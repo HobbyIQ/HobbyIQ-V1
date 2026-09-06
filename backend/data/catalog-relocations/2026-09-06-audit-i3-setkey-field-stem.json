@@ -1,0 +1,150 @@
+{
+ "generatedAt": "2026-09-06T07:50:00Z",
+ "forLane": "relocate-catalog-rows-by-list",
+ "reportOnlyUntil": "Drew's review - no apply is authorized by this PR",
+ "finding": "I3 SETKEY-FIELD-EXTENDS-STEM, pricing-invariant audit run 34018932244 (2026-09-06T07:22:25Z)",
+ "rulings": [
+  "CF-A-ROWS-SETKEY-FIELD-IS-ITS-ID-STEM: a catalog row's setKey field is its id stem, or a named release of it - never the stem's generic. 16 of these 17 rows breach it the same way; the 17th does not breach it that way at all.",
+  "CF-IT-CAME-OUT-OF-BOWMAN (Drew 2026-08-13, re-affirmed 2026-09-05): 'bowman - it came out of Bowman'; 'chrome stock is a property of the card, not the name of the product.' For the 16 CPA rows the FIELD is the correct half and the STEM is the artifact, so the repair moves the id and never rewrites the field.",
+  "NO LANE STAMPED THESE. All 17 rows carry an EMPTY provenance block - no rekeyedFrom, movedFrom, lastRepair, repairedBy or authoritativeSetKey. They were MINTED this way by checklist ingests, not left half-moved by repair-bowman-product-refile. The premise that the refile lane patched only the field is not what the rows say.",
+  "The mint mechanism is the CPA- rule in CHROME_PREFIX_OVERRIDES (hobbyIqCardId.service.ts). It carries maxYear 2022 and every one of the 16 rows is 2020 or 2022 - inside the unambiguous window - so the override fired legitimately on the SLUG while upsertCatalogEntry stored the caller's bare 'bowman' in the FIELD. #1800 stopped this at the mint for callers passing authoritativeSetKey; it moved nothing already stored.",
+  "RETIRE BEFORE RESLUG. 11 of the 16 already have a bowman-keyed twin holding the SAME player, so those chrome-stemmed rows are aliases and are RETIRED; the 5 with no twin are RESLUGGED onto the vacant bowman address. No entry reslugs onto an address a different card holds.",
+  "RETIRE IS A DELETE in this lane (catalogVisibility.ts:23-25 - every state is matchable, only visibility is tiered), and retireCatalogRow re-points nothing: each retired row's sales become unplaced and are handed to the rematch. That cost is stated here rather than discovered after an apply.",
+  "The 17th row (bowman-chrome-sapphire SSA-JC) is EXCLUDED - it is a Beckett-initials collision over whose card SSA-JC is, not a field/stem repair. See `excluded`."
+ ],
+ "census": {
+  "auditRows": 17,
+  "cpaFieldStemRows": 16,
+  "sapphireCollisionExcluded": 1,
+  "byEndState": {
+   "reslug-to-bowman": 5,
+   "retire-alias-twin-exists": 11,
+   "excluded-report-only-collision": 1
+  },
+  "stampedBy": {
+   "checklistcenter-2026-08-29": 5,
+   "beckett-checklist-2026-08-29": 11,
+   "checklistinsider-2026-08-27": 1
+  },
+  "provenanceStampsFound": 0,
+  "twinsExistingSamePlayer": 11,
+  "twinsAbsent": 5,
+  "salesResidentOnRetiredRows": 898,
+  "salesResidentOnReslugRows": 178,
+  "note": "sales counts are rows RESIDENT at the address (cardId partition), measured read-only 2026-09-06"
+ },
+ "entries": [
+  {
+   "id": "hiq:baseball:2022:bowman-chrome:cpa-cm:base:auto",
+   "action": "retire",
+   "reason": "bowman-chrome alias of an existing bowman-keyed twin for the same player; the setKey field already says bowman",
+   "evidence": "Curtis Mead - 2022 Bowman #CPA-CM, setName '2022 Bowman', source beckett-checklist-2026-08-29. The row's OWN setName names the BOWMAN product; the bowman-chrome stem came only from CHROME_PREFIX_OVERRIDES rewriting the slug at mint (the CPA- rule carries maxYear 2022, so 2022 is inside its unambiguous window) while the setKey field kept the checklist's spelling. CF-IT-CAME-OUT-OF-BOWMAN (Drew 2026-08-13, re-affirmed 2026-09-05): chrome stock is a property of the card, not the name of the product - so the FIELD is the correct half and the STEM is the artifact. The bowman-keyed twin hiq:baseball:2022:bowman:cpa-cm:base:auto ALREADY EXISTS and names the SAME player (Curtis Mead, source beckett-scraped-2026-08-26), so this chrome-stemmed row is an alias of it and not a card of its own: 258 sale(s) resident here and 0 at the twin - one card split across two addresses."
+  },
+  {
+   "id": "hiq:baseball:2022:bowman-chrome:cpa-ah:base:auto",
+   "action": "retire",
+   "reason": "bowman-chrome alias of an existing bowman-keyed twin for the same player; the setKey field already says bowman",
+   "evidence": "Alejandro Hidalgo - 2022 Bowman #CPA-AH, setName '2022 Bowman', source beckett-checklist-2026-08-29. The row's OWN setName names the BOWMAN product; the bowman-chrome stem came only from CHROME_PREFIX_OVERRIDES rewriting the slug at mint (the CPA- rule carries maxYear 2022, so 2022 is inside its unambiguous window) while the setKey field kept the checklist's spelling. CF-IT-CAME-OUT-OF-BOWMAN (Drew 2026-08-13, re-affirmed 2026-09-05): chrome stock is a property of the card, not the name of the product - so the FIELD is the correct half and the STEM is the artifact. The bowman-keyed twin hiq:baseball:2022:bowman:cpa-ah:base:auto ALREADY EXISTS and names the SAME player (Alejandro Hidalgo, source beckett-scraped-2026-08-26), so this chrome-stemmed row is an alias of it and not a card of its own: 12 sale(s) resident here and 0 at the twin - one card split across two addresses."
+  },
+  {
+   "id": "hiq:baseball:2022:bowman-chrome:cpa-cc:base:auto",
+   "action": "retire",
+   "reason": "bowman-chrome alias of an existing bowman-keyed twin for the same player; the setKey field already says bowman",
+   "evidence": "Colton Cowser - 2022 Bowman #CPA-CC, setName '2022 Bowman', source beckett-checklist-2026-08-29. The row's OWN setName names the BOWMAN product; the bowman-chrome stem came only from CHROME_PREFIX_OVERRIDES rewriting the slug at mint (the CPA- rule carries maxYear 2022, so 2022 is inside its unambiguous window) while the setKey field kept the checklist's spelling. CF-IT-CAME-OUT-OF-BOWMAN (Drew 2026-08-13, re-affirmed 2026-09-05): chrome stock is a property of the card, not the name of the product - so the FIELD is the correct half and the STEM is the artifact. The bowman-keyed twin hiq:baseball:2022:bowman:cpa-cc:base:auto ALREADY EXISTS and names the SAME player (Colton Cowser, source beckett-scraped-2026-08-26), so this chrome-stemmed row is an alias of it and not a card of its own: 39 sale(s) resident here and 0 at the twin - one card split across two addresses."
+  },
+  {
+   "id": "hiq:baseball:2022:bowman-chrome:cpa-ev:base:auto",
+   "action": "retire",
+   "reason": "bowman-chrome alias of an existing bowman-keyed twin for the same player; the setKey field already says bowman",
+   "evidence": "Eduardo Vaughan - 2022 Bowman #CPA-EV, setName '2022 Bowman', source beckett-checklist-2026-08-29. The row's OWN setName names the BOWMAN product; the bowman-chrome stem came only from CHROME_PREFIX_OVERRIDES rewriting the slug at mint (the CPA- rule carries maxYear 2022, so 2022 is inside its unambiguous window) while the setKey field kept the checklist's spelling. CF-IT-CAME-OUT-OF-BOWMAN (Drew 2026-08-13, re-affirmed 2026-09-05): chrome stock is a property of the card, not the name of the product - so the FIELD is the correct half and the STEM is the artifact. The bowman-keyed twin hiq:baseball:2022:bowman:cpa-ev:base:auto ALREADY EXISTS and names the SAME player (Eduardo Vaughan, source beckett-scraped-2026-08-26), so this chrome-stemmed row is an alias of it and not a card of its own: 62 sale(s) resident here and 0 at the twin - one card split across two addresses."
+  },
+  {
+   "id": "hiq:baseball:2022:bowman-chrome:cpa-el:base:auto",
+   "action": "retire",
+   "reason": "bowman-chrome alias of an existing bowman-keyed twin for the same player; the setKey field already says bowman",
+   "evidence": "Eddys Leonard - 2022 Bowman #CPA-EL, setName '2022 Bowman', source beckett-checklist-2026-08-29. The row's OWN setName names the BOWMAN product; the bowman-chrome stem came only from CHROME_PREFIX_OVERRIDES rewriting the slug at mint (the CPA- rule carries maxYear 2022, so 2022 is inside its unambiguous window) while the setKey field kept the checklist's spelling. CF-IT-CAME-OUT-OF-BOWMAN (Drew 2026-08-13, re-affirmed 2026-09-05): chrome stock is a property of the card, not the name of the product - so the FIELD is the correct half and the STEM is the artifact. The bowman-keyed twin hiq:baseball:2022:bowman:cpa-el:base:auto ALREADY EXISTS and names the SAME player (Eddys Leonard, source beckett-scraped-2026-08-26), so this chrome-stemmed row is an alias of it and not a card of its own: 94 sale(s) resident here and 0 at the twin - one card split across two addresses."
+  },
+  {
+   "id": "hiq:baseball:2022:bowman-chrome:cpa-cw:base:auto",
+   "action": "retire",
+   "reason": "bowman-chrome alias of an existing bowman-keyed twin for the same player; the setKey field already says bowman",
+   "evidence": "Creed Willems - 2022 Bowman #CPA-CW, setName '2022 Bowman', source beckett-checklist-2026-08-29. The row's OWN setName names the BOWMAN product; the bowman-chrome stem came only from CHROME_PREFIX_OVERRIDES rewriting the slug at mint (the CPA- rule carries maxYear 2022, so 2022 is inside its unambiguous window) while the setKey field kept the checklist's spelling. CF-IT-CAME-OUT-OF-BOWMAN (Drew 2026-08-13, re-affirmed 2026-09-05): chrome stock is a property of the card, not the name of the product - so the FIELD is the correct half and the STEM is the artifact. The bowman-keyed twin hiq:baseball:2022:bowman:cpa-cw:base:auto ALREADY EXISTS and names the SAME player (Creed Willems, source beckett-scraped-2026-08-26), so this chrome-stemmed row is an alias of it and not a card of its own: 86 sale(s) resident here and 0 at the twin - one card split across two addresses."
+  },
+  {
+   "id": "hiq:baseball:2022:bowman-chrome:cpa-rv:base:auto",
+   "action": "retire",
+   "reason": "bowman-chrome alias of an existing bowman-keyed twin for the same player; the setKey field already says bowman",
+   "evidence": "Randy Vasquez - 2022 Bowman #CPA-RV, setName '2022 Bowman', source beckett-checklist-2026-08-29. The row's OWN setName names the BOWMAN product; the bowman-chrome stem came only from CHROME_PREFIX_OVERRIDES rewriting the slug at mint (the CPA- rule carries maxYear 2022, so 2022 is inside its unambiguous window) while the setKey field kept the checklist's spelling. CF-IT-CAME-OUT-OF-BOWMAN (Drew 2026-08-13, re-affirmed 2026-09-05): chrome stock is a property of the card, not the name of the product - so the FIELD is the correct half and the STEM is the artifact. The bowman-keyed twin hiq:baseball:2022:bowman:cpa-rv:base:auto ALREADY EXISTS and names the SAME player (Randy Vasquez, source beckett-scraped-2026-08-26), so this chrome-stemmed row is an alias of it and not a card of its own: 94 sale(s) resident here and 0 at the twin - one card split across two addresses."
+  },
+  {
+   "id": "hiq:baseball:2022:bowman-chrome:cpa-ls:base:auto",
+   "action": "retire",
+   "reason": "bowman-chrome alias of an existing bowman-keyed twin for the same player; the setKey field already says bowman",
+   "evidence": "Lenyn Sosa - 2022 Bowman #CPA-LS, setName '2022 Bowman', source beckett-checklist-2026-08-29. The row's OWN setName names the BOWMAN product; the bowman-chrome stem came only from CHROME_PREFIX_OVERRIDES rewriting the slug at mint (the CPA- rule carries maxYear 2022, so 2022 is inside its unambiguous window) while the setKey field kept the checklist's spelling. CF-IT-CAME-OUT-OF-BOWMAN (Drew 2026-08-13, re-affirmed 2026-09-05): chrome stock is a property of the card, not the name of the product - so the FIELD is the correct half and the STEM is the artifact. The bowman-keyed twin hiq:baseball:2022:bowman:cpa-ls:base:auto ALREADY EXISTS and names the SAME player (Lenyn Sosa, source beckett-scraped-2026-08-26), so this chrome-stemmed row is an alias of it and not a card of its own: 93 sale(s) resident here and 0 at the twin - one card split across two addresses."
+  },
+  {
+   "id": "hiq:baseball:2022:bowman-chrome:cpa-ap:base:auto",
+   "action": "retire",
+   "reason": "bowman-chrome alias of an existing bowman-keyed twin for the same player; the setKey field already says bowman",
+   "evidence": "Alejandro Pie - 2022 Bowman #CPA-AP, setName '2022 Bowman', source beckett-checklist-2026-08-29. The row's OWN setName names the BOWMAN product; the bowman-chrome stem came only from CHROME_PREFIX_OVERRIDES rewriting the slug at mint (the CPA- rule carries maxYear 2022, so 2022 is inside its unambiguous window) while the setKey field kept the checklist's spelling. CF-IT-CAME-OUT-OF-BOWMAN (Drew 2026-08-13, re-affirmed 2026-09-05): chrome stock is a property of the card, not the name of the product - so the FIELD is the correct half and the STEM is the artifact. The bowman-keyed twin hiq:baseball:2022:bowman:cpa-ap:base:auto ALREADY EXISTS and names the SAME player (Alejandro Pie, source beckett-scraped-2026-08-26), so this chrome-stemmed row is an alias of it and not a card of its own: 32 sale(s) resident here and 0 at the twin - one card split across two addresses."
+  },
+  {
+   "id": "hiq:baseball:2022:bowman-chrome:cpa-yc:base:auto",
+   "action": "retire",
+   "reason": "bowman-chrome alias of an existing bowman-keyed twin for the same player; the setKey field already says bowman",
+   "evidence": "Yan Contreras - 2022 Bowman #CPA-YC, setName '2022 Bowman', source beckett-checklist-2026-08-29. The row's OWN setName names the BOWMAN product; the bowman-chrome stem came only from CHROME_PREFIX_OVERRIDES rewriting the slug at mint (the CPA- rule carries maxYear 2022, so 2022 is inside its unambiguous window) while the setKey field kept the checklist's spelling. CF-IT-CAME-OUT-OF-BOWMAN (Drew 2026-08-13, re-affirmed 2026-09-05): chrome stock is a property of the card, not the name of the product - so the FIELD is the correct half and the STEM is the artifact. The bowman-keyed twin hiq:baseball:2022:bowman:cpa-yc:base:auto ALREADY EXISTS and names the SAME player (Yan Contreras, source beckett-scraped-2026-08-26), so this chrome-stemmed row is an alias of it and not a card of its own: 61 sale(s) resident here and 0 at the twin - one card split across two addresses."
+  },
+  {
+   "id": "hiq:baseball:2022:bowman-chrome:cpa-rd:base:auto",
+   "action": "retire",
+   "reason": "bowman-chrome alias of an existing bowman-keyed twin for the same player; the setKey field already says bowman",
+   "evidence": "Robert Dominguez - 2022 Bowman #CPA-RD, setName '2022 Bowman', source beckett-checklist-2026-08-29. The row's OWN setName names the BOWMAN product; the bowman-chrome stem came only from CHROME_PREFIX_OVERRIDES rewriting the slug at mint (the CPA- rule carries maxYear 2022, so 2022 is inside its unambiguous window) while the setKey field kept the checklist's spelling. CF-IT-CAME-OUT-OF-BOWMAN (Drew 2026-08-13, re-affirmed 2026-09-05): chrome stock is a property of the card, not the name of the product - so the FIELD is the correct half and the STEM is the artifact. The bowman-keyed twin hiq:baseball:2022:bowman:cpa-rd:base:auto ALREADY EXISTS and names the SAME player (Robert Dominguez, source beckett-scraped-2026-08-26), so this chrome-stemmed row is an alias of it and not a card of its own: 67 sale(s) resident here and 0 at the twin - one card split across two addresses."
+  },
+  {
+   "id": "hiq:baseball:2020:bowman-chrome:cpa-ash:base:auto",
+   "action": "reslug",
+   "to": "hiq:baseball:2020:bowman:cpa-ash:base:auto",
+   "reason": "id stem must equal the setKey field; the field (bowman) is checklist-backed and the stem is a CHROME_PREFIX_OVERRIDES artifact",
+   "evidence": "Aaron Shortridge - 2020 Bowman Baseball #CPA-ASH, setName '2020 Bowman Baseball', source checklistcenter-2026-08-29. The row's OWN setName names the BOWMAN product; the bowman-chrome stem came only from CHROME_PREFIX_OVERRIDES rewriting the slug at mint (the CPA- rule carries maxYear 2022, so 2020 is inside its unambiguous window) while the setKey field kept the checklist's spelling. CF-IT-CAME-OUT-OF-BOWMAN (Drew 2026-08-13, re-affirmed 2026-09-05): chrome stock is a property of the card, not the name of the product - so the FIELD is the correct half and the STEM is the artifact. No row occupies hiq:baseball:2020:bowman:cpa-ash:base:auto, so the card moves to the address its own field already names. 27 sale(s) resident here, 0 at the destination."
+  },
+  {
+   "id": "hiq:baseball:2020:bowman-chrome:cpa-ld:base:auto",
+   "action": "reslug",
+   "to": "hiq:baseball:2020:bowman:cpa-ld:base:auto",
+   "reason": "id stem must equal the setKey field; the field (bowman) is checklist-backed and the stem is a CHROME_PREFIX_OVERRIDES artifact",
+   "evidence": "Lency Delgado - 2020 Bowman Baseball #CPA-LD, setName '2020 Bowman Baseball', source checklistcenter-2026-08-29. The row's OWN setName names the BOWMAN product; the bowman-chrome stem came only from CHROME_PREFIX_OVERRIDES rewriting the slug at mint (the CPA- rule carries maxYear 2022, so 2020 is inside its unambiguous window) while the setKey field kept the checklist's spelling. CF-IT-CAME-OUT-OF-BOWMAN (Drew 2026-08-13, re-affirmed 2026-09-05): chrome stock is a property of the card, not the name of the product - so the FIELD is the correct half and the STEM is the artifact. No row occupies hiq:baseball:2020:bowman:cpa-ld:base:auto, so the card moves to the address its own field already names. 13 sale(s) resident here, 0 at the destination."
+  },
+  {
+   "id": "hiq:baseball:2020:bowman-chrome:cpa-av:base:auto",
+   "action": "reslug",
+   "to": "hiq:baseball:2020:bowman:cpa-av:base:auto",
+   "reason": "id stem must equal the setKey field; the field (bowman) is checklist-backed and the stem is a CHROME_PREFIX_OVERRIDES artifact",
+   "evidence": "Anthony Volpe - 2020 Bowman Baseball #CPA-AV, setName '2020 Bowman Baseball', source checklistcenter-2026-08-29. The row's OWN setName names the BOWMAN product; the bowman-chrome stem came only from CHROME_PREFIX_OVERRIDES rewriting the slug at mint (the CPA- rule carries maxYear 2022, so 2020 is inside its unambiguous window) while the setKey field kept the checklist's spelling. CF-IT-CAME-OUT-OF-BOWMAN (Drew 2026-08-13, re-affirmed 2026-09-05): chrome stock is a property of the card, not the name of the product - so the FIELD is the correct half and the STEM is the artifact. No row occupies hiq:baseball:2020:bowman:cpa-av:base:auto, so the card moves to the address its own field already names. 104 sale(s) resident here, 0 at the destination."
+  },
+  {
+   "id": "hiq:baseball:2020:bowman-chrome:cpa-ah:base:auto",
+   "action": "reslug",
+   "to": "hiq:baseball:2020:bowman:cpa-ah:base:auto",
+   "reason": "id stem must equal the setKey field; the field (bowman) is checklist-backed and the stem is a CHROME_PREFIX_OVERRIDES artifact",
+   "evidence": "Adam Hall - 2020 Bowman Baseball #CPA-AH, setName '2020 Bowman Baseball', source checklistcenter-2026-08-29. The row's OWN setName names the BOWMAN product; the bowman-chrome stem came only from CHROME_PREFIX_OVERRIDES rewriting the slug at mint (the CPA- rule carries maxYear 2022, so 2020 is inside its unambiguous window) while the setKey field kept the checklist's spelling. CF-IT-CAME-OUT-OF-BOWMAN (Drew 2026-08-13, re-affirmed 2026-09-05): chrome stock is a property of the card, not the name of the product - so the FIELD is the correct half and the STEM is the artifact. No row occupies hiq:baseball:2020:bowman:cpa-ah:base:auto, so the card moves to the address its own field already names. 12 sale(s) resident here, 0 at the destination."
+  },
+  {
+   "id": "hiq:baseball:2020:bowman-chrome:cpa-da:base:auto",
+   "action": "reslug",
+   "to": "hiq:baseball:2020:bowman:cpa-da:base:auto",
+   "reason": "id stem must equal the setKey field; the field (bowman) is checklist-backed and the stem is a CHROME_PREFIX_OVERRIDES artifact",
+   "evidence": "Diosbel Arias - 2020 Bowman Baseball #CPA-DA, setName '2020 Bowman Baseball', source checklistcenter-2026-08-29. The row's OWN setName names the BOWMAN product; the bowman-chrome stem came only from CHROME_PREFIX_OVERRIDES rewriting the slug at mint (the CPA- rule carries maxYear 2022, so 2020 is inside its unambiguous window) while the setKey field kept the checklist's spelling. CF-IT-CAME-OUT-OF-BOWMAN (Drew 2026-08-13, re-affirmed 2026-09-05): chrome stock is a property of the card, not the name of the product - so the FIELD is the correct half and the STEM is the artifact. No row occupies hiq:baseball:2020:bowman:cpa-da:base:auto, so the card moves to the address its own field already names. 22 sale(s) resident here, 0 at the destination."
+  }
+ ],
+ "excluded": [
+  {
+   "id": "hiq:baseball:2025:bowman-chrome-sapphire:ssa-jc:base:no-auto",
+   "setKeyField": "bowman-sapphire",
+   "idStem": "bowman-chrome-sapphire",
+   "auditKind": "field-unrelated-to-stem",
+   "whyNotInEntries": "NOT the CPA defect and NOT a field/stem repair. Measured read-only 2026-09-06: SSA-JC in 2025 Bowman Chrome Sapphire is a BECKETT-INITIALS COLLISION. Every other source - beckett-checklist, beckett-scraped-2026-08-26, checklistcenter-2026-08-29, catalog-explode-actuals-2026-08-12 - reads SSA-JC as Jackson Chourio and as an AUTO (Sapphire Selections Autographs, 14 parallels keyed bowman-chrome-sapphire). The rival checklistinsider-2026-08-27 ingest minted a Jac Caglianone no-auto family at the same stem with field bowman-sapphire. Caglianone's own sapphire numbers in that SAME ingest are BCP-103, BCP-154, BSS-7 and CPS-JCA - never SSA-JC - and only checklistinsider claims SSA-JC for him. That is the documented 'Insider layout mints autos UNSIGNED' defect. So neither a reslug to bowman-sapphire (143 id-stem rows against bowman-chrome-sapphire's 8,538) nor a field rewrite is the fix: the open question is WHOSE CARD SSA-JC IS, and that is a checklist ruling, not an invariant repair.",
+   "salesEvidence": "16 sales carry this slug as hobbyiqCardId and NOT ONE is resident at it - they live under two vendor partitions, and their titles split 10x '2025 Bowman Sapphire Baseball #SSA-JC Base' vs 6x '2025 Bowman Chrome Sapphire Baseball #SSA-JC Base'. No title says AUTO, which contradicts the Chourio auto reading as well. Neither identity is provable from the sales.",
+   "recommendation": "report-only. Needs Drew's ruling on whether 2025 Bowman Sapphire is a distinct product from Bowman Chrome Sapphire - the three-key split bowman-sapphire / bowman-chrome-sapphire / bowman-sapphire-chrome is live in the catalog - BEFORE any row moves."
+  }
+ ]
+}
