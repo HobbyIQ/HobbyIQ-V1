@@ -2341,6 +2341,61 @@ export function resolveEnglishPokemonSetFromTitle(title: string): string | null 
   return resolvePokemonSetCodeFromTitle(hay, t);
 }
 
+/**
+ * THE YEAR-LIFT that every product rule in `inferSetKeyFromTitle` reads
+ * against, factored out so a caller outside this function can normalize a
+ * title the SAME way before asking a question about it.
+ *
+ * CF-THE-YEAR-DOES-NOT-SPLIT-THE-PRODUCT (Drew, 2026-08-31) is stated in full
+ * inside `inferSetKeyFromTitle`; this is that one transform and nothing else,
+ * so "Bowman 2025 Chrome Draft" and "2025 Bowman Chrome Draft" answer alike
+ * wherever the transform is applied.
+ */
+function liftInterposedYear(lowerTitle: string): string {
+  return lowerTitle.replace(
+    /\b(topps|bowman|panini|leaf|fleer|donruss|upper\s+deck|score|select)\s+((?:19|20)\d{2})\s+/g,
+    "$1 ",
+  );
+}
+
+/**
+ * DOES THIS TITLE SPELL THE BOWMAN **DRAFT** PRODUCT?
+ * (CF-BOWMAN-CHROME-DRAFT-KEEPS-DRAFT — Drew, 2026-09-06, #1911 then #1912.)
+ *
+ * THE ONE PLACE THE RULE LIVES. #1911 landed this test inline inside
+ * `inferSetKeyFromTitle`, where it decides a setKey. #1912 needs the SAME
+ * question answered by the rematch classifier, which must know whether a sale
+ * stored on a `bowman-chrome` slug is really a Draft card before it will let
+ * the ladder move it. That is one question, so it gets one implementation:
+ * the ladder rule below now CALLS this function, and the classifier reaches it
+ * through `scripts/lib/bowman-draft-title.cjs`, which bridges the compiled
+ * build rather than keeping a second regex.
+ *
+ * WHY THAT MATTERS MORE THAN TIDINESS. `catalogAuthority.service.ts`'s header
+ * records what a second copy of one predicate costs: five call sites answered
+ * one question five slightly different ways and one difference flipped 51
+ * card-number prefixes from "repair" to "blocked". A copy of THIS rule that
+ * drifted by one word would move sales between two products' comp pools —
+ * and on a colliding card number, onto another PERSON's card (cpa-dt is Diego
+ * Tornes in bowman-chrome and Devin Taylor in bowman-draft).
+ *
+ * NARROWNESS IS THE SAFETY, and it is unchanged from #1911. DRAFT must sit
+ * ADJACENT to "chrome" on one side or the other — that is the product being
+ * SPELLED, not the event being mentioned. A bare /draft/ near /bowman/ would
+ * re-read every "... Bowman Chrome ... 2025 MLB Draft" and "... Draft Night
+ * ..." title in the corpus as a Draft card, which is the flagship catch-all
+ * failure in reverse (project_flagship_catchall_swallows_specializations).
+ *
+ * Takes a RAW title and does its own normalization (lowercase + the year
+ * lift), so a caller cannot get a different answer by preparing the string
+ * differently than `inferSetKeyFromTitle` does.
+ */
+export function titleSpellsBowmanDraft(title: string | null | undefined): boolean {
+  const t = liftInterposedYear(String(title ?? "").toLowerCase());
+  if (!/\bbowman\b/.test(t)) return false;
+  return /chrome\s+draft\b/.test(t) || /draft\s+chrome\b/.test(t);
+}
+
 export function inferSetKeyFromTitle(title: string, cardNumber?: string | null): string {
   // CF-THE-YEAR-DOES-NOT-SPLIT-THE-PRODUCT (Drew, 2026-08-31). Every product
   // rule below is written as adjacent words (/topps\s+chrome/), but sellers —
@@ -2361,10 +2416,9 @@ export function inferSetKeyFromTitle(title: string, cardNumber?: string | null):
   // word precedes it, so "Topps 2024" reads as the product it names while a
   // genuine numeric token ("Topps Chrome 1989 Edition") is left alone.
   const raw = String(title ?? "").toLowerCase();
-  const t = raw.replace(
-    /\b(topps|bowman|panini|leaf|fleer|donruss|upper\s+deck|score|select)\s+((?:19|20)\d{2})\s+/g,
-    "$1 ",
-  );
+  // ONE definition of the year lift: `liftInterposedYear` above, which
+  // `titleSpellsBowmanDraft` also uses so both read a title the same way.
+  const t = liftInterposedYear(raw);
   const cn = String(cardNumber ?? "").toUpperCase();
 
   // CF-A-TCG-TITLE-IS-NOT-A-PANINI-COLOUR-WORD (2026-09-06), the companion to
@@ -2436,7 +2490,16 @@ export function inferSetKeyFromTitle(title: string, cardNumber?: string | null):
     if (/topps\s+chrome\s+update|chrome\s+update\s+series/.test(t)) return "Topps Chrome Update Sapphire";
     if (/topps\s+update/.test(t)) return "Topps Update Sapphire";
     if (/\btopps\b/.test(t)) return "Topps Chrome Sapphire";
-    if (/bowman\s+draft/.test(t)) return "Bowman Draft Sapphire";
+    // CF-BOWMAN-CHROME-DRAFT-KEEPS-DRAFT (2026-09-06, #1860). Read in BOTH
+    // word orders, for the same reason the Bowman ladder below does: "Bowman
+    // Chrome Draft Sapphire" is the same product as "Bowman Draft Sapphire",
+    // and reading only the adjacent spelling dropped it to the brand-only
+    // fallback four lines down — "Bowman Chrome Sapphire", a different
+    // product's pool. DRAFT must touch "bowman" or "chrome" so a title that
+    // merely MENTIONS the MLB draft cannot claim the Draft product.
+    if (/bowman\s+draft/.test(t) || (/\bbowman\b/.test(t) && /chrome\s+draft\b|draft\s+chrome\b/.test(t))) {
+      return "Bowman Draft Sapphire";
+    }
     // CF-BOWMAN-DEFAULT-NOT-EVIDENCE (2026-09-05). This used to return
     // "Bowman Chrome Sapphire" for a title that names NO manufacturer at all,
     // on the reasoning that Bowman Sapphire is the commonest -- a MAKER
@@ -2621,6 +2684,57 @@ export function inferSetKeyFromTitle(title: string, cardNumber?: string | null):
   if (/\bfleer\b/i.test(t)) return "Fleer";
   if (/bowman\s+platinum/i.test(t)) return "Bowman Platinum";
   if (/bowman\s+inception/i.test(t)) return "Bowman Inception";
+  // CF-BOWMAN-CHROME-DRAFT-KEEPS-DRAFT (Drew, 2026-09-06, #1860 / #1896).
+  //
+  // THE BUG. The two rules below are written as ADJACENT WORDS, so they read
+  // "Bowman Draft Chrome" but not the reversed "Bowman CHROME Draft" — which
+  // is the commoner eBay spelling. A title like
+  //
+  //     "2025 Bowman Chrome Draft 1st Refractor Auto /499 Devin Taylor #CPA-DT"
+  //
+  // never put DRAFT beside "bowman", fell past both, and was answered by the
+  // bare /bowman\s+chrome/ rule below as "Bowman Chrome". DRAFT — the word
+  // that names the product — was DROPPED.
+  //
+  // WHY THAT IS NOT A SMALL WRONG ANSWER. Bowman, Bowman Chrome, Bowman Draft
+  // and Bowman Chrome Sapphire are DIFFERENT PRODUCTS with different
+  // checklists (project_bowman_setkey_taxonomy). setKey becomes the slug, the
+  // slug becomes cardId, and cardId is the sold_comps PARTITION KEY — so a
+  // dropped DRAFT files a real sale into another product's comp pool. On
+  // CPA-DT it files it under another PERSON's card: cpa-dt is Diego Tornes in
+  // bowman-chrome and Devin Taylor in bowman-draft (#1860,
+  // project_beckett_initials_card_numbers_collide).
+  //
+  // THE RULING. Chrome stock is a PROPERTY of the card; DRAFT is the product
+  // line. A title that names Draft is a Bowman Draft card, whichever side of
+  // "Chrome" the word sits on. Both orders therefore fold to the SAME key the
+  // adjacent rule already returns — "Bowman Draft Chrome", which the
+  // vocabulary nests under bowman-draft (productSetKeys: bowman-draft-chrome,
+  // family + parent bowman-draft). No new key is invented here.
+  //
+  // NARROWNESS IS THE SAFETY. Bare /draft/ anywhere near /bowman/ would re-read
+  // every "... Bowman Chrome ... 2025 MLB Draft" and "... Draft Night ..."
+  // title in the corpus as a Bowman Draft card — the flagship catch-all
+  // failure in reverse (project_flagship_catchall_swallows_specializations).
+  // So DRAFT must sit ADJACENT TO "CHROME" on one side or the other: that is
+  // the product being SPELLED, not the event being mentioned. "2025 Bowman
+  // Chrome Aaron Judge, drafted 2025 MLB Draft" keeps bowman-chrome because
+  // its "Draft" touches neither "bowman" nor "chrome".
+  //
+  // Ordered ABOVE the bare /bowman\s+chrome/ rule, which is the rule that was
+  // swallowing these titles.
+  // The rule itself now lives in `titleSpellsBowmanDraft` above, because the
+  // rematch classifier has to ask the SAME question (#1912) and a second copy
+  // of it would be free to drift. `t` is already lowercased and year-lifted
+  // here; the predicate redoes both on the raw title, which is idempotent.
+  if (titleSpellsBowmanDraft(t)) {
+    // Sapphire never reaches here — the sapphire block far above claims any
+    // title carrying the word, and it now reads both orders too. Kept as a
+    // guard rather than a comment so a future reorder of these ladders cannot
+    // silently file a Draft Sapphire sale into the Draft Chrome pool.
+    if (/sapphire/.test(t)) return "Bowman Draft Sapphire";
+    return "Bowman Draft Chrome";
+  }
   if (/bowman\s+draft\s+chrome/.test(t)) return "Bowman Draft Chrome";
   if (/bowman\s+draft/.test(t)) return "Bowman Draft";
   if (/bowman\s+chrome\s+prospects?/.test(t)) return "Bowman Chrome";
