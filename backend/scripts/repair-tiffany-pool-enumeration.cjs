@@ -391,8 +391,22 @@ async function main() {
       const { resources } = await Promise.race([
         retry(() => pool.items.query(spec).fetchAll()),
         new Promise((_, rej) => {
+          // THE CAP IS REF'D ON PURPOSE (2026-09-06). It used to be unref'd
+          // here, and an unref'd timer cannot be relied on to fire: node does
+          // not count it as work, so the moment nothing else ref'd is pending
+          // the cap is simply never delivered, the race never settles, and the
+          // verify neither answers nor reports that it could not. That is how
+          // retire-self-derived-identities hung runs 34004719519, 34004725658,
+          // 34004731758 and 34004737931 -- a balanced reconcile, then total
+          // silence, then the 150-minute kill, with no VERIFY line at all.
+          //
+          // This lane's retry() sleeps ARE ref'd, so the failure here would
+          // more often be the milder one (the cap fires late rather than
+          // never); the loser query is also never handed an abort signal, so
+          // it keeps running regardless. Neither is a reason to keep a timer
+          // that is unreliable by construction. clearTimeout in the `finally`
+          // below is what releases the loop instead.
           timer = setTimeout(() => rej(new Error("verify-cap")), VERIFY_MS);
-          if (timer.unref) timer.unref();
         }),
       ]);
       return Number(resources[0] ?? 0);

@@ -1,0 +1,443 @@
+{
+ "generatedAt": "2026-09-06T05:45:00Z",
+ "forLane": "relocate-catalog-rows-by-list",
+ "reportOnlyUntil": "Drew's ruling on a distinct `bowmans-best-preview` setKey",
+ "rulings": [
+  "1997-98 Topps Stadium Club Bowman's Best Preview kept its OWN numbering (BBP1-BBP20), so unlike the baseball twin it never collided with the 1-240 base set.",
+  "The Atomic page wrote parallel 'Refractor' with the qualifier carried only in subsetName, and squatted the bare refractor address — pre-#1846 behaviour.",
+  "ORDER IS LOAD-BEARING: the 20 bare alias rows are retired FIRST, vacating the addresses the 20 Preview refractor rows then reslug onto. The lane applies entries top to bottom.",
+  "The 20 Atomic rows reslug to :atomic-refractor, never the plain rung — 'Atomic Refractor' is its own rung (parallelLadders).",
+  "The 20 bare BASE rows are correct as they stand and are deliberately OMITTED from this list.",
+  "The 240 OTHER rows carrying source sportscardchecklist-2026-09-04 in this product are the legitimate Stadium Club base checklist (Michael Jordan #118 among them) and are NOT in scope.",
+  "SEQUENCING WITH THE POOL LANE (#1853-era list data/pool-relocations/2026-09-06-bbp-basketball-rung-repoint.json, on main 2026-09-06). That list repoints 30 sold_comps rows onto 12 targets. SIX of those targets are addresses THIS list retires first (bbp1/3/4/7/10/12 :refractor:no-auto) before reslugging the Preview refractor row onto the same address — so the two lists AGREE on the end state but NOT on the order. Run the CATALOG list first and the pool list second: repointing sales onto an address that is then deleted and recreated leaves them pointing at a row that existed under a different document. Eight further pool targets are addresses this list reslugs ONTO (end state agrees), and four are base rows this list does not touch."
+ ],
+ "census": {
+  "productRowsTotal": 443,
+  "taggedWithSource": 320,
+  "previewShaped": 80,
+  "legitimateProperRows": 240,
+  "aliasRetired": 20,
+  "reslugPreviewRefractor": 20,
+  "reslugPreviewAtomic": 20,
+  "baseRowsLeftAlone": 20,
+  "expectedAfter": "60 preview rows, 3 per card, no sub- segment",
+  "poolLaneInteraction": {
+   "poolList": "data/pool-relocations/2026-09-06-bbp-basketball-rung-repoint.json",
+   "poolRepointTargets": 12,
+   "targetsThisListRetiresFirst": 6,
+   "targetsThisListReslugsOnto": 8,
+   "targetsUntouched": 4,
+   "requiredOrder": "catalog list BEFORE pool list"
+  }
+ },
+ "entries": [
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp1:refractor:no-auto",
+   "action": "retire",
+   "reason": "bare alias row minted by the Atomic page squatting the plain refractor address; the Preview refractor row reslugs onto it",
+   "evidence": "Allen Iverson — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP1, parallel Refractor, subsetName Bowmans Best Preview Atomic"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp10:refractor:no-auto",
+   "action": "retire",
+   "reason": "bare alias row minted by the Atomic page squatting the plain refractor address; the Preview refractor row reslugs onto it",
+   "evidence": "Shaquille O'Neal — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP10, parallel Refractor, subsetName Bowmans Best Preview Atomic"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp11:refractor:no-auto",
+   "action": "retire",
+   "reason": "bare alias row minted by the Atomic page squatting the plain refractor address; the Preview refractor row reslugs onto it",
+   "evidence": "Maurice Taylor — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP11, parallel Refractor, subsetName Bowmans Best Preview Atomic"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp12:refractor:no-auto",
+   "action": "retire",
+   "reason": "bare alias row minted by the Atomic page squatting the plain refractor address; the Preview refractor row reslugs onto it",
+   "evidence": "Chauncey Billups — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP12, parallel Refractor, subsetName Bowmans Best Preview Atomic"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp13:refractor:no-auto",
+   "action": "retire",
+   "reason": "bare alias row minted by the Atomic page squatting the plain refractor address; the Preview refractor row reslugs onto it",
+   "evidence": "Paul Grant — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP13, parallel Refractor, subsetName Bowmans Best Preview Atomic"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp14:refractor:no-auto",
+   "action": "retire",
+   "reason": "bare alias row minted by the Atomic page squatting the plain refractor address; the Preview refractor row reslugs onto it",
+   "evidence": "Tony Battie — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP14, parallel Refractor, subsetName Bowmans Best Preview Atomic"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp15:refractor:no-auto",
+   "action": "retire",
+   "reason": "bare alias row minted by the Atomic page squatting the plain refractor address; the Preview refractor row reslugs onto it",
+   "evidence": "Austin Croshere — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP15, parallel Refractor, subsetName Bowmans Best Preview Atomic"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp16:refractor:no-auto",
+   "action": "retire",
+   "reason": "bare alias row minted by the Atomic page squatting the plain refractor address; the Preview refractor row reslugs onto it",
+   "evidence": "Brevin Knight — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP16, parallel Refractor, subsetName Bowmans Best Preview Atomic"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp17:refractor:no-auto",
+   "action": "retire",
+   "reason": "bare alias row minted by the Atomic page squatting the plain refractor address; the Preview refractor row reslugs onto it",
+   "evidence": "Bobby Jackson — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP17, parallel Refractor, subsetName Bowmans Best Preview Atomic"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp18:refractor:no-auto",
+   "action": "retire",
+   "reason": "bare alias row minted by the Atomic page squatting the plain refractor address; the Preview refractor row reslugs onto it",
+   "evidence": "Johnny Taylor — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP18, parallel Refractor, subsetName Bowmans Best Preview Atomic"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp19:refractor:no-auto",
+   "action": "retire",
+   "reason": "bare alias row minted by the Atomic page squatting the plain refractor address; the Preview refractor row reslugs onto it",
+   "evidence": "Scot Pollard — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP19, parallel Refractor, subsetName Bowmans Best Preview Atomic"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp2:refractor:no-auto",
+   "action": "retire",
+   "reason": "bare alias row minted by the Atomic page squatting the plain refractor address; the Preview refractor row reslugs onto it",
+   "evidence": "Gary Payton — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP2, parallel Refractor, subsetName Bowmans Best Preview Atomic"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp20:refractor:no-auto",
+   "action": "retire",
+   "reason": "bare alias row minted by the Atomic page squatting the plain refractor address; the Preview refractor row reslugs onto it",
+   "evidence": "Tariq Abdul-Wahad — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP20, parallel Refractor, subsetName Bowmans Best Preview Atomic"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp3:refractor:no-auto",
+   "action": "retire",
+   "reason": "bare alias row minted by the Atomic page squatting the plain refractor address; the Preview refractor row reslugs onto it",
+   "evidence": "Grant Hill — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP3, parallel Refractor, subsetName Bowmans Best Preview Atomic"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp4:refractor:no-auto",
+   "action": "retire",
+   "reason": "bare alias row minted by the Atomic page squatting the plain refractor address; the Preview refractor row reslugs onto it",
+   "evidence": "Anfernee Hardaway — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP4, parallel Refractor, subsetName Bowmans Best Preview Atomic"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp5:refractor:no-auto",
+   "action": "retire",
+   "reason": "bare alias row minted by the Atomic page squatting the plain refractor address; the Preview refractor row reslugs onto it",
+   "evidence": "Karl Malone — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP5, parallel Refractor, subsetName Bowmans Best Preview Atomic"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp6:refractor:no-auto",
+   "action": "retire",
+   "reason": "bare alias row minted by the Atomic page squatting the plain refractor address; the Preview refractor row reslugs onto it",
+   "evidence": "Glen Rice — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP6, parallel Refractor, subsetName Bowmans Best Preview Atomic"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp7:refractor:no-auto",
+   "action": "retire",
+   "reason": "bare alias row minted by the Atomic page squatting the plain refractor address; the Preview refractor row reslugs onto it",
+   "evidence": "Antoine Walker — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP7, parallel Refractor, subsetName Bowmans Best Preview Atomic"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp8:refractor:no-auto",
+   "action": "retire",
+   "reason": "bare alias row minted by the Atomic page squatting the plain refractor address; the Preview refractor row reslugs onto it",
+   "evidence": "Alonzo Mourning — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP8, parallel Refractor, subsetName Bowmans Best Preview Atomic"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:bbp9:refractor:no-auto",
+   "action": "retire",
+   "reason": "bare alias row minted by the Atomic page squatting the plain refractor address; the Preview refractor row reslugs onto it",
+   "evidence": "Shareef Abdur-Rahim — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP9, parallel Refractor, subsetName Bowmans Best Preview Atomic"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview:bbp1:refractor:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:topps-stadium-club:bbp1:refractor:no-auto",
+   "reason": "the subset segment was a collision work-around, not identity; BBP numbering is unique in this product so the bare address is correct",
+   "evidence": "Allen Iverson — 1997-98 Topps Stadium Club Bowmans Best Preview Refractors Basketball — cardNumber BBP1, parallel Refractor"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview:bbp10:refractor:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:topps-stadium-club:bbp10:refractor:no-auto",
+   "reason": "the subset segment was a collision work-around, not identity; BBP numbering is unique in this product so the bare address is correct",
+   "evidence": "Shaquille O'Neal — 1997-98 Topps Stadium Club Bowmans Best Preview Refractors Basketball — cardNumber BBP10, parallel Refractor"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview:bbp11:refractor:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:topps-stadium-club:bbp11:refractor:no-auto",
+   "reason": "the subset segment was a collision work-around, not identity; BBP numbering is unique in this product so the bare address is correct",
+   "evidence": "Maurice Taylor — 1997-98 Topps Stadium Club Bowmans Best Preview Refractors Basketball — cardNumber BBP11, parallel Refractor"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview:bbp12:refractor:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:topps-stadium-club:bbp12:refractor:no-auto",
+   "reason": "the subset segment was a collision work-around, not identity; BBP numbering is unique in this product so the bare address is correct",
+   "evidence": "Chauncey Billups — 1997-98 Topps Stadium Club Bowmans Best Preview Refractors Basketball — cardNumber BBP12, parallel Refractor"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview:bbp13:refractor:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:topps-stadium-club:bbp13:refractor:no-auto",
+   "reason": "the subset segment was a collision work-around, not identity; BBP numbering is unique in this product so the bare address is correct",
+   "evidence": "Paul Grant — 1997-98 Topps Stadium Club Bowmans Best Preview Refractors Basketball — cardNumber BBP13, parallel Refractor"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview:bbp14:refractor:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:topps-stadium-club:bbp14:refractor:no-auto",
+   "reason": "the subset segment was a collision work-around, not identity; BBP numbering is unique in this product so the bare address is correct",
+   "evidence": "Tony Battie — 1997-98 Topps Stadium Club Bowmans Best Preview Refractors Basketball — cardNumber BBP14, parallel Refractor"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview:bbp15:refractor:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:topps-stadium-club:bbp15:refractor:no-auto",
+   "reason": "the subset segment was a collision work-around, not identity; BBP numbering is unique in this product so the bare address is correct",
+   "evidence": "Austin Croshere — 1997-98 Topps Stadium Club Bowmans Best Preview Refractors Basketball — cardNumber BBP15, parallel Refractor"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview:bbp16:refractor:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:topps-stadium-club:bbp16:refractor:no-auto",
+   "reason": "the subset segment was a collision work-around, not identity; BBP numbering is unique in this product so the bare address is correct",
+   "evidence": "Brevin Knight — 1997-98 Topps Stadium Club Bowmans Best Preview Refractors Basketball — cardNumber BBP16, parallel Refractor"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview:bbp17:refractor:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:topps-stadium-club:bbp17:refractor:no-auto",
+   "reason": "the subset segment was a collision work-around, not identity; BBP numbering is unique in this product so the bare address is correct",
+   "evidence": "Bobby Jackson — 1997-98 Topps Stadium Club Bowmans Best Preview Refractors Basketball — cardNumber BBP17, parallel Refractor"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview:bbp18:refractor:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:topps-stadium-club:bbp18:refractor:no-auto",
+   "reason": "the subset segment was a collision work-around, not identity; BBP numbering is unique in this product so the bare address is correct",
+   "evidence": "Johnny Taylor — 1997-98 Topps Stadium Club Bowmans Best Preview Refractors Basketball — cardNumber BBP18, parallel Refractor"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview:bbp19:refractor:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:topps-stadium-club:bbp19:refractor:no-auto",
+   "reason": "the subset segment was a collision work-around, not identity; BBP numbering is unique in this product so the bare address is correct",
+   "evidence": "Scot Pollard — 1997-98 Topps Stadium Club Bowmans Best Preview Refractors Basketball — cardNumber BBP19, parallel Refractor"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview:bbp2:refractor:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:topps-stadium-club:bbp2:refractor:no-auto",
+   "reason": "the subset segment was a collision work-around, not identity; BBP numbering is unique in this product so the bare address is correct",
+   "evidence": "Gary Payton — 1997-98 Topps Stadium Club Bowmans Best Preview Refractors Basketball — cardNumber BBP2, parallel Refractor"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview:bbp20:refractor:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:topps-stadium-club:bbp20:refractor:no-auto",
+   "reason": "the subset segment was a collision work-around, not identity; BBP numbering is unique in this product so the bare address is correct",
+   "evidence": "Tariq Abdul-Wahad — 1997-98 Topps Stadium Club Bowmans Best Preview Refractors Basketball — cardNumber BBP20, parallel Refractor"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview:bbp3:refractor:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:topps-stadium-club:bbp3:refractor:no-auto",
+   "reason": "the subset segment was a collision work-around, not identity; BBP numbering is unique in this product so the bare address is correct",
+   "evidence": "Grant Hill — 1997-98 Topps Stadium Club Bowmans Best Preview Refractors Basketball — cardNumber BBP3, parallel Refractor"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview:bbp4:refractor:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:topps-stadium-club:bbp4:refractor:no-auto",
+   "reason": "the subset segment was a collision work-around, not identity; BBP numbering is unique in this product so the bare address is correct",
+   "evidence": "Anfernee Hardaway — 1997-98 Topps Stadium Club Bowmans Best Preview Refractors Basketball — cardNumber BBP4, parallel Refractor"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview:bbp5:refractor:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:topps-stadium-club:bbp5:refractor:no-auto",
+   "reason": "the subset segment was a collision work-around, not identity; BBP numbering is unique in this product so the bare address is correct",
+   "evidence": "Karl Malone — 1997-98 Topps Stadium Club Bowmans Best Preview Refractors Basketball — cardNumber BBP5, parallel Refractor"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview:bbp6:refractor:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:topps-stadium-club:bbp6:refractor:no-auto",
+   "reason": "the subset segment was a collision work-around, not identity; BBP numbering is unique in this product so the bare address is correct",
+   "evidence": "Glen Rice — 1997-98 Topps Stadium Club Bowmans Best Preview Refractors Basketball — cardNumber BBP6, parallel Refractor"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview:bbp7:refractor:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:topps-stadium-club:bbp7:refractor:no-auto",
+   "reason": "the subset segment was a collision work-around, not identity; BBP numbering is unique in this product so the bare address is correct",
+   "evidence": "Antoine Walker — 1997-98 Topps Stadium Club Bowmans Best Preview Refractors Basketball — cardNumber BBP7, parallel Refractor"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview:bbp8:refractor:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:topps-stadium-club:bbp8:refractor:no-auto",
+   "reason": "the subset segment was a collision work-around, not identity; BBP numbering is unique in this product so the bare address is correct",
+   "evidence": "Alonzo Mourning — 1997-98 Topps Stadium Club Bowmans Best Preview Refractors Basketball — cardNumber BBP8, parallel Refractor"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview:bbp9:refractor:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:topps-stadium-club:bbp9:refractor:no-auto",
+   "reason": "the subset segment was a collision work-around, not identity; BBP numbering is unique in this product so the bare address is correct",
+   "evidence": "Shareef Abdur-Rahim — 1997-98 Topps Stadium Club Bowmans Best Preview Refractors Basketball — cardNumber BBP9, parallel Refractor"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview-atomic:bbp1:refractor:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:topps-stadium-club:bbp1:atomic-refractor:no-auto",
+   "reason": "the Atomic page wrote parallel 'Refractor' with the qualifier only in subsetName; Atomic Refractor is its own rung and gets its own address",
+   "evidence": "Allen Iverson — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP1, stored parallel Refractor, subsetName Bowmans Best Preview Atomic"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview-atomic:bbp10:refractor:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:topps-stadium-club:bbp10:atomic-refractor:no-auto",
+   "reason": "the Atomic page wrote parallel 'Refractor' with the qualifier only in subsetName; Atomic Refractor is its own rung and gets its own address",
+   "evidence": "Shaquille O'Neal — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP10, stored parallel Refractor, subsetName Bowmans Best Preview Atomic"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview-atomic:bbp11:refractor:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:topps-stadium-club:bbp11:atomic-refractor:no-auto",
+   "reason": "the Atomic page wrote parallel 'Refractor' with the qualifier only in subsetName; Atomic Refractor is its own rung and gets its own address",
+   "evidence": "Maurice Taylor — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP11, stored parallel Refractor, subsetName Bowmans Best Preview Atomic"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview-atomic:bbp12:refractor:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:topps-stadium-club:bbp12:atomic-refractor:no-auto",
+   "reason": "the Atomic page wrote parallel 'Refractor' with the qualifier only in subsetName; Atomic Refractor is its own rung and gets its own address",
+   "evidence": "Chauncey Billups — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP12, stored parallel Refractor, subsetName Bowmans Best Preview Atomic"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview-atomic:bbp13:refractor:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:topps-stadium-club:bbp13:atomic-refractor:no-auto",
+   "reason": "the Atomic page wrote parallel 'Refractor' with the qualifier only in subsetName; Atomic Refractor is its own rung and gets its own address",
+   "evidence": "Paul Grant — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP13, stored parallel Refractor, subsetName Bowmans Best Preview Atomic"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview-atomic:bbp14:refractor:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:topps-stadium-club:bbp14:atomic-refractor:no-auto",
+   "reason": "the Atomic page wrote parallel 'Refractor' with the qualifier only in subsetName; Atomic Refractor is its own rung and gets its own address",
+   "evidence": "Tony Battie — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP14, stored parallel Refractor, subsetName Bowmans Best Preview Atomic"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview-atomic:bbp15:refractor:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:topps-stadium-club:bbp15:atomic-refractor:no-auto",
+   "reason": "the Atomic page wrote parallel 'Refractor' with the qualifier only in subsetName; Atomic Refractor is its own rung and gets its own address",
+   "evidence": "Austin Croshere — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP15, stored parallel Refractor, subsetName Bowmans Best Preview Atomic"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview-atomic:bbp16:refractor:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:topps-stadium-club:bbp16:atomic-refractor:no-auto",
+   "reason": "the Atomic page wrote parallel 'Refractor' with the qualifier only in subsetName; Atomic Refractor is its own rung and gets its own address",
+   "evidence": "Brevin Knight — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP16, stored parallel Refractor, subsetName Bowmans Best Preview Atomic"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview-atomic:bbp17:refractor:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:topps-stadium-club:bbp17:atomic-refractor:no-auto",
+   "reason": "the Atomic page wrote parallel 'Refractor' with the qualifier only in subsetName; Atomic Refractor is its own rung and gets its own address",
+   "evidence": "Bobby Jackson — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP17, stored parallel Refractor, subsetName Bowmans Best Preview Atomic"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview-atomic:bbp18:refractor:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:topps-stadium-club:bbp18:atomic-refractor:no-auto",
+   "reason": "the Atomic page wrote parallel 'Refractor' with the qualifier only in subsetName; Atomic Refractor is its own rung and gets its own address",
+   "evidence": "Johnny Taylor — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP18, stored parallel Refractor, subsetName Bowmans Best Preview Atomic"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview-atomic:bbp19:refractor:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:topps-stadium-club:bbp19:atomic-refractor:no-auto",
+   "reason": "the Atomic page wrote parallel 'Refractor' with the qualifier only in subsetName; Atomic Refractor is its own rung and gets its own address",
+   "evidence": "Scot Pollard — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP19, stored parallel Refractor, subsetName Bowmans Best Preview Atomic"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview-atomic:bbp2:refractor:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:topps-stadium-club:bbp2:atomic-refractor:no-auto",
+   "reason": "the Atomic page wrote parallel 'Refractor' with the qualifier only in subsetName; Atomic Refractor is its own rung and gets its own address",
+   "evidence": "Gary Payton — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP2, stored parallel Refractor, subsetName Bowmans Best Preview Atomic"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview-atomic:bbp20:refractor:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:topps-stadium-club:bbp20:atomic-refractor:no-auto",
+   "reason": "the Atomic page wrote parallel 'Refractor' with the qualifier only in subsetName; Atomic Refractor is its own rung and gets its own address",
+   "evidence": "Tariq Abdul-Wahad — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP20, stored parallel Refractor, subsetName Bowmans Best Preview Atomic"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview-atomic:bbp3:refractor:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:topps-stadium-club:bbp3:atomic-refractor:no-auto",
+   "reason": "the Atomic page wrote parallel 'Refractor' with the qualifier only in subsetName; Atomic Refractor is its own rung and gets its own address",
+   "evidence": "Grant Hill — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP3, stored parallel Refractor, subsetName Bowmans Best Preview Atomic"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview-atomic:bbp4:refractor:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:topps-stadium-club:bbp4:atomic-refractor:no-auto",
+   "reason": "the Atomic page wrote parallel 'Refractor' with the qualifier only in subsetName; Atomic Refractor is its own rung and gets its own address",
+   "evidence": "Anfernee Hardaway — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP4, stored parallel Refractor, subsetName Bowmans Best Preview Atomic"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview-atomic:bbp5:refractor:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:topps-stadium-club:bbp5:atomic-refractor:no-auto",
+   "reason": "the Atomic page wrote parallel 'Refractor' with the qualifier only in subsetName; Atomic Refractor is its own rung and gets its own address",
+   "evidence": "Karl Malone — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP5, stored parallel Refractor, subsetName Bowmans Best Preview Atomic"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview-atomic:bbp6:refractor:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:topps-stadium-club:bbp6:atomic-refractor:no-auto",
+   "reason": "the Atomic page wrote parallel 'Refractor' with the qualifier only in subsetName; Atomic Refractor is its own rung and gets its own address",
+   "evidence": "Glen Rice — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP6, stored parallel Refractor, subsetName Bowmans Best Preview Atomic"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview-atomic:bbp7:refractor:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:topps-stadium-club:bbp7:atomic-refractor:no-auto",
+   "reason": "the Atomic page wrote parallel 'Refractor' with the qualifier only in subsetName; Atomic Refractor is its own rung and gets its own address",
+   "evidence": "Antoine Walker — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP7, stored parallel Refractor, subsetName Bowmans Best Preview Atomic"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview-atomic:bbp8:refractor:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:topps-stadium-club:bbp8:atomic-refractor:no-auto",
+   "reason": "the Atomic page wrote parallel 'Refractor' with the qualifier only in subsetName; Atomic Refractor is its own rung and gets its own address",
+   "evidence": "Alonzo Mourning — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP8, stored parallel Refractor, subsetName Bowmans Best Preview Atomic"
+  },
+  {
+   "id": "hiq:basketball:1997:topps-stadium-club:sub-bowmans-best-preview-atomic:bbp9:refractor:no-auto",
+   "action": "reslug",
+   "to": "hiq:basketball:1997:topps-stadium-club:bbp9:atomic-refractor:no-auto",
+   "reason": "the Atomic page wrote parallel 'Refractor' with the qualifier only in subsetName; Atomic Refractor is its own rung and gets its own address",
+   "evidence": "Shareef Abdur-Rahim — 1997-98 Topps Stadium Club Bowmans Best Preview Atomic Refractors Basketball — cardNumber BBP9, stored parallel Refractor, subsetName Bowmans Best Preview Atomic"
+  }
+ ],
+ "excluded": [
+  {
+   "note": "20 bare BASE rows hiq:basketball:1997:topps-stadium-club:bbp<n>:base:no-auto — correct as they stand."
+  },
+  {
+   "note": "240 rows, source sportscardchecklist-2026-09-04 — the legitimate Stadium Club proper checklist. Deliberately NOT touched."
+  }
+ ]
+}

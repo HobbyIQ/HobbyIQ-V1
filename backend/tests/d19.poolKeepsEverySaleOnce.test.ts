@@ -307,8 +307,13 @@ function fakePool(opts: {
             calls.query++;
             if (opts.blindQuery) return { resources: [] };
             const p = Object.fromEntries((spec.parameters ?? []).map((x) => [x.name, x.value]));
+            // Mirrors the helper's query, which no longer names @slug: a
+            // row matches on (id, cardId) only. Kept as an OR so a
+            // reintroduced @slug clause would still be exercised here.
             const resources = [...store.values()].filter((d) =>
-              d.id === p["@id"] && (d.cardId === p["@pk"] || d.hobbyiqCardId === p["@slug"]));
+              d.id === p["@id"]
+              && (d.cardId === p["@pk"]
+                || (p["@slug"] !== undefined && d.hobbyiqCardId === p["@slug"])));
             return { resources };
           },
         };
@@ -353,9 +358,14 @@ describe("D19: the create -> verify -> delete helper never leaves the pool witho
     expect(fake.store.has(`${OLD.cardId}::${OLD.id}`)).toBe(true);
   });
   it("the read-back disagrees with what was written -> nothing is deleted", async () => {
-    const fake = fakePool({ staleRead: true });
+    // EVERY read disagrees, the fallback query included. Since 2026-09-06 a
+    // read that does not SHOW THE WRITE is retried past rather than accepted,
+    // so a stale point-read alone no longer decides this -- the query would
+    // (correctly) rescue it. Blinding the query is what makes this the case
+    // it means to be: verification that genuinely cannot succeed.
+    const fake = fakePool({ staleRead: true, blindQuery: true });
     fake.store.set(`${OLD.cardId}::${OLD.id}`, OLD);
-    const res = await lib.relocateSoldComp(fake.container, { keep: KEEP, drop: [OLD], verifyFields: ["rekeyedAt"] });
+    const res = await lib.relocateSoldComp(fake.container, { keep: KEEP, drop: [OLD], verifyFields: ["rekeyedAt"], wait: noWait });
     expect(res).toMatchObject({ ok: false, stage: "verify", deleted: [] });
     expect(fake.calls.delete).toBe(0);
   });
@@ -421,7 +431,7 @@ describe("CF-A-VENDOR-KEYED-SALE-REKEYS-WHERE-IT-LIVES: read back where the row 
     expect(fake.store.has(`${VENDOR_PK}::${VENDOR_KEYED.id}`)).toBe(false);
   });
 
-  it("the run's own failure shape -- a lag longer than every retry -- is saved by the both-keys query", async () => {
+  it("the run's own failure shape -- a lag longer than every retry -- is saved by the fallback query", async () => {
     const fake = fakePool({ lagReads: 99 });
     fake.store.set(`${VENDOR_PK}::${VENDOR_KEYED.id}`, VENDOR_KEYED);
     const res = await lib.relocateSoldComp(fake.container, {
@@ -429,7 +439,11 @@ describe("CF-A-VENDOR-KEYED-SALE-REKEYS-WHERE-IT-LIVES: read back where the row 
       verifyFields: ["hobbyiqCardId", "setKey", "rekeyedAt"], wait: noWait,
     });
     expect(res.ok).toBe(true);
-    expect(res.readBackVia).toBe("query-both-keys");
+    // The fallback is the POINT READ AS A QUERY (2026-09-06): addressed by
+    // (id, cardId) and never OR'd onto hobbyiqCardId, which a re-keyed row's
+    // old-address twin also carries. A query is still served from an
+    // up-to-date replica set, so it still defeats the lag this test creates.
+    expect(res.readBackVia).toBe("query-point-read");
     expect(fake.calls.query).toBeGreaterThan(0);
     expect(fake.store.has(`${VENDOR_PK}::${VENDOR_KEYED.id}`)).toBe(false);
   });
@@ -472,8 +486,10 @@ describe("CF-A-VENDOR-KEYED-SALE-REKEYS-WHERE-IT-LIVES: read back where the row 
   it("the fallback finds a row whose cardId and hobbyiqCardId differ", async () => {
     // Not every stored row has cardId === hobbyiqCardId: the pool holds rows
     // like tca-ebay::128012214430, whose cardId is the ungraded slug while its
-    // hobbyiqCardId carries a :psa-8 grade suffix. Both are passed to the
-    // query, so a row is found by whichever of its two keys is stored.
+    // hobbyiqCardId carries a :psa-8 grade suffix. The fallback addresses the
+    // row by (id, cardId) -- the partition it was WRITTEN to -- so a divergent
+    // hobbyiqCardId does not hide it. It is no longer OR'd onto hobbyiqCardId,
+    // which a re-keyed row's old-address twin also carries (2026-09-06).
     const PK = "hiq:football:2025:score:14:base:no-auto";
     const GRADED = PK + ":psa-8";
     const keep = { id: "tca-ebay::128012214430", cardId: PK, hobbyiqCardId: GRADED, setKey: "score", rekeyedAt: "t" };
@@ -483,7 +499,7 @@ describe("CF-A-VENDOR-KEYED-SALE-REKEYS-WHERE-IT-LIVES: read back where the row 
       verifyFields: ["setKey", "rekeyedAt"], wait: noWait,
     });
     expect(res.ok).toBe(true);
-    expect(res.readBackVia).toBe("query-both-keys");
+    expect(res.readBackVia).toBe("query-point-read");
     expect(fake.store.has(`${PK}::${keep.id}`)).toBe(true);
   });
 

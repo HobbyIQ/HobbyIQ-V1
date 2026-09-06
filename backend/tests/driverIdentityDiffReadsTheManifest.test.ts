@@ -115,7 +115,13 @@ describe("the identity diff reads the key the manifest states", () => {
     const src = fs.readFileSync(DRIVER_SRC, "utf8");
     // The driver reads that same field, from that same sidecar.
     expect(src).toMatch(/function manifestSetKeys\(entry, csvPaths\)/);
-    expect(src).toMatch(/for \(const k of manifestSetKeys\(entry, csvPaths\)\) \{ add\(k\); add\(canonicalSetKey\(k\)\); \}/);
+    // The manifest key still LEADS the candidate list. Since
+    // CF-A-COLLAPSED-KEY-IS-A-DIFFERENT-PRODUCT (2026-09-06) its normalization
+    // is admitted through addStated, which keeps an ALIAS (`finest` ->
+    // `topps-finest`) and drops a FAMILY COLLAPSE (`topps-chrome-bundesliga`
+    // -> `topps-chrome`), so the diff never reads a product nobody stated.
+    expect(src).toMatch(/const stated = manifestSetKeys\(entry, csvPaths\);/);
+    expect(src).toMatch(/function collapsesToParent\(key, normalized\)/);
     // and every read site is given the files this run acquired.
     expect(src).toMatch(/const after = await countCatalogRows\(entry, csvPaths\);/);
     expect(src).toMatch(/const inCatalog = await catalogIdentities\(entry, csvPaths\)\.catch/);
@@ -129,7 +135,7 @@ describe("the identity diff reads the key the manifest states", () => {
     expect(src).toMatch(/counted under \$\{countedKeys\.length/);
     expect(src).toMatch(/countedSetKeys: countedKeys/);
     // and the short-ingest verdict names its address for the same reason.
-    expect(src).toMatch(/under \$\{shortIngest\.countedKeys\.map/);
+    expect(src).toMatch(/\$\{shortIngest\.countedKeys\.map/);
   });
 });
 
