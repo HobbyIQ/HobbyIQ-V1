@@ -199,7 +199,9 @@ holds the repair off the identity axis entirely.
 That still needs a ruling before anything is written, because the evidence
 above shows the two sides are not symmetric: for these 44 products the checklist
 corpus says the setName is right and the year is wrong (topps-finest/football:
-40,092 checklist rows at 2024 against 13,655 hobbymonitor rows at 2025), which
+40,092 checklist rows at 2024 against 13,655 hobbymonitor rows at 2025 —
+re-measured 2026-09-06 the product holds 40,170 rows at 2024 and 33,335 at 2025,
+of which 13,655 are hobbymonitor), which
 argues the opposite repair — moving the row — and that one is per-card, needs a
 checklist-verified destination each, and has a measured 21% different-player
 rate at the naive destination.
