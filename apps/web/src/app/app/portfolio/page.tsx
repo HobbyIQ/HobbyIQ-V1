@@ -272,6 +272,14 @@ function PortfolioPageBody() {
     return <EmptyState />;
   }
 
+  // CF-WITHHELD-SAYS-WHY (Drew, 2026-09-05), audit item 9. A portfolio whose
+  // cards are all present but mostly unpriced is NOT the empty state, and it
+  // was reading like a broken one: rows of dashes with no account of them.
+  // Named here so the banner below can say it once, at the top, instead of
+  // leaving the reader to infer it from a column of "—".
+  const withheldTotal = data.items.filter((h) => withheldOf(h) != null).length;
+  const mostlyWithheld = withheldTotal > 0 && withheldTotal >= data.items.length / 2;
+
   const healthFiltered = activeFilter
     ? data.items.filter((h) => matchesHealthFilter(h, activeFilter))
     : data.items;
@@ -568,6 +576,29 @@ function PortfolioPageBody() {
           {exportError && (
             <div style={{ color: "var(--color-danger)" }}>{exportError}</div>
           )}
+        </div>
+      )}
+
+      {/* CF-WITHHELD-SAYS-WHY (Drew, 2026-09-05), audit item 9. When most of
+          the list is withheld, the page reads as broken — a column of dashes
+          with no account of them. This says it once, in plain words, before
+          the reader has to infer it. Shown only when withheld rows are at
+          least half the portfolio; a couple of refusals speak for themselves
+          on their own rows. */}
+      {mostlyWithheld && (
+        <div
+          className="hiq-card p-4 mb-4 text-sm"
+          data-mostly-withheld="true"
+          style={{ borderColor: "color-mix(in oklab, var(--hiq-warning) 40%, transparent)" }}
+        >
+          <div className="font-medium mb-1">
+            {withheldTotal} of {data.items.length} cards are not priced right now
+          </div>
+          <p className="text-[color:var(--color-muted)] leading-snug">
+            Your cards are all here. We only publish a value when the sales
+            behind it hold up — open any card to see what it is waiting on.
+            The total above counts only the cards we could price.
+          </p>
         </div>
       )}
 
