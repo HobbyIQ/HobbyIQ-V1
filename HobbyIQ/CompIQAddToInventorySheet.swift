@@ -649,6 +649,16 @@ struct CompIQAddToInventorySheet: View {
             return viewModel.hit.year.map(String.init)
         }()
         let release: String? = {
+            // CF-CARD-TITLE-NEVER-DOUBLES-THE-YEAR (Drew, 2026-09-06,
+            // backend PR #1904): `setName` is the product with any leading
+            // year already stripped server-side, and the line below joins
+            // `year` in front of whatever this picks. `release` and the
+            // hit's brand may each still lead with the year, which is how
+            // the web card page came to read "2023 2023 Topps Heritage".
+            // Prefer the field that cannot double; the rest stay as the
+            // fallback for an engine older than PR #1904.
+            if let sn = viewModel.response.cardIdentity?.setName?
+                .trimmingCharacters(in: .whitespacesAndNewlines), sn.isEmpty == false { return sn }
             if let r = viewModel.response.cardIdentity?.release?
                 .trimmingCharacters(in: .whitespacesAndNewlines), r.isEmpty == false { return r }
             return viewModel.hit.brand?.trimmingCharacters(in: .whitespacesAndNewlines)

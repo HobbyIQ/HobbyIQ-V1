@@ -53,6 +53,17 @@ struct CardPanelIdentity: Decodable, Hashable {
     let year: Int?
     let imageUrl: String?
     let description: String?
+    /// CF-CARD-TITLE-NEVER-DOUBLES-THE-YEAR (Drew, 2026-09-06, backend
+    /// PR #1904): the product name with any leading year already removed
+    /// server-side. `set` above is the STORED name and may still lead with
+    /// the year ("2023 Topps Heritage"); this one never does.
+    let setName: String?
+    /// The card title, composed ONCE by the backend
+    /// ("2023 Topps Heritage Mike Trout #74PB-1"). Read this instead of
+    /// joining `year` and `set` yourself. Nil against an engine older than
+    /// PR #1904, so every reader keeps its existing composition as a
+    /// fallback.
+    let displayName: String?
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -72,10 +83,13 @@ struct CardPanelIdentity: Decodable, Hashable {
         }
         imageUrl = try? c.decodeIfPresent(String.self, forKey: .imageUrl)
         description = try? c.decodeIfPresent(String.self, forKey: .description)
+        setName = try? c.decodeIfPresent(String.self, forKey: .setName)
+        displayName = try? c.decodeIfPresent(String.self, forKey: .displayName)
     }
 
     private enum CodingKeys: String, CodingKey {
         case cardId, player, set, number, variant, year, imageUrl, description
+        case setName, displayName
     }
 }
 
