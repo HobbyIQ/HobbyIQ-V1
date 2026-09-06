@@ -139,7 +139,10 @@ describe("retire-self-derived-identities — the budget stops under the action c
     // The operator gate is the reconciliation plus a green job — NOT the
     // absence of a relaunch notice.
     expect(SCRIPT).toContain("BANNER SEQUENCE OF A MULTI-BUDGET APPLY");
-    expect(SCRIPT).toMatch(/GATE ON \(2\) AND \(3\) PLUS A GREEN JOB/);
+    // (5) joined the gate when the verify started reconciling its own
+    // arithmetic against the write ledger: a run whose VERIFY RECONCILE does
+    // not balance has not confirmed the writes it claims.
+    expect(SCRIPT).toMatch(/GATE ON \(2\), \(3\) AND \(5\) PLUS A GREEN JOB/);
   });
 
   it("RUN_MINUTES is spelled the way the sibling lanes spell it", () => {

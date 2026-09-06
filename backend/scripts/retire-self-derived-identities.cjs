@@ -134,22 +134,41 @@
  *   1.  APPLIED / elapsed ... / retired / identityUnverified      the counts
  *   2.  RECONCILE  seen N = ... => N BALANCES                     the arithmetic
  *   3.  [retire-self-derived-identities] reconciled: intended ... the shared check
- *   4.  VERIFY BY READ  <sport>: ...                              or UNCONFIRMED
- *   5.  stopped at the clock budget with products left            the MARKER
- *   6.  ::notice::budget hit (...) — re-dispatching slot n/m      the relaunch
- *   7.  the step ends GREEN, and the next slice starts from product 0
+ *   4.  VERIFY BY READ  <sport>: verified n of n written          the READ-BACK
+ *   5.  VERIFY RECONCILE  written n = verified ... => n BALANCES  its arithmetic
+ *   6.  stopped at the clock budget with products left            the MARKER
+ *   7.  ::notice::budget hit (...) — re-dispatching slot n/m      the relaunch
+ *   8.  the step ends GREEN, and the next slice starts from product 0
  *
- * GATE ON (2) AND (3) PLUS A GREEN JOB. Do NOT gate on the absence of (5) or
- * (6): a budget stop with a relaunch is the designed steady state of a
+ * (4) AND (5) READ THIS RUN'S OWN WRITE LEDGER — not a sport-wide COUNT.
+ * A slice that wrote nothing prints `written 0 — nothing to verify, the
+ * ledger is empty`, which is the normal, healthy state of a slice whose
+ * products an earlier run already marked, and is NOT a skipped verify.
+ *
+ * THE MARKER (6) COMES AFTER THE VERIFY, ON PURPOSE. It is a claim that this
+ * slice's work is durable and the next slice may build on it, so it is only
+ * ever printed on the path where the verify passed. A slice whose verify
+ * could not confirm prints, INSTEAD of (6) through (8):
+ *
+ *   VERIFY INCOMPLETE — <what was not confirmed>
+ *   finishLane: exiting code 6            (7 = a written id lost its marker)
+ *
+ * — no marker, non-zero exit, red step — so the relaunch step (#1913) takes
+ * its third branch, "KILLED before finish ... re-dispatch withheld —
+ * investigate", rather than re-dispatching a slot whose state nobody read.
+ *
+ * GATE ON (2), (3) AND (5) PLUS A GREEN JOB. Do NOT gate on the absence of
+ * (6) or (7): a budget stop with a relaunch is the designed steady state of a
  * multi-slice apply, and this lane is idempotent, so the next slice re-reads
  * the products the last one finished and skips them as `already marked`.
- * The FINAL slice of a slot prints, instead of (5) and (6):
+ * The FINAL slice of a slot prints, instead of (6) and (7):
  *
  *   ::notice::slot n/m finished within budget (...) — done, no re-dispatch.
  *
- * The one thing that IS a failure is (2) saying DOES NOT BALANCE, or the step
- * being killed by the runner -- which, before this fix, is exactly what
- * happened AFTER (3) printed clean (see the RUN_MINUTES block below).
+ * The one thing that IS a failure is (2) or (5) saying DOES NOT BALANCE, a
+ * VERIFY INCOMPLETE, or the step being killed by the runner -- which, before
+ * this fix, is exactly what happened AFTER (3) printed clean, in all TEN
+ * apply runs this lane ever had (see the RUN_MINUTES block below).
  *
  * Every write goes through patchCatalogRowFields, never a raw patch — a raw
  * patch is how #1614 left rows unfindable by rewriting derived search fields
@@ -528,6 +547,18 @@ async function main() {
   const t0 = Date.now();
   let scanned = 0, rowsRead = 0, retired = 0, unverified = 0, gradedChildren = 0, written = 0;
   let cardLevelSeen = 0, failed = 0, alreadyMarked = 0;
+  /** ── THE WRITE LEDGER ─────────────────────────────────────────────────
+   *
+   * CF-VERIFY-THE-WRITE-BY-READING-IT-BACK (2026-09-07). Every id this run
+   * actually patched, with the partition key needed to point-read it again.
+   * The post-loop verify reads THESE rows and nothing else, so its cost is
+   * the size of the ledger rather than the size of the sport — and a lane
+   * that wrote nothing verifies nothing, in no time at all.
+   *
+   * `{ id, pk, field }` because the two lanes write DIFFERENT markers and a
+   * verify that checked only one of them would report a retire as unwritten.
+   */
+  const ledger = [];
   const gaps = new Map();
   let stopReason = null;
 
@@ -599,6 +630,7 @@ async function main() {
             retiredMatchLevel: hasFull ? "identity" : "card",
           }, { retry });
           written++;
+          ledger.push({ id: String(r.id), pk: r.cardId, field: "retiredReason" });
           for (const kid of kids) {
             await patchCatalogRowFields(cat, String(kid.id), kid.cardId, {
               retiredReason: RETIRED,
@@ -608,6 +640,7 @@ async function main() {
               retiredWithParent: String(r.id),
             }, { retry });
             written++;
+            ledger.push({ id: String(kid.id), pk: kid.cardId, field: "retiredReason" });
           }
         } catch (e) { failed++; }
         continue;
@@ -627,6 +660,7 @@ async function main() {
           identityUnverifiedBy: "retire-self-derived-identities",
         }, { retry });
         written++;
+        ledger.push({ id: String(r.id), pk: r.cardId, field: UNVERIFIED });
       } catch (e) { failed++; }
     }
   }
@@ -656,12 +690,30 @@ async function main() {
     console.log(`   ${String(f(n)).padStart(8)}  ${g}`);
   }
 
-  if (stopReason === "clock") {
-    // The relaunch gates on THIS marker and nothing else (CF-RELAUNCH-ONLY-ON-
-    // BUDGET, #1361): relaunching on "did anything" loops forever once a slot
-    // is down to rows it cannot change.
+  /** ── THE BUDGET MARKER IS EMITTED AFTER THE VERIFY, NEVER BEFORE ─────
+   *
+   * CF-A-MARKER-IS-A-PROMISE-ABOUT-STATE-YOU-VERIFIED (2026-09-07).
+   *
+   * The relaunch gates on THIS marker and nothing else (CF-RELAUNCH-ONLY-ON-
+   * BUDGET, #1361): relaunching on "did anything" loops forever once a slot
+   * is down to rows it cannot change.
+   *
+   * It used to print HERE, before the APPLY tail. That ordering means a slice
+   * which stopped on budget and then FAILED ITS VERIFY still had the marker in
+   * its log, so the relaunch step would re-dispatch a slot whose last write it
+   * could not confirm. The marker is a claim that this slice's work is durable
+   * and the next one may build on it; a slice that cannot verify has no
+   * business making that claim. So it is deferred to `emitBudgetMarker()` and
+   * called only on the path where the verify passed — and the
+   * VERIFY INCOMPLETE path below returns before ever reaching it, which is
+   * exactly what makes the relaunch take its "KILLED — investigate" branch.
+   */
+  const emitBudgetMarker = () => {
+    if (stopReason !== "clock") return;
     console.log(`\n  stopped at the clock budget with products left — re-dispatch this slot to continue`);
-  }
+  };
+
+  if (!APPLY) emitBudgetMarker();
 
   if (APPLY) {
     // The first of the boundary narrations (see `narrate` above). The three
@@ -684,68 +736,149 @@ async function main() {
       failed,
     });
 
-    // VERIFY BY READ. A green run is not a data flow
-    // (feedback_green_workflow_is_not_data_flow) -- but a verify that never
-    // returns is not a verify either, it is a timeout with a comment on it.
+    // ── VERIFY BY READ: THE LEDGER, NEVER A COUNT ────────────────────
     //
-    // These two whole-sport `COUNT(1)` scans are the shape this file's own
-    // enumeration comment records as not returning on card_catalog: an
-    // unbounded cross-partition aggregate. In run 33960686247 they ran 887s
-    // and were still running when the step was killed at its 150-minute
-    // ceiling -- AFTER the reconciliation had printed and balanced. So the
-    // verify now runs under a hard cap and REPORTS ITS OWN FAILURE instead of
-    // holding the step open. An unconfirmed verify is a fact worth printing;
-    // a killed step prints nothing at all.
-    // THE CAP IS THE HELPER'S, NOT A COPY OF IT (2026-09-06). The private
-    // copy that used to live here unref'd its cap timer, which — with
-    // retry()'s sleeps also unref'd — left the process holding no ref'd handle
-    // of its own. An unref'd timer neither holds the loop open nor can be
-    // relied on to fire, so the cap never rejected, the race never settled,
-    // and slots 9-12 sat silent from their balanced reconcile to the
-    // 150-minute kill without ever printing a VERIFY line. The helper REF's
-    // the cap and releases it with clearTimeout in a `finally`, so the verify
-    // always either answers or reports that it could not.
+    // CF-VERIFY-THE-WRITE-BY-READING-IT-BACK (2026-09-07).
     //
-    // `vt0` is shared by both calls on purpose: the two counts split ONE cap
-    // between them, exactly as the private copy did.
+    // The verify used to be two whole-sport `SELECT VALUE COUNT(1)` scans,
+    // and EVERY ONE of the ten APPLY runs of this lane on record died in
+    // them. The diagnostic run 34059648410 (slot 13/16, baseball) finally
+    // caught the boundary, because #1906 had put a narration on each side:
+    //
+    //   21:02:38  RECONCILE  seen 52,815 = ... => 52,815 BALANCES
+    //   21:02:38  narrate: reportWrites returned — arming the verify, 600s cap
+    //   21:02:38  narrate: issuing COUNT(1) for retiredReason (sport=baseball)
+    //   23:30:45  ##[error] ... timed out after 150 minutes
+    //
+    // 148 minutes inside ONE COUNT, under a 600-SECOND cap that never fired.
+    // Two independent defects, and the fix has to answer both.
+    //
+    // (1) THE QUERY. A cross-partition aggregate over card_catalog at 19.63M
+    //     rows does not return. This file's own enumeration comment recorded
+    //     that for GROUP BY on 2026-09-04, and the Pokémon census found the
+    //     identical thing on sold_comps: COUNT never answers, while a PAGED
+    //     ID-ONLY PROJECTION over the same predicate answers in ~1.5s. We
+    //     kept writing the COUNT anyway because it read like a cheap sanity
+    //     check. It is the most expensive query the lane issues.
+    //
+    // (2) THE CAP COULD NOT FIRE. The helper's cap timer is REF'd and armed
+    //     before run() (#1859, #1904), and it fires correctly against a
+    //     never-settling promise — measured. What it CANNOT survive is
+    //     MICROTASK STARVATION: `setTimeout` is a macrotask, and a callee
+    //     that loops on already-resolved promises without ever yielding to
+    //     the macrotask queue starves every timer in the process. The SDK's
+    //     cross-partition pipeline drains continuations exactly that way, so
+    //     the cap timer was scheduled and never ran. No `setTimeout`-based
+    //     cap in node can pre-empt that; the helper's own header says as much
+    //     ("No timer in node can pre-empt synchronous work") and this is the
+    //     asynchronous twin of it. laneExitsWhenWorkIsDone drives the
+    //     starvation directly and asserts this lane still ends.
+    //
+    // THE FIX IS NOT A BIGGER CAP, IT IS A QUERY THAT ANSWERS. A run holds
+    // its own write ledger, so the honest verify is the one the doctrine
+    // always asked for: read back the rows THIS RUN WROTE. The cost is the
+    // ledger's size, not the sport's; a slice that wrote 4 rows verifies 4
+    // rows; a slice that wrote nothing does no work at all and says so.
+    //
+    // Point-reads, batched. `container.item(id, pk).read()` is a
+    // single-partition lookup at ~1 RU — the same call
+    // patchCatalogRowFields already makes per row, so the verify costs about
+    // what the write did. There is no cross-partition fan-out anywhere in
+    // this path, which is what puts it out of reach of (2).
+    //
+    // WHAT IT ASSERTS is stronger than the COUNT ever was: not "the sport now
+    // has N marked rows" — a number no slice can attribute to itself, and
+    // which the fan-out's other fifteen slots move underneath it — but "the
+    // marker I wrote on row X is on row X now". That is a per-row claim this
+    // run can actually make (feedback_canary_false_alarm_dedup_cron_window:
+    // name the rows, never the aggregate).
     const vt0 = Date.now();
-    narrate(`reportWrites returned — arming the verify, ${Math.round(VERIFY_MS / 1000)}s cap shared by 2 counts`);
-    const capped = (label, spec) =>
-      LANE_BUDGET.capped(vt0, label, async (signal) => {
-        // Printed INSIDE the capped callback, so it marks the moment the SDK
-        // call is actually issued rather than the moment the cap was armed.
-        // A run that narrates "issuing" and then goes quiet is wedged in the
-        // SDK; one that never narrates it is wedged before the call.
-        narrate(`issuing COUNT(1) for ${label} (sport=${SPORT})`);
-        // The signal reaches BOTH the SDK and retry(), so the loser of the
-        // race actually stops instead of merely being abandoned (#1809).
-        const { resources } = await retry(
-          () => cat.items.query(spec, { maxItemCount: -1, abortSignal: signal }).fetchAll(),
-          2,
-          signal,
-        );
-        narrate(`COUNT(1) for ${label} answered in ${Math.round((Date.now() - vt0) / 1000)}s`);
-        return Number(resources[0] || 0);
-      });
 
-    const v = await capped("retiredReason", {
-      query: `SELECT VALUE COUNT(1) FROM c WHERE c.sport=@s AND c.retiredReason=@r`,
-      parameters: [{ name: "@s", value: SPORT }, { name: "@r", value: RETIRED }],
-    });
-    const u = await capped(UNVERIFIED, {
-      query: `SELECT VALUE COUNT(1) FROM c WHERE c.sport=@s AND c.${UNVERIFIED}=true`,
-      parameters: [{ name: "@s", value: SPORT }],
-    });
-    const shown = (n) => (n === null ? "UNCONFIRMED (verify cap)" : `${f(n)} rows`);
-    console.log(`\n  VERIFY BY READ  ${SPORT}: retiredReason='${RETIRED}' now ${shown(v)};`
-      + ` ${UNVERIFIED}=true now ${shown(u)}`
-      + `   [${Math.round((Date.now() - vt0) / 1000)}s of a ${Math.round(VERIFY_MS / 60000)}m cap]`);
-    if (v === null || u === null) {
-      // NOT a failure of the run: every write already reconciled above. The
-      // operator is told the count is unread so nobody reads its absence as a
-      // zero (feedback_never_dismiss_small_numbers_as_noise).
-      console.log(`  the verify count is UNREAD, not zero — the writes above reconciled and are durable.`);
+    if (ledger.length === 0) {
+      // A no-op that SAYS SO. `written 0` is the normal state of a slice
+      // whose products an earlier run already marked — nine of the ten
+      // killed runs were exactly this — and it must not read as a verify
+      // that was skipped.
+      console.log(`\n  VERIFY BY READ  ${SPORT}: written 0 — nothing to verify, the ledger is empty.`);
+    } else {
+      narrate(`arming the ledger verify — ${f(ledger.length)} ids, ${Math.round(VERIFY_MS / 1000)}s cap`);
+
+      // Chunked so ONE cap covers the whole read-back and a long ledger
+      // cannot quietly become an unbounded phase.
+      const CHUNK = 200;
+      let verified = 0, mismatched = 0, unread = 0, capHit = false;
+
+      for (let i = 0; i < ledger.length && !capHit; i += CHUNK) {
+        const batch = ledger.slice(i, i + CHUNK);
+        const got = await LANE_BUDGET.capped(vt0, `ledger ${i + 1}-${i + batch.length}`, async (signal) => {
+          let ok = 0, bad = 0;
+          for (const e of batch) {
+            if (signal && signal.aborted) throw new Error("verify-cap");
+            // A point-read: single partition, ~1 RU, no fan-out. `retry` gets
+            // the signal so an aborted batch stops instead of sleeping its
+            // way past the ceiling (#1809).
+            const { resource } = await retry(() => cat.item(e.id, e.pk).read(), 2, signal);
+            const got1 = resource && resource[e.field];
+            // The marker is on the row, in the shape this lane writes it.
+            if (e.field === UNVERIFIED ? got1 === true : String(got1 || "") === RETIRED) ok++;
+            else bad++;
+          }
+          return { ok, bad };
+        });
+        if (got === null) { capHit = true; unread = ledger.length - verified - mismatched; break; }
+        verified += got.ok;
+        mismatched += got.bad;
+      }
+
+      console.log(`\n  VERIFY BY READ  ${SPORT}: verified ${f(verified)} of ${f(ledger.length)} written`
+        + (mismatched ? `   *** ${f(mismatched)} MISSING THE MARKER ***` : "")
+        + (unread ? `   ${f(unread)} UNCONFIRMED (verify cap)` : "")
+        + `   [${Math.round((Date.now() - vt0) / 1000)}s of a ${Math.round(VERIFY_MS / 60000)}m cap]`);
+
+      // RECONCILE THE VERIFY ITSELF, the way the loop reconciles its own
+      // arithmetic: every written id took exactly one path.
+      const accounted = verified + mismatched + unread;
+      console.log(`  VERIFY RECONCILE  written ${f(ledger.length)} = verified ${f(verified)}`
+        + ` + mismatched ${f(mismatched)} + unconfirmed ${f(unread)}`
+        + `  => ${f(accounted)} ${accounted === ledger.length ? "BALANCES" : "*** DOES NOT BALANCE ***"}`);
+
+      if (unread) {
+        console.log(`  the verify count is UNREAD, not zero — the writes above reconciled and are durable.`);
+      }
+
+      // ── THE CAP MUST END THE LANE ─────────────────────────────
+      //
+      // CF-A-CAP-THAT-DOES-NOT-END-THE-LANE-IS-A-COMMENT (2026-09-07).
+      //
+      // Before this, an expired cap returned null, the lane printed
+      // UNCONFIRMED and carried on to `finishLane(0)` — a GREEN run whose
+      // verify never happened. Worse, the #1913 relaunch gate reads a green
+      // run with no budget marker as "finished within budget", so a slot that
+      // could not verify was reported DONE and the fan-out moved past it.
+      //
+      // So an incomplete verify now ENDS THE LANE, deliberately:
+      //   - it prints VERIFY INCOMPLETE, naming what was not confirmed;
+      //   - it exits NON-ZERO, so the step is red and visible;
+      //   - it prints NO budget marker, so the relaunch step takes branch
+      //     (c) — "KILLED before finish ... re-dispatch withheld —
+      //     investigate" — rather than re-dispatching a slot whose state it
+      //     could not read.
+      // The ledger and BOTH reconciliations are printed ABOVE this point, so
+      // the operator gets the full accounting first and the verdict second.
+      if (capHit || mismatched) {
+        const what = capHit
+          ? `${f(unread)} of ${f(ledger.length)} written ids unread at the ${Math.round(VERIFY_MS / 60000)}m cap`
+          : `${f(mismatched)} of ${f(ledger.length)} written ids do not carry the marker`;
+        console.log(`\n  VERIFY INCOMPLETE — ${what}`);
+        narrate("verify incomplete — ending the lane non-zero, with NO budget marker");
+        await finishLane(capHit ? 6 : 7, { client, budget: LANE_BUDGET });
+        return; // finishLane exits; this return is for readers and the pin.
+      }
     }
+
+    // The verify passed (or there was nothing to verify). Only now may this
+    // slice tell the runner it stopped on budget and should be continued.
+    emitBudgetMarker();
   }
 
   // The last thing main() does. A run that narrates this and then dies without
