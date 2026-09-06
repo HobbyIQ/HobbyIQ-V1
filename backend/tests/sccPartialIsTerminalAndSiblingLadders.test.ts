@@ -90,8 +90,17 @@ describe("`partial` is a verdict, not a queue position", () => {
   it("the queue filter honours SCOPE=recheck for every terminal status", () => {
     // Terminal-but-recheckable is the whole point: nothing is closed, the
     // control doc still names the gap, and `remaining in lane` still counts it.
+    //
+    // The `continue` gained a second guard in 2026-09-06's converter-version
+    // work (CF-A-CONVERTER-BUMP-RE-OPENS-ITS-OWN-VERDICTS): a terminal verdict
+    // recorded by an OLDER converter re-enters the queue on its own. That
+    // narrows nothing here -- RECHECK still short-circuits the whole test, and
+    // a current-version terminal verdict is still skipped -- so this asserts
+    // the two conditions rather than one literal line, and the converter guard
+    // has its own pin in sccConverterVersionCoversTheWholePipe.test.ts.
     const src = fs.readFileSync(DRIVER, "utf8");
-    expect(src).toContain("if (prior && !RECHECK && TERMINAL.has(prior.status)) continue;");
+    expect(src).toContain("if (prior && !RECHECK && TERMINAL.has(prior.status)) {");
+    expect(src).toContain("if (!staleByConverter(prior)) continue;");
   });
 
   it("the recheck door is the SAME door `empty` already used", () => {

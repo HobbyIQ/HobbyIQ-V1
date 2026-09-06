@@ -335,7 +335,7 @@ describe("the pins fail against the code that shipped the wrong verdict", () => 
   it("empty LANE_CONVERTER_VERSION -> a hollow staged file wins forever", () => {
     withMutant(
       DRIVER,
-      "const LANE_CONVERTER_VERSION = { sportscardchecklist: 2 };",
+      `const LANE_CONVERTER_VERSION = { sportscardchecklist: ${LANE_CONVERTER_VERSION.sportscardchecklist} };`,
       "const LANE_CONVERTER_VERSION = {};",
       "converterver",
       (m) => {
