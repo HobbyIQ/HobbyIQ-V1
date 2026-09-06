@@ -696,7 +696,6 @@ describe("an already-ingested cell skips the ingest apply and still proceeds", (
 describe("holdings that do not re-point are classified by what unlocks them", () => {
   const WF = read(".github", "workflows", "acquire-for-withheld-holdings.yml");
   const step = WF.split(/^      - name: "?/m).find((s) => /^Classify the holdings/.test(s)) ?? "";
-
   it("the classify step exists and is report-only", () => {
     expect(step.length).toBeGreaterThan(200);
     // It must not produce a `proceed` that anything gates on: naming why one
@@ -718,23 +717,6 @@ describe("holdings that do not re-point are classified by what unlocks them", ()
       .toMatch(/#1811/);
   });
 
-  it("a blank-field no-match is counted apart from a populated one", () => {
-    // They need different work: one is field recovery (#1811), the other is
-    // matcher work. Collapsing them sends both to the wrong lane.
-    //
-    // THE PIN READS THE ARITHMETIC, NOT THE NAMES. Asserting that NM_BLANK and
-    // NM_FIELDS merely appear is satisfied by `NM_BLANK=0; NM_FIELDS=0` — the
-    // counters still exist and always report zero, so every no-match silently
-    // vanishes from the table. What makes the split real is that one is
-    // MEASURED from the log and the other is the REMAINDER.
-    expect(step, "NM_BLANK must be measured from the log, not assigned a constant")
-      .toMatch(/NM_BLANK=\$\(grep[^\n]*NO MATCH/);
-    expect(step, "NM_FIELDS must be the remainder, so the two always sum to the total")
-      .toMatch(/NM_FIELDS=\$\(\(\s*NM_ALL\s*-\s*NM_BLANK\s*\)\)/);
-    expect(step, "the total must itself be measured").toMatch(/NM_ALL=\$\(count "NO MATCH"\)/);
-    // ...and a negative remainder is clamped rather than printed.
-    expect(step).toMatch(/NM_FIELDS.*-lt 0.*NM_FIELDS=0/);
-  });
 
   it("the reasons reach the ledger and the outcome table", () => {
     expect(WF).toMatch(/"stuckReasons": "\$\{\{ steps\.classify\.outputs\.reasons \}\}"/);
@@ -746,5 +728,120 @@ describe("holdings that do not re-point are classified by what unlocks them", ()
     expect(WF).toMatch(/\.gate1\.mode/);
     expect(WF).toMatch(/\.gate1\.inCatalog/);
     expect(WF, "gate1.rows no longer exists").not.toMatch(/\.gate1\.rows/);
+  });
+});
+
+// ── 14. THE CLASSIFY STEP'S SHELL, PINNED ON THE REAL LOG SHAPES ──────────
+//
+// Run 33998562094: all ten cells FAILED at classify with
+//
+//   line 9: 0
+//   0: syntax error in expression (error token is "0")
+//   line 22: NM_FIELDS: unbound variable
+//
+// `grep -c` prints 0 AND EXITS 1 when nothing matches, so `$(grep -c ... ||
+// echo 0)` ran the fallback TOO and produced the two-line string "0\n0";
+// `$(( ))` then choked on it. The `|| echo 0` written to guarantee a number
+// was the thing that destroyed it.
+//
+// The cost was not a cosmetic one: classify failed AFTER gate 3 said yes, and
+// the rederive APPLY and the reprice were SKIPPED — ten cells' work lost to a
+// step that only describes outcomes.
+describe("the classify step counts with integers and cannot fail its cell", () => {
+  const WF = read(".github", "workflows", "acquire-for-withheld-holdings.yml");
+  const step = WF.split(/^      - name: "?/m).find((s) => /^Classify the holdings/.test(s)) ?? "";
+  // The step's comments deliberately QUOTE the broken idiom in order to
+  // explain it, so a shell-shape assertion must read CODE lines only —
+  // otherwise the pin fails on its own documentation.
+  const code = step.split("\n").filter((l) => !/^\s*#/.test(l)).join("\n");
+
+  it("no counter uses the `|| echo 0` idiom that produced \"0\n0\"", () => {
+    expect(step.length).toBeGreaterThan(200);
+    expect(code, 'grep -c prints 0 AND exits 1, so `|| echo 0` appends a SECOND zero')
+      .not.toMatch(/grep -ac?[EF]?[^\n]*\|\|\s*echo 0/);
+  });
+
+  it("every count goes through one helper that yields digits or nothing", () => {
+    // tr -cd '0-9' after head -1 makes a non-integer impossible by
+    // construction, which is stronger than defending each call site.
+    expect(step).toMatch(/num\(\)\s*\{/);
+    expect(step).toMatch(/head -1[^\n]*tr -cd '0-9'/);
+    expect(step).toMatch(/\[ -n "\$n" \] \|\| n=0/);
+  });
+
+  it("a classify fault can never fail the cell", () => {
+    // The step describes an outcome; it must not be able to prevent one.
+    expect(step).toMatch(/continue-on-error: true/);
+    // `set -u` killed it on NM_FIELDS; `set -e` would kill it on any miscount.
+    expect(step).toMatch(/set \+eu/);
+    expect(step, "an -e/-u shell here loses the apply it was only describing")
+      .not.toMatch(/set -euo|set -eu\b|set -uo pipefail/);
+  });
+
+  it("the blank/populated no-match split is real arithmetic, not two names", () => {
+    // NM_BLANK=0; NM_FIELDS=0 would keep the names and silently drop every
+    // no-match. One must be MEASURED, the other the REMAINDER.
+    expect(step).toMatch(/NM_BLANK=\$\(grep[\s\S]{0,200}?NO MATCH/);
+    expect(step).toMatch(/NM_FIELDS=\$\(\(\s*NM_ALL\s*-\s*NM_BLANK\s*\)\)/);
+    expect(step).toMatch(/NM_FIELDS[^\n]*-lt 0[^\n]*NM_FIELDS=0/);
+  });
+
+  it("AGREE is counted — the verdict ten of ten cells actually returned", () => {
+    // Run 33998562094's reports were almost entirely AGREE, and the table said
+    // nothing about it. "already on the right identity" is a finding.
+    expect(step).toMatch(/AGREE=\$\(num/);
+    expect(step).toMatch(/REDERIVE=\$\(num/);
+    expect(step).toMatch(/already on the right identity/);
+  });
+});
+
+// ── 15. GATE 3 READS A VERDICT, NEVER A BANNER ────────────────────────────
+//
+// Run 33998562094 reported gate 3 = yes on all ten cells. Nine of them had
+// only AGREE verdicts and one had a single NO-MATCH; not one proposed a
+// re-point. The gate's `grep -i "...|REDERIVE"` was matching the lane's OWN
+// banner — "MODE: rederive", "[mode] rederive — report only", and the script
+// name in "Script confirmed: .../rederive-holding-identity.cjs". It was
+// reading the dispatch, not the outcome.
+describe("gate 3 gates on the rederive VERDICTS", () => {
+  const WF = read(".github", "workflows", "acquire-for-withheld-holdings.yml");
+  const gate = WF.split(/^      - name: "?/m).find((s) => /^Gate: the rederive report proposes/.test(s)) ?? "";
+  const gateCode = gate.split("\n").filter((l) => !/^\s*#/.test(l)).join("\n");
+
+  it("the verdict match is anchored and case-sensitive", () => {
+    expect(gate.length).toBeGreaterThan(200);
+    expect(gate).toMatch(/\^\[\[:space:\]\]\*REDERIVE /);
+    expect(gateCode, "a case-insensitive REDERIVE matches `MODE: rederive`")
+      .not.toMatch(/grep -aqiE[^\n]*REDERIVE/);
+  });
+
+  it("the three real log shapes decide correctly", () => {
+    // Reproduced from run 33998562094's own reports.
+    const banner = '[mode]   rederive — report only\nScript confirmed: backend/scripts/rederive-holding-identity.cjs\n';
+    const verdictRe = /^[ \t]*REDERIVE |"REDERIVE":[ \t]*[1-9]/m;
+    const agreeRe = /^[ \t]*AGREE /m;
+
+    const agreeLog = `${banner}  AGREE      Derek Jeter  1997 #BBP4  hiq:x\nSUMMARY  {"AGREE":2}\n`;
+    const rederiveLog = `${banner}  REDERIVE   Conor Essenburg  2025 #CPA-CE\nSUMMARY  {"REDERIVE":1}\n`;
+    const noMatchLog = `${banner}  NO MATCH   Somebody  2025 #X  from=null\nSUMMARY  {"NO-MATCH":1}\n`;
+
+    // Only the real re-point proceeds.
+    expect(verdictRe.test(rederiveLog)).toBe(true);
+    expect(verdictRe.test(agreeLog), "an AGREE-only report must not proceed").toBe(false);
+    expect(verdictRe.test(noMatchLog), "a NO-MATCH report must not proceed").toBe(false);
+    // And the banner alone never satisfies it — the actual defect.
+    expect(verdictRe.test(banner), "the lane's own banner is not a verdict").toBe(false);
+    expect(agreeRe.test(agreeLog)).toBe(true);
+  });
+
+  it("an all-AGREE cell is reported as such, not as a failure", () => {
+    // "already carries the right identity" is a legitimate outcome and the
+    // operator needs to see it named, not read `no` and guess.
+    expect(gate).toMatch(/AGREE/);
+    expect(gate).toMatch(/nothing to re-point/);
+  });
+
+  it("UNVERIFIED still refuses, ahead of everything", () => {
+    expect(gate).toMatch(/UNVERIFIED/);
   });
 });

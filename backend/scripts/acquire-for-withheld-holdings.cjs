@@ -57,7 +57,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const backend = path.join(__dirname, "..");
 const { CosmosClient } = require(path.join(backend, "node_modules/@azure/cosmos"));
-const { budget } = require(path.join(__dirname, "lib/runner-budget.cjs"));
+const { budget, finishLane } = require(path.join(__dirname, "lib/runner-budget.cjs"));
 const {
   ACTIONABLE_REASONS,
   groupIntoCells,
@@ -167,12 +167,18 @@ async function main() {
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) { console.error("FATAL: COSMOS_CONNECTION_STRING not set"); process.exit(1); }
 
-  const db = new CosmosClient({
+  // Held in a named binding so `finishLane` can dispose it: the SDK's
+  // keep-alive sockets are what kept lanes alive past a clean reconciliation
+  // until the step hit the ceiling (#1809).
+  const client = new CosmosClient({
     connectionString: conn,
     connectionPolicy: {
       retryOptions: { maxRetryAttemptsOnThrottledRequests: 60, maxWaitTimeInSeconds: 300 },
     },
-  }).database(process.env.COSMOS_DATABASE || "hobbyiq");
+  });
+  // The CLIENT is what owns the sockets; `.database()` returns a handle that
+  // cannot be disposed, so the two are kept apart deliberately.
+  const db = client.database(process.env.COSMOS_DATABASE || "hobbyiq");
   const port = db.container("portfolio");
   const cat = db.container("card_catalog");
   const pool = db.container("sold_comps");
@@ -474,6 +480,20 @@ async function main() {
     + `needs-source=${f(plan.counts.needsSource)} unreadable=${f(plan.counts.unreadable)} `
     + `tonight=${f(actionable.length)}`);
   note("  (read-only: nothing was written, nothing was dispatched, nothing was repriced)");
+  // The budget marker, printed literally when the clock ran out mid-scan, so
+  // the runner's relaunch gate reads the same phrase here as on every other
+  // lane (CF-RELAUNCH-ONLY-ON-BUDGET).
+  if (B.outOfClock()) note(`  ${B.stoppedAtBudget()}`);
+  return client;
 }
 
-main().catch((e) => { console.error("FATAL", e && e.message); process.exit(1); });
+// CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809). The success path EXITS; it
+// does not fall off the end of main() and trust the event loop to drain. The
+// Cosmos SDK's keep-alive sockets kept four lanes alive to the step ceiling
+// AFTER they had reconciled clean, turning finished work into a red run.
+main()
+  .then((client) => finishLane(0, { client, budget: B }))
+  .catch(async (e) => {
+    console.error("FATAL", e && e.message);
+    await finishLane(1, { budget: B });
+  });
