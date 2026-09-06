@@ -48,6 +48,19 @@ export interface NormalizableHoldingFields {
   parallel?: string | null;
   cardNumber?: string | null;
   isAuto?: boolean | null;
+  /** CF-A-PARALLEL-FIELD-HOLDS-ONLY-THE-PARALLEL (Drew, 2026-09-05). The
+   *  destination axes R10 moves a mis-filed token ONTO. Each is optional and
+   *  each is only ever written when it is blank, or already equal to what the
+   *  parallel states — a stated value is never contradicted, and a stated
+   *  `false` is never flipped. Passed through untouched otherwise, so every
+   *  existing caller that omits them keeps its exact current behaviour. */
+  printRun?: number | null;
+  /** Numeric grade, e.g. 10 / 9.5. */
+  grade?: number | string | null;
+  /** Grader token, e.g. "PSA" / "BGS". Grade doctrine: the grade is read from
+   *  the GRADER TOKEN only (feedback_grade_from_grader_token_only) — an
+   *  adjective or a card number never mints one. */
+  gradeCompany?: string | null;
   /** CF-SETNAME-FROM-PRODUCT (Drew, 2026-07-23). Older manually-entered
    *  holdings stored the setName under `product` and left `setName`
    *  undefined. When both fields are provided, R6 uses `product` as a
@@ -62,7 +75,7 @@ export interface NormalizeOptions {
 
 export interface NormalizeChange {
   rule: string;
-  field: "playerName" | "setName" | "parallel" | "cardNumber" | "product";
+  field: "playerName" | "setName" | "parallel" | "cardNumber" | "product" | "printRun" | "isAuto" | "grade" | "gradeCompany";
   before: string | null;
   after: string | null;
 }
@@ -160,6 +173,189 @@ interface Rule {
 }
 
 const RULES: Rule[] = [
+  // ── R10 parallel: A PARALLEL FIELD HOLDS ONLY THE PARALLEL ─────────
+  // CF-A-PARALLEL-FIELD-HOLDS-ONLY-THE-PARALLEL (Drew, 2026-09-05).
+  //
+  // OBSERVED (PR #1845, holdings 4a82faed + 25bc5079, one user):
+  //   parallel: "Refractor Auto / 499"
+  // — an eBay `Parallel/Variety` aspect the SELLER typed as a listing-title
+  // fragment. Three facts are jammed into one field: the parallel word
+  // ("Refractor"), the auto flag ("Auto") and the print run ("/ 499"). The
+  // slug built from it reads
+  //
+  //   ...:cpa-dt:refractor-auto-499:auto:num-499
+  //           ^^^^^^^^^^^^^^^^^^^^^ a parallel that no checklist names
+  //
+  // while the checklist twin is `...:cpa-dt:refractor:auto:num-499`. The
+  // holding therefore prices off a pool of one — its own purchase — and
+  // `recheck-holding-identity MODE=rederive` GATE 2 correctly REFUSES the
+  // re-point, because a stored parallel the destination does not carry is,
+  // as far as that gate can tell, a different card.
+  //
+  // THE SPLIT IS LOSSLESS, AND THAT IS THE WHOLE PERMISSION SLIP.
+  // A user-set field is never overwritten by an automatic pass. What this
+  // rule does is NOT an overwrite — it is a NORMALIZATION that moves each
+  // token to the axis that already exists for it and keeps every fact:
+  //
+  //   "Refractor Auto / 499"  →  parallel "Refractor"
+  //                              + isAuto true      (its own field)
+  //                              + printRun 499     (its own field)
+  //
+  // Nothing is discarded, so the holding still states everything it stated.
+  //
+  // AND THE SPLIT ONLY WRITES A BLANK OR AN AGREEMENT. Every destination is
+  // guarded: a print run is written only when `printRun` is blank; the auto
+  // flag only when `isAuto` is blank — a stated `false` is NEVER flipped,
+  // because a seller who typed "Auto" into the variety box does not outrank a
+  // holding that says this copy is unsigned; a grade only when both grade
+  // axes are blank, and only from a GRADER TOKEN carrying its number
+  // (feedback_grade_from_grader_token_only — #1704 minted PSA N out of
+  // adjectives and card numbers, and 38k stored rows paid for it).
+  //
+  // ON DISAGREEMENT THE STATED FIELD STANDS AND THE TOKEN STILL LEAVES THE
+  // PARALLEL. It was never parallel information in the first place, so
+  // keeping it would leave the slug just as wrong as before; and the fact it
+  // carried is not lost, because the holding already states that axis.
+  //
+  // RUNS FIRST, BEFORE R7/R3/R9. Those rules tokenize on whitespace and match
+  // on the whole string; a trailing "/ 499" defeats R8's `Ref$` anchor and
+  // R9's variation-vocabulary lookup alike. Cleaning the field down to its
+  // parallel words first is what lets the existing rules see the shape they
+  // were written for.
+  {
+    name: "parallel_split_off_foreign_axes",
+    apply(fields, changes) {
+      const raw = fields.parallel;
+      if (!raw || typeof raw !== "string") return fields;
+      let work = ` ${raw} `;
+
+      // ── print run ── "/ 499", "#/499", "1 of 1", "numbered to 25".
+      // A BARE SERIAL IS NOT A PRINT RUN: "180/499" states WHICH copy this
+      // is, and only the denominator is the run. Both spellings leave the
+      // parallel; only the denominator is offered to `printRun`.
+      let runFromParallel: number | null = null;
+      const serialRe = /\s(\d{1,5})\s*\/\s*(\d{1,5})(?=\s)/;          // "180/499"
+      const runRe = /\s#?\s*\/\s*(\d{1,5})(?=\s)/;                     // "/ 499", "#/499"
+      const numberedToRe = /\s(?:numbered|serial(?:\s*#)?)\s*(?:to\s*)?\/?\s*(\d{1,5})(?=\s)/i;
+      const oneOfOneRe = /\s1\s*of\s*1(?=\s)/i;                        // "1 of 1"
+      let m: RegExpExecArray | null;
+      if ((m = serialRe.exec(work))) {
+        runFromParallel = Number(m[2]);
+        work = work.replace(serialRe, " ");
+      } else if ((m = runRe.exec(work))) {
+        runFromParallel = Number(m[1]);
+        work = work.replace(runRe, " ");
+      } else if ((m = numberedToRe.exec(work))) {
+        runFromParallel = Number(m[1]);
+        work = work.replace(numberedToRe, " ");
+      } else if (oneOfOneRe.test(work)) {
+        runFromParallel = 1;
+        work = work.replace(oneOfOneRe, " ");
+      }
+
+      // ── auto ── the signature words. "Autograph"/"Autographs" is ALSO the
+      // Bowman subset name, and that subset is already carried by the CPA-/
+      // BSPA- card number and by `isAuto`, so removing it here loses nothing
+      // either way (feedback_isauto_boundary_is_cardnumber_not_text).
+      const autoRe = /\s(?:auto|autos|autographed|autographs?|signed|signature)(?=\s)/i;
+      const autoFromParallel = autoRe.test(work);
+      if (autoFromParallel) work = work.replace(new RegExp(autoRe.source, "gi"), " ");
+
+      // ── grade ── GRADER TOKEN ONLY, and the token must carry its number.
+      // A bare "Gem Mint" mints nothing; a bare "Black Label" mints nothing.
+      const gradeRe = /\s(psa|bgs|sgc|cgc|hga|csg|beckett)\s*\.?\s*(10|9\.5|9|8\.5|8|7\.5|7|6\.5|6|5\.5|5|4\.5|4|3\.5|3|2\.5|2|1\.5|1)(?=\s)/i;
+      const gm = gradeRe.exec(work);
+      const companyFromParallel = gm ? gm[1].toUpperCase() : null;
+      const gradeFromParallel = gm ? Number(gm[2]) : null;
+      if (gm) work = work.replace(gradeRe, " ");
+
+      // ── card number ── NOT STRIPPED, AND THE CORPUS IS WHY.
+      //
+      // The first cut of this rule removed any `#`-prefixed token, on the
+      // reasoning that `cardNumber` is a required axis so a card number in the
+      // parallel field fills nothing and is therefore noise. The sold_comps
+      // census (2026-09-05, 16.7M rows carrying a parallel) refuted it: 85
+      // rows spell a REAL parallel with a `#`, and the strip mangled nine of
+      // the thirteen sampled shapes —
+      //
+      //   "#1 Prospect"            -> null            (a Bowman parallel, erased)
+      //   "#1 Prospect - Yellow Back" -> "- Yellow Back"
+      //   "Checklist #106-211"     -> "Checklist"     (which checklist? gone)
+      //   "K. Mcreynolds #105"     -> "K. Mcreynolds"
+      //   "Jersey #27 in Photo"    -> "Jersey in Photo"
+      //
+      // A `#` is not a card-number marker in this field; it is a hash, and
+      // collectors use it for prospect ranks, checklist ranges and jersey
+      // numbers. There is no shape here that a split would MOVE anywhere —
+      // unlike a print run or an auto flag, a card number has no blank axis
+      // waiting for it — so the rule leaves `#` alone entirely. Absent beats
+      // wrong, and a strip that fills nothing has nothing to weigh against
+      // the pools it fuses.
+
+      // TIDY THE SEAM, NOT THE VALUE. Only the separators a removal can leave
+      // dangling are trimmed, and `#` is NOT among them: "#1 Prospect" is a
+      // real parallel whose leading hash is part of its name (see the census
+      // note above), so trimming it here would undo the decision not to strip
+      // hashes at all.
+      const cleanedParallel = work
+        .replace(/[\s\-–—/]+$/, "")
+        .replace(/^[\s\-–—/]+/, "")
+        .replace(/\s+/g, " ")
+        .trim();
+      if (cleanedParallel === raw.trim()) return fields;   // nothing foreign found
+
+      const next: NormalizableHoldingFields = { ...fields };
+
+      // WHAT IS LEFT MUST STILL BE A PARALLEL. If the split ate the whole
+      // field the parallel becomes null — blank means unknown, never "Base"
+      // (feedback_every_ingest_uses_the_one_checklist_format) — because a
+      // field reading only "Auto / 499" never named a finish at all.
+      next.parallel = cleanedParallel.length > 0 ? cleanedParallel : null;
+      changes.push({ rule: "parallel_split_off_foreign_axes", field: "parallel", before: raw, after: next.parallel });
+
+      // ── the destinations, each blank-or-leave ──
+      if (runFromParallel !== null && runFromParallel > 0) {
+        const stated = typeof fields.printRun === "number" ? fields.printRun : null;
+        if (stated === null) {
+          next.printRun = runFromParallel;
+          changes.push({ rule: "parallel_split_off_foreign_axes", field: "printRun", before: null, after: String(runFromParallel) });
+        }
+        // stated !== null: the holding already says a run. It wins, whether it
+        // agrees or not — an automatic pass does not correct a stated number.
+      }
+
+      if (autoFromParallel) {
+        const stated = typeof fields.isAuto === "boolean" ? fields.isAuto : null;
+        if (stated === null) {
+          next.isAuto = true;
+          changes.push({ rule: "parallel_split_off_foreign_axes", field: "isAuto", before: null, after: "true" });
+        }
+        // A STATED `false` IS NEVER FLIPPED. That asymmetry is the rule's
+        // point: the auto flag's boundary is the card number, not text a
+        // seller typed into a variety box.
+      }
+
+      if (companyFromParallel && gradeFromParallel !== null) {
+        const statedGrade =
+          fields.grade === null || fields.grade === undefined || String(fields.grade).trim() === ""
+            ? null
+            : Number(fields.grade);
+        const statedCompany =
+          fields.gradeCompany == null || String(fields.gradeCompany).trim() === ""
+            ? null
+            : String(fields.gradeCompany).trim().toUpperCase();
+        if (statedGrade === null && statedCompany === null) {
+          next.grade = gradeFromParallel;
+          next.gradeCompany = companyFromParallel;
+          changes.push({ rule: "parallel_split_off_foreign_axes", field: "grade", before: null, after: String(gradeFromParallel) });
+          changes.push({ rule: "parallel_split_off_foreign_axes", field: "gradeCompany", before: null, after: companyFromParallel });
+        }
+      }
+
+      return next;
+    },
+  },
+
   // ── R1 setName: strip year prefix ──────────────────────────────────
   // OBSERVED: setName "2026 Bowman" combined with cardYear=2026 → query
   // built "2026 2026 Bowman ..." (year doubled). Also "2025-26 Bowman"
