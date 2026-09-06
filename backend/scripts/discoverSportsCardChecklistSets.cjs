@@ -124,6 +124,21 @@ const locs = (xml) => {
  * the set name, so a manifest entry and its verification agree.
  */
 const CELLS = [
+  /**
+   * CF-NON-SPORT-IS-A-VERTICAL (2026-09-06). The regex above now admits the
+   * source's `nonsport` word and maps it to the ruled `non-sport`; a cell is
+   * what turns that into ENTRIES. Measured on the sitemap: 5,163 non-sport set
+   * URLs, 21 of them 1948-1962, and the brands are the ones already ruled here
+   * -- Topps (15), Bowman (2), Fleer (2), plus two oddball issuers a brand rule
+   * does not name and which therefore stay unminted rather than being guessed.
+   *
+   * The window matches the vintage cells beside it. Nothing later is claimed:
+   * the modern non-sport universe is thousands of sets and is a scoping
+   * decision, not a discovery-script one.
+   */
+  { sport: "non-sport", setKey: "topps",      from: 1948, to: 1969, label: "non-sport/topps/1948-1969" },
+  { sport: "non-sport", setKey: "bowman",     from: 1948, to: 1969, label: "non-sport/bowman/1948-1969" },
+  { sport: "non-sport", setKey: "fleer",      from: 1948, to: 1969, label: "non-sport/fleer/1948-1969" },
   { sport: "football",   setKey: "topps",      from: 1948, to: 1989, label: "football/topps/1948-1989" },
   { sport: "basketball", setKey: "topps",      from: 1948, to: 1988, label: "basketball/topps/1948-1988" },
   { sport: "basketball", setKey: "topps",      from: 1991, to: 2009, label: "basketball/topps/1991-2009" },
@@ -392,8 +407,37 @@ for (const cell of CELLS) {
 }
 
 // Both year forms. `year2` present = split season; the FIRST year is the cell year.
+/**
+ * CF-NON-SPORT-IS-A-VERTICAL-THE-REGEX-NEVER-ADMITTED (2026-09-06).
+ *
+ * A walk for `sports=non-sport years=1948-1962` found 0 eligible entries, and
+ * the manifest is the reason: this regex alternated four sports, so every
+ * `-nonsport-trading-card-checklist` URL failed to parse, classify() returned
+ * null, and 5,163 non-sport sets -- 21 of them in 1948-1962 -- were never
+ * minted as entries at all. Not dropped by a cell rule, never seen.
+ *
+ * The source spells the vertical `nonsport`, one word. The catalog spells it
+ * `non-sport`, and slugGuard's CANONICAL_SPORTS already rules that spelling
+ * with `"nonsport": "non-sport"` among its aliases -- so this admits a vertical
+ * the system already knows and invents no vocabulary. sportOf() below maps the
+ * source's word to the ruled one at the boundary, so nothing downstream ever
+ * sees `nonsport`.
+ *
+ * The sets are real and famous: 1952 Topps Wings, 1953 Fighting Marines, 1953-55
+ * World on Wheels, 1955 Rails and Sails, 1956 Flags of the World, 1956 Davy
+ * Crockett (both backs).
+ */
+/**
+ * The source's sport word, mapped to the vertical the CATALOG rules.
+ * `nonsport` -> `non-sport` is slugGuard's own alias (CANONICAL_SPORTS), so
+ * this adopts a ruled spelling rather than inventing one, and nothing
+ * downstream ever sees the source's form.
+ */
+const SPORT_FROM_SLUG = { nonsport: "non-sport" };
+const canonicalSport = (s) => SPORT_FROM_SLUG[String(s || "")] || String(s || "");
+
 const SET_URL_RE =
-  /\/set-(\d+)\/(\d{4})(?:-(\d{2}))?-(.+?)-(football|basketball|hockey|baseball)-trading-card-checklist\/?$/;
+  /\/set-(\d+)\/(\d{4})(?:-(\d{2}))?-(.+?)-(football|basketball|hockey|baseball|nonsport)-trading-card-checklist\/?$/;
 
 /**
  * CF-THE-ADDSLASHES-LEAK-IS-IN-THE-URL-TOO (2026-09-06, from the refused
@@ -470,7 +514,7 @@ function classify(url) {
   // flows from `rest`, so undoing the escape here fixes all three at once and
   // nothing downstream has to remember to.
   const rest = canonicalSlug(m[4]);
-  const sport = m[5];
+  const sport = canonicalSport(m[5]);
   for (const cell of CELLS) {
     if (cell.sport !== sport) continue;
     if (year < cell.from || year > cell.to) continue;

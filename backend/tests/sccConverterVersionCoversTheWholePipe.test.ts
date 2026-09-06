@@ -111,15 +111,15 @@ const WATCHED: Array<{ file: string; label: string; fn: string; hash: string }> 
   { file: FETCHER, label: "fetcher", fn: "parallelFromSlug", hash: "" },
 ];
 
-/** The recorded behaviour hash for each watched function, at CONVERTER_VERSION 4. */
+/** The recorded behaviour hash for each watched function, at CONVERTER_VERSION 6. */
 const RECORDED: Record<string, string> = {
   "subset-identity:claimedSubsetOf": "def8b0f7187288a3",
   "subset-identity:isBaseSectionLabel": "e1d58052f029a93e",
   "subset-identity:foldSubsetText": "4c33bdf4b3715ea5",
   "subset-identity:rungKey": "9526fcf87cecbb79",
-  "fetcher:zeroCardReason": "8ed6926f87249ce6",
+  "fetcher:zeroCardReason": "eba4eeac8e75c68b",
   "fetcher:canonicalSlug": "f0c397eb06ab28ca",
-  "fetcher:parseSetUrl": "9f3348f29eb331c3",
+  "fetcher:parseSetUrl": "97144f0493f00e31",
   "fetcher:buildRows": "e328487558b2f244",
   "fetcher:splitParentAndSubset": "17f62334a02e1960",
   "fetcher:parallelFromSlug": "fd2bea5160dd904e",
@@ -141,9 +141,9 @@ function currentHashes(): Record<string, string> {
 
 // ── the bump itself ──────────────────────────────────────────────────────────
 
-describe("the SCC converter is at v5, because the Preview mints different rows", () => {
-  it("the fetcher stamps v5", () => {
-    expect(CONVERTER_VERSION).toBe(5);
+describe("the SCC converter is at v6, because the Preview mints different rows", () => {
+  it("the fetcher stamps v6", () => {
+    expect(CONVERTER_VERSION).toBe(6);
   });
 
   it("the driver's lane table agrees -- a disagreement re-opens nothing", () => {
@@ -153,11 +153,11 @@ describe("the SCC converter is at v5, because the Preview mints different rows",
     expect(LANE_CONVERTER_VERSION.sportscardchecklist).toBe(CONVERTER_VERSION);
   });
 
-  it("v5 names its reason, and the history stays cumulative", () => {
+  it("v6 names its reason, and the history stays cumulative", () => {
     // The reason has to be READABLE where the version is, or the next person
     // to see a stale verdict re-open cannot tell WHICH change re-opened it --
-    // which matters more than usual here, because v4 and v5 were stamped the
-    // same day for unrelated reasons.
+    // which matters more than usual here, because v4, v5 and v6 were all
+    // stamped the same day for unrelated reasons.
     const src = fs.readFileSync(FETCHER, "utf8");
     // v3's reason is still there -- the history is cumulative, not replaced.
     expect(src).toContain("#1878");
@@ -165,8 +165,9 @@ describe("the SCC converter is at v5, because the Preview mints different rows",
     // v4: "Inserts" is a page heading, not a subset name (#1894).
     expect(src).toContain("#1894");
     expect(src).toContain("Inserts");
-    // v5: Drew's Bowman's Best Preview ruling changes the setKey AND the
+    // v6: Drew's Bowman's Best Preview ruling changes the setKey AND the
     // cardNumber on every row of the six Preview pages.
+    expect(src).toContain("#1901");
     expect(src).toContain("Bowman's Best Preview is its own product key");
     expect(src).toContain("BBP prefix");
   });
@@ -177,6 +178,17 @@ describe("the SCC converter is at v5, because the Preview mints different rows",
     const src = fs.readFileSync(FETCHER, "utf8");
     expect(src).toContain("#1894");
     expect(src).toContain('"Inserts" is a page heading');
+  });
+
+  it("the history names BOTH PRs that raced -- #1899's fold and #1898's soft block", () => {
+    // v4 and v5 were bumped from the same base, hours apart: #1899 took v4 for
+    // the "Inserts" fold, #1898 took v5 for the soft-block work, and #1901 then
+    // took v6. A history that named only one of them would leave an operator
+    // unable to tell which change a stale verdict at v4 is missing.
+    const src = fs.readFileSync(FETCHER, "utf8");
+    expect(src).toContain("#1898");
+    expect(src).toContain("#1899");
+    expect(src).toContain("challenge/rate-limit page is named as one");
   });
 
   it("the version history is append-only -- v1 and v2 keep their entries", () => {
@@ -208,7 +220,7 @@ describe("a change to the deciding code cannot land without answering the versio
     expect(Object.keys(now).sort()).toEqual(Object.keys(RECORDED).sort());
   });
 
-  it("no watched function has moved since v4 was recorded", () => {
+  it("no watched function has moved since v5 was recorded", () => {
     const now = currentHashes();
     const moved = Object.keys(RECORDED)
       .filter((k) => now[k] !== RECORDED[k])
@@ -320,15 +332,20 @@ describe("a converter bump re-opens the verdicts recorded under the old one", ()
     expect(staleByConverterProbe("bcp", { status: "partial" })).toBe(false);
     expect(staleByConverterProbe("beckett", { status: "partial", converterVersion: 1 })).toBe(false);
     // ...and for SCC: unstamped and older re-open, current does not.
+    // Expressed RELATIVE to the current version, never as literals: the whole
+    // point of this file is that the version moves, and a pin that hardcodes it
+    // breaks on the next bump for no reason (it did, on v3 -> v4).
+    const cur = CONVERTER_VERSION;
     expect(staleByConverterProbe("sportscardchecklist", { status: "partial" })).toBe(true);
-    expect(staleByConverterProbe("sportscardchecklist", { status: "partial", converterVersion: 2 })).toBe(true);
-    // TWO BUMPS, ONE DAY, AND BOTH RE-OPEN. v4 was the eight SP Authentic
-    // refusals (#1894); v5 is the six Preview pages, which now mint a
-    // different setKey and a different cardNumber on every row. A verdict
-    // recorded under EITHER earlier version is stale.
-    expect(staleByConverterProbe("sportscardchecklist", { status: "partial", converterVersion: 3 })).toBe(true);
-    expect(staleByConverterProbe("sportscardchecklist", { status: "partial", converterVersion: 4 })).toBe(true);
-    expect(staleByConverterProbe("sportscardchecklist", { status: "partial", converterVersion: 5 })).toBe(false);
+    // THREE BUMPS, ONE DAY, AND EVERY EARLIER ONE RE-OPENS. v4 was the eight SP
+    // Authentic refusals (#1894/#1899); v5 the soft-block work (#1898); v6 the
+    // six Preview pages, which now mint a different setKey and a different
+    // cardNumber on every row. A verdict recorded under ANY earlier version is
+    // stale. Still expressed RELATIVE to the current version -- the reason this
+    // pin broke on v3 -> v4 was literals, and v6 is not the last bump either.
+    expect(staleByConverterProbe("sportscardchecklist", { status: "partial", converterVersion: cur - 1 })).toBe(true);
+    expect(staleByConverterProbe("sportscardchecklist", { status: "partial", converterVersion: cur })).toBe(false);
+    expect(staleByConverterProbe("sportscardchecklist", { status: "partial", converterVersion: cur + 1 })).toBe(false);
   });
 
   it("the run says how many it re-opened, so the effect is visible", () => {

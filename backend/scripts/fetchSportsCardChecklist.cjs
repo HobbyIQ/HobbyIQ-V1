@@ -112,6 +112,36 @@ const UA = process.env.SCC_UA
   || "Mozilla/5.0 (compatible; HobbyIQ-checklist-fetch/1.0; +https://hobbyiq.app; contact: dvabulas@outlook.com)";
 const DELAY_MS = Math.max(1000, Number(process.env.SCC_DELAY_MS || 2000));
 
+const { challengeSignal, describeResponse, titleOf } =
+  require(path.join(__dirname, "lib", "scc-block-detect.cjs"));
+
+/**
+ * CF-THE-POLITENESS-DELAY-WAS-NEVER-SPENT (2026-09-06, run 34044007926).
+ *
+ * The header of this file has promised ">=2s between requests" since the lane
+ * shipped, and DELAY_MS existed to honour it -- but it was only ever read
+ * inside the 429/503 backoff. This script fetches ONE page per invocation and
+ * the driver invokes it once per entry, so consecutive entries hit the host
+ * back to back with no delay at all. A lane that believed it was polite spent
+ * thousands of requests today at whatever rate the runner could manage, and
+ * then read the host's rate limiting as three dead pages.
+ *
+ * So the delay is spent HERE, before the request, where a one-shot process can
+ * actually honour it. Jittered so a fleet does not synchronise into a pulse
+ * that looks exactly like the burst we are trying not to send.
+ */
+const PAGE_DELAY_MIN_MS = Math.max(0, Number(process.env.SCC_PAGE_DELAY_MS || 2000));
+const PAGE_DELAY_JITTER_MS = Math.max(0, Number(process.env.SCC_PAGE_JITTER_MS || 2000));
+
+/** Retry waits before a no-checklist response is allowed to be a verdict. A
+ *  soft block lifts on a minute scale; a dead id never does, so this costs a
+ *  dead id two waits ONCE and buys back every entry a block would have closed. */
+const RETRY_WAITS_MS = String(process.env.SCC_RETRY_WAITS_MS || "60000,180000")
+  .split(",").map((s) => Number(s.trim())).filter((n) => Number.isFinite(n) && n >= 0);
+
+const jitteredPageDelay = () =>
+  PAGE_DELAY_MIN_MS + Math.floor(Math.random() * (PAGE_DELAY_JITTER_MS + 1));
+
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 /**
@@ -172,8 +202,37 @@ function unescapeCell(s) {
  *
  * Returns { setId, year, year2, seasonLabel, rest, sport } or null.
  */
+/**
+ * CF-NON-SPORT-IS-A-VERTICAL-THE-REGEX-NEVER-ADMITTED (2026-09-06).
+ *
+ * A walk for `sports=non-sport years=1948-1962` found 0 eligible entries, and
+ * the manifest is the reason: this regex alternated four sports, so every
+ * `-nonsport-trading-card-checklist` URL failed to parse, classify() returned
+ * null, and 5,163 non-sport sets -- 21 of them in 1948-1962 -- were never
+ * minted as entries at all. Not dropped by a cell rule, never seen.
+ *
+ * The source spells the vertical `nonsport`, one word. The catalog spells it
+ * `non-sport`, and slugGuard's CANONICAL_SPORTS already rules that spelling
+ * with `"nonsport": "non-sport"` among its aliases -- so this admits a vertical
+ * the system already knows and invents no vocabulary. sportOf() below maps the
+ * source's word to the ruled one at the boundary, so nothing downstream ever
+ * sees `nonsport`.
+ *
+ * The sets are real and famous: 1952 Topps Wings, 1953 Fighting Marines, 1953-55
+ * World on Wheels, 1955 Rails and Sails, 1956 Flags of the World, 1956 Davy
+ * Crockett (both backs).
+ */
+/**
+ * The source's sport word, mapped to the vertical the CATALOG rules.
+ * `nonsport` -> `non-sport` is slugGuard's own alias (CANONICAL_SPORTS), so
+ * this adopts a ruled spelling rather than inventing one, and nothing
+ * downstream ever sees the source's form.
+ */
+const SPORT_FROM_SLUG = { nonsport: "non-sport" };
+const canonicalSport = (s) => SPORT_FROM_SLUG[String(s || "")] || String(s || "");
+
 const SET_URL_RE =
-  /\/set-(\d+)\/(\d{4})(?:-(\d{2}))?-(.+?)-(football|basketball|hockey|baseball)-trading-card-checklist\/?$/;
+  /\/set-(\d+)\/(\d{4})(?:-(\d{2}))?-(.+?)-(football|basketball|hockey|baseball|nonsport)-trading-card-checklist\/?$/;
 
 /**
  * CF-THE-ADDSLASHES-LEAK-IS-IN-THE-URL-TOO (2026-09-06).
@@ -230,7 +289,8 @@ function parseSetUrl(url) {
     // What the sitemap actually served, kept so an escaped source stays
     // auditable rather than silently rewritten.
     restRaw: m[4],
-    sport: m[5],
+    sport: canonicalSport(m[5]),
+    sportRaw: m[5],
   };
 }
 
@@ -885,13 +945,20 @@ function splitCardHeader(raw) {
  *    pages were refused ENTIRELY (read 42, wrote 0, REFUSED 42) against 56 +
  *    130 baseballcardpedia rows tagged with the literal section word
  *    "Inserts". Those verdicts were recorded under v3 and must re-open.
- * 5  2026-09-06: Bowman's Best Preview is its own product key and its cards
- *    carry the set's own BBP prefix (Drew's ruling). The six Preview pages
- *    produce DIFFERENT rows than they did at v4 -- a different setKey and a
- *    different cardNumber on every row -- so any verdict recorded against the
+ * 5  2026-09-06: the soft-block work (#1898), landing alongside the "Inserts"
+ *    fold that took v4 (#1899). An empty response is retried at 60s and 180s
+ *    before any verdict, and a challenge/rate-limit page is named as one rather
+ *    than reported as "did not serve a set page" -- so an entry a rate limit
+ *    closed as `unreachable` reaches a different verdict on a re-walk. The URL
+ *    reader also admits the `non-sport` vertical. Both change what a re-attempt
+ *    PRODUCES, which is the test this version answers.
+ * 6  2026-09-06: Bowman's Best Preview is its own product key and its cards
+ *    carry the set's own BBP prefix (#1901, Drew's ruling). The six Preview
+ *    pages produce DIFFERENT rows than they did at v5 -- a different setKey and
+ *    a different cardNumber on every row -- so any verdict recorded against the
  *    old output has to be re-attempted rather than trusted.
  */
-const CONVERTER_VERSION = 5;
+const CONVERTER_VERSION = 6;
 
 const NOT_FOUND_RE = /Checklist Not Found|NOT FOUND\s*-\s*https?:\/\//i;
 
@@ -904,15 +971,24 @@ function zeroCardReason(html, stats) {
   // served a set page at all. Checked FIRST -- everything below assumes the
   // page is really ours.
   if (!st.headers && !st.hiddenRows) {
-    const challenged = /cf-browser-verification|cf_chl|__cf_bm|Just a moment|Attention Required|Checking your browser|Access denied|Please enable (?:JS|JavaScript)/i.test(h);
-    if (challenged) {
-      return `no checklist on the page — the host served a challenge/interstitial page with HTTP 200 (${h.length} bytes)`;
+    // CF-A-SOFT-BLOCK-IS-NOT-A-DEAD-ID. The marker set lives in
+    // lib/scc-block-detect.cjs and is paired with "no checklist found", never
+    // used alone: this host's ORDINARY healthy pages carry Cloudflare strings
+    // (18 matches on the live 200-header 2000-01 Topps Chrome page), so a bare
+    // CDN test would declare every good page a challenge.
+    const sig = challengeSignal(h, false);
+    if (sig) {
+      return `no checklist on the page — the host served a challenge/rate-limit page with HTTP 200 ` +
+        `(${h.length} bytes, title=${sig.title ? JSON.stringify(sig.title.slice(0, 60)) : "(none)"}, marker=${JSON.stringify(sig.marker)})`;
     }
     // A real set page is ~100 KB at its smallest (the 10-card sets measured
     // 100,316 bytes). A body far under that carrying no scaffolding is a
     // truncated or error response, not a set with nothing in it.
     if (h.length < 40000 || !/set-\d+|trading-card-checklist/i.test(h)) {
-      return `no checklist on the page — the host did not serve a set page with HTTP 200 (${h.length} bytes)`;
+      // THE LOG NAMES WHAT ARRIVED. The run that lost three live entries could
+      // not tell a truncation from a block from a dead id out of its own
+      // output; the title and byte count are what make that answerable.
+      return `no checklist on the page — the host did not serve a set page with HTTP 200 (${describeResponse(h)})`;
     }
     // CF-A-404-IN-A-200-IS-NOT-AN-EMPTY-SET (2026-09-06, from the 1956 Topps
     // baseball recheck, runs 34025742030 / 34025851336).
@@ -1075,7 +1151,41 @@ async function main() {
   // addslashes escape in this URL; the server tolerates it, but requesting the
   // canonical form keeps the request, the parse and the manifest in agreement.
   const fetchUrl = url ? canonicalSetUrl(url) : "";
-  const html = htmlFile ? fs.readFileSync(htmlFile, "utf8") : await get(fetchUrl);
+  /**
+   * FETCH, THEN GIVE THE HOST A SECOND AND A THIRD CHANCE BEFORE JUDGING IT.
+   *
+   * A response with no card scaffolding is ambiguous at the moment it arrives:
+   * it is a dead id, a truncation, or the host asking us to slow down. The old
+   * code resolved that ambiguity immediately and always the same way, which is
+   * how a rate limit closed live entries as `unreachable`.
+   *
+   * A soft block lifts on a minute scale. A dead id never lifts. So an empty
+   * response is RETRIED after 60s and 180s before any verdict is reached: a
+   * blocked page comes back, a dead id costs two waits once and is then
+   * correctly closed. `--html` (offline) skips all of it.
+   */
+  let html;
+  if (htmlFile) {
+    html = fs.readFileSync(htmlFile, "utf8");
+  } else {
+    // The politeness delay, actually spent -- see the note on PAGE_DELAY_MIN_MS.
+    const firstWait = jitteredPageDelay();
+    if (firstWait) await sleep(firstWait);
+    html = await get(fetchUrl);
+    for (let i = 0; i < RETRY_WAITS_MS.length; i++) {
+      const looksEmpty = extractCardHeaders(html).length === 0 && countHiddenRows(html) === 0;
+      // A "Checklist Not Found" page is a definite answer, not a symptom.
+      // Retrying it would spend four minutes relearning what the host already
+      // told us plainly.
+      if (!looksEmpty || NOT_FOUND_RE.test(html)) break;
+      const sig = challengeSignal(html, false);
+      console.log(`  no checklist on attempt ${i + 1} — ${describeResponse(html)}` +
+        `${sig ? ` challenge=${JSON.stringify(sig.marker)}` : " challenge=(none detected)"}` +
+        `; waiting ${Math.round(RETRY_WAITS_MS[i] / 1000)}s and retrying`);
+      await sleep(RETRY_WAITS_MS[i]);
+      html = await get(fetchUrl);
+    }
+  }
 
   // Sport is an INPUT: the slug states it, and --sport overrides for a driver
   // entry that already knows. Never guessed from the set name.

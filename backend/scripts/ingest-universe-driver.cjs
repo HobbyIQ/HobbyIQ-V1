@@ -235,6 +235,32 @@ const SHORT_STATUS = "short-ingest";
  * nothing and refused nothing is still the unexplained `failed` it always was.
  */
 const REFUSED_STATUS = "refused";
+/**
+ * CF-A-SOFT-BLOCK-IS-NOT-A-DEAD-ID (2026-09-06, run 34044007926).
+ *
+ * The basketball 1990-2009 walk, ALONE on the lane, took three consecutive
+ * `unreachable` verdicts on pages that are alive -- 2000-01 Topps Chrome
+ * (set-151053) re-fetched minutes later served 200 / 817,204 bytes / 200 <h5>
+ * headers -- after the lane had fetched thousands of pages today. A rate limit,
+ * read as three dead ids.
+ *
+ * `unreachable` is TERMINAL, so each of those entries was closed against a page
+ * that was never broken. Measured read-only in crawl_state: 24 entries carry
+ * the "a 200 carrying no checklist" reason (18 basketball, 6 baseball; 12
+ * recorded today) against 6 that are genuine dead ids.
+ *
+ * A HOST ASKING US TO SLOW DOWN IS NOT A VERDICT ABOUT A SET. `backoff` says
+ * what actually happened, is explicitly NOT terminal, and is not a failure --
+ * the run stops cleanly and the entry is picked up by the next pending-only
+ * walk with no operator action and no SCOPE=recheck.
+ */
+const BACKOFF_STATUS = "backoff";
+
+/** How long the operator is told to wait. A soft block on this host lifted well
+ *  inside an hour when probed by hand; 30 minutes is the conservative side of
+ *  that and is only ADVICE -- nothing is scheduled off it. */
+const BACKOFF_RETRY_MINUTES = Math.max(1, Number(process.env.SCC_BACKOFF_MINUTES || 30));
+
 const TERMINAL_STATUSES = new Set(["ingested", "unreachable", EMPTY_STATUS, "partial", SHORT_STATUS, REFUSED_STATUS]);
 
 /**
@@ -1490,6 +1516,16 @@ function acquireEntry(entry, dir) {
           e.emptyAtSource = true;
           throw e;
         }
+        // A CHALLENGE / RATE-LIMIT PAGE STOPS THE LANE, IT DOES NOT CLOSE THE
+        // ENTRY. The fetcher has already retried at 60s and 180s by the time
+        // this is reached, so the host is still refusing after four minutes:
+        // that is a lane condition, and continuing would spend the budget
+        // teaching every remaining entry the same false lesson.
+        if (/challenge\/rate-limit page/.test(said)) {
+          const e = new Error(`sportscardchecklist is challenging or rate-limiting this client — the lane backs off; the entry keeps its place — ${said.slice(0, 240)}`);
+          e.laneBackoff = true;
+          throw e;
+        }
         if (/challenge\/interstitial|did not serve a set page/.test(said)) {
           // Shaped for the shared isGone test so it lands in `unreachable`.
           throw new Error(`sportscardchecklist did not serve the set page (HTTP 403-equivalent: a 200 carrying no checklist) — ${said.slice(0, 200)}`);
@@ -1870,7 +1906,7 @@ function acquireEntry(entry, dir) {
  * stamp on a lane that IS listed is treated as version 0 -- written before the
  * stamp existed, therefore older than anything current.
  */
-const LANE_CONVERTER_VERSION = { sportscardchecklist: 5 };
+const LANE_CONVERTER_VERSION = { sportscardchecklist: 6 };
 
 /** The converter version a staged manifest claims, or 0 when it claims none. */
 function stagedConverterVersion(manifestPath) {
@@ -2619,7 +2655,7 @@ for (const lane of ACQUIRE_LANES) {
   }
 }
 
-module.exports = { collapsesToParent, streakAfter, RUNNER_SCOPE_VARS, gateStagedCsv, gateStagedEntry, ladderIsAttested, setKeyCandidates, canonicalSetKey, TERMINAL_STATUSES, LANES_WITH_SIBLING_PARALLEL_PAGES, ladderOnSiblingPages, allFilesAreParallelOfParent, CARTESIAN_MIN_RUNGS, CARTESIAN_MIN_CARDS, stagedCsvs, LANES_WITHOUT_PRINT_RUNS, LANES_WITH_BASELESS_PRODUCTS, LANES_WITH_VINTAGE_ERA_PRODUCTS, PARALLEL_ERA_FIRST_YEAR, ladderlessByEra, sourceLabelFor, splitCsv, isPersonName, setKeyFor, planFor, tcgdexModern, acquireStaged, ACQUIRE_LANES, LANE_ALIASES, LANE_SOURCE, LANE_MINUTES, CANONICAL_HEADER, CHILD_STDERR_LINES, childBannerLines, CHILD_BANNER_PATTERNS, CHILD_BANNER_LINES, childCounters, childRefusedEverything, CHILD_COUNTERS, REFUSED_STATUS, cosmosSafeId, controlId, orderQueue, SYSTEMIC_FAILURE_STREAK, EMPTY_STATUS, SHORT_STATUS, STREAK_STATUSES, isStaged, stagedSourceRefs, stagedIndex, stagedFilesFor, acquireFromStaging, LANE_CONVERTER_VERSION, stagedConverterVersion, stagedIsCurrent };
+module.exports = { collapsesToParent, streakAfter, RUNNER_SCOPE_VARS, gateStagedCsv, gateStagedEntry, ladderIsAttested, setKeyCandidates, canonicalSetKey, TERMINAL_STATUSES, LANES_WITH_SIBLING_PARALLEL_PAGES, ladderOnSiblingPages, allFilesAreParallelOfParent, CARTESIAN_MIN_RUNGS, CARTESIAN_MIN_CARDS, stagedCsvs, LANES_WITHOUT_PRINT_RUNS, LANES_WITH_BASELESS_PRODUCTS, LANES_WITH_VINTAGE_ERA_PRODUCTS, PARALLEL_ERA_FIRST_YEAR, ladderlessByEra, sourceLabelFor, splitCsv, isPersonName, setKeyFor, planFor, tcgdexModern, acquireStaged, ACQUIRE_LANES, LANE_ALIASES, LANE_SOURCE, LANE_MINUTES, CANONICAL_HEADER, CHILD_STDERR_LINES, childBannerLines, CHILD_BANNER_PATTERNS, CHILD_BANNER_LINES, childCounters, childRefusedEverything, CHILD_COUNTERS, REFUSED_STATUS, cosmosSafeId, controlId, orderQueue, SYSTEMIC_FAILURE_STREAK, EMPTY_STATUS, SHORT_STATUS, STREAK_STATUSES, isStaged, stagedSourceRefs, stagedIndex, stagedFilesFor, acquireFromStaging, LANE_CONVERTER_VERSION, stagedConverterVersion, stagedIsCurrent, BACKOFF_STATUS, BACKOFF_RETRY_MINUTES };
 if (require.main !== module) return;
 
 (async () => {
@@ -3339,7 +3375,12 @@ if (require.main !== module) return;
       const isGone = /HTTP 40[34]|ENOTFOUND|exit(ed)?\s+(?:with\s+)?(?:code\s+)?9|workbook empty or unreachable/i.test(msg);
       // The acquisition itself says when the SOURCE answered "nothing here".
       // That is a verdict about the set, never a symptom of a broken lane.
-      const status = e?.emptyAtSource ? EMPTY_STATUS : isGone ? "unreachable" : "failed";
+      // A LANE BACKOFF OUTRANKS EVERY OTHER READING. The host answered, so the
+      // pipe is fine and the set is fine; what we learned is only that we are
+      // being asked to stop. Checked first so a challenge body that also looks
+      // "gone" can never be recorded as a verdict about the set.
+      const status = e?.laneBackoff ? BACKOFF_STATUS
+        : e?.emptyAtSource ? EMPTY_STATUS : isGone ? "unreachable" : "failed";
       // A thrower that KNOWS the host answered says so, and the streak listens.
       // See the parser-gap throw in the bcp acquisition.
       verdict = { status, reason: `acquisition: ${msg}`, rowsCreated: 0, ...(e?.laneProvenHealthy ? { laneProvenHealthy: true } : {}) };
@@ -3385,6 +3426,26 @@ if (require.main !== module) return;
     // `empty` neither advances the streak NOR resets it: the source having no
     // cards for this set is no evidence either way about the lane's health, so
     // a genuine outage interrupted by an empty set still trips on its own run.
+    /**
+     * A BACKOFF STOPS THE RUN AT ONCE, AND CLEANLY.
+     *
+     * Not on a streak of three: by the time this verdict exists the fetcher has
+     * already waited 60s and 180s and been refused again, so a second and third
+     * entry would only spend four more minutes each to learn the same thing --
+     * and would write two more verdicts against pages nobody has shown to be
+     * broken. This is NOT a systemic ABORT: no entry is marked unreachable, the
+     * verdict is non-terminal, and the next pending-only walk simply resumes.
+     */
+    if (verdict.status === BACKOFF_STATUS) {
+      const mins = Math.round(BACKOFF_RETRY_MINUTES);
+      systemicAbort = `the host is challenging or rate-limiting this client — retry after ${mins} minutes`;
+      notReached = take.length - (i + 1);
+      console.log(`
+  BACKING OFF — ${systemicAbort}`);
+      console.log(`  ${f(notReached)} entries of this run were not attempted. NOTHING was marked unreachable:`);
+      console.log(`  this entry keeps a non-terminal \`${BACKOFF_STATUS}\` verdict and the next pending-only walk takes it again.`);
+      break;
+    }
     consecutiveFailures = streakAfter(consecutiveFailures, verdict);
     if (consecutiveFailures >= SYSTEMIC_FAILURE_STREAK) {
       systemicAbort = `${consecutiveFailures} consecutive entries failed or were unreachable — the lane, not the entries`;
