@@ -1,0 +1,163 @@
+{
+  "generatedAt": "2026-09-06T05:00:00.000Z",
+  "forLane": "relocate-pool-rows-by-list.cjs",
+  "rulings": [
+    "CF-ONE-SALE-ONE-ADDRESS (2026-09-05): one sale resident under two cardId partitions is a split pool AND a double count. Never a delete - RETIRE marks flaggedWrong, and it is reversible.",
+    "THE KEEPER NAMES THE TWIN (2026-09-06): these twins are not rival PARSES, so neither the title predicate nor the canonical-copy rule decides them. The keeper carries `rekeyedFrom` -- the re-key's own record of the address it moved OFF -- and that address is the twin. Provenance, not inference.",
+    "The keeper was verified PRESENT in sold_comps before this list was written (per-id cross-partition probe, 2026-09-06): every entry's keeper is alive at `retireSupersededBy` carrying the run's own `rekeyedAt`. The lane reads only `fromCardId`, so `retireSupersededBy` is stamped onto the retired row as `dedupSupersededBy` and is the audit trail back to the keeper.",
+    "SCOPE: the 14 rows are every `read-back differs from the written row` failure in the 32-slot rematch-sold-comps IMPROVE fleet (2026-09-05 05:22Z - 2026-09-06 02:38Z) that a probe found resident TWICE. 21 rows reported that error; 7 are resident once and are NOT listed - a failure is not a twin until the container says so.",
+    "The other 60 fleet failures report `read-back found nothing`, a DIFFERENT class (the keeper was never found at all). They are out of scope here and are not listed."
+  ],
+  "census": {
+    "fleetRuns": 32,
+    "fleetFailedAtVerify": 81,
+    "differsFromWrittenRow": 21,
+    "readBackFoundNothing": 60,
+    "probedResidentTwice": 14,
+    "probedResidentOnce": 7,
+    "retire": 14,
+    "park": 0
+  },
+  "entries": [
+    {
+      "id": "cardsight::7d05a61b2258ebaf42c70412",
+      "fromCardId": "hiq:baseball:2025:topps:111:base:no-auto",
+      "price": 3,
+      "retireSupersededBy": "hiq:baseball:2025:topps-inception:111:short-print:no-auto",
+      "keeperVerifiedAt": "2026-09-05T14:35:54.025Z",
+      "keeperHobbyiqCardId": "hiq:baseball:2025:topps-inception:111:short-print:no-auto",
+      "runId": "33966981635",
+      "evidence": "readback-verify-twin: the IMPROVE re-key wrote the keeper at hiq:baseball:2025:topps-inception:111:short-print:no-auto and reported `FAILED at verify cardsight::7d05a61b2258ebaf42c70412: read-back differs from the written row` (backfill-runner run 33966981635). The write LANDED -- the keeper carries rekeyedAt 2026-09-05T14:35:54.025Z and rekeyedFrom naming hiq:baseball:2025:topps-inception:111:base:no-auto (hobbyiqCardId hiq:baseball:2025:topps-inception:111:base:no-auto) -- but relocateSoldComp's read-back accepted a stale pre-upsert replica, so the verify branch (correctly) deleted nothing and this id is resident at TWO addresses. This entry retires the old-address copy the re-key left behind. Keeper verified present in sold_comps 2026-09-06. Title: 2025 Topps Inception Baseball Francisco Lindor Short Print #111 New York Mets"
+    },
+    {
+      "id": "tca-ebay::117317329892",
+      "fromCardId": "hiq:pokemon:2018:unknown:107:base:no-auto",
+      "price": 21.5,
+      "retireSupersededBy": "hiq:pokemon:2018:sm7:107:base:no-auto",
+      "keeperVerifiedAt": "2026-09-06T00:51:46.552Z",
+      "keeperHobbyiqCardId": "hiq:pokemon:2018:sm7:107:base:no-auto",
+      "runId": "34000768055",
+      "evidence": "readback-verify-twin: the IMPROVE re-key wrote the keeper at hiq:pokemon:2018:sm7:107:base:no-auto and reported `FAILED at verify tca-ebay::117317329892: read-back differs from the written row` (backfill-runner run 34000768055). The write LANDED -- the keeper carries rekeyedAt 2026-09-06T00:51:46.552Z and rekeyedFrom naming hiq:pokemon:2018:2018-pokemon-sun-moon-forbidden-light:107:base:no-auto (hobbyiqCardId hiq:pokemon:2018:unknown:107:base:no-auto) -- but relocateSoldComp's read-back accepted a stale pre-upsert replica, so the verify branch (correctly) deleted nothing and this id is resident at TWO addresses. This entry retires the old-address copy the re-key left behind. Keeper verified present in sold_comps 2026-09-06. Title: 2018 POKEMON SUN & MOON CELESTIAL STORM #107 LATIAS-HOLO PSA 7"
+    },
+    {
+      "id": "tca-ebay::236523093498",
+      "fromCardId": "hiq:football:2024:unknown:137:base:no-auto:num-135",
+      "price": 2.29,
+      "retireSupersededBy": "hiq:football:2024:score:137:base:no-auto",
+      "keeperVerifiedAt": "2026-09-05T08:01:55.409Z",
+      "keeperHobbyiqCardId": "hiq:football:2024:score:137:base:no-auto",
+      "runId": "33951772443",
+      "evidence": "readback-verify-twin: the IMPROVE re-key wrote the keeper at hiq:football:2024:score:137:base:no-auto and reported `FAILED at verify tca-ebay::236523093498: read-back differs from the written row` (backfill-runner run 33951772443). The write LANDED -- the keeper carries rekeyedAt 2026-09-05T08:01:55.409Z and rekeyedFrom naming hiq:football:2024:unknown:137:base:no-auto (hobbyiqCardId hiq:football:2024:unknown:137:base:no-auto) -- but relocateSoldComp's read-back accepted a stale pre-upsert replica, so the verify branch (correctly) deleted nothing and this id is resident at TWO addresses. This entry retires the old-address copy the re-key left behind. Keeper verified present in sold_comps 2026-09-06. Title: Patrick Mahomes II 2024 Score-A-Treat #137 Kansas City Chiefs"
+    },
+    {
+      "id": "tca-ebay::267756256691",
+      "fromCardId": "hiq:pokemon:2015:unknown:98:base:no-auto:num-98",
+      "price": 710,
+      "retireSupersededBy": "hiq:pokemon:2015:xy7:98:base:no-auto",
+      "keeperVerifiedAt": "2026-09-06T02:02:09.139Z",
+      "keeperHobbyiqCardId": "hiq:pokemon:2015:xy7:98:base:no-auto",
+      "runId": "34004076637",
+      "evidence": "readback-verify-twin: the IMPROVE re-key wrote the keeper at hiq:pokemon:2015:xy7:98:base:no-auto and reported `FAILED at verify tca-ebay::267756256691: read-back differs from the written row` (backfill-runner run 34004076637). The write LANDED -- the keeper carries rekeyedAt 2026-09-06T02:02:09.139Z and rekeyedFrom naming hiq:pokemon:2015:unknown:98:base:no-auto (hobbyiqCardId hiq:pokemon:2015:unknown:98:base:no-auto) -- but relocateSoldComp's read-back accepted a stale pre-upsert replica, so the verify branch (correctly) deleted nothing and this id is resident at TWO addresses. This entry retires the old-address copy the re-key left behind. Keeper verified present in sold_comps 2026-09-06. Title: 2015 POKEMON XY ANCIENT ORIGINS #98 FULL ART/M RAYQUAZA EX PSA 6"
+    },
+    {
+      "id": "tca-ebay::278269524778",
+      "fromCardId": "hiq:baseball:2023:bowman-chrome-sapphire:bcp-145:base:no-auto:num-55",
+      "price": 27.66,
+      "retireSupersededBy": "hiq:baseball:2023:bowman-chrome-sapphire:bcp-145:aqua-refractor:no-auto:num-55",
+      "keeperVerifiedAt": "2026-09-05T07:06:05.188Z",
+      "keeperHobbyiqCardId": "hiq:baseball:2023:bowman-chrome-sapphire:bcp-145:aqua-refractor:no-auto:num-55",
+      "runId": "33947046563",
+      "evidence": "readback-verify-twin: the IMPROVE re-key wrote the keeper at hiq:baseball:2023:bowman-chrome-sapphire:bcp-145:aqua-refractor:no-auto:num-55 and reported `FAILED at verify tca-ebay::278269524778: read-back differs from the written row` (backfill-runner run 33947046563). The write LANDED -- the keeper carries rekeyedAt 2026-09-05T07:06:05.188Z and rekeyedFrom naming hiq:baseball:2023:bowman-chrome-sapphire:bcp-145:base:no-auto (hobbyiqCardId hiq:baseball:2023:bowman-chrome-sapphire:bcp-145:base:no-auto:num-55) -- but relocateSoldComp's read-back accepted a stale pre-upsert replica, so the verify branch (correctly) deleted nothing and this id is resident at TWO addresses. This entry retires the old-address copy the re-key left behind. Keeper verified present in sold_comps 2026-09-06. Title: XAVIER ISAAC 2023 BOWMAN CHROME PROSPECTS SAPPHIRE AQUA 1ST /55 #BCP-145 Q1725"
+    },
+    {
+      "id": "tca-ebay::298562350714",
+      "fromCardId": "hiq:pokemon:2015:unknown:98:base:no-auto:num-98",
+      "price": 500,
+      "retireSupersededBy": "hiq:pokemon:2015:xy7:98:base:no-auto",
+      "keeperVerifiedAt": "2026-09-06T02:02:02.372Z",
+      "keeperHobbyiqCardId": "hiq:pokemon:2015:xy7:98:base:no-auto",
+      "runId": "34004076637",
+      "evidence": "readback-verify-twin: the IMPROVE re-key wrote the keeper at hiq:pokemon:2015:xy7:98:base:no-auto and reported `FAILED at verify tca-ebay::298562350714: read-back differs from the written row` (backfill-runner run 34004076637). The write LANDED -- the keeper carries rekeyedAt 2026-09-06T02:02:02.372Z and rekeyedFrom naming hiq:pokemon:2015:unknown:98:base:no-auto (hobbyiqCardId hiq:pokemon:2015:unknown:98:base:no-auto) -- but relocateSoldComp's read-back accepted a stale pre-upsert replica, so the verify branch (correctly) deleted nothing and this id is resident at TWO addresses. This entry retires the old-address copy the re-key left behind. Keeper verified present in sold_comps 2026-09-06. Title: 2015 POKEMON XY ANCIENT ORIGINS #98 FULL ART/M RAYQUAZA EX PSA 1"
+    },
+    {
+      "id": "tca-ebay::306456024270",
+      "fromCardId": "hiq:football:2024:unknown:137:base:no-auto:num-135",
+      "price": 2.49,
+      "retireSupersededBy": "hiq:football:2024:score:137:base:no-auto",
+      "keeperVerifiedAt": "2026-09-05T06:02:10.156Z",
+      "keeperHobbyiqCardId": "hiq:football:2024:score:137:base:no-auto",
+      "runId": "33947053469",
+      "evidence": "readback-verify-twin: the IMPROVE re-key wrote the keeper at hiq:football:2024:score:137:base:no-auto and reported `FAILED at verify tca-ebay::306456024270: read-back differs from the written row` (backfill-runner run 33947053469). The write LANDED -- the keeper carries rekeyedAt 2026-09-05T06:02:10.156Z and rekeyedFrom naming hiq:football:2024:unknown:137:base:no-auto (hobbyiqCardId hiq:football:2024:unknown:137:base:no-auto) -- but relocateSoldComp's read-back accepted a stale pre-upsert replica, so the verify branch (correctly) deleted nothing and this id is resident at TWO addresses. This entry retires the old-address copy the re-key left behind. Keeper verified present in sold_comps 2026-09-06. Title: 2024 Score-A-Treat Patrick Mahomes II Green Bats #137 Kansas City Chiefs UX3050"
+    },
+    {
+      "id": "tca-ebay::307125592205",
+      "fromCardId": "hiq:pokemon:2015:unknown:98:base:no-auto:num-98",
+      "price": 2909,
+      "retireSupersededBy": "hiq:pokemon:2015:xy7:98:base:no-auto",
+      "keeperVerifiedAt": "2026-09-06T02:02:09.574Z",
+      "keeperHobbyiqCardId": "hiq:pokemon:2015:xy7:98:base:no-auto",
+      "runId": "34004076637",
+      "evidence": "readback-verify-twin: the IMPROVE re-key wrote the keeper at hiq:pokemon:2015:xy7:98:base:no-auto and reported `FAILED at verify tca-ebay::307125592205: read-back differs from the written row` (backfill-runner run 34004076637). The write LANDED -- the keeper carries rekeyedAt 2026-09-06T02:02:09.574Z and rekeyedFrom naming hiq:pokemon:2015:unknown:98:base:no-auto (hobbyiqCardId hiq:pokemon:2015:unknown:98:base:no-auto) -- but relocateSoldComp's read-back accepted a stale pre-upsert replica, so the verify branch (correctly) deleted nothing and this id is resident at TWO addresses. This entry retires the old-address copy the re-key left behind. Keeper verified present in sold_comps 2026-09-06. Title: 2015 POKEMON XY ANCIENT ORIGINS #98 FULL ART/M RAYQUAZA EX PSA 9"
+    },
+    {
+      "id": "tca-ebay::336620339203",
+      "fromCardId": "hiq:baseball:2009:bowman-chrome:12:base:no-auto",
+      "price": 1.99,
+      "retireSupersededBy": "hiq:baseball:2009:bowman-chrome:12:x-fractor:no-auto:num-250",
+      "keeperVerifiedAt": "2026-09-06T01:25:05.452Z",
+      "keeperHobbyiqCardId": "hiq:baseball:2009:bowman-chrome:12:x-fractor:no-auto:num-250",
+      "runId": "34000733526",
+      "evidence": "readback-verify-twin: the IMPROVE re-key wrote the keeper at hiq:baseball:2009:bowman-chrome:12:x-fractor:no-auto:num-250 and reported `FAILED at verify tca-ebay::336620339203: read-back differs from the written row` (backfill-runner run 34000733526). The write LANDED -- the keeper carries rekeyedAt 2026-09-06T01:25:05.452Z and rekeyedFrom naming hiq:baseball:2009:bowman-chrome:12:base:no-auto:num-250 (hobbyiqCardId hiq:baseball:2009:bowman-chrome:12:base:no-auto) -- but relocateSoldComp's read-back accepted a stale pre-upsert replica, so the verify branch (correctly) deleted nothing and this id is resident at TWO addresses. This entry retires the old-address copy the re-key left behind. Keeper verified present in sold_comps 2026-09-06. Title: 2009 Bowman Chrome - Hanley Ramirez #12 X-Fractor /250"
+    },
+    {
+      "id": "tca-ebay::336699006235",
+      "fromCardId": "hiq:baseball:2008:bowman-chrome:150:base:no-auto",
+      "price": 2.44,
+      "retireSupersededBy": "hiq:baseball:2008:bowman-chrome:150:x-fractor:no-auto:num-250",
+      "keeperVerifiedAt": "2026-09-05T07:01:35.187Z",
+      "keeperHobbyiqCardId": "hiq:baseball:2008:bowman-chrome:150:x-fractor:no-auto:num-250",
+      "runId": "33947046563",
+      "evidence": "readback-verify-twin: the IMPROVE re-key wrote the keeper at hiq:baseball:2008:bowman-chrome:150:x-fractor:no-auto:num-250 and reported `FAILED at verify tca-ebay::336699006235: read-back differs from the written row` (backfill-runner run 33947046563). The write LANDED -- the keeper carries rekeyedAt 2026-09-05T07:01:35.187Z and rekeyedFrom naming hiq:baseball:2008:bowman-chrome:150:base:no-auto:num-250 (hobbyiqCardId hiq:baseball:2008:bowman-chrome:150:base:no-auto) -- but relocateSoldComp's read-back accepted a stale pre-upsert replica, so the verify branch (correctly) deleted nothing and this id is resident at TWO addresses. This entry retires the old-address copy the re-key left behind. Keeper verified present in sold_comps 2026-09-06. Title: 2008 Bowman Chrome X-Fractor 210/250 JJ Hardy #150 0a1"
+    },
+    {
+      "id": "tca-ebay::366607950797",
+      "fromCardId": "hiq:baseball:2015:bowman-chrome:62:base:no-auto",
+      "price": 2.29,
+      "retireSupersededBy": "hiq:baseball:2015:bowman-chrome:62:refractor:no-auto:num-499",
+      "keeperVerifiedAt": "2026-09-06T02:02:50.346Z",
+      "keeperHobbyiqCardId": "hiq:baseball:2015:bowman-chrome:62:refractor:no-auto:num-499",
+      "runId": "34004076637",
+      "evidence": "readback-verify-twin: the IMPROVE re-key wrote the keeper at hiq:baseball:2015:bowman-chrome:62:refractor:no-auto:num-499 and reported `FAILED at verify tca-ebay::366607950797: read-back differs from the written row` (backfill-runner run 34004076637). The write LANDED -- the keeper carries rekeyedAt 2026-09-06T02:02:50.346Z and rekeyedFrom naming hiq:baseball:2015:bowman-chrome:62:base:no-auto:num-499 (hobbyiqCardId hiq:baseball:2015:bowman-chrome:62:base:no-auto) -- but relocateSoldComp's read-back accepted a stale pre-upsert replica, so the verify branch (correctly) deleted nothing and this id is resident at TWO addresses. This entry retires the old-address copy the re-key left behind. Keeper verified present in sold_comps 2026-09-06. Title: 2015 Bowman Chrome #62 Trevor Bauer Refractors #/499"
+    },
+    {
+      "id": "tca-ebay::407137764325",
+      "fromCardId": "hiq:baseball:2025:topps-chrome:28:base:no-auto:num-75",
+      "price": 4,
+      "retireSupersededBy": "hiq:basketball:2025:topps-chrome:28:purple-refractor:no-auto:num-75",
+      "keeperVerifiedAt": "2026-09-05T23:59:30.779Z",
+      "keeperHobbyiqCardId": "hiq:basketball:2025:topps-chrome:28:purple-refractor:no-auto:num-75",
+      "runId": "33997553644",
+      "evidence": "readback-verify-twin: the IMPROVE re-key wrote the keeper at hiq:basketball:2025:topps-chrome:28:purple-refractor:no-auto:num-75 and reported `FAILED at verify tca-ebay::407137764325: read-back differs from the written row` (backfill-runner run 33997553644). The write LANDED -- the keeper carries rekeyedAt 2026-09-05T23:59:30.779Z and rekeyedFrom naming hiq:baseball:2025:topps-chrome:28:base:no-auto (hobbyiqCardId hiq:basketball:2025:topps-chrome:28:base:no-auto) -- but relocateSoldComp's read-back accepted a stale pre-upsert replica, so the verify branch (correctly) deleted nothing and this id is resident at TWO addresses. This entry retires the old-address copy the re-key left behind. Keeper verified present in sold_comps 2026-09-06. Title: 2025-26 Topps Chrome Update Jaren Jackson Jr #28 PURPLE /75"
+    },
+    {
+      "id": "tca-ebay::820016429899",
+      "fromCardId": "hiq:basketball:2025:topps-chrome:cg-2:base:no-auto",
+      "price": 10.59,
+      "retireSupersededBy": "hiq:basketball:2025:topps-chrome:cg-2:green-refractor:no-auto:num-99",
+      "keeperVerifiedAt": "2026-09-05T23:59:42.917Z",
+      "keeperHobbyiqCardId": "hiq:basketball:2025:topps-chrome:cg-2:green-refractor:no-auto:num-99",
+      "runId": "33997553644",
+      "evidence": "readback-verify-twin: the IMPROVE re-key wrote the keeper at hiq:basketball:2025:topps-chrome:cg-2:green-refractor:no-auto:num-99 and reported `FAILED at verify tca-ebay::820016429899: read-back differs from the written row` (backfill-runner run 33997553644). The write LANDED -- the keeper carries rekeyedAt 2026-09-05T23:59:42.917Z and rekeyedFrom naming hiq:basketball:2025:topps-chrome:cg-2:base:no-auto:num-99 (hobbyiqCardId hiq:basketball:2025:topps-chrome:cg-2:base:no-auto) -- but relocateSoldComp's read-back accepted a stale pre-upsert replica, so the verify branch (correctly) deleted nothing and this id is resident at TWO addresses. This entry retires the old-address copy the re-key left behind. Keeper verified present in sold_comps 2026-09-06. Title: Tyrese Maxey 2025-26 Topps Chrome 68/99 Clutch Gene Green 76ers #CG-2"
+    },
+    {
+      "id": "tca-ebay::EBAY-v1|298543387201|0",
+      "fromCardId": "hiq:baseball:2025:topps-cosmic-chrome:114:base:no-auto:num-199",
+      "price": 13.79,
+      "retireSupersededBy": "hiq:baseball:2025:topps-cosmic-chrome:114:aqua-equinox-refractor:no-auto:num-199",
+      "keeperVerifiedAt": "2026-09-05T14:33:43.208Z",
+      "keeperHobbyiqCardId": "hiq:baseball:2025:topps-cosmic-chrome:114:aqua-equinox-refractor:no-auto:num-199",
+      "runId": "33966981635",
+      "evidence": "readback-verify-twin: the IMPROVE re-key wrote the keeper at hiq:baseball:2025:topps-cosmic-chrome:114:aqua-equinox-refractor:no-auto:num-199 and reported `FAILED at verify tca-ebay::EBAY-v1|298543387201|0: read-back differs from the written row` (backfill-runner run 33966981635). The write LANDED -- the keeper carries rekeyedAt 2026-09-05T14:33:43.208Z and rekeyedFrom naming hiq:baseball:2025:topps-cosmic-chrome:114:base:no-auto (hobbyiqCardId hiq:baseball:2025:topps-cosmic-chrome:114:base:no-auto:num-199) -- but relocateSoldComp's read-back accepted a stale pre-upsert replica, so the verify branch (correctly) deleted nothing and this id is resident at TWO addresses. This entry retires the old-address copy the re-key left behind. Keeper verified present in sold_comps 2026-09-06. Title: Topps 2025 Cosmic Chrome Rookies Nic Scourton RC #114 Aqua Equinox /199"
+    }
+  ]
+}

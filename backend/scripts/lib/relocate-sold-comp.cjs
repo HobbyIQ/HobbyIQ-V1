@@ -15,11 +15,17 @@
  *                                                    left in the pool, never
  *                                                    retried into a missing row
  *
- * Step 2 is `readBackKeptRow`, and it is deliberately more than one read: the
- * account is at Eventual consistency, so a single point-read at (id, cardId)
- * can 404 on a document that was written -- see that function for the run that
- * proved it. It retries, then falls back to a query on BOTH keys, and only a
- * row that no read can find is a failure.
+ * Step 2 is `readBackKeptRow`, and it is deliberately more than one read: a
+ * single point-read at (id, cardId) can miss a document that was written --
+ * see that function for the runs that proved it, and for the fact that the
+ * miss is not always a 404. It retries until the read SHOWS THE WRITE, then
+ * falls back to a point-read-shaped query, and only a row that no read can
+ * find is a failure.
+ *
+ * The account was raised to **Session** consistency on 2026-09-05 (measured
+ * 2026-09-06: defaultConsistencyLevel "Session", maxStalenessPrefix 100,
+ * maxIntervalInSeconds 5). Session is read-your-writes only WITHIN a session,
+ * so this is a narrower window than Eventual, not a closed one.
  *
  * The same helper serves a re-key (one old row -> one new row) and a collapse
  * (several old rows -> the one kept). The caller decides WHAT to keep; this
@@ -134,7 +140,8 @@ const is404 = (e) => e?.code === 404 || e?.statusCode === 404;
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-/** How many times a null point-read is retried before the query fallback. */
+/** How many times a point-read that does not yet show the write is retried
+ *  before the query fallback. */
 const READ_BACK_ATTEMPTS = 4;
 /** Backoff between those attempts, in ms. */
 const READ_BACK_BACKOFF_MS = [120, 300, 700];
@@ -161,38 +168,71 @@ const READ_BACK_BACKOFF_MS = [120, 300, 700];
  * hold the document a moment earlier -- exactly where replica lag is visible. A
  * row already on its slug re-reads a partition it was already in.
  *
- * The lag is transient, so the point-read is retried with backoff; the last
- * resort is a query on the identity that does not depend on guessing a
- * partition -- the document id together with `hobbyiqCardId` OR `cardId`. A
- * query is served across partitions from an up-to-date replica set, so it sees
- * the write the stale point-read missed.
+ * A STALE READ IS NOT ALWAYS A 404 (2026-09-06, the actual cause of the four
+ * failures below). This loop used to accept the FIRST non-null document it
+ * read, without asking whether that document showed the write. When the
+ * keeper's address ALREADY HELD a document -- a collapse target, or the same
+ * id re-keyed a second time -- a lagging replica answers with the PRE-UPSERT
+ * version instead of 404. That version is non-null, so the loop returned it
+ * on attempt 0: the backoff retries never ran, the query fallback never ran,
+ * and the caller then compared its `verifyFields` against a document it had
+ * already been handed as verified. The result was reported as "read-back
+ * differs from the written row" -- the write had in fact landed.
+ *
+ * Measured: rematch-sold-comps IMPROVE, run 34004076637 (slot 26/32), 4 rows.
+ * Every one is ALIVE at its new address carrying that run's own `rekeyedAt`
+ * (within 50ms of the log line) and `rekeyedFrom` naming the old identity,
+ * with the old row still standing. Sibling rows re-keyed into the SAME
+ * partition in the same second and passed; only the timing separates them.
+ *
+ * So the loop now retries until the read SHOWS THE WRITE: a document counts
+ * only when it is the keeper at the keeper's address AND agrees on the fields
+ * the caller named. `matches` is that predicate, and it is the SAME predicate
+ * the caller applies -- a read-back that satisfies one and not the other is
+ * the bug this fixes.
+ *
+ * The last resort is a query, which is served from an up-to-date replica set.
+ * It is addressed like the point read -- `c.id = @id AND c.cardId = @pk` --
+ * and NOT by `hobbyiqCardId`: the old-address twin of a re-keyed row carries
+ * a hobbyiqCardId too, so an OR on it can answer with the very row this
+ * helper is trying to move away from.
  *
  * Returns the document (tagged `__via` when it took more than the first read),
- * or null when every read agrees it is absent -- a REAL failure, after which
- * the caller still deletes nothing.
+ * or null when no read can show the write -- a REAL failure, after which the
+ * caller still deletes nothing.
  */
-async function readBackKeptRow(pool, keep, retry = (fn) => fn(), wait = sleep) {
+function readBackShowsWrite(doc, keep, verifyFields = []) {
+  if (!doc || doc.id !== keep.id || doc.cardId !== keep.cardId) return false;
+  return verifyFields.every((f) => JSON.stringify(doc[f] ?? null) === JSON.stringify(keep[f] ?? null));
+}
+
+async function readBackKeptRow(pool, keep, retry = (fn) => fn(), wait = sleep, verifyFields = []) {
+  const shows = (doc) => readBackShowsWrite(doc, keep, verifyFields);
   for (let attempt = 0; attempt < READ_BACK_ATTEMPTS; attempt++) {
     let doc = null;
     try { doc = (await retry(() => pool.item(keep.id, keep.cardId).read())).resource ?? null; }
     catch (e) { if (!is404(e)) throw e; }
-    if (doc) return attempt === 0 ? doc : { ...doc, __via: "point-read-retry-" + attempt };
+    // A non-null document is NOT proof the write is visible -- see the note
+    // above. Only a read that SHOWS THE WRITE ends the loop; a stale version
+    // of the row that was already at this address is retried past, exactly as
+    // a 404 is.
+    if (shows(doc)) return attempt === 0 ? doc : { ...doc, __via: "point-read-retry-" + attempt };
     if (attempt < READ_BACK_ATTEMPTS - 1) await wait(READ_BACK_BACKOFF_MS[attempt] ?? 700);
   }
-  // Both keys, one query: the row is addressed by the id it kept and by the
-  // identity it moved to, so neither a stale replica nor a changed partition
-  // can hide it.
+  // The point read, as a query: a query is served from an up-to-date replica
+  // set, so it sees the write a lagging point-read did not. It is addressed
+  // by (id, cardId) and NOTHING else -- never OR'd onto `hobbyiqCardId`,
+  // which the row's own old-address twin also carries, and which would let
+  // this helper "verify" the keeper against the row it is moving away from.
   const res = await retry(() => pool.items.query({
-    query: "SELECT * FROM c WHERE c.id = @id AND (c.cardId = @pk OR c.hobbyiqCardId = @slug)",
+    query: "SELECT * FROM c WHERE c.id = @id AND c.cardId = @pk",
     parameters: [
       { name: "@id", value: keep.id },
       { name: "@pk", value: keep.cardId },
-      { name: "@slug", value: keep.hobbyiqCardId ?? keep.cardId },
     ],
-  }, { enableCrossPartitionQuery: true }).fetchAll());
-  const found = res?.resources ?? [];
-  const hit = found.find((d) => d?.id === keep.id && d?.cardId === keep.cardId) ?? null;
-  return hit ? { ...hit, __via: "query-both-keys" } : null;
+  }, { partitionKey: keep.cardId }).fetchAll());
+  const hit = (res?.resources ?? []).find((d) => shows(d)) ?? null;
+  return hit ? { ...hit, __via: "query-point-read" } : null;
 }
 
 /**
@@ -211,7 +251,7 @@ async function readBackKeptRow(pool, keep, retry = (fn) => fn(), wait = sleep) {
  *   duplicatesLeft old rows whose delete failed: the sale is now in the pool
  *                 TWICE, reported here, never retried past `retry`
  *   readBackVia   how the write was confirmed: "point-read", a retry, or the
- *                 both-keys query that defeats Eventual-consistency lag
+ *                 (id, cardId) query that defeats replica lag
  */
 async function relocateSoldComp(pool, { keep, drop, retry = (fn) => fn(), verifyFields = [], dryRun = false, wait = sleep }) {
   const drops = (drop ?? []).filter((d) => d && d.id && d.cardId && !sameRef(d, keep));
@@ -232,14 +272,45 @@ async function relocateSoldComp(pool, { keep, drop, retry = (fn) => fn(), verify
 
   let back = null, readBackVia = "point-read";
   try {
-    back = await readBackKeptRow(pool, keep, retry, wait);
+    back = await readBackKeptRow(pool, keep, retry, wait, verifyFields);
     if (back && back.__via) { readBackVia = back.__via; delete back.__via; }
   } catch (e) {
     return { ok: false, stage: "verify", error: String(e?.message ?? e), existedBefore, deleted: [], alreadyGone: [], duplicatesLeft: [], readBackVia };
   }
   const mismatch = !back || back.id !== keep.id || back.cardId !== keep.cardId
     || verifyFields.some((f) => JSON.stringify(back[f] ?? null) !== JSON.stringify(keep[f] ?? null));
-  if (mismatch) return { ok: false, stage: "verify", error: back ? "read-back differs from the written row" : "read-back found nothing", existedBefore, deleted: [], alreadyGone: [], duplicatesLeft: [], readBackVia };
+  // Reaching a mismatch now means EVERY read -- the retried point reads and
+  // the query -- failed to show the write, because `readBackKeptRow` applies
+  // these same `verifyFields` before it accepts a document (2026-09-06). A
+  // lagging replica no longer lands here.
+  //
+  // CF-A-VERIFY-MISMATCH-IS-A-DUPLICATE-NOT-A-FAILURE (2026-09-05).
+  //
+  // The upsert above ALREADY SUCCEEDED. Reaching here means the keeper is
+  // written at its new address and the drops are still at their old ones --
+  // the row now exists TWICE. This branch used to return `duplicatesLeft: []`,
+  // so callers counted it as `failed` and their "duplicates left in pool must
+  // be 0" summary line stayed at 0 while a duplicate stood in the pool. This
+  // file's own header records the shape: rekey-product-setkey MODE=pool run
+  // 33973364948 hit it on 12 of 35,173 rows, and every one of the 12 was
+  // later found ALIVE at its new address with the old row still in place.
+  //
+  // The drops are NOT deleted here -- deleting against a read-back we could
+  // not verify is how a sale gets lost, and a sale is never lost. They are
+  // REPORTED, which is the whole change: the number the operator reads now
+  // counts what is actually in the container.
+  if (mismatch) {
+    return {
+      ok: false, stage: "verify",
+      error: back ? "read-back differs from the written row" : "read-back found nothing",
+      existedBefore, deleted: [], alreadyGone: [],
+      duplicatesLeft: drops.map((d) => ({
+        ...d,
+        error: "keeper upserted but read-back failed verification; old row NOT deleted — this id is now resident at two addresses",
+      })),
+      readBackVia,
+    };
+  }
 
   const deleted = [], alreadyGone = [], duplicatesLeft = [];
   for (const d of drops) {
@@ -249,4 +320,4 @@ async function relocateSoldComp(pool, { keep, drop, retry = (fn) => fn(), verify
   return { ok: duplicatesLeft.length === 0, stage: "done", existedBefore, deleted, alreadyGone, duplicatesLeft, readBackVia };
 }
 
-module.exports = { relocateSoldComp, readBackKeptRow, stripSystem, isMissing, cents, day, normParallel, legacyNormParallel, gradeKey, contentHashOf, legacyContentHashOf, contentHashesForLookup, varianceOf, foldMissing, sameRef };
+module.exports = { relocateSoldComp, readBackKeptRow, readBackShowsWrite, stripSystem, isMissing, cents, day, normParallel, legacyNormParallel, gradeKey, contentHashOf, legacyContentHashOf, contentHashesForLookup, varianceOf, foldMissing, sameRef };

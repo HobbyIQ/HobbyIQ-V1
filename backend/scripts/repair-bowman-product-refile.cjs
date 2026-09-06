@@ -96,6 +96,24 @@
  * anchors are counted before and re-read after, and a REPORT-mode run that
  * moved a pool exits 3: a dry run is proven write-free by MEASUREMENT.
  *
+ * ── THE CANARY ATTRIBUTES THIS LANE'S OWN WRITES (2026-09-06) ──────────────
+ *
+ * The anchors are the Chrome side of the collision numbers -- which is exactly
+ * the address the sales lane DRAINS. Run 34009971035 refiled 1,835 sales as
+ * ruled and was failed by its own canary (cpa-ag 16->5, cpa-em 17->8, cpa-hl
+ * 87->7, cpa-wa 91->15, "a collision may have been merged"). Nothing merged:
+ * every departed row carried that run's `reslugedFrom` stamp and landed on the
+ * Bowman address for its OWN player, and the collision player's rows stayed
+ * put. The canary was firing on the lane succeeding.
+ *
+ * Under APPLY the lane now keeps a WRITE LEDGER (pool -> rows moved out / in,
+ * both the sale re-files and the catalog lane's sale re-points) and each
+ * anchor's delta is judged against it: `expected = before - out + in`.
+ * Explained -> PASS, with the arithmetic printed in an attribution table.
+ * Unexplained -> still exits 3. Under REPORT the ledger is empty by
+ * construction, so the gate stays STRICT and any movement is still fatal.
+ * Same defect, same fix as #1711/#1727 in the rematch lane.
+ *
  * Env:
  *   COSMOS_CONNECTION_STRING  required
  *   SCOPE                     REQUIRED -- comma-separated sport:year:setKey
@@ -106,12 +124,14 @@
  */
 "use strict";
 
+const fs = require("fs");
 const path = require("path");
 const backend = path.resolve(__dirname, "..");
 
 const B = require(path.join(__dirname, "lib", "bowman-product-refile.cjs"));
 const { relocateSoldComp, stripSystem, contentHashOf } = require(path.join(__dirname, "lib", "relocate-sold-comp.cjs"));
 const { runnerShardScope } = require(path.join(__dirname, "lib", "runner-shard-scope.cjs"));
+const { cardShardIndex } = require(path.join(__dirname, "lib", "card-shard-axis.cjs"));
 const { budget, finishLane } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
 
 const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === "true";
@@ -123,6 +143,8 @@ const csv = (v) => String(v ?? "").split(",").map((s) => s.trim()).filter(Boolea
 const STARTED = Date.now();
 const CONCURRENCY = Math.max(1, Number(process.env.CONCURRENCY || process.env.BACKFILL_CONCURRENCY || 12));
 const LIMIT = Number(process.env.LIMIT || 0);
+// Where this lane's write ledger is persisted for a human re-reading a halt.
+const WRITE_LEDGER_OUT = String(process.env.BOWMAN_WRITE_LEDGER_OUT || "/tmp/bowman-refile-write-ledger.json").trim();
 
 // CF-A-KILLED-JOB-CANNOT-REPORT-PROGRESS (#1803). The three constants, sized
 // for THIS lane's unit.
@@ -174,10 +196,14 @@ async function forEachPage(container, spec, onPage, pageSize = 400) {
   } while (token);
 }
 
+// CF-A-MOVE-LANE-SHARDS-BY-CARD-NOT-BY-ROW (2026-09-05). The unit is the CARD,
+// not the row: a graded child `${parent}:${tier}` starts with the same id stem
+// the scan reads, so hashing the ROW scattered one card's parent, its children
+// and its destination across up to five slots while moveCatalogRow was
+// re-pointing that card's sales and retiring those same children. See
+// lib/card-shard-axis.cjs for the measured interleavings.
 function shardIndex(id) {
-  const crypto = require("crypto");
-  return parseInt(crypto.createHash("sha1").update(String(id ?? "")).digest("hex").slice(0, 8), 16)
-    % Math.max(1, SHARD_SCOPE.SLOTS);
+  return cardShardIndex(id, SHARD_SCOPE.SLOTS);
 }
 
 /** Every row on either key -- the pool reader ORs both fields, so a count that
@@ -206,7 +232,7 @@ async function main() {
     `  MODE            ${APPLY ? "APPLY (writes)" : "REPORT ONLY (no writes)"}`,
     `  SCOPE           ${SCOPE_PRODUCTS.join(", ") || "(none)"}`,
     `  LANES           ${MODE}`,
-    `  SHARD           slot ${SHARD_SCOPE.SLOT} of ${SHARD_SCOPE.SLOTS}${SHARD_SCOPE.sharding ? "" : " (not sharded)"}`,
+    `  SHARD           slot ${SHARD_SCOPE.SLOT} of ${SHARD_SCOPE.SLOTS}${SHARD_SCOPE.SHARDED ? "" : " (not sharded)"}`,
     `  LIMIT           ${LIMIT || "(none)"}`,
     `  CLOCK           ${CLOCK.describe()}`,
     "══════════════════════════════════════════════════════════════════",
@@ -250,6 +276,22 @@ async function main() {
     canary: {},
   };
   const bump = (o, k) => { o[k] = (o[k] ?? 0) + 1; };
+
+  // ── THE WRITE LEDGER (2026-09-06) ────────────────────────────────────────
+  // CF-VERDICTS-ARE-ATTRIBUTED. Per POOL, the rows this lane moved OUT and IN.
+  // A re-file changes two pools and either can hold a canary anchor, so both
+  // sides are recorded. An EMPTY ledger is the positive statement "this lane
+  // moved nothing anywhere" -- which is exactly what a canary needs to hear
+  // before it blames this lane for a delta.
+  const ledger = new Map();
+  const LEDGER_IDS_PER_POOL = 20;
+  const ledgerNote = (slug, id, side) => {
+    if (!slug) return;
+    let e = ledger.get(slug);
+    if (!e) { e = { from: [], to: [] }; ledger.set(slug, e); }
+    if (e[side].length < LEDGER_IDS_PER_POOL) e[side].push(id);
+    e[`${side}Count`] = (e[`${side}Count`] ?? 0) + 1;
+  };
   // THE PRE-CHECK, not a bare `> BUDGET`. `outOfClock()` is true when there is
   // not enough clock left to START another unit of the largest measured size,
   // so the loop stops BEFORE a unit rather than after one.
@@ -292,7 +334,7 @@ async function main() {
       await forEachPage(cat, spec, async (rows) => {
         for (const row of rows) {
           if (outOfTime()) return false;
-          if (SHARD_SCOPE.sharding && shardIndex(row.id) !== SHARD_SCOPE.SLOT) continue;
+          if (SHARD_SCOPE.SHARDED && shardIndex(row.id) !== SHARD_SCOPE.SLOT) continue;
           report.keyMismatch.scanned++;
           batch.push(row);
           if (LIMIT && report.keyMismatch.scanned >= LIMIT) return false;
@@ -411,7 +453,22 @@ async function main() {
           }
           continue;
         }
-        if (res.action !== "noop" && APPLY) report.keyMismatch.moved++;
+        if (res.action !== "noop" && APPLY) {
+          report.keyMismatch.moved++;
+          // THE CATALOG LANE MOVES POOL ROWS TOO. `moveCatalogRow` re-points
+          // every sale pointing at the old slug (`salesContainer: pool`), so a
+          // catalog move drains one pool and fills another exactly as a sale
+          // re-file does. A ledger blind to that would make a `mode=both` run
+          // fail its own canary for the catalog half's success -- the very
+          // defect this attribution exists to end. Ids are not enumerated here
+          // (the mover does not return them); the COUNTS are what the
+          // arithmetic needs.
+          const repointed = Number(res.salesRepointed ?? 0);
+          for (let i = 0; i < repointed; i++) {
+            ledgerNote(row.id, `catalog-repoint:${row.id}`, "from");
+            ledgerNote(plan.dest, `catalog-repoint:${row.id}`, "to");
+          }
+        }
       }
     }
   }
@@ -457,7 +514,7 @@ async function main() {
       }, async (rows) => {
         for (const r of rows) {
           if (outOfTime()) return false;
-          if (SHARD_SCOPE.sharding && shardIndex(r.id) !== SHARD_SCOPE.SLOT) continue;
+          if (SHARD_SCOPE.SHARDED && shardIndex(r.id) !== SHARD_SCOPE.SLOT) continue;
           report.pool.scanned++;
           sales.push(r);
           if (LIMIT && report.pool.scanned >= LIMIT) return false;
@@ -514,8 +571,24 @@ async function main() {
           retry,
           verifyFields: ["hobbyiqCardId", "cardId", "reslugedFrom"],
         });
-        if (out?.ok) report.pool.moved++;
-        else bump(report.pool.skip, `relocate-failed:${out?.stage ?? "unknown"}`);
+        if (out?.ok) {
+          report.pool.moved++;
+          // Both sides, and only on a write that LANDED. A ledger that counted
+          // intent would explain away a delta the lane never actually caused.
+          //
+          // AND BOTH IDENTITY FIELDS, because `poolCount` ORs them. A row can
+          // carry `cardId` on one slug and `hobbyiqCardId` on another -- 5 of
+          // the 8 rows left in the cpa-em anchor are exactly that, cardId on
+          // the Chrome slug and hobbyiqCardId already on Bowman -- and such a
+          // row is counted in BOTH pools. Recording only `reslugedFrom` would
+          // leave the other anchor's drop unattributed and fail the lane for a
+          // move it fully accounted for. The Set collapses the common case
+          // where the two fields agree, so a normal row is still counted once.
+          for (const src of new Set([str(row.hobbyiqCardId), str(row.cardId)].filter(Boolean))) {
+            ledgerNote(src, row.id, "from");
+          }
+          ledgerNote(plan.dest, row.id, "to");
+        } else bump(report.pool.skip, `relocate-failed:${out?.stage ?? "unknown"}`);
         if (out?.duplicatesLeft?.length) {
           bump(report.pool.skip, `duplicate-left-in-pool:${out.duplicatesLeft.length}`);
         }
@@ -555,17 +628,93 @@ async function main() {
   // they could not -- never hold the step open to the ceiling. An unconfirmed
   // anchor is printed UNCONFIRMED and is NOT read as "unchanged": a count we
   // did not take cannot clear the canary.
+  //
+  // AND THE VERDICT IS ATTRIBUTED (2026-09-06). These anchors sit INSIDE this
+  // lane's own write scope -- the Chrome side of the collision numbers is
+  // precisely what the sales lane drains -- so a bare before/after comparison
+  // fails the lane for succeeding. Run 34009971035 is the proof: it refiled
+  // 1,835 sales exactly as ruled, four anchors fell (16->5, 17->8, 87->7,
+  // 91->15), and the gate called it a merged collision. Read against the pool
+  // afterwards, every departed row carried THIS run's `reslugedFrom` stamp and
+  // landed on the Bowman address for its own player; the other player's rows
+  // never moved. Nothing merged. See #1711/#1727 for the same false halt in
+  // the rematch lane and the same fix.
+  //
+  // So each anchor's delta is now measured against the lane's OWN write
+  // ledger: `expected = before - out + in`. Explained -> PASS with the
+  // arithmetic printed. Unexplained, or no ledger at all -> still FAILS.
   let canaryBad = 0, canaryUnread = 0;
   const vt0 = Date.now();
+  const ledgerPools = {};
+  for (const [slug, e] of ledger) {
+    ledgerPools[slug] = { fromCount: e.fromCount ?? 0, toCount: e.toCount ?? 0, from: e.from, to: e.to };
+  }
+  report.writeLedger = {
+    job: "repair-bowman-product-refile",
+    mode: MODE, apply: APPLY, scope: SCOPE_PRODUCTS,
+    slot: SHARD_SCOPE.SLOT, slots: SHARD_SCOPE.SLOTS,
+    runId: process.env.GITHUB_RUN_ID ?? null,
+    finishedAt: new Date().toISOString(),
+    poolsTouched: ledger.size,
+    pools: ledgerPools,
+  };
+  // A REPORT-ONLY run writes nothing, so its ledger is legitimately empty and
+  // any anchor delta is another writer's. An APPLY carries a real ledger.
+  // Either way the ledger EXISTS, so attribution is armed; `null` is reserved
+  // for a caller that has no ledger at all, which stays strict.
+  // The ledger also goes to disk. The gate is in-process here, so this is not
+  // what the attribution reads -- it is what a HUMAN reads when a halt has to
+  // be re-examined without re-running the lane. Written on every mode,
+  // including a report run whose ledger is legitimately empty.
+  if (WRITE_LEDGER_OUT) {
+    try {
+      fs.mkdirSync(path.dirname(WRITE_LEDGER_OUT), { recursive: true });
+      fs.writeFileSync(WRITE_LEDGER_OUT, JSON.stringify(report.writeLedger, null, 1));
+      console.log(`\n  WRITE LEDGER  ${f(ledger.size)} pool(s) touched  ->  ${WRITE_LEDGER_OUT}`);
+    } catch (e) {
+      // A ledger we could not persist is not a reason to fail the lane: the
+      // attribution below reads the in-memory map, not the file.
+      console.error(`!! could not write the ledger to ${WRITE_LEDGER_OUT}: ${String(e?.message ?? e)}`);
+    }
+  }
+
+  report.canaryAttribution = [];
   for (const s of Object.keys(report.canary)) {
     const after = await CLOCK.capped(vt0, `canary ${s}`, () => poolCount(pool, s));
     report.canary[s].after = after;
-    if (after === null) { canaryUnread++; continue; }
-    if (after !== report.canary[s].before) canaryBad++;
+    // `undefined` (ledger does not name this pool) and `null` (no ledger)
+    // mean opposite things to attributeCanary -- pass the lookup straight
+    // through so the distinction survives.
+    //
+    // A REPORT-ONLY RUN STAYS STRICT. Its ledger is empty by construction, so
+    // attribution would relax every anchor to OTHER-WRITER and a dry run that
+    // actually wrote would sail through -- destroying the very guarantee this
+    // lane's report mode exists to give ("a dry run is proven write-free by
+    // MEASUREMENT, not by intent"). `null` is the no-ledger reading, so report
+    // mode passes null and any delta stands. Attribution is for APPLY, where
+    // the lane has writes to attribute.
+    const verdict = B.attributeCanary(s, report.canary[s].before, after, APPLY ? ledgerPools[s] : null);
+    report.canaryAttribution.push(verdict);
+    if (verdict.unread) { canaryUnread++; continue; }
+    if (!verdict.ok) canaryBad++;
   }
   if (canaryUnread) {
     console.log(`  ${canaryUnread} canary anchor(s) UNCONFIRMED (verify cap) — unread, not unchanged.`);
     console.log(CLOCK.unreadNote());
+  }
+
+  // THE ATTRIBUTION TABLE. A verdict a reader cannot check is a verdict taken
+  // on trust, so the arithmetic that produced it is printed for every anchor.
+  console.log("\n── CANARY ATTRIBUTION ────────────────────────────────────────────");
+  console.log(`  this lane's write ledger names ${f(ledger.size)} pool(s)`);
+  for (const v of report.canaryAttribution) {
+    const line = v.unread
+      ? `${String(v.before).padStart(6)} -> UNREAD`
+      : `${String(v.before).padStart(6)} -> ${String(v.after).padEnd(6)}`
+        + ` out ${String(v.from).padStart(5)}  in ${String(v.to).padStart(5)}`
+        + `  expected ${String(v.expected).padStart(6)}`;
+    console.log(`  ${v.verdict.padEnd(12)} ${line}  ${v.slug}`);
+    if (v.note) console.log(`               ${v.note}`);
   }
 
   console.log("\n── REPORT ────────────────────────────────────────────────────────");
@@ -600,12 +749,19 @@ async function main() {
   }
 
   if (!APPLY && canaryBad) {
+    // A report run writes nothing, so its ledger is empty and every anchor is
+    // UNTOUCHED -- which makes a delta another writer's, not a proof of a
+    // stray write. What still fails here is an UNEXPLAINED anchor, and in
+    // report mode that means a pool moved that this lane says it never wrote.
     console.error(`::error::${canaryBad} canary pool(s) moved during a REPORT-ONLY run.`);
     console.error("FATAL: a dry run is proven write-free by MEASUREMENT, not by intent.");
     process.exit(3);
   }
   if (canaryBad) {
-    console.error(`::error::${canaryBad} canary pool(s) changed — a collision may have been merged. Investigate before continuing.`);
+    console.error(
+      `::error::${canaryBad} canary pool(s) changed by rows this lane's write ledger cannot account for`
+      + ` — a collision may have been merged. Investigate before continuing.`,
+    );
     process.exit(3);
   }
   if (failed) process.exit(4);

@@ -1,0 +1,855 @@
+{
+ "generatedAt": "2026-09-05T22:11:52.674Z",
+ "forLane": "relocate-pool-rows-by-list.cjs",
+ "rulings": [
+  "CF-ONE-SALE-ONE-ADDRESS (2026-09-05): one eBay sale resident under two cardId partitions is a split pool AND a double count. Never a delete — RETIRE marks flaggedWrong, PARK marks identityUnverified, and both are reversible.",
+  "PRODUCT axis (Drew, #1827): the title decides which product a dual-filed sale belongs to; the title naming neither product parks both.",
+  "PARALLEL axis (Drew, 2026-09-05): title-decides extends to the parallel axis when the PRODUCT agrees. Keep the copy whose parallel the title states. A title naming NO parallel keeps the base copy only if the rival parallel has no checklist support, else park both.",
+  "CANONICAL-COPY rule: a copy is canonical when its cardId partition equals its hobbyiqCardId AND its setKey is not a maker/parser default (unknown, bare bowman). Exactly one canonical copy retires the rest; zero or several parks all.",
+  "The title predicate is K.storedParallelStatedInTitle from rematch-classify.cjs — the SAME reader repair-finish-collision-refile uses, never a second copy of it."
+ ],
+ "census": {
+  "groups": 104,
+  "retire": 87,
+  "park": 12,
+  "deferred": 18,
+  "byClass": {
+   "sportOnly": {
+    "retire": 1,
+    "park": 6,
+    "deferred": 0
+   },
+   "bowmanVsUnknown": {
+    "retire": 76,
+    "park": 0,
+    "deferred": 7
+   },
+   "realTwoProductDispute": {
+    "retire": 2,
+    "park": 6,
+    "deferred": 11
+   },
+   "otherAxisOnly": {
+    "retire": 1,
+    "park": 0,
+    "deferred": 0
+   },
+   "parallelOnly": {
+    "retire": 1,
+    "park": 0,
+    "deferred": 0
+   },
+   "involvesUnknownSetKey": {
+    "retire": 1,
+    "park": 0,
+    "deferred": 0
+   }
+  },
+  "parallelAxisFolded": 5
+ },
+ "entries": [
+  {
+   "id": "tca-ebay::306854425580",
+   "fromCardId": "hiq:non-sport:2025:topps-chrome:183:refractor:no-auto",
+   "price": 8.99,
+   "parkIdentityUnverified": true,
+   "evidence": "sportOnly: no single canonical copy (0 canonical of 2 live) — neither address is provably this sale's, so BOTH are parked rather than one guessed. Addresses: hiq:non-sport:2025:topps-chrome:183:refractor:no-aut | hiq:baseball:2025:topps-chrome:183:refractor:no-auto"
+  },
+  {
+   "id": "tca-ebay::306854425580",
+   "fromCardId": "hiq:baseball:2025:topps-chrome:183:refractor:no-auto",
+   "price": 8.99,
+   "parkIdentityUnverified": true,
+   "evidence": "sportOnly: no single canonical copy (0 canonical of 2 live) — neither address is provably this sale's, so BOTH are parked rather than one guessed. Addresses: hiq:non-sport:2025:topps-chrome:183:refractor:no-aut | hiq:baseball:2025:topps-chrome:183:refractor:no-auto"
+  },
+  {
+   "id": "tca-ebay::278012617790",
+   "fromCardId": "hiq:pokemon:2024:bowman:217:base:no-auto",
+   "price": 690,
+   "retireSupersededBy": "hiq:pokemon:2024:unknown:217:base:no-auto",
+   "evidence": "bowman-vs-unknown: the title never says \"bowman\", and the parser can only mint that key from /\\b(1st bowman|bowman)\\b — so the bowman copy is the MAKER DEFAULT (CF-BOWMAN-DEFAULT-NOT-EVIDENCE), refuted by the title, not a rival reading. Retired in favour of the unknown copy, which claims no product. sport=pokemon. Title: UMBREON EX 2024 POKEMON SV8A JPN #217 SPECIAL ART RARE SSR PSA 10 Q0895"
+  },
+  {
+   "id": "tca-ebay::366434240945",
+   "fromCardId": "hiq:pokemon:2000:bowman:42:base:no-auto",
+   "price": 335,
+   "retireSupersededBy": "hiq:pokemon:2000:unknown:42:base:no-auto",
+   "evidence": "bowman-vs-unknown: the title never says \"bowman\", and the parser can only mint that key from /\\b(1st bowman|bowman)\\b — so the bowman copy is the MAKER DEFAULT (CF-BOWMAN-DEFAULT-NOT-EVIDENCE), refuted by the title, not a rival reading. Retired in favour of the unknown copy, which claims no product. sport=pokemon. Title: Dark Persian - 2000 Team Rocket #42 🔥 1st Edition PSA 10 🔥 Vintage Pokemon"
+  },
+  {
+   "id": "tca-ebay::377208416041",
+   "fromCardId": "hiq:pokemon:2002:bowman:92:base:no-auto:num-110",
+   "price": 73,
+   "retireSupersededBy": "hiq:pokemon:2002:unknown:92:base:no-auto:num-110",
+   "evidence": "bowman-vs-unknown: the title never says \"bowman\", and the parser can only mint that key from /\\b(1st bowman|bowman)\\b — so the bowman copy is the MAKER DEFAULT (CF-BOWMAN-DEFAULT-NOT-EVIDENCE), refuted by the title, not a rival reading. Retired in favour of the unknown copy, which claims no product. sport=pokemon. Title: 2002 Pokemon Legendary Collection Reverse Holo Foil /110 Seel #92 - Creases"
+  },
+  {
+   "id": "tca-ebay::227364018915",
+   "fromCardId": "hiq:pokemon:2021:bowman:123:base:no-auto",
+   "price": 100,
+   "retireSupersededBy": "hiq:pokemon:2021:unknown:123:base:no-auto",
+   "evidence": "bowman-vs-unknown: the title never says \"bowman\", and the parser can only mint that key from /\\b(1st bowman|bowman)\\b — so the bowman copy is the MAKER DEFAULT (CF-BOWMAN-DEFAULT-NOT-EVIDENCE), refuted by the title, not a rival reading. Retired in favour of the unknown copy, which claims no product. sport=pokemon. Title: 2021 Pokemon Chinese S Promo Lance\\'s Charizard V Purchase CP PSA 10 #123 Card"
+  },
+  {
+   "id": "tca-ebay::296967546649",
+   "fromCardId": "hiq:hockey:2023:bowman:282:base:no-auto",
+   "price": 76.44,
+   "retireSupersededBy": "hiq:hockey:2023:unknown:282:base:no-auto",
+   "evidence": "bowman-vs-unknown: the title never says \"bowman\", and the parser can only mint that key from /\\b(1st bowman|bowman)\\b — so the bowman copy is the MAKER DEFAULT (CF-BOWMAN-DEFAULT-NOT-EVIDENCE), refuted by the title, not a rival reading. Retired in favour of the unknown copy, which claims no product. sport=hockey. Title: 2023-24 Hoops Premium Stock Rising Stars #282 Victor Wembanyama Silver Holo PSA9"
+  },
+  {
+   "id": "tca-ebay::406949347079",
+   "fromCardId": "hiq:hockey:2025:bowman:30:base:auto:num-49",
+   "price": 20,
+   "retireSupersededBy": "hiq:hockey:2025:unknown:30:base:auto:num-49",
+   "evidence": "bowman-vs-unknown: the title never says \"bowman\", and the parser can only mint that key from /\\b(1st bowman|bowman)\\b — so the bowman copy is the MAKER DEFAULT (CF-BOWMAN-DEFAULT-NOT-EVIDENCE), refuted by the title, not a rival reading. Retired in favour of the unknown copy, which claims no product. sport=hockey. Title: 2025-26 Flair Hockey Hot Hues /49 Tomas Hertl Autograph #30 of 32"
+  },
+  {
+   "id": "tca-ebay::377208593461",
+   "fromCardId": "hiq:non-sport:2024:bowman:92:base:no-auto:num-100",
+   "price": 338,
+   "retireSupersededBy": "hiq:non-sport:2024:unknown:92:base:no-auto:num-100",
+   "evidence": "bowman-vs-unknown: the title never says \"bowman\", and the parser can only mint that key from /\\b(1st bowman|bowman)\\b — so the bowman copy is the MAKER DEFAULT (CF-BOWMAN-DEFAULT-NOT-EVIDENCE), refuted by the title, not a rival reading. Retired in favour of the unknown copy, which claims no product. sport=non-sport. Title: Upper Deck 2024 Marvel Masterpieces \\'92 Platinum PMG Thor #92 Level Up /100"
+  },
+  {
+   "id": "tca-ebay::227356054923",
+   "fromCardId": "hiq:pokemon:2023:bowman:181:base:no-auto",
+   "price": 260,
+   "retireSupersededBy": "hiq:pokemon:2023:unknown:181:base:no-auto",
+   "evidence": "bowman-vs-unknown: the title never says \"bowman\", and the parser can only mint that key from /\\b(1st bowman|bowman)\\b — so the bowman copy is the MAKER DEFAULT (CF-BOWMAN-DEFAULT-NOT-EVIDENCE), refuted by the title, not a rival reading. Retired in favour of the unknown copy, which claims no product. sport=pokemon. Title: 2023 POKEMON MEW EN-151 ILLUSTRATION RARE #181 DRAGONAIR PSA 10"
+  },
+  {
+   "id": "tca-ebay::198393335057",
+   "fromCardId": "hiq:baseball:2022:bowman:c218:base:no-auto",
+   "price": 19.99,
+   "retireSupersededBy": "hiq:baseball:2022:unknown:c218:base:no-auto",
+   "evidence": "bowman-vs-unknown: the title never says \"bowman\", and the parser can only mint that key from /\\b(1st bowman|bowman)\\b — so the bowman copy is the MAKER DEFAULT (CF-BOWMAN-DEFAULT-NOT-EVIDENCE), refuted by the title, not a rival reading. Retired in favour of the unknown copy, which claims no product. sport=baseball. Title: 2022-23 Upper Deck Series 2 - Ud Canvas Young Guns Wyatt Johnston #C218 (RC)"
+  },
+  {
+   "id": "tca-ebay::406832619596",
+   "fromCardId": "hiq:baseball:2000:bowman:292:base:no-auto",
+   "price": 1.49,
+   "retireSupersededBy": "hiq:baseball:2000:unknown:292:base:no-auto",
+   "evidence": "bowman-vs-unknown: the title never says \"bowman\", and the parser can only mint that key from /\\b(1st bowman|bowman)\\b — so the bowman copy is the MAKER DEFAULT (CF-BOWMAN-DEFAULT-NOT-EVIDENCE), refuted by the title, not a rival reading. Retired in favour of the unknown copy, which claims no product. sport=baseball. Title: 2000 Pacific Crown Collection - Carlos Delgado #292"
+  },
+  {
+   "id": "tca-ebay::377212777640",
+   "fromCardId": "hiq:basketball:2018:bowman:lckc-en067:base:no-auto",
+   "price": 1.54,
+   "retireSupersededBy": "hiq:basketball:2018:unknown:lckc-en067:base:no-auto",
+   "evidence": "bowman-vs-unknown: the title never says \"bowman\", and the parser can only mint that key from /\\b(1st bowman|bowman)\\b — so the bowman copy is the MAKER DEFAULT (CF-BOWMAN-DEFAULT-NOT-EVIDENCE), refuted by the title, not a rival reading. Retired in favour of the unknown copy, which claims no product. sport=basketball. Title: 2018 Yu-Gi-Oh Legendary Kaiba Mega Pack English 1st Thunder Dragon #LCKC-EN067"
+  },
+  {
+   "id": "tca-ebay::278024707055",
+   "fromCardId": "hiq:basketball:2021:bowman:11:base:auto",
+   "price": 0.61,
+   "retireSupersededBy": "hiq:basketball:2021:unknown:11:base:auto",
+   "evidence": "bowman-vs-unknown: the title never says \"bowman\", and the parser can only mint that key from /\\b(1st bowman|bowman)\\b — so the bowman copy is the MAKER DEFAULT (CF-BOWMAN-DEFAULT-NOT-EVIDENCE), refuted by the title, not a rival reading. Retired in favour of the unknown copy, which claims no product. sport=basketball. Title: Nikola Jokic 2021-22 Hoops #11 Nuggets NBA READ FREE SHIPPING AutographDen"
+  },
+  {
+   "id": "tca-ebay::117220181727",
+   "fromCardId": "hiq:pokemon:2013:bowman:112:base:no-auto",
+   "price": 270,
+   "retireSupersededBy": "hiq:pokemon:2013:unknown:112:base:no-auto",
+   "evidence": "bowman-vs-unknown: the title never says \"bowman\", and the parser can only mint that key from /\\b(1st bowman|bowman)\\b — so the bowman copy is the MAKER DEFAULT (CF-BOWMAN-DEFAULT-NOT-EVIDENCE), refuted by the title, not a rival reading. Retired in favour of the unknown copy, which claims no product. sport=pokemon. Title: 2013 POKEMON BLACK & WHITE PLASMA FREEZE #112 FULL ART/LATIAS EX PSA 7"
+  },
+  {
+   "id": "tca-ebay::166393193672",
+   "fromCardId": "hiq:baseball:2008:bowman:udj-dl:base:no-auto",
+   "price": 4.49,
+   "retireSupersededBy": "hiq:baseball:2008:upper-deck:udj-dl:base:no-auto",
+   "evidence": "realTwoProductDispute: exactly one copy is canonical — its cardId partition equals its hobbyiqCardId and its setKey (upper-deck) is not a maker/parser default. The other copy sits at a defaulted or split address. Title: 2008 Upper Deck UD Game Jersey #UDJ-DL Derrek Lee MEM 055-H"
+  },
+  {
+   "id": "tca-ebay::287343959323",
+   "fromCardId": "hiq:hockey:2026:bowman:336:base:no-auto",
+   "price": 150.5,
+   "retireSupersededBy": "hiq:hockey:2026:unknown:336:base:no-auto",
+   "evidence": "bowman-vs-unknown: the title never says \"bowman\", and the parser can only mint that key from /\\b(1st bowman|bowman)\\b — so the bowman copy is the MAKER DEFAULT (CF-BOWMAN-DEFAULT-NOT-EVIDENCE), refuted by the title, not a rival reading. Retired in favour of the unknown copy, which claims no product. sport=hockey. Title: Colorado Avalanche Break #336 NHL JERSEY 2026 Under Wraps Hockey x8 Case"
+  },
+  {
+   "id": "tca-ebay::117213851275",
+   "fromCardId": "hiq:pokemon:2001:bowman:125:base:no-auto",
+   "price": 1200,
+   "retireSupersededBy": "hiq:pokemon:2001:unknown:125:base:no-auto",
+   "evidence": "bowman-vs-unknown: the title never says \"bowman\", and the parser can only mint that key from /\\b(1st bowman|bowman)\\b — so the bowman copy is the MAKER DEFAULT (CF-BOWMAN-DEFAULT-NOT-EVIDENCE), refuted by the title, not a rival reading. Retired in favour of the unknown copy, which claims no product. sport=pokemon. Title: 2001 POKEMON JAPANESE EXPEDITION 1ST EDITION #125 CLEFABLE-HOLO PSA 10"
+  },
+  {
+   "id": "tca-ebay::306913187751",
+   "fromCardId": "hiq:pokemon:2006:bowman:2:base:no-auto",
+   "price": 320,
+   "retireSupersededBy": "hiq:pokemon:2006:unknown:2:base:no-auto",
+   "evidence": "bowman-vs-unknown: the title never says \"bowman\", and the parser can only mint that key from /\\b(1st bowman|bowman)\\b — so the bowman copy is the MAKER DEFAULT (CF-BOWMAN-DEFAULT-NOT-EVIDENCE), refuted by the title, not a rival reading. Retired in favour of the unknown copy, which claims no product. sport=pokemon. Title: 2006 POKEMON EX CRYSTAL GUARDIANS #2 BLASTOISE-REVERSE FOIL PSA 5"
+  },
+  {
+   "id": "tca-ebay::278012615342",
+   "fromCardId": "hiq:pokemon:2023:panini-obsidian:198:base:no-auto:num-197",
+   "price": 330,
+   "parkIdentityUnverified": true,
+   "evidence": "sportOnly: no single canonical copy (0 canonical of 2 live) — neither address is provably this sale's, so BOTH are parked rather than one guessed. Addresses: hiq:pokemon:2023:panini-obsidian:198:base:no-auto:nu | hiq:hockey:2023:panini-obsidian:198:base:no-auto:num"
+  },
+  {
+   "id": "tca-ebay::278012615342",
+   "fromCardId": "hiq:hockey:2023:panini-obsidian:198:base:no-auto:num-197",
+   "price": 330,
+   "parkIdentityUnverified": true,
+   "evidence": "sportOnly: no single canonical copy (0 canonical of 2 live) — neither address is provably this sale's, so BOTH are parked rather than one guessed. Addresses: hiq:pokemon:2023:panini-obsidian:198:base:no-auto:nu | hiq:hockey:2023:panini-obsidian:198:base:no-auto:num"
+  },
+  {
+   "id": "tca-ebay::287343959344",
+   "fromCardId": "hiq:hockey:2026:bowman:336:base:no-auto",
+   "price": 91,
+   "retireSupersededBy": "hiq:hockey:2026:unknown:336:base:no-auto",
+   "evidence": "bowman-vs-unknown: the title never says \"bowman\", and the parser can only mint that key from /\\b(1st bowman|bowman)\\b — so the bowman copy is the MAKER DEFAULT (CF-BOWMAN-DEFAULT-NOT-EVIDENCE), refuted by the title, not a rival reading. Retired in favour of the unknown copy, which claims no product. sport=hockey. Title: St. Louis Blues Break #336 NHL JERSEY 2026 Under Wraps Hockey x8 Case"
+  },
+  {
+   "id": "tca-ebay::406957983209",
+   "fromCardId": "hiq:pokemon:2021:bowman:205203:base:no-auto:num-203",
+   "price": 630.98,
+   "retireSupersededBy": "hiq:pokemon:2021:unknown:205203:base:no-auto:num-203",
+   "evidence": "bowman-vs-unknown: the title never says \"bowman\", and the parser can only mint that key from /\\b(1st bowman|bowman)\\b — so the bowman copy is the MAKER DEFAULT (CF-BOWMAN-DEFAULT-NOT-EVIDENCE), refuted by the title, not a rival reading. Retired in favour of the unknown copy, which claims no product. sport=pokemon. Title: Pokémon 2021 Leafeon VMAX 205/203 Evolving Skies Pokemon TCG PSA 10"
+  },
+  {
+   "id": "tca-ebay::287343982940",
+   "fromCardId": "hiq:football:2026:bowman:337:base:auto",
+   "price": 76.99,
+   "retireSupersededBy": "hiq:football:2026:unknown:337:base:auto",
+   "evidence": "bowman-vs-unknown: the title never says \"bowman\", and the parser can only mint that key from /\\b(1st bowman|bowman)\\b — so the bowman copy is the MAKER DEFAULT (CF-BOWMAN-DEFAULT-NOT-EVIDENCE), refuted by the title, not a rival reading. Retired in favour of the unknown copy, which claims no product. sport=football. Title: Carolina Panthers Break #337 Under Wraps NFL Auto Jersey 2026 x8 Full Case"
+  },
+  {
+   "id": "tca-ebay::306954084995",
+   "fromCardId": "hiq:pokemon:2024:bowman:102:base:no-auto:num-101",
+   "price": 41,
+   "retireSupersededBy": "hiq:pokemon:2024:unknown:102:base:no-auto:num-101",
+   "evidence": "bowman-vs-unknown: the title never says \"bowman\", and the parser can only mint that key from /\\b(1st bowman|bowman)\\b — so the bowman copy is the MAKER DEFAULT (CF-BOWMAN-DEFAULT-NOT-EVIDENCE), refuted by the title, not a rival reading. Retired in favour of the unknown copy, which claims no product. sport=pokemon. Title: 2024 Pokemon SUNFLORA #102/101 Mask of Change Art Rare Holo Japanese PSA 10"
+  },
+  {
+   "id": "tca-ebay::168282548275",
+   "fromCardId": "hiq:pokemon:2000:bowman:14:base:no-auto",
+   "price": 30,
+   "retireSupersededBy": "hiq:pokemon:2000:unknown:14:base:no-auto",
+   "evidence": "bowman-vs-unknown: the title never says \"bowman\", and the parser can only mint that key from /\\b(1st bowman|bowman)\\b — so the bowman copy is the MAKER DEFAULT (CF-BOWMAN-DEFAULT-NOT-EVIDENCE), refuted by the title, not a rival reading. Retired in favour of the unknown copy, which claims no product. sport=pokemon. Title: PSA 5 Mewtwo Black Star Promo #14 Pokemon TCG 2000"
+  },
+  {
+   "id": "tca-ebay::117213501811",
+   "fromCardId": "hiq:baseball:2025:bowman:6:base:no-auto:num-65",
+   "price": 1.63,
+   "retireSupersededBy": "hiq:baseball:2025:unknown:6:base:no-auto:num-65",
+   "evidence": "bowman-vs-unknown: the title never says \"bowman\", and the parser can only mint that key from /\\b(1st bowman|bowman)\\b — so the bowman copy is the MAKER DEFAULT (CF-BOWMAN-DEFAULT-NOT-EVIDENCE), refuted by the title, not a rival reading. Retired in favour of the unknown copy, which claims no product. sport=baseball. Title: O-Pee-Chee Platinum 2025-26 Cosmic   - Bo Horvat  #6  53/65"
+  },
+  {
+   "id": "tca-ebay::366434188647",
+   "fromCardId": "hiq:basketball:2017:panini-contenders:23:base:no-auto:num-25",
+   "price": 1309,
+   "retireSupersededBy": "hiq:basketball:2017:panini-contenders:player-jsy-lebron-james-ice:base:no-auto",
+   "evidence": "otherAxisOnly: exactly one copy is canonical — its cardId partition equals its hobbyiqCardId and its setKey (panini-contenders) is not a maker/parser default. The other copy sits at a defaulted or split address. Title: 6/25 JSY# 1/1 ! 2017-18 Contenders LeBron James #23 Ice Winning Tickets BGS 9.5"
+  },
+  {
+   "id": "tca-ebay::188165027531",
+   "fromCardId": "hiq:tcg-other:2025:bowman:44:base:no-auto",
+   "price": 60,
+   "retireSupersededBy": "hiq:tcg-other:2025:unknown:44:base:no-auto",
+   "evidence": "bowman-vs-unknown: the title never says \"bowman\", and the parser can only mint that key from /\\b(1st bowman|bowman)\\b — so the bowman copy is the MAKER DEFAULT (CF-BOWMAN-DEFAULT-NOT-EVIDENCE), refuted by the title, not a rival reading. Retired in favour of the unknown copy, which claims no product. sport=tcg-other. Title: 2025 mtg final fantasy art series #44 sephiroth, fbld soldier graded psa 10"
+  },
+  {
+   "id": "tca-ebay::366432011637",
+   "fromCardId": "hiq:pokemon:2016:bowman:rc5:base:no-auto",
+   "price": 120,
+   "retireSupersededBy": "hiq:pokemon:2016:unknown:rc5:base:no-auto",
+   "evidence": "bowman-vs-unknown: the title never says \"bowman\", and the parser can only mint that key from /\\b(1st bowman|bowman)\\b — so the bowman copy is the MAKER DEFAULT (CF-BOWMAN-DEFAULT-NOT-EVIDENCE), refuted by the title, not a rival reading. Retired in favour of the unknown copy, which claims no product. sport=pokemon. Title: 2016 POKEMON XY GENERATIONS RADIANT COLL. CHARIZARD #RC5 HOLO-RARE PSA 9 MINT"
+  },
+  {
+   "id": "tca-ebay::267655816221",
+   "fromCardId": "hiq:anime-tcg:2022:bowman:op01:base:no-auto",
+   "price": 225,
+   "retireSupersededBy": "hiq:anime-tcg:2022:unknown:op01:base:no-auto",
+   "evidence": "bowman-vs-unknown: the title never says \"bowman\", and the parser can only mint that key from /\\b(1st bowman|bowman)\\b — so the bowman copy is the MAKER DEFAULT (CF-BOWMAN-DEFAULT-NOT-EVIDENCE), refuted by the title, not a rival reading. Retired in favour of the unknown copy, which claims no product. sport=anime-tcg. Title: 2022 Monkey D Luffy One Piece Don!!Card #OP01 Alternate Art PSA 10 FREE SHIPPING"
+  },
+  {
+   "id": "tca-ebay::306961286231",
+   "fromCardId": "hiq:pokemon:2003:bowman:54144:base:no-auto:num-144",
+   "price": 14.79,
+   "retireSupersededBy": "hiq:pokemon:2003:unknown:54144:base:no-auto:num-144",
+   "evidence": "bowman-vs-unknown: the title never says \"bowman\", and the parser can only mint that key from /\\b(1st bowman|bowman)\\b — so the bowman copy is the MAKER DEFAULT (CF-BOWMAN-DEFAULT-NOT-EVIDENCE), refuted by the title, not a rival reading. Retired in favour of the unknown copy, which claims no product. sport=pokemon. Title: Eevee 54/144 Skyridge English Pokemon Card Vintage 2003 (LP)"
+  },
+  {
+   "id": "tca-ebay::397984959841",
+   "fromCardId": "hiq:football:2000:bowman:34:base:no-auto",
+   "price": 1.5,
+   "retireSupersededBy": "hiq:football:2000:unknown:34:base:no-auto",
+   "evidence": "bowman-vs-unknown: the title never says \"bowman\", and the parser can only mint that key from /\\b(1st bowman|bowman)\\b — so the bowman copy is the MAKER DEFAULT (CF-BOWMAN-DEFAULT-NOT-EVIDENCE), refuted by the title, not a rival reading. Retired in favour of the unknown copy, which claims no product. sport=football. Title: 2000 Pacific Vanguard - Dan Marino #34"
+  },
+  {
+   "id": "tca-ebay::397990684160",
+   "fromCardId": "hiq:basketball:2024:bowman:18:base:no-auto",
+   "price": 42.11,
+   "retireSupersededBy": "hiq:basketball:2024:unknown:18:base:no-auto",
+   "evidence": "bowman-vs-unknown: the title never says \"bowman\", and the parser can only mint that key from /\\b(1st bowman|bowman)\\b — so the bowman copy is the MAKER DEFAULT (CF-BOWMAN-DEFAULT-NOT-EVIDENCE), refuted by the title, not a rival reading. Retired in favour of the unknown copy, which claims no product. sport=basketball. Title: 2024-25 RECON ROCK THE RIM VICTOR WEMBANYAMA RC SAN ANTONIO SPURS #18"
+  },
+  {
+   "id": "tca-ebay::206292904915",
+   "fromCardId": "hiq:pokemon:2016:bowman:101:base:no-auto:num-108",
+   "price": 996.88,
+   "retireSupersededBy": "hiq:pokemon:2016:unknown:101:base:no-auto:num-108",
+   "evidence": "bowman-vs-unknown: the title never says \"bowman\", and the parser can only mint that key from /\\b(1st bowman|bowman)\\b — so the bowman copy is the MAKER DEFAULT (CF-BOWMAN-DEFAULT-NOT-EVIDENCE), refuted by the title, not a rival reading. Retired in favour of the unknown copy, which claims no product. sport=pokemon. Title: 2016 POKEMON XY EVOLUTIONS #101/108 M CHARIZARD EX FULL ART ULTRA RARE PSA 10"
+  },
+  {
+   "id": "tca-ebay::306972366461",
+   "fromCardId": "hiq:pokemon:2001:bowman:091:base:no-auto",
+   "price": 4250,
+   "retireSupersededBy": "hiq:pokemon:2001:unknown:091:base:no-auto",
+   "evidence": "bowman-vs-unknown: the title never says \"bowman\", and the parser can only mint that key from /\\b(1st bowman|bowman)\\b — so the bowman copy is the MAKER DEFAULT (CF-BOWMAN-DEFAULT-NOT-EVIDENCE), refuted by the title, not a rival reading. Retired in favour of the unknown copy, which claims no product. sport=pokemon. Title: 2001 POKEMON JAPANESE VS 1ST EDITION #091 KAREN\\'S UMBREON-HOLO PSA 8"
+  },
+  {
+   "id": "tca-ebay::298296513034",
+   "fromCardId": "hiq:pokemon:2016:bowman:247:base:no-auto",
+   "price": 2199,
+   "retireSupersededBy": "hiq:pokemon:2016:unknown:247:base:no-auto",
+   "evidence": "bowman-vs-unknown: the title never says \"bowman\", and the parser can only mint that key from /\\b(1st bowman|bowman)\\b — so the bowman copy is the MAKER DEFAULT (CF-BOWMAN-DEFAULT-NOT-EVIDENCE), refuted by the title, not a rival reading. Retired in favour of the unknown copy, which claims no product. sport=pokemon. Title: 2016 POKEMON JAPANESE XY PROMO #247 PIKACHU LIBRE-HOLO PSA 10"
+  },
+  {
+   "id": "tca-ebay::127884531758",
+   "fromCardId": "hiq:pokemon:2019:bowman:sv69:base:no-auto",
+   "price": 238.38,
+   "retireSupersededBy": "hiq:pokemon:2019:unknown:sv69:base:no-auto",
+   "evidence": "bowman-vs-unknown: the title never says \"bowman\", and the parser can only mint that key from /\\b(1st bowman|bowman)\\b — so the bowman copy is the MAKER DEFAULT (CF-BOWMAN-DEFAULT-NOT-EVIDENCE), refuted by the title, not a rival reading. Retired in favour of the unknown copy, which claims no product. sport=pokemon. Title: 2019 Pokemon SM Hidden Fates Umbreon GX #SV69/SV94"
+  },
+  {
+   "id": "tca-ebay::127886685646",
+   "fromCardId": "hiq:non-sport:2025:topps-chrome:1:refractor:auto:num-1",
+   "price": 168.5,
+   "parkIdentityUnverified": true,
+   "evidence": "sportOnly: no single canonical copy (0 canonical of 2 live) — neither address is provably this sale's, so BOTH are parked rather than one guessed. Addresses: hiq:non-sport:2025:topps-chrome:1:refractor:auto:num | hiq:baseball:2025:topps-chrome:1:refractor:auto:num-"
+  },
+  {
+   "id": "tca-ebay::127886685646",
+   "fromCardId": "hiq:baseball:2025:topps-chrome:1:refractor:auto:num-1",
+   "price": 168.5,
+   "parkIdentityUnverified": true,
+   "evidence": "sportOnly: no single canonical copy (0 canonical of 2 live) — neither address is provably this sale's, so BOTH are parked rather than one guessed. Addresses: hiq:non-sport:2025:topps-chrome:1:refractor:auto:num | hiq:baseball:2025:topps-chrome:1:refractor:auto:num-"
+  },
+  {
+   "id": "tca-ebay::117213494221",
+   "fromCardId": "hiq:baseball:2025:bowman:171:base:no-auto:num-199",
+   "price": 0.73,
+   "retireSupersededBy": "hiq:baseball:2025:unknown:171:base:no-auto:num-199",
+   "evidence": "bowman-vs-unknown: the title never says \"bowman\", and the parser can only mint that key from /\\b(1st bowman|bowman)\\b — so the bowman copy is the MAKER DEFAULT (CF-BOWMAN-DEFAULT-NOT-EVIDENCE), refuted by the title, not a rival reading. Retired in favour of the unknown copy, which claims no product. sport=baseball. Title: O-Pee-Chee Platinum 2025-26 RedPrism  - Sam Bennett #171  182/199"
+  },
+  {
+   "id": "tca-ebay::377211169897",
+   "fromCardId": "hiq:hockey:2025:bowman:5918:base:no-auto",
+   "price": 364.59,
+   "retireSupersededBy": "hiq:hockey:2025:unknown:5918:base:no-auto",
+   "evidence": "bowman-vs-unknown: the title never says \"bowman\", and the parser can only mint that key from /\\b(1st bowman|bowman)\\b — so the bowman copy is the MAKER DEFAULT (CF-BOWMAN-DEFAULT-NOT-EVIDENCE), refuted by the title, not a rival reading. Retired in favour of the unknown copy, which claims no product. sport=hockey. Title: 2025-26 OPC PLATINUM 8 (EIGHT) BOX CASE BREAK #5918 - Montreal Canadiens"
+  },
+  {
+   "id": "tca-ebay::306949350037",
+   "fromCardId": "hiq:pokemon:2025:bowman:15:base:no-auto",
+   "price": 227.5,
+   "retireSupersededBy": "hiq:pokemon:2025:unknown:15:base:no-auto",
+   "evidence": "bowman-vs-unknown: the title never says \"bowman\", and the parser can only mint that key from /\\b(1st bowman|bowman)\\b — so the bowman copy is the MAKER DEFAULT (CF-BOWMAN-DEFAULT-NOT-EVIDENCE), refuted by the title, not a rival reading. Retired in favour of the unknown copy, which claims no product. sport=pokemon. Title: 2025 POKEMON SIMPLIFIED CHINESE CBB2 C-GEM PACK VOL 2 #15 EEVEE PSA 10"
+  },
+  {
+   "id": "tca-ebay::306928629552",
+   "fromCardId": "hiq:pokemon:2023:bowman:051:base:no-auto",
+   "price": 2225,
+   "retireSupersededBy": "hiq:pokemon:2023:unknown:051:base:no-auto",
+   "evidence": "bowman-vs-unknown: the title never says \"bowman\", and the parser can only mint that key from /\\b(1st bowman|bowman)\\b — so the bowman copy is the MAKER DEFAULT (CF-BOWMAN-DEFAULT-NOT-EVIDENCE), refuted by the title, not a rival reading. Retired in favour of the unknown copy, which claims no product. sport=pokemon. Title: 2023 POKEMON 151 POKEMON CENTER ELITE TRAINER BOX PROMO SVP #051 SNORLAX PSA 10"
+  },
+  {
+   "id": "tca-ebay::117209461912",
+   "fromCardId": "hiq:pokemon:2025:bowman:261:base:no-auto",
+   "price": 630,
+   "retireSupersededBy": "hiq:pokemon:2025:unknown:261:base:no-auto",
+   "evidence": "bowman-vs-unknown: the title never says \"bowman\", and the parser can only mint that key from /\\b(1st bowman|bowman)\\b — so the bowman copy is the MAKER DEFAULT (CF-BOWMAN-DEFAULT-NOT-EVIDENCE), refuted by the title, not a rival reading. Retired in favour of the unknown copy, which claims no product. sport=pokemon. Title: 2025 POKEMON JPN PROMO POKEMON CENTER HIROSHIMA #261 HIROSHIMA\\'S PIKACHU PSA 10"
+  },
+  {
+   "id": "tca-ebay::127884522056",
+   "fromCardId": "hiq:baseball:2009:bowman:9:base:no-auto",
+   "price": 146.56,
+   "retireSupersededBy": "hiq:baseball:2009:unknown:9:base:no-auto",
+   "evidence": "bowman-vs-unknown: the title never says \"bowman\", and the parser can only mint that key from /\\b(1st bowman|bowman)\\b — so the bowman copy is the MAKER DEFAULT (CF-BOWMAN-DEFAULT-NOT-EVIDENCE), refuted by the title, not a rival reading. Retired in favour of the unknown copy, which claims no product. sport=baseball. Title: 2009-10 Upper Deck Michael Jordan Legacy Hall of Fame Edition #9 PSA 10 GEM MINT"
+  },
+  {
+   "id": "tca-ebay::306955477477",
+   "fromCardId": "hiq:anime-tcg:2025:bowman:003:base:no-auto",
+   "price": 90,
+   "retireSupersededBy": "hiq:anime-tcg:2025:unknown:003:base:no-auto",
+   "evidence": "bowman-vs-unknown: the title never says \"bowman\", and the parser can only mint that key from /\\b(1st bowman|bowman)\\b — so the bowman copy is the MAKER DEFAULT (CF-BOWMAN-DEFAULT-NOT-EVIDENCE), refuted by the title, not a rival reading. Retired in favour of the unknown copy, which claims no product. sport=anime-tcg. Title: 2025 KAYOU NARUTO SMRITI PSA MAGAZINE EXCLUSIVE #003 NARUTO UZUMAKI PSA 10"
+  },
+  {
+   "id": "tca-ebay::147341525599",
+   "fromCardId": "hiq:pokemon:2023:bowman:198:base:no-auto",
+   "price": 550,
+   "retireSupersededBy": "hiq:pokemon:2023:unknown:198:base:no-auto",
+   "evidence": "bowman-vs-unknown: the title never says \"bowman\", and the parser can only mint that key from /\\b(1st bowman|bowman)\\b — so the bowman copy is the MAKER DEFAULT (CF-BOWMAN-DEFAULT-NOT-EVIDENCE), refuted by the title, not a rival reading. Retired in favour of the unknown copy, which claims no product. sport=pokemon. Title: 2023 Pokemon Mew EN-151 Venusaur EX Special Illustration Rare PSA 10 #198"
+  },
+  {
+   "id": "tca-ebay::127884539537",
+   "fromCardId": "hiq:pokemon:2023:bowman:203:base:no-auto:num-193",
+   "price": 475,
+   "retireSupersededBy": "hiq:pokemon:2023:unknown:203:base:no-auto:num-193",
+   "evidence": "bowman-vs-unknown: the title never says \"bowman\", and the parser can only mint that key from /\\b(1st bowman|bowman)\\b — so the bowman copy is the MAKER DEFAULT (CF-BOWMAN-DEFAULT-NOT-EVIDENCE), refuted by the title, not a rival reading. Retired in favour of the unknown copy, which claims no product. sport=pokemon. Title: 2023 Pokemon SV Paldea Evolved Magikarp Illustration Rare #203/193 PSA 9"
+  },
+  {
+   "id": "tca-ebay::236835412504",
+   "fromCardId": "hiq:pokemon:2001:bowman:110:base:no-auto",
+   "price": 618,
+   "retireSupersededBy": "hiq:pokemon:2001:unknown:110:base:no-auto",
+   "evidence": "bowman-vs-unknown: the title never says \"bowman\", and the parser can only mint that key from /\\b(1st bowman|bowman)\\b — so the bowman copy is the MAKER DEFAULT (CF-BOWMAN-DEFAULT-NOT-EVIDENCE), refuted by the title, not a rival reading. Retired in favour of the unknown copy, which claims no product. sport=pokemon. Title: 2001 Pokemon Japanese Expedition 1st Ed. #110 Cloyster Holo PSA 10 GEM MT"
+  },
+  {
+   "id": "tca-ebay::206312008820",
+   "fromCardId": "hiq:non-sport:2023:panini-optic:225:base:no-auto",
+   "price": 200,
+   "retireSupersededBy": "hiq:basketball:2023:panini-optic:225:base:no-auto",
+   "evidence": "sportOnly: exactly one copy is canonical — its cardId partition equals its hobbyiqCardId and its setKey (panini-optic) is not a maker/parser default. The other copy sits at a defaulted or split address. Title: (7) Victor Wembanyama 2023-24 Panini NBA Donruss Optic Base Rc #225 Lot WOW Hot"
+  },
+  {
+   "id": "tca-ebay::168389395790",
+   "fromCardId": "hiq:hockey:2025:bowman:121:base:no-auto:num-349",
+   "price": 1.99,
+   "retireSupersededBy": "hiq:hockey:2025:unknown:121:base:no-auto:num-349",
+   "evidence": "bowman-vs-unknown: the title never says \"bowman\", and the parser can only mint that key from /\\b(1st bowman|bowman)\\b — so the bowman copy is the MAKER DEFAULT (CF-BOWMAN-DEFAULT-NOT-EVIDENCE), refuted by the title, not a rival reading. Retired in favour of the unknown copy, which claims no product. sport=hockey. Title: 2025-26 Flair Hockey Auston Matthews Imagine B Variant #d 007/349 #121"
+  },
+  {
+   "id": "tca-ebay::377222489985",
+   "fromCardId": "hiq:baseball:2008:bowman:51:base:no-auto",
+   "price": 0.99,
+   "retireSupersededBy": "hiq:baseball:2008:upper-deck:51:base:no-auto",
+   "evidence": "realTwoProductDispute: exactly one copy is canonical — its cardId partition equals its hobbyiqCardId and its setKey (upper-deck) is not a maker/parser default. The other copy sits at a defaulted or split address. Title: 2008 Upper Deck Masterpieces Jordy Nelson RC #51"
+  },
+  {
+   "id": "tca-ebay::137241027720",
+   "fromCardId": "hiq:pokemon:2009:bowman:149:base:no-auto",
+   "price": 1150,
+   "retireSupersededBy": "hiq:pokemon:2009:unknown:149:base:no-auto",
+   "evidence": "bowman-vs-unknown: the title never says \"bowman\", and the parser can only mint that key from /\\b(1st bowman|bowman)\\b — so the bowman copy is the MAKER DEFAULT (CF-BOWMAN-DEFAULT-NOT-EVIDENCE), refuted by the title, not a rival reading. Retired in favour of the unknown copy, which claims no product. sport=pokemon. Title: 2009 POKEMON PLATINUM SUPREME VICTORS #149 MOLTRES-HOLO PSA 9. Recent cert…"
+  },
+  {
+   "id": "tca-ebay::257523900552",
+   "fromCardId": "hiq:non-sport:2020:bowman:89:base:no-auto:num-99",
+   "price": 140.81,
+   "retireSupersededBy": "hiq:non-sport:2020:unknown:89:base:no-auto:num-99",
+   "evidence": "bowman-vs-unknown: the title never says \"bowman\", and the parser can only mint that key from /\\b(1st bowman|bowman)\\b — so the bowman copy is the MAKER DEFAULT (CF-BOWMAN-DEFAULT-NOT-EVIDENCE), refuted by the title, not a rival reading. Retired in favour of the unknown copy, which claims no product. sport=non-sport. Title: 2020 Marvel Masterpieces Palumbo Base Card Tier 4 #89 Kraven 90/99"
+  },
+  {
+   "id": "tca-ebay::178161773234",
+   "fromCardId": "hiq:hockey:2025:bowman:131:base:no-auto:num-349",
+   "price": 0.99,
+   "retireSupersededBy": "hiq:hockey:2025:unknown:131:base:no-auto:num-349",
+   "evidence": "bowman-vs-unknown: the title never says \"bowman\", and the parser can only mint that key from /\\b(1st bowman|bowman)\\b — so the bowman copy is the MAKER DEFAULT (CF-BOWMAN-DEFAULT-NOT-EVIDENCE), refuted by the title, not a rival reading. Retired in favour of the unknown copy, which claims no product. sport=hockey. Title: 2025-26 Flair Forecheck /349 Elias Pettersson #131"
+  },
+  {
+   "id": "tca-ebay::206309013471",
+   "fromCardId": "hiq:baseball:2009:bowman:92:base:no-auto",
+   "price": 95,
+   "retireSupersededBy": "hiq:baseball:2009:unknown:92:base:no-auto",
+   "evidence": "bowman-vs-unknown: the title never says \"bowman\", and the parser can only mint that key from /\\b(1st bowman|bowman)\\b — so the bowman copy is the MAKER DEFAULT (CF-BOWMAN-DEFAULT-NOT-EVIDENCE), refuted by the title, not a rival reading. Retired in favour of the unknown copy, which claims no product. sport=baseball. Title: 2009 Upper Deck Jordan Legacy Gold Michael Jordan #92 PSA 10"
+  },
+  {
+   "id": "tca-ebay::297932346333",
+   "fromCardId": "hiq:pokemon:2018:bowman:038:base:no-auto",
+   "price": 408.07,
+   "retireSupersededBy": "hiq:pokemon:2018:unknown:038:base:no-auto",
+   "evidence": "bowman-vs-unknown: the title never says \"bowman\", and the parser can only mint that key from /\\b(1st bowman|bowman)\\b — so the bowman copy is the MAKER DEFAULT (CF-BOWMAN-DEFAULT-NOT-EVIDENCE), refuted by the title, not a rival reading. Retired in favour of the unknown copy, which claims no product. sport=pokemon. Title: Pokemon PSA 10 Gengar & Mimikyu GX #038 Sun & Moon Tag Bolt 2018 Japanese"
+  },
+  {
+   "id": "tca-ebay::168408634270",
+   "fromCardId": "hiq:basketball:2023:bowman:pps-9:base:no-auto",
+   "price": 1400,
+   "retireSupersededBy": "hiq:basketball:2023:unknown:pps-9:base:no-auto",
+   "evidence": "bowman-vs-unknown: the title never says \"bowman\", and the parser can only mint that key from /\\b(1st bowman|bowman)\\b — so the bowman copy is the MAKER DEFAULT (CF-BOWMAN-DEFAULT-NOT-EVIDENCE), refuted by the title, not a rival reading. Retired in favour of the unknown copy, which claims no product. sport=basketball. Title: 2023-24 Cosmic Chrome - Planetary Pursuit Victor Wembanyama #PPS-9 Sun PSA 10 RC"
+  },
+  {
+   "id": "tca-ebay::157950017850",
+   "fromCardId": "hiq:pokemon:2024:bowman:238:base:no-auto:num-191",
+   "price": 375,
+   "retireSupersededBy": "hiq:pokemon:2024:unknown:238:base:no-auto:num-191",
+   "evidence": "bowman-vs-unknown: the title never says \"bowman\", and the parser can only mint that key from /\\b(1st bowman|bowman)\\b — so the bowman copy is the MAKER DEFAULT (CF-BOWMAN-DEFAULT-NOT-EVIDENCE), refuted by the title, not a rival reading. Retired in favour of the unknown copy, which claims no product. sport=pokemon. Title: 2024 Pokemon SV08: Surging Sparks Pikachu ex PSA 9 #238/191 Special Illustration"
+  },
+  {
+   "id": "tca-ebay::406951822626",
+   "fromCardId": "hiq:pokemon:2026:bowman:2:base:no-auto:num-80",
+   "price": 12.5,
+   "retireSupersededBy": "hiq:pokemon:2026:unknown:2:base:no-auto:num-80",
+   "evidence": "bowman-vs-unknown: the title never says \"bowman\", and the parser can only mint that key from /\\b(1st bowman|bowman)\\b — so the bowman copy is the MAKER DEFAULT (CF-BOWMAN-DEFAULT-NOT-EVIDENCE), refuted by the title, not a rival reading. Retired in favour of the unknown copy, which claims no product. sport=pokemon. Title: 2026 Pokemon TCG Japanese Nihil Zero M3 Gengar 049/080 U PCG 10 #2 AD12"
+  },
+  {
+   "id": "tca-ebay::318303056179",
+   "fromCardId": "hiq:yugioh:2000:bowman:b1:base:no-auto",
+   "price": 9.73,
+   "retireSupersededBy": "hiq:yugioh:2000:unknown:b1:base:no-auto",
+   "evidence": "bowman-vs-unknown: the title never says \"bowman\", and the parser can only mint that key from /\\b(1st bowman|bowman)\\b — so the bowman copy is the MAKER DEFAULT (CF-BOWMAN-DEFAULT-NOT-EVIDENCE), refuted by the title, not a rival reading. Retired in favour of the unknown copy, which claims no product. sport=yugioh. Title: Fire Eye Japanese YuGiOh OCG Series 2 Booster R1 Reprint #B1-13 2000"
+  },
+  {
+   "id": "tca-ebay::227298638734",
+   "fromCardId": "hiq:pokemon:2022:bowman:171172:base:no-auto:num-172",
+   "price": 11.97,
+   "retireSupersededBy": "hiq:hockey:2022:unknown:171172:base:no-auto:num-172",
+   "evidence": "bowman-vs-unknown: the title never says \"bowman\", and the parser can only mint that key from /\\b(1st bowman|bowman)\\b — so the bowman copy is the MAKER DEFAULT (CF-BOWMAN-DEFAULT-NOT-EVIDENCE), refuted by the title, not a rival reading. Retired in favour of the unknown copy, which claims no product. sport=hockey. Title: Marnie\\'s Pride ⭐️ 171/172 Holo Ultra Rare Brilliant Stars 2022 Pokemon NM"
+  },
+  {
+   "id": "tca-ebay::117210447770",
+   "fromCardId": "hiq:pokemon:2025:bowman:208:base:no-auto",
+   "price": 43,
+   "retireSupersededBy": "hiq:pokemon:2025:unknown:208:base:no-auto",
+   "evidence": "bowman-vs-unknown: the title never says \"bowman\", and the parser can only mint that key from /\\b(1st bowman|bowman)\\b — so the bowman copy is the MAKER DEFAULT (CF-BOWMAN-DEFAULT-NOT-EVIDENCE), refuted by the title, not a rival reading. Retired in favour of the unknown copy, which claims no product. sport=pokemon. Title: 2025 POKEMON SVP UNOVA VICTINI ILLUSTRATION COLLECTION-JUMBO #208 VICTINI PSA 9"
+  },
+  {
+   "id": "tca-ebay::198392943095",
+   "fromCardId": "hiq:pokemon:2000:bowman:364:base:no-auto:num-64",
+   "price": 154,
+   "retireSupersededBy": "hiq:pokemon:2000:unknown:364:base:no-auto:num-64",
+   "evidence": "bowman-vs-unknown: the title never says \"bowman\", and the parser can only mint that key from /\\b(1st bowman|bowman)\\b — so the bowman copy is the MAKER DEFAULT (CF-BOWMAN-DEFAULT-NOT-EVIDENCE), refuted by the title, not a rival reading. Retired in favour of the unknown copy, which claims no product. sport=pokemon. Title: Pokémon Celebi Neo Revelation Holo Rare 3/64 50 HP Basic 2000 Near Mint"
+  },
+  {
+   "id": "tca-ebay::206292914914",
+   "fromCardId": "hiq:pokemon:2008:bowman:dp18:base:no-auto",
+   "price": 134.49,
+   "retireSupersededBy": "hiq:pokemon:2008:unknown:dp18:base:no-auto",
+   "evidence": "bowman-vs-unknown: the title never says \"bowman\", and the parser can only mint that key from /\\b(1st bowman|bowman)\\b — so the bowman copy is the MAKER DEFAULT (CF-BOWMAN-DEFAULT-NOT-EVIDENCE), refuted by the title, not a rival reading. Retired in favour of the unknown copy, which claims no product. sport=pokemon. Title: 2008 POKEMON D&P BLACK STAR PROMO D&P SPRING COLL. TINS #DP18 PALKIA LV.X TAG 8"
+  },
+  {
+   "id": "tca-ebay::366434325713",
+   "fromCardId": "hiq:basketball:2026:bowman:mt-51:base:no-auto:num-555",
+   "price": 8.45,
+   "retireSupersededBy": "hiq:basketball:2026:unknown:mt-51:base:no-auto:num-555",
+   "evidence": "bowman-vs-unknown: the title never says \"bowman\", and the parser can only mint that key from /\\b(1st bowman|bowman)\\b — so the bowman copy is the MAKER DEFAULT (CF-BOWMAN-DEFAULT-NOT-EVIDENCE), refuted by the title, not a rival reading. Retired in favour of the unknown copy, which claims no product. sport=basketball. Title: 2026 KAKAWOW AURA Harry Potter 25TH Dean Thomas #MT-51 Magic Trilogy I /555"
+  },
+  {
+   "id": "tca-ebay::317222082629",
+   "fromCardId": "hiq:pokemon:2006:bowman:12:base:no-auto:num-101",
+   "price": 15,
+   "retireSupersededBy": "hiq:pokemon:2006:unknown:12:base:no-auto:num-101",
+   "evidence": "bowman-vs-unknown: the title never says \"bowman\", and the parser can only mint that key from /\\b(1st bowman|bowman)\\b — so the bowman copy is the MAKER DEFAULT (CF-BOWMAN-DEFAULT-NOT-EVIDENCE), refuted by the title, not a rival reading. Retired in favour of the unknown copy, which claims no product. sport=pokemon. Title: 2006 Pokemon Dragon Frontiers Typhlosion #12/101"
+  },
+  {
+   "id": "tca-ebay::298366430419",
+   "fromCardId": "hiq:pokemon:2023:bowman:090159:base:no-auto:num-159",
+   "price": 27,
+   "retireSupersededBy": "hiq:pokemon:2023:unknown:090159:base:no-auto:num-159",
+   "evidence": "bowman-vs-unknown: the title never says \"bowman\", and the parser can only mint that key from /\\b(1st bowman|bowman)\\b — so the bowman copy is the MAKER DEFAULT (CF-BOWMAN-DEFAULT-NOT-EVIDENCE), refuted by the title, not a rival reading. Retired in favour of the unknown copy, which claims no product. sport=pokemon. Title: Ampharos 090/159 Crown Zenith Rare Holo 160 HP English 2023 Pokemon TCG"
+  },
+  {
+   "id": "tca-ebay::168298224130",
+   "fromCardId": "hiq:pokemon:2003:bowman:046:base:no-auto",
+   "price": 244.91,
+   "retireSupersededBy": "hiq:pokemon:2003:unknown:046:base:no-auto",
+   "evidence": "bowman-vs-unknown: the title never says \"bowman\", and the parser can only mint that key from /\\b(1st bowman|bowman)\\b — so the bowman copy is the MAKER DEFAULT (CF-BOWMAN-DEFAULT-NOT-EVIDENCE), refuted by the title, not a rival reading. Retired in favour of the unknown copy, which claims no product. sport=pokemon. Title: 2003 POKEMON JPN EXPANSION PACK 1ST EDITION #046 SNEASEL EX-HOLO PSA 9"
+  },
+  {
+   "id": "tca-ebay::377205880418",
+   "fromCardId": "hiq:pokemon:2025:bowman:096:base:no-auto",
+   "price": 460,
+   "retireSupersededBy": "hiq:pokemon:2025:unknown:096:base:no-auto",
+   "evidence": "bowman-vs-unknown: the title never says \"bowman\", and the parser can only mint that key from /\\b(1st bowman|bowman)\\b — so the bowman copy is the MAKER DEFAULT (CF-BOWMAN-DEFAULT-NOT-EVIDENCE), refuted by the title, not a rival reading. Retired in favour of the unknown copy, which claims no product. sport=pokemon. Title: 2025 Pokemon DRI EN Pre-Release Staff #096 Ethan\\'s Tyranitar PSA 10 GEM MINT"
+  },
+  {
+   "id": "tca-ebay::137330887695",
+   "fromCardId": "hiq:anime-tcg:2024:bowman:006:base:no-auto",
+   "price": 103.77,
+   "retireSupersededBy": "hiq:anime-tcg:2024:unknown:006:base:no-auto",
+   "evidence": "bowman-vs-unknown: the title never says \"bowman\", and the parser can only mint that key from /\\b(1st bowman|bowman)\\b — so the bowman copy is the MAKER DEFAULT (CF-BOWMAN-DEFAULT-NOT-EVIDENCE), refuted by the title, not a rival reading. Retired in favour of the unknown copy, which claims no product. sport=anime-tcg. Title: TASHIGI SPECI4L ALTERNATE ART ONE PIECE OP08-TWO LEGENDS 2024 006 PSA 9"
+  },
+  {
+   "id": "tca-ebay::155655426833",
+   "fromCardId": "hiq:pokemon:2020:bowman:051:base:no-auto",
+   "price": 59.99,
+   "retireSupersededBy": "hiq:pokemon:2020:unknown:051:base:no-auto",
+   "evidence": "bowman-vs-unknown: the title never says \"bowman\", and the parser can only mint that key from /\\b(1st bowman|bowman)\\b — so the bowman copy is the MAKER DEFAULT (CF-BOWMAN-DEFAULT-NOT-EVIDENCE), refuted by the title, not a rival reading. Retired in favour of the unknown copy, which claims no product. sport=pokemon. Title: 2020 LAPARAS HOLO CHAMPIONS PATH BSP PIN COLLECTION PSA 9 MINT #051 POKEMON WOTC"
+  },
+  {
+   "id": "tca-ebay::146469594369",
+   "fromCardId": "hiq:baseball:2013:bowman:0160:base:auto:num-60",
+   "price": 109.99,
+   "retireSupersededBy": "hiq:baseball:2013:unknown:0160:base:auto:num-60",
+   "evidence": "bowman-vs-unknown: the title never says \"bowman\", and the parser can only mint that key from /\\b(1st bowman|bowman)\\b — so the bowman copy is the MAKER DEFAULT (CF-BOWMAN-DEFAULT-NOT-EVIDENCE), refuted by the title, not a rival reading. Retired in favour of the unknown copy, which claims no product. sport=baseball. Title: 2013-14 Upper Deck The Cup Enshrinements Auto 01/60 Ryan Nugent Hopkins CE-RN"
+  },
+  {
+   "id": "tca-ebay::206292910963",
+   "fromCardId": "hiq:pokemon:2025:bowman:023:base:no-auto",
+   "price": 58.73,
+   "retireSupersededBy": "hiq:pokemon:2025:unknown:023:base:no-auto",
+   "evidence": "bowman-vs-unknown: the title never says \"bowman\", and the parser can only mint that key from /\\b(1st bowman|bowman)\\b — so the bowman copy is the MAKER DEFAULT (CF-BOWMAN-DEFAULT-NOT-EVIDENCE), refuted by the title, not a rival reading. Retired in favour of the unknown copy, which claims no product. sport=pokemon. Title: 2025 POKEMON MEP BLACK STAR PROMO #023 MEGA CHARIZARD X EX ULTRA PREMIUM SEALED"
+  },
+  {
+   "id": "tca-ebay::298026223876",
+   "fromCardId": "hiq:non-sport:2024:bowman:39:base:no-auto:num-149",
+   "price": 42,
+   "retireSupersededBy": "hiq:non-sport:2024:unknown:39:base:no-auto:num-149",
+   "evidence": "bowman-vs-unknown: the title never says \"bowman\", and the parser can only mint that key from /\\b(1st bowman|bowman)\\b — so the bowman copy is the MAKER DEFAULT (CF-BOWMAN-DEFAULT-NOT-EVIDENCE), refuted by the title, not a rival reading. Retired in favour of the unknown copy, which claims no product. sport=non-sport. Title: 2024 UD MARVEL ALLEGIANCE SECRET WARS 1984 #39 DOCTOR DOOM 106/149 PSA 9"
+  },
+  {
+   "id": "tca-ebay::178161897125",
+   "fromCardId": "hiq:anime-tcg:2023:bowman:011:base:no-auto",
+   "price": 56,
+   "retireSupersededBy": "hiq:anime-tcg:2023:unknown:011:base:no-auto",
+   "evidence": "bowman-vs-unknown: the title never says \"bowman\", and the parser can only mint that key from /\\b(1st bowman|bowman)\\b — so the bowman copy is the MAKER DEFAULT (CF-BOWMAN-DEFAULT-NOT-EVIDENCE), refuted by the title, not a rival reading. Retired in favour of the unknown copy, which claims no product. sport=anime-tcg. Title: 2023 One Piece Film Red Premium Card Collection #011 Brook BGS 9.5"
+  },
+  {
+   "id": "tca-ebay::306952927753",
+   "fromCardId": "hiq:baseball:2023:bowman:dtd211:base:no-auto",
+   "price": 122.5,
+   "retireSupersededBy": "hiq:baseball:2023:unknown:dtd211:base:no-auto",
+   "evidence": "bowman-vs-unknown: the title never says \"bowman\", and the parser can only mint that key from /\\b(1st bowman|bowman)\\b — so the bowman copy is the MAKER DEFAULT (CF-BOWMAN-DEFAULT-NOT-EVIDENCE), refuted by the title, not a rival reading. Retired in favour of the unknown copy, which claims no product. sport=baseball. Title: 2023 Flesh & Blood DYADIC CARAPACE #DTD211 Cold Foil Legendary English"
+  },
+  {
+   "id": "tca-ebay::168400379759",
+   "fromCardId": "hiq:baseball:2000:bowman:ak1:base:no-auto",
+   "price": 3.75,
+   "retireSupersededBy": "hiq:baseball:2000:unknown:ak1:base:no-auto",
+   "evidence": "bowman-vs-unknown: the title never says \"bowman\", and the parser can only mint that key from /\\b(1st bowman|bowman)\\b — so the bowman copy is the MAKER DEFAULT (CF-BOWMAN-DEFAULT-NOT-EVIDENCE), refuted by the title, not a rival reading. Retired in favour of the unknown copy, which claims no product. sport=baseball. Title: Anna Kournikova 2000 Collectors Edge #AK1 Tennis Card WTA 3902H"
+  },
+  {
+   "id": "tca-ebay::336597672820",
+   "fromCardId": "hiq:baseball:2024:bowman:200187:base:no-auto:num-187",
+   "price": 120.82,
+   "retireSupersededBy": "hiq:baseball:2024:unknown:200187:base:no-auto:num-187",
+   "evidence": "bowman-vs-unknown: the title never says \"bowman\", and the parser can only mint that key from /\\b(1st bowman|bowman)\\b — so the bowman copy is the MAKER DEFAULT (CF-BOWMAN-DEFAULT-NOT-EVIDENCE), refuted by the title, not a rival reading. Retired in favour of the unknown copy, which claims no product. sport=baseball. Title: Leafeon ex - 200/187 - 2024 Terastal Festival ex - Japanese - ACE GEM MINT 10"
+  },
+  {
+   "id": "tca-ebay::397994467192",
+   "fromCardId": "hiq:pokemon:2022:bowman:046:base:no-auto:num-189",
+   "price": 117.99,
+   "retireSupersededBy": "hiq:pokemon:2022:unknown:046:base:no-auto:num-189",
+   "evidence": "bowman-vs-unknown: the title never says \"bowman\", and the parser can only mint that key from /\\b(1st bowman|bowman)\\b — so the bowman copy is the MAKER DEFAULT (CF-BOWMAN-DEFAULT-NOT-EVIDENCE), refuted by the title, not a rival reading. Retired in favour of the unknown copy, which claims no product. sport=pokemon. Title: 2022 Pokemon SWSH Astral Radiance Radiant Greninja #046/189 PSA 10 Gem Mint"
+  },
+  {
+   "id": "tca-ebay::206296849962",
+   "fromCardId": "hiq:pokemon:2001:bowman:1364:base:no-auto:num-64",
+   "price": 80,
+   "retireSupersededBy": "hiq:pokemon:2001:unknown:1364:base:no-auto:num-64",
+   "evidence": "bowman-vs-unknown: the title never says \"bowman\", and the parser can only mint that key from /\\b(1st bowman|bowman)\\b — so the bowman copy is the MAKER DEFAULT (CF-BOWMAN-DEFAULT-NOT-EVIDENCE), refuted by the title, not a rival reading. Retired in favour of the unknown copy, which claims no product. sport=pokemon. Title: Raikou 13/64 Neo Revelation Unlimited Holo Rare 80 HP Basic Pokémon TCG 2001"
+  },
+  {
+   "id": "tca-ebay::206296849962",
+   "fromCardId": "hiq:pokemon:2001:bowman:1364:base:no-auto",
+   "price": 80,
+   "retireSupersededBy": "hiq:pokemon:2001:unknown:1364:base:no-auto:num-64",
+   "evidence": "bowman-vs-unknown: the title never says \"bowman\", and the parser can only mint that key from /\\b(1st bowman|bowman)\\b — so the bowman copy is the MAKER DEFAULT (CF-BOWMAN-DEFAULT-NOT-EVIDENCE), refuted by the title, not a rival reading. Retired in favour of the unknown copy, which claims no product. sport=pokemon. Title: Raikou 13/64 Neo Revelation Unlimited Holo Rare 80 HP Basic Pokémon TCG 2001"
+  },
+  {
+   "id": "tca-ebay::227359736408",
+   "fromCardId": "hiq:baseball:2001:bowman:120:base:no-auto",
+   "price": 7.5,
+   "retireSupersededBy": "hiq:baseball:2001:unknown:120:base:no-auto",
+   "evidence": "bowman-vs-unknown: the title never says \"bowman\", and the parser can only mint that key from /\\b(1st bowman|bowman)\\b — so the bowman copy is the MAKER DEFAULT (CF-BOWMAN-DEFAULT-NOT-EVIDENCE), refuted by the title, not a rival reading. Retired in favour of the unknown copy, which claims no product. sport=baseball. Title: 2001 UPPER DECK SWEET SPOT #120 LARRY WALKER PSA 10! COLORADO ROCKIES!"
+  },
+  {
+   "id": "tca-ebay::206292914443",
+   "fromCardId": "hiq:pokemon:2005:bowman:72:base:no-auto:num-115",
+   "price": 26.1,
+   "retireSupersededBy": "hiq:pokemon:2005:unknown:72:base:no-auto:num-115",
+   "evidence": "bowman-vs-unknown: the title never says \"bowman\", and the parser can only mint that key from /\\b(1st bowman|bowman)\\b — so the bowman copy is the MAKER DEFAULT (CF-BOWMAN-DEFAULT-NOT-EVIDENCE), refuted by the title, not a rival reading. Retired in favour of the unknown copy, which claims no product. sport=pokemon. Title: 2005 POKEMON EX UNSEEN FORCES #72/115 SLOWPOKE REVERSE HOLO ITALIAN"
+  },
+  {
+   "id": "tca-ebay::206292914443",
+   "fromCardId": "hiq:pokemon:2005:bowman:72:base:no-auto",
+   "price": 26.1,
+   "retireSupersededBy": "hiq:pokemon:2005:unknown:72:base:no-auto:num-115",
+   "evidence": "bowman-vs-unknown: the title never says \"bowman\", and the parser can only mint that key from /\\b(1st bowman|bowman)\\b — so the bowman copy is the MAKER DEFAULT (CF-BOWMAN-DEFAULT-NOT-EVIDENCE), refuted by the title, not a rival reading. Retired in favour of the unknown copy, which claims no product. sport=pokemon. Title: 2005 POKEMON EX UNSEEN FORCES #72/115 SLOWPOKE REVERSE HOLO ITALIAN"
+  },
+  {
+   "id": "cardhedge::ch-comp::1715730460050x635424227845177000::2026-07-04T02:41:00.000Z::2108",
+   "fromCardId": "hiq:baseball:2024:bowman-chrome::base:no-auto",
+   "price": 21.08,
+   "parkIdentityUnverified": true,
+   "evidence": "realTwoProductDispute: no single canonical copy (0 canonical of 2 live) — neither address is provably this sale's, so BOTH are parked rather than one guessed. Addresses: hiq:baseball:2024:bowman-chrome::base:no-auto | 1715730460050x635424227845177000"
+  },
+  {
+   "id": "cardhedge::ch-comp::1715730460050x635424227845177000::2026-07-04T02:41:00.000Z::2108",
+   "fromCardId": "1715730460050x635424227845177000",
+   "price": 21.08,
+   "parkIdentityUnverified": true,
+   "evidence": "realTwoProductDispute: no single canonical copy (0 canonical of 2 live) — neither address is provably this sale's, so BOTH are parked rather than one guessed. Addresses: hiq:baseball:2024:bowman-chrome::base:no-auto | 1715730460050x635424227845177000"
+  },
+  {
+   "id": "cardsight::a31ae7b8983b1bae29d63f85",
+   "fromCardId": "hiq:baseball:2026:bowman:bcp-41:fuchsia-mojo-refractor:no-auto",
+   "price": 2.5,
+   "retireSupersededBy": "hiq:baseball:2026:bowman:bcp-41:base:no-auto:num-299",
+   "evidence": "parallel axis: product agrees (bowman); the TITLE names NO parallel and the rival parallel (fuchsia-mojo-refractor) has NO checklist support, so the base copy is KEPT. Title: 2026 Bowman Mega Brailyn Antunez 1st CHROME FUCHSIA MOJO /299 #BCP-41 Brewers"
+  },
+  {
+   "id": "ebay-user-purchase::holding::60900941-28a5-411d-9dc4-1133b3d41c4d",
+   "fromCardId": "hiq:baseball:2025:bowman:cpa-fa:fuchsia-wave-refractor:auto:num-199",
+   "price": 329.07,
+   "parkIdentityUnverified": true,
+   "evidence": "realTwoProductDispute: no single canonical copy (0 canonical of 2 live) — neither address is provably this sale's, so BOTH are parked rather than one guessed. Addresses: hiq:baseball:2025:bowman:cpa-fa:fuchsia-wave-refract | hiq:baseball:2025:bowman-chrome:cpa-fa:refractor:aut"
+  },
+  {
+   "id": "ebay-user-purchase::holding::60900941-28a5-411d-9dc4-1133b3d41c4d",
+   "fromCardId": "hiq:baseball:2025:bowman-chrome:cpa-fa:refractor:auto:num-499",
+   "price": 329.07,
+   "parkIdentityUnverified": true,
+   "evidence": "realTwoProductDispute: no single canonical copy (0 canonical of 2 live) — neither address is provably this sale's, so BOTH are parked rather than one guessed. Addresses: hiq:baseball:2025:bowman:cpa-fa:fuchsia-wave-refract | hiq:baseball:2025:bowman-chrome:cpa-fa:refractor:aut"
+  },
+  {
+   "id": "ebay-user-purchase::holding::54ac79b4-b4db-44ab-9a58-5b4422732d54",
+   "fromCardId": "hiq:baseball:2024:bowman-chrome:cpa-id:base:auto",
+   "price": 34.5,
+   "parkIdentityUnverified": true,
+   "evidence": "realTwoProductDispute: no single canonical copy (0 canonical of 2 live) — neither address is provably this sale's, so BOTH are parked rather than one guessed. Addresses: hiq:baseball:2024:bowman-chrome:cpa-id:base:auto | 1715551762176x220035266432153200"
+  },
+  {
+   "id": "ebay-user-purchase::holding::54ac79b4-b4db-44ab-9a58-5b4422732d54",
+   "fromCardId": "1715551762176x220035266432153200",
+   "price": 34.5,
+   "parkIdentityUnverified": true,
+   "evidence": "realTwoProductDispute: no single canonical copy (0 canonical of 2 live) — neither address is provably this sale's, so BOTH are parked rather than one guessed. Addresses: hiq:baseball:2024:bowman-chrome:cpa-id:base:auto | 1715551762176x220035266432153200"
+  },
+  {
+   "id": "ebay-user-purchase::236965013506-10086790076927",
+   "fromCardId": "hiq:baseball:1992:unknown:232:base:no-auto",
+   "price": 6.25,
+   "retireSupersededBy": "hiq:baseball:1992:donruss-studio:232:base:no-auto",
+   "evidence": "involvesUnknownSetKey: exactly one copy is canonical — its cardId partition equals its hobbyiqCardId and its setKey (donruss-studio) is not a maker/parser default. The other copy sits at a defaulted or split address. Title: 1992 Studio Ken Griffey Jr. #232"
+  },
+  {
+   "id": "tca-ebay::377453572233",
+   "fromCardId": "hiq:basketball:2007:topps:2:base:no-auto:cgc-10",
+   "price": 34.33,
+   "retireSupersededBy": "hiq:basketball:2007:topps:2:orange:no-auto",
+   "evidence": "parallel axis (Drew, 2026-09-05): the copies agree on the PRODUCT (topps) and differ on the PARALLEL. The TITLE states \"orange\", so the orange copy is the sale and the base copy is retired. Read with the existing K.storedParallelStatedInTitle predicate. Title: 2007-08 Topps Kevin Durant Orange RC #2 SuperSonics Rookie"
+  },
+  {
+   "id": "tca-ebay::377453572233",
+   "fromCardId": "hiq:basketball:2007:topps:2:base:no-auto",
+   "price": 34.33,
+   "retireSupersededBy": "hiq:basketball:2007:topps:2:orange:no-auto",
+   "evidence": "parallel axis (Drew, 2026-09-05): the copies agree on the PRODUCT (topps) and differ on the PARALLEL. The TITLE states \"orange\", so the orange copy is the sale and the base copy is retired. Read with the existing K.storedParallelStatedInTitle predicate. Title: 2007-08 Topps Kevin Durant Orange RC #2 SuperSonics Rookie"
+  },
+  {
+   "id": "tca-ebay::188882022052",
+   "fromCardId": "hiq:baseball:1992:topps-stadium-club:603:base:no-auto",
+   "price": 18.9,
+   "retireSupersededBy": "hiq:baseball:1992:topps-stadium-club:603:members-choice:no-auto:cgc-9",
+   "evidence": "parallel axis (Drew, 2026-09-05): the copies agree on the PRODUCT (topps-stadium-club) and differ on the PARALLEL. The TITLE states \"members-choice\", so the members-choice copy is the sale and the base copy is retired. Read with the existing K.storedParallelStatedInTitle predicate. Title: Topps 1992 Stadium Club Members Choice Ken Griffey Jr #603 Seattle Mariners"
+  },
+  {
+   "id": "tca-ebay::307157735067",
+   "fromCardId": "hiq:baseball:1992:topps-stadium-club:603:base:no-auto",
+   "price": 18,
+   "retireSupersededBy": "hiq:baseball:1992:topps-stadium-club:603:members-choice:no-auto:cgc-9",
+   "evidence": "parallel axis (Drew, 2026-09-05): the copies agree on the PRODUCT (topps-stadium-club) and differ on the PARALLEL. The TITLE states \"members-choice\", so the members-choice copy is the sale and the base copy is retired. Read with the existing K.storedParallelStatedInTitle predicate. Title: KEN GRIFFEY JR Members Choice 1992 Topps Stadium Club #603 NM or Better (41923)"
+  },
+  {
+   "id": "tca-ebay::287557335707",
+   "fromCardId": "hiq:baseball:1992:topps-stadium-club:603:base:no-auto",
+   "price": 19.99,
+   "retireSupersededBy": "hiq:baseball:1992:topps-stadium-club:603:members-choice:no-auto:cgc-9",
+   "evidence": "parallel axis (Drew, 2026-09-05): the copies agree on the PRODUCT (topps-stadium-club) and differ on the PARALLEL. The TITLE states \"members-choice\", so the members-choice copy is the sale and the base copy is retired. Read with the existing K.storedParallelStatedInTitle predicate. Title: 1992 Topps Stadium Club - Members Choice Ken Griffey Jr #603"
+  }
+ ],
+ "deferred": [
+  {
+   "id": "tca-ebay::187617390529",
+   "cls": "bowmanVsUnknown",
+   "reason": "bowman default refuted, but 2 non-bowman addresses remain (a cardNumber/print-run split) — not this ruling's to settle",
+   "title": "2024 Pokemon Shrouded Fable Okidogi ex Full Art SIR #090/064 PSA 10"
+  },
+  {
+   "id": "tca-ebay::298295500598",
+   "cls": "bowmanVsUnknown",
+   "reason": "bowman default refuted, but 2 non-bowman addresses remain (a cardNumber/print-run split) — not this ruling's to settle",
+   "title": "Pikachu 062/193 Trick or Trade 2023 Holo - PSA 10"
+  },
+  {
+   "id": "tca-ebay::127894282458",
+   "cls": "bowmanVsUnknown",
+   "reason": "bowman default refuted, but 2 non-bowman addresses remain (a cardNumber/print-run split) — not this ruling's to settle",
+   "title": "Pokemon 2019 Hidden Fates Charizard GX 9/68 Holo Ultra Rare PSA 10"
+  },
+  {
+   "id": "tca-ebay::278009783193",
+   "cls": "bowmanVsUnknown",
+   "reason": "bowman default refuted, but 2 non-bowman addresses remain (a cardNumber/print-run split) — not this ruling's to settle",
+   "title": "JESSIE & JAMES 2019 HIDDEN FATES FULL ART #68/68 TRAINER PSA 9 Q3963"
+  },
+  {
+   "id": "tca-ebay::336603403963",
+   "cls": "realTwoProductDispute",
+   "reason": "fewer-than-two-live-copies",
+   "title": "WALKER JENKINS 2026 BOWMAN GOLD BORDER AUTO #/50 #BPA-WJ TWINS"
+  },
+  {
+   "id": "tca-ebay::117195934064",
+   "cls": "bowmanVsUnknown",
+   "reason": "fewer-than-two-live-copies",
+   "title": "2025 POKEMON SVP EN-SV BLACK STAR PROMO #208 VICTINI PSA 10"
+  },
+  {
+   "id": "tca-ebay::198377922565",
+   "cls": "bowmanVsUnknown",
+   "reason": "bowman default refuted, but 2 non-bowman addresses remain (a cardNumber/print-run split) — not this ruling's to settle",
+   "title": "Pokémon Erika\\'s Clefairy Gym Heroes 25/132 2000 50 HP English Unlimited Regular"
+  },
+  {
+   "id": "tca-ebay::137320568502",
+   "cls": "bowmanVsUnknown",
+   "reason": "bowman default refuted, but 2 non-bowman addresses remain (a cardNumber/print-run split) — not this ruling's to settle",
+   "title": "M CHARIZARD EX POKEMON XY 13/108 2016 EVOLUTIONS HOLO EN PSA 9 - MINT"
+  },
+  {
+   "id": "cardhedge::ch-comp::1780158742284x645119479791385040::2026-07-04T21:52:00.000Z::199",
+   "cls": "realTwoProductDispute",
+   "reason": "fewer-than-two-live-copies",
+   "title": "2026 Bowman Chrome Sterling Jac Caglianone Mojo #BST-14 Royals - Raw"
+  },
+  {
+   "id": "cardhedge::ch-comp::1780199610234x333397461761818750::2026-07-13T03:30:00.000Z::1425",
+   "cls": "realTwoProductDispute",
+   "reason": "fewer-than-two-live-copies",
+   "title": "2026 Bowman Chrome Jac Caglianone Mojo Mega Futures SP RC #MF-7 Royal’s 🔥🔥🔥 - Raw"
+  },
+  {
+   "id": "cardsight::backstop:shohei ohtani|2025||transcendent::2026-07-18T20:24:00+00:00::599",
+   "cls": "realTwoProductDispute",
+   "reason": "fewer-than-two-live-copies",
+   "title": "2025 Topps Update Series - Shohei Ohtani, Roki Sasaki #US269 Diamante Foil (RC) - Raw"
+  },
+  {
+   "id": "cardsight::backstop:owen carey|2026|bcp-69|black::2026-07-15T16:36:00+00:00::850",
+   "cls": "realTwoProductDispute",
+   "reason": "fewer-than-two-live-copies",
+   "title": "2026 Bowman MEGA Owen Carey AQUA MOJO 002/125 JERSEY # MATCH #BCP-69 ATL BRAVES - Raw"
+  },
+  {
+   "id": "cardsight::1768677506572x775238638571052800::2026-07-19T23:04:00+00:00::1999",
+   "cls": "realTwoProductDispute",
+   "reason": "fewer-than-two-live-copies",
+   "title": "2025 Bowman Draft Topps Eli Willits #BD-1 Sky Blue /499 Rookie - Nationals - Raw"
+  },
+  {
+   "id": "cardsight::cardsight:efccdd6c-3f85-4d9f-aa9c-b91d20d8cfd9::334908f4-bf5f-4ed5-98c7-75113561ab55::2026-07-12T14:07:54.711166Z::10000",
+   "cls": "realTwoProductDispute",
+   "reason": "fewer-than-two-live-copies",
+   "title": "2026 Bowman - Brailyn Antunez 1st Bowman #CPA-BA Blue XFractor Auto /150"
+  },
+  {
+   "id": "cardsight::1780156842225x572681871010801700::2026-07-15T05:14:00+00:00::1499",
+   "cls": "realTwoProductDispute",
+   "reason": "fewer-than-two-live-copies",
+   "title": "2026 Bowman Chrome Brailyn Antunez 1st Steel Metal Refractor 24/100 BCP-41 - Raw"
+  },
+  {
+   "id": "cardsight::1768677198934x586733556995573000::2026-07-16T01:10:00+00:00::8900",
+   "cls": "realTwoProductDispute",
+   "reason": "fewer-than-two-live-copies",
+   "title": "2025 Bowman Draft Eli Willits Chrome 1st Prospect #BDC-1 Nationals PSA 10"
+  },
+  {
+   "id": "ebay-user-purchase::holding::bea59d57-5057-4c04-b29e-926c92b2a2c7",
+   "cls": "realTwoProductDispute",
+   "reason": "fewer-than-two-live-copies",
+   "title": "2026 Bowman Refractor Owen Carey True Blue #CPA-OC"
+  },
+  {
+   "id": "ebay-user-purchase::278019624356",
+   "cls": "realTwoProductDispute",
+   "reason": "fewer-than-two-live-copies",
+   "title": "2026 Bowman Blue Marconi German True"
+  }
+ ]
+}

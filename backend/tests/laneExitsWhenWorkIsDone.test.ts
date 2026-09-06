@@ -532,3 +532,547 @@ describe("the ceiling leaves >= 15 minutes AFTER the exit path is paid for", () 
     });
   }
 });
+
+// ── 8. THE EXIT IS UNCONDITIONAL ───────────────────────────────────────────
+//
+// CF-A-LANE-EXITS-UNCONDITIONALLY (2026-09-05). #1809 made every lane CALL
+// finishLane(), and section 5 above pins that it does. Four sharded APPLY
+// runs of retire-self-derived-identities dispatched AFTER #1828 merged
+// (bf47ba1, 21:30Z) STILL died at the ceiling:
+//
+//   33993974633  dispatched 21:45Z
+//   33994076178  dispatched 21:48Z
+//   33994101308  dispatched 21:48Z
+//   33994112578  dispatched 21:48Z
+//
+// Every one of them printed its full reconcile —
+//
+//   RECONCILE  seen 202,186 … => 202,186 BALANCES
+//   [retire-self-derived-identities] reconciled: intended 202,189
+//       = written 694 + skipped 201,495
+//
+// — and every one of them then printed nothing until
+//
+//   ##[error] The action 'Run backfill (APPLY)' has timed out after 150 minutes
+//
+// So finishLane() WAS reached and the process still did not exit. The call
+// being made is not the guarantee; section 5 pins a call, and a call that
+// awaits forever is indistinguishable in source from one that returns.
+//
+// THE MECHANISM. finishLane AWAITED its cleanup — `client.dispose()` and
+// `flushStdio()` — before its `process.exit`. Against section 1's fake both
+// settle instantly. Against the real @azure/cosmos SDK, with the abandoned
+// cross-partition aggregate still in flight, neither need settle at all: the
+// dispose tears down an agent whose sockets are mid-request, and the flush
+// waits on a `write` callback from a pipe whose reader (`tee`) is not
+// draining. The exit line is simply never reached.
+//
+// THE RULE, RESTATED. Cleanup is best-effort and CAPPED. The exit is
+// UNCONDITIONAL. These pins use a fake that is uncooperative in the two ways
+// the real SDK was: a `dispose()` that never resolves, and a query that never
+// settles while holding a REAL handle.
+describe("finishLane exits even when cleanup never finishes", () => {
+  const NEVER_RESOLVING_DISPOSE = `
+    const net = require("net");
+    const srv = net.createServer(() => {});
+    srv.listen(0, "127.0.0.1", async () => {
+      const port = srv.address().port;
+      // A live socket, so only an explicit exit can end this process.
+      const s = net.connect(port, "127.0.0.1", () => s.write("ping"));
+      s.on("error", () => {});
+      const client = {
+        // THE DEFECT, REPRODUCED: dispose() never resolves. The old finishLane
+        // awaited exactly this.
+        dispose: () => new Promise(() => {}),
+      };
+      __BODY__
+    });
+  `;
+
+  it("a dispose() that never resolves does not strand the lane", () => {
+    const r = runNode(`
+      ${LIB_REQUIRE}
+      ${NEVER_RESOLVING_DISPOSE.replace(
+        "__BODY__",
+        `console.log("[probe] calling finishLane"); await finishLane(0, { client });`,
+      )}
+    `);
+    expect(r.stdout).toContain("[probe] calling finishLane");
+    expect(
+      r.timedOut,
+      "finishLane awaited a dispose that never resolved — the exact shape that killed runs "
+        + "33993974633, 33994076178, 33994101308 and 33994112578 AFTER they reconciled clean",
+    ).toBe(false);
+    expect(r.status).toBe(0);
+  });
+
+  it("it exits PROMPTLY — the cleanup cap is short, not the step ceiling", () => {
+    const r = runNode(`
+      ${LIB_REQUIRE}
+      ${NEVER_RESOLVING_DISPOSE.replace("__BODY__", `await finishLane(0, { client });`)}
+    `);
+    expect(r.timedOut).toBe(false);
+    // The cap is 5s; a lane that took the runner's 150 minutes to notice its
+    // dispose was wedged is the bug, not a slow tidy-up.
+    expect(r.ms, `the lane took ${r.ms}ms to exit past a wedged dispose`).toBeLessThan(12000);
+  });
+
+  it("carries the non-zero code out even when cleanup is wedged", () => {
+    const r = runNode(`
+      ${LIB_REQUIRE}
+      ${NEVER_RESOLVING_DISPOSE.replace("__BODY__", `await finishLane(3, { client });`)}
+    `);
+    expect(r.timedOut).toBe(false);
+    expect(r.status, "a failing lane that cannot exit reports nothing at all").toBe(3);
+  });
+
+  it("a dispose that THROWS is not a failed lane either", () => {
+    const r = runNode(`
+      ${LIB_REQUIRE}
+      (async () => {
+        await finishLane(0, { client: { dispose: () => { throw new Error("socket already gone"); } } });
+      })();
+    `);
+    expect(r.timedOut).toBe(false);
+    expect(r.status, "cleanup that throws must not fail a run whose writes reconciled").toBe(0);
+  });
+
+  // THE OPERATOR'S PROOF. The four runs above are indistinguishable, in their
+  // logs, from a lane that exited and a runner that killed it anyway: both
+  // end at the reconcile. An explicit exit line is what makes "did it exit?"
+  // answerable from the log alone.
+  it("prints an explicit exit line, so a log that ends at the reconcile is a KNOWN kill", () => {
+    const r = runNode(`
+      ${LIB_REQUIRE}
+      (async () => {
+        console.log("[retire-self-derived-identities] reconciled: intended 202,189"
+          + " = written 694 + skipped 201,495");
+        await finishLane(0);
+      })();
+    `);
+    expect(r.stdout).toContain("reconciled: intended 202,189");
+    expect(
+      r.stdout,
+      "the log must SAY the lane exited; without it, a killed step and a clean exit read alike",
+    ).toContain("finishLane: exiting code 0");
+    expect(r.timedOut).toBe(false);
+  });
+
+  it("the exit line survives a wedged dispose — it is written after the cap, not before it", () => {
+    const r = runNode(`
+      ${LIB_REQUIRE}
+      ${NEVER_RESOLVING_DISPOSE.replace("__BODY__", `await finishLane(0, { client });`)}
+    `);
+    expect(r.stdout).toContain("finishLane: exiting code 0");
+  });
+
+  // MUTATION. The guarantee is the CAP, not the call: restore the unbounded
+  // await and the probe hangs exactly as the four runs did.
+  it("MUTATION: await the wedged dispose unbounded and the lane hangs again", () => {
+    const r = runNode(
+      `
+      const net = require("net");
+      const srv = net.createServer(() => {});
+      srv.listen(0, "127.0.0.1", async () => {
+        const port = srv.address().port;
+        const s = net.connect(port, "127.0.0.1", () => s.write("ping"));
+        s.on("error", () => {});
+        const client = { dispose: () => new Promise(() => {}) };
+        console.log("[probe] calling the OLD finishLane");
+        // The old body: await the cleanup, THEN exit.
+        await client.dispose();
+        process.exit(0);
+      });
+    `,
+      6000,
+    );
+    expect(r.stdout).toContain("[probe] calling the OLD finishLane");
+    expect(
+      r.timedOut,
+      "the mutation did NOT hang, so these pins would not have caught the four timed-out runs",
+    ).toBe(true);
+  });
+
+  it("the helper states the unconditional exit in source", () => {
+    const fn = /async function finishLane\([\s\S]*?\n\}/.exec(LIB)?.[0] ?? "";
+    // Cleanup runs under a cap...
+    expect(fn, "cleanup must be capped, or an await inside it can strand the exit").toMatch(/underExitCap\(/);
+    // ...and the exit is NOT inside that cap.
+    expect(fn.indexOf("underExitCap(")).toBeLessThan(fn.indexOf("process.exit(code)"));
+    const cap = /async function underExitCap\([\s\S]*?\n\}/.exec(LIB)?.[0] ?? "";
+    expect(cap, "the cap must race the cleanup, not await it").toMatch(/Promise\.race\(/);
+    expect(cap).toMatch(/setTimeout\(/);
+  });
+});
+
+// ── 9. NO LANE KEEPS A PRIVATE COPY OF THE CAP ─────────────────────────────
+//
+// CF-ONE-CAP-NOT-A-COPY-OF-IT (2026-09-06). Four more sharded APPLY runs of
+// retire-self-derived-identities — slots 9-12 of 16, baseball, dispatched
+// 01:45Z from main, LONG after #1809, #1828 and #1844 had all merged:
+//
+//   34004719519 slot  9   work done in 320s   last line 01:52:13   killed 04:16:50
+//   34004725658 slot 10   work done in 606s   last line 01:56:55   killed 04:16:46
+//   34004731758 slot 11   work done in  84s   last line 01:48:17   killed 04:16:54
+//   34004737931 slot 12   work done in 735s   last line 01:59:30   killed 04:17:12
+//
+// Each printed its banner, its `RECONCILE ... BALANCES` and its
+// `reconciled: intended ... = written ... + skipped ...`, and then NOTHING
+// until the 150-minute kill. And once again — the tell — not one printed a
+// `VERIFY BY READ` line.
+//
+// Slot 11 is the whole argument in one row: it finished every product it owned
+// in EIGHTY-FOUR SECONDS and still cost the fleet two and a half hours of a
+// runner, then reported a red step for work that was complete and durable.
+//
+// WHY EVERY PIN ABOVE PASSED WHILE THE LANE HUNG. Sections 5-8 ask two things
+// of a lane's SOURCE: that it calls finishLane(), and that it imports it from
+// this helper. retire-self-derived-identities did both, and had since #1809.
+// Everything else above tests the HELPER — including the one assertion that
+// names this exact defect, "the cap timer is REF'd, so the cap can never be
+// lost to an early exit". That assertion read runner-budget.cjs. The lane was
+// not running runner-budget.cjs's cap. It had its own, fifty lines from the
+// bottom of main(), and that copy did the one thing the helper's is pinned not
+// to do:
+//
+//     timer = setTimeout(() => rej(new Error("verify-cap")), left);
+//     if (timer.unref) timer.unref();          // <- the defect
+//
+// With the cap unref'd AND retry()'s backoff sleeps unref'd (correct on their
+// own — a retry nobody awaits must not hold the process), NOTHING the lane
+// owned was ref'd. An unref'd timer cannot hold the loop open, and it also
+// cannot be relied on to fire: the cap never rejected, the race never settled,
+// main() never resolved, and the unconditional exit section 8 guarantees was
+// never REACHED. A guarantee about what happens inside finishLane() cannot
+// help a lane that never gets there.
+//
+// What kept the process ALIVE for those 144 minutes was the other half: the
+// abandoned cross-partition request's sockets, which belong to the SDK and ARE
+// ref'd. So the two halves conspire — the SDK's handles keep node running, and
+// the lane's unref'd cap never fires to end the verify. Section 10 below
+// isolates the lane's half and shows the signature it produces on its own.
+//
+// So the census below stops asking only "does the lane call the helper" and
+// starts asking "is the helper the ONLY cap in the lane". A private
+// Promise.race-plus-setTimeout verify cap is now a red build wherever it is
+// written, because the helper's version is pinned correct and a copy of it is
+// not pinned at all.
+describe("the verify cap lives in the helper, and lanes do not re-implement it", () => {
+  /** A lane's own `capped`/verify race: the shape that is now forbidden. */
+  const PRIVATE_CAP = /const\s+capped\s*=\s*async\s*\([^)]*\)\s*=>\s*\{[\s\S]*?\n\s{0,6}\};/;
+
+  /** Source with comments removed. These lanes DOCUMENT the defect they were
+   *  fixed for — retire-self-derived-identities quotes the unrefd cap line
+   *  verbatim in its header, as the explanation of what went wrong — and a
+   *  census that cannot tell a description of a bug from the bug itself fails
+   *  on its own documentation. */
+  const codeOf = (src: string) =>
+    src.replace(/\/\*[\s\S]*?\*\//g, "")
+      .split("\n").filter((l) => !/^\s*\/\//.test(l)).join("\n");
+
+  for (const lane of LANES) {
+    it(`${lane.script} does not hand-roll its own verify cap`, () => {
+      const m = PRIVATE_CAP.exec(codeOf(lane.src));
+      if (!m) return; // no local capped at all — nothing to re-implement
+      // A local `capped` is allowed ONLY as a thin delegation to the helper's.
+      expect(
+        /\.capped\(/.test(m[0]),
+        `${lane.script} defines its own capped() that does not delegate to the helper's `
+          + `budget().capped(). The helper's cap is pinned REF'd; a private copy is pinned `
+          + `nothing, and the copy in this lane unrefd its timer — which is why runs `
+          + `34004719519, 34004725658, 34004731758 and 34004737931 went silent from a `
+          + `balanced reconcile straight to the 150-minute kill without ever printing a `
+          + `VERIFY BY READ line.`,
+      ).toBe(true);
+    });
+
+    it(`${lane.script} never unrefs a verify-cap timer`, () => {
+      // The precise defect, wherever it is spelled. An unrefd cap in a
+      // process whose only other timers are unrefd retry sleeps means node
+      // deschedules everything and the cap NEVER FIRES — silence, which is the
+      // one outcome this whole file exists to make impossible.
+      const race = /Promise\.race\(\[[\s\S]{0,900}?\]\)/g;
+      for (const blk of codeOf(lane.src).match(race) ?? []) {
+        if (!/verify-cap/.test(blk)) continue;
+        expect(
+          /unref\(\)/.test(blk),
+          `${lane.script} unrefs the timer that enforces its verify cap. An unrefd cap is `
+            + `not a cap: node exits before it fires, or — when nothing else is refd — `
+            + `stops scheduling and it never fires at all. Use budget().capped(), whose `
+            + `timer is REFd and released by clearTimeout in a finally.`,
+        ).toBe(false);
+      }
+    });
+  }
+
+  it("the lane that hung now routes its cap through the helper", () => {
+    // Named explicitly, because a regex census that silently matched nothing
+    // would be a green build that pins nothing at all.
+    const src = read("backend", "scripts", "retire-self-derived-identities.cjs");
+    expect(src, "the lane must take its clock from the helper").toMatch(/budget\(\{/);
+    expect(src, "and its cap from the same object").toMatch(/\.capped\(/);
+    expect(
+      /timer\.unref\(\)/.test(codeOf(src)),
+      "the unrefd cap timer that caused the 144-minute silence must not come back",
+    ).toBe(false);
+  });
+});
+
+// ── 10. THE MUTATION TEST FOR SECTION 9 ────────────────────────────────────
+//
+// Section 9 is a source census, and a census that cannot fail is decoration.
+// This drives the ACTUAL defect — an unrefd cap racing a query that never
+// settles, in a process whose only other timers are unrefd — and proves it
+// produces exactly the slot-9 signature: the reconcile prints, the VERIFY line
+// does NOT, and the process never exits on its own.
+describe("the unrefd cap really is the hang (mutation)", () => {
+  const LANE_SHAPE = (unref: boolean) => `
+    (async () => {
+      // THE CONDITION THAT MATTERS. The real lane reaches its verify with no
+      // ref'd handle of its own: the Cosmos request is in flight but its
+      // sockets are the SDK's, and retry()'s backoff sleeps are unref'd. So
+      // this probe deliberately holds NOTHING ref'd except whatever the cap
+      // itself refs. That is the whole experiment: with the cap ref'd, node
+      // stays alive long enough to fire it and report; with the cap unref'd,
+      // node has no reason to keep scheduling and the cap never fires at all.
+      // retry()'s backoff sleeps are unrefd in the real lane, and correctly so.
+      const retry = async (fn, tries, signal) => {
+        let wait = 50;
+        for (let a = 0; ; a++) {
+          if (signal && signal.aborted) throw new Error("verify-cap");
+          try { return await fn(); } catch (e) {
+            if (signal && signal.aborted) throw new Error("verify-cap");
+            if (a >= tries) throw e;
+            await new Promise((r) => { const t = setTimeout(r, wait); t.unref(); });
+          }
+        }
+      };
+      const capped = async (label) => {
+        let timer = null;
+        const ac = new AbortController();
+        try {
+          await Promise.race([
+            retry(() => new Promise(() => {}), 2, ac.signal),
+            new Promise((_, rej) => {
+              timer = setTimeout(() => rej(new Error("verify-cap")), 800);
+              ${unref ? "if (timer.unref) timer.unref();" : ""}
+            }),
+          ]);
+        } catch (e) {
+          console.log("  VERIFY BY READ " + label + ": could not confirm (" + e.message + ")");
+          return null;
+        } finally { if (timer) clearTimeout(timer); ac.abort(); }
+      };
+      console.log("[retire-self-derived-identities] reconciled: intended 74,810"
+        + " = written 1 + skipped 74,809");
+      await capped("retiredReason");
+      console.log("main() resolved");
+    })();
+  `;
+
+  // WHAT THE TWO CASES PROVE, AND WHY THE UNREF'D ONE DOES NOT ITSELF HANG.
+  // Stripped to its essentials the defect is not "the process blocks", it is
+  // "the cap never fires and main() never resolves". In this probe, where the
+  // pending request holds nothing at all, node simply runs out of ref'd work
+  // and exits 0 — silently, mid-verify, having printed no VERIFY line and
+  // never reaching the code after `await capped(...)`. In the real lane the
+  // Cosmos SDK's in-flight sockets ARE ref'd, so instead of exiting early the
+  // process sits on them; either way the cap that was supposed to end the
+  // verify never fires and finishLane() is never reached. The observable
+  // signature is the same one slots 9-12 wrote into their logs, and it is what
+  // this pair asserts: reconcile printed, VERIFY line absent, main() never
+  // resolved.
+  it("UNREFD: the reconcile prints, the VERIFY line never does, main() never resolves", () => {
+    const r = runNode(LANE_SHAPE(true), 6000);
+    expect(r.stdout).toContain("reconciled: intended 74,810");
+    expect(
+      r.stdout,
+      "slot 9's signature exactly: no VERIFY BY READ line was ever printed",
+    ).not.toContain("VERIFY BY READ");
+    expect(
+      r.stdout,
+      "the verify never completed, so nothing after it ran — in CI, with the SDK's ref'd "
+        + "sockets in flight, this is the 144 minutes of silence instead of an early exit",
+    ).not.toContain("main() resolved");
+  });
+
+  it("REFD: the cap fires, the VERIFY line prints, the lane finishes", () => {
+    const r = runNode(LANE_SHAPE(false), 6000);
+    expect(r.stdout).toContain("reconciled: intended 74,810");
+    expect(r.stdout, "a cap that can fire always reports").toContain("VERIFY BY READ");
+    expect(r.stdout, "and the lane goes on to its exit").toContain("main() resolved");
+    expect(r.timedOut).toBe(false);
+  });
+});
+
+// ── 11. A DATA CHANNEL IS NOT A LOG ────────────────────────────────────────
+//
+// CF-A-DATA-CHANNEL-IS-NOT-A-LOG (#1846).
+//
+// The nightly acquire-for-withheld-holdings, run 34019169292 (07:26Z, cron
+// 20 7, on main). Its read-only plan step did everything right: it walked 131
+// holdings across 12 portfolio docs, found 13 withheld on identity grounds,
+// built 15 acquisition cells and printed
+//
+//   RECONCILED  YES  cells=15 matched=11 needs-source=2 unreadable=2 tonight=10
+//
+// to STDERR, because in MODE=json this lane routes every human line through
+// `note()` precisely so stdout stays one parseable document. The workflow step
+// even carries the comment saying so. And the next step died anyway:
+//
+//   jq: parse error: Invalid literal at line 739, column 11
+//   ##[error]Process completed with exit code 5
+//
+// Line 739 of the captured stdout was not a truncated write, not a partial
+// document and not a stray console.log in the lane. The uploaded artifact
+// proves it: the JSON closed cleanly with `}` on line 738, and line 739 was
+//
+//   finishLane: exiting code 0
+//
+// — THIS FILE'S OWN operator proof, written by the shared helper to fd 1,
+// unconditionally, after main() had returned. Nothing the lane could do
+// suppressed it. The pipeline stopped before ingest: nothing was written, no
+// dispatch was made, ten matched cells went unacquired.
+//
+// WHY THE FIX IS NOT "SEND IT TO STDERR". Section 8's proof exists because the
+// runner reads a lane as `node <script>.cjs | tee /tmp/backfill.log` — stdout
+// only. Moving the line to stderr for every lane would keep it on the
+// operator's screen and delete it from the artifact the gates and the
+// post-mortems read, re-creating the silence #1809 exists to prevent.
+//
+// So the destination is the LANE'S to declare, and the DEFAULT DOES NOT MOVE.
+// Both pins below are needed: one alone would be satisfied by a fix that
+// breaks the other.
+describe("finishLane narrates to the fd the lane names, and stdout stays the default", () => {
+  it("MODE=json output parses: the exit line is not appended to the document", () => {
+    const r = runNode(`
+      ${LIB_REQUIRE}
+      (async () => {
+        // Exactly the lane's shape: the document, then the helper's exit.
+        process.stdout.write(JSON.stringify({ tonight: [1, 2, 3], counts: { matched: 11 } }, null, 2) + "\\n");
+        await finishLane(0, { narrateTo: "stderr" });
+      })();
+    `);
+    expect(r.timedOut).toBe(false);
+    expect(r.status).toBe(0);
+
+    // THE ASSERTION THE WORKFLOW ACTUALLY MAKES. `jq` is not on this box, but
+    // JSON.parse rejects the identical trailing-literal input — this is the
+    // step that went red, reproduced.
+    let parsed: { tonight: number[] } | null = null;
+    expect(
+      () => { parsed = JSON.parse(r.stdout) as { tonight: number[] }; },
+      "stdout must be ONE parseable document; run 34019169292 died on `jq: parse error: "
+        + "Invalid literal at line 739, column 11`, which was the exit line",
+    ).not.toThrow();
+    expect(parsed!.tonight).toHaveLength(3);
+
+    // And the proof is not LOST — it moved, it did not vanish. A fix that
+    // deletes the line to make the parse pass fails here.
+    expect(
+      r.stderr,
+      "the operator's proof must still be written, on the other fd",
+    ).toContain("finishLane: exiting code 0");
+  });
+
+  it("the DEFAULT is still stdout — the runner tees stdout, so the proof must land there", () => {
+    const r = runNode(`
+      ${LIB_REQUIRE}
+      (async () => {
+        console.log("reconciled: intended 202,189 = written 694 + skipped 201,495");
+        await finishLane(0);
+      })();
+    `);
+    expect(r.timedOut).toBe(false);
+    expect(
+      r.stdout,
+      "`| tee /tmp/backfill.log` captures STDOUT; a blanket move to stderr deletes the "
+        + "proof from every gate's log and re-opens #1809",
+    ).toContain("finishLane: exiting code 0");
+    expect(r.stderr).not.toContain("finishLane: exiting code 0");
+  });
+
+  it("the verify-cap notice follows the same fd — it would break the parse too", () => {
+    // The other line finishLane writes. It was a console.log, i.e. fd 1
+    // regardless of what the lane asked for, so a capped verify in a json run
+    // would have broken the document the same way the exit line did.
+    const r = runNode(`
+      ${LIB_REQUIRE}
+      // The lane declares the fd ONCE and both helpers take it. budget() needs
+      // it too: its VERIFY BY READ line is printed from inside capped(), long
+      // before finishLane is reached, so it lands ABOVE the document.
+      const b = budget({ minutes: 1, reserveMs: 1000, verifyMs: 1, narrateTo: "stderr" });
+      (async () => {
+        // Force the cap to fire: a verify t0 already past the cap.
+        await b.capped(Date.now() - 60_000, "rows", async () => 1);
+        process.stdout.write(JSON.stringify({ tonight: [] }, null, 2) + "\\n");
+        await finishLane(0, { budget: b, narrateTo: "stderr" });
+      })();
+    `);
+    expect(r.timedOut).toBe(false);
+    expect(() => JSON.parse(r.stdout)).not.toThrow();
+    expect(r.stderr).toContain("VERIFY BY READ");
+    expect(r.stderr).toContain("the verify cap fired");
+  });
+
+  // MUTATION. Hard-code fd 1 back into the helper's narration and the json
+  // document stops parsing — the exact failure of run 34019169292.
+  it("MUTATION: narrate to fd 1 regardless of the lane, and the document is unparseable again", () => {
+    const r = runNode(`
+      const fs = require("node:fs");
+      (async () => {
+        process.stdout.write(JSON.stringify({ tonight: [1, 2, 3] }, null, 2) + "\\n");
+        // The OLD body: fd 1, whatever the lane asked for.
+        fs.writeSync(1, "finishLane: exiting code 0\\n");
+        process.exit(0);
+      })();
+    `);
+    expect(
+      () => JSON.parse(r.stdout),
+      "the mutation did NOT break the parse, so this pin would not have caught run 34019169292",
+    ).toThrow();
+  });
+
+  // The lane must actually USE it. A helper that can narrate to stderr and a
+  // lane that never asks it to is the same red run tomorrow night.
+  it("acquire-for-withheld-holdings declares stderr in MODE=json", () => {
+    const src = fs.readFileSync(
+      path.join(BACKEND, "scripts", "acquire-for-withheld-holdings.cjs"),
+      "utf8",
+    );
+    expect(src, "the lane must name the fd").toMatch(/narrateTo/);
+    expect(src, "and it must pick stderr from the json mode it already computes")
+      .toMatch(/JSON_MODE\s*\?\s*"stderr"\s*:\s*"stdout"/);
+
+    // BOTH tails — the success path and the FATAL path. A fatal in json mode
+    // corrupts the document just as thoroughly, and the workflow's `jq` cannot
+    // tell a crashed lane from a polluted one: it just says parse error.
+    //
+    // Sliced from each call site to the end of its line rather than matched
+    // with a brace regex: the success tail spreads `{ ...(ctx || {}) }`, and a
+    // `[^}]*` stops dead at the inner brace.
+    const tails = [...src.matchAll(/finishLane\([01],/g)].map((m) =>
+      src.slice(m.index!, src.indexOf("\n", m.index!)));
+    expect(tails.length, "both the success and the failure tail call finishLane").toBe(2);
+    for (const t of tails) expect(t, `${t} must carry narrateTo`).toMatch(/narrateTo/);
+
+    // And the budget's own cap lines take the same fd.
+    expect(src, "budget() narrates too — its VERIFY BY READ line is on the same stream")
+      .toMatch(/budget\(\{[\s\S]{0,900}?narrateTo/);
+  });
+
+  // The workflow reads the FILE the lane wrote, not the stdout capture. Belt
+  // and braces: even a future stray print cannot break the plan step.
+  it("the workflow parses the plan FILE, not the stdout capture", () => {
+    const wf = fs.readFileSync(
+      path.join(BACKEND, "..", ".github", "workflows", "acquire-for-withheld-holdings.yml"),
+      "utf8",
+    );
+    expect(wf, "OUT= is the lane's verified file and the step must read it")
+      .toMatch(/cp\s+\/tmp\/acquisition-plan\.json\s+\/tmp\/plan\.json/);
+    expect(
+      wf,
+      "the raw stdout redirect is what made a log line a parse error",
+    ).not.toMatch(/acquire-for-withheld-holdings\.cjs\s*>\s*\/tmp\/plan\.json/);
+  });
+});

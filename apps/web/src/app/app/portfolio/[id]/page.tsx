@@ -19,6 +19,7 @@ import {
   type SellPaymentMethod,
 } from "@/lib/api";
 import { formatUSD, formatUSDCompact, formatPct, formatCardTitle, formatGrade } from "@/lib/format";
+import { formatAsOf } from "@/lib/asOf";
 import { EbayListModal } from "@/components/EbayListModal";
 import { EditHoldingModal } from "@/components/EditHoldingModal";
 import { RegradeModal } from "@/components/RegradeModal";
@@ -32,6 +33,15 @@ import { fetchObservedGradeCurve, type ObservedGradeEntry } from "@/lib/api";
 import { ProvenanceChip } from "@/components/ProvenanceChip";
 import { PricingLabelChips } from "@/components/PricingLabelChips";
 import { describeRung, holdingProvenance, type RungDescription } from "@/lib/rung";
+// CF-WITHHELD-SAYS-WHY (Drew, 2026-09-05): one vocabulary for the refusal,
+// shared with the list row and the DailyIQ column so they cannot drift.
+import {
+  withheldOf,
+  withheldShort,
+  withheldSentence,
+  withheldUnlock,
+  withheldPoolNote,
+} from "@/lib/withheld";
 
 export default function HoldingDetailPage() {
   const params = useParams<{ id: string }>();
@@ -174,6 +184,21 @@ export default function HoldingDetailPage() {
   // Curve first; stored value only when the curve has nothing for this grade.
   const value = curveValue ?? storedValue;
   const valueFromCurve = curveValue != null;
+  // CF-WITHHELD-SAYS-WHY (Drew, 2026-09-05): why the engine refused, if it did.
+  const withheld = withheldOf(h);
+  const poolNote = withheld ? withheldPoolNote(withheld) : null;
+  // CF-SHOW-WHAT-BACKS-THE-PRICE (Drew, 2026-09-05, audit item 12). These
+  // ride on the envelope and were never rendered anywhere. They are the two
+  // facts that most cheaply justify a number: how many sales it rests on, and
+  // how recent the last one was. A price with 14 comps and a sale yesterday
+  // reads very differently from one with 2 comps and a sale in March, and the
+  // page was showing them identically.
+  const compsUsed = h.pricing?.method?.compsUsed ?? null;
+  const lastSale = h.pricing?.provenance?.lastSaleSurface ?? null;
+  const pricingConfidence = h.pricing?.confidence?.pricing ?? null;
+  // `formatAsOf` returns null for an absent or unparseable date, which is the
+  // "say nothing" case — a malformed date must not print as "Last sale null".
+  const lastSaleAgo = formatAsOf(lastSale?.date ?? null);
   const paidPrice = h.purchasePrice;
   const totalPaid = paidPrice != null ? paidPrice * h.quantity : null;
   // CF-COST-FALLBACK (Drew, 2026-08-03). Show purchasePrice as
@@ -278,7 +303,10 @@ export default function HoldingDetailPage() {
         </div>
 
         {/* Value / cost / P&L — centered symmetric 4-col KPI row */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8 pt-6 border-t border-[color:var(--color-border)]">
+        {/* CF-MOBILE-390-DETAIL (Drew, 2026-09-05): `gap-6` spent 24px of a
+            390px viewport on the gutter between two columns that needed the
+            width for their numbers. Tighter below `sm`, unchanged above. */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 md:gap-8 pt-6 border-t border-[color:var(--color-border)]">
           <Stat
             label="Market value"
             value={formatUSD(value, { hideCents: true })}
@@ -289,6 +317,72 @@ export default function HoldingDetailPage() {
           <Stat label="Gain/loss" value={formatUSDCompact(gain)} color={gainColor} />
           <Stat label="Return" value={formatPct(gainPct)} color={gainColor} />
         </div>
+
+        {/* CF-SHOW-WHAT-BACKS-THE-PRICE (Drew, 2026-09-05, audit item 12).
+            What the number rests on, for a PUBLISHED price. Suppressed when
+            the price was withheld — the panel below is the explanation then,
+            and a comp count beside a refusal invites reading the refused
+            read as a value.
+
+            Every part renders only if the wire sent it: these fields are
+            optional on the envelope, and an absent comp count must not print
+            as "0 sales". */}
+        {value != null && (compsUsed != null || lastSaleAgo || pricingConfidence != null) && (
+          <div
+            className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[color:var(--color-muted)]"
+            data-price-backing="true"
+          >
+            {compsUsed != null && compsUsed > 0 && (
+              <span>{compsUsed === 1 ? "1 sale" : `${compsUsed} sales`} in this pool</span>
+            )}
+            {lastSaleAgo && <span>Last sale {lastSaleAgo}</span>}
+            {pricingConfidence != null && (
+              <span title="How much the engine trusts this price, from the size and consistency of the pool behind it.">
+                Confidence {Math.round(pricingConfidence * 100)}%
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* CF-WITHHELD-SAYS-WHY (Drew, 2026-09-05).
+
+            The detail page is where an owner comes to ask "why is this card
+            showing a dash?" — and it was the emptiest of the three surfaces:
+            the list at least had a MISSING pill, this had nothing but the
+            dash in the Market value stat above.
+
+            So this is the one place that answers the question in full: the
+            cause in plain words, the number we refused and what we measured
+            it against, how many sales stood behind that read, and what would
+            unlock a price. The refused number lives ONLY inside the sentence
+            that says it was refused — see lib/withheld.ts Rule 3. */}
+        {withheld && (
+          <div
+            className="mt-4 pt-4 border-t border-[color:var(--color-border)] space-y-2"
+            data-withheld-panel={withheld.reason}
+          >
+            <div className="flex flex-wrap items-center gap-2">
+              <span
+                className="px-2 py-0.5 rounded text-[11px] font-medium"
+                style={{
+                  background: "color-mix(in oklab, var(--hiq-warning) 15%, transparent)",
+                  color: "var(--hiq-warning)",
+                }}
+              >
+                {withheldShort(withheld.reason).toUpperCase()}
+              </span>
+              {poolNote && (
+                <span className="text-xs text-[color:var(--color-muted)]">{poolNote}</span>
+              )}
+            </div>
+            <p className="text-sm leading-snug">
+              {withheldSentence(withheld, { costBasis: cost })}
+            </p>
+            <p className="text-xs leading-snug text-[color:var(--color-muted)]">
+              {withheldUnlock(withheld.reason)}
+            </p>
+          </div>
+        )}
 
         {/* CF-A-PERSISTED-PRICE-CARRIES-ITS-LABELS (Drew, 2026-09-03).
             PUBLISH + LABEL. The detail sheet has room for the whole sentence,
@@ -597,7 +691,16 @@ function Stat({ label, value, color, badge, sub }: { label: string; value: strin
           </span>
         )}
       </div>
-      <div className="text-2xl font-bold tabular-nums tracking-tight" style={color ? { color } : undefined}>
+      {/* CF-MOBILE-390-DETAIL (Drew, 2026-09-05), audit item 10. At 390px this
+          grid is two columns ~163px wide, and `text-2xl` tabular digits put a
+          six-figure value (or "-$12,345 · -38.9%") past the column edge —
+          the detail page was never measured at this width. The type steps
+          down below `sm` and `break-words` gives a long value somewhere to
+          break instead of forcing the page to scroll sideways. */}
+      <div
+        className="text-xl sm:text-2xl font-bold tabular-nums tracking-tight break-words"
+        style={color ? { color } : undefined}
+      >
         {value}
       </div>
       {/* D20: the provenance chip sits under the number it describes. */}

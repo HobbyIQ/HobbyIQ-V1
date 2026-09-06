@@ -359,6 +359,75 @@ const RULING_CONFLICT_DENY = Object.freeze({
 });
 
 /**
+ * SPORT-SCOPED ADMISSIONS (CF-SOCCER-PRIZM-IS-PRIZM-FIFA; Drew, 2026-09-05).
+ *
+ * A fifth admission rule, and the narrowest one in the file.
+ *
+ * WHY THE EXISTING FOUR CANNOT REACH THIS. `panini-prizm` is a FIXED POINT of
+ * the deriver -- normalizeSetKey("panini-prizm") === "panini-prizm" -- because
+ * it is the CORRECT key for football and basketball Prizm, the flagship of
+ * both. Gate 2 therefore refuses it, and refuses it RIGHTLY: a key the
+ * vocabulary calls a product is not a spelling. And it must not be declared in
+ * RULED_ALIASES either, because a flat alias has no sport axis and would move
+ * every NFL and NBA Prizm sale into a soccer product. Drew ruled the point
+ * directly: "a SPORT-SCOPED (and year-scoped) resolution, not a global alias;
+ * adding panini-prizm -> panini-prizm-fifa to RULED_ALIASES would wreck FB/BK."
+ *
+ * So the admission itself carries the scope. An entry admits its `from` key
+ * ONLY when the run is filtered to the declared sport and to years inside the
+ * declared set -- and the lane REFUSES rather than widens when the dispatcher
+ * left the sport or the year filter off. An unfiltered run of a sport-scoped
+ * rule is precisely the accident this table exists to make impossible, so it
+ * is a refusal and not a default.
+ *
+ * THE TITLE DECIDES EACH ROW. Unlike every other rule here, a sport-scoped
+ * admission does not license a blanket prefix sweep: `titleParks` is consulted
+ * PER ROW and a row whose title names ANOTHER COMPETITION'S PRODUCT is skipped
+ * by name rather than moved. Absent beats wrong -- a Topps UEFA card filed as
+ * Panini Prizm FIFA is worse than one left where it is.
+ *
+ * The predicate is the SHIPPED one from productSetKeys, never a copy: the
+ * deriver and this lane must agree about what a FIFA title is, or the lane
+ * moves rows the deriver would put back.
+ */
+const SPORT_SCOPED_ADMISSIONS = [
+  {
+    from: "panini-prizm",
+    to: "panini-prizm-fifa",
+    sport: "soccer",
+    years: [2025],
+    why: "Drew 2026-09-05: 2025 soccer Prizm IS Prizm FIFA. Measured read-only the same day -- card_catalog soccer/2025 holds 30,773 STRICT checklistinsider rows keyed `panini-prizm-fifa` (every one of them minted under the id stem `hiq:soccer:2025:panini-prizm:`, which is the defect) against 21 self-derived rows and ZERO strict on `panini-prizm`; the pool holds 2,385 rows on the flagship segment, 98.8% FIFA by title. Sport-scoped on purpose: `panini-prizm` is the correct fixed point for FOOTBALL and BASKETBALL Prizm and must never move.",
+  },
+];
+
+/**
+ * The sport-scoped entry that admits `alias` into `scope` for THIS RUN'S
+ * filters, or a refusal explaining which filter was missing.
+ *
+ * `sports` and `years` are the run's own filters. Both must be present and
+ * both must be exactly inside the declaration: a run that names two sports, or
+ * a year the ruling does not cover, is not the ruled population.
+ */
+function sportScopedAdmission({ alias, scope, sports, years }) {
+  const a = String(alias ?? "").trim().toLowerCase();
+  const k = String(scope ?? "").trim().toLowerCase();
+  const entry = SPORT_SCOPED_ADMISSIONS.find((e) => e.from === a && e.to === k);
+  if (!entry) return null;
+  const sp = (sports ?? []).map((x) => String(x).trim().toLowerCase()).filter(Boolean);
+  const yr = (years ?? []).map(Number).filter((n) => Number.isFinite(n) && n > 0);
+  if (sp.length !== 1 || sp[0] !== entry.sport) {
+    return { admit: false, why: 'SPORT-SCOPED rule for "' + a + '" -> "' + k + '" requires the run to be filtered to EXACTLY sports=' + entry.sport
+      + ' (got ' + (sp.length ? sp.join(",") : "(all)") + '). An unfiltered run would move ' + entry.sport
+      + "'s siblings -- for this rule, football and basketball Prizm -- so it refuses rather than widens" };
+  }
+  if (!yr.length || !yr.every((y) => entry.years.includes(y))) {
+    return { admit: false, why: 'SPORT-SCOPED rule for "' + a + '" -> "' + k + '" requires the run to be filtered to years within ' + entry.years.join(",")
+      + ' (got ' + (yr.length ? yr.join(",") : "(all)") + ")" };
+  }
+  return { admit: true, rule: "SPORT_SCOPED", entry };
+}
+
+/**
  * The pure half of the admission decision for ONE candidate alias.
  *
  * `strictRows` is the count of strict checklist-backed catalog rows measured on
@@ -367,7 +436,7 @@ const RULING_CONFLICT_DENY = Object.freeze({
  * Both are 0/null on the pure path and the measured numbers at run time.
  * Returns {admit:true, rule} or {admit:false, why}.
  */
-function admitAlias({ alias, scope, ruledSet, normalizeSetKey, strictRows = 0, overlap = null, overlapMin = 0.6 }) {
+function admitAlias({ alias, scope, ruledSet, normalizeSetKey, strictRows = 0, overlap = null, overlapMin = 0.6, sports = [], years = [] }) {
   const a = String(alias ?? "").trim().toLowerCase();
   const k = String(scope ?? "").trim().toLowerCase();
   if (!a) return { admit: false, why: "empty alias" };
@@ -382,6 +451,14 @@ function admitAlias({ alias, scope, ruledSet, normalizeSetKey, strictRows = 0, o
   // because a ruling is allowed to disagree with a derivation -- that is what
   // ruling means.
   if (ruledSet.has(a)) return { admit: true, rule: "RULED" };
+
+  // SPORT-SCOPED. Checked BEFORE the deriver gates, because the whole point of
+  // the rule is that its `from` key IS a fixed point (gate 2 would refuse it)
+  // and is CORRECT for the sports it is not scoped to. It carries its own,
+  // stricter gate instead: the run must be filtered to the ruled sport and
+  // year, or it refuses.
+  const scoped = sportScopedAdmission({ alias: a, scope: k, sports, years });
+  if (scoped) return scoped;
 
   // DERIVER. Everything below is a mechanical check on the live vocabulary.
   const n = normalizeSetKey(a);
@@ -477,7 +554,7 @@ function ruledKeyForSlug(id, aliasMap) {
  * matching on either one is in the old pool. Both are rewritten to the target;
  * a field that was already correct stays correct.
  */
-function planAliasReslug({ cardId, hobbyiqCardId, aliasMap }) {
+function planAliasReslug({ cardId, hobbyiqCardId, aliasMap, title = "", titleParks = null }) {
   const pk = str(cardId);
   const hiq = str(hobbyiqCardId);
   // The identity field leads. Where hobbyiqCardId is absent the partition key
@@ -489,6 +566,15 @@ function planAliasReslug({ cardId, hobbyiqCardId, aliasMap }) {
   const viaPartition = pk && pk !== identity ? ruledKeyForSlug(pk, aliasMap) : null;
   const ruled = viaIdentity ?? viaPartition;
   if (!ruled) return { move: false, why: "setKey is not a declared alias of this scope" };
+
+  // THE TITLE DECIDES, PER ROW, for a sport-scoped admission. `titleParks` is
+  // supplied only by a scope whose admission carries one (the shipped
+  // predicate, never a copy). A row it parks is skipped BY NAME and counted --
+  // absent beats wrong. Checked before the target is built so a parked row can
+  // never be reported as a move.
+  if (typeof titleParks === "function" && titleParks(title)) {
+    return { move: false, why: "title names another competition's product", parked: true, aliasWas: setKeyOfSlug(identity) ?? setKeyOfSlug(pk), title: str(title) };
+  }
 
   const target = withSetKeySegment(identity, ruled);
   if (!target) return { move: false, why: "identity slug is malformed" };
@@ -792,7 +878,14 @@ async function main() {
 
   // Every candidate: the ruled declarations, plus every spelling the pool
   // actually stores that the live deriver folds onto this scope.
-  const candidates = [...new Set([...ruledSet, ...discovery.found.keys()])].sort();
+  // A SPORT-SCOPED `from` key can never be DISCOVERED: discovery keeps only
+  // spellings the sport-blind deriver folds onto the scope, and this rule
+  // exists precisely because `panini-prizm` folds onto ITSELF. So the declared
+  // `from` keys for this scope are seeded as candidates and then face
+  // sportScopedAdmission's own, stricter gate like any other candidate --
+  // seeding proposes, the gate disposes.
+  const scopedSeeds = SPORT_SCOPED_ADMISSIONS.filter((e) => e.to === RAW_SCOPE).map((e) => e.from);
+  const candidates = [...new Set([...ruledSet, ...discovery.found.keys(), ...scopedSeeds])].sort();
   if (!candidates.length) {
     const destinations = [...new Set(declared.map((a) => a.canonical))].sort();
     console.error(
@@ -826,7 +919,7 @@ async function main() {
       const o = await measureCardOverlap({ cat, alias, scope: RAW_SCOPE, sports: SPORTS, years: YEARS, retry });
       overlap = o.overlap; perCell = o.perCell;
     }
-    const verdict = admitAlias({ alias, scope: RAW_SCOPE, ruledSet, normalizeSetKey, strictRows: strict, overlap, overlapMin: OVERLAP_MIN });
+    const verdict = admitAlias({ alias, scope: RAW_SCOPE, ruledSet, normalizeSetKey, strictRows: strict, overlap, overlapMin: OVERLAP_MIN, sports: SPORTS, years: YEARS });
     const sampled = discovery.found.get(alias)?.sampled ?? 0;
     if (verdict.admit) admitted.push({ alias, rule: verdict.rule, sampled, strict, bySource, overlap, perCell });
     else refused.push({ alias, why: verdict.why, sampled, strict, bySource, overlap, perCell });
@@ -835,13 +928,17 @@ async function main() {
   console.log(`\n  ALIAS SET for ${RAW_SCOPE} -- ${admitted.length} admitted, ${refused.length} refused`);
   const ruledNames = admitted.filter((a) => a.rule === "RULED").map((a) => a.alias);
   const derivNames = admitted.filter((a) => a.rule === "DERIVER").map((a) => a.alias);
+  const scopedNames = admitted.filter((a) => a.rule === "SPORT_SCOPED").map((a) => a.alias);
   console.log(`      ruled:            ${ruledNames.length ? ruledNames.join(", ") : "(none)"}`);
   console.log(`      deriver-resolved: ${derivNames.length ? derivNames.join(", ") : "(none)"}`);
+  console.log(`      sport-scoped:     ${scopedNames.length ? scopedNames.join(", ") : "(none)"}`);
   for (const a of admitted) {
     console.log(`      ADMIT  ${a.alias}  ->  ${RAW_SCOPE}   [${a.rule}]`
       + (a.rule === "DERIVER"
         ? `  normalizeSetKey("${a.alias}") === "${RAW_SCOPE}"; ${a.strict ? `${f(a.strict)} strict rows, ${(a.overlap * 100).toFixed(1)}% card overlap with the destination` : "0 strict catalog rows"}`
-        : "  declared in RULED_ALIASES")
+        : a.rule === "SPORT_SCOPED"
+          ? `  admitted ONLY for sports=${SPORTS.join(",")} years=${YEARS.join(",")}; this key stays correct in every other sport`
+          : "  declared in RULED_ALIASES")
       + (a.sampled ? `  (seen ${f(a.sampled)}x in the discovery sample)` : ""));
     for (const c of (a.perCell ?? []).slice(0, 6)) {
       console.log(`               ${c.cell.padEnd(18)} alias ${String(f(c.alias)).padStart(7)}  dest ${String(f(c.dest)).padStart(7)}  shared ${String(f(c.shared)).padStart(7)}  ${(c.pct * 100).toFixed(1)}%${c.truncated ? `   TRUNCATED (${c.truncated.join(", ")})` : ""}`);
@@ -875,11 +972,30 @@ async function main() {
     scanned: 0, otherSlot: 0, moved: 0, created: 0, deleted: 0, collapsed: 0,
     notAlias: 0, malformed: 0, outOfScope: 0, alreadyRuled: 0,
     thirdSlug: 0, duplicatesLeft: 0, failed: 0,
+    // Rows a SPORT-SCOPED admission's per-row title test refused: another
+    // competition's product, left exactly where it is (absent beats wrong).
+    parkedOtherCompetition: 0,
   };
   let stopReason = null;
   const byAlias = new Map();
   const destinations = new Map();
   const examples = [];
+  const parkedByAlias = new Map();
+  const parkedExamples = [];
+
+  // The per-row title predicate, present ONLY when a SPORT-SCOPED admission is
+  // in play. It is the SHIPPED predicate from productSetKeys, required through
+  // dist/ like every other vocabulary read in this lane -- never a copy, or the
+  // lane and the deriver could disagree about what a FIFA title is and the
+  // lane would move rows the deriver puts straight back.
+  const TITLE_PARKS = admitted.some((a) => a.rule === "SPORT_SCOPED")
+    ? require(path.join(backend, "dist", "services", "catalog", "productSetKeys.js")).titleNamesOtherCompetition
+    : null;
+  if (TITLE_PARKS) {
+    console.log("  TITLE TEST  a SPORT-SCOPED admission is active: every row's title is checked and one naming");
+    console.log("              ANOTHER COMPETITION'S PRODUCT is PARKED, not moved (absent beats wrong).");
+    console.log("");
+  }
 
   const bump = (m, k) => m.set(k, (m.get(k) ?? 0) + 1);
 
@@ -936,9 +1052,17 @@ async function main() {
   // ── the sweep ────────────────────────────────────────────────────────────
 
   async function handle(row) {
-    const plan = planAliasReslug({ cardId: row.cardId, hobbyiqCardId: row.hobbyiqCardId, aliasMap });
+    const plan = planAliasReslug({
+      cardId: row.cardId, hobbyiqCardId: row.hobbyiqCardId, aliasMap,
+      title: row.title, titleParks: TITLE_PARKS,
+    });
     if (!plan.move) {
-      if (plan.why === "identity slug is malformed") s.malformed++;
+      if (plan.parked) {
+        s.parkedOtherCompetition++;
+        bump(parkedByAlias, plan.aliasWas);
+        if (parkedExamples.length < 10) parkedExamples.push(`  PARK   ${String(plan.aliasWas)}  ${str(plan.title).slice(0, 100)}`);
+      }
+      else if (plan.why === "identity slug is malformed") s.malformed++;
       else if (plan.why === "already at the ruled key") s.alreadyRuled++;
       else s.notAlias++;
       return;
@@ -1138,8 +1262,21 @@ async function main() {
     console.log("\n  CATALOG: no rows on an alias slug in this scope.");
   }
 
+  // PARKED ROWS ARE NAMED, NOT BURIED. A sport-scoped admission's title test
+  // is the half of the ruling that says "absent beats wrong", so what it
+  // refused is reported with its own count and its own examples -- never
+  // folded silently into `skipped`.
+  if (s.parkedOtherCompetition) {
+    console.log(`
+  PARKED -- title names ANOTHER COMPETITION'S PRODUCT, left where it is: ${f(s.parkedOtherCompetition)}`);
+    for (const [k, v] of [...parkedByAlias].sort((a, b) => b[1] - a[1])) console.log(`      ${String(f(v)).padStart(6)}  ${k}`);
+    for (const line of parkedExamples) console.log(line);
+  } else if (TITLE_PARKS) {
+    console.log("\n  PARKED: none -- every scanned row's title is this product or says nothing contradicting it.");
+  }
+
   const intended = s.scanned;
-  const skipped = s.notAlias + s.alreadyRuled + s.outOfScope + s.malformed;
+  const skipped = s.notAlias + s.alreadyRuled + s.outOfScope + s.malformed + s.parkedOtherCompetition;
   console.log(`\n  reconciled: intended ${f(intended)} = written ${f(s.moved)} + skipped ${f(skipped)}${s.failed ? ` + failed ${f(s.failed)}` : ""}`);
   if (APPLY) reportWrites({ job: "reslug-ruled-alias", intended, written: s.moved, skipped, failed: s.failed });
 }
@@ -1156,6 +1293,8 @@ module.exports = {
   // the admission rule (#1793): RULED union DERIVER-RESOLVED, and its refusals
   admitAlias, isStrictCatalogSource, STRICT_CATALOG_SOURCES, RULING_CONFLICT_DENY,
   discoverPoolAliases, countStrictCatalogRows, measureCardOverlap,
+  // the SPORT-SCOPED admission (CF-SOCCER-PRIZM-IS-PRIZM-FIFA)
+  sportScopedAdmission, SPORT_SCOPED_ADMISSIONS,
 };
 
 if (require.main === module) {

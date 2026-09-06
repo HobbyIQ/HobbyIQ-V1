@@ -270,7 +270,7 @@ function refusalFacts(
  * exactly the two reasons this function now checks.
  *
  * THE RULE. A refusal may retain a prior value only when that value is a claim
- * the refusal does not itself contradict. Two conditions, both required:
+ * the refusal does not itself contradict. Three conditions, all required:
  *
  *   1. THE KEPT VALUE MUST ITSELF PASS THE FLOOR. Judged by the same
  *      `costBasisFloor` predicate against the same basis. A retained number
@@ -282,6 +282,52 @@ function refusalFacts(
  *      just blocked) under an exact-pool rung, its number is the same evidence
  *      that just failed, one pass older. The floor's fault is with the POOL;
  *      a number drawn from that pool does not become sound by being stale.
+ *   3. THE IDENTITY MUST BE ONE A PRICE MAY REST ON. Added 2026-09-06 after
+ *      #1865 shipped and the invariant auditor's I10
+ *      (PRICED-ON-UNBACKED-IDENTITY) did NOT clear.
+ *
+ *      Measured read-only that day: 10 of 131 holdings carry a live
+ *      `fairMarketValue` beside a `withheld` block whose reason is
+ *      `no-checklist-match` (9) or `identity-not-in-catalog` (1) — a refusal
+ *      and a published number on the same row. The refusals all fired
+ *      correctly. The retention then handed the number straight back. The
+ *      loudest is 8b38c810/9d88f672, $300 on
+ *      `hiq:baseball:2023:bowman-chrome:cpafc:refractor:auto:num-499`; the
+ *      clearest is 199fcbc9's pair 437f010d / 5979f485, the SAME unbacked
+ *      slug retaining $65 and $133.125 — one card, two prices, neither of
+ *      them a claim the catalog can stand behind.
+ *
+ *      (The two rows that first drew the eye — 925ccfe7 / 4e70af40 at $14.79
+ *      on `…:cpa-jwh:refractor:auto:num-499` — turned out NOT to be this bug
+ *      and not the freshness skip either. The 08:40Z apply run reported
+ *      `freshSkipped: 0` and named both explicitly as
+ *      `skipped: pending-review (awaiting user confirmation)`; their meta
+ *      carries no `withheld` block at all. They are an eBay auto-import that
+ *      self-verified the identity (`catalogVerified: true`, confidence 0.98)
+ *      and was never advanced past `cardStatus: "pending-review"`, so their
+ *      $14.79 is simply the import-time number, untouched. That is a separate
+ *      defect in the import's review gate and is NOT fixed here.)
+ *
+ *      Conditions 1 and 2 both ask "IS THIS NUMBER SOUND?" — they weigh a
+ *      figure against a basis and against a pool. Neither can see the
+ *      question #1784 actually asks, which is not about the number at all:
+ *      IS THERE A CARD HERE? An identity no checklist confirms has nothing
+ *      for a price to be the price OF, so there is no version of the prior
+ *      number that survives — it was a price for a card we cannot name.
+ *      Passing the floor is beside the point when the subject of the claim
+ *      is what is in doubt.
+ *
+ *      ABSENT BEATS WRONG (Drew, 2026-09-06). A withheld price is null plus a
+ *      reason. A retained $14.79 on an unnameable card is a number a user
+ *      spends, sells and reports against, and it is worse than a blank —
+ *      which is exactly what the doctrine "price only checklist-matched
+ *      identities" means when the identity check finally says no.
+ *
+ *      Scoped to the IDENTITY refusals only (`no-checklist-match`,
+ *      `identity-not-in-catalog`). A `no-exact-pool` or `pool-migrating`
+ *      refusal names a real, checklist-backed card whose EVIDENCE is
+ *      temporarily thin, and #1781's retention is exactly right there — the
+ *      $240 Maddux keeps its number. Nothing about those branches changes.
  *
  * When either fails, NOTHING is retained as a price. `fairMarketValue` is
  * null, `estimatedValue` is cleared with it — leaving a stale estimate behind
@@ -305,10 +351,23 @@ function refusalFacts(
  * the rung it was priced under, as evidence rather than as a live claim.
  */
 
+/**
+ * The refusal reasons that fault the IDENTITY rather than the evidence — the
+ * two states `mayPublishPrice` rejects for having no checklist behind them.
+ * A prior number can never stand through one of these: there is no card for
+ * it to be the price of. Kept as a set beside the rule that reads it so the
+ * two cannot drift, and deliberately NOT the whole `NoBasisRefusalReason`
+ * union — the evidence refusals keep #1781's retention untouched.
+ */
+const IDENTITY_REFUSALS: ReadonlySet<string> = new Set([
+  "no-checklist-match",
+  "identity-not-in-catalog",
+]);
+
 /** Why a prior value could not be retained, or the value that stood. */
 export type RetentionVerdict =
   | { retained: true; value: number }
-  | { retained: false; because: "no-prior-value" | "prior-fails-floor" | "prior-is-the-refused-pool" };
+  | { retained: false; because: "no-prior-value" | "prior-fails-floor" | "prior-is-the-refused-pool" | "identity-not-priceable" };
 
 /**
  * Whether the prior value on a holding may stand through a refusal.
@@ -335,12 +394,39 @@ export type RetentionVerdict =
 export function retentionThroughFloor(
   holding: PortfolioHolding,
   entry: { pooledAs: string | null },
+  /**
+   * The refusal's own reason, when the caller has one. Condition 3 reads it
+   * and nothing else does.
+   *
+   * OPTIONAL, and that is deliberate: the cost-basis floor lane genuinely has
+   * no `NoBasisRefusalReason` to give — it refused on a BASIS, not on an
+   * identity — and must keep its existing verdict unchanged. Omitting the
+   * argument therefore means "this refusal makes no claim about the
+   * identity", which is the honest reading and leaves every existing caller
+   * behaving exactly as before.
+   */
+  refusalReason?: NoBasisRefusalReason | null,
 ): RetentionVerdict {
   const prior = typeof holding.fairMarketValue === "number" && Number.isFinite(holding.fairMarketValue)
     && holding.fairMarketValue > 0
     ? holding.fairMarketValue
     : null;
   if (prior === null) return { retained: false, because: "no-prior-value" };
+
+  // 3. THE IDENTITY MUST BE ONE A PRICE MAY REST ON. Asked FIRST of the three
+  //    substantive conditions, because it is not a question about the number:
+  //    when the identity itself is refused there is no card for any number to
+  //    be the price of, so neither the floor's verdict nor the pool's
+  //    provenance can rescue it. "Absent beats wrong."
+  //
+  //    This is the SAME vocabulary `identityBacking` uses — the two identity
+  //    refusals are precisely the states `mayPublishPrice` rejects for having
+  //    no checklist behind them. A refusal about EVIDENCE
+  //    (`no-exact-pool`, `no-exact-pool-at-tier`, `pool-migrating`,
+  //    `confidence-gate`) names a real card and keeps #1781's retention.
+  if (refusalReason && IDENTITY_REFUSALS.has(refusalReason)) {
+    return { retained: false, because: "identity-not-priceable" };
+  }
 
   // 1. The kept number faces the SAME floor, against the SAME basis. Not a
   //    second predicate — `costBasisFloor` itself, so the two cannot drift.
@@ -589,7 +675,74 @@ export function costBasisFloorRefusalWrite(
  * stamp, `retentionThroughFloor` asked once, method / valueSource / fmvRung
  * rewritten on every withheld write.
  */
-export type NoBasisRefusalReason = "identity-not-in-catalog" | "pool-migrating" | "no-checklist-match";
+/**
+ * CF-A-HOLDING-CARRIES-ONE-STAMP, the `no-exact-pool` half (Drew, 2026-09-05).
+ *
+ * `no-exact-pool` and `no-exact-pool-at-tier` are the ENGINE's own names for
+ * "I could not price this", and they reached a holding by a route that never
+ * passed this choke point at all. `valueHoldingThroughOneEntry` returns them
+ * as `outcome: "unpriced"`, and the confidence-gated reprice in
+ * `portfolioStore` then hand-built its own withheld meta:
+ *
+ *     const retentionWithholdReason = engineReason ?? "confidence-gate";
+ *     rung: priorRung ? { rung: priorRung } : { noRung: ... }
+ *
+ * Two defects in three lines. The reason string was the raw `ValuationReason`
+ * — a SECOND vocabulary, never declared anywhere a reader could find it — and
+ * the rung was the PRIOR PASS's, so `writeHoldingValuation` stamped
+ * `method: "exact-pool-last-sale"` on a row that also carried
+ * `withheld { reason: "no-exact-pool" }`. That is precisely the two-stamps
+ * shape #1785 abolished, reintroduced one lane over.
+ *
+ * Live proof, holding 6f4f079b (Ken Griffey Jr. 1999 UD Black Diamond #D24
+ * Diamond Dominance /1500), read read-only after the ruled rederive and
+ * reprice on 2026-09-05:
+ *
+ *     fmvRung                "exact-pool-last-sale"
+ *     pricingSourceMeta      { method: "exact-pool-last-sale", confidence: 0,
+ *                              withheld: { reason: "no-exact-pool", ... } }
+ *
+ * Every reader that prefers `method` sees a current exact-pool price; the
+ * auditor reading `withheld` sees a refusal. Both are reading the same row.
+ *
+ * So the engine's unpriced reasons JOIN this union rather than being
+ * translated at a call site. They are the same event the other three name —
+ * the engine will not publish a number and the caller must persist that
+ * refusal — and sharing the branch is what makes them compose with #1781's
+ * retention rule and #1785's one stamp BY CONSTRUCTION: `fmvRung` null,
+ * `method: "withheld"`, `valueSource: "estimated"`, `retentionThroughFloor`
+ * asked exactly once.
+ */
+export type NoBasisRefusalReason =
+  | "identity-not-in-catalog"
+  | "pool-migrating"
+  | "no-checklist-match"
+  | "no-exact-pool"
+  | "no-exact-pool-at-tier"
+  /** The confidence gate declined and the engine named no reason of its own. */
+  | "confidence-gate";
+
+/**
+ * The engine's `ValuationReason` (or a confidence-gate decline) as a refusal
+ * this module can persist. The mapping is EXPLICIT and total rather than a
+ * cast: an engine reason this union does not name must not reach a holding as
+ * a withheld string nobody declared, which is exactly how `no-exact-pool` got
+ * onto a row in the first place. Anything unrecognised becomes
+ * `confidence-gate` — the lane's own honest name for "this branch declined" —
+ * so a new engine reason cannot silently mint a new withheld vocabulary.
+ */
+export function noBasisReasonFromEngine(engineReason: string | null | undefined): NoBasisRefusalReason {
+  switch (engineReason) {
+    case "identity-not-in-catalog":
+    case "pool-migrating":
+    case "no-checklist-match":
+    case "no-exact-pool":
+    case "no-exact-pool-at-tier":
+      return engineReason;
+    default:
+      return "confidence-gate";
+  }
+}
 
 export function noBasisRefusalWrite(
   holding: PortfolioHolding,
@@ -616,7 +769,11 @@ export function noBasisRefusalWrite(
     ?? (typeof (holding as { hobbyiqCardId?: unknown }).hobbyiqCardId === "string"
       ? ((holding as { hobbyiqCardId: string }).hobbyiqCardId).trim() || null
       : null);
-  const verdict = retentionThroughFloor(holding, { pooledAs: refusedPool });
+  // The REASON is passed, so condition 3 can see an identity refusal. Without
+  // it this lane asks only "is the number sound", and $300 on a slug with no
+  // checklist behind it answers yes — which is how 10 of 131 holdings came to
+  // publish a number through their own `no-checklist-match` withhold.
+  const verdict = retentionThroughFloor(holding, { pooledAs: refusedPool }, reason);
   const kept = verdict.retained ? verdict.value : null;
   const retentionClause = verdict.retained
     ? `prior $${round2(kept as number)} retained`
@@ -626,8 +783,17 @@ export function noBasisRefusalWrite(
     : reason === "no-checklist-match"
       ? `${slug ?? "this identity"} is not checklist-backed — the only catalog row for it was minted`
         + ` from our own data; ${retentionClause}`
-      : `${slug ?? "this identity"} is still having its sales re-keyed — the pool is incomplete`
-        + `; ${retentionClause}`;
+      : reason === "no-exact-pool"
+        ? `no sale of ${slug ?? "this identity"} in 180d at any grade, and no gated fallback rung`
+          + ` could price it; ${retentionClause}`
+        : reason === "no-exact-pool-at-tier"
+          ? `${slug ?? "this identity"} has sales at other grades but none at this tier, and no`
+            + ` empirical ratio or fallback rung could project it; ${retentionClause}`
+          : reason === "confidence-gate"
+            ? `the confidence gate declined to publish a new number for ${slug ?? "this holding"}`
+              + `; ${retentionClause}`
+            : `${slug ?? "this identity"} is still having its sales re-keyed — the pool is incomplete`
+              + `; ${retentionClause}`;
   const refusal = reason === "identity-not-in-catalog"
     ? `no price was published: the catalog holds no identity for this holding`
       + `${slug ? ` (${slug})` : ""}, so there is no pool to price it from.`
@@ -640,6 +806,24 @@ export function noBasisRefusalWrite(
       + ` The catalog's only row for it was minted from our own sales data or from an import,`
       + ` and HobbyIQ prices a card only from a checklist-backed identity. Pricing resumes once`
       + ` this product's checklist is acquired and the card is matched to it.`
+    : reason === "no-exact-pool"
+    // The remedy is the POOL, not the identity: the card is named and its
+    // checklist row exists, and no sale of it was found. A reader told only
+    // "no price" goes looking at the catalog, which is not where the problem
+    // is — the sales may well exist under another slug (that is exactly the
+    // D24 Diamond Dominance and Magnetic Field case).
+    ? `no price was published: no sale of this card was found in the last 180 days at any grade,`
+      + ` and no gated fallback rung could price it either. The identity is known; what is missing`
+      + ` is evidence. Pricing resumes when a sale of this card is recorded — or when sales already`
+      + ` recorded under a different slug are matched onto it.`
+    : reason === "no-exact-pool-at-tier"
+    ? `no price was published: this card has sales at other grades but none at this one, no`
+      + ` empirical ratio projects this tier from the ones that do, and no gated fallback rung`
+      + ` could price it. Pricing resumes when a sale at this tier is recorded, or when the`
+      + ` calibration for this family can project it.`
+    : reason === "confidence-gate"
+    ? `no price was published: the confidence gate declined to publish a new number for this`
+      + ` holding on this pass, and no lane below it produced one either.`
     : `no price was published: this card's identity was created recently and its sales are still`
       + ` being re-keyed onto it, so the pool is a partial view. Pricing resumes once the re-key for`
       + ` this identity has settled. No fallback number is published in the meantime — a partial pool`

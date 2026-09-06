@@ -1,0 +1,1589 @@
+{
+ "generatedAt": "2026-09-05",
+ "census": {
+  "d24RowsRead": 13,
+  "d24Moving": 10,
+  "d24Parked": 3,
+  "ripkenRowsRead": 190,
+  "ripkenMoving": 55,
+  "ripkenParked": 135,
+  "inScope": 65,
+  "tierRowsNeedingChecklist": 0
+ },
+ "rulings": [
+  "Drew 2026-09-05: holding 6f4f079b is hiq:baseball:1999:upper-deck-black-diamond:d24:diamond-dominance:no-auto:num-1500 and holding 277b05a3 is hiq:baseball:1997:metal-universe:8:magnetic-field:no-auto. Both pools were EMPTY after the reprice because the sales sit on other slugs.",
+  "CLASSIFIED BY TITLE, never by the stored parallel/subset. Every row moved here carries its own title evidence in `evidence`; the stored parallel on all 65 reads \"Base\", which is exactly the defect -- the vendor pool never named the insert.",
+  "D24: a title stating \"Dominance\" or \"/1500\" is the Diamond Dominance insert. 10 rows qualify (8 on the legacy Bubble id 1709135825598x588061184868091400, 1 on ...:upper-deck:d24:base:no-auto:num-1500, 1 on ...:black-diamond:d24:base:no-auto) -- the #1787 census exactly.",
+  "D24 ABSENT BEATS WRONG: 3 rows titled only \"1999 Upper Deck Black Diamond Baseball #D24 Base\" name no tier and PARK IN PLACE. They are reported, never guessed onto the Dominance row.",
+  "D24 tier rows (Double/Triple/Quadruple Diamond, /3000, /150, Emerald 1/1) needing the base-ladder checklist: ZERO were found in this population. #1787 ingested the Dominance set only, so had any existed they would be reported here and NOT moved.",
+  "Metal Universe #8: the Magnetic Field insert shares card numbers with the base set (1-250), so the card NUMBER never decided this -- only the title can. 55 rows state \"Magnetic Field\" and join the ruled insert slug.",
+  "MU #8 PARKS: 31 Cal Ripken #8 rows naming no Magnetic Field (base, Titanium die-cut, other) stay put -- a Titanium die-cut is its own card and this lane does not guess it. 104 further rows on these same pools name DIFFERENT PLAYERS sharing card number 8 (Rod Strickland, Grant Hill, Mark McGwire Blast Furnace, Andy Pettitte Platinum Portraits, Mike Piazza Mother Lode); they are not this card and are never touched.",
+  "Both destinations were verified to EXIST and to be checklist-backed before a single row was pointed at them: the D24 row is source=baseballcardpedia (parallel \"Diamond Dominance\", printRun 1500) and the Magnetic Field row is source=sportscardchecklist (parallel \"Magnetic Field\", Cal Ripken Jr.). A relocation onto a row that does not exist would strand the sales.",
+  "No sale id appears in more than one partition in this scope (checked: 0), so no entry is deferred for the two-writes-converging hazard that #1812 deferred 414 rows for.",
+  "Every entry is a RELOCATE: all 65 rows sit in a partition that is not the destination, so none is a bare hobbyiqCardId repoint."
+ ],
+ "excluded": [
+  {
+   "id": "cardhedge::ch-daily::1709135825598x588061184868091400::2026-05-01T02:46:00+00:00::8000",
+   "cardId": "1709135825598x588061184868091400",
+   "price": 80,
+   "park": "title-names-neither",
+   "title": "1999 Upper Deck Black Diamond Baseball #D24 Base",
+   "why": "title names neither Dominance nor /1500 nor another tier — absent beats wrong, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1709135825598x588061184868091400::2026-06-04T00:13:00+00:00::4000",
+   "cardId": "1709135825598x588061184868091400",
+   "price": 40,
+   "park": "title-names-neither",
+   "title": "1999 Upper Deck Black Diamond Baseball #D24 Base",
+   "why": "title names neither Dominance nor /1500 nor another tier — absent beats wrong, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1709135825598x588061184868091400::2026-07-21T23:59:00+00:00::7000",
+   "cardId": "1709135825598x588061184868091400",
+   "price": 70,
+   "park": "title-names-neither",
+   "title": "1999 Upper Deck Black Diamond Baseball #D24 Base",
+   "why": "title names neither Dominance nor /1500 nor another tier — absent beats wrong, parks in place"
+  },
+  {
+   "id": "tca-ebay::389415771922",
+   "cardId": "hiq:baseball:1997:metal-universe:8:base:no-auto",
+   "price": 1.75,
+   "park": "different-player-or-insert",
+   "title": "1997-98 Metal Universe - Rod Strickland #8 Set Break! Combined Shipping!",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "tca-ebay::366526658374",
+   "cardId": "hiq:baseball:1997:metal-universe:8:base:no-auto",
+   "price": 4,
+   "park": "ripken-but-not-magnetic",
+   "title": "1997 Metal Universe Cal Ripken Jr Baltimore Orioles #8",
+   "why": "Cal Ripken #8 title naming no Magnetic Field (base / Titanium / other) — stays where it is; a Titanium die-cut is its own card and this lane does not guess it"
+  },
+  {
+   "id": "tca-ebay::336632488264",
+   "cardId": "hiq:baseball:1997:metal-universe:8:base:no-auto",
+   "price": 4.99,
+   "park": "ripken-but-not-magnetic",
+   "title": "1997 Metal Universe #8 Cal Ripken Jr. Titanium",
+   "why": "Cal Ripken #8 title naming no Magnetic Field (base / Titanium / other) — stays where it is; a Titanium die-cut is its own card and this lane does not guess it"
+  },
+  {
+   "id": "cardhedge::ch-daily::1739578490541x660989115379581000",
+   "cardId": "hiq:baseball:1997:metal-universe:8:base:no-auto",
+   "price": 58,
+   "park": "different-player-or-insert",
+   "title": "1997 Metal Universe Planet Metal Grant Hill #8 PSA 8",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1756091294714x438141857510934140",
+   "cardId": "1675907807147x950372077659781900",
+   "price": 1.49,
+   "park": "different-player-or-insert",
+   "title": "1997 Metal Universe Mining for Gold Neifi Perez Colorado Rockies #8 - Raw 10",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "tca-ebay::298567568593",
+   "cardId": "hiq:basketball:1997:metal-universe:8:base:no-auto",
+   "price": 2.49,
+   "park": "different-player-or-insert",
+   "title": "1997-98 Metal Universe Silver Slam John Wallace #8 New York Knicks",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "tca-ebay::147327530689",
+   "cardId": "hiq:basketball:1997:metal-universe:8:base:no-auto",
+   "price": 200,
+   "park": "different-player-or-insert",
+   "title": "1997-98 Metal Universe Titanium #8 Kevin Garnett Timberwolves HOF PSA 9",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1675906599892x604165696493748700::2026-04-16T21:18:00+00:00::234",
+   "cardId": "1675906599892x604165696493748700",
+   "price": 2.34,
+   "park": "different-player-or-insert",
+   "title": "1997 Metal Universe Baseball #8 Base",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1715326827315x418662288602955800::2026-05-03T01:12:00+00:00::399",
+   "cardId": "1715326827315x418662288602955800",
+   "price": 3.99,
+   "park": "different-player-or-insert",
+   "title": "1997 Metal Universe Baseball #8 Base",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1675906599892x604165696493748700::2026-05-03T18:56:00+00:00::185",
+   "cardId": "1675906599892x604165696493748700",
+   "price": 1.85,
+   "park": "different-player-or-insert",
+   "title": "1997 Metal Universe Baseball #8 Base",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1675906599892x604165696493748700::2026-05-04T18:55:00+00:00::250",
+   "cardId": "1675906599892x604165696493748700",
+   "price": 2.5,
+   "park": "different-player-or-insert",
+   "title": "1997 Metal Universe Baseball #8 Base",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1675906599892x604165696493748700::2026-05-07T02:48:00+00:00::3999",
+   "cardId": "1675906599892x604165696493748700",
+   "price": 39.99,
+   "park": "different-player-or-insert",
+   "title": "1997 Metal Universe Baseball #8 Base",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1675906599892x604165696493748700::2026-05-13T00:46:00+00:00::199",
+   "cardId": "1675906599892x604165696493748700",
+   "price": 1.99,
+   "park": "different-player-or-insert",
+   "title": "1997 Metal Universe Baseball #8 Base",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1675906599892x604165696493748700::2026-05-20T03:59:00+00:00::3999",
+   "cardId": "1675906599892x604165696493748700",
+   "price": 39.99,
+   "park": "different-player-or-insert",
+   "title": "1997 Metal Universe Baseball #8 Base",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1675906599892x604165696493748700::2026-05-28T13:20:00+00:00::199",
+   "cardId": "1675906599892x604165696493748700",
+   "price": 1.99,
+   "park": "different-player-or-insert",
+   "title": "1997 Metal Universe Baseball #8 Base",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1715326827315x418662288602955800::2026-06-01T13:56:00+00:00::3196",
+   "cardId": "1715326827315x418662288602955800",
+   "price": 31.96,
+   "park": "different-player-or-insert",
+   "title": "1997 Metal Universe Baseball #8 Base",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1675906599892x604165696493748700::2026-06-02T18:54:00+00:00::299",
+   "cardId": "1675906599892x604165696493748700",
+   "price": 2.99,
+   "park": "different-player-or-insert",
+   "title": "1997 Metal Universe Baseball #8 Base",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1675906599892x604165696493748700::2026-06-07T03:09:00+00:00::125",
+   "cardId": "1675906599892x604165696493748700",
+   "price": 1.25,
+   "park": "different-player-or-insert",
+   "title": "1997 Metal Universe Baseball #8 Base",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1675906599892x604165696493748700::2026-06-07T21:52:00+00:00::256",
+   "cardId": "1675906599892x604165696493748700",
+   "price": 2.56,
+   "park": "different-player-or-insert",
+   "title": "1997 Metal Universe Baseball #8 Base",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1675906599892x604165696493748700::2026-06-12T12:31:00+00:00::169",
+   "cardId": "1675906599892x604165696493748700",
+   "price": 1.69,
+   "park": "different-player-or-insert",
+   "title": "1997 Metal Universe Baseball #8 Base",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1715326827315x418662288602955800::2026-09-02T17:27:00+00:00::1250",
+   "cardId": "1715326827315x418662288602955800",
+   "price": 12.5,
+   "park": "different-player-or-insert",
+   "title": "1997 Metal Universe Baseball #8 Base",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1715326827315x418662288602955800::2026-09-02T14:31:00+00:00::1250",
+   "cardId": "1715326827315x418662288602955800",
+   "price": 12.5,
+   "park": "different-player-or-insert",
+   "title": "1997 Metal Universe Baseball #8 Base",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1715326827315x418662288602955800::2026-09-02T03:40:00+00:00::1599",
+   "cardId": "1715326827315x418662288602955800",
+   "price": 15.99,
+   "park": "different-player-or-insert",
+   "title": "1997 Metal Universe Baseball #8 Base",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1715326827315x418662288602955800::2026-09-02T02:04:00+00:00::1250",
+   "cardId": "1715326827315x418662288602955800",
+   "price": 12.5,
+   "park": "different-player-or-insert",
+   "title": "1997 Metal Universe Baseball #8 Base",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1715326827315x418662288602955800::2026-09-03T06:34:00+00:00::1250",
+   "cardId": "1715326827315x418662288602955800",
+   "price": 12.5,
+   "park": "different-player-or-insert",
+   "title": "1997 Metal Universe Baseball #8 Base",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1715326827315x418662288602955800::2026-09-03T04:03:00+00:00::1250",
+   "cardId": "1715326827315x418662288602955800",
+   "price": 12.5,
+   "park": "different-player-or-insert",
+   "title": "1997 Metal Universe Baseball #8 Base",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1715326827315x418662288602955800::2026-09-03T02:25:00+00:00::1250",
+   "cardId": "1715326827315x418662288602955800",
+   "price": 12.5,
+   "park": "different-player-or-insert",
+   "title": "1997 Metal Universe Baseball #8 Base",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1788406563630x257538003227138600",
+   "cardId": "1715326827315x418662288602955800",
+   "price": 12.5,
+   "park": "different-player-or-insert",
+   "title": "1997 Fleer Metal Universe Blast Furnace # 8 Mark McGwire A's, Cardinals Great - Raw",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1788323503762x816792048494968000",
+   "cardId": "1715326827315x418662288602955800",
+   "price": 15.99,
+   "park": "different-player-or-insert",
+   "title": "Mark McGwire SP ▪ 1997 Fleer Metal Universe BLAST Furnace #8 Oakland A's - Raw",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1788317467805x320450531015928000",
+   "cardId": "1715326827315x418662288602955800",
+   "price": 12.5,
+   "park": "different-player-or-insert",
+   "title": "1997 Fleer Metal Universe Blast Furnace # 8 Mark McGwire A's, Cardinals Great - Raw",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1788298409057x866580361961237800",
+   "cardId": "1715326827315x418662288602955800",
+   "price": 12.5,
+   "park": "different-player-or-insert",
+   "title": "1997 Fleer Metal Universe Blast Furnace # 8 Mark McGwire A's, Cardinals Great - Raw",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1788274541207x539267412472762560",
+   "cardId": "1715326827315x418662288602955800",
+   "price": 104.9,
+   "park": "different-player-or-insert",
+   "title": "1997 Skybox Metal Universe Blast Furnace Mark McGwire #8 BGS 9.5 GEM MINT 0q3",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1788155413954x782227647043929100",
+   "cardId": "1715326827315x418662288602955800",
+   "price": 4.99,
+   "park": "different-player-or-insert",
+   "title": "1997 Fleer Metal Universe Blast Furnace - A's Mark McGwire # 8 of 12 - Raw",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1788127892791x266747448883939870",
+   "cardId": "1715326827315x418662288602955800",
+   "price": 14.99,
+   "park": "different-player-or-insert",
+   "title": "Mark McGwire SP ▪ 1997 Fleer Metal Universe BLAST Furnace #8 Oakland A's - Raw",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1788118246751x943538357948813200",
+   "cardId": "1715326827315x418662288602955800",
+   "price": 9,
+   "park": "different-player-or-insert",
+   "title": "MARK MCGWIRE 1997 SKYBOX METAL UNIVERSE BLAST FURNACE MINT - Raw",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1782656438970x569020867759550960",
+   "cardId": "1675906599892x604165696493748700",
+   "price": 3,
+   "park": "ripken-but-not-magnetic",
+   "title": "Cal Ripken Jr 1997 Metal Universe #8 Baltimore Orioles - Raw",
+   "why": "Cal Ripken #8 title naming no Magnetic Field (base / Titanium / other) — stays where it is; a Titanium die-cut is its own card and this lane does not guess it"
+  },
+  {
+   "id": "cardhedge::ch-daily::1781390686346x164846358505702720",
+   "cardId": "1675906599892x604165696493748700",
+   "price": 1.04,
+   "park": "ripken-but-not-magnetic",
+   "title": "1997 Metal Universe #8 Cal Ripken Jr BASEBALL Baltimore Orioles - Raw",
+   "why": "Cal Ripken #8 title naming no Magnetic Field (base / Titanium / other) — stays where it is; a Titanium die-cut is its own card and this lane does not guess it"
+  },
+  {
+   "id": "cardhedge::ch-daily::1785566276029x604634661136290700",
+   "cardId": "1715326827315x418662288602955800",
+   "price": 84.94,
+   "park": "different-player-or-insert",
+   "title": "1997 MARK MCGWIRE METAL UNIVERSE BLAST FURNACE #8 PSA 10",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1737144420594x223614141306674340",
+   "cardId": "1675906599892x604165696493748700",
+   "price": 2.99,
+   "park": "ripken-but-not-magnetic",
+   "title": "1997 Fleer Metal Universe Titanium Die Cut Cal Ripken Jr #8 Orioles HOF - Raw 10",
+   "why": "Cal Ripken #8 title naming no Magnetic Field (base / Titanium / other) — stays where it is; a Titanium die-cut is its own card and this lane does not guess it"
+  },
+  {
+   "id": "cardhedge::ch-daily::1737345365719x536865283484879740",
+   "cardId": "1715326827315x418662288602955800",
+   "price": 48,
+   "park": "different-player-or-insert",
+   "title": "1997 Skybox Metal Universe Mark McGwire Blast Furnace #8 PSA 10",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1738371524102x507579353674159100",
+   "cardId": "1675906599892x604165696493748700",
+   "price": 1.99,
+   "park": "ripken-but-not-magnetic",
+   "title": "1997 Fleer Metal Universe Titanium Die Cut Cal Ripken Jr #8 Orioles HOF  FAIR - Raw 10",
+   "why": "Cal Ripken #8 title naming no Magnetic Field (base / Titanium / other) — stays where it is; a Titanium die-cut is its own card and this lane does not guess it"
+  },
+  {
+   "id": "cardhedge::ch-daily::1738419067311x212491501996868500",
+   "cardId": "1715326827315x418662288602955800",
+   "price": 4.3,
+   "park": "different-player-or-insert",
+   "title": "1997 Skybox Metal Universe Blast Furnace Mark McGwire #8 - Raw 10",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1738556835645x178972436903465100",
+   "cardId": "1675906599892x604165696493748700",
+   "price": 1.99,
+   "park": "ripken-but-not-magnetic",
+   "title": "1997 Metal Universe - Cal Ripken Jr - #8 - Baltimore Orioles - Raw 10",
+   "why": "Cal Ripken #8 title naming no Magnetic Field (base / Titanium / other) — stays where it is; a Titanium die-cut is its own card and this lane does not guess it"
+  },
+  {
+   "id": "cardhedge::ch-daily::1741141058216x991600906043522400",
+   "cardId": "1715326827315x418662288602955800",
+   "price": 4.99,
+   "park": "different-player-or-insert",
+   "title": "1997 Skybox Metal Universe Blast Furnace Mark McGwire #8 - Raw 10",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1741206168337x208901535531562640",
+   "cardId": "1715326827315x418662288602955800",
+   "price": 3.95,
+   "park": "different-player-or-insert",
+   "title": "K272,925 - 1997 Metal Universe Blast Furnace #8 Mark McGwire - Raw 10",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1742163874904x938967880553479200",
+   "cardId": "1675906599892x604165696493748700",
+   "price": 3.99,
+   "park": "ripken-but-not-magnetic",
+   "title": "Cal Ripken Jr, Baltimore Orioles, 1997 Fleer Metal Universe, #8 - Raw 10",
+   "why": "Cal Ripken #8 title naming no Magnetic Field (base / Titanium / other) — stays where it is; a Titanium die-cut is its own card and this lane does not guess it"
+  },
+  {
+   "id": "cardhedge::ch-daily::1786125100711x782457432201913700",
+   "cardId": "1715326827315x418662288602955800",
+   "price": 3.95,
+   "park": "different-player-or-insert",
+   "title": "1997 Fleer Metal Universe Blast Furnace Oakland A's Mark McGwire Card # 8 of 12 - Raw",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1786125128520x485000773507282600",
+   "cardId": "1715326827315x418662288602955800",
+   "price": 3.99,
+   "park": "different-player-or-insert",
+   "title": "1997 Fleer Metal Universe Blast Furnace - Oakland A's Mark McGwire # 8 of 12 - Raw",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1743476289983x484864110451400640",
+   "cardId": "1675906599892x604165696493748700",
+   "price": 1.99,
+   "park": "ripken-but-not-magnetic",
+   "title": "1997 Metal Universe #8 Cal Ripken Jr Baltimore Orioles - Raw 10",
+   "why": "Cal Ripken #8 title naming no Magnetic Field (base / Titanium / other) — stays where it is; a Titanium die-cut is its own card and this lane does not guess it"
+  },
+  {
+   "id": "cardhedge::ch-daily::1743823964426x635307796797864400",
+   "cardId": "1675906599892x604165696493748700",
+   "price": 1.99,
+   "park": "ripken-but-not-magnetic",
+   "title": "1997 Metal Universe #8 Cal Ripken Jr - Raw 10",
+   "why": "Cal Ripken #8 title naming no Magnetic Field (base / Titanium / other) — stays where it is; a Titanium die-cut is its own card and this lane does not guess it"
+  },
+  {
+   "id": "cardhedge::ch-daily::1745632864689x803252831865264100",
+   "cardId": "1675906599892x604165696493748700",
+   "price": 15.5,
+   "park": "ripken-but-not-magnetic",
+   "title": "1997 FLEER METAL UNIVERSE #8 CAL RIPKEN JR PSA 8",
+   "why": "Cal Ripken #8 title naming no Magnetic Field (base / Titanium / other) — stays where it is; a Titanium die-cut is its own card and this lane does not guess it"
+  },
+  {
+   "id": "cardhedge::ch-daily::1745685419986x988313398803745400",
+   "cardId": "1675906599892x604165696493748700",
+   "price": 1.59,
+   "park": "ripken-but-not-magnetic",
+   "title": "Cal Ripken Jr 1997 Fleer Metal Universe Baseball Card # 8 I6266 - Raw 10",
+   "why": "Cal Ripken #8 title naming no Magnetic Field (base / Titanium / other) — stays where it is; a Titanium die-cut is its own card and this lane does not guess it"
+  },
+  {
+   "id": "cardhedge::ch-daily::1746730862333x966306798400366600",
+   "cardId": "1715326827315x418662288602955800",
+   "price": 10,
+   "park": "different-player-or-insert",
+   "title": "MARK MCGWIRE 1997 SKYBOX METAL UNIVERSE BLAST FURNACE MINT - Raw 10",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1746818755287x726260917475576300",
+   "cardId": "1675906599892x604165696493748700",
+   "price": 1.12,
+   "park": "ripken-but-not-magnetic",
+   "title": "1997 Skybox Metal Universe Cal Ripken Jr #8 HOF - Raw 10",
+   "why": "Cal Ripken #8 title naming no Magnetic Field (base / Titanium / other) — stays where it is; a Titanium die-cut is its own card and this lane does not guess it"
+  },
+  {
+   "id": "cardhedge::ch-daily::1747360422150x263774780162387520",
+   "cardId": "1675906599892x604165696493748700",
+   "price": 0.55,
+   "park": "ripken-but-not-magnetic",
+   "title": "1997 Metal Universe #8 Cal Ripken Jr Baltimore Orioles HOF - Raw 10",
+   "why": "Cal Ripken #8 title naming no Magnetic Field (base / Titanium / other) — stays where it is; a Titanium die-cut is its own card and this lane does not guess it"
+  },
+  {
+   "id": "cardhedge::ch-daily::1747369711486x969763435476744200",
+   "cardId": "1675906599892x604165696493748700",
+   "price": 2.5,
+   "park": "ripken-but-not-magnetic",
+   "title": "1997 Skybox Metal Universe - #8 Cal Ripken, Jr(i2) - Raw 10",
+   "why": "Cal Ripken #8 title naming no Magnetic Field (base / Titanium / other) — stays where it is; a Titanium die-cut is its own card and this lane does not guess it"
+  },
+  {
+   "id": "cardhedge::ch-daily::1748571188795x584772409245046400",
+   "cardId": "1715326827315x418662288602955800",
+   "price": 18.5,
+   "park": "different-player-or-insert",
+   "title": "Mark McGwire 1997 Fleer Metal Universe Blast Furnace PSA 10",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1748583358376x519209232252164600",
+   "cardId": "1675906599892x604165696493748700",
+   "price": 1.69,
+   "park": "ripken-but-not-magnetic",
+   "title": "1997 Fleer Metal Universe Cal Ripken Jr Baltimore Orioles #8 - Raw 10",
+   "why": "Cal Ripken #8 title naming no Magnetic Field (base / Titanium / other) — stays where it is; a Titanium die-cut is its own card and this lane does not guess it"
+  },
+  {
+   "id": "cardhedge::ch-daily::1749238263247x320509159054880300",
+   "cardId": "1715326827315x418662288602955800",
+   "price": 4.49,
+   "park": "different-player-or-insert",
+   "title": "MARK MCGWIRE ▪ 1997 Fleer Skybox Metal Universe  BLAST FURNACE  #8  Athletics - Raw 10",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1749780703658x972308567249777200",
+   "cardId": "1715326827315x418662288602955800",
+   "price": 39.56,
+   "park": "different-player-or-insert",
+   "title": "Mark McGwire 1997 Fleer Metal Universe Blast Furnace #8 PSA 10 Low pop insert",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1749933263272x782412158056940000",
+   "cardId": "1715326827315x418662288602955800",
+   "price": 29,
+   "park": "different-player-or-insert",
+   "title": "MARK MCGWIRE 1997 SKYBOX METAL UNIVERSE BLAST FURNACE ACETATE INSERT SGC 10 GM",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1750197771231x543808644967784800",
+   "cardId": "1715326827315x418662288602955800",
+   "price": 59,
+   "park": "different-player-or-insert",
+   "title": "PSA 10 1997 METAL UNIVERSE MARK McGWIRE BLAST FURNACE SP INSERT RARE L@@K",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1750220145490x841310986051509000",
+   "cardId": "1715326827315x418662288602955800",
+   "price": 5.96,
+   "park": "different-player-or-insert",
+   "title": "1997 Skybox Metal Universe Blast Furnace Mark McGwire #8 - Raw 10",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1750542313763x125718090504937980",
+   "cardId": "1715326827315x418662288602955800",
+   "price": 22.5,
+   "park": "different-player-or-insert",
+   "title": "MARK MCGWIRE 1997 SKYBOX METAL UNIVERSE BLAST FURNACE ACETATE INSERT SGC 10 GM",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1751167986605x686702381691871100",
+   "cardId": "1715326827315x418662288602955800",
+   "price": 37.5,
+   "park": "different-player-or-insert",
+   "title": "1997 Metal Universe Mark McGwire Blast Furnace #8 PSA 10",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1751827488755x906697566700061600",
+   "cardId": "1675906599892x604165696493748700",
+   "price": 2.12,
+   "park": "ripken-but-not-magnetic",
+   "title": "1997 Metal Universe Baseball #8 Cal Ripken Jr - Raw 10",
+   "why": "Cal Ripken #8 title naming no Magnetic Field (base / Titanium / other) — stays where it is; a Titanium die-cut is its own card and this lane does not guess it"
+  },
+  {
+   "id": "cardhedge::ch-daily::1786386401668x956860686830067600",
+   "cardId": "1715326827315x418662288602955800",
+   "price": 3.99,
+   "park": "different-player-or-insert",
+   "title": "1997 Fleer Metal Universe Blast Furnace Oakland - Mark McGwire Card # 8 of 12 - Raw",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1756326138322x870850439883276800",
+   "cardId": "1675906599892x604165696493748700",
+   "price": 1.25,
+   "park": "ripken-but-not-magnetic",
+   "title": "1997 Metal Universe #8 Cal Ripken Jr, cd3 - Raw 10",
+   "why": "Cal Ripken #8 title naming no Magnetic Field (base / Titanium / other) — stays where it is; a Titanium die-cut is its own card and this lane does not guess it"
+  },
+  {
+   "id": "cardhedge::ch-daily::1753996123777x847075226616780300",
+   "cardId": "1715326827315x418662288602955800",
+   "price": 65,
+   "park": "different-player-or-insert",
+   "title": "Mark McGwire 1997 Fleer Metal Universe Blast Furnace PSA 10",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1757207174188x759227307612942700",
+   "cardId": "1675906599892x604165696493748700",
+   "price": 2.99,
+   "park": "ripken-but-not-magnetic",
+   "title": "1997 Skybox Metal Universe - #8 Cal Ripken, Jr - Raw 10",
+   "why": "Cal Ripken #8 title naming no Magnetic Field (base / Titanium / other) — stays where it is; a Titanium die-cut is its own card and this lane does not guess it"
+  },
+  {
+   "id": "cardhedge::ch-daily::1756585978621x804007870121049000",
+   "cardId": "1675906599892x604165696493748700",
+   "price": 14.99,
+   "park": "ripken-but-not-magnetic",
+   "title": "1997 FLEER METAL UNIVERSE #8 CAL RIPKEN JR PSA 8",
+   "why": "Cal Ripken #8 title naming no Magnetic Field (base / Titanium / other) — stays where it is; a Titanium die-cut is its own card and this lane does not guess it"
+  },
+  {
+   "id": "cardhedge::ch-daily::1757959328607x758217900996826600",
+   "cardId": "1675906599892x604165696493748700",
+   "price": 1.45,
+   "park": "ripken-but-not-magnetic",
+   "title": "1997 Metal Universe #8 Cal Ripken Jr, cd1 - Raw 10",
+   "why": "Cal Ripken #8 title naming no Magnetic Field (base / Titanium / other) — stays where it is; a Titanium die-cut is its own card and this lane does not guess it"
+  },
+  {
+   "id": "cardhedge::ch-daily::1758946663208x258229105031548160",
+   "cardId": "1675906599892x604165696493748700",
+   "price": 14.95,
+   "park": "ripken-but-not-magnetic",
+   "title": "1997 Metal Universe #8 Cal Ripken Jr PSA 8 BALTIMORE ORIOLES",
+   "why": "Cal Ripken #8 title naming no Magnetic Field (base / Titanium / other) — stays where it is; a Titanium die-cut is its own card and this lane does not guess it"
+  },
+  {
+   "id": "cardhedge::ch-daily::1758242758199x902703490816123800",
+   "cardId": "1675906599892x604165696493748700",
+   "price": 4,
+   "park": "ripken-but-not-magnetic",
+   "title": "1997 Fleer Metal Universe Cal Ripken Jr 8 - Raw 10",
+   "why": "Cal Ripken #8 title naming no Magnetic Field (base / Titanium / other) — stays where it is; a Titanium die-cut is its own card and this lane does not guess it"
+  },
+  {
+   "id": "cardhedge::ch-daily::1758072454787x541847574503235800",
+   "cardId": "1675906599892x604165696493748700",
+   "price": 1.99,
+   "park": "ripken-but-not-magnetic",
+   "title": "1997 FLEER METAL UNIVERSE CAL RIPKEN JR #8 BASE FOIL BALTIMORE ORIOLES - Raw 10",
+   "why": "Cal Ripken #8 title naming no Magnetic Field (base / Titanium / other) — stays where it is; a Titanium die-cut is its own card and this lane does not guess it"
+  },
+  {
+   "id": "cardhedge::ch-daily::1752598072801x897410235131457900",
+   "cardId": "1655908034294x213671202783769480",
+   "price": 1.75,
+   "park": "different-player-or-insert",
+   "title": "1997-98 Metal Universe Championship #8 Bobby Jackson Rookie Foil Card - Raw 10",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1675907819460x926189910012631400::2026-04-10T05:59:00+00:00::849",
+   "cardId": "1675907819460x926189910012631400",
+   "price": 8.49,
+   "park": "different-player-or-insert",
+   "title": "1997 Metal Universe Baseball #8 Base",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1675907819460x926189910012631400::2026-04-27T17:38:00+00:00::425",
+   "cardId": "1675907819460x926189910012631400",
+   "price": 4.25,
+   "park": "different-player-or-insert",
+   "title": "1997 Metal Universe Baseball #8 Base",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1675907819460x926189910012631400::2026-05-22T11:37:00+00:00::300",
+   "cardId": "1675907819460x926189910012631400",
+   "price": 3,
+   "park": "different-player-or-insert",
+   "title": "1997 Metal Universe Baseball #8 Base",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1675907819460x926189910012631400::2026-05-27T05:13:00+00:00::400",
+   "cardId": "1675907819460x926189910012631400",
+   "price": 4,
+   "park": "different-player-or-insert",
+   "title": "1997 Metal Universe Baseball #8 Base",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1675907819460x926189910012631400::2026-05-27T06:03:00+00:00::650",
+   "cardId": "1675907819460x926189910012631400",
+   "price": 6.5,
+   "park": "different-player-or-insert",
+   "title": "1997 Metal Universe Baseball #8 Base",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1675907819460x926189910012631400::2026-05-27T10:25:00+00:00::425",
+   "cardId": "1675907819460x926189910012631400",
+   "price": 4.25,
+   "park": "different-player-or-insert",
+   "title": "1997 Metal Universe Baseball #8 Base",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1675907819460x926189910012631400::2026-05-27T10:25:00+00:00::300",
+   "cardId": "1675907819460x926189910012631400",
+   "price": 3,
+   "park": "different-player-or-insert",
+   "title": "1997 Metal Universe Baseball #8 Base",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1675907819460x926189910012631400::2026-05-27T12:00:00+00:00::450",
+   "cardId": "1675907819460x926189910012631400",
+   "price": 4.5,
+   "park": "different-player-or-insert",
+   "title": "1997 Metal Universe Baseball #8 Base",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1675907819460x926189910012631400::2026-05-27T14:26:00+00:00::500",
+   "cardId": "1675907819460x926189910012631400",
+   "price": 5,
+   "park": "different-player-or-insert",
+   "title": "1997 Metal Universe Baseball #8 Base",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1675907819460x926189910012631400::2026-06-01T14:54:00+00:00::295",
+   "cardId": "1675907819460x926189910012631400",
+   "price": 2.95,
+   "park": "different-player-or-insert",
+   "title": "1997 Metal Universe Baseball #8 Base",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1785205744085x491413687720337900",
+   "cardId": "1675907819460x926189910012631400",
+   "price": 5.5,
+   "park": "different-player-or-insert",
+   "title": "1997 Skybox Metal Universe Andy Pettitte Platinum Portraits #8 New York Yankees - Raw",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1785033533473x606457551011285500",
+   "cardId": "1675907819460x926189910012631400",
+   "price": 4.99,
+   "park": "different-player-or-insert",
+   "title": "ANDY PETTITTE 1997 Metal Universe Platinum Portraits Card #8 New York Yankees - Raw",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1782268128775x332016080330856960",
+   "cardId": "1675907819460x926189910012631400",
+   "price": 5.99,
+   "park": "different-player-or-insert",
+   "title": "1997 Metal Universe #8 Andy Pettitte Platinum Portraits - Raw",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1782267915321x455509241803086140",
+   "cardId": "1675907819460x926189910012631400",
+   "price": 4.99,
+   "park": "different-player-or-insert",
+   "title": "1997 Skybox Metal Universe - Platinum Portraits Andy Pettitte #8 - Raw",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1782267915321x320528956181802560",
+   "cardId": "1675907819460x926189910012631400",
+   "price": 3.99,
+   "park": "different-player-or-insert",
+   "title": "1997 Metal Universe #8 Andy Pettitte Platinum Portraits - Raw",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1782168678567x451437818471941900",
+   "cardId": "1675907819460x926189910012631400",
+   "price": 4,
+   "park": "different-player-or-insert",
+   "title": "1997 Metal Universe #8 Andy Pettitte Platinum Portraits - Raw",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1781398691667x418741874154275650",
+   "cardId": "1675907828959x902267229765811200",
+   "price": 52,
+   "park": "different-player-or-insert",
+   "title": "1997 Metal Universe Mike Piazza Mother Lode Die-Cut Insert Los Angeles Dodgers - Raw",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1785911815462x448452940936110660",
+   "cardId": "1675907828959x902267229765811200",
+   "price": 50,
+   "park": "different-player-or-insert",
+   "title": "Mike Piazza 1997 Skybox Metal Universe - Mother Lode #8 - Raw",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1786083086613x169593885992185500",
+   "cardId": "1675907819460x926189910012631400",
+   "price": 4.99,
+   "park": "different-player-or-insert",
+   "title": "ANDY PETTITTE 1997 Metal Universe Platinum Portraits Card #8 New York Yankees - Raw",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1786075087695x621662507383511600",
+   "cardId": "1675907819460x926189910012631400",
+   "price": 4.25,
+   "park": "different-player-or-insert",
+   "title": "1997 Metal Universe Platinum Portraits #8 Andy Pettitte YANKEES - Raw",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1738634940681x515426765279869400",
+   "cardId": "1675907828959x902267229765811200",
+   "price": 19.2,
+   "park": "different-player-or-insert",
+   "title": "1997 Metal Universe Mother Lode Die-Cut Mike Piazza #8 PSA 8 NM-MT",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1741754702194x994839696911832000",
+   "cardId": "1675907819460x926189910012631400",
+   "price": 1.99,
+   "park": "different-player-or-insert",
+   "title": "1997 Metal Universe Platinum Portraits #8 Andy Pettitte - Raw 10",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1758126178073x916118980967139700",
+   "cardId": "1675907828959x902267229765811200",
+   "price": 17.99,
+   "park": "different-player-or-insert",
+   "title": "1997 Metal Universe #8 Mike Piazza Mother Lode - Raw 10",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1751473140101x916811631263724300",
+   "cardId": "1675907828959x902267229765811200",
+   "price": 29.99,
+   "park": "different-player-or-insert",
+   "title": "1997 SkyBox Metal Universe Mike Piazza Mother Lode Die-Cut #8 - Raw 10",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1750713285332x612900421986818200",
+   "cardId": "1675907828959x902267229765811200",
+   "price": 26.5,
+   "park": "different-player-or-insert",
+   "title": "1997 Skybox Metal Universe Mother Lode Mike Piazza #8 HOF - Raw 10",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1748356751192x406091514374873000",
+   "cardId": "1675907828959x902267229765811200",
+   "price": 29.74,
+   "park": "different-player-or-insert",
+   "title": "1997 Skybox Metal Universe Mother Lode Mike Piazza #8 HOF - Raw 10",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1755796449164x186234381685263170",
+   "cardId": "1675907819460x926189910012631400",
+   "price": 3.99,
+   "park": "different-player-or-insert",
+   "title": "ANDY PETTITTE 1997 FLEER METAL UNIVERSE PLATINUM PORTRAITS #8 - Raw 10",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1786997182394x512938464293690300",
+   "cardId": "1675907819460x926189910012631400",
+   "price": 4.99,
+   "park": "different-player-or-insert",
+   "title": "ANDY PETTITTE 1997 Metal Universe Platinum Portraits Card #8 New York Yankees - Raw",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1787422657683x644185235814028800",
+   "cardId": "1675907819460x926189910012631400",
+   "price": 3.49,
+   "park": "different-player-or-insert",
+   "title": "1997 Skybox Metal Universe Andy Pettitte Platinum Portraits #8 New York Yankees - Raw",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1787760044322x986636737974906400",
+   "cardId": "1675907819460x926189910012631400",
+   "price": 5.98,
+   "park": "different-player-or-insert",
+   "title": "1997 Metal Universe Platinum Portraits #8 Andy Pettitte 061-Q - Raw",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1787760044322x850188919566717200",
+   "cardId": "1675907819460x926189910012631400",
+   "price": 5,
+   "park": "different-player-or-insert",
+   "title": "1997 Metal Universe Andy Pettitte PLATINUM PORTRAIT #8 of 10 - New York Yankees - Raw",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1787760044322x849546248493234800",
+   "cardId": "1675907819460x926189910012631400",
+   "price": 7,
+   "park": "different-player-or-insert",
+   "title": "1997 Skybox Metal Universe Andy Pettitte Platinum Portraits #8 New York Yankees - Raw",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1787758589834x402356758770385150",
+   "cardId": "1675907819460x926189910012631400",
+   "price": 9.9,
+   "park": "different-player-or-insert",
+   "title": "1997 Metal Universe Platinum Portraits Andy Pettitte #8 New York Yankees - Raw",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1787706913640x706506760612067000",
+   "cardId": "1675907819460x926189910012631400",
+   "price": 4.45,
+   "park": "different-player-or-insert",
+   "title": "1997 Metal Universe Platinum Portraits Andy Pettitte #8 New York Yankees (02) - Raw",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1787835981537x797997835638542200",
+   "cardId": "1675907819460x926189910012631400",
+   "price": 7.5,
+   "park": "different-player-or-insert",
+   "title": "ANDY PETTITTE 1997 Metal Universe Platinum Portraits Card #8 New York Yankees - Raw",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1788273748455x493603510057746500",
+   "cardId": "1675907819460x926189910012631400",
+   "price": 10.99,
+   "park": "different-player-or-insert",
+   "title": "1997 Metal Universe Platinum Portraits Andy Pettitte #8 New York Yankees⭐️WOW‼️ - Raw",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1782088611772x417388257286096060",
+   "cardId": "1675907803144x127576379319117140",
+   "price": 6.52,
+   "park": "ripken-but-not-magnetic",
+   "title": "1997 Skybox Universe Metal Cal Ripken Jr Titanium #8 Orioles - Raw",
+   "why": "Cal Ripken #8 title naming no Magnetic Field (base / Titanium / other) — stays where it is; a Titanium die-cut is its own card and this lane does not guess it"
+  },
+  {
+   "id": "cardhedge::ch-daily::1740555397022x961479182040976800",
+   "cardId": "1675907803144x127576379319117140",
+   "price": 2.84,
+   "park": "ripken-but-not-magnetic",
+   "title": "1997 Skybox Metal Universe Titanium Cal Ripken Jr #8 HOF - Raw 10",
+   "why": "Cal Ripken #8 title naming no Magnetic Field (base / Titanium / other) — stays where it is; a Titanium die-cut is its own card and this lane does not guess it"
+  },
+  {
+   "id": "cardhedge::ch-daily::1748570815705x482072321739591500",
+   "cardId": "1675907803144x127576379319117140",
+   "price": 2.99,
+   "park": "ripken-but-not-magnetic",
+   "title": "1997 Metal Universe Titanium Die Cut Cal Ripken Jr #8 - Raw 10",
+   "why": "Cal Ripken #8 title naming no Magnetic Field (base / Titanium / other) — stays where it is; a Titanium die-cut is its own card and this lane does not guess it"
+  },
+  {
+   "id": "cardhedge::ch-daily::1786256710133x491307790303933760",
+   "cardId": "1675907803144x127576379319117140",
+   "price": 7.99,
+   "park": "ripken-but-not-magnetic",
+   "title": "1997 Metal Universe Titanium Cal Ripken Jr #8 Die-Cut Insert Baltimore Orioles - Raw",
+   "why": "Cal Ripken #8 title naming no Magnetic Field (base / Titanium / other) — stays where it is; a Titanium die-cut is its own card and this lane does not guess it"
+  },
+  {
+   "id": "cardhedge::ch-daily::1786949207441x907575848302103400",
+   "cardId": "1675907803144x127576379319117140",
+   "price": 5,
+   "park": "ripken-but-not-magnetic",
+   "title": "1997 Metal Universe Titanium Cal Ripken Jr #8 - Raw",
+   "why": "Cal Ripken #8 title naming no Magnetic Field (base / Titanium / other) — stays where it is; a Titanium die-cut is its own card and this lane does not guess it"
+  },
+  {
+   "id": "cardhedge::ch-daily::1786949105851x474332985202976500",
+   "cardId": "1675907803144x127576379319117140",
+   "price": 5.19,
+   "park": "ripken-but-not-magnetic",
+   "title": "1997 Metal Universe 8 Cal Ripken Jr Titanium - Raw",
+   "why": "Cal Ripken #8 title naming no Magnetic Field (base / Titanium / other) — stays where it is; a Titanium die-cut is its own card and this lane does not guess it"
+  },
+  {
+   "id": "cardhedge::ch-daily::1787015194589x870139622999394600",
+   "cardId": "1675907803144x127576379319117140",
+   "price": 3.36,
+   "park": "ripken-but-not-magnetic",
+   "title": "1997 Fleer/Skybox Metal Universe Titanium #8 Cal Ripken Jr Die-Cut Orioles - Raw",
+   "why": "Cal Ripken #8 title naming no Magnetic Field (base / Titanium / other) — stays where it is; a Titanium die-cut is its own card and this lane does not guess it"
+  },
+  {
+   "id": "cardhedge::ch-daily::1675907831540x230095593572250400::2026-05-23T13:16:00+00:00::450",
+   "cardId": "1675907831540x230095593572250400",
+   "price": 4.5,
+   "park": "different-player-or-insert",
+   "title": "1997 Metal Universe Baseball #8 Base",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1675907831540x230095593572250400::2026-05-25T01:17:00+00:00::400",
+   "cardId": "1675907831540x230095593572250400",
+   "price": 4,
+   "park": "different-player-or-insert",
+   "title": "1997 Metal Universe Baseball #8 Base",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1675907831540x230095593572250400::2026-05-30T17:51:00+00:00::200",
+   "cardId": "1675907831540x230095593572250400",
+   "price": 2,
+   "park": "different-player-or-insert",
+   "title": "1997 Metal Universe Baseball #8 Base",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1675907831540x230095593572250400::2026-06-02T21:59:00+00:00::499",
+   "cardId": "1675907831540x230095593572250400",
+   "price": 4.99,
+   "park": "different-player-or-insert",
+   "title": "1997 Metal Universe Baseball #8 Base",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1675907831540x230095593572250400::2026-06-03T20:57:00+00:00::399",
+   "cardId": "1675907831540x230095593572250400",
+   "price": 3.99,
+   "park": "different-player-or-insert",
+   "title": "1997 Metal Universe Baseball #8 Base",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1675907831540x230095593572250400::2026-06-05T19:39:00+00:00::399",
+   "cardId": "1675907831540x230095593572250400",
+   "price": 3.99,
+   "park": "different-player-or-insert",
+   "title": "1997 Metal Universe Baseball #8 Base",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1675907831540x230095593572250400::2026-06-10T14:20:00+00:00::895",
+   "cardId": "1675907831540x230095593572250400",
+   "price": 8.95,
+   "park": "different-player-or-insert",
+   "title": "1997 Metal Universe Baseball #8 Base",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1675907831540x230095593572250400::2026-06-19T14:21:00+00:00::399",
+   "cardId": "1675907831540x230095593572250400",
+   "price": 3.99,
+   "park": "different-player-or-insert",
+   "title": "1997 Metal Universe Baseball #8 Base",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1675907831540x230095593572250400::2026-06-19T14:21:00+00:00::250",
+   "cardId": "1675907831540x230095593572250400",
+   "price": 2.5,
+   "park": "different-player-or-insert",
+   "title": "1997 Metal Universe Baseball #8 Base",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1675907831540x230095593572250400::2026-06-21T02:46:00+00:00::2499",
+   "cardId": "1675907831540x230095593572250400",
+   "price": 24.99,
+   "park": "different-player-or-insert",
+   "title": "1997 Metal Universe Baseball #8 Base",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1675907831540x230095593572250400::2026-07-16T20:30:00+00:00::299",
+   "cardId": "1675907831540x230095593572250400",
+   "price": 2.99,
+   "park": "different-player-or-insert",
+   "title": "1997 Metal Universe Baseball #8 Base",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1675907831540x230095593572250400::2026-07-22T02:59:00+00:00::360",
+   "cardId": "1675907831540x230095593572250400",
+   "price": 3.6,
+   "park": "different-player-or-insert",
+   "title": "1997 Metal Universe Baseball #8 Base",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1747708089089x860596512147641600",
+   "cardId": "1655945934960x376435398574556100",
+   "price": 182.5,
+   "park": "different-player-or-insert",
+   "title": "1997-98 Skybox Metal Universe Championship Kevin Garnett Hardware #8 H - Raw 10",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1786382115080x222494687146052930",
+   "cardId": "1656034795479x506594265460216240",
+   "price": 2.49,
+   "park": "different-player-or-insert",
+   "title": "1997-98 Metal Universe Silver Slam John Wallace #8 New York Knicks - Raw",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1675907831540x230095593572250400::2026-09-02T00:46:00+00:00::1300",
+   "cardId": "1675907831540x230095593572250400",
+   "price": 13,
+   "park": "different-player-or-insert",
+   "title": "1997 Metal Universe Baseball #8 Base",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  },
+  {
+   "id": "cardhedge::ch-daily::1675907831540x230095593572250400::2026-07-30T05:32:00+00:00::4999",
+   "cardId": "1675907831540x230095593572250400",
+   "price": 49.99,
+   "park": "different-player-or-insert",
+   "title": "1997 1997 Metal Universe Baseball #8 Base",
+   "why": "title names a different player or insert sharing card number 8 (Rod Strickland, Grant Hill, McGwire Blast Furnace, Pettitte Platinum Portraits, Piazza Mother Lode) — not this card, parks in place"
+  }
+ ],
+ "entries": [
+  {
+   "id": "cardhedge::ch-daily::1785206423180x558861126912271170",
+   "fromCardId": "1709135825598x588061184868091400",
+   "price": 42,
+   "evidence": "1999 UD Black Diamond #D24 Diamond Dominance /1500: title states \"Dominance\" + title states \"/1500\". Title: \"1999 Upper Deck Black Diamond Dominance 1076/1500 Ken Griffey Jr #D24 HOF - Raw\"",
+   "toCardId": "hiq:baseball:1999:upper-deck-black-diamond:d24:diamond-dominance:no-auto:num-1500"
+  },
+  {
+   "id": "cardhedge::ch-daily::1782649631469x635041350298772900",
+   "fromCardId": "1709135825598x588061184868091400",
+   "price": 60,
+   "evidence": "1999 UD Black Diamond #D24 Diamond Dominance /1500: title states \"Dominance\" + title states \"/1500\". Title: \"KEN GRIFFEY JR 1999 UD BLACK DIAMOND #D24 DIAMOND DOMINANCE INSERT #/1500 SP! - Raw\"",
+   "toCardId": "hiq:baseball:1999:upper-deck-black-diamond:d24:diamond-dominance:no-auto:num-1500"
+  },
+  {
+   "id": "cardhedge::ch-daily::1782267493842x154422280013651000",
+   "fromCardId": "1709135825598x588061184868091400",
+   "price": 16.51,
+   "evidence": "1999 UD Black Diamond #D24 Diamond Dominance /1500: title states \"Dominance\" + title states \"/1500\". Title: \"1999 UD Black Diamond Dominance #D24 Ken Griffey Jr Mariners HOF /1500 - Raw\"",
+   "toCardId": "hiq:baseball:1999:upper-deck-black-diamond:d24:diamond-dominance:no-auto:num-1500"
+  },
+  {
+   "id": "cardhedge::ch-daily::1782181433847x998400255453087700",
+   "fromCardId": "1709135825598x588061184868091400",
+   "price": 22,
+   "evidence": "1999 UD Black Diamond #D24 Diamond Dominance /1500: title states \"Dominance\" + title states \"/1500\". Title: \"1999 UD Black Diamond Dominance #D24 Ken Griffey Jr Mariners HOF /1500 - Raw\"",
+   "toCardId": "hiq:baseball:1999:upper-deck-black-diamond:d24:diamond-dominance:no-auto:num-1500"
+  },
+  {
+   "id": "cardhedge::ch-daily::1740021163175x352091964331599000",
+   "fromCardId": "1709135825598x588061184868091400",
+   "price": 5.5,
+   "evidence": "1999 UD Black Diamond #D24 Diamond Dominance /1500: title states \"Dominance\" + title states \"/1500\". Title: \"KEN GRIFFEY JR 1999 UPPER DECK BLACK DIAMOND DOMINANCE D24 1228/1500 - Raw 10\"",
+   "toCardId": "hiq:baseball:1999:upper-deck-black-diamond:d24:diamond-dominance:no-auto:num-1500"
+  },
+  {
+   "id": "cardhedge::ch-daily::1740260783267x184709088003419680",
+   "fromCardId": "1709135825598x588061184868091400",
+   "price": 26,
+   "evidence": "1999 UD Black Diamond #D24 Diamond Dominance /1500: title states \"Dominance\" + title states \"/1500\". Title: \"1999 UD Black Diamond Dominance D24 Ken Griffey Jr #1157/1500 SGC 9 LOW POP!\"",
+   "toCardId": "hiq:baseball:1999:upper-deck-black-diamond:d24:diamond-dominance:no-auto:num-1500"
+  },
+  {
+   "id": "cardhedge::ch-daily::1740331247187x317483003543111550",
+   "fromCardId": "1709135825598x588061184868091400",
+   "price": 11.5,
+   "evidence": "1999 UD Black Diamond #D24 Diamond Dominance /1500: title states \"Dominance\" + title states \"/1500\". Title: \"1999 Upper Deck Black Diamond #D24 Ken Griffey Jr | Diamond Dominance #/1500 - Raw 10\"",
+   "toCardId": "hiq:baseball:1999:upper-deck-black-diamond:d24:diamond-dominance:no-auto:num-1500"
+  },
+  {
+   "id": "cardhedge::ch-daily::1786223728984x555413242286863000",
+   "fromCardId": "1709135825598x588061184868091400",
+   "price": 60,
+   "evidence": "1999 UD Black Diamond #D24 Diamond Dominance /1500: title states \"Dominance\" + title states \"/1500\". Title: \"Upper Deck 1999 Black Diamond Diamond Dominance #D24 Ken Griffey Jr /1500 - Raw\"",
+   "toCardId": "hiq:baseball:1999:upper-deck-black-diamond:d24:diamond-dominance:no-auto:num-1500"
+  },
+  {
+   "id": "tca-ebay::158181985439",
+   "fromCardId": "hiq:baseball:1999:upper-deck:d24:base:no-auto:num-1500",
+   "price": 818.88,
+   "evidence": "1999 UD Black Diamond #D24 Diamond Dominance /1500: title states \"Dominance\" + title states \"/1500\". Title: \"8090 Ken Griffey Jr 1999 Upper Deck Black Diamond #D24 Dominance /1500 PSA 10\"",
+   "toCardId": "hiq:baseball:1999:upper-deck-black-diamond:d24:diamond-dominance:no-auto:num-1500"
+  },
+  {
+   "id": "ebay-user-purchase::358872876693-10083959936315",
+   "fromCardId": "hiq:baseball:1999:black-diamond:d24:base:no-auto",
+   "price": 60,
+   "evidence": "1999 UD Black Diamond #D24 Diamond Dominance /1500: title states \"Dominance\" + title states \"/1500\". Title: \"Upper Deck 1999 Black Diamond Diamond Dominance #D24 Ken Griffey Jr /1500\"",
+   "toCardId": "hiq:baseball:1999:upper-deck-black-diamond:d24:diamond-dominance:no-auto:num-1500"
+  },
+  {
+   "id": "tca-ebay::196570203486",
+   "fromCardId": "hiq:baseball:1997:metal-universe:8:base:no-auto",
+   "price": 5.4,
+   "evidence": "1997 Metal Universe #8 Magnetic Field (Cal Ripken Jr.): title states \"Magnetic Field\" — the insert shares card numbers 1-250 with the base set, so the number alone never decided this. Title: \"1997 METAL UNIVERSE MAGNETIC FIELD #8 CAL RIPKEN JR.!! MINT!! $1 SHIPPING!!\"",
+   "toCardId": "hiq:baseball:1997:metal-universe:8:magnetic-field:no-auto"
+  },
+  {
+   "id": "tca-ebay::277155504433",
+   "fromCardId": "hiq:baseball:1997:metal-universe:8:base:no-auto",
+   "price": 5,
+   "evidence": "1997 Metal Universe #8 Magnetic Field (Cal Ripken Jr.): title states \"Magnetic Field\" — the insert shares card numbers 1-250 with the base set, so the number alone never decided this. Title: \"1997 Metal Universe #8 Cal Ripken Jr. Magnetic Field\"",
+   "toCardId": "hiq:baseball:1997:metal-universe:8:magnetic-field:no-auto"
+  },
+  {
+   "id": "tca-ebay::335927273719",
+   "fromCardId": "hiq:baseball:1997:metal-universe:8:base:no-auto",
+   "price": 5,
+   "evidence": "1997 Metal Universe #8 Magnetic Field (Cal Ripken Jr.): title states \"Magnetic Field\" — the insert shares card numbers 1-250 with the base set, so the number alone never decided this. Title: \"1997 Metal Universe #8 Cal Ripken Jr. Magnetic Field\"",
+   "toCardId": "hiq:baseball:1997:metal-universe:8:magnetic-field:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1738140891428x614256569705805300",
+   "fromCardId": "1675906599892x604165696493748700",
+   "price": 2.49,
+   "evidence": "1997 Metal Universe #8 Magnetic Field (Cal Ripken Jr.): title states \"Magnetic Field\" — the insert shares card numbers 1-250 with the base set, so the number alone never decided this. Title: \"1997 Fleer Metal Universe Magnetic Field #8 Cal Ripken Jr - Raw 10\"",
+   "toCardId": "hiq:baseball:1997:metal-universe:8:magnetic-field:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1740090673571x527520038611261300",
+   "fromCardId": "1675906599892x604165696493748700",
+   "price": 4.95,
+   "evidence": "1997 Metal Universe #8 Magnetic Field (Cal Ripken Jr.): title states \"Magnetic Field\" — the insert shares card numbers 1-250 with the base set, so the number alone never decided this. Title: \"1997 Skybox Metal Universe Magnetic Field Insert Cal Ripken Jr #8 HOF Nm-mint - Raw 10\"",
+   "toCardId": "hiq:baseball:1997:metal-universe:8:magnetic-field:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1741487685499x318198494343486140",
+   "fromCardId": "1675906599892x604165696493748700",
+   "price": 4.25,
+   "evidence": "1997 Metal Universe #8 Magnetic Field (Cal Ripken Jr.): title states \"Magnetic Field\" — the insert shares card numbers 1-250 with the base set, so the number alone never decided this. Title: \"1997 Skybox Metal Universe Cal Ripken Jr Magnetic Field #8 Orioles - Raw 10\"",
+   "toCardId": "hiq:baseball:1997:metal-universe:8:magnetic-field:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1742386513798x843091336143591000",
+   "fromCardId": "1675906599892x604165696493748700",
+   "price": 3.99,
+   "evidence": "1997 Metal Universe #8 Magnetic Field (Cal Ripken Jr.): title states \"Magnetic Field\" — the insert shares card numbers 1-250 with the base set, so the number alone never decided this. Title: \"1997 Skybox Metal Universe Magnetic Field Insert Cal Ripken Jr #8 HOF(B2) - Raw 10\"",
+   "toCardId": "hiq:baseball:1997:metal-universe:8:magnetic-field:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1746928114067x331669046952936000",
+   "fromCardId": "1675906599892x604165696493748700",
+   "price": 4.99,
+   "evidence": "1997 Metal Universe #8 Magnetic Field (Cal Ripken Jr.): title states \"Magnetic Field\" — the insert shares card numbers 1-250 with the base set, so the number alone never decided this. Title: \"1997 Skybox Metal Universe Magnetic Field #8 Cal Ripken Jr Orioles HOF - Raw 10\"",
+   "toCardId": "hiq:baseball:1997:metal-universe:8:magnetic-field:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1747099728202x660839041552254700",
+   "fromCardId": "1675906599892x604165696493748700",
+   "price": 2.2,
+   "evidence": "1997 Metal Universe #8 Magnetic Field (Cal Ripken Jr.): title states \"Magnetic Field\" — the insert shares card numbers 1-250 with the base set, so the number alone never decided this. Title: \"1997 Metal Universe Magnetic Field Cal Ripken Jr Baltimore Orioles #8 - Raw 10\"",
+   "toCardId": "hiq:baseball:1997:metal-universe:8:magnetic-field:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1748777214414x741544607568675000",
+   "fromCardId": "1675906599892x604165696493748700",
+   "price": 2.82,
+   "evidence": "1997 Metal Universe #8 Magnetic Field (Cal Ripken Jr.): title states \"Magnetic Field\" — the insert shares card numbers 1-250 with the base set, so the number alone never decided this. Title: \"1997 Skybox Metal Universe Magnetic Field Cal Ripken Jr #8 HOF - Raw 10\"",
+   "toCardId": "hiq:baseball:1997:metal-universe:8:magnetic-field:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1751585163762x397931273483013200",
+   "fromCardId": "1675906599892x604165696493748700",
+   "price": 1.99,
+   "evidence": "1997 Metal Universe #8 Magnetic Field (Cal Ripken Jr.): title states \"Magnetic Field\" — the insert shares card numbers 1-250 with the base set, so the number alone never decided this. Title: \"1997 Skybox Metal Universe Magnetic Field Cal Ripken Jr #8 HOF🔥 - Raw 10\"",
+   "toCardId": "hiq:baseball:1997:metal-universe:8:magnetic-field:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1785367385661x466141118812977340",
+   "fromCardId": "1675907831540x230095593572250400",
+   "price": 1.99,
+   "evidence": "1997 Metal Universe #8 Magnetic Field (Cal Ripken Jr.): title states \"Magnetic Field\" — the insert shares card numbers 1-250 with the base set, so the number alone never decided this. Title: \"1997 Metal Universe #8 Cal Ripken Jr Magnetic Field - Raw\"",
+   "toCardId": "hiq:baseball:1997:metal-universe:8:magnetic-field:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1785290555046x443597790547323200",
+   "fromCardId": "1675907831540x230095593572250400",
+   "price": 3.08,
+   "evidence": "1997 Metal Universe #8 Magnetic Field (Cal Ripken Jr.): title states \"Magnetic Field\" — the insert shares card numbers 1-250 with the base set, so the number alone never decided this. Title: \"1997 Metal Universe Magnetic Field #8 Cal Ripken Jr ORIOLES - Raw\"",
+   "toCardId": "hiq:baseball:1997:metal-universe:8:magnetic-field:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1782495761616x229289678625067550",
+   "fromCardId": "1675907831540x230095593572250400",
+   "price": 2.49,
+   "evidence": "1997 Metal Universe #8 Magnetic Field (Cal Ripken Jr.): title states \"Magnetic Field\" — the insert shares card numbers 1-250 with the base set, so the number alone never decided this. Title: \"1997 METAL UNIVERSE CAL RIPKEN JR MAGNETIC FIELD CARD #8 MINT - Raw\"",
+   "toCardId": "hiq:baseball:1997:metal-universe:8:magnetic-field:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1782390482903x919189423091159900",
+   "fromCardId": "1675907831540x230095593572250400",
+   "price": 4,
+   "evidence": "1997 Metal Universe #8 Magnetic Field (Cal Ripken Jr.): title states \"Magnetic Field\" — the insert shares card numbers 1-250 with the base set, so the number alone never decided this. Title: \"1997 METAL UNIVERSE MAGNETIC FIELD #8 CAL RIPKEN JR - Raw\"",
+   "toCardId": "hiq:baseball:1997:metal-universe:8:magnetic-field:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1782249977567x221886856454215360",
+   "fromCardId": "1675907831540x230095593572250400",
+   "price": 3.99,
+   "evidence": "1997 Metal Universe #8 Magnetic Field (Cal Ripken Jr.): title states \"Magnetic Field\" — the insert shares card numbers 1-250 with the base set, so the number alone never decided this. Title: \"1997 Metal Universe #8 Cal Ripken Jr Magnetic Field - Raw\"",
+   "toCardId": "hiq:baseball:1997:metal-universe:8:magnetic-field:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1782146946939x752367378139929200",
+   "fromCardId": "1675907831540x230095593572250400",
+   "price": 4.99,
+   "evidence": "1997 Metal Universe #8 Magnetic Field (Cal Ripken Jr.): title states \"Magnetic Field\" — the insert shares card numbers 1-250 with the base set, so the number alone never decided this. Title: \"1997 Metal Universe Cal Ripken Jr Magnetic Field #8 - Raw\"",
+   "toCardId": "hiq:baseball:1997:metal-universe:8:magnetic-field:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1786012559592x611421007134459600",
+   "fromCardId": "1675907831540x230095593572250400",
+   "price": 4,
+   "evidence": "1997 Metal Universe #8 Magnetic Field (Cal Ripken Jr.): title states \"Magnetic Field\" — the insert shares card numbers 1-250 with the base set, so the number alone never decided this. Title: \"1997 Metal Universe Magnetic Field Cal Ripken Jr Baltimore Orioles #8 - Raw\"",
+   "toCardId": "hiq:baseball:1997:metal-universe:8:magnetic-field:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1785998195803x267831525618867900",
+   "fromCardId": "1675907831540x230095593572250400",
+   "price": 4.99,
+   "evidence": "1997 Metal Universe #8 Magnetic Field (Cal Ripken Jr.): title states \"Magnetic Field\" — the insert shares card numbers 1-250 with the base set, so the number alone never decided this. Title: \"CAL RIPKEN JR 1997 Skybox Metal Universe Magnetic Field Insert #8 - Raw\"",
+   "toCardId": "hiq:baseball:1997:metal-universe:8:magnetic-field:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1737084180047x436988432338221400",
+   "fromCardId": "1675907831540x230095593572250400",
+   "price": 5.5,
+   "evidence": "1997 Metal Universe #8 Magnetic Field (Cal Ripken Jr.): title states \"Magnetic Field\" — the insert shares card numbers 1-250 with the base set, so the number alone never decided this. Title: \"1997 Skybox Metal Universe Magnetic Field #8 Cal Ripken Jr - Raw 10\"",
+   "toCardId": "hiq:baseball:1997:metal-universe:8:magnetic-field:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1737168878133x690443752299626800",
+   "fromCardId": "1675907831540x230095593572250400",
+   "price": 0.84,
+   "evidence": "1997 Metal Universe #8 Magnetic Field (Cal Ripken Jr.): title states \"Magnetic Field\" — the insert shares card numbers 1-250 with the base set, so the number alone never decided this. Title: \"1997 METAL UNIVERSE MAGNETIC FIELD #8 CAL RIPKEN JR - Raw 10\"",
+   "toCardId": "hiq:baseball:1997:metal-universe:8:magnetic-field:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1737233453961x243426308779616900",
+   "fromCardId": "1675907831540x230095593572250400",
+   "price": 4.99,
+   "evidence": "1997 Metal Universe #8 Magnetic Field (Cal Ripken Jr.): title states \"Magnetic Field\" — the insert shares card numbers 1-250 with the base set, so the number alone never decided this. Title: \"1997 Metal Universe Magnetic Field Cal Ripken Jr #8 Baltimore Orioles - Raw 10\"",
+   "toCardId": "hiq:baseball:1997:metal-universe:8:magnetic-field:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1737936533674x370618822719059000",
+   "fromCardId": "1675907831540x230095593572250400",
+   "price": 1.99,
+   "evidence": "1997 Metal Universe #8 Magnetic Field (Cal Ripken Jr.): title states \"Magnetic Field\" — the insert shares card numbers 1-250 with the base set, so the number alone never decided this. Title: \"1997 Metal Universe Magnetic Field Cal Ripken Jr #8 Insert - Raw 10\"",
+   "toCardId": "hiq:baseball:1997:metal-universe:8:magnetic-field:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1786077602215x631030066719417100",
+   "fromCardId": "1675907831540x230095593572250400",
+   "price": 6,
+   "evidence": "1997 Metal Universe #8 Magnetic Field (Cal Ripken Jr.): title states \"Magnetic Field\" — the insert shares card numbers 1-250 with the base set, so the number alone never decided this. Title: \"1997 Metal Universe Magnetic Field #8 Cal Ripken Jr Orioles HOF - Raw\"",
+   "toCardId": "hiq:baseball:1997:metal-universe:8:magnetic-field:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1786020659152x483716976918096900",
+   "fromCardId": "1675907831540x230095593572250400",
+   "price": 5,
+   "evidence": "1997 Metal Universe #8 Magnetic Field (Cal Ripken Jr.): title states \"Magnetic Field\" — the insert shares card numbers 1-250 with the base set, so the number alone never decided this. Title: \"Cal Ripken Jr HOF 1997 Skybox Metal Universe Magnetic Field Insert #8 Orioles - Raw\"",
+   "toCardId": "hiq:baseball:1997:metal-universe:8:magnetic-field:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1738855974958x973176411390423600",
+   "fromCardId": "1675907831540x230095593572250400",
+   "price": 3.99,
+   "evidence": "1997 Metal Universe #8 Magnetic Field (Cal Ripken Jr.): title states \"Magnetic Field\" — the insert shares card numbers 1-250 with the base set, so the number alone never decided this. Title: \"1997 Metal Universe Magnetic Field #8 Cal Ripken Jr - Raw 10\"",
+   "toCardId": "hiq:baseball:1997:metal-universe:8:magnetic-field:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1786198232954x403893606878479300",
+   "fromCardId": "1675907831540x230095593572250400",
+   "price": 4,
+   "evidence": "1997 Metal Universe #8 Magnetic Field (Cal Ripken Jr.): title states \"Magnetic Field\" — the insert shares card numbers 1-250 with the base set, so the number alone never decided this. Title: \"1997 Fleer/Skybox Metal Universe Magnetic Field Cal Ripken, Jr Card #8 of 10 - Raw\"",
+   "toCardId": "hiq:baseball:1997:metal-universe:8:magnetic-field:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1786141286066x110488256937459000",
+   "fromCardId": "1675907831540x230095593572250400",
+   "price": 4.99,
+   "evidence": "1997 Metal Universe #8 Magnetic Field (Cal Ripken Jr.): title states \"Magnetic Field\" — the insert shares card numbers 1-250 with the base set, so the number alone never decided this. Title: \"1997 Metal Universe #8 Cal Ripken Jr Magnetic Field - Raw\"",
+   "toCardId": "hiq:baseball:1997:metal-universe:8:magnetic-field:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1786117091954x495272287822711200",
+   "fromCardId": "1675907831540x230095593572250400",
+   "price": 4,
+   "evidence": "1997 Metal Universe #8 Magnetic Field (Cal Ripken Jr.): title states \"Magnetic Field\" — the insert shares card numbers 1-250 with the base set, so the number alone never decided this. Title: \"1997 Fleer Skybox Metal Universe MAGNETIC FIELD #8 CAL RIPKEN JR Orioles HOF - Raw\"",
+   "toCardId": "hiq:baseball:1997:metal-universe:8:magnetic-field:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1746406385625x517645204987871700",
+   "fromCardId": "1675907831540x230095593572250400",
+   "price": 30,
+   "evidence": "1997 Metal Universe #8 Magnetic Field (Cal Ripken Jr.): title states \"Magnetic Field\" — the insert shares card numbers 1-250 with the base set, so the number alone never decided this. Title: \"1997 Skybox Metal Universe Cal Ripken Jr Magnetic Field #8 Orioles PSA 8 NM-MT\"",
+   "toCardId": "hiq:baseball:1997:metal-universe:8:magnetic-field:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1746560762847x973341412532105300",
+   "fromCardId": "1675907831540x230095593572250400",
+   "price": 1.99,
+   "evidence": "1997 Metal Universe #8 Magnetic Field (Cal Ripken Jr.): title states \"Magnetic Field\" — the insert shares card numbers 1-250 with the base set, so the number alone never decided this. Title: \"1997 Metal Universe #8 Cal Ripken Jr Magnetic Field - Raw 10\"",
+   "toCardId": "hiq:baseball:1997:metal-universe:8:magnetic-field:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1748092570883x366879353462696900",
+   "fromCardId": "1675907831540x230095593572250400",
+   "price": 3,
+   "evidence": "1997 Metal Universe #8 Magnetic Field (Cal Ripken Jr.): title states \"Magnetic Field\" — the insert shares card numbers 1-250 with the base set, so the number alone never decided this. Title: \"1997 Metal Universe #8 Cal Ripken Jr Magnetic Field Orioles - Raw 10\"",
+   "toCardId": "hiq:baseball:1997:metal-universe:8:magnetic-field:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1748132938882x473965941907178700",
+   "fromCardId": "1675907831540x230095593572250400",
+   "price": 3.25,
+   "evidence": "1997 Metal Universe #8 Magnetic Field (Cal Ripken Jr.): title states \"Magnetic Field\" — the insert shares card numbers 1-250 with the base set, so the number alone never decided this. Title: \"1997 Metal Universe: #  8 Cal Ripken Jr Magnetic Field Ref NM-MT OR BETTER - Raw 10\"",
+   "toCardId": "hiq:baseball:1997:metal-universe:8:magnetic-field:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1786314439855x288439723884877250",
+   "fromCardId": "1675907831540x230095593572250400",
+   "price": 5,
+   "evidence": "1997 Metal Universe #8 Magnetic Field (Cal Ripken Jr.): title states \"Magnetic Field\" — the insert shares card numbers 1-250 with the base set, so the number alone never decided this. Title: \"1997 Metal Universe #8 Cal Ripken Jr Magnetic Field - Raw\"",
+   "toCardId": "hiq:baseball:1997:metal-universe:8:magnetic-field:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1749837566440x666592388167834400",
+   "fromCardId": "1675907831540x230095593572250400",
+   "price": 2.09,
+   "evidence": "1997 Metal Universe #8 Magnetic Field (Cal Ripken Jr.): title states \"Magnetic Field\" — the insert shares card numbers 1-250 with the base set, so the number alone never decided this. Title: \"1997 Metal Universe Magnetic Field Cal Ripken Jr #8 Insert - Raw 10\"",
+   "toCardId": "hiq:baseball:1997:metal-universe:8:magnetic-field:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1755786418245x495568110447737600",
+   "fromCardId": "1675907831540x230095593572250400",
+   "price": 5.09,
+   "evidence": "1997 Metal Universe #8 Magnetic Field (Cal Ripken Jr.): title states \"Magnetic Field\" — the insert shares card numbers 1-250 with the base set, so the number alone never decided this. Title: \"1997 Metal Universe Magnetic Field #8 Cal Ripken Jr Baltimore Orioles - Raw 10\"",
+   "toCardId": "hiq:baseball:1997:metal-universe:8:magnetic-field:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1786717158805x588689918369844200",
+   "fromCardId": "1675907831540x230095593572250400",
+   "price": 49.95,
+   "evidence": "1997 Metal Universe #8 Magnetic Field (Cal Ripken Jr.): title states \"Magnetic Field\" — the insert shares card numbers 1-250 with the base set, so the number alone never decided this. Title: \"Cal Ripken Jr 1997 Skybox Metal Universe Magnetic Field Card #8- SGC 9 MT\"",
+   "toCardId": "hiq:baseball:1997:metal-universe:8:magnetic-field:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1756946659204x722168856743744500",
+   "fromCardId": "1675907831540x230095593572250400",
+   "price": 2.99,
+   "evidence": "1997 Metal Universe #8 Magnetic Field (Cal Ripken Jr.): title states \"Magnetic Field\" — the insert shares card numbers 1-250 with the base set, so the number alone never decided this. Title: \"1997 Metal Universe #8 Cal Ripken Jr Magnetic Field - Raw 10\"",
+   "toCardId": "hiq:baseball:1997:metal-universe:8:magnetic-field:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1758328336087x202441359377937280",
+   "fromCardId": "1675907831540x230095593572250400",
+   "price": 4.26,
+   "evidence": "1997 Metal Universe #8 Magnetic Field (Cal Ripken Jr.): title states \"Magnetic Field\" — the insert shares card numbers 1-250 with the base set, so the number alone never decided this. Title: \"1997 Metal Universe: #  8 Cal Ripken Jr Magnetic Field Ref NM-MT OR BETTER - Raw 10\"",
+   "toCardId": "hiq:baseball:1997:metal-universe:8:magnetic-field:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1786559142258x666063194948064400",
+   "fromCardId": "1675907831540x230095593572250400",
+   "price": 5,
+   "evidence": "1997 Metal Universe #8 Magnetic Field (Cal Ripken Jr.): title states \"Magnetic Field\" — the insert shares card numbers 1-250 with the base set, so the number alone never decided this. Title: \"1997 Metal Universe #8 Cal Ripken Jr Magnetic Field - Raw\"",
+   "toCardId": "hiq:baseball:1997:metal-universe:8:magnetic-field:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1759396864387x967379928586992000",
+   "fromCardId": "1675907831540x230095593572250400",
+   "price": 5,
+   "evidence": "1997 Metal Universe #8 Magnetic Field (Cal Ripken Jr.): title states \"Magnetic Field\" — the insert shares card numbers 1-250 with the base set, so the number alone never decided this. Title: \"1997 Metal Universe Magnetic Field #8 Cal Ripken Jr Baltimore Orioles - Raw 10\"",
+   "toCardId": "hiq:baseball:1997:metal-universe:8:magnetic-field:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1759880744954x317535218467245300",
+   "fromCardId": "1675907831540x230095593572250400",
+   "price": 9.99,
+   "evidence": "1997 Metal Universe #8 Magnetic Field (Cal Ripken Jr.): title states \"Magnetic Field\" — the insert shares card numbers 1-250 with the base set, so the number alone never decided this. Title: \"1997 Metal Universe Magnetic Field Foil #8 Cal Ripken Jr - Raw 10\"",
+   "toCardId": "hiq:baseball:1997:metal-universe:8:magnetic-field:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1786864549370x408058527367017400",
+   "fromCardId": "1675907831540x230095593572250400",
+   "price": 7.95,
+   "evidence": "1997 Metal Universe #8 Magnetic Field (Cal Ripken Jr.): title states \"Magnetic Field\" — the insert shares card numbers 1-250 with the base set, so the number alone never decided this. Title: \"1997 Metal Universe #8 Cal Ripken Jr Magnetic Field - Raw\"",
+   "toCardId": "hiq:baseball:1997:metal-universe:8:magnetic-field:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1787097091738x533825015473489800",
+   "fromCardId": "1675907831540x230095593572250400",
+   "price": 4.99,
+   "evidence": "1997 Metal Universe #8 Magnetic Field (Cal Ripken Jr.): title states \"Magnetic Field\" — the insert shares card numbers 1-250 with the base set, so the number alone never decided this. Title: \"1997 Metal Universe Magnetic Field Cal Ripken Jr #8 Baltimore Orioles - Raw\"",
+   "toCardId": "hiq:baseball:1997:metal-universe:8:magnetic-field:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1787326346419x336837521916850000",
+   "fromCardId": "1675907831540x230095593572250400",
+   "price": 4,
+   "evidence": "1997 Metal Universe #8 Magnetic Field (Cal Ripken Jr.): title states \"Magnetic Field\" — the insert shares card numbers 1-250 with the base set, so the number alone never decided this. Title: \"1997 Metal Universe Magnetic Field #8 Cal Ripken Jr 054-A - Raw\"",
+   "toCardId": "hiq:baseball:1997:metal-universe:8:magnetic-field:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1787290215917x766839289649432000",
+   "fromCardId": "1675907831540x230095593572250400",
+   "price": 4.99,
+   "evidence": "1997 Metal Universe #8 Magnetic Field (Cal Ripken Jr.): title states \"Magnetic Field\" — the insert shares card numbers 1-250 with the base set, so the number alone never decided this. Title: \"1997 Fleer Skybox Metal Universe Magnetic Field Cal Ripken Jr #8 - Raw\"",
+   "toCardId": "hiq:baseball:1997:metal-universe:8:magnetic-field:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1787441834064x873377489675772200",
+   "fromCardId": "1675907831540x230095593572250400",
+   "price": 5.99,
+   "evidence": "1997 Metal Universe #8 Magnetic Field (Cal Ripken Jr.): title states \"Magnetic Field\" — the insert shares card numbers 1-250 with the base set, so the number alone never decided this. Title: \"1997 Skybox Metal Universe - Cal Ripken Jr #8 Magnetic Field - Raw\"",
+   "toCardId": "hiq:baseball:1997:metal-universe:8:magnetic-field:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1787618158097x236800186450285560",
+   "fromCardId": "1675907831540x230095593572250400",
+   "price": 8,
+   "evidence": "1997 Metal Universe #8 Magnetic Field (Cal Ripken Jr.): title states \"Magnetic Field\" — the insert shares card numbers 1-250 with the base set, so the number alone never decided this. Title: \"***1997 Fleer Metal Universe Magnetic Field Insert Cal Ripken Jr #8 (Orioles)*** - Raw\"",
+   "toCardId": "hiq:baseball:1997:metal-universe:8:magnetic-field:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1787864752762x738715105522514600",
+   "fromCardId": "1675907831540x230095593572250400",
+   "price": 7.99,
+   "evidence": "1997 Metal Universe #8 Magnetic Field (Cal Ripken Jr.): title states \"Magnetic Field\" — the insert shares card numbers 1-250 with the base set, so the number alone never decided this. Title: \"1997 Metal Universe #8 Cal Ripken Jr Magnetic Field - Raw\"",
+   "toCardId": "hiq:baseball:1997:metal-universe:8:magnetic-field:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1787861857623x458662512511481600",
+   "fromCardId": "1675907831540x230095593572250400",
+   "price": 19.95,
+   "evidence": "1997 Metal Universe #8 Magnetic Field (Cal Ripken Jr.): title states \"Magnetic Field\" — the insert shares card numbers 1-250 with the base set, so the number alone never decided this. Title: \"1997 Skybox Metal Universe MAGNETIC FIELD #8 Cal Ripken Jr HOF RARE INSERT - Raw\"",
+   "toCardId": "hiq:baseball:1997:metal-universe:8:magnetic-field:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1788312788131x452139473338389600",
+   "fromCardId": "1675907831540x230095593572250400",
+   "price": 13,
+   "evidence": "1997 Metal Universe #8 Magnetic Field (Cal Ripken Jr.): title states \"Magnetic Field\" — the insert shares card numbers 1-250 with the base set, so the number alone never decided this. Title: \"1997 Skybox Metal Universe MAGNETIC FIELD #8 Cal Ripken Jr HOF RARE INSERT - Raw\"",
+   "toCardId": "hiq:baseball:1997:metal-universe:8:magnetic-field:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1788257610060x811766124880462800",
+   "fromCardId": "1675907831540x230095593572250400",
+   "price": 12,
+   "evidence": "1997 Metal Universe #8 Magnetic Field (Cal Ripken Jr.): title states \"Magnetic Field\" — the insert shares card numbers 1-250 with the base set, so the number alone never decided this. Title: \"1997 Metal Universe Magnetic Field Cal Ripken Jr Baltimore Orioles #8 - Raw\"",
+   "toCardId": "hiq:baseball:1997:metal-universe:8:magnetic-field:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1788058566587x735216433034512400",
+   "fromCardId": "1675907831540x230095593572250400",
+   "price": 13.83,
+   "evidence": "1997 Metal Universe #8 Magnetic Field (Cal Ripken Jr.): title states \"Magnetic Field\" — the insert shares card numbers 1-250 with the base set, so the number alone never decided this. Title: \"1997 SKYBOX METAL UNIVERSE MAGNETIC FIELD #8 CAL RIPKEN JR ORIOLES - Raw\"",
+   "toCardId": "hiq:baseball:1997:metal-universe:8:magnetic-field:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1788007540654x427500972715456200",
+   "fromCardId": "1675907831540x230095593572250400",
+   "price": 8.48,
+   "evidence": "1997 Metal Universe #8 Magnetic Field (Cal Ripken Jr.): title states \"Magnetic Field\" — the insert shares card numbers 1-250 with the base set, so the number alone never decided this. Title: \"1997 Fleer Metal Universe Magnetic Field #8 Cal Ripken Jr ++++ - Raw\"",
+   "toCardId": "hiq:baseball:1997:metal-universe:8:magnetic-field:no-auto"
+  },
+  {
+   "id": "cardhedge::ch-daily::1787928768037x857952424473899600",
+   "fromCardId": "1675907831540x230095593572250400",
+   "price": 3.99,
+   "evidence": "1997 Metal Universe #8 Magnetic Field (Cal Ripken Jr.): title states \"Magnetic Field\" — the insert shares card numbers 1-250 with the base set, so the number alone never decided this. Title: \"1997 Metal Universe \"Magnetic Field\" #8 of 10, Cal Ripken Jr, Baltimore Orioles - Raw\"",
+   "toCardId": "hiq:baseball:1997:metal-universe:8:magnetic-field:no-auto"
+  }
+ ],
+ "deferred": []
+}

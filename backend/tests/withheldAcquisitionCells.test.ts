@@ -20,6 +20,7 @@ import { describe, it, expect } from "vitest";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { createRequire } from "node:module";
+import { spawnSync } from "node:child_process";
 
 const require_ = createRequire(__filename);
 const ROOT = path.join(__dirname, "..", "..");
@@ -271,18 +272,7 @@ describe("the lane writes nothing and the workflow gates every dispatch", () => 
     expect(SCRIPT).toMatch(/const VERIFY_MS = Number\(process\.env\.VERIFY_MS \|\|/);
   });
 
-  it("GATE 1: the driver APPLY is gated on a reconciled report with rows > 0", () => {
-    const step = WF.split(/^      - name: "?/m).find((s) => /^Gate: the ingest report/.test(s));
-    expect(step, "the ingest report gate step must exist").toBeTruthy();
-    expect(step).toMatch(/RECONCILED/);
-    expect(step).toMatch(/ingested|partial/);
-  });
 
-  it("GATE 2: the rederive only runs after an INGESTED verdict", () => {
-    const step = WF.split(/^      - name: "?/m).find((s) => /^Gate: the ingest apply landed rows/.test(s));
-    expect(step, "the ingest apply gate step must exist").toBeTruthy();
-    expect(step).toMatch(/ingested|partial/);
-  });
 
   it("GATE 3: the rederive APPLY is gated on its own report's verdicts", () => {
     const step = WF.split(/^      - name: "?/m).find((s) => /^Gate: the rederive report/.test(s));
@@ -606,5 +596,389 @@ describe("a #1715 catch-all key parks its holdings, it does not queue them", () 
     const src = SCRIPT.slice(at, at + 400);
     expect(src.indexOf("p.unreadable")).toBeGreaterThan(-1);
     expect(src.indexOf("p.unreadable")).toBeLessThan(src.indexOf("p.source.lane"));
+  });
+});
+
+// ── 11. GATE 1 IS THREE-WAY, AND "0 ROWS" IS NOT "NOTHING TO DO" ──────────
+//
+// Run 33993803531 went green end to end and acquired NOTHING: all ten cells
+// stopped at "0 rows — nothing to land". The gate required `rows > 0` from a
+// dispatch run with apply=false, and `rows created` counts only what an APPLY
+// wrote — so the condition was UNSATISFIABLE and the chain could never reach a
+// rederive for any cell, ingested or not. The Bowman's Best report said:
+//
+//   catalog now: 3,810 rows   seeded=missing   prior=partial
+//   rows created        0   (verified by catalog read, not claimed)
+//   RECONCILED          yes
+//
+// 3,810 rows ARE the checklist. The gate read the dry run's zero as an empty
+// catalog and conflated two OPPOSITE states.
+describe("gate 1 tells an empty catalog from an already-ingested one", () => {
+  const WF = read(".github", "workflows", "acquire-for-withheld-holdings.yml");
+  const gate = WF.split(/^      - name: "?/m).find((s) => /^Gate: acquire, already-ingested/.test(s)) ?? "";
+
+  it("the gate exists and names all three outcomes", () => {
+    expect(gate.length, "the three-way gate 1 step must exist").toBeGreaterThan(200);
+    for (const mode of ["already-ingested", "acquire", "needs-a-source"]) {
+      expect(gate, `gate 1 must be able to conclude ${mode}`).toContain(mode);
+    }
+  });
+
+  it("it reads `catalog now:`, which a REPORT prints, not `rows created`", () => {
+    // The whole defect: `rows created` is an APPLY's number. A gate on it can
+    // never pass from a report.
+    expect(gate).toMatch(/catalog now/);
+    expect(gate, "gate 1 must not gate on a count only an apply can produce")
+      .not.toMatch(/rows created/);
+  });
+
+  it("a non-empty catalog proceeds as already-ingested", () => {
+    expect(gate).toMatch(/IN_CATALOG.*-gt 0/s);
+    expect(gate).toMatch(/MODE=already-ingested; PROCEED=yes/);
+  });
+
+  it("an unreadable count is NOT treated as an empty catalog", () => {
+    // "(setKey/year not derivable — verify would refuse)" yields no digits.
+    // Calling that zero would send the chain to acquire a product it cannot
+    // even verify (feedback_never_dismiss_small_numbers_as_noise).
+    expect(gate).toMatch(/-z "\$IN_CATALOG"/);
+    expect(gate).toMatch(/not derivable/);
+  });
+
+  it("a failed reconciliation still refuses, ahead of every other branch", () => {
+    const rec = gate.indexOf('RECONCILED" = "no"');
+    const cat = gate.indexOf("-gt 0");
+    expect(rec).toBeGreaterThan(-1);
+    expect(rec, "the reconcile check must precede the catalog branch").toBeLessThan(cat);
+  });
+
+  it("needs-a-source survives unchanged: empty catalog AND no source", () => {
+    expect(gate).toMatch(/catalog is empty and no source serves this set/);
+  });
+});
+
+// ── 12. THE APPLY RUNS ONLY IN ACQUIRE MODE ───────────────────────────────
+describe("an already-ingested cell skips the ingest apply and still proceeds", () => {
+  const WF = read(".github", "workflows", "acquire-for-withheld-holdings.yml");
+  const step = (re: RegExp) => WF.split(/^      - name: "?/m).find((s) => re.test(s)) ?? "";
+
+  it("the apply is conditioned on mode == acquire, not on proceed", () => {
+    const apply = step(/^Ingest apply/);
+    expect(apply).toMatch(/if: \$\{\{ steps\.gate_ingest\.outputs\.mode == 'acquire' \}\}/);
+    // Gating it on `proceed` would re-fetch a publisher page to mint nothing
+    // for every already-ingested cell (CF-RECHECK-IS-NOT-REFETCH).
+    expect(apply).not.toMatch(/if: \$\{\{ steps\.gate_ingest\.outputs\.proceed == 'yes' \}\}/);
+  });
+
+  it("gate 2 passes an already-ingested cell through on gate 1's catalog read", () => {
+    const g2 = step(/^Gate: the ingest apply landed rows/);
+    expect(g2).toMatch(/already-ingested/);
+    expect(g2).toMatch(/proceed=yes/);
+    // ...and still judges a real apply the old way when there was one.
+    expect(g2).toMatch(/RECONCILED \+NO/);
+    expect(g2).toMatch(/ingested\|partial/);
+  });
+
+  it("gate 3 is UNCHANGED — the rederive still refuses UNVERIFIED destinations", () => {
+    const g3 = step(/^Gate: the rederive report proposes/);
+    expect(g3).toMatch(/UNVERIFIED/);
+    expect(g3).toMatch(/PROCEED=no/);
+  });
+
+  it("the rederive still runs for an already-ingested cell", () => {
+    // It hangs off gate 2, which now says yes for both modes — that is the
+    // whole point of the fix.
+    const rr = step(/^Rederive report/);
+    expect(rr).toMatch(/if: \$\{\{ steps\.gate_apply\.outputs\.proceed == 'yes' \}\}/);
+  });
+});
+
+// ── 13. A STUCK HOLDING SAYS WHAT WOULD UNSTICK IT ────────────────────────
+describe("holdings that do not re-point are classified by what unlocks them", () => {
+  const WF = read(".github", "workflows", "acquire-for-withheld-holdings.yml");
+  const step = WF.split(/^      - name: "?/m).find((s) => /^Classify the holdings/.test(s)) ?? "";
+  it("the classify step exists and is report-only", () => {
+    expect(step.length).toBeGreaterThan(200);
+    // It must not produce a `proceed` that anything gates on: naming why one
+    // holding is stuck must not decide whether others continue.
+    expect(step).not.toMatch(/echo "proceed=/);
+  });
+
+  it("each distinct rederive verdict maps to the lane that fixes it", () => {
+    // #1868 moved the RECOGNITION of each reason out of nine grep anchors in
+    // this step and into lib/rederive-verdict-classes.cjs, because the anchors
+    // matched a line shape the captured log does not have (run 34021743427:
+    // ten cells, all zeros, one of them holding a real REDERIVE).
+    //
+    // So the step is pinned on what it still owns -- naming the UNLOCK for each
+    // class -- and the classification itself is pinned against a fixture in
+    // tests/rederiveVerdictClasses.test.ts.
+    for (const [cls, unlock] of [
+      ["self-derived twin", "retire-self-derived-identities"],
+      ["player mismatch (collision)", "parked"],
+      ["claims a parallel/serial the row lacks", "parked"],
+    ] as Array<[string, string]>) {
+      expect(step, `${cls} must appear in the operator's table`).toContain(cls);
+      expect(step, `${cls} must name its unlock`).toContain(unlock);
+    }
+    expect(step, "a blank-field no-match is the #1811 field-recovery lane")
+      .toMatch(/#1811/);
+    expect(step, "the counts must come from the module, not from line greps")
+      .toMatch(/rederive-verdict-classes\.cjs/);
+  });
+
+
+  it("the reasons reach the ledger and the outcome table", () => {
+    expect(WF).toMatch(/"stuckReasons": "\$\{\{ steps\.classify\.outputs\.reasons \}\}"/);
+    expect(WF).toMatch(/what is still stuck/);
+    expect(WF).toMatch(/\.stuckReasons/);
+  });
+
+  it("the outcome table reports the MODE and the catalog count, not a dead `rows`", () => {
+    expect(WF).toMatch(/\.gate1\.mode/);
+    expect(WF).toMatch(/\.gate1\.inCatalog/);
+    expect(WF, "gate1.rows no longer exists").not.toMatch(/\.gate1\.rows/);
+  });
+});
+
+// ── 14. THE CLASSIFY STEP'S SHELL, PINNED ON THE REAL LOG SHAPES ──────────
+//
+// Run 33998562094: all ten cells FAILED at classify with
+//
+//   line 9: 0
+//   0: syntax error in expression (error token is "0")
+//   line 22: NM_FIELDS: unbound variable
+//
+// `grep -c` prints 0 AND EXITS 1 when nothing matches, so `$(grep -c ... ||
+// echo 0)` ran the fallback TOO and produced the two-line string "0\n0";
+// `$(( ))` then choked on it. The `|| echo 0` written to guarantee a number
+// was the thing that destroyed it.
+//
+// The cost was not a cosmetic one: classify failed AFTER gate 3 said yes, and
+// the rederive APPLY and the reprice were SKIPPED — ten cells' work lost to a
+// step that only describes outcomes.
+describe("the classify step counts with integers and cannot fail its cell", () => {
+  const WF = read(".github", "workflows", "acquire-for-withheld-holdings.yml");
+  const step = WF.split(/^      - name: "?/m).find((s) => /^Classify the holdings/.test(s)) ?? "";
+  // The step's comments deliberately QUOTE the broken idiom in order to
+  // explain it, so a shell-shape assertion must read CODE lines only —
+  // otherwise the pin fails on its own documentation.
+  const code = step.split("\n").filter((l) => !/^\s*#/.test(l)).join("\n");
+
+  it("no counter uses the `|| echo 0` idiom that produced \"0\n0\"", () => {
+    expect(step.length).toBeGreaterThan(200);
+    expect(code, 'grep -c prints 0 AND exits 1, so `|| echo 0` appends a SECOND zero')
+      .not.toMatch(/grep -ac?[EF]?[^\n]*\|\|\s*echo 0/);
+  });
+
+  it("every count goes through one helper that yields digits or nothing", () => {
+    // tr -cd '0-9' after head -1 makes a non-integer impossible by
+    // construction, which is stronger than defending each call site.
+    // The guarantee and its mechanism are unchanged: ONE reader, ending in
+    // `tr -cd` so a non-integer is impossible by construction rather than
+    // defended at each call site. Only the SOURCE moved -- from nine greps over
+    // a captured log to one `k=v` line emitted by the module (#1868).
+    expect(step).toMatch(/val\(\)\s*\{/);
+    expect(step).toMatch(/head -1[^\n]*tr -cd "0-9"/);
+    expect(step, "each counter still defaults when its key is absent")
+      .toMatch(/\[ -n "\$AGREE" \]\s*\|\|\s*AGREE=0/);
+  });
+
+  it("a classify fault can never fail the cell", () => {
+    // The step describes an outcome; it must not be able to prevent one.
+    expect(step).toMatch(/continue-on-error: true/);
+    // `set -u` killed it on NM_FIELDS; `set -e` would kill it on any miscount.
+    expect(step).toMatch(/set \+eu/);
+    expect(step, "an -e/-u shell here loses the apply it was only describing")
+      .not.toMatch(/set -euo|set -eu\b|set -uo pipefail/);
+  });
+
+  it("the blank/populated no-match split is real, and both halves are carried", () => {
+    // NM_BLANK=0; NM_FIELDS=0 would keep the names and silently drop every
+    // no-match. One must be MEASURED, the other the REMAINDER.
+    // The split still exists and still drives two DIFFERENT unlocks (field
+    // recovery vs matcher work). It is now computed in the module, per verdict,
+    // from the report's own `from` field -- the same rule the old grep applied
+    // to the rendered line (`from=(null|""|none|-)$`) -- so the step carries
+    // both counts instead of deriving one as the remainder of the other.
+    expect(step).toMatch(/NM_BLANK=\$\(val no-match-blank\)/);
+    expect(step).toMatch(/NM_FIELDS=\$\(val no-match-fields\)/);
+    expect(step, "the two halves must reach the operator's table separately")
+      .toMatch(/fields are blank/);
+    expect(step).toMatch(/matcher cannot place it/);
+  });
+
+  it("AGREE is counted — the verdict ten of ten cells actually returned", () => {
+    // Run 33998562094's reports were almost entirely AGREE, and the table said
+    // nothing about it. "already on the right identity" is a finding.
+    expect(step).toMatch(/AGREE=\$\(val agree\)/);
+    expect(step).toMatch(/REDERIVE=\$\(val rederive\)/);
+    expect(step).toMatch(/already on the right identity/);
+  });
+});
+
+// ── 15. GATE 3 READS A VERDICT, NEVER A BANNER ────────────────────────────
+//
+// Run 33998562094 reported gate 3 = yes on all ten cells. Nine of them had
+// only AGREE verdicts and one had a single NO-MATCH; not one proposed a
+// re-point. The gate's `grep -i "...|REDERIVE"` was matching the lane's OWN
+// banner — "MODE: rederive", "[mode] rederive — report only", and the script
+// name in "Script confirmed: .../rederive-holding-identity.cjs". It was
+// reading the dispatch, not the outcome.
+describe("gate 3 gates on the rederive VERDICTS", () => {
+  const WF = read(".github", "workflows", "acquire-for-withheld-holdings.yml");
+  const gate = WF.split(/^      - name: "?/m).find((s) => /^Gate: the rederive report proposes/.test(s)) ?? "";
+  const gateCode = gate.split("\n").filter((l) => !/^\s*#/.test(l)).join("\n");
+
+  it("the verdict match is anchored and case-sensitive", () => {
+    expect(gate.length).toBeGreaterThan(200);
+    expect(gate).toMatch(/\^\[\[:space:\]\]\*REDERIVE /);
+    expect(gateCode, "a case-insensitive REDERIVE matches `MODE: rederive`")
+      .not.toMatch(/grep -aqiE[^\n]*REDERIVE/);
+  });
+
+  it("the three real log shapes decide correctly", () => {
+    // Reproduced from run 33998562094's own reports.
+    const banner = '[mode]   rederive — report only\nScript confirmed: backend/scripts/rederive-holding-identity.cjs\n';
+    const verdictRe = /^[ \t]*REDERIVE |"REDERIVE":[ \t]*[1-9]/m;
+    const agreeRe = /^[ \t]*AGREE /m;
+
+    const agreeLog = `${banner}  AGREE      Derek Jeter  1997 #BBP4  hiq:x\nSUMMARY  {"AGREE":2}\n`;
+    const rederiveLog = `${banner}  REDERIVE   Conor Essenburg  2025 #CPA-CE\nSUMMARY  {"REDERIVE":1}\n`;
+    const noMatchLog = `${banner}  NO MATCH   Somebody  2025 #X  from=null\nSUMMARY  {"NO-MATCH":1}\n`;
+
+    // Only the real re-point proceeds.
+    expect(verdictRe.test(rederiveLog)).toBe(true);
+    expect(verdictRe.test(agreeLog), "an AGREE-only report must not proceed").toBe(false);
+    expect(verdictRe.test(noMatchLog), "a NO-MATCH report must not proceed").toBe(false);
+    // And the banner alone never satisfies it — the actual defect.
+    expect(verdictRe.test(banner), "the lane's own banner is not a verdict").toBe(false);
+    expect(agreeRe.test(agreeLog)).toBe(true);
+  });
+
+  it("an all-AGREE cell is reported as such, not as a failure", () => {
+    // "already carries the right identity" is a legitimate outcome and the
+    // operator needs to see it named, not read `no` and guess.
+    expect(gate).toMatch(/AGREE/);
+    expect(gate).toMatch(/nothing to re-point/);
+  });
+
+  it("UNVERIFIED still refuses, ahead of everything", () => {
+    expect(gate).toMatch(/UNVERIFIED/);
+  });
+});
+
+// ── 6. IN MODE=json, STDOUT IS THE DOCUMENT AND NOTHING ELSE ───────────────
+//
+// CF-A-DATA-CHANNEL-IS-NOT-A-LOG (#1846). Run 34019169292 — the first
+// unattended night this workflow ran — planned correctly and then died on the
+// step that reads the plan:
+//
+//   jq: parse error: Invalid literal at line 739, column 11
+//   ##[error]Process completed with exit code 5
+//
+// Line 739 was `finishLane: exiting code 0`. The JSON closed on 738. Ten
+// matched cells went unacquired because a log line was appended to a document.
+//
+// laneExitsWhenWorkIsDone.test.ts pins the HELPER's half (the exit line and the
+// verify-cap notice take the fd the lane names, default stdout). This pins the
+// LANE's half, and it does it by RUNNING the real script's MODE=json path
+// against a fake Cosmos rather than by reading its source: a source scan for
+// `console.log` cannot tell a suppressed call from a live one, and the defect
+// that actually shipped was not in this file's source at all.
+describe("MODE=json emits ONE parseable document on stdout", () => {
+  /** The lane, run for real, with @azure/cosmos swapped for a fake. The
+   *  require is intercepted through the module cache under the exact absolute
+   *  specifier the lane resolves, so no path in the script changes. */
+  function runLaneAsJson(extraSource = ""): { stdout: string; stderr: string; status: number | null } {
+    const cosmosPath = require_.resolve(path.join(BACKEND, "node_modules/@azure/cosmos"));
+    const probe = `
+      const Module = require("node:module");
+      const COSMOS = ${JSON.stringify(cosmosPath)};
+      // Two portfolio docs, one holding each, both withheld on identity
+      // grounds — enough to produce cells, a ranking and a tonight[] list.
+      const HOLDINGS = {
+        h1: { id: "h1", year: 2026, setKey: "bowman-chrome", sport: "baseball",
+              playerName: "Some Player", cardNumber: "BCP-1",
+              hobbyiqCardId: "hiq:baseball:2026:bowman-chrome:bcp-1",
+              pricingSourceMeta: { withheld: { reason: "no-checklist-match" } } },
+      };
+      const DOCS = [
+        { id: "u1", userId: "u1", holdings: HOLDINGS },
+        { id: "u2", userId: "u2", holdings: { h2: { ...HOLDINGS.h1, id: "h2" } } },
+      ];
+      const answer = (sql) => /COUNT/i.test(String(sql && sql.query || sql)) ? [7] : DOCS;
+      const container = () => ({
+        items: { query: (q) => ({ fetchAll: async () => ({ resources: answer(q) }) }) },
+      });
+      require.cache[COSMOS] = new Module(COSMOS, null);
+      require.cache[COSMOS].filename = COSMOS;
+      require.cache[COSMOS].loaded = true;
+      require.cache[COSMOS].exports = {
+        CosmosClient: class { database() { return { container }; } dispose() {} },
+      };
+      ${extraSource}
+      require(${JSON.stringify(path.join(BACKEND, "scripts", "acquire-for-withheld-holdings.cjs"))});
+    `;
+    const file = path.join(
+      fs.mkdtempSync(path.join(require("node:os").tmpdir(), "acq-json-")),
+      "probe.cjs",
+    );
+    fs.writeFileSync(file, probe);
+    const r = spawnSync(process.execPath, [file], {
+      encoding: "utf8",
+      timeout: 60_000,
+      killSignal: "SIGKILL",
+      cwd: BACKEND,
+      env: {
+        ...process.env,
+        MODE: "json",
+        TOP: "10",
+        OUT: "",
+        BACKFILL_APPLY: "",
+        COSMOS_CONNECTION_STRING: "AccountEndpoint=https://fake.invalid:443/;AccountKey=Zm9v;",
+      },
+    });
+    return { stdout: r.stdout ?? "", stderr: r.stderr ?? "", status: r.status };
+  }
+
+  it("the whole of stdout is the plan — JSON.parse, the way the workflow's jq reads it", () => {
+    const r = runLaneAsJson();
+    expect(r.status, r.stderr.slice(-2000)).toBe(0);
+
+    let plan: { tonight: unknown[]; counts: Record<string, number> } | null = null;
+    expect(
+      () => { plan = JSON.parse(r.stdout) as typeof plan; },
+      "stdout must be ONE document. Run 34019169292 died here on `jq: parse error: "
+        + "Invalid literal at line 739, column 11` — line 739 being the helper's exit line.",
+    ).not.toThrow();
+    expect(plan, "the parse produced no plan").not.toBeNull();
+    expect(Array.isArray(plan!.tonight), "the workflow slices .tonight with jq").toBe(true);
+    expect(plan!.counts, "the ledger step reads .counts").toBeTruthy();
+  });
+
+  it("the banner, the reconcile AND the exit line all went to stderr instead", () => {
+    const r = runLaneAsJson();
+    // Not merely absent from stdout — PRESENT on stderr. A fix that silenced
+    // the lane would pass a stdout-only assertion and blind the operator.
+    expect(r.stderr).toContain("acquire-for-withheld-holdings");
+    expect(r.stderr).toContain("RECONCILED");
+    expect(r.stderr, "CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE still needs its proof")
+      .toContain("finishLane: exiting code");
+    expect(r.stdout).not.toContain("RECONCILED");
+    expect(r.stdout).not.toContain("finishLane: exiting code");
+  });
+
+  // MUTATION. The pin the task asked for: any stray line on stdout in json
+  // mode — a debug print, a library banner, a helper that ignores the mode —
+  // must turn this red. It is injected rather than committed, so the mutation
+  // is exercised on every run instead of living in a comment.
+  it("MUTATION: one stray console.log on stdout and the document stops parsing", () => {
+    const r = runLaneAsJson(`console.log("  scanned 131 holdings");`);
+    expect(
+      () => JSON.parse(r.stdout),
+      "a stray stdout line did NOT break the parse, so this pin would not have caught "
+        + "run 34019169292",
+    ).toThrow();
   });
 });

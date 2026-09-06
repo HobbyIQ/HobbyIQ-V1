@@ -1,0 +1,103 @@
+name: Web Unit Tests
+
+# CF-WEB-LOCK-GATE (2026-09-05). The web had exactly one PR check —
+# the SWA "Build + Deploy" preview — and that job fails on an exhausted
+# preview quota, so it is excluded from merge gating. A PR whose
+# package.json gained four RTL/jsdom devDependencies without a
+# regenerated package-lock.json therefore merged clean (#1817, e5a21d1)
+# and only broke at the PRODUCTION push deploy, leaving the live site on
+# the previous build. This job is the missing gate: plain `npm ci`
+# (which is what fails on lock drift), the vitest suite, and a real
+# `next build`. No secrets, no deploy, no Azure — so it can be marked
+# required without coupling merge to the preview quota.
+
+# `Web Unit Tests` (the JOB name below) is a REQUIRED status check on main, so
+# this workflow has NO `paths:` filter and the job ALWAYS reports. A required
+# check that never runs is not neutral — the PR sits at BLOCKED forever
+# waiting on a context no workflow will produce (#1838). The path check moved
+# INSIDE the job; see test.yml's header and backendWebCheckContexts.test.ts
+# for why a skip-job pair cannot work (`paths` is ANY-match, `paths-ignore` is
+# ALL-match, so the two are not complements and a mixed PR reports twice).
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: web-unit-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  web_unit_tests:
+    runs-on: ubuntu-latest
+    name: Web Unit Tests
+    steps:
+      # Full checkout, not a sparse one: src/lib/rung.test.ts asserts the
+      # web's rung vocabulary equals the backend's closed list by READING
+      # backend/src/services/compiq/*.ts off disk. A web-only checkout
+      # makes that test ENOENT.
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+          lfs: false
+          # Need the base commit present to diff against it.
+          fetch-depth: 0
+
+      - name: Did any web file change?
+        id: changes
+        env:
+          BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          set -euo pipefail
+          # Fail OPEN when there is no usable base: a spurious run costs ~45s,
+          # a wrongly-skipped one ships a broken build.
+          NEEDS_FULL_RUN=no
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then NEEDS_FULL_RUN=yes; fi
+          if [ -z "${BASE_SHA:-}" ]; then NEEDS_FULL_RUN=yes; fi
+          if [ "${BASE_SHA:-}" = "0000000000000000000000000000000000000000" ]; then NEEDS_FULL_RUN=yes; fi
+          if [ -n "${BASE_SHA:-}" ] && ! git cat-file -e "${BASE_SHA}^{commit}" 2>/dev/null; then NEEDS_FULL_RUN=yes; fi
+          if [ "$NEEDS_FULL_RUN" = "yes" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            echo "no usable base ref — running the full suite"
+            exit 0
+          fi
+          CHANGED=$(git diff --name-only "$BASE_SHA" "${{ github.sha }}")
+          echo "changed files:"; echo "$CHANGED"
+          # compiq services are in scope because src/lib/rung.test.ts asserts
+          # the web's rung vocabulary against the backend's closed list.
+          if echo "$CHANGED" | grep -Eq '^(apps/web/|backend/src/services/compiq/|\.github/workflows/web-unit-tests\.yml$)'; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "no web change — skipping the suite, still reporting green"
+          fi
+
+      - uses: actions/setup-node@v4
+        if: steps.changes.outputs.run == 'true'
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: apps/web/package-lock.json
+
+      # `npm ci` and not `npm install`: ci REFUSES a lock that does not
+      # satisfy package.json, which is precisely the drift that shipped
+      # the broken main. `npm install` would paper over it by rewriting
+      # the lock in the runner and the gate would prove nothing.
+      - name: Install dependencies (npm ci — fails on lockfile drift)
+        if: steps.changes.outputs.run == 'true'
+        working-directory: apps/web
+        run: npm ci
+
+      - name: Unit tests (vitest)
+        if: steps.changes.outputs.run == 'true'
+        working-directory: apps/web
+        run: npm test
+
+      - name: Build
+        if: steps.changes.outputs.run == 'true'
+        working-directory: apps/web
+        env:
+          NEXT_PUBLIC_API_BASE: https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net
+        run: npm run build

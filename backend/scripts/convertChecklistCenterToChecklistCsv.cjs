@@ -128,6 +128,26 @@ function clean(raw) {
 
 const { variationFinishOfSection, isVariationSection } = require("./lib/variationSections.cjs");
 
+/** CF-THE-WHOLE-SECTION-NAME-REACHES-THE-AUTO-DECISION (2026-09-05). THE one
+ *  vocabulary that says a checklist named a signed card, shared by every path
+ *  that decides isAuto -- the html subset title, the xlsx section, the xlsx
+ *  qualifier and the xlsx finish. It used to be written out four times with
+ *  three different word lists, and the finish's list was the short one: it
+ *  knew "auto" and "autograph" and not "signature", which is how 823 rows
+ *  reading "Signature Swatches Gold Prizm" staged unsigned.
+ *
+ *  A whole word, always: "Signature"/"Signatures" (Panini's usual spelling),
+ *  "Penmanship" (Prizm BK's), "Ink"/"Inscriptions" (Panini high end),
+ *  "Signing(s)", "Autograph(s)"/"Auto(s)"/"Autographed". Whole-word only, so
+ *  "Autumn" and "Inkjet" are not autographs and a substring can never mint one.
+ *
+ *  NOT in this list, deliberately: "Relic", "Patch", "Swatch", "Material",
+ *  "Jersey", "Memorabilia". A memorabilia card is not a signed card, and a
+ *  section that pairs the two ("Signature Swatches") is caught by the
+ *  signature word it already carries -- never by the swatch. */
+const AUTO_WORDS = /\b(auto|autos|autograph|autographs|autographed|signature|signatures|signing|signings|signed|penmanship|inscription|inscriptions|ink)\b/i;
+const namesAnAuto = (text) => AUTO_WORDS.test(String(text ?? ""));
+
 const UMBRELLA = /(parallels?|factory set|retail|club set|variations?|short prints?|\bsps?\b|photo variations?|checklist)$/i;
 const CARD_LINE = /^\d+[a-z]?\s+[A-Za-z]/;
 const EXCLUSION = /^\(?\*?\s*no\b/i;
@@ -493,11 +513,95 @@ function categoryOf(section) {
   return "insert:" + s;
 }
 
+/**
+ * CF-A-SPLIT-YEAR-IS-STILL-A-YEAR (2026-09-06, run 33997480307).
+ *
+ * A checklistcenter section head states the whole product before the subset:
+ * "2020 Topps Chrome - Base Image Variation Set". The subset is what is wanted,
+ * so the reader stripped a leading year, a trailing "Set"/"Checklist", and then
+ * everything up to the first hyphen.
+ *
+ * Every hockey and soccer product spells its year across the season boundary --
+ * "2020-21", "2021-22" -- and BOTH strips then miss their target:
+ *
+ *   `^\d{4}\s+`   wants whitespace after the year and finds "-";
+ *   `^[^-]*-\s*`  stops at the FIRST hyphen, which is now the one INSIDE the
+ *                 year, so it eats "2020-" and leaves the product standing.
+ *
+ *   "2020-21 Topps Stadium Club Chrome UEFA - Base Rookie Image Variations Auto Set"
+ *     -> "21 Topps Stadium Club Chrome UEFA - Base Rookie Image Variations Auto"
+ *
+ * That string is then read as the subset's variation finish and emitted as the
+ * PARALLEL of every card in the subset, and the cleanliness gate refused the
+ * file for "6 rows whose parallel is a card line" -- because "21 Topps ..."
+ * matches `^\d+\s+[A-Za-z]` exactly as a card line does. The gate was right; the
+ * name it refused was never a parallel, it was the page's own title with four
+ * characters bitten off the front. Measured on the two refused pages of run
+ * 33997480307: 20 rows on 2020-21 Topps Chrome UEFA Champions League and 6 on
+ * 2020-21 Topps Stadium Club Chrome UEFA.
+ *
+ * The fix reads the year as the source writes it -- four digits, optionally with
+ * a two- or four-digit season tail -- and only then drops the product prefix at
+ * the " - " that separates it from the subset. The separator is the SPACED
+ * hyphen the page uses between product and subset, never a hyphen inside a token
+ * ("2020-21", "X-Fractor", "Mini-Diamond"), so a title carrying no such
+ * separator keeps all of its words rather than losing its first one.
+ */
+const SECTION_YEAR = /^(?:19|20)\d{2}(?:\s*[-\/]\s*(?:\d{2}|(?:19|20)\d{2}))?\s+/;
+function sectionTitleWithoutProduct(title) {
+  const t = String(title ?? "").replace(/\s+/g, " ").trim().replace(SECTION_YEAR, "").replace(/\s+(Set|Checklist)$/i, "");
+  // The product/subset separator is a SPACED hyphen. Splitting on a bare "-"
+  // would cut "Mini-Diamond" and "X-Fractor" in half.
+  const cut = t.indexOf(" - ");
+  return (cut >= 0 ? t.slice(cut + 3) : t).trim();
+}
+
 /** The html path: a subset's ladder applied to that subset's own cards.
  *  Returns the CSV rows and the counters; writes nothing. */
+/**
+ * CF-AN-UNNUMBERED-ROSTER-IS-NOT-A-BROKEN-CONVERTER (2026-09-06).
+ *
+ * checklistcenter serves some products -- team sets, and the Merlin/Inception/
+ * Deco UEFA titles -- as a `<ul><li>` roster of BARE PLAYER NAMES with no card
+ * numbers at all ("Marc-Andre ter Stegen", "Ansu Fati / Pedri"), rather than as
+ * the `<p>...<br>` numbered card lines every other page uses. parseHtml finds
+ * the `<h3>` sections and the csColumns, finds no card LINE in either markup,
+ * and every subset drops out -- so convertHtml returned a bare `null` and main
+ * counted it as one more anonymous `refused-or-empty`.
+ *
+ * That silence is the whole defect. The driver turns "no CSV" into
+ * "clc converter produced no CSV (page fetched but refused, or no page
+ * served)" -> `failed`, which says OUR PIPE BROKE and advances the systemic
+ * streak. Five such soccer pages in run 33997480307 read as a dead host and
+ * aborted a lane whose site was serving 200s the whole time (the CLC-FBBK walk
+ * was creating 156k rows per pass at the same hour).
+ *
+ * The catalog keys a card by cardNumber and ingest-checklist-csv-to-catalog
+ * drops any row without one, so reading these would mean INVENTING numbers the
+ * source never published -- which `no synthetic parallels — actuals only`
+ * forbids. This is the SOURCE answering, and its answer is that it has no
+ * keyable card here. It is the same ruling CF-A-CHECKLIST-WITHOUT-CARD-NUMBERS-
+ * IS-NOT-A-PARSER-GAP already made for the bcp lane, and it earns the same
+ * word, so the driver can lift it to `empty` and out of the streak.
+ *
+ * Deliberately NOT a catch-all: a page with sections that DO carry card lines
+ * and still yields no row stays the anonymous refusal it was, so a real
+ * converter gap keeps bringing someone back to it.
+ */
+function unnumberedRoster(html, subsets) {
+  if (subsets.length) return false;
+  // Bare-name <li> entries anywhere in a csColumn: the roster markup.
+  const names = [...html.matchAll(/<div[^>]*class="[^"]*csColumn[^"]*"[^>]*>([\s\S]*?)<\/div>/gi)]
+    .flatMap((c) => [...c[1].matchAll(/<li[^>]*>([\s\S]*?)(?=<li|<\/ul>)/gi)].map((l) => detag(l[1])))
+    .filter(Boolean);
+  // A roster is a BODY of names, and not one of them numbered. One or two
+  // stray <li> is site chrome, not a checklist.
+  return names.length >= 5 && !names.some((n) => /^#?\d/.test(n));
+}
+
 function convertHtml(html, product) {
   const { subsets, rejected } = parseHtml(html, product);
-  if (!subsets.length) return null;
+  if (!subsets.length) return unnumberedRoster(html, subsets) ? { unnumberedRoster: true } : null;
   const rowsOut = [];
   let baseEmitted = false, refusedSubsets = 0, laddersFound = 0, ladderRows = 0;
   const pars = new Set(), nums = new Set(); // product-wide, for the report only -- the gate is per subset
@@ -507,7 +611,7 @@ function convertHtml(html, product) {
   // nothing about a cross-join. The gate is per subset: a subset whose ladder
   // exceeds PAR_MAX rungs or whose card list exceeds NUM_MAX numbers is what a
   // roster-for-ladder mistake looks like, and only that subset is refused.
-  const plainTitle = (s) => s.title.replace(/^\d{4}\s+/, "").replace(/\s+(Set|Checklist)$/i, "").replace(/^[^-]*-\s*/, "");
+  const plainTitle = (s) => sectionTitleWithoutProduct(s.title);
   const numsOf = (s) => new Set(s.cards.map((c) => c.num));
   for (const sub of subsets) {
     let category = sub.category ?? categoryOf(plainTitle(sub));
@@ -521,7 +625,7 @@ function convertHtml(html, product) {
     const plainSubsets = subsets.filter((o) => o !== sub && !isVariationSection(plainTitle(o)));
     const anchorFor = (num) => plainSubsets.find((o) => /^base(\s|$)/i.test(plainTitle(o)) && numsOf(o).has(num))
       ?? plainSubsets.filter((o) => numsOf(o).has(num)).sort((a, b) => numsOf(a).size - numsOf(b).size)[0] ?? null;
-    const isAuto = /\b(auto|autograph|signature)/i.test(sub.title) ? "true" : "false";
+    const isAuto = namesAnAuto(sub.title) ? "true" : "false";
     const rungs = sub.ladders.flatMap((l) => l.rungs);
     const subPars = new Set(rungs.map((r) => r.name)), subNums = new Set(sub.cards.map((c) => c.num));
     if (subPars.size > PAR_MAX || subNums.size > NUM_MAX) {
@@ -614,7 +718,7 @@ function convertXlsx(rows2d, product) {
     for (const c of cards) {
       const { section, finish } = sectionSplit(sv, sections, c.num);
       const category = categoryOf(section);
-      const sectionAuto = /\b(auto|autograph|signature)/i.test(section);
+      const sectionAuto = namesAnAuto(section);
       const key = section + "\u0000" + c.num;
       const card = byCard.get(key) ?? { section, category, sectionAuto, num: c.num, player: c.player, finishes: [] };
       if (finish) { const { name, note, printRun } = clean(finish); card.finishes.push({ name, note, printRun: printRun ?? c.printRun ?? null }); }
@@ -653,7 +757,36 @@ function convertXlsx(rows2d, product) {
       // "Set - Concourse - Gold Prizms" minus its qualifier "Set - Concourse" is
       // "Gold Prizms", not "- Gold Prizms": the separator goes with it.
       if (qualifier && !isVariationSection(name)) name = name === qualifier ? "" : name.startsWith(qualifier + " ") ? name.slice(qualifier.length + 1).replace(/^[-\u2013\u2014:]\s*/, "") : name;
-      let isAuto = card.sectionAuto || (qualifier ? /\b(auto|autograph|signature)/i.test(qualifier) : false);
+      // CF-THE-WHOLE-SECTION-NAME-REACHES-THE-AUTO-DECISION (2026-09-05, the
+      // defect #1823 pinned). The flag was read off the SECTION and the
+      // qualifier only, and the word that says the card is signed does not
+      // always survive into either. 2022 Panini Select publishes "Jumbo Rookie
+      // Signature Swatches Gold Prizm": sectionsOf splits it CORRECTLY -- "Jumbo
+      // Rookie" is the section, "Signature Swatches Gold Prizm" is the finish --
+      // so no word was truncated off the page; the auto word simply ended up on
+      // the side of the split nobody asked. 823 rows whose parallel literally
+      // reads "Signature Swatches Gold Prizm" staged isAuto=false: autographs
+      // minted as unsigned twins of themselves, on the one axis no only-improve
+      // pass can ever see, because every other column is well-formed.
+      //
+      // The finish path did have two rules of its own, but its vocabulary was a
+      // strict SUBSET of the section's -- it never knew the word "signature".
+      // So this is not a new heuristic; it is the SAME vocabulary applied to the
+      // same sentence the checklist wrote. The flag is raised from the whole Set
+      // value -- section AND finish -- however sectionsOf happened to cut it.
+      //
+      // FLAGGING IS NOT STRIPPING. AUTO_RX below still removes only a bare
+      // leading/trailing auto word; "Signature Swatches" is the name of a
+      // memorabilia family and stays in the parallel verbatim. Widening the flag
+      // while leaving the name alone is deliberate: the CHECKLIST decides the
+      // flag (feedback_isauto_boundary_is_cardnumber_not_text), and the
+      // checklist's own words stay the checklist's own words.
+      // Read `r.name` -- the finish AS PUBLISHED -- not the `name` the qualifier
+      // strip has already shortened. Both are checked anyway, but reading the
+      // unstripped text means the flag can never depend on where a LATER
+      // cosmetic rule happened to cut, which is the whole shape of this bug.
+      let isAuto = card.sectionAuto || namesAnAuto(r.name) || namesAnAuto(name)
+        || (qualifier ? namesAnAuto(qualifier) : false);
       if (AUTO_RX.test(name)) { isAuto = true; name = name.replace(AUTO_RX, "").trim(); }
       // a finish that is only the auto word ("2023 Greatest Hits Autographs"
       // under "2023 Greatest Hits") marks the row auto and names no parallel
@@ -662,7 +795,9 @@ function convertXlsx(rows2d, product) {
       // beside "Auto Laser Black"): "Base" leading a finish is that marker,
       // never a parallel word, and the parallel is what follows it.
       if (/^base\s+\S/i.test(name)) name = name.replace(/^base\s+/i, "").trim();
-      if (/autograph/i.test(name) && !isAuto) isAuto = true;
+      // (the old trailing `/autograph/i.test(name)` catch-all is gone: it was a
+      // second, narrower spelling of the flag rule, and namesAnAuto above now
+      // reads the same text with the whole vocabulary. One rule, one place.)
       if (!name) name = card.category === "base" ? "Base" : "";
       if (name) pars.add(name);
       rowsOut.push([card.category, card.num, name, isAuto ? "true" : "false", r.printRun ?? "", card.player, r.note ?? ""]);
@@ -679,7 +814,7 @@ function main() {
   if (YEARS) { const [a, b] = YEARS.split("-").map(Number); products = products.filter((p) => p.year >= a && p.year <= (b || a)); }
   if (LIMIT) products = products.slice(0, LIMIT);
   console.log(`[clc-convert] ${f(products.length)} products  pages: ${PAGES_DIR}  out: ${REPORT ? "(report only, nothing written)" : OUT_DIR}\n`);
-  let written = 0, refused = 0, noPage = 0, viaXlsx = 0, viaHtml = 0, rows = 0, rejectedTotal = 0, ladderRowsTotal = 0;
+  let written = 0, refused = 0, noPage = 0, viaXlsx = 0, viaHtml = 0, rows = 0, rejectedTotal = 0, ladderRowsTotal = 0, unnumberedTotal = 0;
   for (const p of products) {
     const year = String(p.year || "unknown");
     const hPath = path.join(PAGES_DIR, "html", year, `${p.sourceSlug}.html`), xPath = path.join(PAGES_DIR, "xlsx", year, `${p.sourceSlug}.xlsx`);
@@ -690,18 +825,25 @@ function main() {
         if (out) { result = writeOut(p, out.rows, out.rejected, "xlsx", out.stats); srcKind = "xlsx"; viaXlsx++; }
       } catch (e) { console.log(`   xlsx parse failed ${p.sourceSlug}: ${String(e.message).slice(0, 60)}`); }
     }
+    let unnumbered = false;
     if (!result && ONLY !== "xlsx" && fs.existsSync(hPath)) {
       const out = convertHtml(fs.readFileSync(hPath, "utf8"), p);
-      if (out) { result = writeOut(p, out.rows, out.rejected, "html", out.stats); srcKind = "html"; viaHtml++; rejectedTotal += out.rejected.length; }
+      // The converter's own word for the shape, printed so the DRIVER can read
+      // it off stdout and give the entry the verdict the source earned. See
+      // CF-AN-UNNUMBERED-ROSTER-IS-NOT-A-BROKEN-CONVERTER.
+      if (out?.unnumberedRoster) {
+        unnumbered = true;
+        console.log(`!! UNNUMBERED ROSTER ${p.sourceSlug}: the page lists players with no card numbers — nothing a catalog row could be keyed on`);
+      } else if (out) { result = writeOut(p, out.rows, out.rejected, "html", out.stats); srcKind = "html"; viaHtml++; rejectedTotal += out.rejected.length; }
     }
     if (!fs.existsSync(hPath) && !fs.existsSync(xPath)) { noPage++; continue; }
-    if (!result) { refused++; continue; }
+    if (!result) { if (unnumbered) unnumberedTotal++; else refused++; continue; }
     written++; rows += result.rows; ladderRowsTotal += result.ladderRows;
     console.log(`  ${result.stem.padEnd(48)} ${srcKind.padEnd(4)} rows=${String(f(result.rows)).padStart(8)}  sections=${String(result.sections).padStart(3)}  laddersFound=${String(result.laddersFound).padStart(3)}  ladderRows=${String(f(result.ladderRows)).padStart(8)}  rungs=${result.pars}  numbers=${result.nums}${result.refusedSubsets ? `  REFUSED subsets=${result.refusedSubsets}` : ""}`);
   }
-  console.log(`\n[clc-convert] ${REPORT ? "would write" : "written"}=${f(written)} (xlsx ${f(viaXlsx)}, html ${f(viaHtml)})  rows=${f(rows)}  ladderRows=${f(ladderRowsTotal)}  refused-or-empty=${f(refused)}  no page cached=${f(noPage)}  rung candidates rejected=${f(rejectedTotal)}`);
+  console.log(`\n[clc-convert] ${REPORT ? "would write" : "written"}=${f(written)} (xlsx ${f(viaXlsx)}, html ${f(viaHtml)})  rows=${f(rows)}  ladderRows=${f(ladderRowsTotal)}  refused-or-empty=${f(refused)}  unnumbered rosters=${f(unnumberedTotal)}  no page cached=${f(noPage)}  rung candidates rejected=${f(rejectedTotal)}`);
 }
 
-module.exports = { clean, splitRungs, ladderFamily, applyFamily, sectionPrintRun, sectionHeadLine, parseCardLine, parseLadderText, parseLadders, parseHtml, convertHtml, parseXlsxRows, readXlsxRows, parseXlsx, convertXlsx, sectionsOf, sectionSplit, productMeta, categoryOf };
+module.exports = { sectionTitleWithoutProduct, unnumberedRoster, namesAnAuto, AUTO_WORDS, clean, splitRungs, ladderFamily, applyFamily, sectionPrintRun, sectionHeadLine, parseCardLine, parseLadderText, parseLadders, parseHtml, convertHtml, parseXlsxRows, readXlsxRows, parseXlsx, convertXlsx, sectionsOf, sectionSplit, productMeta, categoryOf };
 
 if (require.main === module) main();

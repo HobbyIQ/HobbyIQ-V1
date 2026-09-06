@@ -68,9 +68,12 @@ const bySetName = (n: string) => SCC.find((e: any) => e.setName === n);
 // ── 1. partial is terminal, and still recheckable ────────────────────────────
 
 describe("`partial` is a verdict, not a queue position", () => {
-  it("partial is terminal, beside the three statuses that already were", () => {
+  it("partial is terminal, beside the statuses that already were", () => {
+    // `short-ingest` joined them on 2026-09-06
+    // (CF-AN-ENTRY-THAT-LANDED-ROWS-IS-NOT-A-FAILURE): its rows ARE in the
+    // catalog, so re-attempting re-ingests what is already there.
     expect([...TERMINAL_STATUSES].sort()).toEqual(
-      ["empty", "ingested", "partial", "unreachable"].sort(),
+      ["empty", "ingested", "partial", "short-ingest", "unreachable"].sort(),
     );
     expect(TERMINAL_STATUSES.has("partial")).toBe(true);
   });
@@ -343,8 +346,8 @@ describe("the pins fail against a driver whose declarations are emptied", () => 
   it("drop `partial` from TERMINAL_STATUSES -> the lane re-walks its partials", () => {
     withMutant(
       DRIVER,
-      'const TERMINAL_STATUSES = new Set(["ingested", "unreachable", EMPTY_STATUS, "partial"]);',
-      'const TERMINAL_STATUSES = new Set(["ingested", "unreachable", EMPTY_STATUS]);',
+      'const TERMINAL_STATUSES = new Set(["ingested", "unreachable", EMPTY_STATUS, "partial", SHORT_STATUS]);',
+      'const TERMINAL_STATUSES = new Set(["ingested", "unreachable", EMPTY_STATUS, SHORT_STATUS]);',
       "terminal",
       (m) => {
         expect(m.TERMINAL_STATUSES.has("partial")).toBe(false);

@@ -2236,15 +2236,31 @@ export function inferSetKeyFromTitle(title: string, cardNumber?: string | null):
     if (/topps\s+update/.test(t)) return "Topps Update Sapphire";
     if (/\btopps\b/.test(t)) return "Topps Chrome Sapphire";
     if (/bowman\s+draft/.test(t)) return "Bowman Draft Sapphire";
-    // The bare fallback is Bowman because Bowman Sapphire is by far the
-    // commonest -- but only when the seller named no OTHER manufacturer.
-    // Measured on the sapphire population: "2023 Panini Court Kings
-    // Basketball #BR-ALP Sapphire" still inferred Bowman Chrome Sapphire
-    // after the Topps half of this fix landed, for exactly the reason the
-    // Topps half existed. A title that names another manufacturer FALLS
-    // THROUGH to that brand`s own rules below rather than being claimed here
-    // -- refusing outright would trade one wrong answer for no answer.
-    if (noRivalBrand(t, /bowman/i)) return "Bowman Chrome Sapphire";
+    // CF-BOWMAN-DEFAULT-NOT-EVIDENCE (2026-09-05). This used to return
+    // "Bowman Chrome Sapphire" for a title that names NO manufacturer at all,
+    // on the reasoning that Bowman Sapphire is the commonest -- a MAKER
+    // DEFAULT, i.e. a guess dressed as a parse.
+    //
+    // Why that is not a small wrong answer. `setKey` becomes the slug, the
+    // slug becomes `cardId`, and `cardId` is the sold_comps PARTITION KEY.
+    // The id is `${source}::${externalId}` and is stable, but the partition
+    // is a pure function of this parse -- so the same eBay sale ingested
+    // once while this line guessed `bowman` and again after it stopped
+    // guessing lands as TWO documents under two partition keys. The
+    // pre-write dedup cannot see the first one: it matches on
+    // `hobbyiqCardId` + `contentHash`, and `contentHash` is hashed over the
+    // slug, so BOTH clauses move together with the guess. One sale, two
+    // addresses: a split pool and a double count.
+    //
+    // A brand-less "Sapphire" title states a FINISH, not a product. Blank
+    // means unknown, never a default (CF-EVERY-INGEST-USES-THE-ONE-CHECKLIST-
+    // FORMAT), and absent beats wrong: "Unknown" parks the row for review
+    // instead of filing a Panini or Topps sale into the Bowman pool. The
+    // named-brand branches above are untouched -- they read evidence.
+    //
+    // A title that names another manufacturer still FALLS THROUGH to that
+    // brand's own rules below, exactly as before.
+    if (noRivalBrand(t, /bowman/i) && /\bbowman\b/.test(t)) return "Bowman Chrome Sapphire";
   }
   if (/topps\s+update/.test(t)) return "Topps Update";
   // CF-TRADED-TIFFANY-IS-A-PRODUCT (2026-09-04). Topps Traded (1974-2005),

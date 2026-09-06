@@ -103,10 +103,24 @@ describe("retire-self-derived-identities — the budget stops under the action c
 
   it("(2) the post-loop VERIFY BY READ is hard-capped and reports its own failure", () => {
     expect(SCRIPT).toContain("VERIFY_MS");
-    // It must not simply await the two unbounded COUNT(1) scans any more.
-    expect(SCRIPT).toMatch(/verify-cap/);
-    expect(SCRIPT).toMatch(/could not confirm within the cap/);
-    // And an unread count must never be printed as a zero.
+    // It must not simply await the two unbounded COUNT(1) scans any more: the
+    // cap has to be reached through the SHARED helper. This lane used to carry
+    // its own copy of capped() -- which is how it kept the two strings this
+    // test looks for while unref'ing its cap timer, and hung slots 9-12 of
+    // runs 34004719519/25658/31758/37931 for 144 minutes after a balanced
+    // reconcile. So the assertion is now on the DELEGATION, and the wording
+    // itself is pinned where the wording lives (laneExitsWhenWorkIsDone, and
+    // the helper's own tests).
+    expect(
+      SCRIPT,
+      "the verify must be capped by lib/runner-budget.cjs, not by a private copy of it",
+    ).toMatch(/\bbudget\(\{/);
+    expect(SCRIPT).toMatch(/\.capped\(/);
+    const LIB = read("backend", "scripts", "lib", "runner-budget.cjs");
+    expect(LIB).toMatch(/verify-cap/);
+    expect(LIB).toMatch(/could not confirm within the cap/);
+    // And an unread count must never be printed as a zero. This half stays on
+    // the SCRIPT: the lane composes its own VERIFY BY READ summary line.
     expect(SCRIPT).toMatch(/UNCONFIRMED \(verify cap\)/);
     expect(SCRIPT).toMatch(/UNREAD, not zero/);
   });

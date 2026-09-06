@@ -193,7 +193,13 @@ describe("no whitelisted script reads SLOT/SLOTS raw any more", () => {
       if (bindsRaw) offenders.push(s);
     }
     expect(offenders, "these bind SLOTS themselves and will inherit the runner's 16").toEqual([]);
-  });
+    // 60s, not the 30s default. This sweep reads every .cjs in the dropdown
+    // (~130 files) synchronously; run ALONGSIDE the other shard suites, which
+    // read the same set, the cold-cache I/O alone exceeds 30s and the suite
+    // fails as a timeout rather than on any assertion. shardOptInWhitelist.test
+    // .ts carries the identical widening on its own whole-dropdown sweep, for
+    // the identical reason.
+  }, 60_000);
 
   it("under the runner's OUTAGE env every sweep lane covers the whole population", () => {
     // The binding is a module-level const decided at require time, so it is

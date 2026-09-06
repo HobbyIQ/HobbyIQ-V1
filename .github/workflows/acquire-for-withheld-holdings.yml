@@ -185,9 +185,28 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          node scripts/acquire-for-withheld-holdings.cjs > /tmp/plan.json
-          # The lane prints the human banner to stderr in json mode, so stdout
-          # is a single parseable document.
+          # THE JSON COMES FROM THE FILE THE LANE WROTE, NOT FROM STDOUT (#1846).
+          #
+          # This step used to `> /tmp/plan.json` and jq the capture. Run
+          # 34019169292 died on `jq: parse error: Invalid literal at line 739,
+          # column 11`: the plan ended clean on 738 and line 739 was
+          # `finishLane: exiting code 0`, written to fd 1 by the shared budget
+          # helper AFTER main() returned. The lane's own banner was already on
+          # stderr and still the document was not parseable, because a lane
+          # cannot suppress what the helper it must call writes on its way out.
+          #
+          # The helper now narrates to the fd the lane names, and the lane names
+          # stderr in MODE=json. This reads OUT anyway: the plan is a FILE the
+          # lane wrote and verified, so the parse no longer depends on nothing
+          # else ever printing to stdout again. Belt and braces, one line each.
+          node scripts/acquire-for-withheld-holdings.cjs | tee /tmp/plan-stdout.log
+          # OUT is set in this step's env; a missing file means the lane did not
+          # reach its write, and saying so beats a bare `cp: No such file`.
+          if [ ! -s /tmp/acquisition-plan.json ]; then
+            echo "::error::the lane wrote no plan to $OUT — it did not reach its write"
+            exit 1
+          fi
+          cp /tmp/acquisition-plan.json /tmp/plan.json
           COUNT=$(jq '.tonight | length' /tmp/plan.json)
           echo "count=$COUNT" >> "$GITHUB_OUTPUT"
           echo "cells=$(jq -c '.tonight' /tmp/plan.json)" >> "$GITHUB_OUTPUT"
@@ -370,29 +389,94 @@ jobs:
       #     this set — acquiring nothing is the correct outcome, not an error.
       #   - rows == 0 means there is nothing to land, so an apply is a no-op
       #     that would still burn a publisher fetch.
-      - name: "Gate: the ingest report reconciled with rows to land"
+      # ── GATE 1, THREE-WAY (run 33993803531) ─────────────────────────────
+      #
+      # THE ORIGINAL GATE COULD NEVER PASS. It required `rows > 0` from a
+      # dispatch run with apply=false, and `rows created` counts only what an
+      # APPLY wrote — a report creates nothing by construction. So every cell in
+      # the first green run stopped at "0 rows — nothing to land", including
+      # cells whose checklist is fully present. From the Bowman's Best report:
+      #
+      #   catalog now: 3,810 rows   seeded=missing   prior=partial
+      #   rows created        0   (verified by catalog read, not claimed)
+      #   RECONCILED          yes
+      #
+      # 3,810 rows ARE the checklist. "0 rows created" was the dry run being a
+      # dry run. Reading it as "nothing to acquire" conflated two opposite
+      # states, and the one it silently chose was the wrong one.
+      #
+      # THE SIGNAL IS `catalog now:`, not `rows created`. The driver prints it
+      # for every report entry from a REAL catalog read (countCatalogRows), and
+      # it resolves the setKey through the same union-of-spellings the ingest
+      # child writes under (#1738/#1741) — so it is the one number that answers
+      # "does this product already exist" without a second implementation of
+      # that resolution here.
+      #
+      # THREE OUTCOMES, and the third is the one this fix adds:
+      #
+      #   acquire         catalog is EMPTY and the source serves the set.
+      #                   Ingest it (apply), then rederive, then reprice.
+      #   already-ingested catalog is NON-EMPTY. There is nothing to mint, and
+      #                   the holdings are dark for a DIFFERENT reason: their
+      #                   identity does not match rows that already exist
+      #                   (self-derived slug, blank fields, wrong key). Skip
+      #                   the apply entirely and go straight to the rederive.
+      #   needs-a-source  catalog is empty AND no ingested/partial verdict.
+      #                   Unchanged: reported, never guessed.
+      #
+      # A cell that is already ingested must NOT run the apply: it would re-fetch
+      # a publisher page to mint nothing, and CF-RECHECK-IS-NOT-REFETCH is the
+      # standing warning about re-running an entry whose work is done.
+      - name: "Gate: acquire, already-ingested, or needs a source"
         id: gate_ingest
         shell: bash
         run: |
           set -uo pipefail
           LOG=/tmp/ingest-report.log
-          PROCEED=yes; WHY=""
-          if grep -aqE "RECONCILED +NO" "$LOG"; then PROCEED=no; WHY="the report did not reconcile"; fi
-          if ! grep -aqE "\b(ingested|partial)\b" "$LOG"; then
-            PROCEED=no; WHY="${WHY:-no ingested/partial verdict — the source does not serve this set}"
+          RECONCILED=yes
+          if grep -aqE "RECONCILED +NO" "$LOG"; then RECONCILED=no; fi
+
+          # What the driver READ in the catalog for this entry. Anchored on its
+          # own label so a stray number elsewhere in the log cannot be mistaken
+          # for it, and "(setKey/year not derivable)" yields no digits at all --
+          # which is correctly NOT treated as a zero.
+          IN_CATALOG=$(grep -aoE "catalog now: *[0-9,]+ rows" "$LOG" \
+                        | grep -oE "[0-9,]+" | tr -d ',' | sort -rn | head -1 || true)
+          IN_CATALOG=${IN_CATALOG:-}
+          SERVED=no
+          if grep -aqE "\b(ingested|partial|would-attempt|would drive)\b" "$LOG"; then SERVED=yes; fi
+
+          MODE=needs-a-source; PROCEED=no; WHY=""
+          if [ "$RECONCILED" = "no" ]; then
+            WHY="the report did not reconcile"
+          elif [ -z "$IN_CATALOG" ]; then
+            # The driver could not derive a key to count. That is an
+            # unverifiable entry, never an assumed-empty one.
+            WHY="the report did not state a catalog count — the key was not derivable"
+          elif [ "$IN_CATALOG" -gt 0 ]; then
+            MODE=already-ingested; PROCEED=yes
+            WHY="$IN_CATALOG rows already in the catalog — nothing to mint; the identities are the problem"
+          elif [ "$SERVED" = "yes" ]; then
+            MODE=acquire; PROCEED=yes
+            WHY="catalog is empty and the source serves this set"
+          else
+            WHY="catalog is empty and no source serves this set"
           fi
-          ROWS=$(grep -aoE "rows[= ]+[0-9]+" "$LOG" | grep -oE "[0-9]+" | sort -rn | head -1 || true)
-          ROWS=${ROWS:-0}
-          if [ "$ROWS" -le 0 ]; then PROCEED=no; WHY="${WHY:-0 rows — nothing to land}"; fi
+
+          echo "mode=$MODE" >> "$GITHUB_OUTPUT"
           echo "proceed=$PROCEED" >> "$GITHUB_OUTPUT"
-          echo "rows=$ROWS" >> "$GITHUB_OUTPUT"
+          echo "in_catalog=${IN_CATALOG:-unknown}" >> "$GITHUB_OUTPUT"
           echo "why=$WHY" >> "$GITHUB_OUTPUT"
-          echo "GATE 1 proceed=$PROCEED rows=$ROWS ${WHY:+(}${WHY}${WHY:+)}"
+          echo "GATE 1 mode=$MODE proceed=$PROCEED in_catalog=${IN_CATALOG:-unknown} ($WHY)"
 
       # ── STEP B: the ingest APPLY ────────────────────────────────────────
-      - name: Ingest apply (gated)
+      # ONLY in `acquire` mode. An already-ingested cell skips this entirely:
+      # re-fetching a publisher page to mint nothing is the exact waste
+      # CF-RECHECK-IS-NOT-REFETCH warns about, and it would spend a real
+      # external fetch to produce the same zero the report already proved.
+      - name: Ingest apply (acquire mode only)
         id: ingest_apply
-        if: ${{ steps.gate_ingest.outputs.proceed == 'yes' }}
+        if: ${{ steps.gate_ingest.outputs.mode == 'acquire' }}
         env:
           GH_TOKEN: ${{ github.token }}
           WATCH_MINUTES: ${{ env.WATCH_MINUTES }}
@@ -408,16 +492,29 @@ jobs:
           cp "/tmp/run-$RUN_ID.log" /tmp/ingest-apply.log
 
       # ── GATE 2 ──────────────────────────────────────────────────────────
-      # No rederive without an INGESTED verdict from the apply itself. The
-      # report proved the source serves the set; only the apply proves rows
-      # LANDED, and re-pointing a holding onto a row that does not exist is how
-      # a withheld holding becomes a wrong one.
+      # No rederive without rows to point AT.
+      #
+      #   acquire           the APPLY must have reconciled and verdicted
+      #                     ingested/partial. The report proved the source
+      #                     serves the set; only the apply proves rows LANDED,
+      #                     and re-pointing a holding onto a row that does not
+      #                     exist is how a withheld holding becomes a WRONG one.
+      #   already-ingested  the rows were counted in the catalog by gate 1
+      #                     itself, from the driver's own catalog read. There is
+      #                     no apply to judge, and demanding one would re-create
+      #                     the deadlock this fix removes.
       - name: "Gate: the ingest apply landed rows"
         id: gate_apply
         if: ${{ steps.gate_ingest.outputs.proceed == 'yes' }}
         shell: bash
         run: |
           set -uo pipefail
+          if [ '${{ steps.gate_ingest.outputs.mode }}' = "already-ingested" ]; then
+            echo "proceed=yes" >> "$GITHUB_OUTPUT"
+            echo "why=${{ steps.gate_ingest.outputs.in_catalog }} rows already present — no apply was needed" >> "$GITHUB_OUTPUT"
+            echo "GATE 2 proceed=yes (already ingested: ${{ steps.gate_ingest.outputs.in_catalog }} rows in the catalog)"
+            exit 0
+          fi
           LOG=/tmp/ingest-apply.log
           PROCEED=yes; WHY=""
           if grep -aqE "RECONCILED +NO" "$LOG"; then PROCEED=no; WHY="the apply did not reconcile"; fi
@@ -464,12 +561,169 @@ jobs:
           if grep -aq "UNVERIFIED" "$LOG"; then
             PROCEED=no; WHY="the report named an UNVERIFIED destination — a slug no checklist backs"
           fi
-          if ! grep -aqiE "would re-point|re-point|REDERIVE" "$LOG"; then
-            PROCEED=no; WHY="${WHY:-the report proposed no re-points}"
+          # CF-A-BANNER-IS-NOT-A-VERDICT (run 33998562094). This was
+          #
+          #   grep -aqiE "would re-point|re-point|REDERIVE"
+          #
+          # and the case-insensitive REDERIVE matched the lane's OWN banner --
+          # "MODE: rederive", "[mode] rederive — report only", even the script
+          # filename in "Script confirmed: .../rederive-holding-identity.cjs".
+          # So gate 3 said yes for all ten cells whose verdicts were AGREE or
+          # NO-MATCH: it was reading the dispatch, not the outcome.
+          #
+          # The verdict vocabulary is anchored and CASE-SENSITIVE: the script
+          # prints "  REDERIVE   <player>" at the head of a line, and its
+          # machine-readable SUMMARY carries "REDERIVE": n. Nothing in a banner
+          # matches either.
+          if ! grep -aqE '^[[:space:]]*REDERIVE |"REDERIVE":[[:space:]]*[1-9]' "$LOG"; then
+            # AGREE means the holding is ALREADY on the right identity, so
+            # there is nothing for an apply to write. That is a legitimate
+            # outcome, not a failure -- but running the apply anyway would be a
+            # write path executed on the strength of no proposed change.
+            PROCEED=no
+            if grep -aqE '^[[:space:]]*AGREE ' "$LOG"; then
+              WHY="${WHY:-every holding already carries the right identity (AGREE) — nothing to re-point}"
+            else
+              WHY="${WHY:-the report proposed no re-points}"
+            fi
           fi
           echo "proceed=$PROCEED" >> "$GITHUB_OUTPUT"
           echo "why=$WHY" >> "$GITHUB_OUTPUT"
           echo "GATE 3 proceed=$PROCEED ${WHY:+(}${WHY}${WHY:+)}"
+
+      # ── WHAT UNLOCKS EACH HOLDING THAT DID NOT RE-POINT ─────────────────
+      #
+      # A rederive against a checklist that IS present and still comes back
+      # NO-MATCH or UNVERIFIED is the most informative outcome this chain
+      # produces, and until now it was thrown away: the table said "gate 3: no"
+      # and a reader learned nothing about which of several very different
+      # problems they were looking at.
+      #
+      # The script already distinguishes them in its own prose, so this reads
+      # that vocabulary rather than re-deriving anything, and maps each to THE
+      # LANE THAT FIXES IT:
+      #
+      #   NO MATCH + blank fields   the holding has nothing to match ON.
+      #                             -> field recovery (#1811)
+      #   NO MATCH (fields present) the parser cannot place a populated row.
+      #                             -> matcher work, report to Drew
+      #   UNVERIFIED: no catalog row backs it
+      #                             the destination slug is self-derived.
+      #                             -> retire-self-derived-identities
+      #   UNVERIFIED: player mismatch / destination does not carry
+      #                             a collision or an over-claimed holding.
+      #                             -> PARKED, needs a human ruling
+      #   UNVERIFIED: ruled by a human
+      #                             a user-authored identity. Never overwritten.
+      #   UNVERIFIED: confidence below the floor
+      #                             -> matcher confidence, report only
+      #
+      # It is REPORT-ONLY and never gates anything: naming why a holding is
+      # stuck must not decide whether other holdings proceed.
+      - name: "Classify the holdings that did not re-point"
+        id: classify
+        # FAIL-SAFE (run 33998562094). This step crashed on all ten cells and
+        # took the CELL down with it — after gate 3 had already said yes — so
+        # the rederive APPLY and the reprice were SKIPPED and nothing was
+        # written. A step that only DESCRIBES an outcome must never be able to
+        # prevent it: `continue-on-error` keeps a classify fault from failing
+        # the job, and the step traps its own errors and reports
+        # "classify: error" rather than dying.
+        continue-on-error: true
+        if: ${{ !cancelled() && steps.gate_apply.outputs.proceed == 'yes' }}
+        shell: bash
+        run: |
+          # NOT `set -e`: a miscount must not abort the cell. `set -u` is also
+          # dropped deliberately — an unset counter here is a reporting gap,
+          # not a reason to lose an apply (run 33998562094 lost ten of them to
+          # exactly that: "NM_FIELDS: unbound variable").
+          set +eu
+          LOG=/tmp/rederive-report.log
+          if [ ! -f "$LOG" ]; then
+            echo "reasons=classify: no rederive report" >> "$GITHUB_OUTPUT"
+            echo "(no rederive report to classify)"
+            exit 0
+          fi
+
+          # ── THE CLASSIFY LINE READS THE REPORT, NOT THE LINE SHAPE ──────
+          #
+          # CF-CLASSIFY-READS-THE-REPORT-NOT-THE-LINE-SHAPE (#1868). Run
+          # 34021743427 went end-to-end on all ten cells -- bowman-draft
+          # re-derived holding a2963cd5 and repriced user-67878bb5 -- and every
+          # cell printed
+          #
+          #   CLASSIFY agree=0 rederive=0 ... unverified-total=0
+          #
+          # ALL ZEROS, including the cell whose report said `"verdict":
+          # "REDERIVE"` and whose gate 3 proceeded ON that verdict. The night's
+          # one real re-point was invisible in the line written to describe it.
+          #
+          # The counts were greps anchored to the SCRIPT's stdout shape
+          # (`^[[:space:]]*REDERIVE `). The file is not the script's stdout: it
+          # is `gh run view --log`, which prefixes every line with
+          # `<job> TAB <step> TAB <timestamp>`, so the anchors could never match
+          # and `grep -c` honestly returned 0. Gate 3 survived the same capture
+          # only because its SECOND alternative -- `"REDERIVE":[[:space:]]*[1-9]`
+          # -- is unanchored and matched the machine-readable SUMMARY through the
+          # prefix. The gate read the report; the classifier read the line shape.
+          #
+          # So the counts now come from the SAME JSON the gates read -- the
+          # lane's `holding_rederive_report` document, one entry per holding
+          # with its verdict and reason -- parsed by a module with a fixture pin
+          # (backend/tests/rederiveVerdictClasses.test.ts). Nine grep anchors in
+          # YAML that nothing could test became one function that CI exercises.
+          SUM=$(node "$GITHUB_WORKSPACE/backend/scripts/lib/rederive-verdict-classes.cjs" "$LOG")
+
+          # UNREAD IS NOT ZERO. The module prints `unread`/`unreadable` when the
+          # capture holds no report, precisely so a parsing failure can never
+          # again be published as a row of zeros.
+          case "$SUM" in
+            unread|unreadable)
+              echo "reasons=classify: the rederive report could not be read ($SUM)" >> "$GITHUB_OUTPUT"
+              echo "CLASSIFY unread — the report was not parseable; this is NOT zero"
+              exit 0
+              ;;
+          esac
+
+          # One reader for the module's `k=v k=v` line. Kept to ONE sed
+          # expression with no embedded newline, and `tr -cd` guarantees the
+          # result is digits or empty -- never the two-line value that broke the
+          # arithmetic in run 33998562094.
+          val() { printf "%s" "$SUM" | sed -n "s/.*\\b$1=\\([0-9][0-9]*\\).*/\\1/p" | head -1 | tr -cd "0-9"; }
+          AGREE=$(val agree);            [ -n "$AGREE" ]    || AGREE=0
+          REDERIVE=$(val rederive);      [ -n "$REDERIVE" ] || REDERIVE=0
+          NM_BLANK=$(val no-match-blank);[ -n "$NM_BLANK" ] || NM_BLANK=0
+          NM_FIELDS=$(val no-match-fields);[ -n "$NM_FIELDS" ] || NM_FIELDS=0
+          UV_NOROW=$(val self-derived);  [ -n "$UV_NOROW" ] || UV_NOROW=0
+          UV_PLAYER=$(val collision);    [ -n "$UV_PLAYER" ]|| UV_PLAYER=0
+          UV_CLAIM=$(val over-claim);    [ -n "$UV_CLAIM" ] || UV_CLAIM=0
+          UV_HUMAN=$(val human);         [ -n "$UV_HUMAN" ] || UV_HUMAN=0
+          UV_CONF=$(val low-conf);       [ -n "$UV_CONF" ]  || UV_CONF=0
+          UV_ALL=$(val unverified-total);[ -n "$UV_ALL" ]   || UV_ALL=0
+
+          {
+            echo "### \`${{ matrix.cell.cell }}\` — the rederive verdicts"
+            echo
+            echo "| n | verdict | meaning | what unlocks it |"
+            echo "|---:|---|---|---|"
+            [ "$REDERIVE" -gt 0 ] && echo "| $REDERIVE | REDERIVE | the identity moves | applied this run |"
+            [ "$AGREE"    -gt 0 ] && echo "| $AGREE | AGREE | already on the right identity | **nothing here** — the pool or the gate is the blocker |"
+            [ "$NM_BLANK" -gt 0 ] && echo "| $NM_BLANK | NO-MATCH | the holding's fields are blank | **field recovery (#1811 lane)** |"
+            [ "$NM_FIELDS" -gt 0 ] && echo "| $NM_FIELDS | NO-MATCH | fields present, matcher cannot place it | matcher work — report to Drew |"
+            [ "$UV_NOROW" -gt 0 ] && echo "| $UV_NOROW | UNVERIFIED | destination is a self-derived twin | **retire-self-derived-identities** |"
+            [ "$UV_PLAYER" -gt 0 ] && echo "| $UV_PLAYER | UNVERIFIED | player mismatch (collision) | **parked** — needs a ruling |"
+            [ "$UV_CLAIM" -gt 0 ] && echo "| $UV_CLAIM | UNVERIFIED | holding claims a parallel/serial the row lacks | **parked** — needs a ruling |"
+            [ "$UV_HUMAN" -gt 0 ] && echo "| $UV_HUMAN | UNVERIFIED | user-authored identity | left alone by design |"
+            [ "$UV_CONF"  -gt 0 ] && echo "| $UV_CONF | UNVERIFIED | confidence below the floor | matcher confidence — report only |"
+            true
+          } > /tmp/reasons.md
+          cat /tmp/reasons.md >> "$GITHUB_STEP_SUMMARY"
+          cat /tmp/reasons.md
+
+          echo "reasons=$SUM" >> "$GITHUB_OUTPUT"
+          echo "agree=$AGREE" >> "$GITHUB_OUTPUT"
+          echo "rederive=$REDERIVE" >> "$GITHUB_OUTPUT"
+          echo "CLASSIFY $SUM"
 
       # ── STEP D: the rederive APPLY ──────────────────────────────────────
       - name: Rederive apply (gated)
@@ -526,12 +780,13 @@ jobs:
             "holdings": ${{ matrix.cell.holdings }},
             "source": { "lane": "${{ matrix.cell.source.lane }}", "setName": "${{ matrix.cell.source.setName }}" },
             "ingestReportRun": "${{ steps.ingest_report.outputs.run_id }}",
-            "gate1": { "proceed": "${{ steps.gate_ingest.outputs.proceed }}", "rows": "${{ steps.gate_ingest.outputs.rows }}", "why": "${{ steps.gate_ingest.outputs.why }}" },
+            "gate1": { "mode": "${{ steps.gate_ingest.outputs.mode }}", "proceed": "${{ steps.gate_ingest.outputs.proceed }}", "inCatalog": "${{ steps.gate_ingest.outputs.in_catalog }}", "why": "${{ steps.gate_ingest.outputs.why }}" },
             "ingestApplyRun": "${{ steps.ingest_apply.outputs.run_id }}",
             "gate2": { "proceed": "${{ steps.gate_apply.outputs.proceed }}", "why": "${{ steps.gate_apply.outputs.why }}" },
             "rederiveReportRun": "${{ steps.rederive_report.outputs.run_id }}",
             "gate3": { "proceed": "${{ steps.gate_rederive.outputs.proceed }}", "why": "${{ steps.gate_rederive.outputs.why }}" },
             "rederiveApplyRun": "${{ steps.rederive_apply.outputs.run_id }}",
+            "stuckReasons": "${{ steps.classify.outputs.reasons }}",
             "repricedUsers": "${{ steps.reprice.outputs.repriced }}"
           }
           JSON
@@ -569,10 +824,10 @@ jobs:
           {
             echo "### Outcomes — run [\`${GITHUB_RUN_ID}\`](https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID)"
             echo
-            echo '| cell | gate 1 | gate 2 | gate 3 | repriced |'
-            echo '|---|---|---|---|---|'
+            echo '| cell | mode | in catalog | gate 2 | gate 3 | repriced | what is still stuck |'
+            echo '|---|---|---:|---|---|---:|---|'
             find /tmp/outcomes -name outcome.json -print0 2>/dev/null | while IFS= read -r -d '' F; do
-              jq -r '"| `\(.cell)` | \(.gate1.proceed) \(if .gate1.why != "" then "(\(.gate1.why))" else "" end) | \(.gate2.proceed // "-") | \(.gate3.proceed // "-") | \(.repricedUsers // "-") |"' "$F"
+              jq -r '"| `\(.cell)` | \(.gate1.mode // "-") | \(.gate1.inCatalog // "-") | \(.gate2.proceed // "-") | \(.gate3.proceed // "-") | \(.repricedUsers // "-") | \(if (.stuckReasons // "") == "" then "-" else .stuckReasons end) |"' "$F"
             done
           } > /tmp/outcomes.md
           N=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --limit 100 \

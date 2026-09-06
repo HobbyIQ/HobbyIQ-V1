@@ -57,7 +57,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const backend = path.join(__dirname, "..");
 const { CosmosClient } = require(path.join(backend, "node_modules/@azure/cosmos"));
-const { budget } = require(path.join(__dirname, "lib/runner-budget.cjs"));
+const { budget, finishLane } = require(path.join(__dirname, "lib/runner-budget.cjs"));
 const {
   ACTIONABLE_REASONS,
   groupIntoCells,
@@ -71,6 +71,22 @@ const TOP = Math.max(1, Number(process.env.TOP || 10));
 const USER = String(process.env.USER_ID || "").trim();
 const OUT = String(process.env.OUT || "").trim();
 const JSON_MODE = MODE === "json";
+
+// ── WHERE THE SHARED HELPER'S OWN LINES GO ────────────────────────────────
+//
+// CF-A-DATA-CHANNEL-IS-NOT-A-LOG (#1846). `say` and `note` below keep every
+// line THIS FILE writes off stdout in json mode -- and run 34019169292 still
+// died on `jq: parse error: Invalid literal at line 739, column 11`, because
+// line 739 was `finishLane: exiting code 0`, written to fd 1 by
+// lib/runner-budget.cjs after main() had returned. The document closed clean
+// on 738; the helper appended a log line to it, and no lane can suppress that.
+//
+// So the mode is declared to the helper too -- once, here, and passed to both
+// `budget()` (its verify-cap lines) and both `finishLane()` tails (its exit
+// line). Every other lane's stdout IS its log, since the runner reads a lane
+// as `node <script>.cjs | tee /tmp/backfill.log`, so the DEFAULT does not move
+// and this is the one lane that opts out.
+const NARRATE_TO = JSON_MODE ? "stderr" : "stdout";
 
 // THE REFUSAL. This lane is read-only by construction; a dispatch that asked
 // for an apply is a misunderstanding worth failing on rather than absorbing.
@@ -102,7 +118,14 @@ if (/^(1|true|yes)$/i.test(String(process.env.BACKFILL_APPLY || ""))) {
 const RUN_MINUTES = Number(process.env.RUN_MINUTES || 45);
 const RESERVE_MS = Number(process.env.RESERVE_MS || 60 * 1000);
 const VERIFY_MS = Number(process.env.VERIFY_MS || 5 * 60 * 1000);
-const B = budget({ minutes: RUN_MINUTES, reserveMs: RESERVE_MS, verifyMs: VERIFY_MS });
+const B = budget({
+  minutes: RUN_MINUTES,
+  reserveMs: RESERVE_MS,
+  verifyMs: VERIFY_MS,
+  // Its verify-cap lines would land inside the JSON document otherwise, exactly
+  // as the exit line did. See NARRATE_TO above.
+  narrateTo: NARRATE_TO,
+});
 
 const f = (n) => Number(n ?? 0).toLocaleString("en-US");
 const say = (...a) => { if (!JSON_MODE) console.log(...a); };
@@ -167,12 +190,18 @@ async function main() {
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) { console.error("FATAL: COSMOS_CONNECTION_STRING not set"); process.exit(1); }
 
-  const db = new CosmosClient({
+  // Held in a named binding so `finishLane` can dispose it: the SDK's
+  // keep-alive sockets are what kept lanes alive past a clean reconciliation
+  // until the step hit the ceiling (#1809).
+  const client = new CosmosClient({
     connectionString: conn,
     connectionPolicy: {
       retryOptions: { maxRetryAttemptsOnThrottledRequests: 60, maxWaitTimeInSeconds: 300 },
     },
-  }).database(process.env.COSMOS_DATABASE || "hobbyiq");
+  });
+  // The CLIENT is what owns the sockets; `.database()` returns a handle that
+  // cannot be disposed, so the two are kept apart deliberately.
+  const db = client.database(process.env.COSMOS_DATABASE || "hobbyiq");
   const port = db.container("portfolio");
   const cat = db.container("card_catalog");
   const pool = db.container("sold_comps");
@@ -474,6 +503,31 @@ async function main() {
     + `needs-source=${f(plan.counts.needsSource)} unreadable=${f(plan.counts.unreadable)} `
     + `tonight=${f(actionable.length)}`);
   note("  (read-only: nothing was written, nothing was dispatched, nothing was repriced)");
+  // The budget marker, printed literally when the clock ran out mid-scan, so
+  // the runner's relaunch gate reads the same phrase here as on every other
+  // lane (CF-RELAUNCH-ONLY-ON-BUDGET).
+  if (B.outOfClock()) note(`  ${B.stoppedAtBudget()}`);
+  // The context finishLane disposes and reports from. The CLIENT is what owns
+  // the sockets — a `.database()` handle cannot be disposed — so the two are
+  // deliberately kept apart above.
+  return { client, budget: B };
 }
 
-main().catch((e) => { console.error("FATAL", e && e.message); process.exit(1); });
+// CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809). Success exits too: a lane
+// that lets the loop drain is betting every library released every handle.
+// This lane landed alongside #1828's rewrite of the other 63 tails and so
+// shipped with the old bare `main().catch(...)`.
+//
+// MERGE NOTE (#1832 vs #1842). Both branches conformed this tail and they
+// agreed on the shape; this keeps main's `ctx || {}` call style. The one
+// difference worth preserving is what `main()` HANDS BACK: main's conformance
+// chained `new CosmosClient({...}).database(...)` inline, so no client binding
+// existed and `finishLane` had nothing to dispose — it exited, but it never
+// closed a socket. This lane keeps the client and the database handle apart
+// and returns `{ client, budget }`, so the disposal and the verify-cap notice
+// are real rather than nominal.
+main()
+  .then((ctx) => finishLane(0, { ...(ctx || {}), narrateTo: NARRATE_TO }))
+  .catch(async (e) => { console.error("FATAL", e && e.message);
+    await finishLane(1, { budget: B, narrateTo: NARRATE_TO });
+  });

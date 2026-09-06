@@ -175,6 +175,45 @@ function unescapeCell(s) {
 const SET_URL_RE =
   /\/set-(\d+)\/(\d{4})(?:-(\d{2}))?-(.+?)-(football|basketball|hockey|baseball)-trading-card-checklist\/?$/;
 
+/**
+ * CF-THE-ADDSLASHES-LEAK-IS-IN-THE-URL-TOO (2026-09-06).
+ *
+ * This source's PHP addslashes pass leaks into the URL itself: it slugs
+ * Bowman's Best as `1994-bowman\s-best` and McDonald's as `mcdonald\s`, and
+ * 60 manifest entries carry that backslash in `sourceRef` today.
+ *
+ * The escape is invisible to the RUNG reader -- `bowman\s-best-atomic-refractors`
+ * still ends in `-atomic-refractors`, so `parallelFromSlug` returns "Atomic
+ * Refractor" and everything looks fine -- and fatal to the PARENT reader, whose
+ * brand list is matched against the slug HEAD:
+ *
+ *   splitParentAndSubset("bowman\s-best-atomic-refractors") -> parentSetKey ""
+ *
+ * No parent claim means `parallelOfParent: false`, and a rung page with no base
+ * cards and no parent to attach them to is refused by the driver's zero-base
+ * gate. Measured on run of 2026-09-06: `intended 2 = written 0 + failed 2` for
+ * set-13670 and set-13671. The same miss is why those rows carried
+ * `setKey: bowman` -- `bowman\s-best` never matched `bowmans-best` in
+ * PARENT_BRANDS, so the walk fell through to the bare brand.
+ *
+ * NOT A 404. Verified by fetch on 2026-09-06, the escaped, apostrophe-dropped
+ * and hyphenated forms ALL return HTTP 200, because the server keys on
+ * `set-<id>`. The host was always willing; our slug readers were not.
+ *
+ * Canonicalised HERE, in the parser, and not only in the discovery script, so
+ * the 60 entries already in the manifest heal on their next fetch without a
+ * re-crawl. The apostrophe is DROPPED, never turned into a separator:
+ * `bowmans-best` is the spelling the catalog rules and PARENT_BRANDS carries;
+ * `bowman-s-best` would match neither and leave the bug wearing a tidier slug.
+ */
+function unescapeAddslashes(s) {
+  return String(s ?? "").replace(/\\(.)/g, "$1");
+}
+
+function canonicalSlug(rest) {
+  return unescapeAddslashes(rest).replace(/'/g, "");
+}
+
 function parseSetUrl(url) {
   const m = SET_URL_RE.exec(String(url || "").split("?")[0].split("#")[0]);
   if (!m) return null;
@@ -185,9 +224,25 @@ function parseSetUrl(url) {
     year,                                   // the FIRST year, always
     year2,
     seasonLabel: year2 == null ? String(year) : `${year}-${m[3]}`,
-    rest: m[4],
+    // The slug the SITE canonically spells, so the rung reader and the brand
+    // walk see the same text the catalog does.
+    rest: canonicalSlug(m[4]),
+    // What the sitemap actually served, kept so an escaped source stays
+    // auditable rather than silently rewritten.
+    restRaw: m[4],
     sport: m[5],
   };
+}
+
+/** The set URL with its slug canonicalised; `set-<id>` untouched. Used for the
+ *  live GET so the request carries the spelling the site's own links use. */
+function canonicalSetUrl(url) {
+  const u = String(url ?? "");
+  const m = SET_URL_RE.exec(u.split("?")[0].split("#")[0]);
+  if (!m) return u;
+  const season = m[3] ? `${m[2]}-${m[3]}` : m[2];
+  const base = u.slice(0, u.indexOf(`/set-${m[1]}/`));
+  return `${base}/set-${m[1]}/${season}-${canonicalSlug(m[4])}-${m[5]}-trading-card-checklist`;
 }
 
 /**
@@ -209,9 +264,63 @@ function parseSetUrl(url) {
 // This site spells the compound rung BOTH ways -- `-gold-refractors` and
 // `-refractors-gold` -- and both name the same card, so both map to the one
 // label the pool already uses.
+/**
+ * CF-A-QUALIFIED-REFRACTOR-IS-NOT-A-REFRACTOR (2026-09-05, from Drew's two
+ * withheld 1997 Bowman's Best Preview Jeter holdings).
+ *
+ * The entries below the plates are ordered LONGEST TAIL FIRST for a reason the
+ * `-refractors-gold` note already states, and the list was missing the rung
+ * this hobby names most often. Measured on the shipped fetcher against the
+ * manifest's own 10,359 sportscardchecklist entries:
+ *
+ *   bowmans-best-atomic-refractors               -> parallel "Refractor"
+ *   bowman-bowmans-best-preview-atomic-refractor -> parallel "Refractor"
+ *   bowmans-best-mirror-image-atomic-refractors  -> parallel "Refractor"
+ *   bowmans-best-jumbo-refractors                -> parallel "Refractor"
+ *   bowman-chrome-golden-anniversary-refractors  -> parallel "Refractor"
+ *
+ * 24 rung pages in all, 21 of them Atomic. Every one fell through to the bare
+ * `-refractors?$` entry, which threw the SPECIFIC half of the name away and
+ * landed the card on its family rung -- and, worse, moved the discarded word
+ * into `subset` ("Atomic"), so the page reads as a subset of the base product
+ * rather than a rung of it.
+ *
+ * THAT IS A SPLIT POOL, AND THE REPO HAS ALREADY RULED ON IT. rematch-classify's
+ * V3 genericization rule names this exact pair in its own header -- "Atomic
+ * Refractor -> Refractor ... Pooling an Atomic Refractor with a plain Refractor
+ * is one card, two rows, a split pool, a wrong FMV" -- and refuses it as a LOSS
+ * on 285k stored rows. parallelLadders.ts declares "Atomic Refractor" a rung of
+ * its own at /100. The vocabulary was settled everywhere except the one reader
+ * that mints the rows, so this file was the last place still disagreeing.
+ *
+ * These are the qualifiers the SOURCE actually spells on this lane, and nothing
+ * more: a vocabulary sweep would guess, and a guessed rung is worse than none
+ * (feedback_no_synthetic_parallels_only_actuals). `atomic` is 21 of the 24;
+ * `jumbo`, `golden-anniversary` and `inverted` are the remaining three, each
+ * measured on a real manifest slug and each a rung the catalog already spells.
+ *
+ * The BARE entry stays exactly where it is, immediately below. A slug that
+ * names no qualifier is still a plain Refractor, and this narrows nothing for
+ * it -- which is what the mutation pin proves by deleting these lines and
+ * watching the Atomic Refractor rows collapse back onto "Refractor".
+ */
+const QUALIFIED_REFRACTOR = [
+  ["atomic", "Atomic Refractor"],
+  ["jumbo", "Jumbo Refractor"],
+  ["golden-anniversary", "Golden Anniversary Refractor"],
+  ["inverted", "Inverted Refractor"],
+];
+
 const SLUG_PARALLEL_TAIL = [
   [/-printing-plates-(black|cyan|magenta|yellow)$/, (m) => `Printing Plate ${m[1][0].toUpperCase()}${m[1].slice(1)}`],
   [/-(?:framed-)?press-plates-(black|cyan|magenta|yellow)$/, (m) => `Printing Plate ${m[1][0].toUpperCase()}${m[1].slice(1)}`],
+  // The QUALIFIED rungs, ahead of every bare one. A compound tail has to be
+  // offered before either of its halves or the first match wins with the wrong,
+  // shorter name -- the same ordering rule the `-refractors-gold` note above
+  // was written for, applied to the qualifier that sits on the other side.
+  ...QUALIFIED_REFRACTOR.map(([slug, label]) => [
+    new RegExp(`-${slug}-refractors?$`), label,
+  ]),
   [/-gold-refractors?$/, "Gold Refractor"],
   [/-refractors?-gold$/, "Gold Refractor"],
   [/-black-refractors?$/, "Black Refractor"],
@@ -375,6 +484,87 @@ const RULED_PRODUCT_SLUGS = [
   /^upper-deck-minor-league(?:-|$)/,
 ];
 
+/**
+ * CF-A-PREVIEW-INSERT-KEEPS-THE-PREVIEWED-PRODUCTS-KEY (2026-09-05).
+ *
+ * The brand-prefix split reads a slug LEFT TO RIGHT and stops at the first
+ * brand it recognises, which is right for `topps-chrome-cards-that-never-were`
+ * and wrong for the shape this site uses to publish a preview insert:
+ *
+ *   bowman-bowmans-best-preview-atomic-refractor
+ *     -> parentSetKey `bowman`, subset "Bowmans Best Preview Atomic"
+ *
+ * The cards were PACKED OUT in 1997 Bowman, so the leading brand is a true
+ * statement about where they came from -- and it is not the product they are
+ * priced as. THE POOL IS UNAMBIGUOUS. Every "Bowman's Best Preview" sale in
+ * sold_comps carries a `BBP<n>` card number, which no flagship Bowman card has,
+ * and the resolver already lands them on `bowmans-best` (measured 2026-09-05,
+ * COUNT by hobbyiqCardId over the 1996/1997 Preview sales):
+ *
+ *   hiq:baseball:1997:bowmans-best:bbp2:atomic-refractor:no-auto    17
+ *   hiq:baseball:1997:bowmans-best:bbp16:atomic-refractor:no-auto    8
+ *   hiq:baseball:1996:bowmans-best:bbp8:atomic-refractor:no-auto    11
+ *
+ * ...against a smaller stray population the flagship split already produced:
+ *
+ *   hiq:baseball:1997:bowman:bbp4:atomic-refractor:no-auto          12
+ *   hiq:baseball:1996:bowman:bbp30:atomic-refractor:no-auto         17
+ *
+ * That IS the split pool, live, in both directions: one card, two rows, and the
+ * checklist is what settles which is canonical. Minting the checklist at
+ * `bowman` would not merely leave the split -- it would put a CHECKLIST-BACKED
+ * row on the wrong side of it and make the wrong key the authority.
+ *
+ * So a slug carrying a nested product name keeps THAT product's key, and the
+ * previewed product's own name is the subset. This is the same claim
+ * PRODUCT_TAIL_RE makes for a coated reprint, on a product whose name happens
+ * to sit in the middle of the slug rather than at its end.
+ *
+ * NARROW BY CONSTRUCTION. Only a nested name the catalog ALREADY RULES may win,
+ * and the pin asserts each against productSetKeys.ts, so this invents no
+ * vocabulary and cannot creep: a slug naming no nested product falls straight
+ * through to the brand-prefix split, unchanged.
+ */
+/**
+ * SCOPED TO THE HOST BRAND, because the same insert name means a DIFFERENT
+ * product behind a different one. Measured on the same 2026-09-05 pool read,
+ * the Stadium Club edition of this very insert resolves the other way:
+ *
+ *   1997-98 Stadium Club ... Bowman's Best Preview Refractor #BBP10
+ *     -> hiq:basketball:1997:topps-stadium-club:bbp10:refractor:no-auto
+ *
+ * Those are basketball and football cards packed out in Topps Stadium Club, and
+ * `topps-stadium-club` is the key their pool already carries. A rule keyed on
+ * the insert name alone would drag them onto `bowmans-best` -- inventing a
+ * baseball product's key for a basketball card and creating exactly the split
+ * this fix exists to close, one product over.
+ *
+ * So the LEADING brand is part of the match: only `bowman-bowmans-best-...`
+ * reparents. `topps-stadium-club-bowmans-best-...` falls through to the
+ * brand-prefix split and keeps `topps-stadium-club`, which is correct, and the
+ * pin below asserts both directions.
+ */
+const NESTED_PRODUCT_SLUGS = [
+  [/^bowman-(bowmans-best)(?:-|$)/, "bowmans-best"],
+];
+
+/** The ruled product named INSIDE this slug, and what remains as the subset. */
+function nestedProduct(rest) {
+  const r = String(rest || "");
+  for (const [re, key] of NESTED_PRODUCT_SLUGS) {
+    const m = re.exec(r);
+    if (!m) continue;
+    // Everything after the nested product name is the subset ("Preview"); the
+    // brand before it is where the cards were packed out, which the manifest
+    // already records in sourceUrl and which is not the pricing identity.
+    const tail = r.slice(m.index + m[0].length).replace(/^-+|-+$/g, "");
+    const words = tail.split("-").filter(Boolean)
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1));
+    return { parentSetKey: key, subset: words.join(" ") };
+  }
+  return null;
+}
+
 
 /** The rung tail this slug matched, or null. Returned separately from the LABEL
  *  so the parent split can strip exactly what was recognised. */
@@ -409,6 +599,11 @@ function splitParentAndSubset(rest, tailRe) {
   // below would make it a subset of the flagship and merge two pools that share
   // no numbering.
   if (RULED_PRODUCT_SLUGS.some((re) => re.test(r))) return { parentSetKey: "", subset: "" };
+  // A RULED PRODUCT NAMED INSIDE THE SLUG WINS OVER THE BRAND IT SITS BEHIND.
+  // Checked before the left-to-right brand walk, which would otherwise stop at
+  // the packed-out brand and mint the preview onto the flagship's pool.
+  const nested = nestedProduct(r);
+  if (nested) return nested;
   for (const b of PARENT_BRANDS) {
     if (r === b) return { parentSetKey: BRAND_CANONICAL[b] || b, subset: "" };
     if (r.startsWith(b + "-")) {
@@ -687,7 +882,11 @@ async function main() {
     process.exit(2);
   }
 
-  const html = htmlFile ? fs.readFileSync(htmlFile, "utf8") : await get(url);
+  // FETCH THE CANONICAL SPELLING. The manifest may still carry the source's
+  // addslashes escape in this URL; the server tolerates it, but requesting the
+  // canonical form keeps the request, the parse and the manifest in agreement.
+  const fetchUrl = url ? canonicalSetUrl(url) : "";
+  const html = htmlFile ? fs.readFileSync(htmlFile, "utf8") : await get(fetchUrl);
 
   // Sport is an INPUT: the slug states it, and --sport overrides for a driver
   // entry that already knows. Never guessed from the set name.
@@ -825,4 +1024,6 @@ module.exports = {
   zeroCardReason, parseSetUrl, parallelFromSlug, parallelTailOf, splitParentAndSubset, splitCardHeader, buildRows, toCsv,
   extractCardHeaders, countHiddenRows, autoEvidence, unescapeCell,
   SUBSET_TAGS, NOISE_TAGS, HEADER, SET_URL_RE,
+  unescapeAddslashes, canonicalSlug, canonicalSetUrl,
+  QUALIFIED_REFRACTOR, NESTED_PRODUCT_SLUGS, nestedProduct, SLUG_PARALLEL_TAIL, PARENT_BRANDS,
 };
