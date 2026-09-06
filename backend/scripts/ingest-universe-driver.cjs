@@ -1870,7 +1870,7 @@ function acquireEntry(entry, dir) {
  * stamp on a lane that IS listed is treated as version 0 -- written before the
  * stamp existed, therefore older than anything current.
  */
-const LANE_CONVERTER_VERSION = { sportscardchecklist: 3 };
+const LANE_CONVERTER_VERSION = { sportscardchecklist: 4 };
 
 /** The converter version a staged manifest claims, or 0 when it claims none. */
 function stagedConverterVersion(manifestPath) {

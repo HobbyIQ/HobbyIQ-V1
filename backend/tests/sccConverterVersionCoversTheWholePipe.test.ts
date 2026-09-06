@@ -111,10 +111,10 @@ const WATCHED: Array<{ file: string; label: string; fn: string; hash: string }> 
   { file: FETCHER, label: "fetcher", fn: "parallelFromSlug", hash: "" },
 ];
 
-/** The recorded behaviour hash for each watched function, at CONVERTER_VERSION 3. */
+/** The recorded behaviour hash for each watched function, at CONVERTER_VERSION 4. */
 const RECORDED: Record<string, string> = {
   "subset-identity:claimedSubsetOf": "def8b0f7187288a3",
-  "subset-identity:isBaseSectionLabel": "5f89a5eff2a078ec",
+  "subset-identity:isBaseSectionLabel": "e1d58052f029a93e",
   "subset-identity:foldSubsetText": "4c33bdf4b3715ea5",
   "subset-identity:rungKey": "9526fcf87cecbb79",
   "fetcher:zeroCardReason": "8ed6926f87249ce6",
@@ -141,9 +141,9 @@ function currentHashes(): Record<string, string> {
 
 // ── the bump itself ──────────────────────────────────────────────────────────
 
-describe("the SCC converter is at v3, because the writer changed", () => {
-  it("the fetcher stamps v3", () => {
-    expect(CONVERTER_VERSION).toBe(3);
+describe("the SCC converter is at v4, because the writer changed again", () => {
+  it("the fetcher stamps v4", () => {
+    expect(CONVERTER_VERSION).toBe(4);
   });
 
   it("the driver's lane table agrees -- a disagreement re-opens nothing", () => {
@@ -157,6 +157,14 @@ describe("the SCC converter is at v3, because the writer changed", () => {
     const src = fs.readFileSync(FETCHER, "utf8");
     expect(src).toContain("#1878");
     expect(src).toContain("Base Set");
+  });
+
+  it("v4 names #1894 and the heading it folded", () => {
+    // The same fold as v3, one heading over: eight SP Authentic insert pages
+    // refused entirely against bcp rows tagged with the section word.
+    const src = fs.readFileSync(FETCHER, "utf8");
+    expect(src).toContain("#1894");
+    expect(src).toContain('"Inserts" is a page heading');
   });
 
   it("the version history is append-only -- v1 and v2 keep their entries", () => {
@@ -188,7 +196,7 @@ describe("a change to the deciding code cannot land without answering the versio
     expect(Object.keys(now).sort()).toEqual(Object.keys(RECORDED).sort());
   });
 
-  it("no watched function has moved since v3 was recorded", () => {
+  it("no watched function has moved since v4 was recorded", () => {
     const now = currentHashes();
     const moved = Object.keys(RECORDED)
       .filter((k) => now[k] !== RECORDED[k])
@@ -302,8 +310,11 @@ describe("a converter bump re-opens the verdicts recorded under the old one", ()
     // ...and for SCC: unstamped and older re-open, current does not.
     expect(staleByConverterProbe("sportscardchecklist", { status: "partial" })).toBe(true);
     expect(staleByConverterProbe("sportscardchecklist", { status: "partial", converterVersion: 2 })).toBe(true);
-    expect(staleByConverterProbe("sportscardchecklist", { status: "partial", converterVersion: 3 })).toBe(false);
+    // THE v4 BUMP'S WHOLE POINT: a verdict reached under v3 -- which is every
+    // one of the eight SP Authentic refusals -- is now stale and re-opens.
+    expect(staleByConverterProbe("sportscardchecklist", { status: "partial", converterVersion: 3 })).toBe(true);
     expect(staleByConverterProbe("sportscardchecklist", { status: "partial", converterVersion: 4 })).toBe(false);
+    expect(staleByConverterProbe("sportscardchecklist", { status: "partial", converterVersion: 5 })).toBe(false);
   });
 
   it("the run says how many it re-opened, so the effect is visible", () => {
