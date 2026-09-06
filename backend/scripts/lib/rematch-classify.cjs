@@ -3766,6 +3766,54 @@ function diffAxes(stored, derived, opts = {}) {
   // number (tg01, gg69) never folds, and no other vertical writes POS/TOTAL.
   // Falling back to either identity's own `sport` keeps the pure function
   // callable from a pin without a separate option.
+  // CF-AN-ABSENT-YEAR-IS-NOT-A-RIVAL-YEAR (2026-09-06, I9 run 34029662735).
+  //
+  // I9 reported ~340 rows on `changed:cardYear` and they read like a corpus
+  // defect. They are not. On the tca-ebay/cardsight population the `year`
+  // FIELD is simply ABSENT -- the row never carried one -- while `cardYear`
+  // already equals the year segment of the slug the row is filed under. The
+  // deriver mirrors a year onto that row, and comparing a mirrored value
+  // against a field the row never had reports "changed" for a row where
+  // nothing disagrees about WHICH CARD this is.
+  //
+  // So when the row states no `year` of its own and its stored cardYear is the
+  // one its own ADDRESS already carries, a derivation that lands on that same
+  // year is agreement -- `same`, which classifies AGREE. And when the row
+  // carries no year anywhere and the derivation states one, the derivation
+  // FILLS the axis, which is the ordinary IMPROVE path.
+  //
+  // WHAT THIS DELIBERATELY DOES NOT DO. It never folds a derived year that
+  // DISAGREES with the stored one. A 1955 Koufax filed on a `:2023:` slug
+  // (60 of 90 rows measured in that pool) still reports `changed:cardYear`,
+  // because there the two sides genuinely name different cards and that is
+  // exactly what I9 exists to surface. The rule is gated on EQUALITY, never on
+  // the absence alone -- absence is what makes the stored side not-an-answer,
+  // equality is what makes the derivation agreement rather than a rival.
+  //
+  // `yearFieldAbsent` is a fact about the ROW supplied by the caller (the raw
+  // document's own `year`), never a verdict about the derivation, and it is
+  // applied to the STORED side only.
+  const storedYearSegment = str(opts.storedSlug ?? "").startsWith("hiq:")
+    ? str(opts.storedSlug).split(":")[2] ?? ""
+    : "";
+  const yearFieldAbsent = opts.yearFieldAbsent === true;
+  const storedYearValue = axisValue(stored, "cardYear");
+  const derivedYearValue = axisValue(derived, "cardYear");
+  // The row's address agrees with its cardYear -- so cardYear is the slug's
+  // answer echoed into the field, not an independent reading that could rival
+  // the derivation. An absent slug segment never satisfies this.
+  const storedYearIsSlugEcho = storedYearValue !== ""
+    && storedYearSegment !== ""
+    && storedYearValue === String(Number(storedYearSegment));
+  const yearAgreesWithAddress = yearFieldAbsent
+    && storedYearIsSlugEcho
+    && derivedYearValue !== ""
+    && derivedYearValue === storedYearValue;
+  // Nothing anywhere states a year and the derivation reads one: a fill.
+  const yearIsBlankFill = yearFieldAbsent
+    && storedYearValue === ""
+    && derivedYearValue !== "";
+
   const sportForNumber = str(opts.sport ?? derived?.sport ?? stored?.sport);
   const pokemonNumberFold = pokemonNumberIsPositionOverTotal(stored, derived, sportForNumber)
     || (pokemonNumberDiffersOnlyByPadding(stored, derived, sportForNumber)
@@ -3778,6 +3826,10 @@ function diffAxes(stored, derived, opts = {}) {
       || axisIsBlank(axis, a);
     const bBlank = axisIsBlank(axis, b);
     if (a === b) { same.push(axis); continue; }
+    // CF-AN-ABSENT-YEAR-IS-NOT-A-RIVAL-YEAR. Both tests are equality-gated, so
+    // a derived year that genuinely differs still falls through to `changed`.
+    if (axis === "cardYear" && yearAgreesWithAddress) { same.push(axis); continue; }
+    if (axis === "cardYear" && yearIsBlankFill) { filled.push(axis); continue; }
     if (axis === "cardNumber" && pokemonNumberFold) { filled.push(axis); continue; }
     if (aBlank && !bBlank) { filled.push(axis); continue; }
     if (!aBlank && bBlank) { dropped.push(axis); continue; }
@@ -3991,6 +4043,12 @@ function classifyRow({
     // that its `player-<name>` segment was built out of the product name. A
     // fact about the row, like titleStatesNumber beside it.
     title: str(row?.title),
+    // CF-AN-ABSENT-YEAR-IS-NOT-A-RIVAL-YEAR: whether the raw document carries
+    // a `year` FIELD at all. A fact about the row, read from the document and
+    // never from the derivation, and the slug supplies the address it is
+    // checked against.
+    yearFieldAbsent: row?.year === undefined || row?.year === null || row?.year === "",
+    storedSlug,
   });
   const reasons = [];
 
