@@ -693,6 +693,164 @@ describe("C'. a publish clears the withheld stamp it inherited", () => {
       expect(carriesWithhold(h) && claimsAPrice(h), JSON.stringify(h.pricingSourceMeta)).toBe(false);
     }
   });
+
+  /**
+   * -- C''. THE MIRROR: A REFUSAL'S SECOND WRITE IS NOT A PUBLISH ----------
+   * (2026-09-06, from the 07:21Z corpus audit -- I1, ten rows, five users.)
+   *
+   * C' pinned one direction of the biconditional -- a published stamp must not
+   * inherit a stale withheld block -- and the clear it installed then created
+   * the OTHER direction, which nothing pinned: `method: "withheld"` standing
+   * with no block to explain it.
+   *
+   * The mechanism is two writes on one row. `noBasisRefusalWrite` stamps the
+   * withheld meta; portfolioStore's confidence-gated retention lane (~11404,
+   * added by #1833) then calls the writer a SECOND time on that same row with
+   * `writeMeta: false`, to carry the identity patch and the verdict without
+   * disturbing the stamp. `method` lives in the carried meta and survived;
+   * `withheld` was a top-level key of that meta and the clear dropped it. The
+   * row went to prod saying "withheld" with nothing saying why.
+   *
+   * WHY IT MATTERS rather than being cosmetic: `pricingEnvelope.builder`
+   * derives the client's `withheldReason` from `pricingSourceMeta.withheld`
+   * and from nothing else. Ten holdings therefore reached users as a null
+   * price with no reason -- #1815's exact failure -- while the reason itself
+   * sat one field away in `fmvRungAbsentReason` as English prose no client
+   * parses.
+   */
+  describe("C''. a refusal continuation write keeps the block it just wrote", () => {
+    /** 8b38c810 / c8dfad0d as prod held it at 2026-09-06T04:22:37Z, and as
+     *  `noBasisRefusalWrite` leaves it one line before the second write. */
+    const REFUSED_ROW = {
+      id: "c8dfad0d",
+      cardId: "hiq:baseball:2026:bowman-chrome:bcp-16:base:no-auto",
+      fairMarketValue: null,
+      fmvRung: null,
+      valueSource: "estimated",
+      purchasePrice: 95.09,
+      totalCostBasis: 95.09,
+      quantity: 1,
+      pricingSourceMeta: {
+        slug: "hiq:baseball:2026:bowman-chrome:bcp-16:base:no-auto",
+        method: "withheld",
+        compsUsed: 6,
+        confidence: 0.5981040045018438,
+        labels: [],
+        withheld: {
+          reason: "identity-not-in-catalog",
+          blockingId: "hiq:baseball:2026:bowman-chrome:bcp-16:base:no-auto",
+          blockingCount: 6,
+          proposed: null,
+          retained: null,
+          retentionRefused: "prior-fails-floor",
+          retainedRung: null,
+        },
+      },
+    } as unknown as PortfolioHolding;
+
+    it("the reprice lane second write leaves the block standing", () => {
+      // The literal shape of portfolioStore ~11404: `writeMeta: false`, the
+      // lane's own prose in `noRung`, the verdict in `fields`.
+      //
+      // MUTATION CHECK: drop `&& !carriedIsWithheldStamp` from
+      // `clearsStaleWithhold` in writeHoldingValuation and this goes red with
+      // `withheld` undefined -- which is byte-for-byte the row the 09-06 audit
+      // read out of prod.
+      const continued = writeHoldingValuation(REFUSED_ROW, {
+        fairMarketValue: null,
+        rung: { noRung: "value retained unchanged by the confidence-gated reprice (...)" },
+        valueSource: "estimated",
+        nowIso: NOW,
+        writeMeta: false,
+        fields: { verdict: "Insufficient comps", recommendation: "Hold" },
+      });
+      const meta = continued.pricingSourceMeta as Record<string, unknown>;
+      expect(meta.method).toBe("withheld");
+      const block = meta.withheld as Record<string, unknown> | undefined;
+      expect(block).toBeDefined();
+      expect(block?.reason).toBe("identity-not-in-catalog");
+      // The retention decision survives too -- it is the half a reader needs
+      // to tell "kept and labelled" from "fell to cost basis".
+      expect(block?.retentionRefused).toBe("prior-fails-floor");
+      // And the price is still refused. Keeping the block is not keeping a
+      // number.
+      expect(continued.fairMarketValue).toBeNull();
+    });
+
+    it("I1 holds both ways on the row: method withheld iff a block explains it", () => {
+      // The auditor's own biconditional, run against the writer's output. This
+      // is the assertion `checkOneStampPerHolding` makes in
+      // corpus-invariants.cjs, restated on the shape the writer produces so
+      // the two cannot drift.
+      const continued = writeHoldingValuation(REFUSED_ROW, {
+        fairMarketValue: null,
+        rung: { noRung: "retained" },
+        valueSource: "estimated",
+        nowIso: NOW,
+        writeMeta: false,
+      });
+      const meta = continued.pricingSourceMeta as Record<string, unknown>;
+      const methodIsWithheld = meta.method === "withheld";
+      const hasBlock = !!meta.withheld && typeof meta.withheld === "object";
+      expect(methodIsWithheld).toBe(hasBlock);
+    });
+
+    it("the Griffey publish is UNCHANGED -- its stale block still clears", () => {
+      // The regression guard on the fix. C' exists because a genuine publish
+      // inherited a refusal; the new condition must not weaken it. Griffey's
+      // carried method is "exact-pool-last-sale" -- a published stamp -- so
+      // the block beside it is exactly the leftover C' drops.
+      const published = writeHoldingValuation(GRIFFEY_LIVE, {
+        fairMarketValue: 1850,
+        rung: { noRung: "legacy confidence-gated reprice; the legacy engine names no rung" },
+        valueSource: "estimated",
+        nowIso: NOW,
+        writeMeta: false,
+      });
+      const meta = published.pricingSourceMeta as Record<string, unknown>;
+      expect(meta.withheld).toBeUndefined();
+      expect(meta.method).toBe("exact-pool-last-sale");
+      expect(published.fairMarketValue).toBe(1850);
+    });
+
+    it("an unlabelled-carry row still clears -- only a WITHHELD stamp is protected", () => {
+      // `unlabelled-carry` names a number this write did not derive; it is not
+      // a refusal, so a block riding beside it is still residue.
+      const carry = {
+        ...GRIFFEY_LIVE,
+        pricingSourceMeta: {
+          slug: "s", method: "unlabelled-carry", compsUsed: 3, confidence: null,
+          withheld: { reason: "identity-not-in-catalog", blockingId: "s", blockingCount: 3, proposed: null },
+        },
+      } as unknown as PortfolioHolding;
+      const published = writeHoldingValuation(carry, {
+        fairMarketValue: 42,
+        rung: { noRung: "legacy" },
+        valueSource: "estimated",
+        nowIso: NOW,
+        writeMeta: false,
+      });
+      expect((published.pricingSourceMeta as Record<string, unknown>).withheld).toBeUndefined();
+    });
+
+    it("a DECLARED withhold still replaces a carried one -- the newer reason wins", () => {
+      // A second refusal for a different reason must not be shadowed by the
+      // first. The declared block is built fresh, so it overwrites.
+      const again = writeHoldingValuation(REFUSED_ROW, {
+        fairMarketValue: null,
+        rung: { noRung: "refused again" },
+        valueSource: "estimated",
+        nowIso: NOW,
+        meta: {
+          slug: "s", compsUsed: 6, confidence: null,
+          withheld: { reason: "pool-migrating", blockingId: "s", blockingCount: 6, proposed: null },
+        },
+      });
+      const meta = again.pricingSourceMeta as Record<string, unknown>;
+      expect((meta.withheld as Record<string, unknown>).reason).toBe("pool-migrating");
+      expect(meta.method).toBe("withheld");
+    });
+  });
 });
 
 /**
