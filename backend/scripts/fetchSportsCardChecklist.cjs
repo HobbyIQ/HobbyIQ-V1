@@ -769,11 +769,38 @@ function splitCardHeader(raw) {
  * converter emits or the verdict it reaches -- the stamp is a claim about
  * output, not a build number.
  *
+ * WHAT COUNTS AS "THIS CONVERTER". The staged CSV is produced by THIS file, but
+ * what a re-ingest of that CSV actually LANDS is decided downstream by
+ * ingest-checklist-csv-to-catalog.cjs and the clash/merge rules it reads from
+ * lib/subset-identity.cjs. A change to either of those changes the ROWS a stale
+ * verdict was recorded against just as surely as a change to the parser does,
+ * so THE VERSION COVERS THE WHOLE PIPE, not this file alone.
+ *
+ * That is not a theoretical scope note. v2 was stamped for two defects in this
+ * file, and the very next writer fix (#1878) left every stale verdict closed
+ * because nothing here had changed -- a pending-only walk for 1957 baseball
+ * reported "nothing intended" against entries the fix was written to re-open.
+ * The stamp existed precisely to prevent that and did not, because its scope
+ * was drawn around one file instead of one OUTPUT.
+ *
+ * BUMP THIS WHENEVER any of these change what a re-ingest produces:
+ *   - this file's parsing, slug canonicalisation, or zero-row verdicts
+ *   - ingest-checklist-csv-to-catalog.cjs's clash / merge / write rules
+ *   - lib/subset-identity.cjs's claim and rung-key rules
+ * The pin in tests/sccConverterVersionCoversTheWholePipe.test.ts hashes the
+ * functions that decide those things and fails when they move without a bump,
+ * so this comment cannot quietly become untrue.
+ *
  * 1  original vintage lane
  * 2  2026-09-06: the addslashes URL leak (#1848) and the "Checklist Not Found"
- *    page no longer reported as an empty set.
+ *    page no longer reported as an empty set (#1875).
+ * 3  2026-09-06: "Base Set" is a page heading, not a subset (#1878) -- the
+ *    writer's clash test now compares CLAIMS, so 407 checklist rows per product
+ *    that were refused against themselves now land. Stale `partial` verdicts
+ *    recorded under the old rule have to be re-attempted, which is what this
+ *    bump is for.
  */
-const CONVERTER_VERSION = 2;
+const CONVERTER_VERSION = 3;
 
 const NOT_FOUND_RE = /Checklist Not Found|NOT FOUND\s*-\s*https?:\/\//i;
 
