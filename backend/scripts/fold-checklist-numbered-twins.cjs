@@ -107,6 +107,11 @@ const {
 } = require(path.join(backend, "dist", "services", "catalog", "foldTwinRuleChecklistNumbered.js"));
 const { reportWrites } = require(path.join(backend, "dist", "services", "ops", "writeReconciliation.js"));
 const { relocateSoldComp, stripSystem, contentHashOf } = require(path.join(backend, "scripts", "lib", "relocate-sold-comp.cjs"));
+// CF-A-FOLD-NEVER-CHANGES-THE-PLAYER, the EVIDENCE half: the two arms the
+// survivor rule reads, gathered once for every lane that folds twins.
+const {
+  gatherPlayerEvidence, gatherRivalRows, describePlayerEvidence, playerKeyOf,
+} = require(path.join(backend, "scripts", "lib", "player-evidence.cjs"));
 
 const APPLY = process.env.BACKFILL_APPLY === "true" || process.env.APPLY === "true";
 // CF-AN-INHERITED-SLOTS-IS-NOT-A-CHOSEN-SHARD (#1756, generalised 2026-09-04).
@@ -227,6 +232,8 @@ async function main() {
     // refused and NOTHING was written -- not the catalog row, not one sale.
     // A SKIP, never a write.
     refusedDifferentPlayer: 0,
+    // Twins naming DIFFERENT people -- the only pairs evidence is gathered for.
+    contendedPairs: 0,
   };
   const byFamily = new Map();  // family -> { groups, twins, unnumbered, differentN, ghost }
   const byKind = { "unnumbered-twin": 0, "respelled-same-print-run": 0, "no-auto-ghost": 0 };
@@ -234,6 +241,8 @@ async function main() {
   /** Every refused pair, in full -- a pair truncated out of the log is a pair
    *  nobody can settle, and settling them is the whole point of refusing. */
   const refusals = [];
+  /** Every contended pair with what the arms saw and which decided. */
+  const contendedLines = [];
   const r2Contradictions = [];
   let stopReason = null;
 
@@ -316,10 +325,37 @@ async function main() {
         // So the refusal is discovered on a DRY RUN first, which reads the
         // incumbent and runs the whole arbitration without writing. One extra
         // point read per twin, and only on the folds that actually happen.
+        // THE EVIDENCE HALF. #1838 shipped the `playerEvidence` seam wired
+        // nowhere, so a different-player twin could only ever refuse. The two
+        // arms are gathered here -- for the CONTENDED pairs only, since that is
+        // the only case the seam is consulted for -- and handed to BOTH the
+        // probe and the real move, so the dry run's verdict is the one the
+        // write then makes. Passing it to only one would be a probe that
+        // answers a different question than the move.
+        //
+        // `target` is already in hand, so detecting contention costs no read.
+        const contended = !!String(twin.playerName ?? "").trim()
+          && !!String(target.playerName ?? "").trim()
+          && playerKeyOf(twin.playerName) !== playerKeyOf(target.playerName);
+        let evidence = null;
+        if (contended) {
+          const rivals = await gatherRivalRows(cat, target.id, { retry });
+          evidence = await gatherPlayerEvidence(pool, twin, target, {
+            incomingSlug: twin.id, incumbentSlug: target.id, rivals, retry,
+          });
+        }
+
         const probe = await moveCatalogRow(
           cat, twin, target.id, { printRun: printRunOf(target) },
-          { reason: d.reason, dryRun: true, retry },
+          { reason: d.reason, dryRun: true, retry, ...(evidence ? { playerEvidence: evidence } : {}) },
         );
+        if (contended) {
+          stats.contendedPairs++;
+          contendedLines.push(
+            `  ${String(probe?.action).toUpperCase().padEnd(8)} ${twin.id} -> ${target.id}: ` +
+            describePlayerEvidence(twin, target, evidence, probe),
+          );
+        }
         if (probe?.action === "refused") {
           stats.refusedDifferentPlayer++;
           refusals.push(`  REFUSED ${twin.id} -> ${target.id}: "${probe.refusal?.incomingPlayer}" vs "${probe.refusal?.incumbentPlayer}" -- neither corroborated; NOTHING written`);
@@ -332,7 +368,12 @@ async function main() {
 
         const res = await moveCatalogRow(
           cat, twin, target.id, { printRun: printRunOf(target) },
-          { reason: d.reason, dryRun: !APPLY, salesContainer: pool, retry },
+          {
+            reason: d.reason, dryRun: !APPLY, salesContainer: pool, retry,
+            // The SAME evidence the probe saw: a move that re-asked the
+            // question with less evidence could refuse after the sales moved.
+            ...(evidence ? { playerEvidence: evidence } : {}),
+          },
         );
         // The target is checklist and the twin is not, so the checklist row's
         // fields MUST survive. Assert rather than assume.
@@ -371,6 +412,7 @@ async function main() {
   console.log(`    no-auto ghost            ${f(stats.noAutoGhost)}   <- CPA is auto by definition`);
   console.log(`  left alone: twin is checklist ${f(stats.twinIsChecklist)}  |  is the target ${f(stats.twinIsTarget)}  |  different identity ${f(stats.differentIdentity)}`);
   console.log(`  RIVAL /N (reported, NOT folded) ${f(stats.rivalPrintRun)}   <- a real second print run is a second card; a human rules on these`);
+  console.log(`  CONTENDED: different player ${f(stats.contendedPairs)}   <- evidence gathered for these only; the rest fold on the ordinary ladder`);
   console.log(`  REFUSED: different player  ${f(stats.refusedDifferentPlayer)}   <- twin and target name different people and neither is corroborated; NOTHING written`);
   console.log(`  sales re-pointed (patch)   ${f(stats.salesRepointed)}`);
   console.log(`  sales relocated (re-key)   ${f(stats.salesRelocated)}   <- partition key was the twin slug; upsert-verify-delete`);
@@ -403,6 +445,11 @@ async function main() {
     console.log(`
   RIVAL /N SAMPLES (reported only -- these are NOT folded; two real print runs are two cards):`);
     for (const r of rivalSamples) console.log(r);
+  }
+
+  if (contendedLines.length) {
+    console.log(`\n  DIFFERENT PLAYER at one address -- the evidence, per pair (${f(contendedLines.length)}):`);
+    for (const l of contendedLines) console.log(l);
   }
 
   if (refusals.length) {

@@ -371,6 +371,12 @@ async function main() {
   const { computeHobbyIqCardId } = require(path.join(backend, "dist/services/portfolioiq/hobbyIqCardId.service.js"));
   const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
   const { relocateSoldComp, stripSystem, contentHashOf } = require(path.join(__dirname, "lib", "relocate-sold-comp.cjs"));
+  // CF-A-FOLD-NEVER-CHANGES-THE-PLAYER, the EVIDENCE half. #1838 shipped the
+  // `playerEvidence` seam wired nowhere, so every different-player twin refused.
+  // These gather the two arms; the rule still decides.
+  const {
+    gatherPlayerEvidence, gatherRivalRows, describePlayerEvidence,
+  } = require(path.join(__dirname, "lib", "player-evidence.cjs"));
 
   const db = new CosmosClient({
     connectionString: conn,
@@ -429,6 +435,10 @@ async function main() {
       // that evidence DID settle; it is already counted in moved/folded/replaced
       // and is reported only so a reader can see how many folds changed a name.
       refusedDifferentPlayer: 0, playerArbitrated: 0,
+      // Twins whose two rows NAME DIFFERENT PEOPLE -- the only pairs for which
+      // evidence is gathered at all. The sum of what evidence settled and what
+      // it could not: contendedPairs == playerArbitrated + refusedDifferentPlayer.
+      contendedPairs: 0,
       // CF-A-SOURCE-THAT-CONTRADICTS-ITSELF-MINTS-NO-IDENTITIES. Rows that
       // WOULD have been a MOVE and were labelled in place instead, and the
       // graded children that followed them. Counted separately from the
@@ -440,6 +450,10 @@ async function main() {
     const examples = [];
     /** CF-A-FOLD-NEVER-CHANGES-THE-PLAYER: every refused pair, in full. */
     const refusals = [];
+    /** Every CONTENDED pair with what the two arms saw and which one decided --
+     *  the evidence trail for a fold that changed a name, and for one that
+     *  refused. Un-truncated for the same reason `refusals` is. */
+    const contendedLines = [];
     let stopReason = null;
 
     /**
@@ -588,11 +602,58 @@ async function main() {
                 }
               }
 
+              // CF-A-FOLD-NEVER-CHANGES-THE-PLAYER, the EVIDENCE half.
+              //
+              // The seam is only consulted for a DIFFERENT-PLAYER collision, so
+              // the evidence is gathered only when one is actually in front of
+              // us. That needs the incumbent, which under RETIRE_UNTWINNED is
+              // already read above; otherwise it is a point read HERE and
+              // handed on as `known`, so this adds no SECOND read to any path
+              // (CF-DO-NOT-LOOK-TWICE) -- it moves the read the fold branch was
+              // going to do anyway.
+              //
+              // COST IS PAID ONLY BY THE CONTENDED. Same player, or either side
+              // unnamed, and we gather nothing: no pool partition is opened and
+              // no rival scan runs. On the measured Optic cell that is 9,990 of
+              // 10,197 twins paying nothing.
+              let twin = incumbent;
+              if (!distrusted) {
+                try {
+                  const { resource } = await retry(() => cat.item(newSlug, newSlug).read());
+                  twin = resource ?? null;
+                } catch (e) {
+                  if (e?.code !== 404) throw e;
+                  twin = null;
+                }
+              }
+              const contended = !!twin
+                && !!String(d.playerName ?? "").trim()
+                && !!String(twin.playerName ?? "").trim()
+                && String(d.playerName).trim().toLowerCase().replace(/[^a-z0-9]/g, "")
+                   !== String(twin.playerName).trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+              let evidence = null;
+              if (contended) {
+                const rivals = await gatherRivalRows(cat, newSlug, { retry });
+                evidence = await gatherPlayerEvidence(pool, d, twin, {
+                  incomingSlug: id, incumbentSlug: newSlug, rivals, retry,
+                });
+              }
+
               const r = await moveCatalogRow(cat, d, newSlug, { setKey: TO }, {
                 reason: REASON, repointNormalizedSetKey: true, dryRun: !APPLY,
                 salesContainer: pool, retry,
-                ...(distrusted ? { known: incumbent } : {}),
+                // `known` is now available on EVERY path, not just the
+                // distrusted one: the fold branch read it above.
+                known: twin,
+                ...(evidence ? { playerEvidence: evidence } : {}),
               });
+              if (contended) {
+                s.contendedPairs++;
+                contendedLines.push(
+                  `  ${String(r.action).toUpperCase().padEnd(8)} #${str(d.cardNumber)} ${str(d.parallelSlug) || parts[5]}: ` +
+                  describePlayerEvidence(d, twin, evidence, r),
+                );
+              }
               s.salesRepointed += r.salesRepointed;
               s.gradedRetiredCascade += r.gradedChildrenRetired;
               if (r.action === "move") s.moved++;
@@ -624,6 +685,11 @@ async function main() {
     }
 
     for (const l of examples) console.log(l);
+    if (contendedLines.length) {
+      console.log("");
+      console.log(`-- DIFFERENT PLAYER at one address: the evidence, per pair (${contendedLines.length})`);
+      for (const l of contendedLines) console.log(l);
+    }
     if (refusals.length) {
       console.log("");
       console.log(`-- REFUSED: different players at one address, neither corroborated (${refusals.length})`);
@@ -635,6 +701,7 @@ async function main() {
     console.log(`  FOLDED (twin already there)${f(s.folded).padStart(8)}   <- the incumbent won on authority`);
     console.log(`  REPLACED a lower twin      ${f(s.replaced)}`);
     console.log(`  REFUSED (different player) ${f(s.refusedDifferentPlayer)}   <- NOTHING written for these; both rows stay put`);
+    console.log(`  CONTENDED (different player) ${f(s.contendedPairs)}   <- evidence gathered for these only; = arbitrated + refused`);
     console.log(`    of the folds/replaces, decided by player evidence  ${f(s.playerArbitrated)}`);
     if (RETIRE_UNTWINNED) {
       console.log(`  RETIRED (no twin, labelled)${f(s.retiredUntwinned).padStart(8)}   <- NOT moved to ${TO}; identityUnverified + retiredReason`);
