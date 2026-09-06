@@ -217,7 +217,12 @@ describe("subset disambiguation vacates the plain id", () => {
     // Blank is unknown and is never invented -- vacating is about a clash
     // between two NAMED subsets, and must not have loosened that.
     expect(src).toContain("subsetCollision++");
-    expect(src).toMatch(/if \(!product\.subsetName\) \{/);
+    // CF-BASE-SET-IS-NOT-A-SUBSET (2026-09-06) renamed the operand: the guard
+    // now tests the subset the page CLAIMS, so a structural "Base Set" section
+    // heading no longer reads as a rival subset. The REFUSAL it protects is
+    // unchanged -- a page that names no subset still cannot land on an address
+    // a real named subset holds.
+    expect(src).toMatch(/if \(!productClaim\) \{/);
     expect(src).toContain("subsetDisambiguated++");
   });
 });
