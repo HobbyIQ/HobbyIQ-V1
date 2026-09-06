@@ -704,3 +704,203 @@ describe("finishLane exits even when cleanup never finishes", () => {
     expect(cap).toMatch(/setTimeout\(/);
   });
 });
+
+// ── 9. NO LANE KEEPS A PRIVATE COPY OF THE CAP ─────────────────────────────
+//
+// CF-ONE-CAP-NOT-A-COPY-OF-IT (2026-09-06). Four more sharded APPLY runs of
+// retire-self-derived-identities — slots 9-12 of 16, baseball, dispatched
+// 01:45Z from main, LONG after #1809, #1828 and #1844 had all merged:
+//
+//   34004719519 slot  9   work done in 320s   last line 01:52:13   killed 04:16:50
+//   34004725658 slot 10   work done in 606s   last line 01:56:55   killed 04:16:46
+//   34004731758 slot 11   work done in  84s   last line 01:48:17   killed 04:16:54
+//   34004737931 slot 12   work done in 735s   last line 01:59:30   killed 04:17:12
+//
+// Each printed its banner, its `RECONCILE ... BALANCES` and its
+// `reconciled: intended ... = written ... + skipped ...`, and then NOTHING
+// until the 150-minute kill. And once again — the tell — not one printed a
+// `VERIFY BY READ` line.
+//
+// Slot 11 is the whole argument in one row: it finished every product it owned
+// in EIGHTY-FOUR SECONDS and still cost the fleet two and a half hours of a
+// runner, then reported a red step for work that was complete and durable.
+//
+// WHY EVERY PIN ABOVE PASSED WHILE THE LANE HUNG. Sections 5-8 ask two things
+// of a lane's SOURCE: that it calls finishLane(), and that it imports it from
+// this helper. retire-self-derived-identities did both, and had since #1809.
+// Everything else above tests the HELPER — including the one assertion that
+// names this exact defect, "the cap timer is REF'd, so the cap can never be
+// lost to an early exit". That assertion read runner-budget.cjs. The lane was
+// not running runner-budget.cjs's cap. It had its own, fifty lines from the
+// bottom of main(), and that copy did the one thing the helper's is pinned not
+// to do:
+//
+//     timer = setTimeout(() => rej(new Error("verify-cap")), left);
+//     if (timer.unref) timer.unref();          // <- the defect
+//
+// With the cap unref'd AND retry()'s backoff sleeps unref'd (correct on their
+// own — a retry nobody awaits must not hold the process), NOTHING the lane
+// owned was ref'd. An unref'd timer cannot hold the loop open, and it also
+// cannot be relied on to fire: the cap never rejected, the race never settled,
+// main() never resolved, and the unconditional exit section 8 guarantees was
+// never REACHED. A guarantee about what happens inside finishLane() cannot
+// help a lane that never gets there.
+//
+// What kept the process ALIVE for those 144 minutes was the other half: the
+// abandoned cross-partition request's sockets, which belong to the SDK and ARE
+// ref'd. So the two halves conspire — the SDK's handles keep node running, and
+// the lane's unref'd cap never fires to end the verify. Section 10 below
+// isolates the lane's half and shows the signature it produces on its own.
+//
+// So the census below stops asking only "does the lane call the helper" and
+// starts asking "is the helper the ONLY cap in the lane". A private
+// Promise.race-plus-setTimeout verify cap is now a red build wherever it is
+// written, because the helper's version is pinned correct and a copy of it is
+// not pinned at all.
+describe("the verify cap lives in the helper, and lanes do not re-implement it", () => {
+  /** A lane's own `capped`/verify race: the shape that is now forbidden. */
+  const PRIVATE_CAP = /const\s+capped\s*=\s*async\s*\([^)]*\)\s*=>\s*\{[\s\S]*?\n\s{0,6}\};/;
+
+  /** Source with comments removed. These lanes DOCUMENT the defect they were
+   *  fixed for — retire-self-derived-identities quotes the unrefd cap line
+   *  verbatim in its header, as the explanation of what went wrong — and a
+   *  census that cannot tell a description of a bug from the bug itself fails
+   *  on its own documentation. */
+  const codeOf = (src: string) =>
+    src.replace(/\/\*[\s\S]*?\*\//g, "")
+      .split("\n").filter((l) => !/^\s*\/\//.test(l)).join("\n");
+
+  for (const lane of LANES) {
+    it(`${lane.script} does not hand-roll its own verify cap`, () => {
+      const m = PRIVATE_CAP.exec(codeOf(lane.src));
+      if (!m) return; // no local capped at all — nothing to re-implement
+      // A local `capped` is allowed ONLY as a thin delegation to the helper's.
+      expect(
+        /\.capped\(/.test(m[0]),
+        `${lane.script} defines its own capped() that does not delegate to the helper's `
+          + `budget().capped(). The helper's cap is pinned REF'd; a private copy is pinned `
+          + `nothing, and the copy in this lane unrefd its timer — which is why runs `
+          + `34004719519, 34004725658, 34004731758 and 34004737931 went silent from a `
+          + `balanced reconcile straight to the 150-minute kill without ever printing a `
+          + `VERIFY BY READ line.`,
+      ).toBe(true);
+    });
+
+    it(`${lane.script} never unrefs a verify-cap timer`, () => {
+      // The precise defect, wherever it is spelled. An unrefd cap in a
+      // process whose only other timers are unrefd retry sleeps means node
+      // deschedules everything and the cap NEVER FIRES — silence, which is the
+      // one outcome this whole file exists to make impossible.
+      const race = /Promise\.race\(\[[\s\S]{0,900}?\]\)/g;
+      for (const blk of codeOf(lane.src).match(race) ?? []) {
+        if (!/verify-cap/.test(blk)) continue;
+        expect(
+          /unref\(\)/.test(blk),
+          `${lane.script} unrefs the timer that enforces its verify cap. An unrefd cap is `
+            + `not a cap: node exits before it fires, or — when nothing else is refd — `
+            + `stops scheduling and it never fires at all. Use budget().capped(), whose `
+            + `timer is REFd and released by clearTimeout in a finally.`,
+        ).toBe(false);
+      }
+    });
+  }
+
+  it("the lane that hung now routes its cap through the helper", () => {
+    // Named explicitly, because a regex census that silently matched nothing
+    // would be a green build that pins nothing at all.
+    const src = read("backend", "scripts", "retire-self-derived-identities.cjs");
+    expect(src, "the lane must take its clock from the helper").toMatch(/budget\(\{/);
+    expect(src, "and its cap from the same object").toMatch(/\.capped\(/);
+    expect(
+      /timer\.unref\(\)/.test(codeOf(src)),
+      "the unrefd cap timer that caused the 144-minute silence must not come back",
+    ).toBe(false);
+  });
+});
+
+// ── 10. THE MUTATION TEST FOR SECTION 9 ────────────────────────────────────
+//
+// Section 9 is a source census, and a census that cannot fail is decoration.
+// This drives the ACTUAL defect — an unrefd cap racing a query that never
+// settles, in a process whose only other timers are unrefd — and proves it
+// produces exactly the slot-9 signature: the reconcile prints, the VERIFY line
+// does NOT, and the process never exits on its own.
+describe("the unrefd cap really is the hang (mutation)", () => {
+  const LANE_SHAPE = (unref: boolean) => `
+    (async () => {
+      // THE CONDITION THAT MATTERS. The real lane reaches its verify with no
+      // ref'd handle of its own: the Cosmos request is in flight but its
+      // sockets are the SDK's, and retry()'s backoff sleeps are unref'd. So
+      // this probe deliberately holds NOTHING ref'd except whatever the cap
+      // itself refs. That is the whole experiment: with the cap ref'd, node
+      // stays alive long enough to fire it and report; with the cap unref'd,
+      // node has no reason to keep scheduling and the cap never fires at all.
+      // retry()'s backoff sleeps are unrefd in the real lane, and correctly so.
+      const retry = async (fn, tries, signal) => {
+        let wait = 50;
+        for (let a = 0; ; a++) {
+          if (signal && signal.aborted) throw new Error("verify-cap");
+          try { return await fn(); } catch (e) {
+            if (signal && signal.aborted) throw new Error("verify-cap");
+            if (a >= tries) throw e;
+            await new Promise((r) => { const t = setTimeout(r, wait); t.unref(); });
+          }
+        }
+      };
+      const capped = async (label) => {
+        let timer = null;
+        const ac = new AbortController();
+        try {
+          await Promise.race([
+            retry(() => new Promise(() => {}), 2, ac.signal),
+            new Promise((_, rej) => {
+              timer = setTimeout(() => rej(new Error("verify-cap")), 800);
+              ${unref ? "if (timer.unref) timer.unref();" : ""}
+            }),
+          ]);
+        } catch (e) {
+          console.log("  VERIFY BY READ " + label + ": could not confirm (" + e.message + ")");
+          return null;
+        } finally { if (timer) clearTimeout(timer); ac.abort(); }
+      };
+      console.log("[retire-self-derived-identities] reconciled: intended 74,810"
+        + " = written 1 + skipped 74,809");
+      await capped("retiredReason");
+      console.log("main() resolved");
+    })();
+  `;
+
+  // WHAT THE TWO CASES PROVE, AND WHY THE UNREF'D ONE DOES NOT ITSELF HANG.
+  // Stripped to its essentials the defect is not "the process blocks", it is
+  // "the cap never fires and main() never resolves". In this probe, where the
+  // pending request holds nothing at all, node simply runs out of ref'd work
+  // and exits 0 — silently, mid-verify, having printed no VERIFY line and
+  // never reaching the code after `await capped(...)`. In the real lane the
+  // Cosmos SDK's in-flight sockets ARE ref'd, so instead of exiting early the
+  // process sits on them; either way the cap that was supposed to end the
+  // verify never fires and finishLane() is never reached. The observable
+  // signature is the same one slots 9-12 wrote into their logs, and it is what
+  // this pair asserts: reconcile printed, VERIFY line absent, main() never
+  // resolved.
+  it("UNREFD: the reconcile prints, the VERIFY line never does, main() never resolves", () => {
+    const r = runNode(LANE_SHAPE(true), 6000);
+    expect(r.stdout).toContain("reconciled: intended 74,810");
+    expect(
+      r.stdout,
+      "slot 9's signature exactly: no VERIFY BY READ line was ever printed",
+    ).not.toContain("VERIFY BY READ");
+    expect(
+      r.stdout,
+      "the verify never completed, so nothing after it ran — in CI, with the SDK's ref'd "
+        + "sockets in flight, this is the 144 minutes of silence instead of an early exit",
+    ).not.toContain("main() resolved");
+  });
+
+  it("REFD: the cap fires, the VERIFY line prints, the lane finishes", () => {
+    const r = runNode(LANE_SHAPE(false), 6000);
+    expect(r.stdout).toContain("reconciled: intended 74,810");
+    expect(r.stdout, "a cap that can fire always reports").toContain("VERIFY BY READ");
+    expect(r.stdout, "and the lane goes on to its exit").toContain("main() resolved");
+    expect(r.timedOut).toBe(false);
+  });
+});

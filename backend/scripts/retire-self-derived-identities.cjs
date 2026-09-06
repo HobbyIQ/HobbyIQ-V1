@@ -163,7 +163,7 @@ const { CosmosClient } = require(path.join(backend, "node_modules/@azure/cosmos"
 const { runnerShardScope } = require(path.join(__dirname, "lib", "runner-shard-scope.cjs"));
 // CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809). A lane does not end by
 // letting the loop drain -- it exits, after flushing, with the code it means.
-const { finishLane } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
+const { budget, finishLane } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
 // The row-op, not a hand-rolled patch: CF-GUARD-THE-CATALOG-WRITE-CONTRACT.
 // It keeps a `<field>Before` shadow so every marker this lane writes is
 // reversible, and it no-ops when the value already matches, so a re-run is
@@ -232,14 +232,75 @@ const PRODUCTS = Number(process.env.PRODUCTS || 0);
  * a fleet does not have to remember which lane wants milliseconds.
  * tests/retireSelfDerivedBudgetMargin.test.ts pins the arithmetic against the
  * workflow's real timeout-minutes, so shrinking the ceiling fails CI. */
-const RUN_MINUTES = Number(process.env.RUN_MINUTES || 110);
-const BUDGET_MS = Number(process.env.BUDGET_MS || RUN_MINUTES * 60 * 1000);
+/** ── THE CLOCK COMES FROM THE HELPER, NOT FROM HERE (2026-09-06) ───────────
+ *
+ * These three numbers used to be declared in this file, and so did a private
+ * copy of `capped()` fifty lines from the bottom of main(). That copy is what
+ * hung runs 34004719519 / 34004725658 / 34004731758 / 34004737931 (slots 9-12,
+ * baseball, APPLY, dispatched 01:45Z) — each of them AFTER printing
+ *
+ *   RECONCILE  seen 74,810 = ... => 74,810 BALANCES
+ *   [retire-self-derived-identities] reconciled: intended 74,810 = written 1 + skipped 74,809
+ *
+ * and then nothing whatsoever until the 150-minute ceiling. Slot 11 makes the
+ * cost plain: it finished every product it owned in EIGHTY-FOUR SECONDS and
+ * was killed 2h28m later, red, on work that was complete and durable.
+ *
+ * Not one of the four printed a VERIFY BY READ line, which is the tell: a cap
+ * that fires always prints. This one could not fire, because the private copy
+ * UNREF'D its cap timer:
+ *
+ *     timer = setTimeout(() => rej(new Error("verify-cap")), left);
+ *     if (timer.unref) timer.unref();          // <- the defect
+ *
+ * and `retry()` above also sleeps on unref'd timers (correctly — a retry
+ * nobody awaits must not hold the process). With the cap unref'd too, NOTHING
+ * this lane owns is ref'd, and an unref'd timer neither holds the loop open
+ * nor can be relied on to fire: the cap never rejects, the race never settles,
+ * `main()` never resolves, and `finishLane()` — which this lane has called
+ * since #1809 — is never reached at all. The unconditional exit added by #1844
+ * cannot help a process that never arrives at it.
+ *
+ * What keeps the process ALIVE meanwhile is the other half: the abandoned
+ * cross-partition request's sockets, which belong to the SDK and ARE ref'd. So
+ * the two halves conspire — the SDK keeps node running, and the lane's cap
+ * never fires to end the verify.
+ *
+ * The helper's `capped()` documents this exact hazard and REF's its cap
+ * deliberately, releasing it with `clearTimeout` in a `finally` instead;
+ * laneExitsWhenWorkIsDone pins that the helper's timer is not unref'd. That
+ * pin read the HELPER's source, and this lane's copy was never the thing it
+ * read — the census only asserted that a lane CALLS finishLane and imports it
+ * from the helper, both of which were true here while the lane still hung. One
+ * helper, one cap, one exit. The three constants below stay declared here as
+ * readable literals — both margin pins parse them out of this source to
+ * compute the lane's worst case — but they are now ARGUMENTS to budget(),
+ * which owns the clock, the cap and the capFired flag from here on. */
 /** Wall-clock a single product may still be granted after the budget expires.
- *  A product costing more than this is stopped BEFORE it starts, not after. */
+ *  A product costing more than this is stopped BEFORE it starts, not after.
+ *  Declared as its own const rather than inline in the budget() call because
+ *  runnerBudgetMargin.test.ts reads this default out of the SOURCE to compute
+ *  the lane's worst case: buried inside the call it reads as a 0-minute
+ *  reserve, and a margin computed from a reserve the lane does not actually
+ *  take is a margin that pins nothing. */
 const PRODUCT_RESERVE_MS = Number(process.env.PRODUCT_RESERVE_MS || 10 * 60 * 1000);
-/** Hard cap on the post-loop VERIFY BY READ. It reports "could not confirm"
- *  rather than holding the step open until the runner kills it. */
+/** Hard cap on the post-loop VERIFY BY READ, for the same reason. */
 const VERIFY_MS = Number(process.env.VERIFY_MS || 10 * 60 * 1000);
+/** The loop budget. Spelled as a literal `Number(process.env.RUN_MINUTES || N)`
+ *  because BOTH margin pins — retireSelfDerivedBudgetMargin (this lane) and
+ *  runnerBudgetMargin (every lane) — read this default out of the SOURCE to
+ *  compute the worst case against the workflow's real timeout-minutes. Hidden
+ *  inside the budget() call it is unreadable, and a margin nobody can compute
+ *  is a margin nobody is checking. */
+const RUN_MINUTES = Number(process.env.RUN_MINUTES || 110);
+const LANE_BUDGET = budget({
+  minutes: RUN_MINUTES,
+  // A product is the unit, and the worst single product still in flight when
+  // the budget expires is minutes, not seconds (2024 topps: 290,871 rows).
+  reserveMs: PRODUCT_RESERVE_MS,
+  verifyMs: VERIFY_MS,
+});
+const BUDGET_MS = LANE_BUDGET.BUDGET_MS;
 
 /** Markers. Imported nowhere else so they are stated once, here and in the TS
  *  module they mirror (checklistBackedIdentity.ts) — a CJS script cannot
@@ -293,9 +354,6 @@ const kCard = (r) => [norm(r.year), norm(r.setKey), norm(r.cardNumber), norm(r.p
 async function main() {
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) { console.error("FATAL: COSMOS_CONNECTION_STRING not set"); process.exit(1); }
-  // Set when a verify cap fires: the exit must then be explicit, because an
-  // abandoned request may still hold a handle (#1809).
-  let capFired = false;
   // The CLIENT is kept, not just the container: finishLane() disposes it so a
   // keep-alive socket is not one more reason the process lingers (#1809).
   const client = new CosmosClient({
@@ -330,8 +388,12 @@ async function main() {
   console.log(`retire-self-derived-identities  sport=${SPORT}  ${APPLY ? "APPLY" : "REPORT ONLY"}`);
   console.log(`  ${SHARD.banner()}`);
   console.log(`  card-level rule: ${CARD_RULE ? "ON (retires card-level twins too)" : "off (card-level twins REPORTED only)"}`);
-  console.log(`  budget: ${RUN_MINUTES}m loop + ${Math.round(PRODUCT_RESERVE_MS / 60000)}m product reserve`
-    + ` + ${Math.round(VERIFY_MS / 60000)}m verify cap — stops under the runner's 150m step ceiling`);
+  // The helper composes this line, so the sizing printed in a run's log is
+  // literally the sizing that governed it -- an operator reading slot 9's
+  // "110m loop + 10m product reserve + 10m verify cap" could not tell from the
+  // wording that the cap in force was this file's private copy rather than the
+  // helper's. Now the wording and the code have one source.
+  console.log(`  ${LANE_BUDGET.describe()} — stops under the runner's 150m step ceiling`);
 
   // ── ENUMERATING THE WORK, AND WHY NOT WITH A GROUP BY ────────────────────
   //
@@ -556,39 +618,31 @@ async function main() {
     // verify now runs under a hard cap and REPORTS ITS OWN FAILURE instead of
     // holding the step open. An unconfirmed verify is a fact worth printing;
     // a killed step prints nothing at all.
+    // THE CAP IS THE HELPER'S, NOT A COPY OF IT (2026-09-06). The private
+    // copy that used to live here unref'd its cap timer, which — with
+    // retry()'s sleeps also unref'd — left the process holding no ref'd handle
+    // of its own. An unref'd timer neither holds the loop open nor can be
+    // relied on to fire, so the cap never rejected, the race never settled,
+    // and slots 9-12 sat silent from their balanced reconcile to the
+    // 150-minute kill without ever printing a VERIFY line. The helper REF's
+    // the cap and releases it with clearTimeout in a `finally`, so the verify
+    // always either answers or reports that it could not.
+    //
+    // `vt0` is shared by both calls on purpose: the two counts split ONE cap
+    // between them, exactly as the private copy did.
     const vt0 = Date.now();
-    const capped = async (label, spec) => {
-      const left = VERIFY_MS - (Date.now() - vt0);
-      if (left <= 0) {
-        capFired = true;
-        console.log(`  VERIFY BY READ  ${label}: could not confirm within the cap (verify-cap)`);
-        return null;
-      }
-      // ABORT, don't merely abandon (#1809). Promise.race picks a winner and
-      // walks away from the loser; the loser here is a cross-partition
-      // aggregate whose retry loop kept node alive past the 150m ceiling in
-      // runs 33975816175/25863/34391/40824. The signal reaches both the SDK
-      // and retry(), so the loser actually stops.
-      const ac = new AbortController();
-      let timer = null;
-      try {
-        const { resources } = await Promise.race([
-          retry(() => cat.items.query(spec, { maxItemCount: -1, abortSignal: ac.signal }).fetchAll(), 2, ac.signal),
-          new Promise((_, rej) => {
-            timer = setTimeout(() => rej(new Error("verify-cap")), left);
-            if (timer.unref) timer.unref();
-          }),
-        ]);
+    const capped = (label, spec) =>
+      LANE_BUDGET.capped(vt0, label, async (signal) => {
+        // The signal reaches BOTH the SDK and retry(), so the loser of the
+        // race actually stops instead of merely being abandoned (#1809).
+        const { resources } = await retry(
+          () => cat.items.query(spec, { maxItemCount: -1, abortSignal: signal }).fetchAll(),
+          2,
+          signal,
+        );
         return Number(resources[0] || 0);
-      } catch (e) {
-        capFired = true;
-        console.log(`  VERIFY BY READ  ${label}: could not confirm within the cap (${String(e && e.message)})`);
-        return null;
-      } finally {
-        if (timer) clearTimeout(timer);
-        ac.abort();
-      }
-    };
+      });
+
     const v = await capped("retiredReason", {
       query: `SELECT VALUE COUNT(1) FROM c WHERE c.sport=@s AND c.retiredReason=@r`,
       parameters: [{ name: "@s", value: SPORT }, { name: "@r", value: RETIRED }],
@@ -610,8 +664,10 @@ async function main() {
   }
 
   // Hand the exit path what it needs to close cleanly: the client to dispose,
-  // and whether a cap fired (which is why the exit must be explicit at all).
-  return { client, budget: { capFired: () => capFired } };
+  // and the BUDGET ITSELF -- the helper owns the capFired flag now that it
+  // owns the cap, so finishLane() names a fired cap as the reason the exit had
+  // to be explicit rather than reading a local that nothing sets any more.
+  return { client, budget: LANE_BUDGET };
 }
 
 // CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809). The old tail exited only on
