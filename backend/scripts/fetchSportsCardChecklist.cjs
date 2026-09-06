@@ -859,14 +859,20 @@ function splitCardHeader(raw) {
  *    that were refused against themselves now land. Stale `partial` verdicts
  *    recorded under the old rule have to be re-attempted, which is what this
  *    bump is for.
- * 4  2026-09-06: the soft-block work. An empty response is retried at 60s and
- *    180s before any verdict, and a challenge/rate-limit page is named as one
- *    rather than reported as "did not serve a set page" -- so an entry a rate
- *    limit closed as `unreachable` reaches a different verdict on a re-walk.
- *    The URL reader also admits the `nonsport` vertical. Both change what a
- *    re-attempt PRODUCES, which is the test this version answers.
+ * 4  2026-09-06: "Inserts" is a page heading, not a subset name (#1894) -- the
+ *    same fold as v3, one heading over. Eight 1998/1999 SP Authentic insert
+ *    pages were refused ENTIRELY (read 42, wrote 0, REFUSED 42) against 56 +
+ *    130 baseballcardpedia rows tagged with the literal section word
+ *    "Inserts". Those verdicts were recorded under v3 and must re-open.
+ * 5  2026-09-06: the soft-block work (#1898), landing alongside the "Inserts"
+ *    fold that took v4 (#1899). An empty response is retried at 60s and 180s
+ *    before any verdict, and a challenge/rate-limit page is named as one rather
+ *    than reported as "did not serve a set page" -- so an entry a rate limit
+ *    closed as `unreachable` reaches a different verdict on a re-walk. The URL
+ *    reader also admits the `non-sport` vertical. Both change what a re-attempt
+ *    PRODUCES, which is the test this version answers.
  */
-const CONVERTER_VERSION = 4;
+const CONVERTER_VERSION = 5;
 
 const NOT_FOUND_RE = /Checklist Not Found|NOT FOUND\s*-\s*https?:\/\//i;
 

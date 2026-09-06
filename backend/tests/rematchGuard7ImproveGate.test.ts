@@ -417,10 +417,32 @@ describe("no scope value can ever arm CONFLICT", () => {
   // CONFLICT is a contradiction about WHICH CARD a sale is, and a fleet never
   // settles that -- Drew does. This is structural: CONFLICT is not a member of
   // APPLY_CLASSES, so no alias can name it.
-  it("APPLY_CLASSES holds only the two writing classes", () => {
-    expect(Object.values(K.APPLY_CLASSES).sort()).toEqual([K.BASE_EVICTION, K.IMPROVE].sort());
+  // The list grew on 2026-09-06 with Drew's three ruled scopes. What must NOT
+  // grow is what it means: every member is a class a ruling authorized, and
+  // CONFLICT is still not one of them. Pinned as an EXACT set so a fourth
+  // member cannot appear without a ruling and a test edit.
+  it("APPLY_CLASSES holds only the classes a ruling has authorized", () => {
+    expect(Object.values(K.APPLY_CLASSES).sort()).toEqual([
+      K.BASE_EVICTION, K.IMPROVE,
+      K.GRADE_FROM_TITLE, K.YEAR_FROM_TITLE_VINTAGE, K.SPORT_FROM_PRODUCT,
+    ].sort());
     expect(Object.values(K.APPLY_CLASSES)).not.toContain(K.CONFLICT);
   });
+
+  // THE RULED SCOPES ARE NOT ARMED BY THE WORDS THAT PREDATE THEM. Every
+  // fleet dispatch in flight says `improve`, `base-eviction`, `both` or `all`,
+  // and all four were written before these three scopes existed. A scope
+  // ruled yesterday must be asked for BY NAME or a running fleet starts
+  // writing a population nobody armed.
+  it.each(["improve", "base-eviction", "both", "all", "all-classes"])(
+    "legacy scope %j never arms a 2026-09-06 ruled scope",
+    (scope) => {
+      const armed = [...K.parseApplyScope(scope).classes];
+      expect(armed).not.toContain(K.GRADE_FROM_TITLE);
+      expect(armed).not.toContain(K.YEAR_FROM_TITLE_VINTAGE);
+      expect(armed).not.toContain(K.SPORT_FROM_PRODUCT);
+    },
+  );
 
   it.each([
     "conflict", "CONFLICT", "conflicts", "conflict-only",

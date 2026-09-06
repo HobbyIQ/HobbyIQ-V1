@@ -111,10 +111,10 @@ const WATCHED: Array<{ file: string; label: string; fn: string; hash: string }> 
   { file: FETCHER, label: "fetcher", fn: "parallelFromSlug", hash: "" },
 ];
 
-/** The recorded behaviour hash for each watched function, at CONVERTER_VERSION 4. */
+/** The recorded behaviour hash for each watched function, at CONVERTER_VERSION 5. */
 const RECORDED: Record<string, string> = {
   "subset-identity:claimedSubsetOf": "def8b0f7187288a3",
-  "subset-identity:isBaseSectionLabel": "5f89a5eff2a078ec",
+  "subset-identity:isBaseSectionLabel": "e1d58052f029a93e",
   "subset-identity:foldSubsetText": "4c33bdf4b3715ea5",
   "subset-identity:rungKey": "9526fcf87cecbb79",
   "fetcher:zeroCardReason": "eba4eeac8e75c68b",
@@ -141,9 +141,9 @@ function currentHashes(): Record<string, string> {
 
 // ── the bump itself ──────────────────────────────────────────────────────────
 
-describe("the SCC converter is at v4 — bumped again by the soft-block work", () => {
-  it("the fetcher stamps v4", () => {
-    expect(CONVERTER_VERSION).toBe(4);
+describe("the SCC converter is at v5 — the writer changed again, and the soft-block work landed beside it", () => {
+  it("the fetcher stamps v5", () => {
+    expect(CONVERTER_VERSION).toBe(5);
   });
 
   it("the driver's lane table agrees -- a disagreement re-opens nothing", () => {
@@ -157,6 +157,25 @@ describe("the SCC converter is at v4 — bumped again by the soft-block work", (
     const src = fs.readFileSync(FETCHER, "utf8");
     expect(src).toContain("#1878");
     expect(src).toContain("Base Set");
+  });
+
+  it("v4 names #1894 and the heading it folded", () => {
+    // The same fold as v3, one heading over: eight SP Authentic insert pages
+    // refused entirely against bcp rows tagged with the section word.
+    const src = fs.readFileSync(FETCHER, "utf8");
+    expect(src).toContain("#1894");
+    expect(src).toContain('"Inserts" is a page heading');
+  });
+
+  it("v5 names BOTH PRs that raced for it -- #1899's fold and #1898's soft block", () => {
+    // v4 and v5 were bumped from the same base, hours apart: #1899 took v4 for
+    // the "Inserts" fold, #1898 took v5 for the soft-block work. A history that
+    // named only one of them would leave an operator unable to tell which
+    // change a stale verdict at v4 is missing.
+    const src = fs.readFileSync(FETCHER, "utf8");
+    expect(src).toContain("#1898");
+    expect(src).toContain("#1899");
+    expect(src).toContain("challenge/rate-limit page is named as one");
   });
 
   it("the version history is append-only -- v1 and v2 keep their entries", () => {
@@ -188,7 +207,7 @@ describe("a change to the deciding code cannot land without answering the versio
     expect(Object.keys(now).sort()).toEqual(Object.keys(RECORDED).sort());
   });
 
-  it("no watched function has moved since v3 was recorded", () => {
+  it("no watched function has moved since v5 was recorded", () => {
     const now = currentHashes();
     const moved = Object.keys(RECORDED)
       .filter((k) => now[k] !== RECORDED[k])

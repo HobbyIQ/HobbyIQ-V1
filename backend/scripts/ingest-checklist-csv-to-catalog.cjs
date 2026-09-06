@@ -457,6 +457,18 @@ async function main() {
           // which is where a same-card newcomer has always belonged. A real
           // named subset ("Cards That Never Were", "Rookies") is untouched and
           // still clashes exactly as #1741 and the 2026-09-04 ruling require.
+          //
+          // CF-INSERTS-IS-NOT-A-SUBSET-NAME (Drew, 2026-09-06, run
+          // 34038740849) extends the SAME fold one heading over. #1893 found
+          // eight 1998/1999 SP Authentic insert pages refused ENTIRELY -- read
+          // 42, wrote 0, REFUSED 42 -- against 56 + 130 baseballcardpedia rows
+          // whose subsetName is the literal section word "Inserts". That word
+          // is the bcp scraper's `leaf` when a page lists cards under one
+          // undifferentiated heading: it says a SECTION holds inserts, not
+          // which insert a card is. The SCC pages state their real subset
+          // ("Sheer Dominance", "Home Run Chronicles"), so with the section
+          // word folded the newcomer simply carries its own subset and the
+          // page lands.
           const knownClaim = claimedSubsetOf(known && known.subsetName);
           const productClaim = claimedSubsetOf(product.subsetName);
           if (known && knownClaim && knownClaim !== (productClaim || null)) {

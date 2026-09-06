@@ -41,31 +41,63 @@ function foldSubsetText(raw) {
  *  share tokens with half the corpus, and a partial match would assign cards
  *  by coincidence. */
 /**
- * CF-BASE-SET-IS-NOT-A-SUBSET (2026-09-06, run 34027488624).
+ * CF-BASE-SET-IS-NOT-A-SUBSET (2026-09-06, run 34027488624), EXTENDED by
+ * CF-INSERTS-IS-NOT-A-SUBSET-NAME (Drew ruling, 2026-09-06, run 34038740849).
  *
- * The 1957 Topps recheck read 417 checklist rows and wrote 9. The other 407
- * were refused as "subset collisions" against incumbents whose subsetName was
- * the literal "Base Set" -- Mantle #95, Mays #10, Aaron #20, every one the
- * SAME card the checklist was bringing.
+ * THE FIRST HALF. The 1957 Topps recheck read 417 checklist rows and wrote 9.
+ * The other 407 were refused as "subset collisions" against incumbents whose
+ * subsetName was the literal "Base Set" -- Mantle #95, Mays #10, Aaron #20,
+ * every one the SAME card the checklist was bringing.
  *
- * "Base Set" is not a subset. It is a PAGE-SECTION HEADING that
- * scrape-baseballcardpedia reads off the wiki nav -- its own comment says so:
- * "BCP nests 'Base Set' under 'Checklist' (h1), so a plain topLevel check
- * misses it". The scraper correctly maps that heading to `category: "base"`,
- * and the label then rides along into subsetName where it means the exact
- * opposite of a subset: it says "this row IS the base set".
+ * THE SECOND HALF, and it is the same defect one heading over. #1893 found
+ * eight 1998/1999 SP Authentic insert pages (Sheer Dominance, Sheer Dominance
+ * Titanium, Home Run Chronicles, HRC Die Cuts, Epic Figures, Reflections,
+ * 300th HR Redemption, Game Jersey 5x7) refused ENTIRELY -- read 42, wrote 0,
+ * REFUSED 42 -- because their SD, HR, E and R card numbers are already
+ * occupied by 56 + 130 baseballcardpedia rows carrying subsetName "Inserts".
  *
- * A checklist page for a base set states NO subset, and blank means unknown.
- * So the collision test compared "unknown" against "Base Set" and concluded
- * two different cards -- when both sides were saying the same thing.
+ * WHY BOTH LABELS ARE THE SAME KIND OF THING. Neither is a subset name. Both
+ * are PAGE-SECTION HEADINGS that scrape-baseballcardpedia reads off the wiki
+ * nav and turns into a category, and the heading text then rides along into
+ * subsetName. The scraper's own classifier is where this is visible:
  *
- * These labels are therefore NOT subset claims for the purpose of the clash
- * test. The list is deliberately tiny and structural: only labels that name
- * the base print of a product, never a real subset like "Rookies" or "Cards
- * That Never Were". A guessed vocabulary here would silently merge real
- * subsets, which is the harm #1741 was written for.
+ *     else if (/base\s*set/.test(joined)) category = "base";
+ *     else if (/inserts?/.test(joined))   category = `insert-${slugify(leaf)}`;
+ *
+ * When a page gives each insert its own heading, `leaf` is that insert's real
+ * name ("Sheer Dominance") and the subsetName is a genuine claim. When the
+ * page lists cards directly under a bare "Inserts" section, `leaf` is the
+ * literal word "Inserts" -- a statement that a section of the page holds
+ * inserts, which is true of the section and says NOTHING about which insert
+ * the card belongs to. "Base Set" asserts "this row IS the base set";
+ * "Inserts" asserts "this row is one of the inserts on this page". Neither
+ * names a subset, and comparing either against a checklist page that states
+ * none concluded "two different cards" when both sides were saying the same
+ * thing.
+ *
+ * THE ROWS THEMSELVES SAY SO. The 1998 SP Authentic "Inserts" population is 57
+ * rows, and 13 of them are parse damage from that same undifferentiated
+ * section: cardNumber "Gary" with playerName "Sheffield 5 X 7 JSY 125",
+ * cardNumber "Gold" with playerName "(serial-numbered to 2000 copies)". A
+ * heading that produces THAT is a section label the scraper could not resolve,
+ * not a subset a checklist ever printed.
+ *
+ * A checklist page states NO subset, and blank means unknown. So the clash
+ * test must compare the subset each side actually CLAIMS -- and a structural
+ * section heading claims nothing.
+ *
+ * WHAT IS DELIBERATELY NOT IN THIS LIST. Only labels that name a STRUCTURAL
+ * SECTION of a page: the base print, or the undifferentiated insert section.
+ * A REAL named subset -- "Cards That Never Were", "Rookie Stars", "Row 2",
+ * "Sheer Dominance", "Johnson Reprints" -- is a claim, still clashes against
+ * unknown (#1741), and still disambiguates against another real subset (the
+ * 2026-09-04 ruling). A guessed vocabulary here would silently merge two real
+ * subsets onto one address, which is the exact harm #1741 was written for, so
+ * the list stays small enough to read in one glance and every entry must be a
+ * heading the bcp scraper can actually emit.
  */
-const BASE_SECTION_LABELS = new Set([
+const SECTION_HEADING_LABELS = new Set([
+  // The base print of a product. `category: "base"`.
   "base",
   "base set",
   "base cards",
@@ -73,17 +105,34 @@ const BASE_SECTION_LABELS = new Set([
   "base set cards",
   "checklist",
   "checklist base set",
+  // The undifferentiated insert section. `category: insert-${slugify(leaf)}`
+  // where the leaf IS the section word, so the subsetName is the heading
+  // itself rather than an insert's name. These are the scraper's sibling
+  // spellings of one heading -- see the /inserts?/ branch above.
+  "insert",
+  "inserts",
+  "insert sets",
+  "insert set",
+  "inserts and parallels",
 ]);
 
-/** Is this subsetName a structural "this is the base set" label rather than a
- *  claim that the row belongs to a named subset? */
+/**
+ * Kept under its original name because it is the exported vocabulary #1878
+ * pinned. The set now holds both structural families; the predicate below is
+ * what callers ask.
+ */
+const BASE_SECTION_LABELS = SECTION_HEADING_LABELS;
+
+/** Is this subsetName a structural PAGE-SECTION heading ("this row is in the
+ *  base section" / "this row is in the inserts section") rather than a claim
+ *  that the row belongs to one NAMED subset? */
 function isBaseSectionLabel(subset) {
-  return BASE_SECTION_LABELS.has(foldSubsetText(subset));
+  return SECTION_HEADING_LABELS.has(foldSubsetText(subset));
 }
 
 /**
  * The subset a row actually CLAIMS, for clash purposes: its subsetName unless
- * that is a structural base-section label, in which case it claims none.
+ * that is a structural page-section label, in which case it claims none.
  * Returns "" for "no subset claimed".
  */
 function claimedSubsetOf(subset) {
@@ -197,5 +246,5 @@ module.exports = {
   resolveSubsetFromTitle,
   subsetVerdict,
   rungKey,
-  BASE_SECTION_LABELS, isBaseSectionLabel, claimedSubsetOf,
+  BASE_SECTION_LABELS, SECTION_HEADING_LABELS, isBaseSectionLabel, claimedSubsetOf,
 };

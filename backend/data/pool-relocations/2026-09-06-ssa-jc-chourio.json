@@ -1,0 +1,232 @@
+{
+ "generatedAt": "2026-09-06T13:55:00Z",
+ "forLane": "relocate-pool-rows-by-list",
+ "reportOnlyUntil": "Drew's review - no apply is authorized by this PR",
+ "finding": "SSA-JC 2025 Bowman Chrome Sapphire sales, routed after the Chourio ruling (Drew, 2026-09-06). Companion to backend/data/catalog-relocations/2026-09-06-ssa-jc-chourio.json.",
+ "ordering": "CATALOG FIRST, POOL SECOND. The catalog list retires the Caglianone identity; this list then routes the sales. Run in the other order and these rows repoint onto an address whose rival row still exists.",
+ "rulings": [
+  "SSA-JC IN 2025 BOWMAN CHROME SAPPHIRE IS THE JACKSON CHOURIO AUTOGRAPH (Drew, 2026-09-06). The checklist says the card IS an auto, so a Chourio sale routes to the :auto identity even though NOT ONE title in this population says AUTO. The absence of the word is not evidence against the checklist.",
+  "THE TITLES DO NOT NAME THE PLAYER, THE PARTITION DOES. #1866 recorded a 10/6 title split and read it as a player split. Measured again read-only 2026-09-06: the split is on the PRODUCT WORDS ('Bowman Sapphire' vs 'Bowman Chrome Sapphire') and NOT ONE of the 16 bare titles names any player. What separates them is the vendor partition, and both partitions are player-pure: 1769786601171x571370693030933250 is 9/9 Jackson Chourio, 1782708479171x113035842276264510 is 12/12 Jac Caglianone. Each carries titled AUTO sales naming its player outright, sitting beside the bare rows in the same CardHedge product.",
+  "A RETIRE MUST NOT SWEEP THE OTHER PLAYER'S SALES INTO THE SURVIVOR. Both partitions currently read the same no-auto identity that the catalog list retires. Repointing all of them to Chourio would move 11 Caglianone-attributed sales into Chourio's pool and price his card off another player's market. The Caglianone rows are PARKED instead.",
+  "A DESTINATION MUST BE CHECKLIST-BACKED (CF-CATALOG-MATCH-IS-SELF-CONFIRMING). Caglianone has no checklist-backed SSA-JC identity in 2025 - his only SSA-JC row anywhere is 2024 bowman-draft-sapphire. So his rows are parked, never routed: a repair does not mint an identity from a sale.",
+  "PARK, NOT RETIRE, FOR THE OTHER PLAYER. identityUnverified keeps a row out of every pool without asserting which card it belongs to, which is the honest state for a sale whose player is known and whose card is not yet in the catalog. If the 2025 Caglianone SSA-JC checklist is ever acquired, these rows are recoverable by that label.",
+  "EVERY ENTRY IS A PATCH IN PLACE. All 20 vendor rows sit in vendor-id partitions and the 21st already sits at the destination address, so this list contains no RELOCATE: nothing changes partition, and no document is deleted."
+ ],
+ "census": {
+  "rowsRead": 21,
+  "byCurrentAddressAndTitlePlayer": {
+   "base:no-auto (vendor partitions) x title names NO player": 16,
+   "base:auto (vendor, Chourio partition) x title names Chourio": 2,
+   "base:auto (vendor, Caglianone partition) x title names Caglianone": 2,
+   "base:auto (slug-resident) x title names Caglianone": 1
+  },
+  "byVendorPartition": {
+   "1769786601171x571370693030933250 (Jackson Chourio, 9/9 rows)": 9,
+   "1782708479171x113035842276264510 (Jac Caglianone, 12/12 rows)": 12
+  },
+  "partitionKind": {
+   "vendorId": 20,
+   "slug": 1
+  },
+  "repoint": 7,
+  "park": 12,
+  "relocate": 0,
+  "alreadyAtTheTarget": 2,
+  "titlesSayingAUTO_amongTheBare16": 0,
+  "chourioHoldingInAnyPortfolio": false,
+  "portfolioDocsScanned": 12,
+  "note": "measured read-only 2026-09-06. 'alreadyAtTheTarget' are the 2 Chourio-titled auto sales already reading the surviving :auto identity - listed for the count, not as entries. Portfolio scan walked the holdings MAP of all 12 portfolio docs; no holding references SSA-JC or a Chourio sapphire card."
+ },
+ "entries": [
+  {
+   "id": "cardhedge::ch-daily::1769786601171x571370693030933250::2026-04-27T13:47:00+00:00::11500",
+   "fromCardId": "1769786601171x571370693030933250",
+   "repointHobbyiqCardId": "hiq:baseball:2025:bowman-chrome-sapphire:ssa-jc:base:auto",
+   "price": 115,
+   "title": "2025 Bowman Chrome Sapphire Baseball #SSA-JC Base",
+   "playerNameAsStored": "Jackson Chourio",
+   "currentAddress": "hiq:baseball:2025:bowman-chrome-sapphire:ssa-jc:base:no-auto",
+   "evidence": "REPOINT (partition is a vendor id, so nothing moves partitions): hobbyiqCardId reads hiq:baseball:2025:bowman-chrome-sapphire:ssa-jc:base:no-auto - the no-auto identity this ruling retires - and hobbyiqCardId is what the pricing engine reads. RULING (Drew, 2026-09-06): SSA-JC in 2025 Bowman Chrome Sapphire is the Jackson Chourio AUTOGRAPH; the checklist says the card IS an auto, so a Chourio sale goes to the :auto identity even though no title says AUTO. Title is bare - \"2025 Bowman Chrome Sapphire Baseball #SSA-JC Base\" - and names no player. The identity is carried by the VENDOR PARTITION: cardId 1769786601171x571370693030933250 holds 9 rows and every one carries playerName \"Jackson Chourio\", including two titled sales (\"2025 Bowman Chrome Sapphire Jackson Chourio Selections Auto #SSA-JC PSA 10\" $229.50 and \"...#SSA-JC Brewers - Raw\" $78) that name him outright. A player-pure vendor partition with titled siblings is title evidence for the rows beside them; the bare rows are the same CardHedge product. Stored playerName \"Jackson Chourio\"."
+  },
+  {
+   "id": "cardhedge::ch-daily::1769786601171x571370693030933250::2026-05-19T02:00:00+00:00::8600",
+   "fromCardId": "1769786601171x571370693030933250",
+   "repointHobbyiqCardId": "hiq:baseball:2025:bowman-chrome-sapphire:ssa-jc:base:auto",
+   "price": 86,
+   "title": "2025 Bowman Chrome Sapphire Baseball #SSA-JC Base",
+   "playerNameAsStored": "Jackson Chourio",
+   "currentAddress": "hiq:baseball:2025:bowman-chrome-sapphire:ssa-jc:base:no-auto",
+   "evidence": "REPOINT (partition is a vendor id, so nothing moves partitions): hobbyiqCardId reads hiq:baseball:2025:bowman-chrome-sapphire:ssa-jc:base:no-auto - the no-auto identity this ruling retires - and hobbyiqCardId is what the pricing engine reads. RULING (Drew, 2026-09-06): SSA-JC in 2025 Bowman Chrome Sapphire is the Jackson Chourio AUTOGRAPH; the checklist says the card IS an auto, so a Chourio sale goes to the :auto identity even though no title says AUTO. Title is bare - \"2025 Bowman Chrome Sapphire Baseball #SSA-JC Base\" - and names no player. The identity is carried by the VENDOR PARTITION: cardId 1769786601171x571370693030933250 holds 9 rows and every one carries playerName \"Jackson Chourio\", including two titled sales (\"2025 Bowman Chrome Sapphire Jackson Chourio Selections Auto #SSA-JC PSA 10\" $229.50 and \"...#SSA-JC Brewers - Raw\" $78) that name him outright. A player-pure vendor partition with titled siblings is title evidence for the rows beside them; the bare rows are the same CardHedge product. Stored playerName \"Jackson Chourio\"."
+  },
+  {
+   "id": "cardhedge::ch-daily::1769786601171x571370693030933250::2026-05-29T00:09:00+00:00::7600",
+   "fromCardId": "1769786601171x571370693030933250",
+   "repointHobbyiqCardId": "hiq:baseball:2025:bowman-chrome-sapphire:ssa-jc:base:auto",
+   "price": 76,
+   "title": "2025 Bowman Chrome Sapphire Baseball #SSA-JC Base",
+   "playerNameAsStored": "Jackson Chourio",
+   "currentAddress": "hiq:baseball:2025:bowman-chrome-sapphire:ssa-jc:base:no-auto",
+   "evidence": "REPOINT (partition is a vendor id, so nothing moves partitions): hobbyiqCardId reads hiq:baseball:2025:bowman-chrome-sapphire:ssa-jc:base:no-auto - the no-auto identity this ruling retires - and hobbyiqCardId is what the pricing engine reads. RULING (Drew, 2026-09-06): SSA-JC in 2025 Bowman Chrome Sapphire is the Jackson Chourio AUTOGRAPH; the checklist says the card IS an auto, so a Chourio sale goes to the :auto identity even though no title says AUTO. Title is bare - \"2025 Bowman Chrome Sapphire Baseball #SSA-JC Base\" - and names no player. The identity is carried by the VENDOR PARTITION: cardId 1769786601171x571370693030933250 holds 9 rows and every one carries playerName \"Jackson Chourio\", including two titled sales (\"2025 Bowman Chrome Sapphire Jackson Chourio Selections Auto #SSA-JC PSA 10\" $229.50 and \"...#SSA-JC Brewers - Raw\" $78) that name him outright. A player-pure vendor partition with titled siblings is title evidence for the rows beside them; the bare rows are the same CardHedge product. Stored playerName \"Jackson Chourio\"."
+  },
+  {
+   "id": "cardhedge::ch-daily::1769786601171x571370693030933250::2026-07-17T00:33:00+00:00::8769",
+   "fromCardId": "1769786601171x571370693030933250",
+   "repointHobbyiqCardId": "hiq:baseball:2025:bowman-chrome-sapphire:ssa-jc:base:auto",
+   "price": 87.69,
+   "title": "2025 Bowman Chrome Sapphire Baseball #SSA-JC Base",
+   "playerNameAsStored": "Jackson Chourio",
+   "currentAddress": "hiq:baseball:2025:bowman-chrome-sapphire:ssa-jc:base:no-auto",
+   "evidence": "REPOINT (partition is a vendor id, so nothing moves partitions): hobbyiqCardId reads hiq:baseball:2025:bowman-chrome-sapphire:ssa-jc:base:no-auto - the no-auto identity this ruling retires - and hobbyiqCardId is what the pricing engine reads. RULING (Drew, 2026-09-06): SSA-JC in 2025 Bowman Chrome Sapphire is the Jackson Chourio AUTOGRAPH; the checklist says the card IS an auto, so a Chourio sale goes to the :auto identity even though no title says AUTO. Title is bare - \"2025 Bowman Chrome Sapphire Baseball #SSA-JC Base\" - and names no player. The identity is carried by the VENDOR PARTITION: cardId 1769786601171x571370693030933250 holds 9 rows and every one carries playerName \"Jackson Chourio\", including two titled sales (\"2025 Bowman Chrome Sapphire Jackson Chourio Selections Auto #SSA-JC PSA 10\" $229.50 and \"...#SSA-JC Brewers - Raw\" $78) that name him outright. A player-pure vendor partition with titled siblings is title evidence for the rows beside them; the bare rows are the same CardHedge product. Stored playerName \"Jackson Chourio\"."
+  },
+  {
+   "id": "cardhedge::ch-daily::1769786601171x571370693030933250::2026-07-20T01:09:00+00:00::10250",
+   "fromCardId": "1769786601171x571370693030933250",
+   "repointHobbyiqCardId": "hiq:baseball:2025:bowman-chrome-sapphire:ssa-jc:base:auto",
+   "price": 102.5,
+   "title": "2025 Bowman Chrome Sapphire Baseball #SSA-JC Base",
+   "playerNameAsStored": "Jackson Chourio",
+   "currentAddress": "hiq:baseball:2025:bowman-chrome-sapphire:ssa-jc:base:no-auto",
+   "evidence": "REPOINT (partition is a vendor id, so nothing moves partitions): hobbyiqCardId reads hiq:baseball:2025:bowman-chrome-sapphire:ssa-jc:base:no-auto - the no-auto identity this ruling retires - and hobbyiqCardId is what the pricing engine reads. RULING (Drew, 2026-09-06): SSA-JC in 2025 Bowman Chrome Sapphire is the Jackson Chourio AUTOGRAPH; the checklist says the card IS an auto, so a Chourio sale goes to the :auto identity even though no title says AUTO. Title is bare - \"2025 Bowman Chrome Sapphire Baseball #SSA-JC Base\" - and names no player. The identity is carried by the VENDOR PARTITION: cardId 1769786601171x571370693030933250 holds 9 rows and every one carries playerName \"Jackson Chourio\", including two titled sales (\"2025 Bowman Chrome Sapphire Jackson Chourio Selections Auto #SSA-JC PSA 10\" $229.50 and \"...#SSA-JC Brewers - Raw\" $78) that name him outright. A player-pure vendor partition with titled siblings is title evidence for the rows beside them; the bare rows are the same CardHedge product. Stored playerName \"Jackson Chourio\"."
+  },
+  {
+   "id": "cardhedge::ch-daily::1769786601171x571370693030933250::2026-07-27T01:01:00+00:00::22950",
+   "fromCardId": "1769786601171x571370693030933250",
+   "repointHobbyiqCardId": "hiq:baseball:2025:bowman-chrome-sapphire:ssa-jc:base:auto",
+   "price": 229.5,
+   "title": "2025 Bowman Chrome Sapphire Baseball #SSA-JC Base",
+   "playerNameAsStored": "Jackson Chourio",
+   "currentAddress": "hiq:baseball:2025:bowman-chrome-sapphire:ssa-jc:base:no-auto",
+   "evidence": "REPOINT (partition is a vendor id, so nothing moves partitions): hobbyiqCardId reads hiq:baseball:2025:bowman-chrome-sapphire:ssa-jc:base:no-auto - the no-auto identity this ruling retires - and hobbyiqCardId is what the pricing engine reads. RULING (Drew, 2026-09-06): SSA-JC in 2025 Bowman Chrome Sapphire is the Jackson Chourio AUTOGRAPH; the checklist says the card IS an auto, so a Chourio sale goes to the :auto identity even though no title says AUTO. Title is bare - \"2025 Bowman Chrome Sapphire Baseball #SSA-JC Base\" - and names no player. The identity is carried by the VENDOR PARTITION: cardId 1769786601171x571370693030933250 holds 9 rows and every one carries playerName \"Jackson Chourio\", including two titled sales (\"2025 Bowman Chrome Sapphire Jackson Chourio Selections Auto #SSA-JC PSA 10\" $229.50 and \"...#SSA-JC Brewers - Raw\" $78) that name him outright. A player-pure vendor partition with titled siblings is title evidence for the rows beside them; the bare rows are the same CardHedge product. Stored playerName \"Jackson Chourio\"."
+  },
+  {
+   "id": "cardhedge::ch-daily::1769786601171x571370693030933250::2026-08-09T01:58:00+00:00::7800",
+   "fromCardId": "1769786601171x571370693030933250",
+   "repointHobbyiqCardId": "hiq:baseball:2025:bowman-chrome-sapphire:ssa-jc:base:auto",
+   "price": 78,
+   "title": "2025 Bowman Chrome Sapphire Baseball #SSA-JC Base",
+   "playerNameAsStored": "Jackson Chourio",
+   "currentAddress": "hiq:baseball:2025:bowman-chrome-sapphire:ssa-jc:base:no-auto",
+   "evidence": "REPOINT (partition is a vendor id, so nothing moves partitions): hobbyiqCardId reads hiq:baseball:2025:bowman-chrome-sapphire:ssa-jc:base:no-auto - the no-auto identity this ruling retires - and hobbyiqCardId is what the pricing engine reads. RULING (Drew, 2026-09-06): SSA-JC in 2025 Bowman Chrome Sapphire is the Jackson Chourio AUTOGRAPH; the checklist says the card IS an auto, so a Chourio sale goes to the :auto identity even though no title says AUTO. Title is bare - \"2025 Bowman Chrome Sapphire Baseball #SSA-JC Base\" - and names no player. The identity is carried by the VENDOR PARTITION: cardId 1769786601171x571370693030933250 holds 9 rows and every one carries playerName \"Jackson Chourio\", including two titled sales (\"2025 Bowman Chrome Sapphire Jackson Chourio Selections Auto #SSA-JC PSA 10\" $229.50 and \"...#SSA-JC Brewers - Raw\" $78) that name him outright. A player-pure vendor partition with titled siblings is title evidence for the rows beside them; the bare rows are the same CardHedge product. Stored playerName \"Jackson Chourio\"."
+  },
+  {
+   "id": "tca-ebay::377381023655",
+   "fromCardId": "hiq:baseball:2025:bowman-chrome-sapphire:ssa-jc:base:auto",
+   "parkIdentityUnverified": true,
+   "price": 113.61,
+   "title": "2025 Bowman Sapphire Jac Caglianone Selections Auto Autograph #SSA-JC Royals",
+   "playerNameAsStored": "Jac Caglianone Selections",
+   "currentAddress": "hiq:baseball:2025:bowman-chrome-sapphire:ssa-jc:base:auto",
+   "evidence": "PARK: the title names ANOTHER PLAYER than the card this address belongs to. This row is RESIDENT at hiq:baseball:2025:bowman-chrome-sapphire:ssa-jc:base:auto - the surviving Chourio identity - but its title reads \"2025 Bowman Sapphire Jac Caglianone Selections Auto Autograph #SSA-JC Royals\", naming Jac Caglianone. Under the 2026-09-06 ruling SSA-JC in 2025 Bowman Chrome Sapphire is Chourio's card, so a Caglianone-titled sale does not belong in the Chourio pool. It is NOT routed to a Caglianone address either: Caglianone has NO checklist-backed SSA-JC row in 2025 (his only one is 2024 bowman-draft-sapphire), so routing it would mint an identity from a sale (CF-CATALOG-MATCH-IS-SELF-CONFIRMING). Parked rather than guessed - it leaves the Chourio pool without asserting a card."
+  },
+  {
+   "id": "cardhedge::ch-daily::1782708479171x113035842276264510::2025-07-01T02:29:00+00:00::22850",
+   "fromCardId": "1782708479171x113035842276264510",
+   "parkIdentityUnverified": true,
+   "price": 228.5,
+   "title": "2025 Bowman Sapphire Baseball #SSA-JC Base",
+   "playerNameAsStored": "Jac Caglianone",
+   "currentAddress": "hiq:baseball:2025:bowman-chrome-sapphire:ssa-jc:base:no-auto",
+   "evidence": "PARK: this row reads an identity the ruling retires, and the player its own partition names has no card to go to. hobbyiqCardId reads hiq:baseball:2025:bowman-chrome-sapphire:ssa-jc:base:no-auto. The vendor partition 1782708479171x113035842276264510 holds 12 rows and every one carries playerName \"Jac Caglianone\" - it is a Caglianone CardHedge product, not a Chourio one, so these sales must NOT be swept into the Chourio pool by the retire. Title is bare - \"2025 Bowman Sapphire Baseball #SSA-JC Base\" - and names no player; the partition and its titled siblings (\"2025 Bowman Sapphire Selections Jac Caglianone Auto SSA-JC PSA 10\" $250 and \"JAC CAGLIANONE 2025 BOWMAN CHROME SAPPHIRE #SSA-JC SELECTIONS REFRACTOR AUTO - Raw\" $130) carry the attribution. Caglianone has NO checklist-backed SSA-JC identity in 2025 - measured read-only 2026-09-06, his only SSA-JC row anywhere is 2024 bowman-draft-sapphire (beckett-checklist-2026-08-29), a different card in a different year. Routing here would mint an identity from a sale, so the row is parked, not moved. Stored playerName \"Jac Caglianone\"."
+  },
+  {
+   "id": "cardhedge::ch-daily::1782708479171x113035842276264510::2025-07-04T04:26:00+00:00::26500",
+   "fromCardId": "1782708479171x113035842276264510",
+   "parkIdentityUnverified": true,
+   "price": 265,
+   "title": "2025 Bowman Sapphire Baseball #SSA-JC Base",
+   "playerNameAsStored": "Jac Caglianone",
+   "currentAddress": "hiq:baseball:2025:bowman-chrome-sapphire:ssa-jc:base:no-auto",
+   "evidence": "PARK: this row reads an identity the ruling retires, and the player its own partition names has no card to go to. hobbyiqCardId reads hiq:baseball:2025:bowman-chrome-sapphire:ssa-jc:base:no-auto. The vendor partition 1782708479171x113035842276264510 holds 12 rows and every one carries playerName \"Jac Caglianone\" - it is a Caglianone CardHedge product, not a Chourio one, so these sales must NOT be swept into the Chourio pool by the retire. Title is bare - \"2025 Bowman Sapphire Baseball #SSA-JC Base\" - and names no player; the partition and its titled siblings (\"2025 Bowman Sapphire Selections Jac Caglianone Auto SSA-JC PSA 10\" $250 and \"JAC CAGLIANONE 2025 BOWMAN CHROME SAPPHIRE #SSA-JC SELECTIONS REFRACTOR AUTO - Raw\" $130) carry the attribution. Caglianone has NO checklist-backed SSA-JC identity in 2025 - measured read-only 2026-09-06, his only SSA-JC row anywhere is 2024 bowman-draft-sapphire (beckett-checklist-2026-08-29), a different card in a different year. Routing here would mint an identity from a sale, so the row is parked, not moved. Stored playerName \"Jac Caglianone\"."
+  },
+  {
+   "id": "cardhedge::ch-daily::1782708479171x113035842276264510::2025-07-08T04:56:00+00:00::18000",
+   "fromCardId": "1782708479171x113035842276264510",
+   "parkIdentityUnverified": true,
+   "price": 180,
+   "title": "2025 Bowman Sapphire Baseball #SSA-JC Base",
+   "playerNameAsStored": "Jac Caglianone",
+   "currentAddress": "hiq:baseball:2025:bowman-chrome-sapphire:ssa-jc:base:no-auto",
+   "evidence": "PARK: this row reads an identity the ruling retires, and the player its own partition names has no card to go to. hobbyiqCardId reads hiq:baseball:2025:bowman-chrome-sapphire:ssa-jc:base:no-auto. The vendor partition 1782708479171x113035842276264510 holds 12 rows and every one carries playerName \"Jac Caglianone\" - it is a Caglianone CardHedge product, not a Chourio one, so these sales must NOT be swept into the Chourio pool by the retire. Title is bare - \"2025 Bowman Sapphire Baseball #SSA-JC Base\" - and names no player; the partition and its titled siblings (\"2025 Bowman Sapphire Selections Jac Caglianone Auto SSA-JC PSA 10\" $250 and \"JAC CAGLIANONE 2025 BOWMAN CHROME SAPPHIRE #SSA-JC SELECTIONS REFRACTOR AUTO - Raw\" $130) carry the attribution. Caglianone has NO checklist-backed SSA-JC identity in 2025 - measured read-only 2026-09-06, his only SSA-JC row anywhere is 2024 bowman-draft-sapphire (beckett-checklist-2026-08-29), a different card in a different year. Routing here would mint an identity from a sale, so the row is parked, not moved. Stored playerName \"Jac Caglianone\"."
+  },
+  {
+   "id": "cardhedge::ch-daily::1782708479171x113035842276264510::2025-12-08T02:18:00+00:00::30400",
+   "fromCardId": "1782708479171x113035842276264510",
+   "parkIdentityUnverified": true,
+   "price": 304,
+   "title": "2025 Bowman Sapphire Baseball #SSA-JC Base",
+   "playerNameAsStored": "Jac Caglianone",
+   "currentAddress": "hiq:baseball:2025:bowman-chrome-sapphire:ssa-jc:base:no-auto",
+   "evidence": "PARK: this row reads an identity the ruling retires, and the player its own partition names has no card to go to. hobbyiqCardId reads hiq:baseball:2025:bowman-chrome-sapphire:ssa-jc:base:no-auto. The vendor partition 1782708479171x113035842276264510 holds 12 rows and every one carries playerName \"Jac Caglianone\" - it is a Caglianone CardHedge product, not a Chourio one, so these sales must NOT be swept into the Chourio pool by the retire. Title is bare - \"2025 Bowman Sapphire Baseball #SSA-JC Base\" - and names no player; the partition and its titled siblings (\"2025 Bowman Sapphire Selections Jac Caglianone Auto SSA-JC PSA 10\" $250 and \"JAC CAGLIANONE 2025 BOWMAN CHROME SAPPHIRE #SSA-JC SELECTIONS REFRACTOR AUTO - Raw\" $130) carry the attribution. Caglianone has NO checklist-backed SSA-JC identity in 2025 - measured read-only 2026-09-06, his only SSA-JC row anywhere is 2024 bowman-draft-sapphire (beckett-checklist-2026-08-29), a different card in a different year. Routing here would mint an identity from a sale, so the row is parked, not moved. Stored playerName \"Jac Caglianone\"."
+  },
+  {
+   "id": "cardhedge::ch-daily::1782708479171x113035842276264510::2025-12-25T03:44:00+00:00::17250",
+   "fromCardId": "1782708479171x113035842276264510",
+   "parkIdentityUnverified": true,
+   "price": 172.5,
+   "title": "2025 Bowman Sapphire Baseball #SSA-JC Base",
+   "playerNameAsStored": "Jac Caglianone",
+   "currentAddress": "hiq:baseball:2025:bowman-chrome-sapphire:ssa-jc:base:no-auto",
+   "evidence": "PARK: this row reads an identity the ruling retires, and the player its own partition names has no card to go to. hobbyiqCardId reads hiq:baseball:2025:bowman-chrome-sapphire:ssa-jc:base:no-auto. The vendor partition 1782708479171x113035842276264510 holds 12 rows and every one carries playerName \"Jac Caglianone\" - it is a Caglianone CardHedge product, not a Chourio one, so these sales must NOT be swept into the Chourio pool by the retire. Title is bare - \"2025 Bowman Sapphire Baseball #SSA-JC Base\" - and names no player; the partition and its titled siblings (\"2025 Bowman Sapphire Selections Jac Caglianone Auto SSA-JC PSA 10\" $250 and \"JAC CAGLIANONE 2025 BOWMAN CHROME SAPPHIRE #SSA-JC SELECTIONS REFRACTOR AUTO - Raw\" $130) carry the attribution. Caglianone has NO checklist-backed SSA-JC identity in 2025 - measured read-only 2026-09-06, his only SSA-JC row anywhere is 2024 bowman-draft-sapphire (beckett-checklist-2026-08-29), a different card in a different year. Routing here would mint an identity from a sale, so the row is parked, not moved. Stored playerName \"Jac Caglianone\"."
+  },
+  {
+   "id": "cardhedge::ch-daily::1782708479171x113035842276264510::2026-01-19T02:19:00+00:00::25200",
+   "fromCardId": "1782708479171x113035842276264510",
+   "parkIdentityUnverified": true,
+   "price": 252,
+   "title": "2025 Bowman Sapphire Baseball #SSA-JC Base",
+   "playerNameAsStored": "Jac Caglianone",
+   "currentAddress": "hiq:baseball:2025:bowman-chrome-sapphire:ssa-jc:base:no-auto",
+   "evidence": "PARK: this row reads an identity the ruling retires, and the player its own partition names has no card to go to. hobbyiqCardId reads hiq:baseball:2025:bowman-chrome-sapphire:ssa-jc:base:no-auto. The vendor partition 1782708479171x113035842276264510 holds 12 rows and every one carries playerName \"Jac Caglianone\" - it is a Caglianone CardHedge product, not a Chourio one, so these sales must NOT be swept into the Chourio pool by the retire. Title is bare - \"2025 Bowman Sapphire Baseball #SSA-JC Base\" - and names no player; the partition and its titled siblings (\"2025 Bowman Sapphire Selections Jac Caglianone Auto SSA-JC PSA 10\" $250 and \"JAC CAGLIANONE 2025 BOWMAN CHROME SAPPHIRE #SSA-JC SELECTIONS REFRACTOR AUTO - Raw\" $130) carry the attribution. Caglianone has NO checklist-backed SSA-JC identity in 2025 - measured read-only 2026-09-06, his only SSA-JC row anywhere is 2024 bowman-draft-sapphire (beckett-checklist-2026-08-29), a different card in a different year. Routing here would mint an identity from a sale, so the row is parked, not moved. Stored playerName \"Jac Caglianone\"."
+  },
+  {
+   "id": "cardhedge::ch-daily::1782708479171x113035842276264510::2026-01-26T02:16:00+00:00::21600",
+   "fromCardId": "1782708479171x113035842276264510",
+   "parkIdentityUnverified": true,
+   "price": 216,
+   "title": "2025 Bowman Sapphire Baseball #SSA-JC Base",
+   "playerNameAsStored": "Jac Caglianone",
+   "currentAddress": "hiq:baseball:2025:bowman-chrome-sapphire:ssa-jc:base:no-auto",
+   "evidence": "PARK: this row reads an identity the ruling retires, and the player its own partition names has no card to go to. hobbyiqCardId reads hiq:baseball:2025:bowman-chrome-sapphire:ssa-jc:base:no-auto. The vendor partition 1782708479171x113035842276264510 holds 12 rows and every one carries playerName \"Jac Caglianone\" - it is a Caglianone CardHedge product, not a Chourio one, so these sales must NOT be swept into the Chourio pool by the retire. Title is bare - \"2025 Bowman Sapphire Baseball #SSA-JC Base\" - and names no player; the partition and its titled siblings (\"2025 Bowman Sapphire Selections Jac Caglianone Auto SSA-JC PSA 10\" $250 and \"JAC CAGLIANONE 2025 BOWMAN CHROME SAPPHIRE #SSA-JC SELECTIONS REFRACTOR AUTO - Raw\" $130) carry the attribution. Caglianone has NO checklist-backed SSA-JC identity in 2025 - measured read-only 2026-09-06, his only SSA-JC row anywhere is 2024 bowman-draft-sapphire (beckett-checklist-2026-08-29), a different card in a different year. Routing here would mint an identity from a sale, so the row is parked, not moved. Stored playerName \"Jac Caglianone\"."
+  },
+  {
+   "id": "cardhedge::ch-daily::1782708479171x113035842276264510::2026-06-21T21:02:00+00:00::13000",
+   "fromCardId": "1782708479171x113035842276264510",
+   "parkIdentityUnverified": true,
+   "price": 130,
+   "title": "2025 Bowman Sapphire Baseball #SSA-JC Base",
+   "playerNameAsStored": "Jac Caglianone",
+   "currentAddress": "hiq:baseball:2025:bowman-chrome-sapphire:ssa-jc:base:no-auto",
+   "evidence": "PARK: this row reads an identity the ruling retires, and the player its own partition names has no card to go to. hobbyiqCardId reads hiq:baseball:2025:bowman-chrome-sapphire:ssa-jc:base:no-auto. The vendor partition 1782708479171x113035842276264510 holds 12 rows and every one carries playerName \"Jac Caglianone\" - it is a Caglianone CardHedge product, not a Chourio one, so these sales must NOT be swept into the Chourio pool by the retire. Title is bare - \"2025 Bowman Sapphire Baseball #SSA-JC Base\" - and names no player; the partition and its titled siblings (\"2025 Bowman Sapphire Selections Jac Caglianone Auto SSA-JC PSA 10\" $250 and \"JAC CAGLIANONE 2025 BOWMAN CHROME SAPPHIRE #SSA-JC SELECTIONS REFRACTOR AUTO - Raw\" $130) carry the attribution. Caglianone has NO checklist-backed SSA-JC identity in 2025 - measured read-only 2026-09-06, his only SSA-JC row anywhere is 2024 bowman-draft-sapphire (beckett-checklist-2026-08-29), a different card in a different year. Routing here would mint an identity from a sale, so the row is parked, not moved. Stored playerName \"Jac Caglianone\"."
+  },
+  {
+   "id": "cardhedge::ch-daily::1782616154262x568772602542944900",
+   "fromCardId": "1782708479171x113035842276264510",
+   "parkIdentityUnverified": true,
+   "price": 250,
+   "title": "2025 Bowman Sapphire Selections Jac Caglianone Auto SSA-JC PSA 10",
+   "playerNameAsStored": "Jac Caglianone",
+   "currentAddress": "hiq:baseball:2025:bowman-chrome-sapphire:ssa-jc:base:auto",
+   "evidence": "PARK: this row reads an identity the ruling retires, and the player its own partition names has no card to go to. hobbyiqCardId reads hiq:baseball:2025:bowman-chrome-sapphire:ssa-jc:base:auto. The vendor partition 1782708479171x113035842276264510 holds 12 rows and every one carries playerName \"Jac Caglianone\" - it is a Caglianone CardHedge product, not a Chourio one, so these sales must NOT be swept into the Chourio pool by the retire. Title names Caglianone directly: \"2025 Bowman Sapphire Selections Jac Caglianone Auto SSA-JC PSA 10\". Caglianone has NO checklist-backed SSA-JC identity in 2025 - measured read-only 2026-09-06, his only SSA-JC row anywhere is 2024 bowman-draft-sapphire (beckett-checklist-2026-08-29), a different card in a different year. Routing here would mint an identity from a sale, so the row is parked, not moved. Stored playerName \"Jac Caglianone\"."
+  },
+  {
+   "id": "cardhedge::ch-daily::1782708479171x113035842276264510::2026-08-10T01:22:00+00:00::11361",
+   "fromCardId": "1782708479171x113035842276264510",
+   "parkIdentityUnverified": true,
+   "price": 113.61,
+   "title": "2025 Bowman Sapphire Baseball #SSA-JC Base",
+   "playerNameAsStored": "Jac Caglianone",
+   "currentAddress": "hiq:baseball:2025:bowman-chrome-sapphire:ssa-jc:base:no-auto",
+   "evidence": "PARK: this row reads an identity the ruling retires, and the player its own partition names has no card to go to. hobbyiqCardId reads hiq:baseball:2025:bowman-chrome-sapphire:ssa-jc:base:no-auto. The vendor partition 1782708479171x113035842276264510 holds 12 rows and every one carries playerName \"Jac Caglianone\" - it is a Caglianone CardHedge product, not a Chourio one, so these sales must NOT be swept into the Chourio pool by the retire. Title is bare - \"2025 Bowman Sapphire Baseball #SSA-JC Base\" - and names no player; the partition and its titled siblings (\"2025 Bowman Sapphire Selections Jac Caglianone Auto SSA-JC PSA 10\" $250 and \"JAC CAGLIANONE 2025 BOWMAN CHROME SAPPHIRE #SSA-JC SELECTIONS REFRACTOR AUTO - Raw\" $130) carry the attribution. Caglianone has NO checklist-backed SSA-JC identity in 2025 - measured read-only 2026-09-06, his only SSA-JC row anywhere is 2024 bowman-draft-sapphire (beckett-checklist-2026-08-29), a different card in a different year. Routing here would mint an identity from a sale, so the row is parked, not moved. Stored playerName \"Jac Caglianone\"."
+  },
+  {
+   "id": "cardhedge::ch-daily::1786332820432x186941885569727360",
+   "fromCardId": "1782708479171x113035842276264510",
+   "parkIdentityUnverified": true,
+   "price": 113.61,
+   "title": "2025 Bowman Sapphire Jac Caglianone Selections Auto Autograph #SSA-JC Royals - Raw",
+   "playerNameAsStored": "Jac Caglianone",
+   "currentAddress": "hiq:baseball:2025:bowman-chrome-sapphire:ssa-jc:base:auto",
+   "evidence": "PARK: this row reads an identity the ruling retires, and the player its own partition names has no card to go to. hobbyiqCardId reads hiq:baseball:2025:bowman-chrome-sapphire:ssa-jc:base:auto. The vendor partition 1782708479171x113035842276264510 holds 12 rows and every one carries playerName \"Jac Caglianone\" - it is a Caglianone CardHedge product, not a Chourio one, so these sales must NOT be swept into the Chourio pool by the retire. Title names Caglianone directly: \"2025 Bowman Sapphire Jac Caglianone Selections Auto Autograph #SSA-JC Royals - Raw\". Caglianone has NO checklist-backed SSA-JC identity in 2025 - measured read-only 2026-09-06, his only SSA-JC row anywhere is 2024 bowman-draft-sapphire (beckett-checklist-2026-08-29), a different card in a different year. Routing here would mint an identity from a sale, so the row is parked, not moved. Stored playerName \"Jac Caglianone\"."
+  }
+ ]
+}
