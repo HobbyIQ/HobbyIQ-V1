@@ -195,7 +195,47 @@ const STREAK_STATUSES = new Set(["failed", "unreachable"]);
  * conclude only that the host is down. Reaching it proves the opposite.
  */
 const SHORT_STATUS = "short-ingest";
-const TERMINAL_STATUSES = new Set(["ingested", "unreachable", EMPTY_STATUS, "partial", SHORT_STATUS]);
+/**
+ * CF-A-TOTAL-REFUSAL-IS-NOT-A-GREEN-INGEST (2026-09-06, run 34038740849).
+ *
+ * The SCC baseball 1970-1999 walk logged eight consecutive entries as
+ *
+ *   FAILED — green ingest, 0 rows landed
+ *
+ * and the child's own banner, printed directly above each one, had already
+ * said what happened:
+ *
+ *   [3] 1998 SP Authentic Sheer Dominance   csv rows read 42, written 0, subset collisions REFUSED 42
+ *   [4] 1998 ... Sheer Dominance Titanium   csv rows read 42, written 0, subset collisions REFUSED 42
+ *   [6] 1999 ... Home Run Chronicles        csv rows read 70, written 0, subset collisions REFUSED 70
+ *
+ * Every staged row was REFUSED — deliberately, by the subset-collision guard
+ * (#1741): the stored baseballcardpedia rows at those rungs carry subsetName
+ * "Inserts", the SCC insert page states no subset, and blank is unknown and is
+ * never invented. The refusal is CORRECT. What was wrong is the sentence the
+ * driver wrote about it.
+ *
+ * "green ingest, 0 rows landed" asserts two things that are both false here:
+ * that the ingest was GREEN (it refused every row and said so), and that the
+ * cause is unknown and needs an investigation (the child named it, with a
+ * count). It sent an operator looking for a broken pipe or a mis-derived
+ * setKey — the two causes that sentence has always meant (#1738, #1739) —
+ * when neither was involved and nothing was lost.
+ *
+ * So a child that read N rows, wrote 0, and refused N is its OWN verdict:
+ * `refused`, carrying the child's count and the reason. It is TERMINAL — the
+ * guard will refuse identically on every future pass, so re-attempting it
+ * forever burns budget to reproduce a decision already made — and it is
+ * streak-NEUTRAL, because reaching it required fetching, parsing, staging and
+ * ingesting the page, every one of which proves the lane is UP. That is the
+ * #1855 rule applied to the refusal class: a verdict, never a `failed`.
+ *
+ * It does NOT swallow real failures. The branch fires only when the child's
+ * own banner accounts for EVERY row it read as refused; a child that wrote
+ * nothing and refused nothing is still the unexplained `failed` it always was.
+ */
+const REFUSED_STATUS = "refused";
+const TERMINAL_STATUSES = new Set(["ingested", "unreachable", EMPTY_STATUS, "partial", SHORT_STATUS, REFUSED_STATUS]);
 
 /**
  * The systemic tripwire's whole arithmetic, in one exported place so a test can
@@ -1069,6 +1109,73 @@ function printChildBanner(stdout) {
   const lines = childBannerLines(stdout);
   for (const line of lines) console.log(`        child: ${line}`);
   return lines.length;
+}
+
+/**
+ * The child's accounting, as NUMBERS rather than text.
+ *
+ * childBannerLines surfaces the banner for a human; this reads the same lines
+ * for the verdict. The counters were already being printed and then discarded,
+ * which is how run 34038740849 wrote "green ingest, 0 rows landed" eight times
+ * over a child that had already counted every one of those rows as REFUSED.
+ *
+ * Returns null for anything unreadable and omits any counter the banner did
+ * not state, so a verdict can require a number to be PRESENT rather than
+ * inferring one from a default. A missing counter must never read as zero: a
+ * zero is a measurement and an absence is not, and conflating them here would
+ * let a truncated banner masquerade as a clean refusal.
+ */
+const CHILD_COUNTERS = [
+  ["read", /^\s*csv rows read\s+([\d,]+)\b/],
+  ["written", /^\s*catalog rows written\s+([\d,]+)\b/],
+  ["keptExisting", /^\s*of which kept the existing row\s+([\d,]+)\b/],
+  ["skipped", /^\s*rows skipped\s+([\d,]+)\b/],
+  ["notReached", /^\s*rows not reached\s+([\d,]+)\b/],
+  ["subsetRefused", /^\s*subset collisions REFUSED\s+([\d,]+)\b/],
+  ["subsetResolved", /^\s*subset clashes RESOLVED\s+([\d,]+)\b/],
+  ["failed", /^\s*failed\s+([\d,]+)\b/],
+];
+
+function childCounters(stdout) {
+  if (!stdout) return null;
+  const out = {};
+  for (const raw of String(stdout).split(/\r?\n/)) {
+    for (const [key, re] of CHILD_COUNTERS) {
+      if (key in out) continue;
+      const m = re.exec(raw);
+      if (m) out[key] = Number(String(m[1]).replace(/,/g, ""));
+    }
+  }
+  return Object.keys(out).length ? out : null;
+}
+
+/**
+ * Did the child refuse EVERY row it read, and say so?
+ *
+ * The question is deliberately narrow, because its answer suppresses a
+ * `failed`. All four must hold, from the child's own banner:
+ *
+ *   it read rows          — a page that staged nothing is `empty`, not refused
+ *   it wrote none         — one row landing makes this a partial, not a refusal
+ *   it reported no failures — a crashed child is a failure however it counted
+ *   its refusals ACCOUNT FOR every row read
+ *
+ * The last is the load-bearing one: refusals plus the rows the child skipped
+ * for its own stated reasons must equal what it read. A child that read 42 and
+ * refused 3 has 39 rows unaccounted for, and that gap is exactly the
+ * unexplained loss `failed` exists to report.
+ */
+function childRefusedEverything(counters) {
+  if (!counters) return false;
+  const { read, written, subsetRefused, failed } = counters;
+  if (!Number.isFinite(read) || read <= 0) return false;
+  if (!Number.isFinite(written) || written !== 0) return false;
+  if (Number.isFinite(failed) && failed > 0) return false;
+  if (!Number.isFinite(subsetRefused) || subsetRefused <= 0) return false;
+  const accountedFor = subsetRefused
+    + (Number.isFinite(counters.skipped) ? counters.skipped : 0)
+    + (Number.isFinite(counters.notReached) ? counters.notReached : 0);
+  return accountedFor >= read;
 }
 
 /**
@@ -2512,7 +2619,7 @@ for (const lane of ACQUIRE_LANES) {
   }
 }
 
-module.exports = { collapsesToParent, streakAfter, RUNNER_SCOPE_VARS, gateStagedCsv, gateStagedEntry, ladderIsAttested, setKeyCandidates, canonicalSetKey, TERMINAL_STATUSES, LANES_WITH_SIBLING_PARALLEL_PAGES, ladderOnSiblingPages, allFilesAreParallelOfParent, CARTESIAN_MIN_RUNGS, CARTESIAN_MIN_CARDS, stagedCsvs, LANES_WITHOUT_PRINT_RUNS, LANES_WITH_BASELESS_PRODUCTS, LANES_WITH_VINTAGE_ERA_PRODUCTS, PARALLEL_ERA_FIRST_YEAR, ladderlessByEra, sourceLabelFor, splitCsv, isPersonName, setKeyFor, planFor, tcgdexModern, acquireStaged, ACQUIRE_LANES, LANE_ALIASES, LANE_SOURCE, LANE_MINUTES, CANONICAL_HEADER, CHILD_STDERR_LINES, childBannerLines, CHILD_BANNER_PATTERNS, CHILD_BANNER_LINES, cosmosSafeId, controlId, orderQueue, SYSTEMIC_FAILURE_STREAK, EMPTY_STATUS, SHORT_STATUS, STREAK_STATUSES, isStaged, stagedSourceRefs, stagedIndex, stagedFilesFor, acquireFromStaging, LANE_CONVERTER_VERSION, stagedConverterVersion, stagedIsCurrent };
+module.exports = { collapsesToParent, streakAfter, RUNNER_SCOPE_VARS, gateStagedCsv, gateStagedEntry, ladderIsAttested, setKeyCandidates, canonicalSetKey, TERMINAL_STATUSES, LANES_WITH_SIBLING_PARALLEL_PAGES, ladderOnSiblingPages, allFilesAreParallelOfParent, CARTESIAN_MIN_RUNGS, CARTESIAN_MIN_CARDS, stagedCsvs, LANES_WITHOUT_PRINT_RUNS, LANES_WITH_BASELESS_PRODUCTS, LANES_WITH_VINTAGE_ERA_PRODUCTS, PARALLEL_ERA_FIRST_YEAR, ladderlessByEra, sourceLabelFor, splitCsv, isPersonName, setKeyFor, planFor, tcgdexModern, acquireStaged, ACQUIRE_LANES, LANE_ALIASES, LANE_SOURCE, LANE_MINUTES, CANONICAL_HEADER, CHILD_STDERR_LINES, childBannerLines, CHILD_BANNER_PATTERNS, CHILD_BANNER_LINES, childCounters, childRefusedEverything, CHILD_COUNTERS, REFUSED_STATUS, cosmosSafeId, controlId, orderQueue, SYSTEMIC_FAILURE_STREAK, EMPTY_STATUS, SHORT_STATUS, STREAK_STATUSES, isStaged, stagedSourceRefs, stagedIndex, stagedFilesFor, acquireFromStaging, LANE_CONVERTER_VERSION, stagedConverterVersion, stagedIsCurrent };
 if (require.main !== module) return;
 
 (async () => {
@@ -2821,7 +2928,7 @@ if (require.main !== module) return;
   // balances by construction and can never disagree with itself.
   const take = queue.slice(0, effectiveLimit);
   const intended = take.length;
-  const verdicts = { ingested: 0, partial: 0, failed: 0, unreachable: 0, [EMPTY_STATUS]: 0, [SHORT_STATUS]: 0 };
+  const verdicts = { ingested: 0, partial: 0, failed: 0, unreachable: 0, [EMPTY_STATUS]: 0, [SHORT_STATUS]: 0, [REFUSED_STATUS]: 0 };
   let notReached = 0, rowsCreatedTotal = 0;
   // Report mode reconciles against what it INSPECTED. Counting a dry run's
   // deliberate zero writes as a shortfall reports a false imbalance and, worse,
@@ -2957,6 +3064,10 @@ if (require.main !== module) return;
           CONCURRENCY: process.env.CONCURRENCY || "16",
         }, 20 * 60000);
         printChildBanner(ingestSaid);
+        // THE CHILD'S OWN ACCOUNTING, as numbers. Read here so a verdict can
+        // rest on what the child COUNTED rather than on what the catalog read
+        // back alone. See CF-A-TOTAL-REFUSAL-IS-NOT-A-GREEN-INGEST.
+        const counters = childCounters(ingestSaid);
 
         // VERIFY BY READ. Not the ingest's claim -- a count from Cosmos.
         const after = await countCatalogRows(entry, csvPaths);
@@ -3088,6 +3199,38 @@ if (require.main !== module) return;
           // key to verify it with. Nothing about the host.
           verdict = { status: "failed", reason: "cannot verify by read — setKey/year not derivable for this entry", rowsCreated: 0, stats: gate.stats, laneProvenHealthy: true };
           console.log(`      FAILED — unverifiable`);
+        } else if (childRefusedEverything(counters)) {
+          // A DELIBERATE REFUSAL IS A DECISION, NOT A LOSS.
+          //
+          // The child read rows, wrote none, and accounted for every one of
+          // them as refused -- the subset-collision guard declining to invent
+          // a subset name for a rung the catalog already holds under a
+          // different one. Nothing was dropped and nothing is missing: the
+          // rows were never eligible to land under this identity.
+          //
+          // TERMINAL, because the guard is deterministic. Given the same page
+          // and the same stored rows it refuses identically on every future
+          // pass, so leaving the entry pending re-fetches and re-refuses it
+          // forever -- 8 of this run's 170 slots bought nothing but a repeat
+          // of a decision already made. It leaves the queue with its reason.
+          //
+          // STREAK-NEUTRAL via laneProvenHealthy, on the same evidence as a
+          // cleanliness-gate content refusal: reaching this line required the
+          // page to be fetched, parsed, staged and ingested, which is positive
+          // proof the lane is UP. The streak may conclude one thing only, and
+          // this is evidence against it.
+          const detail = `${f(counters.subsetRefused)} of ${f(counters.read)} rows refused by the subset-collision guard`;
+          verdict = {
+            status: REFUSED_STATUS,
+            reason: `refused at merge — the child read ${f(counters.read)} rows and wrote 0: ${detail}. `
+              + `The stored row at each rung claims a subset this page does not state, and blank is unknown and is never invented. `
+              + `A decision, not a loss — re-running reproduces it.`,
+            rowsCreated: 0, rowsInCatalog: after, rowsStaged: gate.stats.rows,
+            childRead: counters.read, childRefused: counters.subsetRefused,
+            countedSetKeys: setKeyCandidates(entry, csvPaths),
+            stats: gate.stats, laneProvenHealthy: true,
+          };
+          console.log(`      REFUSED AT MERGE — ${detail}; nothing lost, nothing to retry`);
         } else if (after === 0) {
           // A per-entry answer. We fetched the page, staged it, ran the ingest
           // and read the catalog back -- the host answered every time, so this
@@ -3264,7 +3407,7 @@ if (require.main !== module) return;
   // `empty` is a verdict like any other and lands a control doc, so it counts
   // toward `written` -- leaving it out would put a lane of correctly-refused
   // sets straight into RECONCILED NO.
-  const written = verdicts.ingested + verdicts.partial + verdicts.failed + verdicts.unreachable + verdicts[EMPTY_STATUS] + verdicts[SHORT_STATUS];
+  const written = verdicts.ingested + verdicts.partial + verdicts.failed + verdicts.unreachable + verdicts[EMPTY_STATUS] + verdicts[SHORT_STATUS] + verdicts[REFUSED_STATUS];
   // CF-AN-UNREACHABLE-ENTRY-IS-ACCOUNTED-FOR (2026-09-04).
   //
   // Run 33841276495 (sportscardchecklist, report mode, limit=20) printed
@@ -3291,6 +3434,7 @@ if (require.main !== module) return;
     console.log(`    ingested          ${f(verdicts.ingested)}`);
     console.log(`    partial           ${f(verdicts.partial)}`);
     console.log(`    short ingest      ${f(verdicts[SHORT_STATUS])}   (rows landed; some staged identities are not in the catalog)`);
+    console.log(`    refused at merge  ${f(verdicts[REFUSED_STATUS])}   (the child refused every row it read; a decision, not a loss)`);
     console.log(`    failed            ${f(verdicts.failed)}`);
     console.log(`    unreachable       ${f(verdicts.unreachable)}`);
     console.log(`    empty at source   ${f(verdicts[EMPTY_STATUS])}   (the source served no cards; a verdict, not a lane fault)`);
@@ -3326,7 +3470,10 @@ if (require.main !== module) return;
       written: verdicts.ingested + verdicts.partial + verdicts[SHORT_STATUS],
       // An entry the source does not card is deliberately not written; it is
       // skipped, exactly like an unreachable one -- never counted as loss.
-      skipped: verdicts.unreachable + verdicts[EMPTY_STATUS] + notReached,
+      // A merge refusal is deliberately not written, exactly like an
+      // unreachable entry: the rows were never eligible to land under this
+      // identity, so it is skipped and never counted as loss.
+      skipped: verdicts.unreachable + verdicts[EMPTY_STATUS] + verdicts[REFUSED_STATUS] + notReached,
       failed: verdicts.failed,
     });
   }

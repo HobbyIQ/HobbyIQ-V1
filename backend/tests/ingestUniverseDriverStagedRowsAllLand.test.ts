@@ -140,7 +140,10 @@ describe("run 33847867665 — exactly 64 rows per set was the leaked LIMIT, not 
     // what is pinned is which status the SHORT-INGEST verdict carries.
     expect(src).toMatch(/status: SHORT_STATUS,\s*(?:\n\s*\/\/[^\n]*)*\n\s*reason: `short ingest/);
     expect(src).toMatch(/const SHORT_STATUS = "short-ingest";/);
-    expect(src).toMatch(/TERMINAL_STATUSES = new Set\(\[[^\]]*SHORT_STATUS\]\)/);
+    // SHORT_STATUS is in the terminal set; other terminal statuses may sit
+    // beside it (REFUSED_STATUS joined it in #1893), so this pins membership
+    // rather than that it is the last element of the literal.
+    expect(src).toMatch(/TERMINAL_STATUSES = new Set\(\[[^\]]*SHORT_STATUS[^\]]*\]\)/);
     // Decided BEFORE the partial branch: a short ingest is never a thin source.
     expect(src.indexOf("} else if (shortIngest) {")).toBeLessThan(src.indexOf("} else if (incomplete) {"));
     // ...and before the count check, which it supersedes.
