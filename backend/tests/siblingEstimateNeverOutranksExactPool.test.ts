@@ -17,6 +17,7 @@
 // measurement, no price), cross-setkey stays inside the product family
 // and the player, and labels tell the truth.
 import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from "vitest";
+import { PRICING_CONTRACT_VERSION } from "../src/services/portfolioiq/pricingContract.js";
 import request from "supertest";
 import * as repriceJobs from "../src/services/portfolioiq/repriceJobTracker.js";
 import fs from "node:fs";
@@ -499,7 +500,7 @@ describe("repriceHoldingsForUser — the fixture, end to end", () => {
     // does), so the persisted price now states that seller independence
     // could not be verified. The claim this test makes — the exact pool
     // outranks the sibling estimate, observed and labelled — is unchanged.
-    expect(hld.pricingSourceMeta).toEqual({ slug: GOLD, method: "exact-pool-leading-edge", compsUsed: 3, confidence: expect.any(Number), labels: [{ code: "independence-unverified", text: expect.stringContaining("do not tell us who sold them") }], selfAnchored: null });
+    expect(hld.pricingSourceMeta).toEqual({ slug: GOLD, method: "exact-pool-leading-edge", compsUsed: 3, confidence: expect.any(Number), labels: [{ code: "independence-unverified", text: expect.stringContaining("do not tell us who sold them") }], selfAnchored: null, contractVersion: PRICING_CONTRACT_VERSION });
     expect(hld.estimateBasis).toMatch(/^unified: /);
     expect(hld.estimateBasis).toContain("id=hobbyiqCardId");
     expect(hld.estimateBasis).not.toMatch(/floor/i);
@@ -530,7 +531,7 @@ describe("repriceHoldingsForUser — the fixture, end to end", () => {
     expect(hld.fmvRung).toBe("sibling-estimate");
     // confidence: null — the sibling lane measures none and now says so
     // explicitly (CF-CONFIDENCE-IS-NOT-OPTIONAL, persisted half, 2026-09-04).
-    expect(hld.pricingSourceMeta).toEqual({ slug: GOLD, method: "sibling-estimate", compsUsed: 4, confidence: null });
+    expect(hld.pricingSourceMeta).toEqual({ slug: GOLD, method: "sibling-estimate", compsUsed: 4, confidence: null, contractVersion: PRICING_CONTRACT_VERSION });
     expect(hld.estimateBasis).toBe(`sibling: ${SIBLING_CH_ID} × 2.50× parallel (empirical n=12, Bowman Chrome)`);
     expect(hld.estimateBasis).not.toMatch(/floor/i);
     expect(body.updates.find((u: any) => u.id === id)).toMatchObject({ status: "repriced", reason: "sibling-fallback" });
@@ -653,7 +654,7 @@ describe("repriceHoldingsForUser — the fixture, end to end", () => {
     // lane that says "I measured nothing" persisted identically to one that
     // forgot — the exact distinction the required-nullable type exists to
     // preserve. The rendered answer is unchanged ("—"); it is now recorded.
-    expect(hld.pricingSourceMeta).toEqual({ slug: GOLD, method: "exact-pool-leading-edge", compsUsed: 3, confidence: null });
+    expect(hld.pricingSourceMeta).toEqual({ slug: GOLD, method: "exact-pool-leading-edge", compsUsed: 3, confidence: null, contractVersion: PRICING_CONTRACT_VERSION });
     expect(hld.estimateBasis).not.toMatch(/floor/i);
     expect(hld.lastUpdated).not.toBe("2026-08-01T00:00:00.000Z");
     expect(body.updates.find((u: any) => u.id === id)).toMatchObject({ status: "repriced", reason: "our-pool:unified-market-value" });
