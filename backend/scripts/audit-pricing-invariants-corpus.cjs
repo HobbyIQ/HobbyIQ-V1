@@ -92,6 +92,10 @@ const INV = require(path.join(__dirname, "lib", "corpus-invariants.cjs"));
 const { budget } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
 const { runnerShardScope } = require(path.join(__dirname, "lib", "runner-shard-scope.cjs"));
 const CLASSIFY = require(path.join(__dirname, "lib", "rematch-classify.cjs"));
+// The MEASURED packing of sold_comps (16,336,296 rows in 32 slots by
+// (cardYear, sportClass), 1.07x spread). I9's sampling frame draws from every
+// slot so the nightly rate is about the corpus and not about one page of it.
+const SHARD_TABLE = require(path.join(__dirname, "..", "data", "rematch-shard-table.json"));
 
 const DB_NAME = process.env.COSMOS_DATABASE || "hobbyiq";
 const SAMPLE_SCALE = Math.max(0, Number(process.env.SAMPLE_SCALE ?? 1) || 1);
@@ -525,31 +529,75 @@ function buildDeriver() {
   };
 }
 /**
- * A RANDOM sample, not a recent one: recency correlates with whichever ingest
- * ran last, and a class rate measured on one source's output is that source's
- * rate, not the corpus's. Cosmos has no RANDOM(), so the sample is drawn across
- * an offset the run's own clock chooses — good enough for a nightly delta,
- * which is what this invariant is for.
+ * THE FRAME IS PART OF THE FINDING (#1872, 2026-09-06).
+ *
+ * This was `OFFSET floor((nowMs/86400000) % 50) * 500 LIMIT 2000`, described in
+ * this very comment as "A RANDOM sample". It was not random and it was not a
+ * corpus sample: 50 offsets x 500 meant it could never reach a row past index
+ * 26,500 of ~16.7M (0.16%), and with no ORDER BY, OFFSET walks PAGE order,
+ * which is partition order, which is cardId order. The 2026-09-06 artifact
+ * proved the consequence -- 2,000 rows with ZERO AGREE and ZERO IMPROVE,
+ * against 47.1%/2.2% on slot 31's real full-slot census.
+ *
+ * The frame now draws from every one of the 32 measured shard-table slots, at a
+ * per-slot soldAt SEEK point seeded by the UTC day (reproducible within a day,
+ * sweeping across days), through a per-cardId reservoir so one hot pool cannot
+ * fill the sample. See lib/corpus-invariants.cjs `buildSampleFrame`.
+ *
+ * RU: 32 partition-bounded TOP queries (`c.cardYear = @y [AND c.sport = @s]`
+ * plus a `c.soldAt >= @from` seek), ~63 rows each -- ~6,100 RU/run measured
+ * against ~2.2M RU had the draw used a large OFFSET, which Cosmos charges for
+ * every skipped document. No cross-partition COUNT, no OFFSET, no unbounded
+ * scan.
  */
 async function auditRederivation(db, res, bud, nowMs) {
   const pool = db.container("sold_comps");
   const target = sizeOf("I9");
   if (target === 0) { res.notes.push("sample size 0 — skipped"); return; }
 
-  const offset = Math.floor((nowMs / 86400000) % 50) * 500;
-  const { resources } = await retry(() => pool.items.query({
-    query: "SELECT c.id, c.cardId, c.hobbyiqCardId, c.title, c.source, c.parallel, c.setKey, "
-      + "c.cardYear, c.cardNumber, c.printRun FROM c WHERE IS_DEFINED(c.title) "
-      + "AND STARTSWITH(c.hobbyiqCardId, 'hiq:') OFFSET @off LIMIT @n",
-    parameters: [{ name: "@off", value: offset }, { name: "@n", value: target }],
-  }).fetchAll()).catch(async (e) => {
-    res.notes.push(`offset sample unavailable (${String(e?.message ?? e).slice(0, 90)}) — head sample`);
-    return retry(() => pool.items.query({
-      query: "SELECT TOP @n c.id, c.cardId, c.hobbyiqCardId, c.title, c.source, c.parallel, c.setKey, "
-        + "c.cardYear, c.cardNumber, c.printRun FROM c WHERE IS_DEFINED(c.title) AND STARTSWITH(c.hobbyiqCardId, 'hiq:')",
-      parameters: [{ name: "@n", value: target }],
-    }).fetchAll());
-  });
+  const PER_CARD_CAP = Math.max(1, Number(process.env.I9_PER_CARD_CAP ?? 4));
+  const frame = INV.buildSampleFrame({ shardTable: SHARD_TABLE, nowMs, target, perCardCap: PER_CARD_CAP });
+  const reservoir = INV.makeCardReservoir(PER_CARD_CAP);
+  const SELECT = "c.id, c.cardId, c.hobbyiqCardId, c.title, c.source, c.parallel, c.setKey, "
+    + "c.cardYear, c.cardNumber, c.printRun";
+
+  if (!frame.plan.length) {
+    res.notes.push("NOT RUN — the shard table carries no slots, so there is no frame to draw from");
+    return;
+  }
+
+  let slotsRead = 0;
+  for (const entry of frame.plan) {
+    if (bud.outOfClock()) { res.notes.push(`frame stopped at slot ${slotsRead}/${frame.plan.length} — ${bud.stoppedAtBudget()}`); break; }
+    const u = entry.unit;
+    // Partition-bounded by construction: a year, optionally a sport class.
+    // SEEK, NEVER SKIP. A large OFFSET is charged for every document it passes
+    // over (~2.2M RU/night on this table); a soldAt lower bound with ORDER BY
+    // rides the index and is charged for what it RETURNS.
+    const where = ["IS_DEFINED(c.title)", "STARTSWITH(c.hobbyiqCardId, 'hiq:')", "c.soldAt >= @from"];
+    const params = [{ name: "@n", value: entry.take }, { name: "@from", value: entry.seekFrom }];
+    if (u.yearKind === "value") { where.push("c.cardYear = @y"); params.push({ name: "@y", value: Number(u.year) }); }
+    else if (u.yearKind === "null") where.push("IS_NULL(c.cardYear)");
+    else where.push("NOT IS_DEFINED(c.cardYear)");
+    if (u.sportClass && u.sportClass !== "other") { where.push("c.sport = @s"); params.push({ name: "@s", value: u.sportClass }); }
+    const { resources } = await retry(() => pool.items.query({
+      query: `SELECT TOP @n ${SELECT} FROM c WHERE ${where.join(" AND ")} ORDER BY c.soldAt`,
+      parameters: params,
+    }).fetchAll()).catch((e) => {
+      res.notes.push(`slot ${entry.slot} draw failed (${String(e?.message ?? e).slice(0, 80)})`);
+      return { resources: [] };
+    });
+    slotsRead++;
+    for (const row of resources) reservoir.offer(row);
+  }
+
+  const resources = reservoir.rows();
+  res.notes.push(
+    `FRAME: ${slotsRead}/${frame.plan.length} shard-table slots x ${frame.perSlot} rows, per-slot soldAt seek `
+    + `seeded by UTC day ${frame.day} (reproducible within the day, seek not skip); per-card cap ${PER_CARD_CAP} `
+    + `dropped ${f(reservoir.droppedToCap())} row(s); ${f(resources.length)} rows from `
+    + `${f(reservoir.distinctCards())} distinct cards; ~${f(resources.length * 3)} RU`,
+  );
 
   // THE REAL DERIVER, or the invariant does not run. The first prod run passed
   // `derived: null` and got 160/160 UNDERIVABLE with a 0.00% CONFLICT rate — a
@@ -618,6 +666,19 @@ async function auditRederivation(db, res, bud, nowMs) {
   res.byReason = rates.byReason;
   res.needsChecklistAxes = rates.needsChecklistAxes;
   res.needsChecklistRows = needsChecklistRows;
+  // FRAME HEALTH -- is this sample about the corpus, or about itself? Compared
+  // against the last real full-slot census shares. This is a NOTE, never a
+  // breach: the corpus legitimately moves, and the point is that the movement
+  // is VISIBLE. A zero-AGREE or single-pool sample is the frame failing, and
+  // the rate it produced must not be read as a corpus rate.
+  res.frameHealth = INV.frameHealth({
+    byClass: rates.byClass,
+    distinctCards: reservoir.distinctCards(),
+    sampled: verdicts.length,
+  });
+  for (const flag of res.frameHealth.flags) {
+    res.notes.push(`FRAME UNHEALTHY -- ${flag}. The rate below is about the SAMPLE, not the corpus.`);
+  }
   // THE THRESHOLD MEASURES TRUE DISAGREEMENTS. Both numbers are printed, and
   // the note says which one the threshold reads — a threshold that quietly
   // starts measuring something else is indistinguishable from a corpus that
@@ -734,6 +795,20 @@ async function main() {
     }
     if (r.byCell) { console.log("  worst (sport,year) cells:"); for (const [c, v] of Object.entries(r.byCell)) console.log(`    ${c.padEnd(28)} ${v.breaches}/${v.sampled}`); }
     if (r.byClass) { console.log("  by class:"); for (const [c, n] of Object.entries(r.byClass)) console.log(`    ${c.padEnd(28)} ${f(n)}`); }
+    if (r.frameHealth) {
+      // FRAME HEALTH, beside the classes it qualifies. A rate whose frame is
+      // unhealthy is a rate about the sample, and saying so is the whole point.
+      const fh = r.frameHealth;
+      console.log(`  frame health: ${fh.healthy ? "OK" : "UNHEALTHY"}  `
+        + `${f(fh.sampled)} rows / ${f(fh.distinctCards)} distinct cards`);
+      for (const [k, d] of Object.entries(fh.drift)) {
+        const got = (d.sampled * 100).toFixed(1), cen = d.census === null ? "?" : (d.census * 100).toFixed(1);
+        const delta = (d.delta * 100);
+        console.log(`    ${k.padEnd(14)} sample ${String(got).padStart(5)}%   census ${String(cen).padStart(5)}%   `
+          + `${delta >= 0 ? "+" : ""}${delta.toFixed(1)}pp`);
+      }
+      for (const flag of fh.flags) console.log(`    FLAG  ${flag}`);
+    }
     if (r.byConflictKind) {
       console.log("  CONFLICT split (only TRUE-DISAGREEMENT is a breach):");
       for (const [c, n] of Object.entries(r.byConflictKind)) console.log(`    ${c.padEnd(28)} ${f(n)}`);
