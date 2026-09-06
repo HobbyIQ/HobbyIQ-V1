@@ -141,17 +141,49 @@ describe("PIN 2 — a DRAFT title plus Taylor RESOLVES to the bowman-draft row",
     expect(normalizeSetKey("Bowman Chrome")).toBe("bowman-chrome");
   });
 
-  it("MUTATION: without the word-order retry the title reads as the stored product", () => {
-    // WHY THE RETRY EXISTS, stated as a failing case rather than a comment.
-    // `inferSetKeyFromTitle`'s Bowman rules are ADJACENT WORDS — /bowman\s+draft/
-    // — and this title spells the product "Bowman Chrome DRAFT", so DRAFT never
-    // sits beside "bowman" and /bowman\s+chrome/ wins the ladder. Read once,
-    // the title agrees with the stored name, `titleStatedProduct` returns null,
-    // and the holding PARKS instead of resolving.
+  it("THE CAUSE IS FIXED: this title now needs no retry at all", () => {
+    // WAS: `expect(...via).toBe("title-parse-reordered")`.
     //
-    // Delete `reorderProductWords` and this goes red: same title, no product to
-    // try, Devin Taylor's 8 sales stay unreachable.
-    expect(titleStatedProduct(taylorHolding)!.via).toBe("title-parse-reordered");
+    // WHAT CHANGED, AND WHY THIS PIN MOVED (#1860, 2026-09-06). When this file
+    // was written, `inferSetKeyFromTitle`'s Bowman rules were ADJACENT WORDS —
+    // /bowman\s+draft/ — so the spelling "Bowman Chrome DRAFT" never put DRAFT
+    // beside "bowman", /bowman\s+chrome/ won the ladder, and the ONLY way to
+    // reach Devin Taylor's row was to reorder the words and ask again. The
+    // retry was a WORKAROUND at the gate for a defect in the vocabulary, and
+    // it said so: "the fix goes here because loosening that regex would re-read
+    // every '... Bowman Chrome ... 2025 MLB Draft' title in the corpus".
+    //
+    // That defect is now fixed AT THE CAUSE, without the corpus-wide loosening
+    // the comment feared: `inferSetKeyFromTitle` reads DRAFT on either side of
+    // CHROME, but only when the two words TOUCH — so the product being spelled
+    // is read and the event being mentioned is not. The direct read therefore
+    // answers this title, and answering it once is strictly better than
+    // answering it twice.
+    //
+    // MEASURED, not assumed: all FIVE holdings in the 2026-09-06 census whose
+    // title says "Bowman Chrome Draft" now resolve `via: "title-parse"`.
+    expect(titleStatedProduct(taylorHolding)!.via).toBe("title-parse");
+    // ...and to the same product it always had to reach.
+    expect(titleStatedProduct(taylorHolding)!.setName).toBe("Bowman Draft Chrome");
+  });
+
+  it("the retry is still LIVE CODE, and this is the case it alone answers", () => {
+    // WHY IT WAS NOT DELETED. The parser fix requires DRAFT to be ADJACENT to
+    // "bowman" or "chrome" — that adjacency IS the safety, and it is what keeps
+    // "... Bowman Chrome ... 2025 MLB Draft" out of the Draft pool. So a title
+    // that scatters the product word away from BOTH is still invisible to the
+    // one-shot read, and the gate's scoped retry is still the only thing that
+    // finds it — on a population whose destination has already contradicted
+    // its player, which is what makes the looser read safe HERE and nowhere.
+    //
+    // Delete `reorderProductWords` and this goes red.
+    const scattered = {
+      ...taylorHolding,
+      ebayListingTitle:
+        "2025 Bowman Chrome Devin Taylor 1st Draft Pick Refractor Auto /499",
+    };
+    expect(titleStatedProduct(scattered)!.via).toBe("title-parse-reordered");
+    expect(titleStatedProduct(scattered)!.setName).toBe("Bowman Draft Chrome");
   });
 
   it("the resolved destination must ITSELF name this player", () => {
