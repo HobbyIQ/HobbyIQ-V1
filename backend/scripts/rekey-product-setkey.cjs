@@ -117,6 +117,11 @@
  */
 "use strict";
 const path = require("path");
+// CF-A-JAPANESE-CARD-IS-NOT-AN-ENGLISH-CARD. Required at MODULE level, unlike
+// the dist/ loads inside main(): this helper defensive-loads its own code
+// tables, so it cannot break the contract that this script is requirable (and
+// its dispatch refusals drivable) without a compiled tree.
+const { marketVerdict } = require(path.join(__dirname, "lib", "market-guard.cjs"));
 
 const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === "true";
 const SPORT = String(process.env.SPORT || "").trim().toLowerCase();
@@ -446,10 +451,20 @@ async function main() {
       // LABELS -- a reader who conflates them would think rows left the
       // catalog.
       retiredUntwinned: 0, retiredUntwinnedChildren: 0,
+      // CF-A-JAPANESE-CARD-IS-NOT-AN-ENGLISH-CARD. A row whose market
+      // CONTRADICTS the destination key's market. A SKIP, never a write: the
+      // row stays exactly where it was, and it needs a destination in its OWN
+      // market (for the 151 cell, `sv2a`) rather than this dispatch's TO.
+      refusedCrossMarket: 0,
     };
     const examples = [];
     /** CF-A-FOLD-NEVER-CHANGES-THE-PLAYER: every refused pair, in full. */
     const refusals = [];
+    /** CF-A-JAPANESE-CARD-IS-NOT-AN-ENGLISH-CARD: every cross-market refusal,
+     *  in full and for the same reason the others are un-truncated -- a
+     *  refusal exists so a human can route the row, and a row truncated out of
+     *  the report is a row nobody routes. */
+    const crossMarket = [];
     /** Every CONTENDED pair with what the two arms saw and which one decided --
      *  the evidence trail for a fold that changed a name, and for one that
      *  refused. Un-truncated for the same reason `refusals` is. */
@@ -531,6 +546,32 @@ async function main() {
                   s.malformed++;
                   if (examples.length < 8) examples.push(`  LEFT (not an identity slug, no gradeTier)  ${id.slice(0, 76)}`);
                 }
+                return;
+              }
+
+              // CF-A-JAPANESE-CARD-IS-NOT-AN-ENGLISH-CARD (#1900 vocabulary,
+              // guard added 2026-09-06).
+              //
+              // BEFORE the destination slug is even formed, because this is a
+              // refusal to move at all -- not a collision to adjudicate at the
+              // far end. The player guard below cannot catch this: the two
+              // markets print the SAME Pokemon at the SAME number, so every
+              // check it makes passes. Measured on pokemon/2023 `151` ->
+              // `sv03-5`: 148 Japanese-named rows, 148 of them sharing a card
+              // number with an English row naming the SAME player, and report
+              // run 34061675440 refused 0 of them.
+              //
+              // A refusal needs BOTH sides to state a market and to disagree,
+              // so a row that says nothing moves exactly as it did before.
+              const mv = marketVerdict(d, TO, SPORT);
+              if (!mv.allowed) {
+                s.refusedCrossMarket++;
+                crossMarket.push(
+                  `  REFUSED (cross-market)  ${id.slice(0, 62)}\n`
+                  + `      -> would become :${TO}: (${mv.toMarket.toUpperCase()})`
+                  + `, but this row is ${mv.rowMarket.toUpperCase()}\n`
+                  + `      ${str(d.playerName)} #${str(d.cardNumber)} ${str(d.parallel)} — setName "${str(d.setName).slice(0, 60)}"`,
+                );
                 return;
               }
 
@@ -695,12 +736,19 @@ async function main() {
       console.log(`-- REFUSED: different players at one address, neither corroborated (${refusals.length})`);
       for (const l of refusals) console.log(l);
     }
+    if (crossMarket.length) {
+      console.log("");
+      console.log(`-- REFUSED: cross-market — the row's market contradicts ${TO} (${crossMarket.length})`);
+      console.log("   These rows need a destination in their OWN market, not this dispatch's TO.");
+      for (const l of crossMarket) console.log(l);
+    }
     banner(stopReason);
     console.log(`  rows scanned (this slot)   ${f(s.scanned)}   (+${f(s.otherSlot)} other slots)`);
     console.log(`  MOVED to ${TO.padEnd(26)} ${f(s.moved)}${RETIRE_UNTWINNED ? "   <- 0 expected: RETIRE_UNTWINNED diverts every move" : ""}`);
     console.log(`  FOLDED (twin already there)${f(s.folded).padStart(8)}   <- the incumbent won on authority`);
     console.log(`  REPLACED a lower twin      ${f(s.replaced)}`);
     console.log(`  REFUSED (different player) ${f(s.refusedDifferentPlayer)}   <- NOTHING written for these; both rows stay put`);
+    console.log(`  REFUSED (cross-market)     ${f(s.refusedCrossMarket)}   <- a JA row may never land on an EN key, or the reverse`);
     console.log(`  CONTENDED (different player) ${f(s.contendedPairs)}   <- evidence gathered for these only; = arbitrated + refused`);
     console.log(`    of the folds/replaces, decided by player evidence  ${f(s.playerArbitrated)}`);
     if (RETIRE_UNTWINNED) {
@@ -725,7 +773,11 @@ async function main() {
     // reportWrites would flag the arithmetic -- the same reasoning
     // gradedRetiredCascade documents, in the other direction.
     const written = s.moved + s.folded + s.replaced + s.gradedRetiredDirect + s.retiredUntwinned;
-    const skipped = s.stemMismatch + s.yearMismatch + s.malformed + s.noop + s.notReached + s.refusedDifferentPlayer;
+    // A CROSS-MARKET REFUSAL IS A SKIP TOO, and it must be in this sum or the
+    // arithmetic stops closing the moment the guard fires -- reportWrites would
+    // flag a clean run as a mismatch and the lane would look broken.
+    const skipped = s.stemMismatch + s.yearMismatch + s.malformed + s.noop + s.notReached
+      + s.refusedDifferentPlayer + s.refusedCrossMarket;
     reconcile("rekey-product-setkey:catalog", s.scanned, written, skipped, s.failed);
   }
 
@@ -735,8 +787,15 @@ async function main() {
       scanned: 0, otherSlot: 0, moved: 0, created: 0, deleted: 0,
       collapsedOntoExisting: 0, notIdentityRow: 0, slugDrift: 0,
       duplicatesLeft: 0, failed: 0, notReached: 0, readBackRetried: 0,
+      // CF-A-JAPANESE-CARD-IS-NOT-AN-ENGLISH-CARD. A sale whose own title
+      // states the other market. A SKIP: the sale stays in the pool it is in.
+      refusedCrossMarket: 0,
     };
     const examples = [];
+    /** Every cross-market refusal, capped: the pool lane's populations run to
+     *  hundreds of thousands of rows, so unlike the catalog lane's per-row
+     *  curation this one prints a sample and counts the rest in the banner. */
+    const crossMarket = [];
     let stopReason = null;
 
     const prefixes = YEARS.map((y) => `hiq:${SPORT}:${y}:${FROM}:`);
@@ -778,6 +837,26 @@ async function main() {
 
       const target = withSetKeySegment(oldSlug, TO);
       if (!target || target === oldSlug) { s.notIdentityRow++; return; }
+
+      // CF-A-JAPANESE-CARD-IS-NOT-AN-ENGLISH-CARD, on the SALES side.
+      //
+      // The same rule as the catalog lane and for a sharper reason: this lane
+      // moves a SALE into a pricing pool, so a Japanese sale carried onto an
+      // English code does not merely mis-file a row, it prices the English
+      // card off a Japanese comp. A sale states its market in its TITLE, which
+      // marketOfRow reads alongside setName.
+      const mv = marketVerdict(row, TO, SPORT);
+      if (!mv.allowed) {
+        s.refusedCrossMarket++;
+        if (crossMarket.length < 40) {
+          crossMarket.push(
+            `  REFUSED (cross-market)  ${oldSlug.slice(0, 66)}\n`
+            + `      -> would become :${TO}: (${mv.toMarket.toUpperCase()}), but this sale is ${mv.rowMarket.toUpperCase()}\n`
+            + `      ${str(row.title).slice(0, 96)}`,
+          );
+        }
+        return;
+      }
 
       // Reported, never applied: what a FULL recompute would have said. The
       // move itself replaces only segment 3 (D28's rule).
@@ -870,9 +949,15 @@ async function main() {
     }
 
     for (const l of examples) console.log(l);
+    if (crossMarket.length) {
+      console.log("");
+      console.log(`-- REFUSED: cross-market — the sale's market contradicts ${TO} (showing ${crossMarket.length} of ${f(s.refusedCrossMarket)})`);
+      for (const l of crossMarket) console.log(l);
+    }
     banner(stopReason);
     console.log(`  rows scanned (this slot)   ${f(s.scanned)}   (+${f(s.otherSlot)} other slots)`);
     console.log(`  REKEYED ${FROM} -> ${TO}    ${f(s.moved)}`);
+    console.log(`  REFUSED (cross-market)     ${f(s.refusedCrossMarket)}   <- a JA sale may never land on an EN key, or the reverse`);
     console.log(`  new rows created           ${f(s.created)}`);
     console.log(`  old rows deleted           ${f(s.deleted)}`);
     console.log(`  collapsed onto an existing ${f(s.collapsedOntoExisting)}   <- the target address already held this sale`);
@@ -912,7 +997,10 @@ async function main() {
       console.log(`           ${r.y}  ${String(f(r.n)).padStart(9)}   <- ${tag}`);
     }
 
-    reconcile("rekey-product-setkey:pool", s.scanned, s.moved, s.notIdentityRow + s.notReached, s.failed);
+    // The cross-market refusals are SKIPS and belong in the skipped term, for
+    // the same arithmetic reason the catalog lane states.
+    reconcile("rekey-product-setkey:pool", s.scanned, s.moved,
+      s.notIdentityRow + s.notReached + s.refusedCrossMarket, s.failed);
   }
 
   // ── MODE=holdings ─────────────────────────────────────────────────────────
