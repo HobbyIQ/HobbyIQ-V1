@@ -1,6 +1,21 @@
 # Backend unit test suite (vitest, ~529 tests, excludes Tier 1 live-API harness).
-# Runs on any PR touching backend/** except harness-only changes.
+# Runs on any PR or main push touching backend/**.
 # Complements regression.yml, which owns the compiq pricing harness.
+#
+# `Backend Unit Tests` (the JOB name below) is a REQUIRED status check on main.
+# Two things follow, and backendWebCheckContexts.test.ts pins both:
+#
+#  1. Every PR must produce this context or it sits at BLOCKED forever waiting
+#     on a check that will never arrive. These paths are therefore mirrored,
+#     exactly and complementarily, by test-skip.yml's `paths-ignore`.
+#
+#  2. The old `"!backend/harness/**"` exclusion is gone. It was both a merge
+#     hazard and simply wrong: a harness-only PR matched no path here and no
+#     path in the complement, so it produced NO context at all. It also
+#     contradicted the suite — `npm test` is
+#     `vitest run --exclude "**/harness/tier1/**"`, which RUNS harness/**
+#     tests. Only Tier 1 is excluded, and that exclusion lives in the test
+#     script where it belongs, not in the trigger.
 name: backend-tests
 
 on:
@@ -8,9 +23,11 @@ on:
     branches: [main]
     paths:
       - "backend/**"
-      - "!backend/harness/**"
-      - "backend/package.json"
-      - "backend/package-lock.json"
+      - ".github/workflows/test.yml"
+  push:
+    branches: [main]
+    paths:
+      - "backend/**"
       - ".github/workflows/test.yml"
 
 concurrency:
