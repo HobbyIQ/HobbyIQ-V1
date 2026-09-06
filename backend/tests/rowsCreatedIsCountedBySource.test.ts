@@ -47,9 +47,16 @@ describe("rows created counts only what THIS run's source wrote", () => {
     const src = readFileSync(driver, "utf8");
     // The `before` half is the one that did not exist: the old code took only
     // a whole-product `before`, so there was nothing per-source to subtract.
+    //
+    // It carries `csvPaths` since CF-BOTH-ENDS-OF-A-DELTA-READ-ONE-KEY
+    // (2026-09-06, run 33997480307): the key comes from the staged manifest, so
+    // a read taken before acquisition resolves a DIFFERENT key than the `after`
+    // half and the delta straddles two products. Both ends are read from the
+    // same files, which is what makes the subtraction mean anything.
     expect(src).toContain(
-      "const beforeUnderSource = await countCatalogRowsBySource(entry, sourceLabelFor(lane))",
+      "const beforeUnderSource = await countCatalogRowsBySource(entry, sourceLabelFor(lane), csvPaths)",
     );
+    expect(src).not.toMatch(/countCatalogRowsBySource\(entry, sourceLabelFor\(lane\)\)\.catch/);
     expect(src).toMatch(
       /const created = \(rowsUnderSource === null \|\| beforeUnderSource === null\)/,
     );
