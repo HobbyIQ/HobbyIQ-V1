@@ -23,6 +23,7 @@ import {
 import type { HobbyIqFmvMethod, HobbyIqFmvResult } from "../portfolioiq/hobbyIqFmv.service.js";
 import type { ObservedGradeEntry } from "./observedGradeCurve.service.js";
 import { gradeCurveEntryLabel } from "./gradeCurveEntry.js";
+import { composeCardTitle, stripLeadingSetYear } from "../catalog/setNameYear.js";
 
 const round2 = (n: number): number => Math.round(n * 100) / 100;
 
@@ -118,17 +119,46 @@ function confidenceTier(score: number | null | undefined): "estimate" | "rough" 
 }
 
 /** The identity block every wire carries. `card_id` / `slug` are the
- *  catalog slug (the requested id when unresolved). */
+ *  catalog slug (the requested id when unresolved).
+ *
+ *  CF-CARD-TITLE-NEVER-DOUBLES-THE-YEAR (Drew, 2026-09-06). `set` carried the
+ *  catalog's stored, year-prefixed name ("2023 Topps Heritage") next to a
+ *  separate `year`, and every client composing a title had to know to strip
+ *  one before joining the other. apps/web did not, and the card page rendered
+ *  "2023 2023 Topps Heritage Mike Trout #74PB-1".
+ *
+ *  Two additive fields end the ambiguity — `setName`, which never carries a
+ *  year, and `displayName`, the title composed ONCE here so no client composes
+ *  its own. See services/catalog/setNameYear.ts for why this is a wire fix and
+ *  not a fifth client-side strip.
+ *
+ *  `set` is unchanged and still year-prefixed: five server-side callers read it
+ *  as the STORED value (portfolioStore.service writes it into a holding's
+ *  setName; ebayListingSearch builds a query key from it), and redefining it
+ *  would rewrite stored data as a side effect of a display fix. */
 export function wireIdentity(identity: ValuationIdentity): Record<string, unknown> {
   const id = identity.slug ?? identity.requestedId;
   const prettySetKey = String(identity.setKey ?? "").split("-").filter(Boolean)
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+  const storedSet = identity.setName ?? (prettySetKey || null);
+  const yearFreeSet = stripLeadingSetYear(storedSet, identity.year);
   return {
     card_id: id,
     slug: identity.slug,
     sport: identity.sport,
     year: identity.year,
-    set: identity.setName ?? (prettySetKey || null),
+    set: storedSet,
+    setName: yearFreeSet || null,
+    displayName:
+      composeCardTitle({
+        year: identity.year,
+        setName: storedSet,
+        playerName: identity.playerName,
+        cardNumber: identity.cardNumber,
+        parallel: identity.parallel,
+        isAuto: identity.isAuto,
+        printRun: identity.printRun,
+      }) || null,
     setKey: identity.setKey,
     number: identity.cardNumber,
     cardNumber: identity.cardNumber,

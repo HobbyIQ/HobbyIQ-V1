@@ -18,6 +18,7 @@ import type { PortfolioHolding } from "@/lib/api";
 import { formatUSD, formatPct } from "@/lib/format";
 import { ProvenanceChip } from "@/components/ProvenanceChip";
 import { describeRung, type RungDescription } from "@/lib/rung";
+import { cardIdentityTitle } from "@/lib/cardIdentityTitle";
 
 interface Grade { company: string; value: number }
 
@@ -206,33 +207,22 @@ export function CardPriceDetail({
   //
   // Neither source is complete on its own: identity has the player, the slug
   // has the print run. So compose from both, preferring identity per field.
-  const identityTitle = (() => {
-    const id = detail?.cardIdentity;
-    const sp = String(cardsightCardId).split(":");
-    const isHiq = sp[0] === "hiq" && sp.length >= 5;
-    if (!id && !isHiq) return null;
-
-    const pretty = (v: string | undefined | null) => String(v || "")
-      .split("-").filter(Boolean)
-      .map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
-
-    const year = id?.year != null ? String(id.year) : (isHiq ? sp[2] : "");
-    const set = id?.set ?? (isHiq ? pretty(sp[3]) : "");
-    const player = id?.player ?? "";
-    const number = id?.number ?? (isHiq ? String(sp[4] ?? "").toUpperCase() : "");
-
-    // "Base" adds nothing a reader wants — the absence of a parallel says it.
-    const parallelRaw = id?.parallel ?? (isHiq ? pretty(sp[5]) : "");
-    const parallel = parallelRaw && !/^base$/i.test(parallelRaw) ? parallelRaw : "";
-    const isAuto = id?.isAuto ?? (isHiq ? sp[6] === "auto" : false);
-    // Print run lives only in the slug.
-    const printRun = isHiq && /^num-\d+$/.test(String(sp[7] ?? "")) ? `/${String(sp[7]).slice(4)}` : "";
-
-    const parts = [year, set, player, number ? `#${number}` : "", parallel, isAuto ? "Auto" : "", printRun]
-      .map((x) => String(x).trim())
-      .filter(Boolean);
-    return parts.length > 0 ? parts.join(" ") : null;
-  })();
+  //
+  // CF-CARD-TITLE-NEVER-DOUBLES-THE-YEAR (Drew, 2026-09-06, on hobby-iq.com,
+  // search "2023 mike trout"):
+  //
+  //   2023 2023 Topps Heritage Mike Trout #74PB-1
+  //
+  // `cardIdentity.set` is the catalog's STORED name and carries its own year on
+  // 83-99% of rows per product, so joining it after `year` printed the year
+  // twice. Three other surfaces had each grown a private year-strip to survive
+  // this; this one, alone in a render closure where no test could reach it,
+  // never did.
+  //
+  // The fix is not a fourth strip. The backend composes the title ONCE
+  // (services/catalog/setNameYear.ts, on the wire as cardIdentity.displayName)
+  // and this composer moved to lib/cardIdentityTitle.ts so a test can hold it.
+  const identityTitle = cardIdentityTitle(detail?.cardIdentity, String(cardsightCardId));
   const slugTitle = (() => {
     // CF-SLUG-TITLE-KEEPS-THE-PARALLEL (2026-08-22). This parsed the slug and
     // then DROPPED the parallel, the auto flag and the print run, so
