@@ -92,25 +92,42 @@ describe("PIN 1 — a stored set name plus a contradicting player parks", () => 
     //
     // So the pin is that the call is UNCONDITIONAL: the corroboration check
     // must be the `if` itself, never nested inside a recovered-only branch.
-    expect(SRC).toMatch(
-      /if \(!recoveredSetNameIsCorroborated\(h\.playerName, backing\.playerName\)\) \{/);
-    // And `setNameWasRecovered` may only shape the REASON STRING now — never
-    // decide whether the gate runs. Read inside the contradiction branch, it
-    // cannot gate it.
-    const gateStart = SRC.indexOf(
-      "if (!recoveredSetNameIsCorroborated(h.playerName, backing.playerName)) {");
-    const recoveredDecl = SRC.indexOf("const setNameWasRecovered", gateStart);
+    //
+    // #1855 MOVED THIS GATE, AND NOT ONE WORD OF THE RULING. It is now the
+    // shared `corroboratePlayer`, called by BOTH the main path and GATE A,
+    // because `to === from` was short-circuiting it entirely. The pin reads it
+    // where it lives; what it asserts is what it always asserted — the
+    // corroboration is the EARLY RETURN itself, never nested behind a
+    // recovered-only branch.
+    const fnStart = SRC.indexOf("const corroboratePlayer = async (");
+    expect(fnStart).toBeGreaterThan(-1);
+    const fn = SRC.slice(fnStart, SRC.indexOf("const verdicts: RederiveVerdict[] = []", fnStart));
+    expect(fn).toMatch(
+      /if \(recoveredSetNameIsCorroborated\(h\.playerName, dest\.backing\.playerName\)\) return \{ kind: "ok" \};/);
+    // And `setNameWasRecovered` may only shape the REASON STRING — never
+    // decide whether the gate runs. Declared AFTER the corroborating early
+    // return, it cannot gate it.
+    const gateStart = fn.indexOf("if (recoveredSetNameIsCorroborated(h.playerName, dest.backing.playerName))");
+    const recoveredDecl = fn.indexOf("const setNameWasRecovered", gateStart);
     expect(gateStart).toBeGreaterThan(-1);
     expect(recoveredDecl).toBeGreaterThan(gateStart);
-    // Nothing declares it BEFORE the gate any more.
-    expect(SRC.slice(0, gateStart)).not.toContain("const setNameWasRecovered");
+    // Nothing declares it BEFORE the gate.
+    expect(fn.slice(0, gateStart)).not.toContain("const setNameWasRecovered");
+    // AND THE GATE IS UNSKIPPABLE: both paths call it, and GATE A's call is
+    // the one #1855 added — deleting it restores `AGREE Devin Taylor` against
+    // Diego Tornes' row.
+    expect(SRC.match(/await corroboratePlayer\(/g)?.length).toBe(2);
+    expect(SRC).toMatch(/corroboratePlayer\(h, recovery, \{ slug: from as string, backing: own! \}\)/);
   });
 
   it("parks as UNVERIFIED with the contradiction named, and writes nothing", () => {
     // The verdict is UNVERIFIED — this pass's identityUnverified — and its
     // reason names both players so the acquisition lane can read it.
-    expect(SRC).toMatch(/verdict: "UNVERIFIED",[\s\S]{0,400}destination names a different player/);
+    expect(SRC).toMatch(/verdict: "UNVERIFIED"/);
+    expect(SRC).toMatch(/destination names a different player/);
     expect(SRC).toMatch(/holding \$\{JSON\.stringify\(h\.playerName \?\? null\)\} vs catalog row/);
+    // The park verdict on the main path carries the shared reason verbatim.
+    expect(SRC).toMatch(/if \(check\.kind === "park"\) \{[\s\S]{0,300}reason: check\.reason/);
     // Only REDERIVE verdicts are ever written.
     expect(SRC).toContain('verdicts.filter((v) => v.verdict === "REDERIVE")');
   });
@@ -141,17 +158,49 @@ describe("PIN 2 — a DRAFT title plus Taylor RESOLVES to the bowman-draft row",
     expect(normalizeSetKey("Bowman Chrome")).toBe("bowman-chrome");
   });
 
-  it("MUTATION: without the word-order retry the title reads as the stored product", () => {
-    // WHY THE RETRY EXISTS, stated as a failing case rather than a comment.
-    // `inferSetKeyFromTitle`'s Bowman rules are ADJACENT WORDS — /bowman\s+draft/
-    // — and this title spells the product "Bowman Chrome DRAFT", so DRAFT never
-    // sits beside "bowman" and /bowman\s+chrome/ wins the ladder. Read once,
-    // the title agrees with the stored name, `titleStatedProduct` returns null,
-    // and the holding PARKS instead of resolving.
+  it("THE CAUSE IS FIXED: this title now needs no retry at all", () => {
+    // WAS: `expect(...via).toBe("title-parse-reordered")`.
     //
-    // Delete `reorderProductWords` and this goes red: same title, no product to
-    // try, Devin Taylor's 8 sales stay unreachable.
-    expect(titleStatedProduct(taylorHolding)!.via).toBe("title-parse-reordered");
+    // WHAT CHANGED, AND WHY THIS PIN MOVED (#1860, 2026-09-06). When this file
+    // was written, `inferSetKeyFromTitle`'s Bowman rules were ADJACENT WORDS —
+    // /bowman\s+draft/ — so the spelling "Bowman Chrome DRAFT" never put DRAFT
+    // beside "bowman", /bowman\s+chrome/ won the ladder, and the ONLY way to
+    // reach Devin Taylor's row was to reorder the words and ask again. The
+    // retry was a WORKAROUND at the gate for a defect in the vocabulary, and
+    // it said so: "the fix goes here because loosening that regex would re-read
+    // every '... Bowman Chrome ... 2025 MLB Draft' title in the corpus".
+    //
+    // That defect is now fixed AT THE CAUSE, without the corpus-wide loosening
+    // the comment feared: `inferSetKeyFromTitle` reads DRAFT on either side of
+    // CHROME, but only when the two words TOUCH — so the product being spelled
+    // is read and the event being mentioned is not. The direct read therefore
+    // answers this title, and answering it once is strictly better than
+    // answering it twice.
+    //
+    // MEASURED, not assumed: all FIVE holdings in the 2026-09-06 census whose
+    // title says "Bowman Chrome Draft" now resolve `via: "title-parse"`.
+    expect(titleStatedProduct(taylorHolding)!.via).toBe("title-parse");
+    // ...and to the same product it always had to reach.
+    expect(titleStatedProduct(taylorHolding)!.setName).toBe("Bowman Draft Chrome");
+  });
+
+  it("the retry is still LIVE CODE, and this is the case it alone answers", () => {
+    // WHY IT WAS NOT DELETED. The parser fix requires DRAFT to be ADJACENT to
+    // "bowman" or "chrome" — that adjacency IS the safety, and it is what keeps
+    // "... Bowman Chrome ... 2025 MLB Draft" out of the Draft pool. So a title
+    // that scatters the product word away from BOTH is still invisible to the
+    // one-shot read, and the gate's scoped retry is still the only thing that
+    // finds it — on a population whose destination has already contradicted
+    // its player, which is what makes the looser read safe HERE and nowhere.
+    //
+    // Delete `reorderProductWords` and this goes red.
+    const scattered = {
+      ...taylorHolding,
+      ebayListingTitle:
+        "2025 Bowman Chrome Devin Taylor 1st Draft Pick Refractor Auto /499",
+    };
+    expect(titleStatedProduct(scattered)!.via).toBe("title-parse-reordered");
+    expect(titleStatedProduct(scattered)!.setName).toBe("Bowman Draft Chrome");
   });
 
   it("the resolved destination must ITSELF name this player", () => {
@@ -161,6 +210,7 @@ describe("PIN 2 — a DRAFT title plus Taylor RESOLVES to the bowman-draft row",
     // ...and it must be a real catalog row, read back by id (GATE 1 again).
     expect(SRC).toMatch(/const altBacking = await backingOf\(altSlug\)/);
     expect(SRC).toMatch(/has no catalog row — discarded/);
+    expect(SRC).toMatch(/still not this player, discarded/);
   });
 
   it("only the PRODUCT is substituted — every other axis of the claim stands", () => {
@@ -183,6 +233,9 @@ describe("PIN 2 — a DRAFT title plus Taylor RESOLVES to the bowman-draft row",
     expect(SRC).toMatch(
       /droppedSpecificityAxes\(\s*\n?\s*recovery \? \{ \.\.\.h, \.\.\.recovery\.fields \} : h, destination\)/);
     expect(SRC).toMatch(/push\(\{ to: destination, backedBy: destinationBacking\.source, verdict: "REDERIVE"/);
+    // #1855: GATE A's own substitution is gated the same way, on the row it
+    // will actually write.
+    expect(SRC).toMatch(/droppedSpecificityAxes\(claimForGate2, storedCheck\.slug\)/);
   });
 });
 

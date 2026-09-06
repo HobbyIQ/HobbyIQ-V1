@@ -445,6 +445,19 @@ export const PRODUCT_SET_KEYS: ReadonlyArray<ProductSetKey> = [
   P("bowman-platinum", { parent: "bowman" }),
   P("bowmans-best", { parent: "bowman" }),
   P("bowman-best-university", { parent: "bowmans-best" }),
+  // CF-BOWMANS-BEST-PREVIEW-IS-ITS-OWN-PRODUCT (Drew, 2026-09-06). The 20-card
+  // BBP1-BBP20 insert that PREVIEWS Bowman's Best, packed out in 1997 Bowman
+  // (baseball) and 1997-98 Topps Stadium Club (basketball). ONE key for both
+  // sports -- it is one insert, and the sport segment of the id already keeps
+  // the two rosters apart.
+  //
+  // The parent is `bowmans-best` because that is the product it previews and
+  // the ladder the family walk should reach, but it is NOT a rung of it: its
+  // cards carry their own BBP numbering, which is exactly what the 2026-09-06
+  // incident proved when the insert was minted onto the parent's key and its
+  // 1-20 numbering collided with Bowman's Best #1-#20 -- twenty different
+  // cards at twenty occupied addresses.
+  P("bowmans-best-preview", { parent: "bowmans-best" }),
 
   // -- Upper Deck -------------------------------------------------------------
   P("upper-deck"),
