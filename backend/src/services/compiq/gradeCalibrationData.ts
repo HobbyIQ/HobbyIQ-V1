@@ -4,7 +4,7 @@
 // gradeCalibrationConfig.ts and imports the constants exported here.
 //
 // ─── Generation banner ────────────────────────────────────────────────
-//   generatedAt   : 2026-09-03T14:57:00.968Z
+//   generatedAt   : 2026-09-06T10:45:16.499Z
 //   source        : sold_comps (OUR pool), grouped by hobbyiqCardId
 //   sports        : baseball, football, basketball, hockey, pokemon
 //   baseline      : baseball slice, 365d lookback, n>=5 per (family, grader)
@@ -49,65 +49,65 @@ export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEn
       "byTier": {
         "9": {
           "medianRatio": 1.09,
-          "sampleSize": 77
+          "sampleSize": 76
         },
         "10": {
-          "medianRatio": 3.95,
-          "sampleSize": 51
+          "medianRatio": 3.99,
+          "sampleSize": 50
         },
         "8.5": {
           "medianRatio": 1.43,
           "sampleSize": 8
         },
         "9.5": {
-          "medianRatio": 1.73,
-          "sampleSize": 260
+          "medianRatio": 1.76,
+          "sampleSize": 257
         }
       },
-      "medianRatio": 1.68,
-      "p25": 1.04,
+      "medianRatio": 1.72,
+      "p25": 1.05,
       "p75": 2.79,
-      "sampleSize": 399
+      "sampleSize": 394
     },
     "CGC": {
       "byTier": {
         "8": {
-          "medianRatio": 1.03,
-          "sampleSize": 8
+          "medianRatio": 1.13,
+          "sampleSize": 9
         },
         "9": {
-          "medianRatio": 1.37,
+          "medianRatio": 1.33,
           "sampleSize": 65
         },
         "10": {
-          "medianRatio": 3.12,
-          "sampleSize": 220
+          "medianRatio": 3.27,
+          "sampleSize": 224
         },
         "8.5": {
-          "medianRatio": 1.48,
-          "sampleSize": 8
+          "medianRatio": 1.47,
+          "sampleSize": 9
         },
         "9.5": {
-          "medianRatio": 1.95,
-          "sampleSize": 48
+          "medianRatio": 2.1,
+          "sampleSize": 49
         }
       },
-      "medianRatio": 2.36,
-      "p25": 1.25,
-      "p75": 4.51,
-      "sampleSize": 355
+      "medianRatio": 2.37,
+      "p25": 1.27,
+      "p75": 4.49,
+      "sampleSize": 362
     },
     "CSG": {
-      "medianRatio": 1.14,
-      "p25": 0.65,
-      "p75": 4.88,
-      "sampleSize": 8
+      "medianRatio": 1.09,
+      "p25": 0.58,
+      "p75": 1.47,
+      "sampleSize": 7
     },
     "PSA": {
       "byTier": {
         "1": {
-          "medianRatio": 1.69,
-          "sampleSize": 65
+          "medianRatio": 1.72,
+          "sampleSize": 66
         },
         "2": {
           "medianRatio": 5.43,
@@ -126,132 +126,132 @@ export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEn
           "sampleSize": 15
         },
         "6": {
-          "medianRatio": 1.02,
-          "sampleSize": 46
+          "medianRatio": 1.04,
+          "sampleSize": 47
         },
         "7": {
-          "medianRatio": 1,
-          "sampleSize": 66
+          "medianRatio": 0.85,
+          "sampleSize": 68
         },
         "8": {
-          "medianRatio": 1.2,
-          "sampleSize": 695
+          "medianRatio": 1.19,
+          "sampleSize": 696
         },
         "9": {
-          "medianRatio": 1.45,
-          "sampleSize": 5073
+          "medianRatio": 1.46,
+          "sampleSize": 5108
         },
         "10": {
           "medianRatio": 3.33,
-          "sampleSize": 8065
+          "sampleSize": 8111
         }
       },
       "medianRatio": 2.35,
-      "p25": 1.33,
+      "p25": 1.34,
       "p75": 4.44,
-      "sampleSize": 14059
+      "sampleSize": 14145
     },
     "SGC": {
       "byTier": {
         "4": {
-          "medianRatio": 1.87,
+          "medianRatio": 1.83,
           "sampleSize": 8
         },
         "8": {
-          "medianRatio": 1.73,
-          "sampleSize": 11
+          "medianRatio": 1.57,
+          "sampleSize": 10
         },
         "9": {
           "medianRatio": 1.25,
           "sampleSize": 140
         },
         "10": {
-          "medianRatio": 2.32,
-          "sampleSize": 932
+          "medianRatio": 2.34,
+          "sampleSize": 933
         },
         "8.5": {
-          "medianRatio": 1.05,
-          "sampleSize": 10
+          "medianRatio": 0.79,
+          "sampleSize": 12
         },
         "9.5": {
           "medianRatio": 1.55,
-          "sampleSize": 468
+          "sampleSize": 454
         }
       },
-      "medianRatio": 1.91,
+      "medianRatio": 1.92,
       "p25": 1.21,
-      "p75": 3.24,
-      "sampleSize": 1596
+      "p75": 3.27,
+      "sampleSize": 1583
     }
   },
   "bowman-chrome": {
     "BGS": {
       "byTier": {
         "9": {
-          "medianRatio": 1.03,
-          "sampleSize": 27
+          "medianRatio": 1.04,
+          "sampleSize": 28
         },
         "10": {
-          "medianRatio": 2.45,
-          "sampleSize": 13
+          "medianRatio": 3.41,
+          "sampleSize": 12
         },
         "9.5": {
-          "medianRatio": 1.55,
-          "sampleSize": 110
+          "medianRatio": 1.56,
+          "sampleSize": 107
         }
       },
-      "medianRatio": 1.48,
+      "medianRatio": 1.53,
       "p25": 0.96,
       "p75": 2.42,
-      "sampleSize": 155
+      "sampleSize": 152
     },
     "CGC": {
       "byTier": {
         "9": {
-          "medianRatio": 1.28,
-          "sampleSize": 19
+          "medianRatio": 1.16,
+          "sampleSize": 20
         },
         "10": {
-          "medianRatio": 2.59,
-          "sampleSize": 66
+          "medianRatio": 2.61,
+          "sampleSize": 67
         },
         "9.5": {
-          "medianRatio": 1.82,
-          "sampleSize": 17
+          "medianRatio": 1.83,
+          "sampleSize": 15
         }
       },
-      "medianRatio": 1.94,
-      "p25": 1.08,
-      "p75": 3.87,
-      "sampleSize": 108
+      "medianRatio": 1.91,
+      "p25": 1.06,
+      "p75": 3.74,
+      "sampleSize": 110
     },
     "PSA": {
       "byTier": {
         "6": {
-          "medianRatio": 0.94,
+          "medianRatio": 0.96,
           "sampleSize": 8
         },
         "7": {
-          "medianRatio": 0.79,
-          "sampleSize": 16
+          "medianRatio": 0.81,
+          "sampleSize": 17
         },
         "8": {
-          "medianRatio": 1.09,
-          "sampleSize": 233
+          "medianRatio": 1.1,
+          "sampleSize": 232
         },
         "9": {
-          "medianRatio": 1.35,
-          "sampleSize": 2354
+          "medianRatio": 1.34,
+          "sampleSize": 2397
         },
         "10": {
-          "medianRatio": 3.01,
-          "sampleSize": 3688
+          "medianRatio": 3.03,
+          "sampleSize": 3746
         }
       },
-      "medianRatio": 2.19,
+      "medianRatio": 2.2,
       "p25": 1.27,
       "p75": 3.81,
-      "sampleSize": 6304
+      "sampleSize": 6407
     },
     "SGC": {
       "byTier": {
@@ -260,54 +260,54 @@ export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEn
           "sampleSize": 44
         },
         "10": {
-          "medianRatio": 1.96,
+          "medianRatio": 2,
           "sampleSize": 342
         },
         "9.5": {
-          "medianRatio": 1.5,
-          "sampleSize": 160
+          "medianRatio": 1.53,
+          "sampleSize": 161
         }
       },
-      "medianRatio": 1.74,
-      "p25": 1.13,
-      "p75": 2.85,
-      "sampleSize": 550
+      "medianRatio": 1.77,
+      "p25": 1.14,
+      "p75": 2.88,
+      "sampleSize": 551
     }
   },
   "bowman-chrome-draft": {
     "BGS": {
       "byTier": {
         "9.5": {
-          "medianRatio": 0.78,
-          "sampleSize": 10
+          "medianRatio": 0.7,
+          "sampleSize": 9
         }
       },
-      "medianRatio": 0.81,
-      "p25": 0.7,
+      "medianRatio": 0.8,
+      "p25": 0.66,
       "p75": 3.63,
-      "sampleSize": 13
+      "sampleSize": 12
     },
     "CGC": {
-      "medianRatio": 1.33,
+      "medianRatio": 1.04,
       "p25": 1,
-      "p75": 2.35,
-      "sampleSize": 10
+      "p75": 2.24,
+      "sampleSize": 9
     },
     "PSA": {
       "byTier": {
         "9": {
-          "medianRatio": 1.63,
-          "sampleSize": 56
+          "medianRatio": 1.65,
+          "sampleSize": 54
         },
         "10": {
-          "medianRatio": 2.77,
-          "sampleSize": 79
+          "medianRatio": 2.8,
+          "sampleSize": 78
         }
       },
       "medianRatio": 2.19,
       "p25": 1.23,
-      "p75": 4.44,
-      "sampleSize": 142
+      "p75": 4.41,
+      "sampleSize": 139
     },
     "SGC": {
       "medianRatio": 1.13,
@@ -324,14 +324,14 @@ export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEn
           "sampleSize": 17
         },
         "9.5": {
-          "medianRatio": 1.62,
-          "sampleSize": 63
+          "medianRatio": 1.7,
+          "sampleSize": 61
         }
       },
-      "medianRatio": 1.46,
+      "medianRatio": 1.49,
       "p25": 1.09,
-      "p75": 2.19,
-      "sampleSize": 85
+      "p75": 2.27,
+      "sampleSize": 83
     },
     "CGC": {
       "byTier": {
@@ -340,62 +340,62 @@ export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEn
           "sampleSize": 9
         },
         "10": {
-          "medianRatio": 3.12,
-          "sampleSize": 35
+          "medianRatio": 3.29,
+          "sampleSize": 38
         }
       },
-      "medianRatio": 2.76,
+      "medianRatio": 2.79,
       "p25": 1.77,
-      "p75": 4.28,
-      "sampleSize": 56
+      "p75": 4.26,
+      "sampleSize": 59
     },
     "PSA": {
       "byTier": {
         "6": {
-          "medianRatio": 0.98,
-          "sampleSize": 9
+          "medianRatio": 0.85,
+          "sampleSize": 10
         },
         "7": {
-          "medianRatio": 0.71,
-          "sampleSize": 13
+          "medianRatio": 0.63,
+          "sampleSize": 16
         },
         "8": {
-          "medianRatio": 1.09,
-          "sampleSize": 166
+          "medianRatio": 1.08,
+          "sampleSize": 174
         },
         "9": {
-          "medianRatio": 1.35,
-          "sampleSize": 1154
+          "medianRatio": 1.37,
+          "sampleSize": 1158
         },
         "10": {
-          "medianRatio": 3.12,
-          "sampleSize": 1581
+          "medianRatio": 3.15,
+          "sampleSize": 1591
         }
       },
       "medianRatio": 2.15,
       "p25": 1.23,
-      "p75": 3.91,
-      "sampleSize": 2937
+      "p75": 3.96,
+      "sampleSize": 2963
     },
     "SGC": {
       "byTier": {
         "9": {
-          "medianRatio": 1.03,
-          "sampleSize": 37
+          "medianRatio": 1.08,
+          "sampleSize": 36
         },
         "10": {
-          "medianRatio": 2.16,
-          "sampleSize": 191
+          "medianRatio": 2.21,
+          "sampleSize": 195
         },
         "9.5": {
           "medianRatio": 1.46,
-          "sampleSize": 109
+          "sampleSize": 103
         }
       },
-      "medianRatio": 1.69,
-      "p25": 1.16,
-      "p75": 2.8,
-      "sampleSize": 347
+      "medianRatio": 1.74,
+      "p25": 1.19,
+      "p75": 2.85,
+      "sampleSize": 344
     }
   },
   "bowman-sterling": {
@@ -403,17 +403,17 @@ export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEn
       "byTier": {
         "9": {
           "medianRatio": 1.54,
-          "sampleSize": 27
+          "sampleSize": 29
         },
         "10": {
-          "medianRatio": 3.1,
+          "medianRatio": 2.98,
           "sampleSize": 48
         }
       },
-      "medianRatio": 2.3,
-      "p25": 1.66,
-      "p75": 3.45,
-      "sampleSize": 78
+      "medianRatio": 2.29,
+      "p25": 1.63,
+      "p75": 3.35,
+      "sampleSize": 80
     },
     "SGC": {
       "byTier": {
@@ -432,136 +432,136 @@ export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEn
     "BGS": {
       "byTier": {
         "9": {
-          "medianRatio": 1.1,
-          "sampleSize": 263
+          "medianRatio": 1.09,
+          "sampleSize": 264
         },
         "10": {
-          "medianRatio": 3.54,
-          "sampleSize": 266
+          "medianRatio": 3.59,
+          "sampleSize": 265
         },
         "9.5": {
-          "medianRatio": 1.77,
-          "sampleSize": 1041
+          "medianRatio": 1.78,
+          "sampleSize": 1043
         }
       },
-      "medianRatio": 1.82,
-      "p25": 1.07,
-      "p75": 3.14,
-      "sampleSize": 1676
+      "medianRatio": 1.84,
+      "p25": 1.06,
+      "p75": 3.15,
+      "sampleSize": 1694
     },
     "CGC": {
       "byTier": {
         "9": {
-          "medianRatio": 1.82,
-          "sampleSize": 417
+          "medianRatio": 1.84,
+          "sampleSize": 432
         },
         "10": {
-          "medianRatio": 3.36,
-          "sampleSize": 1172
+          "medianRatio": 3.4,
+          "sampleSize": 1199
         },
         "9.5": {
-          "medianRatio": 1.67,
-          "sampleSize": 188
+          "medianRatio": 1.75,
+          "sampleSize": 193
         }
       },
-      "medianRatio": 2.58,
-      "p25": 1.46,
-      "p75": 4.47,
-      "sampleSize": 1954
+      "medianRatio": 2.6,
+      "p25": 1.47,
+      "p75": 4.46,
+      "sampleSize": 2006
     },
     "CSG": {
-      "medianRatio": 1.14,
-      "p25": 0.65,
-      "p75": 4.88,
-      "sampleSize": 8
+      "medianRatio": 1.09,
+      "p25": 0.58,
+      "p75": 1.47,
+      "sampleSize": 7
     },
     "HGA": {
-      "medianRatio": 1.04,
-      "p25": 0.87,
-      "p75": 1.34,
-      "sampleSize": 14
+      "medianRatio": 1.08,
+      "p25": 0.88,
+      "p75": 1.47,
+      "sampleSize": 15
     },
     "PSA": {
       "byTier": {
         "1": {
-          "medianRatio": 1.43,
-          "sampleSize": 105
+          "medianRatio": 1.44,
+          "sampleSize": 110
         },
         "2": {
-          "medianRatio": 1.94,
+          "medianRatio": 1.98,
           "sampleSize": 53
         },
         "6": {
-          "medianRatio": 0.97,
+          "medianRatio": 1,
           "sampleSize": 164
         },
         "7": {
-          "medianRatio": 1.16,
-          "sampleSize": 351
+          "medianRatio": 1.1,
+          "sampleSize": 358
         },
         "8": {
-          "medianRatio": 1.36,
-          "sampleSize": 3114
+          "medianRatio": 1.35,
+          "sampleSize": 3141
         },
         "9": {
           "medianRatio": 1.72,
-          "sampleSize": 18316
+          "sampleSize": 18401
         },
         "10": {
-          "medianRatio": 3.88,
-          "sampleSize": 28999
+          "medianRatio": 3.89,
+          "sampleSize": 29147
         }
       },
-      "medianRatio": 2.64,
-      "p25": 1.45,
-      "p75": 5.23,
-      "sampleSize": 51308
+      "medianRatio": 2.65,
+      "p25": 1.46,
+      "p75": 5.24,
+      "sampleSize": 51580
     },
     "SGC": {
       "byTier": {
         "9": {
-          "medianRatio": 1.43,
-          "sampleSize": 737
+          "medianRatio": 1.44,
+          "sampleSize": 751
         },
         "10": {
-          "medianRatio": 2.63,
-          "sampleSize": 3875
+          "medianRatio": 2.66,
+          "sampleSize": 3898
         },
         "8.5": {
-          "medianRatio": 1.41,
-          "sampleSize": 70
+          "medianRatio": 1.36,
+          "sampleSize": 72
         },
         "9.5": {
-          "medianRatio": 1.84,
-          "sampleSize": 2006
+          "medianRatio": 1.82,
+          "sampleSize": 1990
         }
       },
-      "medianRatio": 2.15,
+      "medianRatio": 2.16,
       "p25": 1.29,
-      "p75": 3.68,
-      "sampleSize": 6866
+      "p75": 3.69,
+      "sampleSize": 6880
     }
   },
   "panini-contenders": {
     "PSA": {
       "byTier": {
         "10": {
-          "medianRatio": 5.13,
-          "sampleSize": 11
+          "medianRatio": 3.83,
+          "sampleSize": 12
         }
       },
-      "medianRatio": 5.17,
-      "p25": 2.1,
-      "p75": 10.68,
-      "sampleSize": 16
+      "medianRatio": 4.22,
+      "p25": 2.04,
+      "p75": 5.8,
+      "sampleSize": 17
     }
   },
   "panini-donruss": {
     "BGS": {
-      "medianRatio": 2.07,
+      "medianRatio": 2.35,
       "p25": 1.48,
       "p75": 6.22,
-      "sampleSize": 10
+      "sampleSize": 11
     },
     "CGC": {
       "byTier": {
@@ -578,26 +578,26 @@ export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEn
     "PSA": {
       "byTier": {
         "7": {
-          "medianRatio": 2.18,
+          "medianRatio": 2.3,
           "sampleSize": 8
         },
         "8": {
-          "medianRatio": 1.5,
-          "sampleSize": 47
+          "medianRatio": 1.45,
+          "sampleSize": 46
         },
         "9": {
-          "medianRatio": 2.32,
+          "medianRatio": 2.34,
           "sampleSize": 181
         },
         "10": {
-          "medianRatio": 6.03,
-          "sampleSize": 246
+          "medianRatio": 6,
+          "sampleSize": 249
         }
       },
-      "medianRatio": 3.48,
-      "p25": 1.74,
-      "p75": 7.5,
-      "sampleSize": 498
+      "medianRatio": 3.52,
+      "p25": 1.76,
+      "p75": 7.54,
+      "sampleSize": 499
     },
     "SGC": {
       "byTier": {
@@ -606,46 +606,46 @@ export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEn
           "sampleSize": 9
         },
         "10": {
-          "medianRatio": 3.96,
-          "sampleSize": 35
+          "medianRatio": 3.97,
+          "sampleSize": 37
         },
         "9.5": {
-          "medianRatio": 2.99,
+          "medianRatio": 3.08,
           "sampleSize": 24
         }
       },
-      "medianRatio": 2.58,
-      "p25": 1.42,
+      "medianRatio": 2.71,
+      "p25": 1.49,
       "p75": 6.11,
-      "sampleSize": 70
+      "sampleSize": 72
     }
   },
   "panini-mosaic": {
     "CGC": {
       "medianRatio": 3.24,
-      "p25": 1.34,
+      "p25": 1.32,
       "p75": 10.19,
       "sampleSize": 7
     },
     "PSA": {
       "byTier": {
         "8": {
-          "medianRatio": 1.13,
-          "sampleSize": 11
+          "medianRatio": 1.09,
+          "sampleSize": 12
         },
         "9": {
-          "medianRatio": 2.95,
-          "sampleSize": 43
+          "medianRatio": 3.11,
+          "sampleSize": 42
         },
         "10": {
-          "medianRatio": 8.25,
-          "sampleSize": 102
+          "medianRatio": 8.49,
+          "sampleSize": 101
         }
       },
-      "medianRatio": 6.27,
-      "p25": 2.97,
-      "p75": 12.27,
-      "sampleSize": 157
+      "medianRatio": 6.64,
+      "p25": 2.92,
+      "p75": 12.46,
+      "sampleSize": 156
     },
     "SGC": {
       "medianRatio": 3.01,
@@ -659,21 +659,21 @@ export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEn
       "byTier": {
         "8": {
           "medianRatio": 1.34,
-          "sampleSize": 31
+          "sampleSize": 30
         },
         "9": {
-          "medianRatio": 2.57,
-          "sampleSize": 128
+          "medianRatio": 2.53,
+          "sampleSize": 129
         },
         "10": {
-          "medianRatio": 5.34,
-          "sampleSize": 167
+          "medianRatio": 5.31,
+          "sampleSize": 168
         }
       },
-      "medianRatio": 3.68,
-      "p25": 1.87,
-      "p75": 7,
-      "sampleSize": 334
+      "medianRatio": 3.75,
+      "p25": 1.92,
+      "p75": 7.05,
+      "sampleSize": 335
     },
     "SGC": {
       "byTier": {
@@ -728,18 +728,18 @@ export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEn
           "sampleSize": 50
         },
         "9": {
-          "medianRatio": 3.18,
-          "sampleSize": 296
+          "medianRatio": 3.16,
+          "sampleSize": 300
         },
         "10": {
-          "medianRatio": 6.8,
-          "sampleSize": 493
+          "medianRatio": 6.76,
+          "sampleSize": 498
         }
       },
-      "medianRatio": 4.77,
-      "p25": 2.59,
-      "p75": 10.23,
-      "sampleSize": 849
+      "medianRatio": 4.71,
+      "p25": 2.58,
+      "p75": 10.15,
+      "sampleSize": 858
     },
     "SGC": {
       "byTier": {
@@ -748,18 +748,18 @@ export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEn
           "sampleSize": 16
         },
         "10": {
-          "medianRatio": 3.07,
-          "sampleSize": 31
+          "medianRatio": 3.04,
+          "sampleSize": 30
         },
         "9.5": {
           "medianRatio": 2.84,
           "sampleSize": 29
         }
       },
-      "medianRatio": 2.89,
+      "medianRatio": 2.87,
       "p25": 1.38,
-      "p75": 4.74,
-      "sampleSize": 81
+      "p75": 4.92,
+      "sampleSize": 80
     }
   },
   "panini-select": {
@@ -789,27 +789,31 @@ export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEn
   "topps": {
     "BGS": {
       "byTier": {
+        "8": {
+          "medianRatio": 0.9,
+          "sampleSize": 8
+        },
         "9": {
-          "medianRatio": 1.13,
-          "sampleSize": 96
+          "medianRatio": 1.15,
+          "sampleSize": 102
         },
         "10": {
-          "medianRatio": 3.53,
-          "sampleSize": 154
+          "medianRatio": 3.52,
+          "sampleSize": 155
         },
         "8.5": {
-          "medianRatio": 0.85,
-          "sampleSize": 17
+          "medianRatio": 0.87,
+          "sampleSize": 19
         },
         "9.5": {
-          "medianRatio": 1.77,
-          "sampleSize": 364
+          "medianRatio": 1.76,
+          "sampleSize": 367
         }
       },
-      "medianRatio": 1.98,
-      "p25": 1.11,
-      "p75": 3.41,
-      "sampleSize": 641
+      "medianRatio": 1.96,
+      "p25": 1.09,
+      "p75": 3.39,
+      "sampleSize": 655
     },
     "CGC": {
       "byTier": {
@@ -818,110 +822,114 @@ export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEn
           "sampleSize": 22
         },
         "9": {
-          "medianRatio": 1.9,
-          "sampleSize": 185
+          "medianRatio": 1.89,
+          "sampleSize": 192
         },
         "10": {
-          "medianRatio": 3.33,
-          "sampleSize": 491
+          "medianRatio": 3.34,
+          "sampleSize": 500
+        },
+        "8.5": {
+          "medianRatio": 1.24,
+          "sampleSize": 9
         },
         "9.5": {
-          "medianRatio": 1.62,
-          "sampleSize": 85
+          "medianRatio": 1.67,
+          "sampleSize": 90
         }
       },
-      "medianRatio": 2.56,
-      "p25": 1.4,
-      "p75": 4.42,
-      "sampleSize": 802
+      "medianRatio": 2.58,
+      "p25": 1.42,
+      "p75": 4.45,
+      "sampleSize": 826
     },
     "HGA": {
       "byTier": {
         "9": {
-          "medianRatio": 1.03,
+          "medianRatio": 1.04,
           "sampleSize": 8
         }
       },
-      "medianRatio": 1.04,
-      "p25": 0.87,
-      "p75": 1.34,
-      "sampleSize": 14
+      "medianRatio": 1.08,
+      "p25": 0.88,
+      "p75": 1.47,
+      "sampleSize": 15
     },
     "PSA": {
       "byTier": {
         "1": {
-          "medianRatio": 1.01,
-          "sampleSize": 40
+          "medianRatio": 1.03,
+          "sampleSize": 44
         },
         "2": {
-          "medianRatio": 0.92,
+          "medianRatio": 0.97,
           "sampleSize": 41
         },
         "3": {
-          "medianRatio": 1.5,
+          "medianRatio": 1.58,
           "sampleSize": 11
         },
         "5": {
-          "medianRatio": 1.27,
-          "sampleSize": 14
+          "medianRatio": 1.25,
+          "sampleSize": 13
         },
         "6": {
-          "medianRatio": 1.06,
-          "sampleSize": 66
+          "medianRatio": 1.07,
+          "sampleSize": 64
         },
         "7": {
-          "medianRatio": 1.15,
-          "sampleSize": 150
+          "medianRatio": 1.11,
+          "sampleSize": 151
         },
         "8": {
           "medianRatio": 1.42,
-          "sampleSize": 1078
+          "sampleSize": 1084
         },
         "9": {
-          "medianRatio": 1.94,
-          "sampleSize": 4967
+          "medianRatio": 1.95,
+          "sampleSize": 4972
         },
         "10": {
-          "medianRatio": 4.28,
-          "sampleSize": 8248
+          "medianRatio": 4.3,
+          "sampleSize": 8268
         },
         "8.5": {
           "medianRatio": 1.09,
           "sampleSize": 26
         }
       },
-      "medianRatio": 2.83,
-      "p25": 1.49,
-      "p75": 5.99,
-      "sampleSize": 14645
+      "medianRatio": 2.84,
+      "p25": 1.5,
+      "p75": 6.02,
+      "sampleSize": 14678
     },
     "SGC": {
       "byTier": {
         "8": {
-          "medianRatio": 0.78,
+          "medianRatio": 0.79,
           "sampleSize": 22
         },
         "9": {
-          "medianRatio": 1.44,
-          "sampleSize": 274
+          "medianRatio": 1.45,
+          "sampleSize": 278
         },
         "10": {
-          "medianRatio": 2.65,
-          "sampleSize": 1342
+          "medianRatio": 2.69,
+          "sampleSize": 1351
         },
         "8.5": {
           "medianRatio": 1.41,
           "sampleSize": 34
         },
         "9.5": {
-          "medianRatio": 1.88,
-          "sampleSize": 716
+          "medianRatio": 1.86,
+          "sampleSize": 715
         }
       },
-      "medianRatio": 2.2,
+      "medianRatio": 2.21,
       "p25": 1.29,
-      "p75": 3.78,
-      "sampleSize": 2389
+      "p75": 3.77,
+      "sampleSize": 2401
     }
   },
   "topps-allen-ginter": {
@@ -932,124 +940,124 @@ export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEn
           "sampleSize": 10
         }
       },
-      "medianRatio": 2.3,
+      "medianRatio": 2.35,
       "p25": 0.89,
       "p75": 3.7,
-      "sampleSize": 16
+      "sampleSize": 17
     },
     "CGC": {
       "byTier": {
         "10": {
-          "medianRatio": 4,
-          "sampleSize": 17
+          "medianRatio": 4.06,
+          "sampleSize": 18
         }
       },
       "medianRatio": 3.11,
       "p25": 1.7,
-      "p75": 5.28,
+      "p75": 4.71,
       "sampleSize": 26
     },
     "PSA": {
       "byTier": {
         "8": {
-          "medianRatio": 2.56,
-          "sampleSize": 17
+          "medianRatio": 2.64,
+          "sampleSize": 18
         },
         "9": {
-          "medianRatio": 2.79,
-          "sampleSize": 68
+          "medianRatio": 2.83,
+          "sampleSize": 70
         },
         "10": {
-          "medianRatio": 6.69,
-          "sampleSize": 130
+          "medianRatio": 6.78,
+          "sampleSize": 129
         }
       },
       "medianRatio": 4.32,
-      "p25": 2.26,
+      "p25": 2.29,
       "p75": 7.64,
-      "sampleSize": 218
+      "sampleSize": 220
     },
     "SGC": {
       "byTier": {
         "10": {
-          "medianRatio": 3.04,
-          "sampleSize": 19
+          "medianRatio": 3.15,
+          "sampleSize": 20
         }
       },
-      "medianRatio": 2.92,
+      "medianRatio": 2.99,
       "p25": 1.29,
-      "p75": 4.47,
-      "sampleSize": 28
+      "p75": 4.08,
+      "sampleSize": 29
     }
   },
   "topps-chrome": {
     "BGS": {
       "byTier": {
         "9": {
-          "medianRatio": 1.04,
+          "medianRatio": 1.02,
           "sampleSize": 25
         },
         "10": {
-          "medianRatio": 2.82,
+          "medianRatio": 2.84,
           "sampleSize": 28
         },
         "9.5": {
-          "medianRatio": 1.7,
-          "sampleSize": 119
+          "medianRatio": 1.69,
+          "sampleSize": 122
         }
       },
       "medianRatio": 1.71,
-      "p25": 1.05,
-      "p75": 2.9,
-      "sampleSize": 177
+      "p25": 1.04,
+      "p75": 2.94,
+      "sampleSize": 182
     },
     "CGC": {
       "byTier": {
         "9": {
           "medianRatio": 2,
-          "sampleSize": 48
+          "sampleSize": 51
         },
         "10": {
-          "medianRatio": 3.4,
-          "sampleSize": 148
+          "medianRatio": 3.45,
+          "sampleSize": 154
         },
         "9.5": {
-          "medianRatio": 1.32,
+          "medianRatio": 1.39,
           "sampleSize": 26
         }
       },
-      "medianRatio": 2.66,
-      "p25": 1.54,
-      "p75": 4.21,
-      "sampleSize": 236
+      "medianRatio": 2.77,
+      "p25": 1.6,
+      "p75": 4.23,
+      "sampleSize": 243
     },
     "PSA": {
       "byTier": {
         "6": {
-          "medianRatio": 0.83,
+          "medianRatio": 0.96,
           "sampleSize": 24
         },
         "7": {
-          "medianRatio": 1.05,
-          "sampleSize": 39
+          "medianRatio": 1.06,
+          "sampleSize": 40
         },
         "8": {
-          "medianRatio": 1.34,
-          "sampleSize": 351
+          "medianRatio": 1.33,
+          "sampleSize": 360
         },
         "9": {
-          "medianRatio": 1.73,
-          "sampleSize": 2118
+          "medianRatio": 1.74,
+          "sampleSize": 2120
         },
         "10": {
-          "medianRatio": 3.9,
-          "sampleSize": 3510
+          "medianRatio": 3.93,
+          "sampleSize": 3525
         }
       },
-      "medianRatio": 2.68,
-      "p25": 1.51,
-      "p75": 5.34,
-      "sampleSize": 6049
+      "medianRatio": 2.69,
+      "p25": 1.52,
+      "p75": 5.4,
+      "sampleSize": 6076
     },
     "SGC": {
       "byTier": {
@@ -1059,117 +1067,113 @@ export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEn
         },
         "9": {
           "medianRatio": 1.43,
-          "sampleSize": 121
+          "sampleSize": 123
         },
         "10": {
-          "medianRatio": 2.99,
-          "sampleSize": 608
+          "medianRatio": 3,
+          "sampleSize": 611
         },
         "8.5": {
-          "medianRatio": 1.64,
+          "medianRatio": 1.65,
           "sampleSize": 17
         },
         "9.5": {
-          "medianRatio": 2.06,
-          "sampleSize": 279
+          "medianRatio": 1.99,
+          "sampleSize": 283
         }
       },
-      "medianRatio": 2.41,
+      "medianRatio": 2.39,
       "p25": 1.43,
       "p75": 4.15,
-      "sampleSize": 1034
+      "sampleSize": 1043
     }
   },
   "topps-chrome-update": {
     "BGS": {
       "byTier": {
-        "9": {
-          "medianRatio": 1.59,
-          "sampleSize": 8
-        },
         "10": {
           "medianRatio": 2.95,
           "sampleSize": 9
         },
         "9.5": {
-          "medianRatio": 1.49,
-          "sampleSize": 31
+          "medianRatio": 1.5,
+          "sampleSize": 34
         }
       },
-      "medianRatio": 1.57,
+      "medianRatio": 1.6,
       "p25": 1.01,
-      "p75": 2.95,
-      "sampleSize": 49
+      "p75": 3.16,
+      "sampleSize": 52
     },
     "CGC": {
       "byTier": {
         "9": {
           "medianRatio": 2,
-          "sampleSize": 23
+          "sampleSize": 24
         },
         "10": {
-          "medianRatio": 3.5,
-          "sampleSize": 48
+          "medianRatio": 3.36,
+          "sampleSize": 51
         }
       },
       "medianRatio": 2.81,
-      "p25": 1.9,
-      "p75": 4.02,
-      "sampleSize": 77
+      "p25": 1.8,
+      "p75": 3.97,
+      "sampleSize": 82
     },
     "PSA": {
       "byTier": {
         "7": {
-          "medianRatio": 1.11,
-          "sampleSize": 14
+          "medianRatio": 1.16,
+          "sampleSize": 15
         },
         "8": {
-          "medianRatio": 1.5,
-          "sampleSize": 93
+          "medianRatio": 1.45,
+          "sampleSize": 95
         },
         "9": {
-          "medianRatio": 1.85,
-          "sampleSize": 572
+          "medianRatio": 1.83,
+          "sampleSize": 568
         },
         "10": {
-          "medianRatio": 3.74,
-          "sampleSize": 827
+          "medianRatio": 3.69,
+          "sampleSize": 816
         }
       },
-      "medianRatio": 2.65,
-      "p25": 1.53,
-      "p75": 5.24,
-      "sampleSize": 1511
+      "medianRatio": 2.61,
+      "p25": 1.51,
+      "p75": 5.14,
+      "sampleSize": 1499
     },
     "SGC": {
       "byTier": {
         "9": {
-          "medianRatio": 1.94,
-          "sampleSize": 59
+          "medianRatio": 1.91,
+          "sampleSize": 60
         },
         "10": {
-          "medianRatio": 3.63,
-          "sampleSize": 141
+          "medianRatio": 3.65,
+          "sampleSize": 142
         },
         "8.5": {
           "medianRatio": 1.38,
           "sampleSize": 9
         },
         "9.5": {
-          "medianRatio": 2.39,
-          "sampleSize": 82
+          "medianRatio": 2.38,
+          "sampleSize": 83
         }
       },
-      "medianRatio": 2.42,
-      "p25": 1.47,
-      "p75": 4.4,
-      "sampleSize": 297
+      "medianRatio": 2.39,
+      "p25": 1.45,
+      "p75": 4.48,
+      "sampleSize": 300
     }
   },
   "topps-finest": {
     "BGS": {
       "medianRatio": 1.83,
-      "p25": 1.27,
+      "p25": 1.29,
       "p75": 3.47,
       "sampleSize": 8
     },
@@ -1180,100 +1184,100 @@ export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEn
           "sampleSize": 11
         }
       },
-      "medianRatio": 4.24,
+      "medianRatio": 4.25,
       "p25": 2.58,
-      "p75": 6.02,
+      "p75": 6.04,
       "sampleSize": 14
     },
     "PSA": {
       "byTier": {
         "8": {
-          "medianRatio": 1.56,
-          "sampleSize": 18
+          "medianRatio": 1.45,
+          "sampleSize": 20
         },
         "9": {
           "medianRatio": 1.75,
-          "sampleSize": 196
+          "sampleSize": 192
         },
         "10": {
           "medianRatio": 3.91,
-          "sampleSize": 373
+          "sampleSize": 376
         }
       },
-      "medianRatio": 2.77,
+      "medianRatio": 2.83,
       "p25": 1.63,
-      "p75": 5.38,
-      "sampleSize": 589
+      "p75": 5.61,
+      "sampleSize": 591
     },
     "SGC": {
       "byTier": {
         "10": {
-          "medianRatio": 2.71,
-          "sampleSize": 33
+          "medianRatio": 2.74,
+          "sampleSize": 34
         },
         "9.5": {
           "medianRatio": 1.82,
           "sampleSize": 10
         }
       },
-      "medianRatio": 2.57,
+      "medianRatio": 2.59,
       "p25": 1.37,
       "p75": 3.67,
-      "sampleSize": 44
+      "sampleSize": 45
     }
   },
   "topps-heritage": {
     "BGS": {
       "byTier": {
         "9.5": {
-          "medianRatio": 1.86,
-          "sampleSize": 17
+          "medianRatio": 1.96,
+          "sampleSize": 18
         }
       },
-      "medianRatio": 1.95,
-      "p25": 1,
-      "p75": 3.24,
+      "medianRatio": 1.96,
+      "p25": 1.01,
+      "p75": 2.57,
       "sampleSize": 24
     },
     "CGC": {
       "byTier": {
         "9": {
-          "medianRatio": 1.8,
-          "sampleSize": 14
+          "medianRatio": 2.05,
+          "sampleSize": 15
         },
         "10": {
-          "medianRatio": 3.02,
+          "medianRatio": 3.23,
           "sampleSize": 16
         }
       },
-      "medianRatio": 2.42,
-      "p25": 1.43,
-      "p75": 3.73,
-      "sampleSize": 38
+      "medianRatio": 2.45,
+      "p25": 1.33,
+      "p75": 3.83,
+      "sampleSize": 40
     },
     "PSA": {
       "byTier": {
         "7": {
-          "medianRatio": 2.86,
-          "sampleSize": 11
+          "medianRatio": 2.67,
+          "sampleSize": 10
         },
         "8": {
-          "medianRatio": 1.53,
-          "sampleSize": 63
+          "medianRatio": 1.51,
+          "sampleSize": 66
         },
         "9": {
-          "medianRatio": 1.94,
+          "medianRatio": 1.95,
           "sampleSize": 289
         },
         "10": {
-          "medianRatio": 4.94,
-          "sampleSize": 331
+          "medianRatio": 5.03,
+          "sampleSize": 336
         }
       },
-      "medianRatio": 2.88,
+      "medianRatio": 2.91,
       "p25": 1.48,
-      "p75": 6.23,
-      "sampleSize": 697
+      "p75": 6.21,
+      "sampleSize": 703
     },
     "SGC": {
       "byTier": {
@@ -1282,64 +1286,64 @@ export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEn
           "sampleSize": 10
         },
         "10": {
-          "medianRatio": 2.93,
-          "sampleSize": 43
+          "medianRatio": 3.1,
+          "sampleSize": 46
         },
         "9.5": {
-          "medianRatio": 1.98,
+          "medianRatio": 1.77,
           "sampleSize": 30
         }
       },
-      "medianRatio": 2.44,
+      "medianRatio": 2.47,
       "p25": 1.35,
-      "p75": 3.94,
-      "sampleSize": 84
+      "p75": 3.95,
+      "sampleSize": 87
     }
   },
   "topps-pristine": {
     "PSA": {
       "byTier": {
         "8": {
-          "medianRatio": 1.47,
+          "medianRatio": 1.33,
           "sampleSize": 14
         },
         "9": {
-          "medianRatio": 1.59,
-          "sampleSize": 60
+          "medianRatio": 1.52,
+          "sampleSize": 59
         },
         "10": {
           "medianRatio": 2.76,
-          "sampleSize": 208
+          "sampleSize": 214
         }
       },
-      "medianRatio": 2.24,
-      "p25": 1.46,
-      "p75": 4.09,
-      "sampleSize": 284
+      "medianRatio": 2.23,
+      "p25": 1.43,
+      "p75": 4.12,
+      "sampleSize": 289
     },
     "SGC": {
       "byTier": {
         "10": {
-          "medianRatio": 2.84,
-          "sampleSize": 11
+          "medianRatio": 3.22,
+          "sampleSize": 12
         }
       },
-      "medianRatio": 2.36,
-      "p25": 1.36,
-      "p75": 3.59,
-      "sampleSize": 15
+      "medianRatio": 2.62,
+      "p25": 1.68,
+      "p75": 3.61,
+      "sampleSize": 16
     }
   },
   "topps-stadium-club": {
     "BGS": {
       "medianRatio": 2.6,
       "p25": 1.14,
-      "p75": 6.79,
+      "p75": 6.03,
       "sampleSize": 8
     },
     "CGC": {
       "medianRatio": 3.58,
-      "p25": 2.13,
+      "p25": 1.2,
       "p75": 4.73,
       "sampleSize": 9
     },
@@ -1350,116 +1354,120 @@ export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEn
           "sampleSize": 10
         },
         "8": {
-          "medianRatio": 1.53,
-          "sampleSize": 59
+          "medianRatio": 1.57,
+          "sampleSize": 58
         },
         "9": {
-          "medianRatio": 2.48,
-          "sampleSize": 128
+          "medianRatio": 2.5,
+          "sampleSize": 129
         },
         "10": {
-          "medianRatio": 6.35,
-          "sampleSize": 129
+          "medianRatio": 6.53,
+          "sampleSize": 128
         }
       },
       "medianRatio": 3.17,
       "p25": 1.53,
-      "p75": 6.49,
-      "sampleSize": 330
+      "p75": 6.35,
+      "sampleSize": 329
     },
     "SGC": {
       "byTier": {
+        "9": {
+          "medianRatio": 2.19,
+          "sampleSize": 8
+        },
         "10": {
-          "medianRatio": 2.51,
-          "sampleSize": 17
+          "medianRatio": 2.45,
+          "sampleSize": 16
         },
         "9.5": {
-          "medianRatio": 2.88,
-          "sampleSize": 16
+          "medianRatio": 2.81,
+          "sampleSize": 15
         }
       },
-      "medianRatio": 2.51,
+      "medianRatio": 2.5,
       "p25": 1.3,
-      "p75": 3.95,
-      "sampleSize": 43
+      "p75": 3.66,
+      "sampleSize": 42
     }
   },
   "topps-update": {
     "BGS": {
       "byTier": {
         "9": {
-          "medianRatio": 0.89,
-          "sampleSize": 13
+          "medianRatio": 0.99,
+          "sampleSize": 16
         },
         "10": {
-          "medianRatio": 5.31,
+          "medianRatio": 5.33,
           "sampleSize": 11
         },
         "9.5": {
           "medianRatio": 2.45,
-          "sampleSize": 41
+          "sampleSize": 42
         }
       },
-      "medianRatio": 2.27,
+      "medianRatio": 2.42,
       "p25": 1.12,
-      "p75": 4.33,
-      "sampleSize": 67
+      "p75": 4.41,
+      "sampleSize": 72
     },
     "CGC": {
       "byTier": {
         "8": {
-          "medianRatio": 2.01,
+          "medianRatio": 2.05,
           "sampleSize": 12
         },
         "9": {
-          "medianRatio": 2.19,
-          "sampleSize": 45
+          "medianRatio": 2.37,
+          "sampleSize": 47
         },
         "10": {
           "medianRatio": 4.09,
           "sampleSize": 86
         },
         "9.5": {
-          "medianRatio": 1.52,
-          "sampleSize": 12
+          "medianRatio": 1.54,
+          "sampleSize": 13
         }
       },
-      "medianRatio": 2.76,
-      "p25": 1.74,
-      "p75": 4.9,
-      "sampleSize": 163
+      "medianRatio": 2.77,
+      "p25": 1.8,
+      "p75": 4.81,
+      "sampleSize": 166
     },
     "PSA": {
       "byTier": {
         "6": {
-          "medianRatio": 0.6,
+          "medianRatio": 0.61,
           "sampleSize": 11
         },
         "7": {
           "medianRatio": 1.07,
-          "sampleSize": 24
+          "sampleSize": 23
         },
         "8": {
-          "medianRatio": 1.54,
-          "sampleSize": 188
+          "medianRatio": 1.55,
+          "sampleSize": 186
         },
         "9": {
           "medianRatio": 2.39,
-          "sampleSize": 569
+          "sampleSize": 567
         },
         "10": {
-          "medianRatio": 6.41,
-          "sampleSize": 677
+          "medianRatio": 6.38,
+          "sampleSize": 667
         },
         "8.5": {
-          "medianRatio": 1.64,
+          "medianRatio": 1.65,
           "sampleSize": 10
         }
       },
-      "medianRatio": 3.39,
-      "p25": 1.71,
-      "p75": 6.77,
-      "sampleSize": 1482
+      "medianRatio": 3.37,
+      "p25": 1.7,
+      "p75": 6.76,
+      "sampleSize": 1467
     },
     "SGC": {
       "byTier": {
@@ -1468,18 +1476,18 @@ export const GRADE_CALIBRATION: Record<string, Record<string, GradeCalibrationEn
           "sampleSize": 27
         },
         "10": {
-          "medianRatio": 3.73,
-          "sampleSize": 110
+          "medianRatio": 3.77,
+          "sampleSize": 109
         },
         "9.5": {
           "medianRatio": 2.11,
           "sampleSize": 75
         }
       },
-      "medianRatio": 2.56,
-      "p25": 1.4,
-      "p75": 4.46,
-      "sampleSize": 220
+      "medianRatio": 2.57,
+      "p25": 1.36,
+      "p75": 4.45,
+      "sampleSize": 219
     }
   }
 };
@@ -1491,65 +1499,65 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
         "byTier": {
           "9": {
             "medianRatio": 1.09,
-            "sampleSize": 77
+            "sampleSize": 76
           },
           "10": {
-            "medianRatio": 3.95,
-            "sampleSize": 51
+            "medianRatio": 3.99,
+            "sampleSize": 50
           },
           "8.5": {
             "medianRatio": 1.43,
             "sampleSize": 8
           },
           "9.5": {
-            "medianRatio": 1.73,
-            "sampleSize": 260
+            "medianRatio": 1.76,
+            "sampleSize": 257
           }
         },
-        "medianRatio": 1.68,
-        "p25": 1.04,
+        "medianRatio": 1.72,
+        "p25": 1.05,
         "p75": 2.79,
-        "sampleSize": 399
+        "sampleSize": 394
       },
       "CGC": {
         "byTier": {
           "8": {
-            "medianRatio": 1.03,
-            "sampleSize": 8
+            "medianRatio": 1.13,
+            "sampleSize": 9
           },
           "9": {
-            "medianRatio": 1.37,
+            "medianRatio": 1.33,
             "sampleSize": 65
           },
           "10": {
-            "medianRatio": 3.12,
-            "sampleSize": 220
+            "medianRatio": 3.27,
+            "sampleSize": 224
           },
           "8.5": {
-            "medianRatio": 1.48,
-            "sampleSize": 8
+            "medianRatio": 1.47,
+            "sampleSize": 9
           },
           "9.5": {
-            "medianRatio": 1.95,
-            "sampleSize": 48
+            "medianRatio": 2.1,
+            "sampleSize": 49
           }
         },
-        "medianRatio": 2.36,
-        "p25": 1.25,
-        "p75": 4.51,
-        "sampleSize": 355
+        "medianRatio": 2.37,
+        "p25": 1.27,
+        "p75": 4.49,
+        "sampleSize": 362
       },
       "CSG": {
-        "medianRatio": 1.14,
-        "p25": 0.65,
-        "p75": 4.88,
-        "sampleSize": 8
+        "medianRatio": 1.09,
+        "p25": 0.58,
+        "p75": 1.47,
+        "sampleSize": 7
       },
       "PSA": {
         "byTier": {
           "1": {
-            "medianRatio": 1.69,
-            "sampleSize": 65
+            "medianRatio": 1.72,
+            "sampleSize": 66
           },
           "2": {
             "medianRatio": 5.43,
@@ -1568,132 +1576,132 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
             "sampleSize": 15
           },
           "6": {
-            "medianRatio": 1.02,
-            "sampleSize": 46
+            "medianRatio": 1.04,
+            "sampleSize": 47
           },
           "7": {
-            "medianRatio": 1,
-            "sampleSize": 66
+            "medianRatio": 0.85,
+            "sampleSize": 68
           },
           "8": {
-            "medianRatio": 1.2,
-            "sampleSize": 695
+            "medianRatio": 1.19,
+            "sampleSize": 696
           },
           "9": {
-            "medianRatio": 1.45,
-            "sampleSize": 5073
+            "medianRatio": 1.46,
+            "sampleSize": 5109
           },
           "10": {
             "medianRatio": 3.33,
-            "sampleSize": 8065
+            "sampleSize": 8111
           }
         },
         "medianRatio": 2.35,
-        "p25": 1.33,
+        "p25": 1.34,
         "p75": 4.44,
-        "sampleSize": 14059
+        "sampleSize": 14146
       },
       "SGC": {
         "byTier": {
           "4": {
-            "medianRatio": 1.87,
+            "medianRatio": 1.83,
             "sampleSize": 8
           },
           "8": {
-            "medianRatio": 1.73,
-            "sampleSize": 11
+            "medianRatio": 1.57,
+            "sampleSize": 10
           },
           "9": {
             "medianRatio": 1.25,
             "sampleSize": 140
           },
           "10": {
-            "medianRatio": 2.32,
-            "sampleSize": 932
+            "medianRatio": 2.34,
+            "sampleSize": 933
           },
           "8.5": {
-            "medianRatio": 1.05,
-            "sampleSize": 10
+            "medianRatio": 0.79,
+            "sampleSize": 12
           },
           "9.5": {
             "medianRatio": 1.55,
-            "sampleSize": 468
+            "sampleSize": 454
           }
         },
-        "medianRatio": 1.91,
+        "medianRatio": 1.92,
         "p25": 1.21,
-        "p75": 3.24,
-        "sampleSize": 1596
+        "p75": 3.27,
+        "sampleSize": 1583
       }
     },
     "bowman-chrome": {
       "BGS": {
         "byTier": {
           "9": {
-            "medianRatio": 1.03,
-            "sampleSize": 27
+            "medianRatio": 1.04,
+            "sampleSize": 28
           },
           "10": {
-            "medianRatio": 2.45,
-            "sampleSize": 13
+            "medianRatio": 3.41,
+            "sampleSize": 12
           },
           "9.5": {
-            "medianRatio": 1.55,
-            "sampleSize": 110
+            "medianRatio": 1.56,
+            "sampleSize": 107
           }
         },
-        "medianRatio": 1.48,
+        "medianRatio": 1.53,
         "p25": 0.96,
         "p75": 2.42,
-        "sampleSize": 155
+        "sampleSize": 152
       },
       "CGC": {
         "byTier": {
           "9": {
-            "medianRatio": 1.28,
-            "sampleSize": 19
+            "medianRatio": 1.16,
+            "sampleSize": 20
           },
           "10": {
-            "medianRatio": 2.59,
-            "sampleSize": 66
+            "medianRatio": 2.61,
+            "sampleSize": 67
           },
           "9.5": {
-            "medianRatio": 1.82,
-            "sampleSize": 17
+            "medianRatio": 1.83,
+            "sampleSize": 15
           }
         },
-        "medianRatio": 1.94,
-        "p25": 1.08,
-        "p75": 3.87,
-        "sampleSize": 108
+        "medianRatio": 1.91,
+        "p25": 1.06,
+        "p75": 3.74,
+        "sampleSize": 110
       },
       "PSA": {
         "byTier": {
           "6": {
-            "medianRatio": 0.94,
+            "medianRatio": 0.96,
             "sampleSize": 8
           },
           "7": {
-            "medianRatio": 0.79,
-            "sampleSize": 16
+            "medianRatio": 0.81,
+            "sampleSize": 17
           },
           "8": {
-            "medianRatio": 1.09,
-            "sampleSize": 233
+            "medianRatio": 1.1,
+            "sampleSize": 232
           },
           "9": {
-            "medianRatio": 1.35,
-            "sampleSize": 2354
+            "medianRatio": 1.34,
+            "sampleSize": 2397
           },
           "10": {
-            "medianRatio": 3.01,
-            "sampleSize": 3688
+            "medianRatio": 3.03,
+            "sampleSize": 3746
           }
         },
-        "medianRatio": 2.19,
+        "medianRatio": 2.2,
         "p25": 1.27,
         "p75": 3.81,
-        "sampleSize": 6304
+        "sampleSize": 6407
       },
       "SGC": {
         "byTier": {
@@ -1702,54 +1710,54 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
             "sampleSize": 44
           },
           "10": {
-            "medianRatio": 1.96,
+            "medianRatio": 2,
             "sampleSize": 342
           },
           "9.5": {
-            "medianRatio": 1.5,
-            "sampleSize": 160
+            "medianRatio": 1.53,
+            "sampleSize": 161
           }
         },
-        "medianRatio": 1.74,
-        "p25": 1.13,
-        "p75": 2.85,
-        "sampleSize": 550
+        "medianRatio": 1.77,
+        "p25": 1.14,
+        "p75": 2.88,
+        "sampleSize": 551
       }
     },
     "bowman-chrome-draft": {
       "BGS": {
         "byTier": {
           "9.5": {
-            "medianRatio": 0.78,
-            "sampleSize": 10
+            "medianRatio": 0.7,
+            "sampleSize": 9
           }
         },
-        "medianRatio": 0.81,
-        "p25": 0.7,
+        "medianRatio": 0.8,
+        "p25": 0.66,
         "p75": 3.63,
-        "sampleSize": 13
+        "sampleSize": 12
       },
       "CGC": {
-        "medianRatio": 1.33,
+        "medianRatio": 1.04,
         "p25": 1,
-        "p75": 2.35,
-        "sampleSize": 10
+        "p75": 2.24,
+        "sampleSize": 9
       },
       "PSA": {
         "byTier": {
           "9": {
-            "medianRatio": 1.63,
-            "sampleSize": 56
+            "medianRatio": 1.65,
+            "sampleSize": 54
           },
           "10": {
-            "medianRatio": 2.77,
-            "sampleSize": 79
+            "medianRatio": 2.8,
+            "sampleSize": 78
           }
         },
         "medianRatio": 2.19,
         "p25": 1.23,
-        "p75": 4.44,
-        "sampleSize": 142
+        "p75": 4.41,
+        "sampleSize": 139
       },
       "SGC": {
         "medianRatio": 1.13,
@@ -1766,14 +1774,14 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
             "sampleSize": 17
           },
           "9.5": {
-            "medianRatio": 1.62,
-            "sampleSize": 63
+            "medianRatio": 1.7,
+            "sampleSize": 61
           }
         },
-        "medianRatio": 1.46,
+        "medianRatio": 1.49,
         "p25": 1.09,
-        "p75": 2.19,
-        "sampleSize": 85
+        "p75": 2.27,
+        "sampleSize": 83
       },
       "CGC": {
         "byTier": {
@@ -1782,62 +1790,62 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
             "sampleSize": 9
           },
           "10": {
-            "medianRatio": 3.12,
-            "sampleSize": 35
+            "medianRatio": 3.29,
+            "sampleSize": 38
           }
         },
-        "medianRatio": 2.76,
+        "medianRatio": 2.79,
         "p25": 1.77,
-        "p75": 4.28,
-        "sampleSize": 56
+        "p75": 4.26,
+        "sampleSize": 59
       },
       "PSA": {
         "byTier": {
           "6": {
-            "medianRatio": 0.98,
-            "sampleSize": 9
+            "medianRatio": 0.85,
+            "sampleSize": 10
           },
           "7": {
-            "medianRatio": 0.71,
-            "sampleSize": 13
+            "medianRatio": 0.63,
+            "sampleSize": 16
           },
           "8": {
-            "medianRatio": 1.09,
-            "sampleSize": 166
+            "medianRatio": 1.08,
+            "sampleSize": 174
           },
           "9": {
-            "medianRatio": 1.35,
-            "sampleSize": 1154
+            "medianRatio": 1.37,
+            "sampleSize": 1158
           },
           "10": {
-            "medianRatio": 3.12,
-            "sampleSize": 1581
+            "medianRatio": 3.15,
+            "sampleSize": 1591
           }
         },
         "medianRatio": 2.15,
         "p25": 1.23,
-        "p75": 3.91,
-        "sampleSize": 2937
+        "p75": 3.96,
+        "sampleSize": 2963
       },
       "SGC": {
         "byTier": {
           "9": {
-            "medianRatio": 1.03,
-            "sampleSize": 37
+            "medianRatio": 1.08,
+            "sampleSize": 36
           },
           "10": {
-            "medianRatio": 2.16,
-            "sampleSize": 191
+            "medianRatio": 2.21,
+            "sampleSize": 195
           },
           "9.5": {
             "medianRatio": 1.46,
-            "sampleSize": 109
+            "sampleSize": 103
           }
         },
-        "medianRatio": 1.69,
-        "p25": 1.16,
-        "p75": 2.8,
-        "sampleSize": 347
+        "medianRatio": 1.74,
+        "p25": 1.19,
+        "p75": 2.85,
+        "sampleSize": 344
       }
     },
     "bowman-sterling": {
@@ -1845,17 +1853,17 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
         "byTier": {
           "9": {
             "medianRatio": 1.54,
-            "sampleSize": 27
+            "sampleSize": 29
           },
           "10": {
-            "medianRatio": 3.1,
+            "medianRatio": 2.98,
             "sampleSize": 48
           }
         },
-        "medianRatio": 2.3,
-        "p25": 1.66,
-        "p75": 3.45,
-        "sampleSize": 78
+        "medianRatio": 2.29,
+        "p25": 1.63,
+        "p75": 3.35,
+        "sampleSize": 80
       },
       "SGC": {
         "byTier": {
@@ -1874,22 +1882,22 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
       "PSA": {
         "byTier": {
           "10": {
-            "medianRatio": 5.13,
-            "sampleSize": 11
+            "medianRatio": 3.83,
+            "sampleSize": 12
           }
         },
-        "medianRatio": 5.17,
-        "p25": 2.1,
-        "p75": 10.68,
-        "sampleSize": 16
+        "medianRatio": 4.22,
+        "p25": 2.04,
+        "p75": 5.8,
+        "sampleSize": 17
       }
     },
     "panini-donruss": {
       "BGS": {
-        "medianRatio": 2.07,
+        "medianRatio": 2.35,
         "p25": 1.48,
         "p75": 6.22,
-        "sampleSize": 10
+        "sampleSize": 11
       },
       "CGC": {
         "byTier": {
@@ -1906,26 +1914,26 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
       "PSA": {
         "byTier": {
           "7": {
-            "medianRatio": 2.18,
+            "medianRatio": 2.3,
             "sampleSize": 8
           },
           "8": {
-            "medianRatio": 1.5,
-            "sampleSize": 47
+            "medianRatio": 1.45,
+            "sampleSize": 46
           },
           "9": {
-            "medianRatio": 2.32,
+            "medianRatio": 2.34,
             "sampleSize": 181
           },
           "10": {
-            "medianRatio": 6.03,
-            "sampleSize": 246
+            "medianRatio": 6,
+            "sampleSize": 249
           }
         },
-        "medianRatio": 3.48,
-        "p25": 1.74,
-        "p75": 7.5,
-        "sampleSize": 498
+        "medianRatio": 3.52,
+        "p25": 1.76,
+        "p75": 7.54,
+        "sampleSize": 499
       },
       "SGC": {
         "byTier": {
@@ -1934,18 +1942,18 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
             "sampleSize": 9
           },
           "10": {
-            "medianRatio": 3.96,
-            "sampleSize": 35
+            "medianRatio": 3.97,
+            "sampleSize": 37
           },
           "9.5": {
-            "medianRatio": 2.99,
+            "medianRatio": 3.08,
             "sampleSize": 24
           }
         },
-        "medianRatio": 2.58,
-        "p25": 1.42,
+        "medianRatio": 2.71,
+        "p25": 1.49,
         "p75": 6.11,
-        "sampleSize": 70
+        "sampleSize": 72
       }
     },
     "panini-immaculate": {
@@ -1959,29 +1967,29 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
     "panini-mosaic": {
       "CGC": {
         "medianRatio": 3.24,
-        "p25": 1.34,
+        "p25": 1.32,
         "p75": 10.19,
         "sampleSize": 7
       },
       "PSA": {
         "byTier": {
           "8": {
-            "medianRatio": 1.13,
-            "sampleSize": 11
+            "medianRatio": 1.09,
+            "sampleSize": 12
           },
           "9": {
-            "medianRatio": 2.95,
-            "sampleSize": 43
+            "medianRatio": 3.11,
+            "sampleSize": 42
           },
           "10": {
-            "medianRatio": 8.25,
-            "sampleSize": 102
+            "medianRatio": 8.49,
+            "sampleSize": 101
           }
         },
-        "medianRatio": 6.27,
-        "p25": 2.97,
-        "p75": 12.27,
-        "sampleSize": 157
+        "medianRatio": 6.64,
+        "p25": 2.92,
+        "p75": 12.46,
+        "sampleSize": 156
       },
       "SGC": {
         "medianRatio": 3.01,
@@ -1998,7 +2006,7 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
         "sampleSize": 3
       },
       "CGC": {
-        "medianRatio": 3.61,
+        "medianRatio": 3.63,
         "p25": 0.57,
         "p75": 4.2,
         "sampleSize": 3
@@ -2007,21 +2015,21 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
         "byTier": {
           "8": {
             "medianRatio": 1.34,
-            "sampleSize": 31
+            "sampleSize": 30
           },
           "9": {
-            "medianRatio": 2.57,
-            "sampleSize": 128
+            "medianRatio": 2.53,
+            "sampleSize": 129
           },
           "10": {
-            "medianRatio": 5.34,
-            "sampleSize": 167
+            "medianRatio": 5.31,
+            "sampleSize": 168
           }
         },
-        "medianRatio": 3.68,
-        "p25": 1.87,
-        "p75": 7,
-        "sampleSize": 334
+        "medianRatio": 3.75,
+        "p25": 1.92,
+        "p75": 7.05,
+        "sampleSize": 335
       },
       "SGC": {
         "byTier": {
@@ -2076,18 +2084,18 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
             "sampleSize": 50
           },
           "9": {
-            "medianRatio": 3.18,
-            "sampleSize": 296
+            "medianRatio": 3.16,
+            "sampleSize": 300
           },
           "10": {
-            "medianRatio": 6.8,
-            "sampleSize": 493
+            "medianRatio": 6.76,
+            "sampleSize": 498
           }
         },
-        "medianRatio": 4.77,
-        "p25": 2.59,
-        "p75": 10.23,
-        "sampleSize": 849
+        "medianRatio": 4.71,
+        "p25": 2.58,
+        "p75": 10.15,
+        "sampleSize": 858
       },
       "SGC": {
         "byTier": {
@@ -2096,23 +2104,23 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
             "sampleSize": 16
           },
           "10": {
-            "medianRatio": 3.07,
-            "sampleSize": 31
+            "medianRatio": 3.04,
+            "sampleSize": 30
           },
           "9.5": {
             "medianRatio": 2.84,
             "sampleSize": 29
           }
         },
-        "medianRatio": 2.89,
+        "medianRatio": 2.87,
         "p25": 1.38,
-        "p75": 4.74,
-        "sampleSize": 81
+        "p75": 4.92,
+        "sampleSize": 80
       }
     },
     "panini-select": {
       "CGC": {
-        "medianRatio": 1.98,
+        "medianRatio": 1.8,
         "p25": 1.14,
         "p75": 2.78,
         "sampleSize": 3
@@ -2143,27 +2151,31 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
     "topps": {
       "BGS": {
         "byTier": {
+          "8": {
+            "medianRatio": 0.9,
+            "sampleSize": 8
+          },
           "9": {
-            "medianRatio": 1.13,
-            "sampleSize": 96
+            "medianRatio": 1.15,
+            "sampleSize": 102
           },
           "10": {
-            "medianRatio": 3.53,
-            "sampleSize": 154
+            "medianRatio": 3.52,
+            "sampleSize": 155
           },
           "8.5": {
-            "medianRatio": 0.85,
-            "sampleSize": 17
+            "medianRatio": 0.87,
+            "sampleSize": 19
           },
           "9.5": {
-            "medianRatio": 1.77,
-            "sampleSize": 364
+            "medianRatio": 1.76,
+            "sampleSize": 367
           }
         },
-        "medianRatio": 1.98,
-        "p25": 1.11,
-        "p75": 3.41,
-        "sampleSize": 641
+        "medianRatio": 1.96,
+        "p25": 1.09,
+        "p75": 3.39,
+        "sampleSize": 655
       },
       "CGC": {
         "byTier": {
@@ -2172,22 +2184,26 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
             "sampleSize": 22
           },
           "9": {
-            "medianRatio": 1.9,
-            "sampleSize": 185
+            "medianRatio": 1.89,
+            "sampleSize": 192
           },
           "10": {
-            "medianRatio": 3.33,
-            "sampleSize": 491
+            "medianRatio": 3.34,
+            "sampleSize": 500
+          },
+          "8.5": {
+            "medianRatio": 1.24,
+            "sampleSize": 9
           },
           "9.5": {
-            "medianRatio": 1.62,
-            "sampleSize": 85
+            "medianRatio": 1.67,
+            "sampleSize": 90
           }
         },
-        "medianRatio": 2.56,
-        "p25": 1.4,
-        "p75": 4.42,
-        "sampleSize": 802
+        "medianRatio": 2.58,
+        "p25": 1.42,
+        "p75": 4.45,
+        "sampleSize": 826
       },
       "CSG": {
         "medianRatio": 0.66,
@@ -2198,90 +2214,90 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
       "HGA": {
         "byTier": {
           "9": {
-            "medianRatio": 1.03,
+            "medianRatio": 1.04,
             "sampleSize": 8
           }
         },
-        "medianRatio": 1.04,
-        "p25": 0.87,
-        "p75": 1.34,
-        "sampleSize": 14
+        "medianRatio": 1.08,
+        "p25": 0.88,
+        "p75": 1.47,
+        "sampleSize": 15
       },
       "PSA": {
         "byTier": {
           "1": {
-            "medianRatio": 1.01,
-            "sampleSize": 40
+            "medianRatio": 1.03,
+            "sampleSize": 44
           },
           "2": {
-            "medianRatio": 0.92,
+            "medianRatio": 0.97,
             "sampleSize": 41
           },
           "3": {
-            "medianRatio": 1.5,
+            "medianRatio": 1.58,
             "sampleSize": 11
           },
           "5": {
-            "medianRatio": 1.27,
-            "sampleSize": 14
+            "medianRatio": 1.25,
+            "sampleSize": 13
           },
           "6": {
-            "medianRatio": 1.06,
-            "sampleSize": 66
+            "medianRatio": 1.07,
+            "sampleSize": 64
           },
           "7": {
-            "medianRatio": 1.15,
-            "sampleSize": 150
+            "medianRatio": 1.11,
+            "sampleSize": 151
           },
           "8": {
             "medianRatio": 1.42,
-            "sampleSize": 1078
+            "sampleSize": 1084
           },
           "9": {
-            "medianRatio": 1.94,
-            "sampleSize": 4967
+            "medianRatio": 1.95,
+            "sampleSize": 4972
           },
           "10": {
-            "medianRatio": 4.28,
-            "sampleSize": 8248
+            "medianRatio": 4.3,
+            "sampleSize": 8268
           },
           "8.5": {
             "medianRatio": 1.09,
             "sampleSize": 26
           }
         },
-        "medianRatio": 2.83,
-        "p25": 1.49,
-        "p75": 5.99,
-        "sampleSize": 14645
+        "medianRatio": 2.84,
+        "p25": 1.5,
+        "p75": 6.02,
+        "sampleSize": 14678
       },
       "SGC": {
         "byTier": {
           "8": {
-            "medianRatio": 0.78,
+            "medianRatio": 0.79,
             "sampleSize": 22
           },
           "9": {
-            "medianRatio": 1.44,
-            "sampleSize": 274
+            "medianRatio": 1.45,
+            "sampleSize": 278
           },
           "10": {
-            "medianRatio": 2.65,
-            "sampleSize": 1342
+            "medianRatio": 2.69,
+            "sampleSize": 1351
           },
           "8.5": {
             "medianRatio": 1.41,
             "sampleSize": 34
           },
           "9.5": {
-            "medianRatio": 1.88,
-            "sampleSize": 716
+            "medianRatio": 1.86,
+            "sampleSize": 715
           }
         },
-        "medianRatio": 2.2,
+        "medianRatio": 2.21,
         "p25": 1.29,
-        "p75": 3.78,
-        "sampleSize": 2389
+        "p75": 3.77,
+        "sampleSize": 2401
       }
     },
     "topps-allen-ginter": {
@@ -2292,130 +2308,130 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
             "sampleSize": 10
           }
         },
-        "medianRatio": 2.3,
+        "medianRatio": 2.35,
         "p25": 0.89,
         "p75": 3.7,
-        "sampleSize": 16
+        "sampleSize": 17
       },
       "CGC": {
         "byTier": {
           "10": {
-            "medianRatio": 4,
-            "sampleSize": 17
+            "medianRatio": 4.06,
+            "sampleSize": 18
           }
         },
         "medianRatio": 3.11,
         "p25": 1.7,
-        "p75": 5.28,
+        "p75": 4.71,
         "sampleSize": 26
       },
       "PSA": {
         "byTier": {
           "8": {
-            "medianRatio": 2.56,
-            "sampleSize": 17
+            "medianRatio": 2.64,
+            "sampleSize": 18
           },
           "9": {
-            "medianRatio": 2.79,
-            "sampleSize": 68
+            "medianRatio": 2.83,
+            "sampleSize": 70
           },
           "10": {
-            "medianRatio": 6.69,
-            "sampleSize": 130
+            "medianRatio": 6.78,
+            "sampleSize": 129
           }
         },
         "medianRatio": 4.32,
-        "p25": 2.26,
+        "p25": 2.29,
         "p75": 7.64,
-        "sampleSize": 218
+        "sampleSize": 220
       },
       "SGC": {
         "byTier": {
           "10": {
-            "medianRatio": 3.04,
-            "sampleSize": 19
+            "medianRatio": 3.15,
+            "sampleSize": 20
           }
         },
-        "medianRatio": 2.92,
+        "medianRatio": 2.99,
         "p25": 1.29,
-        "p75": 4.47,
-        "sampleSize": 28
+        "p75": 4.08,
+        "sampleSize": 29
       }
     },
     "topps-chrome": {
       "BGS": {
         "byTier": {
           "9": {
-            "medianRatio": 1.04,
+            "medianRatio": 1.02,
             "sampleSize": 25
           },
           "10": {
-            "medianRatio": 2.82,
+            "medianRatio": 2.84,
             "sampleSize": 28
           },
           "9.5": {
-            "medianRatio": 1.7,
-            "sampleSize": 119
+            "medianRatio": 1.69,
+            "sampleSize": 122
           }
         },
         "medianRatio": 1.71,
-        "p25": 1.05,
-        "p75": 2.9,
-        "sampleSize": 177
+        "p25": 1.04,
+        "p75": 2.94,
+        "sampleSize": 182
       },
       "CGC": {
         "byTier": {
           "9": {
             "medianRatio": 2,
-            "sampleSize": 48
+            "sampleSize": 51
           },
           "10": {
-            "medianRatio": 3.4,
-            "sampleSize": 148
+            "medianRatio": 3.45,
+            "sampleSize": 154
           },
           "9.5": {
-            "medianRatio": 1.32,
+            "medianRatio": 1.39,
             "sampleSize": 26
           }
         },
-        "medianRatio": 2.66,
-        "p25": 1.54,
-        "p75": 4.21,
-        "sampleSize": 236
+        "medianRatio": 2.77,
+        "p25": 1.6,
+        "p75": 4.23,
+        "sampleSize": 243
       },
       "HGA": {
-        "medianRatio": 0.98,
-        "p25": 0.93,
-        "p75": 1.17,
+        "medianRatio": 1.01,
+        "p25": 0.94,
+        "p75": 1.18,
         "sampleSize": 4
       },
       "PSA": {
         "byTier": {
           "6": {
-            "medianRatio": 0.83,
+            "medianRatio": 0.96,
             "sampleSize": 24
           },
           "7": {
-            "medianRatio": 1.05,
-            "sampleSize": 39
+            "medianRatio": 1.06,
+            "sampleSize": 40
           },
           "8": {
-            "medianRatio": 1.34,
-            "sampleSize": 351
+            "medianRatio": 1.33,
+            "sampleSize": 360
           },
           "9": {
-            "medianRatio": 1.73,
-            "sampleSize": 2118
+            "medianRatio": 1.74,
+            "sampleSize": 2120
           },
           "10": {
-            "medianRatio": 3.9,
-            "sampleSize": 3510
+            "medianRatio": 3.92,
+            "sampleSize": 3526
           }
         },
-        "medianRatio": 2.68,
-        "p25": 1.51,
-        "p75": 5.34,
-        "sampleSize": 6049
+        "medianRatio": 2.69,
+        "p25": 1.52,
+        "p75": 5.4,
+        "sampleSize": 6077
       },
       "SGC": {
         "byTier": {
@@ -2425,117 +2441,113 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
           },
           "9": {
             "medianRatio": 1.43,
-            "sampleSize": 121
+            "sampleSize": 123
           },
           "10": {
-            "medianRatio": 2.99,
-            "sampleSize": 608
+            "medianRatio": 3,
+            "sampleSize": 611
           },
           "8.5": {
-            "medianRatio": 1.64,
+            "medianRatio": 1.65,
             "sampleSize": 17
           },
           "9.5": {
-            "medianRatio": 2.06,
-            "sampleSize": 279
+            "medianRatio": 1.99,
+            "sampleSize": 283
           }
         },
-        "medianRatio": 2.41,
+        "medianRatio": 2.39,
         "p25": 1.43,
         "p75": 4.15,
-        "sampleSize": 1034
+        "sampleSize": 1043
       }
     },
     "topps-chrome-update": {
       "BGS": {
         "byTier": {
-          "9": {
-            "medianRatio": 1.59,
-            "sampleSize": 8
-          },
           "10": {
             "medianRatio": 2.95,
             "sampleSize": 9
           },
           "9.5": {
-            "medianRatio": 1.49,
-            "sampleSize": 31
+            "medianRatio": 1.5,
+            "sampleSize": 34
           }
         },
-        "medianRatio": 1.57,
+        "medianRatio": 1.6,
         "p25": 1.01,
-        "p75": 2.95,
-        "sampleSize": 49
+        "p75": 3.16,
+        "sampleSize": 52
       },
       "CGC": {
         "byTier": {
           "9": {
             "medianRatio": 2,
-            "sampleSize": 23
+            "sampleSize": 24
           },
           "10": {
-            "medianRatio": 3.5,
-            "sampleSize": 48
+            "medianRatio": 3.36,
+            "sampleSize": 51
           }
         },
         "medianRatio": 2.81,
-        "p25": 1.9,
-        "p75": 4.02,
-        "sampleSize": 77
+        "p25": 1.8,
+        "p75": 3.97,
+        "sampleSize": 82
       },
       "PSA": {
         "byTier": {
           "7": {
-            "medianRatio": 1.11,
-            "sampleSize": 14
+            "medianRatio": 1.16,
+            "sampleSize": 15
           },
           "8": {
-            "medianRatio": 1.5,
-            "sampleSize": 93
+            "medianRatio": 1.45,
+            "sampleSize": 95
           },
           "9": {
-            "medianRatio": 1.85,
-            "sampleSize": 572
+            "medianRatio": 1.83,
+            "sampleSize": 568
           },
           "10": {
-            "medianRatio": 3.74,
-            "sampleSize": 827
+            "medianRatio": 3.69,
+            "sampleSize": 817
           }
         },
-        "medianRatio": 2.65,
-        "p25": 1.53,
-        "p75": 5.24,
-        "sampleSize": 1511
+        "medianRatio": 2.61,
+        "p25": 1.52,
+        "p75": 5.14,
+        "sampleSize": 1500
       },
       "SGC": {
         "byTier": {
           "9": {
-            "medianRatio": 1.94,
-            "sampleSize": 59
+            "medianRatio": 1.91,
+            "sampleSize": 60
           },
           "10": {
-            "medianRatio": 3.63,
-            "sampleSize": 141
+            "medianRatio": 3.65,
+            "sampleSize": 142
           },
           "8.5": {
             "medianRatio": 1.38,
             "sampleSize": 9
           },
           "9.5": {
-            "medianRatio": 2.39,
-            "sampleSize": 82
+            "medianRatio": 2.38,
+            "sampleSize": 83
           }
         },
-        "medianRatio": 2.42,
-        "p25": 1.47,
-        "p75": 4.4,
-        "sampleSize": 297
+        "medianRatio": 2.39,
+        "p25": 1.45,
+        "p75": 4.48,
+        "sampleSize": 300
       }
     },
     "topps-finest": {
       "BGS": {
         "medianRatio": 1.83,
-        "p25": 1.27,
+        "p25": 1.29,
         "p75": 3.47,
         "sampleSize": 8
       },
@@ -2546,100 +2558,100 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
             "sampleSize": 11
           }
         },
-        "medianRatio": 4.24,
+        "medianRatio": 4.25,
         "p25": 2.58,
-        "p75": 6.02,
+        "p75": 6.04,
         "sampleSize": 14
       },
       "PSA": {
         "byTier": {
           "8": {
-            "medianRatio": 1.56,
-            "sampleSize": 18
+            "medianRatio": 1.45,
+            "sampleSize": 20
           },
           "9": {
             "medianRatio": 1.75,
-            "sampleSize": 196
+            "sampleSize": 192
           },
           "10": {
             "medianRatio": 3.91,
-            "sampleSize": 373
+            "sampleSize": 376
           }
         },
-        "medianRatio": 2.77,
+        "medianRatio": 2.83,
         "p25": 1.63,
-        "p75": 5.38,
-        "sampleSize": 589
+        "p75": 5.61,
+        "sampleSize": 591
       },
       "SGC": {
         "byTier": {
           "10": {
-            "medianRatio": 2.71,
-            "sampleSize": 33
+            "medianRatio": 2.74,
+            "sampleSize": 34
           },
           "9.5": {
             "medianRatio": 1.82,
             "sampleSize": 10
           }
         },
-        "medianRatio": 2.57,
+        "medianRatio": 2.59,
         "p25": 1.37,
         "p75": 3.67,
-        "sampleSize": 44
+        "sampleSize": 45
       }
     },
     "topps-heritage": {
       "BGS": {
         "byTier": {
           "9.5": {
-            "medianRatio": 1.86,
-            "sampleSize": 17
+            "medianRatio": 1.96,
+            "sampleSize": 18
           }
         },
-        "medianRatio": 1.95,
-        "p25": 1,
-        "p75": 3.24,
+        "medianRatio": 1.96,
+        "p25": 1.01,
+        "p75": 2.57,
         "sampleSize": 24
       },
       "CGC": {
         "byTier": {
           "9": {
-            "medianRatio": 1.8,
-            "sampleSize": 14
+            "medianRatio": 2.05,
+            "sampleSize": 15
           },
           "10": {
-            "medianRatio": 3.02,
+            "medianRatio": 3.23,
             "sampleSize": 16
           }
         },
-        "medianRatio": 2.42,
-        "p25": 1.43,
-        "p75": 3.73,
-        "sampleSize": 38
+        "medianRatio": 2.45,
+        "p25": 1.33,
+        "p75": 3.83,
+        "sampleSize": 40
       },
       "PSA": {
         "byTier": {
           "7": {
-            "medianRatio": 2.86,
-            "sampleSize": 11
+            "medianRatio": 2.67,
+            "sampleSize": 10
           },
           "8": {
-            "medianRatio": 1.53,
-            "sampleSize": 63
+            "medianRatio": 1.51,
+            "sampleSize": 66
           },
           "9": {
-            "medianRatio": 1.94,
+            "medianRatio": 1.95,
             "sampleSize": 289
           },
           "10": {
-            "medianRatio": 4.94,
-            "sampleSize": 331
+            "medianRatio": 5.03,
+            "sampleSize": 336
           }
         },
-        "medianRatio": 2.88,
+        "medianRatio": 2.91,
         "p25": 1.48,
-        "p75": 6.23,
-        "sampleSize": 697
+        "p75": 6.21,
+        "sampleSize": 703
       },
       "SGC": {
         "byTier": {
@@ -2648,70 +2660,70 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
             "sampleSize": 10
           },
           "10": {
-            "medianRatio": 2.93,
-            "sampleSize": 43
+            "medianRatio": 3.1,
+            "sampleSize": 46
           },
           "9.5": {
-            "medianRatio": 1.98,
+            "medianRatio": 1.77,
             "sampleSize": 30
           }
         },
-        "medianRatio": 2.44,
+        "medianRatio": 2.47,
         "p25": 1.35,
-        "p75": 3.94,
-        "sampleSize": 84
+        "p75": 3.95,
+        "sampleSize": 87
       }
     },
     "topps-pristine": {
       "BGS": {
         "medianRatio": 2.18,
         "p25": 1.64,
-        "p75": 2.37,
+        "p75": 2.38,
         "sampleSize": 3
       },
       "PSA": {
         "byTier": {
           "8": {
-            "medianRatio": 1.47,
+            "medianRatio": 1.33,
             "sampleSize": 14
           },
           "9": {
-            "medianRatio": 1.59,
-            "sampleSize": 60
+            "medianRatio": 1.52,
+            "sampleSize": 59
           },
           "10": {
             "medianRatio": 2.76,
-            "sampleSize": 208
+            "sampleSize": 214
           }
         },
-        "medianRatio": 2.24,
-        "p25": 1.46,
-        "p75": 4.09,
-        "sampleSize": 284
+        "medianRatio": 2.23,
+        "p25": 1.43,
+        "p75": 4.12,
+        "sampleSize": 289
       },
       "SGC": {
         "byTier": {
           "10": {
-            "medianRatio": 2.84,
-            "sampleSize": 11
+            "medianRatio": 3.22,
+            "sampleSize": 12
           }
         },
-        "medianRatio": 2.36,
-        "p25": 1.36,
-        "p75": 3.59,
-        "sampleSize": 15
+        "medianRatio": 2.62,
+        "p25": 1.68,
+        "p75": 3.61,
+        "sampleSize": 16
       }
     },
     "topps-stadium-club": {
       "BGS": {
         "medianRatio": 2.6,
         "p25": 1.14,
-        "p75": 6.79,
+        "p75": 6.03,
         "sampleSize": 8
       },
       "CGC": {
         "medianRatio": 3.58,
-        "p25": 2.13,
+        "p25": 1.2,
         "p75": 4.73,
         "sampleSize": 9
       },
@@ -2722,116 +2734,120 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
             "sampleSize": 10
           },
           "8": {
-            "medianRatio": 1.53,
-            "sampleSize": 59
+            "medianRatio": 1.57,
+            "sampleSize": 58
           },
           "9": {
-            "medianRatio": 2.48,
-            "sampleSize": 128
+            "medianRatio": 2.5,
+            "sampleSize": 129
           },
           "10": {
-            "medianRatio": 6.35,
-            "sampleSize": 129
+            "medianRatio": 6.53,
+            "sampleSize": 128
           }
         },
         "medianRatio": 3.17,
         "p25": 1.53,
-        "p75": 6.49,
-        "sampleSize": 330
+        "p75": 6.35,
+        "sampleSize": 329
       },
       "SGC": {
         "byTier": {
+          "9": {
+            "medianRatio": 2.19,
+            "sampleSize": 8
+          },
           "10": {
-            "medianRatio": 2.51,
-            "sampleSize": 17
+            "medianRatio": 2.45,
+            "sampleSize": 16
           },
           "9.5": {
-            "medianRatio": 2.88,
-            "sampleSize": 16
+            "medianRatio": 2.81,
+            "sampleSize": 15
           }
         },
-        "medianRatio": 2.51,
+        "medianRatio": 2.5,
         "p25": 1.3,
-        "p75": 3.95,
-        "sampleSize": 43
+        "p75": 3.66,
+        "sampleSize": 42
       }
     },
     "topps-update": {
       "BGS": {
         "byTier": {
           "9": {
-            "medianRatio": 0.89,
-            "sampleSize": 13
+            "medianRatio": 0.99,
+            "sampleSize": 16
           },
           "10": {
-            "medianRatio": 5.31,
+            "medianRatio": 5.33,
             "sampleSize": 11
           },
           "9.5": {
             "medianRatio": 2.45,
-            "sampleSize": 41
+            "sampleSize": 42
           }
         },
-        "medianRatio": 2.27,
+        "medianRatio": 2.42,
         "p25": 1.12,
-        "p75": 4.33,
-        "sampleSize": 67
+        "p75": 4.41,
+        "sampleSize": 72
       },
       "CGC": {
         "byTier": {
           "8": {
-            "medianRatio": 2.01,
+            "medianRatio": 2.05,
             "sampleSize": 12
           },
           "9": {
-            "medianRatio": 2.19,
-            "sampleSize": 45
+            "medianRatio": 2.37,
+            "sampleSize": 47
           },
           "10": {
             "medianRatio": 4.09,
             "sampleSize": 86
           },
           "9.5": {
-            "medianRatio": 1.52,
-            "sampleSize": 12
+            "medianRatio": 1.54,
+            "sampleSize": 13
           }
         },
-        "medianRatio": 2.76,
-        "p25": 1.74,
-        "p75": 4.9,
-        "sampleSize": 163
+        "medianRatio": 2.77,
+        "p25": 1.8,
+        "p75": 4.81,
+        "sampleSize": 166
       },
       "PSA": {
         "byTier": {
           "6": {
-            "medianRatio": 0.6,
+            "medianRatio": 0.61,
             "sampleSize": 11
           },
           "7": {
             "medianRatio": 1.07,
-            "sampleSize": 24
+            "sampleSize": 23
           },
           "8": {
-            "medianRatio": 1.54,
-            "sampleSize": 188
+            "medianRatio": 1.55,
+            "sampleSize": 186
           },
           "9": {
             "medianRatio": 2.39,
-            "sampleSize": 569
+            "sampleSize": 567
           },
           "10": {
-            "medianRatio": 6.41,
-            "sampleSize": 677
+            "medianRatio": 6.38,
+            "sampleSize": 667
           },
           "8.5": {
-            "medianRatio": 1.64,
+            "medianRatio": 1.65,
             "sampleSize": 10
           }
         },
-        "medianRatio": 3.39,
-        "p25": 1.71,
-        "p75": 6.77,
-        "sampleSize": 1482
+        "medianRatio": 3.37,
+        "p25": 1.7,
+        "p75": 6.76,
+        "sampleSize": 1467
       },
       "SGC": {
         "byTier": {
@@ -2840,18 +2856,18 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
             "sampleSize": 27
           },
           "10": {
-            "medianRatio": 3.73,
-            "sampleSize": 110
+            "medianRatio": 3.77,
+            "sampleSize": 109
           },
           "9.5": {
             "medianRatio": 2.11,
             "sampleSize": 75
           }
         },
-        "medianRatio": 2.56,
-        "p25": 1.4,
-        "p75": 4.46,
-        "sampleSize": 220
+        "medianRatio": 2.57,
+        "p25": 1.36,
+        "p75": 4.45,
+        "sampleSize": 219
       }
     }
   },
@@ -2860,12 +2876,12 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
       "CGC": {
         "byTier": {
           "10": {
-            "medianRatio": 5.41,
-            "sampleSize": 14
+            "medianRatio": 5.56,
+            "sampleSize": 13
           }
         },
-        "medianRatio": 4.97,
-        "p25": 2.61,
+        "medianRatio": 5.14,
+        "p25": 2.02,
         "p75": 7.04,
         "sampleSize": 19
       },
@@ -2877,26 +2893,26 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
           },
           "9": {
             "medianRatio": 3.78,
-            "sampleSize": 107
+            "sampleSize": 109
           },
           "10": {
-            "medianRatio": 7.83,
-            "sampleSize": 163
+            "medianRatio": 7.75,
+            "sampleSize": 165
           }
         },
-        "medianRatio": 5.23,
+        "medianRatio": 5.28,
         "p25": 2.9,
-        "p75": 9.97,
-        "sampleSize": 296
+        "p75": 9.87,
+        "sampleSize": 300
       },
       "SGC": {
         "byTier": {
           "9": {
-            "medianRatio": 2.46,
-            "sampleSize": 8
+            "medianRatio": 2.87,
+            "sampleSize": 9
           },
           "10": {
-            "medianRatio": 5.87,
+            "medianRatio": 5.89,
             "sampleSize": 42
           },
           "9.5": {
@@ -2904,23 +2920,23 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
             "sampleSize": 23
           }
         },
-        "medianRatio": 4.93,
-        "p25": 3.54,
+        "medianRatio": 4.84,
+        "p25": 3.46,
         "p75": 7.02,
-        "sampleSize": 78
+        "sampleSize": 79
       }
     },
     "bowman-university": {
       "BGS": {
         "medianRatio": 5.24,
-        "p25": 2.86,
-        "p75": 8.29,
+        "p25": 3.03,
+        "p75": 8.26,
         "sampleSize": 7
       },
       "CGC": {
         "medianRatio": 4.12,
-        "p25": 2.46,
-        "p75": 4.34,
+        "p25": 2.61,
+        "p75": 4.59,
         "sampleSize": 7
       },
       "PSA": {
@@ -2930,11 +2946,11 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
             "sampleSize": 9
           },
           "9": {
-            "medianRatio": 3.92,
+            "medianRatio": 4.15,
             "sampleSize": 21
           },
           "10": {
-            "medianRatio": 8.93,
+            "medianRatio": 9.14,
             "sampleSize": 26
           }
         },
@@ -2944,8 +2960,8 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
         "sampleSize": 61
       },
       "SGC": {
-        "medianRatio": 4.12,
-        "p25": 2.55,
+        "medianRatio": 4.69,
+        "p25": 2.53,
         "p75": 7.11,
         "sampleSize": 19
       }
@@ -2974,48 +2990,48 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
       "CGC": {
         "byTier": {
           "9": {
-            "medianRatio": 1.77,
+            "medianRatio": 1.78,
             "sampleSize": 13
           },
           "10": {
-            "medianRatio": 7.73,
-            "sampleSize": 18
+            "medianRatio": 7.76,
+            "sampleSize": 20
           }
         },
-        "medianRatio": 4.13,
-        "p25": 2.23,
-        "p75": 7.46,
-        "sampleSize": 38
+        "medianRatio": 4.26,
+        "p25": 2.5,
+        "p75": 8.06,
+        "sampleSize": 40
       },
       "HGA": {
-        "medianRatio": 1.9,
-        "p25": 1.73,
+        "medianRatio": 1.99,
+        "p25": 1.87,
         "p75": 2.83,
         "sampleSize": 4
       },
       "PSA": {
         "byTier": {
           "7": {
-            "medianRatio": 1.38,
-            "sampleSize": 11
+            "medianRatio": 1.8,
+            "sampleSize": 12
           },
           "8": {
-            "medianRatio": 1.29,
-            "sampleSize": 90
+            "medianRatio": 1.26,
+            "sampleSize": 92
           },
           "9": {
-            "medianRatio": 1.37,
-            "sampleSize": 388
+            "medianRatio": 1.38,
+            "sampleSize": 396
           },
           "10": {
             "medianRatio": 3.46,
-            "sampleSize": 321
+            "sampleSize": 327
           }
         },
         "medianRatio": 2.06,
-        "p25": 1.2,
-        "p75": 4.67,
-        "sampleSize": 811
+        "p25": 1.21,
+        "p75": 4.73,
+        "sampleSize": 828
       },
       "SGC": {
         "byTier": {
@@ -3024,36 +3040,36 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
             "sampleSize": 18
           },
           "10": {
-            "medianRatio": 3.72,
+            "medianRatio": 3.9,
             "sampleSize": 52
           },
           "9.5": {
-            "medianRatio": 1.19,
-            "sampleSize": 47
+            "medianRatio": 1.23,
+            "sampleSize": 46
           }
         },
-        "medianRatio": 2.03,
+        "medianRatio": 2.14,
         "p25": 1.12,
-        "p75": 4.65,
-        "sampleSize": 119
+        "p75": 4.75,
+        "sampleSize": 118
       }
     },
     "panini-certified": {
       "PSA": {
         "byTier": {
           "9": {
-            "medianRatio": 3.09,
+            "medianRatio": 2.94,
             "sampleSize": 22
           },
           "10": {
-            "medianRatio": 5.73,
-            "sampleSize": 19
+            "medianRatio": 5.74,
+            "sampleSize": 20
           }
         },
-        "medianRatio": 3.8,
+        "medianRatio": 3.63,
         "p25": 2.04,
         "p75": 6.28,
-        "sampleSize": 47
+        "sampleSize": 49
       },
       "SGC": {
         "medianRatio": 2.05,
@@ -3066,38 +3082,38 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
       "BGS": {
         "byTier": {
           "9.5": {
-            "medianRatio": 6.84,
+            "medianRatio": 6.52,
             "sampleSize": 15
           }
         },
-        "medianRatio": 6.13,
-        "p25": 3.69,
-        "p75": 8.16,
+        "medianRatio": 5.62,
+        "p25": 3.38,
+        "p75": 7.07,
         "sampleSize": 27
       },
       "CGC": {
         "byTier": {
           "9": {
-            "medianRatio": 4.06,
-            "sampleSize": 13
+            "medianRatio": 4.3,
+            "sampleSize": 14
           },
           "10": {
-            "medianRatio": 8.04,
-            "sampleSize": 32
+            "medianRatio": 7.87,
+            "sampleSize": 33
           },
           "9.5": {
-            "medianRatio": 2.8,
-            "sampleSize": 10
+            "medianRatio": 2.56,
+            "sampleSize": 9
           }
         },
-        "medianRatio": 5.4,
-        "p25": 3.97,
-        "p75": 9.36,
-        "sampleSize": 59
+        "medianRatio": 5.6,
+        "p25": 4.05,
+        "p75": 9.54,
+        "sampleSize": 60
       },
       "HGA": {
-        "medianRatio": 2.99,
-        "p25": 2.87,
+        "medianRatio": 2.98,
+        "p25": 2.86,
         "p75": 4.06,
         "sampleSize": 4
       },
@@ -3108,49 +3124,49 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
             "sampleSize": 9
           },
           "8": {
-            "medianRatio": 2.78,
-            "sampleSize": 65
+            "medianRatio": 2.76,
+            "sampleSize": 68
           },
           "9": {
-            "medianRatio": 4.39,
-            "sampleSize": 205
+            "medianRatio": 4.45,
+            "sampleSize": 207
           },
           "10": {
-            "medianRatio": 9.97,
-            "sampleSize": 235
+            "medianRatio": 9.81,
+            "sampleSize": 236
           }
         },
-        "medianRatio": 6.16,
-        "p25": 3.43,
-        "p75": 9.83,
-        "sampleSize": 521
+        "medianRatio": 6.15,
+        "p25": 3.38,
+        "p75": 9.76,
+        "sampleSize": 527
       },
       "SGC": {
         "byTier": {
           "9": {
-            "medianRatio": 3.27,
-            "sampleSize": 22
+            "medianRatio": 3.13,
+            "sampleSize": 21
           },
           "10": {
-            "medianRatio": 5.82,
+            "medianRatio": 5.77,
             "sampleSize": 72
           },
           "9.5": {
-            "medianRatio": 3.84,
+            "medianRatio": 3.8,
             "sampleSize": 52
           }
         },
-        "medianRatio": 4.52,
-        "p25": 2.57,
-        "p75": 6.3,
-        "sampleSize": 154
+        "medianRatio": 4.5,
+        "p25": 2.55,
+        "p75": 6.22,
+        "sampleSize": 153
       }
     },
     "panini-contenders": {
       "BGS": {
         "byTier": {
           "9.5": {
-            "medianRatio": 6.87,
+            "medianRatio": 6.91,
             "sampleSize": 9
           }
         },
@@ -3162,19 +3178,19 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
       "CGC": {
         "byTier": {
           "10": {
-            "medianRatio": 6.87,
-            "sampleSize": 9
+            "medianRatio": 6.74,
+            "sampleSize": 8
           }
         },
-        "medianRatio": 4.37,
-        "p25": 2.04,
-        "p75": 6.87,
-        "sampleSize": 17
+        "medianRatio": 4.22,
+        "p25": 2.02,
+        "p75": 7.82,
+        "sampleSize": 16
       },
       "PSA": {
         "byTier": {
           "8": {
-            "medianRatio": 2.71,
+            "medianRatio": 2.7,
             "sampleSize": 30
           },
           "9": {
@@ -3182,116 +3198,120 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
             "sampleSize": 101
           },
           "10": {
-            "medianRatio": 7.78,
-            "sampleSize": 109
+            "medianRatio": 7.74,
+            "sampleSize": 108
           }
         },
-        "medianRatio": 4.35,
+        "medianRatio": 4.23,
         "p25": 2.23,
-        "p75": 8.82,
+        "p75": 8.67,
         "sampleSize": 248
       },
       "SGC": {
         "byTier": {
           "10": {
-            "medianRatio": 5.36,
-            "sampleSize": 11
+            "medianRatio": 5.97,
+            "sampleSize": 13
           },
           "9.5": {
-            "medianRatio": 2.89,
-            "sampleSize": 9
+            "medianRatio": 2.81,
+            "sampleSize": 10
           }
         },
-        "medianRatio": 3.75,
-        "p25": 2.47,
-        "p75": 5.97,
-        "sampleSize": 26
+        "medianRatio": 3.95,
+        "p25": 2.73,
+        "p75": 6.31,
+        "sampleSize": 29
       }
     },
     "panini-donruss": {
       "BGS": {
         "byTier": {
           "9": {
-            "medianRatio": 1.98,
-            "sampleSize": 63
+            "medianRatio": 1.93,
+            "sampleSize": 61
           },
           "10": {
-            "medianRatio": 4.85,
-            "sampleSize": 11
+            "medianRatio": 6.3,
+            "sampleSize": 10
+          },
+          "8.5": {
+            "medianRatio": 0.99,
+            "sampleSize": 8
           },
           "9.5": {
-            "medianRatio": 2.45,
-            "sampleSize": 128
+            "medianRatio": 2.46,
+            "sampleSize": 132
           }
         },
-        "medianRatio": 2.25,
-        "p25": 1.4,
-        "p75": 3.97,
-        "sampleSize": 211
+        "medianRatio": 2.18,
+        "p25": 1.35,
+        "p75": 3.89,
+        "sampleSize": 213
       },
       "CGC": {
         "byTier": {
           "9": {
             "medianRatio": 2.57,
-            "sampleSize": 94
+            "sampleSize": 92
           },
           "10": {
             "medianRatio": 4.31,
-            "sampleSize": 177
+            "sampleSize": 182
           },
           "9.5": {
             "medianRatio": 2.55,
             "sampleSize": 37
           }
         },
-        "medianRatio": 3.33,
-        "p25": 1.91,
-        "p75": 5.84,
-        "sampleSize": 323
+        "medianRatio": 3.37,
+        "p25": 1.97,
+        "p75": 5.96,
+        "sampleSize": 325
       },
       "HGA": {
         "byTier": {
           "9": {
             "medianRatio": 0.9,
-            "sampleSize": 14
+            "sampleSize": 15
           }
         },
         "medianRatio": 0.95,
-        "p25": 0.76,
+        "p25": 0.82,
         "p75": 1.4,
-        "sampleSize": 19
+        "sampleSize": 20
       },
       "PSA": {
         "byTier": {
           "6": {
-            "medianRatio": 0.82,
+            "medianRatio": 0.83,
             "sampleSize": 34
           },
           "7": {
-            "medianRatio": 1.14,
-            "sampleSize": 115
+            "medianRatio": 1.15,
+            "sampleSize": 114
           },
           "8": {
             "medianRatio": 1.44,
-            "sampleSize": 736
+            "sampleSize": 753
           },
           "9": {
-            "medianRatio": 2.23,
-            "sampleSize": 2727
+            "medianRatio": 2.22,
+            "sampleSize": 2766
           },
           "10": {
             "medianRatio": 5.59,
-            "sampleSize": 2989
+            "sampleSize": 3032
           },
           "8.5": {
-            "medianRatio": 1.36,
+            "medianRatio": 1.35,
             "sampleSize": 17
           }
         },
-        "medianRatio": 2.97,
+        "medianRatio": 2.96,
         "p25": 1.53,
         "p75": 6.23,
-        "sampleSize": 6633
+        "sampleSize": 6731
       },
       "SGC": {
         "byTier": {
@@ -3301,25 +3321,25 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
           },
           "9": {
             "medianRatio": 1.47,
-            "sampleSize": 190
+            "sampleSize": 192
           },
           "10": {
-            "medianRatio": 3.24,
-            "sampleSize": 445
+            "medianRatio": 3.21,
+            "sampleSize": 447
           },
           "8.5": {
-            "medianRatio": 1.54,
+            "medianRatio": 1.53,
             "sampleSize": 25
           },
           "9.5": {
             "medianRatio": 1.87,
-            "sampleSize": 391
+            "sampleSize": 394
           }
         },
-        "medianRatio": 2.22,
+        "medianRatio": 2.2,
         "p25": 1.3,
         "p75": 3.73,
-        "sampleSize": 1069
+        "sampleSize": 1076
       }
     },
     "panini-elite": {
@@ -3332,106 +3352,106 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
       "PSA": {
         "byTier": {
           "8": {
-            "medianRatio": 1.05,
-            "sampleSize": 32
+            "medianRatio": 1.11,
+            "sampleSize": 33
           },
           "9": {
             "medianRatio": 2.18,
-            "sampleSize": 130
+            "sampleSize": 132
           },
           "10": {
-            "medianRatio": 8.96,
+            "medianRatio": 9.09,
             "sampleSize": 68
           }
         },
-        "medianRatio": 2.78,
-        "p25": 1.45,
-        "p75": 5.97,
-        "sampleSize": 232
+        "medianRatio": 2.8,
+        "p25": 1.44,
+        "p75": 5.9,
+        "sampleSize": 235
       },
       "SGC": {
         "medianRatio": 2.27,
         "p25": 1.52,
-        "p75": 3.24,
+        "p75": 3.25,
         "sampleSize": 17
       }
     },
     "panini-illusions": {
       "BGS": {
-        "medianRatio": 6.13,
-        "p25": 5.48,
+        "medianRatio": 6.25,
+        "p25": 5.55,
         "p75": 14.52,
         "sampleSize": 4
       },
       "CGC": {
         "byTier": {
           "10": {
-            "medianRatio": 6.95,
-            "sampleSize": 13
+            "medianRatio": 6.98,
+            "sampleSize": 14
           }
         },
-        "medianRatio": 5.5,
+        "medianRatio": 5.78,
         "p25": 3.52,
-        "p75": 7.21,
-        "sampleSize": 25
+        "p75": 7.44,
+        "sampleSize": 26
       },
       "PSA": {
         "byTier": {
           "7": {
-            "medianRatio": 2.47,
-            "sampleSize": 10
+            "medianRatio": 2.82,
+            "sampleSize": 9
           },
           "8": {
             "medianRatio": 2.32,
             "sampleSize": 49
           },
           "9": {
-            "medianRatio": 3.87,
-            "sampleSize": 119
+            "medianRatio": 3.89,
+            "sampleSize": 121
           },
           "10": {
-            "medianRatio": 8.92,
-            "sampleSize": 122
+            "medianRatio": 8.98,
+            "sampleSize": 125
           }
         },
-        "medianRatio": 4.72,
-        "p25": 2.8,
-        "p75": 8.73,
-        "sampleSize": 302
+        "medianRatio": 4.99,
+        "p25": 2.84,
+        "p75": 8.81,
+        "sampleSize": 305
       },
       "SGC": {
         "byTier": {
           "9": {
-            "medianRatio": 2.49,
+            "medianRatio": 2.51,
             "sampleSize": 14
           },
           "10": {
-            "medianRatio": 4.36,
-            "sampleSize": 20
+            "medianRatio": 3.89,
+            "sampleSize": 21
           },
           "9.5": {
-            "medianRatio": 4.37,
-            "sampleSize": 18
+            "medianRatio": 4.59,
+            "sampleSize": 19
           }
         },
-        "medianRatio": 3.48,
-        "p25": 2.24,
-        "p75": 5.92,
-        "sampleSize": 53
+        "medianRatio": 3.47,
+        "p25": 2.27,
+        "p75": 5.99,
+        "sampleSize": 55
       }
     },
     "panini-luminance": {
       "PSA": {
         "byTier": {
           "10": {
-            "medianRatio": 8.14,
-            "sampleSize": 9
+            "medianRatio": 6.81,
+            "sampleSize": 8
           }
         },
-        "medianRatio": 5.31,
+        "medianRatio": 5.12,
         "p25": 2.29,
-        "p75": 8.36,
-        "sampleSize": 15
+        "p75": 8.14,
+        "sampleSize": 14
       }
     },
     "panini-mosaic": {
@@ -3443,13 +3463,13 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
           },
           "9.5": {
             "medianRatio": 3.68,
-            "sampleSize": 30
+            "sampleSize": 32
           }
         },
-        "medianRatio": 2.52,
-        "p25": 1.48,
+        "medianRatio": 2.51,
+        "p25": 1.58,
         "p75": 4.47,
-        "sampleSize": 51
+        "sampleSize": 53
       },
       "CGC": {
         "byTier": {
@@ -3458,18 +3478,18 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
             "sampleSize": 38
           },
           "10": {
-            "medianRatio": 7.09,
-            "sampleSize": 108
+            "medianRatio": 7.08,
+            "sampleSize": 113
           },
           "9.5": {
             "medianRatio": 3.74,
             "sampleSize": 9
           }
         },
-        "medianRatio": 5.27,
-        "p25": 2.27,
+        "medianRatio": 5.24,
+        "p25": 2.3,
         "p75": 9.38,
-        "sampleSize": 161
+        "sampleSize": 166
       },
       "CSG": {
         "medianRatio": 2.83,
@@ -3478,15 +3498,15 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
         "sampleSize": 3
       },
       "HGA": {
-        "medianRatio": 1.33,
-        "p25": 0.81,
+        "medianRatio": 1.32,
+        "p25": 0.82,
         "p75": 1.85,
         "sampleSize": 6
       },
       "PSA": {
         "byTier": {
           "6": {
-            "medianRatio": 1.33,
+            "medianRatio": 1.36,
             "sampleSize": 21
           },
           "7": {
@@ -3494,22 +3514,22 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
             "sampleSize": 22
           },
           "8": {
-            "medianRatio": 1.36,
-            "sampleSize": 200
+            "medianRatio": 1.39,
+            "sampleSize": 208
           },
           "9": {
             "medianRatio": 2.15,
-            "sampleSize": 1142
+            "sampleSize": 1150
           },
           "10": {
-            "medianRatio": 5.85,
-            "sampleSize": 1641
+            "medianRatio": 5.87,
+            "sampleSize": 1650
           }
         },
-        "medianRatio": 3.4,
+        "medianRatio": 3.39,
         "p25": 1.82,
-        "p75": 7.73,
-        "sampleSize": 3039
+        "p75": 7.76,
+        "sampleSize": 3064
       },
       "SGC": {
         "byTier": {
@@ -3518,17 +3538,17 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
             "sampleSize": 67
           },
           "10": {
-            "medianRatio": 3.52,
-            "sampleSize": 141
+            "medianRatio": 3.53,
+            "sampleSize": 139
           },
           "9.5": {
-            "medianRatio": 2.06,
-            "sampleSize": 124
+            "medianRatio": 2.11,
+            "sampleSize": 126
           }
         },
         "medianRatio": 2.37,
-        "p25": 1.41,
-        "p75": 4.08,
+        "p25": 1.42,
+        "p75": 4.06,
         "sampleSize": 343
       }
     },
@@ -3545,67 +3565,67 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
         "byTier": {
           "9": {
             "medianRatio": 1.68,
-            "sampleSize": 110
+            "sampleSize": 111
           },
           "10": {
-            "medianRatio": 2.87,
+            "medianRatio": 2.8,
             "sampleSize": 119
           }
         },
-        "medianRatio": 2.27,
+        "medianRatio": 2.2,
         "p25": 1.37,
         "p75": 3.57,
-        "sampleSize": 238
+        "sampleSize": 239
       }
     },
     "panini-optic": {
       "BGS": {
         "byTier": {
           "9": {
-            "medianRatio": 1.39,
-            "sampleSize": 35
+            "medianRatio": 1.33,
+            "sampleSize": 34
           },
           "9.5": {
-            "medianRatio": 2,
-            "sampleSize": 64
+            "medianRatio": 2.07,
+            "sampleSize": 67
           }
         },
-        "medianRatio": 1.64,
-        "p25": 1.13,
-        "p75": 3.36,
-        "sampleSize": 108
+        "medianRatio": 1.6,
+        "p25": 1.09,
+        "p75": 3.03,
+        "sampleSize": 109
       },
       "CGC": {
         "byTier": {
           "9": {
-            "medianRatio": 1.65,
-            "sampleSize": 39
+            "medianRatio": 1.68,
+            "sampleSize": 38
           },
           "10": {
-            "medianRatio": 3.48,
-            "sampleSize": 53
+            "medianRatio": 3.62,
+            "sampleSize": 57
           },
           "9.5": {
             "medianRatio": 1.78,
             "sampleSize": 9
           }
         },
-        "medianRatio": 2.43,
-        "p25": 1.37,
-        "p75": 4.12,
-        "sampleSize": 108
+        "medianRatio": 2.68,
+        "p25": 1.39,
+        "p75": 4.33,
+        "sampleSize": 110
       },
       "HGA": {
         "byTier": {
           "9": {
-            "medianRatio": 0.82,
-            "sampleSize": 9
+            "medianRatio": 0.84,
+            "sampleSize": 10
           }
         },
-        "medianRatio": 0.79,
+        "medianRatio": 0.82,
         "p25": 0.73,
-        "p75": 0.87,
-        "sampleSize": 10
+        "p75": 0.95,
+        "sampleSize": 11
       },
       "PSA": {
         "byTier": {
@@ -3619,25 +3639,25 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
           },
           "7": {
             "medianRatio": 0.98,
-            "sampleSize": 46
+            "sampleSize": 45
           },
           "8": {
             "medianRatio": 1.18,
-            "sampleSize": 377
+            "sampleSize": 387
           },
           "9": {
-            "medianRatio": 2.01,
-            "sampleSize": 1666
+            "medianRatio": 2,
+            "sampleSize": 1694
           },
           "10": {
-            "medianRatio": 4.85,
-            "sampleSize": 1883
+            "medianRatio": 4.89,
+            "sampleSize": 1918
           }
         },
-        "medianRatio": 2.8,
+        "medianRatio": 2.79,
         "p25": 1.45,
-        "p75": 5.69,
-        "sampleSize": 4003
+        "p75": 5.73,
+        "sampleSize": 4075
       },
       "SGC": {
         "byTier": {
@@ -3651,24 +3671,24 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
           },
           "9.5": {
             "medianRatio": 1.64,
-            "sampleSize": 170
+            "sampleSize": 172
           }
         },
         "medianRatio": 1.88,
-        "p25": 1.13,
+        "p25": 1.15,
         "p75": 3.18,
-        "sampleSize": 449
+        "sampleSize": 451
       }
     },
     "panini-phoenix": {
       "BGS": {
         "byTier": {
           "9.5": {
-            "medianRatio": 4.08,
+            "medianRatio": 4.07,
             "sampleSize": 8
           }
         },
-        "medianRatio": 3.01,
+        "medianRatio": 3.05,
         "p25": 1.88,
         "p75": 4.51,
         "sampleSize": 14
@@ -3677,7 +3697,7 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
         "byTier": {
           "10": {
             "medianRatio": 4.39,
-            "sampleSize": 22
+            "sampleSize": 21
           },
           "9.5": {
             "medianRatio": 3.01,
@@ -3686,75 +3706,79 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
         },
         "medianRatio": 2.92,
         "p25": 1.37,
-        "p75": 5.64,
-        "sampleSize": 35
+        "p75": 5.61,
+        "sampleSize": 34
       },
       "PSA": {
         "byTier": {
           "6": {
-            "medianRatio": 1.1,
-            "sampleSize": 9
+            "medianRatio": 1.6,
+            "sampleSize": 10
           },
           "7": {
-            "medianRatio": 1.58,
+            "medianRatio": 1.43,
             "sampleSize": 12
           },
           "8": {
-            "medianRatio": 1.83,
-            "sampleSize": 56
+            "medianRatio": 1.89,
+            "sampleSize": 59
           },
           "9": {
-            "medianRatio": 2.49,
+            "medianRatio": 2.52,
             "sampleSize": 222
           },
           "10": {
-            "medianRatio": 5.89,
-            "sampleSize": 318
+            "medianRatio": 6.03,
+            "sampleSize": 319
           }
         },
-        "medianRatio": 3.69,
-        "p25": 1.88,
-        "p75": 7.39,
-        "sampleSize": 618
+        "medianRatio": 3.7,
+        "p25": 1.94,
+        "p75": 7.36,
+        "sampleSize": 623
       },
       "SGC": {
         "byTier": {
+          "9": {
+            "medianRatio": 1.63,
+            "sampleSize": 8
+          },
           "10": {
-            "medianRatio": 3.76,
-            "sampleSize": 25
+            "medianRatio": 3.86,
+            "sampleSize": 26
           },
           "9.5": {
-            "medianRatio": 3.67,
+            "medianRatio": 3.64,
             "sampleSize": 16
           }
         },
         "medianRatio": 3.66,
         "p25": 1.95,
-        "p75": 4.63,
-        "sampleSize": 49
+        "p75": 4.73,
+        "sampleSize": 51
       }
     },
     "panini-playoff": {
       "PSA": {
         "byTier": {
           "9": {
-            "medianRatio": 4.7,
+            "medianRatio": 4.74,
             "sampleSize": 17
           },
           "10": {
-            "medianRatio": 9.59,
-            "sampleSize": 28
+            "medianRatio": 9.98,
+            "sampleSize": 29
           }
         },
-        "medianRatio": 7.64,
-        "p25": 3.98,
+        "medianRatio": 7.71,
+        "p25": 4.01,
         "p75": 11.47,
-        "sampleSize": 52
+        "sampleSize": 53
       },
       "SGC": {
         "medianRatio": 3.64,
         "p25": 2.01,
-        "p75": 4.52,
+        "p75": 4.83,
         "sampleSize": 7
       }
     },
@@ -3762,112 +3786,112 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
       "CGC": {
         "medianRatio": 6.82,
         "p25": 5.07,
-        "p75": 7.49,
+        "p75": 7.67,
         "sampleSize": 9
       },
       "PSA": {
         "byTier": {
           "8": {
-            "medianRatio": 3.07,
-            "sampleSize": 19
+            "medianRatio": 3.49,
+            "sampleSize": 20
           },
           "9": {
-            "medianRatio": 4.33,
+            "medianRatio": 4.35,
             "sampleSize": 61
           },
           "10": {
-            "medianRatio": 10.96,
-            "sampleSize": 109
+            "medianRatio": 10.93,
+            "sampleSize": 110
           }
         },
-        "medianRatio": 6.92,
-        "p25": 3.69,
-        "p75": 11.69,
-        "sampleSize": 197
+        "medianRatio": 7.06,
+        "p25": 3.65,
+        "p75": 11.78,
+        "sampleSize": 200
       },
       "SGC": {
         "byTier": {
           "10": {
-            "medianRatio": 6.02,
-            "sampleSize": 27
+            "medianRatio": 6.06,
+            "sampleSize": 29
           },
           "9.5": {
-            "medianRatio": 4.56,
+            "medianRatio": 4.41,
             "sampleSize": 15
           }
         },
-        "medianRatio": 4.81,
-        "p25": 2.81,
-        "p75": 7.38,
-        "sampleSize": 51
+        "medianRatio": 4.95,
+        "p25": 2.98,
+        "p75": 7.51,
+        "sampleSize": 52
       }
     },
     "panini-prizm": {
       "BGS": {
         "byTier": {
           "9": {
-            "medianRatio": 1.29,
-            "sampleSize": 52
+            "medianRatio": 1.3,
+            "sampleSize": 55
           },
           "8.5": {
             "medianRatio": 0.85,
             "sampleSize": 16
           },
           "9.5": {
-            "medianRatio": 2.74,
-            "sampleSize": 99
+            "medianRatio": 2.85,
+            "sampleSize": 103
           }
         },
-        "medianRatio": 2.2,
-        "p25": 1.25,
-        "p75": 4.15,
-        "sampleSize": 176
+        "medianRatio": 2.17,
+        "p25": 1.24,
+        "p75": 4.25,
+        "sampleSize": 183
       },
       "CGC": {
         "byTier": {
           "8": {
-            "medianRatio": 2.72,
+            "medianRatio": 1.7,
             "sampleSize": 11
           },
           "9": {
-            "medianRatio": 1.41,
-            "sampleSize": 52
+            "medianRatio": 1.39,
+            "sampleSize": 53
           },
           "10": {
-            "medianRatio": 4.48,
-            "sampleSize": 110
+            "medianRatio": 4.4,
+            "sampleSize": 117
           },
           "8.5": {
-            "medianRatio": 1.29,
-            "sampleSize": 8
+            "medianRatio": 1.02,
+            "sampleSize": 9
           },
           "9.5": {
-            "medianRatio": 2.67,
+            "medianRatio": 2.71,
             "sampleSize": 12
           }
         },
-        "medianRatio": 2.61,
+        "medianRatio": 2.62,
         "p25": 1.42,
-        "p75": 5.64,
-        "sampleSize": 198
+        "p75": 5.66,
+        "sampleSize": 209
       },
       "HGA": {
         "byTier": {
           "9": {
-            "medianRatio": 0.95,
+            "medianRatio": 1.06,
             "sampleSize": 10
           }
         },
-        "medianRatio": 0.95,
-        "p25": 0.73,
-        "p75": 1.46,
+        "medianRatio": 1.06,
+        "p25": 0.85,
+        "p75": 1.72,
         "sampleSize": 10
       },
       "PSA": {
         "byTier": {
           "6": {
-            "medianRatio": 0.76,
-            "sampleSize": 30
+            "medianRatio": 0.77,
+            "sampleSize": 31
           },
           "7": {
             "medianRatio": 0.78,
@@ -3875,25 +3899,25 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
           },
           "8": {
             "medianRatio": 1.2,
-            "sampleSize": 668
+            "sampleSize": 672
           },
           "9": {
-            "medianRatio": 2.17,
-            "sampleSize": 2887
+            "medianRatio": 2.18,
+            "sampleSize": 2901
           },
           "10": {
-            "medianRatio": 6.66,
-            "sampleSize": 3358
+            "medianRatio": 6.68,
+            "sampleSize": 3378
           },
           "8.5": {
-            "medianRatio": 0.98,
-            "sampleSize": 15
+            "medianRatio": 0.97,
+            "sampleSize": 13
           }
         },
-        "medianRatio": 3.53,
-        "p25": 1.66,
-        "p75": 7.25,
-        "sampleSize": 7047
+        "medianRatio": 3.55,
+        "p25": 1.67,
+        "p75": 7.26,
+        "sampleSize": 7084
       },
       "SGC": {
         "byTier": {
@@ -3906,29 +3930,29 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
             "sampleSize": 196
           },
           "10": {
-            "medianRatio": 3.68,
-            "sampleSize": 393
+            "medianRatio": 3.69,
+            "sampleSize": 398
           },
           "8.5": {
             "medianRatio": 0.75,
             "sampleSize": 41
           },
           "9.5": {
-            "medianRatio": 2,
-            "sampleSize": 351
+            "medianRatio": 2.01,
+            "sampleSize": 355
           }
         },
-        "medianRatio": 2.3,
+        "medianRatio": 2.33,
         "p25": 1.28,
-        "p75": 3.8,
-        "sampleSize": 1002
+        "p75": 3.81,
+        "sampleSize": 1011
       }
     },
     "panini-revolution": {
       "CGC": {
         "byTier": {
           "10": {
-            "medianRatio": 5.59,
+            "medianRatio": 5.75,
             "sampleSize": 10
           }
         },
@@ -3939,19 +3963,23 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
       },
       "PSA": {
         "byTier": {
+          "8": {
+            "medianRatio": 4.65,
+            "sampleSize": 8
+          },
           "9": {
-            "medianRatio": 4.95,
+            "medianRatio": 5.04,
             "sampleSize": 10
           },
           "10": {
-            "medianRatio": 16.71,
+            "medianRatio": 16.92,
             "sampleSize": 12
           }
         },
-        "medianRatio": 5.5,
+        "medianRatio": 5.72,
         "p25": 3.41,
-        "p75": 15.45,
-        "sampleSize": 30
+        "p75": 15.67,
+        "sampleSize": 31
       }
     },
     "panini-rookies-stars": {
@@ -3962,30 +3990,30 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
         "sampleSize": 4
       },
       "CGC": {
-        "medianRatio": 2.61,
-        "p25": 1.68,
+        "medianRatio": 2.7,
+        "p25": 1.92,
         "p75": 5.83,
-        "sampleSize": 7
+        "sampleSize": 6
       },
       "PSA": {
         "byTier": {
           "8": {
-            "medianRatio": 2.82,
-            "sampleSize": 9
+            "medianRatio": 2.41,
+            "sampleSize": 10
           },
           "9": {
-            "medianRatio": 2.55,
-            "sampleSize": 20
+            "medianRatio": 2.56,
+            "sampleSize": 23
           },
           "10": {
-            "medianRatio": 9.59,
+            "medianRatio": 10.12,
             "sampleSize": 24
           }
         },
-        "medianRatio": 4.22,
-        "p25": 2.53,
-        "p75": 8.59,
-        "sampleSize": 56
+        "medianRatio": 4.05,
+        "p25": 2.52,
+        "p75": 8.45,
+        "sampleSize": 60
       },
       "SGC": {
         "medianRatio": 3.14,
@@ -3998,88 +4026,88 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
       "BGS": {
         "byTier": {
           "9.5": {
-            "medianRatio": 4.62,
+            "medianRatio": 4.52,
             "sampleSize": 12
           }
         },
-        "medianRatio": 4.62,
-        "p25": 4.03,
-        "p75": 8.87,
+        "medianRatio": 4.78,
+        "p25": 3.44,
+        "p75": 10.13,
         "sampleSize": 20
       },
       "CGC": {
         "byTier": {
           "9": {
-            "medianRatio": 3.36,
-            "sampleSize": 13
+            "medianRatio": 3.13,
+            "sampleSize": 14
           },
           "10": {
-            "medianRatio": 8.67,
+            "medianRatio": 8.93,
             "sampleSize": 23
           }
         },
-        "medianRatio": 6.33,
-        "p25": 3.88,
-        "p75": 11.23,
-        "sampleSize": 39
+        "medianRatio": 6.18,
+        "p25": 3.15,
+        "p75": 11.13,
+        "sampleSize": 40
       },
       "PSA": {
         "byTier": {
           "8": {
-            "medianRatio": 3.87,
-            "sampleSize": 33
+            "medianRatio": 4.07,
+            "sampleSize": 32
           },
           "9": {
-            "medianRatio": 5.91,
-            "sampleSize": 97
+            "medianRatio": 6.23,
+            "sampleSize": 95
           },
           "10": {
-            "medianRatio": 12.71,
-            "sampleSize": 139
+            "medianRatio": 12.9,
+            "sampleSize": 137
           }
         },
-        "medianRatio": 8.63,
-        "p25": 4.21,
-        "p75": 13.21,
-        "sampleSize": 278
+        "medianRatio": 8.8,
+        "p25": 4.4,
+        "p75": 13.42,
+        "sampleSize": 273
       },
       "SGC": {
         "byTier": {
           "9": {
-            "medianRatio": 3.4,
+            "medianRatio": 3.38,
             "sampleSize": 8
           },
           "10": {
-            "medianRatio": 7.55,
-            "sampleSize": 39
+            "medianRatio": 7.12,
+            "sampleSize": 41
           },
           "9.5": {
-            "medianRatio": 4.12,
-            "sampleSize": 25
+            "medianRatio": 3.89,
+            "sampleSize": 28
           }
         },
-        "medianRatio": 5.47,
-        "p25": 3.55,
+        "medianRatio": 5.36,
+        "p25": 3.19,
         "p75": 8.11,
-        "sampleSize": 77
+        "sampleSize": 82
       }
     },
     "panini-select": {
       "BGS": {
         "byTier": {
           "9": {
-            "medianRatio": 2.54,
-            "sampleSize": 13
+            "medianRatio": 2.81,
+            "sampleSize": 12
           },
           "9.5": {
-            "medianRatio": 3.44,
-            "sampleSize": 28
+            "medianRatio": 3.18,
+            "sampleSize": 26
           }
         },
-        "medianRatio": 2.92,
+        "medianRatio": 2.99,
         "p25": 1.89,
-        "p75": 5.23,
-        "sampleSize": 48
+        "p75": 5.27,
+        "sampleSize": 44
       },
       "CGC": {
         "byTier": {
@@ -4088,7 +4116,7 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
             "sampleSize": 20
           },
           "10": {
-            "medianRatio": 4.11,
+            "medianRatio": 3.6,
             "sampleSize": 38
           },
           "8.5": {
@@ -4096,14 +4124,14 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
             "sampleSize": 9
           },
           "9.5": {
-            "medianRatio": 2.31,
-            "sampleSize": 8
+            "medianRatio": 2.27,
+            "sampleSize": 10
           }
         },
-        "medianRatio": 3.12,
-        "p25": 1.7,
-        "p75": 5.04,
-        "sampleSize": 79
+        "medianRatio": 2.56,
+        "p25": 1.59,
+        "p75": 4.53,
+        "sampleSize": 81
       },
       "HGA": {
         "byTier": {
@@ -4112,7 +4140,7 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
             "sampleSize": 9
           }
         },
-        "medianRatio": 1.83,
+        "medianRatio": 1.81,
         "p25": 1.04,
         "p75": 2.36,
         "sampleSize": 12
@@ -4120,46 +4148,46 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
       "PSA": {
         "byTier": {
           "7": {
-            "medianRatio": 1.76,
-            "sampleSize": 18
+            "medianRatio": 1.88,
+            "sampleSize": 15
           },
           "8": {
-            "medianRatio": 1.7,
-            "sampleSize": 122
+            "medianRatio": 1.71,
+            "sampleSize": 119
           },
           "9": {
-            "medianRatio": 2.81,
-            "sampleSize": 563
+            "medianRatio": 2.8,
+            "sampleSize": 555
           },
           "10": {
-            "medianRatio": 6.81,
-            "sampleSize": 789
+            "medianRatio": 6.79,
+            "sampleSize": 790
           }
         },
-        "medianRatio": 4.19,
-        "p25": 2.11,
-        "p75": 8.96,
-        "sampleSize": 1504
+        "medianRatio": 4.26,
+        "p25": 2.13,
+        "p75": 9.02,
+        "sampleSize": 1490
       },
       "SGC": {
         "byTier": {
           "9": {
-            "medianRatio": 1.53,
-            "sampleSize": 27
+            "medianRatio": 1.88,
+            "sampleSize": 29
           },
           "10": {
-            "medianRatio": 3.98,
-            "sampleSize": 56
+            "medianRatio": 3.68,
+            "sampleSize": 57
           },
           "9.5": {
-            "medianRatio": 1.91,
+            "medianRatio": 1.95,
             "sampleSize": 49
           }
         },
-        "medianRatio": 2.39,
-        "p25": 1.53,
-        "p75": 4.18,
-        "sampleSize": 133
+        "medianRatio": 2.42,
+        "p25": 1.54,
+        "p75": 4.19,
+        "sampleSize": 136
       }
     },
     "panini-spectra": {
@@ -4177,127 +4205,127 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
           },
           "10": {
             "medianRatio": 3.78,
-            "sampleSize": 49
+            "sampleSize": 50
           }
         },
-        "medianRatio": 2.37,
+        "medianRatio": 2.4,
         "p25": 1.28,
-        "p75": 3.8,
-        "sampleSize": 105
+        "p75": 3.87,
+        "sampleSize": 106
       }
     },
     "panini-zenith": {
       "PSA": {
         "byTier": {
           "8": {
-            "medianRatio": 3.11,
+            "medianRatio": 3.12,
             "sampleSize": 9
           },
           "9": {
-            "medianRatio": 2.75,
-            "sampleSize": 58
+            "medianRatio": 2.59,
+            "sampleSize": 59
           },
           "10": {
-            "medianRatio": 4.29,
-            "sampleSize": 69
+            "medianRatio": 3.9,
+            "sampleSize": 70
           }
         },
         "medianRatio": 3.13,
-        "p25": 2.08,
-        "p75": 5.88,
-        "sampleSize": 137
+        "p25": 2.13,
+        "p75": 5.9,
+        "sampleSize": 139
       },
       "SGC": {
         "medianRatio": 2.12,
-        "p25": 1.87,
-        "p75": 3.52,
+        "p25": 1.89,
+        "p75": 3.53,
         "sampleSize": 14
       }
     },
     "topps-chrome": {
       "BGS": {
-        "medianRatio": 3.63,
-        "p25": 1.72,
+        "medianRatio": 3.76,
+        "p25": 1.28,
         "p75": 5.7,
-        "sampleSize": 9
+        "sampleSize": 11
       },
       "CGC": {
         "byTier": {
           "9": {
-            "medianRatio": 7.07,
+            "medianRatio": 6.95,
             "sampleSize": 21
           },
           "10": {
-            "medianRatio": 6.39,
-            "sampleSize": 16
+            "medianRatio": 6.72,
+            "sampleSize": 15
           },
           "9.5": {
-            "medianRatio": 5.88,
-            "sampleSize": 9
+            "medianRatio": 6.08,
+            "sampleSize": 11
           }
         },
-        "medianRatio": 6.15,
-        "p25": 3.47,
-        "p75": 8.53,
+        "medianRatio": 6.18,
+        "p25": 3.9,
+        "p75": 8.21,
         "sampleSize": 55
       },
       "PSA": {
         "byTier": {
           "8": {
-            "medianRatio": 1.42,
-            "sampleSize": 66
+            "medianRatio": 1.38,
+            "sampleSize": 67
           },
           "9": {
-            "medianRatio": 2.6,
-            "sampleSize": 213
+            "medianRatio": 2.69,
+            "sampleSize": 219
           },
           "10": {
-            "medianRatio": 5.29,
-            "sampleSize": 265
+            "medianRatio": 5.36,
+            "sampleSize": 264
           }
         },
-        "medianRatio": 3.36,
-        "p25": 1.89,
-        "p75": 7.88,
-        "sampleSize": 554
+        "medianRatio": 3.38,
+        "p25": 1.88,
+        "p75": 8.01,
+        "sampleSize": 561
       },
       "SGC": {
         "byTier": {
           "9": {
-            "medianRatio": 1.85,
-            "sampleSize": 10
+            "medianRatio": 2.3,
+            "sampleSize": 9
           },
           "10": {
-            "medianRatio": 4.42,
-            "sampleSize": 17
+            "medianRatio": 4.43,
+            "sampleSize": 18
           },
           "9.5": {
             "medianRatio": 2.8,
             "sampleSize": 18
           }
         },
-        "medianRatio": 2.98,
+        "medianRatio": 3.04,
         "p25": 2.04,
-        "p75": 4.46,
-        "sampleSize": 46
+        "p75": 4.7,
+        "sampleSize": 47
       }
     },
     "topps-finest": {
       "PSA": {
         "byTier": {
           "9": {
-            "medianRatio": 1.42,
-            "sampleSize": 15
+            "medianRatio": 1.71,
+            "sampleSize": 14
           },
           "10": {
-            "medianRatio": 5.63,
-            "sampleSize": 24
+            "medianRatio": 4.6,
+            "sampleSize": 20
           }
         },
         "medianRatio": 2.47,
-        "p25": 1.3,
-        "p75": 6.92,
-        "sampleSize": 44
+        "p25": 1.42,
+        "p75": 6.14,
+        "sampleSize": 38
       },
       "SGC": {
         "medianRatio": 1.37,
@@ -4310,7 +4338,7 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
   "basketball": {
     "bowman-chrome": {
       "BGS": {
-        "medianRatio": 2.44,
+        "medianRatio": 2.45,
         "p25": 1.23,
         "p75": 3.07,
         "sampleSize": 6
@@ -4322,7 +4350,7 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
             "sampleSize": 8
           }
         },
-        "medianRatio": 3.04,
+        "medianRatio": 3.06,
         "p25": 1.56,
         "p75": 4.87,
         "sampleSize": 16
@@ -4330,7 +4358,7 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
       "PSA": {
         "byTier": {
           "8": {
-            "medianRatio": 1.31,
+            "medianRatio": 1.32,
             "sampleSize": 22
           },
           "9": {
@@ -4349,8 +4377,8 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
       },
       "SGC": {
         "medianRatio": 2.49,
-        "p25": 1.63,
-        "p75": 4.15,
+        "p25": 1.64,
+        "p75": 4.14,
         "sampleSize": 20
       }
     },
@@ -4406,8 +4434,8 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
             "sampleSize": 20
           },
           "10": {
-            "medianRatio": 6.33,
-            "sampleSize": 21
+            "medianRatio": 6.22,
+            "sampleSize": 22
           }
         },
         "medianRatio": 3.89,
@@ -4420,14 +4448,14 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
       "BGS": {
         "byTier": {
           "9.5": {
-            "medianRatio": 3.81,
-            "sampleSize": 20
+            "medianRatio": 3.74,
+            "sampleSize": 21
           }
         },
         "medianRatio": 3.81,
         "p25": 2.6,
         "p75": 8.67,
-        "sampleSize": 28
+        "sampleSize": 30
       },
       "CGC": {
         "byTier": {
@@ -4436,22 +4464,22 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
             "sampleSize": 10
           },
           "10": {
-            "medianRatio": 6.64,
+            "medianRatio": 6.77,
             "sampleSize": 25
           },
           "9.5": {
-            "medianRatio": 3.27,
+            "medianRatio": 3.18,
             "sampleSize": 12
           }
         },
-        "medianRatio": 4.37,
+        "medianRatio": 4.28,
         "p25": 2.58,
-        "p75": 7.64,
+        "p75": 7.69,
         "sampleSize": 50
       },
       "HGA": {
-        "medianRatio": 1.96,
-        "p25": 1.94,
+        "medianRatio": 1.97,
+        "p25": 1.97,
         "p75": 9.66,
         "sampleSize": 4
       },
@@ -4462,18 +4490,18 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
             "sampleSize": 43
           },
           "9": {
-            "medianRatio": 3.2,
+            "medianRatio": 3.32,
             "sampleSize": 157
           },
           "10": {
-            "medianRatio": 6.58,
-            "sampleSize": 217
+            "medianRatio": 6.57,
+            "sampleSize": 216
           }
         },
-        "medianRatio": 4.76,
-        "p25": 2.51,
-        "p75": 7.94,
-        "sampleSize": 425
+        "medianRatio": 4.85,
+        "p25": 2.54,
+        "p75": 7.95,
+        "sampleSize": 424
       },
       "SGC": {
         "byTier": {
@@ -4482,18 +4510,18 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
             "sampleSize": 14
           },
           "10": {
-            "medianRatio": 4.03,
-            "sampleSize": 38
+            "medianRatio": 4.05,
+            "sampleSize": 39
           },
           "9.5": {
             "medianRatio": 3.17,
             "sampleSize": 33
           }
         },
-        "medianRatio": 3.74,
+        "medianRatio": 3.75,
         "p25": 2.16,
-        "p75": 6.61,
-        "sampleSize": 86
+        "p75": 6.64,
+        "sampleSize": 87
       }
     },
     "panini-contenders": {
@@ -4504,7 +4532,7 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
             "sampleSize": 9
           }
         },
-        "medianRatio": 5.24,
+        "medianRatio": 5.19,
         "p25": 2.31,
         "p75": 13.52,
         "sampleSize": 17
@@ -4517,7 +4545,7 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
           }
         },
         "medianRatio": 2.88,
-        "p25": 1.57,
+        "p25": 1.56,
         "p75": 5.67,
         "sampleSize": 11
       },
@@ -4529,36 +4557,36 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
           },
           "9": {
             "medianRatio": 2.21,
-            "sampleSize": 107
+            "sampleSize": 105
           },
           "10": {
-            "medianRatio": 6.05,
-            "sampleSize": 106
+            "medianRatio": 6.19,
+            "sampleSize": 104
           }
         },
-        "medianRatio": 2.9,
-        "p25": 1.71,
-        "p75": 6.57,
-        "sampleSize": 250
+        "medianRatio": 2.97,
+        "p25": 1.72,
+        "p75": 6.61,
+        "sampleSize": 246
       },
       "SGC": {
         "byTier": {
           "10": {
-            "medianRatio": 2.65,
-            "sampleSize": 16
+            "medianRatio": 2.72,
+            "sampleSize": 17
           }
         },
-        "medianRatio": 2.62,
-        "p25": 1.87,
-        "p75": 4.34,
-        "sampleSize": 23
+        "medianRatio": 2.67,
+        "p25": 1.84,
+        "p75": 4.72,
+        "sampleSize": 26
       }
     },
     "panini-court-kings": {
       "BGS": {
-        "medianRatio": 2.9,
-        "p25": 1.56,
-        "p75": 4.83,
+        "medianRatio": 3.1,
+        "p25": 1.81,
+        "p75": 5.19,
         "sampleSize": 13
       },
       "PSA": {
@@ -4572,23 +4600,23 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
             "sampleSize": 68
           },
           "10": {
-            "medianRatio": 5.97,
-            "sampleSize": 90
+            "medianRatio": 6.07,
+            "sampleSize": 93
           }
         },
-        "medianRatio": 3.63,
-        "p25": 1.73,
-        "p75": 8.94,
-        "sampleSize": 183
+        "medianRatio": 3.52,
+        "p25": 1.75,
+        "p75": 9.05,
+        "sampleSize": 186
       },
       "SGC": {
         "byTier": {
           "10": {
-            "medianRatio": 3.25,
+            "medianRatio": 3.19,
             "sampleSize": 9
           }
         },
-        "medianRatio": 3.19,
+        "medianRatio": 3.03,
         "p25": 1.35,
         "p75": 3.93,
         "sampleSize": 13
@@ -4615,10 +4643,10 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
           },
           "8": {
             "medianRatio": 1.56,
-            "sampleSize": 32
+            "sampleSize": 33
           },
           "9": {
-            "medianRatio": 2,
+            "medianRatio": 1.99,
             "sampleSize": 53
           },
           "10": {
@@ -4626,14 +4654,14 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
             "sampleSize": 37
           }
         },
-        "medianRatio": 2.07,
+        "medianRatio": 2.04,
         "p25": 1.21,
         "p75": 4.77,
-        "sampleSize": 149
+        "sampleSize": 150
       },
       "SGC": {
         "medianRatio": 3.48,
-        "p25": 1.08,
+        "p25": 1.02,
         "p75": 3.75,
         "sampleSize": 7
       }
@@ -4642,53 +4670,53 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
       "BGS": {
         "byTier": {
           "9": {
-            "medianRatio": 1.91,
-            "sampleSize": 37
+            "medianRatio": 1.92,
+            "sampleSize": 38
           },
           "9.5": {
             "medianRatio": 3.1,
             "sampleSize": 63
           }
         },
-        "medianRatio": 2.43,
-        "p25": 1.39,
-        "p75": 3.9,
+        "medianRatio": 2.32,
+        "p25": 1.4,
+        "p75": 3.99,
         "sampleSize": 110
       },
       "CGC": {
         "byTier": {
           "9": {
             "medianRatio": 1.65,
-            "sampleSize": 27
+            "sampleSize": 29
           },
           "10": {
-            "medianRatio": 4.7,
+            "medianRatio": 4.68,
             "sampleSize": 96
           },
           "9.5": {
-            "medianRatio": 2.36,
+            "medianRatio": 2.39,
             "sampleSize": 11
           }
         },
-        "medianRatio": 3.14,
-        "p25": 1.65,
-        "p75": 5.66,
-        "sampleSize": 143
+        "medianRatio": 3.08,
+        "p25": 1.66,
+        "p75": 5.65,
+        "sampleSize": 145
       },
       "HGA": {
         "medianRatio": 2.7,
         "p25": 2.13,
-        "p75": 3.6,
+        "p75": 3.53,
         "sampleSize": 4
       },
       "PSA": {
         "byTier": {
           "6": {
-            "medianRatio": 1.33,
-            "sampleSize": 16
+            "medianRatio": 1.21,
+            "sampleSize": 15
           },
           "7": {
-            "medianRatio": 0.98,
+            "medianRatio": 0.99,
             "sampleSize": 34
           },
           "8": {
@@ -4696,18 +4724,18 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
             "sampleSize": 212
           },
           "9": {
-            "medianRatio": 2.73,
-            "sampleSize": 822
+            "medianRatio": 2.75,
+            "sampleSize": 827
           },
           "10": {
             "medianRatio": 6.96,
-            "sampleSize": 997
+            "sampleSize": 1002
           }
         },
-        "medianRatio": 4.03,
-        "p25": 1.99,
-        "p75": 7.72,
-        "sampleSize": 2093
+        "medianRatio": 4.05,
+        "p25": 2.01,
+        "p75": 7.65,
+        "sampleSize": 2102
       },
       "SGC": {
         "byTier": {
@@ -4716,35 +4744,35 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
             "sampleSize": 46
           },
           "10": {
-            "medianRatio": 2.92,
-            "sampleSize": 100
+            "medianRatio": 2.97,
+            "sampleSize": 102
           },
           "9.5": {
             "medianRatio": 2.19,
-            "sampleSize": 86
+            "sampleSize": 88
           }
         },
         "medianRatio": 2.29,
         "p25": 1.5,
         "p75": 3.7,
-        "sampleSize": 246
+        "sampleSize": 250
       }
     },
     "panini-elite": {
       "PSA": {
         "byTier": {
           "9": {
-            "medianRatio": 1.85,
+            "medianRatio": 1.88,
             "sampleSize": 40
           },
           "10": {
-            "medianRatio": 4.55,
+            "medianRatio": 4.46,
             "sampleSize": 30
           }
         },
         "medianRatio": 2.71,
         "p25": 1.5,
-        "p75": 5.49,
+        "p75": 5.46,
         "sampleSize": 77
       }
     },
@@ -4752,38 +4780,38 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
       "BGS": {
         "byTier": {
           "9": {
-            "medianRatio": 1.82,
-            "sampleSize": 13
+            "medianRatio": 2.04,
+            "sampleSize": 14
           },
           "9.5": {
-            "medianRatio": 3.61,
-            "sampleSize": 26
+            "medianRatio": 3.4,
+            "sampleSize": 28
           }
         },
-        "medianRatio": 3.39,
+        "medianRatio": 3.35,
         "p25": 1.92,
-        "p75": 4.23,
-        "sampleSize": 43
+        "p75": 4.03,
+        "sampleSize": 46
       },
       "CGC": {
         "byTier": {
           "9": {
-            "medianRatio": 2.42,
-            "sampleSize": 18
+            "medianRatio": 2.37,
+            "sampleSize": 17
           },
           "10": {
-            "medianRatio": 4.54,
-            "sampleSize": 31
+            "medianRatio": 4.66,
+            "sampleSize": 36
           },
           "9.5": {
             "medianRatio": 2.35,
             "sampleSize": 9
           }
         },
-        "medianRatio": 3.15,
-        "p25": 2.14,
-        "p75": 4.78,
-        "sampleSize": 63
+        "medianRatio": 2.92,
+        "p25": 2.08,
+        "p75": 4.79,
+        "sampleSize": 67
       },
       "HGA": {
         "medianRatio": 2.29,
@@ -4794,52 +4822,52 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
       "PSA": {
         "byTier": {
           "7": {
-            "medianRatio": 1.59,
-            "sampleSize": 10
+            "medianRatio": 1.38,
+            "sampleSize": 11
           },
           "8": {
-            "medianRatio": 1.61,
-            "sampleSize": 85
+            "medianRatio": 1.63,
+            "sampleSize": 90
           },
           "9": {
-            "medianRatio": 2.39,
-            "sampleSize": 319
+            "medianRatio": 2.43,
+            "sampleSize": 320
           },
           "10": {
-            "medianRatio": 6.26,
-            "sampleSize": 461
+            "medianRatio": 6.4,
+            "sampleSize": 468
           }
         },
-        "medianRatio": 3.84,
-        "p25": 2.12,
-        "p75": 7.35,
-        "sampleSize": 878
+        "medianRatio": 3.89,
+        "p25": 2.13,
+        "p75": 7.34,
+        "sampleSize": 892
       },
       "SGC": {
         "byTier": {
           "9": {
-            "medianRatio": 1.48,
-            "sampleSize": 27
+            "medianRatio": 1.62,
+            "sampleSize": 29
           },
           "10": {
-            "medianRatio": 3.71,
-            "sampleSize": 57
+            "medianRatio": 3.77,
+            "sampleSize": 58
           },
           "9.5": {
-            "medianRatio": 2.52,
-            "sampleSize": 41
+            "medianRatio": 2.45,
+            "sampleSize": 42
           }
         },
         "medianRatio": 2.73,
         "p25": 1.74,
-        "p75": 4.11,
-        "sampleSize": 126
+        "p75": 4.12,
+        "sampleSize": 130
       }
     },
     "panini-illusions": {
       "CGC": {
-        "medianRatio": 8.07,
-        "p25": 1.11,
+        "medianRatio": 8.16,
+        "p25": 1.07,
         "p75": 9.38,
         "sampleSize": 3
       },
@@ -4850,54 +4878,54 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
             "sampleSize": 39
           },
           "10": {
-            "medianRatio": 9.99,
+            "medianRatio": 10.09,
             "sampleSize": 51
           }
         },
-        "medianRatio": 5.44,
-        "p25": 3.25,
+        "medianRatio": 5.48,
+        "p25": 3.45,
         "p75": 11.28,
-        "sampleSize": 96
+        "sampleSize": 97
       },
       "SGC": {
-        "medianRatio": 7.47,
+        "medianRatio": 8.03,
         "p25": 3.87,
-        "p75": 10.35,
-        "sampleSize": 14
+        "p75": 10.7,
+        "sampleSize": 15
       }
     },
     "panini-mosaic": {
       "BGS": {
         "byTier": {
           "9": {
-            "medianRatio": 1.95,
+            "medianRatio": 2.1,
             "sampleSize": 18
           },
           "9.5": {
-            "medianRatio": 2.93,
-            "sampleSize": 53
+            "medianRatio": 2.95,
+            "sampleSize": 54
           }
         },
         "medianRatio": 2.74,
-        "p25": 1.9,
-        "p75": 3.74,
-        "sampleSize": 75
+        "p25": 1.93,
+        "p75": 3.7,
+        "sampleSize": 77
       },
       "CGC": {
         "byTier": {
           "9": {
-            "medianRatio": 2.04,
+            "medianRatio": 2.03,
             "sampleSize": 14
           },
           "10": {
-            "medianRatio": 3.46,
-            "sampleSize": 33
+            "medianRatio": 3.51,
+            "sampleSize": 40
           }
         },
-        "medianRatio": 2.43,
-        "p25": 1.62,
-        "p75": 4.92,
-        "sampleSize": 53
+        "medianRatio": 2.48,
+        "p25": 1.51,
+        "p75": 5.02,
+        "sampleSize": 60
       },
       "PSA": {
         "byTier": {
@@ -4906,22 +4934,22 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
             "sampleSize": 9
           },
           "8": {
-            "medianRatio": 1.37,
-            "sampleSize": 73
+            "medianRatio": 1.36,
+            "sampleSize": 71
           },
           "9": {
             "medianRatio": 2.62,
-            "sampleSize": 363
+            "sampleSize": 368
           },
           "10": {
-            "medianRatio": 6.89,
-            "sampleSize": 605
+            "medianRatio": 6.8,
+            "sampleSize": 600
           }
         },
         "medianRatio": 4.49,
-        "p25": 2.25,
-        "p75": 8.76,
-        "sampleSize": 1053
+        "p25": 2.27,
+        "p75": 8.67,
+        "sampleSize": 1051
       },
       "SGC": {
         "byTier": {
@@ -4930,18 +4958,18 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
             "sampleSize": 13
           },
           "10": {
-            "medianRatio": 3.49,
-            "sampleSize": 70
+            "medianRatio": 3.51,
+            "sampleSize": 69
           },
           "9.5": {
             "medianRatio": 2.4,
-            "sampleSize": 34
+            "sampleSize": 36
           }
         },
-        "medianRatio": 2.8,
+        "medianRatio": 2.76,
         "p25": 1.74,
-        "p75": 5.3,
-        "sampleSize": 122
+        "p75": 5.36,
+        "sampleSize": 123
       }
     },
     "panini-obsidian": {
@@ -4976,16 +5004,16 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
       "BGS": {
         "byTier": {
           "9": {
-            "medianRatio": 1.46,
-            "sampleSize": 20
+            "medianRatio": 1.48,
+            "sampleSize": 21
           },
           "9.5": {
-            "medianRatio": 2.6,
+            "medianRatio": 2.54,
             "sampleSize": 45
           }
         },
-        "medianRatio": 2.18,
-        "p25": 1.35,
+        "medianRatio": 2.09,
+        "p25": 1.33,
         "p75": 4.37,
         "sampleSize": 76
       },
@@ -4997,41 +5025,37 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
           },
           "10": {
             "medianRatio": 5,
-            "sampleSize": 43
+            "sampleSize": 41
           }
         },
-        "medianRatio": 3.25,
-        "p25": 1.57,
+        "medianRatio": 3.28,
+        "p25": 1.61,
         "p75": 6.7,
-        "sampleSize": 60
+        "sampleSize": 58
       },
       "PSA": {
         "byTier": {
-          "6": {
-            "medianRatio": 1.78,
-            "sampleSize": 8
-          },
           "7": {
             "medianRatio": 0.9,
             "sampleSize": 15
           },
           "8": {
-            "medianRatio": 1.21,
-            "sampleSize": 109
+            "medianRatio": 1.19,
+            "sampleSize": 108
           },
           "9": {
-            "medianRatio": 2.74,
-            "sampleSize": 480
+            "medianRatio": 2.75,
+            "sampleSize": 484
           },
           "10": {
-            "medianRatio": 7.57,
-            "sampleSize": 669
+            "medianRatio": 7.56,
+            "sampleSize": 676
           }
         },
-        "medianRatio": 4.49,
-        "p25": 2.15,
-        "p75": 8.89,
-        "sampleSize": 1284
+        "medianRatio": 4.51,
+        "p25": 2.16,
+        "p75": 8.88,
+        "sampleSize": 1293
       },
       "SGC": {
         "byTier": {
@@ -5040,30 +5064,30 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
             "sampleSize": 24
           },
           "10": {
-            "medianRatio": 3.16,
-            "sampleSize": 63
+            "medianRatio": 3.49,
+            "sampleSize": 65
           },
           "9.5": {
             "medianRatio": 2.14,
-            "sampleSize": 49
+            "sampleSize": 51
           }
         },
         "medianRatio": 2.18,
         "p25": 1.46,
-        "p75": 3.71,
-        "sampleSize": 144
+        "p75": 3.86,
+        "sampleSize": 148
       }
     },
     "panini-phoenix": {
       "BGS": {
-        "medianRatio": 17.94,
+        "medianRatio": 20.95,
         "p25": 13.41,
-        "p75": 28.98,
+        "p75": 31.33,
         "sampleSize": 3
       },
       "CGC": {
-        "medianRatio": 1.8,
-        "p25": 0.96,
+        "medianRatio": 1.81,
+        "p25": 1.05,
         "p75": 2.03,
         "sampleSize": 7
       },
@@ -5074,20 +5098,20 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
             "sampleSize": 25
           },
           "10": {
-            "medianRatio": 6.9,
-            "sampleSize": 36
+            "medianRatio": 7.16,
+            "sampleSize": 40
           }
         },
-        "medianRatio": 4.64,
-        "p25": 2.31,
-        "p75": 7.79,
-        "sampleSize": 69
+        "medianRatio": 5,
+        "p25": 2.44,
+        "p75": 8.22,
+        "sampleSize": 73
       },
       "SGC": {
-        "medianRatio": 3.45,
-        "p25": 3.34,
+        "medianRatio": 3.41,
+        "p25": 2.63,
         "p75": 11.23,
-        "sampleSize": 6
+        "sampleSize": 7
       }
     },
     "panini-prizm": {
@@ -5098,63 +5122,63 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
             "sampleSize": 9
           },
           "9": {
-            "medianRatio": 1.26,
-            "sampleSize": 106
+            "medianRatio": 1.28,
+            "sampleSize": 111
           },
           "10": {
-            "medianRatio": 7.03,
-            "sampleSize": 24
+            "medianRatio": 7.06,
+            "sampleSize": 26
           },
           "8.5": {
-            "medianRatio": 1.1,
-            "sampleSize": 25
+            "medianRatio": 0.95,
+            "sampleSize": 26
           },
           "9.5": {
             "medianRatio": 2.51,
-            "sampleSize": 177
+            "sampleSize": 178
           }
         },
         "medianRatio": 2.01,
         "p25": 1.2,
-        "p75": 3.3,
-        "sampleSize": 343
+        "p75": 3.4,
+        "sampleSize": 352
       },
       "CGC": {
         "byTier": {
           "8": {
-            "medianRatio": 1.13,
-            "sampleSize": 10
+            "medianRatio": 1.27,
+            "sampleSize": 11
           },
           "9": {
-            "medianRatio": 1.33,
-            "sampleSize": 70
+            "medianRatio": 1.36,
+            "sampleSize": 71
           },
           "10": {
-            "medianRatio": 3.32,
-            "sampleSize": 112
+            "medianRatio": 3.27,
+            "sampleSize": 117
           },
           "8.5": {
-            "medianRatio": 1.2,
-            "sampleSize": 17
+            "medianRatio": 1.22,
+            "sampleSize": 18
           },
           "9.5": {
             "medianRatio": 1.51,
             "sampleSize": 27
           }
         },
-        "medianRatio": 2,
-        "p25": 1.15,
-        "p75": 3.7,
-        "sampleSize": 240
+        "medianRatio": 2.04,
+        "p25": 1.21,
+        "p75": 3.48,
+        "sampleSize": 248
       },
       "HGA": {
         "byTier": {
           "9": {
-            "medianRatio": 1.38,
+            "medianRatio": 1.39,
             "sampleSize": 11
           }
         },
-        "medianRatio": 1.56,
+        "medianRatio": 1.57,
         "p25": 0.95,
         "p75": 2.93,
         "sampleSize": 12
@@ -5166,30 +5190,30 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
             "sampleSize": 8
           },
           "6": {
-            "medianRatio": 0.91,
-            "sampleSize": 45
+            "medianRatio": 0.92,
+            "sampleSize": 47
           },
           "7": {
             "medianRatio": 1.01,
-            "sampleSize": 90
+            "sampleSize": 94
           },
           "8": {
-            "medianRatio": 1.31,
-            "sampleSize": 583
+            "medianRatio": 1.33,
+            "sampleSize": 585
           },
           "9": {
             "medianRatio": 2.15,
-            "sampleSize": 2537
+            "sampleSize": 2547
           },
           "10": {
-            "medianRatio": 6.31,
-            "sampleSize": 3281
+            "medianRatio": 6.3,
+            "sampleSize": 3295
           }
         },
-        "medianRatio": 3.51,
+        "medianRatio": 3.5,
         "p25": 1.74,
-        "p75": 7.12,
-        "sampleSize": 6553
+        "p75": 7.14,
+        "sampleSize": 6585
       },
       "SGC": {
         "byTier": {
@@ -5198,16 +5222,16 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
             "sampleSize": 10
           },
           "9": {
-            "medianRatio": 1.24,
-            "sampleSize": 121
+            "medianRatio": 1.25,
+            "sampleSize": 120
           },
           "10": {
-            "medianRatio": 3.44,
-            "sampleSize": 244
+            "medianRatio": 3.42,
+            "sampleSize": 245
           },
           "8.5": {
             "medianRatio": 0.84,
-            "sampleSize": 23
+            "sampleSize": 24
           },
           "9.5": {
             "medianRatio": 1.78,
@@ -5217,7 +5241,7 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
         "medianRatio": 2.15,
         "p25": 1.25,
         "p75": 3.63,
-        "sampleSize": 592
+        "sampleSize": 593
       }
     },
     "panini-revolution": {
@@ -5236,39 +5260,39 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
       "CGC": {
         "byTier": {
           "10": {
-            "medianRatio": 2.22,
-            "sampleSize": 11
+            "medianRatio": 2.43,
+            "sampleSize": 14
           }
         },
-        "medianRatio": 2.12,
+        "medianRatio": 2.17,
         "p25": 1.24,
-        "p75": 3.01,
-        "sampleSize": 13
+        "p75": 3.27,
+        "sampleSize": 16
       },
       "PSA": {
         "byTier": {
           "8": {
-            "medianRatio": 2.55,
+            "medianRatio": 2.61,
             "sampleSize": 31
           },
           "9": {
-            "medianRatio": 2.61,
-            "sampleSize": 143
+            "medianRatio": 2.64,
+            "sampleSize": 144
           },
           "10": {
-            "medianRatio": 6.88,
-            "sampleSize": 170
+            "medianRatio": 7.01,
+            "sampleSize": 172
           }
         },
-        "medianRatio": 4.72,
-        "p25": 2.26,
-        "p75": 8.38,
-        "sampleSize": 354
+        "medianRatio": 4.89,
+        "p25": 2.29,
+        "p75": 8.67,
+        "sampleSize": 357
       },
       "SGC": {
         "byTier": {
           "10": {
-            "medianRatio": 3.57,
+            "medianRatio": 3.64,
             "sampleSize": 19
           },
           "9.5": {
@@ -5276,40 +5300,40 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
             "sampleSize": 12
           }
         },
-        "medianRatio": 2.51,
+        "medianRatio": 2.71,
         "p25": 1.61,
         "p75": 4.23,
-        "sampleSize": 34
+        "sampleSize": 35
       }
     },
     "panini-select": {
       "BGS": {
         "byTier": {
           "9": {
-            "medianRatio": 3.26,
-            "sampleSize": 13
+            "medianRatio": 3.19,
+            "sampleSize": 12
           },
           "9.5": {
             "medianRatio": 2.68,
-            "sampleSize": 17
+            "sampleSize": 19
           }
         },
-        "medianRatio": 2.72,
-        "p25": 1.38,
-        "p75": 4.99,
-        "sampleSize": 32
+        "medianRatio": 2.68,
+        "p25": 1.39,
+        "p75": 4.38,
+        "sampleSize": 33
       },
       "CGC": {
         "byTier": {
           "10": {
-            "medianRatio": 3.52,
-            "sampleSize": 22
+            "medianRatio": 3.23,
+            "sampleSize": 23
           }
         },
-        "medianRatio": 2.51,
-        "p25": 1.45,
+        "medianRatio": 2.47,
+        "p25": 1.36,
         "p75": 5.2,
-        "sampleSize": 30
+        "sampleSize": 31
       },
       "PSA": {
         "byTier": {
@@ -5319,21 +5343,21 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
           },
           "8": {
             "medianRatio": 1.4,
-            "sampleSize": 90
+            "sampleSize": 89
           },
           "9": {
-            "medianRatio": 2.24,
+            "medianRatio": 2.23,
             "sampleSize": 551
           },
           "10": {
-            "medianRatio": 5.62,
-            "sampleSize": 1040
+            "medianRatio": 5.65,
+            "sampleSize": 1046
           }
         },
-        "medianRatio": 3.94,
+        "medianRatio": 3.96,
         "p25": 2.04,
-        "p75": 7.79,
-        "sampleSize": 1701
+        "p75": 7.82,
+        "sampleSize": 1706
       },
       "SGC": {
         "byTier": {
@@ -5342,18 +5366,18 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
             "sampleSize": 20
           },
           "10": {
-            "medianRatio": 2.62,
-            "sampleSize": 53
+            "medianRatio": 2.6,
+            "sampleSize": 54
           },
           "9.5": {
             "medianRatio": 1.81,
-            "sampleSize": 28
+            "sampleSize": 30
           }
         },
-        "medianRatio": 1.91,
-        "p25": 1.25,
+        "medianRatio": 1.9,
+        "p25": 1.24,
         "p75": 2.99,
-        "sampleSize": 104
+        "sampleSize": 107
       }
     },
     "panini-spectra": {
@@ -5378,16 +5402,16 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
       "BGS": {
         "byTier": {
           "9": {
-            "medianRatio": 1.19,
-            "sampleSize": 12
+            "medianRatio": 1.77,
+            "sampleSize": 11
           },
           "9.5": {
-            "medianRatio": 3.43,
-            "sampleSize": 19
+            "medianRatio": 3.38,
+            "sampleSize": 20
           }
         },
-        "medianRatio": 2.29,
-        "p25": 1.27,
+        "medianRatio": 2.3,
+        "p25": 1.48,
         "p75": 5.32,
         "sampleSize": 33
       },
@@ -5398,90 +5422,90 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
             "sampleSize": 17
           },
           "10": {
-            "medianRatio": 5.28,
-            "sampleSize": 48
+            "medianRatio": 5.11,
+            "sampleSize": 49
           }
         },
-        "medianRatio": 3.33,
-        "p25": 1.77,
-        "p75": 6.16,
-        "sampleSize": 76
+        "medianRatio": 3.24,
+        "p25": 1.75,
+        "p75": 5.73,
+        "sampleSize": 77
       },
       "PSA": {
         "byTier": {
           "6": {
-            "medianRatio": 1.23,
-            "sampleSize": 10
+            "medianRatio": 1.19,
+            "sampleSize": 12
           },
           "7": {
             "medianRatio": 0.95,
             "sampleSize": 21
           },
           "8": {
-            "medianRatio": 1.14,
-            "sampleSize": 109
+            "medianRatio": 1.2,
+            "sampleSize": 111
           },
           "9": {
-            "medianRatio": 1.87,
-            "sampleSize": 435
+            "medianRatio": 1.89,
+            "sampleSize": 442
           },
           "10": {
-            "medianRatio": 6.79,
-            "sampleSize": 552
+            "medianRatio": 6.8,
+            "sampleSize": 559
           }
         },
-        "medianRatio": 3.36,
-        "p25": 1.58,
-        "p75": 7.42,
-        "sampleSize": 1132
+        "medianRatio": 3.43,
+        "p25": 1.57,
+        "p75": 7.63,
+        "sampleSize": 1150
       },
       "SGC": {
         "byTier": {
           "9": {
-            "medianRatio": 1.33,
+            "medianRatio": 1.34,
             "sampleSize": 11
           },
           "10": {
-            "medianRatio": 4.86,
-            "sampleSize": 27
+            "medianRatio": 4.92,
+            "sampleSize": 28
           },
           "9.5": {
-            "medianRatio": 2.28,
-            "sampleSize": 12
+            "medianRatio": 2.36,
+            "sampleSize": 13
           }
         },
-        "medianRatio": 2.62,
-        "p25": 1.61,
-        "p75": 5.14,
-        "sampleSize": 50
+        "medianRatio": 2.89,
+        "p25": 1.64,
+        "p75": 5.33,
+        "sampleSize": 52
       }
     },
     "topps-finest": {
       "CGC": {
-        "medianRatio": 3.54,
+        "medianRatio": 3.69,
         "p25": 3.39,
-        "p75": 7.83,
-        "sampleSize": 4
+        "p75": 3.98,
+        "sampleSize": 5
       },
       "PSA": {
         "byTier": {
           "8": {
-            "medianRatio": 1.69,
-            "sampleSize": 12
+            "medianRatio": 1.31,
+            "sampleSize": 15
           },
           "9": {
             "medianRatio": 2,
-            "sampleSize": 27
+            "sampleSize": 31
           },
           "10": {
-            "medianRatio": 9.2,
-            "sampleSize": 58
+            "medianRatio": 9.26,
+            "sampleSize": 60
           }
         },
-        "medianRatio": 4.89,
-        "p25": 1.99,
-        "p75": 10.91,
-        "sampleSize": 102
+        "medianRatio": 4.71,
+        "p25": 1.77,
+        "p75": 10.78,
+        "sampleSize": 110
       }
     }
   },
@@ -5518,7 +5542,7 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
             "sampleSize": 21
           }
         },
-        "medianRatio": 1.5,
+        "medianRatio": 1.6,
         "p25": 1.21,
         "p75": 2.5,
         "sampleSize": 33
@@ -5534,18 +5558,18 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
             "sampleSize": 134
           },
           "9": {
-            "medianRatio": 2.54,
+            "medianRatio": 2.55,
             "sampleSize": 379
           },
           "10": {
             "medianRatio": 7.43,
-            "sampleSize": 459
+            "sampleSize": 461
           }
         },
-        "medianRatio": 3.61,
+        "medianRatio": 3.63,
         "p25": 1.94,
-        "p75": 7.33,
-        "sampleSize": 990
+        "p75": 7.35,
+        "sampleSize": 992
       },
       "SGC": {
         "byTier": {
@@ -5574,74 +5598,74 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
       "BGS": {
         "byTier": {
           "9": {
-            "medianRatio": 1.21,
-            "sampleSize": 198
+            "medianRatio": 1.22,
+            "sampleSize": 189
           },
           "10": {
-            "medianRatio": 7.01,
-            "sampleSize": 338
+            "medianRatio": 7.03,
+            "sampleSize": 334
           },
           "8.5": {
             "medianRatio": 1.12,
-            "sampleSize": 36
+            "sampleSize": 32
           },
           "9.5": {
-            "medianRatio": 2.18,
-            "sampleSize": 583
+            "medianRatio": 2.13,
+            "sampleSize": 579
           }
         },
-        "medianRatio": 2.54,
+        "medianRatio": 2.51,
         "p25": 1.34,
-        "p75": 5,
-        "sampleSize": 1163
+        "p75": 5.01,
+        "sampleSize": 1143
       },
       "CGC": {
         "byTier": {
           "6": {
-            "medianRatio": 1.32,
-            "sampleSize": 10
+            "medianRatio": 1.62,
+            "sampleSize": 13
           },
           "7": {
-            "medianRatio": 1.73,
-            "sampleSize": 42
+            "medianRatio": 1.58,
+            "sampleSize": 40
           },
           "8": {
-            "medianRatio": 1.65,
-            "sampleSize": 362
+            "medianRatio": 1.69,
+            "sampleSize": 377
           },
           "9": {
-            "medianRatio": 2.07,
-            "sampleSize": 2330
+            "medianRatio": 2.13,
+            "sampleSize": 2402
           },
           "10": {
-            "medianRatio": 4.43,
-            "sampleSize": 4775
+            "medianRatio": 4.49,
+            "sampleSize": 4980
           },
           "5.5": {
-            "medianRatio": 1.44,
-            "sampleSize": 8
+            "medianRatio": 1.4,
+            "sampleSize": 9
           },
           "6.5": {
-            "medianRatio": 1.23,
+            "medianRatio": 1.37,
             "sampleSize": 22
           },
           "7.5": {
-            "medianRatio": 1.55,
-            "sampleSize": 116
+            "medianRatio": 1.7,
+            "sampleSize": 114
           },
           "8.5": {
-            "medianRatio": 1.7,
-            "sampleSize": 799
+            "medianRatio": 1.74,
+            "sampleSize": 821
           },
           "9.5": {
             "medianRatio": 2.04,
-            "sampleSize": 1302
+            "sampleSize": 1313
           }
         },
-        "medianRatio": 2.94,
-        "p25": 1.6,
-        "p75": 5.26,
-        "sampleSize": 9780
+        "medianRatio": 2.99,
+        "p25": 1.64,
+        "p75": 5.33,
+        "sampleSize": 10105
       },
       "PSA": {
         "byTier": {
@@ -5650,182 +5674,182 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
             "sampleSize": 15
           },
           "4": {
-            "medianRatio": 1.38,
-            "sampleSize": 15
+            "medianRatio": 1.13,
+            "sampleSize": 14
           },
           "5": {
-            "medianRatio": 0.97,
-            "sampleSize": 32
+            "medianRatio": 1.01,
+            "sampleSize": 33
           },
           "6": {
-            "medianRatio": 0.95,
-            "sampleSize": 124
+            "medianRatio": 0.96,
+            "sampleSize": 129
           },
           "7": {
-            "medianRatio": 1.09,
-            "sampleSize": 309
+            "medianRatio": 1.08,
+            "sampleSize": 311
           },
           "8": {
-            "medianRatio": 1.49,
-            "sampleSize": 1615
+            "medianRatio": 1.52,
+            "sampleSize": 1629
           },
           "9": {
-            "medianRatio": 2.53,
-            "sampleSize": 4125
+            "medianRatio": 2.59,
+            "sampleSize": 4204
           },
           "10": {
-            "medianRatio": 7.57,
-            "sampleSize": 5875
+            "medianRatio": 7.7,
+            "sampleSize": 6101
           },
           "8.5": {
-            "medianRatio": 1.02,
-            "sampleSize": 42
+            "medianRatio": 1.04,
+            "sampleSize": 43
           }
         },
-        "medianRatio": 4.05,
-        "p25": 1.84,
-        "p75": 8.43,
-        "sampleSize": 12156
+        "medianRatio": 4.13,
+        "p25": 1.88,
+        "p75": 8.67,
+        "sampleSize": 12484
       },
       "SGC": {
         "byTier": {
           "9": {
             "medianRatio": 0.9,
-            "sampleSize": 43
+            "sampleSize": 38
           },
           "10": {
-            "medianRatio": 2.42,
-            "sampleSize": 154
+            "medianRatio": 2.4,
+            "sampleSize": 156
           },
           "8.5": {
-            "medianRatio": 0.79,
+            "medianRatio": 1.27,
             "sampleSize": 8
           },
           "9.5": {
-            "medianRatio": 1.29,
+            "medianRatio": 1.27,
             "sampleSize": 54
           }
         },
-        "medianRatio": 1.81,
-        "p25": 1.15,
-        "p75": 3.16,
-        "sampleSize": 266
+        "medianRatio": 1.82,
+        "p25": 1.19,
+        "p75": 3.18,
+        "sampleSize": 262
       },
       "TAG": {
         "byTier": {
           "9": {
-            "medianRatio": 1.45,
-            "sampleSize": 14
+            "medianRatio": 2.11,
+            "sampleSize": 13
           },
           "10": {
             "medianRatio": 4.29,
-            "sampleSize": 40
+            "sampleSize": 36
           }
         },
-        "medianRatio": 3.07,
-        "p25": 1.91,
-        "p75": 6.41,
-        "sampleSize": 55
+        "medianRatio": 2.99,
+        "p25": 1.97,
+        "p75": 6.96,
+        "sampleSize": 50
       }
     },
     "pokemon-astral-radiance": {
       "BGS": {
-        "medianRatio": 4.29,
+        "medianRatio": 4.33,
         "p25": 1.62,
-        "p75": 4.52,
+        "p75": 4.69,
         "sampleSize": 9
       },
       "CGC": {
         "byTier": {
           "9": {
-            "medianRatio": 3.25,
-            "sampleSize": 24
+            "medianRatio": 3.19,
+            "sampleSize": 25
           },
           "10": {
-            "medianRatio": 5.26,
-            "sampleSize": 38
+            "medianRatio": 5.56,
+            "sampleSize": 40
           },
           "9.5": {
-            "medianRatio": 1.43,
+            "medianRatio": 1.34,
             "sampleSize": 11
           }
         },
-        "medianRatio": 3.25,
-        "p25": 1.6,
-        "p75": 6.43,
-        "sampleSize": 79
+        "medianRatio": 3.23,
+        "p25": 1.58,
+        "p75": 6,
+        "sampleSize": 85
       },
       "PSA": {
         "byTier": {
           "8": {
-            "medianRatio": 1.14,
-            "sampleSize": 13
+            "medianRatio": 1.65,
+            "sampleSize": 15
           },
           "9": {
-            "medianRatio": 3.84,
-            "sampleSize": 44
+            "medianRatio": 3.99,
+            "sampleSize": 46
           },
           "10": {
             "medianRatio": 9.09,
-            "sampleSize": 78
+            "sampleSize": 80
           }
         },
-        "medianRatio": 5.82,
-        "p25": 2.9,
-        "p75": 10.97,
-        "sampleSize": 137
+        "medianRatio": 5.65,
+        "p25": 2.99,
+        "p75": 10.77,
+        "sampleSize": 144
       }
     },
     "pokemon-brilliant-stars": {
       "BGS": {
         "medianRatio": 2.65,
-        "p25": 1.42,
-        "p75": 3,
+        "p25": 1.44,
+        "p75": 3.04,
         "sampleSize": 13
       },
       "CGC": {
         "byTier": {
           "9": {
-            "medianRatio": 1.66,
-            "sampleSize": 44
+            "medianRatio": 1.75,
+            "sampleSize": 46
           },
           "10": {
-            "medianRatio": 4.91,
-            "sampleSize": 64
+            "medianRatio": 4.76,
+            "sampleSize": 65
           },
           "8.5": {
-            "medianRatio": 1.48,
-            "sampleSize": 9
+            "medianRatio": 1.63,
+            "sampleSize": 10
           },
           "9.5": {
-            "medianRatio": 1.92,
-            "sampleSize": 23
+            "medianRatio": 2.16,
+            "sampleSize": 26
           }
         },
-        "medianRatio": 2.4,
-        "p25": 1.48,
-        "p75": 5.39,
-        "sampleSize": 147
+        "medianRatio": 2.53,
+        "p25": 1.5,
+        "p75": 5.05,
+        "sampleSize": 154
       },
       "PSA": {
         "byTier": {
           "8": {
-            "medianRatio": 1.53,
+            "medianRatio": 1.52,
             "sampleSize": 26
           },
           "9": {
-            "medianRatio": 3.29,
-            "sampleSize": 71
+            "medianRatio": 3.3,
+            "sampleSize": 72
           },
           "10": {
             "medianRatio": 10.05,
-            "sampleSize": 73
+            "sampleSize": 75
           }
         },
-        "medianRatio": 4.11,
-        "p25": 2.04,
-        "p75": 9,
-        "sampleSize": 178
+        "medianRatio": 4.17,
+        "p25": 2.08,
+        "p75": 9.66,
+        "sampleSize": 181
       },
       "SGC": {
         "medianRatio": 1.6,
@@ -5842,113 +5866,119 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
             "sampleSize": 8
           }
         },
-        "medianRatio": 2.85,
-        "p25": 1.78,
+        "medianRatio": 3.15,
+        "p25": 2.02,
         "p75": 5.48,
-        "sampleSize": 17
+        "sampleSize": 18
       },
       "CGC": {
         "byTier": {
           "8": {
-            "medianRatio": 1.38,
-            "sampleSize": 13
+            "medianRatio": 1.84,
+            "sampleSize": 14
           },
           "9": {
-            "medianRatio": 2.46,
+            "medianRatio": 2.65,
             "sampleSize": 42
           },
           "10": {
-            "medianRatio": 4.99,
-            "sampleSize": 43
+            "medianRatio": 5.26,
+            "sampleSize": 42
           },
           "8.5": {
-            "medianRatio": 1.4,
-            "sampleSize": 21
+            "medianRatio": 1.5,
+            "sampleSize": 25
           },
           "9.5": {
-            "medianRatio": 2.26,
+            "medianRatio": 2.25,
             "sampleSize": 30
           }
         },
-        "medianRatio": 2.52,
-        "p25": 1.4,
-        "p75": 4.6,
-        "sampleSize": 160
+        "medianRatio": 2.77,
+        "p25": 1.41,
+        "p75": 4.66,
+        "sampleSize": 165
       },
       "PSA": {
         "byTier": {
           "7": {
-            "medianRatio": 1.59,
-            "sampleSize": 14
+            "medianRatio": 1.8,
+            "sampleSize": 15
           },
           "8": {
-            "medianRatio": 2.81,
-            "sampleSize": 42
+            "medianRatio": 2.85,
+            "sampleSize": 43
           },
           "9": {
-            "medianRatio": 3.55,
+            "medianRatio": 3.87,
             "sampleSize": 48
           },
           "10": {
-            "medianRatio": 13.06,
+            "medianRatio": 13.62,
             "sampleSize": 49
           }
         },
-        "medianRatio": 3.96,
-        "p25": 2.04,
-        "p75": 7.9,
-        "sampleSize": 160
+        "medianRatio": 4.02,
+        "p25": 1.99,
+        "p75": 7.81,
+        "sampleSize": 162
       },
       "SGC": {
-        "medianRatio": 1.91,
-        "p25": 1.28,
-        "p75": 3.63,
-        "sampleSize": 22
+        "byTier": {
+          "10": {
+            "medianRatio": 3.12,
+            "sampleSize": 8
+          }
+        },
+        "medianRatio": 2.15,
+        "p25": 1.32,
+        "p75": 3.79,
+        "sampleSize": 25
       }
     },
     "pokemon-crown-zenith": {
       "BGS": {
         "byTier": {
           "9": {
-            "medianRatio": 0.74,
+            "medianRatio": 0.75,
             "sampleSize": 9
           },
           "9.5": {
-            "medianRatio": 1.11,
+            "medianRatio": 1.09,
             "sampleSize": 13
           }
         },
-        "medianRatio": 1.22,
-        "p25": 1,
-        "p75": 2.46,
+        "medianRatio": 1.21,
+        "p25": 0.95,
+        "p75": 2.47,
         "sampleSize": 29
       },
       "CGC": {
         "byTier": {
           "8": {
-            "medianRatio": 1.99,
+            "medianRatio": 1.96,
             "sampleSize": 11
           },
           "9": {
-            "medianRatio": 2.04,
+            "medianRatio": 2.07,
             "sampleSize": 69
           },
           "10": {
-            "medianRatio": 4.3,
+            "medianRatio": 4.26,
             "sampleSize": 101
           },
           "8.5": {
-            "medianRatio": 1.6,
+            "medianRatio": 1.64,
             "sampleSize": 20
           },
           "9.5": {
-            "medianRatio": 2.41,
+            "medianRatio": 2.37,
             "sampleSize": 59
           }
         },
-        "medianRatio": 2.52,
-        "p25": 1.24,
-        "p75": 4.53,
+        "medianRatio": 2.5,
+        "p25": 1.25,
+        "p75": 4.4,
         "sampleSize": 265
       },
       "PSA": {
@@ -5959,17 +5989,17 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
           },
           "9": {
             "medianRatio": 2.98,
-            "sampleSize": 108
+            "sampleSize": 111
           },
           "10": {
-            "medianRatio": 9.55,
-            "sampleSize": 116
+            "medianRatio": 9.72,
+            "sampleSize": 121
           }
         },
-        "medianRatio": 3.73,
-        "p25": 1.61,
-        "p75": 7.75,
-        "sampleSize": 291
+        "medianRatio": 3.67,
+        "p25": 1.54,
+        "p75": 7.77,
+        "sampleSize": 304
       },
       "SGC": {
         "byTier": {
@@ -5978,7 +6008,7 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
             "sampleSize": 17
           }
         },
-        "medianRatio": 1.36,
+        "medianRatio": 1.34,
         "p25": 1.04,
         "p75": 1.97,
         "sampleSize": 24
@@ -5986,30 +6016,30 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
     },
     "pokemon-evolving-skies": {
       "BGS": {
-        "medianRatio": 2,
-        "p25": 1.34,
-        "p75": 3.13,
-        "sampleSize": 8
+        "medianRatio": 1.61,
+        "p25": 1.31,
+        "p75": 2.82,
+        "sampleSize": 9
       },
       "CGC": {
         "byTier": {
           "9": {
-            "medianRatio": 2,
-            "sampleSize": 32
+            "medianRatio": 1.94,
+            "sampleSize": 33
           },
           "10": {
-            "medianRatio": 2.89,
-            "sampleSize": 47
+            "medianRatio": 2.99,
+            "sampleSize": 48
           },
           "9.5": {
-            "medianRatio": 1.92,
-            "sampleSize": 13
+            "medianRatio": 1.84,
+            "sampleSize": 14
           }
         },
-        "medianRatio": 2.05,
-        "p25": 1.4,
-        "p75": 4.87,
-        "sampleSize": 103
+        "medianRatio": 2.04,
+        "p25": 1.41,
+        "p75": 4.85,
+        "sampleSize": 106
       },
       "PSA": {
         "byTier": {
@@ -6018,23 +6048,23 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
             "sampleSize": 32
           },
           "9": {
-            "medianRatio": 2.01,
+            "medianRatio": 1.86,
             "sampleSize": 60
           },
           "10": {
             "medianRatio": 5.76,
-            "sampleSize": 72
+            "sampleSize": 74
           }
         },
-        "medianRatio": 4.08,
-        "p25": 1.59,
-        "p75": 6.82,
-        "sampleSize": 169
+        "medianRatio": 3.98,
+        "p25": 1.47,
+        "p75": 6.69,
+        "sampleSize": 173
       },
       "SGC": {
-        "medianRatio": 1.76,
-        "p25": 1.48,
-        "p75": 2.72,
+        "medianRatio": 1.51,
+        "p25": 1.27,
+        "p75": 2.67,
         "sampleSize": 3
       }
     },
@@ -6048,28 +6078,28 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
       "CGC": {
         "byTier": {
           "9": {
-            "medianRatio": 1.36,
-            "sampleSize": 16
+            "medianRatio": 1.38,
+            "sampleSize": 17
           },
           "10": {
-            "medianRatio": 5.61,
+            "medianRatio": 5.5,
             "sampleSize": 25
           },
           "9.5": {
-            "medianRatio": 1.59,
-            "sampleSize": 8
+            "medianRatio": 1.72,
+            "sampleSize": 9
           }
         },
-        "medianRatio": 1.86,
+        "medianRatio": 2.03,
         "p25": 1.26,
-        "p75": 5.61,
-        "sampleSize": 57
+        "p75": 5.5,
+        "sampleSize": 59
       },
       "PSA": {
         "byTier": {
           "8": {
-            "medianRatio": 1.21,
-            "sampleSize": 14
+            "medianRatio": 1.2,
+            "sampleSize": 15
           },
           "9": {
             "medianRatio": 2.31,
@@ -6080,18 +6110,18 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
             "sampleSize": 35
           }
         },
-        "medianRatio": 3.1,
-        "p25": 1.49,
-        "p75": 6.66,
-        "sampleSize": 86
+        "medianRatio": 2.99,
+        "p25": 1.5,
+        "p75": 6.59,
+        "sampleSize": 87
       }
     },
     "pokemon-japanese": {
       "BGS": {
         "byTier": {
           "9": {
-            "medianRatio": 1.21,
-            "sampleSize": 50
+            "medianRatio": 1.23,
+            "sampleSize": 51
           },
           "10": {
             "medianRatio": 7.11,
@@ -6103,85 +6133,85 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
           },
           "9.5": {
             "medianRatio": 2.09,
-            "sampleSize": 354
+            "sampleSize": 353
           }
         },
-        "medianRatio": 3,
-        "p25": 1.61,
-        "p75": 6.02,
+        "medianRatio": 2.99,
+        "p25": 1.6,
+        "p75": 6.3,
         "sampleSize": 678
       },
       "CGC": {
         "byTier": {
           "7": {
-            "medianRatio": 1.59,
-            "sampleSize": 22
+            "medianRatio": 1.69,
+            "sampleSize": 20
           },
           "8": {
-            "medianRatio": 1.6,
-            "sampleSize": 178
+            "medianRatio": 1.62,
+            "sampleSize": 176
           },
           "9": {
-            "medianRatio": 2.11,
-            "sampleSize": 824
+            "medianRatio": 2.19,
+            "sampleSize": 867
           },
           "10": {
-            "medianRatio": 4.06,
-            "sampleSize": 2441
+            "medianRatio": 4.15,
+            "sampleSize": 2592
           },
           "6.5": {
-            "medianRatio": 1.49,
-            "sampleSize": 12
+            "medianRatio": 1.57,
+            "sampleSize": 13
           },
           "7.5": {
-            "medianRatio": 1.47,
-            "sampleSize": 63
+            "medianRatio": 1.54,
+            "sampleSize": 62
           },
           "8.5": {
-            "medianRatio": 1.83,
-            "sampleSize": 333
+            "medianRatio": 1.87,
+            "sampleSize": 334
           },
           "9.5": {
             "medianRatio": 2.05,
-            "sampleSize": 504
+            "sampleSize": 502
           }
         },
-        "medianRatio": 2.88,
-        "p25": 1.7,
-        "p75": 4.75,
-        "sampleSize": 4392
+        "medianRatio": 2.92,
+        "p25": 1.76,
+        "p75": 4.85,
+        "sampleSize": 4581
       },
       "PSA": {
         "byTier": {
           "5": {
-            "medianRatio": 0.97,
-            "sampleSize": 10
+            "medianRatio": 1.11,
+            "sampleSize": 12
           },
           "6": {
-            "medianRatio": 0.92,
+            "medianRatio": 0.98,
             "sampleSize": 50
           },
           "7": {
             "medianRatio": 1.01,
-            "sampleSize": 54
+            "sampleSize": 53
           },
           "8": {
-            "medianRatio": 1.4,
-            "sampleSize": 209
+            "medianRatio": 1.42,
+            "sampleSize": 206
           },
           "9": {
-            "medianRatio": 2.03,
-            "sampleSize": 1108
+            "medianRatio": 2.05,
+            "sampleSize": 1124
           },
           "10": {
-            "medianRatio": 5.4,
-            "sampleSize": 2469
+            "medianRatio": 5.54,
+            "sampleSize": 2592
           }
         },
-        "medianRatio": 3.73,
-        "p25": 1.96,
-        "p75": 6.89,
-        "sampleSize": 3913
+        "medianRatio": 3.82,
+        "p25": 2.03,
+        "p75": 7.08,
+        "sampleSize": 4052
       },
       "SGC": {
         "byTier": {
@@ -6190,83 +6220,83 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
             "sampleSize": 51
           }
         },
-        "medianRatio": 2.74,
-        "p25": 1.83,
+        "medianRatio": 2.82,
+        "p25": 1.81,
         "p75": 3.68,
-        "sampleSize": 58
+        "sampleSize": 57
       },
       "TAG": {
         "byTier": {
           "10": {
-            "medianRatio": 4.03,
-            "sampleSize": 8
+            "medianRatio": 4.14,
+            "sampleSize": 9
           }
         },
-        "medianRatio": 4.03,
-        "p25": 1.99,
-        "p75": 4.37,
-        "sampleSize": 8
+        "medianRatio": 4.14,
+        "p25": 1.91,
+        "p75": 4.3,
+        "sampleSize": 9
       }
     },
     "pokemon-lost-origin": {
       "BGS": {
-        "medianRatio": 2.24,
-        "p25": 1.05,
-        "p75": 3.49,
+        "medianRatio": 2.23,
+        "p25": 1.22,
+        "p75": 3.47,
         "sampleSize": 11
       },
       "CGC": {
         "byTier": {
           "8": {
-            "medianRatio": 2.84,
+            "medianRatio": 2.87,
             "sampleSize": 9
           },
           "9": {
-            "medianRatio": 3.03,
+            "medianRatio": 3.11,
             "sampleSize": 45
           },
           "10": {
-            "medianRatio": 4.95,
-            "sampleSize": 72
+            "medianRatio": 4.73,
+            "sampleSize": 73
           },
           "8.5": {
-            "medianRatio": 1.24,
-            "sampleSize": 10
+            "medianRatio": 1.3,
+            "sampleSize": 11
           },
           "9.5": {
             "medianRatio": 2.2,
             "sampleSize": 21
           }
         },
-        "medianRatio": 3.56,
+        "medianRatio": 3.63,
         "p25": 2.2,
-        "p75": 6.52,
-        "sampleSize": 162
+        "p75": 6.63,
+        "sampleSize": 164
       },
       "PSA": {
         "byTier": {
           "8": {
-            "medianRatio": 2.18,
-            "sampleSize": 29
+            "medianRatio": 2.46,
+            "sampleSize": 30
           },
           "9": {
-            "medianRatio": 4.23,
-            "sampleSize": 77
+            "medianRatio": 4.49,
+            "sampleSize": 79
           },
           "10": {
-            "medianRatio": 9.15,
-            "sampleSize": 93
+            "medianRatio": 9.38,
+            "sampleSize": 96
           }
         },
-        "medianRatio": 5.28,
-        "p25": 2.76,
-        "p75": 9.15,
-        "sampleSize": 214
+        "medianRatio": 5.43,
+        "p25": 2.72,
+        "p75": 9.46,
+        "sampleSize": 221
       },
       "SGC": {
-        "medianRatio": 1.69,
-        "p25": 1.47,
-        "p75": 2.6,
+        "medianRatio": 1.67,
+        "p25": 1.42,
+        "p75": 2.59,
         "sampleSize": 7
       }
     },
@@ -6274,173 +6304,169 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
       "BGS": {
         "byTier": {
           "9": {
-            "medianRatio": 1.14,
-            "sampleSize": 82
+            "medianRatio": 1.13,
+            "sampleSize": 78
           },
           "10": {
-            "medianRatio": 6.95,
+            "medianRatio": 6.63,
             "sampleSize": 8
           },
           "8.5": {
-            "medianRatio": 1.21,
-            "sampleSize": 14
+            "medianRatio": 1.26,
+            "sampleSize": 11
           },
           "9.5": {
-            "medianRatio": 2.2,
-            "sampleSize": 88
+            "medianRatio": 2.19,
+            "sampleSize": 84
           }
         },
-        "medianRatio": 1.63,
+        "medianRatio": 1.59,
         "p25": 1.13,
         "p75": 3.02,
-        "sampleSize": 193
+        "sampleSize": 182
       },
       "CGC": {
         "byTier": {
           "8": {
-            "medianRatio": 1.84,
+            "medianRatio": 1.73,
             "sampleSize": 65
           },
           "9": {
-            "medianRatio": 1.92,
-            "sampleSize": 651
+            "medianRatio": 1.94,
+            "sampleSize": 652
           },
           "10": {
-            "medianRatio": 4.6,
-            "sampleSize": 1155
+            "medianRatio": 4.66,
+            "sampleSize": 1147
           },
           "7.5": {
-            "medianRatio": 1.55,
-            "sampleSize": 12
+            "medianRatio": 1.92,
+            "sampleSize": 14
           },
           "8.5": {
-            "medianRatio": 1.72,
-            "sampleSize": 179
+            "medianRatio": 1.76,
+            "sampleSize": 182
           },
           "9.5": {
-            "medianRatio": 1.92,
+            "medianRatio": 1.91,
             "sampleSize": 416
           }
         },
         "medianRatio": 3.15,
-        "p25": 1.57,
-        "p75": 6.26,
-        "sampleSize": 2490
+        "p25": 1.58,
+        "p75": 6.22,
+        "sampleSize": 2486
       },
       "PSA": {
         "byTier": {
-          "5": {
-            "medianRatio": 1.02,
-            "sampleSize": 8
-          },
           "6": {
             "medianRatio": 0.78,
-            "sampleSize": 22
+            "sampleSize": 21
           },
           "7": {
-            "medianRatio": 0.94,
-            "sampleSize": 126
+            "medianRatio": 0.92,
+            "sampleSize": 124
           },
           "8": {
-            "medianRatio": 1.45,
-            "sampleSize": 731
+            "medianRatio": 1.46,
+            "sampleSize": 729
           },
           "9": {
-            "medianRatio": 2.63,
-            "sampleSize": 1427
+            "medianRatio": 2.68,
+            "sampleSize": 1457
           },
           "10": {
-            "medianRatio": 10.17,
-            "sampleSize": 1498
+            "medianRatio": 10.4,
+            "sampleSize": 1536
           },
           "8.5": {
-            "medianRatio": 1,
-            "sampleSize": 38
+            "medianRatio": 0.99,
+            "sampleSize": 37
           }
         },
-        "medianRatio": 3.94,
-        "p25": 1.6,
-        "p75": 9.63,
-        "sampleSize": 3853
+        "medianRatio": 4.03,
+        "p25": 1.63,
+        "p75": 9.86,
+        "sampleSize": 3914
       },
       "SGC": {
         "byTier": {
           "9": {
-            "medianRatio": 0.78,
-            "sampleSize": 27
+            "medianRatio": 0.8,
+            "sampleSize": 22
           },
           "10": {
-            "medianRatio": 2.57,
-            "sampleSize": 45
+            "medianRatio": 2.64,
+            "sampleSize": 46
           },
           "9.5": {
-            "medianRatio": 1.08,
-            "sampleSize": 23
+            "medianRatio": 1.14,
+            "sampleSize": 24
           }
         },
         "medianRatio": 1.61,
-        "p25": 0.85,
-        "p75": 2.57,
-        "sampleSize": 101
+        "p25": 0.89,
+        "p75": 2.69,
+        "sampleSize": 97
       },
       "TAG": {
-        "medianRatio": 2.67,
-        "p25": 1.55,
-        "p75": 6.94,
-        "sampleSize": 11
+        "medianRatio": 4.51,
+        "p25": 1.62,
+        "p75": 7.69,
+        "sampleSize": 6
       }
     },
     "pokemon-shining-fates": {
       "BGS": {
-        "medianRatio": 2.08,
-        "p25": 0.97,
-        "p75": 8.29,
+        "medianRatio": 2.12,
+        "p25": 1.05,
+        "p75": 9.03,
         "sampleSize": 4
       },
       "CGC": {
         "byTier": {
           "9": {
-            "medianRatio": 2.72,
+            "medianRatio": 2.79,
             "sampleSize": 21
           },
           "10": {
-            "medianRatio": 6.4,
-            "sampleSize": 27
+            "medianRatio": 6.35,
+            "sampleSize": 28
           },
           "9.5": {
-            "medianRatio": 3.82,
+            "medianRatio": 3.83,
             "sampleSize": 12
           }
         },
-        "medianRatio": 4.1,
-        "p25": 2.38,
-        "p75": 6.29,
-        "sampleSize": 64
+        "medianRatio": 4.11,
+        "p25": 2.18,
+        "p75": 5.89,
+        "sampleSize": 66
       },
       "PSA": {
         "byTier": {
           "8": {
-            "medianRatio": 1.3,
+            "medianRatio": 1.32,
             "sampleSize": 8
           },
           "9": {
-            "medianRatio": 3.86,
-            "sampleSize": 27
+            "medianRatio": 4,
+            "sampleSize": 29
           },
           "10": {
-            "medianRatio": 10.06,
-            "sampleSize": 34
+            "medianRatio": 10.34,
+            "sampleSize": 38
           }
         },
-        "medianRatio": 5.84,
-        "p25": 3.07,
-        "p75": 9.98,
-        "sampleSize": 70
+        "medianRatio": 6.48,
+        "p25": 3.18,
+        "p75": 10.4,
+        "sampleSize": 77
       },
       "SGC": {
-        "medianRatio": 2.58,
-        "p25": 1.41,
-        "p75": 7.31,
+        "medianRatio": 2.64,
+        "p25": 1.54,
+        "p75": 7.33,
         "sampleSize": 4
       }
     },
@@ -6448,27 +6474,27 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
       "BGS": {
         "byTier": {
           "9.5": {
-            "medianRatio": 2.37,
+            "medianRatio": 2.32,
             "sampleSize": 8
           }
         },
         "medianRatio": 3.13,
         "p25": 2.12,
-        "p75": 7.73,
+        "p75": 7.08,
         "sampleSize": 17
       },
       "CGC": {
         "byTier": {
           "9": {
-            "medianRatio": 2.58,
+            "medianRatio": 2.47,
             "sampleSize": 43
           },
           "10": {
-            "medianRatio": 4.81,
+            "medianRatio": 4.84,
             "sampleSize": 79
           },
           "8.5": {
-            "medianRatio": 1.61,
+            "medianRatio": 1.57,
             "sampleSize": 15
           },
           "9.5": {
@@ -6476,35 +6502,35 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
             "sampleSize": 24
           }
         },
-        "medianRatio": 3.34,
-        "p25": 1.77,
-        "p75": 5.41,
+        "medianRatio": 3.3,
+        "p25": 1.8,
+        "p75": 5.38,
         "sampleSize": 163
       },
       "PSA": {
         "byTier": {
           "8": {
-            "medianRatio": 2.59,
-            "sampleSize": 38
+            "medianRatio": 2.52,
+            "sampleSize": 39
           },
           "9": {
-            "medianRatio": 3.86,
-            "sampleSize": 92
+            "medianRatio": 4,
+            "sampleSize": 94
           },
           "10": {
-            "medianRatio": 8.88,
-            "sampleSize": 96
+            "medianRatio": 9.19,
+            "sampleSize": 97
           }
         },
-        "medianRatio": 5.06,
-        "p25": 2.64,
-        "p75": 8.51,
-        "sampleSize": 233
+        "medianRatio": 5.12,
+        "p25": 2.7,
+        "p75": 8.69,
+        "sampleSize": 237
       },
       "SGC": {
         "medianRatio": 1.38,
-        "p25": 1.2,
-        "p75": 3.17,
+        "p25": 1.19,
+        "p75": 3.15,
         "sampleSize": 10
       }
     },
@@ -6512,116 +6538,116 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
       "BGS": {
         "byTier": {
           "9": {
-            "medianRatio": 1.84,
+            "medianRatio": 1.57,
             "sampleSize": 13
           },
           "10": {
-            "medianRatio": 5.38,
+            "medianRatio": 5.37,
             "sampleSize": 10
           },
           "9.5": {
-            "medianRatio": 2.18,
+            "medianRatio": 2.14,
             "sampleSize": 27
           }
         },
-        "medianRatio": 2.42,
-        "p25": 1.48,
-        "p75": 3.84,
-        "sampleSize": 54
+        "medianRatio": 2.38,
+        "p25": 1.34,
+        "p75": 3.79,
+        "sampleSize": 55
       },
       "CGC": {
         "byTier": {
           "8": {
-            "medianRatio": 1.13,
-            "sampleSize": 20
+            "medianRatio": 1.14,
+            "sampleSize": 21
           },
           "9": {
-            "medianRatio": 1.36,
-            "sampleSize": 183
+            "medianRatio": 1.38,
+            "sampleSize": 188
           },
           "10": {
             "medianRatio": 3.4,
-            "sampleSize": 225
+            "sampleSize": 227
           },
           "8.5": {
-            "medianRatio": 1.12,
-            "sampleSize": 70
+            "medianRatio": 1.14,
+            "sampleSize": 76
           },
           "9.5": {
-            "medianRatio": 1.58,
-            "sampleSize": 61
+            "medianRatio": 1.56,
+            "sampleSize": 62
           }
         },
-        "medianRatio": 2.05,
-        "p25": 1.17,
-        "p75": 3.86,
-        "sampleSize": 574
+        "medianRatio": 2.08,
+        "p25": 1.19,
+        "p75": 4.1,
+        "sampleSize": 591
       },
       "PSA": {
         "byTier": {
           "6": {
-            "medianRatio": 1.02,
-            "sampleSize": 25
+            "medianRatio": 1.04,
+            "sampleSize": 26
           },
           "7": {
-            "medianRatio": 1.3,
-            "sampleSize": 46
+            "medianRatio": 1.25,
+            "sampleSize": 48
           },
           "8": {
-            "medianRatio": 1.34,
-            "sampleSize": 260
+            "medianRatio": 1.36,
+            "sampleSize": 270
           },
           "9": {
-            "medianRatio": 2.02,
-            "sampleSize": 524
+            "medianRatio": 2.05,
+            "sampleSize": 525
           },
           "10": {
-            "medianRatio": 7.48,
-            "sampleSize": 599
+            "medianRatio": 7.69,
+            "sampleSize": 598
           }
         },
-        "medianRatio": 3.46,
-        "p25": 1.48,
-        "p75": 7.63,
-        "sampleSize": 1468
+        "medianRatio": 3.48,
+        "p25": 1.49,
+        "p75": 7.54,
+        "sampleSize": 1481
       },
       "SGC": {
-        "medianRatio": 1.67,
-        "p25": 0.94,
-        "p75": 2.25,
+        "medianRatio": 1.68,
+        "p25": 0.91,
+        "p75": 2.28,
         "sampleSize": 8
       }
     },
     "pokemon-sword-shield": {
       "BGS": {
-        "medianRatio": 3.23,
-        "p25": 2.31,
-        "p75": 5.35,
-        "sampleSize": 8
+        "medianRatio": 3.13,
+        "p25": 2.01,
+        "p75": 5.23,
+        "sampleSize": 7
       },
       "CGC": {
         "byTier": {
           "9": {
-            "medianRatio": 2.87,
-            "sampleSize": 34
+            "medianRatio": 2.79,
+            "sampleSize": 35
           },
           "10": {
-            "medianRatio": 4.8,
-            "sampleSize": 47
+            "medianRatio": 5.29,
+            "sampleSize": 49
           },
           "8.5": {
-            "medianRatio": 3.34,
+            "medianRatio": 3.31,
             "sampleSize": 14
           },
           "9.5": {
-            "medianRatio": 2.98,
+            "medianRatio": 2.94,
             "sampleSize": 12
           }
         },
-        "medianRatio": 3.86,
-        "p25": 1.94,
-        "p75": 6.5,
-        "sampleSize": 114
+        "medianRatio": 3.88,
+        "p25": 1.97,
+        "p75": 6.9,
+        "sampleSize": 117
       },
       "PSA": {
         "byTier": {
@@ -6630,17 +6656,17 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
             "sampleSize": 11
           },
           "9": {
-            "medianRatio": 4.18,
+            "medianRatio": 4.16,
             "sampleSize": 78
           },
           "10": {
-            "medianRatio": 9.09,
+            "medianRatio": 9.38,
             "sampleSize": 129
           }
         },
-        "medianRatio": 6.62,
-        "p25": 3.68,
-        "p75": 11.76,
+        "medianRatio": 6.58,
+        "p25": 3.65,
+        "p75": 11.56,
         "sampleSize": 225
       },
       "SGC": {
@@ -6652,59 +6678,65 @@ export const GRADE_CALIBRATION_BY_SPORT: Record<string, Record<string, Record<st
     },
     "pokemon-vivid-voltage": {
       "BGS": {
-        "medianRatio": 3.44,
-        "p25": 2.66,
-        "p75": 6.44,
-        "sampleSize": 12
+        "byTier": {
+          "9.5": {
+            "medianRatio": 3.44,
+            "sampleSize": 8
+          }
+        },
+        "medianRatio": 3.79,
+        "p25": 2.73,
+        "p75": 6.45,
+        "sampleSize": 13
       },
       "CGC": {
         "byTier": {
           "9": {
-            "medianRatio": 3.19,
-            "sampleSize": 34
+            "medianRatio": 3.01,
+            "sampleSize": 35
           },
           "10": {
-            "medianRatio": 5.2,
-            "sampleSize": 32
+            "medianRatio": 5.11,
+            "sampleSize": 34
           },
           "8.5": {
             "medianRatio": 3.67,
             "sampleSize": 11
           },
           "9.5": {
-            "medianRatio": 3.93,
+            "medianRatio": 3.85,
             "sampleSize": 14
           }
         },
-        "medianRatio": 4,
-        "p25": 2.73,
-        "p75": 5.16,
-        "sampleSize": 95
+        "medianRatio": 4.17,
+        "p25": 2.74,
+        "p75": 5.13,
+        "sampleSize": 100
       },
       "PSA": {
         "byTier": {
           "8": {
-            "medianRatio": 2.43,
+            "medianRatio": 2.39,
             "sampleSize": 19
           },
           "9": {
-            "medianRatio": 3.7,
+            "medianRatio": 3.44,
             "sampleSize": 53
           },
           "10": {
-            "medianRatio": 10.66,
+            "medianRatio": 10,
             "sampleSize": 66
           }
         },
-        "medianRatio": 5.36,
-        "p25": 2.74,
-        "p75": 10.62,
+        "medianRatio": 5.34,
+        "p25": 2.66,
+        "p75": 10.11,
         "sampleSize": 145
       },
       "SGC": {
         "medianRatio": 2.17,
         "p25": 1.61,
-        "p75": 3.24,
+        "p75": 3.22,
         "sampleSize": 9
       }
     }
@@ -6724,16 +6756,16 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
   baseline: {
   "$1,000-2,499": {
     "BGS 10": {
-      "gradedMedian": 3681.25,
-      "medianRatio": 2.79,
+      "gradedMedian": 3316.38,
+      "medianRatio": 2.01,
       "p25": 1.73,
-      "p75": 3.58,
-      "rawMedian": 1561,
-      "sampleSize": 26
+      "p75": 3.24,
+      "rawMedian": 1537.8,
+      "sampleSize": 24
     },
     "BGS 8.5": {
       "gradedMedian": 1136.11,
-      "medianRatio": 0.69,
+      "medianRatio": 0.7,
       "p25": 0.61,
       "p75": 1.15,
       "rawMedian": 1661.46,
@@ -6741,59 +6773,59 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
     },
     "BGS 9": {
       "gradedMedian": 1771.5,
-      "medianRatio": 1.01,
+      "medianRatio": 1,
       "p25": 0.82,
       "p75": 1.13,
       "rawMedian": 1471.5,
       "sampleSize": 27
     },
     "BGS 9.5": {
-      "gradedMedian": 1498.33,
-      "medianRatio": 1.11,
-      "p25": 0.84,
-      "p75": 1.39,
-      "rawMedian": 1561,
-      "sampleSize": 80
+      "gradedMedian": 1321.33,
+      "medianRatio": 1.09,
+      "p25": 0.82,
+      "p75": 1.34,
+      "rawMedian": 1550.52,
+      "sampleSize": 82
     },
     "CGC 10": {
-      "gradedMedian": 2491.73,
-      "medianRatio": 1.97,
-      "p25": 1.12,
-      "p75": 2.19,
-      "rawMedian": 1193.02,
+      "gradedMedian": 2503.97,
+      "medianRatio": 1.94,
+      "p25": 1.13,
+      "p75": 2.17,
+      "rawMedian": 1174.05,
       "sampleSize": 10
     },
     "CGC 9": {
       "gradedMedian": 1564.65,
       "medianRatio": 1.1,
-      "p25": 1.02,
+      "p25": 1.01,
       "p75": 1.22,
       "rawMedian": 1420.54,
       "sampleSize": 10
     },
     "CGC 9.5": {
       "gradedMedian": 1125.33,
-      "medianRatio": 0.99,
-      "p25": 0.99,
+      "medianRatio": 0.98,
+      "p25": 0.98,
       "p75": 1.29,
-      "rawMedian": 1139.4,
+      "rawMedian": 1152.21,
       "sampleSize": 5
     },
     "PSA 1": {
       "gradedMedian": 1265.07,
       "medianRatio": 0.76,
       "p25": 0.59,
-      "p75": 2.83,
+      "p75": 2.85,
       "rawMedian": 1420.54,
       "sampleSize": 6
     },
     "PSA 10": {
-      "gradedMedian": 2463.5,
-      "medianRatio": 1.61,
+      "gradedMedian": 2464.73,
+      "medianRatio": 1.64,
       "p25": 1.11,
       "p75": 2.43,
-      "rawMedian": 1439.92,
-      "sampleSize": 574
+      "rawMedian": 1435,
+      "sampleSize": 597
     },
     "PSA 6": {
       "gradedMedian": 1816.4,
@@ -6804,28 +6836,28 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       "sampleSize": 8
     },
     "PSA 7": {
-      "gradedMedian": 1710.98,
+      "gradedMedian": 1712.08,
       "medianRatio": 1.16,
-      "p25": 0.9,
-      "p75": 3.87,
+      "p25": 0.89,
+      "p75": 3.96,
       "rawMedian": 1470.2,
       "sampleSize": 11
     },
     "PSA 8": {
-      "gradedMedian": 1119.5,
-      "medianRatio": 0.83,
-      "p25": 0.64,
+      "gradedMedian": 1150,
+      "medianRatio": 0.84,
+      "p25": 0.67,
       "p75": 1,
-      "rawMedian": 1398.32,
-      "sampleSize": 52
+      "rawMedian": 1405.5,
+      "sampleSize": 56
     },
     "PSA 9": {
       "gradedMedian": 1282.5,
-      "medianRatio": 0.9,
+      "medianRatio": 0.91,
       "p25": 0.69,
-      "p75": 1.2,
+      "p75": 1.19,
       "rawMedian": 1413.56,
-      "sampleSize": 301
+      "sampleSize": 299
     },
     "SGC 10": {
       "gradedMedian": 1005.01,
@@ -6836,12 +6868,12 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       "sampleSize": 13
     },
     "SGC 9.5": {
-      "gradedMedian": 877.96,
-      "medianRatio": 0.86,
-      "p25": 0.84,
-      "p75": 1.09,
-      "rawMedian": 1100.71,
-      "sampleSize": 14
+      "gradedMedian": 872.5,
+      "medianRatio": 0.84,
+      "p25": 0.79,
+      "p75": 0.86,
+      "rawMedian": 1035,
+      "sampleSize": 12
     }
   },
   "$10,000+": {
@@ -6856,121 +6888,113 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
     "PSA 10": {
       "gradedMedian": 14384.33,
       "medianRatio": 0.72,
-      "p25": 0.6,
+      "p25": 0.64,
       "p75": 1.1,
-      "rawMedian": 16362.5,
-      "sampleSize": 32
+      "rawMedian": 14942.54,
+      "sampleSize": 36
     },
     "PSA 9": {
-      "gradedMedian": 28233,
-      "medianRatio": 1.66,
-      "p25": 0.68,
+      "gradedMedian": 8075.83,
+      "medianRatio": 0.68,
+      "p25": 0.64,
       "p75": 1.66,
-      "rawMedian": 17031.11,
-      "sampleSize": 6
+      "rawMedian": 11835,
+      "sampleSize": 10
     }
   },
   "$100-249": {
     "BGS 10": {
       "gradedMedian": 483,
-      "medianRatio": 2.89,
-      "p25": 2.06,
-      "p75": 5.38,
-      "rawMedian": 158.45,
-      "sampleSize": 175
+      "medianRatio": 2.8,
+      "p25": 2.03,
+      "p75": 5.07,
+      "rawMedian": 159.11,
+      "sampleSize": 172
     },
     "BGS 8": {
       "gradedMedian": 127.5,
       "medianRatio": 1.05,
       "p25": 0.83,
-      "p75": 1.14,
+      "p75": 1.13,
       "rawMedian": 122.75,
       "sampleSize": 13
     },
     "BGS 8.5": {
       "gradedMedian": 157.5,
       "medianRatio": 1.03,
-      "p25": 0.8,
+      "p25": 0.79,
       "p75": 1.31,
-      "rawMedian": 173.02,
+      "rawMedian": 173.22,
       "sampleSize": 42
     },
     "BGS 9": {
-      "gradedMedian": 157.4,
-      "medianRatio": 1.03,
-      "p25": 0.83,
-      "p75": 1.31,
-      "rawMedian": 150.75,
-      "sampleSize": 181
+      "gradedMedian": 157.5,
+      "medianRatio": 1.04,
+      "p25": 0.84,
+      "p75": 1.3,
+      "rawMedian": 153.12,
+      "sampleSize": 176
     },
     "BGS 9.5": {
-      "gradedMedian": 205.38,
-      "medianRatio": 1.32,
-      "p25": 0.99,
-      "p75": 1.76,
-      "rawMedian": 149.6,
-      "sampleSize": 471
+      "gradedMedian": 212.25,
+      "medianRatio": 1.33,
+      "p25": 1.03,
+      "p75": 1.78,
+      "rawMedian": 150.34,
+      "sampleSize": 483
     },
     "CGC 10": {
       "gradedMedian": 245.35,
       "medianRatio": 1.61,
-      "p25": 1.3,
-      "p75": 2.02,
+      "p25": 1.31,
+      "p75": 2.01,
       "rawMedian": 151.87,
       "sampleSize": 310
     },
-    "CGC 7.5": {
-      "gradedMedian": 122.5,
-      "medianRatio": 0.7,
-      "p25": 0.5,
-      "p75": 0.85,
-      "rawMedian": 180.57,
-      "sampleSize": 5
-    },
     "CGC 8": {
       "gradedMedian": 137.88,
-      "medianRatio": 0.76,
-      "p25": 0.67,
-      "p75": 1.07,
-      "rawMedian": 154.11,
-      "sampleSize": 31
+      "medianRatio": 0.81,
+      "p25": 0.71,
+      "p75": 1.09,
+      "rawMedian": 140.73,
+      "sampleSize": 32
     },
     "CGC 8.5": {
       "gradedMedian": 109.98,
-      "medianRatio": 0.77,
-      "p25": 0.65,
-      "p75": 0.91,
-      "rawMedian": 142.76,
-      "sampleSize": 61
+      "medianRatio": 0.74,
+      "p25": 0.6,
+      "p75": 0.89,
+      "rawMedian": 136.8,
+      "sampleSize": 58
     },
     "CGC 9": {
-      "gradedMedian": 145.13,
+      "gradedMedian": 147,
       "medianRatio": 0.92,
-      "p25": 0.78,
+      "p25": 0.79,
       "p75": 1.1,
       "rawMedian": 145.01,
-      "sampleSize": 169
+      "sampleSize": 168
     },
     "CGC 9.5": {
       "gradedMedian": 146.66,
-      "medianRatio": 0.96,
-      "p25": 0.76,
-      "p75": 1.23,
-      "rawMedian": 146.05,
-      "sampleSize": 110
+      "medianRatio": 0.97,
+      "p25": 0.75,
+      "p75": 1.19,
+      "rawMedian": 147.15,
+      "sampleSize": 117
     },
     "HGA 9": {
-      "gradedMedian": 123.75,
+      "gradedMedian": 112.5,
       "medianRatio": 0.79,
-      "p25": 0.65,
+      "p25": 0.59,
       "p75": 0.86,
       "rawMedian": 171,
       "sampleSize": 6
     },
     "HGA 9.5": {
       "gradedMedian": 175,
-      "medianRatio": 1.01,
-      "p25": 0.93,
+      "medianRatio": 1.02,
+      "p25": 0.94,
       "p75": 1.14,
       "rawMedian": 161.79,
       "sampleSize": 10
@@ -6978,25 +7002,25 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
     "PSA 1": {
       "gradedMedian": 166.53,
       "medianRatio": 1.33,
-      "p25": 1.01,
-      "p75": 1.53,
-      "rawMedian": 128.4,
-      "sampleSize": 29
+      "p25": 1.03,
+      "p75": 1.66,
+      "rawMedian": 127.73,
+      "sampleSize": 27
     },
     "PSA 10": {
-      "gradedMedian": 306.48,
-      "medianRatio": 2.01,
-      "p25": 1.51,
-      "p75": 2.83,
-      "rawMedian": 150.07,
-      "sampleSize": 6881
+      "gradedMedian": 312.32,
+      "medianRatio": 2.03,
+      "p25": 1.52,
+      "p75": 2.87,
+      "rawMedian": 150.63,
+      "sampleSize": 6972
     },
     "PSA 3": {
       "gradedMedian": 144,
       "medianRatio": 1.05,
-      "p25": 0.67,
-      "p75": 1.25,
-      "rawMedian": 214.46,
+      "p25": 0.62,
+      "p75": 1.24,
+      "rawMedian": 224.81,
       "sampleSize": 6
     },
     "PSA 4": {
@@ -7004,71 +7028,71 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       "medianRatio": 0.95,
       "p25": 0.65,
       "p75": 0.95,
-      "rawMedian": 218.98,
+      "rawMedian": 226.23,
       "sampleSize": 5
     },
     "PSA 5": {
       "gradedMedian": 108.98,
-      "medianRatio": 0.63,
-      "p25": 0.55,
+      "medianRatio": 0.69,
+      "p25": 0.51,
       "p75": 0.74,
-      "rawMedian": 156.92,
-      "sampleSize": 12
+      "rawMedian": 157.87,
+      "sampleSize": 10
     },
     "PSA 6": {
-      "gradedMedian": 115.5,
-      "medianRatio": 0.74,
+      "gradedMedian": 122.92,
+      "medianRatio": 0.76,
       "p25": 0.63,
       "p75": 1.04,
-      "rawMedian": 151.83,
-      "sampleSize": 47
+      "rawMedian": 152.31,
+      "sampleSize": 48
     },
     "PSA 7": {
       "gradedMedian": 129.92,
-      "medianRatio": 0.88,
-      "p25": 0.71,
-      "p75": 1.07,
-      "rawMedian": 148.05,
-      "sampleSize": 142
+      "medianRatio": 0.87,
+      "p25": 0.73,
+      "p75": 1.08,
+      "rawMedian": 144.23,
+      "sampleSize": 133
     },
     "PSA 8": {
-      "gradedMedian": 135.47,
+      "gradedMedian": 137.03,
       "medianRatio": 0.87,
-      "p25": 0.7,
-      "p75": 1.12,
-      "rawMedian": 150.15,
-      "sampleSize": 955
+      "p25": 0.71,
+      "p75": 1.14,
+      "rawMedian": 149.43,
+      "sampleSize": 971
     },
     "PSA 8.5": {
       "gradedMedian": 131,
       "medianRatio": 0.96,
       "p25": 0.75,
       "p75": 1.04,
-      "rawMedian": 162.57,
-      "sampleSize": 38
+      "rawMedian": 161.83,
+      "sampleSize": 36
     },
     "PSA 9": {
-      "gradedMedian": 153,
+      "gradedMedian": 153.33,
       "medianRatio": 1.02,
-      "p25": 0.79,
-      "p75": 1.31,
-      "rawMedian": 147.86,
-      "sampleSize": 5134
+      "p25": 0.8,
+      "p75": 1.3,
+      "rawMedian": 148.06,
+      "sampleSize": 5195
     },
     "SGC 10": {
-      "gradedMedian": 190.25,
-      "medianRatio": 1.28,
+      "gradedMedian": 191.25,
+      "medianRatio": 1.3,
       "p25": 0.92,
-      "p75": 1.72,
+      "p75": 1.74,
       "rawMedian": 143.61,
-      "sampleSize": 559
+      "sampleSize": 554
     },
     "SGC 8": {
       "gradedMedian": 152.5,
       "medianRatio": 0.74,
-      "p25": 0.59,
+      "p25": 0.6,
       "p75": 0.89,
-      "rawMedian": 173.32,
+      "rawMedian": 172.09,
       "sampleSize": 18
     },
     "SGC 8.5": {
@@ -7076,32 +7100,32 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       "medianRatio": 0.63,
       "p25": 0.61,
       "p75": 0.75,
-      "rawMedian": 162.57,
+      "rawMedian": 161.83,
       "sampleSize": 24
     },
     "SGC 9": {
-      "gradedMedian": 129.83,
+      "gradedMedian": 134.25,
       "medianRatio": 0.92,
-      "p25": 0.64,
+      "p25": 0.62,
       "p75": 1.13,
-      "rawMedian": 137.61,
-      "sampleSize": 160
+      "rawMedian": 137.1,
+      "sampleSize": 151
     },
     "SGC 9.5": {
       "gradedMedian": 152.29,
       "medianRatio": 0.96,
       "p25": 0.74,
-      "p75": 1.3,
-      "rawMedian": 152.01,
-      "sampleSize": 382
+      "p75": 1.25,
+      "rawMedian": 153.19,
+      "sampleSize": 368
     },
     "TAG 10": {
-      "gradedMedian": 319.6,
-      "medianRatio": 1.99,
-      "p25": 1.71,
-      "p75": 2.22,
-      "rawMedian": 173.02,
-      "sampleSize": 8
+      "gradedMedian": 355,
+      "medianRatio": 2.07,
+      "p25": 1.56,
+      "p75": 4.14,
+      "rawMedian": 205.4,
+      "sampleSize": 7
     }
   },
   "$2,500-4,999": {
@@ -7110,32 +7134,32 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       "medianRatio": 2.03,
       "p25": 0.85,
       "p75": 2.14,
-      "rawMedian": 4492.52,
-      "sampleSize": 8
+      "rawMedian": 3172.48,
+      "sampleSize": 10
     },
     "BGS 9": {
       "gradedMedian": 2666,
-      "medianRatio": 0.79,
+      "medianRatio": 0.71,
       "p25": 0.71,
-      "p75": 2.48,
+      "p75": 0.79,
       "rawMedian": 3367.59,
-      "sampleSize": 7
+      "sampleSize": 5
     },
     "BGS 9.5": {
-      "gradedMedian": 2113.89,
-      "medianRatio": 0.69,
+      "gradedMedian": 2203.9,
+      "medianRatio": 0.7,
       "p25": 0.56,
       "p75": 1.2,
-      "rawMedian": 2730.59,
-      "sampleSize": 14
+      "rawMedian": 2742.93,
+      "sampleSize": 16
     },
     "PSA 10": {
       "gradedMedian": 3720,
-      "medianRatio": 1.08,
+      "medianRatio": 1.06,
       "p25": 0.76,
-      "p75": 1.79,
+      "p75": 1.83,
       "rawMedian": 3367.59,
-      "sampleSize": 154
+      "sampleSize": 155
     },
     "PSA 8": {
       "gradedMedian": 2500,
@@ -7147,21 +7171,21 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
     },
     "PSA 9": {
       "gradedMedian": 2618.5,
-      "medianRatio": 0.71,
+      "medianRatio": 0.77,
       "p25": 0.56,
-      "p75": 1,
-      "rawMedian": 3605,
-      "sampleSize": 40
+      "p75": 0.95,
+      "rawMedian": 3499.63,
+      "sampleSize": 42
     }
   },
   "$25-49": {
     "BGS 10": {
       "gradedMedian": 131.09,
-      "medianRatio": 3.71,
+      "medianRatio": 3.69,
       "p25": 2.45,
-      "p75": 7.98,
-      "rawMedian": 33.09,
-      "sampleSize": 126
+      "p75": 8.44,
+      "rawMedian": 32.84,
+      "sampleSize": 129
     },
     "BGS 8": {
       "gradedMedian": 23.25,
@@ -7172,108 +7196,108 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       "sampleSize": 5
     },
     "BGS 8.5": {
-      "gradedMedian": 31.84,
-      "medianRatio": 0.95,
+      "gradedMedian": 25,
+      "medianRatio": 0.89,
       "p25": 0.69,
-      "p75": 1.1,
-      "rawMedian": 29.6,
-      "sampleSize": 26
+      "p75": 1.02,
+      "rawMedian": 28.98,
+      "sampleSize": 23
     },
     "BGS 9": {
-      "gradedMedian": 39.91,
-      "medianRatio": 1.16,
-      "p25": 0.92,
+      "gradedMedian": 40.47,
+      "medianRatio": 1.14,
+      "p25": 0.93,
       "p75": 1.4,
       "rawMedian": 32.25,
-      "sampleSize": 158
+      "sampleSize": 153
     },
     "BGS 9.5": {
-      "gradedMedian": 57.72,
-      "medianRatio": 1.68,
-      "p25": 1.2,
+      "gradedMedian": 57.74,
+      "medianRatio": 1.69,
+      "p25": 1.22,
       "p75": 2.28,
-      "rawMedian": 33.11,
-      "sampleSize": 461
+      "rawMedian": 33.12,
+      "sampleSize": 460
     },
     "CGC 10": {
-      "gradedMedian": 62.7,
+      "gradedMedian": 62.44,
       "medianRatio": 1.84,
-      "p25": 1.36,
-      "p75": 2.51,
-      "rawMedian": 33.47,
-      "sampleSize": 806
+      "p25": 1.38,
+      "p75": 2.48,
+      "rawMedian": 33.64,
+      "sampleSize": 827
     },
     "CGC 7.5": {
-      "gradedMedian": 23.5,
-      "medianRatio": 0.61,
-      "p25": 0.57,
-      "p75": 1.06,
-      "rawMedian": 33.83,
-      "sampleSize": 12
+      "gradedMedian": 19.51,
+      "medianRatio": 0.58,
+      "p25": 0.55,
+      "p75": 0.75,
+      "rawMedian": 32.84,
+      "sampleSize": 11
     },
     "CGC 8": {
-      "gradedMedian": 23.4,
-      "medianRatio": 0.66,
-      "p25": 0.55,
-      "p75": 0.87,
-      "rawMedian": 34.71,
-      "sampleSize": 33
+      "gradedMedian": 22.8,
+      "medianRatio": 0.64,
+      "p25": 0.56,
+      "p75": 0.84,
+      "rawMedian": 35.32,
+      "sampleSize": 38
     },
     "CGC 8.5": {
-      "gradedMedian": 24.94,
-      "medianRatio": 0.76,
-      "p25": 0.64,
+      "gradedMedian": 25.14,
+      "medianRatio": 0.75,
+      "p25": 0.66,
       "p75": 0.85,
-      "rawMedian": 32.59,
-      "sampleSize": 126
+      "rawMedian": 33.72,
+      "sampleSize": 132
     },
     "CGC 9": {
-      "gradedMedian": 27.83,
+      "gradedMedian": 28.1,
       "medianRatio": 0.86,
-      "p25": 0.73,
-      "p75": 1.02,
-      "rawMedian": 31.45,
-      "sampleSize": 389
+      "p25": 0.72,
+      "p75": 1.04,
+      "rawMedian": 32.23,
+      "sampleSize": 387
     },
     "CGC 9.5": {
-      "gradedMedian": 35,
-      "medianRatio": 1.03,
-      "p25": 0.82,
-      "p75": 1.3,
-      "rawMedian": 34.33,
-      "sampleSize": 232
+      "gradedMedian": 34.98,
+      "medianRatio": 1.04,
+      "p25": 0.81,
+      "p75": 1.29,
+      "rawMedian": 34.23,
+      "sampleSize": 239
     },
     "HGA 9": {
-      "gradedMedian": 32.39,
+      "gradedMedian": 37.75,
       "medianRatio": 0.97,
-      "p25": 0.73,
-      "p75": 0.99,
-      "rawMedian": 38.72,
-      "sampleSize": 10
+      "p25": 0.75,
+      "p75": 1.25,
+      "rawMedian": 35.75,
+      "sampleSize": 11
     },
     "PSA 1": {
-      "gradedMedian": 43.13,
-      "medianRatio": 1.42,
-      "p25": 0.86,
-      "p75": 1.73,
-      "rawMedian": 35.19,
-      "sampleSize": 22
+      "gradedMedian": 42.65,
+      "medianRatio": 1.21,
+      "p25": 0.92,
+      "p75": 1.62,
+      "rawMedian": 36.27,
+      "sampleSize": 23
     },
     "PSA 10": {
-      "gradedMedian": 102.08,
+      "gradedMedian": 102.5,
       "medianRatio": 2.91,
-      "p25": 2.12,
+      "p25": 2.13,
       "p75": 4.17,
-      "rawMedian": 34.75,
-      "sampleSize": 10258
+      "rawMedian": 34.74,
+      "sampleSize": 10361
     },
     "PSA 2": {
       "gradedMedian": 77,
       "medianRatio": 2.13,
-      "p25": 1.07,
-      "p75": 3.89,
-      "rawMedian": 30.82,
-      "sampleSize": 19
+      "p25": 1.26,
+      "p75": 4,
+      "rawMedian": 30.68,
+      "sampleSize": 17
     },
     "PSA 3": {
       "gradedMedian": 72.17,
@@ -7286,278 +7310,278 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
     "PSA 4": {
       "gradedMedian": 48.28,
       "medianRatio": 1.33,
-      "p25": 1.32,
+      "p25": 1.3,
       "p75": 1.38,
       "rawMedian": 36.32,
       "sampleSize": 5
     },
     "PSA 5": {
-      "gradedMedian": 26.25,
-      "medianRatio": 0.78,
-      "p25": 0.54,
+      "gradedMedian": 27.09,
+      "medianRatio": 0.84,
+      "p25": 0.55,
       "p75": 1.13,
-      "rawMedian": 33.83,
-      "sampleSize": 20
+      "rawMedian": 34.81,
+      "sampleSize": 26
     },
     "PSA 6": {
-      "gradedMedian": 25.44,
-      "medianRatio": 0.76,
+      "gradedMedian": 25.75,
+      "medianRatio": 0.73,
       "p25": 0.55,
-      "p75": 0.91,
-      "rawMedian": 33.45,
-      "sampleSize": 73
+      "p75": 0.93,
+      "rawMedian": 34.23,
+      "sampleSize": 76
     },
     "PSA 7": {
       "gradedMedian": 25.96,
       "medianRatio": 0.76,
       "p25": 0.61,
       "p75": 1.01,
-      "rawMedian": 32.78,
-      "sampleSize": 160
+      "rawMedian": 32.69,
+      "sampleSize": 164
     },
     "PSA 8": {
-      "gradedMedian": 28.16,
+      "gradedMedian": 28.65,
       "medianRatio": 0.84,
       "p25": 0.68,
-      "p75": 1.07,
-      "rawMedian": 32.9,
-      "sampleSize": 1419
+      "p75": 1.08,
+      "rawMedian": 33.28,
+      "sampleSize": 1445
     },
     "PSA 8.5": {
       "gradedMedian": 31.15,
-      "medianRatio": 0.8,
+      "medianRatio": 0.83,
       "p25": 0.71,
-      "p75": 1.31,
-      "rawMedian": 39.43,
-      "sampleSize": 22
+      "p75": 1.52,
+      "rawMedian": 35.75,
+      "sampleSize": 23
     },
     "PSA 9": {
-      "gradedMedian": 43.76,
-      "medianRatio": 1.25,
+      "gradedMedian": 44.05,
+      "medianRatio": 1.26,
       "p25": 0.98,
       "p75": 1.67,
-      "rawMedian": 34.75,
-      "sampleSize": 7458
+      "rawMedian": 34.77,
+      "sampleSize": 7537
     },
     "SGC 10": {
-      "gradedMedian": 59.98,
-      "medianRatio": 1.71,
-      "p25": 1.26,
-      "p75": 2.38,
-      "rawMedian": 33.81,
-      "sampleSize": 1010
+      "gradedMedian": 60.01,
+      "medianRatio": 1.72,
+      "p25": 1.28,
+      "p75": 2.42,
+      "rawMedian": 33.75,
+      "sampleSize": 1026
     },
     "SGC 8": {
       "gradedMedian": 29.97,
       "medianRatio": 0.9,
-      "p25": 0.63,
+      "p25": 0.62,
       "p75": 0.96,
-      "rawMedian": 31.45,
+      "rawMedian": 32.45,
       "sampleSize": 12
     },
     "SGC 8.5": {
-      "gradedMedian": 22.86,
-      "medianRatio": 0.58,
+      "gradedMedian": 24.25,
+      "medianRatio": 0.69,
       "p25": 0.55,
-      "p75": 0.76,
-      "rawMedian": 33.45,
-      "sampleSize": 25
+      "p75": 0.79,
+      "rawMedian": 33.72,
+      "sampleSize": 26
     },
     "SGC 9": {
-      "gradedMedian": 33.17,
+      "gradedMedian": 33.07,
       "medianRatio": 0.97,
-      "p25": 0.75,
+      "p25": 0.74,
       "p75": 1.2,
-      "rawMedian": 33.35,
-      "sampleSize": 273
+      "rawMedian": 33.48,
+      "sampleSize": 276
     },
     "SGC 9.5": {
-      "gradedMedian": 41.6,
-      "medianRatio": 1.25,
-      "p25": 0.95,
+      "gradedMedian": 42.01,
+      "medianRatio": 1.26,
+      "p25": 0.96,
       "p75": 1.59,
-      "rawMedian": 33.82,
-      "sampleSize": 645
-    },
-    "TAG 10": {
-      "gradedMedian": 173.15,
-      "medianRatio": 4.37,
-      "p25": 4.07,
-      "p75": 7.41,
-      "rawMedian": 30.72,
-      "sampleSize": 6
+      "rawMedian": 33.81,
+      "sampleSize": 661
     }
   },
   "$250-499": {
     "BGS 10": {
       "gradedMedian": 1025.5,
-      "medianRatio": 2.97,
-      "p25": 1.79,
-      "p75": 4.4,
-      "rawMedian": 335.52,
-      "sampleSize": 87
+      "medianRatio": 3,
+      "p25": 1.99,
+      "p75": 4.41,
+      "rawMedian": 336.38,
+      "sampleSize": 85
+    },
+    "BGS 8": {
+      "gradedMedian": 338,
+      "medianRatio": 0.7,
+      "p25": 0.7,
+      "p75": 0.7,
+      "rawMedian": 479.68,
+      "sampleSize": 5
     },
     "BGS 8.5": {
       "gradedMedian": 396.67,
-      "medianRatio": 0.95,
-      "p25": 0.85,
-      "p75": 1.3,
-      "rawMedian": 382.5,
-      "sampleSize": 12
+      "medianRatio": 1.09,
+      "p25": 0.87,
+      "p75": 1.11,
+      "rawMedian": 363.26,
+      "sampleSize": 14
     },
     "BGS 9": {
-      "gradedMedian": 338.5,
-      "medianRatio": 1,
-      "p25": 0.82,
-      "p75": 1.22,
+      "gradedMedian": 333.67,
+      "medianRatio": 0.97,
+      "p25": 0.83,
+      "p75": 1.23,
       "rawMedian": 322.5,
-      "sampleSize": 86
+      "sampleSize": 91
     },
     "BGS 9.5": {
-      "gradedMedian": 474,
-      "medianRatio": 1.36,
+      "gradedMedian": 480.47,
+      "medianRatio": 1.31,
       "p25": 0.99,
-      "p75": 1.98,
+      "p75": 1.95,
       "rawMedian": 326.79,
-      "sampleSize": 261
+      "sampleSize": 256
     },
     "CGC 10": {
-      "gradedMedian": 537.78,
-      "medianRatio": 1.58,
-      "p25": 1.27,
-      "p75": 2.09,
-      "rawMedian": 331.16,
-      "sampleSize": 122
+      "gradedMedian": 530.64,
+      "medianRatio": 1.6,
+      "p25": 1.28,
+      "p75": 2.07,
+      "rawMedian": 332.21,
+      "sampleSize": 128
     },
     "CGC 8.5": {
-      "gradedMedian": 260.5,
-      "medianRatio": 0.79,
-      "p25": 0.68,
-      "p75": 0.86,
-      "rawMedian": 333.09,
-      "sampleSize": 16
+      "gradedMedian": 252.67,
+      "medianRatio": 0.8,
+      "p25": 0.75,
+      "p75": 0.94,
+      "rawMedian": 281.68,
+      "sampleSize": 23
     },
     "CGC 9": {
-      "gradedMedian": 289.25,
+      "gradedMedian": 290.5,
       "medianRatio": 0.92,
       "p25": 0.82,
-      "p75": 0.99,
-      "rawMedian": 331.16,
-      "sampleSize": 70
+      "p75": 1,
+      "rawMedian": 330.67,
+      "sampleSize": 76
     },
     "CGC 9.5": {
-      "gradedMedian": 370.5,
+      "gradedMedian": 375.62,
       "medianRatio": 1.08,
-      "p25": 0.9,
-      "p75": 1.29,
-      "rawMedian": 349.34,
-      "sampleSize": 43
+      "p25": 0.93,
+      "p75": 1.23,
+      "rawMedian": 341.08,
+      "sampleSize": 46
     },
     "PSA 1": {
-      "gradedMedian": 341.99,
-      "medianRatio": 0.95,
-      "p25": 0.84,
+      "gradedMedian": 362.65,
+      "medianRatio": 0.96,
+      "p25": 0.83,
       "p75": 1.4,
-      "rawMedian": 355.05,
+      "rawMedian": 354.68,
       "sampleSize": 18
     },
     "PSA 10": {
-      "gradedMedian": 608.56,
+      "gradedMedian": 615.72,
       "medianRatio": 1.75,
       "p25": 1.37,
-      "p75": 2.51,
-      "rawMedian": 337.48,
-      "sampleSize": 2862
+      "p75": 2.5,
+      "rawMedian": 336.58,
+      "sampleSize": 2892
     },
     "PSA 6": {
       "gradedMedian": 246.76,
       "medianRatio": 0.8,
       "p25": 0.74,
-      "p75": 0.88,
-      "rawMedian": 314.06,
-      "sampleSize": 17
+      "p75": 0.9,
+      "rawMedian": 364.17,
+      "sampleSize": 15
     },
     "PSA 7": {
-      "gradedMedian": 340,
+      "gradedMedian": 315,
       "medianRatio": 0.89,
-      "p25": 0.75,
-      "p75": 1.31,
-      "rawMedian": 331.16,
-      "sampleSize": 44
+      "p25": 0.78,
+      "p75": 1.23,
+      "rawMedian": 329.7,
+      "sampleSize": 47
     },
     "PSA 8": {
-      "gradedMedian": 311.75,
-      "medianRatio": 0.89,
+      "gradedMedian": 310,
+      "medianRatio": 0.91,
       "p25": 0.76,
-      "p75": 1.14,
-      "rawMedian": 342.71,
-      "sampleSize": 336
+      "p75": 1.12,
+      "rawMedian": 341.68,
+      "sampleSize": 355
     },
     "PSA 8.5": {
       "gradedMedian": 280,
-      "medianRatio": 0.86,
-      "p25": 0.63,
+      "medianRatio": 0.9,
+      "p25": 0.69,
       "p75": 0.98,
-      "rawMedian": 381.99,
-      "sampleSize": 22
+      "rawMedian": 383.21,
+      "sampleSize": 24
     },
     "PSA 9": {
       "gradedMedian": 340,
-      "medianRatio": 1.02,
+      "medianRatio": 1.03,
       "p25": 0.81,
       "p75": 1.19,
-      "rawMedian": 332.5,
-      "sampleSize": 2199
+      "rawMedian": 333.01,
+      "sampleSize": 2220
     },
     "SGC 10": {
       "gradedMedian": 360,
       "medianRatio": 1.12,
-      "p25": 0.87,
+      "p25": 0.88,
       "p75": 1.41,
-      "rawMedian": 309.39,
-      "sampleSize": 217
+      "rawMedian": 311.79,
+      "sampleSize": 216
+    },
+    "SGC 8.5": {
+      "gradedMedian": 238,
+      "medianRatio": 0.66,
+      "p25": 0.56,
+      "p75": 0.66,
+      "rawMedian": 359.89,
+      "sampleSize": 5
     },
     "SGC 9": {
       "gradedMedian": 337.5,
       "medianRatio": 1.01,
       "p25": 0.95,
       "p75": 1.11,
-      "rawMedian": 329.82,
-      "sampleSize": 41
+      "rawMedian": 333.06,
+      "sampleSize": 40
     },
     "SGC 9.5": {
-      "gradedMedian": 391.67,
-      "medianRatio": 1.05,
-      "p25": 0.93,
-      "p75": 1.2,
-      "rawMedian": 350.92,
-      "sampleSize": 144
-    },
-    "TAG 10": {
-      "gradedMedian": 980,
-      "medianRatio": 2.65,
-      "p25": 1.91,
-      "p75": 2.67,
-      "rawMedian": 370.13,
-      "sampleSize": 6
+      "gradedMedian": 380,
+      "medianRatio": 1.03,
+      "p25": 0.91,
+      "p75": 1.18,
+      "rawMedian": 349.31,
+      "sampleSize": 154
     }
   },
   "$5,000-9,999": {
-    "BGS 9": {
-      "gradedMedian": 7826.4,
-      "medianRatio": 0.91,
-      "p25": 0.68,
-      "p75": 0.91,
-      "rawMedian": 8612.07,
-      "sampleSize": 6
+    "BGS 9.5": {
+      "gradedMedian": 5787.5,
+      "medianRatio": 0.98,
+      "p25": 0.98,
+      "p75": 0.98,
+      "rawMedian": 5879,
+      "sampleSize": 5
     },
     "PSA 10": {
-      "gradedMedian": 6934.5,
-      "medianRatio": 1.17,
-      "p25": 0.84,
-      "p75": 1.59,
+      "gradedMedian": 5488.16,
+      "medianRatio": 0.94,
+      "p25": 0.75,
+      "p75": 1.41,
       "rawMedian": 5950,
-      "sampleSize": 40
+      "sampleSize": 46
     },
     "PSA 9": {
       "gradedMedian": 7093.98,
@@ -7570,84 +7594,84 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
   },
   "$50-99": {
     "BGS 10": {
-      "gradedMedian": 274.19,
-      "medianRatio": 3.48,
-      "p25": 2.65,
-      "p75": 7.29,
+      "gradedMedian": 274.25,
+      "medianRatio": 3.56,
+      "p25": 2.64,
+      "p75": 8.07,
       "rawMedian": 62.88,
       "sampleSize": 128
     },
+    "BGS 8": {
+      "gradedMedian": 58.09,
+      "medianRatio": 0.74,
+      "p25": 0.6,
+      "p75": 1.16,
+      "rawMedian": 76.09,
+      "sampleSize": 8
+    },
     "BGS 8.5": {
-      "gradedMedian": 72.5,
+      "gradedMedian": 70,
       "medianRatio": 0.86,
       "p25": 0.83,
       "p75": 1.53,
-      "rawMedian": 60.97,
-      "sampleSize": 16
+      "rawMedian": 61.4,
+      "sampleSize": 18
     },
     "BGS 9": {
-      "gradedMedian": 72.27,
-      "medianRatio": 1.03,
+      "gradedMedian": 72.5,
+      "medianRatio": 1.04,
       "p25": 0.88,
       "p75": 1.27,
-      "rawMedian": 69.42,
-      "sampleSize": 181
+      "rawMedian": 70.47,
+      "sampleSize": 180
     },
     "BGS 9.5": {
       "gradedMedian": 100.5,
-      "medianRatio": 1.47,
-      "p25": 1.11,
-      "p75": 2.01,
-      "rawMedian": 68.21,
-      "sampleSize": 408
+      "medianRatio": 1.46,
+      "p25": 1.07,
+      "p75": 2,
+      "rawMedian": 68.76,
+      "sampleSize": 420
     },
     "CGC 10": {
-      "gradedMedian": 121.24,
-      "medianRatio": 1.75,
+      "gradedMedian": 122.34,
+      "medianRatio": 1.8,
       "p25": 1.37,
-      "p75": 2.33,
-      "rawMedian": 65.18,
-      "sampleSize": 488
-    },
-    "CGC 7.5": {
-      "gradedMedian": 50.4,
-      "medianRatio": 0.76,
-      "p25": 0.67,
-      "p75": 1.37,
-      "rawMedian": 67.67,
-      "sampleSize": 6
+      "p75": 2.28,
+      "rawMedian": 65.32,
+      "sampleSize": 492
     },
     "CGC 8": {
-      "gradedMedian": 48,
+      "gradedMedian": 48.4,
       "medianRatio": 0.71,
-      "p25": 0.59,
-      "p75": 0.81,
-      "rawMedian": 70.43,
-      "sampleSize": 40
+      "p25": 0.57,
+      "p75": 0.8,
+      "rawMedian": 70.8,
+      "sampleSize": 38
     },
     "CGC 8.5": {
       "gradedMedian": 53.5,
       "medianRatio": 0.74,
-      "p25": 0.65,
-      "p75": 0.87,
-      "rawMedian": 69.6,
-      "sampleSize": 66
+      "p25": 0.66,
+      "p75": 0.86,
+      "rawMedian": 70.93,
+      "sampleSize": 67
     },
     "CGC 9": {
-      "gradedMedian": 55.5,
-      "medianRatio": 0.82,
-      "p25": 0.69,
-      "p75": 1.03,
-      "rawMedian": 66.13,
-      "sampleSize": 228
+      "gradedMedian": 55.07,
+      "medianRatio": 0.81,
+      "p25": 0.68,
+      "p75": 1.02,
+      "rawMedian": 65.78,
+      "sampleSize": 227
     },
     "CGC 9.5": {
-      "gradedMedian": 61.65,
-      "medianRatio": 0.96,
+      "gradedMedian": 64.04,
+      "medianRatio": 0.98,
       "p25": 0.81,
-      "p75": 1.19,
-      "rawMedian": 62.79,
-      "sampleSize": 151
+      "p75": 1.28,
+      "rawMedian": 62.9,
+      "sampleSize": 149
     },
     "HGA 9": {
       "gradedMedian": 50.33,
@@ -7662,178 +7686,170 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       "medianRatio": 1.4,
       "p25": 0.93,
       "p75": 1.62,
-      "rawMedian": 86.54,
+      "rawMedian": 86.56,
       "sampleSize": 5
     },
     "PSA 1": {
       "gradedMedian": 131.33,
       "medianRatio": 1.57,
-      "p25": 0.93,
+      "p25": 0.94,
       "p75": 1.9,
       "rawMedian": 72.74,
       "sampleSize": 21
     },
     "PSA 10": {
-      "gradedMedian": 162.63,
-      "medianRatio": 2.32,
+      "gradedMedian": 162.97,
+      "medianRatio": 2.33,
       "p25": 1.76,
-      "p75": 3.14,
-      "rawMedian": 69.02,
-      "sampleSize": 7906
+      "p75": 3.15,
+      "rawMedian": 69.16,
+      "sampleSize": 7976
     },
     "PSA 3": {
       "gradedMedian": 210,
       "medianRatio": 2.77,
-      "p25": 0.7,
+      "p25": 0.71,
       "p75": 2.77,
-      "rawMedian": 75.9,
+      "rawMedian": 75.69,
       "sampleSize": 6
     },
     "PSA 4": {
       "gradedMedian": 46,
-      "medianRatio": 0.72,
+      "medianRatio": 0.69,
       "p25": 0.59,
-      "p75": 0.72,
-      "rawMedian": 59.34,
-      "sampleSize": 5
-    },
-    "PSA 5": {
-      "gradedMedian": 70.99,
-      "medianRatio": 1.21,
-      "p25": 0.63,
-      "p75": 10.71,
+      "p75": 0.73,
       "rawMedian": 78.09,
       "sampleSize": 7
     },
+    "PSA 5": {
+      "gradedMedian": 72.5,
+      "medianRatio": 1.29,
+      "p25": 1.18,
+      "p75": 2.89,
+      "rawMedian": 71.4,
+      "sampleSize": 9
+    },
     "PSA 6": {
-      "gradedMedian": 49.9,
-      "medianRatio": 0.71,
-      "p25": 0.57,
-      "p75": 1.2,
-      "rawMedian": 73.77,
-      "sampleSize": 35
+      "gradedMedian": 57.28,
+      "medianRatio": 0.68,
+      "p25": 0.59,
+      "p75": 0.85,
+      "rawMedian": 75.05,
+      "sampleSize": 38
     },
     "PSA 7": {
-      "gradedMedian": 55.5,
+      "gradedMedian": 56.75,
       "medianRatio": 0.77,
-      "p25": 0.65,
-      "p75": 0.93,
-      "rawMedian": 70.51,
-      "sampleSize": 117
+      "p25": 0.66,
+      "p75": 0.96,
+      "rawMedian": 72.7,
+      "sampleSize": 121
     },
     "PSA 8": {
-      "gradedMedian": 59,
+      "gradedMedian": 59.5,
       "medianRatio": 0.83,
       "p25": 0.68,
-      "p75": 1.12,
-      "rawMedian": 70.22,
-      "sampleSize": 907
+      "p75": 1.09,
+      "rawMedian": 70.28,
+      "sampleSize": 917
     },
     "PSA 8.5": {
       "gradedMedian": 68.5,
       "medianRatio": 0.98,
       "p25": 0.7,
       "p75": 1.08,
-      "rawMedian": 69.72,
+      "rawMedian": 70.19,
       "sampleSize": 17
     },
     "PSA 9": {
-      "gradedMedian": 76,
+      "gradedMedian": 76.26,
       "medianRatio": 1.09,
-      "p25": 0.85,
+      "p25": 0.86,
       "p75": 1.4,
-      "rawMedian": 68.85,
-      "sampleSize": 5786
+      "rawMedian": 69,
+      "sampleSize": 5801
     },
     "SGC 10": {
-      "gradedMedian": 105,
-      "medianRatio": 1.48,
-      "p25": 1.06,
-      "p75": 1.9,
-      "rawMedian": 69.63,
-      "sampleSize": 680
+      "gradedMedian": 105.25,
+      "medianRatio": 1.47,
+      "p25": 1.03,
+      "p75": 1.94,
+      "rawMedian": 70.69,
+      "sampleSize": 674
     },
     "SGC 8": {
       "gradedMedian": 110,
-      "medianRatio": 1.12,
-      "p25": 0.7,
-      "p75": 2.64,
-      "rawMedian": 91,
+      "medianRatio": 1.13,
+      "p25": 0.69,
+      "p75": 2.65,
+      "rawMedian": 91.32,
       "sampleSize": 8
     },
     "SGC 8.5": {
       "gradedMedian": 56.42,
       "medianRatio": 0.76,
-      "p25": 0.65,
+      "p25": 0.64,
       "p75": 0.86,
       "rawMedian": 70.04,
       "sampleSize": 21
     },
     "SGC 9": {
-      "gradedMedian": 62.27,
-      "medianRatio": 0.88,
+      "gradedMedian": 62.5,
+      "medianRatio": 0.89,
       "p25": 0.67,
-      "p75": 1.03,
-      "rawMedian": 74.59,
-      "sampleSize": 167
+      "p75": 1.05,
+      "rawMedian": 74.08,
+      "sampleSize": 175
     },
     "SGC 9.5": {
-      "gradedMedian": 73,
-      "medianRatio": 1.03,
-      "p25": 0.81,
-      "p75": 1.33,
-      "rawMedian": 72.92,
-      "sampleSize": 380
-    },
-    "TAG 10": {
-      "gradedMedian": 164.28,
-      "medianRatio": 2.59,
-      "p25": 2.02,
-      "p75": 3.07,
-      "rawMedian": 65.79,
-      "sampleSize": 6
+      "gradedMedian": 72.4,
+      "medianRatio": 1.01,
+      "p25": 0.82,
+      "p75": 1.3,
+      "rawMedian": 73.17,
+      "sampleSize": 365
     },
     "TAG 9": {
-      "gradedMedian": 89,
-      "medianRatio": 1.07,
+      "gradedMedian": 80.5,
+      "medianRatio": 1.25,
       "p25": 0.76,
-      "p75": 1.63,
-      "rawMedian": 70.22,
-      "sampleSize": 6
+      "p75": 1.62,
+      "rawMedian": 64.58,
+      "sampleSize": 5
     }
   },
   "$500-999": {
     "BGS 10": {
-      "gradedMedian": 2010,
-      "medianRatio": 2.56,
-      "p25": 1.92,
-      "p75": 5.13,
-      "rawMedian": 670.12,
-      "sampleSize": 44
+      "gradedMedian": 2035.1,
+      "medianRatio": 3.22,
+      "p25": 2.09,
+      "p75": 4.98,
+      "rawMedian": 672.54,
+      "sampleSize": 40
     },
     "BGS 9": {
-      "gradedMedian": 645,
-      "medianRatio": 0.88,
+      "gradedMedian": 686,
+      "medianRatio": 0.91,
       "p25": 0.82,
-      "p75": 1.02,
+      "p75": 1.09,
       "rawMedian": 623.29,
-      "sampleSize": 31
+      "sampleSize": 36
     },
     "BGS 9.5": {
-      "gradedMedian": 790,
-      "medianRatio": 1.15,
-      "p25": 0.93,
-      "p75": 1.52,
-      "rawMedian": 675.11,
+      "gradedMedian": 859.99,
+      "medianRatio": 1.17,
+      "p25": 0.91,
+      "p75": 1.68,
+      "rawMedian": 680,
       "sampleSize": 131
     },
     "CGC 10": {
       "gradedMedian": 1045,
-      "medianRatio": 1.78,
-      "p25": 1.47,
-      "p75": 2.22,
-      "rawMedian": 664.9,
-      "sampleSize": 28
+      "medianRatio": 1.68,
+      "p25": 1.06,
+      "p75": 2.18,
+      "rawMedian": 672.54,
+      "sampleSize": 30
     },
     "CGC 9": {
       "gradedMedian": 632.73,
@@ -7845,92 +7861,92 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
     },
     "CGC 9.5": {
       "gradedMedian": 779,
-      "medianRatio": 1.36,
-      "p25": 0.65,
+      "medianRatio": 1.35,
+      "p25": 0.6,
       "p75": 1.45,
-      "rawMedian": 597.16,
+      "rawMedian": 623.29,
       "sampleSize": 6
     },
     "PSA 1": {
       "gradedMedian": 531.25,
       "medianRatio": 0.92,
-      "p25": 0.64,
-      "p75": 0.94,
-      "rawMedian": 605.46,
+      "p25": 0.63,
+      "p75": 0.97,
+      "rawMedian": 611.03,
       "sampleSize": 10
     },
     "PSA 10": {
-      "gradedMedian": 1122.44,
-      "medianRatio": 1.73,
-      "p25": 1.18,
-      "p75": 2.25,
+      "gradedMedian": 1138,
+      "medianRatio": 1.74,
+      "p25": 1.22,
+      "p75": 2.29,
       "rawMedian": 660,
-      "sampleSize": 1290
+      "sampleSize": 1301
     },
     "PSA 7": {
-      "gradedMedian": 620,
-      "medianRatio": 0.99,
-      "p25": 0.83,
-      "p75": 1.33,
+      "gradedMedian": 601.25,
+      "medianRatio": 0.98,
+      "p25": 0.86,
+      "p75": 1.26,
       "rawMedian": 603.72,
-      "sampleSize": 27
+      "sampleSize": 25
     },
     "PSA 8": {
-      "gradedMedian": 513.5,
-      "medianRatio": 0.84,
-      "p25": 0.64,
-      "p75": 1,
+      "gradedMedian": 510.5,
+      "medianRatio": 0.81,
+      "p25": 0.63,
+      "p75": 0.98,
       "rawMedian": 661.07,
-      "sampleSize": 104
+      "sampleSize": 109
     },
     "PSA 9": {
-      "gradedMedian": 632.5,
+      "gradedMedian": 656.27,
       "medianRatio": 0.96,
-      "p25": 0.75,
-      "p75": 1.22,
-      "rawMedian": 667,
-      "sampleSize": 886
+      "p25": 0.76,
+      "p75": 1.23,
+      "rawMedian": 666,
+      "sampleSize": 873
     },
     "SGC 10": {
-      "gradedMedian": 675,
+      "gradedMedian": 755.17,
       "medianRatio": 0.98,
-      "p25": 0.68,
-      "p75": 1.47,
-      "rawMedian": 707.33,
-      "sampleSize": 78
+      "p25": 0.72,
+      "p75": 1.45,
+      "rawMedian": 700.13,
+      "sampleSize": 74
     },
     "SGC 9": {
-      "gradedMedian": 585.5,
-      "medianRatio": 0.81,
-      "p25": 0.77,
-      "p75": 0.86,
-      "rawMedian": 635.2,
-      "sampleSize": 14
+      "gradedMedian": 482.5,
+      "medianRatio": 0.77,
+      "p25": 0.75,
+      "p75": 0.81,
+      "rawMedian": 603.28,
+      "sampleSize": 13
     },
     "SGC 9.5": {
-      "gradedMedian": 677,
-      "medianRatio": 1.01,
+      "gradedMedian": 634.19,
+      "medianRatio": 0.9,
       "p25": 0.72,
-      "p75": 1.22,
-      "rawMedian": 671.09,
-      "sampleSize": 62
+      "p75": 1.21,
+      "rawMedian": 697.25,
+      "sampleSize": 58
     }
   },
   "Under $25": {
     "BGS 10": {
-      "gradedMedian": 60.5,
-      "medianRatio": 7.17,
-      "p25": 4.15,
-      "p75": 15.66,
+      "gradedMedian": 59.41,
+      "medianRatio": 7.09,
+      "p25": 4.18,
+      "p75": 15.63,
       "rawMedian": 8.44,
-      "sampleSize": 711
+      "sampleSize": 710
     },
     "BGS 7": {
       "gradedMedian": 23.14,
-      "medianRatio": 1.5,
-      "p25": 1.31,
-      "p75": 2.7,
-      "rawMedian": 15,
+      "medianRatio": 1.51,
+      "p25": 1.35,
+      "p75": 2.72,
+      "rawMedian": 14.92,
       "sampleSize": 6
     },
     "BGS 7.5": {
@@ -7938,144 +7954,144 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       "medianRatio": 4.58,
       "p25": 1.02,
       "p75": 4.58,
-      "rawMedian": 6.37,
-      "sampleSize": 10
+      "rawMedian": 3.91,
+      "sampleSize": 9
     },
     "BGS 8": {
-      "gradedMedian": 13.33,
-      "medianRatio": 1.16,
-      "p25": 0.74,
-      "p75": 2.57,
+      "gradedMedian": 16.28,
+      "medianRatio": 1.3,
+      "p25": 1.06,
+      "p75": 2.2,
       "rawMedian": 9.8,
-      "sampleSize": 29
+      "sampleSize": 33
     },
     "BGS 8.5": {
-      "gradedMedian": 12.6,
-      "medianRatio": 1.44,
-      "p25": 0.8,
-      "p75": 2.33,
-      "rawMedian": 8.21,
-      "sampleSize": 141
+      "gradedMedian": 13.13,
+      "medianRatio": 1.68,
+      "p25": 0.87,
+      "p75": 2.65,
+      "rawMedian": 7.74,
+      "sampleSize": 145
     },
     "BGS 9": {
       "gradedMedian": 15.5,
-      "medianRatio": 1.85,
+      "medianRatio": 1.87,
       "p25": 1.23,
-      "p75": 2.93,
-      "rawMedian": 7.62,
-      "sampleSize": 771
+      "p75": 3.03,
+      "rawMedian": 7.55,
+      "sampleSize": 781
     },
     "BGS 9.5": {
-      "gradedMedian": 21.87,
+      "gradedMedian": 21.89,
       "medianRatio": 2.83,
-      "p25": 1.89,
-      "p75": 4.53,
-      "rawMedian": 7.51,
-      "sampleSize": 2382
+      "p25": 1.88,
+      "p75": 4.49,
+      "rawMedian": 7.44,
+      "sampleSize": 2378
     },
     "CGC 10": {
-      "gradedMedian": 21.5,
-      "medianRatio": 4.68,
-      "p25": 3.04,
-      "p75": 7.21,
-      "rawMedian": 4.52,
-      "sampleSize": 10934
+      "gradedMedian": 21.57,
+      "medianRatio": 4.71,
+      "p25": 3.08,
+      "p75": 7.26,
+      "rawMedian": 4.49,
+      "sampleSize": 11355
     },
     "CGC 4.5": {
       "gradedMedian": 10,
-      "medianRatio": 7.43,
+      "medianRatio": 6.3,
       "p25": 0.52,
-      "p75": 7.43,
-      "rawMedian": 8.39,
+      "p75": 6.3,
+      "rawMedian": 8.27,
       "sampleSize": 6
     },
     "CGC 5": {
       "gradedMedian": 7.13,
       "medianRatio": 0.95,
-      "p25": 0.81,
+      "p25": 0.82,
       "p75": 4.44,
-      "rawMedian": 5.01,
+      "rawMedian": 4.99,
       "sampleSize": 23
     },
     "CGC 5.5": {
       "gradedMedian": 7.2,
-      "medianRatio": 1.67,
+      "medianRatio": 1.66,
       "p25": 1.4,
-      "p75": 1.97,
-      "rawMedian": 5.01,
+      "p75": 2.05,
+      "rawMedian": 4.99,
       "sampleSize": 8
     },
     "CGC 6": {
-      "gradedMedian": 6,
-      "medianRatio": 1.73,
-      "p25": 1.18,
-      "p75": 2.11,
-      "rawMedian": 3.46,
-      "sampleSize": 29
+      "gradedMedian": 7.2,
+      "medianRatio": 1.97,
+      "p25": 1.3,
+      "p75": 2.32,
+      "rawMedian": 3.48,
+      "sampleSize": 36
     },
     "CGC 6.5": {
-      "gradedMedian": 10,
-      "medianRatio": 1.24,
-      "p25": 1.09,
-      "p75": 2.05,
-      "rawMedian": 4.98,
-      "sampleSize": 39
+      "gradedMedian": 10.5,
+      "medianRatio": 1.57,
+      "p25": 1.1,
+      "p75": 2.32,
+      "rawMedian": 6.38,
+      "sampleSize": 41
     },
     "CGC 7": {
-      "gradedMedian": 8,
+      "gradedMedian": 8.4,
       "medianRatio": 1.66,
       "p25": 1.05,
-      "p75": 2.94,
-      "rawMedian": 3.67,
-      "sampleSize": 115
+      "p75": 2.96,
+      "rawMedian": 4.29,
+      "sampleSize": 110
     },
     "CGC 7.5": {
       "gradedMedian": 9,
-      "medianRatio": 1.63,
-      "p25": 1.05,
-      "p75": 2.48,
-      "rawMedian": 4.89,
-      "sampleSize": 215
+      "medianRatio": 1.71,
+      "p25": 1.11,
+      "p75": 2.54,
+      "rawMedian": 4.77,
+      "sampleSize": 221
     },
     "CGC 8": {
-      "gradedMedian": 9.33,
-      "medianRatio": 1.85,
-      "p25": 1.2,
-      "p75": 2.9,
-      "rawMedian": 4.56,
-      "sampleSize": 742
+      "gradedMedian": 9.6,
+      "medianRatio": 1.87,
+      "p25": 1.22,
+      "p75": 2.87,
+      "rawMedian": 4.31,
+      "sampleSize": 755
     },
     "CGC 8.5": {
-      "gradedMedian": 10.03,
-      "medianRatio": 2.04,
-      "p25": 1.24,
-      "p75": 3.14,
-      "rawMedian": 4.66,
-      "sampleSize": 1356
+      "gradedMedian": 10.2,
+      "medianRatio": 2.05,
+      "p25": 1.25,
+      "p75": 3.16,
+      "rawMedian": 4.59,
+      "sampleSize": 1392
     },
     "CGC 9": {
-      "gradedMedian": 11.24,
-      "medianRatio": 2.34,
-      "p25": 1.43,
-      "p75": 3.69,
-      "rawMedian": 4.62,
-      "sampleSize": 4925
+      "gradedMedian": 11.36,
+      "medianRatio": 2.37,
+      "p25": 1.46,
+      "p75": 3.72,
+      "rawMedian": 4.54,
+      "sampleSize": 5081
     },
     "CGC 9.5": {
-      "gradedMedian": 13.07,
-      "medianRatio": 2.36,
-      "p25": 1.53,
-      "p75": 3.77,
-      "rawMedian": 5.29,
-      "sampleSize": 2581
+      "gradedMedian": 13.13,
+      "medianRatio": 2.38,
+      "p25": 1.54,
+      "p75": 3.8,
+      "rawMedian": 5.28,
+      "sampleSize": 2599
     },
     "CSG 10": {
-      "gradedMedian": 15,
+      "gradedMedian": 19.19,
       "medianRatio": 2.57,
       "p25": 1.18,
-      "p75": 5.57,
-      "rawMedian": 4.46,
-      "sampleSize": 16
+      "p75": 4.86,
+      "rawMedian": 4.48,
+      "sampleSize": 14
     },
     "CSG 9": {
       "gradedMedian": 5.99,
@@ -8087,50 +8103,50 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
     },
     "HGA 9": {
       "gradedMedian": 9.9,
-      "medianRatio": 1.29,
-      "p25": 0.92,
-      "p75": 2.3,
-      "rawMedian": 7.66,
-      "sampleSize": 83
+      "medianRatio": 1.34,
+      "p25": 0.95,
+      "p75": 2.33,
+      "rawMedian": 7.55,
+      "sampleSize": 84
     },
     "HGA 9.5": {
       "gradedMedian": 7.11,
       "medianRatio": 1.13,
-      "p25": 0.87,
-      "p75": 1.74,
-      "rawMedian": 7.66,
+      "p25": 0.88,
+      "p75": 1.75,
+      "rawMedian": 7.55,
       "sampleSize": 21
     },
     "PSA 1": {
-      "gradedMedian": 14.52,
-      "medianRatio": 1.68,
-      "p25": 0.94,
-      "p75": 5.21,
-      "rawMedian": 8.22,
-      "sampleSize": 167
+      "gradedMedian": 13.27,
+      "medianRatio": 1.67,
+      "p25": 0.93,
+      "p75": 4.57,
+      "rawMedian": 7.97,
+      "sampleSize": 186
     },
     "PSA 10": {
-      "gradedMedian": 39,
-      "medianRatio": 6.8,
-      "p25": 4.04,
-      "p75": 11.22,
-      "rawMedian": 5.67,
-      "sampleSize": 61218
+      "gradedMedian": 39.14,
+      "medianRatio": 6.84,
+      "p25": 4.07,
+      "p75": 11.29,
+      "rawMedian": 5.66,
+      "sampleSize": 61751
     },
     "PSA 2": {
       "gradedMedian": 9.77,
       "medianRatio": 1.21,
       "p25": 0.76,
       "p75": 4.2,
-      "rawMedian": 5.89,
-      "sampleSize": 106
+      "rawMedian": 5.88,
+      "sampleSize": 108
     },
     "PSA 3": {
       "gradedMedian": 23.75,
       "medianRatio": 2.25,
-      "p25": 1.24,
+      "p25": 1.21,
       "p75": 8.77,
-      "rawMedian": 6.93,
+      "rawMedian": 7.12,
       "sampleSize": 51
     },
     "PSA 4": {
@@ -8139,78 +8155,78 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       "p25": 1.19,
       "p75": 4.12,
       "rawMedian": 5.78,
-      "sampleSize": 70
+      "sampleSize": 68
     },
     "PSA 5": {
-      "gradedMedian": 8.83,
-      "medianRatio": 1.46,
-      "p25": 0.94,
+      "gradedMedian": 8.55,
+      "medianRatio": 1.48,
+      "p25": 0.93,
       "p75": 3.16,
-      "rawMedian": 5.28,
-      "sampleSize": 157
+      "rawMedian": 5.34,
+      "sampleSize": 149
     },
     "PSA 6": {
-      "gradedMedian": 9,
+      "gradedMedian": 9.17,
       "medianRatio": 1.13,
-      "p25": 0.79,
-      "p75": 1.98,
-      "rawMedian": 7.67,
-      "sampleSize": 658
+      "p25": 0.8,
+      "p75": 2,
+      "rawMedian": 7.76,
+      "sampleSize": 664
     },
     "PSA 7": {
-      "gradedMedian": 10.04,
+      "gradedMedian": 10,
       "medianRatio": 1.33,
-      "p25": 0.86,
-      "p75": 2.14,
-      "rawMedian": 7.86,
-      "sampleSize": 1415
+      "p25": 0.84,
+      "p75": 2.18,
+      "rawMedian": 7.8,
+      "sampleSize": 1434
     },
     "PSA 8": {
-      "gradedMedian": 12.17,
-      "medianRatio": 1.74,
-      "p25": 1.14,
-      "p75": 2.91,
-      "rawMedian": 6.76,
-      "sampleSize": 9840
+      "gradedMedian": 12.25,
+      "medianRatio": 1.75,
+      "p25": 1.15,
+      "p75": 2.92,
+      "rawMedian": 6.77,
+      "sampleSize": 9893
     },
     "PSA 8.5": {
-      "gradedMedian": 14.99,
+      "gradedMedian": 15,
       "medianRatio": 1.88,
-      "p25": 1.19,
-      "p75": 2.62,
+      "p25": 1.21,
+      "p75": 2.6,
       "rawMedian": 8.03,
       "sampleSize": 133
     },
     "PSA 9": {
-      "gradedMedian": 17.34,
-      "medianRatio": 2.73,
-      "p25": 1.75,
-      "p75": 4.48,
-      "rawMedian": 6.14,
-      "sampleSize": 40324
+      "gradedMedian": 17.42,
+      "medianRatio": 2.75,
+      "p25": 1.76,
+      "p75": 4.5,
+      "rawMedian": 6.13,
+      "sampleSize": 40606
     },
     "SGC 1": {
       "gradedMedian": 5.64,
-      "medianRatio": 2.12,
+      "medianRatio": 2.13,
       "p25": 1.28,
       "p75": 6.24,
       "rawMedian": 3.83,
       "sampleSize": 16
     },
     "SGC 10": {
-      "gradedMedian": 21.33,
-      "medianRatio": 3.47,
-      "p25": 2.23,
-      "p75": 5.45,
-      "rawMedian": 6.03,
-      "sampleSize": 7848
+      "gradedMedian": 21.38,
+      "medianRatio": 3.48,
+      "p25": 2.24,
+      "p75": 5.48,
+      "rawMedian": 5.99,
+      "sampleSize": 7924
     },
     "SGC 2": {
       "gradedMedian": 12.24,
       "medianRatio": 2.13,
-      "p25": 1.75,
-      "p75": 4.34,
-      "rawMedian": 5.38,
+      "p25": 1.8,
+      "p75": 4.3,
+      "rawMedian": 5.42,
       "sampleSize": 6
     },
     "SGC 3": {
@@ -8223,18 +8239,18 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
     },
     "SGC 4": {
       "gradedMedian": 8.88,
-      "medianRatio": 1.59,
+      "medianRatio": 1.51,
       "p25": 0.75,
       "p75": 6.45,
-      "rawMedian": 4.28,
+      "rawMedian": 4.22,
       "sampleSize": 23
     },
     "SGC 5": {
       "gradedMedian": 9.42,
-      "medianRatio": 1.98,
+      "medianRatio": 2.03,
       "p25": 0.73,
-      "p75": 3.92,
-      "rawMedian": 5.16,
+      "p75": 3.93,
+      "rawMedian": 5.15,
       "sampleSize": 19
     },
     "SGC 6": {
@@ -8246,60 +8262,60 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       "sampleSize": 21
     },
     "SGC 7": {
-      "gradedMedian": 7.5,
+      "gradedMedian": 7.53,
       "medianRatio": 1.39,
       "p25": 1,
-      "p75": 1.72,
-      "rawMedian": 5.4,
-      "sampleSize": 27
+      "p75": 1.69,
+      "rawMedian": 6.81,
+      "sampleSize": 26
     },
     "SGC 8": {
       "gradedMedian": 8.52,
       "medianRatio": 1.12,
-      "p25": 0.76,
-      "p75": 1.9,
-      "rawMedian": 8.1,
-      "sampleSize": 148
+      "p25": 0.73,
+      "p75": 1.88,
+      "rawMedian": 8.21,
+      "sampleSize": 147
     },
     "SGC 8.5": {
-      "gradedMedian": 9.75,
+      "gradedMedian": 9.5,
       "medianRatio": 1.44,
       "p25": 0.79,
-      "p75": 2.09,
-      "rawMedian": 7.41,
-      "sampleSize": 253
+      "p75": 2.1,
+      "rawMedian": 7.4,
+      "sampleSize": 255
     },
     "SGC 9": {
-      "gradedMedian": 12.26,
-      "medianRatio": 1.73,
-      "p25": 1.15,
-      "p75": 2.85,
-      "rawMedian": 6.73,
-      "sampleSize": 1933
+      "gradedMedian": 12.47,
+      "medianRatio": 1.74,
+      "p25": 1.16,
+      "p75": 2.86,
+      "rawMedian": 6.77,
+      "sampleSize": 1941
     },
     "SGC 9.5": {
-      "gradedMedian": 15.84,
-      "medianRatio": 2.36,
+      "gradedMedian": 15.83,
+      "medianRatio": 2.35,
       "p25": 1.58,
-      "p75": 3.64,
-      "rawMedian": 6.49,
-      "sampleSize": 4418
+      "p75": 3.63,
+      "rawMedian": 6.44,
+      "sampleSize": 4420
     },
     "TAG 10": {
-      "gradedMedian": 54.5,
-      "medianRatio": 6.78,
-      "p25": 4.28,
-      "p75": 9.42,
-      "rawMedian": 9.66,
-      "sampleSize": 31
+      "gradedMedian": 70,
+      "medianRatio": 7.69,
+      "p25": 4.29,
+      "p75": 10.84,
+      "rawMedian": 8.17,
+      "sampleSize": 30
     },
     "TAG 9": {
-      "gradedMedian": 20,
-      "medianRatio": 2.19,
-      "p25": 0.52,
-      "p75": 3.26,
-      "rawMedian": 14.17,
-      "sampleSize": 12
+      "gradedMedian": 27.75,
+      "medianRatio": 2.27,
+      "p25": 0.53,
+      "p75": 2.48,
+      "rawMedian": 14.12,
+      "sampleSize": 14
     }
   }
 },
@@ -8308,11 +8324,11 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
     "$1,000-2,499": {
       "BGS 10": {
         "gradedMedian": 2817.32,
-        "medianRatio": 1.78,
+        "medianRatio": 1.82,
         "p25": 1.19,
-        "p75": 1.8,
+        "p75": 1.95,
         "rawMedian": 2357.88,
-        "sampleSize": 10
+        "sampleSize": 8
       },
       "BGS 9": {
         "gradedMedian": 1800,
@@ -8323,20 +8339,20 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "sampleSize": 8
       },
       "BGS 9.5": {
-        "gradedMedian": 1310,
-        "medianRatio": 0.92,
-        "p25": 0.77,
-        "p75": 1.13,
-        "rawMedian": 1600,
-        "sampleSize": 52
+        "gradedMedian": 1279.61,
+        "medianRatio": 0.86,
+        "p25": 0.74,
+        "p75": 1.12,
+        "rawMedian": 1568.26,
+        "sampleSize": 54
       },
       "PSA 10": {
-        "gradedMedian": 2032.04,
-        "medianRatio": 1.4,
+        "gradedMedian": 2113.01,
+        "medianRatio": 1.42,
         "p25": 0.97,
-        "p75": 2.2,
-        "rawMedian": 1508,
-        "sampleSize": 402
+        "p75": 2.21,
+        "rawMedian": 1477.7,
+        "sampleSize": 420
       },
       "PSA 8": {
         "gradedMedian": 885,
@@ -8347,12 +8363,12 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "sampleSize": 18
       },
       "PSA 9": {
-        "gradedMedian": 1066.65,
+        "gradedMedian": 1031.5,
         "medianRatio": 0.74,
-        "p25": 0.58,
+        "p25": 0.59,
         "p75": 1.08,
         "rawMedian": 1429.48,
-        "sampleSize": 166
+        "sampleSize": 162
       },
       "SGC 10": {
         "gradedMedian": 1197.91,
@@ -8368,7 +8384,7 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "p25": 0.84,
         "p75": 0.86,
         "rawMedian": 1035,
-        "sampleSize": 10
+        "sampleSize": 8
       }
     },
     "$10,000+": {
@@ -8383,140 +8399,148 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       "PSA 10": {
         "gradedMedian": 14384.33,
         "medianRatio": 0.72,
-        "p25": 0.6,
+        "p25": 0.64,
         "p75": 1.1,
-        "rawMedian": 16362.5,
-        "sampleSize": 32
+        "rawMedian": 14942.54,
+        "sampleSize": 36
       },
       "PSA 9": {
-        "gradedMedian": 28233,
-        "medianRatio": 1.66,
-        "p25": 0.68,
+        "gradedMedian": 8075.83,
+        "medianRatio": 0.68,
+        "p25": 0.64,
         "p75": 1.66,
-        "rawMedian": 17031.11,
-        "sampleSize": 6
+        "rawMedian": 11835,
+        "sampleSize": 10
       }
     },
     "$100-249": {
       "BGS 10": {
-        "gradedMedian": 295.92,
-        "medianRatio": 2.44,
+        "gradedMedian": 275,
+        "medianRatio": 2.25,
         "p25": 1.07,
-        "p75": 3.17,
-        "rawMedian": 162.57,
-        "sampleSize": 80
+        "p75": 3.05,
+        "rawMedian": 161.83,
+        "sampleSize": 82
       },
       "BGS 8": {
         "gradedMedian": 127.5,
-        "medianRatio": 1.14,
+        "medianRatio": 1.13,
         "p25": 1.05,
         "p75": 1.21,
-        "rawMedian": 112.24,
+        "rawMedian": 112.73,
         "sampleSize": 6
       },
       "BGS 8.5": {
         "gradedMedian": 201,
         "medianRatio": 1.31,
-        "p25": 0.68,
-        "p75": 1.34,
-        "rawMedian": 154.11,
+        "p25": 0.69,
+        "p75": 1.33,
+        "rawMedian": 154,
         "sampleSize": 14
       },
       "BGS 9": {
-        "gradedMedian": 132.18,
-        "medianRatio": 1.03,
+        "gradedMedian": 142.5,
+        "medianRatio": 1.04,
         "p25": 0.75,
         "p75": 1.17,
-        "rawMedian": 146,
-        "sampleSize": 78
+        "rawMedian": 147.15,
+        "sampleSize": 76
       },
       "BGS 9.5": {
-        "gradedMedian": 184.3,
+        "gradedMedian": 185.22,
         "medianRatio": 1.24,
-        "p25": 0.85,
-        "p75": 1.59,
+        "p25": 0.87,
+        "p75": 1.6,
         "rawMedian": 150.34,
-        "sampleSize": 258
+        "sampleSize": 260
       },
       "CGC 10": {
-        "gradedMedian": 183.7,
-        "medianRatio": 1.08,
-        "p25": 0.83,
-        "p75": 1.7,
-        "rawMedian": 162.57,
+        "gradedMedian": 187.5,
+        "medianRatio": 1.1,
+        "p25": 0.82,
+        "p75": 1.71,
+        "rawMedian": 161.83,
         "sampleSize": 38
       },
       "CGC 8": {
         "gradedMedian": 89.88,
         "medianRatio": 0.66,
         "p25": 0.64,
-        "p75": 0.71,
+        "p75": 0.72,
         "rawMedian": 140.73,
+        "sampleSize": 6
+      },
+      "CGC 8.5": {
+        "gradedMedian": 66.5,
+        "medianRatio": 0.59,
+        "p25": 0.55,
+        "p75": 1.34,
+        "rawMedian": 119.48,
         "sampleSize": 6
       },
       "CGC 9": {
         "gradedMedian": 205,
         "medianRatio": 0.92,
         "p25": 0.91,
-        "p75": 1.33,
-        "rawMedian": 191.52,
+        "p75": 1.26,
+        "rawMedian": 190.9,
         "sampleSize": 10
       },
       "CGC 9.5": {
         "gradedMedian": 136.08,
         "medianRatio": 0.88,
-        "p25": 0.51,
-        "p75": 1.2,
+        "p25": 0.68,
+        "p75": 1.01,
         "rawMedian": 148.09,
-        "sampleSize": 10
+        "sampleSize": 18
       },
       "HGA 9.5": {
         "gradedMedian": 183.75,
         "medianRatio": 1.14,
-        "p25": 1.01,
-        "p75": 1.46,
-        "rawMedian": 173.32,
+        "p25": 1.02,
+        "p75": 1.47,
+        "rawMedian": 172.09,
         "sampleSize": 8
       },
       "PSA 1": {
         "gradedMedian": 166.53,
         "medianRatio": 1.33,
-        "p25": 1.01,
+        "p25": 1.03,
         "p75": 1.84,
-        "rawMedian": 128.4,
+        "rawMedian": 128.22,
         "sampleSize": 18
       },
       "PSA 10": {
-        "gradedMedian": 281.99,
-        "medianRatio": 1.85,
-        "p25": 1.41,
-        "p75": 2.5,
-        "rawMedian": 149.15,
-        "sampleSize": 4932
+        "gradedMedian": 286.12,
+        "medianRatio": 1.87,
+        "p25": 1.42,
+        "p75": 2.53,
+        "rawMedian": 149.55,
+        "sampleSize": 4992
       },
       "PSA 6": {
         "gradedMedian": 109.55,
         "medianRatio": 0.72,
         "p25": 0.63,
-        "p75": 0.9,
-        "rawMedian": 141.85,
+        "p75": 0.89,
+        "rawMedian": 143.32,
         "sampleSize": 18
       },
       "PSA 7": {
-        "gradedMedian": 129.92,
-        "medianRatio": 0.92,
-        "p25": 0.59,
+        "gradedMedian": 179.47,
+        "medianRatio": 1,
+        "p25": 0.6,
         "p75": 1.07,
-        "rawMedian": 149.6,
-        "sampleSize": 38
+        "rawMedian": 157.87,
+        "sampleSize": 36
       },
       "PSA 8": {
-        "gradedMedian": 122.75,
-        "medianRatio": 0.8,
+        "gradedMedian": 122.87,
+        "medianRatio": 0.81,
         "p25": 0.67,
-        "p75": 1.06,
+        "p75": 1.09,
         "rawMedian": 149.43,
-        "sampleSize": 430
+        "sampleSize": 432
       },
       "PSA 8.5": {
         "gradedMedian": 113.7,
@@ -8528,26 +8552,26 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       },
       "PSA 9": {
         "gradedMedian": 137.5,
-        "medianRatio": 0.95,
+        "medianRatio": 0.96,
         "p25": 0.74,
-        "p75": 1.22,
-        "rawMedian": 145.88,
-        "sampleSize": 3318
+        "p75": 1.2,
+        "rawMedian": 145.57,
+        "sampleSize": 3356
       },
       "SGC 10": {
-        "gradedMedian": 177.5,
-        "medianRatio": 1.18,
-        "p25": 0.85,
+        "gradedMedian": 185.5,
+        "medianRatio": 1.22,
+        "p25": 0.86,
         "p75": 1.67,
         "rawMedian": 143.61,
-        "sampleSize": 446
+        "sampleSize": 442
       },
       "SGC 8": {
         "gradedMedian": 200,
         "medianRatio": 0.89,
-        "p25": 0.63,
+        "p25": 0.67,
         "p75": 0.89,
-        "rawMedian": 191.52,
+        "rawMedian": 190.9,
         "sampleSize": 12
       },
       "SGC 8.5": {
@@ -8555,24 +8579,24 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "medianRatio": 0.61,
         "p25": 0.56,
         "p75": 0.63,
-        "rawMedian": 173.32,
+        "rawMedian": 172.09,
         "sampleSize": 16
       },
       "SGC 9": {
-        "gradedMedian": 117.96,
-        "medianRatio": 0.84,
-        "p25": 0.58,
+        "gradedMedian": 110,
+        "medianRatio": 0.66,
+        "p25": 0.56,
         "p75": 1.11,
         "rawMedian": 134.02,
-        "sampleSize": 80
+        "sampleSize": 74
       },
       "SGC 9.5": {
-        "gradedMedian": 135.71,
-        "medianRatio": 0.92,
+        "gradedMedian": 132.5,
+        "medianRatio": 0.86,
         "p25": 0.67,
-        "p75": 1.23,
-        "rawMedian": 150.1,
-        "sampleSize": 270
+        "p75": 1.2,
+        "rawMedian": 152.29,
+        "sampleSize": 256
       }
     },
     "$2,500-4,999": {
@@ -8581,32 +8605,32 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "medianRatio": 2.03,
         "p25": 0.85,
         "p75": 2.14,
-        "rawMedian": 4492.52,
-        "sampleSize": 8
-      },
-      "BGS 9.5": {
-        "gradedMedian": 1526.67,
-        "medianRatio": 0.56,
-        "p25": 0.56,
-        "p75": 0.69,
-        "rawMedian": 2730.59,
+        "rawMedian": 3172.48,
         "sampleSize": 10
       },
+      "BGS 9.5": {
+        "gradedMedian": 2113.89,
+        "medianRatio": 0.69,
+        "p25": 0.56,
+        "p75": 0.7,
+        "rawMedian": 2742.93,
+        "sampleSize": 12
+      },
       "PSA 10": {
-        "gradedMedian": 3183.37,
+        "gradedMedian": 3046.36,
         "medianRatio": 0.88,
         "p25": 0.74,
-        "p75": 1.58,
-        "rawMedian": 3371.8,
-        "sampleSize": 120
+        "p75": 1.54,
+        "rawMedian": 3367.59,
+        "sampleSize": 122
       },
       "PSA 9": {
         "gradedMedian": 2618.5,
-        "medianRatio": 0.56,
+        "medianRatio": 0.66,
         "p25": 0.56,
-        "p75": 0.66,
+        "p75": 0.77,
         "rawMedian": 3713,
-        "sampleSize": 18
+        "sampleSize": 20
       }
     },
     "$25-49": {
@@ -8620,75 +8644,83 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       },
       "BGS 8.5": {
         "gradedMedian": 25,
-        "medianRatio": 0.95,
+        "medianRatio": 0.96,
         "p25": 0.89,
         "p75": 1.02,
-        "rawMedian": 29,
+        "rawMedian": 28.98,
         "sampleSize": 8
       },
       "BGS 9": {
-        "gradedMedian": 29.7,
-        "medianRatio": 1.04,
-        "p25": 0.64,
+        "gradedMedian": 39.5,
+        "medianRatio": 1.05,
+        "p25": 0.69,
         "p75": 1.4,
-        "rawMedian": 30.76,
-        "sampleSize": 54
+        "rawMedian": 29.87,
+        "sampleSize": 50
       },
       "BGS 9.5": {
         "gradedMedian": 57,
         "medianRatio": 1.69,
         "p25": 1.12,
-        "p75": 2.22,
-        "rawMedian": 33.11,
-        "sampleSize": 228
+        "p75": 2.19,
+        "rawMedian": 31.96,
+        "sampleSize": 226
       },
       "CGC 10": {
         "gradedMedian": 50,
-        "medianRatio": 1.33,
-        "p25": 1.12,
+        "medianRatio": 1.32,
+        "p25": 1.11,
         "p75": 1.68,
         "rawMedian": 35.86,
         "sampleSize": 154
+      },
+      "CGC 8.5": {
+        "gradedMedian": 30,
+        "medianRatio": 0.7,
+        "p25": 0.54,
+        "p75": 0.7,
+        "rawMedian": 43.09,
+        "sampleSize": 6
       },
       "CGC 9": {
         "gradedMedian": 20.42,
         "medianRatio": 0.73,
         "p25": 0.71,
         "p75": 0.94,
-        "rawMedian": 28.13,
+        "rawMedian": 27.99,
         "sampleSize": 32
       },
       "CGC 9.5": {
         "gradedMedian": 35,
-        "medianRatio": 0.8,
-        "p25": 0.57,
-        "p75": 1.13,
-        "rawMedian": 38.79,
-        "sampleSize": 20
+        "medianRatio": 0.81,
+        "p25": 0.58,
+        "p75": 1.87,
+        "rawMedian": 35.86,
+        "sampleSize": 22
       },
       "PSA 1": {
-        "gradedMedian": 43.13,
-        "medianRatio": 1.42,
-        "p25": 0.86,
-        "p75": 1.62,
-        "rawMedian": 35.19,
+        "gradedMedian": 42.65,
+        "medianRatio": 1.21,
+        "p25": 0.92,
+        "p75": 1.42,
+        "rawMedian": 36.27,
         "sampleSize": 20
       },
       "PSA 10": {
-        "gradedMedian": 95.48,
-        "medianRatio": 2.66,
+        "gradedMedian": 95.72,
+        "medianRatio": 2.67,
         "p25": 1.99,
-        "p75": 3.71,
-        "rawMedian": 35.06,
-        "sampleSize": 7180
+        "p75": 3.7,
+        "rawMedian": 35,
+        "sampleSize": 7242
       },
       "PSA 2": {
         "gradedMedian": 104.5,
-        "medianRatio": 3.39,
-        "p25": 1.68,
+        "medianRatio": 3.41,
+        "p25": 1.69,
         "p75": 4,
-        "rawMedian": 36.16,
-        "sampleSize": 16
+        "rawMedian": 36.12,
+        "sampleSize": 14
       },
       "PSA 3": {
         "gradedMedian": 72.17,
@@ -8699,68 +8731,68 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "sampleSize": 10
       },
       "PSA 5": {
-        "gradedMedian": 27.09,
-        "medianRatio": 0.98,
+        "gradedMedian": 23.5,
+        "medianRatio": 0.68,
         "p25": 0.64,
-        "p75": 1.38,
-        "rawMedian": 43.62,
-        "sampleSize": 8
+        "p75": 0.98,
+        "rawMedian": 27.61,
+        "sampleSize": 10
       },
       "PSA 6": {
         "gradedMedian": 26.19,
         "medianRatio": 0.94,
-        "p25": 0.76,
+        "p25": 0.73,
         "p75": 1.05,
-        "rawMedian": 32.78,
-        "sampleSize": 16
+        "rawMedian": 34.12,
+        "sampleSize": 14
       },
       "PSA 7": {
-        "gradedMedian": 29.99,
-        "medianRatio": 0.86,
+        "gradedMedian": 26,
+        "medianRatio": 0.82,
         "p25": 0.6,
-        "p75": 1.39,
-        "rawMedian": 33.2,
-        "sampleSize": 44
+        "p75": 1.41,
+        "rawMedian": 34.12,
+        "sampleSize": 46
       },
       "PSA 8": {
         "gradedMedian": 28,
         "medianRatio": 0.82,
-        "p25": 0.66,
-        "p75": 1.12,
-        "rawMedian": 33.01,
-        "sampleSize": 614
+        "p25": 0.67,
+        "p75": 1.13,
+        "rawMedian": 33.12,
+        "sampleSize": 622
       },
       "PSA 9": {
-        "gradedMedian": 42.38,
+        "gradedMedian": 42.6,
         "medianRatio": 1.21,
         "p25": 0.93,
-        "p75": 1.61,
-        "rawMedian": 35,
-        "sampleSize": 4808
+        "p75": 1.63,
+        "rawMedian": 34.99,
+        "sampleSize": 4859
       },
       "SGC 10": {
-        "gradedMedian": 53.17,
-        "medianRatio": 1.53,
-        "p25": 1.17,
-        "p75": 2.14,
-        "rawMedian": 33.81,
-        "sampleSize": 728
+        "gradedMedian": 53.65,
+        "medianRatio": 1.56,
+        "p25": 1.19,
+        "p75": 2.17,
+        "rawMedian": 33.58,
+        "sampleSize": 734
       },
       "SGC 9": {
         "gradedMedian": 33.71,
         "medianRatio": 0.93,
         "p25": 0.71,
         "p75": 1.2,
-        "rawMedian": 33.82,
-        "sampleSize": 134
+        "rawMedian": 34.53,
+        "sampleSize": 140
       },
       "SGC 9.5": {
-        "gradedMedian": 39.81,
-        "medianRatio": 1.19,
+        "gradedMedian": 40.5,
+        "medianRatio": 1.2,
         "p25": 0.93,
-        "p75": 1.48,
-        "rawMedian": 34.09,
-        "sampleSize": 412
+        "p75": 1.49,
+        "rawMedian": 33.87,
+        "sampleSize": 420
       }
     },
     "$250-499": {
@@ -8769,48 +8801,56 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "medianRatio": 1.79,
         "p25": 1.36,
         "p75": 2.28,
-        "rawMedian": 355.73,
+        "rawMedian": 355.33,
         "sampleSize": 30
       },
       "BGS 9": {
-        "gradedMedian": 277.26,
+        "gradedMedian": 265,
         "medianRatio": 0.82,
-        "p25": 0.72,
+        "p25": 0.7,
         "p75": 1.22,
-        "rawMedian": 299.25,
+        "rawMedian": 312.13,
         "sampleSize": 38
       },
       "BGS 9.5": {
-        "gradedMedian": 439.66,
+        "gradedMedian": 468,
         "medianRatio": 1.07,
-        "p25": 0.9,
-        "p75": 1.94,
+        "p25": 0.91,
+        "p75": 1.77,
         "rawMedian": 323.33,
-        "sampleSize": 134
+        "sampleSize": 130
       },
       "CGC 10": {
         "gradedMedian": 378.62,
         "medianRatio": 0.78,
-        "p25": 0.76,
+        "p25": 0.64,
         "p75": 0.78,
-        "rawMedian": 483.36,
-        "sampleSize": 10
+        "rawMedian": 483.09,
+        "sampleSize": 12
+      },
+      "CGC 9.5": {
+        "gradedMedian": 594.05,
+        "medianRatio": 1.23,
+        "p25": 1.04,
+        "p75": 1.23,
+        "rawMedian": 483.09,
+        "sampleSize": 6
       },
       "PSA 1": {
         "gradedMedian": 459.75,
         "medianRatio": 1.4,
-        "p25": 0.67,
+        "p25": 0.68,
         "p75": 1.69,
-        "rawMedian": 355.05,
+        "rawMedian": 354.68,
         "sampleSize": 12
       },
       "PSA 10": {
-        "gradedMedian": 578.2,
+        "gradedMedian": 585,
         "medianRatio": 1.7,
         "p25": 1.25,
-        "p75": 2.38,
-        "rawMedian": 332.35,
-        "sampleSize": 1886
+        "p75": 2.34,
+        "rawMedian": 332.46,
+        "sampleSize": 1900
       },
       "PSA 6": {
         "gradedMedian": 201.26,
@@ -8829,12 +8869,12 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "sampleSize": 10
       },
       "PSA 8": {
-        "gradedMedian": 277.5,
-        "medianRatio": 0.77,
-        "p25": 0.61,
-        "p75": 1.1,
-        "rawMedian": 355.05,
-        "sampleSize": 124
+        "gradedMedian": 277,
+        "medianRatio": 0.81,
+        "p25": 0.62,
+        "p75": 1.12,
+        "rawMedian": 350.92,
+        "sampleSize": 136
       },
       "PSA 8.5": {
         "gradedMedian": 280,
@@ -8845,20 +8885,20 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "sampleSize": 8
       },
       "PSA 9": {
-        "gradedMedian": 300,
+        "gradedMedian": 300.63,
         "medianRatio": 0.89,
-        "p25": 0.72,
-        "p75": 1.13,
-        "rawMedian": 319.6,
-        "sampleSize": 1246
+        "p25": 0.73,
+        "p75": 1.14,
+        "rawMedian": 319.99,
+        "sampleSize": 1250
       },
       "SGC 10": {
         "gradedMedian": 305.48,
-        "medianRatio": 1.01,
-        "p25": 0.79,
+        "medianRatio": 1.02,
+        "p25": 0.8,
         "p75": 1.29,
-        "rawMedian": 304.38,
-        "sampleSize": 154
+        "rawMedian": 307.73,
+        "sampleSize": 152
       },
       "SGC 9": {
         "gradedMedian": 337.5,
@@ -8869,22 +8909,22 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "sampleSize": 16
       },
       "SGC 9.5": {
-        "gradedMedian": 286.3,
-        "medianRatio": 0.94,
-        "p25": 0.8,
-        "p75": 1.37,
+        "gradedMedian": 264.07,
+        "medianRatio": 0.93,
+        "p25": 0.71,
+        "p75": 1.18,
         "rawMedian": 313.55,
-        "sampleSize": 54
+        "sampleSize": 64
       }
     },
     "$5,000-9,999": {
       "PSA 10": {
-        "gradedMedian": 5658.26,
-        "medianRatio": 0.94,
-        "p25": 0.75,
+        "gradedMedian": 5375,
+        "medianRatio": 0.93,
+        "p25": 0.58,
         "p75": 1.41,
-        "rawMedian": 5950,
-        "sampleSize": 32
+        "rawMedian": 5879,
+        "sampleSize": 38
       },
       "PSA 9": {
         "gradedMedian": 7093.98,
@@ -8897,12 +8937,20 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
     },
     "$50-99": {
       "BGS 10": {
-        "gradedMedian": 168.5,
-        "medianRatio": 2.66,
+        "gradedMedian": 187.63,
+        "medianRatio": 2.89,
         "p25": 1.64,
         "p75": 3.48,
-        "rawMedian": 63.45,
-        "sampleSize": 30
+        "rawMedian": 67.86,
+        "sampleSize": 28
+      },
+      "BGS 8": {
+        "gradedMedian": 41,
+        "medianRatio": 0.6,
+        "p25": 0.54,
+        "p75": 1.16,
+        "rawMedian": 75.48,
+        "sampleSize": 6
       },
       "BGS 8.5": {
         "gradedMedian": 88.89,
@@ -8916,163 +8964,163 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "gradedMedian": 79.2,
         "medianRatio": 1.04,
         "p25": 0.95,
-        "p75": 1.27,
-        "rawMedian": 70.66,
+        "p75": 1.23,
+        "rawMedian": 71.75,
         "sampleSize": 56
       },
       "BGS 9.5": {
         "gradedMedian": 93.33,
-        "medianRatio": 1.3,
+        "medianRatio": 1.29,
         "p25": 0.95,
-        "p75": 1.68,
-        "rawMedian": 68.87,
-        "sampleSize": 182
+        "p75": 1.71,
+        "rawMedian": 69,
+        "sampleSize": 190
       },
       "CGC 10": {
         "gradedMedian": 91.25,
-        "medianRatio": 1.21,
+        "medianRatio": 1.22,
         "p25": 1,
         "p75": 1.6,
-        "rawMedian": 75.63,
+        "rawMedian": 70.69,
         "sampleSize": 58
       },
       "CGC 9": {
-        "gradedMedian": 42.5,
-        "medianRatio": 0.6,
+        "gradedMedian": 52.83,
+        "medianRatio": 0.59,
         "p25": 0.56,
-        "p75": 0.62,
-        "rawMedian": 73.97,
-        "sampleSize": 10
+        "p75": 0.63,
+        "rawMedian": 75.48,
+        "sampleSize": 14
       },
       "CGC 9.5": {
-        "gradedMedian": 50,
-        "medianRatio": 0.65,
-        "p25": 0.64,
+        "gradedMedian": 44.5,
+        "medianRatio": 0.66,
+        "p25": 0.59,
         "p75": 6.81,
-        "rawMedian": 75.9,
-        "sampleSize": 8
+        "rawMedian": 67.86,
+        "sampleSize": 6
       },
       "PSA 1": {
         "gradedMedian": 131.25,
         "medianRatio": 1.57,
-        "p25": 0.93,
+        "p25": 0.94,
         "p75": 1.9,
         "rawMedian": 65.27,
         "sampleSize": 18
       },
       "PSA 10": {
-        "gradedMedian": 151.16,
-        "medianRatio": 2.19,
-        "p25": 1.64,
+        "gradedMedian": 151.72,
+        "medianRatio": 2.2,
+        "p25": 1.65,
         "p75": 2.88,
-        "rawMedian": 69.28,
-        "sampleSize": 5780
+        "rawMedian": 69.5,
+        "sampleSize": 5852
       },
       "PSA 6": {
         "gradedMedian": 102,
-        "medianRatio": 1.2,
-        "p25": 0.57,
+        "medianRatio": 1.24,
+        "p25": 0.59,
         "p75": 9.91,
-        "rawMedian": 75.9,
+        "rawMedian": 75.48,
         "sampleSize": 8
       },
       "PSA 7": {
         "gradedMedian": 53,
         "medianRatio": 0.79,
         "p25": 0.52,
-        "p75": 0.86,
-        "rawMedian": 83.37,
+        "p75": 0.85,
+        "rawMedian": 83.84,
         "sampleSize": 20
       },
       "PSA 8": {
-        "gradedMedian": 61.43,
+        "gradedMedian": 60,
         "medianRatio": 0.83,
-        "p25": 0.66,
-        "p75": 1.2,
-        "rawMedian": 72.36,
-        "sampleSize": 398
+        "p25": 0.65,
+        "p75": 1.18,
+        "rawMedian": 71.33,
+        "sampleSize": 412
       },
       "PSA 8.5": {
         "gradedMedian": 74.5,
         "medianRatio": 0.98,
         "p25": 0.69,
         "p75": 1.08,
-        "rawMedian": 76.06,
+        "rawMedian": 76.12,
         "sampleSize": 6
       },
       "PSA 9": {
-        "gradedMedian": 73.27,
-        "medianRatio": 1.04,
-        "p25": 0.81,
+        "gradedMedian": 73.49,
+        "medianRatio": 1.06,
+        "p25": 0.82,
         "p75": 1.34,
-        "rawMedian": 68.83,
-        "sampleSize": 3876
+        "rawMedian": 68.85,
+        "sampleSize": 3906
       },
       "SGC 10": {
-        "gradedMedian": 100,
-        "medianRatio": 1.44,
+        "gradedMedian": 101.5,
+        "medianRatio": 1.4,
         "p25": 0.96,
         "p75": 1.77,
-        "rawMedian": 70.77,
-        "sampleSize": 506
+        "rawMedian": 70.98,
+        "sampleSize": 500
       },
       "SGC 9": {
         "gradedMedian": 57.5,
-        "medianRatio": 0.75,
-        "p25": 0.64,
-        "p75": 0.99,
-        "rawMedian": 80.13,
-        "sampleSize": 82
+        "medianRatio": 0.76,
+        "p25": 0.65,
+        "p75": 1.05,
+        "rawMedian": 78.66,
+        "sampleSize": 88
       },
       "SGC 9.5": {
         "gradedMedian": 65,
-        "medianRatio": 0.93,
-        "p25": 0.73,
-        "p75": 1.21,
-        "rawMedian": 73.01,
-        "sampleSize": 222
+        "medianRatio": 0.91,
+        "p25": 0.74,
+        "p75": 1.16,
+        "rawMedian": 73.21,
+        "sampleSize": 210
       }
     },
     "$500-999": {
       "BGS 10": {
-        "gradedMedian": 1503.03,
-        "medianRatio": 2.13,
-        "p25": 1.8,
-        "p75": 5.13,
-        "rawMedian": 693.74,
-        "sampleSize": 26
+        "gradedMedian": 2035.1,
+        "medianRatio": 2.29,
+        "p25": 1.92,
+        "p75": 5.07,
+        "rawMedian": 700.13,
+        "sampleSize": 22
       },
       "BGS 9": {
-        "gradedMedian": 485.33,
+        "gradedMedian": 555.84,
         "medianRatio": 0.86,
-        "p25": 0.74,
-        "p75": 0.88,
-        "rawMedian": 565.46,
-        "sampleSize": 18
+        "p25": 0.76,
+        "p75": 0.91,
+        "rawMedian": 595.05,
+        "sampleSize": 22
       },
       "BGS 9.5": {
-        "gradedMedian": 654.99,
-        "medianRatio": 0.97,
-        "p25": 0.79,
-        "p75": 1.19,
+        "gradedMedian": 750,
+        "medianRatio": 0.95,
+        "p25": 0.78,
+        "p75": 1.28,
         "rawMedian": 687.01,
         "sampleSize": 80
       },
       "PSA 1": {
         "gradedMedian": 387.97,
-        "medianRatio": 0.64,
-        "p25": 0.5,
+        "medianRatio": 0.63,
+        "p25": 0.54,
         "p75": 6.06,
-        "rawMedian": 605.46,
+        "rawMedian": 611.03,
         "sampleSize": 6
       },
       "PSA 10": {
-        "gradedMedian": 986.38,
-        "medianRatio": 1.51,
+        "gradedMedian": 1002.73,
+        "medianRatio": 1.53,
         "p25": 1.03,
-        "p75": 2.05,
-        "rawMedian": 660,
-        "sampleSize": 918
+        "p75": 2.07,
+        "rawMedian": 661.75,
+        "sampleSize": 920
       },
       "PSA 7": {
         "gradedMedian": 598.13,
@@ -9084,45 +9132,45 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       },
       "PSA 8": {
         "gradedMedian": 446.33,
-        "medianRatio": 0.64,
+        "medianRatio": 0.63,
         "p25": 0.59,
-        "p75": 0.78,
-        "rawMedian": 683.92,
-        "sampleSize": 46
+        "p75": 0.75,
+        "rawMedian": 669.71,
+        "sampleSize": 48
       },
       "PSA 9": {
-        "gradedMedian": 555.61,
-        "medianRatio": 0.84,
+        "gradedMedian": 561.33,
+        "medianRatio": 0.86,
         "p25": 0.67,
         "p75": 1.03,
-        "rawMedian": 671.09,
-        "sampleSize": 488
+        "rawMedian": 668.86,
+        "sampleSize": 476
       },
       "SGC 10": {
         "gradedMedian": 582.5,
         "medianRatio": 0.89,
-        "p25": 0.67,
-        "p75": 1.3,
-        "rawMedian": 709.91,
-        "sampleSize": 64
+        "p25": 0.65,
+        "p75": 1.28,
+        "rawMedian": 707.33,
+        "sampleSize": 60
       },
       "SGC 9.5": {
         "gradedMedian": 540.83,
         "medianRatio": 0.74,
         "p25": 0.69,
-        "p75": 1.06,
+        "p75": 0.89,
         "rawMedian": 760.5,
-        "sampleSize": 38
+        "sampleSize": 34
       }
     },
     "Under $25": {
       "BGS 10": {
         "gradedMedian": 50.11,
-        "medianRatio": 4.72,
+        "medianRatio": 4.68,
         "p25": 2.94,
-        "p75": 7.77,
-        "rawMedian": 10.36,
-        "sampleSize": 324
+        "p75": 8.14,
+        "rawMedian": 10.01,
+        "sampleSize": 326
       },
       "BGS 7.5": {
         "gradedMedian": 13.1,
@@ -9133,164 +9181,164 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "sampleSize": 8
       },
       "BGS 8": {
-        "gradedMedian": 12.54,
-        "medianRatio": 1.06,
-        "p25": 0.74,
-        "p75": 1.94,
-        "rawMedian": 16.88,
-        "sampleSize": 12
+        "gradedMedian": 15.27,
+        "medianRatio": 1.67,
+        "p25": 0.76,
+        "p75": 2.2,
+        "rawMedian": 10.02,
+        "sampleSize": 14
       },
       "BGS 8.5": {
-        "gradedMedian": 15.03,
-        "medianRatio": 1.01,
+        "gradedMedian": 17.2,
+        "medianRatio": 1.61,
         "p25": 0.69,
-        "p75": 2.33,
-        "rawMedian": 9.04,
-        "sampleSize": 54
+        "p75": 3.16,
+        "rawMedian": 8.56,
+        "sampleSize": 62
       },
       "BGS 9": {
-        "gradedMedian": 14.73,
-        "medianRatio": 1.57,
-        "p25": 0.97,
-        "p75": 2.38,
-        "rawMedian": 8.61,
-        "sampleSize": 308
+        "gradedMedian": 14.49,
+        "medianRatio": 1.61,
+        "p25": 1,
+        "p75": 2.58,
+        "rawMedian": 8.21,
+        "sampleSize": 324
       },
       "BGS 9.5": {
         "gradedMedian": 21.78,
-        "medianRatio": 2.41,
+        "medianRatio": 2.39,
         "p25": 1.58,
-        "p75": 4.2,
-        "rawMedian": 8.7,
-        "sampleSize": 1174
+        "p75": 4.03,
+        "rawMedian": 8.47,
+        "sampleSize": 1170
       },
       "CGC 10": {
-        "gradedMedian": 22.8,
-        "medianRatio": 3.7,
-        "p25": 2.37,
-        "p75": 5.53,
+        "gradedMedian": 22.87,
+        "medianRatio": 3.72,
+        "p25": 2.42,
+        "p75": 5.63,
         "rawMedian": 5.76,
-        "sampleSize": 2126
+        "sampleSize": 2178
       },
       "CGC 5": {
         "gradedMedian": 15,
         "medianRatio": 4.44,
-        "p25": 0.81,
+        "p25": 0.82,
         "p75": 22.19,
-        "rawMedian": 4.91,
+        "rawMedian": 4.89,
         "sampleSize": 8
       },
       "CGC 6": {
         "gradedMedian": 4,
-        "medianRatio": 2.11,
-        "p25": 1.96,
-        "p75": 2.14,
-        "rawMedian": 1.9,
+        "medianRatio": 2.12,
+        "p25": 1.97,
+        "p75": 2.15,
+        "rawMedian": 1.88,
         "sampleSize": 6
       },
       "CGC 7": {
         "gradedMedian": 5.5,
-        "medianRatio": 1.51,
-        "p25": 1.03,
-        "p75": 2.9,
+        "medianRatio": 1.5,
+        "p25": 1.05,
+        "p75": 2.92,
         "rawMedian": 3.1,
         "sampleSize": 30
       },
       "CGC 7.5": {
-        "gradedMedian": 15,
-        "medianRatio": 1.44,
-        "p25": 0.96,
-        "p75": 1.97,
-        "rawMedian": 15.67,
-        "sampleSize": 8
+        "gradedMedian": 9.99,
+        "medianRatio": 1.21,
+        "p25": 1.14,
+        "p75": 1.32,
+        "rawMedian": 8.77,
+        "sampleSize": 12
       },
       "CGC 8": {
         "gradedMedian": 6.8,
         "medianRatio": 1.92,
         "p25": 1.13,
         "p75": 2.67,
-        "rawMedian": 3.4,
-        "sampleSize": 106
+        "rawMedian": 3.35,
+        "sampleSize": 108
       },
       "CGC 8.5": {
-        "gradedMedian": 7.72,
-        "medianRatio": 2.06,
-        "p25": 1.04,
-        "p75": 2.91,
-        "rawMedian": 4.84,
+        "gradedMedian": 7,
+        "medianRatio": 1.8,
+        "p25": 0.86,
+        "p75": 2.82,
+        "rawMedian": 4.74,
         "sampleSize": 60
       },
       "CGC 9": {
-        "gradedMedian": 9.27,
+        "gradedMedian": 9.4,
         "medianRatio": 1.9,
-        "p25": 1.17,
-        "p75": 3.26,
-        "rawMedian": 5.01,
-        "sampleSize": 820
+        "p25": 1.14,
+        "p75": 3.11,
+        "rawMedian": 4.98,
+        "sampleSize": 844
       },
       "CGC 9.5": {
         "gradedMedian": 12.43,
-        "medianRatio": 1.87,
-        "p25": 1.16,
-        "p75": 2.91,
-        "rawMedian": 5.83,
-        "sampleSize": 376
+        "medianRatio": 1.92,
+        "p25": 1.24,
+        "p75": 2.88,
+        "rawMedian": 5.85,
+        "sampleSize": 380
       },
       "CSG 10": {
-        "gradedMedian": 19.99,
-        "medianRatio": 4.88,
+        "gradedMedian": 21.76,
+        "medianRatio": 4.86,
         "p25": 1.18,
-        "p75": 5.57,
-        "rawMedian": 4.46,
-        "sampleSize": 10
+        "p75": 25.26,
+        "rawMedian": 4.71,
+        "sampleSize": 8
       },
       "CSG 9": {
         "gradedMedian": 3.67,
         "medianRatio": 0.66,
-        "p25": 0.65,
+        "p25": 0.64,
         "p75": 1.39,
         "rawMedian": 4.3,
         "sampleSize": 6
       },
       "HGA 9": {
-        "gradedMedian": 7.98,
-        "medianRatio": 1.04,
-        "p25": 0.98,
-        "p75": 1.17,
-        "rawMedian": 7.66,
+        "gradedMedian": 8.15,
+        "medianRatio": 1.08,
+        "p25": 1,
+        "p75": 1.18,
+        "rawMedian": 7.55,
         "sampleSize": 22
       },
       "HGA 9.5": {
         "gradedMedian": 7.11,
-        "medianRatio": 0.93,
-        "p25": 0.87,
-        "p75": 0.93,
+        "medianRatio": 0.94,
+        "p25": 0.88,
+        "p75": 0.94,
         "rawMedian": 7.84,
         "sampleSize": 10
       },
       "PSA 1": {
-        "gradedMedian": 14,
-        "medianRatio": 1.6,
+        "gradedMedian": 13,
+        "medianRatio": 1.5,
         "p25": 0.89,
-        "p75": 3.51,
-        "rawMedian": 8.12,
-        "sampleSize": 158
+        "p75": 3.12,
+        "rawMedian": 7.42,
+        "sampleSize": 176
       },
       "PSA 10": {
-        "gradedMedian": 36.31,
-        "medianRatio": 5.69,
-        "p25": 3.38,
+        "gradedMedian": 36.41,
+        "medianRatio": 5.71,
+        "p25": 3.39,
         "p75": 9.62,
-        "rawMedian": 6.28,
-        "sampleSize": 36730
+        "rawMedian": 6.27,
+        "sampleSize": 36788
       },
       "PSA 2": {
         "gradedMedian": 9.77,
-        "medianRatio": 1.21,
-        "p25": 0.76,
+        "medianRatio": 1.18,
+        "p25": 0.75,
         "p75": 4.2,
-        "rawMedian": 5.89,
-        "sampleSize": 100
+        "rawMedian": 5.88,
+        "sampleSize": 102
       },
       "PSA 3": {
         "gradedMedian": 26.42,
@@ -9305,79 +9353,79 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "medianRatio": 3.13,
         "p25": 1.32,
         "p75": 6.32,
-        "rawMedian": 5.54,
+        "rawMedian": 5.62,
         "sampleSize": 42
       },
       "PSA 5": {
-        "gradedMedian": 11.93,
+        "gradedMedian": 10.4,
         "medianRatio": 1.5,
-        "p25": 1.15,
-        "p75": 3.65,
-        "rawMedian": 4.56,
-        "sampleSize": 72
+        "p25": 1.19,
+        "p75": 3.61,
+        "rawMedian": 4.4,
+        "sampleSize": 66
       },
       "PSA 6": {
         "gradedMedian": 8.5,
         "medianRatio": 1.07,
         "p25": 0.78,
-        "p75": 1.96,
-        "rawMedian": 7.59,
-        "sampleSize": 310
+        "p75": 1.93,
+        "rawMedian": 7.61,
+        "sampleSize": 308
       },
       "PSA 7": {
-        "gradedMedian": 9.25,
-        "medianRatio": 1.25,
-        "p25": 0.79,
-        "p75": 2,
-        "rawMedian": 7.88,
-        "sampleSize": 604
+        "gradedMedian": 8.81,
+        "medianRatio": 1.19,
+        "p25": 0.76,
+        "p75": 1.94,
+        "rawMedian": 7.91,
+        "sampleSize": 618
       },
       "PSA 8": {
         "gradedMedian": 11.5,
         "medianRatio": 1.6,
-        "p25": 1.07,
-        "p75": 2.56,
+        "p25": 1.08,
+        "p75": 2.54,
         "rawMedian": 7,
-        "sampleSize": 4628
+        "sampleSize": 4644
       },
       "PSA 8.5": {
         "gradedMedian": 14.5,
         "medianRatio": 1.88,
         "p25": 1.38,
-        "p75": 2.5,
-        "rawMedian": 8.81,
+        "p75": 2.51,
+        "rawMedian": 8.72,
         "sampleSize": 46
       },
       "PSA 9": {
-        "gradedMedian": 16.67,
+        "gradedMedian": 16.69,
         "medianRatio": 2.4,
-        "p25": 1.55,
-        "p75": 3.88,
-        "rawMedian": 6.89,
-        "sampleSize": 22706
+        "p25": 1.56,
+        "p75": 3.89,
+        "rawMedian": 6.9,
+        "sampleSize": 22764
       },
       "SGC 1": {
         "gradedMedian": 5.64,
-        "medianRatio": 2.12,
+        "medianRatio": 2.13,
         "p25": 1.28,
         "p75": 6.24,
         "rawMedian": 3.83,
         "sampleSize": 16
       },
       "SGC 10": {
-        "gradedMedian": 20.36,
-        "medianRatio": 3.19,
-        "p25": 2.09,
-        "p75": 5.16,
-        "rawMedian": 6.05,
-        "sampleSize": 5864
+        "gradedMedian": 20.41,
+        "medianRatio": 3.22,
+        "p25": 2.08,
+        "p75": 5.19,
+        "rawMedian": 6.03,
+        "sampleSize": 5920
       },
       "SGC 2": {
         "gradedMedian": 12.24,
         "medianRatio": 2.13,
-        "p25": 1.75,
-        "p75": 4.34,
-        "rawMedian": 5.38,
+        "p25": 1.8,
+        "p75": 4.3,
+        "rawMedian": 5.42,
         "sampleSize": 6
       },
       "SGC 3": {
@@ -9390,16 +9438,16 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       },
       "SGC 4": {
         "gradedMedian": 8.88,
-        "medianRatio": 1.59,
+        "medianRatio": 1.51,
         "p25": 0.75,
         "p75": 6.45,
-        "rawMedian": 4.28,
+        "rawMedian": 4.22,
         "sampleSize": 22
       },
       "SGC 5": {
         "gradedMedian": 10.34,
         "medianRatio": 2.62,
-        "p25": 1.44,
+        "p25": 1.48,
         "p75": 4.94,
         "rawMedian": 5.46,
         "sampleSize": 16
@@ -9416,41 +9464,41 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "gradedMedian": 12.5,
         "medianRatio": 1.35,
         "p25": 1,
-        "p75": 1.44,
-        "rawMedian": 9,
+        "p75": 1.43,
+        "rawMedian": 9.04,
         "sampleSize": 12
       },
       "SGC 8": {
         "gradedMedian": 7.5,
-        "medianRatio": 1.07,
-        "p25": 0.72,
-        "p75": 1.9,
-        "rawMedian": 9.09,
-        "sampleSize": 96
+        "medianRatio": 1,
+        "p25": 0.71,
+        "p75": 1.88,
+        "rawMedian": 9.07,
+        "sampleSize": 94
       },
       "SGC 8.5": {
         "gradedMedian": 9.13,
         "medianRatio": 1.51,
         "p25": 0.88,
-        "p75": 2.17,
-        "rawMedian": 7.41,
-        "sampleSize": 150
+        "p75": 2.18,
+        "rawMedian": 7.4,
+        "sampleSize": 152
       },
       "SGC 9": {
-        "gradedMedian": 11.33,
+        "gradedMedian": 11.34,
         "medianRatio": 1.69,
         "p25": 1.12,
-        "p75": 2.81,
-        "rawMedian": 6.12,
-        "sampleSize": 1204
+        "p75": 2.79,
+        "rawMedian": 6.15,
+        "sampleSize": 1212
       },
       "SGC 9.5": {
-        "gradedMedian": 15.32,
-        "medianRatio": 2.25,
+        "gradedMedian": 15.25,
+        "medianRatio": 2.23,
         "p25": 1.47,
-        "p75": 3.5,
-        "rawMedian": 6.64,
-        "sampleSize": 3050
+        "p75": 3.44,
+        "rawMedian": 6.48,
+        "sampleSize": 3030
       }
     }
   },
@@ -9459,7 +9507,7 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       "BGS 9": {
         "gradedMedian": 1771.5,
         "medianRatio": 1.02,
-        "p25": 1.02,
+        "p25": 0.98,
         "p75": 1.11,
         "rawMedian": 1712.5,
         "sampleSize": 5
@@ -9469,24 +9517,24 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "medianRatio": 1.72,
         "p25": 1.41,
         "p75": 1.72,
-        "rawMedian": 1775.84,
+        "rawMedian": 1799.87,
         "sampleSize": 5
       },
       "PSA 10": {
-        "gradedMedian": 3315,
-        "medianRatio": 2.49,
-        "p25": 1.52,
-        "p75": 3.31,
+        "gradedMedian": 3402.92,
+        "medianRatio": 2.46,
+        "p25": 1.65,
+        "p75": 3.36,
         "rawMedian": 1481.28,
-        "sampleSize": 50
+        "sampleSize": 52
       },
       "PSA 8": {
         "gradedMedian": 1263.13,
         "medianRatio": 0.94,
-        "p25": 0.83,
+        "p25": 0.81,
         "p75": 1.59,
-        "rawMedian": 1398.32,
-        "sampleSize": 10
+        "rawMedian": 1290,
+        "sampleSize": 11
       },
       "PSA 9": {
         "gradedMedian": 1608.17,
@@ -9502,79 +9550,79 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "gradedMedian": 584.16,
         "medianRatio": 2.64,
         "p25": 2.62,
-        "p75": 4.83,
+        "p75": 4.36,
         "rawMedian": 202.39,
         "sampleSize": 5
       },
       "BGS 8.5": {
-        "gradedMedian": 186,
+        "gradedMedian": 146,
         "medianRatio": 0.87,
-        "p25": 0.81,
+        "p25": 0.82,
         "p75": 1.35,
         "rawMedian": 173.22,
-        "sampleSize": 6
+        "sampleSize": 7
       },
       "BGS 9": {
         "gradedMedian": 214,
-        "medianRatio": 1.17,
+        "medianRatio": 1.12,
         "p25": 0.94,
         "p75": 1.3,
-        "rawMedian": 176.28,
-        "sampleSize": 22
+        "rawMedian": 173.5,
+        "sampleSize": 21
       },
       "BGS 9.5": {
-        "gradedMedian": 303.79,
-        "medianRatio": 1.99,
-        "p25": 1.43,
-        "p75": 2.94,
+        "gradedMedian": 292.38,
+        "medianRatio": 2.01,
+        "p25": 1.47,
+        "p75": 2.75,
         "rawMedian": 148.5,
-        "sampleSize": 35
+        "sampleSize": 37
       },
       "PSA 10": {
-        "gradedMedian": 432.94,
-        "medianRatio": 2.82,
-        "p25": 2.01,
-        "p75": 4.41,
+        "gradedMedian": 439.5,
+        "medianRatio": 2.84,
+        "p25": 2.04,
+        "p75": 4.51,
         "rawMedian": 149.86,
-        "sampleSize": 512
+        "sampleSize": 522
       },
       "PSA 6": {
         "gradedMedian": 149.43,
         "medianRatio": 0.77,
         "p25": 0.62,
-        "p75": 0.84,
-        "rawMedian": 189.16,
+        "p75": 0.81,
+        "rawMedian": 188.69,
         "sampleSize": 9
       },
       "PSA 7": {
         "gradedMedian": 148.16,
-        "medianRatio": 0.87,
+        "medianRatio": 0.85,
         "p25": 0.73,
         "p75": 1.08,
-        "rawMedian": 189.16,
+        "rawMedian": 188.69,
         "sampleSize": 22
       },
       "PSA 8": {
-        "gradedMedian": 125,
-        "medianRatio": 0.82,
-        "p25": 0.69,
-        "p75": 1.06,
-        "rawMedian": 150.33,
-        "sampleSize": 80
+        "gradedMedian": 124.62,
+        "medianRatio": 0.79,
+        "p25": 0.68,
+        "p75": 1.11,
+        "rawMedian": 145.75,
+        "sampleSize": 79
       },
       "PSA 9": {
-        "gradedMedian": 176.25,
-        "medianRatio": 1.15,
-        "p25": 0.94,
+        "gradedMedian": 177.18,
+        "medianRatio": 1.16,
+        "p25": 0.95,
         "p75": 1.49,
-        "rawMedian": 149.05,
-        "sampleSize": 413
+        "rawMedian": 150.1,
+        "sampleSize": 416
       },
       "SGC 10": {
         "gradedMedian": 257.5,
-        "medianRatio": 1.93,
-        "p25": 1.08,
-        "p75": 2.46,
+        "medianRatio": 1.95,
+        "p25": 1.15,
+        "p75": 2.48,
         "rawMedian": 151.73,
         "sampleSize": 18
       },
@@ -9588,9 +9636,9 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       },
       "SGC 9.5": {
         "gradedMedian": 132.5,
-        "medianRatio": 0.92,
+        "medianRatio": 0.93,
         "p25": 0.8,
-        "p75": 1.24,
+        "p75": 1.25,
         "rawMedian": 157.57,
         "sampleSize": 13
       }
@@ -9600,147 +9648,147 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "gradedMedian": 7796,
         "medianRatio": 2.16,
         "p25": 1.77,
-        "p75": 2.47,
-        "rawMedian": 3150,
+        "p75": 2.39,
+        "rawMedian": 3266.67,
         "sampleSize": 16
       },
       "PSA 9": {
         "gradedMedian": 2382.45,
-        "medianRatio": 0.84,
-        "p25": 0.82,
-        "p75": 1.17,
+        "medianRatio": 0.89,
+        "p25": 0.83,
+        "p75": 1.21,
         "rawMedian": 3042,
         "sampleSize": 8
       }
     },
     "$25-49": {
       "BGS 10": {
-        "gradedMedian": 243,
-        "medianRatio": 8.72,
+        "gradedMedian": 541.03,
+        "medianRatio": 13.43,
         "p25": 8.72,
-        "p75": 13.39,
-        "rawMedian": 27.85,
-        "sampleSize": 5
+        "p75": 32.49,
+        "rawMedian": 30.84,
+        "sampleSize": 8
       },
       "BGS 8.5": {
         "gradedMedian": 31.84,
-        "medianRatio": 0.81,
+        "medianRatio": 0.82,
         "p25": 0.7,
-        "p75": 1.3,
-        "rawMedian": 27.07,
-        "sampleSize": 7
+        "p75": 1.1,
+        "rawMedian": 31.74,
+        "sampleSize": 6
       },
       "BGS 9": {
-        "gradedMedian": 45,
-        "medianRatio": 1.31,
-        "p25": 0.99,
-        "p75": 1.63,
+        "gradedMedian": 49.11,
+        "medianRatio": 1.38,
+        "p25": 1.01,
+        "p75": 1.73,
         "rawMedian": 32.25,
-        "sampleSize": 30
+        "sampleSize": 31
       },
       "BGS 9.5": {
         "gradedMedian": 76.88,
         "medianRatio": 2.2,
         "p25": 1.44,
-        "p75": 3.52,
+        "p75": 3.89,
         "rawMedian": 32.25,
-        "sampleSize": 61
+        "sampleSize": 63
       },
       "CGC 10": {
-        "gradedMedian": 60.1,
-        "medianRatio": 1.66,
+        "gradedMedian": 62.08,
+        "medianRatio": 1.73,
         "p25": 1.34,
-        "p75": 2.66,
-        "rawMedian": 31.45,
-        "sampleSize": 31
+        "p75": 2.59,
+        "rawMedian": 31.05,
+        "sampleSize": 34
       },
       "CGC 9": {
         "gradedMedian": 25.5,
         "medianRatio": 0.87,
         "p25": 0.72,
         "p75": 1.25,
-        "rawMedian": 31.45,
+        "rawMedian": 31.74,
         "sampleSize": 14
       },
       "PSA 10": {
-        "gradedMedian": 135.77,
-        "medianRatio": 3.95,
-        "p25": 2.79,
-        "p75": 6.18,
+        "gradedMedian": 138.63,
+        "medianRatio": 4.01,
+        "p25": 2.81,
+        "p75": 6.42,
         "rawMedian": 33.49,
-        "sampleSize": 888
+        "sampleSize": 893
       },
       "PSA 6": {
         "gradedMedian": 23.34,
         "medianRatio": 0.7,
         "p25": 0.53,
-        "p75": 0.81,
-        "rawMedian": 34.79,
-        "sampleSize": 10
+        "p75": 0.82,
+        "rawMedian": 34.63,
+        "sampleSize": 12
       },
       "PSA 7": {
         "gradedMedian": 25.3,
         "medianRatio": 0.7,
         "p25": 0.59,
         "p75": 1.11,
-        "rawMedian": 31.45,
+        "rawMedian": 31.74,
         "sampleSize": 20
       },
       "PSA 8": {
-        "gradedMedian": 31.28,
-        "medianRatio": 0.93,
+        "gradedMedian": 32.72,
+        "medianRatio": 0.95,
         "p25": 0.7,
-        "p75": 1.3,
-        "rawMedian": 33.1,
+        "p75": 1.31,
+        "rawMedian": 33.28,
         "sampleSize": 193
       },
       "PSA 9": {
-        "gradedMedian": 53.5,
+        "gradedMedian": 54,
         "medianRatio": 1.55,
         "p25": 1.16,
-        "p75": 2.22,
-        "rawMedian": 34.07,
-        "sampleSize": 735
+        "p75": 2.23,
+        "rawMedian": 33.9,
+        "sampleSize": 738
       },
       "SGC 10": {
-        "gradedMedian": 73.59,
+        "gradedMedian": 71.45,
         "medianRatio": 2.16,
-        "p25": 1.6,
-        "p75": 2.98,
+        "p25": 1.58,
+        "p75": 2.99,
         "rawMedian": 33.71,
-        "sampleSize": 83
+        "sampleSize": 80
       },
       "SGC 8": {
         "gradedMedian": 31,
-        "medianRatio": 0.63,
+        "medianRatio": 0.62,
         "p25": 0.62,
-        "p75": 1.08,
-        "rawMedian": 30.74,
+        "p75": 1.02,
+        "rawMedian": 31.74,
         "sampleSize": 5
       },
       "SGC 8.5": {
         "gradedMedian": 19.5,
         "medianRatio": 0.69,
         "p25": 0.52,
-        "p75": 0.73,
-        "rawMedian": 29.82,
-        "sampleSize": 6
+        "p75": 0.83,
+        "rawMedian": 29.47,
+        "sampleSize": 7
       },
       "SGC 9": {
-        "gradedMedian": 37,
-        "medianRatio": 1.05,
-        "p25": 0.96,
-        "p75": 1.51,
-        "rawMedian": 30.88,
-        "sampleSize": 45
+        "gradedMedian": 35.82,
+        "medianRatio": 1.04,
+        "p25": 0.95,
+        "p75": 1.48,
+        "rawMedian": 32.45,
+        "sampleSize": 42
       },
       "SGC 9.5": {
         "gradedMedian": 52.5,
-        "medianRatio": 1.62,
+        "medianRatio": 1.63,
         "p25": 1.3,
-        "p75": 2.05,
-        "rawMedian": 33.49,
-        "sampleSize": 71
+        "p75": 2.01,
+        "rawMedian": 33.28,
+        "sampleSize": 74
       }
     },
     "$250-499": {
@@ -9753,23 +9801,23 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "sampleSize": 9
       },
       "BGS 9.5": {
-        "gradedMedian": 783.5,
-        "medianRatio": 2,
+        "gradedMedian": 700,
+        "medianRatio": 1.95,
         "p25": 1.31,
         "p75": 3.02,
         "rawMedian": 349.31,
-        "sampleSize": 18
+        "sampleSize": 17
       },
       "PSA 10": {
-        "gradedMedian": 915,
-        "medianRatio": 2.73,
-        "p25": 2.04,
-        "p75": 4.47,
+        "gradedMedian": 922,
+        "medianRatio": 2.8,
+        "p25": 1.97,
+        "p75": 4.46,
         "rawMedian": 324.29,
-        "sampleSize": 173
+        "sampleSize": 174
       },
       "PSA 7": {
-        "gradedMedian": 819.33,
+        "gradedMedian": 775,
         "medianRatio": 2.2,
         "p25": 1.16,
         "p75": 3.43,
@@ -9785,12 +9833,12 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "sampleSize": 33
       },
       "PSA 9": {
-        "gradedMedian": 376.01,
-        "medianRatio": 1.12,
+        "gradedMedian": 381.5,
+        "medianRatio": 1.13,
         "p25": 0.89,
-        "p75": 1.42,
+        "p75": 1.49,
         "rawMedian": 330,
-        "sampleSize": 146
+        "sampleSize": 147
       },
       "SGC 9.5": {
         "gradedMedian": 690,
@@ -9814,7 +9862,7 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
     "$50-99": {
       "BGS 10": {
         "gradedMedian": 448,
-        "medianRatio": 5.07,
+        "medianRatio": 5.19,
         "p25": 2.38,
         "p75": 7.05,
         "rawMedian": 62.64,
@@ -9823,81 +9871,81 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       "BGS 9": {
         "gradedMedian": 72.5,
         "medianRatio": 1.02,
-        "p25": 0.88,
+        "p25": 0.91,
         "p75": 1.12,
-        "rawMedian": 69.72,
-        "sampleSize": 26
+        "rawMedian": 74.91,
+        "sampleSize": 24
       },
       "BGS 9.5": {
         "gradedMedian": 165,
         "medianRatio": 2.4,
         "p25": 1.81,
         "p75": 3.47,
-        "rawMedian": 66.7,
+        "rawMedian": 66.92,
         "sampleSize": 32
       },
       "CGC 10": {
-        "gradedMedian": 120,
-        "medianRatio": 1.59,
-        "p25": 1.34,
-        "p75": 1.86,
+        "gradedMedian": 110,
+        "medianRatio": 1.58,
+        "p25": 0.83,
+        "p75": 1.77,
         "rawMedian": 70.5,
-        "sampleSize": 16
+        "sampleSize": 15
       },
       "CGC 9": {
-        "gradedMedian": 65.1,
-        "medianRatio": 0.82,
+        "gradedMedian": 63.01,
+        "medianRatio": 0.83,
         "p25": 0.78,
         "p75": 1.09,
-        "rawMedian": 85.65,
+        "rawMedian": 85.52,
         "sampleSize": 8
       },
       "PSA 10": {
-        "gradedMedian": 246.83,
-        "medianRatio": 3.41,
-        "p25": 2.45,
-        "p75": 5.02,
-        "rawMedian": 68.87,
-        "sampleSize": 610
+        "gradedMedian": 244.67,
+        "medianRatio": 3.4,
+        "p25": 2.46,
+        "p75": 4.99,
+        "rawMedian": 68.7,
+        "sampleSize": 604
       },
       "PSA 7": {
         "gradedMedian": 59.72,
-        "medianRatio": 0.77,
+        "medianRatio": 0.76,
         "p25": 0.67,
         "p75": 1.25,
-        "rawMedian": 58.67,
-        "sampleSize": 15
+        "rawMedian": 72.7,
+        "sampleSize": 16
       },
       "PSA 8": {
         "gradedMedian": 65.97,
-        "medianRatio": 0.85,
+        "medianRatio": 0.84,
         "p25": 0.74,
         "p75": 1.27,
-        "rawMedian": 70.17,
-        "sampleSize": 114
+        "rawMedian": 70.65,
+        "sampleSize": 111
       },
       "PSA 9": {
         "gradedMedian": 92.5,
         "medianRatio": 1.3,
         "p25": 1.04,
         "p75": 1.75,
-        "rawMedian": 69.94,
-        "sampleSize": 491
+        "rawMedian": 69.98,
+        "sampleSize": 481
       },
       "SGC 10": {
         "gradedMedian": 160,
         "medianRatio": 2.35,
-        "p25": 1.72,
+        "p25": 1.83,
         "p75": 2.76,
-        "rawMedian": 68.2,
-        "sampleSize": 50
+        "rawMedian": 69.06,
+        "sampleSize": 52
       },
       "SGC 8.5": {
         "gradedMedian": 52.5,
         "medianRatio": 0.75,
         "p25": 0.59,
         "p75": 0.76,
-        "rawMedian": 76.41,
+        "rawMedian": 76.09,
         "sampleSize": 7
       },
       "SGC 9": {
@@ -9905,16 +9953,16 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "medianRatio": 0.96,
         "p25": 0.83,
         "p75": 1.08,
-        "rawMedian": 73.48,
+        "rawMedian": 73.6,
         "sampleSize": 27
       },
       "SGC 9.5": {
-        "gradedMedian": 85.9,
-        "medianRatio": 1.24,
-        "p25": 0.95,
-        "p75": 1.58,
-        "rawMedian": 67.08,
-        "sampleSize": 45
+        "gradedMedian": 81.26,
+        "medianRatio": 1.15,
+        "p25": 0.93,
+        "p75": 1.57,
+        "rawMedian": 68.05,
+        "sampleSize": 43
       }
     },
     "$500-999": {
@@ -9927,20 +9975,20 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "sampleSize": 10
       },
       "PSA 10": {
-        "gradedMedian": 1649.11,
-        "medianRatio": 2.4,
-        "p25": 1.74,
-        "p75": 3.68,
-        "rawMedian": 643.5,
-        "sampleSize": 73
+        "gradedMedian": 1650.4,
+        "medianRatio": 2.43,
+        "p25": 1.76,
+        "p75": 3.76,
+        "rawMedian": 642.34,
+        "sampleSize": 77
       },
       "PSA 8": {
-        "gradedMedian": 1038.86,
-        "medianRatio": 1.35,
-        "p25": 0.92,
+        "gradedMedian": 926.16,
+        "medianRatio": 1.19,
+        "p25": 0.81,
         "p75": 3.23,
         "rawMedian": 731.15,
-        "sampleSize": 9
+        "sampleSize": 11
       },
       "PSA 9": {
         "gradedMedian": 715,
@@ -9953,83 +10001,83 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
     },
     "Under $25": {
       "BGS 10": {
-        "gradedMedian": 104.5,
-        "medianRatio": 9.46,
-        "p25": 8.3,
-        "p75": 40.84,
-        "rawMedian": 7.04,
-        "sampleSize": 28
+        "gradedMedian": 78.6,
+        "medianRatio": 9.09,
+        "p25": 7.54,
+        "p75": 12.71,
+        "rawMedian": 7.03,
+        "sampleSize": 25
       },
       "BGS 8": {
         "gradedMedian": 33.98,
-        "medianRatio": 2.71,
+        "medianRatio": 2.74,
         "p25": 1.14,
-        "p75": 6.32,
+        "p75": 6.28,
         "rawMedian": 9.8,
         "sampleSize": 6
       },
       "BGS 8.5": {
-        "gradedMedian": 13.25,
-        "medianRatio": 1.38,
+        "gradedMedian": 14.5,
+        "medianRatio": 1.57,
         "p25": 0.92,
-        "p75": 2.68,
+        "p75": 2.67,
         "rawMedian": 7.14,
-        "sampleSize": 25
+        "sampleSize": 27
       },
       "BGS 9": {
-        "gradedMedian": 15.99,
-        "medianRatio": 1.98,
-        "p25": 1.39,
-        "p75": 3.33,
-        "rawMedian": 6.48,
-        "sampleSize": 149
+        "gradedMedian": 16.29,
+        "medianRatio": 2.09,
+        "p25": 1.38,
+        "p75": 3.4,
+        "rawMedian": 7.03,
+        "sampleSize": 155
       },
       "BGS 9.5": {
         "gradedMedian": 20.75,
-        "medianRatio": 3.2,
+        "medianRatio": 3.29,
         "p25": 2.27,
-        "p75": 4.59,
-        "rawMedian": 6.09,
-        "sampleSize": 307
+        "p75": 4.71,
+        "rawMedian": 6.4,
+        "sampleSize": 313
       },
       "CGC 10": {
-        "gradedMedian": 25,
-        "medianRatio": 4.5,
-        "p25": 2.76,
-        "p75": 6.91,
-        "rawMedian": 5.27,
-        "sampleSize": 405
+        "gradedMedian": 25.25,
+        "medianRatio": 4.39,
+        "p25": 2.68,
+        "p75": 6.97,
+        "rawMedian": 5.48,
+        "sampleSize": 423
       },
       "CGC 8": {
         "gradedMedian": 9.7,
-        "medianRatio": 1.24,
-        "p25": 0.71,
+        "medianRatio": 1.27,
+        "p25": 0.74,
         "p75": 1.92,
-        "rawMedian": 7.08,
+        "rawMedian": 7.06,
         "sampleSize": 17
       },
       "CGC 8.5": {
-        "gradedMedian": 6.6,
-        "medianRatio": 1.2,
+        "gradedMedian": 7.04,
+        "medianRatio": 1.22,
         "p25": 0.96,
         "p75": 1.68,
-        "rawMedian": 5.07,
-        "sampleSize": 29
+        "rawMedian": 5.35,
+        "sampleSize": 30
       },
       "CGC 9": {
-        "gradedMedian": 12.09,
-        "medianRatio": 1.96,
-        "p25": 1.27,
-        "p75": 2.71,
-        "rawMedian": 6.21,
-        "sampleSize": 164
+        "gradedMedian": 12.26,
+        "medianRatio": 1.95,
+        "p25": 1.28,
+        "p75": 2.69,
+        "rawMedian": 6.28,
+        "sampleSize": 166
       },
       "CGC 9.5": {
-        "gradedMedian": 10,
+        "gradedMedian": 9.5,
         "medianRatio": 1.88,
-        "p25": 1.4,
-        "p75": 2.98,
-        "rawMedian": 4.66,
+        "p25": 1.38,
+        "p75": 2.81,
+        "rawMedian": 4.63,
         "sampleSize": 72
       },
       "HGA 9": {
@@ -10037,80 +10085,80 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "medianRatio": 2.23,
         "p25": 1.39,
         "p75": 2.93,
-        "rawMedian": 4.66,
+        "rawMedian": 4.56,
         "sampleSize": 23
       },
       "PSA 10": {
-        "gradedMedian": 42.03,
-        "medianRatio": 7.98,
-        "p25": 5.13,
+        "gradedMedian": 42.14,
+        "medianRatio": 7.99,
+        "p25": 5.14,
         "p75": 12.73,
-        "rawMedian": 5.06,
-        "sampleSize": 6238
+        "rawMedian": 5.05,
+        "sampleSize": 6272
       },
       "PSA 4": {
         "gradedMedian": 12.25,
-        "medianRatio": 1.38,
-        "p25": 1.19,
-        "p75": 1.75,
-        "rawMedian": 8.84,
+        "medianRatio": 1.39,
+        "p25": 1.2,
+        "p75": 1.78,
+        "rawMedian": 8.71,
         "sampleSize": 5
       },
       "PSA 5": {
         "gradedMedian": 9.59,
         "medianRatio": 1.03,
-        "p25": 0.83,
+        "p25": 0.81,
         "p75": 2.49,
-        "rawMedian": 8.68,
-        "sampleSize": 21
+        "rawMedian": 8.99,
+        "sampleSize": 20
       },
       "PSA 6": {
-        "gradedMedian": 8.9,
-        "medianRatio": 1.35,
-        "p25": 0.85,
-        "p75": 2.12,
-        "rawMedian": 6.93,
-        "sampleSize": 80
+        "gradedMedian": 8.62,
+        "medianRatio": 1.23,
+        "p25": 0.86,
+        "p75": 2.01,
+        "rawMedian": 6.95,
+        "sampleSize": 81
       },
       "PSA 7": {
         "gradedMedian": 10.19,
-        "medianRatio": 1.31,
+        "medianRatio": 1.3,
         "p25": 0.83,
         "p75": 1.8,
-        "rawMedian": 8.94,
-        "sampleSize": 158
+        "rawMedian": 8.96,
+        "sampleSize": 162
       },
       "PSA 8": {
-        "gradedMedian": 12.85,
+        "gradedMedian": 12.87,
         "medianRatio": 1.7,
         "p25": 1.1,
-        "p75": 2.68,
-        "rawMedian": 7.83,
-        "sampleSize": 1054
+        "p75": 2.67,
+        "rawMedian": 7.81,
+        "sampleSize": 1062
       },
       "PSA 8.5": {
-        "gradedMedian": 17.67,
-        "medianRatio": 1.68,
-        "p25": 1.05,
+        "gradedMedian": 15,
+        "medianRatio": 2.1,
+        "p25": 1.04,
         "p75": 4.21,
-        "rawMedian": 9.95,
-        "sampleSize": 14
+        "rawMedian": 7.81,
+        "sampleSize": 15
       },
       "PSA 9": {
-        "gradedMedian": 18.49,
-        "medianRatio": 3.01,
+        "gradedMedian": 18.55,
+        "medianRatio": 3.03,
         "p25": 1.96,
-        "p75": 4.85,
-        "rawMedian": 5.68,
-        "sampleSize": 4355
+        "p75": 4.86,
+        "rawMedian": 5.69,
+        "sampleSize": 4393
       },
       "SGC 10": {
-        "gradedMedian": 24.56,
+        "gradedMedian": 24.99,
         "medianRatio": 3.94,
         "p25": 2.64,
-        "p75": 5.89,
-        "rawMedian": 6.41,
-        "sampleSize": 564
+        "p75": 6.06,
+        "rawMedian": 6.57,
+        "sampleSize": 576
       },
       "SGC 7": {
         "gradedMedian": 8.55,
@@ -10122,35 +10170,35 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       },
       "SGC 8": {
         "gradedMedian": 11.85,
-        "medianRatio": 1.6,
-        "p25": 0.94,
+        "medianRatio": 1.59,
+        "p25": 0.96,
         "p75": 1.71,
-        "rawMedian": 8.68,
+        "rawMedian": 8.67,
         "sampleSize": 14
       },
       "SGC 8.5": {
-        "gradedMedian": 9.75,
+        "gradedMedian": 9.85,
         "medianRatio": 1.4,
-        "p25": 0.81,
+        "p25": 0.71,
         "p75": 2.02,
         "rawMedian": 7.96,
         "sampleSize": 29
       },
       "SGC 9": {
-        "gradedMedian": 14.41,
-        "medianRatio": 1.76,
-        "p25": 1.25,
+        "gradedMedian": 14.74,
+        "medianRatio": 1.78,
+        "p25": 1.26,
         "p75": 2.73,
-        "rawMedian": 8.16,
-        "sampleSize": 197
+        "rawMedian": 8.17,
+        "sampleSize": 202
       },
       "SGC 9.5": {
-        "gradedMedian": 16.98,
+        "gradedMedian": 17.1,
         "medianRatio": 2.45,
-        "p25": 1.68,
-        "p75": 3.69,
-        "rawMedian": 6.8,
-        "sampleSize": 375
+        "p25": 1.69,
+        "p75": 3.7,
+        "rawMedian": 6.99,
+        "sampleSize": 386
       }
     }
   },
@@ -10177,34 +10225,34 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "medianRatio": 2.11,
         "p25": 1.77,
         "p75": 3.05,
-        "rawMedian": 1328.33,
-        "sampleSize": 104
+        "rawMedian": 1327.5,
+        "sampleSize": 105
       },
       "PSA 8": {
-        "gradedMedian": 1190,
-        "medianRatio": 0.83,
+        "gradedMedian": 1157.1,
+        "medianRatio": 0.81,
         "p25": 0.72,
-        "p75": 0.97,
-        "rawMedian": 1573.1,
-        "sampleSize": 16
+        "p75": 0.91,
+        "rawMedian": 1518.13,
+        "sampleSize": 17
       },
       "PSA 9": {
         "gradedMedian": 1436,
         "medianRatio": 1.13,
         "p25": 0.91,
         "p75": 1.42,
-        "rawMedian": 1327.5,
-        "sampleSize": 79
+        "rawMedian": 1352.5,
+        "sampleSize": 81
       }
     },
     "$100-249": {
       "BGS 10": {
-        "gradedMedian": 700,
-        "medianRatio": 4.85,
-        "p25": 3.56,
-        "p75": 10.35,
-        "rawMedian": 171.5,
-        "sampleSize": 10
+        "gradedMedian": 1413.67,
+        "medianRatio": 9.89,
+        "p25": 3.66,
+        "p75": 15.53,
+        "rawMedian": 177.32,
+        "sampleSize": 8
       },
       "BGS 8.5": {
         "gradedMedian": 189.99,
@@ -10215,105 +10263,105 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "sampleSize": 12
       },
       "BGS 9": {
-        "gradedMedian": 206.25,
-        "medianRatio": 1.63,
-        "p25": 1.09,
-        "p75": 2.67,
-        "rawMedian": 150.51,
-        "sampleSize": 27
+        "gradedMedian": 194.5,
+        "medianRatio": 1.6,
+        "p25": 1.01,
+        "p75": 2.26,
+        "rawMedian": 153.12,
+        "sampleSize": 30
       },
       "BGS 9.5": {
-        "gradedMedian": 342,
-        "medianRatio": 2.25,
-        "p25": 1.68,
-        "p75": 5.67,
-        "rawMedian": 163.45,
-        "sampleSize": 55
+        "gradedMedian": 357.5,
+        "medianRatio": 2.18,
+        "p25": 1.64,
+        "p75": 5.36,
+        "rawMedian": 168.29,
+        "sampleSize": 58
       },
       "CGC 10": {
-        "gradedMedian": 171.75,
+        "gradedMedian": 200,
         "medianRatio": 1.32,
         "p25": 0.65,
-        "p75": 1.54,
-        "rawMedian": 171.5,
-        "sampleSize": 9
+        "p75": 1.73,
+        "rawMedian": 172.05,
+        "sampleSize": 11
       },
       "CGC 9": {
         "gradedMedian": 237,
-        "medianRatio": 1.49,
+        "medianRatio": 1.5,
         "p25": 0.84,
-        "p75": 2.03,
-        "rawMedian": 142.83,
+        "p75": 1.98,
+        "rawMedian": 142.97,
         "sampleSize": 9
       },
       "PSA 10": {
-        "gradedMedian": 395.67,
+        "gradedMedian": 394.8,
         "medianRatio": 2.52,
         "p25": 1.9,
-        "p75": 3.63,
-        "rawMedian": 157.76,
-        "sampleSize": 1050
+        "p75": 3.55,
+        "rawMedian": 158.33,
+        "sampleSize": 1072
       },
       "PSA 7": {
-        "gradedMedian": 145.32,
-        "medianRatio": 0.99,
-        "p25": 0.71,
-        "p75": 1.26,
-        "rawMedian": 124.95,
-        "sampleSize": 29
+        "gradedMedian": 136.5,
+        "medianRatio": 0.98,
+        "p25": 0.63,
+        "p75": 1.27,
+        "rawMedian": 116.57,
+        "sampleSize": 27
       },
       "PSA 8": {
-        "gradedMedian": 176.17,
-        "medianRatio": 0.97,
+        "gradedMedian": 177,
+        "medianRatio": 0.99,
         "p25": 0.76,
-        "p75": 1.45,
-        "rawMedian": 161.79,
-        "sampleSize": 232
+        "p75": 1.46,
+        "rawMedian": 160.86,
+        "sampleSize": 252
       },
       "PSA 9": {
-        "gradedMedian": 196.2,
-        "medianRatio": 1.18,
+        "gradedMedian": 199.2,
+        "medianRatio": 1.2,
         "p25": 0.98,
-        "p75": 1.59,
-        "rawMedian": 157.52,
-        "sampleSize": 1055
+        "p75": 1.61,
+        "rawMedian": 159.39,
+        "sampleSize": 1082
       },
       "SGC 10": {
         "gradedMedian": 218.67,
         "medianRatio": 1.56,
         "p25": 1.16,
-        "p75": 2.08,
-        "rawMedian": 139.57,
-        "sampleSize": 71
+        "p75": 2.06,
+        "rawMedian": 142.97,
+        "sampleSize": 70
       },
       "SGC 8": {
         "gradedMedian": 152.5,
         "medianRatio": 0.74,
-        "p25": 0.58,
-        "p75": 2.19,
-        "rawMedian": 171.5,
+        "p25": 0.57,
+        "p75": 2.18,
+        "rawMedian": 172.05,
         "sampleSize": 6
       },
       "SGC 8.5": {
         "gradedMedian": 106.31,
         "medianRatio": 0.86,
-        "p25": 0.73,
-        "p75": 0.98,
-        "rawMedian": 124.95,
+        "p25": 0.72,
+        "p75": 0.99,
+        "rawMedian": 125.41,
         "sampleSize": 6
       },
       "SGC 9": {
         "gradedMedian": 164.75,
         "medianRatio": 1,
         "p25": 0.88,
-        "p75": 1.44,
-        "rawMedian": 144.77,
-        "sampleSize": 53
+        "p75": 1.45,
+        "rawMedian": 150.51,
+        "sampleSize": 52
       },
       "SGC 9.5": {
         "gradedMedian": 214.91,
         "medianRatio": 1.3,
-        "p25": 1.01,
+        "p25": 0.98,
         "p75": 1.76,
         "rawMedian": 150.51,
         "sampleSize": 86
@@ -10321,12 +10369,12 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
     },
     "$2,500-4,999": {
       "PSA 10": {
-        "gradedMedian": 7233,
+        "gradedMedian": 6903.2,
         "medianRatio": 2.03,
         "p25": 1.51,
         "p75": 3.03,
-        "rawMedian": 3500,
-        "sampleSize": 14
+        "rawMedian": 3306.43,
+        "sampleSize": 15
       },
       "PSA 9": {
         "gradedMedian": 2855.5,
@@ -10342,64 +10390,64 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "gradedMedian": 42.5,
         "medianRatio": 1.26,
         "p25": 1,
-        "p75": 1.58,
+        "p75": 1.31,
         "rawMedian": 32.5,
         "sampleSize": 21
       },
       "BGS 9.5": {
-        "gradedMedian": 66.33,
-        "medianRatio": 1.68,
+        "gradedMedian": 66.51,
+        "medianRatio": 1.71,
         "p25": 1.48,
-        "p75": 2.28,
-        "rawMedian": 36.83,
-        "sampleSize": 37
+        "p75": 2.29,
+        "rawMedian": 37.14,
+        "sampleSize": 38
       },
       "CGC 10": {
-        "gradedMedian": 51.11,
-        "medianRatio": 1.51,
+        "gradedMedian": 55.5,
+        "medianRatio": 1.57,
         "p25": 1.16,
         "p75": 2.47,
-        "rawMedian": 30.57,
-        "sampleSize": 25
+        "rawMedian": 31.91,
+        "sampleSize": 26
       },
       "CGC 9": {
-        "gradedMedian": 35,
-        "medianRatio": 0.92,
-        "p25": 0.65,
-        "p75": 1.65,
-        "rawMedian": 30.28,
-        "sampleSize": 19
+        "gradedMedian": 41.6,
+        "medianRatio": 0.97,
+        "p25": 0.74,
+        "p75": 1.56,
+        "rawMedian": 30.27,
+        "sampleSize": 21
       },
       "CGC 9.5": {
         "gradedMedian": 59.52,
         "medianRatio": 1.57,
-        "p25": 1.48,
-        "p75": 2.05,
-        "rawMedian": 40.14,
+        "p25": 1.49,
+        "p75": 1.93,
+        "rawMedian": 40.04,
         "sampleSize": 6
       },
       "HGA 9": {
-        "gradedMedian": 31.25,
+        "gradedMedian": 37.75,
         "medianRatio": 0.97,
-        "p25": 0.73,
-        "p75": 0.97,
-        "rawMedian": 37.87,
-        "sampleSize": 6
+        "p25": 0.75,
+        "p75": 1.25,
+        "rawMedian": 31.96,
+        "sampleSize": 7
       },
       "PSA 10": {
         "gradedMedian": 122.61,
         "medianRatio": 3.56,
         "p25": 2.65,
-        "p75": 4.82,
-        "rawMedian": 34.41,
-        "sampleSize": 1233
+        "p75": 4.79,
+        "rawMedian": 34.61,
+        "sampleSize": 1248
       },
       "PSA 6": {
         "gradedMedian": 38,
         "medianRatio": 0.85,
         "p25": 0.78,
-        "p75": 1.19,
-        "rawMedian": 32,
+        "p75": 1.16,
+        "rawMedian": 32.7,
         "sampleSize": 8
       },
       "PSA 7": {
@@ -10411,28 +10459,28 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "sampleSize": 22
       },
       "PSA 8": {
-        "gradedMedian": 25.78,
-        "medianRatio": 0.74,
+        "gradedMedian": 26.36,
+        "medianRatio": 0.75,
         "p25": 0.65,
-        "p75": 0.94,
-        "rawMedian": 32.5,
-        "sampleSize": 255
+        "p75": 0.96,
+        "rawMedian": 32.7,
+        "sampleSize": 262
       },
       "PSA 9": {
-        "gradedMedian": 48.44,
+        "gradedMedian": 48.47,
         "medianRatio": 1.39,
         "p25": 1.11,
         "p75": 1.8,
-        "rawMedian": 34.55,
-        "sampleSize": 1133
+        "rawMedian": 34.58,
+        "sampleSize": 1149
       },
       "SGC 10": {
         "gradedMedian": 81.5,
-        "medianRatio": 2.42,
-        "p25": 1.72,
-        "p75": 3.04,
+        "medianRatio": 2.41,
+        "p25": 1.71,
+        "p75": 3.01,
         "rawMedian": 34.2,
-        "sampleSize": 152
+        "sampleSize": 157
       },
       "SGC 8": {
         "gradedMedian": 29.97,
@@ -10447,33 +10495,33 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "medianRatio": 0.73,
         "p25": 0.56,
         "p75": 0.76,
-        "rawMedian": 40.14,
+        "rawMedian": 40.04,
         "sampleSize": 13
       },
       "SGC 9": {
-        "gradedMedian": 30.77,
-        "medianRatio": 0.93,
+        "gradedMedian": 31,
+        "medianRatio": 0.95,
         "p25": 0.76,
         "p75": 1.08,
         "rawMedian": 33.48,
         "sampleSize": 72
       },
       "SGC 9.5": {
-        "gradedMedian": 46.25,
+        "gradedMedian": 46.5,
         "medianRatio": 1.33,
-        "p25": 1.07,
+        "p25": 1.08,
         "p75": 1.64,
-        "rawMedian": 34.02,
-        "sampleSize": 136
+        "rawMedian": 34.23,
+        "sampleSize": 139
       }
     },
     "$250-499": {
       "BGS 10": {
         "gradedMedian": 1560,
-        "medianRatio": 4.19,
-        "p25": 3.25,
-        "p75": 8,
-        "rawMedian": 339.95,
+        "medianRatio": 4.14,
+        "p25": 3.42,
+        "p75": 7.73,
+        "rawMedian": 330.45,
         "sampleSize": 5
       },
       "BGS 8.5": {
@@ -10493,40 +10541,40 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "sampleSize": 13
       },
       "BGS 9.5": {
-        "gradedMedian": 565.8,
-        "medianRatio": 1.61,
+        "gradedMedian": 569.48,
+        "medianRatio": 1.63,
         "p25": 1.16,
-        "p75": 2.24,
-        "rawMedian": 334.98,
-        "sampleSize": 49
+        "p75": 2.29,
+        "rawMedian": 342.25,
+        "sampleSize": 50
       },
       "CGC 10": {
-        "gradedMedian": 811,
-        "medianRatio": 2.91,
+        "gradedMedian": 361.75,
+        "medianRatio": 1.24,
         "p25": 1.24,
-        "p75": 3.18,
+        "p75": 2.91,
         "rawMedian": 310.82,
-        "sampleSize": 6
+        "sampleSize": 5
       },
       "CGC 9": {
         "gradedMedian": 345,
         "medianRatio": 1.24,
-        "p25": 0.93,
+        "p25": 0.67,
         "p75": 1.35,
-        "rawMedian": 329.6,
-        "sampleSize": 5
+        "rawMedian": 353,
+        "sampleSize": 6
       },
       "PSA 10": {
-        "gradedMedian": 628.25,
+        "gradedMedian": 625.5,
         "medianRatio": 1.7,
         "p25": 1.44,
         "p75": 2.4,
-        "rawMedian": 359.91,
-        "sampleSize": 664
+        "rawMedian": 358.66,
+        "sampleSize": 674
       },
       "PSA 7": {
         "gradedMedian": 223.25,
-        "medianRatio": 0.81,
+        "medianRatio": 0.8,
         "p25": 0.69,
         "p75": 0.83,
         "rawMedian": 321.67,
@@ -10537,32 +10585,32 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "medianRatio": 0.97,
         "p25": 0.87,
         "p75": 1.16,
-        "rawMedian": 347.19,
-        "sampleSize": 108
+        "rawMedian": 342.25,
+        "sampleSize": 111
       },
       "PSA 9": {
-        "gradedMedian": 404.8,
+        "gradedMedian": 405.33,
         "medianRatio": 1.1,
         "p25": 1.02,
-        "p75": 1.24,
-        "rawMedian": 360.05,
-        "sampleSize": 687
+        "p75": 1.25,
+        "rawMedian": 360,
+        "sampleSize": 696
       },
       "SGC 10": {
         "gradedMedian": 442.5,
         "medianRatio": 1.28,
-        "p25": 1.1,
+        "p25": 1.11,
         "p75": 1.48,
         "rawMedian": 352.32,
-        "sampleSize": 59
+        "sampleSize": 60
       },
       "SGC 9": {
         "gradedMedian": 344.5,
-        "medianRatio": 0.99,
+        "medianRatio": 1.03,
         "p25": 0.95,
-        "p75": 1.08,
+        "p75": 1.11,
         "rawMedian": 350.56,
-        "sampleSize": 21
+        "sampleSize": 20
       },
       "SGC 9.5": {
         "gradedMedian": 407.5,
@@ -10578,41 +10626,41 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "gradedMedian": 1500,
         "medianRatio": 17.6,
         "p25": 3.14,
-        "p75": 23.67,
+        "p75": 23.91,
         "rawMedian": 82.59,
         "sampleSize": 6
       },
       "BGS 9": {
         "gradedMedian": 110,
         "medianRatio": 1.78,
-        "p25": 1,
+        "p25": 0.99,
         "p75": 3.51,
-        "rawMedian": 66.06,
+        "rawMedian": 65.95,
         "sampleSize": 34
       },
       "BGS 9.5": {
         "gradedMedian": 142.5,
         "medianRatio": 2.01,
-        "p25": 1.68,
-        "p75": 2.96,
-        "rawMedian": 72.21,
-        "sampleSize": 45
+        "p25": 1.47,
+        "p75": 2.9,
+        "rawMedian": 73.7,
+        "sampleSize": 49
       },
       "CGC 10": {
         "gradedMedian": 87,
         "medianRatio": 1.41,
         "p25": 0.94,
         "p75": 1.71,
-        "rawMedian": 73,
-        "sampleSize": 13
+        "rawMedian": 82.33,
+        "sampleSize": 12
       },
       "CGC 9": {
         "gradedMedian": 99.99,
         "medianRatio": 1.79,
         "p25": 1.27,
-        "p75": 2.37,
-        "rawMedian": 58.1,
-        "sampleSize": 9
+        "p75": 2.77,
+        "rawMedian": 58.14,
+        "sampleSize": 7
       },
       "HGA 9": {
         "gradedMedian": 50.33,
@@ -10623,76 +10671,76 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "sampleSize": 6
       },
       "PSA 10": {
-        "gradedMedian": 188.5,
+        "gradedMedian": 189.19,
         "medianRatio": 2.73,
-        "p25": 2.09,
-        "p75": 3.56,
+        "p25": 2.11,
+        "p75": 3.53,
         "rawMedian": 69.3,
-        "sampleSize": 940
+        "sampleSize": 933
       },
       "PSA 7": {
         "gradedMedian": 74.45,
-        "medianRatio": 0.83,
+        "medianRatio": 0.84,
         "p25": 0.64,
-        "p75": 1.69,
+        "p75": 1.7,
         "rawMedian": 84.69,
         "sampleSize": 19
       },
       "PSA 8": {
-        "gradedMedian": 56.4,
-        "medianRatio": 0.78,
-        "p25": 0.65,
+        "gradedMedian": 56.59,
+        "medianRatio": 0.79,
+        "p25": 0.66,
         "p75": 1.14,
-        "rawMedian": 70,
-        "sampleSize": 158
+        "rawMedian": 70.26,
+        "sampleSize": 155
       },
       "PSA 9": {
-        "gradedMedian": 84.5,
-        "medianRatio": 1.19,
+        "gradedMedian": 84.65,
+        "medianRatio": 1.18,
         "p25": 0.95,
         "p75": 1.59,
-        "rawMedian": 70.02,
-        "sampleSize": 905
+        "rawMedian": 70.29,
+        "sampleSize": 897
       },
       "SGC 10": {
-        "gradedMedian": 113.57,
-        "medianRatio": 1.64,
+        "gradedMedian": 113.75,
+        "medianRatio": 1.66,
         "p25": 1.2,
-        "p75": 2.16,
-        "rawMedian": 69.31,
+        "p75": 2.15,
+        "rawMedian": 70.17,
         "sampleSize": 83
       },
       "SGC 8": {
         "gradedMedian": 110,
-        "medianRatio": 1.12,
-        "p25": 0.7,
-        "p75": 2.64,
-        "rawMedian": 85.57,
+        "medianRatio": 1.13,
+        "p25": 0.69,
+        "p75": 2.65,
+        "rawMedian": 85.76,
         "sampleSize": 7
       },
       "SGC 8.5": {
         "gradedMedian": 66.14,
         "medianRatio": 0.86,
-        "p25": 0.65,
-        "p75": 3.53,
+        "p25": 0.64,
+        "p75": 3.54,
         "rawMedian": 70.27,
         "sampleSize": 12
       },
       "SGC 9": {
         "gradedMedian": 67,
-        "medianRatio": 0.92,
+        "medianRatio": 0.93,
         "p25": 0.76,
         "p75": 1.43,
-        "rawMedian": 73.91,
-        "sampleSize": 44
+        "rawMedian": 74.08,
+        "sampleSize": 46
       },
       "SGC 9.5": {
-        "gradedMedian": 90.81,
+        "gradedMedian": 92.5,
         "medianRatio": 1.22,
-        "p25": 0.97,
-        "p75": 1.65,
-        "rawMedian": 75.23,
-        "sampleSize": 95
+        "p25": 0.99,
+        "p75": 1.62,
+        "rawMedian": 76.37,
+        "sampleSize": 94
       }
     },
     "$500-999": {
@@ -10709,7 +10757,7 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "medianRatio": 1.48,
         "p25": 1.15,
         "p75": 1.69,
-        "rawMedian": 645.06,
+        "rawMedian": 653.33,
         "sampleSize": 30
       },
       "PSA 10": {
@@ -10717,8 +10765,8 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "medianRatio": 2.06,
         "p25": 1.65,
         "p75": 2.76,
-        "rawMedian": 660.74,
-        "sampleSize": 262
+        "rawMedian": 660.41,
+        "sampleSize": 263
       },
       "PSA 7": {
         "gradedMedian": 620,
@@ -10729,20 +10777,20 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "sampleSize": 5
       },
       "PSA 8": {
-        "gradedMedian": 562,
-        "medianRatio": 0.87,
-        "p25": 0.77,
-        "p75": 1,
-        "rawMedian": 661.07,
-        "sampleSize": 40
+        "gradedMedian": 559.5,
+        "medianRatio": 0.86,
+        "p25": 0.76,
+        "p75": 0.95,
+        "rawMedian": 660.41,
+        "sampleSize": 41
       },
       "PSA 9": {
-        "gradedMedian": 757.04,
+        "gradedMedian": 759.4,
         "medianRatio": 1.11,
         "p25": 0.94,
         "p75": 1.34,
         "rawMedian": 661.07,
-        "sampleSize": 273
+        "sampleSize": 274
       },
       "SGC 10": {
         "gradedMedian": 921.22,
@@ -10753,12 +10801,12 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "sampleSize": 11
       },
       "SGC 9": {
-        "gradedMedian": 470,
-        "medianRatio": 0.81,
-        "p25": 0.77,
+        "gradedMedian": 482.5,
+        "medianRatio": 0.79,
+        "p25": 0.75,
         "p75": 0.97,
         "rawMedian": 600.79,
-        "sampleSize": 9
+        "sampleSize": 10
       },
       "SGC 9.5": {
         "gradedMedian": 820.17,
@@ -10773,42 +10821,50 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       "BGS 10": {
         "gradedMedian": 42.5,
         "medianRatio": 14.52,
-        "p25": 8.93,
+        "p25": 7.57,
         "p75": 19.43,
-        "rawMedian": 3.11,
-        "sampleSize": 12
+        "rawMedian": 2.9,
+        "sampleSize": 13
       },
       "BGS 8.5": {
         "gradedMedian": 11,
-        "medianRatio": 1.74,
+        "medianRatio": 1.75,
         "p25": 0.98,
-        "p75": 3,
-        "rawMedian": 6.81,
+        "p75": 3.03,
+        "rawMedian": 6.38,
         "sampleSize": 24
       },
       "BGS 9": {
-        "gradedMedian": 16.31,
-        "medianRatio": 2.41,
+        "gradedMedian": 16,
+        "medianRatio": 2.36,
         "p25": 1.39,
-        "p75": 3.62,
+        "p75": 3.51,
         "rawMedian": 7.42,
-        "sampleSize": 116
+        "sampleSize": 114
       },
       "BGS 9.5": {
-        "gradedMedian": 30.84,
-        "medianRatio": 5.02,
-        "p25": 3.16,
-        "p75": 8.22,
-        "rawMedian": 5.38,
-        "sampleSize": 217
+        "gradedMedian": 31.33,
+        "medianRatio": 4.94,
+        "p25": 3.13,
+        "p75": 8.15,
+        "rawMedian": 5.46,
+        "sampleSize": 221
       },
       "CGC 10": {
         "gradedMedian": 25.39,
-        "medianRatio": 5.64,
-        "p25": 3.48,
-        "p75": 8.67,
+        "medianRatio": 5.66,
+        "p25": 3.46,
+        "p75": 8.87,
         "rawMedian": 4.29,
-        "sampleSize": 610
+        "sampleSize": 629
+      },
+      "CGC 6": {
+        "gradedMedian": 8.6,
+        "medianRatio": 2.32,
+        "p25": 2.07,
+        "p75": 2.53,
+        "rawMedian": 3.68,
+        "sampleSize": 5
       },
       "CGC 7": {
         "gradedMedian": 8,
@@ -10816,191 +10872,191 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "p25": 1.05,
         "p75": 2.93,
         "rawMedian": 5.31,
-        "sampleSize": 6
+        "sampleSize": 5
       },
       "CGC 7.5": {
         "gradedMedian": 8,
-        "medianRatio": 4.18,
+        "medianRatio": 4.21,
         "p25": 3.59,
         "p75": 4.43,
         "rawMedian": 2.36,
         "sampleSize": 8
       },
       "CGC 8": {
-        "gradedMedian": 8.4,
-        "medianRatio": 2.63,
-        "p25": 1.3,
+        "gradedMedian": 8.5,
+        "medianRatio": 2.57,
+        "p25": 1.32,
         "p75": 4.18,
-        "rawMedian": 2.91,
+        "rawMedian": 2.97,
         "sampleSize": 29
       },
       "CGC 8.5": {
         "gradedMedian": 11.14,
-        "medianRatio": 2.18,
-        "p25": 1.56,
-        "p75": 3.82,
-        "rawMedian": 3.67,
-        "sampleSize": 32
+        "medianRatio": 2.1,
+        "p25": 1.37,
+        "p75": 3.69,
+        "rawMedian": 3.56,
+        "sampleSize": 33
       },
       "CGC 9": {
         "gradedMedian": 12.6,
-        "medianRatio": 2.66,
-        "p25": 1.42,
-        "p75": 4.6,
+        "medianRatio": 2.68,
+        "p25": 1.43,
+        "p75": 4.62,
         "rawMedian": 4.21,
-        "sampleSize": 293
+        "sampleSize": 292
       },
       "CGC 9.5": {
         "gradedMedian": 15,
-        "medianRatio": 2.89,
+        "medianRatio": 2.97,
         "p25": 1.92,
-        "p75": 5.41,
+        "p75": 5.43,
         "rawMedian": 4.42,
-        "sampleSize": 108
+        "sampleSize": 112
       },
       "CSG 10": {
         "gradedMedian": 9.42,
-        "medianRatio": 2.35,
-        "p25": 1.23,
-        "p75": 2.57,
-        "rawMedian": 4.99,
+        "medianRatio": 2.57,
+        "p25": 1.26,
+        "p75": 2.65,
+        "rawMedian": 4.14,
         "sampleSize": 6
       },
       "HGA 9": {
-        "gradedMedian": 11.27,
-        "medianRatio": 1.29,
-        "p25": 0.84,
-        "p75": 2.24,
-        "rawMedian": 8.41,
-        "sampleSize": 38
+        "gradedMedian": 11.15,
+        "medianRatio": 1.28,
+        "p25": 0.87,
+        "p75": 2.4,
+        "rawMedian": 7.67,
+        "sampleSize": 39
       },
       "HGA 9.5": {
         "gradedMedian": 6.76,
-        "medianRatio": 1.9,
-        "p25": 1.39,
+        "medianRatio": 1.87,
+        "p25": 1.36,
         "p75": 2.36,
-        "rawMedian": 4.47,
+        "rawMedian": 4.37,
         "sampleSize": 9
       },
       "PSA 1": {
         "gradedMedian": 24.5,
         "medianRatio": 5.38,
-        "p25": 2.04,
+        "p25": 2.07,
         "p75": 6.01,
         "rawMedian": 5.65,
         "sampleSize": 5
       },
       "PSA 10": {
-        "gradedMedian": 45.85,
-        "medianRatio": 8.75,
-        "p25": 5.6,
-        "p75": 13.14,
-        "rawMedian": 4.85,
-        "sampleSize": 8621
+        "gradedMedian": 46,
+        "medianRatio": 8.81,
+        "p25": 5.62,
+        "p75": 13.24,
+        "rawMedian": 4.81,
+        "sampleSize": 8695
       },
       "PSA 4": {
         "gradedMedian": 7,
-        "medianRatio": 1.02,
-        "p25": 0.75,
-        "p75": 1.75,
+        "medianRatio": 1.19,
+        "p25": 0.74,
+        "p75": 2.06,
         "rawMedian": 4.97,
-        "sampleSize": 9
+        "sampleSize": 10
       },
       "PSA 5": {
         "gradedMedian": 6.75,
         "medianRatio": 1.4,
-        "p25": 0.86,
-        "p75": 2.19,
+        "p25": 0.9,
+        "p75": 2.18,
         "rawMedian": 4.49,
         "sampleSize": 27
       },
       "PSA 6": {
-        "gradedMedian": 7.17,
-        "medianRatio": 1.08,
+        "gradedMedian": 7.25,
+        "medianRatio": 1.03,
         "p25": 0.7,
         "p75": 1.76,
-        "rawMedian": 6.9,
-        "sampleSize": 122
+        "rawMedian": 6.99,
+        "sampleSize": 123
       },
       "PSA 7": {
-        "gradedMedian": 8.84,
-        "medianRatio": 1.33,
+        "gradedMedian": 8.75,
+        "medianRatio": 1.31,
         "p25": 0.82,
-        "p75": 2.1,
-        "rawMedian": 6.96,
-        "sampleSize": 266
+        "p75": 2.13,
+        "rawMedian": 6.91,
+        "sampleSize": 265
       },
       "PSA 8": {
-        "gradedMedian": 12.02,
-        "medianRatio": 1.87,
-        "p25": 1.19,
-        "p75": 2.99,
-        "rawMedian": 6.26,
-        "sampleSize": 1815
+        "gradedMedian": 12.15,
+        "medianRatio": 1.89,
+        "p25": 1.2,
+        "p75": 3.03,
+        "rawMedian": 6.24,
+        "sampleSize": 1833
       },
       "PSA 8.5": {
-        "gradedMedian": 10.15,
+        "gradedMedian": 9.75,
         "medianRatio": 1.95,
         "p25": 1.07,
         "p75": 2.32,
-        "rawMedian": 5.44,
-        "sampleSize": 29
+        "rawMedian": 5.43,
+        "sampleSize": 27
       },
       "PSA 9": {
-        "gradedMedian": 19.77,
+        "gradedMedian": 19.84,
         "medianRatio": 3.43,
         "p25": 2.23,
-        "p75": 5.28,
-        "rawMedian": 5.32,
-        "sampleSize": 6817
+        "p75": 5.3,
+        "rawMedian": 5.33,
+        "sampleSize": 6875
       },
       "SGC 10": {
-        "gradedMedian": 25.88,
-        "medianRatio": 4.54,
+        "gradedMedian": 25.82,
+        "medianRatio": 4.55,
         "p25": 3.1,
         "p75": 6.55,
         "rawMedian": 5.38,
-        "sampleSize": 1176
+        "sampleSize": 1186
       },
       "SGC 7": {
         "gradedMedian": 6.75,
-        "medianRatio": 2.68,
+        "medianRatio": 2.31,
         "p25": 1.39,
         "p75": 3.46,
         "rawMedian": 2.92,
-        "sampleSize": 10
+        "sampleSize": 9
       },
       "SGC 8": {
-        "gradedMedian": 8.75,
+        "gradedMedian": 8.52,
         "medianRatio": 1.34,
         "p25": 0.83,
-        "p75": 1.59,
+        "p75": 1.6,
         "rawMedian": 6.13,
-        "sampleSize": 26
+        "sampleSize": 27
       },
       "SGC 8.5": {
         "gradedMedian": 10.63,
-        "medianRatio": 1.34,
+        "medianRatio": 1.35,
         "p25": 0.82,
-        "p75": 2.13,
+        "p75": 2.09,
         "rawMedian": 7.66,
         "sampleSize": 64
       },
       "SGC 9": {
-        "gradedMedian": 14,
+        "gradedMedian": 14.1,
         "medianRatio": 1.96,
         "p25": 1.23,
-        "p75": 3.05,
+        "p75": 3.1,
         "rawMedian": 7.28,
-        "sampleSize": 476
+        "sampleSize": 479
       },
       "SGC 9.5": {
-        "gradedMedian": 18.15,
-        "medianRatio": 2.73,
+        "gradedMedian": 18.17,
+        "medianRatio": 2.71,
         "p25": 1.87,
-        "p75": 4.18,
-        "rawMedian": 6.03,
-        "sampleSize": 916
+        "p75": 4.16,
+        "rawMedian": 6,
+        "sampleSize": 929
       }
     }
   },
@@ -11038,15 +11094,15 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "p25": 2.44,
         "p75": 3.76,
         "rawMedian": 34.5,
-        "sampleSize": 28
+        "sampleSize": 27
       },
       "PSA 9": {
-        "gradedMedian": 45.19,
-        "medianRatio": 1.26,
-        "p25": 1.11,
-        "p75": 1.46,
-        "rawMedian": 35.63,
-        "sampleSize": 29
+        "gradedMedian": 45.2,
+        "medianRatio": 1.27,
+        "p25": 1.13,
+        "p75": 1.53,
+        "rawMedian": 35.96,
+        "sampleSize": 28
       },
       "SGC 10": {
         "gradedMedian": 91.21,
@@ -11126,11 +11182,11 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       },
       "PSA 10": {
         "gradedMedian": 35.03,
-        "medianRatio": 8.52,
-        "p25": 5.57,
+        "medianRatio": 8.44,
+        "p25": 5.6,
         "p75": 11.91,
-        "rawMedian": 3.74,
-        "sampleSize": 402
+        "rawMedian": 3.76,
+        "sampleSize": 405
       },
       "PSA 7": {
         "gradedMedian": 7.48,
@@ -11145,22 +11201,22 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "medianRatio": 1.65,
         "p25": 1.07,
         "p75": 2.55,
-        "rawMedian": 6.04,
+        "rawMedian": 6.02,
         "sampleSize": 115
       },
       "PSA 9": {
         "gradedMedian": 14.7,
-        "medianRatio": 3.05,
-        "p25": 2.07,
-        "p75": 4.36,
+        "medianRatio": 3.01,
+        "p25": 2.04,
+        "p75": 4.32,
         "rawMedian": 4.29,
-        "sampleSize": 316
+        "sampleSize": 317
       },
       "SGC 10": {
         "gradedMedian": 33.11,
         "medianRatio": 3.88,
         "p25": 2.91,
-        "p75": 5.18,
+        "p75": 5.13,
         "rawMedian": 6.51,
         "sampleSize": 44
       },
@@ -11193,10 +11249,10 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "sampleSize": 12
       },
       "BGS 9": {
-        "gradedMedian": 1837.5,
+        "gradedMedian": 1860,
         "medianRatio": 1.13,
-        "p25": 1.01,
-        "p75": 1.29,
+        "p25": 1,
+        "p75": 1.31,
         "rawMedian": 1420.54,
         "sampleSize": 8
       },
@@ -11204,14 +11260,14 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "gradedMedian": 1902.73,
         "medianRatio": 1.34,
         "p25": 1.17,
-        "p75": 2.19,
+        "p75": 2.32,
         "rawMedian": 1420.54,
         "sampleSize": 10
       },
       "CGC 10": {
-        "gradedMedian": 2805.48,
-        "medianRatio": 2.19,
-        "p25": 1.97,
+        "gradedMedian": 2759,
+        "medianRatio": 2.17,
+        "p25": 1.94,
         "p75": 2.46,
         "rawMedian": 1420.54,
         "sampleSize": 8
@@ -11219,26 +11275,26 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       "CGC 9": {
         "gradedMedian": 1564.65,
         "medianRatio": 1.1,
-        "p25": 1.02,
+        "p25": 1.01,
         "p75": 1.33,
         "rawMedian": 1420.54,
         "sampleSize": 8
       },
       "CGC 9.5": {
         "gradedMedian": 1125.33,
-        "medianRatio": 0.99,
-        "p25": 0.99,
+        "medianRatio": 0.98,
+        "p25": 0.98,
         "p75": 1.29,
-        "rawMedian": 1139.4,
+        "rawMedian": 1152.21,
         "sampleSize": 5
       },
       "PSA 10": {
-        "gradedMedian": 2813.33,
+        "gradedMedian": 2845.27,
         "medianRatio": 2.32,
-        "p25": 1.78,
+        "p25": 1.8,
         "p75": 2.44,
-        "rawMedian": 1356.53,
-        "sampleSize": 18
+        "rawMedian": 1420.54,
+        "sampleSize": 20
       },
       "PSA 6": {
         "gradedMedian": 1066.67,
@@ -11249,198 +11305,182 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "sampleSize": 6
       },
       "PSA 7": {
-        "gradedMedian": 1710.98,
+        "gradedMedian": 1712.08,
         "medianRatio": 1.16,
-        "p25": 0.9,
-        "p75": 1.36,
+        "p25": 0.89,
+        "p75": 1.16,
         "rawMedian": 1470.2,
         "sampleSize": 6
       },
       "PSA 8": {
         "gradedMedian": 1248.66,
-        "medianRatio": 0.89,
+        "medianRatio": 0.88,
         "p25": 0.88,
-        "p75": 1.35,
+        "p75": 0.98,
         "rawMedian": 1420.54,
-        "sampleSize": 8
+        "sampleSize": 10
       },
       "PSA 9": {
-        "gradedMedian": 1540.75,
-        "medianRatio": 1.08,
-        "p25": 0.91,
-        "p75": 1.13,
+        "gradedMedian": 1555.79,
+        "medianRatio": 1.1,
+        "p25": 0.9,
+        "p75": 1.16,
         "rawMedian": 1470.2,
         "sampleSize": 12
       }
     },
     "$100-249": {
       "BGS 10": {
-        "gradedMedian": 659.91,
-        "medianRatio": 4.52,
-        "p25": 2.71,
-        "p75": 7.72,
+        "gradedMedian": 635.44,
+        "medianRatio": 4.2,
+        "p25": 2.5,
+        "p75": 7.02,
         "rawMedian": 148.12,
-        "sampleSize": 80
+        "sampleSize": 77
       },
       "BGS 8.5": {
         "gradedMedian": 154,
-        "medianRatio": 0.88,
+        "medianRatio": 1.13,
         "p25": 0.88,
-        "p75": 1.16,
-        "rawMedian": 173.02,
-        "sampleSize": 9
+        "p75": 1.4,
+        "rawMedian": 137.99,
+        "sampleSize": 8
       },
       "BGS 9": {
         "gradedMedian": 161.5,
-        "medianRatio": 0.94,
-        "p25": 0.74,
-        "p75": 1.12,
-        "rawMedian": 173.68,
-        "sampleSize": 50
+        "medianRatio": 0.93,
+        "p25": 0.73,
+        "p75": 1.09,
+        "rawMedian": 159.32,
+        "sampleSize": 45
       },
       "BGS 9.5": {
-        "gradedMedian": 186.5,
-        "medianRatio": 1.21,
-        "p25": 1.02,
-        "p75": 1.47,
+        "gradedMedian": 188.04,
+        "medianRatio": 1.17,
+        "p25": 1.04,
+        "p75": 1.48,
         "rawMedian": 145.01,
-        "sampleSize": 118
+        "sampleSize": 123
       },
       "CGC 10": {
-        "gradedMedian": 247.57,
-        "medianRatio": 1.66,
-        "p25": 1.42,
-        "p75": 2.04,
-        "rawMedian": 148.18,
-        "sampleSize": 261
+        "gradedMedian": 250.42,
+        "medianRatio": 1.64,
+        "p25": 1.4,
+        "p75": 2.06,
+        "rawMedian": 148.12,
+        "sampleSize": 258
       },
       "CGC 8": {
-        "gradedMedian": 145.18,
-        "medianRatio": 0.81,
+        "gradedMedian": 139.16,
+        "medianRatio": 0.85,
         "p25": 0.72,
-        "p75": 1.07,
-        "rawMedian": 192.43,
-        "sampleSize": 25
+        "p75": 1.09,
+        "rawMedian": 130.22,
+        "sampleSize": 26
       },
       "CGC 8.5": {
-        "gradedMedian": 134.23,
-        "medianRatio": 0.77,
-        "p25": 0.68,
-        "p75": 0.91,
+        "gradedMedian": 112.22,
+        "medianRatio": 0.74,
+        "p25": 0.65,
+        "p75": 0.89,
         "rawMedian": 145.97,
-        "sampleSize": 57
+        "sampleSize": 52
       },
       "CGC 9": {
-        "gradedMedian": 138.38,
+        "gradedMedian": 141.75,
         "medianRatio": 0.92,
-        "p25": 0.78,
-        "p75": 1.08,
-        "rawMedian": 143.57,
-        "sampleSize": 145
+        "p25": 0.79,
+        "p75": 1.06,
+        "rawMedian": 143.8,
+        "sampleSize": 144
       },
       "CGC 9.5": {
         "gradedMedian": 146.66,
-        "medianRatio": 0.96,
-        "p25": 0.76,
-        "p75": 1.19,
-        "rawMedian": 136.11,
-        "sampleSize": 98
+        "medianRatio": 0.97,
+        "p25": 0.78,
+        "p75": 1.15,
+        "rawMedian": 137.82,
+        "sampleSize": 97
       },
       "PSA 1": {
-        "gradedMedian": 119.1,
-        "medianRatio": 1.1,
-        "p25": 1.08,
-        "p75": 1.49,
-        "rawMedian": 122.55,
-        "sampleSize": 10
+        "gradedMedian": 204.58,
+        "medianRatio": 1.53,
+        "p25": 1.1,
+        "p75": 1.6,
+        "rawMedian": 127.73,
+        "sampleSize": 8
       },
       "PSA 10": {
-        "gradedMedian": 376.19,
-        "medianRatio": 2.5,
-        "p25": 1.89,
-        "p75": 3.66,
-        "rawMedian": 147.55,
-        "sampleSize": 377
-      },
-      "PSA 5": {
-        "gradedMedian": 74.33,
-        "medianRatio": 0.55,
-        "p25": 0.5,
-        "p75": 0.63,
-        "rawMedian": 148.05,
-        "sampleSize": 6
+        "gradedMedian": 377.43,
+        "medianRatio": 2.54,
+        "p25": 1.88,
+        "p75": 3.75,
+        "rawMedian": 145.01,
+        "sampleSize": 376
       },
       "PSA 6": {
         "gradedMedian": 146.8,
         "medianRatio": 0.85,
-        "p25": 0.67,
-        "p75": 1.21,
+        "p25": 0.63,
+        "p75": 1.06,
         "rawMedian": 152.31,
-        "sampleSize": 16
+        "sampleSize": 17
       },
       "PSA 7": {
         "gradedMedian": 122,
-        "medianRatio": 0.87,
-        "p25": 0.76,
-        "p75": 1,
-        "rawMedian": 137.86,
-        "sampleSize": 50
+        "medianRatio": 0.86,
+        "p25": 0.75,
+        "p75": 1.01,
+        "rawMedian": 135.15,
+        "sampleSize": 45
       },
       "PSA 8": {
-        "gradedMedian": 137.25,
-        "medianRatio": 0.91,
+        "gradedMedian": 141.83,
+        "medianRatio": 0.9,
         "p25": 0.81,
         "p75": 1.04,
-        "rawMedian": 142.76,
-        "sampleSize": 209
+        "rawMedian": 138.36,
+        "sampleSize": 204
       },
       "PSA 8.5": {
-        "gradedMedian": 177.5,
-        "medianRatio": 0.85,
-        "p25": 0.8,
-        "p75": 1.02,
-        "rawMedian": 207.13,
-        "sampleSize": 10
+        "gradedMedian": 179.31,
+        "medianRatio": 1.02,
+        "p25": 0.85,
+        "p75": 1.04,
+        "rawMedian": 237.61,
+        "sampleSize": 8
       },
       "PSA 9": {
         "gradedMedian": 156.69,
         "medianRatio": 1.02,
-        "p25": 0.9,
+        "p25": 0.91,
         "p75": 1.23,
-        "rawMedian": 143.57,
-        "sampleSize": 338
+        "rawMedian": 143.22,
+        "sampleSize": 331
       },
       "SGC 10": {
         "gradedMedian": 263.75,
-        "medianRatio": 1.47,
+        "medianRatio": 1.5,
         "p25": 1.25,
-        "p75": 1.86,
-        "rawMedian": 173.68,
+        "p75": 1.9,
+        "rawMedian": 159.32,
         "sampleSize": 21
-      },
-      "SGC 9": {
-        "gradedMedian": 119.01,
-        "medianRatio": 0.73,
-        "p25": 0.63,
-        "p75": 0.99,
-        "rawMedian": 119.94,
-        "sampleSize": 6
       },
       "SGC 9.5": {
         "gradedMedian": 158.25,
-        "medianRatio": 0.8,
-        "p25": 0.68,
+        "medianRatio": 0.78,
+        "p25": 0.74,
         "p75": 1.06,
-        "rawMedian": 236.04,
+        "rawMedian": 230.57,
         "sampleSize": 10
       },
       "TAG 10": {
-        "gradedMedian": 319.6,
-        "medianRatio": 1.99,
-        "p25": 1.71,
-        "p75": 2.22,
-        "rawMedian": 173.02,
-        "sampleSize": 8
+        "gradedMedian": 355,
+        "medianRatio": 2.07,
+        "p25": 1.56,
+        "p75": 4.14,
+        "rawMedian": 205.4,
+        "sampleSize": 7
       }
     },
     "$25-49": {
@@ -11449,297 +11489,289 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "medianRatio": 5.95,
         "p25": 3.2,
         "p75": 10.73,
-        "rawMedian": 32.64,
+        "rawMedian": 32.84,
         "sampleSize": 67
       },
       "BGS 8.5": {
-        "gradedMedian": 62.34,
-        "medianRatio": 1.65,
-        "p25": 0.96,
-        "p75": 1.68,
-        "rawMedian": 37.88,
-        "sampleSize": 8
+        "gradedMedian": 35,
+        "medianRatio": 0.96,
+        "p25": 0.69,
+        "p75": 1.36,
+        "rawMedian": 35.22,
+        "sampleSize": 6
       },
       "BGS 9": {
-        "gradedMedian": 34.53,
+        "gradedMedian": 35.82,
         "medianRatio": 1.13,
-        "p25": 0.8,
-        "p75": 1.24,
-        "rawMedian": 32.53,
-        "sampleSize": 50
+        "p25": 0.79,
+        "p75": 1.29,
+        "rawMedian": 34.28,
+        "sampleSize": 48
       },
       "BGS 9.5": {
-        "gradedMedian": 53.5,
-        "medianRatio": 1.51,
-        "p25": 1.2,
+        "gradedMedian": 57.1,
+        "medianRatio": 1.53,
+        "p25": 1.21,
         "p75": 2.13,
         "rawMedian": 34.03,
-        "sampleSize": 132
+        "sampleSize": 130
       },
       "CGC 10": {
-        "gradedMedian": 70.91,
-        "medianRatio": 2,
+        "gradedMedian": 70,
+        "medianRatio": 2.03,
         "p25": 1.53,
-        "p75": 2.64,
-        "rawMedian": 33,
-        "sampleSize": 595
+        "p75": 2.62,
+        "rawMedian": 33.51,
+        "sampleSize": 612
       },
       "CGC 7.5": {
         "gradedMedian": 19.51,
-        "medianRatio": 0.61,
-        "p25": 0.56,
-        "p75": 1.06,
-        "rawMedian": 32.38,
-        "sampleSize": 11
+        "medianRatio": 0.58,
+        "p25": 0.55,
+        "p75": 0.75,
+        "rawMedian": 32.84,
+        "sampleSize": 10
       },
       "CGC 8": {
         "gradedMedian": 22.1,
-        "medianRatio": 0.65,
+        "medianRatio": 0.6,
         "p25": 0.55,
         "p75": 0.76,
-        "rawMedian": 35.6,
-        "sampleSize": 27
+        "rawMedian": 35.32,
+        "sampleSize": 33
       },
       "CGC 8.5": {
-        "gradedMedian": 24.95,
-        "medianRatio": 0.77,
-        "p25": 0.67,
-        "p75": 0.85,
-        "rawMedian": 32.53,
-        "sampleSize": 122
+        "gradedMedian": 25.14,
+        "medianRatio": 0.76,
+        "p25": 0.66,
+        "p75": 0.86,
+        "rawMedian": 33.51,
+        "sampleSize": 124
       },
       "CGC 9": {
-        "gradedMedian": 28.2,
+        "gradedMedian": 28.67,
         "medianRatio": 0.87,
-        "p25": 0.74,
-        "p75": 1.02,
-        "rawMedian": 32.51,
-        "sampleSize": 323
+        "p25": 0.73,
+        "p75": 1.03,
+        "rawMedian": 33,
+        "sampleSize": 319
       },
       "CGC 9.5": {
         "gradedMedian": 34.98,
         "medianRatio": 1.04,
-        "p25": 0.85,
+        "p25": 0.84,
         "p75": 1.29,
-        "rawMedian": 33.45,
-        "sampleSize": 203
+        "rawMedian": 34.23,
+        "sampleSize": 208
       },
       "PSA 10": {
-        "gradedMedian": 121.85,
-        "medianRatio": 3.55,
-        "p25": 2.48,
-        "p75": 5.33,
-        "rawMedian": 33.47,
-        "sampleSize": 929
+        "gradedMedian": 122.19,
+        "medianRatio": 3.58,
+        "p25": 2.51,
+        "p75": 5.3,
+        "rawMedian": 33.72,
+        "sampleSize": 951
       },
       "PSA 5": {
-        "gradedMedian": 26.25,
-        "medianRatio": 0.78,
-        "p25": 0.54,
-        "p75": 0.84,
-        "rawMedian": 33.83,
-        "sampleSize": 10
+        "gradedMedian": 27.33,
+        "medianRatio": 0.84,
+        "p25": 0.55,
+        "p75": 1.32,
+        "rawMedian": 34.81,
+        "sampleSize": 14
       },
       "PSA 6": {
-        "gradedMedian": 25.44,
-        "medianRatio": 0.62,
-        "p25": 0.53,
-        "p75": 0.78,
-        "rawMedian": 34.71,
-        "sampleSize": 39
+        "gradedMedian": 25.75,
+        "medianRatio": 0.63,
+        "p25": 0.54,
+        "p75": 0.79,
+        "rawMedian": 35.32,
+        "sampleSize": 42
       },
       "PSA 7": {
-        "gradedMedian": 25.96,
-        "medianRatio": 0.77,
+        "gradedMedian": 26,
+        "medianRatio": 0.76,
         "p25": 0.64,
-        "p75": 0.88,
-        "rawMedian": 33.11,
-        "sampleSize": 74
+        "p75": 0.91,
+        "rawMedian": 32.07,
+        "sampleSize": 76
       },
       "PSA 8": {
-        "gradedMedian": 29.01,
-        "medianRatio": 0.86,
-        "p25": 0.72,
-        "p75": 1.01,
-        "rawMedian": 32.9,
-        "sampleSize": 353
+        "gradedMedian": 29.86,
+        "medianRatio": 0.88,
+        "p25": 0.73,
+        "p75": 1.03,
+        "rawMedian": 34.23,
+        "sampleSize": 364
       },
       "PSA 8.5": {
         "gradedMedian": 31.15,
-        "medianRatio": 0.8,
-        "p25": 0.71,
-        "p75": 0.83,
-        "rawMedian": 39.43,
-        "sampleSize": 12
+        "medianRatio": 0.83,
+        "p25": 0.74,
+        "p75": 1.25,
+        "rawMedian": 34.81,
+        "sampleSize": 13
       },
       "PSA 9": {
-        "gradedMedian": 40.58,
-        "medianRatio": 1.19,
+        "gradedMedian": 40.32,
+        "medianRatio": 1.18,
         "p25": 1,
         "p75": 1.45,
-        "rawMedian": 33.44,
-        "sampleSize": 753
+        "rawMedian": 33.87,
+        "sampleSize": 763
       },
       "SGC 10": {
         "gradedMedian": 67.5,
         "medianRatio": 1.85,
         "p25": 1.5,
-        "p75": 2.38,
-        "rawMedian": 33.83,
-        "sampleSize": 41
+        "p75": 2.52,
+        "rawMedian": 34.81,
+        "sampleSize": 49
       },
       "SGC 9": {
         "gradedMedian": 36.66,
-        "medianRatio": 0.94,
-        "p25": 0.86,
+        "medianRatio": 0.91,
+        "p25": 0.84,
         "p75": 1.09,
-        "rawMedian": 27.97,
+        "rawMedian": 28,
         "sampleSize": 18
       },
       "SGC 9.5": {
         "gradedMedian": 41.16,
-        "medianRatio": 1.21,
-        "p25": 0.92,
-        "p75": 1.53,
-        "rawMedian": 34.72,
-        "sampleSize": 24
-      },
-      "TAG 10": {
-        "gradedMedian": 173.15,
-        "medianRatio": 4.37,
-        "p25": 4.07,
-        "p75": 7.41,
-        "rawMedian": 30.72,
-        "sampleSize": 6
+        "medianRatio": 1.08,
+        "p25": 0.89,
+        "p75": 1.29,
+        "rawMedian": 34.81,
+        "sampleSize": 26
       }
     },
     "$250-499": {
       "BGS 10": {
-        "gradedMedian": 1200,
-        "medianRatio": 3.41,
-        "p25": 2.97,
-        "p75": 5.58,
-        "rawMedian": 335.52,
-        "sampleSize": 48
+        "gradedMedian": 1247.25,
+        "medianRatio": 3.68,
+        "p25": 3,
+        "p75": 5.4,
+        "rawMedian": 336.38,
+        "sampleSize": 46
+      },
+      "BGS 8.5": {
+        "gradedMedian": 297.98,
+        "medianRatio": 1.09,
+        "p25": 1.09,
+        "p75": 1.11,
+        "rawMedian": 295.48,
+        "sampleSize": 5
       },
       "BGS 9": {
         "gradedMedian": 333.67,
         "medianRatio": 0.97,
         "p25": 0.9,
-        "p75": 1.13,
-        "rawMedian": 333.09,
-        "sampleSize": 26
+        "p75": 1.23,
+        "rawMedian": 332.92,
+        "sampleSize": 31
       },
       "BGS 9.5": {
         "gradedMedian": 474,
         "medianRatio": 1.43,
         "p25": 1.2,
         "p75": 1.76,
-        "rawMedian": 331.16,
-        "sampleSize": 59
+        "rawMedian": 332.92,
+        "sampleSize": 58
       },
       "CGC 10": {
         "gradedMedian": 546,
-        "medianRatio": 1.65,
-        "p25": 1.33,
-        "p75": 2.16,
-        "rawMedian": 331.16,
-        "sampleSize": 106
+        "medianRatio": 1.64,
+        "p25": 1.34,
+        "p75": 2.13,
+        "rawMedian": 330.72,
+        "sampleSize": 111
       },
       "CGC 8.5": {
-        "gradedMedian": 260.5,
-        "medianRatio": 0.79,
-        "p25": 0.68,
-        "p75": 0.86,
-        "rawMedian": 333.09,
-        "sampleSize": 16
+        "gradedMedian": 252.67,
+        "medianRatio": 0.8,
+        "p25": 0.75,
+        "p75": 0.94,
+        "rawMedian": 281.68,
+        "sampleSize": 23
       },
       "CGC 9": {
-        "gradedMedian": 289.25,
+        "gradedMedian": 290.5,
         "medianRatio": 0.92,
-        "p25": 0.82,
+        "p25": 0.83,
         "p75": 0.99,
-        "rawMedian": 331.16,
-        "sampleSize": 63
+        "rawMedian": 330.67,
+        "sampleSize": 68
       },
       "CGC 9.5": {
-        "gradedMedian": 348.83,
-        "medianRatio": 1.04,
-        "p25": 0.9,
-        "p75": 1.28,
-        "rawMedian": 333.09,
-        "sampleSize": 39
+        "gradedMedian": 362.5,
+        "medianRatio": 1.08,
+        "p25": 0.93,
+        "p75": 1.36,
+        "rawMedian": 332.92,
+        "sampleSize": 40
       },
       "PSA 1": {
         "gradedMedian": 302.5,
-        "medianRatio": 0.91,
-        "p25": 0.84,
-        "p75": 0.95,
-        "rawMedian": 361.64,
+        "medianRatio": 0.93,
+        "p25": 0.83,
+        "p75": 0.96,
+        "rawMedian": 363.26,
         "sampleSize": 6
       },
       "PSA 10": {
-        "gradedMedian": 756.97,
+        "gradedMedian": 758.99,
         "medianRatio": 2.25,
         "p25": 1.66,
-        "p75": 3.07,
+        "p75": 3.46,
         "rawMedian": 332.21,
-        "sampleSize": 137
+        "sampleSize": 142
       },
       "PSA 6": {
-        "gradedMedian": 275,
-        "medianRatio": 0.88,
-        "p25": 0.86,
+        "gradedMedian": 246.76,
+        "medianRatio": 0.86,
+        "p25": 0.68,
         "p75": 1.02,
-        "rawMedian": 369.57,
-        "sampleSize": 8
+        "rawMedian": 364.17,
+        "sampleSize": 6
       },
       "PSA 7": {
-        "gradedMedian": 306,
-        "medianRatio": 0.83,
-        "p25": 0.73,
-        "p75": 0.91,
-        "rawMedian": 332.86,
-        "sampleSize": 17
+        "gradedMedian": 314,
+        "medianRatio": 0.89,
+        "p25": 0.78,
+        "p75": 1.23,
+        "rawMedian": 330.67,
+        "sampleSize": 20
       },
       "PSA 8": {
         "gradedMedian": 295.9,
-        "medianRatio": 0.87,
-        "p25": 0.82,
-        "p75": 1.01,
-        "rawMedian": 331.16,
-        "sampleSize": 71
+        "medianRatio": 0.88,
+        "p25": 0.83,
+        "p75": 1.04,
+        "rawMedian": 330.67,
+        "sampleSize": 75
       },
       "PSA 8.5": {
         "gradedMedian": 281.21,
-        "medianRatio": 0.97,
+        "medianRatio": 0.94,
         "p25": 0.86,
         "p75": 0.99,
-        "rawMedian": 331.16,
-        "sampleSize": 12
+        "rawMedian": 330.67,
+        "sampleSize": 14
       },
       "PSA 9": {
-        "gradedMedian": 324.85,
-        "medianRatio": 1.02,
-        "p25": 0.94,
-        "p75": 1.18,
-        "rawMedian": 328.24,
-        "sampleSize": 116
+        "gradedMedian": 324.84,
+        "medianRatio": 1.01,
+        "p25": 0.92,
+        "p75": 1.19,
+        "rawMedian": 314.06,
+        "sampleSize": 123
       },
       "SGC 9.5": {
         "gradedMedian": 340,
-        "medianRatio": 1.2,
+        "medianRatio": 1.19,
         "p25": 0.69,
-        "p75": 1.29,
-        "rawMedian": 361.64,
-        "sampleSize": 6
-      },
-      "TAG 10": {
-        "gradedMedian": 980,
-        "medianRatio": 2.65,
-        "p25": 1.91,
-        "p75": 2.67,
-        "rawMedian": 370.13,
+        "p75": 1.27,
+        "rawMedian": 363.26,
         "sampleSize": 6
       }
     },
@@ -11747,196 +11779,188 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       "BGS 10": {
         "gradedMedian": 325.33,
         "medianRatio": 4.72,
-        "p25": 2.99,
-        "p75": 8.18,
-        "rawMedian": 60.97,
-        "sampleSize": 85
+        "p25": 2.98,
+        "p75": 9.73,
+        "rawMedian": 60.55,
+        "sampleSize": 87
       },
       "BGS 8.5": {
         "gradedMedian": 63,
         "medianRatio": 0.86,
         "p25": 0.83,
         "p75": 0.86,
-        "rawMedian": 72.9,
+        "rawMedian": 72.83,
         "sampleSize": 6
       },
       "BGS 9": {
-        "gradedMedian": 64,
+        "gradedMedian": 67.5,
         "medianRatio": 0.91,
-        "p25": 0.8,
-        "p75": 1.06,
-        "rawMedian": 69.6,
-        "sampleSize": 60
+        "p25": 0.78,
+        "p75": 1.05,
+        "rawMedian": 70.47,
+        "sampleSize": 61
       },
       "BGS 9.5": {
-        "gradedMedian": 94,
-        "medianRatio": 1.44,
-        "p25": 1.11,
-        "p75": 2.02,
-        "rawMedian": 64.91,
+        "gradedMedian": 92.5,
+        "medianRatio": 1.3,
+        "p25": 1.08,
+        "p75": 1.88,
+        "rawMedian": 64.94,
         "sampleSize": 143
       },
       "CGC 10": {
-        "gradedMedian": 126.41,
-        "medianRatio": 1.87,
-        "p25": 1.49,
-        "p75": 2.5,
-        "rawMedian": 64.56,
-        "sampleSize": 398
-      },
-      "CGC 7.5": {
-        "gradedMedian": 50.4,
-        "medianRatio": 0.76,
-        "p25": 0.67,
-        "p75": 1.37,
-        "rawMedian": 67.67,
-        "sampleSize": 6
+        "gradedMedian": 128.67,
+        "medianRatio": 1.91,
+        "p25": 1.48,
+        "p75": 2.52,
+        "rawMedian": 64.46,
+        "sampleSize": 404
       },
       "CGC 8": {
         "gradedMedian": 48.4,
-        "medianRatio": 0.74,
-        "p25": 0.6,
-        "p75": 0.81,
-        "rawMedian": 64.85,
-        "sampleSize": 34
+        "medianRatio": 0.71,
+        "p25": 0.61,
+        "p75": 0.8,
+        "rawMedian": 65.32,
+        "sampleSize": 32
       },
       "CGC 8.5": {
-        "gradedMedian": 53.5,
+        "gradedMedian": 53.55,
         "medianRatio": 0.74,
         "p25": 0.66,
-        "p75": 0.87,
-        "rawMedian": 69.6,
-        "sampleSize": 65
+        "p75": 0.86,
+        "rawMedian": 70.93,
+        "sampleSize": 66
       },
       "CGC 9": {
-        "gradedMedian": 55,
-        "medianRatio": 0.82,
+        "gradedMedian": 55.58,
+        "medianRatio": 0.81,
         "p25": 0.7,
-        "p75": 1.01,
-        "rawMedian": 64.85,
-        "sampleSize": 200
+        "p75": 0.96,
+        "rawMedian": 64.58,
+        "sampleSize": 197
       },
       "CGC 9.5": {
-        "gradedMedian": 62.6,
-        "medianRatio": 0.96,
+        "gradedMedian": 67.6,
+        "medianRatio": 0.97,
         "p25": 0.82,
-        "p75": 1.17,
-        "rawMedian": 61.3,
+        "p75": 1.28,
+        "rawMedian": 61.7,
         "sampleSize": 136
       },
       "PSA 10": {
-        "gradedMedian": 194.24,
-        "medianRatio": 2.86,
-        "p25": 2.11,
-        "p75": 4.34,
-        "rawMedian": 65.79,
-        "sampleSize": 555
+        "gradedMedian": 186.08,
+        "medianRatio": 2.83,
+        "p25": 2.09,
+        "p75": 4.2,
+        "rawMedian": 66.96,
+        "sampleSize": 566
+      },
+      "PSA 5": {
+        "gradedMedian": 70.99,
+        "medianRatio": 1.18,
+        "p25": 0.63,
+        "p75": 1.29,
+        "rawMedian": 59.94,
+        "sampleSize": 6
       },
       "PSA 6": {
         "gradedMedian": 49.9,
-        "medianRatio": 0.71,
+        "medianRatio": 0.68,
         "p25": 0.59,
         "p75": 0.78,
-        "rawMedian": 73.77,
-        "sampleSize": 20
+        "rawMedian": 75.05,
+        "sampleSize": 24
       },
       "PSA 7": {
         "gradedMedian": 53.44,
-        "medianRatio": 0.74,
-        "p25": 0.67,
+        "medianRatio": 0.76,
+        "p25": 0.68,
         "p75": 0.92,
-        "rawMedian": 67.67,
-        "sampleSize": 62
+        "rawMedian": 68.76,
+        "sampleSize": 65
       },
       "PSA 8": {
-        "gradedMedian": 57.42,
+        "gradedMedian": 58.77,
         "medianRatio": 0.85,
         "p25": 0.7,
         "p75": 0.98,
-        "rawMedian": 67.6,
-        "sampleSize": 227
+        "rawMedian": 66.8,
+        "sampleSize": 229
       },
       "PSA 8.5": {
         "gradedMedian": 55.75,
         "medianRatio": 0.96,
         "p25": 0.66,
         "p75": 1.08,
-        "rawMedian": 58.2,
+        "rawMedian": 58.25,
         "sampleSize": 6
       },
       "PSA 9": {
         "gradedMedian": 71.33,
         "medianRatio": 1.07,
-        "p25": 0.91,
-        "p75": 1.24,
-        "rawMedian": 66.09,
-        "sampleSize": 494
+        "p25": 0.9,
+        "p75": 1.25,
+        "rawMedian": 66.51,
+        "sampleSize": 497
       },
       "SGC 10": {
         "gradedMedian": 102.87,
-        "medianRatio": 1.6,
-        "p25": 1.13,
-        "p75": 1.94,
-        "rawMedian": 66.13,
-        "sampleSize": 37
+        "medianRatio": 1.61,
+        "p25": 1.15,
+        "p75": 1.92,
+        "rawMedian": 65.78,
+        "sampleSize": 35
       },
       "SGC 9": {
         "gradedMedian": 54.94,
         "medianRatio": 0.78,
         "p25": 0.71,
         "p75": 0.87,
-        "rawMedian": 70.43,
+        "rawMedian": 70.8,
         "sampleSize": 10
       },
       "SGC 9.5": {
-        "gradedMedian": 72.4,
-        "medianRatio": 1.03,
-        "p25": 0.88,
-        "p75": 1.19,
-        "rawMedian": 72.92,
+        "gradedMedian": 88.33,
+        "medianRatio": 1.08,
+        "p25": 0.9,
+        "p75": 1.28,
+        "rawMedian": 72.96,
         "sampleSize": 14
-      },
-      "TAG 10": {
-        "gradedMedian": 164.28,
-        "medianRatio": 2.59,
-        "p25": 2.27,
-        "p75": 3.07,
-        "rawMedian": 56.75,
-        "sampleSize": 5
       }
     },
     "$500-999": {
       "BGS 10": {
         "gradedMedian": 2010,
-        "medianRatio": 3.49,
+        "medianRatio": 3.47,
         "p25": 3.22,
-        "p75": 3.84,
-        "rawMedian": 670.12,
+        "p75": 3.82,
+        "rawMedian": 672.54,
         "sampleSize": 13
       },
       "BGS 9": {
         "gradedMedian": 721.67,
-        "medianRatio": 0.96,
-        "p25": 0.96,
+        "medianRatio": 1.22,
+        "p25": 1.22,
         "p75": 1.29,
         "rawMedian": 623.29,
         "sampleSize": 5
       },
       "BGS 9.5": {
-        "gradedMedian": 1122.69,
+        "gradedMedian": 1130.49,
         "medianRatio": 1.75,
-        "p25": 1.47,
-        "p75": 2.24,
+        "p25": 1.49,
+        "p75": 2.23,
         "rawMedian": 623.29,
         "sampleSize": 9
       },
       "CGC 10": {
-        "gradedMedian": 1045,
-        "medianRatio": 1.71,
-        "p25": 1.15,
+        "gradedMedian": 1002.65,
+        "medianRatio": 1.54,
+        "p25": 1.06,
         "p75": 2.18,
-        "rawMedian": 664.9,
-        "sampleSize": 25
+        "rawMedian": 648.76,
+        "sampleSize": 27
       },
       "CGC 9": {
         "gradedMedian": 632.73,
@@ -11948,301 +11972,293 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       },
       "CGC 9.5": {
         "gradedMedian": 779,
-        "medianRatio": 1.36,
-        "p25": 0.65,
+        "medianRatio": 1.35,
+        "p25": 0.6,
         "p75": 1.45,
-        "rawMedian": 597.16,
+        "rawMedian": 623.29,
         "sampleSize": 6
       },
       "PSA 10": {
-        "gradedMedian": 1389.5,
-        "medianRatio": 2.23,
-        "p25": 1.93,
-        "p75": 2.84,
-        "rawMedian": 670.12,
-        "sampleSize": 35
-      },
-      "PSA 7": {
-        "gradedMedian": 893.5,
-        "medianRatio": 1.28,
-        "p25": 0.76,
-        "p75": 1.33,
-        "rawMedian": 670.12,
-        "sampleSize": 6
+        "gradedMedian": 1422.36,
+        "medianRatio": 2.32,
+        "p25": 1.98,
+        "p75": 3.3,
+        "rawMedian": 672.54,
+        "sampleSize": 39
       },
       "PSA 8": {
         "gradedMedian": 840,
-        "medianRatio": 1.41,
+        "medianRatio": 1.31,
         "p25": 1.03,
-        "p75": 1.51,
-        "rawMedian": 623.29,
+        "p75": 1.42,
+        "rawMedian": 642.51,
         "sampleSize": 8
       },
       "PSA 9": {
-        "gradedMedian": 674.49,
-        "medianRatio": 0.98,
+        "gradedMedian": 644.09,
+        "medianRatio": 0.99,
         "p25": 0.81,
-        "p75": 1.11,
-        "rawMedian": 672.54,
-        "sampleSize": 27
+        "p75": 1.12,
+        "rawMedian": 678.52,
+        "sampleSize": 25
       }
     },
     "Under $25": {
       "BGS 10": {
         "gradedMedian": 89.01,
         "medianRatio": 11.79,
-        "p25": 6.65,
+        "p25": 6.68,
         "p75": 24.5,
-        "rawMedian": 6.96,
-        "sampleSize": 345
+        "rawMedian": 6.95,
+        "sampleSize": 344
       },
       "BGS 8": {
         "gradedMedian": 17,
-        "medianRatio": 2.11,
+        "medianRatio": 1.16,
         "p25": 1.12,
-        "p75": 3.29,
+        "p75": 2.11,
         "rawMedian": 13.57,
-        "sampleSize": 8
+        "sampleSize": 10
       },
       "BGS 8.5": {
-        "gradedMedian": 13.13,
-        "medianRatio": 1.34,
-        "p25": 1.1,
-        "p75": 1.93,
-        "rawMedian": 8.38,
-        "sampleSize": 35
+        "gradedMedian": 13.65,
+        "medianRatio": 1.82,
+        "p25": 1.19,
+        "p75": 2.23,
+        "rawMedian": 7.74,
+        "sampleSize": 29
       },
       "BGS 9": {
         "gradedMedian": 16.73,
-        "medianRatio": 2.14,
-        "p25": 1.33,
-        "p75": 3.31,
-        "rawMedian": 7.32,
-        "sampleSize": 175
+        "medianRatio": 2.04,
+        "p25": 1.34,
+        "p75": 3.02,
+        "rawMedian": 7.77,
+        "sampleSize": 165
       },
       "BGS 9.5": {
-        "gradedMedian": 20,
+        "gradedMedian": 20.32,
         "medianRatio": 3.04,
         "p25": 2.12,
         "p75": 4.27,
-        "rawMedian": 6.69,
-        "sampleSize": 648
+        "rawMedian": 6.67,
+        "sampleSize": 638
       },
       "CGC 10": {
-        "gradedMedian": 20.99,
-        "medianRatio": 4.93,
-        "p25": 3.27,
-        "p75": 7.56,
-        "rawMedian": 4.15,
-        "sampleSize": 7776
+        "gradedMedian": 21.08,
+        "medianRatio": 4.98,
+        "p25": 3.31,
+        "p75": 7.58,
+        "rawMedian": 4.13,
+        "sampleSize": 8108
       },
       "CGC 4.5": {
         "gradedMedian": 10,
-        "medianRatio": 7.43,
+        "medianRatio": 6.3,
         "p25": 0.52,
-        "p75": 7.43,
-        "rawMedian": 8.39,
+        "p75": 6.3,
+        "rawMedian": 8.27,
         "sampleSize": 6
       },
       "CGC 5": {
         "gradedMedian": 7.13,
         "medianRatio": 0.95,
-        "p25": 0.84,
+        "p25": 0.83,
         "p75": 1.66,
-        "rawMedian": 8.35,
+        "rawMedian": 8.4,
         "sampleSize": 14
       },
       "CGC 5.5": {
         "gradedMedian": 7.2,
-        "medianRatio": 1.67,
+        "medianRatio": 1.66,
         "p25": 1.4,
-        "p75": 1.97,
-        "rawMedian": 5.01,
+        "p75": 2.05,
+        "rawMedian": 4.99,
         "sampleSize": 8
       },
       "CGC 6": {
-        "gradedMedian": 7.2,
-        "medianRatio": 1.45,
+        "gradedMedian": 8,
+        "medianRatio": 1.65,
         "p25": 1.16,
-        "p75": 1.73,
-        "rawMedian": 4.13,
-        "sampleSize": 17
+        "p75": 2.93,
+        "rawMedian": 3.89,
+        "sampleSize": 23
       },
       "CGC 6.5": {
-        "gradedMedian": 10.1,
-        "medianRatio": 1.42,
-        "p25": 1.09,
-        "p75": 2.05,
-        "rawMedian": 4.98,
-        "sampleSize": 36
+        "gradedMedian": 11.8,
+        "medianRatio": 1.57,
+        "p25": 0.78,
+        "p75": 3.1,
+        "rawMedian": 7.41,
+        "sampleSize": 39
       },
       "CGC 7": {
-        "gradedMedian": 8.1,
-        "medianRatio": 1.91,
-        "p25": 1.13,
-        "p75": 3.16,
-        "rawMedian": 3.67,
-        "sampleSize": 75
+        "gradedMedian": 9.3,
+        "medianRatio": 1.87,
+        "p25": 1.07,
+        "p75": 3.15,
+        "rawMedian": 4.75,
+        "sampleSize": 71
       },
       "CGC 7.5": {
         "gradedMedian": 9,
-        "medianRatio": 1.63,
-        "p25": 1.05,
-        "p75": 2.4,
-        "rawMedian": 4.89,
-        "sampleSize": 197
+        "medianRatio": 1.72,
+        "p25": 1.09,
+        "p75": 2.54,
+        "rawMedian": 4.77,
+        "sampleSize": 199
       },
       "CGC 8": {
-        "gradedMedian": 9.8,
-        "medianRatio": 1.84,
-        "p25": 1.22,
+        "gradedMedian": 10,
+        "medianRatio": 1.88,
+        "p25": 1.25,
         "p75": 2.92,
-        "rawMedian": 4.73,
-        "sampleSize": 590
+        "rawMedian": 4.63,
+        "sampleSize": 601
       },
       "CGC 8.5": {
-        "gradedMedian": 10.13,
-        "medianRatio": 2.06,
-        "p25": 1.27,
-        "p75": 3.2,
-        "rawMedian": 4.66,
-        "sampleSize": 1234
+        "gradedMedian": 10.3,
+        "medianRatio": 2.11,
+        "p25": 1.3,
+        "p75": 3.22,
+        "rawMedian": 4.62,
+        "sampleSize": 1268
       },
       "CGC 9": {
-        "gradedMedian": 11.4,
-        "medianRatio": 2.46,
-        "p25": 1.52,
-        "p75": 3.82,
-        "rawMedian": 4.51,
-        "sampleSize": 3645
+        "gradedMedian": 11.5,
+        "medianRatio": 2.49,
+        "p25": 1.55,
+        "p75": 3.85,
+        "rawMedian": 4.43,
+        "sampleSize": 3776
       },
       "CGC 9.5": {
-        "gradedMedian": 13.22,
-        "medianRatio": 2.44,
+        "gradedMedian": 13.37,
+        "medianRatio": 2.48,
         "p25": 1.62,
-        "p75": 3.86,
-        "rawMedian": 5.27,
-        "sampleSize": 2023
+        "p75": 3.9,
+        "rawMedian": 5.28,
+        "sampleSize": 2033
       },
       "PSA 10": {
-        "gradedMedian": 40.6,
-        "medianRatio": 8.71,
-        "p25": 5.44,
-        "p75": 14.4,
-        "rawMedian": 4.74,
-        "sampleSize": 9227
+        "gradedMedian": 41,
+        "medianRatio": 8.88,
+        "p25": 5.53,
+        "p75": 14.65,
+        "rawMedian": 4.71,
+        "sampleSize": 9591
       },
       "PSA 4": {
-        "gradedMedian": 14,
-        "medianRatio": 1.81,
-        "p25": 1.27,
-        "p75": 1.86,
-        "rawMedian": 9.83,
-        "sampleSize": 14
+        "gradedMedian": 13.5,
+        "medianRatio": 1.74,
+        "p25": 0.91,
+        "p75": 1.84,
+        "rawMedian": 10.53,
+        "sampleSize": 11
       },
       "PSA 5": {
         "gradedMedian": 8.83,
-        "medianRatio": 1.49,
-        "p25": 0.94,
-        "p75": 2.38,
+        "medianRatio": 1.89,
+        "p25": 0.93,
+        "p75": 2.65,
         "rawMedian": 7.29,
-        "sampleSize": 37
+        "sampleSize": 36
       },
       "PSA 6": {
-        "gradedMedian": 12.9,
-        "medianRatio": 1.34,
-        "p25": 0.9,
-        "p75": 2.37,
-        "rawMedian": 8.9,
-        "sampleSize": 145
+        "gradedMedian": 13,
+        "medianRatio": 1.35,
+        "p25": 0.93,
+        "p75": 2.29,
+        "rawMedian": 9.16,
+        "sampleSize": 151
       },
       "PSA 7": {
-        "gradedMedian": 12.5,
-        "medianRatio": 1.54,
+        "gradedMedian": 12.51,
+        "medianRatio": 1.6,
         "p25": 1.02,
-        "p75": 2.6,
-        "rawMedian": 8.15,
-        "sampleSize": 378
+        "p75": 2.76,
+        "rawMedian": 7.76,
+        "sampleSize": 380
       },
       "PSA 8": {
-        "gradedMedian": 13,
-        "medianRatio": 2.08,
-        "p25": 1.3,
-        "p75": 3.63,
-        "rawMedian": 6.07,
-        "sampleSize": 2228
+        "gradedMedian": 13.13,
+        "medianRatio": 2.12,
+        "p25": 1.32,
+        "p75": 3.67,
+        "rawMedian": 6.04,
+        "sampleSize": 2239
       },
       "PSA 8.5": {
         "gradedMedian": 16.83,
-        "medianRatio": 1.93,
+        "medianRatio": 2.13,
         "p25": 1.3,
-        "p75": 2.66,
-        "rawMedian": 10.24,
-        "sampleSize": 42
+        "p75": 2.62,
+        "rawMedian": 10.25,
+        "sampleSize": 43
       },
       "PSA 9": {
-        "gradedMedian": 16.79,
-        "medianRatio": 3.21,
-        "p25": 1.99,
-        "p75": 5.26,
-        "rawMedian": 4.98,
-        "sampleSize": 6130
+        "gradedMedian": 16.92,
+        "medianRatio": 3.23,
+        "p25": 2.02,
+        "p75": 5.33,
+        "rawMedian": 4.97,
+        "sampleSize": 6257
       },
       "SGC 10": {
         "gradedMedian": 21.88,
-        "medianRatio": 3.21,
+        "medianRatio": 3.23,
         "p25": 2.23,
-        "p75": 4.57,
-        "rawMedian": 7.14,
-        "sampleSize": 200
+        "p75": 4.5,
+        "rawMedian": 6.95,
+        "sampleSize": 198
       },
       "SGC 8": {
-        "gradedMedian": 8.53,
-        "medianRatio": 2.12,
-        "p25": 1.07,
-        "p75": 3.8,
-        "rawMedian": 4.64,
+        "gradedMedian": 9.75,
+        "medianRatio": 2.67,
+        "p25": 1.79,
+        "p75": 3.79,
+        "rawMedian": 3.56,
         "sampleSize": 12
       },
       "SGC 8.5": {
         "gradedMedian": 7.67,
-        "medianRatio": 0.75,
-        "p25": 0.58,
-        "p75": 1.69,
-        "rawMedian": 10.24,
+        "medianRatio": 1.72,
+        "p25": 0.75,
+        "p75": 2.02,
+        "rawMedian": 3.2,
         "sampleSize": 10
       },
       "SGC 9": {
-        "gradedMedian": 8.5,
+        "gradedMedian": 9,
         "medianRatio": 1.21,
-        "p25": 0.68,
-        "p75": 2.12,
-        "rawMedian": 8.43,
-        "sampleSize": 50
+        "p25": 0.66,
+        "p75": 2.09,
+        "rawMedian": 8.59,
+        "sampleSize": 42
       },
       "SGC 9.5": {
-        "gradedMedian": 17.8,
-        "medianRatio": 1.81,
-        "p25": 1.48,
-        "p75": 2.87,
-        "rawMedian": 7.4,
-        "sampleSize": 52
+        "gradedMedian": 16.9,
+        "medianRatio": 1.67,
+        "p25": 1.42,
+        "p75": 2.88,
+        "rawMedian": 6.59,
+        "sampleSize": 50
       },
       "TAG 10": {
-        "gradedMedian": 72.33,
-        "medianRatio": 6.94,
-        "p25": 4.61,
-        "p75": 9.42,
-        "rawMedian": 9.66,
-        "sampleSize": 27
+        "gradedMedian": 76.8,
+        "medianRatio": 7.72,
+        "p25": 4.64,
+        "p75": 11.19,
+        "rawMedian": 8.17,
+        "sampleSize": 26
       },
       "TAG 9": {
-        "gradedMedian": 20.49,
-        "medianRatio": 2.44,
-        "p25": 2.19,
-        "p75": 3.37,
-        "rawMedian": 8.39,
-        "sampleSize": 7
+        "gradedMedian": 29.75,
+        "medianRatio": 2.48,
+        "p25": 2.27,
+        "p75": 3.31,
+        "rawMedian": 13.03,
+        "sampleSize": 8
       }
     }
   }
@@ -12259,20 +12275,20 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "sampleSize": 14
       },
       "PSA 10": {
-        "gradedMedian": 2032.04,
+        "gradedMedian": 2176.95,
         "medianRatio": 1.46,
-        "p25": 1.06,
-        "p75": 2.14,
-        "rawMedian": 1393,
-        "sampleSize": 134
+        "p25": 1.11,
+        "p75": 2.21,
+        "rawMedian": 1353.72,
+        "sampleSize": 142
       },
       "PSA 9": {
-        "gradedMedian": 1066.65,
+        "gradedMedian": 1018.69,
         "medianRatio": 0.72,
         "p25": 0.59,
         "p75": 1.07,
         "rawMedian": 1276.25,
-        "sampleSize": 58
+        "sampleSize": 54
       },
       "SGC 9.5": {
         "gradedMedian": 872.5,
@@ -12283,111 +12299,121 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "sampleSize": 6
       }
     },
+    "$10,000+": {
+      "PSA 10": {
+        "gradedMedian": 8518.67,
+        "medianRatio": 0.66,
+        "p25": 0.64,
+        "p75": 0.72,
+        "rawMedian": 11835,
+        "sampleSize": 6
+      }
+    },
     "$100-249": {
       "BGS 10": {
         "gradedMedian": 243.14,
         "medianRatio": 1.07,
         "p25": 0.7,
         "p75": 2.45,
-        "rawMedian": 183.51,
-        "sampleSize": 14
+        "rawMedian": 208.25,
+        "sampleSize": 16
       },
       "BGS 9": {
-        "gradedMedian": 142.5,
-        "medianRatio": 1.07,
-        "p25": 0.91,
-        "p75": 1.29,
-        "rawMedian": 147.25,
-        "sampleSize": 26
+        "gradedMedian": 157.5,
+        "medianRatio": 1.11,
+        "p25": 0.95,
+        "p75": 1.6,
+        "rawMedian": 153.79,
+        "sampleSize": 24
       },
       "BGS 9.5": {
         "gradedMedian": 184.3,
-        "medianRatio": 1.33,
-        "p25": 1.12,
+        "medianRatio": 1.37,
+        "p25": 1.11,
         "p75": 1.69,
-        "rawMedian": 146.68,
+        "rawMedian": 148.75,
         "sampleSize": 56
       },
       "CGC 10": {
-        "gradedMedian": 192.89,
-        "medianRatio": 1.45,
-        "p25": 1.25,
-        "p75": 2.03,
-        "rawMedian": 154.11,
+        "gradedMedian": 208.37,
+        "medianRatio": 1.4,
+        "p25": 1.35,
+        "p75": 2.01,
+        "rawMedian": 153.79,
         "sampleSize": 6
       },
       "CGC 9.5": {
         "gradedMedian": 136.08,
         "medianRatio": 0.88,
         "p25": 0.51,
-        "p75": 1.62,
-        "rawMedian": 154.11,
+        "p75": 1.61,
+        "rawMedian": 153.79,
         "sampleSize": 6
       },
       "PSA 1": {
         "gradedMedian": 150.33,
         "medianRatio": 1.17,
-        "p25": 0.73,
-        "p75": 3.01,
+        "p25": 0.65,
+        "p75": 3.05,
         "rawMedian": 128.75,
         "sampleSize": 10
       },
       "PSA 10": {
-        "gradedMedian": 275,
-        "medianRatio": 1.88,
-        "p25": 1.42,
-        "p75": 2.5,
-        "rawMedian": 144.83,
-        "sampleSize": 1624
+        "gradedMedian": 280,
+        "medianRatio": 1.9,
+        "p25": 1.44,
+        "p75": 2.52,
+        "rawMedian": 146.8,
+        "sampleSize": 1652
       },
       "PSA 8": {
         "gradedMedian": 117.5,
-        "medianRatio": 0.81,
+        "medianRatio": 0.84,
         "p25": 0.67,
-        "p75": 1.05,
+        "p75": 1.06,
         "rawMedian": 144.49,
         "sampleSize": 102
       },
       "PSA 9": {
-        "gradedMedian": 138.98,
+        "gradedMedian": 137.81,
         "medianRatio": 0.96,
         "p25": 0.75,
-        "p75": 1.2,
-        "rawMedian": 144.75,
-        "sampleSize": 1088
+        "p75": 1.19,
+        "rawMedian": 145.57,
+        "sampleSize": 1106
       },
       "SGC 10": {
-        "gradedMedian": 200,
-        "medianRatio": 1.3,
-        "p25": 0.92,
-        "p75": 1.69,
-        "rawMedian": 140.25,
+        "gradedMedian": 206.25,
+        "medianRatio": 1.36,
+        "p25": 0.98,
+        "p75": 1.77,
+        "rawMedian": 143.38,
         "sampleSize": 124
       },
       "SGC 9": {
         "gradedMedian": 110,
-        "medianRatio": 0.64,
-        "p25": 0.57,
+        "medianRatio": 0.61,
+        "p25": 0.58,
         "p75": 1,
         "rawMedian": 134.02,
-        "sampleSize": 22
+        "sampleSize": 18
       },
       "SGC 9.5": {
-        "gradedMedian": 146.79,
-        "medianRatio": 0.96,
-        "p25": 0.77,
-        "p75": 1.37,
+        "gradedMedian": 125,
+        "medianRatio": 0.93,
+        "p25": 0.74,
+        "p75": 1.22,
         "rawMedian": 147.25,
-        "sampleSize": 70
+        "sampleSize": 62
       }
     },
     "$2,500-4,999": {
       "PSA 10": {
-        "gradedMedian": 3218.09,
-        "medianRatio": 1.01,
+        "gradedMedian": 3251.86,
+        "medianRatio": 0.93,
         "p25": 0.74,
         "p75": 1.59,
-        "rawMedian": 3171.8,
+        "rawMedian": 3172.48,
         "sampleSize": 30
       }
     },
@@ -12395,7 +12421,7 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       "BGS 10": {
         "gradedMedian": 131.09,
         "medianRatio": 4.3,
-        "p25": 1.21,
+        "p25": 1.23,
         "p75": 4.63,
         "rawMedian": 41.99,
         "sampleSize": 12
@@ -12403,82 +12429,82 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       "BGS 9": {
         "gradedMedian": 29.7,
         "medianRatio": 1.13,
-        "p25": 0.75,
+        "p25": 0.69,
         "p75": 1.85,
-        "rawMedian": 30.76,
-        "sampleSize": 16
+        "rawMedian": 29.14,
+        "sampleSize": 14
       },
       "BGS 9.5": {
         "gradedMedian": 57.12,
         "medianRatio": 1.89,
         "p25": 1.09,
         "p75": 2.22,
-        "rawMedian": 34.88,
-        "sampleSize": 76
+        "rawMedian": 33.64,
+        "sampleSize": 74
       },
       "CGC 10": {
-        "gradedMedian": 51.4,
-        "medianRatio": 1.27,
-        "p25": 0.98,
-        "p75": 1.65,
+        "gradedMedian": 53.75,
+        "medianRatio": 1.43,
+        "p25": 1.16,
+        "p75": 1.85,
         "rawMedian": 39.08,
-        "sampleSize": 30
+        "sampleSize": 32
       },
       "PSA 10": {
-        "gradedMedian": 97.42,
-        "medianRatio": 2.67,
+        "gradedMedian": 97.48,
+        "medianRatio": 2.68,
         "p25": 1.98,
-        "p75": 3.71,
-        "rawMedian": 35.33,
-        "sampleSize": 2140
+        "p75": 3.68,
+        "rawMedian": 35.29,
+        "sampleSize": 2158
       },
       "PSA 7": {
-        "gradedMedian": 29.99,
-        "medianRatio": 1.12,
-        "p25": 0.71,
+        "gradedMedian": 19.75,
+        "medianRatio": 0.71,
+        "p25": 0.52,
         "p75": 2.7,
         "rawMedian": 37.66,
-        "sampleSize": 8
+        "sampleSize": 6
       },
       "PSA 8": {
-        "gradedMedian": 28,
-        "medianRatio": 0.87,
-        "p25": 0.65,
+        "gradedMedian": 28.3,
+        "medianRatio": 0.85,
+        "p25": 0.66,
         "p75": 1.18,
-        "rawMedian": 35.02,
+        "rawMedian": 35.17,
         "sampleSize": 160
       },
       "PSA 9": {
-        "gradedMedian": 42.5,
-        "medianRatio": 1.21,
+        "gradedMedian": 42.53,
+        "medianRatio": 1.22,
         "p25": 0.92,
         "p75": 1.67,
-        "rawMedian": 35.13,
-        "sampleSize": 1462
+        "rawMedian": 35,
+        "sampleSize": 1485
       },
       "SGC 10": {
-        "gradedMedian": 52.14,
-        "medianRatio": 1.5,
-        "p25": 1.11,
-        "p75": 2.13,
-        "rawMedian": 33.81,
+        "gradedMedian": 53.65,
+        "medianRatio": 1.64,
+        "p25": 1.13,
+        "p75": 2.23,
+        "rawMedian": 33.64,
         "sampleSize": 206
       },
       "SGC 9": {
-        "gradedMedian": 37.74,
+        "gradedMedian": 36.25,
         "medianRatio": 1,
-        "p25": 0.91,
-        "p75": 1.39,
-        "rawMedian": 35.06,
-        "sampleSize": 26
+        "p25": 0.84,
+        "p75": 1.16,
+        "rawMedian": 36.7,
+        "sampleSize": 28
       },
       "SGC 9.5": {
-        "gradedMedian": 38.95,
-        "medianRatio": 1.24,
-        "p25": 0.93,
-        "p75": 1.48,
+        "gradedMedian": 39.75,
+        "medianRatio": 1.32,
+        "p25": 0.94,
+        "p75": 1.49,
         "rawMedian": 34.25,
-        "sampleSize": 102
+        "sampleSize": 104
       }
     },
     "$250-499": {
@@ -12493,17 +12519,17 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       "BGS 9": {
         "gradedMedian": 257.25,
         "medianRatio": 0.75,
-        "p25": 0.72,
+        "p25": 0.7,
         "p75": 1.22,
-        "rawMedian": 295.93,
+        "rawMedian": 307.73,
         "sampleSize": 14
       },
       "BGS 9.5": {
-        "gradedMedian": 549.5,
-        "medianRatio": 1.49,
-        "p25": 0.99,
-        "p75": 2.15,
-        "rawMedian": 323.33,
+        "gradedMedian": 499.67,
+        "medianRatio": 1.3,
+        "p25": 1.01,
+        "p75": 2.09,
+        "rawMedian": 351.33,
         "sampleSize": 44
       },
       "PSA 1": {
@@ -12511,40 +12537,40 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "medianRatio": 1.69,
         "p25": 1.4,
         "p75": 1.75,
-        "rawMedian": 355.73,
+        "rawMedian": 355.33,
         "sampleSize": 8
       },
       "PSA 10": {
         "gradedMedian": 605.2,
         "medianRatio": 1.72,
-        "p25": 1.3,
-        "p75": 2.54,
-        "rawMedian": 327.54,
-        "sampleSize": 680
+        "p25": 1.28,
+        "p75": 2.46,
+        "rawMedian": 332.5,
+        "sampleSize": 686
       },
       "PSA 8": {
         "gradedMedian": 274.74,
-        "medianRatio": 0.77,
-        "p25": 0.59,
-        "p75": 1.16,
-        "rawMedian": 349.29,
-        "sampleSize": 40
+        "medianRatio": 0.81,
+        "p25": 0.55,
+        "p75": 1.12,
+        "rawMedian": 344.52,
+        "sampleSize": 44
       },
       "PSA 9": {
         "gradedMedian": 300,
         "medianRatio": 0.9,
-        "p25": 0.75,
+        "p25": 0.76,
         "p75": 1.13,
-        "rawMedian": 317.5,
-        "sampleSize": 474
+        "rawMedian": 319.99,
+        "sampleSize": 480
       },
       "SGC 10": {
         "gradedMedian": 353,
         "medianRatio": 1.18,
-        "p25": 0.85,
+        "p25": 0.82,
         "p75": 1.68,
-        "rawMedian": 295.93,
-        "sampleSize": 40
+        "rawMedian": 307.73,
+        "sampleSize": 38
       },
       "SGC 9": {
         "gradedMedian": 320,
@@ -12560,7 +12586,7 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "p25": 0.8,
         "p75": 1.48,
         "rawMedian": 312.01,
-        "sampleSize": 22
+        "sampleSize": 24
       }
     },
     "$5,000-9,999": {
@@ -12576,158 +12602,158 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
     "$50-99": {
       "BGS 10": {
         "gradedMedian": 168.5,
-        "medianRatio": 2.65,
-        "p25": 0.58,
+        "medianRatio": 2.34,
+        "p25": 0.51,
         "p75": 3.48,
-        "rawMedian": 63.68,
-        "sampleSize": 8
+        "rawMedian": 62.2,
+        "sampleSize": 6
       },
       "BGS 9": {
         "gradedMedian": 79.2,
         "medianRatio": 1.04,
-        "p25": 0.95,
+        "p25": 0.92,
         "p75": 1.27,
-        "rawMedian": 72.42,
+        "rawMedian": 72.94,
         "sampleSize": 24
       },
       "BGS 9.5": {
         "gradedMedian": 93.33,
         "medianRatio": 1.21,
-        "p25": 0.96,
-        "p75": 1.67,
-        "rawMedian": 69.08,
-        "sampleSize": 52
+        "p25": 0.98,
+        "p75": 1.72,
+        "rawMedian": 72.05,
+        "sampleSize": 56
       },
       "CGC 10": {
-        "gradedMedian": 87.5,
-        "medianRatio": 1.09,
-        "p25": 0.81,
-        "p75": 1.54,
-        "rawMedian": 87.38,
-        "sampleSize": 22
+        "gradedMedian": 90.99,
+        "medianRatio": 1.23,
+        "p25": 1,
+        "p75": 1.56,
+        "rawMedian": 88.63,
+        "sampleSize": 20
       },
       "PSA 1": {
         "gradedMedian": 131.25,
         "medianRatio": 1.57,
-        "p25": 0.93,
+        "p25": 0.94,
         "p75": 1.9,
         "rawMedian": 80.37,
         "sampleSize": 8
       },
       "PSA 10": {
-        "gradedMedian": 150.48,
-        "medianRatio": 2.2,
-        "p25": 1.63,
+        "gradedMedian": 150.55,
+        "medianRatio": 2.22,
+        "p25": 1.66,
         "p75": 2.93,
         "rawMedian": 68.33,
-        "sampleSize": 1860
+        "sampleSize": 1896
       },
       "PSA 7": {
         "gradedMedian": 53,
         "medianRatio": 0.79,
         "p25": 0.52,
-        "p75": 0.85,
-        "rawMedian": 83.37,
+        "p75": 0.84,
+        "rawMedian": 83.84,
         "sampleSize": 6
       },
       "PSA 8": {
         "gradedMedian": 59.5,
-        "medianRatio": 0.83,
+        "medianRatio": 0.86,
         "p25": 0.67,
-        "p75": 1.16,
-        "rawMedian": 71.14,
-        "sampleSize": 96
+        "p75": 1.06,
+        "rawMedian": 67.7,
+        "sampleSize": 102
       },
       "PSA 9": {
-        "gradedMedian": 73,
-        "medianRatio": 1.04,
-        "p25": 0.81,
-        "p75": 1.32,
-        "rawMedian": 68.5,
-        "sampleSize": 1278
+        "gradedMedian": 73.49,
+        "medianRatio": 1.06,
+        "p25": 0.82,
+        "p75": 1.33,
+        "rawMedian": 68.73,
+        "sampleSize": 1290
       },
       "SGC 10": {
-        "gradedMedian": 103.89,
-        "medianRatio": 1.48,
-        "p25": 1.06,
-        "p75": 1.77,
+        "gradedMedian": 103.29,
+        "medianRatio": 1.45,
+        "p25": 1,
+        "p75": 1.81,
         "rawMedian": 68.36,
         "sampleSize": 160
       },
       "SGC 9": {
-        "gradedMedian": 52.5,
-        "medianRatio": 0.76,
-        "p25": 0.64,
-        "p75": 0.99,
-        "rawMedian": 72.94,
-        "sampleSize": 22
+        "gradedMedian": 57.5,
+        "medianRatio": 0.89,
+        "p25": 0.67,
+        "p75": 1.05,
+        "rawMedian": 82.79,
+        "sampleSize": 24
       },
       "SGC 9.5": {
         "gradedMedian": 63.35,
         "medianRatio": 0.94,
         "p25": 0.74,
-        "p75": 1.22,
-        "rawMedian": 71.14,
-        "sampleSize": 76
+        "p75": 1.21,
+        "rawMedian": 72.94,
+        "sampleSize": 68
       }
     },
     "$500-999": {
       "BGS 9.5": {
-        "gradedMedian": 697.56,
-        "medianRatio": 1.01,
-        "p25": 0.86,
-        "p75": 1.19,
-        "rawMedian": 680,
+        "gradedMedian": 750,
+        "medianRatio": 0.97,
+        "p25": 0.79,
+        "p75": 1.59,
+        "rawMedian": 704.33,
         "sampleSize": 22
       },
       "PSA 10": {
-        "gradedMedian": 1054.23,
-        "medianRatio": 1.53,
+        "gradedMedian": 1091.27,
+        "medianRatio": 1.57,
         "p25": 1.06,
-        "p75": 2.08,
-        "rawMedian": 655,
-        "sampleSize": 314
+        "p75": 2.15,
+        "rawMedian": 658.33,
+        "sampleSize": 318
       },
       "PSA 8": {
         "gradedMedian": 446.33,
         "medianRatio": 0.59,
-        "p25": 0.53,
-        "p75": 0.78,
+        "p25": 0.57,
+        "p75": 0.73,
         "rawMedian": 698.69,
         "sampleSize": 16
       },
       "PSA 9": {
-        "gradedMedian": 549.74,
-        "medianRatio": 0.85,
-        "p25": 0.66,
-        "p75": 1.04,
+        "gradedMedian": 568.91,
+        "medianRatio": 0.86,
+        "p25": 0.67,
+        "p75": 1.1,
         "rawMedian": 667.57,
-        "sampleSize": 190
+        "sampleSize": 188
       },
       "SGC 10": {
         "gradedMedian": 582.5,
         "medianRatio": 0.89,
         "p25": 0.78,
         "p75": 1.08,
-        "rawMedian": 709.91,
+        "rawMedian": 707.33,
         "sampleSize": 18
       },
       "SGC 9.5": {
         "gradedMedian": 767.71,
-        "medianRatio": 0.91,
+        "medianRatio": 0.78,
         "p25": 0.72,
-        "p75": 1.01,
+        "p75": 0.91,
         "rawMedian": 845.5,
-        "sampleSize": 12
+        "sampleSize": 8
       }
     },
     "Under $25": {
       "BGS 10": {
         "gradedMedian": 47.14,
         "medianRatio": 5.46,
-        "p25": 4.01,
+        "p25": 4.04,
         "p75": 8.86,
-        "rawMedian": 7.3,
+        "rawMedian": 7.31,
         "sampleSize": 52
       },
       "BGS 8.5": {
@@ -12735,92 +12761,84 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "medianRatio": 2.33,
         "p25": 2.31,
         "p75": 8.14,
-        "rawMedian": 13.45,
+        "rawMedian": 13.39,
         "sampleSize": 8
       },
       "BGS 9": {
         "gradedMedian": 14.73,
-        "medianRatio": 1.45,
+        "medianRatio": 1.44,
         "p25": 1.08,
         "p75": 2.55,
-        "rawMedian": 7.09,
-        "sampleSize": 62
+        "rawMedian": 7.27,
+        "sampleSize": 64
       },
       "BGS 9.5": {
         "gradedMedian": 20.75,
         "medianRatio": 2.41,
-        "p25": 1.54,
+        "p25": 1.51,
         "p75": 4,
-        "rawMedian": 8.7,
-        "sampleSize": 252
+        "rawMedian": 8.46,
+        "sampleSize": 246
       },
       "CGC 10": {
-        "gradedMedian": 23,
-        "medianRatio": 3.7,
+        "gradedMedian": 22.87,
+        "medianRatio": 3.77,
         "p25": 2.34,
-        "p75": 5.91,
-        "rawMedian": 6.03,
-        "sampleSize": 378
+        "p75": 5.98,
+        "rawMedian": 5.87,
+        "sampleSize": 386
       },
       "CGC 8": {
-        "gradedMedian": 11,
-        "medianRatio": 2.58,
+        "gradedMedian": 7,
+        "medianRatio": 1.43,
         "p25": 0.92,
         "p75": 6.4,
-        "rawMedian": 4.97,
-        "sampleSize": 12
+        "rawMedian": 3.06,
+        "sampleSize": 14
       },
       "CGC 8.5": {
-        "gradedMedian": 9,
-        "medianRatio": 1.5,
-        "p25": 1.04,
-        "p75": 3.08,
-        "rawMedian": 4.91,
-        "sampleSize": 16
+        "gradedMedian": 6.32,
+        "medianRatio": 1.47,
+        "p25": 0.81,
+        "p75": 1.8,
+        "rawMedian": 4.06,
+        "sampleSize": 18
       },
       "CGC 9": {
-        "gradedMedian": 8.4,
-        "medianRatio": 1.46,
-        "p25": 0.91,
-        "p75": 2.3,
-        "rawMedian": 6.52,
+        "gradedMedian": 8.38,
+        "medianRatio": 1.44,
+        "p25": 0.86,
+        "p75": 2.28,
+        "rawMedian": 6.31,
         "sampleSize": 120
       },
       "CGC 9.5": {
-        "gradedMedian": 12.67,
-        "medianRatio": 2.02,
-        "p25": 1.05,
-        "p75": 3.44,
-        "rawMedian": 6.3,
+        "gradedMedian": 13.05,
+        "medianRatio": 2.12,
+        "p25": 1.25,
+        "p75": 2.92,
+        "rawMedian": 6.51,
         "sampleSize": 90
       },
-      "CSG 10": {
-        "gradedMedian": 19.99,
-        "medianRatio": 4.88,
-        "p25": 1.18,
-        "p75": 5.57,
-        "rawMedian": 4.46,
-        "sampleSize": 6
-      },
       "PSA 1": {
-        "gradedMedian": 18.26,
-        "medianRatio": 1.76,
+        "gradedMedian": 19.33,
+        "medianRatio": 2.36,
         "p25": 0.97,
-        "p75": 5.92,
-        "rawMedian": 8.22,
-        "sampleSize": 94
+        "p75": 6.18,
+        "rawMedian": 7.42,
+        "sampleSize": 96
       },
       "PSA 10": {
-        "gradedMedian": 34.46,
-        "medianRatio": 5.11,
-        "p25": 3.19,
-        "p75": 8.58,
-        "rawMedian": 6.68,
-        "sampleSize": 9334
+        "gradedMedian": 34.66,
+        "medianRatio": 5.13,
+        "p25": 3.22,
+        "p75": 8.61,
+        "rawMedian": 6.7,
+        "sampleSize": 9324
       },
       "PSA 2": {
         "gradedMedian": 37.99,
-        "medianRatio": 8.49,
+        "medianRatio": 8.58,
         "p25": 2.93,
         "p75": 13.4,
         "rawMedian": 4.48,
@@ -12847,56 +12865,56 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "medianRatio": 1.99,
         "p25": 1.35,
         "p75": 3.85,
-        "rawMedian": 4.76,
+        "rawMedian": 4.77,
         "sampleSize": 28
       },
       "PSA 6": {
-        "gradedMedian": 8.5,
+        "gradedMedian": 8.25,
         "medianRatio": 1.07,
         "p25": 0.7,
         "p75": 1.84,
-        "rawMedian": 8.38,
-        "sampleSize": 80
+        "rawMedian": 7.91,
+        "sampleSize": 82
       },
       "PSA 7": {
-        "gradedMedian": 8.62,
-        "medianRatio": 1.19,
+        "gradedMedian": 8.65,
+        "medianRatio": 1.03,
         "p25": 0.66,
-        "p75": 1.79,
-        "rawMedian": 8.38,
-        "sampleSize": 114
+        "p75": 1.8,
+        "rawMedian": 8.65,
+        "sampleSize": 120
       },
       "PSA 8": {
-        "gradedMedian": 11.7,
-        "medianRatio": 1.55,
+        "gradedMedian": 11.75,
+        "medianRatio": 1.54,
         "p25": 1.01,
-        "p75": 2.31,
+        "p75": 2.33,
         "rawMedian": 7.68,
-        "sampleSize": 972
+        "sampleSize": 964
       },
       "PSA 9": {
-        "gradedMedian": 16.1,
-        "medianRatio": 2.15,
-        "p25": 1.43,
-        "p75": 3.44,
-        "rawMedian": 7.47,
-        "sampleSize": 5588
+        "gradedMedian": 16.17,
+        "medianRatio": 2.17,
+        "p25": 1.45,
+        "p75": 3.41,
+        "rawMedian": 7.42,
+        "sampleSize": 5604
       },
       "SGC 1": {
         "gradedMedian": 5.64,
         "medianRatio": 2.02,
         "p25": 1.11,
-        "p75": 2.12,
+        "p75": 2.13,
         "rawMedian": 4.39,
         "sampleSize": 10
       },
       "SGC 10": {
-        "gradedMedian": 18.5,
-        "medianRatio": 2.99,
-        "p25": 1.99,
-        "p75": 4.7,
-        "rawMedian": 5.89,
-        "sampleSize": 1312
+        "gradedMedian": 18.49,
+        "medianRatio": 3,
+        "p25": 1.96,
+        "p75": 4.68,
+        "rawMedian": 5.87,
+        "sampleSize": 1316
       },
       "SGC 3": {
         "gradedMedian": 11.45,
@@ -12909,17 +12927,17 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       "SGC 4": {
         "gradedMedian": 8.88,
         "medianRatio": 2.16,
-        "p25": 0.86,
+        "p25": 0.87,
         "p75": 7.85,
-        "rawMedian": 4.28,
+        "rawMedian": 4.22,
         "sampleSize": 16
       },
       "SGC 5": {
         "gradedMedian": 10.34,
         "medianRatio": 2.62,
-        "p25": 1.44,
+        "p25": 1.48,
         "p75": 4.94,
-        "rawMedian": 5.16,
+        "rawMedian": 5.15,
         "sampleSize": 14
       },
       "SGC 6": {
@@ -12927,52 +12945,60 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "medianRatio": 2.53,
         "p25": 2.25,
         "p75": 2.57,
-        "rawMedian": 5.56,
+        "rawMedian": 5.55,
         "sampleSize": 12
       },
       "SGC 8": {
         "gradedMedian": 10.73,
         "medianRatio": 1.73,
         "p25": 1.08,
-        "p75": 2.69,
-        "rawMedian": 6.12,
-        "sampleSize": 22
+        "p75": 1.97,
+        "rawMedian": 6.81,
+        "sampleSize": 20
       },
       "SGC 8.5": {
-        "gradedMedian": 9.99,
-        "medianRatio": 1.43,
-        "p25": 0.88,
-        "p75": 2.91,
-        "rawMedian": 8.8,
-        "sampleSize": 16
+        "gradedMedian": 9.75,
+        "medianRatio": 1.22,
+        "p25": 0.69,
+        "p75": 1.5,
+        "rawMedian": 6.81,
+        "sampleSize": 18
       },
       "SGC 9": {
-        "gradedMedian": 11.25,
+        "gradedMedian": 11.34,
         "medianRatio": 1.54,
-        "p25": 1.04,
-        "p75": 2.03,
-        "rawMedian": 6.8,
+        "p25": 1.05,
+        "p75": 2.05,
+        "rawMedian": 6.73,
         "sampleSize": 202
       },
       "SGC 9.5": {
-        "gradedMedian": 13.96,
+        "gradedMedian": 13.85,
         "medianRatio": 2.01,
-        "p25": 1.34,
-        "p75": 3.04,
-        "rawMedian": 6.44,
-        "sampleSize": 648
+        "p25": 1.35,
+        "p75": 2.99,
+        "rawMedian": 6.33,
+        "sampleSize": 636
       }
     }
   },
   "baseball|bowman-chrome": {
     "$1,000-2,499": {
+      "BGS 9.5": {
+        "gradedMedian": 1070.08,
+        "medianRatio": 0.82,
+        "p25": 0.56,
+        "p75": 0.84,
+        "rawMedian": 1303.41,
+        "sampleSize": 6
+      },
       "PSA 10": {
-        "gradedMedian": 2032.04,
-        "medianRatio": 1.4,
-        "p25": 1.16,
+        "gradedMedian": 2064.31,
+        "medianRatio": 1.46,
+        "p25": 1.05,
         "p75": 1.89,
-        "rawMedian": 1338.67,
-        "sampleSize": 68
+        "rawMedian": 1382.24,
+        "sampleSize": 76
       },
       "PSA 9": {
         "gradedMedian": 888.5,
@@ -12983,84 +13009,94 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "sampleSize": 20
       }
     },
+    "$10,000+": {
+      "PSA 10": {
+        "gradedMedian": 8518.67,
+        "medianRatio": 0.72,
+        "p25": 0.64,
+        "p75": 0.72,
+        "rawMedian": 11835,
+        "sampleSize": 6
+      }
+    },
     "$100-249": {
       "BGS 10": {
         "gradedMedian": 243.14,
         "medianRatio": 1.07,
-        "p25": 0.7,
+        "p25": 0.71,
         "p75": 2.45,
-        "rawMedian": 217.2,
+        "rawMedian": 213.98,
         "sampleSize": 6
       },
       "BGS 9": {
-        "gradedMedian": 117.25,
-        "medianRatio": 1.17,
-        "p25": 0.7,
+        "gradedMedian": 73.5,
+        "medianRatio": 0.7,
+        "p25": 0.68,
         "p75": 1.31,
-        "rawMedian": 105.58,
-        "sampleSize": 8
+        "rawMedian": 105.18,
+        "sampleSize": 6
       },
       "BGS 9.5": {
-        "gradedMedian": 181.5,
-        "medianRatio": 1.22,
+        "gradedMedian": 264.33,
+        "medianRatio": 1.32,
         "p25": 1.12,
-        "p75": 1.34,
-        "rawMedian": 161.52,
-        "sampleSize": 26
+        "p75": 1.91,
+        "rawMedian": 175.17,
+        "sampleSize": 24
       },
       "PSA 10": {
-        "gradedMedian": 272.16,
-        "medianRatio": 1.84,
-        "p25": 1.37,
-        "p75": 2.43,
-        "rawMedian": 151.76,
-        "sampleSize": 714
+        "gradedMedian": 276.83,
+        "medianRatio": 1.88,
+        "p25": 1.38,
+        "p75": 2.46,
+        "rawMedian": 153,
+        "sampleSize": 736
       },
       "PSA 8": {
         "gradedMedian": 117.5,
-        "medianRatio": 0.78,
-        "p25": 0.65,
+        "medianRatio": 0.81,
+        "p25": 0.67,
         "p75": 0.93,
-        "rawMedian": 126.98,
-        "sampleSize": 34
+        "rawMedian": 130.68,
+        "sampleSize": 32
       },
       "PSA 9": {
-        "gradedMedian": 136.33,
+        "gradedMedian": 136.67,
         "medianRatio": 0.95,
-        "p25": 0.76,
+        "p25": 0.77,
         "p75": 1.14,
-        "rawMedian": 149.3,
-        "sampleSize": 516
+        "rawMedian": 149.68,
+        "sampleSize": 534
       },
       "SGC 10": {
         "gradedMedian": 191.25,
         "medianRatio": 1.09,
-        "p25": 0.91,
-        "p75": 1.6,
-        "rawMedian": 149.3,
+        "p25": 0.83,
+        "p75": 1.69,
+        "rawMedian": 153.43,
         "sampleSize": 66
       },
       "SGC 9": {
-        "gradedMedian": 117.5,
-        "medianRatio": 0.64,
-        "p25": 0.61,
-        "p75": 2.44,
-        "rawMedian": 146.15,
-        "sampleSize": 8
+        "gradedMedian": 85,
+        "medianRatio": 0.61,
+        "p25": 0.58,
+        "p75": 2.49,
+        "rawMedian": 105.18,
+        "sampleSize": 6
       },
       "SGC 9.5": {
         "gradedMedian": 144.75,
         "medianRatio": 1.06,
         "p25": 0.71,
         "p75": 1.34,
-        "rawMedian": 149.3,
-        "sampleSize": 18
+        "rawMedian": 171.65,
+        "sampleSize": 16
       }
     },
     "$2,500-4,999": {
       "PSA 10": {
         "gradedMedian": 3598.5,
-        "medianRatio": 1,
+        "medianRatio": 1.01,
         "p25": 0.76,
         "p75": 1.06,
         "rawMedian": 3681.5,
@@ -13080,189 +13116,189 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "gradedMedian": 62.5,
         "medianRatio": 1.89,
         "p25": 1.47,
-        "p75": 2.35,
+        "p75": 2.28,
         "rawMedian": 37.61,
         "sampleSize": 24
       },
       "CGC 10": {
-        "gradedMedian": 50.88,
-        "medianRatio": 1.27,
-        "p25": 0.9,
-        "p75": 1.64,
-        "rawMedian": 39.5,
-        "sampleSize": 16
+        "gradedMedian": 49.2,
+        "medianRatio": 1.25,
+        "p25": 0.78,
+        "p75": 1.38,
+        "rawMedian": 39.08,
+        "sampleSize": 14
       },
       "PSA 10": {
-        "gradedMedian": 90,
-        "medianRatio": 2.55,
-        "p25": 1.86,
+        "gradedMedian": 90.51,
+        "medianRatio": 2.56,
+        "p25": 1.87,
         "p75": 3.34,
-        "rawMedian": 35.06,
-        "sampleSize": 1074
+        "rawMedian": 35.05,
+        "sampleSize": 1106
       },
       "PSA 8": {
-        "gradedMedian": 30,
-        "medianRatio": 0.93,
+        "gradedMedian": 29.76,
+        "medianRatio": 0.81,
         "p25": 0.71,
         "p75": 1.06,
-        "rawMedian": 33.42,
-        "sampleSize": 54
+        "rawMedian": 35.14,
+        "sampleSize": 56
       },
       "PSA 9": {
-        "gradedMedian": 39.75,
-        "medianRatio": 1.12,
-        "p25": 0.89,
-        "p75": 1.43,
-        "rawMedian": 35.17,
-        "sampleSize": 700
+        "gradedMedian": 39.79,
+        "medianRatio": 1.13,
+        "p25": 0.87,
+        "p75": 1.41,
+        "rawMedian": 35.33,
+        "sampleSize": 728
       },
       "SGC 10": {
         "gradedMedian": 47.5,
         "medianRatio": 1.37,
         "p25": 1.09,
-        "p75": 2.14,
-        "rawMedian": 37.34,
-        "sampleSize": 80
+        "p75": 2.01,
+        "rawMedian": 38.24,
+        "sampleSize": 76
       },
       "SGC 9": {
         "gradedMedian": 41.5,
         "medianRatio": 0.93,
-        "p25": 0.73,
-        "p75": 1.28,
+        "p25": 0.74,
+        "p75": 1.22,
         "rawMedian": 42.71,
         "sampleSize": 12
       },
       "SGC 9.5": {
-        "gradedMedian": 35.29,
-        "medianRatio": 1.14,
+        "gradedMedian": 40.5,
+        "medianRatio": 1.34,
         "p25": 0.92,
-        "p75": 1.45,
+        "p75": 1.41,
         "rawMedian": 36.12,
-        "sampleSize": 40
+        "sampleSize": 44
       }
     },
     "$250-499": {
       "BGS 9.5": {
-        "gradedMedian": 627.1,
-        "medianRatio": 1.53,
+        "gradedMedian": 487.6,
+        "medianRatio": 1.49,
         "p25": 1.13,
         "p75": 2.7,
-        "rawMedian": 361.18,
-        "sampleSize": 24
+        "rawMedian": 323.33,
+        "sampleSize": 22
       },
       "PSA 10": {
-        "gradedMedian": 635.22,
+        "gradedMedian": 631.33,
         "medianRatio": 1.72,
-        "p25": 1.32,
-        "p75": 2.53,
-        "rawMedian": 346.6,
-        "sampleSize": 316
+        "p25": 1.36,
+        "p75": 2.49,
+        "rawMedian": 339.38,
+        "sampleSize": 322
       },
       "PSA 8": {
-        "gradedMedian": 299.03,
+        "gradedMedian": 265,
         "medianRatio": 0.85,
         "p25": 0.62,
-        "p75": 1.18,
-        "rawMedian": 364.99,
-        "sampleSize": 16
+        "p75": 1.14,
+        "rawMedian": 332.65,
+        "sampleSize": 18
       },
       "PSA 9": {
-        "gradedMedian": 300,
-        "medianRatio": 0.89,
-        "p25": 0.73,
+        "gradedMedian": 304,
+        "medianRatio": 0.91,
+        "p25": 0.74,
         "p75": 1.14,
         "rawMedian": 322.16,
-        "sampleSize": 226
+        "sampleSize": 232
       },
       "SGC 10": {
         "gradedMedian": 353,
-        "medianRatio": 1.14,
+        "medianRatio": 1.21,
         "p25": 0.85,
-        "p75": 1.26,
-        "rawMedian": 298.84,
-        "sampleSize": 18
+        "p75": 1.64,
+        "rawMedian": 290.84,
+        "sampleSize": 22
       },
       "SGC 9.5": {
-        "gradedMedian": 267.25,
+        "gradedMedian": 264.07,
         "medianRatio": 0.97,
-        "p25": 0.8,
+        "p25": 0.87,
         "p75": 1.37,
         "rawMedian": 309.59,
-        "sampleSize": 14
+        "sampleSize": 16
       }
     },
     "$50-99": {
       "BGS 9": {
         "gradedMedian": 81.33,
         "medianRatio": 1.04,
-        "p25": 0.94,
-        "p75": 1.36,
-        "rawMedian": 68.3,
+        "p25": 0.95,
+        "p75": 1.23,
+        "rawMedian": 78.9,
         "sampleSize": 14
       },
       "BGS 9.5": {
         "gradedMedian": 70.52,
         "medianRatio": 0.96,
         "p25": 0.81,
-        "p75": 1.56,
-        "rawMedian": 75.17,
-        "sampleSize": 24
+        "p75": 1.45,
+        "rawMedian": 76.04,
+        "sampleSize": 26
       },
       "CGC 10": {
         "gradedMedian": 91.25,
-        "medianRatio": 1.01,
-        "p25": 0.62,
-        "p75": 1.22,
+        "medianRatio": 1.22,
+        "p25": 1.01,
+        "p75": 1.6,
         "rawMedian": 90.62,
-        "sampleSize": 6
+        "sampleSize": 8
       },
       "PSA 10": {
-        "gradedMedian": 146.25,
-        "medianRatio": 2.09,
-        "p25": 1.58,
-        "p75": 2.79,
-        "rawMedian": 68.67,
-        "sampleSize": 930
+        "gradedMedian": 146.5,
+        "medianRatio": 2.14,
+        "p25": 1.59,
+        "p75": 2.82,
+        "rawMedian": 68.55,
+        "sampleSize": 948
       },
       "PSA 8": {
-        "gradedMedian": 57.5,
+        "gradedMedian": 59.5,
         "medianRatio": 0.8,
-        "p25": 0.66,
-        "p75": 1.05,
-        "rawMedian": 73.77,
-        "sampleSize": 52
+        "p25": 0.65,
+        "p75": 1.15,
+        "rawMedian": 72.87,
+        "sampleSize": 54
       },
       "PSA 9": {
-        "gradedMedian": 72,
-        "medianRatio": 1.04,
-        "p25": 0.78,
-        "p75": 1.31,
-        "rawMedian": 68.79,
-        "sampleSize": 636
+        "gradedMedian": 72.4,
+        "medianRatio": 1.05,
+        "p25": 0.79,
+        "p75": 1.3,
+        "rawMedian": 68.6,
+        "sampleSize": 658
       },
       "SGC 10": {
-        "gradedMedian": 96.84,
-        "medianRatio": 1.3,
-        "p25": 0.87,
-        "p75": 1.77,
-        "rawMedian": 70.98,
-        "sampleSize": 92
+        "gradedMedian": 101.5,
+        "medianRatio": 1.27,
+        "p25": 0.9,
+        "p75": 1.9,
+        "rawMedian": 70.77,
+        "sampleSize": 88
       },
       "SGC 9": {
         "gradedMedian": 57.5,
         "medianRatio": 1.05,
-        "p25": 0.64,
-        "p75": 1.33,
+        "p25": 0.65,
+        "p75": 1.41,
         "rawMedian": 56.25,
-        "sampleSize": 6
+        "sampleSize": 8
       },
       "SGC 9.5": {
         "gradedMedian": 63.35,
         "medianRatio": 0.88,
         "p25": 0.71,
-        "p75": 1.16,
-        "rawMedian": 73.77,
-        "sampleSize": 32
+        "p75": 1.06,
+        "rawMedian": 76.25,
+        "sampleSize": 28
       }
     },
     "$500-999": {
@@ -13270,55 +13306,47 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "gradedMedian": 629.5,
         "medianRatio": 0.93,
         "p25": 0.82,
-        "p75": 1.19,
-        "rawMedian": 680,
+        "p75": 1.28,
+        "rawMedian": 611.74,
         "sampleSize": 22
       },
       "PSA 10": {
-        "gradedMedian": 1016,
-        "medianRatio": 1.48,
+        "gradedMedian": 1023.88,
+        "medianRatio": 1.54,
         "p25": 1.06,
-        "p75": 1.91,
-        "rawMedian": 663.88,
+        "p75": 1.96,
+        "rawMedian": 658.33,
         "sampleSize": 158
       },
       "PSA 8": {
         "gradedMedian": 432.33,
-        "medianRatio": 0.61,
+        "medianRatio": 0.59,
         "p25": 0.59,
-        "p75": 0.78,
+        "p75": 0.61,
         "rawMedian": 711.41,
         "sampleSize": 6
       },
       "PSA 9": {
-        "gradedMedian": 512.34,
-        "medianRatio": 0.81,
-        "p25": 0.63,
-        "p75": 0.98,
+        "gradedMedian": 532,
+        "medianRatio": 0.86,
+        "p25": 0.64,
+        "p75": 1.02,
         "rawMedian": 676.89,
-        "sampleSize": 94
+        "sampleSize": 92
       },
       "SGC 10": {
-        "gradedMedian": 755.17,
-        "medianRatio": 1.01,
-        "p25": 0.89,
-        "p75": 1.5,
+        "gradedMedian": 1125,
+        "medianRatio": 1.5,
+        "p25": 1.01,
+        "p75": 2.17,
         "rawMedian": 749.59,
-        "sampleSize": 10
-      },
-      "SGC 9.5": {
-        "gradedMedian": 677,
-        "medianRatio": 1.01,
-        "p25": 0.69,
-        "p75": 1.35,
-        "rawMedian": 671.09,
-        "sampleSize": 6
+        "sampleSize": 8
       }
     },
     "Under $25": {
       "BGS 10": {
         "gradedMedian": 36.52,
-        "medianRatio": 5.77,
+        "medianRatio": 5.83,
         "p25": 5.46,
         "p75": 9.18,
         "rawMedian": 7.49,
@@ -13327,122 +13355,138 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       "BGS 8.5": {
         "gradedMedian": 9.99,
         "medianRatio": 2.33,
-        "p25": 0.74,
+        "p25": 0.75,
         "p75": 2.42,
-        "rawMedian": 7.84,
+        "rawMedian": 7.85,
         "sampleSize": 6
       },
       "BGS 9": {
-        "gradedMedian": 8.58,
-        "medianRatio": 1.04,
-        "p25": 0.97,
-        "p75": 2.18,
-        "rawMedian": 8.38,
-        "sampleSize": 18
+        "gradedMedian": 11.34,
+        "medianRatio": 2.18,
+        "p25": 1.02,
+        "p75": 2.58,
+        "rawMedian": 7.09,
+        "sampleSize": 20
       },
       "BGS 9.5": {
-        "gradedMedian": 20.75,
-        "medianRatio": 2.45,
+        "gradedMedian": 20.6,
+        "medianRatio": 2.26,
         "p25": 1.56,
         "p75": 3.59,
         "rawMedian": 10.32,
-        "sampleSize": 94
+        "sampleSize": 88
       },
       "CGC 10": {
-        "gradedMedian": 20.19,
+        "gradedMedian": 22,
         "medianRatio": 3.55,
-        "p25": 1.95,
-        "p75": 6.06,
-        "rawMedian": 5.76,
-        "sampleSize": 110
+        "p25": 2.2,
+        "p75": 5.98,
+        "rawMedian": 5.82,
+        "sampleSize": 112
       },
       "CGC 8": {
         "gradedMedian": 7,
-        "medianRatio": 0.87,
+        "medianRatio": 0.94,
         "p25": 0.56,
         "p75": 1.13,
         "rawMedian": 6.2,
         "sampleSize": 6
       },
+      "CGC 8.5": {
+        "gradedMedian": 3.3,
+        "medianRatio": 0.68,
+        "p25": 0.52,
+        "p75": 1.06,
+        "rawMedian": 4.84,
+        "sampleSize": 6
+      },
       "CGC 9": {
-        "gradedMedian": 9.67,
-        "medianRatio": 1.36,
+        "gradedMedian": 7.86,
+        "medianRatio": 1.26,
         "p25": 0.78,
         "p75": 1.62,
-        "rawMedian": 8.38,
-        "sampleSize": 36
+        "rawMedian": 7.44,
+        "sampleSize": 38
       },
       "CGC 9.5": {
-        "gradedMedian": 12,
-        "medianRatio": 1.82,
-        "p25": 1.41,
-        "p75": 3.2,
-        "rawMedian": 5.83,
-        "sampleSize": 34
+        "gradedMedian": 9.1,
+        "medianRatio": 1.83,
+        "p25": 1.1,
+        "p75": 3.32,
+        "rawMedian": 4.85,
+        "sampleSize": 30
+      },
+      "PSA 1": {
+        "gradedMedian": 10.49,
+        "medianRatio": 1.5,
+        "p25": 0.69,
+        "p75": 60.41,
+        "rawMedian": 7,
+        "sampleSize": 6
       },
       "PSA 10": {
-        "gradedMedian": 31.65,
+        "gradedMedian": 31.83,
         "medianRatio": 4.34,
-        "p25": 2.92,
-        "p75": 7.07,
-        "rawMedian": 7.2,
-        "sampleSize": 4098
+        "p25": 2.94,
+        "p75": 7.16,
+        "rawMedian": 7.19,
+        "sampleSize": 4126
       },
       "PSA 6": {
         "gradedMedian": 15,
-        "medianRatio": 0.99,
-        "p25": 0.89,
+        "medianRatio": 1.01,
+        "p25": 0.9,
         "p75": 1.08,
         "rawMedian": 13.93,
         "sampleSize": 10
       },
       "PSA 7": {
-        "gradedMedian": 7.22,
-        "medianRatio": 0.78,
-        "p25": 0.69,
-        "p75": 1.78,
-        "rawMedian": 7.36,
-        "sampleSize": 26
+        "gradedMedian": 9.99,
+        "medianRatio": 1.27,
+        "p25": 0.7,
+        "p75": 2.11,
+        "rawMedian": 7.79,
+        "sampleSize": 28
       },
       "PSA 8": {
         "gradedMedian": 11.5,
-        "medianRatio": 1.33,
-        "p25": 0.93,
-        "p75": 2.03,
-        "rawMedian": 8.11,
-        "sampleSize": 304
+        "medianRatio": 1.34,
+        "p25": 0.94,
+        "p75": 1.97,
+        "rawMedian": 7.98,
+        "sampleSize": 298
       },
       "PSA 9": {
-        "gradedMedian": 15.48,
-        "medianRatio": 1.98,
-        "p25": 1.35,
-        "p75": 3.2,
-        "rawMedian": 7.87,
-        "sampleSize": 2512
+        "gradedMedian": 15.5,
+        "medianRatio": 2.01,
+        "p25": 1.36,
+        "p75": 3.19,
+        "rawMedian": 7.85,
+        "sampleSize": 2524
       },
       "SGC 10": {
-        "gradedMedian": 19.13,
-        "medianRatio": 2.7,
-        "p25": 1.83,
-        "p75": 4.09,
-        "rawMedian": 6.56,
-        "sampleSize": 416
+        "gradedMedian": 18.4,
+        "medianRatio": 2.74,
+        "p25": 1.76,
+        "p75": 4,
+        "rawMedian": 6.49,
+        "sampleSize": 422
       },
       "SGC 9": {
-        "gradedMedian": 11.34,
-        "medianRatio": 1.64,
-        "p25": 1.17,
+        "gradedMedian": 12.47,
+        "medianRatio": 1.72,
+        "p25": 1.21,
         "p75": 2.58,
-        "rawMedian": 6.02,
+        "rawMedian": 5.98,
         "sampleSize": 60
       },
       "SGC 9.5": {
         "gradedMedian": 12.17,
-        "medianRatio": 2.04,
+        "medianRatio": 2.01,
         "p25": 1.36,
-        "p75": 3.19,
-        "rawMedian": 6.54,
-        "sampleSize": 208
+        "p75": 3.17,
+        "rawMedian": 6.61,
+        "sampleSize": 212
       }
     }
   },
@@ -13458,7 +13502,7 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       },
       "PSA 9": {
         "gradedMedian": 38.8,
-        "medianRatio": 1.04,
+        "medianRatio": 1.03,
         "p25": 0.99,
         "p75": 3.08,
         "rawMedian": 39.33,
@@ -13467,32 +13511,22 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
     },
     "$50-99": {
       "PSA 10": {
-        "gradedMedian": 83.3,
-        "medianRatio": 1.04,
+        "gradedMedian": 80.5,
+        "medianRatio": 0.93,
         "p25": 0.87,
-        "p75": 1.95,
-        "rawMedian": 73.18,
-        "sampleSize": 12
-      }
-    },
-    "$500-999": {
-      "PSA 10": {
-        "gradedMedian": 642.59,
-        "medianRatio": 1.16,
-        "p25": 0.86,
-        "p75": 1.17,
-        "rawMedian": 555.5,
-        "sampleSize": 6
+        "p75": 1.04,
+        "rawMedian": 71.7,
+        "sampleSize": 10
       }
     },
     "Under $25": {
       "BGS 9.5": {
-        "gradedMedian": 33,
-        "medianRatio": 4.7,
-        "p25": 1.16,
-        "p75": 15,
+        "gradedMedian": 7,
+        "medianRatio": 1.16,
+        "p25": 0.64,
+        "p75": 4.7,
         "rawMedian": 7.09,
-        "sampleSize": 8
+        "sampleSize": 6
       },
       "CGC 10": {
         "gradedMedian": 6.02,
@@ -13504,17 +13538,17 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       },
       "PSA 10": {
         "gradedMedian": 20.26,
-        "medianRatio": 3.58,
+        "medianRatio": 3.37,
         "p25": 2.15,
-        "p75": 7.26,
-        "rawMedian": 4.5,
+        "p75": 7.08,
+        "rawMedian": 4.62,
         "sampleSize": 126
       },
       "PSA 8": {
         "gradedMedian": 6.25,
         "medianRatio": 1.14,
         "p25": 0.92,
-        "p75": 1.48,
+        "p75": 1.49,
         "rawMedian": 4.84,
         "sampleSize": 10
       },
@@ -13522,9 +13556,9 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "gradedMedian": 10.57,
         "medianRatio": 1.9,
         "p25": 1.2,
-        "p75": 3.79,
+        "p75": 3.53,
         "rawMedian": 4.84,
-        "sampleSize": 94
+        "sampleSize": 92
       },
       "SGC 10": {
         "gradedMedian": 12.75,
@@ -13541,10 +13575,10 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       "PSA 10": {
         "gradedMedian": 2176.95,
         "medianRatio": 1.44,
-        "p25": 0.94,
-        "p75": 2.39,
-        "rawMedian": 1477.7,
-        "sampleSize": 28
+        "p25": 0.97,
+        "p75": 2.73,
+        "rawMedian": 1271.29,
+        "sampleSize": 32
       },
       "PSA 9": {
         "gradedMedian": 976.5,
@@ -13565,52 +13599,52 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "sampleSize": 18
       },
       "PSA 10": {
-        "gradedMedian": 287.5,
-        "medianRatio": 1.97,
-        "p25": 1.54,
-        "p75": 2.48,
-        "rawMedian": 145.72,
-        "sampleSize": 420
+        "gradedMedian": 288.19,
+        "medianRatio": 1.94,
+        "p25": 1.56,
+        "p75": 2.52,
+        "rawMedian": 144.75,
+        "sampleSize": 430
       },
       "PSA 8": {
         "gradedMedian": 110.75,
-        "medianRatio": 0.81,
+        "medianRatio": 0.83,
         "p25": 0.67,
         "p75": 1.06,
         "rawMedian": 145.63,
         "sampleSize": 22
       },
       "PSA 9": {
-        "gradedMedian": 144.83,
-        "medianRatio": 0.98,
-        "p25": 0.73,
-        "p75": 1.23,
-        "rawMedian": 146.66,
-        "sampleSize": 304
+        "gradedMedian": 141.57,
+        "medianRatio": 0.97,
+        "p25": 0.72,
+        "p75": 1.22,
+        "rawMedian": 146.46,
+        "sampleSize": 306
       },
       "SGC 10": {
         "gradedMedian": 237.25,
-        "medianRatio": 1.57,
+        "medianRatio": 1.58,
         "p25": 1.18,
         "p75": 1.75,
-        "rawMedian": 144.64,
+        "rawMedian": 142.69,
         "sampleSize": 24
       },
       "SGC 9": {
         "gradedMedian": 110,
-        "medianRatio": 0.57,
+        "medianRatio": 0.59,
         "p25": 0.55,
         "p75": 1,
         "rawMedian": 134.02,
         "sampleSize": 6
       },
       "SGC 9.5": {
-        "gradedMedian": 164.5,
-        "medianRatio": 1.16,
-        "p25": 0.92,
-        "p75": 1.24,
-        "rawMedian": 148.75,
-        "sampleSize": 28
+        "gradedMedian": 164.32,
+        "medianRatio": 1.04,
+        "p25": 0.93,
+        "p75": 1.23,
+        "rawMedian": 134.02,
+        "sampleSize": 26
       }
     },
     "$2,500-4,999": {
@@ -13624,61 +13658,53 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       }
     },
     "$25-49": {
-      "BGS 9": {
-        "gradedMedian": 29,
-        "medianRatio": 0.64,
-        "p25": 0.63,
-        "p75": 5.52,
-        "rawMedian": 35,
-        "sampleSize": 6
-      },
       "BGS 9.5": {
-        "gradedMedian": 55.69,
-        "medianRatio": 1.68,
+        "gradedMedian": 59,
+        "medianRatio": 1.83,
         "p25": 1.09,
-        "p75": 1.97,
-        "rawMedian": 35.06,
-        "sampleSize": 26
+        "p75": 2.19,
+        "rawMedian": 34.49,
+        "sampleSize": 22
       },
       "PSA 10": {
-        "gradedMedian": 98.14,
-        "medianRatio": 2.75,
-        "p25": 2.06,
-        "p75": 3.64,
-        "rawMedian": 36.42,
-        "sampleSize": 438
+        "gradedMedian": 98.58,
+        "medianRatio": 2.74,
+        "p25": 2.08,
+        "p75": 3.76,
+        "rawMedian": 36.36,
+        "sampleSize": 434
       },
       "PSA 8": {
         "gradedMedian": 24.84,
         "medianRatio": 0.77,
         "p25": 0.62,
-        "p75": 1.03,
-        "rawMedian": 32.24,
-        "sampleSize": 44
+        "p75": 1.02,
+        "rawMedian": 30.74,
+        "sampleSize": 46
       },
       "PSA 9": {
-        "gradedMedian": 41.8,
-        "medianRatio": 1.12,
-        "p25": 0.9,
-        "p75": 1.58,
-        "rawMedian": 36.52,
+        "gradedMedian": 41.46,
+        "medianRatio": 1.14,
+        "p25": 0.89,
+        "p75": 1.59,
+        "rawMedian": 36.38,
         "sampleSize": 354
       },
       "SGC 10": {
-        "gradedMedian": 60,
-        "medianRatio": 1.78,
+        "gradedMedian": 62.9,
+        "medianRatio": 1.86,
         "p25": 1.33,
-        "p75": 2.44,
-        "rawMedian": 34.67,
-        "sampleSize": 48
+        "p75": 2.49,
+        "rawMedian": 33.77,
+        "sampleSize": 52
       },
       "SGC 9": {
         "gradedMedian": 39,
-        "medianRatio": 1.03,
-        "p25": 0.92,
+        "medianRatio": 1.18,
+        "p25": 0.93,
         "p75": 1.39,
-        "rawMedian": 35.06,
-        "sampleSize": 10
+        "rawMedian": 36.53,
+        "sampleSize": 8
       },
       "SGC 9.5": {
         "gradedMedian": 35.24,
@@ -13692,50 +13718,50 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
     "$250-499": {
       "BGS 9": {
         "gradedMedian": 216.25,
-        "medianRatio": 0.73,
+        "medianRatio": 0.7,
         "p25": 0.57,
         "p75": 1.26,
-        "rawMedian": 297.79,
+        "rawMedian": 307.73,
         "sampleSize": 6
       },
       "BGS 9.5": {
         "gradedMedian": 578.5,
-        "medianRatio": 1.57,
+        "medianRatio": 1.95,
         "p25": 1.28,
-        "p75": 1.94,
+        "p75": 2.09,
         "rawMedian": 351.33,
-        "sampleSize": 10
+        "sampleSize": 8
       },
       "PSA 10": {
         "gradedMedian": 571.73,
-        "medianRatio": 1.71,
-        "p25": 1.13,
+        "medianRatio": 1.68,
+        "p25": 1.09,
         "p75": 2.32,
         "rawMedian": 335.71,
-        "sampleSize": 158
+        "sampleSize": 156
       },
       "PSA 8": {
-        "gradedMedian": 295,
-        "medianRatio": 0.81,
-        "p25": 0.68,
-        "p75": 1.17,
-        "rawMedian": 302.96,
-        "sampleSize": 8
+        "gradedMedian": 310,
+        "medianRatio": 1.02,
+        "p25": 0.69,
+        "p75": 1.06,
+        "rawMedian": 307.73,
+        "sampleSize": 12
       },
       "PSA 9": {
-        "gradedMedian": 291.5,
+        "gradedMedian": 283.59,
         "medianRatio": 0.87,
-        "p25": 0.76,
+        "p25": 0.77,
         "p75": 1.04,
-        "rawMedian": 324.37,
+        "rawMedian": 317.5,
         "sampleSize": 106
       },
       "SGC 10": {
         "gradedMedian": 297,
-        "medianRatio": 1,
-        "p25": 0.83,
-        "p75": 1.68,
-        "rawMedian": 297.79,
+        "medianRatio": 0.97,
+        "p25": 0.84,
+        "p75": 1.7,
+        "rawMedian": 307.73,
         "sampleSize": 14
       }
     },
@@ -13745,82 +13771,82 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "medianRatio": 1.09,
         "p25": 1.08,
         "p75": 1.34,
-        "rawMedian": 73.01,
+        "rawMedian": 73.02,
         "sampleSize": 8
       },
       "BGS 9.5": {
         "gradedMedian": 100.86,
         "medianRatio": 1.5,
-        "p25": 1.36,
+        "p25": 1.23,
         "p75": 2.01,
-        "rawMedian": 63.45,
-        "sampleSize": 20
+        "rawMedian": 59.52,
+        "sampleSize": 22
       },
       "PSA 10": {
-        "gradedMedian": 157.85,
+        "gradedMedian": 155.68,
         "medianRatio": 2.26,
-        "p25": 1.78,
-        "p75": 2.93,
-        "rawMedian": 68.94,
-        "sampleSize": 376
+        "p25": 1.71,
+        "p75": 2.89,
+        "rawMedian": 69.75,
+        "sampleSize": 382
       },
       "PSA 8": {
-        "gradedMedian": 47.86,
+        "gradedMedian": 47.11,
         "medianRatio": 0.8,
-        "p25": 0.6,
-        "p75": 0.96,
-        "rawMedian": 61.53,
-        "sampleSize": 18
+        "p25": 0.58,
+        "p75": 0.95,
+        "rawMedian": 59.8,
+        "sampleSize": 22
       },
       "PSA 9": {
         "gradedMedian": 72.51,
-        "medianRatio": 1.01,
-        "p25": 0.83,
-        "p75": 1.31,
-        "rawMedian": 68.3,
+        "medianRatio": 1.05,
+        "p25": 0.84,
+        "p75": 1.34,
+        "rawMedian": 68.42,
         "sampleSize": 292
       },
       "SGC 10": {
-        "gradedMedian": 101.59,
-        "medianRatio": 1.45,
-        "p25": 1.3,
+        "gradedMedian": 108.5,
+        "medianRatio": 1.46,
+        "p25": 1.36,
         "p75": 1.6,
-        "rawMedian": 67.66,
-        "sampleSize": 34
+        "rawMedian": 68.11,
+        "sampleSize": 28
       },
       "SGC 9": {
         "gradedMedian": 52.5,
         "medianRatio": 0.67,
         "p25": 0.59,
-        "p75": 1.03,
-        "rawMedian": 89.62,
+        "p75": 1.22,
+        "rawMedian": 74.08,
         "sampleSize": 6
       },
       "SGC 9.5": {
-        "gradedMedian": 88.25,
-        "medianRatio": 1.11,
-        "p25": 0.83,
-        "p75": 1.53,
+        "gradedMedian": 69.81,
+        "medianRatio": 0.91,
+        "p25": 0.73,
+        "p75": 1.28,
         "rawMedian": 80.98,
-        "sampleSize": 24
+        "sampleSize": 20
       }
     },
     "$500-999": {
       "PSA 10": {
-        "gradedMedian": 1122.44,
-        "medianRatio": 1.74,
+        "gradedMedian": 1149.1,
+        "medianRatio": 1.76,
         "p25": 1.03,
-        "p75": 2.37,
+        "p75": 2.66,
         "rawMedian": 647.67,
-        "sampleSize": 98
+        "sampleSize": 100
       },
       "PSA 9": {
         "gradedMedian": 556,
         "medianRatio": 0.87,
         "p25": 0.69,
         "p75": 1.2,
-        "rawMedian": 669,
-        "sampleSize": 58
+        "rawMedian": 673.33,
+        "sampleSize": 54
       },
       "SGC 10": {
         "gradedMedian": 465.1,
@@ -13833,41 +13859,41 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
     },
     "Under $25": {
       "BGS 9": {
-        "gradedMedian": 25.77,
-        "medianRatio": 1.33,
-        "p25": 1.24,
-        "p75": 1.45,
+        "gradedMedian": 20.75,
+        "medianRatio": 1.23,
+        "p25": 1.05,
+        "p75": 1.33,
         "rawMedian": 19.69,
-        "sampleSize": 8
+        "sampleSize": 10
       },
       "BGS 9.5": {
-        "gradedMedian": 24.28,
+        "gradedMedian": 27.27,
         "medianRatio": 2.52,
         "p25": 1.59,
         "p75": 5.1,
-        "rawMedian": 12.54,
-        "sampleSize": 48
+        "rawMedian": 12.33,
+        "sampleSize": 46
       },
       "CGC 10": {
-        "gradedMedian": 16.58,
-        "medianRatio": 3.12,
-        "p25": 2.34,
+        "gradedMedian": 19.8,
+        "medianRatio": 3.36,
+        "p25": 2.38,
         "p75": 4.91,
-        "rawMedian": 5.4,
-        "sampleSize": 70
+        "rawMedian": 5.51,
+        "sampleSize": 76
       },
       "CGC 8.5": {
-        "gradedMedian": 9,
+        "gradedMedian": 7.2,
         "medianRatio": 1.44,
         "p25": 0.72,
-        "p75": 2.91,
-        "rawMedian": 6.19,
+        "p75": 1.81,
+        "rawMedian": 4.99,
         "sampleSize": 6
       },
       "CGC 9": {
         "gradedMedian": 9.33,
         "medianRatio": 1.47,
-        "p25": 0.77,
+        "p25": 0.78,
         "p75": 2.29,
         "rawMedian": 4.3,
         "sampleSize": 18
@@ -13875,7 +13901,7 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       "CGC 9.5": {
         "gradedMedian": 29,
         "medianRatio": 2.8,
-        "p25": 2.08,
+        "p25": 2.32,
         "p75": 4.75,
         "rawMedian": 10.38,
         "sampleSize": 12
@@ -13884,17 +13910,17 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "gradedMedian": 29.44,
         "medianRatio": 3.09,
         "p25": 2.72,
-        "p75": 8.61,
+        "p75": 8.79,
         "rawMedian": 10.65,
         "sampleSize": 8
       },
       "PSA 10": {
-        "gradedMedian": 37.17,
-        "medianRatio": 5.49,
-        "p25": 3.19,
-        "p75": 9.18,
-        "rawMedian": 6.86,
-        "sampleSize": 1632
+        "gradedMedian": 37.65,
+        "medianRatio": 5.66,
+        "p25": 3.23,
+        "p75": 9.3,
+        "rawMedian": 6.87,
+        "sampleSize": 1636
       },
       "PSA 3": {
         "gradedMedian": 26.42,
@@ -13905,80 +13931,88 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "sampleSize": 6
       },
       "PSA 6": {
-        "gradedMedian": 6.01,
+        "gradedMedian": 7,
         "medianRatio": 0.98,
-        "p25": 0.61,
-        "p75": 2.11,
-        "rawMedian": 7.1,
-        "sampleSize": 18
+        "p25": 0.62,
+        "p75": 1.64,
+        "rawMedian": 8.7,
+        "sampleSize": 20
       },
       "PSA 7": {
-        "gradedMedian": 6.25,
-        "medianRatio": 0.74,
-        "p25": 0.59,
-        "p75": 0.83,
-        "rawMedian": 9.88,
-        "sampleSize": 20
+        "gradedMedian": 5.94,
+        "medianRatio": 0.63,
+        "p25": 0.6,
+        "p75": 0.76,
+        "rawMedian": 8.77,
+        "sampleSize": 26
       },
       "PSA 8": {
         "gradedMedian": 11.5,
-        "medianRatio": 1.4,
+        "medianRatio": 1.33,
         "p25": 0.97,
         "p75": 2.24,
-        "rawMedian": 8.29,
-        "sampleSize": 236
+        "rawMedian": 8.7,
+        "sampleSize": 240
       },
       "PSA 9": {
-        "gradedMedian": 15.75,
+        "gradedMedian": 15.95,
         "medianRatio": 2.08,
-        "p25": 1.39,
+        "p25": 1.4,
         "p75": 3.2,
-        "rawMedian": 7.89,
-        "sampleSize": 1176
+        "rawMedian": 7.79,
+        "sampleSize": 1186
       },
       "SGC 10": {
-        "gradedMedian": 19.16,
-        "medianRatio": 2.85,
-        "p25": 1.98,
+        "gradedMedian": 18.75,
+        "medianRatio": 2.86,
+        "p25": 2,
         "p75": 4.5,
-        "rawMedian": 6.68,
-        "sampleSize": 256
+        "rawMedian": 6.47,
+        "sampleSize": 266
       },
       "SGC 4": {
         "gradedMedian": 9.53,
-        "medianRatio": 0.91,
+        "medianRatio": 0.93,
         "p25": 0.75,
-        "p75": 1.64,
-        "rawMedian": 7.92,
+        "p75": 1.55,
+        "rawMedian": 8.42,
         "sampleSize": 6
       },
       "SGC 9": {
         "gradedMedian": 10.26,
         "medianRatio": 1.18,
         "p25": 0.89,
-        "p75": 1.86,
+        "p75": 1.85,
         "rawMedian": 8.06,
         "sampleSize": 48
       },
       "SGC 9.5": {
         "gradedMedian": 15.77,
         "medianRatio": 1.82,
-        "p25": 1.37,
-        "p75": 2.54,
+        "p25": 1.38,
+        "p75": 2.47,
         "rawMedian": 8.12,
-        "sampleSize": 134
+        "sampleSize": 130
       }
     }
   },
   "baseball|bowman-sterling": {
     "$100-249": {
       "PSA 10": {
-        "gradedMedian": 336.15,
+        "gradedMedian": 328.82,
         "medianRatio": 2.06,
         "p25": 1.88,
-        "p75": 3.45,
+        "p75": 2.93,
         "rawMedian": 163.5,
         "sampleSize": 8
+      },
+      "PSA 9": {
+        "gradedMedian": 127.5,
+        "medianRatio": 1.14,
+        "p25": 0.77,
+        "p75": 1.45,
+        "rawMedian": 150.1,
+        "sampleSize": 6
       }
     },
     "$25-49": {
@@ -14035,12 +14069,12 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "sampleSize": 56
       },
       "PSA 9": {
-        "gradedMedian": 24.11,
-        "medianRatio": 1.9,
+        "gradedMedian": 19.78,
+        "medianRatio": 1.83,
         "p25": 1.54,
         "p75": 2.32,
-        "rawMedian": 10.16,
-        "sampleSize": 28
+        "rawMedian": 9.39,
+        "sampleSize": 30
       },
       "SGC 10": {
         "gradedMedian": 34.63,
@@ -14077,31 +14111,31 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "medianRatio": 2.91,
         "p25": 1.74,
         "p75": 5.8,
-        "rawMedian": 9.78,
-        "sampleSize": 14
+        "rawMedian": 10.04,
+        "sampleSize": 16
       }
     }
   },
   "baseball|panini-donruss": {
     "$100-249": {
       "PSA 10": {
-        "gradedMedian": 329.16,
+        "gradedMedian": 336.48,
         "medianRatio": 2.41,
-        "p25": 1.75,
-        "p75": 3.86,
-        "rawMedian": 142.61,
-        "sampleSize": 42
+        "p25": 1.61,
+        "p75": 4.17,
+        "rawMedian": 139.62,
+        "sampleSize": 46
       },
       "PSA 8": {
         "gradedMedian": 81.5,
         "medianRatio": 0.74,
-        "p25": 0.57,
+        "p25": 0.58,
         "p75": 0.84,
-        "rawMedian": 110.01,
+        "rawMedian": 109.96,
         "sampleSize": 6
       },
       "PSA 9": {
-        "gradedMedian": 222.5,
+        "gradedMedian": 202.5,
         "medianRatio": 1.23,
         "p25": 0.79,
         "p75": 2.34,
@@ -14112,8 +14146,8 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "gradedMedian": 94.2,
         "medianRatio": 0.86,
         "p25": 0.8,
-        "p75": 1.71,
-        "rawMedian": 110.01,
+        "p75": 1.74,
+        "rawMedian": 109.96,
         "sampleSize": 6
       }
     },
@@ -14122,24 +14156,24 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "gradedMedian": 155.4,
         "medianRatio": 3.49,
         "p25": 2.91,
-        "p75": 6.44,
+        "p75": 6.46,
         "rawMedian": 32.53,
         "sampleSize": 42
       },
       "PSA 8": {
         "gradedMedian": 27.49,
-        "medianRatio": 0.95,
+        "medianRatio": 0.94,
         "p25": 0.51,
-        "p75": 1,
-        "rawMedian": 30.41,
+        "p75": 1.01,
+        "rawMedian": 30.2,
         "sampleSize": 6
       },
       "PSA 9": {
         "gradedMedian": 40.03,
         "medianRatio": 1.32,
         "p25": 0.99,
-        "p75": 1.72,
-        "rawMedian": 29.39,
+        "p75": 1.71,
+        "rawMedian": 29.31,
         "sampleSize": 34
       }
     },
@@ -14154,27 +14188,27 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       },
       "PSA 8": {
         "gradedMedian": 67.47,
-        "medianRatio": 0.86,
-        "p25": 0.73,
-        "p75": 1.15,
+        "medianRatio": 0.79,
+        "p25": 0.64,
+        "p75": 1.01,
         "rawMedian": 85.06,
-        "sampleSize": 16
+        "sampleSize": 14
       },
       "PSA 9": {
         "gradedMedian": 94.49,
         "medianRatio": 1.32,
         "p25": 0.92,
-        "p75": 2.01,
+        "p75": 2.24,
         "rawMedian": 81.8,
         "sampleSize": 58
       },
       "SGC 10": {
         "gradedMedian": 126.66,
-        "medianRatio": 1.72,
+        "medianRatio": 1.62,
         "p25": 1.12,
         "p75": 1.8,
         "rawMedian": 82.56,
-        "sampleSize": 12
+        "sampleSize": 14
       },
       "SGC 9.5": {
         "gradedMedian": 65,
@@ -14187,18 +14221,18 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
     },
     "Under $25": {
       "BGS 9.5": {
-        "gradedMedian": 12.96,
+        "gradedMedian": 23.04,
         "medianRatio": 3.41,
-        "p25": 2.35,
+        "p25": 2.75,
         "p75": 7.79,
-        "rawMedian": 2.66,
-        "sampleSize": 6
+        "rawMedian": 6.75,
+        "sampleSize": 8
       },
       "CGC 10": {
         "gradedMedian": 29.95,
         "medianRatio": 4.49,
         "p25": 3.18,
-        "p75": 6.16,
+        "p75": 6.18,
         "rawMedian": 6.67,
         "sampleSize": 16
       },
@@ -14211,24 +14245,16 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "sampleSize": 6
       },
       "PSA 10": {
-        "gradedMedian": 44.99,
-        "medianRatio": 7.56,
-        "p25": 4.37,
-        "p75": 13.84,
-        "rawMedian": 5.17,
-        "sampleSize": 338
-      },
-      "PSA 6": {
-        "gradedMedian": 8.5,
-        "medianRatio": 1.61,
-        "p25": 1.11,
-        "p75": 7.89,
-        "rawMedian": 6.76,
-        "sampleSize": 6
+        "gradedMedian": 45.25,
+        "medianRatio": 7.88,
+        "p25": 4.52,
+        "p75": 14.04,
+        "rawMedian": 5.16,
+        "sampleSize": 340
       },
       "PSA 7": {
         "gradedMedian": 12.5,
-        "medianRatio": 2.24,
+        "medianRatio": 2.35,
         "p25": 1.69,
         "p75": 3.96,
         "rawMedian": 4.61,
@@ -14237,40 +14263,40 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       "PSA 8": {
         "gradedMedian": 13.97,
         "medianRatio": 2.41,
-        "p25": 1.36,
+        "p25": 1.4,
         "p75": 4.11,
-        "rawMedian": 6.23,
+        "rawMedian": 6.21,
         "sampleSize": 66
       },
       "PSA 9": {
         "gradedMedian": 20.5,
         "medianRatio": 3.46,
-        "p25": 2.02,
+        "p25": 2.03,
         "p75": 5.47,
-        "rawMedian": 5.63,
+        "rawMedian": 5.5,
         "sampleSize": 230
       },
       "SGC 10": {
-        "gradedMedian": 28.12,
+        "gradedMedian": 28.7,
         "medianRatio": 5.81,
-        "p25": 3.72,
+        "p25": 3.96,
         "p75": 8.09,
         "rawMedian": 4.94,
-        "sampleSize": 50
+        "sampleSize": 52
       },
       "SGC 9": {
         "gradedMedian": 13.54,
-        "medianRatio": 2.06,
+        "medianRatio": 2.05,
         "p25": 1.08,
-        "p75": 2.17,
-        "rawMedian": 6.76,
+        "p75": 2.18,
+        "rawMedian": 6.75,
         "sampleSize": 12
       },
       "SGC 9.5": {
         "gradedMedian": 15,
         "medianRatio": 4.55,
-        "p25": 2.67,
-        "p75": 6.35,
+        "p25": 2.93,
+        "p75": 6.37,
         "rawMedian": 3.8,
         "sampleSize": 36
       }
@@ -14279,44 +14305,52 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
   "baseball|panini-mosaic": {
     "$25-49": {
       "PSA 10": {
-        "gradedMedian": 212.83,
-        "medianRatio": 6.67,
-        "p25": 4.2,
-        "p75": 8.46,
-        "rawMedian": 31.73,
-        "sampleSize": 28
+        "gradedMedian": 216.7,
+        "medianRatio": 7.68,
+        "p25": 3.71,
+        "p75": 8.95,
+        "rawMedian": 29.55,
+        "sampleSize": 22
       },
       "PSA 8": {
-        "gradedMedian": 80.42,
-        "medianRatio": 3.04,
-        "p25": 2.97,
+        "gradedMedian": 79.5,
+        "medianRatio": 3.05,
+        "p25": 1.12,
         "p75": 12.27,
         "rawMedian": 28.93,
-        "sampleSize": 8
+        "sampleSize": 6
       },
       "PSA 9": {
         "gradedMedian": 122.1,
         "medianRatio": 3.57,
-        "p25": 2.06,
+        "p25": 2.33,
         "p75": 4.28,
-        "rawMedian": 31.89,
+        "rawMedian": 29.55,
         "sampleSize": 12
       }
     },
     "$50-99": {
       "PSA 10": {
-        "gradedMedian": 252.5,
-        "medianRatio": 3.63,
+        "gradedMedian": 194.54,
+        "medianRatio": 2.4,
         "p25": 2.02,
-        "p75": 5.28,
+        "p75": 4.76,
+        "rawMedian": 79.17,
+        "sampleSize": 18
+      },
+      "PSA 8": {
+        "gradedMedian": 80.42,
+        "medianRatio": 1.02,
+        "p25": 0.51,
+        "p75": 1.07,
         "rawMedian": 81.04,
-        "sampleSize": 16
+        "sampleSize": 6
       },
       "PSA 9": {
         "gradedMedian": 82.66,
         "medianRatio": 1.09,
         "p25": 0.94,
-        "p75": 1.71,
+        "p75": 1.68,
         "rawMedian": 81.04,
         "sampleSize": 12
       }
@@ -14331,28 +14365,28 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "sampleSize": 10
       },
       "PSA 10": {
-        "gradedMedian": 74.64,
-        "medianRatio": 9.93,
-        "p25": 6.27,
-        "p75": 24.09,
-        "rawMedian": 7.91,
-        "sampleSize": 160
+        "gradedMedian": 73.33,
+        "medianRatio": 9.45,
+        "p25": 6.49,
+        "p75": 23.55,
+        "rawMedian": 8.02,
+        "sampleSize": 162
       },
       "PSA 8": {
-        "gradedMedian": 13.64,
-        "medianRatio": 0.79,
+        "gradedMedian": 14.5,
+        "medianRatio": 1.64,
         "p25": 0.7,
-        "p75": 1.62,
+        "p75": 2.37,
         "rawMedian": 13.56,
-        "sampleSize": 10
+        "sampleSize": 12
       },
       "PSA 9": {
-        "gradedMedian": 30.15,
-        "medianRatio": 3.23,
-        "p25": 2.35,
-        "p75": 6.43,
-        "rawMedian": 8.42,
-        "sampleSize": 62
+        "gradedMedian": 32,
+        "medianRatio": 3.32,
+        "p25": 2.55,
+        "p75": 5.26,
+        "rawMedian": 8.31,
+        "sampleSize": 60
       },
       "SGC 9": {
         "gradedMedian": 11.6,
@@ -14375,28 +14409,28 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
   "baseball|panini-optic": {
     "$100-249": {
       "PSA 10": {
-        "gradedMedian": 416.75,
-        "medianRatio": 2.86,
+        "gradedMedian": 418.5,
+        "medianRatio": 2.98,
         "p25": 2.13,
-        "p75": 3.94,
-        "rawMedian": 155.53,
+        "p75": 3.96,
+        "rawMedian": 154.77,
         "sampleSize": 64
       },
       "PSA 8": {
         "gradedMedian": 186.39,
         "medianRatio": 1.28,
-        "p25": 0.87,
+        "p25": 0.86,
         "p75": 1.34,
         "rawMedian": 192.14,
         "sampleSize": 16
       },
       "PSA 9": {
-        "gradedMedian": 202.67,
-        "medianRatio": 1.49,
-        "p25": 1.12,
+        "gradedMedian": 203.5,
+        "medianRatio": 1.66,
+        "p25": 1.18,
         "p75": 2.43,
-        "rawMedian": 141.62,
-        "sampleSize": 46
+        "rawMedian": 141.42,
+        "sampleSize": 44
       }
     },
     "$25-49": {
@@ -14412,35 +14446,35 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "gradedMedian": 80.22,
         "medianRatio": 2.37,
         "p25": 1.31,
-        "p75": 3.22,
-        "rawMedian": 32,
+        "p75": 3.06,
+        "rawMedian": 33.84,
         "sampleSize": 20
       }
     },
     "$50-99": {
       "PSA 10": {
-        "gradedMedian": 273.76,
+        "gradedMedian": 287.5,
         "medianRatio": 3.87,
         "p25": 2.35,
-        "p75": 5.34,
-        "rawMedian": 81.83,
-        "sampleSize": 34
+        "p75": 5.28,
+        "rawMedian": 86,
+        "sampleSize": 36
       },
       "PSA 8": {
-        "gradedMedian": 83.56,
-        "medianRatio": 1.35,
+        "gradedMedian": 150.5,
+        "medianRatio": 2.27,
         "p25": 0.96,
         "p75": 2.41,
-        "rawMedian": 86.95,
-        "sampleSize": 14
+        "rawMedian": 87.32,
+        "sampleSize": 12
       },
       "PSA 9": {
         "gradedMedian": 140.3,
-        "medianRatio": 1.95,
+        "medianRatio": 1.86,
         "p25": 1.22,
         "p75": 2.67,
         "rawMedian": 81.83,
-        "sampleSize": 36
+        "sampleSize": 38
       }
     },
     "Under $25": {
@@ -14449,24 +14483,24 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "medianRatio": 7.8,
         "p25": 4.69,
         "p75": 13.06,
-        "rawMedian": 4.76,
+        "rawMedian": 4.74,
         "sampleSize": 204
       },
       "PSA 8": {
         "gradedMedian": 15.84,
-        "medianRatio": 1.53,
+        "medianRatio": 1.51,
         "p25": 1.11,
         "p75": 3.41,
-        "rawMedian": 8.51,
+        "rawMedian": 8.61,
         "sampleSize": 26
       },
       "PSA 9": {
-        "gradedMedian": 21.49,
+        "gradedMedian": 20.75,
         "medianRatio": 3.38,
-        "p25": 2.13,
-        "p75": 5.73,
-        "rawMedian": 5.28,
-        "sampleSize": 152
+        "p25": 2.08,
+        "p75": 5.49,
+        "rawMedian": 5.29,
+        "sampleSize": 154
       },
       "SGC 10": {
         "gradedMedian": 20,
@@ -14481,7 +14515,7 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "medianRatio": 2.08,
         "p25": 0.96,
         "p75": 11.51,
-        "rawMedian": 5.28,
+        "rawMedian": 5.29,
         "sampleSize": 6
       },
       "SGC 9.5": {
@@ -14509,34 +14543,34 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "medianRatio": 1.92,
         "p25": 0.89,
         "p75": 2.47,
-        "rawMedian": 104.34,
+        "rawMedian": 104.57,
         "sampleSize": 10
       },
       "PSA 9": {
-        "gradedMedian": 160.29,
+        "gradedMedian": 157.75,
         "medianRatio": 1.17,
-        "p25": 0.97,
-        "p75": 2.32,
+        "p25": 0.9,
+        "p75": 2,
         "rawMedian": 123.29,
-        "sampleSize": 40
+        "sampleSize": 42
       }
     },
     "$25-49": {
       "CGC 10": {
         "gradedMedian": 57.06,
         "medianRatio": 1.15,
-        "p25": 1.1,
-        "p75": 4.66,
-        "rawMedian": 38.33,
+        "p25": 1.11,
+        "p75": 4.71,
+        "rawMedian": 37.76,
         "sampleSize": 6
       },
       "PSA 10": {
-        "gradedMedian": 160,
-        "medianRatio": 4.72,
-        "p25": 2.99,
+        "gradedMedian": 151.25,
+        "medianRatio": 4.58,
+        "p25": 2.91,
         "p75": 7.61,
-        "rawMedian": 36.16,
-        "sampleSize": 84
+        "rawMedian": 36.8,
+        "sampleSize": 88
       },
       "PSA 8": {
         "gradedMedian": 43.62,
@@ -14547,19 +14581,19 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "sampleSize": 10
       },
       "PSA 9": {
-        "gradedMedian": 96.49,
+        "gradedMedian": 101.6,
         "medianRatio": 2.58,
-        "p25": 1.2,
-        "p75": 3.76,
-        "rawMedian": 35.65,
-        "sampleSize": 60
+        "p25": 1.21,
+        "p75": 3.83,
+        "rawMedian": 36.11,
+        "sampleSize": 64
       },
       "SGC 9.5": {
         "gradedMedian": 32.64,
         "medianRatio": 1.05,
         "p25": 0.97,
-        "p75": 1.13,
-        "rawMedian": 31.41,
+        "p75": 1.15,
+        "rawMedian": 31.09,
         "sampleSize": 8
       }
     },
@@ -14587,16 +14621,16 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "medianRatio": 2.96,
         "p25": 1.89,
         "p75": 5.04,
-        "rawMedian": 69.86,
-        "sampleSize": 68
+        "rawMedian": 68.78,
+        "sampleSize": 70
       },
       "PSA 9": {
         "gradedMedian": 87.83,
         "medianRatio": 1.3,
         "p25": 0.93,
         "p75": 2.74,
-        "rawMedian": 70.27,
-        "sampleSize": 36
+        "rawMedian": 67.5,
+        "sampleSize": 38
       },
       "SGC 9": {
         "gradedMedian": 71.5,
@@ -14636,17 +14670,17 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "gradedMedian": 9,
         "medianRatio": 1.76,
         "p25": 1.49,
-        "p75": 1.9,
-        "rawMedian": 6.83,
+        "p75": 2.1,
+        "rawMedian": 6.19,
         "sampleSize": 14
       },
       "PSA 10": {
-        "gradedMedian": 52.36,
+        "gradedMedian": 52.34,
         "medianRatio": 8.04,
         "p25": 4.87,
-        "p75": 13.76,
-        "rawMedian": 6.4,
-        "sampleSize": 764
+        "p75": 13.74,
+        "rawMedian": 6.32,
+        "sampleSize": 768
       },
       "PSA 8": {
         "gradedMedian": 13.5,
@@ -14657,11 +14691,11 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "sampleSize": 78
       },
       "PSA 9": {
-        "gradedMedian": 24,
-        "medianRatio": 3.7,
-        "p25": 2.52,
+        "gradedMedian": 23.95,
+        "medianRatio": 3.63,
+        "p25": 2.53,
         "p75": 6.52,
-        "rawMedian": 6.6,
+        "rawMedian": 6.57,
         "sampleSize": 450
       },
       "SGC 10": {
@@ -14676,7 +14710,7 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "gradedMedian": 13.5,
         "medianRatio": 2.12,
         "p25": 1.38,
-        "p75": 3.3,
+        "p75": 3.21,
         "rawMedian": 7.08,
         "sampleSize": 24
       },
@@ -14684,7 +14718,7 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "gradedMedian": 15,
         "medianRatio": 3.44,
         "p25": 1.7,
-        "p75": 5.69,
+        "p75": 5.7,
         "rawMedian": 4.32,
         "sampleSize": 46
       }
@@ -14723,8 +14757,8 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
     },
     "Under $25": {
       "CGC 10": {
-        "gradedMedian": 38.33,
-        "medianRatio": 1.98,
+        "gradedMedian": 34.99,
+        "medianRatio": 1.8,
         "p25": 1.14,
         "p75": 2.78,
         "rawMedian": 19.41,
@@ -14748,7 +14782,7 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       },
       "PSA 9": {
         "gradedMedian": 40.32,
-        "medianRatio": 5,
+        "medianRatio": 5.02,
         "p25": 2.53,
         "p75": 10.6,
         "rawMedian": 8.35,
@@ -14767,20 +14801,20 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
   "baseball|topps": {
     "$1,000-2,499": {
       "BGS 9.5": {
-        "gradedMedian": 1737.5,
-        "medianRatio": 1.13,
-        "p25": 0.77,
-        "p75": 1.6,
-        "rawMedian": 1830.39,
-        "sampleSize": 16
+        "gradedMedian": 1540.5,
+        "medianRatio": 1.09,
+        "p25": 0.66,
+        "p75": 1.63,
+        "rawMedian": 1651.75,
+        "sampleSize": 14
       },
       "PSA 10": {
-        "gradedMedian": 1965,
+        "gradedMedian": 1953.11,
         "medianRatio": 1.17,
-        "p25": 0.84,
+        "p25": 0.83,
         "p75": 2.22,
-        "rawMedian": 1592.8,
-        "sampleSize": 88
+        "rawMedian": 1587.48,
+        "sampleSize": 86
       },
       "PSA 8": {
         "gradedMedian": 1047.5,
@@ -14792,18 +14826,18 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       },
       "PSA 9": {
         "gradedMedian": 1335.14,
-        "medianRatio": 0.77,
+        "medianRatio": 0.87,
         "p25": 0.57,
-        "p75": 1.08,
-        "rawMedian": 1650,
+        "p75": 1.09,
+        "rawMedian": 1587.48,
         "sampleSize": 26
       },
       "SGC 10": {
         "gradedMedian": 1197.91,
         "medianRatio": 0.65,
         "p25": 0.55,
-        "p75": 1.24,
-        "rawMedian": 1830.39,
+        "p75": 1.26,
+        "rawMedian": 1802.79,
         "sampleSize": 6
       }
     },
@@ -14828,114 +14862,122 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       },
       "BGS 8.5": {
         "gradedMedian": 131.07,
-        "medianRatio": 0.68,
+        "medianRatio": 0.69,
         "p25": 0.5,
         "p75": 1.31,
-        "rawMedian": 180.5,
+        "rawMedian": 180.37,
         "sampleSize": 6
       },
       "BGS 9": {
-        "gradedMedian": 157.4,
-        "medianRatio": 1.03,
+        "gradedMedian": 164.99,
+        "medianRatio": 1.04,
         "p25": 0.75,
-        "p75": 1.14,
-        "rawMedian": 146,
-        "sampleSize": 26
+        "p75": 1.17,
+        "rawMedian": 147.15,
+        "sampleSize": 28
       },
       "BGS 9.5": {
-        "gradedMedian": 185.25,
-        "medianRatio": 1.09,
-        "p25": 0.79,
-        "p75": 1.59,
+        "gradedMedian": 195.15,
+        "medianRatio": 1.1,
+        "p25": 0.85,
+        "p75": 1.63,
         "rawMedian": 158.37,
-        "sampleSize": 94
+        "sampleSize": 96
       },
       "CGC 10": {
-        "gradedMedian": 187.5,
-        "medianRatio": 1.06,
-        "p25": 0.83,
-        "p75": 1.7,
-        "rawMedian": 169.68,
+        "gradedMedian": 189.22,
+        "medianRatio": 1.1,
+        "p25": 0.82,
+        "p75": 1.8,
+        "rawMedian": 169.33,
         "sampleSize": 20
       },
       "CGC 9": {
-        "gradedMedian": 159,
+        "gradedMedian": 150,
         "medianRatio": 0.91,
         "p25": 0.55,
-        "p75": 1.33,
-        "rawMedian": 191.52,
+        "p75": 1.26,
+        "rawMedian": 190.9,
+        "sampleSize": 6
+      },
+      "CGC 9.5": {
+        "gradedMedian": 175.5,
+        "medianRatio": 0.96,
+        "p25": 0.68,
+        "p75": 1.19,
+        "rawMedian": 147.15,
         "sampleSize": 6
       },
       "PSA 1": {
         "gradedMedian": 170.55,
         "medianRatio": 1.33,
-        "p25": 1.01,
+        "p25": 1.03,
         "p75": 1.84,
-        "rawMedian": 128.4,
+        "rawMedian": 128.22,
         "sampleSize": 6
       },
       "PSA 10": {
-        "gradedMedian": 271.77,
-        "medianRatio": 1.77,
-        "p25": 1.34,
-        "p75": 2.47,
+        "gradedMedian": 273.25,
+        "medianRatio": 1.78,
+        "p25": 1.35,
+        "p75": 2.48,
         "rawMedian": 154,
-        "sampleSize": 1100
+        "sampleSize": 1098
       },
       "PSA 6": {
         "gradedMedian": 87.56,
         "medianRatio": 0.72,
         "p25": 0.63,
-        "p75": 0.9,
-        "rawMedian": 151.83,
+        "p75": 0.89,
+        "rawMedian": 152.29,
         "sampleSize": 8
       },
       "PSA 7": {
         "gradedMedian": 179.47,
-        "medianRatio": 0.92,
-        "p25": 0.57,
+        "medianRatio": 0.94,
+        "p25": 0.58,
         "p75": 1.07,
-        "rawMedian": 191.52,
+        "rawMedian": 190.9,
         "sampleSize": 20
       },
       "PSA 8": {
-        "gradedMedian": 133.05,
-        "medianRatio": 0.82,
-        "p25": 0.65,
-        "p75": 1.17,
+        "gradedMedian": 129.25,
+        "medianRatio": 0.83,
+        "p25": 0.62,
+        "p75": 1.14,
         "rawMedian": 151.5,
         "sampleSize": 144
       },
       "PSA 8.5": {
         "gradedMedian": 116.5,
-        "medianRatio": 0.97,
+        "medianRatio": 0.98,
         "p25": 0.86,
         "p75": 1.05,
         "rawMedian": 124.8,
         "sampleSize": 12
       },
       "PSA 9": {
-        "gradedMedian": 135.49,
+        "gradedMedian": 136.03,
         "medianRatio": 0.9,
-        "p25": 0.67,
-        "p75": 1.22,
-        "rawMedian": 147.24,
-        "sampleSize": 694
+        "p25": 0.68,
+        "p75": 1.21,
+        "rawMedian": 146.48,
+        "sampleSize": 690
       },
       "SGC 10": {
-        "gradedMedian": 173.33,
-        "medianRatio": 1.17,
-        "p25": 0.76,
+        "gradedMedian": 173,
+        "medianRatio": 1.11,
+        "p25": 0.75,
         "p75": 1.66,
-        "rawMedian": 147.24,
+        "rawMedian": 146.7,
         "sampleSize": 132
       },
       "SGC 8": {
         "gradedMedian": 200,
         "medianRatio": 0.89,
-        "p25": 0.63,
+        "p25": 0.67,
         "p75": 1.09,
-        "rawMedian": 191.52,
+        "rawMedian": 190.9,
         "sampleSize": 8
       },
       "SGC 8.5": {
@@ -14943,80 +14985,80 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "medianRatio": 0.61,
         "p25": 0.56,
         "p75": 0.63,
-        "rawMedian": 173.32,
+        "rawMedian": 172.09,
         "sampleSize": 8
       },
       "SGC 9": {
         "gradedMedian": 121.86,
         "medianRatio": 0.99,
-        "p25": 0.63,
+        "p25": 0.54,
         "p75": 1.13,
-        "rawMedian": 141.87,
+        "rawMedian": 140.93,
         "sampleSize": 20
       },
       "SGC 9.5": {
         "gradedMedian": 126.46,
         "medianRatio": 0.76,
-        "p25": 0.57,
+        "p25": 0.58,
         "p75": 0.96,
-        "rawMedian": 169.68,
-        "sampleSize": 84
+        "rawMedian": 169.33,
+        "sampleSize": 80
       }
     },
     "$2,500-4,999": {
       "PSA 10": {
-        "gradedMedian": 3720,
-        "medianRatio": 0.97,
-        "p25": 0.66,
-        "p75": 1.66,
+        "gradedMedian": 3836.88,
+        "medianRatio": 1.08,
+        "p25": 0.75,
+        "p75": 1.58,
         "rawMedian": 3627.22,
-        "sampleSize": 38
+        "sampleSize": 40
       },
       "PSA 9": {
         "gradedMedian": 2034,
-        "medianRatio": 0.66,
-        "p25": 0.56,
+        "medianRatio": 0.77,
+        "p25": 0.66,
         "p75": 0.92,
         "rawMedian": 3627.22,
-        "sampleSize": 6
+        "sampleSize": 8
       }
     },
     "$25-49": {
       "BGS 10": {
         "gradedMedian": 77.79,
         "medianRatio": 2.45,
-        "p25": 1.74,
+        "p25": 1.73,
         "p75": 2.77,
         "rawMedian": 31.96,
         "sampleSize": 28
       },
       "BGS 9": {
         "gradedMedian": 41.75,
-        "medianRatio": 1.04,
-        "p25": 0.94,
+        "medianRatio": 1.05,
+        "p25": 0.93,
         "p75": 1.39,
         "rawMedian": 39.33,
         "sampleSize": 16
       },
       "BGS 9.5": {
-        "gradedMedian": 56.33,
+        "gradedMedian": 55.78,
         "medianRatio": 1.68,
-        "p25": 1.12,
+        "p25": 1.15,
         "p75": 2.17,
-        "rawMedian": 30.78,
-        "sampleSize": 54
+        "rawMedian": 31.12,
+        "sampleSize": 56
       },
       "CGC 10": {
         "gradedMedian": 45.47,
         "medianRatio": 1.33,
-        "p25": 1.12,
+        "p25": 1.02,
         "p75": 1.69,
-        "rawMedian": 33.83,
+        "rawMedian": 34.75,
         "sampleSize": 66
       },
       "CGC 9": {
         "gradedMedian": 22.12,
-        "medianRatio": 0.73,
+        "medianRatio": 0.74,
         "p25": 0.71,
         "p75": 0.94,
         "rawMedian": 28.82,
@@ -15024,89 +15066,73 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       },
       "CGC 9.5": {
         "gradedMedian": 35,
-        "medianRatio": 0.8,
-        "p25": 0.57,
+        "medianRatio": 0.81,
+        "p25": 0.58,
         "p75": 1.13,
-        "rawMedian": 38.79,
+        "rawMedian": 36.9,
         "sampleSize": 12
       },
       "PSA 1": {
         "gradedMedian": 33.65,
-        "medianRatio": 0.91,
-        "p25": 0.58,
-        "p75": 1.47,
-        "rawMedian": 36.27,
-        "sampleSize": 14
+        "medianRatio": 1.16,
+        "p25": 0.86,
+        "p75": 1.21,
+        "rawMedian": 36.66,
+        "sampleSize": 12
       },
       "PSA 10": {
-        "gradedMedian": 94.2,
+        "gradedMedian": 94.25,
         "medianRatio": 2.65,
-        "p25": 1.98,
-        "p75": 3.85,
-        "rawMedian": 34.55,
-        "sampleSize": 1862
-      },
-      "PSA 2": {
-        "gradedMedian": 16.1,
-        "medianRatio": 0.62,
-        "p25": 0.55,
-        "p75": 5.75,
-        "rawMedian": 25.81,
-        "sampleSize": 6
-      },
-      "PSA 6": {
-        "gradedMedian": 24.93,
-        "medianRatio": 0.91,
-        "p25": 0.76,
-        "p75": 1.01,
-        "rawMedian": 32.78,
-        "sampleSize": 6
+        "p25": 1.99,
+        "p75": 3.78,
+        "rawMedian": 34.6,
+        "sampleSize": 1866
       },
       "PSA 7": {
         "gradedMedian": 35.5,
-        "medianRatio": 0.91,
-        "p25": 0.61,
+        "medianRatio": 0.92,
+        "p25": 0.8,
         "p75": 2.3,
-        "rawMedian": 32.78,
-        "sampleSize": 22
+        "rawMedian": 34.12,
+        "sampleSize": 24
       },
       "PSA 8": {
-        "gradedMedian": 28,
+        "gradedMedian": 28.19,
         "medianRatio": 0.82,
-        "p25": 0.66,
+        "p25": 0.67,
         "p75": 1.17,
-        "rawMedian": 33,
+        "rawMedian": 33.3,
         "sampleSize": 206
       },
       "PSA 9": {
-        "gradedMedian": 43.36,
-        "medianRatio": 1.23,
+        "gradedMedian": 43.4,
+        "medianRatio": 1.24,
         "p25": 0.95,
         "p75": 1.66,
         "rawMedian": 34.85,
-        "sampleSize": 1190
+        "sampleSize": 1186
       },
       "SGC 10": {
         "gradedMedian": 52.5,
-        "medianRatio": 1.5,
+        "medianRatio": 1.52,
         "p25": 1.17,
-        "p75": 2.03,
-        "rawMedian": 33.35,
-        "sampleSize": 216
+        "p75": 2.02,
+        "rawMedian": 33.29,
+        "sampleSize": 218
       },
       "SGC 9": {
         "gradedMedian": 33.71,
         "medianRatio": 0.95,
-        "p25": 0.69,
+        "p25": 0.71,
         "p75": 1.2,
         "rawMedian": 35.04,
-        "sampleSize": 48
+        "sampleSize": 50
       },
       "SGC 9.5": {
         "gradedMedian": 41,
-        "medianRatio": 1.2,
+        "medianRatio": 1.21,
         "p25": 0.85,
-        "p75": 1.64,
+        "p75": 1.66,
         "rawMedian": 35.86,
         "sampleSize": 142
       }
@@ -15117,82 +15143,90 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "medianRatio": 1.79,
         "p25": 1.45,
         "p75": 2.23,
-        "rawMedian": 289.77,
+        "rawMedian": 286.59,
         "sampleSize": 10
       },
       "BGS 9": {
-        "gradedMedian": 508.5,
-        "medianRatio": 1.94,
-        "p25": 0.86,
-        "p75": 2.44,
-        "rawMedian": 389.69,
-        "sampleSize": 8
+        "gradedMedian": 400,
+        "medianRatio": 0.99,
+        "p25": 0.97,
+        "p75": 1.94,
+        "rawMedian": 286.59,
+        "sampleSize": 10
       },
       "BGS 9.5": {
         "gradedMedian": 309.59,
         "medianRatio": 0.91,
         "p25": 0.77,
-        "p75": 1.09,
-        "rawMedian": 318.31,
+        "p75": 1.23,
+        "rawMedian": 318.3,
         "sampleSize": 34
       },
+      "CGC 10": {
+        "gradedMedian": 226.28,
+        "medianRatio": 0.64,
+        "p25": 0.6,
+        "p75": 0.78,
+        "rawMedian": 354.68,
+        "sampleSize": 6
+      },
       "PSA 10": {
-        "gradedMedian": 537.75,
-        "medianRatio": 1.62,
-        "p25": 1.16,
-        "p75": 2.16,
-        "rawMedian": 329.83,
-        "sampleSize": 386
+        "gradedMedian": 557.5,
+        "medianRatio": 1.65,
+        "p25": 1.2,
+        "p75": 2.28,
+        "rawMedian": 327.11,
+        "sampleSize": 392
       },
       "PSA 7": {
         "gradedMedian": 482.71,
         "medianRatio": 1.22,
         "p25": 1.17,
-        "p75": 1.67,
+        "p75": 1.68,
         "rawMedian": 385.5,
         "sampleSize": 6
       },
       "PSA 8": {
-        "gradedMedian": 301.25,
-        "medianRatio": 0.84,
-        "p25": 0.66,
+        "gradedMedian": 277,
+        "medianRatio": 0.75,
+        "p25": 0.56,
         "p75": 1.04,
-        "rawMedian": 367.53,
-        "sampleSize": 36
+        "rawMedian": 363.75,
+        "sampleSize": 38
       },
       "PSA 9": {
-        "gradedMedian": 299.21,
+        "gradedMedian": 302.85,
         "medianRatio": 0.91,
         "p25": 0.67,
-        "p75": 1.11,
-        "rawMedian": 327.11,
-        "sampleSize": 220
+        "p75": 1.13,
+        "rawMedian": 324.51,
+        "sampleSize": 222
       },
       "SGC 10": {
-        "gradedMedian": 287.02,
+        "gradedMedian": 281.03,
         "medianRatio": 0.9,
         "p25": 0.71,
         "p75": 1.12,
-        "rawMedian": 310.03,
+        "rawMedian": 308.72,
         "sampleSize": 50
       },
       "SGC 9.5": {
-        "gradedMedian": 415.01,
-        "medianRatio": 0.93,
+        "gradedMedian": 221.11,
+        "medianRatio": 0.7,
         "p25": 0.62,
         "p75": 1.18,
-        "rawMedian": 355.05,
-        "sampleSize": 12
+        "rawMedian": 350.92,
+        "sampleSize": 16
       }
     },
     "$5,000-9,999": {
       "PSA 10": {
         "gradedMedian": 5375,
-        "medianRatio": 0.94,
+        "medianRatio": 0.93,
         "p25": 0.75,
-        "p75": 1.41,
+        "p75": 0.94,
         "rawMedian": 5787.78,
-        "sampleSize": 8
+        "sampleSize": 10
       },
       "PSA 9": {
         "gradedMedian": 8625,
@@ -15209,13 +15243,13 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "medianRatio": 2.89,
         "p25": 1.64,
         "p75": 4.89,
-        "rawMedian": 82.54,
+        "rawMedian": 82.51,
         "sampleSize": 12
       },
       "BGS 9.5": {
         "gradedMedian": 92.26,
         "medianRatio": 1.21,
-        "p25": 0.9,
+        "p25": 0.91,
         "p75": 1.61,
         "rawMedian": 66.77,
         "sampleSize": 46
@@ -15224,107 +15258,99 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "gradedMedian": 102.78,
         "medianRatio": 1.45,
         "p25": 1.1,
-        "p75": 2.04,
-        "rawMedian": 75.63,
+        "p75": 2.05,
+        "rawMedian": 75.48,
         "sampleSize": 16
-      },
-      "CGC 9.5": {
-        "gradedMedian": 50,
-        "medianRatio": 0.64,
-        "p25": 0.59,
-        "p75": 6.81,
-        "rawMedian": 75.9,
-        "sampleSize": 6
       },
       "PSA 1": {
         "gradedMedian": 153.31,
-        "medianRatio": 2.71,
+        "medianRatio": 2.82,
         "p25": 1.38,
         "p75": 4.14,
         "rawMedian": 65.27,
         "sampleSize": 6
       },
       "PSA 10": {
-        "gradedMedian": 151.82,
+        "gradedMedian": 152.72,
         "medianRatio": 2.19,
         "p25": 1.58,
-        "p75": 2.87,
-        "rawMedian": 70.2,
-        "sampleSize": 1270
+        "p75": 2.88,
+        "rawMedian": 70.41,
+        "sampleSize": 1276
       },
       "PSA 8": {
         "gradedMedian": 67.75,
         "medianRatio": 0.89,
         "p25": 0.66,
-        "p75": 1.61,
-        "rawMedian": 72.44,
-        "sampleSize": 118
+        "p75": 1.68,
+        "rawMedian": 71.33,
+        "sampleSize": 120
       },
       "PSA 9": {
-        "gradedMedian": 73.61,
-        "medianRatio": 1.07,
-        "p25": 0.82,
+        "gradedMedian": 74.13,
+        "medianRatio": 1.08,
+        "p25": 0.83,
         "p75": 1.43,
-        "rawMedian": 69.72,
-        "sampleSize": 824
+        "rawMedian": 69.3,
+        "sampleSize": 818
       },
       "SGC 10": {
         "gradedMedian": 96.13,
         "medianRatio": 1.37,
         "p25": 0.91,
         "p75": 1.62,
-        "rawMedian": 73.8,
+        "rawMedian": 73.44,
         "sampleSize": 116
       },
       "SGC 9": {
         "gradedMedian": 62.27,
         "medianRatio": 0.68,
-        "p25": 0.63,
+        "p25": 0.65,
         "p75": 0.94,
-        "rawMedian": 82.54,
-        "sampleSize": 20
+        "rawMedian": 80.13,
+        "sampleSize": 22
       },
       "SGC 9.5": {
-        "gradedMedian": 65.5,
-        "medianRatio": 0.97,
+        "gradedMedian": 65.83,
+        "medianRatio": 0.95,
         "p25": 0.77,
         "p75": 1.16,
-        "rawMedian": 75.9,
+        "rawMedian": 75.48,
         "sampleSize": 48
       }
     },
     "$500-999": {
       "BGS 10": {
         "gradedMedian": 3144.55,
-        "medianRatio": 5.13,
-        "p25": 2.13,
-        "p75": 6.88,
+        "medianRatio": 4.98,
+        "p25": 2.15,
+        "p75": 6.82,
         "rawMedian": 833.24,
         "sampleSize": 12
       },
       "BGS 9": {
         "gradedMedian": 686,
-        "medianRatio": 0.89,
+        "medianRatio": 0.91,
         "p25": 0.82,
-        "p75": 1.09,
+        "p75": 0.93,
         "rawMedian": 833.24,
-        "sampleSize": 8
+        "sampleSize": 10
       },
       "BGS 9.5": {
         "gradedMedian": 807,
-        "medianRatio": 1.05,
+        "medianRatio": 0.97,
         "p25": 0.79,
-        "p75": 1.29,
-        "rawMedian": 693.74,
+        "p75": 1.2,
+        "rawMedian": 700.13,
         "sampleSize": 18
       },
       "PSA 10": {
-        "gradedMedian": 933,
-        "medianRatio": 1.45,
+        "gradedMedian": 943.75,
+        "medianRatio": 1.46,
         "p25": 0.96,
-        "p75": 2.05,
-        "rawMedian": 683.22,
-        "sampleSize": 182
+        "p75": 2.02,
+        "rawMedian": 689.04,
+        "sampleSize": 180
       },
       "PSA 7": {
         "gradedMedian": 457.5,
@@ -15336,109 +15362,109 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       },
       "PSA 8": {
         "gradedMedian": 561.76,
-        "medianRatio": 0.76,
+        "medianRatio": 0.75,
         "p25": 0.64,
-        "p75": 1.23,
-        "rawMedian": 690.35,
+        "p75": 1.27,
+        "rawMedian": 669.71,
         "sampleSize": 16
       },
       "PSA 9": {
         "gradedMedian": 610,
-        "medianRatio": 0.84,
+        "medianRatio": 0.79,
         "p25": 0.67,
-        "p75": 1.17,
-        "rawMedian": 696.26,
-        "sampleSize": 72
+        "p75": 1.01,
+        "rawMedian": 700.13,
+        "sampleSize": 70
       },
       "SGC 10": {
         "gradedMedian": 828.16,
         "medianRatio": 0.88,
-        "p25": 0.66,
+        "p25": 0.64,
         "p75": 1.28,
-        "rawMedian": 730.33,
+        "rawMedian": 737.07,
         "sampleSize": 18
       },
       "SGC 9.5": {
-        "gradedMedian": 540.83,
-        "medianRatio": 0.74,
+        "gradedMedian": 546.24,
+        "medianRatio": 0.89,
         "p25": 0.65,
         "p75": 1.06,
-        "rawMedian": 657.99,
-        "sampleSize": 10
+        "rawMedian": 833.24,
+        "sampleSize": 12
       }
     },
     "Under $25": {
       "BGS 10": {
-        "gradedMedian": 51.12,
+        "gradedMedian": 51.18,
         "medianRatio": 4.16,
-        "p25": 2.76,
-        "p75": 6.79,
-        "rawMedian": 11.38,
-        "sampleSize": 200
+        "p25": 2.69,
+        "p75": 6.82,
+        "rawMedian": 11.2,
+        "sampleSize": 202
       },
       "BGS 7.5": {
         "gradedMedian": 13.1,
         "medianRatio": 4.58,
-        "p25": 0.65,
+        "p25": 0.67,
         "p75": 7.17,
         "rawMedian": 6.37,
         "sampleSize": 6
       },
       "BGS 8": {
-        "gradedMedian": 12.54,
-        "medianRatio": 0.81,
-        "p25": 0.74,
+        "gradedMedian": 16.75,
+        "medianRatio": 1.67,
+        "p25": 0.76,
         "p75": 3.34,
-        "rawMedian": 17.6,
+        "rawMedian": 17.2,
         "sampleSize": 8
       },
       "BGS 8.5": {
         "gradedMedian": 15.03,
         "medianRatio": 0.94,
-        "p25": 0.66,
+        "p25": 0.68,
         "p75": 1.87,
-        "rawMedian": 16.19,
-        "sampleSize": 22
+        "rawMedian": 15.85,
+        "sampleSize": 26
       },
       "BGS 9": {
-        "gradedMedian": 14,
-        "medianRatio": 1.57,
-        "p25": 0.85,
-        "p75": 2.36,
-        "rawMedian": 9.28,
-        "sampleSize": 126
+        "gradedMedian": 14.49,
+        "medianRatio": 1.65,
+        "p25": 0.9,
+        "p75": 2.76,
+        "rawMedian": 9.25,
+        "sampleSize": 132
       },
       "BGS 9.5": {
-        "gradedMedian": 22.5,
+        "gradedMedian": 22.44,
         "medianRatio": 2.29,
         "p25": 1.58,
-        "p75": 3.8,
+        "p75": 3.67,
         "rawMedian": 9.07,
         "sampleSize": 460
       },
       "CGC 10": {
-        "gradedMedian": 24.15,
-        "medianRatio": 3.63,
-        "p25": 2.24,
-        "p75": 5.52,
-        "rawMedian": 6.38,
-        "sampleSize": 874
+        "gradedMedian": 24.2,
+        "medianRatio": 3.65,
+        "p25": 2.28,
+        "p75": 5.6,
+        "rawMedian": 6.33,
+        "sampleSize": 890
       },
       "CGC 7": {
         "gradedMedian": 4.5,
-        "medianRatio": 1.35,
-        "p25": 0.88,
+        "medianRatio": 1.37,
+        "p25": 0.89,
         "p75": 1.84,
         "rawMedian": 3.1,
         "sampleSize": 14
       },
       "CGC 8": {
         "gradedMedian": 6.8,
-        "medianRatio": 2.1,
+        "medianRatio": 1.92,
         "p25": 1.3,
-        "p75": 3.22,
+        "p75": 2.67,
         "rawMedian": 3.58,
-        "sampleSize": 40
+        "sampleSize": 42
       },
       "CGC 8.5": {
         "gradedMedian": 7,
@@ -15449,179 +15475,179 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "sampleSize": 10
       },
       "CGC 9": {
-        "gradedMedian": 10.18,
+        "gradedMedian": 10.49,
         "medianRatio": 2.07,
-        "p25": 1.12,
-        "p75": 3.65,
-        "rawMedian": 5.24,
-        "sampleSize": 344
+        "p25": 1.13,
+        "p75": 3.66,
+        "rawMedian": 5.28,
+        "sampleSize": 356
       },
       "CGC 9.5": {
         "gradedMedian": 12.45,
-        "medianRatio": 1.77,
-        "p25": 1.22,
+        "medianRatio": 1.82,
+        "p25": 1.27,
         "p75": 2.57,
         "rawMedian": 6.73,
-        "sampleSize": 148
+        "sampleSize": 156
       },
       "HGA 9": {
         "gradedMedian": 15.69,
         "medianRatio": 1.16,
-        "p25": 0.98,
+        "p25": 1.01,
         "p75": 1.34,
-        "rawMedian": 8.18,
+        "rawMedian": 8.08,
         "sampleSize": 12
       },
       "HGA 9.5": {
         "gradedMedian": 7.11,
-        "medianRatio": 0.87,
+        "medianRatio": 0.88,
         "p25": 0.58,
         "p75": 1.13,
-        "rawMedian": 8.18,
+        "rawMedian": 8.08,
         "sampleSize": 6
       },
       "PSA 1": {
-        "gradedMedian": 8.34,
+        "gradedMedian": 7.75,
         "medianRatio": 0.95,
         "p25": 0.62,
-        "p75": 1.6,
-        "rawMedian": 8.06,
-        "sampleSize": 48
+        "p75": 1.47,
+        "rawMedian": 7.39,
+        "sampleSize": 58
       },
       "PSA 10": {
-        "gradedMedian": 37.23,
-        "medianRatio": 6.08,
-        "p25": 3.44,
-        "p75": 10.36,
-        "rawMedian": 6.08,
-        "sampleSize": 11552
+        "gradedMedian": 37.29,
+        "medianRatio": 6.11,
+        "p25": 3.45,
+        "p75": 10.42,
+        "rawMedian": 6.05,
+        "sampleSize": 11578
       },
       "PSA 2": {
-        "gradedMedian": 6.21,
-        "medianRatio": 0.97,
-        "p25": 0.71,
+        "gradedMedian": 6.34,
+        "medianRatio": 1,
+        "p25": 0.69,
         "p75": 1.36,
         "rawMedian": 5.89,
-        "sampleSize": 74
+        "sampleSize": 76
       },
       "PSA 3": {
         "gradedMedian": 13.8,
-        "medianRatio": 1.5,
+        "medianRatio": 1.58,
         "p25": 0.75,
-        "p75": 3.15,
+        "p75": 3.36,
         "rawMedian": 7.53,
         "sampleSize": 18
       },
       "PSA 4": {
         "gradedMedian": 4.88,
-        "medianRatio": 0.9,
+        "medianRatio": 0.89,
         "p25": 0.88,
         "p75": 1.12,
         "rawMedian": 5.52,
         "sampleSize": 6
       },
       "PSA 5": {
-        "gradedMedian": 8.55,
-        "medianRatio": 1.29,
-        "p25": 0.99,
-        "p75": 2.31,
-        "rawMedian": 4.46,
-        "sampleSize": 24
+        "gradedMedian": 6.95,
+        "medianRatio": 1.25,
+        "p25": 0.9,
+        "p75": 1.36,
+        "rawMedian": 4.44,
+        "sampleSize": 22
       },
       "PSA 6": {
         "gradedMedian": 9.47,
         "medianRatio": 1.13,
-        "p25": 0.83,
-        "p75": 2.04,
+        "p25": 0.88,
+        "p75": 2.02,
         "rawMedian": 7.31,
-        "sampleSize": 114
+        "sampleSize": 112
       },
       "PSA 7": {
-        "gradedMedian": 9.65,
+        "gradedMedian": 9.59,
         "medianRatio": 1.24,
         "p25": 0.88,
-        "p75": 1.91,
-        "rawMedian": 7.67,
+        "p75": 1.81,
+        "rawMedian": 7.81,
         "sampleSize": 242
       },
       "PSA 8": {
-        "gradedMedian": 12.11,
+        "gradedMedian": 12,
         "medianRatio": 1.62,
-        "p25": 1.11,
-        "p75": 2.67,
-        "rawMedian": 7.06,
-        "sampleSize": 1624
+        "p25": 1.12,
+        "p75": 2.65,
+        "rawMedian": 7.11,
+        "sampleSize": 1632
       },
       "PSA 8.5": {
         "gradedMedian": 14.75,
-        "medianRatio": 1.59,
+        "medianRatio": 1.6,
         "p25": 1.12,
-        "p75": 2.24,
-        "rawMedian": 9.52,
+        "p75": 2.27,
+        "rawMedian": 9.42,
         "sampleSize": 28
       },
       "PSA 9": {
-        "gradedMedian": 17.26,
-        "medianRatio": 2.59,
+        "gradedMedian": 17.36,
+        "medianRatio": 2.6,
         "p25": 1.64,
-        "p75": 4.37,
+        "p75": 4.4,
         "rawMedian": 6.62,
-        "sampleSize": 6896
+        "sampleSize": 6918
       },
       "SGC 10": {
-        "gradedMedian": 21.33,
-        "medianRatio": 3.18,
-        "p25": 2,
-        "p75": 5.08,
-        "rawMedian": 6.38,
-        "sampleSize": 2146
+        "gradedMedian": 21.47,
+        "medianRatio": 3.21,
+        "p25": 2.01,
+        "p75": 5.17,
+        "rawMedian": 6.4,
+        "sampleSize": 2162
       },
       "SGC 8": {
         "gradedMedian": 7.5,
         "medianRatio": 0.77,
         "p25": 0.71,
-        "p75": 1.29,
-        "rawMedian": 9.09,
+        "p75": 1.3,
+        "rawMedian": 9.07,
         "sampleSize": 34
       },
       "SGC 8.5": {
         "gradedMedian": 9.13,
-        "medianRatio": 1.64,
-        "p25": 1.09,
-        "p75": 2.06,
-        "rawMedian": 6.38,
+        "medianRatio": 1.59,
+        "p25": 1.1,
+        "p75": 2.1,
+        "rawMedian": 6.37,
         "sampleSize": 58
       },
       "SGC 9": {
-        "gradedMedian": 11.9,
-        "medianRatio": 1.76,
-        "p25": 1.1,
-        "p75": 2.84,
-        "rawMedian": 6.51,
-        "sampleSize": 456
+        "gradedMedian": 12,
+        "medianRatio": 1.74,
+        "p25": 1.09,
+        "p75": 2.81,
+        "rawMedian": 6.87,
+        "sampleSize": 460
       },
       "SGC 9.5": {
         "gradedMedian": 15.75,
-        "medianRatio": 2.28,
-        "p25": 1.41,
-        "p75": 3.56,
-        "rawMedian": 7.04,
-        "sampleSize": 1134
+        "medianRatio": 2.24,
+        "p25": 1.43,
+        "p75": 3.5,
+        "rawMedian": 6.98,
+        "sampleSize": 1130
       }
     }
   },
   "baseball|topps-allen-ginter": {
     "$100-249": {
       "PSA 10": {
-        "gradedMedian": 238.71,
-        "medianRatio": 1.08,
-        "p25": 1.07,
+        "gradedMedian": 244.43,
+        "medianRatio": 1.09,
+        "p25": 1.08,
         "p75": 3.48,
         "rawMedian": 140,
         "sampleSize": 6
       },
       "PSA 9": {
-        "gradedMedian": 125.14,
+        "gradedMedian": 125.73,
         "medianRatio": 0.78,
         "p25": 0.56,
         "p75": 1.86,
@@ -15631,38 +15657,46 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
     },
     "$25-49": {
       "PSA 10": {
-        "gradedMedian": 110.72,
-        "medianRatio": 3.02,
-        "p25": 1.6,
+        "gradedMedian": 80.67,
+        "medianRatio": 1.99,
+        "p25": 1.55,
         "p75": 7.34,
-        "rawMedian": 36.65,
-        "sampleSize": 24
+        "rawMedian": 33.76,
+        "sampleSize": 22
       },
       "PSA 9": {
         "gradedMedian": 38.25,
-        "medianRatio": 1.02,
+        "medianRatio": 0.97,
         "p25": 0.86,
         "p75": 2.91,
-        "rawMedian": 36.65,
+        "rawMedian": 37.53,
         "sampleSize": 12
       }
     },
     "Under $25": {
+      "BGS 9": {
+        "gradedMedian": 17.75,
+        "medianRatio": 2.35,
+        "p25": 0.69,
+        "p75": 5.88,
+        "rawMedian": 7.55,
+        "sampleSize": 6
+      },
       "BGS 9.5": {
         "gradedMedian": 18.37,
         "medianRatio": 2.86,
         "p25": 2,
-        "p75": 5.48,
+        "p75": 5.5,
         "rawMedian": 7.01,
         "sampleSize": 14
       },
       "CGC 10": {
-        "gradedMedian": 18.23,
+        "gradedMedian": 21.4,
         "medianRatio": 4.13,
-        "p25": 2.43,
-        "p75": 6.13,
-        "rawMedian": 5.75,
-        "sampleSize": 30
+        "p25": 2.77,
+        "p75": 6.21,
+        "rawMedian": 5.95,
+        "sampleSize": 32
       },
       "CGC 9": {
         "gradedMedian": 18,
@@ -15670,11 +15704,11 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "p25": 2.23,
         "p75": 3.88,
         "rawMedian": 6.75,
-        "sampleSize": 10
+        "sampleSize": 8
       },
       "PSA 10": {
-        "gradedMedian": 33.49,
-        "medianRatio": 7.4,
+        "gradedMedian": 33.64,
+        "medianRatio": 7.42,
         "p25": 5.05,
         "p75": 10.55,
         "rawMedian": 5.01,
@@ -15685,31 +15719,31 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "medianRatio": 2.78,
         "p25": 1.03,
         "p75": 3.28,
-        "rawMedian": 6.75,
-        "sampleSize": 28
+        "rawMedian": 5.74,
+        "sampleSize": 30
       },
       "PSA 9": {
-        "gradedMedian": 18,
-        "medianRatio": 3.11,
+        "gradedMedian": 18.13,
+        "medianRatio": 3.14,
         "p25": 1.98,
-        "p75": 5.04,
-        "rawMedian": 5.75,
-        "sampleSize": 112
+        "p75": 5.43,
+        "rawMedian": 5.74,
+        "sampleSize": 116
       },
       "SGC 10": {
         "gradedMedian": 23.53,
-        "medianRatio": 3.43,
-        "p25": 2.85,
-        "p75": 5.89,
+        "medianRatio": 3.61,
+        "p25": 2.99,
+        "p75": 5.9,
         "rawMedian": 7.01,
-        "sampleSize": 30
+        "sampleSize": 32
       },
       "SGC 9.5": {
         "gradedMedian": 29,
-        "medianRatio": 3.55,
-        "p25": 3.52,
+        "medianRatio": 3.7,
+        "p25": 3.51,
         "p75": 4.08,
-        "rawMedian": 11.46,
+        "rawMedian": 11.6,
         "sampleSize": 8
       }
     }
@@ -15720,24 +15754,24 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "gradedMedian": 1217.71,
         "medianRatio": 0.74,
         "p25": 0.63,
-        "p75": 0.87,
+        "p75": 0.86,
         "rawMedian": 1655.33,
         "sampleSize": 6
       },
       "PSA 10": {
         "gradedMedian": 2723,
-        "medianRatio": 1.48,
-        "p25": 1.16,
+        "medianRatio": 1.46,
+        "p25": 1.15,
         "p75": 1.95,
         "rawMedian": 1837,
-        "sampleSize": 44
+        "sampleSize": 42
       },
       "PSA 9": {
         "gradedMedian": 1162.5,
-        "medianRatio": 0.83,
+        "medianRatio": 0.79,
         "p25": 0.71,
         "p75": 0.93,
-        "rawMedian": 1413.56,
+        "rawMedian": 1429.48,
         "sampleSize": 18
       }
     },
@@ -15754,59 +15788,59 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
     "$100-249": {
       "BGS 9.5": {
         "gradedMedian": 216.66,
-        "medianRatio": 1.24,
+        "medianRatio": 1.33,
         "p25": 0.82,
-        "p75": 2.38,
-        "rawMedian": 154.79,
+        "p75": 2.28,
+        "rawMedian": 166.44,
         "sampleSize": 24
       },
       "PSA 10": {
-        "gradedMedian": 291.25,
-        "medianRatio": 1.87,
-        "p25": 1.44,
+        "gradedMedian": 292.1,
+        "medianRatio": 1.88,
+        "p25": 1.45,
         "p75": 2.43,
-        "rawMedian": 153.97,
+        "rawMedian": 153.63,
         "sampleSize": 564
       },
       "PSA 8": {
-        "gradedMedian": 127.75,
-        "medianRatio": 0.8,
-        "p25": 0.7,
-        "p75": 1.15,
-        "rawMedian": 149.43,
-        "sampleSize": 46
+        "gradedMedian": 129.25,
+        "medianRatio": 0.85,
+        "p25": 0.71,
+        "p75": 1.19,
+        "rawMedian": 162.86,
+        "sampleSize": 48
       },
       "PSA 9": {
-        "gradedMedian": 133.67,
-        "medianRatio": 0.92,
-        "p25": 0.72,
+        "gradedMedian": 136.03,
+        "medianRatio": 0.94,
+        "p25": 0.74,
         "p75": 1.14,
-        "rawMedian": 146.75,
-        "sampleSize": 364
+        "rawMedian": 144.25,
+        "sampleSize": 360
       },
       "SGC 10": {
         "gradedMedian": 173.33,
-        "medianRatio": 1.17,
+        "medianRatio": 1.22,
         "p25": 0.74,
-        "p75": 1.58,
-        "rawMedian": 154.79,
+        "p75": 1.64,
+        "rawMedian": 164.71,
         "sampleSize": 44
       },
       "SGC 9": {
         "gradedMedian": 89.02,
         "medianRatio": 0.66,
-        "p25": 0.58,
+        "p25": 0.53,
         "p75": 1.13,
         "rawMedian": 133.01,
         "sampleSize": 6
       },
       "SGC 9.5": {
         "gradedMedian": 149,
-        "medianRatio": 0.76,
+        "medianRatio": 0.77,
         "p25": 0.56,
-        "p75": 0.96,
-        "rawMedian": 174.87,
-        "sampleSize": 26
+        "p75": 1.21,
+        "rawMedian": 174.61,
+        "sampleSize": 30
       }
     },
     "$2,500-4,999": {
@@ -15819,8 +15853,8 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "sampleSize": 24
       },
       "PSA 9": {
-        "gradedMedian": 2830,
-        "medianRatio": 0.65,
+        "gradedMedian": 2887.07,
+        "medianRatio": 0.67,
         "p25": 0.56,
         "p75": 0.93,
         "rawMedian": 3713,
@@ -15830,90 +15864,98 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
     "$25-49": {
       "BGS 9": {
         "gradedMedian": 26.95,
-        "medianRatio": 0.97,
-        "p25": 0.59,
-        "p75": 1.04,
-        "rawMedian": 28.22,
+        "medianRatio": 0.98,
+        "p25": 0.61,
+        "p75": 1.05,
+        "rawMedian": 27.67,
         "sampleSize": 6
       },
       "BGS 9.5": {
         "gradedMedian": 55.98,
         "medianRatio": 1.4,
-        "p25": 1.15,
-        "p75": 1.78,
-        "rawMedian": 42.89,
-        "sampleSize": 24
+        "p25": 1.17,
+        "p75": 1.88,
+        "rawMedian": 31.05,
+        "sampleSize": 26
       },
       "CGC 10": {
         "gradedMedian": 54,
-        "medianRatio": 1.36,
+        "medianRatio": 1.37,
         "p25": 1.23,
         "p75": 1.68,
-        "rawMedian": 28.22,
+        "rawMedian": 27.67,
         "sampleSize": 12
       },
       "CGC 9.5": {
         "gradedMedian": 24.03,
-        "medianRatio": 0.61,
+        "medianRatio": 0.62,
         "p25": 0.52,
-        "p75": 0.8,
-        "rawMedian": 43.51,
+        "p75": 0.81,
+        "rawMedian": 43.11,
         "sampleSize": 6
       },
       "PSA 10": {
-        "gradedMedian": 95,
-        "medianRatio": 2.6,
-        "p25": 2.08,
-        "p75": 3.57,
-        "rawMedian": 35.34,
-        "sampleSize": 832
+        "gradedMedian": 95.86,
+        "medianRatio": 2.63,
+        "p25": 2.09,
+        "p75": 3.59,
+        "rawMedian": 35.23,
+        "sampleSize": 850
+      },
+      "PSA 7": {
+        "gradedMedian": 27.17,
+        "medianRatio": 1.07,
+        "p25": 0.5,
+        "p75": 1.41,
+        "rawMedian": 34.12,
+        "sampleSize": 6
       },
       "PSA 8": {
-        "gradedMedian": 25.75,
-        "medianRatio": 0.73,
-        "p25": 0.58,
-        "p75": 0.97,
+        "gradedMedian": 26.08,
+        "medianRatio": 0.76,
+        "p25": 0.59,
+        "p75": 0.95,
         "rawMedian": 30.08,
-        "sampleSize": 48
+        "sampleSize": 52
       },
       "PSA 9": {
-        "gradedMedian": 40.03,
-        "medianRatio": 1.16,
+        "gradedMedian": 40.63,
+        "medianRatio": 1.17,
         "p25": 0.94,
-        "p75": 1.43,
-        "rawMedian": 34.69,
-        "sampleSize": 558
+        "p75": 1.45,
+        "rawMedian": 34.73,
+        "sampleSize": 560
       },
       "SGC 10": {
         "gradedMedian": 53.35,
-        "medianRatio": 1.47,
-        "p25": 1.19,
+        "medianRatio": 1.48,
+        "p25": 1.21,
         "p75": 2.16,
-        "rawMedian": 33.35,
-        "sampleSize": 108
+        "rawMedian": 33.3,
+        "sampleSize": 110
       },
       "SGC 9": {
-        "gradedMedian": 23.2,
-        "medianRatio": 0.71,
-        "p25": 0.59,
-        "p75": 1.16,
-        "rawMedian": 31.04,
-        "sampleSize": 22
+        "gradedMedian": 33.71,
+        "medianRatio": 0.87,
+        "p25": 0.61,
+        "p75": 1.25,
+        "rawMedian": 33.3,
+        "sampleSize": 24
       },
       "SGC 9.5": {
         "gradedMedian": 41.44,
-        "medianRatio": 1.19,
+        "medianRatio": 1.2,
         "p25": 1.02,
         "p75": 1.52,
         "rawMedian": 36.37,
-        "sampleSize": 50
+        "sampleSize": 52
       }
     },
     "$250-499": {
       "BGS 9.5": {
         "gradedMedian": 309.59,
         "medianRatio": 0.9,
-        "p25": 0.82,
+        "p25": 0.86,
         "p75": 0.95,
         "rawMedian": 326.79,
         "sampleSize": 10
@@ -15923,8 +15965,8 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "medianRatio": 1.76,
         "p25": 1.39,
         "p75": 2.28,
-        "rawMedian": 329.91,
-        "sampleSize": 186
+        "rawMedian": 329.83,
+        "sampleSize": 184
       },
       "PSA 8": {
         "gradedMedian": 244.25,
@@ -15935,27 +15977,37 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "sampleSize": 6
       },
       "PSA 9": {
-        "gradedMedian": 328,
+        "gradedMedian": 327.58,
         "medianRatio": 0.91,
-        "p25": 0.76,
-        "p75": 1.16,
-        "rawMedian": 324.33,
-        "sampleSize": 112
+        "p25": 0.72,
+        "p75": 1.15,
+        "rawMedian": 322.68,
+        "sampleSize": 108
       },
       "SGC 10": {
         "gradedMedian": 295,
         "medianRatio": 1,
         "p25": 0.71,
-        "p75": 1.29,
-        "rawMedian": 304.38,
-        "sampleSize": 14
+        "p75": 1.12,
+        "rawMedian": 318.13,
+        "sampleSize": 12
+      }
+    },
+    "$5,000-9,999": {
+      "PSA 10": {
+        "gradedMedian": 3502.88,
+        "medianRatio": 0.57,
+        "p25": 0.51,
+        "p75": 0.93,
+        "rawMedian": 5879,
+        "sampleSize": 6
       }
     },
     "$50-99": {
       "BGS 9.5": {
         "gradedMedian": 107.72,
-        "medianRatio": 1.52,
-        "p25": 1.15,
+        "medianRatio": 1.61,
+        "p25": 1.16,
         "p75": 2.4,
         "rawMedian": 73.66,
         "sampleSize": 16
@@ -15969,28 +16021,28 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "sampleSize": 6
       },
       "PSA 10": {
-        "gradedMedian": 150.5,
-        "medianRatio": 2.16,
-        "p25": 1.71,
-        "p75": 2.64,
-        "rawMedian": 70.74,
-        "sampleSize": 714
+        "gradedMedian": 151.16,
+        "medianRatio": 2.17,
+        "p25": 1.7,
+        "p75": 2.65,
+        "rawMedian": 71,
+        "sampleSize": 716
       },
       "PSA 8": {
-        "gradedMedian": 49,
-        "medianRatio": 0.8,
-        "p25": 0.67,
-        "p75": 1.61,
+        "gradedMedian": 45.22,
+        "medianRatio": 0.72,
+        "p25": 0.65,
+        "p75": 1.2,
         "rawMedian": 68.99,
-        "sampleSize": 30
+        "sampleSize": 34
       },
       "PSA 9": {
-        "gradedMedian": 70,
+        "gradedMedian": 70.25,
         "medianRatio": 1,
         "p25": 0.8,
-        "p75": 1.33,
+        "p75": 1.34,
         "rawMedian": 67.27,
-        "sampleSize": 392
+        "sampleSize": 390
       },
       "SGC 10": {
         "gradedMedian": 90,
@@ -16019,27 +16071,27 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
     },
     "$500-999": {
       "BGS 10": {
-        "gradedMedian": 2113.47,
-        "medianRatio": 2.4,
-        "p25": 2.11,
-        "p75": 5.25,
+        "gradedMedian": 2035.1,
+        "medianRatio": 2.29,
+        "p25": 2.09,
+        "p75": 5.07,
         "rawMedian": 781.9,
         "sampleSize": 8
       },
       "BGS 9.5": {
         "gradedMedian": 807,
         "medianRatio": 1.03,
-        "p25": 0.97,
-        "p75": 1.29,
+        "p25": 0.77,
+        "p75": 1.2,
         "rawMedian": 781.9,
         "sampleSize": 10
       },
       "PSA 10": {
         "gradedMedian": 945,
-        "medianRatio": 1.61,
-        "p25": 1.09,
+        "medianRatio": 1.59,
+        "p25": 1.03,
         "p75": 1.93,
-        "rawMedian": 666,
+        "rawMedian": 673.25,
         "sampleSize": 100
       },
       "PSA 9": {
@@ -16053,180 +16105,172 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       "SGC 10": {
         "gradedMedian": 528.58,
         "medianRatio": 0.68,
-        "p25": 0.68,
-        "p75": 1.3,
-        "rawMedian": 598.76,
+        "p25": 0.65,
+        "p75": 0.89,
+        "rawMedian": 758.99,
         "sampleSize": 10
       }
     },
     "Under $25": {
       "BGS 10": {
         "gradedMedian": 34.68,
-        "medianRatio": 3.68,
+        "medianRatio": 3.7,
         "p25": 2.16,
-        "p75": 9.51,
+        "p75": 9.54,
         "rawMedian": 9.5,
         "sampleSize": 30
       },
       "BGS 8.5": {
-        "gradedMedian": 17.5,
-        "medianRatio": 0.94,
-        "p25": 0.69,
-        "p75": 1.9,
+        "gradedMedian": 20,
+        "medianRatio": 1.9,
+        "p25": 0.94,
+        "p75": 3.16,
         "rawMedian": 18.65,
-        "sampleSize": 6
+        "sampleSize": 8
       },
       "BGS 9": {
-        "gradedMedian": 14.98,
-        "medianRatio": 1.59,
+        "gradedMedian": 13.75,
+        "medianRatio": 1.61,
         "p25": 0.9,
-        "p75": 1.92,
-        "rawMedian": 12.88,
-        "sampleSize": 34
+        "p75": 2.12,
+        "rawMedian": 12.3,
+        "sampleSize": 32
       },
       "BGS 9.5": {
-        "gradedMedian": 22.9,
-        "medianRatio": 2.14,
-        "p25": 1.58,
+        "gradedMedian": 22.44,
+        "medianRatio": 2.11,
+        "p25": 1.56,
         "p75": 3.66,
-        "rawMedian": 9.12,
-        "sampleSize": 146
+        "rawMedian": 9.03,
+        "sampleSize": 148
       },
       "CGC 10": {
-        "gradedMedian": 20,
+        "gradedMedian": 20.33,
         "medianRatio": 3.64,
-        "p25": 2.43,
-        "p75": 4.89,
-        "rawMedian": 5.63,
-        "sampleSize": 274
+        "p25": 2.57,
+        "p75": 4.91,
+        "rawMedian": 5.53,
+        "sampleSize": 286
       },
       "CGC 8": {
-        "gradedMedian": 7.5,
-        "medianRatio": 2.41,
-        "p25": 1.07,
-        "p75": 2.48,
-        "rawMedian": 7.03,
-        "sampleSize": 12
+        "gradedMedian": 6,
+        "medianRatio": 1.77,
+        "p25": 1.06,
+        "p75": 2.28,
+        "rawMedian": 5.09,
+        "sampleSize": 10
       },
       "CGC 8.5": {
-        "gradedMedian": 11,
+        "gradedMedian": 10.5,
         "medianRatio": 2.82,
-        "p25": 2.22,
+        "p25": 2.18,
         "p75": 3.36,
-        "rawMedian": 4.73,
-        "sampleSize": 12
+        "rawMedian": 3.27,
+        "sampleSize": 8
       },
       "CGC 9": {
-        "gradedMedian": 7.77,
+        "gradedMedian": 8,
         "medianRatio": 2.09,
-        "p25": 1.31,
+        "p25": 1.43,
         "p75": 2.6,
-        "rawMedian": 4.41,
-        "sampleSize": 92
+        "rawMedian": 4.42,
+        "sampleSize": 98
       },
       "CGC 9.5": {
-        "gradedMedian": 9.3,
-        "medianRatio": 1.45,
-        "p25": 1.04,
-        "p75": 2.57,
-        "rawMedian": 5.11,
+        "gradedMedian": 9.5,
+        "medianRatio": 1.67,
+        "p25": 1.19,
+        "p75": 3,
+        "rawMedian": 5,
         "sampleSize": 44
       },
       "HGA 9": {
         "gradedMedian": 15.69,
-        "medianRatio": 1.04,
+        "medianRatio": 1.08,
         "p25": 0.89,
-        "p75": 1.17,
-        "rawMedian": 13.44,
+        "p75": 1.18,
+        "rawMedian": 13.34,
         "sampleSize": 6
       },
       "PSA 10": {
-        "gradedMedian": 37.62,
-        "medianRatio": 6.18,
-        "p25": 3.64,
-        "p75": 9.98,
+        "gradedMedian": 37.75,
+        "medianRatio": 6.21,
+        "p25": 3.67,
+        "p75": 10.02,
         "rawMedian": 5.95,
-        "sampleSize": 4544
-      },
-      "PSA 5": {
-        "gradedMedian": 10.4,
-        "medianRatio": 1.15,
-        "p25": 0.7,
-        "p75": 1.3,
-        "rawMedian": 9.01,
-        "sampleSize": 6
+        "sampleSize": 4555
       },
       "PSA 6": {
         "gradedMedian": 9,
-        "medianRatio": 0.83,
-        "p25": 0.71,
-        "p75": 1.33,
-        "rawMedian": 9.09,
+        "medianRatio": 1.03,
+        "p25": 0.78,
+        "p75": 1.81,
+        "rawMedian": 8.91,
         "sampleSize": 44
       },
       "PSA 7": {
-        "gradedMedian": 9.72,
-        "medianRatio": 1.1,
+        "gradedMedian": 9.65,
+        "medianRatio": 1.14,
         "p25": 0.73,
-        "p75": 1.79,
-        "rawMedian": 9.09,
+        "p75": 1.92,
+        "rawMedian": 8.46,
         "sampleSize": 68
       },
       "PSA 8": {
-        "gradedMedian": 10.5,
-        "medianRatio": 1.49,
-        "p25": 1.09,
-        "p75": 2.26,
-        "rawMedian": 7.33,
-        "sampleSize": 570
+        "gradedMedian": 10.45,
+        "medianRatio": 1.48,
+        "p25": 1.12,
+        "p75": 2.28,
+        "rawMedian": 7.35,
+        "sampleSize": 578
       },
       "PSA 9": {
         "gradedMedian": 16.29,
-        "medianRatio": 2.44,
-        "p25": 1.61,
-        "p75": 3.87,
-        "rawMedian": 6.52,
-        "sampleSize": 2738
+        "medianRatio": 2.45,
+        "p25": 1.62,
+        "p75": 3.89,
+        "rawMedian": 6.55,
+        "sampleSize": 2750
       },
       "SGC 10": {
-        "gradedMedian": 20.25,
-        "medianRatio": 3.63,
+        "gradedMedian": 20.48,
+        "medianRatio": 3.64,
         "p25": 2.3,
-        "p75": 5.54,
-        "rawMedian": 5.72,
-        "sampleSize": 990
+        "p75": 5.56,
+        "rawMedian": 5.76,
+        "sampleSize": 996
       },
       "SGC 8": {
         "gradedMedian": 7.48,
         "medianRatio": 0.8,
         "p25": 0.71,
         "p75": 1.08,
-        "rawMedian": 9.35,
+        "rawMedian": 9.31,
         "sampleSize": 18
       },
       "SGC 8.5": {
         "gradedMedian": 8.25,
-        "medianRatio": 1.64,
-        "p25": 1.12,
-        "p75": 2.09,
+        "medianRatio": 1.65,
+        "p25": 1.11,
+        "p75": 2.05,
         "rawMedian": 7.59,
         "sampleSize": 34
       },
       "SGC 9": {
         "gradedMedian": 10.24,
         "medianRatio": 1.69,
-        "p25": 1.19,
-        "p75": 3.07,
-        "rawMedian": 5.51,
-        "sampleSize": 208
+        "p25": 1.18,
+        "p75": 3.04,
+        "rawMedian": 5.47,
+        "sampleSize": 210
       },
       "SGC 9.5": {
-        "gradedMedian": 15.75,
-        "medianRatio": 2.32,
-        "p25": 1.6,
-        "p75": 3.54,
-        "rawMedian": 6.77,
-        "sampleSize": 464
+        "gradedMedian": 15.59,
+        "medianRatio": 2.33,
+        "p25": 1.61,
+        "p75": 3.43,
+        "rawMedian": 6.76,
+        "sampleSize": 462
       }
     }
   },
@@ -16262,7 +16306,7 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "gradedMedian": 122.37,
         "medianRatio": 0.8,
         "p25": 0.72,
-        "p75": 1.12,
+        "p75": 1.09,
         "rawMedian": 170.63,
         "sampleSize": 8
       },
@@ -16270,9 +16314,9 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "gradedMedian": 117.84,
         "medianRatio": 0.88,
         "p25": 0.72,
-        "p75": 1.03,
+        "p75": 1.06,
         "rawMedian": 140.83,
-        "sampleSize": 76
+        "sampleSize": 78
       },
       "SGC 9.5": {
         "gradedMedian": 152.29,
@@ -16287,33 +16331,33 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       "PSA 10": {
         "gradedMedian": 99.11,
         "medianRatio": 2.57,
-        "p25": 2.09,
+        "p25": 2.1,
         "p75": 3.54,
         "rawMedian": 36,
         "sampleSize": 198
       },
       "PSA 8": {
         "gradedMedian": 18.14,
-        "medianRatio": 0.64,
+        "medianRatio": 0.65,
         "p25": 0.59,
         "p75": 0.76,
         "rawMedian": 29.55,
         "sampleSize": 10
       },
       "PSA 9": {
-        "gradedMedian": 39.19,
+        "gradedMedian": 38.93,
         "medianRatio": 1.16,
-        "p25": 0.98,
-        "p75": 1.37,
+        "p25": 0.94,
+        "p75": 1.36,
         "rawMedian": 33.89,
-        "sampleSize": 120
+        "sampleSize": 118
       },
       "SGC 10": {
         "gradedMedian": 59.88,
         "medianRatio": 1.61,
-        "p25": 1.31,
+        "p25": 1.35,
         "p75": 2.32,
-        "rawMedian": 33.79,
+        "rawMedian": 33.75,
         "sampleSize": 28
       },
       "SGC 9": {
@@ -16321,7 +16365,7 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "medianRatio": 0.71,
         "p25": 0.69,
         "p75": 1.01,
-        "rawMedian": 27.5,
+        "rawMedian": 27.47,
         "sampleSize": 10
       },
       "SGC 9.5": {
@@ -16329,48 +16373,48 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "medianRatio": 1.2,
         "p25": 1.11,
         "p75": 1.45,
-        "rawMedian": 33.79,
+        "rawMedian": 33.75,
         "sampleSize": 18
       }
     },
     "$250-499": {
       "BGS 9.5": {
-        "gradedMedian": 229.51,
-        "medianRatio": 0.67,
-        "p25": 0.62,
+        "gradedMedian": 252.09,
+        "medianRatio": 0.79,
+        "p25": 0.68,
         "p75": 0.9,
-        "rawMedian": 318.22,
+        "rawMedian": 318.21,
         "sampleSize": 6
       },
       "PSA 10": {
-        "gradedMedian": 585,
-        "medianRatio": 1.89,
+        "gradedMedian": 573.79,
+        "medianRatio": 1.82,
         "p25": 1.4,
-        "p75": 2.38,
+        "p75": 2.31,
         "rawMedian": 320.61,
-        "sampleSize": 60
+        "sampleSize": 58
       },
       "PSA 9": {
-        "gradedMedian": 340,
-        "medianRatio": 1.13,
+        "gradedMedian": 333.83,
+        "medianRatio": 1.03,
         "p25": 0.76,
-        "p75": 1.26,
+        "p75": 1.24,
         "rawMedian": 304.38,
-        "sampleSize": 36
+        "sampleSize": 34
       },
       "SGC 10": {
-        "gradedMedian": 393.33,
-        "medianRatio": 1.29,
-        "p25": 1.12,
-        "p75": 1.84,
+        "gradedMedian": 295,
+        "medianRatio": 1.12,
+        "p25": 0.56,
+        "p75": 1.29,
         "rawMedian": 304.38,
-        "sampleSize": 8
+        "sampleSize": 6
       }
     },
     "$50-99": {
       "BGS 9.5": {
         "gradedMedian": 70.33,
-        "medianRatio": 1.12,
+        "medianRatio": 1.13,
         "p25": 0.95,
         "p75": 1.68,
         "rawMedian": 64.24,
@@ -16381,7 +16425,7 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "medianRatio": 2.19,
         "p25": 1.49,
         "p75": 2.69,
-        "rawMedian": 72.43,
+        "rawMedian": 72.24,
         "sampleSize": 182
       },
       "PSA 8": {
@@ -16414,7 +16458,7 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "gradedMedian": 1025,
         "medianRatio": 1.57,
         "p25": 1.09,
-        "p75": 2.15,
+        "p75": 2.02,
         "rawMedian": 621,
         "sampleSize": 24
       },
@@ -16430,187 +16474,187 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
     "Under $25": {
       "BGS 10": {
         "gradedMedian": 50.11,
-        "medianRatio": 3.68,
+        "medianRatio": 3.7,
         "p25": 2.95,
         "p75": 8.68,
-        "rawMedian": 13.61,
+        "rawMedian": 13.53,
         "sampleSize": 12
       },
       "BGS 9": {
-        "gradedMedian": 15.5,
-        "medianRatio": 1.68,
-        "p25": 1.57,
+        "gradedMedian": 13.68,
+        "medianRatio": 1.7,
+        "p25": 1.6,
         "p75": 2.07,
-        "rawMedian": 7.66,
+        "rawMedian": 7.55,
         "sampleSize": 12
       },
       "BGS 9.5": {
-        "gradedMedian": 19.99,
-        "medianRatio": 1.71,
-        "p25": 1.49,
+        "gradedMedian": 16.56,
+        "medianRatio": 1.76,
+        "p25": 1.48,
         "p75": 4.2,
-        "rawMedian": 7.89,
-        "sampleSize": 40
+        "rawMedian": 7.52,
+        "sampleSize": 46
       },
       "CGC 10": {
-        "gradedMedian": 17.13,
+        "gradedMedian": 18,
         "medianRatio": 3.64,
         "p25": 2.79,
-        "p75": 4.87,
-        "rawMedian": 4.72,
-        "sampleSize": 90
+        "p75": 4.91,
+        "rawMedian": 5.2,
+        "sampleSize": 96
       },
       "CGC 8": {
         "gradedMedian": 5.73,
-        "medianRatio": 2.41,
-        "p25": 1.07,
+        "medianRatio": 2.28,
+        "p25": 1.06,
         "p75": 3.2,
-        "rawMedian": 2.38,
+        "rawMedian": 2.52,
         "sampleSize": 6
       },
       "CGC 9": {
-        "gradedMedian": 6.5,
+        "gradedMedian": 6.6,
         "medianRatio": 2,
-        "p25": 1.19,
-        "p75": 2.64,
-        "rawMedian": 3.28,
-        "sampleSize": 46
+        "p25": 1.38,
+        "p75": 2.6,
+        "rawMedian": 3.65,
+        "sampleSize": 48
       },
       "CGC 9.5": {
         "gradedMedian": 8.82,
         "medianRatio": 1.24,
-        "p25": 1.04,
+        "p25": 0.98,
         "p75": 2.57,
         "rawMedian": 3.44,
         "sampleSize": 6
       },
       "PSA 10": {
-        "gradedMedian": 38.33,
-        "medianRatio": 6.41,
-        "p25": 3.66,
-        "p75": 10.31,
-        "rawMedian": 5.8,
-        "sampleSize": 1042
+        "gradedMedian": 38.14,
+        "medianRatio": 6.33,
+        "p25": 3.61,
+        "p75": 10.2,
+        "rawMedian": 5.74,
+        "sampleSize": 1023
       },
       "PSA 6": {
         "gradedMedian": 9.47,
         "medianRatio": 0.83,
-        "p25": 0.78,
+        "p25": 0.79,
         "p75": 1.07,
-        "rawMedian": 9.09,
+        "rawMedian": 9.07,
         "sampleSize": 10
       },
       "PSA 7": {
         "gradedMedian": 9.65,
-        "medianRatio": 1.05,
-        "p25": 0.79,
-        "p75": 1.76,
-        "rawMedian": 9.09,
-        "sampleSize": 26
+        "medianRatio": 1.16,
+        "p25": 0.81,
+        "p75": 1.79,
+        "rawMedian": 9.07,
+        "sampleSize": 28
       },
       "PSA 8": {
-        "gradedMedian": 9.49,
-        "medianRatio": 1.61,
-        "p25": 1.25,
-        "p75": 2.7,
-        "rawMedian": 4.73,
-        "sampleSize": 158
+        "gradedMedian": 9.5,
+        "medianRatio": 1.58,
+        "p25": 1.23,
+        "p75": 2.58,
+        "rawMedian": 5.06,
+        "sampleSize": 162
       },
       "PSA 9": {
-        "gradedMedian": 15.94,
+        "gradedMedian": 15.81,
         "medianRatio": 2.47,
-        "p25": 1.66,
+        "p25": 1.65,
         "p75": 4.04,
-        "rawMedian": 6.22,
-        "sampleSize": 784
+        "rawMedian": 6.18,
+        "sampleSize": 778
       },
       "SGC 10": {
-        "gradedMedian": 20.25,
-        "medianRatio": 4.24,
-        "p25": 2.42,
-        "p75": 6.14,
-        "rawMedian": 5.2,
-        "sampleSize": 228
+        "gradedMedian": 20.41,
+        "medianRatio": 4.34,
+        "p25": 2.34,
+        "p75": 6.27,
+        "rawMedian": 5.16,
+        "sampleSize": 232
       },
       "SGC 8": {
         "gradedMedian": 7.48,
         "medianRatio": 0.8,
         "p25": 0.71,
         "p75": 1.08,
-        "rawMedian": 9.35,
+        "rawMedian": 9.31,
         "sampleSize": 12
       },
       "SGC 8.5": {
         "gradedMedian": 10.19,
         "medianRatio": 1.38,
         "p25": 1.12,
-        "p75": 1.64,
+        "p75": 1.65,
         "rawMedian": 7.61,
         "sampleSize": 18
       },
       "SGC 9": {
         "gradedMedian": 10.24,
-        "medianRatio": 2.21,
-        "p25": 1.38,
-        "p75": 3.78,
-        "rawMedian": 3.71,
-        "sampleSize": 104
+        "medianRatio": 2.02,
+        "p25": 1.3,
+        "p75": 3.6,
+        "rawMedian": 3.76,
+        "sampleSize": 106
       },
       "SGC 9.5": {
         "gradedMedian": 14.5,
-        "medianRatio": 2.64,
-        "p25": 1.95,
-        "p75": 3.66,
-        "rawMedian": 5.1,
-        "sampleSize": 138
+        "medianRatio": 2.68,
+        "p25": 1.92,
+        "p75": 3.65,
+        "rawMedian": 5.17,
+        "sampleSize": 140
       }
     }
   },
   "baseball|topps-finest": {
     "$1,000-2,499": {
       "PSA 10": {
-        "gradedMedian": 1553.67,
-        "medianRatio": 1.26,
-        "p25": 0.69,
+        "gradedMedian": 1508,
+        "medianRatio": 1.23,
+        "p25": 0.79,
         "p75": 3.1,
-        "rawMedian": 1935.93,
+        "rawMedian": 1894.62,
         "sampleSize": 6
       }
     },
     "$100-249": {
       "PSA 10": {
-        "gradedMedian": 210.95,
-        "medianRatio": 1.61,
-        "p25": 0.94,
-        "p75": 1.95,
+        "gradedMedian": 232,
+        "medianRatio": 1.62,
+        "p25": 1.04,
+        "p75": 2.07,
         "rawMedian": 171,
-        "sampleSize": 38
+        "sampleSize": 40
       },
       "PSA 9": {
         "gradedMedian": 119.74,
         "medianRatio": 0.78,
         "p25": 0.72,
-        "p75": 0.99,
-        "rawMedian": 127.22,
-        "sampleSize": 20
+        "p75": 1.08,
+        "rawMedian": 127.05,
+        "sampleSize": 22
       }
     },
     "$25-49": {
       "PSA 10": {
         "gradedMedian": 72,
         "medianRatio": 2.24,
-        "p25": 1.61,
+        "p25": 1.53,
         "p75": 2.76,
-        "rawMedian": 32.82,
+        "rawMedian": 32.79,
         "sampleSize": 96
       },
       "PSA 9": {
         "gradedMedian": 42.93,
-        "medianRatio": 1.38,
-        "p25": 0.96,
-        "p75": 1.87,
-        "rawMedian": 30.06,
-        "sampleSize": 48
+        "medianRatio": 1.36,
+        "p25": 0.89,
+        "p75": 1.62,
+        "rawMedian": 30.25,
+        "sampleSize": 44
       }
     },
     "$250-499": {
@@ -16618,33 +16662,33 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "gradedMedian": 457.75,
         "medianRatio": 1.42,
         "p25": 1.09,
-        "p75": 1.68,
-        "rawMedian": 290,
-        "sampleSize": 14
+        "p75": 1.58,
+        "rawMedian": 355.87,
+        "sampleSize": 12
       },
       "PSA 9": {
         "gradedMedian": 260,
         "medianRatio": 0.73,
-        "p25": 0.62,
-        "p75": 0.99,
-        "rawMedian": 355.87,
-        "sampleSize": 12
+        "p25": 0.69,
+        "p75": 1.69,
+        "rawMedian": 375.54,
+        "sampleSize": 8
       }
     },
     "$50-99": {
       "PSA 10": {
-        "gradedMedian": 122.66,
+        "gradedMedian": 137.5,
         "medianRatio": 2.04,
-        "p25": 1.66,
-        "p75": 2.29,
-        "rawMedian": 60.52,
+        "p25": 1.68,
+        "p75": 2.34,
+        "rawMedian": 67.72,
         "sampleSize": 68
       },
       "PSA 9": {
-        "gradedMedian": 73.27,
+        "gradedMedian": 73.29,
         "medianRatio": 1.06,
         "p25": 0.75,
-        "p75": 1.28,
+        "p75": 1.62,
         "rawMedian": 72.54,
         "sampleSize": 46
       },
@@ -16660,58 +16704,58 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
     "Under $25": {
       "BGS 9.5": {
         "gradedMedian": 25.33,
-        "medianRatio": 3.18,
+        "medianRatio": 3.2,
         "p25": 1.97,
-        "p75": 17.52,
+        "p75": 17.72,
         "rawMedian": 5.91,
         "sampleSize": 6
       },
       "CGC 10": {
         "gradedMedian": 36.23,
         "medianRatio": 3.68,
-        "p25": 2.36,
+        "p25": 2.38,
         "p75": 6.19,
-        "rawMedian": 7.91,
+        "rawMedian": 7.88,
         "sampleSize": 22
       },
       "PSA 10": {
         "gradedMedian": 40.82,
-        "medianRatio": 5.36,
-        "p25": 3.49,
-        "p75": 8.46,
-        "rawMedian": 7.91,
-        "sampleSize": 520
+        "medianRatio": 5.54,
+        "p25": 3.51,
+        "p75": 8.39,
+        "rawMedian": 7.64,
+        "sampleSize": 526
       },
       "PSA 8": {
-        "gradedMedian": 7.83,
-        "medianRatio": 1.8,
-        "p25": 1.27,
-        "p75": 2.61,
-        "rawMedian": 4.66,
-        "sampleSize": 32
+        "gradedMedian": 9.37,
+        "medianRatio": 1.64,
+        "p25": 1.25,
+        "p75": 2.34,
+        "rawMedian": 5.04,
+        "sampleSize": 36
       },
       "PSA 9": {
         "gradedMedian": 17.84,
-        "medianRatio": 2.26,
+        "medianRatio": 2.28,
         "p25": 1.56,
-        "p75": 3.4,
-        "rawMedian": 7.96,
-        "sampleSize": 262
+        "p75": 3.43,
+        "rawMedian": 7.91,
+        "sampleSize": 260
       },
       "SGC 10": {
-        "gradedMedian": 20.85,
-        "medianRatio": 2.77,
+        "gradedMedian": 21.24,
+        "medianRatio": 2.81,
         "p25": 1.96,
-        "p75": 3.98,
-        "rawMedian": 7.96,
-        "sampleSize": 58
+        "p75": 4.23,
+        "rawMedian": 7.91,
+        "sampleSize": 60
       },
       "SGC 9.5": {
         "gradedMedian": 20.63,
         "medianRatio": 2.1,
         "p25": 1.48,
-        "p75": 2.59,
-        "rawMedian": 7.96,
+        "p75": 2.61,
+        "rawMedian": 7.91,
         "sampleSize": 18
       }
     }
@@ -16719,8 +16763,8 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
   "baseball|topps-gold-label": {
     "Under $25": {
       "PSA 10": {
-        "gradedMedian": 42.88,
-        "medianRatio": 8.91,
+        "gradedMedian": 46.25,
+        "medianRatio": 10.71,
         "p25": 5.82,
         "p75": 22.73,
         "rawMedian": 6.44,
@@ -16749,24 +16793,32 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
     },
     "$100-249": {
       "BGS 9.5": {
-        "gradedMedian": 227,
-        "medianRatio": 0.95,
-        "p25": 0.79,
-        "p75": 1.1,
+        "gradedMedian": 250,
+        "medianRatio": 1.1,
+        "p25": 0.95,
+        "p75": 2.27,
         "rawMedian": 239.94,
-        "sampleSize": 6
+        "sampleSize": 8
       },
       "PSA 10": {
         "gradedMedian": 275,
         "medianRatio": 1.68,
         "p25": 1.42,
         "p75": 1.97,
-        "rawMedian": 152.3,
-        "sampleSize": 40
+        "rawMedian": 149.24,
+        "sampleSize": 42
+      },
+      "PSA 8": {
+        "gradedMedian": 161.62,
+        "medianRatio": 0.67,
+        "p25": 0.62,
+        "p75": 1.09,
+        "rawMedian": 150.81,
+        "sampleSize": 6
       },
       "PSA 9": {
         "gradedMedian": 170.62,
-        "medianRatio": 1.01,
+        "medianRatio": 1.05,
         "p25": 0.66,
         "p75": 1.36,
         "rawMedian": 159.07,
@@ -16785,49 +16837,49 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       "BGS 9.5": {
         "gradedMedian": 100.5,
         "medianRatio": 3.32,
-        "p25": 3.24,
+        "p25": 3.25,
         "p75": 4.45,
-        "rawMedian": 28.08,
+        "rawMedian": 28.07,
         "sampleSize": 8
       },
       "PSA 10": {
         "gradedMedian": 123.8,
         "medianRatio": 3.57,
         "p25": 2.15,
-        "p75": 4.9,
+        "p75": 4.98,
         "rawMedian": 34.06,
         "sampleSize": 84
       },
       "PSA 8": {
-        "gradedMedian": 33.18,
-        "medianRatio": 0.89,
-        "p25": 0.74,
+        "gradedMedian": 34.37,
+        "medianRatio": 1.01,
+        "p25": 0.81,
         "p75": 1.1,
-        "rawMedian": 28.08,
-        "sampleSize": 14
+        "rawMedian": 38.46,
+        "sampleSize": 16
       },
       "PSA 9": {
-        "gradedMedian": 47,
+        "gradedMedian": 45.95,
         "medianRatio": 1.35,
-        "p25": 1.08,
+        "p25": 1.04,
         "p75": 1.9,
-        "rawMedian": 35.2,
-        "sampleSize": 76
+        "rawMedian": 35.9,
+        "sampleSize": 78
       },
       "SGC 10": {
         "gradedMedian": 71,
         "medianRatio": 1.98,
         "p25": 1.59,
-        "p75": 2.18,
-        "rawMedian": 39.13,
-        "sampleSize": 12
+        "p75": 2.93,
+        "rawMedian": 38.77,
+        "sampleSize": 14
       },
       "SGC 9.5": {
         "gradedMedian": 53.31,
         "medianRatio": 1.41,
         "p25": 1.13,
         "p75": 1.79,
-        "rawMedian": 40.53,
+        "rawMedian": 40.98,
         "sampleSize": 14
       }
     },
@@ -16844,9 +16896,9 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "gradedMedian": 702.4,
         "medianRatio": 1.88,
         "p25": 1.02,
-        "p75": 2.78,
-        "rawMedian": 342.21,
-        "sampleSize": 20
+        "p75": 2.85,
+        "rawMedian": 299.43,
+        "sampleSize": 22
       },
       "PSA 9": {
         "gradedMedian": 275,
@@ -16860,9 +16912,9 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
     "$50-99": {
       "PSA 10": {
         "gradedMedian": 152.41,
-        "medianRatio": 2.25,
+        "medianRatio": 2.17,
         "p25": 1.65,
-        "p75": 2.93,
+        "p75": 2.91,
         "rawMedian": 70.58,
         "sampleSize": 54
       },
@@ -16875,19 +16927,19 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "sampleSize": 12
       },
       "PSA 9": {
-        "gradedMedian": 71.63,
+        "gradedMedian": 71.65,
         "medianRatio": 1.04,
         "p25": 0.89,
-        "p75": 1.18,
+        "p75": 1.25,
         "rawMedian": 70.58,
-        "sampleSize": 58
+        "sampleSize": 60
       }
     },
     "$500-999": {
       "PSA 10": {
         "gradedMedian": 1101.25,
         "medianRatio": 1.9,
-        "p25": 0.7,
+        "p25": 0.71,
         "p75": 2.23,
         "rawMedian": 580,
         "sampleSize": 6
@@ -16898,97 +16950,97 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "gradedMedian": 17.81,
         "medianRatio": 2.09,
         "p25": 1.78,
-        "p75": 2.39,
+        "p75": 2.4,
         "rawMedian": 10.02,
-        "sampleSize": 10
+        "sampleSize": 8
       },
       "BGS 9.5": {
         "gradedMedian": 30.9,
         "medianRatio": 2.25,
-        "p25": 2.04,
+        "p25": 2.05,
         "p75": 2.57,
-        "rawMedian": 9.63,
+        "rawMedian": 9.57,
         "sampleSize": 10
       },
       "CGC 10": {
         "gradedMedian": 21,
         "medianRatio": 3.83,
-        "p25": 1.59,
-        "p75": 5.69,
+        "p25": 1.6,
+        "p75": 5.64,
         "rawMedian": 5.34,
         "sampleSize": 26
       },
       "CGC 9": {
-        "gradedMedian": 15,
+        "gradedMedian": 15.01,
         "medianRatio": 2.05,
         "p25": 1.16,
-        "p75": 3.5,
-        "rawMedian": 6.99,
-        "sampleSize": 28
+        "p75": 3.71,
+        "rawMedian": 5.41,
+        "sampleSize": 30
       },
       "CGC 9.5": {
-        "gradedMedian": 15.33,
-        "medianRatio": 3.24,
-        "p25": 2.69,
-        "p75": 6.28,
-        "rawMedian": 9.63,
-        "sampleSize": 8
+        "gradedMedian": 14.49,
+        "medianRatio": 2.71,
+        "p25": 1.51,
+        "p75": 3.24,
+        "rawMedian": 9.49,
+        "sampleSize": 10
       },
       "PSA 10": {
-        "gradedMedian": 38.43,
-        "medianRatio": 7.25,
-        "p25": 4.35,
-        "p75": 12.03,
-        "rawMedian": 5.49,
-        "sampleSize": 446
+        "gradedMedian": 39.23,
+        "medianRatio": 7.46,
+        "p25": 4.36,
+        "p75": 12.05,
+        "rawMedian": 5.41,
+        "sampleSize": 452
       },
       "PSA 7": {
         "gradedMedian": 13.72,
-        "medianRatio": 2.86,
+        "medianRatio": 2.91,
         "p25": 1.69,
-        "p75": 4.39,
-        "rawMedian": 4.56,
-        "sampleSize": 22
+        "p75": 3.68,
+        "rawMedian": 5.41,
+        "sampleSize": 20
       },
       "PSA 8": {
-        "gradedMedian": 10.26,
-        "medianRatio": 2.01,
+        "gradedMedian": 11.4,
+        "medianRatio": 2.08,
         "p25": 1.37,
-        "p75": 2.86,
+        "p75": 3.05,
         "rawMedian": 4.83,
-        "sampleSize": 90
+        "sampleSize": 92
       },
       "PSA 9": {
-        "gradedMedian": 19.86,
+        "gradedMedian": 19.23,
         "medianRatio": 3.02,
-        "p25": 1.92,
+        "p25": 1.94,
         "p75": 5.12,
-        "rawMedian": 6.34,
-        "sampleSize": 368
+        "rawMedian": 6.33,
+        "sampleSize": 364
       },
       "SGC 10": {
         "gradedMedian": 28.05,
-        "medianRatio": 3.87,
-        "p25": 2.31,
-        "p75": 7.84,
-        "rawMedian": 6.34,
-        "sampleSize": 62
+        "medianRatio": 3.95,
+        "p25": 2.34,
+        "p75": 6.28,
+        "rawMedian": 6.78,
+        "sampleSize": 68
       },
       "SGC 9": {
         "gradedMedian": 12.3,
-        "medianRatio": 2.57,
+        "medianRatio": 2.63,
         "p25": 0.88,
         "p75": 3.52,
-        "rawMedian": 6.23,
+        "rawMedian": 6.22,
         "sampleSize": 14
       },
       "SGC 9.5": {
-        "gradedMedian": 17.36,
-        "medianRatio": 3,
+        "gradedMedian": 17.34,
+        "medianRatio": 2.79,
         "p25": 1.75,
-        "p75": 4.39,
-        "rawMedian": 6.23,
-        "sampleSize": 36
+        "p75": 3.43,
+        "rawMedian": 5.41,
+        "sampleSize": 34
       }
     }
   },
@@ -16998,26 +17050,26 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "gradedMedian": 225.66,
         "medianRatio": 1.49,
         "p25": 1.19,
-        "p75": 1.76,
+        "p75": 1.73,
         "rawMedian": 160.85,
-        "sampleSize": 40
+        "sampleSize": 42
       },
       "PSA 9": {
         "gradedMedian": 178.33,
         "medianRatio": 1.31,
-        "p25": 1.13,
+        "p25": 0.7,
         "p75": 2.39,
-        "rawMedian": 148.33,
-        "sampleSize": 10
+        "rawMedian": 173.5,
+        "sampleSize": 12
       }
     },
     "$25-49": {
       "PSA 10": {
-        "gradedMedian": 71.33,
+        "gradedMedian": 70,
         "medianRatio": 2.12,
         "p25": 1.59,
         "p75": 2.65,
-        "rawMedian": 31.46,
+        "rawMedian": 31.26,
         "sampleSize": 80
       },
       "PSA 9": {
@@ -17052,9 +17104,9 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "gradedMedian": 83,
         "medianRatio": 1.03,
         "p25": 0.62,
-        "p75": 1.32,
+        "p75": 1.28,
         "rawMedian": 85.83,
-        "sampleSize": 14
+        "sampleSize": 12
       }
     },
     "$500-999": {
@@ -17069,12 +17121,12 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
     },
     "Under $25": {
       "PSA 10": {
-        "gradedMedian": 34.19,
+        "gradedMedian": 33.42,
         "medianRatio": 4.56,
-        "p25": 3.04,
-        "p75": 6.73,
-        "rawMedian": 6.53,
-        "sampleSize": 234
+        "p25": 2.76,
+        "p75": 7.06,
+        "rawMedian": 7.21,
+        "sampleSize": 244
       },
       "PSA 8": {
         "gradedMedian": 11.51,
@@ -17085,20 +17137,20 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "sampleSize": 22
       },
       "PSA 9": {
-        "gradedMedian": 17.14,
-        "medianRatio": 1.84,
-        "p25": 1.43,
+        "gradedMedian": 20.85,
+        "medianRatio": 1.9,
+        "p25": 1.48,
         "p75": 2.71,
         "rawMedian": 9.84,
-        "sampleSize": 70
+        "sampleSize": 68
       },
       "SGC 10": {
-        "gradedMedian": 20.88,
-        "medianRatio": 3.57,
+        "gradedMedian": 20.74,
+        "medianRatio": 3.56,
         "p25": 2.35,
-        "p75": 3.61,
-        "rawMedian": 11.25,
-        "sampleSize": 20
+        "p75": 4.15,
+        "rawMedian": 5.75,
+        "sampleSize": 22
       }
     }
   },
@@ -17109,7 +17161,7 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "medianRatio": 1.51,
         "p25": 1.38,
         "p75": 1.52,
-        "rawMedian": 136.01,
+        "rawMedian": 136.08,
         "sampleSize": 14
       },
       "PSA 9": {
@@ -17117,7 +17169,7 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "medianRatio": 1.09,
         "p25": 1.04,
         "p75": 1.14,
-        "rawMedian": 136.01,
+        "rawMedian": 136.93,
         "sampleSize": 8
       }
     },
@@ -17126,9 +17178,9 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "gradedMedian": 103.76,
         "medianRatio": 3.42,
         "p25": 2.49,
-        "p75": 4.24,
+        "p75": 3.49,
         "rawMedian": 32.99,
-        "sampleSize": 22
+        "sampleSize": 20
       },
       "PSA 9": {
         "gradedMedian": 52,
@@ -17144,7 +17196,7 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "gradedMedian": 459.98,
         "medianRatio": 1.12,
         "p25": 1.02,
-        "p75": 1.26,
+        "p75": 1.22,
         "rawMedian": 452,
         "sampleSize": 8
       }
@@ -17153,14 +17205,14 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       "PSA 10": {
         "gradedMedian": 312.45,
         "medianRatio": 3.57,
-        "p25": 3.57,
+        "p25": 3.29,
         "p75": 9.62,
         "rawMedian": 68.32,
         "sampleSize": 6
       },
       "PSA 8": {
-        "gradedMedian": 77.52,
-        "medianRatio": 0.88,
+        "gradedMedian": 78.55,
+        "medianRatio": 0.9,
         "p25": 0.79,
         "p75": 3.16,
         "rawMedian": 60.19,
@@ -17178,25 +17230,25 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
     "Under $25": {
       "CGC 10": {
         "gradedMedian": 30.84,
-        "medianRatio": 5.1,
-        "p25": 4.08,
+        "medianRatio": 5.08,
+        "p25": 4.04,
         "p75": 7.94,
-        "rawMedian": 5.4,
+        "rawMedian": 5.41,
         "sampleSize": 8
       },
       "CGC 9": {
         "gradedMedian": 10.67,
-        "medianRatio": 2.88,
-        "p25": 2.13,
+        "medianRatio": 2.11,
+        "p25": 1.2,
         "p75": 4.73,
         "rawMedian": 4.77,
-        "sampleSize": 8
+        "sampleSize": 6
       },
       "PSA 10": {
-        "gradedMedian": 40.37,
+        "gradedMedian": 40.25,
         "medianRatio": 7.74,
         "p25": 4.98,
-        "p75": 12.56,
+        "p75": 12.27,
         "rawMedian": 4.33,
         "sampleSize": 204
       },
@@ -17210,27 +17262,27 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       },
       "PSA 8": {
         "gradedMedian": 11.18,
-        "medianRatio": 1.66,
+        "medianRatio": 1.72,
         "p25": 1.12,
-        "p75": 3.03,
+        "p75": 3.1,
         "rawMedian": 5.36,
-        "sampleSize": 98
+        "sampleSize": 96
       },
       "PSA 9": {
-        "gradedMedian": 15.25,
-        "medianRatio": 3.03,
-        "p25": 1.92,
+        "gradedMedian": 16,
+        "medianRatio": 3.12,
+        "p25": 1.94,
         "p75": 5.12,
-        "rawMedian": 4.28,
-        "sampleSize": 202
+        "rawMedian": 4.33,
+        "sampleSize": 204
       },
       "SGC 10": {
         "gradedMedian": 25.95,
-        "medianRatio": 4.06,
-        "p25": 2.38,
-        "p75": 5.74,
-        "rawMedian": 5.46,
-        "sampleSize": 24
+        "medianRatio": 3.02,
+        "p25": 2.24,
+        "p75": 5.75,
+        "rawMedian": 5.45,
+        "sampleSize": 22
       },
       "SGC 9": {
         "gradedMedian": 16.49,
@@ -17241,80 +17293,72 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "sampleSize": 12
       },
       "SGC 9.5": {
-        "gradedMedian": 22.49,
+        "gradedMedian": 22.79,
         "medianRatio": 2.98,
         "p25": 2.48,
         "p75": 4.27,
-        "rawMedian": 5.46,
-        "sampleSize": 26
+        "rawMedian": 8.4,
+        "sampleSize": 24
       }
     }
   },
   "baseball|topps-update": {
     "$100-249": {
       "BGS 10": {
-        "gradedMedian": 469.63,
-        "medianRatio": 2.89,
-        "p25": 2.45,
+        "gradedMedian": 493.65,
+        "medianRatio": 3.05,
+        "p25": 2.44,
         "p75": 5.42,
-        "rawMedian": 162.57,
+        "rawMedian": 161.83,
         "sampleSize": 8
       },
       "BGS 9.5": {
         "gradedMedian": 185.25,
         "medianRatio": 1.12,
-        "p25": 0.85,
-        "p75": 1.76,
-        "rawMedian": 162.57,
+        "p25": 0.87,
+        "p75": 1.75,
+        "rawMedian": 161.83,
         "sampleSize": 18
       },
       "PSA 10": {
-        "gradedMedian": 406.47,
+        "gradedMedian": 400,
         "medianRatio": 2.3,
-        "p25": 1.64,
-        "p75": 3.02,
-        "rawMedian": 162.57,
-        "sampleSize": 62
-      },
-      "PSA 7": {
-        "gradedMedian": 105.96,
-        "medianRatio": 0.71,
-        "p25": 0.59,
-        "p75": 1.07,
-        "rawMedian": 149.6,
-        "sampleSize": 6
+        "p25": 1.71,
+        "p75": 3.1,
+        "rawMedian": 161.71,
+        "sampleSize": 56
       },
       "PSA 8": {
         "gradedMedian": 114.33,
         "medianRatio": 0.74,
-        "p25": 0.58,
+        "p25": 0.6,
         "p75": 0.86,
         "rawMedian": 179.27,
-        "sampleSize": 26
+        "sampleSize": 24
       },
       "PSA 9": {
-        "gradedMedian": 174.5,
-        "medianRatio": 0.98,
-        "p25": 0.72,
-        "p75": 1.33,
-        "rawMedian": 162.57,
+        "gradedMedian": 173.4,
+        "medianRatio": 0.97,
+        "p25": 0.66,
+        "p75": 1.31,
+        "rawMedian": 161.83,
         "sampleSize": 58
       },
       "SGC 10": {
-        "gradedMedian": 188.34,
-        "medianRatio": 1.25,
-        "p25": 0.99,
-        "p75": 1.69,
+        "gradedMedian": 213.78,
+        "medianRatio": 1.32,
+        "p25": 1,
+        "p75": 1.74,
         "rawMedian": 143.61,
-        "sampleSize": 26
+        "sampleSize": 24
       },
       "SGC 9.5": {
-        "gradedMedian": 135.71,
-        "medianRatio": 0.99,
-        "p25": 0.62,
-        "p75": 1.38,
-        "rawMedian": 162.57,
-        "sampleSize": 12
+        "gradedMedian": 123.92,
+        "medianRatio": 0.65,
+        "p25": 0.61,
+        "p75": 0.99,
+        "rawMedian": 161.83,
+        "sampleSize": 10
       }
     },
     "$25-49": {
@@ -17344,26 +17388,26 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       },
       "PSA 9": {
         "gradedMedian": 49.57,
-        "medianRatio": 1.32,
+        "medianRatio": 1.36,
         "p25": 1.05,
-        "p75": 1.69,
+        "p75": 1.79,
         "rawMedian": 33.25,
-        "sampleSize": 92
+        "sampleSize": 94
       },
       "SGC 10": {
         "gradedMedian": 64.14,
         "medianRatio": 2.14,
         "p25": 1.96,
-        "p75": 2.44,
+        "p75": 2.46,
         "rawMedian": 33.25,
         "sampleSize": 10
       },
       "SGC 9.5": {
         "gradedMedian": 37.67,
-        "medianRatio": 1.3,
+        "medianRatio": 1.31,
         "p25": 0.89,
-        "p75": 1.77,
-        "rawMedian": 38.92,
+        "p75": 1.78,
+        "rawMedian": 38.67,
         "sampleSize": 8
       }
     },
@@ -17371,7 +17415,7 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       "PSA 10": {
         "gradedMedian": 606,
         "medianRatio": 1.66,
-        "p25": 1.02,
+        "p25": 1.38,
         "p75": 2.69,
         "rawMedian": 356.04,
         "sampleSize": 24
@@ -17388,23 +17432,23 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
     "$50-99": {
       "BGS 9.5": {
         "gradedMedian": 120.21,
-        "medianRatio": 1.55,
-        "p25": 1.34,
+        "medianRatio": 1.56,
+        "p25": 1.32,
         "p75": 1.87,
-        "rawMedian": 89.6,
+        "rawMedian": 90.96,
         "sampleSize": 8
       },
       "PSA 10": {
         "gradedMedian": 200.89,
-        "medianRatio": 2.97,
-        "p25": 2.32,
-        "p75": 3.78,
+        "medianRatio": 2.93,
+        "p25": 2.11,
+        "p75": 3.55,
         "rawMedian": 70.6,
         "sampleSize": 54
       },
       "PSA 8": {
-        "gradedMedian": 54.18,
-        "medianRatio": 0.78,
+        "gradedMedian": 55.29,
+        "medianRatio": 0.77,
         "p25": 0.62,
         "p75": 0.92,
         "rawMedian": 74.83,
@@ -17412,35 +17456,35 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       },
       "PSA 9": {
         "gradedMedian": 75.89,
-        "medianRatio": 1.04,
-        "p25": 0.83,
-        "p75": 1.3,
+        "medianRatio": 1.05,
+        "p25": 0.82,
+        "p75": 1.28,
         "rawMedian": 68.43,
         "sampleSize": 58
       },
       "SGC 10": {
-        "gradedMedian": 87.48,
-        "medianRatio": 1.22,
-        "p25": 0.71,
-        "p75": 1.28,
-        "rawMedian": 68.97,
-        "sampleSize": 6
+        "gradedMedian": 109.73,
+        "medianRatio": 1.21,
+        "p25": 1.21,
+        "p75": 1.29,
+        "rawMedian": 90.96,
+        "sampleSize": 8
       },
       "SGC 9.5": {
-        "gradedMedian": 65.5,
+        "gradedMedian": 66.29,
         "medianRatio": 1.03,
-        "p25": 0.65,
+        "p25": 0.66,
         "p75": 1.03,
-        "rawMedian": 68.21,
-        "sampleSize": 10
+        "rawMedian": 75.96,
+        "sampleSize": 12
       }
     },
     "$500-999": {
       "PSA 10": {
-        "gradedMedian": 922.37,
+        "gradedMedian": 913.9,
         "medianRatio": 1.53,
-        "p25": 0.98,
-        "p75": 3.27,
+        "p25": 0.99,
+        "p75": 3.23,
         "rawMedian": 737.24,
         "sampleSize": 12
       }
@@ -17448,146 +17492,146 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
     "Under $25": {
       "BGS 10": {
         "gradedMedian": 76,
-        "medianRatio": 5.92,
-        "p25": 5.31,
-        "p75": 7.67,
-        "rawMedian": 12.84,
+        "medianRatio": 6.07,
+        "p25": 5.33,
+        "p75": 7.71,
+        "rawMedian": 12.53,
         "sampleSize": 10
       },
       "BGS 9": {
         "gradedMedian": 10.4,
-        "medianRatio": 1.68,
-        "p25": 0.89,
-        "p75": 2.69,
-        "rawMedian": 5.35,
-        "sampleSize": 20
+        "medianRatio": 1.69,
+        "p25": 0.9,
+        "p75": 3.04,
+        "rawMedian": 5.04,
+        "sampleSize": 26
       },
       "BGS 9.5": {
-        "gradedMedian": 28.51,
-        "medianRatio": 3.8,
-        "p25": 2.83,
-        "p75": 6.52,
-        "rawMedian": 5.17,
-        "sampleSize": 48
+        "gradedMedian": 26.91,
+        "medianRatio": 3.81,
+        "p25": 2.87,
+        "p75": 6.46,
+        "rawMedian": 5.08,
+        "sampleSize": 50
       },
       "CGC 10": {
         "gradedMedian": 16.76,
-        "medianRatio": 4.26,
+        "medianRatio": 4.33,
         "p25": 2.97,
-        "p75": 7.16,
-        "rawMedian": 3.78,
+        "p75": 7.2,
+        "rawMedian": 3.8,
         "sampleSize": 158
       },
       "CGC 7": {
         "gradedMedian": 4,
         "medianRatio": 1.8,
         "p25": 1.51,
-        "p75": 2.9,
-        "rawMedian": 2.65,
+        "p75": 2.92,
+        "rawMedian": 2.66,
         "sampleSize": 8
       },
       "CGC 8": {
         "gradedMedian": 6.67,
-        "medianRatio": 2.11,
-        "p25": 1.78,
+        "medianRatio": 2.12,
+        "p25": 1.8,
         "p75": 2.45,
         "rawMedian": 3.21,
         "sampleSize": 24
       },
       "CGC 9": {
-        "gradedMedian": 8.35,
-        "medianRatio": 2.37,
-        "p25": 1.44,
-        "p75": 3.93,
-        "rawMedian": 3.78,
-        "sampleSize": 86
+        "gradedMedian": 8.54,
+        "medianRatio": 2.43,
+        "p25": 1.45,
+        "p75": 3.36,
+        "rawMedian": 3.83,
+        "sampleSize": 90
       },
       "CGC 9.5": {
-        "gradedMedian": 7.42,
-        "medianRatio": 1.68,
-        "p25": 0.94,
-        "p75": 2.51,
-        "rawMedian": 4.75,
+        "gradedMedian": 8.43,
+        "medianRatio": 1.7,
+        "p25": 1.05,
+        "p75": 2.37,
+        "rawMedian": 4.63,
         "sampleSize": 20
       },
       "PSA 10": {
-        "gradedMedian": 36.38,
-        "medianRatio": 7.51,
-        "p25": 4.84,
-        "p75": 11.4,
-        "rawMedian": 4.46,
-        "sampleSize": 1096
+        "gradedMedian": 36.17,
+        "medianRatio": 7.49,
+        "p25": 4.88,
+        "p75": 11.06,
+        "rawMedian": 4.49,
+        "sampleSize": 1082
       },
       "PSA 6": {
         "gradedMedian": 6.99,
         "medianRatio": 1.33,
-        "p25": 0.6,
-        "p75": 2.53,
-        "rawMedian": 5.33,
+        "p25": 0.61,
+        "p75": 2.54,
+        "rawMedian": 5.31,
         "sampleSize": 16
       },
       "PSA 7": {
         "gradedMedian": 9.35,
-        "medianRatio": 1.27,
-        "p25": 0.8,
+        "medianRatio": 1.28,
+        "p25": 0.85,
         "p75": 2.32,
         "rawMedian": 5.38,
         "sampleSize": 34
       },
       "PSA 8": {
-        "gradedMedian": 10.44,
-        "medianRatio": 1.85,
+        "gradedMedian": 10.48,
+        "medianRatio": 1.84,
         "p25": 1.18,
-        "p75": 2.73,
-        "rawMedian": 5.11,
-        "sampleSize": 292
+        "p75": 2.72,
+        "rawMedian": 5.08,
+        "sampleSize": 290
       },
       "PSA 8.5": {
         "gradedMedian": 17.01,
-        "medianRatio": 2.42,
+        "medianRatio": 2.45,
         "p25": 1.88,
-        "p75": 3.19,
-        "rawMedian": 5.33,
+        "p75": 3.21,
+        "rawMedian": 5.31,
         "sampleSize": 12
       },
       "PSA 9": {
-        "gradedMedian": 15.9,
+        "gradedMedian": 16,
         "medianRatio": 2.94,
-        "p25": 1.84,
-        "p75": 4.58,
+        "p25": 1.83,
+        "p75": 4.57,
         "rawMedian": 4.74,
-        "sampleSize": 904
+        "sampleSize": 898
       },
       "SGC 10": {
-        "gradedMedian": 23.33,
-        "medianRatio": 4.24,
+        "gradedMedian": 23.52,
+        "medianRatio": 4.26,
         "p25": 3.17,
         "p75": 6.02,
-        "rawMedian": 4.75,
-        "sampleSize": 174
+        "rawMedian": 4.76,
+        "sampleSize": 172
       },
       "SGC 8.5": {
         "gradedMedian": 9.13,
-        "medianRatio": 1.18,
+        "medianRatio": 1.19,
         "p25": 0.65,
-        "p75": 2.33,
-        "rawMedian": 8.81,
+        "p75": 2.34,
+        "rawMedian": 8.71,
         "sampleSize": 6
       },
       "SGC 9": {
         "gradedMedian": 15.93,
-        "medianRatio": 1.97,
-        "p25": 1.26,
+        "medianRatio": 1.99,
+        "p25": 1.27,
         "p75": 3.26,
-        "rawMedian": 7.38,
+        "rawMedian": 7.32,
         "sampleSize": 44
       },
       "SGC 9.5": {
         "gradedMedian": 17.55,
         "medianRatio": 2.57,
-        "p25": 1.75,
-        "p75": 4.14,
-        "rawMedian": 5.19,
+        "p25": 1.83,
+        "p75": 4.16,
+        "rawMedian": 5.2,
         "sampleSize": 118
       }
     }
@@ -17605,19 +17649,19 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
     },
     "$25-49": {
       "PSA 10": {
-        "gradedMedian": 164.96,
+        "gradedMedian": 171.97,
         "medianRatio": 6.18,
         "p25": 4.44,
-        "p75": 9.69,
+        "p75": 10.44,
         "rawMedian": 29.1,
         "sampleSize": 10
       },
       "PSA 9": {
-        "gradedMedian": 56.83,
-        "medianRatio": 1.91,
+        "gradedMedian": 59.8,
+        "medianRatio": 1.95,
         "p25": 1.55,
         "p75": 2.01,
-        "rawMedian": 31.5,
+        "rawMedian": 32,
         "sampleSize": 10
       }
     },
@@ -17636,22 +17680,22 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "gradedMedian": 44.77,
         "medianRatio": 4.87,
         "p25": 4.02,
-        "p75": 5.04,
-        "rawMedian": 11.09,
+        "p75": 5.07,
+        "rawMedian": 11.11,
         "sampleSize": 6
       },
       "CGC 9": {
         "gradedMedian": 19.2,
         "medianRatio": 2.26,
         "p25": 1.55,
-        "p75": 2.93,
-        "rawMedian": 8.68,
+        "p75": 2.95,
+        "rawMedian": 8.67,
         "sampleSize": 5
       },
       "PSA 10": {
         "gradedMedian": 49.51,
-        "medianRatio": 9.12,
-        "p25": 6.39,
+        "medianRatio": 8.97,
+        "p25": 6.38,
         "p75": 11.28,
         "rawMedian": 5.61,
         "sampleSize": 36
@@ -17659,7 +17703,7 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       "PSA 6": {
         "gradedMedian": 5.51,
         "medianRatio": 0.99,
-        "p25": 0.95,
+        "p25": 0.96,
         "p75": 1.02,
         "rawMedian": 4.3,
         "sampleSize": 5
@@ -17675,7 +17719,7 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       "PSA 9": {
         "gradedMedian": 28.57,
         "medianRatio": 4.05,
-        "p25": 2.41,
+        "p25": 2.42,
         "p75": 4.76,
         "rawMedian": 6.97,
         "sampleSize": 29
@@ -17685,7 +17729,7 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "medianRatio": 2.94,
         "p25": 2.76,
         "p75": 3.38,
-        "rawMedian": 11.09,
+        "rawMedian": 11.11,
         "sampleSize": 5
       }
     }
@@ -17705,12 +17749,12 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
   "basketball|panini-certified": {
     "Under $25": {
       "PSA 10": {
-        "gradedMedian": 67.5,
-        "medianRatio": 6.69,
+        "gradedMedian": 55.2,
+        "medianRatio": 6.33,
         "p25": 4.84,
         "p75": 8.96,
-        "rawMedian": 8.56,
-        "sampleSize": 18
+        "rawMedian": 5.78,
+        "sampleSize": 19
       },
       "PSA 9": {
         "gradedMedian": 24.29,
@@ -17734,10 +17778,10 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       },
       "PSA 9": {
         "gradedMedian": 58.2,
-        "medianRatio": 1.62,
-        "p25": 1.56,
-        "p75": 1.71,
-        "rawMedian": 35.87,
+        "medianRatio": 1.65,
+        "p25": 1.57,
+        "p75": 1.74,
+        "rawMedian": 35.75,
         "sampleSize": 10
       }
     },
@@ -17752,7 +17796,7 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       },
       "CGC 10": {
         "gradedMedian": 28.14,
-        "medianRatio": 7.41,
+        "medianRatio": 7.52,
         "p25": 3.99,
         "p75": 9.5,
         "rawMedian": 3,
@@ -17763,13 +17807,13 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "medianRatio": 3.69,
         "p25": 2.58,
         "p75": 4.94,
-        "rawMedian": 2.33,
+        "rawMedian": 2.32,
         "sampleSize": 9
       },
       "CGC 9.5": {
         "gradedMedian": 7.5,
-        "medianRatio": 4.63,
-        "p25": 1.65,
+        "medianRatio": 4.46,
+        "p25": 1.38,
         "p75": 5.99,
         "rawMedian": 1.78,
         "sampleSize": 11
@@ -17777,41 +17821,41 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       "PSA 10": {
         "gradedMedian": 24,
         "medianRatio": 7.18,
-        "p25": 4.84,
+        "p25": 4.89,
         "p75": 10.34,
         "rawMedian": 3,
-        "sampleSize": 202
+        "sampleSize": 201
       },
       "PSA 8": {
         "gradedMedian": 10.67,
         "medianRatio": 2.29,
         "p25": 1.63,
-        "p75": 3.85,
+        "p75": 3.71,
         "rawMedian": 3.53,
         "sampleSize": 39
       },
       "PSA 9": {
-        "gradedMedian": 13,
+        "gradedMedian": 13.35,
         "medianRatio": 3.46,
-        "p25": 2.15,
+        "p25": 2.22,
         "p75": 5.75,
         "rawMedian": 2.95,
         "sampleSize": 144
       },
       "SGC 10": {
         "gradedMedian": 23.38,
-        "medianRatio": 4.04,
+        "medianRatio": 4.05,
         "p25": 3.3,
-        "p75": 8.73,
-        "rawMedian": 4.36,
-        "sampleSize": 37
+        "p75": 9.86,
+        "rawMedian": 4.29,
+        "sampleSize": 38
       },
       "SGC 9": {
         "gradedMedian": 14.6,
         "medianRatio": 3.2,
         "p25": 1.72,
         "p75": 5.45,
-        "rawMedian": 4.63,
+        "rawMedian": 4.57,
         "sampleSize": 12
       },
       "SGC 9.5": {
@@ -17825,38 +17869,28 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
     }
   },
   "basketball|panini-contenders": {
-    "$100-249": {
-      "PSA 10": {
-        "gradedMedian": 951.67,
-        "medianRatio": 7.87,
-        "p25": 2.98,
-        "p75": 9.99,
-        "rawMedian": 118.92,
-        "sampleSize": 5
-      }
-    },
     "$25-49": {
       "PSA 10": {
         "gradedMedian": 119.17,
-        "medianRatio": 3.17,
-        "p25": 1.73,
+        "medianRatio": 3.16,
+        "p25": 1.72,
         "p75": 4.13,
         "rawMedian": 34.3,
-        "sampleSize": 12
+        "sampleSize": 11
       },
       "PSA 8": {
-        "gradedMedian": 40.01,
+        "gradedMedian": 44,
         "medianRatio": 1.34,
-        "p25": 0.88,
+        "p25": 1.06,
         "p75": 2.9,
-        "rawMedian": 40.28,
+        "rawMedian": 40.36,
         "sampleSize": 7
       },
       "PSA 9": {
         "gradedMedian": 48.83,
-        "medianRatio": 1.27,
+        "medianRatio": 1.29,
         "p25": 1.06,
-        "p75": 2.77,
+        "p75": 2.38,
         "rawMedian": 32.45,
         "sampleSize": 15
       }
@@ -17866,7 +17900,7 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "gradedMedian": 15.87,
         "medianRatio": 3.84,
         "p25": 1.77,
-        "p75": 5.92,
+        "p75": 5.87,
         "rawMedian": 5.79,
         "sampleSize": 8
       },
@@ -17880,39 +17914,47 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       },
       "PSA 8": {
         "gradedMedian": 13.88,
-        "medianRatio": 1.89,
-        "p25": 1.32,
+        "medianRatio": 1.86,
+        "p25": 1.3,
         "p75": 2.34,
         "rawMedian": 8.15,
         "sampleSize": 24
       },
       "PSA 9": {
-        "gradedMedian": 20.37,
-        "medianRatio": 2.63,
-        "p25": 1.69,
-        "p75": 3.88,
-        "rawMedian": 8,
-        "sampleSize": 79
+        "gradedMedian": 19.74,
+        "medianRatio": 2.73,
+        "p25": 1.71,
+        "p75": 3.89,
+        "rawMedian": 7.36,
+        "sampleSize": 77
       },
       "SGC 10": {
         "gradedMedian": 32.21,
-        "medianRatio": 3.64,
-        "p25": 1.87,
-        "p75": 5.03,
+        "medianRatio": 4.15,
+        "p25": 1.84,
+        "p75": 5.97,
         "rawMedian": 7.74,
-        "sampleSize": 13
+        "sampleSize": 14
+      },
+      "SGC 9.5": {
+        "gradedMedian": 22.9,
+        "medianRatio": 4.21,
+        "p25": 1.89,
+        "p75": 4.34,
+        "rawMedian": 6.82,
+        "sampleSize": 5
       }
     }
   },
   "basketball|panini-court-kings": {
     "$100-249": {
       "PSA 10": {
-        "gradedMedian": 342.4,
-        "medianRatio": 2.3,
-        "p25": 1.43,
-        "p75": 2.6,
+        "gradedMedian": 487.43,
+        "medianRatio": 2.6,
+        "p25": 1.33,
+        "p75": 5.01,
         "rawMedian": 144.96,
-        "sampleSize": 5
+        "sampleSize": 6
       },
       "PSA 9": {
         "gradedMedian": 199.15,
@@ -17929,8 +17971,8 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "medianRatio": 3.76,
         "p25": 2.2,
         "p75": 11.42,
-        "rawMedian": 37.28,
-        "sampleSize": 11
+        "rawMedian": 40.2,
+        "sampleSize": 12
       },
       "PSA 8": {
         "gradedMedian": 63.5,
@@ -17952,49 +17994,49 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
     "$50-99": {
       "PSA 10": {
         "gradedMedian": 262.2,
-        "medianRatio": 3.36,
-        "p25": 2.23,
+        "medianRatio": 3.38,
+        "p25": 2.33,
         "p75": 6.07,
-        "rawMedian": 74.96,
-        "sampleSize": 12
+        "rawMedian": 65.45,
+        "sampleSize": 11
       },
       "PSA 8": {
         "gradedMedian": 77.84,
-        "medianRatio": 1.05,
+        "medianRatio": 1.16,
         "p25": 1,
         "p75": 1.73,
         "rawMedian": 60.9,
         "sampleSize": 9
       },
       "PSA 9": {
-        "gradedMedian": 101.53,
+        "gradedMedian": 107.72,
         "medianRatio": 1.77,
         "p25": 1.3,
-        "p75": 1.83,
+        "p75": 1.91,
         "rawMedian": 74.96,
         "sampleSize": 10
       }
     },
     "Under $25": {
       "PSA 10": {
-        "gradedMedian": 53.74,
-        "medianRatio": 7.16,
+        "gradedMedian": 54,
+        "medianRatio": 7.53,
         "p25": 4.8,
-        "p75": 12.18,
-        "rawMedian": 9.22,
-        "sampleSize": 60
+        "p75": 11.55,
+        "rawMedian": 9.39,
+        "sampleSize": 62
       },
       "PSA 8": {
         "gradedMedian": 35.55,
-        "medianRatio": 4.21,
+        "medianRatio": 4.1,
         "p25": 2.02,
-        "p75": 6.58,
+        "p75": 6.63,
         "rawMedian": 10.25,
         "sampleSize": 8
       },
       "PSA 9": {
         "gradedMedian": 30.25,
-        "medianRatio": 3.42,
+        "medianRatio": 3.08,
         "p25": 1.75,
         "p75": 13.98,
         "rawMedian": 12.31,
@@ -18003,14 +18045,24 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       "SGC 10": {
         "gradedMedian": 28,
         "medianRatio": 3.93,
-        "p25": 3.25,
-        "p75": 3.99,
+        "p25": 3.19,
+        "p75": 4.21,
         "rawMedian": 8.77,
         "sampleSize": 6
       }
     }
   },
   "basketball|panini-crown-royale": {
+    "$1,000-2,499": {
+      "PSA 8": {
+        "gradedMedian": 1323.13,
+        "medianRatio": 1.22,
+        "p25": 1,
+        "p75": 6.45,
+        "rawMedian": 1290,
+        "sampleSize": 5
+      }
+    },
     "$100-249": {
       "PSA 10": {
         "gradedMedian": 362.09,
@@ -18030,7 +18082,7 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       },
       "PSA 9": {
         "gradedMedian": 393,
-        "medianRatio": 2.21,
+        "medianRatio": 2.33,
         "p25": 1.06,
         "p75": 2.65,
         "rawMedian": 153.08,
@@ -18043,7 +18095,7 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "medianRatio": 2.24,
         "p25": 0.98,
         "p75": 12.92,
-        "rawMedian": 30.74,
+        "rawMedian": 32.45,
         "sampleSize": 7
       }
     },
@@ -18060,14 +18112,14 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "gradedMedian": 560.63,
         "medianRatio": 1.2,
         "p25": 1.09,
-        "p75": 2.68,
+        "p75": 2.35,
         "rawMedian": 329.7,
         "sampleSize": 7
       },
       "PSA 8": {
         "gradedMedian": 691.43,
         "medianRatio": 1.82,
-        "p25": 1.47,
+        "p25": 1.56,
         "p75": 2.35,
         "rawMedian": 331.35,
         "sampleSize": 9
@@ -18119,7 +18171,7 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "sampleSize": 5
       },
       "PSA 9": {
-        "gradedMedian": 32.33,
+        "gradedMedian": 35.2,
         "medianRatio": 3.33,
         "p25": 2.59,
         "p75": 7.44,
@@ -18133,26 +18185,26 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       "PSA 10": {
         "gradedMedian": 429.96,
         "medianRatio": 2.77,
-        "p25": 1.95,
-        "p75": 4.07,
+        "p25": 2.09,
+        "p75": 4.22,
         "rawMedian": 160.5,
-        "sampleSize": 41
+        "sampleSize": 43
       },
       "PSA 8": {
         "gradedMedian": 114.42,
         "medianRatio": 0.88,
-        "p25": 0.63,
-        "p75": 0.9,
-        "rawMedian": 136.32,
+        "p25": 0.64,
+        "p75": 0.89,
+        "rawMedian": 134.93,
         "sampleSize": 6
       },
       "PSA 9": {
         "gradedMedian": 172.05,
         "medianRatio": 1.08,
-        "p25": 0.88,
+        "p25": 0.92,
         "p75": 1.32,
-        "rawMedian": 163.88,
-        "sampleSize": 32
+        "rawMedian": 160.36,
+        "sampleSize": 31
       }
     },
     "$25-49": {
@@ -18160,7 +18212,7 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "gradedMedian": 54.56,
         "medianRatio": 1.52,
         "p25": 1.39,
-        "p75": 1.62,
+        "p75": 1.7,
         "rawMedian": 38.48,
         "sampleSize": 5
       },
@@ -18172,20 +18224,12 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "rawMedian": 27.85,
         "sampleSize": 10
       },
-      "CGC 10": {
-        "gradedMedian": 46.84,
-        "medianRatio": 1.59,
-        "p25": 0.71,
-        "p75": 1.91,
-        "rawMedian": 32.93,
-        "sampleSize": 5
-      },
       "PSA 10": {
-        "gradedMedian": 132.83,
-        "medianRatio": 3.83,
-        "p25": 2.78,
-        "p75": 6.09,
-        "rawMedian": 32,
+        "gradedMedian": 134.37,
+        "medianRatio": 3.92,
+        "p25": 2.77,
+        "p75": 6.11,
+        "rawMedian": 31.26,
         "sampleSize": 95
       },
       "PSA 8": {
@@ -18200,14 +18244,14 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "gradedMedian": 52.92,
         "medianRatio": 1.54,
         "p25": 1.14,
-        "p75": 2.06,
-        "rawMedian": 33,
+        "p75": 2.07,
+        "rawMedian": 32.44,
         "sampleSize": 79
       },
       "SGC 10": {
         "gradedMedian": 80.67,
         "medianRatio": 2.16,
-        "p25": 1.8,
+        "p25": 1.78,
         "p75": 2.32,
         "rawMedian": 36.7,
         "sampleSize": 10
@@ -18222,20 +18266,20 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       },
       "SGC 9.5": {
         "gradedMedian": 53.4,
-        "medianRatio": 1.39,
+        "medianRatio": 1.53,
         "p25": 1.3,
         "p75": 2.05,
         "rawMedian": 33.57,
-        "sampleSize": 9
+        "sampleSize": 10
       }
     },
     "$250-499": {
       "PSA 10": {
-        "gradedMedian": 855.5,
-        "medianRatio": 3.09,
+        "gradedMedian": 927.48,
+        "medianRatio": 3.49,
         "p25": 2.13,
-        "p75": 10.7,
-        "rawMedian": 305.7,
+        "p75": 10.35,
+        "rawMedian": 306.41,
         "sampleSize": 10
       },
       "PSA 9": {
@@ -18249,16 +18293,16 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
     },
     "$50-99": {
       "PSA 10": {
-        "gradedMedian": 227.13,
-        "medianRatio": 3.24,
-        "p25": 2.4,
-        "p75": 4.97,
-        "rawMedian": 68.65,
-        "sampleSize": 49
+        "gradedMedian": 236.4,
+        "medianRatio": 3.3,
+        "p25": 2.51,
+        "p75": 5.14,
+        "rawMedian": 69.06,
+        "sampleSize": 50
       },
       "PSA 9": {
-        "gradedMedian": 87.5,
-        "medianRatio": 1.31,
+        "gradedMedian": 86.25,
+        "medianRatio": 1.27,
         "p25": 1.12,
         "p75": 1.62,
         "rawMedian": 67.68,
@@ -18304,37 +18348,37 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "gradedMedian": 19.5,
         "medianRatio": 2.38,
         "p25": 1.69,
-        "p75": 3.36,
-        "rawMedian": 7.81,
-        "sampleSize": 26
+        "p75": 3.69,
+        "rawMedian": 6.65,
+        "sampleSize": 27
       },
       "BGS 9.5": {
         "gradedMedian": 21.16,
         "medianRatio": 3.49,
-        "p25": 2.48,
+        "p25": 2.26,
         "p75": 4.88,
-        "rawMedian": 6.41,
+        "rawMedian": 6.44,
         "sampleSize": 45
       },
       "CGC 10": {
-        "gradedMedian": 24.15,
+        "gradedMedian": 24.22,
         "medianRatio": 4.79,
         "p25": 2.72,
         "p75": 7.09,
-        "rawMedian": 4.98,
-        "sampleSize": 91
+        "rawMedian": 5.2,
+        "sampleSize": 92
       },
       "CGC 9": {
         "gradedMedian": 12,
         "medianRatio": 1.68,
-        "p25": 1.44,
+        "p25": 1.33,
         "p75": 2.63,
         "rawMedian": 6.21,
-        "sampleSize": 25
+        "sampleSize": 27
       },
       "CGC 9.5": {
         "gradedMedian": 11,
-        "medianRatio": 2.36,
+        "medianRatio": 2.39,
         "p25": 1.06,
         "p75": 2.78,
         "rawMedian": 4.98,
@@ -18342,41 +18386,41 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       },
       "PSA 10": {
         "gradedMedian": 40.37,
-        "medianRatio": 8.05,
-        "p25": 5.24,
-        "p75": 12.21,
+        "medianRatio": 7.97,
+        "p25": 5.22,
+        "p75": 12.12,
         "rawMedian": 4.57,
-        "sampleSize": 793
+        "sampleSize": 795
       },
       "PSA 5": {
         "gradedMedian": 8.02,
-        "medianRatio": 1.25,
+        "medianRatio": 1.26,
         "p25": 1.03,
         "p75": 2.12,
         "rawMedian": 6.8,
         "sampleSize": 5
       },
       "PSA 6": {
-        "gradedMedian": 8.62,
-        "medianRatio": 1.5,
-        "p25": 0.84,
-        "p75": 2.84,
-        "rawMedian": 6.41,
-        "sampleSize": 14
+        "gradedMedian": 7.92,
+        "medianRatio": 1.44,
+        "p25": 0.85,
+        "p75": 2.31,
+        "rawMedian": 6.4,
+        "sampleSize": 13
       },
       "PSA 7": {
-        "gradedMedian": 9.58,
+        "gradedMedian": 10.5,
         "medianRatio": 1.07,
         "p25": 0.9,
-        "p75": 1.8,
-        "rawMedian": 9.14,
+        "p75": 1.81,
+        "rawMedian": 9.03,
         "sampleSize": 27
       },
       "PSA 8": {
         "gradedMedian": 12.37,
-        "medianRatio": 1.61,
+        "medianRatio": 1.57,
         "p25": 1.07,
-        "p75": 2.67,
+        "p75": 2.61,
         "rawMedian": 7.96,
         "sampleSize": 180
       },
@@ -18385,24 +18429,24 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "medianRatio": 1.39,
         "p25": 0.82,
         "p75": 3.82,
-        "rawMedian": 10.91,
+        "rawMedian": 11.02,
         "sampleSize": 7
       },
       "PSA 9": {
-        "gradedMedian": 18.9,
+        "gradedMedian": 19,
         "medianRatio": 3.19,
         "p25": 2.12,
         "p75": 5.25,
-        "rawMedian": 5.1,
-        "sampleSize": 653
+        "rawMedian": 5.15,
+        "sampleSize": 659
       },
       "SGC 10": {
-        "gradedMedian": 23.25,
-        "medianRatio": 3.49,
-        "p25": 2.36,
+        "gradedMedian": 23.42,
+        "medianRatio": 3.55,
+        "p25": 2.42,
         "p75": 5.03,
-        "rawMedian": 5.37,
-        "sampleSize": 83
+        "rawMedian": 5.86,
+        "sampleSize": 85
       },
       "SGC 9": {
         "gradedMedian": 13.95,
@@ -18414,11 +18458,11 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       },
       "SGC 9.5": {
         "gradedMedian": 14.4,
-        "medianRatio": 2.46,
+        "medianRatio": 2.43,
         "p25": 1.72,
-        "p75": 3.69,
+        "p75": 3.66,
         "rawMedian": 4.96,
-        "sampleSize": 68
+        "sampleSize": 69
       }
     }
   },
@@ -18444,15 +18488,15 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
     "Under $25": {
       "PSA 10": {
         "gradedMedian": 70.17,
-        "medianRatio": 5.42,
-        "p25": 3.67,
-        "p75": 10.09,
+        "medianRatio": 5.09,
+        "p25": 3.8,
+        "p75": 8.54,
         "rawMedian": 12.75,
         "sampleSize": 20
       },
       "PSA 9": {
         "gradedMedian": 24.49,
-        "medianRatio": 2,
+        "medianRatio": 2.08,
         "p25": 1.65,
         "p75": 5,
         "rawMedian": 12.75,
@@ -18468,7 +18512,7 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "p25": 2.35,
         "p75": 3.42,
         "rawMedian": 122.39,
-        "sampleSize": 11
+        "sampleSize": 12
       },
       "PSA 8": {
         "gradedMedian": 126.5,
@@ -18479,7 +18523,7 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "sampleSize": 6
       },
       "PSA 9": {
-        "gradedMedian": 175,
+        "gradedMedian": 176.87,
         "medianRatio": 1.34,
         "p25": 1.25,
         "p75": 1.52,
@@ -18489,43 +18533,43 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
     },
     "$25-49": {
       "PSA 10": {
-        "gradedMedian": 121.15,
-        "medianRatio": 3.45,
-        "p25": 2.62,
-        "p75": 4.74,
-        "rawMedian": 35.6,
-        "sampleSize": 45
+        "gradedMedian": 110.59,
+        "medianRatio": 3.39,
+        "p25": 2.5,
+        "p75": 4.53,
+        "rawMedian": 36.4,
+        "sampleSize": 41
       },
       "PSA 8": {
         "gradedMedian": 44.87,
-        "medianRatio": 1.29,
+        "medianRatio": 1.3,
         "p25": 1.02,
-        "p75": 1.74,
-        "rawMedian": 34.07,
-        "sampleSize": 10
+        "p75": 1.35,
+        "rawMedian": 33.58,
+        "sampleSize": 8
       },
       "PSA 9": {
         "gradedMedian": 58.51,
         "medianRatio": 1.75,
         "p25": 1.29,
-        "p75": 2.64,
-        "rawMedian": 33.47,
-        "sampleSize": 32
+        "p75": 2.26,
+        "rawMedian": 33.58,
+        "sampleSize": 28
       },
       "SGC 10": {
-        "gradedMedian": 70.78,
-        "medianRatio": 1.94,
-        "p25": 1.52,
-        "p75": 2.57,
-        "rawMedian": 36.1,
-        "sampleSize": 7
+        "gradedMedian": 89.38,
+        "medianRatio": 2.09,
+        "p25": 1.8,
+        "p75": 3.1,
+        "rawMedian": 36.4,
+        "sampleSize": 6
       },
       "SGC 9.5": {
-        "gradedMedian": 76,
-        "medianRatio": 2.05,
+        "gradedMedian": 74.69,
+        "medianRatio": 2.14,
         "p25": 1.77,
-        "p75": 2.55,
-        "rawMedian": 35.6,
+        "p75": 2.49,
+        "rawMedian": 29.99,
         "sampleSize": 5
       }
     },
@@ -18541,60 +18585,60 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
     },
     "$50-99": {
       "PSA 10": {
-        "gradedMedian": 198.75,
+        "gradedMedian": 202,
         "medianRatio": 2.9,
         "p25": 2.19,
         "p75": 3.33,
-        "rawMedian": 74.77,
-        "sampleSize": 20
+        "rawMedian": 71.5,
+        "sampleSize": 19
       },
       "PSA 9": {
-        "gradedMedian": 73.67,
-        "medianRatio": 1.16,
-        "p25": 0.8,
-        "p75": 1.32,
+        "gradedMedian": 76,
+        "medianRatio": 1.2,
+        "p25": 1.03,
+        "p75": 1.36,
         "rawMedian": 65.5,
-        "sampleSize": 17
+        "sampleSize": 16
       }
     },
     "Under $25": {
       "BGS 9": {
-        "gradedMedian": 10.2,
-        "medianRatio": 2.24,
-        "p25": 1.61,
-        "p75": 4.23,
-        "rawMedian": 2.95,
-        "sampleSize": 11
+        "gradedMedian": 10.6,
+        "medianRatio": 2.49,
+        "p25": 1.75,
+        "p75": 3.83,
+        "rawMedian": 5.83,
+        "sampleSize": 12
       },
       "BGS 9.5": {
         "gradedMedian": 22.69,
-        "medianRatio": 3.91,
+        "medianRatio": 3.57,
         "p25": 3.14,
-        "p75": 4.51,
+        "p75": 4.35,
         "rawMedian": 4.1,
-        "sampleSize": 22
+        "sampleSize": 23
       },
       "CGC 10": {
-        "gradedMedian": 22.76,
-        "medianRatio": 4.54,
-        "p25": 3.65,
-        "p75": 5.85,
-        "rawMedian": 3.65,
-        "sampleSize": 31
+        "gradedMedian": 23.96,
+        "medianRatio": 4.78,
+        "p25": 3.1,
+        "p75": 6.42,
+        "rawMedian": 3.74,
+        "sampleSize": 36
       },
       "CGC 9": {
         "gradedMedian": 10.5,
-        "medianRatio": 2.43,
-        "p25": 2.08,
+        "medianRatio": 2.4,
+        "p25": 1.99,
         "p75": 2.83,
         "rawMedian": 5.68,
-        "sampleSize": 17
+        "sampleSize": 16
       },
       "CGC 9.5": {
         "gradedMedian": 8.38,
         "medianRatio": 2.35,
         "p25": 2.14,
-        "p75": 3.01,
+        "p75": 2.59,
         "rawMedian": 3,
         "sampleSize": 9
       },
@@ -18607,103 +18651,103 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "sampleSize": 6
       },
       "PSA 10": {
-        "gradedMedian": 30.62,
-        "medianRatio": 7.3,
+        "gradedMedian": 30.75,
+        "medianRatio": 7.24,
         "p25": 4.89,
-        "p75": 11.79,
-        "rawMedian": 3.91,
-        "sampleSize": 380
+        "p75": 11.58,
+        "rawMedian": 3.95,
+        "sampleSize": 391
       },
       "PSA 7": {
-        "gradedMedian": 10.83,
-        "medianRatio": 1.68,
-        "p25": 1.39,
-        "p75": 2.07,
-        "rawMedian": 6.74,
-        "sampleSize": 10
+        "gradedMedian": 10.72,
+        "medianRatio": 1.38,
+        "p25": 1.27,
+        "p75": 2.1,
+        "rawMedian": 7.98,
+        "sampleSize": 11
       },
       "PSA 8": {
-        "gradedMedian": 11.87,
-        "medianRatio": 1.87,
-        "p25": 1.12,
+        "gradedMedian": 12.87,
+        "medianRatio": 1.83,
+        "p25": 1.23,
         "p75": 3.16,
-        "rawMedian": 5.84,
-        "sampleSize": 64
+        "rawMedian": 6.62,
+        "sampleSize": 71
       },
       "PSA 9": {
-        "gradedMedian": 16.02,
-        "medianRatio": 2.69,
-        "p25": 1.89,
-        "p75": 4.63,
-        "rawMedian": 5.68,
-        "sampleSize": 254
+        "gradedMedian": 16.62,
+        "medianRatio": 2.78,
+        "p25": 1.95,
+        "p75": 4.65,
+        "rawMedian": 5.71,
+        "sampleSize": 260
       },
       "SGC 10": {
         "gradedMedian": 22.07,
-        "medianRatio": 4.03,
-        "p25": 3.04,
-        "p75": 5.83,
-        "rawMedian": 5.68,
-        "sampleSize": 48
+        "medianRatio": 3.87,
+        "p25": 2.77,
+        "p75": 5.37,
+        "rawMedian": 5.76,
+        "sampleSize": 50
       },
       "SGC 9": {
-        "gradedMedian": 12,
-        "medianRatio": 1.71,
-        "p25": 1.34,
+        "gradedMedian": 14.46,
+        "medianRatio": 1.9,
+        "p25": 1.38,
         "p75": 2.59,
-        "rawMedian": 6.28,
-        "sampleSize": 22
+        "rawMedian": 7.8,
+        "sampleSize": 26
       },
       "SGC 9.5": {
-        "gradedMedian": 13.96,
-        "medianRatio": 2.74,
-        "p25": 1.84,
-        "p75": 3.82,
-        "rawMedian": 5.68,
-        "sampleSize": 35
+        "gradedMedian": 16.75,
+        "medianRatio": 2.87,
+        "p25": 2.01,
+        "p75": 3.91,
+        "rawMedian": 6.28,
+        "sampleSize": 36
       }
     }
   },
   "basketball|panini-illusions": {
     "Under $25": {
       "PSA 10": {
-        "gradedMedian": 32.3,
-        "medianRatio": 9.99,
-        "p25": 4.12,
-        "p75": 14.63,
-        "rawMedian": 3.78,
+        "gradedMedian": 35.95,
+        "medianRatio": 10.09,
+        "p25": 5.05,
+        "p75": 15.25,
+        "rawMedian": 3.92,
         "sampleSize": 51
       },
       "PSA 8": {
         "gradedMedian": 6.5,
         "medianRatio": 3.12,
         "p25": 2.7,
-        "p75": 4.3,
-        "rawMedian": 3.14,
+        "p75": 4.35,
+        "rawMedian": 3.1,
         "sampleSize": 6
       },
       "PSA 9": {
         "gradedMedian": 16.16,
         "medianRatio": 4.14,
         "p25": 3.05,
-        "p75": 5.41,
+        "p75": 5.58,
         "rawMedian": 4.36,
         "sampleSize": 38
       },
       "SGC 10": {
-        "gradedMedian": 27.86,
-        "medianRatio": 8.91,
-        "p25": 6.85,
-        "p75": 10.35,
-        "rawMedian": 3.14,
-        "sampleSize": 6
+        "gradedMedian": 23.26,
+        "medianRatio": 8.97,
+        "p25": 6.94,
+        "p75": 10.7,
+        "rawMedian": 2.3,
+        "sampleSize": 7
       },
       "SGC 9.5": {
         "gradedMedian": 27.5,
-        "medianRatio": 8.09,
-        "p25": 5.6,
-        "p75": 12.81,
-        "rawMedian": 3.14,
+        "medianRatio": 8.03,
+        "p25": 5.66,
+        "p75": 12.95,
+        "rawMedian": 3.1,
         "sampleSize": 5
       }
     }
@@ -18714,159 +18758,175 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "gradedMedian": 308.96,
         "medianRatio": 2.15,
         "p25": 1.7,
-        "p75": 3.12,
+        "p75": 3.47,
         "rawMedian": 138.83,
         "sampleSize": 28
       },
       "PSA 9": {
-        "gradedMedian": 149.33,
+        "gradedMedian": 142.93,
         "medianRatio": 1.08,
         "p25": 0.86,
-        "p75": 1.31,
-        "rawMedian": 127.25,
-        "sampleSize": 16
+        "p75": 1.27,
+        "rawMedian": 124.42,
+        "sampleSize": 17
       }
     },
     "$25-49": {
+      "BGS 9.5": {
+        "gradedMedian": 75,
+        "medianRatio": 3,
+        "p25": 2.09,
+        "p75": 4.15,
+        "rawMedian": 28.42,
+        "sampleSize": 5
+      },
+      "CGC 10": {
+        "gradedMedian": 21,
+        "medianRatio": 0.77,
+        "p25": 0.56,
+        "p75": 1.34,
+        "rawMedian": 30.33,
+        "sampleSize": 6
+      },
       "PSA 10": {
-        "gradedMedian": 142.08,
-        "medianRatio": 4.03,
-        "p25": 3.21,
-        "p75": 5.76,
-        "rawMedian": 33.68,
-        "sampleSize": 57
+        "gradedMedian": 145,
+        "medianRatio": 4.47,
+        "p25": 3.17,
+        "p75": 6.64,
+        "rawMedian": 32.97,
+        "sampleSize": 60
       },
       "PSA 8": {
-        "gradedMedian": 33.93,
-        "medianRatio": 1.15,
-        "p25": 0.8,
-        "p75": 1.82,
-        "rawMedian": 29.57,
-        "sampleSize": 7
+        "gradedMedian": 69.63,
+        "medianRatio": 1.82,
+        "p25": 0.92,
+        "p75": 2.55,
+        "rawMedian": 32.31,
+        "sampleSize": 8
       },
       "PSA 9": {
         "gradedMedian": 76.13,
-        "medianRatio": 2.21,
+        "medianRatio": 2.23,
         "p25": 1.32,
-        "p75": 4.2,
-        "rawMedian": 34.81,
-        "sampleSize": 48
+        "p75": 3.78,
+        "rawMedian": 34.5,
+        "sampleSize": 50
       },
       "SGC 10": {
-        "gradedMedian": 80,
-        "medianRatio": 2.98,
+        "gradedMedian": 74.26,
+        "medianRatio": 1.74,
         "p25": 1.32,
         "p75": 3.51,
         "rawMedian": 42.74,
-        "sampleSize": 7
+        "sampleSize": 6
       }
     },
     "$50-99": {
       "PSA 10": {
-        "gradedMedian": 179.66,
-        "medianRatio": 2.87,
+        "gradedMedian": 176.94,
+        "medianRatio": 2.82,
         "p25": 2.29,
-        "p75": 3.56,
+        "p75": 4.09,
         "rawMedian": 65,
-        "sampleSize": 30
+        "sampleSize": 31
       },
       "PSA 9": {
         "gradedMedian": 90.9,
         "medianRatio": 1.46,
-        "p25": 1.02,
+        "p25": 1.04,
         "p75": 1.99,
-        "rawMedian": 63.47,
-        "sampleSize": 22
+        "rawMedian": 64.24,
+        "sampleSize": 20
       }
     },
     "Under $25": {
       "BGS 9": {
         "gradedMedian": 12.5,
-        "medianRatio": 1.98,
-        "p25": 1.67,
-        "p75": 2.33,
+        "medianRatio": 2.2,
+        "p25": 1.93,
+        "p75": 2.51,
         "rawMedian": 5.67,
         "sampleSize": 13
       },
       "BGS 9.5": {
-        "gradedMedian": 18.67,
-        "medianRatio": 2.93,
+        "gradedMedian": 18.5,
+        "medianRatio": 2.96,
         "p25": 2.16,
         "p75": 4.06,
-        "rawMedian": 6.25,
+        "rawMedian": 6.14,
         "sampleSize": 47
       },
       "CGC 10": {
-        "gradedMedian": 26.27,
-        "medianRatio": 3.56,
-        "p25": 2.18,
-        "p75": 6.28,
+        "gradedMedian": 25.1,
+        "medianRatio": 4.39,
+        "p25": 2.24,
+        "p75": 7.62,
         "rawMedian": 6.05,
-        "sampleSize": 30
+        "sampleSize": 34
       },
       "CGC 9": {
         "gradedMedian": 11.5,
-        "medianRatio": 1.68,
-        "p25": 1.31,
+        "medianRatio": 1.64,
+        "p25": 1.32,
         "p75": 2.49,
         "rawMedian": 5.89,
         "sampleSize": 13
       },
       "PSA 10": {
-        "gradedMedian": 41.37,
-        "medianRatio": 8.09,
-        "p25": 4.85,
-        "p75": 12.35,
-        "rawMedian": 5.18,
-        "sampleSize": 486
+        "gradedMedian": 41.5,
+        "medianRatio": 7.94,
+        "p25": 4.86,
+        "p75": 12.1,
+        "rawMedian": 5.17,
+        "sampleSize": 478
       },
       "PSA 7": {
         "gradedMedian": 12.04,
         "medianRatio": 1.48,
         "p25": 1.04,
         "p75": 1.59,
-        "rawMedian": 14.29,
+        "rawMedian": 14.55,
         "sampleSize": 9
       },
       "PSA 8": {
-        "gradedMedian": 16.06,
-        "medianRatio": 1.4,
-        "p25": 0.91,
-        "p75": 2.57,
-        "rawMedian": 14.29,
-        "sampleSize": 64
+        "gradedMedian": 15.9,
+        "medianRatio": 1.36,
+        "p25": 0.9,
+        "p75": 2.23,
+        "rawMedian": 12.98,
+        "sampleSize": 63
       },
       "PSA 9": {
-        "gradedMedian": 20.5,
+        "gradedMedian": 20.21,
         "medianRatio": 2.97,
-        "p25": 1.89,
+        "p25": 1.9,
         "p75": 5.11,
-        "rawMedian": 6.32,
-        "sampleSize": 277
+        "rawMedian": 6.3,
+        "sampleSize": 281
       },
       "SGC 10": {
-        "gradedMedian": 28.63,
+        "gradedMedian": 25.8,
         "medianRatio": 3.85,
-        "p25": 2.61,
-        "p75": 6.92,
-        "rawMedian": 6.73,
-        "sampleSize": 60
+        "p25": 2.72,
+        "p75": 6.57,
+        "rawMedian": 6.61,
+        "sampleSize": 59
       },
       "SGC 9": {
         "gradedMedian": 11.53,
         "medianRatio": 1.74,
-        "p25": 1.24,
+        "p25": 1.25,
         "p75": 2.23,
         "rawMedian": 12.32,
         "sampleSize": 13
       },
       "SGC 9.5": {
-        "gradedMedian": 19.83,
+        "gradedMedian": 18.96,
         "medianRatio": 2.41,
-        "p25": 1.63,
+        "p25": 1.59,
         "p75": 4.55,
-        "rawMedian": 5.35,
-        "sampleSize": 34
+        "rawMedian": 4.99,
+        "sampleSize": 35
       }
     }
   },
@@ -18902,7 +18962,7 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "gradedMedian": 71,
         "medianRatio": 1.84,
         "p25": 1.54,
-        "p75": 4.08,
+        "p75": 4,
         "rawMedian": 34.22,
         "sampleSize": 12
       }
@@ -18947,44 +19007,44 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
   "basketball|panini-optic": {
     "$100-249": {
       "PSA 10": {
-        "gradedMedian": 567.33,
-        "medianRatio": 3.67,
-        "p25": 2.17,
-        "p75": 5.72,
-        "rawMedian": 160.36,
-        "sampleSize": 36
+        "gradedMedian": 584,
+        "medianRatio": 3.89,
+        "p25": 2.23,
+        "p75": 5.81,
+        "rawMedian": 159.13,
+        "sampleSize": 40
       },
       "PSA 8": {
         "gradedMedian": 114.42,
         "medianRatio": 0.88,
-        "p25": 0.63,
-        "p75": 0.9,
-        "rawMedian": 136.32,
+        "p25": 0.64,
+        "p75": 0.89,
+        "rawMedian": 134.93,
         "sampleSize": 6
       },
       "PSA 9": {
         "gradedMedian": 203.01,
         "medianRatio": 1.12,
         "p25": 1.01,
-        "p75": 1.87,
-        "rawMedian": 148.5,
+        "p75": 1.65,
+        "rawMedian": 145,
         "sampleSize": 29
       }
     },
     "$25-49": {
       "BGS 9.5": {
         "gradedMedian": 89.96,
-        "medianRatio": 2.96,
+        "medianRatio": 2.95,
         "p25": 1.44,
         "p75": 3.41,
         "rawMedian": 27.85,
         "sampleSize": 6
       },
       "PSA 10": {
-        "gradedMedian": 140.83,
-        "medianRatio": 4.26,
+        "gradedMedian": 144.25,
+        "medianRatio": 4.51,
         "p25": 3.14,
-        "p75": 7.29,
+        "p75": 8.14,
         "rawMedian": 32.62,
         "sampleSize": 52
       },
@@ -18993,16 +19053,16 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "medianRatio": 0.93,
         "p25": 0.83,
         "p75": 1.18,
-        "rawMedian": 33.23,
+        "rawMedian": 33.28,
         "sampleSize": 12
       },
       "PSA 9": {
-        "gradedMedian": 59.61,
-        "medianRatio": 1.58,
+        "gradedMedian": 60.5,
+        "medianRatio": 1.61,
         "p25": 1.16,
-        "p75": 2.71,
-        "rawMedian": 33.81,
-        "sampleSize": 39
+        "p75": 2.76,
+        "rawMedian": 33.85,
+        "sampleSize": 40
       },
       "SGC 10": {
         "gradedMedian": 60,
@@ -19013,19 +19073,19 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "sampleSize": 6
       },
       "SGC 9.5": {
-        "gradedMedian": 50.85,
+        "gradedMedian": 50,
         "medianRatio": 1.53,
         "p25": 1.06,
         "p75": 2.46,
-        "rawMedian": 33.57,
-        "sampleSize": 6
+        "rawMedian": 33.49,
+        "sampleSize": 7
       }
     },
     "$250-499": {
       "PSA 10": {
         "gradedMedian": 1212,
-        "medianRatio": 4.09,
-        "p25": 2.28,
+        "medianRatio": 4.11,
+        "p25": 2.3,
         "p75": 19.88,
         "rawMedian": 327.22,
         "sampleSize": 12
@@ -19041,27 +19101,27 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
     },
     "$50-99": {
       "PSA 10": {
-        "gradedMedian": 270,
-        "medianRatio": 3.55,
+        "gradedMedian": 260,
+        "medianRatio": 3.5,
         "p25": 3.15,
-        "p75": 5.32,
+        "p75": 5.24,
         "rawMedian": 61.61,
-        "sampleSize": 34
+        "sampleSize": 33
       },
       "PSA 9": {
         "gradedMedian": 80.01,
-        "medianRatio": 1.21,
+        "medianRatio": 1.22,
         "p25": 1.14,
-        "p75": 1.41,
-        "rawMedian": 59.86,
-        "sampleSize": 27
+        "p75": 1.39,
+        "rawMedian": 67,
+        "sampleSize": 26
       },
       "SGC 10": {
         "gradedMedian": 176.5,
         "medianRatio": 2.55,
         "p25": 2.05,
         "p75": 2.66,
-        "rawMedian": 54.39,
+        "rawMedian": 53.92,
         "sampleSize": 5
       }
     },
@@ -19077,27 +19137,27 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
     },
     "Under $25": {
       "BGS 9": {
-        "gradedMedian": 14.14,
-        "medianRatio": 1.76,
+        "gradedMedian": 17.47,
+        "medianRatio": 2.04,
         "p25": 1.48,
-        "p75": 2.29,
-        "rawMedian": 6.31,
-        "sampleSize": 13
+        "p75": 4.69,
+        "rawMedian": 6.57,
+        "sampleSize": 14
       },
       "BGS 9.5": {
         "gradedMedian": 22.66,
         "medianRatio": 3.04,
-        "p25": 2.31,
+        "p25": 2.26,
         "p75": 4.5,
-        "rawMedian": 6.06,
+        "rawMedian": 6.57,
         "sampleSize": 29
       },
       "CGC 10": {
         "gradedMedian": 21.07,
-        "medianRatio": 5.65,
-        "p25": 3.17,
+        "medianRatio": 5.24,
+        "p25": 3.04,
         "p75": 8.12,
-        "rawMedian": 4.03,
+        "rawMedian": 4.11,
         "sampleSize": 38
       },
       "CGC 9": {
@@ -19109,52 +19169,52 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "sampleSize": 10
       },
       "PSA 10": {
-        "gradedMedian": 40.35,
-        "medianRatio": 8.83,
-        "p25": 5.69,
-        "p75": 13.76,
-        "rawMedian": 4.17,
-        "sampleSize": 527
+        "gradedMedian": 40.42,
+        "medianRatio": 8.77,
+        "p25": 5.66,
+        "p75": 13.67,
+        "rawMedian": 4.2,
+        "sampleSize": 531
       },
       "PSA 6": {
         "gradedMedian": 9,
         "medianRatio": 1.82,
-        "p25": 1.51,
-        "p75": 5.09,
-        "rawMedian": 3.5,
-        "sampleSize": 7
+        "p25": 1.46,
+        "p75": 2.53,
+        "rawMedian": 4.15,
+        "sampleSize": 6
       },
       "PSA 7": {
         "gradedMedian": 7.56,
         "medianRatio": 1.46,
         "p25": 0.9,
         "p75": 1.95,
-        "rawMedian": 5.27,
+        "rawMedian": 5.38,
         "sampleSize": 12
       },
       "PSA 8": {
         "gradedMedian": 11,
-        "medianRatio": 1.44,
+        "medianRatio": 1.38,
         "p25": 0.99,
-        "p75": 2.29,
+        "p75": 2.23,
         "rawMedian": 6.18,
-        "sampleSize": 86
+        "sampleSize": 85
       },
       "PSA 9": {
-        "gradedMedian": 18.17,
+        "gradedMedian": 18.6,
         "medianRatio": 3.22,
         "p25": 2.12,
         "p75": 5.24,
         "rawMedian": 4.57,
-        "sampleSize": 367
+        "sampleSize": 371
       },
       "SGC 10": {
-        "gradedMedian": 23.61,
+        "gradedMedian": 23.9,
         "medianRatio": 3.92,
-        "p25": 2.22,
-        "p75": 5.06,
-        "rawMedian": 5.66,
-        "sampleSize": 50
+        "p25": 2.42,
+        "p75": 6.06,
+        "rawMedian": 5.86,
+        "sampleSize": 52
       },
       "SGC 9": {
         "gradedMedian": 13.52,
@@ -19165,31 +19225,31 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "sampleSize": 16
       },
       "SGC 9.5": {
-        "gradedMedian": 14.86,
-        "medianRatio": 2.24,
+        "gradedMedian": 16.01,
+        "medianRatio": 2.25,
         "p25": 1.67,
         "p75": 3.33,
-        "rawMedian": 6.18,
-        "sampleSize": 37
+        "rawMedian": 6.57,
+        "sampleSize": 38
       }
     }
   },
   "basketball|panini-phoenix": {
     "$25-49": {
       "PSA 10": {
-        "gradedMedian": 222.5,
-        "medianRatio": 5.37,
-        "p25": 4.88,
-        "p75": 6.95,
+        "gradedMedian": 228.75,
+        "medianRatio": 5.62,
+        "p25": 5,
+        "p75": 7.39,
         "rawMedian": 42.2,
-        "sampleSize": 9
+        "sampleSize": 11
       },
       "PSA 9": {
         "gradedMedian": 77.1,
-        "medianRatio": 2.43,
-        "p25": 1.84,
-        "p75": 3.88,
-        "rawMedian": 32.86,
+        "medianRatio": 2.44,
+        "p25": 1.59,
+        "p75": 3.87,
+        "rawMedian": 32.76,
         "sampleSize": 9
       }
     },
@@ -19205,19 +19265,19 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
     },
     "Under $25": {
       "PSA 10": {
-        "gradedMedian": 134.91,
-        "medianRatio": 16.12,
-        "p25": 7.37,
-        "p75": 21.05,
-        "rawMedian": 14.16,
-        "sampleSize": 20
+        "gradedMedian": 130.93,
+        "medianRatio": 14.21,
+        "p25": 7.42,
+        "p75": 19.29,
+        "rawMedian": 12,
+        "sampleSize": 22
       },
       "PSA 9": {
         "gradedMedian": 31.04,
         "medianRatio": 3.85,
         "p25": 1.77,
-        "p75": 4.64,
-        "rawMedian": 14.74,
+        "p75": 4.77,
+        "rawMedian": 14.16,
         "sampleSize": 15
       }
     }
@@ -19226,11 +19286,11 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
     "$1,000-2,499": {
       "PSA 10": {
         "gradedMedian": 3402.92,
-        "medianRatio": 2.53,
+        "medianRatio": 2.4,
         "p25": 1.88,
         "p75": 3.31,
-        "rawMedian": 1504.74,
-        "sampleSize": 22
+        "rawMedian": 1493.7,
+        "sampleSize": 23
       },
       "PSA 9": {
         "gradedMedian": 1448.85,
@@ -19244,82 +19304,82 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
     "$100-249": {
       "BGS 9": {
         "gradedMedian": 218.06,
-        "medianRatio": 1.02,
+        "medianRatio": 1.04,
         "p25": 0.87,
         "p75": 1.4,
-        "rawMedian": 199.75,
+        "rawMedian": 202.39,
         "sampleSize": 11
       },
       "BGS 9.5": {
         "gradedMedian": 326.61,
         "medianRatio": 2.22,
-        "p25": 1.5,
+        "p25": 1.54,
         "p75": 2.94,
-        "rawMedian": 168.18,
+        "rawMedian": 168.35,
         "sampleSize": 17
       },
       "PSA 10": {
         "gradedMedian": 426.23,
-        "medianRatio": 2.72,
-        "p25": 1.97,
-        "p75": 4.19,
-        "rawMedian": 147.68,
-        "sampleSize": 198
+        "medianRatio": 2.7,
+        "p25": 2,
+        "p75": 4.14,
+        "rawMedian": 147.7,
+        "sampleSize": 201
       },
       "PSA 6": {
         "gradedMedian": 149.43,
         "medianRatio": 0.77,
         "p25": 0.66,
         "p75": 0.79,
-        "rawMedian": 189.16,
+        "rawMedian": 188.69,
         "sampleSize": 5
       },
       "PSA 7": {
         "gradedMedian": 148.16,
         "medianRatio": 0.88,
         "p25": 0.73,
-        "p75": 1.02,
-        "rawMedian": 199.75,
+        "p75": 1,
+        "rawMedian": 202.39,
         "sampleSize": 6
       },
       "PSA 8": {
         "gradedMedian": 112.66,
-        "medianRatio": 0.8,
+        "medianRatio": 0.79,
         "p25": 0.69,
         "p75": 1,
         "rawMedian": 143.27,
         "sampleSize": 36
       },
       "PSA 9": {
-        "gradedMedian": 170,
+        "gradedMedian": 170.81,
         "medianRatio": 1.11,
         "p25": 0.89,
-        "p75": 1.38,
-        "rawMedian": 150.06,
-        "sampleSize": 170
+        "p75": 1.39,
+        "rawMedian": 150.33,
+        "sampleSize": 172
       },
       "SGC 10": {
         "gradedMedian": 408.75,
-        "medianRatio": 2.14,
+        "medianRatio": 2.13,
         "p25": 1.87,
-        "p75": 4.01,
-        "rawMedian": 199.75,
+        "p75": 4.02,
+        "rawMedian": 202.39,
         "sampleSize": 8
       },
       "SGC 9": {
         "gradedMedian": 145.25,
         "medianRatio": 0.77,
         "p25": 0.65,
-        "p75": 0.98,
-        "rawMedian": 199.75,
+        "p75": 0.97,
+        "rawMedian": 200.59,
         "sampleSize": 10
       },
       "SGC 9.5": {
         "gradedMedian": 177.75,
         "medianRatio": 0.81,
-        "p25": 0.69,
+        "p25": 0.68,
         "p75": 1.41,
-        "rawMedian": 204.76,
+        "rawMedian": 204.49,
         "sampleSize": 8
       }
     },
@@ -19335,108 +19395,116 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
     },
     "$25-49": {
       "BGS 8.5": {
-        "gradedMedian": 33,
-        "medianRatio": 1.1,
-        "p25": 0.71,
-        "p75": 1.3,
-        "rawMedian": 27.07,
-        "sampleSize": 6
+        "gradedMedian": 22.33,
+        "medianRatio": 0.82,
+        "p25": 0.7,
+        "p75": 1.1,
+        "rawMedian": 26.74,
+        "sampleSize": 5
       },
       "BGS 9": {
-        "gradedMedian": 35.9,
+        "gradedMedian": 37.8,
         "medianRatio": 1.18,
         "p25": 0.93,
         "p75": 1.63,
-        "rawMedian": 28.84,
+        "rawMedian": 29.29,
         "sampleSize": 17
       },
       "BGS 9.5": {
-        "gradedMedian": 84,
-        "medianRatio": 2.72,
+        "gradedMedian": 98.25,
+        "medianRatio": 2.97,
         "p25": 1.73,
-        "p75": 4.39,
-        "rawMedian": 34.79,
-        "sampleSize": 23
+        "p75": 4.34,
+        "rawMedian": 38.64,
+        "sampleSize": 22
       },
       "CGC 10": {
-        "gradedMedian": 71,
+        "gradedMedian": 70.65,
         "medianRatio": 2.37,
         "p25": 1.66,
-        "p75": 2.66,
-        "rawMedian": 31.45,
-        "sampleSize": 10
+        "p75": 2.65,
+        "rawMedian": 30.02,
+        "sampleSize": 11
       },
       "CGC 9": {
         "gradedMedian": 25.5,
         "medianRatio": 0.87,
         "p25": 0.72,
         "p75": 0.97,
-        "rawMedian": 31.45,
+        "rawMedian": 31.74,
         "sampleSize": 8
       },
       "PSA 10": {
-        "gradedMedian": 138.94,
-        "medianRatio": 4.08,
-        "p25": 2.88,
+        "gradedMedian": 140.47,
+        "medianRatio": 4.1,
+        "p25": 2.91,
         "p75": 6.27,
-        "rawMedian": 33.74,
-        "sampleSize": 355
+        "rawMedian": 33.82,
+        "sampleSize": 357
       },
       "PSA 6": {
         "gradedMedian": 18.36,
         "medianRatio": 0.55,
         "p25": 0.53,
         "p75": 0.7,
-        "rawMedian": 31.45,
-        "sampleSize": 5
+        "rawMedian": 31.74,
+        "sampleSize": 6
       },
       "PSA 7": {
         "gradedMedian": 27.2,
-        "medianRatio": 0.79,
+        "medianRatio": 0.78,
         "p25": 0.64,
-        "p75": 1.24,
-        "rawMedian": 31.45,
+        "p75": 1.21,
+        "rawMedian": 31.74,
         "sampleSize": 8
       },
       "PSA 8": {
-        "gradedMedian": 28.5,
+        "gradedMedian": 28.85,
         "medianRatio": 0.82,
         "p25": 0.65,
-        "p75": 1.21,
-        "rawMedian": 32.5,
+        "p75": 1.25,
+        "rawMedian": 33.1,
         "sampleSize": 71
       },
       "PSA 9": {
-        "gradedMedian": 48.5,
-        "medianRatio": 1.38,
-        "p25": 1.07,
-        "p75": 1.93,
+        "gradedMedian": 49,
+        "medianRatio": 1.39,
+        "p25": 1.08,
+        "p75": 2,
         "rawMedian": 34.86,
-        "sampleSize": 303
+        "sampleSize": 306
       },
       "SGC 10": {
         "gradedMedian": 77.35,
         "medianRatio": 2.44,
-        "p25": 1.67,
-        "p75": 3.67,
-        "rawMedian": 30.26,
-        "sampleSize": 35
+        "p25": 1.66,
+        "p75": 3.31,
+        "rawMedian": 31.29,
+        "sampleSize": 34
+      },
+      "SGC 8.5": {
+        "gradedMedian": 22.5,
+        "medianRatio": 0.72,
+        "p25": 0.69,
+        "p75": 0.83,
+        "rawMedian": 29.47,
+        "sampleSize": 5
       },
       "SGC 9": {
         "gradedMedian": 35.25,
-        "medianRatio": 1.01,
-        "p25": 0.94,
+        "medianRatio": 1.03,
+        "p25": 0.93,
         "p75": 1.17,
-        "rawMedian": 31.45,
+        "rawMedian": 31.74,
         "sampleSize": 17
       },
       "SGC 9.5": {
-        "gradedMedian": 53.12,
-        "medianRatio": 1.61,
+        "gradedMedian": 54,
+        "medianRatio": 1.72,
         "p25": 1.34,
-        "p75": 2.02,
+        "p75": 2.1,
         "rawMedian": 34.17,
-        "sampleSize": 33
+        "sampleSize": 32
       }
     },
     "$250-499": {
@@ -19452,17 +19520,17 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "gradedMedian": 521.83,
         "medianRatio": 1.37,
         "p25": 1.24,
-        "p75": 2,
-        "rawMedian": 297.62,
-        "sampleSize": 11
+        "p75": 1.95,
+        "rawMedian": 324.28,
+        "sampleSize": 10
       },
       "PSA 10": {
-        "gradedMedian": 880.25,
-        "medianRatio": 2.68,
+        "gradedMedian": 885.06,
+        "medianRatio": 2.8,
         "p25": 1.74,
         "p75": 4.42,
-        "rawMedian": 326.53,
-        "sampleSize": 80
+        "rawMedian": 325.96,
+        "sampleSize": 81
       },
       "PSA 8": {
         "gradedMedian": 323.57,
@@ -19473,12 +19541,12 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "sampleSize": 13
       },
       "PSA 9": {
-        "gradedMedian": 371.75,
+        "gradedMedian": 376.01,
         "medianRatio": 1.11,
         "p25": 0.89,
         "p75": 1.49,
         "rawMedian": 325.45,
-        "sampleSize": 68
+        "sampleSize": 70
       }
     },
     "$5,000-9,999": {
@@ -19496,8 +19564,8 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "gradedMedian": 81.5,
         "medianRatio": 0.96,
         "p25": 0.88,
-        "p75": 1.06,
-        "rawMedian": 76.41,
+        "p75": 1.07,
+        "rawMedian": 76.09,
         "sampleSize": 14
       },
       "BGS 9.5": {
@@ -19505,7 +19573,7 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "medianRatio": 2.4,
         "p25": 1.95,
         "p75": 3.47,
-        "rawMedian": 73.48,
+        "rawMedian": 73.6,
         "sampleSize": 18
       },
       "CGC 10": {
@@ -19513,56 +19581,56 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "medianRatio": 1.59,
         "p25": 1.37,
         "p75": 1.77,
-        "rawMedian": 73.48,
+        "rawMedian": 73.6,
         "sampleSize": 7
       },
       "CGC 9": {
         "gradedMedian": 68.75,
         "medianRatio": 0.81,
         "p25": 0.76,
-        "p75": 0.82,
+        "p75": 0.83,
         "rawMedian": 85.99,
         "sampleSize": 6
       },
       "PSA 10": {
-        "gradedMedian": 257.81,
-        "medianRatio": 3.67,
-        "p25": 2.55,
-        "p75": 5.02,
-        "rawMedian": 72.5,
-        "sampleSize": 263
+        "gradedMedian": 256.12,
+        "medianRatio": 3.58,
+        "p25": 2.5,
+        "p75": 4.95,
+        "rawMedian": 71.72,
+        "sampleSize": 259
       },
       "PSA 7": {
         "gradedMedian": 59.72,
         "medianRatio": 0.7,
-        "p25": 0.61,
+        "p25": 0.66,
         "p75": 0.83,
         "rawMedian": 85.99,
-        "sampleSize": 11
+        "sampleSize": 12
       },
       "PSA 8": {
-        "gradedMedian": 68.41,
+        "gradedMedian": 67.53,
         "medianRatio": 0.83,
         "p25": 0.75,
-        "p75": 1.15,
-        "rawMedian": 76.41,
-        "sampleSize": 54
+        "p75": 1.14,
+        "rawMedian": 76.09,
+        "sampleSize": 53
       },
       "PSA 9": {
         "gradedMedian": 94,
         "medianRatio": 1.25,
-        "p25": 1.03,
+        "p25": 1.02,
         "p75": 1.7,
-        "rawMedian": 73.33,
-        "sampleSize": 224
+        "rawMedian": 72.75,
+        "sampleSize": 217
       },
       "SGC 10": {
         "gradedMedian": 192.5,
         "medianRatio": 2.36,
-        "p25": 1.77,
+        "p25": 1.85,
         "p75": 2.76,
-        "rawMedian": 78.97,
-        "sampleSize": 22
+        "rawMedian": 79.12,
+        "sampleSize": 23
       },
       "SGC 8.5": {
         "gradedMedian": 57.19,
@@ -19581,39 +19649,39 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "sampleSize": 19
       },
       "SGC 9.5": {
-        "gradedMedian": 95.04,
-        "medianRatio": 1.26,
+        "gradedMedian": 93.99,
+        "medianRatio": 1.24,
         "p25": 0.77,
-        "p75": 1.56,
+        "p75": 1.46,
         "rawMedian": 71.96,
-        "sampleSize": 26
+        "sampleSize": 25
       }
     },
     "$500-999": {
       "PSA 10": {
         "gradedMedian": 1639,
-        "medianRatio": 2.1,
+        "medianRatio": 2.11,
         "p25": 1.83,
         "p75": 3.13,
         "rawMedian": 610.49,
-        "sampleSize": 33
+        "sampleSize": 34
       },
       "PSA 9": {
         "gradedMedian": 592.05,
         "medianRatio": 1.02,
         "p25": 0.74,
         "p75": 1.25,
-        "rawMedian": 607.1,
-        "sampleSize": 39
+        "rawMedian": 609.67,
+        "sampleSize": 38
       }
     },
     "Under $25": {
       "BGS 10": {
         "gradedMedian": 89.44,
-        "medianRatio": 9.46,
-        "p25": 8.42,
+        "medianRatio": 9.62,
+        "p25": 8.57,
         "p75": 12.71,
-        "rawMedian": 7.15,
+        "rawMedian": 7.04,
         "sampleSize": 9
       },
       "BGS 8.5": {
@@ -19625,156 +19693,156 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "sampleSize": 11
       },
       "BGS 9": {
-        "gradedMedian": 14.68,
-        "medianRatio": 1.62,
-        "p25": 1.2,
-        "p75": 2.51,
-        "rawMedian": 8.06,
-        "sampleSize": 55
+        "gradedMedian": 15.59,
+        "medianRatio": 1.66,
+        "p25": 1.25,
+        "p75": 2.78,
+        "rawMedian": 8.17,
+        "sampleSize": 59
       },
       "BGS 9.5": {
         "gradedMedian": 19.5,
-        "medianRatio": 2.8,
+        "medianRatio": 2.88,
         "p25": 2.11,
-        "p75": 4.08,
-        "rawMedian": 6.2,
-        "sampleSize": 101
+        "p75": 4.38,
+        "rawMedian": 6.39,
+        "sampleSize": 104
       },
       "CGC 10": {
-        "gradedMedian": 25,
-        "medianRatio": 4.01,
-        "p25": 2.61,
-        "p75": 6.32,
-        "rawMedian": 5.17,
-        "sampleSize": 94
+        "gradedMedian": 24.77,
+        "medianRatio": 3.93,
+        "p25": 2.54,
+        "p75": 6.29,
+        "rawMedian": 5.35,
+        "sampleSize": 97
       },
       "CGC 8": {
         "gradedMedian": 9,
-        "medianRatio": 1.46,
+        "medianRatio": 1.45,
         "p25": 0.93,
         "p75": 1.92,
-        "rawMedian": 8.06,
+        "rawMedian": 7.98,
         "sampleSize": 8
       },
       "CGC 8.5": {
         "gradedMedian": 5.31,
-        "medianRatio": 1.22,
+        "medianRatio": 1.24,
         "p25": 0.96,
         "p75": 1.84,
-        "rawMedian": 4.66,
-        "sampleSize": 16
+        "rawMedian": 4.56,
+        "sampleSize": 17
       },
       "CGC 9": {
-        "gradedMedian": 11.63,
-        "medianRatio": 1.75,
-        "p25": 1.06,
-        "p75": 2.42,
-        "rawMedian": 6.49,
-        "sampleSize": 55
+        "gradedMedian": 12.87,
+        "medianRatio": 1.83,
+        "p25": 1.1,
+        "p75": 2.65,
+        "rawMedian": 6.66,
+        "sampleSize": 56
       },
       "CGC 9.5": {
         "gradedMedian": 9,
-        "medianRatio": 1.51,
-        "p25": 1.15,
+        "medianRatio": 1.52,
+        "p25": 1.17,
         "p75": 2.12,
         "rawMedian": 5.28,
         "sampleSize": 25
       },
       "HGA 9": {
         "gradedMedian": 9.5,
-        "medianRatio": 1.8,
+        "medianRatio": 1.84,
         "p25": 1.02,
-        "p75": 3.58,
-        "rawMedian": 8.2,
+        "p75": 3.62,
+        "rawMedian": 8.17,
         "sampleSize": 8
       },
       "PSA 10": {
-        "gradedMedian": 42.14,
-        "medianRatio": 7.86,
+        "gradedMedian": 42.17,
+        "medianRatio": 7.88,
         "p25": 5.19,
-        "p75": 12.33,
-        "rawMedian": 5.23,
-        "sampleSize": 2320
+        "p75": 12.37,
+        "rawMedian": 5.22,
+        "sampleSize": 2330
       },
       "PSA 5": {
         "gradedMedian": 10.67,
         "medianRatio": 0.86,
         "p25": 0.62,
         "p75": 2.59,
-        "rawMedian": 15,
+        "rawMedian": 14.92,
         "sampleSize": 7
       },
       "PSA 6": {
-        "gradedMedian": 8.9,
+        "gradedMedian": 8.5,
         "medianRatio": 1.03,
-        "p25": 0.85,
+        "p25": 0.86,
         "p75": 1.76,
-        "rawMedian": 8.79,
-        "sampleSize": 32
+        "rawMedian": 8.28,
+        "sampleSize": 33
       },
       "PSA 7": {
-        "gradedMedian": 8.62,
-        "medianRatio": 1.13,
-        "p25": 0.71,
-        "p75": 2.09,
-        "rawMedian": 8.56,
-        "sampleSize": 64
+        "gradedMedian": 8.83,
+        "medianRatio": 1.14,
+        "p25": 0.75,
+        "p75": 2.06,
+        "rawMedian": 8.1,
+        "sampleSize": 67
       },
       "PSA 8": {
         "gradedMedian": 11.5,
-        "medianRatio": 1.64,
-        "p25": 1.06,
-        "p75": 2.5,
-        "rawMedian": 7.61,
-        "sampleSize": 406
+        "medianRatio": 1.66,
+        "p25": 1.07,
+        "p75": 2.53,
+        "rawMedian": 7.62,
+        "sampleSize": 408
       },
       "PSA 9": {
-        "gradedMedian": 17.15,
-        "medianRatio": 2.79,
+        "gradedMedian": 17.3,
+        "medianRatio": 2.8,
         "p25": 1.89,
         "p75": 4.37,
-        "rawMedian": 5.61,
-        "sampleSize": 1709
+        "rawMedian": 5.63,
+        "sampleSize": 1720
       },
       "SGC 10": {
-        "gradedMedian": 24.06,
-        "medianRatio": 3.92,
+        "gradedMedian": 24.44,
+        "medianRatio": 3.94,
         "p25": 2.63,
-        "p75": 5.74,
-        "rawMedian": 6.64,
-        "sampleSize": 177
+        "p75": 5.75,
+        "rawMedian": 6.68,
+        "sampleSize": 178
       },
       "SGC 8": {
         "gradedMedian": 9.5,
-        "medianRatio": 0.94,
+        "medianRatio": 0.96,
         "p25": 0.79,
-        "p75": 1.1,
-        "rawMedian": 12.54,
+        "p75": 1.11,
+        "rawMedian": 12.4,
         "sampleSize": 5
       },
       "SGC 8.5": {
         "gradedMedian": 12.7,
-        "medianRatio": 1.15,
-        "p25": 0.6,
-        "p75": 1.92,
-        "rawMedian": 12.54,
+        "medianRatio": 1.14,
+        "p25": 0.62,
+        "p75": 1.94,
+        "rawMedian": 12.4,
         "sampleSize": 11
       },
       "SGC 9": {
-        "gradedMedian": 15.39,
-        "medianRatio": 1.97,
-        "p25": 1.23,
-        "p75": 2.97,
-        "rawMedian": 8.35,
-        "sampleSize": 72
+        "gradedMedian": 15,
+        "medianRatio": 1.86,
+        "p25": 1.2,
+        "p75": 2.95,
+        "rawMedian": 8.17,
+        "sampleSize": 71
       },
       "SGC 9.5": {
-        "gradedMedian": 18.3,
-        "medianRatio": 2.2,
+        "gradedMedian": 19.66,
+        "medianRatio": 2.31,
         "p25": 1.57,
-        "p75": 3.3,
-        "rawMedian": 8.46,
-        "sampleSize": 120
+        "p75": 3.25,
+        "rawMedian": 8.65,
+        "sampleSize": 122
       }
     }
   },
@@ -19784,7 +19852,7 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "gradedMedian": 1058.33,
         "medianRatio": 7.93,
         "p25": 5.06,
-        "p75": 12.95,
+        "p75": 13.4,
         "rawMedian": 125.21,
         "sampleSize": 11
       },
@@ -19792,7 +19860,7 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "gradedMedian": 372.9,
         "medianRatio": 1.93,
         "p25": 1.14,
-        "p75": 5.37,
+        "p75": 5.42,
         "rawMedian": 125.21,
         "sampleSize": 11
       }
@@ -19803,15 +19871,15 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "medianRatio": 3.52,
         "p25": 3.1,
         "p75": 6.44,
-        "rawMedian": 34.63,
+        "rawMedian": 34.17,
         "sampleSize": 11
       },
       "PSA 9": {
         "gradedMedian": 55.6,
-        "medianRatio": 1.57,
+        "medianRatio": 1.61,
         "p25": 1.32,
         "p75": 2.31,
-        "rawMedian": 36.93,
+        "rawMedian": 35.82,
         "sampleSize": 17
       }
     },
@@ -19828,33 +19896,33 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "gradedMedian": 788.5,
         "medianRatio": 2.19,
         "p25": 1.25,
-        "p75": 5.47,
+        "p75": 5.43,
         "rawMedian": 360.44,
         "sampleSize": 7
       }
     },
     "$50-99": {
       "PSA 10": {
-        "gradedMedian": 1725.95,
+        "gradedMedian": 1398.38,
         "medianRatio": 24.33,
-        "p25": 6.72,
-        "p75": 36.2,
+        "p25": 6.89,
+        "p75": 36.45,
         "rawMedian": 66.92,
         "sampleSize": 13
       },
       "PSA 8": {
         "gradedMedian": 439.67,
         "medianRatio": 6.4,
-        "p25": 2.55,
-        "p75": 9.91,
-        "rawMedian": 80.68,
+        "p25": 2.61,
+        "p75": 10.17,
+        "rawMedian": 79.81,
         "sampleSize": 7
       },
       "PSA 9": {
         "gradedMedian": 352.21,
-        "medianRatio": 4.48,
+        "medianRatio": 4.57,
         "p25": 1.37,
-        "p75": 10.61,
+        "p75": 10.88,
         "rawMedian": 73.33,
         "sampleSize": 18
       }
@@ -19865,8 +19933,8 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "medianRatio": 3.68,
         "p25": 3.3,
         "p75": 6.77,
-        "rawMedian": 841.98,
-        "sampleSize": 6
+        "rawMedian": 801.07,
+        "sampleSize": 7
       },
       "PSA 9": {
         "gradedMedian": 1313,
@@ -19880,50 +19948,50 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
     "Under $25": {
       "CGC 10": {
         "gradedMedian": 16.25,
-        "medianRatio": 2.72,
+        "medianRatio": 2.64,
         "p25": 1.4,
-        "p75": 3.06,
-        "rawMedian": 9.67,
-        "sampleSize": 10
+        "p75": 3.27,
+        "rawMedian": 5.75,
+        "sampleSize": 13
       },
       "PSA 10": {
         "gradedMedian": 45.18,
-        "medianRatio": 7.21,
+        "medianRatio": 7.54,
         "p25": 5.38,
-        "p75": 10.51,
+        "p75": 11.31,
         "rawMedian": 5.57,
-        "sampleSize": 121
+        "sampleSize": 122
       },
       "PSA 8": {
         "gradedMedian": 24,
         "medianRatio": 1.75,
         "p25": 1.19,
         "p75": 4.22,
-        "rawMedian": 17.81,
+        "rawMedian": 17.73,
         "sampleSize": 16
       },
       "PSA 9": {
         "gradedMedian": 22.57,
-        "medianRatio": 3.01,
+        "medianRatio": 3.08,
         "p25": 1.84,
-        "p75": 4.39,
-        "rawMedian": 7.7,
-        "sampleSize": 81
+        "p75": 4.5,
+        "rawMedian": 8.2,
+        "sampleSize": 82
       },
       "SGC 10": {
         "gradedMedian": 26,
-        "medianRatio": 3.57,
+        "medianRatio": 3.64,
         "p25": 2.71,
         "p75": 8.21,
-        "rawMedian": 6.33,
+        "rawMedian": 5.6,
         "sampleSize": 19
       },
       "SGC 9.5": {
         "gradedMedian": 22.29,
-        "medianRatio": 1.89,
+        "medianRatio": 1.87,
         "p25": 1.57,
         "p75": 2.32,
-        "rawMedian": 17.81,
+        "rawMedian": 17.73,
         "sampleSize": 9
       }
     }
@@ -19931,8 +19999,8 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
   "basketball|panini-select": {
     "$1,000-2,499": {
       "PSA 10": {
-        "gradedMedian": 2910.2,
-        "medianRatio": 2.08,
+        "gradedMedian": 2962.75,
+        "medianRatio": 2.12,
         "p25": 1.41,
         "p75": 2.42,
         "rawMedian": 1398.32,
@@ -19954,12 +20022,12 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "p25": 0.92,
         "p75": 1.63,
         "rawMedian": 151.73,
-        "sampleSize": 42
+        "sampleSize": 41
       },
       "SGC 10": {
         "gradedMedian": 177,
         "medianRatio": 1.17,
-        "p25": 1.08,
+        "p25": 1.15,
         "p75": 1.65,
         "rawMedian": 151.73,
         "sampleSize": 5
@@ -19970,81 +20038,81 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "gradedMedian": 33.68,
         "medianRatio": 1,
         "p25": 0.97,
-        "p75": 1.38,
-        "rawMedian": 28.91,
+        "p75": 1.39,
+        "rawMedian": 28.84,
         "sampleSize": 5
       },
       "PSA 10": {
-        "gradedMedian": 102.5,
+        "gradedMedian": 103.63,
         "medianRatio": 2.84,
         "p25": 2.21,
-        "p75": 4.31,
-        "rawMedian": 33.44,
-        "sampleSize": 113
+        "p75": 4.27,
+        "rawMedian": 33.5,
+        "sampleSize": 111
       },
       "PSA 8": {
         "gradedMedian": 34.5,
-        "medianRatio": 1.05,
-        "p25": 0.8,
-        "p75": 1.43,
-        "rawMedian": 34.08,
+        "medianRatio": 1.07,
+        "p25": 0.79,
+        "p75": 1.44,
+        "rawMedian": 34.16,
         "sampleSize": 16
       },
       "PSA 9": {
         "gradedMedian": 49,
         "medianRatio": 1.37,
-        "p25": 1.07,
-        "p75": 2.25,
-        "rawMedian": 34.08,
+        "p25": 1.05,
+        "p75": 2.22,
+        "rawMedian": 34.05,
         "sampleSize": 64
       },
       "SGC 10": {
         "gradedMedian": 65.26,
         "medianRatio": 1.88,
         "p25": 1.62,
-        "p75": 2.57,
-        "rawMedian": 34.08,
+        "p75": 2.52,
+        "rawMedian": 34.16,
         "sampleSize": 8
       },
       "SGC 9": {
         "gradedMedian": 44.63,
-        "medianRatio": 1.07,
-        "p25": 1.03,
-        "p75": 1.55,
+        "medianRatio": 1.08,
+        "p25": 1,
+        "p75": 1.56,
         "rawMedian": 31.56,
         "sampleSize": 5
       },
       "SGC 9.5": {
         "gradedMedian": 37,
-        "medianRatio": 1.39,
-        "p25": 0.74,
+        "medianRatio": 1.38,
+        "p25": 0.72,
         "p75": 1.82,
-        "rawMedian": 28.91,
+        "rawMedian": 28.84,
         "sampleSize": 5
       }
     },
     "$250-499": {
       "PSA 10": {
-        "gradedMedian": 725.25,
-        "medianRatio": 2.38,
-        "p25": 2.12,
+        "gradedMedian": 723.33,
+        "medianRatio": 2.32,
+        "p25": 1.88,
         "p75": 3.07,
-        "rawMedian": 294.2,
-        "sampleSize": 18
+        "rawMedian": 291.25,
+        "sampleSize": 19
       },
       "PSA 9": {
         "gradedMedian": 329.17,
         "medianRatio": 1.02,
-        "p25": 0.93,
+        "p25": 0.94,
         "p75": 1.41,
         "rawMedian": 295.6,
-        "sampleSize": 12
+        "sampleSize": 11
       }
     },
     "$50-99": {
       "PSA 10": {
-        "gradedMedian": 191.81,
-        "medianRatio": 2.81,
+        "gradedMedian": 193.16,
+        "medianRatio": 2.98,
         "p25": 2.02,
         "p75": 4,
         "rawMedian": 66.62,
@@ -20059,12 +20127,12 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "sampleSize": 10
       },
       "PSA 9": {
-        "gradedMedian": 78.2,
-        "medianRatio": 1.09,
+        "gradedMedian": 80,
+        "medianRatio": 1.11,
         "p25": 0.83,
         "p75": 1.54,
         "rawMedian": 72.64,
-        "sampleSize": 57
+        "sampleSize": 58
       },
       "SGC 10": {
         "gradedMedian": 150.5,
@@ -20095,44 +20163,44 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
     },
     "Under $25": {
       "BGS 9": {
-        "gradedMedian": 32.49,
-        "medianRatio": 3.33,
-        "p25": 2.32,
-        "p75": 7.12,
+        "gradedMedian": 13.5,
+        "medianRatio": 3.26,
+        "p25": 1.39,
+        "p75": 5.09,
         "rawMedian": 4.56,
-        "sampleSize": 12
+        "sampleSize": 11
       },
       "BGS 9.5": {
         "gradedMedian": 20.48,
         "medianRatio": 4.16,
-        "p25": 2.68,
+        "p25": 2.16,
         "p75": 6.12,
         "rawMedian": 7.23,
-        "sampleSize": 12
+        "sampleSize": 14
       },
       "CGC 10": {
         "gradedMedian": 16.5,
-        "medianRatio": 4.72,
-        "p25": 2.4,
+        "medianRatio": 3.89,
+        "p25": 1.85,
         "p75": 6.66,
         "rawMedian": 5.68,
-        "sampleSize": 18
+        "sampleSize": 19
       },
       "CGC 9": {
         "gradedMedian": 9.5,
         "medianRatio": 2.55,
         "p25": 2.26,
-        "p75": 3.25,
+        "p75": 3.21,
         "rawMedian": 3.73,
         "sampleSize": 5
       },
       "PSA 10": {
-        "gradedMedian": 41.69,
-        "medianRatio": 7.64,
-        "p25": 4.55,
-        "p75": 11.92,
-        "rawMedian": 5.32,
-        "sampleSize": 733
+        "gradedMedian": 42,
+        "medianRatio": 7.72,
+        "p25": 4.61,
+        "p75": 11.99,
+        "rawMedian": 5.39,
+        "sampleSize": 740
       },
       "PSA 6": {
         "gradedMedian": 12,
@@ -20146,7 +20214,7 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "gradedMedian": 8.49,
         "medianRatio": 1.69,
         "p25": 0.65,
-        "p75": 1.73,
+        "p75": 1.79,
         "rawMedian": 5.4,
         "sampleSize": 6
       },
@@ -20154,41 +20222,41 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "gradedMedian": 13.32,
         "medianRatio": 1.93,
         "p25": 1.19,
-        "p75": 3.08,
-        "rawMedian": 7.22,
-        "sampleSize": 59
+        "p75": 3.04,
+        "rawMedian": 7.23,
+        "sampleSize": 58
       },
       "PSA 9": {
-        "gradedMedian": 18.6,
+        "gradedMedian": 18.67,
         "medianRatio": 3.26,
         "p25": 1.96,
-        "p75": 5.21,
-        "rawMedian": 5.54,
-        "sampleSize": 367
+        "p75": 5.35,
+        "rawMedian": 5.55,
+        "sampleSize": 368
       },
       "SGC 10": {
-        "gradedMedian": 24.99,
-        "medianRatio": 3.87,
-        "p25": 2.41,
+        "gradedMedian": 23.82,
+        "medianRatio": 3.56,
+        "p25": 2.13,
         "p75": 5.28,
-        "rawMedian": 7.74,
-        "sampleSize": 34
+        "rawMedian": 7.57,
+        "sampleSize": 35
       },
       "SGC 9": {
         "gradedMedian": 20.25,
         "medianRatio": 1.68,
         "p25": 1.15,
         "p75": 2.95,
-        "rawMedian": 8.16,
+        "rawMedian": 8.12,
         "sampleSize": 11
       },
       "SGC 9.5": {
-        "gradedMedian": 16.1,
+        "gradedMedian": 15.81,
         "medianRatio": 2.19,
         "p25": 1.29,
-        "p75": 2.8,
+        "p75": 2.99,
         "rawMedian": 7.23,
-        "sampleSize": 18
+        "sampleSize": 20
       }
     }
   },
@@ -20215,53 +20283,53 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
   "basketball|topps-chrome": {
     "$1,000-2,499": {
       "PSA 10": {
-        "gradedMedian": 3635.56,
-        "medianRatio": 2.06,
-        "p25": 1.52,
-        "p75": 3.06,
+        "gradedMedian": 4795.12,
+        "medianRatio": 2.46,
+        "p25": 1.65,
+        "p75": 3.37,
         "rawMedian": 1510.8,
-        "sampleSize": 11
+        "sampleSize": 12
       },
       "PSA 9": {
         "gradedMedian": 1880.62,
         "medianRatio": 1.14,
         "p25": 0.91,
-        "p75": 1.23,
-        "rawMedian": 1526,
+        "p75": 1.19,
+        "rawMedian": 1580,
         "sampleSize": 10
       }
     },
     "$100-249": {
       "PSA 10": {
-        "gradedMedian": 616.8,
+        "gradedMedian": 628.51,
         "medianRatio": 3.65,
-        "p25": 2.45,
-        "p75": 5.67,
-        "rawMedian": 160,
+        "p25": 2.5,
+        "p75": 5.6,
+        "rawMedian": 158.68,
         "sampleSize": 69
       },
       "PSA 8": {
-        "gradedMedian": 136.07,
+        "gradedMedian": 134.62,
         "medianRatio": 0.78,
-        "p25": 0.77,
-        "p75": 0.89,
-        "rawMedian": 176.77,
+        "p25": 0.7,
+        "p75": 0.97,
+        "rawMedian": 168.35,
         "sampleSize": 11
       },
       "PSA 9": {
-        "gradedMedian": 187.19,
-        "medianRatio": 1.25,
+        "gradedMedian": 188.1,
+        "medianRatio": 1.24,
         "p25": 1.03,
         "p75": 1.51,
         "rawMedian": 158.68,
-        "sampleSize": 57
+        "sampleSize": 59
       }
     },
     "$2,500-4,999": {
       "PSA 10": {
         "gradedMedian": 3750,
         "medianRatio": 1.49,
-        "p25": 1.34,
+        "p25": 1.35,
         "p75": 2.14,
         "rawMedian": 2729,
         "sampleSize": 5
@@ -20269,204 +20337,204 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
     },
     "$25-49": {
       "PSA 10": {
-        "gradedMedian": 197.68,
-        "medianRatio": 6.07,
-        "p25": 3.67,
-        "p75": 7.32,
+        "gradedMedian": 200.03,
+        "medianRatio": 6.15,
+        "p25": 3.7,
+        "p75": 7.45,
         "rawMedian": 34.34,
-        "sampleSize": 69
+        "sampleSize": 72
       },
       "PSA 8": {
-        "gradedMedian": 34.67,
-        "medianRatio": 1,
-        "p25": 0.71,
-        "p75": 1.21,
-        "rawMedian": 38.67,
+        "gradedMedian": 34.57,
+        "medianRatio": 0.98,
+        "p25": 0.73,
+        "p75": 1.24,
+        "rawMedian": 38.18,
         "sampleSize": 15
       },
       "PSA 9": {
         "gradedMedian": 66,
-        "medianRatio": 1.74,
+        "medianRatio": 1.78,
         "p25": 1.41,
-        "p75": 2.11,
-        "rawMedian": 36.22,
+        "p75": 2.19,
+        "rawMedian": 35.53,
         "sampleSize": 57
       }
     },
     "$250-499": {
       "PSA 10": {
-        "gradedMedian": 1024,
-        "medianRatio": 2.7,
+        "gradedMedian": 1019.14,
+        "medianRatio": 2.73,
         "p25": 2.26,
-        "p75": 5.17,
+        "p75": 5.06,
         "rawMedian": 341,
         "sampleSize": 26
       },
       "PSA 8": {
         "gradedMedian": 288.62,
-        "medianRatio": 0.98,
+        "medianRatio": 1.02,
         "p25": 0.61,
         "p75": 1.29,
         "rawMedian": 283.55,
         "sampleSize": 7
       },
       "PSA 9": {
-        "gradedMedian": 404.5,
-        "medianRatio": 1.24,
-        "p25": 0.93,
-        "p75": 1.37,
+        "gradedMedian": 420.85,
+        "medianRatio": 1.29,
+        "p25": 0.95,
+        "p75": 1.41,
         "rawMedian": 346.04,
         "sampleSize": 27
       }
     },
     "$50-99": {
       "PSA 10": {
-        "gradedMedian": 282.92,
-        "medianRatio": 4.5,
-        "p25": 2.71,
+        "gradedMedian": 280,
+        "medianRatio": 4.37,
+        "p25": 2.79,
         "p75": 6.52,
-        "rawMedian": 67.48,
-        "sampleSize": 60
+        "rawMedian": 69.44,
+        "sampleSize": 59
       },
       "PSA 8": {
-        "gradedMedian": 46.38,
+        "gradedMedian": 45.62,
         "medianRatio": 0.64,
-        "p25": 0.56,
-        "p75": 1.07,
-        "rawMedian": 67.39,
-        "sampleSize": 8
+        "p25": 0.57,
+        "p75": 1.08,
+        "rawMedian": 62.98,
+        "sampleSize": 7
       },
       "PSA 9": {
         "gradedMedian": 107.44,
-        "medianRatio": 1.61,
-        "p25": 1.21,
-        "p75": 1.82,
-        "rawMedian": 72.33,
+        "medianRatio": 1.62,
+        "p25": 1.24,
+        "p75": 1.88,
+        "rawMedian": 70.69,
         "sampleSize": 48
       }
     },
     "$500-999": {
       "PSA 10": {
-        "gradedMedian": 2091.43,
-        "medianRatio": 2.61,
+        "gradedMedian": 2109,
+        "medianRatio": 2.88,
         "p25": 1.12,
-        "p75": 3.98,
-        "rawMedian": 731.33,
-        "sampleSize": 8
+        "p75": 3.99,
+        "rawMedian": 625.01,
+        "sampleSize": 10
       },
       "PSA 9": {
         "gradedMedian": 763.01,
-        "medianRatio": 1.29,
-        "p25": 1.14,
+        "medianRatio": 1.28,
+        "p25": 1.13,
         "p75": 1.42,
-        "rawMedian": 622.74,
+        "rawMedian": 625.01,
         "sampleSize": 18
       }
     },
     "Under $25": {
       "BGS 9": {
-        "gradedMedian": 23.67,
-        "medianRatio": 2.27,
-        "p25": 1.74,
+        "gradedMedian": 27.25,
+        "medianRatio": 2.3,
+        "p25": 1.77,
         "p75": 5.29,
-        "rawMedian": 7.17,
-        "sampleSize": 5
+        "rawMedian": 12.37,
+        "sampleSize": 6
       },
       "BGS 9.5": {
         "gradedMedian": 55,
-        "medianRatio": 7.61,
+        "medianRatio": 7.45,
         "p25": 3.43,
-        "p75": 7.71,
+        "p75": 7.87,
         "rawMedian": 10.82,
         "sampleSize": 10
       },
       "CGC 10": {
-        "gradedMedian": 31.2,
-        "medianRatio": 5.63,
-        "p25": 3.88,
-        "p75": 7.18,
-        "rawMedian": 7.18,
+        "gradedMedian": 32.17,
+        "medianRatio": 5.48,
+        "p25": 3.78,
+        "p75": 7.62,
+        "rawMedian": 8.25,
         "sampleSize": 44
       },
       "CGC 9": {
-        "gradedMedian": 15.5,
-        "medianRatio": 1.91,
-        "p25": 0.89,
-        "p75": 2.6,
-        "rawMedian": 10.14,
+        "gradedMedian": 17,
+        "medianRatio": 1.82,
+        "p25": 0.91,
+        "p75": 2.59,
+        "rawMedian": 10.3,
         "sampleSize": 15
       },
       "CGC 9.5": {
         "gradedMedian": 21.6,
         "medianRatio": 1.88,
-        "p25": 1.68,
-        "p75": 3.01,
-        "rawMedian": 7.18,
+        "p25": 1.7,
+        "p75": 3.05,
+        "rawMedian": 7.09,
         "sampleSize": 5
       },
       "PSA 10": {
-        "gradedMedian": 85,
-        "medianRatio": 11.27,
+        "gradedMedian": 88,
+        "medianRatio": 11.76,
         "p25": 7,
-        "p75": 19.8,
+        "p75": 19.85,
         "rawMedian": 7.7,
-        "sampleSize": 304
+        "sampleSize": 306
       },
       "PSA 6": {
-        "gradedMedian": 13.18,
-        "medianRatio": 2.12,
-        "p25": 0.62,
-        "p75": 3.27,
-        "rawMedian": 7.43,
-        "sampleSize": 8
+        "gradedMedian": 12.75,
+        "medianRatio": 1.59,
+        "p25": 0.61,
+        "p75": 2.18,
+        "rawMedian": 7.44,
+        "sampleSize": 10
       },
       "PSA 7": {
         "gradedMedian": 12,
-        "medianRatio": 1.25,
-        "p25": 0.93,
-        "p75": 1.37,
-        "rawMedian": 12.14,
+        "medianRatio": 1.27,
+        "p25": 0.74,
+        "p75": 1.38,
+        "rawMedian": 12.87,
         "sampleSize": 14
       },
       "PSA 8": {
         "gradedMedian": 19.07,
-        "medianRatio": 1.91,
-        "p25": 1.14,
-        "p75": 3.34,
-        "rawMedian": 8.92,
-        "sampleSize": 61
+        "medianRatio": 2.03,
+        "p25": 1.18,
+        "p75": 3.43,
+        "rawMedian": 8.26,
+        "sampleSize": 63
       },
       "PSA 9": {
         "gradedMedian": 28.09,
-        "medianRatio": 3.53,
-        "p25": 2.18,
-        "p75": 5.45,
-        "rawMedian": 8.1,
-        "sampleSize": 215
+        "medianRatio": 3.65,
+        "p25": 2.35,
+        "p75": 5.63,
+        "rawMedian": 7.97,
+        "sampleSize": 220
       },
       "SGC 10": {
         "gradedMedian": 50.9,
-        "medianRatio": 6.32,
-        "p25": 4.27,
-        "p75": 9.01,
-        "rawMedian": 8.51,
-        "sampleSize": 20
+        "medianRatio": 6.17,
+        "p25": 4.08,
+        "p75": 7.82,
+        "rawMedian": 8.68,
+        "sampleSize": 21
       },
       "SGC 9": {
-        "gradedMedian": 25.33,
-        "medianRatio": 1.62,
-        "p25": 1.29,
+        "gradedMedian": 21.33,
+        "medianRatio": 1.64,
+        "p25": 1.26,
         "p75": 2.42,
-        "rawMedian": 17.32,
-        "sampleSize": 6
-      },
-      "SGC 9.5": {
-        "gradedMedian": 40.27,
-        "medianRatio": 2.36,
-        "p25": 2.21,
-        "p75": 2.68,
         "rawMedian": 10.48,
         "sampleSize": 7
+      },
+      "SGC 9.5": {
+        "gradedMedian": 41.33,
+        "medianRatio": 2.4,
+        "p25": 2.36,
+        "p75": 3.85,
+        "rawMedian": 15.54,
+        "sampleSize": 8
       }
     }
   },
@@ -20475,16 +20543,16 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       "PSA 10": {
         "gradedMedian": 755,
         "medianRatio": 3.83,
-        "p25": 2.8,
+        "p25": 2.9,
         "p75": 4.36,
         "rawMedian": 171,
         "sampleSize": 6
       },
       "PSA 9": {
-        "gradedMedian": 165.92,
+        "gradedMedian": 174.76,
         "medianRatio": 1.07,
         "p25": 0.97,
-        "p75": 1.11,
+        "p75": 1.45,
         "rawMedian": 155.66,
         "sampleSize": 5
       }
@@ -20493,54 +20561,54 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       "PSA 10": {
         "gradedMedian": 200,
         "medianRatio": 6.04,
-        "p25": 3.73,
-        "p75": 6.41,
-        "rawMedian": 37.33,
-        "sampleSize": 10
+        "p25": 5.03,
+        "p75": 7.19,
+        "rawMedian": 36,
+        "sampleSize": 11
       },
       "PSA 9": {
         "gradedMedian": 55.35,
-        "medianRatio": 1.77,
-        "p25": 1.18,
-        "p75": 2,
+        "medianRatio": 1.76,
+        "p25": 1.16,
+        "p75": 2.03,
         "rawMedian": 36,
-        "sampleSize": 6
+        "sampleSize": 7
       }
     },
     "$50-99": {
       "PSA 10": {
-        "gradedMedian": 545.65,
-        "medianRatio": 7.25,
-        "p25": 4.57,
-        "p75": 9.02,
-        "rawMedian": 70.45,
+        "gradedMedian": 350,
+        "medianRatio": 4.57,
+        "p25": 3.74,
+        "p75": 7.25,
+        "rawMedian": 74.11,
         "sampleSize": 5
       }
     },
     "Under $25": {
       "PSA 10": {
-        "gradedMedian": 110,
-        "medianRatio": 14.32,
-        "p25": 10.75,
-        "p75": 18.8,
-        "rawMedian": 6.39,
-        "sampleSize": 33
+        "gradedMedian": 101.67,
+        "medianRatio": 15.74,
+        "p25": 10.32,
+        "p75": 19.63,
+        "rawMedian": 6.4,
+        "sampleSize": 34
       },
       "PSA 8": {
         "gradedMedian": 28.79,
         "medianRatio": 1.99,
-        "p25": 1.58,
+        "p25": 1.6,
         "p75": 6.67,
-        "rawMedian": 12.23,
-        "sampleSize": 7
+        "rawMedian": 14.46,
+        "sampleSize": 8
       },
       "PSA 9": {
         "gradedMedian": 49,
-        "medianRatio": 3.87,
+        "medianRatio": 3.94,
         "p25": 3.22,
-        "p75": 7.92,
-        "rawMedian": 11.99,
-        "sampleSize": 11
+        "p75": 7.93,
+        "rawMedian": 10.32,
+        "sampleSize": 13
       }
     }
   },
@@ -20565,16 +20633,16 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
     },
     "$50-99": {
       "PSA 10": {
-        "gradedMedian": 141.77,
-        "medianRatio": 2.75,
-        "p25": 1.7,
-        "p75": 3.62,
-        "rawMedian": 55.5,
-        "sampleSize": 7
+        "gradedMedian": 239.18,
+        "medianRatio": 2.91,
+        "p25": 2.19,
+        "p75": 6.14,
+        "rawMedian": 59.04,
+        "sampleSize": 8
       },
       "PSA 9": {
         "gradedMedian": 87.6,
-        "medianRatio": 1.29,
+        "medianRatio": 1.46,
         "p25": 1.11,
         "p75": 2.15,
         "rawMedian": 70,
@@ -20583,12 +20651,12 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
     },
     "Under $25": {
       "CGC 10": {
-        "gradedMedian": 20.15,
+        "gradedMedian": 19.28,
         "medianRatio": 5.56,
-        "p25": 2.61,
+        "p25": 3.74,
         "p75": 7.04,
-        "rawMedian": 3.88,
-        "sampleSize": 14
+        "rawMedian": 2.82,
+        "sampleSize": 13
       },
       "CGC 9": {
         "gradedMedian": 9.5,
@@ -20610,22 +20678,22 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "gradedMedian": 10.28,
         "medianRatio": 2.8,
         "p25": 2.37,
-        "p75": 3.46,
-        "rawMedian": 3.32,
+        "p75": 3.48,
+        "rawMedian": 3.3,
         "sampleSize": 19
       },
       "PSA 9": {
         "gradedMedian": 16,
         "medianRatio": 4.28,
-        "p25": 3.12,
+        "p25": 2.9,
         "p75": 6.34,
         "rawMedian": 3.26,
-        "sampleSize": 88
+        "sampleSize": 90
       },
       "SGC 10": {
         "gradedMedian": 21.75,
         "medianRatio": 5.95,
-        "p25": 4.6,
+        "p25": 4.65,
         "p75": 8.78,
         "rawMedian": 2.9,
         "sampleSize": 39
@@ -20633,7 +20701,7 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       "SGC 9": {
         "gradedMedian": 13.9,
         "medianRatio": 2.87,
-        "p25": 1.74,
+        "p25": 1.75,
         "p75": 4.56,
         "rawMedian": 3.42,
         "sampleSize": 7
@@ -20662,40 +20730,40 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "gradedMedian": 9.02,
         "medianRatio": 2.71,
         "p25": 2.31,
-        "p75": 3.76,
-        "rawMedian": 2.83,
+        "p75": 4.04,
+        "rawMedian": 2.67,
         "sampleSize": 9
       },
       "PSA 9": {
-        "gradedMedian": 14.49,
-        "medianRatio": 3.92,
+        "gradedMedian": 14.59,
+        "medianRatio": 4.15,
         "p25": 2.49,
-        "p75": 5.38,
-        "rawMedian": 4.02,
+        "p75": 5.36,
+        "rawMedian": 4.1,
         "sampleSize": 21
       },
       "SGC 10": {
         "gradedMedian": 24.47,
-        "medianRatio": 6.19,
-        "p25": 2.55,
+        "medianRatio": 6.07,
+        "p25": 2.53,
         "p75": 7.11,
         "rawMedian": 7.32,
         "sampleSize": 6
       },
       "SGC 9": {
         "gradedMedian": 14.27,
-        "medianRatio": 4.12,
-        "p25": 1.71,
+        "medianRatio": 4.69,
+        "p25": 1.7,
         "p75": 5.53,
-        "rawMedian": 2.83,
+        "rawMedian": 2.67,
         "sampleSize": 6
       },
       "SGC 9.5": {
         "gradedMedian": 25.48,
-        "medianRatio": 5.73,
-        "p25": 2.97,
-        "p75": 10.3,
-        "rawMedian": 2.83,
+        "medianRatio": 5.71,
+        "p25": 3.14,
+        "p75": 10.26,
+        "rawMedian": 2.67,
         "sampleSize": 6
       }
     }
@@ -20719,46 +20787,46 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "sampleSize": 14
       },
       "PSA 8": {
-        "gradedMedian": 1226.68,
-        "medianRatio": 0.83,
+        "gradedMedian": 1157.1,
+        "medianRatio": 0.81,
         "p25": 0.73,
-        "p75": 1.21,
+        "p75": 1.12,
         "rawMedian": 1361.63,
-        "sampleSize": 8
+        "sampleSize": 9
       },
       "PSA 9": {
         "gradedMedian": 1600.25,
-        "medianRatio": 1.2,
-        "p25": 0.96,
-        "p75": 1.69,
-        "rawMedian": 1361.63,
+        "medianRatio": 1.17,
+        "p25": 0.89,
+        "p75": 1.67,
+        "rawMedian": 1518.13,
         "sampleSize": 20
       }
     },
     "$100-249": {
       "PSA 10": {
-        "gradedMedian": 423.5,
+        "gradedMedian": 432.5,
         "medianRatio": 2.52,
-        "p25": 2.03,
+        "p25": 1.98,
         "p75": 3.85,
-        "rawMedian": 164.35,
-        "sampleSize": 53
+        "rawMedian": 167.5,
+        "sampleSize": 54
       },
       "PSA 8": {
         "gradedMedian": 199,
         "medianRatio": 0.98,
         "p25": 0.63,
-        "p75": 2.52,
+        "p75": 2.43,
         "rawMedian": 202.37,
         "sampleSize": 9
       },
       "PSA 9": {
         "gradedMedian": 207.5,
-        "medianRatio": 1.26,
+        "medianRatio": 1.3,
         "p25": 1.04,
-        "p75": 1.84,
-        "rawMedian": 189.15,
-        "sampleSize": 62
+        "p75": 1.86,
+        "rawMedian": 189,
+        "sampleSize": 65
       },
       "SGC 10": {
         "gradedMedian": 267.5,
@@ -20773,7 +20841,7 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "medianRatio": 1.17,
         "p25": 0.82,
         "p75": 1.51,
-        "rawMedian": 220.22,
+        "rawMedian": 218.41,
         "sampleSize": 6
       }
     },
@@ -20790,7 +20858,7 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "gradedMedian": 59.5,
         "medianRatio": 1.55,
         "p25": 1.36,
-        "p75": 1.79,
+        "p75": 1.83,
         "rawMedian": 40.29,
         "sampleSize": 13
       }
@@ -20801,7 +20869,7 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "medianRatio": 1.85,
         "p25": 1.17,
         "p75": 1.89,
-        "rawMedian": 387.11,
+        "rawMedian": 352.2,
         "sampleSize": 6
       },
       "BGS 9.5": {
@@ -20814,27 +20882,27 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       },
       "PSA 10": {
         "gradedMedian": 847.83,
-        "medianRatio": 2.16,
-        "p25": 1.82,
-        "p75": 2.87,
-        "rawMedian": 410,
+        "medianRatio": 2.11,
+        "p25": 1.8,
+        "p75": 2.74,
+        "rawMedian": 412.09,
         "sampleSize": 53
       },
       "PSA 8": {
         "gradedMedian": 437,
         "medianRatio": 1.05,
         "p25": 0.96,
-        "p75": 1.5,
+        "p75": 1.32,
         "rawMedian": 413.24,
-        "sampleSize": 20
+        "sampleSize": 21
       },
       "PSA 9": {
-        "gradedMedian": 467.5,
+        "gradedMedian": 469.64,
         "medianRatio": 1.13,
         "p25": 1.05,
         "p75": 1.36,
         "rawMedian": 410,
-        "sampleSize": 89
+        "sampleSize": 88
       },
       "SGC 10": {
         "gradedMedian": 610,
@@ -20849,7 +20917,7 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "medianRatio": 1.03,
         "p25": 0.94,
         "p75": 1.12,
-        "rawMedian": 419.44,
+        "rawMedian": 416.84,
         "sampleSize": 12
       }
     },
@@ -20858,25 +20926,17 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "gradedMedian": 176.21,
         "medianRatio": 2.22,
         "p25": 1.93,
-        "p75": 2.82,
+        "p75": 2.48,
         "rawMedian": 78.44,
-        "sampleSize": 19
+        "sampleSize": 21
       },
       "PSA 9": {
         "gradedMedian": 105.5,
         "medianRatio": 1.41,
-        "p25": 1.21,
+        "p25": 1.14,
         "p75": 1.66,
-        "rawMedian": 76.9,
+        "rawMedian": 78.08,
         "sampleSize": 25
-      },
-      "SGC 10": {
-        "gradedMedian": 85,
-        "medianRatio": 1.32,
-        "p25": 1.16,
-        "p75": 1.58,
-        "rawMedian": 68.61,
-        "sampleSize": 5
       }
     },
     "$500-999": {
@@ -20893,7 +20953,7 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "medianRatio": 2.36,
         "p25": 1.85,
         "p75": 3.4,
-        "rawMedian": 645.06,
+        "rawMedian": 649.2,
         "sampleSize": 40
       },
       "PSA 8": {
@@ -20906,9 +20966,9 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       },
       "PSA 9": {
         "gradedMedian": 720.93,
-        "medianRatio": 1.14,
+        "medianRatio": 1.13,
         "p25": 0.94,
-        "p75": 1.41,
+        "p75": 1.39,
         "rawMedian": 626.7,
         "sampleSize": 74
       },
@@ -20925,90 +20985,90 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       "BGS 9.5": {
         "gradedMedian": 25.17,
         "medianRatio": 7.71,
-        "p25": 5.64,
+        "p25": 5.73,
         "p75": 10.69,
-        "rawMedian": 3.42,
+        "rawMedian": 3.41,
         "sampleSize": 8
       },
       "CGC 10": {
-        "gradedMedian": 33.36,
-        "medianRatio": 8.01,
-        "p25": 4.74,
+        "gradedMedian": 28.88,
+        "medianRatio": 8.06,
+        "p25": 4.79,
         "p75": 11.49,
-        "rawMedian": 3.42,
-        "sampleSize": 17
+        "rawMedian": 3.34,
+        "sampleSize": 19
       },
       "CGC 8.5": {
         "gradedMedian": 5.95,
-        "medianRatio": 2.23,
-        "p25": 1.01,
+        "medianRatio": 2.28,
+        "p25": 1.02,
         "p75": 2.67,
-        "rawMedian": 4.47,
+        "rawMedian": 4.37,
         "sampleSize": 5
       },
       "CGC 9": {
         "gradedMedian": 9.5,
-        "medianRatio": 2.45,
+        "medianRatio": 2.5,
         "p25": 1.4,
-        "p75": 4.46,
-        "rawMedian": 3.42,
+        "p75": 4.33,
+        "rawMedian": 3.41,
         "sampleSize": 12
       },
       "PSA 10": {
         "gradedMedian": 29.99,
-        "medianRatio": 10.19,
-        "p25": 6.37,
-        "p75": 15.6,
-        "rawMedian": 2.51,
-        "sampleSize": 132
+        "medianRatio": 10.24,
+        "p25": 6.39,
+        "p75": 15.83,
+        "rawMedian": 2.52,
+        "sampleSize": 135
       },
       "PSA 7": {
-        "gradedMedian": 9.5,
+        "gradedMedian": 9.66,
         "medianRatio": 4.33,
-        "p25": 1.38,
-        "p75": 5.15,
-        "rawMedian": 2.33,
-        "sampleSize": 7
+        "p25": 2.19,
+        "p75": 5.16,
+        "rawMedian": 3.71,
+        "sampleSize": 8
       },
       "PSA 8": {
         "gradedMedian": 10.06,
         "medianRatio": 3.38,
-        "p25": 1.8,
+        "p25": 1.83,
         "p75": 4.74,
         "rawMedian": 3.11,
         "sampleSize": 32
       },
       "PSA 9": {
-        "gradedMedian": 15.5,
-        "medianRatio": 4.96,
-        "p25": 3.25,
-        "p75": 7.05,
-        "rawMedian": 2.7,
-        "sampleSize": 102
+        "gradedMedian": 15.6,
+        "medianRatio": 5.22,
+        "p25": 3.47,
+        "p75": 7.19,
+        "rawMedian": 2.61,
+        "sampleSize": 108
       },
       "SGC 10": {
         "gradedMedian": 18.74,
-        "medianRatio": 5.09,
-        "p25": 4.52,
+        "medianRatio": 5.18,
+        "p25": 4.37,
         "p75": 7.16,
-        "rawMedian": 3.29,
-        "sampleSize": 32
+        "rawMedian": 3.11,
+        "sampleSize": 33
       },
       "SGC 9": {
         "gradedMedian": 10,
         "medianRatio": 2.79,
-        "p25": 2.02,
+        "p25": 2.05,
         "p75": 3.9,
         "rawMedian": 3.59,
         "sampleSize": 8
       },
       "SGC 9.5": {
-        "gradedMedian": 12.65,
-        "medianRatio": 4.06,
-        "p25": 2.82,
+        "gradedMedian": 13.14,
+        "medianRatio": 4.08,
+        "p25": 3.54,
         "p75": 5.65,
-        "rawMedian": 3.05,
-        "sampleSize": 19
+        "rawMedian": 3.11,
+        "sampleSize": 18
       }
     }
   },
@@ -21016,25 +21076,25 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
     "Under $25": {
       "PSA 10": {
         "gradedMedian": 62.5,
-        "medianRatio": 6.28,
+        "medianRatio": 5.92,
         "p25": 5.09,
         "p75": 10.15,
-        "rawMedian": 9,
-        "sampleSize": 16
+        "rawMedian": 8.82,
+        "sampleSize": 17
       },
       "PSA 8": {
         "gradedMedian": 20.27,
-        "medianRatio": 1.57,
-        "p25": 1.29,
-        "p75": 2.55,
-        "rawMedian": 7.94,
+        "medianRatio": 1.63,
+        "p25": 1.57,
+        "p75": 2.6,
+        "rawMedian": 7.9,
         "sampleSize": 5
       },
       "PSA 9": {
-        "gradedMedian": 28.12,
-        "medianRatio": 3.48,
+        "gradedMedian": 28.5,
+        "medianRatio": 3.26,
         "p25": 2.11,
-        "p75": 5.71,
+        "p75": 5.73,
         "rawMedian": 8.37,
         "sampleSize": 20
       }
@@ -21045,9 +21105,9 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       "PSA 10": {
         "gradedMedian": 128.71,
         "medianRatio": 4.16,
-        "p25": 3.13,
-        "p75": 4.83,
-        "rawMedian": 30.84,
+        "p25": 3.18,
+        "p75": 4.85,
+        "rawMedian": 30.72,
         "sampleSize": 8
       },
       "PSA 9": {
@@ -21055,112 +21115,112 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "medianRatio": 1.29,
         "p25": 1.17,
         "p75": 1.51,
-        "rawMedian": 30.84,
+        "rawMedian": 30.72,
         "sampleSize": 7
       },
       "SGC 9.5": {
         "gradedMedian": 47.68,
         "medianRatio": 1.58,
         "p25": 1.28,
-        "p75": 1.62,
-        "rawMedian": 30.84,
+        "p75": 1.63,
+        "rawMedian": 30.72,
         "sampleSize": 5
       }
     },
     "Under $25": {
       "BGS 9": {
         "gradedMedian": 14,
-        "medianRatio": 5.41,
-        "p25": 3.75,
+        "medianRatio": 5.43,
+        "p25": 3.78,
         "p75": 6.62,
-        "rawMedian": 3.13,
+        "rawMedian": 3.11,
         "sampleSize": 6
       },
       "BGS 9.5": {
         "gradedMedian": 18.6,
-        "medianRatio": 6.84,
-        "p25": 5.62,
-        "p75": 12.96,
-        "rawMedian": 2.64,
+        "medianRatio": 6.52,
+        "p25": 4.27,
+        "p75": 8.13,
+        "rawMedian": 2.7,
         "sampleSize": 15
       },
       "CGC 10": {
-        "gradedMedian": 22.63,
-        "medianRatio": 8.22,
-        "p25": 5.76,
-        "p75": 12.05,
+        "gradedMedian": 21.6,
+        "medianRatio": 7.87,
+        "p25": 5.45,
+        "p75": 11.78,
         "rawMedian": 2.64,
-        "sampleSize": 32
+        "sampleSize": 33
       },
       "CGC 9": {
-        "gradedMedian": 12.9,
-        "medianRatio": 4.06,
+        "gradedMedian": 13.91,
+        "medianRatio": 4.56,
         "p25": 3.29,
-        "p75": 4.77,
+        "p75": 4.75,
         "rawMedian": 3.41,
-        "sampleSize": 13
+        "sampleSize": 14
       },
       "CGC 9.5": {
         "gradedMedian": 12.43,
-        "medianRatio": 3.04,
-        "p25": 2.14,
-        "p75": 6.78,
+        "medianRatio": 2.56,
+        "p25": 2.15,
+        "p75": 5.83,
         "rawMedian": 2.93,
-        "sampleSize": 10
+        "sampleSize": 9
       },
       "PSA 10": {
-        "gradedMedian": 34.6,
-        "medianRatio": 10.15,
-        "p25": 7.5,
-        "p75": 13.51,
-        "rawMedian": 3.13,
-        "sampleSize": 227
+        "gradedMedian": 34.82,
+        "medianRatio": 10.13,
+        "p25": 7.52,
+        "p75": 13.58,
+        "rawMedian": 3.17,
+        "sampleSize": 228
       },
       "PSA 7": {
         "gradedMedian": 7,
         "medianRatio": 3,
         "p25": 2.02,
-        "p75": 4.03,
+        "p75": 4.01,
         "rawMedian": 2.68,
         "sampleSize": 9
       },
       "PSA 8": {
-        "gradedMedian": 11.57,
-        "medianRatio": 2.87,
+        "gradedMedian": 11.75,
+        "medianRatio": 2.97,
         "p25": 2.01,
-        "p75": 4.3,
+        "p75": 4.57,
         "rawMedian": 3.49,
-        "sampleSize": 61
+        "sampleSize": 64
       },
       "PSA 9": {
-        "gradedMedian": 15.9,
-        "medianRatio": 4.5,
-        "p25": 3.02,
-        "p75": 6.05,
+        "gradedMedian": 16.01,
+        "medianRatio": 4.59,
+        "p25": 3.06,
+        "p75": 6.16,
         "rawMedian": 3.27,
-        "sampleSize": 198
+        "sampleSize": 200
       },
       "SGC 10": {
         "gradedMedian": 23.46,
-        "medianRatio": 5.96,
+        "medianRatio": 5.97,
         "p25": 4.21,
-        "p75": 8.07,
+        "p75": 8.13,
         "rawMedian": 3.47,
         "sampleSize": 68
       },
       "SGC 9": {
         "gradedMedian": 12.37,
-        "medianRatio": 3.41,
-        "p25": 2.18,
-        "p75": 5.33,
-        "rawMedian": 3.57,
-        "sampleSize": 21
+        "medianRatio": 3.34,
+        "p25": 2.23,
+        "p75": 4.97,
+        "rawMedian": 3.83,
+        "sampleSize": 20
       },
       "SGC 9.5": {
         "gradedMedian": 16.05,
-        "medianRatio": 4.21,
-        "p25": 2.57,
-        "p75": 5.99,
+        "medianRatio": 4.26,
+        "p25": 2.59,
+        "p75": 5.98,
         "rawMedian": 3.56,
         "sampleSize": 47
       }
@@ -21214,51 +21274,59 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       },
       "CGC 10": {
         "gradedMedian": 25.55,
-        "medianRatio": 6.87,
+        "medianRatio": 7.82,
         "p25": 5.29,
-        "p75": 11.41,
+        "p75": 12,
         "rawMedian": 3.82,
-        "sampleSize": 9
+        "sampleSize": 8
       },
       "PSA 10": {
-        "gradedMedian": 39.98,
-        "medianRatio": 11.26,
-        "p25": 6.01,
+        "gradedMedian": 39.5,
+        "medianRatio": 11.25,
+        "p25": 5.9,
         "p75": 16.22,
         "rawMedian": 4.03,
-        "sampleSize": 84
+        "sampleSize": 83
+      },
+      "PSA 7": {
+        "gradedMedian": 7,
+        "medianRatio": 2.15,
+        "p25": 1.3,
+        "p75": 3.01,
+        "rawMedian": 3.14,
+        "sampleSize": 5
       },
       "PSA 8": {
         "gradedMedian": 11.21,
         "medianRatio": 3.07,
-        "p25": 1.79,
-        "p75": 5.78,
+        "p25": 1.8,
+        "p75": 5.77,
         "rawMedian": 3.23,
         "sampleSize": 26
       },
       "PSA 9": {
         "gradedMedian": 18.32,
-        "medianRatio": 4.56,
+        "medianRatio": 4.65,
         "p25": 2.43,
-        "p75": 6.54,
+        "p75": 6.56,
         "rawMedian": 4.21,
         "sampleSize": 77
       },
       "SGC 10": {
-        "gradedMedian": 17.23,
-        "medianRatio": 5.36,
-        "p25": 3.4,
-        "p75": 7.07,
+        "gradedMedian": 17.5,
+        "medianRatio": 5.97,
+        "p25": 3.55,
+        "p75": 8.18,
         "rawMedian": 4.21,
-        "sampleSize": 11
+        "sampleSize": 13
       },
       "SGC 9.5": {
-        "gradedMedian": 20.5,
-        "medianRatio": 3.08,
-        "p25": 2.47,
-        "p75": 6.31,
-        "rawMedian": 5.06,
-        "sampleSize": 8
+        "gradedMedian": 14,
+        "medianRatio": 2.89,
+        "p25": 2.49,
+        "p75": 4.2,
+        "rawMedian": 4.92,
+        "sampleSize": 9
       }
     }
   },
@@ -21284,81 +21352,81 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
     "$100-249": {
       "BGS 10": {
         "gradedMedian": 1413.67,
-        "medianRatio": 9.9,
-        "p25": 4.15,
-        "p75": 10.35,
-        "rawMedian": 171.5,
-        "sampleSize": 6
+        "medianRatio": 9.89,
+        "p25": 4.88,
+        "p75": 10.32,
+        "rawMedian": 172.05,
+        "sampleSize": 5
       },
       "BGS 9": {
         "gradedMedian": 373.22,
         "medianRatio": 2.26,
-        "p25": 1.63,
-        "p75": 3.88,
-        "rawMedian": 153.12,
-        "sampleSize": 13
+        "p25": 1.42,
+        "p75": 3.85,
+        "rawMedian": 162.8,
+        "sampleSize": 14
       },
       "BGS 9.5": {
         "gradedMedian": 482.5,
         "medianRatio": 2.5,
-        "p25": 2.07,
-        "p75": 6.18,
-        "rawMedian": 171.5,
-        "sampleSize": 24
+        "p25": 1.71,
+        "p75": 6.12,
+        "rawMedian": 172.05,
+        "sampleSize": 26
       },
       "CGC 10": {
         "gradedMedian": 233.17,
-        "medianRatio": 1.54,
+        "medianRatio": 1.55,
         "p25": 1.32,
-        "p75": 1.55,
-        "rawMedian": 171.5,
-        "sampleSize": 5
+        "p75": 1.73,
+        "rawMedian": 172.05,
+        "sampleSize": 6
       },
       "PSA 10": {
-        "gradedMedian": 386.67,
+        "gradedMedian": 388.79,
         "medianRatio": 2.48,
-        "p25": 1.77,
-        "p75": 3.76,
-        "rawMedian": 164.48,
-        "sampleSize": 295
+        "p25": 1.75,
+        "p75": 3.67,
+        "rawMedian": 165.6,
+        "sampleSize": 302
       },
       "PSA 7": {
         "gradedMedian": 159.25,
-        "medianRatio": 1.06,
-        "p25": 0.8,
+        "medianRatio": 1.08,
+        "p25": 0.79,
         "p75": 1.31,
-        "rawMedian": 125.15,
-        "sampleSize": 13
+        "rawMedian": 126.26,
+        "sampleSize": 12
       },
       "PSA 8": {
-        "gradedMedian": 187.32,
+        "gradedMedian": 186.98,
         "medianRatio": 1.12,
-        "p25": 0.87,
-        "p75": 1.72,
-        "rawMedian": 163.45,
-        "sampleSize": 87
+        "p25": 0.91,
+        "p75": 1.65,
+        "rawMedian": 162.44,
+        "sampleSize": 96
       },
       "PSA 9": {
-        "gradedMedian": 225,
-        "medianRatio": 1.28,
-        "p25": 1.01,
-        "p75": 1.78,
-        "rawMedian": 167.73,
-        "sampleSize": 294
+        "gradedMedian": 227.83,
+        "medianRatio": 1.29,
+        "p25": 1.03,
+        "p75": 1.8,
+        "rawMedian": 169.06,
+        "sampleSize": 305
       },
       "SGC 10": {
         "gradedMedian": 250,
         "medianRatio": 1.89,
         "p25": 1.31,
-        "p75": 2.27,
+        "p75": 2.29,
         "rawMedian": 150.51,
         "sampleSize": 32
       },
       "SGC 9": {
         "gradedMedian": 189.5,
-        "medianRatio": 1.12,
-        "p25": 0.97,
-        "p75": 1.82,
+        "medianRatio": 1.13,
+        "p25": 0.98,
+        "p75": 1.81,
         "rawMedian": 150.51,
         "sampleSize": 24
       },
@@ -21382,27 +21450,27 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       },
       "CGC 10": {
         "gradedMedian": 85,
-        "medianRatio": 2.47,
+        "medianRatio": 2.25,
         "p25": 1.51,
         "p75": 3.02,
         "rawMedian": 33.48,
-        "sampleSize": 6
+        "sampleSize": 7
       },
       "CGC 9": {
         "gradedMedian": 42.5,
         "medianRatio": 1.12,
         "p25": 0.62,
         "p75": 1.79,
-        "rawMedian": 31.2,
-        "sampleSize": 7
+        "rawMedian": 32.96,
+        "sampleSize": 6
       },
       "PSA 10": {
-        "gradedMedian": 118.7,
+        "gradedMedian": 117.74,
         "medianRatio": 3.5,
         "p25": 2.66,
-        "p75": 4.72,
-        "rawMedian": 33.87,
-        "sampleSize": 243
+        "p75": 4.58,
+        "rawMedian": 34.25,
+        "sampleSize": 249
       },
       "PSA 7": {
         "gradedMedian": 23.75,
@@ -21413,20 +21481,20 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "sampleSize": 6
       },
       "PSA 8": {
-        "gradedMedian": 25.63,
+        "gradedMedian": 25.78,
         "medianRatio": 0.75,
         "p25": 0.63,
-        "p75": 0.92,
-        "rawMedian": 31.94,
-        "sampleSize": 65
+        "p75": 0.93,
+        "rawMedian": 32.21,
+        "sampleSize": 67
       },
       "PSA 9": {
-        "gradedMedian": 48.09,
+        "gradedMedian": 48,
         "medianRatio": 1.36,
         "p25": 1.09,
         "p75": 1.83,
-        "rawMedian": 33.87,
-        "sampleSize": 237
+        "rawMedian": 34.2,
+        "sampleSize": 244
       },
       "SGC 10": {
         "gradedMedian": 73,
@@ -21448,18 +21516,18 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "gradedMedian": 45.49,
         "medianRatio": 1.33,
         "p25": 1.03,
-        "p75": 1.68,
-        "rawMedian": 34.45,
+        "p75": 1.7,
+        "rawMedian": 34.38,
         "sampleSize": 36
       }
     },
     "$250-499": {
       "BGS 9.5": {
-        "gradedMedian": 599,
-        "medianRatio": 2.01,
+        "gradedMedian": 742.5,
+        "medianRatio": 2.29,
         "p25": 1.3,
         "p75": 2.8,
-        "rawMedian": 339.95,
+        "rawMedian": 342.25,
         "sampleSize": 18
       },
       "PSA 10": {
@@ -21468,46 +21536,46 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "p25": 1.4,
         "p75": 1.98,
         "rawMedian": 361.06,
-        "sampleSize": 263
+        "sampleSize": 268
       },
       "PSA 8": {
         "gradedMedian": 340,
         "medianRatio": 1,
         "p25": 0.9,
-        "p75": 1.13,
+        "p75": 1.14,
         "rawMedian": 341.5,
-        "sampleSize": 43
+        "sampleSize": 44
       },
       "PSA 9": {
-        "gradedMedian": 410,
+        "gradedMedian": 408.33,
         "medianRatio": 1.11,
         "p25": 1.04,
         "p75": 1.23,
-        "rawMedian": 362.88,
-        "sampleSize": 255
+        "rawMedian": 360.3,
+        "sampleSize": 261
       },
       "SGC 10": {
         "gradedMedian": 442.5,
         "medianRatio": 1.28,
-        "p25": 1.13,
+        "p25": 1.18,
         "p75": 1.46,
         "rawMedian": 353.5,
-        "sampleSize": 31
+        "sampleSize": 32
       },
       "SGC 9": {
         "gradedMedian": 345,
-        "medianRatio": 1.03,
+        "medianRatio": 1.05,
         "p25": 0.95,
         "p75": 1.11,
         "rawMedian": 335.79,
-        "sampleSize": 11
+        "sampleSize": 10
       },
       "SGC 9.5": {
         "gradedMedian": 407.5,
         "medianRatio": 1.11,
         "p25": 1.02,
         "p75": 1.23,
-        "rawMedian": 364.54,
+        "rawMedian": 364.65,
         "sampleSize": 43
       }
     },
@@ -21517,16 +21585,16 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "medianRatio": 1.98,
         "p25": 1.03,
         "p75": 4.47,
-        "rawMedian": 69.07,
+        "rawMedian": 70.17,
         "sampleSize": 13
       },
       "BGS 9.5": {
-        "gradedMedian": 145,
-        "medianRatio": 2.13,
-        "p25": 1.68,
-        "p75": 4.82,
-        "rawMedian": 73.75,
-        "sampleSize": 16
+        "gradedMedian": 135.27,
+        "medianRatio": 1.93,
+        "p25": 1.47,
+        "p75": 3.89,
+        "rawMedian": 71.4,
+        "sampleSize": 17
       },
       "CGC 10": {
         "gradedMedian": 119.67,
@@ -21537,57 +21605,57 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "sampleSize": 6
       },
       "PSA 10": {
-        "gradedMedian": 189.19,
+        "gradedMedian": 188.61,
         "medianRatio": 2.72,
-        "p25": 2.13,
-        "p75": 3.38,
-        "rawMedian": 69.07,
-        "sampleSize": 188
+        "p25": 2.14,
+        "p75": 3.37,
+        "rawMedian": 69.09,
+        "sampleSize": 185
       },
       "PSA 7": {
         "gradedMedian": 123.1,
         "medianRatio": 1.44,
-        "p25": 0.86,
-        "p75": 2.69,
-        "rawMedian": 85.57,
+        "p25": 0.87,
+        "p75": 2.68,
+        "rawMedian": 85.56,
         "sampleSize": 8
       },
       "PSA 8": {
         "gradedMedian": 59.6,
-        "medianRatio": 0.79,
-        "p25": 0.66,
-        "p75": 1.85,
-        "rawMedian": 70,
-        "sampleSize": 50
+        "medianRatio": 0.8,
+        "p25": 0.67,
+        "p75": 1.9,
+        "rawMedian": 70.17,
+        "sampleSize": 48
       },
       "PSA 9": {
-        "gradedMedian": 82.55,
+        "gradedMedian": 83,
         "medianRatio": 1.16,
         "p25": 0.89,
-        "p75": 1.76,
-        "rawMedian": 69.28,
-        "sampleSize": 195
+        "p75": 1.77,
+        "rawMedian": 70,
+        "sampleSize": 192
       },
       "SGC 10": {
-        "gradedMedian": 109.88,
-        "medianRatio": 1.62,
-        "p25": 1.13,
-        "p75": 1.96,
-        "rawMedian": 69.07,
-        "sampleSize": 35
+        "gradedMedian": 110.3,
+        "medianRatio": 1.64,
+        "p25": 1.14,
+        "p75": 2.08,
+        "rawMedian": 69.09,
+        "sampleSize": 36
       },
       "SGC 9": {
-        "gradedMedian": 91.6,
+        "gradedMedian": 89.94,
         "medianRatio": 1.22,
-        "p25": 0.85,
+        "p25": 0.81,
         "p75": 1.64,
-        "rawMedian": 73.75,
-        "sampleSize": 17
+        "rawMedian": 82.98,
+        "sampleSize": 18
       },
       "SGC 9.5": {
         "gradedMedian": 93.17,
         "medianRatio": 1.18,
-        "p25": 0.97,
+        "p25": 0.99,
         "p75": 1.84,
         "rawMedian": 82.26,
         "sampleSize": 38
@@ -21607,24 +21675,24 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "medianRatio": 1.93,
         "p25": 1.61,
         "p75": 2.65,
-        "rawMedian": 645.6,
-        "sampleSize": 86
+        "rawMedian": 642.65,
+        "sampleSize": 89
       },
       "PSA 8": {
         "gradedMedian": 510.33,
         "medianRatio": 0.87,
-        "p25": 0.75,
+        "p25": 0.7,
         "p75": 0.95,
         "rawMedian": 676,
-        "sampleSize": 9
+        "sampleSize": 10
       },
       "PSA 9": {
-        "gradedMedian": 783.14,
-        "medianRatio": 1.15,
+        "gradedMedian": 784.25,
+        "medianRatio": 1.16,
         "p25": 0.97,
         "p75": 1.29,
         "rawMedian": 682.5,
-        "sampleSize": 79
+        "sampleSize": 82
       },
       "SGC 10": {
         "gradedMedian": 1005.01,
@@ -21645,34 +21713,34 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
     },
     "Under $25": {
       "BGS 9": {
-        "gradedMedian": 19.05,
-        "medianRatio": 2.39,
-        "p25": 1.31,
-        "p75": 2.93,
-        "rawMedian": 5.43,
-        "sampleSize": 27
+        "gradedMedian": 16,
+        "medianRatio": 2.15,
+        "p25": 1.32,
+        "p75": 2.91,
+        "rawMedian": 7.66,
+        "sampleSize": 25
       },
       "BGS 9.5": {
-        "gradedMedian": 27.9,
+        "gradedMedian": 27.92,
         "medianRatio": 3.65,
-        "p25": 2.79,
+        "p25": 2.81,
         "p75": 5.65,
-        "rawMedian": 5.6,
-        "sampleSize": 47
+        "rawMedian": 6.12,
+        "sampleSize": 48
       },
       "CGC 10": {
-        "gradedMedian": 20.93,
-        "medianRatio": 4.66,
-        "p25": 3.21,
-        "p75": 7.63,
+        "gradedMedian": 20.99,
+        "medianRatio": 4.72,
+        "p25": 3.3,
+        "p75": 7.7,
         "rawMedian": 3.26,
-        "sampleSize": 155
+        "sampleSize": 158
       },
       "CGC 8.5": {
         "gradedMedian": 12.75,
         "medianRatio": 3.69,
         "p25": 1.37,
-        "p75": 4.4,
+        "p75": 4.45,
         "rawMedian": 5.29,
         "sampleSize": 6
       },
@@ -21682,31 +21750,31 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "p25": 1.77,
         "p75": 4.15,
         "rawMedian": 3.66,
-        "sampleSize": 78
+        "sampleSize": 77
       },
       "CGC 9.5": {
         "gradedMedian": 13.8,
         "medianRatio": 2.6,
         "p25": 1.88,
-        "p75": 4.48,
-        "rawMedian": 4.17,
+        "p75": 4.46,
+        "rawMedian": 4.16,
         "sampleSize": 32
       },
       "HGA 9": {
         "gradedMedian": 12.75,
-        "medianRatio": 0.92,
+        "medianRatio": 0.9,
         "p25": 0.82,
         "p75": 1.52,
         "rawMedian": 15.92,
         "sampleSize": 8
       },
       "PSA 10": {
-        "gradedMedian": 40.44,
-        "medianRatio": 8.42,
-        "p25": 5.47,
-        "p75": 12.3,
-        "rawMedian": 4.28,
-        "sampleSize": 1890
+        "gradedMedian": 40.75,
+        "medianRatio": 8.47,
+        "p25": 5.52,
+        "p75": 12.36,
+        "rawMedian": 4.29,
+        "sampleSize": 1915
       },
       "PSA 5": {
         "gradedMedian": 6.81,
@@ -21726,42 +21794,42 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       },
       "PSA 7": {
         "gradedMedian": 8.7,
-        "medianRatio": 1.23,
+        "medianRatio": 1.24,
         "p25": 0.8,
         "p75": 1.92,
-        "rawMedian": 6.96,
+        "rawMedian": 6.99,
         "sampleSize": 82
       },
       "PSA 8": {
-        "gradedMedian": 11.63,
+        "gradedMedian": 11.67,
         "medianRatio": 1.81,
         "p25": 1.19,
-        "p75": 2.73,
+        "p75": 2.74,
         "rawMedian": 6.14,
-        "sampleSize": 481
+        "sampleSize": 487
       },
       "PSA 8.5": {
         "gradedMedian": 7.12,
         "medianRatio": 1.79,
         "p25": 1.07,
-        "p75": 2.22,
-        "rawMedian": 4.17,
+        "p75": 2.23,
+        "rawMedian": 4.16,
         "sampleSize": 14
       },
       "PSA 9": {
-        "gradedMedian": 18.49,
+        "gradedMedian": 18.51,
         "medianRatio": 3.38,
-        "p25": 2.24,
-        "p75": 5.08,
-        "rawMedian": 4.69,
-        "sampleSize": 1650
+        "p25": 2.23,
+        "p75": 5.01,
+        "rawMedian": 4.71,
+        "sampleSize": 1665
       },
       "SGC 10": {
         "gradedMedian": 25.25,
-        "medianRatio": 4.42,
+        "medianRatio": 4.4,
         "p25": 3.08,
         "p75": 6.49,
-        "rawMedian": 4.79,
+        "rawMedian": 4.77,
         "sampleSize": 294
       },
       "SGC 8": {
@@ -21777,24 +21845,24 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "medianRatio": 1.57,
         "p25": 0.81,
         "p75": 2.09,
-        "rawMedian": 6.68,
+        "rawMedian": 6.99,
         "sampleSize": 17
       },
       "SGC 9": {
-        "gradedMedian": 14.25,
+        "gradedMedian": 14.4,
         "medianRatio": 2.09,
-        "p25": 1.36,
-        "p75": 3.05,
-        "rawMedian": 7.48,
-        "sampleSize": 118
+        "p25": 1.37,
+        "p75": 3.13,
+        "rawMedian": 7.45,
+        "sampleSize": 119
       },
       "SGC 9.5": {
         "gradedMedian": 17.86,
-        "medianRatio": 2.78,
-        "p25": 1.87,
-        "p75": 4.18,
-        "rawMedian": 5.78,
-        "sampleSize": 228
+        "medianRatio": 2.73,
+        "p25": 1.86,
+        "p75": 4.15,
+        "rawMedian": 5.8,
+        "sampleSize": 231
       }
     }
   },
@@ -21813,22 +21881,22 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "medianRatio": 0.84,
         "p25": 0.77,
         "p75": 1,
-        "rawMedian": 34.51,
+        "rawMedian": 34.49,
         "sampleSize": 6
       },
       "PSA 9": {
         "gradedMedian": 51.76,
         "medianRatio": 1.58,
-        "p25": 1.23,
+        "p25": 1.16,
         "p75": 2.08,
-        "rawMedian": 34.51,
+        "rawMedian": 34.49,
         "sampleSize": 17
       }
     },
     "$50-99": {
       "PSA 9": {
         "gradedMedian": 76.25,
-        "medianRatio": 1.17,
+        "medianRatio": 1.22,
         "p25": 1.07,
         "p75": 1.45,
         "rawMedian": 62,
@@ -21853,20 +21921,20 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "sampleSize": 56
       },
       "PSA 8": {
-        "gradedMedian": 15.33,
-        "medianRatio": 2.07,
+        "gradedMedian": 15.25,
+        "medianRatio": 1.6,
         "p25": 1.11,
-        "p75": 2.81,
-        "rawMedian": 9.15,
-        "sampleSize": 20
+        "p75": 2.43,
+        "rawMedian": 8.84,
+        "sampleSize": 21
       },
       "PSA 9": {
         "gradedMedian": 21.5,
-        "medianRatio": 2.87,
+        "medianRatio": 2.89,
         "p25": 1.91,
         "p75": 4.05,
         "rawMedian": 8.84,
-        "sampleSize": 89
+        "sampleSize": 91
       },
       "SGC 9": {
         "gradedMedian": 15,
@@ -21889,19 +21957,19 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
   "football|panini-illusions": {
     "Under $25": {
       "CGC 10": {
-        "gradedMedian": 25.8,
-        "medianRatio": 6.95,
-        "p25": 5.25,
-        "p75": 7.33,
-        "rawMedian": 3.65,
-        "sampleSize": 13
+        "gradedMedian": 26,
+        "medianRatio": 7.02,
+        "p25": 5.27,
+        "p75": 7.73,
+        "rawMedian": 3.57,
+        "sampleSize": 14
       },
       "CGC 9": {
         "gradedMedian": 14.23,
-        "medianRatio": 3.11,
-        "p25": 1.78,
+        "medianRatio": 3.16,
+        "p25": 1.82,
         "p75": 3.64,
-        "rawMedian": 5.6,
+        "rawMedian": 5.55,
         "sampleSize": 7
       },
       "CGC 9.5": {
@@ -21913,77 +21981,77 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "sampleSize": 5
       },
       "PSA 10": {
-        "gradedMedian": 36.84,
-        "medianRatio": 8.98,
-        "p25": 5.8,
-        "p75": 13.07,
-        "rawMedian": 4.12,
-        "sampleSize": 119
+        "gradedMedian": 37.36,
+        "medianRatio": 9.4,
+        "p25": 6.19,
+        "p75": 13.09,
+        "rawMedian": 4.06,
+        "sampleSize": 122
       },
       "PSA 7": {
-        "gradedMedian": 7.5,
-        "medianRatio": 2.78,
-        "p25": 1.85,
+        "gradedMedian": 6.99,
+        "medianRatio": 2.82,
+        "p25": 1.91,
         "p75": 2.94,
-        "rawMedian": 3.38,
-        "sampleSize": 10
+        "rawMedian": 3.24,
+        "sampleSize": 9
       },
       "PSA 8": {
         "gradedMedian": 11.75,
         "medianRatio": 2.62,
         "p25": 1.59,
-        "p75": 3.67,
+        "p75": 3.62,
         "rawMedian": 3.95,
         "sampleSize": 46
       },
       "PSA 9": {
         "gradedMedian": 18,
-        "medianRatio": 3.94,
-        "p25": 2.53,
-        "p75": 6.2,
-        "rawMedian": 3.73,
-        "sampleSize": 115
+        "medianRatio": 3.95,
+        "p25": 2.55,
+        "p75": 6.23,
+        "rawMedian": 3.72,
+        "sampleSize": 117
       },
       "SGC 10": {
         "gradedMedian": 19.59,
         "medianRatio": 4.85,
         "p25": 2.79,
         "p75": 6.75,
-        "rawMedian": 4.55,
-        "sampleSize": 19
+        "rawMedian": 4.61,
+        "sampleSize": 20
       },
       "SGC 9": {
         "gradedMedian": 13.05,
         "medianRatio": 2.57,
-        "p25": 1.67,
+        "p25": 1.68,
         "p75": 3.47,
-        "rawMedian": 4.55,
+        "rawMedian": 4.6,
         "sampleSize": 14
       },
       "SGC 9.5": {
         "gradedMedian": 17.07,
-        "medianRatio": 4.8,
-        "p25": 3.48,
+        "medianRatio": 4.76,
+        "p25": 3.47,
         "p75": 7.2,
         "rawMedian": 4.55,
-        "sampleSize": 16
+        "sampleSize": 17
       }
     }
   },
   "football|panini-luminance": {
     "Under $25": {
       "PSA 10": {
-        "gradedMedian": 68.93,
+        "gradedMedian": 77.33,
         "medianRatio": 8.14,
         "p25": 5.31,
-        "p75": 14.04,
-        "rawMedian": 9.5,
-        "sampleSize": 7
+        "p75": 9.48,
+        "rawMedian": 10.57,
+        "sampleSize": 6
       },
       "PSA 9": {
         "gradedMedian": 23.75,
         "medianRatio": 2.76,
-        "p25": 2.12,
+        "p25": 2.23,
         "p75": 4.92,
         "rawMedian": 7.62,
         "sampleSize": 5
@@ -21993,33 +22061,33 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
   "football|panini-mosaic": {
     "$100-249": {
       "PSA 10": {
-        "gradedMedian": 333.33,
+        "gradedMedian": 333.25,
         "medianRatio": 2.22,
-        "p25": 1.95,
+        "p25": 1.9,
         "p75": 2.59,
-        "rawMedian": 142.15,
-        "sampleSize": 120
+        "rawMedian": 141.71,
+        "sampleSize": 121
       },
       "PSA 8": {
-        "gradedMedian": 113.8,
+        "gradedMedian": 103.93,
         "medianRatio": 0.75,
-        "p25": 0.72,
-        "p75": 0.92,
-        "rawMedian": 136.43,
-        "sampleSize": 11
+        "p25": 0.73,
+        "p75": 0.89,
+        "rawMedian": 135,
+        "sampleSize": 13
       },
       "PSA 9": {
         "gradedMedian": 154.83,
         "medianRatio": 1.06,
         "p25": 0.92,
-        "p75": 1.24,
-        "rawMedian": 142.87,
-        "sampleSize": 134
+        "p75": 1.25,
+        "rawMedian": 142.15,
+        "sampleSize": 135
       },
       "SGC 9.5": {
         "gradedMedian": 162.01,
         "medianRatio": 1,
-        "p25": 0.86,
+        "p25": 0.85,
         "p75": 1.11,
         "rawMedian": 145.72,
         "sampleSize": 6
@@ -22027,36 +22095,36 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
     },
     "$25-49": {
       "BGS 9.5": {
-        "gradedMedian": 38,
-        "medianRatio": 1.39,
-        "p25": 1.2,
-        "p75": 1.71,
-        "rawMedian": 27.85,
-        "sampleSize": 5
+        "gradedMedian": 48.23,
+        "medianRatio": 1.71,
+        "p25": 1.18,
+        "p75": 2.15,
+        "rawMedian": 28.23,
+        "sampleSize": 6
       },
       "PSA 10": {
         "gradedMedian": 101.52,
         "medianRatio": 2.93,
-        "p25": 2.36,
-        "p75": 3.83,
+        "p25": 2.34,
+        "p75": 3.86,
         "rawMedian": 35.17,
-        "sampleSize": 197
+        "sampleSize": 199
       },
       "PSA 8": {
-        "gradedMedian": 25.38,
-        "medianRatio": 0.84,
+        "gradedMedian": 26.75,
+        "medianRatio": 0.86,
         "p25": 0.66,
-        "p75": 1.29,
-        "rawMedian": 32,
-        "sampleSize": 28
+        "p75": 1.35,
+        "rawMedian": 32.7,
+        "sampleSize": 30
       },
       "PSA 9": {
-        "gradedMedian": 50.5,
-        "medianRatio": 1.47,
+        "gradedMedian": 50.71,
+        "medianRatio": 1.48,
         "p25": 1.15,
-        "p75": 1.83,
-        "rawMedian": 34.61,
-        "sampleSize": 161
+        "p75": 1.94,
+        "rawMedian": 34.89,
+        "sampleSize": 165
       },
       "SGC 10": {
         "gradedMedian": 41,
@@ -22078,9 +22146,9 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "gradedMedian": 38,
         "medianRatio": 1.16,
         "p25": 1.03,
-        "p75": 1.56,
-        "rawMedian": 33.99,
-        "sampleSize": 14
+        "p75": 1.76,
+        "rawMedian": 33.73,
+        "sampleSize": 15
       }
     },
     "$250-499": {
@@ -22088,7 +22156,7 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "gradedMedian": 648.82,
         "medianRatio": 2.16,
         "p25": 1.92,
-        "p75": 2.78,
+        "p75": 2.76,
         "rawMedian": 294.25,
         "sampleSize": 32
       },
@@ -22104,27 +22172,27 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
     "$50-99": {
       "PSA 10": {
         "gradedMedian": 155.75,
-        "medianRatio": 2.24,
+        "medianRatio": 2.23,
         "p25": 1.8,
-        "p75": 3.02,
-        "rawMedian": 68.37,
-        "sampleSize": 159
+        "p75": 2.91,
+        "rawMedian": 69,
+        "sampleSize": 158
       },
       "PSA 8": {
         "gradedMedian": 78.67,
-        "medianRatio": 0.88,
-        "p25": 0.87,
-        "p75": 2.4,
-        "rawMedian": 58,
-        "sampleSize": 9
+        "medianRatio": 0.87,
+        "p25": 0.84,
+        "p75": 2.35,
+        "rawMedian": 68.44,
+        "sampleSize": 8
       },
       "PSA 9": {
         "gradedMedian": 89.94,
         "medianRatio": 1.24,
         "p25": 1.04,
         "p75": 1.39,
-        "rawMedian": 70.61,
-        "sampleSize": 116
+        "rawMedian": 70.71,
+        "sampleSize": 114
       },
       "SGC 10": {
         "gradedMedian": 68.67,
@@ -22156,34 +22224,34 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
     "Under $25": {
       "BGS 9": {
         "gradedMedian": 15.54,
-        "medianRatio": 1.93,
+        "medianRatio": 1.92,
         "p25": 1.36,
-        "p75": 3.23,
-        "rawMedian": 6.61,
+        "p75": 3.22,
+        "rawMedian": 6.64,
         "sampleSize": 16
       },
       "BGS 9.5": {
         "gradedMedian": 28.08,
         "medianRatio": 4.47,
-        "p25": 3.02,
-        "p75": 7.43,
-        "rawMedian": 6.36,
-        "sampleSize": 24
+        "p25": 3.05,
+        "p75": 6.44,
+        "rawMedian": 6.01,
+        "sampleSize": 25
       },
       "CGC 10": {
-        "gradedMedian": 36,
+        "gradedMedian": 34.35,
         "medianRatio": 7.41,
-        "p25": 3.95,
-        "p75": 11.01,
-        "rawMedian": 4.79,
-        "sampleSize": 104
+        "p25": 3.92,
+        "p75": 10.8,
+        "rawMedian": 4.91,
+        "sampleSize": 110
       },
       "CGC 9": {
         "gradedMedian": 16.02,
         "medianRatio": 2.41,
         "p25": 1.07,
         "p75": 5.38,
-        "rawMedian": 6.4,
+        "rawMedian": 6.26,
         "sampleSize": 38
       },
       "CGC 9.5": {
@@ -22197,30 +22265,30 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       "HGA 9": {
         "gradedMedian": 9.5,
         "medianRatio": 1.37,
-        "p25": 0.81,
+        "p25": 0.82,
         "p75": 1.85,
         "rawMedian": 7.67,
         "sampleSize": 6
       },
       "PSA 10": {
-        "gradedMedian": 50.5,
-        "medianRatio": 8.82,
+        "gradedMedian": 50.71,
+        "medianRatio": 8.87,
         "p25": 5.49,
         "p75": 14.17,
-        "rawMedian": 5.01,
-        "sampleSize": 1127
+        "rawMedian": 5.06,
+        "sampleSize": 1134
       },
       "PSA 5": {
         "gradedMedian": 6.75,
         "medianRatio": 2.84,
         "p25": 1.48,
-        "p75": 3.29,
-        "rawMedian": 4.41,
+        "p75": 3.38,
+        "rawMedian": 4.29,
         "sampleSize": 5
       },
       "PSA 6": {
         "gradedMedian": 7,
-        "medianRatio": 1.4,
+        "medianRatio": 1.39,
         "p25": 0.98,
         "p75": 2.31,
         "rawMedian": 5.12,
@@ -22229,58 +22297,58 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       "PSA 7": {
         "gradedMedian": 9.25,
         "medianRatio": 1.47,
-        "p25": 0.81,
-        "p75": 1.81,
-        "rawMedian": 8.56,
+        "p25": 0.82,
+        "p75": 1.89,
+        "rawMedian": 8.53,
         "sampleSize": 21
       },
       "PSA 8": {
-        "gradedMedian": 13.6,
+        "gradedMedian": 13.75,
         "medianRatio": 1.72,
-        "p25": 1.08,
-        "p75": 2.93,
-        "rawMedian": 7.93,
-        "sampleSize": 146
+        "p25": 1.15,
+        "p75": 2.97,
+        "rawMedian": 7.85,
+        "sampleSize": 151
       },
       "PSA 9": {
-        "gradedMedian": 22.13,
+        "gradedMedian": 22.14,
         "medianRatio": 3.39,
         "p25": 2.19,
-        "p75": 5.17,
-        "rawMedian": 5.86,
-        "sampleSize": 693
+        "p75": 5.14,
+        "rawMedian": 5.87,
+        "sampleSize": 698
       },
       "SGC 10": {
-        "gradedMedian": 26.88,
+        "gradedMedian": 27.67,
         "medianRatio": 4.33,
-        "p25": 2.77,
-        "p75": 5.74,
-        "rawMedian": 6.61,
-        "sampleSize": 115
+        "p25": 2.92,
+        "p75": 5.65,
+        "rawMedian": 6.89,
+        "sampleSize": 113
       },
       "SGC 8.5": {
-        "gradedMedian": 14.29,
+        "gradedMedian": 14.69,
         "medianRatio": 1.03,
         "p25": 0.76,
-        "p75": 1.2,
+        "p75": 1.21,
         "rawMedian": 15.81,
         "sampleSize": 6
       },
       "SGC 9": {
         "gradedMedian": 15,
-        "medianRatio": 1.96,
+        "medianRatio": 1.75,
         "p25": 1.21,
-        "p75": 2.81,
-        "rawMedian": 8.04,
+        "p75": 2.82,
+        "rawMedian": 7.99,
         "sampleSize": 54
       },
       "SGC 9.5": {
-        "gradedMedian": 20.4,
-        "medianRatio": 2.42,
+        "gradedMedian": 20.75,
+        "medianRatio": 2.4,
         "p25": 1.81,
         "p75": 3.96,
-        "rawMedian": 7.57,
-        "sampleSize": 99
+        "rawMedian": 7.67,
+        "sampleSize": 100
       }
     }
   },
@@ -22299,8 +22367,8 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "medianRatio": 1.54,
         "p25": 1.16,
         "p75": 2.71,
-        "rawMedian": 139.61,
-        "sampleSize": 39
+        "rawMedian": 149.33,
+        "sampleSize": 40
       }
     },
     "$25-49": {
@@ -22323,10 +22391,10 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
     },
     "$250-499": {
       "PSA 10": {
-        "gradedMedian": 761.82,
+        "gradedMedian": 709,
         "medianRatio": 1.84,
         "p25": 1.55,
-        "p75": 2.31,
+        "p75": 2.29,
         "rawMedian": 349.34,
         "sampleSize": 16
       },
@@ -22335,7 +22403,7 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "medianRatio": 1.18,
         "p25": 1.08,
         "p75": 1.49,
-        "rawMedian": 326.71,
+        "rawMedian": 312.08,
         "sampleSize": 10
       }
     },
@@ -22353,7 +22421,7 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "medianRatio": 2.02,
         "p25": 0.93,
         "p75": 3.53,
-        "rawMedian": 74.27,
+        "rawMedian": 75.95,
         "sampleSize": 20
       }
     },
@@ -22384,7 +22452,7 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "p25": 1.67,
         "p75": 4.59,
         "rawMedian": 1364.84,
-        "sampleSize": 24
+        "sampleSize": 23
       },
       "PSA 9": {
         "gradedMedian": 1387.36,
@@ -22405,52 +22473,52 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "sampleSize": 5
       },
       "BGS 9": {
-        "gradedMedian": 194.5,
-        "medianRatio": 1.37,
+        "gradedMedian": 182,
+        "medianRatio": 1.09,
         "p25": 0.94,
         "p75": 1.67,
-        "rawMedian": 188.82,
-        "sampleSize": 6
+        "rawMedian": 180.18,
+        "sampleSize": 7
       },
       "BGS 9.5": {
         "gradedMedian": 303,
         "medianRatio": 2.17,
         "p25": 1.54,
-        "p75": 5.67,
+        "p75": 3.03,
         "rawMedian": 184.43,
-        "sampleSize": 11
+        "sampleSize": 13
       },
       "PSA 10": {
-        "gradedMedian": 410.33,
-        "medianRatio": 2.54,
+        "gradedMedian": 412.5,
+        "medianRatio": 2.55,
         "p25": 1.78,
-        "p75": 4,
-        "rawMedian": 163.69,
-        "sampleSize": 238
+        "p75": 3.99,
+        "rawMedian": 164.83,
+        "sampleSize": 245
       },
       "PSA 7": {
-        "gradedMedian": 160,
+        "gradedMedian": 164.01,
         "medianRatio": 0.99,
         "p25": 0.92,
-        "p75": 1.22,
+        "p75": 1.37,
         "rawMedian": 143.45,
-        "sampleSize": 9
+        "sampleSize": 8
       },
       "PSA 8": {
-        "gradedMedian": 187.76,
+        "gradedMedian": 186.25,
         "medianRatio": 1.11,
-        "p25": 0.86,
-        "p75": 1.45,
-        "rawMedian": 169.19,
-        "sampleSize": 65
+        "p25": 0.91,
+        "p75": 1.49,
+        "rawMedian": 167.41,
+        "sampleSize": 74
       },
       "PSA 9": {
-        "gradedMedian": 231.2,
-        "medianRatio": 1.3,
-        "p25": 1.01,
+        "gradedMedian": 232.82,
+        "medianRatio": 1.35,
+        "p25": 1.03,
         "p75": 1.85,
-        "rawMedian": 164.65,
-        "sampleSize": 234
+        "rawMedian": 167.41,
+        "sampleSize": 244
       },
       "SGC 10": {
         "gradedMedian": 218.75,
@@ -22463,7 +22531,7 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       "SGC 9": {
         "gradedMedian": 183.37,
         "medianRatio": 1.23,
-        "p25": 0.97,
+        "p25": 0.98,
         "p75": 1.74,
         "rawMedian": 169.19,
         "sampleSize": 12
@@ -22472,7 +22540,7 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "gradedMedian": 276.59,
         "medianRatio": 1.51,
         "p25": 1.11,
-        "p75": 1.85,
+        "p75": 1.86,
         "rawMedian": 149.37,
         "sampleSize": 17
       }
@@ -22480,7 +22548,7 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
     "$25-49": {
       "BGS 9.5": {
         "gradedMedian": 45.34,
-        "medianRatio": 1.53,
+        "medianRatio": 1.52,
         "p25": 1.19,
         "p75": 1.6,
         "rawMedian": 33.16,
@@ -22490,25 +22558,25 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "gradedMedian": 55.5,
         "medianRatio": 1.51,
         "p25": 1.45,
-        "p75": 3.02,
+        "p75": 2.25,
         "rawMedian": 30.27,
-        "sampleSize": 8
+        "sampleSize": 9
       },
       "CGC 9": {
-        "gradedMedian": 42.5,
-        "medianRatio": 1.12,
+        "gradedMedian": 35,
+        "medianRatio": 0.92,
         "p25": 0.89,
-        "p75": 1.65,
-        "rawMedian": 30.28,
-        "sampleSize": 6
+        "p75": 1.12,
+        "rawMedian": 30.27,
+        "sampleSize": 5
       },
       "PSA 10": {
-        "gradedMedian": 117.28,
+        "gradedMedian": 115.04,
         "medianRatio": 3.44,
-        "p25": 2.55,
-        "p75": 4.27,
-        "rawMedian": 33.53,
-        "sampleSize": 197
+        "p25": 2.54,
+        "p75": 4.25,
+        "rawMedian": 34.09,
+        "sampleSize": 199
       },
       "PSA 7": {
         "gradedMedian": 22.75,
@@ -22519,20 +22587,20 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "sampleSize": 5
       },
       "PSA 8": {
-        "gradedMedian": 22.18,
+        "gradedMedian": 25.67,
         "medianRatio": 0.72,
         "p25": 0.65,
         "p75": 0.9,
-        "rawMedian": 32.21,
-        "sampleSize": 40
+        "rawMedian": 32.25,
+        "sampleSize": 42
       },
       "PSA 9": {
         "gradedMedian": 46.67,
         "medianRatio": 1.35,
         "p25": 1.13,
-        "p75": 1.61,
-        "rawMedian": 33.7,
-        "sampleSize": 170
+        "p75": 1.6,
+        "rawMedian": 33.87,
+        "sampleSize": 174
       },
       "SGC 10": {
         "gradedMedian": 85.34,
@@ -22569,28 +22637,28 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "sampleSize": 9
       },
       "PSA 10": {
-        "gradedMedian": 590,
-        "medianRatio": 1.56,
+        "gradedMedian": 585.57,
+        "medianRatio": 1.54,
         "p25": 1.39,
-        "p75": 1.86,
-        "rawMedian": 373.4,
-        "sampleSize": 166
+        "p75": 1.85,
+        "rawMedian": 373.18,
+        "sampleSize": 169
       },
       "PSA 8": {
-        "gradedMedian": 336,
-        "medianRatio": 0.94,
-        "p25": 0.87,
-        "p75": 1.16,
-        "rawMedian": 360.33,
-        "sampleSize": 20
+        "gradedMedian": 332,
+        "medianRatio": 0.93,
+        "p25": 0.84,
+        "p75": 1.09,
+        "rawMedian": 360.05,
+        "sampleSize": 21
       },
       "PSA 9": {
-        "gradedMedian": 412.54,
+        "gradedMedian": 411.91,
         "medianRatio": 1.09,
         "p25": 1.03,
-        "p75": 1.16,
-        "rawMedian": 370.75,
-        "sampleSize": 161
+        "p75": 1.17,
+        "rawMedian": 370.31,
+        "sampleSize": 164
       },
       "SGC 10": {
         "gradedMedian": 430,
@@ -22635,40 +22703,40 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "sampleSize": 8
       },
       "PSA 10": {
-        "gradedMedian": 191.5,
+        "gradedMedian": 191.25,
         "medianRatio": 2.76,
         "p25": 1.98,
-        "p75": 3.45,
-        "rawMedian": 69.16,
-        "sampleSize": 135
+        "p75": 3.42,
+        "rawMedian": 69.3,
+        "sampleSize": 134
       },
       "PSA 8": {
         "gradedMedian": 58.5,
-        "medianRatio": 0.79,
-        "p25": 0.66,
+        "medianRatio": 0.8,
+        "p25": 0.67,
         "p75": 1.72,
         "rawMedian": 68.01,
-        "sampleSize": 27
+        "sampleSize": 25
       },
       "PSA 9": {
-        "gradedMedian": 80.39,
-        "medianRatio": 1.13,
-        "p25": 0.88,
-        "p75": 1.63,
-        "rawMedian": 71.21,
-        "sampleSize": 125
+        "gradedMedian": 80.69,
+        "medianRatio": 1.1,
+        "p25": 0.87,
+        "p75": 1.73,
+        "rawMedian": 71.72,
+        "sampleSize": 123
       },
       "SGC 10": {
         "gradedMedian": 114.03,
         "medianRatio": 1.98,
         "p25": 1.62,
-        "p75": 2.23,
+        "p75": 2.16,
         "rawMedian": 68.01,
         "sampleSize": 14
       },
       "SGC 9": {
         "gradedMedian": 63.99,
-        "medianRatio": 0.92,
+        "medianRatio": 0.93,
         "p25": 0.81,
         "p75": 1.22,
         "rawMedian": 66.9,
@@ -22678,7 +22746,7 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "gradedMedian": 102,
         "medianRatio": 1.51,
         "p25": 1.1,
-        "p75": 1.94,
+        "p75": 1.95,
         "rawMedian": 82.26,
         "sampleSize": 19
       }
@@ -22694,7 +22762,7 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       },
       "PSA 10": {
         "gradedMedian": 1287.75,
-        "medianRatio": 1.84,
+        "medianRatio": 1.83,
         "p25": 1.6,
         "p75": 2.34,
         "rawMedian": 658.89,
@@ -22711,28 +22779,28 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
     },
     "Under $25": {
       "BGS 9": {
-        "gradedMedian": 25.13,
-        "medianRatio": 2.89,
+        "gradedMedian": 19.5,
+        "medianRatio": 2.05,
         "p25": 1.48,
-        "p75": 5.24,
+        "p75": 3.1,
         "rawMedian": 7.21,
-        "sampleSize": 10
+        "sampleSize": 9
       },
       "BGS 9.5": {
         "gradedMedian": 46.96,
-        "medianRatio": 5.56,
-        "p25": 3.01,
-        "p75": 9.56,
+        "medianRatio": 5.55,
+        "p25": 2.97,
+        "p75": 9.55,
         "rawMedian": 8.93,
-        "sampleSize": 20
+        "sampleSize": 21
       },
       "CGC 10": {
-        "gradedMedian": 21.66,
-        "medianRatio": 3.89,
-        "p25": 3,
-        "p75": 6.32,
-        "rawMedian": 5.6,
-        "sampleSize": 39
+        "gradedMedian": 23.07,
+        "medianRatio": 4.4,
+        "p25": 3.04,
+        "p75": 7.22,
+        "rawMedian": 5.56,
+        "sampleSize": 42
       },
       "CGC 9": {
         "gradedMedian": 10.4,
@@ -22751,12 +22819,12 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "sampleSize": 6
       },
       "PSA 10": {
-        "gradedMedian": 44.49,
-        "medianRatio": 7.89,
-        "p25": 5.21,
-        "p75": 11.54,
+        "gradedMedian": 45.08,
+        "medianRatio": 7.93,
+        "p25": 5.26,
+        "p75": 11.61,
         "rawMedian": 5.2,
-        "sampleSize": 1064
+        "sampleSize": 1089
       },
       "PSA 5": {
         "gradedMedian": 8.52,
@@ -22771,7 +22839,7 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "medianRatio": 0.79,
         "p25": 0.6,
         "p75": 1.58,
-        "rawMedian": 10.68,
+        "rawMedian": 10.67,
         "sampleSize": 12
       },
       "PSA 7": {
@@ -22786,17 +22854,17 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "gradedMedian": 11.51,
         "medianRatio": 1.58,
         "p25": 1.07,
-        "p75": 2.56,
-        "rawMedian": 6.77,
+        "p75": 2.55,
+        "rawMedian": 6.91,
         "sampleSize": 220
       },
       "PSA 9": {
-        "gradedMedian": 18.75,
-        "medianRatio": 3.33,
+        "gradedMedian": 18.8,
+        "medianRatio": 3.32,
         "p25": 2.19,
-        "p75": 5.06,
-        "rawMedian": 4.97,
-        "sampleSize": 904
+        "p75": 5.03,
+        "rawMedian": 5.07,
+        "sampleSize": 917
       },
       "SGC 10": {
         "gradedMedian": 25.79,
@@ -22807,20 +22875,20 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "sampleSize": 110
       },
       "SGC 9": {
-        "gradedMedian": 14.49,
-        "medianRatio": 1.38,
+        "gradedMedian": 14.5,
+        "medianRatio": 1.39,
         "p25": 1.01,
-        "p75": 1.98,
+        "p75": 1.97,
         "rawMedian": 9.92,
         "sampleSize": 41
       },
       "SGC 9.5": {
         "gradedMedian": 18.87,
-        "medianRatio": 2.29,
+        "medianRatio": 2.28,
         "p25": 1.56,
         "p75": 3.29,
         "rawMedian": 7.28,
-        "sampleSize": 86
+        "sampleSize": 88
       }
     }
   },
@@ -22837,7 +22905,7 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
     },
     "$100-249": {
       "PSA 10": {
-        "gradedMedian": 378.33,
+        "gradedMedian": 356.73,
         "medianRatio": 2.36,
         "p25": 2.09,
         "p75": 3.09,
@@ -22855,170 +22923,170 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
     },
     "$25-49": {
       "PSA 10": {
-        "gradedMedian": 124.5,
-        "medianRatio": 3.32,
+        "gradedMedian": 126.25,
+        "medianRatio": 3.49,
         "p25": 2.61,
-        "p75": 5.59,
-        "rawMedian": 34.67,
-        "sampleSize": 29
+        "p75": 5.62,
+        "rawMedian": 35.52,
+        "sampleSize": 30
       },
       "PSA 8": {
         "gradedMedian": 66.77,
-        "medianRatio": 2.41,
+        "medianRatio": 2.13,
         "p25": 0.71,
         "p75": 2.49,
-        "rawMedian": 43.85,
-        "sampleSize": 6
+        "rawMedian": 39.83,
+        "sampleSize": 7
       },
       "PSA 9": {
         "gradedMedian": 55.86,
-        "medianRatio": 1.42,
+        "medianRatio": 1.49,
         "p25": 1.02,
-        "p75": 2.9,
-        "rawMedian": 40.94,
-        "sampleSize": 21
+        "p75": 2.71,
+        "rawMedian": 39.83,
+        "sampleSize": 22
       }
     },
     "$250-499": {
       "PSA 10": {
-        "gradedMedian": 619.69,
-        "medianRatio": 1.64,
+        "gradedMedian": 661.5,
+        "medianRatio": 1.65,
         "p25": 1.55,
-        "p75": 1.93,
-        "rawMedian": 358.66,
-        "sampleSize": 17
+        "p75": 2.15,
+        "rawMedian": 397.13,
+        "sampleSize": 18
       },
       "PSA 9": {
         "gradedMedian": 380,
         "medianRatio": 1.04,
         "p25": 0.99,
-        "p75": 1.22,
+        "p75": 1.25,
         "rawMedian": 397.13,
-        "sampleSize": 12
+        "sampleSize": 13
       }
     },
     "$50-99": {
       "PSA 10": {
         "gradedMedian": 232.5,
         "medianRatio": 3.79,
-        "p25": 2.26,
+        "p25": 2.28,
         "p75": 5.21,
-        "rawMedian": 66.45,
-        "sampleSize": 30
+        "rawMedian": 66.3,
+        "sampleSize": 29
       },
       "PSA 9": {
-        "gradedMedian": 153.25,
+        "gradedMedian": 156.25,
         "medianRatio": 2.16,
-        "p25": 0.93,
+        "p25": 1.02,
         "p75": 2.65,
-        "rawMedian": 74.44,
-        "sampleSize": 27
+        "rawMedian": 76.58,
+        "sampleSize": 25
       }
     },
     "$500-999": {
       "PSA 10": {
-        "gradedMedian": 1522.71,
+        "gradedMedian": 1545.05,
         "medianRatio": 1.82,
         "p25": 1.68,
-        "p75": 2.22,
-        "rawMedian": 821.49,
-        "sampleSize": 11
+        "p75": 2.21,
+        "rawMedian": 846.28,
+        "sampleSize": 10
       },
       "PSA 9": {
-        "gradedMedian": 949.67,
-        "medianRatio": 1.12,
+        "gradedMedian": 881.93,
+        "medianRatio": 1.1,
         "p25": 0.94,
-        "p75": 1.25,
+        "p75": 1.12,
         "rawMedian": 846.28,
-        "sampleSize": 6
+        "sampleSize": 5
       }
     },
     "Under $25": {
       "BGS 9.5": {
         "gradedMedian": 48,
         "medianRatio": 4.51,
-        "p25": 3.28,
+        "p25": 3.32,
         "p75": 5.81,
-        "rawMedian": 14.34,
+        "rawMedian": 14.35,
         "sampleSize": 8
       },
       "CGC 10": {
         "gradedMedian": 30.91,
         "medianRatio": 5.46,
-        "p25": 2.29,
-        "p75": 7.86,
-        "rawMedian": 7,
-        "sampleSize": 20
+        "p25": 1.92,
+        "p75": 7.5,
+        "rawMedian": 7.03,
+        "sampleSize": 19
       },
       "CGC 9.5": {
         "gradedMedian": 18.5,
-        "medianRatio": 2.84,
+        "medianRatio": 2.88,
         "p25": 1.03,
         "p75": 4.19,
         "rawMedian": 8.04,
         "sampleSize": 7
       },
       "PSA 10": {
-        "gradedMedian": 52,
-        "medianRatio": 9.18,
-        "p25": 5.33,
-        "p75": 13.41,
+        "gradedMedian": 52.5,
+        "medianRatio": 9.19,
+        "p25": 5.51,
+        "p75": 13.18,
         "rawMedian": 5.68,
-        "sampleSize": 215
+        "sampleSize": 216
       },
       "PSA 6": {
-        "gradedMedian": 7.5,
-        "medianRatio": 0.75,
-        "p25": 0.7,
-        "p75": 2.07,
-        "rawMedian": 8.8,
-        "sampleSize": 7
+        "gradedMedian": 9.88,
+        "medianRatio": 1.13,
+        "p25": 0.72,
+        "p75": 3.12,
+        "rawMedian": 8.72,
+        "sampleSize": 8
       },
       "PSA 7": {
         "gradedMedian": 9.25,
-        "medianRatio": 1.7,
+        "medianRatio": 1.49,
         "p25": 0.85,
-        "p75": 1.93,
-        "rawMedian": 8.35,
+        "p75": 1.9,
+        "rawMedian": 8.34,
         "sampleSize": 12
       },
       "PSA 8": {
         "gradedMedian": 14.13,
-        "medianRatio": 1.84,
+        "medianRatio": 1.89,
         "p25": 1.32,
-        "p75": 2.98,
-        "rawMedian": 5.44,
-        "sampleSize": 45
+        "p75": 3.17,
+        "rawMedian": 5.38,
+        "sampleSize": 47
       },
       "PSA 9": {
         "gradedMedian": 21.95,
-        "medianRatio": 3.36,
-        "p25": 2.22,
-        "p75": 5.14,
+        "medianRatio": 3.37,
+        "p25": 2.23,
+        "p75": 5.08,
         "rawMedian": 6.03,
-        "sampleSize": 146
+        "sampleSize": 147
       },
       "SGC 10": {
-        "gradedMedian": 33.24,
-        "medianRatio": 3.82,
-        "p25": 3.1,
+        "gradedMedian": 30.75,
+        "medianRatio": 3.89,
+        "p25": 3,
         "p75": 5.31,
-        "rawMedian": 8.35,
-        "sampleSize": 24
+        "rawMedian": 8.04,
+        "sampleSize": 25
       },
       "SGC 9": {
-        "gradedMedian": 16,
-        "medianRatio": 1.59,
-        "p25": 1.45,
+        "gradedMedian": 21,
+        "medianRatio": 1.67,
+        "p25": 1.54,
         "p75": 6.89,
         "rawMedian": 8.18,
-        "sampleSize": 7
+        "sampleSize": 8
       },
       "SGC 9.5": {
-        "gradedMedian": 25,
-        "medianRatio": 3.68,
+        "gradedMedian": 24.66,
+        "medianRatio": 3.66,
         "p25": 2.28,
-        "p75": 4.71,
+        "p75": 4.73,
         "rawMedian": 7.84,
         "sampleSize": 16
       }
@@ -23027,26 +23095,26 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
   "football|panini-playoff": {
     "Under $25": {
       "PSA 10": {
-        "gradedMedian": 38.04,
-        "medianRatio": 9.98,
-        "p25": 8.26,
-        "p75": 17.99,
+        "gradedMedian": 39.89,
+        "medianRatio": 10.11,
+        "p25": 8.41,
+        "p75": 20.23,
         "rawMedian": 3.14,
-        "sampleSize": 27
+        "sampleSize": 28
       },
       "PSA 8": {
         "gradedMedian": 26.54,
-        "medianRatio": 3.37,
+        "medianRatio": 3.4,
         "p25": 2.25,
         "p75": 3.98,
-        "rawMedian": 4.01,
+        "rawMedian": 3.98,
         "sampleSize": 6
       },
       "PSA 9": {
         "gradedMedian": 16.75,
         "medianRatio": 4.77,
-        "p25": 3.96,
-        "p75": 6.75,
+        "p25": 3.97,
+        "p75": 6.94,
         "rawMedian": 3.43,
         "sampleSize": 16
       }
@@ -23074,66 +23142,66 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
     "Under $25": {
       "CGC 10": {
         "gradedMedian": 29.5,
-        "medianRatio": 7.47,
+        "medianRatio": 7.48,
         "p25": 5.45,
         "p75": 8.14,
         "rawMedian": 3.95,
         "sampleSize": 6
       },
       "PSA 10": {
-        "gradedMedian": 39.75,
-        "medianRatio": 11.29,
-        "p25": 9.15,
-        "p75": 16.69,
+        "gradedMedian": 39.5,
+        "medianRatio": 11.21,
+        "p25": 8.84,
+        "p75": 15.65,
         "rawMedian": 3.07,
-        "sampleSize": 104
+        "sampleSize": 105
       },
       "PSA 7": {
         "gradedMedian": 7.34,
-        "medianRatio": 1.73,
-        "p25": 1.47,
+        "medianRatio": 1.76,
+        "p25": 1.46,
         "p75": 1.86,
         "rawMedian": 3.95,
         "sampleSize": 5
       },
       "PSA 8": {
-        "gradedMedian": 13.11,
-        "medianRatio": 3.07,
-        "p25": 2.28,
-        "p75": 5.39,
+        "gradedMedian": 13.25,
+        "medianRatio": 3.91,
+        "p25": 2.66,
+        "p75": 5.82,
         "rawMedian": 3.45,
-        "sampleSize": 19
+        "sampleSize": 20
       },
       "PSA 9": {
-        "gradedMedian": 17.33,
-        "medianRatio": 4.64,
-        "p25": 3.12,
+        "gradedMedian": 17.5,
+        "medianRatio": 4.71,
+        "p25": 3.11,
         "p75": 5.77,
-        "rawMedian": 4.5,
+        "rawMedian": 4.51,
         "sampleSize": 55
       },
       "SGC 10": {
         "gradedMedian": 20.85,
-        "medianRatio": 6.02,
-        "p25": 3.97,
-        "p75": 8.26,
-        "rawMedian": 2.68,
-        "sampleSize": 27
+        "medianRatio": 6.06,
+        "p25": 4.22,
+        "p75": 8.45,
+        "rawMedian": 2.67,
+        "sampleSize": 29
       },
       "SGC 9": {
         "gradedMedian": 11,
         "medianRatio": 2.43,
-        "p25": 1.44,
-        "p75": 2.93,
+        "p25": 1.4,
+        "p75": 2.98,
         "rawMedian": 5.28,
         "sampleSize": 5
       },
       "SGC 9.5": {
         "gradedMedian": 19.24,
-        "medianRatio": 4.56,
+        "medianRatio": 4.41,
         "p25": 2.92,
-        "p75": 5.27,
-        "rawMedian": 3.76,
+        "p75": 5.37,
+        "rawMedian": 3.69,
         "sampleSize": 15
       }
     }
@@ -23141,12 +23209,12 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
   "football|panini-prizm": {
     "$1,000-2,499": {
       "PSA 10": {
-        "gradedMedian": 3058.22,
+        "gradedMedian": 3050,
         "medianRatio": 2.29,
-        "p25": 1.78,
-        "p75": 2.7,
-        "rawMedian": 1299.99,
-        "sampleSize": 24
+        "p25": 1.65,
+        "p75": 2.67,
+        "rawMedian": 1267.5,
+        "sampleSize": 25
       },
       "PSA 9": {
         "gradedMedian": 1299,
@@ -23154,206 +23222,214 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "p25": 0.79,
         "p75": 1.15,
         "rawMedian": 1352.5,
-        "sampleSize": 19
+        "sampleSize": 20
       }
     },
     "$100-249": {
       "BGS 9": {
         "gradedMedian": 128.8,
-        "medianRatio": 0.91,
+        "medianRatio": 0.9,
         "p25": 0.72,
         "p75": 1.19,
-        "rawMedian": 138.08,
+        "rawMedian": 137.52,
         "sampleSize": 6
       },
       "BGS 9.5": {
         "gradedMedian": 325,
-        "medianRatio": 1.93,
+        "medianRatio": 1.76,
         "p25": 1.64,
-        "p75": 2.33,
-        "rawMedian": 159.71,
-        "sampleSize": 10
+        "p75": 1.97,
+        "rawMedian": 158.8,
+        "sampleSize": 9
       },
       "PSA 10": {
-        "gradedMedian": 449.53,
+        "gradedMedian": 449.6,
         "medianRatio": 3.08,
-        "p25": 2.22,
-        "p75": 4.08,
-        "rawMedian": 145.5,
-        "sampleSize": 186
+        "p25": 2.23,
+        "p75": 4.06,
+        "rawMedian": 147.21,
+        "sampleSize": 187
       },
       "PSA 7": {
         "gradedMedian": 108,
         "medianRatio": 0.74,
         "p25": 0.63,
         "p75": 0.96,
-        "rawMedian": 124.95,
+        "rawMedian": 125.41,
         "sampleSize": 6
       },
       "PSA 8": {
-        "gradedMedian": 112.1,
-        "medianRatio": 0.78,
+        "gradedMedian": 113.39,
+        "medianRatio": 0.76,
         "p25": 0.67,
-        "p75": 0.87,
-        "rawMedian": 146.03,
-        "sampleSize": 41
+        "p75": 0.89,
+        "rawMedian": 150.58,
+        "sampleSize": 40
       },
       "PSA 9": {
-        "gradedMedian": 162.97,
+        "gradedMedian": 167.2,
         "medianRatio": 1.13,
         "p25": 0.98,
         "p75": 1.32,
-        "rawMedian": 144.77,
-        "sampleSize": 217
+        "rawMedian": 145.5,
+        "sampleSize": 218
       },
       "SGC 10": {
-        "gradedMedian": 199.32,
-        "medianRatio": 1.9,
+        "gradedMedian": 196.29,
+        "medianRatio": 1.72,
         "p25": 0.94,
-        "p75": 2.63,
+        "p75": 1.98,
         "rawMedian": 113.67,
-        "sampleSize": 10
+        "sampleSize": 9
       },
       "SGC 9": {
         "gradedMedian": 91.25,
         "medianRatio": 0.74,
         "p25": 0.63,
-        "p75": 0.91,
-        "rawMedian": 126.73,
-        "sampleSize": 11
+        "p75": 0.84,
+        "rawMedian": 144.23,
+        "sampleSize": 10
       },
       "SGC 9.5": {
-        "gradedMedian": 140,
-        "medianRatio": 1.12,
-        "p25": 0.85,
-        "p75": 1.33,
-        "rawMedian": 138.08,
+        "gradedMedian": 144,
+        "medianRatio": 1.03,
+        "p25": 0.79,
+        "p75": 1.36,
+        "rawMedian": 137.52,
         "sampleSize": 19
       }
     },
     "$2,500-4,999": {
       "PSA 10": {
-        "gradedMedian": 3340.67,
-        "medianRatio": 0.88,
+        "gradedMedian": 6718.8,
+        "medianRatio": 1.91,
         "p25": 0.7,
-        "p75": 1.91,
+        "p75": 2.03,
         "rawMedian": 3643.06,
-        "sampleSize": 5
+        "sampleSize": 6
       }
     },
     "$25-49": {
       "BGS 9": {
         "gradedMedian": 48.6,
-        "medianRatio": 1.09,
-        "p25": 0.92,
+        "medianRatio": 1.15,
+        "p25": 0.96,
         "p75": 1.25,
-        "rawMedian": 39.97,
-        "sampleSize": 7
+        "rawMedian": 41.12,
+        "sampleSize": 8
       },
       "BGS 9.5": {
         "gradedMedian": 85,
-        "medianRatio": 2.28,
+        "medianRatio": 2.29,
         "p25": 1.61,
         "p75": 3.26,
-        "rawMedian": 40.4,
+        "rawMedian": 40.25,
         "sampleSize": 15
       },
       "CGC 10": {
         "gradedMedian": 46.2,
         "medianRatio": 1.38,
         "p25": 1.16,
-        "p75": 1.56,
+        "p75": 1.57,
         "rawMedian": 30.57,
         "sampleSize": 5
       },
+      "CGC 9": {
+        "gradedMedian": 45.72,
+        "medianRatio": 1.14,
+        "p25": 0.77,
+        "p75": 1.42,
+        "rawMedian": 33.12,
+        "sampleSize": 5
+      },
       "PSA 10": {
-        "gradedMedian": 142.33,
-        "medianRatio": 3.99,
-        "p25": 3.04,
-        "p75": 5.51,
-        "rawMedian": 34.99,
-        "sampleSize": 374
+        "gradedMedian": 142,
+        "medianRatio": 3.98,
+        "p25": 3.03,
+        "p75": 5.5,
+        "rawMedian": 35.02,
+        "sampleSize": 377
       },
       "PSA 7": {
         "gradedMedian": 25.5,
         "medianRatio": 0.62,
         "p25": 0.57,
         "p75": 0.7,
-        "rawMedian": 37.75,
+        "rawMedian": 37.46,
         "sampleSize": 11
       },
       "PSA 8": {
-        "gradedMedian": 26.12,
-        "medianRatio": 0.71,
+        "gradedMedian": 26.5,
+        "medianRatio": 0.72,
         "p25": 0.64,
-        "p75": 0.89,
+        "p75": 0.9,
         "rawMedian": 35.5,
         "sampleSize": 84
       },
       "PSA 9": {
-        "gradedMedian": 46.52,
+        "gradedMedian": 47.02,
         "medianRatio": 1.35,
         "p25": 1.1,
-        "p75": 1.69,
-        "rawMedian": 34.85,
+        "p75": 1.7,
+        "rawMedian": 34.99,
         "sampleSize": 379
       },
       "SGC 10": {
         "gradedMedian": 89.92,
-        "medianRatio": 2.78,
+        "medianRatio": 2.55,
         "p25": 1.89,
-        "p75": 3.59,
-        "rawMedian": 34.41,
-        "sampleSize": 50
+        "p75": 3.53,
+        "rawMedian": 34.61,
+        "sampleSize": 51
       },
       "SGC 8.5": {
         "gradedMedian": 32.16,
         "medianRatio": 0.74,
         "p25": 0.56,
         "p75": 0.76,
-        "rawMedian": 43.59,
+        "rawMedian": 43.39,
         "sampleSize": 10
       },
       "SGC 9": {
-        "gradedMedian": 29.75,
+        "gradedMedian": 29.99,
         "medianRatio": 0.84,
-        "p25": 0.75,
-        "p75": 1.02,
+        "p25": 0.74,
+        "p75": 1.01,
         "rawMedian": 33.5,
         "sampleSize": 29
       },
       "SGC 9.5": {
-        "gradedMedian": 48.33,
-        "medianRatio": 1.34,
-        "p25": 1.11,
+        "gradedMedian": 48.56,
+        "medianRatio": 1.35,
+        "p25": 1.12,
         "p75": 1.59,
-        "rawMedian": 36.81,
-        "sampleSize": 51
+        "rawMedian": 37.1,
+        "sampleSize": 52
       }
     },
     "$250-499": {
       "BGS 9.5": {
         "gradedMedian": 565.8,
-        "medianRatio": 1.8,
+        "medianRatio": 1.76,
         "p25": 1.48,
         "p75": 2.23,
         "rawMedian": 334.98,
-        "sampleSize": 10
+        "sampleSize": 11
       },
       "PSA 10": {
-        "gradedMedian": 912,
-        "medianRatio": 2.7,
-        "p25": 1.89,
+        "gradedMedian": 880,
+        "medianRatio": 2.53,
+        "p25": 1.85,
         "p75": 3.75,
-        "rawMedian": 345,
-        "sampleSize": 80
+        "rawMedian": 342.19,
+        "sampleSize": 79
       },
       "PSA 8": {
         "gradedMedian": 289.98,
         "medianRatio": 0.84,
         "p25": 0.7,
         "p75": 0.88,
-        "rawMedian": 326.25,
+        "rawMedian": 327.05,
         "sampleSize": 14
       },
       "PSA 9": {
@@ -23368,8 +23444,8 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
     "$50-99": {
       "BGS 9": {
         "gradedMedian": 87.5,
-        "medianRatio": 1.32,
-        "p25": 0.88,
+        "medianRatio": 1.33,
+        "p25": 0.89,
         "p75": 1.78,
         "rawMedian": 71.3,
         "sampleSize": 9
@@ -23377,81 +23453,81 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       "BGS 9.5": {
         "gradedMedian": 151.33,
         "medianRatio": 2.01,
-        "p25": 1.79,
-        "p75": 2.32,
+        "p25": 1.14,
+        "p75": 2.45,
         "rawMedian": 76.37,
-        "sampleSize": 13
+        "sampleSize": 15
       },
       "PSA 10": {
         "gradedMedian": 210.14,
         "medianRatio": 3.02,
         "p25": 2.43,
         "p75": 4.04,
-        "rawMedian": 68.01,
-        "sampleSize": 257
+        "rawMedian": 68.53,
+        "sampleSize": 255
       },
       "PSA 7": {
         "gradedMedian": 49.5,
         "medianRatio": 0.64,
         "p25": 0.55,
-        "p75": 0.73,
+        "p75": 0.82,
         "rawMedian": 70.51,
         "sampleSize": 7
       },
       "PSA 8": {
-        "gradedMedian": 50.71,
-        "medianRatio": 0.72,
-        "p25": 0.62,
-        "p75": 0.91,
-        "rawMedian": 70.5,
-        "sampleSize": 49
+        "gradedMedian": 51,
+        "medianRatio": 0.74,
+        "p25": 0.63,
+        "p75": 0.94,
+        "rawMedian": 72,
+        "sampleSize": 52
       },
       "PSA 9": {
-        "gradedMedian": 80,
+        "gradedMedian": 79.92,
         "medianRatio": 1.15,
-        "p25": 0.95,
+        "p25": 0.94,
         "p75": 1.44,
         "rawMedian": 69.89,
-        "sampleSize": 276
+        "sampleSize": 278
       },
       "SGC 10": {
-        "gradedMedian": 138.32,
-        "medianRatio": 2.18,
-        "p25": 1.6,
-        "p75": 2.79,
-        "rawMedian": 76.37,
-        "sampleSize": 15
+        "gradedMedian": 187.25,
+        "medianRatio": 2.4,
+        "p25": 1.64,
+        "p75": 3.42,
+        "rawMedian": 77.73,
+        "sampleSize": 16
       },
       "SGC 8.5": {
         "gradedMedian": 52.5,
-        "medianRatio": 0.65,
+        "medianRatio": 0.64,
         "p25": 0.62,
         "p75": 0.86,
         "rawMedian": 70.27,
         "sampleSize": 7
       },
       "SGC 9": {
-        "gradedMedian": 59,
-        "medianRatio": 0.8,
-        "p25": 0.68,
-        "p75": 0.99,
-        "rawMedian": 84.69,
-        "sampleSize": 15
+        "gradedMedian": 63.22,
+        "medianRatio": 0.81,
+        "p25": 0.71,
+        "p75": 1,
+        "rawMedian": 87.61,
+        "sampleSize": 16
       },
       "SGC 9.5": {
-        "gradedMedian": 88.5,
-        "medianRatio": 1.31,
-        "p25": 0.94,
-        "p75": 1.52,
-        "rawMedian": 73.92,
+        "gradedMedian": 90.57,
+        "medianRatio": 1.27,
+        "p25": 0.95,
+        "p75": 1.53,
+        "rawMedian": 75,
         "sampleSize": 27
       }
     },
     "$500-999": {
       "PSA 10": {
-        "gradedMedian": 1475,
+        "gradedMedian": 1478.67,
         "medianRatio": 2.41,
-        "p25": 1.62,
+        "p25": 1.65,
         "p75": 2.9,
         "rawMedian": 715.74,
         "sampleSize": 33
@@ -23459,16 +23535,16 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       "PSA 9": {
         "gradedMedian": 796.67,
         "medianRatio": 1.1,
-        "p25": 0.8,
+        "p25": 0.81,
         "p75": 1.6,
         "rawMedian": 718,
-        "sampleSize": 34
+        "sampleSize": 33
       }
     },
     "Under $25": {
       "BGS 8.5": {
         "gradedMedian": 14.5,
-        "medianRatio": 1.17,
+        "medianRatio": 1.18,
         "p25": 0.62,
         "p75": 1.44,
         "rawMedian": 13.45,
@@ -23477,74 +23553,74 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       "BGS 9": {
         "gradedMedian": 15.59,
         "medianRatio": 2.23,
-        "p25": 1.23,
+        "p25": 1.24,
         "p75": 3.07,
-        "rawMedian": 9.81,
-        "sampleSize": 27
+        "rawMedian": 8.89,
+        "sampleSize": 29
       },
       "BGS 9.5": {
         "gradedMedian": 42.5,
-        "medianRatio": 3.99,
+        "medianRatio": 4.06,
         "p25": 2.85,
-        "p75": 9.95,
-        "rawMedian": 7.51,
-        "sampleSize": 49
+        "p75": 10.11,
+        "rawMedian": 7.18,
+        "sampleSize": 51
       },
       "CGC 10": {
         "gradedMedian": 28.5,
         "medianRatio": 5,
-        "p25": 2.63,
+        "p25": 2.67,
         "p75": 7.47,
-        "rawMedian": 5.73,
-        "sampleSize": 102
+        "rawMedian": 5.66,
+        "sampleSize": 109
       },
       "CGC 8": {
-        "gradedMedian": 8.6,
-        "medianRatio": 2.94,
+        "gradedMedian": 8.67,
+        "medianRatio": 2.72,
         "p25": 1.35,
         "p75": 4.09,
-        "rawMedian": 5.22,
+        "rawMedian": 5.65,
         "sampleSize": 9
       },
       "CGC 8.5": {
         "gradedMedian": 5.77,
-        "medianRatio": 1.69,
-        "p25": 0.99,
+        "medianRatio": 1.59,
+        "p25": 0.98,
         "p75": 1.74,
-        "rawMedian": 3.67,
-        "sampleSize": 6
+        "rawMedian": 3.56,
+        "sampleSize": 7
       },
       "CGC 9": {
         "gradedMedian": 11.68,
         "medianRatio": 1.56,
         "p25": 1.03,
         "p75": 2.1,
-        "rawMedian": 8.41,
+        "rawMedian": 8.43,
         "sampleSize": 43
       },
       "CGC 9.5": {
         "gradedMedian": 12.45,
-        "medianRatio": 2.45,
+        "medianRatio": 2.53,
         "p25": 1.92,
-        "p75": 3.15,
-        "rawMedian": 5.39,
+        "p75": 3.18,
+        "rawMedian": 5.36,
         "sampleSize": 11
       },
       "HGA 9": {
-        "gradedMedian": 11.79,
+        "gradedMedian": 8.53,
         "medianRatio": 1.46,
-        "p25": 0.84,
-        "p75": 1.73,
-        "rawMedian": 13.45,
-        "sampleSize": 6
+        "p25": 0.85,
+        "p75": 2.4,
+        "rawMedian": 8.43,
+        "sampleSize": 7
       },
       "PSA 10": {
-        "gradedMedian": 48.29,
-        "medianRatio": 8.51,
+        "gradedMedian": 48.09,
+        "medianRatio": 8.53,
         "p25": 5.6,
-        "p75": 12.77,
-        "rawMedian": 5.38,
-        "sampleSize": 2397
+        "p75": 12.88,
+        "rawMedian": 5.34,
+        "sampleSize": 2414
       },
       "PSA 5": {
         "gradedMedian": 6.86,
@@ -23555,59 +23631,59 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "sampleSize": 5
       },
       "PSA 6": {
-        "gradedMedian": 6.75,
-        "medianRatio": 0.8,
-        "p25": 0.66,
+        "gradedMedian": 6.88,
+        "medianRatio": 0.87,
+        "p25": 0.67,
         "p75": 1.21,
-        "rawMedian": 7.25,
-        "sampleSize": 27
+        "rawMedian": 7.67,
+        "sampleSize": 28
       },
       "PSA 7": {
-        "gradedMedian": 8.1,
+        "gradedMedian": 8.04,
         "medianRatio": 0.94,
-        "p25": 0.71,
-        "p75": 1.41,
-        "rawMedian": 7.86,
+        "p25": 0.69,
+        "p75": 1.39,
+        "rawMedian": 8.19,
         "sampleSize": 51
       },
       "PSA 8": {
-        "gradedMedian": 11.68,
-        "medianRatio": 1.52,
+        "gradedMedian": 11.73,
+        "medianRatio": 1.53,
         "p25": 1.09,
-        "p75": 2.51,
-        "rawMedian": 7.18,
-        "sampleSize": 471
+        "p75": 2.52,
+        "rawMedian": 7.17,
+        "sampleSize": 473
       },
       "PSA 8.5": {
         "gradedMedian": 16,
         "medianRatio": 1.95,
-        "p25": 0.97,
-        "p75": 2.88,
+        "p25": 0.9,
+        "p75": 3.27,
         "rawMedian": 13.45,
-        "sampleSize": 9
+        "sampleSize": 7
       },
       "PSA 9": {
-        "gradedMedian": 19.97,
-        "medianRatio": 3.13,
+        "gradedMedian": 20,
+        "medianRatio": 3.15,
         "p25": 2.1,
-        "p75": 4.87,
-        "rawMedian": 6.15,
-        "sampleSize": 1864
+        "p75": 4.88,
+        "rawMedian": 6.13,
+        "sampleSize": 1875
       },
       "SGC 10": {
-        "gradedMedian": 29.62,
+        "gradedMedian": 29.75,
         "medianRatio": 4.22,
-        "p25": 2.85,
-        "p75": 5.92,
-        "rawMedian": 6.77,
-        "sampleSize": 314
+        "p25": 2.83,
+        "p75": 6.02,
+        "rawMedian": 6.7,
+        "sampleSize": 318
       },
       "SGC 8": {
         "gradedMedian": 8.96,
         "medianRatio": 0.94,
         "p25": 0.63,
-        "p75": 1.3,
-        "rawMedian": 10.43,
+        "p75": 1.22,
+        "rawMedian": 10.42,
         "sampleSize": 11
       },
       "SGC 8.5": {
@@ -23615,7 +23691,7 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "medianRatio": 1.1,
         "p25": 0.75,
         "p75": 1.62,
-        "rawMedian": 10.07,
+        "rawMedian": 10,
         "sampleSize": 20
       },
       "SGC 9": {
@@ -23623,24 +23699,24 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "medianRatio": 1.58,
         "p25": 1.1,
         "p75": 2.78,
-        "rawMedian": 8.41,
+        "rawMedian": 8.43,
         "sampleSize": 140
       },
       "SGC 9.5": {
-        "gradedMedian": 18.58,
-        "medianRatio": 2.39,
-        "p25": 1.73,
+        "gradedMedian": 18.84,
+        "medianRatio": 2.44,
+        "p25": 1.74,
         "p75": 3.48,
-        "rawMedian": 7.25,
-        "sampleSize": 253
+        "rawMedian": 7.18,
+        "sampleSize": 256
       }
     }
   },
   "football|panini-revolution": {
     "Under $25": {
       "CGC 10": {
-        "gradedMedian": 19.37,
-        "medianRatio": 5.63,
+        "gradedMedian": 19.15,
+        "medianRatio": 5.87,
         "p25": 3.78,
         "p75": 6.81,
         "rawMedian": 3.32,
@@ -23648,26 +23724,26 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       },
       "PSA 10": {
         "gradedMedian": 60.16,
-        "medianRatio": 17.97,
+        "medianRatio": 18.16,
         "p25": 9.3,
-        "p75": 31.64,
-        "rawMedian": 4.55,
+        "p75": 27.51,
+        "rawMedian": 4.48,
         "sampleSize": 12
       },
       "PSA 8": {
         "gradedMedian": 20.5,
-        "medianRatio": 4.51,
-        "p25": 3.34,
-        "p75": 5.27,
-        "rawMedian": 4.55,
-        "sampleSize": 7
+        "medianRatio": 4.73,
+        "p25": 3.83,
+        "p75": 5.72,
+        "rawMedian": 4.48,
+        "sampleSize": 8
       },
       "PSA 9": {
         "gradedMedian": 20.88,
-        "medianRatio": 4.97,
+        "medianRatio": 5.04,
         "p25": 3.41,
         "p75": 7.06,
-        "rawMedian": 4.55,
+        "rawMedian": 4.48,
         "sampleSize": 10
       }
     }
@@ -23679,108 +23755,116 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "medianRatio": 10.48,
         "p25": 6.94,
         "p75": 16.81,
-        "rawMedian": 5.82,
+        "rawMedian": 5.41,
         "sampleSize": 24
       },
       "PSA 8": {
-        "gradedMedian": 14,
+        "gradedMedian": 18,
         "medianRatio": 2.82,
-        "p25": 1.83,
+        "p25": 1.19,
         "p75": 3.76,
-        "rawMedian": 7.3,
-        "sampleSize": 9
+        "rawMedian": 8,
+        "sampleSize": 10
       },
       "PSA 9": {
-        "gradedMedian": 22.5,
-        "medianRatio": 3.2,
-        "p25": 2.44,
-        "p75": 4.05,
-        "rawMedian": 6.07,
-        "sampleSize": 17
+        "gradedMedian": 24.67,
+        "medianRatio": 3.46,
+        "p25": 2.52,
+        "p75": 4.38,
+        "rawMedian": 7.3,
+        "sampleSize": 20
       }
     }
   },
   "football|panini-score": {
     "Under $25": {
+      "BGS 10": {
+        "gradedMedian": 42.5,
+        "medianRatio": 17.25,
+        "p25": 15.21,
+        "p75": 23.52,
+        "rawMedian": 2.49,
+        "sampleSize": 5
+      },
       "BGS 9.5": {
         "gradedMedian": 18.51,
-        "medianRatio": 4.79,
-        "p25": 4.13,
-        "p75": 6.54,
-        "rawMedian": 3.86,
+        "medianRatio": 4.62,
+        "p25": 4.22,
+        "p75": 6.32,
+        "rawMedian": 4.21,
         "sampleSize": 12
       },
       "CGC 10": {
-        "gradedMedian": 24.45,
-        "medianRatio": 8.67,
-        "p25": 4.97,
+        "gradedMedian": 25.9,
+        "medianRatio": 8.93,
+        "p25": 5.22,
         "p75": 11.95,
-        "rawMedian": 2.79,
+        "rawMedian": 2.84,
         "sampleSize": 23
       },
       "CGC 9": {
-        "gradedMedian": 18.25,
-        "medianRatio": 3.36,
-        "p25": 2.95,
-        "p75": 7.23,
-        "rawMedian": 2.9,
-        "sampleSize": 13
+        "gradedMedian": 19.75,
+        "medianRatio": 3.15,
+        "p25": 2.7,
+        "p75": 7.36,
+        "rawMedian": 3.23,
+        "sampleSize": 14
       },
       "PSA 10": {
-        "gradedMedian": 27.48,
-        "medianRatio": 12.9,
-        "p25": 8.98,
-        "p75": 16.39,
-        "rawMedian": 1.78,
-        "sampleSize": 137
+        "gradedMedian": 27.24,
+        "medianRatio": 12.92,
+        "p25": 9.07,
+        "p75": 16.3,
+        "rawMedian": 1.77,
+        "sampleSize": 135
       },
       "PSA 7": {
-        "gradedMedian": 8.49,
-        "medianRatio": 2,
+        "gradedMedian": 11,
+        "medianRatio": 2.04,
         "p25": 0.96,
         "p75": 3.08,
-        "rawMedian": 8.76,
+        "rawMedian": 9.07,
         "sampleSize": 6
       },
       "PSA 8": {
-        "gradedMedian": 10.99,
-        "medianRatio": 3.87,
-        "p25": 3.14,
+        "gradedMedian": 11.04,
+        "medianRatio": 4.1,
+        "p25": 3.21,
         "p75": 4.72,
-        "rawMedian": 2.29,
-        "sampleSize": 33
+        "rawMedian": 2.22,
+        "sampleSize": 32
       },
       "PSA 9": {
-        "gradedMedian": 15,
-        "medianRatio": 5.91,
-        "p25": 4.21,
-        "p75": 9.25,
-        "rawMedian": 2.07,
-        "sampleSize": 95
+        "gradedMedian": 15.33,
+        "medianRatio": 6.36,
+        "p25": 4.32,
+        "p75": 9.42,
+        "rawMedian": 2.16,
+        "sampleSize": 93
       },
       "SGC 10": {
-        "gradedMedian": 18.78,
-        "medianRatio": 7.55,
-        "p25": 5.46,
+        "gradedMedian": 18.87,
+        "medianRatio": 7.46,
+        "p25": 5.55,
         "p75": 10.08,
-        "rawMedian": 2.38,
-        "sampleSize": 39
+        "rawMedian": 2.39,
+        "sampleSize": 40
       },
       "SGC 9": {
         "gradedMedian": 28,
-        "medianRatio": 3.55,
-        "p25": 3.12,
-        "p75": 12.04,
-        "rawMedian": 5.01,
+        "medianRatio": 3.57,
+        "p25": 3.1,
+        "p75": 12.26,
+        "rawMedian": 5.1,
         "sampleSize": 8
       },
       "SGC 9.5": {
-        "gradedMedian": 12.08,
-        "medianRatio": 4.12,
-        "p25": 2.67,
-        "p75": 6.04,
-        "rawMedian": 2.69,
-        "sampleSize": 25
+        "gradedMedian": 10.93,
+        "medianRatio": 3.91,
+        "p25": 2.57,
+        "p75": 5.69,
+        "rawMedian": 2.79,
+        "sampleSize": 28
       }
     }
   },
@@ -23789,210 +23873,210 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       "BGS 9.5": {
         "gradedMedian": 285.52,
         "medianRatio": 2.26,
-        "p25": 2.04,
+        "p25": 2.13,
         "p75": 2.61,
         "rawMedian": 111.4,
         "sampleSize": 5
       },
       "PSA 10": {
-        "gradedMedian": 315.01,
-        "medianRatio": 2.2,
+        "gradedMedian": 302.99,
+        "medianRatio": 2.18,
         "p25": 1.75,
         "p75": 2.73,
         "rawMedian": 129.75,
-        "sampleSize": 43
+        "sampleSize": 48
       },
       "PSA 9": {
-        "gradedMedian": 142.5,
-        "medianRatio": 0.92,
+        "gradedMedian": 148.89,
+        "medianRatio": 1.08,
         "p25": 0.74,
-        "p75": 1.17,
+        "p75": 1.18,
         "rawMedian": 128.41,
-        "sampleSize": 25
+        "sampleSize": 26
       }
     },
     "$25-49": {
       "PSA 10": {
         "gradedMedian": 133.08,
-        "medianRatio": 3.9,
-        "p25": 2.98,
+        "medianRatio": 3.92,
+        "p25": 3.03,
         "p75": 5.39,
-        "rawMedian": 35,
-        "sampleSize": 74
+        "rawMedian": 33.84,
+        "sampleSize": 70
       },
       "PSA 8": {
         "gradedMedian": 22.5,
         "medianRatio": 0.72,
         "p25": 0.65,
-        "p75": 0.92,
-        "rawMedian": 30.86,
-        "sampleSize": 6
+        "p75": 0.96,
+        "rawMedian": 30.72,
+        "sampleSize": 7
       },
       "PSA 9": {
-        "gradedMedian": 50.33,
-        "medianRatio": 1.5,
-        "p25": 1.19,
-        "p75": 2.11,
-        "rawMedian": 35.02,
-        "sampleSize": 49
+        "gradedMedian": 48.86,
+        "medianRatio": 1.49,
+        "p25": 1.12,
+        "p75": 2.07,
+        "rawMedian": 33.84,
+        "sampleSize": 47
       }
     },
     "$250-499": {
       "PSA 10": {
-        "gradedMedian": 533.52,
-        "medianRatio": 2,
+        "gradedMedian": 720,
+        "medianRatio": 2.01,
         "p25": 1.7,
-        "p75": 2.27,
+        "p75": 2.33,
         "rawMedian": 277.5,
-        "sampleSize": 13
+        "sampleSize": 14
       },
       "PSA 9": {
         "gradedMedian": 338.5,
         "medianRatio": 0.95,
         "p25": 0.83,
-        "p75": 1.33,
+        "p75": 1.29,
         "rawMedian": 300,
         "sampleSize": 11
       }
     },
     "$50-99": {
       "PSA 10": {
-        "gradedMedian": 200,
-        "medianRatio": 2.56,
-        "p25": 2.11,
-        "p75": 3.84,
-        "rawMedian": 70.31,
+        "gradedMedian": 204.5,
+        "medianRatio": 2.75,
+        "p25": 2.16,
+        "p75": 3.81,
+        "rawMedian": 72,
         "sampleSize": 61
       },
       "PSA 8": {
-        "gradedMedian": 56.4,
-        "medianRatio": 0.72,
+        "gradedMedian": 52.07,
+        "medianRatio": 0.71,
         "p25": 0.7,
-        "p75": 0.89,
+        "p75": 0.72,
         "rawMedian": 89.21,
-        "sampleSize": 6
+        "sampleSize": 5
       },
       "PSA 9": {
-        "gradedMedian": 92.34,
+        "gradedMedian": 93.01,
         "medianRatio": 1.2,
         "p25": 0.97,
         "p75": 1.42,
         "rawMedian": 72,
-        "sampleSize": 37
+        "sampleSize": 36
       }
     },
     "Under $25": {
       "BGS 9": {
         "gradedMedian": 23.5,
-        "medianRatio": 2.68,
-        "p25": 1.75,
-        "p75": 4.51,
-        "rawMedian": 8.53,
-        "sampleSize": 12
+        "medianRatio": 2.95,
+        "p25": 1.79,
+        "p75": 4.47,
+        "rawMedian": 8.11,
+        "sampleSize": 11
       },
       "BGS 9.5": {
         "gradedMedian": 27.22,
-        "medianRatio": 5.06,
+        "medianRatio": 5.07,
         "p25": 2.69,
-        "p75": 7.18,
-        "rawMedian": 6.03,
-        "sampleSize": 19
+        "p75": 6.93,
+        "rawMedian": 6.06,
+        "sampleSize": 17
       },
       "CGC 10": {
         "gradedMedian": 20.25,
-        "medianRatio": 4.22,
-        "p25": 2.34,
-        "p75": 6.86,
-        "rawMedian": 5.74,
+        "medianRatio": 3.6,
+        "p25": 1.89,
+        "p75": 5.75,
+        "rawMedian": 7.32,
         "sampleSize": 37
       },
       "CGC 8.5": {
         "gradedMedian": 11.5,
         "medianRatio": 1.95,
-        "p25": 1.63,
+        "p25": 1.64,
         "p75": 2.18,
-        "rawMedian": 3.87,
+        "rawMedian": 3.85,
         "sampleSize": 9
       },
       "CGC 9": {
         "gradedMedian": 13.5,
         "medianRatio": 3.12,
-        "p25": 1.22,
+        "p25": 1.2,
         "p75": 5.02,
         "rawMedian": 4.17,
         "sampleSize": 18
       },
       "CGC 9.5": {
-        "gradedMedian": 16.75,
-        "medianRatio": 2.38,
-        "p25": 1.98,
-        "p75": 4.06,
-        "rawMedian": 8.62,
-        "sampleSize": 8
+        "gradedMedian": 16,
+        "medianRatio": 2.29,
+        "p25": 1.42,
+        "p75": 2.78,
+        "rawMedian": 8.05,
+        "sampleSize": 10
       },
       "HGA 9": {
         "gradedMedian": 11.27,
         "medianRatio": 1.76,
         "p25": 1.04,
         "p75": 2.24,
-        "rawMedian": 7.06,
+        "rawMedian": 6.71,
         "sampleSize": 9
       },
       "PSA 10": {
         "gradedMedian": 63.46,
-        "medianRatio": 9.07,
-        "p25": 5.28,
-        "p75": 14.48,
-        "rawMedian": 7.67,
-        "sampleSize": 595
+        "medianRatio": 9.19,
+        "p25": 5.29,
+        "p75": 14.8,
+        "rawMedian": 7.55,
+        "sampleSize": 594
       },
       "PSA 6": {
         "gradedMedian": 10.5,
-        "medianRatio": 1.35,
-        "p25": 1.08,
-        "p75": 1.58,
-        "rawMedian": 8.53,
-        "sampleSize": 6
+        "medianRatio": 1.22,
+        "p25": 1.1,
+        "p75": 1.42,
+        "rawMedian": 8.11,
+        "sampleSize": 5
       },
       "PSA 7": {
-        "gradedMedian": 10,
-        "medianRatio": 1.87,
-        "p25": 0.86,
-        "p75": 3.14,
-        "rawMedian": 4.69,
-        "sampleSize": 18
+        "gradedMedian": 9.02,
+        "medianRatio": 1.88,
+        "p25": 0.92,
+        "p75": 3.43,
+        "rawMedian": 3.85,
+        "sampleSize": 15
       },
       "PSA 8": {
-        "gradedMedian": 14.75,
-        "medianRatio": 1.84,
-        "p25": 1.32,
-        "p75": 3.24,
-        "rawMedian": 8.12,
-        "sampleSize": 108
+        "gradedMedian": 14.17,
+        "medianRatio": 1.92,
+        "p25": 1.34,
+        "p75": 3.34,
+        "rawMedian": 7.99,
+        "sampleSize": 105
       },
       "PSA 9": {
-        "gradedMedian": 27,
+        "gradedMedian": 26.89,
         "medianRatio": 3.43,
-        "p25": 2.09,
-        "p75": 5.61,
-        "rawMedian": 7.65,
-        "sampleSize": 439
+        "p25": 2.1,
+        "p75": 5.7,
+        "rawMedian": 7.53,
+        "sampleSize": 433
       },
       "SGC 10": {
         "gradedMedian": 32,
-        "medianRatio": 4.26,
-        "p25": 3.17,
-        "p75": 7.15,
-        "rawMedian": 6.87,
-        "sampleSize": 49
+        "medianRatio": 4.3,
+        "p25": 3.09,
+        "p75": 7,
+        "rawMedian": 6.71,
+        "sampleSize": 48
       },
       "SGC 9": {
         "gradedMedian": 14.25,
-        "medianRatio": 1.53,
-        "p25": 1.23,
-        "p75": 2.09,
-        "rawMedian": 7.39,
-        "sampleSize": 27
+        "medianRatio": 1.88,
+        "p25": 1.25,
+        "p75": 2.2,
+        "rawMedian": 7.32,
+        "sampleSize": 29
       },
       "SGC 9.5": {
         "gradedMedian": 17.75,
@@ -24018,11 +24102,11 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
     "$25-49": {
       "PSA 10": {
         "gradedMedian": 116.5,
-        "medianRatio": 3.69,
+        "medianRatio": 3.78,
         "p25": 2.91,
-        "p75": 4.12,
+        "p75": 4.79,
         "rawMedian": 34.25,
-        "sampleSize": 13
+        "sampleSize": 12
       },
       "PSA 9": {
         "gradedMedian": 48.5,
@@ -24035,12 +24119,12 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
     },
     "$50-99": {
       "PSA 10": {
-        "gradedMedian": 171.67,
-        "medianRatio": 2.51,
+        "gradedMedian": 160.5,
+        "medianRatio": 2.45,
         "p25": 2.21,
-        "p75": 2.88,
+        "p75": 2.69,
         "rawMedian": 60.6,
-        "sampleSize": 8
+        "sampleSize": 9
       },
       "PSA 9": {
         "gradedMedian": 69,
@@ -24054,11 +24138,11 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
     "Under $25": {
       "PSA 10": {
         "gradedMedian": 62,
-        "medianRatio": 5.22,
-        "p25": 3.79,
-        "p75": 12.61,
+        "medianRatio": 5.44,
+        "p25": 4.46,
+        "p75": 12.69,
         "rawMedian": 13.83,
-        "sampleSize": 23
+        "sampleSize": 24
       },
       "PSA 9": {
         "gradedMedian": 28.66,
@@ -24074,80 +24158,80 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
     "$100-249": {
       "PSA 10": {
         "gradedMedian": 309.47,
-        "medianRatio": 2.32,
+        "medianRatio": 2.31,
         "p25": 2.13,
-        "p75": 2.34,
+        "p75": 2.32,
         "rawMedian": 151.08,
-        "sampleSize": 6
+        "sampleSize": 5
       }
     },
     "$25-49": {
       "PSA 10": {
-        "gradedMedian": 95.67,
+        "gradedMedian": 102.75,
         "medianRatio": 2.66,
-        "p25": 2.46,
+        "p25": 2.5,
         "p75": 4.35,
-        "rawMedian": 33.77,
-        "sampleSize": 8
+        "rawMedian": 34.58,
+        "sampleSize": 12
       },
       "PSA 9": {
-        "gradedMedian": 51.93,
+        "gradedMedian": 66.92,
         "medianRatio": 1.62,
-        "p25": 0.96,
-        "p75": 1.68,
-        "rawMedian": 36.77,
-        "sampleSize": 6
+        "p25": 1.38,
+        "p75": 2.28,
+        "rawMedian": 43.2,
+        "sampleSize": 8
       }
     },
     "$50-99": {
       "PSA 10": {
-        "gradedMedian": 175.78,
-        "medianRatio": 2.42,
+        "gradedMedian": 184.7,
+        "medianRatio": 2.58,
         "p25": 2.08,
-        "p75": 2.74,
-        "rawMedian": 76.3,
-        "sampleSize": 20
+        "p75": 2.88,
+        "rawMedian": 73.48,
+        "sampleSize": 18
       },
       "PSA 9": {
-        "gradedMedian": 120.88,
-        "medianRatio": 1.59,
-        "p25": 1.26,
-        "p75": 1.91,
-        "rawMedian": 72.69,
-        "sampleSize": 17
+        "gradedMedian": 124.72,
+        "medianRatio": 1.74,
+        "p25": 1.45,
+        "p75": 2,
+        "rawMedian": 72.81,
+        "sampleSize": 16
       }
     },
     "Under $25": {
       "PSA 10": {
         "gradedMedian": 63.9,
-        "medianRatio": 8.57,
-        "p25": 5.55,
-        "p75": 13.67,
+        "medianRatio": 8.64,
+        "p25": 5.65,
+        "p75": 14.15,
         "rawMedian": 7.32,
         "sampleSize": 35
       },
       "PSA 8": {
         "gradedMedian": 11.42,
-        "medianRatio": 3.11,
+        "medianRatio": 3.12,
         "p25": 2.92,
         "p75": 5.43,
-        "rawMedian": 6.16,
+        "rawMedian": 6.13,
         "sampleSize": 9
       },
       "PSA 9": {
-        "gradedMedian": 27.5,
-        "medianRatio": 4.83,
-        "p25": 3.51,
-        "p75": 5.88,
-        "rawMedian": 6.4,
-        "sampleSize": 32
+        "gradedMedian": 27,
+        "medianRatio": 4.76,
+        "p25": 3.15,
+        "p75": 5.59,
+        "rawMedian": 6.28,
+        "sampleSize": 33
       },
       "SGC 9.5": {
         "gradedMedian": 22,
-        "medianRatio": 4.44,
+        "medianRatio": 4.47,
         "p25": 2.29,
-        "p75": 4.77,
-        "rawMedian": 5.52,
+        "p75": 4.78,
+        "rawMedian": 5.59,
         "sampleSize": 5
       }
     }
@@ -24155,20 +24239,20 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
   "football|topps-chrome": {
     "$1,000-2,499": {
       "PSA 10": {
-        "gradedMedian": 3356,
-        "medianRatio": 2.1,
+        "gradedMedian": 3976.72,
+        "medianRatio": 2.11,
         "p25": 1.91,
-        "p75": 2.96,
-        "rawMedian": 1527.44,
-        "sampleSize": 9
+        "p75": 3.09,
+        "rawMedian": 1710.56,
+        "sampleSize": 10
       },
       "PSA 9": {
         "gradedMedian": 2483.33,
-        "medianRatio": 1.45,
+        "medianRatio": 1.5,
         "p25": 1.12,
         "p75": 1.6,
         "rawMedian": 1710.56,
-        "sampleSize": 5
+        "sampleSize": 6
       }
     },
     "$100-249": {
@@ -24185,15 +24269,15 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "medianRatio": 0.87,
         "p25": 0.7,
         "p75": 1.04,
-        "rawMedian": 204.67,
-        "sampleSize": 6
+        "rawMedian": 188.05,
+        "sampleSize": 7
       },
       "PSA 9": {
         "gradedMedian": 218.75,
-        "medianRatio": 1.41,
+        "medianRatio": 1.5,
         "p25": 1.06,
         "p75": 1.77,
-        "rawMedian": 153.13,
+        "rawMedian": 167.3,
         "sampleSize": 21
       }
     },
@@ -24210,15 +24294,15 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
     "$25-49": {
       "PSA 10": {
         "gradedMedian": 186,
-        "medianRatio": 5.29,
-        "p25": 3.46,
-        "p75": 7.12,
-        "rawMedian": 33.33,
+        "medianRatio": 5.43,
+        "p25": 3.08,
+        "p75": 7.03,
+        "rawMedian": 37.07,
         "sampleSize": 22
       },
       "PSA 9": {
         "gradedMedian": 52.87,
-        "medianRatio": 1.44,
+        "medianRatio": 1.43,
         "p25": 1.15,
         "p75": 2.37,
         "rawMedian": 36.79,
@@ -24229,54 +24313,54 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       "PSA 10": {
         "gradedMedian": 910,
         "medianRatio": 2.73,
-        "p25": 2.32,
+        "p25": 2.34,
         "p75": 3.58,
         "rawMedian": 329.6,
-        "sampleSize": 19
+        "sampleSize": 20
       },
       "PSA 8": {
         "gradedMedian": 329.33,
-        "medianRatio": 1.07,
+        "medianRatio": 1.06,
         "p25": 1.04,
         "p75": 1.15,
-        "rawMedian": 318.86,
+        "rawMedian": 322.46,
         "sampleSize": 5
       },
       "PSA 9": {
-        "gradedMedian": 487.5,
-        "medianRatio": 1.33,
+        "gradedMedian": 510,
+        "medianRatio": 1.37,
         "p25": 1.05,
         "p75": 1.79,
-        "rawMedian": 329.6,
-        "sampleSize": 13
+        "rawMedian": 365,
+        "sampleSize": 14
       }
     },
     "$50-99": {
       "PSA 10": {
-        "gradedMedian": 193.12,
-        "medianRatio": 2.48,
-        "p25": 2.07,
-        "p75": 3.63,
-        "rawMedian": 82.68,
+        "gradedMedian": 193.5,
+        "medianRatio": 2.76,
+        "p25": 2.12,
+        "p75": 4.96,
+        "rawMedian": 82.67,
         "sampleSize": 24
       },
       "PSA 9": {
         "gradedMedian": 91.4,
-        "medianRatio": 1.13,
-        "p25": 1,
+        "medianRatio": 1.16,
+        "p25": 1.03,
         "p75": 1.57,
         "rawMedian": 82.5,
-        "sampleSize": 15
+        "sampleSize": 16
       }
     },
     "$500-999": {
       "PSA 10": {
-        "gradedMedian": 1775.67,
-        "medianRatio": 2.54,
+        "gradedMedian": 1625,
+        "medianRatio": 2.25,
         "p25": 1.96,
         "p75": 2.99,
-        "rawMedian": 750,
-        "sampleSize": 18
+        "rawMedian": 740,
+        "sampleSize": 17
       },
       "PSA 9": {
         "gradedMedian": 919,
@@ -24289,83 +24373,83 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
     },
     "Under $25": {
       "CGC 10": {
-        "gradedMedian": 27,
+        "gradedMedian": 25.66,
         "medianRatio": 6.72,
-        "p25": 4.28,
-        "p75": 8.9,
-        "rawMedian": 3.69,
+        "p25": 4.88,
+        "p75": 8.89,
+        "rawMedian": 3.66,
         "sampleSize": 15
       },
       "CGC 9": {
         "gradedMedian": 16.35,
-        "medianRatio": 7.54,
+        "medianRatio": 7.46,
         "p25": 4.85,
-        "p75": 9.5,
-        "rawMedian": 2.07,
-        "sampleSize": 19
+        "p75": 8.53,
+        "rawMedian": 2.25,
+        "sampleSize": 18
       },
       "CGC 9.5": {
-        "gradedMedian": 19.2,
-        "medianRatio": 5.88,
-        "p25": 5.67,
-        "p75": 7.17,
-        "rawMedian": 2.82,
-        "sampleSize": 9
+        "gradedMedian": 20,
+        "medianRatio": 6.08,
+        "p25": 5.69,
+        "p75": 8.21,
+        "rawMedian": 3.29,
+        "sampleSize": 11
       },
       "PSA 10": {
         "gradedMedian": 80,
-        "medianRatio": 12.84,
-        "p25": 7.5,
-        "p75": 19.7,
-        "rawMedian": 7.19,
-        "sampleSize": 132
+        "medianRatio": 13.1,
+        "p25": 7.46,
+        "p75": 21.13,
+        "rawMedian": 7.01,
+        "sampleSize": 130
       },
       "PSA 6": {
-        "gradedMedian": 10,
-        "medianRatio": 1.71,
-        "p25": 1.33,
-        "p75": 2.1,
-        "rawMedian": 4.89,
-        "sampleSize": 5
+        "gradedMedian": 10.94,
+        "medianRatio": 1.72,
+        "p25": 1.03,
+        "p75": 2.15,
+        "rawMedian": 6.38,
+        "sampleSize": 6
       },
       "PSA 7": {
         "gradedMedian": 14,
         "medianRatio": 2.38,
-        "p25": 1.12,
+        "p25": 1.13,
         "p75": 2.49,
-        "rawMedian": 6.39,
+        "rawMedian": 6.38,
         "sampleSize": 5
       },
       "PSA 8": {
-        "gradedMedian": 18.07,
-        "medianRatio": 2.4,
+        "gradedMedian": 18.33,
+        "medianRatio": 2.37,
         "p25": 1.44,
         "p75": 4.52,
         "rawMedian": 7.07,
         "sampleSize": 42
       },
       "PSA 9": {
-        "gradedMedian": 26.4,
-        "medianRatio": 4.79,
-        "p25": 2.84,
-        "p75": 7.86,
-        "rawMedian": 4.71,
-        "sampleSize": 133
+        "gradedMedian": 27.25,
+        "medianRatio": 5.23,
+        "p25": 2.87,
+        "p75": 8.58,
+        "rawMedian": 4.59,
+        "sampleSize": 136
       },
       "SGC 10": {
         "gradedMedian": 36.25,
-        "medianRatio": 4.46,
-        "p25": 3.77,
-        "p75": 7.33,
-        "rawMedian": 9.12,
-        "sampleSize": 16
+        "medianRatio": 4.47,
+        "p25": 3.81,
+        "p75": 6.37,
+        "rawMedian": 7.97,
+        "sampleSize": 17
       },
       "SGC 9": {
-        "gradedMedian": 12.83,
-        "medianRatio": 2.5,
+        "gradedMedian": 14.7,
+        "medianRatio": 2.51,
         "p25": 0.96,
-        "p75": 3.19,
-        "rawMedian": 4.5,
+        "p75": 4.1,
+        "rawMedian": 4.49,
         "sampleSize": 7
       },
       "SGC 9.5": {
@@ -24373,7 +24457,7 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "medianRatio": 2.86,
         "p25": 2.04,
         "p75": 4.43,
-        "rawMedian": 6.39,
+        "rawMedian": 6.38,
         "sampleSize": 17
       }
     }
@@ -24381,18 +24465,18 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
   "football|topps-finest": {
     "Under $25": {
       "PSA 10": {
-        "gradedMedian": 96,
-        "medianRatio": 8.56,
-        "p25": 6.14,
-        "p75": 12.25,
-        "rawMedian": 9.34,
-        "sampleSize": 16
+        "gradedMedian": 57.4,
+        "medianRatio": 6.92,
+        "p25": 5.12,
+        "p75": 12.22,
+        "rawMedian": 7.44,
+        "sampleSize": 11
       },
       "PSA 9": {
         "gradedMedian": 23.3,
         "medianRatio": 3.54,
         "p25": 2.18,
-        "p75": 4.76,
+        "p75": 4.61,
         "rawMedian": 6.58,
         "sampleSize": 5
       }
@@ -24444,15 +24528,15 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "p25": 2.44,
         "p75": 3.76,
         "rawMedian": 34.5,
-        "sampleSize": 28
+        "sampleSize": 27
       },
       "PSA 9": {
-        "gradedMedian": 45.19,
-        "medianRatio": 1.26,
-        "p25": 1.11,
-        "p75": 1.46,
-        "rawMedian": 35.63,
-        "sampleSize": 29
+        "gradedMedian": 45.2,
+        "medianRatio": 1.27,
+        "p25": 1.13,
+        "p75": 1.53,
+        "rawMedian": 35.96,
+        "sampleSize": 28
       },
       "SGC 10": {
         "gradedMedian": 91.21,
@@ -24532,11 +24616,11 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       },
       "PSA 10": {
         "gradedMedian": 34.83,
-        "medianRatio": 8.52,
+        "medianRatio": 8.44,
         "p25": 5.6,
         "p75": 11.91,
-        "rawMedian": 3.73,
-        "sampleSize": 396
+        "rawMedian": 3.74,
+        "sampleSize": 399
       },
       "PSA 7": {
         "gradedMedian": 7.48,
@@ -24551,22 +24635,22 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "medianRatio": 1.65,
         "p25": 1.07,
         "p75": 2.55,
-        "rawMedian": 6.04,
+        "rawMedian": 6.02,
         "sampleSize": 115
       },
       "PSA 9": {
         "gradedMedian": 14.7,
-        "medianRatio": 3.05,
-        "p25": 2.07,
+        "medianRatio": 3.01,
+        "p25": 2.04,
         "p75": 4.32,
-        "rawMedian": 4.28,
-        "sampleSize": 314
+        "rawMedian": 4.26,
+        "sampleSize": 315
       },
       "SGC 10": {
         "gradedMedian": 33.11,
         "medianRatio": 3.88,
         "p25": 2.91,
-        "p75": 5.18,
+        "p75": 5.13,
         "rawMedian": 6.51,
         "sampleSize": 44
       },
@@ -24600,894 +24684,878 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       },
       "BGS 9": {
         "gradedMedian": 1155.77,
-        "medianRatio": 1.01,
+        "medianRatio": 1,
         "p25": 0.91,
         "p75": 1.13,
-        "rawMedian": 1193.02,
+        "rawMedian": 1174.05,
         "sampleSize": 5
       },
       "BGS 9.5": {
         "gradedMedian": 1902.73,
         "medianRatio": 1.34,
         "p25": 1.17,
-        "p75": 2.19,
+        "p75": 2.32,
         "rawMedian": 1420.54,
         "sampleSize": 6
       },
       "CGC 10": {
-        "gradedMedian": 2491.73,
-        "medianRatio": 1.97,
+        "gradedMedian": 2503.97,
+        "medianRatio": 1.94,
         "p25": 1.33,
-        "p75": 2.19,
-        "rawMedian": 1193.02,
+        "p75": 2.17,
+        "rawMedian": 1174.05,
         "sampleSize": 5
       },
       "CGC 9": {
         "gradedMedian": 1158.67,
-        "medianRatio": 1.02,
-        "p25": 0.75,
+        "medianRatio": 1.01,
+        "p25": 0.76,
         "p75": 1.1,
-        "rawMedian": 1193.02,
+        "rawMedian": 1174.05,
         "sampleSize": 5
       },
       "PSA 10": {
         "gradedMedian": 2813.33,
-        "medianRatio": 2.32,
-        "p25": 1.78,
+        "medianRatio": 2.2,
+        "p25": 1.8,
         "p75": 2.44,
         "rawMedian": 1356.53,
-        "sampleSize": 10
+        "sampleSize": 11
       },
       "PSA 8": {
-        "gradedMedian": 1013.41,
+        "gradedMedian": 1248.66,
         "medianRatio": 0.88,
-        "p25": 0.85,
-        "p75": 0.89,
-        "rawMedian": 1193.02,
-        "sampleSize": 5
+        "p25": 0.84,
+        "p75": 0.98,
+        "rawMedian": 1420.54,
+        "sampleSize": 6
       },
       "PSA 9": {
         "gradedMedian": 1376.24,
-        "medianRatio": 1,
+        "medianRatio": 0.99,
         "p25": 0.88,
-        "p75": 1.13,
+        "p75": 1.16,
         "rawMedian": 1420.54,
         "sampleSize": 7
       }
     },
     "$100-249": {
       "BGS 10": {
-        "gradedMedian": 659.91,
-        "medianRatio": 4.52,
-        "p25": 2.71,
-        "p75": 6.87,
+        "gradedMedian": 635.44,
+        "medianRatio": 4.2,
+        "p25": 2.69,
+        "p75": 7.02,
         "rawMedian": 152.86,
-        "sampleSize": 42
+        "sampleSize": 40
       },
       "BGS 8.5": {
         "gradedMedian": 154,
         "medianRatio": 0.88,
         "p25": 0.88,
-        "p75": 1.16,
-        "rawMedian": 173.02,
+        "p75": 1.13,
+        "rawMedian": 137.99,
         "sampleSize": 5
       },
       "BGS 9": {
         "gradedMedian": 161.5,
-        "medianRatio": 0.94,
+        "medianRatio": 0.93,
         "p25": 0.73,
         "p75": 1.09,
-        "rawMedian": 173.68,
-        "sampleSize": 26
+        "rawMedian": 161.97,
+        "sampleSize": 24
       },
       "BGS 9.5": {
         "gradedMedian": 188.5,
         "medianRatio": 1.22,
-        "p25": 1.02,
-        "p75": 1.47,
+        "p25": 1.05,
+        "p75": 1.48,
         "rawMedian": 145.97,
-        "sampleSize": 62
+        "sampleSize": 65
       },
       "CGC 10": {
         "gradedMedian": 255,
-        "medianRatio": 1.66,
-        "p25": 1.42,
-        "p75": 2.04,
-        "rawMedian": 150.75,
-        "sampleSize": 140
+        "medianRatio": 1.64,
+        "p25": 1.4,
+        "p75": 2.06,
+        "rawMedian": 151.56,
+        "sampleSize": 138
       },
       "CGC 8": {
-        "gradedMedian": 145.18,
-        "medianRatio": 0.81,
+        "gradedMedian": 139.16,
+        "medianRatio": 0.85,
         "p25": 0.72,
-        "p75": 1.07,
-        "rawMedian": 192.43,
+        "p75": 1.09,
+        "rawMedian": 130.22,
         "sampleSize": 14
       },
       "CGC 8.5": {
-        "gradedMedian": 134.23,
-        "medianRatio": 0.78,
-        "p25": 0.68,
-        "p75": 0.91,
-        "rawMedian": 178.97,
-        "sampleSize": 31
+        "gradedMedian": 112.22,
+        "medianRatio": 0.74,
+        "p25": 0.65,
+        "p75": 0.89,
+        "rawMedian": 148.8,
+        "sampleSize": 28
       },
       "CGC 9": {
-        "gradedMedian": 145.13,
+        "gradedMedian": 147,
         "medianRatio": 0.92,
-        "p25": 0.78,
-        "p75": 1.07,
-        "rawMedian": 150.75,
+        "p25": 0.79,
+        "p75": 1.06,
+        "rawMedian": 148.8,
         "sampleSize": 78
       },
       "CGC 9.5": {
-        "gradedMedian": 138,
-        "medianRatio": 0.96,
+        "gradedMedian": 146.66,
+        "medianRatio": 0.97,
         "p25": 0.76,
-        "p75": 1.19,
-        "rawMedian": 136.11,
+        "p75": 1.15,
+        "rawMedian": 137.82,
         "sampleSize": 51
       },
-      "PSA 1": {
-        "gradedMedian": 119.1,
-        "medianRatio": 1.1,
-        "p25": 1.08,
-        "p75": 1.49,
-        "rawMedian": 122.55,
-        "sampleSize": 5
-      },
       "PSA 10": {
-        "gradedMedian": 384.68,
+        "gradedMedian": 383.71,
         "medianRatio": 2.54,
         "p25": 1.91,
         "p75": 3.75,
-        "rawMedian": 148.12,
-        "sampleSize": 198
+        "rawMedian": 147.86,
+        "sampleSize": 197
       },
       "PSA 6": {
         "gradedMedian": 146.8,
         "medianRatio": 0.85,
-        "p25": 0.67,
-        "p75": 1.21,
+        "p25": 0.63,
+        "p75": 1.06,
         "rawMedian": 152.31,
-        "sampleSize": 8
+        "sampleSize": 9
       },
       "PSA 7": {
         "gradedMedian": 122,
-        "medianRatio": 0.87,
-        "p25": 0.76,
-        "p75": 1,
-        "rawMedian": 137.86,
-        "sampleSize": 26
+        "medianRatio": 0.86,
+        "p25": 0.75,
+        "p75": 1.01,
+        "rawMedian": 135.15,
+        "sampleSize": 23
       },
       "PSA 8": {
-        "gradedMedian": 139.14,
+        "gradedMedian": 141.83,
         "medianRatio": 0.9,
-        "p25": 0.8,
+        "p25": 0.81,
         "p75": 1.04,
-        "rawMedian": 145.01,
-        "sampleSize": 111
-      },
-      "PSA 8.5": {
-        "gradedMedian": 177.5,
-        "medianRatio": 0.85,
-        "p25": 0.8,
-        "p75": 1.02,
-        "rawMedian": 207.13,
-        "sampleSize": 5
+        "rawMedian": 142.78,
+        "sampleSize": 108
       },
       "PSA 9": {
         "gradedMedian": 157.13,
-        "medianRatio": 1.01,
-        "p25": 0.9,
-        "p75": 1.23,
-        "rawMedian": 145.97,
-        "sampleSize": 178
+        "medianRatio": 1.02,
+        "p25": 0.91,
+        "p75": 1.2,
+        "rawMedian": 145.01,
+        "sampleSize": 174
       },
       "SGC 10": {
         "gradedMedian": 247,
-        "medianRatio": 1.47,
+        "medianRatio": 1.5,
         "p25": 1.25,
-        "p75": 1.86,
-        "rawMedian": 173.68,
+        "p75": 1.9,
+        "rawMedian": 159.32,
         "sampleSize": 11
       },
       "SGC 9.5": {
         "gradedMedian": 158.25,
-        "medianRatio": 0.8,
-        "p25": 0.68,
+        "medianRatio": 0.78,
+        "p25": 0.74,
         "p75": 1.06,
-        "rawMedian": 236.04,
+        "rawMedian": 230.57,
         "sampleSize": 5
       },
       "TAG 10": {
-        "gradedMedian": 319.6,
-        "medianRatio": 1.99,
-        "p25": 1.71,
-        "p75": 2.06,
-        "rawMedian": 173.02,
+        "gradedMedian": 355,
+        "medianRatio": 2.07,
+        "p25": 1.97,
+        "p75": 2.3,
+        "rawMedian": 202.95,
         "sampleSize": 5
       }
     },
     "$25-49": {
       "BGS 10": {
         "gradedMedian": 207.75,
-        "medianRatio": 6.02,
+        "medianRatio": 5.96,
         "p25": 3.2,
         "p75": 10.73,
         "rawMedian": 33.53,
         "sampleSize": 34
       },
       "BGS 9": {
-        "gradedMedian": 34.53,
+        "gradedMedian": 36,
         "medianRatio": 1.13,
-        "p25": 0.8,
-        "p75": 1.23,
-        "rawMedian": 33.83,
-        "sampleSize": 25
+        "p25": 0.79,
+        "p75": 1.32,
+        "rawMedian": 34.81,
+        "sampleSize": 24
       },
       "BGS 9.5": {
         "gradedMedian": 53.5,
         "medianRatio": 1.51,
-        "p25": 1.18,
-        "p75": 2.13,
-        "rawMedian": 34.03,
-        "sampleSize": 66
+        "p25": 1.19,
+        "p75": 2.11,
+        "rawMedian": 34.28,
+        "sampleSize": 65
       },
       "CGC 10": {
-        "gradedMedian": 70.91,
-        "medianRatio": 2,
-        "p25": 1.53,
-        "p75": 2.63,
-        "rawMedian": 33.09,
-        "sampleSize": 302
+        "gradedMedian": 70,
+        "medianRatio": 2.03,
+        "p25": 1.52,
+        "p75": 2.62,
+        "rawMedian": 33.53,
+        "sampleSize": 311
       },
       "CGC 7.5": {
         "gradedMedian": 19.51,
-        "medianRatio": 0.61,
-        "p25": 0.56,
-        "p75": 0.74,
-        "rawMedian": 33.83,
+        "medianRatio": 0.58,
+        "p25": 0.55,
+        "p75": 0.65,
+        "rawMedian": 34.28,
         "sampleSize": 5
       },
       "CGC 8": {
-        "gradedMedian": 22.1,
-        "medianRatio": 0.65,
-        "p25": 0.55,
+        "gradedMedian": 22.24,
+        "medianRatio": 0.63,
+        "p25": 0.56,
         "p75": 0.76,
-        "rawMedian": 35.6,
-        "sampleSize": 13
+        "rawMedian": 35.41,
+        "sampleSize": 17
       },
       "CGC 8.5": {
-        "gradedMedian": 24.95,
+        "gradedMedian": 25.34,
         "medianRatio": 0.77,
-        "p25": 0.67,
-        "p75": 0.85,
-        "rawMedian": 32.59,
-        "sampleSize": 63
+        "p25": 0.68,
+        "p75": 0.86,
+        "rawMedian": 33.64,
+        "sampleSize": 64
       },
       "CGC 9": {
         "gradedMedian": 28.76,
-        "medianRatio": 0.87,
+        "medianRatio": 0.86,
         "p25": 0.73,
-        "p75": 1.02,
-        "rawMedian": 32.62,
-        "sampleSize": 162
+        "p75": 1.03,
+        "rawMedian": 33.42,
+        "sampleSize": 159
       },
       "CGC 9.5": {
-        "gradedMedian": 35.17,
-        "medianRatio": 1.03,
-        "p25": 0.83,
+        "gradedMedian": 34.98,
+        "medianRatio": 1.04,
+        "p25": 0.84,
         "p75": 1.29,
-        "rawMedian": 34.33,
-        "sampleSize": 102
+        "rawMedian": 34.28,
+        "sampleSize": 104
       },
       "PSA 10": {
-        "gradedMedian": 122.82,
-        "medianRatio": 3.57,
-        "p25": 2.48,
+        "gradedMedian": 123.05,
+        "medianRatio": 3.6,
+        "p25": 2.51,
         "p75": 5.38,
-        "rawMedian": 33.53,
-        "sampleSize": 472
+        "rawMedian": 33.88,
+        "sampleSize": 484
       },
       "PSA 5": {
-        "gradedMedian": 26.25,
-        "medianRatio": 0.78,
-        "p25": 0.54,
-        "p75": 0.84,
-        "rawMedian": 33.83,
-        "sampleSize": 5
+        "gradedMedian": 27.33,
+        "medianRatio": 0.84,
+        "p25": 0.53,
+        "p75": 1.32,
+        "rawMedian": 34.81,
+        "sampleSize": 7
       },
       "PSA 6": {
         "gradedMedian": 25.75,
         "medianRatio": 0.63,
         "p25": 0.54,
-        "p75": 0.81,
-        "rawMedian": 34.72,
-        "sampleSize": 20
+        "p75": 0.79,
+        "rawMedian": 35.32,
+        "sampleSize": 21
       },
       "PSA 7": {
         "gradedMedian": 26,
-        "medianRatio": 0.77,
+        "medianRatio": 0.76,
         "p25": 0.64,
-        "p75": 0.88,
-        "rawMedian": 33.11,
-        "sampleSize": 38
+        "p75": 0.91,
+        "rawMedian": 32.07,
+        "sampleSize": 39
       },
       "PSA 8": {
-        "gradedMedian": 29.01,
-        "medianRatio": 0.86,
-        "p25": 0.72,
-        "p75": 1.01,
-        "rawMedian": 33.44,
-        "sampleSize": 176
+        "gradedMedian": 29.86,
+        "medianRatio": 0.87,
+        "p25": 0.73,
+        "p75": 1.03,
+        "rawMedian": 34.28,
+        "sampleSize": 182
       },
       "PSA 8.5": {
         "gradedMedian": 31.15,
-        "medianRatio": 0.8,
-        "p25": 0.71,
-        "p75": 0.83,
-        "rawMedian": 39.43,
+        "medianRatio": 0.83,
+        "p25": 0.74,
+        "p75": 1.25,
+        "rawMedian": 38.16,
         "sampleSize": 6
       },
       "PSA 9": {
-        "gradedMedian": 40.61,
-        "medianRatio": 1.19,
+        "gradedMedian": 40.58,
+        "medianRatio": 1.18,
         "p25": 1,
-        "p75": 1.46,
-        "rawMedian": 33.45,
-        "sampleSize": 382
+        "p75": 1.45,
+        "rawMedian": 34.05,
+        "sampleSize": 388
       },
       "SGC 10": {
         "gradedMedian": 67.5,
         "medianRatio": 1.85,
         "p25": 1.5,
-        "p75": 2.54,
-        "rawMedian": 34.81,
-        "sampleSize": 20
+        "p75": 2.69,
+        "rawMedian": 35.41,
+        "sampleSize": 24
       },
       "SGC 9": {
         "gradedMedian": 36.66,
-        "medianRatio": 0.94,
-        "p25": 0.86,
+        "medianRatio": 0.91,
+        "p25": 0.84,
         "p75": 1.09,
-        "rawMedian": 27.97,
+        "rawMedian": 28,
         "sampleSize": 9
       },
       "SGC 9.5": {
         "gradedMedian": 41.16,
-        "medianRatio": 1.21,
-        "p25": 0.92,
-        "p75": 1.53,
-        "rawMedian": 34.72,
-        "sampleSize": 12
+        "medianRatio": 1.08,
+        "p25": 0.89,
+        "p75": 1.29,
+        "rawMedian": 34.81,
+        "sampleSize": 13
       }
     },
     "$250-499": {
       "BGS 10": {
-        "gradedMedian": 1200,
+        "gradedMedian": 1233.33,
         "medianRatio": 3.41,
-        "p25": 2.97,
+        "p25": 3,
         "p75": 5.13,
-        "rawMedian": 335.52,
-        "sampleSize": 26
+        "rawMedian": 336.38,
+        "sampleSize": 25
       },
       "BGS 9": {
         "gradedMedian": 333.67,
         "medianRatio": 0.97,
         "p25": 0.9,
-        "p75": 1.13,
-        "rawMedian": 333.09,
-        "sampleSize": 13
+        "p75": 1.23,
+        "rawMedian": 332.92,
+        "sampleSize": 16
       },
       "BGS 9.5": {
         "gradedMedian": 474,
         "medianRatio": 1.43,
-        "p25": 1.2,
+        "p25": 1.19,
         "p75": 1.76,
-        "rawMedian": 332.86,
-        "sampleSize": 32
+        "rawMedian": 332.92,
+        "sampleSize": 31
       },
       "CGC 10": {
         "gradedMedian": 546,
-        "medianRatio": 1.63,
+        "medianRatio": 1.64,
         "p25": 1.34,
-        "p75": 2.16,
-        "rawMedian": 331.16,
-        "sampleSize": 57
+        "p75": 2.15,
+        "rawMedian": 332.21,
+        "sampleSize": 60
       },
       "CGC 8.5": {
         "gradedMedian": 249,
         "medianRatio": 0.78,
-        "p25": 0.68,
-        "p75": 0.8,
-        "rawMedian": 333.09,
-        "sampleSize": 9
+        "p25": 0.75,
+        "p75": 0.85,
+        "rawMedian": 281.68,
+        "sampleSize": 13
       },
       "CGC 9": {
-        "gradedMedian": 289.25,
-        "medianRatio": 0.92,
+        "gradedMedian": 290.5,
+        "medianRatio": 0.9,
         "p25": 0.82,
         "p75": 0.99,
-        "rawMedian": 332.86,
-        "sampleSize": 34
+        "rawMedian": 330.67,
+        "sampleSize": 37
       },
       "CGC 9.5": {
-        "gradedMedian": 348.83,
-        "medianRatio": 1.04,
-        "p25": 0.85,
-        "p75": 1.28,
-        "rawMedian": 333.09,
+        "gradedMedian": 362.5,
+        "medianRatio": 1.08,
+        "p25": 0.9,
+        "p75": 1.36,
+        "rawMedian": 332.92,
         "sampleSize": 22
       },
       "PSA 10": {
-        "gradedMedian": 756.97,
-        "medianRatio": 2.25,
-        "p25": 1.66,
-        "p75": 3.07,
+        "gradedMedian": 760,
+        "medianRatio": 2.31,
+        "p25": 1.68,
+        "p75": 3.77,
         "rawMedian": 332.21,
-        "sampleSize": 73
+        "sampleSize": 76
       },
       "PSA 7": {
         "gradedMedian": 306,
-        "medianRatio": 0.83,
-        "p25": 0.73,
-        "p75": 0.91,
-        "rawMedian": 332.86,
-        "sampleSize": 9
+        "medianRatio": 0.84,
+        "p25": 0.78,
+        "p75": 1.23,
+        "rawMedian": 330.67,
+        "sampleSize": 11
       },
       "PSA 8": {
         "gradedMedian": 295.9,
         "medianRatio": 0.87,
-        "p25": 0.82,
-        "p75": 1,
-        "rawMedian": 332.86,
-        "sampleSize": 38
+        "p25": 0.83,
+        "p75": 1.04,
+        "rawMedian": 332.92,
+        "sampleSize": 40
       },
       "PSA 8.5": {
         "gradedMedian": 281.21,
-        "medianRatio": 0.97,
+        "medianRatio": 0.94,
         "p25": 0.86,
         "p75": 0.99,
-        "rawMedian": 331.16,
-        "sampleSize": 6
+        "rawMedian": 330.67,
+        "sampleSize": 7
       },
       "PSA 9": {
         "gradedMedian": 327.08,
-        "medianRatio": 1.02,
+        "medianRatio": 1.01,
         "p25": 0.92,
-        "p75": 1.18,
-        "rawMedian": 330.72,
-        "sampleSize": 62
+        "p75": 1.19,
+        "rawMedian": 330.67,
+        "sampleSize": 66
       }
     },
     "$50-99": {
       "BGS 10": {
         "gradedMedian": 327.5,
-        "medianRatio": 5.02,
-        "p25": 3.05,
-        "p75": 8.64,
-        "rawMedian": 61.1,
-        "sampleSize": 44
+        "medianRatio": 5.03,
+        "p25": 2.99,
+        "p75": 9.73,
+        "rawMedian": 60.55,
+        "sampleSize": 45
       },
       "BGS 9": {
-        "gradedMedian": 64,
-        "medianRatio": 0.91,
-        "p25": 0.82,
-        "p75": 1.07,
-        "rawMedian": 65.79,
+        "gradedMedian": 67.6,
+        "medianRatio": 0.96,
+        "p25": 0.8,
+        "p75": 1.06,
+        "rawMedian": 64.58,
         "sampleSize": 31
       },
       "BGS 9.5": {
-        "gradedMedian": 94,
-        "medianRatio": 1.45,
-        "p25": 1.12,
-        "p75": 2.02,
-        "rawMedian": 64.65,
+        "gradedMedian": 92.5,
+        "medianRatio": 1.31,
+        "p25": 1.11,
+        "p75": 1.93,
+        "rawMedian": 64.24,
         "sampleSize": 77
       },
       "CGC 10": {
-        "gradedMedian": 125.57,
+        "gradedMedian": 126.2,
         "medianRatio": 1.86,
-        "p25": 1.48,
-        "p75": 2.48,
-        "rawMedian": 64.56,
-        "sampleSize": 212
+        "p25": 1.46,
+        "p75": 2.44,
+        "rawMedian": 64.08,
+        "sampleSize": 215
       },
       "CGC 8": {
-        "gradedMedian": 47.5,
-        "medianRatio": 0.74,
-        "p25": 0.64,
-        "p75": 0.81,
-        "rawMedian": 64.85,
-        "sampleSize": 20
+        "gradedMedian": 48.4,
+        "medianRatio": 0.71,
+        "p25": 0.61,
+        "p75": 0.8,
+        "rawMedian": 65.32,
+        "sampleSize": 18
       },
       "CGC 8.5": {
         "gradedMedian": 53.5,
-        "medianRatio": 0.73,
+        "medianRatio": 0.74,
         "p25": 0.66,
-        "p75": 0.87,
-        "rawMedian": 67.67,
+        "p75": 0.86,
+        "rawMedian": 70.64,
         "sampleSize": 37
       },
       "CGC 9": {
-        "gradedMedian": 54,
-        "medianRatio": 0.82,
+        "gradedMedian": 54.8,
+        "medianRatio": 0.81,
         "p25": 0.7,
-        "p75": 0.98,
-        "rawMedian": 64.56,
-        "sampleSize": 106
+        "p75": 0.95,
+        "rawMedian": 64.07,
+        "sampleSize": 105
       },
       "CGC 9.5": {
-        "gradedMedian": 61.65,
-        "medianRatio": 0.96,
-        "p25": 0.82,
-        "p75": 1.17,
-        "rawMedian": 60.97,
+        "gradedMedian": 63.09,
+        "medianRatio": 0.97,
+        "p25": 0.81,
+        "p75": 1.28,
+        "rawMedian": 60.7,
         "sampleSize": 71
       },
       "PSA 10": {
-        "gradedMedian": 192.29,
-        "medianRatio": 2.87,
-        "p25": 2.17,
-        "p75": 4.22,
-        "rawMedian": 65.11,
-        "sampleSize": 290
+        "gradedMedian": 185.32,
+        "medianRatio": 2.83,
+        "p25": 2.14,
+        "p75": 4.18,
+        "rawMedian": 66.51,
+        "sampleSize": 294
       },
       "PSA 6": {
         "gradedMedian": 49.9,
-        "medianRatio": 0.71,
+        "medianRatio": 0.68,
         "p25": 0.59,
         "p75": 0.78,
-        "rawMedian": 73.77,
-        "sampleSize": 10
+        "rawMedian": 75.05,
+        "sampleSize": 12
       },
       "PSA 7": {
         "gradedMedian": 54.71,
         "medianRatio": 0.77,
-        "p25": 0.67,
-        "p75": 0.93,
-        "rawMedian": 67.67,
-        "sampleSize": 32
+        "p25": 0.68,
+        "p75": 0.92,
+        "rawMedian": 68.76,
+        "sampleSize": 34
       },
       "PSA 8": {
-        "gradedMedian": 55,
+        "gradedMedian": 57.63,
         "medianRatio": 0.85,
-        "p25": 0.7,
+        "p25": 0.69,
         "p75": 0.98,
-        "rawMedian": 66.13,
-        "sampleSize": 121
+        "rawMedian": 66.8,
+        "sampleSize": 122
       },
       "PSA 9": {
         "gradedMedian": 71,
         "medianRatio": 1.07,
-        "p25": 0.91,
+        "p25": 0.9,
         "p75": 1.24,
-        "rawMedian": 65.51,
+        "rawMedian": 66.33,
         "sampleSize": 260
       },
       "SGC 10": {
-        "gradedMedian": 83.92,
-        "medianRatio": 1.6,
-        "p25": 1.13,
-        "p75": 1.94,
-        "rawMedian": 66.13,
-        "sampleSize": 19
+        "gradedMedian": 102.87,
+        "medianRatio": 1.61,
+        "p25": 1.15,
+        "p75": 1.92,
+        "rawMedian": 67.93,
+        "sampleSize": 18
       },
       "SGC 9": {
         "gradedMedian": 54.94,
         "medianRatio": 0.78,
         "p25": 0.71,
         "p75": 0.87,
-        "rawMedian": 70.43,
+        "rawMedian": 70.8,
         "sampleSize": 5
       },
       "SGC 9.5": {
-        "gradedMedian": 72.4,
-        "medianRatio": 1.03,
-        "p25": 0.88,
-        "p75": 1.19,
-        "rawMedian": 72.92,
+        "gradedMedian": 88.33,
+        "medianRatio": 1.08,
+        "p25": 0.9,
+        "p75": 1.28,
+        "rawMedian": 72.96,
         "sampleSize": 7
-      },
-      "TAG 10": {
-        "gradedMedian": 164.28,
-        "medianRatio": 2.59,
-        "p25": 2.27,
-        "p75": 3.07,
-        "rawMedian": 56.75,
-        "sampleSize": 5
       }
     },
     "$500-999": {
       "BGS 10": {
         "gradedMedian": 2010,
-        "medianRatio": 3.49,
-        "p25": 3.11,
-        "p75": 3.84,
-        "rawMedian": 670.12,
+        "medianRatio": 3.47,
+        "p25": 3.02,
+        "p75": 3.82,
+        "rawMedian": 672.54,
         "sampleSize": 7
       },
       "BGS 9.5": {
-        "gradedMedian": 1122.69,
+        "gradedMedian": 1130.49,
         "medianRatio": 1.75,
-        "p25": 1.47,
-        "p75": 2.24,
-        "rawMedian": 624.14,
+        "p25": 1.49,
+        "p75": 2.23,
+        "rawMedian": 623.29,
         "sampleSize": 5
       },
       "CGC 10": {
         "gradedMedian": 1045,
         "medianRatio": 1.54,
-        "p25": 1.15,
+        "p25": 1.06,
         "p75": 2.18,
-        "rawMedian": 664.9,
-        "sampleSize": 13
+        "rawMedian": 672.54,
+        "sampleSize": 14
       },
       "CGC 9": {
         "gradedMedian": 632.73,
-        "medianRatio": 0.89,
+        "medianRatio": 0.91,
         "p25": 0.85,
         "p75": 1.1,
         "rawMedian": 623.29,
         "sampleSize": 5
       },
       "PSA 10": {
-        "gradedMedian": 1393.89,
-        "medianRatio": 2.32,
-        "p25": 1.93,
-        "p75": 2.84,
-        "rawMedian": 672.54,
-        "sampleSize": 18
+        "gradedMedian": 1436.88,
+        "medianRatio": 2.44,
+        "p25": 2.02,
+        "p75": 3.3,
+        "rawMedian": 676.64,
+        "sampleSize": 20
       },
       "PSA 9": {
-        "gradedMedian": 674.49,
-        "medianRatio": 0.98,
+        "gradedMedian": 644.09,
+        "medianRatio": 0.99,
         "p25": 0.81,
-        "p75": 1.1,
-        "rawMedian": 676.64,
-        "sampleSize": 14
+        "p75": 1.11,
+        "rawMedian": 678.52,
+        "sampleSize": 13
       }
     },
     "Under $25": {
       "BGS 10": {
-        "gradedMedian": 90,
-        "medianRatio": 12.64,
-        "p25": 6.68,
-        "p75": 24.5,
-        "rawMedian": 6.96,
-        "sampleSize": 178
+        "gradedMedian": 90.5,
+        "medianRatio": 12.37,
+        "p25": 6.69,
+        "p75": 27.28,
+        "rawMedian": 6.95,
+        "sampleSize": 176
+      },
+      "BGS 8": {
+        "gradedMedian": 17,
+        "medianRatio": 1.13,
+        "p25": 1.12,
+        "p75": 2.11,
+        "rawMedian": 13.57,
+        "sampleSize": 5
       },
       "BGS 8.5": {
-        "gradedMedian": 12.6,
-        "medianRatio": 1.34,
-        "p25": 0.86,
-        "p75": 1.93,
-        "rawMedian": 8.38,
-        "sampleSize": 19
+        "gradedMedian": 13.65,
+        "medianRatio": 1.82,
+        "p25": 1.19,
+        "p75": 2.23,
+        "rawMedian": 7.74,
+        "sampleSize": 15
       },
       "BGS 9": {
-        "gradedMedian": 16.73,
-        "medianRatio": 2.14,
-        "p25": 1.3,
-        "p75": 3.36,
-        "rawMedian": 7.3,
-        "sampleSize": 95
+        "gradedMedian": 16.75,
+        "medianRatio": 2.04,
+        "p25": 1.34,
+        "p75": 3.02,
+        "rawMedian": 7.8,
+        "sampleSize": 86
       },
       "BGS 9.5": {
-        "gradedMedian": 20.32,
-        "medianRatio": 3.08,
-        "p25": 2.18,
-        "p75": 4.29,
+        "gradedMedian": 20.53,
+        "medianRatio": 3.09,
+        "p25": 2.17,
+        "p75": 4.27,
         "rawMedian": 6.7,
-        "sampleSize": 335
+        "sampleSize": 330
       },
       "CGC 10": {
-        "gradedMedian": 21.08,
-        "medianRatio": 5,
-        "p25": 3.31,
-        "p75": 7.74,
-        "rawMedian": 4.11,
-        "sampleSize": 4045
+        "gradedMedian": 21.3,
+        "medianRatio": 5.05,
+        "p25": 3.37,
+        "p75": 7.8,
+        "rawMedian": 4.1,
+        "sampleSize": 4236
       },
       "CGC 5": {
         "gradedMedian": 7.13,
         "medianRatio": 0.95,
-        "p25": 0.84,
+        "p25": 0.83,
         "p75": 1.66,
-        "rawMedian": 8.35,
+        "rawMedian": 8.4,
         "sampleSize": 7
       },
       "CGC 5.5": {
         "gradedMedian": 7.2,
-        "medianRatio": 1.67,
+        "medianRatio": 1.66,
         "p25": 1.4,
-        "p75": 1.97,
-        "rawMedian": 5.01,
+        "p75": 2.05,
+        "rawMedian": 4.99,
         "sampleSize": 6
       },
       "CGC 6": {
-        "gradedMedian": 7.2,
-        "medianRatio": 1.45,
-        "p25": 1.16,
-        "p75": 1.73,
-        "rawMedian": 4.13,
-        "sampleSize": 9
+        "gradedMedian": 8,
+        "medianRatio": 1.65,
+        "p25": 1.19,
+        "p75": 2.93,
+        "rawMedian": 4.26,
+        "sampleSize": 12
       },
       "CGC 6.5": {
-        "gradedMedian": 10,
-        "medianRatio": 1.24,
-        "p25": 1.09,
-        "p75": 2.05,
-        "rawMedian": 4.98,
-        "sampleSize": 19
+        "gradedMedian": 11.8,
+        "medianRatio": 1.57,
+        "p25": 1.1,
+        "p75": 3.1,
+        "rawMedian": 7.41,
+        "sampleSize": 20
       },
       "CGC 7": {
-        "gradedMedian": 8.1,
-        "medianRatio": 1.91,
-        "p25": 1.13,
-        "p75": 3.16,
-        "rawMedian": 3.67,
-        "sampleSize": 39
+        "gradedMedian": 9.3,
+        "medianRatio": 1.87,
+        "p25": 1.07,
+        "p75": 3.08,
+        "rawMedian": 4.75,
+        "sampleSize": 37
       },
       "CGC 7.5": {
-        "gradedMedian": 8.75,
-        "medianRatio": 1.7,
+        "gradedMedian": 9,
+        "medianRatio": 1.72,
         "p25": 1.09,
-        "p75": 2.48,
-        "rawMedian": 4.89,
+        "p75": 2.68,
+        "rawMedian": 4.77,
         "sampleSize": 107
       },
       "CGC 8": {
-        "gradedMedian": 9.7,
-        "medianRatio": 1.85,
-        "p25": 1.22,
-        "p75": 2.96,
-        "rawMedian": 4.73,
-        "sampleSize": 314
+        "gradedMedian": 10,
+        "medianRatio": 1.91,
+        "p25": 1.27,
+        "p75": 2.95,
+        "rawMedian": 4.63,
+        "sampleSize": 326
       },
       "CGC 8.5": {
-        "gradedMedian": 10.06,
-        "medianRatio": 2.06,
-        "p25": 1.28,
-        "p75": 3.22,
-        "rawMedian": 4.69,
-        "sampleSize": 654
+        "gradedMedian": 10.25,
+        "medianRatio": 2.11,
+        "p25": 1.3,
+        "p75": 3.27,
+        "rawMedian": 4.65,
+        "sampleSize": 674
       },
       "CGC 9": {
-        "gradedMedian": 11.47,
-        "medianRatio": 2.47,
-        "p25": 1.52,
-        "p75": 3.88,
-        "rawMedian": 4.5,
-        "sampleSize": 1940
+        "gradedMedian": 11.56,
+        "medianRatio": 2.5,
+        "p25": 1.56,
+        "p75": 3.92,
+        "rawMedian": 4.41,
+        "sampleSize": 2013
       },
       "CGC 9.5": {
-        "gradedMedian": 13.36,
-        "medianRatio": 2.47,
-        "p25": 1.62,
-        "p75": 3.94,
+        "gradedMedian": 13.44,
+        "medianRatio": 2.49,
+        "p25": 1.63,
+        "p75": 3.97,
         "rawMedian": 5.25,
-        "sampleSize": 1050
+        "sampleSize": 1059
       },
       "PSA 10": {
-        "gradedMedian": 41,
-        "medianRatio": 8.86,
-        "p25": 5.53,
-        "p75": 14.64,
-        "rawMedian": 4.73,
-        "sampleSize": 4812
+        "gradedMedian": 41.7,
+        "medianRatio": 9.02,
+        "p25": 5.6,
+        "p75": 15.19,
+        "rawMedian": 4.67,
+        "sampleSize": 5018
       },
       "PSA 4": {
-        "gradedMedian": 14,
-        "medianRatio": 1.81,
-        "p25": 1.27,
-        "p75": 4.05,
-        "rawMedian": 9.83,
-        "sampleSize": 10
+        "gradedMedian": 13.5,
+        "medianRatio": 1.74,
+        "p25": 0.91,
+        "p75": 1.84,
+        "rawMedian": 10.53,
+        "sampleSize": 7
       },
       "PSA 5": {
         "gradedMedian": 8.83,
-        "medianRatio": 1.49,
-        "p25": 0.94,
-        "p75": 2.38,
+        "medianRatio": 1.89,
+        "p25": 0.93,
+        "p75": 2.65,
         "rawMedian": 7.29,
-        "sampleSize": 19
+        "sampleSize": 18
       },
       "PSA 6": {
-        "gradedMedian": 12.56,
-        "medianRatio": 1.34,
-        "p25": 0.9,
-        "p75": 2.37,
-        "rawMedian": 8.51,
-        "sampleSize": 77
+        "gradedMedian": 12.9,
+        "medianRatio": 1.35,
+        "p25": 0.93,
+        "p75": 2.38,
+        "rawMedian": 9.06,
+        "sampleSize": 80
       },
       "PSA 7": {
-        "gradedMedian": 12.25,
-        "medianRatio": 1.54,
+        "gradedMedian": 12.4,
+        "medianRatio": 1.6,
         "p25": 1.02,
-        "p75": 2.6,
-        "rawMedian": 8.15,
-        "sampleSize": 198
+        "p75": 2.76,
+        "rawMedian": 7.5,
+        "sampleSize": 199
       },
       "PSA 8": {
-        "gradedMedian": 13.12,
-        "medianRatio": 2.08,
-        "p25": 1.3,
-        "p75": 3.64,
-        "rawMedian": 6.08,
-        "sampleSize": 1160
+        "gradedMedian": 13.25,
+        "medianRatio": 2.12,
+        "p25": 1.32,
+        "p75": 3.68,
+        "rawMedian": 6.05,
+        "sampleSize": 1167
       },
       "PSA 8.5": {
-        "gradedMedian": 16.83,
-        "medianRatio": 1.93,
+        "gradedMedian": 19.75,
+        "medianRatio": 2.33,
         "p25": 1.3,
-        "p75": 2.66,
-        "rawMedian": 10.24,
-        "sampleSize": 21
+        "p75": 2.62,
+        "rawMedian": 10.9,
+        "sampleSize": 22
       },
       "PSA 9": {
-        "gradedMedian": 16.95,
-        "medianRatio": 3.25,
-        "p25": 2.01,
-        "p75": 5.38,
-        "rawMedian": 4.97,
-        "sampleSize": 3221
+        "gradedMedian": 17.15,
+        "medianRatio": 3.31,
+        "p25": 2.05,
+        "p75": 5.46,
+        "rawMedian": 4.95,
+        "sampleSize": 3295
       },
       "SGC 10": {
-        "gradedMedian": 21.88,
-        "medianRatio": 3.23,
-        "p25": 2.23,
-        "p75": 4.79,
+        "gradedMedian": 22.49,
+        "medianRatio": 3.26,
+        "p25": 2.29,
+        "p75": 4.55,
         "rawMedian": 6.95,
-        "sampleSize": 101
+        "sampleSize": 100
       },
       "SGC 8": {
-        "gradedMedian": 6.38,
-        "medianRatio": 2.12,
-        "p25": 1.07,
-        "p75": 3.8,
-        "rawMedian": 3.46,
-        "sampleSize": 7
+        "gradedMedian": 9.75,
+        "medianRatio": 2.67,
+        "p25": 1.79,
+        "p75": 3.79,
+        "rawMedian": 3.56,
+        "sampleSize": 6
       },
       "SGC 8.5": {
         "gradedMedian": 7.67,
-        "medianRatio": 0.75,
-        "p25": 0.58,
-        "p75": 1.69,
-        "rawMedian": 10.24,
+        "medianRatio": 1.72,
+        "p25": 0.75,
+        "p75": 2.02,
+        "rawMedian": 3.2,
         "sampleSize": 5
       },
       "SGC 9": {
-        "gradedMedian": 8.5,
+        "gradedMedian": 9,
         "medianRatio": 1.21,
-        "p25": 0.68,
-        "p75": 2.12,
-        "rawMedian": 8.43,
-        "sampleSize": 25
+        "p25": 0.66,
+        "p75": 2.09,
+        "rawMedian": 8.59,
+        "sampleSize": 21
       },
       "SGC 9.5": {
-        "gradedMedian": 17.8,
-        "medianRatio": 1.81,
-        "p25": 1.48,
-        "p75": 2.87,
-        "rawMedian": 7.4,
-        "sampleSize": 26
+        "gradedMedian": 16.9,
+        "medianRatio": 1.67,
+        "p25": 1.42,
+        "p75": 2.88,
+        "rawMedian": 6.59,
+        "sampleSize": 25
       },
       "TAG 10": {
-        "gradedMedian": 78.33,
-        "medianRatio": 7,
-        "p25": 5.91,
-        "p75": 10.21,
-        "rawMedian": 9.66,
-        "sampleSize": 20
+        "gradedMedian": 76.8,
+        "medianRatio": 8.2,
+        "p25": 6.05,
+        "p75": 11.29,
+        "rawMedian": 7.6,
+        "sampleSize": 19
       },
       "TAG 9": {
-        "gradedMedian": 20.49,
-        "medianRatio": 2.44,
-        "p25": 2.19,
-        "p75": 3.37,
-        "rawMedian": 8.39,
+        "gradedMedian": 27.75,
+        "medianRatio": 2.48,
+        "p25": 2.27,
+        "p75": 3.31,
+        "rawMedian": 8.38,
         "sampleSize": 7
       }
     }
@@ -25495,25 +25563,25 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
   "pokemon|pokemon-astral-radiance": {
     "Under $25": {
       "CGC 10": {
-        "gradedMedian": 21.33,
-        "medianRatio": 6.36,
+        "gradedMedian": 21.13,
+        "medianRatio": 6.63,
         "p25": 3.6,
-        "p75": 8.71,
-        "rawMedian": 3.94,
-        "sampleSize": 32
+        "p75": 8.67,
+        "rawMedian": 3.89,
+        "sampleSize": 34
       },
       "CGC 9": {
-        "gradedMedian": 11.98,
-        "medianRatio": 3.66,
-        "p25": 3.06,
-        "p75": 4.61,
+        "gradedMedian": 11.7,
+        "medianRatio": 3.5,
+        "p25": 2.29,
+        "p75": 4.46,
         "rawMedian": 3,
-        "sampleSize": 18
+        "sampleSize": 19
       },
       "CGC 9.5": {
         "gradedMedian": 12.25,
         "medianRatio": 3.25,
-        "p25": 3.14,
+        "p25": 3.15,
         "p75": 4.53,
         "rawMedian": 3.14,
         "sampleSize": 5
@@ -25521,298 +25589,306 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       "PSA 10": {
         "gradedMedian": 40.8,
         "medianRatio": 9.82,
-        "p25": 5.95,
-        "p75": 15.61,
-        "rawMedian": 3.94,
-        "sampleSize": 71
+        "p25": 5.93,
+        "p75": 15.27,
+        "rawMedian": 4.03,
+        "sampleSize": 73
       },
       "PSA 8": {
         "gradedMedian": 12,
-        "medianRatio": 2.13,
+        "medianRatio": 2.91,
         "p25": 1.14,
-        "p75": 3.3,
-        "rawMedian": 5.57,
-        "sampleSize": 9
+        "p75": 4.27,
+        "rawMedian": 4.35,
+        "sampleSize": 11
       },
       "PSA 9": {
-        "gradedMedian": 17.83,
-        "medianRatio": 4.17,
-        "p25": 2.27,
-        "p75": 6.94,
+        "gradedMedian": 17.66,
+        "medianRatio": 4.43,
+        "p25": 2.38,
+        "p75": 6.63,
         "rawMedian": 4.63,
-        "sampleSize": 38
+        "sampleSize": 40
       }
     }
   },
   "pokemon|pokemon-brilliant-stars": {
     "$50-99": {
       "CGC 10": {
-        "gradedMedian": 129.97,
+        "gradedMedian": 131.74,
         "medianRatio": 2.06,
         "p25": 1.57,
-        "p75": 2.5,
-        "rawMedian": 61.02,
+        "p75": 2.57,
+        "rawMedian": 60.18,
         "sampleSize": 6
       },
       "CGC 9": {
         "gradedMedian": 51,
         "medianRatio": 0.8,
         "p25": 0.62,
-        "p75": 0.81,
-        "rawMedian": 61.02,
+        "p75": 0.82,
+        "rawMedian": 60.18,
         "sampleSize": 5
       },
       "PSA 10": {
-        "gradedMedian": 197.21,
-        "medianRatio": 3.42,
-        "p25": 2.12,
-        "p75": 3.75,
-        "rawMedian": 61.02,
+        "gradedMedian": 202.11,
+        "medianRatio": 3.46,
+        "p25": 2.18,
+        "p75": 3.85,
+        "rawMedian": 60.18,
         "sampleSize": 6
       },
       "PSA 9": {
-        "gradedMedian": 68.76,
-        "medianRatio": 1.02,
-        "p25": 0.83,
-        "p75": 1.32,
-        "rawMedian": 61.02,
+        "gradedMedian": 69.65,
+        "medianRatio": 1.08,
+        "p25": 0.85,
+        "p75": 1.36,
+        "rawMedian": 60.18,
         "sampleSize": 6
       }
     },
     "Under $25": {
       "CGC 10": {
         "gradedMedian": 25.35,
-        "medianRatio": 5.46,
-        "p25": 3.86,
+        "medianRatio": 5.27,
+        "p25": 3.92,
         "p75": 7.02,
-        "rawMedian": 5.13,
-        "sampleSize": 54
+        "rawMedian": 5,
+        "sampleSize": 55
       },
       "CGC 8.5": {
         "gradedMedian": 10.67,
-        "medianRatio": 1.48,
+        "medianRatio": 1.79,
         "p25": 1.29,
         "p75": 1.84,
-        "rawMedian": 7.45,
+        "rawMedian": 6.54,
         "sampleSize": 9
       },
       "CGC 9": {
-        "gradedMedian": 14.08,
-        "medianRatio": 2,
+        "gradedMedian": 13.1,
+        "medianRatio": 2.09,
         "p25": 1.41,
         "p75": 3.63,
-        "rawMedian": 6.54,
-        "sampleSize": 36
+        "rawMedian": 6.12,
+        "sampleSize": 38
       },
       "CGC 9.5": {
         "gradedMedian": 17.7,
-        "medianRatio": 2.21,
-        "p25": 1.51,
-        "p75": 3.65,
+        "medianRatio": 2.28,
+        "p25": 1.9,
+        "p75": 3.79,
         "rawMedian": 7.8,
-        "sampleSize": 17
+        "sampleSize": 20
       },
       "PSA 10": {
-        "gradedMedian": 48.24,
-        "medianRatio": 10.68,
-        "p25": 7.42,
+        "gradedMedian": 49.51,
+        "medianRatio": 10.81,
+        "p25": 7.7,
         "p75": 15.49,
-        "rawMedian": 4.31,
-        "sampleSize": 63
+        "rawMedian": 4.37,
+        "sampleSize": 65
       },
       "PSA 7": {
         "gradedMedian": 14.01,
-        "medianRatio": 1.59,
+        "medianRatio": 1.61,
         "p25": 0.9,
         "p75": 2.06,
-        "rawMedian": 8.84,
+        "rawMedian": 8.7,
         "sampleSize": 5
       },
       "PSA 8": {
         "gradedMedian": 14.18,
-        "medianRatio": 1.98,
-        "p25": 1.26,
+        "medianRatio": 2.01,
+        "p25": 1.1,
         "p75": 2.82,
         "rawMedian": 7.8,
         "sampleSize": 21
       },
       "PSA 9": {
-        "gradedMedian": 17.77,
-        "medianRatio": 3.58,
-        "p25": 2.38,
+        "gradedMedian": 17.93,
+        "medianRatio": 3.65,
+        "p25": 2.44,
         "p75": 5.33,
-        "rawMedian": 4.09,
-        "sampleSize": 61
+        "rawMedian": 4.33,
+        "sampleSize": 62
       }
     }
   },
   "pokemon|pokemon-celebrations": {
     "$25-49": {
       "CGC 10": {
-        "gradedMedian": 93.14,
-        "medianRatio": 2.47,
-        "p25": 2.16,
+        "gradedMedian": 93.58,
+        "medianRatio": 2.42,
+        "p25": 2.2,
         "p75": 2.52,
-        "rawMedian": 33.45,
+        "rawMedian": 33.72,
         "sampleSize": 5
       },
       "PSA 10": {
-        "gradedMedian": 131.48,
-        "medianRatio": 4.42,
+        "gradedMedian": 132.4,
+        "medianRatio": 4.43,
         "p25": 4.01,
         "p75": 4.61,
-        "rawMedian": 33.45,
+        "rawMedian": 33.72,
         "sampleSize": 5
       }
     },
     "Under $25": {
       "BGS 9.5": {
         "gradedMedian": 70.67,
-        "medianRatio": 3.95,
-        "p25": 2.58,
+        "medianRatio": 3.71,
+        "p25": 2.34,
         "p75": 5.48,
         "rawMedian": 13.33,
         "sampleSize": 6
       },
       "CGC 10": {
-        "gradedMedian": 27.8,
-        "medianRatio": 6.7,
-        "p25": 4.33,
-        "p75": 9.9,
+        "gradedMedian": 27,
+        "medianRatio": 7.11,
+        "p25": 4.31,
+        "p75": 10.15,
         "rawMedian": 4.41,
-        "sampleSize": 36
+        "sampleSize": 35
       },
       "CGC 7.5": {
         "gradedMedian": 9,
-        "medianRatio": 2.37,
-        "p25": 1.1,
-        "p75": 4.23,
-        "rawMedian": 7.15,
+        "medianRatio": 2.36,
+        "p25": 1.03,
+        "p75": 3.98,
+        "rawMedian": 7.29,
         "sampleSize": 6
       },
       "CGC 8": {
-        "gradedMedian": 7.83,
-        "medianRatio": 1.48,
-        "p25": 1.31,
-        "p75": 3.5,
-        "rawMedian": 4.64,
-        "sampleSize": 11
+        "gradedMedian": 9.85,
+        "medianRatio": 2.37,
+        "p25": 1.39,
+        "p75": 4.5,
+        "rawMedian": 4.27,
+        "sampleSize": 12
       },
       "CGC 8.5": {
-        "gradedMedian": 11.07,
-        "medianRatio": 1.59,
+        "gradedMedian": 11,
+        "medianRatio": 2.19,
         "p25": 1.26,
-        "p75": 3.32,
-        "rawMedian": 7.15,
-        "sampleSize": 17
+        "p75": 4.35,
+        "rawMedian": 4.65,
+        "sampleSize": 21
       },
       "CGC 9": {
-        "gradedMedian": 11.77,
-        "medianRatio": 2.86,
-        "p25": 1.7,
-        "p75": 3.56,
-        "rawMedian": 4.41,
+        "gradedMedian": 11.97,
+        "medianRatio": 2.83,
+        "p25": 1.9,
+        "p75": 4.3,
+        "rawMedian": 4.37,
         "sampleSize": 37
       },
       "CGC 9.5": {
         "gradedMedian": 18,
-        "medianRatio": 2.5,
-        "p25": 2.14,
-        "p75": 4.81,
-        "rawMedian": 7.15,
+        "medianRatio": 3.12,
+        "p25": 2.13,
+        "p75": 4.75,
+        "rawMedian": 7.29,
         "sampleSize": 24
       },
       "PSA 10": {
-        "gradedMedian": 74.25,
-        "medianRatio": 17.24,
-        "p25": 8.92,
-        "p75": 32.5,
+        "gradedMedian": 75.98,
+        "medianRatio": 17.46,
+        "p25": 8.49,
+        "p75": 34.67,
         "rawMedian": 4.27,
         "sampleSize": 42
       },
       "PSA 7": {
         "gradedMedian": 11.21,
-        "medianRatio": 1.79,
-        "p25": 1.52,
-        "p75": 3.31,
-        "rawMedian": 4.64,
-        "sampleSize": 11
+        "medianRatio": 2.41,
+        "p25": 1.6,
+        "p75": 3.23,
+        "rawMedian": 4.37,
+        "sampleSize": 12
       },
       "PSA 8": {
         "gradedMedian": 13.05,
         "medianRatio": 3.01,
         "p25": 1.86,
-        "p75": 4.28,
-        "rawMedian": 4.41,
-        "sampleSize": 36
+        "p75": 4.16,
+        "rawMedian": 4.27,
+        "sampleSize": 37
       },
       "PSA 9": {
-        "gradedMedian": 15.8,
-        "medianRatio": 4.17,
+        "gradedMedian": 15.82,
+        "medianRatio": 4.45,
         "p25": 2.63,
-        "p75": 5.89,
+        "p75": 5.76,
         "rawMedian": 4.27,
         "sampleSize": 42
       },
       "SGC 10": {
         "gradedMedian": 34.24,
-        "medianRatio": 3.63,
-        "p25": 2.38,
-        "p75": 3.73,
-        "rawMedian": 9.83,
-        "sampleSize": 6
+        "medianRatio": 3.42,
+        "p25": 2.29,
+        "p75": 25.78,
+        "rawMedian": 9.06,
+        "sampleSize": 7
       }
     }
   },
   "pokemon|pokemon-crown-zenith": {
     "$25-49": {
       "CGC 10": {
-        "gradedMedian": 43.71,
-        "medianRatio": 1.46,
-        "p25": 0.95,
-        "p75": 1.97,
-        "rawMedian": 33,
-        "sampleSize": 14
+        "gradedMedian": 52.14,
+        "medianRatio": 1.62,
+        "p25": 1.2,
+        "p75": 1.98,
+        "rawMedian": 33.09,
+        "sampleSize": 16
       },
       "CGC 9": {
-        "gradedMedian": 22.07,
+        "gradedMedian": 25.85,
         "medianRatio": 0.74,
         "p25": 0.65,
         "p75": 0.81,
-        "rawMedian": 30.5,
-        "sampleSize": 9
+        "rawMedian": 32.84,
+        "sampleSize": 10
       },
       "CGC 9.5": {
         "gradedMedian": 31.56,
         "medianRatio": 0.79,
-        "p25": 0.62,
+        "p25": 0.64,
         "p75": 1.08,
-        "rawMedian": 36.84,
-        "sampleSize": 7
+        "rawMedian": 37.85,
+        "sampleSize": 8
       },
       "PSA 10": {
-        "gradedMedian": 129.78,
+        "gradedMedian": 130.96,
         "medianRatio": 3.36,
-        "p25": 2.71,
-        "p75": 4.51,
-        "rawMedian": 33,
-        "sampleSize": 14
+        "p25": 2.77,
+        "p75": 4.57,
+        "rawMedian": 33.09,
+        "sampleSize": 16
       },
       "PSA 8": {
-        "gradedMedian": 24.65,
+        "gradedMedian": 27.82,
         "medianRatio": 0.74,
-        "p25": 0.7,
-        "p75": 0.76,
-        "rawMedian": 30.5,
-        "sampleSize": 9
+        "p25": 0.64,
+        "p75": 0.83,
+        "rawMedian": 32.84,
+        "sampleSize": 10
       },
       "PSA 9": {
         "gradedMedian": 26.51,
         "medianRatio": 0.86,
-        "p25": 0.7,
+        "p25": 0.69,
         "p75": 1.1,
-        "rawMedian": 32.38,
-        "sampleSize": 13
+        "rawMedian": 33,
+        "sampleSize": 15
+      },
+      "SGC 10": {
+        "gradedMedian": 59.98,
+        "medianRatio": 1.9,
+        "p25": 1.72,
+        "p75": 1.97,
+        "rawMedian": 35.41,
+        "sampleSize": 5
       }
     },
     "$50-99": {
@@ -25841,18 +25917,18 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "sampleSize": 5
       },
       "PSA 10": {
-        "gradedMedian": 156.62,
-        "medianRatio": 2.17,
-        "p25": 2.02,
-        "p75": 2.5,
+        "gradedMedian": 156.68,
+        "medianRatio": 2.34,
+        "p25": 2.11,
+        "p75": 2.71,
         "rawMedian": 67.93,
         "sampleSize": 7
       },
       "PSA 9": {
-        "gradedMedian": 49.48,
+        "gradedMedian": 50.59,
         "medianRatio": 0.72,
-        "p25": 0.63,
-        "p75": 0.85,
+        "p25": 0.64,
+        "p75": 0.87,
         "rawMedian": 73,
         "sampleSize": 6
       },
@@ -25868,83 +25944,83 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
     "Under $25": {
       "CGC 10": {
         "gradedMedian": 22.17,
-        "medianRatio": 4.99,
-        "p25": 3.75,
+        "medianRatio": 5.22,
+        "p25": 3.5,
         "p75": 7.27,
-        "rawMedian": 4,
-        "sampleSize": 76
+        "rawMedian": 4.1,
+        "sampleSize": 74
       },
       "CGC 8": {
         "gradedMedian": 12.5,
         "medianRatio": 2,
-        "p25": 1.71,
-        "p75": 2.96,
-        "rawMedian": 5.91,
-        "sampleSize": 10
+        "p25": 1.91,
+        "p75": 3.81,
+        "rawMedian": 4.6,
+        "sampleSize": 9
       },
       "CGC 8.5": {
-        "gradedMedian": 10.06,
-        "medianRatio": 1.66,
-        "p25": 1.13,
-        "p75": 2.92,
-        "rawMedian": 5.9,
+        "gradedMedian": 10.22,
+        "medianRatio": 2.28,
+        "p25": 1.24,
+        "p75": 3.13,
+        "rawMedian": 4.69,
         "sampleSize": 17
       },
       "CGC 9": {
         "gradedMedian": 12.37,
         "medianRatio": 2.64,
-        "p25": 1.72,
-        "p75": 3.58,
-        "rawMedian": 4.73,
-        "sampleSize": 51
+        "p25": 1.81,
+        "p75": 3.45,
+        "rawMedian": 4.85,
+        "sampleSize": 50
       },
       "CGC 9.5": {
-        "gradedMedian": 13.73,
-        "medianRatio": 2.68,
-        "p25": 1.5,
-        "p75": 4.12,
-        "rawMedian": 4.73,
-        "sampleSize": 45
+        "gradedMedian": 13.7,
+        "medianRatio": 2.7,
+        "p25": 2.01,
+        "p75": 4.25,
+        "rawMedian": 4.85,
+        "sampleSize": 44
       },
       "PSA 10": {
-        "gradedMedian": 47.04,
-        "medianRatio": 11.92,
-        "p25": 7.83,
-        "p75": 17.98,
-        "rawMedian": 3.55,
-        "sampleSize": 91
+        "gradedMedian": 48.91,
+        "medianRatio": 12.64,
+        "p25": 7.95,
+        "p75": 18.39,
+        "rawMedian": 3.58,
+        "sampleSize": 94
       },
       "PSA 7": {
         "gradedMedian": 11,
         "medianRatio": 1.25,
         "p25": 1.03,
         "p75": 2.01,
-        "rawMedian": 8.77,
+        "rawMedian": 8.74,
         "sampleSize": 7
       },
       "PSA 8": {
-        "gradedMedian": 14.47,
-        "medianRatio": 2.19,
-        "p25": 1.52,
-        "p75": 3.73,
-        "rawMedian": 5.04,
-        "sampleSize": 41
+        "gradedMedian": 14.4,
+        "medianRatio": 2.21,
+        "p25": 1.59,
+        "p75": 3.8,
+        "rawMedian": 5,
+        "sampleSize": 40
       },
       "PSA 9": {
-        "gradedMedian": 15.41,
-        "medianRatio": 3.63,
-        "p25": 2.58,
-        "p75": 5.16,
-        "rawMedian": 3.58,
-        "sampleSize": 85
+        "gradedMedian": 15.71,
+        "medianRatio": 3.76,
+        "p25": 2.67,
+        "p75": 5.06,
+        "rawMedian": 3.92,
+        "sampleSize": 86
       },
       "SGC 10": {
         "gradedMedian": 23.04,
-        "medianRatio": 2.31,
-        "p25": 1.52,
-        "p75": 2.47,
-        "rawMedian": 11.69,
-        "sampleSize": 7
+        "medianRatio": 2.43,
+        "p25": 1.74,
+        "p75": 2.46,
+        "rawMedian": 11.51,
+        "sampleSize": 6
       }
     }
   },
@@ -25953,33 +26029,33 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       "CGC 10": {
         "gradedMedian": 73.18,
         "medianRatio": 1.72,
-        "p25": 1.45,
+        "p25": 1.5,
         "p75": 1.88,
         "rawMedian": 38.97,
         "sampleSize": 5
       },
       "PSA 10": {
         "gradedMedian": 96.74,
-        "medianRatio": 3.21,
-        "p25": 2.59,
-        "p75": 4.27,
-        "rawMedian": 30.99,
-        "sampleSize": 7
+        "medianRatio": 3.32,
+        "p25": 2.74,
+        "p75": 4.36,
+        "rawMedian": 34.27,
+        "sampleSize": 8
       },
       "PSA 9": {
         "gradedMedian": 36.36,
         "medianRatio": 1.04,
-        "p25": 0.9,
+        "p25": 0.82,
         "p75": 1.12,
-        "rawMedian": 30.99,
-        "sampleSize": 5
+        "rawMedian": 34.27,
+        "sampleSize": 6
       }
     },
     "$250-499": {
       "CGC 10": {
-        "gradedMedian": 486.18,
+        "gradedMedian": 502.46,
         "medianRatio": 1.72,
-        "p25": 1.32,
+        "p25": 1.36,
         "p75": 1.84,
         "rawMedian": 294.93,
         "sampleSize": 6
@@ -25993,70 +26069,70 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "sampleSize": 5
       },
       "PSA 10": {
-        "gradedMedian": 605.61,
-        "medianRatio": 2.02,
+        "gradedMedian": 622.41,
+        "medianRatio": 2.06,
         "p25": 1.88,
-        "p75": 2.26,
+        "p75": 2.25,
         "rawMedian": 294.93,
         "sampleSize": 6
       },
       "PSA 9": {
-        "gradedMedian": 312.53,
-        "medianRatio": 1.13,
-        "p25": 0.9,
-        "p75": 1.14,
+        "gradedMedian": 315.73,
+        "medianRatio": 1.12,
+        "p25": 0.91,
+        "p75": 1.16,
         "rawMedian": 294.93,
         "sampleSize": 6
       }
     },
     "Under $25": {
       "CGC 10": {
-        "gradedMedian": 27.92,
-        "medianRatio": 5.37,
-        "p25": 3.86,
-        "p75": 7.05,
-        "rawMedian": 5.35,
-        "sampleSize": 29
+        "gradedMedian": 30.2,
+        "medianRatio": 5.52,
+        "p25": 3.63,
+        "p75": 7.28,
+        "rawMedian": 5.67,
+        "sampleSize": 30
       },
       "CGC 9": {
-        "gradedMedian": 14,
-        "medianRatio": 3.21,
-        "p25": 2,
-        "p75": 4.41,
-        "rawMedian": 3.93,
-        "sampleSize": 22
+        "gradedMedian": 14.42,
+        "medianRatio": 2.97,
+        "p25": 1.78,
+        "p75": 4.3,
+        "rawMedian": 4.25,
+        "sampleSize": 23
       },
       "CGC 9.5": {
         "gradedMedian": 20.87,
-        "medianRatio": 3.16,
+        "medianRatio": 3.15,
         "p25": 1.93,
-        "p75": 6.24,
-        "rawMedian": 4.7,
-        "sampleSize": 8
+        "p75": 6.08,
+        "rawMedian": 4.25,
+        "sampleSize": 9
       },
       "PSA 10": {
-        "gradedMedian": 62.69,
-        "medianRatio": 10.92,
-        "p25": 4.84,
-        "p75": 19.1,
-        "rawMedian": 6.51,
-        "sampleSize": 51
+        "gradedMedian": 64.25,
+        "medianRatio": 10.69,
+        "p25": 5.43,
+        "p75": 17.91,
+        "rawMedian": 6.86,
+        "sampleSize": 52
       },
       "PSA 8": {
         "gradedMedian": 15.75,
-        "medianRatio": 4.39,
+        "medianRatio": 4.28,
         "p25": 2.58,
         "p75": 6.41,
-        "rawMedian": 3.34,
+        "rawMedian": 3.43,
         "sampleSize": 20
       },
       "PSA 9": {
-        "gradedMedian": 22.17,
-        "medianRatio": 4.18,
+        "gradedMedian": 21.67,
+        "medianRatio": 4.35,
         "p25": 1.9,
-        "p75": 5.96,
+        "p75": 6.25,
         "rawMedian": 5.67,
-        "sampleSize": 41
+        "sampleSize": 40
       }
     }
   },
@@ -26064,7 +26140,7 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
     "Under $25": {
       "CGC 10": {
         "gradedMedian": 34.2,
-        "medianRatio": 8.14,
+        "medianRatio": 7.61,
         "p25": 4.45,
         "p75": 9.31,
         "rawMedian": 4.03,
@@ -26074,31 +26150,31 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "gradedMedian": 16.55,
         "medianRatio": 1.6,
         "p25": 1.34,
-        "p75": 3.45,
-        "rawMedian": 10.34,
-        "sampleSize": 10
+        "p75": 4.95,
+        "rawMedian": 5.64,
+        "sampleSize": 11
       },
       "PSA 10": {
         "gradedMedian": 38.5,
         "medianRatio": 10.81,
-        "p25": 5.54,
+        "p25": 5.73,
         "p75": 16.35,
         "rawMedian": 4.03,
         "sampleSize": 27
       },
       "PSA 8": {
-        "gradedMedian": 16,
-        "medianRatio": 2.85,
-        "p25": 1.49,
-        "p75": 4.51,
-        "rawMedian": 10.34,
-        "sampleSize": 8
+        "gradedMedian": 15.66,
+        "medianRatio": 2.79,
+        "p25": 1.5,
+        "p75": 3.56,
+        "rawMedian": 7.02,
+        "sampleSize": 9
       },
       "PSA 9": {
         "gradedMedian": 14.54,
         "medianRatio": 2.99,
         "p25": 1.98,
-        "p75": 4.95,
+        "p75": 4.97,
         "rawMedian": 4.42,
         "sampleSize": 22
       }
@@ -26107,34 +26183,34 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
   "pokemon|pokemon-japanese": {
     "$1,000-2,499": {
       "PSA 10": {
-        "gradedMedian": 2798.85,
+        "gradedMedian": 2813.33,
         "medianRatio": 2.32,
-        "p25": 1.64,
+        "p25": 1.61,
         "p75": 2.41,
-        "rawMedian": 1356.53,
-        "sampleSize": 5
+        "rawMedian": 1470.2,
+        "sampleSize": 6
       }
     },
     "$100-249": {
       "BGS 10": {
-        "gradedMedian": 517.86,
-        "medianRatio": 3.62,
+        "gradedMedian": 488,
+        "medianRatio": 3.58,
         "p25": 2.31,
-        "p75": 5.7,
+        "p75": 5.52,
         "rawMedian": 148.12,
-        "sampleSize": 26
+        "sampleSize": 25
       },
       "BGS 9": {
-        "gradedMedian": 124.55,
-        "medianRatio": 0.88,
+        "gradedMedian": 134,
+        "medianRatio": 0.93,
         "p25": 0.76,
         "p75": 1.15,
-        "rawMedian": 105.84,
-        "sampleSize": 7
+        "rawMedian": 133.78,
+        "sampleSize": 6
       },
       "BGS 9.5": {
         "gradedMedian": 156,
-        "medianRatio": 1.04,
+        "medianRatio": 1.05,
         "p25": 0.97,
         "p75": 1.12,
         "rawMedian": 148.12,
@@ -26142,15 +26218,15 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       },
       "CGC 10": {
         "gradedMedian": 238.73,
-        "medianRatio": 1.64,
+        "medianRatio": 1.61,
         "p25": 1.25,
         "p75": 1.97,
-        "rawMedian": 148.18,
+        "rawMedian": 149.95,
         "sampleSize": 55
       },
       "CGC 8.5": {
         "gradedMedian": 136.15,
-        "medianRatio": 0.75,
+        "medianRatio": 0.76,
         "p25": 0.71,
         "p75": 0.89,
         "rawMedian": 179.4,
@@ -26159,154 +26235,138 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       "CGC 9": {
         "gradedMedian": 124.16,
         "medianRatio": 0.91,
-        "p25": 0.72,
-        "p75": 0.99,
+        "p25": 0.76,
+        "p75": 0.97,
         "rawMedian": 136.11,
         "sampleSize": 21
       },
       "CGC 9.5": {
-        "gradedMedian": 113.56,
-        "medianRatio": 0.8,
-        "p25": 0.7,
-        "p75": 0.84,
+        "gradedMedian": 116.6,
+        "medianRatio": 0.81,
+        "p25": 0.69,
+        "p75": 0.98,
         "rawMedian": 136.11,
-        "sampleSize": 10
+        "sampleSize": 11
       },
       "PSA 10": {
         "gradedMedian": 310.57,
         "medianRatio": 1.91,
-        "p25": 1.56,
-        "p75": 2.5,
-        "rawMedian": 148.18,
-        "sampleSize": 87
-      },
-      "PSA 6": {
-        "gradedMedian": 115.5,
-        "medianRatio": 0.67,
-        "p25": 0.63,
-        "p75": 1.21,
-        "rawMedian": 148.05,
-        "sampleSize": 5
-      },
-      "PSA 7": {
-        "gradedMedian": 99.66,
-        "medianRatio": 0.86,
-        "p25": 0.63,
-        "p75": 0.9,
-        "rawMedian": 148.05,
-        "sampleSize": 6
+        "p25": 1.59,
+        "p75": 2.54,
+        "rawMedian": 148.33,
+        "sampleSize": 89
       },
       "PSA 8": {
-        "gradedMedian": 125.13,
+        "gradedMedian": 144.25,
         "medianRatio": 0.84,
-        "p25": 0.82,
+        "p25": 0.81,
         "p75": 1.07,
-        "rawMedian": 123.19,
-        "sampleSize": 13
+        "rawMedian": 135.01,
+        "sampleSize": 11
       },
       "PSA 9": {
-        "gradedMedian": 147.83,
-        "medianRatio": 0.95,
-        "p25": 0.84,
-        "p75": 1.12,
-        "rawMedian": 143.22,
-        "sampleSize": 65
+        "gradedMedian": 154.25,
+        "medianRatio": 0.94,
+        "p25": 0.88,
+        "p75": 1.14,
+        "rawMedian": 148.12,
+        "sampleSize": 64
       }
     },
     "$25-49": {
       "BGS 10": {
         "gradedMedian": 163.02,
-        "medianRatio": 5.49,
+        "medianRatio": 4.94,
         "p25": 3.12,
-        "p75": 8.56,
+        "p75": 8.46,
         "rawMedian": 33.53,
         "sampleSize": 29
       },
       "BGS 9": {
         "gradedMedian": 32.13,
-        "medianRatio": 0.86,
+        "medianRatio": 0.85,
         "p25": 0.71,
         "p75": 1.13,
         "rawMedian": 28.47,
         "sampleSize": 7
       },
       "BGS 9.5": {
-        "gradedMedian": 44.72,
-        "medianRatio": 1.27,
+        "gradedMedian": 46.02,
+        "medianRatio": 1.31,
         "p25": 1.12,
-        "p75": 1.59,
+        "p75": 1.58,
         "rawMedian": 31.5,
-        "sampleSize": 39
+        "sampleSize": 38
       },
       "CGC 10": {
-        "gradedMedian": 57.8,
-        "medianRatio": 1.66,
-        "p25": 1.36,
-        "p75": 2.23,
-        "rawMedian": 32.51,
-        "sampleSize": 123
+        "gradedMedian": 56.74,
+        "medianRatio": 1.7,
+        "p25": 1.41,
+        "p75": 2.19,
+        "rawMedian": 32.91,
+        "sampleSize": 132
       },
       "CGC 8": {
         "gradedMedian": 18.38,
-        "medianRatio": 0.65,
-        "p25": 0.59,
+        "medianRatio": 0.6,
+        "p25": 0.56,
         "p75": 0.68,
         "rawMedian": 26.95,
-        "sampleSize": 5
+        "sampleSize": 6
       },
       "CGC 8.5": {
         "gradedMedian": 20.27,
-        "medianRatio": 0.7,
+        "medianRatio": 0.68,
         "p25": 0.61,
         "p75": 0.76,
-        "rawMedian": 27.12,
+        "rawMedian": 27.26,
         "sampleSize": 14
       },
       "CGC 9": {
         "gradedMedian": 25.98,
-        "medianRatio": 0.76,
-        "p25": 0.68,
-        "p75": 0.92,
-        "rawMedian": 31.26,
+        "medianRatio": 0.79,
+        "p25": 0.71,
+        "p75": 1.01,
+        "rawMedian": 30.74,
         "sampleSize": 38
       },
       "CGC 9.5": {
         "gradedMedian": 31,
-        "medianRatio": 0.94,
-        "p25": 0.74,
-        "p75": 1.06,
+        "medianRatio": 0.95,
+        "p25": 0.72,
+        "p75": 1.04,
         "rawMedian": 37.38,
         "sampleSize": 28
       },
       "PSA 10": {
-        "gradedMedian": 84.68,
-        "medianRatio": 2.48,
-        "p25": 1.92,
-        "p75": 3.19,
+        "gradedMedian": 85.29,
+        "medianRatio": 2.51,
+        "p25": 1.98,
+        "p75": 3.3,
         "rawMedian": 32.91,
-        "sampleSize": 185
+        "sampleSize": 190
       },
       "PSA 7": {
         "gradedMedian": 31.4,
-        "medianRatio": 0.78,
-        "p25": 0.65,
-        "p75": 0.83,
+        "medianRatio": 0.81,
+        "p25": 0.7,
+        "p75": 1.01,
         "rawMedian": 36.42,
-        "sampleSize": 7
+        "sampleSize": 8
       },
       "PSA 8": {
-        "gradedMedian": 28.74,
-        "medianRatio": 0.85,
-        "p25": 0.71,
+        "gradedMedian": 27.96,
+        "medianRatio": 0.88,
+        "p25": 0.73,
         "p75": 1,
-        "rawMedian": 36.42,
-        "sampleSize": 26
+        "rawMedian": 35.52,
+        "sampleSize": 25
       },
       "PSA 9": {
-        "gradedMedian": 39.86,
-        "medianRatio": 1.17,
+        "gradedMedian": 39.77,
+        "medianRatio": 1.16,
         "p25": 0.97,
-        "p75": 1.38,
+        "p75": 1.39,
         "rawMedian": 33.47,
         "sampleSize": 116
       }
@@ -26315,184 +26375,184 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       "BGS 10": {
         "gradedMedian": 1025.5,
         "medianRatio": 3.28,
-        "p25": 2.58,
+        "p25": 2.43,
         "p75": 5.13,
-        "rawMedian": 333.09,
-        "sampleSize": 12
+        "rawMedian": 333.01,
+        "sampleSize": 11
       },
       "BGS 9.5": {
-        "gradedMedian": 381.98,
+        "gradedMedian": 384.01,
         "medianRatio": 1.2,
         "p25": 1.08,
         "p75": 1.57,
-        "rawMedian": 279.73,
+        "rawMedian": 286.96,
         "sampleSize": 11
       },
       "CGC 10": {
-        "gradedMedian": 387,
+        "gradedMedian": 391.57,
         "medianRatio": 1.34,
-        "p25": 1.07,
+        "p25": 1.2,
         "p75": 1.49,
-        "rawMedian": 310.61,
+        "rawMedian": 323.25,
         "sampleSize": 19
       },
       "CGC 9": {
         "gradedMedian": 269.78,
         "medianRatio": 0.84,
         "p25": 0.77,
-        "p75": 0.84,
-        "rawMedian": 333.09,
+        "p75": 0.85,
+        "rawMedian": 340.19,
         "sampleSize": 6
       },
       "PSA 10": {
         "gradedMedian": 521.2,
         "medianRatio": 1.66,
-        "p25": 1.45,
-        "p75": 1.93,
-        "rawMedian": 332.21,
+        "p25": 1.46,
+        "p75": 1.87,
+        "rawMedian": 333.01,
         "sampleSize": 30
       },
       "PSA 8": {
         "gradedMedian": 248.88,
-        "medianRatio": 0.85,
+        "medianRatio": 0.83,
         "p25": 0.8,
-        "p75": 0.87,
+        "p75": 0.84,
         "rawMedian": 310.61,
         "sampleSize": 5
       },
       "PSA 9": {
-        "gradedMedian": 300.65,
+        "gradedMedian": 302.63,
         "medianRatio": 0.96,
-        "p25": 0.64,
-        "p75": 1.09,
-        "rawMedian": 307.67,
-        "sampleSize": 21
+        "p25": 0.67,
+        "p75": 1.08,
+        "rawMedian": 310.61,
+        "sampleSize": 22
       }
     },
     "$50-99": {
       "BGS 10": {
         "gradedMedian": 274.19,
-        "medianRatio": 3.44,
-        "p25": 2.9,
-        "p75": 8.1,
-        "rawMedian": 60.97,
-        "sampleSize": 34
+        "medianRatio": 3.54,
+        "p25": 2.97,
+        "p75": 8.64,
+        "rawMedian": 60.39,
+        "sampleSize": 35
       },
       "BGS 9": {
-        "gradedMedian": 68.08,
+        "gradedMedian": 68.75,
         "medianRatio": 0.85,
-        "p25": 0.75,
-        "p75": 1.1,
-        "rawMedian": 78.31,
-        "sampleSize": 7
+        "p25": 0.78,
+        "p75": 1.03,
+        "rawMedian": 80.4,
+        "sampleSize": 8
       },
       "BGS 9.5": {
         "gradedMedian": 85.63,
-        "medianRatio": 1.21,
-        "p25": 1.06,
-        "p75": 1.53,
-        "rawMedian": 61.91,
-        "sampleSize": 35
+        "medianRatio": 1.19,
+        "p25": 1.05,
+        "p75": 1.44,
+        "rawMedian": 68.76,
+        "sampleSize": 36
       },
       "CGC 10": {
-        "gradedMedian": 112.08,
-        "medianRatio": 1.61,
-        "p25": 1.27,
-        "p75": 1.99,
-        "rawMedian": 61.91,
-        "sampleSize": 85
+        "gradedMedian": 114.32,
+        "medianRatio": 1.6,
+        "p25": 1.26,
+        "p75": 2.01,
+        "rawMedian": 62.32,
+        "sampleSize": 89
       },
       "CGC 8.5": {
         "gradedMedian": 53.7,
         "medianRatio": 0.74,
-        "p25": 0.73,
-        "p75": 0.79,
-        "rawMedian": 69.6,
-        "sampleSize": 6
+        "p25": 0.71,
+        "p75": 0.82,
+        "rawMedian": 70.64,
+        "sampleSize": 7
       },
       "CGC 9": {
         "gradedMedian": 52.04,
         "medianRatio": 0.78,
-        "p25": 0.69,
-        "p75": 0.91,
-        "rawMedian": 60.97,
-        "sampleSize": 25
+        "p25": 0.67,
+        "p75": 0.9,
+        "rawMedian": 60.7,
+        "sampleSize": 26
       },
       "CGC 9.5": {
         "gradedMedian": 59.52,
         "medianRatio": 0.9,
-        "p25": 0.82,
-        "p75": 1.1,
-        "rawMedian": 60.39,
-        "sampleSize": 20
+        "p25": 0.8,
+        "p75": 1.09,
+        "rawMedian": 59.65,
+        "sampleSize": 21
       },
       "PSA 10": {
         "gradedMedian": 146.67,
-        "medianRatio": 2.11,
-        "p25": 1.81,
-        "p75": 2.69,
-        "rawMedian": 66.6,
-        "sampleSize": 129
+        "medianRatio": 2.09,
+        "p25": 1.78,
+        "p75": 2.58,
+        "rawMedian": 67.42,
+        "sampleSize": 137
       },
       "PSA 7": {
         "gradedMedian": 50.23,
         "medianRatio": 0.69,
-        "p25": 0.6,
-        "p75": 0.77,
-        "rawMedian": 72.9,
-        "sampleSize": 6
+        "p25": 0.59,
+        "p75": 0.79,
+        "rawMedian": 72.83,
+        "sampleSize": 7
       },
       "PSA 8": {
-        "gradedMedian": 54.5,
+        "gradedMedian": 58.77,
         "medianRatio": 0.81,
-        "p25": 0.71,
-        "p75": 0.88,
-        "rawMedian": 69.6,
-        "sampleSize": 17
+        "p25": 0.64,
+        "p75": 0.98,
+        "rawMedian": 68.76,
+        "sampleSize": 19
       },
       "PSA 9": {
         "gradedMedian": 65.13,
         "medianRatio": 1.02,
-        "p25": 0.85,
+        "p25": 0.82,
         "p75": 1.2,
-        "rawMedian": 64.12,
-        "sampleSize": 96
+        "rawMedian": 63.86,
+        "sampleSize": 100
       }
     },
     "$500-999": {
       "CGC 10": {
         "gradedMedian": 992.86,
-        "medianRatio": 1.71,
+        "medianRatio": 1.74,
         "p25": 1.06,
         "p75": 2.18,
-        "rawMedian": 664.9,
-        "sampleSize": 7
+        "rawMedian": 672.54,
+        "sampleSize": 8
       },
       "PSA 10": {
-        "gradedMedian": 1368.3,
-        "medianRatio": 2.17,
-        "p25": 1.84,
+        "gradedMedian": 1389.5,
+        "medianRatio": 2.32,
+        "p25": 1.79,
         "p75": 2.84,
         "rawMedian": 678.52,
-        "sampleSize": 12
+        "sampleSize": 14
       },
       "PSA 9": {
-        "gradedMedian": 674.49,
-        "medianRatio": 0.94,
-        "p25": 0.81,
-        "p75": 1.57,
+        "gradedMedian": 593.33,
+        "medianRatio": 0.86,
+        "p25": 0.7,
+        "p75": 1.6,
         "rawMedian": 686.31,
-        "sampleSize": 8
+        "sampleSize": 7
       }
     },
     "Under $25": {
       "BGS 10": {
         "gradedMedian": 88.8,
-        "medianRatio": 11.21,
-        "p25": 6.56,
-        "p75": 27.64,
-        "rawMedian": 6.88,
-        "sampleSize": 159
+        "medianRatio": 11.76,
+        "p25": 6.59,
+        "p75": 27.28,
+        "rawMedian": 6.81,
+        "sampleSize": 160
       },
       "BGS 9": {
         "gradedMedian": 13.5,
@@ -26503,156 +26563,156 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "sampleSize": 27
       },
       "BGS 9.5": {
-        "gradedMedian": 18.62,
+        "gradedMedian": 18.65,
         "medianRatio": 2.82,
         "p25": 1.98,
         "p75": 4.04,
-        "rawMedian": 6.48,
-        "sampleSize": 241
+        "rawMedian": 6.56,
+        "sampleSize": 240
       },
       "CGC 10": {
-        "gradedMedian": 19.29,
-        "medianRatio": 4.57,
-        "p25": 3.01,
-        "p75": 6.47,
-        "rawMedian": 4.17,
-        "sampleSize": 2151
+        "gradedMedian": 19.58,
+        "medianRatio": 4.6,
+        "p25": 3.05,
+        "p75": 6.45,
+        "rawMedian": 4.14,
+        "sampleSize": 2288
       },
       "CGC 5": {
         "gradedMedian": 10,
         "medianRatio": 0.95,
         "p25": 0.92,
-        "p75": 1.03,
-        "rawMedian": 10.83,
+        "p75": 1.02,
+        "rawMedian": 10.91,
         "sampleSize": 5
       },
       "CGC 6": {
         "gradedMedian": 6,
         "medianRatio": 1.62,
-        "p25": 0.97,
-        "p75": 2.08,
-        "rawMedian": 3.85,
+        "p25": 1.04,
+        "p75": 2.06,
+        "rawMedian": 3.89,
         "sampleSize": 6
       },
       "CGC 6.5": {
-        "gradedMedian": 10,
-        "medianRatio": 1.55,
-        "p25": 1.18,
-        "p75": 3.32,
+        "gradedMedian": 10.5,
+        "medianRatio": 1.57,
+        "p25": 0.78,
+        "p75": 3.3,
         "rawMedian": 3.77,
-        "sampleSize": 12
+        "sampleSize": 13
       },
       "CGC 7": {
         "gradedMedian": 9.6,
-        "medianRatio": 1.66,
+        "medianRatio": 1.87,
         "p25": 1.01,
-        "p75": 3.18,
-        "rawMedian": 4.57,
-        "sampleSize": 21
+        "p75": 3.19,
+        "rawMedian": 4.49,
+        "sampleSize": 19
       },
       "CGC 7.5": {
-        "gradedMedian": 9.5,
-        "medianRatio": 1.51,
+        "gradedMedian": 9.8,
+        "medianRatio": 1.63,
         "p25": 1.03,
-        "p75": 2.06,
-        "rawMedian": 5.24,
-        "sampleSize": 61
+        "p75": 2.29,
+        "rawMedian": 5.25,
+        "sampleSize": 60
       },
       "CGC 8": {
-        "gradedMedian": 9.6,
-        "medianRatio": 1.65,
-        "p25": 1.11,
-        "p75": 2.57,
-        "rawMedian": 4.89,
-        "sampleSize": 169
+        "gradedMedian": 9.89,
+        "medianRatio": 1.66,
+        "p25": 1.15,
+        "p75": 2.63,
+        "rawMedian": 4.63,
+        "sampleSize": 166
       },
       "CGC 8.5": {
-        "gradedMedian": 10,
+        "gradedMedian": 10.17,
         "medianRatio": 2.01,
-        "p25": 1.29,
-        "p75": 2.73,
-        "rawMedian": 4.65,
+        "p25": 1.31,
+        "p75": 2.79,
+        "rawMedian": 4.62,
         "sampleSize": 303
       },
       "CGC 9": {
-        "gradedMedian": 10.76,
-        "medianRatio": 2.29,
-        "p25": 1.49,
-        "p75": 3.19,
-        "rawMedian": 4.56,
-        "sampleSize": 734
+        "gradedMedian": 10.86,
+        "medianRatio": 2.37,
+        "p25": 1.56,
+        "p75": 3.23,
+        "rawMedian": 4.47,
+        "sampleSize": 776
       },
       "CGC 9.5": {
-        "gradedMedian": 12.64,
-        "medianRatio": 2.22,
-        "p25": 1.59,
-        "p75": 3.19,
-        "rawMedian": 5.37,
-        "sampleSize": 444
+        "gradedMedian": 12.73,
+        "medianRatio": 2.24,
+        "p25": 1.62,
+        "p75": 3.17,
+        "rawMedian": 5.31,
+        "sampleSize": 440
       },
       "PSA 10": {
-        "gradedMedian": 34.89,
-        "medianRatio": 6.43,
-        "p25": 4.17,
-        "p75": 9.5,
-        "rawMedian": 5.22,
-        "sampleSize": 2019
+        "gradedMedian": 35.33,
+        "medianRatio": 6.5,
+        "p25": 4.25,
+        "p75": 9.63,
+        "rawMedian": 5.2,
+        "sampleSize": 2125
       },
       "PSA 5": {
         "gradedMedian": 14.62,
-        "medianRatio": 1.21,
-        "p25": 0.94,
-        "p75": 1.78,
-        "rawMedian": 8.06,
-        "sampleSize": 7
+        "medianRatio": 1.25,
+        "p25": 1.01,
+        "p75": 2.33,
+        "rawMedian": 8.16,
+        "sampleSize": 8
       },
       "PSA 6": {
-        "gradedMedian": 11.62,
-        "medianRatio": 1.08,
-        "p25": 0.87,
+        "gradedMedian": 12.75,
+        "medianRatio": 1.13,
+        "p25": 0.88,
         "p75": 1.53,
-        "rawMedian": 9.59,
-        "sampleSize": 33
+        "rawMedian": 10.07,
+        "sampleSize": 35
       },
       "PSA 7": {
         "gradedMedian": 12.15,
-        "medianRatio": 1.39,
-        "p25": 1.01,
-        "p75": 2.14,
-        "rawMedian": 8.31,
+        "medianRatio": 1.37,
+        "p25": 1.02,
+        "p75": 2.21,
+        "rawMedian": 8.08,
         "sampleSize": 33
       },
       "PSA 8": {
-        "gradedMedian": 15.13,
-        "medianRatio": 1.87,
-        "p25": 1.35,
-        "p75": 2.79,
-        "rawMedian": 8.06,
-        "sampleSize": 148
+        "gradedMedian": 15.1,
+        "medianRatio": 1.81,
+        "p25": 1.36,
+        "p75": 2.42,
+        "rawMedian": 8.18,
+        "sampleSize": 145
       },
       "PSA 9": {
         "gradedMedian": 17.99,
-        "medianRatio": 2.57,
-        "p25": 1.82,
-        "p75": 4.04,
-        "rawMedian": 6.82,
-        "sampleSize": 799
+        "medianRatio": 2.62,
+        "p25": 1.83,
+        "p75": 4.07,
+        "rawMedian": 6.7,
+        "sampleSize": 812
       },
       "SGC 10": {
         "gradedMedian": 20.09,
-        "medianRatio": 2.92,
-        "p25": 1.9,
-        "p75": 3.75,
-        "rawMedian": 6.69,
+        "medianRatio": 2.9,
+        "p25": 1.92,
+        "p75": 3.85,
+        "rawMedian": 6.7,
         "sampleSize": 49
       },
       "SGC 9.5": {
-        "gradedMedian": 17.8,
-        "medianRatio": 2.22,
+        "gradedMedian": 18.13,
+        "medianRatio": 2.75,
         "p25": 1.67,
-        "p75": 2.87,
-        "rawMedian": 6.69,
-        "sampleSize": 7
+        "p75": 2.88,
+        "rawMedian": 6.59,
+        "sampleSize": 6
       }
     }
   },
@@ -26660,67 +26720,67 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
     "Under $25": {
       "CGC 10": {
         "gradedMedian": 22.18,
-        "medianRatio": 6.26,
-        "p25": 3.49,
-        "p75": 9.15,
-        "rawMedian": 3.43,
-        "sampleSize": 66
+        "medianRatio": 6.07,
+        "p25": 3.55,
+        "p75": 9.55,
+        "rawMedian": 3.45,
+        "sampleSize": 67
       },
       "CGC 8": {
         "gradedMedian": 9,
         "medianRatio": 3.35,
         "p25": 1.09,
         "p75": 4.63,
-        "rawMedian": 3.05,
+        "rawMedian": 3.04,
         "sampleSize": 7
       },
       "CGC 8.5": {
-        "gradedMedian": 10.2,
-        "medianRatio": 2.97,
-        "p25": 1.1,
-        "p75": 4.22,
-        "rawMedian": 3.43,
-        "sampleSize": 7
+        "gradedMedian": 11,
+        "medianRatio": 3.55,
+        "p25": 1.3,
+        "p75": 4.24,
+        "rawMedian": 2.88,
+        "sampleSize": 8
       },
       "CGC 9": {
         "gradedMedian": 12.7,
-        "medianRatio": 3.31,
-        "p25": 2.2,
+        "medianRatio": 3.39,
+        "p25": 2.04,
         "p75": 5.62,
-        "rawMedian": 3.43,
+        "rawMedian": 3.38,
         "sampleSize": 40
       },
       "CGC 9.5": {
-        "gradedMedian": 14.4,
-        "medianRatio": 4.54,
+        "gradedMedian": 14.7,
+        "medianRatio": 4.21,
         "p25": 1.82,
-        "p75": 6.03,
-        "rawMedian": 3.17,
+        "p75": 6,
+        "rawMedian": 3.13,
         "sampleSize": 17
       },
       "PSA 10": {
-        "gradedMedian": 37.7,
-        "medianRatio": 9.41,
-        "p25": 6.7,
-        "p75": 18.12,
-        "rawMedian": 3.98,
-        "sampleSize": 87
+        "gradedMedian": 40.39,
+        "medianRatio": 9.6,
+        "p25": 6.79,
+        "p75": 19.72,
+        "rawMedian": 3.84,
+        "sampleSize": 90
       },
       "PSA 8": {
         "gradedMedian": 13,
-        "medianRatio": 2.95,
-        "p25": 1.57,
-        "p75": 5.16,
-        "rawMedian": 4.58,
-        "sampleSize": 24
+        "medianRatio": 2.98,
+        "p25": 1.58,
+        "p75": 5.21,
+        "rawMedian": 4.59,
+        "sampleSize": 25
       },
       "PSA 9": {
-        "gradedMedian": 15.95,
-        "medianRatio": 4.58,
-        "p25": 2.76,
-        "p75": 6.1,
-        "rawMedian": 3.73,
-        "sampleSize": 71
+        "gradedMedian": 16.4,
+        "medianRatio": 4.71,
+        "p25": 2.72,
+        "p75": 6.56,
+        "rawMedian": 3.58,
+        "sampleSize": 73
       }
     }
   },
@@ -26728,141 +26788,133 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
     "$100-249": {
       "BGS 9": {
         "gradedMedian": 178.03,
-        "medianRatio": 0.83,
+        "medianRatio": 0.82,
         "p25": 0.73,
-        "p75": 1.01,
+        "p75": 1.02,
         "rawMedian": 207.13,
         "sampleSize": 7
       },
       "BGS 9.5": {
-        "gradedMedian": 300.75,
+        "gradedMedian": 249.13,
         "medianRatio": 1.32,
-        "p25": 1.23,
-        "p75": 1.56,
-        "rawMedian": 175.61,
-        "sampleSize": 12
+        "p25": 1.24,
+        "p75": 1.53,
+        "rawMedian": 163,
+        "sampleSize": 13
       },
       "CGC 10": {
-        "gradedMedian": 257.8,
+        "gradedMedian": 265.87,
         "medianRatio": 1.56,
-        "p25": 1.45,
-        "p75": 1.73,
-        "rawMedian": 173.02,
+        "p25": 1.44,
+        "p75": 1.92,
+        "rawMedian": 175.29,
         "sampleSize": 21
       },
       "CGC 9": {
         "gradedMedian": 147,
-        "medianRatio": 0.87,
+        "medianRatio": 0.88,
         "p25": 0.79,
-        "p75": 0.94,
-        "rawMedian": 163.07,
+        "p75": 0.95,
+        "rawMedian": 163,
         "sampleSize": 12
       },
       "CGC 9.5": {
-        "gradedMedian": 182.94,
-        "medianRatio": 0.98,
+        "gradedMedian": 210,
+        "medianRatio": 1,
         "p25": 0.89,
         "p75": 1.29,
-        "rawMedian": 137.86,
-        "sampleSize": 15
+        "rawMedian": 163,
+        "sampleSize": 14
       },
       "PSA 10": {
-        "gradedMedian": 504.54,
-        "medianRatio": 2.63,
-        "p25": 2.29,
+        "gradedMedian": 523.48,
+        "medianRatio": 2.65,
+        "p25": 2.33,
         "p75": 3.32,
-        "rawMedian": 173.02,
+        "rawMedian": 175.29,
         "sampleSize": 26
       },
       "PSA 7": {
         "gradedMedian": 141.25,
         "medianRatio": 0.85,
         "p25": 0.78,
-        "p75": 0.9,
-        "rawMedian": 173.02,
+        "p75": 0.86,
+        "rawMedian": 175.29,
         "sampleSize": 6
       },
       "PSA 8": {
-        "gradedMedian": 150.85,
-        "medianRatio": 0.89,
-        "p25": 0.82,
-        "p75": 0.95,
-        "rawMedian": 175.61,
-        "sampleSize": 24
-      },
-      "PSA 8.5": {
-        "gradedMedian": 177.5,
-        "medianRatio": 0.85,
+        "gradedMedian": 146.33,
+        "medianRatio": 0.87,
         "p25": 0.8,
-        "p75": 1.02,
-        "rawMedian": 207.13,
-        "sampleSize": 5
+        "p75": 0.95,
+        "rawMedian": 175.29,
+        "sampleSize": 23
       },
       "PSA 9": {
         "gradedMedian": 174.8,
-        "medianRatio": 1.01,
+        "medianRatio": 1.02,
         "p25": 0.94,
         "p75": 1.1,
-        "rawMedian": 163.07,
+        "rawMedian": 163,
         "sampleSize": 27
       }
     },
     "$25-49": {
       "BGS 9": {
         "gradedMedian": 41.42,
-        "medianRatio": 1.23,
-        "p25": 1.02,
-        "p75": 1.32,
-        "rawMedian": 32.53,
-        "sampleSize": 14
+        "medianRatio": 1.22,
+        "p25": 1.03,
+        "p75": 1.35,
+        "rawMedian": 33.64,
+        "sampleSize": 13
       },
       "BGS 9.5": {
-        "gradedMedian": 74.53,
-        "medianRatio": 2.22,
-        "p25": 1.8,
+        "gradedMedian": 79.4,
+        "medianRatio": 2.21,
+        "p25": 1.74,
         "p75": 3.38,
-        "rawMedian": 32.53,
+        "rawMedian": 33.64,
         "sampleSize": 15
       },
       "CGC 10": {
-        "gradedMedian": 81.29,
-        "medianRatio": 2.24,
-        "p25": 1.83,
-        "p75": 2.93,
-        "rawMedian": 32.05,
-        "sampleSize": 92
+        "gradedMedian": 79.35,
+        "medianRatio": 2.32,
+        "p25": 1.81,
+        "p75": 2.96,
+        "rawMedian": 32.29,
+        "sampleSize": 89
       },
       "CGC 8.5": {
-        "gradedMedian": 24.95,
+        "gradedMedian": 26.4,
         "medianRatio": 0.75,
-        "p25": 0.68,
-        "p75": 0.83,
-        "rawMedian": 34.33,
-        "sampleSize": 23
+        "p25": 0.7,
+        "p75": 0.8,
+        "rawMedian": 34.81,
+        "sampleSize": 22
       },
       "CGC 9": {
-        "gradedMedian": 27.66,
-        "medianRatio": 0.89,
-        "p25": 0.74,
-        "p75": 1,
-        "rawMedian": 31.76,
-        "sampleSize": 63
+        "gradedMedian": 27.78,
+        "medianRatio": 0.88,
+        "p25": 0.72,
+        "p75": 0.98,
+        "rawMedian": 32.29,
+        "sampleSize": 61
       },
       "CGC 9.5": {
-        "gradedMedian": 35.48,
-        "medianRatio": 1.05,
-        "p25": 0.9,
-        "p75": 1.27,
-        "rawMedian": 31.76,
-        "sampleSize": 39
+        "gradedMedian": 34.98,
+        "medianRatio": 1.06,
+        "p25": 0.89,
+        "p75": 1.25,
+        "rawMedian": 31.71,
+        "sampleSize": 41
       },
       "PSA 10": {
-        "gradedMedian": 153.5,
+        "gradedMedian": 153.53,
         "medianRatio": 4.4,
-        "p25": 3.39,
-        "p75": 6.82,
-        "rawMedian": 32.62,
-        "sampleSize": 122
+        "p25": 3.38,
+        "p75": 6.62,
+        "rawMedian": 34.23,
+        "sampleSize": 123
       },
       "PSA 6": {
         "gradedMedian": 21.38,
@@ -26875,42 +26927,34 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       "PSA 7": {
         "gradedMedian": 21.23,
         "medianRatio": 0.71,
-        "p25": 0.63,
+        "p25": 0.62,
         "p75": 0.78,
-        "rawMedian": 28.17,
+        "rawMedian": 28.45,
         "sampleSize": 14
       },
       "PSA 8": {
-        "gradedMedian": 26.04,
+        "gradedMedian": 26.22,
         "medianRatio": 0.8,
         "p25": 0.7,
-        "p75": 0.92,
-        "rawMedian": 31.3,
-        "sampleSize": 79
-      },
-      "PSA 8.5": {
-        "gradedMedian": 28.81,
-        "medianRatio": 0.75,
-        "p25": 0.71,
-        "p75": 0.8,
-        "rawMedian": 39.43,
-        "sampleSize": 5
+        "p75": 0.93,
+        "rawMedian": 32.23,
+        "sampleSize": 81
       },
       "PSA 9": {
-        "gradedMedian": 36.03,
+        "gradedMedian": 36.45,
         "medianRatio": 1.1,
-        "p25": 0.97,
-        "p75": 1.26,
-        "rawMedian": 32.23,
-        "sampleSize": 122
+        "p25": 0.96,
+        "p75": 1.25,
+        "rawMedian": 32.84,
+        "sampleSize": 123
       },
       "SGC 10": {
-        "gradedMedian": 72.28,
-        "medianRatio": 2.19,
-        "p25": 1.82,
-        "p75": 2.85,
-        "rawMedian": 29.12,
-        "sampleSize": 11
+        "gradedMedian": 73.6,
+        "medianRatio": 2.52,
+        "p25": 1.8,
+        "p75": 3.16,
+        "rawMedian": 32.29,
+        "sampleSize": 14
       },
       "SGC 9": {
         "gradedMedian": 36.66,
@@ -26921,21 +26965,21 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "sampleSize": 7
       },
       "SGC 9.5": {
-        "gradedMedian": 42.9,
+        "gradedMedian": 43.63,
         "medianRatio": 0.92,
-        "p25": 0.81,
-        "p75": 1.53,
-        "rawMedian": 34.72,
-        "sampleSize": 7
+        "p25": 0.82,
+        "p75": 1.52,
+        "rawMedian": 35.57,
+        "sampleSize": 8
       }
     },
     "$250-499": {
       "BGS 9": {
         "gradedMedian": 333.67,
-        "medianRatio": 1.02,
+        "medianRatio": 1.01,
         "p25": 0.92,
         "p75": 1.13,
-        "rawMedian": 331.16,
+        "rawMedian": 330.67,
         "sampleSize": 9
       },
       "BGS 9.5": {
@@ -26943,331 +26987,331 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "medianRatio": 1.56,
         "p25": 1.46,
         "p75": 1.87,
-        "rawMedian": 332.86,
+        "rawMedian": 332.92,
         "sampleSize": 9
       },
       "CGC 10": {
         "gradedMedian": 669.56,
-        "medianRatio": 1.74,
-        "p25": 1.65,
-        "p75": 2.09,
-        "rawMedian": 381.99,
-        "sampleSize": 12
+        "medianRatio": 1.69,
+        "p25": 1.62,
+        "p75": 1.98,
+        "rawMedian": 383.21,
+        "sampleSize": 13
       },
       "CGC 8.5": {
         "gradedMedian": 240,
-        "medianRatio": 0.79,
+        "medianRatio": 0.8,
         "p25": 0.68,
-        "p75": 0.8,
-        "rawMedian": 280.34,
+        "p75": 0.84,
+        "rawMedian": 281.68,
         "sampleSize": 5
       },
       "CGC 9": {
         "gradedMedian": 298.6,
-        "medianRatio": 0.93,
+        "medianRatio": 0.92,
         "p25": 0.83,
         "p75": 0.97,
-        "rawMedian": 332.86,
+        "rawMedian": 332.92,
         "sampleSize": 11
       },
       "CGC 9.5": {
         "gradedMedian": 375.62,
-        "medianRatio": 1.04,
+        "medianRatio": 1.03,
         "p25": 0.94,
         "p75": 1.18,
-        "rawMedian": 331.16,
+        "rawMedian": 330.67,
         "sampleSize": 7
       },
       "PSA 10": {
-        "gradedMedian": 1183.29,
-        "medianRatio": 2.79,
-        "p25": 2.59,
-        "p75": 3.2,
-        "rawMedian": 332.86,
+        "gradedMedian": 1164.05,
+        "medianRatio": 2.78,
+        "p25": 2.58,
+        "p75": 3.17,
+        "rawMedian": 332.92,
         "sampleSize": 15
       },
       "PSA 7": {
         "gradedMedian": 293.79,
-        "medianRatio": 0.83,
+        "medianRatio": 0.84,
         "p25": 0.68,
         "p75": 0.89,
-        "rawMedian": 332.86,
+        "rawMedian": 332.92,
         "sampleSize": 6
       },
       "PSA 8": {
         "gradedMedian": 295.9,
-        "medianRatio": 0.85,
-        "p25": 0.82,
+        "medianRatio": 0.84,
+        "p25": 0.83,
         "p75": 0.89,
-        "rawMedian": 332.86,
+        "rawMedian": 332.92,
         "sampleSize": 13
       },
       "PSA 8.5": {
         "gradedMedian": 281.21,
-        "medianRatio": 0.97,
+        "medianRatio": 0.94,
         "p25": 0.86,
         "p75": 0.99,
-        "rawMedian": 331.16,
-        "sampleSize": 6
+        "rawMedian": 330.67,
+        "sampleSize": 7
       },
       "PSA 9": {
-        "gradedMedian": 324.85,
+        "gradedMedian": 324.84,
         "medianRatio": 0.99,
-        "p25": 0.96,
+        "p25": 0.95,
         "p75": 1.03,
-        "rawMedian": 332.86,
+        "rawMedian": 332.92,
         "sampleSize": 15
       }
     },
     "$50-99": {
       "BGS 9": {
-        "gradedMedian": 62,
-        "medianRatio": 0.97,
-        "p25": 0.82,
-        "p75": 1.06,
-        "rawMedian": 70.43,
-        "sampleSize": 16
+        "gradedMedian": 61.65,
+        "medianRatio": 0.96,
+        "p25": 0.8,
+        "p75": 1.05,
+        "rawMedian": 70.49,
+        "sampleSize": 15
       },
       "BGS 9.5": {
         "gradedMedian": 131,
-        "medianRatio": 2.03,
+        "medianRatio": 1.84,
         "p25": 1.47,
-        "p75": 2.3,
-        "rawMedian": 70.39,
-        "sampleSize": 18
+        "p75": 2.29,
+        "rawMedian": 70.49,
+        "sampleSize": 17
       },
       "CGC 10": {
-        "gradedMedian": 155.66,
-        "medianRatio": 2.29,
-        "p25": 1.92,
+        "gradedMedian": 156.37,
+        "medianRatio": 2.28,
+        "p25": 1.93,
         "p75": 2.67,
-        "rawMedian": 66.13,
-        "sampleSize": 44
+        "rawMedian": 66.8,
+        "sampleSize": 43
       },
       "CGC 8": {
         "gradedMedian": 49.2,
         "medianRatio": 0.74,
-        "p25": 0.67,
-        "p75": 0.79,
-        "rawMedian": 70.43,
+        "p25": 0.66,
+        "p75": 0.8,
+        "rawMedian": 70.8,
         "sampleSize": 9
       },
       "CGC 8.5": {
         "gradedMedian": 53.55,
-        "medianRatio": 0.79,
+        "medianRatio": 0.84,
         "p25": 0.66,
-        "p75": 0.87,
-        "rawMedian": 63.8,
+        "p75": 0.88,
+        "rawMedian": 64.08,
         "sampleSize": 10
       },
       "CGC 9": {
-        "gradedMedian": 53.96,
-        "medianRatio": 0.87,
-        "p25": 0.71,
-        "p75": 0.98,
-        "rawMedian": 63.8,
-        "sampleSize": 30
+        "gradedMedian": 54.8,
+        "medianRatio": 0.85,
+        "p25": 0.75,
+        "p75": 1.01,
+        "rawMedian": 64.86,
+        "sampleSize": 28
       },
       "CGC 9.5": {
-        "gradedMedian": 68.87,
-        "medianRatio": 0.98,
-        "p25": 0.88,
-        "p75": 1.15,
-        "rawMedian": 66.13,
-        "sampleSize": 26
+        "gradedMedian": 71,
+        "medianRatio": 1,
+        "p25": 0.92,
+        "p75": 1.29,
+        "rawMedian": 70.39,
+        "sampleSize": 24
       },
       "PSA 10": {
-        "gradedMedian": 247.57,
-        "medianRatio": 3.56,
-        "p25": 3.07,
-        "p75": 5.3,
-        "rawMedian": 67.6,
+        "gradedMedian": 250.37,
+        "medianRatio": 3.55,
+        "p25": 3.09,
+        "p75": 5.26,
+        "rawMedian": 67.49,
         "sampleSize": 53
       },
       "PSA 7": {
         "gradedMedian": 54.71,
         "medianRatio": 0.77,
         "p25": 0.65,
-        "p75": 0.93,
-        "rawMedian": 66.81,
+        "p75": 0.92,
+        "rawMedian": 67.42,
         "sampleSize": 15
       },
       "PSA 8": {
-        "gradedMedian": 51.5,
+        "gradedMedian": 53.67,
         "medianRatio": 0.8,
         "p25": 0.69,
-        "p75": 0.92,
-        "rawMedian": 64.65,
-        "sampleSize": 39
+        "p75": 0.91,
+        "rawMedian": 66.8,
+        "sampleSize": 38
       },
       "PSA 9": {
-        "gradedMedian": 71.17,
+        "gradedMedian": 71.77,
         "medianRatio": 1.03,
         "p25": 0.95,
         "p75": 1.11,
-        "rawMedian": 67.69,
+        "rawMedian": 70.39,
         "sampleSize": 56
       },
       "SGC 10": {
-        "gradedMedian": 161.5,
-        "medianRatio": 1.94,
+        "gradedMedian": 155.5,
+        "medianRatio": 1.92,
         "p25": 1.61,
-        "p75": 2.34,
-        "rawMedian": 70.43,
-        "sampleSize": 8
+        "p75": 2.32,
+        "rawMedian": 70.8,
+        "sampleSize": 7
       }
     },
     "Under $25": {
       "BGS 8.5": {
-        "gradedMedian": 17,
-        "medianRatio": 1.34,
-        "p25": 1.16,
+        "gradedMedian": 19.75,
+        "medianRatio": 1.7,
+        "p25": 1.26,
         "p75": 1.93,
-        "rawMedian": 10.12,
-        "sampleSize": 8
+        "rawMedian": 10.25,
+        "sampleSize": 6
       },
       "BGS 9": {
-        "gradedMedian": 16.8,
-        "medianRatio": 2.01,
+        "gradedMedian": 16.25,
+        "medianRatio": 1.76,
         "p25": 1.3,
-        "p75": 3.02,
-        "rawMedian": 8,
-        "sampleSize": 35
+        "p75": 2.77,
+        "rawMedian": 8.46,
+        "sampleSize": 33
       },
       "BGS 9.5": {
         "gradedMedian": 27.16,
-        "medianRatio": 4.03,
-        "p25": 2.74,
-        "p75": 5.73,
+        "medianRatio": 4.04,
+        "p25": 3.3,
+        "p75": 6.07,
         "rawMedian": 6.56,
-        "sampleSize": 33
+        "sampleSize": 29
       },
       "CGC 10": {
-        "gradedMedian": 22.8,
-        "medianRatio": 5.5,
-        "p25": 3.53,
-        "p75": 9.86,
-        "rawMedian": 4.13,
-        "sampleSize": 984
+        "gradedMedian": 22.37,
+        "medianRatio": 5.51,
+        "p25": 3.56,
+        "p75": 9.75,
+        "rawMedian": 4.08,
+        "sampleSize": 979
       },
       "CGC 7": {
         "gradedMedian": 8.4,
-        "medianRatio": 2.16,
-        "p25": 1.64,
-        "p75": 2.36,
-        "rawMedian": 4.66,
-        "sampleSize": 6
+        "medianRatio": 1.97,
+        "p25": 1.66,
+        "p75": 2.12,
+        "rawMedian": 4.75,
+        "sampleSize": 5
       },
       "CGC 7.5": {
         "gradedMedian": 8.5,
-        "medianRatio": 2.16,
-        "p25": 1.33,
-        "p75": 3.32,
+        "medianRatio": 2.4,
+        "p25": 1.21,
+        "p75": 3.62,
         "rawMedian": 3.32,
-        "sampleSize": 9
+        "sampleSize": 11
       },
       "CGC 8": {
-        "gradedMedian": 9.6,
-        "medianRatio": 2.34,
-        "p25": 1.48,
-        "p75": 5.66,
+        "gradedMedian": 9.65,
+        "medianRatio": 2.46,
+        "p25": 1.5,
+        "p75": 6.55,
         "rawMedian": 3.37,
-        "sampleSize": 52
+        "sampleSize": 51
       },
       "CGC 8.5": {
-        "gradedMedian": 10,
-        "medianRatio": 2.56,
-        "p25": 1.18,
-        "p75": 4.18,
-        "rawMedian": 4.08,
-        "sampleSize": 138
+        "gradedMedian": 10.1,
+        "medianRatio": 2.46,
+        "p25": 1.17,
+        "p75": 4.24,
+        "rawMedian": 4.34,
+        "sampleSize": 143
       },
       "CGC 9": {
-        "gradedMedian": 11.25,
-        "medianRatio": 2.39,
-        "p25": 1.4,
-        "p75": 4.63,
-        "rawMedian": 4.6,
-        "sampleSize": 533
+        "gradedMedian": 11.26,
+        "medianRatio": 2.38,
+        "p25": 1.38,
+        "p75": 4.55,
+        "rawMedian": 4.56,
+        "sampleSize": 538
       },
       "CGC 9.5": {
         "gradedMedian": 13,
-        "medianRatio": 2.54,
-        "p25": 1.55,
-        "p75": 4.62,
-        "rawMedian": 5.29,
-        "sampleSize": 327
+        "medianRatio": 2.53,
+        "p25": 1.56,
+        "p75": 4.47,
+        "rawMedian": 5.31,
+        "sampleSize": 328
       },
       "PSA 10": {
-        "gradedMedian": 46.75,
-        "medianRatio": 11.42,
-        "p25": 7.51,
-        "p75": 19.57,
-        "rawMedian": 4.2,
-        "sampleSize": 1280
+        "gradedMedian": 47.4,
+        "medianRatio": 11.73,
+        "p25": 7.5,
+        "p75": 20.13,
+        "rawMedian": 4.18,
+        "sampleSize": 1317
       },
       "PSA 6": {
-        "gradedMedian": 9.99,
-        "medianRatio": 0.93,
+        "gradedMedian": 12.5,
+        "medianRatio": 1.12,
         "p25": 0.66,
-        "p75": 3.36,
-        "rawMedian": 8.51,
-        "sampleSize": 11
+        "p75": 2.95,
+        "rawMedian": 10.8,
+        "sampleSize": 10
       },
       "PSA 7": {
         "gradedMedian": 10.96,
-        "medianRatio": 1.4,
-        "p25": 0.92,
-        "p75": 2.87,
-        "rawMedian": 8.15,
-        "sampleSize": 84
+        "medianRatio": 1.41,
+        "p25": 0.88,
+        "p75": 2.69,
+        "rawMedian": 8.17,
+        "sampleSize": 82
       },
       "PSA 8": {
-        "gradedMedian": 11.54,
-        "medianRatio": 1.83,
-        "p25": 1.2,
-        "p75": 3.47,
-        "rawMedian": 6.07,
-        "sampleSize": 574
+        "gradedMedian": 11.55,
+        "medianRatio": 1.87,
+        "p25": 1.21,
+        "p75": 3.53,
+        "rawMedian": 5.85,
+        "sampleSize": 572
       },
       "PSA 8.5": {
         "gradedMedian": 16.83,
         "medianRatio": 1.53,
         "p25": 1.11,
-        "p75": 2.74,
-        "rawMedian": 10.7,
+        "p75": 2.71,
+        "rawMedian": 10.9,
         "sampleSize": 18
       },
       "PSA 9": {
-        "gradedMedian": 15.03,
-        "medianRatio": 3.14,
+        "gradedMedian": 15.19,
+        "medianRatio": 3.19,
         "p25": 1.91,
-        "p75": 5.59,
+        "p75": 5.75,
         "rawMedian": 4.4,
-        "sampleSize": 1205
+        "sampleSize": 1234
       },
       "SGC 10": {
         "gradedMedian": 24.99,
-        "medianRatio": 4.5,
-        "p25": 3.31,
-        "p75": 6.09,
-        "rawMedian": 5.14,
-        "sampleSize": 22
+        "medianRatio": 4.37,
+        "p25": 3.26,
+        "p75": 5.93,
+        "rawMedian": 5.15,
+        "sampleSize": 21
       },
       "SGC 9": {
-        "gradedMedian": 9,
-        "medianRatio": 0.84,
-        "p25": 0.62,
-        "p75": 1.87,
-        "rawMedian": 11.71,
-        "sampleSize": 16
+        "gradedMedian": 11.75,
+        "medianRatio": 0.83,
+        "p25": 0.6,
+        "p75": 1.37,
+        "rawMedian": 11.68,
+        "sampleSize": 12
       },
       "SGC 9.5": {
         "gradedMedian": 11.5,
-        "medianRatio": 1.62,
-        "p25": 1.52,
-        "p75": 5.24,
-        "rawMedian": 5.57,
+        "medianRatio": 1.65,
+        "p25": 1.56,
+        "p75": 5.23,
+        "rawMedian": 5.58,
         "sampleSize": 8
       }
     }
@@ -27275,52 +27319,52 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
   "pokemon|pokemon-shining-fates": {
     "Under $25": {
       "CGC 10": {
-        "gradedMedian": 20.52,
-        "medianRatio": 6.41,
-        "p25": 5.11,
-        "p75": 8.88,
-        "rawMedian": 3.1,
-        "sampleSize": 26
+        "gradedMedian": 20.37,
+        "medianRatio": 6.4,
+        "p25": 5.05,
+        "p75": 8.58,
+        "rawMedian": 3.04,
+        "sampleSize": 27
       },
       "CGC 9": {
         "gradedMedian": 9.84,
         "medianRatio": 3.06,
         "p25": 1.99,
-        "p75": 4.18,
+        "p75": 4.2,
         "rawMedian": 3.11,
         "sampleSize": 20
       },
       "CGC 9.5": {
         "gradedMedian": 14.38,
-        "medianRatio": 3.82,
-        "p25": 3.04,
-        "p75": 5.24,
-        "rawMedian": 3.39,
+        "medianRatio": 3.84,
+        "p25": 2.88,
+        "p75": 5.25,
+        "rawMedian": 3.46,
         "sampleSize": 11
       },
       "PSA 10": {
-        "gradedMedian": 34.51,
-        "medianRatio": 10.62,
-        "p25": 8.45,
-        "p75": 14.4,
-        "rawMedian": 3.39,
-        "sampleSize": 32
+        "gradedMedian": 34.78,
+        "medianRatio": 10.66,
+        "p25": 8.65,
+        "p75": 14.46,
+        "rawMedian": 3.1,
+        "sampleSize": 36
       },
       "PSA 8": {
         "gradedMedian": 11.83,
-        "medianRatio": 1.37,
+        "medianRatio": 1.36,
         "p25": 1.12,
         "p75": 2.92,
-        "rawMedian": 9.47,
+        "rawMedian": 9.54,
         "sampleSize": 7
       },
       "PSA 9": {
-        "gradedMedian": 15.75,
-        "medianRatio": 4,
-        "p25": 3.2,
-        "p75": 5.55,
-        "rawMedian": 2.86,
-        "sampleSize": 26
+        "gradedMedian": 16.17,
+        "medianRatio": 4.03,
+        "p25": 3.22,
+        "p75": 6.35,
+        "rawMedian": 2.78,
+        "sampleSize": 28
       }
     }
   },
@@ -27328,80 +27372,72 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
     "Under $25": {
       "BGS 9.5": {
         "gradedMedian": 32.25,
-        "medianRatio": 2.52,
-        "p25": 2.22,
-        "p75": 2.59,
+        "medianRatio": 2.48,
+        "p25": 2.17,
+        "p75": 2.52,
         "rawMedian": 12.77,
         "sampleSize": 5
       },
       "CGC 10": {
         "gradedMedian": 22.5,
-        "medianRatio": 5.01,
-        "p25": 3.48,
-        "p75": 8.63,
+        "medianRatio": 4.98,
+        "p25": 3.39,
+        "p75": 8.85,
         "rawMedian": 4.36,
         "sampleSize": 73
       },
       "CGC 8.5": {
-        "gradedMedian": 12.98,
+        "gradedMedian": 11.6,
         "medianRatio": 1.68,
-        "p25": 1.43,
-        "p75": 2.72,
+        "p25": 1.42,
+        "p75": 2.66,
         "rawMedian": 7.4,
         "sampleSize": 12
       },
       "CGC 9": {
         "gradedMedian": 11.8,
-        "medianRatio": 3.04,
-        "p25": 1.77,
+        "medianRatio": 3.06,
+        "p25": 1.8,
         "p75": 4.55,
         "rawMedian": 3.69,
         "sampleSize": 40
       },
       "CGC 9.5": {
         "gradedMedian": 14.8,
-        "medianRatio": 3.1,
+        "medianRatio": 3.06,
         "p25": 1.18,
-        "p75": 3.99,
-        "rawMedian": 6.88,
+        "p75": 3.79,
+        "rawMedian": 6.8,
         "sampleSize": 19
       },
       "PSA 10": {
-        "gradedMedian": 42.99,
-        "medianRatio": 9.5,
-        "p25": 6.4,
-        "p75": 16.02,
-        "rawMedian": 4.2,
-        "sampleSize": 90
+        "gradedMedian": 43.48,
+        "medianRatio": 9.53,
+        "p25": 6.55,
+        "p75": 17.45,
+        "rawMedian": 4.17,
+        "sampleSize": 91
       },
       "PSA 8": {
-        "gradedMedian": 11.97,
-        "medianRatio": 2.94,
-        "p25": 1.71,
-        "p75": 4.28,
+        "gradedMedian": 12.32,
+        "medianRatio": 2.82,
+        "p25": 1.73,
+        "p75": 4.18,
         "rawMedian": 4.17,
-        "sampleSize": 34
+        "sampleSize": 35
       },
       "PSA 9": {
-        "gradedMedian": 16.04,
-        "medianRatio": 4.17,
-        "p25": 2.59,
-        "p75": 6.03,
-        "rawMedian": 3.39,
-        "sampleSize": 86
+        "gradedMedian": 16.16,
+        "medianRatio": 4.27,
+        "p25": 2.64,
+        "p75": 6.24,
+        "rawMedian": 3.43,
+        "sampleSize": 88
       }
     }
   },
   "pokemon|pokemon-sun-moon": {
     "$100-249": {
-      "BGS 9": {
-        "gradedMedian": 241.75,
-        "medianRatio": 1.59,
-        "p25": 1.21,
-        "p75": 1.84,
-        "rawMedian": 207.8,
-        "sampleSize": 5
-      },
       "BGS 9.5": {
         "gradedMedian": 245,
         "medianRatio": 1.68,
@@ -27411,274 +27447,282 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "sampleSize": 5
       },
       "CGC 10": {
-        "gradedMedian": 365.69,
-        "medianRatio": 2.37,
-        "p25": 1.86,
+        "gradedMedian": 364.82,
+        "medianRatio": 2.25,
+        "p25": 1.66,
         "p75": 3.31,
-        "rawMedian": 147.05,
-        "sampleSize": 28
+        "rawMedian": 145.01,
+        "sampleSize": 27
       },
       "CGC 8": {
         "gradedMedian": 145.18,
-        "medianRatio": 1.07,
-        "p25": 0.97,
-        "p75": 1.14,
-        "rawMedian": 156.89,
+        "medianRatio": 1.14,
+        "p25": 0.95,
+        "p75": 1.17,
+        "rawMedian": 125.2,
         "sampleSize": 5
       },
       "CGC 8.5": {
-        "gradedMedian": 160.75,
+        "gradedMedian": 134.23,
         "medianRatio": 0.92,
-        "p25": 0.77,
-        "p75": 1.04,
-        "rawMedian": 178.97,
-        "sampleSize": 9
+        "p25": 0.68,
+        "p75": 1.08,
+        "rawMedian": 145.97,
+        "sampleSize": 7
       },
       "CGC 9": {
-        "gradedMedian": 145.13,
-        "medianRatio": 1.08,
-        "p25": 0.97,
-        "p75": 1.24,
-        "rawMedian": 143.57,
-        "sampleSize": 19
+        "gradedMedian": 169.83,
+        "medianRatio": 1.06,
+        "p25": 0.96,
+        "p75": 1.37,
+        "rawMedian": 143.8,
+        "sampleSize": 18
       },
       "CGC 9.5": {
-        "gradedMedian": 229.04,
-        "medianRatio": 1.46,
-        "p25": 1.08,
+        "gradedMedian": 155.25,
+        "medianRatio": 1.37,
+        "p25": 1.01,
         "p75": 1.98,
-        "rawMedian": 125.47,
-        "sampleSize": 8
+        "rawMedian": 125.35,
+        "sampleSize": 7
       },
       "PSA 10": {
-        "gradedMedian": 674.35,
-        "medianRatio": 4.07,
-        "p25": 3.21,
-        "p75": 6.81,
-        "rawMedian": 143.57,
-        "sampleSize": 49
+        "gradedMedian": 640.76,
+        "medianRatio": 4.02,
+        "p25": 3.18,
+        "p75": 7.88,
+        "rawMedian": 134.39,
+        "sampleSize": 47
       },
       "PSA 7": {
         "gradedMedian": 172,
-        "medianRatio": 1.27,
-        "p25": 0.99,
+        "medianRatio": 1.28,
+        "p25": 0.97,
         "p75": 1.48,
         "rawMedian": 117.14,
         "sampleSize": 7
       },
       "PSA 8": {
-        "gradedMedian": 148.16,
-        "medianRatio": 1.03,
-        "p25": 0.91,
-        "p75": 1.2,
+        "gradedMedian": 163.83,
+        "medianRatio": 1.02,
+        "p25": 0.89,
+        "p75": 1.31,
         "rawMedian": 133.63,
-        "sampleSize": 45
+        "sampleSize": 46
       },
       "PSA 9": {
-        "gradedMedian": 182.63,
-        "medianRatio": 1.24,
+        "gradedMedian": 173.04,
+        "medianRatio": 1.27,
         "p25": 1.04,
-        "p75": 1.59,
-        "rawMedian": 141.76,
-        "sampleSize": 51
+        "p75": 1.52,
+        "rawMedian": 133.63,
+        "sampleSize": 49
       }
     },
     "$25-49": {
       "BGS 9.5": {
         "gradedMedian": 101.66,
-        "medianRatio": 2.35,
+        "medianRatio": 2.36,
         "p25": 2.13,
-        "p75": 3.45,
-        "rawMedian": 36.53,
+        "p75": 3.39,
+        "rawMedian": 36.86,
         "sampleSize": 7
       },
       "CGC 10": {
         "gradedMedian": 90.61,
-        "medianRatio": 2.62,
-        "p25": 1.94,
-        "p75": 3.19,
+        "medianRatio": 2.66,
+        "p25": 1.93,
+        "p75": 3.23,
         "rawMedian": 35.73,
         "sampleSize": 37
       },
       "CGC 8.5": {
         "gradedMedian": 34.93,
-        "medianRatio": 0.88,
+        "medianRatio": 0.87,
         "p25": 0.79,
-        "p75": 1.08,
-        "rawMedian": 36.53,
-        "sampleSize": 14
+        "p75": 1.07,
+        "rawMedian": 35.46,
+        "sampleSize": 15
       },
       "CGC 9": {
         "gradedMedian": 39.1,
-        "medianRatio": 1.03,
-        "p25": 0.93,
-        "p75": 1.27,
-        "rawMedian": 35.03,
+        "medianRatio": 1.05,
+        "p25": 0.92,
+        "p75": 1.28,
+        "rawMedian": 35.32,
         "sampleSize": 35
       },
       "CGC 9.5": {
         "gradedMedian": 51.95,
-        "medianRatio": 1.5,
-        "p25": 1.35,
+        "medianRatio": 1.51,
+        "p25": 1.32,
         "p75": 1.66,
-        "rawMedian": 33.44,
+        "rawMedian": 33.51,
         "sampleSize": 12
       },
       "PSA 10": {
-        "gradedMedian": 186.16,
-        "medianRatio": 5.55,
+        "gradedMedian": 189.54,
+        "medianRatio": 5.62,
         "p25": 3.92,
-        "p75": 7.32,
-        "rawMedian": 35.11,
-        "sampleSize": 105
+        "p75": 7.35,
+        "rawMedian": 35.38,
+        "sampleSize": 106
       },
       "PSA 6": {
         "gradedMedian": 27.97,
         "medianRatio": 0.63,
         "p25": 0.62,
-        "p75": 0.73,
-        "rawMedian": 40.44,
+        "p75": 0.74,
+        "rawMedian": 41.74,
         "sampleSize": 5
       },
       "PSA 7": {
-        "gradedMedian": 35.85,
-        "medianRatio": 1.01,
-        "p25": 0.87,
-        "p75": 1.05,
-        "rawMedian": 39.53,
-        "sampleSize": 8
+        "gradedMedian": 27.83,
+        "medianRatio": 0.91,
+        "p25": 0.56,
+        "p75": 1.01,
+        "rawMedian": 35.46,
+        "sampleSize": 7
       },
       "PSA 8": {
         "gradedMedian": 39.43,
         "medianRatio": 1.06,
-        "p25": 0.95,
+        "p25": 0.94,
         "p75": 1.38,
-        "rawMedian": 34.25,
-        "sampleSize": 48
+        "rawMedian": 35.32,
+        "sampleSize": 51
       },
       "PSA 9": {
-        "gradedMedian": 54.78,
-        "medianRatio": 1.47,
+        "gradedMedian": 55.56,
+        "medianRatio": 1.5,
         "p25": 1.28,
         "p75": 1.89,
-        "rawMedian": 35.11,
+        "rawMedian": 35.38,
         "sampleSize": 94
       }
     },
     "$250-499": {
       "CGC 10": {
-        "gradedMedian": 985.6,
-        "medianRatio": 2.83,
-        "p25": 2.27,
-        "p75": 3.4,
-        "rawMedian": 369.57,
-        "sampleSize": 10
+        "gradedMedian": 920,
+        "medianRatio": 2.72,
+        "p25": 2.15,
+        "p75": 3.3,
+        "rawMedian": 314.06,
+        "sampleSize": 11
       },
       "CGC 9": {
-        "gradedMedian": 286.69,
-        "medianRatio": 1.04,
-        "p25": 0.92,
-        "p75": 1.12,
-        "rawMedian": 259.11,
+        "gradedMedian": 343,
+        "medianRatio": 1.13,
+        "p25": 0.9,
+        "p75": 1.38,
+        "rawMedian": 258.1,
+        "sampleSize": 7
+      },
+      "CGC 9.5": {
+        "gradedMedian": 518,
+        "medianRatio": 1.36,
+        "p25": 1.21,
+        "p75": 1.41,
+        "rawMedian": 420.25,
         "sampleSize": 5
       },
       "PSA 10": {
-        "gradedMedian": 1732.56,
-        "medianRatio": 4.63,
-        "p25": 3.55,
-        "p75": 5.18,
-        "rawMedian": 369.57,
-        "sampleSize": 11
+        "gradedMedian": 1516.98,
+        "medianRatio": 4.73,
+        "p25": 3.77,
+        "p75": 5.23,
+        "rawMedian": 314.06,
+        "sampleSize": 13
       },
       "PSA 8": {
-        "gradedMedian": 337.92,
-        "medianRatio": 1.12,
-        "p25": 1,
-        "p75": 1.17,
-        "rawMedian": 369.57,
-        "sampleSize": 10
+        "gradedMedian": 321.23,
+        "medianRatio": 1.08,
+        "p25": 1.04,
+        "p75": 1.16,
+        "rawMedian": 314.06,
+        "sampleSize": 12
       },
       "PSA 9": {
         "gradedMedian": 478.13,
-        "medianRatio": 1.4,
-        "p25": 1.27,
-        "p75": 1.77,
-        "rawMedian": 369.57,
-        "sampleSize": 10
+        "medianRatio": 1.45,
+        "p25": 1.33,
+        "p75": 1.75,
+        "rawMedian": 314.06,
+        "sampleSize": 12
       }
     },
     "$50-99": {
       "BGS 9.5": {
         "gradedMedian": 121.92,
-        "medianRatio": 1.99,
-        "p25": 1.6,
+        "medianRatio": 2,
+        "p25": 1.61,
         "p75": 2.38,
         "rawMedian": 75.67,
         "sampleSize": 5
       },
       "CGC 10": {
         "gradedMedian": 175,
-        "medianRatio": 2.33,
-        "p25": 1.83,
+        "medianRatio": 2.35,
+        "p25": 1.89,
         "p75": 3.6,
-        "rawMedian": 64.73,
+        "rawMedian": 64.46,
         "sampleSize": 35
       },
       "CGC 8.5": {
         "gradedMedian": 73.74,
-        "medianRatio": 0.86,
-        "p25": 0.64,
+        "medianRatio": 0.83,
+        "p25": 0.77,
         "p75": 1,
-        "rawMedian": 85.62,
+        "rawMedian": 84.17,
         "sampleSize": 8
       },
       "CGC 9": {
         "gradedMedian": 69.99,
         "medianRatio": 0.96,
-        "p25": 0.77,
-        "p75": 1.31,
-        "rawMedian": 73.77,
-        "sampleSize": 22
+        "p25": 0.83,
+        "p75": 1.3,
+        "rawMedian": 75.67,
+        "sampleSize": 21
       },
       "CGC 9.5": {
-        "gradedMedian": 83.73,
-        "medianRatio": 1.38,
-        "p25": 1.17,
-        "p75": 1.67,
-        "rawMedian": 64.73,
-        "sampleSize": 7
+        "gradedMedian": 115.83,
+        "medianRatio": 1.56,
+        "p25": 1.28,
+        "p75": 1.99,
+        "rawMedian": 74.11,
+        "sampleSize": 8
       },
       "PSA 10": {
         "gradedMedian": 298.35,
-        "medianRatio": 4.49,
-        "p25": 3.61,
-        "p75": 5.65,
-        "rawMedian": 67.67,
-        "sampleSize": 59
+        "medianRatio": 4.53,
+        "p25": 3.76,
+        "p75": 5.45,
+        "rawMedian": 70.25,
+        "sampleSize": 58
       },
       "PSA 7": {
         "gradedMedian": 60,
         "medianRatio": 0.81,
-        "p25": 0.73,
+        "p25": 0.7,
         "p75": 1,
-        "rawMedian": 67.67,
+        "rawMedian": 70.93,
         "sampleSize": 7
       },
       "PSA 8": {
         "gradedMedian": 71.5,
         "medianRatio": 0.97,
         "p25": 0.85,
-        "p75": 1.26,
-        "rawMedian": 72.21,
+        "p75": 1.24,
+        "rawMedian": 75.2,
         "sampleSize": 36
       },
       "PSA 9": {
-        "gradedMedian": 90.08,
+        "gradedMedian": 90.88,
         "medianRatio": 1.29,
-        "p25": 1.17,
-        "p75": 1.48,
-        "rawMedian": 67.67,
-        "sampleSize": 59
+        "p25": 1.19,
+        "p75": 1.49,
+        "rawMedian": 70.25,
+        "sampleSize": 58
       }
     },
     "Under $25": {
@@ -27686,47 +27730,47 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "gradedMedian": 36.35,
         "medianRatio": 5.7,
         "p25": 3.45,
-        "p75": 9.76,
-        "rawMedian": 6.89,
-        "sampleSize": 113
+        "p75": 10.11,
+        "rawMedian": 6.5,
+        "sampleSize": 115
       },
       "CGC 7.5": {
-        "gradedMedian": 13.05,
-        "medianRatio": 1.79,
-        "p25": 1.56,
-        "p75": 2.74,
+        "gradedMedian": 16.03,
+        "medianRatio": 1.91,
+        "p25": 1.79,
+        "p75": 2.68,
         "rawMedian": 8.38,
         "sampleSize": 5
       },
       "CGC 8": {
-        "gradedMedian": 18,
-        "medianRatio": 1.81,
-        "p25": 1.41,
+        "gradedMedian": 16.8,
+        "medianRatio": 1.8,
+        "p25": 1.36,
         "p75": 3.17,
-        "rawMedian": 9.8,
+        "rawMedian": 10.06,
         "sampleSize": 10
       },
       "CGC 8.5": {
-        "gradedMedian": 14.18,
-        "medianRatio": 1.94,
+        "gradedMedian": 14,
+        "medianRatio": 2.18,
         "p25": 1.15,
-        "p75": 3.76,
-        "rawMedian": 7.69,
-        "sampleSize": 38
+        "p75": 4.29,
+        "rawMedian": 5.98,
+        "sampleSize": 42
       },
       "CGC 9": {
-        "gradedMedian": 14.28,
-        "medianRatio": 2.5,
-        "p25": 1.38,
-        "p75": 4.38,
-        "rawMedian": 5.94,
-        "sampleSize": 101
+        "gradedMedian": 14.13,
+        "medianRatio": 2.68,
+        "p25": 1.44,
+        "p75": 5.53,
+        "rawMedian": 5.49,
+        "sampleSize": 106
       },
       "CGC 9.5": {
-        "gradedMedian": 22.92,
-        "medianRatio": 2.41,
+        "gradedMedian": 22.49,
+        "medianRatio": 2.4,
         "p25": 1.53,
-        "p75": 4.44,
+        "p75": 4.43,
         "rawMedian": 8.53,
         "sampleSize": 30
       },
@@ -27734,41 +27778,41 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
         "gradedMedian": 77.33,
         "medianRatio": 10.8,
         "p25": 6.78,
-        "p75": 18.62,
+        "p75": 18.97,
         "rawMedian": 7.96,
-        "sampleSize": 373
+        "sampleSize": 372
       },
       "PSA 6": {
         "gradedMedian": 16.74,
         "medianRatio": 2.15,
-        "p25": 1.51,
-        "p75": 3.18,
+        "p25": 1.49,
+        "p75": 3.41,
         "rawMedian": 8.38,
-        "sampleSize": 10
+        "sampleSize": 11
       },
       "PSA 7": {
-        "gradedMedian": 16.98,
-        "medianRatio": 2.35,
+        "gradedMedian": 17.33,
+        "medianRatio": 2.58,
         "p25": 1.52,
-        "p75": 4.69,
+        "p75": 5.03,
         "rawMedian": 8.38,
-        "sampleSize": 20
+        "sampleSize": 22
       },
       "PSA 8": {
         "gradedMedian": 17.75,
-        "medianRatio": 2.71,
+        "medianRatio": 2.58,
         "p25": 1.71,
-        "p75": 4.43,
-        "rawMedian": 7.72,
-        "sampleSize": 119
+        "p75": 4.4,
+        "rawMedian": 7.75,
+        "sampleSize": 123
       },
       "PSA 9": {
-        "gradedMedian": 22.02,
+        "gradedMedian": 22.25,
         "medianRatio": 3.44,
-        "p25": 2.04,
-        "p75": 5.92,
-        "rawMedian": 7.06,
-        "sampleSize": 308
+        "p25": 2.05,
+        "p75": 5.94,
+        "rawMedian": 7.1,
+        "sampleSize": 310
       }
     }
   },
@@ -27776,58 +27820,58 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
     "Under $25": {
       "CGC 10": {
         "gradedMedian": 25.6,
-        "medianRatio": 5.58,
-        "p25": 3.49,
-        "p75": 8.4,
-        "rawMedian": 4.39,
-        "sampleSize": 42
+        "medianRatio": 5.62,
+        "p25": 3.52,
+        "p75": 8.99,
+        "rawMedian": 4.38,
+        "sampleSize": 44
       },
       "CGC 8.5": {
         "gradedMedian": 11.3,
         "medianRatio": 3.4,
-        "p25": 1.66,
-        "p75": 5.73,
+        "p25": 1.65,
+        "p75": 6.46,
         "rawMedian": 2.01,
         "sampleSize": 13
       },
       "CGC 9": {
-        "gradedMedian": 13,
-        "medianRatio": 3.85,
-        "p25": 1.97,
+        "gradedMedian": 12.67,
+        "medianRatio": 3.6,
+        "p25": 1.94,
         "p75": 5.3,
-        "rawMedian": 3.44,
-        "sampleSize": 30
+        "rawMedian": 3.41,
+        "sampleSize": 31
       },
       "CGC 9.5": {
         "gradedMedian": 15.6,
-        "medianRatio": 3.93,
-        "p25": 1.85,
-        "p75": 6.21,
-        "rawMedian": 4.26,
+        "medianRatio": 3.88,
+        "p25": 1.82,
+        "p75": 5.97,
+        "rawMedian": 4.44,
         "sampleSize": 10
       },
       "PSA 10": {
         "gradedMedian": 37.28,
         "medianRatio": 9.56,
-        "p25": 6.34,
+        "p25": 6.37,
         "p75": 15.09,
-        "rawMedian": 3.48,
+        "rawMedian": 3.49,
         "sampleSize": 124
       },
       "PSA 8": {
         "gradedMedian": 17.12,
-        "medianRatio": 3.55,
-        "p25": 3.25,
+        "medianRatio": 3.68,
+        "p25": 3.48,
         "p75": 7.96,
-        "rawMedian": 4.41,
+        "rawMedian": 4.51,
         "sampleSize": 9
       },
       "PSA 9": {
         "gradedMedian": 18.15,
-        "medianRatio": 4.46,
-        "p25": 2.63,
-        "p75": 6.85,
-        "rawMedian": 3.49,
+        "medianRatio": 4.59,
+        "p25": 2.59,
+        "p75": 6.81,
+        "rawMedian": 3.54,
         "sampleSize": 73
       }
     }
@@ -27837,73 +27881,73 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
       "BGS 9.5": {
         "gradedMedian": 38.15,
         "medianRatio": 3.79,
-        "p25": 2.9,
-        "p75": 4.53,
-        "rawMedian": 7.61,
-        "sampleSize": 6
+        "p25": 2.83,
+        "p75": 4.9,
+        "rawMedian": 6.66,
+        "sampleSize": 7
       },
       "CGC 10": {
         "gradedMedian": 25.24,
-        "medianRatio": 5.24,
+        "medianRatio": 5.14,
         "p25": 4.39,
-        "p75": 8.85,
-        "rawMedian": 4.63,
-        "sampleSize": 31
+        "p75": 8.34,
+        "rawMedian": 4.89,
+        "sampleSize": 33
       },
       "CGC 8.5": {
         "gradedMedian": 10.63,
         "medianRatio": 3.67,
-        "p25": 1.6,
-        "p75": 4.25,
-        "rawMedian": 3.23,
+        "p25": 1.57,
+        "p75": 4.35,
+        "rawMedian": 3.16,
         "sampleSize": 11
       },
       "CGC 9": {
-        "gradedMedian": 12.01,
-        "medianRatio": 3.25,
+        "gradedMedian": 12.16,
+        "medianRatio": 3.29,
         "p25": 2.22,
-        "p75": 4.24,
+        "p75": 4.37,
         "rawMedian": 3.73,
-        "sampleSize": 33
+        "sampleSize": 34
       },
       "CGC 9.5": {
         "gradedMedian": 15.7,
-        "medianRatio": 3.99,
-        "p25": 2.77,
-        "p75": 5.55,
-        "rawMedian": 4.63,
+        "medianRatio": 3.91,
+        "p25": 2.81,
+        "p75": 5.12,
+        "rawMedian": 4.66,
         "sampleSize": 13
       },
       "PSA 10": {
-        "gradedMedian": 35.21,
-        "medianRatio": 10.7,
-        "p25": 6.95,
-        "p75": 13.99,
-        "rawMedian": 3.62,
+        "gradedMedian": 35.26,
+        "medianRatio": 10.62,
+        "p25": 7.22,
+        "p75": 13.27,
+        "rawMedian": 3.47,
         "sampleSize": 65
       },
       "PSA 7": {
         "gradedMedian": 11.34,
-        "medianRatio": 2.1,
+        "medianRatio": 2.08,
         "p25": 1.73,
-        "p75": 2.39,
-        "rawMedian": 4.83,
+        "p75": 2.13,
+        "rawMedian": 4.89,
         "sampleSize": 5
       },
       "PSA 8": {
-        "gradedMedian": 14.22,
-        "medianRatio": 2.44,
-        "p25": 1.61,
-        "p75": 2.95,
+        "gradedMedian": 14.5,
+        "medianRatio": 2.43,
+        "p25": 1.68,
+        "p75": 3,
         "rawMedian": 4.96,
         "sampleSize": 18
       },
       "PSA 9": {
         "gradedMedian": 15.96,
-        "medianRatio": 3.73,
-        "p25": 2.54,
-        "p75": 5.49,
-        "rawMedian": 4.38,
+        "medianRatio": 3.7,
+        "p25": 2.46,
+        "p75": 5.58,
+        "rawMedian": 4.42,
         "sampleSize": 52
       }
     }
@@ -27914,7 +27958,7 @@ export const GRADE_MULTIPLIER_BY_VALUE_BAND: {
 /** Generation provenance. Read by grade-calibration-coverage.cjs and
  *  quoted in the refresh PR body. */
 export const GRADE_CALIBRATION_META = {
-  generatedAt: "2026-09-03T14:57:00.968Z",
+  generatedAt: "2026-09-06T10:45:16.499Z",
   source: "sold_comps",
   groupedBy: "hobbyiqCardId",
   sports: ["baseball","football","basketball","hockey","pokemon"],
