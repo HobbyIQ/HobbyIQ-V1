@@ -10285,20 +10285,41 @@ export async function repriceHoldingsForUser(
   }
 
   for (const holding of candidates) {
-    // CF-EBAY-REVIEW-QUEUE (2026-07-12): skip pending-review rows. Those
-    // aren't real inventory yet — pricing them would fire the CompIQ
-    // engine with polluted / unconfirmed inputs, exactly what the review
-    // gate exists to prevent.
-    if ((holding as any).cardStatus === "pending-review") {
-      skipped += 1;
-      updates.push({
-        id: holding.id,
-        status: "skipped",
-        reason: "pending-review (awaiting user confirmation)",
-        cardId: null,
-      });
-      continue;
-    }
+    // CF-A-REVIEW-STATUS-IS-NOT-A-PRICING-STATUS (Drew, 2026-09-06, #1869).
+    //
+    // This skip used to `continue` on every `pending-review` row, and that is
+    // the whole defect. Two independent questions were answered by one field:
+    //
+    //   "does a HUMAN need to look at this row?"   -> cardStatus
+    //   "may a PRICE be published for this row?"   -> the one valuation path
+    //
+    // The review gate answered both, so a holding whose identity had already
+    // resolved sat frozen at whatever number the import wrote, for as long as
+    // nobody pressed Confirm. Measured read-only 2026-09-06 across all 12
+    // portfolio docs / 131 holdings: 53 rows sit at `pending-review`, and the
+    // two carrying a live `fairMarketValue` — 925ccfe7 and 4e70af40, both
+    // $14.79 on `hiq:baseball:2026:bowman-chrome:cpa-jwh:refractor:auto:num-499`
+    // — had been stranded ~49h on their import-time number. Neither carried a
+    // `withheld` block, so nothing on the row said a price was being refused;
+    // the number simply stopped moving. That reads to a user as a current
+    // valuation, which is exactly what it is not.
+    //
+    // The original comment's fear — "pricing them would fire the CompIQ engine
+    // with polluted / unconfirmed inputs" — is answered TODAY by the engine
+    // itself rather than by refusing to ask it. `valueHoldingThroughOneEntry`
+    // runs the #1784 identity gate (`mayPublishPrice`) before any number is
+    // published, and an unconfirmed or unbacked identity comes back as a
+    // `no-basis-refusal` that is PERSISTED as a withhold: null value, stated
+    // reason. A row the engine refuses is therefore left saying so, instead of
+    // left holding a stale number that no lane will ever revisit.
+    //
+    // So the gate narrows to what it is actually for. `pending-review` still
+    // means "a human has not confirmed this", it still keeps the row out of
+    // /holdings, /pnl and the analytics rollups (portfolioAnalytics's
+    // `countsTowardPortfolio`, unchanged), and confirm still promotes it. It no
+    // longer exempts the row from the ONE valuation path — because a review
+    // status decides who looks at a row, and the valuation path decides what
+    // its number is. That is one valuation path, not two.
     // CF-PORTFOLIO-HOLDING-IDENTITY-VALIDATION (2026-06-01): defense-in-depth
     // safety net. After the validation gate at addHolding/updateHolding, no
     // NEW null-identity rows can be persisted. But legacy/edge rows that

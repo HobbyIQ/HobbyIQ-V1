@@ -447,8 +447,22 @@ export async function confirmHoldingInDoc(
   // or better), auto-apply the suggestion. Never overrides an explicit
   // edits.cardId — including null (user explicitly rejected the SKU).
   if (!("cardId" in edits) && !(holding as any).cardId) {
-    let suggested = String((holding as any).suggestedCardId ?? "").trim();
-    let suggestedConfidence = Number((holding as any).suggestionConfidence ?? 0);
+    // CF-THE-VERIFIED-SLUG-OUTRANKS-A-SUGGESTION (Drew, 2026-09-06, #1869).
+    // When the import already verified an identity, that IS the answer — a
+    // suggestion is what we fall back to when no derivation reached one. The
+    // 5 pending-review rows measured 2026-09-06 whose `suggestedCardId`
+    // disagreed with their `catalogVerifiedSlug` all disagreed by dropping the
+    // parallel and print run (…:refractor:auto:num-499 -> …:base:auto), and
+    // this block would have auto-applied the wrong one at confidence 1.0.
+    const verifiedSlug = (holding as any).catalogVerified === true
+      ? String((holding as any).catalogVerifiedSlug ?? "").trim()
+      : "";
+    let suggested = verifiedSlug.startsWith("hiq:")
+      ? verifiedSlug
+      : String((holding as any).suggestedCardId ?? "").trim();
+    let suggestedConfidence = verifiedSlug.startsWith("hiq:")
+      ? Math.max(Number((holding as any).catalogMatchConfidence ?? 0), 0.9)
+      : Number((holding as any).suggestionConfidence ?? 0);
     // CF-CONFIRM-SYNC-SUGGEST (Drew, 2026-08-03). If no suggestion was
     // pre-cached on the holding (fire-and-forget suggester never ran,
     // or ran before the fields were populated), take one synchronous
