@@ -1461,9 +1461,38 @@ function acquireEntry(entry, dir) {
       }));
       const pagesDir = path.join(dir, "pages");
       run("scrape-checklistcenter-products.cjs", [`--outDir=${pagesDir}`, "--delayMs=800"], { CLC_LIST: listPath });
-      run("convertChecklistCenterToChecklistCsv.cjs", [`--pagesDir=${pagesDir}`, `--outDir=${dir}`], { CLC_LIST: listPath });
+      const said = run("convertChecklistCenterToChecklistCsv.cjs", [`--pagesDir=${pagesDir}`, `--outDir=${dir}`], { CLC_LIST: listPath });
       const csvs = fs.readdirSync(dir).filter((n) => n.endsWith(".csv"));
-      if (!csvs.length) throw new Error("clc converter produced no CSV (page fetched but refused, or no page served)");
+      if (!csvs.length) {
+        /**
+         * CF-AN-UNNUMBERED-ROSTER-IS-NOT-A-BROKEN-CONVERTER (2026-09-06).
+         *
+         * "no CSV" had ONE wording for two opposite causes, and it named the
+         * wrong one. `failed` says our pipe broke and advances the systemic
+         * streak; run 33997480307 gave it to five soccer pages that had all
+         * answered HTTP 200 with a complete page, and three of them in a row
+         * (Real Sociedad, Barcelona, Merlin Heritage 97) tripped the tripwire
+         * and aborted the lane with 252 entries still open -- while the same
+         * source's football/basketball walk was creating 156k rows a pass.
+         *
+         * The converter now says WHICH shape it met. An unnumbered roster is
+         * the source answering "I have no keyable card here": the page lists
+         * bare player names and the catalog keys a card by cardNumber, so
+         * there is nothing to read even in principle and inventing numbers is
+         * forbidden outright. That is EMPTY -- a terminal verdict about the
+         * ENTRY, streak-neutral, exactly as the bcp lane already rules it.
+         *
+         * Anything else keeps the old wording and stays `failed`, because a
+         * converter that met a numbered page and still produced nothing is a
+         * real defect and must keep bringing someone back to it.
+         */
+        if (/UNNUMBERED ROSTER/.test(String(said || ""))) {
+          const e = new Error("clc page lists players with no card numbers — the source states no keyable card for this product");
+          e.emptyAtSource = true;
+          throw e;
+        }
+        throw new Error("clc converter produced no CSV (page fetched but refused, or no page served)");
+      }
       return { csvPaths: stagedCsvs(dir) };
     }
     case "tcgdexja": {
