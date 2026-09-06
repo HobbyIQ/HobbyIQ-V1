@@ -807,9 +807,22 @@ function classifyStoredRow(row, classify, deps = {}) {
     if (der && der.ok) derived = der.identity ?? der.derived ?? der;
     else derivationReasons = der?.reasons ?? ["derivation-refused"];
   }
+  // `storedIdentity` NEEDS ITS DEPS (#1878). It calls
+  // `deps.normalizeSetKey(row.setName)`, so calling it with one argument threw
+  // `Cannot read properties of undefined` on every row that carries a setName
+  // -- and the auditor's try/catch turned each throw into a skipped row rather
+  // than a finding. The deriver and the stored reader take the SAME deps
+  // because they are the same two functions the fleet calls.
   const stored = deps.stored
-    ?? (typeof deps.storedIdentity === "function" ? deps.storedIdentity(row) : null);
+    ?? (typeof deps.storedIdentity === "function" ? deps.storedIdentity(row, deps.deriveDeps ?? {}) : null);
 
+  // A CHECKLIST GATE THAT ALWAYS SAYS NO IS NOT A GATE (#1878). `?? false`
+  // meant the AGREE/IMPROVE branch behind "a match proves nothing unless
+  // checklist-backed" could never be reached, so every strictly-more-specific
+  // row returned CONFLICT/not-checklist-backed and the class table could not
+  // contain a single IMPROVE. The caller now passes the same predicate the
+  // fleet uses; `false` remains the default only for callers that genuinely
+  // have no catalog to ask.
   return classify.classifyRow({
     row, stored, derived, storedSlug,
     checklistBacked: deps.checklistBacked ?? false,
