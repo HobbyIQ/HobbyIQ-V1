@@ -300,10 +300,14 @@ describe("a converter bump re-opens the verdicts recorded under the old one", ()
     expect(staleByConverterProbe("bcp", { status: "partial" })).toBe(false);
     expect(staleByConverterProbe("beckett", { status: "partial", converterVersion: 1 })).toBe(false);
     // ...and for SCC: unstamped and older re-open, current does not.
+    // Expressed RELATIVE to the current version, never as literals: the whole
+    // point of this file is that the version moves, and a pin that hardcodes it
+    // breaks on the next bump for no reason (it did, on v3 -> v4).
+    const cur = CONVERTER_VERSION;
     expect(staleByConverterProbe("sportscardchecklist", { status: "partial" })).toBe(true);
-    expect(staleByConverterProbe("sportscardchecklist", { status: "partial", converterVersion: 2 })).toBe(true);
-    expect(staleByConverterProbe("sportscardchecklist", { status: "partial", converterVersion: 3 })).toBe(false);
-    expect(staleByConverterProbe("sportscardchecklist", { status: "partial", converterVersion: 4 })).toBe(false);
+    expect(staleByConverterProbe("sportscardchecklist", { status: "partial", converterVersion: cur - 1 })).toBe(true);
+    expect(staleByConverterProbe("sportscardchecklist", { status: "partial", converterVersion: cur })).toBe(false);
+    expect(staleByConverterProbe("sportscardchecklist", { status: "partial", converterVersion: cur + 1 })).toBe(false);
   });
 
   it("the run says how many it re-opened, so the effect is visible", () => {
