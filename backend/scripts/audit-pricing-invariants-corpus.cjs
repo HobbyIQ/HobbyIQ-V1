@@ -916,13 +916,26 @@ async function auditRederivation(db, res, bud, nowMs) {
   if (movedSlots.length) {
     res.notes.push(`SLOTS ADRIFT vs their OWN census: ${movedSlots.slice(0, 8).join("; ")}`);
   }
-  // THE THRESHOLD MEASURES TRUE DISAGREEMENTS. Both numbers are printed, and
-  // the note says which one the threshold reads — a threshold that quietly
-  // starts measuring something else is indistinguishable from a corpus that
-  // improved overnight.
+  // BOTH NUMBERS ARE STILL PRINTED, and the note still says what each one is
+  // for — a measure that quietly starts meaning something else is
+  // indistinguishable from a corpus that improved overnight.
+  //
+  // CF-THE-ALARM-IS-DRIFT-NOT-LEVEL (Drew, 2026-09-06). The LEVEL is a trend
+  // line now, not a gate. It is still the number a person watches night to
+  // night, so it is printed first and printed plainly -- but what breaches is
+  // the per-class DRIFT below, and the note says so rather than leaving a
+  // reader to assume the old meaning.
+  const i9inv = INV.INVARIANT_BY_ID.get("I9");
   res.notes.push(
     `TRUE-DISAGREEMENT rate ${pct(rates.breaching, rates.total)} of ${f(rates.total)} classified `
-    + `(${f(rates.breaching)} rows) — this is what the threshold reads`,
+    + `(${f(rates.breaching)} rows) — a TREND LINE, not the alarm. The alarm is per-sportClass `
+    + `CONFLICT drift over ${(100 * (i9inv?.driftPoints ?? 0.05)).toFixed(0)}pp against `
+    + "data/rematch-census-shares.json",
+  );
+  res.notes.push(
+    `the former absolute threshold was ${(100 * (i9inv?.reportRate ?? 0.35)).toFixed(0)}% and is kept only as a `
+    + "reference point: a frame drawn toward pokemon (census CONFLICT 59.6%) is over it by "
+    + "construction, which is why the level cannot tell a worse corpus from a harder draw",
   );
   res.notes.push(
     `NEEDS-CHECKLIST ${f(rates.needsChecklist)} (${pct(rates.needsChecklist, rates.total)}) — the `
@@ -1011,6 +1024,19 @@ async function main() {
   for (const r of list) {
     const w = INV.evaluateThreshold(r.id, { breaches: r.breaches, sample: r.sample });
     if (w) warnings.push(w);
+    // CF-THE-ALARM-IS-DRIFT-NOT-LEVEL (Drew, 2026-09-06). A drift invariant is
+    // not gated on its absolute level -- `evaluateThreshold` returns null for
+    // it by design. The alarm is per-sportClass movement AGAINST ITS OWN
+    // REFERENCE, so it needs the frame's class table, which only exists once
+    // the invariant has run.
+    if (r.ran && r.frameHealth) {
+      const d = INV.evaluateDrift(r.id, {
+        byClassFrame: r.frameHealth.bySportClass ?? [],
+        sample: r.sample,
+        breaches: r.breaches,
+      });
+      if (d) warnings.push(d);
+    }
   }
 
   console.log(`\n${"=".repeat(76)}\nCORPUS INVARIANT DIGEST  ${new Date(nowMs).toISOString()}\n${"=".repeat(76)}`);
@@ -1067,6 +1093,14 @@ async function main() {
         console.log(`    slot ${String(sl.slot).padStart(2)}  n=${String(sl.sampled).padStart(3)}   `
           + `CONFLICT ${(100 * d.sampled).toFixed(0)}%  vs its own census ${(100 * d.census).toFixed(0)}%   `
           + `${(d.delta ?? 0) >= 0 ? "+" : ""}${(100 * (d.delta ?? 0)).toFixed(0)}pp`);
+      }
+      // THE ALARM ITSELF, beside the frame it is computed from. A reader must
+      // be able to see the drift verdict and the mix that produced it together.
+      const dv = warnings.find((w) => w.id === r.id && w.thresholdKind === "drift-points");
+      if (r.frameHealth.bySportClass?.length) {
+        console.log(`    drift alarm: ${dv ? `BREACH — ${dv.worstClass} +${(100 * dv.classes[0].delta).toFixed(1)}pp` : "clean"}`
+          + `  (breach at >${(100 * (INV.INVARIANT_BY_ID.get(r.id)?.driftPoints ?? 0.05)).toFixed(0)}pp `
+          + `above a class's own census, min ${INV.MIN_CLASS_ROWS} rows)`);
       }
       for (const flag of fh.flags) console.log(`    FLAG  ${flag}`);
     }
