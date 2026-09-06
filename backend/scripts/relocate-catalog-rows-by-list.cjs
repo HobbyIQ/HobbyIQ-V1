@@ -172,6 +172,18 @@ function classifyEntry(e) {
  * a DIFFERENT player's card is the collision that produced this whole incident,
  * and it is refused rather than merged: two cards must never share a pricing
  * address, and picking a winner here would be picking one by accident.
+ *
+ * WHY THIS LANE IS NOT WIRED TO `playerEvidence` (CF-A-FOLD-NEVER-CHANGES-THE-
+ * PLAYER, the evidence half). The other three fold lanes now gather corroboration
+ * so a different-player collision can RESOLVE instead of always refusing. This
+ * one deliberately does not, because this guard is STRICTER than the evidence
+ * rule and must stay that way: it refuses every different-player destination,
+ * including one the market would corroborate. Handing it evidence would let a
+ * corroborated pair through and turn a refusal into a write -- WEAKENING a guard
+ * on a lane that acts from a human-curated list and DELETES the source row.
+ * There is no ambiguity here for evidence to settle: a curated list that names a
+ * destination already occupied by another player is a mistake in the list, and
+ * the answer is to report it to the human who wrote it.
  */
 function occupiedByDifferentCard(incumbent, row) {
   if (!incumbent) return false;
