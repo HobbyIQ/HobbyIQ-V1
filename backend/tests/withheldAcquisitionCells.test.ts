@@ -705,17 +705,26 @@ describe("holdings that do not re-point are classified by what unlocks them", ()
   });
 
   it("each distinct rederive verdict maps to the lane that fixes it", () => {
-    // The vocabulary is read from the script's own prose rather than restated.
-    for (const [phrase, unlock] of [
-      ["no catalog row backs it", "retire-self-derived-identities"],
-      ["player mismatch", "parked"],
-      ["destination does not carry it", "parked"],
+    // #1868 moved the RECOGNITION of each reason out of nine grep anchors in
+    // this step and into lib/rederive-verdict-classes.cjs, because the anchors
+    // matched a line shape the captured log does not have (run 34021743427:
+    // ten cells, all zeros, one of them holding a real REDERIVE).
+    //
+    // So the step is pinned on what it still owns -- naming the UNLOCK for each
+    // class -- and the classification itself is pinned against a fixture in
+    // tests/rederiveVerdictClasses.test.ts.
+    for (const [cls, unlock] of [
+      ["self-derived twin", "retire-self-derived-identities"],
+      ["player mismatch (collision)", "parked"],
+      ["claims a parallel/serial the row lacks", "parked"],
     ] as Array<[string, string]>) {
-      expect(step, `${phrase} must be classified`).toContain(phrase);
-      expect(step, `${phrase} must name its unlock`).toContain(unlock);
+      expect(step, `${cls} must appear in the operator's table`).toContain(cls);
+      expect(step, `${cls} must name its unlock`).toContain(unlock);
     }
     expect(step, "a blank-field no-match is the #1811 field-recovery lane")
       .toMatch(/#1811/);
+    expect(step, "the counts must come from the module, not from line greps")
+      .toMatch(/rederive-verdict-classes\.cjs/);
   });
 
 
@@ -765,9 +774,14 @@ describe("the classify step counts with integers and cannot fail its cell", () =
   it("every count goes through one helper that yields digits or nothing", () => {
     // tr -cd '0-9' after head -1 makes a non-integer impossible by
     // construction, which is stronger than defending each call site.
-    expect(step).toMatch(/num\(\)\s*\{/);
-    expect(step).toMatch(/head -1[^\n]*tr -cd '0-9'/);
-    expect(step).toMatch(/\[ -n "\$n" \] \|\| n=0/);
+    // The guarantee and its mechanism are unchanged: ONE reader, ending in
+    // `tr -cd` so a non-integer is impossible by construction rather than
+    // defended at each call site. Only the SOURCE moved -- from nine greps over
+    // a captured log to one `k=v` line emitted by the module (#1868).
+    expect(step).toMatch(/val\(\)\s*\{/);
+    expect(step).toMatch(/head -1[^\n]*tr -cd "0-9"/);
+    expect(step, "each counter still defaults when its key is absent")
+      .toMatch(/\[ -n "\$AGREE" \]\s*\|\|\s*AGREE=0/);
   });
 
   it("a classify fault can never fail the cell", () => {
@@ -779,19 +793,26 @@ describe("the classify step counts with integers and cannot fail its cell", () =
       .not.toMatch(/set -euo|set -eu\b|set -uo pipefail/);
   });
 
-  it("the blank/populated no-match split is real arithmetic, not two names", () => {
+  it("the blank/populated no-match split is real, and both halves are carried", () => {
     // NM_BLANK=0; NM_FIELDS=0 would keep the names and silently drop every
     // no-match. One must be MEASURED, the other the REMAINDER.
-    expect(step).toMatch(/NM_BLANK=\$\(grep[\s\S]{0,200}?NO MATCH/);
-    expect(step).toMatch(/NM_FIELDS=\$\(\(\s*NM_ALL\s*-\s*NM_BLANK\s*\)\)/);
-    expect(step).toMatch(/NM_FIELDS[^\n]*-lt 0[^\n]*NM_FIELDS=0/);
+    // The split still exists and still drives two DIFFERENT unlocks (field
+    // recovery vs matcher work). It is now computed in the module, per verdict,
+    // from the report's own `from` field -- the same rule the old grep applied
+    // to the rendered line (`from=(null|""|none|-)$`) -- so the step carries
+    // both counts instead of deriving one as the remainder of the other.
+    expect(step).toMatch(/NM_BLANK=\$\(val no-match-blank\)/);
+    expect(step).toMatch(/NM_FIELDS=\$\(val no-match-fields\)/);
+    expect(step, "the two halves must reach the operator's table separately")
+      .toMatch(/fields are blank/);
+    expect(step).toMatch(/matcher cannot place it/);
   });
 
   it("AGREE is counted — the verdict ten of ten cells actually returned", () => {
     // Run 33998562094's reports were almost entirely AGREE, and the table said
     // nothing about it. "already on the right identity" is a finding.
-    expect(step).toMatch(/AGREE=\$\(num/);
-    expect(step).toMatch(/REDERIVE=\$\(num/);
+    expect(step).toMatch(/AGREE=\$\(val agree\)/);
+    expect(step).toMatch(/REDERIVE=\$\(val rederive\)/);
     expect(step).toMatch(/already on the right identity/);
   });
 });

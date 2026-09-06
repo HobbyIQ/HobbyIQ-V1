@@ -645,43 +645,61 @@ jobs:
             exit 0
           fi
 
-          # ── THE ARITHMETIC BUG THIS FIXES ────────────────────────────────
+          # ── THE CLASSIFY LINE READS THE REPORT, NOT THE LINE SHAPE ──────
           #
-          # `grep -c` prints 0 AND EXITS 1 when nothing matches, so
+          # CF-CLASSIFY-READS-THE-REPORT-NOT-THE-LINE-SHAPE (#1868). Run
+          # 34021743427 went end-to-end on all ten cells -- bowman-draft
+          # re-derived holding a2963cd5 and repriced user-67878bb5 -- and every
+          # cell printed
           #
-          #     N=$(grep -acF "x" "$LOG" || echo 0)
+          #   CLASSIFY agree=0 rederive=0 ... unverified-total=0
           #
-          # ran the fallback TOO and produced the two-line string "0\n0". Then
-          # `$(( NM_ALL - NM_BLANK ))` saw it and bash said, verbatim:
+          # ALL ZEROS, including the cell whose report said `"verdict":
+          # "REDERIVE"` and whose gate 3 proceeded ON that verdict. The night's
+          # one real re-point was invisible in the line written to describe it.
           #
-          #     line 9: 0
-          #     0: syntax error in expression (error token is "0")
+          # The counts were greps anchored to the SCRIPT's stdout shape
+          # (`^[[:space:]]*REDERIVE `). The file is not the script's stdout: it
+          # is `gh run view --log`, which prefixes every line with
+          # `<job> TAB <step> TAB <timestamp>`, so the anchors could never match
+          # and `grep -c` honestly returned 0. Gate 3 survived the same capture
+          # only because its SECOND alternative -- `"REDERIVE":[[:space:]]*[1-9]`
+          # -- is unanchored and matched the machine-readable SUMMARY through the
+          # prefix. The gate read the report; the classifier read the line shape.
           #
-          # The `|| echo 0` was meant to guarantee a number and was the very
-          # thing that destroyed it. So every count now goes through ONE
-          # function that greps, takes the FIRST line only, keeps digits only,
-          # and defaults to 0 — a value that is an integer by construction.
-          num() {
-            local n
-            n=$(grep -acE "$1" "$LOG" 2>/dev/null | head -1 | tr -cd '0-9')
-            [ -n "$n" ] || n=0
-            printf '%s' "$n"
-          }
+          # So the counts now come from the SAME JSON the gates read -- the
+          # lane's `holding_rederive_report` document, one entry per holding
+          # with its verdict and reason -- parsed by a module with a fixture pin
+          # (backend/tests/rederiveVerdictClasses.test.ts). Nine grep anchors in
+          # YAML that nothing could test became one function that CI exercises.
+          SUM=$(node "$GITHUB_WORKSPACE/backend/scripts/lib/rederive-verdict-classes.cjs" "$LOG")
 
-          AGREE=$(num "^[[:space:]]*AGREE ")
-          REDERIVE=$(num "^[[:space:]]*REDERIVE ")
-          NM_ALL=$(num "^[[:space:]]*NO MATCH")
-          NM_BLANK=$(grep -aE "^[[:space:]]*NO MATCH" "$LOG" 2>/dev/null \
-                      | grep -acE 'from=(null|""|none|-)[[:space:]]*$' | head -1 | tr -cd '0-9')
-          [ -n "$NM_BLANK" ] || NM_BLANK=0
-          NM_FIELDS=$(( NM_ALL - NM_BLANK ))
-          [ "$NM_FIELDS" -lt 0 ] && NM_FIELDS=0
-          UV_NOROW=$(num "no catalog row backs it")
-          UV_PLAYER=$(num "player mismatch")
-          UV_CLAIM=$(num "destination does not carry it")
-          UV_HUMAN=$(num "identity is never overwritten")
-          UV_CONF=$(num "NOT WRITTEN: conf ")
-          UV_ALL=$(num "^[[:space:]]*UNVERIFIED ")
+          # UNREAD IS NOT ZERO. The module prints `unread`/`unreadable` when the
+          # capture holds no report, precisely so a parsing failure can never
+          # again be published as a row of zeros.
+          case "$SUM" in
+            unread|unreadable)
+              echo "reasons=classify: the rederive report could not be read ($SUM)" >> "$GITHUB_OUTPUT"
+              echo "CLASSIFY unread — the report was not parseable; this is NOT zero"
+              exit 0
+              ;;
+          esac
+
+          # One reader for the module's `k=v k=v` line. Kept to ONE sed
+          # expression with no embedded newline, and `tr -cd` guarantees the
+          # result is digits or empty -- never the two-line value that broke the
+          # arithmetic in run 33998562094.
+          val() { printf "%s" "$SUM" | sed -n "s/.*\\b$1=\\([0-9][0-9]*\\).*/\\1/p" | head -1 | tr -cd "0-9"; }
+          AGREE=$(val agree);            [ -n "$AGREE" ]    || AGREE=0
+          REDERIVE=$(val rederive);      [ -n "$REDERIVE" ] || REDERIVE=0
+          NM_BLANK=$(val no-match-blank);[ -n "$NM_BLANK" ] || NM_BLANK=0
+          NM_FIELDS=$(val no-match-fields);[ -n "$NM_FIELDS" ] || NM_FIELDS=0
+          UV_NOROW=$(val self-derived);  [ -n "$UV_NOROW" ] || UV_NOROW=0
+          UV_PLAYER=$(val collision);    [ -n "$UV_PLAYER" ]|| UV_PLAYER=0
+          UV_CLAIM=$(val over-claim);    [ -n "$UV_CLAIM" ] || UV_CLAIM=0
+          UV_HUMAN=$(val human);         [ -n "$UV_HUMAN" ] || UV_HUMAN=0
+          UV_CONF=$(val low-conf);       [ -n "$UV_CONF" ]  || UV_CONF=0
+          UV_ALL=$(val unverified-total);[ -n "$UV_ALL" ]   || UV_ALL=0
 
           {
             echo "### \`${{ matrix.cell.cell }}\` — the rederive verdicts"
@@ -702,7 +720,6 @@ jobs:
           cat /tmp/reasons.md >> "$GITHUB_STEP_SUMMARY"
           cat /tmp/reasons.md
 
-          SUM="agree=$AGREE rederive=$REDERIVE no-match-blank=$NM_BLANK no-match-fields=$NM_FIELDS self-derived=$UV_NOROW collision=$UV_PLAYER over-claim=$UV_CLAIM human=$UV_HUMAN low-conf=$UV_CONF unverified-total=$UV_ALL"
           echo "reasons=$SUM" >> "$GITHUB_OUTPUT"
           echo "agree=$AGREE" >> "$GITHUB_OUTPUT"
           echo "rederive=$REDERIVE" >> "$GITHUB_OUTPUT"
