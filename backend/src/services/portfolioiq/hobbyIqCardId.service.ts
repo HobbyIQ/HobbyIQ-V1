@@ -52,6 +52,7 @@ import { JAPANESE_POKEMON_SET_ALIASES } from "../catalog/japanesePokemonAliases.
 import { productParentOf, productSetKeyForName, spellForEra, spellForSport } from "../catalog/productSetKeys.js";
 import { reconcileSetKey } from "../catalog/setKeyReconciliation.js";
 import { normalizePokemonCardNumber } from "../catalog/pokemonCardNumber.js";
+import { isMakerlessCatchAllSetKey, makerlessCatchAllMessage } from "../catalog/makerlessCatchAll.js";
 export interface HobbyIqCardIdComponents {
   sport: string;              // e.g. "baseball"
   year: number;               // e.g. 2026
@@ -1858,6 +1859,25 @@ export function computeHobbyIqCardId(components: HobbyIqCardIdComponents): strin
   // which decides whether this function may run at all — resolves the setKey
   // identically. See that function for the measurements.
   const baseSetKey = resolveSetKeyForSlug(sport, components.setKey, year);
+  // CF-A-MAKER-LESS-CATCH-ALL-IS-NOT-A-PRODUCT (Drew, 2026-09-05). `draft` and
+  // `flagship` are words a title uses ABOUT a product, and a key minted from
+  // one names no card anybody can buy. They arrive through normalizeSetKey's
+  // FALL-THROUGH rather than any vocabulary table: the title parser's
+  // buildSetName(null, "draft") is the literal string "Draft".
+  //
+  // Refused HERE as well as in slugGuard, for the same reason the unparsed
+  // cardNumber is: slugGuard is the gate callers SHOULD use, and this throw is
+  // what makes a caller that skipped it fail loudly instead of minting. The
+  // three ingest paths already wrap this in try/catch and skip the row.
+  //
+  // Exact-token — `bowman-draft` and `topps-chrome` are real products and pass
+  // untouched. The refusal is checked AFTER resolveSetKeyForSlug so that a
+  // resolver able to supply the maker is given its chance first.
+  if (isMakerlessCatchAllSetKey(baseSetKey)) {
+    throw new Error(
+      `hobbyiq-cardid: ${makerlessCatchAllMessage(baseSetKey)} — identity is UNDERIVABLE`,
+    );
+  }
   // CF-PLAYER-IS-THE-NUMBER: an unnumbered card is identified by its player,
   // never by the shared literal "nno". Falls back to the plain normalized form
   // when there is no player, so slugGuard is the one place that refuses.
