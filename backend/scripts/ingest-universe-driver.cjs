@@ -47,7 +47,30 @@ const os = require("node:os");
 const path = require("node:path");
 const { execFileSync } = require("node:child_process");
 // CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809): the one exit path.
-const { finishLane } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
+//
+// `LIB_HOME` is the directory the helper actually lives in, not an assumption
+// that it sits beside this file. #1828 wrote `path.join(__dirname, "lib",
+// "runner-budget.cjs")`, which is right for the committed driver and wrong
+// for every COPY of it: this module's own mutation pins
+// (tests/ingestUniverseDriver*.test.ts and
+// tests/sccPartialIsTerminalAndSiblingLadders.test.ts) write a MUTATED copy
+// of this file to a temp directory and require it, which is how they prove
+// that emptying a declaration changes BEHAVIOUR rather than merely changing
+// source text. Under `__dirname` each copy looked for
+// `<tmp>/lib/runner-budget.cjs`, found nothing, and threw at require time --
+// seven pins red on a path unrelated to anything they pin.
+//
+// Order: this file's own directory (the committed driver, and the only case
+// that runs in prod), then the repo's scripts/ from the working directory (a
+// relocated copy, which is only ever a test). When neither has the helper the
+// require throws as loudly as it did before, which is correct for a genuinely
+// missing one.
+const LIB_HOME = [
+  __dirname,
+  path.join(process.cwd(), "scripts"),
+  path.join(process.cwd(), "backend", "scripts"),
+].find((d) => fs.existsSync(path.join(d, "lib", "runner-budget.cjs"))) || __dirname;
+const { finishLane } = require(path.join(LIB_HOME, "lib", "runner-budget.cjs"));
 
 const HERE = __dirname;
 const RUN_MINUTES = Number(process.env.RUN_MINUTES || 120);
