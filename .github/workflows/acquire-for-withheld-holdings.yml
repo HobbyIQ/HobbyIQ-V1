@@ -185,9 +185,28 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          node scripts/acquire-for-withheld-holdings.cjs > /tmp/plan.json
-          # The lane prints the human banner to stderr in json mode, so stdout
-          # is a single parseable document.
+          # THE JSON COMES FROM THE FILE THE LANE WROTE, NOT FROM STDOUT (#1846).
+          #
+          # This step used to `> /tmp/plan.json` and jq the capture. Run
+          # 34019169292 died on `jq: parse error: Invalid literal at line 739,
+          # column 11`: the plan ended clean on 738 and line 739 was
+          # `finishLane: exiting code 0`, written to fd 1 by the shared budget
+          # helper AFTER main() returned. The lane's own banner was already on
+          # stderr and still the document was not parseable, because a lane
+          # cannot suppress what the helper it must call writes on its way out.
+          #
+          # The helper now narrates to the fd the lane names, and the lane names
+          # stderr in MODE=json. This reads OUT anyway: the plan is a FILE the
+          # lane wrote and verified, so the parse no longer depends on nothing
+          # else ever printing to stdout again. Belt and braces, one line each.
+          node scripts/acquire-for-withheld-holdings.cjs | tee /tmp/plan-stdout.log
+          # OUT is set in this step's env; a missing file means the lane did not
+          # reach its write, and saying so beats a bare `cp: No such file`.
+          if [ ! -s /tmp/acquisition-plan.json ]; then
+            echo "::error::the lane wrote no plan to $OUT — it did not reach its write"
+            exit 1
+          fi
+          cp /tmp/acquisition-plan.json /tmp/plan.json
           COUNT=$(jq '.tonight | length' /tmp/plan.json)
           echo "count=$COUNT" >> "$GITHUB_OUTPUT"
           echo "cells=$(jq -c '.tonight' /tmp/plan.json)" >> "$GITHUB_OUTPUT"
