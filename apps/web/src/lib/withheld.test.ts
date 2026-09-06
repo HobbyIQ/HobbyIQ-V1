@@ -153,3 +153,28 @@ describe("pool note: a refusal from 4 sales differs from one from none", () => {
     expect(withheldPoolNote({ ...base, blockingCount: null })).toBeNull();
   });
 });
+
+// ─── The "mostly withheld" threshold (audit item 9) ────────────────────
+//
+// A portfolio whose cards are all present but mostly unpriced is not the
+// empty state. The banner's rule lives in the page, but the SHAPE of the
+// decision is pinned here: it is a proportion of the list, and it is never
+// triggered by a fully priced portfolio.
+describe("mostly-withheld is a proportion, not a count", () => {
+  const mostly = (withheld: number, total: number) => withheld > 0 && withheld >= total / 2;
+
+  it("fires when withheld rows are at least half", () => {
+    expect(mostly(10, 20)).toBe(true);
+    expect(mostly(71, 131)).toBe(true); // the platform-wide split
+  });
+
+  it("stays quiet for a few refusals in a healthy portfolio", () => {
+    // Drew's own: 10 withheld of 43. Those rows speak for themselves.
+    expect(mostly(10, 43)).toBe(false);
+  });
+
+  it("never fires on a fully priced portfolio", () => {
+    expect(mostly(0, 43)).toBe(false);
+    expect(mostly(0, 0)).toBe(false);
+  });
+});

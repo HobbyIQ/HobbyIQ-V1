@@ -515,9 +515,50 @@ function categoryOf(section) {
 
 /** The html path: a subset's ladder applied to that subset's own cards.
  *  Returns the CSV rows and the counters; writes nothing. */
+/**
+ * CF-AN-UNNUMBERED-ROSTER-IS-NOT-A-BROKEN-CONVERTER (2026-09-06).
+ *
+ * checklistcenter serves some products -- team sets, and the Merlin/Inception/
+ * Deco UEFA titles -- as a `<ul><li>` roster of BARE PLAYER NAMES with no card
+ * numbers at all ("Marc-Andre ter Stegen", "Ansu Fati / Pedri"), rather than as
+ * the `<p>...<br>` numbered card lines every other page uses. parseHtml finds
+ * the `<h3>` sections and the csColumns, finds no card LINE in either markup,
+ * and every subset drops out -- so convertHtml returned a bare `null` and main
+ * counted it as one more anonymous `refused-or-empty`.
+ *
+ * That silence is the whole defect. The driver turns "no CSV" into
+ * "clc converter produced no CSV (page fetched but refused, or no page
+ * served)" -> `failed`, which says OUR PIPE BROKE and advances the systemic
+ * streak. Five such soccer pages in run 33997480307 read as a dead host and
+ * aborted a lane whose site was serving 200s the whole time (the CLC-FBBK walk
+ * was creating 156k rows per pass at the same hour).
+ *
+ * The catalog keys a card by cardNumber and ingest-checklist-csv-to-catalog
+ * drops any row without one, so reading these would mean INVENTING numbers the
+ * source never published -- which `no synthetic parallels — actuals only`
+ * forbids. This is the SOURCE answering, and its answer is that it has no
+ * keyable card here. It is the same ruling CF-A-CHECKLIST-WITHOUT-CARD-NUMBERS-
+ * IS-NOT-A-PARSER-GAP already made for the bcp lane, and it earns the same
+ * word, so the driver can lift it to `empty` and out of the streak.
+ *
+ * Deliberately NOT a catch-all: a page with sections that DO carry card lines
+ * and still yields no row stays the anonymous refusal it was, so a real
+ * converter gap keeps bringing someone back to it.
+ */
+function unnumberedRoster(html, subsets) {
+  if (subsets.length) return false;
+  // Bare-name <li> entries anywhere in a csColumn: the roster markup.
+  const names = [...html.matchAll(/<div[^>]*class="[^"]*csColumn[^"]*"[^>]*>([\s\S]*?)<\/div>/gi)]
+    .flatMap((c) => [...c[1].matchAll(/<li[^>]*>([\s\S]*?)(?=<li|<\/ul>)/gi)].map((l) => detag(l[1])))
+    .filter(Boolean);
+  // A roster is a BODY of names, and not one of them numbered. One or two
+  // stray <li> is site chrome, not a checklist.
+  return names.length >= 5 && !names.some((n) => /^#?\d/.test(n));
+}
+
 function convertHtml(html, product) {
   const { subsets, rejected } = parseHtml(html, product);
-  if (!subsets.length) return null;
+  if (!subsets.length) return unnumberedRoster(html, subsets) ? { unnumberedRoster: true } : null;
   const rowsOut = [];
   let baseEmitted = false, refusedSubsets = 0, laddersFound = 0, ladderRows = 0;
   const pars = new Set(), nums = new Set(); // product-wide, for the report only -- the gate is per subset
@@ -730,7 +771,7 @@ function main() {
   if (YEARS) { const [a, b] = YEARS.split("-").map(Number); products = products.filter((p) => p.year >= a && p.year <= (b || a)); }
   if (LIMIT) products = products.slice(0, LIMIT);
   console.log(`[clc-convert] ${f(products.length)} products  pages: ${PAGES_DIR}  out: ${REPORT ? "(report only, nothing written)" : OUT_DIR}\n`);
-  let written = 0, refused = 0, noPage = 0, viaXlsx = 0, viaHtml = 0, rows = 0, rejectedTotal = 0, ladderRowsTotal = 0;
+  let written = 0, refused = 0, noPage = 0, viaXlsx = 0, viaHtml = 0, rows = 0, rejectedTotal = 0, ladderRowsTotal = 0, unnumberedTotal = 0;
   for (const p of products) {
     const year = String(p.year || "unknown");
     const hPath = path.join(PAGES_DIR, "html", year, `${p.sourceSlug}.html`), xPath = path.join(PAGES_DIR, "xlsx", year, `${p.sourceSlug}.xlsx`);
@@ -741,18 +782,25 @@ function main() {
         if (out) { result = writeOut(p, out.rows, out.rejected, "xlsx", out.stats); srcKind = "xlsx"; viaXlsx++; }
       } catch (e) { console.log(`   xlsx parse failed ${p.sourceSlug}: ${String(e.message).slice(0, 60)}`); }
     }
+    let unnumbered = false;
     if (!result && ONLY !== "xlsx" && fs.existsSync(hPath)) {
       const out = convertHtml(fs.readFileSync(hPath, "utf8"), p);
-      if (out) { result = writeOut(p, out.rows, out.rejected, "html", out.stats); srcKind = "html"; viaHtml++; rejectedTotal += out.rejected.length; }
+      // The converter's own word for the shape, printed so the DRIVER can read
+      // it off stdout and give the entry the verdict the source earned. See
+      // CF-AN-UNNUMBERED-ROSTER-IS-NOT-A-BROKEN-CONVERTER.
+      if (out?.unnumberedRoster) {
+        unnumbered = true;
+        console.log(`!! UNNUMBERED ROSTER ${p.sourceSlug}: the page lists players with no card numbers — nothing a catalog row could be keyed on`);
+      } else if (out) { result = writeOut(p, out.rows, out.rejected, "html", out.stats); srcKind = "html"; viaHtml++; rejectedTotal += out.rejected.length; }
     }
     if (!fs.existsSync(hPath) && !fs.existsSync(xPath)) { noPage++; continue; }
-    if (!result) { refused++; continue; }
+    if (!result) { if (unnumbered) unnumberedTotal++; else refused++; continue; }
     written++; rows += result.rows; ladderRowsTotal += result.ladderRows;
     console.log(`  ${result.stem.padEnd(48)} ${srcKind.padEnd(4)} rows=${String(f(result.rows)).padStart(8)}  sections=${String(result.sections).padStart(3)}  laddersFound=${String(result.laddersFound).padStart(3)}  ladderRows=${String(f(result.ladderRows)).padStart(8)}  rungs=${result.pars}  numbers=${result.nums}${result.refusedSubsets ? `  REFUSED subsets=${result.refusedSubsets}` : ""}`);
   }
-  console.log(`\n[clc-convert] ${REPORT ? "would write" : "written"}=${f(written)} (xlsx ${f(viaXlsx)}, html ${f(viaHtml)})  rows=${f(rows)}  ladderRows=${f(ladderRowsTotal)}  refused-or-empty=${f(refused)}  no page cached=${f(noPage)}  rung candidates rejected=${f(rejectedTotal)}`);
+  console.log(`\n[clc-convert] ${REPORT ? "would write" : "written"}=${f(written)} (xlsx ${f(viaXlsx)}, html ${f(viaHtml)})  rows=${f(rows)}  ladderRows=${f(ladderRowsTotal)}  refused-or-empty=${f(refused)}  unnumbered rosters=${f(unnumberedTotal)}  no page cached=${f(noPage)}  rung candidates rejected=${f(rejectedTotal)}`);
 }
 
-module.exports = { namesAnAuto, AUTO_WORDS, clean, splitRungs, ladderFamily, applyFamily, sectionPrintRun, sectionHeadLine, parseCardLine, parseLadderText, parseLadders, parseHtml, convertHtml, parseXlsxRows, readXlsxRows, parseXlsx, convertXlsx, sectionsOf, sectionSplit, productMeta, categoryOf };
+module.exports = { unnumberedRoster, namesAnAuto, AUTO_WORDS, clean, splitRungs, ladderFamily, applyFamily, sectionPrintRun, sectionHeadLine, parseCardLine, parseLadderText, parseLadders, parseHtml, convertHtml, parseXlsxRows, readXlsxRows, parseXlsx, convertXlsx, sectionsOf, sectionSplit, productMeta, categoryOf };
 
 if (require.main === module) main();
