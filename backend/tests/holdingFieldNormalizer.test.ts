@@ -22,6 +22,7 @@ describe("normalizer rule inventory", () => {
     expect(names).toContain("playerName_strip_trailing_year");
     expect(names).toContain("playerName_title_case_all_caps");
     expect(names).toContain("cardNumber_uppercase_trim");
+    expect(names).toContain("parallel_split_off_foreign_axes");
   });
 });
 
