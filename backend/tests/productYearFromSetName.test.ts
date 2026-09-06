@@ -46,6 +46,23 @@ describe("productYearsOf — what a setName legitimately admits", () => {
     expect(productYearsOf("2022 26 Something")).toEqual([2022]);
   });
 
+  it("a trailing ordinal is not a season year", () => {
+    // "70th Anniversary" must not be read as the second half of a split
+    // season -- this entry is real (2025 Topps Disneyland 70th Anniversary,
+    // queued as 2026) and its correction depends on getting this right.
+    expect(productYearsOf("2025 Topps Disneyland 70th Anniversary")).toEqual([2025]);
+    expect(correctedYear("2025 Topps Disneyland 70th Anniversary", 2026)).toBe(2025);
+  });
+
+  it("a number later in the name is not a season year", () => {
+    expect(productYearsOf("2024 Topps 500 Club")).toEqual([2024]);
+    expect(productYearsOf("2016 Panini Rookies and Stars")).toEqual([2016]);
+  });
+
+  it("a two-digit lead is not a year at all", () => {
+    expect(productYearsOf("20 Topps")).toEqual([]);
+  });
+
   it("states no year -> admits nothing, and the caller must not guess", () => {
     expect(productYearsOf("Topps Chrome")).toEqual([]);
     expect(productYearsOf("")).toEqual([]);
