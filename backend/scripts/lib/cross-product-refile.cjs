@@ -135,7 +135,7 @@ function deriveCollisionNumbers(fromClaims, toClaims) {
  * `playerKey` is EXACT equality after case/punctuation folding, and that is
  * right for deciding who is one person. It is wrong as the only way to ASK
  * whether a checklist claims a row, because the stored `playerName` on a sale
- * is scraped, not curated. Measured over the 314 CPA-DT rows of 2025:
+ * is scraped, not curated. Measured over all 1,044 CPA-DT rows of 2025:
  *
  *     "Devin Taylor"            125 rows   clean
  *     "Draft Devin Taylor"        1        product word glued to the name

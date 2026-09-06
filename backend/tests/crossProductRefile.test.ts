@@ -297,14 +297,15 @@ describe("ONE definition of identity -- this lane cannot drift from the others",
  * The 2025 CPA-DT pool is the case that found this. CPA-DT names FOUR cards in
  * 2025 -- Diego Tornes (bowman-chrome), Devin Taylor (bowman-draft), Drew
  * Thorpe (topps-chrome-platinum) and Dallas Turner (football topps-chrome) --
- * and 13 Devin Taylor sales sat in Diego Tornes' chrome pool.
+ * and Devin Taylor sales sat in Diego Tornes' chrome pool.
  *
  * `planCrossProductSale` asked ONE question of identity: playerKey(playerName)
- * against the checklist claim, folded EXACTLY. Measured over those 314 rows,
- * 12 carry a dirty playerName ("Draft Devin Taylor", "Devin Taylor Oakland",
- * "Devin Taylor On Caes", "Devin Taylor Au") and one is flatly wrong ("Diego
- * Tornes" on a title reading "Devin Taylor 2025 Bowman Chrome Draft 1st Auto
- * Oakland Athletics"). Four of them were exactly the rows the lane skipped.
+ * against the checklist claim, folded EXACTLY. Measured over all 1,044 CPA-DT
+ * rows of 2025, 12 carry a dirty playerName ("Draft Devin Taylor", "Devin
+ * Taylor Oakland", "Devin Taylor On Caes", "Devin Taylor Au") and one is
+ * flatly wrong ("Diego Tornes" on a title reading "Devin Taylor 2025 Bowman
+ * Chrome Draft 1st Auto Oakland Athletics"). Those were exactly the rows the
+ * lane skipped as to-key-checklist-does-not-name-this-player.
  *
  * So the row's OWN WORDS may corroborate a checklist claim when the exact fold
  * cannot -- under guards that keep it corroboration and never a guess.
