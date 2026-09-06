@@ -32,12 +32,46 @@
  * chances to bound the read differently, count a graded child as a title, or
  * quietly scan cross-partition.
  *
- * ── THE READS ARE PARTITION-BOUNDED, AND THAT IS A CORRECTNESS CLAIM ────────
+ * ── THE READS ARE BOUNDED, AND A SLUG IS NOT ALWAYS A PARTITION ────────────
  *
- * `sold_comps` partitions on /cardId, and a candidate slug IS a cardId. So the
- * titles for a contended cell are read with `WHERE c.cardId = @slug` under
- * `{ partitionKey: slug }` -- the shape `relocatePartitionKeyedSales` already
- * uses -- once per candidate slug, never a cross-partition scan.
+ * `sold_comps` partitions on /cardId, and the first cut of this file assumed a
+ * candidate slug IS a cardId, so it read ONLY `WHERE c.cardId = @slug` under
+ * `{ partitionKey: slug }`. Measured on the Optic football 2024 cell that read
+ * found nothing for 187 of 207 contended pairs, and the banner reported those
+ * as `titles: not gathered` -- indistinguishable from "arm 2 never ran". Two
+ * separate facts made the address wrong:
+ *
+ *   1. A CATALOG SLUG CARRIES A PRINT RUN; A SALE'S cardId DOES NOT.
+ *      `card_catalog` ids are 8 segments -- hiq:sport:year:product:number:
+ *      parallel:auto:TIER (`...:no-auto:num-24`). 91% of sale cardIds in this
+ *      product are 7: the tier segment is absent. Querying the 8-segment slug
+ *      asks for a partition that mostly cannot exist. Sampling 60 8-segment
+ *      cells: 0 were reachable by the 8-segment cardId, 18 by the 7-segment
+ *      stem.
+ *
+ *   2. HALF THE POOL IS NOT PARTITIONED BY CARD ADDRESS AT ALL.
+ *      #1860 measured 584 of 1,044 CPA-DT rows sitting in VENDOR-ID partitions
+ *      (`1746683330504x986376055087801600`) whose cardId is not an address.
+ *      Those rows carry a real `hobbyiqCardId`, and CF-COUNT-WHAT-THE-ENGINE-
+ *      READS says that is the field the pricing engine reads. Of the same 60
+ *      cells, 59 were reachable ONLY through `hobbyiqCardId`, and 0 were
+ *      genuinely empty.
+ *
+ * So the tally reads BOTH keys, and falls back from the full slug to its
+ * 7-segment stem. The cardId arm stays partition-bounded; the hobbyiqCardId arm
+ * cannot be -- a vendor partition is not derivable from a card address -- so it
+ * is bounded by MAX_TITLES_PER_SLUG instead, and is an indexed equality
+ * predicate rather than a scan.
+ *
+ * A SALE IS COUNTED ONCE. The arms overlap (a slug-partitioned row matches both
+ * keys), so rows are de-duplicated by document id before they are tallied --
+ * otherwise a row visible to both queries would cast two votes and a 3-2
+ * majority could be manufactured out of one sale.
+ *
+ * AN ERROR IS NOT AN ABSENCE. A query that throws is reported as
+ * `titles: error <reason>`, never as `not gathered`: the first says the read
+ * failed, the second says the market is silent, and folding a player on the
+ * second when the first is true is exactly the defect this file exists to end.
  *
  * `probe-optic-fold-corroboration.cjs` reads the whole product in ONE
  * cross-partition query and buckets it in memory. That is right for a probe:
@@ -81,40 +115,94 @@ const MAX_TITLES_PER_SLUG = 200;
  *  tally here to mean the same thing the survivor rule reads. */
 const playerKeyOf = (s) => String(s ?? "").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
 
+/** The 7-segment stem of a slug: hiq:sport:year:product:number:parallel:auto.
+ *  A card_catalog id carries an 8th TIER segment (`num-24`, `psa-10`); a sale's
+ *  cardId usually does not. Returns null when the slug is already <= 7 segments,
+ *  so callers can skip a duplicate read. */
+function stemOf(slug) {
+  const parts = String(slug ?? "").split(":");
+  return parts.length > 7 ? parts.slice(0, 7).join(":") : null;
+}
+
 /**
- * Read up to MAX_TITLES_PER_SLUG sale titles from ONE partition and tally them
- * by player. Partition-bounded: `c.cardId = @slug` under `partitionKey: slug`.
+ * Read up to MAX_TITLES_PER_SLUG sale titles for ONE candidate slug and tally
+ * them by player.
  *
- * @returns {Promise<Map<string, {name: string, n: number}>>} playerKey -> tally
+ * FOUR ADDRESSES, ONE CARD. A sale of this card can be filed under the full
+ * slug or its 7-segment stem, and under `cardId` (a card-address partition) or
+ * `hobbyiqCardId` (a vendor-id partition). All four are asked; see the header
+ * for the measurements that made each necessary. Reads stop as soon as `max`
+ * distinct sales have been seen, so the extra addresses cost nothing on a cell
+ * whose first read already satisfies the bound.
+ *
+ * De-duplicated by document id: the same row can answer more than one of the
+ * four queries and must still be one vote.
+ *
+ * @returns {Promise<{tally: Map<string,{name:string,n:number}>, error: string|null}>}
+ *          `error` non-null means a read FAILED -- the caller must not report
+ *          that as an absence of titles.
  */
 async function tallyTitlesForSlug(pool, slug, { retry, max = MAX_TITLES_PER_SLUG } = {}) {
   const tally = new Map();
-  if (!pool || !slug) return tally;
+  if (!pool || !slug) return { tally, error: null };
   const run = retry ?? ((fn) => fn());
-  const it = pool.items.query(
-    {
-      query: "SELECT c.playerName, c.title FROM c WHERE c.cardId = @slug",
-      parameters: [{ name: "@slug", value: slug }],
-    },
-    { partitionKey: slug, maxItemCount: Math.min(max, 200) },
-  );
-  let seen = 0;
-  while (it.hasMoreResults() && seen < max) {
-    const { resources } = await run(() => it.fetchNext());
-    for (const row of resources ?? []) {
-      if (seen >= max) break;
-      seen++;
-      // A sale the parser could not name is not a vote. See the header.
-      const name = String(row?.playerName ?? "").trim();
-      if (!name) continue;
-      const k = playerKeyOf(name);
-      if (!k) continue;
-      const cur = tally.get(k) ?? { name, n: 0 };
-      cur.n++;
-      tally.set(k, cur);
+  const seenIds = new Set();
+  let error = null;
+
+  const stem = stemOf(slug);
+  // `partitionKey` is set ONLY for the cardId reads: those addresses are the
+  // container's partition key. The hobbyiqCardId reads cannot name a partition
+  // -- the row lives under a vendor id -- so they run as bounded equality
+  // queries on an indexed field.
+  const plans = [
+    { field: "cardId", value: slug, partitionKey: slug },
+    { field: "hobbyiqCardId", value: slug, partitionKey: null },
+    ...(stem
+      ? [
+          { field: "cardId", value: stem, partitionKey: stem },
+          { field: "hobbyiqCardId", value: stem, partitionKey: null },
+        ]
+      : []),
+  ];
+
+  for (const plan of plans) {
+    if (seenIds.size >= max) break;
+    try {
+      const opts = { maxItemCount: Math.min(max, 200) };
+      if (plan.partitionKey !== null) opts.partitionKey = plan.partitionKey;
+      const it = pool.items.query(
+        {
+          query: `SELECT c.id, c.playerName, c.title FROM c WHERE c.${plan.field} = @v`,
+          parameters: [{ name: "@v", value: plan.value }],
+        },
+        opts,
+      );
+      while (it.hasMoreResults() && seenIds.size < max) {
+        const { resources } = await run(() => it.fetchNext());
+        for (const row of resources ?? []) {
+          if (seenIds.size >= max) break;
+          // One sale is one vote no matter how many addresses reach it.
+          const rid = String(row?.id ?? "");
+          if (rid && seenIds.has(rid)) continue;
+          if (rid) seenIds.add(rid);
+          // A sale the parser could not name is not a vote. See the header.
+          const name = String(row?.playerName ?? "").trim();
+          if (!name) continue;
+          const k = playerKeyOf(name);
+          if (!k) continue;
+          const cur = tally.get(k) ?? { name, n: 0 };
+          cur.n++;
+          tally.set(k, cur);
+        }
+      }
+    } catch (e) {
+      // Remember the FIRST failure and keep asking the other addresses: a
+      // throttled partition read should not erase titles another address can
+      // still supply. The caller surfaces `error` when the tally is empty.
+      error = error ?? `${plan.field}: ${String(e?.message ?? e).slice(0, 120)}`;
     }
   }
-  return tally;
+  return { tally, error };
 }
 
 /**
@@ -136,8 +224,9 @@ async function tallyTitlesForSlug(pool, slug, { retry, max = MAX_TITLES_PER_SLUG
  * @param {string}  opts.incumbentSlug  partition to read for the incumbent
  * @param {Array}   opts.rivals         catalog rows at this cell, for arm 1
  * @param {Function} opts.retry
- * @returns {Promise<null | {rivals?: Array, titlePlayerCounts?: Object}>}
- *          `null` when nothing at all was gathered -- the fail-safe.
+ * @returns {Promise<null | {rivals?: Array, titlePlayerCounts?: Object, titlesError?: string}>}
+ *          `null` when nothing at all was gathered AND nothing failed -- the
+ *          fail-safe. `titlesError` means a read threw; it is never a vote.
  */
 async function gatherPlayerEvidence(pool, incoming, incumbent, opts = {}) {
   const { incomingSlug, incumbentSlug, rivals = null, retry } = opts;
@@ -145,11 +234,11 @@ async function gatherPlayerEvidence(pool, incoming, incumbent, opts = {}) {
   // ── arm 2: the sale titles' majority ──────────────────────────────────────
   const counts = {};
   const slugs = [...new Set([incomingSlug, incumbentSlug].filter(Boolean))];
-  let readAny = false;
+  let titlesError = null;
   if (pool && slugs.length) {
     for (const slug of slugs) {
-      const tally = await tallyTitlesForSlug(pool, slug, { retry });
-      readAny = true;
+      const { tally, error } = await tallyTitlesForSlug(pool, slug, { retry });
+      if (error) titlesError = titlesError ?? error;
       for (const { name, n } of tally.values()) {
         // Keyed by DISPLAY name; chooseSurvivor re-keys with its own
         // playerKeyOf, so two spellings of one person merge there rather than
@@ -162,15 +251,18 @@ async function gatherPlayerEvidence(pool, incoming, incumbent, opts = {}) {
   const haveTitles = Object.keys(counts).length > 0;
   const haveRivals = Array.isArray(rivals) && rivals.length > 0;
   // Nothing gathered at all -> say so, and let the rule refuse. An empty object
-  // would claim a gathering that did not happen.
-  if (!haveTitles && !haveRivals) return null;
+  // would claim a gathering that did not happen. A read that FAILED is not
+  // nothing, though: it is carried so the banner can say `error` rather than
+  // `not gathered`, which are different findings for a human to act on.
+  if (!haveTitles && !haveRivals && !titlesError) return null;
 
   const evidence = {};
   if (haveRivals) evidence.rivals = rivals;
   if (haveTitles) evidence.titlePlayerCounts = counts;
-  // `readAny` is not carried: the seam's contract is the two arms, and a caller
-  // that read a partition and found no named title gathered nothing usable.
-  void readAny;
+  // Never consulted by `chooseSurvivor` -- the rule's arms are unchanged, and a
+  // failed read must not become a vote. It exists so the banner can distinguish
+  // a silent market from a broken query.
+  if (titlesError) evidence.titlesError = titlesError;
   return evidence;
 }
 
@@ -232,7 +324,9 @@ function describePlayerEvidence(incoming, incumbent, evidence, result) {
   }
 
   // arm 2, as counts, so the majority is auditable and not just its verdict.
-  let arm2 = "titles: not gathered";
+  // A FAILED read is named as an error: "not gathered" would say the market is
+  // silent, and a human settling this pair would draw the wrong conclusion.
+  let arm2 = evidence?.titlesError ? `titles: error ${evidence.titlesError}` : "titles: not gathered";
   if (counts) {
     let nIn = 0;
     let nInc = 0;
@@ -247,7 +341,8 @@ function describePlayerEvidence(incoming, incumbent, evidence, result) {
     const topNote = top && playerKeyOf(top[0]) !== kIn && playerKeyOf(top[0]) !== kInc
       ? `; market's top is a THIRD player "${top[0]}" x${top[1]}`
       : "";
-    arm2 = `titles: "${nameIn}" x${nIn} vs "${nameInc}" x${nInc}${topNote}`;
+    const errNote = evidence?.titlesError ? `; PARTIAL -- a read failed: ${evidence.titlesError}` : "";
+    arm2 = `titles: "${nameIn}" x${nIn} vs "${nameInc}" x${nInc}${topNote}${errNote}`;
   }
 
   const by = result?.playerArbitration?.by
@@ -258,6 +353,7 @@ function describePlayerEvidence(incoming, incumbent, evidence, result) {
 module.exports = {
   MAX_TITLES_PER_SLUG,
   playerKeyOf,
+  stemOf,
   tallyTitlesForSlug,
   gatherPlayerEvidence,
   gatherRivalRows,
