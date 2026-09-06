@@ -81,6 +81,11 @@ import { recoverHoldingFields } from "../../src/services/portfolioiq/holdingFiel
 // may adjudicate a card. A ruling is not licence to pin a user's holding to a
 // row we derived from our own sales.
 import { canAdjudicate, catalogAuthorityOf } from "../../src/services/catalog/catalogAuthority.service.js";
+// CF-AGREE-IS-A-VERDICT-ABOUT-A-ROW (Drew, 2026-09-05). The SAME predicate the
+// pricing gate asks — imported, never restated, for the reason
+// sourceCorroboration's header gives at length: four spellings of "is this row
+// checklist-backed" is how the rematch comes to write rows the gate refuses.
+import { identityBackingOf, isSelfDerivedIdentity } from "../../src/services/catalog/identityBacking.js";
 
 // BACKFILL_APPLY is what the runner exports; APPLY is what a hand run types.
 // Reading BOTH is deliberate (feedback_runner_exports_backfill_apply): a
@@ -659,6 +664,11 @@ export function recoveredSetNameIsCorroborated(
   return a === b;
 }
 
+/** A graded child's tail: `…:psa-10`, `…:bgs-9-5`, `…:bgs-10-black`, `…:sgc-10`,
+ *  `…:cgc-9-5`. Matched on the LAST segment so a parallel that merely contains
+ *  a grader's letters cannot be mistaken for a grade. */
+export const GRADED_SUFFIX = /:(psa|bgs|sgc|cgc)-[0-9]+(-[0-9]+)?(-black)?$/i;
+
 interface RederiveVerdict {
   hid: string;
   userId: string;
@@ -666,7 +676,7 @@ interface RederiveVerdict {
   from: string | null;
   to: string | null;
   backedBy: string | null;
-  verdict: "REDERIVE" | "AGREE" | "UNVERIFIED" | "NO-MATCH";
+  verdict: "REDERIVE" | "AGREE" | "AGREE-UNBACKED" | "UNVERIFIED" | "NO-MATCH";
   reason: string;
   matchedBy?: string;
   confidence?: number;
@@ -676,6 +686,13 @@ interface RederiveVerdict {
   recoveredFields?: Array<{ field: string; value: string | number; source: string; via: string }>;
   /** True when a human ruled on this identity — REPORT ONLY, never written. */
   userAuthored?: boolean;
+  /** GATE A: how the STORED identity stands under the pricing gate's own
+   *  predicate. Present on every verdict this pass reached through the
+   *  `to === from` branch, so a reader can tell an AGREE that prices from one
+   *  that does not without re-reading the catalog. */
+  storedBacking?: string;
+  /** The `source` of the stored identity's catalog row; null when it has none. */
+  storedSource?: string | null;
 }
 
 async function rederive(
@@ -734,6 +751,53 @@ async function rederive(
       .fetchAll();
     const r = resources?.[0];
     return r ? { id: r.id, source: String(r.source ?? "unknown"), setName: r.setName ?? null, playerName: r.playerName ?? null } : null;
+  };
+
+  /**
+   * The CHECKLIST-BACKED rows for the same card as `slug`, at any parallel.
+   *
+   * CF-AGREE-IS-A-VERDICT-ABOUT-A-ROW (Drew, 2026-09-05). Read at CARD level —
+   * `hiq:<sport>:<year>:<setKey>:<cardNumber>:` — because that is the scope in
+   * which "is there a real transcription of this card" can be answered at all,
+   * and it is the same scope `retire-self-derived-identities` already uses to
+   * decide whether a self-derived row has a twin. Asking only at the exact
+   * slug would answer a question we already know the answer to: the exact slug
+   * IS the self-derived row.
+   *
+   * GRADED CHILDREN ARE EXCLUDED. They are minted from their parents by
+   * materialize-graded-identities and carry the parent's provenance, so a
+   * self-derived row's own `:psa-7` child would otherwise read as a second
+   * opinion on itself — the same self-confirmation `sourceCorroboration`
+   * excludes graded twins from the rival set for.
+   *
+   * The rows come back with their fields because the CALLER must decide
+   * whether any of them is THIS card (GATE A2 below); this function only
+   * narrows the catalog to the candidates.
+   */
+  const checklistTwinsOfCard = async (slug: string): Promise<Array<{ id: string; source: string; parallel: string | null; printRun: number | null; isAuto: boolean | null; playerName: string | null }>> => {
+    const seg = String(slug ?? "").split(":");
+    // hiq : sport : year : setKey : cardNumber : parallel : auto [ : num-N ][ : grade ]
+    if (seg.length < 6 || seg[0] !== "hiq") return [];
+    const cardPrefix = `${seg.slice(0, 5).join(":")}:`;
+    const { resources } = await catalog.items
+      .query({
+        query: "SELECT c.id, c.source, c.parallel, c.printRun, c.isAuto, c.playerName FROM c WHERE STARTSWITH(c.id, @p)",
+        parameters: [{ name: "@p", value: cardPrefix }],
+      })
+      .fetchAll();
+    return (resources ?? [])
+      .filter((r: any) => r?.id && r.id !== slug)
+      // A graded child confirms nothing its parent does not already say.
+      .filter((r: any) => !GRADED_SUFFIX.test(String(r.id)))
+      .filter((r: any) => identityBackingOf(String(r.id), [{ source: r.source ?? null, id: r.id, playerName: r.playerName ?? null }]) === "checklist-backed")
+      .map((r: any) => ({
+        id: String(r.id),
+        source: String(r.source ?? "unknown"),
+        parallel: r.parallel ?? null,
+        printRun: typeof r.printRun === "number" ? r.printRun : null,
+        isAuto: typeof r.isAuto === "boolean" ? r.isAuto : null,
+        playerName: r.playerName ?? null,
+      }));
   };
 
   const verdicts: RederiveVerdict[] = [];
@@ -818,9 +882,117 @@ async function rederive(
     }
 
     if (to === from) {
-      push({ to, backedBy: null, verdict: "AGREE", reason: "re-derivation agrees with the stored identity",
-        matchedBy: r.matchedBy, confidence: r.confidence });
-      console.log(`  AGREE      ${label}  ${from}`);
+      // GATE A — AGREE IS A VERDICT ABOUT A ROW, NOT ABOUT TWO STRINGS.
+      //
+      // CF-AGREE-IS-A-VERDICT-ABOUT-A-ROW (Drew, 2026-09-05). This branch used
+      // to `continue` on `to === from` alone, which asks only whether the
+      // matcher re-derived the same SLUG — never whether anything real stands
+      // behind it. Every other destination in this pass goes through GATE 1
+      // ("the destination must be a REAL CHECKLIST ROW"); the stored one, the
+      // single destination this pass can leave in place, was the one that
+      // never did.
+      //
+      // What that hid, measured on prod 2026-09-05 (run 33998562094, PR
+      // #1842): nine of ten withheld-holding cells reported AGREE, and SEVEN
+      // of those holdings sit on a row the pricing gate refuses. Drew's two
+      // 1997 Bowman's Best BBP4 Jeter Atomic Refractors (437f010d, 5979f485)
+      // agree on `hiq:baseball:1997:bowmans-best:bbp4:atomic-refractor:no-auto`
+      // — whose ONLY catalog row is `ebay-user-purchase`, minted from Drew's
+      // own eBay import. The rederive said "already right", the gate said
+      // `no-checklist-match`, and both were reading the same row. AGREE meant
+      // "agrees with itself".
+      //
+      // So the stored identity is asked the SAME question, through the SAME
+      // predicate the gate uses (identityBackingOf), and the answer splits
+      // three ways rather than being assumed.
+      const own = await backingOf(from as string);
+      const ownBacking = identityBackingOf(
+        from,
+        own ? [{ source: own.source, id: own.id, playerName: own.playerName }] : [],
+      );
+      if (ownBacking === "checklist-backed") {
+        push({ to, backedBy: own?.source ?? null, verdict: "AGREE",
+          reason: `re-derivation agrees with the stored identity, and it is checklist-backed by ${own?.source ?? "unknown"}`,
+          matchedBy: r.matchedBy, confidence: r.confidence });
+        console.log(`  AGREE      ${label}  ${from}   backed by ${own?.source ?? "unknown"}`);
+        continue;
+      }
+
+      // The stored row is NOT something a price may rest on. Is there a real
+      // transcription of this same card the holding should point at instead?
+      //
+      // GATE A2 — A TWIN OF THE CARD IS NOT AUTOMATICALLY THIS CARD.
+      // `droppedSpecificityAxes` is the gate the REDERIVE path already uses to
+      // refuse a move that would fuse two pools, and a re-point out of a
+      // self-derived row is a move like any other — it is asked here for the
+      // same reason and with the same claim (recovered fields included).
+      // CF-A-ROW-THAT-EXISTS-IS-NOT-THE-RIGHT-ROW.
+      const claim = recovery ? { ...h, ...recovery.fields } : h;
+      const twins = (await checklistTwinsOfCard(from as string))
+        .filter((t) => droppedSpecificityAxes(claim, t.id).length === 0)
+        // A twin naming a DIFFERENT player is a different card, whatever else
+        // matches. Compared only when both sides carry a name — a null is not
+        // a witness (the same rule GATE 1b states).
+        .filter((t) => !(normalizePlayerForCompare(h.playerName) && normalizePlayerForCompare(t.playerName))
+          || recoveredSetNameIsCorroborated(h.playerName, t.playerName));
+
+      // GATE A4 — A HUMAN'S RULING OUTRANKS THIS INFERENCE TOO. Asked BEFORE
+      // the re-point rather than after, because a ruled holding must reach the
+      // report unchanged whether or not a twin exists: the standing GREAT
+      // REMATCH rule is that ruled rows are report-only FOREVER, and a new
+      // gate that could move one would be this pass acquiring, by accident,
+      // the one power #1811 built a gate to deny it.
+      if (recovery?.userAuthored) {
+        push({ to, backedBy: own?.source ?? null, verdict: "AGREE-UNBACKED",
+          reason: `stored identity is ${ownBacking} (${own?.source ?? "no catalog row"}) and a human ruled it (${recovery.userAuthoredBy}) — report only`,
+          matchedBy: r.matchedBy, confidence: r.confidence, userAuthored: true,
+          storedBacking: ownBacking, storedSource: own?.source ?? null });
+        console.log(`  AGREE-UNBACKED ${label}  ${from}   ${ownBacking} — ruled by ${recovery.userAuthoredBy}, never overwritten by this pass`);
+        continue;
+      }
+
+      if (twins.length === 1) {
+        // EXACTLY ONE surviving twin is a re-point, and it is reported as
+        // REDERIVE so it rides this pass's existing apply path, its etag
+        // write and its read-back reconciliation rather than a parallel one.
+        //
+        // AMBIGUITY IS A REFUSAL. Several surviving twins means the catalog
+        // holds more than one real transcription this holding could be, and
+        // picking one by sort order is how a confident wrong price is made
+        // (the `ambiguous` refusal in catalogIdentityResolver exists for the
+        // identical reason). It falls through to AGREE-UNBACKED below.
+        //
+        // GATE 3 (the confidence floor) IS DELIBERATELY NOT ASKED HERE, and
+        // that is not an omission. `r.confidence` scores the MATCHER's guess
+        // at a slug from free text; this destination was not guessed. It is
+        // the one row in the catalog that (i) transcribes this exact card from
+        // a checklist, (ii) survives GATE 2 against the holding's own claim,
+        // and (iii) is unique in doing so. Reusing a text-match score to gate
+        // a structural fact would refuse the correct destination whenever the
+        // holding's PROSE is messy — which is precisely the population this
+        // whole pass exists for.
+        const twin = twins[0];
+        push({ to: twin.id, backedBy: twin.source, verdict: "REDERIVE",
+          reason: `stored identity is ${ownBacking} (${own?.source ?? "no catalog row"}) and a checklist twin of the same card exists — checklist-backed by ${twin.source}`,
+          matchedBy: r.matchedBy, confidence: r.confidence,
+          recoveredFields: (recovery?.recovered ?? []).map((f: any) => ({ field: f.field, value: f.value, source: f.source, via: f.via })),
+          userAuthored: !!recovery?.userAuthored,
+          storedBacking: ownBacking, storedSource: own?.source ?? null });
+        console.log(`  REDERIVE   ${label}\n             ${from}   (${ownBacking}: ${own?.source ?? "no catalog row"})\n          -> ${twin.id}   checklist twin, backed by ${twin.source}`);
+        continue;
+      }
+
+      // No usable twin. The holding's identity is as good as this pass can
+      // make it and STILL unpriceable — which is an ACQUISITION ITEM, not
+      // progress. It is named rather than folded into AGREE precisely because
+      // the gate at run 33998562094 counted nine of these as "done".
+      push({ to, backedBy: own?.source ?? null, verdict: "AGREE-UNBACKED",
+        reason: twins.length > 1
+          ? `stored identity is ${ownBacking} (${own?.source ?? "no catalog row"}) and ${twins.length} checklist twins of this card survive the gates — ambiguous, refusing to pick one`
+          : `stored identity is ${ownBacking} (${own?.source ?? "no catalog row"}); no checklist row transcribes this card — acquire the checklist`,
+        matchedBy: r.matchedBy, confidence: r.confidence,
+        storedBacking: ownBacking, storedSource: own?.source ?? null });
+      console.log(`  AGREE-UNBACKED ${label}  ${from}   ${ownBacking} (${own?.source ?? "no catalog row"})${twins.length > 1 ? ` — ${twins.length} ambiguous twins` : " — no checklist twin: ACQUIRE"}`);
       continue;
     }
 

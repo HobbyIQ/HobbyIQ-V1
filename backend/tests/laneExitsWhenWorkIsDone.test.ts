@@ -532,3 +532,175 @@ describe("the ceiling leaves >= 15 minutes AFTER the exit path is paid for", () 
     });
   }
 });
+
+// ── 8. THE EXIT IS UNCONDITIONAL ───────────────────────────────────────────
+//
+// CF-A-LANE-EXITS-UNCONDITIONALLY (2026-09-05). #1809 made every lane CALL
+// finishLane(), and section 5 above pins that it does. Four sharded APPLY
+// runs of retire-self-derived-identities dispatched AFTER #1828 merged
+// (bf47ba1, 21:30Z) STILL died at the ceiling:
+//
+//   33993974633  dispatched 21:45Z
+//   33994076178  dispatched 21:48Z
+//   33994101308  dispatched 21:48Z
+//   33994112578  dispatched 21:48Z
+//
+// Every one of them printed its full reconcile —
+//
+//   RECONCILE  seen 202,186 … => 202,186 BALANCES
+//   [retire-self-derived-identities] reconciled: intended 202,189
+//       = written 694 + skipped 201,495
+//
+// — and every one of them then printed nothing until
+//
+//   ##[error] The action 'Run backfill (APPLY)' has timed out after 150 minutes
+//
+// So finishLane() WAS reached and the process still did not exit. The call
+// being made is not the guarantee; section 5 pins a call, and a call that
+// awaits forever is indistinguishable in source from one that returns.
+//
+// THE MECHANISM. finishLane AWAITED its cleanup — `client.dispose()` and
+// `flushStdio()` — before its `process.exit`. Against section 1's fake both
+// settle instantly. Against the real @azure/cosmos SDK, with the abandoned
+// cross-partition aggregate still in flight, neither need settle at all: the
+// dispose tears down an agent whose sockets are mid-request, and the flush
+// waits on a `write` callback from a pipe whose reader (`tee`) is not
+// draining. The exit line is simply never reached.
+//
+// THE RULE, RESTATED. Cleanup is best-effort and CAPPED. The exit is
+// UNCONDITIONAL. These pins use a fake that is uncooperative in the two ways
+// the real SDK was: a `dispose()` that never resolves, and a query that never
+// settles while holding a REAL handle.
+describe("finishLane exits even when cleanup never finishes", () => {
+  const NEVER_RESOLVING_DISPOSE = `
+    const net = require("net");
+    const srv = net.createServer(() => {});
+    srv.listen(0, "127.0.0.1", async () => {
+      const port = srv.address().port;
+      // A live socket, so only an explicit exit can end this process.
+      const s = net.connect(port, "127.0.0.1", () => s.write("ping"));
+      s.on("error", () => {});
+      const client = {
+        // THE DEFECT, REPRODUCED: dispose() never resolves. The old finishLane
+        // awaited exactly this.
+        dispose: () => new Promise(() => {}),
+      };
+      __BODY__
+    });
+  `;
+
+  it("a dispose() that never resolves does not strand the lane", () => {
+    const r = runNode(`
+      ${LIB_REQUIRE}
+      ${NEVER_RESOLVING_DISPOSE.replace(
+        "__BODY__",
+        `console.log("[probe] calling finishLane"); await finishLane(0, { client });`,
+      )}
+    `);
+    expect(r.stdout).toContain("[probe] calling finishLane");
+    expect(
+      r.timedOut,
+      "finishLane awaited a dispose that never resolved — the exact shape that killed runs "
+        + "33993974633, 33994076178, 33994101308 and 33994112578 AFTER they reconciled clean",
+    ).toBe(false);
+    expect(r.status).toBe(0);
+  });
+
+  it("it exits PROMPTLY — the cleanup cap is short, not the step ceiling", () => {
+    const r = runNode(`
+      ${LIB_REQUIRE}
+      ${NEVER_RESOLVING_DISPOSE.replace("__BODY__", `await finishLane(0, { client });`)}
+    `);
+    expect(r.timedOut).toBe(false);
+    // The cap is 5s; a lane that took the runner's 150 minutes to notice its
+    // dispose was wedged is the bug, not a slow tidy-up.
+    expect(r.ms, `the lane took ${r.ms}ms to exit past a wedged dispose`).toBeLessThan(12000);
+  });
+
+  it("carries the non-zero code out even when cleanup is wedged", () => {
+    const r = runNode(`
+      ${LIB_REQUIRE}
+      ${NEVER_RESOLVING_DISPOSE.replace("__BODY__", `await finishLane(3, { client });`)}
+    `);
+    expect(r.timedOut).toBe(false);
+    expect(r.status, "a failing lane that cannot exit reports nothing at all").toBe(3);
+  });
+
+  it("a dispose that THROWS is not a failed lane either", () => {
+    const r = runNode(`
+      ${LIB_REQUIRE}
+      (async () => {
+        await finishLane(0, { client: { dispose: () => { throw new Error("socket already gone"); } } });
+      })();
+    `);
+    expect(r.timedOut).toBe(false);
+    expect(r.status, "cleanup that throws must not fail a run whose writes reconciled").toBe(0);
+  });
+
+  // THE OPERATOR'S PROOF. The four runs above are indistinguishable, in their
+  // logs, from a lane that exited and a runner that killed it anyway: both
+  // end at the reconcile. An explicit exit line is what makes "did it exit?"
+  // answerable from the log alone.
+  it("prints an explicit exit line, so a log that ends at the reconcile is a KNOWN kill", () => {
+    const r = runNode(`
+      ${LIB_REQUIRE}
+      (async () => {
+        console.log("[retire-self-derived-identities] reconciled: intended 202,189"
+          + " = written 694 + skipped 201,495");
+        await finishLane(0);
+      })();
+    `);
+    expect(r.stdout).toContain("reconciled: intended 202,189");
+    expect(
+      r.stdout,
+      "the log must SAY the lane exited; without it, a killed step and a clean exit read alike",
+    ).toContain("finishLane: exiting code 0");
+    expect(r.timedOut).toBe(false);
+  });
+
+  it("the exit line survives a wedged dispose — it is written after the cap, not before it", () => {
+    const r = runNode(`
+      ${LIB_REQUIRE}
+      ${NEVER_RESOLVING_DISPOSE.replace("__BODY__", `await finishLane(0, { client });`)}
+    `);
+    expect(r.stdout).toContain("finishLane: exiting code 0");
+  });
+
+  // MUTATION. The guarantee is the CAP, not the call: restore the unbounded
+  // await and the probe hangs exactly as the four runs did.
+  it("MUTATION: await the wedged dispose unbounded and the lane hangs again", () => {
+    const r = runNode(
+      `
+      const net = require("net");
+      const srv = net.createServer(() => {});
+      srv.listen(0, "127.0.0.1", async () => {
+        const port = srv.address().port;
+        const s = net.connect(port, "127.0.0.1", () => s.write("ping"));
+        s.on("error", () => {});
+        const client = { dispose: () => new Promise(() => {}) };
+        console.log("[probe] calling the OLD finishLane");
+        // The old body: await the cleanup, THEN exit.
+        await client.dispose();
+        process.exit(0);
+      });
+    `,
+      6000,
+    );
+    expect(r.stdout).toContain("[probe] calling the OLD finishLane");
+    expect(
+      r.timedOut,
+      "the mutation did NOT hang, so these pins would not have caught the four timed-out runs",
+    ).toBe(true);
+  });
+
+  it("the helper states the unconditional exit in source", () => {
+    const fn = /async function finishLane\([\s\S]*?\n\}/.exec(LIB)?.[0] ?? "";
+    // Cleanup runs under a cap...
+    expect(fn, "cleanup must be capped, or an await inside it can strand the exit").toMatch(/underExitCap\(/);
+    // ...and the exit is NOT inside that cap.
+    expect(fn.indexOf("underExitCap(")).toBeLessThan(fn.indexOf("process.exit(code)"));
+    const cap = /async function underExitCap\([\s\S]*?\n\}/.exec(LIB)?.[0] ?? "";
+    expect(cap, "the cap must race the cleanup, not await it").toMatch(/Promise\.race\(/);
+    expect(cap).toMatch(/setTimeout\(/);
+  });
+});

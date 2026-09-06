@@ -484,16 +484,27 @@ async function main() {
   // the runner's relaunch gate reads the same phrase here as on every other
   // lane (CF-RELAUNCH-ONLY-ON-BUDGET).
   if (B.outOfClock()) note(`  ${B.stoppedAtBudget()}`);
-  return client;
+  // The context finishLane disposes and reports from. The CLIENT is what owns
+  // the sockets — a `.database()` handle cannot be disposed — so the two are
+  // deliberately kept apart above.
+  return { client, budget: B };
 }
 
-// CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809). The success path EXITS; it
-// does not fall off the end of main() and trust the event loop to drain. The
-// Cosmos SDK's keep-alive sockets kept four lanes alive to the step ceiling
-// AFTER they had reconciled clean, turning finished work into a red run.
+// CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809). Success exits too: a lane
+// that lets the loop drain is betting every library released every handle.
+// This lane landed alongside #1828's rewrite of the other 63 tails and so
+// shipped with the old bare `main().catch(...)`.
+//
+// MERGE NOTE (#1832 vs #1842). Both branches conformed this tail and they
+// agreed on the shape; this keeps main's `ctx || {}` call style. The one
+// difference worth preserving is what `main()` HANDS BACK: main's conformance
+// chained `new CosmosClient({...}).database(...)` inline, so no client binding
+// existed and `finishLane` had nothing to dispose — it exited, but it never
+// closed a socket. This lane keeps the client and the database handle apart
+// and returns `{ client, budget }`, so the disposal and the verify-cap notice
+// are real rather than nominal.
 main()
-  .then((client) => finishLane(0, { client, budget: B }))
-  .catch(async (e) => {
-    console.error("FATAL", e && e.message);
+  .then((ctx) => finishLane(0, ctx || {}))
+  .catch(async (e) => { console.error("FATAL", e && e.message);
     await finishLane(1, { budget: B });
   });

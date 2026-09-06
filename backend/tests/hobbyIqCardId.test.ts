@@ -60,11 +60,17 @@ describe("computeHobbyIqCardId — canonical shape", () => {
       isAuto: true,
       printRun: 50,
     });
-    // CF-CHROME-PREFIX-OVERRIDE-NARROW (2026-08-10). setKey="Bowman"
-    // + cardNumber="CPA-EHA" now upgrades to bowman-chrome (was the
-    // 24k-row misslug source). Prior expectation was the bug we
-    // shipped a mass reslug for.
-    expect(slug).toBe("hiq:baseball:2026:bowman-chrome:cpa-eha:gold-refractor:auto:num-50");
+    // CF-CHROME-PREFIX-OVERRIDE-NARROW (2026-08-10) upgraded setKey="Bowman"
+    // + a CPA- cardNumber to bowman-chrome, to fix a 24k-row misslug.
+    //
+    // CF-CPA-IS-AMBIGUOUS-FROM-2023 (2026-09-05) scopes that upgrade to the
+    // years where it is unambiguous. Bowman Draft began numbering its chrome
+    // prospect autos CPA- in 2023, and the 2026-09-05 census found the
+    // override minting 19,867 rows at a Chrome address whose own field says
+    // `bowman` -- "the entire defect", with ZERO real 2026 Bowman Chrome
+    // sales to argue with them. Drew ruled this exact card: "bowman -- it
+    // came out of Bowman" (2026-08-13, re-affirmed 2026-09-05).
+    expect(slug).toBe("hiq:baseball:2026:bowman:cpa-eha:gold-refractor:auto:num-50");
   });
 
   it("Hartman Orange Shimmer Refractor auto (unnumbered → no print-run suffix)", () => {
@@ -77,7 +83,8 @@ describe("computeHobbyIqCardId — canonical shape", () => {
       isAuto: true,
       printRun: null,
     });
-    expect(slug).toBe("hiq:baseball:2026:bowman-chrome:cpa-eha:orange-shimmer-refractor:auto");
+    // CF-CPA-IS-AMBIGUOUS-FROM-2023: the product stays `bowman` (see above).
+    expect(slug).toBe("hiq:baseball:2026:bowman:cpa-eha:orange-shimmer-refractor:auto");
   });
 
   it("base non-auto (Base parallel + no printRun)", () => {
@@ -286,12 +293,25 @@ describe("computeHobbyIqCardId — cardNumber-prefix override (bare→chrome)", 
     expect(slug).toBe("hiq:baseball:2018:bowman-chrome:bcp150:base:no-auto");
   });
 
-  it("bowman + CPA- → bowman-chrome", () => {
-    const slug = computeHobbyIqCardId({
+  it("bowman + CPA- → bowman-chrome ONLY through 2022 (CF-CPA-IS-AMBIGUOUS-FROM-2023)", () => {
+    // Through 2022 the prefix really is unambiguous -- 41,745 checklist-backed
+    // bowman-chrome rows against ZERO bowman-draft.
+    expect(computeHobbyIqCardId({
+      sport: "baseball", year: 2022, setKey: "Bowman",
+      cardNumber: "CPA-OC", parallel: "Refractor", isAuto: true, printRun: 499,
+    })).toBe("hiq:baseball:2022:bowman-chrome:cpa-oc:refractor:auto:num-499");
+    // From 2023 Bowman Draft uses CPA- too, so a bare "Bowman" setName is no
+    // longer evidence of Chrome. Absent beats wrong: the honest bare key.
+    expect(computeHobbyIqCardId({
       sport: "baseball", year: 2026, setKey: "Bowman",
       cardNumber: "CPA-OC", parallel: "Refractor", isAuto: true, printRun: 499,
-    });
-    expect(slug).toBe("hiq:baseball:2026:bowman-chrome:cpa-oc:refractor:auto:num-499");
+    })).toBe("hiq:baseball:2026:bowman:cpa-oc:refractor:auto:num-499");
+    // A title that SAYS Bowman Chrome still resolves bowman-chrome -- the
+    // override never had jurisdiction there, normalizeSetKey answers first.
+    expect(computeHobbyIqCardId({
+      sport: "baseball", year: 2026, setKey: "Bowman Chrome",
+      cardNumber: "CPA-OC", parallel: "Refractor", isAuto: true, printRun: 499,
+    })).toBe("hiq:baseball:2026:bowman-chrome:cpa-oc:refractor:auto:num-499");
   });
 
   it("bowman + BDC- → bowman-chrome", () => {
@@ -377,7 +397,9 @@ describe("computeHobbyIqCardId — cardNumber-prefix override (bare→chrome)", 
       sport: "baseball", year: 2026, setKey: "Bowman",
       cardNumber: "CPA-OC", parallel: "Base", isAuto: true, printRun: 499,
     });
-    expect(slug).toBe("hiq:baseball:2026:bowman-chrome:cpa-oc:base:auto:num-499");
+    // Product is `bowman` per CF-CPA-IS-AMBIGUOUS-FROM-2023; the point of this
+    // test is the PARALLEL segment, which stays `base`.
+    expect(slug).toBe("hiq:baseball:2026:bowman:cpa-oc:base:auto:num-499");
   });
 
   it("TCPA- auto + Base stays base on topps-chrome", () => {
@@ -421,7 +443,9 @@ describe("computeHobbyIqCardId — cardNumber-prefix override (bare→chrome)", 
       sport: "baseball", year: 2026, setKey: "Bowman",
       cardNumber: "CPA-OC", parallel: "Base", isAuto: false,
     });
-    expect(slug).toBe("hiq:baseball:2026:bowman-chrome:cpa-oc:base:auto");
+    // Product is `bowman` per CF-CPA-IS-AMBIGUOUS-FROM-2023; the point of this
+    // test is the forced `:auto` segment.
+    expect(slug).toBe("hiq:baseball:2026:bowman:cpa-oc:base:auto");
   });
 
   it("BCP- auto + Base stays Base (rule scoped to CPA/TCPA/CRA only)", () => {
@@ -679,7 +703,9 @@ describe("computeHobbyIqCardId — market vocabulary aliases", () => {
     expect(trueGreen).toBe(green);
     // CF-CHROME-PREFIX-OVERRIDE-NARROW (2026-08-10). CPA- with
     // setKey="Bowman" upgrades to bowman-chrome.
-    expect(trueGreen).toBe("hiq:baseball:2026:bowman-chrome:cpa-eha:green-refractor:auto:num-99");
+    // Product is `bowman` per CF-CPA-IS-AMBIGUOUS-FROM-2023; the point of this
+    // test is that "True Green Refractor" and "Green Refractor" agree.
+    expect(trueGreen).toBe("hiq:baseball:2026:bowman:cpa-eha:green-refractor:auto:num-99");
   });
 
   it("True Blue Refractor === Blue Refractor (market synonym)", () => {

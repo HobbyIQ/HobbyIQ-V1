@@ -1447,6 +1447,11 @@ interface ChromePrefixRule {
   fromSetKey: string;
   cardNumberPrefix: RegExp;
   toSetKey: string;
+  /** CF-CPA-IS-AMBIGUOUS-FROM-2023 (see the CPA- rule below). The override
+   *  applies only to cards from a year in which the (fromSetKey, prefix) pair
+   *  really is unambiguous. Absent means "every year", which is the case for
+   *  every prefix whose product never overlapped. */
+  maxYear?: number;
 }
 // Regex shape uses `(?:-|\d)` after the prefix so both BCP-102 (modern
 // dashed shape, 2020+) AND BCP150 (older no-dash shape, pre-2020) match.
@@ -1463,7 +1468,41 @@ const CHROME_PREFIX_OVERRIDES: readonly ChromePrefixRule[] = [
   { fromSetKey: "bowman-chrome",      cardNumberPrefix: /^bspa(?:-|\d)/i,  toSetKey: "bowman-chrome-sapphire" },
   // Bowman Chrome family
   { fromSetKey: "bowman",             cardNumberPrefix: /^bcp(?:-|\d)/i,   toSetKey: "bowman-chrome" },
-  { fromSetKey: "bowman",             cardNumberPrefix: /^cpa(?:-|\d)/i,   toSetKey: "bowman-chrome" },
+  // CF-CPA-IS-AMBIGUOUS-FROM-2023 (measured read-only against card_catalog,
+  // 2026-09-05). The comment above claims "Topps CPA- has setKey=topps, not
+  // bowman", and that is still true — but it was never the whole ambiguity.
+  // Bowman DRAFT also numbers its chrome prospect autos CPA-, and it started
+  // doing so in 2023. Counting CHECKLIST-BACKED catalog rows only (vendor and
+  // sales-attested rows excluded, per CF-COUNT-BY-SOURCE), CPA- splits by year:
+  //
+  //     year   bowman-chrome   bowman-draft
+  //     2016-2022   41,745            0        <- unambiguous, the rule holds
+  //     2023        17,611           57
+  //     2024        19,354        6,886
+  //     2025        31,064        9,501
+  //     2026         9,829            0
+  //
+  // and in 2025 alone FIFTY distinct CPA- numbers carry BOTH keys — cpa-dm,
+  // cpa-jg, cpa-mw and 47 more are one number naming two different cards in
+  // two different products. That is the CF-BECKETT-INITIALS-COLLIDE defect
+  // exactly: a cardNumber alone is not an identity.
+  //
+  // Observed in prod: Gage Wood's 2025 CPA-GW is a Bowman DRAFT card. Every
+  // checklist-backed CPA-GW row for 2025 is keyed bowman-draft (72 of them);
+  // the only bowman-chrome ones are six SALES-ATTESTED rows this very override
+  // minted, and `hiq:baseball:2025:bowman-chrome:cpa-gw:*` 404s against the
+  // catalog on every read while `...:bowman-draft:cpa-gw:base:auto` is the
+  // live identity. The override was splitting his pool against a card that
+  // does not exist.
+  //
+  // A bare "Bowman" setName from 2023 on therefore does NOT tell us which
+  // product a CPA- card came from, and ABSENT BEATS WRONG: the override stops
+  // at 2022 and a later card keeps the honest bare `bowman` key rather than
+  // being minted into a chrome pool it may not belong to. Nothing is lost for
+  // the rows that DO say their product — a setName containing "Draft" already
+  // normalises to bowman-draft, and one saying "Bowman Chrome" to
+  // bowman-chrome, before this override is ever consulted.
+  { fromSetKey: "bowman",             cardNumberPrefix: /^cpa(?:-|\d)/i,   toSetKey: "bowman-chrome", maxYear: 2022 },
   { fromSetKey: "bowman",             cardNumberPrefix: /^bcpa(?:-|\d)/i,  toSetKey: "bowman-chrome" },
   { fromSetKey: "bowman",             cardNumberPrefix: /^bdc(?:-|\d)/i,   toSetKey: "bowman-chrome" },
   { fromSetKey: "bowman",             cardNumberPrefix: /^bdcpa(?:-|\d)/i, toSetKey: "bowman-chrome" },
@@ -1495,11 +1534,14 @@ const CHROME_PREFIX_OVERRIDES: readonly ChromePrefixRule[] = [
   { fromSetKey: "bowman",             cardNumberPrefix: /^bda(?:-|\d)/i,   toSetKey: "bowman-draft" },
   { fromSetKey: "bowman-draft",       cardNumberPrefix: /^bda(?:-|\d)/i,   toSetKey: "bowman-draft" },
 ];
-function applyChromePrefixOverride(setKey: string, cardNumber: string): string {
+function applyChromePrefixOverride(setKey: string, cardNumber: string, year: number): string {
   for (const rule of CHROME_PREFIX_OVERRIDES) {
-    if (setKey === rule.fromSetKey && rule.cardNumberPrefix.test(cardNumber)) {
-      return rule.toSetKey;
-    }
+    if (setKey !== rule.fromSetKey || !rule.cardNumberPrefix.test(cardNumber)) continue;
+    // A rule scoped to an era does not speak outside it. `year` is 0 when the
+    // caller could not parse one, and an unknown year is not evidence that we
+    // are inside the unambiguous window — so it refuses too.
+    if (typeof rule.maxYear === "number" && !(year > 0 && year <= rule.maxYear)) continue;
+    return rule.toSetKey;
   }
   return setKey;
 }
@@ -1875,7 +1917,7 @@ export function computeHobbyIqCardId(components: HobbyIqCardIdComponents): strin
   // nothing and keep the repair behaviour unchanged.
   const setKey = components.authoritativeSetKey === true
     ? baseSetKey
-    : applyChromePrefixOverride(baseSetKey, cardNumber);
+    : applyChromePrefixOverride(baseSetKey, cardNumber, year);
   // CF-AUTO-ONLY-FORCE (Drew, 2026-08-11). Auto-only prefixes always
   // produce autograph cards — force isAuto=true so vendor label drift
   // (isAuto=false on a CPA- sale, etc.) can't fragment the pool.

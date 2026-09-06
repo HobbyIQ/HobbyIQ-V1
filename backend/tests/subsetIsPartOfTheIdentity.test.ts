@@ -118,11 +118,17 @@ describe("a unique card number keeps the slug it has always had", () => {
       parallel: "Gold Refractor", isAuto: true, printRun: 50,
       authoritativeSetKey: true,
     })).toBe("hiq:baseball:2026:bowman:cpa-eha:gold-refractor:auto:num-50");
-    // and without it the repair still fires, exactly as before
+    // and WITHOUT it the answer is now the same, which is the point of
+    // CF-CPA-IS-AMBIGUOUS-FROM-2023: Bowman Draft began numbering its chrome
+    // prospect autos CPA- in 2023, so from that year a bare "Bowman" setName
+    // no longer tells us which product a CPA- card came from and the repair
+    // stands down. It agrees with Drew's ruling for this very card -- "bowman
+    // -- it came out of Bowman" (2026-08-13) -- so the two paths converge
+    // instead of minting one card at two addresses.
     expect(computeHobbyIqCardId({
       sport: "baseball", year: 2026, setKey: "Bowman", cardNumber: "CPA-EHA",
       parallel: "Gold Refractor", isAuto: true, printRun: 50,
-    })).toBe("hiq:baseball:2026:bowman-chrome:cpa-eha:gold-refractor:auto:num-50");
+    })).toBe("hiq:baseball:2026:bowman:cpa-eha:gold-refractor:auto:num-50");
     expect(computeHobbyIqCardId({
       sport: "basketball", year: 2024, setKey: "Panini Prizm", cardNumber: "1",
       parallel: "Silver Prizm", isAuto: false, printRun: 99,
