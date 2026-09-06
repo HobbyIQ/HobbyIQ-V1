@@ -347,9 +347,19 @@ describe("GATE 1b — a recovered set name must land on THIS player's card", () 
 
   it("the gate is WIRED to the decision, not just defined beside it", () => {
     // A gate the pass does not call is not a gate. Pin the call site.
+    //
+    // #1855 MADE IT TWO CALL SITES, for the reason that pin exists: the gate
+    // lived only on the `to !== from` path, and GATE A's `to === from` branch
+    // returned AGREE before ever reaching it. It is now the shared
+    // `corroboratePlayer`, and BOTH paths call it.
     const SRC = readFileSync(
       join(__dirname, "..", "scripts", "comp-quality", "recheck-holding-identity.ts"), "utf8");
-    expect(SRC).toMatch(/if \(!recoveredSetNameIsCorroborated\(h\.playerName, backing\.playerName\)\)/);
+    expect(SRC).toMatch(/if \(recoveredSetNameIsCorroborated\(h\.playerName, dest\.backing\.playerName\)\) return \{ kind: "ok" \};/);
+    expect(SRC.match(/await corroboratePlayer\(/g)?.length).toBe(2);
+    // The main path's destination...
+    expect(SRC).toMatch(/const check = await corroboratePlayer\(h, recovery, \{ slug: to, backing \}\)/);
+    // ...and GATE A's own stored row.
+    expect(SRC).toMatch(/corroboratePlayer\(h, recovery, \{ slug: from as string, backing: own! \}\)/);
   });
 });
 
@@ -386,13 +396,18 @@ describe("the rederive pass wires recovery in without losing its gates", () => {
     // The full ruling and its mutation pins live in
     // tests/gate1bStoredSetNames.test.ts.
     expect(SRC).toMatch(/GATE 1b/);
-    // The corroboration is the `if` itself — nothing nests it behind a
-    // recovered-only branch.
+    // The corroboration is the EARLY RETURN itself — nothing nests it behind a
+    // recovered-only branch. #1855 moved it into the shared
+    // `corroboratePlayer` so `to === from` could not skip it either; the
+    // ruling is unchanged, and its mutation pins live in
+    // tests/gateAAgreeIsAVerdictAboutARow.test.ts.
     expect(SRC).toMatch(
-      /if \(!recoveredSetNameIsCorroborated\(h\.playerName, backing\.playerName\)\) \{/);
+      /if \(recoveredSetNameIsCorroborated\(h\.playerName, dest\.backing\.playerName\)\) return \{ kind: "ok" \};/);
     // `setNameWasRecovered` survives only to shape the refusal's REASON, and
-    // is now declared INSIDE the contradiction branch where it cannot gate it.
+    // is declared AFTER the corroborating early return where it cannot gate it.
     expect(SRC).toMatch(/setNameWasRecovered/);
+    // EVERY destination means both of them: the derived row and the stored one.
+    expect(SRC.match(/await corroboratePlayer\(/g)?.length).toBe(2);
   });
 
   it("asks GATE 2 about the RECOVERED claim, and about the WRITTEN destination", () => {

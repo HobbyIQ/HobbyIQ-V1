@@ -299,6 +299,151 @@ describe("capped() cancels the loser instead of merely abandoning it", () => {
     expect(r.status).toBe(0);
   });
 
+  // ── THE CAP MUST BE ARMED BEFORE run() IS CALLED (2026-09-07) ────────────
+  //
+  // CF-A-CAP-YOU-ARM-SECOND-IS-NOT-ARMED. `capped()` used to build its race as
+  //
+  //     Promise.race([ run(ac.signal), new Promise((_,rej) => { timer = ... }) ])
+  //
+  // and array elements evaluate LEFT TO RIGHT. So `run(ac.signal)` was CALLED
+  // first, and an async function body runs synchronously until its first
+  // `await` — everything run() did before suspending happened while the cap
+  // timer DID NOT YET EXIST. A callee that never reaches a suspension point
+  // never arms the cap at all, and the lane goes silent with no line to say so.
+  //
+  // The two assertions below are different claims and both matter:
+  //
+  //   1. the cap NARRATES (it was armed) — this is what the fix guarantees;
+  //   2. the process still EXITS.
+  //
+  // What is deliberately NOT asserted is that the cap fires ON TIME. A callee
+  // that blocks the event loop also blocks the timer callback, and no timer in
+  // node can pre-empt synchronous work; the measured behaviour is that the 8s
+  // prologue under a 3s cap now narrates but still returns at ~8s. Pinning a
+  // deadline here would pin a lie.
+  it("a run() that blocks synchronously before its first await still gets a cap line", () => {
+    const r = runNode(`
+      ${LIB_REQUIRE}
+      (async () => {
+        const b = budget({ minutes: 110, reserveMs: 1000, verifyMs: 300 });
+        // The prologue spins PAST the cap before the callee ever suspends,
+        // then never settles. Under the old ordering the timer for this call
+        // was constructed only after the spin, so the cap could not fire
+        // during it — and with the callee never settling afterwards, the race
+        // never resolved and nothing was ever printed.
+        const v = await b.capped(Date.now(), "sync-prologue", async () => {
+          const end = Date.now() + 1500;
+          while (Date.now() < end) { /* the window the cap must already cover */ }
+          await new Promise(() => {});
+        });
+        console.log("[probe] v=" + v + " capFired=" + b.capFired());
+        await finishLane(0);
+      })();
+    `);
+    expect(
+      r.stdout,
+      "a callee that blocks and then never settles produced no cap line at all",
+    ).toContain("could not confirm within the cap");
+    expect(r.stdout).toContain("[probe] v=null capFired=true");
+    expect(r.timedOut).toBe(false);
+    expect(r.status).toBe(0);
+  });
+
+  // MUTATION, and it took a wrong first cut to find the honest one. A callee
+  // that spins and THEN awaits still gets a line out of the old ordering: the
+  // spin ends, run() suspends, the timer is finally constructed with a
+  // `remaining` that has already elapsed, and it fires on the next turn
+  // (measured: 1,888ms under a 300ms cap — late, but printed). So a delayed
+  // cap is NOT what the old ordering loses.
+  //
+  // What it loses is the cap ENTIRELY, whenever the callee never reaches a
+  // suspension point: no await, no yield, no second race element, no timer.
+  // The helper's own `capped()` cannot be handed such a callee in a way this
+  // suite can survive — a spin with no exit would wedge the probe forever
+  // either way — so the mutation pins the ORDERING ITSELF: with the timer
+  // armed second, `timer` is still null while run() executes, and with it
+  // armed first it is not. That is the exact property the fix establishes.
+  it("MUTATION: with the timer armed second, the cap does not exist while run() runs", () => {
+    const r = runNode(`
+      (async () => {
+        // THE OLD ORDERING. run() is the first race element, so it is invoked
+        // before the second element constructs the timer.
+        let armedDuringRun = null;
+        const cappedOldOrder = async (verifyMs, run) => {
+          let timer = null;
+          try {
+            return await Promise.race([
+              run(() => { armedDuringRun = timer !== null; }),  // <- called FIRST
+              new Promise((_res, rej) => {                      // <- armed SECOND
+                timer = setTimeout(() => rej(new Error("verify-cap")), verifyMs);
+              }),
+            ]);
+          } catch (e) { return null; }
+          finally { if (timer) clearTimeout(timer); }
+        };
+        await cappedOldOrder(300, async (observe) => {
+          observe();               // what is armed at the top of run()?
+          return 1;
+        });
+        console.log("[probe] oldOrder armedDuringRun=" + armedDuringRun);
+
+        // THE FIXED ORDERING, same shape, timer first.
+        let armedDuringRun2 = null;
+        const cappedArmFirst = async (verifyMs, run) => {
+          let timer = null;
+          try {
+            const cap = new Promise((_res, rej) => {
+              timer = setTimeout(() => rej(new Error("verify-cap")), verifyMs);
+            });
+            cap.catch(() => {});
+            return await Promise.race([run(() => { armedDuringRun2 = timer !== null; }), cap]);
+          } catch (e) { return null; }
+          finally { if (timer) clearTimeout(timer); }
+        };
+        await cappedArmFirst(300, async (observe) => { observe(); return 1; });
+        console.log("[probe] armFirst armedDuringRun=" + armedDuringRun2);
+      })();
+    `, 10000);
+    expect(
+      r.stdout,
+      "the old ordering already had its cap armed when run() started — then the "
+        + "reordering fixes nothing and this pin is pinning noise",
+    ).toContain("[probe] oldOrder armedDuringRun=false");
+    expect(
+      r.stdout,
+      "arming first did not actually arm the timer before run() — the fix does not "
+        + "do what it claims",
+    ).toContain("[probe] armFirst armedDuringRun=true");
+    expect(r.timedOut).toBe(false);
+  });
+
+  // And the property, asserted against the REAL helper rather than a replica:
+  // the source must construct its cap promise before it calls run().
+  it("the shipped capped() constructs its cap BEFORE it invokes run()", () => {
+    const fn = LIB.slice(LIB.indexOf("const capped = async (vt0, label, run)"));
+    const body = fn.slice(0, fn.indexOf("\n  };"));
+    // COMMENTS ARE STRIPPED FIRST, and finding out why cost a red run. This
+    // block is heavily commented, and those comments QUOTE the very code they
+    // explain ("`Promise.race([run(ac.signal), ...])`"). A naive indexOf found
+    // the prose mention hundreds of characters before the real call and the pin
+    // failed against a correctly-ordered file. A pin that reads comments is not
+    // reading the program.
+    const code = body
+      .split("\n")
+      .map((l) => l.replace(/\/\/.*$/, ""))
+      .filter((l) => !/^\s*\*/.test(l))
+      .join("\n");
+    const armed = code.indexOf("timer = setTimeout(");
+    const called = code.indexOf("run(ac.signal)");
+    expect(armed, "capped() no longer arms a cap timer at all").toBeGreaterThan(-1);
+    expect(called, "capped() no longer invokes run(ac.signal)").toBeGreaterThan(-1);
+    expect(
+      armed,
+      "run(ac.signal) is invoked before the cap timer is armed — a synchronous "
+        + "prologue in the callee runs with no cap in existence",
+    ).toBeLessThan(called);
+  });
+
   it("a verify that answers inside the cap still returns its number", () => {
     const r = runNode(`
       ${LIB_REQUIRE}

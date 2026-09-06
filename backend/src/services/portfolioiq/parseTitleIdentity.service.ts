@@ -2531,6 +2531,46 @@ export function inferSetKeyFromTitle(title: string, cardNumber?: string | null):
   // printed one too ("2005 Donruss Zenith Museum Collection"), and the bare
   // arm claimed it. Same guard, same reason as the bare product words below.
   if (/topps\s+museum/i.test(t) || (/museum\s+collection/i.test(t) && noRivalBrand(t, /topps/i))) return "Topps Museum Collection";
+  // CF-BOWMANS-BEST-PREVIEW-IS-ITS-OWN-PRODUCT (Drew, 2026-09-06). The 20-card
+  // BBP1-BBP20 insert that previews Bowman's Best is a distinct product, in
+  // both sports it was packed out in. This parser had no rule for EITHER
+  // phrase, so a Preview title fell to the CF-CHROME-IMPLIED rule below (a
+  // title saying "Bowman" and "Refractor" returns "Bowman Chrome") or, failing
+  // that, to the bare Bowman catch-all — two wrong products, neither of which
+  // any Preview card belongs to. Measured on the 2026-09-06 pool: 16 baseball
+  // Preview sales sit across `:bowman:` and `:bowmans-best:` slugs, one of
+  // them a title reading "BOWMAN'S BEST PREVIEW ATOMIC REFRACTOR #BBP2" filed
+  // at `:refractor:` on `bowmans-best`.
+  //
+  // Ordered BEFORE every other Bowman rule and before the Stadium Club rules,
+  // because the insert is named in full in the title and the host brand it was
+  // packed out in — "1997 Bowman", "1997-98 Topps Stadium Club" — is present in
+  // the very same title. The most specific statement in the title wins, which
+  // is the ordering doctrine this whole block already follows.
+  //
+  // Both spellings, with and without the apostrophe, the plural the market
+  // writes ("Bowman's Best Previews Refractor"), and the abbreviation eBay
+  // sellers use on the card itself -- Drew's own holding title reads "1997
+  // Bowman Bowman's Best Prev Derek Jeter Atomic #BBP4", and without "Prev"
+  // that title returns flagship "Bowman". `normalizeSetKey` folds the
+  // apostrophe, so one destination covers every spelling.
+  // THE GAP IS BOUNDED, and measured rather than guessed. Sellers put the
+  // player, the rung or a dash between the product and the insert name --
+  // "Bowman's Best - Previews Frank Thomas", "Bowman's Best Refractor Derek
+  // Jeter Preview Atomic" (Drew's own holding 5979f485). Requiring adjacency
+  // caught 9 of the 16 Preview sales measured on 2026-09-06; allowing up to
+  // five intervening words catches 10, and every one of the remaining 6 is a
+  // CardHedge title that never says "Preview" at all, which no title rule can
+  // or should reach.
+  //
+  // Bounded on purpose: an unbounded gap would pair "Bowman's Best" at the
+  // front of a title with a "Preview" anywhere after it, which is how a rule
+  // like this starts claiming products it was never about. The apostrophe is
+  // optional and may arrive backslash-escaped, because that is how the stored
+  // titles spell it.
+  if (/bowman(?:\\?['’])?s\s+best\b(?:[\s\-:]+[a-z.']+){0,5}?[\s\-:]+prev(?:iew)?s?\b/i.test(t)) {
+    return "Bowman's Best Preview";
+  }
   if (/topps\s+stadium\s+club|stadium\s+club/i.test(t)) return "Topps Stadium Club";
   if (/topps\s+allen[-\s]?(and\s+)?ginter|allen[-\s]?(and\s+)?ginter/i.test(t)) return "Topps Allen Ginter";
   if (/topps\s+gypsy\s+queen|gypsy\s+queen/i.test(t)) return "Topps Gypsy Queen";

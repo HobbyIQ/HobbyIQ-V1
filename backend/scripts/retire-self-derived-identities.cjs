@@ -308,6 +308,77 @@ const BUDGET_MS = LANE_BUDGET.BUDGET_MS;
 const RETIRED = "superseded-by-checklist";
 const UNVERIFIED = "identityUnverified";
 
+/** ── THE 148 MINUTES OF SILENCE HAD NO INSTRUMENTATION IN IT ───────────────
+ *
+ * CF-NARRATE-THE-BOUNDARY-YOU-CANNOT-EXPLAIN (2026-09-07).
+ *
+ * Runs 34044534206 / 34044540313 / 34044554186 (slots 13/14/15, baseball,
+ * APPLY, dispatched 13:10Z 2026-09-06 from a checkout that provably contained
+ * #1859 -- `git log -1 --format=%H` printed 2aa1f97d and the build stamped
+ * sha=2aa1f97) each printed their balanced RECONCILE and their
+ *
+ *   [retire-self-derived-identities] reconciled: intended 52,815 = written 1 + skipped 52,814
+ *
+ * and then NOTHING for 148 minutes, until the 150-minute step ceiling. No
+ * `VERIFY BY READ` line -- not a count, not the UNCONFIRMED the cap prints --
+ * and no `finishLane: exiting code`. Per-step timing rules out a later step:
+ * every step after the backfill ran in under one second once the kill landed.
+ *
+ * The #1859 cause does not explain it. That defect was a private `capped()`
+ * whose cap timer was unref'd; the shipped code calls the helper's, and the
+ * helper's cap was measured here against a never-settling read-back, a
+ * synchronous block, a synchronous throw, a perpetual 429, and the REAL
+ * @azure/cosmos SDK pointed at an endpoint that accepts and never answers --
+ * capping, printing and exiting cleanly in every one of them.
+ *
+ * THE CENSUS, because three runs is an anecdote and ten is a pattern. Every
+ * APPLY run of this lane on record -- 33960686247, 34004719519, 34004725658,
+ * 34004731758, 34004737931, 34016697671, 34023503840, 34044534206,
+ * 34044540313, 34044554186 -- was killed at the 150-minute ceiling. NOT ONE
+ * has ever printed a `VERIFY BY READ` line or a `finishLane: exiting code`.
+ * Other lanes in the same workflow print `finishLane: exiting code 5` in the
+ * same period, so the helper works; this lane specifically never reaches it.
+ *
+ * Two things that census kills:
+ *
+ *   - "the unverified path is the hang". There is no contrast group -- EVERY
+ *     apply run hung, and none ever ran with identityUnverified == 0, so the
+ *     correlation is an artefact of the only value ever observed. The counts
+ *     span 1 to 171,427 and the hang is always the full ceiling: run
+ *     34044534206 wedged after ONE unverified row and ~100s of work.
+ *   - "#1859 fixed it". Run 34016697671 ran at 71eb1a9a -- the fix commit
+ *     itself -- and hung, as did 34023503840 and today's three.
+ *
+ * So the wedge is somewhere between `reportWrites` returning and the first
+ * thing the verify prints, and the log cannot say which side of the boundary
+ * it is on, because there was never a line there. These narrations are that
+ * line.
+ *
+ * A THIRD THING THE CENSUS FOUND, not fixed here because it is the workflow's
+ * and not the lane's: the self-relaunch step greps this log for the budget
+ * marker and, finding none on a KILLED run, prints
+ * `::notice::slot N/16 finished within budget ... done, no re-dispatch`. A run
+ * the runner killed is reported as a clean finish, so the slot silently stops
+ * continuing. Worth a separate change; noted here so it is not rediscovered. They are written with `fs.writeSync` for the same reason finishLane's
+ * proof is: a buffered `console.log` on a pipe whose reader has stopped
+ * draining is exactly the write that might not arrive, and "it did not print"
+ * is the observation we are trying to make trustworthy.
+ *
+ * TWO CONSTRAINTS ON THE WORDING, both load-bearing:
+ *
+ *   - It is prefixed `narrate:` so it cannot collide with any grep the runner
+ *     performs. The relaunch gate greps `stopped at the .*budget`
+ *     (CF-RELAUNCH-ONLY-ON-BUDGET, #1361) and the step's own summary greps
+ *     `^  retired \(twin\) +[0-9,]+` and `^  identityUnverified +[0-9,]+`;
+ *     a narration that matched either would move a number an operator reads.
+ *   - It says what it is ABOUT to do and with what budget, not what it did.
+ *     A line printed after the fact tells you nothing about a hang.
+ */
+const narrate = (line) => {
+  try { require("node:fs").writeSync(1, `narrate: ${line}\n`); }
+  catch { /* the work matters, the narration does not */ }
+};
+
 /** catalogAuthority's DERIVED class + the user-minted family, as SQL. Kept in
  *  the same order as the TS regex so a reader can diff them by eye. */
 const SD_SOURCES = [
@@ -593,6 +664,13 @@ async function main() {
   }
 
   if (APPLY) {
+    // The first of the boundary narrations (see `narrate` above). The three
+    // silent runs stopped with reportWrites' output as their last line, so the
+    // question the log could not answer is whether the process reached the
+    // verify at all. This line is printed BEFORE reportWrites, so its presence
+    // or absence in the next run's log localises the wedge to one side of it.
+    narrate(`APPLY tail entered — reconciling ${f(written)} written, then the verify`);
+
     // The shared reconciliation, so this lane is checked by the same equation
     // as every other runner writer. INTENDED is the rows this run decided to
     // mark (parents + graded children); SKIPPED is the population it
@@ -631,8 +709,14 @@ async function main() {
     // `vt0` is shared by both calls on purpose: the two counts split ONE cap
     // between them, exactly as the private copy did.
     const vt0 = Date.now();
+    narrate(`reportWrites returned — arming the verify, ${Math.round(VERIFY_MS / 1000)}s cap shared by 2 counts`);
     const capped = (label, spec) =>
       LANE_BUDGET.capped(vt0, label, async (signal) => {
+        // Printed INSIDE the capped callback, so it marks the moment the SDK
+        // call is actually issued rather than the moment the cap was armed.
+        // A run that narrates "issuing" and then goes quiet is wedged in the
+        // SDK; one that never narrates it is wedged before the call.
+        narrate(`issuing COUNT(1) for ${label} (sport=${SPORT})`);
         // The signal reaches BOTH the SDK and retry(), so the loser of the
         // race actually stops instead of merely being abandoned (#1809).
         const { resources } = await retry(
@@ -640,6 +724,7 @@ async function main() {
           2,
           signal,
         );
+        narrate(`COUNT(1) for ${label} answered in ${Math.round((Date.now() - vt0) / 1000)}s`);
         return Number(resources[0] || 0);
       });
 
@@ -662,6 +747,13 @@ async function main() {
       console.log(`  the verify count is UNREAD, not zero — the writes above reconciled and are durable.`);
     }
   }
+
+  // The last thing main() does. A run that narrates this and then dies without
+  // `finishLane: exiting code` is wedged in the exit path (dispose or the
+  // stdio flush); one that never narrates it is wedged in the body above.
+  // Between them, the two lines bracket every remaining place the silence can
+  // live.
+  narrate("main() returning — handing the client and budget to finishLane");
 
   // Hand the exit path what it needs to close cleanly: the client to dispose,
   // and the BUDGET ITSELF -- the helper owns the capFired flag now that it

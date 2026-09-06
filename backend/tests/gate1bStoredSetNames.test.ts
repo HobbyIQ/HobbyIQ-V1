@@ -92,25 +92,42 @@ describe("PIN 1 — a stored set name plus a contradicting player parks", () => 
     //
     // So the pin is that the call is UNCONDITIONAL: the corroboration check
     // must be the `if` itself, never nested inside a recovered-only branch.
-    expect(SRC).toMatch(
-      /if \(!recoveredSetNameIsCorroborated\(h\.playerName, backing\.playerName\)\) \{/);
-    // And `setNameWasRecovered` may only shape the REASON STRING now — never
-    // decide whether the gate runs. Read inside the contradiction branch, it
-    // cannot gate it.
-    const gateStart = SRC.indexOf(
-      "if (!recoveredSetNameIsCorroborated(h.playerName, backing.playerName)) {");
-    const recoveredDecl = SRC.indexOf("const setNameWasRecovered", gateStart);
+    //
+    // #1855 MOVED THIS GATE, AND NOT ONE WORD OF THE RULING. It is now the
+    // shared `corroboratePlayer`, called by BOTH the main path and GATE A,
+    // because `to === from` was short-circuiting it entirely. The pin reads it
+    // where it lives; what it asserts is what it always asserted — the
+    // corroboration is the EARLY RETURN itself, never nested behind a
+    // recovered-only branch.
+    const fnStart = SRC.indexOf("const corroboratePlayer = async (");
+    expect(fnStart).toBeGreaterThan(-1);
+    const fn = SRC.slice(fnStart, SRC.indexOf("const verdicts: RederiveVerdict[] = []", fnStart));
+    expect(fn).toMatch(
+      /if \(recoveredSetNameIsCorroborated\(h\.playerName, dest\.backing\.playerName\)\) return \{ kind: "ok" \};/);
+    // And `setNameWasRecovered` may only shape the REASON STRING — never
+    // decide whether the gate runs. Declared AFTER the corroborating early
+    // return, it cannot gate it.
+    const gateStart = fn.indexOf("if (recoveredSetNameIsCorroborated(h.playerName, dest.backing.playerName))");
+    const recoveredDecl = fn.indexOf("const setNameWasRecovered", gateStart);
     expect(gateStart).toBeGreaterThan(-1);
     expect(recoveredDecl).toBeGreaterThan(gateStart);
-    // Nothing declares it BEFORE the gate any more.
-    expect(SRC.slice(0, gateStart)).not.toContain("const setNameWasRecovered");
+    // Nothing declares it BEFORE the gate.
+    expect(fn.slice(0, gateStart)).not.toContain("const setNameWasRecovered");
+    // AND THE GATE IS UNSKIPPABLE: both paths call it, and GATE A's call is
+    // the one #1855 added — deleting it restores `AGREE Devin Taylor` against
+    // Diego Tornes' row.
+    expect(SRC.match(/await corroboratePlayer\(/g)?.length).toBe(2);
+    expect(SRC).toMatch(/corroboratePlayer\(h, recovery, \{ slug: from as string, backing: own! \}\)/);
   });
 
   it("parks as UNVERIFIED with the contradiction named, and writes nothing", () => {
     // The verdict is UNVERIFIED — this pass's identityUnverified — and its
     // reason names both players so the acquisition lane can read it.
-    expect(SRC).toMatch(/verdict: "UNVERIFIED",[\s\S]{0,400}destination names a different player/);
+    expect(SRC).toMatch(/verdict: "UNVERIFIED"/);
+    expect(SRC).toMatch(/destination names a different player/);
     expect(SRC).toMatch(/holding \$\{JSON\.stringify\(h\.playerName \?\? null\)\} vs catalog row/);
+    // The park verdict on the main path carries the shared reason verbatim.
+    expect(SRC).toMatch(/if \(check\.kind === "park"\) \{[\s\S]{0,300}reason: check\.reason/);
     // Only REDERIVE verdicts are ever written.
     expect(SRC).toContain('verdicts.filter((v) => v.verdict === "REDERIVE")');
   });
@@ -193,6 +210,7 @@ describe("PIN 2 — a DRAFT title plus Taylor RESOLVES to the bowman-draft row",
     // ...and it must be a real catalog row, read back by id (GATE 1 again).
     expect(SRC).toMatch(/const altBacking = await backingOf\(altSlug\)/);
     expect(SRC).toMatch(/has no catalog row — discarded/);
+    expect(SRC).toMatch(/still not this player, discarded/);
   });
 
   it("only the PRODUCT is substituted — every other axis of the claim stands", () => {
@@ -215,6 +233,9 @@ describe("PIN 2 — a DRAFT title plus Taylor RESOLVES to the bowman-draft row",
     expect(SRC).toMatch(
       /droppedSpecificityAxes\(\s*\n?\s*recovery \? \{ \.\.\.h, \.\.\.recovery\.fields \} : h, destination\)/);
     expect(SRC).toMatch(/push\(\{ to: destination, backedBy: destinationBacking\.source, verdict: "REDERIVE"/);
+    // #1855: GATE A's own substitution is gated the same way, on the row it
+    // will actually write.
+    expect(SRC).toMatch(/droppedSpecificityAxes\(claimForGate2, storedCheck\.slug\)/);
   });
 });
 

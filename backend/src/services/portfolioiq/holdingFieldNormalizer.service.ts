@@ -699,6 +699,53 @@ const RULES: Rule[] = [
     },
   },
 
+  // ── R11 setName: the Preview is the product, and the rung is not part of it ─
+  //
+  // CF-BOWMANS-BEST-PREVIEW-IS-ITS-OWN-PRODUCT (Drew, 2026-09-06). Measured on
+  // Drew's own two withheld 1997 #BBP4 Jeter holdings, which is where this was
+  // found: the eBay importer wrote the whole aspect string into setName.
+  //
+  //   setName "Bowmans Best Preview Atomic Refractor"   parallel "Atomic Refractor"
+  //   setName "1997 Bowman's Best"                      parallel "Atomic Refractor"
+  //
+  // The first says the rung TWICE -- once in the field that holds the rung and
+  // again inside the product name -- and normalizeSetKey has to read a product
+  // out of a string that names a finish. The second does not name the Preview
+  // at all. Both land on the same wrong key.
+  //
+  // THE RUNG COMES OFF, NOT THE PRODUCT. Only a trailing rung phrase this
+  // product actually has (Refractor / Atomic Refractor) is stripped, and only
+  // when the Preview is named, so no other setName is touched. What remains is
+  // the canonical spelling of the product, which is a normalizeSetKey fixed
+  // point -- so the field the holding already has can reach the ruled key.
+  //
+  // ONLY WHAT THE TEXT SAYS. A setName that never names a Preview is left
+  // exactly as it is: this rule cannot invent the Preview from a bare
+  // "Bowman's Best", because a holding of the parent product is a real thing
+  // and guessing would move it off its own pool. The second holding above is
+  // therefore NOT repaired here -- its title says Preview and its setName does
+  // not, and a field-level normalizer does not read titles. It is repaired by
+  // the ruling dispatch, which is the sanctioned path for a stored row.
+  //
+  // IDEMPOTENT: the output is already canonical, so a second pass is a no-op,
+  // which normalizeHoldingFields promises and the pins assert.
+  {
+    name: "setName_bowmans_best_preview_is_the_product",
+    apply(fields, changes) {
+      const set = fields.setName;
+      if (!set) return fields;
+      if (!/bowman'?s\s+best\s+previews?/i.test(set)) return fields;
+      // Everything up to and including the Preview name, with the rung phrase
+      // that may follow it dropped. A year prefix is R1's job, not this rule's.
+      const m = /^(.*?bowman'?s\s+best\s+previews?)(?:\s+(?:atomic\s+)?refractors?)?\s*$/i.exec(set.trim());
+      if (!m) return fields;
+      const head = m[1].replace(/bowman'?s\s+best\s+previews?/i, "Bowman's Best Preview").trim();
+      if (!head || head === set) return fields;
+      changes.push({ rule: "setName_bowmans_best_preview_is_the_product", field: "setName", before: set, after: head });
+      return { ...fields, setName: head };
+    },
+  },
+
   // CF-A-TRAILING-COMMA-IS-NOT-PART-OF-A-NAME (Drew, 2026-08-25, on his own
   // holding reading "Marconi German,").
   //
