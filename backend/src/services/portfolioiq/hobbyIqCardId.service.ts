@@ -49,9 +49,10 @@ import { chromeRefractorSuffixForVariation, normalizeVariationSlug } from "../ca
 import { POKEMON_SET_ALIASES } from "../catalog/pokemonSetAliases.js";
 import { YUGIOH_SET_ALIASES, MTG_SET_ALIASES } from "../catalog/tcgSetAliases.js";
 import { JAPANESE_POKEMON_SET_ALIASES } from "../catalog/japanesePokemonAliases.js";
-import { productParentOf, productSetKeyForName, spellForEra } from "../catalog/productSetKeys.js";
+import { productParentOf, productSetKeyForName, spellForEra, spellForSport } from "../catalog/productSetKeys.js";
 import { reconcileSetKey } from "../catalog/setKeyReconciliation.js";
 import { normalizePokemonCardNumber } from "../catalog/pokemonCardNumber.js";
+import { isMakerlessCatchAllSetKey, makerlessCatchAllMessage } from "../catalog/makerlessCatchAll.js";
 export interface HobbyIqCardIdComponents {
   sport: string;              // e.g. "baseball"
   year: number;               // e.g. 2026
@@ -1447,6 +1448,11 @@ interface ChromePrefixRule {
   fromSetKey: string;
   cardNumberPrefix: RegExp;
   toSetKey: string;
+  /** CF-CPA-IS-AMBIGUOUS-FROM-2023 (see the CPA- rule below). The override
+   *  applies only to cards from a year in which the (fromSetKey, prefix) pair
+   *  really is unambiguous. Absent means "every year", which is the case for
+   *  every prefix whose product never overlapped. */
+  maxYear?: number;
 }
 // Regex shape uses `(?:-|\d)` after the prefix so both BCP-102 (modern
 // dashed shape, 2020+) AND BCP150 (older no-dash shape, pre-2020) match.
@@ -1463,7 +1469,41 @@ const CHROME_PREFIX_OVERRIDES: readonly ChromePrefixRule[] = [
   { fromSetKey: "bowman-chrome",      cardNumberPrefix: /^bspa(?:-|\d)/i,  toSetKey: "bowman-chrome-sapphire" },
   // Bowman Chrome family
   { fromSetKey: "bowman",             cardNumberPrefix: /^bcp(?:-|\d)/i,   toSetKey: "bowman-chrome" },
-  { fromSetKey: "bowman",             cardNumberPrefix: /^cpa(?:-|\d)/i,   toSetKey: "bowman-chrome" },
+  // CF-CPA-IS-AMBIGUOUS-FROM-2023 (measured read-only against card_catalog,
+  // 2026-09-05). The comment above claims "Topps CPA- has setKey=topps, not
+  // bowman", and that is still true — but it was never the whole ambiguity.
+  // Bowman DRAFT also numbers its chrome prospect autos CPA-, and it started
+  // doing so in 2023. Counting CHECKLIST-BACKED catalog rows only (vendor and
+  // sales-attested rows excluded, per CF-COUNT-BY-SOURCE), CPA- splits by year:
+  //
+  //     year   bowman-chrome   bowman-draft
+  //     2016-2022   41,745            0        <- unambiguous, the rule holds
+  //     2023        17,611           57
+  //     2024        19,354        6,886
+  //     2025        31,064        9,501
+  //     2026         9,829            0
+  //
+  // and in 2025 alone FIFTY distinct CPA- numbers carry BOTH keys — cpa-dm,
+  // cpa-jg, cpa-mw and 47 more are one number naming two different cards in
+  // two different products. That is the CF-BECKETT-INITIALS-COLLIDE defect
+  // exactly: a cardNumber alone is not an identity.
+  //
+  // Observed in prod: Gage Wood's 2025 CPA-GW is a Bowman DRAFT card. Every
+  // checklist-backed CPA-GW row for 2025 is keyed bowman-draft (72 of them);
+  // the only bowman-chrome ones are six SALES-ATTESTED rows this very override
+  // minted, and `hiq:baseball:2025:bowman-chrome:cpa-gw:*` 404s against the
+  // catalog on every read while `...:bowman-draft:cpa-gw:base:auto` is the
+  // live identity. The override was splitting his pool against a card that
+  // does not exist.
+  //
+  // A bare "Bowman" setName from 2023 on therefore does NOT tell us which
+  // product a CPA- card came from, and ABSENT BEATS WRONG: the override stops
+  // at 2022 and a later card keeps the honest bare `bowman` key rather than
+  // being minted into a chrome pool it may not belong to. Nothing is lost for
+  // the rows that DO say their product — a setName containing "Draft" already
+  // normalises to bowman-draft, and one saying "Bowman Chrome" to
+  // bowman-chrome, before this override is ever consulted.
+  { fromSetKey: "bowman",             cardNumberPrefix: /^cpa(?:-|\d)/i,   toSetKey: "bowman-chrome", maxYear: 2022 },
   { fromSetKey: "bowman",             cardNumberPrefix: /^bcpa(?:-|\d)/i,  toSetKey: "bowman-chrome" },
   { fromSetKey: "bowman",             cardNumberPrefix: /^bdc(?:-|\d)/i,   toSetKey: "bowman-chrome" },
   { fromSetKey: "bowman",             cardNumberPrefix: /^bdcpa(?:-|\d)/i, toSetKey: "bowman-chrome" },
@@ -1495,11 +1535,14 @@ const CHROME_PREFIX_OVERRIDES: readonly ChromePrefixRule[] = [
   { fromSetKey: "bowman",             cardNumberPrefix: /^bda(?:-|\d)/i,   toSetKey: "bowman-draft" },
   { fromSetKey: "bowman-draft",       cardNumberPrefix: /^bda(?:-|\d)/i,   toSetKey: "bowman-draft" },
 ];
-function applyChromePrefixOverride(setKey: string, cardNumber: string): string {
+function applyChromePrefixOverride(setKey: string, cardNumber: string, year: number): string {
   for (const rule of CHROME_PREFIX_OVERRIDES) {
-    if (setKey === rule.fromSetKey && rule.cardNumberPrefix.test(cardNumber)) {
-      return rule.toSetKey;
-    }
+    if (setKey !== rule.fromSetKey || !rule.cardNumberPrefix.test(cardNumber)) continue;
+    // A rule scoped to an era does not speak outside it. `year` is 0 when the
+    // caller could not parse one, and an unknown year is not evidence that we
+    // are inside the unambiguous window — so it refuses too.
+    if (typeof rule.maxYear === "number" && !(year > 0 && year <= rule.maxYear)) continue;
+    return rule.toSetKey;
   }
   return setKey;
 }
@@ -1736,7 +1779,15 @@ export function resolveSetKeyForSlug(sport: string, setName: string, year: numbe
   // its switch live in productSetKeys (DONRUSS_SPELLING_POLICY). Applied
   // after normalization so it corrects the canonical key rather than racing
   // the vocabulary that produces it.
-  return spellForEra(rawSetKey, year);
+  // CF-SOCCER-PRIZM-IS-PRIZM-FIFA (Drew, 2026-09-05). A SPORT-scoped spelling,
+  // applied last so it corrects the canonical key the era rule produced rather
+  // than racing it. `panini-prizm` in soccer/2025 IS `panini-prizm-fifa`; in
+  // football and basketball — where `panini-prizm` is the flagship's own fixed
+  // point — this is the identity function, and the mutation test that removes
+  // the sport gate turns FB/BK red. This is the ONE deriver with the sport in
+  // hand, which is why the rule lives at this call site and not in spellForEra
+  // (whose other two call sites have no sport to pass).
+  return spellForSport(spellForEra(rawSetKey, year), sport, year);
 }
 
 /** Compute the canonical hobbyiqCardId slug for a card. Same inputs
@@ -1808,6 +1859,25 @@ export function computeHobbyIqCardId(components: HobbyIqCardIdComponents): strin
   // which decides whether this function may run at all — resolves the setKey
   // identically. See that function for the measurements.
   const baseSetKey = resolveSetKeyForSlug(sport, components.setKey, year);
+  // CF-A-MAKER-LESS-CATCH-ALL-IS-NOT-A-PRODUCT (Drew, 2026-09-05). `draft` and
+  // `flagship` are words a title uses ABOUT a product, and a key minted from
+  // one names no card anybody can buy. They arrive through normalizeSetKey's
+  // FALL-THROUGH rather than any vocabulary table: the title parser's
+  // buildSetName(null, "draft") is the literal string "Draft".
+  //
+  // Refused HERE as well as in slugGuard, for the same reason the unparsed
+  // cardNumber is: slugGuard is the gate callers SHOULD use, and this throw is
+  // what makes a caller that skipped it fail loudly instead of minting. The
+  // three ingest paths already wrap this in try/catch and skip the row.
+  //
+  // Exact-token — `bowman-draft` and `topps-chrome` are real products and pass
+  // untouched. The refusal is checked AFTER resolveSetKeyForSlug so that a
+  // resolver able to supply the maker is given its chance first.
+  if (isMakerlessCatchAllSetKey(baseSetKey)) {
+    throw new Error(
+      `hobbyiq-cardid: ${makerlessCatchAllMessage(baseSetKey)} — identity is UNDERIVABLE`,
+    );
+  }
   // CF-PLAYER-IS-THE-NUMBER: an unnumbered card is identified by its player,
   // never by the shared literal "nno". Falls back to the plain normalized form
   // when there is no player, so slugGuard is the one place that refuses.
@@ -1875,7 +1945,7 @@ export function computeHobbyIqCardId(components: HobbyIqCardIdComponents): strin
   // nothing and keep the repair behaviour unchanged.
   const setKey = components.authoritativeSetKey === true
     ? baseSetKey
-    : applyChromePrefixOverride(baseSetKey, cardNumber);
+    : applyChromePrefixOverride(baseSetKey, cardNumber, year);
   // CF-AUTO-ONLY-FORCE (Drew, 2026-08-11). Auto-only prefixes always
   // produce autograph cards — force isAuto=true so vendor label drift
   // (isAuto=false on a CPA- sale, etc.) can't fragment the pool.

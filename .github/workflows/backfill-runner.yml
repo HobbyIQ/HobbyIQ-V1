@@ -440,6 +440,29 @@ on:
           # `slot=0 slots=16` sweeps EVERY row rather than silently censusing a
           # sixteenth of the population (#1756).
           - census-unknown-setkey
+          # CF-MEASURE-VOLUME-THEN-ASK (Drew's ruling, 2026-09-05) for the
+          # NON-POKEMON TCGs: Magic, Yu-Gi-Oh, One Piece, Lorcana. Measure the
+          # volume first, then ask each publisher IN WRITING before any ingest.
+          # The drafted requests are in
+          # docs/reports/tcg-source-permissions-2026-09-05.md; nothing is sent
+          # by this lane and no ingest lane for these games exists yet.
+          #
+          # IT IS A LANE BECAUSE IT COULD NOT BE A SCRIPT. #1822 committed it as
+          # a workstation script and it never completed interactively -- >50
+          # minutes on 2026-09-05 with nothing printed. Job-length problems are
+          # solved by a budget + a relaunch, not by waiting longer.
+          #
+          # PAGED READS ONLY, walked by continuation token with the budget's
+          # pre-check before each page. Never a cross-partition COUNT -- that is
+          # the shape that got run 33960686247 killed after it had already
+          # reconciled clean. Sharding is OPT-IN via lib/runner-shard-scope.cjs
+          # and the axis is the SPORT (the query axis), so an inherited
+          # `slot=0 slots=16` sweeps every sport rather than a sixteenth (#1756).
+          #
+          # READ ONLY, with no write path in the script at all: it REFUSES
+          # BACKFILL_APPLY=true itself (exit 3), and the gate below refuses the
+          # dispatch before it reaches Cosmos.
+          - census-tcg-verticals
           # CF-MARKET-INDEXES purge + rebuild (Drew's ruling, 2026-09-03).
           # Deletes the nine basket docs minted into prod on 2026-09-03
           # between 14:12Z and 14:36Z by rebuild runs whose "report-only"
@@ -703,7 +726,7 @@ on:
         default: ""
         type: string
       parents_only:
-        description: "For rehome-catalog-rows-to-own-partition: only move identity rows, skipping graded rows (which are regenerable from their parent)."
+        description: "Two meanings, and only ONE script reads the value itself. For rehome-catalog-rows-to-own-partition: only move identity rows, skipping graded rows (which are regenerable from their parent). For every lane on the SHARD line (repair-tiffany-*, retire-self-derived-identities, repair-bowman-product-refile, rekey-product-setkey, repair-finish-collision-refile, reslug-ruled-alias, repair-cpa-draft-refile) it is the SHARD OPT-IN: pass true with slot=0 so slot 0 of a real fan-out is a chosen shard rather than the runner's inherited default. Slots 1..15 shard on their non-zero slot and do not need it. Leave false for a full sweep."
         required: false
         default: false
         type: boolean
@@ -796,6 +819,20 @@ jobs:
         shell: bash
         run: |
           echo "::error::census-unknown-setkey is READ ONLY — it has no write path. Re-dispatch with apply=false; the repair is the Great Rematch's IMPROVE arm or a vocabulary change."
+          exit 1
+
+      # The same gate for the TCG volume census. It is stricter than the others
+      # by intent: for the non-Pokemon TCGs there is not merely no write path in
+      # THIS script, there is no sanctioned ingest for these games AT ALL.
+      # Drew's ruling (2026-09-05) is measure first, then ask each publisher in
+      # writing. An apply dispatch here would be someone believing we had
+      # permission we have not asked for yet, so it is refused twice -- here,
+      # and again inside the script (exit 3) if it is ever run another way.
+      - name: Refuse an APPLY dispatch of the read-only TCG volume census
+        if: ${{ inputs.script == 'census-tcg-verticals' && inputs.apply == true }}
+        shell: bash
+        run: |
+          echo "::error::census-tcg-verticals is READ ONLY — it measures volume and nothing else. There is no sanctioned ingest for Magic / Yu-Gi-Oh / One Piece / Lorcana: Drew's 2026-09-05 ruling is MEASURE FIRST, THEN ASK EACH PUBLISHER IN WRITING (see backend/docs/reports/tcg-source-permissions-2026-09-05.md). Re-dispatch with apply=false."
           exit 1
 
       # The same gate, same reasoning, for the two READ-ONLY lanes of
@@ -1460,7 +1497,7 @@ jobs:
           # this very expression and asserts every script it names is in the
           # dropdown whitelist AND calls runnerShardScope without alwaysShard.
           # Drop a script from the line and that suite turns red.
-          SHARD: ${{ (inputs.script == 'repair-tiffany-pool-enumeration' || inputs.script == 'repair-tiffany-rung-to-product' || inputs.script == 'retire-self-derived-identities') && inputs.parents_only == true && 'true' || '' }}
+          SHARD: ${{ (inputs.script == 'repair-tiffany-pool-enumeration' || inputs.script == 'repair-tiffany-rung-to-product' || inputs.script == 'retire-self-derived-identities' || inputs.script == 'repair-bowman-product-refile' || inputs.script == 'rekey-product-setkey' || inputs.script == 'repair-finish-collision-refile' || inputs.script == 'reslug-ruled-alias' || inputs.script == 'repair-cpa-draft-refile') && inputs.parents_only == true && 'true' || '' }}
           # Optional year scoping (ingest-checklists-end-to-end, rehome-catalog-
           # rows-to-own-partition, dedupe-catalog-partition-shadows, merge-bare-
           # colour-parallels, repair-refractor-mislabel).
@@ -1644,6 +1681,12 @@ jobs:
           # on script for the same reason MODE tokens are: one name, one
           # meaning, and no chance of a path leaking into another lane.
           CENSUS_OUT: ${{ inputs.script == 'census-split-identity' && '/tmp/split-identity-census' || (inputs.script == 'census-ch-product-label-parallel' && '/tmp/ch-product-label-census' || (inputs.script == 'census-unknown-setkey' && '/tmp/unknown-setkey-census' || '/tmp/rematch-census')) }}
+          # The TCG volume census writes ONE JSON document rather than a
+          # directory, so it reads OUT (its own env name) rather than
+          # CENSUS_OUT. Guarded on script for the same one-name-one-meaning
+          # reason as the line above: an empty string on every other lane, so
+          # no path can leak sideways into a script that would honour it.
+          OUT: ${{ inputs.script == 'census-tcg-verticals' && '/tmp/tcg-verticals/census.json' || '' }}
           # CENSUS_FROM_TS is deliberately NOT wired to a dispatch input. A
           # relaunch re-reads its shard from the top, exactly as the rematch
           # census does and for the same reason: the walk is READ ONLY, so
@@ -1819,6 +1862,48 @@ jobs:
           path: /tmp/split-identity-census/
           if-no-files-found: warn
           retention-days: 90
+
+      # The TCG volume census IS the deliverable -- Drew reads these numbers to
+      # decide whether the sport->vertical refactor is worth its cost and what
+      # to say to four publishers. A number that only ever lived in a log is a
+      # number nobody can quote in a permission request.
+      - name: Upload the TCG volume census
+        if: ${{ always() && inputs.script == 'census-tcg-verticals' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: tcg-verticals-census-slot-${{ inputs.slot }}-${{ github.run_id }}
+          path: |
+            /tmp/tcg-verticals/
+            /tmp/backfill.log
+          if-no-files-found: warn
+          retention-days: 90
+
+      # TCG volume census self-relaunch. Relaunch iff the budget marker printed
+      # (CF-RELAUNCH-ONLY-ON-BUDGET, #1361), forwarding every input verbatim --
+      # `apply` included (#1578), though there is no live apply case to forward:
+      # the gate above refuses an apply dispatch of this script before it
+      # reaches Cosmos, so a relaunch carrying apply=true fails there exactly as
+      # its parent did, loudly, rather than quietly running as something else.
+      #
+      # The continuation restarts its shard from the top, like every other
+      # READ-ONLY census here and for the same reason: nothing shrinks as it
+      # works, so a cursor-resumed run would census a SUFFIX of the shard and
+      # report it as the whole. A shard that cannot fit one budget needs more
+      # slots, not a cursor -- the banner prints PARTIAL and names the sports
+      # that did not finish, so a shard that never completes is visible in the
+      # log rather than silent.
+      - name: Self-relaunch census-tcg-verticals until the shard is finished
+        if: ${{ !cancelled() && inputs.script == 'census-tcg-verticals' }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
+            echo "::notice::budget hit — re-dispatching slot ${{ inputs.slot }} to continue the TCG census"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=census-tcg-verticals -f apply="${{ inputs.apply }}" -f mode="${{ inputs.mode }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f limit="${{ inputs.limit }}"
+          else
+            echo "::notice::finished within budget — done, no re-dispatch."
+          fi
 
       # The CH-product-label census names the SUSPECT products, their witness
       # rates and their destination pools -- the list a repair dispatch's
@@ -2126,7 +2211,7 @@ jobs:
           # relaunch would refuse for want of a destination.
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
             echo "::notice::budget hit (rekeyed=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
-            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=rekey-product-setkey -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f setkey_like="${{ inputs.setkey_like }}" -f titles="${{ inputs.titles }}" -f limit="${{ inputs.limit }}"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=rekey-product-setkey -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f setkey_like="${{ inputs.setkey_like }}" -f titles="${{ inputs.titles }}" -f limit="${{ inputs.limit }}" -f parents_only="${{ inputs.parents_only }}"
           else
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (rekeyed=${N:-0}) — done, no re-dispatch."
           fi
@@ -3346,7 +3431,7 @@ jobs:
           echo "reslugged=${N:-0}"
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
             echo "::notice::budget hit (reslugged=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
-            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=reslug-ruled-alias -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f scope="${{ inputs.scope }}" -f limit="${{ inputs.limit }}"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=reslug-ruled-alias -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f scope="${{ inputs.scope }}" -f limit="${{ inputs.limit }}" -f parents_only="${{ inputs.parents_only }}"
           else
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (reslugged=${N:-0}) — done, no re-dispatch."
           fi
@@ -3377,7 +3462,7 @@ jobs:
           echo "refiled=${N:-0}"
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
             echo "::notice::budget hit (refiled=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
-            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repair-finish-collision-refile -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f scope="${{ inputs.scope }}" -f limit="${{ inputs.limit }}"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repair-finish-collision-refile -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f scope="${{ inputs.scope }}" -f limit="${{ inputs.limit }}" -f parents_only="${{ inputs.parents_only }}"
           else
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (refiled=${N:-0}) — done, no re-dispatch."
           fi
@@ -3409,7 +3494,7 @@ jobs:
           echo "refiled=${N:-0}"
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
             echo "::notice::budget hit (refiled=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
-            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repair-bowman-product-refile -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f scope="${{ inputs.scope }}" -f mode="${{ inputs.mode }}" -f limit="${{ inputs.limit }}"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repair-bowman-product-refile -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f scope="${{ inputs.scope }}" -f mode="${{ inputs.mode }}" -f limit="${{ inputs.limit }}" -f parents_only="${{ inputs.parents_only }}"
           else
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (refiled=${N:-0}) — done, no re-dispatch."
           fi
@@ -3437,7 +3522,7 @@ jobs:
           echo "refiled=${N:-0}"
           if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
             echo "::notice::budget hit (refiled=${N:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
-            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repair-cpa-draft-refile -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f scope="${{ inputs.scope }}" -f mode="${{ inputs.mode }}" -f limit="${{ inputs.limit }}"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repair-cpa-draft-refile -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f scope="${{ inputs.scope }}" -f mode="${{ inputs.mode }}" -f limit="${{ inputs.limit }}" -f parents_only="${{ inputs.parents_only }}"
           else
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (refiled=${N:-0}) — done, no re-dispatch."
           fi

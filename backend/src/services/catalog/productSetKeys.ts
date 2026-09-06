@@ -163,6 +163,175 @@ const NEVER_ACQUIRED_MAKER_PREFIXES: Readonly<Record<string, string>> = Object.f
   "panini-skybox": "skybox",
 });
 
+/**
+ * CF-SOCCER-PRIZM-IS-PRIZM-FIFA (Drew, 2026-09-05).
+ *
+ * THE DEFECT IS THE BARE TITLE, AND ONLY THE BARE TITLE. Measured on the
+ * baseline 2026-09-05, an EXPLICIT FIFA title already resolves correctly:
+ * `normalizeSetKey("2025 Panini Prizm FIFA") === "panini-prizm-fifa"`, because
+ * that key is a RECONCILED FIXED POINT (reconcileSetKey returns final:true)
+ * and short-circuits ahead of the unanchored `/panini-prizm/` pattern that
+ * would otherwise swallow the qualifier. So the vocabulary is not broken and
+ * this ruling does not rewrite it.
+ *
+ * What the vocabulary CANNOT do is read a title that says only "Panini Prizm".
+ * It is sport-blind by construction, and the bare text is genuinely ambiguous:
+ * it is the FLAGSHIP in football and basketball and the FIFA release in
+ * soccer 2025. Only a deriver that knows the SPORT can tell those apart. That
+ * is the entire gap this rule closes, and it is why the rule lives at
+ * `resolveSetKeyForSlug` and NOT in `normalizeSetKey`.
+ *
+ * Measured read-only against prod 2026-09-05:
+ *
+ *   card_catalog soccer/2025  setKey `panini-prizm-fifa`  30,773 rows, ALL
+ *                             STRICT (checklistinsider-2026-08-27/29) — and
+ *                             EVERY ONE carries the id stem
+ *                             `hiq:soccer:2025:panini-prizm:`. The checklist
+ *                             ingest wrote the right FIELD and the deriver
+ *                             collapsed the id, which is the whole defect in
+ *                             one row.
+ *   card_catalog soccer/2025  setKey `panini-prizm`  21 rows, all
+ *                             self-derived (ingest-auto-seed / -graded), ZERO
+ *                             strict.
+ *   sold_comps   soccer/2025  segment 3 exactly `panini-prizm`  2,385 rows.
+ *
+ * So the checklist weight is entirely on `panini-prizm-fifa` and the pool is
+ * entirely on `panini-prizm`: one product, two spellings, and a 2025 FIFA
+ * card's FMV depends on which spelling its sale parsed into. That is the
+ * split-pool failure CF-ONE-CARD-ONE-ROW-ONE-POOL exists to prevent.
+ *
+ * WHY THIS IS SPORT-SCOPED AND NOT AN ALIAS. `panini-prizm` is the CORRECT,
+ * fixed-point key for FOOTBALL and BASKETBALL Prizm — the flagship of both,
+ * with millions of pool rows. A flat alias `panini-prizm -> panini-prizm-fifa`
+ * in RULED_ALIASES would move every NFL and NBA Prizm sale into a soccer
+ * product. Drew ruled this explicitly: "a SPORT-SCOPED (and year-scoped)
+ * resolution, not a global alias". The SPORT is what separates them, exactly
+ * as the YEAR separates Donruss's two owners and Fleer Tiffany from Fleer
+ * Glossy above — the same shape, a different axis.
+ *
+ * ABSENT BEATS WRONG. Panini and Topps both publish other soccer competition
+ * products (Prizm Premier League, Topps UEFA Club Competitions). A title whose
+ * COMPETITION NAMES THE PRODUCT is not this release and must not fold into it.
+ * Note carefully what that does NOT mean: a league word describing the
+ * PLAYER'S CLUB is not a product name. Measured on the same pool, six titles
+ * read "Panini Prizm FIFA ... Jude Bellingham #186 Real Madrid La Liga" — a
+ * Prizm FIFA card whose title mentions where the player plays. A naive
+ * "mentions another competition -> park" rule would have parked genuine FIFA
+ * cards, so the test is adjacency to the PRODUCT word, and FIFA present
+ * anywhere settles it.
+ *
+ * A BARE SOCCER PRIZM IS THIS PRODUCT. Drew ruled that a 2025 soccer title
+ * saying only "Panini Prizm" resolves here too: 98.8% of the pool is FIFA by
+ * title, Panini published no other bare-Prizm soccer release that year, and
+ * the 30,773-row checklist is the only soccer/2025 Prizm checklist we hold.
+ *
+ * THE YEAR. 2025 is the measured release (2025-26). The boundary is a
+ * constant rather than an open range so a future soccer Prizm release under a
+ * different competition cannot be swallowed by a rule nobody revisited.
+ */
+export const PRIZM_FIFA_SPORT = "soccer";
+/** The release years the soccer ruling covers (the 2025-26 product). */
+export const PRIZM_FIFA_YEARS: ReadonlySet<number> = new Set([2025]);
+/** The flagship spelling a soccer Prizm sale collapses into today. */
+const PRIZM_FIFA_SOURCE_KEYS: ReadonlySet<string> = new Set(["panini-prizm"]);
+/** The one spelling of the FIFA product. */
+export const PRIZM_FIFA_KEY = "panini-prizm-fifa";
+
+/**
+ * True when this (sport, year) cell is the one Drew's soccer ruling covers.
+ * Football and basketball answer FALSE here in every year, which is the whole
+ * point: `panini-prizm` stays the fixed point of the FB/BK flagship.
+ */
+export function isPrizmFifaCell(sport: string | null | undefined, year: number | null | undefined): boolean {
+  if (String(sport ?? "").trim().toLowerCase() !== PRIZM_FIFA_SPORT) return false;
+  const y = Number(year);
+  return Number.isFinite(y) && PRIZM_FIFA_YEARS.has(y);
+}
+
+/**
+ * The soccer ruling as a spelling: inside the ruled (sport, year) cell a
+ * `panini-prizm` key IS `panini-prizm-fifa`. Outside it — every football and
+ * basketball row, every other year — the key passes through untouched.
+ *
+ * Deliberately separate from `spellForEra`: that function takes (setKey,
+ * year) and is called from three seams, only one of which knows the sport.
+ * Widening its signature would silently pass `undefined` for sport at the
+ * other two and make the rule fire nowhere. Instead this is applied at
+ * `resolveSetKeyForSlug`, the ONE deriver that has the sport in hand and
+ * through which every seam already computes an id.
+ */
+export function spellForSport(setKey: string, sport: string | null | undefined, year: number | null | undefined): string {
+  const k = String(setKey ?? "").trim().toLowerCase();
+  if (!k) return setKey;
+  if (!PRIZM_FIFA_SOURCE_KEYS.has(k)) return setKey;
+  return isPrizmFifaCell(sport, year) ? PRIZM_FIFA_KEY : setKey;
+}
+
+/**
+ * Does this sale title name a DIFFERENT competition's PRODUCT?
+ *
+ * Used by the pool lane to decide, per row, whether a `panini-prizm` soccer
+ * sale is this release. `true` means PARK the row where it is: absent beats
+ * wrong, and a Topps UEFA card must never be filed as Panini Prizm FIFA.
+ *
+ * The FIFA words win outright wherever they appear, because a title that says
+ * FIFA has named the product; the competition test only ever decides a title
+ * that does not. And the competition must sit ADJACENT TO THE PRODUCT WORD —
+ * "Prizm Premier League", "Topps UEFA" — never merely be mentioned, or the
+ * six measured "Prizm FIFA ... Real Madrid La Liga" rows would park.
+ */
+const RX_FIFA_STATED = /\bfifa\b|\bworld\s*cup\b/i;
+/**
+ * A SIBLING FIFA-BRANDED RELEASE that is NOT this product.
+ *
+ * MEASURED 2026-09-05, and it is why this predicate is not simply "does the
+ * title say FIFA". The id stem `hiq:soccer:2025:panini-prizm:` carries THREE
+ * products in the catalog, collapsed by the same bare-title defect:
+ *
+ *     30,773  setKey `panini-prizm-fifa`                  <- Drew's ruling
+ *     18,230  setKey `panini-prizm-fifa-club-world-cup`   <- ANOTHER product
+ *      4,111  setKey `panini-prizm-k-league`              <- ANOTHER product
+ *
+ * and the pool carries them too: of the 2,383 rows on the flagship segment,
+ * 496 are Club World Cup by title. Those 496 SAY "FIFA" -- "2025 Panini Prizm
+ * FIFA Club World Cup Endrick Real Madrid #159" -- so the FIFA test alone
+ * would fold them into the wrong pool. That is the split-pool failure this
+ * ruling exists to prevent, made worse by FUSING TWO REAL PRODUCTS.
+ *
+ * The Club World Cup is a distinct tournament with a distinct 18,230-row
+ * checklist under its own key, and `normalizeSetKey` already spells it
+ * correctly whenever the title carries the FIFA word; what it cannot spell is
+ * the bare "Panini Prizm Club World Cup" form, which collapses to the
+ * flagship exactly as the plain bare title does. So these rows PARK: they are
+ * not this product, their own key exists, and moving them here would be
+ * wrong. Folding them onto their OWN key is a separate scope and a separate
+ * ruling -- absent beats wrong.
+ */
+const RX_SIBLING_FIFA_RELEASE = new RegExp([
+  String.raw`\bclub\s*world\s*cup\b`,
+  String.raw`\bk-?league\b`,
+].join("|"), "i");
+/** Another competition ADJACENT TO the product word — the product, not the
+ *  player's club. */
+const RX_OTHER_COMPETITION = new RegExp([
+  String.raw`\bprizm\s+(?:premier\s*league|epl|la\s*liga|serie\s*a|bundesliga|ligue\s*1|champions\s*league|uefa|mls|eredivisie|liga\s*mx|nwsl|wsl)\b`,
+  String.raw`\b(?:premier\s*league|epl|la\s*liga|champions\s*league|uefa)\s+prizm\b`,
+  String.raw`\btopps\s+(?:uefa|champions\s*league|premier\s*league)\b`,
+  String.raw`\bpanini\s+(?:premier\s*league|la\s*liga|serie\s*a|bundesliga|mls|nwsl)\b`,
+].join("|"), "i");
+
+/** True when the title names another competition's product and never says
+ *  FIFA — the row is PARKED rather than folded. */
+export function titleNamesOtherCompetition(title: string | null | undefined): boolean {
+  const t = String(title ?? "");
+  if (!t) return false;
+  // A SIBLING FIFA-branded release is checked FIRST, ahead of the FIFA test:
+  // these titles DO say FIFA and are still not this product.
+  if (RX_SIBLING_FIFA_RELEASE.test(t)) return true;
+  if (RX_FIFA_STATED.test(t)) return false;
+  return RX_OTHER_COMPETITION.test(t);
+}
+
 export interface ProductSetKey {
   /** The one spelling. */
   readonly setKey: string;
@@ -439,6 +608,13 @@ export const PRODUCT_SET_KEYS: ReadonlyArray<ProductSetKey> = [
   P("panini-prizm", { parent: "panini" }),
   P("panini-prizm-draft-picks", { family: "panini-prizm", parent: "panini-prizm" }),
   P("panini-prizm-wnba", { family: "panini-prizm", parent: "panini-prizm" }),
+  // CF-SOCCER-PRIZM-IS-PRIZM-FIFA (Drew 2026-09-05). The World Cup release,
+  // 30,773 STRICT checklistinsider rows in soccer/2025. Its own family: a FIFA
+  // card does not price off an NFL Prizm comp, exactly as Prizm WNBA does not.
+  // `parent` records the flagship it is a release of, for provenance only.
+  // NOT `spelled` — the sport-scoped rule (spellForSport) decides this key,
+  // not a name match, because the NAME "panini-prizm" belongs to FB/BK.
+  P("panini-prizm-fifa", { parent: "panini-prizm" }),
   P("panini-prizm-monopoly-wnba", { family: "panini-prizm", parent: "panini-prizm" }),
   ...["panini-select", "panini-mosaic", "panini-contenders", "panini-immaculate", "panini-flawless",
     "panini-national-treasures", "panini-absolute", "panini-chronicles", "panini-phoenix", "panini-illusions",

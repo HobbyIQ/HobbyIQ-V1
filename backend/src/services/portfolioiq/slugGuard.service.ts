@@ -40,6 +40,8 @@
 // rejection should leave hobbyiqCardId null and let the re-derivation
 // pass handle the row.
 
+import { isMakerlessCatchAllSetKey } from "../catalog/makerlessCatchAll.js";
+
 /** Sports we accept as a slug namespace. Anything outside this set is a
  *  vendor string we have not taught the system to read yet, and must not
  *  become the top-level namespace of an identifier. */
@@ -192,7 +194,14 @@ export type SlugRejectReason =
    *  so nothing identifies this row", while this one means "a player is
    *  present and it is NOT enough" -- the number exists, we just failed to read
    *  it, and a row keyed on the player would be keyed to a card it is not. */
-  | "cardnumber-unparsed";
+  | "cardnumber-unparsed"
+  /** CF-A-MAKER-LESS-CATCH-ALL-IS-NOT-A-PRODUCT (Drew, 2026-09-05). The setKey
+   *  is a bare word a title uses ABOUT a product -- `draft`, `flagship` -- with
+   *  no maker beside it, so it names no card anybody can buy. Distinct from
+   *  `setkey-raw-vendor-string`, which means "a real product name in the wrong
+   *  SHAPE"; this one means "a well-shaped key that is not a product at all".
+   *  See services/catalog/makerlessCatchAll.ts for the measured list. */
+  | "setkey-makerless-catchall";
 
 export interface SlugGuardResult {
   ok: boolean;
@@ -237,6 +246,13 @@ export function guardSlugInputs(input: {
   const setKey = String(input.normalizedSetKey ?? "").trim();
   if (!setKey) reasons.push("setkey-missing");
   else if (isRawVendorSetKey(setKey)) reasons.push("setkey-raw-vendor-string");
+  // CF-A-MAKER-LESS-CATCH-ALL-IS-NOT-A-PRODUCT (Drew, 2026-09-05). `draft` and
+  // `flagship` are words a title uses ABOUT a product, never a product. They
+  // reach a key through normalizeSetKey's fall-through -- buildSetName(null,
+  // "draft") is the literal string "Draft" -- and a row keyed on one pools
+  // against every other card whose title used the same word. Refuse until a
+  // maker is read; never mint. Exact-token, so `bowman-draft` is untouched.
+  else if (isMakerlessCatchAllSetKey(setKey)) reasons.push("setkey-makerless-catchall");
 
   // CF-PLAYER-IS-THE-NUMBER. `nno` is an ABSENCE of a number that the source
   // ASSERTED — an unnumbered card with a known player IS identifiable ("T206

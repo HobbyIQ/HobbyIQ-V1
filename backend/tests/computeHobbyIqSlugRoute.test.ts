@@ -37,14 +37,25 @@ describe("computeHobbyIqCardId — reference slugs iOS depends on", () => {
       isAuto: true,
       printRun: 150,
     });
-    expect(slug).toBe(// FLAGGED FOR DREW. The catalog holds 2026 CPA-EHA under "bowman" (the
-    // checklist ingest wrote it there), and on 2026-08-13 Drew said of a CPA
-    // pulled from a Bowman pack: "bowman — it came out of Bowman". But
-    // CHROME_PREFIX_OVERRIDES still maps bowman + cpa- -> bowman-chrome on
-    // vendor paths, which is what repaired 92,362 mis-slugged rows. Both
-    // cannot be right, and removing the override risks re-breaking those, so
-    // this pins SHIPPED behaviour rather than silently choosing.
-    "hiq:baseball:2026:bowman-chrome:cpa-eha:blue-refractor:auto:num-150");
+    // RESOLVED (CF-CPA-IS-AMBIGUOUS-FROM-2023, 2026-09-05). This pin used to
+    // be FLAGGED FOR DREW: the catalog holds 2026 CPA-EHA under "bowman" (the
+    // checklist ingest wrote it there) and on 2026-08-13 Drew said of a CPA
+    // pulled from a Bowman pack "bowman — it came out of Bowman", yet
+    // CHROME_PREFIX_OVERRIDES mapped bowman + cpa- -> bowman-chrome on vendor
+    // paths. The note said both could not be right and pinned SHIPPED
+    // behaviour rather than silently choosing.
+    //
+    // Drew chose, and the measurement agrees. Bowman Draft began numbering its
+    // chrome prospect autos CPA- in 2023, so the prefix stopped being evidence
+    // of Chrome; the 2026-09-05 census found the override minting 19,867 rows
+    // at a Chrome address whose own field says `bowman`, against ZERO real
+    // 2026 Bowman Chrome sales. The rule is now scoped to the years where it
+    // is unambiguous (maxYear 2022).
+    //
+    // The 92,362 repaired rows the note worried about are NOT re-broken: they
+    // are BCP-/BDC-/CDA- prefixed, every one of those rules is untouched, and
+    // pre-2023 CPA- still repairs exactly as before.
+    expect(slug).toBe("hiq:baseball:2026:bowman:cpa-eha:blue-refractor:auto:num-150");
   });
 
   it("Owen Carey Bowman Chrome Sapphire BSPA-OC /199 Auto", () => {
