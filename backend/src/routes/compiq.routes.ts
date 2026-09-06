@@ -4312,6 +4312,16 @@ router.get("/card-panel/:cardId", requireSession, requireRateLimited("priceCheck
                 sport: ident.sport,
                 isAuto: ident.isAuto,
                 printRun: ident.printRun,
+                // CF-CARD-TITLE-NEVER-DOUBLES-THE-YEAR (Drew, 2026-09-06).
+                // This block re-projects wireIdentity into the panel's older
+                // field names, and `set` here is the STORED, year-prefixed
+                // name — join it after `year` and the card is titled "2023
+                // 2023 Topps Heritage". Carry the year-free product and the
+                // composed title through so this wire names cards the same
+                // way price-by-id does, instead of leaving each client to
+                // strip a year it cannot see is there.
+                setName: ident.setName ?? null,
+                displayName: ident.displayName ?? null,
               }
             : null,
           gradeCurve: {

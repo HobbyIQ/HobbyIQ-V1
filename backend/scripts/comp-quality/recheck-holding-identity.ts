@@ -737,6 +737,13 @@ interface RederiveVerdict {
   storedBacking?: string;
   /** The `source` of the stored identity's catalog row; null when it has none. */
   storedSource?: string | null;
+  /** CF-AGREE-IS-A-VERDICT-ABOUT-A-ROW: the PLAYER NAMED BY THE ROW this
+   *  verdict is about — which is not the holding's player whenever a card
+   *  number collides. The console label prints the HOLDING's player, and for
+   *  4a82faed / 25bc5079 that is exactly how `AGREE Devin Taylor` came to be
+   *  printed beside Diego Tornes' row. Every verdict this pass reaches through
+   *  a real catalog row carries both names now, in the JSON and on the line. */
+  rowPlayer?: string | null;
 }
 
 async function rederive(
@@ -842,6 +849,122 @@ async function rederive(
         isAuto: typeof r.isAuto === "boolean" ? r.isAuto : null,
         playerName: r.playerName ?? null,
       }));
+  };
+
+  /**
+   * GATE 1b, AS A FUNCTION BOTH PATHS CALL — THE DESTINATION MUST NAME THIS
+   * HOLDING'S PLAYER.
+   *
+   * CF-AGREE-IS-A-VERDICT-ABOUT-A-ROW (Drew, 2026-09-06). #1849 widened this
+   * gate from recovered set names to ALL set names, and it was still reachable
+   * only on the `to !== from` path. GATE A returns AGREE for any holding whose
+   * re-derived slug EQUALS its stored one and whose row is checklist-backed —
+   * every branch inside it ends in `continue` — so a holding already sitting on
+   * the wrong player's row never reached the player check at all. The gate that
+   * exists to catch a colliding card number was unreachable for exactly the
+   * population that had already been written onto the collision.
+   *
+   * 4a82faed / 25bc5079 are the measured case, and they are the SAME two
+   * holdings #1849 fixed on the other path. Both store
+   * `setName: "Bowman Chrome"` and both were ALREADY PINNED to
+   *
+   *     hiq:baseball:2025:bowman-chrome:cpa-dt:refractor:auto:num-499
+   *
+   * so the re-derivation lands back on the stored slug, `to === from` is true,
+   * the row IS checklist-backed (checklistcenter-2026-08-29) — and GATE A said
+   * AGREE. The row names DIEGO TORNES. Run 34051875762 printed
+   * `AGREE Devin Taylor …` beside it, because the label prints the HOLDING's
+   * player and nothing ever printed the ROW's.
+   *
+   * An AGREE must be a verdict about a row that names the holding's player.
+   * So the check runs on BOTH paths, from one implementation — restating it
+   * would be the "four spellings of one predicate" this file's own header
+   * warns about — and it keeps #1849's two steps exactly:
+   *
+   *   1. RE-ASK WITH THE TITLE'S PRODUCT. A contradiction is a question before
+   *      it is a refusal. `titleStatedProduct` reads the holding's free text
+   *      through the ONE vocabulary and returns a product only when it differs
+   *      from the stored one; the matcher is re-asked with that set name and
+   *      EVERY OTHER AXIS PINNED, and the candidate must clear GATE 1 (a real
+   *      row) and this gate again (a player who corroborates).
+   *   2. OTHERWISE PARK, naming BOTH players.
+   *
+   * GATE 2 is asked by the CALLER on whatever destination comes back, because
+   * a substitution moves the holding to a different row and gating the
+   * abandoned one would let a dropped axis through on the written one.
+   *
+   * Returns "ok" when the destination already names this player (the common
+   * case, and no re-ask is made), "resolved" with the substituted row, or
+   * "park" with the contradiction spelled out for the caller's verdict.
+   */
+  type PlayerCheck =
+    | { kind: "ok" }
+    | { kind: "resolved"; slug: string; backing: NonNullable<Awaited<ReturnType<typeof backingOf>>>; titleSetName: string; matchedBy: string; confidence: number }
+    | { kind: "park"; reason: string; titleProduct: string | null };
+
+  const corroboratePlayer = async (
+    h: any,
+    recovery: any,
+    dest: { slug: string; backing: NonNullable<Awaited<ReturnType<typeof backingOf>>> },
+  ): Promise<PlayerCheck> => {
+    if (recoveredSetNameIsCorroborated(h.playerName, dest.backing.playerName)) return { kind: "ok" };
+
+    const setNameWasRecovered = (recovery?.recovered ?? []).some((f: any) => f.field === "setName");
+
+    // STEP 1 — does the holding's OWN TITLE name a different product?
+    // Only tried when both sides actually name a player: a null on either
+    // side is an absence, not a contradiction the title can resolve.
+    const bothNamePlayers = !!normalizePlayerForCompare(h.playerName)
+      && !!normalizePlayerForCompare(dest.backing.playerName);
+    const titleProduct = bothNamePlayers ? titleStatedProduct(h) : null;
+
+    if (titleProduct) {
+      console.log(`  title says "${titleProduct.setName}" (${titleProduct.source}), stored says ${JSON.stringify(h.setName ?? h.product ?? null)} — re-asking`);
+      let alt: any = null;
+      try {
+        alt = await canonicalize({
+          sport: String(h.sport ?? "Baseball").toLowerCase(),
+          year: Number(h.cardYear) || 0,
+          setName: titleProduct.setName,
+          // EVERY OTHER AXIS UNCHANGED. The contradiction is about the
+          // product; substituting more than that would be a different card.
+          cardNumber: recovery ? recovery.fields.cardNumber : String(h.cardNumber ?? ""),
+          parallel: recovery ? recovery.fields.parallel : (h.parallel ?? null),
+          isAuto: h.isAuto === true,
+          printRun: recovery
+            ? (typeof recovery.fields.printRun === "number" ? recovery.fields.printRun : null)
+            : (typeof h.printRun === "number" ? h.printRun : null),
+          player: h.playerName ?? null,
+          source: "unknown",
+        });
+      } catch (e: any) {
+        console.log(`  title-product re-ask threw: ${e?.message}`);
+      }
+      const altSlug: string | null = alt?.found && alt?.slug ? alt.slug : null;
+      if (altSlug) {
+        const altBacking = await backingOf(altSlug);
+        if (!altBacking) {
+          console.log(`  title-product candidate ${altSlug} has no catalog row — discarded`);
+        } else if (!recoveredSetNameIsCorroborated(h.playerName, altBacking.playerName)) {
+          console.log(`  title-product candidate ${altSlug} names ${JSON.stringify(altBacking.playerName ?? null)} — still not this player, discarded`);
+        } else {
+          return { kind: "resolved", slug: altSlug, backing: altBacking, titleSetName: titleProduct.setName,
+            matchedBy: `${alt.matchedBy}+title-product`, confidence: alt.confidence };
+        }
+      } else {
+        console.log(`  title-product re-ask found nothing (${alt?.matchedBy}, conf ${alt?.confidence})`);
+      }
+    }
+
+    // STEP 2 — PARK, with the contradiction named on BOTH sides.
+    return {
+      kind: "park",
+      titleProduct: titleProduct?.setName ?? null,
+      reason: `${setNameWasRecovered ? "set name was recovered from listing text and the" : "the"} destination names a different player: holding ${JSON.stringify(h.playerName ?? null)} vs catalog row ${JSON.stringify(dest.backing.playerName ?? null)}`
+        + (titleProduct
+          ? ` — the title says "${titleProduct.setName}" and no checklist row for that product names this player either`
+          : " — the title names no other product to try"),
+    };
   };
 
   const verdicts: RederiveVerdict[] = [];
@@ -955,10 +1078,83 @@ async function rederive(
         own ? [{ source: own.source, id: own.id, playerName: own.playerName }] : [],
       );
       if (ownBacking === "checklist-backed") {
+        // AND THE ROW MUST NAME THIS HOLDING'S PLAYER (Drew, 2026-09-06).
+        // Checklist-backed answers "may a price rest on this row"; it does not
+        // answer "is this row THIS CARD". A colliding card number makes those
+        // two different questions: the checklist is RIGHT about Diego Tornes'
+        // cpa-dt, and this holding is still Devin Taylor's. Without this call
+        // `to === from` short-circuits GATE 1b entirely, and 4a82faed /
+        // 25bc5079 printed `AGREE Devin Taylor` against Tornes' row.
+        const storedCheck = await corroboratePlayer(h, recovery, { slug: from as string, backing: own! });
+
+        if (storedCheck.kind === "resolved") {
+          // The title's product named a real checklist row for THIS player.
+          // It is a re-point like any other, so it is reported as REDERIVE and
+          // rides this pass's existing apply path — but it must clear the gates
+          // below it first, which is why the remaining ladder is asked here
+          // rather than assumed: GATE 2 (no dropped axis), GATE 3 (confidence),
+          // GATE 4 (a human's ruling outranks it).
+          const claimForGate2 = recovery ? { ...h, ...recovery.fields } : h;
+          const droppedOnResolved = droppedSpecificityAxes(claimForGate2, storedCheck.slug);
+          if (droppedOnResolved.length) {
+            push({ to: storedCheck.slug, backedBy: storedCheck.backing.source, verdict: "UNVERIFIED",
+              reason: `the stored row names ${JSON.stringify(own?.playerName ?? null)} and the title's product reaches ${storedCheck.slug}, but the holding claims ${droppedOnResolved.map((a) => `${a}=${h[a]}`).join(", ")} and it does not carry it`,
+              matchedBy: storedCheck.matchedBy, confidence: storedCheck.confidence,
+              storedBacking: ownBacking, storedSource: own?.source ?? null,
+              rowPlayer: own?.playerName ?? null });
+            console.log(`  UNVERIFIED ${label}\n             ${from}   (row names ${JSON.stringify(own?.playerName ?? null)})\n          -> ${storedCheck.slug}   NOT WRITTEN: holding claims ${droppedOnResolved.map((a) => `${a}=${h[a]}`).join(", ")}`);
+            continue;
+          }
+          if (Number(storedCheck.confidence) < MIN_CONFIDENCE) {
+            push({ to: storedCheck.slug, backedBy: storedCheck.backing.source, verdict: "UNVERIFIED",
+              reason: `the stored row names ${JSON.stringify(own?.playerName ?? null)} and the title's product reaches ${storedCheck.slug}, but confidence ${storedCheck.confidence} is below ${MIN_CONFIDENCE}`,
+              matchedBy: storedCheck.matchedBy, confidence: storedCheck.confidence,
+              storedBacking: ownBacking, storedSource: own?.source ?? null,
+              rowPlayer: own?.playerName ?? null });
+            console.log(`  UNVERIFIED ${label}\n             ${from}   (row names ${JSON.stringify(own?.playerName ?? null)})\n          -> ${storedCheck.slug}   NOT WRITTEN: conf ${storedCheck.confidence} < ${MIN_CONFIDENCE}`);
+            continue;
+          }
+          if (recovery?.userAuthored) {
+            // GATE 4 — a human's ruling is report-only forever, and a player
+            // contradiction is exactly the new evidence that would justify
+            // revisiting it. Reported in full; the decision stays with them.
+            push({ to: storedCheck.slug, backedBy: storedCheck.backing.source, verdict: "UNVERIFIED",
+              reason: `a human ruled this identity (${recovery.userAuthoredBy}) — report only; the stored row names ${JSON.stringify(own?.playerName ?? null)} and the title's product reaches ${storedCheck.slug} (${JSON.stringify(storedCheck.backing.playerName ?? null)})`,
+              matchedBy: storedCheck.matchedBy, confidence: storedCheck.confidence, userAuthored: true,
+              storedBacking: ownBacking, storedSource: own?.source ?? null,
+              rowPlayer: own?.playerName ?? null });
+            console.log(`  UNVERIFIED ${label}\n             ${from}   (row names ${JSON.stringify(own?.playerName ?? null)})\n          -> ${storedCheck.slug}   NOT WRITTEN: ruled by ${recovery.userAuthoredBy}`);
+            continue;
+          }
+          push({ to: storedCheck.slug, backedBy: storedCheck.backing.source, verdict: "REDERIVE",
+            reason: `the stored identity is checklist-backed by ${own?.source ?? "unknown"} but names ${JSON.stringify(own?.playerName ?? null)}, not this holding's player — the title's product "${storedCheck.titleSetName}" reaches ${storedCheck.slug}, checklist-backed by ${storedCheck.backing.source} and naming ${JSON.stringify(storedCheck.backing.playerName ?? null)}`,
+            matchedBy: storedCheck.matchedBy, confidence: storedCheck.confidence,
+            recoveredFields: (recovery?.recovered ?? []).map((f: any) => ({ field: f.field, value: f.value, source: f.source, via: f.via })),
+            userAuthored: false,
+            storedBacking: ownBacking, storedSource: own?.source ?? null,
+            rowPlayer: storedCheck.backing.playerName ?? null });
+          console.log(`  RESOLVED   ${label}\n             ${from}   (${JSON.stringify(own?.playerName ?? null)} — not this player)\n          -> ${storedCheck.slug}   ${JSON.stringify(storedCheck.backing.playerName ?? null)} via the title's product "${storedCheck.titleSetName}"`);
+          continue;
+        }
+
+        if (storedCheck.kind === "park") {
+          push({ to: from, backedBy: own?.source ?? null, verdict: "UNVERIFIED",
+            reason: storedCheck.reason,
+            matchedBy: r.matchedBy, confidence: r.confidence,
+            recoveredFields: (recovery?.recovered ?? []).map((f: any) => ({ field: f.field, value: f.value, source: f.source, via: f.via })),
+            userAuthored: !!recovery?.userAuthored,
+            storedBacking: ownBacking, storedSource: own?.source ?? null,
+            rowPlayer: own?.playerName ?? null });
+          console.log(`  UNVERIFIED ${label}\n             ${from}   NOT AN AGREE: the row names ${JSON.stringify(own?.playerName ?? null)}, the holding says ${JSON.stringify(h.playerName ?? null)}`);
+          continue;
+        }
+
         push({ to, backedBy: own?.source ?? null, verdict: "AGREE",
           reason: `re-derivation agrees with the stored identity, and it is checklist-backed by ${own?.source ?? "unknown"}`,
-          matchedBy: r.matchedBy, confidence: r.confidence });
-        console.log(`  AGREE      ${label}  ${from}   backed by ${own?.source ?? "unknown"}`);
+          matchedBy: r.matchedBy, confidence: r.confidence,
+          storedBacking: ownBacking, storedSource: own?.source ?? null,
+          rowPlayer: own?.playerName ?? null });
+        console.log(`  AGREE      ${label}  ${from}   backed by ${own?.source ?? "unknown"}   row names ${JSON.stringify(own?.playerName ?? null)}`);
         continue;
       }
 
@@ -990,7 +1186,8 @@ async function rederive(
         push({ to, backedBy: own?.source ?? null, verdict: "AGREE-UNBACKED",
           reason: `stored identity is ${ownBacking} (${own?.source ?? "no catalog row"}) and a human ruled it (${recovery.userAuthoredBy}) — report only`,
           matchedBy: r.matchedBy, confidence: r.confidence, userAuthored: true,
-          storedBacking: ownBacking, storedSource: own?.source ?? null });
+          storedBacking: ownBacking, storedSource: own?.source ?? null,
+          rowPlayer: own?.playerName ?? null });
         console.log(`  AGREE-UNBACKED ${label}  ${from}   ${ownBacking} — ruled by ${recovery.userAuthoredBy}, never overwritten by this pass`);
         continue;
       }
@@ -1021,8 +1218,9 @@ async function rederive(
           matchedBy: r.matchedBy, confidence: r.confidence,
           recoveredFields: (recovery?.recovered ?? []).map((f: any) => ({ field: f.field, value: f.value, source: f.source, via: f.via })),
           userAuthored: !!recovery?.userAuthored,
-          storedBacking: ownBacking, storedSource: own?.source ?? null });
-        console.log(`  REDERIVE   ${label}\n             ${from}   (${ownBacking}: ${own?.source ?? "no catalog row"})\n          -> ${twin.id}   checklist twin, backed by ${twin.source}`);
+          storedBacking: ownBacking, storedSource: own?.source ?? null,
+          rowPlayer: twin.playerName ?? null });
+        console.log(`  REDERIVE   ${label}\n             ${from}   (${ownBacking}: ${own?.source ?? "no catalog row"})\n          -> ${twin.id}   checklist twin, backed by ${twin.source}, names ${JSON.stringify(twin.playerName ?? null)}`);
         continue;
       }
 
@@ -1035,8 +1233,9 @@ async function rederive(
           ? `stored identity is ${ownBacking} (${own?.source ?? "no catalog row"}) and ${twins.length} checklist twins of this card survive the gates — ambiguous, refusing to pick one`
           : `stored identity is ${ownBacking} (${own?.source ?? "no catalog row"}); no checklist row transcribes this card — acquire the checklist`,
         matchedBy: r.matchedBy, confidence: r.confidence,
-        storedBacking: ownBacking, storedSource: own?.source ?? null });
-      console.log(`  AGREE-UNBACKED ${label}  ${from}   ${ownBacking} (${own?.source ?? "no catalog row"})${twins.length > 1 ? ` — ${twins.length} ambiguous twins` : " — no checklist twin: ACQUIRE"}`);
+        storedBacking: ownBacking, storedSource: own?.source ?? null,
+        rowPlayer: own?.playerName ?? null });
+      console.log(`  AGREE-UNBACKED ${label}  ${from}   ${ownBacking} (${own?.source ?? "no catalog row"}, names ${JSON.stringify(own?.playerName ?? null)})${twins.length > 1 ? ` — ${twins.length} ambiguous twins` : " — no checklist twin: ACQUIRE"}`);
       continue;
     }
 
@@ -1113,78 +1312,29 @@ async function rederive(
     // "count by source, not row count" — a null is not a witness), and it is
     // not a contradiction that step 1 can repair: nothing was contradicted, so
     // there is nothing for the title's product to correct. It parks.
+    // GATE 1b is asked HERE by calling the shared corroboration above — the
+    // same call GATE A now makes. Both paths, one implementation.
     let destination = to;
     let destinationBacking = backing;
-    if (!recoveredSetNameIsCorroborated(h.playerName, backing.playerName)) {
-      const setNameWasRecovered = (recovery?.recovered ?? []).some((f: any) => f.field === "setName");
-      const recoveredFieldsOut = (recovery?.recovered ?? []).map((f: any) =>
-        ({ field: f.field, value: f.value, source: f.source, via: f.via }));
-
-      // STEP 1 — does the holding's OWN TITLE name a different product?
-      // Only tried when both sides actually name a player: a null on either
-      // side is an absence, not a contradiction the title can resolve.
-      const bothNamePlayers = !!normalizePlayerForCompare(h.playerName)
-        && !!normalizePlayerForCompare(backing.playerName);
-      const titleProduct = bothNamePlayers ? titleStatedProduct(h) : null;
-      let repaired: { slug: string; backing: NonNullable<Awaited<ReturnType<typeof backingOf>>> } | null = null;
-
-      if (titleProduct) {
-        console.log(`  title says "${titleProduct.setName}" (${titleProduct.source}), stored says ${JSON.stringify(h.setName ?? h.product ?? null)} — re-asking`);
-        let alt: any = null;
-        try {
-          alt = await canonicalize({
-            sport: String(h.sport ?? "Baseball").toLowerCase(),
-            year: Number(h.cardYear) || 0,
-            setName: titleProduct.setName,
-            // EVERY OTHER AXIS UNCHANGED. The contradiction is about the
-            // product; substituting more than that would be a different card.
-            cardNumber: recovery ? recovery.fields.cardNumber : String(h.cardNumber ?? ""),
-            parallel: recovery ? recovery.fields.parallel : (h.parallel ?? null),
-            isAuto: h.isAuto === true,
-            printRun: recovery
-              ? (typeof recovery.fields.printRun === "number" ? recovery.fields.printRun : null)
-              : (typeof h.printRun === "number" ? h.printRun : null),
-            player: h.playerName ?? null,
-            source: "unknown",
-          });
-        } catch (e: any) {
-          console.log(`  title-product re-ask threw: ${e?.message}`);
-        }
-        const altSlug: string | null = alt?.found && alt?.slug ? alt.slug : null;
-        if (altSlug) {
-          const altBacking = await backingOf(altSlug);
-          if (!altBacking) {
-            console.log(`  title-product candidate ${altSlug} has no catalog row — discarded`);
-          } else if (!recoveredSetNameIsCorroborated(h.playerName, altBacking.playerName)) {
-            console.log(`  title-product candidate ${altSlug} names ${JSON.stringify(altBacking.playerName ?? null)} — still not this player, discarded`);
-          } else {
-            repaired = { slug: altSlug, backing: altBacking };
-            // The matcher's own confidence for the destination we will
-            // actually write is the one the report must carry.
-            r = { ...r, matchedBy: `${alt.matchedBy}+title-product`, confidence: alt.confidence };
-          }
-        } else {
-          console.log(`  title-product re-ask found nothing (${alt?.matchedBy}, conf ${alt?.confidence})`);
-        }
-      }
-
-      if (repaired) {
-        destination = repaired.slug;
-        destinationBacking = repaired.backing;
-        console.log(`  RESOLVED   ${label}\n             ${to}   (${JSON.stringify(backing.playerName ?? null)} — not this player)\n          -> ${destination}   ${JSON.stringify(destinationBacking.playerName ?? null)} via the title's product "${titleProduct!.setName}"`);
-      } else {
-        // STEP 2 — PARK. identityUnverified, with the contradiction named.
-        push({ to, backedBy: backing.source, verdict: "UNVERIFIED",
-          reason: `${setNameWasRecovered ? "set name was recovered from listing text and the" : "the"} destination names a different player: holding ${JSON.stringify(h.playerName ?? null)} vs catalog row ${JSON.stringify(backing.playerName ?? null)}`
-            + (titleProduct
-              ? ` — the title says "${titleProduct.setName}" and no checklist row for that product names this player either`
-              : " — the title names no other product to try"),
-          matchedBy: r.matchedBy, confidence: r.confidence,
-          recoveredFields: recoveredFieldsOut,
-          userAuthored: !!recovery?.userAuthored });
-        console.log(`  UNVERIFIED ${label}\n             ${from}\n          -> ${to}   NOT WRITTEN: player mismatch (holding ${JSON.stringify(h.playerName ?? null)} vs row ${JSON.stringify(backing.playerName ?? null)})`);
-        continue;
-      }
+    const check = await corroboratePlayer(h, recovery, { slug: to, backing });
+    if (check.kind === "park") {
+      push({ to, backedBy: backing.source, verdict: "UNVERIFIED",
+        reason: check.reason,
+        matchedBy: r.matchedBy, confidence: r.confidence,
+        recoveredFields: (recovery?.recovered ?? []).map((f: any) =>
+          ({ field: f.field, value: f.value, source: f.source, via: f.via })),
+        userAuthored: !!recovery?.userAuthored,
+        rowPlayer: backing.playerName ?? null });
+      console.log(`  UNVERIFIED ${label}\n             ${from}\n          -> ${to}   NOT WRITTEN: player mismatch (holding ${JSON.stringify(h.playerName ?? null)} vs row ${JSON.stringify(backing.playerName ?? null)})`);
+      continue;
+    }
+    if (check.kind === "resolved") {
+      destination = check.slug;
+      destinationBacking = check.backing;
+      // The matcher's own confidence for the destination we will actually
+      // write is the one the report must carry.
+      r = { ...r, matchedBy: check.matchedBy, confidence: check.confidence };
+      console.log(`  RESOLVED   ${label}\n             ${to}   (${JSON.stringify(backing.playerName ?? null)} — not this player)\n          -> ${destination}   ${JSON.stringify(destinationBacking.playerName ?? null)} via the title's product "${check.titleSetName}"`);
     }
 
     // GATE 2 — NO SILENT COLLAPSE. A holding that claims a print run, a serial
@@ -1224,7 +1374,8 @@ async function rederive(
     if (claimed.length) {
       push({ to: destination, backedBy: destinationBacking.source, verdict: "UNVERIFIED",
         reason: `no ladder source — the holding claims ${claimed.map((a) => `${a}=${h[a]}`).join(", ")} and the destination does not carry it`,
-        matchedBy: r.matchedBy, confidence: r.confidence });
+        matchedBy: r.matchedBy, confidence: r.confidence,
+        rowPlayer: destinationBacking.playerName ?? null });
       console.log(`  UNVERIFIED ${label}\n             ${from}\n          -> ${destination}   NOT WRITTEN: holding claims ${claimed.map((a) => `${a}=${h[a]}`).join(", ")}, destination does not carry it`);
       continue;
     }
@@ -1235,7 +1386,8 @@ async function rederive(
     if (Number(r.confidence) < MIN_CONFIDENCE) {
       push({ to: destination, backedBy: destinationBacking.source, verdict: "UNVERIFIED",
         reason: `confidence ${r.confidence} below ${MIN_CONFIDENCE}`,
-        matchedBy: r.matchedBy, confidence: r.confidence });
+        matchedBy: r.matchedBy, confidence: r.confidence,
+        rowPlayer: destinationBacking.playerName ?? null });
       console.log(`  UNVERIFIED ${label}\n             ${from}\n          -> ${destination}   NOT WRITTEN: conf ${r.confidence} < ${MIN_CONFIDENCE}`);
       continue;
     }
@@ -1251,15 +1403,17 @@ async function rederive(
     if (recovery?.userAuthored) {
       push({ to: destination, backedBy: destinationBacking.source, verdict: "UNVERIFIED",
         reason: `a human ruled this identity (${recovery.userAuthoredBy}) — report only; field recovery proposes ${destination}`,
-        matchedBy: r.matchedBy, confidence: r.confidence, recoveredFields, userAuthored: true });
+        matchedBy: r.matchedBy, confidence: r.confidence, recoveredFields, userAuthored: true,
+        rowPlayer: destinationBacking.playerName ?? null });
       console.log(`  UNVERIFIED ${label}\n             ${from}\n          -> ${destination}   NOT WRITTEN: ruled by ${recovery.userAuthoredBy} — a human's identity is never overwritten by this pass`);
       continue;
     }
 
     push({ to: destination, backedBy: destinationBacking.source, verdict: "REDERIVE",
       reason: `checklist-backed by ${destinationBacking.source}`, matchedBy: r.matchedBy, confidence: r.confidence,
-      recoveredFields, userAuthored: false });
-    console.log(`  REDERIVE   ${label}\n             ${from}\n          -> ${destination}   (${r.matchedBy}, conf ${r.confidence})  backed by ${destinationBacking.source}${destinationBacking.setName ? ` — "${destinationBacking.setName}"` : ""}`);
+      recoveredFields, userAuthored: false,
+      rowPlayer: destinationBacking.playerName ?? null });
+    console.log(`  REDERIVE   ${label}\n             ${from}\n          -> ${destination}   (${r.matchedBy}, conf ${r.confidence})  backed by ${destinationBacking.source}, names ${JSON.stringify(destinationBacking.playerName ?? null)}${destinationBacking.setName ? ` — "${destinationBacking.setName}"` : ""}`);
   }
 
   const counts = verdicts.reduce<Record<string, number>>((a, v) => { a[v.verdict] = (a[v.verdict] ?? 0) + 1; return a; }, {});
