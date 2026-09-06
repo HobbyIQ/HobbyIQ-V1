@@ -2104,6 +2104,84 @@ const RIVAL_BRAND_WORDS = /\b(?:upper\s*deck|bowman'?s?|topps|fleer|donruss|scor
  */
 const TCG_VERTICAL_TITLE = /\b(pokemon|pok[eé]?mon|pok\s?mon|yugioh|yu-?gi-?oh|magic\s+the\s+gathering|\bmtg\b|dragon\s*ball|one\s+piece|weiss\s+schwarz|digimon|star\s+wars|halo|final\s+fantasy|ultraman|kaiju|godzilla|marvel|dc\s+comics|funko|topps\s+wacky|garbage\s+pail|hearthstone|lorcana|flesh\s+and\s+blood)\b/;
 
+/**
+ * CF-A-TCG-TITLE-NEED-NOT-SAY-POKEMON (2026-09-06), the last gap in
+ * CF-THE-ENGLISH-SET-CODE-IS-THE-KEY.
+ *
+ * THE DEFECT. The gate above admits a title to the Pokemon vocabulary only
+ * when the title says a VERTICAL word out loud — "pokemon", "yugioh". The
+ * largest single source of Pokemon sales in the pool does not:
+ *
+ *   "Eevee V - SWSH: Crown Zenith - Holofoil"
+ *   "Charizard ex - SV: Obsidian Flames - Holofoil"
+ *   "Giratina VSTAR - SWSH: Lost Origin - Holofoil"
+ *
+ * That is TCGplayer's own title shape, and it reaches us through tca-ebay as
+ * `<card> - <ERA>: <set> - <finish>`. It names the era (`SWSH:`, `SV:`), the
+ * set, and the card's mechanic (`V`, `VSTAR`, `ex`) — everything except the
+ * word "Pokemon". So the gate refused it and the forty-odd sports rules below
+ * answered instead. Measured on this branch, before this change:
+ *
+ *   "Eevee V - SWSH: Crown Zenith - Holofoil"       -> Panini Zenith
+ *   "Charizard ex - SV: Obsidian Flames - Holofoil" -> Panini Obsidian
+ *   "Giratina VSTAR - SWSH: Lost Origin - Holofoil" -> Unknown
+ *
+ * The first two are the harm CF-ONE-CARD-ONE-ROW-ONE-POOL names: a confident
+ * WRONG key that passes the slug guard and fuses a Pokemon sale into a Panini
+ * pool. The 2026-09-06 Crown Zenith census found 585 live sold_comps rows
+ * addressed `panini-zenith` under sport pokemon, and 584 carry this shape.
+ *
+ * THE FIX IS ONE THIS FILE ALREADY MADE ONCE. `tcgVertical.service` has
+ * recognized these titles since 2026-08-14 — `\bswsh\b`, `\bvstar\b|\bvmax\b`
+ * and `\bcrown zenith\b` are all in its TCG_TITLE_PATTERNS. Two lists answered
+ * the same question and disagreed, which is the failure the note on
+ * TCG_VERTICAL_TITLE itself warns about ("ONE list decides the question in
+ * both places"). This is the missing half of that list, kept HERE rather than
+ * imported because tcgVertical.service imports this module and importing it
+ * back would close a cycle — the same reason pokemonEnglishSetKeyRuling copies
+ * the year pattern instead of importing it.
+ *
+ * DELIBERATELY NARROW, because a false positive sends a real sports sale to
+ * "Unknown". Every alternative is an ERA PREFIX IN ITS COLON FORM or a Pokemon
+ * CARD MECHANIC — never a bare word a sports title could carry:
+ *
+ *   `swsh:` `sv:` `sm:` `xy:`   the TCGplayer era prefix, colon REQUIRED. A
+ *                               bare `\bsv\b` would hit jersey and serial text;
+ *                               the colon is what makes it a set address.
+ *   `vstar` `vmax`              Pokemon mechanics with no sports homonym.
+ *                               `\bv\b` alone is NOT here — it is a score
+ *                               separator ("Bears v Packers").
+ *   `sword & shield` `scarlet & violet`
+ *                               the eras spelled out; two-word phrases no
+ *                               sports product uses.
+ *   `crown zenith` `galarian gallery`
+ *                               named Pokemon products, already in
+ *                               tcgVertical.service's own list. Three census
+ *                               titles carry the set name with NO era prefix
+ *                               and no "Pokemon" ("Radiant Charizard Crown
+ *                               Zenith 020/159 Holo PSA 9 English (2023)"), so
+ *                               the product name has to be admissible on its
+ *                               own. Both are two-word phrases; neither
+ *                               `zenith` nor `gallery` is admitted alone,
+ *                               which is what keeps Panini Zenith untouched.
+ *   `GG12/GG70`                 the Galarian Gallery card-of-set notation. The
+ *                               `/GG` is what makes it unambiguous — a sports
+ *                               serial is `12/70`, never `GG12/GG70`.
+ *
+ * `ex` is NOT here, on purpose: it is a grade word ("EX/NM", "EX MT") on tens
+ * of thousands of vintage sports slabs, and admitting it would send them all to
+ * "Unknown". A Pokemon "ex" title reaches the vocabulary by its era prefix
+ * instead, which every TCGplayer title carries.
+ */
+const TCG_ERA_OR_MECHANIC_TITLE =
+  /\b(?:swsh|sv|sm|xy)\s*:|\bvstar\b|\bvmax\b|\bsword\s*&\s*shield\b|\bscarlet\s*&\s*violet\b|\bgg\d{1,2}\s*\/\s*gg\d{1,2}\b|\bcrown\s+zenith\b|\bgalarian\s+gallery\b/i;
+
+/** A title belonging to a TCG vertical: it says the vertical outright, or it
+ *  carries an era prefix / card mechanic only TCG product uses. */
+function isTcgVerticalTitle(t: string): boolean {
+  return TCG_VERTICAL_TITLE.test(t) || TCG_ERA_OR_MECHANIC_TITLE.test(t);
+}
+
 function noRivalBrand(t: string, own: RegExp | null = null): boolean {
   const hits = t.match(new RegExp(RIVAL_BRAND_WORDS.source, "gi")) ?? [];
   if (hits.length === 0) return true;
@@ -2294,9 +2372,78 @@ export function resolveJapanesePokemonSetCodeFromTitle(title: string): string | 
   return null;
 }
 
+/**
+ * CF-A-TCG-TITLE-NEED-NOT-SAY-POKEMON (2026-09-06), the POKEMON half.
+ *
+ * `isTcgVerticalTitle` admits every TCG vertical — Yu-Gi-Oh, MTG, Lorcana —
+ * because its job is to keep the SPORTS rules off a TCG title. The English
+ * Pokemon vocabulary needs the opposite question answered: is this title
+ * POKEMON? Handing it the general gate let a Yu-Gi-Oh title be scored against
+ * 1,497 Pokemon aliases, and "Rage of the Abyss" resolved to `ex3` — the exact
+ * cross-vertical fusion CF-NO-CROSS-VERTICAL-FALLBACK forbids, caught by the
+ * boundary test that pins it.
+ *
+ * So this gate is the word "Pokemon" OR a token only POKEMON product carries.
+ * Every alternative names a Pokemon era, mechanic or product; none is a word
+ * another TCG or a sports title uses. `\bsv\b` and `ex` are still excluded for
+ * the reasons TCG_ERA_OR_MECHANIC_TITLE gives.
+ *
+ * COMPOSED FROM that constant rather than restating it, so the two gates
+ * cannot drift. Keeping two spellings of one vocabulary in sync by hand is
+ * the exact defect this ruling repairs -- TCG_VERTICAL_TITLE and
+ * tcgVertical.service's TCG_TITLE_PATTERNS answered the same question and
+ * disagreed.
+ */
+const POKEMON_TITLE_EVIDENCE = new RegExp(
+  /\b(?:pokemon|pok[eé]?mon|pok\s?mon)\b/.source + "|" + TCG_ERA_OR_MECHANIC_TITLE.source,
+  "i",
+);
+
+/**
+ * CF-AN-ERA-IS-NOT-A-SET (2026-09-06).
+ *
+ * Six alias keys name an ERA — the multi-year container Pokemon prints under —
+ * and each maps to that era's FIRST set, because that set's own name is the
+ * era's name ("Sword & Shield" the era, `swsh1` the 2020 base set):
+ *
+ *   sword-shield -> swsh1     scarlet-violet -> sv01    sun-moon -> sm1
+ *   black-white  -> bw1       diamond-pearl  -> dp1     heartgold-soulsilver -> hgss1
+ *
+ * A title routinely names BOTH the era and the set inside it, which is how
+ * TCGplayer and the graders write a slab:
+ *
+ *   "2023 Pokemon Sword & Shield Series - Crown Zenith - Hisuian Samurott V"
+ *
+ * `sword-shield` and `crown-zenith` are both 12 characters, so longest-first
+ * left the winner to sort stability and this title resolved to `swsh1` — the
+ * 2020 base set, a different product three years and one checklist away from
+ * the card actually sold. Measured on main before this change, so it is a
+ * standing defect this ruling makes reachable for many more titles rather than
+ * one it introduces.
+ *
+ * THE RULE IS THE CONTAINMENT, NOT THE LENGTH. An era alias is the answer only
+ * when the title names NO set within it, so it is ranked last and any other
+ * alias — of any length — wins ahead of it. That keeps the era reachable for a
+ * bare "Pokemon Sword & Shield booster" title while never letting it outrank
+ * the set the card is actually from. Six keys, listed rather than pattern
+ * matched: a rule inferred from spelling would eventually demote a real set
+ * whose name happens to look like an era's.
+ */
+const POKEMON_ERA_CONTAINER_ALIASES: ReadonlySet<string> = new Set([
+  "sword-shield", "scarlet-violet", "sun-moon",
+  "black-white", "diamond-pearl", "heartgold-soulsilver",
+]);
+
 export function resolveEnglishPokemonSetFromTitle(title: string): string | null {
   const t = String(title ?? "");
-  if (!/\b(pokemon|pok[eé]?mon|pok\s?mon)\b/i.test(t)) return null;
+  // CF-A-TCG-TITLE-NEED-NOT-SAY-POKEMON (2026-09-06). A TCGplayer title
+  // ("Eevee V - SWSH: Crown Zenith - Holofoil") names its era and its set but
+  // never the word "Pokemon", and requiring that word HERE would keep the
+  // vocabulary unreachable for the very population this ruling is about, even
+  // after the caller's gate was widened. POKEMON_TITLE_EVIDENCE — NOT the
+  // general TCG gate, which would let a Yu-Gi-Oh title be scored against the
+  // Pokemon aliases.
+  if (!POKEMON_TITLE_EVIDENCE.test(t)) return null;
   // The Japanese vocabulary owns these titles -- see the caller's note.
   if (/\b(japanese|jpn)\b/i.test(t)) return null;
   const cleaned = t
@@ -2334,7 +2481,14 @@ export function resolveEnglishPokemonSetFromTitle(title: string): string | null 
       candidates.push(entry);
     }
   }
-  candidates.sort((a, b) => b[0].length - a[0].length);
+  // An ERA alias is a container, never a set: it ranks last so any other
+  // alias wins ahead of it regardless of length (CF-AN-ERA-IS-NOT-A-SET).
+  candidates.sort((a, b) => {
+    const ea = POKEMON_ERA_CONTAINER_ALIASES.has(a[0]) ? 1 : 0;
+    const eb = POKEMON_ERA_CONTAINER_ALIASES.has(b[0]) ? 1 : 0;
+    if (ea !== eb) return ea - eb;
+    return b[0].length - a[0].length;
+  });
   for (const [alias, key] of candidates) {
     if (hay.includes("-" + alias + "-")) return key;
   }
@@ -2395,7 +2549,7 @@ export function inferSetKeyFromTitle(title: string, cardNumber?: string | null):
   // enforces on its own branch, applied to the one deriver left outside it.
   //
   // Scoped to a title that NAMES the vertical, so a sports title is untouched.
-  if (TCG_VERTICAL_TITLE.test(t)) {
+  if (isTcgVerticalTitle(t)) {
     const enSet = resolveEnglishPokemonSetFromTitle(raw);
     if (enSet) return enSet;
     const jaSet = resolveJapanesePokemonSetCodeFromTitle(raw);
@@ -2744,7 +2898,7 @@ export function inferSetKeyFromTitle(title: string, cardNumber?: string | null):
   // For obviously non-sports contexts, return a truthful placeholder
   // so the LLM-provided setName wins downstream (persistVendorSalesToPool
   // uses `?? inferSetKeyFromTitle` for the fallback).
-  if (TCG_VERTICAL_TITLE.test(t)) {
+  if (isTcgVerticalTitle(t)) {
     // CF-THE-POKEMON-VOCABULARY-WAS-NEVER-REACHABLE-FROM-THE-TITLE
     // (2026-09-04, follow-on to V6 / #1624).
     //
