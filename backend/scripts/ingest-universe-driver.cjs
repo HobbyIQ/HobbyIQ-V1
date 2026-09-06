@@ -1763,7 +1763,7 @@ function acquireEntry(entry, dir) {
  * stamp on a lane that IS listed is treated as version 0 -- written before the
  * stamp existed, therefore older than anything current.
  */
-const LANE_CONVERTER_VERSION = { sportscardchecklist: 2 };
+const LANE_CONVERTER_VERSION = { sportscardchecklist: 3 };
 
 /** The converter version a staged manifest claims, or 0 when it claims none. */
 function stagedConverterVersion(manifestPath) {
@@ -1908,6 +1908,12 @@ async function writeControl(entry, verdict) {
     stagedStats: verdict.stats || null,
     lastAttempt: new Date().toISOString(),
     attempts: (verdict.priorAttempts || 0) + 1,
+    // THE VERDICT RECORDS WHICH CONVERTER REACHED IT. Without this the queue
+    // filter cannot tell a fresh verdict from one recorded before the last
+    // bump, so a re-opened entry would be re-opened again on every subsequent
+    // run -- a bump that never stops costing. Null for a lane with no declared
+    // version, which reads as "unversioned" and changes nothing for it.
+    converterVersion: LANE_CONVERTER_VERSION[entry.lane] ?? null,
   };
   await cosmos().container(CONTROL_CONTAINER).items.upsert(doc);
   return doc;
@@ -2674,7 +2680,7 @@ if (require.main !== module) return;
   const priorById = new Map();
   {
     const { resources } = await cosmos().container(CONTROL_CONTAINER).items.query({
-      query: "SELECT c.entryId, c.status, c.attempts FROM c WHERE c.docType = 'ingest_universe_status' AND c.lane = @l",
+      query: "SELECT c.entryId, c.status, c.attempts, c.converterVersion FROM c WHERE c.docType = 'ingest_universe_status' AND c.lane = @l",
       parameters: [{ name: "@l", value: lane }],
     }).fetchAll();
     for (const r of resources) priorById.set(r.entryId, r);
@@ -2685,12 +2691,57 @@ if (require.main !== module) return;
   // a request and a verdict per run to learn the same thing. SCOPE=recheck is
   // the way back once tcgdex grows the cards.
   const TERMINAL = TERMINAL_STATUSES;
+  /**
+   * CF-A-CONVERTER-BUMP-RE-OPENS-ITS-OWN-VERDICTS (2026-09-06).
+   *
+   * #1875 stamped the converter version and taught `acquireFromStaging` to pass
+   * over a stale staged file. That is HALF the mechanism, and the missing half
+   * made the whole thing inert: the stamp is read inside acquireFromStaging,
+   * which runs only for an entry that already reached the queue -- and the
+   * filter below drops every terminal verdict BEFORE that.
+   *
+   * So a converter fix re-opened nothing. Measured today after #1878, on the
+   * baseball 1948-1969 cell: 107 entries, 97 of them terminal (94 `partial`,
+   * 2 `short-ingest`, 1 `empty`), which a pending-only walk skips outright --
+   * including both 1957 entries the fix was written for. The run reported
+   * "nothing intended", exactly as observed.
+   *
+   * A VERDICT IS A STATEMENT ABOUT AN OUTPUT, and when the code that produces
+   * that output changes, the statement is stale -- not wrong, but no longer
+   * evidence. So a terminal verdict recorded by an OLDER converter re-enters the
+   * queue on its own, which is what the stamp was built to do and could not.
+   *
+   * NARROW BY CONSTRUCTION:
+   *   - only lanes that declare a version (sportscardchecklist alone today);
+   *   - only when the verdict records a version OLDER than current -- a verdict
+   *     already at the current version stays terminal, so a re-dispatch after
+   *     this run does NOT re-walk the same entries again;
+   *   - the `failed` attempts ceiling is untouched, so a lane that is broken
+   *     for its own reasons still stops after three tries.
+   *
+   * An UNSTAMPED verdict counts as older, which is every verdict recorded
+   * before this shipped -- that is the population a bump has to re-open, and it
+   * happens exactly once per bump.
+   */
+  const staleByConverter = (prior) => {
+    const current = LANE_CONVERTER_VERSION[lane];
+    if (!current || !prior) return false;
+    const at = Number(prior.converterVersion);
+    return !(Number.isFinite(at) && at >= current);
+  };
   const queue = [];
+  let reopened = 0;
   for (const e of candidates) {
     const prior = priorById.get(e.id);
-    if (prior && !RECHECK && TERMINAL.has(prior.status)) continue;
+    if (prior && !RECHECK && TERMINAL.has(prior.status)) {
+      if (!staleByConverter(prior)) continue;
+      reopened++;
+    }
     if (prior && !RECHECK && prior.status === "failed" && (prior.attempts || 0) >= 3) continue;
     queue.push({ entry: e, prior });
+  }
+  if (reopened) {
+    console.log(`  converter     v${LANE_CONVERTER_VERSION[lane]} re-opened ${f(reopened)} terminal verdict(s) recorded by an older converter`);
   }
 
   // ORDER BEFORE TAKING. The slice below is the run; ordering after it would
