@@ -799,8 +799,13 @@ function splitCardHeader(raw) {
  *    that were refused against themselves now land. Stale `partial` verdicts
  *    recorded under the old rule have to be re-attempted, which is what this
  *    bump is for.
+ * 4  2026-09-06: "Inserts" is a page heading, not a subset name (#1894) -- the
+ *    same fold as v3, one heading over. Eight 1998/1999 SP Authentic insert
+ *    pages were refused ENTIRELY (read 42, wrote 0, REFUSED 42) against 56 +
+ *    130 baseballcardpedia rows tagged with the literal section word
+ *    "Inserts". Those verdicts were recorded under v3 and must re-open.
  */
-const CONVERTER_VERSION = 3;
+const CONVERTER_VERSION = 4;
 
 const NOT_FOUND_RE = /Checklist Not Found|NOT FOUND\s*-\s*https?:\/\//i;
 
