@@ -3724,10 +3724,14 @@ if (require.main !== module) return;
       // `failed` is our own pipe, and a control page cannot vouch for it --
       // see HOST_FAULT_STATUSES. That streak keeps the abort it always had.
       const hostFault = streakStatuses.length > 0 && streakStatuses.every((s) => HOST_FAULT_STATUSES.has(s));
-      const probe = hostFault
-        ? (console.log(`  PROBING A CONTROL PAGE before judging the lane — a streak is a hypothesis, not a diagnosis.`),
-          await probeControlPage(lane, CONTROL_FETCH))
-        : { verdict: "abort", reason: `the streak is our own pipe (${[...new Set(streakStatuses)].join(", ")}), which no control page can vouch for` };
+      let probe;
+      if (hostFault) {
+        console.log(`  PROBING A CONTROL PAGE before judging the lane — a streak is a hypothesis, not a diagnosis.`);
+        probe = await probeControlPage(lane, CONTROL_FETCH);
+      } else {
+        const kinds = [...new Set(streakStatuses)].join(", ");
+        probe = { verdict: "abort", reason: `the streak is our own pipe (${kinds}), which no control page can vouch for` };
+      }
       if (probe.control) console.log(`  control: ${probe.control.label}`);
 
       if (probe.verdict === "continue") {
