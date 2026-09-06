@@ -111,7 +111,7 @@ const WATCHED: Array<{ file: string; label: string; fn: string; hash: string }> 
   { file: FETCHER, label: "fetcher", fn: "parallelFromSlug", hash: "" },
 ];
 
-/** The recorded behaviour hash for each watched function, at CONVERTER_VERSION 3. */
+/** The recorded behaviour hash for each watched function, at CONVERTER_VERSION 4. */
 const RECORDED: Record<string, string> = {
   "subset-identity:claimedSubsetOf": "def8b0f7187288a3",
   "subset-identity:isBaseSectionLabel": "5f89a5eff2a078ec",
@@ -120,7 +120,7 @@ const RECORDED: Record<string, string> = {
   "fetcher:zeroCardReason": "8ed6926f87249ce6",
   "fetcher:canonicalSlug": "f0c397eb06ab28ca",
   "fetcher:parseSetUrl": "9f3348f29eb331c3",
-  "fetcher:buildRows": "96799fa6888560a4",
+  "fetcher:buildRows": "e328487558b2f244",
   "fetcher:splitParentAndSubset": "17f62334a02e1960",
   "fetcher:parallelFromSlug": "fd2bea5160dd904e",
 };
@@ -141,9 +141,9 @@ function currentHashes(): Record<string, string> {
 
 // ── the bump itself ──────────────────────────────────────────────────────────
 
-describe("the SCC converter is at v3, because the writer changed", () => {
-  it("the fetcher stamps v3", () => {
-    expect(CONVERTER_VERSION).toBe(3);
+describe("the SCC converter is at v4, because the Preview mints different rows", () => {
+  it("the fetcher stamps v4", () => {
+    expect(CONVERTER_VERSION).toBe(4);
   });
 
   it("the driver's lane table agrees -- a disagreement re-opens nothing", () => {
@@ -153,10 +153,17 @@ describe("the SCC converter is at v3, because the writer changed", () => {
     expect(LANE_CONVERTER_VERSION.sportscardchecklist).toBe(CONVERTER_VERSION);
   });
 
-  it("v3 names #1878 as its reason, in the file a reader lands on", () => {
+  it("v4 names its reason, in the file a reader lands on", () => {
+    // The reason has to be READABLE where the version is, or the next person
+    // to see a stale verdict re-open cannot tell which change re-opened it.
     const src = fs.readFileSync(FETCHER, "utf8");
+    // v3's reason is still there -- the history is cumulative, not replaced.
     expect(src).toContain("#1878");
     expect(src).toContain("Base Set");
+    // v4: Drew's Bowman's Best Preview ruling changes the setKey AND the
+    // cardNumber on every row of the six Preview pages.
+    expect(src).toContain("Bowman's Best Preview is its own product key");
+    expect(src).toContain("BBP prefix");
   });
 
   it("the version history is append-only -- v1 and v2 keep their entries", () => {
@@ -302,7 +309,10 @@ describe("a converter bump re-opens the verdicts recorded under the old one", ()
     // ...and for SCC: unstamped and older re-open, current does not.
     expect(staleByConverterProbe("sportscardchecklist", { status: "partial" })).toBe(true);
     expect(staleByConverterProbe("sportscardchecklist", { status: "partial", converterVersion: 2 })).toBe(true);
-    expect(staleByConverterProbe("sportscardchecklist", { status: "partial", converterVersion: 3 })).toBe(false);
+    // v3 NOW RE-OPENS, and that is the whole point of the v4 bump: a verdict
+    // recorded against the six Preview pages at v3 was recorded against a
+    // different setKey and a different cardNumber on every row.
+    expect(staleByConverterProbe("sportscardchecklist", { status: "partial", converterVersion: 3 })).toBe(true);
     expect(staleByConverterProbe("sportscardchecklist", { status: "partial", converterVersion: 4 })).toBe(false);
   });
 

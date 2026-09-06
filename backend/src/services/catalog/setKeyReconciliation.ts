@@ -597,6 +597,38 @@ const RULED_DISTINCT: Readonly<Record<string, string>> = Object.freeze({
   // reach the key even if the reconciliation is ever unloaded (the loader
   // degrades to an EMPTY doc by design, so "the table is absent" is a state
   // that really occurs).
+  // BOWMAN'S BEST PREVIEW — ITS OWN PRODUCT (Drew, 2026-09-06).
+  //
+  // A twenty-card insert (BBP1-BBP20) packed out in 1997 Bowman baseball and
+  // in 1997-98 Topps Stadium Club basketball. It is not a rung of Bowman's
+  // Best and not a subset of either host: it has its own numbering, and the
+  // market uses it — every Preview sale in sold_comps carries a `BBP<n>`
+  // number, which no Bowman's Best card and no Stadium Club base card has.
+  //
+  // WHY IT MUST BE A FIXED POINT, and it is not the usual family-collapse
+  // reason. The damage this key was minted to stop is already recorded: on
+  // 2026-09-06 the SCC ingest wrote the insert onto `bowmans-best` carrying
+  // the page's own 1-20 numbering, so 60 catalog rows landed INSIDE Bowman's
+  // Best's number space at `hiq:baseball:1997:bowmans-best:<1..20>:*` —
+  // twenty different cards at twenty occupied addresses. One address, two
+  // cards is the mirror of one card, two addresses, and it is worse, because
+  // nothing refuses: the rows write cleanly and then price each other.
+  //
+  // Two unanchored patterns downstream would put them back. Both
+  // `/bowmans?-best/` and `/^bowman/` in hobbyIqCardId.service.ts match this
+  // key on its prefix, and the first of them is the one that would win — so
+  // without this entry the ruled key normalizes to `bowmans-best` and is not
+  // a key at all. This is the same prefix accident `scoremasters` and
+  // `scoreboard-mantle` are here for; the vocabulary rule is also re-anchored
+  // with an explicit negative lookahead so its scope is stated rather than
+  // incidental, and the redundancy is deliberate for the reason the Black
+  // Diamond entry gives: the loader degrades to an EMPTY doc by design.
+  //
+  // ONE KEY FOR BOTH SPORTS. It is one insert; the sport segment of the id
+  // already separates the baseball and basketball rosters.
+  "bowmans-best-preview":
+    "Drew 2026-09-06: its OWN PRODUCT — the 20-card BBP1-BBP20 insert previewing Bowman's Best, packed out in 1997 Bowman (baseball) and 1997-98 Topps Stadium Club (basketball), one key for both sports. Never `bowmans-best`: minting it there put the insert inside the parent's 1-20 number space (60 rows on 2026-09-06, twenty different cards at occupied addresses). Pinned against the unanchored `/bowmans?-best/` and `/^bowman/` patterns, either of which would collapse it on the prefix.",
+
   "black-diamond-rookie-edition":
     "Drew 2026-09-04: its OWN PRODUCT — a rookie-only Upper Deck release (194 checklist rows, all 2000, baseballcardpedia), never `upper-deck-black-diamond`. The destination pool is the base sets ('1999 Upper Deck Black Diamond Baseball', 857 rows), and a rookie-only checklist fused into a full veteran one prices both wrong. Pinned against CF-UD-INSERT-LINES, whose `(?:^|-)black-diamond` branch would otherwise capture it on the prefix.",
 });
