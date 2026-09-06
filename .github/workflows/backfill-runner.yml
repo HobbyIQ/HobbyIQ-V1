@@ -728,7 +728,7 @@ on:
         default: "refractor"
         type: string
       setkey_like:
-        description: "Substring the setKey must contain (e.g. bowman). EMPTY = every setKey. Read by dedupe-catalog-partition-shadows and rehome-catalog-rows-to-own-partition. For rematch-sold-comps it is half of the IN-SLOT ROW FILTER (2026-09-07): a PREFIX on the row's STORED setKey segment, `-` bounded, so `panini-prizm` selects `panini-prizm` and every `panini-prizm-*` specialization and nothing else. It narrows the rows a slot CLASSIFIES, never the rows a slot OWNS -- the measured 32-slot shard table is untouched and slots stay disjoint -- and the banner prints the filter plus the counts skipped-by-filter vs classified."
+        description: "Substring the setKey must contain (e.g. bowman). EMPTY = every setKey. Read by dedupe-catalog-partition-shadows and rehome-catalog-rows-to-own-partition. NOTE retire-wiki-footer-catalog-rows reads this as a COMMA-SEPARATED LIST OF EXACT setKeys (it matches `c.setKey IN (...)`, never a substring) and REFUSES an empty value -- its population is 3,136 rows across 585 distinct setKeys, so naming one product per dispatch would take 585 dispatches; the refusal that guards it is 'say which products', not 'say ONE product'. For rematch-sold-comps it is half of the IN-SLOT ROW FILTER (2026-09-07): a PREFIX on the row's STORED setKey segment, `-` bounded, so `panini-prizm` selects `panini-prizm` and every `panini-prizm-*` specialization and nothing else. It narrows the rows a slot CLASSIFIES, never the rows a slot OWNS -- the measured 32-slot shard table is untouched and slots stay disjoint -- and the banner prints the filter plus the counts skipped-by-filter vs classified."
         required: false
         default: ""
         type: string
@@ -1692,6 +1692,14 @@ jobs:
           PARENTS_ONLY: ${{ inputs.parents_only == true && 'true' || 'false' }}
           # dedupe-catalog-partition-shadows: opt in to deleting keyless rows.
           RETIRE_NO_PARTITION_KEY: ${{ inputs.retire_no_partition_key == true && 'true' || 'false' }}
+          # retire-wiki-footer-catalog-rows: a REPORT counts the graded children
+          # an apply would take with each row. The probe is one STARTSWITH
+          # cross-partition scan per row (~4s measured), so it is opt-in rather
+          # than default: on the full 585-setKey scope it is hours, for a number
+          # the apply reports anyway. NO NEW INPUT -- dispatch is at 24 of
+          # GitHub's 25 -- so it rides `mode`, guarded on the script name so the
+          # token cannot leak into another lane's MODE.
+          COUNT_CHILDREN: ${{ (inputs.script == 'retire-wiki-footer-catalog-rows' && inputs.mode == 'count-children') && 'true' || '' }}
           # CF-REPRICE-USER-HOLDINGS: pin Drew's userId + enable composite path
           # so the reprice writes new v2-calibrated FMVs.
           #
@@ -2257,6 +2265,50 @@ jobs:
             N=$(grep -aoE "healed=[0-9,]+" /tmp/backfill.log | grep -oE "[0-9,]+" | tail -1 || true)
             echo "::notice::budget hit (healed=${N:-0}) — re-dispatching to continue"
             gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repair-missing-search-fields -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f setkey_like="${{ inputs.setkey_like }}" -f limit="${{ inputs.limit }}"
+          elif grep -aqE "finishLane: exiting code [0-9]+" /tmp/backfill.log && [ "${{ steps.backfill.outcome }}" = "success" ]; then
+            echo "::notice::finished within budget — done, no re-dispatch."
+          else
+            echo "::error::KILLED before finish — the lane never reached finishLane; NOT finished; re-dispatch withheld — investigate"
+            echo "  step outcome: ${{ steps.backfill.outcome }}"
+            echo "  budget marker: absent    finishLane line: $(grep -acE 'finishLane: exiting code [0-9]+' /tmp/backfill.log 2>/dev/null || echo 0)"
+            echo "  last 20 lines of /tmp/backfill.log:"
+            tail -n 20 /tmp/backfill.log 2>/dev/null || echo "  (no log)"
+            exit 1
+          fi
+
+      # retire-wiki-footer-catalog-rows: scope is SETKEY_LIKE read as a
+      # COMMA-SEPARATED LIST of exact setKeys (the lane matches `c.setKey IN
+      # (...)`, not a substring), and the lane refuses an empty scope.
+      #
+      # The resume cursor IS the predicate, as with the healer above: a retired
+      # row stops matching `cardNumber IN ('This', ...)`, so a relaunch re-reads
+      # the same scope and finds only what is left. Relaunch iff the budget
+      # marker printed (#1361); a report relaunches as a report (#1578); never
+      # on cancel.
+      #
+      # Live population measured read-only 2026-09-06: 3,136 footer rows across
+      # 585 setKeys, every one of them zero-comps. A whole-scope pass is ~10
+      # minutes of gate, so the 100-minute budget is not expected to bind —
+      # the marker and this step exist so that a scope which DOES outgrow it
+      # continues rather than stopping silently green.
+      - name: Self-relaunch retire-wiki-footer-catalog-rows until the scope is clear
+        if: ${{ !cancelled() && inputs.script == 'retire-wiki-footer-catalog-rows' }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # CF-A-KILLED-RUN-IS-NOT-A-FINISHED-RUN (#1906/#1913). Three outcomes, not two:
+          #   (a) budget marker      -> more work, re-dispatch;
+          #   (b) finishLane line    -> the lane exited on its own, genuinely done;
+          #   (c) neither            -> the step was KILLED at the 150-minute ceiling
+          #                             (or cancelled/crashed). NOT finished. Fail loudly.
+          # This lane routes BOTH its exit paths through finishLane() (the .then and the
+          # .catch of retire-wiki-footer-catalog-rows.cjs), so (b) is a witness it really
+          # writes -- absence of it here means the process never got to end on purpose.
+          if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
+            N=$(grep -aoE "deleted=[0-9,]+" /tmp/backfill.log | grep -oE "[0-9,]+" | tail -1 || true)
+            echo "::notice::budget hit (deleted=${N:-0}) — re-dispatching to continue"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=retire-wiki-footer-catalog-rows -f apply="${{ inputs.apply }}" -f setkey_like="${{ inputs.setkey_like }}"
           elif grep -aqE "finishLane: exiting code [0-9]+" /tmp/backfill.log && [ "${{ steps.backfill.outcome }}" = "success" ]; then
             echo "::notice::finished within budget — done, no re-dispatch."
           else
