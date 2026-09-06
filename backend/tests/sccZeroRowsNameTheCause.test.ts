@@ -52,6 +52,12 @@ const finest = () => readFileSync(join(FIX, "1993-94-topps-finest-main-attractio
  *  against a copy. */
 function classify(said: string): { status: string; laneProvenHealthy?: boolean } {
   if (/nothing new to add/.test(said)) return { status: EMPTY_STATUS };
+  // 2026-09-06: a challenge / rate-limit page is a LANE BACKOFF, not a verdict
+  // about the set. `unreachable` is terminal and closed 24 live entries against
+  // pages that were never broken; `backoff` is non-terminal and recheckable.
+  // Ordered first so a challenge body that also looks "gone" cannot be recorded
+  // as a verdict about the set.
+  if (/challenge\/rate-limit page/.test(said)) return { status: "backoff" };
   if (/challenge\/interstitial|did not serve a set page/.test(said)) return { status: "unreachable" };
   if (/layout not understood/.test(said)) return { status: "failed", laneProvenHealthy: true };
   return { status: "failed" };
@@ -78,10 +84,16 @@ describe("the set that tripped the abort parses in full", () => {
 });
 
 describe("zero rows names its cause", () => {
-  it("a challenge page served with 200 is the host not serving us", () => {
-    const said = zeroCardReason("<html>Just a moment... cf_chl</html>", { headers: 0, hiddenRows: 0 });
-    expect(said).toMatch(/challenge\/interstitial/);
-    expect(classify(said).status).toBe("unreachable");
+  it("a challenge page served with 200 backs the lane off -- it does not close the set", () => {
+    // The body must clear the 40 KB floor and name a set page, or it lands in
+    // the truncation branch instead -- which is what the real block bodies do.
+    const body = "<html><head><title>Just a moment...</title></head><body>cf_chl_opt" +
+      "<!-- set-151053 trading-card-checklist -->".repeat(1200) + "</body></html>";
+    const said = zeroCardReason(body, { headers: 0, hiddenRows: 0 });
+    expect(said).toMatch(/challenge\/rate-limit page/);
+    // NOT `unreachable`: that verdict is terminal, and a rate limit says
+    // nothing about whether the set exists.
+    expect(classify(said).status).toBe("backoff");
   });
 
   it("a truncated or error body is the host not serving us — this incident's real shape", () => {

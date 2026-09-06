@@ -111,15 +111,15 @@ const WATCHED: Array<{ file: string; label: string; fn: string; hash: string }> 
   { file: FETCHER, label: "fetcher", fn: "parallelFromSlug", hash: "" },
 ];
 
-/** The recorded behaviour hash for each watched function, at CONVERTER_VERSION 3. */
+/** The recorded behaviour hash for each watched function, at CONVERTER_VERSION 4. */
 const RECORDED: Record<string, string> = {
   "subset-identity:claimedSubsetOf": "def8b0f7187288a3",
   "subset-identity:isBaseSectionLabel": "5f89a5eff2a078ec",
   "subset-identity:foldSubsetText": "4c33bdf4b3715ea5",
   "subset-identity:rungKey": "9526fcf87cecbb79",
-  "fetcher:zeroCardReason": "8ed6926f87249ce6",
+  "fetcher:zeroCardReason": "eba4eeac8e75c68b",
   "fetcher:canonicalSlug": "f0c397eb06ab28ca",
-  "fetcher:parseSetUrl": "9f3348f29eb331c3",
+  "fetcher:parseSetUrl": "97144f0493f00e31",
   "fetcher:buildRows": "96799fa6888560a4",
   "fetcher:splitParentAndSubset": "17f62334a02e1960",
   "fetcher:parallelFromSlug": "fd2bea5160dd904e",
@@ -141,9 +141,9 @@ function currentHashes(): Record<string, string> {
 
 // ── the bump itself ──────────────────────────────────────────────────────────
 
-describe("the SCC converter is at v3, because the writer changed", () => {
-  it("the fetcher stamps v3", () => {
-    expect(CONVERTER_VERSION).toBe(3);
+describe("the SCC converter is at v4 — bumped again by the soft-block work", () => {
+  it("the fetcher stamps v4", () => {
+    expect(CONVERTER_VERSION).toBe(4);
   });
 
   it("the driver's lane table agrees -- a disagreement re-opens nothing", () => {
