@@ -1,0 +1,90 @@
+{
+ "generatedAt": "2026-09-06T07:55:00Z",
+ "forLane": "relocate-pool-rows-by-list.cjs",
+ "reportOnlyUntil": "Drew's review - no apply is authorized by this PR",
+ "finding": "I5 ONE-SALE-ONE-ADDRESS, pricing-invariant audit run 34018932244 (2026-09-06T07:22:25Z)",
+ "rulings": [
+  "CF-ONE-SALE-ONE-ADDRESS (2026-09-05): one eBay sale resident under two cardId partitions is a split pool AND a double count. Never a delete - RETIRE marks flaggedWrong, PARK marks identityUnverified, and both are reversible.",
+  "NONE of these 7 is covered by 2026-09-05-twin-address-dedup.json, 2026-09-06-readback-verify-twins.json or 2026-09-06-readback-found-nothing-twins.json - verified by grepping every sale id against backend/data/. All 7 are new.",
+  "ONE CAUSE, MEASURED. All 7 copies that carry a stamp were rekeyed by the SAME fleet inside 42 seconds (2026-09-06T03:43:07Z-03:43:48Z) with reason 'GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, ...'. In each case the relocate wrote the keeper and did not delete the old row - the CF-A-VERIFY-MISMATCH-IS-A-DUPLICATE-NOT-A-FAILURE surface, so the sale is resident twice and NO sale was lost.",
+  "THE KEEPER IS DECIDED BY PROVENANCE, NOT BY ADDRESS. In all 7 groups exactly one copy is both STAMPED (rekeyedAt + rekeyedFrom naming the very address being retired) and CHECKLIST-BACKED (its cardId resolves in card_catalog). The rival copy is unstamped AND its address 404s against the catalog.",
+  "'bowman' for a Pokemon card, 'unknown', and 'player-' keys are NEVER keepers. Three of the retired addresses are exactly those - hiq:pokemon:2005:bowman:9, hiq:pokemon:2005:bowman:player-pokemon-ex-emerald-sceptile, hiq:pokemon:2016:unknown:8114 - and in every one of them the keeper is a tcgdex-scraped checklist identity (ex9, xy11, sm1, sm2).",
+  "THE BASEBALL GROUP IS NOT A DONRUSS-VS-FINEST DISPUTE. The sale's own title states '2005 Topps Finest - Corey Dillon #72 X-Fractor /250' - it names Topps Finest outright and no Donruss product at all. It is a SPORT misfile: Corey Dillon is football, the rematch keeper is Lyle Overbay's baseball card, and no checklist-backed football Topps Finest #72 row exists. CF-NEVER-DEFAULT-TO-EITHER-SIDE: both copies PARK rather than one being guessed."
+ ],
+ "census": {
+  "auditBreaches": 7,
+  "alreadyListed": 0,
+  "newEntries": 8,
+  "groups": 7,
+  "retire": 6,
+  "park": 2,
+  "byClass": {
+   "pokemonMakerDefaultVsChecklist": 6,
+   "sportMisfileBothCopiesWrong": 1
+  },
+  "rekeyWindow": "2026-09-06T03:43:07.679Z - 2026-09-06T03:43:48.933Z",
+  "note": "measured read-only 2026-09-06 by point-reading BOTH partitions of every sale plus each address in card_catalog"
+ },
+ "provenance": {
+  "APPLY_ORDER": "NO IMPROVE FLEET PASS MAY RUN BETWEEN MERGE AND APPLY - the retired addresses still match the IMPROVE predicate and a pass in between would re-relocate them and race this list.",
+  "auditRun": "34018932244"
+ },
+ "entries": [
+  {
+   "id": "tca-ebay::206292909615",
+   "fromCardId": "hiq:pokemon:2005:bowman:player-pokemon-ex-emerald-sceptile:base:no-auto",
+   "price": 33.35,
+   "retireSupersededBy": "hiq:pokemon:2005:ex9:10:base:no-auto",
+   "evidence": "pokemonMakerDefaultVsChecklist: one sale resident at two partitions. The KEEPER hiq:pokemon:2005:ex9:10:base:no-auto carries THIS run's stamp (rekeyedAt 2026-09-06T03:43:48.933Z, rekeyedReason 'GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled setKey') whose rekeyedFrom names hiq:pokemon:2005:unknown:10106:base:no-auto, and it is CHECKLIST-BACKED - card_catalog holds hiq:pokemon:2005:ex9:10:base:no-auto (player Sceptile, source tcgdex-scraped-2026-08-16). The retired copy hiq:pokemon:2005:bowman:player-pokemon-ex-emerald-sceptile:base:no-auto is UNSTAMPED (no rekeyedAt, no rekeyedFrom) and its address 404s against card_catalog, so nothing attests it. Its setKey stem 'bowman' is a maker/parser default, which is never a keeper. Title on both copies: '2005 POKEMON EX EMERALD #10/106 SCEPTILE REVERSE HOLO ITALIAN'."
+  },
+  {
+   "id": "tca-ebay::278218612111",
+   "fromCardId": "hiq:pokemon:2016:unknown:8114:base:no-auto",
+   "price": 1.51,
+   "retireSupersededBy": "hiq:pokemon:2016:xy11:8:base:no-auto",
+   "evidence": "pokemonMakerDefaultVsChecklist: one sale resident at two partitions. The KEEPER hiq:pokemon:2016:xy11:8:base:no-auto carries THIS run's stamp (rekeyedAt 2026-09-06T03:43:48.899Z, rekeyedReason 'GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled setKey,cardNumber') whose rekeyedFrom names hiq:pokemon:2016:unknown:player-yanmega-break-pokemon-steam:base:no-auto, and it is CHECKLIST-BACKED - card_catalog holds hiq:pokemon:2016:xy11:8:base:no-auto (player Yanmega BREAK, source tcgdex-scraped-2026-08-16). The retired copy hiq:pokemon:2016:unknown:8114:base:no-auto is UNSTAMPED (no rekeyedAt, no rekeyedFrom) and its address 404s against card_catalog, so nothing attests it. Its setKey stem 'unknown' is a maker/parser default, which is never a keeper. Title on both copies: 'YANMEGA BREAK 2016 POKEMON STEAM SIEGE #8/114 RARE BREAK Q3628'."
+  },
+  {
+   "id": "tca-ebay::377338248663",
+   "fromCardId": "hiq:pokemon:2017:sm-guardians-rising:139:base:no-auto",
+   "price": 15,
+   "retireSupersededBy": "hiq:pokemon:2017:sm2:139:base:no-auto",
+   "evidence": "pokemonMakerDefaultVsChecklist: one sale resident at two partitions. The KEEPER hiq:pokemon:2017:sm2:139:base:no-auto carries THIS run's stamp (rekeyedAt 2026-09-06T03:43:48.730Z, rekeyedReason 'GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled setKey') whose rekeyedFrom names hiq:pokemon:2017:unknown:139:base:no-auto, and it is CHECKLIST-BACKED - card_catalog holds hiq:pokemon:2017:sm2:139:base:no-auto (player Metagross GX, source tcgdex-scraped-2026-08-16). The retired copy hiq:pokemon:2017:sm-guardians-rising:139:base:no-auto is UNSTAMPED (no rekeyedAt, no rekeyedFrom) and its address 404s against card_catalog, so nothing attests it. Its setKey stem 'sm-guardians-rising' is a stale vendor-shaped key with no checklist behind it, which is never a keeper. Title on both copies: '2017 Pokemon S&M Guardians Rising - #139 Full Art Metagross GX - PSA 7'."
+  },
+  {
+   "id": "tca-ebay::298355395101",
+   "fromCardId": "hiq:pokemon:2005:2005-pokemon-japanese-golden-sky-silvery-ocean:95:base:no-auto",
+   "price": 370,
+   "retireSupersededBy": "hiq:pokemon:2005:ex9:95:base:no-auto",
+   "evidence": "pokemonMakerDefaultVsChecklist: one sale resident at two partitions. The KEEPER hiq:pokemon:2005:ex9:95:base:no-auto carries THIS run's stamp (rekeyedAt 2026-09-06T03:43:48.353Z, rekeyedReason 'GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled setKey') whose rekeyedFrom names hiq:pokemon:2005:unknown:95:base:no-auto, and it is CHECKLIST-BACKED - card_catalog holds hiq:pokemon:2005:ex9:95:base:no-auto (player Medicham ex, source tcgdex-scraped-2026-08-16). The retired copy hiq:pokemon:2005:2005-pokemon-japanese-golden-sky-silvery-ocean:95:base:no-auto is UNSTAMPED (no rekeyedAt, no rekeyedFrom) and its address 404s against card_catalog, so nothing attests it. Its setKey stem '2005-pokemon-japanese-golden-sky-silvery-ocean' is a stale vendor-shaped key with no checklist behind it, which is never a keeper. Title on both copies: '2005 POKEMON EX EMERALD #95 MEDICHAM EX-HOLO PSA 9'."
+  },
+  {
+   "id": "tca-ebay::227158608664",
+   "fromCardId": "hiq:pokemon:2017:unknown:41149:base:no-auto:num-149",
+   "price": 1.78,
+   "retireSupersededBy": "hiq:pokemon:2017:sm1:41:base:no-auto",
+   "evidence": "pokemonMakerDefaultVsChecklist: one sale resident at two partitions. The KEEPER hiq:pokemon:2017:sm1:41:base:no-auto carries THIS run's stamp (rekeyedAt 2026-09-06T03:43:44.667Z, rekeyedReason 'GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled setKey') whose rekeyedFrom names hiq:pokemon:2017:unknown:41149:base:no-auto, and it is CHECKLIST-BACKED - card_catalog holds hiq:pokemon:2017:sm1:41:base:no-auto (player Primarina, source tcgdex-scraped-2026-08-16). The retired copy hiq:pokemon:2017:unknown:41149:base:no-auto:num-149 is UNSTAMPED (no rekeyedAt, no rekeyedFrom) and its address 404s against card_catalog, so nothing attests it. Its setKey stem 'unknown' is a maker/parser default, which is never a keeper. Title on both copies: 'Primarina 41/149 Rare Sun & Moon Base Pokemon Card 2017 Non Holo HP'."
+  },
+  {
+   "id": "tca-ebay::287351507524",
+   "fromCardId": "hiq:pokemon:2005:bowman:9:base:no-auto",
+   "price": 2000,
+   "retireSupersededBy": "hiq:pokemon:2005:ex9:9:base:no-auto",
+   "evidence": "pokemonMakerDefaultVsChecklist: one sale resident at two partitions. The KEEPER hiq:pokemon:2005:ex9:9:base:no-auto carries THIS run's stamp (rekeyedAt 2026-09-06T03:43:43.379Z, rekeyedReason 'GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled setKey') whose rekeyedFrom names hiq:pokemon:2005:unknown:9:base:no-auto, and it is CHECKLIST-BACKED - card_catalog holds hiq:pokemon:2005:ex9:9:base:no-auto (player Rayquaza, source tcgdex-scraped-2026-08-16). The retired copy hiq:pokemon:2005:bowman:9:base:no-auto is UNSTAMPED (no rekeyedAt, no rekeyedFrom) and its address 404s against card_catalog, so nothing attests it. Its setKey stem 'bowman' is a maker/parser default, which is never a keeper. Title on both copies: '2005 POKEMON EX EMERALD #9 RAYQUAZA-REVERSE FOIL PSA 7'."
+  },
+  {
+   "id": "tca-ebay::277910774346",
+   "fromCardId": "hiq:baseball:2005:topps-finest:72:x-fractor:no-auto:num-250",
+   "price": 7,
+   "parkIdentityUnverified": true,
+   "evidence": "sportMisfileBothCopiesWrong: the sale's own title is '2005 Topps Finest - Corey Dillon #72 X-Fractor /250' - Corey Dillon is a FOOTBALL player and 2005 Topps Finest is the product the title states, so the task's 'Donruss vs Finest' framing is not the dispute: NEITHER address is a Donruss card and the title names Topps Finest outright. The rematch keeper hiq:baseball:2005:topps-finest:72:x-fractor:no-auto:num-250 is checklist-backed but belongs to LYLE OVERBAY (baseball, source baseballcardpedia-ladders-2026-09-04) - a different player's card, so keeping it would file a football sale onto a baseball identity. The rival copy hiq:baseball:2005:panini-donruss:72:base:no-auto:num-25 is worse still: it sits in a BASEBALL partition under panini-donruss while its own hobbyiqCardId says hiq:football:2005:topps-finest:72:base:no-auto:num-250. The only football Topps Finest #72 row in the catalog is sales-attested with a NULL playerName, so no checklist-backed destination exists. CF-NEVER-DEFAULT-TO-EITHER-SIDE (Drew 2026-09-05): both copies PARK."
+  },
+  {
+   "id": "tca-ebay::277910774346",
+   "fromCardId": "hiq:baseball:2005:panini-donruss:72:base:no-auto:num-25",
+   "price": 7,
+   "parkIdentityUnverified": true,
+   "evidence": "sportMisfileBothCopiesWrong: the sale's own title is '2005 Topps Finest - Corey Dillon #72 X-Fractor /250' - Corey Dillon is a FOOTBALL player and 2005 Topps Finest is the product the title states, so the task's 'Donruss vs Finest' framing is not the dispute: NEITHER address is a Donruss card and the title names Topps Finest outright. The rematch keeper hiq:baseball:2005:topps-finest:72:x-fractor:no-auto:num-250 is checklist-backed but belongs to LYLE OVERBAY (baseball, source baseballcardpedia-ladders-2026-09-04) - a different player's card, so keeping it would file a football sale onto a baseball identity. The rival copy hiq:baseball:2005:panini-donruss:72:base:no-auto:num-25 is worse still: it sits in a BASEBALL partition under panini-donruss while its own hobbyiqCardId says hiq:football:2005:topps-finest:72:base:no-auto:num-250. The only football Topps Finest #72 row in the catalog is sales-attested with a NULL playerName, so no checklist-backed destination exists. CF-NEVER-DEFAULT-TO-EITHER-SIDE (Drew 2026-09-05): both copies PARK."
+  }
+ ]
+}
