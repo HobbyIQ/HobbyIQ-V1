@@ -257,14 +257,35 @@ async function flushStdio() {
  *                                is named in the log as the reason the exit
  *                                had to be explicit
  */
+const EXIT_CLEANUP_CAP_MS = Number(process.env.LANE_EXIT_CAP_MS || 5000);
+
+/**
+ * Run cleanup under a HARD cap. Whatever `work` is still doing when the cap
+ * fires is abandoned, because the caller is about to `process.exit` and an
+ * abandoned handle cannot outlive the process.
+ *
+ * The timer is unref'd here, and that is safe ONLY because process.exit()
+ * follows unconditionally on the very next line of every caller: unlike the
+ * verify cap in capped() -- which must be REF'd so node cannot exit before
+ * the cap reports -- nothing here needs to be reported. If node drains and
+ * exits early, the lane has exited, which is the goal.
+ */
+async function underExitCap(work) {
+  let timer = null;
+  try {
+    await Promise.race([
+      Promise.resolve().then(work).catch(() => {}),
+      new Promise((resolve) => {
+        timer = setTimeout(resolve, EXIT_CLEANUP_CAP_MS);
+        if (timer.unref) timer.unref();
+      }),
+    ]);
+  } catch { /* a cap is not a failure */ }
+  finally { if (timer) clearTimeout(timer); }
+}
+
 async function finishLane(code = 0, opts = {}) {
   const { client, budget: b } = opts;
-  // Best-effort: disposing closes the SDK's keep-alive sockets. It is not
-  // what GUARANTEES the exit — process.exit() is — but it lets a clean lane
-  // exit tidily rather than being severed.
-  try {
-    if (client && typeof client.dispose === "function") client.dispose();
-  } catch { /* never let cleanup fail a run whose writes already reconciled */ }
 
   if (b && typeof b.capFired === "function" && b.capFired()) {
     // Name it, so the operator reading the log knows the exit was forced and
@@ -272,7 +293,49 @@ async function finishLane(code = 0, opts = {}) {
     console.log("  the verify cap fired — exiting explicitly so an abandoned"
       + " query cannot hold the step to the ceiling.");
   }
-  await flushStdio();
+
+  // CF-A-LANE-EXITS-UNCONDITIONALLY (2026-09-05). #1809 made every lane CALL
+  // this function, and four sharded APPLY runs of retire-self-derived-
+  // identities dispatched AFTER it merged (bf47ba1, 21:30Z) STILL hit
+  // "The action 'Run backfill (APPLY)' has timed out after 150 minutes" —
+  // runs 33993974633, 33994076178, 33994101308 and 33994112578, every one of
+  // them having already printed its full RECONCILE and its
+  // "reconciled: intended … = written … + skipped …".
+  //
+  // So the call was reached and the process still did not exit. The reason is
+  // that this function AWAITED its cleanup. Against the pin's fake container
+  // both awaits settle instantly; against the real @azure/cosmos SDK, with an
+  // abandoned cross-partition request still pending, they need not settle at
+  // all — `dispose()` tears down an agent whose sockets are mid-request, and
+  // `flushStdio` waits on a `write` callback from a pipe whose reader (`tee`)
+  // is not draining. An await that never resolves is the same bug #1809 set
+  // out to kill, one frame further in: the exit line is never reached.
+  //
+  // The guarantee is therefore restated as: cleanup is BEST-EFFORT and CAPPED;
+  // the exit is UNCONDITIONAL. Everything below runs under one short cap, and
+  // the explicit exit below is reached whether that cleanup finished, threw, or
+  // is still running. Tidiness may be sacrificed; the exit may not be.
+  await underExitCap(async () => {
+    try {
+      // Disposing closes the SDK's keep-alive sockets. It is documented as
+      // synchronous, but a version that returns a promise (or one that hangs
+      // on an in-flight request) must not be able to strand the exit, so it
+      // is awaited INSIDE the cap rather than outside it.
+      if (client && typeof client.dispose === "function") await client.dispose();
+    } catch { /* never let cleanup fail a run whose writes already reconciled */ }
+    await flushStdio();
+  });
+
+  // THE OPERATOR'S PROOF. A log that ends at the reconcile leaves "did it
+  // exit, or was it killed?" unanswerable — which is exactly the question the
+  // four timed-out runs above posed. This line is the answer, and it is
+  // written with a SYNCHRONOUS `writeSync` rather than console.log because a
+  // buffered write on a wedged pipe is precisely what could not be relied on
+  // to arrive.
+  try {
+    require("node:fs").writeSync(1, "finishLane: exiting code " + code + "\n");
+  } catch { /* the exit matters, the narration does not */ }
+
   process.exit(code);
 }
 
