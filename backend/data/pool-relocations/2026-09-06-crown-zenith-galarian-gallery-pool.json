@@ -6,7 +6,8 @@
   "THE TITLE DECIDES, and every one of these titles names Crown Zenith. Classified by the card NUMBER the slug carries rather than by the title's wording alone: `GG12/GG70` and `GG12` are the Galarian Gallery number space, `108/159` is Crown Zenith's. Two rows whose titles say only \"Crown Zenith\" carry GG numbers and are routed to the subset on that evidence.",
   "A YEAR CHANGE IS IN THIS LANE'S VOCABULARY. 22 rows sit under 2021/2022 sale-year slugs; Crown Zenith is a 2023 product, so the year segment moves with the product. RELOCATE takes an arbitrary destination slug and the 2026-09-06 vintage-under-sale-year list already relocates 2015 -> 1952 the same way, so this needs no new lane shape and no rematch subclass.",
   "489 OF THESE ARE ALSO CROSS-VERTICAL SPLIT IDENTITIES: the stored cardId names sport `baseball` (one names `gaming`) while hobbyiqCardId already says pokemon. The exact-pool reader ORs the two fields, so each of those sales was being pulled into a Panini baseball pool AND a Pokemon one. planRelocatedIdentity lands BOTH fields on the destination, which is what makes this one sale in one pool again (CF-ONE-CARD-ONE-ROW-ONE-POOL).",
-  "ONE MULTI-CARD LOT IS EXCLUDED, not routed: a single sale of three different cards has no one card identity to carry."
+  "ONE MULTI-CARD LOT IS EXCLUDED, not routed: a single sale of three different cards has no one card identity to carry.",
+  "THE PARALLEL SEGMENT IS CARRIED, NOT RE-DECIDED. Each destination keeps the parallel the source slug already had (base 439, holofoil 136, full-art 5, reverse-holofoil 1, holo 2, secret 1). Measured read-only 2026-09-06: 71 of the 101 distinct destinations have a card_catalog row and 30 do NOT -- every one of the 30 is a `holofoil` / `reverse-holofoil` finish, because the tcgdex checklist for both products carries only the `base` parallel. Those rows still land at the RIGHT PRODUCT and the right card number, which is what this ruling is about; whether a TCG finish is a parallel of its own or the same card is a VOCABULARY decision that is not taken here (CF-EVERY-INGEST-USES-THE-ONE-CHECKLIST-FORMAT: blank means unknown, never a guess). Re-pointing them onto `base` would be that decision taken silently, and it would merge two pools on no evidence."
  ],
  "census": {
   "measuredAt": "2026-09-06, read-only against prod; both the cardId and hobbyiqCardId partitions were paged",
@@ -22,7 +23,10 @@
   "rowsNeedingAYearChange": 22,
   "rowsWithACrossVerticalSplitIdentity": 490,
   "distinctDestinations": 101,
-  "parserAcceptance": "after this PR's parser fix all 585 of these real titles resolve: 390 -> swsh12-5, 195 -> swsh12-5gg, none left on a Panini key (0 before)"
+  "parserAcceptance": "after this PR's parser fix all 585 of these real titles resolve: 390 -> swsh12-5, 195 -> swsh12-5gg, none left on a Panini key (0 before)",
+  "distinctDestinationsWithACatalogRow": 71,
+  "distinctDestinationsWithoutOne": 30,
+  "destinationsWithoutACatalogRowAreAllFinishParallels": "holofoil / reverse-holofoil; the tcgdex checklist for swsh12-5 and swsh12-5gg carries only `base`"
  },
  "excluded": [
   {
