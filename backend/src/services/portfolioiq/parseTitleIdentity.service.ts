@@ -51,6 +51,7 @@ import {
   AMBIGUOUS_MARKET_CODES,
 } from "../catalog/pokemonSetCodes.js";
 import { slugify } from "./hobbyIqCardId.service.js";
+import { statedFinishFromChecklist } from "./statedFinishFromChecklist.js";
 
 /** TCG `POS/TOTAL` card number, e.g. "008/132". Position CAN exceed the total
  *  (secret/hyper rares are numbered above set size), so only the <=400 bound
@@ -296,6 +297,18 @@ export interface ParseListingIdentityOptions {
   /** Canonical slug when available. Carries the setKey, which survives in
    *  cases where the title is too terse to classify. */
   hobbyiqCardId?: string | null;
+  /** CF-A-TITLE-THAT-NAMES-A-FINISH-IS-NOT-A-BASE-CARD (I9 triage, 2026-09-06).
+   *  The product's year + setKey, so the CHECKLIST can say which parallels this
+   *  card HAS when the title states one no rule enumerates. Same shape and same
+   *  reasoning as `InferIsAutoInput.year/setKey`.
+   *
+   *  Optional, and the reader degrades rather than guessing: with a product it
+   *  reads that product's checklist; without one it falls back to the global
+   *  name index under stricter floors. Callers that derive the setKey AFTER the
+   *  parse (slugRederivation) pass nothing and lose only the product-scoped
+   *  half. */
+  year?: number | null;
+  setKey?: string | null;
 }
 
 export interface ParsedListingIdentity {
@@ -818,7 +831,17 @@ export function parseListingIdentity(
   // ahead of any colour / refractor the title also names ("Image Variation
   // Gold Speckle Refractor"); a weak marker rides along for the seam.
   const variation = readVariationFromTitle(t.toLowerCase());
-  const finish = extractParallel(t);
+  // The product context the checklist reader needs. An explicit option wins;
+  // otherwise the canonical slug carries both -- `hiq:sport:year:setKey:...` --
+  // and a caller that already resolved the card has nothing else to pass.
+  const slugParts = String(opts?.hobbyiqCardId ?? "").split(":");
+  const fromSlug = slugParts[0] === "hiq" && slugParts.length >= 7
+    ? { year: Number(slugParts[2]) || null, setKey: slugParts[3] || null }
+    : { year: null as number | null, setKey: null as string | null };
+  const finish = extractParallel(t, {
+    year: opts?.year ?? fromSlug.year,
+    setKey: opts?.setKey ?? fromSlug.setKey,
+  });
   // The whitelist below already names some variations verbatim ("Chrome-Image
   // Variation"); that spelling is more specific than the family read and is
   // kept — the slug layer speaks the vocabulary either way.
@@ -1363,7 +1386,7 @@ function extractPrintRun(title: string, isTcg = false, isPokemon = false): numbe
  *  (Shimmer/Lava/Wave/RayWave/Grass/X-Fractor) > Sapphire variants when
  *  Sapphire is the product context + a color appears > color refractors
  *  > misc named parallels. Unrecognized → "Base". */
-function extractParallel(title: string): string {
+function extractParallel(title: string, ctx?: { year?: number | null; setKey?: string | null }): string {
   // CF-REF-IS-REFRACTOR (Drew, 2026-08-24). Sellers abbreviate it, and the
   // abbreviation was invisible to every rule below.
   //
@@ -1654,7 +1677,23 @@ function extractParallel(title: string): string {
 
   if (/sepia\s+refractor/i.test(T)) return "Sepia Refractor";
   if (/\bsepia\b/i.test(T) && /\brefractor\b/i.test(T)) return "Sepia Refractor";
-  m = T.match(/(blue|red|green|orange|purple|gold|yellow|aqua|pink|sky\s+blue)\s+foil/i);
+  // CF-FOILBOARD-IS-NOT-FOIL (I9 triage, 2026-09-06). The rule had no trailing
+  // \b, so `foil` matched the FRONT of a longer finish word and answered the
+  // shorter card:
+  //
+  //   "2025 Topps Archives Baseball #82 Pink Foilboard"   -> Pink Foil
+  //   "2025 Topps A&G #47 Orange Foil Filagree"           -> Orange Foil
+  //
+  // Foilboard and Foil Filagree are their own checklist rows with their own
+  // print runs -- the same sibling collapse CF-A-NAMED-PARALLEL-IS-A-DISTINCT-CARD
+  // records for Black Wave / Black Refractor. The \b sends these past this rule
+  // to the checklist reader at the fallback, which answers with the whole name
+  // ("Orange Foil Filagree") or refuses when it cannot confirm the sibling.
+  //
+  // The colour list stays as it is deliberately: widening it here would re-run
+  // the enumeration that produced the gap. The checklist reader covers the
+  // colours this list omits (black, silver, bronze) from the corpus instead.
+  m = T.match(/(blue|red|green|orange|purple|gold|yellow|aqua|pink|sky\s+blue)\s+foil\b/i);
   if (m) return capFirst(m[1].replace(/\s+/, " ")) + " Foil";
   if (/sky\s+blue/i.test(T)) return "Sky Blue Refractor";
   if (/aqua\s+lava/i.test(T)) return "Aqua Lava Refractor";
@@ -1981,6 +2020,37 @@ function extractParallel(title: string): string {
   if (/\bcase\s+hit\b/i.test(T)) return "Case Hit";
   if (/\bshort\s+print\b/i.test(T) && !isSpBrand) return "Short Print";
   if (/\bphoto\s+variation\b/i.test(T)) return "Photo Variation";
+
+  // CF-A-TITLE-THAT-NAMES-A-FINISH-IS-NOT-A-BASE-CARD (I9 triage, 2026-09-06).
+  //
+  // LAST, AND ONLY HERE. Every named colour, pattern, product and scarcity rule
+  // above has already had its turn and returned, so this cannot override one of
+  // them -- it reads ONLY the titles that were about to be called "Base".
+  //
+  // The I9 triage found 190 of 887 TRUE-DISAGREEMENT rows on a `dropped:parallel`
+  // axis: the row stores a real parallel, the title states it in words, and this
+  // function answered Base. Measured on a live 400-row draw, 260 of 386 non-Base
+  // rows re-derived as Base -- "Rainbow Foil", "Black Foil", "Purple Holo Foil",
+  // "Holographic", "Crackle Foil", "Canvas Parallel". The classifier's
+  // base-eviction guard refuses every one of them, so nothing was mis-filed;
+  // they simply sit as permanent disagreements the rematch can never act on.
+  //
+  // The answer comes from the CHECKLIST, not from a longer list here. Adding
+  // rules one finish at a time is what produced the gap: the foil rule enumerated
+  // nine colours and omitted black, and `holo` had no rule at all while being
+  // attested 6,120 times in our own checklist corpus. `statedFinishFromChecklist`
+  // asks `data/checklist-parallel-names.json` which parallels THIS product has
+  // and answers with the checklist's own spelling, so the reader cannot mint a
+  // rung the product lacks -- and where the destination is genuinely unbacked the
+  // classifier's checklistBacked gate holds the row as NEEDS-CHECKLIST, which is
+  // the honest state (#1796).
+  //
+  // A LOT STATES NO ONE CARD'S FINISH. `isMultiCardLot` is the same refusal the
+  // bare-Refractor fallback above carries, for the same reason.
+  if (!isMultiCardLot(T)) {
+    const stated = statedFinishFromChecklist(T, { year: ctx?.year ?? null, setKey: ctx?.setKey ?? null });
+    if (stated) return stated;
+  }
 
   return "Base";
 }
