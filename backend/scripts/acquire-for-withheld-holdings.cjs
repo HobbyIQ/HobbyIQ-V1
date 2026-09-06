@@ -72,6 +72,22 @@ const USER = String(process.env.USER_ID || "").trim();
 const OUT = String(process.env.OUT || "").trim();
 const JSON_MODE = MODE === "json";
 
+// ── WHERE THE SHARED HELPER'S OWN LINES GO ────────────────────────────────
+//
+// CF-A-DATA-CHANNEL-IS-NOT-A-LOG (#1846). `say` and `note` below keep every
+// line THIS FILE writes off stdout in json mode -- and run 34019169292 still
+// died on `jq: parse error: Invalid literal at line 739, column 11`, because
+// line 739 was `finishLane: exiting code 0`, written to fd 1 by
+// lib/runner-budget.cjs after main() had returned. The document closed clean
+// on 738; the helper appended a log line to it, and no lane can suppress that.
+//
+// So the mode is declared to the helper too -- once, here, and passed to both
+// `budget()` (its verify-cap lines) and both `finishLane()` tails (its exit
+// line). Every other lane's stdout IS its log, since the runner reads a lane
+// as `node <script>.cjs | tee /tmp/backfill.log`, so the DEFAULT does not move
+// and this is the one lane that opts out.
+const NARRATE_TO = JSON_MODE ? "stderr" : "stdout";
+
 // THE REFUSAL. This lane is read-only by construction; a dispatch that asked
 // for an apply is a misunderstanding worth failing on rather than absorbing.
 if (/^(1|true|yes)$/i.test(String(process.env.BACKFILL_APPLY || ""))) {
@@ -102,7 +118,14 @@ if (/^(1|true|yes)$/i.test(String(process.env.BACKFILL_APPLY || ""))) {
 const RUN_MINUTES = Number(process.env.RUN_MINUTES || 45);
 const RESERVE_MS = Number(process.env.RESERVE_MS || 60 * 1000);
 const VERIFY_MS = Number(process.env.VERIFY_MS || 5 * 60 * 1000);
-const B = budget({ minutes: RUN_MINUTES, reserveMs: RESERVE_MS, verifyMs: VERIFY_MS });
+const B = budget({
+  minutes: RUN_MINUTES,
+  reserveMs: RESERVE_MS,
+  verifyMs: VERIFY_MS,
+  // Its verify-cap lines would land inside the JSON document otherwise, exactly
+  // as the exit line did. See NARRATE_TO above.
+  narrateTo: NARRATE_TO,
+});
 
 const f = (n) => Number(n ?? 0).toLocaleString("en-US");
 const say = (...a) => { if (!JSON_MODE) console.log(...a); };
@@ -504,7 +527,7 @@ async function main() {
 // and returns `{ client, budget }`, so the disposal and the verify-cap notice
 // are real rather than nominal.
 main()
-  .then((ctx) => finishLane(0, ctx || {}))
+  .then((ctx) => finishLane(0, { ...(ctx || {}), narrateTo: NARRATE_TO }))
   .catch(async (e) => { console.error("FATAL", e && e.message);
-    await finishLane(1, { budget: B });
+    await finishLane(1, { budget: B, narrateTo: NARRATE_TO });
   });
