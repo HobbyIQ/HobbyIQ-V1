@@ -316,6 +316,209 @@ describe("frame health — a rate whose frame is broken is not a corpus rate", (
     expect(censusSlots.size).toBe(SHARD_TABLE.slots.length);
   });
 
+  // ── THE ALARM IS DRIFT, NOT LEVEL (Drew ruling, 2026-09-06) ──────────────
+  //
+  // I9 used to breach on an ABSOLUTE rate: TRUE-DISAGREEMENT over 35%. That
+  // number cannot tell "the corpus got worse last night" from "the frame drew a
+  // harder part of the corpus". The 2026-09-06 artifact is the proof -- 50.28%
+  // reported as a breach, on a corpus whose own CONFLICT share is 40.8% and
+  // whose pokemon slots sit at 59.6%. A pokemon-weighted draw is over 35% by
+  // construction and always would be.
+
+  /** A frame-health class row, the shape `frameHealth().bySportClass` emits. */
+  const classRow = (sportClass: string, sampled: number, census: number, n = 300) => ({
+    sportClass,
+    sampledApprox: n,
+    shareOfFrame: 0.33,
+    conflict: { sampled, census, delta: Number((sampled - census).toFixed(6)) },
+  });
+
+  const CENSUS_OF = (cls: string) => INV.censusSharesForClass(cls).CONFLICT;
+
+  it("a night that matches its reference is CLEAN, at any absolute level", () => {
+    // Every class exactly on its own census. Pokemon's census CONFLICT is
+    // 59.6%, so this night's overall level is far above the old 35% threshold
+    // and is nonetheless the healthiest night possible: nothing moved.
+    const drift = INV.evaluateDrift("I9", {
+      byClassFrame: [
+        classRow("pokemon", CENSUS_OF("pokemon"), CENSUS_OF("pokemon")),
+        classRow("modern", CENSUS_OF("modern"), CENSUS_OF("modern"), 600),
+        classRow("vintage", CENSUS_OF("vintage"), CENSUS_OF("vintage")),
+      ],
+      sample: 1764,
+      breaches: 887,
+    });
+    expect(drift).toBeNull();
+  });
+
+  it("+6 points in one class BREACHES, and the message names that class", () => {
+    const drift = INV.evaluateDrift("I9", {
+      byClassFrame: [
+        classRow("pokemon", CENSUS_OF("pokemon"), CENSUS_OF("pokemon")),
+        classRow("modern", CENSUS_OF("modern") + 0.06, CENSUS_OF("modern"), 600),
+        classRow("vintage", CENSUS_OF("vintage"), CENSUS_OF("vintage")),
+      ],
+      sample: 1764,
+      breaches: 887,
+    });
+    expect(drift).toBeTruthy();
+    expect(drift.worstClass).toBe("modern");
+    expect(drift.thresholdKind).toBe("drift-points");
+    expect(drift.message).toMatch(/modern/);
+    // The class that did NOT move must not be blamed for the one that did.
+    expect(drift.classes).toHaveLength(1);
+    expect(drift.message).not.toMatch(/pokemon/);
+  });
+
+  it("an absolute 44% with ZERO drift is CLEAN — the level is a trend line", () => {
+    // 44% is well over the retired 35% threshold. Every class sits on its own
+    // reference, so nothing moved and nothing breaches. THE MUTATION THIS
+    // CATCHES: restoring the absolute gate turns this night red.
+    const byClassFrame = [
+      classRow("pokemon", CENSUS_OF("pokemon"), CENSUS_OF("pokemon")),
+      classRow("modern", CENSUS_OF("modern"), CENSUS_OF("modern"), 600),
+      classRow("vintage", CENSUS_OF("vintage"), CENSUS_OF("vintage")),
+    ];
+    expect(INV.evaluateDrift("I9", { byClassFrame, sample: 1000, breaches: 440 })).toBeNull();
+    // ...and the absolute evaluator refuses to gate I9 at all now.
+    expect(INV.evaluateThreshold("I9", { breaches: 440, sample: 1000 })).toBeNull();
+  });
+
+  it("MUTATION: the absolute threshold is GONE as a gate, kept only as a note", () => {
+    // Reverting `driftPoints` to `rate: 0.35` makes evaluateThreshold fire
+    // again, and every one of these becomes a breach on level alone.
+    const inv = INV.INVARIANT_BY_ID.get("I9");
+    expect(inv.driftPoints).toBeCloseTo(0.05, 5);
+    expect(inv.rate).toBeUndefined();
+    // The 35% figure survives as a REPORTED reference point, never evaluated.
+    expect(inv.reportRate).toBeCloseTo(0.35, 5);
+    for (const breaches of [440, 887, 1200, 1764]) {
+      expect(
+        INV.evaluateThreshold("I9", { breaches, sample: 1764 }),
+        `absolute level ${breaches}/1764 must not gate`,
+      ).toBeNull();
+    }
+  });
+
+  it("MUTATION: the real 2026-09-06 night — a breach on level, clean on drift", () => {
+    // The artifact reported 50.28% TRUE-DISAGREEMENT against a 35% threshold
+    // and called it a breach. Rebuild a night of that shape -- every slot
+    // reproducing its OWN census -- and the drift alarm passes it, because
+    // nothing moved: the level was the frame's composition all along.
+    const verdicts: any[] = [];
+    for (const row of INV.CENSUS_TABLE.slots) {
+      const n = 55;
+      for (const k of ["AGREE", "IMPROVE", "CONFLICT", "UNDERIVABLE"]) {
+        for (let i = 0; i < Math.round(n * row.shares[k]); i++) {
+          verdicts.push({ klass: k, __frameSlot: row.slot });
+        }
+      }
+    }
+    const byClass: Record<string, number> = {};
+    for (const v of verdicts) byClass[v.klass] = (byClass[v.klass] ?? 0) + 1;
+    const health = INV.frameHealth({
+      byClass, distinctCards: 1321, sampled: verdicts.length, verdicts,
+    });
+    // The night's absolute CONFLICT level is well over the retired threshold...
+    expect(health.drift.CONFLICT.sampled).toBeGreaterThan(0.35);
+    // ...and every class is within a couple of points of its own reference.
+    for (const c of health.bySportClass) {
+      expect(Math.abs(c.conflict.delta), `${c.sportClass} moved`).toBeLessThan(0.05);
+    }
+    expect(INV.evaluateDrift("I9", {
+      byClassFrame: health.bySportClass, sample: verdicts.length, breaches: 887,
+    })).toBeNull();
+  });
+
+  it("only a class ABOVE its reference breaches — improvement is not an alarm", () => {
+    // A night 20 points BETTER than its census is a repair landing. An alarm
+    // that fires on getting better trains people to silence it.
+    const drift = INV.evaluateDrift("I9", {
+      byClassFrame: [classRow("pokemon", CENSUS_OF("pokemon") - 0.20, CENSUS_OF("pokemon"))],
+      sample: 1000, breaches: 200,
+    });
+    expect(drift).toBeNull();
+  });
+
+  it("a class below the row floor is reported but never gates", () => {
+    // A 5-point move on nine rows is one row, and the frame draws unevenly
+    // across classes. Below MIN_CLASS_ROWS the class is carried in `belowFloor`
+    // for the reader and cannot raise a breach on its own.
+    const thin = INV.evaluateDrift("I9", {
+      byClassFrame: [classRow("pokemon", CENSUS_OF("pokemon") + 0.20, CENSUS_OF("pokemon"), 9)],
+      sample: 100, breaches: 50,
+    });
+    expect(thin).toBeNull();
+    // The same move on a real sample DOES breach, so the floor is a floor and
+    // not a silencer.
+    const thick = INV.evaluateDrift("I9", {
+      byClassFrame: [classRow("pokemon", CENSUS_OF("pokemon") + 0.20, CENSUS_OF("pokemon"), INV.MIN_CLASS_ROWS)],
+      sample: 1000, breaches: 500,
+    });
+    expect(thick).toBeTruthy();
+    expect(thick.worstClass).toBe("pokemon");
+  });
+
+  it("the drift reference is the per-class census from #1888, not a constant", () => {
+    // The alarm is only as good as what it compares against. Each class must
+    // resolve to its own row-weighted census share.
+    for (const cls of ["pokemon", "modern", "vintage"]) {
+      const sh = INV.censusSharesForClass(cls);
+      expect(sh, `${cls} has no census reference`).toBeTruthy();
+      expect(sh.CONFLICT).toBeGreaterThan(0);
+      expect(sh.CONFLICT).toBeLessThan(1);
+    }
+    // And they must genuinely differ, or a per-class alarm is a global one.
+    expect(CENSUS_OF("pokemon")).toBeGreaterThan(CENSUS_OF("modern") + 0.1);
+    expect(CENSUS_OF("modern")).toBeGreaterThan(CENSUS_OF("vintage"));
+  });
+
+  it("the drift is measured CONFLICT-to-CONFLICT, not against a subset", () => {
+    // THE SUBTLE ONE. The census emits `counts.CONFLICT` and does NOT split
+    // TRUE-DISAGREEMENT from NEEDS-CHECKLIST; the nightly audit does. Comparing
+    // the audit's TRUE-DISAGREEMENT against a census CONFLICT would compare a
+    // subset to its superset and understate drift by the NEEDS-CHECKLIST share
+    // -- 5.1pp on the 2026-09-06 artifact (887 TRUE-DIS + 90 NEEDS-CL = 977
+    // CONFLICT of 1,764), which is the entire 5pp threshold. A silent swap to
+    // the subset would therefore hide exactly one threshold's worth of drift.
+    //
+    // The alarm reads `conflict.sampled` off the frame-health class rows, so a
+    // class sitting 6pp over on CONFLICT breaches REGARDLESS of what the
+    // `breaches` (TRUE-DISAGREEMENT) count says.
+    const over = INV.evaluateDrift("I9", {
+      byClassFrame: [classRow("modern", CENSUS_OF("modern") + 0.06, CENSUS_OF("modern"), 600)],
+      sample: 1764,
+      breaches: 0,          // no true disagreements at all
+    });
+    expect(over).toBeTruthy();
+    expect(over.worstClass).toBe("modern");
+    // ...and a class ON its CONFLICT reference is clean even when the
+    // TRUE-DISAGREEMENT count is enormous.
+    const on = INV.evaluateDrift("I9", {
+      byClassFrame: [classRow("modern", CENSUS_OF("modern"), CENSUS_OF("modern"), 600)],
+      sample: 1764,
+      breaches: 1700,
+    });
+    expect(on).toBeNull();
+  });
+
+  it("the frame-health line is kept — the alarm needs the frame it reads", () => {
+    // The drift alarm consumes `frameHealth().bySportClass`. Removing the frame
+    // health line does not merely lose a diagnostic, it disarms the alarm, so
+    // the two are pinned together.
+    const verdicts = [
+      ...Array.from({ length: 60 }, () => ({ klass: "CONFLICT", __frameSlot: 7 })),
+      ...Array.from({ length: 40 }, () => ({ klass: "AGREE", __frameSlot: 7 })),
+    ];
+    const health = INV.frameHealth({
+      byClass: { CONFLICT: 60, AGREE: 40 }, distinctCards: 400, sampled: 100, verdicts,
+    });
+    expect(health.bySportClass.length).toBeGreaterThan(0);
+    expect(health.drift).toBeTruthy();
+    expect(health.flags).toEqual([]);
+    expect(health.referenceSlots).toBe(32);
+  });
+
   it("the four classes are shares of the same denominator, not a partition", () => {
     // The fleet reports UNDERIVABLE-for-subset under byTier and leaves it out
     // of counts, so the four shares sum to ~0.95 corpus-wide and to ~0.74 on
