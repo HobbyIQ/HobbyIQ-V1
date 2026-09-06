@@ -38,7 +38,7 @@ import type { EbayItemDetails } from "../ebay/ebayItemDetails.service.js";
 // which strings are real parallels, so the aspect is vetted through it rather
 // than against a second, drifting list here.
 import { normalizeHoldingFields } from "./holdingFieldNormalizer.service.js";
-import { valueHoldingThroughOneEntry } from "./holdingValuation.js";
+import { valueHoldingThroughOneEntry, noBasisRefusalWrite, costBasisFloorRefusalWrite } from "./holdingValuation.js";
 
 /**
  * Threshold at which we auto-create a holding from a purchase.
@@ -202,13 +202,67 @@ export async function autoCreateHoldingForPurchase(
   // outcome leaves the holding exactly as it was (no value written) — but a
   // priced one now carries fairMarketValue, fmvRung AND valueSource together,
   // written by the one path rather than by this file's own hand.
+  // CF-AN-IMPORT-REFUSAL-IS-A-WITHHOLD-NOT-A-SHRUG (Drew, 2026-09-06, #1869).
+  //
+  // The two lines this replaced kept `valued.holding` on a priced outcome and
+  // THREW AWAY every refusal:
+  //
+  //     const priced = valued.outcome === "observed" || valued.outcome === "estimated"
+  //       ? valued.holding
+  //       : holding;
+  //
+  // `holding` is the pre-valuation row. So when the one entry ran its #1784
+  // identity gate and returned `no-basis-refusal` — "there is no checklist-backed
+  // card here, publish nothing" — the import discarded that answer and stored the
+  // unwithheld row instead. The refusal was computed, logged, and dropped on the
+  // floor. Same for the cost-basis floor.
+  //
+  // That is how 925ccfe7 / 4e70af40 came to carry $14.79 with no `withheld` block
+  // at all. Their slug
+  // `hiq:baseball:2026:bowman-chrome:cpa-jwh:refractor:auto:num-499` has 95 real
+  // sales in the pool but NO card_catalog row (verified read-only 2026-09-06:
+  // 0 rows for that id, and 0 for the suggester's `…:base:auto` twin). A pool can
+  // hold sales under a slug the catalog cannot name — that is precisely the state
+  // #1784 refuses to price, and precisely the state this line hid.
+  //
+  // Now the refusal is PERSISTED through the same `noBasisRefusalWrite` every
+  // other lane uses (portfolioStore's autoPriceHolding and the reprice loop), so
+  // the import cannot drift from them: `fairMarketValue` null, `estimatedValue`
+  // cleared with it, `method: "withheld"`, `fmvRung` null with the refusal prose
+  // as its stated reason, and the machine-readable reason on
+  // `pricingSourceMeta.withheld`. ABSENT BEATS WRONG: a withheld price is null
+  // plus a reason, and a number for a card we cannot name is worse than a blank.
+  //
+  // `unresolved` and `unpriced` keep their existing meaning — the engine reached
+  // no verdict worth persisting, and the row is stored as built with no value —
+  // so an import of a card with a genuinely empty pool is unchanged.
   const valued = await valueHoldingThroughOneEntry(holding, {
     userId: doc.userId ?? null,
     caller: "ebayAutoHolding.import",
   });
-  const priced = valued.outcome === "observed" || valued.outcome === "estimated"
-    ? valued.holding
-    : holding;
+  let priced: PortfolioHolding = holding;
+  if (valued.outcome === "observed" || valued.outcome === "estimated") {
+    priced = valued.holding;
+  } else if (valued.outcome === "no-basis-refusal") {
+    const nb = noBasisRefusalWrite(holding, valued.reason, valued.valuation, new Date().toISOString());
+    priced = nb.holding;
+    console.warn(JSON.stringify({
+      event: "no_basis_refusal_persisted",
+      source: "ebayAutoHolding.import",
+      holdingId: holding.id,
+      reason: valued.reason,
+      summary: nb.summary,
+    }));
+  } else if (valued.outcome === "cost-basis-floor") {
+    const cbf = costBasisFloorRefusalWrite(holding, valued, new Date().toISOString());
+    priced = cbf.holding;
+    console.warn(JSON.stringify({
+      event: "cost_basis_floor_refusal_persisted",
+      source: "ebayAutoHolding.import",
+      holdingId: holding.id,
+      summary: cbf.summary,
+    }));
+  }
 
   doc.holdings[holding.id] = priced;
   // Idempotent Set-union merge, symmetric with PATCH /link-holdings.
