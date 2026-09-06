@@ -43,6 +43,10 @@ const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReco
 const { upsertCatalogEntry, cleanPlayerName } = require(path.join(backend, "dist/services/portfolioiq/cardCatalog.service.js"));
 const { computeHobbyIqCardId, slugify, normalizeSetKey } = require(path.join(backend, "dist/services/portfolioiq/hobbyIqCardId.service.js"));
 const { catalogAuthorityOf } = require(path.join(backend, "dist/services/catalog/catalogAuthority.service.js"));
+// CF-VACATE-THE-PLAIN-ID-OR-REFUSE: the incumbent is MOVED, never re-upserted
+// at a second address, so the ambiguous plain id genuinely stops existing and
+// the sales hanging off it follow the card.
+const { moveCatalogRow } = require(path.join(backend, "dist/services/catalog/catalogRowOps.service.js"));
 const { CosmosClient } = require("@azure/cosmos");
 
 /**
@@ -63,19 +67,21 @@ const { CosmosClient } = require("@azure/cosmos");
  * its own address is still found, and 98.9% of the catalog is at its own
  * address now.
  */
-const lookup = (() => {
-  let container = null;
-  return async (slug) => {
-    if (!container) {
-      container = new CosmosClient({
-        connectionString: process.env.COSMOS_CONNECTION_STRING,
-        connectionPolicy: { retryOptions: { maxRetryAttemptsOnThrottledRequests: 60, maxWaitTimeInSeconds: 300 } },
-      }).database("hobbyiq").container("card_catalog");
-    }
-    try { return (await container.item(slug, slug).read()).resource ?? null; }
-    catch (e) { if (e.code === 404) return null; throw e; }
-  };
+const db = (() => {
+  let d = null;
+  return () => (d ??= new CosmosClient({
+    connectionString: process.env.COSMOS_CONNECTION_STRING,
+    connectionPolicy: { retryOptions: { maxRetryAttemptsOnThrottledRequests: 60, maxWaitTimeInSeconds: 300 } },
+  }).database("hobbyiq"));
 })();
+const catalogContainer = () => db().container("card_catalog");
+// The pool, so a vacated plain id's sales are RE-POINTED rather than orphaned.
+const poolContainer = () => db().container("sold_comps");
+
+const lookup = async (slug) => {
+  try { return (await catalogContainer().item(slug, slug).read()).resource ?? null; }
+  catch (e) { if (e.code === 404) return null; throw e; }
+};
 
 const DIR = process.env.DIR || "";
 const SOURCE = process.env.SOURCE || "";
@@ -272,7 +278,8 @@ async function main() {
   // Numbered rows whose parallel the source left blank. NOT base cards.
   let unnamedParallel = 0;
   // A clash the subset RESOLVES: both cards get their own subset-bearing id.
-  let subsetDisambiguated = 0, subsetIncumbentMoved = 0;
+  let subsetDisambiguated = 0, subsetIncumbentMoved = 0, subsetVacateFailed = 0, subsetSalesRepointed = 0;
+  const vacateFailures = [];
   // A clash where the subset is UNKNOWN on one side. Still refused, still
   // counted -- blank is unknown and this pass never invents one.
   let subsetCollision = 0;
@@ -463,11 +470,56 @@ async function main() {
               authoritativeSetKey: true,
             });
             if (incumbentSlug !== slugForWrite) {
-              await upsertCatalogEntry({
-                ...known, id: incumbentSlug, cardId: incumbentSlug, hobbyiqCardId: incumbentSlug,
-                subsetName: known.subsetName, subsetInId: true,
-              }, { known: await lookup(incumbentSlug) });
-              subsetIncumbentMoved++;
+              // CF-VACATE-THE-PLAIN-ID-OR-REFUSE (2026-09-06).
+              //
+              // The ruling above says "the plain id is vacated", and the code
+              // did not vacate it: an `upsertCatalogEntry` at `incumbentSlug`
+              // COPIES the incumbent to its new address and LEAVES the row on
+              // the plain id. Two subsets that clashed on one address then
+              // occupied three -- the newcomer's :sub- row, the incumbent's
+              // :sub- row, and the original plain-id row still answering for
+              // both cards, still collecting their sales. The disambiguation
+              // reported success while the ambiguity it existed to remove was
+              // still there.
+              //
+              // moveCatalogRow is the primitive that actually vacates: it
+              // copies to the new slug, RE-POINTS that row's sales, retires
+              // its graded children and deletes the old row -- in that order,
+              // so no sale is ever dangling. A raw patch cannot do any of it
+              // (feedback: use patchCatalogRowFields, never a raw patch; here
+              // the address itself changes, so the move is the only correct
+              // tool).
+              //
+              // AND IF IT CANNOT MOVE, IT REFUSES AND SAYS SO. An occupied
+              // destination is adjudicated by moveCatalogRow's own authority
+              // rule; any outcome that leaves the plain id still standing is
+              // counted in `subsetVacateFailed` and named in the banner,
+              // because a disambiguation that silently half-happened is how
+              // this defect survived review the first time.
+              const moved = await moveCatalogRow(
+                catalogContainer(),
+                known,
+                incumbentSlug,
+                { subsetName: known.subsetName, subsetInId: true },
+                {
+                  reason: `subset disambiguation: "${known.subsetName}" and "${product.subsetName}" both claim ${String(r.cardNumber).toUpperCase()}|${r.parallel || "base"}`,
+                  dryRun: !APPLY,
+                  salesContainer: poolContainer(),
+                  known: await lookup(incumbentSlug),
+                },
+              );
+              // "noop" means the row was already where it belongs. Any other
+              // non-moving action left the plain id occupied.
+              if (moved.action === "move" || moved.action === "replace" || moved.action === "fold") {
+                subsetIncumbentMoved++;
+                subsetSalesRepointed += moved.salesRepointed || 0;
+              } else if (moved.action !== "noop") {
+                subsetVacateFailed++;
+                if (vacateFailures.length < 8) {
+                  vacateFailures.push(String(r.cardNumber).toUpperCase() + "|" + (r.parallel || "base")
+                    + ` -> ${incumbentSlug}: ${moved.action} (${moved.decision})`);
+                }
+              }
             }
             subsetDisambiguated++;
             if (disambiguatedExamples.length < 8) {
@@ -586,7 +638,12 @@ async function main() {
     }
   }
   console.log(`  rows skipped           ${f(skippedRow)}   <- no card number, no player, or unslugable`);
-  console.log(`  subset clashes RESOLVED   ${f(subsetDisambiguated)}   <- same (cardNumber, rung) under a DIFFERENT subset; both cards re-minted with a :sub- segment (${f(subsetIncumbentMoved)} incumbents moved off the plain id)`);
+  console.log(`  subset clashes RESOLVED   ${f(subsetDisambiguated)}   <- same (cardNumber, rung) under a DIFFERENT subset; both cards re-minted with a :sub- segment (${f(subsetIncumbentMoved)} incumbents MOVED off the plain id, vacating it; ${f(subsetSalesRepointed)} sales re-pointed)`);
+  if (subsetVacateFailed) {
+    // LOUD. Each of these is a plain id still answering for two cards.
+    console.log(`  subset clashes NOT VACATED ${f(subsetVacateFailed)}   <- the incumbent could NOT be moved off the plain id; it still answers for both cards`);
+    for (const line of vacateFailures) console.log(`      ${line}`);
+  }
   if (disambiguatedExamples.length) console.log(`    e.g. ${disambiguatedExamples.join("; ")}`);
   console.log(`  subset collisions REFUSED ${f(subsetCollision)}   <- the clash is real but ONE SIDE OF IT HAS NO SUBSET NAME; blank is unknown and is never invented`);
   if (collisionExamples.length) console.log(`    e.g. ${collisionExamples.join("; ")}`);
