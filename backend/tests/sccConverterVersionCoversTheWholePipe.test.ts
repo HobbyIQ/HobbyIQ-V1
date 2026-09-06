@@ -111,15 +111,15 @@ const WATCHED: Array<{ file: string; label: string; fn: string; hash: string }> 
   { file: FETCHER, label: "fetcher", fn: "parallelFromSlug", hash: "" },
 ];
 
-/** The recorded behaviour hash for each watched function, at CONVERTER_VERSION 4. */
+/** The recorded behaviour hash for each watched function, at CONVERTER_VERSION 5. */
 const RECORDED: Record<string, string> = {
   "subset-identity:claimedSubsetOf": "def8b0f7187288a3",
   "subset-identity:isBaseSectionLabel": "e1d58052f029a93e",
   "subset-identity:foldSubsetText": "4c33bdf4b3715ea5",
   "subset-identity:rungKey": "9526fcf87cecbb79",
-  "fetcher:zeroCardReason": "8ed6926f87249ce6",
+  "fetcher:zeroCardReason": "eba4eeac8e75c68b",
   "fetcher:canonicalSlug": "f0c397eb06ab28ca",
-  "fetcher:parseSetUrl": "9f3348f29eb331c3",
+  "fetcher:parseSetUrl": "97144f0493f00e31",
   "fetcher:buildRows": "96799fa6888560a4",
   "fetcher:splitParentAndSubset": "17f62334a02e1960",
   "fetcher:parallelFromSlug": "fd2bea5160dd904e",
@@ -141,9 +141,9 @@ function currentHashes(): Record<string, string> {
 
 // ── the bump itself ──────────────────────────────────────────────────────────
 
-describe("the SCC converter is at v4, because the writer changed again", () => {
-  it("the fetcher stamps v4", () => {
-    expect(CONVERTER_VERSION).toBe(4);
+describe("the SCC converter is at v5 — the writer changed again, and the soft-block work landed beside it", () => {
+  it("the fetcher stamps v5", () => {
+    expect(CONVERTER_VERSION).toBe(5);
   });
 
   it("the driver's lane table agrees -- a disagreement re-opens nothing", () => {
@@ -165,6 +165,17 @@ describe("the SCC converter is at v4, because the writer changed again", () => {
     const src = fs.readFileSync(FETCHER, "utf8");
     expect(src).toContain("#1894");
     expect(src).toContain('"Inserts" is a page heading');
+  });
+
+  it("v5 names BOTH PRs that raced for it -- #1899's fold and #1898's soft block", () => {
+    // v4 and v5 were bumped from the same base, hours apart: #1899 took v4 for
+    // the "Inserts" fold, #1898 took v5 for the soft-block work. A history that
+    // named only one of them would leave an operator unable to tell which
+    // change a stale verdict at v4 is missing.
+    const src = fs.readFileSync(FETCHER, "utf8");
+    expect(src).toContain("#1898");
+    expect(src).toContain("#1899");
+    expect(src).toContain("challenge/rate-limit page is named as one");
   });
 
   it("the version history is append-only -- v1 and v2 keep their entries", () => {
@@ -196,7 +207,7 @@ describe("a change to the deciding code cannot land without answering the versio
     expect(Object.keys(now).sort()).toEqual(Object.keys(RECORDED).sort());
   });
 
-  it("no watched function has moved since v4 was recorded", () => {
+  it("no watched function has moved since v5 was recorded", () => {
     const now = currentHashes();
     const moved = Object.keys(RECORDED)
       .filter((k) => now[k] !== RECORDED[k])
@@ -308,13 +319,14 @@ describe("a converter bump re-opens the verdicts recorded under the old one", ()
     expect(staleByConverterProbe("bcp", { status: "partial" })).toBe(false);
     expect(staleByConverterProbe("beckett", { status: "partial", converterVersion: 1 })).toBe(false);
     // ...and for SCC: unstamped and older re-open, current does not.
+    // Expressed RELATIVE to the current version, never as literals: the whole
+    // point of this file is that the version moves, and a pin that hardcodes it
+    // breaks on the next bump for no reason (it did, on v3 -> v4).
+    const cur = CONVERTER_VERSION;
     expect(staleByConverterProbe("sportscardchecklist", { status: "partial" })).toBe(true);
-    expect(staleByConverterProbe("sportscardchecklist", { status: "partial", converterVersion: 2 })).toBe(true);
-    // THE v4 BUMP'S WHOLE POINT: a verdict reached under v3 -- which is every
-    // one of the eight SP Authentic refusals -- is now stale and re-opens.
-    expect(staleByConverterProbe("sportscardchecklist", { status: "partial", converterVersion: 3 })).toBe(true);
-    expect(staleByConverterProbe("sportscardchecklist", { status: "partial", converterVersion: 4 })).toBe(false);
-    expect(staleByConverterProbe("sportscardchecklist", { status: "partial", converterVersion: 5 })).toBe(false);
+    expect(staleByConverterProbe("sportscardchecklist", { status: "partial", converterVersion: cur - 1 })).toBe(true);
+    expect(staleByConverterProbe("sportscardchecklist", { status: "partial", converterVersion: cur })).toBe(false);
+    expect(staleByConverterProbe("sportscardchecklist", { status: "partial", converterVersion: cur + 1 })).toBe(false);
   });
 
   it("the run says how many it re-opened, so the effect is visible", () => {

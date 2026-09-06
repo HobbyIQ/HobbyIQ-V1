@@ -1176,10 +1176,24 @@ export interface PriceByIdResponse {
     card_id?: string;
     player?: string | null;
     year?: number | null;
+    /** The catalog's STORED set name, which is year-prefixed ("2023 Topps
+     *  Heritage") on 83-99% of rows per product. Do NOT join this after
+     *  `year` — that is what rendered "2023 2023 Topps Heritage Mike Trout
+     *  #74PB-1" on Drew's card page (CF-CARD-TITLE-NEVER-DOUBLES-THE-YEAR,
+     *  2026-09-06). Use `setName` for the product, or `displayName` for a
+     *  whole title. */
     set?: string | null;
+    /** The same product with its leading year removed ("Topps Heritage").
+     *  Safe to print next to `year`. */
+    setName?: string | null;
+    /** The full card title, composed server-side — "2023 Topps Heritage Mike
+     *  Trout #74PB-1". ONE composer: prefer this over rebuilding a title from
+     *  the parts. */
+    displayName?: string | null;
     number?: string | null;
     parallel?: string | null;
     isAuto?: boolean;
+    printRun?: number | null;
     imageUrl?: string | null;
     sport?: string | null;
   };
