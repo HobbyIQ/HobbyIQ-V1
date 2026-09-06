@@ -1,0 +1,1037 @@
+{
+ "generatedAt": "2026-09-06T22:30:00Z",
+ "forLane": "relocate-catalog-rows-by-list",
+ "reportOnlyUntil": "Drew's review - no apply is authorized by this PR",
+ "finding": "CF-A-JAPANESE-CARD-IS-NOT-AN-ENGLISH-CARD. The cell pokemon/2023 setKey `151` holds 715 catalog rows across three setNames, and 148 of them are JAPANESE cards ('2023 Pokemon Japanese Scarlet & Violet 151') sitting under a key the ruling sends to the ENGLISH tcgdex code sv03-5. The English 151 is sv03-5; the Japanese 151 is sv2a. This list routes those 148 rows to sv2a: 57 RETIRE where the Japanese twin already exists there, 91 RESLUG where the address is vacant. 0 collisions. The re-key lane's refusal guard could not stop the move because it compares PLAYER only and both markets print the SAME Pokemon at the SAME number -- 148 of 148 share a card number with an English row naming the same player, which is why report run 34061675440 said 0 REFUSED. The guard added in this PR refuses them by MARKET.",
+ "rulings": [
+  "THE ENGLISH 151 AND THE JAPANESE 151 ARE DIFFERENT PRODUCTS, AND THE VOCABULARY ALREADY SAID SO. POKEMON_EN_SET_CODES maps sv03-5 -> '151' and POKEMON_JA_SET_CODES maps sv2a -> 'ポケモンカード151'. resolveSetKeyForSlug has drawn this line since #1900: hobbyIqCardId.service.ts:1817 tests the setName for /japanese/i and answers from the Japanese aliases BEFORE the English table is consulted, with the comment 'would otherwise hit the ENGLISH alias for 151 (sv03-5) and pool Japanese sales into the English card, which is a different print with a different market'. These 148 rows are what the catalog looks like where that rule was never applied.",
+  "sv2a IS THE DESTINATION AND IT IS A normalizeSetKey FIXED POINT, PINNED RATHER THAN ASSUMED. pokemonSetCodeIsTheKey.test.ts:184 asserts every emittable code (all 160 JA codes included) satisfies normalizeSetKey(c) === c, and pokemonEnglishSetKeyIsTheCode.test.ts:156 pins resolveSetKeyForSlug('pokemon','2023 Pokemon Japanese Scarlet & Violet 151',2023) === 'sv2a' -- the exact setName all 148 of these rows carry. The destination is the key the resolver would mint for them today.",
+  "sv2a ALREADY EXISTS FOR 2023 AND THE CHECKLIST TWIN WINS (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT). Measured read-only: 1,381 rows at pokemon/2023/sv2a -- 420 from tcgdex-ja (2026-09-02 and 2026-09-04), the CHECKLIST authority for the Japanese product, plus 871 ingest-auto-seed-graded children and 90 ingest-auto-seed. Where a row's own destination slug is already occupied the incumbent wins and this row is a RETIRE, because a second row at one address is a split pool (CF-ONE-CARD-ONE-ROW-ONE-POOL). 57 entries are that case; 55 of those twins are ingest-auto-seed and 2 are tcgdex-ja.",
+  "A JAPANESE NAME IS NOT A DIFFERENT PLAYER. Two entries (#196 Erika's Invitation, #197 Giovanni's Charisma) point at destinations held by a tcgdex-ja row carrying the card's JAPANESE name -- エリカの招待 and サカキのカリスマ. Same number, same product, one card: a transliteration is not a collision, and the checklist row is the authority for the Japanese product, so both are RETIREs. NOTE FOR THE APPLY: relocate-catalog-rows-by-list compares playerName literally, so had these been listed as RESLUGs its occupied guard would have refused them -- correctly, on the information it has. They are listed as RETIREs, which takes no such comparison.",
+  "ALL 148 ARE ingest-auto-seed -- A DERIVED SOURCE, NEVER A TRANSCRIPTION. Not one of them is checklist-backed, so no checklist row is being retired or moved anywhere by this list. The 567 rows in the same cell that are NOT Japanese (398 'pokemon-tcg-data-scraped-2026-08-14' + 169 English-named ingest-auto-seed) are deliberately untouched: they are English cards and sv03-5 is their correct destination.",
+  "ORDER IS RETIRE-THEN-RESLUG AND THE LANE APPLIES IT TOP TO BOTTOM. No retire in this list vacates an address that a later reslug then claims -- the 57 retire destinations and the 91 reslug destinations are disjoint, and all 91 reslug destinations were point-read as VACANT -- but the order is stated explicitly because the lane does not reorder and a future edit to this file must not assume it will.",
+  "AN OCCUPIED ADDRESS IS STILL A COLLISION TO REPORT. All 91 reslug destinations were checked against the 1,381 live sv2a rows and every one is vacant, so this list expects 0 refusals. If the report run refuses any, the address was taken between the census and the run and that entry needs re-deciding -- never routing around.",
+  "THE POOL LIST IS EMPTY BECAUSE THE POOL IS EMPTY, MEASURED TWO WAYS. All 148 ids were counted in sold_comps by `cardId` AND by `hobbyiqCardId`: 0 and 0. No sales become unplaced by the 57 retires and none need re-pointing by the 91 reslugs. No pool list ships, because an empty file would misrepresent a measurement as an oversight.",
+  "THERE ARE NO GRADED CHILDREN UNDER 151 TO CARRY. The census projected gradeTier across all 715 rows in the cell: 0 graded rows. The 871 ingest-auto-seed-graded rows measured at sv2a are children of the sv2a parents, not of these."
+ ],
+ "census": {
+  "method": "read-only. One cross-partition query over card_catalog for sport='pokemon' AND (setKey='151' OR STARTSWITH(id,'hiq:pokemon:2023:151:')) projecting id/setKey/setName/playerName/cardNumber/year/source/parallel/gradeTier -- 715 rows, 158 RU. A second for sv2a (1,381 rows). Then, per JA row, an in-memory point check of its destination slug against those 1,381, and a sold_comps COUNT on all 148 ids by cardId and by hobbyiqCardId. No writes.",
+  "cellRows": 715,
+  "bySetName": {
+   "2023 151 Pokemon": 398,
+   "2023 Pokemon Scarlet & Violet 151": 169,
+   "2023 Pokemon Japanese Scarlet & Violet 151": 148
+  },
+  "bySource": {
+   "pokemon-tcg-data-scraped-2026-08-14": 398,
+   "ingest-auto-seed": 317
+  },
+  "japaneseRows": 148,
+  "japaneseByParallel": {
+   "Master Ball": 112,
+   "Reverse Foil": 34,
+   "Base": 2
+  },
+  "japaneseBySource": {
+   "ingest-auto-seed": 148
+  },
+  "gradedChildrenInCell": 0,
+  "destinationSv2aRows": 1381,
+  "destinationSv2aBySource": {
+   "ingest-auto-seed-graded": 871,
+   "tcgdex-ja-2026-09-02": 210,
+   "tcgdex-ja-2026-09-04": 210,
+   "ingest-auto-seed": 90
+  },
+  "routed": {
+   "retire": 57,
+   "reslug": 91,
+   "collision": 0
+  },
+  "poolRowsOnTheseIds": {
+   "byCardId": 0,
+   "byHobbyiqCardId": 0
+  }
+ },
+ "entries": [
+  {
+   "id": "hiq:pokemon:2023:151:127:master-ball:no-auto",
+   "action": "retire",
+   "reason": "cross-market: a Japanese-named row under the ENGLISH key 151 (sv03-5); the Japanese twin already exists at hiq:pokemon:2023:sv2a:127:master-ball:no-auto",
+   "evidence": "twin at hiq:pokemon:2023:sv2a:127:master-ball:no-auto source=ingest-auto-seed, same player \"Pinsir\" #127 Master Ball"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:137:master-ball:no-auto",
+   "action": "retire",
+   "reason": "cross-market: a Japanese-named row under the ENGLISH key 151 (sv03-5); the Japanese twin already exists at hiq:pokemon:2023:sv2a:137:master-ball:no-auto",
+   "evidence": "twin at hiq:pokemon:2023:sv2a:137:master-ball:no-auto source=ingest-auto-seed, same player \"Porygon\" #137 Master Ball"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:100:master-ball:no-auto",
+   "action": "retire",
+   "reason": "cross-market: a Japanese-named row under the ENGLISH key 151 (sv03-5); the Japanese twin already exists at hiq:pokemon:2023:sv2a:100:master-ball:no-auto",
+   "evidence": "twin at hiq:pokemon:2023:sv2a:100:master-ball:no-auto source=ingest-auto-seed, same player \"Voltorb\" #100 Master Ball"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:134:master-ball:no-auto",
+   "action": "retire",
+   "reason": "cross-market: a Japanese-named row under the ENGLISH key 151 (sv03-5); the Japanese twin already exists at hiq:pokemon:2023:sv2a:134:master-ball:no-auto",
+   "evidence": "twin at hiq:pokemon:2023:sv2a:134:master-ball:no-auto source=ingest-auto-seed, same player \"Vaporeon\" #134 Master Ball"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:131:master-ball:no-auto",
+   "action": "retire",
+   "reason": "cross-market: a Japanese-named row under the ENGLISH key 151 (sv03-5); the Japanese twin already exists at hiq:pokemon:2023:sv2a:131:master-ball:no-auto",
+   "evidence": "twin at hiq:pokemon:2023:sv2a:131:master-ball:no-auto source=ingest-auto-seed, same player \"Lapras\" #131 Master Ball"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:196:base:no-auto",
+   "action": "retire",
+   "reason": "cross-market: a Japanese-named row under the ENGLISH key 151 (sv03-5); the Japanese twin already exists at hiq:pokemon:2023:sv2a:196:base:no-auto",
+   "evidence": "twin at hiq:pokemon:2023:sv2a:196:base:no-auto source=tcgdex-ja-2026-09-02 (tcgdex-ja checklist authority), same player \"エリカの招待\" #196 "
+  },
+  {
+   "id": "hiq:pokemon:2023:151:133:master-ball:no-auto",
+   "action": "retire",
+   "reason": "cross-market: a Japanese-named row under the ENGLISH key 151 (sv03-5); the Japanese twin already exists at hiq:pokemon:2023:sv2a:133:master-ball:no-auto",
+   "evidence": "twin at hiq:pokemon:2023:sv2a:133:master-ball:no-auto source=ingest-auto-seed, same player \"Eevee\" #133 Master Ball"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:113:master-ball:no-auto",
+   "action": "retire",
+   "reason": "cross-market: a Japanese-named row under the ENGLISH key 151 (sv03-5); the Japanese twin already exists at hiq:pokemon:2023:sv2a:113:master-ball:no-auto",
+   "evidence": "twin at hiq:pokemon:2023:sv2a:113:master-ball:no-auto source=ingest-auto-seed, same player \"Chansey\" #113 Master Ball"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:137:reverse-foil:no-auto",
+   "action": "retire",
+   "reason": "cross-market: a Japanese-named row under the ENGLISH key 151 (sv03-5); the Japanese twin already exists at hiq:pokemon:2023:sv2a:137:reverse-foil:no-auto",
+   "evidence": "twin at hiq:pokemon:2023:sv2a:137:reverse-foil:no-auto source=ingest-auto-seed, same player \"Porygon\" #137 Reverse Foil"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:149:master-ball:no-auto",
+   "action": "retire",
+   "reason": "cross-market: a Japanese-named row under the ENGLISH key 151 (sv03-5); the Japanese twin already exists at hiq:pokemon:2023:sv2a:149:master-ball:no-auto",
+   "evidence": "twin at hiq:pokemon:2023:sv2a:149:master-ball:no-auto source=ingest-auto-seed, same player \"Dragonite\" #149 Master Ball"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:118:master-ball:no-auto",
+   "action": "retire",
+   "reason": "cross-market: a Japanese-named row under the ENGLISH key 151 (sv03-5); the Japanese twin already exists at hiq:pokemon:2023:sv2a:118:master-ball:no-auto",
+   "evidence": "twin at hiq:pokemon:2023:sv2a:118:master-ball:no-auto source=ingest-auto-seed, same player \"Goldeen\" #118 Master Ball"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:147:reverse-foil:no-auto",
+   "action": "retire",
+   "reason": "cross-market: a Japanese-named row under the ENGLISH key 151 (sv03-5); the Japanese twin already exists at hiq:pokemon:2023:sv2a:147:reverse-foil:no-auto",
+   "evidence": "twin at hiq:pokemon:2023:sv2a:147:reverse-foil:no-auto source=ingest-auto-seed, same player \"Dratini\" #147 Reverse Foil"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:113:reverse-foil:no-auto",
+   "action": "retire",
+   "reason": "cross-market: a Japanese-named row under the ENGLISH key 151 (sv03-5); the Japanese twin already exists at hiq:pokemon:2023:sv2a:113:reverse-foil:no-auto",
+   "evidence": "twin at hiq:pokemon:2023:sv2a:113:reverse-foil:no-auto source=ingest-auto-seed, same player \"Chansey\" #113 Reverse Foil"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:116:master-ball:no-auto",
+   "action": "retire",
+   "reason": "cross-market: a Japanese-named row under the ENGLISH key 151 (sv03-5); the Japanese twin already exists at hiq:pokemon:2023:sv2a:116:master-ball:no-auto",
+   "evidence": "twin at hiq:pokemon:2023:sv2a:116:master-ball:no-auto source=ingest-auto-seed, same player \"Horsea\" #116 Master Ball"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:146:master-ball:no-auto",
+   "action": "retire",
+   "reason": "cross-market: a Japanese-named row under the ENGLISH key 151 (sv03-5); the Japanese twin already exists at hiq:pokemon:2023:sv2a:146:master-ball:no-auto",
+   "evidence": "twin at hiq:pokemon:2023:sv2a:146:master-ball:no-auto source=ingest-auto-seed, same player \"Moltres\" #146 Master Ball"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:109:master-ball:no-auto",
+   "action": "retire",
+   "reason": "cross-market: a Japanese-named row under the ENGLISH key 151 (sv03-5); the Japanese twin already exists at hiq:pokemon:2023:sv2a:109:master-ball:no-auto",
+   "evidence": "twin at hiq:pokemon:2023:sv2a:109:master-ball:no-auto source=ingest-auto-seed, same player \"Koffing\" #109 Master Ball"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:149:reverse-foil:no-auto",
+   "action": "retire",
+   "reason": "cross-market: a Japanese-named row under the ENGLISH key 151 (sv03-5); the Japanese twin already exists at hiq:pokemon:2023:sv2a:149:reverse-foil:no-auto",
+   "evidence": "twin at hiq:pokemon:2023:sv2a:149:reverse-foil:no-auto source=ingest-auto-seed, same player \"Dragonite\" #149 Reverse Foil"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:197:base:no-auto",
+   "action": "retire",
+   "reason": "cross-market: a Japanese-named row under the ENGLISH key 151 (sv03-5); the Japanese twin already exists at hiq:pokemon:2023:sv2a:197:base:no-auto",
+   "evidence": "twin at hiq:pokemon:2023:sv2a:197:base:no-auto source=tcgdex-ja-2026-09-02 (tcgdex-ja checklist authority), same player \"サカキのカリスマ\" #197 "
+  },
+  {
+   "id": "hiq:pokemon:2023:151:143:master-ball:no-auto",
+   "action": "retire",
+   "reason": "cross-market: a Japanese-named row under the ENGLISH key 151 (sv03-5); the Japanese twin already exists at hiq:pokemon:2023:sv2a:143:master-ball:no-auto",
+   "evidence": "twin at hiq:pokemon:2023:sv2a:143:master-ball:no-auto source=ingest-auto-seed, same player \"Snorlax\" #143 Master Ball"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:129:master-ball:no-auto",
+   "action": "retire",
+   "reason": "cross-market: a Japanese-named row under the ENGLISH key 151 (sv03-5); the Japanese twin already exists at hiq:pokemon:2023:sv2a:129:master-ball:no-auto",
+   "evidence": "twin at hiq:pokemon:2023:sv2a:129:master-ball:no-auto source=ingest-auto-seed, same player \"Magikarp\" #129 Master Ball"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:143:reverse-foil:no-auto",
+   "action": "retire",
+   "reason": "cross-market: a Japanese-named row under the ENGLISH key 151 (sv03-5); the Japanese twin already exists at hiq:pokemon:2023:sv2a:143:reverse-foil:no-auto",
+   "evidence": "twin at hiq:pokemon:2023:sv2a:143:reverse-foil:no-auto source=ingest-auto-seed, same player \"Snorlax\" #143 Reverse Foil"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:150:master-ball:no-auto",
+   "action": "retire",
+   "reason": "cross-market: a Japanese-named row under the ENGLISH key 151 (sv03-5); the Japanese twin already exists at hiq:pokemon:2023:sv2a:150:master-ball:no-auto",
+   "evidence": "twin at hiq:pokemon:2023:sv2a:150:master-ball:no-auto source=ingest-auto-seed, same player \"Mewtwo\" #150 Master Ball"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:104:master-ball:no-auto",
+   "action": "retire",
+   "reason": "cross-market: a Japanese-named row under the ENGLISH key 151 (sv03-5); the Japanese twin already exists at hiq:pokemon:2023:sv2a:104:master-ball:no-auto",
+   "evidence": "twin at hiq:pokemon:2023:sv2a:104:master-ball:no-auto source=ingest-auto-seed, same player \"Cubone\" #104 Master Ball"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:130:reverse-foil:no-auto",
+   "action": "retire",
+   "reason": "cross-market: a Japanese-named row under the ENGLISH key 151 (sv03-5); the Japanese twin already exists at hiq:pokemon:2023:sv2a:130:reverse-foil:no-auto",
+   "evidence": "twin at hiq:pokemon:2023:sv2a:130:reverse-foil:no-auto source=ingest-auto-seed, same player \"Gyarados\" #130 Reverse Foil"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:111:master-ball:no-auto",
+   "action": "retire",
+   "reason": "cross-market: a Japanese-named row under the ENGLISH key 151 (sv03-5); the Japanese twin already exists at hiq:pokemon:2023:sv2a:111:master-ball:no-auto",
+   "evidence": "twin at hiq:pokemon:2023:sv2a:111:master-ball:no-auto source=ingest-auto-seed, same player \"Rhyhorn\" #111 Master Ball"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:129:reverse-foil:no-auto",
+   "action": "retire",
+   "reason": "cross-market: a Japanese-named row under the ENGLISH key 151 (sv03-5); the Japanese twin already exists at hiq:pokemon:2023:sv2a:129:reverse-foil:no-auto",
+   "evidence": "twin at hiq:pokemon:2023:sv2a:129:reverse-foil:no-auto source=ingest-auto-seed, same player \"Magikarp\" #129 Reverse Foil"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:120:reverse-foil:no-auto",
+   "action": "retire",
+   "reason": "cross-market: a Japanese-named row under the ENGLISH key 151 (sv03-5); the Japanese twin already exists at hiq:pokemon:2023:sv2a:120:reverse-foil:no-auto",
+   "evidence": "twin at hiq:pokemon:2023:sv2a:120:reverse-foil:no-auto source=ingest-auto-seed, same player \"Staryu\" #120 Reverse Foil"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:138:master-ball:no-auto",
+   "action": "retire",
+   "reason": "cross-market: a Japanese-named row under the ENGLISH key 151 (sv03-5); the Japanese twin already exists at hiq:pokemon:2023:sv2a:138:master-ball:no-auto",
+   "evidence": "twin at hiq:pokemon:2023:sv2a:138:master-ball:no-auto source=ingest-auto-seed, same player \"Omanyte\" #138 Master Ball"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:121:master-ball:no-auto",
+   "action": "retire",
+   "reason": "cross-market: a Japanese-named row under the ENGLISH key 151 (sv03-5); the Japanese twin already exists at hiq:pokemon:2023:sv2a:121:master-ball:no-auto",
+   "evidence": "twin at hiq:pokemon:2023:sv2a:121:master-ball:no-auto source=ingest-auto-seed, same player \"Starmie\" #121 Master Ball"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:125:master-ball:no-auto",
+   "action": "retire",
+   "reason": "cross-market: a Japanese-named row under the ENGLISH key 151 (sv03-5); the Japanese twin already exists at hiq:pokemon:2023:sv2a:125:master-ball:no-auto",
+   "evidence": "twin at hiq:pokemon:2023:sv2a:125:master-ball:no-auto source=ingest-auto-seed, same player \"Electabuzz\" #125 Master Ball"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:139:master-ball:no-auto",
+   "action": "retire",
+   "reason": "cross-market: a Japanese-named row under the ENGLISH key 151 (sv03-5); the Japanese twin already exists at hiq:pokemon:2023:sv2a:139:master-ball:no-auto",
+   "evidence": "twin at hiq:pokemon:2023:sv2a:139:master-ball:no-auto source=ingest-auto-seed, same player \"Omastar\" #139 Master Ball"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:147:master-ball:no-auto",
+   "action": "retire",
+   "reason": "cross-market: a Japanese-named row under the ENGLISH key 151 (sv03-5); the Japanese twin already exists at hiq:pokemon:2023:sv2a:147:master-ball:no-auto",
+   "evidence": "twin at hiq:pokemon:2023:sv2a:147:master-ball:no-auto source=ingest-auto-seed, same player \"Dratini\" #147 Master Ball"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:110:master-ball:no-auto",
+   "action": "retire",
+   "reason": "cross-market: a Japanese-named row under the ENGLISH key 151 (sv03-5); the Japanese twin already exists at hiq:pokemon:2023:sv2a:110:master-ball:no-auto",
+   "evidence": "twin at hiq:pokemon:2023:sv2a:110:master-ball:no-auto source=ingest-auto-seed, same player \"Weezing\" #110 Master Ball"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:103:master-ball:no-auto",
+   "action": "retire",
+   "reason": "cross-market: a Japanese-named row under the ENGLISH key 151 (sv03-5); the Japanese twin already exists at hiq:pokemon:2023:sv2a:103:master-ball:no-auto",
+   "evidence": "twin at hiq:pokemon:2023:sv2a:103:master-ball:no-auto source=ingest-auto-seed, same player \"Exeggutor\" #103 Master Ball"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:122:master-ball:no-auto",
+   "action": "retire",
+   "reason": "cross-market: a Japanese-named row under the ENGLISH key 151 (sv03-5); the Japanese twin already exists at hiq:pokemon:2023:sv2a:122:master-ball:no-auto",
+   "evidence": "twin at hiq:pokemon:2023:sv2a:122:master-ball:no-auto source=ingest-auto-seed, same player \"Mr. Mime\" #122 Master Ball"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:144:reverse-foil:no-auto",
+   "action": "retire",
+   "reason": "cross-market: a Japanese-named row under the ENGLISH key 151 (sv03-5); the Japanese twin already exists at hiq:pokemon:2023:sv2a:144:reverse-foil:no-auto",
+   "evidence": "twin at hiq:pokemon:2023:sv2a:144:reverse-foil:no-auto source=ingest-auto-seed, same player \"Articuno\" #144 Reverse Foil"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:141:master-ball:no-auto",
+   "action": "retire",
+   "reason": "cross-market: a Japanese-named row under the ENGLISH key 151 (sv03-5); the Japanese twin already exists at hiq:pokemon:2023:sv2a:141:master-ball:no-auto",
+   "evidence": "twin at hiq:pokemon:2023:sv2a:141:master-ball:no-auto source=ingest-auto-seed, same player \"Kabutops\" #141 Master Ball"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:142:master-ball:no-auto",
+   "action": "retire",
+   "reason": "cross-market: a Japanese-named row under the ENGLISH key 151 (sv03-5); the Japanese twin already exists at hiq:pokemon:2023:sv2a:142:master-ball:no-auto",
+   "evidence": "twin at hiq:pokemon:2023:sv2a:142:master-ball:no-auto source=ingest-auto-seed, same player \"Aerodactyl\" #142 Master Ball"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:123:reverse-foil:no-auto",
+   "action": "retire",
+   "reason": "cross-market: a Japanese-named row under the ENGLISH key 151 (sv03-5); the Japanese twin already exists at hiq:pokemon:2023:sv2a:123:reverse-foil:no-auto",
+   "evidence": "twin at hiq:pokemon:2023:sv2a:123:reverse-foil:no-auto source=ingest-auto-seed, same player \"Scyther\" #123 Reverse Foil"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:136:master-ball:no-auto",
+   "action": "retire",
+   "reason": "cross-market: a Japanese-named row under the ENGLISH key 151 (sv03-5); the Japanese twin already exists at hiq:pokemon:2023:sv2a:136:master-ball:no-auto",
+   "evidence": "twin at hiq:pokemon:2023:sv2a:136:master-ball:no-auto source=ingest-auto-seed, same player \"Flareon\" #136 Master Ball"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:125:reverse-foil:no-auto",
+   "action": "retire",
+   "reason": "cross-market: a Japanese-named row under the ENGLISH key 151 (sv03-5); the Japanese twin already exists at hiq:pokemon:2023:sv2a:125:reverse-foil:no-auto",
+   "evidence": "twin at hiq:pokemon:2023:sv2a:125:reverse-foil:no-auto source=ingest-auto-seed, same player \"Electabuzz\" #125 Reverse Foil"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:132:reverse-foil:no-auto",
+   "action": "retire",
+   "reason": "cross-market: a Japanese-named row under the ENGLISH key 151 (sv03-5); the Japanese twin already exists at hiq:pokemon:2023:sv2a:132:reverse-foil:no-auto",
+   "evidence": "twin at hiq:pokemon:2023:sv2a:132:reverse-foil:no-auto source=ingest-auto-seed, same player \"Ditto\" #132 Reverse Foil"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:130:master-ball:no-auto",
+   "action": "retire",
+   "reason": "cross-market: a Japanese-named row under the ENGLISH key 151 (sv03-5); the Japanese twin already exists at hiq:pokemon:2023:sv2a:130:master-ball:no-auto",
+   "evidence": "twin at hiq:pokemon:2023:sv2a:130:master-ball:no-auto source=ingest-auto-seed, same player \"Gyarados\" #130 Master Ball"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:135:master-ball:no-auto",
+   "action": "retire",
+   "reason": "cross-market: a Japanese-named row under the ENGLISH key 151 (sv03-5); the Japanese twin already exists at hiq:pokemon:2023:sv2a:135:master-ball:no-auto",
+   "evidence": "twin at hiq:pokemon:2023:sv2a:135:master-ball:no-auto source=ingest-auto-seed, same player \"Jolteon\" #135 Master Ball"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:132:master-ball:no-auto",
+   "action": "retire",
+   "reason": "cross-market: a Japanese-named row under the ENGLISH key 151 (sv03-5); the Japanese twin already exists at hiq:pokemon:2023:sv2a:132:master-ball:no-auto",
+   "evidence": "twin at hiq:pokemon:2023:sv2a:132:master-ball:no-auto source=ingest-auto-seed, same player \"Ditto\" #132 Master Ball"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:126:master-ball:no-auto",
+   "action": "retire",
+   "reason": "cross-market: a Japanese-named row under the ENGLISH key 151 (sv03-5); the Japanese twin already exists at hiq:pokemon:2023:sv2a:126:master-ball:no-auto",
+   "evidence": "twin at hiq:pokemon:2023:sv2a:126:master-ball:no-auto source=ingest-auto-seed, same player \"Magmar\" #126 Master Ball"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:112:master-ball:no-auto",
+   "action": "retire",
+   "reason": "cross-market: a Japanese-named row under the ENGLISH key 151 (sv03-5); the Japanese twin already exists at hiq:pokemon:2023:sv2a:112:master-ball:no-auto",
+   "evidence": "twin at hiq:pokemon:2023:sv2a:112:master-ball:no-auto source=ingest-auto-seed, same player \"Rhydon\" #112 Master Ball"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:114:master-ball:no-auto",
+   "action": "retire",
+   "reason": "cross-market: a Japanese-named row under the ENGLISH key 151 (sv03-5); the Japanese twin already exists at hiq:pokemon:2023:sv2a:114:master-ball:no-auto",
+   "evidence": "twin at hiq:pokemon:2023:sv2a:114:master-ball:no-auto source=ingest-auto-seed, same player \"Tangela\" #114 Master Ball"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:150:reverse-foil:no-auto",
+   "action": "retire",
+   "reason": "cross-market: a Japanese-named row under the ENGLISH key 151 (sv03-5); the Japanese twin already exists at hiq:pokemon:2023:sv2a:150:reverse-foil:no-auto",
+   "evidence": "twin at hiq:pokemon:2023:sv2a:150:reverse-foil:no-auto source=ingest-auto-seed, same player \"Mewtwo\" #150 Reverse Foil"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:103:reverse-foil:no-auto",
+   "action": "retire",
+   "reason": "cross-market: a Japanese-named row under the ENGLISH key 151 (sv03-5); the Japanese twin already exists at hiq:pokemon:2023:sv2a:103:reverse-foil:no-auto",
+   "evidence": "twin at hiq:pokemon:2023:sv2a:103:reverse-foil:no-auto source=ingest-auto-seed, same player \"Exeggutor\" #103 Reverse Foil"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:117:master-ball:no-auto",
+   "action": "retire",
+   "reason": "cross-market: a Japanese-named row under the ENGLISH key 151 (sv03-5); the Japanese twin already exists at hiq:pokemon:2023:sv2a:117:master-ball:no-auto",
+   "evidence": "twin at hiq:pokemon:2023:sv2a:117:master-ball:no-auto source=ingest-auto-seed, same player \"Seadra\" #117 Master Ball"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:140:master-ball:no-auto",
+   "action": "retire",
+   "reason": "cross-market: a Japanese-named row under the ENGLISH key 151 (sv03-5); the Japanese twin already exists at hiq:pokemon:2023:sv2a:140:master-ball:no-auto",
+   "evidence": "twin at hiq:pokemon:2023:sv2a:140:master-ball:no-auto source=ingest-auto-seed, same player \"Kabuto\" #140 Master Ball"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:106:master-ball:no-auto",
+   "action": "retire",
+   "reason": "cross-market: a Japanese-named row under the ENGLISH key 151 (sv03-5); the Japanese twin already exists at hiq:pokemon:2023:sv2a:106:master-ball:no-auto",
+   "evidence": "twin at hiq:pokemon:2023:sv2a:106:master-ball:no-auto source=ingest-auto-seed, same player \"Hitmonlee\" #106 Master Ball"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:128:master-ball:no-auto",
+   "action": "retire",
+   "reason": "cross-market: a Japanese-named row under the ENGLISH key 151 (sv03-5); the Japanese twin already exists at hiq:pokemon:2023:sv2a:128:master-ball:no-auto",
+   "evidence": "twin at hiq:pokemon:2023:sv2a:128:master-ball:no-auto source=ingest-auto-seed, same player \"Tauros\" #128 Master Ball"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:119:master-ball:no-auto",
+   "action": "retire",
+   "reason": "cross-market: a Japanese-named row under the ENGLISH key 151 (sv03-5); the Japanese twin already exists at hiq:pokemon:2023:sv2a:119:master-ball:no-auto",
+   "evidence": "twin at hiq:pokemon:2023:sv2a:119:master-ball:no-auto source=ingest-auto-seed, same player \"Seaking\" #119 Master Ball"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:123:master-ball:no-auto",
+   "action": "retire",
+   "reason": "cross-market: a Japanese-named row under the ENGLISH key 151 (sv03-5); the Japanese twin already exists at hiq:pokemon:2023:sv2a:123:master-ball:no-auto",
+   "evidence": "twin at hiq:pokemon:2023:sv2a:123:master-ball:no-auto source=ingest-auto-seed, same player \"Scyther\" #123 Master Ball"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:108:master-ball:no-auto",
+   "action": "retire",
+   "reason": "cross-market: a Japanese-named row under the ENGLISH key 151 (sv03-5); the Japanese twin already exists at hiq:pokemon:2023:sv2a:108:master-ball:no-auto",
+   "evidence": "twin at hiq:pokemon:2023:sv2a:108:master-ball:no-auto source=ingest-auto-seed, same player \"Lickitung\" #108 Master Ball"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:93:master-ball:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:93:master-ball:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:93:master-ball:no-auto; Haunter #93 Master Ball source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:4:reverse-foil:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:4:reverse-foil:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:4:reverse-foil:no-auto; Charmander #4 Reverse Foil source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:25:reverse-foil:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:25:reverse-foil:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:25:reverse-foil:no-auto; Pikachu #25 Reverse Foil source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:66:master-ball:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:66:master-ball:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:66:master-ball:no-auto; Machop #66 Master Ball source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:75:master-ball:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:75:master-ball:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:75:master-ball:no-auto; Graveler #75 Master Ball source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:37:reverse-foil:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:37:reverse-foil:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:37:reverse-foil:no-auto; Vulpix #37 Reverse Foil source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:5:master-ball:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:5:master-ball:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:5:master-ball:no-auto; Charmeleon #5 Master Ball source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:8:master-ball:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:8:master-ball:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:8:master-ball:no-auto; Wartortle #8 Master Ball source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:37:master-ball:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:37:master-ball:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:37:master-ball:no-auto; Vulpix #37 Master Ball source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:27:master-ball:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:27:master-ball:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:27:master-ball:no-auto; Sandshrew #27 Master Ball source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:2:master-ball:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:2:master-ball:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:2:master-ball:no-auto; Ivysaur #2 Master Ball source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:78:master-ball:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:78:master-ball:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:78:master-ball:no-auto; Rapidash #78 Master Ball source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:80:master-ball:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:80:master-ball:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:80:master-ball:no-auto; Slowbro #80 Master Ball source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:22:reverse-foil:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:22:reverse-foil:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:22:reverse-foil:no-auto; Fearow #22 Reverse Foil source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:73:master-ball:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:73:master-ball:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:73:master-ball:no-auto; Tentacruel #73 Master Ball source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:10:master-ball:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:10:master-ball:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:10:master-ball:no-auto; Caterpie #10 Master Ball source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:16:reverse-foil:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:16:reverse-foil:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:16:reverse-foil:no-auto; Pidgey #16 Reverse Foil source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:91:reverse-foil:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:91:reverse-foil:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:91:reverse-foil:no-auto; Cloyster #91 Reverse Foil source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:47:master-ball:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:47:master-ball:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:47:master-ball:no-auto; Parasect #47 Master Ball source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:22:master-ball:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:22:master-ball:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:22:master-ball:no-auto; Fearow #22 Master Ball source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:59:reverse-foil:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:59:reverse-foil:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:59:reverse-foil:no-auto; Arcanine #59 Reverse Foil source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:25:master-ball:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:25:master-ball:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:25:master-ball:no-auto; Pikachu #25 Master Ball source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:60:master-ball:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:60:master-ball:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:60:master-ball:no-auto; Poliwag #60 Master Ball source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:45:reverse-foil:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:45:reverse-foil:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:45:reverse-foil:no-auto; Vileplume #45 Reverse Foil source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:35:master-ball:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:35:master-ball:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:35:master-ball:no-auto; Clefairy #35 Master Ball source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:7:reverse-foil:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:7:reverse-foil:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:7:reverse-foil:no-auto; Squirtle #7 Reverse Foil source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:42:master-ball:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:42:master-ball:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:42:master-ball:no-auto; Golbat #42 Master Ball source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:51:master-ball:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:51:master-ball:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:51:master-ball:no-auto; Dugtrio #51 Master Ball source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:45:master-ball:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:45:master-ball:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:45:master-ball:no-auto; Vileplume #45 Master Ball source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:68:reverse-foil:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:68:reverse-foil:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:68:reverse-foil:no-auto; Machamp #68 Reverse Foil source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:32:master-ball:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:32:master-ball:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:32:master-ball:no-auto; Nidoran #32 Master Ball source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:11:master-ball:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:11:master-ball:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:11:master-ball:no-auto; Metapod #11 Master Ball source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:71:master-ball:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:71:master-ball:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:71:master-ball:no-auto; Victreebel #71 Master Ball source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:58:master-ball:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:58:master-ball:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:58:master-ball:no-auto; Growlithe #58 Master Ball source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:62:reverse-foil:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:62:reverse-foil:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:62:reverse-foil:no-auto; Poliwrath #62 Reverse Foil source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:43:master-ball:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:43:master-ball:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:43:master-ball:no-auto; Oddish #43 Master Ball source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:4:master-ball:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:4:master-ball:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:4:master-ball:no-auto; Charmander #4 Master Ball source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:28:master-ball:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:28:master-ball:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:28:master-ball:no-auto; Sandslash #28 Master Ball source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:39:master-ball:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:39:master-ball:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:39:master-ball:no-auto; Jigglypuff #39 Master Ball source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:30:master-ball:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:30:master-ball:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:30:master-ball:no-auto; Nidorina #30 Master Ball source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:62:master-ball:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:62:master-ball:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:62:master-ball:no-auto; Poliwrath #62 Master Ball source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:34:master-ball:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:34:master-ball:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:34:master-ball:no-auto; Nidoking #34 Master Ball source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:86:master-ball:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:86:master-ball:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:86:master-ball:no-auto; Seel #86 Master Ball source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:57:master-ball:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:57:master-ball:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:57:master-ball:no-auto; Primeape #57 Master Ball source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:90:master-ball:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:90:master-ball:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:90:master-ball:no-auto; Shellder #90 Master Ball source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:91:master-ball:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:91:master-ball:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:91:master-ball:no-auto; Cloyster #91 Master Ball source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:63:master-ball:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:63:master-ball:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:63:master-ball:no-auto; Abra #63 Master Ball source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:16:master-ball:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:16:master-ball:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:16:master-ball:no-auto; Pidgey #16 Master Ball source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:48:master-ball:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:48:master-ball:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:48:master-ball:no-auto; Venonat #48 Master Ball source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:17:master-ball:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:17:master-ball:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:17:master-ball:no-auto; Pidgeotto #17 Master Ball source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:64:master-ball:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:64:master-ball:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:64:master-ball:no-auto; Kadabra #64 Master Ball source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:94:master-ball:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:94:master-ball:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:94:master-ball:no-auto; Gengar #94 Master Ball source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:54:reverse-foil:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:54:reverse-foil:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:54:reverse-foil:no-auto; Psyduck #54 Reverse Foil source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:49:master-ball:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:49:master-ball:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:49:master-ball:no-auto; Venomoth #49 Master Ball source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:23:master-ball:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:23:master-ball:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:23:master-ball:no-auto; Ekans #23 Master Ball source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:53:reverse-foil:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:53:reverse-foil:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:53:reverse-foil:no-auto; Persian #53 Reverse Foil source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:90:reverse-foil:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:90:reverse-foil:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:90:reverse-foil:no-auto; Shellder #90 Reverse Foil source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:79:master-ball:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:79:master-ball:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:79:master-ball:no-auto; Slowpoke #79 Master Ball source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:67:master-ball:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:67:master-ball:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:67:master-ball:no-auto; Machoke #67 Master Ball source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:55:master-ball:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:55:master-ball:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:55:master-ball:no-auto; Golduck #55 Master Ball source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:93:reverse-foil:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:93:reverse-foil:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:93:reverse-foil:no-auto; Haunter #93 Reverse Foil source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:89:master-ball:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:89:master-ball:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:89:master-ball:no-auto; Muk #89 Master Ball source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:95:master-ball:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:95:master-ball:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:95:master-ball:no-auto; Onix #95 Master Ball source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:18:master-ball:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:18:master-ball:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:18:master-ball:no-auto; Pidgeot #18 Master Ball source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:72:master-ball:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:72:master-ball:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:72:master-ball:no-auto; Tentacool #72 Master Ball source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:83:master-ball:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:83:master-ball:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:83:master-ball:no-auto; Farfetch'd #83 Master Ball source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:13:master-ball:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:13:master-ball:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:13:master-ball:no-auto; Weedle #13 Master Ball source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:82:master-ball:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:82:master-ball:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:82:master-ball:no-auto; Magneton #82 Master Ball source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:33:master-ball:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:33:master-ball:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:33:master-ball:no-auto; Nidorino #33 Master Ball source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:77:master-ball:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:77:master-ball:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:77:master-ball:no-auto; Ponyta #77 Master Ball source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:87:master-ball:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:87:master-ball:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:87:master-ball:no-auto; Dewgong #87 Master Ball source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:70:master-ball:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:70:master-ball:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:70:master-ball:no-auto; Weepinbell #70 Master Ball source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:7:master-ball:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:7:master-ball:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:7:master-ball:no-auto; Squirtle #7 Master Ball source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:81:master-ball:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:81:master-ball:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:81:master-ball:no-auto; Magnemite #81 Master Ball source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:99:master-ball:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:99:master-ball:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:99:master-ball:no-auto; Kingler #99 Master Ball source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:52:master-ball:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:52:master-ball:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:52:master-ball:no-auto; Meowth #52 Master Ball source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:1:master-ball:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:1:master-ball:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:1:master-ball:no-auto; Bulbasaur #1 Master Ball source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:94:reverse-foil:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:94:reverse-foil:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:94:reverse-foil:no-auto; Gengar #94 Reverse Foil source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:54:master-ball:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:54:master-ball:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:54:master-ball:no-auto; Psyduck #54 Master Ball source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:99:reverse-foil:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:99:reverse-foil:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:99:reverse-foil:no-auto; Kingler #99 Reverse Foil source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:59:master-ball:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:59:master-ball:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:59:master-ball:no-auto; Arcanine #59 Master Ball source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:21:master-ball:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:21:master-ball:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:21:master-ball:no-auto; Spearow #21 Master Ball source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:52:reverse-foil:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:52:reverse-foil:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:52:reverse-foil:no-auto; Meowth #52 Reverse Foil source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:89:reverse-foil:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:89:reverse-foil:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:89:reverse-foil:no-auto; Muk #89 Reverse Foil source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:50:master-ball:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:50:master-ball:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:50:master-ball:no-auto; Diglett #50 Master Ball source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:92:master-ball:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:92:master-ball:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:92:master-ball:no-auto; Gastly #92 Master Ball source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:26:reverse-foil:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:26:reverse-foil:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:26:reverse-foil:no-auto; Raichu #26 Reverse Foil source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:69:master-ball:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:69:master-ball:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:69:master-ball:no-auto; Bellsprout #69 Master Ball source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:46:master-ball:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:46:master-ball:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:46:master-ball:no-auto; Paras #46 Master Ball source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:53:master-ball:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:53:master-ball:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:53:master-ball:no-auto; Persian #53 Master Ball source=ingest-auto-seed"
+  },
+  {
+   "id": "hiq:pokemon:2023:151:97:master-ball:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2023:sv2a:97:master-ball:no-auto",
+   "reason": "cross-market: setName says \"Japanese\"; the Japanese 151 is sv2a, never the English sv03-5",
+   "evidence": "no row at hiq:pokemon:2023:sv2a:97:master-ball:no-auto; Hypno #97 Master Ball source=ingest-auto-seed"
+  }
+ ]
+}
