@@ -775,6 +775,114 @@ export const PRODUCT_SET_KEYS: ReadonlyArray<ProductSetKey> = [
   // answers before the regex vocabulary, so the fold does not depend on the
   // reconciliation alone.
   S("bellingham-mariners", { names: ["bellingham", "bellingham-mariners-team-issue"] }),
+
+  // -- Soccer league / competition products (#1863, Drew 2026-09-06) ----------
+  //
+  // THE RULING. All 66 are DISTINCT products, each a normalizeSetKey fixed
+  // point since #1863, standing on 178,281 strict checklistcenter rows. In
+  // every contested namespace the flagship they were collapsing into holds NO
+  // strict soccer checklist rows of its own (`topps` 0 of 399, `topps-chrome`
+  // 0 of 1,075, `topps-finest` 0 of 119, `topps-stadium-club` 0 of 344,
+  // `panini-mosaic` 0 of 193) — CF-COUNT-BY-SOURCE-NOT-ROW-COUNT, so no fold
+  // ruled here lands on a flagship a checklist stands behind.
+  //
+  // WHY THEY BELONG IN THIS TABLE. #1863 made them fixed points but registered
+  // them nowhere, so `productAncestry` returned the bare key and the rematch's
+  // SPECIALIZATION-STATED ladder (#1725) — which reads this table through the
+  // mirror in rematch-classify.cjs — saw no parent and refused every row. A
+  // ruled product the ladder cannot see is a ruling that repairs nothing.
+  //
+  // EACH IS ITS OWN PRICING FAMILY (no `family`, so it defaults to the key),
+  // for the reason `panini-prizm-fifa` states four hundred lines above: a UEFA
+  // card does not price off an NFL comp. `parent` is the flagship the title's
+  // brand words name — the ladder the family walk should reach — and that is
+  // the edge SPECIALIZATION-STATED needs.
+  //
+  // The damage this repairs, from the #1863 note: 2020 Topps Chrome UEFA,
+  // Bundesliga and Match Attax Bundesliga all folded to `topps-chrome`, so
+  // three different players held card #1 at one address and an ingest of 2,747
+  // identities reported 803 "missing" that had in fact been written over.
+  P("topps-uefa-club-competitions", { parent: "topps" }),
+  P("topps-mls", { parent: "topps" }),
+  P("topps-merlin-chrome-uefa-champions-league", { parent: "topps" }),
+  P("topps-uefa-superstars", { parent: "topps" }),
+  P("topps-merlin-collection-chrome", { parent: "topps" }),
+  P("topps-bundesliga", { parent: "topps" }),
+  P("topps-uefa-champions-league", { parent: "topps" }),
+  P("topps-uefa-champions-league-japan-edition", { parent: "topps" }),
+  P("topps-uefa-japan-edition", { parent: "topps" }),
+  P("topps-uefa-champions-league-jade-edition", { parent: "topps" }),
+  P("topps-jade-edition-uefa-club-competitions", { parent: "topps" }),
+  P("topps-match-attax-uefa", { parent: "topps" }),
+  P("topps-uefa-1st-edition-club-competitions", { parent: "topps" }),
+  P("topps-carnaval-uefa-club-competitions", { parent: "topps" }),
+  P("topps-uefa-1st-edition", { parent: "topps" }),
+  P("topps-bundesliga-japan-edition", { parent: "topps" }),
+  P("topps-liverpool-fc-team-set", { parent: "topps" }),
+  P("topps-atletico-madrid-team-set", { parent: "topps" }),
+  P("topps-renaissance-mls", { parent: "topps" }),
+  P("topps-juventus-team-set", { parent: "topps" }),
+  P("topps-deco-uefa", { parent: "topps" }),
+  // `topps-tier-one` is a parser rule and a reconciliation key but was never a
+  // table entry, so its Bundesliga release had no rung to hang from. #1863
+  // files that release under `topps` because `topps` is the namespace the rows
+  // were COLLAPSING into; the product it is actually a release OF is Tier One,
+  // which is the key the title parser reads and the parent recorded here.
+  P("topps-tier-one", { parent: "topps" }),
+  P("topps-tier-one-bundesliga", { parent: "topps-tier-one" }),
+  // Not one of the 66: a fixed point since the 2026-09-03 census (29,769
+  // checklist rows) and named in #1863's note as the sibling that survives the
+  // collapse. It survived the vocabulary but not the parser or this table, so
+  // it carried the same defect and is repaired with them.
+  P("topps-chrome-uefa-club-competitions", { parent: "topps-chrome" }),
+  P("topps-chrome-uefa-champions-league", { parent: "topps-chrome" }),
+  P("topps-chrome-bundesliga", { parent: "topps-chrome" }),
+  P("topps-chrome-spfl", { parent: "topps-chrome" }),
+  P("topps-chrome-match-attax-bundesliga", { parent: "topps-chrome" }),
+  P("topps-chrome-uefa-womens-champions-league", { parent: "topps-chrome" }),
+  P("topps-chrome-steve-aoki", { parent: "topps-chrome" }),
+  P("topps-chrome-atletico-de-madrid-team-set", { parent: "topps-chrome" }),
+  P("topps-chrome-paris-saint-germain", { parent: "topps-chrome" }),
+  P("topps-chrome-borussia-dortmund-team-set", { parent: "topps-chrome" }),
+  P("topps-chrome-bvb-borussia-dortmund", { parent: "topps-chrome" }),
+  P("topps-chrome-x-real-sociedad", { parent: "topps-chrome" }),
+  P("topps-chrome-sapphire-edition-uefa", { parent: "topps-chrome-sapphire" }),
+  P("topps-chrome-sapphire-bundesliga", { parent: "topps-chrome-sapphire" }),
+  P("topps-chrome-sapphire-edition-uefa-womens", { parent: "topps-chrome-sapphire" }),
+  P("topps-finest-bundesliga", { parent: "topps-finest" }),
+  P("topps-finest-uefa-champions-league", { parent: "topps-finest" }),
+  P("topps-finest-uefa-club-competitions", { parent: "topps-finest" }),
+  P("topps-stadium-club-chrome-uefa", { parent: "topps-stadium-club" }),
+  P("topps-stadium-club-chrome-bundesliga", { parent: "topps-stadium-club" }),
+  P("topps-museum-collection-uefa-champions-league", { parent: "topps-museum-collection" }),
+  P("topps-museum-collection-uefa", { parent: "topps-museum-collection" }),
+  P("topps-museum-collection-bundesliga", { parent: "topps-museum-collection" }),
+  P("panini-mosaic-uefa-euro-2020", { parent: "panini-mosaic" }),
+  P("panini-mosaic-serie-a", { parent: "panini-mosaic" }),
+  P("panini-mosaic-laliga", { parent: "panini-mosaic" }),
+  P("panini-mosaic-premier-league", { parent: "panini-mosaic" }),
+  P("panini-mosaic-la-liga", { parent: "panini-mosaic" }),
+  P("panini-mosaic-fifa-road-to-world-cup", { parent: "panini-mosaic" }),
+  P("panini-prizm-fifa-world-cup-qatar", { parent: "panini-prizm" }),
+  P("panini-select-uefa-euro-preview", { parent: "panini-select" }),
+  P("panini-revolution-premier-league", { parent: "panini-revolution" }),
+  P("panini-national-treasures-fifa-road-to-world-cup", { parent: "panini-national-treasures" }),
+  P("donruss-elite-premier-league", { parent: "donruss-elite" }),
+  P("donruss-elite-serie-a", { parent: "donruss-elite" }),
+  P("donruss-elite-la-liga", { parent: "donruss-elite" }),
+  P("donruss-elite-laliga", { parent: "donruss-elite" }),
+  P("donruss-elite-fifa", { parent: "donruss-elite" }),
+  P("score-premier-league", { parent: "score" }),
+  P("score-serie-a", { parent: "score" }),
+  P("score-ligue-1", { parent: "score" }),
+  P("score-la-liga", { parent: "score" }),
+  P("score-fifa", { parent: "score" }),
+  P("bowman-mls", { parent: "bowman" }),
+  // The one key of the 66 with rows outside soccer: 960 hockey (2019) beside
+  // 7,173 soccer (2022), both checklistcenter. A real product in two
+  // verticals, ruled distinct in both — so the entry carries no sport of its
+  // own, exactly as `bowmans-best-preview` above carries none.
+  P("leaf-ultimate", { parent: "leaf" }),
 ];
 
 // -- lookups -----------------------------------------------------------------

@@ -34,6 +34,90 @@ import { readFileSync } from "node:fs";
 import { productAncestry, productEntry, SAME_NUMBER_PARALLEL_SETS, isSameNumberParallelSet } from "../src/services/catalog/productSetKeys.js";
 import { normalizeSetKey, computeHobbyIqCardId } from "../src/services/portfolioiq/hobbyIqCardId.service.js";
 import { inferSetKeyFromTitle } from "../src/services/portfolioiq/parseTitleIdentity.service.js";
+import { MINTS as SOCCER_TITLES } from "./soccerLeagueSetKeysFromTitle.test.js";
+
+/** The keys #1715 taught the parser, each with a title that states it. */
+const TIFFANY_MINT_CASES: ReadonlyArray<readonly [string, string]> = [
+  ["1987 Topps Traded Tiffany Greg Maddux #70T", "topps-traded-tiffany"],
+  ["1987 Topps Traded Greg Maddux #70T", "topps-traded"],
+  ["1988 Topps Tiffany George Brett #400", "topps-tiffany"],
+  ["1990 Bowman Tiffany Greg Maddux #27", "bowman-tiffany"],
+];
+
+/**
+ * The mirrored edges no other corpus in this file reaches, each with a title
+ * that states the product:
+ *
+ *   `topps-tier-one`  — the soccer corpus reaches it only in its Bundesliga
+ *                       spelling; the bare product is its own edge.
+ *   the Bowman Draft trio (#1912) — the Paper spelling is deliberate: the
+ *                       parser's Paper rule reads "1st Paper" / "Paper
+ *                       Prospect", which is how the product is written, and a
+ *                       bare "Bowman Draft Paper" is `bowman-draft`.
+ */
+const OTHER_MINT_TITLES: readonly string[] = [
+  "2021 Topps Tier One Shohei Ohtani Auto",
+  "2024 Bowman Draft Cooper Flagg #BD-1",
+  "2024 Bowman Draft 1st Paper Prospect Cooper Flagg #BDP-1",
+  "2024 Bowman Draft Sapphire Edition Cooper Flagg #BDC-1",
+];
+
+/** The title each unmintable key WOULD be minted from, once it has a rule. */
+const MINTABLE_PROBES: Readonly<Record<string, string>> = {
+  "fleer-tiffany": "1996 Fleer Tiffany Chipper Jones #300",
+  "fleer-glossy": "1996 Fleer Glossy Derek Jeter #185",
+  "fleer-update-tiffany": "1997 Fleer Update Tiffany Vladimir Guerrero #U12",
+  "fleer-update-glossy": "1997 Fleer Update Glossy Nomar Garciaparra #U3",
+  "fleer-tradition-tiffany": "1999 Fleer Tradition Tiffany Ken Griffey Jr #100",
+  sp: "1994 SP Alex Rodriguez #15 Foil",
+  "sp-championship": "1995 SP Championship Chipper Jones #12",
+  "upper-deck-minors": "1994 Upper Deck Minors Derek Jeter #1",
+  "upper-deck-black-diamond": "1999 Upper Deck Black Diamond Ken Griffey Jr #D24",
+  "score-rookie-and-traded": "1992 Score Rookie & Traded Mike Piazza #T1",
+  "pacific-prism": "1997 Pacific Prism Ken Griffey Jr #10",
+  "pacific-crown-collection": "1998 Pacific Crown Collection Mark McGwire #250",
+  "pacific-gold-crown-die-cuts": "1998 Pacific Gold Crown Die Cuts Sammy Sosa #12",
+};
+
+/**
+ * MEASURED, NOT ASSUMED: the mirrored keys NO title can mint today.
+ *
+ * Taken by running `inferSetKeyFromTitle` over a real-shaped title for each
+ * (2026-09-06). Every one comes back as its FLAGSHIP, so the ladder edge
+ * exists and the derivation can never reach it — the "silently dead edge" the
+ * pin below exists to forbid:
+ *
+ *   1996 Fleer Tiffany / Glossy            -> fleer        (not fleer-tiffany)
+ *   1997 Fleer Update Tiffany / Glossy     -> fleer-update
+ *   1999 Fleer Tradition Tiffany           -> fleer
+ *   1994 SP, 1995 SP Championship          -> unknown
+ *   1994 Upper Deck Minors                 -> upper-deck
+ *   1999 Upper Deck Black Diamond          -> upper-deck
+ *   1992 Score Rookie & Traded             -> score
+ *   1997 Pacific Prism / Crown Collection /
+ *        Gold Crown Die Cuts               -> pacific
+ *
+ * They are LISTED rather than fixed here because each needs its own parser
+ * rule and its own evidence, which is a different change from #1863's soccer
+ * ruling. The list is the point: a key may sit here only deliberately, and the
+ * pin fails the day a NEW edge is added without a rule — which is exactly how
+ * the 66 soccer edges would have been caught had this pin existed.
+ */
+const KNOWN_UNMINTABLE: readonly string[] = [
+  "fleer-tiffany",
+  "fleer-glossy",
+  "fleer-update-tiffany",
+  "fleer-update-glossy",
+  "fleer-tradition-tiffany",
+  "sp",
+  "sp-championship",
+  "upper-deck-minors",
+  "upper-deck-black-diamond",
+  "score-rookie-and-traded",
+  "pacific-prism",
+  "pacific-crown-collection",
+  "pacific-gold-crown-die-cuts",
+];
 
 const require_ = createRequire(import.meta.url);
 const K = require_("../scripts/lib/rematch-classify.cjs");
@@ -442,15 +526,43 @@ describe("the mirrored ladder is a cache, not a second source of truth", () => {
   it("the post-#1715 parser actually MINTS each mirrored key from a title", () => {
     // A ladder edge the derivation can never reach is an edge that repairs
     // nothing. This is the leg that would have been silently dead before #1715.
-    const cases: Array<[string, string]> = [
-      ["1987 Topps Traded Tiffany Greg Maddux #70T", "topps-traded-tiffany"],
-      ["1987 Topps Traded Greg Maddux #70T", "topps-traded"],
-      ["1988 Topps Tiffany George Brett #400", "topps-tiffany"],
-      ["1990 Bowman Tiffany Greg Maddux #27", "bowman-tiffany"],
-    ];
-    for (const [title, expected] of cases) {
+    for (const [title, expected] of TIFFANY_MINT_CASES) {
       expect(normalizeSetKey(inferSetKeyFromTitle(title)), title).toBe(expected);
     }
+  });
+
+  it("EVERY mirrored key has a title that mints it — no silently dead edge", () => {
+    // The test above names four keys by hand, so it could only ever speak for
+    // those four: when #1863's 66 soccer products were mirrored it stayed
+    // green while every one of their edges was unreachable, which is exactly
+    // the "silently dead" failure its own comment warns about. The corpus in
+    // soccerLeagueSetKeysFromTitle.test.ts holds a real-shaped title per
+    // soccer key; this pin asserts the mirror carries no key that NO corpus
+    // can mint, so the next ladder edge added without a parser rule fails
+    // here rather than repairing nothing in silence.
+    const minted = new Set<string>(
+      [
+        ...TIFFANY_MINT_CASES.map(([title]) => title),
+        ...OTHER_MINT_TITLES,
+        ...SOCCER_TITLES.map(([title]) => title),
+      ].map((title) => normalizeSetKey(inferSetKeyFromTitle(title))),
+    );
+    const unreachable = Object.keys(K.SPECIALIZATION_PARENTS)
+      .filter((k) => !minted.has(k))
+      .filter((k) => !KNOWN_UNMINTABLE.includes(k));
+    expect(unreachable, "mirrored keys no title in the corpora mints").toEqual([]);
+  });
+
+  it("the unmintable list is exact — a key that GAINS a rule leaves it", () => {
+    // The exemption above is a debt register, not a waiver. If someone teaches
+    // the parser one of these products, this fails and the name comes off the
+    // list, so the register can only ever shrink by being paid down.
+    const stillDead = KNOWN_UNMINTABLE.filter(
+      (k) => !MINTABLE_PROBES[k] || normalizeSetKey(inferSetKeyFromTitle(MINTABLE_PROBES[k])) !== k,
+    );
+    expect(stillDead, "keys still unmintable").toEqual([...KNOWN_UNMINTABLE]);
+    // and every listed key is really a mirrored edge, not a stale name.
+    for (const k of KNOWN_UNMINTABLE) expect(K.SPECIALIZATION_PARENTS[k], k).toBeTruthy();
   });
 });
 
