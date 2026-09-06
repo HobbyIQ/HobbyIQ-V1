@@ -24,6 +24,19 @@
 //     create a third region matching NEITHER side of the pair
 //   - both fire on pull_request AND push to main (the push side is what
 //     records the context on main itself)
+//   - each pair's path list names BOTH workflow files in the pair
+//
+// That last one is subtle and cost a real CI round-trip to find. GitHub skips
+// a run under `paths-ignore` only when EVERY changed file matches an ignore
+// pattern — one unmatched file and the run proceeds. The first cut of this
+// change listed only the real workflow's own file, so a PR editing the SKIP
+// workflow matched neither ignore list, and BOTH the real and the skip job
+// ran: the context was reported twice (observed on #1840, where a 2s skip
+// pass sat beside the pending real suite). A duplicated required context is
+// worse than a missing one under strict=false — the fast green skip can
+// satisfy the gate while the real suite is still pending or already red. So
+// each pair's paths must name both files in the pair, keeping the two sides a
+// true partition.
 import { describe, it, expect } from "vitest";
 import * as fs from "node:fs";
 import * as path from "node:path";
@@ -75,6 +88,15 @@ function jobNames(yml: string): string[] {
   return [...yml.slice(jobsStart).matchAll(/^    name:\s*(.+?)\s*$/gm)].map((m) => m[1]);
 }
 
+/**
+ * The workflow with every full-line `#` comment removed. Text assertions MUST
+ * run against this, never the raw file: these workflows carry long rationale
+ * comments that quote the very strings being asserted against (`npm ci`,
+ * `!backend/harness/**`), and matching those would be a false positive that
+ * hides a real regression. Same guard workflowAlertGates.test.ts uses.
+ */
+const code = (yml: string) => yml.split("\n").filter((l) => !/^\s*#/.test(l)).join("\n");
+
 /** The four workflows that together must cover every PR. */
 const PAIRS = [
   { context: "Backend Unit Tests", real: "test.yml", skip: "test-skip.yml" },
@@ -97,9 +119,11 @@ describe("required check contexts are produced by EVERY pull_request", () => {
       it("the skip job is the cheap one — no checkout, no install, no test run", () => {
         // The whole point is CI minutes. If the skip job grows real steps the
         // pair costs more than just dropping the path filters.
-        expect(skipYml).not.toMatch(/actions\/checkout/);
-        expect(skipYml).not.toMatch(/actions\/setup-node/);
-        expect(skipYml).not.toMatch(/npm (ci|test|run build)/);
+        // code(), not skipYml — the header comment legitimately mentions
+        // `npm ci` while explaining what is being skipped.
+        expect(code(skipYml)).not.toMatch(/actions\/checkout/);
+        expect(code(skipYml)).not.toMatch(/actions\/setup-node/);
+        expect(code(skipYml)).not.toMatch(/npm (ci|test|run build)/);
       });
 
       for (const event of ["pull_request", "push"] as const) {
@@ -131,8 +155,23 @@ describe("required check contexts are produced by EVERY pull_request", () => {
             expect(pathList(skipYml, event, "paths")).toEqual([]);
           });
 
+          it("the pair's own two workflow files are both in the path list", () => {
+            // See the header note: `paths-ignore` skips a run only when EVERY
+            // changed file is ignored. If the skip workflow's own file is
+            // absent from the list, a PR touching it triggers BOTH jobs and
+            // the required context is reported twice.
+            const realPaths = pathList(realYml, event, "paths");
+            for (const f of [real, skip]) {
+              expect(
+                realPaths,
+                `${real} ${event} paths must name .github/workflows/${f}`,
+              ).toContain(`.github/workflows/${f}`);
+            }
+          });
+
           it("the skip workflow is scoped to main, like the check it stands in for", () => {
-            expect(skipYml).toMatch(new RegExp(`  ${event}:\\n    branches: \\[main\\]`));
+            expect(skipYml).toContain(`  ${event}:
+    branches: [main]`);
           });
         });
       }
@@ -147,7 +186,9 @@ describe("required check contexts are produced by EVERY pull_request", () => {
     // back into the trigger.
     const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, "backend", "package.json"), "utf8"));
     expect(pkg.scripts.test).toContain("harness/tier1");
-    expect(wf("test.yml")).not.toContain("!backend/harness");
+    // code(), not the raw file — test.yml's header comment quotes the
+    // removed `"!backend/harness/**"` string while explaining why it went.
+    expect(code(wf("test.yml"))).not.toContain("!backend/harness");
     expect(pathList(wf("test.yml"), "pull_request", "paths")).toContain("backend/**");
   });
 

@@ -26,11 +26,13 @@ on:
     paths-ignore:
       - "backend/**"
       - ".github/workflows/test.yml"
+      - ".github/workflows/test-skip.yml"
   push:
     branches: [main]
     paths-ignore:
       - "backend/**"
       - ".github/workflows/test.yml"
+      - ".github/workflows/test-skip.yml"
 
 concurrency:
   group: backend-tests-skip-${{ github.ref }}

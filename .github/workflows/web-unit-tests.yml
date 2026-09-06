@@ -18,12 +18,14 @@ on:
       - "apps/web/**"
       - "backend/src/services/compiq/**"
       - ".github/workflows/web-unit-tests.yml"
+      - ".github/workflows/web-unit-tests-skip.yml"
   push:
     branches: [main]
     paths:
       - "apps/web/**"
       - "backend/src/services/compiq/**"
       - ".github/workflows/web-unit-tests.yml"
+      - ".github/workflows/web-unit-tests-skip.yml"
   workflow_dispatch:
 
 concurrency:
