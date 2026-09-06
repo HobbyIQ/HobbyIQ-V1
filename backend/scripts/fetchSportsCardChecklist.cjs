@@ -175,6 +175,45 @@ function unescapeCell(s) {
 const SET_URL_RE =
   /\/set-(\d+)\/(\d{4})(?:-(\d{2}))?-(.+?)-(football|basketball|hockey|baseball)-trading-card-checklist\/?$/;
 
+/**
+ * CF-THE-ADDSLASHES-LEAK-IS-IN-THE-URL-TOO (2026-09-06).
+ *
+ * This source's PHP addslashes pass leaks into the URL itself: it slugs
+ * Bowman's Best as `1994-bowman\s-best` and McDonald's as `mcdonald\s`, and
+ * 60 manifest entries carry that backslash in `sourceRef` today.
+ *
+ * The escape is invisible to the RUNG reader -- `bowman\s-best-atomic-refractors`
+ * still ends in `-atomic-refractors`, so `parallelFromSlug` returns "Atomic
+ * Refractor" and everything looks fine -- and fatal to the PARENT reader, whose
+ * brand list is matched against the slug HEAD:
+ *
+ *   splitParentAndSubset("bowman\s-best-atomic-refractors") -> parentSetKey ""
+ *
+ * No parent claim means `parallelOfParent: false`, and a rung page with no base
+ * cards and no parent to attach them to is refused by the driver's zero-base
+ * gate. Measured on run of 2026-09-06: `intended 2 = written 0 + failed 2` for
+ * set-13670 and set-13671. The same miss is why those rows carried
+ * `setKey: bowman` -- `bowman\s-best` never matched `bowmans-best` in
+ * PARENT_BRANDS, so the walk fell through to the bare brand.
+ *
+ * NOT A 404. Verified by fetch on 2026-09-06, the escaped, apostrophe-dropped
+ * and hyphenated forms ALL return HTTP 200, because the server keys on
+ * `set-<id>`. The host was always willing; our slug readers were not.
+ *
+ * Canonicalised HERE, in the parser, and not only in the discovery script, so
+ * the 60 entries already in the manifest heal on their next fetch without a
+ * re-crawl. The apostrophe is DROPPED, never turned into a separator:
+ * `bowmans-best` is the spelling the catalog rules and PARENT_BRANDS carries;
+ * `bowman-s-best` would match neither and leave the bug wearing a tidier slug.
+ */
+function unescapeAddslashes(s) {
+  return String(s ?? "").replace(/\\(.)/g, "$1");
+}
+
+function canonicalSlug(rest) {
+  return unescapeAddslashes(rest).replace(/'/g, "");
+}
+
 function parseSetUrl(url) {
   const m = SET_URL_RE.exec(String(url || "").split("?")[0].split("#")[0]);
   if (!m) return null;
@@ -185,9 +224,25 @@ function parseSetUrl(url) {
     year,                                   // the FIRST year, always
     year2,
     seasonLabel: year2 == null ? String(year) : `${year}-${m[3]}`,
-    rest: m[4],
+    // The slug the SITE canonically spells, so the rung reader and the brand
+    // walk see the same text the catalog does.
+    rest: canonicalSlug(m[4]),
+    // What the sitemap actually served, kept so an escaped source stays
+    // auditable rather than silently rewritten.
+    restRaw: m[4],
     sport: m[5],
   };
+}
+
+/** The set URL with its slug canonicalised; `set-<id>` untouched. Used for the
+ *  live GET so the request carries the spelling the site's own links use. */
+function canonicalSetUrl(url) {
+  const u = String(url ?? "");
+  const m = SET_URL_RE.exec(u.split("?")[0].split("#")[0]);
+  if (!m) return u;
+  const season = m[3] ? `${m[2]}-${m[3]}` : m[2];
+  const base = u.slice(0, u.indexOf(`/set-${m[1]}/`));
+  return `${base}/set-${m[1]}/${season}-${canonicalSlug(m[4])}-${m[5]}-trading-card-checklist`;
 }
 
 /**
@@ -827,7 +882,11 @@ async function main() {
     process.exit(2);
   }
 
-  const html = htmlFile ? fs.readFileSync(htmlFile, "utf8") : await get(url);
+  // FETCH THE CANONICAL SPELLING. The manifest may still carry the source's
+  // addslashes escape in this URL; the server tolerates it, but requesting the
+  // canonical form keeps the request, the parse and the manifest in agreement.
+  const fetchUrl = url ? canonicalSetUrl(url) : "";
+  const html = htmlFile ? fs.readFileSync(htmlFile, "utf8") : await get(fetchUrl);
 
   // Sport is an INPUT: the slug states it, and --sport overrides for a driver
   // entry that already knows. Never guessed from the set name.
@@ -965,5 +1024,6 @@ module.exports = {
   zeroCardReason, parseSetUrl, parallelFromSlug, parallelTailOf, splitParentAndSubset, splitCardHeader, buildRows, toCsv,
   extractCardHeaders, countHiddenRows, autoEvidence, unescapeCell,
   SUBSET_TAGS, NOISE_TAGS, HEADER, SET_URL_RE,
+  unescapeAddslashes, canonicalSlug, canonicalSetUrl,
   QUALIFIED_REFRACTOR, NESTED_PRODUCT_SLUGS, nestedProduct, SLUG_PARALLEL_TAIL, PARENT_BRANDS,
 };

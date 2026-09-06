@@ -431,3 +431,142 @@ describe("the catalog move declares its setKey change (real moveCatalogRow)", ()
     expect(B.idStem(NEW_ID)).toBe("bowman");
   });
 });
+
+/**
+ * ── THE CANARY ATTRIBUTES THIS LANE'S OWN WRITES ──────────────────────────
+ *
+ * Run 34009971035 (2026-09-06T03:49:51Z→03:53:47Z, MODE=sales, APPLY, scope
+ * baseball:2026:bowman-chrome) refiled 1,835 sales exactly as ruled and was
+ * then failed by its own canary, exit 3, "a collision may have been merged":
+ *
+ *     cpa-ag  16 -> 5      cpa-em  17 -> 8
+ *     cpa-hl  87 -> 7      cpa-wa  91 -> 15      bcp-151  0 -> 0
+ *
+ * Nothing merged. Read against the pool afterwards, every single departed row
+ * carried that run's `reslugedFrom` stamp and the CF-IT-CAME-OUT-OF-BOWMAN
+ * reason, landed on `hiq:baseball:2026:bowman:<num>:base:auto`, and named the
+ * BOWMAN-side player; the collision player's rows never moved. Source drop
+ * equalled destination gain in all four pools (11/9/80/76). The anchors ARE
+ * the address the sales lane drains, so the gate was firing on success.
+ *
+ * These pin the fix, and the mutations that must stay red:
+ *   - a delta the ledger explains exactly            -> PASS
+ *   - one row's write missing from the ledger        -> FAIL (the mutation)
+ *   - a pool the ledger never names                  -> another writer, PASS
+ *   - no ledger at all                               -> STRICT, FAIL
+ */
+describe("the canary attributes this lane's own writes", () => {
+  const P = (n: string) => `hiq:baseball:2026:bowman-chrome:${n}:base:auto`;
+
+  // The four pools exactly as run 34009971035 left them, with the ledger the
+  // lane now emits for the moves it actually made.
+  const RUN = [
+    { num: "cpa-ag", before: 16, after: 5, out: 11 },
+    { num: "cpa-em", before: 17, after: 8, out: 9 },
+    { num: "cpa-hl", before: 87, after: 7, out: 80 },
+    { num: "cpa-wa", before: 91, after: 15, out: 76 },
+  ];
+
+  it("the run that was falsely halted now PASSES, every pool attributed", () => {
+    for (const { num, before, after, out } of RUN) {
+      const v = B.attributeCanary(P(num), before, after, { fromCount: out, toCount: 0 });
+      expect(v.verdict).toBe("ATTRIBUTED");
+      expect(v.ok).toBe(true);
+      // The arithmetic is printed, not asserted on trust.
+      expect(v.expected).toBe(after);
+      expect(v.from).toBe(out);
+      expect(v.delta).toBe(after - before);
+    }
+  });
+
+  it("the untouched anchor is UNCHANGED, not merely un-blamed", () => {
+    // bcp-151 was 0 -> 0. A pool that did not move must not be dressed up as
+    // an attributed change.
+    const v = B.attributeCanary(P("bcp-151"), 0, 0, undefined);
+    expect(v.verdict).toBe("UNCHANGED");
+    expect(v.ok).toBe(true);
+  });
+
+  // ── THE MUTATION ────────────────────────────────────────────────────────
+  // Drop ONE row from the ledger and the pool must go red. This is the whole
+  // guarantee: attribution relaxes the gate exactly as far as the lane can
+  // prove it wrote, and not one row further.
+  it("one row's write missing from the ledger still FAILS", () => {
+    const v = B.attributeCanary(P("cpa-hl"), 87, 7, { fromCount: 79, toCount: 0 });
+    expect(v.verdict).toBe("UNEXPLAINED");
+    expect(v.ok).toBe(false);
+    expect(v.expected).toBe(8);          // 87 - 79
+    expect(v.note).toMatch(/cannot account for/);
+  });
+
+  it("a pool the ledger never names is ANOTHER writer's change, not this lane's damage", () => {
+    // sold_comps has many writers -- the CardHedge daily ingest, the dedup
+    // cron, the ingest lanes. A lane that wrote nothing here cannot have
+    // damaged it. #1711/#1727.
+    const v = B.attributeCanary(P("cpa-ag"), 16, 20, undefined);
+    expect(v.verdict).toBe("OTHER-WRITER");
+    expect(v.ok).toBe(true);
+    expect(v.from).toBe(0);
+    expect(v.to).toBe(0);
+  });
+
+  it("rows arriving IN a pool are attributed too — a refile changes both ends", () => {
+    const v = B.attributeCanary("hiq:baseball:2026:bowman:cpa-hl:base:auto", 473, 553, { fromCount: 0, toCount: 80 });
+    expect(v.verdict).toBe("ATTRIBUTED");
+    expect(v.expected).toBe(553);
+    expect(v.ok).toBe(true);
+  });
+
+  // ── THE GATE DEGRADES CLOSED ────────────────────────────────────────────
+  it("no ledger at all is STRICT — a checker that cannot attribute hands out no passes", () => {
+    const explicitNull = B.attributeCanary(P("cpa-hl"), 87, 7, null);
+    expect(explicitNull.verdict).toBe("UNEXPLAINED");
+    expect(explicitNull.ok).toBe(false);
+    expect(explicitNull.note).toMatch(/no write ledger/);
+
+    // A caller that omits the argument entirely is a caller with no ledger.
+    // `undefined` as an ABSENT argument must not be read as the relaxing
+    // "ledger exists, does not name this pool" case.
+    const omitted = (B.attributeCanary as (...a: unknown[]) => { verdict: string; ok: boolean })(P("cpa-hl"), 87, 7);
+    expect(omitted.verdict).toBe("UNEXPLAINED");
+    expect(omitted.ok).toBe(false);
+  });
+
+  it("an anchor that could not be re-read is UNCONFIRMED, never a pass", () => {
+    // A count we did not take cannot clear the canary.
+    const v = B.attributeCanary(P("cpa-wa"), 91, null, { fromCount: 76, toCount: 0 });
+    expect(v.verdict).toBe("UNCONFIRMED");
+    expect(v.unread).toBe(true);
+    expect(v.ok).toBe(false);
+  });
+
+  it("a REPORT-only run cannot be relaxed by an empty ledger", () => {
+    // The lane passes `null` under !APPLY precisely so that a dry run which
+    // moved a pool is still proven wrong BY MEASUREMENT rather than excused
+    // by the absence of writes it claims not to have made.
+    const v = B.attributeCanary(P("cpa-ag"), 16, 5, null);
+    expect(v.ok).toBe(false);
+  });
+
+  // A ROW COUNTED IN TWO POOLS MUST BE RECORDED IN TWO POOLS.
+  //
+  // `poolCount` ORs cardId and hobbyiqCardId, so a row whose two identity
+  // fields disagree is counted in BOTH pools -- 5 of the 8 rows left in the
+  // cpa-em anchor are exactly that (cardId on the Chrome slug, hobbyiqCardId
+  // already on Bowman). The lane records the departure under both addresses;
+  // if it recorded only `reslugedFrom` the OTHER anchor would show an
+  // unattributed drop and the lane would be failed for a move it fully
+  // accounted for -- the same false halt, one level down.
+  it("a split-identity row drains both anchors, and both are attributed", () => {
+    // The chrome anchor loses the row even though reslugedFrom named Bowman.
+    const chrome = B.attributeCanary(P("cpa-em"), 17, 16, { fromCount: 1, toCount: 0 });
+    expect(chrome.verdict).toBe("ATTRIBUTED");
+    expect(chrome.ok).toBe(true);
+
+    // Recording only one side is the regression this guards: the anchor drops
+    // but the ledger says the lane took nothing out of it.
+    const unrecorded = B.attributeCanary(P("cpa-em"), 17, 16, { fromCount: 0, toCount: 0 });
+    expect(unrecorded.verdict).toBe("UNEXPLAINED");
+    expect(unrecorded.ok).toBe(false);
+  });
+});

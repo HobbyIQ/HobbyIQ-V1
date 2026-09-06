@@ -153,3 +153,52 @@ describe("pool note: a refusal from 4 sales differs from one from none", () => {
     expect(withheldPoolNote({ ...base, blockingCount: null })).toBeNull();
   });
 });
+
+// ─── The "mostly withheld" threshold (audit item 9) ────────────────────
+//
+// A portfolio whose cards are all present but mostly unpriced is not the
+// empty state. The banner's rule lives in the page, but the SHAPE of the
+// decision is pinned here: it is a proportion of the list, and it is never
+// triggered by a fully priced portfolio.
+describe("mostly-withheld is a proportion, not a count", () => {
+  const mostly = (withheld: number, total: number) => withheld > 0 && withheld >= total / 2;
+
+  it("fires when withheld rows are at least half", () => {
+    expect(mostly(10, 20)).toBe(true);
+    expect(mostly(71, 131)).toBe(true); // the platform-wide split
+  });
+
+  it("stays quiet for a few refusals in a healthy portfolio", () => {
+    // Drew's own: 10 withheld of 43. Those rows speak for themselves.
+    expect(mostly(10, 43)).toBe(false);
+  });
+
+  it("never fires on a fully priced portfolio", () => {
+    expect(mostly(0, 43)).toBe(false);
+    expect(mostly(0, 0)).toBe(false);
+  });
+});
+
+// ─── CF-REPRICE-IS-VISIBLE-PER-ROW (Drew, 2026-09-05), audit item 6 ────
+//
+// The reprice is already async + polled; the gap was that the LIST said
+// nothing while it ran. The rule for WHICH rows show a pending marker is the
+// interesting part, so it is pinned here.
+describe("per-row pending: only rows a run could change", () => {
+  const pending = (repricing: boolean, value: number | null) => repricing && value == null;
+
+  it("marks an unpriced row while a run is in flight", () => {
+    expect(pending(true, null)).toBe(true);
+  });
+
+  it("leaves a PRICED row alone — a spinner on a good price reads as broken", () => {
+    // The run may confirm the same number. Putting a pending marker on every
+    // row would make a healthy portfolio look broken for the ~40s it takes.
+    expect(pending(true, 1415)).toBe(false);
+  });
+
+  it("marks nothing when no run is in flight", () => {
+    expect(pending(false, null)).toBe(false);
+    expect(pending(false, 1415)).toBe(false);
+  });
+});
