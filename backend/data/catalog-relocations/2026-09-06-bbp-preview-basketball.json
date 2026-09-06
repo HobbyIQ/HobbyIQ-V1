@@ -8,7 +8,8 @@
   "ORDER IS LOAD-BEARING: the 20 bare alias rows are retired FIRST, vacating the addresses the 20 Preview refractor rows then reslug onto. The lane applies entries top to bottom.",
   "The 20 Atomic rows reslug to :atomic-refractor, never the plain rung — 'Atomic Refractor' is its own rung (parallelLadders).",
   "The 20 bare BASE rows are correct as they stand and are deliberately OMITTED from this list.",
-  "The 240 OTHER rows carrying source sportscardchecklist-2026-09-04 in this product are the legitimate Stadium Club base checklist (Michael Jordan #118 among them) and are NOT in scope."
+  "The 240 OTHER rows carrying source sportscardchecklist-2026-09-04 in this product are the legitimate Stadium Club base checklist (Michael Jordan #118 among them) and are NOT in scope.",
+  "SEQUENCING WITH THE POOL LANE (#1853-era list data/pool-relocations/2026-09-06-bbp-basketball-rung-repoint.json, on main 2026-09-06). That list repoints 30 sold_comps rows onto 12 targets. SIX of those targets are addresses THIS list retires first (bbp1/3/4/7/10/12 :refractor:no-auto) before reslugging the Preview refractor row onto the same address — so the two lists AGREE on the end state but NOT on the order. Run the CATALOG list first and the pool list second: repointing sales onto an address that is then deleted and recreated leaves them pointing at a row that existed under a different document. Eight further pool targets are addresses this list reslugs ONTO (end state agrees), and four are base rows this list does not touch."
  ],
  "census": {
   "productRowsTotal": 443,
@@ -19,7 +20,15 @@
   "reslugPreviewRefractor": 20,
   "reslugPreviewAtomic": 20,
   "baseRowsLeftAlone": 20,
-  "expectedAfter": "60 preview rows, 3 per card, no sub- segment"
+  "expectedAfter": "60 preview rows, 3 per card, no sub- segment",
+  "poolLaneInteraction": {
+   "poolList": "data/pool-relocations/2026-09-06-bbp-basketball-rung-repoint.json",
+   "poolRepointTargets": 12,
+   "targetsThisListRetiresFirst": 6,
+   "targetsThisListReslugsOnto": 8,
+   "targetsUntouched": 4,
+   "requiredOrder": "catalog list BEFORE pool list"
+  }
  },
  "entries": [
   {

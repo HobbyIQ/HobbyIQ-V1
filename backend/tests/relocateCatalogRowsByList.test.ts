@@ -23,7 +23,7 @@
  * absence removes a row from a pool.
  */
 import { describe, it, expect } from "vitest";
-import { readFileSync } from "node:fs";
+import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { createRequire } from "node:module";
 
@@ -398,5 +398,45 @@ describe("the basketball list retires 20 aliases and reslugs 40, in that order",
     expect(new Set(doc.entries.map((e) => e.id)).size).toBe(60);
     const tos = doc.entries.filter((e) => e.to).map((e) => e.to);
     expect(new Set(tos).size).toBe(tos.length);
+  });
+
+  it("SEQUENCING: the pool lane's list repoints onto addresses this list retires first", () => {
+    // data/pool-relocations/2026-09-06-bbp-basketball-rung-repoint.json landed
+    // on main the same day and repoints 30 sold_comps rows onto 12 targets in
+    // this product. The two lists agree on the END STATE and disagree on the
+    // ORDER: six of those targets are bare refractor addresses this list
+    // retires before reslugging the Preview row onto them. Repointing sales
+    // onto an address that is then deleted and recreated leaves them on a row
+    // that existed under a different document, so the CATALOG list runs first.
+    //
+    // This pin exists so that a later edit to either list cannot quietly widen
+    // the overlap without someone reading the ordering note.
+    const poolList = join(
+      __dirname, "..", "data", "pool-relocations",
+      "2026-09-06-bbp-basketball-rung-repoint.json",
+    );
+    if (!existsSync(poolList)) return; // the pool list is not in this tree yet
+
+    const pool = JSON.parse(readFileSync(poolList, "utf8")) as {
+      entries: { repointHobbyiqCardId?: string }[];
+    };
+    const targets = new Set(
+      pool.entries.map((e) => e.repointHobbyiqCardId).filter(Boolean) as string[],
+    );
+    const retires = new Set(doc.entries.filter((e) => e.action === "retire").map((e) => e.id));
+    const reslugTo = new Set(doc.entries.filter((e) => e.action === "reslug").map((e) => e.to));
+
+    const retiredFirst = [...targets].filter((t) => retires.has(t));
+    const landedOn = [...targets].filter((t) => reslugTo.has(t));
+
+    // The measured overlap on 2026-09-06.
+    expect(retiredFirst).toHaveLength(6);
+    expect(landedOn).toHaveLength(8);
+    // Every contended target ends up as a live address of this product, so the
+    // end states genuinely agree — the only question is order.
+    for (const t of retiredFirst) expect(reslugTo.has(t)).toBe(true);
+
+    // And the list says so in its own rulings, for whoever runs it.
+    expect(JSON.stringify(doc.rulings)).toMatch(/catalog list BEFORE pool list|SEQUENCING WITH THE POOL LANE/i);
   });
 });
