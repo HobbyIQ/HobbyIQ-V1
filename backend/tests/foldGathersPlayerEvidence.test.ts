@@ -37,6 +37,7 @@ import { moveCatalogRow } from "../src/services/catalog/catalogRowOps.service.js
 const require_ = createRequire(import.meta.url);
 const {
   gatherPlayerEvidence, tallyTitlesForSlug, MAX_TITLES_PER_SLUG,
+  describePlayerEvidence, stemOf,
 } = require_("../scripts/lib/player-evidence.cjs");
 
 type Doc = Record<string, any>;
@@ -68,20 +69,31 @@ function notFound(): Error & { code: number } {
  * arrives without one, or with one that does not match, returns nothing --
  * exactly as a real cross-partition-disabled read would behave.
  */
-function poolFake(byPartition: Record<string, Doc[]>) {
+function poolFake(
+  byPartition: Record<string, Doc[]>,
+  byHobbyiqCardId: Record<string, Doc[]> = {},
+) {
   const calls: Array<{ partitionKey: unknown; maxItemCount: unknown; query: string }> = [];
   return {
     calls,
     container: {
       items: {
         query(spec: any, opts: any) {
+          const q = String(spec?.query ?? "");
           calls.push({
             partitionKey: opts?.partitionKey,
             maxItemCount: opts?.maxItemCount,
-            query: String(spec?.query ?? ""),
+            query: q,
           });
-          const pk = String(opts?.partitionKey ?? "");
-          const rows = byPartition[pk] ?? [];
+          // The real container answers on BOTH keys: cardId names a partition,
+          // hobbyiqCardId does not (those rows live under a vendor id). This
+          // fake serves cardId from `byPartition` and hobbyiqCardId from
+          // `byHobbyiqCardId`, keyed by the bound parameter, so a test can put
+          // a sale at an address that has no card-shaped partition at all.
+          const val = String(spec?.parameters?.[0]?.value ?? "");
+          const rows = q.includes("c.hobbyiqCardId")
+            ? (byHobbyiqCardId[val] ?? [])
+            : (byPartition[String(opts?.partitionKey ?? "")] ?? []);
           let served = false;
           return {
             hasMoreResults: () => !served,
@@ -94,8 +106,15 @@ function poolFake(byPartition: Record<string, Doc[]>) {
 }
 
 /** n sale rows naming one player under one partition. */
+let _sid = 0;
 const titles = (player: string, n: number): Doc[] =>
-  Array.from({ length: n }, (_, i) => ({ playerName: player, title: `2024 Optic #40 ${player} Gold ${i}` }));
+  Array.from({ length: n }, (_, i) => ({
+    // A distinct id per row: the gatherer de-duplicates by document id, so a
+    // fixture without ids could not tell one sale from the same sale twice.
+    id: `sale-${_sid++}`,
+    playerName: player,
+    title: `2024 Optic #40 ${player} Gold ${i}`,
+  }));
 
 /** The catalog fake from the sibling suite, narrowed to what these pins need:
  *  a point read of the destination, an upsert, and the delete. */
@@ -258,14 +277,25 @@ describe("the reads are partition-bounded and capped", () => {
       incomingSlug: ALIAS, incumbentSlug: DEST, rivals: [],
     });
 
-    expect(pool.calls).toHaveLength(2);
-    expect(pool.calls.map((c) => c.partitionKey)).toEqual([ALIAS, DEST]);
-    // The predicate is the partition key itself. A query that filtered on
-    // sport/year/setKey instead -- the probe's shape -- would be a
-    // cross-partition scan per fold inside a fleet lane.
+    // Two candidate slugs, each asked on BOTH keys. These slugs are already
+    // 7-segment, so there is no stem fallback and the count is exactly 4.
+    expect(pool.calls).toHaveLength(4);
+
+    const cardIdCalls = pool.calls.filter((c) => c.query.includes("c.cardId ="));
+    const hiqCalls = pool.calls.filter((c) => c.query.includes("c.hobbyiqCardId ="));
+    expect(cardIdCalls.map((c) => c.partitionKey)).toEqual([ALIAS, DEST]);
+    // THE CARD-ID ARM STAYS PARTITION-BOUNDED. That was the correctness claim
+    // of the original file and it is not relaxed by reading a second key.
+    for (const c of cardIdCalls) expect(c.partitionKey).toBeTruthy();
+    // The hobbyiqCardId arm CANNOT name a partition -- a vendor id is not
+    // derivable from a card address -- so it is bounded by the sample cap
+    // instead, on an indexed equality predicate.
+    expect(hiqCalls).toHaveLength(2);
+    for (const c of hiqCalls) expect(c.partitionKey).toBeUndefined();
+
+    // No query may widen into the probe's cross-partition shape.
     for (const c of pool.calls) {
-      expect(c.query).toContain("c.cardId = @slug");
-      expect(c.query).not.toMatch(/normalizedSetKey|c\.sport/);
+      expect(c.query).not.toMatch(/normalizedSetKey|c.sport|c.cardNumber/);
       expect(Number(c.maxItemCount)).toBeLessThanOrEqual(200);
     }
   });
@@ -275,13 +305,17 @@ describe("the reads are partition-bounded and capped", () => {
     await gatherPlayerEvidence(pool.container, destRow(), destRow(), {
       incomingSlug: DEST, incumbentSlug: DEST, rivals: [],
     });
-    expect(pool.calls).toHaveLength(1);
+    // One slug, both keys: the slug is de-duplicated, the keys are not.
+    expect(pool.calls).toHaveLength(2);
+    expect(new Set(pool.calls.map((c) => c.query.includes("hobbyiqCardId"))).size).toBe(2);
   });
 
   it("the sample is capped: an unbounded partition does not become an unbounded read", async () => {
     const pool = poolFake({ [ALIAS]: titles("Ja'Marr Chase", 5_000) });
-    const tally = await tallyTitlesForSlug(pool.container, ALIAS, {});
+    const { tally, error } = await tallyTitlesForSlug(pool.container, ALIAS, {});
     const total = [...tally.values()].reduce((a: number, v: any) => a + v.n, 0);
+
+    expect(error).toBeNull();
 
     expect(MAX_TITLES_PER_SLUG).toBe(200);
     expect(total).toBe(MAX_TITLES_PER_SLUG);
@@ -329,5 +363,174 @@ describe("the pins fail against the unwired code #1838 shipped", () => {
     });
     expect(res.action).toBe("refused");
     expect(cat.upserted).toEqual([]);
+  });
+});
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// #1876 shipped the wiring, and the Optic football 2024 REPORT run still
+// printed `titles: not gathered` for 187 of 207 contended pairs. The gathering
+// was not skipped and no flag was missing: the tally asked for an address that
+// does not hold these sales. Two facts, both measured read-only against prod:
+//
+//   * a card_catalog id is 8 segments (`...:no-auto:num-24`); 91% of sale
+//     cardIds in this product are 7. Of 60 sampled 8-segment cells, ZERO were
+//     reachable by the 8-segment cardId and 18 by the 7-segment stem.
+//   * 59 of those same 60 were reachable ONLY via `hobbyiqCardId`, because the
+//     rows sit in vendor-id partitions (#1860). None was genuinely empty.
+//
+// Pair #17 dragon, the one named in the report: 0 sales by cardId at either
+// address, 5 under `hobbyiqCardId` on the alias stem, in partitions like
+// `1746683330504x986376055087801600`.
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe("a catalog slug is not always a sale's partition", () => {
+  const TIERED = `${ALIAS}:num-24`;
+
+  it("stemOf strips the 8th TIER segment, and leaves a 7-segment slug alone", () => {
+    expect(stemOf(TIERED)).toBe(ALIAS);
+    expect(stemOf(ALIAS)).toBeNull();
+  });
+
+  it("REGRESSION: sales under the 7-segment stem are found from an 8-segment slug", async () => {
+    // Nothing at all lives at the tiered address -- exactly the live shape.
+    const pool = poolFake({ [ALIAS]: titles("Ja'Marr Chase", 9), [TIERED]: [] });
+    const { tally, error } = await tallyTitlesForSlug(pool.container, TIERED, {});
+
+    expect(error).toBeNull();
+    // Before the fix this tally was EMPTY and the banner said "not gathered".
+    expect([...tally.values()].reduce((a: number, v: any) => a + v.n, 0)).toBe(9);
+  });
+
+  it("REGRESSION: a 0-row cardId partition plus rows under hobbyiqCardId are found", async () => {
+    // Pair #17's real shape: the card-address partition is empty, and every
+    // sale sits in a vendor-id partition reachable only by hobbyiqCardId.
+    const pool = poolFake(
+      { [ALIAS]: [], [TIERED]: [] },
+      { [ALIAS]: titles("Roquan Smith", 5) },
+    );
+    const { tally, error } = await tallyTitlesForSlug(pool.container, TIERED, {});
+
+    expect(error).toBeNull();
+    expect([...tally.values()].reduce((a: number, v: any) => a + v.n, 0)).toBe(5);
+  });
+
+  it("MUTATION: the pre-fix query shape finds nothing on that same fixture", async () => {
+    // Replaying ONLY `c.cardId = <full slug>` -- the shape this PR replaces --
+    // against the fixture above returns zero rows. If a future edit drops the
+    // stem fallback or the hobbyiqCardId arm, the tally returns to that empty
+    // result and the two REGRESSION pins above fail.
+    const pool = poolFake({ [TIERED]: [] }, { [ALIAS]: titles("Roquan Smith", 5) });
+    const it_ = pool.container.items.query(
+      { query: "SELECT c.playerName FROM c WHERE c.cardId = @slug", parameters: [{ name: "@slug", value: TIERED }] },
+      { partitionKey: TIERED },
+    ) as any;
+    const { resources } = await it_.fetchNext();
+    expect(resources).toEqual([]);
+  });
+
+  it("a sale reachable by BOTH keys is one vote, not two", async () => {
+    // A slug-partitioned row answers the cardId query AND the hobbyiqCardId
+    // query. Counting it twice would manufacture a majority out of one sale.
+    const shared = titles("Ja'Marr Chase", 4);
+    const pool = poolFake({ [ALIAS]: shared }, { [ALIAS]: shared });
+    const { tally } = await tallyTitlesForSlug(pool.container, ALIAS, {});
+
+    expect([...tally.values()].reduce((a: number, v: any) => a + v.n, 0)).toBe(4);
+  });
+
+  it("the cap still holds when four addresses are asked", async () => {
+    const pool = poolFake(
+      { [ALIAS]: titles("Ja'Marr Chase", 5_000) },
+      { [ALIAS]: titles("Will Shipley", 5_000) },
+    );
+    const { tally } = await tallyTitlesForSlug(pool.container, ALIAS, {});
+    expect([...tally.values()].reduce((a: number, v: any) => a + v.n, 0)).toBe(MAX_TITLES_PER_SLUG);
+  });
+});
+
+describe("REPORT gathers exactly what APPLY gathers", () => {
+  it("the same pool yields the same evidence and the same verdict in both modes", async () => {
+    const rows = { [ALIAS]: titles("Ja'Marr Chase", 30), [DEST]: titles("Will Shipley", 2) };
+
+    const mk = async (dryRun: boolean) => {
+      const incoming = aliasRow();
+      const incumbent = destRow();
+      const pool = poolFake(rows);
+      const cat = catFake([incumbent]);
+      const evidence = await gatherPlayerEvidence(pool.container, incoming, incumbent, {
+        incomingSlug: ALIAS, incumbentSlug: DEST, rivals: [],
+      });
+      const res = await moveCatalogRow(cat.container, incoming, DEST, { setKey: "donruss-optic" }, {
+        reason: "test", dryRun, known: incumbent, playerEvidence: evidence,
+      });
+      return { evidence, res, queries: pool.calls.length };
+    };
+
+    const report = await mk(true);
+    const apply = await mk(false);
+
+    // The gathering does not consult the mode -- same reads, same counts, same
+    // arbitration. Only the WRITE differs.
+    expect(report.queries).toBe(apply.queries);
+    expect(report.evidence.titlePlayerCounts).toEqual(apply.evidence.titlePlayerCounts);
+    expect(report.res.playerArbitration?.by).toBe(apply.res.playerArbitration?.by);
+    expect(report.res.survivor).toBe(apply.res.survivor);
+  });
+});
+
+describe("a failed read is an error, never an absence", () => {
+  /** A pool whose queries all throw. */
+  const throwingPool = (msg: string) => ({
+    items: {
+      query() {
+        return {
+          hasMoreResults: () => true,
+          fetchNext: async () => { throw new Error(msg); },
+        };
+      },
+    },
+  } as unknown as Container);
+
+  it("tallyTitlesForSlug reports the reason instead of a silent empty tally", async () => {
+    const { tally, error } = await tallyTitlesForSlug(throwingPool("Request rate is large"), ALIAS, {});
+    expect(tally.size).toBe(0);
+    expect(error).toContain("Request rate is large");
+  });
+
+  it("the banner says 'titles: error ...', not 'titles: not gathered'", async () => {
+    const evidence = await gatherPlayerEvidence(throwingPool("429 throttled"), aliasRow(), destRow(), {
+      incomingSlug: ALIAS, incumbentSlug: DEST, rivals: [],
+    });
+
+    // Not null: a read that FAILED is a finding, and collapsing it to null
+    // would print the same words as a genuinely silent market.
+    expect(evidence).not.toBeNull();
+    expect(evidence.titlesError).toContain("429 throttled");
+
+    const line = describePlayerEvidence(aliasRow(), destRow(), evidence, { action: "refused" });
+    expect(line).toContain("titles: error");
+    expect(line).not.toContain("titles: not gathered");
+  });
+
+  it("an error never becomes a vote: the fold still REFUSES", async () => {
+    const incumbent = destRow();
+    const cat = catFake([incumbent]);
+    const evidence = await gatherPlayerEvidence(throwingPool("boom"), aliasRow(), incumbent, {
+      incomingSlug: ALIAS, incumbentSlug: DEST, rivals: [],
+    });
+    const res = await moveCatalogRow(cat.container, aliasRow(), DEST, { setKey: "donruss-optic" }, {
+      reason: "test", dryRun: true, known: incumbent, playerEvidence: evidence,
+    });
+
+    expect(res.action).toBe("refused");
+    expect(cat.upserted).toEqual([]);
+  });
+
+  it("a genuinely silent market still reads 'not gathered', and still refuses", async () => {
+    const { res, evidence } = await foldWithEvidence({ [ALIAS]: [], [DEST]: [] });
+    expect(evidence).toBeNull();
+    expect(res.action).toBe("refused");
+    expect(describePlayerEvidence(aliasRow(), destRow(), evidence, res)).toContain("titles: not gathered");
   });
 });

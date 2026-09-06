@@ -49,25 +49,101 @@ import {
  *  plain word boundary happily matches it because "#" is a non-word
  *  character. Reading a card number as the year is exactly the class of
  *  error this sweep exists to remove. */
-const TITLE_YEAR_RE = /(?<!#)\b(19[3-9]\d|20[0-4]\d)\b/;
+const TITLE_YEAR_RE = /(?<!#)\b(19[3-9]\d|20[0-4]\d)\b/g;
 
-/** Season-spanning years, e.g. "2024-25 Upper Deck" — take the FIRST.
- *  Hockey and basketball products are routinely labelled this way and
- *  the leading year is the catalog year. */
-const TITLE_SEASON_RE = /\b(19[3-9]\d|20[0-4]\d)\s*[-/]\s*\d{2}\b/;
+/** Season-spanning years — "2024-25 Upper Deck", "2020-2021 Panini Donruss",
+ *  "1986-1987 O-Pee-Chee". The LEADING year is the catalog year; hockey and
+ *  basketball products are routinely labelled this way.
+ *
+ *  CF-A-SEASON-SPANS-TWO-DIGITS-OR-FOUR (Drew, 2026-09-06). The trailing half
+ *  used to be `\d{2}` only, so "2020-2021" did not read as a season at all and
+ *  the two halves were seen as two independent years.
+ *
+ *  CF-A-CARD-NUMBER-IS-NOT-A-SEASON (Drew, 2026-09-06). This pattern also
+ *  lacked the `(?<!#)` its sibling above carries, so "#1974-61" — the card
+ *  NUMBER of a Topps Originals Buyback — parsed as the season "1974-61". A
+ *  card number does not become a season by having a hyphen in it. Observed:
+ *
+ *    "2015 Topps - Originals Buybacks Luis Aparicio #1974-61"  ->  1974 */
+const TITLE_SEASON_RE = /(?<!#)\b(19[3-9]\d|20[0-4]\d)\s*[-/]\s*(?:\d{2}|(?:19|20)\d{2})\b/g;
 
+/** Text that, when it IMMEDIATELY follows a year, marks that year as the
+ *  design being homaged rather than the year the card was issued. "1990 Foil
+ *  2025 Topps Update" is a 2025 card wearing a 1990 design.
+ *
+ *  The trailing ordinal alternative catches the anniversary shape, where the
+ *  homaged year is followed by how long ago it was rather than by a product
+ *  word: "1991 35th Anniversary ... 2026 Topps Flagship" is a 2026 card. */
+const HOMAGE_AFTER_YEAR_RE =
+  /^\s*(?:foil|insert|design|anniversar|reprint|buyback|throwback|retro|tribute|style|all[-\s]?star|rookies\b|mini(?:s)?\b|variation|\d{1,3}(?:st|nd|rd|th)\b)/i;
+
+/** Spans that LOOK like years but are not the card's year, removed before the
+ *  scan: serial print runs ("/2000", "#d/2000") and a player's death year
+ *  ("d.2011", "D-2015"). Both are common in vintage listings and both sit
+ *  where a naive reader would take them for the issue year. */
+function stripNonYearNumerics(t: string): string {
+  return t
+    .replace(/\bserial\b/gi, " ")
+    .replace(/#?\s*d?\s*\/\s*\d{1,5}\b/g, " ")
+    .replace(/\bd[.\-\s]?(?:19|20)\d{2}\b/gi, " ");
+}
+
+/** The year a title STATES for the card, or null when it states none.
+ *
+ *  CF-THE-FIRST-YEAR-IS-THE-PRODUCT-YEAR (Drew, 2026-09-06). Position in the
+ *  title decides, not which pattern happened to be tried first. This function
+ *  used to test the season pattern across the WHOLE string before it ever
+ *  looked for a plain year, so a homaged season late in a title beat the
+ *  product year that opened it:
+ *
+ *    "2007 Topps Kevin Durant 1957-58 Variation #112 PSA 9"  ->  1957
+ *
+ *  That is a 2007 Topps card whose DESIGN homages 1957-58. The convention every
+ *  seller follows is positional: the product year LEADS the title. MEASURED
+ *  over 5,995 live tca-ebay rows (soldAt >= 2026-08-20), taking the first
+ *  stated year agrees with the stored cardYear on 99.78% of them; the previous
+ *  season-first reading and a maker-token-anchored alternative both scored
+ *  worse (99.72% and 99.62%).
+ *
+ *  THE ONE EXCEPTION IS EARNED, NOT ASSUMED. A modern retro insert puts the
+ *  PLAYER first and the homaged year second — "Pete Crow-Armstrong 1990 Foil
+ *  2025 Topps Update" is a 2025 card — so a year immediately followed by a
+ *  homage word is demoted when a later year survives. That lifts agreement to
+ *  99.85%. A 2023 Topps Heritage card homaging a 1954 design keeps 2023 under
+ *  both halves of the rule: its product year leads.
+ *
+ *  What this never does is read the SALE date. See yearTheTitleAllows.ts. */
 export function extractYearFromTitle(title: string | null | undefined): number | null {
-  const t = String(title ?? "");
-  if (!t) return null;
-  const season = t.match(TITLE_SEASON_RE);
-  if (season) {
-    const y = Number(season[1]);
-    if (Number.isFinite(y)) return y;
-  }
-  const m = t.match(TITLE_YEAR_RE);
-  if (!m) return null;
-  const y = Number(m[1]);
-  return Number.isFinite(y) ? y : null;
+  const raw = String(title ?? "");
+  if (!raw) return null;
+  const t = stripNonYearNumerics(raw);
+
+  const found: Array<{ index: number; end: number; year: number }> = [];
+  const collect = (re: RegExp): void => {
+    // Belt-and-braces: a /g regex kept at module scope carries lastIndex
+    // between calls. The loop below always runs to exhaustion, which resets it
+    // to 0 on its own, so this is unreachable today — it is here so that a
+    // later early-return inside the loop cannot silently make the SECOND call
+    // on a given title start scanning from the middle of it.
+    re.lastIndex = 0;
+    for (let m = re.exec(t); m !== null; m = re.exec(t)) {
+      const y = Number(m[1]);
+      if (!Number.isFinite(y)) continue;
+      if (found.some((f) => f.index === m!.index)) continue; // season wins its own index
+      found.push({ index: m.index, end: m.index + m[0].length, year: y });
+    }
+  };
+  collect(TITLE_SEASON_RE);
+  collect(TITLE_YEAR_RE);
+  if (!found.length) return null;
+  found.sort((a, b) => a.index - b.index);
+  if (found.length === 1) return found[0].year;
+
+  // Demote years that a homage word immediately follows, but only while a
+  // later year is left to take the place — a title that is ALL homage markers
+  // still has to answer with something, and the first year is that answer.
+  const survivors = found.filter((f) => !HOMAGE_AFTER_YEAR_RE.test(t.slice(f.end)));
+  return (survivors.length ? survivors : found)[0].year;
 }
 
 export interface RederiveRow {

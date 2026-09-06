@@ -51,6 +51,7 @@ import { YUGIOH_SET_ALIASES, MTG_SET_ALIASES } from "../catalog/tcgSetAliases.js
 import { JAPANESE_POKEMON_SET_ALIASES } from "../catalog/japanesePokemonAliases.js";
 import { productParentOf, productSetKeyForName, spellForEra, spellForSport } from "../catalog/productSetKeys.js";
 import { reconcileSetKey } from "../catalog/setKeyReconciliation.js";
+import { ruledPokemonEnglishSetKey } from "../catalog/pokemonEnglishSetKeyRuling.js";
 import { normalizePokemonCardNumber } from "../catalog/pokemonCardNumber.js";
 import { isMakerlessCatchAllSetKey, makerlessCatchAllMessage } from "../catalog/makerlessCatchAll.js";
 export interface HobbyIqCardIdComponents {
@@ -1122,12 +1123,55 @@ export function canonicalRuledSetKey(setKey: string | null | undefined): string 
   return RULED_SET_KEY_REWRITES[s] ?? s;
 }
 
-export function normalizeSetKey(setName: string): string {
+/**
+ * `sport` is OPTIONAL and its absence means "no vertical asserted", never
+ * "Pokemon". It exists for CF-THE-ENGLISH-SET-CODE-IS-THE-KEY: the English
+ * Pokemon vocabulary contains keys like `151`, `jungle` and `dragon` that are
+ * ORDINARY WORDS in a sports set name, so it may only be consulted by a caller
+ * that knows the row is Pokemon. Callers that hold the sport pass it; callers
+ * that do not get exactly the behaviour they had before this parameter existed.
+ *
+ * This is the same gate `resolveSetKeyForSlug` has always applied to the alias
+ * table ("GATED ON SPORT, deliberately") and that pokemonSetAliases.test.ts
+ * pins as "aliases do NOT leak into other sports" — stated once, here, rather
+ * than re-derived at each call site.
+ */
+export function normalizeSetKey(setName: string, sport?: string | null): string {
   const s = stripYearAndSport(slugify(setName));
   // CF-THE-JAPANESE-CODE-IS-THE-KEY (R2): a ruled key is decided here, before
   // any unanchored pattern can reach it.
   const ruled = RULED_SET_KEY_REWRITES[s];
   if (ruled) return ruled;
+  // CF-THE-ENGLISH-SET-CODE-IS-THE-KEY (Drew, 2026-09-06). The English half of
+  // the ruling above: the tcgdex set CODE is the canonical setKey and the
+  // English NAME is its alias. Decided HERE — immediately after the Japanese
+  // codes, and ahead of everything else — for the two reasons that ordering
+  // always carries in this function:
+  //
+  //   the JAPANESE ruling still wins, because six spellings (`base-set`,
+  //   `black-bolt`, `shining-legends`, `white-flare`, `jungle`,
+  //   `forbidden-light`) name a product in BOTH markets and Drew ruled the
+  //   Japanese codes first; the Japanese SALE never reaches this line at all
+  //   (resolveSetKeyForSlug answers it from the setName), and the ruled
+  //   `japanese-<code>` keys are decided one line above.
+  //
+  //   the SPORTS vocabulary never gets to answer, which is the whole point.
+  //   187 of the 188 patterns below are unanchored, and measured on this
+  //   branch they claimed 35 Pokemon names outright — `obsidian-flames` ->
+  //   `panini-obsidian`, `crown-zenith` -> `panini-zenith`, `firered-leafgreen`
+  //   -> `leaf`. The census found 2,600 live pool rows sitting in those Panini
+  //   and Leaf pools. CF-NO-CROSS-VERTICAL-FALLBACK already forbids this on
+  //   the vendor branch; this line brings the one deriver that was outside it
+  //   under the same rule.
+  //
+  // ONLY FOR A CALLER THAT SAYS THE ROW IS POKEMON. `151` is Scarlet & Violet
+  // 151 and it is also a perfectly ordinary sports set name; applying this
+  // table to a baseball row would be the mirror of the cross-vertical damage
+  // it fixes.
+  if (sport === "pokemon") {
+    const enPokemon = ruledPokemonEnglishSetKey(s);
+    if (enPokemon) return enPokemon;
+  }
   // CF-A-RULED-KEY-IS-A-FIXED-POINT (2026-09-03, follow-on to #1689). The
   // reconciliation answers next, and it answers in BOTH directions:
   //
@@ -1769,8 +1813,31 @@ export function resolveSetKeyForSlug(sport: string, setName: string, year: numbe
     const bare = String(setName).replace(/^((19|20)\d{2}\s+)/, "").replace(/^pokemon\s+/i, "").trim();
     return slugify(bare);
   }
+  // CF-THE-ENGLISH-SET-CODE-IS-THE-KEY (Drew, 2026-09-06). The English branch
+  // asks the alias table by EXACT slug and, failing that, the RULING — which
+  // is the same table with the year prefix removed and the standing
+  // reconciliation verdicts subtracted.
+  //
+  // The exact lookup alone was not enough, and the gap was not a rare shape.
+  // The alias table spells a set several ways but not every way, so a setName
+  // whose exact slug is absent fell straight to `slugify(setName)` and came
+  // back YEAR-PREFIXED — which slugGuard refuses, leaving a real product with
+  // no slug at all:
+  //
+  //   "2025 Pokemon Surging Sparks"    -> 2025-pokemon-surging-sparks   REFUSED
+  //   "2025 Pokemon Obsidian Flames"   -> 2025-pokemon-obsidian-flames  REFUSED
+  //
+  // Both of those sets are in the table under their bare names; only the
+  // year-prefixed spelling was missing. Asking the ruling second reaches them
+  // without inventing an alias, and it keeps the two derivers agreeing BY
+  // CONSTRUCTION: `normalizeSetKey` consults the very same map.
+  //
+  // On a genuine miss the behaviour is unchanged — the clean slug, which
+  // slugGuard may still refuse. Absent beats wrong (CF-SLUG-REFUSE-FALLBACKS).
   const rawSetKey = sport === "pokemon"
-    ? (POKEMON_SET_ALIASES[slugify(setName)] ?? slugify(setName))
+    ? (POKEMON_SET_ALIASES[slugify(setName)]
+      ?? ruledPokemonEnglishSetKey(stripYearAndSport(slugify(setName)))
+      ?? slugify(setName))
     : normalizeSetKey(setName);
   // CF-PANINI-IS-ANACHRONISTIC-BEFORE-2009: Panini did not acquire Donruss
   // until 2009, so a 1987 "Donruss" card must not be stamped panini-donruss.

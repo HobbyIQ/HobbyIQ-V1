@@ -1,0 +1,64 @@
+{
+ "generatedAt": "2026-09-06",
+ "reportOnly": "REPORT ONLY. No apply is authorized, no lane is armed, and no relocation list is offered. Drew asked for a census and a recommendation; this is the census and the recommendation. Implementing the move is a separate decision.",
+ "finding": "1,129 sold_comps rows are addressed by a `backstop:` key, which is NOT the slug grammar. `backstop:<player>|<year>||<parallel>` names no card the pricing path can read: computeHobbyIqCardId emits `hiq:sport:year:setKey:cardNumber:parallel:auto[:num-N]`, every pool read keys on that shape, and a row outside it prices nothing. This is an ADDRESS defect, not a grade or identity defect -- the rows' own fields are mostly sound.",
+ "whyItSurfacedNow": "The I9 triage cited `backstop:michael jordan|1986||` as evidence for the proposed graded-from-title re-key: a pool holding PSA 9 OC, PSA 5 and PSA 8 sales 'under one raw address'. The read-only census showed the opposite of the premise -- the grade FIELDS on those rows are already correct and complete (PSA 8/9/7/6/5/4/3, one PSA 0, one PSA 8.5), so `filterByGrade` would separate them correctly the moment the rows had a readable address. Nothing about that pool is a grade defect. What it is, is 183 sales of the most valuable basketball rookie card there is, parked at an address no reader can price.",
+ "census": {
+  "method": "read-only, one cross-partition query bounded by STARTSWITH(c.cardId,'backstop:') (1,129 rows, 84 RU), plus card_catalog point reads on the most-populated candidate destinations.",
+  "rows": 1129,
+  "distinctBackstopKeys": 23,
+  "source": { "cardsight": 1129 },
+  "bySport": { "baseball": 678, "football": 194, "basketball": 102, "absent": 155 },
+  "rowsWithTitle": 1129,
+  "rowsWithGradeFields": 632,
+  "shape": {
+   "derivableShaped": 739,
+   "missingCardNumber": 302,
+   "missingSetName": 88,
+   "missingCardYear": 0,
+   "note": "`derivableShaped` counts rows carrying a setName, a cardNumber and a cardYear -- the three inputs a slug needs beyond sport. It is an UPPER BOUND on what a rematch could address, not a verdict: the real deriver normalizes the setKey and applies slugGuard, and neither was run here. The 302 rows with no cardNumber cannot be addressed at all without a checklist lookup by player."
+  },
+  "topKeys": [
+   { "key": "backstop:justin herbert|2020||", "rows": 240 },
+   { "key": "backstop:michael jordan|1986||", "rows": 183 },
+   { "key": "backstop:eli willits|2025||green refractor", "rows": 155 },
+   { "key": "backstop:eric hartman|2026||blue refractor", "rows": 66 },
+   { "key": "backstop:caleb bonemer|2024||blue", "rows": 50 },
+   { "key": "backstop:shohei ohtani|2025||transcendent", "rows": 42 },
+   { "key": "backstop:brailyn antunez|2026||blue", "rows": 40 },
+   { "key": "backstop:aaron judge catching|2017||", "rows": 35 },
+   { "key": "backstop:padparadscha|2024||sapphire", "rows": 33 },
+   { "key": "backstop:josh hammond|2025||blue", "rows": 31 }
+  ]
+ },
+ "observations": [
+  "EVERY ROW IS `source: cardsight`, and Cardsight is RETIRED from matching (off in code 2026-08-16; prod env vars inert but set). No new rows arrive at these keys. The population is closed and will not grow.",
+  "THE KEYS COLLAPSE DISTINCT CARDS. `backstop:eric hartman|2026||blue refractor` holds sales whose own setName field says `bowman`, `bowman-chrome` AND `topps`, and whose titles name Gold Refractor, Aqua Refractor /125 and plain 1st Bowman Chrome Auto. One backstop key is several cards -- so this is not merely a wrong address, it is a SPLIT POOL under a shared one, and a relocation must separate them rather than move them together.",
+  "THE GRADE FIELDS ARE NOT THE DEFECT. 632 of 1,129 rows carry grade fields, and on the Jordan key they are complete and correct across nine grades. A grade lane has nothing to do here.",
+  "THE VALUE IS CONCENTRATED. The top 10 keys hold 651 of 1,129 rows (58%), and two of them -- a 1986 Fleer Sticker Jordan rookie and a 2020 Justin Herbert -- are cards with deep, liquid comp pools ALREADY EXISTING at their proper addresses. These sales are not pricing a card that has no other data; they are missing from pools that would readily absorb them."
+ ],
+ "recommendation": {
+  "verdict": "RE-ADDRESS the derivable rows through the GREAT REMATCH; RETIRE nothing yet; do NOT build a bespoke lane.",
+  "why": "A whole-source retire is the wrong instrument twice over. First, `feedback_replaced_by_is_product_level_coverage_is_per_card`: coverage is measured per card, and these 1,129 rows are real observed sales -- retiring them deletes market evidence for a 1986 Fleer Sticker Jordan rookie to tidy an address. Second, `feedback_a_whole_source_retire_needs_its_name`: cardsight being retired from MATCHING says nothing about whether its already-ingested SALES are true. The sales happened.",
+  "proposedPath": [
+   "1. NOT A NEW SCOPE. The existing rematch already re-derives an identity from the title and re-keys the row; a `backstop:` row is simply one whose stored address is unreadable rather than wrong-but-parseable. What it needs is for the census to REACH it -- the shard axis is (cardYear, sportClass, sha1(id) % parts) and these rows carry cardYear, so they are already shardable.",
+   "2. THE BLOCKER IS THE CLASS, NOT THE LANE. `slugYearSegment` returns null for a non-`hiq:` key and the eviction/improve gates read the stored slug, so these rows classify UNDERIVABLE or CONFLICT today. Deciding what class a non-grammar address belongs to is a ruling, and it is the one thing this report does not presume.",
+   "3. SEPARATE BEFORE MOVING. Because one backstop key holds several cards (see observations), any move must be per-ROW off the title, never per-KEY. A key-level relocation list would merge three Eric Hartman parallels into one pool and create exactly the defect `feedback_one_card_one_row_one_pool` forbids.",
+   "4. THE 302 ROWS WITH NO cardNumber ARE A SEPARATE QUESTION. They cannot be addressed from their own fields and would need a checklist lookup by player and year. Report them; do not guess a number for them -- CF-UNPARSED-IS-NOT-UNNUMBERED.",
+   "5. MEASURE THE DESTINATIONS FIRST. This report deliberately did not run the real deriver (that needs the parser and slugGuard, i.e. a census pass, not a point query). Before any ruling, a report-first census slot should print: how many of the 739 derive a slug that passes slugGuard, how many of those destinations are checklist-backed, and how many already hold sales -- the same three numbers #1890 produced for the vintage-year class."
+  ],
+  "notRecommended": {
+   "retireTheRows": "Deletes real sales, including 183 on a Jordan rookie, to fix an address. Refused unless Drew rules the cardsight sales themselves untrustworthy -- which is a claim about the SALES, and nothing measured here supports it.",
+   "keyLevelRelocationList": "One backstop key is several cards. A list keyed on the backstop address would merge them.",
+   "leaveAsIs": "These rows are invisible to every pool read, so they contribute nothing to any FMV while still counting as corpus rows -- the worst of both."
+  }
+ },
+ "provenance": {
+  "measuredAt": "2026-09-06",
+  "database": "hobbyiq",
+  "container": "sold_comps",
+  "readOnly": true,
+  "writes": "none -- no Cosmos writes, no runner dispatches",
+  "connectionString": "piped from `az webapp config appsettings list` at read time; never printed and never written to disk"
+ }
+}
