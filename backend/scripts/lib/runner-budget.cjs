@@ -54,6 +54,29 @@ function runMinutes(fallback) {
   return Number.isFinite(n) && n > 0 ? n : fallback;
 }
 
+/** ── WHERE THIS HELPER'S OWN LINES GO ──────────────────────────────────────
+ *
+ * CF-A-DATA-CHANNEL-IS-NOT-A-LOG (#1846). Default fd 1 — stdout — because that
+ * is what the runner tees into /tmp/backfill.log and what every gate greps. A
+ * lane whose stdout is a DATA CHANNEL (one JSON document somebody parses)
+ * passes stderr instead. See the block above finishLane for the run that
+ * forced this.
+ */
+function narrationFd(narrateTo) {
+  if (narrateTo === 2 || narrateTo === "stderr") return 2;
+  return 1;
+}
+
+/** A synchronous writer on that fd. Synchronous because a buffered write on a
+ *  wedged pipe is exactly what could not be relied on to arrive (#1809). */
+function narrator(narrateTo) {
+  const fd = narrationFd(narrateTo);
+  return (line) => {
+    try { require("node:fs").writeSync(fd, `${line}\n`); }
+    catch { /* the work matters, the narration does not */ }
+  };
+}
+
 /**
  * The three-constant clock.
  *
@@ -63,12 +86,22 @@ function runMinutes(fallback) {
  *                                   still be granted after the budget expires
  * @param {number} [opts.verifyMs]   hard cap on the post-loop verify-by-read
  * @param {number} [opts.startedAt]  loop t0, when the caller already has one
+ * @param {number|string} [opts.narrateTo]  fd (1|2) or "stdout"|"stderr" for
+ *                                   this helper's VERIFY BY READ lines.
+ *                                   Default stdout; a lane whose stdout is a
+ *                                   data channel passes stderr.
  */
-function budget({ minutes, reserveMs, verifyMs = 10 * 60 * 1000, startedAt = Date.now() }) {
+function budget({ minutes, reserveMs, verifyMs = 10 * 60 * 1000, startedAt = Date.now(), narrateTo }) {
   const RUN_MINUTES = runMinutes(minutes);
   const BUDGET_MS = Number(process.env.BUDGET_MS || RUN_MINUTES * 60 * 1000);
   const RESERVE_MS = Number(process.env.RESERVE_MS || reserveMs);
   const VERIFY_MS = Number(process.env.VERIFY_MS || verifyMs);
+
+  // The VERIFY BY READ lines below are this helper's, not the lane's, so the
+  // lane cannot route them with its own `note()`. They take the same fd as the
+  // exit line: a cap notice landing inside a JSON document breaks the parse
+  // just as thoroughly as `finishLane: exiting code 0` did in run 34019169292.
+  const narrate = narrator(narrateTo);
 
   /** Set when a verify cap fired, i.e. when an abandoned query may still be
    *  in flight holding a handle. `finishLane()` reports it. */
@@ -138,7 +171,7 @@ function budget({ minutes, reserveMs, verifyMs = 10 * 60 * 1000, startedAt = Dat
     const remaining = VERIFY_MS - (Date.now() - vt0);
     if (remaining <= 0) {
       capFired = true;
-      console.log(`  VERIFY BY READ  ${label}: could not confirm within the cap (verify-cap)`);
+      narrate(`  VERIFY BY READ  ${label}: could not confirm within the cap (verify-cap)`);
       return null;
     }
     const ac = new AbortController();
@@ -162,7 +195,7 @@ function budget({ minutes, reserveMs, verifyMs = 10 * 60 * 1000, startedAt = Dat
       ]);
     } catch (e) {
       capFired = true;
-      console.log(`  VERIFY BY READ  ${label}: could not confirm within the cap (${String(e && e.message)})`);
+      narrate(`  VERIFY BY READ  ${label}: could not confirm within the cap (${String(e && e.message)})`);
       return null;
     } finally {
       if (timer) clearTimeout(timer);
@@ -284,13 +317,65 @@ async function underExitCap(work) {
   finally { if (timer) clearTimeout(timer); }
 }
 
+/** ── WHERE THE NARRATION GOES WHEN STDOUT IS A DATA CHANNEL ────────────────
+ *
+ * CF-A-DATA-CHANNEL-IS-NOT-A-LOG (#1846).
+ *
+ * Run 34019169292 — the nightly acquire-for-withheld-holdings — read its
+ * withheld population, matched 11 of 15 cells to a source and printed
+ * `RECONCILED YES … tonight=10`. Then the workflow's next step died:
+ *
+ *   jq: parse error: Invalid literal at line 739, column 11
+ *   ##[error]Process completed with exit code 5
+ *
+ * Line 739 of the captured stdout was not truncation, not a partial write and
+ * not a stray console.log in the lane. The JSON document ended cleanly on 738.
+ * 739 was THIS FILE'S own operator proof:
+ *
+ *   finishLane: exiting code 0
+ *
+ * The lane had done everything right. `MODE=json` routes its banner through
+ * `note()` to stderr and its reconcile with it, precisely so stdout is a
+ * single parseable document — the workflow step even says so in a comment.
+ * What it could not route was a line written by the helper it must call, to
+ * fd 1, unconditionally, after main() returned. No lane can suppress that.
+ *
+ * WHY NOT SIMPLY MOVE THE LINE TO STDERR FOR EVERYONE. Because the runner
+ * reads a lane through `node <script>.cjs | tee /tmp/backfill.log` — stdout
+ * only. Sending the proof to stderr everywhere would keep it on the operator's
+ * screen and delete it from the artifact the gates and the post-mortems
+ * actually read, which is the exact silence #1809 exists to prevent.
+ *
+ * So the destination is the LANE'S to declare and the default does not move:
+ * fd 1 for all 60-odd lanes whose stdout IS their log, fd 2 for the one whose
+ * stdout is a document someone parses. A lane that never passes `narrateTo`
+ * behaves exactly as before. `narrationFd`/`narrator` at the top of this file
+ * are the one implementation; `budget()` takes the same option for its own
+ * VERIFY BY READ lines.
+ */
+
+/**
+ * @param {number}  [code]
+ * @param {object}  [opts]
+ * @param {object}  [opts.client]
+ * @param {Function}[opts.budget]
+ * @param {number|string} [opts.narrateTo]  fd (1|2) or "stdout"|"stderr" for
+ *                                          this helper's own lines. Default
+ *                                          stdout; a lane whose stdout is a
+ *                                          data channel passes stderr.
+ */
 async function finishLane(code = 0, opts = {}) {
   const { client, budget: b } = opts;
+
+  // Everything THIS HELPER says goes to one fd, chosen by the lane. Both lines
+  // below use it: a verify-cap notice landing in a JSON document breaks the
+  // parse exactly as the exit line did.
+  const narrate = narrator(opts.narrateTo);
 
   if (b && typeof b.capFired === "function" && b.capFired()) {
     // Name it, so the operator reading the log knows the exit was forced and
     // that the UNCONFIRMED count above is the reason — not a crash.
-    console.log("  the verify cap fired — exiting explicitly so an abandoned"
+    narrate("  the verify cap fired — exiting explicitly so an abandoned"
       + " query cannot hold the step to the ceiling.");
   }
 
@@ -331,10 +416,9 @@ async function finishLane(code = 0, opts = {}) {
   // four timed-out runs above posed. This line is the answer, and it is
   // written with a SYNCHRONOUS `writeSync` rather than console.log because a
   // buffered write on a wedged pipe is precisely what could not be relied on
-  // to arrive.
-  try {
-    require("node:fs").writeSync(1, "finishLane: exiting code " + code + "\n");
-  } catch { /* the exit matters, the narration does not */ }
+  // to arrive. It goes to the fd the LANE chose (stdout unless the lane's
+  // stdout is a data channel) — see narrationFd above.
+  narrate(`finishLane: exiting code ${code}`);
 
   process.exit(code);
 }
@@ -342,4 +426,4 @@ async function finishLane(code = 0, opts = {}) {
 const fmt = (n) => Number(n ?? 0).toLocaleString("en-US");
 const fmtMs = (ms) => (ms >= 60000 ? `${Math.round(ms / 60000)}m` : `${Math.round(ms / 1000)}s`);
 
-module.exports = { budget, runMinutes, finishLane, flushStdio };
+module.exports = { budget, runMinutes, finishLane, flushStdio, narrationFd, narrator };
