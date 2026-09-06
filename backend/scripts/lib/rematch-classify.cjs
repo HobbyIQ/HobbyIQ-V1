@@ -152,6 +152,91 @@ const REVERT_EVICTION = "REVERT-EVICTION";
  *  Green Wave. Never writable; see FINISH_FAMILY_COLLISION below. */
 const FINISH_FAMILY_COLLISION = "FINISH-FAMILY-COLLISION";
 
+/**
+ * GRADE-FROM-TITLE -- A FIELD BACKFILL, NOT A RE-KEY (Drew, 2026-09-06).
+ *
+ * THE RULING AS ASKED WAS FOR A RE-KEY, AND THE CORPUS REFUSED IT. The
+ * original scope said "a sale stored on a RAW slug whose title states a grader
+ * token belongs to the GRADED pool of the same identity". There is no such
+ * pool. CF-CARD-IDENTITY-VS-GRADE (cardIdentityKey.service.ts, Drew
+ * 2026-08-19) rules that identity and grade are different dimensions and
+ * "grade is never read out of a slug by position"; `computeHobbyIqCardId`
+ * takes no grade argument at all and returns
+ * `hiq:sport:year:setKey:number:parallel:auto[:num-N]`. A PSA 10 sale and a
+ * raw sale of one card derive the SAME slug, by design.
+ *
+ * Measured read-only 2026-09-06 on the ruling's own headline example,
+ * `hiq:baseball:2011:finest:94:base:no-auto` (Trout 2011 Finest #94): 39 rows
+ * -- 13 raw averaging $80 and 26 graded averaging $189, in one partition, and
+ * `filterByGrade` (hobbyIqFmv.service.ts) splits them at READ time. Rung 1 is
+ * "exact slug + grade". The raw FMV there does not include the PSA 10s, and
+ * the count of rows in that pool whose title names a grader while their fields
+ * say raw is ZERO. The pool cited as damage is already correct.
+ *
+ * SO WHAT IS THE DEFECT? The rows where the SPLIT CANNOT HAPPEN: 16,115 rows
+ * (corpus-wide, `hiq:` slugs) carry an empty `gradeCompany` while their title
+ * states a grader token. `filterByGrade` reads a doc with no grade fields as
+ * RAW, so a PSA 4 1933 Goudey Babe Ruth is counted as a raw sale of that card
+ * -- the graded sale pollutes the raw pool, which is the harm the ruling
+ * names, arriving by the other road. The repair is to STAMP THE FIELDS the
+ * title already states. The address is correct and never moves.
+ *
+ * A FIELD BACKFILL IS NOT A RE-KEY, and the difference is the whole safety
+ * argument: no partition changes, no `rekeyedFrom`, no destination pool to
+ * anchor, no chance of merging two cards. The row stays exactly where it is
+ * and starts being READ correctly.
+ */
+const GRADE_FROM_TITLE = "GRADE-FROM-TITLE";
+
+/**
+ * YEAR-FROM-TITLE-VINTAGE -- the slug year is the SALE year (Drew, 2026-09-06).
+ *
+ * #1890's finding, promoted from a verified list to a lane by Drew's ruling.
+ * `hiq:baseball:2015:topps:311:base:no-auto` holds a 1952 Topps Mantle that
+ * sold for $54,000; `hiq:baseball:2015:bowman:253:...` holds a 1951 Bowman
+ * Mantle rookie. The year segment names the year the card SOLD, so every
+ * vintage card is split across as many pools as it has sale years and each
+ * fragment is priced against nothing.
+ *
+ * This moves `cardYear`, which the only-improve doctrine forbids -- which is
+ * exactly why #1890 shipped report-only and asked for a ruling. This is that
+ * ruling, and the guard is the one #1890 proposed, leg for leg.
+ *
+ * RE-MEASURED 2026-09-06 with #1890's own frame (TOP 1200 per slug year over
+ * 2015/2017/2019/2021/2024, restricted to vintage-capable setKeys): 3,199
+ * in-scope rows, 2,754 hits (86.1%). Per-year hits 111/705/668/576/694 against
+ * #1890's 111/705/673/578/534 -- the same class, independently drawn. A BROAD
+ * `tca-ebay` draw finds 1 in 300, because the class is CONCENTRATED in
+ * vintage-capable setKeys and invisible in a sample dominated by modern cards.
+ * The frame is part of the finding.
+ */
+const YEAR_FROM_TITLE_VINTAGE = "YEAR-FROM-TITLE-VINTAGE";
+
+/**
+ * SPORT-FROM-PRODUCT -- a card's sport is the PRODUCT'S sport (Drew,
+ * 2026-09-06).
+ *
+ * A 2024 Topps Series 2 "First Pitch" Victor Wembanyama is a BASEBALL card:
+ * the product is Topps Baseball, the checklist is a baseball checklist, and
+ * the card's number `FP-1` is a baseball insert number. The PLAYER's sport is
+ * a property of the player, not of the card. Measured: 23 of 300 "first pitch"
+ * rows are stored `basketball`, and
+ * `hiq:baseball:2024:topps:fp-1:base:no-auto` is checklist-backed
+ * (baseballcardpedia-ladders) while the basketball address does not exist.
+ *
+ * TOPPS NOW IS EXCLUDED BY NAME, and finding out why is what kept this
+ * subclass honest. Topps Now is GENUINELY MULTI-SPORT -- there is a Topps Now
+ * basketball product, a hockey one and a soccer one -- so a 2024-25 Topps Now
+ * Wembanyama IS a basketball card and moving it to baseball would be the
+ * defect, not the repair. 57 of the 69 sport-mismatched "topps now" rows
+ * measured are exactly that. The checklist gate does NOT catch it on its own:
+ * `hiq:baseball:2024:topps-now:7:...` IS backed while the basketball address
+ * is not, so a naive rule would have moved a real basketball card onto a
+ * baseball checklist row. A multi-sport product cannot name one sport, so it
+ * is refused by name.
+ */
+const SPORT_FROM_PRODUCT = "SPORT-FROM-PRODUCT";
+
 /** Sources that are a real person's own record of their own transaction.
  *  These are never re-keyed by a fleet, only by Drew. */
 const PROTECTED_SOURCES = new Set(["ebay-user-purchase", "ebay-user-sale", "ebay-account", "manual-user-entry"]);
@@ -3838,6 +3923,328 @@ function diffAxes(stored, derived, opts = {}) {
   return { same, filled, dropped, changed };
 }
 
+// ── GRADE-FROM-TITLE: the field backfill ────────────────────────────────────
+
+/**
+ * THE LENIENT SCALES ARE NOT THE STRICT ONES, AND MAPPING THEM IS EXPENSIVE.
+ *
+ * BCCG (Beckett Collectors Club Grading) and BVG (Beckett Vintage Grading) are
+ * SEPARATE SCALES from BGS, deliberately more generous: a BCCG 10 is roughly a
+ * PSA 8 and routinely sits on cards with visibly rounded corners. Stamping one
+ * as `BGS 10` files the cheapest slab in the most expensive pool of the card.
+ *
+ * Found in the sample: "2011 Topps Heritage Minor League #44 Mike Trout Rookie
+ * Card BGS BCCG 10" -- the strict reader sees the BGS token, skips "BCCG" as a
+ * label word and returns BGS 10. The title says BCCG.
+ *
+ * So a title naming either scale is REFUSED outright rather than mapped. There
+ * is no empirical conversion in GRADE_CALIBRATION for them, and the doctrine
+ * is empirical-only: absent beats wrong.
+ */
+const LENIENT_SCALE_RE = /\b(BCCG|BVG)\b/i;
+
+/**
+ * SGC'S LEGACY 1-100 SCALE, AND WHY "SGC POOR 10" IS NOT A TEN.
+ *
+ * SGC graded on a 1-100 scale for most of its history; "POOR 10" on that scale
+ * is the BOTTOM of it, equivalent to a modern SGC 1. The strict reader, which
+ * skips label adjectives to find the numeral, reads it as SGC 10 -- the top.
+ *
+ * Measured read-only 2026-09-06: 40 such rows, and the prices settle it --
+ * $90 for a 1928 Tharp's Ice Cream Cy Williams, $480 for a 1937 O-Pee-Chee
+ * Jimmy Foxx. Those are poor-condition prices. Stamping them SGC 10 would put
+ * the worst copies of vintage cards into the best pool, and would do it to the
+ * most valuable cards in the corpus (a 1952 Topps Jackie Robinson, a 1933
+ * Goudey Ruth) because those are the cards worth slabbing in poor condition.
+ *
+ * A CONDITION ADJECTIVE THAT CONTRADICTS THE NUMERAL IS A REFUSAL. This is
+ * D8's rule (#1704) read on the other side: D8 refuses a grade minted FROM an
+ * adjective; this refuses a grade whose adjective says the numeral is on a
+ * different scale. Both say the same thing -- when the title's words and its
+ * digits disagree, absent beats wrong.
+ */
+const LOW_GRADE_ADJECTIVE_RE = /\b(POOR|PR|FAIR|FR|GOOD|GD|VG|VERY\s*GOOD)\b/i;
+
+/** Every DISTINCT grader token a title names. Two different graders means the
+ *  title describes more than one slab (a lot, or a comparison) and no single
+ *  grade is this row's. */
+function graderTokensIn(title) {
+  const t = String(title ?? "");
+  const out = new Set();
+  const re = new RegExp(GRADER_RE.source, "gi");
+  let m;
+  while ((m = re.exec(t)) !== null) out.add(m[1].toUpperCase());
+  return [...out];
+}
+
+/** The grade values each scale actually issues. A title stating a value the
+ *  scale does not have is a misread, not a grade: PSA has no 9.5 (that is
+ *  BGS's half-point), and no grader issues a 0. */
+function gradeValueIsOnScale(company, value) {
+  if (!(value > 0) || value > 10) return false;
+  const half = Math.abs(value * 2 - Math.round(value * 2)) < 1e-9;
+  if (!half) return false;
+  const isHalf = Math.abs(value - Math.round(value)) > 1e-9;
+  switch (company) {
+    // PSA issues whole numbers plus the single half-grade 1.5. No PSA 9.5.
+    case "PSA": return !isHalf || value === 1.5;
+    // BGS/SGC/CGC issue half grades across the range.
+    case "BGS": case "SGC": case "CGC": case "CSG": case "HGA": case "TAG": case "ISA": case "GMA": case "KSA":
+      return true;
+    default: return false;
+  }
+}
+
+/**
+ * The GRADE-FROM-TITLE evidence for one row. Returns
+ * `{ qualifies, failed, evidence }`, the same shape every other subclass uses,
+ * so the census can count a near miss BY THE LEG IT FAILED.
+ *
+ * This subclass does NOT move the row. `evidence.gradeCompany` /
+ * `.gradeValue` are the two FIELDS the apply stamps onto the row at its
+ * existing address.
+ */
+function gradeFromTitleEvidence({ row, stored, axes }) {
+  const failed = [];
+  const title = str(row?.title);
+  if (!title) failed.push("no-title");
+
+  // G1 -- THE ROW MUST BE FIELD-RAW. This subclass exists for rows the pool
+  // reader counts as raw because their fields are empty. A row that already
+  // carries a grade is not this defect, and re-stamping one would be a grade
+  // CHANGE -- a rival reading, and never this lane's business.
+  if (gradeToken(stored) !== "RAW") failed.push(`stored-grade-present:${gradeLabel(stored)}`);
+
+  // G2 -- ONE GRADER, NAMED. Two distinct grader tokens describe two slabs.
+  const tokens = graderTokensIn(title);
+  if (!tokens.length) failed.push("title-names-no-grader");
+  else if (tokens.length > 1) failed.push(`title-names-two-graders:${tokens.join("+")}`);
+
+  // G3 -- THE LENIENT SCALES ARE REFUSED, NEVER MAPPED.
+  const lenient = LENIENT_SCALE_RE.exec(title);
+  if (lenient) failed.push(`lenient-scale-not-mapped:${lenient[1].toUpperCase()}`);
+
+  // G4 -- THE STRICT #1704 READER, AND ONLY IT. A grade is a grader token plus
+  // the numeral that follows IT. An adjective alone never mints a grade.
+  const strict = gradeFromTitleStrict(title);
+  if (!strict) failed.push("no-strict-grade-in-title");
+
+  // G5 -- THE VALUE MUST BE ONE THE SCALE ISSUES.
+  if (strict && !gradeValueIsOnScale(strict.gradeCompany, strict.gradeValue)) {
+    failed.push(`grade-not-on-scale:${strict.gradeCompany} ${strict.gradeValue}`);
+  }
+
+  // G6 -- A LOW-CONDITION ADJECTIVE BESIDE A HIGH NUMERAL IS A LEGACY SCALE.
+  // "SGC POOR 10" is a 1-100 scale bottom, not a ten. Only fires when the
+  // adjective sits between the grader token and the numeral -- the exact shape
+  // the strict reader skips over -- so "1933 Goudey ... PSA VG-EX 4" (where
+  // the adjective AGREES with a low numeral) still qualifies.
+  if (strict && strict.gradeValue >= 5) {
+    const g = title.match(GRADER_RE);
+    const between = g ? title.slice(g.index + g[0].length, g.index + g[0].length + 24) : "";
+    if (LOW_GRADE_ADJECTIVE_RE.test(between)) {
+      failed.push(`low-condition-adjective-with-high-numeral:${strict.gradeCompany} ${strict.gradeValue}`);
+    }
+  }
+
+  // G7 -- NO OTHER AXIS MAY MOVE. This lane stamps two fields at a settled
+  // address. A derivation that also disagrees about WHICH CARD this is is a
+  // rival reading, and a field backfill must never ride along with one.
+  const moved = [...(axes?.changed ?? []), ...(axes?.dropped ?? [])].filter((a) => a !== "grade");
+  if (moved.length) failed.push(`identity-axis-moved:${moved.join(",")}`);
+
+  return {
+    qualifies: failed.length === 0,
+    failed,
+    evidence: {
+      gradeCompany: strict?.gradeCompany ?? null,
+      gradeValue: strict?.gradeValue ?? null,
+      graderTokens: tokens,
+      titleQuoted: title.slice(0, 160),
+    },
+  };
+}
+
+// ── YEAR-FROM-TITLE-VINTAGE: the slug year is the sale year ─────────────────
+
+/**
+ * THE VINTAGE-CAPABLE VOCABULARY, DERIVED AND NOT GUESSED.
+ *
+ * #1890 derived this from the corpus: the setKey segment of slugs whose YEAR
+ * SEGMENT is genuinely pre-1990, sampled at ten vintage years (3,000 slugs, 23
+ * distinct setKeys). A guessed list would decide by taste which products are
+ * old; this one is the answer to "which products does the corpus actually
+ * carry pre-1990 cards for". `feedback_no_synthetic_parallels_only_actuals`
+ * read onto a vocabulary.
+ *
+ * A key ABSENT here is not refused because it is modern -- it is refused
+ * because nothing measured says it is vintage-capable, which is absence, not
+ * a verdict. Widening it is a measurement, never an opinion.
+ */
+const VINTAGE_CAPABLE_SETKEYS = new Set([
+  "topps", "bowman", "fleer", "leaf", "goudey", "play-ball", "red-man",
+  "o-pee-chee", "donruss", "score", "upper-deck", "panini-donruss",
+  "topps-traded", "topps-tiffany", "topps-traded-tiffany", "fleer-update",
+  "philadelphia", "kellogg", "hostess", "post", "sportflics", "topps-stickers",
+  "cracker-jack",
+]);
+
+/** Products that HOMAGE a vintage design. A 2023 Topps Heritage card states
+ *  1954 in its title and IS a 2023 card -- the retro case is the one that
+ *  would make this lane wrong, so it is excluded by setKey AND by title word.
+ *  #1890 excluded 27 rows this way and pinned that no entry carries a marker. */
+const RETRO_SETKEY_RE = /heritage|archives|tribute|gallery|allen-ginter|gypsy-queen|big-league|topps-now|throwback/i;
+const RETRO_TITLE_RE = /\b(heritage|archives|tribute|reprint|reprints|relic|design|anniversary|retro|buyback|commemorative|throwback|tbt)\b/i;
+
+/** The FIRST four-digit year a title states, or null. First, not any: a title
+ *  ends with the year it was listed, names a player's debut, or carries a
+ *  grader's cert number -- the issue year is the one the seller leads with. */
+function firstStatedYear(title) {
+  const m = String(title ?? "").match(/\b(1[89]\d\d)\b/);
+  return m ? Number(m[1]) : null;
+}
+
+/** The year segment of a `hiq:` slug, or null. Positional -- segment 3. */
+function slugYearSegment(slug) {
+  const parts = String(slug ?? "").split(":");
+  if (parts[0] !== "hiq" || parts.length < 3) return null;
+  const y = Number(parts[2]);
+  return Number.isFinite(y) && y > 0 ? y : null;
+}
+
+/**
+ * The YEAR-FROM-TITLE-VINTAGE evidence for one row. Same
+ * `{ qualifies, failed, evidence }` shape as every other subclass.
+ *
+ * `destBacked` is a CATALOG read the caller supplies -- this module is pure.
+ * `null` means unanswered, and unanswered is a refusal: absent beats wrong,
+ * and #1890's ruling is explicit that an unbacked destination is a PARK.
+ */
+function yearFromTitleVintageEvidence({ row, stored, derived, axes, storedSlug, destBacked = null }) {
+  const failed = [];
+  const title = str(row?.title);
+  const setKey = lower(stored?.setKey);
+
+  // V1 -- the slug year is a MODERN year. That is what makes it a sale year:
+  // a vintage card filed at :2015: was filed by the year it changed hands.
+  const slugYear = slugYearSegment(storedSlug) ?? (stored?.cardYear ?? null);
+  if (!(slugYear >= 2015)) failed.push(`slug-year-not-modern:${slugYear ?? "none"}`);
+
+  // V2 -- the title's FIRST stated year is pre-1990.
+  const titleYear = firstStatedYear(title);
+  if (titleYear === null) failed.push("title-states-no-year");
+  else if (titleYear >= 1990) failed.push(`title-year-not-vintage:${titleYear}`);
+
+  // V3 -- the setKey is one the corpus carries genuinely pre-1990 cards for.
+  if (!VINTAGE_CAPABLE_SETKEYS.has(setKey)) failed.push(`setkey-not-vintage-capable:${setKey || "(blank)"}`);
+
+  // V4 -- NOT A RETRO/HOMAGE ISSUE, by product AND by title word. This is the
+  // leg that would make the lane wrong if it were dropped, so it is checked on
+  // both sides: a Heritage setKey, or a title that says Heritage/Reprint/TBT.
+  if (RETRO_SETKEY_RE.test(setKey)) failed.push(`retro-product-setkey:${setKey}`);
+  const retroWord = RETRO_TITLE_RE.exec(title);
+  if (retroWord) failed.push(`retro-title-word:${lower(retroWord[1])}`);
+
+  // V5 -- ONLY THE YEAR MOVES. sport, setKey, cardNumber, parallel, auto and
+  // print run are carried verbatim, so no identity is invented and the
+  // destination is one the grammar already spells (#1890's third ruling).
+  const moved = [...(axes?.changed ?? []), ...(axes?.dropped ?? [])].filter((a) => a !== "cardYear");
+  if (moved.length) failed.push(`identity-axis-moved:${moved.join(",")}`);
+
+  // V6 -- THE DESTINATION MUST BE CHECKLIST-BACKED, ELSE PARK. Relocating onto
+  // an unbacked address would mint an identity whose only evidence is the sale
+  // -- CF-CATALOG-MATCH-IS-SELF-CONFIRMING. #1890 measured 44 of 160 sampled
+  // destinations unbacked and parked every one.
+  if (destBacked === null) failed.push("destination-backing-unknown");
+  else if (destBacked === false) failed.push("destination-not-checklist-backed");
+
+  // V7 -- the derivation must actually AGREE that the year is the title's.
+  if (derived && titleYear !== null && Number(derived.cardYear) !== titleYear) {
+    failed.push(`derived-year-is-not-title-year:${derived.cardYear}`);
+  }
+
+  return {
+    qualifies: failed.length === 0,
+    failed,
+    evidence: {
+      slugYear, titleYear, setKey, destBacked,
+      decade: titleYear === null ? null : `${Math.floor(titleYear / 10) * 10}s`,
+      titleQuoted: title.slice(0, 160),
+    },
+  };
+}
+
+// ── SPORT-FROM-PRODUCT: the product's sport, never the player's ─────────────
+
+/**
+ * MULTI-SPORT PRODUCTS CANNOT NAME A SPORT.
+ *
+ * Topps Now prints a baseball product, a basketball product, a hockey product
+ * and a soccer one under one name, so "the product's sport" has no single
+ * answer and the ruling's own premise does not apply. Measured 2026-09-06: 57
+ * of 69 sport-mismatched "topps now" rows are genuine basketball cards.
+ *
+ * THE CHECKLIST GATE DOES NOT CATCH THIS ON ITS OWN, which is why the list
+ * exists: `hiq:baseball:2024:topps-now:7:base:no-auto` IS checklist-backed
+ * while `hiq:basketball:2024:topps-now:7:...` is not, so a rule that trusted
+ * backing alone would move a real basketball card onto a baseball row and cite
+ * a checklist while doing it.
+ */
+const MULTI_SPORT_SETKEYS = new Set([
+  "topps-now", "topps-chrome", "panini-prizm", "panini-select", "panini-mosaic",
+  "panini-donruss", "panini-optic", "leaf", "sage", "upper-deck", "topps-finest",
+]);
+
+/** Sports the corpus stores that are not sports -- ingest artifacts from a
+ *  vendor name bleeding into the sport field (`sight` from cardsight, `hedge`
+ *  from cardhedge). A row stored under one of these has no sport at all, which
+ *  is a different defect and not this lane's to settle. */
+const NON_SPORT_SPORT_VALUES = new Set(["sight", "hedge", "unknown", "", "?"]);
+
+/**
+ * The SPORT-FROM-PRODUCT evidence for one row.
+ *
+ * `productSport` is the sport the PRODUCT'S CHECKLIST is written in -- a
+ * catalog read the caller supplies, never inferred from the player and never
+ * from the title's team words. `null` is unanswered, and unanswered refuses.
+ */
+function sportFromProductEvidence({ row, stored, derived, axes, productSport = null, destBacked = null }) {
+  const failed = [];
+  const setKey = lower(stored?.setKey);
+  const storedSport = lower(stored?.sport);
+
+  // S1 -- THE PRODUCT MUST NAME ONE SPORT. A multi-sport product cannot, and
+  // is refused BY NAME rather than by the checklist gate, which cannot see it.
+  if (MULTI_SPORT_SETKEYS.has(setKey)) failed.push(`multi-sport-product:${setKey}`);
+
+  // S2 -- the product's sport must be READABLE, from the checklist.
+  if (!productSport) failed.push("product-sport-unreadable");
+
+  // S3 -- there must BE a disagreement, and the stored side must be a real
+  // sport. A row stored `sight` is a vendor artifact, not a cross-sport insert.
+  if (NON_SPORT_SPORT_VALUES.has(storedSport)) failed.push(`stored-sport-is-not-a-sport:${storedSport || "(blank)"}`);
+  else if (productSport && storedSport === lower(productSport)) failed.push("sport-already-agrees");
+
+  // S4 -- ONLY THE SPORT MOVES.
+  const moved = [...(axes?.changed ?? []), ...(axes?.dropped ?? [])].filter((a) => a !== "sport");
+  if (moved.length) failed.push(`identity-axis-moved:${moved.join(",")}`);
+
+  // S5 -- THE DESTINATION MUST BE CHECKLIST-BACKED. The same gate every other
+  // moving subclass takes: a match proves nothing unless checklist-backed.
+  if (destBacked === null) failed.push("destination-backing-unknown");
+  else if (destBacked === false) failed.push("destination-not-checklist-backed");
+
+  return {
+    qualifies: failed.length === 0,
+    failed,
+    evidence: {
+      storedSport, productSport: productSport ? lower(productSport) : null, setKey, destBacked,
+      pair: `${storedSport || "(blank)"}->${productSport ? lower(productSport) : "?"}`,
+      titleQuoted: str(row?.title).slice(0, 160),
+    },
+  };
+}
+
 /**
  * Classify ONE row.
  *
@@ -3921,6 +4328,20 @@ function classifyRow({
   // Defaults null, so a caller that does not supply it gets no subclass at all
   // and today's behaviour is unchanged.
   checklistSaysNotAuto = null,
+  // THE THREE RULED SCOPES OF 2026-09-06. Each takes a CATALOG fact the caller
+  // supplies, because this module is pure and a catalog read is not something
+  // it may do. Every one defaults to the value that REFUSES, so a caller that
+  // cannot answer gets today's behaviour and no new write.
+  //
+  //   vintageDestBacked   is the destination identity at the TITLE'S year
+  //                       backed by a checklist row? null = unanswered = PARK.
+  //   productSport        the sport the PRODUCT'S checklist is written in.
+  //                       Never the player's sport, never read off the title.
+  //   sportDestBacked     is the destination identity under the product's
+  //                       sport checklist-backed? null = unanswered = refuse.
+  vintageDestBacked = null,
+  productSport = null,
+  sportDestBacked = null,
 }) {
   const prov = provenanceTier(row);
   // THE SLUG-SHAPE DEFECTS ARE COMPUTED FOR EVERY ROW AND CHANGE NOTHING.
@@ -4182,7 +4603,58 @@ function classifyRow({
     const snaNear = sna.failed.includes("autograph-witness-is-not-seller-only")
       ? [] : [`not-seller-name-auto:${sna.failed.join(",")}`];
 
-    return { ...base, klass: AGREE, axes, reasons: [...near, ...snaNear, ...splitReasons], writable: false };
+    // GRADE-FROM-TITLE: THE ROW THAT AGREES WITH ITSELF AND IS READ AS RAW.
+    //
+    // These rows land HERE, in AGREE, and that is the whole problem -- the
+    // same trap SELLER-NAME-AUTO above sits in. `deriveIdentity` carries the
+    // STORED grade forward whenever the title is silent, and for a field-raw
+    // row it also carries the stored EMPTINESS forward: `ingestGradeFromTitle`
+    // is a different, looser reader than the strict #1704 one, and where it
+    // finds nothing the derived grade equals the stored RAW. Eight axes agree,
+    // the row reports "nothing to do", and `filterByGrade` goes on counting a
+    // PSA 4 Goudey Babe Ruth as a raw sale of that card forever.
+    //
+    // So the subclass is evaluated on the AGREE path, and it is the ONLY thing
+    // that may leave it here. The write is TWO FIELDS at the row's existing
+    // address -- no re-key, no partition change, no destination pool. See
+    // GRADE_FROM_TITLE above for why the ruling's re-key could not be built.
+    //
+    // It takes THE ORDINARY IMPROVE GATE through the same `allImproveRefusals`
+    // every other IMPROVE arm calls, for the reason #1753 spells out: two
+    // copies of a gate is one gate that silently is not there.
+    const gft = gradeFromTitleEvidence({ row, stored, axes });
+    if (gft.qualifies) {
+      const refusals = allImproveRefusals({ row, stored, derived, axes, parserSaysLot, family, derivationRefused });
+      return {
+        ...base,
+        klass: IMPROVE, subclass: GRADE_FROM_TITLE,
+        // The grade axis is what MOVES, even though the address does not.
+        axes: { ...axes, filled: [...axes.filled, "grade"] },
+        // The repair target: this row's own identity with the two grade fields
+        // the title states. Nothing else moves -- that is what G7 asserts.
+        derived: { ...(derived ?? stored), gradeCompany: gft.evidence.gradeCompany, gradeValue: gft.evidence.gradeValue },
+        reasons: [
+          ...near, ...snaNear,
+          `subclass:${GRADE_FROM_TITLE}`,
+          `grade-from-title:RAW->${gft.evidence.gradeCompany} ${gft.evidence.gradeValue}`,
+          ...refusals, ...splitReasons,
+        ],
+        improveRefusals: refusals,
+        gradeFromTitleEvidence: gft.evidence,
+        writable: prov.tier === AUTO && refusals.length === 0,
+      };
+    }
+    // A NEAR MISS IS NAMED, NOT SWALLOWED -- but only for rows that were real
+    // candidates: the title names a grader AND the row's grade fields are
+    // empty. Gating on G2 alone still tagged every ALREADY-GRADED row whose
+    // title repeats its slab ("...PSA 9", stored PSA 9), which is most graded
+    // rows in the corpus and says only "this row is fine". Both legs, so what
+    // remains is the population one refusal away from a stamp.
+    const gftNear = (gft.failed.includes("title-names-no-grader")
+      || gft.failed.some((fl) => fl.startsWith("stored-grade-present")))
+      ? [] : [`not-grade-from-title:${gft.failed.join(",")}`];
+
+    return { ...base, klass: AGREE, axes, reasons: [...near, ...snaNear, ...gftNear, ...splitReasons], writable: false };
   }
 
   // A demotion or a lateral change on ANY axis is a conflict, whatever else
@@ -4248,6 +4720,83 @@ function classifyRow({
     if (!spec.failed.includes("not-a-ladder-specialization")) {
       reasons.push(`not-specialization-stated:${spec.failed.join(",")}`);
     }
+
+    // YEAR-FROM-TITLE-VINTAGE: THE `changed:cardYear` THAT IS A SALE YEAR.
+    //
+    // The second door out of CONFLICT, and as narrow as the first. #1890
+    // measured the class and asked for the ruling; Drew gave it 2026-09-06.
+    // Evaluated here, beside SPECIALIZATION-STATED, because it is the same
+    // shape of exception: a changed axis that is not a rival reading but a
+    // stale ADDRESS, proven by the title and gated on a checklist.
+    //
+    // A row that fails a leg falls through to the CONFLICT return it reaches
+    // today, carrying its failed legs so the census can count which leg held
+    // it back -- which is how the destination-backing gate is judged.
+    const vint = yearFromTitleVintageEvidence({
+      row, stored, derived, axes, storedSlug, destBacked: vintageDestBacked,
+    });
+    if (vint.qualifies) {
+      const refusals = allImproveRefusals({ row, stored, derived, axes, parserSaysLot, family, derivationRefused });
+      return {
+        ...base,
+        klass: IMPROVE, subclass: YEAR_FROM_TITLE_VINTAGE, axes,
+        reasons: [
+          ...reasons,
+          `subclass:${YEAR_FROM_TITLE_VINTAGE}`,
+          `vintage-year:${vint.evidence.slugYear}->${vint.evidence.titleYear}`,
+          `decade:${vint.evidence.decade}`,
+          ...refusals, ...splitReasons,
+        ],
+        improveRefusals: refusals,
+        vintageYearEvidence: vint.evidence,
+        writable: prov.tier === AUTO && refusals.length === 0,
+      };
+    }
+    // Named only for REAL candidates. A near-miss reason is only worth
+    // printing when the row could plausibly have qualified -- the slug year is
+    // modern, the title states a vintage year AND the setKey is one the
+    // vocabulary knows. Every other `changed:cardYear` row fails V1/V2/V3
+    // trivially, and a reason on all of them is a count of the corpus, not of
+    // the defect (the same discipline the eviction's `slug-names-no-parallel`
+    // gate applies).
+    const vintNearMiss = !vint.failed.some((fl) => fl.startsWith("slug-year-not-modern")
+      || fl.startsWith("title-year-not-vintage") || fl === "title-states-no-year"
+      || fl.startsWith("setkey-not-vintage-capable"));
+    if (vintNearMiss) reasons.push(`not-year-from-title-vintage:${vint.failed.join(",")}`);
+
+    // SPORT-FROM-PRODUCT: THE `changed:sport` THAT IS A CROSS-SPORT INSERT.
+    //
+    // The third door, and the one whose refusal list is doing the most work: a
+    // multi-sport product is refused BY NAME because the checklist gate cannot
+    // see it (see MULTI_SPORT_SETKEYS -- the Topps Now measurement).
+    const sfp = sportFromProductEvidence({
+      row, stored, derived, axes, productSport, destBacked: sportDestBacked,
+    });
+    if (sfp.qualifies) {
+      const refusals = allImproveRefusals({ row, stored, derived, axes, parserSaysLot, family, derivationRefused });
+      return {
+        ...base,
+        klass: IMPROVE, subclass: SPORT_FROM_PRODUCT, axes,
+        reasons: [
+          ...reasons,
+          `subclass:${SPORT_FROM_PRODUCT}`,
+          `sport-from-product:${sfp.evidence.pair}`,
+          ...refusals, ...splitReasons,
+        ],
+        improveRefusals: refusals,
+        sportFromProductEvidence: sfp.evidence,
+        writable: prov.tier === AUTO && refusals.length === 0,
+      };
+    }
+    // Same discipline: named only when the SPORT is the axis in question and
+    // the product could have answered. A row whose product sport is unreadable
+    // -- the overwhelming majority, since most products are single-sport and
+    // never asked -- was never a candidate, and tagging it counts the corpus.
+    const sfpNearMiss = (axes.changed ?? []).includes("sport")
+      && !sfp.failed.includes("sport-already-agrees")
+      && !sfp.failed.includes("product-sport-unreadable")
+      && !sfp.failed.some((fl) => fl.startsWith("stored-sport-is-not-a-sport"));
+    if (sfpNearMiss) reasons.push(`not-sport-from-product:${sfp.failed.join(",")}`);
     // A PRODUCT-FAMILY COLLAPSE IS REFUSED BY NAME (Drew, 2026-09-03).
     //
     // `changed:setKey` already lands in CONFLICT, and CONFLICT is already
@@ -4373,8 +4922,16 @@ function isPhantomGradeArtifact(stored, derived, axes) {
 // classes and reports how it read it, and the runner refuses an apply it
 // cannot read.
 
-/** The classes an apply may be scoped to. */
-const APPLY_CLASSES = { IMPROVE, BASE_EVICTION };
+/** The classes an apply may be scoped to.
+ *
+ *  THE THREE RULED SCOPES OF 2026-09-06 ARE THEIR OWN CLASSES, not a widening
+ *  of IMPROVE. Their `klass` is IMPROVE -- that is what the census measured --
+ *  but a dispatch that says `scope=improve` must NOT arm them: they were ruled
+ *  separately, they are report-first separately, and each earns its apply on
+ *  its own canary. `applyKindOf` reads the SUBCLASS first for exactly this
+ *  reason, so the ordinary IMPROVE scope keeps writing exactly what it wrote
+ *  yesterday and no more. */
+const APPLY_CLASSES = { IMPROVE, BASE_EVICTION, GRADE_FROM_TITLE, YEAR_FROM_TITLE_VINTAGE, SPORT_FROM_PRODUCT };
 
 /** Spellings of each class a dispatch may use. Deliberately generous on
  *  punctuation (base-eviction / base_eviction / baseeviction) and deliberately
@@ -4404,6 +4961,21 @@ const APPLY_SCOPE_ALIASES = new Map([
   ["revert", []],
   ["revert-base-eviction", []],
   ["unevict", []],
+  // THE THREE RULED SCOPES OF 2026-09-06. Each is armed only by its own name.
+  // DELIBERATELY ABSENT FROM "both" AND "all" BELOW: those words are what a
+  // fleet dispatch already says today, and a scope ruled yesterday must not be
+  // armed by a dispatch written before the ruling existed. A new scope is
+  // asked for by name or it does not run.
+  ["grade-from-title", [GRADE_FROM_TITLE]],
+  ["gradefromtitle", [GRADE_FROM_TITLE]],
+  ["grade-backfill", [GRADE_FROM_TITLE]],
+  ["year-from-title-vintage", [YEAR_FROM_TITLE_VINTAGE]],
+  ["yearfromtitlevintage", [YEAR_FROM_TITLE_VINTAGE]],
+  ["vintage-year", [YEAR_FROM_TITLE_VINTAGE]],
+  ["sport-from-product", [SPORT_FROM_PRODUCT]],
+  ["sportfromproduct", [SPORT_FROM_PRODUCT]],
+  // "both" and "all" keep meaning what they meant when the fleet dispatches
+  // that use them were written: the two classes that existed then.
   ["both", [IMPROVE, BASE_EVICTION]],
   ["all", [IMPROVE, BASE_EVICTION]],
   ["all-classes", [IMPROVE, BASE_EVICTION]],
@@ -4451,7 +5023,7 @@ function parseApplyScope(raw) {
     // to learn what the accepted scopes actually are -- including the revert,
     // which is otherwise undiscoverable.
     out.reason = `scope ${JSON.stringify(str(raw))} carries unrecognised token(s) ${unknown.join(",")} `
-      + `(expected one of: improve, base-eviction, both, revert-eviction)`;
+      + `(expected one of: improve, base-eviction, both, revert-eviction, grade-from-title, year-from-title-vintage, sport-from-product)`;
     return out;
   }
   if (out.revert) {
@@ -4461,7 +5033,7 @@ function parseApplyScope(raw) {
   }
   if (!out.classes.size) {
     out.reason = `scope ${JSON.stringify(str(raw))} names no apply class ` +
-      `(expected one of: improve, base-eviction, both, revert-eviction)`;
+      `(expected one of: improve, base-eviction, both, revert-eviction, grade-from-title, year-from-title-vintage, sport-from-product)`;
     return out;
   }
   out.ok = true;
@@ -4484,14 +5056,30 @@ function writableUnderScope(result, classes) {
   return !!classes && classes.has(kind);
 }
 
-/** Which apply class a classified row belongs to, or null. IMPROVE by class,
- *  BASE-EVICTION by subclass; nothing else is ever an apply candidate. */
+/** Which apply class a classified row belongs to, or null.
+ *
+ *  THE SUBCLASS IS READ FIRST, and that ordering is the whole containment of
+ *  the three 2026-09-06 scopes. Their `klass` is IMPROVE, so a bare
+ *  `klass === IMPROVE` test would fold them into the ordinary IMPROVE scope
+ *  and a `scope=improve` fleet dispatch -- written before any of them was
+ *  ruled -- would start writing all three. Naming them first means
+ *  `scope=improve` arms exactly what it armed yesterday.
+ *
+ *  BASE-EVICTION is likewise a subclass; nothing else is an apply candidate. */
 function applyKindOf(result) {
   if (!result) return null;
-  if (result.klass === IMPROVE) return IMPROVE;
+  if (result.subclass === GRADE_FROM_TITLE) return GRADE_FROM_TITLE;
+  if (result.subclass === YEAR_FROM_TITLE_VINTAGE) return YEAR_FROM_TITLE_VINTAGE;
+  if (result.subclass === SPORT_FROM_PRODUCT) return SPORT_FROM_PRODUCT;
   if (result.subclass === BASE_EVICTION) return BASE_EVICTION;
+  if (result.klass === IMPROVE) return IMPROVE;
   return null;
 }
+
+/** The apply kinds that stamp FIELDS at the row's existing address rather than
+ *  re-keying it. The apply path reads this to choose its write shape, and the
+ *  canary reads it to know a pool's membership did not change. */
+const FIELD_ONLY_APPLY_KINDS = new Set([GRADE_FROM_TITLE]);
 
 /** The defect axis a row contributes to the banner's per-class breakdown.
  *  A row can move on several axes; each is counted. */
@@ -4518,6 +5106,17 @@ function renderIdentity(id) {
 
 module.exports = {
   AGREE, IMPROVE, CONFLICT, UNDERIVABLE, PROTECTED, AUTO, BASE_EVICTION,
+  // THE THREE RULED SCOPES OF 2026-09-06, exported piece by piece -- the
+  // subclass name, its evidence function and each table it reads -- so a pin
+  // can drive one leg alone and the mutation check can revert one leg alone.
+  // A leg nothing can call alone is a leg nothing can prove.
+  GRADE_FROM_TITLE, gradeFromTitleEvidence, graderTokensIn, gradeValueIsOnScale,
+  LENIENT_SCALE_RE, LOW_GRADE_ADJECTIVE_RE, FIELD_ONLY_APPLY_KINDS,
+  YEAR_FROM_TITLE_VINTAGE, yearFromTitleVintageEvidence,
+  VINTAGE_CAPABLE_SETKEYS, RETRO_SETKEY_RE, RETRO_TITLE_RE,
+  firstStatedYear, slugYearSegment,
+  SPORT_FROM_PRODUCT, sportFromProductEvidence,
+  MULTI_SPORT_SETKEYS, NON_SPORT_SPORT_VALUES,
   UNDERIVABLE_FOR_SUBSET, subsetVerdict: SUBSET.subsetVerdict,
   resolveSubsetFromTitle: SUBSET.resolveSubsetFromTitle,
   titleNamesSubset: SUBSET.titleNamesSubset,
