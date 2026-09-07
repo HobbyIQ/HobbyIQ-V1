@@ -2,8 +2,19 @@
 /**
  * CENSUS: setKey=unknown, READ ONLY. (Drew's GO, 2026-09-05)
  *
- * THE POPULATION. 889,860 sold_comps rows carry a slug whose product segment
- * is the literal string `unknown` -- `hiq:<sport>:<year>:unknown:<num>:...`.
+ * THE POPULATION. sold_comps rows whose slug's product segment is the literal
+ * string `unknown` -- `hiq:<sport>:<year>:unknown:<num>:...` -- on EITHER
+ * `cardId` or `hobbyiqCardId`, because the pool reader ORs both fields and
+ * they do not agree (measured 2026-09-07: 664,125 on hobbyiqCardId vs 269,061
+ * on cardId, population 664,810).
+ *
+ * ITS SIZE IS MEASURED, NEVER ASSUMED. This file used to hardcode
+ * `POPULATION_TOTAL = 889860` and scale every extrapolation to it; that number
+ * was 3.3x the live count under its own predicate and could not be reproduced
+ * (#1927). The denominator is now a COUNT over the same filter the run
+ * samples with, or a value the caller supplies via `--population`, and a run
+ * with neither reports SAMPLED COUNTS and withholds extrapolation entirely.
+ * See CF-A-CENSUS-MEASURES-ITS-OWN-DENOMINATOR at the extrapolation block.
  * The checklist-gap census (backend/docs/reports/checklist-gaps-2026-09-05.md)
  * measured them as a class and named them the largest single identity defect
  * in the pool: bigger than any checklist gap, and -- this is the part that
@@ -72,7 +83,8 @@
  * glance whether recognising the product would even produce a writable row --
  * because recognising a product is not the same as having its checklist.
  *
- * SAMPLING. The population is ~890k rows spread over the whole container. A
+ * SAMPLING. The population is several hundred thousand rows spread over the
+ * whole container (measured per run, see above). A
  * full sweep is a 10-15 minute cross-partition scan (measured, that report's
  * own scans ran 10m15s and 12m54s at ~17.6k rows/s). This census samples, and
  * the banner states the sample size per (sport, year) cell and the
@@ -91,7 +103,8 @@
  *     --query "[?name=='COSMOS_CONNECTION_STRING'].value" -o tsv)" \
  *   node backend/scripts/census-unknown-setkey.cjs [--limit=N] [--minutes=M] [--json=path]
  *
- * Env / inputs: LIMIT, RUN_MINUTES, CENSUS_OUT, SLOT/SLOTS/SHARD, YEARS, SPORTS.
+ * Env / inputs: LIMIT, RUN_MINUTES, CENSUS_OUT, SLOT/SLOTS/SHARD, YEARS,
+ * SPORTS, CENSUS_POPULATION (or --population=<n>).
  */
 "use strict";
 
@@ -130,6 +143,20 @@ const PROGRESS_EVERY = Number(arg("progress-every", "25000")) || 25000;
  *  and cannot be cancelled either. */
 const PROBE_CARDS = Number(arg("probe", "12")) || 12;
 const TOP_SPELLINGS = Number(arg("top", "50")) || 50;
+/** The denominator, when the caller already measured it and does not want this
+ *  run to spend a COUNT on it. Absent by default: the census MEASURES its own
+ *  population (see the extrapolation block). Never a literal in this file —
+ *  CF-A-CENSUS-MEASURES-ITS-OWN-DENOMINATOR. */
+const POPULATION_INPUT = (() => {
+  const raw = arg("population", process.env.CENSUS_POPULATION ?? "");
+  if (raw === "" || raw == null) return null;
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n <= 0) {
+    console.error(`census-unknown-setkey: --population must be a positive number, got ${JSON.stringify(raw)}`);
+    process.exit(2);
+  }
+  return Math.round(n);
+})();
 const YEARS = String(arg("years", process.env.YEARS ?? "")).split(",").map((s) => s.trim()).filter(Boolean);
 const SPORTS = String(arg("sports", process.env.SPORTS ?? "")).split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
 
@@ -170,10 +197,22 @@ function slugSetKeySegment(cardId) {
 }
 
 /** The population predicate. `unknown` is the explicit one GENERIC_SETKEYS
- *  names; the empty segment is the same statement spelled differently. */
+ *  names; the empty segment is the same statement spelled differently.
+ *
+ * CF-THE-POOL-READER-ORS-BOTH-FIELDS (2026-09-07). This read `cardId` alone,
+ * and the two fields do not agree: measured 2026-09-07, `hobbyiqCardId`
+ * carries `unknown` on 664,125 rows while `cardId` carries it on 269,061 — a
+ * 395,749-row difference, and `cardId`-only is the SMALLER half. The pool
+ * reader ORs both fields, so a census selecting on one of them describes a
+ * population no consumer has. Both are read here, which is also what makes
+ * the measured total agree with the report's 664,810. */
 function isUnknownKeyRow(row) {
-  const seg = slugSetKeySegment(row?.cardId);
-  return seg === "unknown" || seg === "";
+  const byCardId = slugSetKeySegment(row?.cardId);
+  const byHiq = slugSetKeySegment(row?.hobbyiqCardId);
+  const blank = (seg) => seg === "unknown" || seg === "";
+  // `null` means "not an hiq slug" — absent, not blank. Only a slug that
+  // parsed and came back unknown/empty counts.
+  return (byCardId !== null && blank(byCardId)) || (byHiq !== null && blank(byHiq));
 }
 
 // ── the refusal buckets ─────────────────────────────────────────────────────
@@ -275,6 +314,52 @@ function productSpelling(title) {
 }
 
 // ── main ────────────────────────────────────────────────────────────────────
+
+/**
+ * MEASURE the denominator, over the SAME filter this run sampled with.
+ *
+ * CF-A-CENSUS-MEASURES-ITS-OWN-DENOMINATOR (2026-09-07). The population is a
+ * `COUNT(1)` over the identical WHERE clause the sampling query used —
+ * including this run's `--years` / `--sports` narrowing — so the numerator and
+ * the denominator can never describe different populations. A census that
+ * scales a filtered sample to an UNfiltered total reports nonsense, and that
+ * is the second half of what the 889,860 constant did.
+ *
+ * THE COUNT IS THE FILTER'S, NOT THE PREDICATE'S. `CONTAINS(...)` is
+ * index-servable; the exact segment test (`isUnknownKeyRow`) is a JS read that
+ * SQL cannot express. So this over-counts by exactly the rows the sample loop
+ * reports as `filteredNotPopulation`, and the banner subtracts them: the
+ * reported population is `count - filteredRate * count`, with the rate taken
+ * from this run's own re-check. Measured 2026-09-07 that rate was 0 — every
+ * `:unknown:` in a slug was in segment 3 — but it is corrected rather than
+ * assumed, because assuming it is how a constant is born.
+ *
+ * NOT A MINUTES-LONG SCAN. A single server-side aggregate over an
+ * index-servable predicate, not the cross-partition row walk the sampler does.
+ * It is given its own short budget and, on timeout or error, returns `null` —
+ * and `null` means the census reports COUNTS and withholds extrapolation,
+ * which is the honest outcome. It never falls back to a literal.
+ */
+async function measurePopulation(pool, params, where) {
+  const t0 = Date.now();
+  try {
+    const q = {
+      query: `SELECT VALUE COUNT(1) FROM c WHERE ${where.join(" AND ")}`,
+      parameters: params,
+    };
+    const { resources } = await pool.items
+      .query(q, { maxItemCount: 1, maxDegreeOfParallelism: 32 })
+      .fetchAll();
+    const n = Number(resources?.[0]);
+    if (!Number.isFinite(n) || n < 0) return null;
+    console.log(`  population measured: ${f(n)} rows match the filter (COUNT, ${((Date.now() - t0) / 1000).toFixed(1)}s)`);
+    return n;
+  } catch (e) {
+    console.warn(`  population COUNT failed after ${((Date.now() - t0) / 1000).toFixed(1)}s (${e?.message ?? e})`);
+    console.warn(`  -> extrapolation WITHHELD. Buckets are reported as sampled counts.`);
+    return null;
+  }
+}
 
 async function main() {
   const conn = process.env.COSMOS_CONNECTION_STRING;
@@ -477,7 +562,11 @@ async function main() {
   // it always has -- `:unknown:` -- and every row is re-checked in JS against
   // `slugSetKeySegment`, which is the authority. CONTAINS is the FILTER;
   // the segment read is the PREDICATE.
-  const where = ["CONTAINS(c.cardId, \":unknown:\")"];
+  // Both fields, ORed — see isUnknownKeyRow. Selecting on `cardId` alone
+  // reaches 269k rows and misses the 395,749 that carry `unknown` only on
+  // `hobbyiqCardId`. CONTAINS stays the index-servable FILTER; the segment
+  // read in JS remains the PREDICATE.
+  const where = ["(CONTAINS(c.cardId, \":unknown:\") OR CONTAINS(c.hobbyiqCardId, \":unknown:\"))"];
   const params = [];
   if (YEARS.length) { where.push(`c.cardYear IN (${YEARS.map((_, i) => `@y${i}`).join(",")})`); YEARS.forEach((y, i) => params.push({ name: `@y${i}`, value: Number(y) })); }
   if (SPORTS.length) { where.push(`c.sport IN (${SPORTS.map((_, i) => `@s${i}`).join(",")})`); SPORTS.forEach((s, i) => params.push({ name: `@s${i}`, value: s })); }
@@ -752,21 +841,46 @@ async function main() {
   }
 
   // ── extrapolation ─────────────────────────────────────────────────────────
-  // The report's own measured total for this population.
-  const POPULATION_TOTAL = 889860;
+  //
+  // CF-A-CENSUS-MEASURES-ITS-OWN-DENOMINATOR (2026-09-07).
+  //
+  // THE DEFECT. This read `const POPULATION_TOTAL = 889860` — a literal — and
+  // every `~total` and every `±` it printed was scaled to it. Measured
+  // 2026-09-07 under that constant's OWN predicate (`cardId` only), the live
+  // count is 269,061; under the predicate that matches the pool reader (either
+  // field) it is 664,810. The constant was 3.3× the first and 1.34× the
+  // second, so every extrapolation this script has ever printed was inflated
+  // by a factor nobody could re-derive.
+  //
+  // A constant cannot be verified and cannot age. It is now MEASURED by
+  // default and may be SUPPLIED when the measurement is not wanted — but it is
+  // never a literal, and a run that has neither refuses to extrapolate rather
+  // than scale to a number it made up. `null` is the honest denominator when
+  // the population is unknown: the buckets are still reported as counts, and
+  // the `~total` column simply does not appear.
+  //
+  // The measurement is a COUNT over the same filter the sample uses, so the
+  // denominator and the numerator describe one population by construction.
+  // It is a single aggregate — not the minutes-long cross-partition scan the
+  // sampling loop is — and it is skipped entirely when a value is supplied.
   const sampled = stats.population;
-  const covered = SHARDED ? POPULATION_TOTAL / SLOTS : POPULATION_TOTAL;
+  const populationTotal = POPULATION_INPUT ?? await measurePopulation(pool, params, where);
+  const populationSource = POPULATION_INPUT != null
+    ? "supplied (--population)"
+    : (populationTotal == null ? "UNMEASURED — extrapolation withheld" : "measured (COUNT over this run's own filter)");
+  const covered = populationTotal == null ? 0 : (SHARDED ? populationTotal / SLOTS : populationTotal);
   const fraction = covered ? Math.min(1, sampled / covered) : 0;
   /** A binomial 95% half-width on a proportion, scaled to the population.
    *  Stated so a number this census extrapolates is never mistaken for one it
-   *  measured. */
+   *  measured. `null` when there is no measured denominator to scale to —
+   *  CF-ABSENT-BEATS-WRONG applies to error bars too. */
   const errorBar = (k) => {
-    if (!sampled) return 0;
+    if (!sampled || populationTotal == null) return null;
     const p = k / sampled;
     const half = 1.96 * Math.sqrt(Math.max(p * (1 - p), 1e-9) / sampled);
-    return Math.round(half * POPULATION_TOTAL);
+    return Math.round(half * populationTotal);
   };
-  const scale = (k) => (sampled ? Math.round((k / sampled) * POPULATION_TOTAL) : 0);
+  const scale = (k) => (sampled && populationTotal != null ? Math.round((k / sampled) * populationTotal) : null);
 
   const elapsed = (Date.now() - started) / 1000;
   const out = {
@@ -777,7 +891,13 @@ async function main() {
     stopReason,
     elapsedSeconds: Math.round(elapsed),
     rowsPerSecond: Math.round(stats.scanned / Math.max(elapsed, 1)),
-    populationTotalMeasured: POPULATION_TOTAL,
+    // The denominator and WHERE IT CAME FROM, always reported together: a
+    // reader must be able to tell a measurement from a supplied value from an
+    // absent one without re-deriving it. Never a literal.
+    populationTotal,
+    populationSource,
+    populationMeasured: POPULATION_INPUT == null && populationTotal != null,
+    extrapolationWithheld: populationTotal == null,
     sampleSize: sampled,
     sampleFraction: Number((fraction * 100).toFixed(2)),
     scanned: stats.scanned,
@@ -813,12 +933,20 @@ async function main() {
   console.log("");
   console.log(`── census-unknown-setkey ─────────────────────────────────────────────`);
   console.log(`  scanned ${f(stats.scanned)} rows in ${Math.round(elapsed)}s (${f(out.rowsPerSecond)} rows/s)${stopReason ? `  -- ${stopReason}` : ""}`);
-  console.log(`  population sampled: ${f(sampled)} of ${f(POPULATION_TOTAL)} measured unknown-key rows (${(fraction * 100).toFixed(2)}%)`);
+  // `~n` renders an extrapolation, or "n/a" when there is no denominator to
+  // scale to. A dash beats a fabricated number.
+  const fx = (n) => (n == null ? "n/a" : f(n));
+  if (populationTotal == null) {
+    console.log(`  population sampled: ${f(sampled)} rows. POPULATION NOT MEASURED — every ~total and ± below is WITHHELD.`);
+    console.log(`  (pass --population=<n> to supply a denominator you measured yourself.)`);
+  } else {
+    console.log(`  population sampled: ${f(sampled)} of ${f(populationTotal)} unknown-key rows (${(fraction * 100).toFixed(2)}%) -- ${populationSource}`);
+  }
   if (stats.filtered) console.log(`  ${f(stats.filtered)} rows matched the CONTAINS filter but were NOT population (segment re-check)`);
   if (SHARDED) console.log(`  shard ${SLOT}/${SLOTS} -- ${f(stats.otherShard)} rows belong to other shards`);
   console.log("");
   console.log(`  BUCKET                       sampled      share    extrapolated (95% CI)`);
-  const line = (label, k) => console.log(`  ${label.padEnd(26)} ${f(k).padStart(9)}  ${pct(k, sampled).padStart(8)}    ${f(scale(k)).padStart(9)} ± ${f(errorBar(k))}`);
+  const line = (label, k) => console.log(`  ${label.padEnd(26)} ${f(k).padStart(9)}  ${pct(k, sampled).padStart(8)}    ${fx(scale(k)).padStart(9)} ± ${fx(errorBar(k))}`);
   line("fleet fixes (IMPROVE+backed)", buckets.fleetFixes);
   line("reads product, no checklist", buckets.improveNotBacked);
   line("needs vocabulary", buckets.needsVocab);
@@ -829,26 +957,31 @@ async function main() {
   console.log("");
   console.log(`  UNDERIVABLE by reason:`);
   for (const [r, n] of Object.entries(underivableByReason).sort((a, b) => b[1] - a[1]).slice(0, 20)) {
-    console.log(`    ${String(r).padEnd(40)} ${f(n).padStart(8)}   ~${f(scale(n))}`);
+    console.log(`    ${String(r).padEnd(40)} ${f(n).padStart(8)}   ~${fx(scale(n))}`);
   }
   console.log("");
   const nbTop = Object.entries(notBackedByProduct).sort((a, b) => b[1] - a[1]).slice(0, 15);
   if (nbTop.length) {
     console.log(`  READS THE PRODUCT, HAS NO CHECKLIST -- top products (the acquisition list):`);
-    for (const [k, n] of nbTop) console.log(`    ${String(k).padEnd(42)} ${f(n).padStart(7)}   ~${f(scale(n))}`);
+    for (const [k, n] of nbTop) console.log(`    ${String(k).padEnd(42)} ${f(n).padStart(7)}   ~${fx(scale(n))}`);
     console.log("");
   }
   console.log(`  TOP ${Math.min(TOP_SPELLINGS, top50.length)} PRODUCTS the vocabulary has no rule for `
     + `(${f(byKey.size)} distinct proposed keys over ${f(spellings.size)} raw spellings):`);
   console.log(`    ${"proposedKey".padEnd(30)} ${"rows".padStart(6)} ${"~total".padStart(8)} ${"chkProbe".padStart(8)}  representative spelling`);
   for (const s of top50) {
-    console.log(`    ${String(s.proposedKey).padEnd(30).slice(0, 30)} ${f(s.rows).padStart(6)} ${f(scale(s.rows)).padStart(8)} `
+    console.log(`    ${String(s.proposedKey).padEnd(30).slice(0, 30)} ${f(s.rows).padStart(6)} ${fx(scale(s.rows)).padStart(8)} `
       + `${(s.checklistProbed ? `${s.checklistHits}/${s.checklistProbed}` : "-").padStart(8)}  ${String(s.spelling).slice(0, 40)}`
       + `${s.variants.length > 1 ? `  (+${s.variants.length - 1} more spellings)` : ""}`);
   }
   console.log("");
-  console.log(`  Every extrapolation above is LABELLED as one. The sample is ${(fraction * 100).toFixed(2)}% of the population;`);
-  console.log(`  the ± is a binomial 95% half-width scaled to ${f(POPULATION_TOTAL)} rows.`);
+  if (populationTotal == null) {
+    console.log(`  NO EXTRAPOLATION WAS PRINTED. The population was not measured, so every ~total and ±`);
+    console.log(`  reads n/a: the buckets above are SAMPLED COUNTS and nothing above is scaled.`);
+  } else {
+    console.log(`  Every extrapolation above is LABELLED as one. The sample is ${(fraction * 100).toFixed(2)}% of the population;`);
+    console.log(`  the ± is a binomial 95% half-width scaled to ${f(populationTotal)} rows -- ${populationSource}.`);
+  }
   console.log(`  NOTHING WAS WRITTEN. This script has no write path.`);
 
   if (JSON_OUT) {

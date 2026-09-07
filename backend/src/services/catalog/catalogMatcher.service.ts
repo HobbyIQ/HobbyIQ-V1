@@ -506,12 +506,39 @@ export function canonicalizeParallelName(raw: string | null): string {
   return trimmed;
 }
 
-/** Build a canonical HobbyIqCardIdComponents from arbitrary input. */
+/** Build a canonical HobbyIqCardIdComponents from arbitrary input.
+ *
+ * CF-NO-CROSS-VERTICAL-FALLBACK, applied at the call site that had the sport
+ * and dropped it (2026-09-07, the unknown-setKey census).
+ *
+ * `normalizeSetKey` consults the ruled Pokemon English vocabulary ONLY when
+ * its caller says the row is Pokemon — `151` is Scarlet & Violet 151 and it is
+ * also an ordinary sports set name, so the table is gated on purpose. This
+ * function builds a components object whose FIRST field is the sport, and it
+ * called `normalizeSetKey` without it. The sports vocabulary then answered a
+ * Pokemon question, and 187 of its 188 patterns are unanchored:
+ *
+ *     buildComponents({ sport: "pokemon", setName: "Obsidian Flames" })
+ *       -> setKey `panini-obsidian`   -> hiq:pokemon:2023:panini-obsidian:125:…
+ *     buildComponents({ sport: "pokemon", setName: "Crown Zenith" })
+ *       -> setKey `panini-zenith`     -> hiq:pokemon:2023:panini-zenith:…
+ *
+ * A Pokemon card addressed into a Panini basketball pool — the exact damage
+ * CF-NO-CROSS-VERTICAL-FALLBACK was written for after it measured 59,748 such
+ * rows on 2026-08-17. That ruling was applied inside `resolveSetKeyForSlug`
+ * and pinned there; this call site was outside the net, and `recordSoldComp`
+ * reaches it through `canonicalize` on every vendor row it reconciles. With
+ * the sport passed the same input answers `sv03` / `swsh12-5`.
+ *
+ * Passing the sport is not a new rule and mints no alias: it hands
+ * `normalizeSetKey` the one argument that decides which vocabulary has
+ * jurisdiction. For every non-Pokemon sport this is the identity function. */
 export function buildComponents(input: CatalogMatchInput): HobbyIqCardIdComponents {
+  const sportForKey = String(input.sport ?? "").trim().toLowerCase();
   return {
-    sport: String(input.sport ?? "").trim().toLowerCase(),
+    sport: sportForKey,
     year: input.year,
-    setKey: normalizeSetKey(input.setName ?? ""),
+    setKey: normalizeSetKey(input.setName ?? "", sportForKey),
     // CF-CARD-NUMBER-IS-CASE-INSENSITIVE (Drew, 2026-08-16: "yea, we should
     // see if it does").
     //
@@ -958,7 +985,11 @@ function applySetKeyInvariant(
 
   const got = setKeySegmentOf(result.slug);
   if (got === null) return result;          // non-canonical id, nothing to compare
-  const want = normalizeSetKey(input.setName ?? "");
+  // The sport decides which vocabulary answers, here as in buildComponents.
+  // Without it this invariant asked the SPORTS vocabulary what a Pokemon row
+  // wanted, got `panini-obsidian`, and then rejected the correct `sv03` match
+  // for disagreeing with it — a right guard measuring the wrong question.
+  const want = normalizeSetKey(input.setName ?? "", String(input.sport ?? "").trim().toLowerCase());
   if (!want || got === want) return result;
 
   console.warn(JSON.stringify({

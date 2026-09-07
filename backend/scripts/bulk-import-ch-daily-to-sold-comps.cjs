@@ -45,15 +45,13 @@ const START_DATE = process.env.BULK_START_DATE || new Date().toISOString().slice
 const END_DATE = process.env.BULK_END_DATE || "2018-01-01";
 const SPORT_FILTER = (process.env.BULK_SPORT_FILTER || "").trim();
 
-function normSport(chGroup) {
-  const g = String(chGroup || "").trim().toLowerCase();
-  if (g === "baseball") return "baseball";
-  if (g === "basketball") return "basketball";
-  if (g === "football") return "football";
-  if (g === "hockey") return "hockey";
-  if (g === "soccer") return "soccer";
-  return null;
-}
+// CF-THE-VENDOR-STATES-THE-VERTICAL (2026-09-07). This script used to carry
+// its OWN copy of normSport, and the copy is how a fix reaches one ingest lane
+// and not the other: the shared mapper learned `pokemon` and this literal
+// would have gone on returning null for 1,525,994 rows. Imported from the one
+// implementation instead, so the two lanes cannot disagree about what
+// CardHedge's `group` field means. Same require root as recordSoldComp above.
+const { normSport } = require(path.join(backend, "dist/services/portfolioiq/chRowToSoldComp.js"));
 
 function normGrader(grader) {
   const g = String(grader || "").trim().toUpperCase();

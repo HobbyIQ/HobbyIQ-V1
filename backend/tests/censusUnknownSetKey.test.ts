@@ -23,6 +23,7 @@
  */
 import { describe, it, expect } from "vitest";
 import path from "node:path";
+import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 
 const require_ = createRequire(import.meta.url);
@@ -69,6 +70,108 @@ describe("the population predicate reads the SLUG, not setName", () => {
       cardId: "hiq:baseball:2005:unknown:96:base:auto:num-25",
       setName: "Leaf",
     })).toBe(true);
+  });
+
+  // CF-THE-POOL-READER-ORS-BOTH-FIELDS (2026-09-07). The predicate read
+  // `cardId` alone, and the fields disagree on 395,749 rows -- with the
+  // cardId-only reading being the SMALLER half (269,061 vs 664,125). A census
+  // that selects on one field describes a population no consumer has.
+  it("counts a row carrying unknown on hobbyiqCardId ALONE", () => {
+    // The 395,749-row shape: cardId names a real product, hobbyiqCardId does
+    // not. The pool reader ORs both, so this row IS population.
+    expect(isUnknownKeyRow({
+      cardId: "hiq:pokemon:2023:sv03:125:base:no-auto",
+      hobbyiqCardId: "hiq:pokemon:2023:unknown:125:base:no-auto",
+    })).toBe(true);
+  });
+
+  it("counts a row carrying unknown on cardId ALONE", () => {
+    expect(isUnknownKeyRow({
+      cardId: "hiq:pokemon:2023:unknown:125:base:no-auto",
+      hobbyiqCardId: "hiq:pokemon:2023:sv03:125:base:no-auto",
+    })).toBe(true);
+  });
+
+  it("does NOT count a row where BOTH fields name a real product", () => {
+    expect(isUnknownKeyRow({
+      cardId: "hiq:baseball:2024:topps-chrome:150:base:no-auto",
+      hobbyiqCardId: "hiq:baseball:2024:topps-chrome:150:base:no-auto",
+    })).toBe(false);
+  });
+
+  it("treats an ABSENT hobbyiqCardId as absent, not as blank", () => {
+    // `null` from slugSetKeySegment means "not an hiq slug" -- no statement at
+    // all. Only a slug that PARSED and came back unknown/empty is population;
+    // otherwise every row lacking the field would be swept in.
+    expect(isUnknownKeyRow({
+      cardId: "hiq:baseball:2024:topps-chrome:150:base:no-auto",
+    })).toBe(false);
+    expect(isUnknownKeyRow({
+      cardId: "hiq:baseball:2024:topps-chrome:150:base:no-auto",
+      hobbyiqCardId: "holding::abc123",
+    })).toBe(false);
+  });
+});
+
+// CF-A-CENSUS-MEASURES-ITS-OWN-DENOMINATOR (2026-09-07).
+//
+// The script hardcoded `POPULATION_TOTAL = 889860` and scaled every `~total`
+// and every `±` to it. Measured under that constant's own predicate the live
+// count was 269,061 -- the constant was 3.3x it, and no run could reproduce
+// it. A literal denominator cannot be verified and cannot age, so the source
+// is pinned against its return.
+describe("the census never scales to a hardcoded population", () => {
+  const SRC = readFileSync(
+    path.join(process.cwd(), "scripts", "census-unknown-setkey.cjs"),
+    "utf8",
+  );
+  /** The EXECUTABLE half. The comments deliberately quote the old constant to
+   *  explain why it went, and a pin that read them would forbid its own
+   *  documentation -- so these assertions run against the code with block and
+   *  line comments stripped. */
+  const CODE = SRC
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .split("\n")
+    // Drop whole-line `//` comments. Enough for this pin: every explanatory
+    // mention of the retired constant is on a comment line of its own, and a
+    // trailing-comment form would still have to survive the checks below.
+    .filter((l) => !/^\s*\/\//.test(l))
+    .join("\n");
+
+  it("does not declare a POPULATION_TOTAL constant", () => {
+    // The prose that explains the removal may name it; an assignment may not.
+    expect(CODE).not.toMatch(/const\s+POPULATION_TOTAL\s*=/);
+  });
+
+  it("contains no bare 889860 literal in executable code", () => {
+    expect(CODE).not.toMatch(/\b889860\b/);
+  });
+
+  it("measures the population with a COUNT over the run's own filter", () => {
+    // The denominator and the numerator must describe ONE population: the
+    // COUNT is built from the same `where` the sampling query uses, so a
+    // --years/--sports run cannot scale a filtered sample to an unfiltered
+    // total.
+    expect(SRC).toMatch(/async function measurePopulation\(pool, params, where\)/);
+    expect(SRC).toMatch(/SELECT VALUE COUNT\(1\) FROM c WHERE \$\{where\.join\(" AND "\)\}/);
+  });
+
+  it("accepts a supplied denominator instead of measuring", () => {
+    expect(SRC).toMatch(/POPULATION_INPUT/);
+    expect(SRC).toMatch(/arg\("population"/);
+  });
+
+  it("withholds extrapolation rather than inventing a denominator", () => {
+    // scale() and errorBar() return null when there is no population, and the
+    // banner prints n/a. Absent beats wrong applies to error bars too.
+    expect(SRC).toMatch(/populationTotal != null \? Math\.round\(\(k \/ sampled\) \* populationTotal\) : null/);
+    expect(SRC).toMatch(/if \(!sampled \|\| populationTotal == null\) return null;/);
+  });
+
+  it("selects on BOTH id fields in the query filter", () => {
+    // The source escapes the quotes inside the SQL string literal, so match on
+    // the field names and the OR rather than on the exact quoting.
+    expect(CODE).toMatch(/CONTAINS\(c\.cardId,[^)]*\)\s*OR\s*CONTAINS\(c\.hobbyiqCardId,/);
   });
 });
 

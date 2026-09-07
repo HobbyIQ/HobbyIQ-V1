@@ -50,7 +50,11 @@ describe("chRowToSoldComp — field derivation", () => {
   it("normalizes CH group to a canonical sport tag", () => {
     expect(normSport("Baseball")).toBe("baseball");
     expect(normSport("  FOOTBALL ")).toBe("football");
-    expect(normSport("Pokemon")).toBeNull();
+    // CF-THE-VENDOR-STATES-THE-VERTICAL (2026-09-07): `Pokemon` is a vertical
+    // CardHedge really sends (1,525,994 rows) and `pokemon` is canonical, so
+    // it maps. A group we genuinely do not carry still returns null.
+    expect(normSport("Pokemon")).toBe("pokemon");
+    expect(normSport("Wrestling")).toBeNull();
     expect(normSport(undefined)).toBeNull();
   });
 
@@ -123,12 +127,31 @@ describe("chRowToSoldComp — mapping contract", () => {
   it("applies the sport filter and distinguishes filtered from untagged", () => {
     expect(mapChRowToSoldComp(baseRow({ group: "Football" }), { sportFilter: ["baseball"] }))
       .toEqual({ ok: false, skip: "sport-filtered" });
-    expect(mapChRowToSoldComp(baseRow({ group: "Pokemon" }), { sportFilter: ["baseball"] }))
+    // CF-THE-VENDOR-STATES-THE-VERTICAL (2026-09-07). This case used `Pokemon`
+    // as its stand-in for "a group we do not carry", and that premise is gone:
+    // `Pokemon` is 1,525,994 rows of ch_daily_sales and normSport now maps it,
+    // which is what lets those rows reach the ruled Pokemon setKey vocabulary
+    // instead of being refused on `sport-uncanonical`. The distinction this
+    // test exists for -- FILTERED vs UNTAGGED -- is unchanged and is still
+    // pinned, now with a group that really is untagged.
+    expect(mapChRowToSoldComp(baseRow({ group: "Wrestling" }), { sportFilter: ["baseball"] }))
       .toEqual({ ok: false, skip: "no-sport" });
     // No filter => untagged sport is still accepted, sport just stays null.
-    const r = mapChRowToSoldComp(baseRow({ group: "Pokemon" }));
+    const r = mapChRowToSoldComp(baseRow({ group: "Wrestling" }));
     expect(r.ok).toBe(true);
     if (r.ok) expect(r.input.sport).toBeNull();
+  });
+
+  it("carries the Pokemon vertical CardHedge states in `group`", () => {
+    // The row that used to arrive sportless. A sport filter naming pokemon
+    // keeps it; one that does not, filters it -- FILTERED, not untagged.
+    const r = mapChRowToSoldComp(baseRow({ group: "Pokemon" }));
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.input.sport).toBe("pokemon");
+    expect(mapChRowToSoldComp(baseRow({ group: "Pokemon" }), { sportFilter: ["baseball"] }))
+      .toEqual({ ok: false, skip: "sport-filtered" });
+    const kept = mapChRowToSoldComp(baseRow({ group: "Pokemon" }), { sportFilter: ["pokemon"] });
+    expect(kept.ok).toBe(true);
   });
 });
 
