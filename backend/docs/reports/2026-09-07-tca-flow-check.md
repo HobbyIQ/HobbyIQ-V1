@@ -10,7 +10,7 @@ Read-only against prod. No writes, no config changes, no runner dispatches.
 
 | Stage | Verdict | One line |
 |---|---|---|
-| 1. Schedule + runs | **RED** | 8 of 8 scheduled runs red since 2026-09-06T00:59Z; match-enricher skipped 8 consecutive times |
+| 1. Schedule + runs | **RED** | 8 consecutive reds since 2026-09-06T00:59Z (15 of 29 runs red over 7d); match-enricher skipped 8 times |
 | 2. Landing volume | **GREEN** | 20.7k–27.6k rows/day since 09-03, steady; parks 32/24h (0.13%) — the guard is not over-refusing |
 | 3. Identity quality | **GREEN** | Every axis improved vs the 08-31 baseline; catalog-backed 30.7% → 42% |
 | 4. Freshness canary | **AMBER** | Green, but at 26,752 vs a 25,000 floor — 7% of headroom, and it cannot see the cron is dead |
@@ -40,8 +40,17 @@ passes). It is the only TCA workflow; `match-enricher` is its second job
 | 09-06 00:59 | failure | skipped | 18,058 | 1,734 | 16,225 | reconciliation |
 | 09-05 18:21 → 09-03 00:54 | success ×12 | success ×12 | — | — | — | — |
 
-**runs7d: 4 ok / 8 failed** (the 09-05 18:21 run is the last green; the four
-green runs inside the 7-day window are 09-05's).
+**runs7d: 14 ok / 15 failed** over the full 7-day window (2026-08-31T20:00Z
+onward, 29 scheduled runs). The window opens on a second, earlier red streak —
+09-01 01:04 through 09-02 12:32, seven consecutive failures — then twelve
+consecutive greens from 09-02 18:26 to 09-05 18:21, then the current eight.
+The table above shows the tail; the current streak is the one this PR fixes.
+
+The earlier streak is a THIRD, unrelated shape and is already over: those runs
+pulled genuinely nothing (`pages=0 fetched=0 written=0 errors=0`, elapsed 31s),
+which is why 09-01 and 09-02 land at 345 and 151 rows in the volume table. That
+is the feed itself having no data to give on those days, not a reporting or
+plumbing defect, and it recovered on its own at 09-02 18:26.
 
 Two DIFFERENT reds, which the workflow reported with the same sentence:
 
