@@ -816,7 +816,7 @@ on:
         default: false
         type: boolean
       mode:
-        description: "For canonicalize-vendor-shaped-rows: 'vendor' (id is not a hiq slug) or 'nopk' (cardId missing entirely). For repair-parallel-subset-fold: 'prefix' or 'glue'. For rename-setkey-to-product: 'product' (the catalog rename, sharded), 'hyphen' (needs sources), 'holdings' (slot 0), 'estimate' (read-only counts). For repair-card-number-from-title (D28): 'grade' | 'slash' | 'ordinal' | 'year' | 'nonumber' | 'all' (needs scope=all) -- REQUIRED, no default. For clean-base-cards-parallel-slug: 'cards' | 'subset' | 'both' (needs scope=all) -- REQUIRED. For measure-card-number-integrity: 'grade' | 'shapes' | 'months' | 'catalog-year'. For repair-bcp-misfiled-parallels (D33): 'card-as-parallel' (retire the rows whose parallel is another card) | 'chrome-ladder' (move the refractor ladder from the paper number to the chrome one) | 'first-edition' (move 1st Edition rows to their own product) | 'names' (the comma before Jr./Sr./II) | 'number-glued' (black-1 -> black:num-1) -- REQUIRED, no default. For rekey-product-setkey: 'catalog' (move the catalog rows by id stem) | 'pool' (re-key the sold_comps rows; REQUIRES years) | 'holdings' (conform the holdings, slot 0) -- REQUIRED, no default. Empty = the script's default."
+        description: "For canonicalize-vendor-shaped-rows: 'vendor' (id is not a hiq slug) or 'nopk' (cardId missing entirely). For repair-parallel-subset-fold: 'prefix' or 'glue'. For rename-setkey-to-product: 'product' (the catalog rename, sharded), 'hyphen' (needs sources), 'holdings' (slot 0), 'estimate' (read-only counts). For repair-card-number-from-title (D28): 'grade' | 'slash' | 'ordinal' | 'year' | 'nonumber' | 'all' (needs scope=all) -- REQUIRED, no default. For clean-base-cards-parallel-slug: 'cards' | 'subset' | 'both' (needs scope=all) -- REQUIRED. For measure-card-number-integrity: 'grade' | 'shapes' | 'months' | 'catalog-year'. For repair-bcp-misfiled-parallels (D33): 'card-as-parallel' (retire the rows whose parallel is another card) | 'chrome-ladder' (move the refractor ladder from the paper number to the chrome one) | 'first-edition' (move 1st Edition rows to their own product) | 'names' (the comma before Jr./Sr./II) | 'number-glued' (black-1 -> black:num-1) -- REQUIRED, no default. For rekey-product-setkey: 'catalog' (move the catalog rows by id stem) | 'pool' (re-key the sold_comps rows; REQUIRES years) | 'holdings' (conform the holdings, slot 0) -- REQUIRED, no default. For backfill-searchtokens-all-sports: 'recompute-stale' widens the scan past the missing-tokens predicate (a STALE row satisfies neither half of it) and rewrites only rows the coverage canary's own classifyRowTokens calls stale; pass the sport in `sports`. Empty = the script's default."
         required: false
         default: ""
       slug_prefix:
@@ -1737,6 +1737,20 @@ jobs:
           SCAN_LIMIT: ${{ inputs.scan_limit }}
           # reslug-tcg-out-of-sports-namespace: which non-sport categories.
           SPORTS: ${{ inputs.sports }}
+          # CF-A-MISSING-ONLY-LANE-CANNOT-HEAL-A-STALE-ROW (#1614, 2026-09-07).
+          # backfill-searchtokens-all-sports' single-sport scope. It reads
+          # SPORT_FILTER, which the runner never exported -- so before this
+          # line the ONLY thing a dispatch could run was the whole catalog, and
+          # a per-sport apply (the shape a 35.7M-row heal actually wants) was
+          # undispatchable. Guarded on the script name so `sports`, which other
+          # lanes read as a comma LIST, cannot arrive here as one.
+          #
+          # Its other new knob, mode=recompute-stale, needs no line here: the
+          # generic `MODE: ${{ inputs.mode }}` below already carries it. A
+          # second MODE key in this same block would be a duplicate mapping key
+          # -- YAML keeps the last and drops the first silently, which is how a
+          # guard that looks present stops existing.
+          SPORT_FILTER: ${{ inputs.script == 'backfill-searchtokens-all-sports' && inputs.sports || '' }}
           # reslugAllSoldComps: contentHash first-char shard, 16 total.
           SHARD_HEX: ${{ inputs.shard_hex }}
           # repair-parallel-from-title mode=backfill-stamp: bound the sweep to
@@ -5010,7 +5024,14 @@ jobs:
         #   - the field backfills (backfill-composite-fields,
         #     backfill-composite-v3, backfill-autostyle-from-title,
         #     backfill-searchtokens-all-sports) select only rows where the field
-        #     they write is still absent or null;
+        #     they write is still absent or null -- EXCEPT
+        #     backfill-searchtokens-all-sports under mode=recompute-stale, whose
+        #     scan is deliberately unfiltered (a STALE row's tokens are neither
+        #     absent nor empty, so the predicate could never select one). It is
+        #     idempotent by a different mechanism: it re-reads the finished part
+        #     and classifyRowTokens returns "ok", so the row is counted `fresh`
+        #     and not rewritten. Continuation is paid in cheap reads, and still
+        #     needs no cursor input;
         #   - the reslugs (backfill-catalog-driven-canonicalize,
         #     backfill-bowman-mega-box-reslug,
         #     backfill-cardsight-title-identity) re-derive the target and read a

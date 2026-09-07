@@ -26,6 +26,26 @@ const { CosmosClient } = require("@azure/cosmos");
 const APPLY = process.env.BACKFILL_APPLY === "true";
 const CONCURRENCY = Math.max(1, Number(process.env.BACKFILL_CONCURRENCY || 10));
 const SPORT_FILTER = process.env.SPORT_FILTER || null;
+// CF-A-MISSING-ONLY-LANE-CANNOT-HEAL-A-STALE-ROW (#1614, 2026-09-07).
+//
+// The scan below selected only rows whose searchTokens are ABSENT or EMPTY.
+// A stale row -- non-empty tokens that the CURRENT builders would not
+// produce -- is neither, so this lane could never touch one no matter how
+// many times it ran. That is why the coverage canary can sit red at 14.17%
+// while this job reports a clean sweep: the two ask different questions and
+// only the canary asks the one that matters.
+//
+// MODE=recompute-stale widens the scan to every row and decides per row with
+// classifyRowTokens -- the SAME verdict function the canary fails on, so a
+// row this mode rewrites is exactly a row the canary was counting. Rows that
+// already classify "ok" are counted `fresh` and never written, so the mode is
+// idempotent and a re-run is cheap.
+//
+// Default stays missing-only: the nightly cron's job is coverage, and
+// widening its scan by default would put a full-catalog read on a cron that
+// has never needed one.
+const MODE = process.env.MODE === "recompute-stale" ? "recompute-stale" : "missing-only";
+const RECOMPUTE_STALE = MODE === "recompute-stale";
 
 if (!process.env.COSMOS_CONNECTION_STRING) { console.error("COSMOS_CONNECTION_STRING required"); process.exit(1); }
 
@@ -72,46 +92,29 @@ const RESERVE_MS = Number(process.env.RESERVE_MS || 90 * 1000);
 const VERIFY_MS = Number(process.env.VERIFY_MS || 60 * 1000);
 const CLOCK = budget({ minutes: RUN_MINUTES, reserveMs: RESERVE_MS, verifyMs: VERIFY_MS });
 
-// Mirror of buildSearchIndex from backend/src/services/portfolioiq/searchIndexing.service.ts
-function buildSearchText(row) {
-  const parts = [];
-  const player = row.playerName ?? row.player;
-  const releaseName = row.releaseName;
-  const setName = row.setName ?? row.set;
-  const number = row.cardNumber ?? row.number;
-  const title = row.title;
-  const variant = row.variant;
-  if (player) parts.push(String(player));
-  if (releaseName) parts.push(String(releaseName));
-  if (setName && setName !== releaseName) parts.push(String(setName));
-  if (title && title !== releaseName && title !== setName) parts.push(String(title));
-  if (number) parts.push(String(number));
-  if (row.year !== undefined && row.year !== null && row.year !== "") parts.push(String(row.year));
-  if (variant) parts.push(String(variant));
-  if (Array.isArray(row.parallels)) {
-    for (const p of row.parallels) if (p && p.name) parts.push(String(p.name));
-  }
-  if (Array.isArray(row.attributes)) {
-    for (const a of row.attributes) if (a) parts.push(String(a));
-  }
-  return parts.join(" ").toLowerCase();
-}
-
-function buildSearchTokens(searchText) {
-  if (!searchText) return [];
-  const seen = new Set();
-  const out = [];
-  const raw = String(searchText).toLowerCase().split(/[^a-z0-9-]+/).filter(Boolean);
-  for (const r of raw) {
-    if (r.length >= 2 && !seen.has(r)) { seen.add(r); out.push(r); }
-    if (r.includes("-")) {
-      for (const f of r.split("-")) {
-        if (f.length >= 2 && !seen.has(f)) { seen.add(f); out.push(f); }
-      }
-    }
-  }
-  return out;
-}
+// CF-TOKEN-BUILDERS-SHARED, extended to THIS lane (#1614, 2026-09-07).
+//
+// What stood here was a PRIVATE COPY of the builders, and it had drifted
+// badly. It read only the cardsight row shape -- `player`, `releaseName`,
+// `setName`, `number` -- so on a CANONICAL row it saw neither `setKey` nor
+// `cardNumber` nor `parallel`:
+//
+//   private copy : "bo bichette sn-bh 2015"
+//   shared       : "bo bichette bowman chrome sn-bh 2015"
+//
+// and its tokenizer emitted no ASCII fold and none of the searcher-side
+// forms. So this lane -- the one a stale-token finding sends you to -- would
+// have WRITTEN tokens the coverage canary then classified as stale, and
+// stamped __searchIndexedAt on them so the damage looked like coverage.
+//
+// That is the exact failure searchTokenBuilders.cjs was extracted to end: a
+// canary and a writer that do not share a builder cannot disagree usefully.
+// Import the same module the canary imports.
+const {
+  buildSearchText,
+  buildSearchTokens,
+  classifyRowTokens,
+} = require(path.join(__dirname, "comp-quality", "searchTokenBuilders.cjs"));
 
 async function withRetry(fn, attempts = 5, baseMs = 300) {
   for (let i = 0; i < attempts; i++) {
@@ -129,16 +132,21 @@ async function main() {
   // reconciled-clean runs to the ceiling.
   const client = new CosmosClient(process.env.COSMOS_CONNECTION_STRING);
   const cc = client.database(process.env.COSMOS_DATABASE || "hobbyiq").container("card_catalog");
-  console.log(`[backfill-searchtokens-all-sports] apply=${APPLY} concurrency=${CONCURRENCY} sport=${SPORT_FILTER ?? "all"}`);
+  console.log(`[backfill-searchtokens-all-sports] apply=${APPLY} mode=${MODE} concurrency=${CONCURRENCY} sport=${SPORT_FILTER ?? "all"}`);
   console.log(`  ${CLOCK.describe()}`);
 
   const sportClause = SPORT_FILTER ? " AND c.sport = @sport" : "";
   const params = SPORT_FILTER ? [{ name: "@sport", value: SPORT_FILTER }] : [];
-  const query = "SELECT * FROM c WHERE (NOT IS_DEFINED(c.searchTokens) OR ARRAY_LENGTH(c.searchTokens) = 0)" +
-                sportClause;
+  // In recompute-stale mode the missing-token predicate is DROPPED, because a
+  // stale row satisfies neither half of it. The per-row classify below is what
+  // narrows the write set instead -- a wider read, a strictly smaller write.
+  const missingClause = RECOMPUTE_STALE
+    ? ""
+    : " AND (NOT IS_DEFINED(c.searchTokens) OR ARRAY_LENGTH(c.searchTokens) = 0)";
+  const query = "SELECT * FROM c WHERE STARTSWITH(c.id, 'hiq:')" + missingClause + sportClause;
 
   const iter = cc.items.query({ query, parameters: params }, { maxItemCount: 200 });
-  const stats = { scanned: 0, indexed: 0, empty: 0, errors: 0, bySport: {} };
+  const stats = { scanned: 0, indexed: 0, empty: 0, fresh: 0, errors: 0, bySport: {} };
   const inFlight = [];
   // `written` did not exist: `indexed` counted rows the lane DECIDED to write,
   // incremented before the upsert was even attempted, so a run whose every write
@@ -154,6 +162,10 @@ async function main() {
       const searchText = buildSearchText(row);
       const searchTokens = buildSearchTokens(searchText);
       if (!searchTokens.length) { stats.empty++; return; }
+      // The canary's own verdict, not a second opinion. "ok" means the stored
+      // array already carries every token the builders want, so rewriting it
+      // would spend RU to change nothing.
+      if (RECOMPUTE_STALE && classifyRowTokens(row) === "ok") { stats.fresh++; return; }
       const sport = row.sport || "unknown";
       stats.bySport[sport] = (stats.bySport[sport] || 0) + 1;
       stats.indexed++;
@@ -198,6 +210,9 @@ async function main() {
   console.log(`  scanned:  ${stats.scanned}`);
   console.log(`  indexed:  ${stats.indexed}`);
   console.log(`  empty:    ${stats.empty}  (no text to tokenize)`);
+  if (RECOMPUTE_STALE) {
+    console.log(`  fresh:    ${stats.fresh}  (tokens already current — not rewritten)`);
+  }
   console.log(`  errors:   ${stats.errors}`);
   console.log(`  by sport:`);
   for (const [s, n] of Object.entries(stats.bySport).sort((a, b) => b[1] - a[1])) {
@@ -230,8 +245,12 @@ async function main() {
     console.log(`
   stopped at the ${CLOCK.RUN_MINUTES}-minute budget -- `
       + `this sweep is UNFINISHED; the relaunch continues from here`);
-    console.log("  the continuation never re-reads what this pass wrote: the scan selects only"
-      + " rows whose searchTokens are absent or empty, and an indexed row has neither.");
+    console.log(RECOMPUTE_STALE
+      ? "  the continuation RE-READS what this pass wrote and classifies it fresh: the"
+        + " recompute-stale scan is unfiltered, so progress is paid in cheap reads over the"
+        + " finished part, and only rows still stale are rewritten."
+      : "  the continuation never re-reads what this pass wrote: the scan selects only"
+        + " rows whose searchTokens are absent or empty, and an indexed row has neither.");
   }
 
   return { client, budget: CLOCK };
