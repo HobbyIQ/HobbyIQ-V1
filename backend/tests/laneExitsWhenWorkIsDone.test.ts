@@ -1265,13 +1265,29 @@ describe("the retire lane verifies by reading its own write ledger", () => {
 
   it("it keeps a ledger of the ids it wrote, with their partition keys", () => {
     expect(codeOnly, "the ledger is declared").toMatch(/const ledger = \[\]/);
-    // Every write site records: the two markers are written by different
-    // branches, and a ledger missing one would report a real write as absent.
+    // EVERY write site records. The markers are written by different branches
+    // and a ledger missing one would report a real write as absent.
+    //
+    // The count is the ENUMERATION, not a magic number. Since the cross-sport
+    // probe (CF-A-ROW-IN-THE-WRONG-SPORT-IS-NOT-A-MISSING-CHECKLIST) there are
+    // SEVEN, in three families:
+    //
+    //   in-sport      parent retire, graded child, unverified          3
+    //   cross-sport   parent retire, graded child, unverified          3
+    //   ambiguous     unverified                                       1
+    //
+    // The right way to break this pin is to add a write that does NOT record —
+    // so the assertion is stated against every `patchCatalogRowFields` call in
+    // the loop, which is the population a ledger must cover.
     const pushes = codeOnly.match(/ledger\.push\(/g) ?? [];
+    expect(pushes.length, "every write site must record to the ledger").toBe(7);
+    // A write the ledger does not know about is a write the verify cannot
+    // confirm. Each `written++` is one such write, so the two must agree.
+    const writes = codeOnly.match(/\bwritten\+\+/g) ?? [];
     expect(
-      pushes.length,
-      "all three write sites (parent retire, graded child, unverified) must record",
-    ).toBe(3);
+      writes.length,
+      "every `written++` must be matched by a ledger.push -- an unrecorded write is unverifiable",
+    ).toBe(pushes.length);
     // The partition key travels with the id: a point-read needs both.
     expect(codeOnly).toMatch(/ledger\.push\(\{ id: String\([^)]+\), pk: pkOf\([^)]+\), field:/);
   });

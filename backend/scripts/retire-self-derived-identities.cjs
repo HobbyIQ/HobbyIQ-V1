@@ -180,6 +180,16 @@ const path = require("path");
 const backend = path.join(__dirname, "..");
 const { CosmosClient } = require(path.join(backend, "node_modules/@azure/cosmos"));
 const { runnerShardScope } = require(path.join(__dirname, "lib", "runner-shard-scope.cjs"));
+// CF-A-ROW-IN-THE-WRONG-SPORT-IS-NOT-A-MISSING-CHECKLIST. The cross-sport
+// probe lives in a lib so the pins drive the SHIPPED rule, not a restatement
+// of it. Without it a row whose SPORT is wrong is compared against the wrong
+// sport's checklists, finds no twin by construction, and lands on the
+// ACQUISITION QUEUE asking a publisher for a product that does not exist.
+const {
+  classifySportContamination,
+  contaminationReason,
+  mayEnqueueAcquisition,
+} = require(path.join(__dirname, "lib", "sport-contamination.cjs"));
 // CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809). A lane does not end by
 // letting the loop drain -- it exits, after flushing, with the code it means.
 const { budget, finishLane } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
@@ -326,6 +336,27 @@ const BUDGET_MS = LANE_BUDGET.BUDGET_MS;
  *  import the TS one, so the test pins the two spellings together. */
 const RETIRED = "superseded-by-checklist";
 const UNVERIFIED = "identityUnverified";
+
+/** ── THE CROSS-SPORT PROBE'S OWN COST CONTROL ──────────────────────────────
+ *
+ * The probe is ONE extra query per PRODUCT, and it fires only on a product
+ * where it can possibly change an answer: the product holds self-derived rows
+ * AND holds ZERO strict checklist rows in the sport being swept. On a healthy
+ * product -- one whose own sport has checklists -- nothing is read at all.
+ *
+ * That is the difference between a probe and a second pass. The 2026-09-07
+ * census paid 723,947 RU to answer this question for every product in the
+ * catalog; this asks it only where the lane is about to write a verdict it
+ * cannot justify, which on baseball is the minority of products.
+ *
+ * The query is a projection over one (year, setKey) across ALL sports, NOT a
+ * cross-partition aggregate: `SELECT c.sport, c.source ... WHERE c.year=@y AND
+ * c.setKey=@k`. This file's own enumeration comment records that COUNT(1) and
+ * GROUP BY do not return on card_catalog at 19.63M rows, so the counting is
+ * done here in memory over the projected rows, the same way the in-sport
+ * classification above already does it.
+ */
+const PROBE_DISABLED = String(process.env.NO_SPORT_PROBE || "") === "true";
 
 /** ── THE 148 MINUTES OF SILENCE HAD NO INSTRUMENTATION IN IT ───────────────
  *
@@ -547,6 +578,14 @@ async function main() {
   const t0 = Date.now();
   let scanned = 0, rowsRead = 0, retired = 0, unverified = 0, gradedChildren = 0, written = 0;
   let cardLevelSeen = 0, failed = 0, alreadyMarked = 0;
+  /** The cross-sport probe's own books. `contaminated` counts ROWS the probe
+   *  decided (it is a subset of retired + unverified, never a fourth path, so
+   *  the RECONCILE arithmetic below is unchanged); `probed` counts the extra
+   *  queries the probe actually cost, so an operator can price it from the
+   *  banner rather than guessing. */
+  let contaminated = 0, probed = 0;
+  const contaminationReasons = new Map();
+  const contaminationPairs = new Map();
   /** ── THE WRITE LEDGER ─────────────────────────────────────────────────
    *
    * CF-VERIFY-THE-WRITE-BY-READING-IT-BACK (2026-09-07). Every id this run
@@ -579,7 +618,8 @@ async function main() {
     if (Date.now() - t0 > BUDGET_MS - PRODUCT_RESERVE_MS) { stopReason = "clock"; break; }
     const { resources: rows } = await retry(() => cat.items.query({
       query: `SELECT c.id, c.cardId, c.source, c.year, c.setKey, c.cardNumber, c.playerName,
-                     c.parallel, c.isAuto, c.retiredReason, c.identityUnverified
+                     c.parallel, c.isAuto, c.retiredReason, c.identityUnverified,
+                     c.identityUnverifiedReason
               FROM c WHERE c.sport=@s AND c.year=@y AND c.setKey=@k`,
       parameters: [{ name: "@s", value: SPORT }, { name: "@y", value: p.year }, { name: "@k", value: p.setKey }],
     }, { maxItemCount: -1 }).fetchAll());
@@ -601,9 +641,52 @@ async function main() {
 
     const chkFull = new Set(), chkCard = new Set();
     const sd = [];
+    let chkInSport = 0;
     for (const r of rows) {
-      if (isChecklist(r.source)) { chkFull.add(kFull(r)); chkCard.add(kCard(r)); }
+      if (isChecklist(r.source)) { chkFull.add(kFull(r)); chkCard.add(kCard(r)); chkInSport++; }
       else if (isSelfDerived(r.source)) sd.push(r);
+    }
+
+    /** ── THE CROSS-SPORT PROBE ────────────────────────────────────────────
+     *
+     * Asked BEFORE the twin comparison, because the twin comparison is the
+     * thing it corrects. The lane's `rows` above are scoped `c.sport=@s`, so
+     * chkInSport is exactly "does this product have a checklist in the sport
+     * we are sweeping". When it does, the in-sport comparison is sound and no
+     * probe is needed. When it does not AND there are self-derived rows to
+     * classify, the probe reads the SAME (year, setKey) across every sport
+     * and asks which sports attest it.
+     *
+     * A product with no self-derived rows is skipped even when it has no
+     * in-sport checklist: there is no verdict to correct.
+     */
+    let contamination = { contaminated: false, verdict: "agree", trueSport: null, candidates: [] };
+    let trueSportFull = null, trueSportCard = null;
+    if (!PROBE_DISABLED && sd.length > 0 && chkInSport === 0) {
+      probed++;
+      const { resources: xs } = await retry(() => cat.items.query({
+        query: `SELECT c.sport, c.source, c.year, c.setKey, c.cardNumber, c.playerName,
+                       c.parallel, c.isAuto
+                FROM c WHERE c.year=@y AND c.setKey=@k`,
+        parameters: [{ name: "@y", value: p.year }, { name: "@k", value: p.setKey }],
+      }, { maxItemCount: -1 }).fetchAll());
+      const counts = new Map();
+      const bySport = new Map();
+      for (const x of xs) {
+        if (!isChecklist(x.source)) continue;
+        const s = norm(x.sport);
+        if (!s || s === SPORT) continue; // the in-sport count is already zero
+        counts.set(s, (counts.get(s) || 0) + 1);
+        if (!bySport.has(s)) bySport.set(s, { full: new Set(), card: new Set() });
+        const b = bySport.get(s);
+        b.full.add(kFull(x)); b.card.add(kCard(x));
+      }
+      contamination = classifySportContamination({ sport: SPORT, checklistSportCounts: counts });
+      if (contamination.verdict === "contaminated") {
+        const b = bySport.get(contamination.trueSport);
+        trueSportFull = b ? b.full : null;
+        trueSportCard = b ? b.card : null;
+      }
     }
 
     for (const r of sd) {
@@ -615,7 +698,30 @@ async function main() {
       const retiring = hasFull || (hasCard && CARD_RULE);
       const alreadyRetired = String(r.retiredReason || "") === RETIRED;
       const alreadyUnver = r.identityUnverified === true;
-      if ((retiring && alreadyRetired) || (!retiring && !hasCard && alreadyUnver)) { alreadyMarked++; continue; }
+      /** THE ALREADY-MARKED SHORTCUT MUST NOT SWALLOW A CONTAMINATED ROW.
+       *
+       * Before the probe, `identityUnverified === true` meant this lane had
+       * already reached its final answer for the row and a re-run was free.
+       * That is no longer true for a contaminated product: every row on it was
+       * parked as `identityUnverified` by a PRE-PROBE run precisely because
+       * the in-sport comparison could not see the checklist that describes it.
+       * Skipping those is how the fix would fail to reach the 32,044 rows it
+       * exists for -- the row stays parked, its reason stays "no checklist
+       * exists", and the cell stays on the acquisition queue.
+       *
+       * So on a contaminated product the shortcut is taken only when the row
+       * already carries THIS probe's verdict. A row parked with the old
+       * reasonless marker is re-classified; one already carrying
+       * `sport-contaminated:*` or `sport-ambiguous` is left alone, which is
+       * what keeps a re-run free.
+       */
+      const contaminatedProduct = contamination.contaminated;
+      const alreadyProbed = /^sport-(contaminated|ambiguous)/.test(String(r.identityUnverifiedReason || ""))
+        || /^sport-contaminated/.test(String(r.retiredReason || ""));
+      const settled = contaminatedProduct
+        ? alreadyProbed
+        : ((retiring && alreadyRetired) || (!retiring && !hasCard && alreadyUnver));
+      if (settled) { alreadyMarked++; continue; }
 
       if (retiring) {
         retired++;
@@ -656,10 +762,113 @@ async function main() {
 
       if (hasCard) continue; // card-level twin, rule off: reported, untouched.
 
+      /** ── SPORT-CONTAMINATED ROWS TAKE THEIR OWN THREE BRANCHES ─────────
+       *
+       * Reached only when the in-sport comparison found nothing -- which for
+       * a contaminated row it CANNOT have, because the row is being compared
+       * against a sport whose checklists do not describe it. Before this
+       * block, every one of these rows fell straight through to the
+       * acquisition queue below, asking for a checklist that cannot exist.
+       */
+      if (contamination.contaminated) {
+        if (contamination.verdict === "contaminated") {
+          // THE ROW'S TRUE SPORT IS KNOWN. Ask the twin question again, this
+          // time against the checklists that actually describe this product.
+          const tFull = trueSportFull ? trueSportFull.has(kFull(r)) : false;
+          const tCard = !tFull && trueSportCard ? trueSportCard.has(kCard(r)) : false;
+          const twinFound = tFull || (tCard && CARD_RULE);
+          const reason = contaminationReason("contaminated", { trueSport: contamination.trueSport, twinFound });
+          contaminated++;
+          contaminationReasons.set(reason, (contaminationReasons.get(reason) || 0) + 1);
+          const pair = `${SPORT}->${contamination.trueSport}`;
+          contaminationPairs.set(pair, (contaminationPairs.get(pair) || 0) + 1);
+
+          if (twinFound) {
+            // TWIN WINS. The checklist row under the true sport IS the card;
+            // this one is a duplicate at a wrong address that splits the pool
+            // -- the same argument lane (a) already makes, now reachable.
+            retired++;
+            const kids = childrenOf.get(String(r.id)) || [];
+            gradedChildren += kids.length;
+            if (!APPLY) continue;
+            try {
+              const now = new Date().toISOString();
+              await patchCatalogRowFields(cat, String(r.id), r.cardId, {
+                retiredReason: reason,
+                retiredAt: now,
+                retiredBy: "retire-self-derived-identities",
+                retiredMatchLevel: tFull ? "identity-cross-sport" : "card-cross-sport",
+                retiredTrueSport: contamination.trueSport,
+              }, { retry });
+              written++;
+              ledger.push({ id: String(r.id), pk: pkOf(r), field: "retiredReason", expect: reason });
+              for (const kid of kids) {
+                await patchCatalogRowFields(cat, String(kid.id), kid.cardId, {
+                  retiredReason: reason,
+                  retiredAt: now,
+                  retiredBy: "retire-self-derived-identities",
+                  retiredMatchLevel: "graded-child",
+                  retiredWithParent: String(r.id),
+                  retiredTrueSport: contamination.trueSport,
+                }, { retry });
+                written++;
+                ledger.push({ id: String(kid.id), pk: pkOf(kid), field: "retiredReason", expect: reason });
+              }
+            } catch (e) { failed++; }
+            continue;
+          }
+          // NO TWIN UNDER THE TRUE SPORT. The row is still unplaceable, so it
+          // parks -- but it does NOT enqueue. Its own sport names a product
+          // no publisher serves, and its TRUE sport's cell demonstrably HAS a
+          // checklist (that is the fact that identified the contamination),
+          // so there is nothing to acquire in either direction.
+          unverified++;
+          if (!APPLY) continue;
+          try {
+            await patchCatalogRowFields(cat, String(r.id), r.cardId, {
+              [UNVERIFIED]: true,
+              identityUnverifiedAt: new Date().toISOString(),
+              identityUnverifiedBy: "retire-self-derived-identities",
+              identityUnverifiedReason: reason,
+              identityTrueSport: contamination.trueSport,
+            }, { retry });
+            written++;
+            ledger.push({ id: String(r.id), pk: pkOf(r), field: UNVERIFIED });
+          } catch (e) { failed++; }
+          continue;
+        }
+
+        // AMBIGUOUS. Several sports attest this product and none of them is
+        // ours. We will not guess which -- a guessed sport is a guessed
+        // address (#1929) -- so the row parks and enqueues nothing.
+        contaminated++;
+        contaminationReasons.set("sport-ambiguous", (contaminationReasons.get("sport-ambiguous") || 0) + 1);
+        unverified++;
+        if (!APPLY) continue;
+        try {
+          await patchCatalogRowFields(cat, String(r.id), r.cardId, {
+            [UNVERIFIED]: true,
+            identityUnverifiedAt: new Date().toISOString(),
+            identityUnverifiedBy: "retire-self-derived-identities",
+            identityUnverifiedReason: "sport-ambiguous",
+            identityCandidateSports: contamination.candidates,
+          }, { retry });
+          written++;
+          ledger.push({ id: String(r.id), pk: pkOf(r), field: UNVERIFIED });
+        } catch (e) { failed++; }
+        continue;
+      }
+
       // No checklist row for this card at all -> the acquisition queue.
       unverified++;
-      const g = `${p.year}|${p.setKey}`;
-      gaps.set(g, (gaps.get(g) || 0) + 1);
+      // THE ENQUEUE GATE. `mayEnqueueAcquisition` is the one place that says
+      // which verdicts may cost a publisher request. Every contaminated
+      // verdict returned above already `continue`d, so this is belt-and-
+      // braces -- and it is what the mutation test breaks to turn red.
+      if (mayEnqueueAcquisition(contamination.verdict)) {
+        const g = `${p.year}|${p.setKey}`;
+        gaps.set(g, (gaps.get(g) || 0) + 1);
+      }
       if (!APPLY) continue;
       try {
         await patchCatalogRowFields(cat, String(r.id), r.cardId, {
@@ -684,6 +893,23 @@ async function main() {
   console.log(`  already marked     ${f(alreadyMarked)}`);
   console.log(`  write failures     ${f(failed)}`);
 
+  /** THE PROBE'S REPORT. Printed even at zero, because "the probe ran and
+   *  found nothing" and "the probe did not run" are different facts and the
+   *  banner is where an operator tells them apart. */
+  console.log(`\n  CROSS-SPORT PROBE  ${PROBE_DISABLED ? "DISABLED (NO_SPORT_PROBE=true)" : `${f(probed)} products probed`}`);
+  console.log(`  sport-contaminated ${f(contaminated)} rows   (a SUBSET of retired/unverified above, not a fourth path)`);
+  if (contaminationReasons.size) {
+    for (const [reason, n] of [...contaminationReasons.entries()].sort((a, b) => b[1] - a[1])) {
+      console.log(`   ${String(f(n)).padStart(8)}  ${reason}`);
+    }
+  }
+  if (contaminationPairs.size) {
+    console.log(`  by sport pair (claimed -> checklist-attested):`);
+    for (const [pair, n] of [...contaminationPairs.entries()].sort((a, b) => b[1] - a[1]).slice(0, 20)) {
+      console.log(`   ${String(f(n)).padStart(8)}  ${pair}`);
+    }
+  }
+
   // RECONCILIATION. Every self-derived row seen took exactly one path, and the
   // paths must sum to the population. A run that cannot balance its own
   // arithmetic has not measured what it claims to
@@ -693,7 +919,10 @@ async function main() {
     + ` + alreadyMarked ${f(alreadyMarked)} + cardLevelLeft ${f(CARD_RULE ? 0 : cardLevelSeen)}`
     + `  => ${f(routed)} ${routed === scanned ? "BALANCES" : "*** DOES NOT BALANCE ***"}`);
 
-  console.log(`\n  ACQUISITION QUEUE — top 40 (year|setKey -> rows with no checklist):`);
+  // The queue no longer carries cells the probe refused. A cell whose
+  // checklist lives under another sport is not a gap to acquire; it is a
+  // misfiling to repair, and asking a publisher for it buys nothing.
+  console.log(`\n  ACQUISITION QUEUE — top 40 (year|setKey -> rows with no checklist ANYWHERE):`);
   for (const [g, n] of [...gaps.entries()].sort((a, b) => b[1] - a[1]).slice(0, 40)) {
     console.log(`   ${String(f(n)).padStart(8)}  ${g}`);
   }
@@ -828,7 +1057,14 @@ async function main() {
             const { resource } = await retry(() => cat.item(e.id, e.pk).read(), 2, signal);
             const got1 = resource && resource[e.field];
             // The marker is on the row, in the shape this lane writes it.
-            if (e.field === UNVERIFIED ? got1 === true : String(got1 || "") === RETIRED) ok++;
+            // A cross-sport retire carries `sport-contaminated:twin-in-<sport>`
+            // rather than the plain RETIRED marker, so the ledger records what
+            // THIS write meant to leave (`expect`) and the verify checks that.
+            // Hard-coding RETIRED here would read a perfectly good cross-sport
+            // write as MISSING THE MARKER and turn a healthy run red -- the
+            // same class of defect the `pkOf` mirror comment above guards.
+            const want = e.expect || RETIRED;
+            if (e.field === UNVERIFIED ? got1 === true : String(got1 || "") === want) ok++;
             else bad++;
           }
           return { ok, bad };
