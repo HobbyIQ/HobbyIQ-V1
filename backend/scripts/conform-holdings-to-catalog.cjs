@@ -44,9 +44,35 @@ const backend = path.resolve(__dirname, "..");
 const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
 const { CosmosClient } = require("@azure/cosmos");
 const { catalogAuthorityOf } = require(path.join(backend, "dist/services/catalog/catalogAuthority.service.js"));
+const { budget, finishLane } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
 
 const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === "true";
 const USER = process.env.USER_ID || "";
+
+// -- THE CLOCK ---------------------------------------------------------------
+//
+// CF-A-KILLED-JOB-CANNOT-REPORT-PROGRESS. This lane writes `portfolio` -- user
+// holdings, the highest-blast-radius container this runner touches -- and had
+// no clock at all. Over every portfolio doc it could only end by being KILLED
+// at the runner's 150-minute ceiling: no marker, no reconcile, no finishLane
+// line, at which point #1913's KILLED branch withholds the re-dispatch and the
+// sweep stops half done with no record of where.
+//
+// THE UNIT IS ONE HOLDING, and its cost is a resolve plus at most one patch:
+// several index-served `IN` candidate queries against card_catalog, the
+// authority read, then a single JSON-patch on the user doc. That is
+// sub-second warm, but a throttled container with this lane's own 20-second
+// backoff ceiling can stretch one holding into the tens of seconds. 90 seconds
+// is that worst case with room, checked BEFORE the holding rather than after
+// its patch.
+//
+// The post-loop report reads nothing -- every count is accumulated in the loop
+// -- so VERIFY_MS is nominal and only sizes the pin's worst case
+// (110 + 1.5 + 1 + 1 = 113.5m under the 150m ceiling, 36.5m of margin).
+const RUN_MINUTES = Number(process.env.RUN_MINUTES || 110);
+const RESERVE_MS = Number(process.env.RESERVE_MS || 90 * 1000);
+const VERIFY_MS = Number(process.env.VERIFY_MS || 60 * 1000);
+const CLOCK = budget({ minutes: RUN_MINUTES, reserveMs: RESERVE_MS, verifyMs: VERIFY_MS });
 
 // Three attempts with backoff for transient socket/timeout errors; the SDK
 // already retries throttles (connectionPolicy). A 404 is an answer, not a fault.
@@ -343,23 +369,52 @@ async function applyRulings(portfolio, cat) {
       applied++;
     } catch (e) { failed++; console.log(`  failed ${r.holdingId.slice(0, 8)}: ${String(e?.message ?? e).slice(0, 120)}`); }
   }
-  console.log(`\n${APPLY ? "APPLIED" : "REPORT ONLY -- nothing written"}\n  rulings ${rulings.length}  ${APPLY ? "applied" : "would apply"} ${applied}  skipped ${skipped}  failed ${failed}`);
-  if (APPLY) reportWrites({ job: "conform-holdings-to-catalog", intended: rulings.length, written: applied, skipped, failed });
+  console.log(`
+${APPLY ? "APPLIED" : "REPORT ONLY -- nothing written"}
+  rulings ${rulings.length}  ${APPLY ? "applied" : "would apply"} ${applied}  skipped ${skipped}  failed ${failed}  not reached ${notReached}`);
+  // A PARTIAL RUN STILL RECONCILES: the identity holds over the whole file,
+  // with the remainder declared rather than inferred from an absence.
+  console.log(`  reconciled: intended ${rulings.length} = applied ${applied} + skipped ${skipped} `
+    + `+ failed ${failed} + not reached ${notReached}`);
+  if (applied + skipped + failed + notReached !== rulings.length) {
+    console.error("  !! RECONCILE MISMATCH -- a ruling was neither applied, skipped, failed nor deferred");
+    process.exitCode = 4;
+  }
+  if (APPLY) reportWrites({ job: "conform-holdings-to-catalog", intended: rulings.length, written: applied, skipped: skipped + notReached, failed });
+
+  // CF-RELAUNCH-ONLY-ON-BUDGET (#1361). A SOURCE LITERAL -- a marker built by
+  // concatenation is one a refactor can silently reword, and a reworded marker
+  // ends the fan-out after one slice with the run green.
+  if (stoppedAtBudget) {
+    console.log(`
+  stopped at the ${CLOCK.RUN_MINUTES}-minute budget -- `
+      + `${notReached} ruling(s) not reached; the relaunch continues from here`);
+    console.log("  the rulings file is IDEMPOTENT: a ruling already applied re-reads as"
+      + " agreeing with the catalog row and writes nothing, so the continuation re-derives"
+      + " cheaply and patches only what is left.");
+  }
 }
 
 async function main() {
   if (String(process.env.SCOPE || "").trim().toLowerCase() === "rulings") {
     const conn = process.env.COSMOS_CONNECTION_STRING;
     if (!conn) { console.error("FATAL: COSMOS_CONNECTION_STRING not set"); process.exit(1); }
-    const db = new CosmosClient({ connectionString: conn, connectionPolicy: { retryOptions: { maxRetryAttemptsOnThrottledRequests: 30, maxWaitTimeInSeconds: 120 } } }).database("hobbyiq");
-    return applyRulings(db.container("portfolio"), db.container("card_catalog"));
+    // NAMED so finishLane() can dispose it (#1809).
+    const client = new CosmosClient({ connectionString: conn, connectionPolicy: { retryOptions: { maxRetryAttemptsOnThrottledRequests: 30, maxWaitTimeInSeconds: 120 } } });
+    const db = client.database("hobbyiq");
+    await applyRulings(db.container("portfolio"), db.container("card_catalog"));
+    return { client, budget: CLOCK };
   }
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) { console.error("FATAL: COSMOS_CONNECTION_STRING not set"); process.exit(1); }
-  const db = new CosmosClient({
+  // NAMED rather than chained away so finishLane() can dispose it: an
+  // undisposed SDK holds keep-alive sockets, and a live handle is what held
+  // four reconciled-clean runs to the ceiling (#1809).
+  const client = new CosmosClient({
     connectionString: conn,
     connectionPolicy: { retryOptions: { maxRetryAttemptsOnThrottledRequests: 60, maxWaitTimeInSeconds: 300 } },
-  }).database("hobbyiq");
+  });
+  const db = client.database("hobbyiq");
   const cat = db.container("card_catalog"), portfolio = db.container("portfolio");
   const retry = async (fn, tries = 10) => {
     let wait = 800;
@@ -387,8 +442,31 @@ async function main() {
   const refusedEx = [];
   const unresolvedEx = [], correctedEx = [];
 
-  for (const doc of docs) {
+  // Holdings the budget never reached. The portfolio docs are FETCHED UP FRONT,
+  // so the remainder is knowable exactly rather than guessed: when the clock
+  // stops the sweep, every holding in every document from the stopping point on
+  // is counted here. They are NOT skips -- nothing was read and nothing was
+  // decided about them -- so they get their own reconcile line and the relaunch
+  // is what settles them.
+  let notReached = 0, stoppedAtBudget = false;
+  outer:
+  for (let di = 0; di < docs.length; di++) {
+    const doc = docs[di];
     for (const [hid, h] of Object.entries(doc.holdings ?? {})) {
+      // THE PRE-CHECK: before the holding, never after its patch. `outOfClock()`
+      // is true when less than the reserve remains, so the holding whose
+      // resolve-and-patch would overrun is never STARTED. Checking after admits
+      // one more unit of unbounded size past expiry -- the loop-top defect
+      // #1799 named.
+      if (CLOCK.outOfClock()) {
+        stoppedAtBudget = true;
+        // The remainder, counted rather than estimated: total holdings across
+        // every fetched doc, minus the ones this run actually considered.
+        // Stated this way it cannot drift out of step with `holdings` however
+        // the loop above is later restructured.
+        notReached = docs.reduce((a, d2) => a + Object.keys(d2.holdings ?? {}).length, 0) - holdings;
+        break outer;
+      }
       if (LIMIT && holdings >= LIMIT) break;
       holdings++;
       try {
@@ -561,10 +639,33 @@ async function main() {
   console.log(`  verified stamped        ${f(verifiedStamped)}   <- identity is a checklist-backed row (Drew, 2026-08-30)`);
   console.log(`  cardId aligned          ${f(cardIdAligned)}   <- an older hiq: cardId brought to the agreed hobbyiqCardId`);
   console.log(`  holdings patched        ${f(patched)}`);
-  if (APPLY) reportWrites({ job: "conform-holdings-to-catalog", intended: holdings, written: patched, skipped: holdings - patched - failed, failed });
+  console.log(`  not reached (budget)    ${f(notReached)}   <- the relaunch settles these`);
+  // A PARTIAL RUN STILL RECONCILES. `holdings` counts only what this run
+  // considered, so the identity holds whether the loop finished or the budget
+  // stopped it; `not reached` carries the remainder explicitly rather than
+  // leaving it to be inferred from a shrunken total.
+  const skippedSweep = holdings - patched - failed;
+  console.log(`  reconciled: scanned ${f(holdings)} = patched ${f(patched)} + skipped ${f(skippedSweep)} `
+    + `+ failed ${f(failed)}   (+ ${f(notReached)} not reached)`);
+  if (APPLY) reportWrites({ job: "conform-holdings-to-catalog", intended: holdings, written: patched, skipped: skippedSweep, failed });
   if (refusedEx.length) { console.log(`\n  refused:`); for (const e of refusedEx) console.log(`     ${e}`); }
   if (correctedEx.length) { console.log(`\n  corrections:`); for (const e of correctedEx) console.log(`     ${e}`); }
   if (unresolvedEx.length) { console.log(`\n  unresolved — the acquisition/ruling list:`); for (const e of unresolvedEx) console.log(`     ${e.slice(0, 110)}`); }
+
+  // CF-RELAUNCH-ONLY-ON-BUDGET (#1361). A SOURCE LITERAL, never assembled from
+  // variables: a marker built by concatenation is one a refactor can silently
+  // reword, and a reworded marker ends the fan-out after one slice with the run
+  // green.
+  if (stoppedAtBudget) {
+    console.log(`
+  stopped at the ${CLOCK.RUN_MINUTES}-minute budget -- `
+      + `${f(notReached)} holding(s) not reached; the relaunch continues from here`);
+    console.log("  the sweep is IDEMPOTENT: a holding whose identity already agrees with its"
+      + " catalog row counts as `already agreed` and is never re-patched, so the continuation"
+      + " re-resolves cheaply and writes only what is left.");
+  }
+
+  return { client, budget: CLOCK };
 }
 
 /** Pure: which catalog row a composed slug resolves to among the card's rows (the un-numbered row, else its ONE numbered twin, else nothing).
@@ -585,6 +686,14 @@ function rowFor(resolved, ids) {
 }
 module.exports = { resolveRung, setAgrees, identityTargets, productChanged, setKeyOf, rowFor, numberedTwinsOf, cardNumberVariants, playerAgreement, fieldOps };
 
+// CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809). Success exits too -- a failure
+// path that exits and a success path that hopes is the asymmetry that cost four
+// reconciled-clean runs their exit codes.
 if (require.main === module) {
-  main().catch((e) => { console.error("FATAL:", e?.stack || e?.message); process.exit(3); });
+  main()
+    .then((ctx) => finishLane(process.exitCode || 0, ctx || { budget: CLOCK }))
+    .catch(async (e) => {
+      console.error("FATAL:", e?.stack || e?.message);
+      await finishLane(3, { budget: CLOCK });
+    });
 }

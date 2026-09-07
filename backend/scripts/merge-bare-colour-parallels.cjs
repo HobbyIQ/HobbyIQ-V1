@@ -37,6 +37,43 @@
 // bare-colour parallels with no refractor form; Finest lists "Uncommon" and
 // "Uncommon Refractor" as two cards). Consolidation now follows the checklist
 // row per card (the D30 fleet). The script refuses to run.
+// -- THE CLOCK ---------------------------------------------------------------
+//
+// CF-A-KILLED-JOB-CANNOT-REPORT-PROGRESS. This lane is RETIRED (it exits 2
+// below), but it is still on the runner's dropdown, so it is still one env
+// edit away from running -- and it had no clock at all. The three constants
+// are declared HERE, above the retirement exit, so they are module-scope
+// facts on every path rather than statements sitting behind an unreachable
+// barrier: a budget that only exists after a `process.exit` is a budget the
+// lane does not have.
+//
+// THE UNIT IS ONE YEAR, and a year is the largest unit this lane has. It is a
+// full cross-partition page walk of sold_comps for that cardYear -- 500 rows a
+// page, EVERY row of the year, not a filtered subset, because the bare-colour
+// test is done in JS on the slug rather than in the query -- plus a
+// card_catalog point read per distinct destination and a read-modify-replace
+// per row that merges. The heavy years carry hundreds of thousands of sales
+// against sold_comps' 8,000 RU floor, so one year is minutes of wall clock
+// before it writes anything. The reserve is therefore 5 minutes: the clock
+// refuses to START a year it cannot plausibly finish, instead of admitting one
+// more unbounded year past expiry (the #1799 loop-top defect).
+//
+// VERIFY_MS is nominal: this lane reads NOTHING after the loop -- no post-loop
+// aggregate to cap -- so it only sizes the pin's worst case (110 + 5m + 1m +
+// 1m startup = 117m, 33m under the 150-minute ceiling).
+// `path` is hoisted so the require reads as one plain expression. The inline
+// `require("node:path").join(...)` form this replaces is functionally identical
+// and STATICALLY INVISIBLE: laneExitsWhenWorkIsDone matches the helper import
+// with `require([^)]*runner-budget\.cjs")\s*)`, and a nested require() puts a
+// closing paren inside that character class, so the lane read as one that never
+// imported the shared helper at all.
+const path = require("node:path");
+const { budget, finishLane } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
+const RUN_MINUTES = Number(process.env.RUN_MINUTES || 110);
+const RESERVE_MS = Number(process.env.RESERVE_MS || 5 * 60 * 1000);
+const VERIFY_MS = Number(process.env.VERIFY_MS || 60 * 1000);
+const CLOCK = budget({ minutes: RUN_MINUTES, reserveMs: RESERVE_MS, verifyMs: VERIFY_MS });
+
 console.error("RETIRED 2026-08-30: merge-bare-colour-parallels moved sales on a vocabulary rule (colour = refractor). Colour follows the checklist per card now — use the D30 consolidation fleet.");
 process.exit(2);
 // eslint-disable-next-line no-unreachable
@@ -86,13 +123,17 @@ async function yearsPresent(sold) {
     .sort((a, b) => b.n - a.n).map((r) => r.y);
 }
 
-(async () => {
+async function main() {
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) { console.error("FATAL: COSMOS_CONNECTION_STRING not set"); process.exit(1); }
-  const db = new CosmosClient({
+  // NAMED, not chained away: finishLane() disposes it. An undisposed SDK client
+  // holds keep-alive sockets, and a ref'd handle is exactly what keeps a
+  // finished process alive until the runner kills the step (#1809).
+  const client = new CosmosClient({
     connectionString: conn,
     connectionPolicy: { retryOptions: { maxRetryAttemptsOnThrottledRequests: 60, maxWaitTimeInSeconds: 300 } },
-  }).database(process.env.COSMOS_DATABASE ?? "hobbyiq");
+  });
+  const db = client.database(process.env.COSMOS_DATABASE ?? "hobbyiq");
   const sold = db.container("sold_comps");
   const cat = db.container("card_catalog");
 
@@ -120,10 +161,23 @@ async function yearsPresent(sold) {
   const years = all.filter((_, i) => i % SLOTS === SLOT);
   console.log("years: " + all.length + "   this worker (slot " + SLOT + "/" + SLOTS + "): " + years.length);
   console.log(`  ${SHARD_SCOPE.banner()}`);
+  console.log(`  clock:  ${CLOCK.describe()}`);
 
   const total = { seen: 0, bare: 0, chrome: 0, notChrome: 0, noDest: 0, wrote: 0, failed: 0 };
 
-  for (const year of years) {
+  // Years the budget never STARTED. `years` is fixed before the first page is
+  // read, so a partial run names exactly how much is left instead of leaving
+  // the slot UNFINISHED.
+  let stoppedAtBudget = false, yearsNotReached = 0;
+  for (let yi = 0; yi < years.length; yi++) {
+    const year = years[yi];
+    // THE PRE-CHECK: before the year, never after it. A check at the loop
+    // bottom admits one more whole cross-partition year past expiry.
+    if (CLOCK.outOfClock()) {
+      stoppedAtBudget = true;
+      yearsNotReached = years.length - yi;
+      break;
+    }
     let token, seen = 0, bare = 0, chrome = 0, notChrome = 0, noDest = 0, wrote = 0, failed = 0;
     const samples = [], missing = new Map(), skipped = new Map();
 
@@ -207,6 +261,18 @@ async function yearsPresent(sold) {
   // is accounted for; only a merge that was chosen and then never landed is a
   // shortfall. See CF-A-GREEN-RUN-IS-NOT-A-DATA-FLOW.
   if (APPLY) {
+    // A PARTIAL RUN STILL RECONCILES. The identity holds over what the loop
+    // CONSIDERED -- the bare colours it actually SAW -- and the years the clock
+    // never started are stated separately, in YEARS, because their row counts
+    // are unknown: those pages were never walked, so inventing a row number for
+    // them would be a fabrication, not a reconciliation.
+    console.log(`  reconciled: intended ${total.bare} = written ${total.wrote}`
+      + ` + skipped ${total.notChrome + total.noDest} + failed ${total.failed}`
+      + `  (years not reached: ${yearsNotReached})`);
+    if (total.wrote + total.notChrome + total.noDest + total.failed !== total.bare) {
+      console.error("  !! RECONCILE MISMATCH -- a bare-colour row was neither merged, left alone, unplaceable nor failed");
+      process.exitCode = 4;
+    }
     reportWrites({
       job: "merge-bare-colour-parallels",
       intended: total.bare,
@@ -215,7 +281,31 @@ async function yearsPresent(sold) {
       failed: total.failed,
     });
   }
-})().catch((e) => {
-  console.error("FATAL:", e?.stack || e?.message || String(e));
-  process.exit(3);
-});
+
+  // -- THE MARKER THE RELAUNCH GREPS ---------------------------------------
+  //
+  // CF-RELAUNCH-ONLY-ON-BUDGET (#1361). The runner greps stdout for
+  // `stopped at the .*budget`, so the phrase is a SOURCE LITERAL rather than
+  // assembled from a variable holding the words -- a marker a static reader
+  // cannot see is a relaunch that never fires.
+  if (stoppedAtBudget) {
+    console.log(`
+  stopped at the ${CLOCK.RUN_MINUTES}-minute budget -- `
+      + `${yearsNotReached} year(s) not reached; the relaunch continues from here`);
+    console.log("  the merge is IDEMPOTENT: a row already moved no longer carries a bare"
+      + " colour, so the continuation re-scans cheaply and writes only what is left."
+      + " Pass YEARS= to name the remainder directly.");
+  }
+
+  return { client, budget: CLOCK };
+}
+
+// CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809). Success exits too -- a
+// failure path that exits and a success path that hopes is the asymmetry that
+// cost four reconciled-clean runs their exit codes.
+main()
+  .then((ctx) => finishLane(process.exitCode || 0, ctx || { budget: CLOCK }))
+  .catch(async (e) => {
+    console.error("FATAL:", e?.stack || e?.message || String(e));
+    await finishLane(3, { budget: CLOCK });
+  });

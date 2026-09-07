@@ -503,6 +503,42 @@ function deriveIdentity(row, deps) {
 }
 
 // ── main ───────────────────────────────────────────────────────────────────
+/**
+ * A STOPPED SLOT MUST SAY WHERE ITS TIME WENT (2026-09-07).
+ *
+ * "stopped at the 120-minute budget" told a reader nothing that would let them
+ * act. Slot 12 printed exactly that beside `written=0`, and the fleet's own
+ * annotation guessed the wrong cause from it -- it read the pair as a
+ * truncated apply and re-dispatched a REPORT, when the slot had in fact walked
+ * its shard and found none of the class it was armed for.
+ *
+ * So the stop line carries the arithmetic that distinguishes those two: how
+ * many rows were classified, how fast, and how much of the shard that covered.
+ * A slot that is SLOW and a slot that is EMPTY produce visibly different lines.
+ */
+function stopAccounting({ stopReason, stats, expected, startedAt }) {
+  if (!stopReason) return null;
+  const secs = Math.max(0.001, (Date.now() - startedAt) / 1000);
+  const looked = stats.seen + stats.prefiltered;
+  const reach = stats.seen + stats.prefiltered + stats.otherSlot;
+  const rps = looked / secs;
+  const lines = [stopReason];
+  lines.push(`  where the time went: ${f(stats.seen)} row(s) classified` +
+    (stats.prefiltered ? ` + ${f(stats.prefiltered)} prefiltered out` : "") +
+    (stats.filtered ? ` + ${f(stats.filtered)} filtered out` : "") +
+    ` in ${(secs / 60).toFixed(1)}m  = ${rps.toFixed(0)} in-slot rows/s`);
+  lines.push(`  shard coverage:      ${f(reach)} row(s) reached of ${f(expected)} measured at capture` +
+    (expected ? `  (${((reach / expected) * 100).toFixed(1)}%)` : ""));
+  // The line that names the two causes apart. A slot that saw its whole shard
+  // did not run out of time -- it ran out of candidates.
+  if (expected && reach >= expected) {
+    lines.push(`  this slot REACHED ITS WHOLE SHARD; the budget stopped the tail, not the sweep.`);
+  } else if (expected) {
+    lines.push(`  this slot did NOT reach its whole shard -- ${f(Math.max(0, expected - reach))} row(s) were never read.`);
+  }
+  return lines.join("\n");
+}
+
 async function main() {
   if (MODE !== "census" && MODE !== "apply-improve") {
     console.error(`FATAL: MODE is required and has no default -- 'census' (read only) or 'apply-improve'. Got ${JSON.stringify(MODE)}.`);
@@ -520,6 +556,30 @@ async function main() {
   }
   const ARMED = applyScope.classes;
   const REVERTING = MODE === "apply-improve" && applyScope.revert === true;
+  /**
+   * THE SCOPED-APPLY PREFILTER (2026-09-07).
+   *
+   * A scoped apply writes ONE class and counts the rest, but it used to
+   * CLASSIFY every row of its shard to find out which was which -- and
+   * classification is the expensive half (a derivation, a catalog point read,
+   * and the per-product map reads behind the clash and flagship gates). Slot
+   * 12 of the 2026-09-07 fleet burned its whole 120-minute budget classifying
+   * 350,267 rows to discover that ZERO were GRADE-FROM-TITLE, then reported
+   * "budget hit ... written=0" -- a report that says nothing about why.
+   *
+   * `K.applyPrefilterFor` returns the NECESSARY CONDITION for the single armed
+   * kind, read off the stored row with no derivation and no catalog read, and
+   * built from the very predicates the evidence function's own legs call. A
+   * row it refuses would have failed that leg anyway.
+   *
+   * ONLY IN apply-improve, and only for a single-kind scope. MODE=census must
+   * count every class -- that is what a census IS -- so it never filters, and
+   * a multi-kind scope gets null because the rows are then a union of two
+   * populations. IMPROVE and BASE-EVICTION have no cheap necessary condition
+   * and no entry, so `scope=improve` and `scope=both` are untouched.
+   */
+  const APPLY_PREFILTER = MODE === "apply-improve" && !REVERTING
+    ? K.applyPrefilterFor(ARMED) : null;
 
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) { console.error("FATAL: COSMOS_CONNECTION_STRING not set"); process.exit(1); }
@@ -1166,7 +1226,7 @@ async function main() {
   const yfvByDecade = new Map(), yfvBySetKey = new Map(), yfvBySport = new Map(), yfvSamples = [];
   const sfpByPair = new Map(), sfpBySetKey = new Map(), sfpSamples = [];
   let splitTotal = 0;
-  const stats = { seen: 0, otherSlot: 0, filtered: 0, intended: 0, written: 0, skipped: 0, failed: 0, duplicatesLeft: 0, alreadyGone: 0, notReached: 0 };
+  const stats = { seen: 0, otherSlot: 0, filtered: 0, prefiltered: 0, intended: 0, written: 0, skipped: 0, failed: 0, duplicatesLeft: 0, alreadyGone: 0, notReached: 0 };
   const bump = (m, k, n = 1) => m.set(k, (m.get(k) ?? 0) + n);
 
   /**
@@ -1235,6 +1295,17 @@ async function main() {
       // derivation: a row this dispatch was not asked to look at costs no
       // parser call and no catalog read. See SPORTS_FILTER above.
       if (!rowPassesFilter(row, deps)) { stats.filtered++; continue; }
+      // THE SCOPED-APPLY PREFILTER, applied after slot membership and the
+      // in-slot filter and before ANY derivation or catalog read. A row that
+      // cannot be the one class this apply is armed for costs nothing but the
+      // two field tests behind it. Counted separately from `filtered` and
+      // `otherSlot`: "another slot owns it", "this dispatch declined to look
+      // at it" and "it cannot be the class we are writing" are three different
+      // facts and the banner prints all three.
+      if (APPLY_PREFILTER && !APPLY_PREFILTER({ row, stored: storedIdentity(row, deps) })) {
+        stats.prefiltered++;
+        continue;
+      }
       if (LIMIT && stats.seen >= LIMIT) { stopReason = stopReason ?? `stopped at the LIMIT of ${f(LIMIT)} rows`; break page; }
       stats.seen++;
       const stored = storedIdentity(row, deps);
@@ -1407,6 +1478,17 @@ async function main() {
   if (ROW_FILTER_ON) {
     console.log(`  in-slot row filter: ${f(stats.filtered)} row(s) skipped by filter, ${f(stats.seen)} classified  (sports=${SPORTS_FILTER.join(",") || "any"} setkey_like=${SETKEY_LIKE || "any"})`);
   }
+  // THE PREFILTER SAYS WHAT IT SKIPPED AND WHY, or a scoped apply reads as an
+  // empty shard. A slot that classified 2,800 of its 350,000 rows did not fail
+  // to see them: it proved, on the row itself, that they cannot be the class
+  // it is armed to write. Printed whenever the prefilter is on -- including
+  // when it skipped nothing -- so the reader never has to infer its presence.
+  if (APPLY_PREFILTER) {
+    const looked = stats.prefiltered + stats.seen;
+    const share = looked ? `${((stats.seen / looked) * 100).toFixed(2)}%` : "-";
+    console.log(`  scoped-apply prefilter: ${f(stats.prefiltered)} row(s) cannot be ${[...ARMED].join("+")} and were skipped before any derivation or catalog read`);
+    console.log(`                          ${f(stats.seen)} of ${f(looked)} in-slot rows classified (${share}) -- the rest failed a necessary condition read off the row itself`);
+  }
   for (const klass of [K.AGREE, K.IMPROVE, K.CONFLICT, K.UNDERIVABLE]) {
     const prot = byTier.get(`${klass}/${K.PROTECTED}`) ?? 0, auto = byTier.get(`${klass}/${K.AUTO}`) ?? 0;
     console.log(`  ${klass.padEnd(12)} ${f(counts[klass]).padStart(11)}  ${pct(counts[klass]).padStart(7)}   AUTO ${f(auto).padStart(10)}  PROTECTED ${f(prot).padStart(6)}`);
@@ -1523,6 +1605,14 @@ async function main() {
     // The filter is part of the census's identity: two censuses of the same
     // slot are only comparable when they were taken through the same filter.
     rowFilter: ROW_FILTER_ON ? { sports: SPORTS_FILTER, setkeyLike: SETKEY_LIKE || null, skipped: stats.filtered } : null,
+    // THE PREFILTER IS PART OF THE CENSUS'S IDENTITY TOO. A scoped apply's
+    // census counted only the rows that could be its class, so its class
+    // totals are NOT comparable with an unfiltered census of the same slot --
+    // and an artifact that does not say so invites exactly that comparison.
+    // Null when every in-slot row was classified.
+    applyPrefilter: APPLY_PREFILTER
+      ? { armed: [...ARMED], skipped: stats.prefiltered, classified: total }
+      : null,
     counts, byTier: Object.fromEntries(byTier), defects: Object.fromEntries(defects),
     // Subclass counts are INCLUDED in `counts` -- BASE-EVICTION is a narrowing
     // of CONFLICT, so an auditor summing both would double-count.
@@ -1566,7 +1656,7 @@ async function main() {
   // ── census stops here. There is no write path in this mode. ───────────────
   if (MODE === "census") {
     console.log(`\nREAD ONLY -- the census writes nothing to the pool.`);
-    if (stopReason) console.log(`\n${stopReason}`);
+    if (stopReason) console.log(`\n${stopAccounting({ stopReason, stats, expected, startedAt: started })}`);
     return;
   }
 
@@ -1897,7 +1987,7 @@ async function main() {
     await writeSettleMarkers(ledger, doc, conn);
   }
   if (APPLY) reportWrites({ job: "rematch-sold-comps", intended: stats.intended, written: stats.written, skipped: stats.skipped, failed: stats.failed });
-  if (stopReason) console.log(`\n${stopReason}`);
+  if (stopReason) console.log(`\n${stopAccounting({ stopReason, stats, expected, startedAt: started })}`);
 }
 
 /**
