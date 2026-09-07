@@ -1330,3 +1330,72 @@ describe("catalogRowAnswersForSport -- a checklist answers for ONE product", () 
     expect(src).toContain("K.catalogRowAnswersForSport");
   });
 });
+
+/**
+ * THE SPORT PREDICATE IS A CORRECTNESS FIX, NOT AN IMPROVE-FREEING ONE.
+ *
+ * MEASURED read-only 2026-09-06, pristine main vs main + the sport predicate
+ * alone (bare-soccer rule disabled to isolate it), soccer 2022 panini-prizm
+ * slot 19 -- the cell where L5 provably fired 173 times:
+ *
+ *     flagship-checklist-lists-this-card   173  ->    0
+ *     flagship-coverage-unknown              0  ->  181
+ *     AGREE / IMPROVE / CONFLICT / UNDERIVABLE   IDENTICAL (495/0/1366/12)
+ *
+ * L5 moves from wrongly-answered to correctly-unanswerable, and BOTH are
+ * refusals, so no verdict moves. This is pinned because the row counts invite
+ * exactly the opposite conclusion: 219,328 card-number L5 answers across the
+ * catalog stop being decided by a foreign checklist, and none of them is by
+ * itself a freed verdict. Anyone sizing an IMPROVE wave off that number would
+ * overstate it by its whole size.
+ */
+describe("the sport predicate corrects L5's REASON without moving its VERDICT", () => {
+  const STORED = {
+    sport: "soccer", cardYear: 2022, setKey: "panini-prizm", cardNumber: "108",
+    parallel: "Base", isAuto: false, printRun: null,
+  };
+  const DERIVED = { ...STORED, setKey: "panini-prizm-fifa-world-cup-qatar" };
+  const AXES = { changed: ["setKey"], dropped: [] };
+  const TITLE = "2022 Panini Prizm World Cup Qatar - Silver Prizm #108 Jamal Musiala PSA 9";
+
+  /** The same row, asked with L5 answered the OLD way (a foreign checklist said
+   *  yes) and the NEW way (this product has no checklist of its own, so null).
+   *  The bare-soccer rule is off in both, which is what isolates the predicate:
+   *  the derived key here is deliberately NOT a ruled soccer competition key. */
+  const ask = (flagship: boolean | null) => K.specializationStatedEvidence({
+    row: { title: TITLE }, stored: STORED,
+    derived: { ...STORED, setKey: "topps-traded-tiffany" },
+    axes: AXES, derivedBacked: true,
+    storedFlagshipListsCardNumber: flagship,
+    competitionStated: false,
+  });
+
+  it("BOTH L5 branches refuse -- the reason changes, the verdict does not", () => {
+    const before = ask(true);   // a foreign sport's checklist "listed" it
+    const after = ask(null);    // no checklist of its own: unanswerable
+    expect(before.failed).toContain("flagship-checklist-lists-this-card");
+    expect(after.failed).toContain("flagship-coverage-unknown");
+    // The REASON differs...
+    expect(before.failed).not.toEqual(after.failed);
+    // ...and the VERDICT does not. Both refuse.
+    expect(before.qualifies).toBe(false);
+    expect(after.qualifies).toBe(false);
+  });
+
+  it("only a RULING frees the row -- which is why bareSoccerFamily is separate", () => {
+    // The same unanswerable L5, but now the pair is one Drew ruled on: the
+    // stored key is not a rival product at all. THIS is what turns a refusal
+    // into an IMPROVE, and the sport predicate cannot do it.
+    const ruled = K.specializationStatedEvidence({
+      row: { title: TITLE }, stored: STORED, derived: DERIVED, axes: AXES,
+      derivedBacked: true,
+      storedFlagshipListsCardNumber: true,
+      competitionStated: true,
+    });
+    expect(ruled.evidence.bareSoccerFamily).toBe(true);
+    expect(ruled.qualifies).toBe(true);
+    // And with the ruling absent, the identical row refuses however L5 answers.
+    expect(ask(true).qualifies).toBe(false);
+    expect(ask(null).qualifies).toBe(false);
+  });
+});

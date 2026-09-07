@@ -3088,6 +3088,42 @@ function specializationStatedEvidence({
   // is precisely its declared parent, so the baseball, basketball and football
   // `panini-prizm` flagships, which are real products with rival checklists,
   // are untouched and keep the strict test.
+  // WHAT THE SPORT PREDICATE DOES HERE, AND WHAT IT DOES NOT -- MEASURED.
+  //
+  // CF-A-SETKEY-IS-NOT-A-PRODUCT-UNTIL-A-SPORT-NAMES-IT makes
+  // `storedFlagshipListsCardNumber` answer from the asking row's OWN sport
+  // instead of from every sport's checklist at once. That is a correctness fix
+  // and it changes this gate's REASON on a large population. It does NOT, on
+  // its own, change this gate's VERDICT -- and the difference matters enough to
+  // write down, because it is the opposite of what the row counts suggest.
+  //
+  // Measured read-only 2026-09-06, pristine main vs main + the sport predicate
+  // alone (the bare-soccer rule disabled to isolate it), soccer 2022
+  // panini-prizm slot 19 -- the cell where L5 provably fired 173 times:
+  //
+  //     flagship-checklist-lists-this-card   173  ->    0
+  //     flagship-coverage-unknown              0  ->  181
+  //     AGREE / IMPROVE / CONFLICT / UNDERIVABLE   IDENTICAL (495/0/1366/12)
+  //
+  // Both branches below push to `failed`. "Another sport's checklist lists this
+  // number" and "this product has no checklist of its own" are different facts,
+  // and the second is the true one, but BOTH are refusals -- so L5 moves from
+  // wrongly-answered to correctly-unanswerable and the row stays CONFLICT.
+  //
+  // THE CONSEQUENCE FOR SIZING AN IMPROVE WAVE. 219,328 card-number L5 answers
+  // across the catalog stop being decided by a foreign checklist (football
+  // 103,163 | basketball 53,320 | baseball 40,797 | hockey 16,947 | tennis
+  // 4,031 | soccer 1,070). NONE of them is by itself a freed verdict. A row is
+  // freed only where a RULING says the stored key is not a rival product at all
+  // -- which is what `bareSoccerFamily` is, and why it is a separate guard
+  // rather than something the sport predicate subsumes. Reading the 219,328 as
+  // a forecast of IMPROVEs would overstate the wave by its whole size.
+  //
+  // What the sport predicate buys is: no row is ever refused by, or promoted
+  // on, a checklist belonging to a different sport -- including the guards
+  // BELOW this one that are not verdict-neutral (`checklistNames` decides which
+  // PLAYER a card depicts, and a foreign name there is a different person at
+  // the same number).
   const bareSoccerFamily = ladder && isBareSoccerFamilyNonFlagship(derivedKey, storedKey);
   const sameNumberParallel = ladder && isSameNumberParallelSet(derivedKey, storedKey);
   if (!sameNumberParallel && !bareSoccerFamily) {
