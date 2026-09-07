@@ -46,7 +46,7 @@ const { catalogAuthorityOf } = require(path.join(backend, "dist/services/catalog
 // CF-VACATE-THE-PLAIN-ID-OR-REFUSE: the incumbent is MOVED, never re-upserted
 // at a second address, so the ambiguous plain id genuinely stops existing and
 // the sales hanging off it follow the card.
-const { moveCatalogRow } = require(path.join(backend, "dist/services/catalog/catalogRowOps.service.js"));
+const { moveCatalogRow, rebuildSearchFields } = require(path.join(backend, "dist/services/catalog/catalogRowOps.service.js"));
 const { CosmosClient } = require("@azure/cosmos");
 
 /**
@@ -608,12 +608,43 @@ async function main() {
             confidence: 0.95,
             verificationStatus: "verified",
             catalogVersion: 2,
-            searchTokens: Array.from(new Set([
-              String(product.year), String(r.cardNumber).toLowerCase(),
-              ...r.player.toLowerCase().split(/\s+/),
-              ...(r.parallel ? r.parallel.toLowerCase().split(/\s+/) : []),
-              ...product.setKey.split("-"),
-            ].filter(Boolean))),
+            // CF-DERIVED-FIELDS-ARE-NEVER-HAND-ROLLED (#1614, 2026-09-07).
+            //
+            // This was a FOURTH tokenizer: an inline Set that split on
+            // whitespace only. It emitted no hyphen FRAGMENTS, no ASCII fold,
+            // and no searchText at all -- so every row this lane has ever
+            // minted stored "sn-bh" without "sn" or "bh", and carried
+            // searchText: undefined.
+            //
+            // Measured 2026-09-07 on a 5,040-row sample of card_catalog:
+            // 503 rows (9.98%) read STALE to the coverage canary, and the
+            // top four sources were ALL this lane
+            // (baseballcardpedia-ladders-*, baseballcardpedia). Replaying
+            // the inline expression above against a probed prod row
+            // reproduced its stored tokens byte for byte -- the lane is the
+            // author, not a later mutation.
+            //
+            // The cost is the one this area keeps paying: catalogSearch
+            // discriminates with ARRAY_CONTAINS(c.searchTokens, @t), so a
+            // user typing either half of a hyphenated card number misses the
+            // indexed arm and falls through to the unindexed scans.
+            //
+            // rebuildSearchFields is the SAME derivation deriveCatalogEntry
+            // mints with and moveCatalogRow heals with, so a row minted here
+            // is byte-identical to one healed there and neither reads as
+            // stale to the canary. Never a fifth copy.
+            ...rebuildSearchFields({
+              sport: product.sport,
+              year: product.year,
+              setKey: product.setKey,
+              setName: product.setName,
+              cardNumber: String(r.cardNumber).toUpperCase(),
+              playerName: r.player,
+              parallel: r.parallel || null,
+              parallelSlug: slugify(r.parallel || "Base"),
+              printRun: r.printRun ? Number(r.printRun) : null,
+              subsetName: product.subsetName || null,
+            }),
           }, { known });
           // The service swallows its own upsert error and returns null: that
           // row was NOT written, and counting it as written is how a run
