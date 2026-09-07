@@ -33,6 +33,20 @@ export interface WriteReconciliation {
   /** Rows deliberately NOT written -- a guard held them, a destination was
    *  missing. Legitimate, and must be declared so it is not mistaken for loss. */
   skipped?: number;
+  /** CF-A-REFUSAL-IS-AN-OUTCOME-NOT-A-LOSS (#1953 for the promoter, 2026-09-07
+   *  for the TCA firehose). Rows a guard REFUSED on purpose: the write was
+   *  declined because performing it would have been wrong, not because it
+   *  failed. `twinAddressRefused` is the case that named this -- the sale is
+   *  already resident under a different partition, so writing here would mint
+   *  a second copy of one sale.
+   *
+   *  Arithmetically this is `skipped`, and callers who fold it in there still
+   *  reconcile. It gets its own term because the two answer different
+   *  questions: `skipped` is "we could not use this row", `refused` is "we
+   *  understood this row and declined to write it". A refusal count that
+   *  climbs is a guard doing its job or a guard mis-scoped; a skip count that
+   *  climbs is a parser going blind. Reading them as one number loses that. */
+  refused?: number;
   /** Fraction of intended writes that may go missing before this is a failure.
    *  Defaults to 0.5% -- large enough for genuine terminal errors, far too
    *  small to hide a throttling collapse. */
@@ -60,12 +74,13 @@ export function reconcileWrites(input: WriteReconciliation): ReconciliationResul
   const written = Math.max(0, Math.trunc(input.written));
   const failed = Math.max(0, Math.trunc(input.failed ?? 0));
   const skipped = Math.max(0, Math.trunc(input.skipped ?? 0));
+  const refused = Math.max(0, Math.trunc(input.refused ?? 0));
   const tolerance = input.tolerance ?? 0.005;
 
   // Everything intended must be accounted for as written, deliberately
   // skipped, or explicitly failed. What is left over is work that vanished
   // without anyone naming it -- which is exactly the 9,081,247 case.
-  const accounted = written + skipped + failed;
+  const accounted = written + skipped + refused + failed;
   const unaccounted = Math.max(0, intended - accounted);
   // The mirror image, and previously invisible: a job can also claim MORE than
   // it set out to do. dedupe-catalog-partition-shadows printed
@@ -91,6 +106,7 @@ export function reconcileWrites(input: WriteReconciliation): ReconciliationResul
       message:
         `[${input.job}] reconciled: intended ${num(intended)} = written ${num(written)}` +
         (skipped ? ` + skipped ${num(skipped)}` : "") +
+        (refused ? ` + refused ${num(refused)}` : "") +
         (failed ? ` + failed ${num(failed)}` : "") +
         (unaccounted ? ` (${num(unaccounted)} unaccounted, within tolerance)` : ""),
     };
@@ -105,6 +121,7 @@ export function reconcileWrites(input: WriteReconciliation): ReconciliationResul
       `!!   intended     ${num(intended).padStart(12)}`,
       `!!   written      ${num(written).padStart(12)}`,
       `!!   skipped      ${num(skipped).padStart(12)}`,
+      `!!   refused      ${num(refused).padStart(12)}`,
       `!!   failed       ${num(failed).padStart(12)}`,
       `!!   OVER by      ${num(overAccounted).padStart(12)}   more claimed than intended`,
       "!!",
@@ -125,6 +142,7 @@ export function reconcileWrites(input: WriteReconciliation): ReconciliationResul
     `!!   intended     ${num(intended).padStart(12)}`,
     `!!   written      ${num(written).padStart(12)}`,
     `!!   skipped      ${num(skipped).padStart(12)}   (declared, deliberate)`,
+    `!!   refused      ${num(refused).padStart(12)}   (declared, a guard said no)`,
     `!!   failed       ${num(failed).padStart(12)}   (declared, reported)`,
     `!!   UNACCOUNTED  ${num(unaccounted).padStart(12)}   ${pct(shortfallPct)} of intended`,
     "!!",
