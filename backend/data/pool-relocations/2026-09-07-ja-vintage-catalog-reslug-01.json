@@ -1,0 +1,264 @@
+{
+  "note": "R5 catalog moves: JA-stated checklist rows minted onto a shared English code.",
+  "keepSales": false,
+  "rulings": [
+    "CF-THE-JAPANESE-VINTAGE-SET-GETS-ITS-OWN-KEY (Drew, 2026-09-07, R5): the 38 Japanese sets whose alias resolves to a code the ENGLISH table owns get the distinct key ja-<code>.",
+    "THE NUMBER SEGMENT IS KEPT (#1938 N/M, reaffirmed #1948): the Japanese print carries the same number, so ONLY the set-code segment changes.",
+    "SHAPE FOLLOWS THE FIELD THAT IS WRONG: sold_comps is partitioned on /cardId and this corpus is CardHedge vendor ids, so a wrong identity is a REPOINT (patch in place); only a row whose PARTITION carries the slug RELOCATES.",
+    "THE ROW SIDE IS #1915 marketOfRow, asked with the row's TEXT only -- the stored key IS the address here, so a key witness would agree with the address by construction."
+  ],
+  "entries": [
+    {
+      "id": "hiq:pokemon:2025:sv10:131:mega-hyper-rare:no-auto",
+      "action": "reslug",
+      "to": "hiq:pokemon:2025:ja-sv10:131:mega-hyper-rare:no-auto",
+      "reason": "R5: setName \"Japanese ロケット団の栄光\" states Japanese; setKey sv10 is the shared ENGLISH code; ruled key ja-sv10"
+    },
+    {
+      "id": "hiq:pokemon:2025:sv10:066:double-rare:no-auto",
+      "action": "reslug",
+      "to": "hiq:pokemon:2025:ja-sv10:066:double-rare:no-auto",
+      "reason": "R5: setName \"Japanese ロケット団の栄光\" states Japanese; setKey sv10 is the shared ENGLISH code; ruled key ja-sv10"
+    },
+    {
+      "id": "hiq:pokemon:2025:sv10:103:illustration-rare:no-auto",
+      "action": "reslug",
+      "to": "hiq:pokemon:2025:ja-sv10:103:illustration-rare:no-auto",
+      "reason": "R5: setName \"Japanese ロケット団の栄光\" states Japanese; setKey sv10 is the shared ENGLISH code; ruled key ja-sv10"
+    },
+    {
+      "id": "hiq:pokemon:2025:sv10:118:ultra-rare:no-auto",
+      "action": "reslug",
+      "to": "hiq:pokemon:2025:ja-sv10:118:ultra-rare:no-auto",
+      "reason": "R5: setName \"Japanese ロケット団の栄光\" states Japanese; setKey sv10 is the shared ENGLISH code; ruled key ja-sv10"
+    },
+    {
+      "id": "hiq:pokemon:2025:sv10:122:ultra-rare:no-auto",
+      "action": "reslug",
+      "to": "hiq:pokemon:2025:ja-sv10:122:ultra-rare:no-auto",
+      "reason": "R5: setName \"Japanese ロケット団の栄光\" states Japanese; setKey sv10 is the shared ENGLISH code; ruled key ja-sv10"
+    },
+    {
+      "id": "hiq:pokemon:2025:sv10:063:double-rare:no-auto",
+      "action": "reslug",
+      "to": "hiq:pokemon:2025:ja-sv10:063:double-rare:no-auto",
+      "reason": "R5: setName \"Japanese ロケット団の栄光\" states Japanese; setKey sv10 is the shared ENGLISH code; ruled key ja-sv10"
+    },
+    {
+      "id": "hiq:pokemon:2025:sv10:079:double-rare:no-auto",
+      "action": "reslug",
+      "to": "hiq:pokemon:2025:ja-sv10:079:double-rare:no-auto",
+      "reason": "R5: setName \"Japanese ロケット団の栄光\" states Japanese; setKey sv10 is the shared ENGLISH code; ruled key ja-sv10"
+    },
+    {
+      "id": "hiq:pokemon:2025:sv10:111:ultra-rare:no-auto",
+      "action": "reslug",
+      "to": "hiq:pokemon:2025:ja-sv10:111:ultra-rare:no-auto",
+      "reason": "R5: setName \"Japanese ロケット団の栄光\" states Japanese; setKey sv10 is the shared ENGLISH code; ruled key ja-sv10"
+    },
+    {
+      "id": "hiq:pokemon:2025:sv10:113:ultra-rare:no-auto",
+      "action": "reslug",
+      "to": "hiq:pokemon:2025:ja-sv10:113:ultra-rare:no-auto",
+      "reason": "R5: setName \"Japanese ロケット団の栄光\" states Japanese; setKey sv10 is the shared ENGLISH code; ruled key ja-sv10"
+    },
+    {
+      "id": "hiq:pokemon:2025:sv10:102:illustration-rare:no-auto",
+      "action": "reslug",
+      "to": "hiq:pokemon:2025:ja-sv10:102:illustration-rare:no-auto",
+      "reason": "R5: setName \"Japanese ロケット団の栄光\" states Japanese; setKey sv10 is the shared ENGLISH code; ruled key ja-sv10"
+    },
+    {
+      "id": "hiq:pokemon:2025:sv10:117:ultra-rare:no-auto",
+      "action": "reslug",
+      "to": "hiq:pokemon:2025:ja-sv10:117:ultra-rare:no-auto",
+      "reason": "R5: setName \"Japanese ロケット団の栄光\" states Japanese; setKey sv10 is the shared ENGLISH code; ruled key ja-sv10"
+    },
+    {
+      "id": "hiq:pokemon:2025:sv10:125:special-illustration-rare:no-auto",
+      "action": "reslug",
+      "to": "hiq:pokemon:2025:ja-sv10:125:special-illustration-rare:no-auto",
+      "reason": "R5: setName \"Japanese ロケット団の栄光\" states Japanese; setKey sv10 is the shared ENGLISH code; ruled key ja-sv10"
+    },
+    {
+      "id": "hiq:pokemon:2025:sv10:119:ultra-rare:no-auto",
+      "action": "reslug",
+      "to": "hiq:pokemon:2025:ja-sv10:119:ultra-rare:no-auto",
+      "reason": "R5: setName \"Japanese ロケット団の栄光\" states Japanese; setKey sv10 is the shared ENGLISH code; ruled key ja-sv10"
+    },
+    {
+      "id": "hiq:pokemon:2025:sv10:115:ultra-rare:no-auto",
+      "action": "reslug",
+      "to": "hiq:pokemon:2025:ja-sv10:115:ultra-rare:no-auto",
+      "reason": "R5: setName \"Japanese ロケット団の栄光\" states Japanese; setKey sv10 is the shared ENGLISH code; ruled key ja-sv10"
+    },
+    {
+      "id": "hiq:pokemon:2025:sv10:105:illustration-rare:no-auto",
+      "action": "reslug",
+      "to": "hiq:pokemon:2025:ja-sv10:105:illustration-rare:no-auto",
+      "reason": "R5: setName \"Japanese ロケット団の栄光\" states Japanese; setKey sv10 is the shared ENGLISH code; ruled key ja-sv10"
+    },
+    {
+      "id": "hiq:pokemon:2025:sv10:120:ultra-rare:no-auto",
+      "action": "reslug",
+      "to": "hiq:pokemon:2025:ja-sv10:120:ultra-rare:no-auto",
+      "reason": "R5: setName \"Japanese ロケット団の栄光\" states Japanese; setKey sv10 is the shared ENGLISH code; ruled key ja-sv10"
+    },
+    {
+      "id": "hiq:pokemon:2025:sv10:126:special-illustration-rare:no-auto",
+      "action": "reslug",
+      "to": "hiq:pokemon:2025:ja-sv10:126:special-illustration-rare:no-auto",
+      "reason": "R5: setName \"Japanese ロケット団の栄光\" states Japanese; setKey sv10 is the shared ENGLISH code; ruled key ja-sv10"
+    },
+    {
+      "id": "hiq:pokemon:2025:sv10:127:special-illustration-rare:no-auto",
+      "action": "reslug",
+      "to": "hiq:pokemon:2025:ja-sv10:127:special-illustration-rare:no-auto",
+      "reason": "R5: setName \"Japanese ロケット団の栄光\" states Japanese; setKey sv10 is the shared ENGLISH code; ruled key ja-sv10"
+    },
+    {
+      "id": "hiq:pokemon:2025:sv10:110:illustration-rare:no-auto",
+      "action": "reslug",
+      "to": "hiq:pokemon:2025:ja-sv10:110:illustration-rare:no-auto",
+      "reason": "R5: setName \"Japanese ロケット団の栄光\" states Japanese; setKey sv10 is the shared ENGLISH code; ruled key ja-sv10"
+    },
+    {
+      "id": "hiq:pokemon:2025:sv10:099:illustration-rare:no-auto",
+      "action": "reslug",
+      "to": "hiq:pokemon:2025:ja-sv10:099:illustration-rare:no-auto",
+      "reason": "R5: setName \"Japanese ロケット団の栄光\" states Japanese; setKey sv10 is the shared ENGLISH code; ruled key ja-sv10"
+    },
+    {
+      "id": "hiq:pokemon:2025:sv10:015:double-rare:no-auto",
+      "action": "reslug",
+      "to": "hiq:pokemon:2025:ja-sv10:015:double-rare:no-auto",
+      "reason": "R5: setName \"Japanese ロケット団の栄光\" states Japanese; setKey sv10 is the shared ENGLISH code; ruled key ja-sv10"
+    },
+    {
+      "id": "hiq:pokemon:2025:sv10:106:illustration-rare:no-auto",
+      "action": "reslug",
+      "to": "hiq:pokemon:2025:ja-sv10:106:illustration-rare:no-auto",
+      "reason": "R5: setName \"Japanese ロケット団の栄光\" states Japanese; setKey sv10 is the shared ENGLISH code; ruled key ja-sv10"
+    },
+    {
+      "id": "hiq:pokemon:2025:sv10:012:double-rare:no-auto",
+      "action": "reslug",
+      "to": "hiq:pokemon:2025:ja-sv10:012:double-rare:no-auto",
+      "reason": "R5: setName \"Japanese ロケット団の栄光\" states Japanese; setKey sv10 is the shared ENGLISH code; ruled key ja-sv10"
+    },
+    {
+      "id": "hiq:pokemon:2025:sv10:101:illustration-rare:no-auto",
+      "action": "reslug",
+      "to": "hiq:pokemon:2025:ja-sv10:101:illustration-rare:no-auto",
+      "reason": "R5: setName \"Japanese ロケット団の栄光\" states Japanese; setKey sv10 is the shared ENGLISH code; ruled key ja-sv10"
+    },
+    {
+      "id": "hiq:pokemon:2025:sv10:112:ultra-rare:no-auto",
+      "action": "reslug",
+      "to": "hiq:pokemon:2025:ja-sv10:112:ultra-rare:no-auto",
+      "reason": "R5: setName \"Japanese ロケット団の栄光\" states Japanese; setKey sv10 is the shared ENGLISH code; ruled key ja-sv10"
+    },
+    {
+      "id": "hiq:pokemon:2025:sv10:055:double-rare:no-auto",
+      "action": "reslug",
+      "to": "hiq:pokemon:2025:ja-sv10:055:double-rare:no-auto",
+      "reason": "R5: setName \"Japanese ロケット団の栄光\" states Japanese; setKey sv10 is the shared ENGLISH code; ruled key ja-sv10"
+    },
+    {
+      "id": "hiq:pokemon:2025:sv10:100:illustration-rare:no-auto",
+      "action": "reslug",
+      "to": "hiq:pokemon:2025:ja-sv10:100:illustration-rare:no-auto",
+      "reason": "R5: setName \"Japanese ロケット団の栄光\" states Japanese; setKey sv10 is the shared ENGLISH code; ruled key ja-sv10"
+    },
+    {
+      "id": "hiq:pokemon:2025:sv10:132:mega-hyper-rare:no-auto",
+      "action": "reslug",
+      "to": "hiq:pokemon:2025:ja-sv10:132:mega-hyper-rare:no-auto",
+      "reason": "R5: setName \"Japanese ロケット団の栄光\" states Japanese; setKey sv10 is the shared ENGLISH code; ruled key ja-sv10"
+    },
+    {
+      "id": "hiq:pokemon:2025:sv10:123:ultra-rare:no-auto",
+      "action": "reslug",
+      "to": "hiq:pokemon:2025:ja-sv10:123:ultra-rare:no-auto",
+      "reason": "R5: setName \"Japanese ロケット団の栄光\" states Japanese; setKey sv10 is the shared ENGLISH code; ruled key ja-sv10"
+    },
+    {
+      "id": "hiq:pokemon:2025:sv10:108:illustration-rare:no-auto",
+      "action": "reslug",
+      "to": "hiq:pokemon:2025:ja-sv10:108:illustration-rare:no-auto",
+      "reason": "R5: setName \"Japanese ロケット団の栄光\" states Japanese; setKey sv10 is the shared ENGLISH code; ruled key ja-sv10"
+    },
+    {
+      "id": "hiq:pokemon:2025:sv10:109:illustration-rare:no-auto",
+      "action": "reslug",
+      "to": "hiq:pokemon:2025:ja-sv10:109:illustration-rare:no-auto",
+      "reason": "R5: setName \"Japanese ロケット団の栄光\" states Japanese; setKey sv10 is the shared ENGLISH code; ruled key ja-sv10"
+    },
+    {
+      "id": "hiq:pokemon:2025:sv10:130:mega-hyper-rare:no-auto",
+      "action": "reslug",
+      "to": "hiq:pokemon:2025:ja-sv10:130:mega-hyper-rare:no-auto",
+      "reason": "R5: setName \"Japanese ロケット団の栄光\" states Japanese; setKey sv10 is the shared ENGLISH code; ruled key ja-sv10"
+    },
+    {
+      "id": "hiq:pokemon:2025:sv10:121:ultra-rare:no-auto",
+      "action": "reslug",
+      "to": "hiq:pokemon:2025:ja-sv10:121:ultra-rare:no-auto",
+      "reason": "R5: setName \"Japanese ロケット団の栄光\" states Japanese; setKey sv10 is the shared ENGLISH code; ruled key ja-sv10"
+    },
+    {
+      "id": "hiq:pokemon:2025:sv10:129:special-illustration-rare:no-auto",
+      "action": "reslug",
+      "to": "hiq:pokemon:2025:ja-sv10:129:special-illustration-rare:no-auto",
+      "reason": "R5: setName \"Japanese ロケット団の栄光\" states Japanese; setKey sv10 is the shared ENGLISH code; ruled key ja-sv10"
+    },
+    {
+      "id": "hiq:pokemon:2025:sv10:116:ultra-rare:no-auto",
+      "action": "reslug",
+      "to": "hiq:pokemon:2025:ja-sv10:116:ultra-rare:no-auto",
+      "reason": "R5: setName \"Japanese ロケット団の栄光\" states Japanese; setKey sv10 is the shared ENGLISH code; ruled key ja-sv10"
+    },
+    {
+      "id": "hiq:pokemon:2025:sv10:128:special-illustration-rare:no-auto",
+      "action": "reslug",
+      "to": "hiq:pokemon:2025:ja-sv10:128:special-illustration-rare:no-auto",
+      "reason": "R5: setName \"Japanese ロケット団の栄光\" states Japanese; setKey sv10 is the shared ENGLISH code; ruled key ja-sv10"
+    },
+    {
+      "id": "hiq:pokemon:2025:sv10:114:ultra-rare:no-auto",
+      "action": "reslug",
+      "to": "hiq:pokemon:2025:ja-sv10:114:ultra-rare:no-auto",
+      "reason": "R5: setName \"Japanese ロケット団の栄光\" states Japanese; setKey sv10 is the shared ENGLISH code; ruled key ja-sv10"
+    },
+    {
+      "id": "hiq:pokemon:2025:sv10:104:illustration-rare:no-auto",
+      "action": "reslug",
+      "to": "hiq:pokemon:2025:ja-sv10:104:illustration-rare:no-auto",
+      "reason": "R5: setName \"Japanese ロケット団の栄光\" states Japanese; setKey sv10 is the shared ENGLISH code; ruled key ja-sv10"
+    },
+    {
+      "id": "hiq:pokemon:2025:sv10:032:double-rare:no-auto",
+      "action": "reslug",
+      "to": "hiq:pokemon:2025:ja-sv10:032:double-rare:no-auto",
+      "reason": "R5: setName \"Japanese ロケット団の栄光\" states Japanese; setKey sv10 is the shared ENGLISH code; ruled key ja-sv10"
+    },
+    {
+      "id": "hiq:pokemon:2025:sv10:039:double-rare:no-auto",
+      "action": "reslug",
+      "to": "hiq:pokemon:2025:ja-sv10:039:double-rare:no-auto",
+      "reason": "R5: setName \"Japanese ロケット団の栄光\" states Japanese; setKey sv10 is the shared ENGLISH code; ruled key ja-sv10"
+    },
+    {
+      "id": "hiq:pokemon:2025:sv10:107:illustration-rare:no-auto",
+      "action": "reslug",
+      "to": "hiq:pokemon:2025:ja-sv10:107:illustration-rare:no-auto",
+      "reason": "R5: setName \"Japanese ロケット団の栄光\" states Japanese; setKey sv10 is the shared ENGLISH code; ruled key ja-sv10"
+    },
+    {
+      "id": "hiq:pokemon:2025:sv10:124:special-illustration-rare:no-auto",
+      "action": "reslug",
+      "to": "hiq:pokemon:2025:ja-sv10:124:special-illustration-rare:no-auto",
+      "reason": "R5: setName \"Japanese ロケット団の栄光\" states Japanese; setKey sv10 is the shared ENGLISH code; ruled key ja-sv10"
+    }
+  ]
+}
