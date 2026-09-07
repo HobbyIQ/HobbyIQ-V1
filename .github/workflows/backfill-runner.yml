@@ -4999,6 +4999,128 @@ jobs:
             exit 1
           fi
 
+      - name: Self-relaunch a wave-2 budgeted write lane until its scope is drained
+        # CF-A-KILLED-JOB-CANNOT-REPORT-PROGRESS, wave 2 of the #1944 ratchet
+        # (44 -> 29). Same contract as the wave-1 step above -- budget(), a
+        # per-unit outOfClock() PRE-check, a reserve sized to that lane's largest
+        # unit, the marker as a source literal, a reconcile that still balances
+        # after a partial run, and finishLane() on every exit path -- and a
+        # SEPARATE step rather than fifteen more names on the wave-1 gate, so
+        # each wave's population stays readable next to the reasoning that
+        # produced it.
+        #
+        # FIVE OF THESE ARRIVE FROM A DIFFERENT PROTOCOL, and that is the part
+        # worth reading twice. auto-label-catalog-variants,
+        # backfill-searchtokens-all-sports, dedupe-catalog-by-hobbyiq,
+        # fix-catalog-parallel-as-player and normalize-catalog-schema were NOT
+        # unclocked -- they carried a local BACKFILL_MAX_MINUTES cap and
+        # continued through `RELAUNCH_NEEDED=true|false`, read by the
+        # "Self-relaunch catalog expansion" step further down. That step has
+        # TWO arms and no third: `true` re-dispatches, `false` stops, and
+        # ANYTHING ELSE -- including the empty string a KILLED step leaves,
+        # because a killed step prints no line at all -- lands on a
+        # `::warning::` that does not fail the job. So a lane killed at the
+        # 150-minute ceiling reported a warning, went GREEN, and left its work
+        # half done: exactly #1906's defect, in a protocol
+        # relaunchNeverCallsAKilledRunFinished.test.ts does not police because
+        # its population is the marker-keyed steps.
+        #
+        # Those five now print the marker and are named HERE, and are removed
+        # from the RELAUNCH_NEEDED gate below -- not left on both, which would
+        # double-dispatch every budget stop.
+        #
+        # EVERY ONE OF THESE IS IDEMPOTENT ON RE-READ, which is what makes a
+        # verbatim re-dispatch safe rather than merely convenient:
+        #   - the marker-stamped sweeps (backfill-stage2-title-parser,
+        #     normalize-catalog-schema, auto-label-catalog-variants,
+        #     backfill-cardsight-unverified-flag) exclude their own marker field
+        #     in the scan query, so a written row is never re-read;
+        #   - the field backfills (backfill-composite-fields,
+        #     backfill-composite-v3, backfill-autostyle-from-title,
+        #     backfill-searchtokens-all-sports) select only rows where the field
+        #     they write is still absent or null;
+        #   - the reslugs (backfill-catalog-driven-canonicalize,
+        #     backfill-bowman-mega-box-reslug,
+        #     backfill-cardsight-title-identity) re-derive the target and read a
+        #     row already at it as `unchanged`;
+        #   - dedupe-catalog-by-hobbyiq re-reads a folded group as a singleton
+        #     and moveCatalogRow returns `noop` for a row already at its slug;
+        #   - fix-catalog-parallel-as-player files an already-fixed row among a
+        #     group's GOOD names rather than its bad rows;
+        #   - auto-quarantine-contaminated-pools selects only rows whose
+        #     __poolAutoQuarantined is absent or not true;
+        #   - reprice-user-holdings re-reads its user list and the nightly lane
+        #     skips a holding priced within 20h whose pool has not grown.
+        # So a continuation pays cheap reads over the finished part and writes
+        # only what is left. That is also why none of them needs a cursor input.
+        #
+        # THREE OF THEM CAN EXIT 5 -- A REFUSAL, NOT A FAILURE.
+        # dedupe-catalog-by-hobbyiq, fix-catalog-parallel-as-player and
+        # auto-quarantine-contaminated-pools each compute their write plan from
+        # the SHAPE of a whole-container scan (a group's membership, a majority
+        # vote, a contamination ratio), so a scan-phase budget stop makes the
+        # plan wrong rather than short and the write phase refuses outright
+        # (#1947's retire-flattened-attestations lesson). They still print the
+        # marker, so the first arm below re-dispatches them: nothing was
+        # written, and the next run re-scans from the top. The marker check runs
+        # BEFORE the outcome check for exactly that reason.
+        #
+        # `apply` and `scope` are forwarded VERBATIM: a report relaunches as a
+        # report and an apply as an apply (#1578).
+        # `!cancelled()` sits on the `if:` LINE, not folded onto the next one:
+        # the pin that requires every marker-keyed relaunch step to run after a
+        # kill reads the gate with a single-line regex, and a gate whose first
+        # line is bare `>-` parses as EMPTY. A step that looks gated and is not
+        # is precisely the silent hole this rule exists to close, so the
+        # formatting is load-bearing rather than cosmetic.
+        if: ${{ !cancelled() && (
+            inputs.script == 'reprice-user-holdings' ||
+            inputs.script == 'backfill-catalog-driven-canonicalize' ||
+            inputs.script == 'backfill-stage2-title-parser' ||
+            inputs.script == 'auto-label-catalog-variants' ||
+            inputs.script == 'backfill-searchtokens-all-sports' ||
+            inputs.script == 'dedupe-catalog-by-hobbyiq' ||
+            inputs.script == 'fix-catalog-parallel-as-player' ||
+            inputs.script == 'normalize-catalog-schema' ||
+            inputs.script == 'auto-quarantine-contaminated-pools' ||
+            inputs.script == 'backfill-autostyle-from-title' ||
+            inputs.script == 'backfill-bowman-mega-box-reslug' ||
+            inputs.script == 'backfill-cardsight-title-identity' ||
+            inputs.script == 'backfill-cardsight-unverified-flag' ||
+            inputs.script == 'backfill-composite-fields' ||
+            inputs.script == 'backfill-composite-v3'
+          ) }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set +e
+          # CF-A-KILLED-RUN-IS-NOT-A-FINISHED-RUN (#1906/#1913). Three outcomes, not two:
+          #   (a) budget marker      -> more work, re-dispatch;
+          #   (b) finishLane line    -> the lane exited on its own, genuinely done;
+          #   (c) neither            -> the step was KILLED at the 150-minute ceiling
+          #                             (or cancelled/crashed). NOT finished. Fail loudly.
+          # Absence of the marker used to mean (b) by default, so all ten killed APPLY
+          # shards of retire-self-derived-identities reported "finished within budget"
+          # and the fan-out stopped with the work half done and the run green.
+          # Every lane gated above routes BOTH its exit paths through finishLane(), so
+          # (b) is a real witness that the process ended on purpose rather than an
+          # assumption drawn from an absence.
+          if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
+            W=$(grep -aoE "reconciled: [a-z]+ [0-9,]+ = [a-z]+ [0-9,]+" /tmp/backfill.log | tail -1 || true)
+            echo "::notice::budget hit on ${{ inputs.script }} (${W:-no reconcile line}) — re-dispatching to continue"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script="${{ inputs.script }}" -f apply="${{ inputs.apply }}" -f scope="${{ inputs.scope }}"
+          elif grep -aqE "finishLane: exiting code [0-9]+" /tmp/backfill.log && [ "${{ steps.backfill.outcome }}" = "success" ]; then
+            echo "::notice::${{ inputs.script }} finished within budget — done, no re-dispatch."
+          else
+            echo "::error::KILLED before finish — ${{ inputs.script }} never reached finishLane; NOT finished; re-dispatch withheld — investigate"
+            echo "  step outcome: ${{ steps.backfill.outcome }}"
+            echo "  budget marker: absent    finishLane line: $(grep -acE 'finishLane: exiting code [0-9]+' /tmp/backfill.log 2>/dev/null || echo 0)"
+            echo "  last 20 lines of /tmp/backfill.log:"
+            tail -n 20 /tmp/backfill.log 2>/dev/null || echo "  (no log)"
+            exit 1
+          fi
+
       - name: Self-relaunch until composite backfill fully drains
         # CF-COMPOSITE-BACKFILL-SELF-RELAUNCH (Drew, 2026-07-30). Composite
         # backfill covers ~3.4M sold_comps rows and one 150-min iteration
@@ -5104,7 +5226,31 @@ jobs:
         # process. The script self-caps to ~25 min per invocation; this step
         # re-dispatches the workflow immediately so it continues in a fresh
         # runner. Loops until the script emits RELAUNCH_NEEDED=false.
-        if: ${{ !cancelled() && (inputs.script == 'backfill-catalog-cs-images' || inputs.script == 'normalize-catalog-schema' || inputs.script == 'dedupe-catalog-by-hobbyiq' || inputs.script == 'backfill-cs-card-population' || inputs.script == 'drain-staging-backlog' || inputs.script == 'rescore-anomalies' || inputs.script == 'score-all-sold-comps' || inputs.script == 'reaudit-cardsight-unverified' || inputs.script == 'backfill-searchtokens-all-sports' || inputs.script == 'fix-catalog-parallel-as-player' || inputs.script == 'auto-label-catalog-variants') && inputs.apply == true }}
+        #
+        # FIVE LANES LEFT THIS LIST in the #1944 ratchet's wave 2 --
+        # normalize-catalog-schema, dedupe-catalog-by-hobbyiq,
+        # backfill-searchtokens-all-sports, fix-catalog-parallel-as-player and
+        # auto-label-catalog-variants -- and are now gated by the wave-2 marker
+        # step above. They are removed HERE rather than left on both gates:
+        # two steps reacting to the same stop would re-dispatch it twice.
+        #
+        # WHY THEY LEFT, because it is the same bug this file has fixed twice
+        # already in the other protocol. The three-arm logic below has only two
+        # real arms: `true` re-dispatches, `false` stops, and anything else --
+        # INCLUDING THE EMPTY STRING A KILLED STEP LEAVES, since a killed step
+        # prints no line at all -- reaches the `::warning::` at the bottom,
+        # which does NOT fail the job. So a lane killed at the 150-minute
+        # ceiling went green with its work half done. That is #1906's "a killed
+        # run is not a finished run" defect, and the pin that governs it
+        # (relaunchNeverCallsAKilledRunFinished.test.ts) does not see this step,
+        # because its population is the MARKER-keyed relaunches.
+        #
+        # THE LANES STILL LISTED BELOW HAVE NOT BEEN AUDITED FOR THAT. They are
+        # on the ratchet in backend/tests/runnerBudgetMargin.test.ts and inherit
+        # the same treatment when their turn comes; until then this warning arm
+        # remains the known-soft edge, named here rather than left to be
+        # rediscovered.
+        if: ${{ !cancelled() && (inputs.script == 'backfill-catalog-cs-images' || inputs.script == 'backfill-cs-card-population' || inputs.script == 'drain-staging-backlog' || inputs.script == 'rescore-anomalies' || inputs.script == 'score-all-sold-comps' || inputs.script == 'reaudit-cardsight-unverified') && inputs.apply == true }}
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash

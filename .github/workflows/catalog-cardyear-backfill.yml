@@ -78,7 +78,12 @@ jobs:
           echo "Running: node backend/scripts/backfillCatalogCardYearFromSlug.cjs (DRY_RUN=$DRY_RUN SOURCE_FILTER=$SOURCE_FILTER)"
           node backend/scripts/backfillCatalogCardYearFromSlug.cjs
 
+      # 2026-09-07: identical to P2-5 in marketplace-listings-refresh. The
+      # backfill step above succeeds and this step then dies on
+      # `Cannot find module '@azure/cosmos'` — deps live under `backend/`, the
+      # inline `node -e` ran from the repo root. Failing 09-05, 09-06, 09-07.
       - name: Report post-run coverage
+        working-directory: backend
         env:
           COSMOS_CONNECTION_STRING: ${{ steps.cosmos.outputs.cs }}
         run: |
