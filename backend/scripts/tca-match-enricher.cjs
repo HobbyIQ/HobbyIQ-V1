@@ -41,6 +41,15 @@ const path = require("path");
 // here as a failed write. The safe order is write-then-delete (catalogRowOps
 // does that for card_catalog); the pool has no such helper yet.
 const { reportWrites } = require(path.join(__dirname, "..", "dist/services/ops/writeReconciliation.js"));
+// CF-ONE-WRITE-PATH-FOR-SOLD-COMPS (2026-09-07). The re-key below used to be a
+// hand-rolled delete-then-create -- the exact order D19 named as the shape that
+// LOSES a sale, and this file is the one it was named after. It now goes
+// through the one mover, which upserts, VERIFIES the read-back, and only then
+// deletes the old address; a delete that fails is reported as a duplicate
+// rather than retried into a missing row. The mover also runs the shared
+// identity guard on the document it keeps, so a re-key to an unreadable
+// address is refused instead of written.
+const { relocateSoldComp, contentHashOf } = require(path.join(__dirname, "lib", "relocate-sold-comp.cjs"));
 
 const APPLY = process.env.APPLY === "true";
 const MAX_MINUTES = Math.max(1, Number(process.env.MAX_MINUTES || 12));
@@ -206,9 +215,26 @@ async function main() {
       const merged = { ...existing, ...patch };
       try {
         if (existing.cardId !== patch.cardId) {
-          // Partition key changing — must delete + recreate.
-          await sold.item(row.id, existing.cardId).delete();
-          await sold.items.create(merged);
+          // THE PARTITION MOVES. A row cannot be re-keyed in place, so this is
+          // a new document plus a delete of the old one -- and the pool must
+          // never be without the sale between the two. `contentHash` is the
+          // partition-scoped dedup key, so it is recomputed for the NEW cardId
+          // or the store's pre-write dedup can never match this row again.
+          merged.contentHash = contentHashOf(merged);
+          const res = await relocateSoldComp(sold, {
+            keep: merged,
+            drop: [{ id: row.id, cardId: existing.cardId }],
+            verifyFields: ["cardId", "hobbyiqCardId", "price", "soldAt", "contentHash"],
+          });
+          if (!res.ok) {
+            // NOT counted here: the `catch` below owns `writeFailed`, and the
+            // throw goes straight to it. Counting in both places double-counts
+            // the same failed row.
+            if (res.duplicatesLeft?.length) {
+              console.error(`  DUPLICATE LEFT IN POOL: ${row.id} — ${res.error ?? res.stage}`);
+            }
+            throw new Error(`relocate failed at ${res.stage}: ${res.error ?? "unknown"}`);
+          }
         } else {
           await sold.items.upsert(merged);
         }

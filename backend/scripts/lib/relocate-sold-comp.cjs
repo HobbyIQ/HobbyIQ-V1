@@ -38,6 +38,35 @@
  */
 "use strict";
 const crypto = require("crypto");
+const path = require("path");
+
+/**
+ * CF-ONE-WRITE-PATH-FOR-SOLD-COMPS (2026-09-07). The mover is SANCTIONED --
+ * it is the one way a row changes its key, and 21 scripts go through it -- but
+ * being sanctioned is about ORDER, not about the address. This helper
+ * guaranteed the sale was never lost between the upsert and the delete and
+ * never once asked whether the identity it was moving the row TO was one
+ * anybody can read back. A `to` value comes from a list file; a mover that
+ * writes it unchecked mints exactly the unaddressable keys #1939 measured,
+ * with a verified read-back to prove it landed.
+ *
+ * So the NEW document goes through the SAME predicate the emitter uses. Loaded
+ * from dist/ the way every other script loads shipped logic; when dist has not
+ * been built the guard is ABSENT rather than silently permissive, and
+ * `relocateSoldComp` refuses to write instead of guessing -- an unguarded move
+ * is the thing this exists to stop.
+ */
+let _guardFn = null;
+function loadGuard() {
+  if (_guardFn) return _guardFn;
+  const backend = path.resolve(__dirname, "..", "..");
+  const mod = require(path.join(backend, "dist", "services", "portfolioiq", "splitIdentityWriteGuard.js"));
+  if (typeof mod.guardSoldCompDoc !== "function") {
+    throw new Error("relocate-sold-comp: dist splitIdentityWriteGuard exports no guardSoldCompDoc");
+  }
+  _guardFn = mod.guardSoldCompDoc;
+  return _guardFn;
+}
 
 const SYSTEM_FIELDS = new Set(["_rid", "_self", "_etag", "_attachments", "_ts"]);
 
@@ -253,10 +282,28 @@ async function readBackKeptRow(pool, keep, retry = (fn) => fn(), wait = sleep, v
  *   readBackVia   how the write was confirmed: "point-read", a retry, or the
  *                 (id, cardId) query that defeats replica lag
  */
-async function relocateSoldComp(pool, { keep, drop, retry = (fn) => fn(), verifyFields = [], dryRun = false, wait = sleep }) {
+async function relocateSoldComp(pool, { keep, drop, retry = (fn) => fn(), verifyFields = [], dryRun = false, wait = sleep, guard = undefined }) {
   const drops = (drop ?? []).filter((d) => d && d.id && d.cardId && !sameRef(d, keep));
   if (!keep || !keep.id || !keep.cardId) throw new Error("relocateSoldComp: keep needs id and cardId");
-  if (dryRun) return { ok: true, stage: "dry-run", existedBefore: null, deleted: [], alreadyGone: [], duplicatesLeft: [], wouldDelete: drops.length };
+
+  // ── THE ADDRESS THE ROW IS MOVING TO ─────────────────────────────────────
+  // Judged BEFORE the dry-run return, so a dry run reports the same refusal an
+  // APPLY would hit rather than describing a move that will not happen. The
+  // guard mutates `keep` in place: a parked row still MOVES (the sale is real
+  // and the caller decided where it belongs), it just carries the stamp that
+  // keeps it out of every pool. A malformed destination is different -- there
+  // is no pool to be out of, because the address cannot be read back -- so it
+  // is REFUSED and nothing is written or deleted.
+  const guardFn = guard === undefined ? loadGuard() : guard;
+  const verdict = guardFn(keep, { guardedBy: "relocateSoldComp" });
+  if (verdict.verdict === "park" && verdict.reason === "malformed-key") {
+    return {
+      ok: false, stage: "guard",
+      error: `relocateSoldComp: refused — ${verdict.detail}`,
+      existedBefore: null, deleted: [], alreadyGone: [], duplicatesLeft: [], guard: verdict,
+    };
+  }
+  if (dryRun) return { ok: true, stage: "dry-run", existedBefore: null, deleted: [], alreadyGone: [], duplicatesLeft: [], wouldDelete: drops.length, guard: verdict };
 
   let existedBefore = false;
   try {
@@ -320,4 +367,4 @@ async function relocateSoldComp(pool, { keep, drop, retry = (fn) => fn(), verify
   return { ok: duplicatesLeft.length === 0, stage: "done", existedBefore, deleted, alreadyGone, duplicatesLeft, readBackVia };
 }
 
-module.exports = { relocateSoldComp, readBackKeptRow, readBackShowsWrite, stripSystem, isMissing, cents, day, normParallel, legacyNormParallel, gradeKey, contentHashOf, legacyContentHashOf, contentHashesForLookup, varianceOf, foldMissing, sameRef };
+module.exports = { relocateSoldComp, loadGuard, readBackKeptRow, readBackShowsWrite, stripSystem, isMissing, cents, day, normParallel, legacyNormParallel, gradeKey, contentHashOf, legacyContentHashOf, contentHashesForLookup, varianceOf, foldMissing, sameRef };

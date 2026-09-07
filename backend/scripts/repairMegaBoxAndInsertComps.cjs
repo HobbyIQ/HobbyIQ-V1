@@ -36,6 +36,14 @@
 //   node scripts/repairMegaBoxAndInsertComps.cjs --year 2026 --max 250 --apply
 
 const { CosmosClient } = require("@azure/cosmos");
+const path = require("path");
+// CF-ONE-WRITE-PATH-FOR-SOLD-COMPS (2026-09-07). The move below had the right
+// ORDER and a read-back, but the read-back only asked "is anything there?" --
+// and a document ALREADY at the destination answers that from a lagging
+// replica without showing this write, which is the 2026-09-06 miss D19's own
+// header records. The one mover verifies the fields it was told to verify, and
+// runs the shared identity guard on the document it keeps.
+const { relocateSoldComp, stripSystem, contentHashOf } = require(path.join(__dirname, "lib", "relocate-sold-comp.cjs"));
 
 const args = process.argv.slice(2);
 const has = (f) => args.includes(f);
@@ -93,17 +101,20 @@ async function moveComp(doc, newCardId) {
   const newId = `${newCardId}::${String(doc.id).split("::").slice(1).join("::") || doc.id}`;
   if (!APPLY) return true;
   try {
-    const next = { ...doc, id: newId, cardId: newCardId, hobbyiqCardId: newCardId,
+    const next = { ...stripSystem(doc), id: newId, cardId: newCardId, hobbyiqCardId: newCardId,
       repairedFrom: doc.cardId, repairedAt: new Date().toISOString(),
       repairReason: "CF-MEGA-BOX-COMP-REPAIR" };
-    delete next._rid; delete next._self; delete next._etag; delete next._attachments; delete next._ts;
+    // The dedup key is partition-scoped, so it is recomputed for the new
+    // cardId -- hashed after both identity fields are final.
+    next.contentHash = contentHashOf(next);
 
-    await withRetry(() => comps.items.upsert(next));
-    // Verify the new doc is readable BEFORE removing the old one, so a crash
-    // mid-move duplicates a sale rather than losing it.
-    const check = await withRetry(() => comps.item(newId, newCardId).read());
-    if (!check.resource) { stats.failed++; return false; }
-    await withRetry(() => comps.item(doc.id, doc.cardId).delete());
+    const res = await relocateSoldComp(comps, {
+      keep: next,
+      drop: [{ id: doc.id, cardId: doc.cardId }],
+      retry: withRetry,
+      verifyFields: ["cardId", "hobbyiqCardId", "price", "soldAt", "contentHash"],
+    });
+    if (!res.ok) { stats.failed++; return false; }
     return true;
   } catch (e) { stats.failed++; return false; }
 }

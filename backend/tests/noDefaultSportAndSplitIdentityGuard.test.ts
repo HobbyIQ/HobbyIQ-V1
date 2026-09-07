@@ -31,6 +31,7 @@ import { describe, expect, it } from "vitest";
 import {
   addressDefect,
   decideSplitIdentity,
+  guardSoldCompDoc,
   sportOf,
   withSport,
 } from "../src/services/portfolioiq/splitIdentityWriteGuard.js";
@@ -263,13 +264,77 @@ describe("CF-A-SPLIT-ROW-IS-NEVER-WRITTEN: the write-door guard", () => {
   });
 });
 
+describe("guardSoldCompDoc -- the one predicate, doc-shaped", () => {
+  // CF-ONE-WRITE-PATH-FOR-SOLD-COMPS (2026-09-07). The bulk entry points hold a
+  // finished DOCUMENT, not the two fields, so this adapter exists to give them
+  // the SAME answer and the SAME mutation recordSoldComp applies. These pin the
+  // mutation, because that is the half `decideSplitIdentity` cannot express.
+  const OK = "hiq:baseball:2024:topps:1:base:no-auto";
+  const OTHER_SPORT = "hiq:football:2024:topps:1:base:no-auto";
+  const MALFORMED = "hiq:hedge::1773078923701x852055104605271300::43f7ac3c";
+
+  it("leaves an agreeing row untouched", () => {
+    const doc: Record<string, unknown> = { cardId: OK, hobbyiqCardId: OK, price: 1 };
+    expect(guardSoldCompDoc(doc).verdict).toBe("ok");
+    expect(doc.identityUnverified).toBeUndefined();
+    expect(doc.cardId).toBe(OK);
+  });
+
+  it("stamps a parked row with a reason a human can act on", () => {
+    const doc: Record<string, unknown> = { cardId: OK, hobbyiqCardId: OTHER_SPORT };
+    const out = guardSoldCompDoc(doc, { guardedBy: "test-lane" });
+    expect(out.verdict).toBe("park");
+    expect(doc.identityUnverified).toBe(true);
+    expect(doc.identityUnverifiedBy).toBe("test-lane");
+    expect(doc.identityUnverifiedReason).toBe("split-identity");
+    expect(String(doc.identityUnverifiedDetail ?? "")).not.toBe("");
+    // Parking keeps the row OUT of every pool without asserting which card it
+    // is -- so it must NOT quietly rewrite either identity field.
+    expect(doc.cardId).toBe(OK);
+    expect(doc.hobbyiqCardId).toBe(OTHER_SPORT);
+  });
+
+  it("parks a malformed address by name, ahead of any split reasoning", () => {
+    const doc: Record<string, unknown> = { cardId: MALFORMED, hobbyiqCardId: OK };
+    const out = guardSoldCompDoc(doc);
+    expect(out.verdict).toBe("park");
+    expect(doc.identityUnverifiedReason).toBe("malformed-key");
+  });
+
+  it("an ATTESTED sport resolves, and BOTH fields take it", () => {
+    const doc: Record<string, unknown> = { cardId: OK, hobbyiqCardId: OTHER_SPORT };
+    const out = guardSoldCompDoc(doc, { attestedSport: "football", attestedBy: "cardhedge:group" });
+    expect(out.verdict).toBe("resolve");
+    expect(doc.cardId).toBe(OTHER_SPORT);
+    expect(doc.hobbyiqCardId).toBe(OTHER_SPORT);
+    expect(doc.identityUnverified).toBeUndefined();
+  });
+
+  it("a sport with NOBODY attesting it does not resolve -- a guess is not a source", () => {
+    const doc: Record<string, unknown> = { cardId: OK, hobbyiqCardId: OTHER_SPORT };
+    // attestedSport supplied, attestedBy omitted: the adapter must refuse to
+    // treat it as attested, exactly as recordSoldComp does with an inferred
+    // sport. This is the text-heuristic hole that produced the damage.
+    const out = guardSoldCompDoc(doc, { attestedSport: "football" });
+    expect(out.verdict).toBe("park");
+  });
+});
+
 describe("the guard is WIRED, on the path every emitter shares", () => {
   const store = read("src/services/portfolioiq/soldCompsStore.service.ts");
 
   it("recordSoldComp calls the guard before the upsert", () => {
+    // CF-ONE-WRITE-PATH-FOR-SOLD-COMPS (2026-09-07). The store no longer calls
+    // `decideSplitIdentity` by name: it calls `guardSoldCompDoc`, the
+    // doc-shaped adapter that applies this same decision AND the mutation it
+    // implies, so the bulk entry points that cannot afford recordSoldComp's
+    // per-row transaction park and resolve rows identically. Still one
+    // predicate -- guardSoldCompDoc delegates straight to decideSplitIdentity,
+    // which `oneWritePathForSoldComps.test.ts` pins -- and still before the
+    // write, which is what this asserts.
     const code = codeOf(store);
-    expect(code).toContain("decideSplitIdentity");
-    const guardAt = code.indexOf("decideSplitIdentity({");
+    expect(code).toContain("guardSoldCompDoc");
+    const guardAt = code.indexOf("guardSoldCompDoc(");
     const upsertAt = code.indexOf("await c.items.upsert(doc as any)");
     expect(guardAt).toBeGreaterThan(-1);
     expect(upsertAt).toBeGreaterThan(-1);
@@ -305,8 +370,12 @@ describe("the guard is WIRED, on the path every emitter shares", () => {
 
   it("the parked row carries a reason a human can act on", () => {
     const code = codeOf(store);
-    expect(code).toContain("identityUnverified");
-    expect(code).toContain("identityUnverifiedReason");
+    // The parked STAMP moved into guardSoldCompDoc with the decision (one
+    // predicate, one mutation, two entry points); the store keeps the log that
+    // names it as the door. Assert each where it now lives.
+    const guardCode = codeOf(read("src/services/portfolioiq/splitIdentityWriteGuard.ts"));
+    expect(guardCode).toContain("identityUnverified");
+    expect(guardCode).toContain("identityUnverifiedReason");
     // Counted by reason, per the brief.
     expect(code).toContain("sold_comp_split_identity_parked");
     expect(code).toContain("sold_comp_split_identity_resolved");
@@ -521,7 +590,9 @@ describe("#1938 — ONE vertical vocabulary: the builder asks the door's table",
 
   it("the write path still calls the guard", () => {
     const code = codeOf(read("src/services/portfolioiq/soldCompsStore.service.ts"));
-    expect(code).toContain("decideSplitIdentity(");
+    // Via the shared adapter -- see the note on "calls the guard before the
+    // upsert" above.
+    expect(code).toContain("guardSoldCompDoc(");
   });
 });
 
