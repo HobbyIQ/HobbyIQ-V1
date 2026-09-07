@@ -131,31 +131,89 @@ Add new items with:
 
 ## Cosmos throughput
 
-### sold_comps autoscale bumped 8K → 40K for backfill sprint
+### Autoscale rollback — measured 2026-09-07
 
-- **What:** 2026-08-10, bumped `sold_comps` autoscale max from 8K to
-  40K RU/s to unblock concurrent CH-fanout + setName-normalizer +
-  cross-source-dedupe running against the same container.
-- **Why parked:** Autoscale means we pay only for burst; when the
-  backfill scripts finish, actual consumption should drop back to
-  the low-thousand-RU range naturally. No urgent cost pressure.
-- **Trigger:** When all these are complete:
-  - Normalizer (`bcalxbpjs`) finishes writing normalizedSetKey on
-    ~3.87M rows
-  - CH fanout GH Actions dispatch (run 31414515858) completes
-  - Cross-source dedupe apply run completes
-  - Re-slug rev 2 apply run completes
-- **Where:**
+Read the live state first; never scale from memory:
+
+```bash
+cd backend && node scripts/cosmos-throughput.cjs --report
+```
+
+| container | mode | max RU/s | Azure floor | 7-day avg | 5-min peak |
+| --- | --- | --- | --- | --- | --- |
+| `sold_comps` | autoscale | 40,000 | **10,000** | ~1,460 RU/s | 17,900 RU/s |
+| `card_catalog` | autoscale | 400,000 | **40,000** | ~1,530 RU/s | 12,000 RU/s |
+| `ch_daily_sales` | manual | 400 | 400 | ~29 RU/s | — |
+| `portfolio` | autoscale | 1,000 | 1,000 | — | — |
+
+Floors are `az cosmosdb sql container throughput show ... --query
+resource.minimumThroughput`. **The floor is `highest-ever-provisioned / 10`, so
+it only ever rises.** `sold_comps` has been at 100,000 at some point, so its
+floor is 10,000 and 8,000 is unreachable forever — that is why every hardcoded
+`8000` teardown below fails.
+
+#### sold_comps: 40K max — do NOT roll back yet
+
+- **Old trigger (dead):** the Aug-10 doc named the `bcalxbpjs` normalizer, CH
+  fanout run `31414515858`, cross-source dedupe, and re-slug rev 2. All four
+  finished in August. Item 17 / P2-2 of the go-live audit.
+- **New trigger:** the **GREAT REMATCH program quiesces** — measured as
+  `gh run list --workflow=backfill-runner.yml` dropping below ~10 runs/day for
+  3 consecutive days. On 2026-09-07 it was **200+ runs/day**; throttling now
+  would stall catalog work, which is the whole program.
+- **Launch week vs steady state:** during launch week the fleets need the 40,000
+  ceiling (peak observed 17,900 RU/s — a 10,000 ceiling would throttle).
+  In steady state, consumption is ~1,460 RU/s, so the floor alone covers it.
+- **Target when it fires:** 10,000, not 8,000. **The floor is the target.**
 
   ```bash
-  az cosmosdb sql container throughput update \
-    --account-name hobbyiq-comps --database-name hobbyiq \
-    --name sold_comps --resource-group rg-hobbyiq-dev \
-    --max-throughput 8000
+  cd backend && node scripts/cosmos-throughput.cjs --container=sold_comps --max=10000
   ```
 
-  Verify via App Insights sold_comps RU-consumed metric before
-  dropping — if consumption hasn't come back down, wait longer.
+  The script lands on Azure's reported floor if the target is under it, so
+  passing a stale low number is safe but prints a correction — fix the caller.
+
+#### card_catalog: 400K → 40K is the live cost item (P1-6)
+
+Spine passes are **done**, so memory's "400k until spine passes finish, then
+40k" condition is **already met**. Consumption evidence: 7-day average ~1,530
+RU/s, biggest 5-minute peak **~12,000 RU/s** (the `catalog-cardYear-backfill`
+`CONCURRENCY: 128` window). 12,000 is well under the 40,000 floor, so **no
+fleet breaks at 40K** — the floor still buys 3.3x headroom over the worst
+observed burst.
+
+- **Cost delta:** billed idle floor drops 40,000 → 4,000 RU/s.
+  **~$76.80/day → ~$7.68/day — saves ~$69/day (~$2,074/month).** This is the
+  single largest silent cost line going into launch.
+- **Command (DO NOT RUN — live Cosmos config is a HALT item, Drew's go only):**
+
+  ```bash
+  cd backend && node scripts/cosmos-throughput.cjs --container=card_catalog --max=40000
+  ```
+
+  Note the floor is already 40,000, so this is the lowest reachable setting;
+  Azure will refuse anything below it and the script will land on 40,000 anyway.
+
+#### Every raise must land back on the floor
+
+Four workflows raise `sold_comps` to 40,000 and lower it in an `always()` step:
+`nightly-slug-backfill`, `printrun-merge`, `reslug-setkey`, `slug-drift-audit`.
+All four have a teardown — none is missing — but **three assert an unreachable
+`SOLD_IDLE_MAX: "8000"`** and fail every run:
+
+| workflow | idle target | reachable? |
+| --- | --- | --- |
+| `nightly-slug-backfill` | 10000 | yes |
+| `printrun-merge` | 8000 | **no — under the 10,000 floor** |
+| `reslug-setkey` | 8000 | **no** |
+| `slug-drift-audit` | 8000 | **no** |
+
+Since #1954 the script parses Azure's rejection and lands on the floor instead
+of failing, so those three now succeed at 10,000 — but their env values are
+still misleading and should be corrected to `10000` when each is next touched.
+
+**Rule for new callers:** an idle target is a *floor request*, not a constant.
+Set it to the current floor from `--report`, and never assume it stays put.
 
 ---
 

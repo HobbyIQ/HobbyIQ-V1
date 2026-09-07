@@ -1,0 +1,214 @@
+{
+  "ruling": "CF-THE-JAPANESE-VINTAGE-SET-GETS-ITS-OWN-KEY (R5, 2026-09-07)",
+  "measuredAt": "2026-09-07T15:56:57.296Z",
+  "keys": 38,
+  "pool": {
+    "scanned": 3288367,
+    "jaOnRuledCode": 32394,
+    "alreadyParked": 94,
+    "repoint": 32116,
+    "relocate": 184,
+    "entries": 32300,
+    "byCode": {
+      "neo1": 6261,
+      "base3": 4272,
+      "base2": 4261,
+      "gym2": 2986,
+      "sm9": 2524,
+      "ecard2": 1547,
+      "sm11": 1279,
+      "sm10": 1249,
+      "ecard3": 1100,
+      "xy7": 660,
+      "sm12": 586,
+      "sm8": 568,
+      "xy6": 547,
+      "bw4": 535,
+      "swsh4": 431,
+      "bw7": 399,
+      "xy3": 371,
+      "bw9": 337,
+      "xy2": 337,
+      "xy4": 282,
+      "xy9": 249,
+      "xy10": 240,
+      "dp6": 239,
+      "bw2": 222,
+      "sm7": 209,
+      "sm6": 175,
+      "swsh3": 122,
+      "neo3": 115,
+      "dp2": 95,
+      "swsh2": 53,
+      "dp1": 21,
+      "neo4": 15,
+      "ecard1": 4,
+      "neo2": 3,
+      "dp3": 3,
+      "base1": 1,
+      "sv10": 1,
+      "gym1": 1
+    },
+    "bySource": {
+      "cardhedge": 32292,
+      "tca-ebay": 8
+    },
+    "byYear": {
+      "1997": 8509,
+      "1999": 3005,
+      "2000": 6269,
+      "2001": 118,
+      "2002": 2665,
+      "2006": 21,
+      "2007": 98,
+      "2008": 239,
+      "2011": 222,
+      "2012": 934,
+      "2013": 337,
+      "2014": 990,
+      "2015": 1454,
+      "2016": 242,
+      "2018": 3474,
+      "2019": 3116,
+      "2020": 606,
+      "2025": 1
+    }
+  },
+  "catalog": {
+    "scannedAtCodes": 39473,
+    "jaStated": 42,
+    "entries": 42,
+    "byCode": {
+      "sv10": 42
+    },
+    "bySource": {
+      "tcgdex-ja-2026-09-04": 42
+    }
+  },
+  "listPaths": [
+    "data\\pool-relocations\\2026-09-07-ja-vintage-pool-repoint-01.json",
+    "data\\pool-relocations\\2026-09-07-ja-vintage-pool-repoint-02.json",
+    "data\\pool-relocations\\2026-09-07-ja-vintage-pool-repoint-03.json",
+    "data\\pool-relocations\\2026-09-07-ja-vintage-pool-repoint-04.json",
+    "data\\pool-relocations\\2026-09-07-ja-vintage-pool-repoint-05.json",
+    "data\\pool-relocations\\2026-09-07-ja-vintage-pool-repoint-06.json",
+    "data\\pool-relocations\\2026-09-07-ja-vintage-pool-repoint-07.json",
+    "data\\pool-relocations\\2026-09-07-ja-vintage-pool-repoint-08.json",
+    "data\\pool-relocations\\2026-09-07-ja-vintage-pool-repoint-09.json",
+    "data\\pool-relocations\\2026-09-07-ja-vintage-pool-repoint-10.json",
+    "data\\pool-relocations\\2026-09-07-ja-vintage-pool-repoint-11.json",
+    "data\\pool-relocations\\2026-09-07-ja-vintage-pool-repoint-12.json",
+    "data\\pool-relocations\\2026-09-07-ja-vintage-pool-repoint-13.json",
+    "data\\pool-relocations\\2026-09-07-ja-vintage-pool-repoint-14.json",
+    "data\\pool-relocations\\2026-09-07-ja-vintage-pool-repoint-15.json",
+    "data\\pool-relocations\\2026-09-07-ja-vintage-pool-repoint-16.json",
+    "data\\pool-relocations\\2026-09-07-ja-vintage-pool-repoint-17.json",
+    "data\\pool-relocations\\2026-09-07-ja-vintage-catalog-reslug-01.json"
+  ],
+  "tcgdexJaCoverage": {
+    "source": "api.tcgdex.net/v2/ja/sets, read 2026-09-07",
+    "note": "A JA set sharing an English code is DROPPED from POKEMON_JA_SET_CODES by the generator (if (enByCode.has(code)) continue), so the committed JA table holds 160 of tcgdex 184. These 19 are among the dropped: tcgdex DOES serve them as Japanese sets, under the shared id.",
+    "setsWithChecklist": 19,
+    "setsWithoutChecklist": 19,
+    "cardsAvailable": 1665,
+    "withChecklist": {
+      "ja-neo1": {
+        "cards": 96,
+        "jaName": "金、銀、新世界へ..."
+      },
+      "ja-neo2": {
+        "cards": 56,
+        "jaName": "遺跡をこえて..."
+      },
+      "ja-neo3": {
+        "cards": 57,
+        "jaName": "めざめる伝説"
+      },
+      "ja-neo4": {
+        "cards": 113,
+        "jaName": "闇、そして光へ..."
+      },
+      "ja-sm10": {
+        "cards": 95,
+        "jaName": "ダブルブレイズ"
+      },
+      "ja-sm11": {
+        "cards": 94,
+        "jaName": "ミラクルツイン"
+      },
+      "ja-sm12": {
+        "cards": 95,
+        "jaName": "オルタージェネシス"
+      },
+      "ja-sm6": {
+        "cards": 94,
+        "jaName": "禁断の光"
+      },
+      "ja-sm7": {
+        "cards": 96,
+        "jaName": "裂空のカリスマ"
+      },
+      "ja-sm8": {
+        "cards": 95,
+        "jaName": "超爆インパクト"
+      },
+      "ja-sm9": {
+        "cards": 95,
+        "jaName": "タッグボルト"
+      },
+      "ja-sv10": {
+        "cards": 98,
+        "jaName": "ロケット団の栄光"
+      },
+      "ja-xy10": {
+        "cards": 78,
+        "jaName": "めざめる超王"
+      },
+      "ja-xy2": {
+        "cards": 80,
+        "jaName": "ワイルドブレイズ"
+      },
+      "ja-xy3": {
+        "cards": 96,
+        "jaName": "ライジングフィスト"
+      },
+      "ja-xy4": {
+        "cards": 88,
+        "jaName": "ファントムゲート"
+      },
+      "ja-xy6": {
+        "cards": 78,
+        "jaName": "エメラルドブレイク"
+      },
+      "ja-xy7": {
+        "cards": 81,
+        "jaName": "バンデットリング"
+      },
+      "ja-xy9": {
+        "cards": 80,
+        "jaName": "破天の怒り"
+      }
+    },
+    "withoutChecklist": [
+      "ja-base1",
+      "ja-base2",
+      "ja-base3",
+      "ja-bw2",
+      "ja-bw4",
+      "ja-bw7",
+      "ja-bw9",
+      "ja-dp1",
+      "ja-dp2",
+      "ja-dp3",
+      "ja-dp6",
+      "ja-ecard1",
+      "ja-ecard2",
+      "ja-ecard3",
+      "ja-gym1",
+      "ja-gym2",
+      "ja-swsh2",
+      "ja-swsh3",
+      "ja-swsh4"
+    ]
+  }
+}
