@@ -272,7 +272,14 @@ describe("ingest-universe-driver — work already on disk leads the queue", () =
   it("all 52 staged modern JA sets lead the tcgdexja lane, ahead of the vintage XY sets", () => {
     const manifest = require_(path.join(backend, "data", "ingest-universe.json"));
     const lane = manifest.entries.filter((e: any) => e.lane === "tcgdexja");
-    expect(lane.length).toBe(180);
+    // 184, the number of Japanese sets tcgdex serves. It was 180 until
+    // CF-A-MANIFEST-BUILT-BY-THE-DROPPING-FILTER-INHERITS-THE-DROP (2026-09-07)
+    // added neo1..neo4 -- the four the seeding enumeration's own
+    // `!enIds.has(s.id)` had dropped, and the only JA ids tcgdex spells
+    // lowercase in both markets. The count is a bystander in THIS test, whose
+    // subject is staged-first ordering; what matters below is that the 52
+    // staged sets still lead, whatever the lane's size.
+    expect(lane.length).toBe(184);
 
     const { queue, mode, staged } = orderQueue(lane.map((entry: any) => ({ entry })), "");
     expect(mode).toMatch(/staged-first/);
