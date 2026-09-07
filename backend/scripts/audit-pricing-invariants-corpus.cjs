@@ -1030,21 +1030,43 @@ async function main() {
     // REFERENCE, so it needs the frame's class table, which only exists once
     // the invariant has run.
     if (r.ran && r.frameHealth) {
-      const d = INV.evaluateDrift(r.id, {
+      // CF-AN-ALARM-COMPARES-LIKE-WITH-LIKE (2026-09-07, I9 P1). The reference
+      // carries the DERIVATION STAMP it was measured under. When that stamp is
+      // not this tree's, the two numbers are in different units and the drift
+      // between them measures the CODE CHANGE, not the corpus — so it is
+      // recorded as a re-baseline FINDING and the alarm stays silent. At a
+      // matching stamp nothing changes: the class threshold decides as before.
+      const agreement = INV.referenceStampAgreement();
+      const drift = {
         byClassFrame: r.frameHealth.bySportClass ?? [],
         sample: r.sample,
         breaches: r.breaches,
-      });
+        stampAgreement: agreement,
+      };
+      const d = INV.evaluateDrift(r.id, drift);
       if (d) warnings.push(d);
+      const rebase = INV.describeReferenceDrift(r.id, drift);
+      if (rebase) {
+        r.referenceRebaseline = rebase;
+        r.notes.push(rebase.message);
+      }
+      r.referenceStamp = {
+        reference: agreement.referenceStamp, current: agreement.currentStamp,
+        comparable: agreement.comparable, reason: agreement.reason,
+      };
     }
   }
 
   console.log(`\n${"=".repeat(76)}\nCORPUS INVARIANT DIGEST  ${new Date(nowMs).toISOString()}\n${"=".repeat(76)}`);
   console.log(`  ${"id".padEnd(4)}${"invariant".padEnd(30)}${"sampled".padStart(10)}${"breaches".padStart(10)}   status`);
   for (const r of list) {
+    // A RE-BASELINE IS ITS OWN STATUS, never "clean". The reference could not
+    // be compared, so the honest word is neither BREACH nor clean -- and a row
+    // that silently read "clean" is exactly how a stale reference hides.
     const status = !r.ran ? "NOT RUN"
       : warnings.some((w) => w.id === r.id) ? "BREACH"
-        : r.breaches > 0 ? "findings (under threshold)" : "clean";
+        : r.referenceRebaseline ? "REFERENCE STALE — re-baseline owed"
+          : r.breaches > 0 ? "findings (under threshold)" : "clean";
     console.log(`  ${r.id.padEnd(4)}${r.name.padEnd(30)}${f(r.sample).padStart(10)}${f(r.breaches).padStart(10)}   ${status}`);
   }
 
@@ -1098,7 +1120,10 @@ async function main() {
       // be able to see the drift verdict and the mix that produced it together.
       const dv = warnings.find((w) => w.id === r.id && w.thresholdKind === "drift-points");
       if (r.frameHealth.bySportClass?.length) {
-        console.log(`    drift alarm: ${dv ? `BREACH — ${dv.worstClass} +${(100 * dv.classes[0].delta).toFixed(1)}pp` : "clean"}`
+        const rb = r.referenceRebaseline;
+        console.log(`    drift alarm: ${dv ? `BREACH — ${dv.worstClass} +${(100 * dv.classes[0].delta).toFixed(1)}pp`
+          : rb ? `NOT COMPARABLE (${rb.reason}) — reference ${rb.referenceStamp ?? "unstamped"} vs current ${rb.currentStamp}; re-baseline owed`
+            : "clean"}`
           + `  (breach at >${(100 * (INV.INVARIANT_BY_ID.get(r.id)?.driftPoints ?? 0.05)).toFixed(0)}pp `
           + `above a class's own census, min ${INV.MIN_CLASS_ROWS} rows)`);
       }
