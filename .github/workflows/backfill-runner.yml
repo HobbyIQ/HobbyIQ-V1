@@ -4749,6 +4749,60 @@ jobs:
             exit 1
           fi
 
+      - name: Self-relaunch the catalog list relocation until the list is drained
+        # CF-A-KILLED-JOB-CANNOT-REPORT-PROGRESS, for the list lane.
+        #
+        # Run 34079952456 -- APPLY over the 13,295-entry soccer bare-key list --
+        # was killed at this step's 150-minute ceiling with no marker, no
+        # reconcile and no finishLane line, because the lane had NO BUDGET AT
+        # ALL. Measured from that run's log the apply costs 1.826 s/entry
+        # against the report's 0.076 s/entry, so 13,295 entries needed ~6.7
+        # hours: 2.7x the ceiling. The lane now budgets, stops itself, prints
+        # the marker and exits; this step is what continues it.
+        #
+        # THE SCOPE IS RE-DISPATCHED VERBATIM, and it must be: `scope` names
+        # the committed list file, the lane has no default, and a relaunch that
+        # dropped it would be fatal at entry 0 rather than merely wrong. There
+        # is no cursor input and none is wanted -- the continuation re-reads the
+        # same file from the top.
+        #
+        # THAT RE-READ IS SAFE BECAUSE THE LIST IS IDEMPOTENT. A retire whose
+        # row is already gone reads back as `already gone` and is SKIPPED, never
+        # re-deleted and never counted as written; a reslug whose source has
+        # already moved is NOT FOUND and skipped. So a continuation pays one
+        # cheap point read per finished entry and writes only the remainder --
+        # which is also why a killed run of this lane never needs a repair list.
+        if: ${{ !cancelled() && inputs.script == 'relocate-catalog-rows-by-list' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        working-directory: backend
+        run: |
+          set +e
+          N=$(grep -aoE "^  entries considered +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
+          echo "entries_considered=${N:-0}"
+          # CF-A-KILLED-RUN-IS-NOT-A-FINISHED-RUN (#1906). Three outcomes, not two:
+          #   (a) budget marker      -> more work, re-dispatch;
+          #   (b) finishLane line    -> the lane exited on its own, genuinely done;
+          #   (c) neither            -> the step was KILLED at the 150-minute ceiling
+          #                             (or cancelled/crashed). NOT finished. Fail loudly.
+          # Absence of the marker used to mean (b) by default, so all ten killed APPLY
+          # shards of retire-self-derived-identities reported "finished within budget"
+          # and the fan-out stopped with the work half done and the run green.
+          if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
+            echo "::notice::budget hit (considered=${N:-0}) — re-dispatching ${{ inputs.scope }} to continue"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=relocate-catalog-rows-by-list -f apply="${{ inputs.apply }}" -f scope="${{ inputs.scope }}"
+          elif grep -aqE "finishLane: exiting code [0-9]+" /tmp/backfill.log && [ "${{ steps.backfill.outcome }}" = "success" ]; then
+            echo "::notice::${{ inputs.scope }} finished within budget (considered=${N:-0}) — done, no re-dispatch."
+          else
+            echo "::error::KILLED before finish — the lane never reached finishLane; NOT finished; re-dispatch withheld — investigate"
+            echo "  step outcome: ${{ steps.backfill.outcome }}"
+            echo "  budget marker: absent    finishLane line: $(grep -acE 'finishLane: exiting code [0-9]+' /tmp/backfill.log 2>/dev/null || echo 0)"
+            echo "  last 20 lines of /tmp/backfill.log:"
+            tail -n 20 /tmp/backfill.log 2>/dev/null || echo "  (no log)"
+            exit 1
+          fi
+
       - name: Self-relaunch until composite backfill fully drains
         # CF-COMPOSITE-BACKFILL-SELF-RELAUNCH (Drew, 2026-07-30). Composite
         # backfill covers ~3.4M sold_comps rows and one 150-min iteration
