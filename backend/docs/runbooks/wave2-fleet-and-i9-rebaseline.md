@@ -85,6 +85,34 @@ not be — which is why the script stamps a non-null `applyPrefilter` block into
 the artifact when one was active, so an auditor cannot compare the two by
 accident.
 
+### The existing reference was NOT taken under `mode=census`, and that is fine
+
+Worth knowing before you compare old to new. Pulling the actual artifacts behind
+`rematch-census-shares.json` (runs 33947033673, 33947039875, 33961902857,
+34000783679, 34007001399) shows every one of them carries:
+
+```
+mode = "apply-improve"     applyPrefilter = undefined
+```
+
+So #1888's 32-slot reference was recorded from **report-only `apply-improve`
+runs** (`apply=false`), not from `mode=census`. The census block is emitted in
+both modes, which is why those runs produced a `census-slot-<N>.json` at all.
+
+The two are nonetheless **comparable**, for a reason specific to this scope:
+`applyPrefilterFor(ARMED)` returns `null` for `scope=improve`, because IMPROVE
+has no cheap necessary condition that could be read off a stored row. So an
+`apply-improve scope=improve` report classifies every in-slot row, exactly as a
+census does, and `applyPrefilter` is null in both. The artifacts confirm it —
+the field is absent throughout.
+
+Where this WOULD bite is a single-kind ruled scope (`grade-from-title`,
+`year-from-title-vintage`): those do get a prefilter, their `classified` counts
+only the rows that could be that class, and their artifacts carry a non-null
+`applyPrefilter`. **Never feed those to the re-baseline** — they are a census of
+a filtered subset, not of a shard. `mode=census` is the right instrument for
+Wave 2 precisely because it can never be one of those by construction.
+
 Gate per slot: chain outcome `finished`, plus a readable
 `CENSUS  slot N/32  rows classified <n>` banner. Anything else is HELD.
 

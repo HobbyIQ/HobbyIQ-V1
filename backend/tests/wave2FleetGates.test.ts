@@ -29,6 +29,12 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
+// Each shell pin spawns a real bash, which costs seconds on Windows (Git bash)
+// and is not free on CI either; several pins spawn more than once. The default
+// per-test budget measures process startup rather than the behaviour under
+// test, so this file sets its own.
+const SHELL_TIMEOUT_MS = 120_000;
+
 const repoRoot = join(__dirname, "..", "..");
 const FLEET = join(repoRoot, "backend", "scripts", "wave2", "wave2-fleet.sh");
 const REMATCH = join(repoRoot, "backend", "scripts", "rematch-sold-comps.cjs");
@@ -58,6 +64,10 @@ function findBash(): string | null {
 }
 const BASH = findBash();
 const HAS_BASH = BASH !== null;
+
+/** A pin that shells out, with a budget sized for process startup. */
+const itShell = (name: string, fn: () => void) =>
+  it.runIf(HAS_BASH)(name, fn, SHELL_TIMEOUT_MS);
 
 /**
  * Git bash on Windows does not resolve a `C:\\Users\\...` argument; it wants
@@ -143,27 +153,27 @@ describe("every reader survives the `gh run view --log` prefix (#1868)", () => {
   const CENSUS = "CENSUS  slot 0/32  rows classified 514,583\n  IMPROVE            20,867    4.06%   AUTO      20,000  PROTECTED     867\n";
   const APPLY = "  re-keyed   1,200\n  skipped        30   <- re-checked at write time and no longer writable\n  intended 1,240 = written 1,200 + skipped 30 + failed 2 + not reached 8\n  failed          2\n  not reached     8\n";
 
-  it.runIf(HAS_BASH)("census_classified reads the same number raw and prefixed", () => {
+  itShell("census_classified reads the same number raw and prefixed", () => {
     expect(reader("census_classified", CENSUS).out).toBe("514583");
     expect(reader("census_classified", GH(CENSUS)).out).toBe("514583");
   });
 
-  it.runIf(HAS_BASH)("census_class reads the same number raw and prefixed", () => {
+  itShell("census_class reads the same number raw and prefixed", () => {
     expect(reader("census_class", CENSUS, "IMPROVE").out).toBe("20867");
     expect(reader("census_class", GH(CENSUS), "IMPROVE").out).toBe("20867");
   });
 
-  it.runIf(HAS_BASH)("apply_written reads the same number raw and prefixed", () => {
+  itShell("apply_written reads the same number raw and prefixed", () => {
     expect(reader("apply_written", APPLY).out).toBe("1200");
     expect(reader("apply_written", GH(APPLY)).out).toBe("1200");
   });
 
-  it.runIf(HAS_BASH)("apply_reconciled balances raw and prefixed", () => {
+  itShell("apply_reconciled balances raw and prefixed", () => {
     expect(reader("apply_reconciled", APPLY).rc).toBe(0);
     expect(reader("apply_reconciled", GH(APPLY)).rc).toBe(0);
   });
 
-  it.runIf(HAS_BASH)("chain_outcome reads the same outcome raw and prefixed", () => {
+  itShell("chain_outcome reads the same outcome raw and prefixed", () => {
     const killed = "rematch-sold-comps: STARTUP ok\nrematch-sold-comps  MODE=census\nworking\n";
     expect(reader("chain_outcome", killed).out).toBe("killed");
     expect(reader("chain_outcome", GH(killed)).out).toBe("killed");
@@ -173,7 +183,7 @@ describe("every reader survives the `gh run view --log` prefix (#1868)", () => {
 
   // The prefix carries the STEP NAME, which for an apply contains the word
   // "APPLY" — a reader that did not strip it could match on the wrong thing.
-  it.runIf(HAS_BASH)("strips ANSI as well as the tab prefix", () => {
+  itShell("strips ANSI as well as the tab prefix", () => {
     const ansi = "[32mCENSUS  slot 0/32  rows classified 514,583[0m\n";
     expect(reader("census_classified", ansi).out).toBe("514583");
   });
@@ -187,13 +197,13 @@ describe("every reader survives the `gh run view --log` prefix (#1868)", () => {
 });
 
 describe("the fleet reads the shard's own canary verdict rather than re-deriving it", () => {
-  it.runIf(HAS_BASH)("reads a passing canary", () => {
+  itShell("reads a passing canary", () => {
     const log = "  all 7 canaries hold -- the shard may stand, and the next shard may be censused.\n";
     expect(reader("canary_verdict", log).out).toBe("hold");
     expect(reader("canary_verdict", GH(log)).out).toBe("hold");
   });
 
-  it.runIf(HAS_BASH)("reads a regression", () => {
+  itShell("reads a regression", () => {
     const log = "!! 3 of 7 canaries REGRESSED. This shard is damage, not an improvement.\n";
     expect(reader("canary_verdict", log).out).toBe("regressed");
   });
@@ -201,7 +211,7 @@ describe("the fleet reads the shard's own canary verdict rather than re-deriving
   // AN ABSENT VERDICT IS NOT A PASS. rematch-canary-check.cjs exits 2 when a
   // slot has no canary at all, precisely because "a shard with no canary passes
   // this gate by construction" is an absence of measurement, not a pass.
-  it.runIf(HAS_BASH)("calls a missing verdict absent, never a pass", () => {
+  itShell("calls a missing verdict absent, never a pass", () => {
     expect(reader("canary_verdict", "  re-keyed 10\n").out).toBe("absent");
   });
 
@@ -223,13 +233,13 @@ describe("the census reader reads the banner rematch-sold-comps actually prints"
     expect(rematchSrc).toContain("`\\nCENSUS  slot ${SLOT}/${SLOTS}  rows classified ${f(total)}");
   });
 
-  it.runIf(HAS_BASH)("reads 'rows classified' with thousands separators", () => {
+  itShell("reads 'rows classified' with thousands separators", () => {
     const { rc, out } = reader("census_classified", "CENSUS  slot 0/32  rows classified 514,583\n");
     expect(rc).toBe(0);
     expect(out).toBe("514583");
   });
 
-  it.runIf(HAS_BASH)("reads a class count off its census line", () => {
+  itShell("reads a class count off its census line", () => {
     const log = [
       "CENSUS  slot 0/32  rows classified 514,583",
       "  AGREE              36,981    7.19%   AUTO      30,000  PROTECTED   6,981",
@@ -242,13 +252,13 @@ describe("the census reader reads the banner rematch-sold-comps actually prints"
   });
 
   // THE PIN THAT MATTERS. A log with no census banner must REFUSE.
-  it.runIf(HAS_BASH)("refuses a log with no census banner rather than calling it zero", () => {
+  itShell("refuses a log with no census banner rather than calling it zero", () => {
     const { rc, out } = reader("census_classified", "some other output\nnothing to see\n");
     expect(rc).not.toBe(0);
     expect(out).toBe("");
   });
 
-  it.runIf(HAS_BASH)("is not fooled by the word appearing in prose", () => {
+  itShell("is not fooled by the word appearing in prose", () => {
     const { rc } = reader("census_classified", "note: rows classified by the old parser were wrong\n");
     expect(rc).not.toBe(0);
   });
@@ -275,21 +285,21 @@ describe("the apply readers read the apply summary block", () => {
     );
   });
 
-  it.runIf(HAS_BASH)("reads written from an APPLY log", () => {
+  itShell("reads written from an APPLY log", () => {
     expect(reader("apply_written", APPLY_LOG)).toEqual({ rc: 0, out: "1200" });
   });
 
-  it.runIf(HAS_BASH)("reads written from a REPORT log, which says 'would re-key'", () => {
+  itShell("reads written from a REPORT log, which says 'would re-key'", () => {
     expect(reader("apply_written", "  would re-key   44,000\n")).toEqual({ rc: 0, out: "44000" });
   });
 
-  it.runIf(HAS_BASH)("reads skipped / failed / not reached", () => {
+  itShell("reads skipped / failed / not reached", () => {
     expect(reader("apply_field", APPLY_LOG, "skipped").out).toBe("30");
     expect(reader("apply_field", APPLY_LOG, "failed").out).toBe("2");
     expect(reader("apply_field", APPLY_LOG, '"not reached"').out).toBe("8");
   });
 
-  it.runIf(HAS_BASH)("accepts a reconciliation that balances", () => {
+  itShell("accepts a reconciliation that balances", () => {
     const { rc, out } = reader("apply_reconciled", APPLY_LOG);
     expect(rc).toBe(0);
     expect(out).toBe("1240");
@@ -297,12 +307,12 @@ describe("the apply readers read the apply summary block", () => {
 
   // A DRIFTED RECONCILIATION IS A HOLD. The script itself exits 4 on drift;
   // the fleet must not pass the slot either.
-  it.runIf(HAS_BASH)("refuses a reconciliation that does NOT balance", () => {
+  itShell("refuses a reconciliation that does NOT balance", () => {
     const drifted = "  intended 1,240 = written 1,000 + skipped 30 + failed 2 + not reached 8\n";
     expect(reader("apply_reconciled", drifted).rc).not.toBe(0);
   });
 
-  it.runIf(HAS_BASH)("refuses an ABSENT reconciliation — a missing line is not a balanced one", () => {
+  itShell("refuses an ABSENT reconciliation — a missing line is not a balanced one", () => {
     expect(reader("apply_reconciled", "  re-keyed   1,200\n").rc).not.toBe(0);
   });
 });
@@ -320,12 +330,12 @@ describe("chain_outcome tells the four outcomes apart", () => {
     ["rematch-sold-comps: STARTUP ok\nrematch-sold-comps  MODE=census\nwork work work\n", "killed"],
   ];
   for (const [log, expected] of cases) {
-    it.runIf(HAS_BASH)(`reads ${JSON.stringify(expected)}`, () => {
+    itShell(`reads ${JSON.stringify(expected)}`, () => {
       expect(reader("chain_outcome", log).out).toBe(expected);
     });
   }
 
-  it.runIf(HAS_BASH)("calls an empty log empty, not a budget kill", () => {
+  itShell("calls an empty log empty, not a budget kill", () => {
     expect(reader("chain_outcome", "").out).toBe("empty-log");
   });
 
@@ -362,22 +372,22 @@ describe("the apply gate holds when it cannot prove the slot", () => {
     }
   }
 
-  it.runIf(HAS_BASH)("passes a slot inside the ±5% band", () => {
+  itShell("passes a slot inside the ±5% band", () => {
     expect(gate(CENSUS_OK, 100, false)).toBe(0);
     expect(gate(CENSUS_OK, 104, false)).toBe(0);
   });
 
-  it.runIf(HAS_BASH)("holds a slot that wrote far more than its census said was writable", () => {
+  itShell("holds a slot that wrote far more than its census said was writable", () => {
     expect(gate(CENSUS_OK, 50, false)).not.toBe(0);
   });
 
-  it.runIf(HAS_BASH)("holds a slot that wrote far less", () => {
+  itShell("holds a slot that wrote far less", () => {
     expect(gate(CENSUS_OK, 400, false)).not.toBe(0);
   });
 
   // THE ZERO CASE. There is no percentage band around zero, and a slot writing
   // into a class its census found empty is the shape of a scope failure.
-  it.runIf(HAS_BASH)("admits only zero where the census found zero writable", () => {
+  itShell("admits only zero where the census found zero writable", () => {
     const zero = [
       "  re-keyed   0",
       "  intended 0 = written 0 + skipped 0 + failed 0 + not reached 0",
@@ -390,16 +400,16 @@ describe("the apply gate holds when it cannot prove the slot", () => {
 
   // THE CANARY IS A CEILING. Slot 0 proves nothing has gone wrong yet, so the
   // only claim it must satisfy is that it did not out-write its own census.
-  it.runIf(HAS_BASH)("the canary passes when it writes at or under the census, including far under", () => {
+  itShell("the canary passes when it writes at or under the census, including far under", () => {
     expect(gate(CENSUS_OK, 100, true)).toBe(0);
     expect(gate(CENSUS_OK, 100000, true)).toBe(0);
   });
 
-  it.runIf(HAS_BASH)("the canary holds when it out-writes its census", () => {
+  itShell("the canary holds when it out-writes its census", () => {
     expect(gate(CENSUS_OK, 99, true)).not.toBe(0);
   });
 
-  it.runIf(HAS_BASH)("holds a slot whose banner is missing entirely", () => {
+  itShell("holds a slot whose banner is missing entirely", () => {
     expect(gate("nothing here\n", 100, false)).not.toBe(0);
     expect(gate("nothing here\n", 100, true)).not.toBe(0);
   });
@@ -450,5 +460,37 @@ describe("the I9 re-baseline path is the artifact the workflow already uploads",
   // whole-shard number and therefore a legitimate corpus reference.
   it("the apply prefilter cannot narrow a census", () => {
     expect(rematchSrc).toMatch(/const APPLY_PREFILTER = MODE === "apply-improve"/);
+  });
+
+  /**
+   * WHY A CENSUS AND AN `apply-improve scope=improve` REPORT ARE COMPARABLE.
+   *
+   * The existing reference was NOT taken under mode=census: every artifact
+   * behind rematch-census-shares.json carries `mode: "apply-improve"` with
+   * `applyPrefilter` absent. They are still comparable to a mode=census draw,
+   * and the reason is specific and worth pinning: `applyPrefilterFor` returns
+   * null unless the scope is a SINGLE kind that has an entry in the table, and
+   * IMPROVE has no entry — it has no cheap necessary condition readable off a
+   * stored row. So scope=improve classifies every in-slot row either way.
+   *
+   * The ruled single-kind scopes DO get a prefilter, their `classified` counts
+   * only rows that could be that class, and feeding one of those artifacts to
+   * the re-baseline would record a filtered subset as a corpus reference.
+   */
+  it("scope=improve gets no prefilter, which is what makes the two draws comparable", () => {
+    const classify = readFileSync(join(repoRoot, "backend", "scripts", "lib", "rematch-classify.cjs"), "utf8");
+    const at = classify.indexOf("function applyPrefilterFor(");
+    expect(at).toBeGreaterThan(-1);
+    const fn = classify.slice(at, at + 400);
+    // a multi-kind scope, and any kind with no table entry, both get null
+    expect(fn).toContain("if (kinds.length !== 1) return null;");
+    expect(fn).toMatch(/APPLY_PREFILTERS\[kinds\[0\]\] \?\? null/);
+
+    // and the table has entries ONLY for the two ruled scopes — never IMPROVE
+    const tableAt = classify.indexOf("const APPLY_PREFILTERS = {");
+    const table = classify.slice(tableAt, classify.indexOf("\n};", tableAt));
+    expect(table).toContain("GRADE_FROM_TITLE");
+    expect(table).toContain("YEAR_FROM_TITLE_VINTAGE");
+    expect(table).not.toMatch(/\[\s*IMPROVE\s*\]/);
   });
 });
