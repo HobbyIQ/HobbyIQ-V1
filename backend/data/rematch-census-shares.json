@@ -2,6 +2,13 @@
  "_doc": "CF-THE-REFERENCE-IS-THE-WHOLE-CORPUS-NOT-ONE-SLOT (2026-09-06). Per-slot classification from the GREAT REMATCH IMPROVE fleet, recovered from each run's rematch-census-slot-<N>-<runId> artifact (file census-slot-<N>.json, fields classified + counts.*). One entry per shard-table slot, latest run per slot in the window 2026-09-05T04:20Z..2026-09-06T02:49Z. `weighted` is the row-weighted corpus average -- the reference a whole-corpus draw is compared against; `slots[].shares` is what a SINGLE-SLOT draw must be compared against instead. NOTE the four classes do not sum to 1: the runs report UNDERIVABLE-for-subset in byTier and leave it out of counts, so ~26% of rows are in none of the four. The shares are therefore comparable to each other and to a sample classified the same way, which is what frameHealth does.",
  "source": "rematch IMPROVE fleet census artifacts, 32/32 slots, 2026-09-05/06",
  "measuredAt": "2026-09-06",
+ "measuredUnder": {
+  "stamp": "dbce20ce5dd2d+no-contract",
+  "derivation": "dbce20ce5dd2d",
+  "contract": null,
+  "commit": "60807cb0097676bb28b09602f16aea7ce71e1f36",
+  "note": "The derivation stamp of the tree at the last commit before the census window closed (2026-09-06T02:49Z). Recomputed by scripts/lib/derivation-version.cjs over the six files that decide a derivation. A reference whose stamp does not equal the current one is NOT COMPARABLE: the eight classifier commits and eleven vocabulary commits that landed 09-06..09-07 changed what a re-derivation SAYS, so the drift against it is a re-baseline finding, never an alarm."
+ },
  "container": "sold_comps",
  "slotCount": 32,
  "classifiedTotal": 16716343,
