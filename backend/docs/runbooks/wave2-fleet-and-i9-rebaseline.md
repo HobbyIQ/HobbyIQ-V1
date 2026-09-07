@@ -190,7 +190,7 @@ stops the fleet rather than merely skipping the slot:
 
 ---
 
-## 5. The one defect this driver was nearly born with
+## 5. Two defects this driver was nearly born with, both about reading a log
 
 `gh run view --log` prefixes **every line** with `<job>\t<step>\t<ISO
 timestamp> `. A `^`-anchored grep against a captured log therefore matches
