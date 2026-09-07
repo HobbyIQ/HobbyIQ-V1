@@ -1,0 +1,428 @@
+[
+ {
+  "id": "tca-ebay::EBAY-v1|366626551525|0",
+  "fromCardId": "hiq:basketball:2025:topps-chrome:23:speckle-refractor:no-auto",
+  "parkIdentityUnverified": true,
+  "evidence": "duplicate-partition-copy: neither copy is both coherent and catalog-backed — no evidence to promote one"
+ },
+ {
+  "id": "tca-ebay::137579685231",
+  "fromCardId": "hiq:baseball:2026:topps-chrome:91c-27:mojo-refractor:no-auto",
+  "parkIdentityUnverified": true,
+  "evidence": "duplicate-partition-copy: neither copy is both coherent and catalog-backed — no evidence to promote one"
+ },
+ {
+  "id": "tca-ebay::137579685231",
+  "fromCardId": "hiq:baseball:2026:topps:player-colby-thomas:mojo-refractor:no-auto",
+  "parkIdentityUnverified": true,
+  "evidence": "duplicate-partition-copy: neither copy is both coherent and catalog-backed — no evidence to promote one"
+ },
+ {
+  "id": "tca-ebay::137579685231",
+  "fromCardId": "hiq:baseball:2026:topps:pf-jacob-misiorowski-mojo-pack:base:no-auto",
+  "parkIdentityUnverified": true,
+  "evidence": "duplicate-partition-copy: neither copy is both coherent and catalog-backed — no evidence to promote one"
+ },
+ {
+  "id": "tca-ebay::800418744071",
+  "fromCardId": "hiq:baseball:2023:topps-chrome:425:base:no-auto:num-25",
+  "parkIdentityUnverified": true,
+  "evidence": "duplicate-partition-copy: neither copy is both coherent and catalog-backed — no evidence to promote one"
+ },
+ {
+  "id": "tca-ebay::800418744071",
+  "fromCardId": "hiq:baseball:2023:topps-chrome:s-14:base:no-auto:num-25",
+  "parkIdentityUnverified": true,
+  "evidence": "duplicate-partition-copy: neither copy is both coherent and catalog-backed — no evidence to promote one"
+ },
+ {
+  "id": "tca-ebay::800418744071",
+  "fromCardId": "hiq:baseball:2023:topps-chrome:s-14:black-refractor:no-auto:num-25",
+  "parkIdentityUnverified": true,
+  "evidence": "duplicate-partition-copy: neither copy is both coherent and catalog-backed — no evidence to promote one"
+ },
+ {
+  "id": "tca-ebay::EBAY-v1|307151305373|0",
+  "fromCardId": "hiq:baseball:2025:topps:1:speckle-refractor:no-auto",
+  "parkIdentityUnverified": true,
+  "evidence": "duplicate-partition-copy: neither copy is both coherent and catalog-backed — no evidence to promote one"
+ },
+ {
+  "id": "tca-ebay::377456609888",
+  "fromCardId": "hiq:baseball:2010:topps:266:base:no-auto:num-349",
+  "parkIdentityUnverified": true,
+  "evidence": "duplicate-partition-copy: partition matches its own hobbyiqCardId and resolves to a catalog row"
+ },
+ {
+  "id": "tca-ebay::377376898247",
+  "fromCardId": "hiq:baseball:2026:unknown:2:base:no-auto",
+  "parkIdentityUnverified": true,
+  "evidence": "duplicate-partition-copy: neither copy is both coherent and catalog-backed — no evidence to promote one"
+ },
+ {
+  "id": "tca-ebay::377376898247",
+  "fromCardId": "hiq:soccer:2026:unknown:2:base:no-auto:num-2",
+  "parkIdentityUnverified": true,
+  "evidence": "duplicate-partition-copy: neither copy is both coherent and catalog-backed — no evidence to promote one"
+ },
+ {
+  "id": "tca-ebay::800418351327",
+  "fromCardId": "hiq:baseball:2023:bowman:1649:base:auto:num-49",
+  "parkIdentityUnverified": true,
+  "evidence": "duplicate-partition-copy: neither copy is both coherent and catalog-backed — no evidence to promote one"
+ },
+ {
+  "id": "tca-ebay::147452684985",
+  "fromCardId": "hiq:football:2025:panini-mosaic:208:base:no-auto",
+  "parkIdentityUnverified": true,
+  "evidence": "duplicate-partition-copy: both copies are coherent and catalog-backed — no tell picks between them"
+ },
+ {
+  "id": "tca-ebay::318664184957",
+  "fromCardId": "hiq:basketball:2025:panini-donruss:107:base:no-auto:num-149",
+  "parkIdentityUnverified": true,
+  "evidence": "duplicate-partition-copy: neither copy is both coherent and catalog-backed — no evidence to promote one"
+ },
+ {
+  "id": "tca-ebay::297779990460",
+  "fromCardId": "hiq:soccer:2023:panini-prizm:128:base:no-auto:num-10",
+  "parkIdentityUnverified": true,
+  "evidence": "duplicate-partition-copy: partition matches its own hobbyiqCardId and resolves to a catalog row"
+ },
+ {
+  "id": "tca-ebay::177337899007",
+  "fromCardId": "hiq:basketball:2023:panini-prizm:12:silver-holo:no-auto",
+  "parkIdentityUnverified": true,
+  "evidence": "duplicate-partition-copy: partition matches its own hobbyiqCardId and resolves to a catalog row"
+ },
+ {
+  "id": "tca-ebay::137581663795",
+  "fromCardId": "hiq:baseball:2026:topps:168:base:no-auto:num-250",
+  "parkIdentityUnverified": true,
+  "evidence": "duplicate-partition-copy: neither copy is both coherent and catalog-backed — no evidence to promote one"
+ },
+ {
+  "id": "tca-ebay::147324580512",
+  "fromCardId": "hiq:football:2025:panini-select:2:base:no-auto",
+  "parkIdentityUnverified": true,
+  "evidence": "duplicate-partition-copy: both copies are coherent and catalog-backed — no tell picks between them"
+ },
+ {
+  "id": "tca-ebay::147324580512",
+  "fromCardId": "hiq:baseball:2025:panini-select:2:base:no-auto",
+  "parkIdentityUnverified": true,
+  "evidence": "duplicate-partition-copy: both copies are coherent and catalog-backed — no tell picks between them"
+ },
+ {
+  "id": "tca-ebay::366578351544",
+  "fromCardId": "hiq:baseball:2022:panini-mosaic:281:base:no-auto",
+  "parkIdentityUnverified": true,
+  "evidence": "duplicate-partition-copy: both copies are coherent and catalog-backed — no tell picks between them"
+ },
+ {
+  "id": "tca-ebay::278219211337",
+  "fromCardId": "hiq:football:2024:panini-prizm:223:base:no-auto",
+  "parkIdentityUnverified": true,
+  "evidence": "duplicate-partition-copy: neither copy is both coherent and catalog-backed — no evidence to promote one"
+ },
+ {
+  "id": "tca-ebay::307062324018",
+  "fromCardId": "hiq:baseball:2021:panini-mosaic:1:base:no-auto:num-50",
+  "parkIdentityUnverified": true,
+  "evidence": "duplicate-partition-copy: neither copy is both coherent and catalog-backed — no evidence to promote one"
+ },
+ {
+  "id": "tca-ebay::307062324018",
+  "fromCardId": "hiq:soccer:2021:panini-mosaic:1:base:no-auto:num-50",
+  "parkIdentityUnverified": true,
+  "evidence": "duplicate-partition-copy: neither copy is both coherent and catalog-backed — no evidence to promote one"
+ },
+ {
+  "id": "tca-ebay::358809319243",
+  "fromCardId": "hiq:baseball:2020:panini-national-treasures:80:base:no-auto:num-5",
+  "parkIdentityUnverified": true,
+  "evidence": "duplicate-partition-copy: neither copy is both coherent and catalog-backed — no evidence to promote one"
+ },
+ {
+  "id": "tca-ebay::128004871884",
+  "fromCardId": "hiq:baseball:2025:panini-prospect-edition:39:base:no-auto:num-249",
+  "parkIdentityUnverified": true,
+  "evidence": "duplicate-partition-copy: neither copy is both coherent and catalog-backed — no evidence to promote one"
+ },
+ {
+  "id": "tca-ebay::298218599172",
+  "fromCardId": "hiq:soccer:2024:topps:109:base:no-auto",
+  "parkIdentityUnverified": true,
+  "evidence": "duplicate-partition-copy: partition matches its own hobbyiqCardId and resolves to a catalog row"
+ },
+ {
+  "id": "tca-ebay::227440906517",
+  "fromCardId": "hiq:baseball:2021:panini-select:ssp-bjo:image-variation-ssp:no-auto:num-1",
+  "parkIdentityUnverified": true,
+  "evidence": "duplicate-partition-copy: neither copy is both coherent and catalog-backed — no evidence to promote one"
+ },
+ {
+  "id": "tca-ebay::168416749600",
+  "fromCardId": "hiq:basketball:2025:topps:51:base:no-auto",
+  "parkIdentityUnverified": true,
+  "evidence": "duplicate-partition-copy: partition matches its own hobbyiqCardId and resolves to a catalog row"
+ },
+ {
+  "id": "tca-ebay::137524216884",
+  "fromCardId": "hiq:baseball:2026:leaf:28:base:no-auto:num-6",
+  "parkIdentityUnverified": true,
+  "evidence": "duplicate-partition-copy: neither copy is both coherent and catalog-backed — no evidence to promote one"
+ },
+ {
+  "id": "tca-ebay::278018925605",
+  "fromCardId": "hiq:football:2025:panini-mosaic:287:image-variation:no-auto",
+  "parkIdentityUnverified": true,
+  "evidence": "duplicate-partition-copy: partition matches its own hobbyiqCardId and resolves to a catalog row"
+ },
+ {
+  "id": "tca-ebay::375509893939",
+  "fromCardId": "hiq:baseball:2023:panini-select:34:base:no-auto:num-99",
+  "parkIdentityUnverified": true,
+  "evidence": "duplicate-partition-copy: neither copy is both coherent and catalog-backed — no evidence to promote one"
+ },
+ {
+  "id": "tca-ebay::168579673800",
+  "fromCardId": "hiq:baseball:2026:panini-optic:135:base:no-auto:num-65",
+  "parkIdentityUnverified": true,
+  "evidence": "duplicate-partition-copy: neither copy is both coherent and catalog-backed — no evidence to promote one"
+ },
+ {
+  "id": "tca-ebay::376688355628",
+  "fromCardId": "hiq:baseball:2024:panini-prizm:175:base:no-auto:num-75",
+  "parkIdentityUnverified": true,
+  "evidence": "duplicate-partition-copy: neither copy is both coherent and catalog-backed — no evidence to promote one"
+ },
+ {
+  "id": "tca-ebay::278185532357",
+  "fromCardId": "hiq:basketball:2025:panini-prizm:87:base:no-auto:num-199",
+  "parkIdentityUnverified": true,
+  "evidence": "duplicate-partition-copy: neither copy is both coherent and catalog-backed — no evidence to promote one"
+ },
+ {
+  "id": "tca-ebay::398326677780",
+  "fromCardId": "hiq:baseball:2009:topps:7:base:no-auto:num-500",
+  "parkIdentityUnverified": true,
+  "evidence": "duplicate-partition-copy: partition matches its own hobbyiqCardId and resolves to a catalog row"
+ },
+ {
+  "id": "tca-ebay::178341961010",
+  "fromCardId": "hiq:football:2025:unknown:bl-10:base:no-auto:num-5",
+  "parkIdentityUnverified": true,
+  "evidence": "duplicate-partition-copy: neither copy is both coherent and catalog-backed — no evidence to promote one"
+ },
+ {
+  "id": "tca-ebay::358602948014",
+  "fromCardId": "hiq:basketball:2024:panini-prizm:234:base:no-auto",
+  "parkIdentityUnverified": true,
+  "evidence": "duplicate-partition-copy: both copies are coherent and catalog-backed — no tell picks between them"
+ },
+ {
+  "id": "tca-ebay::147478480867",
+  "fromCardId": "hiq:baseball:1986:panini-donruss:43:base:no-auto",
+  "parkIdentityUnverified": true,
+  "evidence": "duplicate-partition-copy: partition matches its own hobbyiqCardId and resolves to a catalog row"
+ },
+ {
+  "id": "tca-ebay::198554706701",
+  "fromCardId": "hiq:baseball:2026:topps:274:base:no-auto:num-250",
+  "parkIdentityUnverified": true,
+  "evidence": "duplicate-partition-copy: partition matches its own hobbyiqCardId and resolves to a catalog row"
+ },
+ {
+  "id": "tca-ebay::198554706701",
+  "fromCardId": "hiq:baseball:2026:topps-chrome:274:base:no-auto:num-250",
+  "parkIdentityUnverified": true,
+  "evidence": "duplicate-partition-copy: partition matches its own hobbyiqCardId and resolves to a catalog row"
+ },
+ {
+  "id": "tca-ebay::157891223527",
+  "fromCardId": "hiq:baseball:2025:panini-select:264:base:no-auto:num-699",
+  "parkIdentityUnverified": true,
+  "evidence": "duplicate-partition-copy: neither copy is both coherent and catalog-backed — no evidence to promote one"
+ },
+ {
+  "id": "tca-ebay::257640451504",
+  "fromCardId": "hiq:baseball:2025:topps-chrome:35:base:no-auto",
+  "parkIdentityUnverified": true,
+  "evidence": "duplicate-partition-copy: both copies are coherent and catalog-backed — no tell picks between them"
+ },
+ {
+  "id": "tca-ebay::257640451504",
+  "fromCardId": "hiq:basketball:2025:topps-chrome:35:base:no-auto",
+  "parkIdentityUnverified": true,
+  "evidence": "duplicate-partition-copy: both copies are coherent and catalog-backed — no tell picks between them"
+ },
+ {
+  "id": "tca-ebay::EBAY-v1|398317588874|0",
+  "fromCardId": "hiq:baseball:2025:topps:pf-superstars-yoshinobu-yamamoto:base:auto",
+  "parkIdentityUnverified": true,
+  "evidence": "duplicate-partition-copy: neither copy is both coherent and catalog-backed — no evidence to promote one"
+ },
+ {
+  "id": "tca-ebay::377375619960",
+  "fromCardId": "hiq:baseball:2024:panini-prizm:rs-ajj:base:auto",
+  "parkIdentityUnverified": true,
+  "evidence": "duplicate-partition-copy: neither copy is both coherent and catalog-backed — no evidence to promote one"
+ },
+ {
+  "id": "tca-ebay::EBAY-v1|407161965153|0",
+  "fromCardId": "hiq:baseball:2025:topps:t91:base:no-auto",
+  "parkIdentityUnverified": true,
+  "evidence": "duplicate-partition-copy: neither copy is both coherent and catalog-backed — no evidence to promote one"
+ },
+ {
+  "id": "tca-ebay::358848130073",
+  "fromCardId": "hiq:mma:2021:panini-prizm:015275:base:no-auto:num-275",
+  "parkIdentityUnverified": true,
+  "evidence": "duplicate-partition-copy: neither copy is both coherent and catalog-backed — no evidence to promote one"
+ },
+ {
+  "id": "tca-ebay::187611242195",
+  "fromCardId": "hiq:baseball:2025:kakawow-phantom-disney:pf-kakawow-phantom-disney-stained:base:no-auto:num-75",
+  "parkIdentityUnverified": true,
+  "evidence": "duplicate-partition-copy: neither copy is both coherent and catalog-backed — no evidence to promote one"
+ },
+ {
+  "id": "tca-ebay::407075144128",
+  "fromCardId": "hiq:football:2025:panini-mosaic:288:image-variation:no-auto",
+  "parkIdentityUnverified": true,
+  "evidence": "duplicate-partition-copy: partition matches its own hobbyiqCardId and resolves to a catalog row"
+ },
+ {
+  "id": "tca-ebay::278249792380",
+  "fromCardId": "hiq:baseball:2016:panini-immaculate:tg:base:auto:num-99",
+  "parkIdentityUnverified": true,
+  "evidence": "duplicate-partition-copy: neither copy is both coherent and catalog-backed — no evidence to promote one"
+ },
+ {
+  "id": "tca-ebay::358852380968",
+  "fromCardId": "hiq:baseball:2021:panini-prizm:29:base:no-auto:num-5",
+  "parkIdentityUnverified": true,
+  "evidence": "duplicate-partition-copy: partition matches its own hobbyiqCardId and resolves to a catalog row"
+ },
+ {
+  "id": "tca-ebay::358852380968",
+  "fromCardId": "hiq:baseball:2021:panini-donruss:29:base:no-auto:num-5",
+  "parkIdentityUnverified": true,
+  "evidence": "duplicate-partition-copy: partition matches its own hobbyiqCardId and resolves to a catalog row"
+ },
+ {
+  "id": "tca-ebay::158086896155",
+  "fromCardId": "hiq:baseball:2022:panini-prizm:152:base:no-auto:num-99",
+  "parkIdentityUnverified": true,
+  "evidence": "duplicate-partition-copy: neither copy is both coherent and catalog-backed — no evidence to promote one"
+ },
+ {
+  "id": "tca-ebay::158086896155",
+  "fromCardId": "hiq:wrestling:2022:panini-prizm:152:base:no-auto:num-99",
+  "parkIdentityUnverified": true,
+  "evidence": "duplicate-partition-copy: neither copy is both coherent and catalog-backed — no evidence to promote one"
+ },
+ {
+  "id": "tca-ebay::358703730973",
+  "fromCardId": "hiq:mma:2022:panini-prizm:160:base:no-auto",
+  "parkIdentityUnverified": true,
+  "evidence": "duplicate-partition-copy: partition matches its own hobbyiqCardId and resolves to a catalog row"
+ },
+ {
+  "id": "tca-ebay::336712335300",
+  "fromCardId": "hiq:baseball:2024:topps-heritage-high-number:383:base:no-auto",
+  "parkIdentityUnverified": true,
+  "evidence": "duplicate-partition-copy: neither copy is both coherent and catalog-backed — no evidence to promote one"
+ },
+ {
+  "id": "tca-ebay::407116669667",
+  "fromCardId": "hiq:baseball:1994:donruss:46:base:no-auto",
+  "parkIdentityUnverified": true,
+  "evidence": "duplicate-partition-copy: partition matches its own hobbyiqCardId and resolves to a catalog row"
+ },
+ {
+  "id": "tca-ebay::407116669667",
+  "fromCardId": "hiq:baseball:1994:panini-donruss:46:base:no-auto:num-10000",
+  "parkIdentityUnverified": true,
+  "evidence": "duplicate-partition-copy: partition matches its own hobbyiqCardId and resolves to a catalog row"
+ },
+ {
+  "id": "tca-ebay::EBAY-v1|377234714104|0",
+  "fromCardId": "hiq:baseball:2024:panini-optic:32:base:no-auto",
+  "parkIdentityUnverified": true,
+  "evidence": "duplicate-partition-copy: neither copy is both coherent and catalog-backed — no evidence to promote one"
+ },
+ {
+  "id": "tca-ebay::366578460783",
+  "fromCardId": "hiq:baseball:2026:bowman-chrome:110:base:no-auto:num-850",
+  "parkIdentityUnverified": true,
+  "evidence": "duplicate-partition-copy: neither copy is both coherent and catalog-backed — no evidence to promote one"
+ },
+ {
+  "id": "tca-ebay::366578460783",
+  "fromCardId": "hiq:baseball:2026:panini-select:110:base:no-auto:num-850",
+  "parkIdentityUnverified": true,
+  "evidence": "duplicate-partition-copy: neither copy is both coherent and catalog-backed — no evidence to promote one"
+ },
+ {
+  "id": "tca-ebay::236938515053",
+  "fromCardId": "hiq:baseball:2025:unknown:lcro-19:base:no-auto:num-399",
+  "parkIdentityUnverified": true,
+  "evidence": "duplicate-partition-copy: neither copy is both coherent and catalog-backed — no evidence to promote one"
+ },
+ {
+  "id": "tca-ebay::236938515053",
+  "fromCardId": "hiq:soccer:2025:unknown:lcro-19:base:no-auto:num-399",
+  "parkIdentityUnverified": true,
+  "evidence": "duplicate-partition-copy: neither copy is both coherent and catalog-backed — no evidence to promote one"
+ },
+ {
+  "id": "tca-ebay::206381407684",
+  "fromCardId": "hiq:baseball:2022:panini-chronicles:4699:base:no-auto:num-99",
+  "parkIdentityUnverified": true,
+  "evidence": "duplicate-partition-copy: neither copy is both coherent and catalog-backed — no evidence to promote one"
+ },
+ {
+  "id": "tca-ebay::298531643969",
+  "fromCardId": "hiq:hockey:2022:panini-optic:1:base:no-auto:num-10",
+  "parkIdentityUnverified": true,
+  "evidence": "duplicate-partition-copy: neither copy is both coherent and catalog-backed — no evidence to promote one"
+ },
+ {
+  "id": "tca-ebay::EBAY-v1|395755232054|0",
+  "fromCardId": "hiq:baseball:2022:unknown:133:base:no-auto",
+  "parkIdentityUnverified": true,
+  "evidence": "duplicate-partition-copy: neither copy is both coherent and catalog-backed — no evidence to promote one"
+ },
+ {
+  "id": "tca-ebay::366545377720",
+  "fromCardId": "hiq:baseball:2026:topps:334:easter-green-leaf-foil:no-auto",
+  "parkIdentityUnverified": true,
+  "evidence": "duplicate-partition-copy: partition matches its own hobbyiqCardId and resolves to a catalog row"
+ },
+ {
+  "id": "tca-ebay::278182363328",
+  "fromCardId": "hiq:baseball:2024:panini-prizm:sig-jdw:base:auto",
+  "parkIdentityUnverified": true,
+  "evidence": "duplicate-partition-copy: neither copy is both coherent and catalog-backed — no evidence to promote one"
+ },
+ {
+  "id": "tca-ebay::EBAY-v1|377454019448|0",
+  "fromCardId": "hiq:football:2021:panini-phoenix:130:base:no-auto:num-10",
+  "parkIdentityUnverified": true,
+  "evidence": "duplicate-partition-copy: partition matches its own hobbyiqCardId and resolves to a catalog row"
+ },
+ {
+  "id": "tca-ebay::398221174012",
+  "fromCardId": "hiq:basketball:2024:panini-select:151:premier-level:no-auto",
+  "parkIdentityUnverified": true,
+  "evidence": "duplicate-partition-copy: partition matches its own hobbyiqCardId and resolves to a catalog row"
+ },
+ {
+  "id": "tca-ebay::377374137713",
+  "fromCardId": "hiq:baseball:2020:futera-unique:pf-futera-unique-sadio-mane:base:no-auto:num-15",
+  "parkIdentityUnverified": true,
+  "evidence": "duplicate-partition-copy: neither copy is both coherent and catalog-backed — no evidence to promote one"
+ }
+]

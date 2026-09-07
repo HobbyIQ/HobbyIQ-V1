@@ -1,0 +1,44 @@
+[
+ {
+  "id": "cardhedge::ch-daily::1788019280150x807193266415986700",
+  "fromCardId": "1746759727465x516852170957763400",
+  "parkIdentityUnverified": true,
+  "evidence": "duplicate-partition-copy: neither copy is both coherent and catalog-backed — no evidence to promote one"
+ },
+ {
+  "id": "tca-ebay::168438810461",
+  "fromCardId": "hiq:football:2024:donruss-optic:201:image-variation-ssp:no-auto",
+  "parkIdentityUnverified": true,
+  "evidence": "duplicate-partition-copy: neither copy is both coherent and catalog-backed — no evidence to promote one"
+ },
+ {
+  "id": "tca-ebay::168438810461",
+  "fromCardId": "hiq:football:2024:panini-optic:201:base:no-auto",
+  "parkIdentityUnverified": true,
+  "evidence": "duplicate-partition-copy: neither copy is both coherent and catalog-backed — no evidence to promote one"
+ },
+ {
+  "id": "tca-ebay::168438810461",
+  "fromCardId": "hiq:football:2024:panini-donruss:201:image-variation-ssp:no-auto",
+  "parkIdentityUnverified": true,
+  "evidence": "duplicate-partition-copy: neither copy is both coherent and catalog-backed — no evidence to promote one"
+ },
+ {
+  "id": "tca-ebay::178349166269",
+  "fromCardId": "hiq:football:2024:donruss-optic:pf-rated-jayden-daniels-optic:pink-prizm:no-auto",
+  "parkIdentityUnverified": true,
+  "evidence": "duplicate-partition-copy: neither copy is both coherent and catalog-backed — no evidence to promote one"
+ },
+ {
+  "id": "tca-ebay::178349166269",
+  "fromCardId": "hiq:football:2024:donruss-optic:248:pink-prizm:no-auto",
+  "parkIdentityUnverified": true,
+  "evidence": "duplicate-partition-copy: neither copy is both coherent and catalog-backed — no evidence to promote one"
+ },
+ {
+  "id": "tca-ebay::398235965523",
+  "fromCardId": "hiq:football:2024:2024-panini-encore-football:7:base:no-auto",
+  "parkIdentityUnverified": true,
+  "evidence": "duplicate-partition-copy: neither copy is both coherent and catalog-backed — no evidence to promote one"
+ }
+]
