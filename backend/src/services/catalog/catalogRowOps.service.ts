@@ -52,6 +52,7 @@ import {
 import { buildSearchText, buildSearchTokens } from "../portfolioiq/searchIndexing.service.js";
 import { authorityRank } from "./catalogAuthority.service.js";
 import { canonicalCardName } from "./canonicalCardName.js";
+import { playerIdentityKey } from "./playerIdentityKey.js";
 import { productAncestry } from "./productSetKeys.js";
 import { corroborationOf, type CorroborationRow } from "./sourceCorroboration.js";
 
@@ -560,13 +561,15 @@ function salesCounter(row: CatalogRowDoc): number {
 /**
  * A player name reduced to the letters and digits that identify it, so
  * "T.J. Hockenson" and "TJ Hockenson" are one person and a punctuation
- * difference is never a disagreement. The same reduction sourceCorroboration
- * uses, deliberately: two spellings of one predicate is the bug this repo has
- * already paid for twice.
+ * difference is never a disagreement.
+ *
+ * NOW LITERALLY the same function sourceCorroboration and player-evidence.cjs
+ * use, rather than a third copy of the same expression that a comment asked to
+ * stay in step. See playerIdentityKey.ts: the three copies shared a defect on
+ * Pokemon names -- "Miracle Sphere α" and "Suicune ☆" lost the character that
+ * IS the card -- and a fix in one copy would have been a fix in one copy.
  */
-function playerKeyOf(name: unknown): string {
-  return String(name ?? "").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
-}
+const playerKeyOf = playerIdentityKey;
 
 /**
  * CF-A-FOLD-NEVER-CHANGES-THE-PLAYER (Drew, 2026-09-05 — the donruss-optic

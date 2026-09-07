@@ -172,6 +172,7 @@
  * The list is an ACQUISITION QUEUE.
  */
 import { catalogAuthorityOf } from "./catalogAuthority.service.js";
+import { playerIdentityKey } from "./playerIdentityKey.js";
 
 /**
  * Sources whose transcription is trusted ONLY where a second strict source
@@ -277,9 +278,13 @@ export function identityCellOf(row: CorroborationRow | null | undefined): string
 
 /** A player name reduced to the letters and digits that identify it, so
  *  "T.J. Hockenson" and "TJ Hockenson" are one person and a punctuation
- *  difference is never a disagreement. */
+ *  difference is never a disagreement.
+ *
+ *  The reduction itself lives in playerIdentityKey.ts and is shared with
+ *  catalogRowOps and player-evidence.cjs -- arm 1 and arm 2 of the same rule
+ *  cannot be allowed to disagree about who two rows name. */
 function playerKey(row: CorroborationRow | null | undefined): string {
-  return String(row?.playerName ?? "").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+  return playerIdentityKey(row?.playerName);
 }
 
 /**
