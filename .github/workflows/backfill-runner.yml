@@ -415,6 +415,27 @@ on:
           # because no catalog field excludes a row from the MATCH paths; see
           # the script's header for the measurement behind that.
           - relocate-catalog-rows-by-list
+          # CF-THE-ACQUISITION-QUEUE-MUST-ONLY-CARRY-CELLS-A-SOURCE-CAN-SERVE
+          # (2026-09-07). The WRITE half of audit-seed-queue-sport-hygiene,
+          # which is report-only by construction and emitted the 2,080-entry
+          # purge list this lane consumes (1,083 sport-contaminated + 997
+          # ambiguous `catalog_seed_queue` entries).
+          #
+          # MARK, NEVER DELETE. Every write is the drainer's own vocabulary --
+          # status=unavailable with a reason -- so the row stays visible as
+          # real demand, requestCount intact, rather than losing the evidence
+          # of the ingest defect that minted it.
+          #
+          # `scope` carries the list path and is REQUIRED: this lane writes,
+          # and there is no predicate that selects "the polluted entries" --
+          # the list IS the scope. The classification is NOT re-implemented
+          # here: the lane calls scripts/lib/sport-contamination.cjs, the same
+          # module the audit and the pins drive, and RE-DERIVES every entry
+          # against the LIVE catalog before writing. An entry the catalog no
+          # longer calls polluted is SKIPPED with a reason and never marked,
+          # so a list that has aged cannot mark a cell whose checklist has
+          # since landed. Idempotent: a seed already `unavailable` is skipped.
+          - purge-seed-queue-sport-hygiene
           # CF-ENGINE-BACKTEST (#1651, 2026-09-02). The published accuracy
           # number: the engine's projection AS OF just before each held-out
           # sale, using only prior data, scored against what the card actually
@@ -1639,6 +1660,15 @@ jobs:
           # the script REFUSES it (exit 2) rather than treating it as "both":
           # an apply says which class it writes, by name. MODE=census ignores
           # SCOPE entirely and counts every class.
+          #
+          # For purge-seed-queue-sport-hygiene (2026-09-07) SCOPE is THE LIST
+          # PATH, as it is for the two relocate-*-by-list lanes: the committed
+          # .json emitted by audit-seed-queue-sport-hygiene --purge-list
+          # (docs/reports/2026-09-07-seed-queue-sport-purge-list.json). It is
+          # REQUIRED and has no default -- the lane writes, and a whole-scope
+          # write refuses without its scope. The inherited runner-wide default
+          # "refractor" does not end in .json, so it is REFUSED (exit 2) rather
+          # than read as a scope, exactly as the rematch apply refuses it.
           SCOPE: ${{ inputs.scope }}
           # dedupe-catalog-partition-shadows: which products to sweep.
           SETKEY_LIKE: ${{ inputs.setkey_like }}
@@ -2314,6 +2344,51 @@ jobs:
             N=$(grep -aoE "deleted=[0-9,]+" /tmp/backfill.log | grep -oE "[0-9,]+" | tail -1 || true)
             echo "::notice::budget hit (deleted=${N:-0}) — re-dispatching to continue"
             gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=retire-wiki-footer-catalog-rows -f apply="${{ inputs.apply }}" -f setkey_like="${{ inputs.setkey_like }}"
+          elif grep -aqE "finishLane: exiting code [0-9]+" /tmp/backfill.log && [ "${{ steps.backfill.outcome }}" = "success" ]; then
+            echo "::notice::finished within budget — done, no re-dispatch."
+          else
+            echo "::error::KILLED before finish — the lane never reached finishLane; NOT finished; re-dispatch withheld — investigate"
+            echo "  step outcome: ${{ steps.backfill.outcome }}"
+            echo "  budget marker: absent    finishLane line: $(grep -acE 'finishLane: exiting code [0-9]+' /tmp/backfill.log 2>/dev/null || echo 0)"
+            echo "  last 20 lines of /tmp/backfill.log:"
+            tail -n 20 /tmp/backfill.log 2>/dev/null || echo "  (no log)"
+            exit 1
+          fi
+
+      # purge-seed-queue-sport-hygiene: the scope is the committed purge list
+      # carried in SCOPE, and the RESUME CURSOR IS THE IDEMPOTENCY CHECK. A
+      # seed this lane marked reads back `status: unavailable` and the next
+      # pass SKIPS it, so a relaunch re-reads the same list and does only what
+      # is left. That is also why the relaunch forwards `scope` verbatim: a
+      # different list would be a different scope, not a continuation.
+      #
+      # Relaunch iff the budget marker printed (#1361); a report relaunches as
+      # a report (#1578) because the lane prints the marker from the same line
+      # in both modes; never on cancel.
+      #
+      # The list is 2,080 entries over ~1.9k (year, setKey) cells, one catalog
+      # projection each, run serially because the lane writes. The 100-minute
+      # budget is not expected to bind — the marker and this step exist so that
+      # a list which DOES outgrow it continues rather than stopping silently
+      # green.
+      - name: Self-relaunch purge-seed-queue-sport-hygiene until the list is drained
+        if: ${{ !cancelled() && inputs.script == 'purge-seed-queue-sport-hygiene' }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # CF-A-KILLED-RUN-IS-NOT-A-FINISHED-RUN (#1906/#1913). Three outcomes, not two:
+          #   (a) budget marker      -> more work, re-dispatch;
+          #   (b) finishLane line    -> the lane exited on its own, genuinely done;
+          #   (c) neither            -> the step was KILLED at the 150-minute ceiling
+          #                             (or cancelled/crashed). NOT finished. Fail loudly.
+          # This lane routes BOTH its exit paths through finishLane() (the .then and the
+          # .catch of purge-seed-queue-sport-hygiene.cjs), so (b) is a witness it really
+          # ended -- absence of it here means the process never got to end on purpose.
+          if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
+            N=$(grep -aoE "written [0-9,]+" /tmp/backfill.log | grep -oE "[0-9,]+" | tail -1 || true)
+            echo "::notice::budget hit (written=${N:-0}) — re-dispatching to continue"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=purge-seed-queue-sport-hygiene -f apply="${{ inputs.apply }}" -f scope="${{ inputs.scope }}"
           elif grep -aqE "finishLane: exiting code [0-9]+" /tmp/backfill.log && [ "${{ steps.backfill.outcome }}" = "success" ]; then
             echo "::notice::finished within budget — done, no re-dispatch."
           else
