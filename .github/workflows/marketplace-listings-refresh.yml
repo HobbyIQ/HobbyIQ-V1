@@ -76,7 +76,14 @@ jobs:
           echo "Running: node backend/scripts/backfillMarketplaceListings.cjs (DRY_RUN=$DRY_RUN FRESH=$FRESH)"
           node backend/scripts/backfillMarketplaceListings.cjs
 
+      # P2-5 (2026-09-07). This step failed 9 consecutive nights (2026-08-30 →
+      # 09-07) with `Cannot find module '@azure/cosmos'`, while the refresh
+      # step above stayed green the whole time: deps install under `backend/`,
+      # so an inline `node -e` run from the repo root cannot resolve them. The
+      # refresh was never broken — only its count report — but a permanently
+      # red workflow trains everyone to ignore the one that matters.
       - name: Report post-run listings count
+        working-directory: backend
         env:
           COSMOS_CONNECTION_STRING: ${{ steps.cosmos.outputs.cs }}
         run: |
