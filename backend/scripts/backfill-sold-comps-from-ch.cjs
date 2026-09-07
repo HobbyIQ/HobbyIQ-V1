@@ -44,6 +44,7 @@ const { computeHobbyIqCardId } = require(path.join(__dirname, "..", "dist/servic
 //   failed   = upserts that threw
 // A day whose QUERY fails is logged and never counted as processed.
 const { reportWrites } = require(path.join(__dirname, "..", "dist/services/ops/writeReconciliation.js"));
+const { guardSoldCompDoc } = require(path.join(__dirname, "..", "dist/services/portfolioiq/splitIdentityWriteGuard.js"));
 
 // Prospect autograph cardNumber prefixes — per Drew's memory
 // `isauto-boundary-is-cardnumber-not-text`, the cardNumber prefix IS
@@ -260,6 +261,27 @@ async function main() {
           verifiedByUser: false,
           confidence: 0.8,
         };
+        // CF-ONE-WRITE-PATH-FOR-SOLD-COMPS (2026-09-07). This lane mints whole
+        // sale documents and upserts them straight to the pool, so neither
+        // #1929's split-identity guard nor #1939's malformed-key guard -- both
+        // of which live in `recordSoldComp` -- has ever seen a row it wrote.
+        // `cardId` here can be the VENDOR's id beside our own slug, which is the
+        // designed 12.96M-row vendor partition and NOT a split; the guard fails
+        // open on exactly that shape. What it does catch is an identity field
+        // that is not a readable address -- the #1939 class, 8,102 rows.
+        {
+          const verdict = guardSoldCompDoc(doc, { guardedBy: "backfill-sold-comps-from-ch" });
+          if (verdict.verdict === "park") {
+            console.warn(JSON.stringify({
+              event: "sold_comp_split_identity_parked",
+              source: "backfill-sold-comps-from-ch",
+              reason: verdict.reason,
+              cardId: doc.cardId,
+              hobbyiqCardId: doc.hobbyiqCardId,
+              detail: verdict.detail,
+            }));
+          }
+        }
         if (!args.apply) { dayWritten++; return; }
         try {
           await sc.items.upsert(doc);

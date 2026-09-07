@@ -201,3 +201,100 @@ describe("relocateSoldComp: the stale replica no longer costs a re-key", () => {
     expect(deleted).toEqual([`${drop.id}@${drop.cardId}`]);
   });
 });
+
+describe("the mover guards the address it is moving TO", () => {
+  // CF-ONE-WRITE-PATH-FOR-SOLD-COMPS (2026-09-07). Being the sanctioned mover
+  // is about ORDER -- never losing the sale between the upsert and the delete.
+  // It was never about the ADDRESS: `to` comes from a list file, and until now
+  // the mover wrote it unchecked, so a re-key to an unreadable key landed with
+  // a verified read-back to prove it. The guard is injected here (the shipped
+  // path loads it from dist/), so these drive the decision directly.
+  const OK = "hiq:baseball:2024:topps:1:base:no-auto";
+  const keeper = () => ({ id: "tca-ebay::1", cardId: OK, hobbyiqCardId: OK, price: 5, soldAt: "2024-05-01" });
+
+  it("REFUSES a malformed destination, and writes and deletes nothing", async () => {
+    const calls: string[] = [];
+    const pool = {
+      item: () => ({ read: async () => { calls.push("read"); return { resource: null }; },
+                     delete: async () => { calls.push("delete"); } }),
+      items: { upsert: async () => { calls.push("upsert"); }, query: () => ({ fetchAll: async () => ({ resources: [] }) }) },
+    };
+    const res = await relocateSoldComp(pool as never, {
+      keep: keeper(), drop: [{ id: "tca-ebay::1", cardId: "hiq:football:2024:topps:1:base:no-auto" }],
+      guard: () => ({ verdict: "park", reason: "malformed-key", detail: "the cardId address has an EMPTY sport segment" }),
+    });
+    expect(res.ok).toBe(false);
+    expect(res.stage).toBe("guard");
+    expect(String(res.error)).toContain("EMPTY sport segment");
+    // The whole point: an unaddressable destination is REFUSED, not written.
+    // A row half-moved to a key nothing can read back is worse than not moved.
+    expect(calls).toEqual([]);
+    expect(res.duplicatesLeft).toEqual([]);
+  });
+
+  it("a dry run reports the SAME refusal an APPLY would hit", async () => {
+    const res = await relocateSoldComp({} as never, {
+      keep: keeper(), drop: [], dryRun: true,
+      guard: () => ({ verdict: "park", reason: "malformed-key", detail: "unreadable" }),
+    });
+    // Judged ahead of the dry-run return, so an operator sees the refusal
+    // before APPLY rather than a plan that will not happen.
+    expect(res.stage).toBe("guard");
+    expect(res.ok).toBe(false);
+  });
+
+  it("a SPLIT-identity park still MOVES -- the sale is real, it just carries the stamp", async () => {
+    const written: Record<string, unknown>[] = [];
+    const deleted: string[] = [];
+    const keep = keeper();
+    const pool = {
+      item: (id: string, pk: string) => ({
+        read: async () => ({ resource: written.find((w) => w.id === id && w.cardId === pk) ?? null }),
+        delete: async () => { deleted.push(`${id}@${pk}`); },
+      }),
+      items: {
+        upsert: async (d: Record<string, unknown>) => { written.push({ ...d }); },
+        query: () => ({ fetchAll: async () => ({ resources: [] }) }),
+      },
+    };
+    const res = await relocateSoldComp(pool as never, {
+      keep, drop: [{ id: "tca-ebay::1", cardId: "hiq:football:2024:topps:1:base:no-auto" }],
+      verifyFields: ["cardId", "hobbyiqCardId"],
+      guard: (doc: Record<string, unknown>) => {
+        doc.identityUnverified = true;
+        doc.identityUnverifiedReason = "split-identity";
+        return { verdict: "park", reason: "split-identity", detail: "sport disagrees" };
+      },
+    });
+    expect(res.ok).toBe(true);
+    expect(written).toHaveLength(1);
+    // Parked out of every pool, but PRESENT -- and the old address is gone, so
+    // the row is not left resident at two addresses.
+    expect(written[0]!.identityUnverified).toBe(true);
+    expect(deleted).toEqual(["tca-ebay::1@hiq:football:2024:topps:1:base:no-auto"]);
+  });
+
+  it("an OK verdict moves the row exactly as before", async () => {
+    const written: Record<string, unknown>[] = [];
+    const deleted: string[] = [];
+    const pool = {
+      item: (id: string, pk: string) => ({
+        read: async () => ({ resource: written.find((w) => w.id === id && w.cardId === pk) ?? null }),
+        delete: async () => { deleted.push(`${id}@${pk}`); },
+      }),
+      items: {
+        upsert: async (d: Record<string, unknown>) => { written.push({ ...d }); },
+        query: () => ({ fetchAll: async () => ({ resources: [] }) }),
+      },
+    };
+    const res = await relocateSoldComp(pool as never, {
+      keep: keeper(), drop: [{ id: "tca-ebay::1", cardId: "hiq:football:2024:topps:1:base:no-auto" }],
+      verifyFields: ["cardId", "hobbyiqCardId"],
+      guard: () => ({ verdict: "ok" }),
+    });
+    expect(res.ok).toBe(true);
+    expect(res.stage).toBe("done");
+    expect(written[0]!.identityUnverified).toBeUndefined();
+    expect(deleted).toHaveLength(1);
+  });
+});

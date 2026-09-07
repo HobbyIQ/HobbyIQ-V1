@@ -28,6 +28,15 @@ const {
 
 const backend = path.resolve(__dirname, "..", "..");
 const { computeHobbyIqCardId } = require(path.join(backend, "dist/services/portfolioiq/hobbyIqCardId.service.js"));
+// CF-ONE-WRITE-PATH-FOR-SOLD-COMPS (2026-09-07). #1939 named this file: it
+// upserts sold_comps documents STRAIGHT to the container, so neither #1929's
+// split-identity guard nor #1939's malformed-key guard -- both of which live
+// in `recordSoldComp` -- has ever seen a row this crawler wrote. It cannot
+// call `recordSoldComp`: that is a per-row transaction (a dedup query, a
+// cross-partition probe, a catalog seed) and paying it per sale on a bulk
+// crawl is prohibitive. So it calls the GUARD, which is the same predicate
+// `recordSoldComp` itself calls. One predicate, two entry points.
+const { guardSoldCompDoc } = require(path.join(backend, "dist/services/portfolioiq/splitIdentityWriteGuard.js"));
 // CF-A-GREEN-RUN-IS-NOT-A-DATA-FLOW (D18, 2026-08-29). The printed totals
 // carry over across --resume runs from the progress file, so they cannot be
 // this run's equation. Per-RUN counters, sales-level, disjoint:
@@ -180,8 +189,29 @@ async function upsertSale(soldCompsContainer, source, catalogRow, saleRecord, gr
     csCardId: catalogRow.cardId,
     bulkCrawledAt: nowIso(),
   };
-  if (dryRun) return "inserted";
-  try { await soldCompsContainer.items.upsert(doc); return "inserted"; }
+  // THE WRITE DOOR. `cardId: hiq:${slug.slice(4)}` above is exactly the
+  // reassembly whose failure mode #1939 documented -- it is `slug` rebuilt on
+  // the assumption that `slug` already wears our prefix, which is true when
+  // computeHobbyIqCardId made it and false the moment a vendor-keyed catalog
+  // id reaches it. The guard judges the address rather than trusting it. A
+  // parked row is still WRITTEN: the sale is real, and parking keeps it
+  // queryable and out of every pool without asserting which card it is.
+  const verdict = guardSoldCompDoc(doc, { guardedBy: "phase-b-crawl-pricing" });
+  if (verdict.verdict === "park") {
+    console.warn(JSON.stringify({
+      event: "sold_comp_split_identity_parked",
+      source: "phase-b-crawl-pricing",
+      reason: verdict.reason,
+      cardId: doc.cardId,
+      hobbyiqCardId: doc.hobbyiqCardId,
+      detail: verdict.detail,
+    }));
+  }
+  if (dryRun) return verdict.verdict === "park" ? "parked" : "inserted";
+  try {
+    await soldCompsContainer.items.upsert(doc);
+    return verdict.verdict === "park" ? "parked" : "inserted";
+  }
   catch (err) { console.warn(`  upsert fail (${slug}): ${err.message}`); return "failed"; }
 }
 
@@ -220,6 +250,7 @@ async function main() {
   const t0 = Date.now();
   let inserted = progress.totals.inserted, deduped = progress.totals.deduped, skipped = progress.totals.skipped, failed = progress.totals.failed;
   let upsertFailed = 0;
+  let parked = progress.totals.parked ?? 0;
   const run = { intended: 0, inserted: 0, deduped: 0, skipped: 0, failed: 0 };
 
   for (let bi = 0; bi < batches.length; bi++) {
@@ -266,8 +297,14 @@ async function main() {
     await runInParallel(workUnits, async (u) => {
       run.intended++;
       const status = await upsertSale(soldCompsContainer, SOURCE, u.catalogRow, u.rec, u.gradedContext, dryRun);
-      const s = perCardStats.get(u.cardId) || { inserted: 0, deduped: 0, skipped: 0, failed: 0 };
-      if (status === "inserted") s.inserted++;
+      const s = perCardStats.get(u.cardId) || { inserted: 0, deduped: 0, skipped: 0, failed: 0, parked: 0 };
+      // A PARKED row IS WRITTEN — it counts as `inserted` in the write
+      // reconciliation equation, and is tracked separately so the operator can
+      // see how much of a run the guard held out of the pools. Folding it into
+      // `skipped` would make the equation claim a sale was not written when it
+      // was, which is the D18 defect running the other way.
+      if (status === "parked") { s.inserted++; s.parked++; }
+      else if (status === "inserted") s.inserted++;
       else if (status === "deduped") s.deduped++;
       else if (status === "failed") s.failed++;
       else s.skipped++;
@@ -276,21 +313,22 @@ async function main() {
 
     for (const [cardId, s] of perCardStats.entries()) {
       inserted += s.inserted;
+      parked += s.parked ?? 0;
       deduped += s.deduped;
       skipped += s.skipped;
       upsertFailed += s.failed;
       run.inserted += s.inserted; run.deduped += s.deduped; run.skipped += s.skipped; run.failed += s.failed;
       progress.doneCardIds[cardId] = s;
     }
-    progress.totals = { batches: bi + 1, inserted, deduped, skipped, failed };
+    progress.totals = { batches: bi + 1, inserted, parked, deduped, skipped, failed };
     writeState(progressFile, progress);
     const elapsedS = ((Date.now() - t0) / 1000).toFixed(1);
     const rate = ((bi + 1) * BATCH_SIZE / Math.max(1, (Date.now() - t0) / 1000)).toFixed(0);
-    console.log(`  batch ${bi + 1}/${batches.length} — inserted=${inserted} deduped=${deduped} skipped=${skipped} failed=${failed} | ${rate} cards/s | elapsed ${elapsedS}s`);
+    console.log(`  batch ${bi + 1}/${batches.length} — inserted=${inserted} parked=${parked} deduped=${deduped} skipped=${skipped} failed=${failed} | ${rate} cards/s | elapsed ${elapsedS}s`);
   }
 
   const total = ((Date.now() - t0) / 1000).toFixed(1);
-  console.log(`\n[phase-b-pricing] complete: inserted=${inserted} deduped=${deduped} skipped=${skipped} upsertFailed=${upsertFailed} failed(cards, fetch)=${failed} in ${total}s`);
+  console.log(`\n[phase-b-pricing] complete: inserted=${inserted} parked=${parked} deduped=${deduped} skipped=${skipped} upsertFailed=${upsertFailed} failed(cards, fetch)=${failed} in ${total}s`);
   console.log(`  progress state: .state/${progressFile}`);
   if (!dryRun) reportWrites({ job: "phase-b-crawl-pricing", intended: run.intended, written: run.inserted, skipped: run.deduped + run.skipped, failed: run.failed });
 }

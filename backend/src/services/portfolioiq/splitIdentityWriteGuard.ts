@@ -246,3 +246,76 @@ export function decideSplitIdentity(input: SplitIdentityInput): SplitIdentityOut
     detail: `sport disagrees and no source attests it: cardId=${cardSport ?? "?"} vs hobbyiqCardId=${hiqSport ?? "?"} -- parked, not filed under a guess`,
   };
 }
+
+/**
+ * The parked-row provenance stamp. One shape, so a row parked by the bulk
+ * entry and a row parked inside `recordSoldComp` are the SAME row to every
+ * reader and to the unpark lane.
+ */
+export interface GuardedSoldCompDoc {
+  identityUnverified?: boolean;
+  identityUnverifiedAt?: string;
+  identityUnverifiedBy?: string;
+  identityUnverifiedReason?: SplitIdentityReason;
+  identityUnverifiedDetail?: string;
+  cardId?: string | null;
+  hobbyiqCardId?: string | null;
+  [k: string]: unknown;
+}
+
+/**
+ * THE ONE PREDICATE, DOC-SHAPED — CF-ONE-WRITE-PATH-FOR-SOLD-COMPS.
+ *
+ * `decideSplitIdentity` judges the two identity FIELDS; a bulk writer holds a
+ * finished DOCUMENT. This is the adapter between them, and it is deliberately
+ * the whole of the difference: it reads the two fields off the doc, asks the
+ * SAME `decideSplitIdentity`, and applies the SAME mutation `recordSoldComp`
+ * applies at its own write door. It is not a second guard and it must never
+ * grow a rule of its own — a rule added here and not in `decideSplitIdentity`
+ * is exactly the reader/writer drift this module's header refuses.
+ *
+ * WHY IT EXISTS. #1939 named `phase-b-crawl-pricing.cjs` writing sold_comps
+ * documents straight to the container, and the census behind this change found
+ * `persistVendorSalesToPool` doing the same at ingest scale — both building
+ * `cardId: hiq:${slug.slice(4)}` by hand, which is the very mechanism
+ * `addressDefect`'s header documents. Neither could call `recordSoldComp`:
+ * that function is a per-row transaction (pre-ingest clean, a dedup query, a
+ * cross-partition probe, a catalog seed), and paying it per row on a bulk
+ * crawl is prohibitive. So the GUARD is separated from the transaction. One
+ * predicate, two entry points.
+ *
+ * Mutates `doc` in place and returns the outcome so a caller can count by
+ * verdict. A `park` verdict does NOT mean "do not write": the sale is real and
+ * the row is kept queryable and out of every pool, exactly as `recordSoldComp`
+ * parks. A caller that would rather refuse the write entirely may read the
+ * verdict and skip — `phase-b` does not, because a dropped sale is market
+ * evidence we cannot re-acquire.
+ */
+export function guardSoldCompDoc(
+  doc: GuardedSoldCompDoc,
+  opts: { attestedSport?: string | null; attestedBy?: string | null; guardedBy?: string } = {},
+): SplitIdentityOutcome {
+  const outcome = decideSplitIdentity({
+    cardId: doc.cardId,
+    hobbyiqCardId: doc.hobbyiqCardId,
+    // Attested ONLY when the caller names who attested it. A text heuristic's
+    // answer must never arrive here — that is what produced the damage.
+    attestedSport: opts.attestedBy ? opts.attestedSport ?? null : null,
+    attestedBy: opts.attestedBy ?? null,
+  });
+
+  if (outcome.verdict === "resolve") {
+    // Both fields take the attested identity, so the row is filed once and
+    // prices exactly one card. The caller re-mints any id that embeds cardId.
+    doc.cardId = outcome.resolvedTo;
+    doc.hobbyiqCardId = outcome.resolvedTo;
+  } else if (outcome.verdict === "park") {
+    doc.identityUnverified = true;
+    doc.identityUnverifiedAt = new Date().toISOString();
+    doc.identityUnverifiedBy = opts.guardedBy ?? "guardSoldCompDoc";
+    doc.identityUnverifiedReason = outcome.reason;
+    doc.identityUnverifiedDetail = outcome.detail;
+  }
+
+  return outcome;
+}

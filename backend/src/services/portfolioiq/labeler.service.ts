@@ -12,6 +12,7 @@
 import { CosmosClient, type Container } from "@azure/cosmos";
 import { computeHobbyIqCardId, normalizeSetKey } from "./hobbyIqCardId.service.js";
 import { mayUnionIdentities } from "../compiq/identityUnionGuard.js";
+import { patchSoldCompFields } from "./soldCompRowOps.service.js";
 
 interface CanonicalLabel {
   parallel: string;
@@ -398,12 +399,20 @@ export async function saveVariantLabel(input: SaveLabelInput): Promise<SaveLabel
         }));
         continue;
       }
-      row.parallel = input.canonicalParallel;
-      row.hobbyiqCardId = newSlug;
-      row.__labeledByAdmin = { at: label.labeledAt, by: label.labeledBy, chVariant: input.chVariant };
+      // CF-A-MUTATOR-PATCHES-FIELDS-NEVER-THE-WHOLE-DOC (#1941 follow-up,
+      // 2026-09-07). This set three fields on the row it had read and upserted
+      // the WHOLE document back, so an admin label raced every other writer on
+      // the pool: a `flaggedWrong` stamp, a grade backfill or a repoint landing
+      // between the query above and this write was silently overwritten at its
+      // pre-write value. The query is over the whole container and the rewrite
+      // loop can run long, which makes that window wide, not narrow.
       try {
-        await sc.items.upsert(row);
-        rewritten += 1;
+        const res = await patchSoldCompFields(sc, String(row.id), String(row.cardId), {
+          parallel: input.canonicalParallel,
+          hobbyiqCardId: newSlug,
+          __labeledByAdmin: { at: label.labeledAt, by: label.labeledBy, chVariant: input.chVariant },
+        });
+        if (res.action === "patch") rewritten += 1;
       } catch {
         /* skip individual errors — surface aggregate count */
       }
