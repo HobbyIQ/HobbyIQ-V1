@@ -47,6 +47,7 @@ import {
   deriveParentSetKey,
   parseHobbyIqCardId,
   slugify,
+  type HobbyIqCardIdComponents,
 } from "../portfolioiq/hobbyIqCardId.service.js";
 import { buildSearchText, buildSearchTokens } from "../portfolioiq/searchIndexing.service.js";
 import { authorityRank } from "./catalogAuthority.service.js";
@@ -352,14 +353,68 @@ function fieldExtendsStem(field: string, stem: string): boolean {
  * field that is stale-generic, equal, or unrelated to the stem is replaced by
  * the stem. A rename is a ruling and always lands on what it asked for.
  */
+/**
+ * Parse a slug that may be a GRADED CHILD.
+ *
+ * `parseHobbyIqCardId` deserializes the CARD identity, and a graded child is
+ * not one: its id is `${parentSlug}:${tier}` (catalogRowOps' own contract,
+ * `isGradedChildOf` above) and the tier segment is not part of the card-id
+ * grammar, so the parser correctly returns null for it. That is right for the
+ * parser and wrong for a MOVE, which is why all 292 Crown Zenith Galarian
+ * Gallery rows failed their apply on 2026-09-07 with "newSlug is not a hiq
+ * slug: hiq:pokemon:2023:swsh12-5gg:gg01:full-art:no-auto:cgc-10" -- every one
+ * a graded child, every destination well-formed.
+ *
+ * moveCatalogRow ALREADY knows this shape: it queries for graded children by
+ * `STARTSWITH(c.id, parent + ":") AND IS_DEFINED(c.gradeTier)` and retires
+ * them. It could sweep a graded child up but never move one, which is not a
+ * position anyone chose.
+ *
+ * THE SPLIT USES THE RULE ALREADY WRITTEN DOWN, verbatim from
+ * `isGradedChildOf`: a tier is ONE segment and never the print-run segment --
+ * `psa-10` yes, `num-50` no. So the tail is only taken when the head parses as
+ * a card on its own; nothing else can be reinterpreted as a grade, and a slug
+ * that is simply malformed still returns null and still throws.
+ *
+ * `parseHobbyIqCardId` itself is deliberately NOT loosened: 61 call sites read
+ * it, including the matcher's hot path, and a 292-row cleanup does not get to
+ * widen the id grammar for all of them.
+ */
+function parseSlugWithGrade(slug: string): { parsed: HobbyIqCardIdComponents; parentSlug: string; gradeTier: string | null } | null {
+  const direct = parseHobbyIqCardId(slug);
+  if (direct) return { parsed: direct, parentSlug: slug, gradeTier: null };
+  const cut = slug.lastIndexOf(":");
+  if (cut <= 0) return null;
+  const head = slug.slice(0, cut);
+  const tier = slug.slice(cut + 1);
+  // A tier is one segment (guaranteed by the lastIndexOf split), is not the
+  // print-run segment, and is not empty.
+  if (!tier || tier.startsWith("num-")) return null;
+  const parsed = parseHobbyIqCardId(head);
+  if (!parsed) return null;
+  return { parsed, parentSlug: head, gradeTier: tier };
+}
+
 function buildIncoming(
   oldRow: CatalogRowDoc,
   newSlug: string,
   changedFields: Partial<CardCatalogEntry> & Record<string, unknown>,
 ): CatalogRowDoc {
   const merged = { ...stripSlugBoundFields(oldRow), ...changedFields } as CatalogRowDoc;
-  const parsed = parseHobbyIqCardId(newSlug);
-  if (!parsed) throw new Error(`moveCatalogRow: newSlug is not a hiq slug: ${newSlug}`);
+  const split = parseSlugWithGrade(newSlug);
+  if (!split) throw new Error(`moveCatalogRow: newSlug is not a hiq slug: ${newSlug}`);
+  const { parsed, gradeTier } = split;
+  // A GRADED CHILD MOVES WITH ITS PARENT, and stays a graded child: the row is
+  // only a graded identity because `gradeTier` is defined and `parentSlug`
+  // points at the card. Moving it to a new address re-points both -- the
+  // parent is the destination's own head, never the one it used to have, or
+  // the child would be orphaned onto the row we just vacated.
+  const oldGrade = parseSlugWithGrade(String(oldRow.id));
+  if (Boolean(gradeTier) !== Boolean(oldGrade?.gradeTier)) {
+    throw new Error(
+      `moveCatalogRow: ${gradeTier ? "a card cannot move onto a graded address" : "a graded child cannot move onto a card address"} (${String(oldRow.id)} -> ${newSlug})`,
+    );
+  }
   const oldIdSetKey = idSetKeySegment(oldRow.id);
   // Did the caller ASK for a product change? Only an explicit `setKey` in
   // changedFields does that; a fold passes printRun / cardNumber and means
@@ -463,6 +518,9 @@ function buildIncoming(
     isAuto: parsed.isAuto,
     printRun,
     ...(setKeyChanged ? { brand: deriveBrand(setKey), parentSetKey: deriveParentSetKey(setKey) } : {}),
+    // The graded annotations follow the address, so the child hangs off the
+    // card it actually moved to.
+    ...(gradeTier ? { parentSlug: split.parentSlug, gradeTier: merged.gradeTier ?? gradeTier } : {}),
   };
   Object.assign(doc, rebuildSearchFields(doc));
   return doc;
