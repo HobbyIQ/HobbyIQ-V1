@@ -135,10 +135,20 @@ async function main() {
   console.log(`  stopped because:   ${res.stoppedReason}`);
   console.log(`  elapsed:           ${(res.elapsedMs / 1000).toFixed(1)}s`);
 
-  const failed = res.perDay.filter((d) => !d.complete);
-  if (failed.length > 0) {
+  // CF-CH-BACKFILL-POISON-PILL (2026-09-07). A QUARANTINED day is incomplete
+  // by construction — it 500s, which is why it was given up on — so gating on
+  // `!d.complete` marks the run red forever even after the escape worked and
+  // the walk moved on. Judge the run on days that actually BLOCKED it.
+  const quarantined = res.quarantinedThisRun ?? [];
+  if (quarantined.length > 0) {
+    console.log(`\n  QUARANTINED THIS RUN (known holes, walk continued):`);
+    quarantined.forEach((d) => console.log(`    ${d}`));
+  }
+
+  const blocking = svc.blockingFailures(res);
+  if (blocking.length > 0) {
     console.log(`\n  INCOMPLETE DAYS (cursor held here):`);
-    failed.forEach((d) => console.log(`    ${d.fileDate}  http=${d.httpStatus}  ${d.error ?? ""}`));
+    blocking.forEach((d) => console.log(`    ${d.fileDate}  http=${d.httpStatus}  ${d.error ?? ""}`));
     return 2;
   }
   return 0;

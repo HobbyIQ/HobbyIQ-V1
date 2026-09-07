@@ -124,6 +124,32 @@ export interface BackfillRunResult {
   elapsedMs: number;
 }
 
+/**
+ * The days that actually BLOCKED this run, which is what its exit code must
+ * be judged on.
+ *
+ * CF-CH-BACKFILL-POISON-PILL (2026-09-07). The runner used to fail on every
+ * incomplete day:
+ *
+ *     const failed = res.perDay.filter((d) => !d.complete);
+ *
+ * A quarantined day is incomplete BY CONSTRUCTION — it 500s, which is the
+ * entire reason it was given up on — so under that gate the run reports
+ * failure forever, even though the escape worked, the cursor advanced past
+ * the poison date, and every later day ingested normally. The workflow would
+ * stay permanently red on a job that had just healed itself, which is exactly
+ * how a real outage later gets waved off as "that one's always red".
+ *
+ * A day we deliberately stepped over is a recorded hole, not a blockage. It
+ * is already surfaced as a ::warning:: and listed in the cursor's
+ * quarantinedDates. A day that HELD the cursor still fails the run, so a
+ * genuine upstream outage stays loud.
+ */
+export function blockingFailures(res: BackfillRunResult): DayResult[] {
+  const quarantined = new Set(res.quarantinedThisRun ?? []);
+  return res.perDay.filter((d) => !d.complete && !quarantined.has(d.fileDate));
+}
+
 export function addDays(dateStr: string, n: number): string {
   const d = new Date(`${dateStr}T00:00:00Z`);
   d.setUTCDate(d.getUTCDate() + n);
