@@ -118,19 +118,14 @@ const MAX_TITLES_PER_SLUG = 200;
  *  three copies shared and why a tally that disagrees with the survivor rule
  *  about who two rows name is worse than no tally.
  *
- *  DEFENSIVE LOAD, the same contract market-guard.cjs has: this module is
- *  required by an ops script whose dispatch refusals must work WITHOUT a
- *  compiled tree (rekeyRetireUntwinned.test.ts loads it that way). A missing
- *  dist/ therefore falls back to the pre-fix expression -- which is the
- *  behaviour this file had before, so a tree-less run is never WORSE than it
- *  was, only un-improved. */
-const playerKeyOf = (() => {
-  try {
-    const built = require(require("path").join(__dirname, "..", "..", "dist/services/catalog/playerIdentityKey.js"));
-    if (typeof built.playerIdentityKey === "function") return built.playerIdentityKey;
-  } catch { /* fall through to the legacy reduction */ }
-  return (s) => String(s ?? "").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
-})();
+ *  THE LOADER MOVED to lib/player-identity.cjs (#1953 follow-up), because
+ *  relocate-catalog-rows-by-list's occupancy compare needs the same reduction
+ *  and must not require this module -- with its Cosmos query plans and title
+ *  budget -- merely to compare two names. The defensive-load contract is
+ *  unchanged and now lives there: a missing dist/ falls back to the pre-fix
+ *  expression, so a tree-less run is never WORSE than it was, only
+ *  un-improved. */
+const { playerIdentityKey: playerKeyOf } = require(require("path").join(__dirname, "player-identity.cjs"));
 
 /** The 7-segment stem of a slug: hiq:sport:year:product:number:parallel:auto.
  *  A card_catalog id carries an 8th TIER segment (`num-24`, `psa-10`); a sale's
