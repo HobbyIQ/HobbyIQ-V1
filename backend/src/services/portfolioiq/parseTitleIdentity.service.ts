@@ -1392,7 +1392,7 @@ function extractParallel(title: string, ctx?: { year?: number | null; setKey?: s
   //
   //   "2025 Bowman Draft Chrome MAX WILLIAMS 1/50 1st Auto Gold Ref. #CPA-MWI PSA 9"
   //
-  // The bare-refractor rule tests /refractor/, which "Ref." does not
+  // The bare-refractor rule tests /\brefractor\b/, which "Ref." does not
   // match, so every colour and pattern rule was skipped and the title fell all
   // the way to the chrome-auto fallback, returning "Refractor". The colour was
   // not lost by a bad rule — it was never read.
@@ -2762,14 +2762,84 @@ const SOCCER_COMPETITION_FAMILIES: ReadonlySet<string> = new Set(
  * family not in the table, falls through unchanged: blank is unknown.
  */
 export function refineSoccerCompetitionSetKey(familyKey: string, title: string): string {
+  return soccerCompetitionRefinement(familyKey, title).setKey;
+}
+
+/**
+ * WHAT THE COMPETITION TABLE ACTUALLY MATCHED — the fact, not just the answer.
+ *
+ * CF-THE-PARSER-IS-THE-EVIDENCE (this PR). SPECIALIZATION-STATED's L2 leg asks
+ * the title to STATE every word that distinguishes the derived key from the
+ * stored one, and it computes those words from the KEY'S SEGMENTS. That is the
+ * right rule for `topps-traded-tiffany` — the product IS spelled the way the
+ * seller writes it — and it is the WRONG question for a ruled competition key,
+ * because the key is a canonical NAME and the table matched an ALIAS of it:
+ *
+ *   "2022 Panini Prizm World Cup Qatar #108 Jamal Musiala"
+ *      family  panini-prizm
+ *      alias   /\b(?:fifa\s+)?world\s+cup\s+qatar\b/   MATCHED
+ *      key     panini-prizm-fifa-world-cup-qatar
+ *      L2 asks for {fifa, world, cup, qatar}; the title never says "fifa".
+ *
+ * The title states the product as clearly as a title can. Demanding the key's
+ * spelling instead of the alias the parser actually read makes the parser's own
+ * successful match invisible to the classifier, and 803 CONFLICT rows in the
+ * 2022 soccer panini-prizm cell are exactly that blindness (slot 20 census,
+ * run 34067635931: `title-does-not-state:fifa` on 94 sampled rows).
+ *
+ * SO THE STATEMENT IS EXPORTED FROM THE ONE SEAM, NOT RE-DERIVED DOWNSTREAM.
+ * The classifier is pure and holds no table; teaching it a second copy of these
+ * 66 regexes is how two readings of one title begin to disagree — the identical
+ * argument `inferSetKeyFromTitle` gives for applying the refinement once rather
+ * than at each of its forty `return` statements. This function returns the
+ * matched fact and the classifier consumes it as an opaque boolean.
+ *
+ * IT IS A STATEMENT, NEVER A PROMOTION. `competitionStated` is true only where
+ * the table's own regex matched the title. A soccer title naming no competition
+ * refines to nothing and reports false, so it keeps the bare family key and can
+ * never climb the ladder on this leg; a title naming a DIFFERENT competition
+ * refines to THAT competition's key, so `setKey` names the Premier League
+ * product and a World Cup destination is not what the parser derived at all.
+ * Blank stays unknown (CF-EVERY-INGEST-USES-THE-ONE-CHECKLIST-FORMAT).
+ */
+export function soccerCompetitionRefinement(
+  familyKey: string,
+  title: string,
+): { setKey: string; competitionStated: boolean; alias: string | null } {
   const fam = slugify(String(familyKey ?? ""));
-  if (!SOCCER_COMPETITION_FAMILIES.has(fam)) return familyKey;
+  const unrefined = { setKey: familyKey, competitionStated: false, alias: null } as const;
+  if (!SOCCER_COMPETITION_FAMILIES.has(fam)) return { ...unrefined };
   const t = String(title ?? "").toLowerCase();
   for (const p of SOCCER_COMPETITION_PRODUCTS) {
     if (p.family !== fam) continue;
-    if (p.competition.test(t)) return p.setKey;
+    const m = p.competition.exec(t);
+    if (m) return { setKey: p.setKey, competitionStated: true, alias: m[0] };
   }
-  return familyKey;
+  return { ...unrefined };
+}
+
+/**
+ * Did the title STATE the competition that names `derivedSetKey`?
+ *
+ * The classifier's entry point. It re-runs the table against the title and
+ * confirms the answer is the very key under discussion, so a caller cannot use
+ * a stale or unrelated refinement as evidence: if the title says "Premier
+ * League" this returns false for the World Cup key, because the table's own
+ * answer for that title is the Premier League key.
+ *
+ * `familyKey` is the STORED key — the ladder ancestor the derivation is
+ * climbing from — because that is what the table refines. Passing the derived
+ * key would ask the table to refine an already-refined answer, which is not a
+ * family and matches nothing.
+ */
+export function titleStatesSoccerCompetition(
+  familyKey: string,
+  derivedSetKey: string,
+  title: string,
+): boolean {
+  const r = soccerCompetitionRefinement(familyKey, title);
+  if (!r.competitionStated) return false;
+  return slugify(String(r.setKey ?? "")) === slugify(String(derivedSetKey ?? ""));
 }
 
 /**

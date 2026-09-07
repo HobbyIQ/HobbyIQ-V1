@@ -574,6 +574,12 @@ async function main() {
     // is exactly what the D7 guard has to be able to see through.
     isCardNumberAutoSubset: pti.isCardNumberAutoSubset,
     inferSetKeyFromTitle: pti.inferSetKeyFromTitle,
+    // CF-THE-PARSER-IS-THE-EVIDENCE (this PR). The ruled soccer competition
+    // table's own verdict on a title, exported from the ONE seam that holds
+    // it. `specInputs` hands it to the classifier as a boolean so the
+    // classifier -- which is pure and must stay so -- never carries a second
+    // copy of the 66 regexes that would drift from this one.
+    titleStatesSoccerCompetition: pti.titleStatesSoccerCompetition,
     inferSportFromTitle: pti.inferSportFromTitle,
     ingestGradeFromTitle: pvs.ingestGradeFromTitle,
     // The parser's own count-anchored multi-card-lot detector. GUARD 5 in the
@@ -963,13 +969,27 @@ async function main() {
    *  string work on two keys already in hand, and a row that fails it can
    *  never qualify however the catalog answers. Without this gate the census
    *  would issue two extra catalog reads per row and stop being a census. */
-  const specInputs = async (stored, der) => {
-    const none = { derivedBackedStrict: false, storedFlagshipListsCardNumber: null };
+  const specInputs = async (row, stored, der) => {
+    const none = { derivedBackedStrict: false, storedFlagshipListsCardNumber: null, competitionStated: false };
     if (!der?.ok) return none;
     if (!K.isSpecializationOf(der.identity?.setKey, stored?.setKey)) return none;
     return {
       derivedBackedStrict: await checklistBackedStrict(der.slug),
       storedFlagshipListsCardNumber: await flagshipListsCardNumber(stored),
+      // CF-THE-PARSER-IS-THE-EVIDENCE (this PR). The classifier's L2 leg asks
+      // the title to state every word that distinguishes the derived key from
+      // the stored one, and a ruled soccer competition key is a canonical NAME
+      // whose alias is what the market actually writes -- "World Cup Qatar"
+      // never says "fifa". The PARSER already matched that alias to reach this
+      // derived key; this hands the classifier that fact rather than asking it
+      // to hold a second copy of the 66 regexes.
+      //
+      // Read from the STORED key, because that is the family the table refines,
+      // and confirmed against the DERIVED key, so a title naming a different
+      // competition can never be cited as evidence for this one. Pure string
+      // work over a table already in memory: no catalog read, no cost.
+      competitionStated: deps.titleStatesSoccerCompetition
+        ? deps.titleStatesSoccerCompetition(stored?.setKey, der.identity?.setKey, row?.title) : false,
     };
   };
 
@@ -1146,7 +1166,7 @@ async function main() {
       // eviction, and only an eviction reads this. A row that is not a
       // candidate costs no catalog read for a question it never asks.
       const beName = beCandidate ? await checklistPlayerNameFor(der.identity) : null;
-      const spec = await specInputs(stored, der);
+      const spec = await specInputs(row, stored, der);
       const res = K.classifyRow({
         row, stored, derived: der.ok ? der.identity : null, checklistBacked: backed, derivationReasons: der.reasons,
         storedSlug: row.cardId, baseDestSlug: der.baseSlug ?? null, baseDestBacked: baseBacked,
@@ -1541,7 +1561,7 @@ async function main() {
       // qualifying row silently declining to write while the census reported
       // it writable. A gate that disagrees with itself between the two passes
       // is a gate nobody can audit.
-      const spec = await specInputs(stored, der);
+      const spec = await specInputs(fresh, stored, der);
       const res = K.classifyRow({
         row: fresh, stored, derived: der.ok ? der.identity : null, checklistBacked: backed, derivationReasons: der.reasons,
         storedSlug: fresh.cardId, baseDestSlug: der.baseSlug ?? null, baseDestBacked: baseBacked, checklistPlayerName: beName,

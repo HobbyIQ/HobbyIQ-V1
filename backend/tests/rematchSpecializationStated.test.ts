@@ -33,7 +33,9 @@ import { createRequire } from "node:module";
 import { readFileSync } from "node:fs";
 import { productAncestry, productEntry, SAME_NUMBER_PARALLEL_SETS, isSameNumberParallelSet } from "../src/services/catalog/productSetKeys.js";
 import { normalizeSetKey, computeHobbyIqCardId } from "../src/services/portfolioiq/hobbyIqCardId.service.js";
-import { inferSetKeyFromTitle } from "../src/services/portfolioiq/parseTitleIdentity.service.js";
+import {
+  inferSetKeyFromTitle, titleStatesSoccerCompetition, soccerCompetitionRefinement,
+} from "../src/services/portfolioiq/parseTitleIdentity.service.js";
 import { MINTS as SOCCER_TITLES } from "./soccerLeagueSetKeysFromTitle.test.js";
 
 /** The keys #1715 taught the parser, each with a title that states it. */
@@ -988,5 +990,188 @@ describe("BLACK DIAMOND joins the ladder (R3, 2026-09-04)", () => {
     // so -- every other table still names the product.
     expect(K.LADDER_MIRRORED_KEYS).toContain("upper-deck-black-diamond");
     expect(K.specializationAncestry("upper-deck-black-diamond")).not.toEqual([]);
+  });
+});
+
+/**
+ * CF-THE-PARSER-IS-THE-EVIDENCE + CF-THE-COMPETITION-IS-THE-PRODUCT.
+ *
+ * The two legs that stranded the whole 2022 soccer Panini Prizm cell, measured
+ * on runs 34067392809 (slot 19) and 34067635931 (slot 20): 803 CONFLICT rows
+ * carrying `changed:setKey`, with `title-does-not-state:fifa` and
+ * `flagship-checklist-lists-this-card` as the named refusals.
+ *
+ *   L2  The ladder demanded every SEGMENT of `panini-prizm-fifa-world-cup-qatar`
+ *       appear in the title. The market writes "World Cup Qatar" and never
+ *       writes "fifa", so the leg failed on a title that names the product
+ *       completely. The parser's OWN competition table had already matched that
+ *       alias to derive the key -- the evidence existed and was thrown away.
+ *
+ *   L5  It then asked whether `soccer:2022:panini-prizm`'s "flagship checklist"
+ *       lists the number. Measured read-only 2026-09-06: that key holds ZERO
+ *       strict SOCCER checklist rows. Its 130,257 strict rows are baseball
+ *       (52,134), basketball (39,104) and football (39,019), and
+ *       `flagshipNumbers` is sport-blind -- so all 300 World Cup card numbers
+ *       "collided" with the baseball/basketball/football Prizm numbering and
+ *       every row was refused by a checklist for a different sport.
+ *
+ * Drew ruled 2026-09-06 that all 66 soccer competition keys are distinct
+ * products and that a Prizm / Select / Chrome SOCCER release is ALWAYS a
+ * competition product -- there is no bare "2022 Panini Prizm" soccer flagship
+ * for those numbers to belong to.
+ */
+describe("SPECIALIZATION-STATED -- the ruled soccer competition products", () => {
+  const WC = "panini-prizm-fifa-world-cup-qatar";
+  const STORED = {
+    sport: "soccer", cardYear: 2022, setKey: "panini-prizm", cardNumber: "108",
+    parallel: "Base", isAuto: false, printRun: null,
+  };
+  const DERIVED = { ...STORED, setKey: WC };
+  const AXES = { changed: ["setKey"], dropped: [] };
+
+  /** L2 POSITIVE -- the aliases the market actually writes. Real titles from
+   *  the slot-19 and slot-20 CONFLICT samples, not invented fixtures. */
+  const STATES_IT: readonly string[] = [
+    "2022 Panini Prizm World Cup Qatar - Silver Prizm #108 Jamal Musiala PSA 9",
+    "2022 Panini Prizm FIFA World Cup Qatar #170 Robert Lewandowski Hyper Prizm - Raw 10",
+    "LISANDRO MARTINEZ 2022 Panini Prizm Qatar World Cup #29 New Era Silver PSA 9 J2",
+  ];
+  for (const title of STATES_IT) {
+    it("accepts the parser's matched alias as the statement: " + title.slice(0, 46), () => {
+      // The parser reaches the key from this title...
+      expect(inferSetKeyFromTitle(title)).toBe(WC);
+      // ...and says so, for THIS family and THIS destination.
+      expect(titleStatesSoccerCompetition("panini-prizm", WC, title)).toBe(true);
+      const ev = K.specializationStatedEvidence({
+        row: { title }, stored: STORED, derived: DERIVED, axes: AXES,
+        derivedBacked: true, storedFlagshipListsCardNumber: true,
+        competitionStated: true,
+      });
+      expect(ev.qualifies).toBe(true);
+      expect(ev.failed).toEqual([]);
+      // The word list is still COMPUTED and REPORTED -- only the refusal moved.
+      expect(ev.evidence.distinguishingWords).toContain("fifa");
+    });
+  }
+
+  it("L2 NEGATIVE: a title stating NO competition never promotes off the family", () => {
+    // Blank is unknown (CF-EVERY-INGEST-USES-THE-ONE-CHECKLIST-FORMAT): the
+    // parser keeps the family key, the classifier is handed FALSE, and L2
+    // refuses exactly as it does today.
+    const title = "2022 Panini Prizm #175 Cristiano Ronaldo Base Portugal";
+    expect(titleStatesSoccerCompetition("panini-prizm", WC, title)).toBe(false);
+    const ev = K.specializationStatedEvidence({
+      row: { title }, stored: STORED, derived: DERIVED, axes: AXES,
+      derivedBacked: true, storedFlagshipListsCardNumber: false,
+      competitionStated: false,
+    });
+    expect(ev.qualifies).toBe(false);
+    expect(ev.failed.join(",")).toContain("title-does-not-state:");
+  });
+
+  it("L2 NEGATIVE: a Premier League title never promotes to the World Cup key", () => {
+    // The most dangerous false positive available: two ruled products of ONE
+    // family. The table answers with the Premier League key, so the World Cup
+    // key is not what this title states and cannot borrow the statement.
+    const title = "2022 Panini Prizm Premier League #10 Erling Haaland Silver";
+    expect(titleStatesSoccerCompetition("panini-prizm", WC, title)).toBe(false);
+    const ev = K.specializationStatedEvidence({
+      row: { title }, stored: STORED, derived: DERIVED, axes: AXES,
+      derivedBacked: true, storedFlagshipListsCardNumber: false,
+      competitionStated: false,
+    });
+    expect(ev.qualifies).toBe(false);
+  });
+
+  it("L5: a bare soccer FAMILY key is not a flagship and cannot block", () => {
+    // The stored "flagship" lists the number only because `flagshipNumbers` is
+    // sport-blind and the baseball / basketball / football Prizm checklists
+    // share the 1-N numbering. There is no soccer product at the bare key to
+    // be a rival, so the gate is switched off for exactly this shape.
+    const title = "2022 Panini Prizm World Cup Qatar - Silver Prizm #108 Jamal Musiala PSA 9";
+    const ev = K.specializationStatedEvidence({
+      row: { title }, stored: STORED, derived: DERIVED, axes: AXES,
+      derivedBacked: true, storedFlagshipListsCardNumber: true,
+      competitionStated: true,
+    });
+    expect(ev.evidence.bareSoccerFamily).toBe(true);
+    expect(ev.failed).not.toContain("flagship-checklist-lists-this-card");
+    expect(ev.qualifies).toBe(true);
+  });
+
+  it("L5 stays STRICT for the real baseball / basketball / football flagships", () => {
+    // `panini-prizm` is a real flagship in three other sports whose checklists
+    // ARE rival claims. The rule fires only when the DERIVED key is a ruled
+    // SOCCER competition key, so those keep the strict test.
+    expect(K.isBareSoccerFamilyNonFlagship(WC, "panini-prizm")).toBe(true);
+    expect(K.isBareSoccerFamilyNonFlagship("topps-traded-tiffany", "topps-traded")).toBe(false);
+    expect(K.isBareSoccerFamilyNonFlagship("upper-deck-black-diamond", "upper-deck")).toBe(false);
+    expect(K.isBareSoccerFamilyNonFlagship("panini-prizm", "panini-prizm")).toBe(false);
+    // Black Diamond is the right control: a mirrored ladder edge that is NOT a
+    // declared same-number parallel set, so L5 is the ONLY thing that can be
+    // refusing it. It still does.
+    const ev = K.specializationStatedEvidence({
+      row: { title: "1999 Upper Deck Black Diamond #D24 Ken Griffey Jr" },
+      stored: { sport: "baseball", cardYear: 1999, setKey: "upper-deck", cardNumber: "D24", parallel: "Base", isAuto: false, printRun: null },
+      derived: { sport: "baseball", cardYear: 1999, setKey: "upper-deck-black-diamond", cardNumber: "D24", parallel: "Base", isAuto: false, printRun: null },
+      axes: AXES, derivedBacked: true, storedFlagshipListsCardNumber: true,
+    });
+    expect(ev.evidence.bareSoccerFamily).toBe(false);
+    expect(ev.failed).toContain("flagship-checklist-lists-this-card");
+    expect(ev.qualifies).toBe(false);
+  });
+
+  it("MUTATION: without the alias fact, every World Cup row is stranded again", () => {
+    // Revert the L2 change -- `competitionStated` defaults false -- and the
+    // exact census refusal returns. This is the pin on the 803 rows.
+    const title = "2022 Panini Prizm World Cup Qatar - Silver Prizm #108 Jamal Musiala PSA 9";
+    const ev = K.specializationStatedEvidence({
+      row: { title }, stored: STORED, derived: DERIVED, axes: AXES,
+      derivedBacked: true, storedFlagshipListsCardNumber: false,
+    });
+    expect(ev.qualifies).toBe(false);
+    expect(ev.failed.join(",")).toContain("title-does-not-state:fifa");
+  });
+
+  it("MUTATION: without the bare-family rule, L5 refuses on the wrong sport", () => {
+    const title = "2022 Panini Prizm World Cup Qatar - Silver Prizm #108 Jamal Musiala PSA 9";
+    const ev = K.specializationStatedEvidence({
+      row: { title }, stored: STORED,
+      // A derived key that is NOT one of the ruled soccer competition keys
+      // cannot reach the rule, so L5 asks its usual question and refuses.
+      derived: { ...STORED, setKey: "topps-traded-tiffany" },
+      axes: AXES, derivedBacked: true, storedFlagshipListsCardNumber: true,
+      competitionStated: true,
+    });
+    expect(ev.evidence.bareSoccerFamily).toBe(false);
+    expect(ev.qualifies).toBe(false);
+  });
+
+  it("the 66 ruled keys and their bare families are COMPUTED from the ladder", () => {
+    // Not a hand list: a 67th ruled key added to SPECIALIZATION_PARENTS is
+    // picked up here for free, which is what keeps this from becoming a second
+    // place to forget.
+    expect(K.SOCCER_COMPETITION_SETKEYS).toHaveLength(66);
+    expect(K.SOCCER_COMPETITION_SETKEYS).toContain(WC);
+    for (const fam of ["panini-prizm", "panini-select", "topps-chrome", "topps-finest", "panini-mosaic"]) {
+      expect(K.SOCCER_BARE_FAMILY_SETKEYS).toContain(fam);
+    }
+    // The Tiffany / Fleer / Bowman baseball ladder is NOT soccer and must
+    // never reach the rule.
+    expect(K.SOCCER_COMPETITION_SETKEYS).not.toContain("topps-traded-tiffany");
+    expect(K.SOCCER_BARE_FAMILY_SETKEYS).not.toContain("topps-traded");
+  });
+
+  it("the alias fact comes from the ONE seam, not a second copy of the table", () => {
+    // If the classifier ever grows its own competition regexes this fails:
+    // there must be exactly one place that reads a competition out of a title.
+    const src = readFileSync(new URL("../scripts/lib/rematch-classify.cjs", import.meta.url), "utf8");
+    expect(src).not.toContain("SOCCER_COMPETITION_PRODUCTS");
+    expect(src).not.toContain("refineSoccerCompetitionSetKey");
+    // And the seam exports the fact the classifier consumes, alias and all.
+    expect(soccerCompetitionRefinement("panini-prizm", "2022 Panini Prizm World Cup Qatar #1").alias)
+      .toBe("world cup qatar");
+    expect(soccerCompetitionRefinement("panini-prizm", "2022 Panini Prizm #1").competitionStated)
+      .toBe(false);
   });
 });
