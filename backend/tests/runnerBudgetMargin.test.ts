@@ -499,8 +499,16 @@ describe("the budget marker every relaunch greps for still prints verbatim", () 
   }
 
   it("the relaunch steps still grep for the marker they have always grepped for", () => {
-    const greps = RUNNER.match(/grep -aqE "stopped at the [^"]*"/g) ?? [];
-    expect(greps.length, "the marker-gated relaunch steps must exist").toBeGreaterThan(0);
+    // The grep moved into .github/actions/relaunch-on-marker on 2026-09-07:
+    // seventy-two copies of the relaunch shell had grown backfill-runner.yml
+    // past GitHub's 512 KB limit, where dispatches are accepted and no job is
+    // ever created. Both files are searched, so the pattern is still pinned
+    // wherever it lives — and a lane that keeps its own copy is still checked.
+    const haystack = RUNNER + read(
+      ".github", "actions", "relaunch-on-marker", "action.yml",
+    );
+    const greps = haystack.match(/grep -aqE "stopped at the [^"]*"/g) ?? [];
+    expect(greps.length, "the marker-gated relaunch must exist").toBeGreaterThan(0);
     for (const g of greps) expect(g).toMatch(/stopped at the \.\*budget/);
   });
 });

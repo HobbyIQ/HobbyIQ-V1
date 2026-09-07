@@ -358,16 +358,30 @@ type RelaunchStep = {
  *  comment quoting the marker does not count as a gate). */
 function relaunchSteps(): RelaunchStep[] {
   const yml = fs.readFileSync(RUNNER, "utf8");
+  // THE COMPOSITE (2026-09-07). The marker test used to be retyped in each
+  // step; seventy-two copies of that shell pushed the workflow past GitHub's
+  // 512 KB limit, where dispatches are accepted and no job is ever created. It
+  // now lives once in .github/actions/relaunch-on-marker, so a step is
+  // marker-keyed if it greps the marker ITSELF or delegates to the action that
+  // does. Either way the behaviour asserted below is identical.
+  const ACTION = fs.readFileSync(
+    path.join(WORKFLOWS, "..", "actions", "relaunch-on-marker", "action.yml"), "utf8",
+  );
+  const actionKeyed = BUDGET_MARKER.test(ACTION.replace(/^\s*#.*$/gm, ""));
   return yml
     .split(/\n(?=      - name:)/)
     .filter((step) => /gh workflow run backfill-runner\.yml/.test(step))
-    .map((step) => ({
-      name: /- name:\s*(.*)/.exec(step)?.[1]?.trim() ?? "?",
-      scripts: [...step.matchAll(/inputs\.script == '([^']+)'/g)].map((m) => m[1]),
-      keyedOnMarker: BUDGET_MARKER.test(step.replace(/^\s*#.*$/gm, "")),
-      gate: /^\s*if:\s*(.*)$/m.exec(step)?.[1]?.trim() ?? "",
-      applyForwards: [...step.matchAll(/-f apply=("[^"]*"|\S+)/g)].map((m) => m[1]),
-    }));
+    .map((step) => {
+      const bare = step.replace(/^\s*#.*$/gm, "");
+      const delegates = /uses: \.\/\.github\/actions\/relaunch-on-marker/.test(bare);
+      return {
+        name: /- name:\s*(.*)/.exec(step)?.[1]?.trim() ?? "?",
+        scripts: [...step.matchAll(/inputs\.script == '([^']+)'/g)].map((m) => m[1]),
+        keyedOnMarker: BUDGET_MARKER.test(bare) || (delegates && actionKeyed),
+        gate: /^\s*if:\s*(.*)$/m.exec(step)?.[1]?.trim() ?? "",
+        applyForwards: [...step.matchAll(/-f apply=("[^"]*"|\S+)/g)].map((m) => m[1]),
+      };
+    });
 }
 function markerPrinters(): string[] {
   return load(whitelisted()).filter((s) => BUDGET_MARKER.test(s.src)).map((s) => s.name);

@@ -90,31 +90,67 @@ const backend = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
 const RUNNER_PATH = path.join(backend, "..", ".github", "workflows", "backfill-runner.yml");
 const RUNNER = fs.readFileSync(RUNNER_PATH, "utf8").replace(/\r\n/g, "\n");
 
+/** THE COMPOSITE (2026-09-07). The four-outcome shell used to be retyped once
+ *  per lane — seventy-two copies, 408 KB of the workflow's 553 KB. That pushed
+ *  the file past GitHub's 512 KB per-workflow limit, and over that line GitHub
+ *  accepts a dispatch and then silently creates NO jobs: thirty-plus Backfill
+ *  Runner runs sat `queued` with zero jobs from 16:57Z. The shell now lives in
+ *  ONE composite action and each lane `uses:` it.
+ *
+ *  So this file reads two things and still asserts exactly what it did: the
+ *  contract itself, once, from the composite; and, per lane, that the lane
+ *  actually routes through it and hands it that lane's own dispatch. The
+ *  mutation check is unchanged in spirit and stronger in reach — breaking the
+ *  contract in the one place now names every lane at once, and a lane that
+ *  quietly stops delegating is named by `delegates to the composite` below. */
+const ACTION_PATH = path.join(
+  backend, "..", ".github", "actions", "relaunch-on-marker", "action.yml",
+);
+const ACTION = fs.readFileSync(ACTION_PATH, "utf8").replace(/\r\n/g, "\n");
+/** The composite's single `run:` block — the shell every lane now executes. */
+const ACTION_RUN = ACTION.slice(ACTION.indexOf("      run: |"));
+
 const BUDGET_MARKER = /stopped at the \.\*budget/;
 /** The line finishLane() writes with writeSync just before process.exit. */
 const FINISH_LANE = /finishLane: exiting code/;
 
-type Step = { name: string; src: string; run: string; gate: string; scripts: string[] };
+type Step = {
+  name: string; src: string; run: string; gate: string; scripts: string[];
+  /** The lane's own `with:` args — where its dispatch line and notices live. */
+  args: string;
+};
 
 /** Strip YAML comments so a comment QUOTING a branch cannot stand in for one.
  *  D18 learned this the hard way against the marker gate itself. */
 const stripComments = (s: string) => s.replace(/^\s*#.*$/gm, "");
 
+const USES_COMPOSITE = /uses: \.\/\.github\/actions\/relaunch-on-marker/;
+
 /** Every runner step that re-dispatches this workflow when the budget marker
  *  is in the log — the population this rule governs. The three lanes that
  *  decide completion some other way (a Cosmos probe, a next-start date,
  *  RELAUNCH_NEEDED) are deliberately NOT here: each reads a positive signal of
- *  work REMAINING rather than inferring completion from an absent marker. */
+ *  work REMAINING rather than inferring completion from an absent marker.
+ *
+ *  `run` is the shell the step actually RUNS: the composite's, for a step that
+ *  delegates; its own inline block otherwise. Every assertion below reads that,
+ *  so both shapes are held to the same contract and a lane cannot escape it by
+ *  changing which shape it uses. */
 function markerRelaunchSteps(): Step[] {
   return RUNNER.split(/\n(?=      - name:)/)
     .filter((s) => /gh workflow run backfill-runner\.yml/.test(s))
-    .map((s) => ({
-      name: /- name:\s*(.*)/.exec(s)?.[1]?.trim() ?? "?",
-      src: s,
-      run: s.slice(s.indexOf("run: |")),
-      gate: /^\s*if:\s*(.*)$/m.exec(s)?.[1]?.trim() ?? "",
-      scripts: [...s.matchAll(/inputs\.script == '([^']+)'/g)].map((m) => m[1]),
-    }))
+    .map((s) => {
+      const delegates = USES_COMPOSITE.test(s);
+      const withAt = s.indexOf("\n        with:\n");
+      return {
+        name: /- name:\s*(.*)/.exec(s)?.[1]?.trim() ?? "?",
+        src: s,
+        run: delegates ? ACTION_RUN : s.slice(s.indexOf("run: |")),
+        args: delegates && withAt >= 0 ? s.slice(withAt) : "",
+        gate: /^\s*if:\s*(.*)$/m.exec(s)?.[1]?.trim() ?? "",
+        scripts: [...s.matchAll(/inputs\.script == '([^']+)'/g)].map((m) => m[1]),
+      };
+    })
     .filter((s) => BUDGET_MARKER.test(stripComments(s.run)));
 }
 
@@ -126,8 +162,10 @@ const LANES = [...new Set(STEPS.flatMap((s) => s.scripts))];
  *  the message, because the `::error::` that makes the job red is on the SAME
  *  line as the message and a slice starting at the text would cut it off. */
 function killedBranch(run: string): string {
-  const i = run.lastIndexOf("\n          else\n");
-  return i < 0 ? "" : run.slice(i);
+  // Indentation-agnostic: the composite's shell sits two columns shallower
+  // than the inline blocks did, and the arm is the same arm either way.
+  const m = [...run.matchAll(/\n\s*else\n/g)].pop();
+  return m ? run.slice(m.index!) : "";
 }
 
 describe("the census finds the steps this rule governs", () => {
@@ -198,18 +236,45 @@ describe("every marker-keyed relaunch step handles the killed case", () => {
       const run = stripComments(step.run);
       // Outcome (a) is unchanged...
       const marker = /if grep -aqE "stopped at the \.\*budget"[\s\S]*?\n\s*elif\b/.exec(run)?.[0] ?? "";
+      // The dispatch is either written into the branch (an inline step) or
+      // interpolated there from the lane's own `dispatch:` argument (a step
+      // that delegates). Either way it must be THIS branch that fires it.
+      const dispatchesHere = /gh workflow run backfill-runner\.yml/.test(marker)
+        || /\$\{\{ inputs\.dispatch \}\}/.test(marker);
       expect(
-        marker,
+        dispatchesHere,
         `${step.name}'s budget-marker branch must still be the branch that re-dispatches`,
-      ).toMatch(/gh workflow run backfill-runner\.yml/);
+      ).toBe(true);
+
+      // ...and a delegating step must actually SUPPLY a dispatch, or the branch
+      // above interpolates to nothing and the budget stop silently ends the
+      // fan-out — the #1361 failure with a new cause.
+      if (/\$\{\{ inputs\.dispatch \}\}/.test(marker)) {
+        expect(
+          step.args,
+          `${step.name} delegates to the composite but passes no dispatch:, so its budget `
+            + `branch would run an empty command and the fleet would stop, green.`,
+        ).toMatch(/dispatch: \|\n\s+gh workflow run backfill-runner\.yml/);
+      }
 
       // ...and the killed branch must not have become a second one.
       const killed = killedBranch(run);
       expect(
-        /gh workflow run/.test(killed),
+        /gh workflow run/.test(killed) || /\$\{\{ inputs\.dispatch \}\}/.test(killed),
         `${step.name} re-dispatches from its killed branch. A kill is not a budget stop: it `
           + `withholds the re-dispatch and fails.`,
       ).toBe(false);
+    });
+
+    it(`${step.name} delegates to the composite that holds the contract`, () => {
+      // A lane may keep its shell inline, but if it does, the four-outcome
+      // logic above is being asserted against ITS copy — which is exactly the
+      // duplication that grew the file past 512 KB. New lanes must delegate.
+      expect(
+        USES_COMPOSITE.test(step.src) || /run: \|/.test(step.src),
+        `${step.name} neither delegates to .github/actions/relaunch-on-marker nor carries an `
+          + `inline run: block, so nothing decides its outcome.`,
+      ).toBe(true);
     });
   }
 });
@@ -226,12 +291,28 @@ describe("the finished branch is gated on BOTH witnesses", () => {
 
       // A log can be truncated, and a lane can print finishLane and still have
       // the step fail afterwards. The step's own outcome is the second witness.
+      // The composite reads it from $RELAUNCH_OUTCOME, which its `env:` binds to
+      // ${{ inputs.outcome }} — so for a delegating step the witness is proven
+      // in two halves: the arm consults it, and the lane supplies it.
       expect(
         elif,
         `${step.name} decides on the log alone. The finished branch must also require `
           + `steps.backfill.outcome == 'success', or a step that printed finishLane and then `
           + `failed is still called finished.`,
-      ).toMatch(/steps\.backfill\.outcome/);
+      ).toMatch(/steps\.backfill\.outcome|RELAUNCH_OUTCOME/);
+
+      if (/RELAUNCH_OUTCOME/.test(elif)) {
+        expect(
+          ACTION,
+          `the composite reads $RELAUNCH_OUTCOME but its env: does not bind it to the `
+            + `outcome input, so the second witness would always be empty.`,
+        ).toMatch(/RELAUNCH_OUTCOME: \$\{\{ inputs\.outcome \}\}/);
+        expect(
+          step.args,
+          `${step.name} delegates but passes no outcome:, so the finished arm compares an `
+            + `empty string and can never be true — every clean finish would read as a kill.`,
+        ).toMatch(/outcome: \$\{\{ steps\.backfill\.outcome \}\}/);
+      }
 
       // #1913 read ANY finishLane code as finished. A lane that exits 5 on a
       // BACKOFF reached finishLane and is NOT done, so the finished arm has to
@@ -244,12 +325,15 @@ describe("the finished branch is gated on BOTH witnesses", () => {
           + `"exiting code 0" specifically.`,
       ).toMatch(/finishLane: exiting code 0/);
 
+      // The wording stays the lane's own — the counts it interpolates differ
+      // per lane — so for a delegating step it is asserted on the
+      // `finished-notice:` the composite runs in that arm, not on the arm.
       expect(
-        elif,
+        /finished within budget/.test(elif) || /finished within budget/.test(step.args),
         `${step.name}'s finished branch must still be the one that says "finished within `
           + `budget" — the operator reads that line to mean the lane is done, and it must now `
           + `be earned rather than assumed.`,
-      ).toMatch(/finished within budget/);
+      ).toBe(true);
     });
   }
 });
@@ -259,9 +343,10 @@ describe("the finished branch is gated on BOTH witnesses", () => {
 function verdictBranch(run: string): string {
   const i = run.indexOf("finishLane: exiting code 0");
   if (i < 0) return "";
-  const from = run.indexOf("\n          elif", i);
-  const to = run.lastIndexOf("\n          else\n");
-  return from < 0 || to < from ? "" : run.slice(from, to);
+  const from = [...run.matchAll(/\n\s*elif\b/g)].find((m) => m.index! > i);
+  const to = [...run.matchAll(/\n\s*else\n/g)].pop();
+  if (!from || !to || to.index! < from.index!) return "";
+  return run.slice(from.index!, to.index!);
 }
 
 describe("a finishLane with a NON-ZERO code is a verdict, never a kill", () => {
@@ -353,7 +438,10 @@ function classify(run: string, log: string, outcome: string): string {
   if (finishedArm ? zero && outcome === "success" : anyCode && outcome === "success") {
     return "FINISHED";
   }
-  if (/elif grep -aqE "finishLane: exiting code \[0-9\]\+" \/tmp\/backfill\.log; then/.test(run)
+  // The log is named literally by an inline step and by "$LOG" in the
+  // composite, which binds it from the `log:` input (default /tmp/backfill.log).
+  // The arm is the same arm; only the way it spells the file differs.
+  if (/elif grep -aqE "finishLane: exiting code \[0-9\]\+" (\/tmp\/backfill\.log|"\$LOG"); then/.test(run)
       && anyCode) {
     return "VERDICT";
   }
@@ -456,5 +544,71 @@ describe("finishLane really prints the line the relaunch now depends on", () => 
         + `exit line never reaches /tmp/backfill.log and every clean run reads as KILLED:\n  `
         + `${hidden.join("\n  ")}`,
     ).toEqual([]);
+  });
+});
+
+/**
+ * THE CEILING THAT HAS NO ERROR MESSAGE (2026-09-07).
+ *
+ * GitHub caps a workflow file at 512 KB (524,288 bytes). Past it, a dispatch is
+ * ACCEPTED — the run appears, `queued` — and no job is ever created. No error,
+ * no annotation, no failed run to notice: the fleet simply stops existing. From
+ * 16:57Z on 2026-09-07 that is what thirty-plus Backfill Runner dispatches did,
+ * while every other workflow in the repo ran normally, and the only visible
+ * symptom was runs that sat queued forever.
+ *
+ * It was reached by accretion, not by one bad commit: 366,611 bytes before
+ * #1955, 520,895 at #1955 (already over, merged 16:55Z — two minutes before the
+ * first stuck run), then 553,411 once #1963/#1970/#1975 landed. Every one of
+ * those PRs was a correct fix that added another copy of the same shell.
+ *
+ * So the guard is a NUMBER, checked in CI, well below the real ceiling. The
+ * margin is the point: a pin at 524,288 would go red only once the workflow was
+ * already dead, which is precisely the failure it exists to prevent. At 400,000
+ * there is room for the file to grow and still be caught with time to fix it.
+ *
+ * WHEN THIS GOES RED, the fix is not to raise the number. It is to find what is
+ * being retyped per lane and move it into
+ * `.github/actions/relaunch-on-marker/action.yml` (or another composite), the
+ * way the seventy-two relaunch blocks were.
+ */
+describe("backfill-runner.yml stays well under GitHub's 512 KB workflow limit", () => {
+  const LIMIT = 524_288;   // GitHub's hard ceiling: over this, jobs stop being created.
+  const CEILING = 400_000; // Ours, with margin to notice and fix before that.
+
+  it(`is under ${CEILING} bytes`, () => {
+    const bytes = fs.statSync(RUNNER_PATH).size;
+    expect(
+      bytes,
+      `backfill-runner.yml is ${bytes} bytes. GitHub's per-workflow limit is ${LIMIT}, and a `
+        + `file over it is accepted and then silently creates NO jobs — the 2026-09-07 outage, `
+        + `where 30+ dispatches sat queued forever with nothing to read. Do not raise this `
+        + `number: extract whatever is now duplicated per lane into a composite action, as the `
+        + `72 relaunch steps were.`,
+    ).toBeLessThan(CEILING);
+  });
+
+  it("the composite is what keeps it there — every marker lane delegates to it", () => {
+    const inline = STEPS.filter((s) => !USES_COMPOSITE.test(s.src)).map((s) => s.name);
+    expect(
+      inline,
+      `these marker-keyed relaunch steps still carry their own copy of the four-outcome shell. `
+        + `Each copy is ~5 KB, and seventy-two of them is what pushed the file over the limit:\n  `
+        + `${inline.join("\n  ")}`,
+    ).toEqual([]);
+  });
+
+  it("and the contract it holds is the one this file has been asserting", () => {
+    // A composite that lost the shell would make every per-lane assertion above
+    // vacuous, since they all now read it. Anchor it independently.
+    for (const needle of [
+      'grep -aqE "stopped at the .*budget"',
+      "finishLane: exiting code 0( |$)",
+      "FINISHED WITH VERDICT code",
+      "KILLED before finish",
+      "re-dispatch withheld",
+    ]) {
+      expect(ACTION_RUN, `the composite must still contain: ${needle}`).toContain(needle);
+    }
   });
 });

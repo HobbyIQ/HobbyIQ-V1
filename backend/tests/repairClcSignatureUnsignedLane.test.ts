@@ -384,7 +384,13 @@ describe("repair-clc-signature-unsigned — the runner wiring", () => {
     const stepStart = yml.indexOf("Self-relaunch the clc signature repair");
     const nextStep = yml.indexOf("\n      - name:", stepStart);
     const step = yml.slice(stepStart, nextStep < 0 ? undefined : nextStep);
-    expect(step).toMatch(/stopped at the .*budget/);
+    // The marker grep moved into .github/actions/relaunch-on-marker on
+    // 2026-09-07: seventy-two copies of the relaunch shell had grown
+    // backfill-runner.yml past GitHub's 512 KB limit, where a dispatch is
+    // accepted and NO job is ever created. The step delegates now, so the
+    // gate is asserted on the step PLUS the shell it calls.
+    const composite = fs.readFileSync(path.join(backend, "..", ".github", "actions", "relaunch-on-marker", "action.yml"), "utf8");
+    expect(step + composite).toMatch(/stopped at the .*budget/);
   });
 
   it("the marker is a SOURCE LITERAL in the lane, so a static reader can see it", () => {

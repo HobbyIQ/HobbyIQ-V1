@@ -1,0 +1,180 @@
+name: Relaunch on the budget marker
+description: >-
+  The four-outcome relaunch contract every marker-keyed lane of
+  backfill-runner.yml shares, in ONE place instead of seventy-two copies.
+
+# ONE COPY, NOT SEVENTY-TWO (2026-09-07).
+#
+# THE RUN THAT WROTE THIS FILE. Every Backfill Runner dispatch from 16:57Z on
+# 2026-09-07 sat `queued` with ZERO jobs created — thirty-plus runs, while every
+# other workflow in the repo ran normally. The cause was not the YAML's meaning
+# but its SIZE: backfill-runner.yml had grown to 553,411 bytes, past GitHub's
+# 512 KB (524,288-byte) per-workflow-file limit. Over that line GitHub does not
+# reject the dispatch and does not report an error; it accepts the run and never
+# creates a job. A silent ceiling, hit by accretion: #1955 took the file from
+# 366,611 to 520,895 bytes and #1963/#1970/#1975 pushed it the rest of the way.
+#
+# 408 KB of those 553 KB were seventy-two near-identical shell blocks — the same
+# four-outcome logic, retyped once per lane, with only a count-extraction
+# preamble and a dispatch line differing between them. That duplication was
+# never a style problem; it was the mechanism that ate the byte budget, and it
+# was also seventy-two places for the outcome logic to drift apart. Both are
+# fixed by having exactly one copy.
+#
+# THE CONTRACT, unchanged from #1913/#1955/#1963. FOUR outcomes, not three:
+#   (a) budget marker      -> more work, re-dispatch;
+#   (b) finishLane code 0  -> the lane exited on its own, genuinely done;
+#   (c) neither            -> the step was KILLED at the 150-minute ceiling
+#                             (or cancelled/crashed). NOT finished. Fail loudly.
+#   (d) finishLane with a NON-ZERO code -> the lane reached its own exit and
+#                             DECLARED something: BACKOFF 5, refusal 2,
+#                             VERIFY INCOMPLETE 6/7, scan-phase-stop 5. It is
+#                             finished, not killed. Report the verdict, withhold
+#                             the re-dispatch, and still fail so the chain is red.
+# Absence of the marker used to mean (b) by default, so all ten killed APPLY
+# shards of retire-self-derived-identities reported "finished within budget"
+# and the fan-out stopped with the work half done and the run green. And (d)
+# used to fall into (c): run 34135736122's ingest-universe-driver printed a
+# deliberate BACKOFF verdict and `finishLane: exiting code 5`, and the step
+# still announced "KILLED before finish ... finishLane line: 1" -- a message
+# contradicted by the very log line it was counting.
+#
+# WHAT STAYS IN THE WORKFLOW. The `if:` gate naming each lane's script, the env
+# block, and `working-directory` stay on the calling step: the gate is what
+# decides WHICH lane runs, and folding it in here would turn an explicit
+# per-lane opt-in into a pattern match. What moves is only the part that was
+# identical.
+
+inputs:
+  log:
+    description: The lane's teed stdout. The witnesses are read from this file.
+    required: false
+    default: /tmp/backfill.log
+  outcome:
+    description: >-
+      steps.backfill.outcome. The SECOND witness for the finished arm: a lane
+      can print finishLane and still have the step fail afterwards, and a log
+      can be truncated. Without it a failed step that reached finishLane is
+      called finished.
+    required: true
+  dispatch:
+    description: >-
+      The full `gh workflow run` line to run when the budget marker is present,
+      forwarded VERBATIM from the calling step. It carries that lane's own input
+      list, because CF-A-RELAUNCH-THAT-DROPS-AN-INPUT-INHERITS-A-DEFAULT
+      (2026-09-07): rematch-sold-comps omitted `scope`, the continuation
+      inherited the workflow default 'refractor', MODE=apply-improve refused it
+      at exit 2, and 18 slots of that fleet died in 55-70s having read no rows.
+      So the list is per-lane and stated by the lane, never assembled here.
+    required: true
+  preamble:
+    description: >-
+      Optional shell run BEFORE the outcome test, for the lane's own counters:
+      the `N=$(grep ...)` extraction whose value the notices interpolate, and
+      any `echo name=value` progress line. Runs in the same shell, so anything
+      it sets is visible to `budget-notice` below.
+    required: false
+    default: ""
+  budget-notice:
+    description: >-
+      Optional shell for outcome (a), run just BEFORE the dispatch — the lane's
+      own "budget hit (written=N)" wording. rematch-sold-comps uses it to warn
+      that an APPLY continues as a REPORT because its canary baseline does not
+      survive a re-dispatch.
+    required: false
+    default: ""
+  finished-notice:
+    description: >-
+      Optional shell for outcome (b). Must still say "finished within budget" —
+      the operator reads that phrase to mean the lane is done.
+    required: false
+    default: ""
+  script:
+    description: The lane's script name, for the messages that name it.
+    required: false
+    default: ""
+  startup-marker-prefix:
+    description: >-
+      When set, outcome (c) is split further using the lane's own startup
+      narration: `<prefix>: STARTUP REFUSED` means the slot is UNSTARTED rather
+      than half-done, and `<prefix>: STARTUP ok` without the banner named by
+      `startup-banner-regex` means it died at module load. CF-AN-EMPTY-LOG-IS-
+      NOT-A-BUDGET-KILL (2026-09-07): "KILLED before finish" reads as a kill at
+      the 150-minute ceiling, and for 18 runs that reading was wrong — they died
+      in 55-70 SECONDS at a startup refusal. Empty means the lane has no startup
+      narration and (c) stays a single KILLED verdict.
+    required: false
+    default: ""
+  startup-banner-regex:
+    description: >-
+      The lane's first post-startup banner line, as an ERE. Reaching STARTUP ok
+      but never this line is DIED DURING STARTUP.
+    required: false
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        RELAUNCH_LOG: ${{ inputs.log }}
+        RELAUNCH_OUTCOME: ${{ inputs.outcome }}
+        RELAUNCH_SCRIPT: ${{ inputs.script }}
+        RELAUNCH_STARTUP_PREFIX: ${{ inputs.startup-marker-prefix }}
+        RELAUNCH_STARTUP_BANNER: ${{ inputs.startup-banner-regex }}
+      run: |
+        # `set +e` matches what the inlined blocks did: every grep here is a
+        # QUESTION about the log, not a failure, and a pipeline that finds
+        # nothing must not end the step before the outcome is decided. The
+        # explicit `exit 1`s below are what make the job red.
+        set +e
+
+        LOG="$RELAUNCH_LOG"
+
+        # The lane's own counters, in this shell so the notices can read them.
+        ${{ inputs.preamble }}
+
+        if grep -aqE "stopped at the .*budget" "$LOG"; then
+          ${{ inputs.budget-notice }}
+          ${{ inputs.dispatch }}
+        elif grep -aqE "finishLane: exiting code 0( |$)" "$LOG" && [ "$RELAUNCH_OUTCOME" = "success" ]; then
+          ${{ inputs.finished-notice }}
+        elif grep -aqE "finishLane: exiting code [0-9]+" "$LOG"; then
+          RC=$(grep -aoE "finishLane: exiting code [0-9]+" "$LOG" | tail -1 | grep -oE "[0-9]+$" || true)
+          SAID=$(grep -aE "SYSTEMIC|ABORT|BACKING OFF|VERIFY INCOMPLETE" "$LOG" | tail -1 | sed -e "s/^[[:space:]]*//" || true)
+          if [ "$RC" = "0" ]; then
+            # finishLane said 0, but the STEP still failed: the lane ended on purpose
+            # and something after it (or the runner itself) went red. Not a kill, and
+            # not a clean finish either -- name it for what it is rather than
+            # reporting a "verdict code 0", which would read as a contradiction.
+            echo "::error::EXITED 0 BUT THE STEP FAILED — the lane reached finishLane cleanly yet the step outcome is $RELAUNCH_OUTCOME; re-dispatch withheld"
+          else
+            echo "::error::FINISHED WITH VERDICT code $RC — ${SAID:-(no SYSTEMIC/ABORT/BACKOFF/VERIFY line in the log)}; re-dispatch withheld"
+          fi
+          if [ "$RC" = "5" ]; then echo "  if this was a BACKOFF: the host is refusing this client — retry after 30 minutes."; fi
+          echo "  step outcome: $RELAUNCH_OUTCOME"
+          echo "  last 20 lines of $LOG:"
+          tail -n 20 "$LOG" 2>/dev/null || echo "  (no log)"
+          exit 1
+        else
+          # CF-AN-EMPTY-LOG-IS-NOT-A-BUDGET-KILL (2026-09-07). For a lane that
+          # narrates its startup, (c) splits three further ways before the real
+          # kill: a refusal that read no rows, a process that never printed a
+          # line at all, and a death at module load. Only the last arm is the
+          # 150-minute ceiling this branch was originally written for.
+          if [ -n "$RELAUNCH_STARTUP_PREFIX" ] && grep -aq "$RELAUNCH_STARTUP_PREFIX: STARTUP REFUSED" "$LOG"; then
+            echo "::error::STARTUP REFUSED — the lane never began work; this is NOT a budget kill. No rows were read and NOTHING was written; the slot is UNSTARTED, not half-done. Re-dispatch it with the inputs the refusal names."
+            grep -a "STARTUP REFUSED\|^FATAL \[phase=" "$LOG" | head -n 20 || true
+          elif [ -n "$RELAUNCH_STARTUP_PREFIX" ] && [ ! -s "$LOG" ]; then
+            echo "::error::EMPTY LOG — the lane did not even reach its first stdout line. That line is a source literal printed before any require, so an empty log now means the process never started at all (runner/image failure, or the step was killed before node ran) rather than a silent refusal."
+          elif [ -n "$RELAUNCH_STARTUP_PREFIX" ] && grep -aq "$RELAUNCH_STARTUP_PREFIX: STARTUP ok" "$LOG" && ! grep -aqE "$RELAUNCH_STARTUP_BANNER" "$LOG"; then
+            echo "::error::DIED DURING STARTUP — the lane printed its STARTUP line but never reached its banner, so it failed at module load (a missing dist/, a bad require, or an OOM before work began). NOT a budget kill; nothing was written."
+          else
+            echo "::error::KILLED before finish — ${RELAUNCH_SCRIPT:-the lane} never reached finishLane; NOT finished; re-dispatch withheld — investigate"
+          fi
+          echo "  step outcome: $RELAUNCH_OUTCOME"
+          echo "  budget marker: absent    finishLane line: $(grep -acE 'finishLane: exiting code [0-9]+' "$LOG" 2>/dev/null || echo 0)"
+          echo "  last 20 lines of $LOG:"
+          tail -n 20 "$LOG" 2>/dev/null || echo "  (no log)"
+          exit 1
+        fi

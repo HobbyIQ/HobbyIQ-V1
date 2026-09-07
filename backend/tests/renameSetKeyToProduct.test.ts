@@ -178,7 +178,13 @@ describe("the fleet's contract with the runner", () => {
     const yml = fs.readFileSync(path.join(__dirname, "..", "..", ".github", "workflows", "backfill-runner.yml"), "utf8");
     expect(yml).toMatch(/^\s+- rename-setkey-to-product\s*$/m);
     const step = yml.split(/\n(?=      - name:)/).find((s) => /inputs\.script == 'rename-setkey-to-product'/.test(s)) ?? "";
-    expect(step).toMatch(/stopped at the \.\*budget/);
+    // The marker grep moved into .github/actions/relaunch-on-marker on
+    // 2026-09-07: seventy-two copies of the relaunch shell had grown
+    // backfill-runner.yml past GitHub's 512 KB limit, where a dispatch is
+    // accepted and NO job is ever created. The step delegates now, so the
+    // gate is asserted on the step PLUS the shell it calls.
+    const composite = fs.readFileSync(path.join(__dirname, "..", "..", ".github", "actions", "relaunch-on-marker", "action.yml"), "utf8");
+    expect(step + composite).toMatch(/stopped at the \.\*budget/);
     for (const input of ["slot", "slots", "mode", "sports", "years", "scope", "sources"]) expect(step, input).toContain(`-f ${input}="\${{ inputs.${input} }}"`);
   });
 });

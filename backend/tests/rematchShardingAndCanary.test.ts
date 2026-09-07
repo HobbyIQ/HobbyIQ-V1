@@ -215,7 +215,16 @@ describe("the runner contract", () => {
     expect(re.test("stopped at the 140-minute budget")).toBe(true);
     expect(re.test("stopped at the LIMIT of 400 rows")).toBe(false);
     expect(script).toContain("stopped at the ${RUN_MINUTES}-minute budget");
-    expect(runner).toContain('if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then');
+    // The grep moved into .github/actions/relaunch-on-marker on 2026-09-07:
+    // seventy-two copies of the relaunch shell had grown backfill-runner.yml
+    // past GitHub's 512 KB limit, where a dispatch is accepted and NO job is
+    // ever created. `"$LOG"` is the composite's binding for the `log:` input,
+    // whose default is /tmp/backfill.log — the same file, named once.
+    const composite = fs.readFileSync(
+      path.resolve(backend, "..", ".github", "actions", "relaunch-on-marker", "action.yml"), "utf8",
+    );
+    expect(composite).toContain('if grep -aqE "stopped at the .*budget" "$LOG"; then');
+    expect(composite).toContain("default: /tmp/backfill.log");
   });
 
   it("the relaunch forwards mode verbatim, and NEVER forwards apply=true", () => {
@@ -254,6 +263,11 @@ describe("the runner contract", () => {
     //
     // N is a COURTESY NUMBER in a ::notice:: line. It must never be able to
     // decide whether the relaunch happens.
+    // The step delegates to .github/actions/relaunch-on-marker since 2026-09-07
+    // (72 copies of the shell had pushed the workflow past GitHub's 512 KB
+    // limit). The N= extraction is still the lane's own -- it now rides in the
+    // step's `budget-notice:` argument, which the composite runs in exactly the
+    // branch it always ran in -- so this reads the step, args included.
     const step = runner.slice(runner.indexOf("Self-relaunch rematch-sold-comps"));
     const body = step.slice(0, step.indexOf("\n      - name:") + 1);
     const assignment = body.split("\n").find((l) => l.trim().startsWith("N=$("));

@@ -36,6 +36,9 @@ const read = (...p: string[]) => fs.readFileSync(path.join(ROOT, ...p), "utf8").
 
 const SCRIPT = read("backend", "scripts", "retire-self-derived-identities.cjs");
 const RUNNER = read(".github", "workflows", "backfill-runner.yml");
+/** The four-outcome relaunch shell, extracted from the workflow on 2026-09-07
+ *  when 72 copies of it pushed the file past GitHub's 512 KB limit. */
+const COMPOSITE = read(".github", "actions", "relaunch-on-marker", "action.yml");
 
 /** The step that actually runs the script. Its `timeout-minutes` is the
  *  ceiling every lane's budget has to live under — read from the workflow,
@@ -132,7 +135,12 @@ describe("retire-self-derived-identities — the budget stops under the action c
     const relaunch = RUNNER.split(/^      - name: /m)
       .find((s) => /^Self-relaunch the self-derived retire\/label lane/.test(s));
     expect(relaunch, "the retire lane's relaunch step must exist").toBeTruthy();
-    expect(relaunch as string).toMatch(/grep -aqE "stopped at the \.\*budget"/);
+    // The marker grep moved into .github/actions/relaunch-on-marker on
+    // 2026-09-07: seventy-two copies of the relaunch shell had grown
+    // backfill-runner.yml past GitHub's 512 KB limit, where a dispatch is
+    // accepted and NO job is ever created. The step delegates now, so the
+    // gate is asserted on the step PLUS the shell it calls.
+    expect((relaunch as string) + COMPOSITE).toMatch(/grep -aqE "stopped at the \.\*budget"/);
   });
 
   it("a multi-budget apply documents its banner sequence, so a relaunch is not read as a failure", () => {

@@ -537,7 +537,13 @@ describe("D19: both scripts carry the fleet discipline", () => {
       expect(yml).toMatch(new RegExp(`^\\s+- ${name}\\s*$`, "m"));
       const step = yml.split(/\n(?=      - name:)/).find((st) => st.includes(`inputs.script == '${name}'`) && /gh workflow run backfill-runner\.yml/.test(st));
       expect(step, `${name} has no relaunch step`).toBeTruthy();
-      expect(step!.replace(/^\s*#.*$/gm, "")).toMatch(/stopped at the .*budget/);
+      // The four-outcome shell moved into .github/actions/relaunch-on-marker on
+      // 2026-09-07: seventy-two copies of it had grown backfill-runner.yml past
+      // GitHub's 512 KB limit, where a dispatch is accepted and NO job is ever
+      // created. The step delegates now, so the gate is read on the step PLUS
+      // the shell it calls.
+      const composite = fs.readFileSync(path.join(__dirname, "..", "..", ".github", "actions", "relaunch-on-marker", "action.yml"), "utf8");
+      expect((step! + composite).replace(/^\s*#.*$/gm, "")).toMatch(/stopped at the .*budget/);
     });
   }
 });
