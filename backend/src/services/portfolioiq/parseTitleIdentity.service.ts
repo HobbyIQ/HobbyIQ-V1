@@ -879,7 +879,14 @@ export function parseListingIdentity(
     : null;
   const finish = extractParallel(t, {
     year: opts?.year ?? fromSlug.year,
-    setKey: opts?.setKey ?? fromSlug.setKey ?? resolvedPokemonSetKey,
+    setKey: opts?.setKey ?? fromSlug.setKey,
+    // SUPPRESSION ONLY, never product context. Passing this as `setKey` would
+    // ALSO unlock the checklist reader's product branch, and that changes which
+    // reader answers: a resolved `swsh3-5` let the sports corpus name "Holo
+    // Foil" beat the Pokemon vocabulary's canonical "Holofoil" on
+    // "Champion's Path ... Holo Foil". The set is used to say what is NOT a
+    // finish; it is not evidence about which finishes this product HAS.
+    pokemonSetKeyForResidue: resolvedPokemonSetKey,
     // CF-A-FINISH-IS-A-CARD-LINE, AT THE TITLE PARSER (Drew, 2026-09-07). The
     // Pokemon finish vocabulary is consulted only under the SAME gate the
     // number reader above uses, because "Holo", "Foil" and "Reverse" are
@@ -1432,7 +1439,16 @@ function extractPrintRun(title: string, isTcg = false, isPokemon = false): numbe
  *  > misc named parallels. Unrecognized → "Base". */
 function extractParallel(
   title: string,
-  ctx?: { year?: number | null; setKey?: string | null; isPokemon?: boolean },
+  ctx?: {
+    year?: number | null;
+    setKey?: string | null;
+    isPokemon?: boolean;
+    /** CF-A-SET-NAME-IS-NEVER-A-PARALLEL: the Pokemon set this TITLE names, when
+     *  the caller supplied no setKey. Used ONLY to say which words name the SET
+     *  and therefore cannot be a finish -- never as product context, which would
+     *  change which reader answers. */
+    pokemonSetKeyForResidue?: string | null;
+  },
 ): string {
   // CF-REF-IS-REFRACTOR (Drew, 2026-08-24). Sellers abbreviate it, and the
   // abbreviation was invisible to every rule below.
@@ -2095,7 +2111,11 @@ function extractParallel(
   // A LOT STATES NO ONE CARD'S FINISH. `isMultiCardLot` is the same refusal the
   // bare-Refractor fallback above carries, for the same reason.
   if (!isMultiCardLot(T)) {
-    const stated = statedFinishFromChecklist(T, { year: ctx?.year ?? null, setKey: ctx?.setKey ?? null });
+    const stated = statedFinishFromChecklist(T, {
+      year: ctx?.year ?? null,
+      setKey: ctx?.setKey ?? null,
+      pokemonSetKeyForResidue: ctx?.pokemonSetKeyForResidue ?? null,
+    });
     if (stated) return stated;
   }
 

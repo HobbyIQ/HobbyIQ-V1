@@ -547,6 +547,19 @@ export interface StatedFinishContext {
   year?: number | null;
   /** The card's setKey, when the caller knows it. */
   setKey?: string | null;
+  /**
+   * CF-A-SET-NAME-IS-NEVER-A-PARALLEL (Drew, 2026-09-07): the Pokemon set the
+   * TITLE names, when the caller supplied no `setKey` of its own.
+   *
+   * SUPPRESSION ONLY, AND THAT SEPARATION IS THE WHOLE POINT. It says which
+   * words name the SET and therefore cannot be a finish. It is NOT product
+   * context: it must never select `byProduct`, because a resolved key would
+   * then change WHICH READER ANSWERS. Measured -- passing it as `setKey` let
+   * the sports corpus name "Holo Foil" beat the Pokemon vocabulary's canonical
+   * "Holofoil" on "2020 Pokemon Champion's Path Charizard V #79 Holo Foil",
+   * which is #1937's five-spellings-one-card-line defect reintroduced.
+   */
+  pokemonSetKeyForResidue?: string | null;
 }
 
 /**
@@ -599,10 +612,27 @@ export function statedFinishFromChecklist(
   if (/\bbase\b/i.test(t)) return null;
 
   const own = productWords(ctx.setKey);
-  // CF-A-SET-NAME-IS-NEVER-A-PARALLEL, THE TITLE HALF. Only when the product IS
-  // a Pokemon set: `own` is the sports rule everywhere else and must not move.
-  if (pokemonSetNameWords(lower(ctx.setKey ?? "")).size) {
-    for (const w of pokemonSetNameWordsFromTitle(titleWordSet)) own.add(w);
+  // CF-A-SET-NAME-IS-NEVER-A-PARALLEL, THE TITLE HALF. Reached either because
+  // the CALLER named a Pokemon product, or because the title itself named one
+  // (`pokemonSetKeyForResidue`) -- which adds suppression WITHOUT adding the
+  // product context that would change which reader answers.
+  //
+  // KEPT SEPARATE FROM `own`, and that separation is load-bearing. `own` is read
+  // TWICE and the two readings want different things: the candidate filter below
+  // (refuse a name made entirely of set words) is what this ruling needs, while
+  // the LEFTOVER test further down uses `own` to EXCUSE a leftover word. Folding
+  // the set-name words into `own` would excuse them there too -- measured, that
+  // let "Holo Foil" answer "2020 Pokemon Champion's Path Charizard V #79 Holo
+  // Foil", because `champion` stopped counting as an unexplained leftover. On
+  // main that leftover is exactly what refuses the read, so the Pokemon finish
+  // vocabulary answers the canonical "Holofoil" (#1937's one-card-line fold).
+  //
+  // So: these words may DISQUALIFY a candidate, and may never RESCUE one.
+  const setNameWords = new Set<string>();
+  const residueKey = lower(ctx.pokemonSetKeyForResidue ?? "");
+  if (residueKey) for (const w of pokemonSetNameWords(residueKey)) setNameWords.add(w);
+  if (residueKey || pokemonSetNameWords(lower(ctx.setKey ?? "")).size) {
+    for (const w of pokemonSetNameWordsFromTitle(titleWordSet)) setNameWords.add(w);
   }
   const year = ctx.year == null ? "" : String(ctx.year);
   const setKey = lower(ctx.setKey ?? "");
@@ -648,9 +678,12 @@ export function statedFinishFromChecklist(
     // `topps-heritage-chrome` names the set; on `topps` it is a finish. Only a
     // name made ENTIRELY of this product's own words is refused -- "Chrome
     // Refractor" on topps-chrome still states a finish via `refractor`.
-    if (own.size) {
+    if (own.size || setNameWords.size) {
       const ws = words(name);
-      if (ws.every((w) => own.has(w))) continue;
+      if (own.size && ws.every((w) => own.has(w))) continue;
+      // CF-A-SET-NAME-IS-NEVER-A-PARALLEL: a candidate made entirely of the
+      // words that name the SET is the residue this ruling refuses.
+      if (setNameWords.size && ws.every((w) => setNameWords.has(w))) continue;
     }
     // The longest name that the title fully states is the most specific one.
     if (!best || name.length > best.length) best = name;

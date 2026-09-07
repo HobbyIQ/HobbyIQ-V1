@@ -145,6 +145,20 @@ describe("CF-A-SET-NAME-IS-NEVER-A-PARALLEL", () => {
     expect(pokemon(t).parallel).toBe("Base");
   });
 
+  it("the set-name words may DISQUALIFY a candidate, never RESCUE one", () => {
+    // THE REGRESSION THIS GUARD ALMOST SHIPPED. `own` is read twice inside
+    // statedFinishFromChecklist: once to refuse a candidate made of the
+    // product's own words, and once to EXCUSE an unexplained leftover word.
+    // Folding the set-name words into `own` satisfied every other test here and
+    // broke this title -- `champion` stopped counting as a leftover, so the
+    // sports corpus name "Holo Foil" answered instead of the Pokemon
+    // vocabulary's canonical "Holofoil", reintroducing #1937's
+    // five-spellings-one-card-line split. The words live in their own set for
+    // exactly this reason.
+    expect(parseListingIdentity("2020 Pokemon Champion's Path Charizard V #79 Holo Foil").parallel)
+      .toBe("Holofoil");
+  });
+
   it("STILL READS A REAL FINISH on a set whose name is a residue trap", () => {
     // THE MUTATION GUARD. A guard that suppressed everything would pass every
     // test above and destroy #1938's whole point. A finish stated in words is
