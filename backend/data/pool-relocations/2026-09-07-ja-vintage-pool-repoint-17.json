@@ -1,0 +1,2111 @@
+{
+  "note": "R5 pool moves: JA-stated sales addressed on one of the 38 shared English codes.",
+  "rulings": [
+    "CF-THE-JAPANESE-VINTAGE-SET-GETS-ITS-OWN-KEY (Drew, 2026-09-07, R5): the 38 Japanese sets whose alias resolves to a code the ENGLISH table owns get the distinct key ja-<code>.",
+    "THE NUMBER SEGMENT IS KEPT (#1938 N/M, reaffirmed #1948): the Japanese print carries the same number, so ONLY the set-code segment changes.",
+    "SHAPE FOLLOWS THE FIELD THAT IS WRONG: sold_comps is partitioned on /cardId and this corpus is CardHedge vendor ids, so a wrong identity is a REPOINT (patch in place); only a row whose PARTITION carries the slug RELOCATES.",
+    "THE ROW SIDE IS #1915 marketOfRow, asked with the row's TEXT only -- the stored key IS the address here, so a key witness would agree with the address by construction."
+  ],
+  "entries": [
+    {
+      "id": "cardhedge::ch-daily::1788424063796x997046842331142900",
+      "fromCardId": "1766376539462x197663406639252860",
+      "repointHobbyiqCardId": "hiq:pokemon:2012:ja-bw4:20:base:no-auto",
+      "price": 2.51,
+      "evidence": "R5: setName/title states Japanese; address code bw4 is shared with the ENGLISH product; ruled key ja-bw4"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788320635123x143638157849176770",
+      "fromCardId": "1709691393847x544972006400175300",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base2:53:base:no-auto",
+      "price": 3.59,
+      "evidence": "R5: setName/title states Japanese; address code base2 is shared with the ENGLISH product; ruled key ja-base2"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788317341691x511318696556240400",
+      "fromCardId": "1764432631364x830014836211725000",
+      "repointHobbyiqCardId": "hiq:pokemon:2000:ja-neo1:189:base:no-auto",
+      "price": 7.51,
+      "evidence": "R5: setName/title states Japanese; address code neo1 is shared with the ENGLISH product; ruled key ja-neo1"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788314256416x650209477757657200",
+      "fromCardId": "1762403489197x519914754448116000",
+      "repointHobbyiqCardId": "hiq:pokemon:2018:ja-sm9:13:base:no-auto",
+      "price": 14.99,
+      "evidence": "R5: setName/title states Japanese; address code sm9 is shared with the ENGLISH product; ruled key ja-sm9"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788313619315x711475108803326000",
+      "fromCardId": "1762403489197x519914754448116000",
+      "repointHobbyiqCardId": "hiq:pokemon:2018:ja-sm9:13:base:no-auto",
+      "price": 12.03,
+      "evidence": "R5: setName/title states Japanese; address code sm9 is shared with the ENGLISH product; ruled key ja-sm9"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788311323835x157408808620943300",
+      "fromCardId": "1709691397259x202977183356958000",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base2:31:base:no-auto",
+      "price": 10,
+      "evidence": "R5: setName/title states Japanese; address code base2 is shared with the ENGLISH product; ruled key ja-base2"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788310367196x639947028287975600",
+      "fromCardId": "1764432604840x201759325908141840",
+      "repointHobbyiqCardId": "hiq:pokemon:2000:ja-neo1:176:base:no-auto",
+      "price": 9.5,
+      "evidence": "R5: setName/title states Japanese; address code neo1 is shared with the ENGLISH product; ruled key ja-neo1"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788306720095x768912013697672600",
+      "fromCardId": "1763958783688x104271567245731500",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:141:base:no-auto",
+      "price": 9,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788300663517x421603290016806500",
+      "fromCardId": "1770506656914x430725335950425900",
+      "repointHobbyiqCardId": "hiq:pokemon:2002:ja-ecard3:73:base:no-auto",
+      "price": 270,
+      "evidence": "R5: setName/title states Japanese; address code ecard3 is shared with the ENGLISH product; ruled key ja-ecard3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788300510149x149122212475376160",
+      "fromCardId": "1764432631364x830014836211725000",
+      "repointHobbyiqCardId": "hiq:pokemon:2000:ja-neo1:189:base:no-auto",
+      "price": 11.88,
+      "evidence": "R5: setName/title states Japanese; address code neo1 is shared with the ENGLISH product; ruled key ja-neo1"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788295257935x993030321628629600",
+      "fromCardId": "1762403489197x519914754448116000",
+      "repointHobbyiqCardId": "hiq:pokemon:2018:ja-sm9:13:base:no-auto",
+      "price": 13.45,
+      "evidence": "R5: setName/title states Japanese; address code sm9 is shared with the ENGLISH product; ruled key ja-sm9"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788280343966x247971948514895230",
+      "fromCardId": "1764432631364x830014836211725000",
+      "repointHobbyiqCardId": "hiq:pokemon:2000:ja-neo1:189:base:no-auto",
+      "price": 33.83,
+      "evidence": "R5: setName/title states Japanese; address code neo1 is shared with the ENGLISH product; ruled key ja-neo1"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788280834760x765614830508172900",
+      "fromCardId": "1770506674382x803632679210324600",
+      "repointHobbyiqCardId": "hiq:pokemon:2002:ja-ecard3:52:base:no-auto",
+      "price": 45,
+      "evidence": "R5: setName/title states Japanese; address code ecard3 is shared with the ENGLISH product; ruled key ja-ecard3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788270937785x880223778405011300",
+      "fromCardId": "1770506616830x289341725206297100",
+      "repointHobbyiqCardId": "hiq:pokemon:2002:ja-ecard3:42:base:no-auto",
+      "price": 172,
+      "evidence": "R5: setName/title states Japanese; address code ecard3 is shared with the ENGLISH product; ruled key ja-ecard3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788265007609x817481834566419500",
+      "fromCardId": "1763958765385x157327287798185500",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:094:base:no-auto",
+      "price": 90,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788264981467x512077411890876600",
+      "fromCardId": "1763958757134x478308353644428800",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:54:base:no-auto",
+      "price": 5,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788267724755x432820024236685060",
+      "fromCardId": "1763958765385x157327287798185500",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:94:base:no-auto",
+      "price": 350,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788261871585x166501951380836800",
+      "fromCardId": "1762403489197x519914754448116000",
+      "repointHobbyiqCardId": "hiq:pokemon:2018:ja-sm9:13:base:no-auto",
+      "price": 50,
+      "evidence": "R5: setName/title states Japanese; address code sm9 is shared with the ENGLISH product; ruled key ja-sm9"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788261644968x160796639726382000",
+      "fromCardId": "1765646498736x935087174370712300",
+      "repointHobbyiqCardId": "hiq:pokemon:2014:ja-xy3:37:base:no-auto",
+      "price": 1.88,
+      "evidence": "R5: setName/title states Japanese; address code xy3 is shared with the ENGLISH product; ruled key ja-xy3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788258350155x296134524484843440",
+      "fromCardId": "1764432641196x648651503016233900",
+      "repointHobbyiqCardId": "hiq:pokemon:2000:ja-neo1:227:base:no-auto",
+      "price": 175.42,
+      "evidence": "R5: setName/title states Japanese; address code neo1 is shared with the ENGLISH product; ruled key ja-neo1"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788256668967x234095948856909220",
+      "fromCardId": "1765287311382x898967857133245000",
+      "repointHobbyiqCardId": "hiq:pokemon:2015:ja-xy7:32:base:no-auto",
+      "price": 2.5,
+      "evidence": "R5: setName/title states Japanese; address code xy7 is shared with the ENGLISH product; ruled key ja-xy7"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788267730743x405401038934067000",
+      "fromCardId": "1762403489197x519914754448116000",
+      "repointHobbyiqCardId": "hiq:pokemon:2018:ja-sm9:13:base:no-auto",
+      "price": 20,
+      "evidence": "R5: setName/title states Japanese; address code sm9 is shared with the ENGLISH product; ruled key ja-sm9"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788255337917x473052373842317600",
+      "fromCardId": "1762402806548x197922576822475940",
+      "repointHobbyiqCardId": "hiq:pokemon:2019:ja-sm11:69:base:no-auto",
+      "price": 8.81,
+      "evidence": "R5: setName/title states Japanese; address code sm11 is shared with the ENGLISH product; ruled key ja-sm11"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788339941855x374621008462316000",
+      "fromCardId": "1762403489197x519914754448116000",
+      "repointHobbyiqCardId": "hiq:pokemon:2018:ja-sm9:13:base:no-auto",
+      "price": 80,
+      "evidence": "R5: setName/title states Japanese; address code sm9 is shared with the ENGLISH product; ruled key ja-sm9"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788247221331x988386294335700700",
+      "fromCardId": "1764432604840x201759325908141840",
+      "repointHobbyiqCardId": "hiq:pokemon:2000:ja-neo1:176:base:no-auto",
+      "price": 20.5,
+      "evidence": "R5: setName/title states Japanese; address code neo1 is shared with the ENGLISH product; ruled key ja-neo1"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788246922696x657936551583187000",
+      "fromCardId": "1764432630679x874408852351273900",
+      "repointHobbyiqCardId": "hiq:pokemon:2000:ja-neo1:154:base:no-auto",
+      "price": 17.5,
+      "evidence": "R5: setName/title states Japanese; address code neo1 is shared with the ENGLISH product; ruled key ja-neo1"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788241524527x405751363790192400",
+      "fromCardId": "1765810347026x118964917390059100",
+      "repointHobbyiqCardId": "hiq:pokemon:2012:ja-bw7:58:1st-edition:no-auto",
+      "price": 3.49,
+      "evidence": "R5: setName/title states Japanese; address code bw7 is shared with the ENGLISH product; ruled key ja-bw7"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788229226749x268299403838195170",
+      "fromCardId": "1709691410094x807574629257375400",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base2:045:base:no-auto",
+      "price": 37,
+      "evidence": "R5: setName/title states Japanese; address code base2 is shared with the ENGLISH product; ruled key ja-base2"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788227813615x179572261063243970",
+      "fromCardId": "1762402806548x197922576822475940",
+      "repointHobbyiqCardId": "hiq:pokemon:2019:ja-sm11:69:base:no-auto",
+      "price": 15.5,
+      "evidence": "R5: setName/title states Japanese; address code sm11 is shared with the ENGLISH product; ruled key ja-sm11"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788224164468x198102586088490180",
+      "fromCardId": "1764432630679x874408852351273900",
+      "repointHobbyiqCardId": "hiq:pokemon:2000:ja-neo1:154:base:no-auto",
+      "price": 17.58,
+      "evidence": "R5: setName/title states Japanese; address code neo1 is shared with the ENGLISH product; ruled key ja-neo1"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788223656822x436880566295352770",
+      "fromCardId": "1762403489197x519914754448116000",
+      "repointHobbyiqCardId": "hiq:pokemon:2018:ja-sm9:13:base:no-auto",
+      "price": 59,
+      "evidence": "R5: setName/title states Japanese; address code sm9 is shared with the ENGLISH product; ruled key ja-sm9"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788246147274x607858254732089900",
+      "fromCardId": "1762404266058x188740197311265900",
+      "repointHobbyiqCardId": "hiq:pokemon:2018:ja-sm8:72:base:no-auto",
+      "price": 115,
+      "evidence": "R5: setName/title states Japanese; address code sm8 is shared with the ENGLISH product; ruled key ja-sm8"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788222922592x572861831579920100",
+      "fromCardId": "1764432604840x201759325908141840",
+      "repointHobbyiqCardId": "hiq:pokemon:2000:ja-neo1:176:base:no-auto",
+      "price": 62,
+      "evidence": "R5: setName/title states Japanese; address code neo1 is shared with the ENGLISH product; ruled key ja-neo1"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788219006667x488266976299276400",
+      "fromCardId": "1709691396694x253921779571710370",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base2:39:base:no-auto",
+      "price": 2,
+      "evidence": "R5: setName/title states Japanese; address code base2 is shared with the ENGLISH product; ruled key ja-base2"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788218929352x132860015259555820",
+      "fromCardId": "1764432604840x201759325908141840",
+      "repointHobbyiqCardId": "hiq:pokemon:2000:ja-neo1:176:base:no-auto",
+      "price": 149.99,
+      "evidence": "R5: setName/title states Japanese; address code neo1 is shared with the ENGLISH product; ruled key ja-neo1"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788215969951x345620489961062200",
+      "fromCardId": "1770506643031x205082714973564350",
+      "repointHobbyiqCardId": "hiq:pokemon:2002:ja-ecard3:63:base:no-auto",
+      "price": 9.99,
+      "evidence": "R5: setName/title states Japanese; address code ecard3 is shared with the ENGLISH product; ruled key ja-ecard3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788210155331x766808235022846500",
+      "fromCardId": "1763958757134x478308353644428800",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:054:base:no-auto",
+      "price": 6.72,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788210012014x172455841179834050",
+      "fromCardId": "1763958783688x104271567245731500",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:141:base:no-auto",
+      "price": 149.95,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788201082301x998996787467706800",
+      "fromCardId": "1716513701421x685538370052855200",
+      "repointHobbyiqCardId": "hiq:pokemon:2019:ja-sm10:29:base:no-auto",
+      "price": 12.99,
+      "evidence": "R5: setName/title states Japanese; address code sm10 is shared with the ENGLISH product; ruled key ja-sm10"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788267629148x356255971293692160",
+      "fromCardId": "1709691410094x807574629257375400",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base2:45:base:no-auto",
+      "price": 24.99,
+      "evidence": "R5: setName/title states Japanese; address code base2 is shared with the ENGLISH product; ruled key ja-base2"
+    },
+    {
+      "id": "cardhedge::ch-daily::1763958772411x971537149931627600::2026-09-04T23:22:00+00:00::473",
+      "fromCardId": "1763958772411x971537149931627600",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:24:base:no-auto",
+      "price": 4.73,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1763958765385x157327287798185500::2026-09-04T04:56:00+00:00::19500",
+      "fromCardId": "1763958765385x157327287798185500",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:94:base:no-auto",
+      "price": 195,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1763958765385x157327287798185500::2026-09-04T08:41:00+00:00::91893",
+      "fromCardId": "1763958765385x157327287798185500",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:94:base:no-auto",
+      "price": 918.93,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1764432631364x830014836211725000::2026-09-04T17:45:00+00:00::4499",
+      "fromCardId": "1764432631364x830014836211725000",
+      "repointHobbyiqCardId": "hiq:pokemon:2000:ja-neo1:189:base:no-auto",
+      "price": 44.99,
+      "evidence": "R5: setName/title states Japanese; address code neo1 is shared with the ENGLISH product; ruled key ja-neo1"
+    },
+    {
+      "id": "cardhedge::ch-daily::1764432631364x830014836211725000::2026-09-04T18:15:00+00:00::6000",
+      "fromCardId": "1764432631364x830014836211725000",
+      "repointHobbyiqCardId": "hiq:pokemon:2000:ja-neo1:189:base:no-auto",
+      "price": 60,
+      "evidence": "R5: setName/title states Japanese; address code neo1 is shared with the ENGLISH product; ruled key ja-neo1"
+    },
+    {
+      "id": "cardhedge::ch-daily::1764432631364x830014836211725000::2026-09-04T00:43:00+00:00::750",
+      "fromCardId": "1764432631364x830014836211725000",
+      "repointHobbyiqCardId": "hiq:pokemon:2000:ja-neo1:189:base:no-auto",
+      "price": 7.5,
+      "evidence": "R5: setName/title states Japanese; address code neo1 is shared with the ENGLISH product; ruled key ja-neo1"
+    },
+    {
+      "id": "cardhedge::ch-daily::1764432631364x830014836211725000::2026-09-04T05:41:00+00:00::551",
+      "fromCardId": "1764432631364x830014836211725000",
+      "repointHobbyiqCardId": "hiq:pokemon:2000:ja-neo1:189:base:no-auto",
+      "price": 5.51,
+      "evidence": "R5: setName/title states Japanese; address code neo1 is shared with the ENGLISH product; ruled key ja-neo1"
+    },
+    {
+      "id": "cardhedge::ch-daily::1709691408362x544752478206948400::2026-09-04T20:20:00+00:00::8000",
+      "fromCardId": "1709691408362x544752478206948400",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base2:101:base:no-auto",
+      "price": 80,
+      "evidence": "R5: setName/title states Japanese; address code base2 is shared with the ENGLISH product; ruled key ja-base2"
+    },
+    {
+      "id": "cardhedge::ch-daily::1709691408362x544752478206948400::2026-09-04T21:16:00+00:00::1899",
+      "fromCardId": "1709691408362x544752478206948400",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base2:101:base:no-auto",
+      "price": 18.99,
+      "evidence": "R5: setName/title states Japanese; address code base2 is shared with the ENGLISH product; ruled key ja-base2"
+    },
+    {
+      "id": "cardhedge::ch-daily::1764432641196x648651503016233900::2026-09-04T15:52:00+00:00::1200",
+      "fromCardId": "1764432641196x648651503016233900",
+      "repointHobbyiqCardId": "hiq:pokemon:2000:ja-neo1:227:base:no-auto",
+      "price": 12,
+      "evidence": "R5: setName/title states Japanese; address code neo1 is shared with the ENGLISH product; ruled key ja-neo1"
+    },
+    {
+      "id": "cardhedge::ch-daily::1764432641196x648651503016233900::2026-09-04T18:25:00+00:00::6499",
+      "fromCardId": "1764432641196x648651503016233900",
+      "repointHobbyiqCardId": "hiq:pokemon:2000:ja-neo1:227:base:no-auto",
+      "price": 64.99,
+      "evidence": "R5: setName/title states Japanese; address code neo1 is shared with the ENGLISH product; ruled key ja-neo1"
+    },
+    {
+      "id": "cardhedge::ch-daily::1764432641196x648651503016233900::2026-09-04T18:39:00+00:00::30000",
+      "fromCardId": "1764432641196x648651503016233900",
+      "repointHobbyiqCardId": "hiq:pokemon:2000:ja-neo1:227:base:no-auto",
+      "price": 300,
+      "evidence": "R5: setName/title states Japanese; address code neo1 is shared with the ENGLISH product; ruled key ja-neo1"
+    },
+    {
+      "id": "cardhedge::ch-daily::1763958788738x204524421994764160::2026-09-04T10:50:00+00:00::1600",
+      "fromCardId": "1763958788738x204524421994764160",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:142:base:no-auto",
+      "price": 16,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1763958783688x104271567245731500::2026-09-04T17:50:00+00:00::6999",
+      "fromCardId": "1763958783688x104271567245731500",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:141:base:no-auto",
+      "price": 69.99,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1763958783688x104271567245731500::2026-09-04T03:14:00+00:00::1999",
+      "fromCardId": "1763958783688x104271567245731500",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:141:base:no-auto",
+      "price": 19.99,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1763958788738x204524421994764160::2026-09-04T07:22:00+00:00::2703",
+      "fromCardId": "1763958788738x204524421994764160",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:142:base:no-auto",
+      "price": 27.03,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1762403489197x519914754448116000::2026-09-04T01:31:00+00:00::4499",
+      "fromCardId": "1762403489197x519914754448116000",
+      "repointHobbyiqCardId": "hiq:pokemon:2018:ja-sm9:13:base:no-auto",
+      "price": 44.99,
+      "evidence": "R5: setName/title states Japanese; address code sm9 is shared with the ENGLISH product; ruled key ja-sm9"
+    },
+    {
+      "id": "cardhedge::ch-daily::1762403489197x519914754448116000::2026-09-04T01:44:00+00:00::9000",
+      "fromCardId": "1762403489197x519914754448116000",
+      "repointHobbyiqCardId": "hiq:pokemon:2018:ja-sm9:13:base:no-auto",
+      "price": 90,
+      "evidence": "R5: setName/title states Japanese; address code sm9 is shared with the ENGLISH product; ruled key ja-sm9"
+    },
+    {
+      "id": "cardhedge::ch-daily::1764432604840x201759325908141840::2026-09-04T22:32:00+00:00::2000",
+      "fromCardId": "1764432604840x201759325908141840",
+      "repointHobbyiqCardId": "hiq:pokemon:2000:ja-neo1:176:base:no-auto",
+      "price": 20,
+      "evidence": "R5: setName/title states Japanese; address code neo1 is shared with the ENGLISH product; ruled key ja-neo1"
+    },
+    {
+      "id": "cardhedge::ch-daily::1764432630679x874408852351273900::2026-09-04T20:10:00+00:00::4500",
+      "fromCardId": "1764432630679x874408852351273900",
+      "repointHobbyiqCardId": "hiq:pokemon:2000:ja-neo1:154:base:no-auto",
+      "price": 45,
+      "evidence": "R5: setName/title states Japanese; address code neo1 is shared with the ENGLISH product; ruled key ja-neo1"
+    },
+    {
+      "id": "cardhedge::ch-daily::1764432630679x874408852351273900::2026-09-04T20:09:00+00:00::6500",
+      "fromCardId": "1764432630679x874408852351273900",
+      "repointHobbyiqCardId": "hiq:pokemon:2000:ja-neo1:154:base:no-auto",
+      "price": 65,
+      "evidence": "R5: setName/title states Japanese; address code neo1 is shared with the ENGLISH product; ruled key ja-neo1"
+    },
+    {
+      "id": "cardhedge::ch-daily::1764432630679x874408852351273900::2026-09-04T18:21:00+00:00::4499",
+      "fromCardId": "1764432630679x874408852351273900",
+      "repointHobbyiqCardId": "hiq:pokemon:2000:ja-neo1:154:base:no-auto",
+      "price": 44.99,
+      "evidence": "R5: setName/title states Japanese; address code neo1 is shared with the ENGLISH product; ruled key ja-neo1"
+    },
+    {
+      "id": "cardhedge::ch-daily::1709691410094x807574629257375400::2026-09-04T22:38:00+00:00::5999",
+      "fromCardId": "1709691410094x807574629257375400",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base2:45:base:no-auto",
+      "price": 59.99,
+      "evidence": "R5: setName/title states Japanese; address code base2 is shared with the ENGLISH product; ruled key ja-base2"
+    },
+    {
+      "id": "cardhedge::ch-daily::1709691395026x114125916693738720::2026-09-04T22:18:00+00:00::140300",
+      "fromCardId": "1709691395026x114125916693738720",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base2:135:base:no-auto",
+      "price": 1403,
+      "evidence": "R5: setName/title states Japanese; address code base2 is shared with the ENGLISH product; ruled key ja-base2"
+    },
+    {
+      "id": "cardhedge::ch-daily::1709691395026x114125916693738720::2026-09-04T15:58:00+00:00::8000",
+      "fromCardId": "1709691395026x114125916693738720",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base2:135:base:no-auto",
+      "price": 80,
+      "evidence": "R5: setName/title states Japanese; address code base2 is shared with the ENGLISH product; ruled key ja-base2"
+    },
+    {
+      "id": "cardhedge::ch-daily::1709691395026x114125916693738720::2026-09-04T15:57:00+00:00::7850",
+      "fromCardId": "1709691395026x114125916693738720",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base2:135:base:no-auto",
+      "price": 78.5,
+      "evidence": "R5: setName/title states Japanese; address code base2 is shared with the ENGLISH product; ruled key ja-base2"
+    },
+    {
+      "id": "cardhedge::ch-daily::1763958757134x478308353644428800::2026-09-04T21:12:00+00:00::399",
+      "fromCardId": "1763958757134x478308353644428800",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:54:base:no-auto",
+      "price": 3.99,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788174241627x357477642691616640",
+      "fromCardId": "1763958765385x157327287798185500",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:94:base:no-auto",
+      "price": 190,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788264386891x172454507386001100",
+      "fromCardId": "1764432640884x114468648126250240",
+      "repointHobbyiqCardId": "hiq:pokemon:2000:ja-neo1:167:base:no-auto",
+      "price": 1.24,
+      "evidence": "R5: setName/title states Japanese; address code neo1 is shared with the ENGLISH product; ruled key ja-neo1"
+    },
+    {
+      "id": "cardhedge::ch-daily::1763958765385x157327287798185500::2026-09-05T01:07:00+00:00::17800",
+      "fromCardId": "1763958765385x157327287798185500",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:94:base:no-auto",
+      "price": 178,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1764432631364x830014836211725000::2026-09-05T02:31:00+00:00::4999",
+      "fromCardId": "1764432631364x830014836211725000",
+      "repointHobbyiqCardId": "hiq:pokemon:2000:ja-neo1:189:base:no-auto",
+      "price": 49.99,
+      "evidence": "R5: setName/title states Japanese; address code neo1 is shared with the ENGLISH product; ruled key ja-neo1"
+    },
+    {
+      "id": "cardhedge::ch-daily::1770506616830x289341725206297100::2026-09-05T02:52:00+00:00::10250",
+      "fromCardId": "1770506616830x289341725206297100",
+      "repointHobbyiqCardId": "hiq:pokemon:2002:ja-ecard3:42:base:no-auto",
+      "price": 102.5,
+      "evidence": "R5: setName/title states Japanese; address code ecard3 is shared with the ENGLISH product; ruled key ja-ecard3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1763958788738x204524421994764160::2026-09-05T02:13:00+00:00::2710",
+      "fromCardId": "1763958788738x204524421994764160",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:142:base:no-auto",
+      "price": 27.1,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1763958788738x204524421994764160::2026-09-05T01:21:00+00:00::9600",
+      "fromCardId": "1763958788738x204524421994764160",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:142:base:no-auto",
+      "price": 96,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1763958783688x104271567245731500::2026-09-05T03:57:00+00:00::1300",
+      "fromCardId": "1763958783688x104271567245731500",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:141:base:no-auto",
+      "price": 13,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1762403489197x519914754448116000::2026-09-05T08:27:00+00:00::1162",
+      "fromCardId": "1762403489197x519914754448116000",
+      "repointHobbyiqCardId": "hiq:pokemon:2018:ja-sm9:13:base:no-auto",
+      "price": 11.62,
+      "evidence": "R5: setName/title states Japanese; address code sm9 is shared with the ENGLISH product; ruled key ja-sm9"
+    },
+    {
+      "id": "cardhedge::ch-daily::1762404266058x188740197311265900::2026-09-05T08:31:00+00:00::1999",
+      "fromCardId": "1762404266058x188740197311265900",
+      "repointHobbyiqCardId": "hiq:pokemon:2018:ja-sm8:72:base:no-auto",
+      "price": 19.99,
+      "evidence": "R5: setName/title states Japanese; address code sm8 is shared with the ENGLISH product; ruled key ja-sm8"
+    },
+    {
+      "id": "cardhedge::ch-daily::1764432604840x201759325908141840::2026-09-05T08:43:00+00:00::1400",
+      "fromCardId": "1764432604840x201759325908141840",
+      "repointHobbyiqCardId": "hiq:pokemon:2000:ja-neo1:176:base:no-auto",
+      "price": 14,
+      "evidence": "R5: setName/title states Japanese; address code neo1 is shared with the ENGLISH product; ruled key ja-neo1"
+    },
+    {
+      "id": "cardhedge::ch-daily::1764432604840x201759325908141840::2026-09-05T02:15:00+00:00::3500",
+      "fromCardId": "1764432604840x201759325908141840",
+      "repointHobbyiqCardId": "hiq:pokemon:2000:ja-neo1:176:base:no-auto",
+      "price": 35,
+      "evidence": "R5: setName/title states Japanese; address code neo1 is shared with the ENGLISH product; ruled key ja-neo1"
+    },
+    {
+      "id": "cardhedge::ch-daily::1762402790645x963892192326551000::2026-09-05T01:28:00+00:00::5700",
+      "fromCardId": "1762402790645x963892192326551000",
+      "repointHobbyiqCardId": "hiq:pokemon:2019:ja-sm11:29:base:no-auto",
+      "price": 57,
+      "evidence": "R5: setName/title states Japanese; address code sm11 is shared with the ENGLISH product; ruled key ja-sm11"
+    },
+    {
+      "id": "cardhedge::ch-daily::1763958788738x204524421994764160::2026-09-05T09:29:00+00:00::1800",
+      "fromCardId": "1763958788738x204524421994764160",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:142:base:no-auto",
+      "price": 18,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1764432631364x830014836211725000::2026-09-05T08:01:00+00:00::1200",
+      "fromCardId": "1764432631364x830014836211725000",
+      "repointHobbyiqCardId": "hiq:pokemon:2000:ja-neo1:189:base:no-auto",
+      "price": 12,
+      "evidence": "R5: setName/title states Japanese; address code neo1 is shared with the ENGLISH product; ruled key ja-neo1"
+    },
+    {
+      "id": "cardhedge::ch-daily::1763958788738x204524421994764160::2026-09-05T08:02:00+00:00::5760",
+      "fromCardId": "1763958788738x204524421994764160",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:142:base:no-auto",
+      "price": 57.6,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1763958788738x204524421994764160::2026-09-05T08:01:00+00:00::3600",
+      "fromCardId": "1763958788738x204524421994764160",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:142:base:no-auto",
+      "price": 36,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1763958788738x204524421994764160::2026-09-05T08:01:00+00:00::3000",
+      "fromCardId": "1763958788738x204524421994764160",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:142:base:no-auto",
+      "price": 30,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1709691410094x807574629257375400::2026-09-05T12:43:00+00:00::1619",
+      "fromCardId": "1709691410094x807574629257375400",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base2:45:base:no-auto",
+      "price": 16.19,
+      "evidence": "R5: setName/title states Japanese; address code base2 is shared with the ENGLISH product; ruled key ja-base2"
+    },
+    {
+      "id": "cardhedge::ch-daily::1709691410094x807574629257375400::2026-09-05T09:40:00+00:00::2200",
+      "fromCardId": "1709691410094x807574629257375400",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base2:45:base:no-auto",
+      "price": 22,
+      "evidence": "R5: setName/title states Japanese; address code base2 is shared with the ENGLISH product; ruled key ja-base2"
+    },
+    {
+      "id": "cardhedge::ch-daily::1716513701421x685538370052855200::2026-09-05T02:02:00+00:00::1233",
+      "fromCardId": "1716513701421x685538370052855200",
+      "repointHobbyiqCardId": "hiq:pokemon:2019:ja-sm10:29:base:no-auto",
+      "price": 12.33,
+      "evidence": "R5: setName/title states Japanese; address code sm10 is shared with the ENGLISH product; ruled key ja-sm10"
+    },
+    {
+      "id": "cardhedge::ch-daily::1763958765385x157327287798185500::2026-09-05T16:01:00+00:00::226512",
+      "fromCardId": "1763958765385x157327287798185500",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:94:base:no-auto",
+      "price": 2265.12,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1763958765385x157327287798185500::2026-09-05T08:01:00+00:00::22200",
+      "fromCardId": "1763958765385x157327287798185500",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:94:base:no-auto",
+      "price": 222,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788252942134x358740560497496260",
+      "fromCardId": "1764432630679x874408852351273900",
+      "repointHobbyiqCardId": "hiq:pokemon:2000:ja-neo1:154:base:no-auto",
+      "price": 71.24,
+      "evidence": "R5: setName/title states Japanese; address code neo1 is shared with the ENGLISH product; ruled key ja-neo1"
+    },
+    {
+      "id": "cardhedge::ch-daily::1762402820086x182634613608977380::2026-09-05T16:58:00+00:00::2016",
+      "fromCardId": "1762402820086x182634613608977380",
+      "repointHobbyiqCardId": "hiq:pokemon:2019:ja-sm11:54:base:no-auto",
+      "price": 20.16,
+      "evidence": "R5: setName/title states Japanese; address code sm11 is shared with the ENGLISH product; ruled key ja-sm11"
+    },
+    {
+      "id": "cardhedge::ch-daily::1762402820086x182634613608977380::2026-09-05T05:50:00+00:00::4300",
+      "fromCardId": "1762402820086x182634613608977380",
+      "repointHobbyiqCardId": "hiq:pokemon:2019:ja-sm11:54:base:no-auto",
+      "price": 43,
+      "evidence": "R5: setName/title states Japanese; address code sm11 is shared with the ENGLISH product; ruled key ja-sm11"
+    },
+    {
+      "id": "cardhedge::ch-daily::1763958757134x478308353644428800::2026-09-05T17:27:00+00:00::299",
+      "fromCardId": "1763958757134x478308353644428800",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:54:base:no-auto",
+      "price": 2.99,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788158278667x492805471689632830",
+      "fromCardId": "1770507622517x554831461477737400",
+      "repointHobbyiqCardId": "hiq:pokemon:2002:ja-ecard2:064:1st-edition:no-auto",
+      "price": 318.13,
+      "evidence": "R5: setName/title states Japanese; address code ecard2 is shared with the ENGLISH product; ruled key ja-ecard2"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788156403661x197359809621235680",
+      "fromCardId": "1762402820086x182634613608977380",
+      "repointHobbyiqCardId": "hiq:pokemon:2019:ja-sm11:54:base:no-auto",
+      "price": 14,
+      "evidence": "R5: setName/title states Japanese; address code sm11 is shared with the ENGLISH product; ruled key ja-sm11"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788147502507x678801046979518500",
+      "fromCardId": "1763958772411x971537149931627600",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:24:base:no-auto",
+      "price": 2,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788147064371x873367113878735600",
+      "fromCardId": "1709691397259x202977183356958000",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base2:31:base:no-auto",
+      "price": 83.88,
+      "evidence": "R5: setName/title states Japanese; address code base2 is shared with the ENGLISH product; ruled key ja-base2"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788144173015x739270864934255000",
+      "fromCardId": "1709691397259x202977183356958000",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base2:31:base:no-auto",
+      "price": 8.51,
+      "evidence": "R5: setName/title states Japanese; address code base2 is shared with the ENGLISH product; ruled key ja-base2"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788143134675x785779357911365200",
+      "fromCardId": "1770507003898x384434458330708000",
+      "repointHobbyiqCardId": "hiq:pokemon:2002:ja-ecard2:058:base:no-auto",
+      "price": 80,
+      "evidence": "R5: setName/title states Japanese; address code ecard2 is shared with the ENGLISH product; ruled key ja-ecard2"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788142616376x257986610133376320",
+      "fromCardId": "1763341386825x595434015145682700",
+      "repointHobbyiqCardId": "hiq:pokemon:2016:ja-xy10:57:1st-edition:no-auto",
+      "price": 46.68,
+      "evidence": "R5: setName/title states Japanese; address code xy10 is shared with the ENGLISH product; ruled key ja-xy10"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788142181124x540555441763846300",
+      "fromCardId": "1762402820608x357907265932961840",
+      "repointHobbyiqCardId": "hiq:pokemon:2019:ja-sm11:45:base:no-auto",
+      "price": 1.99,
+      "evidence": "R5: setName/title states Japanese; address code sm11 is shared with the ENGLISH product; ruled key ja-sm11"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788134115640x445814321645958000",
+      "fromCardId": "1709691397259x202977183356958000",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base2:31:base:no-auto",
+      "price": 12,
+      "evidence": "R5: setName/title states Japanese; address code base2 is shared with the ENGLISH product; ruled key ja-base2"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788133824217x466644905868350850",
+      "fromCardId": "1763341360898x821596178909414800",
+      "repointHobbyiqCardId": "hiq:pokemon:2016:ja-xy10:88:1st-edition:no-auto",
+      "price": 2150,
+      "evidence": "R5: setName/title states Japanese; address code xy10 is shared with the ENGLISH product; ruled key ja-xy10"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788132446950x374900191131735800",
+      "fromCardId": "1762103547782x356950136879061300",
+      "repointHobbyiqCardId": "hiq:pokemon:2020:ja-swsh4:10:base:no-auto",
+      "price": 45,
+      "evidence": "R5: setName/title states Japanese; address code swsh4 is shared with the ENGLISH product; ruled key ja-swsh4"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788131289362x550605414371533600",
+      "fromCardId": "1764432630679x874408852351273900",
+      "repointHobbyiqCardId": "hiq:pokemon:2000:ja-neo1:154:base:no-auto",
+      "price": 17.96,
+      "evidence": "R5: setName/title states Japanese; address code neo1 is shared with the ENGLISH product; ruled key ja-neo1"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788130143113x892355827553106000",
+      "fromCardId": "1764432630679x874408852351273900",
+      "repointHobbyiqCardId": "hiq:pokemon:2000:ja-neo1:154:base:no-auto",
+      "price": 67,
+      "evidence": "R5: setName/title states Japanese; address code neo1 is shared with the ENGLISH product; ruled key ja-neo1"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788127077317x304904556431079740",
+      "fromCardId": "1764432649714x614066542445426300",
+      "repointHobbyiqCardId": "hiq:pokemon:2000:ja-neo1:185:base:no-auto",
+      "price": 1.63,
+      "evidence": "R5: setName/title states Japanese; address code neo1 is shared with the ENGLISH product; ruled key ja-neo1"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788123778473x975004580794950800",
+      "fromCardId": "1765646440014x501668862784426400",
+      "repointHobbyiqCardId": "hiq:pokemon:2014:ja-xy3:52:1st-edition:no-auto",
+      "price": 158.67,
+      "evidence": "R5: setName/title states Japanese; address code xy3 is shared with the ENGLISH product; ruled key ja-xy3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788121804672x532284118324241500",
+      "fromCardId": "1709691395026x114125916693738720",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base2:135:base:no-auto",
+      "price": 23.5,
+      "evidence": "R5: setName/title states Japanese; address code base2 is shared with the ENGLISH product; ruled key ja-base2"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788120229578x930578904098488200",
+      "fromCardId": "1765651325788x295206815117340350",
+      "repointHobbyiqCardId": "hiq:pokemon:2013:ja-bw9:33:1st-edition:no-auto",
+      "price": 1.16,
+      "evidence": "R5: setName/title states Japanese; address code bw9 is shared with the ENGLISH product; ruled key ja-bw9"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788117189088x819074577898181100",
+      "fromCardId": "1765550131899x762988598217709300",
+      "repointHobbyiqCardId": "hiq:pokemon:2014:ja-xy4:90:1st-edition:no-auto",
+      "price": 9554.74,
+      "evidence": "R5: setName/title states Japanese; address code xy4 is shared with the ENGLISH product; ruled key ja-xy4"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788116276207x887061812571334800",
+      "fromCardId": "1763958757134x478308353644428800",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:54:base:no-auto",
+      "price": 89,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788115001863x397683160750981200",
+      "fromCardId": "1763958778768x650778183511496700",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:97:base:no-auto",
+      "price": 33.99,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788108407534x137256091928754200",
+      "fromCardId": "1763958757134x478308353644428800",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:54:base:no-auto",
+      "price": 149.99,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788107660558x695707144077431400",
+      "fromCardId": "1709691395026x114125916693738720",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base2:135:base:no-auto",
+      "price": 550,
+      "evidence": "R5: setName/title states Japanese; address code base2 is shared with the ENGLISH product; ruled key ja-base2"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788107113210x458038763974473600",
+      "fromCardId": "1763958772411x971537149931627600",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:24:base:no-auto",
+      "price": 3.65,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788105060403x811756668277369300",
+      "fromCardId": "1762403489197x519914754448116000",
+      "repointHobbyiqCardId": "hiq:pokemon:2018:ja-sm9:013:base:no-auto",
+      "price": 39.99,
+      "evidence": "R5: setName/title states Japanese; address code sm9 is shared with the ENGLISH product; ruled key ja-sm9"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788100183348x912281238091459600",
+      "fromCardId": "1763958783688x104271567245731500",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:141:base:no-auto",
+      "price": 7.44,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788094862286x140943585076934940",
+      "fromCardId": "1762403489197x519914754448116000",
+      "repointHobbyiqCardId": "hiq:pokemon:2018:ja-sm9:13:base:no-auto",
+      "price": 53.85,
+      "evidence": "R5: setName/title states Japanese; address code sm9 is shared with the ENGLISH product; ruled key ja-sm9"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788091936477x476112702481170400",
+      "fromCardId": "1763341332736x605024431687527300",
+      "repointHobbyiqCardId": "hiq:pokemon:2016:ja-xy10:58:base:no-auto",
+      "price": 340.5,
+      "evidence": "R5: setName/title states Japanese; address code xy10 is shared with the ENGLISH product; ruled key ja-xy10"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788159800381x547852346684652100",
+      "fromCardId": "1762402820608x357907265932961840",
+      "repointHobbyiqCardId": "hiq:pokemon:2019:ja-sm11:45:base:no-auto",
+      "price": 25.2,
+      "evidence": "R5: setName/title states Japanese; address code sm11 is shared with the ENGLISH product; ruled key ja-sm11"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788159907409x371486247117125400",
+      "fromCardId": "1770507072667x442097336683285000",
+      "repointHobbyiqCardId": "hiq:pokemon:2002:ja-ecard2:22:1st-edition:no-auto",
+      "price": 98.4,
+      "evidence": "R5: setName/title states Japanese; address code ecard2 is shared with the ENGLISH product; ruled key ja-ecard2"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788159944276x165084028635287300",
+      "fromCardId": "1763958765385x157327287798185500",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:94:base:no-auto",
+      "price": 7500,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788159998568x782097713043199600",
+      "fromCardId": "1763944420562x328056565344371460",
+      "repointHobbyiqCardId": "hiq:pokemon:1999:ja-gym2:4:base:no-auto",
+      "price": 186,
+      "evidence": "R5: setName/title states Japanese; address code gym2 is shared with the ENGLISH product; ruled key ja-gym2"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788159857134x499702830211732800",
+      "fromCardId": "1709691397259x202977183356958000",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base2:31:base:no-auto",
+      "price": 16.8,
+      "evidence": "R5: setName/title states Japanese; address code base2 is shared with the ENGLISH product; ruled key ja-base2"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788160176794x922429769574398600",
+      "fromCardId": "1763944416613x334981645465698600",
+      "repointHobbyiqCardId": "hiq:pokemon:1999:ja-gym2:109:base:no-auto",
+      "price": 31.2,
+      "evidence": "R5: setName/title states Japanese; address code gym2 is shared with the ENGLISH product; ruled key ja-gym2"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788160206733x797368982999079800",
+      "fromCardId": "1770507003898x384434458330708000",
+      "repointHobbyiqCardId": "hiq:pokemon:2002:ja-ecard2:58:base:no-auto",
+      "price": 48,
+      "evidence": "R5: setName/title states Japanese; address code ecard2 is shared with the ENGLISH product; ruled key ja-ecard2"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788160329671x310761639838964100",
+      "fromCardId": "1762402806548x197922576822475940",
+      "repointHobbyiqCardId": "hiq:pokemon:2019:ja-sm11:69:base:no-auto",
+      "price": 8.4,
+      "evidence": "R5: setName/title states Japanese; address code sm11 is shared with the ENGLISH product; ruled key ja-sm11"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788160418896x213404719413881280",
+      "fromCardId": "1765810347026x118964917390059100",
+      "repointHobbyiqCardId": "hiq:pokemon:2012:ja-bw7:58:1st-edition:no-auto",
+      "price": 13.2,
+      "evidence": "R5: setName/title states Japanese; address code bw7 is shared with the ENGLISH product; ruled key ja-bw7"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788160524848x316435925588193660",
+      "fromCardId": "1763958783688x104271567245731500",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:141:base:no-auto",
+      "price": 18,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788160734839x296115332783747140",
+      "fromCardId": "1763944403240x203700397610358400",
+      "repointHobbyiqCardId": "hiq:pokemon:1999:ja-gym2:96:base:no-auto",
+      "price": 10.8,
+      "evidence": "R5: setName/title states Japanese; address code gym2 is shared with the ENGLISH product; ruled key ja-gym2"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788160683853x765658379064075000",
+      "fromCardId": "1765810347026x118964917390059100",
+      "repointHobbyiqCardId": "hiq:pokemon:2012:ja-bw7:58:1st-edition:no-auto",
+      "price": 10.8,
+      "evidence": "R5: setName/title states Japanese; address code bw7 is shared with the ENGLISH product; ruled key ja-bw7"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788160550177x312166647980994560",
+      "fromCardId": "1763958783688x104271567245731500",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:141:base:no-auto",
+      "price": 14.4,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788160934532x103621557479529840",
+      "fromCardId": "1716513676188x547399264517873340",
+      "repointHobbyiqCardId": "hiq:pokemon:2019:ja-sm10:36:base:no-auto",
+      "price": 15.6,
+      "evidence": "R5: setName/title states Japanese; address code sm10 is shared with the ENGLISH product; ruled key ja-sm10"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788161133716x522272607811548900",
+      "fromCardId": "1770507530074x937817391811523100",
+      "repointHobbyiqCardId": "hiq:pokemon:2002:ja-ecard2:50:1st-edition:no-auto",
+      "price": 39.6,
+      "evidence": "R5: setName/title states Japanese; address code ecard2 is shared with the ENGLISH product; ruled key ja-ecard2"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788161122503x576546824703272300",
+      "fromCardId": "1709691395026x114125916693738720",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base2:135:base:no-auto",
+      "price": 1290,
+      "evidence": "R5: setName/title states Japanese; address code base2 is shared with the ENGLISH product; ruled key ja-base2"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788082532848x200430109630215680",
+      "fromCardId": "1709691410094x807574629257375400",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base2:45:base:no-auto",
+      "price": 14.33,
+      "evidence": "R5: setName/title states Japanese; address code base2 is shared with the ENGLISH product; ruled key ja-base2"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788256917300x436679098410426050",
+      "fromCardId": "1764432630679x874408852351273900",
+      "repointHobbyiqCardId": "hiq:pokemon:2000:ja-neo1:154:base:no-auto",
+      "price": 15,
+      "evidence": "R5: setName/title states Japanese; address code neo1 is shared with the ENGLISH product; ruled key ja-neo1"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788078145849x368601601242692500",
+      "fromCardId": "1709691396694x253921779571710370",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base2:039:base:no-auto",
+      "price": 1.77,
+      "evidence": "R5: setName/title states Japanese; address code base2 is shared with the ENGLISH product; ruled key ja-base2"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788076338393x337277346055536960",
+      "fromCardId": "1762403489197x519914754448116000",
+      "repointHobbyiqCardId": "hiq:pokemon:2018:ja-sm9:13:base:no-auto",
+      "price": 7.24,
+      "evidence": "R5: setName/title states Japanese; address code sm9 is shared with the ENGLISH product; ruled key ja-sm9"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788071462765x328134861849417100",
+      "fromCardId": "1709691397259x202977183356958000",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base2:31:base:no-auto",
+      "price": 130,
+      "evidence": "R5: setName/title states Japanese; address code base2 is shared with the ENGLISH product; ruled key ja-base2"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788067877971x234130197889861340",
+      "fromCardId": "1709691410094x807574629257375400",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base2:45:base:no-auto",
+      "price": 28.98,
+      "evidence": "R5: setName/title states Japanese; address code base2 is shared with the ENGLISH product; ruled key ja-base2"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788063670032x932682343204021600",
+      "fromCardId": "1765651310694x820196591081549200",
+      "repointHobbyiqCardId": "hiq:pokemon:2013:ja-bw9:81:1st-edition:no-auto",
+      "price": 145,
+      "evidence": "R5: setName/title states Japanese; address code bw9 is shared with the ENGLISH product; ruled key ja-bw9"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788061110672x499692342666111300",
+      "fromCardId": "1709691397259x202977183356958000",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base2:31:base:no-auto",
+      "price": 649.99,
+      "evidence": "R5: setName/title states Japanese; address code base2 is shared with the ENGLISH product; ruled key ja-base2"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788057487813x511033997722172300",
+      "fromCardId": "1762402820086x182634613608977380",
+      "repointHobbyiqCardId": "hiq:pokemon:2019:ja-sm11:54:base:no-auto",
+      "price": 75,
+      "evidence": "R5: setName/title states Japanese; address code sm11 is shared with the ENGLISH product; ruled key ja-sm11"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788056503290x546154496443862500",
+      "fromCardId": "1764432649714x614066542445426300",
+      "repointHobbyiqCardId": "hiq:pokemon:2000:ja-neo1:185:base:no-auto",
+      "price": 26,
+      "evidence": "R5: setName/title states Japanese; address code neo1 is shared with the ENGLISH product; ruled key ja-neo1"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788056342343x803633462500800100",
+      "fromCardId": "1763958757134x478308353644428800",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:54:base:no-auto",
+      "price": 66,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788055621270x897630592398473600",
+      "fromCardId": "1770506654808x496740942891336060",
+      "repointHobbyiqCardId": "hiq:pokemon:2002:ja-ecard3:031:1st-edition:no-auto",
+      "price": 51,
+      "evidence": "R5: setName/title states Japanese; address code ecard3 is shared with the ENGLISH product; ruled key ja-ecard3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788055508226x938767110297546800",
+      "fromCardId": "1765288226047x159911017041931100",
+      "repointHobbyiqCardId": "hiq:pokemon:2015:ja-xy6:29:1st-edition:no-auto",
+      "price": 115.6,
+      "evidence": "R5: setName/title states Japanese; address code xy6 is shared with the ENGLISH product; ruled key ja-xy6"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788055167371x166360803433587070",
+      "fromCardId": "1765550131899x762988598217709300",
+      "repointHobbyiqCardId": "hiq:pokemon:2014:ja-xy4:90:1st-edition:no-auto",
+      "price": 2514.93,
+      "evidence": "R5: setName/title states Japanese; address code xy4 is shared with the ENGLISH product; ruled key ja-xy4"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788054404088x625359519836388000",
+      "fromCardId": "1762402820086x182634613608977380",
+      "repointHobbyiqCardId": "hiq:pokemon:2019:ja-sm11:54:base:no-auto",
+      "price": 29.89,
+      "evidence": "R5: setName/title states Japanese; address code sm11 is shared with the ENGLISH product; ruled key ja-sm11"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788051110142x345064186119312680",
+      "fromCardId": "1763341311375x917542115655305200",
+      "repointHobbyiqCardId": "hiq:pokemon:2016:ja-xy10:18:1st-edition:no-auto",
+      "price": 106.08,
+      "evidence": "R5: setName/title states Japanese; address code xy10 is shared with the ENGLISH product; ruled key ja-xy10"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788049735541x459893905248200500",
+      "fromCardId": "1709691408362x544752478206948400",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base2:101:base:no-auto",
+      "price": 10,
+      "evidence": "R5: setName/title states Japanese; address code base2 is shared with the ENGLISH product; ruled key ja-base2"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788048339865x207710551949132900",
+      "fromCardId": "1709691397259x202977183356958000",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base2:31:base:no-auto",
+      "price": 15.98,
+      "evidence": "R5: setName/title states Japanese; address code base2 is shared with the ENGLISH product; ruled key ja-base2"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788048339865x742101901229645000",
+      "fromCardId": "1763958778768x650778183511496700",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:97:base:no-auto",
+      "price": 29.98,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788073638972x115951305707113540",
+      "fromCardId": "1763341386825x595434015145682700",
+      "repointHobbyiqCardId": "hiq:pokemon:2016:ja-xy10:57:1st-edition:no-auto",
+      "price": 780,
+      "evidence": "R5: setName/title states Japanese; address code xy10 is shared with the ENGLISH product; ruled key ja-xy10"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788038735176x644209709930633900",
+      "fromCardId": "1709691408362x544752478206948400",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base2:101:base:no-auto",
+      "price": 13.5,
+      "evidence": "R5: setName/title states Japanese; address code base2 is shared with the ENGLISH product; ruled key ja-base2"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788038405762x880835965800533400",
+      "fromCardId": "1763944400738x488942414836215600",
+      "repointHobbyiqCardId": "hiq:pokemon:1999:ja-gym2:55:base:no-auto",
+      "price": 43.99,
+      "evidence": "R5: setName/title states Japanese; address code gym2 is shared with the ENGLISH product; ruled key ja-gym2"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788036629219x976005092480466400",
+      "fromCardId": "1709691395026x114125916693738720",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base2:135:base:no-auto",
+      "price": 212.5,
+      "evidence": "R5: setName/title states Japanese; address code base2 is shared with the ENGLISH product; ruled key ja-base2"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788034722775x244331030392266780",
+      "fromCardId": "1763341332736x605024431687527300",
+      "repointHobbyiqCardId": "hiq:pokemon:2016:ja-xy10:58:base:no-auto",
+      "price": 21.67,
+      "evidence": "R5: setName/title states Japanese; address code xy10 is shared with the ENGLISH product; ruled key ja-xy10"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788033467062x519062056094914400",
+      "fromCardId": "1762402790645x963892192326551000",
+      "repointHobbyiqCardId": "hiq:pokemon:2019:ja-sm11:29:base:no-auto",
+      "price": 154.99,
+      "evidence": "R5: setName/title states Japanese; address code sm11 is shared with the ENGLISH product; ruled key ja-sm11"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788033467062x132276116799020060",
+      "fromCardId": "1762402790645x963892192326551000",
+      "repointHobbyiqCardId": "hiq:pokemon:2019:ja-sm11:29:base:no-auto",
+      "price": 154.99,
+      "evidence": "R5: setName/title states Japanese; address code sm11 is shared with the ENGLISH product; ruled key ja-sm11"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788028607789x189156546953295870",
+      "fromCardId": "1764432604840x201759325908141840",
+      "repointHobbyiqCardId": "hiq:pokemon:2000:ja-neo1:176:base:no-auto",
+      "price": 12.04,
+      "evidence": "R5: setName/title states Japanese; address code neo1 is shared with the ENGLISH product; ruled key ja-neo1"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788027207089x143948043151654000",
+      "fromCardId": "1764432631364x830014836211725000",
+      "repointHobbyiqCardId": "hiq:pokemon:2000:ja-neo1:189:base:no-auto",
+      "price": 8,
+      "evidence": "R5: setName/title states Japanese; address code neo1 is shared with the ENGLISH product; ruled key ja-neo1"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788026212410x345201577677756860",
+      "fromCardId": "1763958765385x157327287798185500",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:94:base:no-auto",
+      "price": 210,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788024035485x452585576390109440",
+      "fromCardId": "1762403489197x519914754448116000",
+      "repointHobbyiqCardId": "hiq:pokemon:2018:ja-sm9:13:base:no-auto",
+      "price": 9.99,
+      "evidence": "R5: setName/title states Japanese; address code sm9 is shared with the ENGLISH product; ruled key ja-sm9"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788023988306x819375704091069800",
+      "fromCardId": "1764432631364x830014836211725000",
+      "repointHobbyiqCardId": "hiq:pokemon:2000:ja-neo1:189:base:no-auto",
+      "price": 4.91,
+      "evidence": "R5: setName/title states Japanese; address code neo1 is shared with the ENGLISH product; ruled key ja-neo1"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788021617156x649181288677824300",
+      "fromCardId": "1763958753692x430425567938697200",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:91:base:no-auto",
+      "price": 1.99,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788018137763x557918491186450960",
+      "fromCardId": "1709691408362x544752478206948400",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base2:101:base:no-auto",
+      "price": 4.79,
+      "evidence": "R5: setName/title states Japanese; address code base2 is shared with the ENGLISH product; ruled key ja-base2"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788014862421x113548719584640960",
+      "fromCardId": "1709691393847x544972006400175300",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base2:53:base:no-auto",
+      "price": 1.79,
+      "evidence": "R5: setName/title states Japanese; address code base2 is shared with the ENGLISH product; ruled key ja-base2"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788013652796x996337553616839600",
+      "fromCardId": "1709691393847x544972006400175300",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base2:53:base:no-auto",
+      "price": 1.99,
+      "evidence": "R5: setName/title states Japanese; address code base2 is shared with the ENGLISH product; ruled key ja-base2"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788013028670x366423418375568800",
+      "fromCardId": "1763958753692x430425567938697200",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:91:base:no-auto",
+      "price": 3.41,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788010866655x293098585491489150",
+      "fromCardId": "1709691395026x114125916693738720",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base2:135:base:no-auto",
+      "price": 25,
+      "evidence": "R5: setName/title states Japanese; address code base2 is shared with the ENGLISH product; ruled key ja-base2"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788010768966x232710824309744670",
+      "fromCardId": "1764432641196x648651503016233900",
+      "repointHobbyiqCardId": "hiq:pokemon:2000:ja-neo1:227:base:no-auto",
+      "price": 11.5,
+      "evidence": "R5: setName/title states Japanese; address code neo1 is shared with the ENGLISH product; ruled key ja-neo1"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788004203481x688530275687419000",
+      "fromCardId": "1762402790645x963892192326551000",
+      "repointHobbyiqCardId": "hiq:pokemon:2019:ja-sm11:29:base:no-auto",
+      "price": 39.99,
+      "evidence": "R5: setName/title states Japanese; address code sm11 is shared with the ENGLISH product; ruled key ja-sm11"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788000187636x775376612007659500",
+      "fromCardId": "1764432641196x648651503016233900",
+      "repointHobbyiqCardId": "hiq:pokemon:2000:ja-neo1:227:base:no-auto",
+      "price": 9.41,
+      "evidence": "R5: setName/title states Japanese; address code neo1 is shared with the ENGLISH product; ruled key ja-neo1"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788008479216x328259082343528060",
+      "fromCardId": "1716513701421x685538370052855200",
+      "repointHobbyiqCardId": "hiq:pokemon:2019:ja-sm10:29:base:no-auto",
+      "price": 18,
+      "evidence": "R5: setName/title states Japanese; address code sm10 is shared with the ENGLISH product; ruled key ja-sm10"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788082071242x994904288006826900",
+      "fromCardId": "1762402790645x963892192326551000",
+      "repointHobbyiqCardId": "hiq:pokemon:2019:ja-sm11:29:base:no-auto",
+      "price": 149.99,
+      "evidence": "R5: setName/title states Japanese; address code sm11 is shared with the ENGLISH product; ruled key ja-sm11"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788167076302x424544365664992300",
+      "fromCardId": "1763958778768x650778183511496700",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:97:base:no-auto",
+      "price": 82.3,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788078481202x140393603405815740",
+      "fromCardId": "1763958757134x478308353644428800",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:54:base:no-auto",
+      "price": 2.99,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1787987203115x977762556790094700",
+      "fromCardId": "1765288259804x608070832138188300",
+      "repointHobbyiqCardId": "hiq:pokemon:2015:ja-xy6:35:1st-edition:no-auto",
+      "price": 19.99,
+      "evidence": "R5: setName/title states Japanese; address code xy6 is shared with the ENGLISH product; ruled key ja-xy6"
+    },
+    {
+      "id": "cardhedge::ch-daily::1787980320076x992727610493107600",
+      "fromCardId": "1709691395026x114125916693738720",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base2:135:base:no-auto",
+      "price": 41,
+      "evidence": "R5: setName/title states Japanese; address code base2 is shared with the ENGLISH product; ruled key ja-base2"
+    },
+    {
+      "id": "cardhedge::ch-daily::1787979036183x605069203406036400",
+      "fromCardId": "1763958779530x382908060821793860",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:117:base:no-auto",
+      "price": 3.99,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1787974870452x175651314479811070",
+      "fromCardId": "1763958765385x157327287798185500",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:094:base:no-auto",
+      "price": 110,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1787973528592x502696692946239300",
+      "fromCardId": "1764432640884x114468648126250240",
+      "repointHobbyiqCardId": "hiq:pokemon:2000:ja-neo1:167:base:no-auto",
+      "price": 1.72,
+      "evidence": "R5: setName/title states Japanese; address code neo1 is shared with the ENGLISH product; ruled key ja-neo1"
+    },
+    {
+      "id": "cardhedge::ch-daily::1787970285759x515087209830053400",
+      "fromCardId": "1763958765385x157327287798185500",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:94:base:no-auto",
+      "price": 710,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1787968982568x183457853946064060",
+      "fromCardId": "1763958765385x157327287798185500",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:94:base:no-auto",
+      "price": 176.5,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1787968482172x727857173008292400",
+      "fromCardId": "1763958783688x104271567245731500",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:141:base:no-auto",
+      "price": 542,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1787968266779x578983615960726300",
+      "fromCardId": "1709691408362x544752478206948400",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base2:101:base:no-auto",
+      "price": 260,
+      "evidence": "R5: setName/title states Japanese; address code base2 is shared with the ENGLISH product; ruled key ja-base2"
+    },
+    {
+      "id": "cardhedge::ch-daily::1787965713892x403484809723688060",
+      "fromCardId": "1762402790645x963892192326551000",
+      "repointHobbyiqCardId": "hiq:pokemon:2019:ja-sm11:29:base:no-auto",
+      "price": 25,
+      "evidence": "R5: setName/title states Japanese; address code sm11 is shared with the ENGLISH product; ruled key ja-sm11"
+    },
+    {
+      "id": "cardhedge::ch-daily::1787957127123x118621955575258130",
+      "fromCardId": "1763958783688x104271567245731500",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:141:base:no-auto",
+      "price": 34.99,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788691008163x396192748802930600",
+      "fromCardId": "1763958765385x157327287798185500",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:94:holofoil:no-auto",
+      "price": 142.61,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788679411425x295347822252174850",
+      "fromCardId": "1716513716859x992844927430259300",
+      "repointHobbyiqCardId": "hiq:pokemon:2019:ja-sm10:74:double-double:no-auto",
+      "price": 1.79,
+      "evidence": "R5: setName/title states Japanese; address code sm10 is shared with the ENGLISH product; ruled key ja-sm10"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788678926028x399140609617968600",
+      "fromCardId": "1763958778768x650778183511496700",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:97:holofoil:no-auto",
+      "price": 14.5,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788678570268x823225082010301000",
+      "fromCardId": "1763958765385x157327287798185500",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:94:holofoil:no-auto",
+      "price": 785,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788675525967x588700048605414800",
+      "fromCardId": "1763958757134x478308353644428800",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:54:base:no-auto",
+      "price": 1.69,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788675525967x958009116389971700",
+      "fromCardId": "1763958783688x104271567245731500",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:141:base:no-auto",
+      "price": 11.98,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788664268556x235333331319164580",
+      "fromCardId": "1768687604782x638073266248862200",
+      "repointHobbyiqCardId": "hiq:pokemon:2006:ja-dp1:453:holofoil:no-auto",
+      "price": 5.39,
+      "evidence": "R5: setName/title states Japanese; address code dp1 is shared with the ENGLISH product; ruled key ja-dp1"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788664268556x275892760522302270",
+      "fromCardId": "1768687604782x638073266248862200",
+      "repointHobbyiqCardId": "hiq:pokemon:2006:ja-dp1:453:holofoil:no-auto",
+      "price": 5.39,
+      "evidence": "R5: setName/title states Japanese; address code dp1 is shared with the ENGLISH product; ruled key ja-dp1"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788662506850x402773092802561200",
+      "fromCardId": "1763958765385x157327287798185500",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:94:holofoil:no-auto",
+      "price": 102.5,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788662288372x209801462118263100",
+      "fromCardId": "1763944416613x334981645465698600",
+      "repointHobbyiqCardId": "hiq:pokemon:1999:ja-gym2:109:base:no-auto",
+      "price": 30,
+      "evidence": "R5: setName/title states Japanese; address code gym2 is shared with the ENGLISH product; ruled key ja-gym2"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788662061139x643803925548630500",
+      "fromCardId": "1763958772411x971537149931627600",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:24:base:no-auto",
+      "price": 24.04,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788661989226x564623225967030300",
+      "fromCardId": "1709691408362x544752478206948400",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base2:101:holofoil:no-auto",
+      "price": 61,
+      "evidence": "R5: setName/title states Japanese; address code base2 is shared with the ENGLISH product; ruled key ja-base2"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788661311400x615956489646306200",
+      "fromCardId": "1763958765385x157327287798185500",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:94:holofoil:no-auto",
+      "price": 94,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788661243644x382150631853049660",
+      "fromCardId": "1763958757134x478308353644428800",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:54:base:no-auto",
+      "price": 61,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788661311400x253711502718551900",
+      "fromCardId": "1763958778768x650778183511496700",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:097:holofoil:no-auto",
+      "price": 46,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788660745926x815152562241916900",
+      "fromCardId": "1763651051848x239636394172172860",
+      "repointHobbyiqCardId": "hiq:pokemon:2015:ja-xy9:030:base:no-auto",
+      "price": 20.5,
+      "evidence": "R5: setName/title states Japanese; address code xy9 is shared with the ENGLISH product; ruled key ja-xy9"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788660695479x895115522904036000",
+      "fromCardId": "1763958757134x478308353644428800",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:54:base:no-auto",
+      "price": 57.67,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788659127268x979215198900992300",
+      "fromCardId": "1763958765385x157327287798185500",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:94:holofoil:no-auto",
+      "price": 157.5,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788659205065x393131095105335500",
+      "fromCardId": "1763958765385x157327287798185500",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:094:holofoil:no-auto",
+      "price": 88,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788656129954x355845041273700860",
+      "fromCardId": "1763944416613x334981645465698600",
+      "repointHobbyiqCardId": "hiq:pokemon:1999:ja-gym2:109:base:no-auto",
+      "price": 114.38,
+      "evidence": "R5: setName/title states Japanese; address code gym2 is shared with the ENGLISH product; ruled key ja-gym2"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788652944152x665379105781723100",
+      "fromCardId": "1763958788738x204524421994764160",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:142:holofoil:no-auto",
+      "price": 16.13,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788652944151x961321617544539800",
+      "fromCardId": "1764432604840x201759325908141840",
+      "repointHobbyiqCardId": "hiq:pokemon:2000:ja-neo1:176:holofoil:no-auto",
+      "price": 16.99,
+      "evidence": "R5: setName/title states Japanese; address code neo1 is shared with the ENGLISH product; ruled key ja-neo1"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788649660966x287499329399012900",
+      "fromCardId": "1709691410094x807574629257375400",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base2:45:holofoil:no-auto",
+      "price": 9,
+      "evidence": "R5: setName/title states Japanese; address code base2 is shared with the ENGLISH product; ruled key ja-base2"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788648449323x764382674985286400",
+      "fromCardId": "1764432604840x201759325908141840",
+      "repointHobbyiqCardId": "hiq:pokemon:2000:ja-neo1:176:holofoil:no-auto",
+      "price": 85,
+      "evidence": "R5: setName/title states Japanese; address code neo1 is shared with the ENGLISH product; ruled key ja-neo1"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788645698927x703542484507290600",
+      "fromCardId": "1764432604840x201759325908141840",
+      "repointHobbyiqCardId": "hiq:pokemon:2000:ja-neo1:176:holofoil:no-auto",
+      "price": 100,
+      "evidence": "R5: setName/title states Japanese; address code neo1 is shared with the ENGLISH product; ruled key ja-neo1"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788643279669x122411669226759170",
+      "fromCardId": "1709691395026x114125916693738720",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base2:135:holofoil:no-auto",
+      "price": 204.99,
+      "evidence": "R5: setName/title states Japanese; address code base2 is shared with the ENGLISH product; ruled key ja-base2"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788641929437x750296025864893800",
+      "fromCardId": "1763958765385x157327287798185500",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:94:holofoil:no-auto",
+      "price": 199.95,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788639791089x648217589692529900",
+      "fromCardId": "1709691408362x544752478206948400",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base2:101:holofoil:no-auto",
+      "price": 10.66,
+      "evidence": "R5: setName/title states Japanese; address code base2 is shared with the ENGLISH product; ruled key ja-base2"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788636015189x941584992408978000",
+      "fromCardId": "1763958765385x157327287798185500",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:94:holofoil:no-auto",
+      "price": 102.29,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788632036943x592520173124361200",
+      "fromCardId": "1763958757134x478308353644428800",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:54:base:no-auto",
+      "price": 2.99,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788627641568x136007715075275200",
+      "fromCardId": "1762403489197x519914754448116000",
+      "repointHobbyiqCardId": "hiq:pokemon:2018:ja-sm9:13:holofoil:no-auto",
+      "price": 7.31,
+      "evidence": "R5: setName/title states Japanese; address code sm9 is shared with the ENGLISH product; ruled key ja-sm9"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788615015698x378336919886820300",
+      "fromCardId": "1709691410094x807574629257375400",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base2:45:holofoil:no-auto",
+      "price": 16.19,
+      "evidence": "R5: setName/title states Japanese; address code base2 is shared with the ENGLISH product; ruled key ja-base2"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788611486149x605585127359846500",
+      "fromCardId": "1764432604840x201759325908141840",
+      "repointHobbyiqCardId": "hiq:pokemon:2000:ja-neo1:176:holofoil:no-auto",
+      "price": 40.52,
+      "evidence": "R5: setName/title states Japanese; address code neo1 is shared with the ENGLISH product; ruled key ja-neo1"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788604031824x818851361689798600",
+      "fromCardId": "1763958783688x104271567245731500",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:141:holofoil:no-auto",
+      "price": 23,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788604031824x720748584101752000",
+      "fromCardId": "1709691410094x807574629257375400",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base2:45:base:no-auto",
+      "price": 22,
+      "evidence": "R5: setName/title states Japanese; address code base2 is shared with the ENGLISH product; ruled key ja-base2"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788688399305x732660095753694200",
+      "fromCardId": "1763958772411x971537149931627600",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:24:base:no-auto",
+      "price": 2.99,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788688399306x306865608341707650",
+      "fromCardId": "1763958757134x478308353644428800",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:54:base:no-auto",
+      "price": 3.99,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788599848447x417674405569491000",
+      "fromCardId": "1762404266058x188740197311265900",
+      "repointHobbyiqCardId": "hiq:pokemon:2018:ja-sm8:72:base:no-auto",
+      "price": 19.99,
+      "evidence": "R5: setName/title states Japanese; address code sm8 is shared with the ENGLISH product; ruled key ja-sm8"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788609971090x267669825193264770",
+      "fromCardId": "1763958783688x104271567245731500",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:141:holofoil:no-auto",
+      "price": 44.4,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788609787681x326522909577325440",
+      "fromCardId": "1709691408362x544752478206948400",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base2:101:holofoil:no-auto",
+      "price": 24,
+      "evidence": "R5: setName/title states Japanese; address code base2 is shared with the ENGLISH product; ruled key ja-base2"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788609971090x807681255319763000",
+      "fromCardId": "1709691408362x544752478206948400",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base2:101:holofoil:no-auto",
+      "price": 16.8,
+      "evidence": "R5: setName/title states Japanese; address code base2 is shared with the ENGLISH product; ruled key ja-base2"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788609939242x654338992291098200",
+      "fromCardId": "1763958778768x650778183511496700",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:097:holofoil:no-auto",
+      "price": 14.4,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788609929558x434181170450782340",
+      "fromCardId": "1764432604840x201759325908141840",
+      "repointHobbyiqCardId": "hiq:pokemon:2000:ja-neo1:176:holofoil:no-auto",
+      "price": 31.2,
+      "evidence": "R5: setName/title states Japanese; address code neo1 is shared with the ENGLISH product; ruled key ja-neo1"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788590816656x269525924565548350",
+      "fromCardId": "1763958778768x650778183511496700",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:97:holofoil:no-auto",
+      "price": 7.74,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788590261932x782750961987215700",
+      "fromCardId": "1762402820086x182634613608977380",
+      "repointHobbyiqCardId": "hiq:pokemon:2019:ja-sm11:54:base:no-auto",
+      "price": 43,
+      "evidence": "R5: setName/title states Japanese; address code sm11 is shared with the ENGLISH product; ruled key ja-sm11"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788577425056x656792936417231100",
+      "fromCardId": "1764432604840x201759325908141840",
+      "repointHobbyiqCardId": "hiq:pokemon:2000:ja-neo1:176:base:no-auto",
+      "price": 35,
+      "evidence": "R5: setName/title states Japanese; address code neo1 is shared with the ENGLISH product; ruled key ja-neo1"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788576439860x435340232316738800",
+      "fromCardId": "1716513701421x685538370052855200",
+      "repointHobbyiqCardId": "hiq:pokemon:2019:ja-sm10:29:base:no-auto",
+      "price": 12.33,
+      "evidence": "R5: setName/title states Japanese; address code sm10 is shared with the ENGLISH product; ruled key ja-sm10"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788574479944x281902481707773540",
+      "fromCardId": "1762402790645x963892192326551000",
+      "repointHobbyiqCardId": "hiq:pokemon:2019:ja-sm11:29:base:no-auto",
+      "price": 57,
+      "evidence": "R5: setName/title states Japanese; address code sm11 is shared with the ENGLISH product; ruled key ja-sm11"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788566991104x203438108181105630",
+      "fromCardId": "1763958772411x971537149931627600",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:24:base:no-auto",
+      "price": 4.73,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788564341235x812445199891137000",
+      "fromCardId": "1709691410094x807574629257375400",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base2:45:holofoil:no-auto",
+      "price": 59.99,
+      "evidence": "R5: setName/title states Japanese; address code base2 is shared with the ENGLISH product; ruled key ja-base2"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788564092974x270704956241731420",
+      "fromCardId": "1764432617166x659235869759340800",
+      "repointHobbyiqCardId": "hiq:pokemon:2000:ja-neo1:164:base:no-auto",
+      "price": 1.7,
+      "evidence": "R5: setName/title states Japanese; address code neo1 is shared with the ENGLISH product; ruled key ja-neo1"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788563091205x886678114868169500",
+      "fromCardId": "1709691395026x114125916693738720",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base2:135:cosmos-holo:no-auto",
+      "price": 1403,
+      "evidence": "R5: setName/title states Japanese; address code base2 is shared with the ENGLISH product; ruled key ja-base2"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788559384125x177573281203344800",
+      "fromCardId": "1709691408362x544752478206948400",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base2:101:holofoil:no-auto",
+      "price": 18.99,
+      "evidence": "R5: setName/title states Japanese; address code base2 is shared with the ENGLISH product; ruled key ja-base2"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788559333280x242407939068451040",
+      "fromCardId": "1763958757134x478308353644428800",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:54:base:no-auto",
+      "price": 3.99,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788559241681x273432154173962800",
+      "fromCardId": "1763958772411x971537149931627600",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:24:base:no-auto",
+      "price": 1.99,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1763958765385x157327287798185500::2026-09-05T20:10:00+00:00::19995",
+      "fromCardId": "1763958765385x157327287798185500",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:94:base:no-auto",
+      "price": 199.95,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1763958765385x157327287798185500::2026-09-05T18:34:00+00:00::10229",
+      "fromCardId": "1763958765385x157327287798185500",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:94:base:no-auto",
+      "price": 102.29,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1764432604840x201759325908141840::2026-09-05T21:59:00+00:00::8500",
+      "fromCardId": "1764432604840x201759325908141840",
+      "repointHobbyiqCardId": "hiq:pokemon:2000:ja-neo1:176:base:no-auto",
+      "price": 85,
+      "evidence": "R5: setName/title states Japanese; address code neo1 is shared with the ENGLISH product; ruled key ja-neo1"
+    },
+    {
+      "id": "cardhedge::ch-daily::1764432604840x201759325908141840::2026-09-05T23:17:00+00:00::1699",
+      "fromCardId": "1764432604840x201759325908141840",
+      "repointHobbyiqCardId": "hiq:pokemon:2000:ja-neo1:176:base:no-auto",
+      "price": 16.99,
+      "evidence": "R5: setName/title states Japanese; address code neo1 is shared with the ENGLISH product; ruled key ja-neo1"
+    },
+    {
+      "id": "cardhedge::ch-daily::1764432604840x201759325908141840::2026-09-05T08:01:00+00:00::3120",
+      "fromCardId": "1764432604840x201759325908141840",
+      "repointHobbyiqCardId": "hiq:pokemon:2000:ja-neo1:176:base:no-auto",
+      "price": 31.2,
+      "evidence": "R5: setName/title states Japanese; address code neo1 is shared with the ENGLISH product; ruled key ja-neo1"
+    },
+    {
+      "id": "cardhedge::ch-daily::1764432604840x201759325908141840::2026-09-05T11:45:00+00:00::4052",
+      "fromCardId": "1764432604840x201759325908141840",
+      "repointHobbyiqCardId": "hiq:pokemon:2000:ja-neo1:176:base:no-auto",
+      "price": 40.52,
+      "evidence": "R5: setName/title states Japanese; address code neo1 is shared with the ENGLISH product; ruled key ja-neo1"
+    },
+    {
+      "id": "cardhedge::ch-daily::1764432604840x201759325908141840::2026-09-05T21:10:00+00:00::10000",
+      "fromCardId": "1764432604840x201759325908141840",
+      "repointHobbyiqCardId": "hiq:pokemon:2000:ja-neo1:176:base:no-auto",
+      "price": 100,
+      "evidence": "R5: setName/title states Japanese; address code neo1 is shared with the ENGLISH product; ruled key ja-neo1"
+    },
+    {
+      "id": "cardhedge::ch-daily::1709691410094x807574629257375400::2026-09-05T22:19:00+00:00::900",
+      "fromCardId": "1709691410094x807574629257375400",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base2:45:base:no-auto",
+      "price": 9,
+      "evidence": "R5: setName/title states Japanese; address code base2 is shared with the ENGLISH product; ruled key ja-base2"
+    },
+    {
+      "id": "cardhedge::ch-daily::1763958788738x204524421994764160::2026-09-05T23:17:00+00:00::1613",
+      "fromCardId": "1763958788738x204524421994764160",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:142:base:no-auto",
+      "price": 16.13,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1763958778768x650778183511496700::2026-09-05T08:01:00+00:00::1440",
+      "fromCardId": "1763958778768x650778183511496700",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:97:base:no-auto",
+      "price": 14.4,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1763958778768x650778183511496700::2026-09-05T05:56:00+00:00::774",
+      "fromCardId": "1763958778768x650778183511496700",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:97:base:no-auto",
+      "price": 7.74,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1709691408362x544752478206948400::2026-09-05T19:37:00+00:00::1066",
+      "fromCardId": "1709691408362x544752478206948400",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base2:101:base:no-auto",
+      "price": 10.66,
+      "evidence": "R5: setName/title states Japanese; address code base2 is shared with the ENGLISH product; ruled key ja-base2"
+    },
+    {
+      "id": "cardhedge::ch-daily::1709691408362x544752478206948400::2026-09-05T08:01:00+00:00::2400",
+      "fromCardId": "1709691408362x544752478206948400",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base2:101:base:no-auto",
+      "price": 24,
+      "evidence": "R5: setName/title states Japanese; address code base2 is shared with the ENGLISH product; ruled key ja-base2"
+    },
+    {
+      "id": "cardhedge::ch-daily::1709691408362x544752478206948400::2026-09-05T08:01:00+00:00::1680",
+      "fromCardId": "1709691408362x544752478206948400",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base2:101:base:no-auto",
+      "price": 16.8,
+      "evidence": "R5: setName/title states Japanese; address code base2 is shared with the ENGLISH product; ruled key ja-base2"
+    },
+    {
+      "id": "cardhedge::ch-daily::1763958783688x104271567245731500::2026-09-05T09:41:00+00:00::2300",
+      "fromCardId": "1763958783688x104271567245731500",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:141:base:no-auto",
+      "price": 23,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1763958783688x104271567245731500::2026-09-05T08:01:00+00:00::4440",
+      "fromCardId": "1763958783688x104271567245731500",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:141:base:no-auto",
+      "price": 44.4,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1763958772411x971537149931627600::2026-09-05T08:36:00+00:00::299",
+      "fromCardId": "1763958772411x971537149931627600",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:24:base:no-auto",
+      "price": 2.99,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1763958757134x478308353644428800::2026-09-05T08:36:00+00:00::399",
+      "fromCardId": "1763958757134x478308353644428800",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:54:base:no-auto",
+      "price": 3.99,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1709691395026x114125916693738720::2026-09-05T20:35:00+00:00::20499",
+      "fromCardId": "1709691395026x114125916693738720",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base2:135:base:no-auto",
+      "price": 204.99,
+      "evidence": "R5: setName/title states Japanese; address code base2 is shared with the ENGLISH product; ruled key ja-base2"
+    },
+    {
+      "id": "cardhedge::ch-daily::1762403489197x519914754448116000::2026-09-05T16:20:00+00:00::731",
+      "fromCardId": "1762403489197x519914754448116000",
+      "repointHobbyiqCardId": "hiq:pokemon:2018:ja-sm9:13:base:no-auto",
+      "price": 7.31,
+      "evidence": "R5: setName/title states Japanese; address code sm9 is shared with the ENGLISH product; ruled key ja-sm9"
+    },
+    {
+      "id": "cardhedge::ch-daily::1763651051848x239636394172172860::2026-09-06T01:26:00+00:00::2050",
+      "fromCardId": "1763651051848x239636394172172860",
+      "repointHobbyiqCardId": "hiq:pokemon:2015:ja-xy9:30:base:no-auto",
+      "price": 20.5,
+      "evidence": "R5: setName/title states Japanese; address code xy9 is shared with the ENGLISH product; ruled key ja-xy9"
+    },
+    {
+      "id": "cardhedge::ch-daily::1763958778768x650778183511496700::2026-09-06T01:30:00+00:00::4600",
+      "fromCardId": "1763958778768x650778183511496700",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:97:base:no-auto",
+      "price": 46,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1709691408362x544752478206948400::2026-09-06T01:45:00+00:00::6100",
+      "fromCardId": "1709691408362x544752478206948400",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base2:101:base:no-auto",
+      "price": 61,
+      "evidence": "R5: setName/title states Japanese; address code base2 is shared with the ENGLISH product; ruled key ja-base2"
+    },
+    {
+      "id": "cardhedge::ch-daily::1768687604782x638073266248862200::2026-09-06T02:18:00+00:00::539",
+      "fromCardId": "1768687604782x638073266248862200",
+      "repointHobbyiqCardId": "hiq:pokemon:2006:ja-dp1:dpbp:base:no-auto",
+      "price": 5.39,
+      "evidence": "R5: setName/title states Japanese; address code dp1 is shared with the ENGLISH product; ruled key ja-dp1"
+    },
+    {
+      "id": "cardhedge::ch-daily::1763958772411x971537149931627600::2026-09-06T01:47:00+00:00::2404",
+      "fromCardId": "1763958772411x971537149931627600",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:24:base:no-auto",
+      "price": 24.04,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1763958765385x157327287798185500::2026-09-06T06:24:00+00:00::78500",
+      "fromCardId": "1763958765385x157327287798185500",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:94:base:no-auto",
+      "price": 785,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1763958765385x157327287798185500::2026-09-06T01:55:00+00:00::10250",
+      "fromCardId": "1763958765385x157327287798185500",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:94:base:no-auto",
+      "price": 102.5,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1763958765385x157327287798185500::2026-09-06T01:00:00+00:00::15750",
+      "fromCardId": "1763958765385x157327287798185500",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:94:base:no-auto",
+      "price": 157.5,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1763958765385x157327287798185500::2026-09-06T01:36:00+00:00::9400",
+      "fromCardId": "1763958765385x157327287798185500",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:94:base:no-auto",
+      "price": 94,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1763958765385x157327287798185500::2026-09-06T01:00:00+00:00::8800",
+      "fromCardId": "1763958765385x157327287798185500",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:94:base:no-auto",
+      "price": 88,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1716513716859x992844927430259300::2026-09-06T06:37:00+00:00::179",
+      "fromCardId": "1716513716859x992844927430259300",
+      "repointHobbyiqCardId": "hiq:pokemon:2019:ja-sm10:74:base:no-auto",
+      "price": 1.79,
+      "evidence": "R5: setName/title states Japanese; address code sm10 is shared with the ENGLISH product; ruled key ja-sm10"
+    },
+    {
+      "id": "cardhedge::ch-daily::1763958778768x650778183511496700::2026-09-06T06:27:00+00:00::1450",
+      "fromCardId": "1763958778768x650778183511496700",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:97:base:no-auto",
+      "price": 14.5,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1763958783688x104271567245731500::2026-09-06T05:25:00+00:00::1198",
+      "fromCardId": "1763958783688x104271567245731500",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:141:base:no-auto",
+      "price": 11.98,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1763958765385x157327287798185500::2026-09-06T09:47:00+00:00::14261",
+      "fromCardId": "1763958765385x157327287798185500",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:94:base:no-auto",
+      "price": 142.61,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1763944416613x334981645465698600::2026-09-06T01:51:00+00:00::3000",
+      "fromCardId": "1763944416613x334981645465698600",
+      "repointHobbyiqCardId": "hiq:pokemon:1999:ja-gym2:109:base:no-auto",
+      "price": 30,
+      "evidence": "R5: setName/title states Japanese; address code gym2 is shared with the ENGLISH product; ruled key ja-gym2"
+    },
+    {
+      "id": "cardhedge::ch-daily::1763944416613x334981645465698600::2026-09-06T00:06:00+00:00::11438",
+      "fromCardId": "1763944416613x334981645465698600",
+      "repointHobbyiqCardId": "hiq:pokemon:1999:ja-gym2:109:base:no-auto",
+      "price": 114.38,
+      "evidence": "R5: setName/title states Japanese; address code gym2 is shared with the ENGLISH product; ruled key ja-gym2"
+    },
+    {
+      "id": "cardhedge::ch-daily::1763958757134x478308353644428800::2026-09-06T01:42:00+00:00::5767",
+      "fromCardId": "1763958757134x478308353644428800",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:54:base:no-auto",
+      "price": 57.67,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1763958757134x478308353644428800::2026-09-06T01:33:00+00:00::6100",
+      "fromCardId": "1763958757134x478308353644428800",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:54:base:no-auto",
+      "price": 61,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1763958757134x478308353644428800::2026-09-06T01:25:00+00:00::5767",
+      "fromCardId": "1763958757134x478308353644428800",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:54:base:no-auto",
+      "price": 57.67,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1763958757134x478308353644428800::2026-09-06T05:28:00+00:00::169",
+      "fromCardId": "1763958757134x478308353644428800",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:54:base:no-auto",
+      "price": 1.69,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788556376851x533337188636163100",
+      "fromCardId": "1709691408362x544752478206948400",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base2:101:holofoil:no-auto",
+      "price": 80,
+      "evidence": "R5: setName/title states Japanese; address code base2 is shared with the ENGLISH product; ruled key ja-base2"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788640858993x839792253395673500",
+      "fromCardId": "1762403506874x772155065236474400",
+      "repointHobbyiqCardId": "hiq:pokemon:2018:ja-sm9:23:base:no-auto",
+      "price": 2.98,
+      "evidence": "R5: setName/title states Japanese; address code sm9 is shared with the ENGLISH product; ruled key ja-sm9"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788546671578x281992807440067700",
+      "fromCardId": "1763958778768x650778183511496700",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:97:holofoil:no-auto",
+      "price": 49.99,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788546872941x526747864309211400",
+      "fromCardId": "1709691410094x807574629257375400",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base2:45:holofoil:no-auto",
+      "price": 59.99,
+      "evidence": "R5: setName/title states Japanese; address code base2 is shared with the ENGLISH product; ruled key ja-base2"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788540377558x863911291812748000",
+      "fromCardId": "1709691395026x114125916693738720",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base2:135:holofoil:no-auto",
+      "price": 80,
+      "evidence": "R5: setName/title states Japanese; address code base2 is shared with the ENGLISH product; ruled key ja-base2"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788540377558x216985969263641100",
+      "fromCardId": "1709691395026x114125916693738720",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base2:135:holofoil:no-auto",
+      "price": 78.5,
+      "evidence": "R5: setName/title states Japanese; address code base2 is shared with the ENGLISH product; ruled key ja-base2"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788535889239x480586987683068400",
+      "fromCardId": "1764432649714x614066542445426300",
+      "repointHobbyiqCardId": "hiq:pokemon:2000:ja-neo1:185:base:no-auto",
+      "price": 1.39,
+      "evidence": "R5: setName/title states Japanese; address code neo1 is shared with the ENGLISH product; ruled key ja-neo1"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788529582638x791426736883881500",
+      "fromCardId": "1763958779530x382908060821793860",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base3:117:base:no-auto",
+      "price": 2.47,
+      "evidence": "R5: setName/title states Japanese; address code base3 is shared with the ENGLISH product; ruled key ja-base3"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788513828213x640785857598044300",
+      "fromCardId": "1762402820608x357907265932961840",
+      "repointHobbyiqCardId": "hiq:pokemon:2019:ja-sm11:45:base:no-auto",
+      "price": 54.99,
+      "evidence": "R5: setName/title states Japanese; address code sm11 is shared with the ENGLISH product; ruled key ja-sm11"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788511903103x901183531193734700",
+      "fromCardId": "1709691397259x202977183356958000",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base2:31:holofoil:no-auto",
+      "price": 11.64,
+      "evidence": "R5: setName/title states Japanese; address code base2 is shared with the ENGLISH product; ruled key ja-base2"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788511651947x455615327053916500",
+      "fromCardId": "1762402820086x182634613608977380",
+      "repointHobbyiqCardId": "hiq:pokemon:2019:ja-sm11:54:base:no-auto",
+      "price": 68.42,
+      "evidence": "R5: setName/title states Japanese; address code sm11 is shared with the ENGLISH product; ruled key ja-sm11"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788500906526x529668784524885300",
+      "fromCardId": "1709691396694x253921779571710370",
+      "repointHobbyiqCardId": "hiq:pokemon:1997:ja-base2:39:base:no-auto",
+      "price": 2.69,
+      "evidence": "R5: setName/title states Japanese; address code base2 is shared with the ENGLISH product; ruled key ja-base2"
+    },
+    {
+      "id": "cardhedge::ch-daily::1788488267576x833296151145787000",
+      "fromCardId": "1762402790645x963892192326551000",
+      "repointHobbyiqCardId": "hiq:pokemon:2019:ja-sm11:29:base:no-auto",
+      "price": 55,
+      "evidence": "R5: setName/title states Japanese; address code sm11 is shared with the ENGLISH product; ruled key ja-sm11"
+    }
+  ]
+}

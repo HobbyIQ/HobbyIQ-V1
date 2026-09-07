@@ -265,3 +265,52 @@ describe("MUTATION: the market guard", () => {
     expect(guard.marketVerdict({ setKey: "neo1", setName: "x" }, JA_151, "pokemon").allowed).toBe(true);
   });
 });
+
+// CF-THE-JAPANESE-VINTAGE-SET-GETS-ITS-OWN-KEY (Drew, 2026-09-07, R5).
+//
+// The 38 ruled `ja-<code>` keys are a THIRD Japanese vocabulary this guard has
+// to know. Without these pins the guard reads `ja-base2` as no market at all,
+// and the very moves the ruling creates -- a Japanese row going from the
+// shared English code to its own Japanese key -- would be invisible to it.
+describe("the market guard reads the ruled ja-<code> keys as JAPANESE (R5)", () => {
+  const RULED_JA = ["ja-base2", "ja-base3", "ja-gym1", "ja-gym2", "ja-ecard1", "ja-ecard3", "ja-bw4", "ja-sv10"];
+
+  it("every ruled key states JA", () => {
+    for (const k of RULED_JA) expect(guard.marketOfKey(k), k).toBe("ja");
+  });
+
+  it("the 19 built on an AMBIGUOUS code state JA anyway — the prefix is explicit", () => {
+    // This is the ordering that matters: `sm10` is ambiguous and states
+    // nothing, but `ja-sm10` spells the market out. Ambiguity is a property of
+    // the BARE code, never of a key that names its market. A guard that asked
+    // the ambiguous set first would answer null for 19 of the 38.
+    for (const bare of ["neo1", "sm10", "xy2", "sv10"]) {
+      expect(guard.marketOfKey(bare), bare).toBeNull();
+      expect(guard.marketOfKey(`ja-${bare}`), `ja-${bare}`).toBe("ja");
+    }
+  });
+
+  it("a JA row may move onto its ruled JA key, and an EN row may not", () => {
+    // The move the ruling exists to permit...
+    expect(guard.marketVerdict(JA_ROW, "ja-base2", "pokemon").allowed).toBe(true);
+    // ...and the one it must still refuse: an English row onto a Japanese key.
+    const enRow = { setKey: "base2", setName: "1999 Pokemon Jungle", title: "1999 Pokemon Jungle #46 Meowth" };
+    expect(guard.marketOfRow(enRow)).toBe("en");
+    expect(guard.marketVerdict(enRow, "ja-base2", "pokemon").allowed).toBe(false);
+  });
+
+  it("the bare English code is STILL English — the ruling adds a key, it moves none", () => {
+    for (const bare of ["base2", "base3", "gym1", "gym2", "ecard1", "ecard3", "bw4"]) {
+      expect(guard.marketOfKey(bare), bare).toBe("en");
+    }
+  });
+
+  // THE MUTANT THIS PIN EXISTS FOR. A `/^ja-/` regex is the obvious shortcut
+  // and it is wrong: `ja` opens legitimate sports keys, and reading every one
+  // of them as Japanese would refuse moves across the whole catalog.
+  it("a mutant using a bare /^ja-/ prefix would call arbitrary keys Japanese", () => {
+    for (const notRuled of ["ja-nonesuch", "jackie-robinson-tribute", "ja-", "japan-national-team"]) {
+      expect(guard.marketOfKey(notRuled), notRuled).not.toBe("ja");
+    }
+  });
+});
