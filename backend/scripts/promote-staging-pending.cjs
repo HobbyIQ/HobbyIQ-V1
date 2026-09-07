@@ -191,6 +191,13 @@ async function main() {
 
   let playerFromCatalog = 0;
   let scanned = 0, tried = 0, inserted = 0, deduped = 0, skipped = 0, catalogUnmatched = 0, errored = 0, statusFlipped = 0, patchFailed = 0, divertedToVerify = 0;
+  // CF-A-PARKED-TWIN-IS-NOT-A-TWIN (#1953). Both twin outcomes were invisible
+  // to this script: persistVendorSalesToPool reported them and nothing read
+  // them, so a row that was refused or folded left NO counter moving and fell
+  // straight out of `intended = written + skipped + failed`. That is the whole
+  // of `WORK VANISHED — UNACCOUNTED 6,557 (100.00%)`: not a lost write, an
+  // unnamed outcome. A guard that refuses correctly still has to be counted.
+  let twinRefused = 0, twinFolded = 0;
   let unusable = 0, flipAttempted = 0;
   const inflight = new Set();
 
@@ -292,6 +299,10 @@ async function main() {
           catalogUnmatched += unmatched;
           const diverted = res.divertedToVerify ?? 0;
           divertedToVerify += diverted;
+          const refused = res.twinAddressRefused ?? 0;
+          twinRefused += refused;
+          const folded = res.twinFolded ?? 0;
+          twinFolded += folded;
           // CF-CATALOG-MATCH-ONLY (Drew, 2026-08-08). Flip status also
           // on catalog-unmatched so the row stops getting re-tried —
           // it's now in the admin review pool, decision belongs there.
@@ -314,11 +325,27 @@ async function main() {
           // A diverted row is not lost: it is in verify_queue and a human
           // owns the decision, exactly like catalog-unmatched. Flipping it
           // is what lets the promoter's budget reach rows it has not seen.
-          if (res.inserted > 0 || res.deduped > 0 || unmatched > 0 || diverted > 0) {
+          // CF-A-PARKED-TWIN-IS-NOT-A-TWIN (#1953). `folded` and `refused`
+          // join this condition for the same reason `diverted` did
+          // (CF-PROMOTER-VERIFY-LOOP): a row whose answer cannot change on a
+          // re-run must leave `pending`, or the hourly job spends its whole
+          // budget re-deciding it. Measured: the 461 ids refused at 14:31Z
+          // were a 100% subset of the 503 refused at 13:31Z — the same rows,
+          // every hour, at 6,557 persist calls a run (~14 re-tries per id).
+          //
+          // The two statuses are DIFFERENT because the rows are different.
+          // A folded row IS in the pool at the right address — it is done, and
+          // `already-in-pool` says so. A refused row is NOT in the pool here
+          // and a human ruling decides where it belongs, which is what
+          // `twin-address-refused` hands to the dedup lane. Neither is
+          // `promoted`: neither one inserted a sale.
+          if (res.inserted > 0 || res.deduped > 0 || unmatched > 0 || diverted > 0 || folded > 0 || refused > 0) {
             const newStatus = res.inserted > 0
               ? "promoted"
               : (unmatched > 0 ? "catalog-unmatched"
-              : (diverted > 0 ? "awaiting-verify" : "already-in-pool"));
+              : (diverted > 0 ? "awaiting-verify"
+              : (refused > 0 ? "twin-address-refused"
+              : (folded > 0 ? "already-in-pool" : "already-in-pool"))));
             // CF-STAGING-FLIP-PARTITION-KEY (Drew, 2026-08-14). The
             // partition key is hobbyiqCardId, NOT id. Passing row.id
             // addressed a partition that does not exist, so every patch
@@ -365,10 +392,33 @@ async function main() {
   }
   await Promise.all([...inflight]);
 
-  console.log(`\n[promoter] done — scanned=${scanned} unusable=${unusable} tried=${tried} inserted=${inserted} deduped=${deduped} skipped=${skipped} diverted=${divertedToVerify} catalogUnmatched=${catalogUnmatched} playerFromCatalog=${playerFromCatalog} flipped=${statusFlipped} patchFailed=${patchFailed} errored=${errored} elapsed=${((Date.now()-startMs)/1000).toFixed(0)}s`);
+  console.log(`\n[promoter] done — scanned=${scanned} unusable=${unusable} tried=${tried} inserted=${inserted} deduped=${deduped} skipped=${skipped} diverted=${divertedToVerify} catalogUnmatched=${catalogUnmatched} twinFolded=${twinFolded} twinRefused=${twinRefused} playerFromCatalog=${playerFromCatalog} flipped=${statusFlipped} patchFailed=${patchFailed} errored=${errored} elapsed=${((Date.now()-startMs)/1000).toFixed(0)}s`);
+
+  // CF-EVERY-WRITE-RECONCILES, stated as an equation the script checks itself.
+  //
+  // The ledger below is the same one `reportWrites` computes, but printed as
+  // the identity a reader can verify by eye — because the failure this fixes
+  // was not a wrong number, it was a MISSING TERM. `twinFolded` and
+  // `twinRefused` did not exist as counters, so `tried - (written + skipped +
+  // failed)` was 6,557 and the banner correctly called that work vanished.
+  //
+  // Every row handed to persist lands in exactly one bucket. If this line does
+  // not balance, a NEW outcome has appeared in the service that nothing here
+  // counts — which is the defect, not the arithmetic.
+  const accountedFor = inserted + deduped + skipped + catalogUnmatched + twinFolded + twinRefused + errored;
+  const unaccounted = tried - accountedFor;
+  console.log(`[promoter] reconcile — tried=${tried} = inserted=${inserted} + deduped=${deduped} + skipped=${skipped} + catalogUnmatched=${catalogUnmatched} + twinFolded=${twinFolded} + twinRefused=${twinRefused} + errored=${errored}  (unaccounted=${unaccounted})`);
+  if (unaccounted !== 0) {
+    console.error(`[promoter] UNACCOUNTED ${unaccounted} of ${tried} — a persist outcome exists that this script does not count`);
+  }
   if (!APPLY) console.log(`(dry-run — no writes)`);
   if (APPLY) {
-    reportWrites({ job: "promote-staging-pending:pool", intended: tried, written: inserted, skipped: deduped + skipped + catalogUnmatched, failed: errored });
+    // `skipped` here means DELIBERATELY NOT WRITTEN, which is exactly what a
+    // fold and a refusal are: the fold replaced a document already at the right
+    // address (no new sale entered the pool), the refusal declined to mint a
+    // second copy of one sale. Both are correct outcomes and both must be
+    // declared, or reportWrites reads them as loss.
+    reportWrites({ job: "promote-staging-pending:pool", intended: tried, written: inserted, skipped: deduped + skipped + catalogUnmatched + twinFolded + twinRefused, failed: errored });
     reportWrites({ job: "promote-staging-pending:status-flip", intended: flipAttempted, written: statusFlipped, failed: patchFailed });
   }
 }
