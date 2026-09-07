@@ -17,7 +17,7 @@ import { saveTopPlayers, markNotified, getTopPlayers } from "../repositories/dai
 import { getAllDailyIQAlertPreferences } from "../repositories/alertPreferences.repository.js";
 import { getWatchlistSet } from "../services/dailyiq/watchlistStore.service.js";
 import { sendDailyIQNotification, isPushProviderConfigured, FeaturedPlayer } from "../services/notification.service.js";
-import { runSingleFlight } from "./_singleFlight.js";
+import { runSingleFlight, schedulerTickMs } from "./_singleFlight.js";
 
 function todayInTimezone(tz: string): string {
   return dateInTimezone(tz, new Date());
@@ -251,7 +251,7 @@ export function startDailyJobs(): void {
       runSingleFlight("dailyiq.job", 24 * 60 * 60 * 1000, runDailyIQJob).catch((err) => {
         console.error("[dailyiq.job] runDailyIQJob threw:", err?.message ?? err);
       });
-    }, 24 * 60 * 60 * 1000);
+    }, schedulerTickMs(24 * 60 * 60 * 1000));
   }, delay);
 }
 

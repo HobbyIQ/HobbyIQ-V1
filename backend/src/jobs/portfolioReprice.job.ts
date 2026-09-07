@@ -29,7 +29,7 @@ import {
 import { snapshotPortfolioValueForUser } from "../services/portfolioiq/portfolioValueHistory.service.js";
 import { CosmosClient, Container } from "@azure/cosmos";
 import { DefaultAzureCredential } from "@azure/identity";
-import { runSingleFlight } from "./_singleFlight.js";
+import { runSingleFlight, schedulerTickMs } from "./_singleFlight.js";
 
 interface RepriceJobSummary {
   startedAt: string;
@@ -367,7 +367,7 @@ export function startPortfolioRepriceJob(): void {
       runSingleFlight("portfolio.reprice.job", intervalMs, runPortfolioRepriceJob).catch((err) => {
         console.error("[portfolio.reprice.job] interval run threw:", err?.message ?? err);
       });
-    }, intervalMs);
+    }, schedulerTickMs(intervalMs));
   }, firstDelayMs);
 }
 

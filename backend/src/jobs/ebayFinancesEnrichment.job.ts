@@ -40,7 +40,7 @@ import {
 } from "../services/ebay/ebayFinances.service.js";
 import { applyFeeEnrichment } from "../services/portfolioiq/erpAgingOverride.service.js";
 import type { LedgerEntryForErp } from "../services/portfolioiq/erpReconciliation.service.js";
-import { runSingleFlight } from "./_singleFlight.js";
+import { runSingleFlight, schedulerTickMs } from "./_singleFlight.js";
 
 const DEFAULT_INTERVAL_HOURS = 6;
 const DEFAULT_FIRST_DELAY_MS = 120_000;
@@ -494,7 +494,7 @@ export function startEbayFinancesEnrichmentJob(): void {
       runSingleFlight("ebay.finances.enrichment.job", intervalMs, runFinancesEnrichmentSweep).catch((err) => {
         console.error("[ebay.finances.enrichment.job] interval run threw:", err?.message ?? err);
       });
-    }, intervalMs);
+    }, schedulerTickMs(intervalMs));
   }, firstDelayMs);
 }
 

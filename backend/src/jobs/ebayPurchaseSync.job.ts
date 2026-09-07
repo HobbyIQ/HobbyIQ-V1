@@ -27,7 +27,7 @@
 import { importEbayPurchaseHistory } from "../services/ebay/ebayBuyerHistory.service.js";
 import { isTerminalTokenError } from "../services/ebay/ebayAuth.service.js";
 import { listConnectedUserIds, markReconnectRequired } from "../services/ebay/ebayTokenStore.service.js";
-import { runSingleFlight } from "./_singleFlight.js";
+import { runSingleFlight, schedulerTickMs } from "./_singleFlight.js";
 
 const TICK_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
 const PER_USER_DELAY_MS = 1000; // polite spacing (eBay Trading API caps)
@@ -220,7 +220,7 @@ export function startWeeklyEbayPurchaseSyncJob(): void {
   // Fire once shortly after boot to catch the case where the process
   // restarted inside the fire window on Sunday.
   setTimeout(() => { void runSingleFlight("ebay.weekly.purchase.sync", TICK_INTERVAL_MS, tick); }, 90_000);
-  _intervalTimer = setInterval(() => { void runSingleFlight("ebay.weekly.purchase.sync", TICK_INTERVAL_MS, tick); }, TICK_INTERVAL_MS);
+  _intervalTimer = setInterval(() => { void runSingleFlight("ebay.weekly.purchase.sync", TICK_INTERVAL_MS, tick); }, schedulerTickMs(TICK_INTERVAL_MS));
 }
 
 export function stopWeeklyEbayPurchaseSyncJob(): void {
