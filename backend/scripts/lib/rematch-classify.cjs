@@ -2034,6 +2034,53 @@ const STRICT_PUBLISHER_LANES = Object.freeze([
  *  that hold the rows ask `isStrictChecklistRow` below; this function is what
  *  they fall back to when all they have is a string, and it stays honest about
  *  which question it answered rather than guessing at the other one. */
+/**
+ * CF-A-SETKEY-IS-NOT-A-PRODUCT-UNTIL-A-SPORT-NAMES-IT (this PR).
+ *
+ * May this catalog row answer a checklist question asked about `sport`?
+ *
+ * THE DEFECT THIS CLOSES. Every checklist lookup in rematch-sold-comps.cjs
+ * keyed on (setKey, cardYear) and nothing else. `topps-chrome`,
+ * `panini-prizm`, `panini-select`, `topps-finest`, `topps` and `bowman-chrome`
+ * ship in several sports in the same year; each sport is a SEPARATE product
+ * with a SEPARATE checklist numbering its own cards 1..N. Keyed without a
+ * sport, "the flagship's checklist" was the UNION of every sport's, so L5 --
+ * does the stored flagship list this cardNumber? -- was answered YES off a
+ * different sport's card.
+ *
+ * MEASURED read-only 2026-09-06 over the eleven shared families: 162 of the
+ * 253 (setKey, year) cells holding strict checklist rows hold MORE THAN ONE
+ * SPORT.
+ *
+ *   topps-chrome|2025   baseball 1,092 numbers (527 shared with another sport)
+ *                       football 2,285 (538) | basketball 1,887 (455)
+ *                       tennis 720 (300)
+ *   panini-prizm|2022   baseball 955 (345) | football 849 (383)
+ *                       basketball 724 (358)
+ *   panini-select|2023  baseball 473 (318) | basketball 1,163 (418)
+ *                       football 1,308 (400)
+ *
+ * The 2022 soccer World Cup cell that opened this PR is one instance of a
+ * general defect, not a soccer special case.
+ *
+ * BLANK ON EITHER SIDE IS UNKNOWN, AND UNKNOWN NEVER MATCHES. A row whose
+ * sport does not normalize cannot be shown to belong to the asked-for product,
+ * and a question with no readable sport names no product to ask about. Both
+ * answer false, so the caller falls back to the refusal it already has --
+ * `null` for L5, an empty map elsewhere. Absent beats wrong, which is the rule
+ * every one of these gates is already written to.
+ *
+ * Pure and exported so the rule is pinned on the SHIPPED predicate rather than
+ * on a test's re-implementation of it; the runner's five lookups all call it.
+ */
+function catalogRowAnswersForSport(row, sport, normalizeSport) {
+  const want = typeof normalizeSport === "function" ? normalizeSport(sport ?? null) : null;
+  if (!want) return false;
+  const got = typeof normalizeSport === "function" ? normalizeSport(row?.sport ?? null) : null;
+  if (!got) return false;
+  return got === want;
+}
+
 function isStrictChecklistSource(raw) {
   const s = normalizeCatalogSource(raw);
   if (s === "") return false;
@@ -2600,6 +2647,93 @@ const LADDER_MIRRORED_KEYS = Object.freeze(
 );
 
 /**
+ * THE SOCCER COMPETITION KEYS, and the bare FAMILIES they hang under.
+ *
+ * CF-THE-COMPETITION-IS-THE-PRODUCT (Drew, 2026-09-06). All 66 league keys are
+ * distinct products, and a Prizm / Select / Chrome SOCCER release is ALWAYS a
+ * competition product -- there is no bare "2022 Panini Prizm" soccer flagship
+ * for the World Cup cards to belong to. Panini printed a FIFA World Cup Qatar
+ * set; it did not also print an unbranded soccer Prizm set that happens to
+ * share the numbering.
+ *
+ * BOTH SETS ARE COMPUTED FROM `SPECIALIZATION_PARENTS`, NOT HAND-LISTED. The
+ * ladder table above already carries every one of these edges, so a 67th ruled
+ * key added there is picked up here for free; a hand list is a second place to
+ * forget, which is the failure `distinguishingWords` documents for itself.
+ *
+ * The membership test is the SOCCER MARKER: a ruled competition key names its
+ * competition in its own tail segments, and those tails are the vocabulary
+ * `inferSportFromTitle`'s soccer branch already rules sufficient evidence of
+ * soccer (CF-SOCCER-NEVER-DETECTED, Drew 2026-08-15). Reading the sport off the
+ * KEY rather than off a row's `sport` field is deliberate: the field is the
+ * thing under repair, and a mis-tagged row must not decide whether its own
+ * product is a soccer product.
+ */
+const SOCCER_COMPETITION_MARKER_RE = new RegExp(
+  "(?:^|-)(?:fifa|uefa|ucl|ucc|epl|mls|world-cup|champions-league|premier-league|"
+  + "la-liga|laliga|serie-a|ligue-1|bundesliga|spfl|euro-2020|club-competitions|"
+  + "womens|match-attax|merlin|jade-edition|japan-edition|1st-edition|carnaval|"
+  + "deco|superstars|renaissance|liverpool-fc|juventus|atletico|borussia|bvb|"
+  + "paris-saint-germain|psg|real-sociedad|steve-aoki|road-to-world-cup|"
+  + "scottish-premiership)(?:-|$)",
+);
+
+/** Every ruled soccer competition key on the mirrored ladder. */
+const SOCCER_COMPETITION_SETKEYS = Object.freeze(
+  Object.keys(SPECIALIZATION_PARENTS).filter((k) => SOCCER_COMPETITION_MARKER_RE.test(k)),
+);
+
+/**
+ * The bare family keys those competition products hang under -- `panini-prizm`,
+ * `panini-select`, `topps-chrome`, `topps-finest`, `panini-donruss`,
+ * `panini-mosaic`, `score`, `topps`, `leaf`, ... -- for soccer ONLY.
+ *
+ * WHAT THIS SET IS FOR, AND THE ONE THING IT MUST NOT DO. It turns L5 off for a
+ * stored bare family, and NOTHING ELSE. L1 (the ladder), L3 (the derived key
+ * must be checklist-backed by a real scraped source) and L4 (no other identity
+ * axis moved) all still stand exactly as they are, so a row still cannot climb
+ * unless the destination is a real checklist-attested card and the derivation
+ * agrees about which card it is.
+ *
+ * WHY L5 IS WRONG HERE SPECIFICALLY. L5 asks "does the stored FLAGSHIP's own
+ * checklist list this number?", and its answer is evidence precisely because a
+ * flagship is a real product whose checklist is a rival claim on the card. For
+ * `soccer:2022:panini-prizm` there is no such product to be a rival: Drew's
+ * ruling says the competition IS the product. Every catalog row sitting at that
+ * bare key is a World Cup card at the wrong address (measured below), so L5 is
+ * not consulting a rival checklist -- it is consulting the misfiling, and then
+ * citing it as the reason not to fix the misfiling. That is a guard confirming
+ * itself, the shape CF-CATALOG-MATCH-IS-SELF-CONFIRMING names.
+ *
+ * IT IS SPORT-SCOPED, AND THE SPORT COMES FROM THE PAIR, NEVER FROM THE ROW.
+ * `panini-prizm` is also the key of a very real baseball, basketball and
+ * football flagship whose checklists ARE rival claims, and this must never
+ * touch them. The set is therefore only ever consulted when the DERIVED key is
+ * one of the ruled SOCCER competition keys -- so the pair itself says soccer,
+ * read from the ruled vocabulary rather than from the `sport` field a rematch
+ * is often repairing.
+ */
+const SOCCER_BARE_FAMILY_SETKEYS = Object.freeze(
+  [...new Set(SOCCER_COMPETITION_SETKEYS.map((k) => SPECIALIZATION_PARENTS[k]).filter(Boolean))],
+);
+const SOCCER_BARE_FAMILY_SET = new Set(SOCCER_BARE_FAMILY_SETKEYS);
+const SOCCER_COMPETITION_SET = new Set(SOCCER_COMPETITION_SETKEYS);
+
+/**
+ * Is the STORED key a bare soccer family that cannot be a flagship for the
+ * DERIVED competition key? Both halves must hold: the derived key is a ruled
+ * soccer competition product, and the stored key is the bare family it hangs
+ * under. Anything else -- including `panini-prizm` under a baseball derivation
+ * -- answers false and keeps L5 exactly as it is today.
+ */
+function isBareSoccerFamilyNonFlagship(derivedKey, storedKey) {
+  const d = lower(derivedKey), s = lower(storedKey);
+  if (!d || !s) return false;
+  if (!SOCCER_COMPETITION_SET.has(d)) return false;
+  return SOCCER_BARE_FAMILY_SET.has(s) && SPECIALIZATION_PARENTS[d] === s;
+}
+
+/**
  * THE RULED SIBLING PAIRS (Drew, 2026-09-06 -- CF-BOWMAN-CHROME-DRAFT-KEEPS-
  * DRAFT, #1912).
  *
@@ -2864,6 +2998,20 @@ function specializationStatedEvidence({
   row, stored, derived, axes,
   derivedBacked = false,
   storedFlagshipListsCardNumber = null,
+  // THE PARSER'S MATCHED ALIAS, supplied by the caller.
+  //
+  // CF-THE-PARSER-IS-THE-EVIDENCE (this PR). True when
+  // `titleStatesSoccerCompetition(storedKey, derivedKey, title)` says the ruled
+  // soccer competition table matched THIS title and answered with THIS derived
+  // key. The classifier does not hold that table and must not: it is 66 regexes
+  // living in parseTitleIdentity.service.ts, and a second copy here is exactly
+  // how two readings of one title start to disagree -- the same argument
+  // `inferSetKeyFromTitle` gives for refining once at the seam rather than at
+  // each of its forty returns.
+  //
+  // Defaults FALSE, so every caller that cannot answer -- every non-soccer
+  // lane, every test that does not pass it -- gets today's strict L2 exactly.
+  competitionStated = false,
 }) {
   const failed = [];
   const title = str(row?.title);
@@ -2886,10 +3034,25 @@ function specializationStatedEvidence({
   // L2 -- every distinguishing word, stated in the title. Only meaningful
   // once the ladder holds; on a non-ladder pair the segment difference is not
   // a specialization's words and naming it would be a misleading count.
+  //
+  // UNLESS THE PARSER'S OWN COMPETITION TABLE MATCHED THE TITLE, in which case
+  // the ALIAS it matched IS the statement (CF-THE-PARSER-IS-THE-EVIDENCE, this
+  // PR). See `competitionStated` in the parameter list for the whole argument;
+  // in one line: a ruled competition key is a canonical NAME, the table matched
+  // one of its aliases, and asking the title to spell the canonical name is
+  // asking a question the market never answers. "2022 Panini Prizm World Cup
+  // Qatar" states the product completely and does not contain the word "fifa".
+  //
+  // The word list is still COMPUTED and still REPORTED -- `distinguishingWords`
+  // is what the IMPROVE reason line cites and what the census counts -- so this
+  // changes only whether the unstated remainder is a REFUSAL, never what the
+  // subclass claims about the row. And it is scoped to exactly one fact the
+  // caller had to prove: `competitionStated` is true only where the parser's
+  // table matched THIS title and answered with THIS derived key.
   const words = ladder ? distinguishingWords(derivedKey, storedKey) : [];
   const unstated = words.filter((w) => !titleStatesWord(title, w));
   if (ladder && !words.length) failed.push("no-distinguishing-words");
-  else if (unstated.length) failed.push(`title-does-not-state:${unstated.join("+")}`);
+  else if (unstated.length && !competitionStated) failed.push(`title-does-not-state:${unstated.join("+")}`);
 
   // L3 -- the DERIVED identity is checklist-backed by a real scraped source.
   if (!derivedBacked) failed.push("derived-not-checklist-backed");
@@ -2914,8 +3077,20 @@ function specializationStatedEvidence({
   // strict test. What still has to hold for a declared pair is L3: the CHILD'S
   // own checklist row, from a real scraped source. The title says which
   // product; the checklist says the card was printed. Both, or neither.
+  // AND UNLESS THE STORED KEY IS A BARE SOCCER FAMILY, which is not a flagship
+  // at all (CF-THE-COMPETITION-IS-THE-PRODUCT, Drew 2026-09-06). See
+  // `SOCCER_BARE_FAMILY_SETKEYS` above for the full argument. The short form:
+  // there is no bare "2022 Panini Prizm" soccer product, so the rows answering
+  // this question at `soccer:2022:panini-prizm` are the misfiled World Cup
+  // cards themselves, and refusing the repair because the misfiling exists is
+  // the guard citing itself. Narrow by construction -- it fires only when the
+  // DERIVED key is one of the ruled soccer competition keys and the stored key
+  // is precisely its declared parent, so the baseball, basketball and football
+  // `panini-prizm` flagships, which are real products with rival checklists,
+  // are untouched and keep the strict test.
+  const bareSoccerFamily = ladder && isBareSoccerFamilyNonFlagship(derivedKey, storedKey);
   const sameNumberParallel = ladder && isSameNumberParallelSet(derivedKey, storedKey);
-  if (!sameNumberParallel) {
+  if (!sameNumberParallel && !bareSoccerFamily) {
     if (storedFlagshipListsCardNumber === null) failed.push("flagship-coverage-unknown");
     else if (storedFlagshipListsCardNumber === true) failed.push("flagship-checklist-lists-this-card");
   }
@@ -2928,6 +3103,7 @@ function specializationStatedEvidence({
       distinguishingWords: words, unstatedWords: unstated,
       derivedBacked, storedFlagshipListsCardNumber,
       sameNumberParallelSet: sameNumberParallel,
+      competitionStated, bareSoccerFamily,
     },
   };
 }
@@ -4598,6 +4774,13 @@ function classifyRow({
   vintageDestBacked = null,
   productSport = null,
   sportDestBacked = null,
+  // CF-THE-PARSER-IS-THE-EVIDENCE (this PR). Did the ruled soccer competition
+  // table in parseTitleIdentity.service.ts match THIS row's title and answer
+  // with THIS derived setKey? A PARSER fact, not a catalog read, but it lives
+  // in dist/ and this module is pure, so the caller supplies it exactly as it
+  // supplies the catalog facts above. Defaults FALSE -- every caller that
+  // cannot answer, and every non-soccer lane, gets today's strict L2.
+  competitionStated = false,
 }) {
   const prov = provenanceTier(row);
   // THE SLUG-SHAPE DEFECTS ARE COMPUTED FOR EVERY ROW AND CHANGE NOTHING.
@@ -4946,6 +5129,7 @@ function classifyRow({
       row, stored, derived, axes,
       derivedBacked: derivedBackedStrict === true,
       storedFlagshipListsCardNumber,
+      competitionStated: competitionStated === true,
     });
     if (spec.qualifies) {
       // The row now takes the ORDINARY IMPROVE gate, through THE SAME
@@ -5394,6 +5578,8 @@ module.exports = {
   // mutation check can revert the table alone.
   RULED_SIBLING_PAIRS, ruledSiblingPair, ruledSiblingMove, SIBLING_TITLE_GATES,
   SAME_NUMBER_PARALLEL_SETS, isSameNumberParallelSet,
+  SOCCER_COMPETITION_SETKEYS, SOCCER_BARE_FAMILY_SETKEYS, isBareSoccerFamilyNonFlagship,
+  catalogRowAnswersForSport,
   STRICT_CHECKLIST_SOURCES, STRICT_PUBLISHER_LANES, normalizeCatalogSource, isStrictChecklistSource,
   isStrictChecklistRow,
   specializationAncestry, isSpecializationOf, distinguishingWords,
