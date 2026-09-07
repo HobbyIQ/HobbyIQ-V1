@@ -335,6 +335,80 @@ function occupiedByDifferentCard(incumbent, row) {
   return a !== b;
 }
 
+/**
+ * CF-A-READ-BACK-THAT-LAGS-IS-NOT-A-FAILED-DELETE (2026-09-07).
+ *
+ * The retire verifies by READ, and that stays: a delete is never believed on
+ * its own word. But the FIRST read is not the last word either. On 2026-09-07
+ * the two hobbymonitor donruss-optic applies -- runs 34077802430 (RETIRED 999,
+ * failed 1) and 34086888973 (written 998, failed 2) -- reported three rows
+ * "still readable after the retire":
+ *
+ *   hiq:basketball:2025:donruss-optic:27:checkerboard:no-auto
+ *   hiq:basketball:2025:donruss-optic:8:choice-dragon:no-auto
+ *   hiq:basketball:2025:donruss-optic:36:purple-velocity:no-auto:num-12
+ *
+ * All three were point-read afterwards at (id, id) AND queried cross-partition
+ * by id: gone, zero rows, nowhere in the container -- and all three 2024
+ * checklist twins present, so the retires were right AND complete. The deletes
+ * had succeeded; the immediate read-back had been served by a replica that had
+ * not yet applied them. Nothing was left behind and nothing needs re-running.
+ *
+ * The delete path itself was cleared in the same pass. retireCatalogRow ->
+ * deleteTolerant awaits `container.item(id, pk).delete()`, and the SDK rejects
+ * on any non-2xx, so a 412 or a throttled 429 surfaces as a throw (the lane's
+ * own `retry` re-tries the 429s) and can never be mistaken for a 204. It
+ * returns true only for a delete that actually returned, false only on a 404.
+ *
+ * The same lag is already documented one container over: relocate-sold-comp's
+ * readBackKeptRow retries the point read and then falls back to a QUERY, whose
+ * header records rekey-product-setkey run 33973364948 hitting it on 12 of
+ * 35,173 rows. This is that helper's mirror image -- it waits for ABSENCE
+ * rather than presence -- and it is deliberately NOT folded into the shared
+ * one: the pool helper verifies a written document field-by-field, this one
+ * verifies that nothing is there at all.
+ *
+ * The retries do not make the verify weaker. A row that is genuinely still
+ * resident is read on every attempt and STILL fails, because the loop ends
+ * early only on absence; the cost of the extra confidence is ~2s on the
+ * ~0.1-0.2% of retires that lag. The cross-partition query is the last word:
+ * a point read at (id, id) misses a row living under a foreign partition key,
+ * and calling such a row "gone" is exactly the false success a DELETING lane
+ * must never report.
+ *
+ * Returns { gone, via, attempts }. `via` names how absence was established, so
+ * the banner can separate a clean delete from one that needed the wait.
+ */
+const RETIRE_READ_BACK_ATTEMPTS = 3;
+const RETIRE_READ_BACK_BACKOFF_MS = [400, 900];
+
+async function confirmRetired(cat, id, pk, opts = {}) {
+  const retry = opts.retry ?? ((fn) => fn());
+  const wait = opts.wait ?? ((ms) => new Promise((r) => setTimeout(r, ms)));
+  const readOnce = async () => {
+    try { return (await retry(() => cat.item(id, pk).read())).resource ?? null; }
+    catch (err) { if (err?.code === 404 || err?.statusCode === 404) return null; throw err; }
+  };
+  for (let attempt = 0; attempt < RETIRE_READ_BACK_ATTEMPTS; attempt++) {
+    if (!(await readOnce())) {
+      return { gone: true, via: attempt === 0 ? "point-read" : `point-read-retry-${attempt}`, attempts: attempt + 1 };
+    }
+    if (attempt < RETIRE_READ_BACK_ATTEMPTS - 1) await wait(RETIRE_READ_BACK_BACKOFF_MS[attempt] ?? 900);
+  }
+  // Still readable after every retried point read. A query reaches an
+  // up-to-date replica set AND every partition, so it settles both remaining
+  // questions at once: a lagging replica, and a row under a foreign pk the
+  // point read could never have seen.
+  const { resources } = await retry(() => cat.items.query({
+    query: "SELECT c.id FROM c WHERE c.id = @id",
+    parameters: [{ name: "@id", value: id }],
+  }).fetchAll());
+  const hits = (resources ?? []).length;
+  return hits === 0
+    ? { gone: true, via: "query", attempts: RETIRE_READ_BACK_ATTEMPTS }
+    : { gone: false, via: "query", attempts: RETIRE_READ_BACK_ATTEMPTS, hits };
+}
+
 async function main() {
   if (SCOPE_ERROR) { console.error(SCOPE_ERROR); process.exit(1); }
 
@@ -403,6 +477,10 @@ async function main() {
 
   let retired = 0, resluged = 0, alreadyRight = 0, notFound = 0, failed = 0;
   let refusedOccupied = 0, salesUnplaced = 0, salesRepointed = 0, gradedRetired = 0;
+  // Retires whose delete landed but whose FIRST read-back still saw the row.
+  // Counted, not hidden: these are successes, and a number that climbs is the
+  // container telling us something about its replication, not about this lane.
+  let readBackRetried = 0;
   // Sales a keepSales reslug deliberately did NOT carry. Counted separately
   // from salesUnplaced because the two are different states: an unplaced sale
   // has no row at its address at all, while these still have one -- the
@@ -439,11 +517,22 @@ async function main() {
       try {
         const res = await retireCatalogRow(cat, id, row.cardId ?? id, reason, { retry });
         gradedRetired += res?.gradedChildrenRetired ?? 0;
-        // VERIFY BY READ. The delete is not believed on its own word.
-        if (await rowAt(id)) {
+        // VERIFY BY READ -- and read PAST a lagging replica before calling it a
+        // failure. The delete is still not believed on its own word; a read
+        // that has not caught up yet is simply not the delete's word either.
+        // retireCatalogRow deletes at `cardId ? String(cardId) : id`, so the
+        // verify reads at the SAME key rather than assuming (id, id).
+        const back = await confirmRetired(cat, id, row.cardId ?? id, { retry });
+        if (back.gone) {
+          retired++;
+          if (back.via !== "point-read") {
+            readBackRetried++;
+            console.log(`      read-back needed a retry (${back.via}) — the delete had landed`);
+          }
+        } else {
           failed++;
-          console.error("      FAILED: the row is still readable after the retire");
-        } else retired++;
+          console.error(`      FAILED: the row is still readable after the retire (${f(back.hits ?? 1)} still resident after ${back.attempts} reads + a query)`);
+        }
       } catch (err) {
         failed++;
         console.error(`      FAILED: ${String(err?.message ?? err).slice(0, 80)}`);
@@ -555,6 +644,7 @@ async function main() {
   console.log(`  refused — cross-market  ${f(refusedCrossMarket)}   <- a JA row may never land on an EN key, or the reverse`);
   console.log(`  already gone            ${f(alreadyRight)}`);
   console.log(`  not found               ${f(notFound)}`);
+  console.log(`  read-back needed a retry ${f(readBackRetried)}   <- replica lag, delete confirmed landed — NOT failed`);
   console.log(`  failed                  ${f(failed)}`);
   console.log(`  sales made UNPLACED     ${f(salesUnplaced)}   <- the rematch owns these`);
   console.log(`  sales re-pointed        ${f(salesRepointed)}`);
@@ -586,4 +676,5 @@ if (require.main === module) {
 
 module.exports = {
   SCOPE, APPLY, classifyEntry, occupiedByDifferentCard, crossProductFields, idSetKey, keepsSales,
+  confirmRetired, RETIRE_READ_BACK_ATTEMPTS,
 };
