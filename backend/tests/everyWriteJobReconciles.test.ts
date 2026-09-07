@@ -150,41 +150,83 @@ const UNRECONCILED = new Set([
   // backfill-cardsight-unverified-flag each counted only FAILURES on their
   // upsert, so a run reported `wouldChange: N` and said nothing at all about
   // how many of those N landed. The success counter is part of the same change.
+  // ELEVEN MORE NAMES LEFT THIS LIST on 2026-09-07 in the #1944 ratchet's wave
+  // 3 (backfill-grade-from-ch-daily, backfill-grade-from-title,
+  // backfill-insert-setkey, backfill-isauto-cross-sport,
+  // backfill-isauto-from-cardnumber, backfill-parallel-enrichment,
+  // backfill-printrun-from-title, backfill-stage3-price-sanity,
+  // backfill-sub-channel-vocabulary, baseline-pool-snapshot,
+  // migrate-cardsight-to-staging, promote-sold-comps-trust-tier,
+  // reaudit-cardsight-unverified), for the same reason the fourteen in wave 2
+  // did: budgeting a lane means giving it a STOP, and a lane that can stop half
+  // way MUST be able to say so.
+  //
+  // TWO SHAPES OF RECONCILIATION, AND THE DIFFERENCE IS LOAD-BEARING. A lane
+  // that DISCOVERS its work page by page cannot honestly report a `not reached`
+  // count -- there is no denominator -- so it reconciles over what it SAW:
+  // `intended = written + failed`, where intended is the rows it decided to
+  // write. A lane that builds a PLAN first (scan, then patch) knows its
+  // denominator, so it reconciles `intended = written + failed + not reached`.
+  // Both balance after a partial run; neither is interchangeable with the other
+  // (feedback: a slice is not a sibling counter).
+  //
+  // SEVERAL COULD NOT HAVE RECONCILED BEFORE, for the same reason four of
+  // wave 2's could not: they had no written count to reconcile WITH.
+  // backfill-grade-from-title, backfill-sub-channel-vocabulary,
+  // backfill-stage3-price-sanity and promote-sold-comps-trust-tier each counted
+  // only FAILURES on their upsert; reaudit-cardsight-unverified counted its
+  // VERDICTS (cleared / kept) and nothing at all about how many reached the
+  // container; baseline-pool-snapshot swallowed every upsert error into a
+  // `/* skip */` and could print "complete: 0 slugs recorded" on a run whose
+  // writes all failed, and exit 0. Four more --
+  // backfill-grade-from-ch-daily, backfill-insert-setkey,
+  // backfill-isauto-cross-sport, backfill-isauto-from-cardnumber and
+  // backfill-printrun-from-title -- reported `runInParallel`'s `ok` as applied,
+  // which counts a worker callback that did not throw rather than a write. The
+  // success counters are part of the same change.
+  // FIVE MORE NAMES LEFT THIS LIST on 2026-09-07 in the #1944 ratchet's wave 4
+  // -- backfill-verify-queue-grades, rescore-anomalies,
+  // reslug-cross-product-mis-slug, reslug-suspicious-setkeys and
+  // score-all-sold-comps -- and with them the ratchet reached ZERO. Same reason
+  // as waves 1-3: budgeting a lane means giving it a STOP, and a lane that can
+  // stop half way MUST be able to say so.
+  //
+  // THE TWO SHAPES AGAIN, AND WAVE 4 IS EVENLY SPLIT BETWEEN THEM. The three
+  // that build a PLAN first -- both reslugs and backfill-verify-queue-grades --
+  // know their denominator, so they reconcile `intended = written + failed +
+  // not reached`, where "not reached" is the planned patches the clock stopped
+  // the drain before claiming. The two that DISCOVER their work page by page --
+  // rescore-anomalies and score-all-sold-comps -- have no denominator for the
+  // rows they never saw, so they reconcile over the rows they DID scan. Neither
+  // shape is interchangeable with the other (a slice is not a sibling counter).
+  //
+  // ALL FIVE REPORTED A NUMBER THAT WAS NOT A WRITE, which is why none of them
+  // could have reconciled before. The two reslugs and
+  // backfill-verify-queue-grades printed `runInParallel`'s `ok` as "patched" --
+  // a count of worker callbacks that did not THROW, which is not the same thing
+  // as a patch that landed. score-all-sold-comps counted `scored`, a score
+  // COMPUTED, with the upsert awaited inside a try whose catch only bumped
+  // `errors`. rescore-anomalies counted its VERDICTS (`promoted` / `stillLow`)
+  // while BOTH arms upserted into the same swallowing catch. Every one of them
+  // gained a real success counter, incremented on the line after its own write
+  // resolves, as part of the same change.
   "backfill-canonicalize-chrome-slugs",
-  "backfill-grade-from-ch-daily",
-  "backfill-grade-from-title",
-  "backfill-insert-setkey",
-  "backfill-isauto-cross-sport",
-  "backfill-isauto-from-cardnumber",
-  "backfill-parallel-enrichment",
-  "backfill-printrun-from-title",
-  "backfill-stage3-price-sanity",
-  "backfill-sub-channel-vocabulary",
-  "backfill-verify-queue-grades",
-  "baseline-pool-snapshot",
-  "migrate-cardsight-to-staging",
-  "promote-sold-comps-trust-tier",
-  "reaudit-cardsight-unverified",
-  "rescore-anomalies",
   "reslug-bowman-paper-vs-bowman",
   "reslug-brand-root-refinement",
   "reslug-chrome-draft-collision",
   "reslug-chrome-prospects-and-wave",
   "reslug-cross-brand-fix",
-  "reslug-cross-product-mis-slug",
   "reslug-fleer-stickers",
   "reslug-heritage-vs-topps-chrome",
   "reslug-player-sport-fix",
   "reslug-recover-cardnumbers",
   "reslug-speckle-recovery",
-  "reslug-suspicious-setkeys",
   "reslugAllSoldComps",
   // retire-flattened-attestations left this list on 2026-09-07: budgeting it
   // meant giving it a stop, and a lane that can stop half way MUST be able to
   // say so -- `intended = written + skipped + failed` with the budget's
   // remainder carried as `skipped` is the only honest banner for a partial run.
   // It gained a real reportWrites() in the same change rather than a token one.
-  "score-all-sold-comps",
 ]);
 
 /**

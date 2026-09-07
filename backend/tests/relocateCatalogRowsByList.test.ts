@@ -47,6 +47,10 @@ const readList = (p: string): ListDoc => JSON.parse(readFileSync(p, "utf8")) as 
 const L = require_(lane) as {
   classifyEntry: (e: unknown) => { ok: boolean; why?: string; action?: string; to?: string };
   occupiedByDifferentCard: (incumbent: unknown, row: unknown) => boolean;
+  occupancyRefusal: (
+    incumbent: unknown,
+    row: unknown,
+  ) => false | { reason: string; hint: string };
   crossProductFields: (id: string, to: string) => { setKey?: string };
   idSetKey: (slug: string) => string;
   confirmRetired: (
@@ -979,5 +983,305 @@ describe("a lagging read-back is retried, a resident row still fails", () => {
     // inside `retired` and must NOT be added to the reconciliation again.
     expect(src).toContain("written = retired + resluged");
     expect(src).not.toContain("+ readBackRetried");
+  });
+});
+
+/**
+ * CF-A-MOVE-VERIFIES-ITS-SOURCE-THE-SAME-WAY-A-RETIRE-DOES (2026-09-07).
+ *
+ * #1940 taught the RETIRE branch to read past a lagging replica. The MOVE
+ * branch kept one bare point read at (id, id) and produced the identical
+ * false failure at the identical rate: five entries over 99 relocate APPLY
+ * runs on 2026-09-07, each `FAILED: landed=true sourceVacated=false`. All
+ * five sources were afterwards absent on a point read AND on a
+ * cross-partition query, with all five destinations present and stamped
+ * `movedFrom` the source. The deletes had landed; the report was wrong.
+ *
+ * These pin the three things that follow, on the lane source, because the
+ * branch they live in needs a live Cosmos container to execute.
+ */
+describe("the move verifies its source the way the retire does", () => {
+  const src = () => readFileSync(lane, "utf8");
+
+  it("the source verify uses confirmRetired, at the key moveCatalogRow deletes at", () => {
+    // moveCatalogRow's own `oldPk = String(oldRow.cardId ?? oldId)`. A verify
+    // reading (id, id) would 404 on a foreign-pk row and call it vacated.
+    expect(src()).toContain("const back = await confirmRetired(cat, id, row.cardId ?? id, { retry });\n      if (landed && back.gone)");
+  });
+
+  it("the bare single point read is gone from the move branch", () => {
+    // The exact line that produced all five false failures.
+    expect(src()).not.toContain("const sourceGone = !(await rowAt(id));");
+  });
+
+  it("a lagging move read-back is counted as a retry, not a failure", () => {
+    const s = src();
+    expect(s).toContain("read-back needed a retry (${back.via}) — the source delete had landed");
+    // resluged++ happens only under `landed && back.gone`.
+    expect(s).toMatch(/if \(landed && back\.gone\) \{\s*\n\s*resluged\+\+;/);
+  });
+
+  it("a source that genuinely survives is its OWN outcome, not `failed`", () => {
+    const s = src();
+    expect(s).toContain("MOVE LANDED; SOURCE RETIRE FAILED");
+    expect(s).toContain("moveSourceLeftBehind++");
+    // Two rows for one card is the state to report, by name, so a re-run
+    // has a work list rather than a count.
+    expect(s).toContain("two rows now hold one card");
+    expect(s).toContain("LEFTOVER SOURCES");
+    expect(s).toContain("leftoverSources.push({ from: id, to, player: row.playerName ?? null })");
+  });
+
+  it("the new outcomes are in the banner AND in the reconciliation", () => {
+    const s = src();
+    expect(s).toContain("move landed; source retire failed ${f(moveSourceLeftBehind)}");
+    expect(s).toContain("moves COMPLETED         ${f(movesCompleted)}");
+    // Both wrote, so both are `written`; the reconcile identity must still
+    // account for every entry exactly once.
+    expect(s).toContain("const written = retired + resluged + movesCompleted + moveSourceLeftBehind;");
+  });
+});
+
+/**
+ * CF-A-HALF-APPLIED-MOVE-IS-COMPLETED-BY-A-RE-RUN-NEVER-REFUSED (2026-09-07).
+ *
+ * The trap this pins shut. A `move landed; source retire failed` leaves the
+ * destination holding the card and the source still resident. On a re-run the
+ * incumbent at `to` IS this card -- so an occupied-refusal would refuse
+ * identically on every future run and the pair would stay split forever,
+ * which is exactly what one-card-one-row forbids. The `movedFrom` stamp,
+ * which moveCatalogRow writes on every move, is what tells the two cases
+ * apart: this card already arrived, versus a genuine rival.
+ */
+describe("a re-run completes a half-applied move", () => {
+  const src = () => readFileSync(lane, "utf8");
+
+  it("an incumbent stamped movedFrom this id RETIRES the source", () => {
+    const s = src();
+    expect(s).toContain('if (incumbent && String(incumbent.movedFrom ?? "") === id) {');
+    expect(s).toContain("COMPLETE MOVE");
+    expect(s).toContain("complete a half-applied move to ${to}");
+    expect(s).toContain("movesCompleted++");
+  });
+
+  it("the completion is decided BEFORE the occupied refusal", () => {
+    const s = src();
+    const complete = s.indexOf('if (incumbent && String(incumbent.movedFrom ?? "") === id)');
+    // The call site now asks occupancyRefusal, which NAMES the refusal
+    // (collision vs name-superset) rather than returning a bare boolean. The
+    // invariant this pins is the ORDER, which is unchanged.
+    const occupied = s.indexOf("const occ = occupancyRefusal(incumbent, row);");
+    expect(complete).toBeGreaterThan(-1);
+    expect(occupied).toBeGreaterThan(-1);
+    // Order is load-bearing: refusing first would strand the pair.
+    expect(complete).toBeLessThan(occupied);
+  });
+
+  it("a row at `to` WITHOUT the stamp is still a collision, unchanged", () => {
+    // The occupied refusal survives: only a movedFrom-stamped incumbent
+    // takes the completion path, so a genuine rival is still reported.
+    expect(L.occupiedByDifferentCard({ playerName: "Bob Lilly" }, { playerName: "Roger Staubach" })).toBe(true);
+    // The doctrine still ships, now as the hint printed with the refusal.
+    expect(src()).toContain("a collision to report, never to route around");
+  });
+
+  it("a reslug whose source is already gone is recognised, not called not-found", () => {
+    const s = src();
+    expect(s).toContain("ALREADY MOVED");
+    expect(s).toContain('if (done && String(done.movedFrom ?? "") === id) {');
+  });
+
+  it("the completion still verifies by read before it counts", () => {
+    // The same doctrine as the retire: a delete is never believed on its own
+    // word, and the counted success sits inside the read-back.
+    expect(src()).toContain("retireCatalogRow(cat, id, row.cardId ?? id, `complete a half-applied move to ${to}");
+    expect(src()).toContain("the source is still readable after the retire");
+  });
+});
+
+// ── the occupancy compare is playerIdentityKey, not a raw lowercase ─────────
+//
+// #1953 shipped 138 hand-adjudications because this predicate compared
+// `trim().toLowerCase()` and could not tell a FOLD (one card, two spellings)
+// from a COLLISION (two cards). The reduction now comes from the one key the
+// survivor rule uses. These pin the three outcomes apart: fold, superset,
+// collision.
+
+describe("occupancy folds spelling, refuses identity, and never guesses a suffix", () => {
+  // The bridge is loaded directly so the fixtures exercise the REAL reduction
+  // (the lane is required tree-less, where the loader falls back to the legacy
+  // expression by design). Which one is live is asserted, not assumed.
+  const bridge = join(__dirname, "..", "scripts", "lib", "player-identity.cjs");
+  const B = require_(bridge) as {
+    playerIdentityKey: (n: unknown) => string;
+    identityKeyIsBuilt: () => boolean;
+  };
+  const key = B.playerIdentityKey;
+  const built = B.identityKeyIsBuilt();
+
+  // Every pair below is ONE card under two transcriptions. Named for the shape
+  // it exercises so a regression says which character class broke.
+  const SAME_CARD: ReadonlyArray<readonly [string, string, string]> = [
+    ["curly apostrophe", "Team Magma's Camerupt", "Team Magma’s Camerupt"],
+    ["dropped apostrophe", "Team Magma's Camerupt", "Team Magmas Camerupt"],
+    ["period in an abbreviation", "Mr. Mime", "Mr Mime"],
+    ["hyphen vs space", "Porygon-Z", "Porygon Z"],
+    ["case and padding", " derek jeter ", "Derek Jeter"],
+    ["initials", "T.J. Hockenson", "TJ Hockenson"],
+  ];
+
+  // These need the transliterations, so they are asserted only when the built
+  // tree is live -- the legacy fallback DELETES these characters and is
+  // documented to do so. Skipping silently would hide the whole point, so the
+  // build state is asserted instead.
+  const SAME_CARD_BUILT: ReadonlyArray<readonly [string, string, string]> = [
+    ["accents fold", "Flabébé", "Flabebe"],
+    ["Pokemon Star symbol", "Suicune ☆", "Suicune Star"],
+    ["black star variant", "Suicune ★", "Suicune Star"],
+    ["female symbol", "Nidoran♀", "Nidoran F"],
+    ["male symbol", "Nidoran♂", "Nidoran M"],
+    ["Greek alpha", "Miracle Sphere α", "Miracle Sphere Alpha"],
+    ["Greek beta", "Miracle Sphere β", "Miracle Sphere Beta"],
+    ["Greek gamma", "Miracle Sphere γ", "Miracle Sphere Gamma"],
+    ["delta species", "Vibrava δ", "Vibrava Delta"],
+  ];
+
+  it("reports which reduction is live rather than guessing", () => {
+    expect(typeof built).toBe("boolean");
+    // The bridge must always yield a usable function, tree or no tree.
+    expect(key("Derek Jeter")).toBe("derekjeter");
+  });
+
+  for (const [shape, a, b] of SAME_CARD) {
+    it("folds an occupied address for the same card — " + shape, () => {
+      expect(key(a)).toBe(key(b));
+      expect(L.occupancyRefusal({ playerName: a }, { playerName: b })).toBe(false);
+      expect(L.occupiedByDifferentCard({ playerName: a }, { playerName: b })).toBe(false);
+    });
+  }
+
+  for (const [shape, a, b] of SAME_CARD_BUILT) {
+    it("folds an occupied address for the same card — " + shape, () => {
+      if (!built) {
+        // The legacy reduction deletes these characters; that is the
+        // documented tree-less behaviour, and the fold is simply un-improved.
+        expect(existsSync(join(__dirname, "..", "dist", "services", "catalog", "playerIdentityKey.js"))).toBe(false);
+        return;
+      }
+      expect(key(a)).toBe(key(b));
+      expect(L.occupancyRefusal({ playerName: a }, { playerName: b })).toBe(false);
+    });
+  }
+
+  it("a genuinely different card still REFUSES — the guard is intact", () => {
+    const r = L.occupancyRefusal({ playerName: "Todd Hundley" }, { playerName: "Derek Jeter" });
+    expect(r).not.toBe(false);
+    expect((r as { reason: string }).reason).toBe("occupied: different card");
+    expect(L.occupiedByDifferentCard({ playerName: "Bob Lilly" }, { playerName: "Roger Staubach" })).toBe(true);
+    // Two Pokemon that differ by more than orthography are still two cards.
+    expect(L.occupiedByDifferentCard({ playerName: "Jolteon" }, { playerName: "Flareon" })).toBe(true);
+  });
+
+  it("a CONTAINMENT pair is refused as name-superset — the lane does not fold it", () => {
+    // #1953 settled these by reading tcgdex. Only a checklist can say whether
+    // the suffix is a different card, and this lane has no checklist.
+    const PAIRS: ReadonlyArray<readonly [string, string]> = [
+      ["Jolteon", "Jolteon δ"],
+      ["Charizard", "Charizard ex"],
+      ["M Venusaur", "M Venusaur EX"],
+      ["Flying Pikachu", "Flying Pikachu V"],
+      // NOT a Pokemon-only shape. "Ken Griffey" vs "Ken Griffey Jr" is the
+      // same open question -- a truncated transcription, or the other man --
+      // and the same answer applies: a checklist decides, not this lane.
+      ["Ken Griffey", "Ken Griffey Jr"],
+      ["Cal Ripken", "Cal Ripken Jr"],
+    ];
+    for (const [a, b] of PAIRS) {
+      const fwd = L.occupancyRefusal({ playerName: a }, { playerName: b });
+      const rev = L.occupancyRefusal({ playerName: b }, { playerName: a });
+      expect(fwd, a + " vs " + b).not.toBe(false);
+      expect(rev, b + " vs " + a).not.toBe(false);
+      // Refused by its OWN name, not lumped in with a collision.
+      expect((fwd as { reason: string }).reason).toBe("occupied: name-superset");
+      expect((rev as { reason: string }).reason).toBe("occupied: name-superset");
+      // And the hint points at the thing that actually decides it.
+      expect((fwd as { hint: string }).hint).toMatch(/checklist/i);
+      // It is still occupied — a superset never becomes a fold.
+      expect(L.occupiedByDifferentCard({ playerName: a }, { playerName: b })).toBe(true);
+    }
+  });
+
+  it("an EMPTY destination is not occupied, and an UNNAMED side refuses", () => {
+    expect(L.occupancyRefusal(null, { playerName: "Derek Jeter" })).toBe(false);
+    expect(L.occupancyRefusal(undefined, { playerName: "Derek Jeter" })).toBe(false);
+    const UNNAMED: ReadonlyArray<readonly [unknown, unknown]> = [
+      [{ playerName: "" }, { playerName: "Derek Jeter" }],
+      [{}, { playerName: "Derek Jeter" }],
+      [{ playerName: "Todd Hundley" }, { playerName: "" }],
+      // Punctuation-only reduces to nothing, which is unknown by the same rule.
+      [{ playerName: "---" }, { playerName: "Derek Jeter" }],
+    ];
+    for (const [inc, row] of UNNAMED) {
+      const r = L.occupancyRefusal(inc, row);
+      expect(r).not.toBe(false);
+      expect((r as { reason: string }).reason).toBe("occupied: unnamed");
+    }
+  });
+
+  it("MUTATION: fold a containment pair -> a delta card's sales join the base pool -> red", () => {
+    // The mutant treats "one name contains the other" as the same card.
+    const mutant = (a: string, b: string) => {
+      const ka = key(a);
+      const kb = key(b);
+      return !(ka.startsWith(kb) || kb.startsWith(ka));
+    };
+    expect(mutant("Jolteon", "Jolteon δ")).toBe(false); // the mutant folds it
+    // The shipped lane refuses it.
+    expect(L.occupiedByDifferentCard({ playerName: "Jolteon" }, { playerName: "Jolteon δ" })).toBe(true);
+  });
+
+  it("MUTATION: compare raw lowercase again -> the #1930 shapes re-refuse -> red", () => {
+    const legacyMutant = (a: string, b: string) =>
+      String(a).trim().toLowerCase() !== String(b).trim().toLowerCase();
+    // The mutant calls one card two cards on every shape #1953 hand-settled.
+    expect(legacyMutant("Team Magma's Camerupt", "Team Magma’s Camerupt")).toBe(true);
+    expect(legacyMutant("Mr. Mime", "Mr Mime")).toBe(true);
+    // The shipped predicate folds them.
+    expect(L.occupiedByDifferentCard(
+      { playerName: "Team Magma's Camerupt" },
+      { playerName: "Team Magma’s Camerupt" },
+    )).toBe(false);
+    expect(L.occupiedByDifferentCard({ playerName: "Mr. Mime" }, { playerName: "Mr Mime" })).toBe(false);
+  });
+
+  it("the lane loads the ONE key and does not restate the expression", () => {
+    const src = readFileSync(lane, "utf8");
+    expect(src).toContain('require(path.join(__dirname, "lib", "player-identity.cjs"))');
+    expect(src).toContain("playerIdentityKey(display(incumbent))");
+    // The pre-fix reduction must not survive as CODE. The header quotes it on
+    // purpose -- documenting the defect is why the fix reads -- so the
+    // assertion is made against the source with comment lines removed, not
+    // against the prose that explains them.
+    const code = src
+      .split(/\r?\n/)
+      .filter((ln) => !/^\s*(\/\/|\*|\/\*)/.test(ln))
+      .join("\n");
+    expect(code).not.toContain('String(r?.playerName ?? "").trim().toLowerCase()');
+    // And the header DOES still carry the explanation.
+    expect(src).toContain('String(r?.playerName ?? "").trim().toLowerCase()');
+  });
+
+  it("the superset refusal is still counted as OCCUPIED — reconciliation unchanged", () => {
+    const src = readFileSync(lane, "utf8");
+    // The identity is written + skipped + refused + failed + notReached, and
+    // refused sums refusedOccupied + refusedCrossMarket. A superset must not
+    // add a term to that sum or every superset would double-count.
+    expect(src).toContain("refusedOccupied + refusedCrossMarket");
+    expect(src).not.toMatch(/refusedOccupied \+ refusedCrossMarket \+ refusedNameSuperset/);
+    // It increments the occupied counter first, then the subset counter.
+    const occ = src.indexOf("refusedOccupied++");
+    const sup = src.indexOf("refusedNameSuperset++");
+    expect(occ).toBeGreaterThan(-1);
+    expect(sup).toBeGreaterThan(occ);
   });
 });

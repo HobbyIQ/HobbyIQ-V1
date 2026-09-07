@@ -252,6 +252,10 @@ const path = require("node:path");
 const fs = require("node:fs");
 const backend = path.resolve(__dirname, "..");
 const { budget, finishLane } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
+// The ONE name reduction the survivor rule and the corroboration arms use.
+// Loaded defensively (see lib/player-identity.cjs): a tree-less run falls back
+// to the legacy expression rather than failing to load.
+const { playerIdentityKey, identityKeyIsBuilt } = require(path.join(__dirname, "lib", "player-identity.cjs"));
 // The dist/ and Cosmos requires live inside main(), as the pool lane does it:
 // loading this module must not need a built tree, so the runner contract test
 // can require it and drive the scope refusal without a compile step.
@@ -398,16 +402,98 @@ function keepsSales(entry, doc) {
   return file === null ? false : file;
 }
 
-function occupiedByDifferentCard(incumbent, row) {
+/**
+ * Does a row already at the destination name a DIFFERENT card than the row
+ * being moved?
+ *
+ * ── THE COMPARE IS playerIdentityKey, NOT A RAW LOWERCASE (#1953) ───────────
+ *
+ * This used to reduce both names with
+ *
+ *     String(r?.playerName ?? "").trim().toLowerCase()
+ *
+ * and ask `a !== b`. That is the pre-fix expression `playerIdentityKey.ts`
+ * exists to replace, and on the #1930 shapes it calls one card two cards:
+ *
+ *   "Team Magma's Camerupt" vs "Team Magma’s Camerupt"   curly apostrophe
+ *   "Mr. Mime"              vs "Mr Mime"                 punctuation
+ *   "Flabébé"               vs "Flabebe"                 accent
+ *   "Suicune ☆"             vs "Suicune Star"            identity symbol
+ *   "Nidoran♀"              vs "Nidoran F"               gender symbol
+ *   "Miracle Sphere α"      vs "Miracle Sphere Alpha"    Greek suffix
+ *
+ * Each of those refused as `occupied`, and #1953 settled 138 of them BY HAND --
+ * reading tcgdex per pair to confirm what orthography alone could have said.
+ * The reduction now comes from `lib/player-identity.cjs`, which loads the ONE
+ * key the survivor rule and the corroboration arms already use. A lane that
+ * disagrees with the survivor rule about who two rows name is worse than a lane
+ * that refuses, so there is exactly one answer to the question.
+ *
+ * ── WHAT DID NOT CHANGE: A DIFFERENT KEY STILL REFUSES ─────────────────────
+ *
+ * "Todd Hundley" and "Derek Jeter" reduce to two keys and this still refuses.
+ * An occupied address is a COLLISION to report, never to route around, and
+ * folding it would put two cards' sales in one pricing pool. This change makes
+ * the compare see through SPELLING, and nothing else.
+ *
+ * An unnamed side still refuses. Blank is unknown, never "the same", which is
+ * the safe direction for a delete-bearing lane.
+ *
+ * ── A SUPERSET IS NOT A FOLD, AND THIS LANE MAY NOT DECIDE IT ──────────────
+ *
+ * "Jolteon" vs "Jolteon δ" is the shape that tempts a containment rule, and a
+ * containment rule is exactly the "right guard, wrong scope" error.
+ * `playerIdentityKey.ts`'s own header draws this line: A SUFFIX IS NOT AN
+ * ACCENT. Whether the bare row is a truncated transcription of the δ card or a
+ * genuinely different card at the same number is a question about the product's
+ * CHECKLIST, and this lane has no checklist -- #1953 answered its supersets by
+ * reading tcgdex, which is the right way and not one available here.
+ *
+ * So a containment pair is still REFUSED, but it is refused by its own name --
+ * `name-superset` -- rather than being lumped in with a genuine collision. The
+ * two need different actions from an operator: a collision is a numbering bug
+ * to fix, a superset is a checklist lookup that resolves to a fold or a split.
+ * Reporting them as one number is what made 138 hand-adjudications look like
+ * 138 collisions.
+ *
+ * @returns {false | {reason: string, hint: string}} false when the destination
+ *          is free or holds THIS card; otherwise the refusal, named.
+ */
+function occupancyRefusal(incumbent, row) {
   if (!incumbent) return false;
-  const name = (r) => String(r?.playerName ?? "").trim().toLowerCase();
-  const a = name(incumbent);
-  const b = name(row);
+  const display = (r) => String(r?.playerName ?? "").trim();
+  const a = playerIdentityKey(display(incumbent));
+  const b = playerIdentityKey(display(row));
   // An unnamed side cannot be adjudicated either way. Blank is unknown, never
   // "the same", so an unnamed incumbent is treated as a different card and
-  // refused -- the safe direction for a delete-bearing lane.
-  if (!a || !b) return true;
-  return a !== b;
+  // refused -- the safe direction for a delete-bearing lane. A name that
+  // reduces to nothing (punctuation only) is unknown by the same argument.
+  if (!a || !b) {
+    return {
+      reason: "occupied: unnamed",
+      hint: "one side has no usable playerName — blank is unknown, never 'the same'",
+    };
+  }
+  // The same card under two spellings. THE fold this change exists to allow.
+  if (a === b) return false;
+  // Containment: one key is the other plus a suffix. NOT folded here — only a
+  // checklist can say whether the suffix is a different card. See the header.
+  if (a.startsWith(b) || b.startsWith(a)) {
+    return {
+      reason: "occupied: name-superset",
+      hint: "one name is the other plus a suffix — a checklist twin decides whether this is a fold or two cards; this lane does not guess",
+    };
+  }
+  return {
+    reason: "occupied: different card",
+    hint: "two different names at one address — a collision to report, never to route around",
+  };
+}
+
+/** The boolean face of `occupancyRefusal`, kept because "is this occupied?" is
+ *  the question most callers ask and a truthy object answers it directly. */
+function occupiedByDifferentCard(incumbent, row) {
+  return occupancyRefusal(incumbent, row) !== false;
 }
 
 /**
@@ -453,6 +539,45 @@ function occupiedByDifferentCard(incumbent, row) {
  *
  * Returns { gone, via, attempts }. `via` names how absence was established, so
  * the banner can separate a clean delete from one that needed the wait.
+ *
+ * CF-A-THE-MOVE-VERIFIES-ITS-SOURCE-THE-SAME-WAY (2026-09-07, this change).
+ *
+ * #1940 gave that read-back to the RETIRE branch only. The MOVE branch kept a
+ * single bare `rowAt(id)` -- one point read, at (id, id), no retry, no query
+ * -- and so reproduced the identical false failure at the identical rate: five
+ * entries across 99 relocate APPLY runs on 2026-09-07, ~1 per 1,000, every one
+ * reported `FAILED: landed=true sourceVacated=false (action move)`:
+ *
+ *   hiq:soccer:2022:panini-prizm:130:pink:no-auto                  (run 34112338270)
+ *   hiq:basketball:2023:nba-hoops:14:pink-ice-prizm:no-auto:num-35 (run 34131833131)
+ *   hiq:football:2025:topps-finest:46:purple-checkerboard-refractor:no-auto:num-150 (34135975562)
+ *   hiq:football:2025:panini-select:231:black-green-prizm-shock:no-auto (34141342368)
+ *   hiq:football:2025:topps-finest:fg-rs:black-geometric-refractor:auto:num-25 (34144311996)
+ *
+ * All five were point-read afterwards at (id, id) AND queried cross-partition
+ * by id: gone, zero hits. All five destinations were present, each stamped
+ * `movedFrom` the failed source and carrying the right player (Ao Tanaka,
+ * Lauri Markkanen, Roger Craig, Aaron Rodgers, Roger Staubach). The deletes
+ * had landed; the immediate read-back was served by a replica that had not yet
+ * applied them. Nothing was left behind and nothing needed re-running -- the
+ * bug was the REPORT, exactly as it was for the retire half.
+ *
+ * Two things follow, and both are in the code below. First, the move's source
+ * verify uses confirmRetired at `row.cardId ?? id` -- the key moveCatalogRow's
+ * own `oldPk = String(oldRow.cardId ?? oldId)` deletes at -- so a row under a
+ * foreign partition key is no longer declared gone by a read that could never
+ * have seen it. Second, a source that IS still resident after all of that is
+ * no longer counted as `failed`: it is `move landed; source retire failed`,
+ * its own outcome, listed by name, because the state it describes is TWO ROWS
+ * FOR ONE CARD and the fix is to retire the source, not to redo the move.
+ *
+ * Which is what a re-run now does. An entry whose destination already holds
+ * the moved row -- proven by `movedFrom === id`, a stamp moveCatalogRow writes
+ * on every move -- is COMPLETED by retiring the source, never refused as
+ * occupied. Refusing was the trap: the destination is not a rival card, it is
+ * this card already arrived, so every re-run would refuse identically and the
+ * pair would stay split forever. A row at `to` WITHOUT that stamp is still a
+ * genuine collision and still takes the occupied refusal, unchanged.
  */
 const RETIRE_READ_BACK_ATTEMPTS = 3;
 const RETIRE_READ_BACK_BACKOFF_MS = [400, 900];
@@ -556,6 +681,9 @@ async function main() {
 
   let retired = 0, resluged = 0, alreadyRight = 0, notFound = 0, failed = 0;
   let refusedOccupied = 0, salesUnplaced = 0, salesRepointed = 0, gradedRetired = 0;
+  // A SUBSET of refusedOccupied, never an addition to it: the reconciliation
+  // identity below counts occupied refusals once, and a superset IS one.
+  let refusedNameSuperset = 0;
   // Retires whose delete landed but whose FIRST read-back still saw the row.
   // Counted, not hidden: these are successes, and a number that climbs is the
   // container telling us something about its replication, not about this lane.
@@ -566,6 +694,14 @@ async function main() {
   // GENUINE year-N+1 row that was always the right one for them.
   let salesLeftBehind = 0;
   let refusedCrossMarket = 0;
+  // Moves whose destination landed but whose SOURCE survived every retried
+  // read and the cross-partition query. Its own outcome, neither success nor
+  // plain failure: the card arrived, and a second row still holds its old
+  // address. Named in `leftoverSources` so the report is a work list.
+  let moveSourceLeftBehind = 0;
+  const leftoverSources = [];
+  // Half-applied moves this run FINISHED by retiring the source.
+  let movesCompleted = 0;
   const intended = entries.length;
 
   // ── THE CLOCK ────────────────────────────────────────────────────────────
@@ -605,6 +741,20 @@ async function main() {
 
     const row = await rowAt(id);
     if (!row) {
+      // A RESLUG WHOSE SOURCE IS GONE MAY ALREADY BE DONE. Before calling it
+      // "not found", ask the destination: a row there stamped `movedFrom` this
+      // id is THIS ENTRY, already completed by an earlier run -- the ordinary
+      // shape of a re-run over a list whose applies mostly succeeded. Counting
+      // that as not-found is merely noisy; the state is correct either way.
+      if (action === "reslug") {
+        const done = await rowAt(to);
+        if (done && String(done.movedFrom ?? "") === id) {
+          alreadyRight++;
+          console.log(`  ALREADY MOVED  ${id.slice(0, 62)}`);
+          console.log(`      ->  ${to.slice(0, 70)}   <- an earlier run completed this entry`);
+          continue;
+        }
+      }
       // Already gone is the target state for a retire, and it is a SKIP, not a
       // success: a re-run must not inflate the written count.
       alreadyRight += action === "retire" ? 1 : 0;
@@ -650,12 +800,55 @@ async function main() {
 
     // ── RESLUG ────────────────────────────────────────────────────────────
     const incumbent = await rowAt(to);
-    if (occupiedByDifferentCard(incumbent, row)) {
+
+    // IDEMPOTENT COMPLETION, PINNED. The source is still here AND the
+    // destination already holds the row this entry moved -- the exact residue
+    // of a `move landed; source retire failed` above, and of any run killed
+    // between moveCatalogRow's upsert and its delete. The right finish is to
+    // RETIRE THE SOURCE, not to refuse as occupied: the destination is not a
+    // rival card, it is this card, already arrived. Refusing here would strand
+    // the pair as two rows for one card forever, since every re-run would make
+    // the same refusal. The `movedFrom` stamp is what distinguishes this from
+    // a genuine collision -- moveCatalogRow writes it on every move -- so a
+    // row that merely happens to sit at `to` still goes down the occupied
+    // path below and is still reported by name.
+    if (incumbent && String(incumbent.movedFrom ?? "") === id) {
+      console.log(`  COMPLETE MOVE  ${id.slice(0, 62)}`);
+      console.log(`      ->  ${to.slice(0, 70)}   <- destination already holds this row; retiring the source`);
+      if (!APPLY) { movesCompleted++; continue; }
+      try {
+        const res = await retireCatalogRow(cat, id, row.cardId ?? id, `complete a half-applied move to ${to}: ${reason}`, { retry });
+        gradedRetired += res?.gradedChildrenRetired ?? 0;
+        const back = await confirmRetired(cat, id, row.cardId ?? id, { retry });
+        if (back.gone) {
+          movesCompleted++;
+          if (back.via !== "point-read") {
+            readBackRetried++;
+            console.log(`      read-back needed a retry (${back.via}) — the delete had landed`);
+          }
+        } else {
+          failed++;
+          console.error(`      FAILED: the source is still readable after the retire (${f(back.hits ?? 1)} still resident after ${back.attempts} reads + a query)`);
+        }
+      } catch (err) {
+        failed++;
+        console.error(`      FAILED: ${String(err?.message ?? err).slice(0, 80)}`);
+      }
+      continue;
+    }
+
+    // NAME THE REFUSAL. A superset ("Jolteon" vs "Jolteon δ") and a genuine
+    // collision ("Todd Hundley" vs "Derek Jeter") both stop the move, but they
+    // ask different things of an operator -- a checklist lookup versus a
+    // numbering fix -- so they are reported apart rather than as one number.
+    const occ = occupancyRefusal(incumbent, row);
+    if (occ) {
       refusedOccupied++;
-      console.error(`  REFUSED (occupied)  ${id.slice(0, 62)}`);
+      if (occ.reason === "occupied: name-superset") refusedNameSuperset++;
+      console.error(`  REFUSED (${occ.reason})  ${id.slice(0, 62)}`);
       console.error(`      -> ${to.slice(0, 70)}`);
       console.error(`      held by ${String(incumbent.playerName ?? "(unnamed)")}, moving ${String(row.playerName ?? "(unnamed)")}`);
-      console.error("      an occupied address is a COLLISION to report, never to route around");
+      console.error(`      ${occ.hint}`);
       continue;
     }
     console.log(`  RESLUG  ${id.slice(0, 62)}`);
@@ -730,13 +923,39 @@ async function main() {
       if (!APPLY) { resluged++; continue; }
       salesRepointed += res?.salesRepointed ?? 0;
       gradedRetired += res?.gradedChildrenRetired ?? 0;
-      // VERIFY BY READ: the destination exists and the source is gone.
+      // VERIFY BY READ -- AND THE SOURCE HALF READS PAST A LAGGING REPLICA
+      // TOO. #1940 gave the retire a read-back that retries and then queries;
+      // the move's source verify was left as ONE bare point read at (id, id),
+      // and that asymmetry is the whole of this bug. moveCatalogRow deletes at
+      // `oldRow.cardId ?? oldRow.id` -- so a row under a foreign partition key
+      // was deleted at a key the verify never read, and a replica that had not
+      // yet applied a delete made at the RIGHT key was believed on its first
+      // word. Both are the same class of false failure, so both get the same
+      // helper, at the same key the delete used.
       const landed = await rowAt(to);
-      const sourceGone = !(await rowAt(id));
-      if (landed && sourceGone) resluged++;
-      else {
+      const back = await confirmRetired(cat, id, row.cardId ?? id, { retry });
+      if (landed && back.gone) {
+        resluged++;
+        if (back.via !== "point-read") {
+          readBackRetried++;
+          console.log(`      read-back needed a retry (${back.via}) — the source delete had landed`);
+        }
+      } else if (landed && !back.gone) {
+        // THE MOVE IS HALF DONE, AND THAT IS ITS OWN OUTCOME. The destination
+        // holds the card and the source is genuinely still resident after
+        // every retry and a cross-partition query: two rows for one card,
+        // which the one-card-one-row doctrine forbids. It is NOT `failed`,
+        // because the move itself landed and re-running the whole move would
+        // find the destination occupied by its own copy; it is a source that
+        // still needs retiring, and it is counted and named so a re-run --
+        // which completes it below rather than refusing -- can finish it.
+        moveSourceLeftBehind++;
+        leftoverSources.push({ from: id, to, player: row.playerName ?? null });
+        console.error(`      MOVE LANDED; SOURCE RETIRE FAILED  (${f(back.hits ?? 1)} still resident after ${back.attempts} reads + a query)`);
+        console.error("      two rows now hold one card — re-run this entry to retire the source");
+      } else {
         failed++;
-        console.error(`      FAILED: landed=${Boolean(landed)} sourceVacated=${sourceGone} (action ${res?.action})`);
+        console.error(`      FAILED: landed=${Boolean(landed)} sourceVacated=${back.gone} (action ${res?.action})`);
       }
     } catch (err) {
       failed++;
@@ -754,7 +973,16 @@ async function main() {
   console.log(`  entries considered      ${f(considered)}${stoppedAt === null ? "   <- the whole list" : ""}`);
   console.log(`  RETIRED (deleted)       ${f(retired)}   <- deleted; a soft label does NOT stop a catalog row resolving`);
   console.log(`  RESLUGGED (moved)       ${f(resluged)}`);
+  console.log(`  moves COMPLETED         ${f(movesCompleted)}   <- destination already held the row; the source was retired`);
+  console.log(`  move landed; source retire failed ${f(moveSourceLeftBehind)}   <- TWO rows hold one card; re-run finishes it`);
   console.log(`  refused — occupied      ${f(refusedOccupied)}   <- a different card holds the target address`);
+  if (refusedNameSuperset) {
+    console.log(`    of which name-superset ${f(refusedNameSuperset)}   <- one name is the other plus a suffix; a checklist twin decides`);
+  }
+  if (!identityKeyIsBuilt()) {
+    console.log("  NOTE: dist/ was not loadable — names compared with the LEGACY reduction");
+    console.log("        (accents and ☆ ♀ ♂ α β γ δ are deleted, not transliterated); build the tree for the full compare");
+  }
   console.log(`  refused — cross-market  ${f(refusedCrossMarket)}   <- a JA row may never land on an EN key, or the reverse`);
   console.log(`  already gone            ${f(alreadyRight)}`);
   console.log(`  not found               ${f(notFound)}`);
@@ -767,7 +995,24 @@ async function main() {
   // RECONCILE IN BOTH MODES. A report that cannot account for its own entries
   // is not a report worth reading, and the apply's arithmetic must have been
   // seen once before it runs.
-  const written = retired + resluged;
+  // A completed move WROTE (it deleted a source), so it counts as written.
+  // A left-behind source also wrote -- the destination landed -- and is
+  // counted here too; what it did not do is finish, which its own line says.
+  // THE WORK LIST, BY NAME. A count of half-applied moves an operator cannot
+  // act on is not a report. Every leftover source is printed as a (from, to)
+  // pair, in the shape a relocation list entry takes, so a re-run of THIS
+  // list finishes them by the idempotent-completion path above.
+  if (moveSourceLeftBehind > 0) {
+    console.log("");
+    console.log(`  LEFTOVER SOURCES (${f(moveSourceLeftBehind)}) — the destination holds the card, the old row is still resident:`);
+    for (const l of leftoverSources) {
+      console.log(`    from ${l.from}`);
+      console.log(`    to   ${l.to}${l.player ? `   (${l.player})` : ""}`);
+    }
+    console.log("  re-run this same list: each is completed by retiring the source, not refused as occupied");
+  }
+
+  const written = retired + resluged + movesCompleted + moveSourceLeftBehind;
   const skipped = alreadyRight + notFound;
   const refused = refusedOccupied + refusedCrossMarket;
   // A PARTIAL RUN STILL RECONCILES. The identity has to hold over what the
@@ -815,6 +1060,6 @@ if (require.main === module) {
 }
 
 module.exports = {
-  SCOPE, APPLY, classifyEntry, occupiedByDifferentCard, crossProductFields, idSetKey, keepsSales,
+  SCOPE, APPLY, classifyEntry, occupiedByDifferentCard, occupancyRefusal, crossProductFields, idSetKey, keepsSales,
   confirmRetired, RETIRE_READ_BACK_ATTEMPTS,
 };

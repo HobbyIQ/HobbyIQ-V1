@@ -15,6 +15,15 @@ import { startSubscriptionsSafetyNetJob } from "./jobs/subscriptionsSafetyNet.jo
 import { startCacheHitRateEmit } from "./services/shared/cache.service.js";
 import { startEbayFinancesEnrichmentJob } from "./jobs/ebayFinancesEnrichment.job.js";
 import { warmCompsByPlayerCache } from "./services/compiq/compsByPlayer.service.js";
+import { installWorkerLifecycleHandlers } from "./services/ops/workerLifecycle.js";
+
+// CF-WORKER-LIFECYCLE (#1973, 2026-09-07). Installed FIRST, before App
+// Insights setup and before the server listens, so a failure during boot
+// is still attributable. Emits one `worker_shutdown` event naming the
+// reason the process ended (SIGTERM = platform recycle: deploy,
+// appsettings write, scale, host patch), and absorbs unhandled
+// rejections instead of letting a stray promise recycle a worker.
+installWorkerLifecycleHandlers();
 
 // Initialize App Insights — must be called before the server handles requests.
 // The Azure App Service agent (ApplicationInsightsAgent_EXTENSION_VERSION=~3)
