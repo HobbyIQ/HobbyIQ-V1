@@ -86,10 +86,34 @@ die()  { printf 'WAVE2 REFUSED — %s\n' "$*" >&2; exit 2; }
 # and leaves a raw capture (`| tee`, a fixture) untouched. Anchors are then
 # safe, and they are worth keeping: `  failed  N` must not match the `failed`
 # inside a per-row `FAILED at ...` line.
+# THE LOG CONTAINS THE GATE'S OWN GREP PATTERNS, AND THAT IS NOT HYPOTHETICAL.
+# `gh run view --log` includes each step's SCRIPT as Actions echoes it, so the
+# relaunch step's own `grep -aqE "stopped at the .*budget"` appears in the log
+# as text. Measured on run 33947033673: `chain_outcome` read `budget` from a
+# run that never hit its budget, because it matched the workflow's echoed
+# command rather than the lane's banner. Two lines, both wearing an Actions
+# marker the lane's own stdout can never carry:
+#
+#   ##[group]Run if grep -aqE "stopped at the .*budget" ...
+#   ESC[36;1mif grep -aqE "stopped at the .*budget" ...ESC[0m
+#
+# So those are dropped FIRST — before ANSI is stripped, because the escape
+# sequence is the evidence — and only then is the prefix removed. A raw capture
+# has neither and passes through untouched.
+#
+# NOTE THE TWO SPELLINGS OF THE ESCAPE. `gh run view --log` does not hand back a
+# real ESC byte for a command echo: run 33947033673 stores the literal two
+# characters `^` `[` (verified with od -c). A pattern written as $'\x1b[' therefore
+# matches NOTHING in a captured log, which is how the first attempt at this
+# filter still read `budget` off an echoed grep. Both spellings are excluded --
+# the literal caret-bracket a capture carries, and the real escape a live
+# terminal would.
 normalize() {
-  sed -e 's/\x1b\[[0-9;]*m//g' \
-      -e 's/^[^\t]*\t[^\t]*\t//' \
-      -e 's/^[[:space:]]*[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}T[0-9:.]*Z[[:space:]]\{0,1\}//' "$1"
+  local ESC; ESC=$(printf '\033')
+  grep -av -e '##\[' -e '\^\[\[' -e "${ESC}\[" "$1" \
+    | sed -e "s/${ESC}\[[0-9;]*m//g" \
+          -e 's/^[^\t]*\t[^\t]*\t//' \
+          -e 's/^[[:space:]]*[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}T[0-9:.]*Z[[:space:]]\{0,1\}//'
 }
 
 # "CENSUS  slot 0/32  rows classified 514,583"

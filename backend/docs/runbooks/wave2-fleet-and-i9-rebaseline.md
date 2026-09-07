@@ -208,6 +208,47 @@ Note also that the rematch lane does **not** upload `/tmp/backfill.log`, so an
 external driver has no raw capture available: `gh run view --log` is the only
 source, and normalizing is not optional.
 
+### And the log contains the gate's own grep patterns
+
+This one was caught by running the finished gates against a **real** captured
+log (run 33947033673) rather than against fixtures only, and it is the reason to
+do that:
+
+```
+chain_outcome  ->  "budget"      on a run that never hit its budget
+```
+
+`gh run view --log` includes each step's *script* as Actions echoes it, so the
+relaunch step's own `grep -aqE "stopped at the .*budget"` is in the log **as
+text**, twice:
+
+```
+##[group]Run if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
+^[[36;1mif grep -aqE "stopped at the .*budget" /tmp/backfill.log; then^[[0m
+```
+
+`normalize` therefore drops any line carrying `##[` or an escape **before**
+stripping ANSI. An escape means "this is Actions talking, not the lane": the
+lane's banners are plain `console.log` and are never coloured, so de-colouring
+such a line and keeping it is precisely how the false `budget` was read.
+
+And note the **two spellings of the escape**. The capture stores the literal two
+characters `^` `[` — verified with `od -c` — not a real ESC byte, so a filter
+written as `$'\x1b['` matches nothing at all. Both forms are excluded.
+
+### A pre-#1906 log has no `finishLane`, and `killed` is the right answer
+
+Running the gates against that same 09-05 log returns `killed` rather than
+`finished`, and that is **correct**: `finishLane: exiting code N` landed on
+2026-09-06 (#1906), after the run was taken. The log genuinely carries no finish
+witness, and the driver refuses to invent one — absence of the marker is exactly
+the state #1906 was written to stop reading as success. Verified against a
+post-#1906 run (34145302999), the same reader returns `finished`.
+
+Practical consequence: **do not re-gate historical runs with this driver.** It
+is built for runs taken under the current runner, and it will hold anything
+older on the grounds that it cannot prove they finished.
+
 ---
 
 ## 6. Throughput, and the thing that actually governs the schedule

@@ -181,11 +181,25 @@ describe("every reader survives the `gh run view --log` prefix (#1868)", () => {
     expect(reader("chain_outcome", GH(refused)).out).toBe("startup-refused");
   });
 
-  // The prefix carries the STEP NAME, which for an apply contains the word
-  // "APPLY" — a reader that did not strip it could match on the wrong thing.
-  itShell("strips ANSI as well as the tab prefix", () => {
-    const ansi = "[32mCENSUS  slot 0/32  rows classified 514,583[0m\n";
-    expect(reader("census_classified", ansi).out).toBe("514583");
+  /**
+   * AN ESCAPE-BEARING LINE IS DROPPED, NOT DE-COLOURED — and that is deliberate.
+   *
+   * The obvious reading of "strip ANSI" is to de-colour the line and keep it.
+   * But in a `gh run view --log` capture the ONLY lines carrying an escape are
+   * Actions' own command echoes: the lane's banners are plain `console.log` and
+   * are never coloured. Keeping a de-coloured echo is exactly how the first
+   * version of this filter read `budget` off the relaunch step's own grep
+   * pattern, on run 33947033673.
+   *
+   * So the rule is: an escape means "this is Actions talking, not the lane", and
+   * the line goes. The `sed` that removes ANSI afterwards is belt-and-braces for
+   * a raw capture, not the primary defence.
+   */
+  itShell("drops an escape-bearing line rather than de-colouring and trusting it", () => {
+    const coloured = "\u001b[32mCENSUS  slot 0/32  rows classified 999,999\u001b[0m\n";
+    expect(reader("census_classified", coloured).rc).not.toBe(0);
+    // the same banner, plain, is read normally
+    expect(reader("census_classified", "CENSUS  slot 0/32  rows classified 514,583\n").out).toBe("514583");
   });
 
   it("the fleet script normalizes before it greps, and says why", () => {
@@ -193,6 +207,89 @@ describe("every reader survives the `gh run view --log` prefix (#1868)", () => {
     expect(fleetSrc).toContain("normalize() {");
     // no reader may grep the raw file directly
     expect(fleetSrc).not.toMatch(/grep -aoE (?:'[^']*'|"[^"]*") "\$1"/);
+  });
+
+  /**
+   * THE LOG CONTAINS THE GATE'S OWN GREP PATTERNS — measured, not imagined.
+   *
+   * `gh run view --log` includes each step's script as Actions echoes it, so the
+   * relaunch step's own `grep -aqE "stopped at the .*budget"` is IN THE LOG as
+   * text. Against run 33947033673 the first version of `chain_outcome` read
+   * `budget` from a run that never hit its budget, because it matched that echo.
+   *
+   * And the echo does NOT carry a real ESC byte: the capture stores the literal
+   * two characters `^` `[` (verified with `od -c`), so a filter written as
+   * $'\x1b[' matches nothing at all. Both spellings must be excluded.
+   */
+  it("drops Actions' own echoed commands, in both spellings of the escape", () => {
+    expect(fleetSrc).toContain("THE LOG CONTAINS THE GATE'S OWN GREP PATTERNS");
+    // the group marker, the LITERAL caret-bracket a capture carries, and a real ESC
+    expect(fleetSrc).toMatch(/grep -av -e '##\\\[' -e '\\\^\\\[\\\[' -e "\$\{ESC\}\\\["/);
+  });
+
+  itShell("does not read a verdict out of an echoed grep pattern", () => {
+    // The exact shape of the two lines that fooled the first version.
+    const poisoned = [
+      "run-backfill\tUNKNOWN STEP\t2026-09-05T05:31:41Z CENSUS  slot 0/32  rows classified 514,583",
+      "run-backfill\tUNKNOWN STEP\t2026-09-05T05:32:49Z ##[group]Run if grep -aqE \"stopped at the .*budget\" /tmp/backfill.log; then",
+      "run-backfill\tUNKNOWN STEP\t2026-09-05T05:32:49Z ^[[36;1mif grep -aqE \"stopped at the .*budget\" /tmp/backfill.log; then^[[0m",
+      "run-backfill\tUNKNOWN STEP\t2026-09-05T05:32:50Z finishLane: exiting code 0",
+      "",
+    ].join("\n");
+    // The lane finished; the only "budget" text present is the workflow's echo.
+    expect(reader("chain_outcome", poisoned).out).toBe("finished");
+    // and the real banner is still read through the same filter
+    expect(reader("census_classified", poisoned).out).toBe("514583");
+  });
+});
+
+/**
+ * THE REAL LOG, COMMITTED. Fixtures I wrote can only encode what I already
+ * believed; this excerpt is bytes taken verbatim from `gh run view --log` on
+ * run 33947033673 (rematch slot 0, 2026-09-05) — the census banner, its four
+ * class lines, the canary verdict, and the two echoed-command lines that made
+ * the first version of `chain_outcome` report `budget` on a run that never hit
+ * one. It is the difference between a gate that passes its author's imagination
+ * and a gate that passes the runner.
+ */
+describe("the gates read a REAL captured runner log", () => {
+  const REAL = readFileSync(
+    join(repoRoot, "backend", "tests", "fixtures", "wave2", "real-census-slot0-excerpt.txt"),
+    "utf8",
+  );
+
+  itShell("reads the census total and every class off it", () => {
+    expect(reader("census_classified", REAL).out).toBe("514583");
+    expect(reader("census_class", REAL, "AGREE").out).toBe("36981");
+    expect(reader("census_class", REAL, "IMPROVE").out).toBe("20867");
+    expect(reader("census_class", REAL, "CONFLICT").out).toBe("381423");
+    expect(reader("census_class", REAL, "UNDERIVABLE").out).toBe("75312");
+  });
+
+  itShell("reads the real canary verdict", () => {
+    expect(reader("canary_verdict", REAL).out).toBe("hold");
+  });
+
+  // THE REGRESSION THIS FIXTURE EXISTS FOR. Both `stopped at the .*budget`
+  // lines in it are Actions echoing the relaunch step's own grep. If the
+  // echoed-command filter is ever weakened, this flips back to "budget".
+  itShell("does NOT read a budget stop out of the workflow's echoed grep", () => {
+    expect(reader("chain_outcome", REAL).out).not.toBe("budget");
+  });
+
+  it("the fixture really does contain the poison lines", () => {
+    // If a future edit sanitises the fixture, the pin above stops proving
+    // anything — so the fixture's own hazard is asserted.
+    expect(REAL).toContain('grep -aqE "stopped at the .*budget"');
+    expect(REAL).toContain("##[group]");
+    // NOTE THE SPELLING: the capture stores the LITERAL two characters `^` `[`,
+    // not an ESC byte (verified with od -c). A filter written as $'\\x1b[' would
+    // miss this line entirely, which is how the first version of the echoed-command
+    // filter let the relaunch step's own grep through.
+    expect(REAL).toContain("^[[36;1m");
+    expect(REAL.includes(String.fromCharCode(27))).toBe(false);
+    // and it is a gh capture, not a raw one
+    expect(REAL).toMatch(/^run-backfill	/m);
   });
 });
 
