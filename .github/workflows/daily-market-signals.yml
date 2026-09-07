@@ -59,8 +59,27 @@ jobs:
           echo "::add-mask::$CS"
           echo "COSMOS_CONNECTION_STRING=$CS" >> "$GITHUB_ENV"
       - name: Run market signals refresh
+        # CF-A-KILLED-JOB-CANNOT-REPORT-PROGRESS. refresh-market-signals gained
+        # the shared clock in the #1944 ratchet's wave 4, and its DEFAULT is
+        # sized for the backfill runner's 150-minute step. THIS job has
+        # `timeout-minutes: 30` -- shared with npm ci and a full backend build --
+        # so the default would be a "budget" a whole order of magnitude above
+        # the ceiling it is supposed to stop under, i.e. no budget at all.
+        #
+        # 12 minutes leaves the install + build their share and still stops the
+        # lane with time to print its refusal, reconcile and finishLane line
+        # before the 30-minute kill. RESERVE_MS stays at the lane's own default
+        # (one 5,000-row page).
+        #
+        # A STOP HERE REFUSES AND EXITS 5, by design: the signals are ratios of
+        # medians and counts over the whole window, so a partial scan would
+        # publish wrong momentum over the top of right momentum. A red run
+        # saying "the window did not fit in 12 minutes" is the correct outcome
+        # and the signal to widen this job, never to widen the budget past the
+        # ceiling.
         env:
           MARKET_SIGNALS_APPLY: "true"
           MARKET_SIGNALS_WINDOW_DAYS: "30"
           MARKET_SIGNALS_MIN_VOLUME: "20"
+          RUN_MINUTES: "12"
         run: node backend/scripts/refresh-market-signals.cjs

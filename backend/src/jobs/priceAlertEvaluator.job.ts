@@ -44,7 +44,7 @@ import { catalogSlugIfExists } from "../services/catalog/catalogMatcher.service.
 import { computeHobbyIqCardId } from "../services/portfolioiq/hobbyIqCardId.service.js";
 import { inferSportFromContext } from "../services/portfolioiq/soldCompsStore.service.js";
 import { sendPriceAlertNotification } from "../services/notification.service.js";
-import { runSingleFlight } from "./_singleFlight.js";
+import { runSingleFlight, schedulerTickMs } from "./_singleFlight.js";
 
 export interface EvaluatorSummary {
   startedAt: string;
@@ -353,7 +353,7 @@ export function startPriceAlertEvaluatorJob(): void {
       runSingleFlight("price.alert.evaluator", intervalMs, runPriceAlertEvaluator).catch((err) => {
         console.error("[price.alert.evaluator] interval run threw:", err?.message ?? err);
       });
-    }, intervalMs);
+    }, schedulerTickMs(intervalMs));
   }, firstDelayMs);
 }
 
