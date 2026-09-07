@@ -10,9 +10,29 @@
 //      playerName. That's the exact class of pollution the 2026-08-08
 //      normalizer R4a/b/c/d patch fixed and now must guard forward.
 //   2. Slug-fragmentation rate > MAX_FRAGMENTATION_PCT (default 2%)
-//      — indicates the same identity tuple is being written under
-//      multiple hobbyiqCardId slugs. Symptoms: FMV lookups miss
-//      recent comps, grade curve counts inflate.
+//      — indicates one card is being written under multiple
+//      hobbyiqCardId slugs. Symptoms: FMV lookups miss recent comps,
+//      grade curve counts inflate.
+//
+//      #1954 (2026-09-07) REPLACED THIS AXIS. It used to group rows by
+//      `(cardYear, setName, cardNumber)` — a tuple with no parallel, no
+//      auto flag and no print run — and count every slug in a group with
+//      more than one. That reads a card's PARALLELS as fragmentation:
+//
+//        hiq:pokemon:2025:sv08-5:21:base:no-auto
+//        hiq:pokemon:2025:sv08-5:21:master-ball:no-auto
+//        hiq:pokemon:2025:sv08-5:21:poke-ball:no-auto
+//
+//      are three DISTINCT CARDS with three prices (a named parallel is a
+//      distinct card; a finish is a distinct card line, #1935), and the
+//      canary called them one identity written three ways. That is the
+//      whole of the chronic 6.64% red measured on run 34123049882 — every
+//      sample it printed was a legitimately distinct card, and the axis
+//      was mismeasuring while the data underneath it was right.
+//
+//      The axis now asks the only question that makes a red actionable:
+//      would a fold or re-key lane MERGE these two slugs? See
+//      src/services/portfolioiq/slugFragmentation.ts.
 //   3. Missing-hobbyiqCardId rate > MAX_MISSING_HIQ_PCT (default 5%)
 //      — indicates identity resolution is failing for a growing
 //      fraction of rows (parser drift, sport-detection gap, etc.).
@@ -48,6 +68,12 @@ const { CosmosClient } = require("@azure/cosmos");
 // the invariant moves. Requires backend/dist (the workflow builds it).
 const { judgeCardNumber, explicitTitleCardNumber, isTcgVertical, sameCardNumber } =
   require(path.join(__dirname, "..", "dist", "services", "portfolioiq", "cardNumberIntegrity.js"));
+// #1954. The fragmentation axis, for the same reason D28's guard is imported
+// rather than re-expressed: the question "would a lane merge these two slugs?"
+// is answered by the fold and re-key functions themselves, and a canary that
+// keeps its own copy of that answer stops measuring it the moment a fold moves.
+const { scoreFragmentation } =
+  require(path.join(__dirname, "..", "dist", "services", "portfolioiq", "slugFragmentation.js"));
 
 const WINDOW_HOURS = Number(process.env.WINDOW_HOURS || 12);
 const SAMPLE_SIZE = Number(process.env.SAMPLE_SIZE || 5000);
@@ -103,6 +129,8 @@ async function main() {
     allCaps: 0,
     missingHiq: 0,
     fragmented: 0,
+    fragmentJudged: 0,
+    fragmentGroups: 0,
     garbageSamples: [],
     allCapsSamples: [],
     fragmentSamples: [],
@@ -111,9 +139,6 @@ async function main() {
     cardNumberBySource: new Map(),
     cardNumberSamples: [],
   };
-
-  // Group by identity tuple to detect fragmentation
-  const tupleSlugs = new Map();  // "year|setLower|cardNumberUpper" → Set<hobbyiqCardId>
 
   for (const r of rows) {
     const name = String(r.playerName || "").trim();
@@ -152,29 +177,26 @@ async function main() {
         if (stats.cardNumberSamples.length < 4) stats.cardNumberSamples.push({ shape, cardNumber: num, source: src, title: title.slice(0, 110) });
       }
     }
-
-    // Fragmentation: same (year, setName, cardNumber) with multiple hiq: slugs
-    if (typeof r.cardYear === "number" && r.setName && r.cardNumber && r.hobbyiqCardId) {
-      const key = `${r.cardYear}|${r.setName.toLowerCase()}|${r.cardNumber.toUpperCase()}`;
-      if (!tupleSlugs.has(key)) tupleSlugs.set(key, new Set());
-      tupleSlugs.get(key).add(r.hobbyiqCardId);
-    }
   }
 
-  // Count fragmented tuples (>1 distinct slug for same identity)
-  const fragmentedTuples = [];
-  for (const [key, slugs] of tupleSlugs) {
-    if (slugs.size > 1) {
-      fragmentedTuples.push({ key, slugs: [...slugs] });
-      stats.fragmented += slugs.size;  // count every dupe row
-      if (stats.fragmentSamples.length < 3) stats.fragmentSamples.push({ identity: key, slugs: [...slugs] });
-    }
-  }
+  // #1954. Fragmentation is scored over the WHOLE sample at once, by the
+  // shipped module: two stored slugs are one card only when every fold this
+  // codebase owns still lands them on one key. The denominator is the rows the
+  // module could JUDGE (those carrying a parseable slug) rather than every
+  // sampled row — an unparseable slug is not evidence of fragmentation either
+  // way, and it is already counted on the missing-hobbyiqCardId axis.
+  const fragmentation = scoreFragmentation(rows);
+  stats.fragmented = fragmentation.fragmentedRows;
+  stats.fragmentJudged = fragmentation.considered;
+  stats.fragmentGroups = fragmentation.groups.length;
+  stats.fragmentSamples = fragmentation.groups.slice(0, 3).map((g) => ({ identity: g.canonicalKey, slugs: g.slugs }));
 
   const garbagePct = (stats.garbagePrefix / stats.total) * 100;
   const allCapsPct = (stats.allCaps / stats.total) * 100;
   const missingHiqPct = (stats.missingHiq / stats.total) * 100;
-  const fragmentationPct = (stats.fragmented / stats.total) * 100;
+  const fragmentationPct = stats.fragmentJudged > 0
+    ? (stats.fragmented / stats.fragmentJudged) * 100
+    : 0;
   const cardNumberPct = (stats.cardNumberBad / stats.total) * 100;
 
   console.log("");
@@ -184,6 +206,7 @@ async function main() {
   console.log(`ALL-CAPS playerName   ${String(stats.allCaps).padStart(6)}  ${allCapsPct.toFixed(2).padStart(5)}%   (informational)`);
   console.log(`missing hobbyiqCardId ${String(stats.missingHiq).padStart(6)}  ${missingHiqPct.toFixed(2).padStart(5)}%   ${MAX_MISSING_HIQ_PCT.toFixed(2)}%`);
   console.log(`fragmented slugs      ${String(stats.fragmented).padStart(6)}  ${fragmentationPct.toFixed(2).padStart(5)}%   ${MAX_FRAGMENTATION_PCT.toFixed(2)}%`);
+  console.log(`    ${String(stats.fragmentGroups).padStart(6)} group(s) a fold lane would merge, over ${stats.fragmentJudged} judged rows`);
   console.log(`card_number_integrity ${String(stats.cardNumberBad).padStart(6)}  ${cardNumberPct.toFixed(2).padStart(5)}%   ${MAX_CARD_NUMBER_INTEGRITY_PCT.toFixed(2)}%`);
   for (const [shape, n] of [...stats.cardNumberByShape.entries()].sort((a, b) => b[1] - a[1])) {
     console.log(`    ${String(shape).padEnd(34)} ${String(n).padStart(6)}`);
@@ -203,8 +226,8 @@ async function main() {
     alerts.push(`MISSING hobbyiqCardId rate ${missingHiqPct.toFixed(2)}% exceeds ${MAX_MISSING_HIQ_PCT}% — identity resolution failing`);
   }
   if (fragmentationPct > MAX_FRAGMENTATION_PCT) {
-    alerts.push(`SLUG-FRAGMENTATION rate ${fragmentationPct.toFixed(2)}% exceeds ${MAX_FRAGMENTATION_PCT}% — same identity written under multiple slugs`);
-    console.log("Sample fragmented tuples:");
+    alerts.push(`SLUG-FRAGMENTATION rate ${fragmentationPct.toFixed(2)}% exceeds ${MAX_FRAGMENTATION_PCT}% — ${stats.fragmentGroups} card(s) written under multiple slugs that a fold lane would MERGE (#1954). Each group below is one card at two addresses, not two cards.`);
+    console.log("Sample fragmented cards (one canonical key, several stored slugs):");
     stats.fragmentSamples.forEach((s) => {
       console.log(`  ${s.identity}`);
       s.slugs.forEach((slug) => console.log(`    → ${slug}`));
