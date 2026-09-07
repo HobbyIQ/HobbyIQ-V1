@@ -35,6 +35,7 @@ import { productAncestry, productEntry, SAME_NUMBER_PARALLEL_SETS, isSameNumberP
 import { normalizeSetKey, computeHobbyIqCardId } from "../src/services/portfolioiq/hobbyIqCardId.service.js";
 import { inferSetKeyFromTitle } from "../src/services/portfolioiq/parseTitleIdentity.service.js";
 import { MINTS as SOCCER_TITLES } from "./soccerLeagueSetKeysFromTitle.test.js";
+import { MINTS as LADDER_TITLES } from "./ladderSpecializationSetKeysFromTitle.test.js";
 
 /** The keys #1715 taught the parser, each with a title that states it. */
 const TIFFANY_MINT_CASES: ReadonlyArray<readonly [string, string]> = [
@@ -82,43 +83,69 @@ const MINTABLE_PROBES: Readonly<Record<string, string>> = {
 /**
  * MEASURED, NOT ASSUMED: the mirrored keys NO title can mint today.
  *
- * Taken by running `inferSetKeyFromTitle` over a real-shaped title for each
- * (2026-09-06). Every one comes back as its FLAGSHIP, so the ladder edge
- * exists and the derivation can never reach it — the "silently dead edge" the
- * pin below exists to forbid:
+ * #1918 opened this register with THIRTEEN entries, each measured by running
+ * `inferSetKeyFromTitle` over a real-shaped title and getting the FLAGSHIP
+ * back. NINE HAVE SINCE BEEN PAID DOWN by CF-A-DEAD-LADDER-EDGE-REPAIRS-
+ * NOTHING, whose rules and 143 table-driven pins live in
+ * ladderSpecializationSetKeysFromTitle.test.ts:
  *
- *   1996 Fleer Tiffany / Glossy            -> fleer        (not fleer-tiffany)
- *   1997 Fleer Update Tiffany / Glossy     -> fleer-update
- *   1999 Fleer Tradition Tiffany           -> fleer
- *   1994 SP, 1995 SP Championship          -> unknown
- *   1994 Upper Deck Minors                 -> upper-deck
- *   1999 Upper Deck Black Diamond          -> upper-deck
- *   1992 Score Rookie & Traded             -> score
- *   1997 Pacific Prism / Crown Collection /
- *        Gold Crown Die Cuts               -> pacific
+ *   fleer-glossy · fleer-tiffany · fleer-update-glossy · fleer-update-tiffany
+ *   pacific-prism · pacific-crown-collection · pacific-gold-crown-die-cuts
+ *   upper-deck-minors · upper-deck-black-diamond · score-rookie-and-traded
  *
- * They are LISTED rather than fixed here because each needs its own parser
- * rule and its own evidence, which is a different change from #1863's soccer
- * ruling. The list is the point: a key may sit here only deliberately, and the
- * pin fails the day a NEW edge is added without a rule — which is exactly how
- * the 66 soccer edges would have been caught had this pin existed.
+ * FOUR REMAIN, and each stays dead for a reason that was MEASURED read-only on
+ * prod (2026-09-06), not assumed. An edge with no evidence keeps its edge dead
+ * rather than getting a rule that guesses — "blank means unknown, never a
+ * guess" applied to the parser itself.
+ *
+ *   `sp` — THE WORD IS AMBIGUOUS AND THE AMBIGUITY IS THE MAJORITY.
+ *     8,969 catalog rows (8,113 checklist-backed) and 5,266 pool rows say the
+ *     PRODUCT is real; the parser is what cannot safely read it. Of 6,000
+ *     sampled titles containing " SP ", only 3,051 name a brand LINE (SP
+ *     Authentic, Upper Deck SP, SP Game Used — all of which already have their
+ *     own rules) while 2,837 are a bare SP that is a SHORT-PRINT MARKER on
+ *     another brand's card: "2026 Bowman Chrome ... #CPA-EHA RC SP Braves",
+ *     "2023 Topps Heritage Baseball #35 SP", "2025 Topps Chrome #PP25 Power
+ *     Players SP". The bare token peaks in 2025 (502) and 2026 (458) — modern
+ *     short-print usage, decades after 1993-1997 SP. productSetKeys.ts already
+ *     rules on exactly this: the `upper-deck-sp` alias is a claim registry and
+ *     NOT a live alias, because promoting it "changes what every title
+ *     containing SP resolves to" and is "deliberately NOT made here". A parser
+ *     rule would make that same change through the other door.
+ *
+ *   `sp-championship` — SAME TOKEN, AND THE POOL SHOWS THE DAMAGE.
+ *     202 catalog rows, all checklist-backed, and the product is real (1994,
+ *     1995). But of 1,500 sampled titles saying "SP CHAMPIONSHIP", 1,031 are
+ *     stored under `unknown` — the key the parser returns for these titles
+ *     today — and only 126 under `sp-championship`. The stored keys are not a
+ *     ladder the refinement could walk: a family of `unknown` has no brand
+ *     arm to gate on, so a rule here would have to read the bare SP token,
+ *     which is the ambiguity above. It is repairable by a REKEY of the
+ *     `unknown` rows, not by this parser seam.
+ *
+ *   `fleer-tradition-tiffany` — NO POPULATION TO MOVE.
+ *     600 catalog rows, 100% checklist-backed (2002, 2003), so the product is
+ *     real. But ZERO of 6,000 sampled `:fleer:` pool titles state "Tradition"
+ *     and "Tiffany" together, and only 2 sampled rows sit on the key. A rule
+ *     would fire on nothing; the honest state is a live edge with no traffic,
+ *     and inventing a looser rule to reach it would just capture bare-Tiffany
+ *     Fleer titles the 1996 rule already places correctly.
+ *
+ *   the bare-"minors" SPELLING of `upper-deck-minors` — the KEY is now
+ *     mintable (see the list above) but only from "Minor League", which is how
+ *     the market writes it: 58 of 6,000 sampled `:upper-deck:` titles say
+ *     "minor league" and ZERO say a bare "minors". Recorded here so the
+ *     narrower reading is a decision rather than an oversight.
+ *
+ * The list is the point: a key may sit here only deliberately, and the pin
+ * fails the day a NEW edge is added without a rule — which is exactly how the
+ * 66 soccer edges would have been caught had this pin existed.
  */
 const KNOWN_UNMINTABLE: readonly string[] = [
-  "fleer-tiffany",
-  "fleer-glossy",
-  "fleer-update-tiffany",
-  "fleer-update-glossy",
   "fleer-tradition-tiffany",
   "sp",
   "sp-championship",
-  "upper-deck-minors",
-  "upper-deck-black-diamond",
-  "score-rookie-and-traded",
-  "pacific-prism",
-  "pacific-crown-collection",
-  "pacific-gold-crown-die-cuts",
 ];
-
 const require_ = createRequire(import.meta.url);
 const K = require_("../scripts/lib/rematch-classify.cjs");
 
@@ -545,6 +572,10 @@ describe("the mirrored ladder is a cache, not a second source of truth", () => {
         ...TIFFANY_MINT_CASES.map(([title]) => title),
         ...OTHER_MINT_TITLES,
         ...SOCCER_TITLES.map(([title]) => title),
+        // The nine edges CF-A-DEAD-LADDER-EDGE-REPAIRS-NOTHING paid down. The
+        // corpus is imported rather than restated so the pin and the rules it
+        // speaks for can never drift apart.
+        ...LADDER_TITLES.map(([title]) => title),
       ].map((title) => normalizeSetKey(inferSetKeyFromTitle(title))),
     );
     const unreachable = Object.keys(K.SPECIALIZATION_PARENTS)

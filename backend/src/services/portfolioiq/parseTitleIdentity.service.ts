@@ -2773,6 +2773,206 @@ export function refineSoccerCompetitionSetKey(familyKey: string, title: string):
 }
 
 /**
+ * CF-A-DEAD-LADDER-EDGE-REPAIRS-NOTHING (#1918's debt register, paid down).
+ *
+ * #1918 widened the mirror pin to assert that EVERY key in
+ * `SPECIALIZATION_PARENTS` has a title the parser can mint it from, and that
+ * immediately named 13 keys where the ladder edge existed and the derivation
+ * could never reach it. A dead edge is not a cosmetic gap: SPECIALIZATION-STATED
+ * (#1725) only opens when the derived key CHANGES, so a family that can never
+ * refine classifies every one of its sales AGREE and the ladder is never
+ * consulted. The pool for the product is fed by ingest-time keys alone.
+ *
+ * NINE OF THE THIRTEEN ARE PAID DOWN HERE. Four are left dead deliberately,
+ * with their numbers, in the register in rematchSpecializationStated.test.ts.
+ *
+ * THE SAME SEAM, NOT A SECOND ONE. This is the table shape #1863/#1918 built
+ * for the soccer competitions, pointed at the vintage families, and it is
+ * applied at the SAME single seam in `inferSetKeyFromTitle` — one refinement
+ * pass over whatever the brand rules decided. A second regex path in the brand
+ * arms is exactly how two readings of one title start to disagree.
+ *
+ * EVERY RULE IS BRAND-GATED, AND THE NEGATIVES ARE WHY. The refinement reads
+ * `familyKey` — what the brand rules already decided — so a rule can only fire
+ * on a title whose manufacturer the parser already resolved. That gate is
+ * load-bearing, not defensive. Measured read-only on prod sold_comps
+ * (2026-09-06), the specialization words are overwhelmingly OTHER brands':
+ *
+ *     "prism"          3,962 of 4,000 titles name no Pacific  (99.0%)
+ *                      — topps-chrome-platinum 2,715, topps-chrome 964
+ *     "glossy"         2,264 of 4,000 name no Fleer           (56.6%)
+ *                      — topps 947, Garbage Pail Kids 325, donruss 141
+ *     "minor league"   2,363 of 4,000 name no Upper Deck      (59.1%)
+ *                      — topps-heritage 1,401, classic-best 192
+ *     "black diamond"  1,057 of 4,000 name no Upper Deck      (26.4%)
+ *
+ * An unanchored rule for any of those would have filed thousands of Topps
+ * cards into a Pacific or Fleer pool — a confidently WRONG key, which is worse
+ * than a generic one, because it still passes the slug guard and fuses a real
+ * sale into another brand's pool (CF-ONE-CARD-ONE-ROW-ONE-POOL).
+ *
+ * LONGEST / MOST QUALIFIED FIRST, because the words genuinely co-occur. Of the
+ * 4,188 sampled `:pacific:` rows, 137 state BOTH "Crown Collection" and
+ * "Prisms" ("1994 Pacific Crown Collection - Prisms Ken Griffey Jr #8 Silver")
+ * and 48 state both "Crown Collection" and "Gold Crown Die-Cuts". Prism and
+ * Gold Crown Die Cuts are the NAMED products in those titles and Crown
+ * Collection is the base set they are cut from, so they are tested first;
+ * reversing the order would swallow both into the parent.
+ *
+ * BLANK MEANS UNKNOWN. A title that states no specialization keeps the bare
+ * family key. The table reads only what the seller wrote — never a product
+ * inferred from a year or a player.
+ */
+interface LadderSpecializationProduct {
+  /** The family key the brand rules must already have returned. */
+  readonly family: string;
+  /** The words the SELLER must have written for this product to be read. */
+  readonly states: RegExp;
+  /** The ruled destination key. */
+  readonly setKey: string;
+  /**
+   * Optional year gate, inclusive. Only where a ruling scopes the SPELLING by
+   * era — `fleer-tiffany` is the one such case (see below).
+   */
+  readonly minYear?: number;
+  readonly maxYear?: number;
+}
+
+const LADDER_SPECIALIZATION_PRODUCTS: readonly LadderSpecializationProduct[] = [
+  // -- fleer -----------------------------------------------------------------
+  // CF-THERE-IS-NO-FLEER-TIFFANY (Drew, 2026-09-05) is the ruling these two
+  // rules implement, and it is scoped BY YEAR because the data is. Fleer's
+  // 1980s coated product is GLOSSY (the 1987-1989 Glossy Tin); "Fleer Tiffany"
+  // is a real product only from 1996, which is what the catalog holds:
+  //
+  //     fleer-glossy    2,474 catalog rows, 100% checklist   1987,88,89 + 2007,08
+  //     fleer-tiffany   2,715 catalog rows,  2,251 checklist  1996, 1997, 2002
+  //
+  // and what the pool states: of 6,000 sampled `:fleer:` rows, the titles
+  // saying "glossy" are 1987 (86) and 1988 (12), and the two saying "tiffany"
+  // are 1996. `spellForEra` already re-spells a pre-1996 fleer-tiffany KEY as
+  // Glossy; these rules mean the parser does not mint the wrong one first.
+  // ZERO sampled titles say both words, so the order between them is not
+  // load-bearing — but Glossy is tested first anyway, because the nine real
+  // 1987 "GLOSSY ... TIFFANY" sales the ruling names must reach Glossy.
+  { family: "fleer", states: /\bglossy\b/, setKey: "fleer-glossy" },
+  { family: "fleer", states: /\btiffany\b/, setKey: "fleer-tiffany", minYear: 1996 },
+  // `fleer-tradition-tiffany` is NOT here. It has 600 checklist rows (2002,
+  // 2003) but ZERO of the 6,000 sampled `:fleer:` titles state "Tradition"
+  // and "Tiffany" together — no population, so no rule. It stays in the debt
+  // register with that number.
+
+  // -- fleer-update ----------------------------------------------------------
+  // Same ruling, same era boundary, its own family. 264 checklist rows for
+  // fleer-update-glossy (1987, 1988) and 250 for fleer-update-tiffany (1996);
+  // the pool's 6,000 sampled `:fleer-update:` titles say glossy in 1987 (304)
+  // and 1988 (98), tiffany in 1996 (10).
+  { family: "fleer-update", states: /\bglossy\b/, setKey: "fleer-update-glossy" },
+  { family: "fleer-update", states: /\btiffany\b/, setKey: "fleer-update-tiffany", minYear: 1996 },
+
+  // -- pacific ---------------------------------------------------------------
+  // MOST QUALIFIED FIRST. Gold Crown Die Cuts and Prisms are NAMED products
+  // that print ON Crown Collection stock, so a title stating both names the
+  // child; Crown Collection is tested last so it claims only the titles that
+  // name it alone.
+  //
+  // "Gold Holo Crown Die Cuts" is a real 1999 spelling in the pool, so the
+  // interposed word is allowed. `die cut` alone is NOT enough — it is a
+  // finish a dozen products use — and neither is `gold crown` alone without
+  // Pacific, which the family gate already forbids.
+  //
+  //     pacific-gold-crown-die-cuts     92 catalog rows, 100% checklist
+  //                                    257 of 3,000 family titles state it
+  //     pacific-prism               5,894 catalog rows, 1,674 checklist
+  //                                    403 of 3,000 family titles state it
+  //     pacific-crown-collection    6,851 catalog rows, 1,827 checklist
+  //                                    253 of 3,000 family titles state it
+  {
+    family: "pacific",
+    states: /\bgold\s+(?:holo\s+)?crown\s+die\s*-?\s*cuts?\b|\bgold\s+crown\b(?=[\s\S]*\bdie\s*-?\s*cuts?\b)/,
+    setKey: "pacific-gold-crown-die-cuts",
+  },
+  // `pacific-prism` IS SINGULAR (productSetKeys.ts: the catalog rows, the
+  // sales, and BaseballCardPedia's own redirect all agree); only the source's
+  // slug is plural, so the rule reads both spellings and answers the singular.
+  { family: "pacific", states: /\bprisms?\b/, setKey: "pacific-prism" },
+  { family: "pacific", states: /\bcrown\s+collection\b/, setKey: "pacific-crown-collection" },
+
+  // -- upper-deck ------------------------------------------------------------
+  // "MINOR LEAGUE", NEVER BARE "MINORS". Of 6,000 sampled `:upper-deck:` rows,
+  // 58 state "minor league" and ZERO state a bare "minors" — so the loose
+  // spelling would buy nothing and could only misfire. 981 catalog rows at the
+  // key, 825 checklist-backed, 1992/94/95.
+  { family: "upper-deck", states: /\bminor\s+league\b/, setKey: "upper-deck-minors" },
+  // 17,242 catalog rows, 16,396 checklist-backed. 34 of 3,000 family titles
+  // state it; the other 598 "black diamond" sales in the wider sample are
+  // ALREADY stored on the key by ingest — this rule is what lets a flagship-
+  // filed one be promoted onto it.
+  { family: "upper-deck", states: /\bblack\s+diamond\b/, setKey: "upper-deck-black-diamond" },
+
+  // -- score -----------------------------------------------------------------
+  // The ampersand, the word, and the slash are all real spellings in the pool
+  // ("1991 Score Rookie & Traded", "1994 Score Rookie/Traded"). "Traded"
+  // ALONE is not enough: 162 of the 6,000 sampled `:score:` titles say traded
+  // without rookie, and Score printed no Traded-only set — those are Topps
+  // Traded cards misfiled under Score, a different defect this must not
+  // launder into a wrong key. 766 catalog rows, 100% checklist-backed.
+  { family: "score", states: /\brookie'?s?\s*(?:&|and|\/|\+)\s*traded\b/, setKey: "score-rookie-and-traded" },
+];
+
+/** The families this table can refine, for the O(1) reject that keeps an
+ *  unrelated title from walking the whole table. */
+const LADDER_SPECIALIZATION_FAMILIES: ReadonlySet<string> = new Set(
+  LADDER_SPECIALIZATION_PRODUCTS.map((p) => p.family),
+);
+
+/**
+ * The year a title states, or null when it states none.
+ *
+ * Only used by the era-scoped Fleer rules. Reads the FIRST 4-digit year in
+ * set-year range, which is where a card title puts it, and understands the
+ * "1997-98" span spelling by taking the opening year — the same reading
+ * `computeHobbyIqCardId` stores for a split-season product.
+ */
+function statedYearFromTitle(title: string): number | null {
+  const m = /\b(19[3-9]\d|20[0-4]\d)\b/.exec(String(title ?? ""));
+  if (!m) return null;
+  const y = Number(m[1]);
+  return Number.isFinite(y) ? y : null;
+}
+
+/**
+ * Refine a family key into the ruled specialization the title STATES, or
+ * return it unchanged.
+ *
+ * `familyKey` is what the brand rules already decided — so this never reads
+ * the brand itself and cannot mint a product for a title whose manufacturer it
+ * misread. A family that states no specialization, and every family not in the
+ * table, falls through unchanged: blank is unknown, never a guess.
+ */
+export function refineLadderSpecializationSetKey(familyKey: string, title: string): string {
+  const fam = slugify(String(familyKey ?? ""));
+  if (!LADDER_SPECIALIZATION_FAMILIES.has(fam)) return familyKey;
+  const t = String(title ?? "").toLowerCase();
+  let year: number | null | undefined;
+  for (const p of LADDER_SPECIALIZATION_PRODUCTS) {
+    if (p.family !== fam) continue;
+    if (!p.states.test(t)) continue;
+    if (p.minYear !== undefined || p.maxYear !== undefined) {
+      // A year-scoped rule REFUSES rather than guesses when the title states
+      // no year: an absent year must not silently mint one era's product from
+      // another's, which is the refusal `spellForEra` already makes.
+      if (year === undefined) year = statedYearFromTitle(title);
+      if (year === null) continue;
+      if (p.minYear !== undefined && year < p.minYear) continue;
+      if (p.maxYear !== undefined && year > p.maxYear) continue;
+    }
+    return p.setKey;
+  }
+  return familyKey;
+}
+
+/**
  * Infer the setKey a title states.
  *
  * ONE PARSER, TWO STAGES. The brand rules answer first — they are the ~40
@@ -2788,7 +2988,11 @@ export function refineSoccerCompetitionSetKey(familyKey: string, title: string):
  * title that states no competition returns precisely what it returned before.
  */
 export function inferSetKeyFromTitle(title: string, cardNumber?: string | null): string {
-  return refineSoccerCompetitionSetKey(inferFamilySetKeyFromTitle(title, cardNumber), title);
+  const family = inferFamilySetKeyFromTitle(title, cardNumber);
+  return refineLadderSpecializationSetKey(
+    refineSoccerCompetitionSetKey(family, title),
+    title,
+  );
 }
 
 /** The brand rules: the historical body of `inferSetKeyFromTitle`, which

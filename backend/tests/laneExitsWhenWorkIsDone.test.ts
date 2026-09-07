@@ -1221,3 +1221,195 @@ describe("finishLane narrates to the fd the lane names, and stdout stays the def
     ).not.toMatch(/acquire-for-withheld-holdings\.cjs\s*>\s*\/tmp\/plan\.json/);
   });
 });
+
+// ── 12. THE VERIFY READS ITS OWN LEDGER, AND THE CAP ENDS THE LANE ───────
+//
+// CF-VERIFY-THE-WRITE-BY-READING-IT-BACK (2026-09-07).
+//
+// The diagnostic run 34059648410 (retire-self-derived-identities, slot 13/16,
+// baseball, APPLY) is the one that finally located the wedge, because #1906
+// had narrated both sides of the boundary:
+//
+//   21:02:38  RECONCILE  seen 52,815 = ... => 52,815 BALANCES
+//   21:02:38  narrate: reportWrites returned — arming the verify, 600s cap
+//   21:02:38  narrate: issuing COUNT(1) for retiredReason (sport=baseball)
+//   23:30:45  ##[error] ... timed out after 150 minutes
+//
+// 148 minutes inside ONE `SELECT VALUE COUNT(1)`, under a 600-second cap that
+// never fired. All TEN apply runs of this lane on record died in that query,
+// every one of them AFTER its writes had landed and reconciled.
+//
+// WHY THE CAP DID NOT FIRE, which is the part that generalises. The helper's
+// cap timer is REF'd and armed before run() (#1859, #1904) and it fires
+// correctly against a never-settling promise. What no `setTimeout` in node
+// can survive is MICROTASK STARVATION: a callee that loops on already-resolved
+// promises never yields to the macrotask queue, so the timer is scheduled and
+// never runs. Section 12b drives exactly that and asserts it.
+//
+// So the fix is not a bigger cap — it is a verify that cannot starve. A run
+// holds its own write ledger, so it reads back the ids IT wrote, by
+// point-read, single-partition, no cross-partition fan-out at all.
+describe("the retire lane verifies by reading its own write ledger", () => {
+  const src = read("backend", "scripts", "retire-self-derived-identities.cjs");
+  const codeOnly = src
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .split("\n").filter((l) => !/^\s*\/\//.test(l)).join("\n");
+
+  it("the sport-wide COUNT(1) that killed all ten apply runs is gone", () => {
+    expect(
+      codeOnly,
+      "a cross-partition SELECT VALUE COUNT(1) over card_catalog does not return; "
+        + "it is what ran 148 minutes in run 34059648410 and 887s in run 33960686247",
+    ).not.toMatch(/SELECT VALUE COUNT\(1\)/);
+  });
+
+  it("it keeps a ledger of the ids it wrote, with their partition keys", () => {
+    expect(codeOnly, "the ledger is declared").toMatch(/const ledger = \[\]/);
+    // Every write site records: the two markers are written by different
+    // branches, and a ledger missing one would report a real write as absent.
+    const pushes = codeOnly.match(/ledger\.push\(/g) ?? [];
+    expect(
+      pushes.length,
+      "all three write sites (parent retire, graded child, unverified) must record",
+    ).toBe(3);
+    // The partition key travels with the id: a point-read needs both.
+    expect(codeOnly).toMatch(/ledger\.push\(\{ id: String\([^)]+\), pk: pkOf\([^)]+\), field:/);
+  });
+
+  it("the ledger's partition key MIRRORS the one the write used", () => {
+    // patchCatalogRowFields computes `cardId ? String(cardId) : id`. A ledger
+    // that recorded a raw null cardId would point-read the wrong partition,
+    // get nothing, and report a good write as MISSING THE MARKER -- and since
+    // a mismatch now ends the lane non-zero, that would turn a healthy run
+    // red. Read exactly where the write went.
+    expect(codeOnly).toMatch(/const pkOf = \(row\) =>[\s\S]{0,160}row\.cardId \? String\(row\.cardId\) : String\(row && row\.id\)/);
+    const svc = read("backend", "src", "services", "catalog", "catalogRowOps.service.ts");
+    expect(
+      svc,
+      "the rule being mirrored must still be the rule patchCatalogRowFields applies",
+    ).toMatch(/const pk = cardId \? String\(cardId\) : id;/);
+    // And no write site may go back to handing the raw field through.
+    expect(codeOnly).not.toMatch(/pk: \w+\.cardId/);
+  });
+
+  it("the verify point-reads those ids instead of scanning the sport", () => {
+    // container.item(id, pk).read() is a single-partition lookup at ~1 RU.
+    expect(codeOnly, "the read-back is a point-read").toMatch(/cat\.item\(e\.id, e\.pk\)\.read\(\)/);
+    // And it is still under the helper's cap, chunked so one cap covers it.
+    expect(codeOnly).toMatch(/LANE_BUDGET\.capped\(vt0/);
+  });
+
+  it("an empty ledger is a no-op that SAYS it verified nothing", () => {
+    // Nine of the ten killed runs wrote 0-21 rows, because an earlier run had
+    // already marked their products. `written 0` must not read as a skipped
+    // or failed verify.
+    expect(src).toMatch(/written 0 — nothing to verify, the ledger is empty/);
+    expect(codeOnly).toMatch(/if \(ledger\.length === 0\)/);
+  });
+
+  it("it reports verified n of n written, and reconciles that arithmetic", () => {
+    expect(src).toMatch(/verified \$\{f\(verified\)\} of \$\{f\(ledger\.length\)\} written/);
+    expect(src, "the verify reconciles like the loop does").toMatch(/VERIFY RECONCILE/);
+    expect(src).toMatch(/DOES NOT BALANCE/);
+  });
+
+  it("an incomplete verify ends the lane non-zero and prints NO budget marker", () => {
+    // THE CONTRACT WITH #1913. The relaunch step has three branches:
+    //   (a) budget marker  -> re-dispatch
+    //   (b) finishLane + green -> finished
+    //   (c) neither -> KILLED, re-dispatch withheld, investigate
+    // A verify that could not confirm must land in (c), never (a): the marker
+    // is a promise that this slice's work is durable, and an unverified slice
+    // cannot make it.
+    expect(src, "it names what it could not confirm").toMatch(/VERIFY INCOMPLETE —/);
+    // Non-zero exit, so the step is red.
+    expect(codeOnly).toMatch(/finishLane\(capHit \? 6 : 7/);
+    // The marker is DEFERRED past the verify and only emitted on the good path.
+    expect(codeOnly, "the marker is a function, called after the verify")
+      .toMatch(/const emitBudgetMarker = \(\) =>/);
+    const verifyIdx = codeOnly.indexOf("VERIFY INCOMPLETE");
+    const emitIdx = codeOnly.lastIndexOf("emitBudgetMarker();");
+    expect(
+      emitIdx,
+      "the budget marker must be emitted AFTER the VERIFY INCOMPLETE early-return, "
+        + "or a slice that could not verify still gets re-dispatched",
+    ).toBeGreaterThan(verifyIdx);
+  });
+
+  it("the marker wording the relaunch greps for is unchanged", () => {
+    // CF-RELAUNCH-ONLY-ON-BUDGET (#1361). Moving WHEN it prints must not move
+    // WHAT it prints.
+    expect(src).toContain("stopped at the clock budget with products left");
+  });
+});
+
+// ── 12b. MICROTASK STARVATION IS WHY THE CAP NEVER FIRED (MUTATION) ─────
+//
+// The census in section 9 proved the cap timer is REF'd, and the probe in
+// section 10 proved a REF'd cap fires against a never-settling promise. Both
+// were true of the shipped code on 2026-09-06, and slot 13 hung anyway. This
+// is the missing case: the callee never yields to the macrotask queue, so the
+// timer that enforces the cap is scheduled and never runs.
+//
+// This is not a hypothetical shape. The Cosmos SDK's cross-partition query
+// pipeline drains continuations through resolved promises, which is exactly
+// this. It is also unfixable by any timer-based cap — which is the argument
+// for deleting the query rather than capping it harder.
+describe("a starved event loop defeats any setTimeout cap (mutation)", () => {
+  const STARVE = `
+    ${LIB_REQUIRE}
+    const B = budget({ minutes: 1, reserveMs: 1000, verifyMs: 700 });
+    (async () => {
+      console.log("reconciled: intended 52,815 = written 0 + skipped 52,815");
+      const v = await B.capped(Date.now(), "retiredReason", async () => {
+        console.log("issuing COUNT(1)");
+        // The SDK shape: continuations on already-resolved promises, forever.
+        // No await ever reaches the macrotask queue, so no timer can run.
+        for (;;) { await Promise.resolve(); }
+      });
+      console.log("VERIFY BY READ " + v);
+      return { budget: B };
+    })().then((c) => finishLane(0, c));
+  `;
+
+  it("the cap does NOT fire, and the lane never exits — slot 13's signature", () => {
+    const r = runNode(STARVE, 6000);
+    expect(r.stdout).toContain("issuing COUNT(1)");
+    expect(
+      r.stdout,
+      "run 34059648410 printed `issuing COUNT(1)` and then nothing for 148 minutes",
+    ).not.toContain("VERIFY BY READ");
+    expect(r.stdout).not.toContain("finishLane: exiting code");
+    expect(
+      r.timedOut,
+      "no setTimeout-based cap can pre-empt a starved loop — which is why the "
+        + "COUNT had to be deleted, not capped harder",
+    ).toBe(true);
+  });
+
+  // And the shipped verify's shape does NOT starve: a point-read loop awaits
+  // real I/O, so timers keep running and the cap remains enforceable.
+  it("a point-read loop yields, so the cap still fires there", () => {
+    const POINT_READS = `
+      ${LIB_REQUIRE}
+      const B = budget({ minutes: 1, reserveMs: 1000, verifyMs: 700 });
+      (async () => {
+        const v = await B.capped(Date.now(), "ledger 1-200", async (signal) => {
+          // I/O-shaped: each read yields to the macrotask queue, exactly as a
+          // Cosmos point-read does. A slow ledger therefore hits the cap
+          // instead of hanging the step.
+          for (;;) {
+            if (signal && signal.aborted) throw new Error("verify-cap");
+            await new Promise((r) => setTimeout(r, 5));
+          }
+        });
+        console.log("capped returned " + v);
+        return { budget: B };
+      })().then((c) => finishLane(0, c));
+    `;
+    const r = runNode(POINT_READS, 8000);
+    expect(r.stdout, "the cap reports rather than hanging").toContain("capped returned null");
+    expect(r.stdout).toContain("finishLane: exiting code 0");
+    expect(r.timedOut, "the lane ended itself").toBe(false);
+  });
+});
