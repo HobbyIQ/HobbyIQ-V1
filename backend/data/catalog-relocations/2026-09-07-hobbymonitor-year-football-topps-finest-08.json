@@ -1,0 +1,3147 @@
+{
+  "generatedAt": "2026-09-07T02:00:00Z",
+  "forLane": "relocate-catalog-rows-by-list",
+  "reportOnlyUntil": "Drew's review — NO APPLY IS AUTHORIZED BY THIS PR. This list DELETES catalog rows.",
+  "keepSales": true,
+  "finding": "#1925 H1. 7476 card_catalog rows from hobbymonitor-2026-09-04 under football/topps-finest carry year 2025 while their own setName states 2024. The census compared 5,381 card numbers across all 28 products: 5,351 agree with the year-N checklist, 444 agree with year N+1, and ZERO agree with N+1 but not N — so the setName is right and the year field is wrong. This file is part 08 of 8 for this product: 0 retire, 446 reslug.",
+  "rulings": [
+    "THE CHECKLIST IS THE AUTHORITY AND THE setName IS RIGHT. Every number-to-player comparison in #1925 resolves to year N. A row is retired only where the year-N address is already held by the SAME player from a CHECKLIST source (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT); a twin from `ingest-auto-seed` or `bccp` earns no delete and is excluded instead.",
+    "THE SALES DO NOT MOVE — `keepSales: true`. 7,905 sales rest on these rows' slugs and their titles are 7,901-to-0 the year-N+1 product: they belong to the card that STAYS, not the one that moves. moveCatalogRow re-points a row's own sales by default, which here would carry genuine year-N+1 sales back to year N — the exact mispricing this repair exists to end. Under the flag the lane hands moveCatalogRow no salesContainer, so hobbyiqCardId and cardId are untouched and the rematch re-derives them against the genuine year-N+1 identity. Measured: 7,776 of the 7,905 have a genuine year-N+1 row at their card number to land on; 129 do not and need a checklist ingest first.",
+    "RETIRE IS A HARD DELETE, AND IT IS ORDERED FIRST. card_catalog has no field that stops a row resolving, so a retire deletes the row and its graded children, and leaves its sales UNPLACED. Retires sort before reslugs in every file, and the files sort in the order they must run.",
+    "AN OCCUPIED DESTINATION IS REPORTED, NEVER ROUTED AROUND. 5,899 rows whose year-N destination names a DIFFERENT player, and 712 whose destination is an UNNAMED bccp row, are in docs/reports/2026-09-07-hobbymonitor-year-excluded.md and in no list."
+  ],
+  "census": {
+    "product": "football/topps-finest",
+    "storedYear": 2025,
+    "trueYear": 2024,
+    "destinationSetKey": "topps-finest",
+    "rowsInProduct": 7476,
+    "retireInThisFile": 0,
+    "reslugInThisFile": 446,
+    "salesOnEntriesInThisFile": 58
+  },
+  "entries": [
+    {
+      "id": "hiq:football:2025:topps-finest:fa-lk:red-refractor:auto:num-5",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fa-lk:red-refractor:auto:num-5",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Leroy Kelly\" #FA-LK; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fa-ta:refractor:auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fa-ta:refractor:auto",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Troy Aikman\" #FA-TA; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fa-th:oil-spill-geometric-refractor:auto:num-10",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fa-th:oil-spill-geometric-refractor:auto:num-10",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Tony Hill\" #FA-TH; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fa-dn:red-refractor:auto:num-5",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fa-dn:red-refractor:auto:num-5",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Dat Nguyen\" #FA-DN; destination read as vacant 2026-09-07; 1 sale(s) rest here and STAY — they are the 2025 card's"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:20:black-geometric-refractor:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:20:black-geometric-refractor:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Troy Aikman\" #20; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:16:oil-spill-refractor:no-auto:num-20",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:16:oil-spill-refractor:no-auto:num-20",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Terrell Owens\" #16; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fba-emc:superfractor:auto:num-1",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fba-emc:superfractor:auto:num-1",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Ed McCaffrey\" #FBA-EMC; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:255:checkerboard-refractor:no-auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:255:checkerboard-refractor:no-auto",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jonah Elliss\" #255; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:214:black-geometric-refractors-15-1-breaker:no-auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:214:black-geometric-refractors-15-1-breaker:no-auto",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Tim Tebow\" #214; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:213:gold-geometric-refractor:no-auto:num-20",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:213:gold-geometric-refractor:no-auto:num-20",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"John Elway\" #213; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:116:green-refractor:no-auto:num-35",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:116:green-refractor:no-auto:num-35",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Tim Tebow\" #116; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:116:red-geometric-refractor:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:116:red-geometric-refractor:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Tim Tebow\" #116; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:116:oil-spill-geometric-refractor:no-auto:num-15",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:116:oil-spill-geometric-refractor:no-auto:num-15",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Tim Tebow\" #116; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:78:purple-checkerboard-refractor:no-auto:num-150",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:78:purple-checkerboard-refractor:no-auto:num-150",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Audric Estimé\" #78; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:63:common-parallel:no-auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:63:common-parallel:no-auto",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Bo Nix\" #63; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:63:black-refractor:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:63:black-refractor:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Bo Nix\" #63; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:dyn-30:refractor:no-auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:dyn-30:refractor:no-auto",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Barry Sanders\" #DYN-30; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:d-26:refractor:no-auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:d-26:refractor:no-auto",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Terrion Arnold\" #D-26; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fa-cs:superfractor:auto:num-1",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fa-cs:superfractor:auto:num-1",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Chris Spielman\" #FA-CS; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:291:oil-spill-geometric-refractor:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:291:oil-spill-geometric-refractor:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Terrion Arnold\" #291; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:291:green-refractor:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:291:green-refractor:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Terrion Arnold\" #291; destination read as vacant 2026-09-07; 1 sale(s) rest here and STAY — they are the 2025 card's"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:152:purple-refractor:no-auto:num-200",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:152:purple-refractor:no-auto:num-200",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Terrion Arnold\" #152; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:25:checkerboard-refractor:no-auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:25:checkerboard-refractor:no-auto",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Billy Sims\" #25; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:24:blue-checkerboard-refractor:no-auto:num-99",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:24:blue-checkerboard-refractor:no-auto:num-99",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Barry Sanders\" #24; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fg-bf:gold-geometric-refractor:auto:num-50",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fg-bf:gold-geometric-refractor:auto:num-50",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Brett Favre\" #FG-BF; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fg-bf:red-refractor:auto:num-5",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fg-bf:red-refractor:auto:num-5",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Brett Favre\" #FG-BF; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fa-mc:refractor:auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fa-mc:refractor:auto",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Mark Chmura\" #FA-MC; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:166:red-refractor:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:166:red-refractor:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Javon Bullard\" #166; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:69:checkerboard-refractor:no-auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:69:checkerboard-refractor:no-auto",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Edgerrin Cooper\" #69; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:119:purple-checkerboard-refractor:no-auto:num-99",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:119:purple-checkerboard-refractor:no-auto:num-99",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Earl Campbell\" #119; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:184:oil-spill-refractor:no-auto:num-15",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:184:oil-spill-refractor:no-auto:num-15",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Cade Stover\" #184; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:256:red-geometric-refractor:no-auto:num-3",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:256:red-geometric-refractor:no-auto:num-3",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Calen Bullock\" #256; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fba-mw:blue-geometric-refractor:auto:num-99",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fba-mw:blue-geometric-refractor:auto:num-99",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Mario Williams\" #FBA-MW; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fba-af:red-geometric-refractor:auto:num-5",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fba-af:red-geometric-refractor:auto:num-5",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Arian Foster\" #FBA-AF; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:220:green-refractor:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:220:green-refractor:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Peyton Manning\" #220; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:266:gold-refractor:no-auto:num-20",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:266:gold-refractor:no-auto:num-20",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Anthony Gould\" #266; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:33:common-parallel:no-auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:33:common-parallel:no-auto",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Dallas Clark\" #33; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:123:red-geometric-refractor:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:123:red-geometric-refractor:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Edgerrin James\" #123; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fa-tb:black-geometric-refractor:auto:num-25",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fa-tb:black-geometric-refractor:auto:num-25",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Tony Boselli\" #FA-TB; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:p-xw:gold-refractor:auto:num-50",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:p-xw:gold-refractor:auto:num-50",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Xavier Worthy\" #P-XW; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fba-jst:black-refractor:auto:num-25",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fba-jst:black-refractor:auto:num-25",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jan Stenerud\" #FBA-JST; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:126:blue-checkerboard-refractor:no-auto:num-49",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:126:blue-checkerboard-refractor:no-auto:num-49",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Dwayne Bowe\" #126; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:126:red-geometric-refractor:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:126:red-geometric-refractor:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Dwayne Bowe\" #126; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:rfa-bb:blue-geometric-refractor:auto:num-99",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:rfa-bb:blue-geometric-refractor:auto:num-99",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Brock Bowers\" #RFA-BB; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:282:red-geometric-refractor:no-auto:num-3",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:282:red-geometric-refractor:no-auto:num-3",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Brock Bowers\" #282; destination read as vacant 2026-09-07; 1 sale(s) rest here and STAY — they are the 2025 card's"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:tf-9:red-refractor:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:tf-9:red-refractor:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Brock Bowers\" #TF-9; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:198:sky-blue-refractor:no-auto:num-250",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:198:sky-blue-refractor:no-auto:num-250",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Brenden Rice\" #198; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:rfa-lm:oil-spill-refractor:auto:num-10",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:rfa-lm:oil-spill-refractor:auto:num-10",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Ladd McConkey\" #RFA-LM; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:142:oil-spill-refractor:no-auto:num-15",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:142:oil-spill-refractor:no-auto:num-15",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Bo Jackson\" #142; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fba-nc:red-geometric-refractor:auto:num-5",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fba-nc:red-geometric-refractor:auto:num-5",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Nolan Cromwell\" #FBA-NC; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:rfa-kk:refractor:auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:rfa-kk:refractor:auto",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Kamren Kinchens\" #RFA-KK; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:222:oil-spill-refractor:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:222:oil-spill-refractor:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jim Everett\" #222; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:157:checkerboard-refractor:no-auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:157:checkerboard-refractor:no-auto",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Chop Robinson\" #157; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:157:red-geometric-refractor:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:157:red-geometric-refractor:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Chop Robinson\" #157; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fa-jr:black-geometric-refractor:auto:num-25",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fa-jr:black-geometric-refractor:auto:num-25",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"John Randle\" #FA-JR; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:d-23:sky-blue-refractor:no-auto:num-150",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:d-23:sky-blue-refractor:no-auto:num-150",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Ja'Lynn Polk\" #D-23; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:d-3:gold-refractor:no-auto:num-50",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:d-3:gold-refractor:no-auto:num-50",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Drake Maye\" #D-3; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:p-dm:refractor:auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:p-dm:refractor:auto",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Drake Maye\" #P-DM; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fba-kf:blue-geometric-refractor:auto:num-99",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fba-kf:blue-geometric-refractor:auto:num-99",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Kevin Faulk\" #FBA-KF; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fba-jh:red-geometric-refractor:auto:num-5",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fba-jh:red-geometric-refractor:auto:num-5",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"John Hannah\" #FBA-JH; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fba-jh:superfractor:auto:num-1",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fba-jh:superfractor:auto:num-1",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"John Hannah\" #FBA-JH; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:248:black-geometric-refractors-15-1-breaker:no-auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:248:black-geometric-refractors-15-1-breaker:no-auto",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Drake Maye\" #248; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fba-am:blue-checkerboard-refractor:auto:num-99",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fba-am:blue-checkerboard-refractor:auto:num-99",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Archie Manning\" #FBA-AM; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:233:black-geometric-refractors-15-1-breaker:no-auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:233:black-geometric-refractors-15-1-breaker:no-auto",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Phil Simms\" #233; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:269:blue-checkerboard-refractor:no-auto:num-49",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:269:blue-checkerboard-refractor:no-auto:num-49",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Malik Nabers\" #269; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fg-lt:oil-spill-refractor:auto:num-10",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fg-lt:oil-spill-refractor:auto:num-10",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Lawrence Taylor\" #FG-LT; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fba-em:red-geometric-refractor:auto:num-5",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fba-em:red-geometric-refractor:auto:num-5",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Eli Manning\" #FBA-EM; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fba-jt:red-geometric-refractor:auto:num-5",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fba-jt:red-geometric-refractor:auto:num-5",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Justin Tuck\" #FBA-JT; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fba-jt:red-refractor:auto:num-5",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fba-jt:red-refractor:auto:num-5",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Justin Tuck\" #FBA-JT; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:rfa-mn:oil-spill-geometric-refractor:auto:num-10",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:rfa-mn:oil-spill-geometric-refractor:auto:num-10",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Malik Nabers\" #RFA-MN; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:rfa-mn:blue-geometric-refractor:auto:num-99",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:rfa-mn:blue-geometric-refractor:auto:num-99",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Malik Nabers\" #RFA-MN; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:140:purple-refractor:no-auto:num-200",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:140:purple-refractor:no-auto:num-200",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Santana Moss\" #140; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:rfa-mc:oil-spill-refractor:auto:num-10",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:rfa-mc:oil-spill-refractor:auto:num-10",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Malachi Corley\" #RFA-MC; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:294:checkerboard-refractor:no-auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:294:checkerboard-refractor:no-auto",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Cooper DeJean\" #294; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:144:red-geometric-refractor:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:144:red-geometric-refractor:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Donovan McNabb\" #144; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:153:oil-spill-geometric-refractor:no-auto:num-15",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:153:oil-spill-geometric-refractor:no-auto:num-15",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Quinyon Mitchell\" #153; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:180:blue-refractor:no-auto:num-150",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:180:blue-refractor:no-auto:num-150",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Will Shipley\" #180; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fg-9:black-refractor:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fg-9:black-refractor:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Donovan McNabb\" #FG-9; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:dyn-7:checkerboard-refractor:no-auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:dyn-7:checkerboard-refractor:no-auto",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Will Shipley\" #DYN-7; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fba-bd:black-geometric-refractor:auto:num-25",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fba-bd:black-geometric-refractor:auto:num-25",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Brian Dawkins\" #FBA-BD; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fa-rj:oil-spill-refractor:auto:num-10",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fa-rj:oil-spill-refractor:auto:num-10",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Ron Jaworski\" #FA-RJ; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fba-bf:oil-spill-refractor:auto:num-10",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fba-bf:oil-spill-refractor:auto:num-10",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Barry Foster\" #FBA-BF; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fa-mq:superfractor:auto:num-1",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fa-mq:superfractor:auto:num-1",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Mike Quick\" #FA-MQ; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fg-16:blue-refractor:no-auto:num-99",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fg-16:blue-refractor:no-auto:num-99",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Terry Bradshaw\" #FG-16; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:dyn-17:green-refractor:no-auto:num-75",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:dyn-17:green-refractor:no-auto:num-75",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Roman Wilson\" #DYN-17; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:274:red-refractor:no-auto:num-3",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:274:red-refractor:no-auto:num-3",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Roman Wilson\" #274; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:274:gold-refractor:no-auto:num-20",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:274:gold-refractor:no-auto:num-20",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Roman Wilson\" #274; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:194:checkerboard-refractor:no-auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:194:checkerboard-refractor:no-auto",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Roman Wilson\" #194; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:237:red-refractor:no-auto:num-3",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:237:red-refractor:no-auto:num-3",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Terry Bradshaw\" #237; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fg-ag:blue-geometric-refractor:auto:num-99",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fg-ag:blue-geometric-refractor:auto:num-99",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Antonio Gates\" #FG-AG; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:238:black-refractor:no-auto:num-15",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:238:black-refractor:no-auto:num-15",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Dan Fouts\" #238; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:147:oil-spill-geometric-refractor:no-auto:num-15",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:147:oil-spill-geometric-refractor:no-auto:num-15",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jerry Rice\" #147; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:240:oil-spill-geometric-refractor:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:240:oil-spill-geometric-refractor:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Joe Montana\" #240; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:279:purple-refractor:no-auto:num-125",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:279:purple-refractor:no-auto:num-125",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jacob Cowing\" #279; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fa-rcr:refractor:auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fa-rcr:refractor:auto",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Roger Craig\" #FA-RCR; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fg-fg:oil-spill-refractor:auto:num-10",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fg-fg:oil-spill-refractor:auto:num-10",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Frank Gore\" #FG-FG; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fg-jm:red-refractor:auto:num-5",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fg-jm:red-refractor:auto:num-5",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Joe Montana\" #FG-JM; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fba-jr:black-geometric-refractor:auto:num-25",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fba-jr:black-geometric-refractor:auto:num-25",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jerry Rice\" #FBA-JR; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:30:oil-spill-refractor:no-auto:num-20",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:30:oil-spill-refractor:no-auto:num-20",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Warren Moon\" #30; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fg-15:blue-refractor:no-auto:num-99",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fg-15:blue-refractor:no-auto:num-99",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Matt Hasselbeck\" #FG-15; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fa-sa:blue-geometric-refractor:auto:num-99",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fa-sa:blue-geometric-refractor:auto:num-99",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Shaun Alexander\" #FA-SA; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:175:gold-refractor:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:175:gold-refractor:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Byron Murphy II\" #175; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:65:common-parallel:no-auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:65:common-parallel:no-auto",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Michael Pratt\" #65; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:165:green-refractor:no-auto:num-35",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:165:green-refractor:no-auto:num-35",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Michael Pratt\" #165; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:165:red-refractor:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:165:red-refractor:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Michael Pratt\" #165; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:278:red-geometric-refractor:no-auto:num-3",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:278:red-geometric-refractor:no-auto:num-3",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jalen McMillan\" #278; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:rfa-jm:oil-spill-refractor:auto:num-10",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:rfa-jm:oil-spill-refractor:auto:num-10",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jalen McMillan\" #RFA-JM; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fg-tb:superfractor:auto:num-1",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fg-tb:superfractor:auto:num-1",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Tom Brady\" #FG-TB; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fg-8:blue-refractor:no-auto:num-99",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fg-8:blue-refractor:no-auto:num-99",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Tom Brady\" #FG-8; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:172:oil-spill-geometric-refractor:no-auto:num-15",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:172:oil-spill-geometric-refractor:no-auto:num-15",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Dillon Johnson\" #172; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:68:blue-checkerboard-refractor:no-auto:num-99",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:68:blue-checkerboard-refractor:no-auto:num-99",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Sam Hartman\" #68; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fg-24:blue-refractor:no-auto:num-99",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fg-24:blue-refractor:no-auto:num-99",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Sam Hartman\" #FG-24; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:tf-2:sky-blue-refractor:no-auto:num-150",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:tf-2:sky-blue-refractor:no-auto:num-150",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jayden Daniels\" #TF-2; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fa-dm:black-refractor:auto:num-25",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fa-dm:black-refractor:auto:num-25",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Dexter Manley\" #FA-DM; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:148:purple-refractor:no-auto:num-200",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:148:purple-refractor:no-auto:num-200",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Joe Montana\" #148; destination read as vacant 2026-09-07; 1 sale(s) rest here and STAY — they are the 2025 card's"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:245:purple-refractor:no-auto:num-125",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:245:purple-refractor:no-auto:num-125",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Mark Rypien\" #245; destination read as vacant 2026-09-07; 4 sale(s) rest here and STAY — they are the 2025 card's"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:285:gold-refractor:no-auto:num-20",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:285:gold-refractor:no-auto:num-20",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Blake Corum\" #285; destination read as vacant 2026-09-07; 1 sale(s) rest here and STAY — they are the 2025 card's"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:163:purple-refractor:no-auto:num-200",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:163:purple-refractor:no-auto:num-200",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Bo Nix\" #163; destination read as vacant 2026-09-07; 3 sale(s) rest here and STAY — they are the 2025 card's"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:171:sky-blue-refractor:no-auto:num-250",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:171:sky-blue-refractor:no-auto:num-250",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"MarShawn Lloyd\" #171; destination read as vacant 2026-09-07; 1 sale(s) rest here and STAY — they are the 2025 card's"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:190:sky-blue-refractor:no-auto:num-250",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:190:sky-blue-refractor:no-auto:num-250",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Malik Nabers\" #190; destination read as vacant 2026-09-07; 2 sale(s) rest here and STAY — they are the 2025 card's"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:141:sky-blue-refractor:no-auto:num-250",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:141:sky-blue-refractor:no-auto:num-250",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Wayne Chrebet\" #141; destination read as vacant 2026-09-07; 1 sale(s) rest here and STAY — they are the 2025 card's"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:102:purple-refractor:no-auto:num-200",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:102:purple-refractor:no-auto:num-200",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Michael Vick\" #102; destination read as vacant 2026-09-07; 3 sale(s) rest here and STAY — they are the 2025 card's"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:173:gold-refractor:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:173:gold-refractor:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Tyler Nubin\" #173; destination read as vacant 2026-09-07; 1 sale(s) rest here and STAY — they are the 2025 card's"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:169:sky-blue-refractor:no-auto:num-250",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:169:sky-blue-refractor:no-auto:num-250",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jaden Hicks\" #169; destination read as vacant 2026-09-07; 2 sale(s) rest here and STAY — they are the 2025 card's"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:203:purple-refractor:no-auto:num-125",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:203:purple-refractor:no-auto:num-125",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Bryce Young\" #203; destination read as vacant 2026-09-07; 1 sale(s) rest here and STAY — they are the 2025 card's"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:162:sky-blue-refractor:no-auto:num-250",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:162:sky-blue-refractor:no-auto:num-250",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Drake Maye\" #162; destination read as vacant 2026-09-07; 3 sale(s) rest here and STAY — they are the 2025 card's"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:147:purple-refractor:no-auto:num-200",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:147:purple-refractor:no-auto:num-200",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jerry Rice\" #147; destination read as vacant 2026-09-07; 1 sale(s) rest here and STAY — they are the 2025 card's"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:tf-8:sky-blue-refractor:no-auto:num-150",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:tf-8:sky-blue-refractor:no-auto:num-150",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Bo Nix\" #TF-8; destination read as vacant 2026-09-07; 2 sale(s) rest here and STAY — they are the 2025 card's"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:193:purple-refractor:no-auto:num-200",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:193:purple-refractor:no-auto:num-200",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Malachi Corley\" #193; destination read as vacant 2026-09-07; 2 sale(s) rest here and STAY — they are the 2025 card's"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:236:green-refractor:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:236:green-refractor:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Charlie Batch\" #236; destination read as vacant 2026-09-07; 1 sale(s) rest here and STAY — they are the 2025 card's"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:200:sky-blue-refractor:no-auto:num-250",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:200:sky-blue-refractor:no-auto:num-250",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jacob Cowing\" #200; destination read as vacant 2026-09-07; 3 sale(s) rest here and STAY — they are the 2025 card's"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:202:gold-refractor:no-auto:num-20",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:202:gold-refractor:no-auto:num-20",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Michael Vick\" #202; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:139:gold-refractor:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:139:gold-refractor:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Phil Simms\" #139; destination read as vacant 2026-09-07; 1 sale(s) rest here and STAY — they are the 2025 card's"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:299:sky-blue-refractor:no-auto:num-150",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:299:sky-blue-refractor:no-auto:num-150",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Michael Irvin\" #299; destination read as vacant 2026-09-07; 2 sale(s) rest here and STAY — they are the 2025 card's"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:da-sb:base:auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:da-sb:base:auto",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"CJ Stroud\" #DA-SB; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:sa-4:base:auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:sa-4:base:auto",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"CJ Stroud\" #SA-4; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fg-bj:base:auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fg-bj:base:auto",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Bo Jackson\" #FG-BJ; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fa-mq:base:auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fa-mq:base:auto",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Mike Quick\" #FA-MQ; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:rfa-rw:base:auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:rfa-rw:base:auto",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Roman Wilson\" #RFA-RW; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:dyn-9:red-refractor:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:dyn-9:red-refractor:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Trey Benson\" #DYN-9; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:d-14:red-refractor:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:d-14:red-refractor:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Trey Benson\" #D-14; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:201:blue-checkerboard-refractor:no-auto:num-49",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:201:blue-checkerboard-refractor:no-auto:num-49",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Kurt Warner\" #201; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:2:purple-checkerboard-refractor:no-auto:num-150",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:2:purple-checkerboard-refractor:no-auto:num-150",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Kurt Warner\" #2; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fg-7:green-refractor:no-auto:num-75",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fg-7:green-refractor:no-auto:num-75",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Michael Vick\" #FG-7; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fg-rl:blue-geometric-refractor:auto:num-99",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fg-rl:blue-geometric-refractor:auto:num-99",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Ray Lewis\" #FG-RL; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:5:common-parallel:no-auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:5:common-parallel:no-auto",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Ray Lewis\" #5; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:271:purple-checkerboard-refractor:no-auto:num-75",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:271:purple-checkerboard-refractor:no-auto:num-75",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Keon Coleman\" #271; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fa-tt:oil-spill-geometric-refractor:auto:num-10",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fa-tt:oil-spill-geometric-refractor:auto:num-10",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Thurman Thomas\" #FA-TT; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fba-bsm:black-refractor:auto:num-25",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fba-bsm:black-refractor:auto:num-25",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Bruce Smith\" #FBA-BSM; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fba-emw:blue-geometric-refractor:auto:num-99",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fba-emw:blue-geometric-refractor:auto:num-99",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Eric Moulds\" #FBA-EMW; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:rfa-fg:oil-spill-geometric-refractor:auto:num-10",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:rfa-fg:oil-spill-geometric-refractor:auto:num-10",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Frank Gore Jr.\" #RFA-FG; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:83:oil-spill-refractor:no-auto:num-20",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:83:oil-spill-refractor:no-auto:num-20",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Ja'Tavion Sanders\" #83; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:170:oil-spill-geometric-refractor:no-auto:num-15",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:170:oil-spill-geometric-refractor:no-auto:num-15",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jonathon Brooks\" #170; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:rfa-jbr:oil-spill-refractor:auto:num-10",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:rfa-jbr:oil-spill-refractor:auto:num-10",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jonathon Brooks\" #RFA-JBR; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:rfa-js:refractor:auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:rfa-js:refractor:auto",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Ja'Tavion Sanders\" #RFA-JS; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:12:checkerboard-refractor:no-auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:12:checkerboard-refractor:no-auto",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Mike Singletary\" #12; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:13:checkerboard-refractor:no-auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:13:checkerboard-refractor:no-auto",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Walter Payton\" #13; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:161:oil-spill-geometric-refractor:no-auto:num-15",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:161:oil-spill-geometric-refractor:no-auto:num-15",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Caleb Williams\" #161; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:161:blue-refractor:no-auto:num-150",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:161:blue-refractor:no-auto:num-150",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Caleb Williams\" #161; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:161:green-refractor:no-auto:num-35",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:161:green-refractor:no-auto:num-35",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Caleb Williams\" #161; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:298:black-geometric-refractors-15-1-breaker:no-auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:298:black-geometric-refractors-15-1-breaker:no-auto",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Lance Briggs\" #298; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:tf-3:red-refractor:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:tf-3:red-refractor:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Caleb Williams\" #TF-3; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:dyn-29:gold-refractor:no-auto:num-50",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:dyn-29:gold-refractor:no-auto:num-50",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Chad Johnson\" #DYN-29; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fa-lk:oil-spill-refractor:auto:num-10",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fa-lk:oil-spill-refractor:auto:num-10",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Leroy Kelly\" #FA-LK; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fa-jc:oil-spill-geometric-refractor:auto:num-10",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fa-jc:oil-spill-geometric-refractor:auto:num-10",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Josh Cribbs\" #FA-JC; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:75:oil-spill-geometric-refractor:no-auto:num-20",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:75:oil-spill-geometric-refractor:no-auto:num-20",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Michael Hall Jr.\" #75; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:17:black-refractor:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:17:black-refractor:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Josh Cribbs\" #17; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fg-1:gold-refractor:no-auto:num-50",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fg-1:gold-refractor:no-auto:num-50",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Troy Aikman\" #FG-1; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fg-1:green-refractor:no-auto:num-75",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fg-1:green-refractor:no-auto:num-75",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Troy Aikman\" #FG-1; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:18:black-refractor:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:18:black-refractor:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Calvin Hill\" #18; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:rfa-ae:blue-geometric-refractor:auto:num-99",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:rfa-ae:blue-geometric-refractor:auto:num-99",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Audric Estimé\" #RFA-AE; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:rfa-ae:black-geometric-refractor:auto:num-25",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:rfa-ae:black-geometric-refractor:auto:num-25",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Audric Estimé\" #RFA-AE; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fba-sa:superfractor:auto:num-1",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fba-sa:superfractor:auto:num-1",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Steve Atwater\" #FBA-SA; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fba-emc:black-geometric-refractor:auto:num-25",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fba-emc:black-geometric-refractor:auto:num-25",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Ed McCaffrey\" #FBA-EMC; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:272:blue-refractor:no-auto:num-99",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:272:blue-refractor:no-auto:num-99",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Troy Franklin\" #272; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:249:gold-geometric-refractor:no-auto:num-20",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:249:gold-geometric-refractor:no-auto:num-20",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Bo Nix\" #249; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:rfa-jsm:gold-refractor:auto:num-50",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:rfa-jsm:gold-refractor:auto:num-50",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Ennis Rakestraw Jr.\" #RFA-JSM; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:291:purple-checkerboard-refractor:no-auto:num-75",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:291:purple-checkerboard-refractor:no-auto:num-75",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Terrion Arnold\" #291; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fa-mc:gold-refractor:auto:num-50",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fa-mc:gold-refractor:auto:num-50",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Mark Chmura\" #FA-MC; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:166:checkerboard-refractor:no-auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:166:checkerboard-refractor:no-auto",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Javon Bullard\" #166; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:171:gold-refractor:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:171:gold-refractor:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"MarShawn Lloyd\" #171; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:166:purple-refractor:no-auto:num-200",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:166:purple-refractor:no-auto:num-200",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Javon Bullard\" #166; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:118:sky-blue-refractor:no-auto:num-250",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:118:sky-blue-refractor:no-auto:num-250",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Brett Favre\" #118; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fg-ec:blue-geometric-refractor:auto:num-99",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fg-ec:blue-geometric-refractor:auto:num-99",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Earl Campbell\" #FG-EC; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:119:purple-refractor:no-auto:num-200",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:119:purple-refractor:no-auto:num-200",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Earl Campbell\" #119; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:29:oil-spill-geometric-refractor:no-auto:num-20",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:29:oil-spill-geometric-refractor:no-auto:num-20",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Earl Campbell\" #29; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:66:checkerboard-refractor:no-auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:66:checkerboard-refractor:no-auto",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Kamari Lassiter\" #66; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:66:blue-geometric-refractor:no-auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:66:blue-geometric-refractor:no-auto",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Kamari Lassiter\" #66; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:84:black-geometric-refractor:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:84:black-geometric-refractor:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Cade Stover\" #84; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:122:gold-refractor:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:122:gold-refractor:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"J.J. Watt\" #122; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:208:purple-refractor:no-auto:num-125",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:208:purple-refractor:no-auto:num-125",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"CJ Stroud\" #208; destination read as vacant 2026-09-07; 2 sale(s) rest here and STAY — they are the 2025 card's"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fba-mw:oil-spill-geometric-refractor:auto:num-10",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fba-mw:oil-spill-geometric-refractor:auto:num-10",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Mario Williams\" #FBA-MW; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:p-cjs:black-geometric-refractor:auto:num-25",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:p-cjs:black-geometric-refractor:auto:num-25",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"CJ Stroud\" #P-CJS; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:dyn-10:blue-refractor:no-auto:num-99",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:dyn-10:blue-refractor:no-auto:num-99",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Adonai Mitchell\" #DYN-10; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:dyn-10:checkerboard-refractor:no-auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:dyn-10:checkerboard-refractor:no-auto",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Adonai Mitchell\" #DYN-10; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fg-27:blue-refractor:no-auto:num-99",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fg-27:blue-refractor:no-auto:num-99",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Anthony Richardson\" #FG-27; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:259:black-geometric-refractors-15-1-breaker:no-auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:259:black-geometric-refractors-15-1-breaker:no-auto",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Adonai Mitchell\" #259; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:85:oil-spill-geometric-refractor:no-auto:num-20",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:85:oil-spill-geometric-refractor:no-auto:num-20",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Adonai Mitchell\" #85; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:35:purple-checkerboard-refractor:no-auto:num-150",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:35:purple-checkerboard-refractor:no-auto:num-150",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Peyton Manning\" #35; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:125:blue-checkerboard-refractor:no-auto:num-49",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:125:blue-checkerboard-refractor:no-auto:num-49",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Fred Taylor\" #125; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:73:common-parallel:no-auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:73:common-parallel:no-auto",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Maason Smith\" #73; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fa-tb:blue-checkerboard-refractor:auto:num-99",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fa-tb:blue-checkerboard-refractor:auto:num-99",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Tony Boselli\" #FA-TB; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:37:blue-checkerboard-refractor:no-auto:num-99",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:37:blue-checkerboard-refractor:no-auto:num-99",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Keenan McCardell\" #37; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:169:red-geometric-refractor:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:169:red-geometric-refractor:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jaden Hicks\" #169; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:dyn-15:refractor:no-auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:dyn-15:refractor:no-auto",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Xavier Worthy\" #DYN-15; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:d-8:refractor:no-auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:d-8:refractor:no-auto",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Xavier Worthy\" #D-8; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:rfa-xw:blue-geometric-refractor:auto:num-99",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:rfa-xw:blue-geometric-refractor:auto:num-99",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Xavier Worthy\" #RFA-XW; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fba-jst:red-geometric-refractor:auto:num-5",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fba-jst:red-geometric-refractor:auto:num-5",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jan Stenerud\" #FBA-JST; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fba-dh:gold-geometric-refractor:auto:num-50",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fba-dh:gold-geometric-refractor:auto:num-50",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Dante Hall\" #FBA-DH; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:270:black-refractor:no-auto:num-15",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:270:black-refractor:no-auto:num-15",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Xavier Worthy\" #270; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:91:blue-geometric-refractor:no-auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:91:blue-geometric-refractor:no-auto",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Xavier Worthy\" #91; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:39:blue-checkerboard-refractor:no-auto:num-99",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:39:blue-checkerboard-refractor:no-auto:num-99",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Dwayne Bowe\" #39; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:282:oil-spill-refractor:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:282:oil-spill-refractor:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Brock Bowers\" #282; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:59:oil-spill-refractor:no-auto:num-20",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:59:oil-spill-refractor:no-auto:num-20",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Joe Alt\" #59; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:261:black-geometric-refractors-15-1-breaker:no-auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:261:black-geometric-refractors-15-1-breaker:no-auto",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Ladd McConkey\" #261; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:261:oil-spill-geometric-refractor:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:261:oil-spill-geometric-refractor:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Ladd McConkey\" #261; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:dyn-11:blue-refractor:no-auto:num-99",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:dyn-11:blue-refractor:no-auto:num-99",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Ladd McConkey\" #DYN-11; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:rfa-lm:gold-geometric-refractor:auto:num-50",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:rfa-lm:gold-geometric-refractor:auto:num-50",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Ladd McConkey\" #RFA-LM; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:rfa-br:black-refractor:auto:num-25",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:rfa-br:black-refractor:auto:num-25",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Brenden Rice\" #RFA-BR; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fg-bj:gold-refractor:auto:num-50",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fg-bj:gold-refractor:auto:num-50",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Bo Jackson\" #FG-BJ; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fa-jt:oil-spill-geometric-refractor:auto:num-10",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fa-jt:oil-spill-geometric-refractor:auto:num-10",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jason Taylor\" #FA-JT; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:296:blue-refractor:no-auto:num-99",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:296:blue-refractor:no-auto:num-99",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jaylen Wright\" #296; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:296:oil-spill-geometric-refractor:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:296:oil-spill-geometric-refractor:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jaylen Wright\" #296; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:296:black-refractor:no-auto:num-15",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:296:black-refractor:no-auto:num-15",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jaylen Wright\" #296; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:287:oil-spill-geometric-refractor:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:287:oil-spill-geometric-refractor:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Chop Robinson\" #287; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:50:common-parallel:no-auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:50:common-parallel:no-auto",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Randy Moss\" #50; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:d-19:checkerboard-refractor:no-auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:d-19:checkerboard-refractor:no-auto",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Dallas Turner\" #D-19; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:226:gold-geometric-refractor:no-auto:num-20",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:226:gold-geometric-refractor:no-auto:num-20",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Daunte Culpepper\" #226; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:226:red-refractor:no-auto:num-3",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:226:red-refractor:no-auto:num-3",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Daunte Culpepper\" #226; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:131:checkerboard-refractor:no-auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:131:checkerboard-refractor:no-auto",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Adrian Peterson\" #131; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:131:red-refractor:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:131:red-refractor:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Adrian Peterson\" #131; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:133:purple-checkerboard-refractor:no-auto:num-99",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:133:purple-checkerboard-refractor:no-auto:num-99",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Danny Amendola\" #133; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:d-23:green-refractor:no-auto:num-75",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:d-23:green-refractor:no-auto:num-75",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Ja'Lynn Polk\" #D-23; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fba-jh:oil-spill-refractor:auto:num-10",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fba-jh:oil-spill-refractor:auto:num-10",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"John Hannah\" #FBA-JH; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fg-da:black-geometric-refractor:auto:num-25",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fg-da:black-geometric-refractor:auto:num-25",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Danny Amendola\" #FG-DA; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fa-lb:red-refractor:auto:num-5",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fa-lb:red-refractor:auto:num-5",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"LeGarrette Blount\" #FA-LB; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:228:green-refractor:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:228:green-refractor:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Drew Bledsoe\" #228; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:228:black-refractor:no-auto:num-15",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:228:black-refractor:no-auto:num-15",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Drew Bledsoe\" #228; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:135:red-geometric-refractor:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:135:red-geometric-refractor:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Tom Brady\" #135; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:134:green-refractor:no-auto:num-35",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:134:green-refractor:no-auto:num-35",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Rob Gronkowski\" #134; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:d-13:sky-blue-refractor:no-auto:num-150",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:d-13:sky-blue-refractor:no-auto:num-150",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Spencer Rattler\" #D-13; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:d-13:blue-refractor:no-auto:num-99",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:d-13:blue-refractor:no-auto:num-99",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Spencer Rattler\" #D-13; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:232:black-geometric-refractors-15-1-breaker:no-auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:232:black-geometric-refractors-15-1-breaker:no-auto",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Eli Manning\" #232; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fba-js:black-refractor:auto:num-25",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fba-js:black-refractor:auto:num-25",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jason Sehorn\" #FBA-JS; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:140:gold-geometric-refractor:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:140:gold-geometric-refractor:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Santana Moss\" #140; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:rfa-mc:black-refractor:auto:num-25",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:rfa-mc:black-refractor:auto:num-25",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Malachi Corley\" #RFA-MC; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:53:black-geometric-refractor:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:53:black-geometric-refractor:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Quinyon Mitchell\" #53; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:153:oil-spill-refractor:no-auto:num-15",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:153:oil-spill-refractor:no-auto:num-15",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Quinyon Mitchell\" #153; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:235:black-refractor:no-auto:num-15",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:235:black-refractor:no-auto:num-15",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Ron Jaworski\" #235; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:292:oil-spill-geometric-refractor:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:292:oil-spill-geometric-refractor:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Quinyon Mitchell\" #292; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:292:blue-refractor:no-auto:num-99",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:292:blue-refractor:no-auto:num-99",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Quinyon Mitchell\" #292; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:rfa-ws:gold-geometric-refractor:auto:num-50",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:rfa-ws:gold-geometric-refractor:auto:num-50",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Will Shipley\" #RFA-WS; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:d-27:green-refractor:no-auto:num-75",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:d-27:green-refractor:no-auto:num-75",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Quinyon Mitchell\" #D-27; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:rfa-jw:black-refractor:auto:num-25",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:rfa-jw:black-refractor:auto:num-25",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Johnny Wilson\" #RFA-JW; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fg-16:black-refractor:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fg-16:black-refractor:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Terry Bradshaw\" #FG-16; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fg-jh:blue-geometric-refractor:auto:num-99",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fg-jh:blue-geometric-refractor:auto:num-99",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"James Harrison\" #FG-JH; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:236:purple-checkerboard-refractor:no-auto:num-75",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:236:purple-checkerboard-refractor:no-auto:num-75",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Charlie Batch\" #236; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:236:red-refractor:no-auto:num-3",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:236:red-refractor:no-auto:num-3",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Charlie Batch\" #236; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:238:green-refractor:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:238:green-refractor:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Dan Fouts\" #238; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:279:green-refractor:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:279:green-refractor:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jacob Cowing\" #279; destination read as vacant 2026-09-07; 1 sale(s) rest here and STAY — they are the 2025 card's"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:279:gold-refractor:no-auto:num-20",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:279:gold-refractor:no-auto:num-20",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jacob Cowing\" #279; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fg-jr:gold-geometric-refractor:auto:num-50",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fg-jr:gold-geometric-refractor:auto:num-50",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jerry Rice\" #FG-JR; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fg-sy:red-geometric-refractor:auto:num-5",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fg-sy:red-geometric-refractor:auto:num-5",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Steve Young\" #FG-SY; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fba-jr:red-geometric-refractor:auto:num-5",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fba-jr:red-geometric-refractor:auto:num-5",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jerry Rice\" #FBA-JR; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fg-15:green-refractor:no-auto:num-75",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fg-15:green-refractor:no-auto:num-75",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Matt Hasselbeck\" #FG-15; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fg-15:purple-refractor:no-auto:num-125",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fg-15:purple-refractor:no-auto:num-125",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Matt Hasselbeck\" #FG-15; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:41:common-parallel:no-auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:41:common-parallel:no-auto",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Chris Long\" #41; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:96:oil-spill-geometric-refractor:no-auto:num-20",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:96:oil-spill-geometric-refractor:no-auto:num-20",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jalen McMillan\" #96; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:179:gold-refractor:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:179:gold-refractor:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Bucky Irving\" #179; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:242:red-geometric-refractor:no-auto:num-3",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:242:red-geometric-refractor:no-auto:num-3",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Brad Johnson\" #242; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:243:purple-checkerboard-refractor:no-auto:num-75",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:243:purple-checkerboard-refractor:no-auto:num-75",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Doug Williams\" #243; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fa-bj:blue-checkerboard-refractor:auto:num-99",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fa-bj:blue-checkerboard-refractor:auto:num-99",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Brad Johnson\" #FA-BJ; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:tf-4:sky-blue-refractor:no-auto:num-150",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:tf-4:sky-blue-refractor:no-auto:num-150",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Tom Brady\" #TF-4; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fg-cjo:oil-spill-refractor:auto:num-10",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fg-cjo:oil-spill-refractor:auto:num-10",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Chris Johnson\" #FG-CJO; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fg-dw:red-refractor:auto:num-5",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fg-dw:red-refractor:auto:num-5",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Delanie Walker\" #FG-DW; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fg-26:gold-refractor:no-auto:num-50",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fg-26:gold-refractor:no-auto:num-50",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Will Levis\" #FG-26; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:155:checkerboard-refractor:no-auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:155:checkerboard-refractor:no-auto",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jer'Zhan Newton\" #155; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:d-1:sky-blue-refractor:no-auto:num-150",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:d-1:sky-blue-refractor:no-auto:num-150",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jayden Daniels\" #D-1; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:rfa-sh:refractor:auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:rfa-sh:refractor:auto",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Sam Hartman\" #RFA-SH; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:rfa-sh:blue-geometric-refractor:auto:num-99",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:rfa-sh:blue-geometric-refractor:auto:num-99",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Sam Hartman\" #RFA-SH; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:sar-5:base:auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:sar-5:base:auto",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"CJ Stroud\" #SAR-5; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:cs-1:base:auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:cs-1:base:auto",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"CJ Stroud\" #CS-1; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:cs-10:base:auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:cs-10:base:auto",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"CJ Stroud\" #CS-10; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fg-rg:base:auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fg-rg:base:auto",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Rob Gronkowski\" #FG-RG; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:rfa-mn:base:auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:rfa-mn:base:auto",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Malik Nabers\" #RFA-MN; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:rfa-m:base:auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:rfa-m:base:auto",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Bucky Irving\" #RFA-M\"; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:dyn-9:green-refractor:no-auto:num-75",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:dyn-9:green-refractor:no-auto:num-75",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Trey Benson\" #DYN-9; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:d-14:gold-refractor:no-auto:num-50",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:d-14:gold-refractor:no-auto:num-50",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Trey Benson\" #D-14; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:myst-1:gold-refractor:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:myst-1:gold-refractor:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Kurt Warner\" #MYST-1; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:tf-6:red-refractor:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:tf-6:red-refractor:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Marvin Harrison Jr.\" #TF-6; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:176:blue-refractor:no-auto:num-150",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:176:blue-refractor:no-auto:num-150",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Trey Benson\" #176; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:189:checkerboard-refractor:no-auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:189:checkerboard-refractor:no-auto",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Marvin Harrison Jr.\" #189; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:189:oil-spill-geometric-refractor:no-auto:num-15",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:189:oil-spill-geometric-refractor:no-auto:num-15",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Marvin Harrison Jr.\" #189; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:189:gold-geometric-refractor:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:189:gold-geometric-refractor:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Marvin Harrison Jr.\" #189; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:268:oil-spill-geometric-refractor:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:268:oil-spill-geometric-refractor:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Marvin Harrison Jr.\" #268; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:p-mh:gold-geometric-refractor:auto:num-50",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:p-mh:gold-geometric-refractor:auto:num-50",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Marvin Harrison Jr.\" #P-MH; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:202:black-refractor:no-auto:num-15",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:202:black-refractor:no-auto:num-15",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Michael Vick\" #202; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:4:black-refractor:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:4:black-refractor:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Lenny Moore\" #4; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:rfa-nw:superfractor:auto:num-1",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:rfa-nw:superfractor:auto:num-1",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Nate Wiggins\" #RFA-NW; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fa-ts:superfractor:auto:num-1",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fa-ts:superfractor:auto:num-1",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Troy Smith\" #FA-TS; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fa-jo:superfractor:auto:num-1",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fa-jo:superfractor:auto:num-1",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jonathan Ogden\" #FA-JO; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:290:checkerboard-refractor:no-auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:290:checkerboard-refractor:no-auto",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Nate Wiggins\" #290; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:6:oil-spill-refractor:no-auto:num-20",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:6:oil-spill-refractor:no-auto:num-20",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Todd Heap\" #6; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:105:red-geometric-refractor:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:105:red-geometric-refractor:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jim Kelly\" #105; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:205:black-geometric-refractors-15-1-breaker:no-auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:205:black-geometric-refractors-15-1-breaker:no-auto",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jim Kelly\" #205; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fa-ar:oil-spill-geometric-refractor:auto:num-10",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fa-ar:oil-spill-geometric-refractor:auto:num-10",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Andre Reed\" #FA-AR; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:10:checkerboard-refractor:no-auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:10:checkerboard-refractor:no-auto",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Luke Kuechly\" #10; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:70:common-parallel:no-auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:70:common-parallel:no-auto",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jonathon Brooks\" #70; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:72:checkerboard-refractor:no-auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:72:checkerboard-refractor:no-auto",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Dillon Johnson\" #72; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:106:red-refractor:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:106:red-refractor:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Luke Kuechly\" #106; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:170:purple-checkerboard-refractor:no-auto:num-99",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:170:purple-checkerboard-refractor:no-auto:num-99",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jonathon Brooks\" #170; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:260:oil-spill-geometric-refractor:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:260:oil-spill-geometric-refractor:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Xavier Legette\" #260; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:260:red-geometric-refractor:no-auto:num-3",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:260:red-geometric-refractor:no-auto:num-3",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Xavier Legette\" #260; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:289:checkerboard-refractor:no-auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:289:checkerboard-refractor:no-auto",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Ja'Tavion Sanders\" #289; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fg-mmu:red-geometric-refractor:auto:num-5",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fg-mmu:red-geometric-refractor:auto:num-5",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Muhsin Muhammad\" #FG-MMU; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:rfa-dj:red-geometric-refractor:auto:num-5",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:rfa-dj:red-geometric-refractor:auto:num-5",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Dillon Johnson\" #RFA-DJ; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:rfa-jbr:red-geometric-refractor:auto:num-5",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:rfa-jbr:red-geometric-refractor:auto:num-5",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jonathon Brooks\" #RFA-JBR; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:d-16:red-refractor:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:d-16:red-refractor:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jonathon Brooks\" #D-16; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:d-22:refractor:no-auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:d-22:refractor:no-auto",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Ja'Tavion Sanders\" #D-22; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:dyn-12:red-refractor:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:dyn-12:red-refractor:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Xavier Legette\" #DYN-12; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:107:blue-checkerboard-refractor:no-auto:num-49",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:107:blue-checkerboard-refractor:no-auto:num-49",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Charles Tillman\" #107; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:108:red-refractor:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:108:red-refractor:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Mike Singletary\" #108; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:247:checkerboard-refractor:no-auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:247:checkerboard-refractor:no-auto",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Caleb Williams\" #247; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fa-wp:refractor:auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fa-wp:refractor:auto",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"William Perry\" #FA-WP; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fa-wp:black-geometric-refractor:auto:num-25",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fa-wp:black-geometric-refractor:auto:num-25",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"William Perry\" #FA-WP; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fba-jco:black-refractor:auto:num-25",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fba-jco:black-refractor:auto:num-25",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jimbo Covert\" #FBA-JCO; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:myst-16:red-refractor:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:myst-16:red-refractor:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Caleb Williams\" #MYST-16; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:rfa-jb:black-refractor:auto:num-25",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:rfa-jb:black-refractor:auto:num-25",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jermaine Burton\" #RFA-JB; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:195:green-refractor:no-auto:num-35",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:195:green-refractor:no-auto:num-35",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jermaine Burton\" #195; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:95:blue-geometric-refractor:no-auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:95:blue-geometric-refractor:no-auto",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jermaine Burton\" #95; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fba-on:blue-geometric-refractor:auto:num-99",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fba-on:blue-geometric-refractor:auto:num-99",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Ozzie Newsome\" #FBA-ON; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:dyn-25:refractor:no-auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:dyn-25:refractor:no-auto",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Emmitt Smith\" #DYN-25; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fg-1:purple-refractor:no-auto:num-125",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fg-1:purple-refractor:no-auto:num-125",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Troy Aikman\" #FG-1; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fa-la:red-refractor:auto:num-5",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fa-la:red-refractor:auto:num-5",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Larry Allen\" #FA-LA; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:112:gold-geometric-refractor:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:112:gold-geometric-refractor:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Emmitt Smith\" #112; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:112:red-refractor:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:112:red-refractor:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Emmitt Smith\" #112; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:18:checkerboard-refractor:no-auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:18:checkerboard-refractor:no-auto",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Calvin Hill\" #18; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fba-tt:oil-spill-refractor:auto:num-10",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fba-tt:oil-spill-refractor:auto:num-10",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Tim Tebow\" #FBA-TT; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fba-emc:black-refractor:auto:num-25",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fba-emc:black-refractor:auto:num-25",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Ed McCaffrey\" #FBA-EMC; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:255:purple-checkerboard-refractor:no-auto:num-75",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:255:purple-checkerboard-refractor:no-auto:num-75",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jonah Elliss\" #255; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:163:oil-spill-geometric-refractor:no-auto:num-15",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:163:oil-spill-geometric-refractor:no-auto:num-15",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Bo Nix\" #163; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:115:blue-refractor:no-auto:num-150",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:115:blue-refractor:no-auto:num-150",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"John Elway\" #115; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:22:oil-spill-geometric-refractor:no-auto:num-20",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:22:oil-spill-geometric-refractor:no-auto:num-20",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"John Elway\" #22; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:dyn-30:sky-blue-refractor:no-auto:num-150",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:dyn-30:sky-blue-refractor:no-auto:num-150",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Barry Sanders\" #DYN-30; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:d-26:gold-refractor:no-auto:num-50",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:d-26:gold-refractor:no-auto:num-50",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Terrion Arnold\" #D-26; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:rfa-jsm:superfractor:auto:num-1",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:rfa-jsm:superfractor:auto:num-1",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Ennis Rakestraw Jr.\" #RFA-JSM; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:291:oil-spill-refractor:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:291:oil-spill-refractor:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Terrion Arnold\" #291; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:152:checkerboard-refractor:no-auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:152:checkerboard-refractor:no-auto",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Terrion Arnold\" #152; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:dyn-2:black-refractor:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:dyn-2:black-refractor:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Marshawn Lloyd\" #DYN-2; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fg-bf:black-geometric-refractor:auto:num-25",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fg-bf:black-geometric-refractor:auto:num-25",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Brett Favre\" #FG-BF; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:166:red-geometric-refractor:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:166:red-geometric-refractor:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Javon Bullard\" #166; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:71:oil-spill-geometric-refractor:no-auto:num-20",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:71:oil-spill-geometric-refractor:no-auto:num-20",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"MarShawn Lloyd\" #71; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:28:purple-checkerboard-refractor:no-auto:num-150",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:28:purple-checkerboard-refractor:no-auto:num-150",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Lynn Dickey\" #28; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:dyn-20:sky-blue-refractor:no-auto:num-150",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:dyn-20:sky-blue-refractor:no-auto:num-150",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Earl Campbell\" #DYN-20; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fg-ec:superfractor:auto:num-1",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fg-ec:superfractor:auto:num-1",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Earl Campbell\" #FG-EC; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:218:sky-blue-refractor:no-auto:num-150",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:218:sky-blue-refractor:no-auto:num-150",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Dan Pastorini\" #218; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:31:common-parallel:no-auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:31:common-parallel:no-auto",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Arian Foster\" #31; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:84:blue-geometric-refractor:no-auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:84:blue-geometric-refractor:no-auto",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Cade Stover\" #84; destination read as vacant 2026-09-07; 1 sale(s) rest here and STAY — they are the 2025 card's"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:122:blue-refractor:no-auto:num-150",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:122:blue-refractor:no-auto:num-150",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"J.J. Watt\" #122; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:256:gold-refractor:no-auto:num-20",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:256:gold-refractor:no-auto:num-20",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Calen Bullock\" #256; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:p-cjs:blue-geometric-refractor:auto:num-99",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:p-cjs:blue-geometric-refractor:auto:num-99",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"CJ Stroud\" #P-CJS; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:d-10:black-refractor:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:d-10:black-refractor:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Adonai Mitchell\" #D-10; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:d-10:refractor:no-auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:d-10:refractor:no-auto",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Adonai Mitchell\" #D-10; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:220:oil-spill-refractor:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:220:oil-spill-refractor:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Peyton Manning\" #220; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:220:oil-spill-geometric-refractor:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:220:oil-spill-geometric-refractor:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Peyton Manning\" #220; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fba-dcl:gold-refractor:auto:num-50",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fba-dcl:gold-refractor:auto:num-50",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Dallas Clark\" #FBA-DCL; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:33:black-refractor:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:33:black-refractor:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Dallas Clark\" #33; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:185:purple-checkerboard-refractor:no-auto:num-99",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:185:purple-checkerboard-refractor:no-auto:num-99",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Adonai Mitchell\" #185; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fba-ft:red-geometric-refractor:auto:num-5",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fba-ft:red-geometric-refractor:auto:num-5",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Fred Taylor\" #FBA-FT; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:dyn-15:purple-refractor:no-auto:num-125",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:dyn-15:purple-refractor:no-auto:num-125",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Xavier Worthy\" #DYN-15; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:d-8:red-refractor:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:d-8:red-refractor:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Xavier Worthy\" #D-8; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:rfa-xw:gold-geometric-refractor:auto:num-50",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:rfa-xw:gold-geometric-refractor:auto:num-50",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Xavier Worthy\" #RFA-XW; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:rfa-xw:superfractor:auto:num-1",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:rfa-xw:superfractor:auto:num-1",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Xavier Worthy\" #RFA-XW; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:p-xw:black-refractor:auto:num-25",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:p-xw:black-refractor:auto:num-25",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Xavier Worthy\" #P-XW; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:300:checkerboard-refractor:no-auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:300:checkerboard-refractor:no-auto",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Christian Okoye\" #300; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:126:gold-geometric-refractor:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:126:gold-geometric-refractor:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Dwayne Bowe\" #126; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:182:red-refractor:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:182:red-refractor:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Brock Bowers\" #182; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:143:green-refractor:no-auto:num-35",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:143:green-refractor:no-auto:num-35",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Howie Long\" #143; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:143:blue-checkerboard-refractor:no-auto:num-49",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:143:blue-checkerboard-refractor:no-auto:num-49",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Howie Long\" #143; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:277:blue-refractor:no-auto:num-99",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:277:blue-refractor:no-auto:num-99",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Brenden Rice\" #277; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:rfa-br:black-geometric-refractor:auto:num-25",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:rfa-br:black-geometric-refractor:auto:num-25",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Brenden Rice\" #RFA-BR; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fg-bj:oil-spill-geometric-refractor:auto:num-10",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fg-bj:oil-spill-geometric-refractor:auto:num-10",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Bo Jackson\" #FG-BJ; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fg-bj:oil-spill-refractor:auto:num-10",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fg-bj:oil-spill-refractor:auto:num-10",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Bo Jackson\" #FG-BJ; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:258:blue-refractor:no-auto:num-99",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:258:blue-refractor:no-auto:num-99",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Kamren Kinchens\" #258; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:177:blue-refractor:no-auto:num-150",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:177:blue-refractor:no-auto:num-150",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Blake Corum\" #177; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:42:oil-spill-geometric-refractor:no-auto:num-20",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:42:oil-spill-geometric-refractor:no-auto:num-20",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jim Everett\" #42; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:rfa-cr:refractor:auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:rfa-cr:refractor:auto",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Chop Robinson\" #RFA-CR; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:287:purple-checkerboard-refractor:no-auto:num-75",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:287:purple-checkerboard-refractor:no-auto:num-75",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Chop Robinson\" #287; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:265:blue-refractor:no-auto:num-99",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:265:blue-refractor:no-auto:num-99",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Malik Washington\" #265; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:225:purple-checkerboard-refractor:no-auto:num-75",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:225:purple-checkerboard-refractor:no-auto:num-75",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Pat White\" #225; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:128:red-geometric-refractor:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:128:red-geometric-refractor:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Dan Marino\" #128; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:dyn-24:purple-refractor:no-auto:num-125",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:dyn-24:purple-refractor:no-auto:num-125",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Randy Moss\" #DYN-24; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:myst-10:superfractor:no-auto:num-1",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:myst-10:superfractor:no-auto:num-1",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Tom Brady\" #MYST-10; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fg-20:sky-blue-refractor:no-auto:num-150",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fg-20:sky-blue-refractor:no-auto:num-150",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Drake Maye\" #FG-20; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fa-mv:red-refractor:auto:num-5",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fa-mv:red-refractor:auto:num-5",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Mike Vrabel\" #FA-MV; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fa-if:oil-spill-refractor:auto:num-10",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fa-if:oil-spill-refractor:auto:num-10",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Irving Fryar\" #FA-IF; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:262:checkerboard-refractor:no-auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:262:checkerboard-refractor:no-auto",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Ja'Lynn Polk\" #262; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:228:red-geometric-refractor:no-auto:num-3",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:228:red-geometric-refractor:no-auto:num-3",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Drew Bledsoe\" #228; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fg-22:black-refractor:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fg-22:black-refractor:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Spencer Rattler\" #FG-22; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:250:green-refractor:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:250:green-refractor:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Spencer Rattler\" #250; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fba-am:red-geometric-refractor:auto:num-5",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fba-am:red-geometric-refractor:auto:num-5",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Archie Manning\" #FBA-AM; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:231:oil-spill-geometric-refractor:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:231:oil-spill-geometric-refractor:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Archie Manning\" #231; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:64:blue-geometric-refractor:no-auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:64:blue-geometric-refractor:no-auto",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Spencer Rattler\" #64; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:232:black-refractor:no-auto:num-15",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:232:black-refractor:no-auto:num-15",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Eli Manning\" #232; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:233:checkerboard-refractor:no-auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:233:checkerboard-refractor:no-auto",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Phil Simms\" #233; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:269:checkerboard-refractor:no-auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:269:checkerboard-refractor:no-auto",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Malik Nabers\" #269; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fa-rh:refractor:auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fa-rh:refractor:auto",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Rodney Hampton\" #FA-RH; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fa-rh:black-geometric-refractor:auto:num-25",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fa-rh:black-geometric-refractor:auto:num-25",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Rodney Hampton\" #FA-RH; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:140:blue-checkerboard-refractor:no-auto:num-49",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:140:blue-checkerboard-refractor:no-auto:num-49",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Santana Moss\" #140; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:193:blue-checkerboard-refractor:no-auto:num-49",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:193:blue-checkerboard-refractor:no-auto:num-49",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Malachi Corley\" #193; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:294:oil-spill-refractor:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:294:oil-spill-refractor:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Cooper DeJean\" #294; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:97:oil-spill-geometric-refractor:no-auto:num-20",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:97:oil-spill-geometric-refractor:no-auto:num-20",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Johnny Wilson\" #97; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:144:blue-refractor:no-auto:num-150",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:144:blue-refractor:no-auto:num-150",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Donovan McNabb\" #144; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:153:checkerboard-refractor:no-auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:153:checkerboard-refractor:no-auto",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Quinyon Mitchell\" #153; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:154:red-refractor:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:154:red-refractor:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Cooper DeJean\" #154; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:235:gold-geometric-refractor:no-auto:num-20",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:235:gold-geometric-refractor:no-auto:num-20",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Ron Jaworski\" #235; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:292:blue-checkerboard-refractor:no-auto:num-49",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:292:blue-checkerboard-refractor:no-auto:num-49",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Quinyon Mitchell\" #292; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:rfa-qm:gold-geometric-refractor:auto:num-50",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:rfa-qm:gold-geometric-refractor:auto:num-50",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Quinyon Mitchell\" #RFA-QM; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fa-rj:blue-checkerboard-refractor:auto:num-99",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fa-rj:blue-checkerboard-refractor:auto:num-99",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Ron Jaworski\" #FA-RJ; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:194:purple-checkerboard-refractor:no-auto:num-99",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:194:purple-checkerboard-refractor:no-auto:num-99",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Roman Wilson\" #194; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:200:blue-checkerboard-refractor:no-auto:num-49",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:200:blue-checkerboard-refractor:no-auto:num-49",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jacob Cowing\" #200; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:263:black-refractor:no-auto:num-15",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:263:black-refractor:no-auto:num-15",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Ricky Pearsall\" #263; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:279:oil-spill-geometric-refractor:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:279:oil-spill-geometric-refractor:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jacob Cowing\" #279; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fg-sy:red-refractor:auto:num-5",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fg-sy:red-refractor:auto:num-5",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Steve Young\" #FG-SY; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fa-sa:red-refractor:auto:num-5",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fa-sa:red-refractor:auto:num-5",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Shaun Alexander\" #FA-SA; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fa-cl:blue-checkerboard-refractor:auto:num-99",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fa-cl:blue-checkerboard-refractor:auto:num-99",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Chris Long\" #FA-CL; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:127:oil-spill-geometric-refractor:no-auto:num-15",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:127:oil-spill-geometric-refractor:no-auto:num-15",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Chris Long\" #127; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:65:black-refractor:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:65:black-refractor:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Michael Pratt\" #65; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:278:gold-refractor:no-auto:num-20",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:278:gold-refractor:no-auto:num-20",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jalen McMillan\" #278; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fa-bj:gold-refractor:auto:num-50",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fa-bj:gold-refractor:auto:num-50",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Brad Johnson\" #FA-BJ; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fg-tb:oil-spill-refractor:auto:num-10",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fg-tb:oil-spill-refractor:auto:num-10",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Tom Brady\" #FG-TB; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:d-28:gold-refractor:no-auto:num-50",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:d-28:gold-refractor:no-auto:num-50",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Bucky Irving\" #D-28; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fg-bm:gold-geometric-refractor:auto:num-50",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fg-bm:gold-geometric-refractor:auto:num-50",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Bruce Matthews\" #FG-BM; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fg-bm:black-geometric-refractor:auto:num-25",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fg-bm:black-geometric-refractor:auto:num-25",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Bruce Matthews\" #FG-BM; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:rfa-jd:black-geometric-refractor:auto:num-25",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:rfa-jd:black-geometric-refractor:auto:num-25",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jayden Daniels\" #RFA-JD; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:246:red-geometric-refractor:no-auto:num-3",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:246:red-geometric-refractor:no-auto:num-3",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jayden Daniels\" #246; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:fa-dm:red-refractor:auto:num-5",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:fa-dm:red-refractor:auto:num-5",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Dexter Manley\" #FA-DM; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:264:green-refractor:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:264:green-refractor:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Luke McCaffrey\" #264; destination read as vacant 2026-09-07; 1 sale(s) rest here and STAY — they are the 2025 card's"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:282:sky-blue-refractor:no-auto:num-150",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:282:sky-blue-refractor:no-auto:num-150",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Brock Bowers\" #282; destination read as vacant 2026-09-07; 2 sale(s) rest here and STAY — they are the 2025 card's"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:191:sky-blue-refractor:no-auto:num-250",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:191:sky-blue-refractor:no-auto:num-250",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Xavier Worthy\" #191; destination read as vacant 2026-09-07; 2 sale(s) rest here and STAY — they are the 2025 card's"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:200:purple-refractor:no-auto:num-200",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:200:purple-refractor:no-auto:num-200",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jacob Cowing\" #200; destination read as vacant 2026-09-07; 1 sale(s) rest here and STAY — they are the 2025 card's"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:247:gold-refractor:no-auto:num-20",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:247:gold-refractor:no-auto:num-20",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Caleb Williams\" #247; destination read as vacant 2026-09-07; 1 sale(s) rest here and STAY — they are the 2025 card's"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:236:purple-refractor:no-auto:num-125",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:236:purple-refractor:no-auto:num-125",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Charlie Batch\" #236; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:124:purple-refractor:no-auto:num-200",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:124:purple-refractor:no-auto:num-200",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Peyton Manning\" #124; destination read as vacant 2026-09-07; 3 sale(s) rest here and STAY — they are the 2025 card's"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:142:sky-blue-refractor:no-auto:num-250",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:142:sky-blue-refractor:no-auto:num-250",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Bo Jackson\" #142; destination read as vacant 2026-09-07; 5 sale(s) rest here and STAY — they are the 2025 card's"
+    },
+    {
+      "id": "hiq:football:2025:topps-finest:196:gold-refractor:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-finest:196:gold-refractor:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2024 Topps Finest Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jalen McMillan\" #196; destination read as vacant 2026-09-07; 1 sale(s) rest here and STAY — they are the 2025 card's"
+    }
+  ]
+}

@@ -1,0 +1,1040 @@
+{
+  "generatedAt": "2026-09-07T02:00:00Z",
+  "forLane": "relocate-catalog-rows-by-list",
+  "reportOnlyUntil": "Drew's review — NO APPLY IS AUTHORIZED BY THIS PR. This list DELETES catalog rows.",
+  "keepSales": true,
+  "finding": "#1925 H1. 2804 card_catalog rows from hobbymonitor-2026-09-04 under basketball/panini-silhouette carry year 2025 while their own setName states 2024. The census compared 5,381 card numbers across all 28 products: 5,351 agree with the year-N checklist, 444 agree with year N+1, and ZERO agree with N+1 but not N — so the setName is right and the year field is wrong. This file is part 03 of 3 for this product: 0 retire, 145 reslug.",
+  "rulings": [
+    "THE CHECKLIST IS THE AUTHORITY AND THE setName IS RIGHT. Every number-to-player comparison in #1925 resolves to year N. A row is retired only where the year-N address is already held by the SAME player from a CHECKLIST source (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT); a twin from `ingest-auto-seed` or `bccp` earns no delete and is excluded instead.",
+    "THE SALES DO NOT MOVE — `keepSales: true`. 7,905 sales rest on these rows' slugs and their titles are 7,901-to-0 the year-N+1 product: they belong to the card that STAYS, not the one that moves. moveCatalogRow re-points a row's own sales by default, which here would carry genuine year-N+1 sales back to year N — the exact mispricing this repair exists to end. Under the flag the lane hands moveCatalogRow no salesContainer, so hobbyiqCardId and cardId are untouched and the rematch re-derives them against the genuine year-N+1 identity. Measured: 7,776 of the 7,905 have a genuine year-N+1 row at their card number to land on; 129 do not and need a checklist ingest first.",
+    "RETIRE IS A HARD DELETE, AND IT IS ORDERED FIRST. card_catalog has no field that stops a row resolving, so a retire deletes the row and its graded children, and leaves its sales UNPLACED. Retires sort before reslugs in every file, and the files sort in the order they must run.",
+    "AN OCCUPIED DESTINATION IS REPORTED, NEVER ROUTED AROUND. 5,899 rows whose year-N destination names a DIFFERENT player, and 712 whose destination is an UNNAMED bccp row, are in docs/reports/2026-09-07-hobbymonitor-year-excluded.md and in no list."
+  ],
+  "census": {
+    "product": "basketball/panini-silhouette",
+    "storedYear": 2025,
+    "trueYear": 2024,
+    "destinationSetKey": "panini-silhouette",
+    "rowsInProduct": 2804,
+    "retireInThisFile": 0,
+    "reslugInThisFile": 145,
+    "salesOnEntriesInThisFile": 0
+  },
+  "entries": [
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:9:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:9:base:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Johnny Furphy\" #9; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:28:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:28:base:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Enrique Freeman\" #28; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:61:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:61:base:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Miles McBride\" #61; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:59:holo-platinum:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:59:holo-platinum:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Clint Capela\" #59; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:41:holo-silver-25-or-15:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:41:holo-silver-25-or-15:no-auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jalen Johnson\" #41; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:32:holo-gold-10-or-6:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:32:holo-gold-10-or-6:no-auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Trae Young\" #32; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:4:holo-gold-10-or-3:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:4:holo-gold-10-or-3:no-auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Zaccharie Risacher\" #4; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:82:holo-gold-10-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:82:holo-gold-10-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Marcus Smart\" #82; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:20:holo-silver-25-or-15:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:20:holo-silver-25-or-15:no-auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Derrick White\" #20; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:20:holo-gold-10-or-5:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:20:holo-gold-10-or-5:no-auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Derrick White\" #20; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:10:holo-gold-10-or-5:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:10:holo-gold-10-or-5:no-auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"James Harden\" #10; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:15:holo-gold-10-or-5:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:15:holo-gold-10-or-5:no-auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"LaMelo Ball\" #15; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:49:fotl-red-7-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:49:fotl-red-7-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"PJ Hall\" #49; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:34:holo-silver-25-or-15:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:34:holo-silver-25-or-15:no-auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Michael Porter Jr.\" #34; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:3:ticket-stub:no-auto:num-44",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:3:ticket-stub:no-auto:num-44",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jason Richardson\" #3; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:74:holo-silver:auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:74:holo-silver:auto:num-25",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Myles Turner\" #74; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:42:holo-gold-10-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:42:holo-gold-10-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Zach Edey\" #42; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:11:championship-ticket:no-auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:11:championship-ticket:no-auto:num-1",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Patrick Ewing\" #11; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:77:holo-gold-10-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:77:holo-gold-10-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jalen Suggs\" #77; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:48:holo-gold-10-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:48:holo-gold-10-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Judah Mintz\" #48; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:40:fotl-red-7-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:40:fotl-red-7-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jared McCain\" #40; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:64:holo-gold-10-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:64:holo-gold-10-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Bradley Beal\" #64; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:39:fotl-red-7-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:39:fotl-red-7-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Donovan Clingan\" #39; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:84:fotl-red-7-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:84:fotl-red-7-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Keegan Murray\" #84; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:84:holo-gold-10-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:84:holo-gold-10-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Keegan Murray\" #84; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:98:fotl-red-7-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:98:fotl-red-7-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jeremy Sochan\" #98; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:18:ticket-stub:no-auto:num-44",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:18:ticket-stub:no-auto:num-44",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Gary Payton\" #18; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:19:fotl-red-7-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:19:fotl-red-7-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Ja'Kobe Walter\" #19; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:18:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:18:base:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Nikola Durisic\" #18; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:48:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:48:base:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Judah Mintz\" #48; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:82:holo-silver:auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:82:holo-silver:auto:num-25",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Marcus Smart\" #82; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:57:holo-gold-10-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:57:holo-gold-10-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Stephen Curry\" #57; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:67:holo-gold-10-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:67:holo-gold-10-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Obi Toppin\" #67; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:29:cracked-ice-ticket:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:29:cracked-ice-ticket:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Austin Reaves\" #29; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:7:the-finals-ticket:no-auto:num-49",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:7:the-finals-ticket:no-auto:num-49",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jerry West\" #7; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:25:holo-gold-10-or-6:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:25:holo-gold-10-or-6:no-auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Andrew Wiggins\" #25; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:67:holo-platinum:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:67:holo-platinum:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Evan Fournier\" #67; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:26:holo-gold-10-or-6:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:26:holo-gold-10-or-6:no-auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Immanuel Quickley\" #26; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:18:holo-silver-25-or-15:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:18:holo-silver-25-or-15:no-auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Paul George\" #18; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:83:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:83:base:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Kristaps Porzingis\" #83; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:42:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:42:base:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Zach Edey\" #42; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:24:ticket-stub:no-auto:num-44",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:24:ticket-stub:no-auto:num-44",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Lonzo Ball\" #24; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:68:fotl-black:auto:num-3",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:68:fotl-black:auto:num-3",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Evan Mobley\" #68; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:68:fotl-red-7-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:68:fotl-red-7-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Evan Mobley\" #68; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:25:holo-gold-10-or-5:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:25:holo-gold-10-or-5:no-auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jamal Murray\" #25; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:65:fotl-red-7-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:65:fotl-red-7-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jaden Ivey\" #65; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:46:holo-gold-10-or-5:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:46:holo-gold-10-or-5:no-auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jalen Green\" #46; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:66:holo-silver:auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:66:holo-silver:auto:num-25",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"GG Jackson II\" #66; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:51:fotl-black:auto:num-3",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:51:fotl-black:auto:num-3",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Keshad Johnson\" #51; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:95:holo-silver:auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:95:holo-silver:auto:num-25",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Dyson Daniels\" #95; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:11:ticket-stub:no-auto:num-44",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:11:ticket-stub:no-auto:num-44",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Patrick Ewing\" #11; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:97:fotl-red-7-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:97:fotl-red-7-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Franz Wagner\" #97; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:96:holo-silver:auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:96:holo-silver:auto:num-25",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Anfernee Simons\" #96; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:98:fotl-black:auto:num-3",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:98:fotl-black:auto:num-3",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jeremy Sochan\" #98; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:54:holo-gold-10-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:54:holo-gold-10-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jamison Battle\" #54; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:32:fotl-red-7-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:32:fotl-red-7-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jonathan Mogbo\" #32; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:73:holo-gold-10-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:73:holo-gold-10-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Keyonte George\" #73; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:12:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:12:base:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"KJ Simpson Jr.\" #12; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:78:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:78:base:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Zach LaVine\" #78; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:56:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:56:base:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Dereck Lively II\" #56; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:66:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:66:base:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"GG Jackson II\" #66; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:9:championship-ticket:no-auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:9:championship-ticket:no-auto:num-1",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Isaiah Thomas\" #9; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:31:holo-gold-10-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:31:holo-gold-10-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Melvin Ajinca\" #31; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:28:holo-gold-10-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:28:holo-gold-10-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Enrique Freeman\" #28; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:32:holo-gold-10-or-5:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:32:holo-gold-10-or-5:no-auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Bennedict Mathurin\" #32; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:30:championship-ticket:no-auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:30:championship-ticket:no-auto:num-1",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Kareem Abdul-Jabbar\" #30; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:10:fotl-red-7-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:10:fotl-red-7-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Kevin McCullar Jr.\" #10; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:26:holo-silver-25-or-15:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:26:holo-silver-25-or-15:no-auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Immanuel Quickley\" #26; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:49:holo-gold-10-or-5:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:49:holo-gold-10-or-5:no-auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jalen Williams\" #49; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:24:holo-gold-10-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:24:holo-gold-10-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Harrison Ingram\" #24; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:26:fotl-red-7-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:26:fotl-red-7-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Kyshawn George\" #26; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:38:holo-gold-10-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:38:holo-gold-10-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Matas Buzelis\" #38; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:23:ticket-stub:no-auto:num-44",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:23:ticket-stub:no-auto:num-44",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Dereck Lively II\" #23; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:69:holo-gold-10-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:69:holo-gold-10-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Michael Porter Jr.\" #69; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:62:fotl-red-7-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:62:fotl-red-7-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Christian Braun\" #62; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:50:holo-gold-10-or-5:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:50:holo-gold-10-or-5:no-auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jonathan Kuminga\" #50; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:15:fotl-red-7-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:15:fotl-red-7-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Cam Christie\" #15; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:92:fotl-black:auto:num-3",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:92:fotl-black:auto:num-3",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Ja Morant\" #92; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:5:the-finals-ticket:no-auto:num-49",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:5:the-finals-ticket:no-auto:num-49",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Ja Morant\" #5; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:5:fotl-red-7-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:5:fotl-red-7-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Pelle Larsson\" #5; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:2:holo-gold-10-or-3:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:2:holo-gold-10-or-3:no-auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Kyrie Irving\" #2; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:95:fotl-red-7-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:95:fotl-red-7-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Dyson Daniels\" #95; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:93:fotl-red-7-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:93:fotl-red-7-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Zion Williamson\" #93; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:10:championship-ticket:no-auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:10:championship-ticket:no-auto:num-1",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jeremy Lin\" #10; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:22:the-finals-ticket:no-auto:num-49",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:22:the-finals-ticket:no-auto:num-49",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"LaMarcus Aldridge\" #22; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:17:holo-gold-10-or-5:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:17:holo-gold-10-or-5:no-auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Domantas Sabonis\" #17; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:4:championship-ticket:no-auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:4:championship-ticket:no-auto:num-1",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Shawn Kemp\" #4; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:17:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:17:base:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"DaRon Holmes II\" #17; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:27:the-finals-ticket:no-auto:num-49",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:27:the-finals-ticket:no-auto:num-49",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Larry Bird\" #27; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:13:the-finals-ticket:no-auto:num-49",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:13:the-finals-ticket:no-auto:num-49",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Amen Thompson\" #13; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:79:fotl-red-7-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:79:fotl-red-7-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Alperen Sengun\" #79; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:67:holo-platinum:auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:67:holo-platinum:auto:num-1",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Obi Toppin\" #67; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:66:holo-platinum:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:66:holo-platinum:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Kawhi Leonard\" #66; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:53:fotl-black:auto:num-3",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:53:fotl-black:auto:num-3",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Armando Bacot\" #53; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:6:championship-ticket:no-auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:6:championship-ticket:no-auto:num-1",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Damian Lillard\" #6; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:93:holo-platinum:auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:93:holo-platinum:auto:num-1",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Zion Williamson\" #93; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:71:fotl-black:auto:num-3",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:71:fotl-black:auto:num-3",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jalen Brunson\" #71; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:39:holo-gold-10-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:39:holo-gold-10-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Donovan Clingan\" #39; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:75:fotl-black:auto:num-3",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:75:fotl-black:auto:num-3",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Devin Vassell\" #75; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:23:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:23:base:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Tidjane Salaun\" #23; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:45:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:45:base:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Yuki Kawamura\" #45; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:52:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:52:base:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jalen Bridges\" #52; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:2:ticket-stub:no-auto:num-44",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:2:ticket-stub:no-auto:num-44",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Dominique Wilkins\" #2; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:9:the-finals-ticket:no-auto:num-49",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:9:the-finals-ticket:no-auto:num-49",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Isaiah Thomas\" #9; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:2:holo-gold-10-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:2:holo-gold-10-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Anton Watson\" #2; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:38:holo-gold-10-or-5:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:38:holo-gold-10-or-5:no-auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Coby White\" #38; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:56:fotl-red-7-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:56:fotl-red-7-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Dereck Lively II\" #56; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:49:fotl-black:auto:num-3",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:49:fotl-black:auto:num-3",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"PJ Hall\" #49; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:36:holo-gold-10-or-5:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:36:holo-gold-10-or-5:no-auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Myles Turner\" #36; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:23:holo-silver-25-or-15:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:23:holo-silver-25-or-15:no-auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Tyler Herro\" #23; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:95:holo-gold-10-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:95:holo-gold-10-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Dyson Daniels\" #95; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:80:holo-platinum:auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:80:holo-platinum:auto:num-1",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"CJ McCollum\" #80; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:96:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:96:base:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Anfernee Simons\" #96; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:32:holo-silver-25-or-15:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:32:holo-silver-25-or-15:no-auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Trae Young\" #32; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:83:holo-silver:auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:83:holo-silver:auto:num-25",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Kristaps Porzingis\" #83; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:7:holo-gold-10-or-5:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:7:holo-gold-10-or-5:no-auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jaylen Brown\" #7; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:16:ticket-stub:no-auto:num-44",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:16:ticket-stub:no-auto:num-44",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"LaMelo Ball\" #16; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:21:holo-silver-25-or-15:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:21:holo-silver-25-or-15:no-auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Luka Doncic\" #21; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:69:fotl-black:auto:num-3",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:69:fotl-black:auto:num-3",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Michael Porter Jr.\" #69; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:21:holo-gold-10-or-6:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:21:holo-gold-10-or-6:no-auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jeremy Lin\" #21; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:29:the-finals-ticket:no-auto:num-49",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:29:the-finals-ticket:no-auto:num-49",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Austin Reaves\" #29; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:66:fotl-red-7-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:66:fotl-red-7-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"GG Jackson II\" #66; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:45:fotl-black:auto:num-3",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:45:fotl-black:auto:num-3",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Yuki Kawamura\" #45; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:35:holo-gold-10-or-6:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:35:holo-gold-10-or-6:no-auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Bam Adebayo\" #35; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:80:holo-silver:auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:80:holo-silver:auto:num-25",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"CJ McCollum\" #80; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:18:holo-gold-10-or-5:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:18:holo-gold-10-or-5:no-auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Paul George\" #18; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:37:holo-gold-10-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:37:holo-gold-10-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Bub Carrington\" #37; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:30:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:30:base:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Matas Buzelis\" #30; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:67:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:67:base:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Obi Toppin\" #67; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:22:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:22:base:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Yves Missi\" #22; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:1:championship-ticket:no-auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:1:championship-ticket:no-auto:num-1",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Trae Young\" #1; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:27:ticket-stub:no-auto:num-44",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:27:ticket-stub:no-auto:num-44",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Larry Bird\" #27; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:24:holo-gold-10-or-5:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:24:holo-gold-10-or-5:no-auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Lauri Markkanen\" #24; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:56:holo-gold-10-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:56:holo-gold-10-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Dereck Lively II\" #56; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:56:holo-silver:auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:56:holo-silver:auto:num-25",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Dereck Lively II\" #56; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:69:holo-silver:auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:69:holo-silver:auto:num-25",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Michael Porter Jr.\" #69; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:69:fotl-red-7-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:69:fotl-red-7-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Michael Porter Jr.\" #69; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:57:fotl-red-7-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:57:fotl-red-7-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Stephen Curry\" #57; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:17:ticket-stub:no-auto:num-44",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:17:ticket-stub:no-auto:num-44",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Alperen Sengun\" #17; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:19:holo-silver-25-or-15:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:19:holo-silver-25-or-15:no-auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Tyrese Haliburton\" #19; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:74:fotl-black:auto:num-3",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:74:fotl-black:auto:num-3",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Myles Turner\" #74; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:88:fotl-black:auto:num-3",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:88:fotl-black:auto:num-3",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Norman Powell\" #88; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:21:championship-ticket:no-auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:21:championship-ticket:no-auto:num-1",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Paolo Banchero\" #21; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:6:cracked-ice-25-or-10:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:6:cracked-ice-25-or-10:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Tracy McGrady\" #6; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-silhouette:39:holo-gold-10-or-5:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-silhouette:39:holo-gold-10-or-5:no-auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Silhouette Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Deandre Ayton\" #39; destination read as vacant 2026-09-07"
+    }
+  ]
+}

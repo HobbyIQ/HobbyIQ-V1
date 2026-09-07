@@ -1,0 +1,1632 @@
+{
+  "generatedAt": "2026-09-07T02:00:00Z",
+  "forLane": "relocate-catalog-rows-by-list",
+  "reportOnlyUntil": "Drew's review — NO APPLY IS AUTHORIZED BY THIS PR. This list DELETES catalog rows.",
+  "keepSales": true,
+  "finding": "#1925 H1. 1626 card_catalog rows from hobbymonitor-2026-09-04 under basketball/panini-origins carry year 2025 while their own setName states 2024. The census compared 5,381 card numbers across all 28 products: 5,351 agree with the year-N checklist, 444 agree with year N+1, and ZERO agree with N+1 but not N — so the setName is right and the year field is wrong. This file is part 02 of 2 for this product: 52 retire, 185 reslug.",
+  "rulings": [
+    "THE CHECKLIST IS THE AUTHORITY AND THE setName IS RIGHT. Every number-to-player comparison in #1925 resolves to year N. A row is retired only where the year-N address is already held by the SAME player from a CHECKLIST source (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT); a twin from `ingest-auto-seed` or `bccp` earns no delete and is excluded instead.",
+    "THE SALES DO NOT MOVE — `keepSales: true`. 7,905 sales rest on these rows' slugs and their titles are 7,901-to-0 the year-N+1 product: they belong to the card that STAYS, not the one that moves. moveCatalogRow re-points a row's own sales by default, which here would carry genuine year-N+1 sales back to year N — the exact mispricing this repair exists to end. Under the flag the lane hands moveCatalogRow no salesContainer, so hobbyiqCardId and cardId are untouched and the rematch re-derives them against the genuine year-N+1 identity. Measured: 7,776 of the 7,905 have a genuine year-N+1 row at their card number to land on; 129 do not and need a checklist ingest first.",
+    "RETIRE IS A HARD DELETE, AND IT IS ORDERED FIRST. card_catalog has no field that stops a row resolving, so a retire deletes the row and its graded children, and leaves its sales UNPLACED. Retires sort before reslugs in every file, and the files sort in the order they must run.",
+    "AN OCCUPIED DESTINATION IS REPORTED, NEVER ROUTED AROUND. 5,899 rows whose year-N destination names a DIFFERENT player, and 712 whose destination is an UNNAMED bccp row, are in docs/reports/2026-09-07-hobbymonitor-year-excluded.md and in no list."
+  ],
+  "census": {
+    "product": "basketball/panini-origins",
+    "storedYear": 2025,
+    "trueYear": 2024,
+    "destinationSetKey": "panini-origins",
+    "rowsInProduct": 1626,
+    "retireInThisFile": 52,
+    "reslugInThisFile": 185,
+    "salesOnEntriesInThisFile": 0
+  },
+  "entries": [
+    {
+      "id": "hiq:basketball:2025:panini-origins:36:swirl-fotl:auto:num-3",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:panini-origins:36:swirl-fotl:auto:num-3 and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:panini-origins:36:swirl-fotl:auto:num-3 source=checklistcenter-2026-09-06, same player \"Shawn Kemp\" #36; setName \"2024/25 Panini Origins Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:27:blue:auto:num-49",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:panini-origins:27:blue:auto:num-49 and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:panini-origins:27:blue:auto:num-49 source=checklistcenter-2026-09-06, same player \"Jonathan Mogbo\" #27; setName \"2024/25 Panini Origins Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:39:green:auto:num-5",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:panini-origins:39:green:auto:num-5 and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:panini-origins:39:green:auto:num-5 source=checklistcenter-2026-09-06, same player \"Jonathan Mogbo\" #39; setName \"2024/25 Panini Origins Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:33:basketballs:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:panini-origins:33:basketballs:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:panini-origins:33:basketballs:no-auto source=checklistinsider-2026-08-27, same player \"Keyonte George\" #33; setName \"2024/25 Panini Origins Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:79:pink:no-auto:num-60",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:panini-origins:79:pink:no-auto:num-60 and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:panini-origins:79:pink:no-auto:num-60 source=checklistinsider-2026-08-27, same player \"Cody Williams\" #79; setName \"2024/25 Panini Origins Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:2:pink:auto:num-15",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:panini-origins:2:pink:auto:num-15 and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:panini-origins:2:pink:auto:num-15 source=checklistcenter-2026-09-06, same player \"Trae Young\" #2; setName \"2024/25 Panini Origins Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:13:blue:auto:num-49",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:panini-origins:13:blue:auto:num-49 and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:panini-origins:13:blue:auto:num-49 source=checklistcenter-2026-09-06, same player \"KJ Simpson Jr.\" #13; setName \"2024/25 Panini Origins Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:23:green:auto:num-5",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:panini-origins:23:green:auto:num-5 and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:panini-origins:23:green:auto:num-5 source=checklistcenter-2026-09-06, same player \"Zach LaVine\" #23; setName \"2024/25 Panini Origins Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:7:purple-fotl:auto:num-18",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:panini-origins:7:purple-fotl:auto:num-18 and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:panini-origins:7:purple-fotl:auto:num-18 source=checklistcenter-2026-09-06, same player \"Matas Buzelis\" #7; setName \"2024/25 Panini Origins Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:71:black-white:no-auto:num-15",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:panini-origins:71:black-white:no-auto:num-15 and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:panini-origins:71:black-white:no-auto:num-15 source=checklistinsider-2026-08-27, same player \"Jaylon Tyson\" #71; setName \"2024/25 Panini Origins Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:12:black-inscription:auto:num-1",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:panini-origins:12:black-inscription:auto:num-1 and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:panini-origins:12:black-inscription:auto:num-1 source=checklistcenter-2026-09-06, same player \"Jaylon Tyson\" #12; setName \"2024/25 Panini Origins Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:28:opal:auto:num-15",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:panini-origins:28:opal:auto:num-15 and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:panini-origins:28:opal:auto:num-15 source=checklistcenter-2026-09-06, same player \"Joe Dumars\" #28; setName \"2024/25 Panini Origins Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:18:gold:auto:num-10",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:panini-origins:18:gold:auto:num-10 and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:panini-origins:18:gold:auto:num-10 source=checklistcenter-2026-09-06, same player \"Isiah Thomas\" #18; setName \"2024/25 Panini Origins Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:22:black-inscription:auto:num-1",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:panini-origins:22:black-inscription:auto:num-1 and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:panini-origins:22:black-inscription:auto:num-1 source=checklistcenter-2026-09-06, same player \"Cam Christie\" #22; setName \"2024/25 Panini Origins Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:100:pink:no-auto:num-60",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:panini-origins:100:pink:no-auto:num-60 and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:panini-origins:100:pink:no-auto:num-60 source=checklistinsider-2026-08-27, same player \"Zach Edey\" #100; setName \"2024/25 Panini Origins Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:8:black-inscription:auto:num-1",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:panini-origins:8:black-inscription:auto:num-1 and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:panini-origins:8:black-inscription:auto:num-1 source=checklistcenter-2026-09-06, same player \"Zach Edey\" #8; setName \"2024/25 Panini Origins Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:81:black-white:no-auto:num-15",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:panini-origins:81:black-white:no-auto:num-15 and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:panini-origins:81:black-white:no-auto:num-15 source=checklistinsider-2026-08-27, same player \"Kel'el Ware\" #81; setName \"2024/25 Panini Origins Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:76:swirl-fotl:no-auto:num-3",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:panini-origins:76:swirl-fotl:no-auto:num-3 and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:panini-origins:76:swirl-fotl:no-auto:num-3 source=checklistinsider-2026-08-27, same player \"Rob Dillingham\" #76; setName \"2024/25 Panini Origins Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:14:purple-fotl:no-auto:num-22",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:panini-origins:14:purple-fotl:no-auto:num-22 and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:panini-origins:14:purple-fotl:no-auto:num-22 source=checklistinsider-2026-08-27, same player \"Dejounte Murray\" #14; setName \"2024/25 Panini Origins Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:88:amethyst:no-auto:num-8",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:panini-origins:88:amethyst:no-auto:num-8 and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:panini-origins:88:amethyst:no-auto:num-8 source=checklistinsider-2026-08-27, same player \"Nikola Topic\" #88; setName \"2024/25 Panini Origins Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:31:black-inscription:auto:num-1",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:panini-origins:31:black-inscription:auto:num-1 and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:panini-origins:31:black-inscription:auto:num-1 source=checklistcenter-2026-09-06, same player \"Tyrese Maxey\" #31; setName \"2024/25 Panini Origins Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:78:cosmos:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:panini-origins:78:cosmos:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:panini-origins:78:cosmos:no-auto source=checklistinsider-2026-08-27, same player \"Jared McCain\" #78; setName \"2024/25 Panini Origins Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:9:base:auto:num-30",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:panini-origins:9:base:auto:num-30 and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:panini-origins:9:base:auto:num-30 source=checklistcenter-2026-09-06, same player \"David Robinson\" #9; setName \"2024/25 Panini Origins Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:38:red:no-auto:num-299",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:panini-origins:38:red:no-auto:num-299 and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:panini-origins:38:red:no-auto:num-299 source=checklistinsider-2026-08-27, same player \"Victor Wembanyama\" #38; setName \"2024/25 Panini Origins Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:33:black-inscription:auto:num-1",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:panini-origins:33:black-inscription:auto:num-1 and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:panini-origins:33:black-inscription:auto:num-1 source=checklistcenter-2026-09-06, same player \"John Stockton\" #33; setName \"2024/25 Panini Origins Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:7:turquoise:auto:num-5",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:panini-origins:7:turquoise:auto:num-5 and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:panini-origins:7:turquoise:auto:num-5 source=checklistcenter-2026-09-06, same player \"Gilbert Arenas\" #7; setName \"2024/25 Panini Origins Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:24:gold:auto:num-10",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:panini-origins:24:gold:auto:num-10 and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:panini-origins:24:gold:auto:num-10 source=checklistcenter-2026-09-06, same player \"Clint Capela\" #24; setName \"2024/25 Panini Origins Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:15:pink:no-auto:num-99",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:panini-origins:15:pink:no-auto:num-99 and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:panini-origins:15:pink:no-auto:num-99 source=checklistcenter-2026-09-06, same player \"Jayson Tatum\" #15; setName \"2024/25 Panini Origins Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:80:pink:no-auto:num-60",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:panini-origins:80:pink:no-auto:num-60 and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:panini-origins:80:pink:no-auto:num-60 source=checklistinsider-2026-08-27, same player \"Baylor Scheierman\" #80; setName \"2024/25 Panini Origins Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:95:red:no-auto:num-299",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:panini-origins:95:red:no-auto:num-299 and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:panini-origins:95:red:no-auto:num-299 source=checklistinsider-2026-08-27, same player \"Tidjane Salaun\" #95; setName \"2024/25 Panini Origins Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:35:black:auto:num-1",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:panini-origins:35:black:auto:num-1 and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:panini-origins:35:black:auto:num-1 source=checklistcenter-2026-09-06, same player \"Zydrunas Ilgauskas\" #35; setName \"2024/25 Panini Origins Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:18:red:no-auto:num-75",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:panini-origins:18:red:no-auto:num-75 and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:panini-origins:18:red:no-auto:num-75 source=checklistcenter-2026-09-06, same player \"Luka Doncic\" #18; setName \"2024/25 Panini Origins Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:34:swirl-fotl:no-auto:num-3",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:panini-origins:34:swirl-fotl:no-auto:num-3 and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:panini-origins:34:swirl-fotl:no-auto:num-3 source=checklistinsider-2026-08-27, same player \"Klay Thompson\" #34; setName \"2024/25 Panini Origins Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:54:red:no-auto:num-299",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:panini-origins:54:red:no-auto:num-299 and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:panini-origins:54:red:no-auto:num-299 source=checklistinsider-2026-08-27, same player \"Stephen Curry\" #54; setName \"2024/25 Panini Origins Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:32:cosmos:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:panini-origins:32:cosmos:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:panini-origins:32:cosmos:no-auto source=checklistinsider-2026-08-27, same player \"Draymond Green\" #32; setName \"2024/25 Panini Origins Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:97:amethyst:no-auto:num-8",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:panini-origins:97:amethyst:no-auto:num-8 and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:panini-origins:97:amethyst:no-auto:num-8 source=checklistinsider-2026-08-27, same player \"Jaylen Wells\" #97; setName \"2024/25 Panini Origins Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:8:red:auto:num-49",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:panini-origins:8:red:auto:num-49 and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:panini-origins:8:red:auto:num-49 source=checklistcenter-2026-09-06, same player \"Zach Edey\" #8; setName \"2024/25 Panini Origins Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:15:black-inscription:auto:num-1",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:panini-origins:15:black-inscription:auto:num-1 and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:panini-origins:15:black-inscription:auto:num-1 source=checklistcenter-2026-09-06, same player \"AJ Johnson\" #15; setName \"2024/25 Panini Origins Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:56:purple-fotl:no-auto:num-22",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:panini-origins:56:purple-fotl:no-auto:num-22 and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:panini-origins:56:purple-fotl:no-auto:num-22 source=checklistinsider-2026-08-27, same player \"Julius Randle\" #56; setName \"2024/25 Panini Origins Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:37:pink:auto:num-25",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:panini-origins:37:pink:auto:num-25 and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:panini-origins:37:pink:auto:num-25 source=checklistcenter-2026-09-06, same player \"Yves Missi\" #37; setName \"2024/25 Panini Origins Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:39:red:no-auto:num-299",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:panini-origins:39:red:no-auto:num-299 and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:panini-origins:39:red:no-auto:num-299 source=checklistinsider-2026-08-27, same player \"Brandon Ingram\" #39; setName \"2024/25 Panini Origins Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:93:amethyst:no-auto:num-8",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:panini-origins:93:amethyst:no-auto:num-8 and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:panini-origins:93:amethyst:no-auto:num-8 source=checklistinsider-2026-08-27, same player \"Dillon Jones\" #93; setName \"2024/25 Panini Origins Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:39:tessellated:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:panini-origins:39:tessellated:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:panini-origins:39:tessellated:auto source=checklistcenter-2026-09-06, same player \"Paolo Banchero\" #39; setName \"2024/25 Panini Origins Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:91:cosmos:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:panini-origins:91:cosmos:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:panini-origins:91:cosmos:no-auto source=checklistinsider-2026-08-27, same player \"Tristan da Silva\" #91; setName \"2024/25 Panini Origins Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:41:red:no-auto:num-299",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:panini-origins:41:red:no-auto:num-299 and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:panini-origins:41:red:no-auto:num-299 source=checklistinsider-2026-08-27, same player \"Paul George\" #41; setName \"2024/25 Panini Origins Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:2:basketballs:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:panini-origins:2:basketballs:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:panini-origins:2:basketballs:no-auto source=checklistinsider-2026-08-27, same player \"Devin Booker\" #2; setName \"2024/25 Panini Origins Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:13:red:auto:num-49",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:panini-origins:13:red:auto:num-49 and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:panini-origins:13:red:auto:num-49 source=checklistcenter-2026-09-06, same player \"Donovan Clingan\" #13; setName \"2024/25 Panini Origins Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:10:pink:no-auto:num-60",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:panini-origins:10:pink:no-auto:num-60 and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:panini-origins:10:pink:no-auto:num-60 source=checklistinsider-2026-08-27, same player \"Scottie Barnes\" #10; setName \"2024/25 Panini Origins Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:10:cosmos:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:panini-origins:10:cosmos:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:panini-origins:10:cosmos:no-auto source=checklistinsider-2026-08-27, same player \"Scottie Barnes\" #10; setName \"2024/25 Panini Origins Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:33:purple-fotl:no-auto:num-22",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:panini-origins:33:purple-fotl:no-auto:num-22 and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:panini-origins:33:purple-fotl:no-auto:num-22 source=checklistinsider-2026-08-27, same player \"Keyonte George\" #33; setName \"2024/25 Panini Origins Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:79:black-white:no-auto:num-15",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:panini-origins:79:black-white:no-auto:num-15 and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:panini-origins:79:black-white:no-auto:num-15 source=checklistinsider-2026-08-27, same player \"Cody Williams\" #79; setName \"2024/25 Panini Origins Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:16:red:auto:num-49",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:panini-origins:16:red:auto:num-49 and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:panini-origins:16:red:auto:num-49 source=checklistcenter-2026-09-06, same player \"Kyshawn George\" #16; setName \"2024/25 Panini Origins Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:37:turquoise-15-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:37:turquoise-15-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Zach LaVine\" #37; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:40:pink-25-or-15:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:40:pink-25-or-15:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Magic Johnson\" #40; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:19:red:auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:19:red:auto:num-25",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Paolo Banchero\" #19; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:21:purple-fotl-18-or-13:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:21:purple-fotl-18-or-13:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Harrison Ingram\" #21; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:15:red:auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:15:red:auto:num-25",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Yao Ming\" #15; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:25:pink-25-or-15:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:25:pink-25-or-15:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Oso Ighodaro\" #25; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:13:turquoise-15-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:13:turquoise-15-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Donovan Clingan\" #13; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:32:base:auto:num-175",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:32:base:auto:num-175",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Lauri Markkanen\" #32; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:33:purple-fotl-18-or-13:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:33:purple-fotl-18-or-13:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jaylon Tyson\" #33; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:14:pink-25-or-15:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:14:pink-25-or-15:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Tristen Newton\" #14; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:2:turquoise-15-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:2:turquoise-15-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Dalton Knecht\" #2; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:23:turquoise-15-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:23:turquoise-15-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Ajay Mitchell\" #23; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:1:base:auto:num-175",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:1:base:auto:num-175",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Matas Buzelis\" #1; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:15:base:auto:num-175",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:15:base:auto:num-175",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"AJ Johnson\" #15; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:16:red:auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:16:red:auto:num-25",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Anthony Edwards\" #16; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:4:purple-fotl-18-or-13:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:4:purple-fotl-18-or-13:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Terrence Shannon Jr.\" #4; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:39:red:auto:num-49",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:39:red:auto:num-49",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Paolo Banchero\" #39; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:18:purple-fotl-18-or-13:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:18:purple-fotl-18-or-13:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Donovan Clingan\" #18; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:6:base:auto:num-30",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:6:base:auto:num-30",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Domantas Sabonis\" #6; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:7:red:auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:7:red:auto:num-25",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Gilbert Arenas\" #7; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:37:base:auto:num-175",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:37:base:auto:num-175",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Zach LaVine\" #37; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:12:red:auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:12:red:auto:num-25",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Stephen Curry\" #12; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:21:pink-25-or-15:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:21:pink-25-or-15:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Johnny Furphy\" #21; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:2:pink-25-or-15:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:2:pink-25-or-15:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Dalton Knecht\" #2; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:19:purple-fotl-18-or-13:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:19:purple-fotl-18-or-13:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"AJ Johnson\" #19; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:24:purple-fotl-18-or-13:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:24:purple-fotl-18-or-13:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Ajay Mitchell\" #24; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:9:turquoise-15-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:9:turquoise-15-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jared McCain\" #9; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:35:purple-fotl-18-or-13:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:35:purple-fotl-18-or-13:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Devin Carter\" #35; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:29:turquoise-15-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:29:turquoise-15-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jamal Shead\" #29; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:10:turquoise-15-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:10:turquoise-15-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Tidjane Salaun\" #10; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:24:pink-25-or-15:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:24:pink-25-or-15:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jaylen Wells\" #24; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:20:turquoise-15-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:20:turquoise-15-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Tyler Kolek\" #20; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:31:purple-fotl-18-or-13:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:31:purple-fotl-18-or-13:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Dillon Jones\" #31; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:8:red:auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:8:red:auto:num-25",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Julius Erving\" #8; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:26:turquoise-15-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:26:turquoise-15-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Adem Bona\" #26; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:9:pink-25-or-15:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:9:pink-25-or-15:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jared McCain\" #9; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:1:pink-25-or-15:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:1:pink-25-or-15:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Matas Buzelis\" #1; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:14:red:auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:14:red:auto:num-25",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Hakeem Olajuwon\" #14; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:14:turquoise-15-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:14:turquoise-15-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Tristen Newton\" #14; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:16:purple-fotl-18-or-13:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:16:purple-fotl-18-or-13:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Pelle Larsson\" #16; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:12:purple-fotl-18-or-13:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:12:purple-fotl-18-or-13:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Adem Bona\" #12; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:11:base:auto:num-175",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:11:base:auto:num-175",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Devin Carter\" #11; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:14:pink:auto:num-15",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:14:pink:auto:num-15",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Hakeem Olajuwon\" #14; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:2:base:auto:num-175",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:2:base:auto:num-175",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Dalton Knecht\" #2; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:29:purple-fotl-18-or-13:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:29:purple-fotl-18-or-13:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Kevin McCullar Jr.\" #29; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:39:pink-25-or-15:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:39:pink-25-or-15:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Paolo Banchero\" #39; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:9:red:auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:9:red:auto:num-25",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"David Robinson\" #9; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:33:pink-25-or-15:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:33:pink-25-or-15:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"John Stockton\" #33; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:37:pink-25-or-15:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:37:pink-25-or-15:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Zach LaVine\" #37; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:12:pink:auto:num-15",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:12:pink:auto:num-15",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Stephen Curry\" #12; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:8:pink:auto:num-15",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:8:pink:auto:num-15",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Julius Erving\" #8; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:40:purple-fotl-18-or-13:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:40:purple-fotl-18-or-13:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Bub Carrington\" #40; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:3:red:auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:3:red:auto:num-25",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Larry Bird\" #3; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:13:purple-fotl-18-or-13:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:13:purple-fotl-18-or-13:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"KJ Simpson Jr.\" #13; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:12:turquoise-15-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:12:turquoise-15-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jaylon Tyson\" #12; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:6:base:auto:num-175",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:6:base:auto:num-175",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Tristan da Silva\" #6; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:35:red:auto:num-49",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:35:red:auto:num-49",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Anfernee Simons\" #35; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:4:turquoise-15-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:4:turquoise-15-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Bub Carrington\" #4; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:10:base:auto:num-175",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:10:base:auto:num-175",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Tidjane Salaun\" #10; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:30:purple-fotl-18-or-13:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:30:purple-fotl-18-or-13:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Matas Buzelis\" #30; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:12:base:auto:num-175",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:12:base:auto:num-175",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jaylon Tyson\" #12; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:40:turquoise-15-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:40:turquoise-15-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Magic Johnson\" #40; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:6:red:auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:6:red:auto:num-25",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Domantas Sabonis\" #6; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:3:pink-25-or-15:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:3:pink-25-or-15:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Ja'Kobe Walter\" #3; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:21:turquoise-15-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:21:turquoise-15-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Johnny Furphy\" #21; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:13:pink:auto:num-15",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:13:pink:auto:num-15",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Anthony Davis\" #13; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:8:turquoise-15-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:8:turquoise-15-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Zach Edey\" #8; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:34:base:auto:num-175",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:34:base:auto:num-175",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Ja Morant\" #34; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:30:turquoise-15-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:30:turquoise-15-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Antonio Reeves\" #30; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:38:turquoise-15-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:38:turquoise-15-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Shai Gilgeous-Alexander\" #38; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:38:red:auto:num-49",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:38:red:auto:num-49",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Shai Gilgeous-Alexander\" #38; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:15:purple-fotl-18-or-13:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:15:purple-fotl-18-or-13:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Tristan da Silva\" #15; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:3:base:auto:num-175",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:3:base:auto:num-175",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Ja'Kobe Walter\" #3; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:10:opal:auto:num-15",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:10:opal:auto:num-15",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Ausar Thompson\" #10; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:10:purple-fotl-18-or-13:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:10:purple-fotl-18-or-13:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jaylen Wells\" #10; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:7:turquoise-15-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:7:turquoise-15-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Yves Missi\" #7; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:20:base:auto:num-175",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:20:base:auto:num-175",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Tyler Kolek\" #20; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:31:base:auto:num-175",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:31:base:auto:num-175",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Tyrese Maxey\" #31; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:13:pink-25-or-15:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:13:pink-25-or-15:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Donovan Clingan\" #13; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:36:black-inscription:auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:36:black-inscription:auto:num-1",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Shawn Kemp\" #36; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:16:turquoise-15-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:16:turquoise-15-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Kyshawn George\" #16; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:15:pink:auto:num-15",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:15:pink:auto:num-15",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Yao Ming\" #15; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:1:purple-fotl-18-or-13:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:1:purple-fotl-18-or-13:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Reed Sheppard\" #1; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:1:turquoise-15-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:1:turquoise-15-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Matas Buzelis\" #1; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:2:purple-fotl-18-or-13:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:2:purple-fotl-18-or-13:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jared McCain\" #2; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:31:pink-25-or-15:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:31:pink-25-or-15:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Tyrese Maxey\" #31; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:26:base:auto:num-175",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:26:base:auto:num-175",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Adem Bona\" #26; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:35:pink-25-or-15:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:35:pink-25-or-15:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Anfernee Simons\" #35; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:36:pink-25-or-15:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:36:pink-25-or-15:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Shawn Kemp\" #36; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:18:opal:auto:num-15",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:18:opal:auto:num-15",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Isiah Thomas\" #18; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:30:pink-25-or-15:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:30:pink-25-or-15:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Antonio Reeves\" #30; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:7:pink-25-or-15:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:7:pink-25-or-15:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Yves Missi\" #7; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:33:red:auto:num-49",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:33:red:auto:num-49",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"John Stockton\" #33; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:2:opal:auto:num-15",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:2:opal:auto:num-15",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Fred VanVleet\" #2; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:40:red:auto:num-49",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:40:red:auto:num-49",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Magic Johnson\" #40; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:31:turquoise-15-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:31:turquoise-15-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Tyrese Maxey\" #31; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:21:base:auto:num-175",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:21:base:auto:num-175",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Johnny Furphy\" #21; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:34:red:auto:num-49",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:34:red:auto:num-49",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Ja Morant\" #34; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:2:red:auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:2:red:auto:num-25",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Trae Young\" #2; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:27:pink-25-or-15:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:27:pink-25-or-15:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"KJ Simpson Jr.\" #27; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:6:pink-25-or-15:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:6:pink-25-or-15:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Tristan da Silva\" #6; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:6:pink:auto:num-15",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:6:pink:auto:num-15",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Domantas Sabonis\" #6; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:15:pink-25-or-15:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:15:pink-25-or-15:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"AJ Johnson\" #15; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:15:turquoise-15-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:15:turquoise-15-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"AJ Johnson\" #15; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:12:pink-25-or-15:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:12:pink-25-or-15:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jaylon Tyson\" #12; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:5:pink-25-or-15:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:5:pink-25-or-15:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Reed Sheppard\" #5; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:13:red:auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:13:red:auto:num-25",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Anthony Davis\" #13; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:25:turquoise-15-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:25:turquoise-15-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Oso Ighodaro\" #25; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:36:base:auto:num-175",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:36:base:auto:num-175",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Shawn Kemp\" #36; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:17:purple-fotl-18-or-13:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:17:purple-fotl-18-or-13:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jamal Shead\" #17; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:4:pink:auto:num-15",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:4:pink:auto:num-15",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Nikola Jokic\" #4; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:11:turquoise-15-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:11:turquoise-15-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Devin Carter\" #11; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:33:base:auto:num-175",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:33:base:auto:num-175",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"John Stockton\" #33; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:3:purple-fotl-18-or-13:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:3:purple-fotl-18-or-13:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"DaRon Holmes II\" #3; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:40:base:auto:num-175",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:40:base:auto:num-175",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Magic Johnson\" #40; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:34:pink-25-or-15:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:34:pink-25-or-15:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Ja Morant\" #34; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:33:turquoise-15-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:33:turquoise-15-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"John Stockton\" #33; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:16:pink:auto:num-15",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:16:pink:auto:num-15",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Anthony Edwards\" #16; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:37:purple-fotl-18-or-13:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:37:purple-fotl-18-or-13:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Yves Missi\" #37; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:5:purple-fotl-18-or-13:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:5:purple-fotl-18-or-13:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Tyler Kolek\" #5; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:38:pink-25-or-15:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:38:pink-25-or-15:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Shai Gilgeous-Alexander\" #38; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:26:pink-25-or-15:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:26:pink-25-or-15:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Adem Bona\" #26; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:29:base:auto:num-175",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:29:base:auto:num-175",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jamal Shead\" #29; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:3:pink:auto:num-15",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:3:pink:auto:num-15",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Larry Bird\" #3; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:10:pink-25-or-15:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:10:pink-25-or-15:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Tidjane Salaun\" #10; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:4:red:auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:4:red:auto:num-25",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Nikola Jokic\" #4; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:39:base:auto:num-175",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:39:base:auto:num-175",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Paolo Banchero\" #39; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:35:turquoise-15-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:35:turquoise-15-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Anfernee Simons\" #35; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:36:red:auto:num-49",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:36:red:auto:num-49",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Shawn Kemp\" #36; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:32:turquoise-15-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:32:turquoise-15-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Lauri Markkanen\" #32; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:28:purple-fotl-18-or-13:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:28:purple-fotl-18-or-13:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Kyshawn George\" #28; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:21:black-inscription:auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:21:black-inscription:auto:num-1",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Johnny Furphy\" #21; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:28:pink-25-or-15:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:28:pink-25-or-15:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Pelle Larsson\" #28; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:20:pink:auto:num-15",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:20:pink:auto:num-15",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Allen Iverson\" #20; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:27:turquoise-15-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:27:turquoise-15-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"KJ Simpson Jr.\" #27; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:8:purple-fotl-18-or-13:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:8:purple-fotl-18-or-13:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Dalton Knecht\" #8; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:8:pink-25-or-15:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:8:pink-25-or-15:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Zach Edey\" #8; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:24:turquoise-15-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:24:turquoise-15-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jaylen Wells\" #24; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:18:pink:auto:num-15",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:18:pink:auto:num-15",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Manu Ginobili\" #18; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:16:base:auto:num-175",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:16:base:auto:num-175",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Kyshawn George\" #16; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:38:purple-fotl-18-or-13:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:38:purple-fotl-18-or-13:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Quinten Post\" #38; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:8:base:auto:num-175",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:8:base:auto:num-175",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Zach Edey\" #8; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:34:turquoise-15-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:34:turquoise-15-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Ja Morant\" #34; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:20:pink-25-or-15:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:20:pink-25-or-15:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Tyler Kolek\" #20; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:22:purple-fotl-18-or-13:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:22:purple-fotl-18-or-13:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Ja'Kobe Walter\" #22; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:3:turquoise-15-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:3:turquoise-15-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Ja'Kobe Walter\" #3; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:32:red:auto:num-49",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:32:red:auto:num-49",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Lauri Markkanen\" #32; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:4:pink-25-or-15:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:4:pink-25-or-15:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Bub Carrington\" #4; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:22:pink-25-or-15:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:22:pink-25-or-15:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Cam Christie\" #22; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:28:turquoise-15-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:28:turquoise-15-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Pelle Larsson\" #28; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:35:base:auto:num-175",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:35:base:auto:num-175",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Anfernee Simons\" #35; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:36:turquoise-15-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:36:turquoise-15-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Shawn Kemp\" #36; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:27:purple-fotl-18-or-13:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:27:purple-fotl-18-or-13:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jonathan Mogbo\" #27; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:19:pink-25-or-15:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:19:pink-25-or-15:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jonathan Mogbo\" #19; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:16:pink-25-or-15:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:16:pink-25-or-15:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Kyshawn George\" #16; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:10:red:auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:10:red:auto:num-25",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Carmelo Anthony\" #10; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:7:base:auto:num-175",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:7:base:auto:num-175",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Yves Missi\" #7; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:23:pink-25-or-15:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:23:pink-25-or-15:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Ajay Mitchell\" #23; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:39:turquoise-15-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:39:turquoise-15-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Paolo Banchero\" #39; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:9:purple-fotl-18-or-13:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:9:purple-fotl-18-or-13:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Oso Ighodaro\" #9; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:17:red:auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:17:red:auto:num-25",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Dominique Wilkins\" #17; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:23:purple-fotl-18-or-13:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:23:purple-fotl-18-or-13:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Tristen Newton\" #23; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:21:red:auto:num-49",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:21:red:auto:num-49",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Johnny Furphy\" #21; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:31:red:auto:num-49",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:31:red:auto:num-49",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Tyrese Maxey\" #31; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:9:base:auto:num-175",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:9:base:auto:num-175",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jared McCain\" #9; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:34:purple-fotl-18-or-13:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:34:purple-fotl-18-or-13:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Trey Alexander\" #34; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:6:purple-fotl-18-or-13:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:6:purple-fotl-18-or-13:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Johnny Furphy\" #6; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:32:pink-25-or-15:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:32:pink-25-or-15:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Lauri Markkanen\" #32; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:4:base:auto:num-175",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:4:base:auto:num-175",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Bub Carrington\" #4; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:5:turquoise-15-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:5:turquoise-15-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Reed Sheppard\" #5; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:22:turquoise-15-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:22:turquoise-15-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Cam Christie\" #22; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:25:purple-fotl-18-or-13:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:25:purple-fotl-18-or-13:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Zach Edey\" #25; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:20:red:auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:20:red:auto:num-25",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Allen Iverson\" #20; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:32:purple-fotl-18-or-13:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:32:purple-fotl-18-or-13:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jalen Bridges\" #32; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:19:turquoise-15-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:19:turquoise-15-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jonathan Mogbo\" #19; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:7:purple-fotl-18-or-13:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:7:purple-fotl-18-or-13:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Bobi Klintman\" #7; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:20:purple-fotl-18-or-13:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:20:purple-fotl-18-or-13:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Cam Christie\" #20; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:6:turquoise-15-or-5:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:6:turquoise-15-or-5:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Tristan da Silva\" #6; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:29:pink-25-or-15:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:29:pink-25-or-15:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jamal Shead\" #29; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:37:red:auto:num-49",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:37:red:auto:num-49",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Zach LaVine\" #37; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:5:base:auto:num-175",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:5:base:auto:num-175",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Reed Sheppard\" #5; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:38:base:auto:num-175",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:38:base:auto:num-175",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Shai Gilgeous-Alexander\" #38; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:13:base:auto:num-175",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:13:base:auto:num-175",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Donovan Clingan\" #13; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:11:purple-fotl-18-or-13:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:11:purple-fotl-18-or-13:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Tidjane Salaun\" #11; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-origins:11:pink-25-or-15:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:panini-origins:11:pink-25-or-15:auto",
+      "reason": "#1925 H1: setName \"2024/25 Panini Origins Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Devin Carter\" #11; destination read as vacant 2026-09-07"
+    }
+  ]
+}

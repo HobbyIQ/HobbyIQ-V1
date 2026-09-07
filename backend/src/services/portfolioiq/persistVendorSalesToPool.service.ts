@@ -581,6 +581,11 @@ export async function persistVendorSalesToPool(
   identity: VendorPersistIdentityHint = {},
 ): Promise<VendorPersistResult> {
   const result: VendorPersistResult = { inserted: 0, deduped: 0, skipped: 0, catalogUnmatched: 0, vendorParallelOverruled: 0, divertedToVerify: 0 };
+  // CF-NO-DEFAULT-SPORT (#1924 follow-up). Counted separately from the general
+  // `skipped` tally because it is the number the ruling turns on: it is the
+  // population that USED to be written at `hiq:baseball:...` on no evidence.
+  // A caller watching this go up is watching the default stop happening.
+  let skippedSportUnresolved = 0;
   if (!isPersistVendorLookupsEnabled()) return result;
   if (!Array.isArray(rows) || rows.length === 0) return result;
   const container = await getSoldCompsContainer();
@@ -737,31 +742,40 @@ export async function persistVendorSalesToPool(
     // resolveVertical checks TCG FIRST (a Pokemon title contains no sport
     // keyword, so it would otherwise fall straight through to the default) and
     // reports whether it was confident, which the caller records below.
+    // CF-NO-DEFAULT-SPORT (#1924 follow-up, 2026-09-07). The fallback used to
+    // be the literal string "baseball". It is now ABSENT, and the difference
+    // is the whole fix: `sport` is the FIRST segment of the slug, the slug is
+    // `cardId`, and `cardId` is the sold_comps PARTITION KEY. A defaulted
+    // sport is therefore a GUESSED ADDRESS, and the #1924 census measured what
+    // that address costs -- baseball is the origin of 78,153 of the 94,275
+    // sport-mismatched pool rows (82.9%), which is the signature of a default,
+    // not of an error spread evenly across verticals.
+    //
+    // The 2026-09-05 stamp (CF-A-DEFAULTED-SPORT-IS-NOT-EVIDENCE) recorded the
+    // guess and deliberately kept writing it, on the reasoning that parking
+    // millions of rows was too blunt. The census re-decided that: the guess is
+    // not merely unproven, it is wrong often enough to price two cards from
+    // one sale. So the row now PARKS -- kept, queryable, provenance intact,
+    // out of every pool -- rather than being filed under a sport nothing
+    // stated. Absent beats wrong.
     const verticalRes = resolveVertical({
       declared: identity.sport,
       title,
-      fallback: "baseball",
     });
-    let sport = verticalRes.vertical;
-    // CF-A-DEFAULTED-SPORT-IS-NOT-EVIDENCE (2026-09-05). `resolveVertical`
-    // has always reported whether it PROVED the vertical or merely fell back
-    // to `fallback: "baseball"`, and this caller has always thrown that half
-    // of the answer away. It matters because `sport` is the FIRST segment of
-    // the slug, the slug is `cardId`, and `cardId` is the sold_comps
-    // PARTITION KEY -- so a guessed sport is a guessed address. When the
-    // guess later changes (a sport keyword rule lands, the LLM answers
-    // differently on a cold cache), the same `${source}::${externalId}` id is
-    // written under a second partition and the first copy is never removed:
-    // the pre-write dedup matches on `hobbyiqCardId` + `contentHash`, and
-    // both move with the slug.
+    let sport: string | null = verticalRes.confident === true ? verticalRes.vertical : null;
+    // CF-A-DEFAULTED-SPORT-IS-NOT-EVIDENCE (2026-09-05), SHARPENED BY #1924.
     //
-    // Deliberately NOT a refusal here. Unlike the Sapphire maker default,
-    // baseball-as-fallback is load-bearing for a large legitimate population
-    // and dropping it would park millions of rows; the ruling this lane
-    // carries is report-first. So the row is STAMPED instead: the verdict
-    // travels with the sale, the census can count the class by reading rows
-    // rather than re-deriving them, and a later ruling can act on a measured
-    // number. Absent beats wrong; a marked guess beats an unmarked one.
+    // The 2026-09-05 reasoning was that `sport` is the FIRST segment of the
+    // slug, the slug is `cardId`, and `cardId` is the sold_comps PARTITION
+    // KEY -- so a guessed sport is a guessed ADDRESS. That reasoning was
+    // right; the conclusion (stamp it and write it anyway, because parking
+    // was too blunt) was what the census re-decided. A guessed address does
+    // not merely make the row hard to audit: paired with a later re-derivation
+    // that rewrites only `hobbyiqCardId`, it makes ONE SALE PRICE TWO CARDS.
+    //
+    // So the stamp stays -- it is how the class is counted from stored rows --
+    // but it is now the reason the row PARKS rather than a label on a row that
+    // was written regardless. Absent beats wrong.
     const sportDefaulted = verticalRes.confident !== true;
 
     // CF-LLM-FALLBACK (Drew, 2026-08-03). When regex + guess helpers
@@ -1019,6 +1033,20 @@ export async function persistVendorSalesToPool(
     // pattern we saw in the 2024 Bowman Chrome rollup dry-run.
     const canonicalParallel = canonicalizeParallelName(parsed.parallel);
     parsed.parallel = canonicalParallel;
+
+    // CF-NO-DEFAULT-SPORT (#1924 follow-up). A slug cannot be ADDRESSED without
+    // a sport -- it is segment one -- so an unresolved vertical is not a row
+    // with a missing field, it is a row with no address. It is skipped here
+    // rather than minted at `hiq:baseball:...`, which is precisely how the
+    // 78,153 baseball-origin split rows were created. The sale is not lost:
+    // it stays in staging with `sportDefaulted` stamped, so the re-resolve
+    // pass promotes it the moment a keyword rule or a checklist names its
+    // vertical -- the same loop-back the catalog-unmatched skip relies on.
+    if (!sport) {
+      result.skipped++;
+      skippedSportUnresolved++;
+      continue;
+    }
 
     let slug: string;
     try {
@@ -1811,6 +1839,9 @@ export async function persistVendorSalesToPool(
       deduped: result.deduped,
       skipped: result.skipped,
       catalogUnmatched: result.catalogUnmatched,
+      // The rows that would previously have been minted under a guessed
+      // `baseball` address and gone on to price two cards.
+      skippedSportUnresolved,
     }));
   }
   return result;

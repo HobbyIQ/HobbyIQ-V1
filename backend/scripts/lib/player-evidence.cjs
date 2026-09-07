@@ -109,11 +109,28 @@ const { corroborationOf } = require(require("path").join(__dirname, "source-corr
 const MAX_TITLES_PER_SLUG = 200;
 
 /** A player name reduced to the letters and digits that identify it, so
- *  "T.J. Hockenson" and "TJ Hockenson" are one person. This mirrors
- *  `playerKey` in sourceCorroboration.ts and `playerKeyOf` in
- *  catalogRowOps.service.ts -- the SAME reduction all three must agree on for a
- *  tally here to mean the same thing the survivor rule reads. */
-const playerKeyOf = (s) => String(s ?? "").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+ *  "T.J. Hockenson" and "TJ Hockenson" are one person.
+ *
+ *  THE SAME FUNCTION `playerKey` in sourceCorroboration.ts and `playerKeyOf` in
+ *  catalogRowOps.service.ts use -- loaded from the built tree, not restated
+ *  here. It used to be a third copy of one expression, kept in step by a
+ *  comment; playerIdentityKey.ts's header records the Pokemon-name defect all
+ *  three copies shared and why a tally that disagrees with the survivor rule
+ *  about who two rows name is worse than no tally.
+ *
+ *  DEFENSIVE LOAD, the same contract market-guard.cjs has: this module is
+ *  required by an ops script whose dispatch refusals must work WITHOUT a
+ *  compiled tree (rekeyRetireUntwinned.test.ts loads it that way). A missing
+ *  dist/ therefore falls back to the pre-fix expression -- which is the
+ *  behaviour this file had before, so a tree-less run is never WORSE than it
+ *  was, only un-improved. */
+const playerKeyOf = (() => {
+  try {
+    const built = require(require("path").join(__dirname, "..", "..", "dist/services/catalog/playerIdentityKey.js"));
+    if (typeof built.playerIdentityKey === "function") return built.playerIdentityKey;
+  } catch { /* fall through to the legacy reduction */ }
+  return (s) => String(s ?? "").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+})();
 
 /** The 7-segment stem of a slug: hiq:sport:year:product:number:parallel:auto.
  *  A card_catalog id carries an 8th TIER segment (`num-24`, `psa-10`); a sale's
