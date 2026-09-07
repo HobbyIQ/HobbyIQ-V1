@@ -27,6 +27,7 @@
 // Usage:
 //   node scripts/cosmos-throughput.cjs --container=sold_comps            # read
 //   node scripts/cosmos-throughput.cjs --container=sold_comps --max=4000 # set
+//   node scripts/cosmos-throughput.cjs --report                          # all four
 
 const { CosmosClient } = require("@azure/cosmos");
 
@@ -38,10 +39,50 @@ const arg = (n, d) => {
 const DB = arg("database", "hobbyiq");
 const CONTAINER = arg("container", "");
 const MAX = arg("max", "");
+const REPORT = process.argv.includes("--report");
+
+// CF-THROUGHPUT-REPORT (2026-09-07). The four containers whose throughput is a
+// standing cost decision. `--report` reads all of them and prints a table; it
+// never writes. Keep this list in sync with docs/GO-LIVE-CHECKLIST.md
+// "Cosmos throughput".
+const REPORT_CONTAINERS = ["sold_comps", "card_catalog", "ch_daily_sales", "portfolio"];
+
+// The autoscale floor is max(1000, storage floor, highest-ever-max / 10) and
+// Azure names it only in a rejection. Over the DATA plane the offer does not
+// carry it, so the report shows the highest-ever-derived component we CAN see
+// (max/10) and labels it as such -- an under-estimate is possible when the
+// highest-ever max exceeds today's. `az cosmosdb sql container throughput show
+// --query resource.minimumThroughput` is the authoritative read.
+const billedFloor = (max) => Math.round(max / 10);
 
 (async () => {
   if (!process.env.COSMOS_CONNECTION_STRING) throw new Error("COSMOS_CONNECTION_STRING not set");
-  if (!CONTAINER) throw new Error("--container=<name> required");
+
+  if (REPORT) {
+    const client = new CosmosClient(process.env.COSMOS_CONNECTION_STRING);
+    const rows = [];
+    for (const name of REPORT_CONTAINERS) {
+      try {
+        const { resource: o } = await client.database(DB).container(name).readOffer();
+        if (!o) { rows.push([name, "n/a", "n/a", "no container-level offer"]); continue; }
+        const auto = o.content && o.content.offerAutopilotSettings;
+        rows.push(auto
+          ? [name, "autoscale", String(auto.maxThroughput), `~${billedFloor(auto.maxThroughput)} RU/s billed idle`]
+          : [name, "manual", String(o.content.offerThroughput), `${o.content.offerThroughput} RU/s billed flat`]);
+      } catch (e) {
+        rows.push([name, "ERROR", "-", e.message]);
+      }
+    }
+    const head = ["container", "mode", "max RU/s", "floor / note"];
+    const w = head.map((h, i) => Math.max(h.length, ...rows.map((r) => r[i].length)));
+    const line = (r) => r.map((c, i) => c.padEnd(w[i])).join("  ").trimEnd();
+    console.log(line(head));
+    console.log(w.map((n) => "-".repeat(n)).join("  "));
+    for (const r of rows) console.log(line(r));
+    return;
+  }
+
+  if (!CONTAINER) throw new Error("--container=<name> required (or --report)");
 
   const client = new CosmosClient(process.env.COSMOS_CONNECTION_STRING);
   const container = client.database(DB).container(CONTAINER);

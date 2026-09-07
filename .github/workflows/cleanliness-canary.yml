@@ -3,8 +3,16 @@ name: Sold Comps Cleanliness Canary
 # CF-CLEANLINESS-CANARY (Drew, 2026-08-08). Complements the freshness
 # canary. Detects title-parser regressions that leak subset descriptors
 # ("Shohei Ohtani Pitching Jersey") into playerName, plus slug
-# fragmentation drift where the same identity ends up written under
-# multiple hobbyiqCardId slugs.
+# fragmentation drift where ONE CARD ends up written under multiple
+# hobbyiqCardId slugs.
+#
+# #1954 (2026-09-07): the fragmentation axis used to group by
+# (cardYear, setName, cardNumber) — a tuple with no parallel segment — so a
+# card's Master Ball / Poke Ball / base parallels read as one identity
+# written three ways. That is the whole of the chronic red this workflow
+# carried; the data was right and the axis was not. It now counts only
+# slugs a fold or re-key lane would MERGE. See
+# backend/src/services/portfolioiq/slugFragmentation.ts.
 #
 # Cadence: every 6h. Fails if any of:
 #   - garbage-prefix playerName rate > 1% in last 12h

@@ -79,13 +79,29 @@ function loadCodeTables() {
   try {
     const backend = path.resolve(__dirname, "..", "..");
     const m = require(path.join(backend, "dist/services/catalog/pokemonSetCodes.js"));
+    // CF-THE-JAPANESE-VINTAGE-SET-GETS-ITS-OWN-KEY (Drew, 2026-09-07, R5). The
+    // 38 ruled `ja-<code>` keys are a THIRD Japanese vocabulary this guard has
+    // to know, and it is loaded from the RULING rather than matched by a
+    // `/^ja-/` regex. The prefix alone is not a market witness: `ja` is a
+    // legitimate opening for sports keys, and a pattern that read every one of
+    // them as Japanese would refuse moves across the whole catalog. Only the
+    // 38 keys the ruling actually mints are Japanese here.
+    //
+    // Loaded defensively for the same reason the code tables are: a missing
+    // dist/ degrades to "no ruled keys", never to a crash.
+    let ruledJa = {};
+    try {
+      const r = require(path.join(backend, "dist/services/catalog/japaneseVintageSetKeyRuling.js"));
+      for (const k of r.ruledJapaneseVintageKeys()) ruledJa[k] = true;
+    } catch { ruledJa = {}; }
     return {
       en: m.POKEMON_EN_SET_CODES || {},
       ja: m.POKEMON_JA_SET_CODES || {},
       ambiguous: m.AMBIGUOUS_MARKET_CODES || new Set(),
+      ruledJa,
     };
   } catch {
-    return { en: {}, ja: {}, ambiguous: new Set() };
+    return { en: {}, ja: {}, ambiguous: new Set(), ruledJa: {} };
   }
 }
 
@@ -108,9 +124,15 @@ function __setTables(t) { cached = t; }
 function marketOfKey(key) {
   const k = String(key ?? "").trim().toLowerCase();
   if (!k) return null;
-  const { en, ja, ambiguous } = tables();
+  const { en, ja, ambiguous, ruledJa } = tables();
   // The `japanese-<code>` minter artefact states JA outright, whatever follows.
   if (/^japanese-/.test(k)) return "ja";
+  // A RULED `ja-<code>` key (R5) states JA outright too -- and it is decided
+  // BEFORE the ambiguous set, because 19 of the 38 are built on an ambiguous
+  // English code. `sm10` states nothing; `ja-sm10` states Japanese. The
+  // ambiguity is a property of the BARE code, never of a key that spells the
+  // market out.
+  if (ruledJa && ruledJa[k]) return "ja";
   // A code both markets use for DIFFERENT products states nothing.
   if (ambiguous.has && ambiguous.has(k)) return null;
   const isEn = Boolean(en[k]);

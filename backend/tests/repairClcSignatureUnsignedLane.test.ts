@@ -378,8 +378,13 @@ describe("repair-clc-signature-unsigned — the runner wiring", () => {
     expect(line).toContain("-f slots=");
     expect(line).toContain("-f scope=");
     // And the gate itself is the marker.
-    const step = yml.slice(yml.indexOf("Self-relaunch the clc signature repair"));
-    expect(step.slice(0, 1800)).toMatch(/stopped at the .*budget/);
+    // Slice to the END OF THE STEP rather than a fixed byte count: the step's
+    // comment block grows (four outcomes now, not three), and a 1800-byte
+    // window silently stopped containing the line it was asserting about.
+    const stepStart = yml.indexOf("Self-relaunch the clc signature repair");
+    const nextStep = yml.indexOf("\n      - name:", stepStart);
+    const step = yml.slice(stepStart, nextStep < 0 ? undefined : nextStep);
+    expect(step).toMatch(/stopped at the .*budget/);
   });
 
   it("the marker is a SOURCE LITERAL in the lane, so a static reader can see it", () => {

@@ -111,6 +111,41 @@
  * persistVendorSalesToPool, writeReconciliation).
  */
 "use strict";
+
+// ── THE LANE NARRATES ITS OWN START, BEFORE IT CAN FAIL ──────────────────────
+//
+// CF-AN-EMPTY-LOG-IS-NOT-A-BUDGET-KILL (#1913 follow-up, 2026-09-07).
+//
+// 19 of 121 rematch-sold-comps runner runs (15.7%) ended in #1913's KILLED
+// branch with an EMPTY /tmp/backfill.log, and the branch's diagnostic --
+// `tail -n 20 /tmp/backfill.log` -- printed nothing at all. An operator reading
+// that run saw "KILLED before finish" with no evidence, and the natural reading
+// of a KILLED-at-the-ceiling banner is a 150-minute budget kill. It was not.
+// Those runs died in 55-70 SECONDS, at the very first env check.
+//
+// The mechanism is one line of the runner:
+//
+//     node "backend/scripts/${{ inputs.script }}.cjs" | tee /tmp/backfill.log
+//
+// `tee` sees STDOUT ONLY. Every startup refusal in this file is a
+// `console.error` + `process.exit(2)` -- STDERR -- and it fires BEFORE the
+// banner, which is the first thing this script writes to stdout. So a refusal
+// wrote the log file and left it EMPTY: exactly the state the KILLED branch
+// reads as "neither the budget marker nor finishLane", i.e. a kill.
+//
+// THE PIN. This is a SOURCE LITERAL printed to STDOUT before any require that
+// touches Cosmos, the catalog or dist/ -- before, in fact, any require at all.
+// It cannot be skipped by a failing import, a missing dist/, an OOM at module
+// load, or an env refusal, because nothing above it can throw. An empty
+// /tmp/backfill.log is therefore no longer reachable from this lane: if the log
+// is empty the process never started, and if this line is present but nothing
+// follows it, the run died in startup and the log says so.
+//
+// The runner's KILLED branch reads this line to say "started but died at
+// <phase>" instead of implying a budget kill. Keep the text stable -- the
+// runner and the tests both match on `rematch-sold-comps: STARTUP`.
+console.log("rematch-sold-comps: STARTUP ok -- module load beginning (pid " + process.pid + ")");
+
 const path = require("path");
 const fs = require("fs");
 const crypto = require("crypto");
@@ -539,20 +574,53 @@ function stopAccounting({ stopReason, stats, expected, startedAt }) {
   return lines.join("\n");
 }
 
+// ── A REFUSAL THE RUNNER'S LOG CAN SEE ───────────────────────────────────────
+//
+// CF-AN-EMPTY-LOG-IS-NOT-A-BUDGET-KILL (2026-09-07). The runner pipes this
+// script through `tee /tmp/backfill.log`, and `tee` sees STDOUT ONLY. Every
+// refusal below used to be `console.error` alone, so the runner's log kept no
+// trace of WHY a run stopped -- and #1913's KILLED branch, whose whole
+// diagnostic is `tail -n 20 /tmp/backfill.log`, printed an empty tail and
+// implied a 150-minute budget kill for a run that died in 55 seconds.
+//
+// `refuse()` writes the SAME text to BOTH streams: stderr keeps the Actions
+// red-annotation behaviour operators already rely on, and stdout puts it in
+// the log the KILLED branch reads. `phase` names where the lane died, so the
+// runner can say "started but died at <phase>" rather than guessing.
+// `code` keeps the house convention that a missing COSMOS_CONNECTION_STRING
+// exits 1 (every other script in backend/scripts does), while a refusal of a
+// dispatched INPUT exits 2. Only the stream the text lands on is changing here;
+// the exit codes are exactly what they were.
+function refuse(phase, lines, code = 2) {
+  const head = `FATAL [phase=${phase}]:`;
+  for (const l of [`${head} ${lines[0]}`, ...lines.slice(1)]) {
+    console.error(l);
+    console.log(l);
+  }
+  // STARTUP REFUSED is the runner's machine-readable hook. Keep the spelling
+  // stable -- backfill-runner.yml greps for it and so do this lane's tests.
+  const marker = `rematch-sold-comps: STARTUP REFUSED at phase=${phase} -- the lane never began work (this is NOT a budget kill).`;
+  console.error(marker);
+  console.log(marker);
+  process.exit(code);
+}
+
 async function main() {
   if (MODE !== "census" && MODE !== "apply-improve") {
-    console.error(`FATAL: MODE is required and has no default -- 'census' (read only) or 'apply-improve'. Got ${JSON.stringify(MODE)}.`);
-    process.exit(2);
+    refuse("mode", [`MODE is required and has no default -- 'census' (read only) or 'apply-improve'. Got ${JSON.stringify(MODE)}.`]);
   }
   // THE CLASS SCOPE IS PARSED BEFORE ANYTHING IS READ, and a scope the apply
   // cannot read is a REFUSAL, not a default. See APPLY_SCOPE_RAW above.
   const applyScope = K.parseApplyScope(APPLY_SCOPE_RAW);
   if (MODE === "apply-improve" && !applyScope.ok) {
-    console.error(`FATAL: MODE=apply-improve needs a class scope on the 'scope' input, and ${JSON.stringify(APPLY_SCOPE_RAW)} is not one.`);
-    console.error(`       ${applyScope.reason}`);
-    console.error(`       Use scope=base-eviction (the class the audit gate cleared), scope=improve, or scope=both.`);
-    console.error(`       The runner's inherited default 'refractor' is deliberately NOT accepted -- an apply says which class it writes.`);
-    process.exit(2);
+    refuse("class-scope", [
+      `MODE=apply-improve needs a class scope on the 'scope' input, and ${JSON.stringify(APPLY_SCOPE_RAW)} is not one.`,
+      `       ${applyScope.reason}`,
+      `       Use scope=base-eviction (the class the audit gate cleared), scope=improve, or scope=both.`,
+      `       The runner's inherited default 'refractor' is deliberately NOT accepted -- an apply says which class it writes.`,
+      `       IF THIS RUN WAS A SELF-RELAUNCH: the relaunch must forward -f scope=<class>. A relaunch that omits it`,
+      `       inherits the workflow default 'refractor' and lands here, having done no work at all.`,
+    ]);
   }
   const ARMED = applyScope.classes;
   const REVERTING = MODE === "apply-improve" && applyScope.revert === true;
@@ -582,9 +650,9 @@ async function main() {
     ? K.applyPrefilterFor(ARMED) : null;
 
   const conn = process.env.COSMOS_CONNECTION_STRING;
-  if (!conn) { console.error("FATAL: COSMOS_CONNECTION_STRING not set"); process.exit(1); }
+  if (!conn) { refuse("cosmos-env", ["COSMOS_CONNECTION_STRING not set"], 1); }
   if (!Number.isFinite(SLOT) || !Number.isFinite(SLOTS) || SLOT < 0 || SLOT >= SLOTS) {
-    console.error(`FATAL: SLOT must be 0..${SLOTS - 1}; got SLOT=${SLOT} SLOTS=${SLOTS}`); process.exit(2);
+    refuse("slot-range", [`SLOT must be 0..${SLOTS - 1}; got SLOT=${SLOT} SLOTS=${SLOTS}`]);
   }
   // THE REVERT PASS BRANCHES BEFORE THE SHARD TABLE, and deliberately.
   //
@@ -611,11 +679,10 @@ async function main() {
     return;
   }
   if (SLOTS !== SHARD_TABLE.slots.length) {
-    console.error(`FATAL: SLOTS=${SLOTS} but the measured shard table has ${SHARD_TABLE.slots.length} slots. The table IS the axis -- re-measure before changing it.`);
-    process.exit(2);
+    refuse("shard-table", [`SLOTS=${SLOTS} but the measured shard table has ${SHARD_TABLE.slots.length} slots. The table IS the axis -- re-measure before changing it.`]);
   }
   const units = unitsForSlot(SLOT);
-  if (!units.length) { console.error(`FATAL: slot ${SLOT} owns no units in the measured table.`); process.exit(2); }
+  if (!units.length) { refuse("shard-units", [`slot ${SLOT} owns no units in the measured table.`]); }
   const q = slotQuery(units);
   if (!q) { console.log(`slot ${SLOT} has no units matching YEARS=${YEARS.join(",")} -- nothing to do.`); return; }
 
@@ -2298,6 +2365,14 @@ if (require.main === module) // CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809). S
 // Runs 33975816175/25863/34391/40824 lost that bet AFTER reconciling clean.
 main()
   .then((ctx) => finishLane(0, ctx || {}))
-  .catch(async (e) => { console.error("FATAL:", e?.stack || e?.message); 
+  .catch(async (e) => {
+    // CF-AN-EMPTY-LOG-IS-NOT-A-BUDGET-KILL (2026-09-07). The runner reads
+    // /tmp/backfill.log, which `tee` fills from STDOUT ONLY -- so a crash
+    // reported to stderr alone left the runner's log without the one thing an
+    // operator needs. Mirror it. finishLane(3) still writes its own exit line,
+    // so the KILLED branch sees a genuine finish witness rather than a kill.
+    const msg = `FATAL: ${e?.stack || e?.message}`;
+    console.error(msg);
+    console.log(msg);
     await finishLane(3);
   });
