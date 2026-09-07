@@ -63,6 +63,7 @@ import { derivePredictionDirection } from "./predictionConstants.js";
 // so PredictionLogDocument.cache_hit reflects whether the prediction
 // served entirely from the cache.
 import { cacheStatsContext } from "../shared/cache.service.js";
+import { cosmosOptionsFromConnectionString, hobbyIqConnectionPolicy } from "../ops/cosmosConnectionPolicy.js";
 // STEP 3: write-completeness health counter. Per methodology §2.6 we
 // record each attempt + success/failure resolution into a Cosmos doc
 // per-replica per-day. The counter calls are fire-and-forget and
@@ -113,13 +114,14 @@ async function getContainer(): Promise<Container | null> {
 
       let client: CosmosClient | null = null;
       if (conn) {
-        client = new CosmosClient(conn);
+        client = new CosmosClient(cosmosOptionsFromConnectionString(conn));
       } else if (endpoint && key) {
-        client = new CosmosClient({ endpoint, key });
+        client = new CosmosClient({ endpoint, key, connectionPolicy: hobbyIqConnectionPolicy() });
       } else if (endpoint) {
         client = new CosmosClient({
           endpoint,
           aadCredentials: new DefaultAzureCredential(),
+          connectionPolicy: hobbyIqConnectionPolicy(),
         });
       } else {
         return null;

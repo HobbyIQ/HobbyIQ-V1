@@ -12,6 +12,7 @@ import { computeSubRawDiscovery, type SkuRawAggregate, type FamilyMultipliersByK
 import { slugFamily } from "./observedMultipliersCompute.service.js";
 import type { StoredMultiplier } from "./observedMultipliersStore.service.js";
 import type { SubRawCandidate, SubRawDiscoveryOptions } from "../../types/discovery.types.js";
+import { cosmosOptionsFromConnectionString } from "../ops/cosmosConnectionPolicy.js";
 
 let sharedCHContainer: Container | null = null;
 let sharedMultipliersContainer: Container | null = null;
@@ -31,7 +32,7 @@ async function getContainers(): Promise<{ ch: Container; mult: Container }> {
   }
   const cs = process.env.COSMOS_CONNECTION_STRING;
   if (!cs) throw new Error("COSMOS_CONNECTION_STRING not set — subRawDiscovery cannot run");
-  const client = new CosmosClient(cs);
+  const client = new CosmosClient(cosmosOptionsFromConnectionString(cs));
   const { database } = await client.databases.createIfNotExists({
     id: process.env.COSMOS_DATABASE ?? "hobbyiq",
   });

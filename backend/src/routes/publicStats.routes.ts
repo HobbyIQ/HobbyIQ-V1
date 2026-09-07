@@ -9,6 +9,7 @@
 
 import { Router, type Request, type Response } from "express";
 import { CosmosClient } from "@azure/cosmos";
+import { cosmosOptionsFromConnectionString } from "../services/ops/cosmosConnectionPolicy.js";
 
 const router = Router();
 
@@ -90,7 +91,7 @@ async function fetchLiveStats(): Promise<PublicStats | null> {
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) return null;
   try {
-    const client = new CosmosClient(conn);
+    const client = new CosmosClient(cosmosOptionsFromConnectionString(conn));
     const db = client.database(process.env.COSMOS_DATABASE ?? "hobbyiq");
     const soldComps = db.container(process.env.COSMOS_SOLD_COMPS_CONTAINER ?? "sold_comps");
     const cardCatalog = db.container("card_catalog");

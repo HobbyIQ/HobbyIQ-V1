@@ -21,6 +21,7 @@ import { CosmosClient, Container } from "@azure/cosmos";
 import { DefaultAzureCredential } from "@azure/identity";
 import { randomUUID } from "crypto";
 import type { HoldingMoveRule, MoveDirection } from "../services/advancedAlerts/holdingMoveRule.js";
+import { cosmosOptionsFromConnectionString, hobbyIqConnectionPolicy } from "../services/ops/cosmosConnectionPolicy.js";
 
 interface HoldingMoveRuleDocument extends HoldingMoveRule {
   id: string;
@@ -61,13 +62,14 @@ async function getContainer(): Promise<Container | null> {
 
       let client: CosmosClient;
       if (connStr) {
-        client = new CosmosClient(connStr);
+        client = new CosmosClient(cosmosOptionsFromConnectionString(connStr));
       } else if (key) {
-        client = new CosmosClient({ endpoint: endpoint!, key });
+        client = new CosmosClient({ endpoint: endpoint!, key, connectionPolicy: hobbyIqConnectionPolicy() });
       } else {
         client = new CosmosClient({
           endpoint: endpoint!,
           aadCredentials: new DefaultAzureCredential(),
+          connectionPolicy: hobbyIqConnectionPolicy(),
         });
       }
 

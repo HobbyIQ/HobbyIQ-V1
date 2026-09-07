@@ -18,6 +18,7 @@
 // latency the user can feel — enqueue failures cost us a seed, not a confirm.
 
 import { CosmosClient, type Container } from "@azure/cosmos";
+import { cosmosOptionsFromConnectionString } from "../ops/cosmosConnectionPolicy.js";
 
 const COSMOS_DATABASE = process.env.COSMOS_DATABASE ?? "hobbyiq";
 const SEED_QUEUE_CONTAINER =
@@ -40,7 +41,7 @@ async function getContainer(): Promise<Container | null> {
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) return null;
   try {
-    _container = new CosmosClient(conn)
+    _container = new CosmosClient(cosmosOptionsFromConnectionString(conn))
       .database(COSMOS_DATABASE)
       .container(SEED_QUEUE_CONTAINER);
     return _container;

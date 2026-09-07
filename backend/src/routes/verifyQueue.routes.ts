@@ -111,6 +111,7 @@ router.post("/verify/queue/:reason/:id", async (req, res, next) => {
 import { CosmosClient } from "@azure/cosmos";
 import { ocrImageUrl } from "../services/portfolioiq/azureVisionOcr.service.js";
 import { parseHobbyIqCardId, computeHobbyIqCardId } from "../services/portfolioiq/hobbyIqCardId.service.js";
+import { cosmosOptionsFromConnectionString } from "../services/ops/cosmosConnectionPolicy.js";
 
 function upgradeImageUrl(u: string | null | undefined): string | null {
   if (!u) return null;
@@ -130,7 +131,7 @@ router.get("/verify/parallel-train/next", async (req, res, next) => {
     const mode = typeof req.query.mode === "string" ? req.query.mode.toLowerCase() : "non-auto";
     const conn = process.env.COSMOS_CONNECTION_STRING;
     if (!conn) return res.status(503).json({ success: false, error: "cosmos not configured" });
-    const c = new CosmosClient(conn);
+    const c = new CosmosClient(cosmosOptionsFromConnectionString(conn));
     const stage = c.database(process.env.COSMOS_DATABASE ?? "hobbyiq").container("comps_staging");
     const sold = c.database(process.env.COSMOS_DATABASE ?? "hobbyiq").container("sold_comps");
 
@@ -232,7 +233,7 @@ router.post("/verify/parallel-train/:stagingId/label", async (req, res, next) =>
     }
     const conn = process.env.COSMOS_CONNECTION_STRING;
     if (!conn) return res.status(503).json({ success: false, error: "cosmos not configured" });
-    const c = new CosmosClient(conn);
+    const c = new CosmosClient(cosmosOptionsFromConnectionString(conn));
     const stage = c.database(process.env.COSMOS_DATABASE ?? "hobbyiq").container("comps_staging");
     const corrections = c.database(process.env.COSMOS_DATABASE ?? "hobbyiq").container("verify_corrections");
 

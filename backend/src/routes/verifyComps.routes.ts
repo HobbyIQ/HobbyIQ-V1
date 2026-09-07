@@ -20,6 +20,7 @@
 import { Request, Response, Router } from "express";
 import { CosmosClient, type Container } from "@azure/cosmos";
 import { requireAdmin } from "../middleware/requireAdmin.js";
+import { cosmosOptionsFromConnectionString } from "../services/ops/cosmosConnectionPolicy.js";
 
 const router = Router();
 router.use(requireAdmin);
@@ -30,7 +31,7 @@ async function getContainer(): Promise<Container | null> {
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) return null;
   try {
-    _container = new CosmosClient(conn)
+    _container = new CosmosClient(cosmosOptionsFromConnectionString(conn))
       .database(process.env.COSMOS_DATABASE ?? "hobbyiq")
       .container("sold_comps");
     return _container;

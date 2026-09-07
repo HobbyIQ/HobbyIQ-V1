@@ -17,6 +17,7 @@
 
 import { Container, CosmosClient } from "@azure/cosmos";
 import { DefaultAzureCredential } from "@azure/identity";
+import { cosmosOptionsFromConnectionString, hobbyIqConnectionPolicy } from "../ops/cosmosConnectionPolicy.js";
 
 const CURSOR_ID = "histbackfill::cursor";
 const CURSOR_PARTITION = "_checkpoint";
@@ -73,11 +74,12 @@ async function getContainer(): Promise<Container | null> {
       const containerId = process.env.COSMOS_CH_DAILY_SALES_CONTAINER ?? "ch_daily_sales";
       if (!endpoint && !connStr) return null;
       let client: CosmosClient;
-      if (connStr) client = new CosmosClient(connStr);
-      else if (key) client = new CosmosClient({ endpoint: endpoint!, key });
+      if (connStr) client = new CosmosClient(cosmosOptionsFromConnectionString(connStr));
+      else if (key) client = new CosmosClient({ endpoint: endpoint!, key, connectionPolicy: hobbyIqConnectionPolicy() });
       else client = new CosmosClient({
         endpoint: endpoint!,
         aadCredentials: new DefaultAzureCredential(),
+        connectionPolicy: hobbyIqConnectionPolicy(),
       });
       // Read-only handle to an existing container — do NOT createIfNotExists
       // here; the daily-ingest store owns the container definition and a

@@ -11,6 +11,7 @@ import { CosmosClient, type Container } from "@azure/cosmos";
 import { computeHobbyIqCardId } from "./hobbyIqCardId.service.js";
 import { verifiedCatalogSqlClause, provisionalCatalogSqlClause } from "../catalog/catalogVisibility.js";
 import { authorityRank, isDerived } from "../catalog/catalogAuthority.service.js";
+import { cosmosOptionsFromConnectionString } from "../ops/cosmosConnectionPolicy.js";
 
 export interface CanonicalSearchInput {
   q: string;
@@ -158,7 +159,7 @@ async function getContainers(): Promise<{ catalog: Container; sold: Container } 
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) return null;
   try {
-    const client = new CosmosClient(conn);
+    const client = new CosmosClient(cosmosOptionsFromConnectionString(conn));
     const db = client.database(process.env.COSMOS_DATABASE ?? "hobbyiq");
     cachedCatalog = db.container("card_catalog");
     cachedSold = db.container("sold_comps");

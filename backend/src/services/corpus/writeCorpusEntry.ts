@@ -18,6 +18,7 @@
 import { CosmosClient, type Container } from "@azure/cosmos";
 import type { CorpusEntry } from "../../models/corpusEntry.js";
 import { isCorpusDisabled, getCorpusSampleRate } from "./corpusConfig.js";
+import { cosmosOptionsFromConnectionString } from "../ops/cosmosConnectionPolicy.js";
 
 const DB_NAME = "hobbyiq";
 const CONTAINER_NAME = "compiq_corpus";
@@ -41,7 +42,7 @@ function getContainer(): Container | null {
     return null;
   }
   try {
-    const client = new CosmosClient(conn);
+    const client = new CosmosClient(cosmosOptionsFromConnectionString(conn));
     cachedContainer = client.database(DB_NAME).container(CONTAINER_NAME);
     return cachedContainer;
   } catch (e) {

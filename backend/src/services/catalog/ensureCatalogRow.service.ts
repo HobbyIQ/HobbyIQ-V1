@@ -15,6 +15,7 @@
 import { CosmosClient, type Container, type JSONObject } from "@azure/cosmos";
 import { deriveBrand, deriveParentSetKey, normalizeSetKey, slugify } from "../portfolioiq/hobbyIqCardId.service.js";
 import { upsertCatalogEntry, type CardCatalogEntry } from "../portfolioiq/cardCatalog.service.js";
+import { cosmosOptionsFromConnectionString } from "../ops/cosmosConnectionPolicy.js";
 
 let _container: Container | null = null;
 async function getContainer(): Promise<Container | null> {
@@ -22,7 +23,7 @@ async function getContainer(): Promise<Container | null> {
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) return null;
   try {
-    _container = new CosmosClient(conn)
+    _container = new CosmosClient(cosmosOptionsFromConnectionString(conn))
       .database(process.env.COSMOS_DATABASE ?? "hobbyiq")
       .container("card_catalog");
     return _container;

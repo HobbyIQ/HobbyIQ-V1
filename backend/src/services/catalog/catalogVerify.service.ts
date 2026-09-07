@@ -41,6 +41,7 @@ import {
   slugify,
 } from "../portfolioiq/hobbyIqCardId.service.js";
 import { requestChecklistSeed } from "./checklistSeedQueue.service.js";
+import { cosmosOptionsFromConnectionString } from "../ops/cosmosConnectionPolicy.js";
 
 const COSMOS_DATABASE = process.env.COSMOS_DATABASE ?? "hobbyiq";
 const CATALOG_CONTAINER = process.env.COSMOS_CARD_CATALOG_CONTAINER ?? "card_catalog";
@@ -51,7 +52,7 @@ async function getContainer(): Promise<Container | null> {
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) return null;
   try {
-    _container = new CosmosClient(conn)
+    _container = new CosmosClient(cosmosOptionsFromConnectionString(conn))
       .database(COSMOS_DATABASE)
       .container(CATALOG_CONTAINER);
     return _container;

@@ -14,6 +14,7 @@
 
 import { CosmosClient, type Container } from "@azure/cosmos";
 import { parseHobbyIqCardId } from "./hobbyIqCardId.service.js";
+import { cosmosOptionsFromConnectionString } from "../ops/cosmosConnectionPolicy.js";
 
 export interface PopulationGrade {
   gradeName: string;           // "10", "9.5", etc.
@@ -41,7 +42,7 @@ async function containers(): Promise<{ catalog: Container; pop: Container } | nu
   if (!conn) return null;
   try {
     if (!cachedCatalog || !cachedPop) {
-      const client = new CosmosClient(conn);
+      const client = new CosmosClient(cosmosOptionsFromConnectionString(conn));
       const db = client.database(process.env.COSMOS_DATABASE ?? "hobbyiq");
       cachedCatalog = db.container("card_catalog");
       cachedPop = db.container("card_population");

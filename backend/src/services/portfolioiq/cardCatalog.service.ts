@@ -33,6 +33,7 @@ import { authorityRank, catalogAuthorityOf } from "../catalog/catalogAuthority.s
 import { buildSearchText, buildSearchTokens } from "./searchIndexing.service.js";
 import { canonicalCardName } from "../catalog/canonicalCardName.js";
 import { checkSetKeyFieldMatchesIdStem } from "../catalog/setKeyFieldInvariant.js";
+import { cosmosOptionsFromConnectionString } from "../ops/cosmosConnectionPolicy.js";
 
 export interface CardCatalogEntry {
   id: string;                        // hobbyiqCardId slug (also the doc id)
@@ -171,7 +172,7 @@ async function getContainer(): Promise<Container | null> {
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) return null;
   try {
-    const client = new CosmosClient(conn);
+    const client = new CosmosClient(cosmosOptionsFromConnectionString(conn));
     const db = client.database(process.env.COSMOS_DATABASE ?? "hobbyiq");
     _cached = db.container(process.env.COSMOS_CARD_CATALOG_CONTAINER ?? "card_catalog");
     return _cached;

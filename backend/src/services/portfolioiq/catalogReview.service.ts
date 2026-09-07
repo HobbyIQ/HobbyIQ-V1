@@ -14,6 +14,7 @@
 // one page; actions differ per type but the shape mostly aligns.
 
 import { CosmosClient, type Container } from "@azure/cosmos";
+import { cosmosOptionsFromConnectionString } from "../ops/cosmosConnectionPolicy.js";
 
 const COSMOS_DATABASE = process.env.COSMOS_DATABASE ?? "hobbyiq";
 
@@ -25,7 +26,7 @@ function getCatalog(): Container | null {
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) return null;
   try {
-    _catalog = new CosmosClient(conn).database(COSMOS_DATABASE).container("card_catalog");
+    _catalog = new CosmosClient(cosmosOptionsFromConnectionString(conn)).database(COSMOS_DATABASE).container("card_catalog");
     return _catalog;
   } catch { return null; }
 }
@@ -35,7 +36,7 @@ function getStaging(): Container | null {
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) return null;
   try {
-    _staging = new CosmosClient(conn).database(COSMOS_DATABASE).container("comps_staging");
+    _staging = new CosmosClient(cosmosOptionsFromConnectionString(conn)).database(COSMOS_DATABASE).container("comps_staging");
     return _staging;
   } catch { return null; }
 }

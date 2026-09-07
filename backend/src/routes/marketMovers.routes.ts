@@ -32,6 +32,7 @@ import { Router, type Request, type Response } from "express";
 import { requireSession } from "../middleware/requireSession.js";
 import { CosmosClient, type Container } from "@azure/cosmos";
 import { moverCredibility, looksDamaged } from "../services/compiq/moverCredibility.service.js";
+import { cosmosOptionsFromConnectionString } from "../services/ops/cosmosConnectionPolicy.js";
 
 const router = Router();
 
@@ -56,7 +57,7 @@ async function getContainer(): Promise<Container | null> {
   const cs = process.env.COSMOS_CONNECTION_STRING;
   if (!cs) return null;
   try {
-    const client = new CosmosClient(cs);
+    const client = new CosmosClient(cosmosOptionsFromConnectionString(cs));
     sharedContainer = client
       .database(process.env.COSMOS_DATABASE ?? "hobbyiq")
       .container(process.env.COSMOS_SOLD_COMPS_CONTAINER ?? "sold_comps");
@@ -70,7 +71,7 @@ async function getDailyContainer(): Promise<Container | null> {
   const cs = process.env.COSMOS_CONNECTION_STRING;
   if (!cs) return null;
   try {
-    const client = new CosmosClient(cs);
+    const client = new CosmosClient(cosmosOptionsFromConnectionString(cs));
     sharedDailyContainer = client
       .database(process.env.COSMOS_DATABASE ?? "hobbyiq")
       .container("sold_comps_daily");

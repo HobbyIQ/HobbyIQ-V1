@@ -34,6 +34,7 @@ import { canonicalVariationName, pickVariationForMarker, reduceVariationStockToC
 import { qualifiedSetKeyFromTitle } from "../catalog/productQualifiers.js";
 import { parseGradeFromTitle } from "./gradeParser.js";
 import { judgeCardNumber, logCardNumberVerdict, isTcgVertical } from "./cardNumberIntegrity.js";
+import { cosmosOptionsFromConnectionString } from "../ops/cosmosConnectionPolicy.js";
 
 // CF-CHECKLIST-NARROWER (Drew, 2026-08-02). When parseListingIdentity
 // can't extract a cardNumber but we have (player, year, set) triple,
@@ -45,7 +46,7 @@ async function getCatalogContainer(): Promise<Container | null> {
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) return null;
   try {
-    const client = new CosmosClient(conn);
+    const client = new CosmosClient(cosmosOptionsFromConnectionString(conn));
     const db = client.database(process.env.COSMOS_DATABASE ?? "hobbyiq");
     cachedCatalogContainer = db.container("card_catalog");
     return cachedCatalogContainer;
@@ -268,7 +269,7 @@ async function getSoldForScoring(): Promise<Container | null> {
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) return null;
   try {
-    const client = new CosmosClient(conn);
+    const client = new CosmosClient(cosmosOptionsFromConnectionString(conn));
     const db = client.database(process.env.COSMOS_DATABASE ?? "hobbyiq");
     cachedSoldCompsContainerForScoring = db.container(process.env.COSMOS_SOLD_COMPS_CONTAINER ?? "sold_comps");
     return cachedSoldCompsContainerForScoring;
@@ -552,7 +553,7 @@ async function catalogHasSlug(slug: string): Promise<boolean> {
   try {
     const conn = process.env.COSMOS_CONNECTION_STRING;
     if (!conn) return true; // fail-open when Cosmos isn't wired (tests, local dev)
-    const client = new CosmosClient(conn);
+    const client = new CosmosClient(cosmosOptionsFromConnectionString(conn));
     const cat = client.database(process.env.COSMOS_DATABASE ?? "hobbyiq").container("card_catalog");
     // Point-lookup by field. Query returns 0 or 1+ counts; either way
     // cheap since hobbyiqCardId is the canonical join key.
@@ -580,7 +581,7 @@ async function getSoldCompsContainer(): Promise<Container | null> {
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) return null;
   try {
-    const client = new CosmosClient(conn);
+    const client = new CosmosClient(cosmosOptionsFromConnectionString(conn));
     const db = client.database(process.env.COSMOS_DATABASE ?? "hobbyiq");
     cachedContainer = db.container(process.env.COSMOS_SOLD_COMPS_CONTAINER ?? "sold_comps");
     return cachedContainer;

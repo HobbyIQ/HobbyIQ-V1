@@ -18,6 +18,7 @@
 import { Container, CosmosClient } from "@azure/cosmos";
 import { DefaultAzureCredential } from "@azure/identity";
 import type { WeeklyDigest } from "./weeklyDigestBuild.service.js";
+import { cosmosOptionsFromConnectionString, hobbyIqConnectionPolicy } from "../ops/cosmosConnectionPolicy.js";
 
 const DB_NAME = process.env.COSMOS_DATABASE ?? "hobbyiq";
 const DIGEST_CONTAINER = process.env.COSMOS_WEEKLY_DIGESTS_CONTAINER ?? "weekly_digests";
@@ -54,9 +55,9 @@ async function init(): Promise<Container | null> {
       const connStr = process.env.COSMOS_CONNECTION_STRING;
       if (!endpoint && !connStr) return null;
       let client: CosmosClient;
-      if (connStr) client = new CosmosClient(connStr);
-      else if (key) client = new CosmosClient({ endpoint: endpoint!, key });
-      else client = new CosmosClient({ endpoint: endpoint!, aadCredentials: new DefaultAzureCredential() });
+      if (connStr) client = new CosmosClient(cosmosOptionsFromConnectionString(connStr));
+      else if (key) client = new CosmosClient({ endpoint: endpoint!, key, connectionPolicy: hobbyIqConnectionPolicy() });
+      else client = new CosmosClient({ endpoint: endpoint!, aadCredentials: new DefaultAzureCredential(), connectionPolicy: hobbyIqConnectionPolicy() });
       const { database } = await client.databases.createIfNotExists({ id: DB_NAME });
       const { container } = await database.containers.createIfNotExists({
         id: DIGEST_CONTAINER,

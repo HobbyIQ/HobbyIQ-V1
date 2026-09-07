@@ -32,6 +32,7 @@ import { valueIdentity } from "../compiq/oneValuationPath.service.js";
 import { fetchCardActiveListings, type ActiveListing } from "../ebay/ebayListingSearch.service.js";
 import { sendBuyerIqDealNotification } from "../notification.service.js";
 import type { BuyerIqTarget } from "./buyeriqStore.service.js";
+import { cosmosOptionsFromConnectionString } from "../ops/cosmosConnectionPolicy.js";
 
 const DEAL_THRESHOLD_PCT = Math.max(0.02, Math.min(0.60, Number(process.env.BUYERIQ_DEAL_THRESHOLD_PCT ?? "0.15")));
 const COOLDOWN_HOURS = Math.max(1, Number(process.env.BUYERIQ_DEAL_COOLDOWN_HOURS ?? "24"));
@@ -67,7 +68,7 @@ async function getDealsSentContainer(): Promise<Container | null> {
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) return null;
   try {
-    const client = new CosmosClient(conn);
+    const client = new CosmosClient(cosmosOptionsFromConnectionString(conn));
     const db = client.database(process.env.COSMOS_DATABASE ?? "hobbyiq");
     const { container } = await db.containers.createIfNotExists({
       id: "buyeriq_deals_sent",
@@ -114,7 +115,7 @@ async function getTargetsContainer(): Promise<Container | null> {
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) return null;
   try {
-    const client = new CosmosClient(conn);
+    const client = new CosmosClient(cosmosOptionsFromConnectionString(conn));
     _targetsContainer = client
       .database(process.env.COSMOS_DATABASE ?? "hobbyiq")
       .container("buyeriq_targets");

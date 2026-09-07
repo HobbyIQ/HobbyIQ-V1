@@ -18,6 +18,7 @@
 // "all color-family momentum for today") is a same-partition query.
 
 import { CosmosClient, type Container } from "@azure/cosmos";
+import { cosmosOptionsFromConnectionString } from "../ops/cosmosConnectionPolicy.js";
 
 export type MomentumDimension =
   | "colorFamily"
@@ -79,7 +80,7 @@ async function getContainer(): Promise<Container | null> {
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) return null;
   try {
-    const client = new CosmosClient(conn);
+    const client = new CosmosClient(cosmosOptionsFromConnectionString(conn));
     const db = client.database(process.env.COSMOS_DATABASE ?? "hobbyiq");
     const { container } = await db.containers.createIfNotExists(
       { id: CONTAINER_NAME, partitionKey: "/dimension", defaultTtl: -1 },

@@ -10,6 +10,7 @@ import { CosmosClient, Container } from "@azure/cosmos";
 import { DefaultAzureCredential } from "@azure/identity";
 import { randomUUID } from "crypto";
 import type { TrendIQCoverage } from "../services/compiq/trendIQ.types.js";
+import { cosmosOptionsFromConnectionString, hobbyIqConnectionPolicy } from "../services/ops/cosmosConnectionPolicy.js";
 
 // ─── Rule type model ────────────────────────────────────────────────────────
 
@@ -100,13 +101,14 @@ async function getContainer(): Promise<Container | null> {
 
       let client: CosmosClient;
       if (connStr) {
-        client = new CosmosClient(connStr);
+        client = new CosmosClient(cosmosOptionsFromConnectionString(connStr));
       } else if (key) {
-        client = new CosmosClient({ endpoint: endpoint!, key });
+        client = new CosmosClient({ endpoint: endpoint!, key, connectionPolicy: hobbyIqConnectionPolicy() });
       } else {
         client = new CosmosClient({
           endpoint: endpoint!,
           aadCredentials: new DefaultAzureCredential(),
+          connectionPolicy: hobbyIqConnectionPolicy(),
         });
       }
 

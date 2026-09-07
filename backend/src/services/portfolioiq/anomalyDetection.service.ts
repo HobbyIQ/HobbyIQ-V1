@@ -10,6 +10,7 @@
 // after baseline-snapshot in nightly-cleanliness.yml).
 
 import { CosmosClient, type Container } from "@azure/cosmos";
+import { cosmosOptionsFromConnectionString } from "../ops/cosmosConnectionPolicy.js";
 
 export interface AnomalyRow {
   slug: string;
@@ -54,7 +55,7 @@ function getSc(): Container | null {
   if (cachedSc) return cachedSc;
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) return null;
-  const client = new CosmosClient(conn);
+  const client = new CosmosClient(cosmosOptionsFromConnectionString(conn));
   cachedSc = client.database(process.env.COSMOS_DATABASE ?? "hobbyiq").container("sold_comps");
   return cachedSc;
 }
@@ -63,7 +64,7 @@ async function getBaselineContainer(): Promise<Container | null> {
   if (cachedBaseline) return cachedBaseline;
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) return null;
-  const client = new CosmosClient(conn);
+  const client = new CosmosClient(cosmosOptionsFromConnectionString(conn));
   const db = client.database(process.env.COSMOS_DATABASE ?? "hobbyiq");
   try {
     const { container } = await db.containers.createIfNotExists({

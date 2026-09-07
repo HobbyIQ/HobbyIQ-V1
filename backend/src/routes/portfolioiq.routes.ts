@@ -106,6 +106,7 @@ import {
 // cluster health surface — reads ch_card_attribution_stats and
 // returns holdings where the community disagrees on identity.
 import { analyzeAttributionHealth } from "../services/portfolioiq/attributionHealthAnalyze.service.js";
+import { cosmosOptionsFromConnectionString } from "../services/ops/cosmosConnectionPolicy.js";
 
 const router = Router();
 
@@ -181,7 +182,7 @@ router.get(
           error: "player-trend on-demand compute unavailable (no COSMOS_CONNECTION_STRING)",
         });
       }
-      const client = new CosmosClient(cs);
+      const client = new CosmosClient(cosmosOptionsFromConnectionString(cs));
       const container = client
         .database(process.env.COSMOS_DATABASE ?? "hobbyiq")
         .container(process.env.COSMOS_CH_DAILY_SALES_CONTAINER ?? "ch_daily_sales");

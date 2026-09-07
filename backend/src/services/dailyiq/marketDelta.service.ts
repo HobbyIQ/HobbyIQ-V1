@@ -11,6 +11,7 @@
 // Soft-fails everywhere: a Cosmos outage must never block the DailyIQ brief.
 
 import { CosmosClient, Container } from "@azure/cosmos";
+import { cosmosOptionsFromConnectionString } from "../ops/cosmosConnectionPolicy.js";
 
 const DB_NAME = process.env.COSMOS_DATABASE ?? "hobbyiq";
 const CONTAINER_NAME = "comp_logs";
@@ -44,7 +45,7 @@ function getContainer(): Container | null {
     return null;
   }
   try {
-    const client = new CosmosClient(conn);
+    const client = new CosmosClient(cosmosOptionsFromConnectionString(conn));
     _container = client.database(DB_NAME).container(CONTAINER_NAME);
     return _container;
   } catch (err) {

@@ -14,6 +14,7 @@
 // scans required for the app's read paths.
 
 import { Container, CosmosClient } from "@azure/cosmos";
+import { cosmosOptionsFromConnectionString } from "../ops/cosmosConnectionPolicy.js";
 
 export interface BuyerIqList {
   id: string;                          // uuid, doc id
@@ -65,7 +66,7 @@ async function getListsContainer(): Promise<Container | null> {
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) return null;
   try {
-    const client = new CosmosClient(conn);
+    const client = new CosmosClient(cosmosOptionsFromConnectionString(conn));
     const db = client.database(process.env.COSMOS_DATABASE ?? "hobbyiq");
     // CF-BUYERIQ-AUTO-PROVISION: create the container on first read/write
     // so a deploy doesn't need a manual portal step. Idempotent — noop
@@ -84,7 +85,7 @@ async function getTargetsContainer(): Promise<Container | null> {
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) return null;
   try {
-    const client = new CosmosClient(conn);
+    const client = new CosmosClient(cosmosOptionsFromConnectionString(conn));
     const db = client.database(process.env.COSMOS_DATABASE ?? "hobbyiq");
     const { container } = await db.containers.createIfNotExists({
       id: "buyeriq_targets",

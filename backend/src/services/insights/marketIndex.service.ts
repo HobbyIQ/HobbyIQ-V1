@@ -92,6 +92,7 @@
 // synthetic prices.
 
 import { CosmosClient, type Container } from "@azure/cosmos";
+import { cosmosOptionsFromConnectionString } from "../ops/cosmosConnectionPolicy.js";
 
 /** Sports that get an index tile. */
 export const INDEX_SPORTS = ["baseball", "basketball", "football", "hockey", "pokemon"] as const;
@@ -279,7 +280,7 @@ export async function getSoldCompsContainer(): Promise<Container | null> {
   const cs = process.env.COSMOS_CONNECTION_STRING;
   if (!cs) return null;
   try {
-    const client = new CosmosClient(cs);
+    const client = new CosmosClient(cosmosOptionsFromConnectionString(cs));
     sharedSoldComps = client
       .database(process.env.COSMOS_DATABASE ?? "hobbyiq")
       .container(process.env.COSMOS_SOLD_COMPS_CONTAINER ?? "sold_comps");
@@ -298,7 +299,7 @@ export async function getSeriesContainer(): Promise<Container | null> {
   const cs = process.env.COSMOS_CONNECTION_STRING;
   if (!cs) return null;
   try {
-    const client = new CosmosClient(cs);
+    const client = new CosmosClient(cosmosOptionsFromConnectionString(cs));
     sharedSeries = client
       .database(process.env.COSMOS_DATABASE ?? "hobbyiq")
       .container("daily_price_series");

@@ -23,6 +23,7 @@
 
 import { CosmosClient, type Container } from "@azure/cosmos";
 import { readLearningEvents } from "./learningEvents.service.js";
+import { cosmosOptionsFromConnectionString } from "../ops/cosmosConnectionPolicy.js";
 
 interface LearnedWeights {
   id: string;
@@ -44,7 +45,7 @@ async function getContainer(): Promise<Container | null> {
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) return null;
   try {
-    const client = new CosmosClient(conn);
+    const client = new CosmosClient(cosmosOptionsFromConnectionString(conn));
     const { database } = await client.databases.createIfNotExists({ id: process.env.COSMOS_DATABASE ?? "hobbyiq" });
     const { container } = await database.containers.createIfNotExists({
       id: CONTAINER_ID,

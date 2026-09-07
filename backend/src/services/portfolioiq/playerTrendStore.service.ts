@@ -7,6 +7,7 @@
 
 import type { Container } from "@azure/cosmos";
 import { CosmosClient } from "@azure/cosmos";
+import { cosmosOptionsFromConnectionString } from "../ops/cosmosConnectionPolicy.js";
 import type {
   PlayerTrendResult,
   StratifiedPlayerTrendResult,
@@ -21,7 +22,7 @@ async function getContainer(): Promise<Container> {
   if (sharedContainer) return sharedContainer;
   const cs = process.env.COSMOS_CONNECTION_STRING;
   if (!cs) throw new Error("COSMOS_CONNECTION_STRING not set — playerTrendStore cannot query");
-  const client = new CosmosClient(cs);
+  const client = new CosmosClient(cosmosOptionsFromConnectionString(cs));
   const { database } = await client.databases.createIfNotExists({ id: DB_NAME });
   const { container } = await database.containers.createIfNotExists({
     id: CONTAINER_ID,

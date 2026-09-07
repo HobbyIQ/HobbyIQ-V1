@@ -13,6 +13,7 @@
 // card has 0-3 comps.
 
 import { CosmosClient, type Container } from "@azure/cosmos";
+import { cosmosOptionsFromConnectionString } from "../ops/cosmosConnectionPolicy.js";
 
 const CARD_TIER_MIN_COMPS = Number(process.env.TIERED_MOMENTUM_CARD_MIN ?? "5");
 const WINDOW_DAYS_RECENT = Number(process.env.TIERED_MOMENTUM_WINDOW_RECENT ?? "30");
@@ -61,7 +62,7 @@ async function getSoldCompsContainer(): Promise<Container | null> {
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) return null;
   try {
-    const client = new CosmosClient(conn);
+    const client = new CosmosClient(cosmosOptionsFromConnectionString(conn));
     cachedContainer = client
       .database(process.env.COSMOS_DATABASE ?? "hobbyiq")
       .container("sold_comps");

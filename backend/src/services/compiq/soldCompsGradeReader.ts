@@ -1,3 +1,4 @@
+import { cosmosOptionsFromConnectionString } from "../ops/cosmosConnectionPolicy.js";
 // CF-GRADE-CURVE-TEST-SEAM (2026-08-16).
 //
 // The raw sold_comps read behind the observed grade curve, split into its own
@@ -66,7 +67,7 @@ async function getContainer(): Promise<QueryableContainer | null> {
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) return null;
   const { CosmosClient } = await import("@azure/cosmos");
-  _container = new CosmosClient(conn)
+  _container = new CosmosClient(cosmosOptionsFromConnectionString(conn))
     .database(process.env.COSMOS_DATABASE ?? "hobbyiq")
     .container("sold_comps") as unknown as QueryableContainer;
   return _container;

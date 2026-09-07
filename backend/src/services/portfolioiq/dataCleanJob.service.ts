@@ -35,6 +35,7 @@ import { normalizeHoldingFields } from "./holdingFieldNormalizer.service.js";
 import type { StagingClean, StagingDoc } from "./compsStaging.service.js";
 import { classifyTcg } from "./tcgVertical.service.js";
 import { resolveVertical } from "./resolveVertical.service.js";
+import { cosmosOptionsFromConnectionString } from "../ops/cosmosConnectionPolicy.js";
 
 /** CF-DATA-CLEAN-MEDIAN-BY-GRADE: the bucket a sale belongs to for price
  *  plausibility. Raw and PSA 10 are different markets for the same card, so
@@ -109,7 +110,7 @@ async function getStagingContainer(): Promise<Container | null> {
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) return null;
   try {
-    const client = new CosmosClient(conn);
+    const client = new CosmosClient(cosmosOptionsFromConnectionString(conn));
     const db = client.database(process.env.COSMOS_DATABASE ?? "hobbyiq");
     _cached = db.container(process.env.COSMOS_COMPS_STAGING_CONTAINER ?? "comps_staging");
     return _cached;
@@ -124,7 +125,7 @@ async function getSoldCompsContainer(): Promise<Container | null> {
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) return null;
   try {
-    const client = new CosmosClient(conn);
+    const client = new CosmosClient(cosmosOptionsFromConnectionString(conn));
     const db = client.database(process.env.COSMOS_DATABASE ?? "hobbyiq");
     _soldCompsCached = db.container(process.env.COSMOS_SOLD_COMPS_CONTAINER ?? "sold_comps");
     return _soldCompsCached;

@@ -9,6 +9,7 @@
 // Cached 15 min (expensive full-container aggregation).
 
 import { CosmosClient, type Container } from "@azure/cosmos";
+import { cosmosOptionsFromConnectionString } from "../ops/cosmosConnectionPolicy.js";
 
 export interface SlugAuditRow {
   slug: string;
@@ -39,7 +40,7 @@ function getSc(): Container | null {
   if (cachedSc) return cachedSc;
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) return null;
-  const client = new CosmosClient(conn);
+  const client = new CosmosClient(cosmosOptionsFromConnectionString(conn));
   cachedSc = client.database(process.env.COSMOS_DATABASE ?? "hobbyiq").container("sold_comps");
   return cachedSc;
 }

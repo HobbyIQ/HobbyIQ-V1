@@ -26,6 +26,7 @@ import {
 } from "../../types/playerScore.js";
 import { getMlbMomentum, levelFromSport } from "./mlbStats.service.js";
 import { getRecentSnapshotsByPlayer } from "./trendHistory.service.js";
+import { cosmosOptionsFromConnectionString, hobbyIqConnectionPolicy } from "../ops/cosmosConnectionPolicy.js";
 
 const DB_NAME = process.env.COSMOS_DB ?? process.env.COSMOS_DATABASE ?? "hobbyiq";
 const TRENDS_CONTAINER =
@@ -50,9 +51,9 @@ async function initContainers(): Promise<void> {
       const endpoint = process.env.COSMOS_ENDPOINT;
       const key = process.env.COSMOS_KEY;
       let client: CosmosClient | null = null;
-      if (conn) client = new CosmosClient(conn);
-      else if (endpoint && key) client = new CosmosClient({ endpoint, key });
-      else if (endpoint) client = new CosmosClient({ endpoint, aadCredentials: new DefaultAzureCredential() });
+      if (conn) client = new CosmosClient(cosmosOptionsFromConnectionString(conn));
+      else if (endpoint && key) client = new CosmosClient({ endpoint, key, connectionPolicy: hobbyIqConnectionPolicy() });
+      else if (endpoint) client = new CosmosClient({ endpoint, aadCredentials: new DefaultAzureCredential(), connectionPolicy: hobbyIqConnectionPolicy() });
       else return;
 
       const { database } = await client.databases.createIfNotExists({ id: DB_NAME });

@@ -39,6 +39,7 @@
 import { CosmosClient, type Container } from "@azure/cosmos";
 import { asOfCutoffString, isBeforeAsOf } from "./asOfCutoff.js";
 import { mayUnionIdentities, productIdentityOf } from "./identityUnionGuard.js";
+import { cosmosOptionsFromConnectionString } from "../ops/cosmosConnectionPolicy.js";
 
 const COSMOS_DATABASE = process.env.COSMOS_DATABASE ?? "hobbyiq";
 const SOLD_COMPS_CONTAINER = process.env.COSMOS_SOLD_COMPS_CONTAINER ?? "sold_comps";
@@ -66,7 +67,7 @@ function getContainer(): Container | null {
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) return null;
   try {
-    _container = new CosmosClient(conn).database(COSMOS_DATABASE).container(SOLD_COMPS_CONTAINER);
+    _container = new CosmosClient(cosmosOptionsFromConnectionString(conn)).database(COSMOS_DATABASE).container(SOLD_COMPS_CONTAINER);
     return _container;
   } catch { return null; }
 }

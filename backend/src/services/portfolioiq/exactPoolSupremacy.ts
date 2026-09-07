@@ -48,6 +48,7 @@ import { isExactPoolRung } from "../compiq/fmvRung.js";
 import type { UnifiedPriceResult } from "../compiq/unifiedPricing.service.js";
 import { poolReadIdsFor, resolveIdentityToCatalogRow, type CatalogRowResolution } from "../catalog/catalogIdentityResolver.js";
 import { decideIdentityUnion } from "../compiq/identityUnionGuard.js";
+import { cosmosOptionsFromConnectionString } from "../ops/cosmosConnectionPolicy.js";
 
 export const EXACT_POOL_WINDOW_DAYS = 180;
 
@@ -154,7 +155,7 @@ function soldCompsContainer(): Container | null {
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) return null;
   try {
-    _container = new CosmosClient(conn)
+    _container = new CosmosClient(cosmosOptionsFromConnectionString(conn))
       .database(process.env.COSMOS_DATABASE ?? "hobbyiq")
       .container(process.env.COSMOS_SOLD_COMPS_CONTAINER ?? "sold_comps");
     return _container;

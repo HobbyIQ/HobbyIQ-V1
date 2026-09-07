@@ -16,6 +16,7 @@ import { runImageVerifyBatch } from "../services/portfolioiq/imageVerifyJob.serv
 import { runPromotionBatch } from "../services/portfolioiq/promotionJob.service.js";
 import { runAutoTriageBatch } from "../services/portfolioiq/autoTriageJob.service.js";
 import { CosmosClient } from "@azure/cosmos";
+import { cosmosOptionsFromConnectionString } from "../services/ops/cosmosConnectionPolicy.js";
 
 const router = Router();
 // CF-ADMIN-GATE-SCOPE (Drew, 2026-08-12). MUST stay path-scoped. This
@@ -114,7 +115,7 @@ router.get("/staging/health", async (_req, res, next) => {
   try {
     const conn = process.env.COSMOS_CONNECTION_STRING;
     if (!conn) return res.json({ success: true, counts: {}, note: "cosmos not configured" });
-    const client = new CosmosClient(conn);
+    const client = new CosmosClient(cosmosOptionsFromConnectionString(conn));
     const staging = client.database(process.env.COSMOS_DATABASE ?? "hobbyiq").container(process.env.COSMOS_COMPS_STAGING_CONTAINER ?? "comps_staging");
     const statuses = ["pending", "clean", "anomaly", "verified", "pending-manual", "promoted", "awaiting-catalog", "holding-tcg", "player-precision"] as const;
     const counts: Record<string, number> = {};

@@ -14,6 +14,7 @@
 import { CosmosClient, type Container } from "@azure/cosmos";
 import { computeDhashFromBytes, computeDhashFromUrl, hammingHex } from "../attribution/phashCompute.service.js";
 import { parseHobbyIqCardId } from "./hobbyIqCardId.service.js";
+import { cosmosOptionsFromConnectionString } from "../ops/cosmosConnectionPolicy.js";
 
 // POOL-1 residue (audit, 2026-09-03). The phash INDEX query below deliberately
 // reads every row -- identity lookup wants all the evidence, adjudicated or
@@ -67,7 +68,7 @@ async function getSoldContainer(): Promise<Container | null> {
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) return null;
   try {
-    const client = new CosmosClient(conn);
+    const client = new CosmosClient(cosmosOptionsFromConnectionString(conn));
     cachedSold = client.database(process.env.COSMOS_DATABASE ?? "hobbyiq").container("sold_comps");
     return cachedSold;
   } catch { return null; }

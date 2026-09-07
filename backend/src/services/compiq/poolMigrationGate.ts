@@ -157,6 +157,7 @@
  * and it never promotes a rung the ladder did not itself reach.
  */
 import { CosmosClient, type Container } from "@azure/cosmos";
+import { cosmosOptionsFromConnectionString } from "../ops/cosmosConnectionPolicy.js";
 
 /**
  * How long after a catalog row is minted its pool is presumed to be still
@@ -334,7 +335,7 @@ function getControlContainer(): Container | null {
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) return null;
   try {
-    _controlContainer = new CosmosClient(conn)
+    _controlContainer = new CosmosClient(cosmosOptionsFromConnectionString(conn))
       .database(process.env.COSMOS_DATABASE ?? "hobbyiq")
       .container(process.env.COSMOS_REMATCH_CONTROL_CONTAINER ?? REMATCH_CONTROL_CONTAINER);
     return _controlContainer;

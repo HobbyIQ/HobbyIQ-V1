@@ -5,6 +5,7 @@ import { DefaultAzureCredential } from "@azure/identity";
 import { verifyAppleIdentityToken } from "./appleAuth.js";
 import { effectivePlanFor } from "../config/entitlements.js";
 import { TERMS_VERSION, isCurrentTermsVersion } from "./legal/termsVersion.js";
+import { cosmosOptionsFromConnectionString, hobbyIqConnectionPolicy } from "./ops/cosmosConnectionPolicy.js";
 
 // CF-PAYMENTS-A (2026-06-02): plan enum rev. Was "free" | "pro" | "all-star".
 // New tiers per the entitlements matrix in config/entitlements.ts. Legacy
@@ -238,13 +239,14 @@ async function getContainer(): Promise<Container | null> {
 
       let client: CosmosClient;
       if (connStr) {
-        client = new CosmosClient(connStr);
+        client = new CosmosClient(cosmosOptionsFromConnectionString(connStr));
       } else if (key) {
-        client = new CosmosClient({ endpoint: endpoint!, key });
+        client = new CosmosClient({ endpoint: endpoint!, key, connectionPolicy: hobbyIqConnectionPolicy() });
       } else {
         client = new CosmosClient({
           endpoint: endpoint!,
           aadCredentials: new DefaultAzureCredential(),
+          connectionPolicy: hobbyIqConnectionPolicy(),
         });
       }
 

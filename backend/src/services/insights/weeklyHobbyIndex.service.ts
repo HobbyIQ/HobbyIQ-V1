@@ -11,6 +11,7 @@
 // Output shape targets iOS + a text-formattable digest.
 
 import { CosmosClient, type Container } from "@azure/cosmos";
+import { cosmosOptionsFromConnectionString } from "../ops/cosmosConnectionPolicy.js";
 
 let sharedContainer: Container | null = null;
 async function getContainer(): Promise<Container | null> {
@@ -18,7 +19,7 @@ async function getContainer(): Promise<Container | null> {
   const cs = process.env.COSMOS_CONNECTION_STRING;
   if (!cs) return null;
   try {
-    const client = new CosmosClient(cs);
+    const client = new CosmosClient(cosmosOptionsFromConnectionString(cs));
     sharedContainer = client
       .database(process.env.COSMOS_DATABASE ?? "hobbyiq")
       .container(process.env.COSMOS_SOLD_COMPS_CONTAINER ?? "sold_comps");

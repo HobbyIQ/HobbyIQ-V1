@@ -19,6 +19,7 @@
 
 import { CosmosClient, type Container } from "@azure/cosmos";
 import { sameCardNumber } from "./hobbyIqCardId.service.js";
+import { cosmosOptionsFromConnectionString } from "../ops/cosmosConnectionPolicy.js";
 
 export interface HoldingMatcher {
   holdingId?: string;
@@ -59,7 +60,7 @@ function getPortfolio(): Container | null {
   if (cachedPortfolio) return cachedPortfolio;
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) return null;
-  const client = new CosmosClient(conn);
+  const client = new CosmosClient(cosmosOptionsFromConnectionString(conn));
   cachedPortfolio = client.database(process.env.COSMOS_DATABASE ?? "hobbyiq").container("portfolio");
   return cachedPortfolio;
 }

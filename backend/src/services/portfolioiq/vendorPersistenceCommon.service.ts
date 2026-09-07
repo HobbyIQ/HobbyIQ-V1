@@ -13,6 +13,7 @@
 
 import { CosmosClient, type Container } from "@azure/cosmos";
 import { createHash } from "crypto";
+import { cosmosOptionsFromConnectionString } from "../ops/cosmosConnectionPolicy.js";
 
 const containerCache = new Map<string, Container>();
 
@@ -27,7 +28,7 @@ export async function getContainer(
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) return null;
   try {
-    const client = new CosmosClient(conn);
+    const client = new CosmosClient(cosmosOptionsFromConnectionString(conn));
     const db = client.database(process.env.COSMOS_DATABASE ?? "hobbyiq");
     const { container } = await db.containers.createIfNotExists({
       id: name,

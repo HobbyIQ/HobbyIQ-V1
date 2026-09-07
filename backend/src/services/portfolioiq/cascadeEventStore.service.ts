@@ -7,6 +7,7 @@
 import type { Container } from "@azure/cosmos";
 import { CosmosClient } from "@azure/cosmos";
 import type { CascadeEvent } from "../../types/cascadeAlert.types.js";
+import { cosmosOptionsFromConnectionString } from "../ops/cosmosConnectionPolicy.js";
 
 const CONTAINER_ID = process.env.COSMOS_CASCADE_EVENTS_CONTAINER ?? "cascade_events";
 const DB_NAME = process.env.COSMOS_DATABASE ?? "hobbyiq";
@@ -17,7 +18,7 @@ async function getContainer(): Promise<Container> {
   if (sharedContainer) return sharedContainer;
   const cs = process.env.COSMOS_CONNECTION_STRING;
   if (!cs) throw new Error("COSMOS_CONNECTION_STRING not set — cascadeEventStore cannot query");
-  const client = new CosmosClient(cs);
+  const client = new CosmosClient(cosmosOptionsFromConnectionString(cs));
   const { database } = await client.databases.createIfNotExists({ id: DB_NAME });
   const { container } = await database.containers.createIfNotExists({
     id: CONTAINER_ID,

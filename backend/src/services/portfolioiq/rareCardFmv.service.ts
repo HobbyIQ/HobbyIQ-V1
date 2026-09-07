@@ -30,6 +30,7 @@
 
 import { CosmosClient, type Container } from "@azure/cosmos";
 import { parseHobbyIqCardId, computeHobbyIqCardId } from "./hobbyIqCardId.service.js";
+import { cosmosOptionsFromConnectionString } from "../ops/cosmosConnectionPolicy.js";
 
 // POOL-1 residue (audit, 2026-09-03). The rare-card rung reads sold_comps
 // directly, so an adjudicated-wrong row could BE the "last actual sale" this
@@ -84,7 +85,7 @@ async function getContainer(): Promise<Container | null> {
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) return null;
   try {
-    const client = new CosmosClient(conn);
+    const client = new CosmosClient(cosmosOptionsFromConnectionString(conn));
     const db = client.database(process.env.COSMOS_DATABASE ?? "hobbyiq");
     cached = db.container(process.env.COSMOS_SOLD_COMPS_CONTAINER ?? "sold_comps");
     return cached;

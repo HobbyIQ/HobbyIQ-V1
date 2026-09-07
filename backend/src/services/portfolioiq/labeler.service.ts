@@ -13,6 +13,7 @@ import { CosmosClient, type Container } from "@azure/cosmos";
 import { computeHobbyIqCardId, normalizeSetKey } from "./hobbyIqCardId.service.js";
 import { mayUnionIdentities } from "../compiq/identityUnionGuard.js";
 import { patchSoldCompFields } from "./soldCompRowOps.service.js";
+import { cosmosOptionsFromConnectionString } from "../ops/cosmosConnectionPolicy.js";
 
 interface CanonicalLabel {
   parallel: string;
@@ -46,7 +47,7 @@ let cachedSoldComps: Container | null = null;
 function db(name: string): Container | null {
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) return null;
-  const client = new CosmosClient(conn);
+  const client = new CosmosClient(cosmosOptionsFromConnectionString(conn));
   return client.database(process.env.COSMOS_DATABASE ?? "hobbyiq").container(name);
 }
 function getCatalog(): Container | null {
@@ -92,7 +93,7 @@ export async function listLabelerQueue(limit = 25): Promise<QueueCandidate[]> {
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) return [];
   const { CosmosClient } = await import("@azure/cosmos");
-  const client = new CosmosClient(conn);
+  const client = new CosmosClient(cosmosOptionsFromConnectionString(conn));
   const portfolio = client.database(process.env.COSMOS_DATABASE ?? "hobbyiq").container("portfolio");
 
   // Portfolio hits per (cardNumber, cardYear)

@@ -12,6 +12,7 @@
 
 import { Container, CosmosClient } from "@azure/cosmos";
 import { DefaultAzureCredential } from "@azure/identity";
+import { cosmosOptionsFromConnectionString, hobbyIqConnectionPolicy } from "../ops/cosmosConnectionPolicy.js";
 
 const TTL_SEC = 90 * 24 * 3600;
 
@@ -47,11 +48,12 @@ async function getContainer(): Promise<Container | null> {
         return null;
       }
       let client: CosmosClient;
-      if (connStr) client = new CosmosClient(connStr);
-      else if (key) client = new CosmosClient({ endpoint: endpoint!, key });
+      if (connStr) client = new CosmosClient(cosmosOptionsFromConnectionString(connStr));
+      else if (key) client = new CosmosClient({ endpoint: endpoint!, key, connectionPolicy: hobbyIqConnectionPolicy() });
       else client = new CosmosClient({
         endpoint: endpoint!,
         aadCredentials: new DefaultAzureCredential(),
+        connectionPolicy: hobbyIqConnectionPolicy(),
       });
       const { database } = await client.databases.createIfNotExists({ id: dbName });
       const { container } = await database.containers.createIfNotExists({

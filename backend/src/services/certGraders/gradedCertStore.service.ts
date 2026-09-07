@@ -25,6 +25,7 @@
 // catalog later learns the card the cert pointed at.
 
 import { CosmosClient, type Container } from "@azure/cosmos";
+import { cosmosOptionsFromConnectionString } from "../ops/cosmosConnectionPolicy.js";
 
 const COSMOS_DATABASE = process.env.COSMOS_DATABASE ?? "hobbyiq";
 const GRADED_CERT_CONTAINER = process.env.COSMOS_GRADED_CERT_CONTAINER ?? "graded_cert";
@@ -38,7 +39,7 @@ async function getContainer(): Promise<Container | null> {
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) return null;
   try {
-    const client = new CosmosClient(conn);
+    const client = new CosmosClient(cosmosOptionsFromConnectionString(conn));
     const { database } = await client.databases.createIfNotExists({ id: COSMOS_DATABASE });
     const { container } = await database.containers.createIfNotExists({
       id: GRADED_CERT_CONTAINER,

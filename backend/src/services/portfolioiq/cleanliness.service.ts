@@ -6,6 +6,7 @@
 // Cached for 5 min (this walks the whole container; not cheap).
 
 import { CosmosClient, type Container } from "@azure/cosmos";
+import { cosmosOptionsFromConnectionString } from "../ops/cosmosConnectionPolicy.js";
 
 export interface CleanlinessReport {
   totalRows: number;
@@ -46,7 +47,7 @@ async function getContainer(): Promise<Container | null> {
   if (cachedContainer) return cachedContainer;
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) return null;
-  const client = new CosmosClient(conn);
+  const client = new CosmosClient(cosmosOptionsFromConnectionString(conn));
   cachedContainer = client.database(process.env.COSMOS_DATABASE ?? "hobbyiq").container("sold_comps");
   return cachedContainer;
 }
