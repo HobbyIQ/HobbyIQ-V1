@@ -21,20 +21,27 @@
  * vs module responses for back-to-back diff analysis during the cutover
  * soak window.
  *
- * --- Build-time GIT_SHA -----------------------------------------------------
+ * --- Build-time SHA ---------------------------------------------------------
  *
- * Production deploys must set GIT_SHA in the App Service application
- * settings prior to startup. The deploy script reads the current commit:
+ * CF-DEPLOY-RESTARTS-ONCE (2026-09-07): this used to read GIT_SHA, an App
+ * Setting written by an `az webapp config appsettings set` step after every
+ * deploy. That step has been removed -- it was a config/write, and a
+ * config/write recycles every worker, making it the second of the two
+ * restarts per deploy that #1977 traced to a ten-minute mean process
+ * lifetime.
  *
- *   $sha = git rev-parse --short HEAD
- *   az webapp config appsettings set --resource-group rg-hobbyiq-dev \
- *     --name HobbyIQ3 --settings GIT_SHA=$sha
+ * The SHA now comes from services/ops/buildInfo, which reads
+ * dist/build-info.json out of the deployed artifact (baked by
+ * scripts/write-build-info.cjs at `npm run build`) and falls back to GIT_SHA
+ * for any container started outside the build chain.
  *
- * If GIT_SHA is absent at process start we emit a single startup warning
- * (loud, not silent) and stamp engineVersion="unknown" on every response.
- * App Insights queries on engineVersion="unknown" are the production
- * alarm for a misconfigured deploy.
+ * If NEITHER is available we still emit a single startup warning (loud, not
+ * silent) and stamp engineVersion="unknown" on every response. App Insights
+ * queries on engineVersion="unknown" remain the production alarm for a
+ * misconfigured deploy.
  */
+
+import { getGitSha } from "../ops/buildInfo.js";
 
 export type PricingEngineId = "monolith" | "module";
 
@@ -69,14 +76,16 @@ function resolvePricingEngine(): PricingEngineId {
  * import and freeze "unknown" for the process lifetime.
  */
 function resolveEngineVersion(): string {
-  const sha = (process.env.GIT_SHA ?? "").trim();
+  // Artifact first (dist/build-info.json), GIT_SHA second.
+  const sha = getGitSha();
   if (!sha) {
     // Loud, not silent: a misconfigured deploy is a production alarm.
     // eslint-disable-next-line no-console
     console.warn(
-      "[engineMeta] GIT_SHA environment variable not set; " +
+      "[engineMeta] no build SHA available (neither dist/build-info.json " +
+        "nor GIT_SHA); " +
         'engineVersion will be stamped as "unknown" on all responses. ' +
-        "Set GIT_SHA in App Service application settings before deploy."
+        "Check that `npm run build` ran write-build-info.cjs."
     );
     return "unknown";
   }

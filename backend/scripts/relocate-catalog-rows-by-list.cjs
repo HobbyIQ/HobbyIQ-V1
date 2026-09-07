@@ -252,6 +252,10 @@ const path = require("node:path");
 const fs = require("node:fs");
 const backend = path.resolve(__dirname, "..");
 const { budget, finishLane } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
+// The ONE name reduction the survivor rule and the corroboration arms use.
+// Loaded defensively (see lib/player-identity.cjs): a tree-less run falls back
+// to the legacy expression rather than failing to load.
+const { playerIdentityKey, identityKeyIsBuilt } = require(path.join(__dirname, "lib", "player-identity.cjs"));
 // The dist/ and Cosmos requires live inside main(), as the pool lane does it:
 // loading this module must not need a built tree, so the runner contract test
 // can require it and drive the scope refusal without a compile step.
@@ -398,16 +402,98 @@ function keepsSales(entry, doc) {
   return file === null ? false : file;
 }
 
-function occupiedByDifferentCard(incumbent, row) {
+/**
+ * Does a row already at the destination name a DIFFERENT card than the row
+ * being moved?
+ *
+ * ── THE COMPARE IS playerIdentityKey, NOT A RAW LOWERCASE (#1953) ───────────
+ *
+ * This used to reduce both names with
+ *
+ *     String(r?.playerName ?? "").trim().toLowerCase()
+ *
+ * and ask `a !== b`. That is the pre-fix expression `playerIdentityKey.ts`
+ * exists to replace, and on the #1930 shapes it calls one card two cards:
+ *
+ *   "Team Magma's Camerupt" vs "Team Magma’s Camerupt"   curly apostrophe
+ *   "Mr. Mime"              vs "Mr Mime"                 punctuation
+ *   "Flabébé"               vs "Flabebe"                 accent
+ *   "Suicune ☆"             vs "Suicune Star"            identity symbol
+ *   "Nidoran♀"              vs "Nidoran F"               gender symbol
+ *   "Miracle Sphere α"      vs "Miracle Sphere Alpha"    Greek suffix
+ *
+ * Each of those refused as `occupied`, and #1953 settled 138 of them BY HAND --
+ * reading tcgdex per pair to confirm what orthography alone could have said.
+ * The reduction now comes from `lib/player-identity.cjs`, which loads the ONE
+ * key the survivor rule and the corroboration arms already use. A lane that
+ * disagrees with the survivor rule about who two rows name is worse than a lane
+ * that refuses, so there is exactly one answer to the question.
+ *
+ * ── WHAT DID NOT CHANGE: A DIFFERENT KEY STILL REFUSES ─────────────────────
+ *
+ * "Todd Hundley" and "Derek Jeter" reduce to two keys and this still refuses.
+ * An occupied address is a COLLISION to report, never to route around, and
+ * folding it would put two cards' sales in one pricing pool. This change makes
+ * the compare see through SPELLING, and nothing else.
+ *
+ * An unnamed side still refuses. Blank is unknown, never "the same", which is
+ * the safe direction for a delete-bearing lane.
+ *
+ * ── A SUPERSET IS NOT A FOLD, AND THIS LANE MAY NOT DECIDE IT ──────────────
+ *
+ * "Jolteon" vs "Jolteon δ" is the shape that tempts a containment rule, and a
+ * containment rule is exactly the "right guard, wrong scope" error.
+ * `playerIdentityKey.ts`'s own header draws this line: A SUFFIX IS NOT AN
+ * ACCENT. Whether the bare row is a truncated transcription of the δ card or a
+ * genuinely different card at the same number is a question about the product's
+ * CHECKLIST, and this lane has no checklist -- #1953 answered its supersets by
+ * reading tcgdex, which is the right way and not one available here.
+ *
+ * So a containment pair is still REFUSED, but it is refused by its own name --
+ * `name-superset` -- rather than being lumped in with a genuine collision. The
+ * two need different actions from an operator: a collision is a numbering bug
+ * to fix, a superset is a checklist lookup that resolves to a fold or a split.
+ * Reporting them as one number is what made 138 hand-adjudications look like
+ * 138 collisions.
+ *
+ * @returns {false | {reason: string, hint: string}} false when the destination
+ *          is free or holds THIS card; otherwise the refusal, named.
+ */
+function occupancyRefusal(incumbent, row) {
   if (!incumbent) return false;
-  const name = (r) => String(r?.playerName ?? "").trim().toLowerCase();
-  const a = name(incumbent);
-  const b = name(row);
+  const display = (r) => String(r?.playerName ?? "").trim();
+  const a = playerIdentityKey(display(incumbent));
+  const b = playerIdentityKey(display(row));
   // An unnamed side cannot be adjudicated either way. Blank is unknown, never
   // "the same", so an unnamed incumbent is treated as a different card and
-  // refused -- the safe direction for a delete-bearing lane.
-  if (!a || !b) return true;
-  return a !== b;
+  // refused -- the safe direction for a delete-bearing lane. A name that
+  // reduces to nothing (punctuation only) is unknown by the same argument.
+  if (!a || !b) {
+    return {
+      reason: "occupied: unnamed",
+      hint: "one side has no usable playerName — blank is unknown, never 'the same'",
+    };
+  }
+  // The same card under two spellings. THE fold this change exists to allow.
+  if (a === b) return false;
+  // Containment: one key is the other plus a suffix. NOT folded here — only a
+  // checklist can say whether the suffix is a different card. See the header.
+  if (a.startsWith(b) || b.startsWith(a)) {
+    return {
+      reason: "occupied: name-superset",
+      hint: "one name is the other plus a suffix — a checklist twin decides whether this is a fold or two cards; this lane does not guess",
+    };
+  }
+  return {
+    reason: "occupied: different card",
+    hint: "two different names at one address — a collision to report, never to route around",
+  };
+}
+
+/** The boolean face of `occupancyRefusal`, kept because "is this occupied?" is
+ *  the question most callers ask and a truthy object answers it directly. */
+function occupiedByDifferentCard(incumbent, row) {
+  return occupancyRefusal(incumbent, row) !== false;
 }
 
 /**
@@ -595,6 +681,9 @@ async function main() {
 
   let retired = 0, resluged = 0, alreadyRight = 0, notFound = 0, failed = 0;
   let refusedOccupied = 0, salesUnplaced = 0, salesRepointed = 0, gradedRetired = 0;
+  // A SUBSET of refusedOccupied, never an addition to it: the reconciliation
+  // identity below counts occupied refusals once, and a superset IS one.
+  let refusedNameSuperset = 0;
   // Retires whose delete landed but whose FIRST read-back still saw the row.
   // Counted, not hidden: these are successes, and a number that climbs is the
   // container telling us something about its replication, not about this lane.
@@ -748,12 +837,18 @@ async function main() {
       continue;
     }
 
-    if (occupiedByDifferentCard(incumbent, row)) {
+    // NAME THE REFUSAL. A superset ("Jolteon" vs "Jolteon δ") and a genuine
+    // collision ("Todd Hundley" vs "Derek Jeter") both stop the move, but they
+    // ask different things of an operator -- a checklist lookup versus a
+    // numbering fix -- so they are reported apart rather than as one number.
+    const occ = occupancyRefusal(incumbent, row);
+    if (occ) {
       refusedOccupied++;
-      console.error(`  REFUSED (occupied)  ${id.slice(0, 62)}`);
+      if (occ.reason === "occupied: name-superset") refusedNameSuperset++;
+      console.error(`  REFUSED (${occ.reason})  ${id.slice(0, 62)}`);
       console.error(`      -> ${to.slice(0, 70)}`);
       console.error(`      held by ${String(incumbent.playerName ?? "(unnamed)")}, moving ${String(row.playerName ?? "(unnamed)")}`);
-      console.error("      an occupied address is a COLLISION to report, never to route around");
+      console.error(`      ${occ.hint}`);
       continue;
     }
     console.log(`  RESLUG  ${id.slice(0, 62)}`);
@@ -881,6 +976,13 @@ async function main() {
   console.log(`  moves COMPLETED         ${f(movesCompleted)}   <- destination already held the row; the source was retired`);
   console.log(`  move landed; source retire failed ${f(moveSourceLeftBehind)}   <- TWO rows hold one card; re-run finishes it`);
   console.log(`  refused — occupied      ${f(refusedOccupied)}   <- a different card holds the target address`);
+  if (refusedNameSuperset) {
+    console.log(`    of which name-superset ${f(refusedNameSuperset)}   <- one name is the other plus a suffix; a checklist twin decides`);
+  }
+  if (!identityKeyIsBuilt()) {
+    console.log("  NOTE: dist/ was not loadable — names compared with the LEGACY reduction");
+    console.log("        (accents and ☆ ♀ ♂ α β γ δ are deleted, not transliterated); build the tree for the full compare");
+  }
   console.log(`  refused — cross-market  ${f(refusedCrossMarket)}   <- a JA row may never land on an EN key, or the reverse`);
   console.log(`  already gone            ${f(alreadyRight)}`);
   console.log(`  not found               ${f(notFound)}`);
@@ -958,6 +1060,6 @@ if (require.main === module) {
 }
 
 module.exports = {
-  SCOPE, APPLY, classifyEntry, occupiedByDifferentCard, crossProductFields, idSetKey, keepsSales,
+  SCOPE, APPLY, classifyEntry, occupiedByDifferentCard, occupancyRefusal, crossProductFields, idSetKey, keepsSales,
   confirmRetired, RETIRE_READ_BACK_ATTEMPTS,
 };
