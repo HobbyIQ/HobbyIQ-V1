@@ -288,7 +288,22 @@ function isPokemonVertical(title: string, vertical?: string | null, slug?: strin
   const slugStr = String(slug ?? "");
   // A slug already in the pokemon namespace is the pipeline's own verdict.
   if (/^hiq:pokemon:/i.test(slugStr)) return true;
-  return /\bpok[e\u00e9]mon\b/i.test(`${title} ${slugStr}`);
+  if (/\bpok[e\u00e9]mon\b/i.test(`${title} ${slugStr}`)) return true;
+  // CF-ONE-VOCABULARY-DECIDES-ONE-VERTICAL (Drew, 2026-09-07). The SAME
+  // evidence the setKey path already acts on. This gate used to demand the
+  // literal word "Pokemon", so a TCGplayer title that names its era and its
+  // set but never the franchise \u2014 "Machamp V - SWSH9: Brilliant Stars -
+  // Holofoil" \u2014 resolved a Pokemon setKey through POKEMON_TITLE_EVIDENCE and
+  // then had its card number read by the SPORTS rules, which return null for
+  // `TG01/TG30`, `GG01/GG70` and `SV001/SV122`. One title, two verdicts about
+  // which vertical it is: exactly the drift the note on TCG_ERA_OR_MECHANIC_
+  // TITLE warns about, and the reason both gates are now the one constant.
+  //
+  // This can only WIDEN to titles the setKey path already calls Pokemon, and
+  // every alternative in that constant is an era prefix in its colon form or a
+  // Pokemon-only mechanic \u2014 never a bare word a sports title carries. A
+  // caller-stated non-Pokemon TCG vertical still refuses above.
+  return POKEMON_TITLE_EVIDENCE.test(title);
 }
 
 export interface ParseListingIdentityOptions {
@@ -2194,6 +2209,18 @@ const TCG_VERTICAL_TITLE = /\b(pokemon|pok[eé]?mon|pok\s?mon|yugioh|yu-?gi-?oh|
  *   `swsh:` `sv:` `sm:` `xy:`   the TCGplayer era prefix, colon REQUIRED. A
  *                               bare `\bsv\b` would hit jersey and serial text;
  *                               the colon is what makes it a set address.
+ *   `swsh12:` `sv03:` `xy7:`    CF-AN-ERA-PREFIX-IS-USUALLY-NUMBERED (Drew,
+ *   `sv08.5:` `swsh9-5:`        2026-09-07). The SAME address with the era's
+ *                               ORDINAL, which is how TCGplayer actually
+ *                               writes the majority of them. This alternative
+ *                               is stated separately because `\bsv\b` cannot
+ *                               match `sv03` — there is no word boundary
+ *                               between a letter and a digit, so the bare
+ *                               form above is blind to every numbered one.
+ *                               The colon carries the same safety it does
+ *                               there: `SV03` alone is a Topps Chrome
+ *                               Sapphire card number, `SV03:` is a set
+ *                               address no sports title writes.
  *   `vstar` `vmax`              Pokemon mechanics with no sports homonym.
  *                               `\bv\b` alone is NOT here — it is a score
  *                               separator ("Bears v Packers").
@@ -2220,7 +2247,7 @@ const TCG_VERTICAL_TITLE = /\b(pokemon|pok[eé]?mon|pok\s?mon|yugioh|yu-?gi-?oh|
  * instead, which every TCGplayer title carries.
  */
 const TCG_ERA_OR_MECHANIC_TITLE =
-  /\b(?:swsh|sv|sm|xy)\s*:|\bvstar\b|\bvmax\b|\bsword\s*&\s*shield\b|\bscarlet\s*&\s*violet\b|\bgg\d{1,2}\s*\/\s*gg\d{1,2}\b|\bcrown\s+zenith\b|\bgalarian\s+gallery\b/i;
+  /\b(?:swsh|sv|sm|xy|bw)\d{1,2}(?:[.-]\d)?\s*:|\b(?:swsh|sv|sm|xy)\s*:|\bvstar\b|\bvmax\b|\bsword\s*&\s*shield\b|\bscarlet\s*&\s*violet\b|\bgg\d{1,2}\s*\/\s*gg\d{1,2}\b|\bcrown\s+zenith\b|\bgalarian\s+gallery\b/i;
 
 /** A title belonging to a TCG vertical: it says the vertical outright, or it
  *  carries an era prefix / card mechanic only TCG product uses. */
@@ -2494,7 +2521,28 @@ export function resolveEnglishPokemonSetFromTitle(title: string): string | null 
   if (/\b(japanese|jpn)\b/i.test(t)) return null;
   const cleaned = t
     .replace(/\b(19|20)\d{2}\b/g, " ")
-    .replace(/pok[eé]?mon/gi, " ");
+    .replace(/pok[eé]?mon/gi, " ")
+    // CF-THE-APOSTROPHE-IS-A-SEGMENT (Drew, 2026-09-07). tcgdex renders a
+    // possessive as its OWN segment — `champion-s-path`, `mcdonald-s-
+    // collection` — because the apostrophe is punctuation and its slugifier
+    // splits there. `slugify` here DROPS it instead, so the same product name
+    // arrives as `champions-path` and matched no alias: 4 of the 4 year-free
+    // `-s-` aliases in the table (all of them Champion's Path, swsh3-5) were
+    // unreachable from any title a seller writes. Measured on a 6,000-row
+    // sample of the unknown-setKey Pokemon pool, "Champion's Path" titles sit
+    // in the 557-row `other` bucket alongside the genuinely-absent names.
+    //
+    // Rewritten on the TITLE rather than added as 91 alias variants, because
+    // the two spellings then agree BY CONSTRUCTION and a future tcgdex set
+    // whose name carries an apostrophe needs no new entry — the same reasoning
+    // pokemonEnglishSetKeyRuling gives for stripping the year prefix instead
+    // of keeping two spellings in sync by hand.
+    //
+    // ONLY the possessive `'s`, and only inside this Pokemon resolver. It
+    // cannot reach a sports title, and it cannot merge two DIFFERENT alias
+    // keys: no alias in the table differs from another only by this rewrite
+    // (pinned by test).
+    .replace(/[’']\s*s\b/gi, " s ");
   const hay = "-" + slugify(cleaned) + "-";
   if (hay === "--") return null;
   // The NAME answers first: it is the more specific signal, and every name
