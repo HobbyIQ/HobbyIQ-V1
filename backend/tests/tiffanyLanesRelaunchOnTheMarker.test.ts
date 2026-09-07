@@ -172,8 +172,19 @@ describe("the runner has a marker-keyed relaunch step for each Tiffany lane", ()
   /** The step block that fires for `script`, split the way the runner's own
    *  pins split it. */
   function stepFor(script: string): string | undefined {
-    return yml().split(/\n(?=      - name:)/)
+    const step = yml().split(/\n(?=      - name:)/)
       .find((s) => /gh workflow run backfill-runner\.yml/.test(s) && s.includes(`inputs.script == '${script}'`));
+    // The four-outcome shell moved into .github/actions/relaunch-on-marker on
+    // 2026-09-07: seventy-two copies of it had grown backfill-runner.yml past
+    // GitHub's 512 KB limit, where a dispatch is accepted and NO job is ever
+    // created. A delegating step is returned WITH the shell it calls, so the
+    // marker gate is still asserted while the per-lane `-f` forwards below —
+    // mode, parents_only, apply — are still read off the step's own args.
+    if (!step || !/uses: \.\/\.github\/actions\/relaunch-on-marker/.test(step)) return step;
+    return step + "\n" + fs.readFileSync(
+      path.join(backend, "..", ".github", "actions", "relaunch-on-marker", "action.yml"),
+      "utf8",
+    );
   }
 
   for (const { script, mode } of LANES) {

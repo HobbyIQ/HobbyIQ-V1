@@ -224,7 +224,16 @@ describe("D37 — the job is safe to dispatch", () => {
     // the marker and re-dispatched nothing, so no report longer than one budget
     // could finish (CF-REPORT-RELAUNCHES-AS-A-REPORT).
     expect(wf).toMatch(/inputs\.script == 'backfill-ebay-purchase-comps' \}\}/);
-    expect(wf).toContain('grep -aqE "stopped at the .*budget" /tmp/backfill.log');
+    // The four-outcome shell moved into .github/actions/relaunch-on-marker on
+    // 2026-09-07: seventy-two copies of it had grown backfill-runner.yml past
+    // GitHub's 512 KB limit, where a dispatch is accepted and NO job is ever
+    // created. The step delegates now, so the gate is read on the step PLUS
+    // the shell it calls.
+    const composite = fs.readFileSync(
+      path.join(__dirname, "..", "..", ".github", "actions", "relaunch-on-marker", "action.yml"),
+      "utf8",
+    );
+    expect(composite).toContain('grep -aqE "stopped at the .*budget" "$LOG"');
   });
 
   it("walks holdings as a MAP, never as an array", () => {

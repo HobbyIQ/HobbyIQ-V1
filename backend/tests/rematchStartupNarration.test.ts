@@ -129,22 +129,44 @@ describe("the KILLED branch tells a startup failure from a budget kill", () => {
   const branch = (() => {
     const at = runner.indexOf("Self-relaunch rematch-sold-comps until the shard is finished");
     const rest = runner.slice(at);
-    return rest.slice(0, rest.indexOf("\n      - name:"));
+    const step = rest.slice(0, rest.indexOf("\n      - name:"));
+    // THE COMPOSITE (2026-09-07). Seventy-two copies of the relaunch shell had
+    // grown backfill-runner.yml to 553 KB, past GitHub's 512 KB limit, where a
+    // dispatch is accepted and NO job is ever created — 30+ runs sat queued.
+    // The shell is now one composite action, and the three startup sub-outcomes
+    // are parameterised: the ARMS live in the action, while the two strings
+    // that make them this lane's — the STARTUP marker prefix and the banner
+    // regex — are passed by this step. Both halves are asserted below, so the
+    // lane still proves it tells a startup failure from a budget kill.
+    if (!/uses: \.\/\.github\/actions\/relaunch-on-marker/.test(step)) return step;
+    return step + "\n" + readFileSync(
+      join(repoRoot, ".github", "actions", "relaunch-on-marker", "action.yml"), "utf8",
+    );
   })();
 
+  // The arms grep `$RELAUNCH_STARTUP_PREFIX: STARTUP …`, and the prefix is
+  // bound to THIS lane by the step's `startup-marker-prefix:` argument. Both
+  // halves are asserted: an arm that stopped looking, or a lane that stopped
+  // naming itself, each break the classification just as completely.
   it("reads the STARTUP REFUSED marker and says the slot is UNSTARTED", () => {
-    expect(branch).toContain('grep -aq "rematch-sold-comps: STARTUP REFUSED"');
+    expect(branch).toContain('grep -aq "$RELAUNCH_STARTUP_PREFIX: STARTUP REFUSED"');
+    expect(branch).toContain("startup-marker-prefix: rematch-sold-comps");
     expect(branch).toContain("STARTUP REFUSED");
     expect(branch).toMatch(/NOT a budget kill/);
   });
 
   it("treats a genuinely empty log as its own, now-unreachable-from-this-lane case", () => {
-    expect(branch).toContain('[ ! -s /tmp/backfill.log ]');
+    // `$LOG` is the composite's binding for the `log:` input, whose default is
+    // /tmp/backfill.log — the same file, named once instead of seventy-two times.
+    expect(branch).toContain('[ ! -s "$LOG" ]');
+    expect(branch).toContain("default: /tmp/backfill.log");
     expect(branch).toContain("EMPTY LOG");
   });
 
   it("names the died-during-module-load case between STARTUP ok and the banner", () => {
-    expect(branch).toContain('grep -aq "rematch-sold-comps: STARTUP ok"');
+    expect(branch).toContain('grep -aq "$RELAUNCH_STARTUP_PREFIX: STARTUP ok"');
+    // The banner that must NOT have been reached is still this lane's own.
+    expect(branch).toContain('startup-banner-regex: "^rematch-sold-comps  MODE="');
     expect(branch).toContain("DIED DURING STARTUP");
   });
 

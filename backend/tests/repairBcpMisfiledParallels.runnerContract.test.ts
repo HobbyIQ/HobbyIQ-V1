@@ -33,7 +33,17 @@ const { MODES } = require("../scripts/repair-bcp-misfiled-parallels.cjs");
 function relaunchStep(): string {
   const start = runner.indexOf("Self-relaunch the misfiled-parallel repair");
   const next = runner.indexOf("\n      - name:", start);
-  return runner.slice(start, next < 0 ? undefined : next);
+  const step = runner.slice(start, next < 0 ? undefined : next);
+  // The four-outcome shell moved into .github/actions/relaunch-on-marker on
+  // 2026-09-07: seventy-two copies of it had grown backfill-runner.yml past
+  // GitHub's 512 KB limit, where a dispatch is accepted and NO job is ever
+  // created. A step that delegates is read together with the shell it calls,
+  // so every line this file pins is still pinned — on the lane's own args for
+  // the parts that are per-lane, on the composite for the shared contract.
+  if (!/uses: \.\/\.github\/actions\/relaunch-on-marker/.test(step)) return step;
+  return step + "\n" + readFileSync(
+    join(repoRoot, ".github", "actions", "relaunch-on-marker", "action.yml"), "utf8",
+  );
 }
 
 describe("the runner can dispatch this script", () => {

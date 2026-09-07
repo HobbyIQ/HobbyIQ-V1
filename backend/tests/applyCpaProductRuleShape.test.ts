@@ -196,6 +196,9 @@ describe("the fleet contract", () => {
 
 describe("the runner is wired for this script", () => {
   const YML = readFileSync(path.resolve(__dirname, "../../.github/workflows/backfill-runner.yml"), "utf8");
+  /** The four-outcome relaunch shell, extracted from the workflow on 2026-09-07
+   *  when 72 copies of it pushed the file past GitHub's 512 KB limit. */
+  const COMPOSITE = readFileSync(path.resolve(__dirname, "../../.github/actions/relaunch-on-marker/action.yml"), "utf8");
 
   it("is on the whitelist", () => {
     expect(YML).toMatch(/^\s+- apply-cpa-product-rule$/m);
@@ -206,7 +209,12 @@ describe("the runner is wired for this script", () => {
     expect(step, "the relaunch step must exist").toBeTruthy();
     // CF-RELAUNCH-GATES-ON-THE-BUDGET-MARKER: on the marker only, never a count,
     // never on cancel.
-    expect(step).toMatch(/stopped at the \.\*budget/);
+    // The marker grep moved into .github/actions/relaunch-on-marker on
+    // 2026-09-07: seventy-two copies of the relaunch shell had grown
+    // backfill-runner.yml past GitHub's 512 KB limit, where a dispatch is
+    // accepted and NO job is ever created. The step delegates now, so the
+    // gate is asserted on the step PLUS the shell it calls.
+    expect(step + COMPOSITE).toMatch(/stopped at the \.\*budget/);
     expect(step).toMatch(/!cancelled\(\)/);
     // CF-REPORT-RELAUNCHES-AS-A-REPORT (D34, 2026-08-30). This used to require
     // `inputs.apply == true` on the gate, which is what stranded every report
