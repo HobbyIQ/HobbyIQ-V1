@@ -164,6 +164,13 @@ const ALWAYS_SHARD = new Set([
   "rematch-sold-comps",
   "normalize-catalog-format",
   "census-split-identity",
+  // census-duplicate-sale-ids is a fan-out BY CONSTRUCTION, and more strictly
+  // than the others: its shard axis is hashId(id), because a duplicate's two
+  // copies were written at different times and a _ts-sharded slot would see
+  // one of them, call the id unique and report zero. It has no slot-0
+  // ambiguity to resolve -- an unsharded run is simply the whole corpus in one
+  // pass, which is what SLOT_SPAN exists to make affordable.
+  "census-duplicate-sale-ids",
 ]);
 
 // rematch-canary-check reads SLOT but does NOT gate a population with it: it
