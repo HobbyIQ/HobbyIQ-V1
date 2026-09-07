@@ -62,12 +62,34 @@ jobs:
       ACC: hobbyiq-comps
       RG: rg-hobbyiq-dev
       DB: hobbyiq
-      # 8000 is Azure's floor for this container, not a preference: autoscale
-      # max may not go below highest-ever-provisioned / 10, and sold_comps
-      # peaked at 80000. This said "4000" until 2026-08-18, so the teardown
-      # failed on run 32140009688 and stranded the account at the 40000 working
-      # ceiling -- the exact bill the scaling exists to avoid.
-      SOLD_IDLE_MAX: "8000"
+      # THE FLOOR ONLY RISES, AND IT WAS NEVER 8000 (#1960).
+      #
+      # Azure pins an autoscale container's minimum max to
+      # `max(1000, storage floor, highest-ever-provisioned / 10)`, and that
+      # number NEVER falls. sold_comps touched 100,000 at some point, so its
+      # floor is 10,000 permanently -- Azure names it verbatim in the
+      # rejection this teardown used to earn on every run:
+      #
+      #   Requested throughput 8000 is less than required minimum throughput
+      #   10000. Minimum limit 10000 is because of Highest RUs provisioned
+      #   100000.
+      #
+      # This said "8000" because the high-water mark was read as 80,000. It
+      # was not, and 8000 has been UNREACHABLE BY CONSTRUCTION ever since --
+      # so the `if: always()` teardown failed on every run and left sold_comps
+      # parked at the 40,000 working ceiling, which is the exact bill the
+      # scale-down exists to avoid. reslug-setkey watched the same thing happen
+      # at "4000" before 2026-08-18 and moved to a number that was equally
+      # unreachable.
+      #
+      # Since #1954 cosmos-throughput.cjs PARSES that rejection and lands on
+      # the floor rather than failing the step, so the run is green either way
+      # -- which is precisely why the constant has to be right rather than
+      # merely tolerated: a value the script silently corrects is a value
+      # nobody reads again. workflowAlertGates pins this by NAME, so a stale
+      # 8000 (or 4000) fails CI with the workflow named rather than being
+      # discovered on a bill.
+      SOLD_IDLE_MAX: "10000"
       SOLD_WORK_MAX: "40000"
     steps:
       - uses: actions/checkout@v4
