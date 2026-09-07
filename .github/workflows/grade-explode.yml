@@ -82,7 +82,14 @@ jobs:
           echo "Running: node backend/scripts/explodeCatalogGrades.cjs $LIMIT_ARG --apply (CONCURRENCY=$CONCURRENCY)"
           node backend/scripts/explodeCatalogGrades.cjs $LIMIT_ARG --apply
 
+      # 2026-09-07: same defect as P2-5 (marketplace-listings-refresh) and the
+      # cardYear backfill — deps install under `backend/` only, so this inline
+      # `node -e` cannot resolve @azure/cosmos from the repo root. Latent
+      # rather than observed: the recent scheduled runs are all `cancelled`
+      # (timeout) and never reach this step, so it has been failing silently in
+      # waiting rather than in the logs.
       - name: Report post-run state
+        working-directory: backend
         env:
           COSMOS_CONNECTION_STRING: ${{ steps.cosmos.outputs.cs }}
         run: |
