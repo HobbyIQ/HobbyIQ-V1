@@ -31,9 +31,11 @@
 // Env:
 //   COSMOS_CONNECTION_STRING   required
 //   BACKFILL_APPLY             true|false  (default false = dry)
-//   BACKFILL_MAX_MINUTES       per-slice cap (default 25)
+//   RUN_MINUTES                the work loop's budget (default 110)
+//   RESERVE_MS / VERIFY_MS     unit reserve / verify cap (see THE CLOCK)
 //   BACKFILL_CONCURRENCY       parallel workers (default 8)
 
+const path = require("node:path");
 const { CosmosClient } = require("@azure/cosmos");
 
 let computeHobbyIqCardId, moveCatalogRow;
@@ -46,12 +48,73 @@ try {
   process.exit(2);
 }
 
+const { reportWrites } = require("../dist/services/ops/writeReconciliation.js");
+// CF-A-KILLED-JOB-CANNOT-REPORT-PROGRESS + CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE.
+// The clock and the exit come from the SHARED helper, never a local copy: a
+// private capped() is what #1859 cost (an unref'd cap that never fired, four
+// runs killed at the ceiling having already reconciled clean).
+const { budget, finishLane } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
+
 const APPLY = process.env.BACKFILL_APPLY === "true";
-// CF-DEDUPE-BIGGER-BUDGET (Drew, 2026-08-02). Bumped 25→60 min per
-// slice. Prior 25 got eaten entirely by the scan phase (1.65M rows
-// takes ~24 min), leaving 0 minutes for merge work. Job timeout is
-// 150 min so 60 is safe.
-const MAX_MINUTES = Math.max(1, Number(process.env.BACKFILL_MAX_MINUTES || 60));
+
+// -- THE CLOCK --------------------------------------------------------------
+//
+// CF-A-KILLED-JOB-CANNOT-REPORT-PROGRESS. This lane DELETES card_catalog rows
+// (it folds vendor rows onto their hobbyiq slug) and had a LOCAL time cap
+// rather than a budget: BACKFILL_MAX_MINUTES, checked at the top of both loops
+// with no unit reserve, and signalling continuation through RELAUNCH_NEEDED
+// rather than the marker every other budgeted lane prints.
+//
+// THAT CAP WAS NOT A BUDGET. It reserved NOTHING for the group still in flight,
+// so a group admitted a millisecond before expiry ran its whole delete train
+// past it. And its RELAUNCH_NEEDED protocol goes SILENT when the step is
+// killed: `RN` parses empty and the runner's RELAUNCH_NEEDED step falls to a
+// `::warning::` that does NOT fail the job, so a killed run went GREEN with an
+// unknown number of catalog rows deleted -- #1906's defect in a second
+// protocol. Its own history says the exposure was real: the cap was raised
+// 25 -> 60 precisely because "prior 25 got eaten entirely by the scan phase
+// (1.65M rows takes ~24 min)".
+//
+// THE UNIT IS ONE DUPLICATE GROUP, not a page, because the merge loop cannot
+// stop inside one: processGroup walks the group's rows serially, and each
+// moveCatalogRow is an upsert plus a delete through an EIGHT-ATTEMPT retry
+// ladder whose backoff sums to ~127 seconds per operation on a throttled
+// container. A group is small in rows and potentially very long in wall clock,
+// so the reserve is FIVE MINUTES -- sized to that retry ladder rather than to
+// the row count -- and it is checked BEFORE the group is dispatched.
+//
+// -- WHY THE WRITE PHASE REFUSES AFTER A SCAN-PHASE STOP ---------------------
+//
+// #1947's retire-flattened-attestations lesson, and this lane is the sharper
+// case. The scan does not merely collect rows: it GROUPS THE WHOLE CONTAINER by
+// hobbyiq slug, and the merge phase then reads each group's SHAPE to decide
+// what to do -- `rows.length < 2` means singleton, skip; otherwise the
+// best-populated row is chosen as the survivor and every other row in the group
+// is DELETED.
+//
+// Both of those readings are wrong on a partial scan, and wrong in the
+// direction that destroys data:
+//
+//   - A group that has been seen ONCE looks like a singleton, but its siblings
+//     may simply be in the pages the budget never reached. Skipping it is
+//     harmless.
+//   - A group seen TWICE out of five looks complete, and the merge picks the
+//     best-populated of the TWO rows it happens to have. The true survivor --
+//     the richest row in the group -- may sit in the unscanned remainder, and
+//     this run will DELETE the better row and keep the poorer one. That is not
+//     an unfinished job; it is a wrong one, and no relaunch undoes it.
+//
+// So a scan-phase budget stop REFUSES the merge phase outright (exit 5) rather
+// than acting on a population whose shape it cannot trust. The next dispatch
+// re-scans from the top and, when it completes the scan inside its budget,
+// merges against groups that are actually whole.
+//
+// VERIFY_MS is nominal: this lane reads NOTHING after its loop.
+// Worst case 110 + 5 + 1 + 1 = 117m under the 150m ceiling: 33 minutes of margin.
+const RUN_MINUTES = Number(process.env.RUN_MINUTES || 110);
+const RESERVE_MS = Number(process.env.RESERVE_MS || 5 * 60 * 1000);
+const VERIFY_MS = Number(process.env.VERIFY_MS || 60 * 1000);
+const CLOCK = budget({ minutes: RUN_MINUTES, reserveMs: RESERVE_MS, verifyMs: VERIFY_MS });
 // CF-DEDUPE-THROTTLE-FIX (Drew, 2026-08-01). Prior default of 8-16
 // concurrent workers × (1 upsert + N deletes per group) hammered
 // Cosmos into 429 storms that overwhelmed the retry loop and
@@ -63,9 +126,7 @@ const GROUP_SLEEP_MS = Math.max(0, Number(process.env.GROUP_SLEEP_MS || 100));
 
 if (!process.env.COSMOS_CONNECTION_STRING) { console.error("COSMOS_CONNECTION_STRING required"); process.exit(1); }
 
-const START = Date.now();
 let processExiting = false;
-function timeExpired() { return (Date.now() - START) / 60000 > MAX_MINUTES; }
 
 // Longer backoff + more attempts. Base 500ms, up to 8 attempts:
 // 500, 1000, 2000, 4000, 8000, 16000, 32000, 64000 ms.
@@ -152,9 +213,13 @@ function identityFromVendorRow(row, slug) {
 }
 
 async function main() {
-  const c = new CosmosClient(process.env.COSMOS_CONNECTION_STRING);
-  const cc = c.database(process.env.COSMOS_DATABASE || "hobbyiq").container("card_catalog");
-  console.log(`[dedupe-catalog-by-hobbyiq]  apply=${APPLY}  concurrency=${CONCURRENCY}  maxMinutes=${MAX_MINUTES}`);
+  // NAMED, not chained, so finishLane() can dispose it (#1809): an undisposed
+  // SDK holds keep-alive sockets, and a live handle is what held four
+  // reconciled-clean runs to the ceiling.
+  const client = new CosmosClient(process.env.COSMOS_CONNECTION_STRING);
+  const cc = client.database(process.env.COSMOS_DATABASE || "hobbyiq").container("card_catalog");
+  console.log(`[dedupe-catalog-by-hobbyiq]  apply=${APPLY}  concurrency=${CONCURRENCY}`);
+  console.log(`  ${CLOCK.describe()}`);
 
   // CF-COSMOS-RESERVED-SET-REVERT (Drew, 2026-08-02). Reverted to
   // SELECT * because `set` is a Cosmos SQL reserved word and any
@@ -173,8 +238,12 @@ async function main() {
   let scanned = 0;
   let noSlug = 0;
 
+  // Set when the budget stopped the SCAN. It is what makes the merge phase
+  // refuse: a partial grouping cannot be merged safely (see THE CLOCK above).
+  let scanStoppedAtBudget = false;
   while (iter.hasMoreResults()) {
-    if (timeExpired()) { console.log("⏰ scan-phase time cap"); break; }
+    // THE PRE-CHECK, before the page is fetched rather than after it is grouped.
+    if (CLOCK.outOfClock()) { scanStoppedAtBudget = true; break; }
     const { resources } = await iter.fetchNext();
     if (!Array.isArray(resources)) break;
     for (const row of resources) {
@@ -200,14 +269,41 @@ async function main() {
 
   if (!APPLY) {
     console.log(`\n  (dry run — set BACKFILL_APPLY=true to write canonical + delete vendor rows)`);
-    console.log(`RELAUNCH_NEEDED=${timeExpired() ? "true" : "false"}`);
-    return;
+    if (scanStoppedAtBudget) {
+      console.log(`
+  stopped at the ${CLOCK.RUN_MINUTES}-minute budget -- `
+        + `the scan is UNFINISHED, so these group counts describe only what was seen`);
+    }
+    return { client, budget: CLOCK };
+  }
+
+  // -- THE WRITE PHASE REFUSES ON A PARTIAL SCAN ---------------------------
+  //
+  // See THE CLOCK above for why this is a REFUSAL rather than a partial merge:
+  // a group's SHAPE decides which row survives and which are deleted, and a
+  // half-scanned group can name the wrong survivor. Nothing has been written at
+  // this point, so refusing costs a re-scan and never a wrong delete.
+  if (scanStoppedAtBudget) {
+    console.error(`\nREFUSING TO MERGE: the scan stopped at the ${CLOCK.RUN_MINUTES}-minute budget,`
+      + ` so the grouping is PARTIAL.`);
+    console.error("  A group seen in part looks complete: the merge would pick the best-populated of"
+      + " the rows it happens to hold and DELETE the rest, while the true survivor may sit in the"
+      + " pages this run never read. That is a wrong merge, not an unfinished one, and no relaunch"
+      + " undoes a deleted row.");
+    console.error("  Nothing was written. Re-dispatch: the next run re-scans from the top and merges"
+      + " only if it completes the scan inside its budget.");
+    console.log(`
+  stopped at the ${CLOCK.RUN_MINUTES}-minute budget -- `
+      + `scan phase only; the merge was REFUSED and the relaunch continues from here`);
+    process.exitCode = 5;
+    return { client, budget: CLOCK };
   }
 
   // Merge phase — every vendor row moves onto the slug; the first write
   // creates (or lands on) the canonical row, the rest fold onto it.
   let mergedGroups = 0, canonicalUpserts = 0, vendorDeletes = 0, errors = 0;
   const inFlight = [];
+  let mergeStoppedAtBudget = false;
 
   async function processGroup(slug, rows) {
     // Best-populated row first: it is the survivor unless a higher authority
@@ -232,7 +328,11 @@ async function main() {
 
   for (const [slug, rows] of bySlug) {
     if (rows.length < 2) continue;   // singletons don't need merge
-    if (timeExpired() || processExiting) { console.log("⏰ merge-phase stopping (time cap or fatal error)"); break; }
+    // THE PRE-CHECK: before the group is dispatched rather than after its
+    // delete train has been issued. The reserve is sized to the ~127s retry
+    // ladder a single moveCatalogRow can spend on a throttled container.
+    if (CLOCK.outOfClock()) { mergeStoppedAtBudget = true; break; }
+    if (processExiting) { console.log("merge-phase stopping (fatal error)"); break; }
     inFlight.push(processGroup(slug, rows));
     if (inFlight.length >= CONCURRENCY) {
       await Promise.race(inFlight);
@@ -255,18 +355,46 @@ async function main() {
   console.log(`  canonical upserts:  ${canonicalUpserts}`);
   console.log(`  vendor rows deleted: ${vendorDeletes}`);
   console.log(`  errors:             ${errors}`);
-  // Relaunch when: (a) we hit time cap, (b) something crashed and we
-  // want the next slice to keep making progress, OR (c) there are
-  // more dup groups than we processed this slice (per-slice quota).
-  const stillMore = mergedGroups < dupGroups;
-  console.log(`RELAUNCH_NEEDED=${(timeExpired() || processExiting || stillMore) ? "true" : "false"}`);
+  // RECONCILE OVER THE GROUPS THIS RUN DISPATCHED. The population is KNOWN here
+  // -- `dupGroups` was counted from a COMPLETE scan, which the refusal above
+  // guarantees -- so `not reached` is a real number rather than an invention
+  // (#1947: the two reconciliation shapes are not interchangeable).
+  const notReached = dupGroups - mergedGroups - errors;
+  console.log(`  reconciled: intended ${dupGroups} groups = merged ${mergedGroups}`
+    + ` + failed ${errors} + not reached ${notReached}`);
+  if (mergedGroups + errors + notReached !== dupGroups) {
+    console.error("  !! RECONCILE MISMATCH -- a duplicate group was neither merged, failed nor left unreached");
+    process.exitCode = 4;
+  }
+  reportWrites({
+    job: "dedupe-catalog-by-hobbyiq",
+    intended: dupGroups, written: mergedGroups, skipped: notReached, failed: errors,
+  });
+
+  // -- THE MARKER THE RELAUNCH GREPS ---------------------------------------
+  //
+  // CF-RELAUNCH-ONLY-ON-BUDGET (#1361). A SOURCE LITERAL, never assembled from
+  // variables: a marker built by concatenation is one a refactor can silently
+  // reword, and a reworded marker ends the fan-out after one slice with the run
+  // green -- the quiet version of the bug it exists to make loud.
+  if (mergeStoppedAtBudget || processExiting || mergedGroups < dupGroups) {
+    console.log(`
+  stopped at the ${CLOCK.RUN_MINUTES}-minute budget -- `
+      + `${notReached} of ${dupGroups} duplicate groups NOT REACHED; the relaunch continues from here`);
+    console.log("  the merge is IDEMPOTENT: a group already folded has one row left at its slug, so"
+      + " it re-reads as a singleton and is skipped, and moveCatalogRow returns `noop` for a row"
+      + " already at its own slug. The continuation re-scans cheaply and merges only what is left.");
+  }
+
+  return { client, budget: CLOCK };
 }
 
-main().catch(e => {
-  console.error("[main-catch]", e?.message ?? e);
-  // Print RELAUNCH_NEEDED=true so the workflow re-dispatches instead
-  // of dropping the loop on a crash (prior bug: exit(1) killed the
-  // self-relaunch grep).
-  console.log("RELAUNCH_NEEDED=true");
-  process.exit(0);
-});
+// CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809). Success exits too -- a failure
+// path that exits and a success path that hopes is the asymmetry that cost four
+// reconciled-clean runs their exit codes.
+main()
+  .then((ctx) => finishLane(process.exitCode || 0, ctx || { budget: CLOCK }))
+  .catch(async (e) => {
+    console.error(e);
+    await finishLane(1, { budget: CLOCK });
+  });

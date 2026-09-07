@@ -27,6 +27,49 @@
 // Concurrency: BACKFILL_CONCURRENCY (default 8).
 
 const path = require("path");
+const { reportWrites } = require(path.join(__dirname, "..", "dist/services/ops/writeReconciliation.js"));
+// CF-A-KILLED-JOB-CANNOT-REPORT-PROGRESS + CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE.
+// The clock and the exit come from the SHARED helper, never a local copy: a
+// private capped() is what #1859 cost (an unref'd cap that never fired, four
+// runs killed at the ceiling having already reconciled clean).
+const { budget, finishLane } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
+
+// -- THE CLOCK --------------------------------------------------------------
+//
+// CF-A-KILLED-JOB-CANNOT-REPORT-PROGRESS. This lane REWRITES a sale's IDENTITY
+// -- cardNumber, parallel, isAuto, hobbyiqCardId and contentHash, i.e. which
+// FMV pool the sale belongs to -- and declared no budget at all. BACKFILL_LIMIT
+// defaults to 0, "no cap", so the standing configuration is an unbounded walk
+// of every Cardsight row with a title. Before this it could only ever end by
+// being KILLED at the ceiling: no marker, no reconcile, no finishLane line, and
+// #1913's KILLED branch then withholding the re-dispatch -- with some sales
+// moved to their true pools and the rest still dragging the wrong ones, which
+// is exactly the split-pool state the lane exists to end
+// (feedback_one_card_one_row_one_pool).
+//
+// THIS LANE IS SCAN-THEN-WRITE, and both phases are on the clock.
+//
+//   THE SCAN builds the whole workQueue in memory before a single rewrite is
+//   issued. Its unit is one page of up to 500 rows.
+//
+//   THE WRITE unit is ONE REWRITE, and it is expensive: a full document READ
+//   followed by a full document REPLACE, each wrapped in a 5-attempt
+//   exponential backoff, dispatched through a CONCURRENCY-wide (default 8)
+//   worker pool. 90 seconds comfortably exceeds one such read/replace pair
+//   through its backoff, and it is checked BEFORE the worker takes the item.
+//
+// A PARTIAL SCAN CANNOT PRODUCE A WRONG WRITE: every decision reads the ROW IN
+// HAND -- parseListingIdentity on that row's own title, compared against that
+// row's own stored fields -- with no reference to any other row, so a row the
+// scan never reached is simply not in this pass's queue. The scan's own stop is
+// still reported, so a short queue is never read as the whole population.
+//
+// VERIFY_MS is nominal: this lane reads NOTHING after its loop.
+// Worst case 110 + 1.5 + 1 + 1 = 113.5m under the 150m ceiling.
+const RUN_MINUTES = Number(process.env.RUN_MINUTES || 110);
+const RESERVE_MS = Number(process.env.RESERVE_MS || 90 * 1000);
+const VERIFY_MS = Number(process.env.VERIFY_MS || 60 * 1000);
+const CLOCK = budget({ minutes: RUN_MINUTES, reserveMs: RESERVE_MS, verifyMs: VERIFY_MS });
 
 const APPLY = String(process.env.BACKFILL_APPLY || "").toLowerCase() === "true";
 const CONCURRENCY = Math.max(1, Math.min(32, Number(process.env.BACKFILL_CONCURRENCY || 8)));
@@ -57,6 +100,7 @@ async function main() {
   console.log(`  mode:        ${APPLY ? "APPLY" : "DRY-RUN"}`);
   console.log(`  concurrency: ${CONCURRENCY}`);
   console.log(`  limit:       ${LIMIT || "no cap"}`);
+  console.log(`  ${CLOCK.describe()}`);
   console.log("");
 
   // CF-BACKFILL-WIDEN-SOURCES (Drew, 2026-07-31). Originally scoped to
@@ -98,7 +142,10 @@ async function main() {
   const iterator = sc.items.query(query, { maxItemCount: 500 });
   const workQueue = [];
 
+  let scanStoppedAtBudget = false;
   while (iterator.hasMoreResults()) {
+    // THE PRE-CHECK, before the page is fetched rather than after it is queued.
+    if (CLOCK.outOfClock()) { scanStoppedAtBudget = true; break; }
     const page = await iterator.fetchNext();
     for (const row of page.resources) {
       stats.scanned++;
@@ -170,17 +217,57 @@ async function main() {
     }
   }
 
+  if (scanStoppedAtBudget) {
+    console.log(`\n  the scan was CUT SHORT by the budget: ${stats.scanned} rows were read, which is`
+      + ` NOT the whole population. The counts above cover only those.`);
+  }
+
   if (!APPLY) {
     console.log(`\n[dry-run] no writes. Re-run with BACKFILL_APPLY=true to apply.`);
-    return;
+    if (scanStoppedAtBudget) {
+      console.log(`
+  stopped at the ${CLOCK.RUN_MINUTES}-minute budget -- `
+        + `the scan is UNFINISHED; the relaunch continues from here`);
+    }
+    return { client, budget: CLOCK };
+  }
+
+  // -- THE WRITE PHASE IS GATED ON THE CLOCK, NOT REFUSED ------------------
+  //
+  // See THE CLOCK above for why a partial scan is safe to write from here (each
+  // row's answer comes from its own title). What is NOT safe is STARTING the
+  // rewrite train past expiry: that is #1947's "one more unit" defect at phase
+  // granularity, so entry is gated.
+  if (CLOCK.outOfClock()) {
+    console.log(`
+  stopped at the ${CLOCK.RUN_MINUTES}-minute budget -- `
+      + `the scan consumed it; ${workQueue.length} rewrites were NOT STARTED and the relaunch`
+      + ` continues from here`);
+    console.log("  nothing was written. The next pass re-derives this same queue -- the comparison"
+      + " is against stored fields, so an unwritten row still mismatches -- and spends its clock"
+      + " on the rewrites.");
+    return { client, budget: CLOCK };
   }
 
   console.log(`\n=== Applying ${workQueue.length} rewrites (concurrency ${CONCURRENCY}) ===`);
 
   // Worker pool
   let idx = 0;
+  let writeStoppedAtBudget = false;
+  let notReached = 0;
   const worker = async () => {
     while (idx < workQueue.length) {
+      // THE PRE-CHECK, inside the worker so it governs the RUN and not one
+      // item: a worker that finds the clock gone stops taking work instead of
+      // draining the whole remaining queue past expiry. The remainder is
+      // counted, not silently dropped -- the population is KNOWN here, so
+      // `not reached` is a real number.
+      if (CLOCK.outOfClock()) {
+        writeStoppedAtBudget = true;
+        notReached += workQueue.length - idx;
+        idx = workQueue.length;
+        return;
+      }
       const my = idx++;
       const { row, parsed, newCardNumber, newParallel, newIsAuto } = workQueue[my];
       stats.rewriteQueued++;
@@ -255,6 +342,39 @@ async function main() {
   console.log(`  queued:  ${stats.rewriteQueued}`);
   console.log(`  ok:      ${stats.rewriteOk}`);
   console.log(`  errors:  ${stats.rewriteErr}`);
+  console.log(`  not reached: ${notReached}`);
+
+  // RECONCILE OVER THE KNOWN QUEUE. workQueue was built before the first write,
+  // so the population is known and `not reached` is a real number rather than an
+  // invention (#1947: the two reconciliation shapes are not interchangeable).
+  console.log(`  reconciled: intended ${workQueue.length} = written ${stats.rewriteOk}`
+    + ` + failed ${stats.rewriteErr} + not reached ${notReached}`);
+  if (stats.rewriteOk + stats.rewriteErr + notReached !== workQueue.length) {
+    console.error("  !! RECONCILE MISMATCH -- a queued rewrite was neither written, failed nor left unreached");
+    process.exitCode = 4;
+  }
+  reportWrites({
+    job: "backfill-cardsight-title-identity",
+    intended: workQueue.length, written: stats.rewriteOk,
+    skipped: notReached, failed: stats.rewriteErr,
+  });
+
+  // -- THE MARKER THE RELAUNCH GREPS ---------------------------------------
+  //
+  // CF-RELAUNCH-ONLY-ON-BUDGET (#1361). A SOURCE LITERAL, never assembled from
+  // variables: a marker built by concatenation is one a refactor can silently
+  // reword, and a reworded marker ends the fan-out after one slice with the run
+  // green -- the quiet version of the bug it exists to make loud.
+  if (writeStoppedAtBudget || scanStoppedAtBudget) {
+    console.log(`
+  stopped at the ${CLOCK.RUN_MINUTES}-minute budget -- `
+      + `this sweep is UNFINISHED; the relaunch continues from here`);
+    console.log("  the rewrite is IDEMPOTENT, as this lane's own docblock states: a row whose stored"
+      + " identity now matches its parsed identity re-reads as `unchanged` and is never queued"
+      + " again, so the continuation re-walks cheaply and rewrites only what is left.");
+  }
+
+  return { client, budget: CLOCK };
 }
 
 // Given a slug like "hiq:baseball:2026:bowman-chrome:cpa-eha:blue-refractor:auto",
@@ -268,7 +388,12 @@ function deriveSetKeyFromSlug(slug) {
   return parts[3] || null;
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+// CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809). Success exits too -- a failure
+// path that exits and a success path that hopes is the asymmetry that cost four
+// reconciled-clean runs their exit codes.
+main()
+  .then((ctx) => finishLane(process.exitCode || 0, ctx || { budget: CLOCK }))
+  .catch(async (e) => {
+    console.error(e);
+    await finishLane(1, { budget: CLOCK });
+  });
