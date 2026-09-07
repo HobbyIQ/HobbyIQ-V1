@@ -95,6 +95,29 @@ describe("the derivation stamp names what a measurement was taken under", () => 
     fs.rmSync(root, { recursive: true, force: true });
   });
 
+  it("is stable across line endings — a CRLF laptop and an LF runner agree", () => {
+    // THE NIGHTLY MEASURES ON AN LF RUNNER; A RE-BASELINE IS USUALLY COMPUTED ON
+    // A CRLF CHECKOUT. Without the normalisation the stamps would differ on
+    // every file, the reference would read as stale every single night, and the
+    // alarm would never speak again — a silencer by accident.
+    const mk = (eol: "lf" | "crlf") => {
+      const root = fs.mkdtempSync(path.join(os.tmpdir(), `i9eol-${eol}-`));
+      for (const rel of DV.DERIVATION_INPUTS) {
+        const dst = path.join(root, rel);
+        fs.mkdirSync(path.dirname(dst), { recursive: true });
+        let c = fs.readFileSync(path.join(backend, rel), "utf8").replace(/\r\n/g, "\n");
+        if (eol === "crlf") c = c.replace(/\n/g, "\r\n");
+        fs.writeFileSync(dst, c);
+      }
+      return root;
+    };
+    const lf = mk("lf"); const crlf = mk("crlf");
+    expect(DV.derivationStamp(lf)).toBe(DV.derivationStamp(crlf));
+    expect(DV.derivationStamp(lf)).toMatch(/^d[0-9a-f]{12}$/);
+    fs.rmSync(lf, { recursive: true, force: true });
+    fs.rmSync(crlf, { recursive: true, force: true });
+  });
+
   it("refuses a stamp it cannot stand behind rather than hashing what is there", () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "i9stamp-empty-"));
     expect(DV.derivationStamp(root)).toBeNull();
