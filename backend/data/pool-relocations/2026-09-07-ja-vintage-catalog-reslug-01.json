@@ -5,7 +5,8 @@
     "CF-THE-JAPANESE-VINTAGE-SET-GETS-ITS-OWN-KEY (Drew, 2026-09-07, R5): the 38 Japanese sets whose alias resolves to a code the ENGLISH table owns get the distinct key ja-<code>.",
     "THE NUMBER SEGMENT IS KEPT (#1938 N/M, reaffirmed #1948): the Japanese print carries the same number, so ONLY the set-code segment changes.",
     "SHAPE FOLLOWS THE FIELD THAT IS WRONG: sold_comps is partitioned on /cardId and this corpus is CardHedge vendor ids, so a wrong identity is a REPOINT (patch in place); only a row whose PARTITION carries the slug RELOCATES.",
-    "THE ROW SIDE IS #1915 marketOfRow, asked with the row's TEXT only -- the stored key IS the address here, so a key witness would agree with the address by construction."
+    "THE ROW SIDE IS #1915 marketOfRow, asked with the row's TEXT only -- the stored key IS the address here, so a key witness would agree with the address by construction.",
+    "SALES ARE NOT A QUESTION HERE, MEASURED: zero sold_comps rows rest on any of these 42 addresses (read-only 2026-09-07), so the keepSales default (sales follow the row) is inert. The Japanese SALES for this set are in the pool lists, addressed by hobbyiqCardId on the shared code, and they move by REPOINT."
   ],
   "entries": [
     {
