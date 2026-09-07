@@ -209,6 +209,28 @@ jobs:
             # get the full cleaning treatment.
             CAT_FILTER=""
             echo "=== $P_CLEAN (category=$CAT_FILTER, $PER_PLATFORM_MIN min) ==="
+            # CF-TCA-EXIT-4-IS-NOT-A-QUOTA-CAP (2026-09-07). Exit 4 is the
+            # write-reconciliation verdict (writeReconciliation.ts), NOT a
+            # fetch failure: the pull worked and the shortfall is over the
+            # 0.5% tolerance. On 2026-09-07 that shape — pages=8 fetched=7792
+            # written=915 skipped=6812, 65 unaccounted (0.83%) — was folded in
+            # with quota exhaustion and reported as "wrote nothing on every
+            # platform", sending the reader after a 200K/day cap that was
+            # sitting at 199,998. Count it as a platform that pulled, and let
+            # the exit code below carry the reconciliation red on its own.
+            #
+            # CF-TCA-ENV-CHAIN-UNBROKEN (2026-09-07). This comment used to sit
+            # BETWEEN the CRAWLER_ID assignment and `node`, after a trailing
+            # backslash. A backslash-newline continues onto the comment line, the
+            # comment then ENDS the command, and every assignment in the chain
+            # bound to the next simple command instead — `set +e`, a builtin,
+            # which discards them. `node` then ran as a SEPARATE command with no
+            # COSMOS_CONNECTION_STRING: it died with "COSMOS_CONNECTION_STRING
+            # required" in 0.3s and the run reported "wrote nothing on every
+            # platform" while x-ratelimit-remaining sat at 199,997 — the exact
+            # misdiagnosis the block above exists to prevent. A comment must
+            # never interrupt an env-assignment continuation chain.
+            set +e
             COSMOS_CONNECTION_STRING="$COSMOS_CONNECTION_STRING" \
             TCA_API_KEY="$TCA_API_KEY" \
             COSMOS_DATABASE=hobbyiq \
@@ -224,16 +246,6 @@ jobs:
             PLATFORM="$P_CLEAN" \
             CATEGORY="$CAT_FILTER" \
             CRAWLER_ID="tca-${P_CLEAN,,}-${CAT_FILTER:-all}-${{ inputs.sort || 'date_desc' }}${{ inputs.crawler_slot && format('-{0}', inputs.crawler_slot) || '' }}" \
-            # CF-TCA-EXIT-4-IS-NOT-A-QUOTA-CAP (2026-09-07). Exit 4 is the
-            # write-reconciliation verdict (writeReconciliation.ts), NOT a
-            # fetch failure: the pull worked and the shortfall is over the
-            # 0.5% tolerance. On 2026-09-07 that shape — pages=8 fetched=7792
-            # written=915 skipped=6812, 65 unaccounted (0.83%) — was folded in
-            # with quota exhaustion and reported as "wrote nothing on every
-            # platform", sending the reader after a 200K/day cap that was
-            # sitting at 199,998. Count it as a platform that pulled, and let
-            # the exit code below carry the reconciliation red on its own.
-            set +e
             node scripts/tca-firehose-ingest.cjs
             RC=$?
             set -e

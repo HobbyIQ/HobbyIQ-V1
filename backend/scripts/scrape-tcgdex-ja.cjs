@@ -40,6 +40,8 @@
  */
 const fs = require("node:fs");
 const path = require("node:path");
+const { jaSetKeyFor } = require("./lib/tcgdex-ja-set-key.cjs");
+const { ruledKeyForJaSourceId, sameProductAsEnglishSet } = require("./lib/tcgdex-ja-source-id-map.cjs");
 
 const arg = (n, d) => { const h = process.argv.find((a) => a.startsWith(`--${n}=`)); return h ? h.slice(n.length + 3) : d; };
 const OUT_DIR = arg("outDir", "C:/tmp/tcgdex-ja");
@@ -68,13 +70,34 @@ try {
  *  readable next to the derivation that reproduces it. Not consulted. */
 const GEN12_LEGACY_UNUSED = ["bulbasaur","ivysaur","venusaur","charmander","charmeleon","charizard","squirtle","wartortle","blastoise","caterpie","metapod","butterfree","weedle","kakuna","beedrill","pidgey","pidgeotto","pidgeot","rattata","raticate","spearow","fearow","ekans","arbok","pikachu","raichu","sandshrew","sandslash","nidoran-f","nidorina","nidoqueen","nidoran-m","nidorino","nidoking","clefairy","clefable","vulpix","ninetales","jigglypuff","wigglytuff","zubat","golbat","oddish","gloom","vileplume","paras","parasect","venonat","venomoth","diglett","dugtrio","meowth","persian","psyduck","golduck","mankey","primeape","growlithe","arcanine","poliwag","poliwhirl","poliwrath","abra","kadabra","alakazam","machop","machoke","machamp","bellsprout","weepinbell","victreebel","tentacool","tentacruel","geodude","graveler","golem","ponyta","rapidash","slowpoke","slowbro","magnemite","magneton","farfetchd","doduo","dodrio","seel","dewgong","grimer","muk","shellder","cloyster","gastly","haunter","gengar","onix","drowzee","hypno","krabby","kingler","voltorb","electrode","exeggcute","exeggutor","cubone","marowak","hitmonlee","hitmonchan","lickitung","koffing","weezing","rhyhorn","rhydon","chansey","tangela","kangaskhan","horsea","seadra","goldeen","seaking","staryu","starmie","mr-mime","scyther","jynx","electabuzz","magmar","pinsir","tauros","magikarp","gyarados","lapras","ditto","eevee","vaporeon","jolteon","flareon","porygon","omanyte","omastar","kabuto","kabutops","aerodactyl","snorlax","articuno","zapdos","moltres","dratini","dragonair","dragonite","mewtwo","mew","chikorita","bayleef","meganium","cyndaquil","quilava","typhlosion","totodile","croconaw","feraligatr","sentret","furret","hoothoot","noctowl","ledyba","ledian","spinarak","ariados","crobat","chinchou","lanturn","pichu","cleffa","igglybuff","togepi","togetic","natu","xatu","mareep","flaaffy","ampharos","bellossom","marill","azumarill","sudowoodo","politoed","hoppip","skiploom","jumpluff","aipom","sunkern","sunflora","yanma","wooper","quagsire","espeon","umbreon","murkrow","slowking","misdreavus","unown","wobbuffet","girafarig","pineco","forretress","dunsparce","gligar","steelix","snubbull","granbull","qwilfish","scizor","shuckle","heracross","sneasel","teddiursa","ursaring","slugma","magcargo","swinub","piloswine","corsola","remoraid","octillery","delibird","mantine","skarmory","houndour","houndoom","kingdra","phanpy","donphan","porygon2","stantler","smeargle","tyrogue","hitmontop","smoochum","elekid","magby","miltank","blissey","raikou","entei","suicune","larvitar","pupitar","tyranitar","lugia","ho-oh","celebi"];
 
-/** English names for the classic ja-exclusive sets; fallback is the tcgdex id. */
+/**
+ * English names for the classic ja-exclusive sets; fallback is the tcgdex id.
+ *
+ * E1/E2/E3 are NOT typed here. They are the e-Card sets the source-id map
+ * already carries an `enName` for, and a second hand-maintained copy of a name
+ * is a copy that drifts -- so `enNameFor` reads the map first and this table is
+ * only the vocabulary the map does not cover (PMCG4 Rocket Gang has no English
+ * twin at all, and the neo names are the localisation the map does not state
+ * because `jaSetKeyFor`, not the map, addresses those sets).
+ */
 const SET_EN = {
-  PMCG1: "Base Set", PMCG2: "Jungle", PMCG3: "Mystery of the Fossils",
-  PMCG4: "Rocket Gang", PMCG5: "Gym Booster 1 Leaders Stadium",
-  PMCG6: "Gym Booster 2 Challenge from the Darkness",
+  PMCG4: "Rocket Gang",
   neo1: "Neo Genesis", neo2: "Neo Discovery", neo3: "Neo Revelation", neo4: "Neo Destiny",
 };
+
+/**
+ * The English name for a JA set id. The map is authoritative where it speaks.
+ *
+ * Falling through to the bare id is what gave E1 the setName "Japanese E1" --
+ * a catalog row named after its own id, which is the provenance loss the modern
+ * lane's manifest comment spells out at length. The fallback REMAINS, because
+ * inventing a name is worse, but it now applies only where nothing knows one.
+ */
+function enNameFor(jaId) {
+  const product = sameProductAsEnglishSet(jaId);
+  if (product && product.enName) return product.enName;
+  return SET_EN[jaId] ?? jaId;
+}
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const csvEsc = (s) => { const v = String(s ?? ""); return /[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v; };
@@ -99,10 +122,16 @@ async function main() {
     get("https://api.tcgdex.net/v2/en/sets"),
   ]);
   if (!ja || !en) { console.error("FATAL: set catalogs unreachable"); process.exit(1); }
+  // A SHARED CODE IS NOT A SHARED CARD (#1959). The old `!enIds.has(s.id)`
+  // dropped every JA set an EN set names -- neo1..neo4 among them, 323 cards
+  // that were never staged -- because it was written before the ruling gave
+  // those sets the `ja-<code>` address. The scope is now every JA set, and
+  // since CF-THE-JAPANESE-SET-IS-REACHED-BY-ITS-JAPANESE-ID the KEY is the
+  // ruled one rather than a slug of the English display name.
   const enIds = new Set(en.map((s) => s.id));
-  let work = ja.filter((s) => !enIds.has(s.id));
+  let work = ja.slice();
   if (ONLY.length) work = work.filter((s) => ONLY.includes(s.id));
-  console.log(`[tcgdex-ja] ${ja.length} ja sets, ${work.length} ja-EXCLUSIVE in scope`);
+  console.log(`[tcgdex-ja] ${ja.length} ja sets, ${work.length} in scope (shared-code sets included since #1959)`);
   console.log(`[dex-bridge] ${Object.keys(DEX_SPECIES).length} species, dexId 1..${DEX_MAX}\n`);
 
   let staged = 0, rows = 0, bridged = 0, unnamed = 0, skippedSets = 0, done = 0;
@@ -133,11 +162,46 @@ async function main() {
       lines.push(["base", csvEsc(String(detail.localId ?? c.localId)), "", "false", "", csvEsc(player)].join(","));
     }
     bridged += setBridged;
-    const enName = SET_EN[s.id] ?? s.id;
-    const key = `${year}-japanese-${enName.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-pokemon`;
+    const enName = enNameFor(s.id);
+    /**
+     * THE SETKEY IS THE RULED ADDRESS, AND THE MANIFEST MUST STATE IT.
+     *
+     * This lane used to key by NAME alone -- `1997-japanese-jungle-pokemon` --
+     * and state no `setKey` at all, so the ingest fell through to
+     * `normalizeSetKey(setName)` and the driver's verification to a slug of the
+     * display name. R5 (#1959) has since given these sets a ruled address, and
+     * two different derivations of the same thing are how #1741's whole
+     * "short ingest" class happened. So the key is derived ONCE, here, and
+     * WRITTEN DOWN: `ingest-checklist-csv-to-catalog.cjs` honours a stated
+     * `setKey` verbatim (`m.setKey || normalizeSetKey(m.setName)`), and the
+     * driver's `manifestSetKeys` reads the manifest first.
+     *
+     * Two derivations feed it, in this order, and neither guesses:
+     *
+     *   ruledKeyForJaSourceId  the set tcgdex serves under its OWN Japanese id
+     *                          (PMCG2 IS the Japanese Jungle). `pmcg2` collides
+     *                          with no English code, so jaSetKeyFor would key it
+     *                          `pmcg2` -- an address the resolver never answers.
+     *                          The map states the product identity, with its
+     *                          evidence, and R5 spells the address.
+     *
+     *   jaSetKeyFor            the set tcgdex serves under an id that case-folds
+     *                          onto an English one (neo1..neo4). #1971 already
+     *                          made this the modern lane's rule; the vintage
+     *                          lane was keying by name and never used it.
+     *
+     * An id that is neither -- PMCG4, the ja-exclusive Rocket Gang -- falls to
+     * its own bare code, which is exactly the doctrine "a bare JA code wins
+     * where one exists" and is what this lane has always effectively produced.
+     */
+    const setKey = ruledKeyForJaSourceId(s.id) ?? jaSetKeyFor(s.id, enIds);
+    if (!setKey) { skippedSets++; console.log(`  ${s.id}: no derivable setKey — SKIPPED, not guessed`); continue; }
+    const key = `${year}-${setKey}-pokemon`;
     fs.writeFileSync(path.join(OUT_DIR, `${key}.csv`), lines.join("\n") + "\n");
     fs.writeFileSync(path.join(OUT_DIR, `${key}.manifest.json`), JSON.stringify({
-      year, sport: "pokemon", setName: `Japanese ${enName}`,
+      productKey: `${year}-${setKey}`,
+      year, sport: "pokemon", setKey, setName: `Japanese ${enName}`,
+      source: "tcgdex-ja",
       sourceUrl: `https://api.tcgdex.net/v2/ja/sets/${s.id}`, tcgdexId: s.id,
     }, null, 1));
     staged++;

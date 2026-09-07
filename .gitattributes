@@ -53,3 +53,8 @@ backend/tests/fixtures/hobbymonitor/*.json text eol=lf
 # and the file agree everywhere. The pin also splits on /\r?\n/ now, so a CSV
 # that arrives CRLF by some other route still reads correctly.
 *.csv text eol=lf
+
+# The WAVE 2 gate fixture is a VERBATIM `gh run view --log` capture. Its exact
+# bytes are the test: line endings, tab prefixes and the literal `^[` sequence
+# are all load-bearing, so it must never be line-ending-converted.
+backend/tests/fixtures/wave2/* -text

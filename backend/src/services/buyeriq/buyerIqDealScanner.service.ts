@@ -132,7 +132,14 @@ async function listAllWantedTargets(): Promise<BuyerIqTarget[]> {
       }, { maxItemCount: 200 })
       .fetchAll();
     return resources || [];
-  } catch { return []; }
+  } catch (err) {
+    // Deliberately RETHROWN (2026-09-07). This used to `return []`, which made
+    // a broken Cosmos read indistinguishable from a genuinely empty target
+    // list: both produced a clean "scanned 0 targets" summary, so the canary
+    // saw a healthy heartbeat while the scanner was reading nothing at all.
+    // The caller catches this and emits outcome:"error" with errors=1.
+    throw err instanceof Error ? err : new Error(String(err));
+  }
 }
 
 // ── Deal detection per target ────────────────────────────────────────
@@ -243,12 +250,27 @@ export async function runBuyerIqDealScan(): Promise<DealScannerSummary> {
     errors: 0,
   };
 
+  // The summary trace IS the canary's heartbeat (#1967): its absence is what
+  // "the scanner is dead" is measured by. So every exit from this function
+  // emits one — including the disabled no-op and the zero-target cycle, which
+  // used to return silently and were therefore indistinguishable from a job
+  // that never ran at all.
   if (process.env.BUYERIQ_DEAL_SCANNER_DISABLE === "true") {
     console.log("[buyeriq.deal.scanner] disabled via env");
-    return summary;
+    return emitSummary(summary, startedAt, "disabled");
   }
 
-  const targets = await listAllWantedTargets();
+  let targets: BuyerIqTarget[] = [];
+  try {
+    targets = await listAllWantedTargets();
+  } catch (err) {
+    // Listing the targets is the one step outside the per-target try/catch.
+    // If it throws, the cycle is over — but it must still leave a heartbeat,
+    // or a broken Cosmos read looks exactly like a scheduler that stopped.
+    summary.errors++;
+    console.error(`[buyeriq.deal.scanner] target listing failed: ${(err as Error)?.message ?? err}`);
+    return emitSummary(summary, startedAt, "error");
+  }
   console.log(`[buyeriq.deal.scanner] scanning ${targets.length} wanted targets (threshold=${DEAL_THRESHOLD_PCT * 100}% below FMV, min FMV $${MIN_FMV}, cooldown ${COOLDOWN_HOURS}h)`);
 
   for (const t of targets) {
@@ -336,9 +358,28 @@ export async function runBuyerIqDealScan(): Promise<DealScannerSummary> {
     }
   }
 
+  return emitSummary(summary, startedAt, "ok");
+}
+
+/**
+ * Stamp the clock fields and emit the one heartbeat trace. Every return path
+ * from runBuyerIqDealScan goes through here, so a cycle that scanned nothing,
+ * was disabled, or threw is still visible to the canary — with `outcome`
+ * saying which. Returns the summary so callers can `return emitSummary(...)`.
+ */
+function emitSummary(
+  summary: DealScannerSummary,
+  startedAt: Date,
+  outcome: "ok" | "disabled" | "error",
+): DealScannerSummary {
   const finishedAt = new Date();
   summary.finishedAt = finishedAt.toISOString();
   summary.durationMs = finishedAt.getTime() - startedAt.getTime();
-  console.log(JSON.stringify({ event: "buyeriq_deal_scan_summary", source: "buyerIqDealScanner.service", ...summary }));
+  console.log(JSON.stringify({
+    event: "buyeriq_deal_scan_summary",
+    source: "buyerIqDealScanner.service",
+    outcome,
+    ...summary,
+  }));
   return summary;
 }

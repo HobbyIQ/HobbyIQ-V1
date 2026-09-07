@@ -200,89 +200,121 @@ const unparsed: string[] = [];
  * fails by name. The read-only ones — censuses and audits that a `mode` input
  * pins to report — are left alone deliberately: they cannot leave half-written
  * state behind, and a pin that demands ceremony of them gets deleted.
+ *
+ * As of the #1944 ratchet's wave 4 this array is expected to be EMPTY, and the
+ * assertion below says so outright. It is no longer compared against an
+ * allowlist, because the allowlist reached zero and was deleted.
  */
 const unbudgetedWriters: string[] = [];
 
-/** The debt, frozen as measured on 2026-09-07 and SHRUNK the same week -- the
- *  dispatchable write lanes still running with no clock of their own. This list
- *  may LOSE names (a lane that gains a budget must be struck from it) and may
- *  never GAIN one. It is not an approval: every entry here is a lane that will
- *  be KILLED rather than stopped if it is ever dispatched over more work than
- *  one 150-minute step holds.
+/** ── THE RATCHET REACHED ZERO, SO IT IS NOW A HARD RULE ────────────────────
  *
- *  59 -> 44 -> 29, in three waves. Every struck name is absent for the same
- *  reason relocate-catalog-rows-by-list is: it now budgets, so putting any of
- *  them back would make this suite red.
+ * THERE IS NO LIST HERE ANY MORE. That is the change, and it is the whole
+ * point: for four waves this file carried a frozen, shrink-only allowlist of
+ * dispatchable write lanes that ran with no clock, and the rule below was
+ * "no NEW one". The rule below is now "not ONE", with nothing to be added to.
  *
- *  WAVE 1 (59 -> 44) took the lanes in BLAST-RADIUS ORDER:
- *    portfolio: conform-holdings-to-catalog, reap-orphan-price-trails,
- *      backfill-holding-ebay-ids, backfill-canonicalize-chrome-slugs
- *    sold_comps + card_catalog: repair-refractor-mislabel,
- *      merge-bare-colour-parallels, retire-impossible-grade-rows,
- *      retire-flattened-attestations
- *    card_catalog: dedupe-catalog-partition-shadows,
- *      backfillCatalogCardYearFromSlug, normalize-catalog-format
- *    sold_comps: relocate-pool-rows-by-list, recover-chrome-collapse-damage,
- *      revert-d30-base-onto-one-of-one, reslug-tcg-out-of-sports-namespace
+ * 59 -> 44 -> 29 -> 14 -> 0, in four waves. Every name left for the same
+ * reason relocate-catalog-rows-by-list did: it now budgets.
  *
- *  WAVE 2 (44 -> 29) took the next fifteen IN OWED ORDER, i.e. straight off the
- *  top of this list as wave 1 left it, so the ranking was read rather than
- *  re-derived:
- *    portfolio: reprice-user-holdings -- the SANCTIONED reprice path and the
- *      last remaining writer of that container
- *    two-container: backfill-catalog-driven-canonicalize,
- *      backfill-stage2-title-parser
- *    card_catalog: auto-label-catalog-variants,
- *      backfill-searchtokens-all-sports, dedupe-catalog-by-hobbyiq,
- *      fix-catalog-parallel-as-player, normalize-catalog-schema
- *    sold_comps: auto-quarantine-contaminated-pools,
- *      backfill-autostyle-from-title, backfill-bowman-mega-box-reslug,
- *      backfill-cardsight-title-identity, backfill-cardsight-unverified-flag,
- *      backfill-composite-fields, backfill-composite-v3
+ *   WAVE 1 (59 -> 44) took the lanes in BLAST-RADIUS ORDER --
+ *     portfolio: conform-holdings-to-catalog, reap-orphan-price-trails,
+ *       backfill-holding-ebay-ids, backfill-canonicalize-chrome-slugs
+ *     sold_comps + card_catalog: repair-refractor-mislabel,
+ *       merge-bare-colour-parallels, retire-impossible-grade-rows,
+ *       retire-flattened-attestations
+ *     card_catalog: dedupe-catalog-partition-shadows,
+ *       backfillCatalogCardYearFromSlug, normalize-catalog-format
+ *     sold_comps: relocate-pool-rows-by-list, recover-chrome-collapse-damage,
+ *       revert-d30-base-onto-one-of-one, reslug-tcg-out-of-sports-namespace
  *
- *  FIVE OF WAVE 2 WERE NOT UNCLOCKED -- THEY WERE CLOCKED WRONG, which this
- *  census could not see and is worth recording so the next reader does not
- *  mistake the absence of RUN_MINUTES for the absence of a cap.
- *  auto-label-catalog-variants, backfill-searchtokens-all-sports,
- *  dedupe-catalog-by-hobbyiq, fix-catalog-parallel-as-player and
- *  normalize-catalog-schema each carried a LOCAL `BACKFILL_MAX_MINUTES` +
- *  `timeExpired()` cap, checked at the loop TOP with no unit reserve, and
- *  signalled continuation with `RELAUNCH_NEEDED=true|false` instead of the
- *  marker. That protocol is sound only while a lane cannot be killed: a killed
- *  step prints no line at all, so `RN` parses EMPTY and the runner's
- *  RELAUNCH_NEEDED step falls through to a `::warning::` that does NOT fail the
- *  job -- #1906's "a killed run is not a finished run" defect living in a
- *  second protocol, where relaunchNeverCallsAKilledRunFinished.test.ts was not
- *  looking for it (that pin's population is the MARKER-keyed steps, and its
- *  docblock explicitly excludes RELAUNCH_NEEDED lanes on the grounds that they
- *  read a positive signal of work remaining -- true, and beside the point once
- *  the lane can be killed mid-sweep). All five now take the shared clock and
- *  the marker, which puts them inside that pin's population.
+ *   WAVE 2 (44 -> 29) took the last `portfolio` writer -- reprice-user-holdings,
+ *     the SANCTIONED reprice path -- then the two-container lanes, then
+ *     card_catalog, then sold_comps.
  *
- *  THE ORDER THE REMAINING 29 ARE OWED IN is the order they are written below:
- *  portfolio first, then the two-container lanes, then card_catalog, then
- *  sold_comps, then the lanes whose writes land outside the three pricing
- *  containers. Within a tier they are alphabetical, so the next builder takes
- *  the top of the list rather than re-deriving the ranking. No `portfolio`
- *  writer remains: wave 2 took the last one.
+ *   WAVE 3 (29 -> 14) took the fifteen plain sold_comps field and slug writers,
+ *     the flag stampers, and two statistic lanes.
  *
- *  NONE of these 29 is local-only. Every one is reachable from the runner's
- *  `script` dropdown, and the eBay lanes (run-ebay-order-poll, -purchase-sync,
- *  -finances-enrichment) were deliberately MOVED onto the runner from the API
- *  process, so de-listing them is not available as a shortcut -- they have to
- *  be budgeted where they are. */
-const KNOWN_UNBUDGETED_WRITE_LANES = [
-  "backfill-grade-from-ch-daily", "backfill-grade-from-title", "backfill-insert-setkey",
-  "backfill-isauto-cross-sport", "backfill-isauto-from-cardnumber", "backfill-parallel-enrichment",
-  "backfill-printrun-from-title", "backfill-stage3-price-sanity", "backfill-sub-channel-vocabulary",
-  "baseline-pool-snapshot", "migrate-cardsight-to-staging", "nightly-reingest-top-ch-cards",
-  "promote-sold-comps-trust-tier", "reaudit-cardsight-unverified", "refresh-calibration-multipliers",
-  "refresh-market-signals", "rescore-anomalies", "reslug-cross-product-mis-slug",
-  "reslug-suspicious-setkeys", "score-all-sold-comps", "backfill-ch-catalog-additions",
-  "backfill-verify-queue-grades", "bulk-import-ch-daily-to-sold-comps", "drain-staging-backlog",
-  "ingest-2026-bowman-auto-checklist", "ingest-product-checklist", "run-ebay-finances-enrichment",
-  "run-ebay-order-poll", "run-ebay-purchase-sync",
-];
+ *   WAVE 4 (14 -> 0) took what was left, and it was the tail for a reason:
+ *     the two remaining slug rewrites (reslug-cross-product-mis-slug,
+ *       reslug-suspicious-setkeys)
+ *     the two confidence scorers (score-all-sold-comps, rescore-anomalies)
+ *     the verify_queue grade patcher (backfill-verify-queue-grades)
+ *     the CH bulk importer (bulk-import-ch-daily-to-sold-comps)
+ *     the staging drainer (drain-staging-backlog)
+ *     the two checklist minters (ingest-product-checklist,
+ *       ingest-2026-bowman-auto-checklist)
+ *     the CH catalog additions ingester (backfill-ch-catalog-additions)
+ *     the market-signals statistic lane (refresh-market-signals)
+ *     and the three eBay lanes that were deliberately MOVED onto the runner
+ *       from the API process (run-ebay-order-poll, -purchase-sync,
+ *       -finances-enrichment), so de-listing them was never available as a
+ *       shortcut.
+ *
+ * ── FOUR THINGS WAVE 4 FOUND THAT NO EARLIER WAVE HAD SEEN ────────────────
+ *
+ * 1. TWO LANES SWALLOWED A FATAL INTO A GREEN RUN. rescore-anomalies and
+ *    score-all-sold-comps both ended
+ *
+ *      main().catch(e => { console.error(e);
+ *                          console.log("RELAUNCH_NEEDED=true");
+ *                          process.exit(0); })
+ *
+ *    -- a crash printed a re-dispatch request and exited ZERO. The step went
+ *    green, the job went green, and the only evidence was a stack trace nobody
+ *    was told to look for. No gate could have caught it: there was nothing in
+ *    the log that said anything had gone wrong.
+ *
+ * 2. ONE LANE'S MARKER HAS NEVER BEEN GREPPED BY ANYTHING.
+ *    bulk-import-ch-daily-to-sold-comps carried a REAL time budget --
+ *    ch-fanout-to-sold-comps.yml sets BULK_TIME_BUDGET_MIN=300 under a
+ *    340-minute job, added after three consecutive nights of cancellation in
+ *    2026-08 -- and printed its stop as `TIME BUDGET REACHED (300m)`. The
+ *    marker every relaunch in the runner greps is `stopped at the .*budget`
+ *    (CF-RELAUNCH-ONLY-ON-BUDGET, #1361). So the lane named exactly which date
+ *    window to resume from, and not one step in this repository ever read it.
+ *    And on the RUNNER it was worse: that budget defaults to 0 and the guard
+ *    read `TIME_BUDGET_MIN > 0`, so every dropdown dispatch ran an
+ *    eight-year-capable walk with no clock at all.
+ *
+ * 3. A NEW SHAPE: THE LANE THAT DOES NOT OWN ITS LOOP. run-ebay-purchase-sync,
+ *    run-ebay-finances-enrichment and backfill-ch-catalog-additions each hand
+ *    their entire job to ONE service call that loops internally and returns a
+ *    summary. There is no seam at which a per-unit outOfClock() could be
+ *    placed, and racing the call would ABANDON it -- the #1809 wedge exactly.
+ *    Their clock is therefore a PRE-FLIGHT GATE: if it cannot seat a whole
+ *    sweep it refuses to start one, exits 5 having written nothing, and prints
+ *    the marker so the relaunch gives the next run a full clock. All three are
+ *    resumable (per-user cursors, feeFetchedAt candidacy, a stored
+ *    checkpoint), so a refusal costs the dispatch and nothing else. This pin
+ *    cannot tell that shape from a lane with no pre-check at all -- both
+ *    declare a reserve and check it -- which is why the reasoning lives in
+ *    each script's own THE CLOCK block where the next reader will find it.
+ *
+ * 4. THE SHARPEST STATISTIC LANE YET. refresh-market-signals computes every
+ *    number it publishes as a ratio over a whole 60-day fetch held in memory,
+ *    and its query carries NO ORDER BY. So a partial fetch is not a sample --
+ *    it is whichever physical partitions were served first. A dimension key
+ *    whose sales live in the unread partitions publishes as a -100% volume
+ *    COLLAPSE, and upsertMomentumSignal OVERWRITES on
+ *    (dimension, key, windowDays), so the wrong signal replaces the right one
+ *    rather than sitting beside it. It refuses after a scan-phase stop.
+ *
+ * ── WHAT REPLACES THE LIST ────────────────────────────────────────────────
+ *
+ * `unbudgetedWriters` is still collected, and the assertion below simply
+ * requires it to be EMPTY. A new dispatchable write lane that ships without a
+ * budget now fails by name on arrival, and there is no allowlist to park it
+ * on. That is the property the ratchet existed to reach: it was a ramp, not a
+ * destination, and a ramp that never arrives is an exemption list wearing a
+ * different word.
+ *
+ * IF YOU ARE HERE BECAUSE CI IS RED AND NAMED YOUR SCRIPT: the fix is
+ * budget() from scripts/lib/runner-budget.cjs with a source-literal
+ * RUN_MINUTES, an outOfClock() PRE-check before each unit (never at the loop
+ * top), a reserve sized to your lane's largest unit, the marker as a source
+ * literal, and finishLane() on every exit path. Re-adding a name here is not
+ * one of the options, because there is no longer anywhere to add it. */
 
 /** A lane that can WRITE. The signal is the runner's own gate (`BACKFILL_APPLY`
  *  / `APPLY`), which every write lane reads to decide whether to persist, and
@@ -339,57 +371,46 @@ describe("every budgeted runner lane stops under the action ceiling", () => {
     expect(LANES.length).toBeGreaterThanOrEqual(60);
   });
 
-  it("no NEW dispatchable write lane may ship without a budget — the list only shrinks", () => {
-    // ── WHY A RATCHET AND NOT A FLAT ZERO ──────────────────────────────────
+  it("NO dispatchable write lane may run without a budget — the ratchet is a hard rule now", () => {
+    // ── WHY THIS IS NO LONGER A RATCHET ────────────────────────────────────
     //
-    // Measured when this assertion was written: 59 whitelisted write lanes
-    // declared no budget. Demanding zero that day would have failed the suite
-    // on 59 lanes nobody in that change had measured, and a pin that is red on
-    // arrival is a pin somebody deletes — which would cost the rule entirely.
+    // Measured when the first version of this assertion was written: 59
+    // whitelisted write lanes declared no budget. Demanding zero THAT DAY
+    // would have failed the suite on 59 lanes nobody in that change had
+    // measured, and a pin that is red on arrival is a pin somebody deletes —
+    // which would have cost the rule entirely. So the debt was written down,
+    // frozen, and allowed only to shrink: 59, then 44, then 29, then 14.
     //
-    // The ratchet is doing its job: 59 the day it was frozen, 44 after wave 1,
-    // 29 after wave 2. The
-    // fifteen that left were MEASURED — each one's unit identified, its reserve
-    // sized to that unit's worst case, its marker and reconcile driven by the
-    // per-lane assertions below — which is the only way a name may leave.
+    // It is now zero, so the allowlist is GONE rather than empty. An empty
+    // list is an invitation; no list is a rule. Every one of the 59 was
+    // MEASURED on its way out — its unit identified, its reserve sized to that
+    // unit's worst case, its marker and reconcile driven by the per-lane
+    // assertions below — which was always the only way a name could leave.
     //
-    // So the debt is WRITTEN DOWN and frozen. Removing a lane from this list is
-    // the only edit that keeps the suite green: adding a name fails below, and
-    // shipping a NEW unbudgeted write lane fails below too. That makes the
-    // backlog visible and monotonically shrinking instead of invisible and
-    // growing, which is exactly the property the old silent `continue` denied.
-    //
-    // relocate-catalog-rows-by-list is DELIBERATELY ABSENT: run 34079952456 is
-    // what forced this assertion, and the lane it killed now budgets. Putting
-    // it back would make this suite red.
-    const unbudgeted = new Set(unbudgetedWriters);
-    const stillOwed = KNOWN_UNBUDGETED_WRITE_LANES.filter((s) => unbudgeted.has(s));
-    const newlyUnbudgeted = unbudgetedWriters.filter(
-      (s) => !KNOWN_UNBUDGETED_WRITE_LANES.includes(s),
-    );
-
+    // MUTATION CHECK: delete any one lane's budget() call and this test names
+    // that script. There is no second arm to satisfy and nothing to strike.
     expect(
-      newlyUnbudgeted,
+      unbudgetedWriters,
       `these dispatchable WRITE lanes declare no budget at all, so they run until the `
         + `runner kills them at the ${CEILING}-minute ceiling — no marker, no reconcile, `
         + `no finishLane, and #1906's killed branch withholds the re-dispatch: `
-        + `${newlyUnbudgeted.join(", ")}. Give each one budget() from `
+        + `${unbudgetedWriters.join(", ")}. Give each one budget() from `
         + `scripts/lib/runner-budget.cjs, an outOfClock() pre-check per unit, the `
-        + `marker as a source literal, and finishLane().`,
+        + `marker as a source literal, and finishLane(). The old `
+        + `KNOWN_UNBUDGETED_WRITE_LANES allowlist reached zero and was deleted — there `
+        + `is nowhere to park a new one.`,
     ).toEqual([]);
 
-    // The ratchet's other tooth: a lane that HAS been fixed must be struck from
-    // the list, or the list stops describing the debt it exists to bound.
-    const fixed = KNOWN_UNBUDGETED_WRITE_LANES.filter((s) => !unbudgeted.has(s));
+    // A guard against the whole thing passing vacuously. `unbudgetedWriters`
+    // being empty is only meaningful if the detector that fills it still
+    // matches real lanes, so assert that the census SAW write lanes at all —
+    // budgeted ones, which is now the entire population.
+    const writers = LANES.filter((l) => writesWhenApplied(l.src)).map((l) => l.script);
     expect(
-      fixed,
-      `these lanes now declare a budget and must be removed from `
-        + `KNOWN_UNBUDGETED_WRITE_LANES: ${fixed.join(", ")}`,
-    ).toEqual([]);
-
-    // A guard against the whole thing passing vacuously if `writesWhenApplied`
-    // ever stops matching anything.
-    expect(stillOwed.length).toBeGreaterThan(0);
+      writers.length,
+      "writesWhenApplied() matched no budgeted lane either, so this file is asserting "
+        + "nothing at all — the detector, not the debt, is what changed",
+    ).toBeGreaterThan(20);
   });
 
   it("every budgeted lane's RUN_MINUTES is parseable — a new spelling is not a free pass", () => {

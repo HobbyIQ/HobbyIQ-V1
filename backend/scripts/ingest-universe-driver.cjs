@@ -71,6 +71,10 @@ const LIB_HOME = [
   path.join(process.cwd(), "backend", "scripts"),
 ].find((d) => fs.existsSync(path.join(d, "lib", "runner-budget.cjs"))) || __dirname;
 const { finishLane } = require(path.join(LIB_HOME, "lib", "runner-budget.cjs"));
+// CF-THE-JAPANESE-SET-IS-REACHED-BY-ITS-JAPANESE-ID (2026-09-07). Resolved via
+// LIB_HOME for the same reason runner-budget is: the driver is invoked from
+// three different working directories.
+const { ruledKeyForJaSourceId } = require(path.join(LIB_HOME, "lib", "tcgdex-ja-source-id-map.cjs"));
 
 const HERE = __dirname;
 const RUN_MINUTES = Number(process.env.RUN_MINUTES || 120);
@@ -2294,7 +2298,16 @@ function setKeyFor(entry) {
   // is what the sourceRef carries.
   if (entry.lane === "tcgdexja") {
     const id = String(entry.sourceRef || "").split("/").pop();
-    return id ? id.toLowerCase() : null;
+    if (!id) return null;
+    // CF-THE-JAPANESE-SET-IS-REACHED-BY-ITS-JAPANESE-ID (2026-09-07). For the
+    // eight sets tcgdex serves under their OWN Japanese id, the bare id is NOT
+    // the address the child writes: PMCG2 IS the Japanese Jungle and R5 keys it
+    // `ja-base2`, so `pmcg2` is a key nothing was ever written under, and a
+    // clean ingest would read back 0 rows and be recorded `failed` -- the exact
+    // measurement error CF-THE-DIFF-MUST-READ-THE-KEY-THE-MANIFEST-STATES
+    // catalogues. The manifest still leads; this keeps the FALLBACK honest for
+    // an entry staged before the sidecar existed.
+    return ruledKeyForJaSourceId(id) ?? id.toLowerCase();
   }
   let k = slugOf(entry.setName || "");
   k = k.replace(/^(?:19|20)\d{2}(?:-\d{2})?-/, "");

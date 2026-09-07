@@ -100,10 +100,29 @@ jobs:
 
       - name: "Step 1/3: Refresh market signals (daily momentum)"
         id: signals
+        # CF-A-KILLED-JOB-CANNOT-REPORT-PROGRESS. Both of the first two steps
+        # gained the shared clock in the #1944 ratchet (signals in wave 4,
+        # calibration in wave 3), and BOTH default to RUN_MINUTES=110 -- sized
+        # for the backfill runner's 150-minute step, not for a 180-minute job
+        # they SHARE with each other and a third script. Two 110-minute budgets
+        # in one 180-minute job is not a budget: step 1 alone could spend 110 of
+        # the 180 and leave step 2 to be killed with nothing said.
+        #
+        # This job's own header sizes the chain at "up to 45 min for the three
+        # chained steps", so each of the two budgeted ones takes 15. RESERVE_MS
+        # stays at each lane's own default.
+        #
+        # A STOP IN EITHER REFUSES AND EXITS 5, by design -- both compute
+        # statistics over a whole window, and a partial window yields a
+        # different number rather than a smaller one. The gate below already
+        # reads a non-zero exit; a red chain saying "the window did not fit in
+        # 15 minutes" is the signal to widen the JOB, never to widen a budget
+        # past the ceiling it is meant to stop under.
         env:
           MARKET_SIGNALS_APPLY: "true"
           MARKET_SIGNALS_WINDOW_DAYS: "30"
           MARKET_SIGNALS_MIN_VOLUME: "20"
+          RUN_MINUTES: "15"
         shell: bash
         run: |
           set -o pipefail
@@ -115,6 +134,9 @@ jobs:
         env:
           CALIBRATION_APPLY: "true"
           CALIBRATION_WINDOW_DAYS: "90"
+          # See step 1: the lane's 110-minute default is sized for the backfill
+          # runner's 150-minute step, not for this shared 180-minute job.
+          RUN_MINUTES: "15"
         shell: bash
         run: |
           set -o pipefail
