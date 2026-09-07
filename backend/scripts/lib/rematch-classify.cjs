@@ -5581,6 +5581,84 @@ function applyKindOf(result) {
  *  canary reads it to know a pool's membership did not change. */
 const FIELD_ONLY_APPLY_KINDS = new Set([GRADE_FROM_TITLE]);
 
+/**
+ * THE SCOPED-APPLY PREFILTER (2026-09-07).
+ *
+ * WHAT IT IS FOR. A scoped apply -- `scope=grade-from-title` and the two
+ * other 2026-09-06 scopes -- writes exactly ONE apply kind and counts the
+ * rest. But it reached that decision by CLASSIFYING every row of its shard
+ * first, and classification is the expensive half: the derivation, the
+ * catalog point read behind `checklistBacked`, and the per-product map reads
+ * behind the clash and flagship gates. Slot 12 of the 2026-09-07 fleet spent
+ * its whole 120-minute budget classifying 350,267 rows to discover that ZERO
+ * of them were the class it was armed for.
+ *
+ * MEASURED ON THE 5,000-ROW SAMPLE: 76.6% of rows are field-raw (G1 can pass)
+ * and 22.5% name a grader in the title (G2 can pass), but only 0.84% are BOTH
+ * -- so 99.16% of a grade-from-title shard is provably not a candidate before
+ * any derivation or catalog read happens at all.
+ *
+ * WHY IT IS SOUND. Each predicate here is a NECESSARY CONDITION read straight
+ * off the STORED row -- the identical test the evidence function's own leg
+ * makes, calling the identical helper. A row this refuses would have failed
+ * that leg and been classified as something the scope does not write. It can
+ * therefore only ever remove rows that were going to be counted, never rows
+ * that were going to be written.
+ *
+ * WHY IT IS NECESSARY-ONLY AND NEVER SUFFICIENT. It reads the two legs that
+ * need nothing but the row itself. The remaining legs (G3-G7: the lenient
+ * scales, the strict reader, the scale check, the legacy-scale adjective and
+ * "no other axis moved") still run inside `classifyRow` on the survivors,
+ * exactly as before. This decides which rows are LOOKED AT; the classifier
+ * still decides what they ARE -- the same division of labour the in-slot row
+ * filter states.
+ *
+ * WHY IT LIVES HERE AND NOT IN THE DRIVER. `gradeFromTitleEvidence` is in
+ * this file and so is `gradeToken`; a copy of these two legs in the driver
+ * would be a second definition of "can this row be a grade backfill", free to
+ * drift from the one the verdict is actually made with. The census and the
+ * apply must never disagree about which rows they were shown.
+ *
+ * A KIND WITH NO ENTRY IS NOT FILTERABLE, and the absence is the safe answer:
+ * `applyPrefilterFor` returns null, the caller filters nothing, and the pass
+ * behaves exactly as it did before this existed. IMPROVE and BASE-EVICTION
+ * have no cheap necessary condition -- any row can be either -- so neither has
+ * an entry, and a `scope=improve` dispatch is untouched by all of this.
+ */
+const APPLY_PREFILTERS = {
+  // G1 -- the row must be field-raw, and G2 -- its title must name a grader.
+  // Both read the stored row alone. `gradeToken` and `graderTokensIn` are
+  // the same functions gradeFromTitleEvidence calls for these two legs.
+  [GRADE_FROM_TITLE]: ({ row, stored }) =>
+    gradeToken(stored) === "RAW" && graderTokensIn(row?.title).length === 1,
+
+  // YEAR-FROM-TITLE-VINTAGE: the title must state a pre-1990 year and the slug
+  // must carry a modern one. Both are the evidence function's own first legs,
+  // and both are pure string work on the row.
+  [YEAR_FROM_TITLE_VINTAGE]: ({ row, stored }) => {
+    const slugYear = slugYearSegment(row?.cardId) ?? stored?.cardYear ?? null;
+    if (!(slugYear >= 2015)) return false;
+    const titleYear = firstStatedYear(row?.title);
+    return titleYear !== null && titleYear < 1990;
+  },
+};
+
+/**
+ * The prefilter for ONE armed apply kind, or null when the pass must look at
+ * every row.
+ *
+ * A scope arming MORE THAN ONE kind gets null: the rows are then the UNION of
+ * two populations and a filter for one would discard the other's candidates.
+ * Only a single-kind scope -- which is what every ruled scope is -- can be
+ * narrowed, and only to its own kind's necessary condition.
+ */
+function applyPrefilterFor(armed) {
+  const kinds = [...(armed ?? [])];
+  if (kinds.length !== 1) return null;
+  return APPLY_PREFILTERS[kinds[0]] ?? null;
+}
+
+
 /** The defect axis a row contributes to the banner's per-class breakdown.
  *  A row can move on several axes; each is counted. */
 function defectAxes(result) {
@@ -5611,6 +5689,7 @@ module.exports = {
   // can drive one leg alone and the mutation check can revert one leg alone.
   // A leg nothing can call alone is a leg nothing can prove.
   GRADE_FROM_TITLE, gradeFromTitleEvidence, graderTokensIn, gradeValueIsOnScale,
+  APPLY_PREFILTERS, applyPrefilterFor,
   LENIENT_SCALE_RE, LOW_GRADE_ADJECTIVE_RE, FIELD_ONLY_APPLY_KINDS,
   YEAR_FROM_TITLE_VINTAGE, yearFromTitleVintageEvidence,
   VINTAGE_CAPABLE_SETKEYS, RETRO_SETKEY_RE, RETRO_TITLE_RE,
