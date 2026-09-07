@@ -45,7 +45,14 @@ describe("the notification crons load without AUTH_SESSION_SECRET", () => {
   ];
 
   for (const [cron, rel] of entries) {
-    it(`${cron} imports its service with AUTH_SESSION_SECRET unset`, async () => {
+    // 120s, not the global 30s: each of these is a COLD import of a large
+    // compiled dependency graph (cascadeNotify alone pulls the estimate
+    // engine), and the cache-buster below means no suite can have warmed it.
+    // In isolation the whole file runs in ~4s; under a full parallel suite the
+    // first of these three crossed 30s and failed on time rather than on the
+    // thing being tested. The assertion is "does it load at all", so the clock
+    // must not be the thing that answers it.
+    it(`${cron} imports its service with AUTH_SESSION_SECRET unset`, { timeout: 120_000 }, async () => {
       const prior = process.env.AUTH_SESSION_SECRET;
       delete process.env.AUTH_SESSION_SECRET;
       try {
