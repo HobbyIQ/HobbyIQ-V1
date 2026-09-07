@@ -453,6 +453,45 @@ function occupiedByDifferentCard(incumbent, row) {
  *
  * Returns { gone, via, attempts }. `via` names how absence was established, so
  * the banner can separate a clean delete from one that needed the wait.
+ *
+ * CF-A-THE-MOVE-VERIFIES-ITS-SOURCE-THE-SAME-WAY (2026-09-07, this change).
+ *
+ * #1940 gave that read-back to the RETIRE branch only. The MOVE branch kept a
+ * single bare `rowAt(id)` -- one point read, at (id, id), no retry, no query
+ * -- and so reproduced the identical false failure at the identical rate: five
+ * entries across 99 relocate APPLY runs on 2026-09-07, ~1 per 1,000, every one
+ * reported `FAILED: landed=true sourceVacated=false (action move)`:
+ *
+ *   hiq:soccer:2022:panini-prizm:130:pink:no-auto                  (run 34112338270)
+ *   hiq:basketball:2023:nba-hoops:14:pink-ice-prizm:no-auto:num-35 (run 34131833131)
+ *   hiq:football:2025:topps-finest:46:purple-checkerboard-refractor:no-auto:num-150 (34135975562)
+ *   hiq:football:2025:panini-select:231:black-green-prizm-shock:no-auto (34141342368)
+ *   hiq:football:2025:topps-finest:fg-rs:black-geometric-refractor:auto:num-25 (34144311996)
+ *
+ * All five were point-read afterwards at (id, id) AND queried cross-partition
+ * by id: gone, zero hits. All five destinations were present, each stamped
+ * `movedFrom` the failed source and carrying the right player (Ao Tanaka,
+ * Lauri Markkanen, Roger Craig, Aaron Rodgers, Roger Staubach). The deletes
+ * had landed; the immediate read-back was served by a replica that had not yet
+ * applied them. Nothing was left behind and nothing needed re-running -- the
+ * bug was the REPORT, exactly as it was for the retire half.
+ *
+ * Two things follow, and both are in the code below. First, the move's source
+ * verify uses confirmRetired at `row.cardId ?? id` -- the key moveCatalogRow's
+ * own `oldPk = String(oldRow.cardId ?? oldId)` deletes at -- so a row under a
+ * foreign partition key is no longer declared gone by a read that could never
+ * have seen it. Second, a source that IS still resident after all of that is
+ * no longer counted as `failed`: it is `move landed; source retire failed`,
+ * its own outcome, listed by name, because the state it describes is TWO ROWS
+ * FOR ONE CARD and the fix is to retire the source, not to redo the move.
+ *
+ * Which is what a re-run now does. An entry whose destination already holds
+ * the moved row -- proven by `movedFrom === id`, a stamp moveCatalogRow writes
+ * on every move -- is COMPLETED by retiring the source, never refused as
+ * occupied. Refusing was the trap: the destination is not a rival card, it is
+ * this card already arrived, so every re-run would refuse identically and the
+ * pair would stay split forever. A row at `to` WITHOUT that stamp is still a
+ * genuine collision and still takes the occupied refusal, unchanged.
  */
 const RETIRE_READ_BACK_ATTEMPTS = 3;
 const RETIRE_READ_BACK_BACKOFF_MS = [400, 900];
@@ -566,6 +605,14 @@ async function main() {
   // GENUINE year-N+1 row that was always the right one for them.
   let salesLeftBehind = 0;
   let refusedCrossMarket = 0;
+  // Moves whose destination landed but whose SOURCE survived every retried
+  // read and the cross-partition query. Its own outcome, neither success nor
+  // plain failure: the card arrived, and a second row still holds its old
+  // address. Named in `leftoverSources` so the report is a work list.
+  let moveSourceLeftBehind = 0;
+  const leftoverSources = [];
+  // Half-applied moves this run FINISHED by retiring the source.
+  let movesCompleted = 0;
   const intended = entries.length;
 
   // ── THE CLOCK ────────────────────────────────────────────────────────────
@@ -605,6 +652,20 @@ async function main() {
 
     const row = await rowAt(id);
     if (!row) {
+      // A RESLUG WHOSE SOURCE IS GONE MAY ALREADY BE DONE. Before calling it
+      // "not found", ask the destination: a row there stamped `movedFrom` this
+      // id is THIS ENTRY, already completed by an earlier run -- the ordinary
+      // shape of a re-run over a list whose applies mostly succeeded. Counting
+      // that as not-found is merely noisy; the state is correct either way.
+      if (action === "reslug") {
+        const done = await rowAt(to);
+        if (done && String(done.movedFrom ?? "") === id) {
+          alreadyRight++;
+          console.log(`  ALREADY MOVED  ${id.slice(0, 62)}`);
+          console.log(`      ->  ${to.slice(0, 70)}   <- an earlier run completed this entry`);
+          continue;
+        }
+      }
       // Already gone is the target state for a retire, and it is a SKIP, not a
       // success: a re-run must not inflate the written count.
       alreadyRight += action === "retire" ? 1 : 0;
@@ -650,6 +711,43 @@ async function main() {
 
     // ── RESLUG ────────────────────────────────────────────────────────────
     const incumbent = await rowAt(to);
+
+    // IDEMPOTENT COMPLETION, PINNED. The source is still here AND the
+    // destination already holds the row this entry moved -- the exact residue
+    // of a `move landed; source retire failed` above, and of any run killed
+    // between moveCatalogRow's upsert and its delete. The right finish is to
+    // RETIRE THE SOURCE, not to refuse as occupied: the destination is not a
+    // rival card, it is this card, already arrived. Refusing here would strand
+    // the pair as two rows for one card forever, since every re-run would make
+    // the same refusal. The `movedFrom` stamp is what distinguishes this from
+    // a genuine collision -- moveCatalogRow writes it on every move -- so a
+    // row that merely happens to sit at `to` still goes down the occupied
+    // path below and is still reported by name.
+    if (incumbent && String(incumbent.movedFrom ?? "") === id) {
+      console.log(`  COMPLETE MOVE  ${id.slice(0, 62)}`);
+      console.log(`      ->  ${to.slice(0, 70)}   <- destination already holds this row; retiring the source`);
+      if (!APPLY) { movesCompleted++; continue; }
+      try {
+        const res = await retireCatalogRow(cat, id, row.cardId ?? id, `complete a half-applied move to ${to}: ${reason}`, { retry });
+        gradedRetired += res?.gradedChildrenRetired ?? 0;
+        const back = await confirmRetired(cat, id, row.cardId ?? id, { retry });
+        if (back.gone) {
+          movesCompleted++;
+          if (back.via !== "point-read") {
+            readBackRetried++;
+            console.log(`      read-back needed a retry (${back.via}) — the delete had landed`);
+          }
+        } else {
+          failed++;
+          console.error(`      FAILED: the source is still readable after the retire (${f(back.hits ?? 1)} still resident after ${back.attempts} reads + a query)`);
+        }
+      } catch (err) {
+        failed++;
+        console.error(`      FAILED: ${String(err?.message ?? err).slice(0, 80)}`);
+      }
+      continue;
+    }
+
     if (occupiedByDifferentCard(incumbent, row)) {
       refusedOccupied++;
       console.error(`  REFUSED (occupied)  ${id.slice(0, 62)}`);
@@ -730,13 +828,39 @@ async function main() {
       if (!APPLY) { resluged++; continue; }
       salesRepointed += res?.salesRepointed ?? 0;
       gradedRetired += res?.gradedChildrenRetired ?? 0;
-      // VERIFY BY READ: the destination exists and the source is gone.
+      // VERIFY BY READ -- AND THE SOURCE HALF READS PAST A LAGGING REPLICA
+      // TOO. #1940 gave the retire a read-back that retries and then queries;
+      // the move's source verify was left as ONE bare point read at (id, id),
+      // and that asymmetry is the whole of this bug. moveCatalogRow deletes at
+      // `oldRow.cardId ?? oldRow.id` -- so a row under a foreign partition key
+      // was deleted at a key the verify never read, and a replica that had not
+      // yet applied a delete made at the RIGHT key was believed on its first
+      // word. Both are the same class of false failure, so both get the same
+      // helper, at the same key the delete used.
       const landed = await rowAt(to);
-      const sourceGone = !(await rowAt(id));
-      if (landed && sourceGone) resluged++;
-      else {
+      const back = await confirmRetired(cat, id, row.cardId ?? id, { retry });
+      if (landed && back.gone) {
+        resluged++;
+        if (back.via !== "point-read") {
+          readBackRetried++;
+          console.log(`      read-back needed a retry (${back.via}) — the source delete had landed`);
+        }
+      } else if (landed && !back.gone) {
+        // THE MOVE IS HALF DONE, AND THAT IS ITS OWN OUTCOME. The destination
+        // holds the card and the source is genuinely still resident after
+        // every retry and a cross-partition query: two rows for one card,
+        // which the one-card-one-row doctrine forbids. It is NOT `failed`,
+        // because the move itself landed and re-running the whole move would
+        // find the destination occupied by its own copy; it is a source that
+        // still needs retiring, and it is counted and named so a re-run --
+        // which completes it below rather than refusing -- can finish it.
+        moveSourceLeftBehind++;
+        leftoverSources.push({ from: id, to, player: row.playerName ?? null });
+        console.error(`      MOVE LANDED; SOURCE RETIRE FAILED  (${f(back.hits ?? 1)} still resident after ${back.attempts} reads + a query)`);
+        console.error("      two rows now hold one card — re-run this entry to retire the source");
+      } else {
         failed++;
-        console.error(`      FAILED: landed=${Boolean(landed)} sourceVacated=${sourceGone} (action ${res?.action})`);
+        console.error(`      FAILED: landed=${Boolean(landed)} sourceVacated=${back.gone} (action ${res?.action})`);
       }
     } catch (err) {
       failed++;
@@ -754,6 +878,8 @@ async function main() {
   console.log(`  entries considered      ${f(considered)}${stoppedAt === null ? "   <- the whole list" : ""}`);
   console.log(`  RETIRED (deleted)       ${f(retired)}   <- deleted; a soft label does NOT stop a catalog row resolving`);
   console.log(`  RESLUGGED (moved)       ${f(resluged)}`);
+  console.log(`  moves COMPLETED         ${f(movesCompleted)}   <- destination already held the row; the source was retired`);
+  console.log(`  move landed; source retire failed ${f(moveSourceLeftBehind)}   <- TWO rows hold one card; re-run finishes it`);
   console.log(`  refused — occupied      ${f(refusedOccupied)}   <- a different card holds the target address`);
   console.log(`  refused — cross-market  ${f(refusedCrossMarket)}   <- a JA row may never land on an EN key, or the reverse`);
   console.log(`  already gone            ${f(alreadyRight)}`);
@@ -767,7 +893,24 @@ async function main() {
   // RECONCILE IN BOTH MODES. A report that cannot account for its own entries
   // is not a report worth reading, and the apply's arithmetic must have been
   // seen once before it runs.
-  const written = retired + resluged;
+  // A completed move WROTE (it deleted a source), so it counts as written.
+  // A left-behind source also wrote -- the destination landed -- and is
+  // counted here too; what it did not do is finish, which its own line says.
+  // THE WORK LIST, BY NAME. A count of half-applied moves an operator cannot
+  // act on is not a report. Every leftover source is printed as a (from, to)
+  // pair, in the shape a relocation list entry takes, so a re-run of THIS
+  // list finishes them by the idempotent-completion path above.
+  if (moveSourceLeftBehind > 0) {
+    console.log("");
+    console.log(`  LEFTOVER SOURCES (${f(moveSourceLeftBehind)}) — the destination holds the card, the old row is still resident:`);
+    for (const l of leftoverSources) {
+      console.log(`    from ${l.from}`);
+      console.log(`    to   ${l.to}${l.player ? `   (${l.player})` : ""}`);
+    }
+    console.log("  re-run this same list: each is completed by retiring the source, not refused as occupied");
+  }
+
+  const written = retired + resluged + movesCompleted + moveSourceLeftBehind;
   const skipped = alreadyRight + notFound;
   const refused = refusedOccupied + refusedCrossMarket;
   // A PARTIAL RUN STILL RECONCILES. The identity has to hold over what the
