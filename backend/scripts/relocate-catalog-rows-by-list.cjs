@@ -94,6 +94,64 @@
  * id, its current address, its intended fate, and the evidence recorded in the
  * file -- and writes nothing.
  *
+ * ────────────────────────────────────────────────────────────────────────────
+ * WHAT HAPPENS TO A ROW'S SALES, STATED PER SHAPE -- AND `keepSales`
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * The two shapes do OPPOSITE things to the sold_comps rows that point at the
+ * slug being acted on, and neither of them is "nothing". Written out because a
+ * list author picks a shape and inherits a sales decision with it:
+ *
+ *   retire   sales are LEFT WHERE THEY ARE, pointing at a slug that no longer
+ *            resolves. retireCatalogRow's own docblock: "Nothing is stamped on
+ *            the sales that pointed here -- they are unplaced now, and the
+ *            rematch owns unplaced sales." The banner counts them as
+ *            `sales made UNPLACED`. It is not a re-point and not a delete: the
+ *            hobbyiqCardId keeps its old value and the address behind it is
+ *            gone, so the rematch is the only thing that can place them again.
+ *
+ *   reslug   sales FOLLOW THE ROW, by default. moveCatalogRow patches every
+ *            sale at the old slug -- `/hobbyiqCardId` to the new slug, plus
+ *            `/reslugedFrom`, `/reslugedReason`, `/reslugedAt`. It does this
+ *            whenever the caller hands it `salesContainer`, which this lane
+ *            always did.
+ *
+ * THAT DEFAULT IS RIGHT FOR A MOVE AND WRONG FOR A DISENTANGLEMENT, and the
+ * difference is whose sales they are. A reslug that corrects ONE card's address
+ * -- a renumber, a parallel spelling, a key rename -- moves the card, and the
+ * card's own sales belong at its new address. But a reslug that SEPARATES TWO
+ * CARDS that were sharing one address moves only one of them, and the sales
+ * resting there were never the moving card's: they belong to the card that
+ * stays. Carrying them along would take a real sale off the identity that
+ * actually sold and attach it to one that did not.
+ *
+ * #1925 is that second shape, measured: 141,304 hobbymonitor rows are the
+ * year-N product carrying `year` = N+1, so they sit inside the year-N+1
+ * product's numbering -- and the 7,905 sales resting on their slugs have
+ * titles that are 7,901-to-0 year N+1. Those are the OTHER card's sales. Move
+ * the rows to year N with the default on and 7,905 genuine 2025 sales get
+ * carried back to 2024, which is the mispricing this repair exists to end,
+ * inflicted a second time by the repair itself.
+ *
+ * So the list may say so, per file or per entry:
+ *
+ *     "keepSales": true          at the top level, or on one entry
+ *     "repointSales": false      the same statement, spelled the other way
+ *
+ * An entry's own value wins over the file's; absent at both levels the default
+ * is unchanged (sales follow the row), so every existing list behaves exactly
+ * as it did. Under the flag a reslug hands moveCatalogRow NO `salesContainer`,
+ * which is the documented way to tell it the caller owns the sales -- the row
+ * moves, the sales' `hobbyiqCardId` and `cardId` are not touched, and they stay
+ * at the year-N+1 address for the rematch to re-derive against the genuine
+ * year-N+1 identity. The banner counts them as `sales LEFT BEHIND` so the size
+ * of that hand-off is as visible as the retire's is.
+ *
+ * IT IS NOT A SUPPRESSION OF THE WRITE, IT IS A STATEMENT OF OWNERSHIP. The
+ * flag never makes a sale disappear and never marks one wrong. It says the
+ * sales at this address are not this row's to carry, which is exactly what the
+ * evidence says when a list separates two cards.
+ *
  * Env: COSMOS_CONNECTION_STRING; BACKFILL_APPLY/APPLY; SCOPE=<list file>
  *      (path relative to backend/; REQUIRED -- this lane has no default list).
  */
@@ -185,6 +243,40 @@ function classifyEntry(e) {
  * destination already occupied by another player is a mistake in the list, and
  * the answer is to report it to the human who wrote it.
  */
+/**
+ * Does this entry keep its sales where they are, rather than carrying them to
+ * the new slug?
+ *
+ * Two spellings, because a list author reaches for whichever reads right in
+ * the file, and they mean the same thing: `keepSales: true` and
+ * `repointSales: false`. An ENTRY's own statement wins over the FILE's, so a
+ * list can set the shape once at the top and dissent on the rows that differ.
+ *
+ * ABSENT IS NOT FALSE, AND THAT IS THE WHOLE CONTRACT. Silence at both levels
+ * returns `false` -- sales follow the row, exactly as every list committed
+ * before this flag existed behaves. A new option that quietly changed the
+ * meaning of the eight lists already on disk would be a far worse defect than
+ * the one it fixes, so the default is pinned by a test rather than left to
+ * read right.
+ *
+ * The two spellings are read INDEPENDENTLY and either one is enough. They are
+ * not checked for agreement: a file that says `keepSales: true` and an entry
+ * that says `repointSales: true` is the entry dissenting, and the entry wins
+ * on both keys alike.
+ */
+function keepsSales(entry, doc) {
+  const read = (o) => {
+    if (!o || typeof o !== "object") return null;
+    if (typeof o.keepSales === "boolean") return o.keepSales;
+    if (typeof o.repointSales === "boolean") return !o.repointSales;
+    return null;
+  };
+  const own = read(entry);
+  if (own !== null) return own;
+  const file = read(doc);
+  return file === null ? false : file;
+}
+
 function occupiedByDifferentCard(incumbent, row) {
   if (!incumbent) return false;
   const name = (r) => String(r?.playerName ?? "").trim().toLowerCase();
@@ -264,6 +356,11 @@ async function main() {
 
   let retired = 0, resluged = 0, alreadyRight = 0, notFound = 0, failed = 0;
   let refusedOccupied = 0, salesUnplaced = 0, salesRepointed = 0, gradedRetired = 0;
+  // Sales a keepSales reslug deliberately did NOT carry. Counted separately
+  // from salesUnplaced because the two are different states: an unplaced sale
+  // has no row at its address at all, while these still have one -- the
+  // GENUINE year-N+1 row that was always the right one for them.
+  let salesLeftBehind = 0;
   const intended = entries.length;
 
   for (const e of entries) {
@@ -320,10 +417,32 @@ async function main() {
     console.log(`      ->  ${to.slice(0, 70)}`);
     console.log(`      ${String(row.playerName ?? "(no player)")} — reason: ${reason.slice(0, 70)}`);
     if (evidence) console.log(`      evidence: ${evidence.slice(0, 90)}`);
+
+    // WHOSE SALES ARE THESE? A move carries the card's own sales; a
+    // disentanglement leaves the other card's sales where they are. The list
+    // states which this is, per entry or per file, and the count is printed in
+    // BOTH modes so the hand-off is sized before the apply -- exactly as the
+    // retire's `sales pointing here` line is.
+    const keepSales = keepsSales(e, doc);
+    if (keepSales) {
+      const staying = await salesAt(id);
+      console.log(`      sales staying at this slug: ${staying === null ? "unknown" : f(staying)}`
+        + "   <- NOT re-pointed; they are the other card's, the rematch re-derives them");
+      if (staying) salesLeftBehind += staying;
+    }
+
     if (!APPLY) { resluged++; continue; }
     try {
       const res = await moveCatalogRow(cat, row, to, {}, {
-        reason, dryRun: false, salesContainer: pool, known: incumbent, retry,
+        reason,
+        dryRun: false,
+        // Omitting salesContainer is moveCatalogRow's documented way to say
+        // "the caller KNOWS no sale should follow" -- it then re-points
+        // nothing and says so in its own decision string. That is the whole
+        // mechanism of keepSales: not a suppressed patch, an unasked-for one.
+        ...(keepSales ? {} : { salesContainer: pool }),
+        known: incumbent,
+        retry,
       });
       salesRepointed += res?.salesRepointed ?? 0;
       gradedRetired += res?.gradedChildrenRetired ?? 0;
@@ -351,6 +470,7 @@ async function main() {
   console.log(`  failed                  ${f(failed)}`);
   console.log(`  sales made UNPLACED     ${f(salesUnplaced)}   <- the rematch owns these`);
   console.log(`  sales re-pointed        ${f(salesRepointed)}`);
+  console.log(`  sales LEFT BEHIND       ${f(salesLeftBehind)}   <- keepSales: the other card's sales, not carried`);
   console.log(`  graded children retired ${f(gradedRetired)}`);
   // RECONCILE IN BOTH MODES. A report that cannot account for its own entries
   // is not a report worth reading, and the apply's arithmetic must have been
@@ -375,4 +495,4 @@ if (require.main === module) {
   main().catch((e) => { console.error("FATAL:", e?.stack || e?.message); process.exit(3); });
 }
 
-module.exports = { SCOPE, APPLY, classifyEntry, occupiedByDifferentCard };
+module.exports = { SCOPE, APPLY, classifyEntry, occupiedByDifferentCard, keepsSales };

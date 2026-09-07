@@ -1,0 +1,730 @@
+{
+  "generatedAt": "2026-09-07T02:00:00Z",
+  "forLane": "relocate-catalog-rows-by-list",
+  "reportOnlyUntil": "Drew's review — NO APPLY IS AUTHORIZED BY THIS PR. This list DELETES catalog rows.",
+  "keepSales": true,
+  "finding": "#1925 H1. 8115 card_catalog rows from hobbymonitor-2026-09-04 under football/topps-resurgence carry year 2025 while their own setName states 2024. The census compared 5,381 card numbers across all 28 products: 5,351 agree with the year-N checklist, 444 agree with year N+1, and ZERO agree with N+1 but not N — so the setName is right and the year field is wrong. This file is part 09 of 9 for this product: 100 retire, 15 reslug.",
+  "rulings": [
+    "THE CHECKLIST IS THE AUTHORITY AND THE setName IS RIGHT. Every number-to-player comparison in #1925 resolves to year N. A row is retired only where the year-N address is already held by the SAME player from a CHECKLIST source (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT); a twin from `ingest-auto-seed` or `bccp` earns no delete and is excluded instead.",
+    "THE SALES DO NOT MOVE — `keepSales: true`. 7,905 sales rest on these rows' slugs and their titles are 7,901-to-0 the year-N+1 product: they belong to the card that STAYS, not the one that moves. moveCatalogRow re-points a row's own sales by default, which here would carry genuine year-N+1 sales back to year N — the exact mispricing this repair exists to end. Under the flag the lane hands moveCatalogRow no salesContainer, so hobbyiqCardId and cardId are untouched and the rematch re-derives them against the genuine year-N+1 identity. Measured: 7,776 of the 7,905 have a genuine year-N+1 row at their card number to land on; 129 do not and need a checklist ingest first.",
+    "RETIRE IS A HARD DELETE, AND IT IS ORDERED FIRST. card_catalog has no field that stops a row resolving, so a retire deletes the row and its graded children, and leaves its sales UNPLACED. Retires sort before reslugs in every file, and the files sort in the order they must run.",
+    "AN OCCUPIED DESTINATION IS REPORTED, NEVER ROUTED AROUND. 5,899 rows whose year-N destination names a DIFFERENT player, and 712 whose destination is an UNNAMED bccp row, are in docs/reports/2026-09-07-hobbymonitor-year-excluded.md and in no list."
+  ],
+  "census": {
+    "product": "football/topps-resurgence",
+    "storedYear": 2025,
+    "trueYear": 2024,
+    "destinationSetKey": "topps-resurgence",
+    "rowsInProduct": 8115,
+    "retireInThisFile": 100,
+    "reslugInThisFile": 15,
+    "salesOnEntriesInThisFile": 23
+  },
+  "entries": [
+    {
+      "id": "hiq:football:2025:topps-resurgence:rs-je:lime-green-power-surge:auto:num-15",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:rs-je:lime-green-power-surge:auto:num-15 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:rs-je:lime-green-power-surge:auto:num-15 source=checklistcenter-2026-09-05, same player \"John Elway\" #RS-JE; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:rpa-tf:electron:auto:num-14",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:rpa-tf:electron:auto:num-14 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:rpa-tf:electron:auto:num-14 source=checklistcenter-2026-09-05, same player \"Troy Franklin\" #RPA-TF; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:c-16:blue-surge:no-auto:num-99",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:c-16:blue-surge:no-auto:num-99 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:c-16:blue-surge:no-auto:num-99 source=checklistcenter-2026-09-05, same player \"John Elway\" #C-16; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:33:navy-surge:no-auto:num-275",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:33:navy-surge:no-auto:num-275 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:33:navy-surge:no-auto:num-275 source=checklistcenter-2026-09-05, same player \"Terrell Davis\" #33; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:32:black-static:no-auto:num-2",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:32:black-static:no-auto:num-2 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:32:black-static:no-auto:num-2 source=checklistcenter-2026-09-05, same player \"John Elway\" #32; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:gg-10:gold-power-surge:no-auto:num-50",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:gg-10:gold-power-surge:no-auto:num-50 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:gg-10:gold-power-surge:no-auto:num-50 source=checklistcenter-2026-09-05, same player \"Barry Sanders\" #GG-10; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:gg-10:purple-surge:no-auto:num-75",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:gg-10:purple-surge:no-auto:num-75 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:gg-10:purple-surge:no-auto:num-75 source=checklistcenter-2026-09-05, same player \"Barry Sanders\" #GG-10; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:rs-af:red-power-surge:auto:num-5",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:rs-af:red-power-surge:auto:num-5 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:rs-af:red-power-surge:auto:num-5 source=checklistcenter-2026-09-05, same player \"Antonio Freeman\" #RS-AF; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:rrs-jm:white-surge:auto:num-125",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:rrs-jm:white-surge:auto:num-125 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:rrs-jm:white-surge:auto:num-125 source=checklistcenter-2026-09-05, same player \"Jordan Morgan\" #RRS-JM; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:rrs-jm:red-static:auto:num-5",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:rrs-jm:red-static:auto:num-5 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:rrs-jm:red-static:auto:num-5 source=checklistcenter-2026-09-05, same player \"Jordan Morgan\" #RRS-JM; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:rrs-ec:blue-surge:auto:num-99",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:rrs-ec:blue-surge:auto:num-99 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:rrs-ec:blue-surge:auto:num-99 source=checklistcenter-2026-09-05, same player \"Edgerrin Cooper\" #RRS-EC; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:38:high-voltage:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:38:high-voltage:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:38:high-voltage:no-auto source=checklistcenter-2026-09-05, same player \"Charles Woodson\" #38; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:38:aqua-surge:no-auto:num-249",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:38:aqua-surge:no-auto:num-249 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:38:aqua-surge:no-auto:num-249 source=checklistcenter-2026-09-05, same player \"Charles Woodson\" #38; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:36:crimson-surge:no-auto:num-199",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:36:crimson-surge:no-auto:num-199 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:36:crimson-surge:no-auto:num-199 source=checklistcenter-2026-09-05, same player \"Antonio Freeman\" #36; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:42:navy-surge:no-auto:num-275",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:42:navy-surge:no-auto:num-275 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:42:navy-surge:no-auto:num-275 source=checklistcenter-2026-09-05, same player \"J.J. Watt\" #42; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:v-1:red-power-surge:no-auto:num-5",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:v-1:red-power-surge:no-auto:num-5 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:v-1:red-power-surge:no-auto:num-5 source=checklistcenter-2026-09-05, same player \"CJ Stroud\" #V-1; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:rs-cjs:blue-surge:auto:num-99",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:rs-cjs:blue-surge:auto:num-99 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:rs-cjs:blue-surge:auto:num-99 source=checklistcenter-2026-09-05, same player \"CJ Stroud\" #RS-CJS; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:mm-af:red-power-surge:auto:num-5",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:mm-af:red-power-surge:auto:num-5 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:mm-af:red-power-surge:auto:num-5 source=checklistcenter-2026-09-05, same player \"Arian Foster\" #MM-AF; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:c-3:orange-power-surge:no-auto:num-25",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:c-3:orange-power-surge:no-auto:num-25 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:c-3:orange-power-surge:no-auto:num-25 source=checklistcenter-2026-09-05, same player \"Anthony Richardson\" #C-3; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:45:pink-power-surge:no-auto:num-10",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:45:pink-power-surge:no-auto:num-10 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:45:pink-power-surge:no-auto:num-10 source=checklistcenter-2026-09-05, same player \"Anthony Richardson\" #45; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:rpa-ll:gold-power-surge:auto:num-50",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:rpa-ll:gold-power-surge:auto:num-50 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:rpa-ll:gold-power-surge:auto:num-50 source=checklistcenter-2026-09-05, same player \"Laiatu Latu\" #RPA-LL; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:rrs-ami:silver-static:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:rrs-ami:silver-static:auto and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:rrs-ami:silver-static:auto source=checklistcenter-2026-09-05, same player \"Adonai Mitchell\" #RRS-AMI; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:rs-ari:lime-green-power-surge:auto:num-15",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:rs-ari:lime-green-power-surge:auto:num-15 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:rs-ari:lime-green-power-surge:auto:num-15 source=checklistcenter-2026-09-05, same player \"Anthony Richardson\" #RS-ARI; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:rs-ft:superfractor:auto:num-1",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:rs-ft:superfractor:auto:num-1 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:rs-ft:superfractor:auto:num-1 source=checklistcenter-2026-09-05, same player \"Fred Taylor\" #RS-FT; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:rrs-ms:black-static:auto:num-2",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:rrs-ms:black-static:auto:num-2 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:rrs-ms:black-static:auto:num-2 source=checklistcenter-2026-09-05, same player \"Maason Smith\" #RRS-MS; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:v-8:gold-power-surge:no-auto:num-50",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:v-8:gold-power-surge:no-auto:num-50 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:v-8:gold-power-surge:no-auto:num-50 source=checklistcenter-2026-09-05, same player \"Xavier Worthy\" #V-8; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:48:gold-power-surge:no-auto:num-50",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:48:gold-power-surge:no-auto:num-50 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:48:gold-power-surge:no-auto:num-50 source=checklistcenter-2026-09-05, same player \"Christian Okoye\" #48; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:50:orange-power-surge:no-auto:num-25",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:50:orange-power-surge:no-auto:num-25 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:50:orange-power-surge:no-auto:num-25 source=checklistcenter-2026-09-05, same player \"Marcus Allen\" #50; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:mm-dha:blue-surge:auto:num-99",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:mm-dha:blue-surge:auto:num-99 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:mm-dha:blue-surge:auto:num-99 source=checklistcenter-2026-09-05, same player \"Dante Hall\" #MM-DHA; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:79:white-surge:no-auto:num-125",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:79:white-surge:no-auto:num-125 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:79:white-surge:no-auto:num-125 source=checklistcenter-2026-09-05, same player \"Tim Brown\" #79; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:rpa-bb:orange-power-surge:auto:num-25",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:rpa-bb:orange-power-surge:auto:num-25 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:rpa-bb:orange-power-surge:auto:num-25 source=checklistcenter-2026-09-05, same player \"Brock Bowers\" #RPA-BB; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:78:gold-power-surge:no-auto:num-50",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:78:gold-power-surge:no-auto:num-50 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:78:gold-power-surge:no-auto:num-50 source=checklistcenter-2026-09-05, same player \"Howie Long\" #78; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:78:orange-power-surge:no-auto:num-25",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:78:orange-power-surge:no-auto:num-25 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:78:orange-power-surge:no-auto:num-25 source=checklistcenter-2026-09-05, same player \"Howie Long\" #78; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:cb-7:teal-surge:no-auto:num-149",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:cb-7:teal-surge:no-auto:num-149 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:cb-7:teal-surge:no-auto:num-149 source=checklistcenter-2026-09-05, same player \"Ladd McConkey\" #CB-7; setName \"2024 Topps Resurgence Football\" states 2024; 2 sale(s) rest here and are LEFT BEHIND for the rematch"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:au-br:electron:auto:num-14",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:au-br:electron:auto:num-14 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:au-br:electron:auto:num-14 source=checklistcenter-2026-09-05, same player \"Brenden Rice\" #AU-BR; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:rrs-bf:gold-power-surge:auto:num-50",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:rrs-bf:gold-power-surge:auto:num-50 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:rrs-bf:gold-power-surge:auto:num-50 source=checklistcenter-2026-09-05, same player \"Braden Fiske\" #RRS-BF; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:rs-bg:pink-power-surge:auto:num-10",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:rs-bg:pink-power-surge:auto:num-10 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:rs-bg:pink-power-surge:auto:num-10 source=checklistcenter-2026-09-05, same player \"Bob Griese\" #RS-BG; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:rs-rwi:pink-static:auto:num-10",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:rs-rwi:pink-static:auto:num-10 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:rs-rwi:pink-static:auto:num-10 source=checklistcenter-2026-09-05, same player \"Ricky Williams\" #RS-RWI; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:rrs-cr:pink-static:auto:num-10",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:rrs-cr:pink-static:auto:num-10 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:rrs-cr:pink-static:auto:num-10 source=checklistcenter-2026-09-05, same player \"Chop Robinson\" #RRS-CR; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:rrs-jwr:pink-power-surge:auto:num-10",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:rrs-jwr:pink-power-surge:auto:num-10 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:rrs-jwr:pink-power-surge:auto:num-10 source=checklistcenter-2026-09-05, same player \"Jaylen Wright\" #RRS-JWR; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:rpa-jw:red-power-surge:auto:num-5",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:rpa-jw:red-power-surge:auto:num-5 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:rpa-jw:red-power-surge:auto:num-5 source=checklistcenter-2026-09-05, same player \"Jaylen Wright\" #RPA-JW; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:60:navy-surge:no-auto:num-275",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:60:navy-surge:no-auto:num-275 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:60:navy-surge:no-auto:num-275 source=checklistcenter-2026-09-05, same player \"Ricky Williams\" #60; setName \"2024 Topps Resurgence Football\" states 2024; 2 sale(s) rest here and are LEFT BEHIND for the rematch"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:60:teal-surge:no-auto:num-149",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:60:teal-surge:no-auto:num-149 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:60:teal-surge:no-auto:num-149 source=checklistcenter-2026-09-05, same player \"Ricky Williams\" #60; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:59:crimson-surge:no-auto:num-199",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:59:crimson-surge:no-auto:num-199 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:59:crimson-surge:no-auto:num-199 source=checklistcenter-2026-09-05, same player \"Jason Taylor\" #59; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:gg-14:red-power-surge:no-auto:num-5",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:gg-14:red-power-surge:no-auto:num-5 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:gg-14:red-power-surge:no-auto:num-5 source=checklistcenter-2026-09-05, same player \"Randy Moss\" #GG-14; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:rs-rg:pink-static:auto:num-10",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:rs-rg:pink-static:auto:num-10 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:rs-rg:pink-static:auto:num-10 source=checklistcenter-2026-09-05, same player \"Rob Gronkowski\" #RS-RG; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:rrs-jpo:black-static:auto:num-2",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:rrs-jpo:black-static:auto:num-2 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:rrs-jpo:black-static:auto:num-2 source=checklistcenter-2026-09-05, same player \"Ja'Lynn Polk\" #RRS-JPO; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:gg-1:red-power-surge:no-auto:num-5",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:gg-1:red-power-surge:no-auto:num-5 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:gg-1:red-power-surge:no-auto:num-5 source=checklistcenter-2026-09-05, same player \"Tom Brady\" #GG-1; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:rpa-sr:purple-surge:auto:num-75",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:rpa-sr:purple-surge:auto:num-75 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:rpa-sr:purple-surge:auto:num-75 source=checklistcenter-2026-09-05, same player \"Spencer Rattler\" #RPA-SR; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:c-9:navy-surge:no-auto:num-275",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:c-9:navy-surge:no-auto:num-275 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:c-9:navy-surge:no-auto:num-275 source=checklistcenter-2026-09-05, same player \"Spencer Rattler\" #C-9; setName \"2024 Topps Resurgence Football\" states 2024; 2 sale(s) rest here and are LEFT BEHIND for the rematch"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:rrs-tn:black-static:auto:num-2",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:rrs-tn:black-static:auto:num-2 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:rrs-tn:black-static:auto:num-2 source=checklistcenter-2026-09-05, same player \"Tyler Nubin\" #RRS-TN; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:rrs-mn:lime-green-power-surge:auto:num-15",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:rrs-mn:lime-green-power-surge:auto:num-15 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:rrs-mn:lime-green-power-surge:auto:num-15 source=checklistcenter-2026-09-05, same player \"Malik Nabers\" #RRS-MN; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:c-13:gold-power-surge:no-auto:num-50",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:c-13:gold-power-surge:no-auto:num-50 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:c-13:gold-power-surge:no-auto:num-50 source=checklistcenter-2026-09-05, same player \"Eli Manning\" #C-13; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:72:yellow-surge:no-auto:num-225",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:72:yellow-surge:no-auto:num-225 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:72:yellow-surge:no-auto:num-225 source=checklistcenter-2026-09-05, same player \"Michael Strahan\" #72; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:71:surge:no-auto:num-399",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:71:surge:no-auto:num-399 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:71:surge:no-auto:num-399 source=checklistcenter-2026-09-05, same player \"Lawrence Taylor\" #71; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:70:aqua-surge:no-auto:num-249",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:70:aqua-surge:no-auto:num-249 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:70:aqua-surge:no-auto:num-249 source=checklistcenter-2026-09-05, same player \"Eli Manning\" #70; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:rrs-of:superfractor:auto:num-1",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:rrs-of:superfractor:auto:num-1 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:rrs-of:superfractor:auto:num-1 source=checklistcenter-2026-09-05, same player \"Olu Fashanu\" #RRS-OF; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:rm-wc:pink-power-surge:auto:num-10",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:rm-wc:pink-power-surge:auto:num-10 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:rm-wc:pink-power-surge:auto:num-10 source=checklistcenter-2026-09-05, same player \"Wayne Chrebet\" #RM-WC; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:cb-10:pink-power-surge:no-auto:num-10",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:cb-10:pink-power-surge:no-auto:num-10 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:cb-10:pink-power-surge:no-auto:num-10 source=checklistcenter-2026-09-05, same player \"Malachi Corley\" #CB-10; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:au-mc:purple-surge:auto:num-75",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:au-mc:purple-surge:auto:num-75 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:au-mc:purple-surge:auto:num-75 source=checklistcenter-2026-09-05, same player \"Malachi Corley\" #AU-MC; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:au-mc:gold-power-surge:auto:num-50",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:au-mc:gold-power-surge:auto:num-50 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:au-mc:gold-power-surge:auto:num-50 source=checklistcenter-2026-09-05, same player \"Malachi Corley\" #AU-MC; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:74:aqua-surge:no-auto:num-249",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:74:aqua-surge:no-auto:num-249 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:74:aqua-surge:no-auto:num-249 source=checklistcenter-2026-09-05, same player \"Darrelle Revis\" #74; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:82:red-static:no-auto:num-5",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:82:red-static:no-auto:num-5 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:82:red-static:no-auto:num-5 source=checklistcenter-2026-09-05, same player \"Jason Kelce\" #82; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:au-jw:lime-green-power-surge:auto:num-15",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:au-jw:lime-green-power-surge:auto:num-15 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:au-jw:lime-green-power-surge:auto:num-15 source=checklistcenter-2026-09-05, same player \"Johnny Wilson\" #AU-JW; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:rpa-as:superfractor:auto:num-1",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:rpa-as:superfractor:auto:num-1 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:rpa-as:superfractor:auto:num-1 source=checklistcenter-2026-09-05, same player \"Ainias Smith\" #RPA-AS; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:rpa-ws:electron:auto:num-14",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:rpa-ws:electron:auto:num-14 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:rpa-ws:electron:auto:num-14 source=checklistcenter-2026-09-05, same player \"Will Shipley\" #RPA-WS; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:rrs-cd:blue-surge:auto:num-99",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:rrs-cd:blue-surge:auto:num-99 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:rrs-cd:blue-surge:auto:num-99 source=checklistcenter-2026-09-05, same player \"Cooper DeJean\" #RRS-CD; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:rrs-cd:lime-green-static:auto:num-15",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:rrs-cd:lime-green-static:auto:num-15 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:rrs-cd:lime-green-static:auto:num-15 source=checklistcenter-2026-09-05, same player \"Cooper DeJean\" #RRS-CD; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:rs-jg:silver-static:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:rs-jg:silver-static:auto and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:rs-jg:silver-static:auto source=checklistcenter-2026-09-05, same player \"Joe Greene\" #RS-JG; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:rs-hw:pink-power-surge:auto:num-10",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:rs-hw:pink-power-surge:auto:num-10 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:rs-hw:pink-power-surge:auto:num-10 source=checklistcenter-2026-09-05, same player \"Hines Ward\" #RS-HW; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:rs-tbr:superfractor:auto:num-1",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:rs-tbr:superfractor:auto:num-1 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:rs-tbr:superfractor:auto:num-1 source=checklistcenter-2026-09-05, same player \"Terry Bradshaw\" #RS-TBR; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:rm-rwo:red-power-surge:auto:num-5",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:rm-rwo:red-power-surge:auto:num-5 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:rm-rwo:red-power-surge:auto:num-5 source=checklistcenter-2026-09-05, same player \"Rod Woodson\" #RM-RWO; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:84:pink-power-surge:no-auto:num-10",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:84:pink-power-surge:no-auto:num-10 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:84:pink-power-surge:no-auto:num-10 source=checklistcenter-2026-09-05, same player \"Hines Ward\" #84; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:85:blue-surge:no-auto:num-99",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:85:blue-surge:no-auto:num-99 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:85:blue-surge:no-auto:num-99 source=checklistcenter-2026-09-05, same player \"James Harrison\" #85; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:cb-15:orange-power-surge:no-auto:num-25",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:cb-15:orange-power-surge:no-auto:num-25 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:cb-15:orange-power-surge:no-auto:num-25 source=checklistcenter-2026-09-05, same player \"Roman Wilson\" #CB-15; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:c-20:pink-power-surge:no-auto:num-10",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:c-20:pink-power-surge:no-auto:num-10 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:c-20:pink-power-surge:no-auto:num-10 source=checklistcenter-2026-09-05, same player \"Terry Bradshaw\" #C-20; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:rm-kw:gold-power-surge:auto:num-50",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:rm-kw:gold-power-surge:auto:num-50 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:rm-kw:gold-power-surge:auto:num-50 source=checklistcenter-2026-09-05, same player \"Kellen Winslow\" #RM-KW; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:90:pink-static:no-auto:num-10",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:90:pink-static:no-auto:num-10 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:90:pink-static:no-auto:num-10 source=checklistcenter-2026-09-05, same player \"Frank Gore\" #90; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:92:blue-and-orange-spark:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:92:blue-and-orange-spark:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:92:blue-and-orange-spark:no-auto source=checklistcenter-2026-09-05, same player \"Joe Montana\" #92; setName \"2024 Topps Resurgence Football\" states 2024; 1 sale(s) rest here and are LEFT BEHIND for the rematch"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:rpa-rp:pink-power-surge:auto:num-10",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:rpa-rp:pink-power-surge:auto:num-10 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:rpa-rp:pink-power-surge:auto:num-10 source=checklistcenter-2026-09-05, same player \"Ricky Pearsall\" #RPA-RP; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:rs-jr:black-static:auto:num-2",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:rs-jr:black-static:auto:num-2 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:rs-jr:black-static:auto:num-2 source=checklistcenter-2026-09-05, same player \"Jerry Rice\" #RS-JR; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:rs-rsh:orange-power-surge:auto:num-25",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:rs-rsh:orange-power-surge:auto:num-25 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:rs-rsh:orange-power-surge:auto:num-25 source=checklistcenter-2026-09-05, same player \"Richard Sherman\" #RS-RSH; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:rs-rsh:red-static:auto:num-5",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:rs-rsh:red-static:auto:num-5 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:rs-rsh:red-static:auto:num-5 source=checklistcenter-2026-09-05, same player \"Richard Sherman\" #RS-RSH; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:rm-sa:lime-green-power-surge:auto:num-15",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:rm-sa:lime-green-power-surge:auto:num-15 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:rm-sa:lime-green-power-surge:auto:num-15 source=checklistcenter-2026-09-05, same player \"Shaun Alexander\" #RM-SA; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:afa-cl:lime-green-power-surge:auto:num-15",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:afa-cl:lime-green-power-surge:auto:num-15 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:afa-cl:lime-green-power-surge:auto:num-15 source=checklistcenter-2026-09-05, same player \"Chris Long\" #AFA-CL; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:55:lime-green-static:no-auto:num-15",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:55:lime-green-static:no-auto:num-15 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:55:lime-green-static:no-auto:num-15 source=checklistcenter-2026-09-05, same player \"Torry Holt\" #55; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:gg-6:aqua-surge:no-auto:num-249",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:gg-6:aqua-surge:no-auto:num-249 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:gg-6:aqua-surge:no-auto:num-249 source=checklistcenter-2026-09-05, same player \"Kurt Warner\" #GG-6; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:gg-6:purple-surge:no-auto:num-75",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:gg-6:purple-surge:no-auto:num-75 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:gg-6:purple-surge:no-auto:num-75 source=checklistcenter-2026-09-05, same player \"Kurt Warner\" #GG-6; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:rs-mf:gold-power-surge:auto:num-50",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:rs-mf:gold-power-surge:auto:num-50 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:rs-mf:gold-power-surge:auto:num-50 source=checklistcenter-2026-09-05, same player \"Marshall Faulk\" #RS-MF; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:gg-19:refractor:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:gg-19:refractor:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:gg-19:refractor:no-auto source=checklistcenter-2026-09-05, same player \"Rob Gronkowski\" #GG-19; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:gg-19:orange-power-surge:no-auto:num-25",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:gg-19:orange-power-surge:no-auto:num-25 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:gg-19:orange-power-surge:no-auto:num-25 source=checklistcenter-2026-09-05, same player \"Rob Gronkowski\" #GG-19; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:rrs-bi:silver-static:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:rrs-bi:silver-static:auto and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:rrs-bi:silver-static:auto source=checklistcenter-2026-09-05, same player \"Bucky Irving\" #RRS-BI; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:rrs-jmc:white-surge:auto:num-125",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:rrs-jmc:white-surge:auto:num-125 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:rrs-jmc:white-surge:auto:num-125 source=checklistcenter-2026-09-05, same player \"Jalen McMillan\" #RRS-JMC; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:rrs-jmc:aqua-surge:auto:num-249",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:rrs-jmc:aqua-surge:auto:num-249 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:rrs-jmc:aqua-surge:auto:num-249 source=checklistcenter-2026-09-05, same player \"Jalen McMillan\" #RRS-JMC; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:rrs-mp:red-static:auto:num-5",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:rrs-mp:red-static:auto:num-5 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:rrs-mp:red-static:auto:num-5 source=checklistcenter-2026-09-05, same player \"Michael Pratt\" #RRS-MP; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:98:surge:no-auto:num-399",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:98:surge:no-auto:num-399 and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:98:surge:no-auto:num-399 source=checklistcenter-2026-09-05, same player \"Eddie George\" #98; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:97:high-voltage:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:97:high-voltage:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:97:high-voltage:no-auto source=checklistcenter-2026-09-05, same player \"Will Levis\" #97; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:26:sky-blue-and-pink-shock:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:26:sky-blue-and-pink-shock:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:26:sky-blue-and-pink-shock:no-auto source=checklistcenter-2026-09-05, same player \"Michael Irvin\" #26; setName \"2024 Topps Resurgence Football\" states 2024"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:57:sky-blue-and-pink-shock:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:57:sky-blue-and-pink-shock:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:57:sky-blue-and-pink-shock:no-auto source=checklistcenter-2026-09-05, same player \"Bob Griese\" #57; setName \"2024 Topps Resurgence Football\" states 2024; 15 sale(s) rest here and are LEFT BEHIND for the rematch"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:13:high-voltage:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:football:2024:topps-resurgence:13:high-voltage:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:football:2024:topps-resurgence:13:high-voltage:no-auto source=checklistcenter-2026-09-05, same player \"Devin Hester\" #13; setName \"2024 Topps Resurgence Football\" states 2024; 1 sale(s) rest here and are LEFT BEHIND for the rematch"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:sps-of:lime-green-power-surge-15:auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-resurgence:sps-of:lime-green-power-surge-15:auto",
+      "reason": "#1925 H1: setName \"2024 Topps Resurgence Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Olu Fashanu\" #SPS-OF; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:sps-jt:lime-green-power-surge-15:auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-resurgence:sps-jt:lime-green-power-surge-15:auto",
+      "reason": "#1925 H1: setName \"2024 Topps Resurgence Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Joe Thomas\" #SPS-JT; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:sps-gb:lime-green-power-surge-15:auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-resurgence:sps-gb:lime-green-power-surge-15:auto",
+      "reason": "#1925 H1: setName \"2024 Topps Resurgence Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Graham Barton\" #SPS-GB; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:sps-jo:lime-green-power-surge-15:auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-resurgence:sps-jo:lime-green-power-surge-15:auto",
+      "reason": "#1925 H1: setName \"2024 Topps Resurgence Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jonathan Ogden\" #SPS-JO; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:sps-ja:lime-green-power-surge-15:auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-resurgence:sps-ja:lime-green-power-surge-15:auto",
+      "reason": "#1925 H1: setName \"2024 Topps Resurgence Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Joe Alt\" #SPS-JA; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:sps-tfa:lime-green-power-surge-15:auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-resurgence:sps-tfa:lime-green-power-surge-15:auto",
+      "reason": "#1925 H1: setName \"2024 Topps Resurgence Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Troy Fautanu\" #SPS-TFA; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:sps-tl:lime-green-power-surge-15:auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-resurgence:sps-tl:lime-green-power-surge-15:auto",
+      "reason": "#1925 H1: setName \"2024 Topps Resurgence Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Taylor Lewan\" #SPS-TL; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:sps-jp:lime-green-power-surge-15:auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-resurgence:sps-jp:lime-green-power-surge-15:auto",
+      "reason": "#1925 H1: setName \"2024 Topps Resurgence Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jackson Powers-Johnson\" #SPS-JP; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:sps-jl:lime-green-power-surge-15:auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-resurgence:sps-jl:lime-green-power-surge-15:auto",
+      "reason": "#1925 H1: setName \"2024 Topps Resurgence Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"JC Latham\" #SPS-JL; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:sps-am:lime-green-power-surge-15:auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-resurgence:sps-am:lime-green-power-surge-15:auto",
+      "reason": "#1925 H1: setName \"2024 Topps Resurgence Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Amarius Mims\" #SPS-AM; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:sps-jm:lime-green-power-surge-15:auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-resurgence:sps-jm:lime-green-power-surge-15:auto",
+      "reason": "#1925 H1: setName \"2024 Topps Resurgence Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jordan Morgan\" #SPS-JM; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:sps-tf:lime-green-power-surge-15:auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-resurgence:sps-tf:lime-green-power-surge-15:auto",
+      "reason": "#1925 H1: setName \"2024 Topps Resurgence Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Taliese Fuaga\" #SPS-TF; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:sps-aw:lime-green-power-surge-15:auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-resurgence:sps-aw:lime-green-power-surge-15:auto",
+      "reason": "#1925 H1: setName \"2024 Topps Resurgence Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Andrew Whitworth\" #SPS-AW; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:sps-jk:lime-green-power-surge-15:auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-resurgence:sps-jk:lime-green-power-surge-15:auto",
+      "reason": "#1925 H1: setName \"2024 Topps Resurgence Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jason Kelce\" #SPS-JK; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:football:2025:topps-resurgence:sps-tg:lime-green-power-surge-15:auto",
+      "action": "reslug",
+      "to": "hiq:football:2024:topps-resurgence:sps-tg:lime-green-power-surge-15:auto",
+      "reason": "#1925 H1: setName \"2024 Topps Resurgence Football\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Tyler Guyton\" #SPS-TG; destination read as vacant 2026-09-07"
+    }
+  ]
+}

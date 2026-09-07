@@ -1,0 +1,1912 @@
+{
+  "generatedAt": "2026-09-07T02:00:00Z",
+  "forLane": "relocate-catalog-rows-by-list",
+  "reportOnlyUntil": "Drew's review — NO APPLY IS AUTHORIZED BY THIS PR. This list DELETES catalog rows.",
+  "keepSales": true,
+  "finding": "#1925 H1. 298 card_catalog rows from hobbymonitor-2026-09-04 under basketball/topps-chrome carry year 2025 while their own setName states 2024. The census compared 5,381 card numbers across all 28 products: 5,351 agree with the year-N checklist, 444 agree with year N+1, and ZERO agree with N+1 but not N — so the setName is right and the year field is wrong. This file is part 01 of 1 for this product: 199 retire, 99 reslug.",
+  "rulings": [
+    "THE CHECKLIST IS THE AUTHORITY AND THE setName IS RIGHT. Every number-to-player comparison in #1925 resolves to year N. A row is retired only where the year-N address is already held by the SAME player from a CHECKLIST source (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT); a twin from `ingest-auto-seed` or `bccp` earns no delete and is excluded instead.",
+    "THE SALES DO NOT MOVE — `keepSales: true`. 7,905 sales rest on these rows' slugs and their titles are 7,901-to-0 the year-N+1 product: they belong to the card that STAYS, not the one that moves. moveCatalogRow re-points a row's own sales by default, which here would carry genuine year-N+1 sales back to year N — the exact mispricing this repair exists to end. Under the flag the lane hands moveCatalogRow no salesContainer, so hobbyiqCardId and cardId are untouched and the rematch re-derives them against the genuine year-N+1 identity. Measured: 7,776 of the 7,905 have a genuine year-N+1 row at their card number to land on; 129 do not and need a checklist ingest first.",
+    "RETIRE IS A HARD DELETE, AND IT IS ORDERED FIRST. card_catalog has no field that stops a row resolving, so a retire deletes the row and its graded children, and leaves its sales UNPLACED. Retires sort before reslugs in every file, and the files sort in the order they must run.",
+    "AN OCCUPIED DESTINATION IS REPORTED, NEVER ROUTED AROUND. 5,899 rows whose year-N destination names a DIFFERENT player, and 712 whose destination is an UNNAMED bccp row, are in docs/reports/2026-09-07-hobbymonitor-year-excluded.md and in no list."
+  ],
+  "census": {
+    "product": "basketball/topps-chrome",
+    "storedYear": 2025,
+    "trueYear": 2024,
+    "destinationSetKey": "topps-chrome",
+    "rowsInProduct": 298,
+    "retireInThisFile": 199,
+    "reslugInThisFile": 99,
+    "salesOnEntriesInThisFile": 0
+  },
+  "entries": [
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-jwi:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-jwi:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-jwi:base:no-auto source=checklistinsider-2026-08-27, same player \"Jamaal Wilkes\" #C-JWI; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-jaw:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-jaw:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-jaw:base:no-auto source=checklistinsider-2026-08-27, same player \"Jason Williams\" #C-JAW; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-nr:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-nr:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-nr:base:no-auto source=checklistinsider-2026-08-27, same player \"Naz Reid\" #C-NR; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-sh:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-sh:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-sh:base:no-auto source=checklistinsider-2026-08-27, same player \"Scoot Henderson\" #C-SH; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:fsa-zr:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:fsa-zr:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:fsa-zr:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Zaccharie Risacher\" #FSA-ZR; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-dh:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:tcai-dh:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:tcai-dh:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"De'Andre Hunter\" #TCAI-DH; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:fsa-tn:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:fsa-tn:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:fsa-tn:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Tristen Newton\" #FSA-TN; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-jc:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:tcai-jc:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:tcai-jc:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Jaylen Clark\" #TCAI-JC; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:fsa-js:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:fsa-js:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:fsa-js:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Jamal Shead\" #FSA-JS; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-iw:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-iw:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-iw:base:no-auto source=checklistinsider-2026-08-27, same player \"Isaiah Wong\" #C-IW; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-sc:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-sc:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-sc:base:no-auto source=checklistinsider-2026-08-27, same player \"Seth Curry\" #C-SC; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-kl:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-kl:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-kl:base:no-auto source=checklistinsider-2026-08-27, same player \"Kevon Looney\" #C-KL; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-jwa:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-jwa:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-jwa:base:no-auto source=checklistinsider-2026-08-27, same player \"Jarace Walker\" #C-JWA; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-gg:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-gg:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-gg:base:no-auto source=checklistinsider-2026-08-27, same player \"George Gervin\" #C-GG; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-ag:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:tcai-ag:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:tcai-ag:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Artis Gilmore\" #TCAI-AG; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-as:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:tcai-as:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:tcai-as:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Alperen Sengun\" #TCAI-AS; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:fsa-tk:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:fsa-tk:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:fsa-tk:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Tyler Kolek\" #FSA-TK; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-js:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-js:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-js:base:no-auto source=checklistinsider-2026-08-27, same player \"Leaky Black\" #C-JS; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-ag:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-ag:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-ag:base:no-auto source=checklistinsider-2026-08-27, same player \"Aaron Gordon\" #C-AG; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-ghi:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-ghi:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-ghi:base:no-auto source=checklistinsider-2026-08-27, same player \"Grant Hill\" #C-GHI; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-bcl:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:tcai-bcl:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:tcai-bcl:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Brandon Clarke\" #TCAI-BCL; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:fsa-rd:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:fsa-rd:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:fsa-rd:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Rob Dillingham\" #FSA-RD; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:fsa-td:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:fsa-td:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:fsa-td:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Tristan da Silva\" #FSA-TD; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-sk:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:tcai-sk:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:tcai-sk:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Shawn Kemp\" #TCAI-SK; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-sb:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:tcai-sb:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:tcai-sb:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Saddiq Bey\" #TCAI-SB; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-jow:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-jow:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-jow:base:no-auto source=checklistinsider-2026-08-27, same player \"Jordan Walsh\" #C-JOW; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-ra:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-ra:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-ra:base:no-auto source=checklistinsider-2026-08-27, same player \"Ray Allen\" #C-RA; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-eh:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-eh:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-eh:base:no-auto source=checklistinsider-2026-08-27, same player \"Elvin Hayes\" #C-EH; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-bs:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-bs:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-bs:base:no-auto source=checklistinsider-2026-08-27, same player \"Brice Sensabaugh\" #C-BS; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-mst:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:tcai-mst:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:tcai-mst:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Max Strus\" #TCAI-MST; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-dwi:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:tcai-dwi:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:tcai-dwi:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Deron Williams\" #TCAI-DWI; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-jwi:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:tcai-jwi:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:tcai-jwi:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Jason Williams\" #TCAI-JWI; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-jk:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-jk:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-jk:base:no-auto source=checklistinsider-2026-08-27, same player \"Jason Kidd\" #C-JK; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-ae:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-ae:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-ae:base:no-auto source=checklistinsider-2026-08-27, same player \"Alex English\" #C-AE; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-ds:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-ds:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-ds:base:no-auto source=checklistinsider-2026-08-27, same player \"Domantas Sabonis\" #C-DS; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-jh:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:tcai-jh:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:tcai-jh:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Jalen Hood-Schifino\" #TCAI-JH; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-gtj:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:tcai-gtj:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:tcai-gtj:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Gary Trent Jr.\" #TCAI-GTJ; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:fsa-aj:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:fsa-aj:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:fsa-aj:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"AJ Johnson\" #FSA-AJ; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:fsa-as:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:fsa-as:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:fsa-as:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Alexandre Sarr\" #FSA-AS; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-ah:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-ah:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-ah:base:no-auto source=checklistinsider-2026-08-27, same player \"Al Horford\" #C-AH; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-lj:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-lj:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-lj:base:no-auto source=checklistinsider-2026-08-27, same player \"Larry Johnson\" #C-LJ; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-aw:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-aw:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-aw:base:no-auto source=checklistinsider-2026-08-27, same player \"Andrew Wiggins\" #C-AW; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-an:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-an:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-an:base:no-auto source=checklistinsider-2026-08-27, same player \"Aaron Nesmith\" #C-AN; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-cla:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-cla:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-cla:base:no-auto source=checklistinsider-2026-08-27, same player \"Christian Laettner\" #C-CLA; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-kt:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-kt:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-kt:base:no-auto source=checklistinsider-2026-08-27, same player \"Karl-Anthony Towns\" #C-KT; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-mg:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-mg:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-mg:base:no-auto source=checklistinsider-2026-08-27, same player \"Manu Ginobili\" #C-MG; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-sci:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-sci:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-sci:base:no-auto source=checklistinsider-2026-08-27, same player \"Sidy Cissoko\" #C-SCI; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-jb:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:tcai-jb:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:tcai-jb:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Jalen Brunson\" #TCAI-JB; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:fsa-cw:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:fsa-cw:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:fsa-cw:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Cody Williams\" #FSA-CW; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-dg:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-dg:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-dg:base:no-auto source=checklistinsider-2026-08-27, same player \"Daniel Gafford\" #C-DG; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-am:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-am:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-am:base:no-auto source=checklistinsider-2026-08-27, same player \"Alonzo Mourning\" #C-AM; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-dv:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-dv:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-dv:base:no-auto source=checklistinsider-2026-08-27, same player \"Andre Jackson Jr.\" #C-DV; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-dro:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-dro:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-dro:base:no-auto source=checklistinsider-2026-08-27, same player \"David Robinson\" #C-DRO; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-dl:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:tcai-dl:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:tcai-dl:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Dereck Lively II\" #TCAI-DL; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-js:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:tcai-js:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:tcai-js:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Jerry Stackhouse\" #TCAI-JS; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-jva:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:tcai-jva:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:tcai-jva:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Jarred Vanderbilt\" #TCAI-JVA; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-jw:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-jw:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-jw:base:no-auto source=checklistinsider-2026-08-27, same player \"Jalen Wilson\" #C-JW; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-gwi:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-gwi:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-gwi:base:no-auto source=checklistinsider-2026-08-27, same player \"Grant Williams\" #C-GWI; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-jho:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-jho:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-jho:base:no-auto source=checklistinsider-2026-08-27, same player \"Juwan Howard\" #C-JHO; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-jta:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-jta:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-jta:base:no-auto source=checklistinsider-2026-08-27, same player \"Jae'Sean Tate\" #C-JTA; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-kbr:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-kbr:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-kbr:base:no-auto source=checklistinsider-2026-08-27, same player \"Kobe Brown\" #C-KBR; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-ms:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-ms:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-ms:base:no-auto source=checklistinsider-2026-08-27, same player \"Trey Murphy III\" #C-MS; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-ch:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-ch:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-ch:base:no-auto source=checklistinsider-2026-08-27, same player \"Chet Holmgren\" #C-CH; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-jst:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-jst:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-jst:base:no-auto source=checklistinsider-2026-08-27, same player \"John Stockton\" #C-JST; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-mb:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:tcai-mb:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:tcai-mb:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Mo Bamba\" #TCAI-MB; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-gj:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:tcai-gj:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:tcai-gj:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"GG Jackson II\" #TCAI-GJ; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:fsa-ze:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:fsa-ze:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:fsa-ze:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Zach Edey\" #FSA-ZE; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-mf:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:tcai-mf:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:tcai-mf:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Markelle Fultz\" #TCAI-MF; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:fsa-uc:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:fsa-uc:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:fsa-uc:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Ulrich Chomche\" #FSA-UC; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:fsa-kf:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:fsa-kf:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:fsa-kf:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Kyle Filipowski\" #FSA-KF; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-gd:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:tcai-gd:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:tcai-gd:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Gradey Dick\" #TCAI-GD; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-bbo:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-bbo:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-bbo:base:no-auto source=checklistinsider-2026-08-27, same player \"Bogdan Bogdanović\" #C-BBO; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-jh:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-jh:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-jh:base:no-auto source=checklistinsider-2026-08-27, same player \"Jordan Hawkins\" #C-JH; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-ih:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-ih:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-ih:base:no-auto source=checklistinsider-2026-08-27, same player \"Jabari Walker\" #C-IH; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-sd:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-sd:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-sd:base:no-auto source=checklistinsider-2026-08-27, same player \"Jonas Valančiūnas\" #C-SD; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-dd:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:tcai-dd:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:tcai-dd:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Donte DiVincenzo\" #TCAI-DD; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-vc:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:tcai-vc:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:tcai-vc:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Vince Carter\" #TCAI-VC; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-pg:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-pg:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-pg:base:no-auto source=checklistinsider-2026-08-27, same player \"Pau Gasol\" #C-PG; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-km:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-km:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-km:base:no-auto source=checklistinsider-2026-08-27, same player \"GG Jackson II\" #C-KM; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-qg:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:tcai-qg:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:tcai-qg:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Quentin Grimes\" #TCAI-QG; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-cl:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:tcai-cl:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:tcai-cl:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Christian Laettner\" #TCAI-CL; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-mg:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:tcai-mg:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:tcai-mg:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Manu Ginobili\" #TCAI-MG; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-ja:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-ja:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-ja:base:no-auto source=checklistinsider-2026-08-27, same player \"Jarrett Allen\" #C-JA; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-dm:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-dm:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-dm:base:no-auto source=checklistinsider-2026-08-27, same player \"Donovan Mitchell\" #C-DM; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:fsa-jm:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:fsa-jm:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:fsa-jm:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Jonathan Mogbo\" #FSA-JM; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-cj:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-cj:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-cj:base:no-auto source=checklistinsider-2026-08-27, same player \"Cameron Johnson\" #C-CJ; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-jg:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-jg:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-jg:base:no-auto source=checklistinsider-2026-08-27, same player \"Jalen Green\" #C-JG; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-dr:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-dr:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-dr:base:no-auto source=checklistinsider-2026-08-27, same player \"D'Angelo Russell\" #C-DR; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-th:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-th:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-th:base:no-auto source=checklistinsider-2026-08-27, same player \"Tyler Herro\" #C-TH; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-ld:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-ld:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-ld:base:no-auto source=checklistinsider-2026-08-27, same player \"Luguentz Dort\" #C-LD; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-dg:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:tcai-dg:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:tcai-dg:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Daniel Gafford\" #TCAI-DG; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-bh:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:tcai-bh:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:tcai-bh:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Bones Hyland\" #TCAI-BH; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-dsh:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:tcai-dsh:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:tcai-dsh:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Day'ron Sharpe\" #TCAI-DSH; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-pmi:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:tcai-pmi:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:tcai-pmi:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Patty Mills\" #TCAI-PMI; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-tm:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-tm:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-tm:base:no-auto source=checklistinsider-2026-08-27, same player \"Tyrese Maxey\" #C-TM; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:fsa-ef:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:fsa-ef:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:fsa-ef:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Enrique Freeman\" #FSA-EF; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-lbj:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:tcai-lbj:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:tcai-lbj:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Lebron James\" #TCAI-LBJ; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-kg:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-kg:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-kg:base:no-auto source=checklistinsider-2026-08-27, same player \"Kevin Garnett\" #C-KG; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-ar:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-ar:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-ar:base:no-auto source=checklistinsider-2026-08-27, same player \"Logan Johnson\" #C-AR; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-rja:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-rja:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-rja:base:no-auto source=checklistinsider-2026-08-27, same player \"Reggie Jackson\" #C-RJA; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-sc:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:tcai-sc:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:tcai-sc:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Stephen Curry\" #TCAI-SC; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:fsa-cc:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:fsa-cc:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:fsa-cc:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Cam Christie\" #FSA-CC; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:fsa-ar:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:fsa-ar:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:fsa-ar:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Antonio Reeves\" #FSA-AR; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-jp:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:tcai-jp:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:tcai-jp:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Jakob Poeltl\" #TCAI-JP; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-jt:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:tcai-jt:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:tcai-jt:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Jayson Tatum\" #TCAI-JT; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-db:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-db:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-db:base:no-auto source=checklistinsider-2026-08-27, same player \"Desmond Bane\" #C-DB; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-cb:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-cb:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-cb:base:no-auto source=checklistinsider-2026-08-27, same player \"Leonard Miller\" #C-CB; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-bb:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-bb:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-bb:base:no-auto source=checklistinsider-2026-08-27, same player \"Bradley Beal\" #C-BB; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-nc:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-nc:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-nc:base:no-auto source=checklistinsider-2026-08-27, same player \"Nic Claxton\" #C-NC; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-dbr:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-dbr:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-dbr:base:no-auto source=checklistinsider-2026-08-27, same player \"Dillon Brooks\" #C-DBR; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-mj:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:tcai-mj:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:tcai-mj:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Magic Johnson\" #TCAI-MJ; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-ab:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:tcai-ab:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:tcai-ab:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Anthony Black\" #TCAI-AB; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-jwe:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-jwe:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-jwe:base:no-auto source=checklistinsider-2026-08-27, same player \"Jerry West\" #C-JWE; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-mb:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-mb:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-mb:base:no-auto source=checklistinsider-2026-08-27, same player \"Mikal Bridges\" #C-MB; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-rja:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:tcai-rja:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:tcai-rja:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Reggie Jackson\" #TCAI-RJA; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-oo:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-oo:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-oo:base:no-auto source=checklistinsider-2026-08-27, same player \"Onyeka Okongwu\" #C-OO; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-kp:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-kp:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-kp:base:no-auto source=checklistinsider-2026-08-27, same player \"Kristaps Porzingis\" #C-KP; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-ca:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:tcai-ca:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:tcai-ca:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Carmelo Anthony\" #TCAI-CA; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-op:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-op:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-op:base:no-auto source=checklistinsider-2026-08-27, same player \"Olivier-Maxence Prosper\" #C-OP; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-cs:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-cs:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-cs:base:no-auto source=checklistinsider-2026-08-27, same player \"Collin Sexton\" #C-CS; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:fsa-pl:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:fsa-pl:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:fsa-pl:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Pelle Larsson\" #FSA-PL; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-kd:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:tcai-kd:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:tcai-kd:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Kevin Durant\" #TCAI-KD; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-iq:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:tcai-iq:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:tcai-iq:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Immanuel Quickley\" #TCAI-IQ; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-jco:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:tcai-jco:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:tcai-jco:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"John Collins\" #TCAI-JCO; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-dw:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:tcai-dw:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:tcai-dw:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Dwyane Wade\" #TCAI-DW; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:fsa-oi:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:fsa-oi:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:fsa-oi:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Oso Ighodaro\" #FSA-OI; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-vw:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:tcai-vw:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:tcai-vw:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Victor Wembanyama\" #TCAI-VW; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-jgr:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-jgr:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-jgr:base:no-auto source=checklistinsider-2026-08-27, same player \"Jeff Green\" #C-JGR; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-oo:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:tcai-oo:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:tcai-oo:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Onyeka Okongwu\" #TCAI-OO; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-sa:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-sa:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-sa:base:no-auto source=checklistinsider-2026-08-27, same player \"Steven Adams\" #C-SA; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:fsa-aw:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:fsa-aw:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:fsa-aw:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Anton Watson\" #FSA-AW; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:fsa-sc:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:fsa-sc:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:fsa-sc:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Stephon Castle\" #FSA-SC; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-jc:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-jc:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-jc:base:no-auto source=checklistinsider-2026-08-27, same player \"Jordan Clarkson\" #C-JC; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-bc:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:tcai-bc:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:tcai-bc:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Bilal Coulibaly\" #TCAI-BC; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-kb:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-kb:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-kb:base:no-auto source=checklistinsider-2026-08-27, same player \"Kobe Bufkin\" #C-KB; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-oa:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-oa:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-oa:base:no-auto source=checklistinsider-2026-08-27, same player \"Bruce Brown Jr.\" #C-OA; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-nc:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:tcai-nc:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:tcai-nc:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Noah Clowney\" #TCAI-NC; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:fsa-tsm:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:fsa-tsm:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:fsa-tsm:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Tyler Smith\" #FSA-TSM; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-bb:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:tcai-bb:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:tcai-bb:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Bruce Brown Jr.\" #TCAI-BB; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:fsa-ts:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:fsa-ts:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:fsa-ts:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Tidjane Salaün\" #FSA-TS; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:fsa-jf:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:fsa-jf:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:fsa-jf:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Johnny Furphy\" #FSA-JF; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-bm:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-bm:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-bm:base:no-auto source=checklistinsider-2026-08-27, same player \"Brandon Miller\" #C-BM; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-jm:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-jm:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-jm:base:no-auto source=checklistinsider-2026-08-27, same player \"Jamal Murray\" #C-JM; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-ps:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-ps:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-ps:base:no-auto source=checklistinsider-2026-08-27, same player \"Pascal Siakam\" #C-PS; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-jl:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-jl:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-jl:base:no-auto source=checklistinsider-2026-08-27, same player \"Jake LaRavia\" #C-JL; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-bbo:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:tcai-bbo:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:tcai-bbo:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Bogdan Bogdanović\" #TCAI-BBO; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-gw:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:tcai-gw:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:tcai-gw:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Grant Williams\" #TCAI-GW; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-tm:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:tcai-tm:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:tcai-tm:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Trey Murphy III\" #TCAI-TM; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-sma:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:tcai-sma:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:tcai-sma:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Sandro Mamukelashvili\" #TCAI-SMA; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-cmu:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-cmu:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-cmu:base:no-auto source=checklistinsider-2026-08-27, same player \"Calvin Murphy\" #C-CMU; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-bc:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-bc:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-bc:base:no-auto source=checklistinsider-2026-08-27, same player \"Jacob Toppin\" #C-BC; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-lm:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-lm:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-lm:base:no-auto source=checklistinsider-2026-08-27, same player \"Lauri Markkanen\" #C-LM; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-pw:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:tcai-pw:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:tcai-pw:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Patrick Williams\" #TCAI-PW; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-dn:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:tcai-dn:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:tcai-dn:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Dirk Nowitzki\" #TCAI-DN; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-bp:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:tcai-bp:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:tcai-bp:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Brandin Podziemski\" #TCAI-BP; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-jho:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:tcai-jho:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:tcai-jho:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Jett Howard\" #TCAI-JHO; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-th:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:tcai-th:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:tcai-th:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Taylor Hendricks\" #TCAI-TH; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-ca:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-ca:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-ca:base:no-auto source=checklistinsider-2026-08-27, same player \"Cole Anthony\" #C-CA; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:fsa-rh:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:fsa-rh:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:fsa-rh:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Ron Holland II\" #FSA-RH; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-der:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-der:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-der:base:no-auto source=checklistinsider-2026-08-27, same player \"Dennis Rodman\" #C-DER; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-mm:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-mm:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-mm:base:no-auto source=checklistinsider-2026-08-27, same player \"Malik Monk\" #C-MM; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-bw:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-bw:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-bw:base:no-auto source=checklistinsider-2026-08-27, same player \"Blake Wesley\" #C-BW; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-cw:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:tcai-cw:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:tcai-cw:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Cam Whitmore\" #TCAI-CW; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-tma:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:tcai-tma:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:tcai-tma:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Terance Mann\" #TCAI-TMA; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-nb:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:tcai-nb:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:tcai-nb:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Nicolas Batum\" #TCAI-NB; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-cl:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-cl:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-cl:base:no-auto source=checklistinsider-2026-08-27, same player \"Chris Livingston\" #C-CL; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-cm:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-cm:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-cm:base:no-auto source=checklistinsider-2026-08-27, same player \"CJ McCollum\" #C-CM; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-rr:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-rr:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-rr:base:no-auto source=checklistinsider-2026-08-27, same player \"Rayan Rupert\" #C-RR; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-as:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-as:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-as:base:no-auto source=checklistinsider-2026-08-27, same player \"Anfernee Simons\" #C-AS; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-rp:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:tcai-rp:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:tcai-rp:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Robert Parish\" #TCAI-RP; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-zr:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:tcai-zr:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:tcai-zr:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Zach Randolph\" #TCAI-ZR; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-nr:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:tcai-nr:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:tcai-nr:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Naz Reid\" #TCAI-NR; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-jp:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-jp:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-jp:base:no-auto source=checklistinsider-2026-08-27, same player \"Julian Phillips\" #C-JP; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-dt:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-dt:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-dt:base:no-auto source=checklistinsider-2026-08-27, same player \"David Thompson\" #C-DT; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-ha:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-ha:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-ha:base:no-auto source=checklistinsider-2026-08-27, same player \"Hakeem Olajuwon\" #C-HA; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-nb:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-nb:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-nb:base:no-auto source=checklistinsider-2026-08-27, same player \"Nicolas Batum\" #C-NB; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-so:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-so:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-so:base:no-auto source=checklistinsider-2026-08-27, same player \"Shaquille O'Neal\" #C-SO; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-rj:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-rj:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-rj:base:no-auto source=checklistinsider-2026-08-27, same player \"Richard Jefferson\" #C-RJ; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-kc:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-kc:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-kc:base:no-auto source=checklistinsider-2026-08-27, same player \"Kentavious Caldwell-Pope\" #C-KC; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-cd:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-cd:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-cd:base:no-auto source=checklistinsider-2026-08-27, same player \"Clyde Drexler\" #C-CD; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-pst:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-pst:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-pst:base:no-auto source=checklistinsider-2026-08-27, same player \"Peja Stojakovic\" #C-PST; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-dt:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:tcai-dt:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:tcai-dt:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"David Thompson\" #TCAI-DT; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-rh:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:tcai-rh:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:tcai-rh:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Rui Hachimura\" #TCAI-RH; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-ns:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-ns:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-ns:base:no-auto source=checklistinsider-2026-08-27, same player \"Nick Smith Jr.\" #C-NS; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-mw:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-mw:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-mw:base:no-auto source=checklistinsider-2026-08-27, same player \"Metta World Peace\" #C-MW; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-kk:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-kk:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-kk:base:no-auto source=checklistinsider-2026-08-27, same player \"Kyle Kuzma\" #C-KK; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-cc:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:tcai-cc:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:tcai-cc:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Clint Capela\" #TCAI-CC; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:fsa-bj:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:fsa-bj:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:fsa-bj:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Bronny James Jr.\" #FSA-BJ; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:fsa-nt:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:fsa-nt:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:fsa-nt:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Nikola Topić\" #FSA-NT; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:c-fw:base:no-auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:c-fw:base:no-auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:c-fw:base:no-auto source=checklistinsider-2026-08-27, same player \"Franz Wagner\" #C-FW; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-lj:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:tcai-lj:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:tcai-lj:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Larry Johnson\" #TCAI-LJ; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-ss:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:tcai-ss:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:tcai-ss:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Shaedon Sharpe\" #TCAI-SS; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-pp:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:tcai-pp:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:tcai-pp:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Paul Pierce\" #TCAI-PP; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-lw:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:tcai-lw:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:tcai-lw:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Lonnie Walker IV\" #TCAI-LW; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-rb:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:tcai-rb:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:tcai-rb:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Rick Barry\" #TCAI-RB; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:fsa-cs:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:fsa-cs:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:fsa-cs:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Cam Spencer\" #FSA-CS; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-ls:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:tcai-ls:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:tcai-ls:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Latrell Sprewell\" #TCAI-LS; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:fsa-dj:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:fsa-dj:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:fsa-dj:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Dillon Jones\" #FSA-DJ; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:fsa-dc:blue-basketball:auto",
+      "action": "retire",
+      "reason": "#1925 H1: this is the 2024 card carrying year 2025; the 2024 checklist twin already exists at hiq:basketball:2024:topps-chrome:fsa-dc:blue-basketball:auto and the checklist row wins",
+      "evidence": "twin at hiq:basketball:2024:topps-chrome:fsa-dc:blue-basketball:auto source=checklistcenter-2026-09-05, same player \"Devin Carter\" #FSA-DC; setName \"2024/25 Topps Chrome Basketball\" states 2024"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-jco:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:tcai-jco:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"John Collins\" #TCAI-JCO; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-sb:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:tcai-sb:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Saddiq Bey\" #TCAI-SB; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-cc:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:tcai-cc:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Clint Capela\" #TCAI-CC; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-qg:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:tcai-qg:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Quentin Grimes\" #TCAI-QG; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-mb:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:tcai-mb:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Mo Bamba\" #TCAI-MB; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-bh:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:tcai-bh:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Bones Hyland\" #TCAI-BH; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-kd:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:tcai-kd:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Kevin Durant\" #TCAI-KD; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-dwi:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:tcai-dwi:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Deron Williams\" #TCAI-DWI; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-cw:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:tcai-cw:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Cam Whitmore\" #TCAI-CW; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:fsa-cs:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:fsa-cs:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Cam Spencer\" #FSA-CS; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:fsa-tk:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:fsa-tk:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Tyler Kolek\" #FSA-TK; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:fsa-sc:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:fsa-sc:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Stephon Castle\" #FSA-SC; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-gd:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:tcai-gd:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Gradey Dick\" #TCAI-GD; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:fsa-ef:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:fsa-ef:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Enrique Freeman\" #FSA-EF; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-jwi:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:tcai-jwi:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jason Williams\" #TCAI-JWI; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-mf:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:tcai-mf:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Markelle Fultz\" #TCAI-MF; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:fsa-cw:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:fsa-cw:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Cody Williams\" #FSA-CW; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-bc:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:tcai-bc:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Bilal Coulibaly\" #TCAI-BC; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-nc:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:tcai-nc:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Noah Clowney\" #TCAI-NC; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-sc:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:tcai-sc:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Stephen Curry\" #TCAI-SC; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:fsa-ze:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:fsa-ze:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Zach Edey\" #FSA-ZE; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:fsa-tsm:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:fsa-tsm:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Tyler Smith\" #FSA-TSM; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-ls:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:tcai-ls:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Latrell Sprewell\" #TCAI-LS; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:fsa-dj:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:fsa-dj:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Dillon Jones\" #FSA-DJ; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-mst:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:tcai-mst:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Max Strus\" #TCAI-MST; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-rb:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:tcai-rb:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Rick Barry\" #TCAI-RB; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-dw:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:tcai-dw:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Dwyane Wade\" #TCAI-DW; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:fsa-zr:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:fsa-zr:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Zaccharie Risacher\" #FSA-ZR; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-oo:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:tcai-oo:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Onyeka Okongwu\" #TCAI-OO; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-ag:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:tcai-ag:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Artis Gilmore\" #TCAI-AG; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-jva:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:tcai-jva:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jarred Vanderbilt\" #TCAI-JVA; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:fsa-aj:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:fsa-aj:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"AJ Johnson\" #FSA-AJ; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:fsa-pl:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:fsa-pl:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Pelle Larsson\" #FSA-PL; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-rja:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:tcai-rja:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Reggie Jackson\" #TCAI-RJA; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-vw:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:tcai-vw:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Victor Wembanyama\" #TCAI-VW; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-bb:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:tcai-bb:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Bruce Brown Jr.\" #TCAI-BB; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-as:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:tcai-as:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Alperen Sengun\" #TCAI-AS; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-mj:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:tcai-mj:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Magic Johnson\" #TCAI-MJ; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-jc:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:tcai-jc:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jaylen Clark\" #TCAI-JC; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:fsa-aw:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:fsa-aw:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Anton Watson\" #FSA-AW; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-rp:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:tcai-rp:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Robert Parish\" #TCAI-RP; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-gw:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:tcai-gw:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Grant Williams\" #TCAI-GW; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-lj:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:tcai-lj:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Larry Johnson\" #TCAI-LJ; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-dl:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:tcai-dl:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Dereck Lively II\" #TCAI-DL; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-gj:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:tcai-gj:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"GG Jackson II\" #TCAI-GJ; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-pw:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:tcai-pw:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Patrick Williams\" #TCAI-PW; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-gtj:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:tcai-gtj:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Gary Trent Jr.\" #TCAI-GTJ; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-lbj:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:tcai-lbj:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Lebron James\" #TCAI-LBJ; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-bcl:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:tcai-bcl:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Brandon Clarke\" #TCAI-BCL; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-sma:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:tcai-sma:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Sandro Mamukelashvili\" #TCAI-SMA; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:fsa-uc:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:fsa-uc:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Ulrich Chomche\" #FSA-UC; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-tma:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:tcai-tma:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Terance Mann\" #TCAI-TMA; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:fsa-oi:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:fsa-oi:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Oso Ighodaro\" #FSA-OI; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-pp:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:tcai-pp:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Paul Pierce\" #TCAI-PP; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:fsa-ar:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:fsa-ar:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Antonio Reeves\" #FSA-AR; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-nb:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:tcai-nb:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Nicolas Batum\" #TCAI-NB; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:fsa-jm:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:fsa-jm:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jonathan Mogbo\" #FSA-JM; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-nr:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:tcai-nr:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Naz Reid\" #TCAI-NR; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-dh:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:tcai-dh:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"De'Andre Hunter\" #TCAI-DH; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:fsa-ts:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:fsa-ts:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Tidjane Salaün\" #FSA-TS; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-bbo:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:tcai-bbo:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Bogdan Bogdanović\" #TCAI-BBO; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-jh:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:tcai-jh:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jalen Hood-Schifino\" #TCAI-JH; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:fsa-rd:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:fsa-rd:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Rob Dillingham\" #FSA-RD; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-zr:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:tcai-zr:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Zach Randolph\" #TCAI-ZR; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-ss:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:tcai-ss:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Shaedon Sharpe\" #TCAI-SS; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:fsa-kf:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:fsa-kf:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Kyle Filipowski\" #FSA-KF; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:fsa-jf:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:fsa-jf:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Johnny Furphy\" #FSA-JF; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:fsa-cc:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:fsa-cc:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Cam Christie\" #FSA-CC; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-cl:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:tcai-cl:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Christian Laettner\" #TCAI-CL; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:fsa-nt:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:fsa-nt:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Nikola Topić\" #FSA-NT; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:fsa-rh:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:fsa-rh:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Ron Holland II\" #FSA-RH; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:fsa-tn:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:fsa-tn:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Tristen Newton\" #FSA-TN; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:fsa-dc:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:fsa-dc:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Devin Carter\" #FSA-DC; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-mg:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:tcai-mg:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Manu Ginobili\" #TCAI-MG; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-jp:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:tcai-jp:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jakob Poeltl\" #TCAI-JP; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-vc:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:tcai-vc:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Vince Carter\" #TCAI-VC; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:fsa-as:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:fsa-as:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Alexandre Sarr\" #FSA-AS; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-jt:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:tcai-jt:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jayson Tatum\" #TCAI-JT; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-dsh:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:tcai-dsh:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Day'ron Sharpe\" #TCAI-DSH; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-js:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:tcai-js:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jerry Stackhouse\" #TCAI-JS; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-bp:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:tcai-bp:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Brandin Podziemski\" #TCAI-BP; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-iq:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:tcai-iq:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Immanuel Quickley\" #TCAI-IQ; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-pmi:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:tcai-pmi:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Patty Mills\" #TCAI-PMI; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-rh:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:tcai-rh:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Rui Hachimura\" #TCAI-RH; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-lw:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:tcai-lw:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Lonnie Walker IV\" #TCAI-LW; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:fsa-js:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:fsa-js:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jamal Shead\" #FSA-JS; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:fsa-bj:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:fsa-bj:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Bronny James Jr.\" #FSA-BJ; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-tm:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:tcai-tm:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Trey Murphy III\" #TCAI-TM; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-th:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:tcai-th:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Taylor Hendricks\" #TCAI-TH; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-ca:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:tcai-ca:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Carmelo Anthony\" #TCAI-CA; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-jb:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:tcai-jb:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jalen Brunson\" #TCAI-JB; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-dn:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:tcai-dn:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Dirk Nowitzki\" #TCAI-DN; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-sk:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:tcai-sk:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Shawn Kemp\" #TCAI-SK; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-dg:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:tcai-dg:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Daniel Gafford\" #TCAI-DG; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-dt:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:tcai-dt:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"David Thompson\" #TCAI-DT; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-dd:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:tcai-dd:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Donte DiVincenzo\" #TCAI-DD; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-jho:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:tcai-jho:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Jett Howard\" #TCAI-JHO; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:tcai-ab:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:tcai-ab:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Anthony Black\" #TCAI-AB; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps-chrome:fsa-td:pink-basketball:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2024:topps-chrome:fsa-td:pink-basketball:auto",
+      "reason": "#1925 H1: setName \"2024/25 Topps Chrome Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
+      "evidence": "player \"Tristan da Silva\" #FSA-TD; destination read as vacant 2026-09-07"
+    }
+  ]
+}
