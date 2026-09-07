@@ -981,3 +981,112 @@ describe("a lagging read-back is retried, a resident row still fails", () => {
     expect(src).not.toContain("+ readBackRetried");
   });
 });
+
+/**
+ * CF-A-MOVE-VERIFIES-ITS-SOURCE-THE-SAME-WAY-A-RETIRE-DOES (2026-09-07).
+ *
+ * #1940 taught the RETIRE branch to read past a lagging replica. The MOVE
+ * branch kept one bare point read at (id, id) and produced the identical
+ * false failure at the identical rate: five entries over 99 relocate APPLY
+ * runs on 2026-09-07, each `FAILED: landed=true sourceVacated=false`. All
+ * five sources were afterwards absent on a point read AND on a
+ * cross-partition query, with all five destinations present and stamped
+ * `movedFrom` the source. The deletes had landed; the report was wrong.
+ *
+ * These pin the three things that follow, on the lane source, because the
+ * branch they live in needs a live Cosmos container to execute.
+ */
+describe("the move verifies its source the way the retire does", () => {
+  const src = () => readFileSync(lane, "utf8");
+
+  it("the source verify uses confirmRetired, at the key moveCatalogRow deletes at", () => {
+    // moveCatalogRow's own `oldPk = String(oldRow.cardId ?? oldId)`. A verify
+    // reading (id, id) would 404 on a foreign-pk row and call it vacated.
+    expect(src()).toContain("const back = await confirmRetired(cat, id, row.cardId ?? id, { retry });\n      if (landed && back.gone)");
+  });
+
+  it("the bare single point read is gone from the move branch", () => {
+    // The exact line that produced all five false failures.
+    expect(src()).not.toContain("const sourceGone = !(await rowAt(id));");
+  });
+
+  it("a lagging move read-back is counted as a retry, not a failure", () => {
+    const s = src();
+    expect(s).toContain("read-back needed a retry (${back.via}) — the source delete had landed");
+    // resluged++ happens only under `landed && back.gone`.
+    expect(s).toMatch(/if \(landed && back\.gone\) \{\s*\n\s*resluged\+\+;/);
+  });
+
+  it("a source that genuinely survives is its OWN outcome, not `failed`", () => {
+    const s = src();
+    expect(s).toContain("MOVE LANDED; SOURCE RETIRE FAILED");
+    expect(s).toContain("moveSourceLeftBehind++");
+    // Two rows for one card is the state to report, by name, so a re-run
+    // has a work list rather than a count.
+    expect(s).toContain("two rows now hold one card");
+    expect(s).toContain("LEFTOVER SOURCES");
+    expect(s).toContain("leftoverSources.push({ from: id, to, player: row.playerName ?? null })");
+  });
+
+  it("the new outcomes are in the banner AND in the reconciliation", () => {
+    const s = src();
+    expect(s).toContain("move landed; source retire failed ${f(moveSourceLeftBehind)}");
+    expect(s).toContain("moves COMPLETED         ${f(movesCompleted)}");
+    // Both wrote, so both are `written`; the reconcile identity must still
+    // account for every entry exactly once.
+    expect(s).toContain("const written = retired + resluged + movesCompleted + moveSourceLeftBehind;");
+  });
+});
+
+/**
+ * CF-A-HALF-APPLIED-MOVE-IS-COMPLETED-BY-A-RE-RUN-NEVER-REFUSED (2026-09-07).
+ *
+ * The trap this pins shut. A `move landed; source retire failed` leaves the
+ * destination holding the card and the source still resident. On a re-run the
+ * incumbent at `to` IS this card -- so an occupied-refusal would refuse
+ * identically on every future run and the pair would stay split forever,
+ * which is exactly what one-card-one-row forbids. The `movedFrom` stamp,
+ * which moveCatalogRow writes on every move, is what tells the two cases
+ * apart: this card already arrived, versus a genuine rival.
+ */
+describe("a re-run completes a half-applied move", () => {
+  const src = () => readFileSync(lane, "utf8");
+
+  it("an incumbent stamped movedFrom this id RETIRES the source", () => {
+    const s = src();
+    expect(s).toContain('if (incumbent && String(incumbent.movedFrom ?? "") === id) {');
+    expect(s).toContain("COMPLETE MOVE");
+    expect(s).toContain("complete a half-applied move to ${to}");
+    expect(s).toContain("movesCompleted++");
+  });
+
+  it("the completion is decided BEFORE the occupied refusal", () => {
+    const s = src();
+    const complete = s.indexOf('if (incumbent && String(incumbent.movedFrom ?? "") === id)');
+    const occupied = s.indexOf("if (occupiedByDifferentCard(incumbent, row)) {");
+    expect(complete).toBeGreaterThan(-1);
+    expect(occupied).toBeGreaterThan(-1);
+    // Order is load-bearing: refusing first would strand the pair.
+    expect(complete).toBeLessThan(occupied);
+  });
+
+  it("a row at `to` WITHOUT the stamp is still a collision, unchanged", () => {
+    // The occupied refusal survives: only a movedFrom-stamped incumbent
+    // takes the completion path, so a genuine rival is still reported.
+    expect(L.occupiedByDifferentCard({ playerName: "Bob Lilly" }, { playerName: "Roger Staubach" })).toBe(true);
+    expect(src()).toContain("an occupied address is a COLLISION to report, never to route around");
+  });
+
+  it("a reslug whose source is already gone is recognised, not called not-found", () => {
+    const s = src();
+    expect(s).toContain("ALREADY MOVED");
+    expect(s).toContain('if (done && String(done.movedFrom ?? "") === id) {');
+  });
+
+  it("the completion still verifies by read before it counts", () => {
+    // The same doctrine as the retire: a delete is never believed on its own
+    // word, and the counted success sits inside the read-back.
+    expect(src()).toContain("retireCatalogRow(cat, id, row.cardId ?? id, `complete a half-applied move to ${to}");
+    expect(src()).toContain("the source is still readable after the retire");
+  });
+});
