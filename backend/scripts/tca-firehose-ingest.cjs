@@ -43,7 +43,32 @@ const fs = require("fs");
 //   skipped  = unusable before persist + deduped + skipped + catalogUnmatched
 //              (the service lands every row in exactly one of its four counts;
 //              catalogUnmatched was not being tallied at all until D18)
+//   refused  = twinAddressRefused + twinFolded (2026-09-07, see below)
 //   failed   = persist calls that rejected (row-level)
+//
+// CF-A-REFUSAL-IS-AN-OUTCOME-NOT-A-LOSS (2026-09-07). Every scheduled run
+// since CF-ONE-SALE-ONE-ADDRESS landed reported a shortfall, because this
+// caller read four of the service's outcome counters and the service returns
+// six. `twinAddressRefused` and `twinFolded` are TERMINAL -- the row leaves
+// the pipeline at the twin check and reaches none of the other four -- so
+// every refused row simply fell out of the ledger.
+//
+// Measured on run 34071480616 (2026-09-07T00:58Z), the run that motivated
+// this fix:
+//
+//   fetched 19,109  written 9,177  skipped 9,719  ->  UNACCOUNTED 213 (1.11%)
+//   twin_address_refused events in that run's log:                  213
+//
+// Exactly the shortfall, to the row. Not a sampling artifact, not a dropped
+// write: a missing term. The staging promoter hit the identical bug and fixed
+// it the identical way in #1953 (`UNACCOUNTED 6,557 (100.00%)`); this script
+// is the one caller that never got that fix.
+//
+// A fold is not an insert (the sale was already at this address, so the upsert
+// replaced a document and no NEW sale entered the pool) and not a refusal of
+// the write (the write was correct and allowed). It still has to be named, or
+// a silent fold -- one with no live twin elsewhere, which logs nothing at all
+// -- vanishes from the ledger exactly as the refusals did.
 // A TCA FETCH that fails is fetchErrors — no rows, so nothing intended. The
 // crawl_state upsert is one doc; if it throws the run exits 1, not green.
 const { reportWrites } = require(path.join(__dirname, "..", "dist/services/ops/writeReconciliation.js"));
@@ -369,6 +394,13 @@ async function main() {
   let totalWritten = 0;
   let totalDedupSkipped = 0;
   let totalCatalogUnmatched = 0;
+  // Terminal twin-check outcomes. Counted separately from `skipped` because
+  // "we understood this row and declined to write it" is a different fact from
+  // "we could not read this row" -- a climbing refusal count is a guard doing
+  // its job or a guard mis-scoped, a climbing skip count is a parser going
+  // blind. Folding them together loses that signal.
+  let totalTwinRefused = 0;
+  let totalTwinFolded = 0;
   let totalErrors = 0;
   let fetchErrors = 0;
   let lastCursor = cursor;
@@ -437,6 +469,8 @@ async function main() {
             totalWritten += res.inserted;
             totalDedupSkipped += res.deduped + res.skipped;
             totalCatalogUnmatched += res.catalogUnmatched ?? 0;
+            totalTwinRefused += res.twinAddressRefused ?? 0;
+            totalTwinFolded += res.twinFolded ?? 0;
           })
           .catch((err) => {
             totalErrors++;
@@ -477,8 +511,47 @@ async function main() {
   }
 
   const elapsedS = ((Date.now() - startMs) / 1000).toFixed(0);
-  console.log(`\n[tca-firehose] done — pages=${page} fetched=${totalFetched} written=${totalWritten} skipped=${totalDedupSkipped} catalogUnmatched=${totalCatalogUnmatched} errors=${totalErrors} fetchErrors=${fetchErrors} elapsed=${elapsedS}s`);
-  if (APPLY) reportWrites({ job: "tca-firehose-ingest", intended: totalFetched, written: totalWritten, skipped: totalDedupSkipped + totalCatalogUnmatched, failed: totalErrors });
+  console.log(`\n[tca-firehose] done — pages=${page} fetched=${totalFetched} written=${totalWritten} skipped=${totalDedupSkipped} catalogUnmatched=${totalCatalogUnmatched} twinFolded=${totalTwinFolded} twinRefused=${totalTwinRefused} errors=${totalErrors} fetchErrors=${fetchErrors} elapsed=${elapsedS}s`);
+
+  // CF-EVERY-WRITE-RECONCILES, printed as an identity a reader can check by
+  // eye — because the failure this fixes was not a wrong number, it was a
+  // MISSING TERM, and only an equation written out in full shows a term to be
+  // missing. Same shape as promote-staging-pending.cjs, deliberately.
+  //
+  // Every fetched row lands in exactly one bucket. If this line does not
+  // balance, a NEW terminal outcome has appeared in persistVendorSalesToPool
+  // that nothing here counts — which is the defect to go fix, not the
+  // arithmetic to go adjust.
+  if (APPLY) {
+    const accountedFor =
+      totalWritten + totalDedupSkipped + totalCatalogUnmatched +
+      totalTwinFolded + totalTwinRefused + totalErrors;
+    const unaccounted = totalFetched - accountedFor;
+    console.log(
+      `[tca-firehose] reconcile — fetched=${totalFetched} = written=${totalWritten}` +
+      ` + skipped=${totalDedupSkipped} + catalogUnmatched=${totalCatalogUnmatched}` +
+      ` + twinFolded=${totalTwinFolded} + twinRefused=${totalTwinRefused}` +
+      ` + errors=${totalErrors}  (unaccounted=${unaccounted})`,
+    );
+    if (unaccounted !== 0) {
+      console.error(
+        `[tca-firehose] UNACCOUNTED ${unaccounted} of ${totalFetched} — a persist outcome exists that this script does not count`,
+      );
+    }
+    // `refused` carries the twin verdicts: a fold replaced a document already
+    // at the right address (no new sale entered the pool) and a refusal
+    // declined to mint a second copy of one sale. Both are CORRECT outcomes
+    // and both must be declared, or reportWrites reads them as loss — which
+    // is precisely what turned eight scheduled runs red.
+    reportWrites({
+      job: "tca-firehose-ingest",
+      intended: totalFetched,
+      written: totalWritten,
+      skipped: totalDedupSkipped + totalCatalogUnmatched,
+      refused: totalTwinFolded + totalTwinRefused,
+      failed: totalErrors,
+    });
+  }
 
   // A daily-feed run that started with NO stored cursor asked the unlimited
   // window for a whole day of sales. Zero rows back is an anomaly — a real day

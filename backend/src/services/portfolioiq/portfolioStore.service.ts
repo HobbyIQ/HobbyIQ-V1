@@ -1,7 +1,6 @@
 import { Request, Response } from "express";
 import { randomUUID } from "crypto";
 import { isExactPoolRung } from "../compiq/fmvRung.js";
-import { getUserBySession } from "../authService.js";
 import { PortfolioHolding, type HoldingHeldExpense, type HeldExpenseKind } from "../../types/portfolioiq.types.js";
 import type { CompIQEstimateRequest } from "../../types/compiq.types.js";
 import { computeEstimate } from "../compiq/compiqEstimate.service.js";
@@ -5441,6 +5440,17 @@ async function requireUser(req: Request, res: Response): Promise<{ userId: strin
     res.status(401).json({ error: "Missing x-session-id" });
     return null;
   }
+  // CF-CRON-AUTH-LOAD (2026-09-07). authService resolves AUTH_SESSION_SECRET at
+  // module load and throws when it is unset (CF-AUTH-SESSION-SECRET-FAIL-CLOSED).
+  // That fail-closed guard is right for the API, but this module is also pulled
+  // in by three notification crons (cascade-detect, grade-worthy-push,
+  // watchlist-digest) that never touch a session and are not given the secret --
+  // so a top-level import killed all three at require() time, before any work ran.
+  // getUserBySession is used only here, on the HTTP request path, so the import is
+  // deferred to the call: the API behaves identically (the first request still
+  // loads authService and still fails closed on a bad secret) and the crons never
+  // load it at all.
+  const { getUserBySession } = await import("../authService.js");
   const user = await getUserBySession(sessionId);
   if (!user) {
     res.status(401).json({ error: "Invalid session" });

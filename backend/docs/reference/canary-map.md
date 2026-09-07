@@ -10,7 +10,7 @@ The house rule they all share: **a green workflow is not data flow**
 because some job reported success while writing nothing, or wrote nothing
 while nobody was watching.
 
-## The six canaries
+## The seven canaries
 
 | Canary | Workflow | Cron | Source of truth | Red when |
 |---|---|---|---|---|
@@ -20,13 +20,26 @@ while nobody was watching.
 | Catalog Token Coverage | `catalog-token-coverage-canary.yml` | `45 */6 * * *` | Cosmos `card_catalog` | rows missing `searchTokens` exceed the threshold |
 | **Deal Scanner** | `deal-scanner-canary.yml` | `15 */6 * * *` | App Insights `traces`, event `buyeriq_deal_scan_summary` | no completed scan in 2h (= 2x the job's 60-min interval); or errors/targets-scanned > 50% |
 | **Storefront Visibility** | `storefront-visibility-canary.yml` | `0 */6 * * *` | Cosmos `marketplace_listings` (+ `users` for the seller set) | zero visible listings; an eligible seller with no listings; a refresh cohort losing >50% of the prior one; newest `lastUpdatedAt` > 48h |
+| **Scheduled Jobs** | `scheduled-jobs-canary.yml` | `5 */6 * * *` | GitHub Actions run conclusions, `event=schedule` | any cron workflow whose last 2 **scheduled** runs both `failure`/`timed_out`; or a workflow whose run history could not be read at all |
 
-The five SIX-HOURLY canaries take deliberately distinct minutes (`:00`,
-`:15`, `:17`, `:30`, `:45`) so no two Cosmos-reading jobs land on the same
-minute; Catalog Duplicates runs once daily on its own offset. A pin in
+The six SIX-HOURLY canaries take deliberately distinct minutes (`:00`,
+`:05`, `:15`, `:17`, `:30`, `:45`) so no two Cosmos-reading jobs land on the
+same minute; Catalog Duplicates runs once daily on its own offset. A pin in
 `backend/tests/dealScannerAndStorefrontCanaries.test.ts` enumerates the
 workflow directory and fails if any `*-canary.yml` is missing from the table
 above, or if two six-hourly canaries share a minute.
+
+**Scheduled Jobs is the odd one out, deliberately.** Every other canary here
+reads DATA — a container, a trace stream — and the house rule is that a green
+workflow is not data flow. This one reads the workflows themselves, because
+the inverse turned out to be just as true: **green data is not a live job**.
+The TCA firehose was red on eight consecutive scheduled runs while
+`sold_comps` kept filling from the webhook, so the freshness canary two rows
+above stayed green through the entire outage and `match-enricher` was skipped
+eight times in silence. It also watches itself — a dead canary is worth
+alarming about — and its exemption list lives in
+`backend/data/scheduled-jobs-canary-exemptions.json`, which ships empty.
+See `backend/docs/reports/2026-09-07-scheduled-jobs-canary-and-tca-reconciliation.md`.
 
 ---
 

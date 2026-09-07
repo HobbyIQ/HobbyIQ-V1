@@ -1,0 +1,217 @@
+name: Scheduled Jobs Canary
+
+# CF-SCHEDULED-JOBS-CANARY (2026-09-07). The gap the TCA flow check found:
+# the freshness canary reads ROWS, so it cannot see a dead cron.
+#
+# The TCA firehose was red on EIGHT consecutive scheduled runs (2026-09-06
+# 00:59Z → 2026-09-07 18:24Z) and nothing noticed, because the live writer for
+# sold_comps is the 30-minute WEBHOOK, not the cron. Rows kept landing at
+# 20-27k/day, the freshness canary stayed green through the entire outage, and
+# `match-enricher` — which `needs: ingest` — was skipped eight times in
+# silence. Full account: backend/docs/reports/2026-09-07-tca-flow-check.md.
+#
+# A row canary was never going to catch that. It measures the pool, and the
+# pool was fine. What broke was a JOB, and a job's only evidence is its own run
+# history. This canary reads conclusions.
+#
+# WHAT FIRES IT. Any cron workflow whose last TWO scheduled runs both failed.
+# Two, not one: a single red is a transient (an upstream 500, a runner hiccup,
+# a 429) and alarming on those teaches the reader to mute the canary before
+# there is anything worth protecting. Two consecutive is a pattern — whatever
+# broke is still broken and the next run will not fix it either.
+#
+# WHY EVERY-6h AND NOT HOURLY. The fastest cron in the repo runs hourly, most
+# run daily, several weekly. A six-hourly canary catches a dead daily job
+# within one cycle of it being provably dead, costs four runs a day, and
+# matches the cadence of the freshness, cleanliness and token-coverage
+# canaries it sits beside. Offset to :05 so the four do not stack.
+#
+# THE ENUMERATION IS DERIVED, NOT LISTED — a hand-kept list of cron workflows
+# goes stale on the first one somebody adds, and the workflow it misses is
+# invisible in exactly the way this canary exists to prevent. The list comes
+# from .github/workflows/*.yml on every run and is PINNED by a test, so adding
+# or retiring a cron is a deliberate act that updates a number.
+#
+# THE EXEMPTIONS ARE A FILE — backend/data/scheduled-jobs-canary-exemptions.json,
+# reviewed as data, each entry carrying a reason and an exit condition.
+# Silencing an alarm is the highest-consequence edit a canary can carry and it
+# does not happen inside a script. That file is EMPTY today; see its $comment.
+#
+# MEASURED 2026-09-07 (read-only, this canary's own query over all 61 cron
+# workflows): 2 breaches — TCA Firehose Ingest (8 straight, fix in #1980) and
+# Era-Baselines Refresh (red every scheduled run since at least 08-23, dying in
+# 33s on `Cannot find dist output — run npm run build first`, NOT the timeout
+# its memory note describes; that note is marked RESOLVED and predates the
+# 07-16 workflow split).
+
+on:
+  schedule:
+    - cron: '5 */6 * * *'   # every 6h at :05, offset from freshness (:30), cleanliness (:17), token coverage (:45), deal scanner (:15)
+  workflow_dispatch:
+    inputs:
+      consecutive:
+        description: 'Consecutive failed scheduled runs that constitute a breach. Default 2. 1 makes every transient an alarm.'
+        required: false
+        type: string
+        default: '2'
+      lookback_runs:
+        description: 'Scheduled runs fetched per workflow. Default 3 — one more than the breach window, so the streak is visible in context.'
+        required: false
+        type: string
+        default: '3'
+
+jobs:
+  scheduled-jobs:
+    name: Cron workflow run-success health
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: read
+      issues: write
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+
+      # The fetch lives HERE, not in the script — same contract as the deal
+      # scanner canary. The script needs no network and no gh CLI, stays
+      # unit-testable on fixtures, and an operator can paste these commands
+      # and get the same rows the canary saw.
+      #
+      # `event=schedule` is applied SERVER-SIDE so the per_page window is
+      # spent entirely on scheduled runs. Filtering client-side instead would
+      # let a burst of workflow_dispatch runs push the scheduled ones out of
+      # the page and make a dead cron read as "no runs".
+      - name: Collect scheduled run conclusions per cron workflow
+        id: collect
+        env:
+          GH_TOKEN: ${{ github.token }}
+          LOOKBACK: ${{ inputs.lookback_runs || '3' }}
+        run: |
+          set -uo pipefail
+          echo "{}" > /tmp/runs.json
+          FAILED_QUERIES=0
+          # ONE parser decides which workflows are cron workflows: the script's
+          # own `--list`. An earlier cut re-implemented hasScheduleTrigger in
+          # awk here and the two disagreed on the first try — the awk matched
+          # nothing, so every workflow would have gone unqueried, been reported
+          # `unmeasured`, and the canary would have failed with 61 phantom
+          # findings on its very first run. Two parsers that must agree forever
+          # is a defect waiting for its turn.
+          node backend/scripts/checkScheduledJobsHealth.cjs --list > /tmp/cron-workflows.txt
+          echo "cron workflows enumerated: $(wc -l < /tmp/cron-workflows.txt)"
+          while read -r base; do
+            [ -n "$base" ] || continue
+            # Three different answers, and they must not collapse into one:
+            #   [...]  runs exist          -> judged
+            #   []     registered, no runs -> real answer, "no history"
+            #   404    NOT REGISTERED YET  -> a cron added on a branch does not
+            #          exist to the API until it lands on the default branch.
+            #          Recorded as [] (no history), NOT as a failed query —
+            #          otherwise every PR that adds a cron workflow turns this
+            #          canary red on itself. Verified 2026-09-07: this file
+            #          404s from a branch and returns [] once merged.
+            # Anything else non-zero is genuinely unmeasured.
+            HTTP="$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/$base/runs?event=schedule&per_page=$LOOKBACK" \
+                      --jq '[.workflow_runs[] | {conclusion, event, created_at, html_url}]' 2>/tmp/gh.err)"
+            GH_RC=$?
+            if [ $GH_RC -ne 0 ] && grep -q "HTTP 404" /tmp/gh.err; then
+              echo "::notice::$base is not registered yet (404) — recorded as no scheduled history"
+              RESP="[]"; GH_RC=0
+            else
+              RESP="$HTTP"
+            fi
+            if [ $GH_RC -eq 0 ]; then
+              jq --arg k "$base" --argjson v "$RESP" '. + {($k): $v}' /tmp/runs.json > /tmp/runs.next.json \
+                && mv /tmp/runs.next.json /tmp/runs.json
+            else
+              FAILED_QUERIES=$((FAILED_QUERIES + 1))
+              echo "::warning::run query failed for $base — it will be reported as unmeasured, not as healthy"
+            fi
+          done < /tmp/cron-workflows.txt
+          echo "workflows queried: $(jq 'length' /tmp/runs.json), failed queries: $FAILED_QUERIES"
+
+      - name: Run scheduled jobs canary
+        id: canary
+        working-directory: backend
+        env:
+          RUNS_JSON: /tmp/runs.json
+          CONSECUTIVE: ${{ inputs.consecutive || '2' }}
+        run: node scripts/checkScheduledJobsHealth.cjs
+
+      # Same lane as the deploy-failure alert (#1954) and the deal-scanner
+      # canary: github.token only, no azure/login. An Azure outage can take out
+      # a dozen of these crons at once, and it must not also take out the alert
+      # about them. One issue per UTC day, threaded on retry.
+      - name: Open or update the scheduled-jobs-red issue
+        if: ${{ failure() && steps.canary.outcome == 'failure' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          RUN_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          TODAY="$(date -u +%Y-%m-%d)"
+          TITLE="SCHEDULED JOBS RED $TODAY"
+          {
+            echo "One or more cron workflows have failed their last 2 **scheduled** runs."
+            echo ""
+            echo "A row-based canary cannot see this. The TCA firehose was red on eight consecutive"
+            echo "scheduled runs while \`sold_comps\` kept filling from the webhook and the freshness"
+            echo "canary stayed green the whole time — that outage is why this canary exists."
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| Run | [$GITHUB_RUN_ID]($RUN_URL) |"
+            echo "| Source of truth | GitHub Actions run conclusions, \`event=schedule\` |"
+            echo "| Breach rule | last 2 scheduled runs both \`failure\` or \`timed_out\` |"
+            echo "| Exemptions | \`backend/data/scheduled-jobs-canary-exemptions.json\` |"
+            echo ""
+            echo "**The breaching workflows are named in the run log**, with their last two conclusions."
+            echo ""
+            echo "**First three things to check**"
+            echo ""
+            echo "1. Is the job failing before it reaches its script? A missing \`npm run build\`, a"
+            echo "   \`working-directory\`, or an env chain broken by a comment (#1980) all die in seconds."
+            echo "2. Is the work still happening by another path? A cron can be dead while a webhook"
+            echo "   keeps the data fresh — that is the silence this canary breaks, not a reason to close it."
+            echo "3. Is this red genuinely by design? If so it belongs in the exemptions file **with an"
+            echo "   exit condition**, not muted here."
+            echo ""
+            echo '```bash'
+            echo "gh run list --workflow=<file>.yml --limit 5 --json conclusion,event,createdAt"
+            echo '```'
+            echo ""
+            echo "<sub>Filed automatically by the \`Scheduled Jobs Canary\` workflow. Close it once the named crons are green.</sub>"
+          } > /tmp/scheduled-jobs-body.md
+
+          # Deliberately NOT filtered by --label: a label filter that matches
+          # nothing misses every time and would file a fresh issue every 6h
+          # instead of threading. The exact-title match is the thread identity.
+          EXISTING="$(gh issue list --repo "$GITHUB_REPOSITORY" --state open \
+            --search "$TITLE in:title" --json number,title \
+            --jq "map(select(.title == \"$TITLE\")) | .[0].number // empty" 2>/dev/null || true)"
+
+          if [ -n "$EXISTING" ]; then
+            echo "::notice::scheduled-jobs issue #$EXISTING already open for $TITLE — commenting"
+            gh issue comment "$EXISTING" --repo "$GITHUB_REPOSITORY" --body-file /tmp/scheduled-jobs-body.md \
+              || echo "::warning::could not comment on #$EXISTING — the run log still carries the failure"
+          else
+            # Labels are best-effort, the ISSUE is not. `gh issue create` fails
+            # outright on a label the repo does not carry, so a labelled-only
+            # create would file NOTHING and leave only a ::warning:: — the
+            # alert silently absent in exactly the incident it exists for.
+            # `ops` and `canary` exist as of 2026-09-07; the fallback stays so
+            # a renamed or deleted label cannot silence the alarm.
+            gh issue create --repo "$GITHUB_REPOSITORY" \
+              --title "$TITLE" \
+              --body-file /tmp/scheduled-jobs-body.md \
+              --label ops --label canary \
+              || gh issue create --repo "$GITHUB_REPOSITORY" \
+                   --title "$TITLE" \
+                   --body-file /tmp/scheduled-jobs-body.md \
+              || echo "::warning::could not open the scheduled-jobs issue — the run log still carries the failure"
+          fi
