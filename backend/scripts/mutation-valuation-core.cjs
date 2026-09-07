@@ -54,7 +54,19 @@ const MUTANTS = [
     name: "union-guard-off",
     doctrine: "CF-A-UNION-IS-ONE-CARD (#1627) — a union is one card",
     file: "src/services/portfolioiq/exactPoolSupremacy.ts",
-    find: "const unionOk = !hiq || mayUnionIdentities(cid, hiq);",
+    // ANCHOR REPOINTED 2026-09-07 (#1963/#1975). #1679 refactored this guard
+    // from `!hiq || mayUnionIdentities(cid, hiq)` to a decideIdentityUnion()
+    // decision object on 2026-09-03, so the old find-string matched 0x and
+    // this mutant audited NOTHING for four days. The harness said so on every
+    // run -- "anchor matched 0 times ... the harness is auditing nothing" --
+    // and exited 1, but the workflow piped it through `tee` without pipefail,
+    // so the job took tee's always-zero status and reported SUCCESS. Five
+    // consecutive nightly runs were green over a harness auditing 3 of its 4
+    // doctrines. The pipefail added in that PR is what surfaced this.
+    //
+    // The doctrine and the killing edit are unchanged: force the union open
+    // and poolTwinUnionIsOneCard must go red.
+    find: "const unionOk = decision === null || decision.allowed;",
     replace: "const unionOk = true;",
     suites: ["tests/poolTwinUnionIsOneCard.test.ts"],
     kills: "two identities naming different products merge into one pool again",

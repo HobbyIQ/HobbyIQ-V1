@@ -92,12 +92,16 @@ jobs:
           DRY_RUN_ARG: ${{ inputs.dry_run == 'true' && '--dry-run' || '--apply' }}
           SPORT: ${{ inputs.sport || 'baseball' }}
         run: |
+          # CF-THE-LOG-IS-BOTH-STREAMS (#1963/#1975): `2>&1` needs pipefail beside
+          # it, or the pipeline exits on tee's always-zero status and a crashed
+          # rollup reports success.
+          set -o pipefail
           node scripts/rollup-sold-comps-daily.cjs \
             --from=${{ steps.window.outputs.from_date }} \
             --to=${{ steps.window.outputs.to_date }} \
             --sport=$SPORT \
             $DRY_RUN_ARG \
-            | tee rollup-out.log
+            2>&1 | tee rollup-out.log
 
       - name: Upload log
         uses: actions/upload-artifact@v4

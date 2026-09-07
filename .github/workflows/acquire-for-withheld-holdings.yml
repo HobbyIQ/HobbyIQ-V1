@@ -199,7 +199,13 @@ jobs:
           # stderr in MODE=json. This reads OUT anyway: the plan is a FILE the
           # lane wrote and verified, so the parse no longer depends on nothing
           # else ever printing to stdout again. Belt and braces, one line each.
-          node scripts/acquire-for-withheld-holdings.cjs | tee /tmp/plan-stdout.log
+          #
+          # CF-THE-LOG-IS-BOTH-STREAMS (#1963/#1975). This lane NARRATES TO STDERR
+          # in MODE=json -- deliberately, so nothing pollutes the JSON on stdout --
+          # which made a stdout-only tee capture exactly the stream that carries no
+          # narration. The refusal that explains a missing plan was written to the
+          # console and never to the log kept beside it.
+          node scripts/acquire-for-withheld-holdings.cjs 2>&1 | tee /tmp/plan-stdout.log
           # OUT is set in this step's env; a missing file means the lane did not
           # reach its write, and saying so beats a bare `cp: No such file`.
           if [ ! -s /tmp/acquisition-plan.json ]; then
