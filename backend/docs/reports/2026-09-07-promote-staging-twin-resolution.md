@@ -153,16 +153,33 @@ SCOPE=data/pool-relocations/2026-09-07-i5-one-sale-one-address.json \
   BACKFILL_APPLY=true node scripts/relocate-pool-rows-by-list.cjs
 ```
 
+## The mirror-image trap, caught on review
+
+A `fold` deliberately falls **through** to the upsert — the replace is the
+point — and the write door ends with `result.inserted++`. So a folded row moved
+*both* counters, and the new ledger would have **over-accounted** by exactly the
+fold count: 124 of every 200 rows on the measured backlog.
+
+`reportWrites` treats over-accounting as loudly as a shortfall, and rightly —
+it means a counter is being incremented on a path it does not own, so none of
+the other numbers can be trusted. The fix for `UNACCOUNTED` would have shipped
+its own mirror image. `inserted` now means what its name says: a **new** sale
+entered the pool. The write still happens; only the counter moves.
+
 ## Verification
 
 - `npx tsc --noEmit` clean.
-- `twinAddressRule.test.ts` — 10 tests, **mutation-checked three ways**:
+- `twinAddressRule.test.ts` — 11 tests, **mutation-checked three ways**:
   restoring the original one-line predicate turns **6 red**; dropping only the
   parked-is-not-a-twin half turns **3 red**; dropping only the residency half
   turns **3 red**. Each branch is pinned independently.
 - Affected suites green: `everyWriteJobReconciles`,
   `oneSaleOneDocumentAcrossPartitions`, `oneSaleOneAddress`,
   `persistVendorSalesToPool`, `duplicateSaleIdsRule`.
+- **CI green on the head sha** (`Backend Unit Tests` + `Web Unit Tests`). The
+  local full-suite run shows 15 unrelated files red — ingest-driver, pokemon,
+  scc, ebay and portfolio lanes, none of them in this diff and none of them
+  reachable from it; CI is green on the same commit, which is the reference.
 
 ## What this does NOT do
 
