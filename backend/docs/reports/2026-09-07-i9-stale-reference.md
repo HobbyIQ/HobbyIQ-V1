@@ -1,10 +1,14 @@
 # I9 drift, 2026-09-07: the reference was stale, not the corpus
 
-**Verdict: STALE REFERENCE.** The I9 breach compares today's derivation against a
-reference measured by a materially different one — nineteen intended commits
-earlier. No regression was found in the rows whose derivation should not have
-changed, and the drift reproduces under the *reference* classifier, which rules
-out both corpus movement and the classifier diff as its cause.
+**Verdict: STALE REFERENCE — the alarm cannot honestly speak.** The I9 breach
+compares today’s derivation against a reference measured nineteen intended commits
+earlier, and the reference records nothing about what produced it. The drift is
+**not** overnight corpus movement: it reproduces under the *reference* parser and
+the *reference* classifier, on a frame shaped differently from the nightly. No
+regression was identified. A residual of ~10-20pp is **not attributed** by this
+investigation and is named as such in section 4 - which is itself the argument
+for the fix: the audit cannot currently tell these cases apart, and that is the
+defect being repaired.
 
 ## 1. What breached, and against what
 
@@ -136,26 +140,105 @@ and both land in the same +18..+25pp band. **A drift that reproduces across two
 differently-shaped draws, under two different classifiers, is systematic, not a
 draw artifact.**
 
-### Where it comes from: the parser, which the census could not have used
+### The next candidate: the parser, which the census could not have used
 
-Holding the deriver constant is exactly what made the classifier-only A/B blind
-to the real cause. **Fifteen commits changed the parser and set-key services
-after the census window closed**, and the census was measured through the
-pre-#1883 parser:
+Holding the deriver constant is what made the classifier-only A/B blind to the
+deriver. **Fifteen commits changed the parser and set-key services after the
+census window closed**, and the census was measured through the pre-#1883 parser:
 
-#1883 ("Raw 10" is a grade, not a card number — 2,839 Pokémon sales) · #1887 (a
-title naming a finish is not a base card) · #1892 (the year segment stops being
-the sale year) · #1900 (855 English Pokémon spellings fold onto the tcgdex code)
-· #1901 (Preview keys) · #1911 (a title that says DRAFT is a Bowman Draft card —
-10,146 sales) · #1914 · #1918 · #1919 (Crown Zenith) · #1922 (dead ladder edges)
-· #1923 · #1934 · #1937 / #1938 (Pokémon finish vocabulary) · #1939 (vendor
+#1883 ("Raw 10" is a grade, not a card number - 2,839 Pokemon sales) - #1887 (a
+title naming a finish is not a base card) - #1892 (the year segment stops being
+the sale year) - #1900 (855 English Pokemon spellings fold onto the tcgdex code)
+- #1901 (Preview keys) - #1911 (a title that says DRAFT is a Bowman Draft card -
+10,146 sales) - #1914 - #1918 - #1919 (Crown Zenith) - #1922 (dead ladder edges)
+- #1923 - #1934 - #1937 / #1938 (Pokemon finish vocabulary) - #1939 (vendor
 labels).
 
-These change the DERIVED identity for large populations, which is precisely what
-lifts CONFLICT against a reference measured before them. It also explains why
-Pokémon — the vertical with the heaviest parser churn (#1883, #1900, #1937,
-#1938) — shows +18.3pp here despite sitting *below* its reference in the
-nightly's differently-shaped draw.
+These change the DERIVED identity for large populations, so they are the obvious
+next suspect. The full-stack A/B below **measures** how much they are worth
+rather than assuming it - and the answer is smaller than this framing implies.
+
+### The full-stack A/B: both parsers, and what the parser churn is actually worth
+
+The classifier-only A/B could not see the parser, so the reference commit's own
+`dist/` was built and the draw was re-derived end to end — REF parser + REF
+classifier against HEAD parser + HEAD classifier, same 4,144 rows, zero classify
+errors on either side.
+
+**205 rows (4.9%) moved class.** The parser churn is real and visible:
+
+| transition | rows | dominant axis |
+|---|---|---|
+| AGREE → CONFLICT | 98 | `filled:parallel` (63), `changed:setKey` (27) |
+| CONFLICT → IMPROVE | 53 | `filled:cardNumber,setKey` (52) |
+| IMPROVE → CONFLICT | 26 | `filled:parallel,setKey` (23) |
+| CONFLICT → AGREE | 21 | no axis diff |
+| AGREE → IMPROVE | 5 | `filled:parallel` |
+| UNDERIVABLE → CONFLICT | 2 | `filled:cardNumber,setKey` |
+
+The movement is exactly the shape the commits describe: `filled:parallel` and
+`filled:cardNumber,setKey` on Prismatic Evolutions rows is #1937/#1938's Pokémon
+finish vocabulary and #1900's tcgdex fold reaching the title parser.
+
+**But the NET effect on the alarm's number is small:**
+
+| class | REF parser | HEAD parser | net |
+|---|---|---|---|
+| AGREE | 1,212 (29.2%) | 1,130 (27.3%) | −82 |
+| IMPROVE | 83 (2.0%) | 115 (2.8%) | +32 |
+| CONFLICT | 2,493 (60.2%) | 2,545 (61.4%) | **+52 (+1.2pp)** |
+| UNDERIVABLE | 356 (8.6%) | 354 (8.5%) | −2 |
+
+**The nineteen commits are worth about +1.2pp of CONFLICT, not +18pp.** Stated
+plainly because it cuts against the simplest version of this report's thesis.
+
+### The residual, and the honest limit of this investigation
+
+Scoring the same draw against the census under *both* parsers:
+
+| class | n | REF parser | HEAD parser | census (raw) | census (renormalised) | residual |
+|---|---|---|---|---|---|---|
+| vintage | 115 | 57.4% | 57.4% | 31.9% | 35.3% | **+22.1pp** |
+| modern | 3,240 | 58.1% | 59.7% | 41.8% | 43.4% | **+16.3pp** |
+| pokemon | 789 | 68.9% | 68.9% | 59.6% | 60.0% | **+9.0pp** |
+
+Three candidate explanations were measured and **none closes the gap**:
+
+- **parser churn** — +1.2pp net (above)
+- **census renormalisation** — the four census classes sum to 0.90–0.99, not 1
+  (`UNDERIVABLE-for-subset` is reported in `byTier` and left out of `counts`).
+  Renormalising moves CONFLICT by 2–3pp
+- **population scope** — the fleet census reads `SELECT * FROM c WHERE <year/sport>`
+  while the audit frame adds `IS_DEFINED(c.title)` and
+  `STARTSWITH(c.hobbyiqCardId,'hiq:')`. Measured on one slot-0 unit
+  (2025/pokemon): 513,294 rows vs 499,466 — a 2.7% difference
+
+So **a residual of roughly 10–20pp is not attributed by this investigation.**
+Two things are known about it, and both matter:
+
+1. It is **not overnight corpus movement**: it reproduces under the *reference*
+   parser and the *reference* classifier, on a frame with a different shape from
+   the nightly's. Whatever it is, it was already true when the census was taken.
+2. It is **not the frame's shape**: the nightly's own `frameHealth` reports
+   `healthy: true`, no flags, and an `expectedForThisMix` of CONFLICT 40.8%
+   against a measured 59.9% — the audit's own instrument says the gap is not
+   composition.
+
+The most likely remaining candidate is a **methodology difference between the
+fleet census's classification and the auditor's** — the two ask the same
+`classifyRow` but assemble its inputs differently (the local harness's
+`checklistBacked` predicate, for instance, is narrower than the fleet's, which
+omits `isStrictChecklistSource` and would inflate CONFLICT locally). Confirming
+that requires re-running the fleet census, which is precisely the re-baseline
+§7 says is owed.
+
+**This does not change the fix, and it is the reason the fix is shaped the way it
+is.** Whether the residual is a methodology artifact or something real, the
+audit *cannot currently tell*, because the reference does not record what
+produced it. That is the defect being repaired. The alarm is deferred until a
+reference exists that can be honestly compared — and the moment one does, any real
+drift breaches on it.
+
 
 ### The decisive structural proof
 
@@ -184,20 +267,25 @@ axes a post-census commit deliberately redefined — year (#1886, #1892), set ke
 (`1955 Topps #123 Sandy Koufax` filed on a `:2023:` slug), a pre-existing corpus
 condition tracked as `project_vintage_sales_under_sale_year_slugs`.
 
-**A caveat stated plainly, because it is the one thing that could still hide a
-regression.** The A/B in §4 held the deriver constant, so it can prove the
-classifier is innocent but *cannot* separate "the parser changed on purpose" from
-"the parser regressed" inside the derived identities themselves. That separation
-needs a full-stack re-derivation under both parsers, which is the same work as a
-fresh census — and a fresh census is exactly what §7 says is owed. Until it runs,
-the honest position is:
+**The limit of this investigation, stated plainly.** The full-stack A/B (section
+4) re-derived the draw under both parsers and both classifiers, so it can see the
+whole derivation and not just the classifier. It found 205 rows moving class in
+the shapes the commits describe, worth **+1.2pp of CONFLICT** - and a residual of
+roughly 10-20pp that neither the parser churn, nor the census renormalisation
+(2-3pp), nor the population-scope difference (2.7%) accounts for. The most likely
+remaining candidate is a methodology difference between the fleet census and the
+auditor, which can only be settled by re-running the census - the same work
+section 7 already says is owed.
+
+So the honest position is:
 
 - the drift is **not** explained by corpus movement (it reproduces under the old
-  classifier, across two differently-shaped frames)
-- the drift is **fully consistent** with the nineteen intended derivation changes
-- no row-level evidence of an unintended regression was found
-- and the alarm is deferred, **not deleted** — re-baselining re-arms it, and if a
-  regression is hiding in those changes the next comparable night breaches on it
+  parser and old classifier, across two differently-shaped frames)
+- **no row-level evidence of an unintended regression was found**
+- a substantial part of the gap is **unattributed**, and is reported as such
+  rather than argued away
+- the alarm is deferred, **not deleted** - re-baselining re-arms it, and if a
+  regression is hiding in any of this, the next comparable night breaches on it
 
 **This is not a claim that the corpus is clean.** I9's absolute
 TRUE-DISAGREEMENT level (51.65% nightly, 53.2% in the local draw) remains high
