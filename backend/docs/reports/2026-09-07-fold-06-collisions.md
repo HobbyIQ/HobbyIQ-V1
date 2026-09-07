@@ -132,3 +132,71 @@ The apostrophe pair (sm115#63) is the one case `playerIdentityKey` *would* have 
 on its own — `occupiedByDifferentCard` refused it only because that guard compares raw
 strings instead of identity keys. Noted as a follow-up, not fixed here: this list is a
 data correction, and changing a delete-bearing lane's guard is its own change.
+
+---
+
+# Parts 07 and 08 — the same adjudication, 95 more occupied destinations
+
+Parts 07 and 08 carry the same #1937 finding and the same defect. Part 07 held on
+`refused — occupied` in its REPORT run; part 08 had never been reported at all. Rather
+than depend on a run log for one and have nothing for the other, occupancy for BOTH was
+derived directly from prod with read-only point reads, applying the lane's own
+`occupiedByDifferentCard` rule (raw lowercased `playerName` compare) so the prediction
+matches what the lane will do:
+
+| list | reslug entries | occupied destinations |
+|---|---|---|
+| 07 | 2,000 | **71** |
+| 08 | 951 | **24** |
+
+## Verdict across 07 + 08
+
+| class | 07 | 08 |
+|---|---|---|
+| same card, fuller spelling → **FOLD** (retire the truncated row) | 70 | 24 |
+| wrong cardNumber / wrong set → corrective reslug | 0 | 0 |
+| genuinely different card → **true collision** | 0 | 0 |
+| **withheld** — seed row carries the FULLER checklist name | **1** | 0 |
+
+Not one of the 95 pairs is two different cards. Reduced under `playerIdentityKey`, every
+occupant either equals the mover or strictly contains it — there is no pair whose two
+names are unrelated.
+
+## Four addresses where tcgdex itself carries two spellings
+
+These needed a closer look, because a second checklist name at one number is exactly what
+a genuine collision would look like:
+
+| address | tcgdex names | reading |
+|---|---|---|
+| `ex4#84` | `Team Magma's Technical Machine 01` / `Team Magma Technical Machine 01` | two transcriptions of ONE card |
+| `pl4#12` | `Zapdos` / `Zapdos G` | two transcriptions of ONE card |
+| `swsh2#154` | `Boss's Orders (Giovanni)` / `Boss's Orders` | two transcriptions of ONE card |
+| `pl2#28` | `Mr. Mime 4` / `Mr. Mime E4` | two transcriptions of ONE card |
+
+None is two cards: `Team Magma's` vs `Team Magma`, `Boss's Orders` vs `Boss's Orders
+(Giovanni)`, and `Mr. Mime 4` vs `Mr. Mime E4` are the same printed card transcribed twice
+inside tcgdex. They fold.
+
+## The one entry withheld from 07b
+
+`hiq:pokemon:2009:pl4:12:reverse-holo:no-auto` — **Zapdos G → Zapdos**.
+
+This is the only pair in all 138 where the direction inverts: the row being MOVED carries
+the fuller checklist name (`Zapdos G`, the Team Galactic card, attested by
+`pokemon-tcg-data-scraped-2026-08-14`), and the row sitting at the destination carries the
+truncated one (`Zapdos`, `finish-attested:cardhedge`).
+
+Folding it the way the other 94 fold would retire the BETTER-named row and keep the
+truncation, which is the fold running backwards. Reversing it — retiring the occupant
+instead — is a different edit than the list authorises, on a row the list never names.
+So it is withheld: dropped from 07b, recorded here, and left for a human. 07b therefore
+carries 1,999 entries where part 07 carried 2,000.
+
+## Per-list totals
+
+| list | entries | reslug | retire | note |
+|---|---|---|---|---|
+| 06b | 2,000 | 1,388 | 612 | 569 original retires + 43 folds |
+| 07b | 1,999 | 1,929 | 70 | 1 entry withheld (Zapdos G) |
+| 08b | 951 | 927 | 24 | never reported before; occupancy derived from prod |
