@@ -48,10 +48,10 @@
 import { chromeRefractorSuffixForVariation, normalizeVariationSlug } from "../catalog/variationVocabulary.js";
 import { POKEMON_SET_ALIASES } from "../catalog/pokemonSetAliases.js";
 import { YUGIOH_SET_ALIASES, MTG_SET_ALIASES } from "../catalog/tcgSetAliases.js";
-import { JAPANESE_POKEMON_SET_ALIASES } from "../catalog/japanesePokemonAliases.js";
 import { productParentOf, productSetKeyForName, spellForEra, spellForSport } from "../catalog/productSetKeys.js";
 import { reconcileSetKey } from "../catalog/setKeyReconciliation.js";
 import { ruledPokemonEnglishSetKey } from "../catalog/pokemonEnglishSetKeyRuling.js";
+import { ruledJapaneseSetAliases } from "../catalog/japaneseVintageSetKeyRuling.js";
 import { normalizePokemonCardNumber } from "../catalog/pokemonCardNumber.js";
 import { isMakerlessCatchAllSetKey, makerlessCatchAllMessage } from "../catalog/makerlessCatchAll.js";
 // CF-A-SLUG-SEGMENT-IS-NOT-A-VENDOR-LABEL (#1938): ONE vertical vocabulary.
@@ -1868,6 +1868,13 @@ function stripVerticalPrefix(setName: string): string {
  * Matched 89.9% of Japanese sales when measured against live data.
  */
 function resolveJapanesePokemonSet(setName: string): string | null {
+  // CF-THE-JAPANESE-VINTAGE-SET-GETS-ITS-OWN-KEY (Drew, 2026-09-07, R5). The
+  // table is asked through the RULING, which rewrites the 38 destinations the
+  // English code table owns onto their `ja-<code>` keys and carries every
+  // other alias through unchanged. Reading the ruled view rather than the raw
+  // table is what makes the MINT agree with normalizeSetKey by construction --
+  // the same shape CF-THE-ENGLISH-SET-CODE-IS-THE-KEY uses on the English half.
+  const ALIASES = ruledJapaneseSetAliases();
   const stripped = String(setName ?? "")
     .replace(/^((19|20)\d{2}\s+)/, "")
     .replace(/^pokemon\s+/i, "")
@@ -1878,7 +1885,7 @@ function resolveJapanesePokemonSet(setName: string): string | null {
   for (const cand of candidates) {
     const key = slugify(cand);
     if (!key) continue;
-    const exact = JAPANESE_POKEMON_SET_ALIASES[key];
+    const exact = ALIASES[key];
     if (exact) return exact;
   }
   // Segment-boundary containment, so "151" finds "pokemon-card-151" without a
@@ -1886,7 +1893,7 @@ function resolveJapanesePokemonSet(setName: string): string | null {
   for (const cand of candidates) {
     const key = slugify(cand);
     if (!key || key.length < 2) continue;
-    for (const [alias, code] of Object.entries(JAPANESE_POKEMON_SET_ALIASES)) {
+    for (const [alias, code] of Object.entries(ALIASES)) {
       if (alias === key || alias.endsWith("-" + key) || alias.startsWith(key + "-")
         || alias.includes("-" + key + "-")) return code;
     }
