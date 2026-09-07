@@ -287,6 +287,14 @@ So the honest position is:
 - the alarm is deferred, **not deleted** - re-baselining re-arms it, and if a
   regression is hiding in any of this, the next comparable night breaches on it
 
+**One real defect WAS found on the way, and it is filed separately.** The
+full-stack A/B’s `AGREE -> CONFLICT` bucket - the rows where the stored key is
+right and today’s parser wants to move it - held 8 rows. Seven are the intended
+#1937/#1938 finish work. The eighth is a parser bug: `SV Twilight Masquerade`
+mints a `twilight` PARALLEL out of half the set’s name, affecting **2,379 pool
+rows**. See `2026-09-07-sv-twilight-parallel-defect.md`. Report-only, and it is
+a caution for any IMPROVE lane acting on `filled:parallel`.
+
 **This is not a claim that the corpus is clean.** I9's absolute
 TRUE-DISAGREEMENT level (51.65% nightly, 53.2% in the local draw) remains high
 and every row is still listed as a finding. The claim is narrower and is the only
