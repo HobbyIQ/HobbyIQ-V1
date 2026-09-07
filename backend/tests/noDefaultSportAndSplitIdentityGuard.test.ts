@@ -29,10 +29,12 @@ import { fileURLToPath } from "node:url";
 import fs from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
+  addressDefect,
   decideSplitIdentity,
   sportOf,
   withSport,
 } from "../src/services/portfolioiq/splitIdentityWriteGuard.js";
+import { computeHobbyIqCardId, normalizeSport } from "../src/services/portfolioiq/hobbyIqCardId.service.js";
 import { resolveVertical } from "../src/services/portfolioiq/resolveVertical.service.js";
 
 const backend = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -366,5 +368,214 @@ describe("MUTATION CHECK -- these tests fail when the fix is removed", () => {
     expect(
       decideSplitIdentity({ cardId: CENSUS.bubbleId, hobbyiqCardId: CENSUS.bubbleHiq }).verdict,
     ).toBe("ok");
+  });
+});
+
+
+// ── #1938 · CF-A-SLUG-SEGMENT-IS-NOT-A-VENDOR-LABEL ─────────────────────────
+//
+// Every id below is a REAL one, read from sold_comps on 2026-09-07. The census
+// found 8,102 rows whose cardId sport segment is empty or non-canonical, and
+// 337 of them were written that morning -- AFTER #1929 shipped. That is the
+// finding this block pins: the write door parked those rows for the sport
+// disagreement they happened to carry, and never once refused the KEY that
+// made them unaddressable in the first place.
+const MALFORMED = {
+  // `cardhedge::<bubble-id>` after `hiq:${slug.slice(4)}` ate "card".
+  hedge: "hiq:hedge::1773078923701x852055104605271300::43f7ac3c",
+  // `cardsight::<uuid>` the same way.
+  sight: "hiq:sight::be80caf8-1c9c-4a1e-9e0d-2f6b0c1d3e4f::bulk",
+  // `variant::` the same way, glued onto a whole second slug.
+  ant: "hiq:ant::hiq:football:2024:bowman:215:base:no-auto",
+  antHiq: "hiq:football:2024:donruss-optic:215:base:no-auto",
+  // A vertical ALIAS that is not in CANONICAL_SPORTS.
+  baseballMlb: "hiq:baseball-mlb:2018:topps-heritage:600:base:no-auto",
+  baseballMlbHiq: "hiq:baseball:2018:topps-heritage:600:base:no-auto",
+  // The same defect wearing a spelling the alias table already knows.
+  iceHockey: "hiq:ice-hockey:1990:upper-deck:1:base:no-auto",
+  iceHockeyHiq: "hiq:hockey:1990:upper-deck:1:base:no-auto",
+  // An EMPTY sport segment.
+  emptySport: "hiq::2018:topps:1:base:no-auto",
+};
+
+describe("#1938 — a malformed key is parked, never written as though it named a card", () => {
+  it.each([
+    ["a cardhedge vendor key wearing our prefix", MALFORMED.hedge, null],
+    ["a cardsight vendor key wearing our prefix", MALFORMED.sight, null],
+    ["a variant key prefixed onto a second slug", MALFORMED.ant, MALFORMED.antHiq],
+    ["a non-canonical vertical alias", MALFORMED.baseballMlb, MALFORMED.baseballMlbHiq],
+    ["an un-normalised hockey spelling", MALFORMED.iceHockey, MALFORMED.iceHockeyHiq],
+    ["an empty sport segment", MALFORMED.emptySport, null],
+  ])("parks %s with reason malformed-key", (_label, cardId, hobbyiqCardId) => {
+    const out = decideSplitIdentity({ cardId, hobbyiqCardId });
+    if (out.verdict !== "park") throw new Error(`expected park, got ${out.verdict}`);
+    expect(out.reason).toBe("malformed-key");
+    // The detail names a defect a human can act on, not just "invalid".
+    expect(out.detail.length).toBeGreaterThan(20);
+  });
+
+  it("parks on a malformed hobbyiqCardId too, not only the partition key", () => {
+    const out = decideSplitIdentity({
+      cardId: "hiq:baseball:2018:topps:1:base:no-auto",
+      hobbyiqCardId: MALFORMED.hedge,
+    });
+    if (out.verdict !== "park") throw new Error("expected park");
+    expect(out.reason).toBe("malformed-key");
+    expect(out.detail).toContain("hobbyiqCardId");
+  });
+
+  it("an ATTESTED sport does NOT unpark a malformed key", () => {
+    // Attestation settles a SPORT DISAGREEMENT between two readable addresses.
+    // It cannot make an unreadable address readable, so it must not launder one
+    // into a real pool on the strength of a vendor naming the vertical.
+    const out = decideSplitIdentity({
+      cardId: MALFORMED.baseballMlb,
+      hobbyiqCardId: MALFORMED.baseballMlbHiq,
+      attestedSport: "baseball",
+      attestedBy: "cardhedge-group",
+    });
+    expect(out.verdict).toBe("park");
+  });
+
+  // ── The exemptions the guard must KEEP ───────────────────────────────────
+  it("leaves the 12.96M-row designed vendor partition alone", () => {
+    // A bare vendor key claims nothing: no `hiq:` prefix, so no broken promise.
+    expect(addressDefect(CENSUS.bubbleId)).toBeNull();
+    expect(
+      decideSplitIdentity({ cardId: CENSUS.bubbleId, hobbyiqCardId: CENSUS.bubbleHiq }).verdict,
+    ).toBe("ok");
+  });
+
+  it("leaves a well-formed row alone", () => {
+    const good = "hiq:baseball:2018:topps:1:base:no-auto";
+    expect(addressDefect(good)).toBeNull();
+    expect(decideSplitIdentity({ cardId: good, hobbyiqCardId: good }).verdict).toBe("ok");
+  });
+
+  it("still parks a REAL sport split — malformed-key does not swallow the class", () => {
+    const out = decideSplitIdentity({
+      cardId: CENSUS.toppsChromeCard,
+      hobbyiqCardId: CENSUS.toppsChromeHiq,
+    });
+    if (out.verdict !== "park") throw new Error("expected park");
+    expect(out.reason).toBe("split-identity");
+  });
+});
+
+describe("#1938 — ONE vertical vocabulary: the builder asks the door's table", () => {
+  it("refuses to mint a slug for a non-canonical vertical", () => {
+    // The emitter half. Before the fix `normalizeSport` ended `return s`, so
+    // "Baseball - MLB" slugified to "baseball-mlb" and became a NAMESPACE.
+    expect(normalizeSport("Baseball - MLB")).toBeNull();
+    expect(() =>
+      computeHobbyIqCardId({
+        sport: "Baseball - MLB", year: 2018, setKey: "Topps Heritage",
+        cardNumber: "600", parallel: "Base", isAuto: false, printRun: null,
+      }),
+    ).toThrow(/not a canonical vertical/);
+  });
+
+  it("COLLAPSES the alias onto the real pool instead of splitting it", () => {
+    // The point of the fix is not only refusal. "Ice Hockey" and "hockey" are
+    // the SAME card, and before this they did not share a slug -- so the comps
+    // split and neither side could price.
+    expect(normalizeSport("Ice Hockey")).toBe("hockey");
+    expect(normalizeSport("auto racing")).toBe("racing");
+    const viaAlias = computeHobbyIqCardId({
+      sport: "Ice Hockey", year: 1990, setKey: "Upper Deck",
+      cardNumber: "1", parallel: "Base", isAuto: false, printRun: null,
+    });
+    const viaCanonical = computeHobbyIqCardId({
+      sport: "hockey", year: 1990, setKey: "Upper Deck",
+      cardNumber: "1", parallel: "Base", isAuto: false, printRun: null,
+    });
+    expect(viaAlias).toBe(viaCanonical);
+  });
+
+  it("rejects a multi-value vendor tag dump rather than picking a token", () => {
+    expect(normalizeSport("football, baseball")).toBeNull();
+  });
+
+  it("the builder and the door agree — nothing the builder mints is malformed", () => {
+    // The two-normalizer defect, in one assertion: anything
+    // `computeHobbyIqCardId` is willing to emit must be an address the write
+    // door will accept. Two tables meant the door refused what the builder had
+    // happily minted.
+    for (const sport of ["baseball", "Ice Hockey", "MLB", "nfl", "auto racing", "Pokemon"]) {
+      const slug = computeHobbyIqCardId({
+        sport, year: 2018, setKey: "Topps", cardNumber: "1",
+        parallel: "Base", isAuto: false, printRun: null,
+      });
+      expect(addressDefect(slug)).toBeNull();
+    }
+  });
+
+  it("the vendor-key adoption is refused at the matcher, not patched at the reassembly", () => {
+    // The root cause: `adoptResolvedSlug` gated on CONFIDENCE and never on
+    // SHAPE, so a `cardhedge::` catalog row matched at >= 0.7 became `slug`,
+    // and persistVendorSalesToPool's documented "just slug reassembled" then
+    // ate four characters of the vendor name.
+    const code = codeOf(read("src/services/catalog/catalogMatcher.service.ts"));
+    expect(code).toContain('resolved.slug.startsWith("hiq:")');
+  });
+
+  it("the write path still calls the guard", () => {
+    const code = codeOf(read("src/services/portfolioiq/soldCompsStore.service.ts"));
+    expect(code).toContain("decideSplitIdentity(");
+  });
+});
+
+describe("#1938 MUTATION CHECK -- these fail when the fix is removed", () => {
+  it("the OLD normalizeSport would have minted every one of the 77 verticals", () => {
+    // Re-implement the removed tail (`return s`) and prove the pin catches it.
+    const slugifyLocal = (r: string) =>
+      String(r).toLowerCase().replace(/[^\w\s-]/g, "").replace(/_/g, "-")
+        .replace(/\s+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
+    const oldNormalize = (sport: string) => {
+      const v = slugifyLocal(sport);
+      if (v === "nfl") return "football";
+      if (v === "nba") return "basketball";
+      if (v === "mlb") return "baseball";
+      if (v === "nhl") return "hockey";
+      return v;                     // <-- the defect
+    };
+    expect(oldNormalize("Baseball - MLB")).toBe("baseball-mlb");
+    expect(normalizeSport("Baseball - MLB")).not.toBe(oldNormalize("Baseball - MLB"));
+    // And the address that old value produced is exactly the parked shape.
+    expect(
+      addressDefect(`hiq:${oldNormalize("Baseball - MLB")}:2018:topps-heritage:600:base:no-auto`),
+    ).toContain("not a canonical vertical");
+  });
+
+  it("a guard without the malformed check would call a vendor key a real product", () => {
+    // `hiq:hedge::<id>` splits into >= 4 segments, so `productIdentityOf`
+    // answers "hedge::" and the OLD guard went on to reason about "hedge" as
+    // though it were a sport.
+    const productIdentityOfNaive = (slug: string) => {
+      const seg = slug.split(":");
+      return seg.length >= 4 ? `${seg[1]}:${seg[2]}:${seg[3]}` : null;
+    };
+    // Segments 1..3 are "hedge", "" and the bubble id: the guard would have
+    // read the tail of a VENDOR NAME as the sport, and an empty string as the
+    // year, and called the result a product.
+    expect(productIdentityOfNaive(MALFORMED.hedge))
+      .toBe("hedge::1773078923701x852055104605271300");
+    // With the check, it is named for what it is instead.
+    const out = decideSplitIdentity({ cardId: MALFORMED.hedge, hobbyiqCardId: null });
+    if (out.verdict !== "park") throw new Error("expected park");
+    expect(out.reason).toBe("malformed-key");
+  });
+
+  it("dropping the shape check on adoption would re-open the slice(4) path", () => {
+    // The reassembly is correct for an hiq slug and catastrophic for a vendor
+    // key. This is the exact transform, on the exact id measured in prod.
+    const reassemble = (slug: string) => `hiq:${slug.slice(4)}`;
+    expect(reassemble("hiq:baseball:2018:topps:1:base:no-auto"))
+      .toBe("hiq:baseball:2018:topps:1:base:no-auto");            // identity
+    expect(reassemble("cardhedge::1773078923701x852055104605271300::43f7ac3c"))
+      .toBe(MALFORMED.hedge);                                      // the defect
+    expect(
+      addressDefect(reassemble("cardhedge::1773078923701x852055104605271300::43f7ac3c")),
+    ).toContain("empty slug segment");
   });
 });
