@@ -451,3 +451,134 @@ jobs:
           # guard, not a throttle.
           REPRICE_MAX_HOLDINGS: "200"
         run: node scripts/reprice-user-holdings.cjs
+
+  # ── DEPLOY FAILURE ALERT (P1-5, 2026-09-07) ───────────────────────────────
+  #
+  # WHAT WAS SILENT. A failed "Daily 5AM ET Refresh & Deploy" announced itself
+  # to nobody. Since this workflow is the ONLY mechanism by which a backend fix
+  # reaches prod (merging does not deploy), a red run during launch week means
+  # shipping a fix and never learning it did not land — the "green workflow is
+  # not data flow" trap, pointed the other way.
+  #
+  # WHY A GITHUB ISSUE AND NOT THE EMAIL PATH. The repo's one existing mail
+  # lane (catalog-gap-digest) sends through ACS, and to do that it must first
+  # `azure/login` and read ACS_EMAIL_CONNECTION_STRING off the HobbyIQ3 App
+  # Service. Every one of those steps is a thing that can be the reason THIS
+  # workflow just failed: an Azure outage or an expired OIDC credential would
+  # take out the deploy and the alert about the deploy together. The Azure
+  # Monitor action group has the same coupling plus a live-config change to
+  # point it here. An issue needs only `github.token`, so the alert survives
+  # exactly the failures it exists to report, and GitHub mails the watchers.
+  #
+  # WHY IT GATES ON CONCLUSIONS, NOT ON A SHA. Per the 2026-09-04 incident
+  # (smoke case #4 null since 04:21Z, reprice-all skipped ~2 days, /api/health
+  # still serving a fresh-looking sha): a sha proves a deploy ran, never that
+  # it worked. Every condition below reads a step or job CONCLUSION.
+  #
+  # WHY `!cancelled()` IS SPELLED OUT AND NOT FOLDED. A `>-` block folds its
+  # newlines into spaces and, when the expression is written across lines,
+  # yields a string GitHub evaluates as truthy REGARDLESS of the run's state —
+  # the alert would then fire on every green nightly. The condition is one
+  # line, in `${{ }}`, and the test in backend/tests/workflowAlertGates.test.ts
+  # pins that shape.
+  deploy-failure-alert:
+    name: Open/update the deploy-failed issue
+    needs: [deploy-and-refresh, reprice-holdings]
+    # Fires when the ET gate OPENED (a closed UTC trigger deployed nothing and
+    # has nothing to report) and either job did not succeed. `!cancelled()`
+    # keeps a hand-cancelled or timed-out run from paging anybody.
+    if: ${{ !cancelled() && needs.deploy-and-refresh.outputs.should_run == 'true' && (needs.deploy-and-refresh.result == 'failure' || needs.reprice-holdings.result == 'failure') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      # Only to file the alert. Nothing in this job reads code or touches prod.
+      issues: write
+      contents: read
+      actions: read
+
+    steps:
+      - name: Identify the failed step and open or update the issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEPLOY_RESULT: ${{ needs.deploy-and-refresh.result }}
+          REPRICE_RESULT: ${{ needs.reprice-holdings.result }}
+          ENGINE_OK: ${{ needs.deploy-and-refresh.outputs.engine_ok }}
+        run: |
+          set -euo pipefail
+
+          RUN_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          SHA_SHORT="${GITHUB_SHA:0:7}"
+          TODAY="$(date -u +%Y-%m-%d)"
+          TITLE="DEPLOY FAILED $TODAY $SHA_SHORT"
+
+          # Name the failed steps from the run's own step conclusions rather
+          # than guessing from the job result: "the deploy job is red" is not
+          # actionable, "Deploy to Azure App Service failed" is.
+          FAILED_STEPS="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/jobs" \
+            --jq '.jobs[] | .name as $j | .steps[]? | select(.conclusion == "failure") | "- **\($j)** → `\(.name)`"' \
+            2>/dev/null || true)"
+          if [ -z "$FAILED_STEPS" ]; then
+            FAILED_STEPS="- (no individual step reported failure — see the run log)"
+          fi
+
+          # engine_ok separates "a fixture disagrees with the engine" from "the
+          # engine is down"; the reprice gate already reads it, so the alert
+          # says which one happened instead of making the reader open the log.
+          case "$ENGINE_OK" in
+            true)  ENGINE_LINE="\`engine_ok=true\` — the pricing engine answered every smoke case. A red here is a stale fixture expectation, not an outage; the nightly reprice still ran." ;;
+            false) ENGINE_LINE="\`engine_ok=false\` — **the smoke saw an unreasoned null or no answer at all.** The nightly reprice was held back. Treat as an engine outage." ;;
+            *)     ENGINE_LINE="\`engine_ok\` is empty — the job failed BEFORE the smoke test ran (build, deploy, or health check). Nothing was validated and the reprice was held back." ;;
+          esac
+
+          {
+            echo "The 5AM ET refresh + deploy did not complete cleanly. **Merging does not deploy** —"
+            echo "until this run is green, the code on \`main\` is not the code in prod."
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| Run | [$GITHUB_RUN_ID]($RUN_URL) |"
+            echo "| Commit | \`$GITHUB_SHA\` |"
+            echo "| Deploy job | \`$DEPLOY_RESULT\` |"
+            echo "| Reprice job | \`$REPRICE_RESULT\` |"
+            echo "| Triggered by | \`$GITHUB_EVENT_NAME\` |"
+            echo ""
+            echo "**Failed steps**"
+            echo ""
+            echo "$FAILED_STEPS"
+            echo ""
+            echo "**Smoke verdict.** $ENGINE_LINE"
+            echo ""
+            echo "**Verify prod separately from this run** — a sha alone proves a deploy ran, never that it worked (2026-09-04):"
+            echo ""
+            echo '```bash'
+            echo "curl -s https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net/api/health | jq '.build'"
+            echo "gh run view $GITHUB_RUN_ID --log-failed"
+            echo '```'
+            echo ""
+            echo "Re-run with \`gh workflow run \"Daily 5AM ET Refresh & Deploy\"\` once the cause is fixed."
+            echo ""
+            echo "<sub>Filed automatically by the \`deploy-failure-alert\` job. Close it when the deploy is green.</sub>"
+          } > /tmp/deploy-failed-body.md
+
+          # One issue per (date, sha): a workflow retried three times on the
+          # same broken commit should thread, not file three tickets. An
+          # already-open issue gets a comment; anything else opens a new one.
+          EXISTING="$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --label deploy \
+            --search "$TITLE in:title" --json number,title \
+            --jq "map(select(.title == \"$TITLE\")) | .[0].number // empty" 2>/dev/null || true)"
+
+          if [ -n "$EXISTING" ]; then
+            echo "::notice::deploy-failure issue #$EXISTING already open for $TITLE — commenting"
+            gh issue comment "$EXISTING" --repo "$GITHUB_REPOSITORY" --body-file /tmp/deploy-failed-body.md \
+              || echo "::warning::could not comment on #$EXISTING — the run log still carries the failure"
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" \
+              --title "$TITLE" \
+              --body-file /tmp/deploy-failed-body.md \
+              --label ops --label deploy \
+              || echo "::warning::could not open the deploy-failure issue — the run log still carries the failure"
+          fi
+
+          # The alert must not be the reason the run is red, and must not make
+          # a red run look green. The deploy job's own conclusion is the verdict.
+          echo "::error::Daily 5AM ET Refresh & Deploy FAILED — see $RUN_URL"
