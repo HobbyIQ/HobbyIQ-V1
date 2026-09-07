@@ -98,6 +98,7 @@
 
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { POKEMON_EN_SET_CODES, POKEMON_JA_SET_CODES } from "../catalog/pokemonSetCodes.js";
 
 interface ParallelCorpus {
   products?: Record<string, { parallels?: { name?: string }[] }>;
@@ -374,12 +375,134 @@ export function _resetStatedFinishCorpus(): void {
   _loadFailed = false;
 }
 
+/**
+ * CF-A-SET-NAME-IS-NEVER-A-PARALLEL (Drew, 2026-09-07, from #1964's I9 audit).
+ *
+ * THE DEFECT. `productWords` reads the words of the setKey, and on a SPORTS
+ * key the set name IS those words -- `topps-heritage-chrome` spells "chrome",
+ * so "Chrome" is correctly refused as a finish on its own product. A POKEMON
+ * setKey is an opaque tcgdex CODE (`sv06`, `swsh1`, `base5`), so it spells
+ * NOTHING, and every word of the set's real name arrives at the global index
+ * as an ordinary title word free to match a sports parallel:
+ *
+ *   "Pokemon SV Twilight Masquerade Iron Leaves ex 025/167"  ->  Twilight
+ *
+ * `twilight` is a genuine parallel name on three sports products, so it clears
+ * both global floors (8 chars, 3 products) and the reader answers it. The card
+ * is a BASE Twilight Masquerade card; "Twilight" is half the set's name. #1964
+ * measured 2,379 pool rows deriving this way, and an IMPROVE lane on
+ * `filled:parallel` would have moved every one of them onto a parallel that
+ * does not exist.
+ *
+ * NOT AN SV PROBLEM, AND NOT A POKEMON-ONLY PROBLEM IN PRINCIPLE. Measured on
+ * this branch across all 205 English sets, four set names collide with the
+ * sports parallel vocabulary this way:
+ *
+ *   base5  Team Rocket          -> Rocket
+ *   dc1    Double Crisis        -> Double Double
+ *   ex7    Team Rocket Returns  -> Rocket
+ *   swsh1  Sword & Shield       -> Shield
+ *
+ * THE FIX IS THE RULE THAT WAS ALREADY HERE, GIVEN THE NAME IT COULD NOT SEE.
+ * A product's own name has never been a finish on that product; the sports keys
+ * simply carried their name in the key. So when the setKey is a Pokemon code,
+ * its NAME is looked up and contributes its words too. This adds no new
+ * behaviour -- it feeds the existing "a name made entirely of this product's own
+ * words is refused" test the words it was always meant to have.
+ *
+ * IT CANNOT SUPPRESS A REAL FINISH. Only a candidate made ENTIRELY of the
+ * product's own words is refused (the `ws.every` test below), so a genuine
+ * "Reverse Holofoil" on Twilight Masquerade is untouched -- `reverse` and
+ * `holofoil` are not set-name words. And a set whose name IS a finish word
+ * cannot arise here: these are set names, and the four collisions above are all
+ * ordinary nouns.
+ */
+function pokemonSetNameWords(setKey: string): Set<string> {
+  const out = new Set<string>();
+  const name = POKEMON_EN_SET_CODES[setKey] ?? POKEMON_JA_SET_CODES[setKey];
+  if (!name) return out;
+  for (const w of lower(name).split(/[^a-z0-9]+/)) {
+    if (w.length >= 3) out.add(w);
+  }
+  return out;
+}
+
+/**
+ * Every Pokemon set NAME, as a word list -- the vocabulary the title-side half
+ * of CF-A-SET-NAME-IS-NEVER-A-PARALLEL reads. Order does not matter: every name
+ * the title fully states contributes its words, and the caller only ever asks
+ * whether a candidate is made ENTIRELY of them.
+ *
+ * A TITLE STATES MORE SET NAMES THAN ITS OWN. "2025 Pokemon Destined Rivals
+ * Team Rocket Mewtwo ex 231/182" is an sv10 card, and "Team Rocket" in it is a
+ * SUBSET name that also happens to be the name of a 2000 set (base5). Reading
+ * the matched product's name alone would leave `rocket` free to answer, which
+ * is the same residue by a different route -- and `productWordsFromTitle`
+ * already suppressed exactly this case for SPORTS keys, by recognizing that the
+ * title spells a real product. This is that rule, with the Pokemon names it
+ * could not see: the corpus it reads carries ONE Pokemon product, so a Pokemon
+ * set name is invisible to it.
+ *
+ * Built once, from the same generated code tables the resolver is keyed by.
+ */
+const POKEMON_SET_NAME_WORD_SETS: ReadonlyArray<ReadonlyArray<string>> = (() => {
+  const out: string[][] = [];
+  const seen = new Set<string>();
+  for (const name of [...Object.values(POKEMON_EN_SET_CODES), ...Object.values(POKEMON_JA_SET_CODES)]) {
+    const ws = lower(name).split(/[^a-z0-9]+/).filter((w) => w.length >= 3);
+    // A one-word set name is NOT admitted: "151", "Evolutions", "XY" are card
+    // text as often as they are a set, and suppressing them from a title that
+    // merely mentions the word would silence real finishes elsewhere. A
+    // multi-word name states itself.
+    if (ws.length < 2) continue;
+    const key = ws.join(" ");
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(ws);
+  }
+  return out;
+})();
+
+/** The same names, bucketed by their FIRST word.
+ *
+ *  A name can only match a title that contains its first word, so the title's
+ *  own words select every candidate worth testing and the rest are never
+ *  touched. A pure index over the array above -- same entries, same answers --
+ *  kept because this runs on the parser's hot path, which is the reason
+ *  `resolveEnglishPokemonSetFromTitle` carries the identical index. */
+const POKEMON_SET_NAMES_BY_FIRST_WORD: ReadonlyMap<string, ReadonlyArray<ReadonlyArray<string>>> = (() => {
+  const m = new Map<string, string[][]>();
+  for (const ws of POKEMON_SET_NAME_WORD_SETS) {
+    const bucket = m.get(ws[0]);
+    if (bucket) bucket.push(ws as string[]);
+    else m.set(ws[0], [ws as string[]]);
+  }
+  return m;
+})();
+
+/** The words of any POKEMON set name this title states in full. */
+function pokemonSetNameWordsFromTitle(titleWordSet: ReadonlySet<string>): Set<string> {
+  const out = new Set<string>();
+  for (const w of titleWordSet) {
+    const bucket = POKEMON_SET_NAMES_BY_FIRST_WORD.get(w);
+    if (!bucket) continue;
+    for (const ws of bucket) {
+      if (ws.every((x) => titleWordSet.has(x))) for (const x of ws) out.add(x);
+    }
+  }
+  return out;
+}
+
 /** The words of this product's own setKey -- on this product they name the SET. */
 function productWords(setKey: string | null | undefined): Set<string> {
   const out = new Set<string>();
-  for (const w of lower(setKey ?? "").split(/[^a-z0-9]+/)) {
+  const key = lower(setKey ?? "");
+  for (const w of key.split(/[^a-z0-9]+/)) {
     if (w.length >= 3) out.add(w);
   }
+  // CF-A-SET-NAME-IS-NEVER-A-PARALLEL: a Pokemon key spells a code, not a name,
+  // so the name it stands for is added here.
+  for (const w of pokemonSetNameWords(key)) out.add(w);
   return out;
 }
 
@@ -424,6 +547,19 @@ export interface StatedFinishContext {
   year?: number | null;
   /** The card's setKey, when the caller knows it. */
   setKey?: string | null;
+  /**
+   * CF-A-SET-NAME-IS-NEVER-A-PARALLEL (Drew, 2026-09-07): the Pokemon set the
+   * TITLE names, when the caller supplied no `setKey` of its own.
+   *
+   * SUPPRESSION ONLY, AND THAT SEPARATION IS THE WHOLE POINT. It says which
+   * words name the SET and therefore cannot be a finish. It is NOT product
+   * context: it must never select `byProduct`, because a resolved key would
+   * then change WHICH READER ANSWERS. Measured -- passing it as `setKey` let
+   * the sports corpus name "Holo Foil" beat the Pokemon vocabulary's canonical
+   * "Holofoil" on "2020 Pokemon Champion's Path Charizard V #79 Holo Foil",
+   * which is #1937's five-spellings-one-card-line defect reintroduced.
+   */
+  pokemonSetKeyForResidue?: string | null;
 }
 
 /**
@@ -476,6 +612,28 @@ export function statedFinishFromChecklist(
   if (/\bbase\b/i.test(t)) return null;
 
   const own = productWords(ctx.setKey);
+  // CF-A-SET-NAME-IS-NEVER-A-PARALLEL, THE TITLE HALF. Reached either because
+  // the CALLER named a Pokemon product, or because the title itself named one
+  // (`pokemonSetKeyForResidue`) -- which adds suppression WITHOUT adding the
+  // product context that would change which reader answers.
+  //
+  // KEPT SEPARATE FROM `own`, and that separation is load-bearing. `own` is read
+  // TWICE and the two readings want different things: the candidate filter below
+  // (refuse a name made entirely of set words) is what this ruling needs, while
+  // the LEFTOVER test further down uses `own` to EXCUSE a leftover word. Folding
+  // the set-name words into `own` would excuse them there too -- measured, that
+  // let "Holo Foil" answer "2020 Pokemon Champion's Path Charizard V #79 Holo
+  // Foil", because `champion` stopped counting as an unexplained leftover. On
+  // main that leftover is exactly what refuses the read, so the Pokemon finish
+  // vocabulary answers the canonical "Holofoil" (#1937's one-card-line fold).
+  //
+  // So: these words may DISQUALIFY a candidate, and may never RESCUE one.
+  const setNameWords = new Set<string>();
+  const residueKey = lower(ctx.pokemonSetKeyForResidue ?? "");
+  if (residueKey) for (const w of pokemonSetNameWords(residueKey)) setNameWords.add(w);
+  if (residueKey || pokemonSetNameWords(lower(ctx.setKey ?? "")).size) {
+    for (const w of pokemonSetNameWordsFromTitle(titleWordSet)) setNameWords.add(w);
+  }
   const year = ctx.year == null ? "" : String(ctx.year);
   const setKey = lower(ctx.setKey ?? "");
 
@@ -520,9 +678,12 @@ export function statedFinishFromChecklist(
     // `topps-heritage-chrome` names the set; on `topps` it is a finish. Only a
     // name made ENTIRELY of this product's own words is refused -- "Chrome
     // Refractor" on topps-chrome still states a finish via `refractor`.
-    if (own.size) {
+    if (own.size || setNameWords.size) {
       const ws = words(name);
-      if (ws.every((w) => own.has(w))) continue;
+      if (own.size && ws.every((w) => own.has(w))) continue;
+      // CF-A-SET-NAME-IS-NEVER-A-PARALLEL: a candidate made entirely of the
+      // words that name the SET is the residue this ruling refuses.
+      if (setNameWords.size && ws.every((w) => setNameWords.has(w))) continue;
     }
     // The longest name that the title fully states is the most specific one.
     if (!best || name.length > best.length) best = name;

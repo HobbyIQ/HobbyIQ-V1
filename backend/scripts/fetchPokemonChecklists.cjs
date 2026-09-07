@@ -94,7 +94,57 @@ function yearOf(releaseDate) {
  * The name forms a seller might write for this set, all mapping to its id.
  * Deliberately generous on the way IN (matching is where we want recall) and
  * exact on the way OUT (one canonical setKey per set).
+ *
+ * (The era-code half of that recall is `eraFormsFor` immediately below.)
  */
+
+/**
+ * CF-AN-ERA-CODE-IS-A-SPELLING-OF-THE-SET (2026-09-07, #1964's I9 finding).
+ *
+ * THE DEFECT. TCGplayer writes its titles `<card> - <ERA>: <set> - <finish>`,
+ * and the era half is a CODE, not the serie NAME this function reads:
+ *
+ *     "Iron Leaves ex - SV Twilight Masquerade - Holofoil"
+ *     "Eevee V - SWSH: Crown Zenith - Holofoil"
+ *     "Bloodmoon Ursaluna ex - SV06: Twilight Masquerade"
+ *
+ * `aliasesFor` emitted `scarlet-violet-twilight-masquerade` (the serie name)
+ * and `twilight-masquerade` (the bare name) but never `sv-twilight-masquerade`,
+ * so the era segment matched nothing. Measured on main over the 77 EN sets in
+ * the five numbered eras: 73 of 77 failed to resolve from the `<ERA> <name>`
+ * shape.
+ *
+ * THE COLON FORM ONLY WORKED BY ACCIDENT. "SV: Twilight Masquerade" resolved --
+ * not through an era alias, but because the BARE `twilight-masquerade` alias
+ * still matched on segment boundaries once the unmatched `sv` segment was
+ * skipped. The space form has no such luck: `sv` and the set name are adjacent
+ * segments of one candidate, so nothing matched and the title fell through to
+ * the sports rules. One alias now serves both.
+ *
+ * THE CODE IS DERIVED FROM THE SET ID, NOT GUESSED. tcgdex ids are already
+ * `<era><number>` (`sv06`, `swsh12-5`, `sm7-5`), so both the bare era (`sv`)
+ * and the numbered era (`sv06`) come straight off the id this function is
+ * already keyed by. Nothing is invented: an id that does not parse as a
+ * numbered era contributes no era aliases at all.
+ *
+ * THE BARE ERA IS NEVER AN ALIAS ON ITS OWN. `add` only ever receives the era
+ * JOINED TO THE SET NAME, so a title saying nothing but "SV" cannot claim a
+ * set -- that is CF-AN-ERA-IS-NOT-A-SET, which the resolver enforces from the
+ * other side for the six era-container names.
+ */
+function eraFormsFor(setId) {
+  const id = slug(setId);
+  // `<era><number>`, where the number may carry a `-5` half-step (`swsh12-5`).
+  const m = id.match(/^([a-z]+)(\d+(?:-\d+)?[a-z]*)$/);
+  if (!m) return [];
+  const [, era, num] = m;
+  // A one-letter era is not a spelling anyone writes; it is a card-number
+  // prefix waiting to happen ("H" is Aquapolis's holo subset).
+  if (era.length < 2) return [];
+  const forms = new Set([era, `${era}${num}`]);
+  return [...forms];
+}
+
 function aliasesFor(set) {
   const name = String(set.name ?? "").trim();
   const serie = String(set.serie?.name ?? "").trim();
@@ -112,6 +162,14 @@ function aliasesFor(set) {
     add(`${year} pokemon ${name}`);
     add(`${year} ${name}`);
     if (serie) add(`${year} pokemon ${serie} ${name}`);
+  }
+  // The TCGplayer era-code shapes. `slug` collapses "SV: Twilight Masquerade",
+  // "SV Twilight Masquerade" and "SV06: Twilight Masquerade" onto these, so one
+  // alias serves every punctuation a seller uses.
+  for (const era of eraFormsFor(set.id)) {
+    add(`${era} ${name}`);
+    add(`pokemon ${era} ${name}`);
+    if (year) add(`${year} pokemon ${era} ${name}`);
   }
   return [...out];
 }
