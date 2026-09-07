@@ -70,16 +70,46 @@ const MAX = arg("max", "");
     return;
   }
 
-  offer.content.offerAutopilotSettings.maxThroughput = target;
-  await client.offer(offer.id).replace(offer);
+  // CF-THROUGHPUT-FLOOR-IS-A-MOVING-TARGET (2026-09-07).
+  //
+  // The autoscale minimum is highest-ever-provisioned / 10, so it RISES every
+  // time anything provisions this container higher and never falls. A caller's
+  // hardcoded idle number is therefore correct only until the next spike:
+  // nightly-slug-backfill's teardown asserted 4000 (floor was 8000), then
+  // 8000 (floor moved to 10000), and BOTH times the teardown failed on every
+  // single run and left sold_comps parked at the 40000 working ceiling — the
+  // exact bill the scale-down exists to avoid. A cost guard that fails open is
+  // worse than none, because it reports success on the way up and silence on
+  // the way down.
+  //
+  // Azure names the real minimum in its rejection ("Minimum limit 10000 is
+  // because of Highest RUs provisioned 100000"). When the ONLY reason the
+  // target was refused is that it sits under that floor, land on the floor: it
+  // is the cheapest reachable setting, which is what the caller was asking for.
+  // Any other rejection still throws — this widens no other failure.
+  const setMax = async (value) => {
+    offer.content.offerAutopilotSettings.maxThroughput = value;
+    await client.offer(offer.id).replace(offer);
+  };
+
+  let intended = target;
+  try {
+    await setMax(target);
+  } catch (e) {
+    const floor = Number(/required minimum throughput (\d+)/i.exec(e.message || "")?.[1]);
+    if (!Number.isFinite(floor) || floor <= target) throw e;
+    console.log(`${CONTAINER}: ${target} is below the autoscale floor Azure reports (${floor}) — using the floor`);
+    intended = floor;
+    await setMax(floor);
+  }
 
   // Read back. A silent no-op would leave the account parked at the working
   // ceiling, which is exactly the bill this scaling exists to avoid.
   const { resource: after } = await container.readOffer();
   const landed = after.content.offerAutopilotSettings.maxThroughput;
   console.log(`${CONTAINER}: autoscale max ${current} -> ${landed} (billed floor ~${Math.round(landed / 10)} RU/s)`);
-  if (landed !== target) {
-    throw new Error(`readback mismatch: asked for ${target}, Cosmos reports ${landed}`);
+  if (landed !== intended) {
+    throw new Error(`readback mismatch: asked for ${intended}, Cosmos reports ${landed}`);
   }
 })().catch((e) => {
   console.error(`throughput: ${e.message}`);
