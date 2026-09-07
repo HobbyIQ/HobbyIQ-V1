@@ -110,6 +110,11 @@ jobs:
           CH_GROUP_ARG: ${{ inputs.ch_group != '' && format('--ch-group={0}', inputs.ch_group) || '' }}
           CARD_SET_ARG: ${{ inputs.card_set_contains != '' && format('--card-set-contains={0}', inputs.card_set_contains) || '' }}
         run: |
+          # CF-THE-LOG-IS-BOTH-STREAMS (#1963/#1975). Adding `2>&1` to the tee
+          # below without pipefail would leave the pipeline exiting on TEE's
+          # status -- always 0 -- so this apply would report success even when
+          # the lane crashed. Both halves or neither.
+          set -o pipefail
           node scripts/backfill-sold-comps-from-ch.cjs \
             --from=${{ inputs.from_date }} \
             --to=${{ inputs.to_date }} \
@@ -118,7 +123,7 @@ jobs:
             $CH_GROUP_ARG \
             --concurrency=${{ inputs.concurrency }} \
             $DRY_RUN_ARG \
-            | tee backfill-out.log
+            2>&1 | tee backfill-out.log
 
       - name: Upload log
         uses: actions/upload-artifact@v4
