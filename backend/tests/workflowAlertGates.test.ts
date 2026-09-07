@@ -212,14 +212,65 @@ describe("P1-7 + P2-5. the red scheduled jobs", () => {
     expect(yml).toContain("path: backend/data/gap-reports/");
   });
 
-  it("nightly-slug-backfill's idle floor is the one Azure actually accepts", () => {
-    const yml = wf("nightly-slug-backfill.yml");
-    // 4000 (until 08-18) and 8000 (until 09-07) were both under the floor, so
-    // the teardown failed EVERY run and parked sold_comps at the 40000 working
-    // ceiling — the exact bill the scale-down exists to avoid.
-    expect(yml).toContain('SOLD_IDLE_MAX: "10000"');
-    expect(yml).not.toContain('SOLD_IDLE_MAX: "8000"');
-    expect(yml).toContain("Highest RUs provisioned");
+  // EVERY workflow that raises sold_comps, not just the nightly one (#1960).
+  //
+  // The rule is one sentence: a teardown must name a target Azure will
+  // ACCEPT. Azure pins an autoscale container's minimum to
+  // max(1000, storage floor, highest-ever-provisioned / 10) and that number
+  // never falls, so sold_comps -- which touched 100,000 -- has a permanent
+  // floor of 10,000. 4000 (until 08-18) and 8000 (until 09-07) were both
+  // under it, so the `if: always()` teardown failed EVERY run and parked the
+  // container at the 40,000 working ceiling: the exact bill the scale-down
+  // exists to avoid.
+  //
+  // THE PIN IS PER WORKFLOW, BY NAME, and that is the point. #1954 taught
+  // cosmos-throughput.cjs to parse Azure's rejection and land on the floor,
+  // which makes a stale constant SILENT rather than red -- three workflows
+  // sat on an unreachable 8000 for a month afterwards and nothing said so.
+  // A value the script quietly corrects is a value nobody reads again, so
+  // the constant is asserted here instead: a stale one fails CI naming the
+  // file, rather than being rediscovered on a bill.
+  //
+  // MUTATION CHECK: put "8000" back in any one of the four and the test that
+  // names that workflow goes red.
+  const RAISES_SOLD_COMPS = [
+    "nightly-slug-backfill.yml",
+    "printrun-merge.yml",
+    "reslug-setkey.yml",
+    "slug-drift-audit.yml",
+  ];
+
+  for (const file of RAISES_SOLD_COMPS) {
+    it(`${file}'s idle floor is the one Azure actually accepts`, () => {
+      const yml = wf(file);
+      // A guard against asserting about a workflow that no longer raises the
+      // container at all — the pin would then pass vacuously.
+      expect(yml, `${file} must still raise sold_comps to a working ceiling`)
+        .toContain('SOLD_WORK_MAX: "40000"');
+      expect(yml).toContain('SOLD_IDLE_MAX: "10000"');
+      expect(yml).not.toContain('SOLD_IDLE_MAX: "8000"');
+      expect(yml).not.toContain('SOLD_IDLE_MAX: "4000"');
+      // The reason, not just the number: 10,000 is Azure's floor because the
+      // container once held 100,000, and a reader who does not know that will
+      // "optimise" it back down.
+      expect(yml).toContain("Highest RUs provisioned");
+    });
+  }
+
+  it("no workflow raises sold_comps without a reachable teardown", () => {
+    // The census: any workflow naming SOLD_IDLE_MAX at all is governed above.
+    // A new one that arrives with 8000 is caught HERE rather than going
+    // unnoticed until it appears in the loop's hardcoded list.
+    const dir = path.join(__dirname, "..", "..", ".github", "workflows");
+    const raisers = fs
+      .readdirSync(dir)
+      .filter((n) => n.endsWith(".yml"))
+      .filter((n) => /SOLD_IDLE_MAX/.test(read(".github", "workflows", n)));
+    expect(
+      raisers.sort(),
+      "a workflow gained or lost a sold_comps teardown; add it to RAISES_SOLD_COMPS "
+        + "so its idle target is pinned by name",
+    ).toEqual([...RAISES_SOLD_COMPS].sort());
   });
 
   it("cosmos-throughput lands on the floor Azure names instead of failing on a stale one", () => {

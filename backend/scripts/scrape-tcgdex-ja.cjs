@@ -99,10 +99,15 @@ async function main() {
     get("https://api.tcgdex.net/v2/en/sets"),
   ]);
   if (!ja || !en) { console.error("FATAL: set catalogs unreachable"); process.exit(1); }
-  const enIds = new Set(en.map((s) => s.id));
-  let work = ja.filter((s) => !enIds.has(s.id));
+  // A SHARED CODE IS NOT A SHARED CARD (#1959). The old `!enIds.has(s.id)`
+  // dropped every JA set an EN set names -- neo1..neo4 among them, 323 cards
+  // that were never staged -- because it was written before the ruling gave
+  // those sets the `ja-<code>` address. The scope is now every JA set; this
+  // lane keys by NAME (`<year>-japanese-<name>-pokemon`), which already states
+  // the market, so no key here collides with an English one.
+  let work = ja.slice();
   if (ONLY.length) work = work.filter((s) => ONLY.includes(s.id));
-  console.log(`[tcgdex-ja] ${ja.length} ja sets, ${work.length} ja-EXCLUSIVE in scope`);
+  console.log(`[tcgdex-ja] ${ja.length} ja sets, ${work.length} in scope (shared-code sets included since #1959)`);
   console.log(`[dex-bridge] ${Object.keys(DEX_SPECIES).length} species, dexId 1..${DEX_MAX}\n`);
 
   let staged = 0, rows = 0, bridged = 0, unnamed = 0, skippedSets = 0, done = 0;

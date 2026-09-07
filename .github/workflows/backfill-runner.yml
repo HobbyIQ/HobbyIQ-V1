@@ -2368,7 +2368,18 @@ jobs:
             else
               echo "::notice::budget hit (written=${N:-0}) — re-dispatching slot ${{ inputs.slot }} to continue"
             fi
-            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=rematch-sold-comps -f mode="${{ inputs.mode }}" -f apply=false -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f years="${{ inputs.years }}" -f limit="${{ inputs.limit }}"
+            # CF-A-RELAUNCH-THAT-DROPS-AN-INPUT-INHERITS-A-DEFAULT (2026-09-07).
+            # `scope`, `sports` and `setkey_like` were NOT forwarded here. For
+            # MODE=apply-improve `scope` is the APPLY CLASS SCOPE and is
+            # REQUIRED -- so a relaunch that omitted it re-dispatched with the
+            # workflow default 'refractor', which that mode REFUSES (exit 2).
+            # Measured: 18 slots (10..28, less 17) of the 2026-09-07 fleet died
+            # this way in 55-70s each, having read not one row, and #1913's
+            # KILLED branch reported them as kills at the 150-minute ceiling.
+            # The two row-filter inputs are forwarded for the same reason: a
+            # continuation that silently widens its own scope is a different
+            # run than the one the operator dispatched.
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=rematch-sold-comps -f mode="${{ inputs.mode }}" -f apply=false -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f years="${{ inputs.years }}" -f limit="${{ inputs.limit }}" -f scope="${{ inputs.scope }}" -f sports="${{ inputs.sports }}" -f setkey_like="${{ inputs.setkey_like }}"
           elif grep -aqE "finishLane: exiting code 0( |$)" /tmp/backfill.log && [ "${{ steps.backfill.outcome }}" = "success" ]; then
             echo "::notice::finished within budget — done, no re-dispatch."
           elif grep -aqE "finishLane: exiting code [0-9]+" /tmp/backfill.log; then
@@ -2389,7 +2400,24 @@ jobs:
             tail -n 20 /tmp/backfill.log 2>/dev/null || echo "  (no log)"
             exit 1
           else
-            echo "::error::KILLED before finish — the lane never reached finishLane; NOT finished; re-dispatch withheld — investigate"
+            # CF-AN-EMPTY-LOG-IS-NOT-A-BUDGET-KILL (2026-09-07). "KILLED before
+            # finish" reads as a kill at the 150-minute ceiling, and for 18 runs
+            # of the 2026-09-07 fleet that reading was WRONG: they died in 55-70
+            # SECONDS at a startup refusal, having read no rows at all. The lane
+            # now prints a STARTUP line to stdout before any require (so `tee`
+            # captures it whatever fails afterwards) and a STARTUP REFUSED line
+            # naming the phase when it refuses. Read them and say which it was,
+            # rather than making the operator infer a kill from an empty tail.
+            if grep -aq "rematch-sold-comps: STARTUP REFUSED" /tmp/backfill.log; then
+              echo "::error::STARTUP REFUSED — the lane never began work; this is NOT a budget kill. No rows were read and NOTHING was written; the slot is UNSTARTED, not half-done. Re-dispatch it with the inputs the refusal names."
+              grep -a "STARTUP REFUSED\|^FATAL \[phase=" /tmp/backfill.log | head -n 20 || true
+            elif [ ! -s /tmp/backfill.log ]; then
+              echo "::error::EMPTY LOG — the lane did not even reach its first stdout line. That line is a source literal printed before any require, so an empty log now means the process never started at all (runner/image failure, or the step was killed before node ran) rather than a silent refusal."
+            elif grep -aq "rematch-sold-comps: STARTUP ok" /tmp/backfill.log && ! grep -aqE "^rematch-sold-comps  MODE=" /tmp/backfill.log; then
+              echo "::error::DIED DURING STARTUP — the lane printed its STARTUP line but never reached its banner, so it failed at module load (a missing dist/, a bad require, or an OOM before work began). NOT a budget kill; nothing was written."
+            else
+              echo "::error::KILLED before finish — the lane never reached finishLane; NOT finished; re-dispatch withheld — investigate"
+            fi
             echo "  step outcome: ${{ steps.backfill.outcome }}"
             echo "  budget marker: absent    finishLane line: $(grep -acE 'finishLane: exiting code [0-9]+' /tmp/backfill.log 2>/dev/null || echo 0)"
             echo "  last 20 lines of /tmp/backfill.log:"
@@ -6975,6 +7003,165 @@ jobs:
             exit 1
           fi
 
+      - name: Self-relaunch a wave-3 budgeted write lane until its scope is drained
+        # CF-A-KILLED-JOB-CANNOT-REPORT-PROGRESS, wave 3 of the #1944 ratchet
+        # (29 -> 14). Same contract as the wave-1 and wave-2 steps above --
+        # budget(), a per-unit outOfClock() PRE-check, a reserve sized to that
+        # lane's largest unit, the marker as a source literal, a reconcile that
+        # still balances after a partial run, and finishLane() on every exit
+        # path -- and a SEPARATE step rather than fifteen more names on an
+        # existing gate, so each wave's population stays readable next to the
+        # reasoning that produced it.
+        #
+        # TWO OF THESE ARRIVE FROM THE RELAUNCH_NEEDED PROTOCOL, and one of them
+        # arrives from nothing at all.
+        #
+        #   reaudit-cardsight-unverified carried a local BACKFILL_MAX_MINUTES
+        #   cap and printed `RELAUNCH_NEEDED=true|false`, read by the
+        #   "Self-relaunch catalog expansion" step further down. That step has
+        #   TWO arms and no third: `true` re-dispatches, `false` stops, and
+        #   ANYTHING ELSE -- including the empty string a KILLED step leaves,
+        #   because a killed step prints no line at all -- lands on a
+        #   `::warning::` that does not fail the job. So a lane killed at the
+        #   150-minute ceiling reported a warning, went GREEN, and left its work
+        #   half done. It is named HERE and REMOVED from that gate below -- not
+        #   left on both, which would double-dispatch every budget stop.
+        #
+        #   nightly-reingest-top-ch-cards printed the same
+        #   `RELAUNCH_NEEDED=<bool>` line and NO STEP IN THIS FILE EVER READ IT.
+        #   It is not on the catalog-expansion gate and never was, so its
+        #   continuation signal went to the log and nowhere else: a 25-minute
+        #   local cap that stopped the lane, announced that more work remained,
+        #   and was then simply not acted upon. The lane has been dispatched
+        #   nightly against a top-1000 walk it cannot finish in one pass. That
+        #   is why the fan-out is arriving here rather than being repaired in
+        #   place.
+        #
+        # EVERY ONE OF THESE IS IDEMPOTENT ON RE-READ, which is what makes a
+        # verbatim re-dispatch safe rather than merely convenient:
+        #   - the field backfills (backfill-grade-from-title,
+        #     backfill-grade-from-ch-daily, backfill-printrun-from-title,
+        #     backfill-sub-channel-vocabulary) select only rows where the field
+        #     they write is still absent, null or empty;
+        #   - the slug rewrites (backfill-insert-setkey,
+        #     backfill-isauto-from-cardnumber, backfill-isauto-cross-sport)
+        #     re-derive the target and skip a row already at it --
+        #     `already compound` for the first, isAuto=false for the other two;
+        #   - the flag stampers (backfill-stage3-price-sanity,
+        #     promote-sold-comps-trust-tier, reaudit-cardsight-unverified)
+        #     exclude their own marker field in the scan, so a written row is
+        #     never re-read;
+        #   - migrate-cardsight-to-staging keys the staging upsert on the row's
+        #     own id + cardId, so a re-copy overwrites with itself, and with
+        #     MIGRATION_DELETE_SOURCE=true an already-deleted row no longer
+        #     appears in the scan at all;
+        #   - baseline-pool-snapshot writes `<snapshotDate>::<slug>`, so a
+        #     continuation on the same day overwrites its own rows;
+        #   - refresh-calibration-multipliers re-reads the whole window and
+        #     overwrites the calibration wholesale;
+        #   - nightly-reingest-top-ch-cards writes nothing at all (its insert
+        #     path is a documented TODO), so a re-read costs CardHedge calls
+        #     and no rows;
+        #   - backfill-parallel-enrichment is DISARMED for apply and refuses at
+        #     the top of the file.
+        # So a continuation pays cheap reads over the finished part and writes
+        # only what is left. That is also why none of them needs a cursor input.
+        #
+        # FOUR OF THEM CAN EXIT 5 -- A REFUSAL, NOT A FAILURE.
+        # backfill-stage3-price-sanity, promote-sold-comps-trust-tier,
+        # baseline-pool-snapshot and refresh-calibration-multipliers each
+        # compute their write plan from a STATISTIC over a whole-container or
+        # whole-window scan -- a per-slug median, a per-slug percentile set, a
+        # median of per-identity price ratios -- so a scan-phase budget stop
+        # makes the plan WRONG rather than short (#1947's
+        # retire-flattened-attestations lesson, and #1951's three sharper
+        # instances). A median over part of a pool is a DIFFERENT median, not a
+        # smaller one, and the row floors those lanes carry (MIN_POOL_SIZE,
+        # MIN_POOL_FOR_MEDIAN, MIN_SAMPLES, identityN >= 3) do not save them:
+        # a partial pool can clear a row floor and still misstate the
+        # statistic. Each exits 5 having written nothing, and still prints the
+        # marker -- the first arm below runs BEFORE the outcome check for
+        # exactly that reason, so a refusal re-dispatches and the next run
+        # re-scans from the top with a full clock.
+        #
+        # `apply` and `scope` are forwarded VERBATIM: a report relaunches as a
+        # report and an apply as an apply (#1578).
+        # `!cancelled()` sits on the `if:` LINE, not folded onto the next one:
+        # the pin that requires every marker-keyed relaunch step to run after a
+        # kill reads the gate with a single-line regex, and a gate whose first
+        # line is bare `>-` parses as EMPTY. A step that looks gated and is not
+        # is precisely the silent hole this rule exists to close, so the
+        # formatting is load-bearing rather than cosmetic.
+        if: ${{ !cancelled() && (
+            inputs.script == 'backfill-grade-from-ch-daily' ||
+            inputs.script == 'backfill-grade-from-title' ||
+            inputs.script == 'backfill-insert-setkey' ||
+            inputs.script == 'backfill-isauto-cross-sport' ||
+            inputs.script == 'backfill-isauto-from-cardnumber' ||
+            inputs.script == 'backfill-parallel-enrichment' ||
+            inputs.script == 'backfill-printrun-from-title' ||
+            inputs.script == 'backfill-stage3-price-sanity' ||
+            inputs.script == 'backfill-sub-channel-vocabulary' ||
+            inputs.script == 'baseline-pool-snapshot' ||
+            inputs.script == 'migrate-cardsight-to-staging' ||
+            inputs.script == 'nightly-reingest-top-ch-cards' ||
+            inputs.script == 'promote-sold-comps-trust-tier' ||
+            inputs.script == 'reaudit-cardsight-unverified' ||
+            inputs.script == 'refresh-calibration-multipliers'
+          ) }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set +e
+          # CF-A-KILLED-RUN-IS-NOT-A-FINISHED-RUN (#1906/#1913/#1955). FOUR outcomes, not three:
+          #   (a) budget marker      -> more work, re-dispatch;
+          #   (b) finishLane code 0    -> the lane exited on its own, genuinely done;
+          #   (c) neither            -> the step was KILLED at the 150-minute ceiling
+          #                             (or cancelled/crashed). NOT finished. Fail loudly.
+          #   (d) finishLane with a NON-ZERO code -> the lane reached its own exit and
+          #                             DECLARED something: a scan-phase refusal 5, a
+          #                             reconcile mismatch 4, a fatal 1. It is finished,
+          #                             not killed. Report the verdict, withhold the
+          #                             re-dispatch, and still fail so the chain is red.
+          # Absence of the marker used to mean (b) by default, so all ten killed APPLY
+          # shards of retire-self-derived-identities reported "finished within budget"
+          # and the fan-out stopped with the work half done and the run green.
+          # Every lane gated above routes BOTH its exit paths through finishLane(), so
+          # (b) is a real witness that the process ended on purpose rather than an
+          # assumption drawn from an absence.
+          if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
+            W=$(grep -aoE "reconciled: [a-z]+ [0-9,]+ = [a-z]+ [0-9,]+" /tmp/backfill.log | tail -1 || true)
+            echo "::notice::budget hit on ${{ inputs.script }} (${W:-no reconcile line}) — re-dispatching to continue"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script="${{ inputs.script }}" -f apply="${{ inputs.apply }}" -f scope="${{ inputs.scope }}"
+          elif grep -aqE "finishLane: exiting code 0( |$)" /tmp/backfill.log && [ "${{ steps.backfill.outcome }}" = "success" ]; then
+            echo "::notice::${{ inputs.script }} finished within budget — done, no re-dispatch."
+          elif grep -aqE "finishLane: exiting code [0-9]+" /tmp/backfill.log; then
+            RC=$(grep -aoE "finishLane: exiting code [0-9]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9]+$" || true)
+            SAID=$(grep -aE "SYSTEMIC|ABORT|BACKING OFF|VERIFY INCOMPLETE|REFUSING" /tmp/backfill.log | tail -1 | sed -e "s/^[[:space:]]*//" || true)
+            if [ "$RC" = "0" ]; then
+              # finishLane said 0, but the STEP still failed: the lane ended on purpose
+              # and something after it (or the runner itself) went red. Not a kill, and
+              # not a clean finish either -- name it for what it is rather than
+              # reporting a "verdict code 0", which would read as a contradiction.
+              echo "::error::EXITED 0 BUT THE STEP FAILED — the lane reached finishLane cleanly yet the step outcome is ${{ steps.backfill.outcome }}; re-dispatch withheld"
+            else
+              echo "::error::FINISHED WITH VERDICT code $RC — ${SAID:-(no SYSTEMIC/ABORT/BACKOFF/VERIFY/REFUSING line in the log)}; re-dispatch withheld"
+            fi
+            if [ "$RC" = "5" ]; then echo "  code 5 here is a SCAN-PHASE REFUSAL: the lane's statistic was computed from a partial scan and it declined to write. Re-dispatch it with a full clock."; fi
+            echo "  step outcome: ${{ steps.backfill.outcome }}"
+            echo "  last 20 lines of /tmp/backfill.log:"
+            tail -n 20 /tmp/backfill.log 2>/dev/null || echo "  (no log)"
+            exit 1
+          else
+            echo "::error::KILLED before finish — ${{ inputs.script }} never reached finishLane; NOT finished; re-dispatch withheld — investigate"
+            echo "  step outcome: ${{ steps.backfill.outcome }}"
+            echo "  budget marker: absent    finishLane line: $(grep -acE 'finishLane: exiting code [0-9]+' /tmp/backfill.log 2>/dev/null || echo 0)"
+            echo "  last 20 lines of /tmp/backfill.log:"
+            tail -n 20 /tmp/backfill.log 2>/dev/null || echo "  (no log)"
+            exit 1
+          fi
+
       - name: Self-relaunch until composite backfill fully drains
         # CF-COMPOSITE-BACKFILL-SELF-RELAUNCH (Drew, 2026-07-30). Composite
         # backfill covers ~3.4M sold_comps rows and one 150-min iteration
@@ -7104,7 +7291,22 @@ jobs:
         # the same treatment when their turn comes; until then this warning arm
         # remains the known-soft edge, named here rather than left to be
         # rediscovered.
-        if: ${{ !cancelled() && (inputs.script == 'backfill-catalog-cs-images' || inputs.script == 'backfill-cs-card-population' || inputs.script == 'drain-staging-backlog' || inputs.script == 'rescore-anomalies' || inputs.script == 'score-all-sold-comps' || inputs.script == 'reaudit-cardsight-unverified') && inputs.apply == true }}
+        #
+        # ONE MORE LANE LEFT THIS LIST in the #1944 ratchet's wave 3 --
+        # reaudit-cardsight-unverified -- and is now gated by the wave-3 marker
+        # step above, for the same reason the five in wave 2 left: this step's
+        # third arm is a `::warning::` that does not fail the job, so the empty
+        # string a KILLED step leaves reads as neither `true` nor `false` and the
+        # run goes GREEN with its work half done. It is removed HERE rather than
+        # left on both gates: two steps reacting to the same stop would
+        # re-dispatch it twice.
+        #
+        # THE LANES STILL LISTED BELOW HAVE NOT BEEN AUDITED FOR THAT. They are
+        # on the ratchet in backend/tests/runnerBudgetMargin.test.ts and inherit
+        # the same treatment when their turn comes; until then this warning arm
+        # remains the known-soft edge, named here rather than left to be
+        # rediscovered.
+        if: ${{ !cancelled() && (inputs.script == 'backfill-catalog-cs-images' || inputs.script == 'backfill-cs-card-population' || inputs.script == 'drain-staging-backlog' || inputs.script == 'rescore-anomalies' || inputs.script == 'score-all-sold-comps') && inputs.apply == true }}
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
