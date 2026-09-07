@@ -135,3 +135,24 @@ describe("the three actions are exhaustive — every id lands in exactly one", (
     }
   });
 });
+
+describe("a fold WRITES but does not INSERT — one row, one bucket", () => {
+  it("the fold verdict is distinguishable from write, so the write door can skip inserted++", () => {
+    // The trap this pins. A fold falls THROUGH to the upsert (it must — the
+    // replace is the point), and the write door ends with `result.inserted++`.
+    // If both moved for one row, the promoter's ledger
+    //   tried = inserted + deduped + skipped + catalogUnmatched
+    //         + twinFolded + twinRefused + errored
+    // would OVER-account, and reportWrites treats over-accounting as loudly as
+    // a shortfall — correctly, because it means a counter is being incremented
+    // on a path it does not own.
+    //
+    // So "fold" must be its own action rather than a flavour of "write": the
+    // write door reads it to decide whether the row is a NEW sale.
+    const fold = decideTwinAddress(CHROME, [{ cardId: CHROME }]);
+    const write = decideTwinAddress(CHROME, []);
+    expect(fold.action).toBe("fold");
+    expect(write.action).toBe("write");
+    expect(fold.action).not.toBe(write.action);
+  });
+});

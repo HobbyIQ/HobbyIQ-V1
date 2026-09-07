@@ -1854,6 +1854,12 @@ export async function persistVendorSalesToPool(
         parameters: [{ name: "@id", value: doc.id }],
       }).fetchAll();
       const twinVerdict = decideTwinAddress(doc.cardId, elsewhere as TwinCandidate[]);
+      // A fold WRITES (it replaces the document already at this address) but it
+      // does not INSERT: no new sale enters the pool. The two counters must not
+      // both move for one row, or `tried = inserted + ... + twinFolded + ...`
+      // over-accounts and reportWrites' overAccounted check goes red -- which
+      // is exactly as loud as a shortfall, and correctly so.
+      const isFold = twinVerdict.action === "fold";
       if (twinVerdict.action === "fold") {
         // The sale is already filed here. The write proceeds as the plain
         // replace it is -- but the caller is told it was a fold, not a new
@@ -1947,7 +1953,9 @@ export async function persistVendorSalesToPool(
       }
 
       await container.items.upsert(doc);
-      result.inserted++;
+      // Counted at the twin check, where the verdict was made. Incrementing
+      // `inserted` here as well would count one row in two buckets.
+      if (!isFold) result.inserted++;
       // Staging shim runs earlier (above the dedup check) so it fires
       // regardless of whether sold_comps dedups the write. See
       // CF-COMPS-STAGING-SHIM-EARLY.
