@@ -34,6 +34,10 @@
 // shutdown must not itself become the shutdown.
 
 import * as appInsights from "applicationinsights";
+// CF-DEPLOY-RESTARTS-ONCE: GIT_SHA_SHORT is no longer written as an App
+// Setting (that write was the second restart per deploy). Read the SHA from
+// the deployed artifact, falling back to the env var.
+import { getGitShaShort } from "./buildInfo.js";
 
 export type ShutdownReason =
   | "SIGTERM"
@@ -125,7 +129,7 @@ export function emitWorkerShutdown(
     // Short uptime + SIGTERM is the recycle signature. Recording it as a
     // property means the query is a filter, not a join against boot traces.
     shortLived: String(uptimeSec < 20 * 60),
-    gitSha: process.env.GIT_SHA_SHORT ?? "",
+    gitSha: getGitShaShort() ?? "",
     unhandledRejections: String(_unhandledRejections),
   };
   if (detail !== undefined) properties.detail = describe(detail).slice(0, 500);
@@ -187,7 +191,7 @@ export function installWorkerLifecycleHandlers(): void {
         detail: describe(reason).slice(0, 500),
         uptimeSeconds: String(Math.round(process.uptime())),
         count: String(_unhandledRejections),
-        gitSha: process.env.GIT_SHA_SHORT ?? "",
+        gitSha: getGitShaShort() ?? "",
       });
     } catch {
       /* never throw from the handler */

@@ -117,26 +117,29 @@ jobs:
           resource-group-name: rg-hobbyiq-dev
           package: deploy.zip
 
-      # azure/webapps-deploy@v3 does not update App Settings, so GIT_SHA and
-      # DEPLOYED_AT stay stale after workflow-triggered deploys and /api/health
-      # reports the wrong build metadata. Refresh them here so observability
-      # reflects what was actually deployed. See issue #83.
+      # CF-DEPLOY-RESTARTS-ONCE (2026-09-07). There used to be an "Update build
+      # metadata App Settings" step here, writing GIT_SHA/GIT_SHA_SHORT/
+      # GIT_BRANCH/DEPLOYED_AT so /api/health could report the deployed build.
       #
-      # CF-DAILY-REFRESH-CONSISTENCY (2026-05-24): also refresh GIT_SHA_SHORT
-      # and GIT_BRANCH so this workflow matches the quad written by
-      # scripts/deploy-with-build-info.ps1. Before this change, the workflow
-      # set only GIT_SHA + DEPLOYED_AT, leaving GIT_SHA_SHORT + GIT_BRANCH
-      # stale from prior operator-initiated deploys — asymmetric drift
-      # discovered during a mid-session investigation.
-      - name: Update build metadata App Settings
-        if: steps.et-gate.outputs.should_run == 'true'
-        run: |
-          SHA_SHORT="${GITHUB_SHA:0:7}"
-          az webapp config appsettings set \
-            --resource-group rg-hobbyiq-dev \
-            --name HobbyIQ3 \
-            --settings GIT_SHA=${{ github.sha }} GIT_SHA_SHORT=$SHA_SHORT GIT_BRANCH=${{ github.ref_name }} DEPLOYED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ) \
-            --output none
+      # It has been removed, because it was the SECOND restart of every deploy.
+      # An `az webapp config appsettings set` is a config/write: App Service
+      # recycles every worker to pick the new settings up, ~45s after
+      # azure/webapps-deploy@v3 had already recycled them once. The 2026-09-07
+      # investigation (#1977, backend/docs/reports/2026-09-07-app-service-
+      # recycles-and-telemetry-loss.md) traced both workers' 8-19 minute
+      # lockstep reboots to exactly this pair, at ~23 dispatches/day: mean
+      # process lifetime near ten minutes, and no setInterval longer than that
+      # has ever fired in production from the interval path.
+      #
+      # Nothing is lost. The SHA already ships INSIDE the package:
+      # scripts/write-build-info.cjs writes dist/build-info.json at build time,
+      # and src/routes/health.routes.ts now serves build.sha/shaShort/branch
+      # from that file (env vars remain the fallback). That is also strictly
+      # more truthful than the env vars were — build-info.json cannot report a
+      # SHA unless the dist carrying it is the dist actually loaded, which is
+      # the exact failure the env-var quad could not see (the 3-for-3 silent
+      # old-dist deploys). The deploy is now ONE restart-causing step: the
+      # azure/webapps-deploy@v3 above.
 
       # Wait for the app to finish restarting before warming cache
       - name: Wait for app restart
