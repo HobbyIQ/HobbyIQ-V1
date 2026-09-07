@@ -559,6 +559,14 @@ async function main() {
    * verify that checked only one of them would report a retire as unwritten.
    */
   const ledger = [];
+  /** The partition key patchCatalogRowFields WILL have used for this row.
+   *  Mirrored, not guessed: that function computes `cardId ? String(cardId)
+   *  : id`, so a row with no cardId is written at its own id. A ledger that
+   *  recorded a raw null here would point-read the wrong partition, get
+   *  nothing back, and report a perfectly good write as MISSING THE MARKER --
+   *  which, now that a mismatch ends the lane non-zero, would turn a healthy
+   *  run red. The verify must read exactly where the write went. */
+  const pkOf = (row) => (row && row.cardId ? String(row.cardId) : String(row && row.id));
   const gaps = new Map();
   let stopReason = null;
 
@@ -630,7 +638,7 @@ async function main() {
             retiredMatchLevel: hasFull ? "identity" : "card",
           }, { retry });
           written++;
-          ledger.push({ id: String(r.id), pk: r.cardId, field: "retiredReason" });
+          ledger.push({ id: String(r.id), pk: pkOf(r), field: "retiredReason" });
           for (const kid of kids) {
             await patchCatalogRowFields(cat, String(kid.id), kid.cardId, {
               retiredReason: RETIRED,
@@ -640,7 +648,7 @@ async function main() {
               retiredWithParent: String(r.id),
             }, { retry });
             written++;
-            ledger.push({ id: String(kid.id), pk: kid.cardId, field: "retiredReason" });
+            ledger.push({ id: String(kid.id), pk: pkOf(kid), field: "retiredReason" });
           }
         } catch (e) { failed++; }
         continue;
@@ -660,7 +668,7 @@ async function main() {
           identityUnverifiedBy: "retire-self-derived-identities",
         }, { retry });
         written++;
-        ledger.push({ id: String(r.id), pk: r.cardId, field: UNVERIFIED });
+        ledger.push({ id: String(r.id), pk: pkOf(r), field: UNVERIFIED });
       } catch (e) { failed++; }
     }
   }

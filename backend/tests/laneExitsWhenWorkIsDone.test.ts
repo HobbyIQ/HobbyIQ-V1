@@ -1273,7 +1273,23 @@ describe("the retire lane verifies by reading its own write ledger", () => {
       "all three write sites (parent retire, graded child, unverified) must record",
     ).toBe(3);
     // The partition key travels with the id: a point-read needs both.
-    expect(codeOnly).toMatch(/ledger\.push\(\{ id: String\([^)]+\), pk: [^,]+, field:/);
+    expect(codeOnly).toMatch(/ledger\.push\(\{ id: String\([^)]+\), pk: pkOf\([^)]+\), field:/);
+  });
+
+  it("the ledger's partition key MIRRORS the one the write used", () => {
+    // patchCatalogRowFields computes `cardId ? String(cardId) : id`. A ledger
+    // that recorded a raw null cardId would point-read the wrong partition,
+    // get nothing, and report a good write as MISSING THE MARKER -- and since
+    // a mismatch now ends the lane non-zero, that would turn a healthy run
+    // red. Read exactly where the write went.
+    expect(codeOnly).toMatch(/const pkOf = \(row\) =>[\s\S]{0,160}row\.cardId \? String\(row\.cardId\) : String\(row && row\.id\)/);
+    const svc = read("backend", "src", "services", "catalog", "catalogRowOps.service.ts");
+    expect(
+      svc,
+      "the rule being mirrored must still be the rule patchCatalogRowFields applies",
+    ).toMatch(/const pk = cardId \? String\(cardId\) : id;/);
+    // And no write site may go back to handing the raw field through.
+    expect(codeOnly).not.toMatch(/pk: \w+\.cardId/);
   });
 
   it("the verify point-reads those ids instead of scanning the sport", () => {
