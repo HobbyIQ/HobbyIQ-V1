@@ -36,6 +36,7 @@ import { CosmosClient } from "@azure/cosmos";
 import { computeHobbyIqCardId } from "../dist/services/portfolioiq/hobbyIqCardId.service.js";
 import { extractPrintRunFromTitle } from "../dist/services/portfolioiq/soldCompsStore.service.js";
 import { inferSportFromContext } from "../dist/services/portfolioiq/soldCompsStore.service.js";
+import { patchSoldCompFields } from "../dist/services/portfolioiq/soldCompRowOps.service.js";
 
 const args = parseArgs(process.argv.slice(2));
 const connStr = process.env.COSMOS_CONNECTION_STRING;
@@ -72,26 +73,21 @@ console.error(`Starting backfill. limit=${args.limit} batch=${args.batch} concur
 // expected ~200-600 rows/sec, 10-30× the sequential rate. Concurrency
 // bounded because uncapped parallelism causes 429 storms that cost more
 // wall-clock than they save.
+// CF-A-MUTATOR-PATCHES-FIELDS-NEVER-THE-WHOLE-DOC (#1941 follow-up,
+// 2026-09-07). The retry loop that used to live here was a second copy of the
+// helper's -- and a narrower one: it retried 429 but not 449, the "retry with"
+// Cosmos returns when two writers hit the same partition at once, which is
+// exactly what a fleet running beside this backfill produces. A 449 counted as
+// a permanent failure and the row was reported as errored rather than retried.
+// The write shape was already correct (one named field, never the whole doc);
+// what it lacked was the shared retry contract.
 async function patchWithRetry(id, cardId, hobbyiqCardId) {
-  const MAX_ATTEMPTS = 4;
-  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
-    try {
-      await container.item(id, cardId).patch([
-        { op: "add", path: "/hobbyiqCardId", value: hobbyiqCardId },
-      ]);
-      return { ok: true };
-    } catch (err) {
-      // Cosmos 429 → RetryAfterInMs on the error; back off then retry.
-      const code = err?.code ?? err?.statusCode;
-      if (code === 429 && attempt < MAX_ATTEMPTS - 1) {
-        const retryAfterMs = Number(err?.retryAfterInMs ?? err?.headers?.["x-ms-retry-after-ms"] ?? (100 * Math.pow(2, attempt)));
-        await sleep(retryAfterMs);
-        continue;
-      }
-      return { ok: false, err };
-    }
+  try {
+    await patchSoldCompFields(container, id, cardId, { hobbyiqCardId }, { sleep });
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, err };
   }
-  return { ok: false, err: new Error("max retries exceeded") };
 }
 
 async function patchInParallel(work, concurrency) {

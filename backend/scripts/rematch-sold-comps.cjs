@@ -116,6 +116,7 @@ const fs = require("fs");
 const crypto = require("crypto");
 const { CosmosClient } = require("@azure/cosmos");
 const { relocateSoldComp, stripSystem, contentHashOf } = require(path.join(__dirname, "lib", "relocate-sold-comp.cjs"));
+const { patchSoldCompFields } = require(path.join(__dirname, "lib", "patch-sold-comp-fields.cjs"));
 const K = require(path.join(__dirname, "lib", "rematch-classify.cjs"));
 // CF-HOBBYMONITOR-IS-STRICT-ONLY-WHERE-A-SECOND-SOURCE-AGREES (Drew, 2026-09-05).
 // The ONE corroboration predicate, reached through the CJS bridge; never a copy.
@@ -1731,13 +1732,12 @@ async function main() {
           continue;
         }
         try {
-          const patch = [
-            { op: "set", path: "/gradeCompany", value: g.gradeCompany },
-            { op: "set", path: "/gradeValue", value: g.gradeValue },
-            { op: "set", path: "/gradeStampedAt", value: new Date().toISOString() },
-            { op: "set", path: "/gradeStampedReason", value: `GREAT REMATCH (2026-09-06): GRADE-FROM-TITLE -- title states "${g.gradeCompany} ${g.gradeValue}" and the row's grade fields were empty; address unchanged` },
-          ];
-          await retry(() => pool.item(fresh.id, fresh.cardId).patch(patch));
+          await retry(() => patchSoldCompFields(pool, fresh.id, fresh.cardId, {
+            gradeCompany: g.gradeCompany,
+            gradeValue: g.gradeValue,
+            gradeStampedAt: new Date().toISOString(),
+            gradeStampedReason: `GREAT REMATCH (2026-09-06): GRADE-FROM-TITLE -- title states "${g.gradeCompany} ${g.gradeValue}" and the row's grade fields were empty; address unchanged`,
+          }));
           // VERIFY BY READ, ON THE ROW ITSELF. The #1850 read-back contract:
           // a write is not done because the call returned, it is done because
           // the value is there when you look.
