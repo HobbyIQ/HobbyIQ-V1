@@ -150,7 +150,16 @@ while (!done && stats.seen < args.limit) {
       continue;
     }
 
-    const sport = row.sport ?? inferSportFromContext(row.setName, row.title);
+    // CF-NO-DEFAULT-SPORT (#1924 follow-up, 2026-09-07). `cardYear` is the
+    // THIRD argument and this call was omitting it, while the ingest path
+    // (deriveHobbyIqSlug) has always passed it. That is not a cosmetic
+    // difference: the third argument gates the vintage-flagship rules
+    // (a bare pre-1981 Topps, pre-1986 Fleer, ...), so ingest and backfill
+    // could infer DIFFERENT SPORTS FOR THE SAME ROW -- and this script writes
+    // only `hobbyiqCardId`, leaving `cardId` (an immutable partition key) on
+    // the other answer. That asymmetry is how the split became 2.4M rows wide.
+    // One derivation, one set of arguments.
+    const sport = row.sport ?? inferSportFromContext(row.setName, row.title, row.cardYear);
     if (!sport || typeof row.cardYear !== "number" || !Number.isFinite(row.cardYear)) {
       stats.skippedMissingIdentity++;
       continue;

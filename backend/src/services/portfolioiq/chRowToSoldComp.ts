@@ -206,6 +206,15 @@ export function mapChRowToSoldComp(row: CHDailySaleRow, opts: MapOptions = {}): 
       cardNumber: verdict.cardNumber,
       isAuto: inferIsAutoFromCH(row),
       sport,
+      // CF-A-SPLIT-ROW-IS-NEVER-WRITTEN (#1924 follow-up). `sport` here comes
+      // from CH's `group` field (normSport above), not from a title scan --
+      // per CF-CH-INGEST-MULTI-SPORT that field IS the vendor's own statement
+      // of the vertical. Naming the attestor lets the store's split-identity
+      // guard RESOLVE a cardId/hobbyiqCardId sport disagreement toward it
+      // instead of parking the sale. Only set when a group actually produced
+      // a sport: `normSport` returns null for groups it cannot map, and an
+      // absent attestation must never be claimed.
+      ...(sport ? { sportAttestedBy: "cardhedge-group" } : {}),
       gradeCompany: normGrader(row.grader),
       gradeValue: parseGrade(row.grade),
       price,
