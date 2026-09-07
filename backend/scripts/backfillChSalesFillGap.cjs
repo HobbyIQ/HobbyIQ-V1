@@ -20,6 +20,9 @@
 //   MIN_COMPS=10       skip cards with fewer than N existing comps
 
 const { CosmosClient } = require("@azure/cosmos");
+const path = require("path");
+// CF-ONE-WRITE-PATH-FOR-SOLD-COMPS (2026-09-07). See the guard block below.
+const { guardSoldCompDoc } = require(path.join(__dirname, "..", "dist/services/portfolioiq/splitIdentityWriteGuard.js"));
 
 const APPLY = process.env.APPLY === "true";
 const TOP_N = Number(process.env.TOP_N || 1000);
@@ -146,6 +149,26 @@ async function main() {
           observedAt: new Date().toISOString(),
           title: s?.title || null,
         };
+        // CF-ONE-WRITE-PATH-FOR-SOLD-COMPS (2026-09-07). This lane mints whole
+        // sale documents and upserts them straight to the pool, so neither
+        // #1929's split-identity guard nor #1939's malformed-key guard -- both
+        // of which live in `recordSoldComp` -- has ever seen a row it wrote.
+        // Here BOTH identity fields are set from `t.hobbyiqCardId`, so a
+        // defective slug lands on both halves at once: precisely the #1939
+        // class, where an `hiq:` prefix wears a key nothing can read back.
+        {
+          const verdict = guardSoldCompDoc(doc, { guardedBy: "backfillChSalesFillGap" });
+          if (verdict.verdict === "park") {
+            console.warn(JSON.stringify({
+              event: "sold_comp_split_identity_parked",
+              source: "backfillChSalesFillGap",
+              reason: verdict.reason,
+              cardId: doc.cardId,
+              hobbyiqCardId: doc.hobbyiqCardId,
+              detail: verdict.detail,
+            }));
+          }
+        }
         try { await sc.items.upsert(doc); }
         catch (e) { totalFailed++; if (totalFailed < 5) console.warn(`  fail ${id}: ${e.message}`); }
       }

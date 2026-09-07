@@ -24,6 +24,7 @@ import {
 } from "./parseTitleIdentity.service.js";
 import { resolveVertical } from "./resolveVertical.service.js";
 import { cardNumberInClause, computeHobbyIqCardId, slugify, normalizeSetKey as canonicalNormalizeSetKey } from "./hobbyIqCardId.service.js";
+import { guardSoldCompDoc } from "./splitIdentityWriteGuard.js";
 import { playerTheTitleAllows } from "./playerTheTitleAllows.js";
 import { yearTheTitleAllows } from "./yearTheTitleAllows.js";
 import { extractYearFromTitle } from "./slugRederivation.service.js";
@@ -475,6 +476,13 @@ export interface VendorPersistResult {
    *  existing address left alone; which address is right is the dedup lane's
    *  ruling to make, never the ingest writer's. */
   twinAddressRefused?: number;
+  /** CF-ONE-WRITE-PATH-FOR-SOLD-COMPS. Rows the shared write guard parked out
+   *  of every pool (malformed address, or a split identity nothing attests).
+   *  The sale is still written — parked, not dropped. */
+  identityParked?: number;
+  /** Rows whose two identity fields disagreed and an ATTESTED sport settled
+   *  it; both fields were rewritten to the attested identity. */
+  identityResolved?: number;
   /** CF-THE-TITLE-OUTRANKS-THE-VENDOR-PLAYER: the vendor attributed the sale to
    *  a DIFFERENT person than the title names. Neither is adopted; the row is
    *  skipped as UNDERIVABLE rather than keyed to a card it may not be. */
@@ -1801,6 +1809,63 @@ export async function persistVendorSalesToPool(
           title,
         }));
         continue;
+      }
+
+      // ── THE WRITE DOOR — CF-ONE-WRITE-PATH-FOR-SOLD-COMPS (2026-09-07) ──
+      //
+      // This lane builds its own document and upserts it, so until now NOTHING
+      // compared its two identity fields and nothing checked that they were
+      // readable addresses at all. #1939 measured what that costs: 8,102 rows
+      // wearing an `hiq:` prefix over a key nothing can read back, 100% from
+      // this pipeline's own source, 337 of them written AFTER #1929's guard
+      // shipped in `recordSoldComp` — because the guard was in the function
+      // this lane does not call.
+      //
+      // `hiq:${slug.slice(4)}` above is the mechanism, and its own comment
+      // states the assumption that makes it wrong: "just `slug` reassembled"
+      // is true when the builder computed the slug and FALSE after
+      // `adoptResolvedSlug` rebinds it to a matched catalog row, which gates
+      // on confidence and never on shape. A `cardhedge::` id matched at >= 0.7
+      // becomes `slug`, and the reassembly eats "card" and glues our prefix
+      // onto "hedge::<id>".
+      //
+      // The SAME predicate `recordSoldComp` applies, applied here. Not a
+      // second guard — the one function, at the second door. A parked row is
+      // still WRITTEN: the sale is real, and parking keeps it queryable and
+      // out of every pool without asserting which card it is.
+      {
+        const verdict = guardSoldCompDoc(doc as Record<string, unknown>, {
+          // The vertical resolver states a sport, but only a CONFIDENT answer
+          // is an attestation; `sportDefaulted` is precisely the case where it
+          // is a fallback, and a fallback must never resolve a disagreement.
+          attestedSport: sportDefaulted ? null : doc.sport ?? null,
+          attestedBy: sportDefaulted ? null : "persistVendorSalesToPool:vertical-resolver",
+          guardedBy: "persistVendorSalesToPool:split-identity-guard",
+        });
+        if (verdict.verdict === "park") {
+          result.identityParked = (result.identityParked ?? 0) + 1;
+          console.warn(JSON.stringify({
+            event: "sold_comp_split_identity_parked",
+            source: "persistVendorSalesToPool",
+            vendorSource: source,
+            reason: verdict.reason,
+            cardId: doc.cardId,
+            hobbyiqCardId: doc.hobbyiqCardId,
+            detail: verdict.detail,
+          }));
+        } else if (verdict.verdict === "resolve") {
+          result.identityResolved = (result.identityResolved ?? 0) + 1;
+          // The id embeds cardId, so it is re-minted or the row lands under the
+          // old address's key in the new partition.
+          doc.id = `${source}::${sourceExternalId}`;
+          console.log(JSON.stringify({
+            event: "sold_comp_split_identity_resolved",
+            source: "persistVendorSalesToPool",
+            vendorSource: source,
+            resolvedTo: verdict.resolvedTo,
+            attestedBy: verdict.attestedBy,
+          }));
+        }
       }
 
       await container.items.upsert(doc);

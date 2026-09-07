@@ -45,7 +45,7 @@ import { DefaultAzureCredential } from "@azure/identity";
 import { computeHobbyIqCardId, resolveSetKeyForSlug, sameCardNumber } from "./hobbyIqCardId.service.js";
 import { guardSlugInputs, normalizeSportStrict, type SlugGuardResult } from "./slugGuard.service.js";
 import { playerTheTitleAllows } from "./playerTheTitleAllows.js";
-import { decideSplitIdentity } from "./splitIdentityWriteGuard.js";
+import { guardSoldCompDoc } from "./splitIdentityWriteGuard.js";
 import { canonicalizeParallel } from "./parallelCanonicalizer.service.js";
 import { parseParallelComposite } from "./parseParallelComposite.service.js";
 import { enrichCompositeV3 } from "./enrichCompositeV3.service.js";
@@ -1896,12 +1896,19 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<Record
   // does; `inferSportFromContext` deliberately does not, since a text
   // heuristic is what produced the damage. Attested resolves; unattested
   // parks. Counted by reason so the class is measurable from the logs.
+  //
+  // CF-ONE-WRITE-PATH-FOR-SOLD-COMPS (2026-09-07). The decision AND the
+  // mutation it implies now live in `guardSoldCompDoc`, so the bulk entry
+  // points that cannot afford this function's per-row transaction park and
+  // resolve rows IDENTICALLY. This call site keeps only what is genuinely its
+  // own: the telemetry naming `recordSoldComp` as the door, and the id re-mint
+  // (the id embeds `cardId`, and only this function knows how to make one).
   {
-    const outcome = decideSplitIdentity({
-      cardId: doc.cardId,
-      hobbyiqCardId: doc.hobbyiqCardId,
+    const wasCardId = doc.cardId, wasHobbyiqCardId = doc.hobbyiqCardId;
+    const outcome = guardSoldCompDoc(doc as SoldCompDoc & Record<string, unknown>, {
       attestedSport: input.sportAttestedBy ? input.sport ?? null : null,
       attestedBy: input.sportAttestedBy ?? null,
+      guardedBy: "soldCompsStore.recordSoldComp:split-identity-guard",
     });
     if (outcome.verdict === "resolve") {
       // A source named the sport. Both fields take it -- the row is filed once,
@@ -1910,13 +1917,12 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<Record
         event: "sold_comp_split_identity_resolved",
         source: "soldCompsStore.recordSoldComp",
         vendorSource: input.source,
-        wasCardId: doc.cardId,
-        wasHobbyiqCardId: doc.hobbyiqCardId,
+        wasCardId,
+        wasHobbyiqCardId,
         resolvedTo: outcome.resolvedTo,
         attestedBy: outcome.attestedBy,
       }));
-      doc.cardId = outcome.resolvedTo;
-      doc.hobbyiqCardId = outcome.resolvedTo;
+      // Both identity fields were already set to `resolvedTo` by the guard.
       // The id embeds cardId, so it is re-minted or the row lands under the
       // old address's key in the new partition.
       doc.id = makeId(input.source, input.sourceExternalId ?? null, doc.cardId, doc.soldAt);
@@ -1925,12 +1931,7 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<Record
       // price on that date -- so the row is kept and queryable, but parked out
       // of EVERY pool rather than filed under a guess that the census proved
       // wrong about a third of the time.
-      const parked = doc as SoldCompDoc & Record<string, unknown>;
-      parked.identityUnverified = true;
-      parked.identityUnverifiedAt = new Date().toISOString();
-      parked.identityUnverifiedBy = "soldCompsStore.recordSoldComp:split-identity-guard";
-      parked.identityUnverifiedReason = outcome.reason;
-      parked.identityUnverifiedDetail = outcome.detail;
+      // The parked stamp is applied by the guard; only the log is ours.
       console.warn(JSON.stringify({
         event: "sold_comp_split_identity_parked",
         source: "soldCompsStore.recordSoldComp",

@@ -19,6 +19,14 @@ const distRoot = path.resolve(__dirname, "..", "dist");
 const { parseCardQuery } = require(path.join(distRoot, "services", "compiq", "cardQueryParser.js"));
 const { inferSetKeyFromTitle, inferSportFromTitle } = require(path.join(distRoot, "services", "portfolioiq", "parseTitleIdentity.service.js"));
 const { computeHobbyIqCardId } = require(path.join(distRoot, "services", "portfolioiq", "hobbyIqCardId.service.js"));
+// CF-ONE-WRITE-PATH-FOR-SOLD-COMPS (2026-09-07). The re-key below had the SAFE
+// order already (write new, then delete old) but nothing between the two: no
+// read-back verify, so a lagging replica could make a landed write look absent
+// and a stale one look landed, and no `contentHash` recompute, so a moved row
+// carried its OLD partition's hash and the store's pre-write dedup could never
+// see it again. Both belong to the one mover, which also runs the shared
+// identity guard on the document it keeps.
+const { relocateSoldComp, contentHashOf } = require(path.join(__dirname, "lib", "relocate-sold-comp.cjs"));
 
 const APPLY = process.env.APPLY === "true";
 const MAX_MINUTES = Number(process.env.MAX_MINUTES || 60);
@@ -113,13 +121,23 @@ async function main() {
             // order (delete-then-create) was losing rows to a race with
             // the cron webhook re-writing.
             patch.cardId = newSlug;
-            await sold.items.upsert(patch);
-            try { await sold.item(row.id, row.cardId).delete(); }
-            catch (delErr) {
-              // Not fatal — the new row is written; old-partition delete
-              // failure means we have a duplicate that a future normalize
-              // pass will collapse. Log for triage.
-              if (failed < 10) console.warn(`  post-write delete failed id=${row.id} oldPart=${row.cardId}: ${delErr?.code ?? delErr?.message ?? delErr}`);
+            // The partition-scoped dedup key must follow the row to its new
+            // partition, and it is hashed AFTER cardId is final.
+            patch.contentHash = contentHashOf(patch);
+            const res = await relocateSoldComp(sold, {
+              keep: patch,
+              drop: [{ id: row.id, cardId: row.cardId }],
+              verifyFields: ["cardId", "hobbyiqCardId", "price", "soldAt", "contentHash"],
+            });
+            if (!res.ok) {
+              // A failed delete is NOT fatal -- the new row is written, so the
+              // sale is present; what is left is a duplicate a future pass
+              // collapses. A failed VERIFY is the same shape and reported the
+              // same way. Neither is silently swallowed.
+              failed++;
+              if (failed < 10) {
+                console.warn(`  relocate incomplete id=${row.id} oldPart=${row.cardId} stage=${res.stage}: ${res.error ?? "duplicate left"}`);
+              }
             }
             slugChanged++;
           } else {

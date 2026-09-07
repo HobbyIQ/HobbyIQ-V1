@@ -248,8 +248,22 @@ async function main() {
       if (APPLY) {
         const next = stripSystem(doc0);
         next.hobbyiqCardId = repoint;
-        try { await retry(() => pool.items.upsert(next)); repointed++; }
-        catch (err) { failed++; console.error(`      FAILED: ${String(err?.message ?? err).slice(0, 70)}`); }
+        // CF-ONE-WRITE-PATH-FOR-SOLD-COMPS (2026-09-07). A REPOINT does not move
+        // partition, so it needs no delete -- but it DOES rewrite an identity
+        // field, and until now it wrote whatever the list file said without
+        // asking whether it was an address. It goes through the same mover as
+        // the RELOCATE four branches down: same guard, same verified read-back,
+        // with `drop` empty because nothing is being left behind.
+        //
+        // `contentHash` is NOT recomputed: it hashes cardId, and cardId is
+        // unchanged here. Recomputing on a hobbyiqCardId change would move the
+        // dedup key for a row that never moved partition.
+        const res = await relocateSoldComp(pool, {
+          keep: next, drop: [], retry,
+          verifyFields: ["cardId", "hobbyiqCardId", "price", "soldAt"],
+        });
+        if (res.ok) repointed++;
+        else { failed++; console.error(`      FAILED at ${res.stage}: ${String(res.error ?? "").slice(0, 70)}`); }
       } else { repointed++; }
       continue;
     }
