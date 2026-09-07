@@ -50,7 +50,6 @@ import {
   SCARCITY_PREMIUM_ALT_MULTIPLIER,
   T7_QUICK_SALE_MULTIPLIER,
 } from "../../modules/compiq/services/pricing/utils/pricing.constants.js";
-import { getUserBySession } from "../authService.js";
 import { classifyRegime } from "./regimeClassifier.js";
 import {
   multiplierFromGemRate,
@@ -8956,6 +8955,13 @@ async function isTierLadderHeaderAuthorized(req: Request): Promise<boolean> {
   const sessionId = String(req.headers["x-session-id"] ?? "").trim();
   if (!sessionId) return false;
   try {
+    // CF-CRON-AUTH-LOAD (2026-09-07). Deferred for the same reason as the one
+    // in portfolioStore.service: authService resolves AUTH_SESSION_SECRET at
+    // module load and throws when it is unset, and this module sits on the
+    // require() path of the three notification crons, which never touch a
+    // session and are not given the secret. This check runs only on an HTTP
+    // request, so the import belongs at the call.
+    const { getUserBySession } = await import("../authService.js");
     const user = await getUserBySession(sessionId);
     return user?.userId === "admin-testing-hobbyiq";
   } catch {

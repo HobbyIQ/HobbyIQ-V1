@@ -96,7 +96,19 @@ function resolveStateSecret(): string {
   }
   return raw;
 }
-const STATE_SECRET = resolveStateSecret();
+// CF-CRON-AUTH-LOAD (2026-09-07). Resolved on first use rather than at module
+// load. The guard is unchanged and still fail-closed: buildState/parseState are
+// the only readers, and both call this, so no OAuth state can be signed or
+// accepted with a missing, retired or too-short secret. What changes is that
+// merely IMPORTING this module no longer throws — ebayListingSearch pulls it in
+// for getAccessToken (an app-level token that never touches OAuth state), and
+// that import sits on the require() path of the three notification crons, which
+// are not given the secret and died at load before running any work.
+let _stateSecret: string | null = null;
+function stateSecret(): string {
+  if (_stateSecret === null) _stateSecret = resolveStateSecret();
+  return _stateSecret;
+}
 
 export type EbayAuthPlatform = "ios" | "web";
 
@@ -106,7 +118,7 @@ function buildState(userId: string, platform: EbayAuthPlatform): string {
     platform,
     exp: Date.now() + 10 * 60 * 1000,
   })).toString("base64url");
-  const sig = crypto.createHmac("sha256", STATE_SECRET).update(payload).digest("base64url");
+  const sig = crypto.createHmac("sha256", stateSecret()).update(payload).digest("base64url");
   return `${payload}.${sig}`;
 }
 
@@ -115,7 +127,7 @@ function parseState(state: string): { userId: string; platform: EbayAuthPlatform
   if (dot === -1) return null;
   const payload = state.slice(0, dot);
   const sig     = state.slice(dot + 1);
-  const expected = crypto.createHmac("sha256", STATE_SECRET).update(payload).digest("base64url");
+  const expected = crypto.createHmac("sha256", stateSecret()).update(payload).digest("base64url");
   // Constant-time compare
   try {
     if (!crypto.timingSafeEqual(Buffer.from(expected, "base64url"), Buffer.from(sig, "base64url"))) return null;
