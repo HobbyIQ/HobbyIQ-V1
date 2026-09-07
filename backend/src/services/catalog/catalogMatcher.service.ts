@@ -371,6 +371,33 @@ export function stripGradeSegment(slug: string): { slug: string; stripped: strin
  */
 export function adoptResolvedSlug(computedSlug: string, resolved: CatalogMatchResult): SlugAdoption {
   if (!resolved.found || !resolved.slug) return { slug: computedSlug, rebound: false };
+  // CF-A-SLUG-SEGMENT-IS-NOT-A-VENDOR-LABEL (#1938, 2026-09-07). A VENDOR-KEYED
+  // catalog row is a real row, but its id is not an address of ours: adopting
+  // "cardhedge::<bubble-id>" as the slug hands a vendor key to callers that
+  // have been told they hold an hiq slug. persistVendorSalesToPool then writes
+  // its cardId by re-joining "hiq:" onto slug.slice(4) -- documented in that
+  // file as "just slug reassembled", which is true ONLY for an hiq slug. On a
+  // vendor key the slice eats the first four characters of the VENDOR NAME
+  // instead, minting hiq:hedge::… , hiq:sight::… , hiq:ant::… . 8,102 such
+  // rows were measured in the live pool on 2026-09-07, 337 of them written
+  // that morning.
+  //
+  // Refused HERE rather than patched at the reassembly, because the
+  // reassembly is not wrong: it is documented as an identity, and it IS one
+  // for every input this function is supposed to return. The defect is that
+  // this function could return something else. Every matcher step but one
+  // already filters r.id.startsWith("hiq:"); the one that does not
+  // (family-fallback) was held back only by its 0.55 confidence sitting under
+  // the 0.7 gate -- safe by a numeric coincidence, one constant away from
+  // shipping the defect. The rule belongs on the ADOPTION, where it holds
+  // however the steps change.
+  if (!resolved.slug.startsWith("hiq:")) {
+    return {
+      slug: computedSlug,
+      rebound: false,
+      refusedReason: `candidate "${resolved.slug}" is a vendor key, not an hiq: address (${resolved.matchedBy})`,
+    };
+  }
   // CF-A-GRADE-IS-A-FIELD-NEVER-A-SLUG-SEGMENT: an exploded graded catalog row
   // names the right CARD at the wrong GRANULARITY. Strip to the parent BEFORE
   // any comparison, so a resolved `…:psa-10` against an identical computed slug

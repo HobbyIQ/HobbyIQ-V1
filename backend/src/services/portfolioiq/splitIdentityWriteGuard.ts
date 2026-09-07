@@ -62,13 +62,20 @@
  */
 
 import { productIdentityOf } from "../compiq/identityUnionGuard.js";
+// CF-A-SLUG-SEGMENT-IS-NOT-A-VENDOR-LABEL (#1938): the SHIPPED vertical
+// vocabulary, never a list re-typed here. If a sport is added to the product,
+// this guard learns it in the same commit.
+import { CANONICAL_SPORTS } from "./slugGuard.service.js";
 
 /** Why a write was parked. Each value is a reason a human can act on. */
 export type SplitIdentityReason =
   /** The two identity fields name different products and nothing attests either. */
   | "split-identity"
   /** No sport could be resolved from any source, so no slug can be addressed. */
-  | "sport-unresolved";
+  | "sport-unresolved"
+  /** An identity field is not a well-formed address: its sport segment is
+   *  empty or names no canonical vertical, so the row is unaddressable. */
+  | "malformed-key";
 
 export type SplitIdentityOutcome =
   /** The fields agree, or one is a vendor key. Write unchanged. */
@@ -116,7 +123,85 @@ export function withSport(slug: string, sport: string): string {
  * THE decision, for the one write door. Pure: no I/O, no clock, so a unit test
  * drives it directly and every emitter path gets the same answer.
  */
+/**
+ * Why this string is not an ADDRESS, or null when it is one.
+ *
+ * CF-A-SLUG-SEGMENT-IS-NOT-A-VENDOR-LABEL (#1938, 2026-09-07).
+ *
+ * Only applied to strings that CLAIM to be ours -- anything not starting with
+ * `hiq:` is a vendor key and is left alone, exactly as the fail-open below
+ * leaves it. The claim is what is checked: a string wearing our prefix must be
+ * an address we can read back, or the prefix is a lie.
+ *
+ * The three shapes measured in the live pool on 2026-09-07, 8,102 rows:
+ *
+ *     hiq:hedge::1773078923701x8520551…::43f7ac3c   `cardhedge::<id>` with the
+ *     hiq:sight::be80caf8-…::bulk                   first four chars eaten by
+ *                                                   `hiq:${slug.slice(4)}` --
+ *                                                   the "vertical" is the TAIL
+ *                                                   OF THE VENDOR NAME
+ *     hiq:ant::hiq:football:2024:bowman:215:…       `variant::` the same way,
+ *                                                   onto a whole second slug
+ *     hiq:baseball-mlb:2018:topps-heritage:600:…    a vertical alias that is
+ *                                                   not in CANONICAL_SPORTS
+ *
+ * The `slice(4)` shapes come from a real mechanism, not a typo:
+ * `persistVendorSalesToPool` reassembles `hiq:${slug.slice(4)}` on the
+ * documented assumption that `slug` is already an hiq slug -- true when the
+ * builder computed it, FALSE after `adoptResolvedSlug` rebinds it to a matched
+ * catalog row, because that function gates on confidence and never on shape. A
+ * `cardhedge::` catalog id matched at >= 0.7 becomes `slug`, and the
+ * reassembly then eats "card" and glues our prefix onto "hedge::<id>".
+ *
+ * This predicate is the same one the #1936 classification lane uses
+ * (`backend/scripts/classify-split-identity-rows.cjs`, `addressDefect`), which
+ * is how those rows were named PARKED rather than routed. It is stated here in
+ * the shipped code so the WRITE door refuses what the repair lane refuses to
+ * route -- the rule at the door, not only in the lane that cleans up after it.
+ */
+export function addressDefect(slug: string | null | undefined): string | null {
+  const s = String(slug ?? "").trim();
+  if (!s.startsWith("hiq:")) return null;   // a vendor key claims nothing
+  if (s.includes("::")) {
+    return "contains an empty slug segment (a vendor key wearing an hiq: prefix)";
+  }
+  const parts = s.split(":");
+  if (parts.length < 7) {
+    return `has only ${parts.length} segments; an hiq address has at least 7`;
+  }
+  const sport = parts[1];
+  if (!sport) return "has an EMPTY sport segment";
+  if (!CANONICAL_SPORTS.has(sport)) {
+    return `names "${sport}", which is not a canonical vertical`;
+  }
+  return null;
+}
+
 export function decideSplitIdentity(input: SplitIdentityInput): SplitIdentityOutcome {
+  // ── MALFORMED BEFORE SPLIT ────────────────────────────────────────────────
+  // Checked FIRST, and deliberately ahead of the vendor-key fail-open below.
+  // A malformed key is not a disagreement between two cards to be adjudicated;
+  // it is an address nothing can read back, and the split branches would
+  // otherwise compare it as though it named a product. `hiq:hedge::…` splits
+  // into >= 4 segments, so `productIdentityOf` answers "hedge::" and the guard
+  // would have gone on to reason about "hedge" as a sport. Park it by name.
+  {
+    const cardDefect = addressDefect(input.cardId);
+    const hiqDefect = addressDefect(input.hobbyiqCardId);
+    if (cardDefect || hiqDefect) {
+      const which = cardDefect && hiqDefect
+        ? `both addresses are malformed (cardId ${cardDefect}; hobbyiqCardId ${hiqDefect})`
+        : cardDefect
+          ? `the cardId address ${cardDefect}`
+          : `the hobbyiqCardId address ${hiqDefect}`;
+      return {
+        verdict: "park",
+        reason: "malformed-key",
+        detail: `${which} -- an unaddressable key is parked, never written as though it named a card`,
+      };
+    }
+  }
+
   const cardProduct = productIdentityOf(input.cardId);
   const hiqProduct = productIdentityOf(input.hobbyiqCardId);
 

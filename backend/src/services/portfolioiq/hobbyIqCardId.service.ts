@@ -54,6 +54,10 @@ import { reconcileSetKey } from "../catalog/setKeyReconciliation.js";
 import { ruledPokemonEnglishSetKey } from "../catalog/pokemonEnglishSetKeyRuling.js";
 import { normalizePokemonCardNumber } from "../catalog/pokemonCardNumber.js";
 import { isMakerlessCatchAllSetKey, makerlessCatchAllMessage } from "../catalog/makerlessCatchAll.js";
+// CF-A-SLUG-SEGMENT-IS-NOT-A-VENDOR-LABEL (#1938): ONE vertical vocabulary.
+// The builder and the write door must agree on what a sport IS, so the builder
+// asks the door's table rather than keeping a four-alias copy of it.
+import { normalizeSportStrict } from "./slugGuard.service.js";
 export interface HobbyIqCardIdComponents {
   sport: string;              // e.g. "baseball"
   year: number;               // e.g. 2026
@@ -217,15 +221,41 @@ export function slugify(raw: string): string {
     .replace(/^-|-$/g, "");        // trim
 }
 
-/** Normalize sport to the canonical lowercase form. */
-function normalizeSport(sport: string): string {
-  const s = slugify(sport);
-  // Aliases → canonical (defensive; upstream should already normalize)
-  if (s === "nfl") return "football";
-  if (s === "nba") return "basketball";
-  if (s === "mlb") return "baseball";
-  if (s === "nhl") return "hockey";
-  return s;
+/**
+ * Normalize sport to the canonical lowercase form, or null when the label is
+ * not a vertical we can address.
+ *
+ * CF-A-SLUG-SEGMENT-IS-NOT-A-VENDOR-LABEL (#1938, 2026-09-07).
+ *
+ * This function used to end `return s` -- the slugified label, whatever it
+ * was. That made `computeHobbyIqCardId` total over its sport argument, and a
+ * total function over an uncontrolled vocabulary mints an address for every
+ * string a vendor ever typed. Measured on the live pool the same day:
+ *
+ *     hiq:baseball-mlb:2018:topps-heritage:600:base:no-auto
+ *     hiq:ice-hockey:…      hiq:auto-racing:…      hiq:calcio:…
+ *     hiq:basketballcollabs-eligiblesingle:…       hiq:competative-eating:…
+ *
+ * 77 distinct non-canonical verticals across 8,102 rows. Every one of them is
+ * a pool nothing else can ever address: `ice-hockey` and `hockey` are the
+ * SAME card and they do not share a slug, so the comps split and neither side
+ * prices. The four league aliases hardcoded here (nfl/nba/mlb/nhl) were the
+ * whole defence, and they are a four-entry subset of a table that already
+ * exists.
+ *
+ * THE TABLE IS `normalizeSportStrict`, AND THERE IS ONLY ONE OF IT. It
+ * already carries those four aliases plus `ice-hockey`, `auto-racing`,
+ * `calcio`, `non-sports`, `ufc`, `nascar` and the rest; it already rejects
+ * the multi-value vendor tag dumps (`"football, baseball"`); and it is already
+ * what `slugGuard` enforces at the door. Two normalizers meant the guard
+ * refused a slug the builder had happily minted -- the builder now asks the
+ * same table the guard does, so a label either maps or it has no address.
+ *
+ * UNKNOWN IS NULL, NEVER A GUESS. `computeHobbyIqCardId` throws on null
+ * rather than emit an address nothing can ever read back.
+ */
+export function normalizeSport(sport: string): string | null {
+  return normalizeSportStrict(sport);
 }
 
 // The controlled vocabulary.
@@ -2046,7 +2076,20 @@ function formatSubsetSegment(components: HobbyIqCardIdComponents): string {
 }
 
 export function computeHobbyIqCardId(components: HobbyIqCardIdComponents): string {
+  // CF-A-SLUG-SEGMENT-IS-NOT-A-VENDOR-LABEL (#1938, 2026-09-07). The sport is
+  // the NAMESPACE of the address; a label that maps to no canonical vertical
+  // names a pool that nothing else can ever address. Refused here as well as
+  // in slugGuard, for the same reason the makerless catch-all and the unparsed
+  // cardNumber are: slugGuard is the gate callers SHOULD use, and this throw is
+  // what makes a caller that skipped it fail loudly instead of minting
+  // `hiq:ice-hockey:…` beside the real `hiq:hockey:…` pool. The ingest paths
+  // already wrap this in try/catch and skip the row.
   const sport = normalizeSport(components.sport);
+  if (sport === null) {
+    throw new Error(
+      `hobbyiq-cardid: sport "${String(components.sport ?? "")}" is not a canonical vertical — identity is UNDERIVABLE (CF-A-SLUG-SEGMENT-IS-NOT-A-VENDOR-LABEL)`,
+    );
+  }
   const year = Number.isFinite(components.year) ? Math.trunc(components.year) : 0;
   // CF-POKEMON-CHECKLISTS (Pokemon set names arrive in as many shapes as
   // sellers can type, and fragment across every spelling) and
