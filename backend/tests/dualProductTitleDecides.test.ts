@@ -109,10 +109,18 @@ describe("the lane RETIRES by marking, and never by deleting", () => {
   const lane = readFileSync(join(__dirname, "..", "scripts", "relocate-pool-rows-by-list.cjs"), "utf8");
   const retireBlock = lane.slice(lane.indexOf("if (retire) {"), lane.indexOf("if (park) {"));
 
+  // CF-A-MUTATOR-PATCHES-FIELDS-NEVER-THE-WHOLE-DOC (#1941 follow-up,
+  // 2026-09-07). These assertions named the raw `{ op, path, value }` triples
+  // the lane used to build by hand. The lane now names the same fields through
+  // `patchSoldCompFields`, which is what stops a concurrent lane's stamp from
+  // being clobbered; the FIELDS pinned here are unchanged, only the spelling
+  // is. The write path itself is now pinned too, so a revert to a hand-rolled
+  // whole-document write fails here as well as in the census guard.
   it("writes the D19 dedup marker", () => {
-    expect(retireBlock).toContain('path: "/flaggedWrong", value: true');
-    expect(retireBlock).toContain('path: "/dedupSupersededBy"');
-    expect(retireBlock).toContain('path: "/flaggedReason"');
+    expect(retireBlock).toContain("patchSoldCompFields(pool, id, from, {");
+    expect(retireBlock).toContain("flaggedWrong: true");
+    expect(retireBlock).toContain("dedupSupersededBy:");
+    expect(retireBlock).toContain("flaggedReason:");
   });
 
   it("never deletes on the retire path", () => {
@@ -126,7 +134,8 @@ describe("the lane RETIRES by marking, and never by deleting", () => {
 
   it("parks with identityUnverified and no pool assertion", () => {
     const parkBlock = lane.slice(lane.indexOf("if (park) {"), lane.indexOf("REPOINT: right partition"));
-    expect(parkBlock).toContain('path: "/identityUnverified", value: true');
+    expect(parkBlock).toContain("patchSoldCompFields(pool, id, from, {");
+    expect(parkBlock).toContain("identityUnverified: true");
     expect(parkBlock).not.toMatch(/\.delete\(/);
     expect(parkBlock).not.toContain("hobbyiqCardId");
   });
