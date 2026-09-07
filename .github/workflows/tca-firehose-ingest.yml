@@ -224,7 +224,26 @@ jobs:
             PLATFORM="$P_CLEAN" \
             CATEGORY="$CAT_FILTER" \
             CRAWLER_ID="tca-${P_CLEAN,,}-${CAT_FILTER:-all}-${{ inputs.sort || 'date_desc' }}${{ inputs.crawler_slot && format('-{0}', inputs.crawler_slot) || '' }}" \
-            node scripts/tca-firehose-ingest.cjs && PLATFORMS_OK=$((PLATFORMS_OK+1)) || echo "  ($P_CLEAN failed or quota-capped — continuing)"
+            # CF-TCA-EXIT-4-IS-NOT-A-QUOTA-CAP (2026-09-07). Exit 4 is the
+            # write-reconciliation verdict (writeReconciliation.ts), NOT a
+            # fetch failure: the pull worked and the shortfall is over the
+            # 0.5% tolerance. On 2026-09-07 that shape — pages=8 fetched=7792
+            # written=915 skipped=6812, 65 unaccounted (0.83%) — was folded in
+            # with quota exhaustion and reported as "wrote nothing on every
+            # platform", sending the reader after a 200K/day cap that was
+            # sitting at 199,998. Count it as a platform that pulled, and let
+            # the exit code below carry the reconciliation red on its own.
+            set +e
+            node scripts/tca-firehose-ingest.cjs
+            RC=$?
+            set -e
+            case "$RC" in
+              0) PLATFORMS_OK=$((PLATFORMS_OK+1)) ;;
+              4) PLATFORMS_OK=$((PLATFORMS_OK+1))
+                 RECONCILE_RED=1
+                 echo "  ($P_CLEAN pulled, but write reconciliation failed — exit 4)" ;;
+              *) echo "  ($P_CLEAN failed or quota-capped — continuing)" ;;
+            esac
           done
 
           # CF-TCA-QUOTA-VISIBILITY (Drew, 2026-08-13: "It isn't moving.").
@@ -251,6 +270,15 @@ jobs:
             exit 1
           fi
           echo "platforms with a successful pull: $PLATFORMS_OK"
+
+          # A pull that landed rows but could not account for all of them is
+          # still red — writeReconciliation is the whole point of "verify the
+          # write, not the run" — but it is a DIFFERENT red from an outage, and
+          # the message has to say which one the reader is looking at.
+          if [ "${RECONCILE_RED:-0}" -eq 1 ]; then
+            echo "::error::TCA ingest pulled rows but write reconciliation failed (exit 4) — rows were fetched and some were written; the shortfall is above tolerance. This is NOT a quota cap. See the WORK VANISHED block above for intended/written/skipped/failed."
+            exit 1
+          fi
 
   match-enricher:
     name: TCA match-enricher (title → identity)
