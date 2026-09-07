@@ -49,6 +49,7 @@
  */
 const fs = require("node:fs");
 const path = require("node:path");
+const { jaSetKeyFor } = require("./lib/tcgdex-ja-set-key.cjs");
 
 const arg = (n, d) => { const h = process.argv.find((a) => a.startsWith(`--${n}=`)); return h ? h.slice(n.length + 3) : d; };
 const OUT_DIR = arg("outDir", "C:/tmp/tcgdex-ja-modern");
@@ -145,9 +146,13 @@ async function main() {
   if (!ja || !en) { console.error("FATAL: set catalogs unreachable"); process.exit(1); }
   const enIds = new Set(en.map((s) => s.id));
 
-  // ja-EXCLUSIVE only: a set that exists in EN is served by the EN pipeline and
-  // ingesting its ja twin would mint duplicate vocabulary.
-  let work = ja.filter((s) => !enIds.has(s.id) && MODERN_ID.test(s.id));
+  // A SHARED CODE IS NOT A SHARED CARD (CF-THE-JAPANESE-VINTAGE-SET-GETS-ITS-
+  // OWN-KEY, #1959). This used to read `!enIds.has(s.id)` -- drop any JA set an
+  // EN set already names -- which was written before the ruling gave those sets
+  // an address. Now they stage under `ja-<code>`, so the scope is every modern
+  // JA set and the KEY carries the market. See lib/tcgdex-ja-set-key.cjs for
+  // why the old exact-case compare was wrong in both directions.
+  let work = ja.filter((s) => MODERN_ID.test(s.id));
   if (ONLY.length) {
     const want = new Set(ONLY.map((s) => s.toLowerCase()));
     work = ja.filter((s) => want.has(s.id.toLowerCase()));
@@ -210,8 +215,11 @@ async function main() {
       continue;
     }
 
-    // SETKEY = THE BARE OFFICIAL CODE (ruling R1/R2/R3, 2026-09-01).
-    const setKey = s.id.toLowerCase();
+    // SETKEY = THE BARE OFFICIAL CODE (ruling R1/R2/R3, 2026-09-01), EXCEPT
+    // where an English set owns that code, in which case R5 (#1959) rules it
+    // `ja-<code>`. `s.id.toLowerCase()` alone put "Japanese ロケット団の栄光"
+    // on the English `sv10` key -- 42 catalog rows #1959 had to reslug.
+    const setKey = jaSetKeyFor(s.id, enIds);
     const file = `${year}-${setKey}-pokemon`;
     fs.writeFileSync(path.join(OUT_DIR, `${file}.csv`), lines.join("\n") + "\n");
     // SIDECAR NAME = `<stem>.manifest.json`, NOT `<stem>.csv.meta.json`.
