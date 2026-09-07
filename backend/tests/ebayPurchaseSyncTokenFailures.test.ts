@@ -92,7 +92,36 @@ describe("the runner's exit code reflects DATA failures only", () => {
   });
 
   it("exits 1 on data failures", () => {
-    expect(runner).toMatch(/if \(dataFailures\.length > 0\) \{[\s\S]{0,200}process\.exit\(1\)/);
+    // ── WHY THIS NO LONGER LOOKS FOR A BARE `process.exit(1)` ──────────────
+    //
+    // The CONTRACT is unchanged and is what this asserts: a DATA failure must
+    // make the run exit non-zero. The SPELLING changed when this lane took the
+    // shared clock in the #1944 ratchet's wave 4.
+    //
+    // CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809) requires every budgeted
+    // lane to leave through finishLane(), which flushes a piped stdout and
+    // disposes the Cosmos client under a cap before exiting. A bare
+    // `process.exit(1)` here would SKIP that — and skipping the flush is how
+    // four runs of retire-self-derived-identities lost the very reconcile lines
+    // the relaunch gate greps, on a `| tee` pipe whose stdout is asynchronous.
+    // It would also cost the run its outcome classification: the relaunch step
+    // reads `finishLane: exiting code <n>` to tell a lane that DECLARED
+    // something (outcome (d)) from one that was KILLED (outcome (c)), and a
+    // process that exits without that line reads as a kill.
+    //
+    // So the lane sets `process.exitCode = 1` and lets its single exit path
+    // carry it. Both halves are pinned, because either alone would let the
+    // contract rot: the assignment must be INSIDE the dataFailures branch, and
+    // the tail must pass that code to finishLane rather than a literal 0.
+    expect(
+      runner,
+      "a DATA failure must still make this run exit non-zero",
+    ).toMatch(/if \(dataFailures\.length > 0\) \{[\s\S]{0,300}process\.exitCode = 1/);
+    expect(
+      runner,
+      "and the exit must go through finishLane(), carrying that code rather than a literal 0 "
+        + "— a bare process.exit() skips the flush #1809 exists to guarantee",
+    ).toMatch(/finishLane\(process\.exitCode \|\| 0/);
   });
 
   it("does NOT exit on token failures alone", () => {

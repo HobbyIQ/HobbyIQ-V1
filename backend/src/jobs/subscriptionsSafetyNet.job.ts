@@ -37,7 +37,7 @@ import {
   AppleConfigError,
 } from "../services/subscriptions/appleConfig.js";
 import { productIdToPlan } from "../services/subscriptions/productMap.js";
-import { runSingleFlight } from "./_singleFlight.js";
+import { runSingleFlight, schedulerTickMs } from "./_singleFlight.js";
 
 interface ReconcileSummary {
   totalScanned: number;
@@ -302,7 +302,7 @@ export function startSubscriptionsSafetyNetJob(): void {
       runSingleFlight("subscriptionsSafetyNet", 24 * 60 * 60 * 1000, runSubscriptionsSafetyNetJob).catch((err) => {
         console.error("[subscriptionsSafetyNet] runSubscriptionsSafetyNetJob threw:", err?.message ?? err);
       });
-    }, 24 * 60 * 60 * 1000);
+    }, schedulerTickMs(24 * 60 * 60 * 1000));
   }, delay);
 }
 
