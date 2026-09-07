@@ -114,10 +114,20 @@ export function resolveVertical(input: {
   const sport = provenSport(title);
   if (sport) return { vertical: sport, confident: true, reason: "sport-keyword" };
 
-  // Nothing identified it. Return the fallback but say so, so the caller can
-  // record `vertical-defaulted` and we can finally measure how big this is.
+  // Nothing identified it.
+  //
+  // CF-NO-DEFAULT-SPORT (#1924 follow-up, 2026-09-07). This used to read
+  // `input.fallback ?? "baseball"` -- so a caller that passed NO fallback,
+  // having deliberately declined to guess, was handed the very default this
+  // module was written to expose. The hardcoded half is gone: a caller that
+  // names no fallback now gets `""`, and `confident: false` beside it says
+  // why. Callers that DO pass a fallback are unchanged (dataCleanJob passes
+  // the row's own already-resolved sport, which is a real prior, not a guess).
+  //
+  // The measured cost of the old default: 82.9% of the 94,275 sport-mismatched
+  // sold_comps rows the #1924 census found originate in baseball.
   return {
-    vertical: input.fallback ?? "baseball",
+    vertical: input.fallback ?? "",
     confident: false,
     reason: "defaulted",
   };
