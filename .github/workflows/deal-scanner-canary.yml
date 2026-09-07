@@ -1,0 +1,175 @@
+name: Deal Scanner Canary
+
+# CF-DEAL-SCANNER-CANARY (GO-LIVE P2-4, checklist §Alerts item 3:
+# "Deal-scanner job failure — buyerIqDealScanner.job runs in-process on
+# App Service; a crash today is silent.")
+#
+# WHY IT IS SILENT, CONCRETELY. The scanner is not a workflow. It is a
+# `setInterval` armed from backend/src/server.ts:111, so there is no run
+# history to go red and no step conclusion to read. On top of that, tick()
+# swallows every throw into a console.error and still prints its summary,
+# and every Cosmos accessor in the service returns null on failure — so a
+# total Cosmos outage produces a fully-zeroed, error-free summary that is
+# byte-for-byte identical to a quiet night.
+#
+# SOURCE OF TRUTH: App Insights `traces`, event `buyeriq_deal_scan_summary`
+# (backend/src/services/buyeriq/buyerIqDealScanner.service.ts:342), which
+# reaches App Insights because server.ts:39 arms setAutoCollectConsole.
+# NOT a container: the scanner's only Cosmos write (buyeriq_deals_sent) is
+# conditional on a deal clearing the threshold AND a push delivering, so a
+# healthy quiet hour and a three-day-dead process both write zero rows.
+#
+# THRESHOLD ARITHMETIC. The job's interval is 60 minutes
+# (BUYERIQ_DEAL_SCANNER_INTERVAL_MIN, default 60). The heartbeat ceiling is
+# schedule x 2 = 2h, so one missed cycle is tolerated and two is not. This
+# canary itself runs every 6h, which is deliberately COARSER than the
+# ceiling it enforces: the ceiling is about the scanner's silence, not this
+# workflow's cadence, and a 6h cron catches a dead scanner within 6h while
+# costing four runs a day instead of twenty-four.
+#
+# MEASURED 2026-09-07 (read-only): the 7-day window held 3 summary traces,
+# ALL on 09-07 between 15:17Z and 15:45Z, clustered around an App Service
+# restart. The six days before carry nothing at all. That is the shape this
+# canary exists to name.
+
+on:
+  schedule:
+    - cron: '15 */6 * * *'   # every 6h, offset from freshness (:30) and token coverage (:45)
+  workflow_dispatch:
+    inputs:
+      max_silence_hours:
+        description: 'Heartbeat ceiling (hours). Default 2 = 2x the 60-min job interval.'
+        required: false
+        type: string
+        default: '2'
+      window_hours:
+        description: 'Trace lookback window (hours). Default 24.'
+        required: false
+        type: string
+        default: '24'
+      max_error_rate:
+        description: 'Ceiling on errors/targets-scanned across the window. 0 = off. Default 0.5.'
+        required: false
+        type: string
+        default: '0.5'
+
+jobs:
+  heartbeat:
+    name: BuyerIQ deal scanner heartbeat
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      id-token: write
+      contents: read
+      issues: write
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend deps
+        working-directory: backend
+        run: npm ci --omit=dev
+
+      - name: Login to Azure
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_1259D9D213E34AE29B2DD54B3E755C4D }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5AB8B3DC612348FD9D37DBE28FF40802 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A45CF8552AE94AF68A046FB846E21206 }}
+
+      - name: Run deal scanner canary
+        id: canary
+        working-directory: backend
+        env:
+          WINDOW_HOURS: ${{ inputs.window_hours || '24' }}
+          MAX_SILENCE_HOURS: ${{ inputs.max_silence_hours || '2' }}
+          MAX_ERROR_RATE: ${{ inputs.max_error_rate || '0.5' }}
+        run: |
+          set -uo pipefail
+          # The query lives HERE, not in the script, so an operator can paste
+          # it into the portal unchanged and get the same rows the canary saw.
+          # The script stays free of the Azure SDK and unit-testable on fixtures.
+          az monitor app-insights query \
+            --app 468bd437-5d16-47b4-90fb-5ee5d41726ae \
+            --analytics-query "traces | where timestamp > ago(${WINDOW_HOURS}h) | where message has 'buyeriq_deal_scan_summary' | project timestamp, message | order by timestamp desc | take 500" \
+            -o json > /tmp/deal-scan-traces.json
+          if [ ! -s /tmp/deal-scan-traces.json ]; then
+            echo "::error::App Insights returned nothing at all — the scanner was NOT measured"
+            exit 2
+          fi
+          TRACE_JSON=/tmp/deal-scan-traces.json node scripts/checkDealScannerHeartbeat.cjs
+
+      # Same lane as the deploy-failure alert (#1954): github.token only, no
+      # Azure login, so an Azure outage cannot take out both the scanner and
+      # the alert about the scanner. One issue per UTC day, threaded on retry.
+      - name: Open or update the deal-scanner-silent issue
+        if: ${{ failure() && steps.canary.outcome == 'failure' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          RUN_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          TODAY="$(date -u +%Y-%m-%d)"
+          TITLE="DEAL SCANNER SILENT $TODAY"
+          {
+            echo "The BuyerIQ deal scanner has not reported a completed scan inside its heartbeat window."
+            echo ""
+            echo "It runs **in-process on App Service** (\`setInterval\`, armed at \`backend/src/server.ts:111\`),"
+            echo "so there is no workflow run to go red — this canary is the only thing that notices."
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| Run | [$GITHUB_RUN_ID]($RUN_URL) |"
+            echo "| Source of truth | App Insights \`traces\`, event \`buyeriq_deal_scan_summary\` |"
+            echo "| Job interval | 60 min (\`BUYERIQ_DEAL_SCANNER_INTERVAL_MIN\`) |"
+            echo "| Heartbeat ceiling | ${MAX_SILENCE_HOURS:-2}h (interval x 2) |"
+            echo ""
+            echo "**First three things to check**"
+            echo ""
+            echo "1. Is the App Service up at all? A restart loop stops the timer with no other symptom."
+            echo "2. Is \`BUYERIQ_DEAL_SCANNER_DISABLE\` set to \`true\` on HobbyIQ3?"
+            echo "3. Did a deploy land that throws before \`startBuyerIqDealScannerJob()\`? server.ts:113 only console.errors it."
+            echo ""
+            echo '```bash'
+            echo "curl -s https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net/api/health | jq '.build'"
+            echo "az monitor app-insights query --app 468bd437-5d16-47b4-90fb-5ee5d41726ae \\"
+            echo "  --analytics-query \"traces | where timestamp > ago(24h) | where message has 'buyeriq_deal_scan' | project timestamp, message | order by timestamp desc\""
+            echo '```'
+            echo ""
+            echo "<sub>Filed automatically by the \`Deal Scanner Canary\` workflow. Close it once a scan reports again.</sub>"
+          } > /tmp/deal-scanner-body.md
+
+          # Deliberately NOT filtered by --label: the labels may not exist (see
+          # the create branch below), and a label filter matching nothing would
+          # make this lookup always miss and file a fresh issue every 6h. The
+          # exact-title match below is what identifies the thread.
+          EXISTING="$(gh issue list --repo "$GITHUB_REPOSITORY" --state open \
+            --search "$TITLE in:title" --json number,title \
+            --jq "map(select(.title == \"$TITLE\")) | .[0].number // empty" 2>/dev/null || true)"
+
+          if [ -n "$EXISTING" ]; then
+            echo "::notice::deal-scanner issue #$EXISTING already open for $TITLE — commenting"
+            gh issue comment "$EXISTING" --repo "$GITHUB_REPOSITORY" --body-file /tmp/deal-scanner-body.md \
+              || echo "::warning::could not comment on #$EXISTING — the run log still carries the failure"
+          else
+            # Labels are best-effort, the ISSUE is not. `gh issue create` FAILS
+            # OUTRIGHT on a label the repo does not carry, and neither `ops` nor
+            # `canary` exists today (verified 2026-09-07: both 404). A labelled-only
+            # create would file NOTHING and leave only a ::warning:: - the alert
+            # silently absent in exactly the incident it exists for. Try labelled,
+            # fall back to unlabelled, then warn.
+            gh issue create --repo "$GITHUB_REPOSITORY" \
+              --title "$TITLE" \
+              --body-file /tmp/deal-scanner-body.md \
+              --label ops --label canary \
+              || gh issue create --repo "$GITHUB_REPOSITORY" \
+                   --title "$TITLE" \
+                   --body-file /tmp/deal-scanner-body.md \
+              || echo "::warning::could not open the deal-scanner issue — the run log still carries the failure"
+          fi
