@@ -2368,7 +2368,18 @@ jobs:
             else
               echo "::notice::budget hit (written=${N:-0}) — re-dispatching slot ${{ inputs.slot }} to continue"
             fi
-            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=rematch-sold-comps -f mode="${{ inputs.mode }}" -f apply=false -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f years="${{ inputs.years }}" -f limit="${{ inputs.limit }}"
+            # CF-A-RELAUNCH-THAT-DROPS-AN-INPUT-INHERITS-A-DEFAULT (2026-09-07).
+            # `scope`, `sports` and `setkey_like` were NOT forwarded here. For
+            # MODE=apply-improve `scope` is the APPLY CLASS SCOPE and is
+            # REQUIRED -- so a relaunch that omitted it re-dispatched with the
+            # workflow default 'refractor', which that mode REFUSES (exit 2).
+            # Measured: 18 slots (10..28, less 17) of the 2026-09-07 fleet died
+            # this way in 55-70s each, having read not one row, and #1913's
+            # KILLED branch reported them as kills at the 150-minute ceiling.
+            # The two row-filter inputs are forwarded for the same reason: a
+            # continuation that silently widens its own scope is a different
+            # run than the one the operator dispatched.
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=rematch-sold-comps -f mode="${{ inputs.mode }}" -f apply=false -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f years="${{ inputs.years }}" -f limit="${{ inputs.limit }}" -f scope="${{ inputs.scope }}" -f sports="${{ inputs.sports }}" -f setkey_like="${{ inputs.setkey_like }}"
           elif grep -aqE "finishLane: exiting code 0( |$)" /tmp/backfill.log && [ "${{ steps.backfill.outcome }}" = "success" ]; then
             echo "::notice::finished within budget — done, no re-dispatch."
           elif grep -aqE "finishLane: exiting code [0-9]+" /tmp/backfill.log; then
@@ -2389,7 +2400,24 @@ jobs:
             tail -n 20 /tmp/backfill.log 2>/dev/null || echo "  (no log)"
             exit 1
           else
-            echo "::error::KILLED before finish — the lane never reached finishLane; NOT finished; re-dispatch withheld — investigate"
+            # CF-AN-EMPTY-LOG-IS-NOT-A-BUDGET-KILL (2026-09-07). "KILLED before
+            # finish" reads as a kill at the 150-minute ceiling, and for 18 runs
+            # of the 2026-09-07 fleet that reading was WRONG: they died in 55-70
+            # SECONDS at a startup refusal, having read no rows at all. The lane
+            # now prints a STARTUP line to stdout before any require (so `tee`
+            # captures it whatever fails afterwards) and a STARTUP REFUSED line
+            # naming the phase when it refuses. Read them and say which it was,
+            # rather than making the operator infer a kill from an empty tail.
+            if grep -aq "rematch-sold-comps: STARTUP REFUSED" /tmp/backfill.log; then
+              echo "::error::STARTUP REFUSED — the lane never began work; this is NOT a budget kill. No rows were read and NOTHING was written; the slot is UNSTARTED, not half-done. Re-dispatch it with the inputs the refusal names."
+              grep -a "STARTUP REFUSED\|^FATAL \[phase=" /tmp/backfill.log | head -n 20 || true
+            elif [ ! -s /tmp/backfill.log ]; then
+              echo "::error::EMPTY LOG — the lane did not even reach its first stdout line. That line is a source literal printed before any require, so an empty log now means the process never started at all (runner/image failure, or the step was killed before node ran) rather than a silent refusal."
+            elif grep -aq "rematch-sold-comps: STARTUP ok" /tmp/backfill.log && ! grep -aqE "^rematch-sold-comps  MODE=" /tmp/backfill.log; then
+              echo "::error::DIED DURING STARTUP — the lane printed its STARTUP line but never reached its banner, so it failed at module load (a missing dist/, a bad require, or an OOM before work began). NOT a budget kill; nothing was written."
+            else
+              echo "::error::KILLED before finish — the lane never reached finishLane; NOT finished; re-dispatch withheld — investigate"
+            fi
             echo "  step outcome: ${{ steps.backfill.outcome }}"
             echo "  budget marker: absent    finishLane line: $(grep -acE 'finishLane: exiting code [0-9]+' /tmp/backfill.log 2>/dev/null || echo 0)"
             echo "  last 20 lines of /tmp/backfill.log:"
