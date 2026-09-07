@@ -52,6 +52,7 @@ import {
 } from "../catalog/pokemonSetCodes.js";
 import { slugify } from "./hobbyIqCardId.service.js";
 import { statedFinishFromChecklist } from "./statedFinishFromChecklist.js";
+import { pokemonFinishFromTitle } from "./pokemonFinishFromTitle.js";
 
 /** TCG `POS/TOTAL` card number, e.g. "008/132". Position CAN exceed the total
  *  (secret/hyper rares are numbered above set size), so only the <=400 bound
@@ -841,6 +842,11 @@ export function parseListingIdentity(
   const finish = extractParallel(t, {
     year: opts?.year ?? fromSlug.year,
     setKey: opts?.setKey ?? fromSlug.setKey,
+    // CF-A-FINISH-IS-A-CARD-LINE, AT THE TITLE PARSER (Drew, 2026-09-07). The
+    // Pokemon finish vocabulary is consulted only under the SAME gate the
+    // number reader above uses, because "Holo", "Foil" and "Reverse" are
+    // ordinary words in a sports title. See pokemonFinishFromTitle.ts.
+    isPokemon,
   });
   // The whitelist below already names some variations verbatim ("Chrome-Image
   // Variation"); that spelling is more specific than the family read and is
@@ -1386,7 +1392,10 @@ function extractPrintRun(title: string, isTcg = false, isPokemon = false): numbe
  *  (Shimmer/Lava/Wave/RayWave/Grass/X-Fractor) > Sapphire variants when
  *  Sapphire is the product context + a color appears > color refractors
  *  > misc named parallels. Unrecognized → "Base". */
-function extractParallel(title: string, ctx?: { year?: number | null; setKey?: string | null }): string {
+function extractParallel(
+  title: string,
+  ctx?: { year?: number | null; setKey?: string | null; isPokemon?: boolean },
+): string {
   // CF-REF-IS-REFRACTOR (Drew, 2026-08-24). Sellers abbreviate it, and the
   // abbreviation was invisible to every rule below.
   //
@@ -2050,6 +2059,43 @@ function extractParallel(title: string, ctx?: { year?: number | null; setKey?: s
   if (!isMultiCardLot(T)) {
     const stated = statedFinishFromChecklist(T, { year: ctx?.year ?? null, setKey: ctx?.setKey ?? null });
     if (stated) return stated;
+  }
+
+  // CF-A-FINISH-IS-A-CARD-LINE, AT THE TITLE PARSER (Drew, 2026-09-07).
+  //
+  // LAST, UNDER THE POKEMON GATE, AND ONLY WHERE THE ANSWER WAS ABOUT TO BE
+  // "Base". Every colour, pattern, product and scarcity rule above has already
+  // returned, and the checklist reader above has already had its turn -- so this
+  // overrides nothing and can only fill an answer that was otherwise empty.
+  //
+  // It exists because the checklist reader CANNOT cover this: its corpus
+  // (`data/checklist-parallel-names.json`, built 2026-09-04) carries 627
+  // products and exactly ONE of them is Pokemon. With no product context it
+  // falls to a global index whose floors -- `MIN_GLOBAL_TOKEN_LEN` = 5, the
+  // single-word product floor, the one-word truncation guard -- are correct for
+  // the sports hobby they were measured on and refuse "holo" (4 chars),
+  // "reverse foil" and "reverse holo" (absent from the corpus entirely) and
+  // "normal" (absent). Widening those floors globally would be a sports
+  // regression; they exist because "ice"/"war"/"cup" collide with card text.
+  //
+  // The cost of not reading them is measured, not theoretical. #1937 ran a
+  // 600-row sample through the rematch classifier before and after its slug
+  // fold and got byte-for-byte identical output: 150/150 CONFLICT, 0 writable,
+  // on every token. The fold was never what refused them -- the derivation
+  // answered "Base" on titles ending in the words "Reverse Foil", so the
+  // classifier refused on `dropped:parallel` and 299,317 reverse-family sales
+  // stayed permanently unactionable in pools their own titles contradict.
+  //
+  // THE GATE IS NOT OPTIONAL. "Holo" is Panini Optic's word for a Holo prizm,
+  // "Gold Foil" is a 1990s Topps/Fleer parallel, and "Reverse" is ordinary
+  // sports title text. This is the same gate `normalizeSetKey` and the #1937
+  // slug fold already apply to the Pokemon vocabulary, for the same reason.
+  //
+  // A LOT STATES NO ONE CARD'S FINISH -- the same `isMultiCardLot` refusal the
+  // reader above carries, for the same reason.
+  if (ctx?.isPokemon && !isMultiCardLot(T)) {
+    const pokemonFinish = pokemonFinishFromTitle(T);
+    if (pokemonFinish) return pokemonFinish.display;
   }
 
   return "Base";
