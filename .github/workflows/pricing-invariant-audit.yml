@@ -166,6 +166,10 @@ jobs:
             echo "::error::COSMOS_CONNECTION_STRING empty from App Service"
             exit 1
           fi
+          # CF-THE-LOG-IS-BOTH-STREAMS (#1963/#1975): tee's exit code is always 0, so
+          # without pipefail a crashed audit reports SUCCESS and its findings are
+          # simply absent rather than red.
+          set -o pipefail
           COSMOS_CONNECTION_STRING="$COSMOS_CONNECTION_STRING" \
           COSMOS_DATABASE=hobbyiq \
           USER_ID="${{ inputs.user_id || '' }}" \
@@ -299,6 +303,9 @@ jobs:
             echo "::error::COSMOS_CONNECTION_STRING empty from App Service"
             exit 1
           fi
+          # CF-THE-LOG-IS-BOTH-STREAMS (#1963/#1975): see above -- pipefail keeps the
+          # corpus audit's own exit code instead of tee's always-zero one.
+          set -o pipefail
           COSMOS_CONNECTION_STRING="$COSMOS_CONNECTION_STRING" \
           COSMOS_DATABASE=hobbyiq \
           DEPLOY_HEALTH_JSON=/tmp/deploy-health.json \
@@ -316,7 +323,9 @@ jobs:
         if: always()
         working-directory: backend
         run: |
-          node scripts/rebaseline-i9-reference.cjs | tee /tmp/i9-stamp.log || true
+          # CF-THE-LOG-IS-BOTH-STREAMS (#1963/#1975): `|| true` already swallows the
+          # exit code, so stderr is the ONLY place a failure of this stamp can show.
+          node scripts/rebaseline-i9-reference.cjs 2>&1 | tee /tmp/i9-stamp.log || true
           {
             echo '### I9 reference stamp'
             echo ''

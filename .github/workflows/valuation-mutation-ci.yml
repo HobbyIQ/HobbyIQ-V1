@@ -74,7 +74,13 @@ jobs:
         working-directory: backend
         env:
           MUTANTS: ${{ inputs.mutants || '' }}
-        run: node scripts/mutation-valuation-core.cjs 2>&1 | tee /tmp/mutation.log
+        run: |
+          # CF-THE-LOG-IS-BOTH-STREAMS (#1963/#1975): a pipeline exits on its LAST
+          # command, and tee always exits 0. Without pipefail this step reports
+          # SUCCESS when a mutant went UNCAUGHT -- the one result the job exists to
+          # catch -- because the failure rode the exit code tee threw away.
+          set -o pipefail
+          node scripts/mutation-valuation-core.cjs 2>&1 | tee /tmp/mutation.log
 
       - name: Post digest to run summary
         if: always()
