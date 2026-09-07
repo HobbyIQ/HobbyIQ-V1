@@ -105,6 +105,13 @@
  * with `dryRun: !APPLY`: read everything, derive everything, write only when
  * armed. Anything moveCatalogRow would refuse, the report refuses too.
  *
+ * The same day proved the point twice. The Crown Zenith Galarian Gallery list
+ * (292 EN->EN reslugs) reported 292/292 and applied 0, failing every row on
+ * "newSlug is not a hiq slug" -- a VALIDATION refusal, nothing to do with the
+ * market guard or with occupancy. A report that skips the derivation cannot
+ * predict ANY of the three, which is why the fix is one shared call rather
+ * than three mirrored checks that would drift apart again.
+ *
  * Env: COSMOS_CONNECTION_STRING; BACKFILL_APPLY/APPLY; SCOPE=<list file>
  *      (path relative to backend/; REQUIRED -- this lane has no default list).
  */

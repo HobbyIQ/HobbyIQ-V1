@@ -35,6 +35,7 @@ const listDir = join(__dirname, "..", "data", "catalog-relocations");
 const baseballList = join(listDir, "2026-09-06-bbp-preview-baseball.json");
 const basketballList = join(listDir, "2026-09-06-bbp-preview-basketball.json");
 const japanese151List = join(listDir, "2026-09-06-pokemon-151-japanese-rows.json");
+const zenithList = join(listDir, "2026-09-06-crown-zenith-galarian-gallery.json");
 
 type Entry = { id: string; action: string; to?: string; reason?: string; evidence?: string };
 type ListDoc = { forLane: string; entries: Entry[]; rulings?: string[]; excluded?: unknown[] };
@@ -587,6 +588,78 @@ describe("the Japanese 151 list is idempotent over the half-applied apply", () =
     for (const e of doc.entries.filter((x) => x.action === "reslug")) {
       const row = { setName: "2023 Pokemon Japanese Scarlet & Violet 151", setKey: "151", id: e.id, sport: "pokemon" };
       expect(marketVerdict(row, String(e.to).split(":")[3], "pokemon").allowed).toBe(true);
+    }
+  });
+});
+
+describe("the Crown Zenith list is well-formed — the validator was wrong, not the list", () => {
+  const doc = readList(zenithList);
+
+  /**
+   * THE SECOND INSTANCE OF THE SAME DEFECT, 2026-09-07. The report said
+   * "RESLUGGED 292, failed 0"; the apply wrote 0 and failed 292 on
+   * "moveCatalogRow: newSlug is not a hiq slug:
+   * hiq:pokemon:2023:swsh12-5gg:gg01:full-art:no-auto:cgc-10".
+   *
+   * THE LIST IS VALID. Every entry is an 8-segment GRADED CHILD whose id is
+   * `${parentSlug}:${tier}` -- catalogRowOps' own documented shape -- and every
+   * destination differs from its source in the product segment ALONE. Nothing
+   * here is malformed, so nothing in this file is edited: the fix is in
+   * buildIncoming, which now splits a graded tail before parsing.
+   */
+  it("names this lane and holds 292 reslugs, no retires", () => {
+    expect(doc.forLane).toBe("relocate-catalog-rows-by-list");
+    expect(doc.entries).toHaveLength(292);
+    expect(doc.entries.every((e) => e.action === "reslug")).toBe(true);
+  });
+
+  it("every entry passes the lane's own validation", () => {
+    for (const e of doc.entries) expect(L.classifyEntry(e).ok).toBe(true);
+  });
+
+  it("EVERY entry is a GRADED CHILD — 8 segments with a grade tail", () => {
+    for (const e of doc.entries) {
+      const from = e.id.split(":"), to = String(e.to).split(":");
+      expect(from).toHaveLength(8);
+      expect(to).toHaveLength(8);
+      // The tail is a grade tier: one segment, never the print-run segment.
+      expect(to[7]).toMatch(/^(psa|bgs|cgc|sgc)-/);
+      expect(to[7].startsWith("num-")).toBe(false);
+    }
+  });
+
+  it("ONLY the product segment moves: swsh12-5 -> swsh12-5gg", () => {
+    for (const e of doc.entries) {
+      const a = e.id.split(":"), b = String(e.to).split(":");
+      expect(a[3]).toBe("swsh12-5");
+      expect(b[3]).toBe("swsh12-5gg");
+      a[3] = ""; b[3] = "";
+      expect(b.join(":")).toBe(a.join(":"));
+    }
+  });
+
+  it("and the destination product is what the lane asks moveCatalogRow for", () => {
+    for (const e of doc.entries) {
+      expect(L.crossProductFields(e.id, String(e.to))).toEqual({ setKey: "swsh12-5gg" });
+    }
+  });
+
+  it("no duplicate ids and no two rows onto one address", () => {
+    const ids = doc.entries.map((e) => e.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    const tos = doc.entries.map((e) => String(e.to));
+    expect(new Set(tos).size).toBe(tos.length);
+  });
+
+  it("EN -> EN, so the market guard has nothing to say either way", () => {
+    // Both keys are English Crown Zenith codes. The guard must not invent a
+    // refusal here -- silence on one side means the move proceeds.
+    const { marketVerdict } = require_(
+      join(__dirname, "..", "scripts", "lib", "market-guard.cjs"),
+    ) as { marketVerdict: (r: unknown, k: string, s?: string) => { allowed: boolean } };
+    for (const e of doc.entries.slice(0, 20)) {
+      const row = { setName: "2023 Pokemon Crown Zenith Galarian Gallery", setKey: "swsh12-5", id: e.id, sport: "pokemon" };
+      expect(marketVerdict(row, "swsh12-5gg", "pokemon").allowed).toBe(true);
     }
   });
 });
