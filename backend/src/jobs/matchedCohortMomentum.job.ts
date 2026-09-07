@@ -35,7 +35,7 @@ import {
 } from "../services/compiq/cardhedge.client.js";
 import { computeMomentumFromNormalizedWeeks } from "../services/playerTrend/momentum.compute.js";
 import type { NormalizedWeeklySales } from "../services/playerTrend/playerTrend.types.js";
-import { runSingleFlight } from "./_singleFlight.js";
+import { runSingleFlight, schedulerTickMs } from "./_singleFlight.js";
 import {
   assembleMarketPlayersPayload,
   writeMarketPlayersPayload,
@@ -463,7 +463,7 @@ export function startMatchedCohortJob(): void {
           `[matched-cohort] cycle failed: ${(e as Error)?.message ?? e}`,
         );
       }
-    }, intervalMs);
+    }, schedulerTickMs(intervalMs));
   }, DEFAULT_FIRST_DELAY_MS);
 }
 

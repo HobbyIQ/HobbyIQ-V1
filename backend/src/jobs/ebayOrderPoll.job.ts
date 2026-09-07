@@ -28,7 +28,7 @@ import {
 } from "../services/ebay/ebayOrderPoll.service.js";
 import { listConnectedUserIds } from "../services/ebay/ebayTokenStore.service.js";
 import { reportWrites } from "../services/ops/writeReconciliation.js";
-import { runSingleFlight } from "./_singleFlight.js";
+import { runSingleFlight, schedulerTickMs } from "./_singleFlight.js";
 
 const DEFAULT_INTERVAL_HOURS = 1;
 const DEFAULT_FIRST_DELAY_MS = 60_000;       // 60s after process boot
@@ -250,7 +250,7 @@ export function startEbayOrderPollJob(): void {
       runSingleFlight("ebay.order.poll.job", intervalMs, runEbayOrderPollJob).catch((err) => {
         console.error("[ebay.order.poll.job] interval run threw:", err?.message ?? err);
       });
-    }, intervalMs);
+    }, schedulerTickMs(intervalMs));
   }, firstDelayMs);
 }
 
