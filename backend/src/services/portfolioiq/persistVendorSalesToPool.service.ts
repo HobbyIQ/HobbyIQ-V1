@@ -25,6 +25,7 @@ import {
 import { resolveVertical } from "./resolveVertical.service.js";
 import { cardNumberInClause, computeHobbyIqCardId, slugify, normalizeSetKey as canonicalNormalizeSetKey } from "./hobbyIqCardId.service.js";
 import { guardSoldCompDoc } from "./splitIdentityWriteGuard.js";
+import { decideTwinAddress, type TwinCandidate } from "./twinAddressRule.js";
 import { playerTheTitleAllows } from "./playerTheTitleAllows.js";
 import { yearTheTitleAllows } from "./yearTheTitleAllows.js";
 import { extractYearFromTitle } from "./slugRederivation.service.js";
@@ -476,6 +477,14 @@ export interface VendorPersistResult {
    *  existing address left alone; which address is right is the dedup lane's
    *  ruling to make, never the ingest writer's. */
   twinAddressRefused?: number;
+  /** CF-A-PARKED-TWIN-IS-NOT-A-TWIN (#1953): the sale was ALREADY resident at
+   *  the address being written, so the upsert replaced one document rather
+   *  than minting a second. Not an insert (no new sale entered the pool) and
+   *  not a refusal (the write was correct and allowed) — a caller reconciling
+   *  scanned = inserted + folded + ... needs its own name for it, or the row
+   *  vanishes from the ledger. That is precisely how the staging promoter
+   *  reported `UNACCOUNTED 6,557 (100.00%)`. */
+  twinFolded?: number;
   /** CF-ONE-WRITE-PATH-FOR-SOLD-COMPS. Rows the shared write guard parked out
    *  of every pool (malformed address, or a split identity nothing attests).
    *  The sale is still written — parked, not dropped. */
@@ -588,7 +597,7 @@ export async function persistVendorSalesToPool(
   rows: VendorSaleRow[],
   identity: VendorPersistIdentityHint = {},
 ): Promise<VendorPersistResult> {
-  const result: VendorPersistResult = { inserted: 0, deduped: 0, skipped: 0, catalogUnmatched: 0, vendorParallelOverruled: 0, divertedToVerify: 0 };
+  const result: VendorPersistResult = { inserted: 0, deduped: 0, skipped: 0, catalogUnmatched: 0, vendorParallelOverruled: 0, divertedToVerify: 0, twinAddressRefused: 0, twinFolded: 0 };
   // CF-NO-DEFAULT-SPORT (#1924 follow-up). Counted separately from the general
   // `skipped` tally because it is the number the ruling turns on: it is the
   // population that USED to be written at `hiq:baseball:...` on no evidence.
@@ -1785,31 +1794,106 @@ export async function persistVendorSalesToPool(
       // is the pattern emit-staging-to-pool already uses. This is a point
       // read on the id index, not a scan.
       //
-      // WHAT IT DOES, AND DELIBERATELY DOES NOT, DO. A twin found here is
+      // WHAT IT DOES, AND DELIBERATELY DOES NOT, DO. A LIVE twin found here is
       // REPORTED and the new address is NOT written: absent beats wrong, and
       // writing a second copy is the defect itself. It is never a DELETE --
       // a sale is never lost, and adjudicating WHICH address is right is the
       // dedup lane's job (title-decides, RETIRE/PARK markers), not the
       // ingest writer's. A row already at this exact address still upserts
       // normally, so genuine re-ingests and price corrections are unaffected.
+      //
+      // ── CF-A-PARKED-TWIN-IS-NOT-A-TWIN (2026-09-07, #1953) ──────────────
+      //
+      // THE DEFECT THIS FIXES. The check above asked "does this id exist under
+      // any OTHER cardId" and refused on the first hit. It asked neither of the
+      // two questions that decide the answer:
+      //
+      //   1. is this row ALREADY RESIDENT AT ITS OWN ADDRESS?  The query
+      //      returns every copy INCLUDING one at `doc.cardId`, and `.find(r =>
+      //      r.cardId !== doc.cardId)` skips straight past it. So a sale
+      //      correctly resident at the address it is being written to was
+      //      refused because a DIFFERENT copy existed elsewhere. That write is
+      //      a no-op upsert -- it cannot create a second document, because
+      //      Cosmos scopes id uniqueness per partition and the id is already
+      //      in that partition. Refusing it is refusing to notice the work is
+      //      already done.
+      //
+      //   2. is the other copy still LIVE?  #1942's repair lane parks the
+      //      losing copy with `flaggedWrong` + `flaggedReason:
+      //      "duplicate-partition-copy"` + `dedupSupersededBy` NAMING THE
+      //      WINNING ADDRESS. A parked row is out of every pool: it cannot
+      //      split a pool and it cannot double-count. Treating it as a twin
+      //      makes the repair lane's own ruling into a permanent block on the
+      //      write that ruling authorized.
+      //
+      // MEASURED on the hourly job's stuck backlog (run 34133391955, 14:31Z,
+      // 6,557 scanned / 0 inserted / 100% UNACCOUNTED; 461 distinct sale ids,
+      // 200 probed live against sold_comps):
+      //
+      //     110  resident AT the staged address, every other copy already
+      //          PARKED by #1942                              -> FOLD
+      //      14  resident AT the staged address, a live twin
+      //          elsewhere                                    -> FOLD
+      //      76  NOT resident; a live twin elsewhere          -> REFUSE
+      //
+      //     131 of the 139 parked copies carried `dedupSupersededBy` equal to
+      //     EXACTLY the address the promoter was trying to write.
+      //
+      // and the backlog is permanent, not flowing: the 461 ids refused at
+      // 14:31Z are a 100% subset of the 503 refused at 13:31Z. The same rows,
+      // every hour, forever, because nothing about them can change.
+      //
+      // THE RULE. A twin is a copy at a DIFFERENT address that is still LIVE.
+      // A parked copy is not a twin. A copy at THIS address is not a twin, it
+      // is this row.
+      // The RULE lives in twinAddressRule.ts, on its own, where a test can
+      // reach it -- the one-line predicate this replaces was wrong in two
+      // independent ways and had no seam to pin either.
       const { resources: elsewhere } = await container.items.query({
-        query: "SELECT c.id, c.cardId FROM c WHERE c.id = @id",
+        query: "SELECT c.id, c.cardId, c.flaggedWrong, c.identityUnverified, c.dedupSupersededBy FROM c WHERE c.id = @id",
         parameters: [{ name: "@id", value: doc.id }],
       }).fetchAll();
-      const twin = elsewhere.find((r: { cardId?: string }) => String(r?.cardId ?? "") !== doc.cardId);
-      if (twin) {
+      const twinVerdict = decideTwinAddress(doc.cardId, elsewhere as TwinCandidate[]);
+      // A fold WRITES (it replaces the document already at this address) but it
+      // does not INSERT: no new sale enters the pool. The two counters must not
+      // both move for one row, or `tried = inserted + ... + twinFolded + ...`
+      // over-accounts and reportWrites' overAccounted check goes red -- which
+      // is exactly as loud as a shortfall, and correctly so.
+      const isFold = twinVerdict.action === "fold";
+      if (twinVerdict.action === "fold") {
+        // The sale is already filed here. The write proceeds as the plain
+        // replace it is -- but the caller is told it was a fold, not a new
+        // sale, so a promoter can flip the staging row off `pending` and stop
+        // re-scanning a row whose work is finished.
+        result.twinFolded = (result.twinFolded ?? 0) + 1;
+        if (twinVerdict.liveTwinAt) {
+          // Worth naming: the sale is correctly here AND still live elsewhere.
+          // The write is safe (it touches only this partition); the other copy
+          // is the dedup lane's to adjudicate.
+          console.warn(JSON.stringify({
+            event: "twin_folded_live_twin_remains",
+            source: "persistVendorSalesToPool",
+            id: doc.id,
+            residentAt: doc.cardId,
+            liveTwinAt: twinVerdict.liveTwinAt,
+            title,
+          }));
+        }
+      } else if (twinVerdict.action === "refuse") {
         result.twinAddressRefused = (result.twinAddressRefused ?? 0) + 1;
         console.warn(JSON.stringify({
           event: "twin_address_refused",
           source: "persistVendorSalesToPool",
           id: doc.id,
           wouldWriteAt: doc.cardId,
-          alreadyAt: twin.cardId,
+          alreadyAt: twinVerdict.liveTwinAt,
           sportDefaulted,
           title,
         }));
         continue;
       }
+      // else: every other copy is parked and none is at this address, so the
+      // sale has no live home. Writing it here is what gives it one.
 
       // ── THE WRITE DOOR — CF-ONE-WRITE-PATH-FOR-SOLD-COMPS (2026-09-07) ──
       //
@@ -1869,7 +1953,9 @@ export async function persistVendorSalesToPool(
       }
 
       await container.items.upsert(doc);
-      result.inserted++;
+      // Counted at the twin check, where the verdict was made. Incrementing
+      // `inserted` here as well would count one row in two buckets.
+      if (!isFold) result.inserted++;
       // Staging shim runs earlier (above the dedup check) so it fires
       // regardless of whether sold_comps dedups the write. See
       // CF-COMPS-STAGING-SHIM-EARLY.
