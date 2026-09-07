@@ -123,6 +123,11 @@ on:
           - retire-flattened-attestations
           - repair-refractor-mislabel
           - repair-base-to-title-finish
+          # CF-A-FINISH-IS-A-CARD-LINE (Drew, 2026-09-07). Mints the finish row
+          # UNDER an existing checklist card where a source attests the finish;
+          # refuses an unbacked identity, a JA<->EN market mismatch, and a
+          # whole-scope APPLY. Scope with YEARS + SETKEYS.
+          - mint-attested-finish-rows
           - repair-setkey-from-title-parallel
           - merge-bare-colour-parallels
           - dedupe-catalog-partition-shadows
@@ -2852,6 +2857,43 @@ jobs:
             gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repair-setkey-from-title-parallel -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f mode="${{ inputs.mode }}" -f sports="${{ inputs.sports }}" -f years="${{ inputs.years }}" -f scope="${{ inputs.scope }}" -f sources="${{ inputs.sources }}" -f setkey_like="${{ inputs.setkey_like }}"
           elif grep -aqE "finishLane: exiting code [0-9]+" /tmp/backfill.log && [ "${{ steps.backfill.outcome }}" = "success" ]; then
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (moves=$N) — done, no re-dispatch."
+          else
+            echo "::error::KILLED before finish — the lane never reached finishLane; NOT finished; re-dispatch withheld — investigate"
+            echo "  step outcome: ${{ steps.backfill.outcome }}"
+            echo "  budget marker: absent    finishLane line: $(grep -acE 'finishLane: exiting code [0-9]+' /tmp/backfill.log 2>/dev/null || echo 0)"
+            echo "  last 20 lines of /tmp/backfill.log:"
+            tail -n 20 /tmp/backfill.log 2>/dev/null || echo "  (no log)"
+            exit 1
+          fi
+
+      - name: Self-relaunch the attested-finish mint until the shard is clean
+        if: ${{ !cancelled() && inputs.script == 'mint-attested-finish-rows' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        working-directory: backend
+        run: |
+          set +e
+          N=$(grep -aoE "WOULD MINT[^0-9]+[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
+          N=${N:-0}
+          echo "wouldMint=$N"
+          # CF-RELAUNCH-ONLY-ON-BUDGET (#1361, D18 2026-08-29). Relaunch iff the
+          # script printed its budget marker — never on a count. A count gate
+          # loops forever on a shard down to rows it cannot change, and stops
+          # early on a budget stop that happened to mint nothing. A LIMIT stop is
+          # a dry-run bound and deliberately prints no marker.
+          # years/setkey_like carry this lane's OWN scope axes (YEARS, SETKEYS);
+          # forwarding them is what stops a relaunch widening its own scope
+          # mid-fleet into the whole-corpus mint the script refuses at entry.
+          # CF-A-KILLED-RUN-IS-NOT-A-FINISHED-RUN (#1906). Three outcomes, not two:
+          #   (a) budget marker      -> more work, re-dispatch;
+          #   (b) finishLane line    -> the lane exited on its own, genuinely done;
+          #   (c) neither            -> KILLED at the ceiling. NOT finished. Fail loudly.
+          if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
+            echo "::notice::budget hit (wouldMint=$N) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=mint-attested-finish-rows -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f years="${{ inputs.years }}" -f setkey_like="${{ inputs.setkey_like }}"
+          elif grep -aqE "finishLane: exiting code [0-9]+" /tmp/backfill.log && [ "${{ steps.backfill.outcome }}" = "success" ]; then
+            echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (wouldMint=$N) — done, no re-dispatch."
           else
             echo "::error::KILLED before finish — the lane never reached finishLane; NOT finished; re-dispatch withheld — investigate"
             echo "  step outcome: ${{ steps.backfill.outcome }}"
