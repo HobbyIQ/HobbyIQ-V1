@@ -983,7 +983,11 @@ export async function persistVendorSalesToPool(
     const titleVariation = canonicalVariationName(parsed.parallel);
     if ((parsed.variationMarker && !titleVariation) || (titleVariation && /\b(?:chrome|paper)\b/i.test(titleVariation))) {
       if (cardYear && setKey && sport && parsed.cardNumber) {
-        const canonKey = canonicalNormalizeSetKey(setKey);
+        // The sport is in hand and non-null (the guard above requires it), and
+        // it decides which vocabulary answers — CF-NO-CROSS-VERTICAL-FALLBACK.
+        // Without it a Pokemon row's variation lookup was keyed on
+        // `panini-obsidian` and never met its own catalog rows.
+        const canonKey = canonicalNormalizeSetKey(setKey, sport);
         const key = `${sport}|${cardYear}|${canonKey}|${String(parsed.cardNumber).toUpperCase()}`;
         let slugs = variationRowsByCard.get(key);
         if (!slugs) {

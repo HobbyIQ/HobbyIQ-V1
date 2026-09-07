@@ -31,7 +31,50 @@ import { parallelTheTitleAllows } from "./titleOutranksVendorTag.js";
  *  don't carry (the caller decides whether that's a skip or an accept).
  *  Per CF-CH-INGEST-MULTI-SPORT: sport comes from the `group` field,
  *  NOT from card_set text — modern football/basketball set names often
- *  contain no sport word at all. */
+ *  contain no sport word at all.
+ *
+ * CF-THE-VENDOR-STATES-THE-VERTICAL (2026-09-07, the unknown-setKey census).
+ *
+ * THE DEFECT. This function knew five sports and returned `null` for
+ * everything else — including `Pokemon`, which is 1,525,994 of the 6,564,633
+ * rows in `ch_daily_sales` (23.2%, measured by GROUP BY on `c["group"]`).
+ * CardHedge STATES the vertical on every row, and we threw the statement away.
+ *
+ * What `null` costs, traced end to end. `sport: null` reaches
+ * `deriveHobbyIqSlug`, which falls through to `inferSportFromContext` — a bare
+ * substring test for the word "pokemon" over `setName + title`. A CH Pokemon
+ * row whose `card_set` is the set's own name therefore resolves NO sport, and
+ * `guardSlugInputs` refuses it on `sport-uncanonical`. Measured on the real
+ * deriver:
+ *
+ *     card_set                  normSport   inferSportFromContext   slug
+ *     "Prismatic Evolutions"    null        null                    NULL (sport-uncanonical)
+ *     "Obsidian Flames"         null        null                    NULL (sport-uncanonical)
+ *     "Crown Zenith"            null        null                    NULL (sport-uncanonical)
+ *     "Pokemon Surging Sparks"  null        pokemon                 hiq:pokemon:2025:sv08:…
+ *
+ * Only the fourth got an identity, and only because a seller happened to type
+ * the word. That is the whole `pokemon` share of the `unknown` pool —
+ * 415,649 rows, 62.5% of it (2026-09-07 census) — arriving unaddressed.
+ *
+ * With the vertical passed through, the SAME deriver answers with the ruled
+ * tcgdex codes, because `resolveSetKeyForSlug`'s Pokemon branch is gated on
+ * `sport === "pokemon"` and now reaches its vocabulary:
+ *
+ *     "Prismatic Evolutions" -> hiq:pokemon:2025:sv08-5:…
+ *     "Obsidian Flames"      -> hiq:pokemon:2023:sv03:…
+ *     "Crown Zenith"         -> hiq:pokemon:2023:swsh12-5:…
+ *
+ * THIS IS NOT A GUESS AND NOT A NEW VOCABULARY. No alias is added here; the
+ * vendor's own `group` is forwarded to a vocabulary that already exists and is
+ * already ruled (CF-THE-ENGLISH-SET-CODE-IS-THE-KEY). `unknown` stays the
+ * answer wherever the vocabulary genuinely has no rule — blank means unknown,
+ * never a guess.
+ *
+ * ONLY `pokemon` IS ADDED, deliberately. It is the one non-sport vertical
+ * `ch_daily_sales` actually carries (the GROUP BY returns exactly five values
+ * plus 155 undefined). A group we do not carry still returns `null`, and the
+ * caller still decides whether that is a skip. */
 export function normSport(chGroup: string | null | undefined): string | null {
   const g = String(chGroup ?? "").trim().toLowerCase();
   if (g === "baseball") return "baseball";
@@ -39,6 +82,9 @@ export function normSport(chGroup: string | null | undefined): string | null {
   if (g === "football") return "football";
   if (g === "hockey") return "hockey";
   if (g === "soccer") return "soccer";
+  // The vendor names the vertical; `pokemon` is canonical in CANONICAL_SPORTS
+  // and is what unlocks the ruled Pokemon setKey vocabulary downstream.
+  if (g === "pokemon" || g === "pokémon") return "pokemon";
   return null;
 }
 
