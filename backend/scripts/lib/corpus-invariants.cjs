@@ -46,6 +46,10 @@
 "use strict";
 
 const path = require("path");
+// THE DERIVATION STAMP (#I9 P1, 2026-09-07). Pure, hashes source files only —
+// no dist/, no Cosmos — so requiring it here cannot make this module depend on
+// a build having been run.
+const DERIVATION_VERSION = require(path.join(__dirname, "derivation-version.cjs"));
 
 // I3 reuses the SHIPPED invariant (src/services/catalog/setKeyFieldInvariant.ts)
 // rather than re-deriving the two-armed directional test. An auditor with its
@@ -1176,9 +1180,22 @@ const MIN_CLASS_ROWS = 40;
  * the class's sampled CONFLICT share, its census share and the delta, computed
  * from the frame's own row-apportioned class mix.
  */
-function evaluateDrift(id, { byClassFrame = [], sample = 0, breaches = 0 } = {}) {
+function evaluateDrift(id, { byClassFrame = [], sample = 0, breaches = 0, stampAgreement = null } = {}) {
   const inv = INVARIANT_BY_ID.get(id);
   if (!inv || typeof inv.driftPoints !== "number") return null;
+  // CF-AN-ALARM-COMPARES-LIKE-WITH-LIKE (2026-09-07, I9 P1). A reference
+  // measured under a DIFFERENT derivation is not a worse-or-better yardstick;
+  // it is a yardstick in different units, and a drift against it is not a
+  // measurement of the corpus at all. The caller asks `stampsAgree` and passes
+  // the verdict; when the stamps disagree the drift is reported as a
+  // RE-BASELINE FINDING by `describeReferenceDrift` and the ALARM is silent.
+  //
+  // THIS IS NOT A SILENCER, AND THE ASYMMETRY IS THE PROOF: the only thing
+  // that suppresses the alarm is a reference the code itself can show was
+  // measured under different rules. At the CURRENT stamp every class is
+  // evaluated exactly as before, and a regression under today's derivation
+  // breaches today. Pinned both ways.
+  if (stampAgreement && stampAgreement.comparable === false) return null;
   const limit = Number(inv.driftPoints);
   const over = [];
   const belowFloor = [];
@@ -1218,6 +1235,64 @@ function evaluateDrift(id, { byClassFrame = [], sample = 0, breaches = 0 } = {})
     message: `${id} ${inv.name}: CONFLICT drifted more than `
       + `${(100 * limit).toFixed(0)}pp above its own census reference in `
       + `${over.length === 1 ? "class" : `${over.length} classes`} — ${named}`,
+  };
+}
+
+/**
+ * THE RE-BASELINE FINDING — what a drift against an INCOMPARABLE reference is.
+ *
+ * CF-FINDINGS-ARE-DATA-NEVER-FIXES (Drew, 2026-09-02) applied to the reference
+ * itself. When the stamps disagree the honest report is not "the corpus is
+ * fine" and not "the corpus regressed" — it is "the yardstick changed, here is
+ * by how much, and here is the stamp the next reference must carry".
+ *
+ * The old->new delta is recorded per class, exactly the numbers the alarm
+ * would have printed, so nothing is hidden: a reader sees the same +30.3pp
+ * that breached, labelled as what it is. It is returned as a NOTE-shaped
+ * finding, never as a `warnings` entry, because the one thing it must not do
+ * is page somebody about a comparison the auditor knows is invalid.
+ *
+ * `rebaselineOwed` is the actionable half: it names the stamp a fresh census
+ * must be recorded under before the alarm can speak again.
+ */
+function describeReferenceDrift(id, { byClassFrame = [], stampAgreement = null } = {}) {
+  const inv = INVARIANT_BY_ID.get(id);
+  if (!inv || typeof inv.driftPoints !== "number") return null;
+  if (!stampAgreement || stampAgreement.comparable !== false) return null;
+  const limit = Number(inv.driftPoints);
+  const classes = [];
+  for (const c of byClassFrame) {
+    const d = c?.conflict?.delta;
+    const n = Number(c?.sampledApprox ?? 0);
+    if (d === null || d === undefined || c?.conflict?.census === null) continue;
+    classes.push({
+      sportClass: c.sportClass, sampled: c.conflict.sampled, census: c.conflict.census,
+      delta: d, sampledApprox: n,
+      wouldHaveBreached: n >= MIN_CLASS_ROWS && d > limit,
+    });
+  }
+  classes.sort((a, b) => b.delta - a.delta);
+  const wouldBreach = classes.filter((c) => c.wouldHaveBreached);
+  const named = classes
+    .map((c) => `${c.sportClass} ${(100 * c.sampled).toFixed(1)}% vs reference `
+      + `${(100 * c.census).toFixed(1)}% (${c.delta >= 0 ? "+" : ""}${(100 * c.delta).toFixed(1)}pp, n~${Math.round(c.sampledApprox)})`)
+    .join("; ");
+  return {
+    id, name: inv.name,
+    kind: "reference-rebaseline",
+    reason: stampAgreement.reason,
+    referenceStamp: stampAgreement.referenceStamp,
+    currentStamp: stampAgreement.currentStamp,
+    threshold: limit,
+    classes,
+    wouldHaveBreached: wouldBreach.map((c) => c.sportClass),
+    rebaselineOwed: stampAgreement.currentStamp,
+    message: `${id} ${inv.name}: REFERENCE NOT COMPARABLE (${stampAgreement.reason}) — `
+      + `measured under ${stampAgreement.referenceStamp ?? "an unrecorded stamp"}, `
+      + `running under ${stampAgreement.currentStamp ?? "an uncomputable stamp"}. `
+      + `Drift reported as a FINDING, not an alarm: ${named || "no class reached the reference"}. `
+      + `${wouldBreach.length ? `${wouldBreach.map((c) => c.sportClass).join(", ")} would have breached the ${(100 * limit).toFixed(0)}pp threshold against the stale reference. ` : ""}`
+      + `A fresh census recorded under ${stampAgreement.currentStamp ?? "the current stamp"} re-arms the alarm.`,
   };
 }
 
@@ -1468,6 +1543,29 @@ const CENSUS_REFERENCE_SHARES = Object.freeze({
   ...(CENSUS_TABLE?.weighted ?? { AGREE: 0.423947, IMPROVE: 0.034467, CONFLICT: 0.407827, UNDERIVABLE: 0.082341 }),
 });
 
+/**
+ * THE STAMP THIS REFERENCE WAS MEASURED UNDER, or null for a reference written
+ * before stamps existed.
+ *
+ * A null is NOT a pass. `stampsAgree(null)` returns `comparable: false` with
+ * reason `reference-unstamped`, which is the correct reading of every
+ * reference recorded before 2026-09-07: its units are unknown, so nothing may
+ * be concluded by comparing to it.
+ */
+const CENSUS_REFERENCE_STAMP = CENSUS_TABLE?.measuredUnder?.stamp ?? null;
+
+/**
+ * Is the loaded reference comparable to what THIS tree derives?
+ *
+ * Delegates to `derivation-version.cjs`, which hashes the six files that decide
+ * a derivation plus the pricing contract version. Kept as a function rather
+ * than a constant so a test can drive it against a temporary tree, and so the
+ * hash is computed when the auditor asks rather than at require time.
+ */
+function referenceStampAgreement() {
+  return DERIVATION_VERSION.stampsAgree(CENSUS_REFERENCE_STAMP);
+}
+
 /** One slot's own census shares, or null when the table lacks it. */
 function censusSharesForSlot(slot) {
   if (!CENSUS_TABLE || slot === null || slot === undefined) return null;
@@ -1690,4 +1788,6 @@ module.exports = {
   checkPricedOnUnbackedIdentity,
   // thresholds
   evaluateThreshold, evaluateDrift, MIN_CLASS_ROWS,
+  // The reference stamp (#I9 P1, 2026-09-07)
+  describeReferenceDrift, CENSUS_REFERENCE_STAMP, referenceStampAgreement,
 };
