@@ -170,13 +170,88 @@
  * sales at this address are not this row's to carry, which is exactly what the
  * evidence says when a list separates two cards.
  *
+ * ────────────────────────────────────────────────────────────────────────────
+ * THE BUDGET, AND THE RUN THAT ADDED IT
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * CF-A-KILLED-JOB-CANNOT-REPORT-PROGRESS, arriving late to this lane.
+ *
+ * Run 34079952456 -- APPLY over 2026-09-07-soccer-2022-panini-prizm-bare-key
+ * .json, 13,295 entries (11,630 retires + 1,665 reslugs) -- was KILLED:
+ *
+ *   ##[error] The action 'Run backfill (APPLY)' has timed out after 150 minutes
+ *
+ * with no budget marker, no reconcile, no finishLane line. #1913's KILLED
+ * branch fired and withheld the re-dispatch, which is the correct behaviour
+ * for an unexplained kill -- but the kill was not unexplained. It was
+ * arithmetic.
+ *
+ * THE DEFECT WAS NOT A MISPLACED CHECK. IT WAS THE ABSENCE OF ONE. This lane
+ * never required scripts/lib/runner-budget.cjs at all: no `budget()`, no
+ * `outOfClock()`, no `stoppedAtBudget()` marker, no `finishLane()`. It looped
+ * over every entry in the file and printed its banner only after the last one.
+ * runnerBudgetMargin's census could not have caught this, because its loader
+ * skips any script matching neither RUN_MINUTES nor BUDGET_MS -- a lane with
+ * NO budget was not a failing lane, it was an invisible one. That hole is
+ * closed in the pin as part of this change: a whitelisted lane that WRITES
+ * must declare a budget, and the census now says so by name.
+ *
+ * WHY THE REPORT FINISHED AND THE APPLY COULD NOT. Both modes are measured,
+ * from the two runs' own logs:
+ *
+ *   REPORT 34077554971  11,630 retires in   886s = 0.076 s/row  (13.1 rows/s)
+ *   APPLY  34079952456   4,935 retires in 9,010s = 1.826 s/row  ( 0.55 rows/s)
+ *
+ * The report is not doing less READING -- it runs the same `salesAt` count and
+ * the same moveCatalogRow derivation under dryRun. What it does not run is the
+ * WRITE half: retireCatalogRow (a graded-children sweep plus the delete) and
+ * the read-back that confirms it. That is 1.75 s/row this list never budgeted
+ * for. At 1.826 s/row, 13,295 entries need ~6.7 HOURS: 2.7x the 150-minute
+ * ceiling. No arrangement of a budget check makes this list finish in one
+ * step -- it was structurally impossible, and a lane without a budget had no
+ * way to say so.
+ *
+ * AND #1940's confirmRetired IS NOT THE CAUSE, which is worth stating because
+ * it is the obvious suspect. Its three reads plus backoff plus cross-partition
+ * query only escalate past the FIRST point read when that read still sees the
+ * row. Run 34079952456 printed `read-back needed a retry` exactly 0 times
+ * across 4,935 retires: every confirm settled on the first point-read, i.e. at
+ * one read's cost. The backoff path was never entered. The cost is the delete
+ * and its cascade, which predate #1940.
+ *
+ * SO THE FIX IS TWO THINGS, AND BOTH ARE NEEDED. A budget alone would turn a
+ * red kill into a green stop that relaunches ~4 times to finish one file --
+ * correct, but slow, and each relaunch re-reads the whole list from the top.
+ * A split alone would let the current lane finish, and leave the next
+ * oversized list to be killed exactly as this one was. So: this lane now
+ * budgets, marks, exits and relaunches (below), AND the two oversized
+ * committed lists are split into <=2,000-entry chunks in the same change.
+ *
+ * WHAT A UNIT COSTS, AND THEREFORE WHAT IS RESERVED. A unit here is ONE
+ * ENTRY, and the measurement above sizes it: 1.826 s/row for a retire.
+ * A reslug is dearer -- an extra destination read, a moveCatalogRow write and
+ * a two-read verify -- so the reserve is set to 30s, roughly 16x the measured
+ * worst entry. That is deliberately generous, because the reserve's job is to
+ * be larger than the slowest single entry a throttled container can produce,
+ * and it costs only 30 seconds of a 15-minute margin to be sure of it.
+ *
+ * IDEMPOTENT, SO THE RELAUNCH IS FREE. A relaunch re-reads the list from
+ * entry 0 and re-derives every one. A retire whose row is already gone is
+ * counted `already gone` and skipped -- never re-deleted, never counted as
+ * written. A reslug whose source has moved is `NOT FOUND` and skipped. So the
+ * continuation costs one cheap point read per finished entry (~0.076 s/row,
+ * measured above) and writes only what is left. No resume cursor is needed
+ * and no repair list is ever required after a kill.
+ *
  * Env: COSMOS_CONNECTION_STRING; BACKFILL_APPLY/APPLY; SCOPE=<list file>
- *      (path relative to backend/; REQUIRED -- this lane has no default list).
+ *      (path relative to backend/; REQUIRED -- this lane has no default list);
+ *      RUN_MINUTES (default 110), RESERVE_MS, VERIFY_MS.
  */
 "use strict";
 const path = require("node:path");
 const fs = require("node:fs");
 const backend = path.resolve(__dirname, "..");
+const { budget, finishLane } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
 // The dist/ and Cosmos requires live inside main(), as the pool lane does it:
 // loading this module must not need a built tree, so the runner contract test
 // can require it and drive the scope refusal without a compile step.
@@ -443,10 +518,14 @@ async function main() {
   for (const r of doc.rulings || []) console.log(`  ruling: ${r}`);
   console.log("");
 
-  const db = new CosmosClient({
+  // The client is NAMED rather than chained away, so finishLane() can dispose
+  // it: an undisposed SDK keeps keep-alive sockets open, and a live handle is
+  // exactly what held four APPLY shards to the ceiling in #1809.
+  const client = new CosmosClient({
     connectionString: conn,
     connectionPolicy: { retryOptions: { maxRetryAttemptsOnThrottledRequests: 60, maxWaitTimeInSeconds: 300 } },
-  }).database("hobbyiq");
+  });
+  const db = client.database("hobbyiq");
   const cat = db.container("card_catalog");
   const pool = db.container("sold_comps");
   const retry = async (fn, tries = 12) => {
@@ -489,7 +568,36 @@ async function main() {
   let refusedCrossMarket = 0;
   const intended = entries.length;
 
+  // ── THE CLOCK ────────────────────────────────────────────────────────────
+  //
+  // Sized from the measurement in this file's header: a unit is ONE ENTRY at
+  // ~1.8s, so a 30s reserve is ~16x the slowest entry measured -- the reserve
+  // exists to exceed the worst single unit a throttled container can produce.
+  // There is no post-loop aggregate to cap (every count is accumulated in the
+  // loop), so VERIFY_MS is nominal and only sizes the pin's worst case.
+  const b = budget({ minutes: 110, reserveMs: 30 * 1000, verifyMs: 60 * 1000 });
+  console.log(`  ${b.describe()}`);
+  console.log("");
+
+  // How far the loop actually got. `stoppedAt` stays null when every entry was
+  // considered; a number means the budget stopped the loop BEFORE that index,
+  // and the banner and the marker both report it.
+  let stoppedAt = null;
+  let considered = 0;
+
   for (const e of entries) {
+    // THE PRE-CHECK, ONCE, FOR EVERY BRANCH BELOW. It is here -- above the
+    // classify, above the `rowAt`, above the retire/reslug fork -- precisely so
+    // that no branch can be the one that forgets it. A budget checked inside
+    // `if (action === "retire")` would leave the reslug half unbudgeted, which
+    // is the same defect this lane already had, merely halved.
+    //
+    // And it is a PRE-check: `outOfClock()` is true when less than the reserve
+    // remains, so the entry that would overrun is never STARTED. Checking
+    // after the entry admits one more unit of unbounded size past expiry,
+    // which is the loop-top defect #1799 named.
+    if (b.outOfClock()) { stoppedAt = considered; break; }
+    considered++;
     const c = classifyEntry(e);
     if (!c.ok) { failed++; console.error(`  MALFORMED — ${c.why}`); continue; }
     const { id, action, to, reason } = c;
@@ -636,8 +744,14 @@ async function main() {
     }
   }
 
+  // Entries the budget never reached. They are NOT failures and NOT skips:
+  // nothing was read and nothing was decided about them, so they are their own
+  // line in the reconcile and the relaunch is what settles them.
+  const notReached = stoppedAt === null ? 0 : intended - stoppedAt;
+
   console.log(`\n${APPLY ? "APPLY" : "REPORT ONLY — nothing written"}`);
   console.log(`  entries in scope        ${f(intended)}`);
+  console.log(`  entries considered      ${f(considered)}${stoppedAt === null ? "   <- the whole list" : ""}`);
   console.log(`  RETIRED (deleted)       ${f(retired)}   <- deleted; a soft label does NOT stop a catalog row resolving`);
   console.log(`  RESLUGGED (moved)       ${f(resluged)}`);
   console.log(`  refused — occupied      ${f(refusedOccupied)}   <- a different card holds the target address`);
@@ -656,18 +770,44 @@ async function main() {
   const written = retired + resluged;
   const skipped = alreadyRight + notFound;
   const refused = refusedOccupied + refusedCrossMarket;
+  // A PARTIAL RUN STILL RECONCILES. The identity has to hold over what the
+  // loop CONSIDERED, not over the file, or a budget stop reads as 6,695 lost
+  // entries. `not reached` carries the remainder explicitly so the two numbers
+  // an operator cares about -- what happened, and what is left -- are both on
+  // the page rather than one being inferred from the other's absence.
   console.log(`  reconciled: intended ${f(intended)} = written ${f(written)} + skipped ${f(skipped)} `
-    + `+ refused ${f(refused)} + failed ${f(failed)}`);
-  if (written + skipped + refused + failed !== intended) {
-    console.error("  !! RECONCILE MISMATCH — an entry was neither written, skipped, refused nor failed");
+    + `+ refused ${f(refused)} + failed ${f(failed)} + not reached ${f(notReached)}`);
+  if (written + skipped + refused + failed + notReached !== intended) {
+    console.error("  !! RECONCILE MISMATCH — an entry was neither written, skipped, refused, failed nor deferred");
     process.exitCode = 4;
   }
   if (APPLY) {
     reportWrites({
       job: "relocate-catalog-rows-by-list", intended,
-      written, skipped, failed: failed + refused,
+      written, skipped: skipped + notReached, failed: failed + refused,
     });
   }
+
+  // ── THE MARKER THE RELAUNCH GREPS ────────────────────────────────────────
+  //
+  // CF-RELAUNCH-ONLY-ON-BUDGET (#1361). The runner greps stdout for
+  // `stopped at the .*budget`, so the phrase is written here as a SOURCE
+  // LITERAL rather than assembled from variables: a marker built by
+  // concatenation is a marker a refactor can silently reword, and a reworded
+  // marker ends the fan-out after one slice with the run green -- the quiet
+  // version of the bug #1913 made loud.
+  if (stoppedAt !== null) {
+    console.log(`\n  stopped at the ${b.RUN_MINUTES}-minute budget — `
+      + `stopped at ${f(stoppedAt)} of ${f(intended)}; the relaunch continues from here`);
+    console.log("  the list is IDEMPOTENT: a finished retire re-reads as `already gone` and a "
+      + "finished reslug as NOT FOUND, so the continuation re-derives cheaply and writes only what is left.");
+  }
+
+  // CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809). Whether the loop finished
+  // or the budget stopped it, this lane EXITS -- it never ends by hoping the
+  // event loop drains. `process.exitCode` may already carry a reconcile
+  // mismatch, and that is the code finishLane is handed.
+  await finishLane(process.exitCode ?? 0, { client, budget: b });
 }
 
 if (require.main === module) {

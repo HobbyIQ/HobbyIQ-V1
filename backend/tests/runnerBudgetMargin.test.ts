@@ -182,13 +182,75 @@ function afterTheWork(src: string, at: number): boolean {
 
 const unparsed: string[] = [];
 
+/** ── THE HOLE THIS CENSUS USED TO HAVE ──────────────────────────────────────
+ *
+ * A lane matching neither RUN_MINUTES nor BUDGET_MS was `continue`d below, so
+ * a lane with NO BUDGET AT ALL was not a failing lane — it was an INVISIBLE
+ * one. Every per-lane assertion in this file only ever ran against lanes that
+ * had already declared a budget, which is precisely the population that does
+ * not need to be told to declare one.
+ *
+ * relocate-catalog-rows-by-list sat in that hole. It is on the dropdown, it
+ * DELETES catalog rows, and it looped over its whole list with no clock —
+ * until run 34079952456 hit the 150-minute ceiling mid-list, printing no
+ * marker, no reconcile and no finishLane line. This census had nothing to say
+ * about it, because it never saw it.
+ *
+ * So the skip is now RECORDED, not silent, and a WRITING lane in that bucket
+ * fails by name. The read-only ones — censuses and audits that a `mode` input
+ * pins to report — are left alone deliberately: they cannot leave half-written
+ * state behind, and a pin that demands ceremony of them gets deleted.
+ */
+const unbudgetedWriters: string[] = [];
+
+/** The debt, frozen as measured on 2026-09-07 — 58 dispatchable write lanes
+ *  with no clock of their own. This list may LOSE names (a lane that gains a
+ *  budget must be struck from it) and may never GAIN one. It is not an
+ *  approval: every entry here is a lane that will be killed rather than stopped
+ *  if it is ever dispatched over more work than one 150-minute step holds.
+ *
+ *  relocate-catalog-rows-by-list is not here because this change fixed it. */
+const KNOWN_UNBUDGETED_WRITE_LANES = [
+  "reslug-cross-product-mis-slug", "reslug-suspicious-setkeys", "backfill-grade-from-ch-daily",
+  "bulk-import-ch-daily-to-sold-comps", "backfill-verify-queue-grades",
+  "backfill-isauto-from-cardnumber", "backfill-isauto-cross-sport", "backfill-printrun-from-title",
+  "backfill-autostyle-from-title", "backfill-parallel-enrichment", "backfill-insert-setkey",
+  "backfill-composite-fields", "backfill-composite-v3", "refresh-market-signals",
+  "refresh-calibration-multipliers", "ingest-product-checklist",
+  "ingest-2026-bowman-auto-checklist", "reprice-user-holdings", "reap-orphan-price-trails",
+  "backfill-cardsight-title-identity", "backfill-canonicalize-chrome-slugs",
+  "backfill-catalog-driven-canonicalize", "backfill-stage2-title-parser",
+  "backfill-stage3-price-sanity", "promote-sold-comps-trust-tier", "baseline-pool-snapshot",
+  "backfill-cardsight-unverified-flag", "migrate-cardsight-to-staging", "backfill-grade-from-title",
+  "backfill-bowman-mega-box-reslug", "backfill-sub-channel-vocabulary",
+  "auto-quarantine-contaminated-pools", "normalize-catalog-schema", "dedupe-catalog-by-hobbyiq",
+  "nightly-reingest-top-ch-cards", "backfill-ch-catalog-additions", "drain-staging-backlog",
+  "backfill-searchtokens-all-sports", "fix-catalog-parallel-as-player",
+  "auto-label-catalog-variants", "rescore-anomalies", "score-all-sold-comps",
+  "reaudit-cardsight-unverified", "recover-chrome-collapse-damage", "normalize-catalog-format",
+  "retire-flattened-attestations", "repair-refractor-mislabel", "merge-bare-colour-parallels",
+  "dedupe-catalog-partition-shadows", "reslug-tcg-out-of-sports-namespace",
+  "retire-impossible-grade-rows", "revert-d30-base-onto-one-of-one", "backfill-holding-ebay-ids",
+  "conform-holdings-to-catalog", "run-ebay-order-poll", "run-ebay-finances-enrichment",
+  "run-ebay-purchase-sync", "relocate-pool-rows-by-list", "backfillCatalogCardYearFromSlug",
+];
+
+/** A lane that can WRITE. The signal is the runner's own gate (`BACKFILL_APPLY`
+ *  / `APPLY`), which every write lane reads to decide whether to persist, and
+ *  which a report-only census does not have. */
+const writesWhenApplied = (src: string) =>
+  /process\.env\.BACKFILL_APPLY|process\.env\.APPLY\b/.test(src);
+
 function loadLanes(): Lane[] {
   const lanes: Lane[] = [];
   for (const script of whitelistedScripts()) {
     const file = path.join("backend", "scripts", `${script}.cjs`);
     if (!fs.existsSync(path.join(ROOT, file))) continue;
     const src = read(file);
-    if (!/RUN_MINUTES|BUDGET_MS/.test(src)) continue;
+    if (!/RUN_MINUTES|BUDGET_MS/.test(src)) {
+      if (writesWhenApplied(src)) unbudgetedWriters.push(script);
+      continue;
+    }
 
     let runMinutes: number | null = null;
     for (const re of BUDGET_PATTERNS) {
@@ -226,6 +288,53 @@ describe("every budgeted runner lane stops under the action ceiling", () => {
     // A guard against the loader silently matching nothing and the whole
     // suite passing vacuously (feedback_retired_correction_verify_output_not_existence).
     expect(LANES.length).toBeGreaterThanOrEqual(60);
+  });
+
+  it("no NEW dispatchable write lane may ship without a budget — the list only shrinks", () => {
+    // ── WHY A RATCHET AND NOT A FLAT ZERO ──────────────────────────────────
+    //
+    // Measured when this assertion was written: 59 whitelisted write lanes
+    // declare no budget. Demanding zero today would fail the suite on 58 lanes
+    // nobody in this change has measured, and a pin that is red on arrival is
+    // a pin somebody deletes — which would cost the rule entirely.
+    //
+    // So the debt is WRITTEN DOWN and frozen. Removing a lane from this list is
+    // the only edit that keeps the suite green: adding a name fails below, and
+    // shipping a NEW unbudgeted write lane fails below too. That makes the
+    // backlog visible and monotonically shrinking instead of invisible and
+    // growing, which is exactly the property the old silent `continue` denied.
+    //
+    // relocate-catalog-rows-by-list is DELIBERATELY ABSENT: run 34079952456 is
+    // what forced this assertion, and the lane it killed now budgets. Putting
+    // it back would make this suite red.
+    const unbudgeted = new Set(unbudgetedWriters);
+    const stillOwed = KNOWN_UNBUDGETED_WRITE_LANES.filter((s) => unbudgeted.has(s));
+    const newlyUnbudgeted = unbudgetedWriters.filter(
+      (s) => !KNOWN_UNBUDGETED_WRITE_LANES.includes(s),
+    );
+
+    expect(
+      newlyUnbudgeted,
+      `these dispatchable WRITE lanes declare no budget at all, so they run until the `
+        + `runner kills them at the ${CEILING}-minute ceiling — no marker, no reconcile, `
+        + `no finishLane, and #1906's killed branch withholds the re-dispatch: `
+        + `${newlyUnbudgeted.join(", ")}. Give each one budget() from `
+        + `scripts/lib/runner-budget.cjs, an outOfClock() pre-check per unit, the `
+        + `marker as a source literal, and finishLane().`,
+    ).toEqual([]);
+
+    // The ratchet's other tooth: a lane that HAS been fixed must be struck from
+    // the list, or the list stops describing the debt it exists to bound.
+    const fixed = KNOWN_UNBUDGETED_WRITE_LANES.filter((s) => !unbudgeted.has(s));
+    expect(
+      fixed,
+      `these lanes now declare a budget and must be removed from `
+        + `KNOWN_UNBUDGETED_WRITE_LANES: ${fixed.join(", ")}`,
+    ).toEqual([]);
+
+    // A guard against the whole thing passing vacuously if `writesWhenApplied`
+    // ever stops matching anything.
+    expect(stillOwed.length).toBeGreaterThan(0);
   });
 
   it("every budgeted lane's RUN_MINUTES is parseable — a new spelling is not a free pass", () => {
