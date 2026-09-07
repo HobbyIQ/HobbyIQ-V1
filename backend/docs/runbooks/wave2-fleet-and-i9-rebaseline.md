@@ -245,13 +245,51 @@ Two consequences worth planning around:
 - **Sequential total ≈ 32 × 52 min ≈ 28 h; fully parallel ≈ 1.7 h.** The real
   figure sits between and is decided by runner concurrency, not by the rate.
 
-**The binding constraint is the Actions queue, not the classifier.** At the time
-of writing, 29 `backfill-runner` runs were queued with the oldest waiting over
-an hour, and a freshly dispatched census slot sat queued for 25+ minutes without
-starting. Plan the census as an overnight run, dispatch it when the queue is
-shallow, and treat "queued" as the expected state rather than a fault. The
-driver polls rather than assuming, and `WAVE2_MAX_CHAIN_MINUTES` (default 600)
-bounds how long it will follow one slot's chain.
+**The binding constraint is the Actions queue, not the classifier** — and on
+2026-09-07 it was not merely a constraint but a stoppage. See below.
+
+The driver polls rather than assuming, and `WAVE2_MAX_CHAIN_MINUTES` (default
+600) bounds how long it will follow one slot's chain. Plan the census as an
+overnight run, dispatch it when the queue is shallow, and treat "queued" as an
+expected state rather than a fault.
+
+### 2026-09-07: the backfill lane was fully stalled, and Wave 2 cannot start on it
+
+Measured while taking the slot-0 shape proof for this PR:
+
+```
+backfill-runner runs:   30 queued,  0 in_progress
+oldest queued:          34145540359, queued since 16:57Z  (>2.5 h, never started)
+this PR's census slot0: 34151208109, dispatched 18:20Z, still queued at 19:30Z
+```
+
+Other workflows were unaffected in the same window — `backend-tests`,
+`Web Unit Tests`, `Staging Pipeline Cron`, `eBay order poll` and
+`Daily 5AM ET Refresh & Deploy` all started and completed normally. So this was
+**not** a global Actions outage; it was the backfill lane specifically, with
+**zero** of its runs executing while thirty waited.
+
+`backfill-runner.yml` declares no workflow-level `concurrency:` group, so it is
+not self-serialising: the runs are waiting on capacity, not on each other. The
+likely cause is the fleet's own dispatch pattern — the rematch lane alone drove
+121 runner runs in a day, each holding a 180-minute job slot — exhausting the
+account's concurrent-job allowance and starving every later dispatch, including
+its own self-relaunches.
+
+**What this means for WAVE 2, concretely:**
+
+- **Do not dispatch a 32-slot census into a non-empty backfill queue.** Thirty-two
+  more 180-minute jobs behind thirty stalled ones will not run; they will age
+  out of usefulness while the operator watches "queued".
+- **Check the lane before arming, every time:**
+  `gh run list --workflow=backfill-runner.yml --limit 60 --json status --jq 'group_by(.status)|map({s:.[0].status,n:length})'`
+  If `in_progress` is 0 while `queued` is large, the lane is stalled — hold, and
+  cancel the stale queue rather than adding to it.
+- **This is a scheduling problem, not a code problem**, and the driver cannot
+  fix it: it polls, and a polled run that never starts simply consumes
+  `WAVE2_MAX_CHAIN_MINUTES` before being reported as `timeout`. That is the
+  correct behaviour — a run that never started is not a slot that finished — but
+  it is a slow way to learn something a one-line query says immediately.
 
 ---
 

@@ -415,6 +415,44 @@ describe("the apply gate holds when it cannot prove the slot", () => {
   });
 });
 
+/**
+ * THE STALLED-LANE PREFLIGHT.
+ *
+ * Measured while taking this driver's own shape proof on 2026-09-07: 30
+ * backfill-runner runs QUEUED and ZERO in_progress, the oldest waiting over two
+ * and a half hours without ever starting, while every other workflow ran
+ * normally. Adding 32 more 180-minute jobs to that queue does not start 32
+ * jobs — it ages them, and the driver would only learn so after burning
+ * WAVE2_MAX_CHAIN_MINUTES per slot.
+ */
+describe("the fleet refuses to dispatch into a stalled lane", () => {
+  it("checks the lane before dispatching, in both dispatching phases", () => {
+    expect(fleetSrc).toContain("preflight_lane() {");
+    // once in the census phase, once in the apply path
+    expect(fleetSrc.match(/^ *preflight_lane$/gm)?.length).toBe(2);
+  });
+
+  it("treats a deep queue with NOTHING running as stalled, not busy", () => {
+    // The distinguishing condition is `running == 0`, not queue depth alone: a
+    // deep queue that is MOVING is merely busy and must not be refused.
+    expect(fleetSrc).toMatch(/running:-0\}" -eq 0/);
+    expect(fleetSrc).toMatch(/queued:-0\}" -ge/);
+    expect(fleetSrc).toContain("the backfill lane is STALLED");
+  });
+
+  it("can be bypassed deliberately, and only deliberately", () => {
+    expect(fleetSrc).toContain('WAVE2_SKIP_PREFLIGHT:-false');
+    expect(fleetSrc).toContain("WAVE2_SKIP_PREFLIGHT=true to queue behind it deliberately");
+  });
+
+  // An unreadable lane is not an empty one. If the query fails, say so and
+  // proceed — refusing on a failed `gh` call would make the driver unusable
+  // offline, and the preflight is an early warning, not a safety interlock.
+  it("proceeds with a warning when it cannot read the lane at all", () => {
+    expect(fleetSrc).toContain("could not read the backfill lane's state — proceeding blind");
+  });
+});
+
 describe("an apply cannot run without the census that gates it", () => {
   it("refuses when WAVE2_CENSUS_DIR is unset", () => {
     expect(fleetSrc).toContain('[ -n "$CENSUS_DIR" ] || die "WAVE2_CENSUS_DIR is unset');

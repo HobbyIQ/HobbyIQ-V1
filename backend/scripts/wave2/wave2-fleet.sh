@@ -181,6 +181,37 @@ canary_verdict() {
 
 # ── DISPATCH + FOLLOW ────────────────────────────────────────────────────────
 
+# ── PREFLIGHT: IS THE LANE MOVING AT ALL? ────────────────────────────────────
+#
+# Measured 2026-09-07, while taking this driver's own shape proof: 30
+# backfill-runner runs QUEUED and ZERO in_progress, the oldest waiting over two
+# and a half hours and never starting. Other workflows ran normally in the same
+# window, so it was the backfill lane specifically — the fleet's own dispatch
+# pattern (121 runner runs in a day, each holding a 180-minute job slot)
+# exhausting the concurrent-job allowance and starving every later dispatch,
+# including its own self-relaunches.
+#
+# Adding 32 more 180-minute jobs to that queue does not start 32 jobs; it ages
+# them. The driver would eventually report them as `timeout`, correctly but
+# slowly, and this query says the same thing in one call. So it is checked
+# BEFORE dispatching, not discovered after.
+#
+# WAVE2_SKIP_PREFLIGHT=true bypasses it for a deliberate queue-behind.
+preflight_lane() {
+  [ "${WAVE2_SKIP_PREFLIGHT:-false}" = "true" ] && return 0
+  local counts queued running
+  counts=$(gh run list --repo "$REPO" --workflow=backfill-runner.yml --limit 60 \
+             --json status --jq '"\([.[]|select(.status=="queued")]|length) \([.[]|select(.status=="in_progress")]|length)"' 2>/dev/null)
+  [ -n "${counts:-}" ] || { warn "could not read the backfill lane's state — proceeding blind"; return 0; }
+  queued=${counts%% *}; running=${counts##* }
+  say "WAVE2 preflight: backfill-runner lane has $queued queued, $running in progress"
+  # A deep queue with NOTHING running is a stalled lane, not a busy one.
+  if [ "${queued:-0}" -ge 10 ] && [ "${running:-0}" -eq 0 ]; then
+    die "the backfill lane is STALLED — $queued queued and none running. Dispatching $SLOTS more 180-minute jobs would only age them. Clear or cancel the stale queue first, or set WAVE2_SKIP_PREFLIGHT=true to queue behind it deliberately."
+  fi
+  return 0
+}
+
 dispatch() {
   local mode="$1" apply="$2" scope="$3" slot="$4"
   local cmd=(gh workflow run backfill-runner.yml --repo "$REPO" --ref "$REF"
@@ -241,6 +272,7 @@ follow_slot() {
 # I9 reference has to be.
 
 phase_census() {
+  preflight_lane
   local since; since=$(date -u +%Y-%m-%dT%H:%M:%SZ)
   say "WAVE2 CENSUS — $SLOTS slots, mode=census apply=false (report-only)"
   local s
@@ -359,6 +391,7 @@ gate_apply_slot() {
 run_apply_slots() {
   local canary="$1"; shift
   local slots=("$@")
+  preflight_lane
   local since; since=$(date -u +%Y-%m-%dT%H:%M:%SZ)
   local s
   for s in "${slots[@]}"; do dispatch apply-improve true improve "$s" || true; done
