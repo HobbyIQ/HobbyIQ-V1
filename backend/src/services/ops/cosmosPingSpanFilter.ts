@@ -95,7 +95,11 @@ export function suppressIfCosmosPing(span: FilterableSpan): boolean {
  * `useAzureMonitor({ spanProcessors: [new CosmosPingSpanFilter()] })`.
  */
 export class CosmosPingSpanFilter {
-  /** Count of spans suppressed, for the periodic summary log. */
+  /**
+   * How many spans this processor has suppressed. Not logged anywhere — it
+   * exists so a test can assert the filter actually acted, rather than
+   * inferring it from the absence of a row.
+   */
   private _suppressed = 0;
 
   get suppressedCount(): number {
