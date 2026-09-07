@@ -198,6 +198,19 @@ balancing and says so at runtime.
 - The workflow's collect step was **extracted from the YAML and executed** with
   a stubbed `gh` (the #1980 standard: parsing is not running), and the 404 /
   red-cron / healthy branches were each probed against the live API.
+- Full suite: **19,227 passed / 1 skipped**, with one local 30-second timeout in
+  `splitIdentitySportSegmentTranche2.test.ts` that CI does not reproduce — box
+  load, and a file this PR does not touch.
+
+### One pin caught this PR, which is the system working
+
+#1967's canary-map pin enumerates `.github/workflows/*-canary.yml` and goes red
+the moment a canary exists that `canary-map.md` does not name. Adding
+`scheduled-jobs-canary.yml` turned it red — in CI and locally, on the same
+assertion — and the fix was to write the row it was asking for. Worth recording
+because it is the same shape as everything else here: the pin did not know about
+this canary in advance, it knew that the map must not fall behind, and that was
+enough to catch a real omission on the first run.
 
 **Deploy: OWED.** `writeReconciliation.ts` is under `backend/src`, and the first
 draft of this report claimed no in-process consumer. That was wrong, and checking
