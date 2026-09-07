@@ -151,8 +151,21 @@ while the scheduled backlog-drainer does nothing.
 ### Parks since the guard
 
 `identityUnverified = true` on tca-ebay rows in the last 24h: **32** of
-~25,031 (**0.13%**). No park reason dominates; the 500-row samples below
-contain zero parked rows.
+~25,031 (**0.13%**). Enumerated by reason, all 32 are the same class:
+
+| Reason | 2026-09-07 | Total |
+|---|---|---|
+| `split-identity` | 32 | **32** |
+| sport-unresolved | 0 | 0 |
+| malformed-key | 0 | 0 |
+
+So the two classes #1939 measured — 8,102 malformed `hiq:` keys and the
+sport-defaulted split — are **no longer being produced**: nothing in the last
+24h parked for a malformed key or an unresolved sport. What still parks is the
+genuine case the guard exists for, a sale whose two identity fields disagree
+and where no attestation resolves it (e.g. `2000 Upper Deck Black Diamond #T8
+Barry Bonds Constant Threat`). The 500-row samples below contain zero parked
+rows, consistent with 0.13%.
 
 Neither failure mode is present:
 - **Not a park flood** — 0.13% is far too small to be the guard catching a
