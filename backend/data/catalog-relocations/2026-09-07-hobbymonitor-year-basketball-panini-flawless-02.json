@@ -1,0 +1,648 @@
+{
+  "generatedAt": "2026-09-07T02:00:00Z",
+  "forLane": "relocate-catalog-rows-by-list",
+  "reportOnlyUntil": "Drew's review — NO APPLY IS AUTHORIZED BY THIS PR. This list DELETES catalog rows.",
+  "keepSales": true,
+  "finding": "#1925 H1. 1584 card_catalog rows from hobbymonitor-2026-09-04 under basketball/panini-flawless carry year 2025 while their own setName states 2023. The census compared 5,381 card numbers across all 28 products: 5,351 agree with the year-N checklist, 444 agree with year N+1, and ZERO agree with N+1 but not N — so the setName is right and the year field is wrong. This file is part 02 of 2 for this product: 0 retire, 89 reslug.",
+  "rulings": [
+    "THE CHECKLIST IS THE AUTHORITY AND THE setName IS RIGHT. Every number-to-player comparison in #1925 resolves to year N. A row is retired only where the year-N address is already held by the SAME player from a CHECKLIST source (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT); a twin from `ingest-auto-seed` or `bccp` earns no delete and is excluded instead.",
+    "THE SALES DO NOT MOVE — `keepSales: true`. 7,905 sales rest on these rows' slugs and their titles are 7,901-to-0 the year-N+1 product: they belong to the card that STAYS, not the one that moves. moveCatalogRow re-points a row's own sales by default, which here would carry genuine year-N+1 sales back to year N — the exact mispricing this repair exists to end. Under the flag the lane hands moveCatalogRow no salesContainer, so hobbyiqCardId and cardId are untouched and the rematch re-derives them against the genuine year-N+1 identity. Measured: 7,776 of the 7,905 have a genuine year-N+1 row at their card number to land on; 129 do not and need a checklist ingest first.",
+    "RETIRE IS A HARD DELETE, AND IT IS ORDERED FIRST. card_catalog has no field that stops a row resolving, so a retire deletes the row and its graded children, and leaves its sales UNPLACED. Retires sort before reslugs in every file, and the files sort in the order they must run.",
+    "AN OCCUPIED DESTINATION IS REPORTED, NEVER ROUTED AROUND. 5,899 rows whose year-N destination names a DIFFERENT player, and 712 whose destination is an UNNAMED bccp row, are in docs/reports/2026-09-07-hobbymonitor-year-excluded.md and in no list."
+  ],
+  "census": {
+    "product": "basketball/panini-flawless",
+    "storedYear": 2025,
+    "trueYear": 2023,
+    "destinationSetKey": "panini-flawless",
+    "rowsInProduct": 1584,
+    "retireInThisFile": 0,
+    "reslugInThisFile": 89,
+    "salesOnEntriesInThisFile": 1
+  },
+  "entries": [
+    {
+      "id": "hiq:basketball:2025:panini-flawless:14:emerald-5-jalen-johnson-3:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:14:emerald-5-jalen-johnson-3:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Kyle Kuzma\" #14; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:12:base-2:auto:num-2",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:12:base-2:auto:num-2",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Bilal Coulibaly\" #12; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:7:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:7:base:auto",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Kevin McHale\" #7; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:33:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:33:base:auto",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Jordan Walsh\" #33; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:47:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:47:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Miles Bridges\" #47; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:17:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:17:base:auto",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Olivier-Maxence Prosper\" #17; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:79:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:79:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Jason Kidd\" #79; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:41:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:41:base:auto",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Julian Strawther\" #41; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:102:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:102:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Yao Ming\" #102; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:23:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:23:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Yao Ming\" #23; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:90:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:90:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Jaren Jackson Jr.\" #90; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:140:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:140:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Bam Adebayo\" #140; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:19:base-11:no-auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:19:base-11:no-auto:num-1",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"LeBron James\" #19; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:6:ruby-15-select-cards-only-list-below:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:6:ruby-15-select-cards-only-list-below:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Bam Adebayo\" #6; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:45:emerald-5-jalen-johnson-3:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:45:emerald-5-jalen-johnson-3:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Keegan Murray\" #45; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:40:emerald-5-jalen-johnson-3:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:40:emerald-5-jalen-johnson-3:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Jordan Poole\" #40; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:144:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:144:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Shai Gilgeous-Alexander\" #144; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:25:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:25:base:auto",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Paul Pierce\" #25; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:187:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:187:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Jayson Tatum\" #187; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:175:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:175:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Jaylen Brown\" #175; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:94:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:94:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Rudy Gobert\" #94; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:20:base-11:no-auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:20:base-11:no-auto:num-1",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Stephen Curry\" #20; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:12:ruby-15-select-cards-only-list-below:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:12:ruby-15-select-cards-only-list-below:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Bones Hyland\" #12; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:38:emerald-5-jalen-johnson-3:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:38:emerald-5-jalen-johnson-3:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Jalen Hood-Schifino\" #38; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:22:emerald-5-jalen-johnson-3:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:22:emerald-5-jalen-johnson-3:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Bam Adebayo\" #22; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:100:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:100:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Nikola Jokic\" #100; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:128:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:128:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Anthony Davis\" #128; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:86:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:86:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Bam Adebayo\" #86; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:49:ruby-15-select-cards-only-list-below:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:49:ruby-15-select-cards-only-list-below:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Coby White\" #49; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:5:base-11:no-auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:5:base-11:no-auto:num-1",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Tim Duncan\" #5; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:5:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:5:base:auto",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Kobe Bufkin\" #5; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:76:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:76:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Larry Bird\" #76; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:105:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:105:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Larry Bird\" #105; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:88:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:88:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Vasilije Micic\" #88; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:150:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:150:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Jalen Brunson\" #150; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:16:base-11:no-auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:16:base-11:no-auto:num-1",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Jayson Tatum\" #16; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:30:emerald-5-jalen-johnson-3:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:30:emerald-5-jalen-johnson-3:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Derrick White\" #30; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:29:base-11:auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:29:base-11:auto:num-1",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Stephen Curry\" #29; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:42:ruby-15-select-cards-only-list-below:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:42:ruby-15-select-cards-only-list-below:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Shaedon Sharpe\" #42; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:2:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:2:base:auto",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Trae Young\" #2; destination read as vacant 2026-09-07; 1 sale(s) rest here and STAY — they are the 2025 card's"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:41:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:41:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Hunter Tyson\" #41; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:34:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:34:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Klay Thompson\" #34; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:69:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:69:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Trayce Jackson-Davis\" #69; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:166:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:166:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Klay Thompson\" #166; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:160:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:160:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Kareem Abdul-Jabbar\" #160; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:1:blue-3-lively-2-no-jackson-davis:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:1:blue-3-lively-2-no-jackson-davis:auto",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Dejounte Murray\" #1; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:30:base-11:auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:30:base-11:auto:num-1",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Giannis Antetokounmpo\" #30; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:26:emerald-5-jalen-johnson-3:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:26:emerald-5-jalen-johnson-3:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Taylor Hendricks\" #26; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:10:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:10:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Jaylen Brown\" #10; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:20:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:20:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Brandon Miller\" #20; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:45:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:45:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Chris Paul\" #45; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:61:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:61:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Cam Whitmore\" #61; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:131:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:131:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Tyrese Haliburton\" #131; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:10:base-11:no-auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:10:base-11:no-auto:num-1",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Cam Whitmore\" #10; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:36:ruby-15-select-cards-only-list-below:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:36:ruby-15-select-cards-only-list-below:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Austin Reaves\" #36; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:11:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:11:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Zion Williamson\" #11; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:101:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:101:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Derrick Rose\" #101; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:57:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:57:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Dereck Lively II\" #57; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:125:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:125:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Stephen Curry\" #125; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:162:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:162:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Magic Johnson\" #162; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:177:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:177:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Kevin Garnett\" #177; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:199:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:199:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"David Robinson\" #199; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:26:base-11:auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:26:base-11:auto:num-1",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Donovan Mitchell\" #26; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:26:base-2:auto:num-2",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:26:base-2:auto:num-2",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Donovan Mitchell\" #26; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:1:base-2:auto:num-2",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:1:base-2:auto:num-2",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Ausar Thompson\" #1; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:1:base-11:auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:1:base-11:auto:num-1",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Ausar Thompson\" #1; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:15:base-11:no-auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:15:base-11:no-auto:num-1",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Giannis Antetokounmpo\" #15; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:8:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:8:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Jayson Tatum\" #8; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:23:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:23:base:auto",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Vasilije Micic\" #23; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:53:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:53:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Nick Smith Jr.\" #53; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:70:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:70:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Kyrie Irving\" #70; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:47:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:47:base:auto",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Chris Paul\" #47; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:55:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:55:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Brandin Podziemski\" #55; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:35:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:35:base:auto",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Amen Thompson\" #35; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:22:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:22:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Amen Thompson\" #22; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:82:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:82:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Pau Gasol\" #82; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:188:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:188:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Giannis Antetokounmpo\" #188; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:47:ruby-15-select-cards-only-list-below:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:47:ruby-15-select-cards-only-list-below:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Miles Bridges\" #47; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:9:emerald-5-jalen-johnson-3:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:9:emerald-5-jalen-johnson-3:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Pascal Siakam\" #9; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:5:base-2:no-auto:num-2",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:5:base-2:no-auto:num-2",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Tim Duncan\" #5; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:14:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:14:base:auto",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Trae Young\" #14; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:18:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:18:base:auto",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Dominique Wilkins\" #18; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:141:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:141:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Ausar Thompson\" #141; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:80:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:80:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Tyrese Haliburton\" #80; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:132:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:132:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Shai Gilgeous-Alexander\" #132; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:19:ruby-15-select-cards-only-list-below:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:19:ruby-15-select-cards-only-list-below:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Nick Smith Jr.\" #19; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:27:emerald-5-jalen-johnson-3:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:27:emerald-5-jalen-johnson-3:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Patrick Williams\" #27; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:29:base-2:auto:num-2",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:29:base-2:auto:num-2",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Stephen Curry\" #29; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:panini-flawless:30:base-2:auto:num-2",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:panini-flawless:30:base-2:auto:num-2",
+      "reason": "#1925 H1: setName \"2023/24 Panini Flawless Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Giannis Antetokounmpo\" #30; destination read as vacant 2026-09-07"
+    }
+  ]
+}
