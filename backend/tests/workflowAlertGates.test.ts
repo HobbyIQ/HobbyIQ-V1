@@ -298,3 +298,75 @@ describe("P1-7 + P2-5. the red scheduled jobs", () => {
     );
   });
 });
+
+// ---------------------------------------------------------------------------
+// 2026-09-07 — the thirteen red scheduled crons. Three of them were real
+// defects with a fix that lives in a workflow file or in an import line, so
+// the pin is the test.
+// ---------------------------------------------------------------------------
+
+describe("era-baselines-refresh builds dist before loading it", () => {
+  const yml = wf("era-baselines-refresh.yml");
+
+  it("runs npm run build, not just npm ci", () => {
+    // The script imports backend/dist/services/compiq/eraBaselineCompute.js.
+    // Without a build step dist/ never exists and every scheduled run died in
+    // ~33s with "Cannot find dist output — run `npm run build` first."
+    expect(yml).toContain("run: npm ci");
+    expect(yml).toContain("run: npm run build");
+  });
+
+  it("builds before the refresh step that loads dist", () => {
+    expect(yml.indexOf("run: npm run build")).toBeLessThan(
+      yml.indexOf("node scripts/refresh-era-baselines.cjs"),
+    );
+  });
+
+  it("the build carries the same ET gate as every other step", () => {
+    const build = yml.slice(yml.indexOf("- name: Build backend"));
+    expect(build.slice(0, 200)).toContain("steps.et-gate.outputs.should_run == 'true'");
+  });
+});
+
+describe("nightly-cleanliness anomaly detection has a workable budget", () => {
+  const yml = wf("nightly-cleanliness.yml");
+
+  it("allows the forced rescan more than 90s", () => {
+    // ?force=true bypasses the 5-min cache; the run died at exactly 90s with
+    // curl exit 28 on 09-04/05/06/07. Read the timeout off the curl calls
+    // themselves — the comment above them quotes the old value on purpose.
+    const timeouts = [...yml.matchAll(/curl[^\n]*--max-time (\d+)/g)].map((m) => Number(m[1]));
+    expect(timeouts.length).toBeGreaterThan(0);
+    for (const t of timeouts) expect(t).toBeGreaterThanOrEqual(900);
+  });
+
+  it("reports a timeout AS a timeout, not as an empty response", () => {
+    expect(yml).toMatch(/if \[ "\$CURL_RC" -eq 28 \]; then\n\s+echo "::error::anomaly detection timed out[^\n]*"\n\s+exit 1\n\s+fi/);
+    // The empty-response branch stays, and stays exit 1 (D13).
+    expect(yml).toMatch(/if \[ -z "\$RESULT" \]; then\n(\s+#[^\n]*\n)?\s+echo "::error::anomaly detection returned empty[^\n]*"\n\s+exit 1\n\s+fi/);
+  });
+
+  it("a non-zero curl status can never be read as success", () => {
+    expect(yml).toMatch(/if \[ "\$CURL_RC" -ne 0 \]; then\n\s+echo "::error::[^\n]*"\n\s+exit 1\n\s+fi/);
+  });
+});
+
+describe("daily-listings-snapshot names the reason it was refused", () => {
+  const yml = wf("daily-listings-snapshot.yml");
+
+  it("a 401 says the secret drifted, instead of a bare curl exit 22", () => {
+    // requireOpsToken answers 503 when OPS_REPORT_TOKEN is unset server-side,
+    // so a 401 proves the server has a token and the repo secret differs.
+    expect(yml).toMatch(/if \[ "\$HTTP_CODE" = "401" \]; then\n\s+echo "::error::[^\n]*OPS_TOKEN[^\n]*"\n\s+exit 1\n\s+fi/);
+    expect(yml).toContain("Re-set the GitHub secret OPS_TOKEN");
+  });
+
+  it("distinguishes an unconfigured server (503) from a wrong token (401)", () => {
+    expect(yml).toMatch(/if \[ "\$HTTP_CODE" = "503" \]; then/);
+  });
+
+  it("any other non-2xx is still red, with the code in the message", () => {
+    expect(yml).toMatch(/HTTP_CODE" -lt 200 \] \|\| \[ "\$HTTP_CODE" -ge 300 \]/);
+    expect(yml).toContain("no snapshots were written");
+  });
+});

@@ -48,12 +48,46 @@ jobs:
 
           # 25-minute upper bound on the endpoint call itself (the job
           # walks up to TOP_N players sequentially-with-cap).
-          RESPONSE=$(curl -sS --fail-with-body --max-time 1500 \
+          #
+          # CF-LISTINGS-CRON-401 (2026-09-07). Every scheduled run since at
+          # least 09-05 died as a bare "exit code 22" — curl's generic HTTP
+          # failure — which says nothing about WHY. Capture the status code so
+          # the log names the cause. A 401 here is specifically a credential
+          # mismatch and NOT a code defect: requireOpsToken answers 503 when
+          # OPS_REPORT_TOKEN is unset server-side, so a 401 proves the server
+          # HAS a token and this workflow is sending a different one. The
+          # repo's OPS_TOKEN secret (set 2026-07-14, used by no other
+          # workflow, so nothing else corroborates it) has drifted from the
+          # App Service OPS_REPORT_TOKEN. Rotating either is a live-config
+          # write, so this fix makes the failure legible; it cannot re-key it.
+          set +e
+          HTTP_CODE=$(curl -sS --max-time 1500 \
+            -o /tmp/cron-tick-response.json -w '%{http_code}' \
             -X POST \
             -H "content-type: application/json" \
             -H "x-ops-token: $OPS_TOKEN" \
             -d "$PAYLOAD" \
             "$PROD_URL/api/ops/listings/cron-tick")
+          CURL_RC=$?
+          set -e
+          RESPONSE=$(cat /tmp/cron-tick-response.json 2>/dev/null || echo "")
+
+          if [ "$CURL_RC" -ne 0 ]; then
+            echo "::error::listings cron-tick request failed to complete (curl exit $CURL_RC) — no snapshots were written"
+            exit 1
+          fi
+          if [ "$HTTP_CODE" = "401" ]; then
+            echo "::error::listings cron-tick rejected the OPS_TOKEN (HTTP 401). The server has an OPS_REPORT_TOKEN set (an unset one answers 503), so the repo secret OPS_TOKEN no longer matches it. Re-set the GitHub secret OPS_TOKEN to the current HobbyIQ3 OPS_REPORT_TOKEN app setting. No snapshots were written."
+            exit 1
+          fi
+          if [ "$HTTP_CODE" = "503" ]; then
+            echo "::error::listings cron-tick reports OPS_REPORT_TOKEN is not configured on HobbyIQ3 (HTTP 503). No snapshots were written."
+            exit 1
+          fi
+          if [ "$HTTP_CODE" -lt 200 ] || [ "$HTTP_CODE" -ge 300 ]; then
+            echo "::error::listings cron-tick returned HTTP $HTTP_CODE — no snapshots were written. Body: $RESPONSE"
+            exit 1
+          fi
 
           echo "Response: $RESPONSE"
 

@@ -149,11 +149,30 @@ jobs:
         shell: bash
         run: |
           echo "Running anomaly detection..."
-          RESULT=$(curl -sf --max-time 90 -H "Authorization: Bearer $ADMIN_API_TOKEN" \
+          # CF-CLEANLINESS-ANOMALY-BUDGET (2026-09-07). --max-time 90 was below
+          # what this endpoint needs: ?force=true bypasses the 5-min cache and
+          # rescans, and the nightly run died at exactly 90s with curl exit 28
+          # on 09-04/05/06/07. Raise the ceiling to 15 minutes (the budget
+          # daily-listings-snapshot already gives its ops call). Capture curl's
+          # status so a timeout reports AS a timeout instead of being flattened
+          # into the "returned empty" branch below — the two have different
+          # fixes, and the message has to say which one the reader is seeing.
+          set +e
+          RESULT=$(curl -sf --max-time 900 -H "Authorization: Bearer $ADMIN_API_TOKEN" \
             "https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net/api/cleanliness/anomalies?force=true")
+          CURL_RC=$?
+          set -e
+          if [ "$CURL_RC" -eq 28 ]; then
+            echo "::error::anomaly detection timed out after 900s (curl exit 28) — the endpoint never answered, so no drift comparison ran"
+            exit 1
+          fi
+          if [ "$CURL_RC" -ne 0 ]; then
+            echo "::error::anomaly detection request failed (curl exit $CURL_RC) — no drift comparison ran"
+            exit 1
+          fi
           if [ -z "$RESULT" ]; then
             # D13: an empty response used to warn and exit 0 — green with no detection.
-            echo "::error::anomaly detection returned empty (curl -f failed or the API returned nothing) — no drift comparison ran"
+            echo "::error::anomaly detection returned empty (the API answered with nothing) — no drift comparison ran"
             exit 1
           fi
           HIGH_COUNT=$(echo "$RESULT" | node -e "let d=''; process.stdin.on('data',c=>d+=c); process.stdin.on('end',()=>{ try { const r=JSON.parse(d); const highs=(r.report?.anomalies||[]).filter(a=>a.suspiciousness==='high'); console.log(highs.length); } catch { console.log('0'); } })")
