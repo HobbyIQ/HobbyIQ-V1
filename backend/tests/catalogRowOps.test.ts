@@ -726,6 +726,167 @@ describe("retireCatalogRow", () => {
   });
 });
 
+describe("moveCatalogRow: a graded child can MOVE, not only be swept up", () => {
+  /**
+   * THE 2026-09-07 CROWN ZENITH INCIDENT.
+   *
+   * All 292 rows of the Galarian Gallery list failed their apply with
+   *
+   *   moveCatalogRow: newSlug is not a hiq slug:
+   *   hiq:pokemon:2023:swsh12-5gg:gg01:full-art:no-auto:cgc-10
+   *
+   * and the list was RIGHT: every one of those 292 is a graded child, whose id
+   * is `${parentSlug}:${tier}` by this module's own contract, and every
+   * destination differs from its source in the product segment alone.
+   * `parseHobbyIqCardId` deserializes a CARD identity and a grade tier is not
+   * part of that grammar, so it returned null and buildIncoming threw.
+   *
+   * moveCatalogRow already RETIRES graded children by
+   * `STARTSWITH(c.id, parent + ":") AND IS_DEFINED(c.gradeTier)`. It could
+   * sweep one up but never move one -- a position nobody chose.
+   *
+   * The parser itself is NOT loosened (61 call sites, the matcher's hot path
+   * among them); the split lives here, and uses the tier rule already written
+   * down for isGradedChildOf: one segment, never `num-`.
+   */
+  // identityRow() carries a CARD id, and gradedChild spreads its overrides
+  // last -- so passing it as an override clobbers the child id. Build the
+  // card first, then stamp the graded identity over it.
+  const gradedOf = (parent: string, tier: string): Doc => ({
+    ...identityRow(),
+    ...gradedChild(parent, tier),
+  });
+
+  const CHILD_OLD = `${OLD}:cgc-10`;
+  const CHILD_NEW = `${NEW}:cgc-10`;
+
+  it("moves a graded child across a product rename", async () => {
+    const w = world();
+    const r = await moveCatalogRow(
+      w.cat, gradedOf(OLD, "cgc-10") as never, CHILD_NEW,
+      { setKey: "topps-allen-and-ginter" }, { reason: REASON, salesContainer: w.pool },
+    );
+    expect(r.action).toBe("move");
+    expect(r.newSlug).toBe(CHILD_NEW);
+    const landed = w.catalog.docs.get(CHILD_NEW)!;
+    expect(landed).toBeDefined();
+    expect(landed.setKey).toBe("topps-allen-and-ginter");
+  });
+
+  it("THE GRADED ANNOTATIONS FOLLOW: parentSlug points at the NEW parent", async () => {
+    // Leaving parentSlug behind would orphan the child onto the address the
+    // move just vacated -- a graded row hanging off a card that no longer
+    // exists is exactly the split-pool shape this lane exists to close.
+    const w = world();
+    await moveCatalogRow(
+      w.cat, gradedOf(OLD, "cgc-10") as never, CHILD_NEW,
+      { setKey: "topps-allen-and-ginter" }, { reason: REASON, salesContainer: w.pool },
+    );
+    const landed = w.catalog.docs.get(CHILD_NEW)!;
+    expect(landed.parentSlug).toBe(NEW);
+    expect(landed.gradeTier).toBe("cgc-10");
+  });
+
+  it("MUTATION: reject the graded tail -> the 292 fail again -> red", async () => {
+    // The shipped 2026-09-06 behaviour, asserted as the thing that changed.
+    const w = world();
+    await expect(moveCatalogRow(
+      w.cat, gradedOf(OLD, "cgc-10") as never, CHILD_NEW,
+      { setKey: "topps-allen-and-ginter" }, { reason: REASON, salesContainer: w.pool },
+    )).resolves.toMatchObject({ action: "move" });
+    // ...and the exact production slug shape parses, rather than throwing.
+    const zenithChild = {
+      ...identityRow(),
+      id: "hiq:pokemon:2023:swsh12-5:gg01:full-art:no-auto:cgc-10",
+      cardId: "hiq:pokemon:2023:swsh12-5:gg01:full-art:no-auto:cgc-10",
+      parentSlug: "hiq:pokemon:2023:swsh12-5:gg01:full-art:no-auto",
+      gradeTier: "cgc-10",
+      sport: "pokemon", year: 2023, cardYear: 2023,
+      setKey: "panini-zenith", cardNumber: "gg01", parallel: "Full Art", parallelSlug: "full-art",
+      playerName: "Rillaboom",
+    };
+    const w2 = world({ old: zenithChild });
+    const r = await moveCatalogRow(
+      w2.cat, zenithChild as never,
+      "hiq:pokemon:2023:swsh12-5gg:gg01:full-art:no-auto:cgc-10",
+      { setKey: "swsh12-5gg" }, { reason: REASON, salesContainer: w2.pool },
+    );
+    expect(r.action).toBe("move");
+    expect(r.newSlug).toBe("hiq:pokemon:2023:swsh12-5gg:gg01:full-art:no-auto:cgc-10");
+  });
+
+  it("A PRINT-RUN SEGMENT IS NOT A GRADE — num- is never read as a tier", async () => {
+    // `hiq:…:no-auto:num-50` is the NUMBERED SIBLING, a card in its own right,
+    // and must keep parsing as a card. Reading `num-50` as a grade tier would
+    // make every numbered card a graded child of its unnumbered twin.
+    const w = world();
+    const numberedOld = `${OLD}:num-50`;
+    const numberedNew = `${NEW}:num-50`;
+    const row = identityRow({ id: numberedOld, cardId: numberedOld, hobbyiqCardId: numberedOld, printRun: 50 });
+    const r = await moveCatalogRow(
+      w.cat, row as never, numberedNew,
+      { setKey: "topps-allen-and-ginter" }, { reason: REASON, salesContainer: w.pool },
+    );
+    expect(r.action).toBe("move");
+    const landed = w.catalog.docs.get(numberedNew)!;
+    expect(landed.printRun).toBe(50);
+    // It is a CARD, so it gains no graded annotations.
+    expect(landed.parentSlug).toBeUndefined();
+    expect(landed.gradeTier).toBeUndefined();
+
+    // AND THE SPLIT ITSELF MUST REFUSE `num-`, not merely decline to reach it.
+    // The case above parses directly as a card, so it never exercises the
+    // tail split at all. A slug whose head does NOT parse and whose tail is a
+    // print run -- `…:no-auto:num-50:num-25`, a shape no builder mints -- is
+    // the one that proves the `num-` exclusion is load-bearing: without it the
+    // split would accept `num-25` as a grade tier and mint a graded identity
+    // with no grade.
+    await expect(moveCatalogRow(
+      w.cat, identityRow() as never, `${NEW}:num-50:num-25`,
+      { setKey: "topps-allen-and-ginter" }, { reason: REASON, salesContainer: w.pool },
+    )).rejects.toThrow(/is not a hiq slug/);
+  });
+
+  it("and a genuinely malformed slug still throws", async () => {
+    const w = world();
+    for (const bad of [
+      "hiq:baseball:2024:topps-allen-and-ginter:1:base",          // no auto flag
+      "hiq:baseball:2024:topps-allen-and-ginter:1:base:maybe",    // not an auto flag
+      "not-a-slug-at-all",
+    ]) {
+      await expect(moveCatalogRow(
+        w.cat, identityRow() as never, bad,
+        { setKey: "topps-allen-and-ginter" }, { reason: REASON, salesContainer: w.pool },
+      )).rejects.toThrow(/is not a hiq slug|cross-product move/);
+    }
+  });
+
+  it("A CARD MAY NOT MOVE ONTO A GRADED ADDRESS, nor a child onto a card's", async () => {
+    // The two shapes are different kinds of row; silently converting one into
+    // the other would mint a graded identity with no grade, or a card whose id
+    // carries someone's tier.
+    const w = world();
+    await expect(moveCatalogRow(
+      w.cat, identityRow() as never, CHILD_NEW,
+      { setKey: "topps-allen-and-ginter" }, { reason: REASON, salesContainer: w.pool },
+    )).rejects.toThrow(/cannot move onto a graded address/);
+    await expect(moveCatalogRow(
+      w.cat, gradedOf(OLD, "cgc-10") as never, NEW,
+      { setKey: "topps-allen-and-ginter" }, { reason: REASON, salesContainer: w.pool },
+    )).rejects.toThrow(/cannot move onto a card address/);
+  });
+
+  it("the cross-product guard still applies to a graded child's PARENT stem", async () => {
+    // The setKey assertion reads the head of the slug, so a graded child gets
+    // exactly the same protection its parent would: no silent product change.
+    const w = world();
+    await expect(moveCatalogRow(
+      w.cat, gradedOf(OLD, "cgc-10") as never, CHILD_NEW,
+      {}, { reason: REASON, salesContainer: w.pool },
+    )).rejects.toThrow(/newSlug says setKey .* but the row's id says/);
+  });
+});
+
 describe("isGradedChildOf", () => {
   const parent = "hiq:baseball:2024:topps:1:gold:no-auto";
   it("accepts the parent's own tiers and rejects the numbered sibling's", () => {

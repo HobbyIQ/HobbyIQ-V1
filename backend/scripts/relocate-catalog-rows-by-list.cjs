@@ -90,9 +90,27 @@
  * list that must vacate an alias address before reslugging onto it says so by
  * putting the retire first. The lane does not reorder.
  *
- * REPORT FIRST. Without BACKFILL_APPLY=true this prints the whole plan -- every
- * id, its current address, its intended fate, and the evidence recorded in the
- * file -- and writes nothing.
+ * REPORT FIRST, AND THE REPORT RUNS THE APPLY'S DERIVATION. Without
+ * BACKFILL_APPLY=true this prints the whole plan -- every id, its current
+ * address, its intended fate, and the evidence recorded in the file -- and
+ * writes nothing.
+ *
+ * "Writes nothing" is NOT the same as "computes nothing", and conflating them
+ * is what produced the 2026-09-07 incident: the report counted every reslug a
+ * success before moveCatalogRow was ever called, reconciled 148/148, and the
+ * apply of the same list on the same rows then FAILED 91 of them on a
+ * derivation the report had never run. A report that cannot predict its apply
+ * is worse than no report -- it is a green light for a write that will not
+ * happen. So the reslug path now makes ONE moveCatalogRow call for both modes,
+ * with `dryRun: !APPLY`: read everything, derive everything, write only when
+ * armed. Anything moveCatalogRow would refuse, the report refuses too.
+ *
+ * The same day proved the point twice. The Crown Zenith Galarian Gallery list
+ * (292 EN->EN reslugs) reported 292/292 and applied 0, failing every row on
+ * "newSlug is not a hiq slug" -- a VALIDATION refusal, nothing to do with the
+ * market guard or with occupancy. A report that skips the derivation cannot
+ * predict ANY of the three, which is why the fix is one shared call rather
+ * than three mirrored checks that would drift apart again.
  *
  * ────────────────────────────────────────────────────────────────────────────
  * WHAT HAPPENS TO A ROW'S SALES, STATED PER SHAPE -- AND `keepSales`
@@ -243,6 +261,34 @@ function classifyEntry(e) {
  * destination already occupied by another player is a mistake in the list, and
  * the answer is to report it to the human who wrote it.
  */
+/** The setKey segment of a hiq slug, or "" when it is not one. */
+function idSetKey(slug) {
+  const parts = String(slug ?? "").split(":");
+  return parts.length >= 5 && parts[0] === "hiq" ? parts[3] : "";
+}
+
+/**
+ * The `changedFields` a reslug must pass to moveCatalogRow.
+ *
+ * moveCatalogRow separates two populations by ONE question: did the caller ASK
+ * to change the product? A FOLD (renumber, parallel fix) asks for nothing and
+ * its destination stem must equal the row's own; a RENAME names the product it
+ * is moving to and is allowed to land there. A curated list states the whole
+ * destination slug, so it answers that question by construction: when the
+ * destination's stem differs from the id's, this entry IS a rename and must
+ * say so. Returning `{}` for a same-stem move keeps every fold on the strict
+ * path, unchanged.
+ *
+ * Nothing is invented here -- the key is read off the destination the list
+ * author wrote, never re-derived from setName, and the market guard still has
+ * to agree before it is used.
+ */
+function crossProductFields(id, to) {
+  const from = idSetKey(id);
+  const dest = idSetKey(to);
+  return dest && from && dest !== from ? { setKey: dest } : {};
+}
+
 /**
  * Does this entry keep its sales where they are, rather than carrying them to
  * the new slug?
@@ -297,6 +343,7 @@ async function main() {
   const {
     moveCatalogRow, retireCatalogRow,
   } = require(path.join(backend, "dist/services/catalog/catalogRowOps.service.js"));
+  const { marketVerdict } = require(path.join(__dirname, "lib", "market-guard.cjs"));
 
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) { console.error("FATAL: COSMOS_CONNECTION_STRING not set"); process.exit(1); }
@@ -361,6 +408,7 @@ async function main() {
   // has no row at its address at all, while these still have one -- the
   // GENUINE year-N+1 row that was always the right one for them.
   let salesLeftBehind = 0;
+  let refusedCrossMarket = 0;
   const intended = entries.length;
 
   for (const e of entries) {
@@ -418,11 +466,37 @@ async function main() {
     console.log(`      ${String(row.playerName ?? "(no player)")} — reason: ${reason.slice(0, 70)}`);
     if (evidence) console.log(`      evidence: ${evidence.slice(0, 90)}`);
 
+    // THE DESTINATION NAMES THE PRODUCT. When `to` stems from a different
+    // setKey than the row's id, this entry is a RENAME, and moveCatalogRow
+    // refuses a product change nobody asked for -- so ASK, with the key the
+    // list itself spelled. Silence here is what failed all 91 Japanese 151
+    // rows on 2026-09-06: `{}` means "same product, new address", the
+    // destination said sv2a, the id said 151, and buildIncoming threw.
+    // A same-product move (a fold: renumber, parallel fix) still passes
+    // nothing, so the stem must equal the old one -- that guard is untouched.
+    const changed = crossProductFields(id, to);
+
+    // ...AND THE MARKET GUARD VALIDATES IT. Honouring the list is not trusting
+    // it blindly: a destination whose market contradicts the ROW's market is
+    // refused before any derivation. sv2a is JA and these rows' setName says
+    // Japanese, so this passes -- and an EN destination for a JA row never
+    // would. Both sides must speak and disagree; silence never invents a
+    // refusal (market-guard.cjs).
+    const verdict = marketVerdict(row, changed.setKey ?? idSetKey(to), row.sport);
+    if (!verdict.allowed) {
+      refusedCrossMarket++;
+      console.error(`  REFUSED (cross-market)  ${id.slice(0, 62)}`);
+      console.error(`      -> ${to.slice(0, 70)}`);
+      console.error(`      the row's market is ${verdict.rowMarket}, the destination's is ${verdict.toMarket}`);
+      console.error("      a JA row may never land on an EN key, or the reverse");
+      continue;
+    }
+
     // WHOSE SALES ARE THESE? A move carries the card's own sales; a
     // disentanglement leaves the other card's sales where they are. The list
-    // states which this is, per entry or per file, and the count is printed in
-    // BOTH modes so the hand-off is sized before the apply -- exactly as the
-    // retire's `sales pointing here` line is.
+    // states which this is, per entry or per file, and the count is printed
+    // BEFORE the derivation so the hand-off is sized in the report exactly as
+    // the retire's `sales pointing here` line is.
     const keepSales = keepsSales(e, doc);
     if (keepSales) {
       const staying = await salesAt(id);
@@ -431,19 +505,32 @@ async function main() {
       if (staying) salesLeftBehind += staying;
     }
 
-    if (!APPLY) { resluged++; continue; }
+    // ONE DERIVATION FOR BOTH PATHS. The report does NOT count a success it
+    // never computed: it runs the SAME moveCatalogRow with dryRun, which
+    // reads everything, runs buildIncoming and the survivor choice, and
+    // writes nothing. A report that cannot predict its apply is the defect
+    // -- report-first is only safe when report and apply share the
+    // derivation. Only the write and the verify-by-read differ below.
     try {
-      const res = await moveCatalogRow(cat, row, to, {}, {
+      const res = await moveCatalogRow(cat, row, to, changed, {
         reason,
-        dryRun: false,
+        dryRun: !APPLY,
         // Omitting salesContainer is moveCatalogRow's documented way to say
         // "the caller KNOWS no sale should follow" -- it then re-points
         // nothing and says so in its own decision string. That is the whole
         // mechanism of keepSales: not a suppressed patch, an unasked-for one.
+        // It rides the shared derivation above, so the report predicts this
+        // too: a dryRun run reports salesRepointed 0 for a keepSales entry.
         ...(keepSales ? {} : { salesContainer: pool }),
         known: incumbent,
         retry,
       });
+      if (res?.action === "refused") {
+        failed++;
+        console.error(`      FAILED: ${String(res?.decision ?? "refused").slice(0, 80)}`);
+        continue;
+      }
+      if (!APPLY) { resluged++; continue; }
       salesRepointed += res?.salesRepointed ?? 0;
       gradedRetired += res?.gradedChildrenRetired ?? 0;
       // VERIFY BY READ: the destination exists and the source is gone.
@@ -465,6 +552,7 @@ async function main() {
   console.log(`  RETIRED (deleted)       ${f(retired)}   <- deleted; a soft label does NOT stop a catalog row resolving`);
   console.log(`  RESLUGGED (moved)       ${f(resluged)}`);
   console.log(`  refused — occupied      ${f(refusedOccupied)}   <- a different card holds the target address`);
+  console.log(`  refused — cross-market  ${f(refusedCrossMarket)}   <- a JA row may never land on an EN key, or the reverse`);
   console.log(`  already gone            ${f(alreadyRight)}`);
   console.log(`  not found               ${f(notFound)}`);
   console.log(`  failed                  ${f(failed)}`);
@@ -477,16 +565,17 @@ async function main() {
   // seen once before it runs.
   const written = retired + resluged;
   const skipped = alreadyRight + notFound;
+  const refused = refusedOccupied + refusedCrossMarket;
   console.log(`  reconciled: intended ${f(intended)} = written ${f(written)} + skipped ${f(skipped)} `
-    + `+ refused ${f(refusedOccupied)} + failed ${f(failed)}`);
-  if (written + skipped + refusedOccupied + failed !== intended) {
+    + `+ refused ${f(refused)} + failed ${f(failed)}`);
+  if (written + skipped + refused + failed !== intended) {
     console.error("  !! RECONCILE MISMATCH — an entry was neither written, skipped, refused nor failed");
     process.exitCode = 4;
   }
   if (APPLY) {
     reportWrites({
       job: "relocate-catalog-rows-by-list", intended,
-      written, skipped, failed: failed + refusedOccupied,
+      written, skipped, failed: failed + refused,
     });
   }
 }
@@ -495,4 +584,6 @@ if (require.main === module) {
   main().catch((e) => { console.error("FATAL:", e?.stack || e?.message); process.exit(3); });
 }
 
-module.exports = { SCOPE, APPLY, classifyEntry, occupiedByDifferentCard, keepsSales };
+module.exports = {
+  SCOPE, APPLY, classifyEntry, occupiedByDifferentCard, crossProductFields, idSetKey, keepsSales,
+};
