@@ -41,6 +41,7 @@ const path = require("path");
 const backend = path.join(__dirname, "..");
 const { CosmosClient } = require("@azure/cosmos");
 const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
+const { budget, finishLane } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
 
 const APPLY = process.env.BACKFILL_APPLY === "true";
 const ONLY_USER = String(process.env.REPRICE_USER_ID || "").trim() || null;
@@ -50,18 +51,45 @@ const CEILING = 2 * 1024 * 1024; // Cosmos hard document ceiling, bytes.
 const n = (x) => x.toLocaleString("en-US");
 const pct = (a, b) => (b > 0 ? ((a / b) * 100).toFixed(1) : "0.0");
 
+// -- THE CLOCK --------------------------------------------------------------
+//
+// CF-A-KILLED-JOB-CANNOT-REPORT-PROGRESS. This lane writes to `portfolio` --
+// user documents -- and had no clock at all: over every user with holdings it
+// could only end by being KILLED at the runner's 150-minute ceiling, printing
+// no marker, no reconcile and no finishLane line, at which point #1913's
+// KILLED branch withholds the re-dispatch and the reap stops half done.
+//
+// THE UNIT IS ONE USER DOCUMENT, and it is the most expensive unit shape in
+// this repo: a WHOLE-DOCUMENT `replace` followed by a verifying `read`, on a
+// document this lane's own banner tracks against the 2 MB Cosmos ceiling. A
+// document at the ceiling is ~2 MB written and ~2 MB read back, and a
+// throttled container can stretch that pair well past a minute. 90 seconds is
+// that worst case with room, checked BEFORE the document rather than after it.
+//
+// Every count is accumulated in the loop and the post-loop report reads
+// nothing, so VERIFY_MS is nominal and only sizes the pin's worst case
+// (110 + 1.5 + 1 + 1 = 113.5m under the 150m ceiling).
+const RUN_MINUTES = Number(process.env.RUN_MINUTES || 110);
+const RESERVE_MS = Number(process.env.RESERVE_MS || 90 * 1000);
+const VERIFY_MS = Number(process.env.VERIFY_MS || 60 * 1000);
+const CLOCK = budget({ minutes: RUN_MINUTES, reserveMs: RESERVE_MS, verifyMs: VERIFY_MS });
+
 async function main() {
   if (!process.env.COSMOS_CONNECTION_STRING) {
     console.error("FATAL: COSMOS_CONNECTION_STRING not set");
     process.exit(1);
   }
-  const container = new CosmosClient(process.env.COSMOS_CONNECTION_STRING)
-    .database(DB).container("portfolio");
+  // NAMED, not chained away, so finishLane() can dispose it: an undisposed SDK
+  // holds keep-alive sockets, and a live handle is what held four
+  // reconciled-clean runs to the ceiling (#1809).
+  const client = new CosmosClient(process.env.COSMOS_CONNECTION_STRING);
+  const container = client.database(DB).container("portfolio");
 
   console.log("=".repeat(74));
   console.log("reap-orphan-price-trails");
   console.log(`  mode:   ${APPLY ? "APPLY (writes)" : "REPORT-ONLY (no writes)"}`);
   console.log(`  scope:  ${ONLY_USER ? `ONE user (${ONLY_USER})` : "EVERY user with holdings"}`);
+  console.log(`  clock:  ${CLOCK.describe()}`);
   console.log("=".repeat(74));
   console.log();
 
@@ -121,13 +149,28 @@ async function main() {
     const affected = plan.filter((p) => p.orphanIds.length > 0).length;
     console.log(`REPORT-ONLY -- ${n(intendedTrails)} orphaned trails (${n(intendedPoints)} points) would be reaped across ${n(affected)} users.`);
     console.log("Nothing was written. Re-dispatch with apply=true to reap.");
-    return;
+    return { client, budget: CLOCK };
   }
 
   // -- Apply --------------------------------------------------------------
   let written = 0, skipped = 0, failed = 0, pointsReaped = 0;
-  for (const p of plan) {
-    if (p.orphanIds.length === 0) continue;
+  // Trails the budget never reached. NOT failures and NOT skips: nothing was
+  // written and nothing was decided about them, so they are their own line in
+  // the reconcile and the relaunch is what settles them.
+  let notReached = 0;
+  let stoppedAtBudget = false;
+  const work = plan.filter((p) => p.orphanIds.length > 0);
+  for (let i = 0; i < work.length; i++) {
+    const p = work[i];
+    // THE PRE-CHECK: before the document, never after it. `outOfClock()` is
+    // true when less than the reserve remains, so the user doc that would
+    // overrun is never STARTED. A check after the write admits one more
+    // whole-document replace past expiry -- the loop-top defect #1799 named.
+    if (CLOCK.outOfClock()) {
+      stoppedAtBudget = true;
+      for (let j = i; j < work.length; j++) notReached += work[j].orphanIds.length;
+      break;
+    }
     try {
       for (const id of p.orphanIds) delete p.doc.priceHistoryByHolding[id];
       await container.item(p.doc.id, p.userId).replace(p.doc);
@@ -159,6 +202,15 @@ async function main() {
 
   console.log();
   console.log(`Reaped ${n(written)} trails / ${n(pointsReaped)} points.`);
+  console.log(`Not reached (budget): ${n(notReached)} trails -- the relaunch settles these.`);
+  // A PARTIAL RUN STILL RECONCILES. The identity holds over what the loop
+  // CONSIDERED, not over the scan, or a budget stop reads as lost trails.
+  console.log(`  reconciled: intended ${n(intendedTrails)} = written ${n(written)} + skipped ${n(skipped)} `
+    + `+ failed ${n(failed)} + not reached ${n(notReached)}`);
+  if (written + skipped + failed + notReached !== intendedTrails) {
+    console.error("  !! RECONCILE MISMATCH -- a trail was neither written, skipped, failed nor deferred");
+    process.exitCode = 4;
+  }
   // intended = every orphaned trail the scan found; each one is written,
   // skipped or failed. skipped stays 0: this lane holds nothing back, so a
   // non-zero skip would mean a trail vanished between the scan and the write.
@@ -166,9 +218,31 @@ async function main() {
     job: "reap-orphan-price-trails",
     intended: intendedTrails,
     written,
-    skipped,
+    skipped: skipped + notReached,
     failed,
   });
+
+  // -- THE MARKER THE RELAUNCH GREPS ---------------------------------------
+  //
+  // CF-RELAUNCH-ONLY-ON-BUDGET (#1361). The runner greps stdout for
+  // `stopped at the .*budget`, so the phrase is a SOURCE LITERAL rather than
+  // assembled from variables: a marker built by concatenation is one a
+  // refactor can silently reword, and a reworded marker ends the fan-out after
+  // one slice with the run green.
+  if (stoppedAtBudget) {
+    console.log(`
+  stopped at the ${CLOCK.RUN_MINUTES}-minute budget -- `
+      + `${n(notReached)} trails not reached; the relaunch continues from here`);
+    console.log("  the reap is IDEMPOTENT: a trail already deleted is no longer an orphan on"
+      + " the next scan, so the continuation re-derives cheaply and writes only what is left.");
+  }
+
+  return { client, budget: CLOCK };
 }
 
-main().catch((e) => { console.error(e); process.exit(1); });
+// CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809). Success exits too -- a
+// failure path that exits and a success path that hopes is the asymmetry that
+// cost four reconciled-clean runs their exit codes.
+main()
+  .then((ctx) => finishLane(process.exitCode || 0, ctx || { budget: CLOCK }))
+  .catch(async (e) => { console.error(e); await finishLane(1, { budget: CLOCK }); });

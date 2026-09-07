@@ -58,13 +58,50 @@ const SETKEY_LIKE = String(process.env.SETKEY_LIKE || "bowman").toLowerCase();
 // see CF-A-MISSING-PARTITION-KEY-IS-STILL-A-KEY at the delete site.
 const RETIRE_NO_PK = String(process.env.RETIRE_NO_PARTITION_KEY || "") === "true";
 
-(async () => {
+// -- THE CLOCK ---------------------------------------------------------------
+//
+// CF-A-KILLED-JOB-CANNOT-REPORT-PROGRESS. This lane had no clock: it looped
+// every year in YEARS and printed its counters and its reportWrites only after
+// the last one. Run past the runner's 150-minute step and it is KILLED, not
+// stopped -- no marker, no reconcile, no finishLane line -- and #1913's killed
+// branch then withholds the re-dispatch, so the unreached years never happen.
+//
+// THE UNIT IS ONE YEAR, and it is the largest unit this lane has by a wide
+// margin. A year is TWO expensive phases back to back: first a full
+// cross-partition page walk of card_catalog for that year (1,000 rows a page,
+// and the predicate is CONTAINS(LOWER(c.setKey), @k) -- a SCAN, not an index
+// seek), and then, for every duplicated slug it found, a moveCatalogRow per
+// shadow. Each of those is a point read of the full row, a copy write and a
+// delete. The 2026 bowman run this file documents counted 15,876 surplus rows
+// in ONE year: at moveCatalogRow's measured ~1.8 s/row of write cost that year
+// is hours, and even a modest year is many minutes. 5 minutes is the reserve
+// because the check has to be able to refuse a year BEFORE its scan begins --
+// once the page walk starts there is no further checkpoint, and admitting one
+// more year past expiry is exactly the #1799 loop-top defect.
+//
+// VERIFY_MS is nominal: this lane runs NO post-loop aggregate -- nothing is
+// read after the write loop, the counters are held in memory -- so the cap has
+// nothing to bound here and only sizes the pin's worst case (110 + 5m + 1m +
+// 1m startup = 117m, 33m under the 150-minute ceiling).
+const { budget, finishLane } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
+const RUN_MINUTES = Number(process.env.RUN_MINUTES || 110);
+const RESERVE_MS = Number(process.env.RESERVE_MS || 5 * 60 * 1000);
+const VERIFY_MS = Number(process.env.VERIFY_MS || 60 * 1000);
+const CLOCK = budget({ minutes: RUN_MINUTES, reserveMs: RESERVE_MS, verifyMs: VERIFY_MS });
+
+async function main() {
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) { console.error("FATAL: COSMOS_CONNECTION_STRING not set"); process.exit(1); }
-  const cat = new CosmosClient({
+  // NAMED, not chained away: finishLane() disposes it. The old form chained
+  // straight through to .container(), which left no handle to dispose -- and an
+  // undisposed SDK client's keep-alive sockets are precisely the ref'd handle
+  // that holds a finished process to the runner's ceiling (#1809).
+  const client = new CosmosClient({
     connectionString: conn,
     connectionPolicy: { retryOptions: { maxRetryAttemptsOnThrottledRequests: 60, maxWaitTimeInSeconds: 300 } },
-  }).database(process.env.COSMOS_DATABASE ?? "hobbyiq").container("card_catalog");
+  });
+  const cat = client.database(process.env.COSMOS_DATABASE ?? "hobbyiq").container("card_catalog");
+  console.log(`  clock:  ${CLOCK.describe()}`);
 
   const retry = async (fn) => {
     let wait = 1000;
@@ -79,7 +116,21 @@ const RETIRE_NO_PK = String(process.env.RETIRE_NO_PARTITION_KEY || "") === "true
 
   let intended = 0, merged = 0, retired = 0, failed = 0, skipped = 0;
 
-  for (const year of YEARS) {
+  // Years the budget never STARTED. YEARS is known up front -- it is an env
+  // list, fixed before the first query -- so a partial run says exactly how
+  // many years are left rather than leaving the slot UNFINISHED.
+  let stoppedAtBudget = false, yearsNotReached = 0;
+  for (let yi = 0; yi < YEARS.length; yi++) {
+    const year = YEARS[yi];
+    // THE PRE-CHECK: before the year, never after it. There is no checkpoint
+    // inside a year -- the scan runs to exhaustion and the retire loop follows
+    // it -- so this is the only place the clock can refuse one, and it must
+    // refuse it BEFORE the scan starts.
+    if (CLOCK.outOfClock()) {
+      stoppedAtBudget = true;
+      yearsNotReached = YEARS.length - yi;
+      break;
+    }
     // Group by canonical slug. Only hiq: ids participate -- a vendor-id row
     // that is not ALSO a duplicate of a canonical slug is a legitimate vendor
     // record and is left completely alone.
@@ -207,13 +258,53 @@ const RETIRE_NO_PK = String(process.env.RETIRE_NO_PARTITION_KEY || "") === "true
   console.log("");
   console.log("canonical rows written " + merged + "   shadows retired " + retired +
               "   skipped " + skipped + "   failed " + failed);
-  if (!APPLY) { console.log("REPORT ONLY - nothing written."); return; }
+  // -- THE MARKER THE RELAUNCH GREPS ---------------------------------------
+  //
+  // CF-RELAUNCH-ONLY-ON-BUDGET (#1361). The runner greps stdout for
+  // `stopped at the .*budget`, so the phrase is a SOURCE LITERAL rather than
+  // built from a variable holding the words: a marker assembled at runtime is
+  // a marker the source never printed, and the relaunch never fires on it.
+  //
+  // Printed BEFORE the report-only return below, so a dry run that stopped
+  // early says so too -- a report that silently covered half its years is a
+  // plan nobody knows is partial.
+  if (stoppedAtBudget) {
+    console.log(`
+  stopped at the ${CLOCK.RUN_MINUTES}-minute budget -- `
+      + `${yearsNotReached} year(s) not reached; the relaunch continues from here`);
+    console.log("  the fold is IDEMPOTENT: a shadow already rehomed is no longer a surplus"
+      + " row in the next scan, so the continuation re-derives cheaply and writes only"
+      + " what is left. Pass YEARS= to name the remainder directly.");
+  }
+
+  if (!APPLY) { console.log("REPORT ONLY - nothing written."); return { client, budget: CLOCK }; }
   if (!RETIRE_NO_PK && skipped) {
     console.log("  " + skipped + " keyless duplicate rows were left in place. " +
                 "They ARE addressable -- re-run with RETIRE_NO_PARTITION_KEY=true to retire them.");
   }
+  // A PARTIAL RUN STILL RECONCILES. `intended` is accumulated PER YEAR, inside
+  // the loop, so it only ever counts surplus rows from years the clock actually
+  // started -- the identity is over what was SEEN, and a budget stop cannot
+  // read as loss. The years never reached carry no row count at all (their
+  // pages were never walked), so they are stated in YEARS rather than
+  // fabricated as rows.
+  console.log("  reconciled: intended " + intended + " = written " + retired +
+              " + skipped " + skipped + " + failed " + failed +
+              "  (years not reached: " + yearsNotReached + ")");
+  if (retired + skipped + failed !== intended) {
+    console.error("  !! RECONCILE MISMATCH -- a surplus row was neither retired, skipped nor failed");
+    process.exitCode = 4;
+  }
   reportWrites({ job: "dedupe-catalog-partition-shadows", intended, written: retired, skipped, failed });
-})().catch((e) => {
-  console.error("FATAL:", e?.stack || e?.message || String(e));
-  process.exit(3);
-});
+  return { client, budget: CLOCK };
+}
+
+// CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809). Success exits too -- a
+// failure path that exits and a success path that hopes is the asymmetry that
+// cost four reconciled-clean runs their exit codes.
+main()
+  .then((ctx) => finishLane(process.exitCode || 0, ctx || { budget: CLOCK }))
+  .catch(async (e) => {
+    console.error("FATAL:", e?.stack || e?.message || String(e));
+    await finishLane(3, { budget: CLOCK });
+  });

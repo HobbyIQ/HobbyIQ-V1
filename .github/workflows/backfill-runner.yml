@@ -4871,6 +4871,106 @@ jobs:
             exit 1
           fi
 
+      - name: Self-relaunch a newly budgeted write lane until its scope is drained
+        # CF-A-KILLED-JOB-CANNOT-REPORT-PROGRESS, for the lanes #1944's ratchet
+        # named. Run 34079952456 proved what an unbudgeted write lane does when
+        # its scope outgrows one step: it is KILLED at the 150-minute ceiling,
+        # printing no marker, no reconcile and no finishLane line, and #1913's
+        # KILLED branch then correctly withholds the re-dispatch -- leaving the
+        # work half done and the run red. The census that was supposed to catch
+        # that could not see it, because a lane with NO budget matched neither
+        # RUN_MINUTES nor BUDGET_MS and was skipped rather than failed.
+        #
+        # The lanes below have now been given the same clock relocate-catalog-
+        # rows-by-list got: budget(), a per-unit outOfClock() PRE-check, a unit
+        # reserve sized to that lane's largest unit, the marker as a source
+        # literal, a reconcile that still balances after a partial run, and
+        # finishLane() on every exit path. This step is what continues them.
+        #
+        # ONE STEP, NOT FIFTEEN. Every lane here has the same continuation
+        # semantics -- re-read the scope, skip what is already done, write only
+        # the remainder -- so fifteen copies of this shell would be fifteen
+        # places for the three-way outcome logic to drift apart. The gate names
+        # each lane explicitly rather than matching a pattern, so adding a lane
+        # is a deliberate edit and a lane cannot join by being named a certain
+        # way.
+        #
+        # EVERY ONE OF THESE IS IDEMPOTENT ON RE-READ, which is what makes a
+        # verbatim re-dispatch safe rather than merely convenient:
+        #   - the sweeps (conform-holdings-to-catalog, backfill-holding-ebay-ids,
+        #     backfill-canonicalize-chrome-slugs, backfillCatalogCardYearFromSlug,
+        #     normalize-catalog-format, reslug-tcg-out-of-sports-namespace) skip a
+        #     row that already carries the value they would write;
+        #   - the list lane (relocate-pool-rows-by-list) re-reads a finished
+        #     entry as `already at the target` and never re-writes it;
+        #   - the retires (retire-impossible-grade-rows,
+        #     retire-flattened-attestations) read a row that is already gone as
+        #     a skip, never as a second delete;
+        #   - the repairs (repair-refractor-mislabel, merge-bare-colour-parallels,
+        #     dedupe-catalog-partition-shadows, recover-chrome-collapse-damage,
+        #     revert-d30-base-onto-one-of-one, reap-orphan-price-trails) re-derive
+        #     their population from the live containers, so work already done is
+        #     simply no longer in scope on the next pass.
+        # So a continuation pays cheap reads over the finished part and writes
+        # only what is left. That is also why none of them needs a cursor input.
+        #
+        # `apply` and `scope` are forwarded VERBATIM: a report relaunches as a
+        # report and an apply as an apply (#1578), and a lane whose scope is a
+        # committed list would be fatal at entry 0 without it.
+        # `!cancelled()` sits on the `if:` LINE, not folded onto the next one:
+        # the pin that requires every marker-keyed relaunch step to run after a
+        # kill reads the gate with a single-line regex, and a gate whose first
+        # line is bare `>-` reads as empty. A step that looked correct here but
+        # parsed as ungated is exactly the silent hole this whole rule exists to
+        # close, so the formatting is load-bearing rather than cosmetic.
+        if: ${{ !cancelled() && (
+            inputs.script == 'conform-holdings-to-catalog' ||
+            inputs.script == 'reap-orphan-price-trails' ||
+            inputs.script == 'backfill-holding-ebay-ids' ||
+            inputs.script == 'backfill-canonicalize-chrome-slugs' ||
+            inputs.script == 'repair-refractor-mislabel' ||
+            inputs.script == 'merge-bare-colour-parallels' ||
+            inputs.script == 'dedupe-catalog-partition-shadows' ||
+            inputs.script == 'retire-impossible-grade-rows' ||
+            inputs.script == 'retire-flattened-attestations' ||
+            inputs.script == 'relocate-pool-rows-by-list' ||
+            inputs.script == 'backfillCatalogCardYearFromSlug' ||
+            inputs.script == 'normalize-catalog-format' ||
+            inputs.script == 'recover-chrome-collapse-damage' ||
+            inputs.script == 'revert-d30-base-onto-one-of-one' ||
+            inputs.script == 'reslug-tcg-out-of-sports-namespace'
+          ) }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set +e
+          # CF-A-KILLED-RUN-IS-NOT-A-FINISHED-RUN (#1906/#1913). Three outcomes, not two:
+          #   (a) budget marker      -> more work, re-dispatch;
+          #   (b) finishLane line    -> the lane exited on its own, genuinely done;
+          #   (c) neither            -> the step was KILLED at the 150-minute ceiling
+          #                             (or cancelled/crashed). NOT finished. Fail loudly.
+          # Absence of the marker used to mean (b) by default, so all ten killed APPLY
+          # shards of retire-self-derived-identities reported "finished within budget"
+          # and the fan-out stopped with the work half done and the run green.
+          # Every lane gated above routes BOTH its exit paths through finishLane(), so
+          # (b) is a real witness that the process ended on purpose rather than an
+          # assumption drawn from an absence.
+          if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
+            W=$(grep -aoE "reconciled: [a-z]+ [0-9,]+ = [a-z]+ [0-9,]+" /tmp/backfill.log | tail -1 || true)
+            echo "::notice::budget hit on ${{ inputs.script }} (${W:-no reconcile line}) — re-dispatching to continue"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script="${{ inputs.script }}" -f apply="${{ inputs.apply }}" -f scope="${{ inputs.scope }}"
+          elif grep -aqE "finishLane: exiting code [0-9]+" /tmp/backfill.log && [ "${{ steps.backfill.outcome }}" = "success" ]; then
+            echo "::notice::${{ inputs.script }} finished within budget — done, no re-dispatch."
+          else
+            echo "::error::KILLED before finish — ${{ inputs.script }} never reached finishLane; NOT finished; re-dispatch withheld — investigate"
+            echo "  step outcome: ${{ steps.backfill.outcome }}"
+            echo "  budget marker: absent    finishLane line: $(grep -acE 'finishLane: exiting code [0-9]+' /tmp/backfill.log 2>/dev/null || echo 0)"
+            echo "  last 20 lines of /tmp/backfill.log:"
+            tail -n 20 /tmp/backfill.log 2>/dev/null || echo "  (no log)"
+            exit 1
+          fi
+
       - name: Self-relaunch until composite backfill fully drains
         # CF-COMPOSITE-BACKFILL-SELF-RELAUNCH (Drew, 2026-07-30). Composite
         # backfill covers ~3.4M sold_comps rows and one 150-min iteration
