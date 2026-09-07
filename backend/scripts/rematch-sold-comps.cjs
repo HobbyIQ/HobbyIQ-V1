@@ -737,8 +737,15 @@ async function main() {
       // The demotion, applied only where a named source actually demands it --
       // so the 45-odd other sources cost nothing and no existing verdict moves.
       if (backed && named.some((s) => CORROBORATION.requiresCorroboration(s))) {
+        // hiq:<sport>:<year>:<setKey>:<number>:<parallel>:<auto>[:...] -- the
+        // sport is segment 1, and it is the slug's OWN answer about which
+        // product this row belongs to, which is exactly the right one here:
+        // corroboration must come from the checklist of the product the row is
+        // addressed to, never from another sport that reuses the setKey.
         const parts = String(slug).split(":");
-        const rivals = parts.length >= 7 ? await checklistCells(parts[2], parts[3]) : null;
+        const rivals = parts.length >= 7
+          ? await checklistCells(parts[2], parts[3], deps.normalizeSportStrict(parts[1]))
+          : null;
         backed = K.isStrictChecklistRow(resource, rivals ?? []);
       }
     }
@@ -751,16 +758,18 @@ async function main() {
    *  no demoted rows. Graded children are excluded by the predicate itself: a
    *  row minted from its parent cannot confirm that parent one tier up. */
   const checklistCellsCache = new Map();
-  const checklistCells = async (year, setKey) => {
-    const key = `${year}|${setKey}`;
+  const checklistCells = async (year, setKey, sport) => {
+    // Corroboration from another sport's checklist is not corroboration.
+    if (!sport) return [];
+    const key = `${year}|${setKey}|${sport}`;
     if (checklistCellsCache.has(key)) return checklistCellsCache.get(key);
     let out = [];
     try {
       const { resources } = await retry(() => cat.items.query({
-        query: `SELECT c.id, c.source, c.playerName, c.gradeTier FROM c WHERE c.setKey = @sk AND ${yearMatch("c")}`,
+        query: `SELECT c.id, c.source, c.playerName, c.gradeTier, c.sport FROM c WHERE c.setKey = @sk AND ${yearMatch("c")}`,
         parameters: [{ name: "@sk", value: setKey }, { name: "@y", value: Number(year) }],
       }, { maxItemCount: -1 }).fetchAll());
-      out = (resources ?? []).filter((r) => CORROBORATION.isCorroboratingSource(r));
+      out = (resources ?? []).filter((r) => CORROBORATION.isCorroboratingSource(r) && rowIsSport(r, sport));
     } catch { out = []; }
     checklistCellsCache.set(key, out);
     return out;
@@ -789,20 +798,77 @@ async function main() {
    *
    *  An OR of two equality predicates is still index-served on both terms. */
   const yearMatch = (alias) => `(${alias}.cardYear = @y OR ${alias}.year = @y)`;
+
+  /**
+   * CF-A-SETKEY-IS-NOT-A-PRODUCT-UNTIL-A-SPORT-NAMES-IT (this PR).
+   *
+   * THE DEFECT. Every checklist lookup below keys on (setKey, cardYear) and
+   * NOTHING ELSE. `topps-chrome`, `panini-prizm`, `panini-select`,
+   * `topps-finest`, `topps` and `bowman-chrome` are all shipped in several
+   * sports in the same year, and each sport is a SEPARATE product with a
+   * SEPARATE checklist that numbers its cards 1..N in its own space. Keyed
+   * without a sport, "the flagship's checklist" is the UNION of every sport's,
+   * so the question L5 asks -- does the stored flagship list this number? --
+   * has been answered by other sports' checklists.
+   *
+   * MEASURED read-only 2026-09-06 over the eleven shared families: 162 of 253
+   * (setKey, year) cells carrying strict checklist rows hold MORE THAN ONE
+   * SPORT, and hundreds of card numbers per cell are shared between them.
+   *   topps-chrome|2025  baseball 1,092 numbers (527 shared) | football 2,285
+   *                      (538) | basketball 1,887 (455) | tennis 720 (300)
+   *   panini-prizm|2022  baseball 955 (345) | football 849 (383) |
+   *                      basketball 724 (358)
+   * The 2022 soccer World Cup cell that opened this PR is one instance of a
+   * general defect, not a soccer special case.
+   *
+   * THE FILTER IS IN MEMORY, NOT IN THE QUERY, and that is deliberate. These
+   * caches exist because a per-row catalog query over 16.3M rows is an outage
+   * rather than a census (CF-FLEET-SCRIPTS-MEASURE-THROUGHPUT-BEFORE-DISPATCH).
+   * Adding `c.sport = @sp` to the SQL would key the cache by sport too and
+   * issue one query per (product, year, sport) instead of per (product, year),
+   * multiplying reads on the hottest path here for a filter that is a string
+   * compare over rows already in hand. The rows are fetched once per product
+   * and each sport reads its own slice for free.
+   *
+   * A ROW WITH NO READABLE SPORT GETS NO ANSWER. `null` from
+   * `normalizeSportStrict` means the row does not say which product it belongs
+   * to, and a lookup that cannot name its product must not borrow another
+   * one's checklist. The callers below turn that into the refusal each already
+   * has for an unanswerable question -- `null` for L5, an empty map elsewhere
+   * -- because absent beats wrong, which is the rule every one of these gates
+   * is already written to.
+   *
+   * THE SPORT COMES FROM THE STORED ROW, WHICH IS SOMETIMES THE THING UNDER
+   * REPAIR. That is the right input anyway: L5 asks about the STORED
+   * flagship -- the product the row currently claims to belong to -- so the
+   * stored sport is precisely the one that names it. A row whose sport is
+   * wrong is answered against the wrong product's checklist either way; what
+   * this stops is answering it against ALL products' checklists at once, which
+   * is wrong for every row rather than only the mis-tagged ones.
+   */
+  const sportOf = (identity) => deps.normalizeSportStrict(identity?.sport ?? null);
+  // The predicate itself lives in the pure lib (K.catalogRowAnswersForSport) so
+  // it is pinned on the shipped rule rather than on a test's copy of it; these
+  // closures only supply the normalizer, which is a dist/ import this module
+  // holds and that one must not.
+  const rowIsSport = (r, sport) => K.catalogRowAnswersForSport(r, sport, deps.normalizeSportStrict);
   const flagshipNumbersCache = new Map();
-  const flagshipNumbers = async (year, setKey) => {
-    const key = `${year}|${setKey}`;
+  const flagshipNumbers = async (year, setKey, sport) => {
+    // No readable sport, no product, no answer. See sportOf above.
+    if (!sport) return null;
+    const key = `${year}|${setKey}|${sport}`;
     if (flagshipNumbersCache.has(key)) return flagshipNumbersCache.get(key);
     let out = null;
     try {
       const { resources } = await retry(() => cat.items.query({
-        query: `SELECT c.cardNumber, c.source FROM c WHERE c.setKey = @sk AND ${yearMatch("c")}`,
+        query: `SELECT c.cardNumber, c.source, c.sport FROM c WHERE c.setKey = @sk AND ${yearMatch("c")}`,
         parameters: [{ name: "@sk", value: setKey }, { name: "@y", value: Number(year) }],
       }, { maxItemCount: -1 }).fetchAll());
-      // A flagship with NO real checklist rows cannot answer the question --
-      // "not listed" and "nothing to list from" are different facts and only
-      // the first is evidence. Null is the refusal.
-      const real = (resources ?? []).filter((r) => K.isStrictChecklistSource(r?.source));
+      // A flagship with NO real checklist rows IN THIS SPORT cannot answer the
+      // question -- "not listed", "nothing to list from" and "that is another
+      // sport's checklist" are three different facts and only the first is
+      // evidence. Null is the refusal.
+      const real = (resources ?? []).filter((r) => K.isStrictChecklistSource(r?.source) && rowIsSport(r, sport));
       out = real.length ? new Set(real.map((r) => String(r.cardNumber ?? "").toUpperCase())) : null;
     } catch { out = null; }
     flagshipNumbersCache.set(key, out);
@@ -825,17 +891,21 @@ async function main() {
    *  to the row's own name only if that reads as a person. Absent beats wrong.
    */
   const checklistNamesCache = new Map();
-  const checklistNames = async (year, setKey) => {
-    const key = `${year}|${setKey}`;
+  const checklistNames = async (year, setKey, sport) => {
+    // A name read from another sport's checklist is a DIFFERENT PLAYER at the
+    // same number, which is the worst possible answer for a guard whose whole
+    // job is to say who the card depicts. No sport, no map.
+    if (!sport) return new Map();
+    const key = `${year}|${setKey}|${sport}`;
     if (checklistNamesCache.has(key)) return checklistNamesCache.get(key);
     let out = new Map();
     try {
       const { resources } = await retry(() => cat.items.query({
-        query: `SELECT c.cardNumber, c.playerName, c.source FROM c WHERE c.setKey = @sk AND ${yearMatch("c")} AND c.playerName > ''`,
+        query: `SELECT c.cardNumber, c.playerName, c.source, c.sport FROM c WHERE c.setKey = @sk AND ${yearMatch("c")} AND c.playerName > ''`,
         parameters: [{ name: "@sk", value: setKey }, { name: "@y", value: Number(year) }],
       }, { maxItemCount: -1 }).fetchAll());
       for (const r of resources ?? []) {
-        if (!K.isStrictChecklistSource(r?.source)) continue;
+        if (!K.isStrictChecklistSource(r?.source) || !rowIsSport(r, sport)) continue;
         const num = String(r?.cardNumber ?? "").toUpperCase();
         const name = String(r?.playerName ?? "").trim();
         if (!num || !name || out.has(num)) continue;
@@ -862,17 +932,20 @@ async function main() {
    *  own cure. A product with no strictly-sourced rows yields an empty map,
    *  every lookup returns null, and null is a REFUSAL: absent beats wrong. */
   const checklistAutoCache = new Map();
-  const checklistAutos = async (year, setKey) => {
-    const key = `${year}|${setKey}`;
+  const checklistAutos = async (year, setKey, sport) => {
+    // Whether #150 is an autograph is a fact about ONE product's checklist.
+    // No sport, no map -- and an empty map is already this gate's refusal.
+    if (!sport) return new Map();
+    const key = `${year}|${setKey}|${sport}`;
     if (checklistAutoCache.has(key)) return checklistAutoCache.get(key);
     let out = new Map();
     try {
       const { resources } = await retry(() => cat.items.query({
-        query: `SELECT c.cardNumber, c.isAuto, c.source FROM c WHERE c.setKey = @sk AND ${yearMatch("c")}`,
+        query: `SELECT c.cardNumber, c.isAuto, c.source, c.sport FROM c WHERE c.setKey = @sk AND ${yearMatch("c")}`,
         parameters: [{ name: "@sk", value: setKey }, { name: "@y", value: Number(year) }],
       }, { maxItemCount: -1 }).fetchAll());
       for (const r of resources ?? []) {
-        if (!K.isStrictChecklistSource(r?.source)) continue;
+        if (!K.isStrictChecklistSource(r?.source) || !rowIsSport(r, sport)) continue;
         const num = String(r?.cardNumber ?? "").toUpperCase();
         // A checklist row with NO isAuto field states nothing. Blank means
         // unknown, never "Base" (CF-EVERY-INGEST-USES-THE-ONE-CHECKLIST-FORMAT).
@@ -891,7 +964,7 @@ async function main() {
   const checklistSaysNotAutoFor = async (identity) => {
     const y = identity?.cardYear, sk = identity?.setKey, num = identity?.cardNumber;
     if (y === null || y === undefined || !sk || !num) return null;
-    const m = await checklistAutos(y, sk);
+    const m = await checklistAutos(y, sk, sportOf(identity));
     const hit = m.get(String(num).toUpperCase());
     return hit === undefined ? null : hit === false;
   };
@@ -900,7 +973,7 @@ async function main() {
   const checklistPlayerNameFor = async (identity) => {
     const y = identity?.cardYear, sk = identity?.setKey, num = identity?.cardNumber;
     if (y === null || y === undefined || !sk || !num) return null;
-    const m = await checklistNames(y, sk);
+    const m = await checklistNames(y, sk, sportOf(identity));
     return m.get(String(num).toUpperCase()) ?? null;
   };
   /** CF-A-SUBSET-IS-PART-OF-THE-IDENTITY-WHEN-IT-HAS-TO-BE (Drew, 2026-09-04).
@@ -917,8 +990,13 @@ async function main() {
    *  catalog, so this returns empty for effectively every row and the subset
    *  rule stays silent -- which is the design, not an accident of the data. */
   const clashMapCache = new Map();
-  const clashMap = async (year, setKey) => {
-    const key = `${year}|${setKey}`;
+  const clashMap = async (year, setKey, sport) => {
+    // A subset clash is two subsets of ONE product numbering one card. Two
+    // sports numbering their own cards the same is not a clash at all, and
+    // counting it as one would make the subset rule fire on cards that do not
+    // clash with anything.
+    if (!sport) return new Map();
+    const key = `${year}|${setKey}|${sport}`;
     if (clashMapCache.has(key)) return clashMapCache.get(key);
     let out = new Map();
     try {
@@ -926,10 +1004,11 @@ async function main() {
         // A range predicate on subsetName is index-served; IS_DEFINED is a
         // scan. Blank is unknown and can neither create nor join a clash, so
         // excluding it here is the rule, not an optimisation.
-        query: `SELECT c.cardNumber, c.parallelSlug, c.isAuto, c.printRun, c.subsetName FROM c WHERE c.setKey = @sk AND ${yearMatch("c")} AND c.subsetName > ''`,
+        query: `SELECT c.cardNumber, c.parallelSlug, c.isAuto, c.printRun, c.subsetName, c.sport FROM c WHERE c.setKey = @sk AND ${yearMatch("c")} AND c.subsetName > ''`,
         parameters: [{ name: "@sk", value: setKey }, { name: "@y", value: Number(year) }],
       }, { maxItemCount: -1 }).fetchAll());
       for (const r of resources ?? []) {
+        if (!rowIsSport(r, sport)) continue;
         const sub = String(r?.subsetName ?? "").trim();
         if (!sub) continue;
         // ONE key builder for both sides. The catalog spells the parallel
@@ -951,7 +1030,7 @@ async function main() {
   const clashSubsetsFor = async (stored) => {
     const year = stored?.cardYear, setKey = String(stored?.setKey ?? "").toLowerCase();
     if (!year || !setKey) return [];
-    const m = await clashMap(year, setKey);
+    const m = await clashMap(year, setKey, sportOf(stored));
     if (!m.size) return [];
     const hit = m.get(SUBSET.rungKey(stored));
     return hit ? [...hit] : [];
@@ -960,7 +1039,12 @@ async function main() {
     const year = stored?.cardYear, setKey = String(stored?.setKey ?? "").toLowerCase();
     const num = String(stored?.cardNumber ?? "").toUpperCase();
     if (!year || !setKey || !num) return null;
-    const nums = await flagshipNumbers(year, setKey);
+    // THE SPORT NAMES THE PRODUCT. Without it this asked whether ANY sport's
+    // checklist at this (setKey, year) lists the number, and answered yes off
+    // a different sport's card -- see CF-A-SETKEY-IS-NOT-A-PRODUCT-UNTIL-A-
+    // SPORT-NAMES-IT above. `null` (unreadable sport, or no strict rows in
+    // this sport) stays the refusal it already was.
+    const nums = await flagshipNumbers(year, setKey, sportOf(stored));
     return nums ? nums.has(num) : null;
   };
   /** SPECIALIZATION-STATED's two catalog facts, computed ONLY for a row whose

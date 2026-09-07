@@ -2034,6 +2034,53 @@ const STRICT_PUBLISHER_LANES = Object.freeze([
  *  that hold the rows ask `isStrictChecklistRow` below; this function is what
  *  they fall back to when all they have is a string, and it stays honest about
  *  which question it answered rather than guessing at the other one. */
+/**
+ * CF-A-SETKEY-IS-NOT-A-PRODUCT-UNTIL-A-SPORT-NAMES-IT (this PR).
+ *
+ * May this catalog row answer a checklist question asked about `sport`?
+ *
+ * THE DEFECT THIS CLOSES. Every checklist lookup in rematch-sold-comps.cjs
+ * keyed on (setKey, cardYear) and nothing else. `topps-chrome`,
+ * `panini-prizm`, `panini-select`, `topps-finest`, `topps` and `bowman-chrome`
+ * ship in several sports in the same year; each sport is a SEPARATE product
+ * with a SEPARATE checklist numbering its own cards 1..N. Keyed without a
+ * sport, "the flagship's checklist" was the UNION of every sport's, so L5 --
+ * does the stored flagship list this cardNumber? -- was answered YES off a
+ * different sport's card.
+ *
+ * MEASURED read-only 2026-09-06 over the eleven shared families: 162 of the
+ * 253 (setKey, year) cells holding strict checklist rows hold MORE THAN ONE
+ * SPORT.
+ *
+ *   topps-chrome|2025   baseball 1,092 numbers (527 shared with another sport)
+ *                       football 2,285 (538) | basketball 1,887 (455)
+ *                       tennis 720 (300)
+ *   panini-prizm|2022   baseball 955 (345) | football 849 (383)
+ *                       basketball 724 (358)
+ *   panini-select|2023  baseball 473 (318) | basketball 1,163 (418)
+ *                       football 1,308 (400)
+ *
+ * The 2022 soccer World Cup cell that opened this PR is one instance of a
+ * general defect, not a soccer special case.
+ *
+ * BLANK ON EITHER SIDE IS UNKNOWN, AND UNKNOWN NEVER MATCHES. A row whose
+ * sport does not normalize cannot be shown to belong to the asked-for product,
+ * and a question with no readable sport names no product to ask about. Both
+ * answer false, so the caller falls back to the refusal it already has --
+ * `null` for L5, an empty map elsewhere. Absent beats wrong, which is the rule
+ * every one of these gates is already written to.
+ *
+ * Pure and exported so the rule is pinned on the SHIPPED predicate rather than
+ * on a test's re-implementation of it; the runner's five lookups all call it.
+ */
+function catalogRowAnswersForSport(row, sport, normalizeSport) {
+  const want = typeof normalizeSport === "function" ? normalizeSport(sport ?? null) : null;
+  if (!want) return false;
+  const got = typeof normalizeSport === "function" ? normalizeSport(row?.sport ?? null) : null;
+  if (!got) return false;
+  return got === want;
+}
+
 function isStrictChecklistSource(raw) {
   const s = normalizeCatalogSource(raw);
   if (s === "") return false;
@@ -5532,6 +5579,7 @@ module.exports = {
   RULED_SIBLING_PAIRS, ruledSiblingPair, ruledSiblingMove, SIBLING_TITLE_GATES,
   SAME_NUMBER_PARALLEL_SETS, isSameNumberParallelSet,
   SOCCER_COMPETITION_SETKEYS, SOCCER_BARE_FAMILY_SETKEYS, isBareSoccerFamilyNonFlagship,
+  catalogRowAnswersForSport,
   STRICT_CHECKLIST_SOURCES, STRICT_PUBLISHER_LANES, normalizeCatalogSource, isStrictChecklistSource,
   isStrictChecklistRow,
   specializationAncestry, isSpecializationOf, distinguishingWords,

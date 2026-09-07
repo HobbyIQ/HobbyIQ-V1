@@ -36,6 +36,7 @@ import { normalizeSetKey, computeHobbyIqCardId } from "../src/services/portfolio
 import {
   inferSetKeyFromTitle, titleStatesSoccerCompetition, soccerCompetitionRefinement,
 } from "../src/services/portfolioiq/parseTitleIdentity.service.js";
+import { normalizeSportStrict } from "../src/services/portfolioiq/slugGuard.service.js";
 import { MINTS as SOCCER_TITLES } from "./soccerLeagueSetKeysFromTitle.test.js";
 
 /** The keys #1715 taught the parser, each with a title that states it. */
@@ -1173,5 +1174,128 @@ describe("SPECIALIZATION-STATED -- the ruled soccer competition products", () =>
       .toBe("world cup qatar");
     expect(soccerCompetitionRefinement("panini-prizm", "2022 Panini Prizm #1").competitionStated)
       .toBe(false);
+  });
+});
+
+/**
+ * CF-A-SETKEY-IS-NOT-A-PRODUCT-UNTIL-A-SPORT-NAMES-IT.
+ *
+ * THE GENERAL DEFECT BEHIND THE SOCCER SYMPTOM. The five checklist lookups in
+ * rematch-sold-comps.cjs keyed on (setKey, cardYear) and NOTHING ELSE:
+ * flagshipNumbers (L5), checklistNames, checklistAutos, checklistCells and
+ * clashMap. `topps-chrome`, `panini-prizm`, `panini-select`, `topps-finest`,
+ * `topps` and `bowman-chrome` all ship in several sports in the same year, and
+ * each sport is a SEPARATE product with a SEPARATE checklist numbering its own
+ * cards 1..N. Keyed without a sport, "the flagship's checklist" was the UNION
+ * of every sport's.
+ *
+ * MEASURED read-only 2026-09-06 over the eleven shared families: 162 of the
+ * 253 (setKey, year) cells holding strict checklist rows hold MORE THAN ONE
+ * SPORT, hundreds of numbers shared per cell --
+ *
+ *   topps-chrome|2025   baseball 1,092 numbers (527 shared) | football 2,285
+ *                       (538) | basketball 1,887 (455) | tennis 720 (300)
+ *   panini-prizm|2022   baseball 955 (345) | football 849 (383) |
+ *                       basketball 724 (358)
+ *   panini-select|2023  baseball 473 (318) | basketball 1,163 (418) |
+ *                       football 1,308 (400)
+ *
+ * -- so a baseball 2022 topps-chrome number "listed by the flagship" may have
+ * been listed only by the football checklist. The soccer World Cup cell that
+ * opened this PR is one instance, not a special case.
+ *
+ * THE PIN THE COORDINATOR ASKED FOR is the third test: a cell whose only
+ * strict rows belong to ANOTHER sport must report coverage ABSENT, never
+ * "lists this card".
+ */
+describe("catalogRowAnswersForSport -- a checklist answers for ONE product", () => {
+  const answers = (row: unknown, sport: string | null) =>
+    K.catalogRowAnswersForSport(row, sport, normalizeSportStrict);
+
+  it("a row of the asked-for sport answers; a row of another sport does not", () => {
+    expect(answers({ sport: "baseball" }, "baseball")).toBe(true);
+    expect(answers({ sport: "football" }, "baseball")).toBe(false);
+    expect(answers({ sport: "basketball" }, "soccer")).toBe(false);
+    // Aliases and casing go through the one normalizer, not a string compare.
+    expect(answers({ sport: "Soccer" }, "soccer")).toBe(true);
+  });
+
+  it("blank on EITHER side is unknown, and unknown never matches", () => {
+    // A row that does not say which product it belongs to cannot prove it
+    // belongs to this one; a question with no sport names no product to ask
+    // about. Both refuse -- absent beats wrong.
+    expect(answers({ sport: null }, "baseball")).toBe(false);
+    expect(answers({ sport: "" }, "baseball")).toBe(false);
+    expect(answers({ sport: "baseball" }, null)).toBe(false);
+    expect(answers({ sport: null }, null)).toBe(false);
+    // Compound junk does not normalize, so it answers for nothing.
+    expect(answers({ sport: "basketball-football" }, "basketball")).toBe(false);
+  });
+
+  it("THE PIN: a cell whose only strict rows are ANOTHER sport reports coverage ABSENT", () => {
+    // The exact shape measured at soccer:2022:panini-prizm -- zero strict
+    // SOCCER rows, 130,257 strict rows belonging to baseball, basketball and
+    // football. This reproduces flagshipNumbers' own body over a fixture: the
+    // strict-source filter, then the sport filter, then "no rows left means
+    // the question is unanswerable".
+    const CELL = [
+      { cardNumber: "108", source: "checklistcenter", sport: "baseball" },
+      { cardNumber: "108", source: "beckett-scraped", sport: "football" },
+      { cardNumber: "175", source: "bccp", sport: "basketball" },
+      // Present but NOT strict, so it cannot answer for soccer either.
+      { cardNumber: "108", source: "ingest-auto-seed", sport: "soccer" },
+    ];
+    const numbersFor = (sport: string | null): Set<string> | null => {
+      const real = CELL.filter(
+        (r) => K.isStrictChecklistSource(r.source) && answers(r, sport),
+      );
+      return real.length ? new Set(real.map((r) => r.cardNumber.toUpperCase())) : null;
+    };
+    // Soccer: the only soccer row is sales-derived, so coverage is UNKNOWN.
+    // Null is what L5 turns into `flagship-coverage-unknown` -- a refusal, and
+    // emphatically NOT `flagship-checklist-lists-this-card`.
+    expect(numbersFor("soccer")).toBeNull();
+    // Baseball asks the same cell and IS answered -- by its own checklist only.
+    const bb = numbersFor("baseball");
+    expect(bb).not.toBeNull();
+    expect(bb!.has("108")).toBe(true);
+    // ...and it must NOT inherit basketball's #175.
+    expect(bb!.has("175")).toBe(false);
+    // An unreadable sport is answered by nobody.
+    expect(numbersFor(null)).toBeNull();
+  });
+
+  it("MUTATION: drop the sport filter and the cell answers for every sport at once", () => {
+    // The defect, reproduced. Without `answers(...)` the soccer question is
+    // resolved off the baseball, football and basketball checklists and
+    // reports the number as listed -- which is the 218 refusals this PR
+    // measured across slots 19 and 20.
+    const CELL = [
+      { cardNumber: "108", source: "checklistcenter", sport: "baseball" },
+      { cardNumber: "108", source: "beckett-scraped", sport: "football" },
+    ];
+    const unfiltered = CELL.filter((r) => K.isStrictChecklistSource(r.source));
+    expect(unfiltered.length).toBeGreaterThan(0);
+    expect(new Set(unfiltered.map((r) => r.cardNumber)).has("108")).toBe(true);
+    // With the filter, soccer gets nothing.
+    expect(CELL.filter((r) => K.isStrictChecklistSource(r.source) && answers(r, "soccer")))
+      .toHaveLength(0);
+  });
+
+  it("every checklist lookup in the runner is keyed by sport, not just L5", () => {
+    // A sibling lookup left keyed on (setKey, year) would reintroduce the same
+    // defect on a different gate -- a player NAME read from another sport's
+    // checklist is a different person at the same number. Pinned on the
+    // shipped file: each cache key carries the sport, and each definition
+    // takes it.
+    const src = readFileSync(new URL("../scripts/rematch-sold-comps.cjs", import.meta.url), "utf8");
+    for (const fn of ["flagshipNumbers", "checklistNames", "checklistAutos", "checklistCells", "clashMap"]) {
+      expect(src).toMatch(new RegExp(`const ${fn} = async \\((?:year|[a-z]+), setKey, sport\\)`));
+    }
+    // The cache key must include the sport, or one sport's answer is served to
+    // another from cache even with the filter in place.
+    expect(src).not.toMatch(/const key = `\$\{year\}\|\$\{setKey\}`;/);
+    // And the runner must not re-implement the predicate.
+    expect(src).toContain("K.catalogRowAnswersForSport");
   });
 });
