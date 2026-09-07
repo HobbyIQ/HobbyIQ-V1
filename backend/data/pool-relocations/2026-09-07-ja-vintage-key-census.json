@@ -104,5 +104,111 @@
     "data\\pool-relocations\\2026-09-07-ja-vintage-pool-repoint-16.json",
     "data\\pool-relocations\\2026-09-07-ja-vintage-pool-repoint-17.json",
     "data\\pool-relocations\\2026-09-07-ja-vintage-catalog-reslug-01.json"
-  ]
+  ],
+  "tcgdexJaCoverage": {
+    "source": "api.tcgdex.net/v2/ja/sets, read 2026-09-07",
+    "note": "A JA set sharing an English code is DROPPED from POKEMON_JA_SET_CODES by the generator (if (enByCode.has(code)) continue), so the committed JA table holds 160 of tcgdex 184. These 19 are among the dropped: tcgdex DOES serve them as Japanese sets, under the shared id.",
+    "setsWithChecklist": 19,
+    "setsWithoutChecklist": 19,
+    "cardsAvailable": 1665,
+    "withChecklist": {
+      "ja-neo1": {
+        "cards": 96,
+        "jaName": "金、銀、新世界へ..."
+      },
+      "ja-neo2": {
+        "cards": 56,
+        "jaName": "遺跡をこえて..."
+      },
+      "ja-neo3": {
+        "cards": 57,
+        "jaName": "めざめる伝説"
+      },
+      "ja-neo4": {
+        "cards": 113,
+        "jaName": "闇、そして光へ..."
+      },
+      "ja-sm10": {
+        "cards": 95,
+        "jaName": "ダブルブレイズ"
+      },
+      "ja-sm11": {
+        "cards": 94,
+        "jaName": "ミラクルツイン"
+      },
+      "ja-sm12": {
+        "cards": 95,
+        "jaName": "オルタージェネシス"
+      },
+      "ja-sm6": {
+        "cards": 94,
+        "jaName": "禁断の光"
+      },
+      "ja-sm7": {
+        "cards": 96,
+        "jaName": "裂空のカリスマ"
+      },
+      "ja-sm8": {
+        "cards": 95,
+        "jaName": "超爆インパクト"
+      },
+      "ja-sm9": {
+        "cards": 95,
+        "jaName": "タッグボルト"
+      },
+      "ja-sv10": {
+        "cards": 98,
+        "jaName": "ロケット団の栄光"
+      },
+      "ja-xy10": {
+        "cards": 78,
+        "jaName": "めざめる超王"
+      },
+      "ja-xy2": {
+        "cards": 80,
+        "jaName": "ワイルドブレイズ"
+      },
+      "ja-xy3": {
+        "cards": 96,
+        "jaName": "ライジングフィスト"
+      },
+      "ja-xy4": {
+        "cards": 88,
+        "jaName": "ファントムゲート"
+      },
+      "ja-xy6": {
+        "cards": 78,
+        "jaName": "エメラルドブレイク"
+      },
+      "ja-xy7": {
+        "cards": 81,
+        "jaName": "バンデットリング"
+      },
+      "ja-xy9": {
+        "cards": 80,
+        "jaName": "破天の怒り"
+      }
+    },
+    "withoutChecklist": [
+      "ja-base1",
+      "ja-base2",
+      "ja-base3",
+      "ja-bw2",
+      "ja-bw4",
+      "ja-bw7",
+      "ja-bw9",
+      "ja-dp1",
+      "ja-dp2",
+      "ja-dp3",
+      "ja-dp6",
+      "ja-ecard1",
+      "ja-ecard2",
+      "ja-ecard3",
+      "ja-gym1",
+      "ja-gym2",
+      "ja-swsh2",
+      "ja-swsh3",
+      "ja-swsh4"
+    ]
+  }
 }

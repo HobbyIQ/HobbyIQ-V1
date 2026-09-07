@@ -78,9 +78,18 @@
  *
  * -- WHAT THIS COSTS, STATED BEFORE IT IS ASKED ------------------------------
  *
- * 19 of the 38 keys have a tcgdex-ja checklist behind them (1,565 cards, read
- * 2026-09-07 from api.tcgdex.net/v2/ja/sets) and 19 do not. A key with no
- * checklist row still STANDS -- it is the correct address for the sale -- but
+ * 19 of the 38 keys have a tcgdex-ja checklist behind them (1,665 cards, read
+ * 2026-09-07 from api.tcgdex.net/v2/ja/sets) and 19 do not. THE 19 WITH
+ * COVERAGE ARE EXACTLY THE AMBIGUOUS CODES, which is not a coincidence: a code
+ * is in AMBIGUOUS_MARKET_CODES precisely BECAUSE tcgdex serves a Japanese set
+ * under it, and the generator then drops that set from POKEMON_JA_SET_CODES.
+ * So the checklist exists upstream and only our table declined to hold it.
+ *
+ * The 19 WITHOUT are the older shared ids -- ja-base1/2/3, ja-gym1/2,
+ * ja-ecard1/2/3, ja-bw2/4/7/9, ja-dp1/2/3/6, ja-swsh2/3/4 -- which tcgdex files
+ * only under English. Those need a checklist source before they can price.
+ *
+ * A key with no checklist row still STANDS -- it is the correct address -- but
  * CF-PRICE-ONLY-CHECKLIST-MATCHED-IDENTITIES means those pools do not price
  * until their checklist lands. That is not a regression: those rows are not
  * priced today either, they are merely pooled with the English card, which is
