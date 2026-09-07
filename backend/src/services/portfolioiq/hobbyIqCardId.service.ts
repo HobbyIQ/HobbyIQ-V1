@@ -54,6 +54,10 @@ import { reconcileSetKey } from "../catalog/setKeyReconciliation.js";
 import { ruledPokemonEnglishSetKey } from "../catalog/pokemonEnglishSetKeyRuling.js";
 import { normalizePokemonCardNumber } from "../catalog/pokemonCardNumber.js";
 import { isMakerlessCatchAllSetKey, makerlessCatchAllMessage } from "../catalog/makerlessCatchAll.js";
+// CF-A-SLUG-SEGMENT-IS-NOT-A-VENDOR-LABEL (#1938): ONE vertical vocabulary.
+// The builder and the write door must agree on what a sport IS, so the builder
+// asks the door's table rather than keeping a four-alias copy of it.
+import { normalizeSportStrict } from "./slugGuard.service.js";
 export interface HobbyIqCardIdComponents {
   sport: string;              // e.g. "baseball"
   year: number;               // e.g. 2026
@@ -217,15 +221,41 @@ export function slugify(raw: string): string {
     .replace(/^-|-$/g, "");        // trim
 }
 
-/** Normalize sport to the canonical lowercase form. */
-function normalizeSport(sport: string): string {
-  const s = slugify(sport);
-  // Aliases → canonical (defensive; upstream should already normalize)
-  if (s === "nfl") return "football";
-  if (s === "nba") return "basketball";
-  if (s === "mlb") return "baseball";
-  if (s === "nhl") return "hockey";
-  return s;
+/**
+ * Normalize sport to the canonical lowercase form, or null when the label is
+ * not a vertical we can address.
+ *
+ * CF-A-SLUG-SEGMENT-IS-NOT-A-VENDOR-LABEL (#1938, 2026-09-07).
+ *
+ * This function used to end `return s` -- the slugified label, whatever it
+ * was. That made `computeHobbyIqCardId` total over its sport argument, and a
+ * total function over an uncontrolled vocabulary mints an address for every
+ * string a vendor ever typed. Measured on the live pool the same day:
+ *
+ *     hiq:baseball-mlb:2018:topps-heritage:600:base:no-auto
+ *     hiq:ice-hockey:…      hiq:auto-racing:…      hiq:calcio:…
+ *     hiq:basketballcollabs-eligiblesingle:…       hiq:competative-eating:…
+ *
+ * 77 distinct non-canonical verticals across 8,102 rows. Every one of them is
+ * a pool nothing else can ever address: `ice-hockey` and `hockey` are the
+ * SAME card and they do not share a slug, so the comps split and neither side
+ * prices. The four league aliases hardcoded here (nfl/nba/mlb/nhl) were the
+ * whole defence, and they are a four-entry subset of a table that already
+ * exists.
+ *
+ * THE TABLE IS `normalizeSportStrict`, AND THERE IS ONLY ONE OF IT. It
+ * already carries those four aliases plus `ice-hockey`, `auto-racing`,
+ * `calcio`, `non-sports`, `ufc`, `nascar` and the rest; it already rejects
+ * the multi-value vendor tag dumps (`"football, baseball"`); and it is already
+ * what `slugGuard` enforces at the door. Two normalizers meant the guard
+ * refused a slug the builder had happily minted -- the builder now asks the
+ * same table the guard does, so a label either maps or it has no address.
+ *
+ * UNKNOWN IS NULL, NEVER A GUESS. `computeHobbyIqCardId` throws on null
+ * rather than emit an address nothing can ever read back.
+ */
+export function normalizeSport(sport: string): string | null {
+  return normalizeSportStrict(sport);
 }
 
 // The controlled vocabulary.
@@ -1378,7 +1408,104 @@ export function cardNumberInClause(raw: string | null | undefined, prefix = "@n"
  * check data/checklist-parallel-names.json for a singular twin first.
  */
 const PLURAL_PARALLEL_HEAD =
-  /(^|-)(refractor|x-fractor|xfractor|fractor|superfractor|prizm|plate|printing-plate|parallel|mini|jumbo|wave|shimmer|holo|foil|sparkle|pulsar|mojo|insert|autograph|relic|patch|die-cut|short-print|printing-plate)s$/;
+  /(^|-)(refractor|x-fractor|xfractor|fractor|superfractor|prizm|plate|printing-plate|parallel|mini|jumbo|wave|shimmer|holofoil|holo|foil|sparkle|pulsar|mojo|insert|autograph|relic|patch|die-cut|short-print|printing-plate)s$/;
+
+/**
+ * CF-A-FINISH-TOKEN-IS-ONE-TOKEN (Drew, 2026-09-07). The Pokemon finish fold,
+ * SCOPED TO sport=pokemon AND TO NOTHING ELSE.
+ *
+ * #1935 ruled that a Pokemon finish -- Holofoil / Reverse Holofoil / Normal and
+ * the era equivalents -- is a distinct card line with its own row and its own
+ * pool, and its census found the market spelling ONE physical finish several
+ * ways. Whole-Pokemon-pool measurement, 2026-09-06/07:
+ *
+ *     reverse-holo    215,231        holofoil    3,915
+ *     reverse-foil     71,094        holo          280
+ *     reverse          12,712
+ *
+ * Five slug tokens for TWO cards. CF-ONE-CARD-ONE-ROW-ONE-POOL forbids exactly
+ * that: a card split across pools prices from a fraction of its own sales, and
+ * FMV is a projection off a pool's trend, so a split pool is a wrong number and
+ * not merely an untidy one.
+ *
+ * THE CANONICAL TOKENS ARE `holofoil` AND `reverse-holofoil`, and they are not
+ * chosen by row count. `scripts/lib/pokemon-finish-vocab.cjs` is the MINT-LANE
+ * vocabulary #1935 shipped: it is what `mint-attested-finish-rows` writes new
+ * catalog rows at, and its `FINISH_DISPLAY` names ("Holofoil", "Reverse
+ * Holofoil") are pinned there as fixed points through this very function. A
+ * slug seam that folded onto the bigger POOL token (`reverse-holo`, 215,231
+ * rows) would address every newly minted row at a token the mint lane never
+ * writes -- the multi-home defect, reintroduced by the fix for it. The
+ * checklist/mint side decides; the pool follows. `pokemonFinishTokenFold.test.ts`
+ * pins this table equal to that file's, so the two cannot drift.
+ *
+ * REVERSE NEVER FOLDS ONTO HOLO. A Reverse Holofoil and a Holofoil are
+ * different cards at different prices, and 215,231 reverse sales landing in a
+ * holo pool would be a silent corpus-wide FMV corruption. Every `reverse-*` key
+ * maps to `reverse-holofoil` and to nothing else; pinned as a family-wide
+ * property rather than a spot check.
+ *
+ * SPORTS KEEP EVERY TOKEN, WHICH IS WHY THE GATE IS NOT OPTIONAL. "Gold Foil"
+ * is a real 1990s sports parallel (1994 Topps Gold, Fleer Gold Foil), "Foil" is
+ * a real Skybox/Upper Deck finish, and "Holo" is Panini Optic's own word for a
+ * Holo prizm. Folding `foil` -> `holofoil` on a baseball card would merge a Gold
+ * Foil pool into a holofoil pool that does not exist in that hobby at all. This
+ * table is consulted ONLY when the caller states sport=pokemon -- the same gate
+ * `normalizeSetKey` and `resolveSetKeyForSlug` apply to the Pokemon set
+ * vocabulary, and for the same reason: these words are ordinary in a sports set.
+ *
+ * A CANONICAL TOKEN IS A FIXED POINT. `holofoil` -> `holofoil` and
+ * `reverse-holofoil` -> `reverse-holofoil` are in the table explicitly, so
+ * re-deriving an already-folded slug never moves it again.
+ */
+const POKEMON_FINISH_TOKEN_FOLD: Readonly<Record<string, string>> = Object.freeze({
+  // The holo family.
+  "holofoil": "holofoil",
+  "holofoils": "holofoil",
+  "holo": "holofoil",
+  "holos": "holofoil",
+  "holo-rare": "holofoil",
+  "foil": "holofoil",
+  "foils": "holofoil",
+  // The reverse family. NEVER folds onto the holo family above.
+  "reverse-holofoil": "reverse-holofoil",
+  "reverse-holofoils": "reverse-holofoil",
+  "reverse-holo": "reverse-holofoil",
+  "reverse-holos": "reverse-holofoil",
+  "reverse-foil": "reverse-holofoil",
+  "reverse-foils": "reverse-holofoil",
+  "reverse": "reverse-holofoil",
+  // Era-specific finishes, each its own line. Unchanged by this fold and
+  // present so the table is the WHOLE vocabulary rather than a diff of it.
+  "cosmos-holo": "cosmos-holo",
+  "cosmos": "cosmos-holo",
+  "cracked-ice": "cracked-ice",
+  "cracked-ice-holo": "cracked-ice",
+  "cracked-ice-holofoil": "cracked-ice",
+  // The un-foiled line. "Normal" is TCGplayer's own word for it.
+  "normal": "normal",
+});
+
+/**
+ * The canonical Pokemon finish token for an already-normalized parallel SLUG,
+ * or the slug unchanged.
+ *
+ * WHOLE-SLUG, NOT PER-SEGMENT, ON PURPOSE. A finish is the whole parallel on
+ * these rows -- `reverse-foil` IS the parallel. Matching a segment would let
+ * `gold-foil` fold to `gold-holofoil`, inventing a card, and would reach the
+ * sports vocabulary through any Pokemon row that carried a compound name. A
+ * parallel this table does not name in full is returned untouched.
+ *
+ * Exported so the fold is testable and so a caller that already holds a slug
+ * (the rematch reads stored slugs) asks the same question the builder does.
+ */
+export function foldPokemonFinishToken(parallelSlug: string): string {
+  return POKEMON_FINISH_TOKEN_FOLD[parallelSlug] ?? parallelSlug;
+}
+
+/** The fold table itself, for the equality pin against the mint-lane
+ *  vocabulary. Not for matching -- callers use `foldPokemonFinishToken`. */
+export const POKEMON_FINISH_TOKEN_FOLD_TABLE = POKEMON_FINISH_TOKEN_FOLD;
 
 /** Normalize parallel to a canonical slug. Caller MUST pass the
  *  specific variant (not lossy vendor labels like "Refractor" for a
@@ -1949,7 +2076,20 @@ function formatSubsetSegment(components: HobbyIqCardIdComponents): string {
 }
 
 export function computeHobbyIqCardId(components: HobbyIqCardIdComponents): string {
+  // CF-A-SLUG-SEGMENT-IS-NOT-A-VENDOR-LABEL (#1938, 2026-09-07). The sport is
+  // the NAMESPACE of the address; a label that maps to no canonical vertical
+  // names a pool that nothing else can ever address. Refused here as well as
+  // in slugGuard, for the same reason the makerless catch-all and the unparsed
+  // cardNumber are: slugGuard is the gate callers SHOULD use, and this throw is
+  // what makes a caller that skipped it fail loudly instead of minting
+  // `hiq:ice-hockey:…` beside the real `hiq:hockey:…` pool. The ingest paths
+  // already wrap this in try/catch and skip the row.
   const sport = normalizeSport(components.sport);
+  if (sport === null) {
+    throw new Error(
+      `hobbyiq-cardid: sport "${String(components.sport ?? "")}" is not a canonical vertical — identity is UNDERIVABLE (CF-A-SLUG-SEGMENT-IS-NOT-A-VENDOR-LABEL)`,
+    );
+  }
   const year = Number.isFinite(components.year) ? Math.trunc(components.year) : 0;
   // CF-POKEMON-CHECKLISTS (Pokemon set names arrive in as many shapes as
   // sellers can type, and fragment across every spelling) and
@@ -2053,6 +2193,24 @@ export function computeHobbyIqCardId(components: HobbyIqCardIdComponents): strin
   const isAuto = components.isAuto === true
     || AUTO_ONLY_CARDNUMBER_PREFIX.test(cardNumber);
   let parallelSlug = normalizeParallel(components.parallel);
+  // CF-A-FINISH-TOKEN-IS-ONE-TOKEN (Drew, 2026-09-07). THE ONE SEAM.
+  //
+  // Applied HERE and only here, because this is the one place in the deriver
+  // that holds BOTH the normalized parallel and the row's sport.
+  // `normalizeParallel` itself takes no sport and must not learn one: it is
+  // called from a dozen sports paths that have no vertical to assert, and a
+  // table that folded `foil` -> `holofoil` for them would merge a 1994 Topps
+  // Gold Foil pool into a finish that does not exist in that hobby.
+  //
+  // Ordered BEFORE the chrome-stock strip below for the same reason the ruled
+  // set keys are decided before the product table: this is a whole-token
+  // decision taken against a measured vocabulary, and no unanchored rule
+  // downstream may re-litigate it. In practice the two cannot interact --
+  // no chrome-family setKey is a Pokemon one -- but the ordering is stated
+  // rather than left to that coincidence.
+  if (sport === "pokemon") {
+    parallelSlug = foldPokemonFinishToken(parallelSlug);
+  }
   // CF-CHROME-STOCK-REDUNDANT-PREFIX (Drew, 2026-08-11). On chrome-family
   // setKeys, a leading "chrome-" on the parallel is vendor noise (CH
   // labels e.g. "Chrome Sky Blue Refractor" for what collectors call
