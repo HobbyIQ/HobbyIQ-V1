@@ -15,8 +15,15 @@
 // Partitioned by YEAR so N workers never touch the same document, which means
 // no coordination and no lost updates.
 const { CosmosClient } = require("@azure/cosmos");
-const { canonicalCardName, canonicalSetName, titleCaseWords } = require(require("node:path").resolve(__dirname, "..", "dist/services/catalog/canonicalCardName.js"));
-const { reportWrites } = require(require("node:path").resolve(__dirname, "..", "dist/services/ops/writeReconciliation.js"));
+// HOISTED, not inlined as `require(require("node:path")...)`. The pin that
+// asserts every budgeted lane imports finishLane from the ONE helper matches
+// `require([^)]*runner-budget.cjs")` -- and `[^)]*` cannot cross the `)` that
+// closes a NESTED require. Written the inline way, this lane read to
+// laneExitsWhenWorkIsDone as one that never imported the helper at all, and
+// failed both "imports finishLane from the ONE helper" and "exits on SUCCESS".
+const path = require("node:path");
+const { canonicalCardName, canonicalSetName, titleCaseWords } = require(path.resolve(__dirname, "..", "dist/services/catalog/canonicalCardName.js"));
+const { reportWrites } = require(path.resolve(__dirname, "..", "dist/services/ops/writeReconciliation.js"));
 
 const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === "true";
 // Work units come from partitions.json: {y, lo, hi} where lo/hi optionally
@@ -29,6 +36,41 @@ const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === 
 const { runnerShardScope } = require("./lib/runner-shard-scope.cjs");
 const SHARD_SCOPE = runnerShardScope({ alwaysShard: true, defaultSlots: 16, label: "normalize-catalog-format" });
 const { SHARDED, SLOT, SLOTS } = SHARD_SCOPE;
+// CF-A-KILLED-JOB-CANNOT-REPORT-PROGRESS + CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE.
+// The clock and the exit come from the ONE shared helper. A local copy is what
+// #1859 cost: an unref'd cap that never fired and four runs killed at the
+// ceiling having already reconciled clean.
+const { budget, finishLane } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
+
+// ── THE THREE CONSTANTS (lib/runner-budget.cjs) ────────────────────────────
+//
+// Spelled out by name because the pins that govern budgeted lanes --
+// runnerBudgetMargin and laneExitsWhenWorkIsDone -- select their population on
+// the literal `RUN_MINUTES`. This lane had no clock at all, over a population
+// measured at 13,012,857 rows across 16 slots: dispatched over more work than
+// one 150-minute step holds, it was KILLED rather than stopped, and a killed
+// step prints no marker, no reconcile and no exit code -- so the 3.8M rows a
+// single 2026-08-25 run dropped to throttling could not even be counted.
+//
+// THE UNIT IS ONE PAGE of the `do { ... } while (token)` chunk walk: a
+// maxItemCount=1000 fetchNext, the normalisation of those 1,000 rows in
+// memory, and then up to ten 100-op `items.bulk` chunks retried through
+// MAX_ATTEMPTS (8) passes with a backoff capped at 15s per pass and a
+// per-chunk retryAfter honoured on top. That retry ladder is the whole reason
+// this unit is not a row: a page whose every chunk is throttled to the last
+// attempt spends roughly 8 x 15s of pure backoff before it gives up and
+// charges the remainder to `exhausted`. 90 seconds covers that worst observed
+// page with room, and it is checked BEFORE the page is fetched rather than
+// after it (the #1799 loop-top defect admits one more page past expiry).
+//
+// VERIFY_MS is nominal: every count this lane prints is accumulated in the
+// loop, and buildUnits' GROUP BY runs BEFORE the work, where a slow scan
+// spends budget the loop then does not get rather than stranding a
+// reconciliation that has already printed.
+const RUN_MINUTES = Number(process.env.RUN_MINUTES || 110);
+const RESERVE_MS = Number(process.env.RESERVE_MS || 90 * 1000);
+const VERIFY_MS = Number(process.env.VERIFY_MS || 60 * 1000);
+const CLOCK = budget({ minutes: RUN_MINUTES, reserveMs: RESERVE_MS, verifyMs: VERIFY_MS });
 
 const MEGA_CUT = 1500000;
 const RANGES = [["", "g"], ["g", "n"], ["n", "t"], ["t", "~"]];
@@ -61,11 +103,17 @@ const MAX_ATTEMPTS = Number(process.env.MAX_ATTEMPTS || 8);
 const TAG = process.env.TAG || `slot${process.env.SLOT ?? 0}`;
 const STOP = new Set(["the","a","of","and","psa","bgs","sgc","cgc","raw","rc","hof","set","break","lot","card","cards","vintage","graded"]);
 
-(async () => {
-  const db = new CosmosClient({
+async function main() {
+  // NAMED and unchained, so finishLane() can dispose it. The chained
+  // `new CosmosClient(...).database(...)` this replaces threw the client away
+  // at construction, leaving nothing to dispose -- and an undisposed SDK keeps
+  // keep-alive sockets open, which is the live handle that held four APPLY
+  // shards to the ceiling in #1809.
+  const client = new CosmosClient({
     connectionString: process.env.COSMOS_CONNECTION_STRING,
     connectionPolicy: { retryOptions: { maxRetryAttemptsOnThrottledRequests: 60, maxWaitTimeInSeconds: 300 } },
-  }).database("hobbyiq");
+  });
+  const db = client.database("hobbyiq");
   const cat = db.container("card_catalog");
   let throttled = 0, exhausted = 0, retryAfter = 0;
 
@@ -94,13 +142,37 @@ const STOP = new Set(["the","a","of","and","psa","bgs","sgc","cgc","raw","rc","h
   console.log(`[${TAG}] slot ${SLOT}/${SLOTS}  APPLY=${APPLY}  units=${UNITS.length}  ~rows=${mine.n}`);
   console.log(`  ${SHARD_SCOPE.banner()}`);
 
-  let seen = 0, changed = 0, wrote = 0, failed = 0;
+  console.log(`  ${CLOCK.describe()}`);
 
-  for (const unit of UNITS) {
+  let seen = 0, changed = 0, wrote = 0, failed = 0;
+  // THE BUDGET'S BOOKKEEPING. `unitsNotReached` is a REAL number -- buildUnits
+  // materialises this slot's whole unit list before the loop -- but the ROW
+  // population inside those units is discovered page by page and is NOT known
+  // up front. So this lane reconciles over what it SAW and says the slot is
+  // UNFINISHED; it does not invent a not-reached ROW count it has no way to
+  // compute. A fabricated remainder is worse than an admitted gap: it makes a
+  // half-swept slot read as an accounted one.
+  let stoppedAtBudget = false, unitsNotReached = 0;
+
+  for (let ui = 0; ui < UNITS.length; ui++) {
+    const unit = UNITS[ui];
     const y = unit.y;
     const bounded = unit.lo !== null && unit.lo !== undefined;
     let token;
     do {
+      // THE PRE-CHECK, ABOVE THE PAGE FETCH. A page is this lane's unit: fetch
+      // 1,000 rows, normalise them, then push up to ten 100-op bulk chunks
+      // through the MAX_ATTEMPTS retry ladder. Checked here, the page that
+      // would overrun is never STARTED; checked at the bottom of the do/while
+      // it would already have run, which is exactly the loop-top defect #1799
+      // named. The `break` leaves the page walk, and the guard after the
+      // do/while stops the outer unit loop too, so a stop is a stop rather
+      // than a skipped page.
+      if (CLOCK.outOfClock()) {
+        stoppedAtBudget = true;
+        unitsNotReached = UNITS.length - ui;
+        break;
+      }
       const page = await queryWithRetry(
         { query: `SELECT * FROM c WHERE c.year=@y AND STARTSWITH(c.id,'hiq:')
                   AND (NOT IS_DEFINED(c.verificationStatus) OR c.verificationStatus != 'rejected')
@@ -216,6 +288,10 @@ const STOP = new Set(["the","a","of","and","psa","bgs","sgc","cgc","raw","rc","h
 
       process.stderr.write(`\r[${TAG}] ${y}  seen ${seen}  changed ${changed}  wrote ${wrote}   `);
     } while (token);
+    // The inner break only leaves the page walk. Without this the outer loop
+    // would start the NEXT unit's first page with the clock already expired --
+    // one more unit past expiry, the very thing the pre-check exists to refuse.
+    if (stoppedAtBudget) break;
   }
   process.stderr.write("\n");
   console.log(`[${TAG}] DONE units=${UNITS.length} seen=${seen} changed=${changed} wrote=${wrote}` +
@@ -236,4 +312,56 @@ const STOP = new Set(["the","a","of","and","psa","bgs","sgc","cgc","raw","rc","h
   if (APPLY) {
     reportWrites({ job: `normalize-catalog-format ${TAG}`, intended: changed, written: wrote, failed });
   }
-})().catch((e) => { console.error(`[${TAG}] FATAL:`, e?.message || String(e)); process.exit(3); });
+
+  // RECONCILED OVER WHAT WAS SEEN, which is the only population this lane can
+  // honestly claim: `changed` counts rows this run actually read and found
+  // stale, so intended == written + exhausted + failed holds whether the loop
+  // finished its units or the budget stopped it mid-page. The rows in the
+  // units it never reached are not missing from this equation -- they were
+  // never IN it, and the marker below is what says so.
+  // A shortfall is RED (exit 4), not a note: the 2026-08-25 run that dropped
+  // 3,805,355 of 8,944,939 intended writes to throttling exited 0 and went
+  // green, and a warning nobody is paged on is the same as silence.
+  const accountedFor = wrote + exhausted + failed;
+  console.log(`  reconciled: intended ${changed} = written ${wrote} + skipped ${exhausted} + failed ${failed}`
+    + `  (over ${seen} rows SEEN; ${unitsNotReached} of ${UNITS.length} units not reached)`);
+  if (APPLY && accountedFor !== changed) {
+    console.error(`[${TAG}] RECONCILE MISMATCH: ${accountedFor} accounted vs ${changed} intended`);
+    process.exitCode = 4;
+  }
+
+  // -- THE MARKER THE RELAUNCH GREPS ---------------------------------------
+  //
+  // CF-RELAUNCH-ONLY-ON-BUDGET (#1361). The runner greps stdout for
+  // `stopped at the .*budget`, so the phrase is a SOURCE LITERAL rather than
+  // assembled from variables: a marker built by concatenation is one a
+  // refactor can silently reword, and a reworded marker ends the fan-out after
+  // one slice with the run green.
+  //
+  // It says UNFINISHED and NOT a row remainder, deliberately. This slot walks
+  // its pages behind a continuation token and never learns how many rows a
+  // unit holds until it has read them, so any "N rows left" here would be a
+  // number this lane made up.
+  if (stoppedAtBudget) {
+    console.log(`
+  stopped at the ${CLOCK.RUN_MINUTES}-minute budget -- `
+      + `this slot is UNFINISHED (${unitsNotReached} of ${UNITS.length} units not reached);`
+      + ` the relaunch continues from here`);
+    console.log(`[${TAG}] the normalise is CONVERGENT: a row already carrying its canonical`
+      + " setName/parallel/displayName/searchTokens compares `same` and is skipped, so the"
+      + " continuation re-reads cheaply and writes only what is still stale.");
+  }
+
+  return { client, budget: CLOCK };
+}
+
+// CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809). This lane used to be a bare
+// IIFE with a `.catch(... process.exit(3))`: a failure path that exited and a
+// success path that merely hoped the event loop would drain. That asymmetry is
+// what cost four reconciled-clean runs their exit codes, and it is closed here.
+main()
+  .then((ctx) => finishLane(process.exitCode || 0, ctx || { budget: CLOCK }))
+  .catch(async (e) => {
+    console.error(`[${TAG}] FATAL:`, e?.message || String(e));
+    await finishLane(3, { budget: CLOCK });
+  });

@@ -40,6 +40,11 @@
 const path = require("node:path");
 const fs = require("node:fs");
 const backend = path.resolve(__dirname, "..");
+// The clock is a MODULE-scope require deliberately: lib/runner-budget.cjs has
+// no dist/ dependency, so the contract test can still load this module without
+// a built tree, and `budget()`/`finishLane()` are in scope for the .catch
+// below as well as for main().
+const { budget, finishLane } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
 // The dist/ and Cosmos requires live inside main(), as the D33 lane does it:
 // loading this module must not need a built tree, so the runner contract test
 // can require it and drive the scope refusal without a compile step.
@@ -68,6 +73,32 @@ if (RAW_SCOPE && !RAW_SCOPE.endsWith(".json")) {
 }
 const SCOPE = RAW_SCOPE || DEFAULT_LIST;
 const f = (n) => Number(n).toLocaleString();
+
+// ── THE CLOCK ────────────────────────────────────────────────────────────────
+//
+// CF-A-KILLED-JOB-CANNOT-REPORT-PROGRESS. This lane is the POOL sibling of
+// relocate-catalog-rows-by-list, and it had the identical defect: it looped
+// over its whole list with no clock at all, so a list longer than one
+// 150-minute step could only end by being KILLED at the ceiling — no marker,
+// no reconcile, no finishLane line, and #1913's KILLED branch then correctly
+// withholding the re-dispatch, leaving the work half done and the run red.
+//
+// THE UNIT IS ONE ENTRY, and an entry's cost is dominated by its WRITE half:
+// relocateSoldComp does a read, a create at the new partition, a verified
+// read-back and a delete at the old one. Run 34079952456 measured the catalog
+// sibling's apply at 1.826 s/entry against a 0.076 s/entry report — the write
+// half is ~1.75s of that, and this lane's partition MOVE is strictly more work
+// than that one's delete. A 90-second reserve is ~50x the slowest entry that
+// measurement supports, which is the point: the reserve must exceed the worst
+// single unit a throttled container can produce, not the average one.
+//
+// Every count this lane prints is accumulated inside the loop, so there is no
+// post-loop aggregate to cap; VERIFY_MS is nominal and only sizes the pin's
+// worst case (110 + 1.5 + 1 + 1 = 113.5m under the 150m ceiling).
+const RUN_MINUTES = Number(process.env.RUN_MINUTES || 110);
+const RESERVE_MS = Number(process.env.RESERVE_MS || 90 * 1000);
+const VERIFY_MS = Number(process.env.VERIFY_MS || 60 * 1000);
+const CLOCK = budget({ minutes: RUN_MINUTES, reserveMs: RESERVE_MS, verifyMs: VERIFY_MS });
 
 /**
  * CF-ONE-CARD-ONE-ROW-ONE-POOL -- a moved row carries ONE identity.
@@ -142,12 +173,17 @@ async function main() {
   console.log(`entries in scope        ${f(entries.length)}`);
   console.log(`excluded by the audit   ${f((doc.excluded || []).length)}   <- deliberately NOT moved`);
   for (const r of doc.rulings || []) console.log(`  ruling: ${r}`);
+  console.log(`  ${CLOCK.describe()}`);
   console.log("");
 
-  const db = new CosmosClient({
+  // The client is NAMED rather than chained away, so finishLane() can dispose
+  // it: an undisposed SDK keeps keep-alive sockets open, and a live handle is
+  // what held four reconciled-clean runs to the ceiling (#1809).
+  const client = new CosmosClient({
     connectionString: conn,
     connectionPolicy: { retryOptions: { maxRetryAttemptsOnThrottledRequests: 60, maxWaitTimeInSeconds: 300 } },
-  }).database("hobbyiq");
+  });
+  const db = client.database("hobbyiq");
   const pool = db.container("sold_comps");
   const retry = async (fn, tries = 12) => {
     let wait = 1000;
@@ -164,7 +200,25 @@ async function main() {
   let thirdSlug = 0, retired = 0, parked = 0;
   const intended = entries.length;
 
+  // How far the loop actually got. `stoppedAt` stays null when every entry was
+  // considered; a number means the budget stopped the loop BEFORE that index,
+  // and the banner and the marker both report it.
+  let stoppedAt = null;
+  let considered = 0;
+
   for (const e of entries) {
+    // THE PRE-CHECK, ONCE, ABOVE EVERY SHAPE. It sits here — above the parse,
+    // above the shape fork, above the read — precisely so that no branch
+    // (relocate / repoint / retire / park) can be the one that forgets it. A
+    // check inside one arm leaves the other three unbudgeted, which is the
+    // same defect merely quartered.
+    //
+    // And it is a PRE-check: `outOfClock()` is true when less than the reserve
+    // remains, so the entry that would overrun is never STARTED. Checking
+    // after the entry admits one more unit of unbounded size past expiry —
+    // the loop-top defect #1799 named.
+    if (CLOCK.outOfClock()) { stoppedAt = considered; break; }
+    considered++;
     const id = String(e.id ?? "").trim();
     const from = String(e.fromCardId ?? "").trim();
     const to = String(e.toCardId ?? "").trim();
@@ -333,8 +387,14 @@ async function main() {
     }
   }
 
+  // Entries the budget never reached. They are NOT failures and NOT skips:
+  // nothing was read and nothing was decided about them, so they are their own
+  // line in the reconcile and the relaunch is what settles them.
+  const notReached = stoppedAt === null ? 0 : intended - stoppedAt;
+
   console.log(`\n${APPLY ? "APPLY" : "REPORT ONLY — nothing written"}`);
   console.log(`  entries in scope        ${f(intended)}`);
+  console.log(`  entries considered      ${f(considered)}${stoppedAt === null ? "   <- the whole list" : ""}`);
   console.log(`  RELOCATED (partition)   ${f(relocated)}`);
   console.log(`  REPOINTED (hiqCardId)   ${f(repointed)}`);
   console.log(`  RETIRED (flaggedWrong)  ${f(retired)}   <- marked, never deleted`);
@@ -344,16 +404,61 @@ async function main() {
   console.log(`  failed                  ${f(failed)}`);
   console.log(`  duplicates left in pool ${f(duplicatesLeft)}   <- must be 0`);
   console.log(`  third-slug hobbyiqCardId ${f(thirdSlug)}   <- overwritten to the target, listed above`);
+  console.log(`  not reached (budget)    ${f(notReached)}   <- the relaunch settles these`);
+
+  // A PARTIAL RUN STILL RECONCILES. The identity has to hold over what the
+  // loop CONSIDERED, not over the file, or a budget stop reads as thousands of
+  // lost entries. `not reached` carries the remainder explicitly so the two
+  // numbers an operator cares about -- what happened, and what is left -- are
+  // both on the page rather than one being inferred from the other's absence.
+  const written = relocated + repointed + retired + parked;
+  const skipped = alreadyRight + notFound;
+  console.log(`  reconciled: intended ${f(intended)} = written ${f(written)} + skipped ${f(skipped)} `
+    + `+ failed ${f(failed)} + not reached ${f(notReached)}`);
+  if (written + skipped + failed + notReached !== intended) {
+    console.error("  !! RECONCILE MISMATCH -- an entry was neither written, skipped, failed nor deferred");
+    process.exitCode = 4;
+  }
   if (APPLY) {
     reportWrites({
       job: "relocate-pool-rows-by-list", intended,
-      written: relocated + repointed + retired + parked, skipped: alreadyRight + notFound, failed,
+      written, skipped: skipped + notReached, failed,
     });
   }
+
+  // -- THE MARKER THE RELAUNCH GREPS --------------------------------------
+  //
+  // CF-RELAUNCH-ONLY-ON-BUDGET (#1361). The runner greps stdout for
+  // `stopped at the .*budget`, so the phrase is written here as a SOURCE
+  // LITERAL rather than assembled from variables: a marker built by
+  // concatenation is a marker a refactor can silently reword, and a reworded
+  // marker ends the fan-out after one slice with the run green -- the quiet
+  // version of the bug #1913 made loud.
+  if (stoppedAt !== null) {
+    console.log(`
+  stopped at the ${CLOCK.RUN_MINUTES}-minute budget -- `
+      + `stopped at ${f(stoppedAt)} of ${f(intended)}; the relaunch continues from here`);
+    console.log("  the list is IDEMPOTENT: a finished relocate re-reads as `already at the target`,"
+      + " and a finished retire or park already carries its field, so the continuation re-derives"
+      + " cheaply and writes only what is left.");
+  }
+
+  return { client, budget: CLOCK };
 }
 
+// CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809). Whether the loop finished or
+// the budget stopped it, this lane EXITS -- it never ends by hoping the event
+// loop drains. A failure path that exits and a success path that hopes is
+// exactly the asymmetry that cost four reconciled-clean runs their exit codes.
+// `process.exitCode` may already carry a reconcile mismatch, and that is the
+// code finishLane is handed.
 if (require.main === module) {
-  main().catch((e) => { console.error("FATAL:", e?.stack || e?.message); process.exit(3); });
+  main()
+    .then((ctx) => finishLane(process.exitCode || 0, ctx || { budget: CLOCK }))
+    .catch(async (e) => {
+      console.error("FATAL:", e?.stack || e?.message);
+      await finishLane(3, { budget: CLOCK });
+    });
 }
 
 module.exports = { DEFAULT_LIST, SCOPE, APPLY, planRelocatedIdentity };

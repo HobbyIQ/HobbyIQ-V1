@@ -173,7 +173,11 @@ const UNRECONCILED = new Set([
   "reslug-speckle-recovery",
   "reslug-suspicious-setkeys",
   "reslugAllSoldComps",
-  "retire-flattened-attestations",
+  // retire-flattened-attestations left this list on 2026-09-07: budgeting it
+  // meant giving it a stop, and a lane that can stop half way MUST be able to
+  // say so -- `intended = written + skipped + failed` with the budget's
+  // remainder carried as `skipped` is the only honest banner for a partial run.
+  // It gained a real reportWrites() in the same change rather than a token one.
   "score-all-sold-comps",
 ]);
 

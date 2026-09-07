@@ -203,36 +203,60 @@ const unparsed: string[] = [];
  */
 const unbudgetedWriters: string[] = [];
 
-/** The debt, frozen as measured on 2026-09-07 — 58 dispatchable write lanes
- *  with no clock of their own. This list may LOSE names (a lane that gains a
- *  budget must be struck from it) and may never GAIN one. It is not an
- *  approval: every entry here is a lane that will be killed rather than stopped
- *  if it is ever dispatched over more work than one 150-minute step holds.
+/** The debt, frozen as measured on 2026-09-07 and SHRUNK the same week -- the
+ *  dispatchable write lanes still running with no clock of their own. This list
+ *  may LOSE names (a lane that gains a budget must be struck from it) and may
+ *  never GAIN one. It is not an approval: every entry here is a lane that will
+ *  be KILLED rather than stopped if it is ever dispatched over more work than
+ *  one 150-minute step holds.
  *
- *  relocate-catalog-rows-by-list is not here because this change fixed it. */
+ *  59 -> 44. The fifteen struck below were converted together and are absent
+ *  for the same reason relocate-catalog-rows-by-list is: they now budget, so
+ *  putting any of them back would make this suite red. They were taken in
+ *  BLAST-RADIUS ORDER -- what a killed run of each would leave half-written --
+ *  rather than in the order they happened to be listed:
+ *
+ *    portfolio (user documents, the container a half-write is worst in):
+ *      conform-holdings-to-catalog, reap-orphan-price-trails,
+ *      backfill-holding-ebay-ids, backfill-canonicalize-chrome-slugs
+ *    sold_comps + card_catalog (a half-move splits a pool AND its address):
+ *      repair-refractor-mislabel, merge-bare-colour-parallels,
+ *      retire-impossible-grade-rows, retire-flattened-attestations
+ *    card_catalog (the address space itself):
+ *      dedupe-catalog-partition-shadows, backfillCatalogCardYearFromSlug,
+ *      normalize-catalog-format
+ *    sold_comps (the pool):
+ *      relocate-pool-rows-by-list, recover-chrome-collapse-damage,
+ *      revert-d30-base-onto-one-of-one, reslug-tcg-out-of-sports-namespace
+ *
+ *  THE ORDER THE REMAINING 44 ARE OWED IN is the order they are written below:
+ *  portfolio first, then the two-container lanes, then card_catalog, then
+ *  sold_comps, then the lanes whose writes land outside the three pricing
+ *  containers. Within a tier they are alphabetical, so the next builder takes
+ *  the top of the list rather than re-deriving the ranking. reprice-user-
+ *  holdings is deliberately first: it is the only remaining lane that writes
+ *  `portfolio`, and it is on the daily-refresh cron as well as the dropdown.
+ *
+ *  NONE of these 44 is local-only. Every one is reachable from the runner's
+ *  `script` dropdown, and the eBay lanes (run-ebay-order-poll, -purchase-sync,
+ *  -finances-enrichment) were deliberately MOVED onto the runner from the API
+ *  process, so de-listing them is not available as a shortcut -- they have to
+ *  be budgeted where they are. */
 const KNOWN_UNBUDGETED_WRITE_LANES = [
-  "reslug-cross-product-mis-slug", "reslug-suspicious-setkeys", "backfill-grade-from-ch-daily",
-  "bulk-import-ch-daily-to-sold-comps", "backfill-verify-queue-grades",
-  "backfill-isauto-from-cardnumber", "backfill-isauto-cross-sport", "backfill-printrun-from-title",
-  "backfill-autostyle-from-title", "backfill-parallel-enrichment", "backfill-insert-setkey",
-  "backfill-composite-fields", "backfill-composite-v3", "refresh-market-signals",
-  "refresh-calibration-multipliers", "ingest-product-checklist",
-  "ingest-2026-bowman-auto-checklist", "reprice-user-holdings", "reap-orphan-price-trails",
-  "backfill-cardsight-title-identity", "backfill-canonicalize-chrome-slugs",
-  "backfill-catalog-driven-canonicalize", "backfill-stage2-title-parser",
-  "backfill-stage3-price-sanity", "promote-sold-comps-trust-tier", "baseline-pool-snapshot",
-  "backfill-cardsight-unverified-flag", "migrate-cardsight-to-staging", "backfill-grade-from-title",
-  "backfill-bowman-mega-box-reslug", "backfill-sub-channel-vocabulary",
-  "auto-quarantine-contaminated-pools", "normalize-catalog-schema", "dedupe-catalog-by-hobbyiq",
-  "nightly-reingest-top-ch-cards", "backfill-ch-catalog-additions", "drain-staging-backlog",
-  "backfill-searchtokens-all-sports", "fix-catalog-parallel-as-player",
-  "auto-label-catalog-variants", "rescore-anomalies", "score-all-sold-comps",
-  "reaudit-cardsight-unverified", "recover-chrome-collapse-damage", "normalize-catalog-format",
-  "retire-flattened-attestations", "repair-refractor-mislabel", "merge-bare-colour-parallels",
-  "dedupe-catalog-partition-shadows", "reslug-tcg-out-of-sports-namespace",
-  "retire-impossible-grade-rows", "revert-d30-base-onto-one-of-one", "backfill-holding-ebay-ids",
-  "conform-holdings-to-catalog", "run-ebay-order-poll", "run-ebay-finances-enrichment",
-  "run-ebay-purchase-sync", "relocate-pool-rows-by-list", "backfillCatalogCardYearFromSlug",
+  "reprice-user-holdings", "backfill-catalog-driven-canonicalize", "backfill-stage2-title-parser",
+  "auto-label-catalog-variants", "backfill-searchtokens-all-sports", "dedupe-catalog-by-hobbyiq",
+  "fix-catalog-parallel-as-player", "normalize-catalog-schema", "auto-quarantine-contaminated-pools",
+  "backfill-autostyle-from-title", "backfill-bowman-mega-box-reslug", "backfill-cardsight-title-identity",
+  "backfill-cardsight-unverified-flag", "backfill-composite-fields", "backfill-composite-v3",
+  "backfill-grade-from-ch-daily", "backfill-grade-from-title", "backfill-insert-setkey",
+  "backfill-isauto-cross-sport", "backfill-isauto-from-cardnumber", "backfill-parallel-enrichment",
+  "backfill-printrun-from-title", "backfill-stage3-price-sanity", "backfill-sub-channel-vocabulary",
+  "baseline-pool-snapshot", "migrate-cardsight-to-staging", "nightly-reingest-top-ch-cards",
+  "promote-sold-comps-trust-tier", "reaudit-cardsight-unverified", "refresh-calibration-multipliers",
+  "refresh-market-signals", "rescore-anomalies", "reslug-cross-product-mis-slug", "reslug-suspicious-setkeys",
+  "score-all-sold-comps", "backfill-ch-catalog-additions", "backfill-verify-queue-grades",
+  "bulk-import-ch-daily-to-sold-comps", "drain-staging-backlog", "ingest-2026-bowman-auto-checklist",
+  "ingest-product-checklist", "run-ebay-finances-enrichment", "run-ebay-order-poll", "run-ebay-purchase-sync",
 ];
 
 /** A lane that can WRITE. The signal is the runner's own gate (`BACKFILL_APPLY`
@@ -294,9 +318,14 @@ describe("every budgeted runner lane stops under the action ceiling", () => {
     // ── WHY A RATCHET AND NOT A FLAT ZERO ──────────────────────────────────
     //
     // Measured when this assertion was written: 59 whitelisted write lanes
-    // declare no budget. Demanding zero today would fail the suite on 58 lanes
-    // nobody in this change has measured, and a pin that is red on arrival is
-    // a pin somebody deletes — which would cost the rule entirely.
+    // declared no budget. Demanding zero that day would have failed the suite
+    // on 59 lanes nobody in that change had measured, and a pin that is red on
+    // arrival is a pin somebody deletes — which would cost the rule entirely.
+    //
+    // The ratchet is doing its job: 59 the day it was frozen, 44 now. The
+    // fifteen that left were MEASURED — each one's unit identified, its reserve
+    // sized to that unit's worst case, its marker and reconcile driven by the
+    // per-lane assertions below — which is the only way a name may leave.
     //
     // So the debt is WRITTEN DOWN and frozen. Removing a lane from this list is
     // the only edit that keeps the suite green: adding a name fails below, and

@@ -23,6 +23,9 @@ const path = require("path");
 //   intended = rows the apply branch handed to an upsert
 //   written  = upserts acknowledged (rewritten); failed = upserts that threw
 const { reportWrites } = require(path.join(__dirname, "..", "dist/services/ops/writeReconciliation.js"));
+// CF-A-KILLED-JOB-CANNOT-REPORT-PROGRESS + CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE.
+// The clock and the exit are the SHARED helper, never a local copy.
+const { budget, finishLane } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
 
 // CF-RUNNER-FLAG-HYGIENE (D18, 2026-08-29). The runner exports BACKFILL_APPLY
 // and never RECOVER_MODE, so under the runner this was PERMANENTLY DRY: an
@@ -31,6 +34,34 @@ const { reportWrites } = require(path.join(__dirname, "..", "dist/services/ops/w
 // runner's flag decides; with neither, dry.
 const MODE = (process.env.RECOVER_MODE || (process.env.BACKFILL_APPLY === "true" ? "apply" : "dry")).toLowerCase();
 const CONCURRENCY = Math.max(1, Number(process.env.RECOVER_CONCURRENCY || 8));
+
+// -- THE CLOCK --------------------------------------------------------------
+//
+// CF-A-KILLED-JOB-CANNOT-REPORT-PROGRESS. This lane REWRITES sold_comps
+// identities -- it moves a sale's hobbyiqCardId from one product family to
+// another -- and declared no budget at all, so a marked population larger than
+// one 150-minute step holds could only end by being KILLED at the ceiling with
+// half the pool recovered and no marker, no reconcile and no finishLane line to
+// say which half.
+//
+// THE UNIT IS ONE ROW: one `sc.items.upsert(r)` of a whole sold_comps document,
+// wrapped in withRetry (5 attempts, exponential 250ms base). CONCURRENCY (8) is
+// an in-flight WINDOW, not a batch -- the loop admits one row at a time and only
+// waits when the window is full -- so the largest thing the budget can be asked
+// to admit is a single upsert plus, at worst, the wait for one slot to free.
+// withRetry's own ceiling on a throttled row is roughly 250+500+1000+2000+4000ms
+// of backoff plus the requests themselves; 60 seconds exceeds that by a wide
+// margin, and is checked BEFORE the row is queued rather than after it is
+// written.
+//
+// VERIFY_MS is nominal: the post-loop report reads NOTHING, it only prints the
+// transition tallies the loop accumulated. Worst case 110 + 1 + 1 + 1 = 113m
+// under the 150m ceiling.
+const RUN_MINUTES = Number(process.env.RUN_MINUTES || 110);
+const RESERVE_MS = Number(process.env.RESERVE_MS || 60 * 1000);
+const VERIFY_MS = Number(process.env.VERIFY_MS || 60 * 1000);
+const CLOCK = budget({ minutes: RUN_MINUTES, reserveMs: RESERVE_MS, verifyMs: VERIFY_MS });
+const f = (n) => Number(n ?? 0).toLocaleString("en-US");
 
 // Set-string canonicalization ONLY (safe rules — no cardNumber prefix override).
 // Mirrors the trimmed normalizeSetKey collapse rules that are now the ONLY chrome
@@ -118,10 +149,14 @@ async function withRetry(fn, attempts = 5, baseMs = 250) {
 
 async function main() {
   if (!process.env.COSMOS_CONNECTION_STRING) { console.error("COSMOS_CONNECTION_STRING required"); process.exit(1); }
-  const c = new CosmosClient(process.env.COSMOS_CONNECTION_STRING);
-  const sc = c.database(process.env.COSMOS_DATABASE || "hobbyiq").container("sold_comps");
+  // NAMED and unchained so finishLane() can dispose it (#1809): an undisposed
+  // SDK holds keep-alive sockets, and a live handle is what held four
+  // reconciled-clean runs to the ceiling.
+  const client = new CosmosClient(process.env.COSMOS_CONNECTION_STRING);
+  const sc = client.database(process.env.COSMOS_DATABASE || "hobbyiq").container("sold_comps");
 
   console.log(`[recover-chrome-collapse-damage]  mode=${MODE}  concurrency=${CONCURRENCY}`);
+  console.log(`  ${CLOCK.describe()}`);
 
   const { resources: rows } = await sc.items.query({
     query: `SELECT * FROM c WHERE IS_DEFINED(c.__canonicalizedChromeAt)`
@@ -174,7 +209,21 @@ async function main() {
   const skipped = {};
   const inFlight = [];
   let rewritten = 0, unchanged = 0, errored = 0, keptAsIs = 0, attempted = 0;
-  for (const r of rows) {
+  // THE POPULATION IS KNOWN UP FRONT -- `rows` is one fetchAll() of every marked
+  // row -- so a budget stop CAN name exactly what it did not reach, unlike a
+  // lane that discovers its rows page by page.
+  let stoppedAtBudget = false, notReached = 0;
+  for (let ri = 0; ri < rows.length; ri++) {
+    // THE PRE-CHECK: above the unit's work and above every branch fork below,
+    // so the row whose upsert would overrun is never CLASSIFIED, let alone
+    // queued. Checking after the classification would still admit one whole
+    // upsert past expiry -- the loop-top defect #1799 named.
+    if (CLOCK.outOfClock()) {
+      stoppedAtBudget = true;
+      notReached = rows.length - ri;
+      break;
+    }
+    const r = rows[ri];
     const oldSlug = r.hobbyiqCardId;
     if (typeof oldSlug !== "string" || !oldSlug.startsWith("hiq:")) { unchanged++; continue; }
     const parts = oldSlug.split(":");
@@ -217,6 +266,7 @@ async function main() {
   await Promise.allSettled(inFlight);
 
   console.log(`\ntotal marked=${rows.length}  would-change=${rewritten}  unchanged=${unchanged}  kept-as-is=${keptAsIs}  errored=${errored}`);
+  if (notReached) console.log(`  not reached (budget)=${f(notReached)}`);
   console.log(`\nRecovery transitions applied (top 30):`);
   Object.entries(transitions).sort((a,b) => b[1] - a[1]).slice(0, 30).forEach(([k, n]) => {
     console.log(`  ${String(n).padStart(5)}  ${k}`);
@@ -225,7 +275,49 @@ async function main() {
   Object.entries(skipped).sort((a,b) => b[1] - a[1]).slice(0, 15).forEach(([k, n]) => {
     console.log(`  ${String(n).padStart(5)}  ${k}`);
   });
-  if (MODE === "apply") reportWrites({ job: "recover-chrome-collapse-damage", intended: attempted, written: rewritten, failed: errored });
+  // RECONCILIATION. `attempted` counts only rows this run actually handed to an
+  // upsert, so `intended = written + failed` holds whether the loop finished or
+  // the budget stopped it. The rows the budget never reached are reported
+  // SEPARATELY as `skipped` rather than folded into `intended`: they were never
+  // classified, so they are not yet known to be rows this lane would have
+  // written at all. A shortfall sets process.exitCode = 4 -- red, not green.
+  if (MODE === "apply") {
+    console.log(`  reconciled: attempted ${f(attempted)} = written ${f(rewritten)} + failed ${f(errored)}`);
+    if (rewritten + errored !== attempted) {
+      console.error("  !! RECONCILE MISMATCH -- a queued upsert was neither acknowledged nor failed");
+      process.exitCode = 4;
+    }
+    reportWrites({
+      job: "recover-chrome-collapse-damage",
+      intended: attempted, written: rewritten, skipped: notReached, failed: errored,
+      notes: `unchanged ${unchanged}; kept-as-is ${keptAsIs}; not reached ${notReached}`,
+    });
+  }
+
+  // -- THE MARKER THE RELAUNCH GREPS ---------------------------------------
+  //
+  // CF-RELAUNCH-ONLY-ON-BUDGET (#1361). A SOURCE LITERAL, never assembled from
+  // variables: a marker built by concatenation is one a refactor can silently
+  // reword, and a reworded marker ends the fan-out after one slice with the run
+  // green.
+  if (stoppedAtBudget) {
+    console.log(`
+  stopped at the ${CLOCK.RUN_MINUTES}-minute budget -- `
+      + `${f(notReached)} of ${f(rows.length)} marked rows not reached; the relaunch continues from here`);
+    console.log("  the recovery is IDEMPOTENT: a row whose slug already carries the corrected"
+      + " set reads as `unchanged` on the next pass, so the continuation re-derives cheaply"
+      + " and writes only what is left.");
+  }
+
+  return { client, budget: CLOCK };
 }
 
-main().catch(e => { console.error(e); process.exit(1); });
+// CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809). Success exits too -- a failure
+// path that exits and a success path that hopes is the asymmetry that cost four
+// reconciled-clean runs their exit codes.
+main()
+  .then((ctx) => finishLane(process.exitCode || 0, ctx || { budget: CLOCK }))
+  .catch(async (e) => {
+    console.error(e);
+    await finishLane(1, { budget: CLOCK });
+  });

@@ -56,6 +56,38 @@ const { SHARDED, SLOT, SLOTS } = SHARD_SCOPE;
 // "all"       = every slug whose parallel segment disagrees with its title.
 const SCOPE = String(process.env.SCOPE || "refractor").toLowerCase();
 
+// -- THE CLOCK ---------------------------------------------------------------
+//
+// CF-A-KILLED-JOB-CANNOT-REPORT-PROGRESS. This lane had no clock at all: it
+// looped over every year it found and printed its TOTAL and its reportWrites
+// only after the last one. A run that does not finish inside the runner's
+// 150-minute step is therefore KILLED rather than stopped -- no marker, no
+// reconcile, no finishLane line -- and #1913's killed branch withholds the
+// re-dispatch, so the years it never reached are simply never done. That is
+// how three workers of the 2026-08-25 apply died on a 429 and abandoned every
+// remaining year with nothing to say about them.
+//
+// THE UNIT IS ONE YEAR, and a year here is not a small thing: it is a full
+// cross-partition page walk of sold_comps for that cardYear (400 rows a page,
+// millions of rows in the heavy years), a parseListingIdentity per row, a
+// card_catalog point read per distinct destination, and a read-modify-replace
+// per row that moves. 2026 alone carries hundreds of thousands of ':refractor:'
+// sales; against sold_comps' 8,000 RU floor -- which this file already records
+// being saturated by parallel workers -- one year can spend MINUTES on the scan
+// before it writes anything. So the reserve is 5 minutes: the clock refuses to
+// START a year it cannot plausibly finish, rather than admitting one more
+// unbounded year past expiry (the #1799 loop-top defect).
+//
+// VERIFY_MS is nominal: this lane reads NOTHING after the loop -- no post-loop
+// aggregate, no count-by-read -- so the cap has nothing to bound and only sizes
+// the pin's worst case (110 + 5m + 1m + 1m startup = 117m, 33m under the
+// 150-minute ceiling).
+const { budget, finishLane } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
+const RUN_MINUTES = Number(process.env.RUN_MINUTES || 110);
+const RESERVE_MS = Number(process.env.RESERVE_MS || 5 * 60 * 1000);
+const VERIFY_MS = Number(process.env.VERIFY_MS || 60 * 1000);
+const CLOCK = budget({ minutes: RUN_MINUTES, reserveMs: RESERVE_MS, verifyMs: VERIFY_MS });
+
 const slugify = (s) => String(s ?? "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
 // The doubled-year producer is fixed (0000f60) but stored titles still carry
@@ -95,13 +127,18 @@ async function yearsPresent(sold) {
     .sort((a, b) => b.n - a.n).map((r) => r.y);
 }
 
-(async () => {
+async function main() {
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) { console.error("FATAL: COSMOS_CONNECTION_STRING not set"); process.exit(1); }
-  const db = new CosmosClient({
+  // NAMED, not chained away: finishLane() disposes it, and an undisposed SDK
+  // client keeps its keep-alive sockets open -- a ref'd handle is exactly what
+  // holds a finished process to the runner's ceiling (CF-A-LANE-EXITS-WHEN-ITS-
+  // WORK-IS-DONE, #1809).
+  const client = new CosmosClient({
     connectionString: conn,
     connectionPolicy: { retryOptions: { maxRetryAttemptsOnThrottledRequests: 60, maxWaitTimeInSeconds: 300 } },
-  }).database(process.env.COSMOS_DATABASE ?? "hobbyiq");
+  });
+  const db = client.database(process.env.COSMOS_DATABASE ?? "hobbyiq");
   const sold = db.container("sold_comps");
   const cat = db.container("card_catalog");
 
@@ -110,6 +147,7 @@ async function yearsPresent(sold) {
   console.log("years with ':refractor:' sales: " + all.length +
               "   this worker (slot " + SLOT + "/" + SLOTS + "): " + years.length);
   console.log(`  ${SHARD_SCOPE.banner()}`);
+  console.log(`  clock:  ${CLOCK.describe()}`);
 
   const total = { seen: 0, correct: 0, toBase: 0, toColour: 0, other: 0, noDest: 0, held: 0, wrote: 0, failed: 0 };
   const destCache = new Map();
@@ -146,7 +184,21 @@ async function yearsPresent(sold) {
     return ok;
   };
 
-  for (const year of years) {
+  // Years the budget never STARTED. This lane knows its whole population up
+  // front -- `years` is fixed before the first page is read -- so a partial run
+  // can say exactly how much is left rather than leaving the slot UNFINISHED.
+  let stoppedAtBudget = false, yearsNotReached = 0;
+  for (let yi = 0; yi < years.length; yi++) {
+    const year = years[yi];
+    // THE PRE-CHECK: before the year, never after it. `outOfClock()` is true
+    // when less than the reserve remains, so the year that would overrun is
+    // never STARTED -- a check at the loop bottom admits one more whole
+    // cross-partition year past expiry, which is the #1799 defect.
+    if (CLOCK.outOfClock()) {
+      stoppedAtBudget = true;
+      yearsNotReached = years.length - yi;
+      break;
+    }
     let token, seen = 0, correct = 0, toBase = 0, toColour = 0, other = 0, noDest = 0, wrote = 0, failed = 0, held = 0;
     const heldWhy = new Map();
     const samples = [], missing = new Map();
@@ -290,6 +342,19 @@ async function yearsPresent(sold) {
   // committed to never reached the database.
   if (APPLY) {
     const moves = total.toBase + total.toColour + total.other;
+    // A PARTIAL RUN STILL RECONCILES. The identity holds over what the loop
+    // CONSIDERED, and the years the clock never started are declared as
+    // SKIPPED so a budget stop reads as deferred work rather than as loss.
+    // Their ROW count is unknown -- the pages were never walked -- so the
+    // reconcile states the deferral in YEARS, which is the unit this lane
+    // actually stopped on.
+    console.log(`  reconciled: intended ${moves + total.held + total.noDest} = written ${total.wrote}`
+      + ` + skipped ${total.held + total.noDest} + failed ${total.failed}`
+      + `  (years not reached: ${yearsNotReached})`);
+    if (total.wrote + total.failed !== moves) {
+      console.error("  !! RECONCILE MISMATCH -- a move this run CHOSE was neither written nor failed");
+      process.exitCode = 4;
+    }
     reportWrites({
       job: "repair-refractor-mislabel",
       intended: moves + total.held + total.noDest,
@@ -298,7 +363,32 @@ async function yearsPresent(sold) {
       failed: total.failed,
     });
   }
-})().catch((e) => {
-  console.error("FATAL:", e?.stack || e?.message || String(e));
-  process.exit(3);
-});
+
+  // -- THE MARKER THE RELAUNCH GREPS ---------------------------------------
+  //
+  // CF-RELAUNCH-ONLY-ON-BUDGET (#1361). The runner greps stdout for
+  // `stopped at the .*budget`, so the phrase is a SOURCE LITERAL here rather
+  // than assembled from a variable holding the words: a marker built by
+  // concatenation is one a refactor can silently reword, and a reworded marker
+  // ends the fan-out after one slice with the run green.
+  if (stoppedAtBudget) {
+    console.log(`
+  stopped at the ${CLOCK.RUN_MINUTES}-minute budget -- `
+      + `${yearsNotReached} year(s) not reached; the relaunch continues from here`);
+    console.log("  the repair is IDEMPOTENT: a row already moved parses to the slug it now"
+      + " carries and is counted correct, so the continuation re-scans cheaply and writes"
+      + " only what is left. Pass YEARS= to name the remainder directly.");
+  }
+
+  return { client, budget: CLOCK };
+}
+
+// CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809). Success exits too -- a
+// failure path that exits and a success path that hopes is the asymmetry that
+// cost four reconciled-clean runs their exit codes.
+main()
+  .then((ctx) => finishLane(process.exitCode || 0, ctx || { budget: CLOCK }))
+  .catch(async (e) => {
+    console.error("FATAL:", e?.stack || e?.message || String(e));
+    await finishLane(3, { budget: CLOCK });
+  });
