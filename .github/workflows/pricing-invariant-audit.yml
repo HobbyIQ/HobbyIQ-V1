@@ -305,6 +305,26 @@ jobs:
           OUT_JSON=/tmp/audit-findings.json \
           node scripts/audit-pricing-invariants-corpus.cjs 2>&1 | tee /tmp/corpus-audit.log
 
+      # CF-AN-ALARM-COMPARES-LIKE-WITH-LIKE (2026-09-07, I9 P1). The I9 alarm
+      # compares only against a reference measured under THIS tree's derivation
+      # stamp. When the stamp has moved -- a classifier or vocabulary change
+      # landed -- the drift is a re-baseline FINDING, not an alarm, and a fresh
+      # census is owed. This step makes that state visible in the run without
+      # anybody reading the JSON, and never fails the job: a stale reference is
+      # a finding like every other finding here.
+      - name: Report the I9 reference stamp
+        if: always()
+        working-directory: backend
+        run: |
+          node scripts/rebaseline-i9-reference.cjs | tee /tmp/i9-stamp.log || true
+          {
+            echo '### I9 reference stamp'
+            echo ''
+            echo '```'
+            cat /tmp/i9-stamp.log
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
       # THE SINK, part 1: the artifact. Row-level findings with ids, so the
       # repair lane that eventually runs has a list to name.
       - name: Upload findings JSON

@@ -261,11 +261,25 @@ describe("chHistoricalBackfill — day walk + cursor", () => {
 
     // Day 1 succeeded, day 2 failed → we stop, and the cursor sits on
     // the last GOOD day. Walking past 01-02 would orphan it forever.
+    //
+    // CF-CH-BACKFILL-POISON-PILL (2026-08-22): the FIRST failure still holds,
+    // which is what this test pins. The hold now ALSO records the block
+    // (blockedDate / blockedAttempts) so the walk can tell a transient from a
+    // permanently-dead upstream date, and that record goes through the same
+    // cursor write. So the write COUNT is no longer 1 — but every written
+    // value is still the last good day, which is the actual invariant here.
+    // Pinning the exact count pinned an implementation detail; pin instead
+    // that the cursor never advances past the failed day.
     expect(res.stoppedReason).toBe("hard-error");
     expect(res.cursorAfter).toBe("2025-01-01");
     const written = writeCursorMock.mock.calls.map((c) => c[0].lastCompletedDate);
-    expect(written).toEqual(["2025-01-01"]);
+    expect(written.length).toBeGreaterThan(0);
+    expect([...new Set(written)]).toEqual(["2025-01-01"]);
     expect(written).not.toContain("2025-01-02");
+    // The block is recorded against the failing date, and it is only strike 1.
+    const blocked = writeCursorMock.mock.calls.map((c) => c[0]).filter((u) => u.blockedDate);
+    expect(blocked.at(-1)?.blockedDate).toBe("2025-01-02");
+    expect(blocked.at(-1)?.blockedAttempts).toBe(1);
   });
 
   it("does not advance the cursor at all in dry-run", async () => {
