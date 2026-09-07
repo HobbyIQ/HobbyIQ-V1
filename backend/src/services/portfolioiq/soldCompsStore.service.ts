@@ -1823,7 +1823,53 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<Record
   // under the un-numbered twin while a re-file landed beside it. One
   // transaction, one row: a copy of this id filed under another card is
   // superseded before this write lands.
-  if (isUserScoped && input.sourceExternalId && String(input.sourceExternalId).trim()) {
+  //
+  // ── THE SCOPE WAS THE DEFECT (2026-09-07, the duplicate-sale-ids census) ──
+  //
+  // This guard was gated on `isUserScoped`, and the population it was built to
+  // stop is overwhelmingly NOT user-scoped. `makeId` returns
+  // `${source}::${externalId}` whenever the source provides an external id --
+  // and for a VENDOR source it always does. That id does not contain `cardId`.
+  // So when the parser learns a better setKey and the same vendor listing is
+  // re-ingested, the SAME id is written under a NEW partition key: the upsert
+  // creates rather than replaces, the partition-scoped contentHash probe
+  // hashes `cardId` and cannot see across, the cross-partition probe above is
+  // user-scoped too -- and the sale is now TWO DOCUMENTS in two pools.
+  //
+  // Two documents is strictly worse than the split ROW #1924 measured. A split
+  // row satisfies exactPoolReader's `OR` once and every per-pool audit
+  // reconciles; two documents are two rows, one in each pool, and no
+  // reader-side guard ever holds both. `dedupeSoldComps` cannot collapse them
+  // either -- it clusters within one array, and the copies are never in the
+  // same array.
+  //
+  // Measured signature: the older copy carries an `unknown` setKey and the
+  // newer one the setKey the parser later learned, e.g.
+  //   tca-ebay::267679692186  hiq:hockey:2024:unknown:97:base:no-auto  (08-06)
+  //                        -> hiq:hockey:2024:bowman:97:base:no-auto   (08-10)
+  //
+  // So the gate becomes the id shape, which is what actually determines the
+  // hazard: ANY source whose id is externalId-keyed can collide across
+  // partitions. What differs by source is the REMEDY, not the detection --
+  // see below.
+  //
+  // THE COST, MEASURED (2026-09-07, live against sold_comps): this probe is
+  // cross-partition and costs **28.25 RU and ~1.0s** per call. That is not
+  // free, and widening the gate moves it from the user-scoped trickle onto
+  // every vendor ingest. It is paid deliberately:
+  //
+  //   - it is ONE point-shaped probe (`c.id = @id`) per written row, not a
+  //     scan -- the RU is flat in corpus size, not linear;
+  //   - it runs only where the hazard exists, i.e. where an externalId keys
+  //     the id, and returns nothing at all in the overwhelmingly common case;
+  //   - the alternative is the measured defect: a sale resident in two pools
+  //     that no reader-side guard and no per-pool audit can see.
+  //
+  // If this ever becomes the ingest bottleneck the fix is to put `cardId` back
+  // into `makeId` for vendor sources -- which makes the collision impossible
+  // rather than detected -- but that is a re-keying of stored rows and belongs
+  // in its own audited lane, not here.
+  if (input.sourceExternalId && String(input.sourceExternalId).trim()) {
     try {
       const { resources: sameId } = await c.items.query<{ id: string; cardId: string }>({
         query: "SELECT c.id, c.cardId FROM c WHERE c.id = @id AND c.cardId != @cardId",
@@ -1834,13 +1880,42 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<Record
       }).fetchAll();
       // Re-checked in code: only ever this id, only ever another partition.
       const stale = (sameId ?? []).filter((e) => e?.id === doc.id && typeof e.cardId === "string" && e.cardId !== doc.cardId);
+      // THE REMEDY IS PER SOURCE, THE DETECTION IS NOT.
+      //
+      // A user transaction is one row by definition -- the id IS the order --
+      // so a copy under another slug is not a sale, it is a stale filing, and
+      // the delete stays exactly as D9 shipped it.
+      //
+      // A VENDOR sale is a real observation of a real price, and
+      // CF-A-RETIRE-IS-A-MARKER-NEVER-A-DELETE governs: the pool is sacred, we
+      // flag and never hard-delete. `flaggedWrong` is what every FMV read
+      // already excludes, so the marker ends the double-count immediately and
+      // is reversible where a delete is not. The provenance names the id's new
+      // home so the repair is auditable and the row can be un-flagged if this
+      // write later turns out to be the wrong address.
       for (const e of stale) {
-        try { await c.item(e.id, e.cardId).delete(); } catch { /* best effort */ }
+        try {
+          if (isUserScoped) {
+            await c.item(e.id, e.cardId).delete();
+          } else {
+            await c.item(e.id, e.cardId).patch([
+              { op: "set", path: "/flaggedWrong", value: true },
+              { op: "set", path: "/flaggedReason", value: "duplicate-partition-copy" },
+              { op: "set", path: "/dedupSupersededBy", value: doc.cardId },
+              { op: "set", path: "/dedupReason", value: "same sale id re-ingested under a new partition key; this copy is the older address" },
+              { op: "set", path: "/dedupAt", value: new Date().toISOString() },
+            ]);
+          }
+        } catch { /* best effort */ }
       }
       if (stale.length > 0) {
         console.log(JSON.stringify({
           event: "sold_comp_same_id_rehomed",
           source: "soldCompsStore.recordSoldComp",
+          vendorSource: doc.source,
+          // A vendor copy is FLAGGED, a user copy is DELETED. Named, so the
+          // two outcomes are distinguishable in the logs rather than inferred.
+          remedy: isUserScoped ? "deleted" : "flaggedWrong",
           id: doc.id,
           fromCardIds: stale.map((e) => e.cardId),
           toCardId: doc.cardId,

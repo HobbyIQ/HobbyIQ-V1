@@ -455,6 +455,19 @@ on:
           # row-balanced chunk list. Vendor-partition rows are exempt and
           # counted, never flagged (#1650). Never writes, in any mode.
           - census-split-identity
+          # CF-ONE-SALE-ONE-DOCUMENT (2026-09-07). The OTHER shape of the
+          # #1924 defect, and strictly worse: the same sale `id` resident as
+          # TWO DOCUMENTS under two different /cardId partition keys. A split
+          # ROW satisfies exactPoolReader's OR once; two DOCUMENTS are two
+          # rows, one returned by each pool's read, so the sale prices two
+          # cards and every per-pool audit still reconciles. READ ONLY.
+          #
+          # Sharding here is by hashId(id), NOT by _ts: a duplicate's copies
+          # were written at different times, so a _ts-sharded slot would see
+          # one copy, call the id unique and report zero. SLOT_SPAN lets one
+          # process own a contiguous slot range and pay for the corpus walk
+          # once. Never writes, in any mode.
+          - census-duplicate-sale-ids
           # CF-UNKNOWN-IS-A-PARSER-PROBLEM (Drew's GO, 2026-09-05). The
           # 889,860 sold_comps rows whose slug carries `setKey=unknown` -- the
           # largest single identity defect in the pool, and the one NO
@@ -880,6 +893,17 @@ jobs:
         shell: bash
         run: |
           echo "::error::census-split-identity is READ ONLY — it has no write path. Re-dispatch with apply=false; the repair is a separate audited lane."
+          exit 1
+
+      # The same gate, same reasoning, for the duplicate-sale-ids census. It
+      # has no write path in any mode: the repair for the copies it finds is
+      # the audited relocate-pool-rows-by-list PARK lane, which is report-first
+      # and names its rows in a committed list.
+      - name: Refuse an APPLY dispatch of the read-only duplicate-sale-ids census
+        if: ${{ inputs.script == 'census-duplicate-sale-ids' && inputs.apply == true }}
+        shell: bash
+        run: |
+          echo "::error::census-duplicate-sale-ids is READ ONLY — it has no write path. Re-dispatch with apply=false; the repair is the relocate-pool-rows-by-list PARK lane."
           exit 1
 
       # The same gate, same reasoning, for the unknown-setKey census. It has no
@@ -1799,7 +1823,7 @@ jobs:
           # so the two lanes' artifacts can never overwrite each other. Guarded
           # on script for the same reason MODE tokens are: one name, one
           # meaning, and no chance of a path leaking into another lane.
-          CENSUS_OUT: ${{ inputs.script == 'census-split-identity' && '/tmp/split-identity-census' || (inputs.script == 'census-ch-product-label-parallel' && '/tmp/ch-product-label-census' || (inputs.script == 'census-unknown-setkey' && '/tmp/unknown-setkey-census' || '/tmp/rematch-census')) }}
+          CENSUS_OUT: ${{ inputs.script == 'census-split-identity' && '/tmp/split-identity-census' || (inputs.script == 'census-duplicate-sale-ids' && '/tmp/duplicate-sale-ids-census' || (inputs.script == 'census-ch-product-label-parallel' && '/tmp/ch-product-label-census' || (inputs.script == 'census-unknown-setkey' && '/tmp/unknown-setkey-census' || '/tmp/rematch-census'))) }}
           # The TCG volume census writes ONE JSON document rather than a
           # directory, so it reads OUT (its own env name) rather than
           # CENSUS_OUT. Guarded on script for the same one-name-one-meaning
@@ -2148,6 +2172,50 @@ jobs:
             echo "::error::KILLED before finish — the lane never reached finishLane; NOT finished; re-dispatch withheld — investigate"
             echo "  step outcome: ${{ steps.backfill.outcome }}"
             echo "  budget marker: absent    finishLane line: $(grep -acE 'finishLane: exiting code [0-9]+' /tmp/backfill.log 2>/dev/null || echo 0)"
+            echo "  last 20 lines of /tmp/backfill.log:"
+            tail -n 20 /tmp/backfill.log 2>/dev/null || echo "  (no log)"
+            exit 1
+          fi
+
+      # The same three-outcome relaunch for the duplicate-sale-ids census.
+      #
+      # Its continuation is a FULL RE-READ of the corpus, not a resume, and
+      # unlike the split-identity census that is not merely a preference: this
+      # lane's unit is an ID, whose copies are spread across the whole `_ts`
+      # space, so a partial walk has not seen enough to call any id unique.
+      # There is deliberately no CENSUS_FROM_TS here -- resuming past a `_ts`
+      # would silently turn duplicates into singletons and report zero.
+      #
+      # So a shard that cannot finish inside one budget needs MORE SLOTS, not a
+      # cursor: raise `slots` (and lower SLOT_SPAN) so each pass fits. The
+      # banner prints the corpus size and the rows scanned, so a shard that
+      # never completes is visible rather than silent.
+      - name: Self-relaunch census-duplicate-sale-ids until the shard is finished
+        if: ${{ !cancelled() && inputs.script == 'census-duplicate-sale-ids' }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # CF-A-KILLED-RUN-IS-NOT-A-FINISHED-RUN (#1906). Three outcomes:
+          #   (a) budget marker   -> more work, re-dispatch;
+          #   (b) finishLane line -> the lane exited on its own, genuinely done;
+          #   (c) neither         -> KILLED at the ceiling. NOT finished. Fail loudly.
+          if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
+            N=$(grep -aoE "ids in >1 partition +[0-9,]+" /tmp/backfill.log | grep -oE "[0-9,]+" | tail -1 || true)
+            # `apply` is forwarded VERBATIM, as the split-identity census does
+            # it, and for the same reason: this lane has no write path, and the
+            # gate above refuses an apply dispatch before it reaches Cosmos. A
+            # relaunch carrying apply=true therefore fails at that gate exactly
+            # as its parent did -- loudly -- instead of quietly running as
+            # something it was not asked to be. Only the rematch de-escalates,
+            # because only the rematch actually writes.
+            echo "::notice::budget hit (dupIds=${N:-0}) — re-dispatching slot ${{ inputs.slot }} to continue"
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=census-duplicate-sale-ids -f apply="${{ inputs.apply }}" -f mode="${{ inputs.mode }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f limit="${{ inputs.limit }}"
+          elif grep -aqE "finishLane: exiting code [0-9]+" /tmp/backfill.log && [ "${{ steps.backfill.outcome }}" = "success" ]; then
+            echo "::notice::finished within budget — done, no re-dispatch."
+          else
+            echo "::error::KILLED before finish — the lane never reached finishLane; NOT finished; re-dispatch withheld — investigate"
+            echo "  step outcome: ${{ steps.backfill.outcome }}"
             echo "  last 20 lines of /tmp/backfill.log:"
             tail -n 20 /tmp/backfill.log 2>/dev/null || echo "  (no log)"
             exit 1
