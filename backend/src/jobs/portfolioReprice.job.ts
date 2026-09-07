@@ -30,6 +30,7 @@ import { snapshotPortfolioValueForUser } from "../services/portfolioiq/portfolio
 import { CosmosClient, Container } from "@azure/cosmos";
 import { DefaultAzureCredential } from "@azure/identity";
 import { runSingleFlight, schedulerTickMs } from "./_singleFlight.js";
+import { cosmosOptionsFromConnectionString, hobbyIqConnectionPolicy } from "../services/ops/cosmosConnectionPolicy.js";
 
 interface RepriceJobSummary {
   startedAt: string;
@@ -67,9 +68,9 @@ async function getRunsContainer(): Promise<Container | null> {
       const containerId = process.env.PORTFOLIO_REPRICE_RUNS_CONTAINER ?? "reprice_runs";
       if (!endpoint && !connStr) return null;
       let client: CosmosClient;
-      if (connStr) client = new CosmosClient(connStr);
-      else if (key) client = new CosmosClient({ endpoint: endpoint!, key });
-      else client = new CosmosClient({ endpoint: endpoint!, aadCredentials: new DefaultAzureCredential() });
+      if (connStr) client = new CosmosClient(cosmosOptionsFromConnectionString(connStr));
+      else if (key) client = new CosmosClient({ endpoint: endpoint!, key, connectionPolicy: hobbyIqConnectionPolicy() });
+      else client = new CosmosClient({ endpoint: endpoint!, aadCredentials: new DefaultAzureCredential(), connectionPolicy: hobbyIqConnectionPolicy() });
       const { database } = await client.databases.createIfNotExists({ id: dbName });
       const { container } = await database.containers.createIfNotExists({
         id: containerId,

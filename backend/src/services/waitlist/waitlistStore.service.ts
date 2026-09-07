@@ -22,6 +22,7 @@
  */
 
 import { CosmosClient, Container } from "@azure/cosmos";
+import { cosmosOptionsFromConnectionString } from "../ops/cosmosConnectionPolicy.js";
 
 const DB = process.env.COSMOS_DATABASE ?? "hobbyiq";
 const CONTAINER = "waitlist";
@@ -32,7 +33,7 @@ async function getContainer(): Promise<Container | null> {
   if (_container) return _container;
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) return null;
-  const db = new CosmosClient(conn).database(DB);
+  const db = new CosmosClient(cosmosOptionsFromConnectionString(conn)).database(DB);
   // Programmatic create — indexing policy is default. Safe (empty container
   // + fresh partition key) and idempotent, so it doesn't count as a live
   // config change on an in-flight container.

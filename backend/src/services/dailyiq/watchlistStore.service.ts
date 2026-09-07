@@ -3,6 +3,7 @@ import path from "path";
 import crypto from "crypto";
 import { CosmosClient, Container } from "@azure/cosmos";
 import { DefaultAzureCredential } from "@azure/identity";
+import { cosmosOptionsFromConnectionString, hobbyIqConnectionPolicy } from "../ops/cosmosConnectionPolicy.js";
 
 export interface WatchlistEntryMetadata {
   /** Display name. When the player isn't in PLAYER_POOL, GET /watchlist
@@ -87,13 +88,14 @@ async function getContainer(): Promise<Container | null> {
 
       let client: CosmosClient;
       if (connStr) {
-        client = new CosmosClient(connStr);
+        client = new CosmosClient(cosmosOptionsFromConnectionString(connStr));
       } else if (key) {
-        client = new CosmosClient({ endpoint: endpoint!, key });
+        client = new CosmosClient({ endpoint: endpoint!, key, connectionPolicy: hobbyIqConnectionPolicy() });
       } else {
         client = new CosmosClient({
           endpoint: endpoint!,
           aadCredentials: new DefaultAzureCredential(),
+          connectionPolicy: hobbyIqConnectionPolicy(),
         });
       }
 

@@ -9,6 +9,7 @@
 
 import { Router, type Request, type Response } from "express";
 import { CosmosClient } from "@azure/cosmos";
+import { cosmosOptionsFromConnectionString } from "../services/ops/cosmosConnectionPolicy.js";
 
 const router = Router();
 
@@ -49,7 +50,7 @@ async function collect(): Promise<DataQualityResponse> {
       perSource: [],
     };
   }
-  const c = new CosmosClient(conn);
+  const c = new CosmosClient(cosmosOptionsFromConnectionString(conn));
   const sc = c.database(process.env.COSMOS_DATABASE ?? "hobbyiq").container("sold_comps");
 
   const one = async (query: string): Promise<number> => {

@@ -26,6 +26,7 @@ import { ocrImageUrl, checkTokensAgainstOcr } from "./azureVisionOcr.service.js"
 import type { StagingDoc, StagingVerification } from "./compsStaging.service.js";
 import { parseHobbyIqCardId } from "./hobbyIqCardId.service.js";
 import { extractSlabLabel, checkSlabAgainstIdentity } from "./slabOcrVerify.service.js";
+import { cosmosOptionsFromConnectionString } from "../ops/cosmosConnectionPolicy.js";
 
 let _cached: Container | null = null;
 async function getStagingContainer(): Promise<Container | null> {
@@ -33,7 +34,7 @@ async function getStagingContainer(): Promise<Container | null> {
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) return null;
   try {
-    const client = new CosmosClient(conn);
+    const client = new CosmosClient(cosmosOptionsFromConnectionString(conn));
     const db = client.database(process.env.COSMOS_DATABASE ?? "hobbyiq");
     _cached = db.container(process.env.COSMOS_COMPS_STAGING_CONTAINER ?? "comps_staging");
     return _cached;

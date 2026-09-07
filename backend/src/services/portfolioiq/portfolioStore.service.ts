@@ -115,11 +115,11 @@ async function getContainer(): Promise<Container | null> {
       
       let client: CosmosClient;
       if (connStr) {
-        client = new CosmosClient(connStr);
+        client = new CosmosClient(cosmosOptionsFromConnectionString(connStr));
       } else if (key) {
-        client = new CosmosClient({ endpoint: endpoint!, key });
+        client = new CosmosClient({ endpoint: endpoint!, key, connectionPolicy: hobbyIqConnectionPolicy() });
       } else {
-        client = new CosmosClient({ endpoint: endpoint!, aadCredentials: new DefaultAzureCredential() });
+        client = new CosmosClient({ endpoint: endpoint!, aadCredentials: new DefaultAzureCredential(), connectionPolicy: hobbyIqConnectionPolicy() });
       }
       const { database } = await client.databases.createIfNotExists({ id: dbName });
       // CF-IMPORT-ASYNC (2026-06-21): defaultTtl: -1 means "TTL enabled,
@@ -9034,6 +9034,7 @@ export async function markHoldingSoldFromEbay(
 // ─── CF-ERP-EXPANSION-#7 atomic trade write ────────────────────────────────
 
 import { allocateTradeProceeds } from "./erpTrades.service.js";
+import { cosmosOptionsFromConnectionString, hobbyIqConnectionPolicy } from "../ops/cosmosConnectionPolicy.js";
 
 export interface RecordTradeInput {
   userId: string;

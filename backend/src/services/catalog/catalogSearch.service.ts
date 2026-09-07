@@ -33,6 +33,7 @@ import { cardNumberInClause, normalizeSetKey, sameCardNumber } from "../portfoli
 import { productAncestry, productEntry } from "./productSetKeys.js";
 import { authorityRank, catalogAuthorityOf, type CatalogAuthority } from "./catalogAuthority.service.js";
 import { foldSpelling } from "./parallelSpellingFold.js";
+import { cosmosOptionsFromConnectionString } from "../ops/cosmosConnectionPolicy.js";
 
 const COSMOS_DATABASE = process.env.COSMOS_DATABASE ?? "hobbyiq";
 const CATALOG_CONTAINER = process.env.COSMOS_CARD_CATALOG_CONTAINER ?? "card_catalog";
@@ -47,7 +48,7 @@ async function getContainer(): Promise<Container | null> {
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) return null;
   try {
-    _container = new CosmosClient(conn).database(COSMOS_DATABASE).container(CATALOG_CONTAINER);
+    _container = new CosmosClient(cosmosOptionsFromConnectionString(conn)).database(COSMOS_DATABASE).container(CATALOG_CONTAINER);
     return _container;
   } catch { return null; }
 }
@@ -73,7 +74,7 @@ async function getCompsContainer(): Promise<Container | null> {
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) return null;
   try {
-    _comps = new CosmosClient(conn).database(COSMOS_DATABASE).container(SOLD_COMPS_CONTAINER);
+    _comps = new CosmosClient(cosmosOptionsFromConnectionString(conn)).database(COSMOS_DATABASE).container(SOLD_COMPS_CONTAINER);
     return _comps;
   } catch { return null; }
 }

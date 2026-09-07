@@ -5,6 +5,7 @@
 import type { Container } from "@azure/cosmos";
 import { CosmosClient } from "@azure/cosmos";
 import type { FamilyMultiplierRow } from "../../types/observedMultipliers.types.js";
+import { cosmosOptionsFromConnectionString } from "../ops/cosmosConnectionPolicy.js";
 
 const CONTAINER_ID = process.env.COSMOS_OBSERVED_MULTIPLIERS_CONTAINER ?? "observed_grader_multipliers";
 const DB_NAME = process.env.COSMOS_DATABASE ?? "hobbyiq";
@@ -15,7 +16,7 @@ async function getContainer(): Promise<Container> {
   if (sharedContainer) return sharedContainer;
   const cs = process.env.COSMOS_CONNECTION_STRING;
   if (!cs) throw new Error("COSMOS_CONNECTION_STRING not set — observedMultipliersStore cannot query");
-  const client = new CosmosClient(cs);
+  const client = new CosmosClient(cosmosOptionsFromConnectionString(cs));
   const { database } = await client.databases.createIfNotExists({ id: DB_NAME });
   const { container } = await database.containers.createIfNotExists({
     id: CONTAINER_ID,

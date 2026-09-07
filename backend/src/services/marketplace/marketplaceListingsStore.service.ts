@@ -15,13 +15,14 @@
 //     (Cascade handled by admin sweep, not per-write.)
 
 import { CosmosClient, type Container } from "@azure/cosmos";
+import { cosmosOptionsFromConnectionString } from "../ops/cosmosConnectionPolicy.js";
 
 let _container: Container | null = null;
 async function getContainer(): Promise<Container | null> {
   if (_container) return _container;
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) return null;
-  const client = new CosmosClient(conn);
+  const client = new CosmosClient(cosmosOptionsFromConnectionString(conn));
   const db = client.database(process.env.COSMOS_DATABASE ?? "hobbyiq");
   _container = db.container("marketplace_listings");
   return _container;

@@ -10,6 +10,7 @@
 
 import { Router, type Request, type Response } from "express";
 import { CosmosClient } from "@azure/cosmos";
+import { cosmosOptionsFromConnectionString } from "../services/ops/cosmosConnectionPolicy.js";
 
 const router = Router();
 
@@ -44,7 +45,7 @@ async function collect(): Promise<HealthResponse> {
   if (!conn) {
     return { now: now.toISOString(), sources: [], totalLast24h: 0, totalLast7d: 0 };
   }
-  const client = new CosmosClient(conn);
+  const client = new CosmosClient(cosmosOptionsFromConnectionString(conn));
   const sc = client.database(process.env.COSMOS_DATABASE ?? "hobbyiq").container("sold_comps");
 
   const nowMs = now.getTime();

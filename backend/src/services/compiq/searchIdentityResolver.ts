@@ -33,6 +33,7 @@
  */
 import { CosmosClient, type Container } from "@azure/cosmos";
 import { normalizeSetKey } from "../portfolioiq/hobbyIqCardId.service.js";
+import { cosmosOptionsFromConnectionString } from "../ops/cosmosConnectionPolicy.js";
 
 /** More candidates than this means the query did not name one card. */
 const MAX_CANDIDATES = 3;
@@ -57,7 +58,7 @@ function catalog(): Container | null {
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) return null;
   try {
-    _container = new CosmosClient(conn)
+    _container = new CosmosClient(cosmosOptionsFromConnectionString(conn))
       .database(process.env.COSMOS_DATABASE ?? "hobbyiq")
       .container("card_catalog");
     return _container;

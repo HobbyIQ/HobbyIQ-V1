@@ -11,6 +11,7 @@
 
 import { CosmosClient, type Container } from "@azure/cosmos";
 import { parseHobbyIqCardId } from "./hobbyIqCardId.service.js";
+import { cosmosOptionsFromConnectionString } from "../ops/cosmosConnectionPolicy.js";
 
 // POOL-1 residue (audit, 2026-09-03). The discovery surfaces are a SIGNAL
 // class -- trending, breakout, movers -- computed straight off sold_comps
@@ -66,7 +67,7 @@ async function getSoldCompsContainer(): Promise<Container | null> {
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) return null;
   try {
-    const client = new CosmosClient(conn);
+    const client = new CosmosClient(cosmosOptionsFromConnectionString(conn));
     cachedSold = client.database(process.env.COSMOS_DATABASE ?? "hobbyiq").container("sold_comps");
     return cachedSold;
   } catch { return null; }

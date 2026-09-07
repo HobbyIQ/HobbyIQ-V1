@@ -18,6 +18,7 @@ import { getMarketDeltasForPlayers } from "../dailyiq/marketDelta.service.js";
 import { getLatestBrief } from "../../repositories/dailyiq.repository.js";
 import { readNotableSales } from "../portfolioiq/notableSalesRead.service.js";
 import type { NotableSale } from "../portfolioiq/notableSalesRead.service.js";
+import { cosmosOptionsFromConnectionString, hobbyIqConnectionPolicy } from "../ops/cosmosConnectionPolicy.js";
 
 export interface MarketMoverSnapshot {
   playerName: string;
@@ -59,12 +60,13 @@ async function getContainer(): Promise<Container | null> {
         return null;
       }
       let client: CosmosClient;
-      if (connStr) client = new CosmosClient(connStr);
-      else if (key) client = new CosmosClient({ endpoint: endpoint!, key });
+      if (connStr) client = new CosmosClient(cosmosOptionsFromConnectionString(connStr));
+      else if (key) client = new CosmosClient({ endpoint: endpoint!, key, connectionPolicy: hobbyIqConnectionPolicy() });
       else
         client = new CosmosClient({
           endpoint: endpoint!,
           aadCredentials: new DefaultAzureCredential(),
+          connectionPolicy: hobbyIqConnectionPolicy(),
         });
       const { database } = await client.databases.createIfNotExists({ id: DB_NAME });
       const { container } = await database.containers.createIfNotExists({

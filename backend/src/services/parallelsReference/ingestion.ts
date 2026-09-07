@@ -14,6 +14,7 @@
 
 import { CosmosClient, Container, type ItemResponse } from "@azure/cosmos";
 import { DefaultAzureCredential } from "@azure/identity";
+import { cosmosOptionsFromConnectionString, hobbyIqConnectionPolicy } from "../ops/cosmosConnectionPolicy.js";
 
 // ─── Schema types (mirror backend/docs/parallels-reference-schema.md §2) ────
 
@@ -242,12 +243,12 @@ export function buildCosmosClient(): CosmosClient {
   const endpoint = process.env.COSMOS_ENDPOINT;
   const key = process.env.COSMOS_KEY;
   const connStr = process.env.COSMOS_CONNECTION_STRING;
-  if (connStr) return new CosmosClient(connStr);
+  if (connStr) return new CosmosClient(cosmosOptionsFromConnectionString(connStr));
   if (!endpoint) {
     throw new Error("[parallels-ingestion] COSMOS_ENDPOINT or COSMOS_CONNECTION_STRING must be set");
   }
-  if (key) return new CosmosClient({ endpoint, key });
-  return new CosmosClient({ endpoint, aadCredentials: new DefaultAzureCredential() });
+  if (key) return new CosmosClient({ endpoint, key, connectionPolicy: hobbyIqConnectionPolicy() });
+  return new CosmosClient({ endpoint, aadCredentials: new DefaultAzureCredential(), connectionPolicy: hobbyIqConnectionPolicy() });
 }
 
 export async function getParallelsContainers(

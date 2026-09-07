@@ -26,6 +26,7 @@
 
 import { readCompsByCardId, type SoldCompDoc, type SoldCompSource } from "./soldCompsStore.service.js";
 import { CosmosClient, type Container } from "@azure/cosmos";
+import { cosmosOptionsFromConnectionString } from "../ops/cosmosConnectionPolicy.js";
 
 export type PriceHistoryBucket = "weekly" | "monthly" | "quarterly";
 export type PriceHistoryWindow = "3m" | "1y" | "3y" | "all";
@@ -102,7 +103,7 @@ async function getCHDailySalesContainer(): Promise<Container | null> {
   if (!cs) return null;
   const dbName = process.env.COSMOS_DATABASE ?? "hobbyiq";
   const containerId = process.env.COSMOS_CH_DAILY_SALES_CONTAINER ?? "ch_daily_sales";
-  const client = new CosmosClient(cs);
+  const client = new CosmosClient(cosmosOptionsFromConnectionString(cs));
   const container = client.database(dbName).container(containerId);
   sharedCHContainer = container;
   return container;

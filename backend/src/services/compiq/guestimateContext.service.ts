@@ -16,6 +16,7 @@
 
 import { CosmosClient, type Container } from "@azure/cosmos";
 import type { PlayerTier } from "./guestimatePricing.js";
+import { cosmosOptionsFromConnectionString } from "../ops/cosmosConnectionPolicy.js";
 
 const CONTAINER_ID = process.env.COSMOS_CH_DAILY_SALES_CONTAINER ?? "ch_daily_sales";
 const DB_NAME = process.env.COSMOS_DATABASE ?? "hobbyiq";
@@ -36,7 +37,7 @@ function getContainer(): Container | null {
   if (sharedContainer) return sharedContainer;
   const cs = process.env.COSMOS_CONNECTION_STRING;
   if (!cs) return null;
-  const client = new CosmosClient(cs);
+  const client = new CosmosClient(cosmosOptionsFromConnectionString(cs));
   sharedContainer = client.database(DB_NAME).container(CONTAINER_ID);
   return sharedContainer;
 }

@@ -11,6 +11,7 @@ import {
   type MissingParallelsBundle,
 } from "./missingParallelsCompute.service.js";
 import type { PortfolioHolding } from "../../types/portfolioiq.types.js";
+import { cosmosOptionsFromConnectionString } from "../ops/cosmosConnectionPolicy.js";
 
 let sharedCHContainer: Container | null = null;
 
@@ -22,7 +23,7 @@ async function getContainer(): Promise<Container> {
   if (sharedCHContainer) return sharedCHContainer;
   const cs = process.env.COSMOS_CONNECTION_STRING;
   if (!cs) throw new Error("COSMOS_CONNECTION_STRING not set — missingParallels cannot run");
-  const client = new CosmosClient(cs);
+  const client = new CosmosClient(cosmosOptionsFromConnectionString(cs));
   const db = client.database(process.env.COSMOS_DATABASE ?? "hobbyiq");
   sharedCHContainer = db.container(process.env.COSMOS_CH_DAILY_SALES_CONTAINER ?? "ch_daily_sales");
   return sharedCHContainer;

@@ -13,6 +13,7 @@
 import { Router, Request, Response, NextFunction } from "express";
 import { CosmosClient, Database } from "@azure/cosmos";
 import { DefaultAzureCredential } from "@azure/identity";
+import { cosmosOptionsFromConnectionString, hobbyIqConnectionPolicy } from "../services/ops/cosmosConnectionPolicy.js";
 
 const router = Router();
 
@@ -48,9 +49,9 @@ async function getDb(): Promise<Database | null> {
     const dbName = process.env.COSMOS_DATABASE ?? "hobbyiq";
     if (!endpoint && !connStr) return null;
     let client: CosmosClient;
-    if (connStr) client = new CosmosClient(connStr);
-    else if (key) client = new CosmosClient({ endpoint: endpoint!, key });
-    else client = new CosmosClient({ endpoint: endpoint!, aadCredentials: new DefaultAzureCredential() });
+    if (connStr) client = new CosmosClient(cosmosOptionsFromConnectionString(connStr));
+    else if (key) client = new CosmosClient({ endpoint: endpoint!, key, connectionPolicy: hobbyIqConnectionPolicy() });
+    else client = new CosmosClient({ endpoint: endpoint!, aadCredentials: new DefaultAzureCredential(), connectionPolicy: hobbyIqConnectionPolicy() });
     _db = client.database(dbName);
     return _db;
   } catch (err: any) {

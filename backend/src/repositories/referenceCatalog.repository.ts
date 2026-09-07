@@ -9,6 +9,7 @@
 import { CosmosClient, Container, JSONObject } from "@azure/cosmos";
 import { DefaultAzureCredential } from "@azure/identity";
 import { ParallelDoc, ReferenceDoc } from "../services/reference/referenceCatalog.types.js";
+import { cosmosOptionsFromConnectionString, hobbyIqConnectionPolicy } from "../services/ops/cosmosConnectionPolicy.js";
 
 let _container: Container | null = null;
 let _initPromise: Promise<Container | null> | null = null;
@@ -34,13 +35,14 @@ async function getContainer(): Promise<Container | null> {
 
       let client: CosmosClient;
       if (connStr) {
-        client = new CosmosClient(connStr);
+        client = new CosmosClient(cosmosOptionsFromConnectionString(connStr));
       } else if (key) {
-        client = new CosmosClient({ endpoint: endpoint!, key });
+        client = new CosmosClient({ endpoint: endpoint!, key, connectionPolicy: hobbyIqConnectionPolicy() });
       } else {
         client = new CosmosClient({
           endpoint: endpoint!,
           aadCredentials: new DefaultAzureCredential(),
+          connectionPolicy: hobbyIqConnectionPolicy(),
         });
       }
 

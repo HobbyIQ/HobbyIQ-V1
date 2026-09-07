@@ -40,6 +40,7 @@
 import { CosmosClient, type Container } from "@azure/cosmos";
 import { randomUUID } from "crypto";
 import type { RecordSoldCompInput } from "./soldCompsStore.service.js";
+import { cosmosOptionsFromConnectionString } from "../ops/cosmosConnectionPolicy.js";
 
 /**
  * Why an ingest attempt was diverted here. Extend when new detectors
@@ -99,7 +100,7 @@ async function getContainer(): Promise<Container | null> {
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) return null;
   try {
-    const client = new CosmosClient(conn);
+    const client = new CosmosClient(cosmosOptionsFromConnectionString(conn));
     const db = client.database(process.env.COSMOS_DATABASE ?? "hobbyiq");
     _cached = db.container(process.env.COSMOS_VERIFY_QUEUE_CONTAINER ?? "verify_queue");
     return _cached;

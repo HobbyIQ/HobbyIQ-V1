@@ -26,6 +26,7 @@ import { dedupeSoldComps } from "../portfolioiq/dedupeSoldComps.js";
 import { projectFromLeadingEdge } from "./nextSaleProjection.service.js";
 import { readExactPoolRows, type ExactPoolRow } from "./exactPoolReader.js";
 import type { ExactPoolRungLabel } from "./fmvRung.js";
+import { cosmosOptionsFromConnectionString } from "../ops/cosmosConnectionPolicy.js";
 
 const COSMOS_DATABASE = process.env.COSMOS_DATABASE ?? "hobbyiq";
 const SOLD_COMPS_CONTAINER = process.env.COSMOS_SOLD_COMPS_CONTAINER ?? "sold_comps";
@@ -214,7 +215,7 @@ async function getContainer(): Promise<Container | null> {
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) return null;
   try {
-    _cachedContainer = new CosmosClient(conn).database(COSMOS_DATABASE).container(SOLD_COMPS_CONTAINER);
+    _cachedContainer = new CosmosClient(cosmosOptionsFromConnectionString(conn)).database(COSMOS_DATABASE).container(SOLD_COMPS_CONTAINER);
     return _cachedContainer;
   } catch { return null; }
 }

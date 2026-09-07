@@ -23,6 +23,7 @@
 
 import { CosmosClient, Container } from "@azure/cosmos";
 import { randomBytes } from "crypto";
+import { cosmosOptionsFromConnectionString } from "../ops/cosmosConnectionPolicy.js";
 
 let _container: Container | null = null;
 let _initPromise: Promise<Container | null> | null = null;
@@ -34,7 +35,7 @@ async function getContainer(): Promise<Container | null> {
     const conn = process.env.COSMOS_CONNECTION_STRING;
     if (!conn) return null;
     try {
-      const client = new CosmosClient(conn);
+      const client = new CosmosClient(cosmosOptionsFromConnectionString(conn));
       const db = client.database(process.env.COSMOS_DATABASE ?? "hobbyiq");
       const { container } = await db.containers.createIfNotExists({
         id: "invite_codes",

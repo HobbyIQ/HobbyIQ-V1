@@ -17,6 +17,7 @@ import { CosmosClient, type Container } from "@azure/cosmos";
 import { DefaultAzureCredential } from "@azure/identity";
 import type { BroaderTrend } from "../compiq/compiqEstimate.service.js";
 import type { TrendSnapshot } from "../../types/playerScore.js";
+import { cosmosOptionsFromConnectionString, hobbyIqConnectionPolicy } from "../ops/cosmosConnectionPolicy.js";
 
 const DB_NAME = process.env.COSMOS_DB ?? process.env.COSMOS_DATABASE ?? "hobbyiq";
 const CONTAINER_NAME =
@@ -40,13 +41,14 @@ async function getContainer(): Promise<Container | null> {
 
       let client: CosmosClient | null = null;
       if (conn) {
-        client = new CosmosClient(conn);
+        client = new CosmosClient(cosmosOptionsFromConnectionString(conn));
       } else if (endpoint && key) {
-        client = new CosmosClient({ endpoint, key });
+        client = new CosmosClient({ endpoint, key, connectionPolicy: hobbyIqConnectionPolicy() });
       } else if (endpoint) {
         client = new CosmosClient({
           endpoint,
           aadCredentials: new DefaultAzureCredential(),
+          connectionPolicy: hobbyIqConnectionPolicy(),
         });
       } else {
         return null;

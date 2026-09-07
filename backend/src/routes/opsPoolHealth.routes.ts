@@ -13,6 +13,7 @@ import { Router, type Request, type Response } from "express";
 import { requireAdmin } from "../middleware/requireAdmin.js";
 import { CosmosClient } from "@azure/cosmos";
 import { getEmitFailureCount } from "../services/portfolioiq/soldCompsStore.service.js";
+import { cosmosOptionsFromConnectionString } from "../services/ops/cosmosConnectionPolicy.js";
 
 const router = Router();
 
@@ -25,7 +26,7 @@ router.get("/pool-health", requireAdmin, async (_req: Request, res: Response, ne
   try {
     const cs = process.env.COSMOS_CONNECTION_STRING;
     if (!cs) { res.status(503).json({ error: "COSMOS_CONNECTION_STRING not set" }); return; }
-    const client = new CosmosClient(cs);
+    const client = new CosmosClient(cosmosOptionsFromConnectionString(cs));
     const db = client.database(process.env.COSMOS_DATABASE ?? "hobbyiq");
     const sc = db.container("sold_comps");
     const chDaily = db.container("ch_daily_sales");

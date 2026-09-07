@@ -16,6 +16,7 @@
 import { Container, CosmosClient } from "@azure/cosmos";
 import { DefaultAzureCredential } from "@azure/identity";
 import type { ActionVerdict } from "./dailyIqActionPlanCompute.service.js";
+import { cosmosOptionsFromConnectionString, hobbyIqConnectionPolicy } from "../ops/cosmosConnectionPolicy.js";
 
 const DB_NAME = process.env.COSMOS_DATABASE ?? "hobbyiq";
 const SNAPSHOT_CONTAINER = process.env.COSMOS_ACTION_PLAN_SNAPSHOTS_CONTAINER ?? "action_plan_snapshots";
@@ -72,9 +73,9 @@ async function init(): Promise<{ snapshots: Container | null; outcomes: Containe
       const connStr = process.env.COSMOS_CONNECTION_STRING;
       if (!endpoint && !connStr) return { snapshots: null, outcomes: null };
       let client: CosmosClient;
-      if (connStr) client = new CosmosClient(connStr);
-      else if (key) client = new CosmosClient({ endpoint: endpoint!, key });
-      else client = new CosmosClient({ endpoint: endpoint!, aadCredentials: new DefaultAzureCredential() });
+      if (connStr) client = new CosmosClient(cosmosOptionsFromConnectionString(connStr));
+      else if (key) client = new CosmosClient({ endpoint: endpoint!, key, connectionPolicy: hobbyIqConnectionPolicy() });
+      else client = new CosmosClient({ endpoint: endpoint!, aadCredentials: new DefaultAzureCredential(), connectionPolicy: hobbyIqConnectionPolicy() });
       const { database } = await client.databases.createIfNotExists({ id: DB_NAME });
       const [snap, out] = await Promise.all([
         database.containers.createIfNotExists({

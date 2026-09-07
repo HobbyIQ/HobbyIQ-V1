@@ -17,6 +17,7 @@
 //   recomputes qualityFlags (not shipped in v1 — deferred until observed)
 
 import { CosmosClient, type Container } from "@azure/cosmos";
+import { cosmosOptionsFromConnectionString } from "../ops/cosmosConnectionPolicy.js";
 
 export type FlagCompReason =
   | "wrong-price"
@@ -48,7 +49,7 @@ async function getSoldContainer(): Promise<Container | null> {
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) return null;
   try {
-    const client = new CosmosClient(conn);
+    const client = new CosmosClient(cosmosOptionsFromConnectionString(conn));
     cachedContainer = client
       .database(process.env.COSMOS_DATABASE ?? "hobbyiq")
       .container(process.env.COSMOS_SOLD_COMPS_CONTAINER ?? "sold_comps");

@@ -19,6 +19,7 @@ import { logSubRawInversionObserved } from "../compiq/marketRead.service.js";
 // route can serve reads via a single point-read instead of re-running
 // the cross-partition scan per request.
 import { writeProspectsRollup } from "../portfolioiq/prospectsBreakingOutStore.service.js";
+import { cosmosOptionsFromConnectionString } from "../ops/cosmosConnectionPolicy.js";
 
 let sharedContainer: Container | null = null;
 async function getContainer(): Promise<Container | null> {
@@ -26,7 +27,7 @@ async function getContainer(): Promise<Container | null> {
   const cs = process.env.COSMOS_CONNECTION_STRING;
   if (!cs) return null;
   try {
-    const client = new CosmosClient(cs);
+    const client = new CosmosClient(cosmosOptionsFromConnectionString(cs));
     sharedContainer = client
       .database(process.env.COSMOS_DATABASE ?? "hobbyiq")
       .container(process.env.COSMOS_SOLD_COMPS_CONTAINER ?? "sold_comps");

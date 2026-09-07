@@ -62,6 +62,7 @@ import { classifyFamily, lookupGradeRatio, lookupGradeRatioByTier, lookupValueBa
 import { titleMatchesParallel } from "./titleParallelMatch.js";
 import { canonicalRungLabel, type FmvRungLabel } from "./fmvRung.js";
 import { judgeCardNumber, logCardNumberVerdict } from "../portfolioiq/cardNumberIntegrity.js";
+import { cosmosOptionsFromConnectionString } from "../ops/cosmosConnectionPolicy.js";
 
 export type CanonicalFmvMethod =
   | "direct-comp"
@@ -968,7 +969,7 @@ async function getChDailyContainer(): Promise<Container | null> {
   try {
     const cs = process.env.COSMOS_CONNECTION_STRING;
     if (!cs) return null;
-    const client = new CosmosClient(cs);
+    const client = new CosmosClient(cosmosOptionsFromConnectionString(cs));
     const db = client.database(process.env.COSMOS_DATABASE ?? "hobbyiq");
     sharedChDailyContainer = db.container(
       process.env.COSMOS_CH_DAILY_SALES_CONTAINER ?? "ch_daily_sales",

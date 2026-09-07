@@ -22,6 +22,7 @@
 import { CosmosClient, Container } from "@azure/cosmos";
 import { DefaultAzureCredential } from "@azure/identity";
 import type { SubRawInversion } from "../signals/subRawInversionScan.service.js";
+import { cosmosOptionsFromConnectionString, hobbyIqConnectionPolicy } from "../ops/cosmosConnectionPolicy.js";
 
 export interface ProspectsBreakingOutDoc {
   id: string;                    // `${sport}::${computedDate}`
@@ -62,11 +63,12 @@ async function getContainer(): Promise<Container | null> {
       const containerId = process.env.COSMOS_PROSPECTS_BREAKING_OUT_CONTAINER ?? CONTAINER_ID_DEFAULT;
       if (!endpoint && !connStr) return null;
       let client: CosmosClient;
-      if (connStr) client = new CosmosClient(connStr);
-      else if (key) client = new CosmosClient({ endpoint: endpoint!, key });
+      if (connStr) client = new CosmosClient(cosmosOptionsFromConnectionString(connStr));
+      else if (key) client = new CosmosClient({ endpoint: endpoint!, key, connectionPolicy: hobbyIqConnectionPolicy() });
       else client = new CosmosClient({
         endpoint: endpoint!,
         aadCredentials: new DefaultAzureCredential(),
+        connectionPolicy: hobbyIqConnectionPolicy(),
       });
       const { database } = await client.databases.createIfNotExists({ id: dbName });
       const { container } = await database.containers.createIfNotExists({

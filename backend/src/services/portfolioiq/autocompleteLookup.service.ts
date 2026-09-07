@@ -3,6 +3,7 @@
 // card records) so the response is tiny and fits keystroke UX.
 
 import { CosmosClient, type Container } from "@azure/cosmos";
+import { cosmosOptionsFromConnectionString } from "../ops/cosmosConnectionPolicy.js";
 
 export interface AutocompleteHit {
   name: string;
@@ -23,7 +24,7 @@ async function getCatalog(): Promise<Container | null> {
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) return null;
   try {
-    const client = new CosmosClient(conn);
+    const client = new CosmosClient(cosmosOptionsFromConnectionString(conn));
     cachedCatalog = client.database(process.env.COSMOS_DATABASE ?? "hobbyiq").container("card_catalog");
     return cachedCatalog;
   } catch { return null; }

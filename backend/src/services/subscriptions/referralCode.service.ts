@@ -27,6 +27,7 @@
 import { Container, CosmosClient } from "@azure/cosmos";
 import { DefaultAzureCredential } from "@azure/identity";
 import { randomBytes } from "crypto";
+import { cosmosOptionsFromConnectionString, hobbyIqConnectionPolicy } from "../ops/cosmosConnectionPolicy.js";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -81,8 +82,8 @@ async function ensureInit(): Promise<{ refs: Container; codes: Container } | nul
       const endpoint = process.env.COSMOS_ENDPOINT;
       if (!connStr && !endpoint) return;
       let client: CosmosClient;
-      if (connStr) client = new CosmosClient(connStr);
-      else client = new CosmosClient({ endpoint: endpoint!, aadCredentials: new DefaultAzureCredential() });
+      if (connStr) client = new CosmosClient(cosmosOptionsFromConnectionString(connStr));
+      else client = new CosmosClient({ endpoint: endpoint!, aadCredentials: new DefaultAzureCredential(), connectionPolicy: hobbyIqConnectionPolicy() });
       const dbName = process.env.COSMOS_DATABASE ?? "hobbyiq";
       const { database } = await client.databases.createIfNotExists({ id: dbName });
       const [r1, r2] = await Promise.all([

@@ -22,6 +22,7 @@
 import { CosmosClient, type Container } from "@azure/cosmos";
 import type { CompLogEntry } from "../../models/compLogEntry.js";
 import { isCompLogsDisabled, getCompLogsSampleRate } from "./compLogsConfig.js";
+import { cosmosOptionsFromConnectionString } from "../ops/cosmosConnectionPolicy.js";
 
 const DB_NAME = "hobbyiq";
 const CONTAINER_NAME = "comp_logs";
@@ -45,7 +46,7 @@ function getContainer(): Container | null {
     return null;
   }
   try {
-    const client = new CosmosClient(conn);
+    const client = new CosmosClient(cosmosOptionsFromConnectionString(conn));
     cachedContainer = client.database(DB_NAME).container(CONTAINER_NAME);
     return cachedContainer;
   } catch (e) {

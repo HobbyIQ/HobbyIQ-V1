@@ -8,6 +8,7 @@
 import { Router, type Request, type Response, type NextFunction } from "express";
 import { CosmosClient, type Container } from "@azure/cosmos";
 import { getUserBySession } from "../services/authService.js";
+import { cosmosOptionsFromConnectionString } from "../services/ops/cosmosConnectionPolicy.js";
 
 const router = Router();
 
@@ -27,7 +28,7 @@ async function getSoldComps(): Promise<Container | null> {
   if (cachedSc) return cachedSc;
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) return null;
-  const client = new CosmosClient(conn);
+  const client = new CosmosClient(cosmosOptionsFromConnectionString(conn));
   cachedSc = client.database(process.env.COSMOS_DATABASE ?? "hobbyiq").container("sold_comps");
   return cachedSc;
 }

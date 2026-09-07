@@ -121,6 +121,7 @@
 
 import { CosmosClient, type Container } from "@azure/cosmos";
 import { canAdjudicate } from "./catalogAuthority.service.js";
+import { cosmosOptionsFromConnectionString } from "../ops/cosmosConnectionPolicy.js";
 
 const COSMOS_DATABASE = process.env.COSMOS_DATABASE ?? "hobbyiq";
 const CATALOG_CONTAINER = process.env.COSMOS_CARD_CATALOG_CONTAINER ?? "card_catalog";
@@ -313,7 +314,7 @@ function getContainer(): Container | null {
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) return null;
   try {
-    _container = new CosmosClient(conn).database(COSMOS_DATABASE).container(CATALOG_CONTAINER);
+    _container = new CosmosClient(cosmosOptionsFromConnectionString(conn)).database(COSMOS_DATABASE).container(CATALOG_CONTAINER);
     return _container;
   } catch {
     return null;

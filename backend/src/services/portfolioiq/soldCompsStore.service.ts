@@ -54,6 +54,7 @@ import { createHash } from "crypto";
 // Type-only: erased at compile time, so this adds no runtime edge back to
 // ebayAutoHolding (which imports THIS module dynamically).
 import type { SalePriceBasis } from "./ebayAutoHolding.service.js";
+import { cosmosOptionsFromConnectionString, hobbyIqConnectionPolicy } from "../ops/cosmosConnectionPolicy.js";
 
 // CF-COMPOSITE-EMIT (Drew, 2026-07-30). Compute the 6-axis composite
 // from the incoming attributes. Silent-safe — returns null on any
@@ -371,7 +372,7 @@ async function getCardsightStagingContainer(): Promise<Container | null> {
   try {
     const conn = process.env.COSMOS_CONNECTION_STRING;
     if (!conn) return null;
-    const client = new CosmosClient(conn);
+    const client = new CosmosClient(cosmosOptionsFromConnectionString(conn));
     const { database } = await client.databases.createIfNotExists({
       id: process.env.COSMOS_DATABASE ?? "hobbyiq",
     });
@@ -397,11 +398,12 @@ async function getContainer(): Promise<Container | null> {
       const containerId = process.env.COSMOS_SOLD_COMPS_CONTAINER ?? "sold_comps";
       if (!endpoint && !connStr) return null;
       let client: CosmosClient;
-      if (connStr) client = new CosmosClient(connStr);
-      else if (key) client = new CosmosClient({ endpoint: endpoint!, key });
+      if (connStr) client = new CosmosClient(cosmosOptionsFromConnectionString(connStr));
+      else if (key) client = new CosmosClient({ endpoint: endpoint!, key, connectionPolicy: hobbyIqConnectionPolicy() });
       else client = new CosmosClient({
         endpoint: endpoint!,
         aadCredentials: new DefaultAzureCredential(),
+        connectionPolicy: hobbyIqConnectionPolicy(),
       });
       const { database } = await client.databases.createIfNotExists({ id: dbName });
       const { container } = await database.containers.createIfNotExists({

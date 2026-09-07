@@ -17,6 +17,7 @@
 // queries. TTL 730 days (2 years of training history retained).
 
 import { CosmosClient, type Container } from "@azure/cosmos";
+import { cosmosOptionsFromConnectionString } from "../ops/cosmosConnectionPolicy.js";
 
 export type LearningEventType =
   | "labeler-save"          // variant labeled with canonical parallel + printRun
@@ -73,7 +74,7 @@ async function getContainer(): Promise<Container | null> {
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) return null;
   try {
-    const client = new CosmosClient(conn);
+    const client = new CosmosClient(cosmosOptionsFromConnectionString(conn));
     const { database } = await client.databases.createIfNotExists({
       id: process.env.COSMOS_DATABASE ?? "hobbyiq",
     });

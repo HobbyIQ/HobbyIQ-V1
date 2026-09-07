@@ -6,6 +6,7 @@
 import { Container, CosmosClient } from "@azure/cosmos";
 import { DefaultAzureCredential } from "@azure/identity";
 import type { CanonicalEntityDoc, CanonicalEntityType } from "../../types/chCanonical.types.js";
+import { cosmosOptionsFromConnectionString, hobbyIqConnectionPolicy } from "../ops/cosmosConnectionPolicy.js";
 
 let _container: Container | null = null;
 let _init: Promise<Container | null> | null = null;
@@ -22,11 +23,12 @@ async function getContainer(): Promise<Container | null> {
       const containerId = process.env.COSMOS_CH_CANONICAL_ENTITIES_CONTAINER ?? "ch_canonical_entities";
       if (!endpoint && !connStr) return null;
       let client: CosmosClient;
-      if (connStr) client = new CosmosClient(connStr);
-      else if (key) client = new CosmosClient({ endpoint: endpoint!, key });
+      if (connStr) client = new CosmosClient(cosmosOptionsFromConnectionString(connStr));
+      else if (key) client = new CosmosClient({ endpoint: endpoint!, key, connectionPolicy: hobbyIqConnectionPolicy() });
       else client = new CosmosClient({
         endpoint: endpoint!,
         aadCredentials: new DefaultAzureCredential(),
+        connectionPolicy: hobbyIqConnectionPolicy(),
       });
       const { database } = await client.databases.createIfNotExists({ id: dbName });
       const { container } = await database.containers.createIfNotExists({

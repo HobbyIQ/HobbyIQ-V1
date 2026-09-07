@@ -21,6 +21,7 @@ import {
 } from "./phashStore.service.js";
 import { Container, CosmosClient } from "@azure/cosmos";
 import { DefaultAzureCredential } from "@azure/identity";
+import { cosmosOptionsFromConnectionString, hobbyIqConnectionPolicy } from "../ops/cosmosConnectionPolicy.js";
 
 export interface RunOptions {
   /** How many days of ch_daily_sales to read (from today-1 backward). */
@@ -85,9 +86,9 @@ async function getChDailySalesContainer(): Promise<Container | null> {
   const containerId = process.env.COSMOS_CH_DAILY_SALES_CONTAINER ?? "ch_daily_sales";
   if (!endpoint && !connStr) return null;
   let client: CosmosClient;
-  if (connStr) client = new CosmosClient(connStr);
-  else if (key) client = new CosmosClient({ endpoint: endpoint!, key });
-  else client = new CosmosClient({ endpoint: endpoint!, aadCredentials: new DefaultAzureCredential() });
+  if (connStr) client = new CosmosClient(cosmosOptionsFromConnectionString(connStr));
+  else if (key) client = new CosmosClient({ endpoint: endpoint!, key, connectionPolicy: hobbyIqConnectionPolicy() });
+  else client = new CosmosClient({ endpoint: endpoint!, aadCredentials: new DefaultAzureCredential(), connectionPolicy: hobbyIqConnectionPolicy() });
   const { database } = await client.databases.createIfNotExists({ id: dbName });
   const { container } = await database.containers.createIfNotExists({
     id: containerId,

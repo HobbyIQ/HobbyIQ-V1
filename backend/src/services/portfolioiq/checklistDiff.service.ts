@@ -20,6 +20,7 @@
 import { CosmosClient, type Container } from "@azure/cosmos";
 import { normalizeSetKey } from "./hobbyIqCardId.service.js";
 import { deriveCatalogEntry, upsertCatalogEntry } from "./cardCatalog.service.js";
+import { cosmosOptionsFromConnectionString } from "../ops/cosmosConnectionPolicy.js";
 
 const COSMOS_DATABASE = process.env.COSMOS_DATABASE ?? "hobbyiq";
 
@@ -29,7 +30,7 @@ function getCatalog(): Container | null {
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) return null;
   try {
-    _catalog = new CosmosClient(conn).database(COSMOS_DATABASE).container("card_catalog");
+    _catalog = new CosmosClient(cosmosOptionsFromConnectionString(conn)).database(COSMOS_DATABASE).container("card_catalog");
     return _catalog;
   } catch { return null; }
 }

@@ -29,7 +29,25 @@
 // WHAT SURVIVES. AzureMonitorSpanProcessor runs BEFORE this one and only feeds
 // standard pre-aggregated metrics (`recordSpan`); it does not export rows. So
 // the pings keep being counted in aggregate metrics while ceasing to mint one
-// AppDependencies row each — the call stays observable, the 215.7M rows stop.
+// AppDependencies row each.
+//
+// SCOPE — CORRECTED 2026-09-07 (CF-COSMOS-PING-VOLUME). This processor governs
+// the IN-PROCESS OpenTelemetry provider only, and that is not where the flood
+// came from. Measured 20+ minutes after this shipped, the volume was unchanged
+// (~16,000 pings/minute) because those rows are emitted by the App Service
+// **agent extension** (ApplicationInsightsAgent_EXTENSION_VERSION=~3), a
+// separate collector outside this process:
+//
+//   dependencies | summarize by sdkVersion
+//     ali_node:2.9.6                 195,600   <- agent extension (the pings)
+//     alm_node22:otel2.1.0:dst1.16.0     117   <- this provider
+//
+// A span processor cannot suppress a row it never sees. The actual fix stops
+// the CALLS being made, in services/ops/cosmosConnectionPolicy — see that file
+// for the mechanism and the measurements. This filter is kept because it is
+// correct for spans that DO flow through this provider (anything the undici
+// instrumentation or a future agent-less deployment emits), but it is a
+// belt-and-braces measure, not the load-bearing one.
 
 import { isCosmosGatewayPing } from "./telemetryFilters.js";
 

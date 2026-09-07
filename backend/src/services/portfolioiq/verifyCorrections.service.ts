@@ -20,6 +20,7 @@ import { CosmosClient, type Container } from "@azure/cosmos";
 import { randomUUID, createHash } from "crypto";
 import type { RecordSoldCompInput } from "./soldCompsStore.service.js";
 import type { VerifyReason } from "./verifyQueue.service.js";
+import { cosmosOptionsFromConnectionString } from "../ops/cosmosConnectionPolicy.js";
 
 export interface VerifyCorrectionDoc {
   id: string;
@@ -50,7 +51,7 @@ async function getContainer(): Promise<Container | null> {
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) return null;
   try {
-    const client = new CosmosClient(conn);
+    const client = new CosmosClient(cosmosOptionsFromConnectionString(conn));
     const db = client.database(process.env.COSMOS_DATABASE ?? "hobbyiq");
     _cached = db.container(process.env.COSMOS_VERIFY_CORRECTIONS_CONTAINER ?? "verify_corrections");
     return _cached;

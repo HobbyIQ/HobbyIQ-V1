@@ -26,6 +26,7 @@
 // to the variant's slug.
 
 import { CosmosClient, type Container } from "@azure/cosmos";
+import { cosmosOptionsFromConnectionString } from "../ops/cosmosConnectionPolicy.js";
 
 const DB = process.env.COSMOS_DATABASE ?? "hobbyiq";
 const SC = process.env.COSMOS_SOLD_COMPS_CONTAINER ?? "sold_comps";
@@ -35,7 +36,7 @@ function getContainers(): { catalog: Container; soldComps: Container } | null {
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) return null;
   if (!_catalog || !_soldComps) {
-    const client = new CosmosClient(conn);
+    const client = new CosmosClient(cosmosOptionsFromConnectionString(conn));
     _catalog = client.database(DB).container("card_catalog");
     _soldComps = client.database(DB).container(SC);
   }
