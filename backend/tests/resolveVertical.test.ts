@@ -50,10 +50,18 @@ describe("resolveVertical — real sports still resolve", () => {
 });
 
 describe("resolveVertical — the honest default", () => {
-  it("still returns a usable vertical so nothing breaks", () => {
-    // Non-breaking: callers that need a string keep getting one.
+  it("names NO vertical when nothing identified one", () => {
+    // CF-NO-DEFAULT-SPORT (#1924 follow-up, 2026-09-07). This test used to
+    // assert `"baseball"`, on the reasoning that "callers that need a string
+    // keep getting one". The #1924 census priced that convenience: `sport` is
+    // the first segment of the slug, the slug is `cardId`, and `cardId` is the
+    // sold_comps partition key -- so the free string was a GUESSED ADDRESS,
+    // and baseball is the origin of 82.9% of the 94,275 sport-mismatched pool
+    // rows. A caller that needs a vertical it cannot prove must now say so
+    // and park, not receive a default dressed as an answer.
     const r = resolveVertical({ title: "2019 some completely unidentifiable card" });
-    expect(r.vertical).toBe("baseball");
+    expect(r.vertical).toBe("");
+    expect(r.vertical).not.toBe("baseball");
   });
 
   it("but reports that it GUESSED — this is the whole point", () => {
@@ -73,8 +81,13 @@ describe("resolveVertical — the honest default", () => {
   it("distinguishes a real baseball card from a defaulted one", () => {
     const real = resolveVertical({ title: "1969 Topps Baseball #100 Mickey Mantle" });
     const guess = resolveVertical({ title: "2019 unidentifiable thing" });
-    expect(real.vertical).toBe(guess.vertical);        // same answer...
+    // The two used to give the SAME answer with different `confident` flags --
+    // which is exactly why the difference was so easy to throw away at a call
+    // site. Now they differ in the answer too: proven baseball, or nothing.
+    expect(real.vertical).toBe("baseball");
     expect(real.confident).toBe(true);
-    expect(guess.confident).toBe(false);               // ...different claim
+    expect(guess.vertical).toBe("");
+    expect(guess.confident).toBe(false);
+    expect(real.vertical).not.toBe(guess.vertical);
   });
 });

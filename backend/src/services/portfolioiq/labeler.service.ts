@@ -11,6 +11,7 @@
 
 import { CosmosClient, type Container } from "@azure/cosmos";
 import { computeHobbyIqCardId, normalizeSetKey } from "./hobbyIqCardId.service.js";
+import { mayUnionIdentities } from "../compiq/identityUnionGuard.js";
 
 interface CanonicalLabel {
   parallel: string;
@@ -278,6 +279,10 @@ export interface SaveLabelInput {
 export interface SaveLabelResult {
   cardCatalogUpdated: boolean;
   soldCompsRewritten: number;
+  /** CF-A-SPLIT-ROW-IS-NEVER-WRITTEN (#1924 follow-up). Rows the label would
+   *  have moved to a DIFFERENT product, and did not. Reported so an admin can
+   *  see that a label did not silently do less than it appeared to. */
+  soldCompsSkippedCrossProduct: number;
   newSlugSample: string;
 }
 
@@ -288,7 +293,19 @@ export async function saveVariantLabel(input: SaveLabelInput): Promise<SaveLabel
   const sc = getSoldComps();
   if (!catalog || !sc) throw new Error("Cosmos not configured");
 
-  const sport = input.sport ?? "baseball";
+  // CF-NO-DEFAULT-SPORT (#1924 follow-up, 2026-09-07). This read
+  // `input.sport ?? "baseball"`, so an admin labelling a card without naming
+  // the sport minted `hiq:baseball:...` -- and the rewrite loop below then
+  // stamped that slug onto rows whose `cardId` said otherwise. The sport is
+  // segment one of the slug and therefore part of the ADDRESS; a caller that
+  // did not state it has not stated the card. Refuse instead of guessing.
+  const sport = String(input.sport ?? "").trim();
+  if (!sport) {
+    throw new Error(
+      "saveVariantLabel: sport is required -- it is the first segment of the slug, so a default "
+      + "would mint a card at a guessed address (CF-NO-DEFAULT-SPORT, #1924)",
+    );
+  }
   const setSlug = normalizeSetKey(input.set);
   const newSlug = computeHobbyIqCardId({
     sport,
@@ -337,6 +354,9 @@ export async function saveVariantLabel(input: SaveLabelInput): Promise<SaveLabel
   } catch { /* soft */ }
 
   let rewritten = 0;
+  // Rows a label would have moved to a DIFFERENT product. Refused, not moved:
+  // rewriting hobbyiqCardId alone splits the row across two pools (#1924).
+  let skippedCrossProduct = 0;
   if (input.applyToSoldComps) {
     const cnUpper = input.cardNumber.trim().toUpperCase();
     const suffix = ` #${cnUpper} ${input.chVariant}`.toUpperCase();
@@ -350,6 +370,34 @@ export async function saveVariantLabel(input: SaveLabelInput): Promise<SaveLabel
     }).fetchAll();
 
     for (const row of rows) {
+      // CF-A-SPLIT-ROW-IS-NEVER-WRITTEN (#1924 follow-up, 2026-09-07). This
+      // loop rewrote `hobbyiqCardId` and left `cardId` on the old identity, so
+      // every label that moved a row across products MINTED a split row --
+      // read into both cards' pools by exactPoolReader's `OR`. The #1924
+      // census names this file as a CONTINUING generator, not merely a
+      // historical one.
+      //
+      // `cardId` is a Cosmos partition key and cannot be patched in place, so
+      // the fix is not to rewrite both here -- that needs a new document and a
+      // verified delete, which is `relocate-pool-rows-by-list`'s job and doing
+      // it by side effect inside an admin label is how half-moved rows happen.
+      // The fix is to REFUSE: a label may canonicalize a parallel within one
+      // product, and may not move a row to a different product. Skipped rows
+      // are counted and named so the admin sees what did not move.
+      if (!mayUnionIdentities(row.cardId, newSlug)) {
+        skippedCrossProduct += 1;
+        console.warn(JSON.stringify({
+          event: "labeler_refused_cross_product_reslug",
+          source: "labeler.applyLabel",
+          id: row.id,
+          cardId: row.cardId,
+          wasHobbyiqCardId: row.hobbyiqCardId,
+          refusedSlug: newSlug,
+          detail: "a label may canonicalize a parallel within one product, not move a row to another; "
+            + "rewriting hobbyiqCardId alone would split the row across two pools",
+        }));
+        continue;
+      }
       row.parallel = input.canonicalParallel;
       row.hobbyiqCardId = newSlug;
       row.__labeledByAdmin = { at: label.labeledAt, by: label.labeledBy, chVariant: input.chVariant };
@@ -365,6 +413,7 @@ export async function saveVariantLabel(input: SaveLabelInput): Promise<SaveLabel
   return {
     cardCatalogUpdated: true,
     soldCompsRewritten: rewritten,
+    soldCompsSkippedCrossProduct: skippedCrossProduct,
     newSlugSample: newSlug,
   };
 }

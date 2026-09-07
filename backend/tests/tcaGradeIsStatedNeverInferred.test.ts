@@ -294,12 +294,20 @@ describe("CF-GRADE-IS-STATED-NEVER-INFERRED: the INGEST WRITE PATH infers nothin
     const { persistVendorSalesToPool } = await import(
       "../src/services/portfolioiq/persistVendorSalesToPool.service.js"
     );
+    // CF-NO-DEFAULT-SPORT (#1924 follow-up, 2026-09-07). Every title here now
+    // NAMES its vertical. It did not have to before, because an unresolvable
+    // title silently became a baseball card -- the very default the #1924
+    // census traced 78,153 split pool rows to. Now an unresolved vertical
+    // parks instead of writing, so a fixture with no sport word produces no
+    // row and this test could not see the grade fields it exists to check.
+    // The subject under test is the GRADE, so the sport is stated and the
+    // grade shapes below are unchanged.
     const cases = [
-      "1950 Bowman - Bob Feller #6",                                  // raw
-      "1996-97 Topps Kobe Bryant Rookie RC #138 Lakers",              // raw
-      "2024 Panini Prizm #347 PSA 9",                                 // stated
+      "1950 Bowman Baseball - Bob Feller #6",                         // raw
+      "1996-97 Topps Basketball Kobe Bryant Rookie RC #138 Lakers",   // raw
+      "2024 Panini Prizm Football #347 PSA 9",                        // stated
       "1964 Topps Baseball #125 Pete Rose SGC Authentic",             // authentic
-      "1968 TOPPS #230 PETE ROSE  SGC 6 Reds Not PSA or BVG",         // multi-grader
+      "1968 TOPPS Baseball #230 PETE ROSE  SGC 6 Reds Not PSA or BVG", // multi-grader
     ];
     for (const [i, title] of cases.entries()) {
       upserted.length = 0;

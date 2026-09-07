@@ -2908,18 +2908,32 @@ router.post("/search", requireSession, requireRateLimited("priceChecksPerDay"), 
             import("../services/catalog/checklistSeedQueue.service.js"),
             import("../services/portfolioiq/soldCompsStore.service.js"),
           ])
-            .then(([{ requestChecklistSeed }, { inferSportFromContext }]) => requestChecklistSeed({
+            .then(([{ requestChecklistSeed }, { inferSportFromContext }]) => {
               // The query parser states no sport, and `sport` is part of the
               // seed's identity -- so it is READ from the query's own words by
               // the same helper the ingest path uses, never hardcoded.
-              sport: String(inferSportFromContext(gapSetName, query, Number(gapYear)) ?? "baseball"),
+              //
+              // CF-NO-DEFAULT-SPORT (#1924 follow-up, 2026-09-07). This read
+              // `... ?? "baseball"`, so a search whose words named no vertical
+              // queued a BASEBALL checklist acquisition -- and the acquired
+              // checklist then mints rows at `hiq:baseball:...`, which is the
+              // catalog half of the same defect. `inferSportFromContext`
+              // returns null when it has no evidence, and that null is an
+              // ANSWER ("we do not know"), not a hole to be filled. A gap
+              // whose sport we cannot name is simply not seeded; the search
+              // still logs the miss below.
+              const gapSport = inferSportFromContext(gapSetName, query, Number(gapYear));
+              if (!gapSport) return;
+              return requestChecklistSeed({
+              sport: gapSport,
               year: Number(gapYear),
               setName: String(gapSetName),
               setKey: String(gapSetKey),
               reason: "search-auto-intent-unsatisfiable",
               missingPlayer: parsedForAnchor?.playerName ?? undefined,
               missingCardNumber: parsedForAnchor?.cardNumber ?? undefined,
-            }))
+              });
+            })
             .catch(() => { /* a gap we could not record is not a failed search */ });
         }
         console.log(JSON.stringify({
