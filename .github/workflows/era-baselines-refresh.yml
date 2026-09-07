@@ -69,6 +69,18 @@ jobs:
         working-directory: backend
         run: npm ci
 
+      # CF-ERA-BASELINES-BUILD (2026-09-07). refresh-era-baselines.cjs imports
+      # backend/dist/services/compiq/eraBaselineCompute.js, but this workflow
+      # only ran `npm ci` -- never `npm run build` -- so dist/ never existed
+      # and every scheduled run died in ~33s with "Cannot find dist output".
+      # Red since at least 2026-08-30. Every other cron that loads from dist/
+      # (cascade-detect, grade-worthy-push, watchlist-digest) builds here; this
+      # one was simply missing the step.
+      - name: Build backend
+        if: steps.et-gate.outputs.should_run == 'true'
+        working-directory: backend
+        run: npm run build
+
       - name: Login to Azure
         if: steps.et-gate.outputs.should_run == 'true'
         uses: azure/login@v3
