@@ -26,6 +26,16 @@ const script = readFileSync(join(__dirname, "..", "scripts", "repair-bcp-misfile
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { MODES } = require("../scripts/repair-bcp-misfiled-parallels.cjs");
 
+/** The relaunch step, bounded by the NEXT step rather than by a byte count.
+ *  A fixed window (this file used 2500) silently stops containing the lines it
+ *  asserts about as soon as the step gains a comment -- which is exactly what
+ *  happened when the relaunch grew its fourth outcome. */
+function relaunchStep(): string {
+  const start = runner.indexOf("Self-relaunch the misfiled-parallel repair");
+  const next = runner.indexOf("\n      - name:", start);
+  return runner.slice(start, next < 0 ? undefined : next);
+}
+
 describe("the runner can dispatch this script", () => {
   it("is on the script whitelist", () => {
     expect(runner).toContain("          - repair-bcp-misfiled-parallels\n");
@@ -43,14 +53,14 @@ describe("the runner can dispatch this script", () => {
     // longer than one budget could ever finish. The marker is the gate now
     // (CF-REPORT-RELAUNCHES-AS-A-REPORT); apply is forwarded, not required.
     expect(runner).toContain("inputs.script == 'repair-bcp-misfiled-parallels'");
-    const step = runner.slice(runner.indexOf("Self-relaunch the misfiled-parallel repair"));
-    const gate = /^\s*if:\s*(.*)$/m.exec(step.slice(0, 2500))?.[1] ?? "";
+    const step = relaunchStep();
+    const gate = /^\s*if:\s*(.*)$/m.exec(step)?.[1] ?? "";
     expect(gate).not.toMatch(/inputs\.apply/);
   });
 
   it("relaunches a report as a report, an apply as an apply", () => {
-    const step = runner.slice(runner.indexOf("Self-relaunch the misfiled-parallel repair"));
-    const dispatch = step.slice(0, 2500);
+    const step = relaunchStep();
+    const dispatch = step;
     // Verbatim forward — never `-f apply=true`, which would turn a report
     // continuation into a live write against 21M rows.
     expect(dispatch).toContain('-f apply="${{ inputs.apply }}"');
@@ -58,7 +68,7 @@ describe("the runner can dispatch this script", () => {
   });
 
   it("the relaunch never fires on a cancel", () => {
-    const step = runner.slice(runner.indexOf("Self-relaunch the misfiled-parallel repair"));
+    const step = relaunchStep();
     expect(step.slice(0, 2000)).toContain("!cancelled()");
   });
 });
@@ -70,24 +80,24 @@ describe("the budget marker the relaunch greps is the one the script prints", ()
   });
 
   it("the runner greps a pattern that sentence matches", () => {
-    const step = runner.slice(runner.indexOf("Self-relaunch the misfiled-parallel repair"));
-    const grep = step.slice(0, 2500).match(/grep -aqE "([^"]+)"/);
+    const step = relaunchStep();
+    const grep = step.match(/grep -aqE "([^"]+)"/);
     expect(grep).not.toBeNull();
     const printed = "\nstopped at the 140-minute budget — the relaunch continues from here";
     expect(new RegExp(grep![1]).test(printed)).toBe(true);
   });
 
   it("the count the relaunch reads is the line the script prints on APPLY", () => {
-    const step = runner.slice(runner.indexOf("Self-relaunch the misfiled-parallel repair"));
-    const grep = step.slice(0, 2500).match(/grep -aoE "(\^  CHANGED[^"]+)"/);
+    const step = relaunchStep();
+    const grep = step.match(/grep -aoE "(\^  CHANGED[^"]+)"/);
     expect(grep).not.toBeNull();
     // The APPLY branch of the summary prints "  CHANGED" with the padding.
     expect(new RegExp(grep![1]).test("  CHANGED                 47,267")).toBe(true);
   });
 
   it("forwards MODE, without which the relaunch would exit 1 every time", () => {
-    const step = runner.slice(runner.indexOf("Self-relaunch the misfiled-parallel repair"));
-    const dispatch = step.slice(0, 2500);
+    const step = relaunchStep();
+    const dispatch = step;
     expect(dispatch).toContain("-f mode=");
     for (const input of ["slot", "slots", "scope", "sources", "sports", "years", "concurrency"]) {
       expect(dispatch).toContain(`-f ${input}=`);
