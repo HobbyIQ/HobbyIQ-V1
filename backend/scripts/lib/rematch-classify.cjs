@@ -2474,6 +2474,30 @@ const SPECIALIZATION_PARENTS = Object.freeze({
   "fleer-update-tiffany": "fleer-update",
   "fleer-update-glossy": "fleer-update",
   "fleer-tradition-tiffany": "fleer-tradition",
+  // -- Panini Haunted Hoops (#1715 class, 2026-09-07). The Halloween release
+  //    is its own product with its own 300-card checklist; the family word
+  //    "Hoops" in its own name is what let `nba-hoops` swallow it. It is a
+  //    productSetKeys.ts entry whose immediate `parent` is `nba-hoops`, so it
+  //    is mirrored, not excepted.
+  //
+  //    Measured read-only on prod 2026-09-07: 4,653 sold_comps rows whose own
+  //    titles read "Panini Haunted Hoops" sit on `nba-hoops` addresses (2023:
+  //    3,539; 2024: 1,114) against 112 correctly addressed. Every one states
+  //    its specialization in its own title, which is precisely the population
+  //    this subclass exists to repair.
+  //
+  //    DELIBERATELY ABSENT FROM SAME_NUMBER_PARALLEL_SETS, for the `sp` and
+  //    Score Rookie & Traded reason above: Haunted Hoops is NOT a reprint of
+  //    the flagship checklist on the flagship's numbers. It runs its own 1-300
+  //    with its own roster and its own parallels (Slime, Holo Bats, Holo Webs,
+  //    Holo Trick-or-Treat), so the number still carries information and L5's
+  //    strict test must keep asking.
+  "panini-haunted-hoops": "nba-hoops",
+  // -- NBA Hoops Premium Stock, same class and same day: 14,970 strict
+  //    checklistinsider rows and 9,205 pool titles, all swallowed by the
+  //    family word. Also DELIBERATELY ABSENT FROM SAME_NUMBER_PARALLEL_SETS:
+  //    it runs its own 1-300 roster, not a reprint of the flagship's numbers.
+  "nba-hoops-premium-stock": "nba-hoops",
   // -- The 1990s baseball products the IMPROVE gate audit of #1758 found the
   //    rematch could not place. All are productSetKeys.ts entries whose
   //    immediate `parent` is named here, so they are mirrored, not excepted.

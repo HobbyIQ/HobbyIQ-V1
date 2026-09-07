@@ -644,6 +644,92 @@ export const PRODUCT_SET_KEYS: ReadonlyArray<ProductSetKey> = [
   // resolves to this product rather than to no entry at all.
   P("nba-hoops", { parent: "panini", names: ["panini-hoops", "hoops"] }),
 
+  /**
+   * PANINI HAUNTED HOOPS IS ITS OWN PRODUCT (#1715 class, 2026-09-07).
+   *
+   * The Halloween release is a SEPARATE product from Panini NBA Hoops: its own
+   * 300-card checklist, its own parallels (Slime, Holo Bats, Holo Webs, Holo
+   * Trick-or-Treat), its own print runs and its own market. It is the
+   * flagship-catch-all class exactly -- `nba-hoops` carries the family word
+   * "Hoops", so every unanchored Hoops rule swallowed the specialization.
+   *
+   * MEASURED READ-ONLY AGAINST PROD, 2026-09-07. The damage was not one-sided,
+   * which is why the fix is a ruled key rather than a repair list alone:
+   *
+   *   card_catalog  1,825 rows setName "2024 panini haunted hoops"
+   *                            (checklistinsider-2026-08-27) at `nba-hoops`
+   *                 2,100 rows setName "2024/25 Panini Haunted Hoops
+   *                            Basketball" (hobbymonitor-2026-09-04) already
+   *                            at `panini-haunted-hoops`
+   *   sold_comps    4,653 sales whose own titles read "Panini Haunted Hoops"
+   *                            priced inside the NBA Hoops flagship pool
+   *                            (2023: 3,539; 2024: 1,114) against 112 correct
+   *
+   * ONE PRODUCT, TWO POOLS, AND THE PARSER PICKED THE POOL BY PUNCTUATION.
+   * Both catalog populations are the SAME 300-card checklist -- 1,200 identity
+   * keys (number|parallel|auto|printRun) appear in both and the player agrees
+   * on all 1,200, zero disagreements. They diverged only because
+   * normalizeSetKey answered three different ways for one product name:
+   *
+   *   "2024 panini haunted hoops"              -> panini-haunted-hoops (slugify
+   *                                               fallthrough, by luck)
+   *   "2024/25 Panini Haunted Hoops Basketball"-> nba-hoops   (the slash form)
+   *   "Haunted Hoops Basketball"               -> nba-hoops   (the bare form)
+   *
+   * The key `panini-haunted-hoops` therefore already holds 2,100 rows while
+   * being DECLARED NOWHERE -- it existed only as an accident of slugify, which
+   * is precisely the state a ruled key must replace: a key nothing declares is
+   * one parser edit away from vanishing.
+   *
+   * SPELLED (`S`), for the Fleer-coated-reprint reason stated above. Only a
+   * spelled product answers productSetKeyForName, the leg of normalizeSetKey
+   * that runs BEFORE the unanchored brand patterns; declared with `P` this key
+   * still collapses onto `nba-hoops`, verified by running the function rather
+   * than by reading it.
+   *
+   * `parent: "nba-hoops"` records the family it is a release of, so the matcher
+   * may widen up the ladder, while `family` keeps its pool its own. It is NOT
+   * given the name "hoops": that name belongs to the flagship, and handing it
+   * here would re-create the swallow in the opposite direction.
+   */
+  S("panini-haunted-hoops", { family: "nba-hoops", parent: "nba-hoops" }),
+
+  /**
+   * NBA HOOPS PREMIUM STOCK IS ITS OWN PRODUCT (same class, same day). The
+   * SECOND specialization `nba-hoops` was swallowing, and the larger of the
+   * two by checklist rows.
+   *
+   * MEASURED READ-ONLY, 2026-09-07. `nba-hoops` holds exactly five distinct
+   * (setName, source, year) shapes, and two of them are not the flagship:
+   *
+   *     26,219  "2024 nba hoops"                 checklistinsider-2026-08-27
+   *     14,970  "2023 nba hoops premium stock"   checklistinsider-2026-08-27
+   *      1,825  "2024 panini haunted hoops"      checklistinsider-2026-08-27
+   *         20  "2024 nba hoops"                 checklistinsider-2026-08-28
+   *         11  "2024 nba hoops"                 checklistinsider-2026-08-29
+   *
+   * It is a DIFFERENT CHECKLIST, not a parallel run of the flagship's: its own
+   * 1-300 with its own roster, and its 300 numbers share no player-at-number
+   * agreement with the flagship rows (0 of 0 comparable -- the strict flagship
+   * rows are 2024 and Premium Stock is 2023, so there is no year in which the
+   * two could be confused for one checklist). Every parallel it carries is
+   * Prizm-family stock (Premium Nebula Prizm, Red Seismic Prizm, Gold Vinyl
+   * Prizm, Red Ice Prizm) -- the Prizm-stock insert product, not the paper
+   * flagship. 9,205 pool titles say "Premium Stock".
+   *
+   * THE NAME IS SHARED, WHICH IS WHY THE RULE IS HOOPS-GATED. "Premium Stock"
+   * names a STOCK several Panini products borrow: normalizeSetKey("2023 Panini
+   * Prizm Premium Stock") answers `panini-prizm` today and must keep doing so.
+   * So the vocabulary rule anchors on "hoops premium stock", never on the
+   * stock words alone -- the same discipline as `optic`, a stock other
+   * products borrow, being ruled only where it names the product.
+   *
+   * Same shape as Haunted Hoops above: `S` so productSetKeyForName answers
+   * before the unanchored Hoops patterns, `parent` for the ladder, and NOT the
+   * name "hoops", which belongs to the flagship.
+   */
+  S("nba-hoops-premium-stock", { family: "nba-hoops", parent: "nba-hoops" }),
+
   // -- Fleer / Skybox / Pinnacle / Score / vintage ----------------------------
   P("fleer"),
   ...["fleer-stickers", "fleer-tradition", "fleer-update", "fleer-metal-universe"].map((k) => P(k, { parent: "fleer" })),
