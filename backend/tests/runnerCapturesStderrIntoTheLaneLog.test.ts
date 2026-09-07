@@ -78,11 +78,16 @@ import { fileURLToPath } from "node:url";
 const backend = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const WORKFLOW_DIR = path.join(backend, "..", ".github", "workflows");
 
-/** GitHub refuses to queue a job from a workflow file over this size. */
-const GITHUB_WORKFLOW_BYTE_CEILING = 512 * 1024;
+/* GitHub refuses to queue a job from a workflow file over 512 KB. That ceiling
+ * is pinned by NUMBER in relaunchNeverCallsAKilledRunFinished -- it is what the
+ * exemption below was waiting on, and it outlived the exemption. */
 
-/** The one file the rule does not yet bind, and the only reason it does not. */
-const OVERSIZE_EXEMPT = "backfill-runner.yml";
+/** THE EXEMPTION, RETIRED (2026-09-07). backfill-runner.yml was exempt for
+ *  exactly one reason: at 553,411 bytes it was over GitHub's 512 KB ceiling,
+ *  queuing with ZERO jobs, and it could not be grown by even two lines while it
+ *  was too large to run at all. The composite extraction took it to 284 KB, so
+ *  the constraint is gone and both of its teed lanes now carry `2>&1` with
+ *  pipefail. There is no exempt file any more: SITES is every site. */
 
 /** Strip YAML comments: a comment QUOTING a broken pipe must not read as a live
  *  pipe, and a comment quoting a fixed one must not stand in for one. */
@@ -108,7 +113,7 @@ function teeSites(): TeeSite[] {
 
 const ALL_SITES = teeSites();
 /** The sites the rule binds today: everything outside the oversize exemption. */
-const SITES = ALL_SITES.filter((s) => s.file !== OVERSIZE_EXEMPT);
+const SITES = ALL_SITES;
 
 describe("the census finds the teed lanes this rule governs", () => {
   it("finds every `| tee` across the workflow directory", () => {
@@ -123,8 +128,13 @@ describe("the census finds the teed lanes this rule governs", () => {
     expect([...new Set(SITES.map((s) => s.file))].length).toBeGreaterThanOrEqual(6);
   });
 
-  it("still sees the exempt file's lanes, so the exemption is measured not invisible", () => {
-    expect(ALL_SITES.some((s) => s.file === OVERSIZE_EXEMPT)).toBe(true);
+  it("binds backfill-runner.yml, the file that produced the bug", () => {
+    // It was the last exemption, and it was the ONLY file the defect was
+    // actually observed in. A rule that never reached it would have been
+    // bookkeeping rather than a fix.
+    const its = SITES.filter((s) => s.file === "backfill-runner.yml");
+    expect(its.length, "the runner's teed lanes must be in the governed population")
+      .toBeGreaterThanOrEqual(2);
   });
 });
 
@@ -193,44 +203,29 @@ describe("the capture keeps the lane's own exit code", () => {
   }
 });
 
-describe("the exemption retires itself", () => {
-  // The rule does not bind backfill-runner.yml YET, and this block is the only
-  // thing standing between "not yet" and "never". It asserts the exemption's own
-  // premise — that the file is over GitHub's ceiling and therefore cannot be
-  // grown — so the moment the composite-action change lands and the file fits,
-  // this test fails and hands the next reader the exact instruction.
-  const bytes = fs.statSync(path.join(WORKFLOW_DIR, OVERSIZE_EXEMPT)).size;
-
-  it("names the exempt file's lanes rather than losing them", () => {
-    const exempted = ALL_SITES.filter((s) => s.file === OVERSIZE_EXEMPT);
-    expect(
-      exempted.length,
-      "the exemption is bookkeeping, not a blind spot: these lanes are known to be unfixed",
-    ).toBeGreaterThanOrEqual(1);
-    // Both are stdout-only today. If one is already fixed the exemption has been
-    // partially lifted by hand, and the block below will say so.
-    expect(exempted.every((s) => /\|\s*tee\s/.test(s.text))).toBe(true);
-  });
-
-  it("fails once backfill-runner.yml fits under GitHub's 512 KB ceiling", () => {
-    expect(
-      bytes,
-      `backfill-runner.yml is now ${bytes} bytes, under GitHub's ${GITHUB_WORKFLOW_BYTE_CEILING}-`
-        + `byte ceiling. The ONLY reason it was exempt from "every teed lane captures both `
-        + `streams" is that it could not be grown by even two lines while it was too large to `
-        + `queue a job at all. That constraint is gone.\n\n`
-        + `TO CLEAR THIS TEST:\n`
-        + `  1. change its lane capture to \`2>&1 | tee /tmp/backfill.log\` with \`set -o `
-        + `pipefail\` above it (and the AFTER-canary capture likewise) — or, if the relaunch `
-        + `steps now live in a composite action, apply it wherever the lane is actually run and `
-        + `wherever the log is grepped;\n`
-        + `  2. delete OVERSIZE_EXEMPT and this describe block, so the file joins the population `
-        + `above;\n`
-        + `  3. keep the size pin green.\n\n`
-        + `Do not simply raise this number.`,
-    ).toBeGreaterThan(GITHUB_WORKFLOW_BYTE_CEILING);
-  });
-});
+/* THE EXEMPTION RETIRED ITSELF (2026-09-07).
+ *
+ * A `describe("the exemption retires itself")` block used to stand here. It
+ * asserted the exemption's own premise -- that backfill-runner.yml was OVER
+ * GitHub's 512 KB ceiling and therefore could not be grown -- so that the day
+ * the file fit, the test would fail and hand the next reader the instructions
+ * to lift it. That is exactly what happened: the composite-action extraction
+ * took the file from 553,411 to ~284 KB, this block went red, and its three
+ * steps were carried out --
+ *
+ *   1. both teed lanes now capture `2>&1` (the lane run already had pipefail
+ *      added with it; the AFTER-canary capture already had pipefail and
+ *      `rc=${PIPESTATUS[0]}`, and gained the `2>&1`);
+ *   2. OVERSIZE_EXEMPT is gone and SITES is now every site, so the file is
+ *      governed by "every teed lane captures both streams" above rather than
+ *      listed beside it;
+ *   3. the size pin lives in relaunchNeverCallsAKilledRunFinished, which fails
+ *      by NUMBER at 400,000 bytes -- with margin, because a pin at 524,288
+ *      goes red only once the workflow is already dead.
+ *
+ * Nothing replaces it, because there is nothing left to exempt. The ceiling
+ * itself is still pinned; it is just pinned where it belongs.
+ */
 
 /* ────────────────────────────────────────────────────────────────────────────
  * THE FIXTURE. Not a YAML shape assertion — this RUNS the four-outcome

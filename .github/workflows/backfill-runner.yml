@@ -1869,7 +1869,31 @@ jobs:
           # a knob nobody sets is a knob that drifts.
           REPORT_OUT: /tmp/market-index-rebuild/report.json
           NODE_OPTIONS: "--max-old-space-size=8192"
-        run: node "backend/scripts/${{ inputs.script }}.cjs" | tee /tmp/backfill.log
+        # CF-A-REFUSAL-ON-STDERR-IS-NOT-A-KILLED-RUN (#1981). `tee` sees STDOUT
+        # ONLY, so a lane that refuses on stderr — before its first stdout write
+        # — left an EMPTY /tmp/backfill.log, and the relaunch's outcome test then
+        # read that absence as "KILLED before finish" or "EMPTY LOG": confident,
+        # wrong verdicts about a lane that started, decided, said so on stderr,
+        # and exited on purpose. `2>&1` puts the verdict in the file the gate
+        # reads, whichever stream carried it.
+        #
+        # `set -o pipefail` is the other half and is NOT optional: without it the
+        # pipeline exits on tee's status — always 0 — so a crashed lane would
+        # report SUCCESS. The finished arm requires `steps.backfill.outcome ==
+        # 'success'` as its second witness, so zeroing the exit code would
+        # promote every verdict into a clean finish: strictly worse than the bug
+        # being fixed.
+        #
+        # #1981 fixed every teed lane in the repo and had to EXEMPT this one
+        # file: at 553,411 bytes it was over GitHub's 512 KB ceiling, queuing
+        # with zero jobs, and adding lines to a file that must shrink before it
+        # runs at all was the wrong order. That exemption was written as a
+        # self-retiring assertion. The composite extraction in this PR brings the
+        # file to 283 KB, so the exemption has retired itself and the rule binds
+        # here like everywhere else.
+        run: |
+          set -o pipefail
+          node "backend/scripts/${{ inputs.script }}.cjs" 2>&1 | tee /tmp/backfill.log
         shell: bash
 
       # ── THE MARKET-INDEX REBUILD SAYS WHAT IT DID ────────────────────────
@@ -1968,7 +1992,12 @@ jobs:
           NODE_OPTIONS: "--max-old-space-size=8192"
         run: |
           set -o pipefail
-          node backend/scripts/rematch-canary-check.cjs | tee /tmp/canary-after.log
+          # CF-A-REFUSAL-ON-STDERR-IS-NOT-A-KILLED-RUN (#1981): `tee` sees stdout
+          # only, so a checker that refuses on stderr would leave an empty
+          # canary log and the uploaded artifact would say nothing about why.
+          # `pipefail` was already here, and `rc=${PIPESTATUS[0]}` below keeps
+          # the checker's own exit 5 rather than tee's zero.
+          node backend/scripts/rematch-canary-check.cjs 2>&1 | tee /tmp/canary-after.log
           rc=${PIPESTATUS[0]}
           if [ "$rc" = "5" ]; then
             echo "::error::CANARY REGRESSION on slot ${{ inputs.slot }} — a canary pool THIS SHARD WROTE IN regressed, or a protected row left / a pool went empty. The fleet STOPS here; the diff and the write ledger go to Drew."

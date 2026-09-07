@@ -437,9 +437,20 @@ describe("chain_outcome tells the four outcomes apart", () => {
   });
 
   it("the runner branches on the same literals", () => {
-    expect(workflowSrc).toContain('grep -aq "rematch-sold-comps: STARTUP REFUSED"');
-    expect(workflowSrc).toContain('grep -aqE "stopped at the .*budget"');
-    expect(workflowSrc).toContain('grep -aqE "finishLane: exiting code 0( |$)"');
+    // The four-outcome shell moved into .github/actions/relaunch-on-marker on
+    // 2026-09-07: seventy-two copies of it had grown backfill-runner.yml to
+    // 553 KB, past GitHub's 512 KB limit, where a dispatch is accepted and NO
+    // job is ever created (30+ runs sat queued). The literals are unchanged;
+    // they are now written once. The STARTUP prefix is parameterised, so the
+    // lane's half — that the prefix IS `rematch-sold-comps` — is asserted on
+    // the workflow, and the arm that greps it on the composite.
+    const relaunchSrc = readFileSync(
+      join(repoRoot, ".github", "actions", "relaunch-on-marker", "action.yml"), "utf8",
+    );
+    expect(relaunchSrc).toContain('grep -aq "$RELAUNCH_STARTUP_PREFIX: STARTUP REFUSED"');
+    expect(workflowSrc).toContain("startup-marker-prefix: rematch-sold-comps");
+    expect(relaunchSrc).toContain('grep -aqE "stopped at the .*budget"');
+    expect(relaunchSrc).toContain('grep -aqE "finishLane: exiting code 0( |$)"');
   });
 });
 
