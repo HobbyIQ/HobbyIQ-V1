@@ -46,6 +46,9 @@
  *   PROBE_ONLY                measure rows/s and RU, then exit (no walk)
  *   MAX_SAMPLES               sample duplicate ids printed (default 12)
  *   CENSUS_OUT                directory for the JSON census
+ *   EMIT_LIST / --emit-list   also write relocate-pool-rows-by-list PARK
+ *                             files for the EXCESS copies (see below)
+ *   LIST_MAX                  entries per PARK file (default 2000)
  */
 "use strict";
 
@@ -78,11 +81,114 @@ const LIMIT = Number(process.env.LIMIT || 0);
 const PROBE_ONLY = String(process.env.PROBE_ONLY || "") === "true";
 const MAX_SAMPLES = Number(process.env.MAX_SAMPLES || 12);
 const CENSUS_OUT = process.env.CENSUS_OUT || "/tmp/duplicate-sale-ids-census";
+// The census is the evidence; the PARK list is the remedy, and they are
+// written by the SAME pass so a list can never describe a population some
+// other run measured. Off by default: a census is report-first, and a list
+// nobody asked for is a list somebody might apply.
+const EMIT_LIST = String(process.env.EMIT_LIST || "") === "true"
+  || process.argv.includes("--emit-list");
+// CF-LISTS-ARE-BOUNDED (#1942): the relocate lane reads a whole file into
+// memory and an operator reviews it by eye, so 2,000 entries is the ceiling.
+const LIST_MAX = Math.max(1, Number(process.env.LIST_MAX || 2000));
 
 const started = Date.now();
 const budgetLeft = () => RUN_MINUTES * 60000 - (Date.now() - started);
 const f = (n) => Number(n ?? 0).toLocaleString();
 const pct = (a, b) => (b > 0 ? ((100 * a) / b).toFixed(4) + "%" : "-");
+
+/**
+ * WRITE THE CENSUS ARTIFACT.
+ *
+ * #1942 shipped the CALL to this function and not the function: all 64 slots
+ * of the 2026-09-07 sweep printed a clean, reconciling banner and then died on
+ * `ReferenceError: writeCensus is not defined` at the last statement, so every
+ * run concluded `failure` and the relaunch step read the crash as outcome (c)
+ * -- KILLED at the ceiling -- for a lane that had in fact finished. The census
+ * was correct and completely unreadable: 196,143 duplicate ids measured, zero
+ * artifacts, 64 red runs.
+ *
+ * The lesson is the one #1809 keeps re-teaching from the other end: what a
+ * lane does AFTER its reconcile is part of the lane. A report that cannot be
+ * written is not a report, and an exit code is evidence about the run, so a
+ * clean census that exits non-zero is a lie in the only field the runner reads.
+ *
+ * Failure to write is a ::warning:: and NOT a failure of the run: the numbers
+ * are already on stdout and in the tee'd log, so a full disk must not turn a
+ * finished census into a red run. That is the same defect in a smaller hat.
+ */
+function writeCensus(extra) {
+  try {
+    const dir = CENSUS_OUT.endsWith(".json") ? path.dirname(CENSUS_OUT) : CENSUS_OUT;
+    fs.mkdirSync(dir, { recursive: true });
+    const out = path.join(dir, `duplicate-sale-ids-census-slot-${SLOT}.json`);
+    fs.writeFileSync(out, JSON.stringify({
+      lane: "census-duplicate-sale-ids",
+      generatedAt: new Date().toISOString(),
+      slot: SLOT, slotHi: Math.min(SLOT + SLOT_SPAN, SLOTS) - 1, slots: SLOTS,
+      ...extra,
+    }, null, 2));
+    return out;
+  } catch (e) {
+    console.log(`\n::warning::could not write the census artifact: ${e?.message}`);
+    return null;
+  }
+}
+
+/**
+ * THE PARK LISTS.
+ *
+ * One entry per EXCESS document -- never the canonical copy, and never a
+ * delete. `D.parkEntry` builds the entry, so the remedy shape lives with the
+ * rule it belongs to and this file only decides batching and file names.
+ *
+ * UNIQUENESS IS ON (id, fromCardId), which is the pair that addresses ONE of
+ * the two documents. Keying on `id` alone would collapse the two copies of a
+ * duplicate into one entry and park the wrong document half the time; keying
+ * on nothing lets a re-fetched page park the same document twice. #1936's
+ * tranche 2 keyed it exactly this way and this is the same defect.
+ *
+ * Files are capped at LIST_MAX entries and numbered, because the relocate lane
+ * reads a whole list into memory and an operator reviews it by eye.
+ */
+function writeParkLists(decided) {
+  const seenPair = new Set();
+  const entries = [];
+  for (const d of decided) {
+    for (const extra of d.extras) {
+      const key = `${d.id}\u0000${extra.cardId}`;
+      if (seenPair.has(key)) continue;
+      seenPair.add(key);
+      entries.push(D.parkEntry(d.id, extra, `${d.verdict}: ${d.reason}`));
+    }
+  }
+  if (!entries.length) return [];
+  const written = [];
+  try {
+    const dir = CENSUS_OUT.endsWith(".json") ? path.dirname(CENSUS_OUT) : CENSUS_OUT;
+    fs.mkdirSync(dir, { recursive: true });
+    const parts = Math.ceil(entries.length / LIST_MAX);
+    for (let i = 0; i < parts; i++) {
+      const slice = entries.slice(i * LIST_MAX, (i + 1) * LIST_MAX);
+      const out = path.join(dir, `park-duplicate-partition-copies-slot-${SLOT}-part-${String(i + 1).padStart(3, "0")}.json`);
+      fs.writeFileSync(out, JSON.stringify({
+        lane: "relocate-pool-rows-by-list",
+        reason: "duplicate-partition-copy",
+        generatedAt: new Date().toISOString(),
+        slot: SLOT, slots: SLOTS, part: i + 1, parts,
+        rulings: [
+          "one sale, one document: every entry here is an EXCESS copy of an id that exists in more than one partition (#1942).",
+          "PARK, never delete: each entry sets parkIdentityUnverified so the row leaves every pool without asserting which card it belongs to.",
+          "uniqueness is on (id, fromCardId) -- the pair addresses ONE of the duplicate's documents.",
+        ],
+        entries: slice,
+      }, null, 2));
+      written.push(out);
+    }
+  } catch (e) {
+    console.log(`\n::warning::could not write the PARK lists: ${e?.message}`);
+  }
+  return written;
+}
 
 const retry = async (fn, tries = 8) => {
   let wait = 500;
@@ -262,16 +368,33 @@ async function main() {
     for (const line of D.sampleLines(dups, MAX_SAMPLES)) console.log(`  ${line}`);
   }
 
-  // The same writer as the checkpoint, so the artifact has ONE shape and the
-  // only difference between a killed run and a finished one is whether the
-  // catalog verdicts are filled in.
+  // The artifact has ONE shape whether the run stopped at its budget or ran
+  // to the end; `stopReason` is what tells the two apart, so it is IN the
+  // file rather than only in a log a later reader may not still have.
   const finalOut = writeCensus({
-    catalogResolved: !catalogTruncated,
+    corpusRows: grand, rowsScanned: scanned, rowsInSlice: mineRows,
+    stopReason, stoppedAtBudget: !!(stopReason && stopReason.includes("budget")),
+    dupIds: report.dupIds, dupIds3plus: report.dupIds3plus,
+    dupDocs: report.dupDocs, excessDocs: report.excessDocs,
+    // Every distinct address is read; the batched IN loop has no early
+    // exit, so a resolved count below the address count means the catalog
+    // genuinely lacks those rows -- never that the census gave up reading.
+    catalogResolved: true,
     catalogAddresses: addresses.length, catalogPresent: present.size,
     verdicts, reconciled,
     decided: decided.map((d) => ({ id: d.id, verdict: d.verdict, reason: d.reason, canonical: d.canonical?.cardId ?? null, extras: d.extras.map((e) => e.cardId) })),
   });
   if (finalOut) console.log(`\ncensus written to ${finalOut}`);
+
+  // The remedy, written by the SAME pass that measured it. Report-first: this
+  // only produces the INPUT a human reviews and the relocate lane consumes.
+  if (EMIT_LIST) {
+    const lists = writeParkLists(decided);
+    console.log(`\nPARK LISTS  ${f(report.excessDocs)} excess documents -> ${lists.length} file(s), <= ${f(LIST_MAX)} entries each`);
+    for (const l of lists) console.log(`  ${l}`);
+    if (!lists.length) console.log("  (no excess documents in this slice -- nothing to park)");
+    console.log("  these are the INPUT to relocate-pool-rows-by-list; this lane still wrote nothing.");
+  }
 
   if (stopReason && stopReason.includes("budget")) {
     console.log(`\n${stopReason} — the relaunch re-reads this shard from the top.`);
