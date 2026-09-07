@@ -184,17 +184,38 @@ source, and normalizing is not optional.
 
 ## 6. Throughput, and the thing that actually governs the schedule
 
-Census throughput is I/O-bound, not classifier-bound: the classifier is pinned
-at ~0.02 ms/row (`rematchCensusThroughput`), while each derivable row costs a
-`checklistBacked` catalog point read plus the per-product map reads behind the
-clash and flagship gates. The measured whole-shard census rate is the ~49 rows/s
-that #1950 recorded before its prefilter (that prefilter speeds up a *scoped
-apply*, not a census).
+Census throughput is I/O-bound, not classifier-bound. The classifier itself is
+pinned at 0.12–0.28 ms/row (3,500–8,500 rows/s, `rematchCensusThroughput`);
+what dominates the wall clock is the per-row `checklistBacked` catalog point
+read plus the per-product map reads behind the clash and flagship gates.
 
-At ~500k rows/slot that is roughly **2.8 h of walking per slot**, which exceeds
-the 140-minute budget — so **a census slot is normally a chain of two runs**,
-not one. With 32 slots dispatched at once the wall-clock is governed by runner
-concurrency, not by the per-slot rate.
+**Do not size this from #1950's 49 rows/s.** That figure is a *scoped apply*
+walking rows it could not write, and its prefilter — which does not apply to a
+census — is what fixed it. The honest number is the last full census itself.
+Measured from the 2026-09-05/06 window (run durations against each slot's
+recorded `classified`, first ten slots):
+
+| slot | classified | minutes | rows/s |
+|---|---|---|---|
+| 0 | 514,583 | 10.4 | 822 |
+| 1 | 543,045 | 83.0 | 109 |
+| 2 | 528,979 | 104.6 | 84 |
+| 3 | 511,439 | 39.7 | 215 |
+| 5 | 522,236 | 83.4 | 104 |
+| 9 | 500,532 | 15.6 | 534 |
+
+**Average ≈ 267 rows/s, ≈ 52 minutes per slot**, spread 84–822. The spread is
+real and is mostly catalog cache warmth and sport mix, not noise.
+
+Two consequences worth planning around:
+
+- **A census slot normally completes in ONE run.** Every slot in the sample
+  finished `success` inside the 140-minute budget; even the slowest (104.6 min)
+  cleared it. So the census is not usually a relaunch chain — but the driver
+  follows one anyway, because the slowest observed slot has only ~35 minutes of
+  headroom and a colder cache would spend it.
+- **Sequential total ≈ 32 × 52 min ≈ 28 h; fully parallel ≈ 1.7 h.** The real
+  figure sits between and is decided by runner concurrency, not by the rate.
 
 **The binding constraint is the Actions queue, not the classifier.** At the time
 of writing, 29 `backfill-runner` runs were queued with the oldest waiting over
