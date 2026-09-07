@@ -83,7 +83,7 @@
   }
  ],
  "totals": {
-  "entries": 18115,
+  "entries": 18119,
   "refused": 0,
   "byLane": {
    "hobbymonitor": {
@@ -120,9 +120,9 @@
     }
    },
    "tcgdexja": {
-    "total": 180,
+    "total": 184,
     "seeded": {
-     "missing": 165,
+     "missing": 169,
      "partial": 15
     }
    },
@@ -219257,6 +219257,50 @@
    "estimatedCards": null,
    "seededStatus": "missing",
    "seededNote": "sitemap-discovered 2026-09-05; cell hockey/upper-deck/2015; season=2015-16; set-36822; not yet fetched"
+  },
+  {
+   "id": "tcgdexja::https://api.tcgdex.net/v2/ja/sets/neo1",
+   "lane": "tcgdexja",
+   "sourceRef": "https://api.tcgdex.net/v2/ja/sets/neo1",
+   "sport": "pokemon",
+   "year": 2000,
+   "setName": "neo1 金、銀、新世界へ...",
+   "estimatedCards": 96,
+   "seededStatus": "missing",
+   "seededNote": "ja set sharing an English set code, absent from the seeding enumeration because it case-folds onto the English id; 96 cards stated by source"
+  },
+  {
+   "id": "tcgdexja::https://api.tcgdex.net/v2/ja/sets/neo2",
+   "lane": "tcgdexja",
+   "sourceRef": "https://api.tcgdex.net/v2/ja/sets/neo2",
+   "sport": "pokemon",
+   "year": 2000,
+   "setName": "neo2 遺跡をこえて...",
+   "estimatedCards": 57,
+   "seededStatus": "missing",
+   "seededNote": "ja set sharing an English set code, absent from the seeding enumeration because it case-folds onto the English id; 57 cards stated by source"
+  },
+  {
+   "id": "tcgdexja::https://api.tcgdex.net/v2/ja/sets/neo3",
+   "lane": "tcgdexja",
+   "sourceRef": "https://api.tcgdex.net/v2/ja/sets/neo3",
+   "sport": "pokemon",
+   "year": 2000,
+   "setName": "neo3 めざめる伝説",
+   "estimatedCards": 57,
+   "seededStatus": "missing",
+   "seededNote": "ja set sharing an English set code, absent from the seeding enumeration because it case-folds onto the English id; 57 cards stated by source"
+  },
+  {
+   "id": "tcgdexja::https://api.tcgdex.net/v2/ja/sets/neo4",
+   "lane": "tcgdexja",
+   "sourceRef": "https://api.tcgdex.net/v2/ja/sets/neo4",
+   "sport": "pokemon",
+   "year": 2001,
+   "setName": "neo4 闇、そして光へ...",
+   "estimatedCards": 113,
+   "seededStatus": "missing",
+   "seededNote": "ja set sharing an English set code, absent from the seeding enumeration because it case-folds onto the English id; 113 cards stated by source"
   }
  ]
 }

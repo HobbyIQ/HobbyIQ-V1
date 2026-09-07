@@ -172,6 +172,17 @@ describe("the committed universe manifest carries no year that contradicts its o
   it("still carries every entry — a correction is never a drop", () => {
     const p = path.join(__dirname, "..", "data", "ingest-universe.json");
     const manifest = JSON.parse(fs.readFileSync(p, "utf8"));
-    expect(manifest.entries.length).toBe(18115);
+    // A FLOOR, NOT A CENSUS. The rule this pins is
+    // CF-A-PUBLICATION-YEAR-IS-NOT-THE-PRODUCT-YEAR's "the builder CORRECTS
+    // rather than drops" -- so what must never happen is the count going DOWN.
+    // It was 18,115 when the year-correction landed and is 18,119 since
+    // CF-A-MANIFEST-BUILT-BY-THE-DROPPING-FILTER-INHERITS-THE-DROP added
+    // neo1..neo4; an exact equality here reads every legitimate ADDITION as a
+    // regression, which is the opposite of what the title claims to protect.
+    expect(manifest.entries.length).toBeGreaterThanOrEqual(18115);
+    // ...and the entries are still uniquely identified, which is the property
+    // a silent drop-and-replace would actually violate.
+    const ids = manifest.entries.map((e: { id: string }) => e.id);
+    expect(new Set(ids).size).toBe(ids.length);
   });
 });
