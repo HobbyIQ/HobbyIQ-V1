@@ -854,9 +854,32 @@ export function parseListingIdentity(
   const fromSlug = slugParts[0] === "hiq" && slugParts.length >= 7
     ? { year: Number(slugParts[2]) || null, setKey: slugParts[3] || null }
     : { year: null as number | null, setKey: null as string | null };
+  // CF-A-SET-NAME-IS-NEVER-A-PARALLEL (Drew, 2026-09-07, from #1964's I9 audit).
+  //
+  // THE PRODUCT CONTEXT A POKEMON TITLE CARRIES IS ITS OWN SET NAME, and until
+  // now nothing read it here. `fromSlug` only speaks when the CALLER already
+  // resolved the card, so a bare marketplace title reached `extractParallel`
+  // with setKey=null -- and with no product to suppress against, the checklist
+  // reader's global index was free to answer a word of the set's own NAME:
+  //
+  //   "Pokemon SV Twilight Masquerade Iron Leaves ex 025/167"  ->  Twilight
+  //   "Pokemon Team Rocket Pikachu 025/167"                    ->  Rocket
+  //   "Pokemon Sword & Shield Pikachu 025/167"                 ->  Shield
+  //
+  // #1964 measured 2,379 pool rows deriving `twilight` this way. The set is
+  // RIGHT THERE in the title -- `resolveEnglishPokemonSetFromTitle` already
+  // finds it, and `statedFinishFromChecklist` already refuses a candidate made
+  // entirely of the product's own words. The two were simply never introduced.
+  //
+  // ONLY WHEN THE CALLER SUPPLIED NOTHING, and only under the Pokemon gate, so
+  // this can add product context where there was none and can never override a
+  // caller that knows better.
+  const resolvedPokemonSetKey = isPokemon && !opts?.setKey && !fromSlug.setKey
+    ? resolveEnglishPokemonSetFromTitle(t)
+    : null;
   const finish = extractParallel(t, {
     year: opts?.year ?? fromSlug.year,
-    setKey: opts?.setKey ?? fromSlug.setKey,
+    setKey: opts?.setKey ?? fromSlug.setKey ?? resolvedPokemonSetKey,
     // CF-A-FINISH-IS-A-CARD-LINE, AT THE TITLE PARSER (Drew, 2026-09-07). The
     // Pokemon finish vocabulary is consulted only under the SAME gate the
     // number reader above uses, because "Holo", "Foil" and "Reverse" are
