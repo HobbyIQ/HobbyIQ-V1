@@ -184,28 +184,49 @@ const UNRECONCILED = new Set([
   // backfill-printrun-from-title -- reported `runInParallel`'s `ok` as applied,
   // which counts a worker callback that did not throw rather than a write. The
   // success counters are part of the same change.
+  // FIVE MORE NAMES LEFT THIS LIST on 2026-09-07 in the #1944 ratchet's wave 4
+  // -- backfill-verify-queue-grades, rescore-anomalies,
+  // reslug-cross-product-mis-slug, reslug-suspicious-setkeys and
+  // score-all-sold-comps -- and with them the ratchet reached ZERO. Same reason
+  // as waves 1-3: budgeting a lane means giving it a STOP, and a lane that can
+  // stop half way MUST be able to say so.
+  //
+  // THE TWO SHAPES AGAIN, AND WAVE 4 IS EVENLY SPLIT BETWEEN THEM. The three
+  // that build a PLAN first -- both reslugs and backfill-verify-queue-grades --
+  // know their denominator, so they reconcile `intended = written + failed +
+  // not reached`, where "not reached" is the planned patches the clock stopped
+  // the drain before claiming. The two that DISCOVER their work page by page --
+  // rescore-anomalies and score-all-sold-comps -- have no denominator for the
+  // rows they never saw, so they reconcile over the rows they DID scan. Neither
+  // shape is interchangeable with the other (a slice is not a sibling counter).
+  //
+  // ALL FIVE REPORTED A NUMBER THAT WAS NOT A WRITE, which is why none of them
+  // could have reconciled before. The two reslugs and
+  // backfill-verify-queue-grades printed `runInParallel`'s `ok` as "patched" --
+  // a count of worker callbacks that did not THROW, which is not the same thing
+  // as a patch that landed. score-all-sold-comps counted `scored`, a score
+  // COMPUTED, with the upsert awaited inside a try whose catch only bumped
+  // `errors`. rescore-anomalies counted its VERDICTS (`promoted` / `stillLow`)
+  // while BOTH arms upserted into the same swallowing catch. Every one of them
+  // gained a real success counter, incremented on the line after its own write
+  // resolves, as part of the same change.
   "backfill-canonicalize-chrome-slugs",
-  "backfill-verify-queue-grades",
-  "rescore-anomalies",
   "reslug-bowman-paper-vs-bowman",
   "reslug-brand-root-refinement",
   "reslug-chrome-draft-collision",
   "reslug-chrome-prospects-and-wave",
   "reslug-cross-brand-fix",
-  "reslug-cross-product-mis-slug",
   "reslug-fleer-stickers",
   "reslug-heritage-vs-topps-chrome",
   "reslug-player-sport-fix",
   "reslug-recover-cardnumbers",
   "reslug-speckle-recovery",
-  "reslug-suspicious-setkeys",
   "reslugAllSoldComps",
   // retire-flattened-attestations left this list on 2026-09-07: budgeting it
   // meant giving it a stop, and a lane that can stop half way MUST be able to
   // say so -- `intended = written + skipped + failed` with the budget's
   // remainder carried as `skipped` is the only honest banner for a partial run.
   // It gained a real reportWrites() in the same change rather than a token one.
-  "score-all-sold-comps",
 ]);
 
 /**
