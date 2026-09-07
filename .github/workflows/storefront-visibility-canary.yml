@@ -1,0 +1,178 @@
+name: Storefront Visibility Canary
+
+# CF-STOREFRONT-VISIBILITY-CANARY (GO-LIVE P2-4, checklist §Alerts item 4:
+# "Storefront visibility drops to 0 — sanity canary for the
+# marketplace_listings pool.")
+#
+# SOURCE OF TRUTH: Cosmos `marketplace_listings`. In this index visibility
+# IS ROW PRESENCE — there is no status/visible/active/deletedAt field, and
+# GET /api/marketplace/search applies no visibility predicate, so anything
+# in the container is publicly served and COUNT(rows) is the visibility
+# number.
+#
+# WHY THIS IS NOT THE SAME AS THE REFRESH WORKFLOW'S OWN COUNT. The nightly
+# Marketplace Listings Refresh already prints a post-run row count, but it
+# prints it from INSIDE the run that just wrote the rows. It cannot see the
+# refresh failing to run at all, and its report step was red for nine
+# consecutive nights (08-30 → 09-07) while the refresh itself stayed green.
+# A canary on a separate cron, reading the pool from outside, is what
+# catches "the writer stopped" rather than "the writer wrote".
+#
+# THRESHOLD ARITHMETIC.
+#   total          > 0 rows. The literal checklist item.
+#   sellers        every eligible seller must hold >= 1 row. The eligible
+#                  set is DERIVED from `users` with the same four gates the
+#                  refresh uses (plan in pro_seller|investor,
+#                  publicShareEnabled, verified email, a username) — there
+#                  is no sellers container and no isSeller flag.
+#   day-over-day   >50% of the previous refresh cohort lost = red. Cohorts
+#                  come from `lastUpdatedAt`, which the refresh stamps on
+#                  every row it writes, so the pool carries its own history
+#                  and the axis needs no cache or baseline file. Skipped —
+#                  loudly — when only one cohort exists.
+#   refresh age    newest stamp <= 48h. The cron is nightly at 07:30 UTC,
+#                  so 48h tolerates exactly one missed run.
+#
+# MEASURED 2026-09-07 (read-only): 19 listings, 2 distinct sellers, 2
+# eligible sellers (2/2 covered), whole pool stamped 07:42Z by that
+# morning's cron.
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'   # every 6h, offset from the other three canaries
+  workflow_dispatch:
+    inputs:
+      min_listings:
+        description: 'Fire when total visible listings <= this. Default 0.'
+        required: false
+        type: string
+        default: '0'
+      max_drop_pct:
+        description: 'Fire when a refresh loses more than this fraction of the prior cohort. 0 = off. Default 0.5.'
+        required: false
+        type: string
+        default: '0.5'
+      max_refresh_age_hours:
+        description: 'Fire when the newest lastUpdatedAt is older than this. 0 = off. Default 48.'
+        required: false
+        type: string
+        default: '48'
+
+jobs:
+  visibility:
+    name: marketplace_listings visible to the active sellers set
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      id-token: write
+      contents: read
+      issues: write
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend deps
+        working-directory: backend
+        run: npm ci --omit=dev
+
+      - name: Login to Azure
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_1259D9D213E34AE29B2DD54B3E755C4D }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5AB8B3DC612348FD9D37DBE28FF40802 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A45CF8552AE94AF68A046FB846E21206 }}
+
+      - name: Run storefront visibility canary
+        id: canary
+        working-directory: backend
+        run: |
+          COSMOS_CONNECTION_STRING=$(az webapp config appsettings list \
+            --name HobbyIQ3 --resource-group rg-hobbyiq-dev \
+            --query "[?name=='COSMOS_CONNECTION_STRING'].value" -o tsv | tr -d '\r\n')
+          if [ -z "$COSMOS_CONNECTION_STRING" ]; then
+            echo "::error::COSMOS_CONNECTION_STRING empty from App Service"
+            exit 1
+          fi
+          COSMOS_CONNECTION_STRING="$COSMOS_CONNECTION_STRING" \
+          COSMOS_DATABASE=hobbyiq \
+          MIN_LISTINGS="${{ inputs.min_listings || '0' }}" \
+          MAX_DROP_PCT="${{ inputs.max_drop_pct || '0.5' }}" \
+          MAX_REFRESH_AGE_HOURS="${{ inputs.max_refresh_age_hours || '48' }}" \
+          RUN_MINUTES=8 \
+          node scripts/checkStorefrontVisibility.cjs
+
+      # Same lane as the deploy-failure alert (#1954): github.token only, no
+      # Azure login, so an Azure outage cannot take out both the storefront
+      # and the alert about the storefront.
+      - name: Open or update the storefront-visibility issue
+        if: ${{ failure() && steps.canary.outcome == 'failure' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          RUN_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          TODAY="$(date -u +%Y-%m-%d)"
+          TITLE="STOREFRONT VISIBILITY $TODAY"
+          {
+            echo "The marketplace listings index failed a visibility check. Cross-storefront search"
+            echo "(\`GET /api/marketplace/search\`) reads this container **directly and with no visibility"
+            echo "filter**, so what the canary measured is what buyers can see."
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| Run | [$GITHUB_RUN_ID]($RUN_URL) |"
+            echo "| Source of truth | Cosmos \`marketplace_listings\` (visibility = row presence) |"
+            echo "| Only writer | \`marketplace-listings-refresh\`, nightly 07:30 UTC |"
+            echo ""
+            echo "The run log carries the failing axis and its arithmetic — read the banner there first;"
+            echo "\`total\`, \`sellers\`, \`day-over-day\` and \`refresh age\` fail for different reasons."
+            echo ""
+            echo "**First three things to check**"
+            echo ""
+            echo "1. Did last night's refresh run, and did it succeed *past* its write step?"
+            echo "2. Did the eligible-seller set change? A plan downgrade, an unverified email or a"
+            echo "   \`publicShareEnabled\` flip legitimately removes a seller — the canary names who."
+            echo "3. Was a FRESH rebuild dispatched? It cascades a full delete before rebuilding, so a"
+            echo "   run that died mid-rebuild leaves the pool genuinely empty."
+            echo ""
+            echo '```bash'
+            echo "gh run list --workflow=marketplace-listings-refresh.yml --limit 5"
+            echo '```'
+            echo ""
+            echo "<sub>Filed automatically by the \`Storefront Visibility Canary\` workflow. Close it once the pool is healthy.</sub>"
+          } > /tmp/storefront-body.md
+
+          # Deliberately NOT filtered by --label: the labels may not exist (see
+          # the create branch below), and a label filter matching nothing would
+          # make this lookup always miss and file a fresh issue every 6h. The
+          # exact-title match below is what identifies the thread.
+          EXISTING="$(gh issue list --repo "$GITHUB_REPOSITORY" --state open \
+            --search "$TITLE in:title" --json number,title \
+            --jq "map(select(.title == \"$TITLE\")) | .[0].number // empty" 2>/dev/null || true)"
+
+          if [ -n "$EXISTING" ]; then
+            echo "::notice::storefront issue #$EXISTING already open for $TITLE — commenting"
+            gh issue comment "$EXISTING" --repo "$GITHUB_REPOSITORY" --body-file /tmp/storefront-body.md \
+              || echo "::warning::could not comment on #$EXISTING — the run log still carries the failure"
+          else
+            # Labels are best-effort, the ISSUE is not. `gh issue create` FAILS
+            # OUTRIGHT on a label the repo does not carry, and neither `ops` nor
+            # `canary` exists today (verified 2026-09-07: both 404). A labelled-only
+            # create would file NOTHING and leave only a ::warning:: - the alert
+            # silently absent in exactly the incident it exists for. Try labelled,
+            # fall back to unlabelled, then warn.
+            gh issue create --repo "$GITHUB_REPOSITORY" \
+              --title "$TITLE" \
+              --body-file /tmp/storefront-body.md \
+              --label ops --label canary \
+              || gh issue create --repo "$GITHUB_REPOSITORY" \
+                   --title "$TITLE" \
+                   --body-file /tmp/storefront-body.md \
+              || echo "::warning::could not open the storefront issue — the run log still carries the failure"
+          fi
