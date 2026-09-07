@@ -366,8 +366,21 @@ describe("ingest-universe-driver — the setKey the verify reads by", () => {
 
   it("keys a Japanese pokemon set by its SET ID, not its unslugifiable name", () => {
     // "PMCG1 拡張パック" slugifies to nothing, so a name-derived key left every
-    // tcgdexja entry unverifiable and would have failed a clean ingest.
-    expect(setKeyFor({ setName: "PMCG1 拡張パック", sourceRef: "https://api.tcgdex.net/v2/ja/sets/PMCG1", lane: "tcgdexja" })).toBe("pmcg1");
+    // tcgdexja entry unverifiable and would have failed a clean ingest. That
+    // rule is unchanged: the key still comes from the ID.
+    //
+    // What changed is WHICH address the id resolves to.
+    // CF-THE-JAPANESE-SET-IS-REACHED-BY-ITS-JAPANESE-ID (2026-09-07): tcgdex
+    // serves the Japanese Base Set under its own Japanese id, and R5 (#1959)
+    // addresses that product `ja-base1`. `pmcg1` is a key the child never
+    // writes and the resolver never answers, so asserting it here would pin
+    // the driver to look where the rows are not -- the exact measurement error
+    // CF-THE-DIFF-MUST-READ-THE-KEY-THE-MANIFEST-STATES catalogues.
+    expect(setKeyFor({ setName: "PMCG1 拡張パック", sourceRef: "https://api.tcgdex.net/v2/ja/sets/PMCG1", lane: "tcgdexja" })).toBe("ja-base1");
+    // A ja-exclusive set with no English twin still falls to its bare code...
+    expect(setKeyFor({ setName: "VS1 VS", sourceRef: "https://api.tcgdex.net/v2/ja/sets/VS1", lane: "tcgdexja" })).toBe("vs1");
+    // ...and one R1-R4 ruled by NAME keeps that name, where its rows already are.
+    expect(setKeyFor({ setName: "PMCG4 ロケット団", sourceRef: "https://api.tcgdex.net/v2/ja/sets/PMCG4", lane: "tcgdexja" })).toBe("japanese-rocket-gang");
   });
 
   it("returns null rather than guessing when nothing is derivable", () => {

@@ -1,0 +1,8 @@
+run-backfill	UNKNOWN STEP	2026-09-05T05:31:41.3067396Z CENSUS  slot 0/32  rows classified 514,583
+run-backfill	UNKNOWN STEP	2026-09-05T05:31:41.3068166Z   AGREE             36,981    7.19%   AUTO     36,981  PROTECTED      0
+run-backfill	UNKNOWN STEP	2026-09-05T05:31:41.3068962Z   IMPROVE           20,867    4.06%   AUTO     20,867  PROTECTED      0
+run-backfill	UNKNOWN STEP	2026-09-05T05:31:41.3074039Z   CONFLICT         381,423   74.12%   AUTO    381,423  PROTECTED      0
+run-backfill	UNKNOWN STEP	2026-09-05T05:31:41.3075621Z   UNDERIVABLE       75,312   14.64%   AUTO     75,312  PROTECTED      0
+run-backfill	UNKNOWN STEP	2026-09-05T05:32:47.1999637Z all 38 canaries hold -- the shard may stand, and the next shard may be censused.
+run-backfill	UNKNOWN STEP	2026-09-05T05:32:49.1324235Z ##[group]Run if grep -aqE "stopped at the .*budget" /tmp/backfill.log; then
+run-backfill	UNKNOWN STEP	2026-09-05T05:32:49.1324879Z ^[[36;1mif grep -aqE "stopped at the .*budget" /tmp/backfill.log; then^[[0m

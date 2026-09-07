@@ -17,6 +17,8 @@
 // real 16,746-entry manifest with no connection string.
 "use strict";
 
+const { ruledKeyForJaSourceId } = require("./tcgdex-ja-source-id-map.cjs");
+
 /** The withheld reasons this queue acts on. CLOSED, and it is the same closed
  *  vocabulary `NoBasisRefusalReason` declares in holdingValuation.ts --
  *  `pool-migrating` is deliberately NOT here: a re-key that has not settled is
@@ -86,7 +88,16 @@ function setKeyForEntry(entry) {
   // the catalog keys pokemon on, and the sourceRef carries it.
   if (entry.lane === "tcgdexja") {
     const id = String(entry.sourceRef || "").split("/").pop();
-    return id ? id.toLowerCase() : null;
+    if (!id) return null;
+    // CF-THE-JAPANESE-SET-IS-REACHED-BY-ITS-JAPANESE-ID (2026-09-07). For the
+    // eight sets tcgdex serves under their OWN Japanese id, the bare id is NOT
+    // the address the child writes: PMCG2 IS the Japanese Jungle and R5 keys it
+    // `ja-base2`, so `pmcg2` is a key nothing was ever written under, and a
+    // clean ingest would read back 0 rows and be recorded `failed` -- the exact
+    // measurement error CF-THE-DIFF-MUST-READ-THE-KEY-THE-MANIFEST-STATES
+    // catalogues. The manifest still leads; this keeps the FALLBACK honest for
+    // an entry staged before the sidecar existed.
+    return ruledKeyForJaSourceId(id) ?? id.toLowerCase();
   }
   let k = slugOf(entry.setName || "");
   k = k.replace(/^(?:19|20)\d{2}(?:-\d{2})?-/, "");
