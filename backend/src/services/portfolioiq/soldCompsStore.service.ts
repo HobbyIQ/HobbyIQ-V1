@@ -45,6 +45,7 @@ import { DefaultAzureCredential } from "@azure/identity";
 import { computeHobbyIqCardId, resolveSetKeyForSlug, sameCardNumber } from "./hobbyIqCardId.service.js";
 import { guardSlugInputs, normalizeSportStrict, type SlugGuardResult } from "./slugGuard.service.js";
 import { playerTheTitleAllows } from "./playerTheTitleAllows.js";
+import { decideSplitIdentity } from "./splitIdentityWriteGuard.js";
 import { canonicalizeParallel } from "./parallelCanonicalizer.service.js";
 import { parseParallelComposite } from "./parseParallelComposite.service.js";
 import { enrichCompositeV3 } from "./enrichCompositeV3.service.js";
@@ -304,6 +305,14 @@ export interface RecordSoldCompInput {
    *  "soccer" / null). When absent, inferSportFromContext() derives from
    *  setName + title. */
   sport?: string | null;
+  /** CF-A-SPLIT-ROW-IS-NEVER-WRITTEN (#1924 follow-up). What ATTESTED
+   *  `sport` -- a SOURCE that stated it, never a text heuristic. CardHedge's
+   *  `group` field is the canonical example ("cardhedge-group"). Present means
+   *  the split-identity guard may use `sport` to RESOLVE a disagreement
+   *  between `cardId` and `hobbyiqCardId`; absent means a disagreement PARKS,
+   *  because the census proved a convention picks the wrong side about a third
+   *  of the time. A caller that merely inferred the sport must NOT set this. */
+  sportAttestedBy?: string | null;
   gradeCompany?: string | null;
   gradeValue?: number | null;
   /** CF-AUTHENTIC-BUCKET: authenticated slab, no numeric grade. */
@@ -1868,6 +1877,72 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<Record
     } catch { /* 404 or read failure — nothing stored to protect */ }
   }
 
+  // ── CF-A-SPLIT-ROW-IS-NEVER-WRITTEN (#1924 follow-up, 2026-09-07) ─────────
+  //
+  // THE WRITE DOOR. `cardId` comes from the caller verbatim and
+  // `hobbyiqCardId` is derived independently a few hundred lines above;
+  // NOTHING has compared them until this moment. The #1924 census measured
+  // what that costs: 94,275 rows whose two identity fields name different
+  // SPORTS, read into both cards' pools by exactPoolReader's `OR`, and 3,398
+  // of them written in the seven days before the census ran. The reader-side
+  // guard (identityUnionGuard) is real protection and it is why the damage is
+  // not worse, but it only ever sees both halves when ONE caller hands it
+  // both. The cross-pool double-count happens across TWO reads, each naming
+  // one identity, where no reader ever holds both. The defect is in the STORED
+  // ROW, so the guard belongs here.
+  //
+  // It does not guess. `input.sport` is only treated as ATTESTED when a caller
+  // says who attested it (`sportAttestedBy`) -- CardHedge's `group` field
+  // does; `inferSportFromContext` deliberately does not, since a text
+  // heuristic is what produced the damage. Attested resolves; unattested
+  // parks. Counted by reason so the class is measurable from the logs.
+  {
+    const outcome = decideSplitIdentity({
+      cardId: doc.cardId,
+      hobbyiqCardId: doc.hobbyiqCardId,
+      attestedSport: input.sportAttestedBy ? input.sport ?? null : null,
+      attestedBy: input.sportAttestedBy ?? null,
+    });
+    if (outcome.verdict === "resolve") {
+      // A source named the sport. Both fields take it -- the row is filed once,
+      // under the identity the source attests, and prices exactly one card.
+      console.log(JSON.stringify({
+        event: "sold_comp_split_identity_resolved",
+        source: "soldCompsStore.recordSoldComp",
+        vendorSource: input.source,
+        wasCardId: doc.cardId,
+        wasHobbyiqCardId: doc.hobbyiqCardId,
+        resolvedTo: outcome.resolvedTo,
+        attestedBy: outcome.attestedBy,
+      }));
+      doc.cardId = outcome.resolvedTo;
+      doc.hobbyiqCardId = outcome.resolvedTo;
+      // The id embeds cardId, so it is re-minted or the row lands under the
+      // old address's key in the new partition.
+      doc.id = makeId(input.source, input.sourceExternalId ?? null, doc.cardId, doc.soldAt);
+    } else if (outcome.verdict === "park") {
+      // Nothing attests either side. The SALE IS REAL -- someone paid that
+      // price on that date -- so the row is kept and queryable, but parked out
+      // of EVERY pool rather than filed under a guess that the census proved
+      // wrong about a third of the time.
+      const parked = doc as SoldCompDoc & Record<string, unknown>;
+      parked.identityUnverified = true;
+      parked.identityUnverifiedAt = new Date().toISOString();
+      parked.identityUnverifiedBy = "soldCompsStore.recordSoldComp:split-identity-guard";
+      parked.identityUnverifiedReason = outcome.reason;
+      parked.identityUnverifiedDetail = outcome.detail;
+      console.warn(JSON.stringify({
+        event: "sold_comp_split_identity_parked",
+        source: "soldCompsStore.recordSoldComp",
+        vendorSource: input.source,
+        reason: outcome.reason,
+        cardId: doc.cardId,
+        hobbyiqCardId: doc.hobbyiqCardId,
+        detail: outcome.detail,
+      }));
+    }
+  }
+
   try {
     await c.items.upsert(doc as any);
     // CF-INGEST-CATALOG-AUTO-SEED (Drew, 2026-08-05). Fire-and-forget:
@@ -1888,7 +1963,15 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<Record
     // user physically owns is real coverage even before its checklist is
     // acquired. That is the one place a sale is evidence of a card.
     // USER_SEED_SOURCES is module-level (shared with the D7d reconcile gate).
-    if (doc.hobbyiqCardId && doc.cardYear && doc.sport && USER_SEED_SOURCES.has(String(input.source))) {
+    // CF-A-PARKED-SALE-SEEDS-NOTHING (#1924 follow-up). A row the split-identity
+    // guard just parked has NO identity we stand behind -- that is what parking
+    // means. Seeding the catalog from it would mint a card at an address the
+    // guard has already refused to file the sale under, which is the
+    // sales-mint-cards defect wearing a different hat. The census found the
+    // catalog already contaminated this way: 32,044 `ingest-auto-seed` rows
+    // carry a sport with ZERO checklist backing in their product-year.
+    const identityParked = (doc as SoldCompDoc & Record<string, unknown>).identityUnverified === true;
+    if (!identityParked && doc.hobbyiqCardId && doc.cardYear && doc.sport && USER_SEED_SOURCES.has(String(input.source))) {
       void (async () => {
         try {
           const { ensureCatalogRow } = await import("../catalog/ensureCatalogRow.service.js");

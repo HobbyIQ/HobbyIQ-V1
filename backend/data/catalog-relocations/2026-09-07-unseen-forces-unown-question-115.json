@@ -1,0 +1,74 @@
+{
+ "generatedAt": "2026-09-07T02:10:00Z",
+ "forLane": "relocate-catalog-rows-by-list",
+ "reportOnlyUntil": "Drew's review - no apply is authorized by this PR",
+ "finding": "The ONE genuinely-different-card contended pair in the ten held Pokemon EN rekey cells: pokemon/2005 unseen-forces -> ex10, report run 34074070785, CONTENDED (different player) 1, banner line `FOLD #?115 base: ... \"Unown\" x0 vs \"Suicune ☆\" x44 | decided by: sale-titles`.",
+ "rulings": [
+  "A DIFFERENT PLAYER AT THE SAME NUMBER MEANS A DIFFERENT CARD - NEVER FOLD (Drew, the doctrine these ten cells were held under). Unown ? and Suicune ☆ are two cards. The fold the report proposes would put a Pokemon Star secret rare and an Unown alphabet common in ONE pricing pool.",
+  "THE COLLISION IS A MINT DEFECT, NOT A NUMBERING CLASH. Measured read-only 2026-09-07: these rows carry `cardNumber: \"?115\"` but their id's number segment is bare `115` - the `?` was dropped when the slug was built. normalizePokemonCardNumber('?115') returns '?115' unchanged, so the number itself is fine and only the slug lost the character. Every OTHER letter of the Unown alphabet minted correctly (a115..z115 are 50 rows at their own addresses, e.g. hiq:pokemon:2005:unseen-forces:p115:base:no-auto #P115), which is what makes `?` the outlier rather than the rule.",
+  "SO THE INCUMBENT IS NOT WRONG. hiq:pokemon:2005:ex10:115:base:no-auto is held by Suicune ☆, source tcgdex-scraped-2026-08-16 - the checklist authority for the English product, and 115/115 IS Suicune ☆ in Unseen Forces. The destination is correct and stays put; it is the Unown rows that are at an address that was never theirs.",
+  "THE CORRECT DESTINATION IS CHECKLIST-BACKED AND FREE. tcgdex numbers this card `?115`, and both hiq:pokemon:2005:ex10:?115:base:no-auto and hiq:pokemon:2005:ex10:?115:reverse-holofoil:no-auto were point-read on 2026-09-07 and are UNOCCUPIED. That is why these are RESLUGs and not report-only: a relocate needs a checklist-backed destination, and this one has both halves - the checklist mints the number and nothing is standing on it.",
+  "RESLUG, NOT RETIRE. The Unown ? rows are real cards with a real address; nothing about them is an alias of the Suicune row. Retiring them would delete a card to resolve a collision the card did not cause.",
+  "THE `ex10-unseen-forces` PAIR IS THE SAME DEFECT ONE PRODUCT OVER. Two more rows carry cardNumber `?115` under the transitional stem `hiq:pokemon:2005:ex10-unseen-forces:115:*`. They are listed here because they are the same mis-mint and the same destination, and leaving them would re-create the collision the moment that stem is swept.",
+  "REPORT-ONLY UNTIL REVIEWED. This list is committed, not dispatched. relocate-catalog-rows-by-list refuses a reslug onto an address a different card holds, so if any of these four destinations is occupied by the time it runs, the lane refuses that entry rather than merging - which is the behaviour we want and not something this list should try to pre-empt."
+ ],
+ "census": {
+  "contendedPairsInCell": 1,
+  "rowsListed": 4,
+  "byEndState": {
+   "reslug-to-question-115": 4
+  },
+  "byStem": {
+   "unseen-forces": 2,
+   "ex10-unseen-forces": 2
+  },
+  "destinationsPointReadFree": 2,
+  "destinationsOccupied": 0,
+  "unownAlphabetRowsMintedCorrectly": 50,
+  "source": "pokemon-tcg-data-scraped-2026-08-14 (all four rows)"
+ },
+ "entries": [
+  {
+   "id": "hiq:pokemon:2005:unseen-forces:115:base:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2005:ex10:?115:base:no-auto",
+   "reason": "Unown ? minted onto Suicune ☆'s address: cardNumber is '?115' but the slug's number segment lost the '?'. Reslug to the checklist's own ?115 address, which is free.",
+   "evidence": "Row reads cardNumber '?115', playerName 'Unown', source pokemon-tcg-data-scraped-2026-08-14. Its id's number segment is bare '115'. The English destination hiq:pokemon:2005:ex10:115:base:no-auto is held by 'Suicune ☆' (tcgdex-scraped-2026-08-16), card 115/115 of Unseen Forces - a Pokemon Star secret rare, not an Unown. Report run 34074070785 gathered evidence for this pair and the sale-titles arm decided for Suicune 44-0, which would have FOLDED the Unown row away; the arm is answering 'who does the market price at 115' correctly and the Unown row simply is not at 115. Destination hiq:pokemon:2005:ex10:?115:base:no-auto point-read 2026-09-07: 404, free. The other 50 rows of this Unown alphabet (a115..z115, base + reverse-holofoil) all carry their letter in the slug, so this is a per-character mint defect and not the product's numbering scheme."
+  },
+  {
+   "id": "hiq:pokemon:2005:unseen-forces:115:reverse-holofoil:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2005:ex10:?115:reverse-holofoil:no-auto",
+   "reason": "The reverse-holofoil half of the same mis-mint. Same card, same defect, same free destination.",
+   "evidence": "Row reads cardNumber '?115', playerName 'Unown', source pokemon-tcg-data-scraped-2026-08-14, parallel reverse-holofoil. Destination hiq:pokemon:2005:ex10:?115:reverse-holofoil:no-auto point-read 2026-09-07: 404, free. Note the English 115 reverse-holofoil address is ALSO free - Suicune ☆ exists only at :115:base: and its gold-star sibling - so this row was not contended in the report and is listed here to keep the card's two parallels together rather than reslugging one and stranding the other."
+  },
+  {
+   "id": "hiq:pokemon:2005:ex10-unseen-forces:115:base:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2005:ex10:?115:base:no-auto",
+   "reason": "The same Unown ? mis-mint under the transitional `ex10-unseen-forces` stem; same destination as its unseen-forces twin.",
+   "evidence": "Row reads cardNumber '?115', playerName 'Unown', source pokemon-tcg-data-scraped-2026-08-14, stem 'ex10-unseen-forces'. Listed with the pair above because the defect and the destination are identical: leaving it would re-create the 115 collision as soon as the ex10-unseen-forces stem is swept onto ex10. If its unseen-forces twin has already landed on ?115 when this runs, relocate-catalog-rows-by-list sees an incumbent naming the SAME player ('Unown') and adjudicates it as a fold rather than refusing - one card, one row, one pool."
+  },
+  {
+   "id": "hiq:pokemon:2005:ex10-unseen-forces:115:reverse-holofoil:no-auto",
+   "action": "reslug",
+   "to": "hiq:pokemon:2005:ex10:?115:reverse-holofoil:no-auto",
+   "reason": "The reverse-holofoil half of the ex10-unseen-forces mis-mint.",
+   "evidence": "Row reads cardNumber '?115', playerName 'Unown', source pokemon-tcg-data-scraped-2026-08-14, parallel reverse-holofoil, stem 'ex10-unseen-forces'. Same reasoning as the base entry above."
+  }
+ ],
+ "excluded": [
+  {
+   "what": "The 50 correctly-minted Unown alphabet rows (a115..z115 under unseen-forces, base + reverse-holofoil).",
+   "why": "They carry their letter in the slug and are not in collision with anything. The rekey lane moves them to ex10 normally - report run 34074070785 shows MOVED 170 including p115 and k115 - and nothing here should touch them."
+  },
+  {
+   "what": "hiq:pokemon:2005:ex10:115:base:no-auto (Suicune ☆, tcgdex-scraped-2026-08-16) and its gold-star / graded siblings.",
+   "why": "The incumbent is CORRECT. 115/115 is Suicune ☆ and the checklist row is the authority for the English product. This list moves the rows that landed on its address, never the row that belongs there."
+  },
+  {
+   "what": "The five ingest-auto-seed rows at hiq:pokemon:2005:ex10:115:gold-star:no-auto (+ 4 graded children) naming 'Suicune' without the star.",
+   "why": "A separate question - whether the seed's bare 'Suicune' is the same card as the checklist's 'Suicune ☆' at a different parallel - and not one this contended pair raises. Named here so a reader who point-reads the cell is not surprised by them."
+  }
+ ]
+}

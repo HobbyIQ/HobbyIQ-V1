@@ -1,0 +1,3378 @@
+{
+  "generatedAt": "2026-09-07T02:00:00Z",
+  "forLane": "relocate-catalog-rows-by-list",
+  "reportOnlyUntil": "Drew's review — NO APPLY IS AUTHORIZED BY THIS PR. This list DELETES catalog rows.",
+  "keepSales": true,
+  "finding": "#1925 H1. 2479 card_catalog rows from hobbymonitor-2026-09-04 under basketball/topps-three carry year 2025 while their own setName states 2023. The census compared 5,381 card numbers across all 28 products: 5,351 agree with the year-N checklist, 444 agree with year N+1, and ZERO agree with N+1 but not N — so the setName is right and the year field is wrong. This file is part 03 of 3 for this product: 0 retire, 479 reslug.",
+  "rulings": [
+    "THE CHECKLIST IS THE AUTHORITY AND THE setName IS RIGHT. Every number-to-player comparison in #1925 resolves to year N. A row is retired only where the year-N address is already held by the SAME player from a CHECKLIST source (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT); a twin from `ingest-auto-seed` or `bccp` earns no delete and is excluded instead.",
+    "THE SALES DO NOT MOVE — `keepSales: true`. 7,905 sales rest on these rows' slugs and their titles are 7,901-to-0 the year-N+1 product: they belong to the card that STAYS, not the one that moves. moveCatalogRow re-points a row's own sales by default, which here would carry genuine year-N+1 sales back to year N — the exact mispricing this repair exists to end. Under the flag the lane hands moveCatalogRow no salesContainer, so hobbyiqCardId and cardId are untouched and the rematch re-derives them against the genuine year-N+1 identity. Measured: 7,776 of the 7,905 have a genuine year-N+1 row at their card number to land on; 129 do not and need a checklist ingest first.",
+    "RETIRE IS A HARD DELETE, AND IT IS ORDERED FIRST. card_catalog has no field that stops a row resolving, so a retire deletes the row and its graded children, and leaves its sales UNPLACED. Retires sort before reslugs in every file, and the files sort in the order they must run.",
+    "AN OCCUPIED DESTINATION IS REPORTED, NEVER ROUTED AROUND. 5,899 rows whose year-N destination names a DIFFERENT player, and 712 whose destination is an UNNAMED bccp row, are in docs/reports/2026-09-07-hobbymonitor-year-excluded.md and in no list."
+  ],
+  "census": {
+    "product": "basketball/topps-three",
+    "storedYear": 2025,
+    "trueYear": 2023,
+    "destinationSetKey": "topps-three",
+    "rowsInProduct": 2479,
+    "retireInThisFile": 0,
+    "reslugInThisFile": 479,
+    "salesOnEntriesInThisFile": 0
+  },
+  "entries": [
+    {
+      "id": "hiq:basketball:2025:topps:fcs-kbr:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-kbr:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Kobe Brown\" #FCS-KBR; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:rs-jhs:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:rs-jhs:base:auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Jalen Hood-Schifino\" #RS-JHS; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:rra-kj:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:rra-kj:base:auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Keyontae Johnson\" #RRA-KJ; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-ghi:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-ghi:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Grant Hill\" #FCS-GHI; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:ko-14:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:ko-14:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Anthony Black\" #KO-14; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-nb:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-nb:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Nicolas Batum\" #FCS-NB; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-dro:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-dro:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"David Robinson\" #FCS-DRO; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:rp-jp:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:rp-jp:base:auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Jordan Poole\" #RP-JP; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-kk:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-kk:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Kyle Kuzma\" #FCS-KK; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:87:bronze:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:87:bronze:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Larry Bird\" #87; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:tra-nc:gold:auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:tra-nc:gold:auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Noah Clowney\" #TRA-NC; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:123:blue:auto:num-15",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:123:blue:auto:num-15",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Jalen Wilson\" #123; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:123:red:auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:123:red:auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Jalen Wilson\" #123; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:arch-18:platinum:no-auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:arch-18:platinum:no-auto:num-1",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Brandon Miller\" #ARCH-18; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-ac:bronze:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-ac:bronze:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Alex Caruso\" #FCS-AC; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:tra-zl:bronze:auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:tra-zl:bronze:auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Zach Lavine\" #TRA-ZL; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:ss-ag:bronze:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:ss-ag:bronze:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Aaron Gordon\" #SS-AG; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:19:bronze:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:19:bronze:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Alex English\" #19; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:tra-ms:bronze:auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:tra-ms:bronze:auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Marcus Sasser\" #TRA-MS; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:md-11:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:md-11:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Stephen Curry\" #MD-11; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:106:bronze:auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:106:bronze:auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Jarace Walker\" #106; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-jhs:bronze:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-jhs:bronze:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Jalen Hood-Schifino\" #FCS-JHS; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-dr:red:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-dr:red:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"D'Angelo Russell\" #FCS-DR; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:29:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:29:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Metta World-Peace\" #29; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:tra-msa:bronze:auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:tra-msa:bronze:auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Marcus Smart\" #TRA-MSA; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:rm-th:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:rm-th:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Tyler Herro\" #RM-TH; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:iw-7:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:iw-7:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Jimmy Butler\" #IW-7; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:md-23:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:md-23:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Jaime Jaquez Jr.\" #MD-23; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:20:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:20:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Karl-Anthony Towns\" #20; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:arch-20:red:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:arch-20:red:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Jordan Hawkins\" #ARCH-20; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:rm-ab:red:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:rm-ab:red:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Anthony Black\" #RM-AB; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:rm-ab:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:rm-ab:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Anthony Black\" #RM-AB; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:ko-8:platinum:no-auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:ko-8:platinum:no-auto:num-1",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Joel Embiid\" #KO-8; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:arch-2:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:arch-2:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Kevin Durant\" #ARCH-2; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:76:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:76:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Devin Booker\" #76; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:ko-13:red:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:ko-13:red:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Scoot Henderson\" #KO-13; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-sh:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-sh:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Scoot Henderson\" #FCS-SH; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:ss-mm:red:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:ss-mm:red:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Malik Monk\" #SS-MM; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-dro:bronze:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-dro:bronze:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"David Robinson\" #FCS-DRO; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:rm-vw:bronze:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:rm-vw:bronze:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Victor Wembanyama\" #RM-VW; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-bse:red:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-bse:red:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Brice Sensabaugh\" #FCS-BSE; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-bc:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-bc:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Bilal Coulibaly\" #FCS-BC; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:117:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:117:base:auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Noah Clowney\" #117; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-aba:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-aba:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Amari Bailey\" #FCS-ABA; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:rs-jr:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:rs-jr:base:auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Jalen Rose\" #RS-JR; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-dl:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-dl:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Dereck Lively II\" #FCS-DL; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:tra-ms:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:tra-ms:base:auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Marcus Sasser\" #TRA-MS; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:tra-lm:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:tra-lm:base:auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Leonard Miller\" #TRA-LM; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:ss-ls:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:ss-ls:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Latrell Sprewell\" #SS-LS; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:125:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:125:base:auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Terquavion Smith\" #125; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:arch-17:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:arch-17:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Scoot Henderson\" #ARCH-17; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:ko-9:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:ko-9:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Kevin Durant\" #KO-9; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:rm-da:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:rm-da:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Deandre Ayton\" #RM-DA; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:ko-23:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:ko-23:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"John Stockton\" #KO-23; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-dw:red:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-dw:red:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Dominique Wilkins\" #FCS-DW; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:md-3:platinum:no-auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:md-3:platinum:no-auto:num-1",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Jayson Tatum\" #MD-3; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:ko-4:platinum:no-auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:ko-4:platinum:no-auto:num-1",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Jayson Tatum\" #KO-4; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:arch-14:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:arch-14:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Larry Bird\" #ARCH-14; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-jow:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-jow:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Jordan Walsh\" #FCS-JOW; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:4:bronze:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:4:bronze:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"LaMelo Ball\" #4; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:102:platinum:auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:102:platinum:auto:num-1",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Brandon Miller\" #102; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-bm:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-bm:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Brandon Miller\" #FCS-BM; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-nv:red:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-nv:red:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Nikola Vučević\" #FCS-NV; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:iw-12:red:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:iw-12:red:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Donovan Mitchell\" #IW-12; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:ss-dm:bronze:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:ss-dm:bronze:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Donovan Mitchell\" #SS-DM; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-dl:platinum:no-auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-dl:platinum:no-auto:num-1",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Dereck Lively II\" #FCS-DL; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:tra-tha:platinum:auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:tra-tha:platinum:auto:num-1",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Tim Hardaway Jr.\" #TRA-THA; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-ae:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-ae:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Alex English\" #FCS-AE; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-ag:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-ag:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Aaron Gordon\" #FCS-AG; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:17:bronze:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:17:bronze:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Aaron Gordon\" #17; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:19:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:19:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Alex English\" #19; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:iw-1:red:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:iw-1:red:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Stephen Curry\" #IW-1; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:65:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:65:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Stephen Curry\" #65; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:ko-1:platinum:no-auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:ko-1:platinum:no-auto:num-1",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Stephen Curry\" #KO-1; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:38:bronze:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:38:bronze:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Jalen Green\" #38; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:rm-as:platinum:no-auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:rm-as:platinum:no-auto:num-1",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Alperen Sengun\" #RM-AS; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:arch-6:platinum:no-auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:arch-6:platinum:no-auto:num-1",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Tyrese Haliburton\" #ARCH-6; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-tha:red:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-tha:red:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Tyrese Haliburton\" #FCS-THA; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:td-2:red:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:td-2:red:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Russell Westbrook\" #TD-2; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:52:bronze:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:52:bronze:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Pau Gasol\" #52; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-mj:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-mj:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Magic Johnson\" #FCS-MJ; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-so:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-so:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Shaquille O'Neal\" #FCS-SO; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:ss-jw:bronze:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:ss-jw:bronze:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Jason Williams\" #SS-JW; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:iw-18:platinum:no-auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:iw-18:platinum:no-auto:num-1",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Jaime Jaquez Jr.\" #IW-18; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:20:bronze:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:20:bronze:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Karl-Anthony Towns\" #20; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:21:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:21:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Rudy Gobert\" #21; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:ss-cl:red:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:ss-cl:red:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Christian Laettner\" #SS-CL; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-rj:bronze:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-rj:bronze:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Richard Jefferson\" #FCS-RJ; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-jk:bronze:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-jk:bronze:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Jason Kidd\" #FCS-JK; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:ko-17:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:ko-17:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Jordan Hawkins\" #KO-17; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:126:bronze:auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:126:bronze:auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Jacob Toppin\" #126; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:119:bronze:auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:119:bronze:auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Keyontae Johnson\" #119; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-aha:platinum:no-auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-aha:platinum:no-auto:num-1",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Anfernee Hardaway\" #FCS-AHA; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:125:bronze:auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:125:bronze:auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Terquavion Smith\" #125; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:arch-17:red:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:arch-17:red:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Scoot Henderson\" #ARCH-17; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:ss-da:platinum:no-auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:ss-da:platinum:no-auto:num-1",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Deandre Ayton\" #SS-DA; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-rr:bronze:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-rr:bronze:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Rayan Rupert\" #FCS-RR; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:113:gold:auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:113:gold:auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Rayan Rupert\" #113; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-as:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-as:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Anfernee Simons\" #FCS-AS; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:iw-8:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:iw-8:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"De'Aaron Fox\" #IW-8; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-pst:platinum:no-auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-pst:platinum:no-auto:num-1",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Peja Stojaković\" #FCS-PST; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:101:platinum:auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:101:platinum:auto:num-1",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Victor Wembanyama\" #101; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:101:blue:auto:num-15",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:101:blue:auto:num-15",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Victor Wembanyama\" #101; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-bse:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-bse:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Brice Sensabaugh\" #FCS-BSE; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:105:bronze:auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:105:bronze:auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Bilal Coulibaly\" #105; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:rp-dm:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:rp-dm:base:auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Dejounte Murray\" #RP-DM; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:rs-bb:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:rs-bb:base:auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Bogdan Bogdanovic\" #RS-BB; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:tra-nc:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:tra-nc:base:auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Noah Clowney\" #TRA-NC; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:ko-12:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:ko-12:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Brandon Miller\" #KO-12; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-dn:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-dn:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Dirk Nowitzki\" #FCS-DN; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-ms:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-ms:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Max Strus\" #FCS-MS; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-mp:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-mp:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Michael Porter Jr.\" #FCS-MP; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:tra-kb:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:tra-kb:base:auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Kobe Brown\" #TRA-KB; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:tra-msa:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:tra-msa:base:auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Marcus Smart\" #TRA-MSA; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:124:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:124:base:auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Jaylen Clark\" #124; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:111:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:111:base:auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Jordan Hawkins\" #111; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:101:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:101:base:auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Victor Wembanyama\" #101; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:ko-15:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:ko-15:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Bilal Coulibaly\" #KO-15; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-kb:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-kb:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Kobe Bufkin\" #FCS-KB; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:ko-4:red:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:ko-4:red:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Jayson Tatum\" #KO-4; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-nc:platinum:no-auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-nc:platinum:no-auto:num-1",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Noah Clowney\" #FCS-NC; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:tra-ns:bronze:auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:tra-ns:bronze:auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Nick Smith Jr.\" #TRA-NS; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:iw-17:platinum:no-auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:iw-17:platinum:no-auto:num-1",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Brandon Miller\" #IW-17; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:rm-nv:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:rm-nv:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Nikola Vučević\" #RM-NV; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:ko-21:platinum:no-auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:ko-21:platinum:no-auto:num-1",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Dennis Rodman\" #KO-21; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:36:bronze:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:36:bronze:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Dirk Nowitzki\" #36; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:rm-dl:red:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:rm-dl:red:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Dereck Lively II\" #RM-DL; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:arch-7:red:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:arch-7:red:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Kyrie Irving\" #ARCH-7; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:ss-bw:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:ss-bw:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Ben Wallace\" #SS-BW; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:ss-sc:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:ss-sc:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Stephen Curry\" #SS-SC; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:ss-sc:red:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:ss-sc:red:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Stephen Curry\" #SS-SC; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-aw:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-aw:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Andrew Wiggins\" #FCS-AW; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:65:bronze:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:65:bronze:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Stephen Curry\" #65; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:td-7:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:td-7:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Stephen Curry\" #TD-7; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:td-7:red:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:td-7:red:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Stephen Curry\" #TD-7; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:38:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:38:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Jalen Green\" #38; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:arch-8:red:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:arch-8:red:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Jalen Green\" #ARCH-8; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:rm-mt:red:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:rm-mt:red:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Myles Turner\" #RM-MT; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:rm-ps:red:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:rm-ps:red:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Pascal Siakam\" #RM-PS; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:42:bronze:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:42:bronze:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Desmond Bane\" #42; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-msm:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-msm:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Marcus Smart\" #FCS-MSM; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:43:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:43:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Marcus Smart\" #43; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:rm-th:bronze:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:rm-th:bronze:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Tyler Herro\" #RM-TH; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:91:bronze:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:91:bronze:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Bam Adebayo\" #91; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:25:bronze:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:25:bronze:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Alonzo Mourning\" #25; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-jjj:red:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-jjj:red:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Jaime Jaquez Jr.\" #FCS-JJJ; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:ko-25:red:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:ko-25:red:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Giannis Antetokounmpo\" #KO-25; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:tra-lm:gold:auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:tra-lm:gold:auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Leonard Miller\" #TRA-LM; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:44:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:44:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"CJ McCollum\" #44; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:iw-16:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:iw-16:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Jordan Hawkins\" #IW-16; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:rm-jb:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:rm-jb:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Jalen Brunson\" #RM-JB; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:tra-ld:gold:auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:tra-ld:gold:auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Luguentz Dort\" #TRA-LD; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:rm-jw:platinum:no-auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:rm-jw:platinum:no-auto:num-1",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Jalen Williams\" #RM-JW; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-jw:bronze:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-jw:bronze:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Jalen Williams\" #FCS-JW; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-aha:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-aha:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Anfernee Hardaway\" #FCS-AHA; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:18:bronze:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:18:bronze:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Tracy McGrady\" #18; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:18:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:18:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Tracy McGrady\" #18; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:96:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:96:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Tyrese Maxey\" #96; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:78:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:78:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Bradley Beal\" #78; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:tra-km:red:auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:tra-km:red:auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Kris Murray\" #TRA-KM; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-cd:bronze:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-cd:bronze:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Clyde Drexler\" #FCS-CD; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-as:red:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-as:red:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Anfernee Simons\" #FCS-AS; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:ss-mm:bronze:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:ss-mm:bronze:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Malik Monk\" #SS-MM; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:108:bronze:auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:108:bronze:auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Colby Jones\" #108; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:ss-dr:platinum:no-auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:ss-dr:platinum:no-auto:num-1",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"David Robinson\" #SS-DR; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-dro:red:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-dro:red:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"David Robinson\" #FCS-DRO; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:93:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:93:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Immanuel Quickley\" #93; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:rm-lm:platinum:no-auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:rm-lm:platinum:no-auto:num-1",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Lauri Markkanen\" #RM-LM; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:14:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:14:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Corey Kispert\" #14; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:ss-ho:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:ss-ho:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Hakeem Olajuwon\" #SS-HO; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-jh:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-jh:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Jrue Holiday\" #FCS-JH; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:tra-ab:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:tra-ab:base:auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Amari Bailey\" #TRA-AB; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:rp-ag:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:rp-ag:base:auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Aaron Gordon\" #RP-AG; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-mj:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-mj:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Magic Johnson\" #FCS-MJ; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:rp-dr:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:rp-dr:base:auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"D'Angelo Russell\" #RP-DR; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:ko-25:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:ko-25:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Giannis Antetokounmpo\" #KO-25; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:arch-20:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:arch-20:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Jordan Hawkins\" #ARCH-20; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:rp-ih:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:rp-ih:base:auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Isaiah Hartenstein\" #RP-IH; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:ko-8:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:ko-8:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Joel Embiid\" #KO-8; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:tra-bb:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:tra-bb:base:auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Bradley Beal\" #TRA-BB; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:rm-bw:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:rm-bw:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Bill Walton\" #RM-BW; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-sci:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-sci:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Sidy Cissoko\" #FCS-SCI; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:rs-vw:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:rs-vw:base:auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Victor Wembanyama\" #RS-VW; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:ko-11:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:ko-11:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Victor Wembanyama\" #KO-11; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:tra-vw:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:tra-vw:base:auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Victor Wembanyama\" #TRA-VW; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:117:bronze:auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:117:bronze:auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Noah Clowney\" #117; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:102:gold:auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:102:gold:auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Brandon Miller\" #102; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:122:bronze:auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:122:bronze:auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Nick Smith Jr.\" #122; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:tra-nv:platinum:auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:tra-nv:platinum:auto:num-1",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Nikola Vučević\" #TRA-NV; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-dm:bronze:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-dm:bronze:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Donovan Mitchell\" #FCS-DM; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:35:bronze:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:35:bronze:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Tim Hardaway Jr.\" #35; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-ae:bronze:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-ae:bronze:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Alex English\" #FCS-AE; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-jst:red:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-jst:red:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Julian Strawther\" #FCS-JST; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:arch-4:platinum:no-auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:arch-4:platinum:no-auto:num-1",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Stephen Curry\" #ARCH-4; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:rm-ms:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:rm-ms:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Marcus Smart\" #RM-MS; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-dwa:red:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-dwa:red:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Dwyane Wade\" #FCS-DWA; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-dwa:platinum:no-auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-dwa:platinum:no-auto:num-1",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Dwyane Wade\" #FCS-DWA; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:7:bronze:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:7:bronze:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Tyler Herro\" #7; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:arch-13:red:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:arch-13:red:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Giannis Antetokounmpo\" #ARCH-13; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:tra-kt:bronze:auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:tra-kt:bronze:auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Karl-Anthony Towns\" #TRA-KT; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:107:platinum:auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:107:platinum:auto:num-1",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Leonard Miller\" #107; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:ss-dd:platinum:no-auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:ss-dd:platinum:no-auto:num-1",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Donte DiVincenzo\" #SS-DD; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:ss-ls:platinum:no-auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:ss-ls:platinum:no-auto:num-1",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Latrell Sprewell\" #SS-LS; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-aha:bronze:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-aha:bronze:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Anfernee Hardaway\" #FCS-AHA; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-jho:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-jho:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Jett Howard\" #FCS-JHO; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:md-12:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:md-12:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Joel Embiid\" #MD-12; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:82:bronze:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:82:bronze:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Peja Stojaković\" #82; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:47:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:47:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Devin Vassell\" #47; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-tp:red:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-tp:red:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Tony Parker\" #FCS-TP; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:arch-16:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:arch-16:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Victor Wembanyama\" #ARCH-16; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:iw-20:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:iw-20:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Victor Wembanyama\" #IW-20; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:md-21:red:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:md-21:red:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Victor Wembanyama\" #MD-21; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-bm:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-bm:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Brandon Miller\" #FCS-BM; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:tra-mst:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:tra-mst:base:auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Max Strus\" #TRA-MST; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:arch-12:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:arch-12:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Dirk Nowitzki\" #ARCH-12; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-dr:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-dr:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"D'Angelo Russell\" #FCS-DR; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:ko-3:platinum:no-auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:ko-3:platinum:no-auto:num-1",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Trae Young\" #KO-3; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:md-3:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:md-3:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Jayson Tatum\" #MD-3; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:tra-mb:red:auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:tra-mb:red:auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Mikal Bridges\" #TRA-MB; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:rm-zl:platinum:no-auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:rm-zl:platinum:no-auto:num-1",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Zach Lavine\" #RM-ZL; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:tra-mst:red:auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:tra-mst:red:auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Max Strus\" #TRA-MST; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:td-6:red:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:td-6:red:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Nikola Jokić\" #TD-6; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-op:platinum:no-auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-op:platinum:no-auto:num-1",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Olivier-Maxence Prosper\" #FCS-OP; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-jst:bronze:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-jst:bronze:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Julian Strawther\" #FCS-JST; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:ss-jgr:bronze:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:ss-jgr:bronze:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Jalen Green\" #SS-JGR; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:iw-3:red:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:iw-3:red:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Tyrese Haliburton\" #IW-3; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:106:platinum:auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:106:platinum:auto:num-1",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Jarace Walker\" #106; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:104:bronze:auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:104:bronze:auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Kobe Brown\" #104; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-bh:bronze:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-bh:bronze:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Bones Hyland\" #FCS-BH; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:rm-dw:bronze:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:rm-dw:bronze:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Dwyane Wade\" #RM-DW; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:arch-13:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:arch-13:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Giannis Antetokounmpo\" #ARCH-13; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:tra-lm:red:auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:tra-lm:red:auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Leonard Miller\" #TRA-LM; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-jha:bronze:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-jha:bronze:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Jordan Hawkins\" #FCS-JHA; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:100:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:100:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"OG Anunoby\" #100; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:md-14:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:md-14:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Chet Holmgren\" #MD-14; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-ghi:red:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-ghi:red:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Grant Hill\" #FCS-GHI; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:rm-tm:red:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:rm-tm:red:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Tyrese Maxey\" #RM-TM; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-kmu:platinum:no-auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-kmu:platinum:no-auto:num-1",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Kris Murray\" #FCS-KMU; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:tra-km:bronze:auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:tra-km:bronze:auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Kris Murray\" #TRA-KM; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:ss-da:bronze:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:ss-da:bronze:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Deandre Ayton\" #SS-DA; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:ss-da:red:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:ss-da:red:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Deandre Ayton\" #SS-DA; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:49:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:49:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"David Robinson\" #49; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:rm-vw:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:rm-vw:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Victor Wembanyama\" #RM-VW; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-gd:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-gd:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Gradey Dick\" #FCS-GD; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:ko-23:red:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:ko-23:red:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"John Stockton\" #KO-23; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:ss-jc:bronze:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:ss-jc:bronze:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"John Collins\" #SS-JC; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:15:bronze:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:15:bronze:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Elvin Hayes\" #15; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:tra-sb:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:tra-sb:base:auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Saddiq Bey\" #TRA-SB; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:tra-dw:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:tra-dw:base:auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Derrick White\" #TRA-DW; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:tra-ns:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:tra-ns:base:auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Nick Smith Jr.\" #TRA-NS; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:tra-jp:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:tra-jp:base:auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Julian Phillips\" #TRA-JP; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-ac:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-ac:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Alex Caruso\" #FCS-AC; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:rra-bs:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:rra-bs:base:auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Ben Sheppard\" #RRA-BS; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-bh:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-bh:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Bones Hyland\" #FCS-BH; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:tra-ar:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:tra-ar:base:auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Austin Reaves\" #TRA-AR; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-jw:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-jw:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Jalen Williams\" #FCS-JW; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:84:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:84:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Jaylen Brown\" #84; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:md-17:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:md-17:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Larry Bird\" #MD-17; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:112:bronze:auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:112:bronze:auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Amari Bailey\" #112; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:iw-17:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:iw-17:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Brandon Miller\" #IW-17; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-op:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-op:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Olivier-Maxence Prosper\" #FCS-OP; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:md-11:red:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:md-11:red:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Stephen Curry\" #MD-11; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-tha:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-tha:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Tyrese Haliburton\" #FCS-THA; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:127:bronze:auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:127:bronze:auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Isaiah Wong\" #127; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-kbr:bronze:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-kbr:bronze:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Kobe Brown\" #FCS-KBR; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:rm-so:platinum:no-auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:rm-so:platinum:no-auto:num-1",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Shaquille O'Neal\" #RM-SO; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:ss-sd:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:ss-sd:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Spencer Dinwiddie\" #SS-SD; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:rm-dr:red:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:rm-dr:red:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"D'Angelo Russell\" #RM-DR; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:74:bronze:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:74:bronze:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"LeBron James\" #74; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:ko-18:platinum:no-auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:ko-18:platinum:no-auto:num-1",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Jaime Jaquez Jr.\" #KO-18; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:iw-5:platinum:no-auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:iw-5:platinum:no-auto:num-1",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Giannis Antetokounmpo\" #IW-5; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:107:red:auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:107:red:auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Leonard Miller\" #107; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:ko-17:red:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:ko-17:red:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Jordan Hawkins\" #KO-17; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:iw-14:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:iw-14:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Jalen Brunson\" #IW-14; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:rm-jb:bronze:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:rm-jb:bronze:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Jalen Brunson\" #RM-JB; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:ko-22:red:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:ko-22:red:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Allen Iverson\" #KO-22; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-tma:bronze:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-tma:bronze:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Tyrese Maxey\" #FCS-TMA; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-tma:platinum:no-auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-tma:platinum:no-auto:num-1",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Tyrese Maxey\" #FCS-TMA; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:rm-sh:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:rm-sh:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Scoot Henderson\" #RM-SH; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:115:platinum:auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:115:platinum:auto:num-1",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Sidy Cissoko\" #115; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-js:red:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-js:red:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Jeremy Sochan\" #FCS-JS; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:110:gold:auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:110:gold:auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Gradey Dick\" #110; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:tra-lma:red:auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:tra-lma:red:auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Lauri Markkanen\" #TRA-LMA; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:rm-cs:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:rm-cs:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Collin Sexton\" #RM-CS; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:tra-ncl:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:tra-ncl:base:auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Nic Claxton\" #TRA-NCL; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:tra-mb:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:tra-mb:base:auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Mikal Bridges\" #TRA-MB; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:ss-gw:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:ss-gw:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Grant Williams\" #SS-GW; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:ko-6:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:ko-6:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Donovan Mitchell\" #KO-6; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:rs-ae:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:rs-ae:base:auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Alex English\" #RS-AE; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:ko-20:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:ko-20:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Marcus Sasser\" #KO-20; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-bw:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-bw:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Ben Wallace\" #FCS-BW; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:arch-11:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:arch-11:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Magic Johnson\" #ARCH-11; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:116:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:116:base:auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"GG Jackson\" #116; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:rm-tm:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:rm-tm:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Tyrese Maxey\" #RM-TM; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:rs-tm:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:rs-tm:base:auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Tyrese Maxey\" #RS-TM; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:rm-kd:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:rm-kd:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Kevin Durant\" #RM-KD; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:arch-2:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:arch-2:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Kevin Durant\" #ARCH-2; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:108:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:108:base:auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Colby Jones\" #108; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:tra-cs:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:tra-cs:base:auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Collin Sexton\" #TRA-CS; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:tra-sb:gold:auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:tra-sb:gold:auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Saddiq Bey\" #TRA-SB; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:ko-5:red:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:ko-5:red:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Larry Bird\" #KO-5; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-jt:red:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-jt:red:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Jayson Tatum\" #FCS-JT; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:rm-lj:platinum:no-auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:rm-lj:platinum:no-auto:num-1",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Larry Johnson\" #RM-LJ; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:109:blue:auto:num-15",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:109:blue:auto:num-15",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Julian Phillips\" #109; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-dm:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-dm:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Donovan Mitchell\" #FCS-DM; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-dl:bronze:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-dl:bronze:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Dereck Lively II\" #FCS-DL; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-dn:red:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-dn:red:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Dirk Nowitzki\" #FCS-DN; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:ko-16:platinum:no-auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:ko-16:platinum:no-auto:num-1",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Dereck Lively II\" #KO-16; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:md-1:red:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:md-1:red:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Klay Thompson\" #MD-1; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-ps:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-ps:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Pascal Siakam\" #FCS-PS; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-bs:red:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-bs:red:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Ben Sheppard\" #FCS-BS; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:rm-dw:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:rm-dw:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Dwyane Wade\" #RM-DW; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:rm-dw:platinum:no-auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:rm-dw:platinum:no-auto:num-1",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Dwyane Wade\" #RM-DW; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:iw-18:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:iw-18:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Jaime Jaquez Jr.\" #IW-18; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:111:gold:auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:111:gold:auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Jordan Hawkins\" #111; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:125:red:auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:125:red:auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Terquavion Smith\" #125; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:md-19:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:md-19:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Allen Iverson\" #MD-19; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-da:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-da:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Deandre Ayton\" #FCS-DA; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-as:bronze:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-as:bronze:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Anfernee Simons\" #FCS-AS; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-vw:bronze:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-vw:bronze:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Victor Wembanyama\" #FCS-VW; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:110:red:auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:110:red:auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Gradey Dick\" #110; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:rm-lm:red:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:rm-lm:red:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Lauri Markkanen\" #RM-LM; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:arch-4:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:arch-4:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Stephen Curry\" #ARCH-4; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:tra-bs:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:tra-bs:base:auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Ben Sheppard\" #TRA-BS; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:ko-18:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:ko-18:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Jaime Jaquez Jr.\" #KO-18; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:tra-dd:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:tra-dd:base:auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Donte DiVincenzo\" #TRA-DD; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:rm-gw:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:rm-gw:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Grant Williams\" #RM-GW; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:rm-lj:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:rm-lj:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Larry Johnson\" #RM-LJ; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:109:red:auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:109:red:auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Julian Phillips\" #109; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:tra-mst:bronze:auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:tra-mst:bronze:auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Max Strus\" #TRA-MST; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-dn:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-dn:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Dirk Nowitzki\" #FCS-DN; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:rm-dl:bronze:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:rm-dl:bronze:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Dereck Lively II\" #RM-DL; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:arch-1:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:arch-1:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Nikola Jokić\" #ARCH-1; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-msa:bronze:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-msa:bronze:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Marcus Sasser\" #FCS-MSA; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:rm-cp:red:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:rm-cp:red:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Chris Paul\" #RM-CP; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-aw:platinum:no-auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-aw:platinum:no-auto:num-1",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Andrew Wiggins\" #FCS-AW; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-dr:platinum:no-auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-dr:platinum:no-auto:num-1",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"D'Angelo Russell\" #FCS-DR; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:41:bronze:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:41:bronze:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Jaren Jackson Jr.\" #41; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:tra-msa:red:auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:tra-msa:red:auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Marcus Smart\" #TRA-MSA; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:25:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:25:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Alonzo Mourning\" #25; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-the:bronze:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-the:bronze:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Tyler Herro\" #FCS-THE; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:114:platinum:auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:114:platinum:auto:num-1",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Jaime Jaquez Jr.\" #114; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:tra-kt:red:auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:tra-kt:red:auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Karl-Anthony Towns\" #TRA-KT; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:rm-jb:red:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:rm-jb:red:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Jalen Brunson\" #RM-JB; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:rm-tm:platinum:no-auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:rm-tm:platinum:no-auto:num-1",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Tyrese Maxey\" #RM-TM; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:md-13:red:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:md-13:red:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Kevin Durant\" #MD-13; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:27:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:27:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Shaedon Sharpe\" #27; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:md-18:red:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:md-18:red:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Vince Carter\" #MD-18; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-bse:platinum:no-auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-bse:platinum:no-auto:num-1",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Brice Sensabaugh\" #FCS-BSE; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:13:bronze:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:13:bronze:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Kyle Kuzma\" #13; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:tra-bm:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:tra-bm:base:auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Brandon Miller\" #TRA-BM; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:tra-nv:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:tra-nv:base:auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Nikola Vučević\" #TRA-NV; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:rm-dl:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:rm-dl:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Dereck Lively II\" #RM-DL; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:rra-jc:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:rra-jc:base:auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Jaylen Clark\" #RRA-JC; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:ss-cl:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:ss-cl:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Christian Laettner\" #SS-CL; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-rj:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-rj:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Richard Jefferson\" #FCS-RJ; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:tra-rg:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:tra-rg:base:auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Rudy Gobert\" #TRA-RG; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-jk:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-jk:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Jason Kidd\" #FCS-JK; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-as:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-as:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Anfernee Simons\" #FCS-AS; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:arch-3:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:arch-3:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Jayson Tatum\" #ARCH-3; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-lb:bronze:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-lb:bronze:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Larry Bird\" #FCS-LB; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-jow:bronze:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-jow:bronze:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Jordan Walsh\" #FCS-JOW; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:rm-pp:platinum:no-auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:rm-pp:platinum:no-auto:num-1",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Paul Pierce\" #RM-PP; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:tra-nc:red:auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:tra-nc:red:auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Noah Clowney\" #TRA-NC; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:6:bronze:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:6:bronze:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Larry Johnson\" #6; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-aba:bronze:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-aba:bronze:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Amari Bailey\" #FCS-ABA; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:iw-6:platinum:no-auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:iw-6:platinum:no-auto:num-1",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"LaMelo Ball\" #IW-6; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:md-25:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:md-25:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Brandon Miller\" #MD-25; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:ko-21:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:ko-21:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Dennis Rodman\" #KO-21; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-ac:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-ac:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Alex Caruso\" #FCS-AC; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-jro:platinum:no-auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-jro:platinum:no-auto:num-1",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Jalen Rose\" #FCS-JRO; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:tra-nv:bronze:auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:tra-nv:bronze:auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Nikola Vučević\" #TRA-NV; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:arch-7:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:arch-7:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Kyrie Irving\" #ARCH-7; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:tra-st:bronze:auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:tra-st:bronze:auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Stephen Curry\" #TRA-ST; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:tra-st:red:auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:tra-st:red:auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Stephen Curry\" #TRA-ST; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:rm-cp:bronze:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:rm-cp:bronze:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Chris Paul\" #RM-CP; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:rm-as:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:rm-as:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Alperen Sengun\" #RM-AS; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:71:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:71:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Bennedict Mathurin\" #71; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:70:bronze:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:70:bronze:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Russell Westbrook\" #70; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:rm-dr:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:rm-dr:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"D'Angelo Russell\" #RM-DR; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-mj:red:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-mj:red:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Magic Johnson\" #FCS-MJ; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:md-10:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:md-10:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Desmond Bane\" #MD-10; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:arch-9:red:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:arch-9:red:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Jimmy Butler\" #ARCH-9; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-jjj:bronze:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-jjj:bronze:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Jaime Jaquez Jr.\" #FCS-JJJ; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:tra-kmi:gold:auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:tra-kmi:gold:auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Khris Middleton\" #TRA-KMI; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:ss-cl:platinum:no-auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:ss-cl:platinum:no-auto:num-1",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Christian Laettner\" #SS-CL; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-jk:red:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-jk:red:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Jason Kidd\" #FCS-JK; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:tra-oa:bronze:auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:tra-oa:bronze:auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"OG Anunoby\" #TRA-OA; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:tra-oa:platinum:auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:tra-oa:platinum:auto:num-1",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"OG Anunoby\" #TRA-OA; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:125:platinum:auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:125:platinum:auto:num-1",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Terquavion Smith\" #125; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:97:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:97:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Allen Iverson\" #97; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:ko-9:platinum:no-auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:ko-9:platinum:no-auto:num-1",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Kevin Durant\" #KO-9; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:tra-km:gold:auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:tra-km:gold:auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Kris Murray\" #TRA-KM; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-ds:platinum:no-auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-ds:platinum:no-auto:num-1",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Domantas Sabonis\" #FCS-DS; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-tp:bronze:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-tp:bronze:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Tony Parker\" #FCS-TP; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-mg:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-mg:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Manu Ginobili\" #FCS-MG; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:ss-vc:red:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:ss-vc:red:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Vince Carter\" #SS-VC; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-bse:bronze:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-bse:bronze:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Brice Sensabaugh\" #FCS-BSE; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:ko-23:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:ko-23:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"John Stockton\" #KO-23; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:rm-cs:red:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:rm-cs:red:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Collin Sexton\" #RM-CS; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:105:gold:auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:105:gold:auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Bilal Coulibaly\" #105; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-dw:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-dw:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Dominique Wilkins\" #FCS-DW; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:rra-nc:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:rra-nc:base:auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Noah Clowney\" #RRA-NC; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:122:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:122:base:auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Nick Smith Jr.\" #122; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:rs-ac:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:rs-ac:base:auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Alex Caruso\" #RS-AC; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:tra-tha:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:tra-tha:base:auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Tim Hardaway Jr.\" #TRA-THA; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:tra-jwa:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:tra-jwa:base:auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Jarace Walker\" #TRA-JWA; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-bs:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-bs:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Ben Sheppard\" #FCS-BS; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:td-2:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:td-2:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Russell Westbrook\" #TD-2; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:rm-th:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:rm-th:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Tyler Herro\" #RM-TH; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-bbe:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-bbe:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Bradley Beal\" #FCS-BBE; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:rm-lm:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:rm-lm:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Lauri Markkanen\" #RM-LM; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:tra-ncl:bronze:auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:tra-ncl:bronze:auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Nic Claxton\" #TRA-NCL; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-mw:red:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-mw:red:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Mark Williams\" #FCS-MW; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:rm-zl:bronze:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:rm-zl:bronze:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Zach Lavine\" #RM-ZL; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:ko-7:platinum:no-auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:ko-7:platinum:no-auto:num-1",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Kyrie Irving\" #KO-7; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-jst:platinum:no-auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-jst:platinum:no-auto:num-1",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Julian Strawther\" #FCS-JST; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:arch-8:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:arch-8:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Jalen Green\" #ARCH-8; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:61:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:61:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Tyrese Haliburton\" #61; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:md-9:platinum:no-auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:md-9:platinum:no-auto:num-1",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Tyrese Haliburton\" #MD-9; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:td-2:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:td-2:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Russell Westbrook\" #TD-2; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:md-8:red:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:md-8:red:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"James Harden\" #MD-8; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-bh:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-bh:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Bones Hyland\" #FCS-BH; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:rm-dr:bronze:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:rm-dr:bronze:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"D'Angelo Russell\" #RM-DR; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-ar:red:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-ar:red:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Austin Reaves\" #FCS-AR; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:ko-24:red:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:ko-24:red:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Magic Johnson\" #KO-24; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:rm-th:platinum:no-auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:rm-th:platinum:no-auto:num-1",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Tyler Herro\" #RM-TH; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:md-20:red:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:md-20:red:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Ray Allen\" #MD-20; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:21:bronze:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:21:bronze:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Rudy Gobert\" #21; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:tra-rg:bronze:auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:tra-rg:bronze:auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Rudy Gobert\" #TRA-RG; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:111:blue:auto:num-15",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:111:blue:auto:num-15",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Jordan Hawkins\" #111; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-ls:red:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-ls:red:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Latrell Sprewell\" #FCS-LS; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:md-14:red:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:md-14:red:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Chet Holmgren\" #MD-14; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:tra-ld:red:auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:tra-ld:red:auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Luguentz Dort\" #TRA-LD; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-jho:platinum:no-auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-jho:platinum:no-auto:num-1",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Jett Howard\" #FCS-JHO; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:tra-tm:red:auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:tra-tm:red:auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Tyrese Maxey\" #TRA-TM; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-kd:bronze:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-kd:bronze:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Kevin Durant\" #FCS-KD; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:md-22:platinum:no-auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:md-22:platinum:no-auto:num-1",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Scoot Henderson\" #MD-22; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:rm-sh:red:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:rm-sh:red:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Scoot Henderson\" #RM-SH; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:101:bronze:auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:101:bronze:auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Victor Wembanyama\" #101; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:115:red:auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:115:red:auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Sidy Cissoko\" #115; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:ko-4:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:ko-4:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Jayson Tatum\" #KO-4; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-lb:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-lb:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Larry Bird\" #FCS-LB; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:rs-cl:base:auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:rs-cl:base:auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Caris LeVert\" #RS-CL; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-kmu:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-kmu:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Kris Murray\" #FCS-KMU; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-sh:base:no-auto",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-sh:base:no-auto",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Scoot Henderson\" #FCS-SH; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:rm-pp:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:rm-pp:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Paul Pierce\" #RM-PP; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:rm-pp:red:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:rm-pp:red:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Paul Pierce\" #RM-PP; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:112:platinum:auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:112:platinum:auto:num-1",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Amari Bailey\" #112; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:112:red:auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:112:red:auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Amari Bailey\" #112; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:iw-6:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:iw-6:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"LaMelo Ball\" #IW-6; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-der:platinum:no-auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-der:platinum:no-auto:num-1",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Dennis Rodman\" #FCS-DER; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:iw-15:red:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:iw-15:red:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Kyrie Irving\" #IW-15; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:tra-tha:gold:auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:tra-tha:gold:auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Tim Hardaway Jr.\" #TRA-THA; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-ag:platinum:no-auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-ag:platinum:no-auto:num-1",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Aaron Gordon\" #FCS-AG; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:iw-1:platinum:no-auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:iw-1:platinum:no-auto:num-1",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Stephen Curry\" #IW-1; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:tra-st:platinum:auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:tra-st:platinum:auto:num-1",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Stephen Curry\" #TRA-ST; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:ko-1:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:ko-1:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Stephen Curry\" #KO-1; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-ho:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-ho:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Hakeem Olajuwon\" #FCS-HO; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:ss-th:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:ss-th:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Tyrese Haliburton\" #SS-TH; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-so:red:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-so:red:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Shaquille O'Neal\" #FCS-SO; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:iw-5:red:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:iw-5:red:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Giannis Antetokounmpo\" #IW-5; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:tra-kt:platinum:auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:tra-kt:platinum:auto:num-1",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Karl-Anthony Towns\" #TRA-KT; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-kg:platinum:no-auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-kg:platinum:no-auto:num-1",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Kevin Garnett\" #FCS-KG; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-rj:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-rj:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Richard Jefferson\" #FCS-RJ; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-jb:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-jb:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Jalen Brunson\" #FCS-JB; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:94:bronze:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:94:bronze:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Carmelo Anthony\" #94; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:iw-10:red:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:iw-10:red:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Allen Iverson\" #IW-10; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-kd:platinum:no-auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-kd:platinum:no-auto:num-1",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Kevin Durant\" #FCS-KD; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:arch-2:red:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:arch-2:red:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Kevin Durant\" #ARCH-2; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:arch-2:platinum:no-auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:arch-2:platinum:no-auto:num-1",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Kevin Durant\" #ARCH-2; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:iw-2:red:no-auto:num-5",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:iw-2:red:no-auto:num-5",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Kevin Durant\" #IW-2; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:md-13:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:md-13:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Kevin Durant\" #MD-13; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:113:bronze:auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:113:bronze:auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Rayan Rupert\" #113; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-ds:bronze:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-ds:bronze:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Domantas Sabonis\" #FCS-DS; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-mg:platinum:no-auto:num-1",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-mg:platinum:no-auto:num-1",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Manu Ginobili\" #FCS-MG; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:rm-sk:bronze:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:rm-sk:bronze:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Shawn Kemp\" #RM-SK; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-kk:gold:no-auto:num-10",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-kk:gold:no-auto:num-10",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Kyle Kuzma\" #FCS-KK; destination read as vacant 2026-09-07"
+    },
+    {
+      "id": "hiq:basketball:2025:topps:fcs-kk:bronze:no-auto:num-25",
+      "action": "reslug",
+      "to": "hiq:basketball:2023:topps:fcs-kk:bronze:no-auto:num-25",
+      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
+      "evidence": "player \"Kyle Kuzma\" #FCS-KK; destination read as vacant 2026-09-07"
+    }
+  ]
+}
