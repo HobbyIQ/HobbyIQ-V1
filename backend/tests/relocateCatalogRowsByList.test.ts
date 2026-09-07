@@ -49,6 +49,13 @@ const L = require_(lane) as {
   occupiedByDifferentCard: (incumbent: unknown, row: unknown) => boolean;
   crossProductFields: (id: string, to: string) => { setKey?: string };
   idSetKey: (slug: string) => string;
+  confirmRetired: (
+    cat: unknown,
+    id: string,
+    pk: string,
+    opts?: { retry?: (fn: () => unknown) => unknown; wait?: (ms: number) => Promise<void> },
+  ) => Promise<{ gone: boolean; via: string; attempts: number; hits?: number }>;
+  RETIRE_READ_BACK_ATTEMPTS: number;
 };
 
 // ── the runner contract ──────────────────────────────────────────────────────
@@ -843,5 +850,134 @@ describe("the basketball list moves all 60 rows onto the ruled key", () => {
 
     // And both lists say so, for whoever runs them.
     expect(JSON.stringify(doc.rulings)).toMatch(/re-mint|catalog list/i);
+  });
+});
+
+// ── the read-back that lags is not a failed delete ───────────────────────────
+
+/**
+ * THE 2026-09-07 RETIRE READ-BACK INCIDENT, pinned.
+ *
+ * Two hobbymonitor donruss-optic applies of this lane -- run 34077802430
+ * (RETIRED 999, failed 1) and run 34086888973 (written 998, failed 2) --
+ * reported three rows "still readable after the retire". Point-read at
+ * (id, id) and queried cross-partition by id afterwards, all three were GONE,
+ * zero rows anywhere in card_catalog, with all three 2024 checklist twins
+ * present. The deletes had landed; the immediate read-back had been served by
+ * a replica that had not applied them yet. ~0.1-0.2% of retires.
+ *
+ * These pin the fix at the level the incident happened: a fake container whose
+ * read shows the row ONCE and then 404s must come out a SUCCESS with the retry
+ * counted, and one that never stops showing the row must still FAIL. The
+ * second half is the load-bearing one -- a retry loop that cannot fail is not
+ * a verify, and this lane DELETES.
+ */
+describe("a lagging read-back is retried, a resident row still fails", () => {
+  const { confirmRetired, RETIRE_READ_BACK_ATTEMPTS } = L;
+  const gone = Object.assign(new Error("NotFound"), { code: 404 });
+  const noWait = async () => {}; // the test does not spend the backoff
+
+  /** A container whose point read returns `row` for the first `showTimes`
+   *  reads and 404s after, and whose query returns `queryRows`. */
+  const fakeCat = (showTimes: number, queryRows: unknown[] = []) => {
+    const state = { reads: 0, queries: 0 };
+    return {
+      state,
+      item: (id: string, pk: string) => ({
+        read: async () => {
+          state.reads++;
+          if (state.reads <= showTimes) return { resource: { id, cardId: pk } };
+          throw gone;
+        },
+      }),
+      items: {
+        query: () => ({ fetchAll: async () => { state.queries++; return { resources: queryRows }; } }),
+      },
+    };
+  };
+
+  it("a read-back that 404s straight away is a plain success, no retry counted", async () => {
+    const cat = fakeCat(0);
+    const res = await confirmRetired(cat, "hiq:x", "hiq:x", { wait: noWait });
+    expect(res).toMatchObject({ gone: true, via: "point-read", attempts: 1 });
+    // One read, and NO query: the cheap path stays cheap for the 99.8%.
+    expect(cat.state.reads).toBe(1);
+    expect(cat.state.queries).toBe(0);
+  });
+
+  it("a row readable ONCE then gone succeeds, and the retry is counted", async () => {
+    const cat = fakeCat(1);
+    const res = await confirmRetired(cat, "hiq:basketball:2025:donruss-optic:27:checkerboard:no-auto", "hiq:basketball:2025:donruss-optic:27:checkerboard:no-auto", { wait: noWait });
+    expect(res.gone).toBe(true);
+    expect(res.attempts).toBe(2);
+    // `via` must NAME the retry -- that is what the banner counts and what
+    // tells an operator this was replica lag rather than a clean delete.
+    expect(res.via).toBe("point-read-retry-1");
+    expect(cat.state.queries).toBe(0);
+  });
+
+  it("a row still readable on the last attempt is settled by the query", async () => {
+    // Never 404s on the point read, but the query -- an up-to-date replica
+    // set, every partition -- finds nothing. The row is gone.
+    const cat = fakeCat(Number.MAX_SAFE_INTEGER, []);
+    const res = await confirmRetired(cat, "hiq:x", "hiq:x", { wait: noWait });
+    expect(res).toMatchObject({ gone: true, via: "query" });
+    expect(cat.state.reads).toBe(RETIRE_READ_BACK_ATTEMPTS);
+    expect(cat.state.queries).toBe(1);
+  });
+
+  it("a row that NEVER goes away still FAILS — the retry cannot rescue a live row", async () => {
+    // The point read shows it forever AND the query finds it. This is the
+    // real "still readable" case the verify exists for, and no amount of
+    // waiting may turn it into a success.
+    const cat = fakeCat(Number.MAX_SAFE_INTEGER, [{ id: "hiq:x" }]);
+    const res = await confirmRetired(cat, "hiq:x", "hiq:x", { wait: noWait });
+    expect(res.gone).toBe(false);
+    expect(res.hits).toBe(1);
+    expect(cat.state.reads).toBe(RETIRE_READ_BACK_ATTEMPTS);
+  });
+
+  it("a row alive under a FOREIGN partition key is not called gone", async () => {
+    // The point read at (id, id) 404s because the row lives under another pk.
+    // Absence from ONE partition is not absence from the container, and a
+    // deleting lane that reported this as retired would be lying.
+    const cat = {
+      item: () => ({ read: async () => { throw gone; } }),
+      items: { query: () => ({ fetchAll: async () => ({ resources: [{ id: "hiq:x" }] }) }) },
+    };
+    // The first read 404s, so the cheap path returns before the query --
+    // which is correct for a row deleted at the pk the retire used. The
+    // guard that matters is that the verify reads at the SAME pk the delete
+    // wrote to, pinned on the lane source below.
+    const res = await confirmRetired(cat, "hiq:x", "hiq:x", { wait: noWait });
+    expect(res.gone).toBe(true);
+  });
+
+  it("the verify reads at the key the DELETE used, not at (id, id)", () => {
+    const src = readFileSync(lane, "utf8");
+    // retireCatalogRow's pk rule is `cardId ? String(cardId) : id`; a verify
+    // that assumed (id, id) would 404 on every foreign-pk row and report a
+    // delete that never happened as a success.
+    expect(src).toContain("confirmRetired(cat, id, row.cardId ?? id");
+    expect(src).toContain("retireCatalogRow(cat, id, row.cardId ?? id");
+  });
+
+  it("keeps the verify: a retire is still only counted on a read", () => {
+    const src = readFileSync(lane, "utf8");
+    expect(src).toContain("the row is still readable after the retire");
+    // The success branch is gated on the read-back, never on the call
+    // returning: `retired++` for a retire happens inside `if (back.gone)`.
+    expect(src).toContain("if (back.gone) {");
+    expect(src).toContain("read-back needed a retry");
+  });
+
+  it("the retried read-backs are counted in the banner, apart from failed", () => {
+    const src = readFileSync(lane, "utf8");
+    expect(src).toContain("readBackRetried");
+    expect(src).toContain("NOT failed");
+    // Parity (#1920): a retried read-back is a SUCCESS, so it is already
+    // inside `retired` and must NOT be added to the reconciliation again.
+    expect(src).toContain("written = retired + resluged");
+    expect(src).not.toContain("+ readBackRetried");
   });
 });
