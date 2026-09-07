@@ -130,35 +130,62 @@ const NOT_ROW_WRITERS = new Set(["cosmos-throughput", "mutation-valuation-core"]
  * Sorted. May only shrink.
  */
 const UNRECONCILED = new Set([
-  "auto-label-catalog-variants",
-  "auto-quarantine-contaminated-pools",
-  "backfill-autostyle-from-title",
-  "backfill-bowman-mega-box-reslug",
+  // FOURTEEN NAMES LEFT THIS LIST on 2026-09-07 in the #1944 ratchet's wave 2
+  // (auto-label-catalog-variants, auto-quarantine-contaminated-pools,
+  // backfill-autostyle-from-title, backfill-bowman-mega-box-reslug,
+  // backfill-cardsight-title-identity, backfill-cardsight-unverified-flag,
+  // backfill-catalog-driven-canonicalize, backfill-composite-fields,
+  // backfill-composite-v3, backfill-searchtokens-all-sports,
+  // backfill-stage2-title-parser, dedupe-catalog-by-hobbyiq,
+  // fix-catalog-parallel-as-player, normalize-catalog-schema), for the same
+  // reason retire-flattened-attestations left it in wave 1: budgeting a lane
+  // means giving it a STOP, and a lane that can stop half way MUST be able to
+  // say so. `intended = written + skipped + failed` is the only honest banner
+  // for a partial run, and each of these gained a real reportWrites() rather
+  // than a token one.
+  //
+  // SEVERAL OF THEM COULD NOT HAVE RECONCILED BEFORE, because they had no
+  // written count to reconcile WITH -- backfill-catalog-driven-canonicalize,
+  // backfill-stage2-title-parser, backfill-bowman-mega-box-reslug and
+  // backfill-cardsight-unverified-flag each counted only FAILURES on their
+  // upsert, so a run reported `wouldChange: N` and said nothing at all about
+  // how many of those N landed. The success counter is part of the same change.
+  // ELEVEN MORE NAMES LEFT THIS LIST on 2026-09-07 in the #1944 ratchet's wave
+  // 3 (backfill-grade-from-ch-daily, backfill-grade-from-title,
+  // backfill-insert-setkey, backfill-isauto-cross-sport,
+  // backfill-isauto-from-cardnumber, backfill-parallel-enrichment,
+  // backfill-printrun-from-title, backfill-stage3-price-sanity,
+  // backfill-sub-channel-vocabulary, baseline-pool-snapshot,
+  // migrate-cardsight-to-staging, promote-sold-comps-trust-tier,
+  // reaudit-cardsight-unverified), for the same reason the fourteen in wave 2
+  // did: budgeting a lane means giving it a STOP, and a lane that can stop half
+  // way MUST be able to say so.
+  //
+  // TWO SHAPES OF RECONCILIATION, AND THE DIFFERENCE IS LOAD-BEARING. A lane
+  // that DISCOVERS its work page by page cannot honestly report a `not reached`
+  // count -- there is no denominator -- so it reconciles over what it SAW:
+  // `intended = written + failed`, where intended is the rows it decided to
+  // write. A lane that builds a PLAN first (scan, then patch) knows its
+  // denominator, so it reconciles `intended = written + failed + not reached`.
+  // Both balance after a partial run; neither is interchangeable with the other
+  // (feedback: a slice is not a sibling counter).
+  //
+  // SEVERAL COULD NOT HAVE RECONCILED BEFORE, for the same reason four of
+  // wave 2's could not: they had no written count to reconcile WITH.
+  // backfill-grade-from-title, backfill-sub-channel-vocabulary,
+  // backfill-stage3-price-sanity and promote-sold-comps-trust-tier each counted
+  // only FAILURES on their upsert; reaudit-cardsight-unverified counted its
+  // VERDICTS (cleared / kept) and nothing at all about how many reached the
+  // container; baseline-pool-snapshot swallowed every upsert error into a
+  // `/* skip */` and could print "complete: 0 slugs recorded" on a run whose
+  // writes all failed, and exit 0. Four more --
+  // backfill-grade-from-ch-daily, backfill-insert-setkey,
+  // backfill-isauto-cross-sport, backfill-isauto-from-cardnumber and
+  // backfill-printrun-from-title -- reported `runInParallel`'s `ok` as applied,
+  // which counts a worker callback that did not throw rather than a write. The
+  // success counters are part of the same change.
   "backfill-canonicalize-chrome-slugs",
-  "backfill-cardsight-title-identity",
-  "backfill-cardsight-unverified-flag",
-  "backfill-catalog-driven-canonicalize",
-  "backfill-composite-fields",
-  "backfill-composite-v3",
-  "backfill-grade-from-ch-daily",
-  "backfill-grade-from-title",
-  "backfill-insert-setkey",
-  "backfill-isauto-cross-sport",
-  "backfill-isauto-from-cardnumber",
-  "backfill-parallel-enrichment",
-  "backfill-printrun-from-title",
-  "backfill-searchtokens-all-sports",
-  "backfill-stage2-title-parser",
-  "backfill-stage3-price-sanity",
-  "backfill-sub-channel-vocabulary",
   "backfill-verify-queue-grades",
-  "baseline-pool-snapshot",
-  "dedupe-catalog-by-hobbyiq",
-  "fix-catalog-parallel-as-player",
-  "migrate-cardsight-to-staging",
-  "normalize-catalog-schema",
-  "promote-sold-comps-trust-tier",
-  "reaudit-cardsight-unverified",
   "rescore-anomalies",
   "reslug-bowman-paper-vs-bowman",
   "reslug-brand-root-refinement",

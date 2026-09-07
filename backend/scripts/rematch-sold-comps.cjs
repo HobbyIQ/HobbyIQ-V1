@@ -111,6 +111,41 @@
  * persistVendorSalesToPool, writeReconciliation).
  */
 "use strict";
+
+// ── THE LANE NARRATES ITS OWN START, BEFORE IT CAN FAIL ──────────────────────
+//
+// CF-AN-EMPTY-LOG-IS-NOT-A-BUDGET-KILL (#1913 follow-up, 2026-09-07).
+//
+// 19 of 121 rematch-sold-comps runner runs (15.7%) ended in #1913's KILLED
+// branch with an EMPTY /tmp/backfill.log, and the branch's diagnostic --
+// `tail -n 20 /tmp/backfill.log` -- printed nothing at all. An operator reading
+// that run saw "KILLED before finish" with no evidence, and the natural reading
+// of a KILLED-at-the-ceiling banner is a 150-minute budget kill. It was not.
+// Those runs died in 55-70 SECONDS, at the very first env check.
+//
+// The mechanism is one line of the runner:
+//
+//     node "backend/scripts/${{ inputs.script }}.cjs" | tee /tmp/backfill.log
+//
+// `tee` sees STDOUT ONLY. Every startup refusal in this file is a
+// `console.error` + `process.exit(2)` -- STDERR -- and it fires BEFORE the
+// banner, which is the first thing this script writes to stdout. So a refusal
+// wrote the log file and left it EMPTY: exactly the state the KILLED branch
+// reads as "neither the budget marker nor finishLane", i.e. a kill.
+//
+// THE PIN. This is a SOURCE LITERAL printed to STDOUT before any require that
+// touches Cosmos, the catalog or dist/ -- before, in fact, any require at all.
+// It cannot be skipped by a failing import, a missing dist/, an OOM at module
+// load, or an env refusal, because nothing above it can throw. An empty
+// /tmp/backfill.log is therefore no longer reachable from this lane: if the log
+// is empty the process never started, and if this line is present but nothing
+// follows it, the run died in startup and the log says so.
+//
+// The runner's KILLED branch reads this line to say "started but died at
+// <phase>" instead of implying a budget kill. Keep the text stable -- the
+// runner and the tests both match on `rematch-sold-comps: STARTUP`.
+console.log("rematch-sold-comps: STARTUP ok -- module load beginning (pid " + process.pid + ")");
+
 const path = require("path");
 const fs = require("fs");
 const crypto = require("crypto");
@@ -503,28 +538,121 @@ function deriveIdentity(row, deps) {
 }
 
 // ── main ───────────────────────────────────────────────────────────────────
+/**
+ * A STOPPED SLOT MUST SAY WHERE ITS TIME WENT (2026-09-07).
+ *
+ * "stopped at the 120-minute budget" told a reader nothing that would let them
+ * act. Slot 12 printed exactly that beside `written=0`, and the fleet's own
+ * annotation guessed the wrong cause from it -- it read the pair as a
+ * truncated apply and re-dispatched a REPORT, when the slot had in fact walked
+ * its shard and found none of the class it was armed for.
+ *
+ * So the stop line carries the arithmetic that distinguishes those two: how
+ * many rows were classified, how fast, and how much of the shard that covered.
+ * A slot that is SLOW and a slot that is EMPTY produce visibly different lines.
+ */
+function stopAccounting({ stopReason, stats, expected, startedAt }) {
+  if (!stopReason) return null;
+  const secs = Math.max(0.001, (Date.now() - startedAt) / 1000);
+  const looked = stats.seen + stats.prefiltered;
+  const reach = stats.seen + stats.prefiltered + stats.otherSlot;
+  const rps = looked / secs;
+  const lines = [stopReason];
+  lines.push(`  where the time went: ${f(stats.seen)} row(s) classified` +
+    (stats.prefiltered ? ` + ${f(stats.prefiltered)} prefiltered out` : "") +
+    (stats.filtered ? ` + ${f(stats.filtered)} filtered out` : "") +
+    ` in ${(secs / 60).toFixed(1)}m  = ${rps.toFixed(0)} in-slot rows/s`);
+  lines.push(`  shard coverage:      ${f(reach)} row(s) reached of ${f(expected)} measured at capture` +
+    (expected ? `  (${((reach / expected) * 100).toFixed(1)}%)` : ""));
+  // The line that names the two causes apart. A slot that saw its whole shard
+  // did not run out of time -- it ran out of candidates.
+  if (expected && reach >= expected) {
+    lines.push(`  this slot REACHED ITS WHOLE SHARD; the budget stopped the tail, not the sweep.`);
+  } else if (expected) {
+    lines.push(`  this slot did NOT reach its whole shard -- ${f(Math.max(0, expected - reach))} row(s) were never read.`);
+  }
+  return lines.join("\n");
+}
+
+// ── A REFUSAL THE RUNNER'S LOG CAN SEE ───────────────────────────────────────
+//
+// CF-AN-EMPTY-LOG-IS-NOT-A-BUDGET-KILL (2026-09-07). The runner pipes this
+// script through `tee /tmp/backfill.log`, and `tee` sees STDOUT ONLY. Every
+// refusal below used to be `console.error` alone, so the runner's log kept no
+// trace of WHY a run stopped -- and #1913's KILLED branch, whose whole
+// diagnostic is `tail -n 20 /tmp/backfill.log`, printed an empty tail and
+// implied a 150-minute budget kill for a run that died in 55 seconds.
+//
+// `refuse()` writes the SAME text to BOTH streams: stderr keeps the Actions
+// red-annotation behaviour operators already rely on, and stdout puts it in
+// the log the KILLED branch reads. `phase` names where the lane died, so the
+// runner can say "started but died at <phase>" rather than guessing.
+// `code` keeps the house convention that a missing COSMOS_CONNECTION_STRING
+// exits 1 (every other script in backend/scripts does), while a refusal of a
+// dispatched INPUT exits 2. Only the stream the text lands on is changing here;
+// the exit codes are exactly what they were.
+function refuse(phase, lines, code = 2) {
+  const head = `FATAL [phase=${phase}]:`;
+  for (const l of [`${head} ${lines[0]}`, ...lines.slice(1)]) {
+    console.error(l);
+    console.log(l);
+  }
+  // STARTUP REFUSED is the runner's machine-readable hook. Keep the spelling
+  // stable -- backfill-runner.yml greps for it and so do this lane's tests.
+  const marker = `rematch-sold-comps: STARTUP REFUSED at phase=${phase} -- the lane never began work (this is NOT a budget kill).`;
+  console.error(marker);
+  console.log(marker);
+  process.exit(code);
+}
+
 async function main() {
   if (MODE !== "census" && MODE !== "apply-improve") {
-    console.error(`FATAL: MODE is required and has no default -- 'census' (read only) or 'apply-improve'. Got ${JSON.stringify(MODE)}.`);
-    process.exit(2);
+    refuse("mode", [`MODE is required and has no default -- 'census' (read only) or 'apply-improve'. Got ${JSON.stringify(MODE)}.`]);
   }
   // THE CLASS SCOPE IS PARSED BEFORE ANYTHING IS READ, and a scope the apply
   // cannot read is a REFUSAL, not a default. See APPLY_SCOPE_RAW above.
   const applyScope = K.parseApplyScope(APPLY_SCOPE_RAW);
   if (MODE === "apply-improve" && !applyScope.ok) {
-    console.error(`FATAL: MODE=apply-improve needs a class scope on the 'scope' input, and ${JSON.stringify(APPLY_SCOPE_RAW)} is not one.`);
-    console.error(`       ${applyScope.reason}`);
-    console.error(`       Use scope=base-eviction (the class the audit gate cleared), scope=improve, or scope=both.`);
-    console.error(`       The runner's inherited default 'refractor' is deliberately NOT accepted -- an apply says which class it writes.`);
-    process.exit(2);
+    refuse("class-scope", [
+      `MODE=apply-improve needs a class scope on the 'scope' input, and ${JSON.stringify(APPLY_SCOPE_RAW)} is not one.`,
+      `       ${applyScope.reason}`,
+      `       Use scope=base-eviction (the class the audit gate cleared), scope=improve, or scope=both.`,
+      `       The runner's inherited default 'refractor' is deliberately NOT accepted -- an apply says which class it writes.`,
+      `       IF THIS RUN WAS A SELF-RELAUNCH: the relaunch must forward -f scope=<class>. A relaunch that omits it`,
+      `       inherits the workflow default 'refractor' and lands here, having done no work at all.`,
+    ]);
   }
   const ARMED = applyScope.classes;
   const REVERTING = MODE === "apply-improve" && applyScope.revert === true;
+  /**
+   * THE SCOPED-APPLY PREFILTER (2026-09-07).
+   *
+   * A scoped apply writes ONE class and counts the rest, but it used to
+   * CLASSIFY every row of its shard to find out which was which -- and
+   * classification is the expensive half (a derivation, a catalog point read,
+   * and the per-product map reads behind the clash and flagship gates). Slot
+   * 12 of the 2026-09-07 fleet burned its whole 120-minute budget classifying
+   * 350,267 rows to discover that ZERO were GRADE-FROM-TITLE, then reported
+   * "budget hit ... written=0" -- a report that says nothing about why.
+   *
+   * `K.applyPrefilterFor` returns the NECESSARY CONDITION for the single armed
+   * kind, read off the stored row with no derivation and no catalog read, and
+   * built from the very predicates the evidence function's own legs call. A
+   * row it refuses would have failed that leg anyway.
+   *
+   * ONLY IN apply-improve, and only for a single-kind scope. MODE=census must
+   * count every class -- that is what a census IS -- so it never filters, and
+   * a multi-kind scope gets null because the rows are then a union of two
+   * populations. IMPROVE and BASE-EVICTION have no cheap necessary condition
+   * and no entry, so `scope=improve` and `scope=both` are untouched.
+   */
+  const APPLY_PREFILTER = MODE === "apply-improve" && !REVERTING
+    ? K.applyPrefilterFor(ARMED) : null;
 
   const conn = process.env.COSMOS_CONNECTION_STRING;
-  if (!conn) { console.error("FATAL: COSMOS_CONNECTION_STRING not set"); process.exit(1); }
+  if (!conn) { refuse("cosmos-env", ["COSMOS_CONNECTION_STRING not set"], 1); }
   if (!Number.isFinite(SLOT) || !Number.isFinite(SLOTS) || SLOT < 0 || SLOT >= SLOTS) {
-    console.error(`FATAL: SLOT must be 0..${SLOTS - 1}; got SLOT=${SLOT} SLOTS=${SLOTS}`); process.exit(2);
+    refuse("slot-range", [`SLOT must be 0..${SLOTS - 1}; got SLOT=${SLOT} SLOTS=${SLOTS}`]);
   }
   // THE REVERT PASS BRANCHES BEFORE THE SHARD TABLE, and deliberately.
   //
@@ -551,11 +679,10 @@ async function main() {
     return;
   }
   if (SLOTS !== SHARD_TABLE.slots.length) {
-    console.error(`FATAL: SLOTS=${SLOTS} but the measured shard table has ${SHARD_TABLE.slots.length} slots. The table IS the axis -- re-measure before changing it.`);
-    process.exit(2);
+    refuse("shard-table", [`SLOTS=${SLOTS} but the measured shard table has ${SHARD_TABLE.slots.length} slots. The table IS the axis -- re-measure before changing it.`]);
   }
   const units = unitsForSlot(SLOT);
-  if (!units.length) { console.error(`FATAL: slot ${SLOT} owns no units in the measured table.`); process.exit(2); }
+  if (!units.length) { refuse("shard-units", [`slot ${SLOT} owns no units in the measured table.`]); }
   const q = slotQuery(units);
   if (!q) { console.log(`slot ${SLOT} has no units matching YEARS=${YEARS.join(",")} -- nothing to do.`); return; }
 
@@ -1166,7 +1293,7 @@ async function main() {
   const yfvByDecade = new Map(), yfvBySetKey = new Map(), yfvBySport = new Map(), yfvSamples = [];
   const sfpByPair = new Map(), sfpBySetKey = new Map(), sfpSamples = [];
   let splitTotal = 0;
-  const stats = { seen: 0, otherSlot: 0, filtered: 0, intended: 0, written: 0, skipped: 0, failed: 0, duplicatesLeft: 0, alreadyGone: 0, notReached: 0 };
+  const stats = { seen: 0, otherSlot: 0, filtered: 0, prefiltered: 0, intended: 0, written: 0, skipped: 0, failed: 0, duplicatesLeft: 0, alreadyGone: 0, notReached: 0 };
   const bump = (m, k, n = 1) => m.set(k, (m.get(k) ?? 0) + n);
 
   /**
@@ -1235,6 +1362,17 @@ async function main() {
       // derivation: a row this dispatch was not asked to look at costs no
       // parser call and no catalog read. See SPORTS_FILTER above.
       if (!rowPassesFilter(row, deps)) { stats.filtered++; continue; }
+      // THE SCOPED-APPLY PREFILTER, applied after slot membership and the
+      // in-slot filter and before ANY derivation or catalog read. A row that
+      // cannot be the one class this apply is armed for costs nothing but the
+      // two field tests behind it. Counted separately from `filtered` and
+      // `otherSlot`: "another slot owns it", "this dispatch declined to look
+      // at it" and "it cannot be the class we are writing" are three different
+      // facts and the banner prints all three.
+      if (APPLY_PREFILTER && !APPLY_PREFILTER({ row, stored: storedIdentity(row, deps) })) {
+        stats.prefiltered++;
+        continue;
+      }
       if (LIMIT && stats.seen >= LIMIT) { stopReason = stopReason ?? `stopped at the LIMIT of ${f(LIMIT)} rows`; break page; }
       stats.seen++;
       const stored = storedIdentity(row, deps);
@@ -1407,6 +1545,17 @@ async function main() {
   if (ROW_FILTER_ON) {
     console.log(`  in-slot row filter: ${f(stats.filtered)} row(s) skipped by filter, ${f(stats.seen)} classified  (sports=${SPORTS_FILTER.join(",") || "any"} setkey_like=${SETKEY_LIKE || "any"})`);
   }
+  // THE PREFILTER SAYS WHAT IT SKIPPED AND WHY, or a scoped apply reads as an
+  // empty shard. A slot that classified 2,800 of its 350,000 rows did not fail
+  // to see them: it proved, on the row itself, that they cannot be the class
+  // it is armed to write. Printed whenever the prefilter is on -- including
+  // when it skipped nothing -- so the reader never has to infer its presence.
+  if (APPLY_PREFILTER) {
+    const looked = stats.prefiltered + stats.seen;
+    const share = looked ? `${((stats.seen / looked) * 100).toFixed(2)}%` : "-";
+    console.log(`  scoped-apply prefilter: ${f(stats.prefiltered)} row(s) cannot be ${[...ARMED].join("+")} and were skipped before any derivation or catalog read`);
+    console.log(`                          ${f(stats.seen)} of ${f(looked)} in-slot rows classified (${share}) -- the rest failed a necessary condition read off the row itself`);
+  }
   for (const klass of [K.AGREE, K.IMPROVE, K.CONFLICT, K.UNDERIVABLE]) {
     const prot = byTier.get(`${klass}/${K.PROTECTED}`) ?? 0, auto = byTier.get(`${klass}/${K.AUTO}`) ?? 0;
     console.log(`  ${klass.padEnd(12)} ${f(counts[klass]).padStart(11)}  ${pct(counts[klass]).padStart(7)}   AUTO ${f(auto).padStart(10)}  PROTECTED ${f(prot).padStart(6)}`);
@@ -1523,6 +1672,14 @@ async function main() {
     // The filter is part of the census's identity: two censuses of the same
     // slot are only comparable when they were taken through the same filter.
     rowFilter: ROW_FILTER_ON ? { sports: SPORTS_FILTER, setkeyLike: SETKEY_LIKE || null, skipped: stats.filtered } : null,
+    // THE PREFILTER IS PART OF THE CENSUS'S IDENTITY TOO. A scoped apply's
+    // census counted only the rows that could be its class, so its class
+    // totals are NOT comparable with an unfiltered census of the same slot --
+    // and an artifact that does not say so invites exactly that comparison.
+    // Null when every in-slot row was classified.
+    applyPrefilter: APPLY_PREFILTER
+      ? { armed: [...ARMED], skipped: stats.prefiltered, classified: total }
+      : null,
     counts, byTier: Object.fromEntries(byTier), defects: Object.fromEntries(defects),
     // Subclass counts are INCLUDED in `counts` -- BASE-EVICTION is a narrowing
     // of CONFLICT, so an auditor summing both would double-count.
@@ -1566,7 +1723,7 @@ async function main() {
   // ── census stops here. There is no write path in this mode. ───────────────
   if (MODE === "census") {
     console.log(`\nREAD ONLY -- the census writes nothing to the pool.`);
-    if (stopReason) console.log(`\n${stopReason}`);
+    if (stopReason) console.log(`\n${stopAccounting({ stopReason, stats, expected, startedAt: started })}`);
     return;
   }
 
@@ -1897,7 +2054,7 @@ async function main() {
     await writeSettleMarkers(ledger, doc, conn);
   }
   if (APPLY) reportWrites({ job: "rematch-sold-comps", intended: stats.intended, written: stats.written, skipped: stats.skipped, failed: stats.failed });
-  if (stopReason) console.log(`\n${stopReason}`);
+  if (stopReason) console.log(`\n${stopAccounting({ stopReason, stats, expected, startedAt: started })}`);
 }
 
 /**
@@ -2208,6 +2365,14 @@ if (require.main === module) // CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809). S
 // Runs 33975816175/25863/34391/40824 lost that bet AFTER reconciling clean.
 main()
   .then((ctx) => finishLane(0, ctx || {}))
-  .catch(async (e) => { console.error("FATAL:", e?.stack || e?.message); 
+  .catch(async (e) => {
+    // CF-AN-EMPTY-LOG-IS-NOT-A-BUDGET-KILL (2026-09-07). The runner reads
+    // /tmp/backfill.log, which `tee` fills from STDOUT ONLY -- so a crash
+    // reported to stderr alone left the runner's log without the one thing an
+    // operator needs. Mirror it. finishLane(3) still writes its own exit line,
+    // so the KILLED branch sees a genuine finish witness rather than a kill.
+    const msg = `FATAL: ${e?.stack || e?.message}`;
+    console.error(msg);
+    console.log(msg);
     await finishLane(3);
   });

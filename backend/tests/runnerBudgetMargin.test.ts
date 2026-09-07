@@ -210,53 +210,118 @@ const unbudgetedWriters: string[] = [];
  *  be KILLED rather than stopped if it is ever dispatched over more work than
  *  one 150-minute step holds.
  *
- *  59 -> 44. The fifteen struck below were converted together and are absent
- *  for the same reason relocate-catalog-rows-by-list is: they now budget, so
- *  putting any of them back would make this suite red. They were taken in
- *  BLAST-RADIUS ORDER -- what a killed run of each would leave half-written --
- *  rather than in the order they happened to be listed:
+ *  59 -> 44 -> 29 -> 14, in four waves. Every struck name is absent for the
+ *  same reason relocate-catalog-rows-by-list is: it now budgets, so putting any
+ *  of them back would make this suite red.
  *
- *    portfolio (user documents, the container a half-write is worst in):
- *      conform-holdings-to-catalog, reap-orphan-price-trails,
+ *  WAVE 1 (59 -> 44) took the lanes in BLAST-RADIUS ORDER:
+ *    portfolio: conform-holdings-to-catalog, reap-orphan-price-trails,
  *      backfill-holding-ebay-ids, backfill-canonicalize-chrome-slugs
- *    sold_comps + card_catalog (a half-move splits a pool AND its address):
- *      repair-refractor-mislabel, merge-bare-colour-parallels,
- *      retire-impossible-grade-rows, retire-flattened-attestations
- *    card_catalog (the address space itself):
- *      dedupe-catalog-partition-shadows, backfillCatalogCardYearFromSlug,
- *      normalize-catalog-format
- *    sold_comps (the pool):
- *      relocate-pool-rows-by-list, recover-chrome-collapse-damage,
+ *    sold_comps + card_catalog: repair-refractor-mislabel,
+ *      merge-bare-colour-parallels, retire-impossible-grade-rows,
+ *      retire-flattened-attestations
+ *    card_catalog: dedupe-catalog-partition-shadows,
+ *      backfillCatalogCardYearFromSlug, normalize-catalog-format
+ *    sold_comps: relocate-pool-rows-by-list, recover-chrome-collapse-damage,
  *      revert-d30-base-onto-one-of-one, reslug-tcg-out-of-sports-namespace
  *
- *  THE ORDER THE REMAINING 44 ARE OWED IN is the order they are written below:
+ *  WAVE 2 (44 -> 29) took the next fifteen IN OWED ORDER, i.e. straight off the
+ *  top of this list as wave 1 left it, so the ranking was read rather than
+ *  re-derived:
+ *    portfolio: reprice-user-holdings -- the SANCTIONED reprice path and the
+ *      last remaining writer of that container
+ *    two-container: backfill-catalog-driven-canonicalize,
+ *      backfill-stage2-title-parser
+ *    card_catalog: auto-label-catalog-variants,
+ *      backfill-searchtokens-all-sports, dedupe-catalog-by-hobbyiq,
+ *      fix-catalog-parallel-as-player, normalize-catalog-schema
+ *    sold_comps: auto-quarantine-contaminated-pools,
+ *      backfill-autostyle-from-title, backfill-bowman-mega-box-reslug,
+ *      backfill-cardsight-title-identity, backfill-cardsight-unverified-flag,
+ *      backfill-composite-fields, backfill-composite-v3
+ *
+ *  FIVE OF WAVE 2 WERE NOT UNCLOCKED -- THEY WERE CLOCKED WRONG, which this
+ *  census could not see and is worth recording so the next reader does not
+ *  mistake the absence of RUN_MINUTES for the absence of a cap.
+ *  auto-label-catalog-variants, backfill-searchtokens-all-sports,
+ *  dedupe-catalog-by-hobbyiq, fix-catalog-parallel-as-player and
+ *  normalize-catalog-schema each carried a LOCAL `BACKFILL_MAX_MINUTES` +
+ *  `timeExpired()` cap, checked at the loop TOP with no unit reserve, and
+ *  signalled continuation with `RELAUNCH_NEEDED=true|false` instead of the
+ *  marker. That protocol is sound only while a lane cannot be killed: a killed
+ *  step prints no line at all, so `RN` parses EMPTY and the runner's
+ *  RELAUNCH_NEEDED step falls through to a `::warning::` that does NOT fail the
+ *  job -- #1906's "a killed run is not a finished run" defect living in a
+ *  second protocol, where relaunchNeverCallsAKilledRunFinished.test.ts was not
+ *  looking for it (that pin's population is the MARKER-keyed steps, and its
+ *  docblock explicitly excludes RELAUNCH_NEEDED lanes on the grounds that they
+ *  read a positive signal of work remaining -- true, and beside the point once
+ *  the lane can be killed mid-sweep). All five now take the shared clock and
+ *  the marker, which puts them inside that pin's population.
+ *
+ *  WAVE 3 (29 -> 14) took the next fifteen IN OWED ORDER, i.e. straight off the
+ *  top of this list as wave 2 left it, so the ranking was again read rather
+ *  than re-derived. All fifteen write `sold_comps`, which is what the top of
+ *  the list held:
+ *    field backfills: backfill-grade-from-ch-daily, backfill-grade-from-title,
+ *      backfill-printrun-from-title, backfill-sub-channel-vocabulary
+ *    slug rewrites: backfill-insert-setkey, backfill-isauto-cross-sport,
+ *      backfill-isauto-from-cardnumber, backfill-parallel-enrichment
+ *    flag stampers: backfill-stage3-price-sanity,
+ *      promote-sold-comps-trust-tier, reaudit-cardsight-unverified
+ *    statistics: baseline-pool-snapshot, refresh-calibration-multipliers
+ *    other containers: migrate-cardsight-to-staging (cardsight_staging),
+ *      nightly-reingest-top-ch-cards (measures only -- see below)
+ *
+ *  TWO OF WAVE 3 WERE CLOCKED WRONG RATHER THAN UNCLOCKED, the same class wave
+ *  2 found five of. reaudit-cardsight-unverified and
+ *  nightly-reingest-top-ch-cards each carried a local `BACKFILL_MAX_MINUTES` +
+ *  `timeExpired()` cap, checked at the loop TOP with no unit reserve, and
+ *  signalled continuation with `RELAUNCH_NEEDED=true|false` instead of the
+ *  marker -- a protocol whose third arm is a `::warning::` that does NOT fail
+ *  the job, so a KILLED step (which prints no line at all) parses EMPTY and the
+ *  run goes green with its work half done.
+ *
+ *  AND nightly-reingest-top-ch-cards WAS WORSE THAN THAT: it printed
+ *  `RELAUNCH_NEEDED=` and NO STEP IN THE RUNNER EVER READ IT. It is not on the
+ *  catalog-expansion gate and never was, so for as long as it has been
+ *  dispatched its continuation signal has gone to the log and nowhere else --
+ *  a 25-minute cap that stopped a top-1000 walk it cannot finish in one pass,
+ *  said so, and was not acted on. Both now take the shared clock and the
+ *  marker, which puts them inside relaunchNeverCallsAKilledRunFinished's
+ *  population.
+ *
+ *  FOUR OF WAVE 3 REFUSE THEIR WRITE PHASE after a scan-phase stop --
+ *  backfill-stage3-price-sanity, promote-sold-comps-trust-tier,
+ *  baseline-pool-snapshot and refresh-calibration-multipliers. Each computes
+ *  its plan from a STATISTIC over a whole-container or whole-window scan (a
+ *  per-slug median, a percentile set, a median of per-identity price ratios),
+ *  and a statistic over PART of a pool is a DIFFERENT number rather than a
+ *  smaller one. Their row floors do not save them: a partial pool can clear
+ *  MIN_POOL_SIZE / MIN_SAMPLES / identityN >= 3 and still misstate the value.
+ *  refresh-calibration-multipliers is the sharpest of the four -- its output is
+ *  the multiplier the pricing engine applies, with a `confidence` label derived
+ *  from the same partial count, so a wrong fit can be stamped "verified".
+ *
+ *  THE ORDER THE REMAINING 14 ARE OWED IN is the order they are written below:
  *  portfolio first, then the two-container lanes, then card_catalog, then
  *  sold_comps, then the lanes whose writes land outside the three pricing
  *  containers. Within a tier they are alphabetical, so the next builder takes
- *  the top of the list rather than re-deriving the ranking. reprice-user-
- *  holdings is deliberately first: it is the only remaining lane that writes
- *  `portfolio`, and it is on the daily-refresh cron as well as the dropdown.
+ *  the top of the list rather than re-deriving the ranking. No `portfolio`
+ *  writer remains: wave 2 took the last one, and no plain `sold_comps` field
+ *  or slug writer remains either: wave 3 took those.
  *
- *  NONE of these 44 is local-only. Every one is reachable from the runner's
+ *  NONE of these 14 is local-only. Every one is reachable from the runner's
  *  `script` dropdown, and the eBay lanes (run-ebay-order-poll, -purchase-sync,
  *  -finances-enrichment) were deliberately MOVED onto the runner from the API
  *  process, so de-listing them is not available as a shortcut -- they have to
  *  be budgeted where they are. */
 const KNOWN_UNBUDGETED_WRITE_LANES = [
-  "reprice-user-holdings", "backfill-catalog-driven-canonicalize", "backfill-stage2-title-parser",
-  "auto-label-catalog-variants", "backfill-searchtokens-all-sports", "dedupe-catalog-by-hobbyiq",
-  "fix-catalog-parallel-as-player", "normalize-catalog-schema", "auto-quarantine-contaminated-pools",
-  "backfill-autostyle-from-title", "backfill-bowman-mega-box-reslug", "backfill-cardsight-title-identity",
-  "backfill-cardsight-unverified-flag", "backfill-composite-fields", "backfill-composite-v3",
-  "backfill-grade-from-ch-daily", "backfill-grade-from-title", "backfill-insert-setkey",
-  "backfill-isauto-cross-sport", "backfill-isauto-from-cardnumber", "backfill-parallel-enrichment",
-  "backfill-printrun-from-title", "backfill-stage3-price-sanity", "backfill-sub-channel-vocabulary",
-  "baseline-pool-snapshot", "migrate-cardsight-to-staging", "nightly-reingest-top-ch-cards",
-  "promote-sold-comps-trust-tier", "reaudit-cardsight-unverified", "refresh-calibration-multipliers",
-  "refresh-market-signals", "rescore-anomalies", "reslug-cross-product-mis-slug", "reslug-suspicious-setkeys",
-  "score-all-sold-comps", "backfill-ch-catalog-additions", "backfill-verify-queue-grades",
-  "bulk-import-ch-daily-to-sold-comps", "drain-staging-backlog", "ingest-2026-bowman-auto-checklist",
-  "ingest-product-checklist", "run-ebay-finances-enrichment", "run-ebay-order-poll", "run-ebay-purchase-sync",
+  "refresh-market-signals", "rescore-anomalies", "reslug-cross-product-mis-slug",
+  "reslug-suspicious-setkeys", "score-all-sold-comps", "backfill-ch-catalog-additions",
+  "backfill-verify-queue-grades", "bulk-import-ch-daily-to-sold-comps", "drain-staging-backlog",
+  "ingest-2026-bowman-auto-checklist", "ingest-product-checklist", "run-ebay-finances-enrichment",
+  "run-ebay-order-poll", "run-ebay-purchase-sync",
 ];
 
 /** A lane that can WRITE. The signal is the runner's own gate (`BACKFILL_APPLY`
@@ -322,10 +387,11 @@ describe("every budgeted runner lane stops under the action ceiling", () => {
     // on 59 lanes nobody in that change had measured, and a pin that is red on
     // arrival is a pin somebody deletes — which would cost the rule entirely.
     //
-    // The ratchet is doing its job: 59 the day it was frozen, 44 now. The
-    // fifteen that left were MEASURED — each one's unit identified, its reserve
-    // sized to that unit's worst case, its marker and reconcile driven by the
-    // per-lane assertions below — which is the only way a name may leave.
+    // The ratchet is doing its job: 59 the day it was frozen, 44 after wave 1,
+    // 29 after wave 2, 14 after wave 3. Every name that left was MEASURED —
+    // each one's unit identified, its reserve sized to that unit's worst case,
+    // its marker and reconcile driven by the per-lane assertions below — which
+    // is the only way a name may leave.
     //
     // So the debt is WRITTEN DOWN and frozen. Removing a lane from this list is
     // the only edit that keeps the suite green: adding a name fails below, and

@@ -33,6 +33,53 @@ const backend = __dirname + "/..";
 const { CosmosClient } = require(path.join(backend, "node_modules/@azure/cosmos"));
 const { upsertCalibration } = require(path.join(backend, "dist/services/portfolioiq/marketMomentum.service.js"));
 const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
+// CF-A-KILLED-JOB-CANNOT-REPORT-PROGRESS + CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE.
+// The clock and the exit come from the SHARED helper, never a local copy.
+const { budget, finishLane } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
+
+// -- THE CLOCK --------------------------------------------------------------
+//
+// CF-A-KILLED-JOB-CANNOT-REPORT-PROGRESS. This lane writes the GRADE AND COLOUR
+// MULTIPLIERS the pricing engine applies -- the empirical calibration doctrine's
+// only sanctioned source -- and declared no budget at all. Its scan reads every
+// composite-bearing sale in a 90-day window, so before this it could only ever
+// end by being KILLED at the 150-minute ceiling: no marker, no reconcile, no
+// finishLane line, and #1913's KILLED branch then withholding the re-dispatch.
+//
+// >>> THE WRITE PHASE REFUSES AFTER A SCAN-PHASE STOP. <<<
+//
+// This is the sharpest instance of #1947's lesson on this wave, because the
+// output IS the statistic and the statistic prices real cards. Every multiplier
+// is `median of per-identity ratios` -- median(target) / median(baseline)
+// within a (sport, year, product, cardNumber) identity, then the median across
+// identities. A window read HALF WAY THROUGH does not produce half a ratio: it
+// produces a DIFFERENT ratio, computed over whichever identities the scan
+// happened to reach, and it is written as the calibration.
+//
+// AND THE GUARDS THAT LOOK LIKE THEY SAVE IT DO NOT. `identityN < 3` and the
+// per-product `productRows.length < 30` are ROW FLOORS: a partial scan can put
+// three identities and thirty rows into a product and still misstate its Gold
+// premium, exactly as #1951 found for auto-quarantine-contaminated-pools'
+// MIN_SAMPLES. Worse, `confidence` is derived from the same partial count, so a
+// wrong multiplier can be stamped "verified" -- a well-formed wrong row that
+// nothing downstream can tell from a correct one, and that the engine then
+// multiplies every affected card's FMV by until the next weekly refit.
+//
+// So a scan stop exits 5 having written NOTHING, and still prints the marker --
+// the relaunch's marker arm runs BEFORE its outcome check, so a refusal
+// re-dispatches and the next run re-reads the window from the top.
+//
+// THE UNIT IS ONE PAGE of up to 5,000 rows of a TWELVE-FIELD PROJECTION. Once
+// the scan completes, the five compute passes are in-memory apart from a
+// handful of small upsertCalibration writes -- one per product plus four
+// globals -- so the reserve is sized to the scan page: 60 seconds.
+//
+// VERIFY_MS is nominal: this lane reads NOTHING after its work.
+// Worst case 110 + 1 + 1 + 1 = 113m under the 150m ceiling.
+const RUN_MINUTES = Number(process.env.RUN_MINUTES || 110);
+const RESERVE_MS = Number(process.env.RESERVE_MS || 60 * 1000);
+const VERIFY_MS = Number(process.env.VERIFY_MS || 60 * 1000);
+const CLOCK = budget({ minutes: RUN_MINUTES, reserveMs: RESERVE_MS, verifyMs: VERIFY_MS });
 
 // CF-RUNNER-FLAG-HYGIENE (D18, 2026-08-29). Default-on meant `apply=false`
 // under the runner still wrote — the runner exports BACKFILL_APPLY, not
@@ -62,11 +109,16 @@ async function fetchSample(sc, sinceIso) {
     { maxItemCount: 5000 }
   );
   const rows = [];
+  let stopped = false;
   while (it.hasMoreResults()) {
+    // THE PRE-CHECK, before the page is fetched rather than after it is
+    // buffered. A stop here is FATAL to the calibration -- see THE CLOCK above
+    // -- not merely a shorter run, so the flag travels back to main().
+    if (CLOCK.outOfClock()) { stopped = true; break; }
     const { resources } = await it.fetchNext();
     if (Array.isArray(resources)) rows.push(...resources);
   }
-  return rows;
+  return { rows, stopped };
 }
 
 function median(arr) {
@@ -273,13 +325,43 @@ async function main() {
 
   console.log(`[refresh-calibration-multipliers v2 (per-card ratios)]`);
   console.log(`  apply: ${APPLY}`);
-  console.log(`  window: ${WINDOW_DAYS} days\n`);
+  console.log(`  window: ${WINDOW_DAYS} days`);
+  console.log(`  ${CLOCK.describe()}\n`);
 
   const now = Date.now();
   const computedAt = new Date(now).toISOString();
   const sinceIso = new Date(now - WINDOW_DAYS * 86400000).toISOString();
-  const rows = await fetchSample(sc, sinceIso);
+  const { rows, stopped: scanStoppedAtBudget } = await fetchSample(sc, sinceIso);
   console.log(`  ${rows.length} sales with composite in window\n`);
+
+  // -- THE REFUSAL -----------------------------------------------------------
+  //
+  // A ratio over part of a window is a DIFFERENT ratio, not a smaller one, and
+  // this lane's output is nothing BUT ratios -- written as the multipliers the
+  // pricing engine applies to every affected card until the next weekly refit,
+  // with a `confidence` label derived from the same partial count. The row
+  // floors (identityN >= 3, productRows.length >= 30) do not save it: a partial
+  // scan can clear both and still misstate the premium.
+  //
+  // Exit 5 is a VERDICT, not a crash (#1955's outcome (d)). The marker is
+  // printed FIRST, because the relaunch's marker arm runs BEFORE its outcome
+  // check -- so this re-dispatches and the next run re-reads the window from
+  // the top with a full clock.
+  if (scanStoppedAtBudget) {
+    console.log(`
+  stopped at the ${CLOCK.RUN_MINUTES}-minute budget -- `
+      + `the ${WINDOW_DAYS}-day window scan is UNFINISHED; the relaunch continues from here`);
+    console.error("  REFUSING TO FIT: every multiplier here is a median of per-identity price"
+      + " RATIOS, and a ratio computed over part of the window is a DIFFERENT number rather than"
+      + " a less precise one. Writing it would stamp a wrong premium -- possibly labelled"
+      + " `verified`, since confidence reads the same partial count -- onto the calibration the"
+      + " engine multiplies FMVs by. Nothing was written.");
+    if (APPLY) {
+      reportWrites({ job: "refresh-calibration-multipliers", intended: 0, written: 0, skipped: 0, failed: 0 });
+    }
+    process.exitCode = 5;
+    return { client, budget: CLOCK };
+  }
 
   await computeColorLadder(rows, computedAt);
   await computeFinishPremium(rows, computedAt);
@@ -290,7 +372,33 @@ async function main() {
   console.log(`\n════════════════ SUMMARY ════════════════`);
   console.log(`  computedAt: ${computedAt}`);
   if (!APPLY) console.log(`\n*** DRY-RUN. Set CALIBRATION_APPLY=true to write. ***`);
-  if (APPLY) reportWrites({ job: "refresh-calibration-multipliers", ...writes });
+  if (APPLY) {
+    // The existing reconciliation (D18) is unchanged: intended = calibration
+    // docs handed to upsertCalibration, written = calls that resolved. It
+    // BALANCES BY CONSTRUCTION here because a throwing call aborts the run, and
+    // the refusal above is the only path that can reduce the fit -- and it
+    // returns before any of this.
+    console.log(`  reconciled: intended ${writes.intended} = written ${writes.written} + failed 0`);
+    if (writes.written !== writes.intended) {
+      console.error("  !! RECONCILE MISMATCH -- a calibration doc was handed over but never landed");
+      process.exitCode = 4;
+    }
+    reportWrites({ job: "refresh-calibration-multipliers", ...writes });
+  }
+
+  // NO BUDGET MARKER ON THE SUCCESS PATH, DELIBERATELY. The only way this lane
+  // stops early is the refusal above, which prints the marker itself and exits
+  // 5. Once the window is fully read the five compute passes are in-memory
+  // apart from a handful of small upserts, so there is no partial-fit state to
+  // continue from: the run either fits the whole window or fits none of it.
+
+  return { client, budget: CLOCK };
 }
 
-main().catch(e => { console.error(e); process.exit(1); });
+// CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809). Success exits too.
+main()
+  .then((ctx) => finishLane(process.exitCode || 0, ctx || { budget: CLOCK }))
+  .catch(async (e) => {
+    console.error(e);
+    await finishLane(1, { budget: CLOCK });
+  });
