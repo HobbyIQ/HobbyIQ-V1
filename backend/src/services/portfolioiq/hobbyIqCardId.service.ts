@@ -708,6 +708,27 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
     // and one that omits it ("2024 NBA Hoops") must reach the same pool, and
     // before this they did not — the vocabulary answered `panini-hoops` and
     // returned before the reconciliation was ever consulted.
+    // HAUNTED HOOPS IS ITS OWN PRODUCT (#1715 class, 2026-09-07). It MUST
+    // precede the two Hoops rules that follow, or the family word in its own
+    // name eats it -- the same ordering law as Black Diamond Rookie Edition
+    // before Black Diamond, and Ultra before Fleer.
+    //
+    // Anchored on "haunted" alone, with the maker word optional, because the
+    // corpus spells it three ways and all three are one product: "2024 panini
+    // haunted hoops" (checklistinsider), "2024/25 Panini Haunted Hoops
+    // Basketball" (hobbymonitor) and the bare "Haunted Hoops" sellers type.
+    // Before this rule those reached `panini-haunted-hoops`, `nba-hoops` and
+    // `nba-hoops` respectively -- one product, two pools, split by whether the
+    // season carried a slash. No rival product contains the word "haunted", so
+    // the bare form is safe; the Pokemon set `gold-series-haunted-mine` is a
+    // TCG alias resolved on a different path and never reaches this table.
+    [/haunted-hoops/, "panini-haunted-hoops"],
+    // Hoops Premium Stock, the second specialization `nba-hoops` swallowed
+    // and the larger one: 14,970 strict checklistinsider rows. Anchored on
+    // "hoops-premium-stock" and NEVER on the stock words alone -- "Premium
+    // Stock" is a stock Prizm borrows too, and normalizeSetKey("2023 Panini
+    // Prizm Premium Stock") must keep answering `panini-prizm`.
+    [/hoops-premium-stock/, "nba-hoops-premium-stock"],
     [/panini-hoops/, "nba-hoops"],
     [/panini-prestige/, "panini-prestige"],
     [/panini-elite-extra-edition/, "panini-elite-extra-edition"],
@@ -938,6 +959,10 @@ function bareAliasPatterns(): Array<[RegExp, string]> {
     // — see the only-improve doctrine.
     [/(^|-)rookies-(?:and-)?stars(-|$)/, "panini-rookies-and-stars"],
     [/(^|-)crusade(-|$)/, "panini-crusade"],
+    // Haunted Hoops before bare Hoops, for the same reason it leads in the
+    // strict tier: the specialization must never lose to its own family word.
+    [/(^|-)haunted-hoops(-|$)/, "panini-haunted-hoops"],
+    [/(^|-)hoops-premium-stock(-|$)/, "nba-hoops-premium-stock"],
     [/(^|-)hoops(-|$)/, "nba-hoops"],
     [/(^|-)prestige(-|$)/, "panini-prestige"],
     [/(^|-)elite-extra-edition(-|$)/, "panini-elite-extra-edition"],

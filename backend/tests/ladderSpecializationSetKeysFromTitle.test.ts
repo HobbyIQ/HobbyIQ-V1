@@ -148,6 +148,30 @@ export const MINTS: ReadonlyArray<readonly [string, string]> = [
   ["1992 Score Rookie and Traded Mike Piazza #T1", "score-rookie-and-traded"],
   ["Alex Rodriguez 1998 Score Rookie & Traded #RT30 Mariners", "score-rookie-and-traded"],
   ["1990 Score Rookie & Traded Baseball #26T Base", "score-rookie-and-traded"],
+
+  // -- panini-haunted-hoops (8) ---------------------------------------------
+  // #1715 class, 2026-09-07. The corpus spells this product THREE ways and all
+  // three are here, because before the ruling they reached three different
+  // keys: the checklistinsider setName landed `panini-haunted-hoops` by a
+  // slugify accident, the hobbymonitor split-season form landed `nba-hoops`,
+  // and the bare form landed `nba-hoops`. Verbatim prod shapes are marked.
+  ["2023 Panini Haunted Hoops Basketball #23 Base", "panini-haunted-hoops"],      // verbatim, pool
+  ["2024 Panini Haunted Hoops Basketball #227 Orange", "panini-haunted-hoops"],   // verbatim, pool
+  ["2024/25 Panini Haunted Hoops Basketball #97 Base", "panini-haunted-hoops"],   // hobbymonitor setName shape
+  ["2024 panini haunted hoops #182 Holo Bat", "panini-haunted-hoops"],            // checklistinsider setName shape
+  ["2024-25 Panini Haunted Hoops Slime #40 Paul George", "panini-haunted-hoops"],
+  ["2024-25 Haunted Hoops Holo Webs #146 Alperen Sengun", "panini-haunted-hoops"],
+  ["Haunted Hoops Basketball #29 Holo Trick-or-Treat", "panini-haunted-hoops"],
+  ["2024 Panini Haunted Hoops #182 Herbert Jones /399", "panini-haunted-hoops"],
+
+  // -- nba-hoops-premium-stock (6) ------------------------------------------
+  // The larger of the two swallows: 14,970 strict checklistinsider rows.
+  ["2023 nba hoops premium stock #1 Red Ice Prizm", "nba-hoops-premium-stock"],   // checklistinsider setName shape
+  ["2023-24 Panini NBA Hoops Premium Stock #150 Green Prizm", "nba-hoops-premium-stock"],
+  ["2023/24 Hoops Premium Stock Basketball #77 Orange Prizm", "nba-hoops-premium-stock"],
+  ["Panini Hoops Premium Stock Gold Vinyl Prizm #12", "nba-hoops-premium-stock"],
+  ["2023-24 NBA Hoops Premium Stock Premium Nebula Prizm #300", "nba-hoops-premium-stock"],
+  ["2023 Hoops Premium Stock Red Seismic Prizm #45 Victor Wembanyama", "nba-hoops-premium-stock"],
 ];
 
 /**
@@ -163,6 +187,27 @@ const NEGATIVES: ReadonlyArray<readonly [string, string]> = [
   ["2022 Topps Chrome Prism Refractor Julio Rodriguez #189", "topps-chrome"],
   ["2021 Topps Chrome Update Series Prism Refractor #USC12", "topps-chrome"],
   ["2022 Panini Prizm Baseball Bobby Witt Jr #22", "panini-prizm"],
+
+  // -- the Hoops family word must keep the FLAGSHIP (#1715 class, 2026-09-07)
+  // Ruling a specialization is only safe if the family it nests under is
+  // untouched. These are the shapes that must NOT move: the flagship spelled
+  // with the maker, without it, bare, and with the sport word.
+  ["2024 Panini NBA Hoops Basketball #1 Base", "nba-hoops"],
+  ["2024 NBA Hoops #55 Victor Wembanyama", "nba-hoops"],
+  ["2024-25 Hoops #12 Purple", "nba-hoops"],
+  ["2024 Panini Hoops Basketball #200 Teal Explosion", "nba-hoops"],
+  // "Hoops Winter" is NOT ruled: ZERO checklist-backed catalog rows carry it
+  // (measured 2026-09-07), so it keeps the flagship key rather than minting a
+  // product no checklist stands behind — CF-COUNT-BY-SOURCE-NOT-ROW-COUNT and
+  // "blank means unknown, never a guess". 1,490 pool titles say it; they are
+  // LISTED for acquisition, not ruled here.
+  ["2024-25 Hoops Winter #33 Base", "nba-hoops"],
+  ["2024-25 Panini NBA Hoops Winter Basketball #7", "nba-hoops"],
+  // -- "Premium Stock" is a STOCK other Panini products borrow ---------------
+  // The rule is gated on the Hoops product word for exactly this reason: an
+  // unanchored "premium stock" rule would file Prizm cards into a Hoops pool.
+  ["2023 Panini Prizm Premium Stock #14 Silver", "panini-prizm"],
+  ["2022-23 Panini Prizm Premium Stock Basketball #99", "panini-prizm"],
 
   // -- "glossy" is 56.6% not Fleer ------------------------------------------
   ["1985 Garbage Pail Kids Original Series 1 Glossy #8a", "unknown"],
@@ -234,6 +279,8 @@ describe("CF-A-DEAD-LADDER-EDGE-REPAIRS-NOTHING — the parser mints the nine", 
       "fleer-glossy", "fleer-tiffany", "fleer-update-glossy", "fleer-update-tiffany",
       "pacific-prism", "pacific-crown-collection", "pacific-gold-crown-die-cuts",
       "upper-deck-minors", "upper-deck-black-diamond", "score-rookie-and-traded",
+      // #1715 class, 2026-09-07 — the two specializations `nba-hoops` swallowed.
+      "panini-haunted-hoops", "nba-hoops-premium-stock",
     ];
     for (const k of TAUGHT) expect(counts.get(k) ?? 0, k).toBeGreaterThanOrEqual(5);
     // and the corpus mints nothing it did not declare.
@@ -306,6 +353,9 @@ describe("MUTATION — each rule is load-bearing", () => {
       "pacific-gold-crown-die-cuts": "pacific",
       "upper-deck-minors": "upper-deck", "upper-deck-black-diamond": "upper-deck",
       "score-rookie-and-traded": "score",
+      // #1715 class, 2026-09-07 — both nest under the NBA Hoops flagship.
+      "panini-haunted-hoops": "nba-hoops",
+      "nba-hoops-premium-stock": "nba-hoops",
     };
     for (const [title, key] of MINTS) {
       const fam = FAMILY_OF[key];

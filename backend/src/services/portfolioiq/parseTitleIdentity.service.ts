@@ -3474,6 +3474,31 @@ function inferFamilySetKeyFromTitle(title: string, cardNumber?: string | null): 
   // the reason this block already states: most specific first.
   if (/donruss\s+elite|panini\s+elite\b/i.test(t)) return "Donruss Elite";
   if (/panini\s+donruss|\bdonruss\b/i.test(t)) return "Panini Donruss";
+  // THE TWO HOOPS SPECIALIZATIONS (#1715 class, 2026-09-07), ABOVE THE BARE
+  // PRIZM ARM AND ABOVE THE HOOPS ARM FURTHER DOWN -- "most specific first",
+  // and this position is load-bearing for BOTH neighbours:
+  //
+  //   below /\bprizm\b/  "2023 NBA Hoops Premium Stock Red Ice Prizm #45"
+  //                      returns Panini Prizm, because EVERY Premium Stock
+  //                      parallel is Prizm-named (Premium Nebula Prizm, Gold
+  //                      Vinyl Prizm, Red Seismic Prizm). The PARALLEL word
+  //                      would beat the PRODUCT word. Caught by the mutation
+  //                      pin in ladderSpecializationSetKeysFromTitle.test.ts,
+  //                      not by reading -- the rule looked right one screen
+  //                      lower and was wrong.
+  //   below /\bhoops\b/  the family word in each product's own name swallows
+  //                      it, which is the #1715 defect this repairs.
+  //
+  // Measured read-only 2026-09-07: 4,653 sold_comps rows whose own titles read
+  // "Panini Haunted Hoops" were priced inside the NBA Hoops flagship pool, and
+  // 9,205 pool titles say "Premium Stock".
+  //
+  // Both maker words are OPTIONAL, for the reason Exquisite states: vendors
+  // elide them. "Haunted" is safe bare -- no rival product's name contains it.
+  // "Premium Stock" is NOT: it names a STOCK that Prizm borrows, so that rule
+  // is gated on the Hoops product word and never on the stock words alone.
+  if (/haunted\s+hoops/i.test(t)) return "Panini Haunted Hoops";
+  if (/hoops\s+premium\s+stock/i.test(t)) return "Panini NBA Hoops Premium Stock";
   if (/panini\s+prizm|\bprizm\b/i.test(t)) return "Panini Prizm";
   if (/topps/.test(t)) return "Topps";
   // CF-INFER-SET-POKEMON-GUARD (Drew, 2026-08-03). Bowman is the
