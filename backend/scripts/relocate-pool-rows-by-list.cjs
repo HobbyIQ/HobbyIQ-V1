@@ -114,6 +114,11 @@ async function main() {
   const {
     relocateSoldComp, stripSystem, contentHashOf,
   } = require(path.join(__dirname, "lib/relocate-sold-comp.cjs"));
+  const { patchSoldCompFields } = require(path.join(__dirname, "lib/patch-sold-comp-fields.cjs"));
+  // The same predicate relocateSoldComp reaches through its own loader: a
+  // REPOINT rewrites an identity field, so the destination is judged as an
+  // address before it is written. Never a second copy of the rule.
+  const { guardSoldCompDoc } = require(path.join(backend, "dist/services/portfolioiq/splitIdentityWriteGuard.js"));
 
   const conn = process.env.COSMOS_CONNECTION_STRING;
   if (!conn) { console.error("FATAL: COSMOS_CONNECTION_STRING not set"); process.exit(1); }
@@ -201,13 +206,13 @@ async function main() {
       console.log(`      why: ${String(e.evidence ?? "").slice(0, 150)}`);
       if (APPLY) {
         try {
-          await retry(() => pool.item(id, from).patch([
-            { op: "set", path: "/flaggedWrong", value: true },
-            { op: "set", path: "/flaggedReason", value: "dedup-superseded" },
-            { op: "set", path: "/dedupSupersededBy", value: retire },
-            { op: "set", path: "/dedupReason", value: String(e.evidence ?? "title states the other product") },
-            { op: "set", path: "/dedupAt", value: new Date().toISOString() },
-          ]));
+          await retry(() => patchSoldCompFields(pool, id, from, {
+            flaggedWrong: true,
+            flaggedReason: "dedup-superseded",
+            dedupSupersededBy: retire,
+            dedupReason: String(e.evidence ?? "title states the other product"),
+            dedupAt: new Date().toISOString(),
+          }));
           retired++;
         } catch (err) { failed++; console.error(`      FAILED: ${String(err?.message ?? err).slice(0, 70)}`); }
       } else { retired++; }
@@ -226,12 +231,12 @@ async function main() {
       console.log(`      why: ${String(e.evidence ?? "").slice(0, 150)}`);
       if (APPLY) {
         try {
-          await retry(() => pool.item(id, from).patch([
-            { op: "set", path: "/identityUnverified", value: true },
-            { op: "set", path: "/identityUnverifiedAt", value: new Date().toISOString() },
-            { op: "set", path: "/identityUnverifiedBy", value: "relocate-pool-rows-by-list" },
-            { op: "set", path: "/identityUnverifiedReason", value: String(e.evidence ?? "title names neither product") },
-          ]));
+          await retry(() => patchSoldCompFields(pool, id, from, {
+            identityUnverified: true,
+            identityUnverifiedAt: new Date().toISOString(),
+            identityUnverifiedBy: "relocate-pool-rows-by-list",
+            identityUnverifiedReason: String(e.evidence ?? "title names neither product"),
+          }));
           parked++;
         } catch (err) { failed++; console.error(`      FAILED: ${String(err?.message ?? err).slice(0, 70)}`); }
       } else { parked++; }
@@ -246,24 +251,37 @@ async function main() {
       console.log(`                 -> ${repoint.slice(0, 58)}`);
       console.log(`      why: ${String(e.evidence ?? "").slice(0, 150)}`);
       if (APPLY) {
-        const next = stripSystem(doc0);
-        next.hobbyiqCardId = repoint;
-        // CF-ONE-WRITE-PATH-FOR-SOLD-COMPS (2026-09-07). A REPOINT does not move
-        // partition, so it needs no delete -- but it DOES rewrite an identity
-        // field, and until now it wrote whatever the list file said without
-        // asking whether it was an address. It goes through the same mover as
-        // the RELOCATE four branches down: same guard, same verified read-back,
-        // with `drop` empty because nothing is being left behind.
+        // CF-ONE-WRITE-PATH-FOR-SOLD-COMPS (#1941, 2026-09-07). A REPOINT
+        // rewrites an IDENTITY field, so the destination must be judged as an
+        // address before it is written -- the guard #1941 put in front of this
+        // branch. That judgement is kept exactly as it was.
+        //
+        // CF-A-MUTATOR-PATCHES-FIELDS-NEVER-THE-WHOLE-DOC (#1941 follow-up).
+        // What changes is the WRITE. #1941 reached the guard by routing through
+        // relocateSoldComp, whose write is `pool.items.upsert(keep)` -- a whole
+        // document, built from a `doc0` read at the top of this loop. A REPOINT
+        // does not move partition, so a mover's upsert-verify-delete buys
+        // nothing here and costs the one thing it cannot afford: every field
+        // another concurrent lane stamped between that read and this write --
+        // the park, retire, grade and rematch lanes all touch these same rows --
+        // is rewritten at its stale value. One field changes, so one field is
+        // written, and the guard runs on the address regardless.
         //
         // `contentHash` is NOT recomputed: it hashes cardId, and cardId is
         // unchanged here. Recomputing on a hobbyiqCardId change would move the
         // dedup key for a row that never moved partition.
-        const res = await relocateSoldComp(pool, {
-          keep: next, drop: [], retry,
-          verifyFields: ["cardId", "hobbyiqCardId", "price", "soldAt"],
-        });
-        if (res.ok) repointed++;
-        else { failed++; console.error(`      FAILED at ${res.stage}: ${String(res.error ?? "").slice(0, 70)}`); }
+        const next = stripSystem(doc0);
+        next.hobbyiqCardId = repoint;
+        const verdict = guardSoldCompDoc(next, { guardedBy: "relocate-pool-rows-by-list REPOINT" });
+        if (verdict.verdict === "park" && verdict.reason === "malformed-key") {
+          failed++;
+          console.error(`      FAILED at guard: refused — ${String(verdict.detail ?? "").slice(0, 70)}`);
+        } else {
+          try {
+            await retry(() => patchSoldCompFields(pool, id, from, { hobbyiqCardId: repoint }));
+            repointed++;
+          } catch (err) { failed++; console.error(`      FAILED: ${String(err?.message ?? err).slice(0, 70)}`); }
+        }
       } else { repointed++; }
       continue;
     }
