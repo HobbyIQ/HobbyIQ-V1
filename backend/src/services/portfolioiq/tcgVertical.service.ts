@@ -176,6 +176,99 @@ const POKEMON_CHARACTERS: readonly string[] = [
  */
 const JAPANESE_SET_CODE_RE = /\bs[vm]?\d{1,2}[a-z]\b/i;
 
+/**
+ * Set names that ARE Pokemon sets but collide with sports products, so they
+ * may only be read as Pokemon when something ELSE on the row already proves
+ * the vertical.
+ *
+ * CF-TCG-SPORTS-COLLIDING-SETS-NEED-A-MARKER (#2006 follow-up, 2026-09-08).
+ *
+ * #2006 pointed the daily TCA feed at TCGplayer. Measured over the first
+ * 12,000 live TCGplayer rows (2026-09-07 window): 8,102 resolved to pokemon
+ * and 3,898 -- 32.5% -- resolved to NOTHING and were skipped as
+ * `skippedSportUnresolved`, which under CF-NO-DEFAULT-SPORT means the sale
+ * never entered a pool at all.
+ *
+ * Those 3,898 are not a detector failure in the usual sense. They are the
+ * DELIBERATE omissions listed above -- "expedition", "base set", "platinum",
+ * "dragon", the EX-era names -- which were rightly excluded because a bare
+ * "Expedition" or "Platinum" in a SPORTS title must never be read as Pokemon.
+ * The measured residual is dominated by two groups:
+ *
+ *   "Gastly - Expedition - Normal"           985+ rows across Expedition,
+ *   "Furret - Aquapolis - Normal"            Aquapolis, Diamond and Pearl,
+ *   "Floatzel - Diamond and Pearl - Normal"  Base Set, Platinum, EX Dragon...
+ *
+ *   "ME: Ascended Heroes" / "ME05: Pitch Black" / "ME01: Mega Evolution"
+ *   -- 3,499 rows of the Mega Evolution era, which postdates every list here
+ *   and which no amount of enumerating known set names could have caught.
+ *
+ * The fix is NOT to delete the collision guard -- that would put "Platinum"
+ * back on a Bowman Platinum sale. It is to notice that the guard answers the
+ * wrong question. "Is 'Expedition' a Pokemon word?" is genuinely ambiguous.
+ * "Is 'Expedition' a Pokemon word ON A ROW WHOSE PLATFORM IS TCGPLAYER?" is
+ * not ambiguous at all: TCGplayer sells no sports cards, so the collision it
+ * guards against cannot occur on that row.
+ *
+ * So these names resolve to pokemon ONLY when a marker proves the vertical
+ * independently, and stay unresolved otherwise. Blank still means unknown --
+ * a marker is evidence, not a guess.
+ */
+const POKEMON_SPORTS_COLLIDING_SET_NAMES: readonly string[] = [
+  // WotC / e-Card era
+  "base set", "expedition", "aquapolis", "skyridge", "southern islands",
+  "shadowless", "best of promos", "nintendo promos",
+  // EX era (the "<character> - <set> - <finish>" title shape)
+  "ex dragon", "ex deoxys", "ex emerald", "ex ruby and sapphire",
+  "ex firered & leafgreen", "ex firered and leafgreen", "ex unseen forces",
+  "ex team rocket returns", "ex hidden legends",
+  // DP / Platinum / HGSS
+  "diamond and pearl", "platinum", "rumble",
+  // BW / XY
+  "black and white", "dragon vault", "generations",
+  // SM / SWSH
+  "shining legends", "champion's path", "champions path",
+  "blister exclusives", "prize pack series", "trading card game classic",
+  // Mega Evolution era (2025-)
+  "mega evolution", "ascended heroes", "pitch black", "chaos rising",
+  "perfect order", "phantasmal flames",
+  // structural / promo
+  "miscellaneous cards & products", "mcdonald's", "mcdonalds",
+];
+
+/**
+ * Set-code shape used by TCGplayer's Mega Evolution era: an "ME" ordinal
+ * prefix ("ME01:", "ME05:", "MEE:"). Marker-gated like the names above --
+ * "ME" is far too short to read as Pokemon on an unproven row.
+ */
+const POKEMON_ME_ERA_RE = /\bmee?\d{0,2}\s*:/i;
+
+/**
+ * Markers that prove a row is Pokemon INDEPENDENTLY of its set name.
+ *
+ * Each is vocabulary a sports-card listing does not carry. The platform check
+ * is the strongest signal and is handled from the caller's `platform` /
+ * `category` FIELDS rather than by a title regex, because a field the vendor
+ * stamped is stronger evidence than a word someone typed into a title.
+ */
+const POKEMON_MARKER_PATTERNS: readonly RegExp[] = [
+  /\bpok[eé]mon\b/i,
+  // Rarity + card-type vocabulary that exists only in the TCG.
+  /\bholo(?:foil)?\s+rare\b/i,
+  /\breverse\s+holo(?:foil)?\b/i,
+  /\b(?:secret|ultra|illustration|amazing|radiant|shiny)\s+rare\b/i,
+  /\btrainer\s+(?:gallery|card|kit|deck)\b/i,
+  // NOT an energy-type pattern. "<Type> Energy" reads as a Pokemon marker, but
+  // it is the one marker a COLLIDING row can carry on its own: "Fighting
+  // Energy - Expedition - Normal" would self-mark, unlocking "Expedition"
+  // with no evidence from outside the title. That defeats the gate -- the
+  // whole point is that a colliding name needs INDEPENDENT proof -- so the
+  // energy phrasing is deliberately absent. Those rows resolve on their
+  // platform (TCGplayer) instead, which is real evidence.
+  /\b\d{1,3}\s*hp\b/i,
+  /\b(?:vstar|vmax|v-union|tag team)\b/i,
+];
+
 const TCG_TITLE_PATTERNS: readonly RegExp[] = [
   /\bpokemon\b/i,
   /\bpikachu\b/i,
@@ -185,7 +278,12 @@ const TCG_TITLE_PATTERNS: readonly RegExp[] = [
   /\bscarlet\s*&?\s*violet\b/i,
   /\bcall of legends\b|\bmajestic dawn\b|\bstormfront\b|\bex sandstorm\b/i,
   /\bpop series\b/i,
-  /\byu-?gi-?oh\b/i,
+  // Hyphen-flattening (above) turns "Yu-Gi-Oh" into "Yu Gi Oh", which
+  // `\byu-?gi-?oh\b` cannot match — it allows an optional HYPHEN, not the
+  // space the flattening produced. Harmless while an unmatched row merely
+  // fell through to `isTcg:false`; NOT harmless once the platform fallback
+  // below names a vertical, because the row would be labelled `pokemon`.
+  /\byu[\s-]?gi[\s-]?oh\b/i,
   /\bone piece\b/i,
   /\blorcana\b/i,
   /\bmagic:? the gathering\b/i,
@@ -202,9 +300,35 @@ const TCG_TITLE_PATTERNS: readonly RegExp[] = [
 export interface TcgClassification {
   isTcg: boolean;
   /** Why it was classified — recorded on the row so the call is auditable. */
-  reason?: "vertical-field" | "title-pattern" | "set-name" | "character-name" | "set-code";
+  reason?: "vertical-field" | "title-pattern" | "set-name" | "character-name" | "set-code" | "tcg-platform" | "marked-set-name";
   /** The vertical when known from the sport field. */
   vertical?: string;
+}
+
+/**
+ * Platforms that sell TCG product and no sports cards.
+ *
+ * CF-TCG-SPORTS-COLLIDING-SETS-NEED-A-MARKER (#2006 follow-up). TCGplayer is
+ * a TCG marketplace -- a row sourced from it is never a sports card, so the
+ * sports-collision guard has nothing to guard against there. This is a FIELD
+ * the vendor stamped, not a word parsed out of a title, which is why it can
+ * carry the weight of unlocking the colliding set names.
+ */
+const TCG_ONLY_PLATFORMS: ReadonlySet<string> = new Set(["tcgplayer"]);
+
+/** Does anything on this row prove the TCG vertical on its own? */
+function hasPokemonMarker(input: {
+  platform?: string | null;
+  category?: string | null;
+  haystack: string;
+}): boolean {
+  const platform = String(input.platform ?? "").trim().toLowerCase();
+  if (platform && TCG_ONLY_PLATFORMS.has(platform)) return true;
+  // TCA stamps `category: "tcg"` on 100% of TCGplayer rows (measured
+  // 2026-09-07, 4,000/4,000). A vendor category of "tcg" is a statement about
+  // the PRODUCT, which is exactly what the cross-sport rule asks for.
+  if (String(input.category ?? "").trim().toLowerCase() === "tcg") return true;
+  return POKEMON_MARKER_PATTERNS.some((re) => re.test(input.haystack));
 }
 
 /**
@@ -218,6 +342,12 @@ export function classifyTcg(input: {
   sport?: string | null;
   title?: string | null;
   hobbyiqCardId?: string | null;
+  /** Vendor marketplace the sale came from ("TCGplayer", "eBay", ...). */
+  platform?: string | null;
+  /** Vendor product category ("tcg", "sports", ...). */
+  category?: string | null;
+  /** Vendor set name, when the feed supplies one separately from the title. */
+  setName?: string | null;
 }): TcgClassification {
   const sport = String(input.sport ?? "").trim().toLowerCase();
   if (sport && TCG_VERTICALS.has(sport)) {
@@ -231,7 +361,7 @@ export function classifyTcg(input: {
   // Hyphens become spaces first — slugs are hyphenated ("call-of-legends") while
   // the patterns are written in prose form ("call of legends"), so without this
   // every slug-only detection silently missed.
-  const hay = `${input.title ?? ""} ${input.hobbyiqCardId ?? ""}`.replace(/-/g, " ");
+  const hay = `${input.title ?? ""} ${input.setName ?? ""} ${input.hobbyiqCardId ?? ""}`.replace(/-/g, " ");
   if (TCG_TITLE_PATTERNS.some((re) => re.test(hay))) {
     return { isTcg: true, reason: "title-pattern" };
   }
@@ -264,5 +394,43 @@ export function classifyTcg(input: {
   if (JAPANESE_SET_CODE_RE.test(flat)) {
     return { isTcg: true, reason: "set-code" };
   }
+  // CF-TCG-SPORTS-COLLIDING-SETS-NEED-A-MARKER (#2006 follow-up, 2026-09-08).
+  //
+  // LAST, and gated. Everything above resolves a row on its own evidence. This
+  // branch handles the set names that are real Pokemon sets but collide with
+  // sports products -- "Expedition", "Base Set", "Platinum", "Diamond and
+  // Pearl", the EX-era names, the 2025 Mega Evolution era -- and it only fires
+  // when a marker has ALREADY proved the vertical: a TCG-only platform, a
+  // vendor category of "tcg", or TCG-only vocabulary in the text.
+  //
+  // Order matters for the same reason it does above: this is the weakest
+  // signal, so every self-sufficient one keeps its own `reason` and wins.
+  //
+  // Removing the marker gate makes this branch read a bare "Platinum" or
+  // "Base Set" in a SPORTS title as Pokemon, which is the exact harm the
+  // omission list was written to prevent -- see the mutation test.
+  if (POKEMON_SPORTS_COLLIDING_SET_NAMES.some((n) => flat.includes(n)) ||
+      POKEMON_ME_ERA_RE.test(flat)) {
+    if (hasPokemonMarker({ platform: input.platform, category: input.category, haystack: flat })) {
+      return { isTcg: true, reason: "marked-set-name", vertical: "pokemon" };
+    }
+  }
+
+  // A TCG-only platform proves the row is TCG even when nothing in the text
+  // does: TCGplayer sells no sports cards, so a row sourced from it cannot be
+  // one -- and 32.5% of the first live TCGplayer day reached here with no
+  // other signal.
+  //
+  // WHICH TCG it is, though, is a separate claim. Every non-Pokemon game has
+  // its own pattern above and keeps its own vertical, so anything reaching
+  // here has already failed all of them. Pokemon is named because it is what
+  // this feed overwhelmingly is (8,102 of the first 12,000 rows resolved to
+  // pokemon on their own evidence, and the 3,898 residual was Pokemon sets to
+  // the last row), and because leaving the vertical blank would park the sale
+  // out of every pool -- the very outcome this change exists to end.
+  if (hasPokemonMarker({ platform: input.platform, category: input.category, haystack: "" })) {
+    return { isTcg: true, reason: "tcg-platform", vertical: "pokemon" };
+  }
+
   return { isTcg: false };
 }

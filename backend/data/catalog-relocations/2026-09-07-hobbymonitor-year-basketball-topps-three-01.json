@@ -3,12 +3,13 @@
   "forLane": "relocate-catalog-rows-by-list",
   "reportOnlyUntil": "Drew's review — NO APPLY IS AUTHORIZED BY THIS PR. This list DELETES catalog rows.",
   "keepSales": true,
-  "finding": "#1925 H1. 2479 card_catalog rows from hobbymonitor-2026-09-04 under basketball/topps-three carry year 2025 while their own setName states 2023. The census compared 5,381 card numbers across all 28 products: 5,351 agree with the year-N checklist, 444 agree with year N+1, and ZERO agree with N+1 but not N — so the setName is right and the year field is wrong. This file is part 01 of 3 for this product: 733 retire, 267 reslug.",
+  "finding": "#1925 H1. 2479 card_catalog rows from hobbymonitor-2026-09-04 under basketball/topps-three carry year 2025 while their own setName states 2023. The census compared 5,381 card numbers across all 28 products: 5,351 agree with the year-N checklist, 444 agree with year N+1, and ZERO agree with N+1 but not N — so the setName is right and the year field is wrong. This file is part 01 of 3 for this product: 733 retire, 251 reslug, 16 park.",
   "rulings": [
     "THE CHECKLIST IS THE AUTHORITY AND THE setName IS RIGHT. Every number-to-player comparison in #1925 resolves to year N. A row is retired only where the year-N address is already held by the SAME player from a CHECKLIST source (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT); a twin from `ingest-auto-seed` or `bccp` earns no delete and is excluded instead.",
     "THE SALES DO NOT MOVE — `keepSales: true`. 7,905 sales rest on these rows' slugs and their titles are 7,901-to-0 the year-N+1 product: they belong to the card that STAYS, not the one that moves. moveCatalogRow re-points a row's own sales by default, which here would carry genuine year-N+1 sales back to year N — the exact mispricing this repair exists to end. Under the flag the lane hands moveCatalogRow no salesContainer, so hobbyiqCardId and cardId are untouched and the rematch re-derives them against the genuine year-N+1 identity. Measured: 7,776 of the 7,905 have a genuine year-N+1 row at their card number to land on; 129 do not and need a checklist ingest first.",
     "RETIRE IS A HARD DELETE, AND IT IS ORDERED FIRST. card_catalog has no field that stops a row resolving, so a retire deletes the row and its graded children, and leaves its sales UNPLACED. Retires sort before reslugs in every file, and the files sort in the order they must run.",
-    "AN OCCUPIED DESTINATION IS REPORTED, NEVER ROUTED AROUND. 5,899 rows whose year-N destination names a DIFFERENT player, and 712 whose destination is an UNNAMED bccp row, are in docs/reports/2026-09-07-hobbymonitor-year-excluded.md and in no list."
+    "AN OCCUPIED DESTINATION IS REPORTED, NEVER ROUTED AROUND. 5,899 rows whose year-N destination names a DIFFERENT player, and 712 whose destination is an UNNAMED bccp row, are in docs/reports/2026-09-07-hobbymonitor-year-excluded.md and in no list.",
+    "RULING 17 (Drew, 2026-09-08): THE CHECKLIST DECIDES THE NUMBER, AND AN UNCONFIRMED ROW IS PARKED, NOT FOLDED. REPORT run 34231543456 stopped 16 entries on \"occupied: different card\". Every one was point-read in prod 2026-09-08 and every one names TWO DIFFERENT PLAYERS: the moving row is `hobbymonitor-2026-09-04` setKey `topps-three`, the occupant is `checklistinsider-2026-08-27` setKey `topps-royalty` — two products sharing the bare `topps` slug stem that disagree about who holds the number. There is NOT ONE same-player twin among them, so this file gains no fold. A reslug is the collision itself and a retire would delete an UNCONFIRMED row, so all 16 become `park`: stamped identityUnverified, the row and its sales stay put and price nothing until a source confirms the number."
   ],
   "census": {
     "product": "basketball/topps-three",
@@ -17,8 +18,9 @@
     "destinationSetKey": "topps-three",
     "rowsInProduct": 2479,
     "retireInThisFile": 733,
-    "reslugInThisFile": 267,
-    "salesOnEntriesInThisFile": 0
+    "reslugInThisFile": 251,
+    "salesOnEntriesInThisFile": 0,
+    "parkInThisFile": 16
   },
   "entries": [
     {
@@ -4498,10 +4500,9 @@
     },
     {
       "id": "hiq:basketball:2025:topps:16:gold:no-auto:num-10",
-      "action": "reslug",
-      "to": "hiq:basketball:2023:topps:16:gold:no-auto:num-10",
-      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
-      "evidence": "player \"Michael Porter Jr.\" #16; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's ruling 2026-09-08: THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-2023 address — a checklist-backed row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-08: this row player \"Michael Porter Jr.\" #16 source=hobbymonitor-2026-09-04 setKey=topps-three setName \"2023/24 Topps Three Basketball\"; the 2023 address hiq:basketball:2023:topps:16:gold:no-auto:num-10 is held by \"DeMar DeRozan\" source=checklistinsider-2026-08-27 setKey=topps-royalty. Two sources disagree on who holds this number under the shared `topps` slug stem, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT). REPORT run 34231543456 refused the move as \"occupied: different card\"."
     },
     {
       "id": "hiq:basketball:2025:topps:120:blue:auto:num-15",
@@ -4547,10 +4548,9 @@
     },
     {
       "id": "hiq:basketball:2025:topps:45:gold:no-auto:num-10",
-      "action": "reslug",
-      "to": "hiq:basketball:2023:topps:45:gold:no-auto:num-10",
-      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
-      "evidence": "player \"Trey Murphy III\" #45; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's ruling 2026-09-08: THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-2023 address — a checklist-backed row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-08: this row player \"Trey Murphy III\" #45 source=hobbymonitor-2026-09-04 setKey=topps-three setName \"2023/24 Topps Three Basketball\"; the 2023 address hiq:basketball:2023:topps:45:gold:no-auto:num-10 is held by \"Anfernee Simons\" source=checklistinsider-2026-08-27 setKey=topps-royalty. Two sources disagree on who holds this number under the shared `topps` slug stem, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT). REPORT run 34231543456 refused the move as \"occupied: different card\"."
     },
     {
       "id": "hiq:basketball:2025:topps:tra-ld:platinum:auto:num-1",
@@ -4722,10 +4722,9 @@
     },
     {
       "id": "hiq:basketball:2025:topps:33:gold:no-auto:num-10",
-      "action": "reslug",
-      "to": "hiq:basketball:2023:topps:33:gold:no-auto:num-10",
-      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
-      "evidence": "player \"Kyrie Irving\" #33; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's ruling 2026-09-08: THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-2023 address — a checklist-backed row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-08: this row player \"Kyrie Irving\" #33 source=hobbymonitor-2026-09-04 setKey=topps-three setName \"2023/24 Topps Three Basketball\"; the 2023 address hiq:basketball:2023:topps:33:gold:no-auto:num-10 is held by \"Kyle Kuzma\" source=checklistinsider-2026-08-27 setKey=topps-royalty. Two sources disagree on who holds this number under the shared `topps` slug stem, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT). REPORT run 34231543456 refused the move as \"occupied: different card\"."
     },
     {
       "id": "hiq:basketball:2025:topps:fcs-sc:red:no-auto:num-5",
@@ -4736,10 +4735,9 @@
     },
     {
       "id": "hiq:basketball:2025:topps:67:gold:no-auto:num-10",
-      "action": "reslug",
-      "to": "hiq:basketball:2023:topps:67:gold:no-auto:num-10",
-      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
-      "evidence": "player \"Chris Paul\" #67; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's ruling 2026-09-08: THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-2023 address — a checklist-backed row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-08: this row player \"Chris Paul\" #67 source=hobbymonitor-2026-09-04 setKey=topps-three setName \"2023/24 Topps Three Basketball\"; the 2023 address hiq:basketball:2023:topps:67:gold:no-auto:num-10 is held by \"Bradley Beal\" source=checklistinsider-2026-08-27 setKey=topps-royalty. Two sources disagree on who holds this number under the shared `topps` slug stem, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT). REPORT run 34231543456 refused the move as \"occupied: different card\"."
     },
     {
       "id": "hiq:basketball:2025:topps:md-1:platinum:no-auto:num-1",
@@ -4820,10 +4818,9 @@
     },
     {
       "id": "hiq:basketball:2025:topps:80:gold:no-auto:num-10",
-      "action": "reslug",
-      "to": "hiq:basketball:2023:topps:80:gold:no-auto:num-10",
-      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
-      "evidence": "player \"Domantas Sabonis\" #80; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's ruling 2026-09-08: THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-2023 address — a checklist-backed row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-08: this row player \"Domantas Sabonis\" #80 source=hobbymonitor-2026-09-04 setKey=topps-three setName \"2023/24 Topps Three Basketball\"; the 2023 address hiq:basketball:2023:topps:80:gold:no-auto:num-10 is held by \"Alperen Sengun\" source=checklistinsider-2026-08-27 setKey=topps-royalty. Two sources disagree on who holds this number under the shared `topps` slug stem, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT). REPORT run 34231543456 refused the move as \"occupied: different card\"."
     },
     {
       "id": "hiq:basketball:2025:topps:fcs-pst:bronze:no-auto:num-25",
@@ -5030,10 +5027,9 @@
     },
     {
       "id": "hiq:basketball:2025:topps:69:gold:no-auto:num-10",
-      "action": "reslug",
-      "to": "hiq:basketball:2023:topps:69:gold:no-auto:num-10",
-      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
-      "evidence": "player \"Paul George\" #69; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's ruling 2026-09-08: THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-2023 address — a checklist-backed row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-08: this row player \"Paul George\" #69 source=hobbymonitor-2026-09-04 setKey=topps-three setName \"2023/24 Topps Three Basketball\"; the 2023 address hiq:basketball:2023:topps:69:gold:no-auto:num-10 is held by \"Kevin Durant\" source=checklistinsider-2026-08-27 setKey=topps-royalty. Two sources disagree on who holds this number under the shared `topps` slug stem, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT). REPORT run 34231543456 refused the move as \"occupied: different card\"."
     },
     {
       "id": "hiq:basketball:2025:topps:rm-so:gold:no-auto:num-10",
@@ -5219,17 +5215,15 @@
     },
     {
       "id": "hiq:basketball:2025:topps:79:gold:no-auto:num-10",
-      "action": "reslug",
-      "to": "hiq:basketball:2023:topps:79:gold:no-auto:num-10",
-      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
-      "evidence": "player \"De'Aaron Fox\" #79; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's ruling 2026-09-08: THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-2023 address — a checklist-backed row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-08: this row player \"De'Aaron Fox\" #79 source=hobbymonitor-2026-09-04 setKey=topps-three setName \"2023/24 Topps Three Basketball\"; the 2023 address hiq:basketball:2023:topps:79:gold:no-auto:num-10 is held by \"Hakeem Olajuwon\" source=checklistinsider-2026-08-27 setKey=topps-royalty. Two sources disagree on who holds this number under the shared `topps` slug stem, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT). REPORT run 34231543456 refused the move as \"occupied: different card\"."
     },
     {
       "id": "hiq:basketball:2025:topps:82:gold:no-auto:num-10",
-      "action": "reslug",
-      "to": "hiq:basketball:2023:topps:82:gold:no-auto:num-10",
-      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
-      "evidence": "player \"Peja Stojaković\" #82; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's ruling 2026-09-08: THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-2023 address — a checklist-backed row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-08: this row player \"Peja Stojaković\" #82 source=hobbymonitor-2026-09-04 setKey=topps-three setName \"2023/24 Topps Three Basketball\"; the 2023 address hiq:basketball:2023:topps:82:gold:no-auto:num-10 is held by \"Jalen Green\" source=checklistinsider-2026-08-27 setKey=topps-royalty. Two sources disagree on who holds this number under the shared `topps` slug stem, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT). REPORT run 34231543456 refused the move as \"occupied: different card\"."
     },
     {
       "id": "hiq:basketball:2025:topps:tra-kh:bronze:auto:num-25",
@@ -5478,10 +5472,9 @@
     },
     {
       "id": "hiq:basketball:2025:topps:66:gold:no-auto:num-10",
-      "action": "reslug",
-      "to": "hiq:basketball:2023:topps:66:gold:no-auto:num-10",
-      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
-      "evidence": "player \"Klay Thompson\" #66; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's ruling 2026-09-08: THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-2023 address — a checklist-backed row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-08: this row player \"Klay Thompson\" #66 source=hobbymonitor-2026-09-04 setKey=topps-three setName \"2023/24 Topps Three Basketball\"; the 2023 address hiq:basketball:2023:topps:66:gold:no-auto:num-10 is held by \"Shaquille O'Neal\" source=checklistinsider-2026-08-27 setKey=topps-royalty. Two sources disagree on who holds this number under the shared `topps` slug stem, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT). REPORT run 34231543456 refused the move as \"occupied: different card\"."
     },
     {
       "id": "hiq:basketball:2025:topps:ko-19:red:no-auto:num-5",
@@ -5499,10 +5492,9 @@
     },
     {
       "id": "hiq:basketball:2025:topps:40:gold:no-auto:num-10",
-      "action": "reslug",
-      "to": "hiq:basketball:2023:topps:40:gold:no-auto:num-10",
-      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
-      "evidence": "player \"Hakeem Olajuwon\" #40; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's ruling 2026-09-08: THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-2023 address — a checklist-backed row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-08: this row player \"Hakeem Olajuwon\" #40 source=hobbymonitor-2026-09-04 setKey=topps-three setName \"2023/24 Topps Three Basketball\"; the 2023 address hiq:basketball:2023:topps:40:gold:no-auto:num-10 is held by \"Kevin Garnett\" source=checklistinsider-2026-08-27 setKey=topps-royalty. Two sources disagree on who holds this number under the shared `topps` slug stem, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT). REPORT run 34231543456 refused the move as \"occupied: different card\"."
     },
     {
       "id": "hiq:basketball:2025:topps:td-5:gold:no-auto:num-10",
@@ -5583,10 +5575,9 @@
     },
     {
       "id": "hiq:basketball:2025:topps:42:gold:no-auto:num-10",
-      "action": "reslug",
-      "to": "hiq:basketball:2023:topps:42:gold:no-auto:num-10",
-      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
-      "evidence": "player \"Desmond Bane\" #42; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's ruling 2026-09-08: THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-2023 address — a checklist-backed row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-08: this row player \"Desmond Bane\" #42 source=hobbymonitor-2026-09-04 setKey=topps-three setName \"2023/24 Topps Three Basketball\"; the 2023 address hiq:basketball:2023:topps:42:gold:no-auto:num-10 is held by \"Chet Holmgren\" source=checklistinsider-2026-08-27 setKey=topps-royalty. Two sources disagree on who holds this number under the shared `topps` slug stem, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT). REPORT run 34231543456 refused the move as \"occupied: different card\"."
     },
     {
       "id": "hiq:basketball:2025:topps:fcs-jjj:platinum:no-auto:num-1",
@@ -5660,10 +5651,9 @@
     },
     {
       "id": "hiq:basketball:2025:topps:94:gold:no-auto:num-10",
-      "action": "reslug",
-      "to": "hiq:basketball:2023:topps:94:gold:no-auto:num-10",
-      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
-      "evidence": "player \"Carmelo Anthony\" #94; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's ruling 2026-09-08: THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-2023 address — a checklist-backed row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-08: this row player \"Carmelo Anthony\" #94 source=hobbymonitor-2026-09-04 setKey=topps-three setName \"2023/24 Topps Three Basketball\"; the 2023 address hiq:basketball:2023:topps:94:gold:no-auto:num-10 is held by \"Paul Pierce\" source=checklistinsider-2026-08-27 setKey=topps-royalty. Two sources disagree on who holds this number under the shared `topps` slug stem, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT). REPORT run 34231543456 refused the move as \"occupied: different card\"."
     },
     {
       "id": "hiq:basketball:2025:topps:ko-10:red:no-auto:num-5",
@@ -5933,10 +5923,9 @@
     },
     {
       "id": "hiq:basketball:2025:topps:58:gold:no-auto:num-10",
-      "action": "reslug",
-      "to": "hiq:basketball:2023:topps:58:gold:no-auto:num-10",
-      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
-      "evidence": "player \"Paul Pierce\" #58; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's ruling 2026-09-08: THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-2023 address — a checklist-backed row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-08: this row player \"Paul Pierce\" #58 source=hobbymonitor-2026-09-04 setKey=topps-three setName \"2023/24 Topps Three Basketball\"; the 2023 address hiq:basketball:2023:topps:58:gold:no-auto:num-10 is held by \"Paul George\" source=checklistinsider-2026-08-27 setKey=topps-royalty. Two sources disagree on who holds this number under the shared `topps` slug stem, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT). REPORT run 34231543456 refused the move as \"occupied: different card\"."
     },
     {
       "id": "hiq:basketball:2025:topps:fcs-lb:red:no-auto:num-5",
@@ -6010,10 +5999,9 @@
     },
     {
       "id": "hiq:basketball:2025:topps:53:gold:no-auto:num-10",
-      "action": "reslug",
-      "to": "hiq:basketball:2023:topps:53:gold:no-auto:num-10",
-      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
-      "evidence": "player \"Dennis Rodman\" #53; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's ruling 2026-09-08: THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-2023 address — a checklist-backed row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-08: this row player \"Dennis Rodman\" #53 source=hobbymonitor-2026-09-04 setKey=topps-three setName \"2023/24 Topps Three Basketball\"; the 2023 address hiq:basketball:2023:topps:53:gold:no-auto:num-10 is held by \"Klay Thompson\" source=checklistinsider-2026-08-27 setKey=topps-royalty. Two sources disagree on who holds this number under the shared `topps` slug stem, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT). REPORT run 34231543456 refused the move as \"occupied: different card\"."
     },
     {
       "id": "hiq:basketball:2025:topps:fcs-jro:bronze:no-auto:num-25",
@@ -6157,10 +6145,9 @@
     },
     {
       "id": "hiq:basketball:2025:topps:63:gold:no-auto:num-10",
-      "action": "reslug",
-      "to": "hiq:basketball:2023:topps:63:gold:no-auto:num-10",
-      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
-      "evidence": "player \"Khris Middleton\" #63; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's ruling 2026-09-08: THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-2023 address — a checklist-backed row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-08: this row player \"Khris Middleton\" #63 source=hobbymonitor-2026-09-04 setKey=topps-three setName \"2023/24 Topps Three Basketball\"; the 2023 address hiq:basketball:2023:topps:63:gold:no-auto:num-10 is held by \"Austin Reaves\" source=checklistinsider-2026-08-27 setKey=topps-royalty. Two sources disagree on who holds this number under the shared `topps` slug stem, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT). REPORT run 34231543456 refused the move as \"occupied: different card\"."
     },
     {
       "id": "hiq:basketball:2025:topps:md-16:red:no-auto:num-5",
@@ -6192,10 +6179,9 @@
     },
     {
       "id": "hiq:basketball:2025:topps:24:gold:no-auto:num-10",
-      "action": "reslug",
-      "to": "hiq:basketball:2023:topps:24:gold:no-auto:num-10",
-      "reason": "#1925 H1: setName \"2023/24 Topps Three Basketball\" states 2023; the year field says 2025. The 2023 address is vacant",
-      "evidence": "player \"Jalen Williams\" #24; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's ruling 2026-09-08: THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-2023 address — a checklist-backed row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-08: this row player \"Jalen Williams\" #24 source=hobbymonitor-2026-09-04 setKey=topps-three setName \"2023/24 Topps Three Basketball\"; the 2023 address hiq:basketball:2023:topps:24:gold:no-auto:num-10 is held by \"Trae Young\" source=checklistinsider-2026-08-27 setKey=topps-royalty. Two sources disagree on who holds this number under the shared `topps` slug stem, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT). REPORT run 34231543456 refused the move as \"occupied: different card\"."
     },
     {
       "id": "hiq:basketball:2025:topps:fcs-aha:red:no-auto:num-5",
