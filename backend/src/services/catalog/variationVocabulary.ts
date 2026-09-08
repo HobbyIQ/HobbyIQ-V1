@@ -118,6 +118,27 @@ const NEVER_KIND = new Set(["base", "set", "cards", "card", "variation", "variat
 const IMAGE_WORDS = new Set(["image", "images", "photo", "photos", "picture", "pic"]);
 const GENERIC = new Set([...NEVER_KIND, ...IMAGE_WORDS]);
 const STOCK_WORDS = new Set(["chrome", "paper"]);
+/**
+ * CF-A-A-LEADING-FINISH-IS-A-FINISH (Drew ruling 20, 2026-09-08). A finish
+ * word that appears BEFORE "variation" names the finish the variation comes
+ * in, not a kind of variation: 2022 Topps Chrome's Witt #221 is sold as both
+ * "Image Variation Refractor" and "Refractor Image Variation", and BCP lists
+ * ONE card ("All Gimmicks are Refractors" -- Refractor is intrinsic to the
+ * Tier 1 / Tier 2 variation, which our vocabulary spells Image Variation SP
+ * and Image Variation SSP). Before this set existed, the split-at-first-
+ * "variation" rule read the leading "refractor" as a KIND and minted
+ * `refractor-image-variation` -- a third address for a card that already had
+ * `image-variation`. These words are moved to the finish side instead, which
+ * is where the same word lands when it follows ("image-variation-refractor").
+ * ONLY bare finishes are listed: a finish that is part of a NAMED kind
+ * ("Golden Mirror", "FrozenFractor", "Chrome Variation") is matched as a kind
+ * before this set is consulted, and stock words (chrome / paper) are NOT here
+ * because "Chrome Variation" is a real Heritage kind.
+ */
+const LEADING_FINISH = new Set([
+  "refractor", "refractors", "xfractor", "x-fractor", "superfractor", "superfractors",
+  "raywave", "wave", "prizm", "holo", "foil", "atomic", "mojo", "shimmer", "speckle", "sparkle",
+]);
 /** The pool's spellings for finish words that follow a variation. */
 const FINISH_SPELLING: Readonly<Record<string, string>> = {
   superfractor: "SuperFractor", xfractor: "X-Fractor", raywave: "RayWave", frozenfractor: "FrozenFractor", logofractor: "Logofractor",
@@ -289,12 +310,26 @@ export function normalizeVariationSlug(slug: string): string {
   // follows is a finish the variation comes in.
   const parts = s.split("-");
   const at = parts.indexOf("variation");
-  const before = parts.slice(0, at).filter((w) => !NEVER_KIND.has(w));
+  const beforeAll = parts.slice(0, at).filter((w) => !NEVER_KIND.has(w));
   const after = parts.slice(at + 1).filter((w) => w !== "variation" && !GENERIC.has(w));
+  // A leading finish is a finish, not a kind -- but only when what remains in
+  // front is not itself a known kind, so "Chrome Variation" and "Golden
+  // Mirror Image Variation" keep every word they have.
+  const leading = beforeAll.filter((w) => LEADING_FINISH.has(w));
+  const beforeKindOnly = beforeAll.filter((w) => !LEADING_FINISH.has(w));
+  const remainderIsKind =
+    beforeKindOnly.length > 0 &&
+    (KNOWN_KIND_SLUGS.has(beforeKindOnly.join("-")) ||
+      KNOWN_KIND_SLUGS.has(beforeKindOnly.filter((w) => !IMAGE_WORDS.has(w)).join("-")) ||
+      beforeKindOnly.every((w) => IMAGE_WORDS.has(w)));
+  const before = leading.length > 0 && (remainderIsKind || beforeKindOnly.length === 0) ? beforeKindOnly : beforeAll;
+  const movedFinish = before === beforeKindOnly ? leading : [];
   const withoutImageWords = before.filter((w) => !IMAGE_WORDS.has(w));
   const kindWords = withoutImageWords.length === 0 || KNOWN_KIND_SLUGS.has(withoutImageWords.join("-")) ? withoutImageWords : before;
   const kind = kindWords.length ? kindWords.join("-") : "image";
-  return [kind, "variation", ...(ssp ? ["ssp"] : []), ...after].join("-");
+  const tail = [...after];
+  for (const w of movedFinish) if (!tail.includes(w)) tail.push(w);
+  return [kind, "variation", ...(ssp ? ["ssp"] : []), ...tail].join("-");
 }
 
 /** True when a parallel slug names a member of the family. */

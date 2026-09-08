@@ -1,0 +1,11 @@
+category,cardNumber,parallel,isAuto,printRun,player,rarity
+insert,1,Base,false,,Albert Belle,
+insert,2,Base,false,,Barry Bonds,
+insert,3,Base,false,,Juan Gonzalez,
+insert,4,Base,false,,"Ken Griffey, Jr.",
+insert,5,Base,false,,Mark McGwire,
+insert,6,Base,false,,Mike Piazza,
+insert,7,Base,false,,Sammy Sosa,
+insert,8,Base,false,,Frank Thomas,
+insert,9,Base,false,,Mo Vaughn,
+insert,10,Base,false,,Matt Williams,
