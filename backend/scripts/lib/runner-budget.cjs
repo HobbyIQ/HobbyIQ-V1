@@ -49,6 +49,13 @@
 
 /** Minutes on the clock for the work loop itself. Env override keeps the
  *  operator's `RUN_MINUTES=` dispatch input working on every lane. */
+/** How often the keepalive interval beats. It exists to hold a REF on the
+ *  event loop, so the period only has to be short enough that an operator
+ *  tailing the log sees the lane is alive and long enough that ninety minutes
+ *  of healthy work is not drowned in heartbeats. Five minutes gives ~26 lines
+ *  across a full 131-minute worst case. */
+const KEEPALIVE_MS = Number(process.env.LANE_KEEPALIVE_MS || 5 * 60 * 1000);
+
 function runMinutes(fallback) {
   const n = Number(process.env.RUN_MINUTES || fallback);
   return Number.isFinite(n) && n > 0 ? n : fallback;
@@ -257,10 +264,91 @@ function budget({ minutes, reserveMs, verifyMs = 10 * 60 * 1000, startedAt = Dat
   const unreadNote = () =>
     "  the verify count is UNREAD, not zero — the writes above reconciled and are durable.";
 
+
+  /** ── A LANE THAT OWNS NO REF'D HANDLE CAN EXIT 0 IN SILENCE ──────────────
+   *
+   * CF-A-SILENT-EXIT-ZERO-IS-NOT-A-FINISHED-LANE (2026-09-08).
+   *
+   * Run 34231217320 (retire-self-derived-identities, football, slot 4/16,
+   * APPLY) printed its banner and its
+   *
+   *   1,434 (year, setKey) products in football
+   *   this run owns 85 products
+   *
+   * and then NOTHING. No progress, no RECONCILE, no `VERIFY BY READ`, no
+   * `finishLane: exiting code`, and no `FATAL` from the lane's own `.catch`.
+   * The step nevertheless reported **outcome: success** — node exited ZERO —
+   * 37 seconds after that last line, and the relaunch composite, seeing no
+   * budget marker and no finishLane line, correctly called it KILLED. The two
+   * witnesses contradicted each other because BOTH were reading a process that
+   * had not crashed, had not been killed, and had not finished.
+   *
+   * The mechanism is the one this file already documents for the verify cap,
+   * one frame earlier. When `main()`'s promise is pending and NOTHING in the
+   * process holds a ref'd handle, node's event loop is empty: it exits, with
+   * status 0, running no `.then`, no `.catch`, and no `process.on('exit')`
+   * that a lane might have installed. Reproduced exactly:
+   *
+   *   const p = new Promise(() => {});          // a dropped SDK request
+   *   (async () => { await p; })().then(...).catch(...);
+   *   const t = setTimeout(() => {}, 60000); t.unref();
+   *   // -> prints nothing, exits 0
+   *
+   * and every ingredient is present in a budgeted lane between its banner and
+   * its verify: `retry()` sleeps on UNREF'D timers by design (a retry nobody
+   * awaits must not hold the process), the budget's own cap timer is armed
+   * only INSIDE `capped()` — i.e. only during the post-loop verify — and the
+   * sole ref'd handles during the work loop belong to the Cosmos SDK's
+   * sockets. The moment the SDK gives up on a request without settling its
+   * promise (`maxWaitTimeInSeconds` elapsed on a throttled container, a
+   * torn-down agent, an aborted continuation), its sockets go and the loop is
+   * empty while `main()` still awaits. card_catalog's autoscale went
+   * 400,000 -> 40,000 RU/s on 2026-09-07, the day before these runs, which is
+   * what made a previously rare drop routine.
+   *
+   * THE KEEPALIVE. One REF'D interval, owned by the budget and armed for the
+   * lane's whole life, so the event loop can never be empty while work is
+   * outstanding. It does not fix a dropped request — nothing here can — but it
+   * converts an unobservable silent exit 0 into the observable state the rest
+   * of this file is built to handle: the lane stays alive, keeps printing its
+   * heartbeat, and is either finished by its own budget or killed at the step
+   * ceiling with `KILLED before finish` telling the operator the truth.
+   *
+   * The heartbeat LINE is not decoration either. #1906 put narrations either
+   * side of the verify for exactly this reason and they are what localised the
+   * 148-minute wedge; a lane whose log dead-ends at the banner cannot say
+   * whether it read one product or eighty-five. It is prefixed `narrate:` so
+   * it can never collide with a runner grep (CF-RELAUNCH-ONLY-ON-BUDGET greps
+   * `stopped at the .*budget`; the per-lane summaries grep anchored `^  ` count
+   * lines), and it is written through the same fd the lane chose.
+   *
+   * `release()` is called by `finishLane()` before it exits, so the keepalive
+   * can never be the reason a lane that IS done stays alive.
+   */
+  let keepaliveTimer = null;
+  let beats = 0;
+  const keepalive = (label) => {
+    if (keepaliveTimer) return keepaliveTimer;
+    keepaliveTimer = setInterval(() => {
+      beats++;
+      const mins = Math.round((Date.now() - startedAt) / 60000);
+      narrate(`narrate: heartbeat ${beats} — ${label || "lane"} alive at ${mins}m, ${fmtMs(Math.max(0, left()))} of budget left`);
+    }, KEEPALIVE_MS);
+    // REF'D ON PURPOSE. An unref'd interval is exactly the defect above: it
+    // neither holds the loop open nor can be relied on to fire.
+    return keepaliveTimer;
+  };
+  const releaseKeepalive = () => {
+    if (keepaliveTimer) { clearInterval(keepaliveTimer); keepaliveTimer = null; }
+  };
+
   return {
     RUN_MINUTES, BUDGET_MS, RESERVE_MS, VERIFY_MS,
     startedAt, left, outOfClock, stoppedAtBudget, describe,
     capped, shown, unreadNote,
+    /** A REF'D interval that keeps the event loop non-empty for the lane's
+     *  whole life — see the block above. `finishLane()` releases it. */
+    keepalive, releaseKeepalive,
     /** True once a verify cap fired — an abandoned request may still hold a
      *  handle, so the lane MUST exit explicitly rather than wait for a drain. */
     capFired: () => capFired,
@@ -410,6 +498,12 @@ async function underExitCap(work) {
  */
 async function finishLane(code = 0, opts = {}) {
   const { client, budget: b } = opts;
+
+  // RELEASE THE KEEPALIVE FIRST. It is a REF'D interval (see budget()), so a
+  // lane that reached its own exit must not be held open by the very handle
+  // that exists to stop it exiting in silence. Released here rather than in
+  // the lane, so no lane can forget.
+  if (b && typeof b.releaseKeepalive === "function") { try { b.releaseKeepalive(); } catch { /* never fail an exit on cleanup */ } }
 
   // Everything THIS HELPER says goes to one fd, chosen by the lane. Both lines
   // below use it: a verify-cap notice landing in a JSON document breaks the
