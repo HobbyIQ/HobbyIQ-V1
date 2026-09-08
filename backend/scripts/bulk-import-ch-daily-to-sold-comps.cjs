@@ -29,13 +29,40 @@
 
 const path = require("path");
 const backend = __dirname + "/..";
-const { CosmosClient } = require(path.join(backend, "node_modules/@azure/cosmos"));
-const { recordSoldComp } = require(path.join(backend, "dist/services/portfolioiq/soldCompsStore.service.js"));
-// D28 (CF-A-CARD-NUMBER-IS-NOT-A-GRADE). This script keeps its OWN copy of the
-// CH mapping -- the copy that wrote ~4.2M of the current sold_comps rows -- so
-// the guard has to be applied here too. Applying it only in
-// chRowToSoldComp.ts would leave the biggest writer of the defect untouched.
-const { judgeCardNumber, logCardNumberVerdict } = require(path.join(backend, "dist/services/portfolioiq/cardNumberIntegrity.js"));
+
+// CF-THE-MODULE-MUST-BE-EVALUABLE-WITHOUT-A-BUILD (2026-09-08). Everything this
+// lane needs out of dist/ is used inside main() and nowhere else, so the
+// requires are DEFERRED into loadDist(). Two things follow, and the second is
+// the reason:
+//
+//  1. `node scripts/...` behaves exactly as before -- main() calls loadDist()
+//     as its first statement, so a genuinely missing build still fails loudly
+//     and at the same point in the run.
+//  2. runnerBudgetTdz.test.ts can EVALUATE this module's whole top level under
+//     BUDGET_DRY_PARSE=1 without `npm run build` first. That matters because
+//     the defect this file just carried -- a `const budget` required BELOW its
+//     own first use -- is a TemporalDeadZone error, and `node --check` parses a
+//     TDZ clean. Only evaluation catches it. If the dist/ requires stayed at
+//     the top the test would die on MODULE_NOT_FOUND before ever reaching the
+//     budget block, and would have passed against the broken file.
+let CosmosClient, recordSoldComp, judgeCardNumber, logCardNumberVerdict, normSport, reportWrites;
+function loadDist() {
+  ({ CosmosClient } = require(path.join(backend, "node_modules/@azure/cosmos")));
+  ({ recordSoldComp } = require(path.join(backend, "dist/services/portfolioiq/soldCompsStore.service.js")));
+  // D28 (CF-A-CARD-NUMBER-IS-NOT-A-GRADE). This script keeps its OWN copy of the
+  // CH mapping -- the copy that wrote ~4.2M of the current sold_comps rows -- so
+  // the guard has to be applied here too. Applying it only in
+  // chRowToSoldComp.ts would leave the biggest writer of the defect untouched.
+  ({ judgeCardNumber, logCardNumberVerdict } = require(path.join(backend, "dist/services/portfolioiq/cardNumberIntegrity.js")));
+  // CF-THE-VENDOR-STATES-THE-VERTICAL (2026-09-07). This script used to carry
+  // its OWN copy of normSport, and the copy is how a fix reaches one ingest lane
+  // and not the other: the shared mapper learned `pokemon` and this literal
+  // would have gone on returning null for 1,525,994 rows. Imported from the one
+  // implementation instead, so the two lanes cannot disagree about what
+  // CardHedge's `group` field means. Same require root as recordSoldComp above.
+  ({ normSport } = require(path.join(backend, "dist/services/portfolioiq/chRowToSoldComp.js")));
+  ({ reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js")));
+}
 
 const APPLY = process.env.BACKFILL_APPLY === "true";
 const CONCURRENCY = Number(process.env.BACKFILL_CONCURRENCY || "8");
@@ -113,6 +140,26 @@ const END_DATE = process.env.BULK_END_DATE || "2018-01-01";
 // quoted in the prose fifty lines above. A budget nobody can compute the margin
 // of is the thing this whole file exists to prevent, so the compatibility shim
 // happens BEFORE the declaration and the declaration stays canonical.
+// CF-A-KILLED-JOB-CANNOT-REPORT-PROGRESS + CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE.
+// The clock and the exit come from the SHARED helper, never a local copy.
+//
+// CF-A-CONST-IS-NOT-A-HOISTED-FUNCTION (2026-09-08). This require used to sit
+// FOURTEEN LINES BELOW the `const CLOCK = budget(...)` call that needs it. A
+// `const` binding is in its temporal dead zone until its own line evaluates, so
+// the very first statement of this lane threw
+//
+//   ReferenceError: Cannot access 'budget' before initialization
+//
+// and the cron died at module load every night from 2026-09-06 -- long before
+// any banner, budget marker or `finishLane` could say so. Run 34200832460 read
+// as a plain red X. sold_comps took 42k cardhedge rows for sold-day 09-07 and 4
+// for 09-08 against a normal 75-90k/day.
+//
+// It is ABOVE the budget constants deliberately: everything below this line may
+// call `budget()`, and nothing above it does. Moving it back down restores the
+// crash, which is why runnerBudgetTdz.test.ts EVALUATES this module rather than
+// only parsing it -- `node --check` is clean on a TDZ.
+const { budget, finishLane } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
 const TIME_BUDGET_MIN = Number(process.env.BULK_TIME_BUDGET_MIN || "0") || 0;
 // ch-fanout-to-sold-comps.yml still sets BULK_TIME_BUDGET_MIN=300 under its
 // 340-minute job. Honour it by seeding RUN_MINUTES, so that workflow keeps
@@ -124,20 +171,21 @@ const RUN_MINUTES = Number(process.env.RUN_MINUTES || 110);
 const RESERVE_MS = Number(process.env.RESERVE_MS || 5 * 60 * 1000);
 const VERIFY_MS = Number(process.env.VERIFY_MS || 60 * 1000);
 const CLOCK = budget({ minutes: RUN_MINUTES, reserveMs: RESERVE_MS, verifyMs: VERIFY_MS });
+
+// CF-A-CONST-IS-NOT-A-HOISTED-FUNCTION, the CI half. Under BUDGET_DRY_PARSE the
+// process stops HERE: the whole top level above has been evaluated -- including
+// the `budget()` call one line up, which is the statement that threw for three
+// nights -- and nothing below it runs, so no Cosmos client is constructed and
+// no row is read or written. Exit 0 means "this lane's module scope is sound".
+// A TDZ, a typo'd require path or a throwing constant all exit non-zero instead.
+if (process.env.BUDGET_DRY_PARSE === "1") {
+  console.log(`dry-parse OK: ${path.basename(__filename)} RUN_MINUTES=${CLOCK.RUN_MINUTES}`);
+  process.exit(0);
+}
+
 let stoppedOnBudget = false;
 const SPORT_FILTER = (process.env.BULK_SPORT_FILTER || "").trim();
 
-// CF-THE-VENDOR-STATES-THE-VERTICAL (2026-09-07). This script used to carry
-// its OWN copy of normSport, and the copy is how a fix reaches one ingest lane
-// and not the other: the shared mapper learned `pokemon` and this literal
-// would have gone on returning null for 1,525,994 rows. Imported from the one
-// implementation instead, so the two lanes cannot disagree about what
-// CardHedge's `group` field means. Same require root as recordSoldComp above.
-const { normSport } = require(path.join(backend, "dist/services/portfolioiq/chRowToSoldComp.js"));
-const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
-// CF-A-KILLED-JOB-CANNOT-REPORT-PROGRESS + CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE.
-// The clock and the exit come from the SHARED helper, never a local copy.
-const { budget, finishLane } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
 
 function normGrader(grader) {
   const g = String(grader || "").trim().toUpperCase();
@@ -201,6 +249,10 @@ function addDays(dateStr, days) {
 }
 
 async function main() {
+  // The deferred dist/ + Cosmos requires, resolved before anything uses them.
+  // A missing build still fails here, loudly, exactly as it did when these were
+  // top-level requires -- only the LINE moved, never the requirement.
+  loadDist();
   // NAMED, not chained, so finishLane() can dispose it (#1809).
   const client = new CosmosClient(process.env.COSMOS_CONNECTION_STRING);
   const chContainer = client.database("hobbyiq").container("ch_daily_sales");

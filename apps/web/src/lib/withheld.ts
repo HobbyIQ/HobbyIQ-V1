@@ -144,3 +144,34 @@ export function withheldPoolNote(w: WithheldBlock): string | null {
   if (n == null || n <= 0) return null;
   return n === 1 ? "1 sale in this pool" : `${n} sales in this pool`;
 }
+
+/**
+ * CF-WITHHELD-OUTLIVES-THE-SPINNER (2026-09-08): may this row say
+ * "CHECKING PRICE…"?
+ *
+ * The incident: six eBay-imported holdings showed the spinner and a bare
+ * "—" indefinitely. The engine had in fact priced them and WITHHELD with
+ * `no-checklist-match`, persisting a reason to each row — but the row hid
+ * that reason behind the spinner for as long as a reprice looked in flight,
+ * and a cross-instance poll could keep it looking in flight until the
+ * client's own 5-minute deadline.
+ *
+ * The rule: a run being in flight is not a reason to un-say something
+ * already decided. A row carrying a terminal refusal shows its REASON even
+ * while a run works; a row with no verdict at all still shows the spinner,
+ * because there "we are looking" is the honest claim.
+ *
+ * `withheld` and `value` are the same two facts the row already computes.
+ */
+export function showsCheckingPrice(args: {
+  repricing: boolean;
+  value: number | null;
+  withheld: WithheldBlock | null;
+}): boolean {
+  if (!args.repricing) return false;
+  // A published number never gets a spinner — the run may confirm it.
+  if (args.value != null) return false;
+  // Decided already: the reason outranks the promise of one.
+  if (args.withheld != null) return false;
+  return true;
+}
