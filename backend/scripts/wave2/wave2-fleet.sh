@@ -315,6 +315,16 @@ dispatch() {
 # `killed` claims we read a run and it died; `unfound` says we never found the
 # run at all. Reporting the second as the first is exactly how #1974 read as a
 # fleet-wide failure rather than as a broken finder.
+#
+# HOW LONG TO WAIT FOR A RUN TO NAME ITSELF. 15 minutes by default. Note what
+# this clock actually has to cover: `gh run view --log` refuses while a run is
+# in progress, so a run can only be identified once it COMPLETES, and the
+# window therefore spans queue time plus the run itself. A census slot that sits
+# behind a deep backfill-runner queue will exceed it and be reported `unfound` —
+# which is honest (we did not find it) but is not the same as "it failed", so
+# raise WAVE2_IDENTIFY_TIMEOUT_MINUTES when queueing behind a busy lane rather
+# than reading an `unfound` as a dead slot. `preflight_lane` exists to keep the
+# fleet out of that situation in the first place.
 IDENTIFY_TIMEOUT_MINUTES="${WAVE2_IDENTIFY_TIMEOUT_MINUTES:-15}"
 
 # Does THIS log belong to THIS dispatch? Takes a log file, the mode and the
@@ -368,15 +378,29 @@ find_run_for_slot() {
       # A QUEUED run has no log yet. It is not rejected; it is not ready.
       st=$(gh run view "$id" --repo "$REPO" --json status --jq .status 2>/dev/null)
       [ "$st" = "queued" ] && continue
+      # AND NEITHER DOES AN IN-PROGRESS ONE: `gh run view --log` refuses
+      # outright while a run is running ("logs will be available when it is
+      # complete"), so identification necessarily happens at completion.
+      #
+      # THE STEP NAMES ARE NOT AN ALTERNATIVE, and that was measured rather than
+      # assumed. `--json jobs` does expose step names live, but they are the
+      # workflow's STATIC step list -- every backfill-runner run has the same
+      # one. Compared 34232404064 (this fleet's census) against 34231277782
+      # (the park lane): both carry "Canary gate AFTER the rematch apply",
+      # "Upload the shard census", "Self-relaunch rematch-sold-comps ...".
+      # Nothing in a step name varies with `script`, `mode` or `slot`, so a
+      # step-name match would re-create #1974 exactly. Only the log says who a
+      # run is.
+      [ "$st" = "in_progress" ] && continue
       gh run view "$id" --repo "$REPO" --log >"$probe" 2>/dev/null || : >"$probe"
       if run_log_identifies_slot "$probe" "$mode" "$slot"; then
         rm -f "$probe"
         printf '%s' "$id"; return 0
       fi
-      # An IN-PROGRESS run may not have printed its banner yet, so it stays a
-      # candidate. Only a COMPLETED run that never identified itself is somebody
-      # else's for good.
-      [ "$st" = "completed" ] && rejected="$rejected$id "
+      # A COMPLETED run whose own log never named this script, mode and slot is
+      # somebody else's for good. Remember it so its log is downloaded once
+      # rather than once per poll.
+      rejected="$rejected$id "
     done
     sleep "$POLL_SECS"
   done

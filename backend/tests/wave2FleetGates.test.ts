@@ -900,3 +900,55 @@ describe("a dispatch that creates no run is reported at dispatch time", () => {
     expect(dry).toMatch(/say "WAVE2 dry-run: \$\{cmd\[\*\]\}"\n\s*return 0/);
   });
 });
+
+/**
+ * WHY THE LOG, AND NOT THE JOB'S STEP NAMES.
+ *
+ * `gh run view --log` refuses while a run is in progress ("logs will be
+ * available when it is complete"), so the obvious optimisation is to identify a
+ * run live from `--json jobs` step names instead. MEASURED 2026-09-08: that
+ * cannot work. Step names are the workflow's STATIC list and are identical
+ * across every backfill-runner run — 34232404064 (this fleet's census) and
+ * 34231277782 (the park lane of #1974) both carry "Canary gate AFTER the
+ * rematch apply", "Upload the shard census" and "Self-relaunch
+ * rematch-sold-comps until the shard is finished". Nothing in a step name
+ * varies with `script`, `mode` or `slot`.
+ *
+ * So a step-name match would reproduce #1974 exactly, and this pin exists to
+ * stop that "optimisation" being made later.
+ */
+describe("identity comes from the log, because step names cannot carry it", () => {
+  it("records the measurement that rules step names out", () => {
+    expect(fleetSrc).toContain("THE STEP NAMES ARE NOT AN ALTERNATIVE");
+  });
+
+  it("never matches a run on its job or step names", () => {
+    const finder = fleetSrc.slice(fleetSrc.indexOf("find_run_for_slot() {"), fleetSrc.indexOf("# Follow ONE SLOT"));
+    // strip comments — `--json jobs` is NAMED in the explanation of why it is
+    // not used, and a pin that cannot tell code from commentary is not a pin
+    const code = finder
+      .split("\n")
+      .filter((l) => !l.trim().startsWith("#"))
+      .join("\n");
+    expect(code).not.toMatch(/--json jobs/);
+    // the run's own LOG is what gets read
+    expect(code).toContain('--log >"$probe"');
+  });
+
+  // A run that cannot yet be read is not a run that failed identification.
+  it("holds queued and in-progress runs as candidates rather than rejecting them", () => {
+    const finder = fleetSrc.slice(fleetSrc.indexOf("find_run_for_slot() {"), fleetSrc.indexOf("# Follow ONE SLOT"));
+    expect(finder).toMatch(/\[ "\$st" = "queued" \] && continue/);
+    expect(finder).toMatch(/\[ "\$st" = "in_progress" \] && continue/);
+    // and only a run whose log was actually read gets remembered as a stranger
+    const rejectAt = finder.indexOf('rejected="$rejected$id "');
+    expect(rejectAt).toBeGreaterThan(finder.indexOf('--log >"$probe"'));
+  });
+
+  // The identify clock spans queue time plus the run, since identification can
+  // only happen at completion. That is worth stating where the default lives.
+  it("says what the identify timeout has to cover", () => {
+    expect(fleetSrc).toContain("HOW LONG TO WAIT FOR A RUN TO NAME ITSELF");
+    expect(fleetSrc).toMatch(/IDENTIFY_TIMEOUT_MINUTES="\$\{WAVE2_IDENTIFY_TIMEOUT_MINUTES:-15\}"/);
+  });
+});
