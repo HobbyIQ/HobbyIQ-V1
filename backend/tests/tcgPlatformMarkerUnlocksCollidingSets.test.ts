@@ -151,3 +151,31 @@ describe("MUTATION CHECK -- the marker gate is load-bearing", () => {
     expect(classifyTcg({ title: "1998 Upper Deck Expedition #30" }).isTcg).toBe(false);
   });
 });
+
+describe("a TCG-only platform must not relabel the OTHER games", () => {
+  // The platform fallback names `pokemon`, so every non-Pokemon game has to
+  // resolve on its own evidence BEFORE reaching it. Found while checking this:
+  // the haystack flattens hyphens, so "Yu-Gi-Oh" arrives as "Yu Gi Oh" and the
+  // old /yu-?gi-?oh/ (optional HYPHEN, not space) missed it. Harmless
+  // while an unmatched row merely fell through to isTcg:false -- but with the
+  // fallback in place it would have been labelled pokemon, which is a wrong
+  // vertical, not a missing one.
+  it("keeps Yu-Gi-Oh, One Piece and Lorcana on their own patterns", () => {
+    for (const title of ["Blue-Eyes White Dragon - Yu-Gi-Oh",
+                         "Dark Magician - Yu-Gi-Oh! - 1st Edition",
+                         "Monkey D. Luffy - One Piece OP01",
+                         "Elsa - Lorcana - Foil"]) {
+      const c = classifyTcg({ title, platform: "TCGplayer" });
+      expect(c.isTcg, title).toBe(true);
+      // Its OWN pattern decided it, not the platform fallback.
+      expect(c.reason, title).toBe("title-pattern");
+      expect(c.vertical, title).not.toBe("pokemon");
+    }
+  });
+
+  it("matches Yu-Gi-Oh through the slug, where hyphens are already flattened", () => {
+    // The slug form is the one that exercises the flattening.
+    const c = classifyTcg({ title: "", hobbyiqCardId: "hiq:yugioh:2002:yu-gi-oh:1:base:no-auto" });
+    expect(c.isTcg).toBe(true);
+  });
+});

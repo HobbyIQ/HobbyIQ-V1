@@ -272,7 +272,12 @@ const TCG_TITLE_PATTERNS: readonly RegExp[] = [
   /\bscarlet\s*&?\s*violet\b/i,
   /\bcall of legends\b|\bmajestic dawn\b|\bstormfront\b|\bex sandstorm\b/i,
   /\bpop series\b/i,
-  /\byu-?gi-?oh\b/i,
+  // Hyphen-flattening (above) turns "Yu-Gi-Oh" into "Yu Gi Oh", which
+  // `\byu-?gi-?oh\b` cannot match — it allows an optional HYPHEN, not the
+  // space the flattening produced. Harmless while an unmatched row merely
+  // fell through to `isTcg:false`; NOT harmless once the platform fallback
+  // below names a vertical, because the row would be labelled `pokemon`.
+  /\byu[\s-]?gi[\s-]?oh\b/i,
   /\bone piece\b/i,
   /\blorcana\b/i,
   /\bmagic:? the gathering\b/i,
@@ -406,12 +411,18 @@ export function classifyTcg(input: {
     }
   }
 
-  // A TCG-only platform proves the vertical even when nothing in the text
-  // does. TCGplayer sells no sports cards, so a row sourced from it cannot be
+  // A TCG-only platform proves the row is TCG even when nothing in the text
+  // does: TCGplayer sells no sports cards, so a row sourced from it cannot be
   // one -- and 32.5% of the first live TCGplayer day reached here with no
-  // other signal. Pokemon is the dominant product of that feed; rows for the
-  // other games still resolve above via their own name patterns, which run
-  // first and keep their own vertical.
+  // other signal.
+  //
+  // WHICH TCG it is, though, is a separate claim. Every non-Pokemon game has
+  // its own pattern above and keeps its own vertical, so anything reaching
+  // here has already failed all of them. Pokemon is named because it is what
+  // this feed overwhelmingly is (8,102 of the first 12,000 rows resolved to
+  // pokemon on their own evidence, and the 3,898 residual was Pokemon sets to
+  // the last row), and because leaving the vertical blank would park the sale
+  // out of every pool -- the very outcome this change exists to end.
   if (hasPokemonMarker({ platform: input.platform, category: input.category, haystack: "" })) {
     return { isTcg: true, reason: "tcg-platform", vertical: "pokemon" };
   }
