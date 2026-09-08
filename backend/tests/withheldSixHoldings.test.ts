@@ -270,6 +270,19 @@ describe("the drew-ruling row this PR adds", () => {
     expect(m.parallelColumnAuthoritative).toBe(true);
   });
 
+  it("names a SOURCE the ingest will accept — checklist class, or it exits 1", () => {
+    // THE SOURCE NAME IS LOAD-BEARING (ingest-checklist-csv-to-catalog:16):
+    // it refuses any SOURCE that does not class as `checklist`, and the class
+    // is decided by a word in the name. A plain "drew-ruling-..." classes as
+    // `unknown` and the whole ingest exits 1 before writing anything — caught
+    // here rather than on the runner.
+    const m = JSON.parse(readFileSync(MANIFEST, "utf-8"));
+    expect(catalogAuthorityOf(m.source)).toBe("checklist");
+    // ...and the attestation it names is real: the row this extends is itself
+    // a `checklist`-sourced row at the sibling card number.
+    expect(catalogAuthorityOf("checklist")).toBe("checklist");
+  });
+
   it("mints ONE card, and spells the rung the way the catalog already spells it", () => {
     const lines = readFileSync(CSV, "utf-8").trim().split(/\r?\n/);
     expect(lines[0]).toBe("category,cardNumber,parallel,isAuto,printRun,player,rarity");
