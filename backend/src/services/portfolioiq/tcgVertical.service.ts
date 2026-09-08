@@ -258,7 +258,13 @@ const POKEMON_MARKER_PATTERNS: readonly RegExp[] = [
   /\breverse\s+holo(?:foil)?\b/i,
   /\b(?:secret|ultra|illustration|amazing|radiant|shiny)\s+rare\b/i,
   /\btrainer\s+(?:gallery|card|kit|deck)\b/i,
-  /\b(?:grass|fire|water|lightning|psychic|fighting|darkness|metal|fairy|dragon)\s+energy\b/i,
+  // NOT an energy-type pattern. "<Type> Energy" reads as a Pokemon marker, but
+  // it is the one marker a COLLIDING row can carry on its own: "Fighting
+  // Energy - Expedition - Normal" would self-mark, unlocking "Expedition"
+  // with no evidence from outside the title. That defeats the gate -- the
+  // whole point is that a colliding name needs INDEPENDENT proof -- so the
+  // energy phrasing is deliberately absent. Those rows resolve on their
+  // platform (TCGplayer) instead, which is real evidence.
   /\b\d{1,3}\s*hp\b/i,
   /\b(?:vstar|vmax|v-union|tag team)\b/i,
 ];

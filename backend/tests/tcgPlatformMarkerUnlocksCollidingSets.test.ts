@@ -146,7 +146,13 @@ describe("MUTATION CHECK -- the marker gate is load-bearing", () => {
     // Proves the gate is about EVIDENCE, not about one vendor field.
     expect(classifyTcg({ title: "Gastly - Expedition - Holo Rare" }).isTcg).toBe(true);
     expect(classifyTcg({ title: "Team Aqua Grunt - Expedition - Trainer Card" }).isTcg).toBe(true);
-    expect(classifyTcg({ title: "Water Energy - Expedition" }).isTcg).toBe(true);
+    // NOT an energy phrase: "<Type> Energy" is the one marker a colliding row
+    // can carry on its own, so it would self-mark and unlock "Expedition" with
+    // no evidence from outside the title. It must still decline -- these rows
+    // resolve on platform=TCGplayer instead, which is real evidence.
+    expect(classifyTcg({ title: "Water Energy - Expedition" }).isTcg).toBe(false);
+    expect(classifyTcg({ title: "Fighting Energy - Expedition - Normal" }).isTcg).toBe(false);
+    expect(classifyTcg({ title: "Fighting Energy - Expedition - Normal", platform: "TCGplayer" }).isTcg).toBe(true);
     // Same set word, no marker -> still refused.
     expect(classifyTcg({ title: "1998 Upper Deck Expedition #30" }).isTcg).toBe(false);
   });
