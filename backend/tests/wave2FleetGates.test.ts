@@ -952,3 +952,87 @@ describe("identity comes from the log, because step names cannot carry it", () =
     expect(fleetSrc).toMatch(/IDENTIFY_TIMEOUT_MINUTES="\$\{WAVE2_IDENTIFY_TIMEOUT_MINUTES:-15\}"/);
   });
 });
+
+/**
+ * THE PIPEFAIL/SIGPIPE TRAP — the reason #1974's slots ALL said `killed`.
+ *
+ * This file sets `set -o pipefail`. `grep -q` exits the instant it matches. So
+ * in `printf '%s' "$n" | grep -aq PATTERN`, printf is still writing when grep
+ * leaves, printf dies of SIGPIPE (exit 141), and pipefail promotes that to the
+ * pipeline's status — SO A SUCCESSFUL MATCH REPORTS FAILURE.
+ *
+ * It only bites on a log big enough that printf has not finished. Every fixture
+ * in this file is a few hundred bytes, so all 88 pins passed while the real
+ * thing was broken. MEASURED on the 755KB log of run 34232404064 (this fleet's
+ * own slot 0 census): the pre-existing `chain_outcome` returned `killed` for a
+ * run that had cleanly hit its budget and relaunched. That is the SECOND defect
+ * behind #1974 and it is independent of the finder — it would have reported
+ * `killed` for all 32 slots even if every slot had been found correctly.
+ *
+ * These pins therefore use a log LARGER THAN A PIPE BUFFER (64KB on Linux),
+ * because a small one cannot tell a fixed reader from a broken one.
+ */
+describe("readers survive a log larger than a pipe buffer (pipefail/SIGPIPE)", () => {
+  /** Padding that no reader's pattern can match, sized past any pipe buffer. */
+  const PAD = Array.from({ length: 20000 }, (_, i) => `  filler line ${i} — nothing here matches a banner`).join("\n");
+
+  /**
+   * THE BANNER GOES FIRST, and that placement is the whole point. SIGPIPE fires
+   * when grep finds its match EARLY and exits while printf is still writing —
+   * exactly the real shape, since `Script confirmed` and the lane banner sit
+   * near the top of a runner log while the row-by-row output that makes the log
+   * big comes after. A fixture with the banner at the END lets printf finish
+   * before grep leaves and the bug does not reproduce: measured, that ordering
+   * passes against the BROKEN reader too, which makes it a worthless pin.
+   */
+  const bigLog = (body: string) => `${body}\n${PAD}\n`;
+
+  itShell("chain_outcome reads a budget stop out of a large log, not `killed`", () => {
+    const budget = bigLog("rematch-sold-comps  MODE=census  READ ONLY  slot 0/32\nlane stopped at the 140m budget -- relaunching");
+    expect(reader("chain_outcome", budget).out).toBe("budget");
+  });
+
+  itShell("chain_outcome reads a clean finish out of a large log", () => {
+    const fin = bigLog("rematch-sold-comps  MODE=census  READ ONLY  slot 0/32\nfinishLane: exiting code 0");
+    expect(reader("chain_outcome", fin).out).toBe("finished");
+  });
+
+  itShell("chain_outcome still reads a startup refusal out of a large log", () => {
+    const ref = bigLog("rematch-sold-comps: STARTUP REFUSED at phase=class-scope -- the lane never began work");
+    expect(reader("chain_outcome", ref).out).toBe("startup-refused");
+  });
+
+  itShell("the identity check accepts a large log that names this script, mode and slot", () => {
+    const big = bigLog(
+      "Script confirmed: backend/scripts/rematch-sold-comps.cjs\n" +
+        "rematch-sold-comps  MODE=census  READ ONLY  slot 0/32  budget 120m  limit none",
+    );
+    expect(reader("run_log_identifies_slot", big, "census 0").rc).toBe(0);
+    // and still rejects the wrong slot and the wrong mode at full size
+    expect(reader("run_log_identifies_slot", big, "census 7").rc).not.toBe(0);
+    expect(reader("run_log_identifies_slot", big, "apply-improve 0").rc).not.toBe(0);
+  });
+
+  itShell("canary_verdict reads a hold out of a large log", () => {
+    const held = bigLog("canaries hold -- the shard may stand");
+    expect(reader("canary_verdict", held).out).toBe("hold");
+  });
+
+  /**
+   * The structural pin. A herestring feeds grep with no pipe at all, so there
+   * is no SIGPIPE and no pipefail interaction. `printf | grep -q` must not come
+   * back — it is the exact shape of the bug.
+   */
+  it("no reader pipes into `grep -q`", () => {
+    // strip comments — the shape is NAMED in the explanation of why it is gone,
+    // and a pin that cannot tell code from commentary is not a pin
+    const code = fleetSrc
+      .split("\n")
+      .filter((l) => !l.trim().startsWith("#"))
+      .join("\n");
+    expect(code).not.toMatch(/printf '%s' "\$n" \| grep -aq/);
+    expect(fleetSrc).toContain("NOTE THE HERESTRINGS");
+    // the readers that scan a whole normalized log all use herestrings
+    expect((fleetSrc.match(/<<< "\$n"/g) ?? []).length).toBeGreaterThanOrEqual(11);
+  });
+});

@@ -180,13 +180,13 @@ apply_reconciled() {
 chain_outcome() {
   local f="$1" n
   n=$(normalize "$f")
-  if   printf '%s' "$n" | grep -aq 'rematch-sold-comps: STARTUP REFUSED'; then printf 'startup-refused'
+  if   grep -aq 'rematch-sold-comps: STARTUP REFUSED' <<< "$n"; then printf 'startup-refused'
   elif [ ! -s "$f" ];                                                     then printf 'empty-log'
-  elif printf '%s' "$n" | grep -aq 'rematch-sold-comps: STARTUP ok' \
-       && ! printf '%s' "$n" | grep -aqE '^rematch-sold-comps  MODE=';    then printf 'died-in-startup'
-  elif printf '%s' "$n" | grep -aqE 'stopped at the .*budget';            then printf 'budget'
-  elif printf '%s' "$n" | grep -aqE 'finishLane: exiting code 0( |$)';    then printf 'finished'
-  elif printf '%s' "$n" | grep -aqE 'finishLane: exiting code [0-9]+';    then printf 'verdict'
+  elif grep -aq 'rematch-sold-comps: STARTUP ok' <<< "$n" \
+       && ! grep -aqE '^rematch-sold-comps  MODE=' <<< "$n";    then printf 'died-in-startup'
+  elif grep -aqE 'stopped at the .*budget' <<< "$n";            then printf 'budget'
+  elif grep -aqE 'finishLane: exiting code 0( |$)' <<< "$n";    then printf 'finished'
+  elif grep -aqE 'finishLane: exiting code [0-9]+' <<< "$n";    then printf 'verdict'
   else                                                                         printf 'killed'
   fi
 }
@@ -205,8 +205,8 @@ chain_outcome() {
 # banner is not a zero.
 canary_verdict() {
   local n; n=$(normalize "$1")
-  if   printf '%s' "$n" | grep -aqE 'canaries REGRESSED';                     then printf 'regressed'
-  elif printf '%s' "$n" | grep -aqE 'canaries hold -- the shard may stand';   then printf 'hold'
+  if   grep -aqE 'canaries REGRESSED' <<< "$n";                     then printf 'regressed'
+  elif grep -aqE 'canaries hold -- the shard may stand' <<< "$n";   then printf 'hold'
   else                                                                            printf 'absent'
   fi
 }
@@ -336,21 +336,33 @@ IDENTIFY_TIMEOUT_MINUTES="${WAVE2_IDENTIFY_TIMEOUT_MINUTES:-15}"
 # are accepted as alternates because the workflow echoes the input that way in
 # its env block, but the lane banner is primary: it is the only spelling that
 # also proves MODE.
+#
+# NOTE THE HERESTRINGS, AND WHY THEY ARE NOT `printf | grep`. MEASURED against
+# the real 755KB log of run 34232404064 -- the FIRST full-size capture this
+# function ever saw: `printf '%s' "$n" | grep -aq PATTERN` RETURNS FAILURE ON A
+# SUCCESSFUL MATCH. `grep -q` exits the instant it matches, printf then dies of
+# SIGPIPE (141), and this file's `set -o pipefail` promotes that to the
+# pipeline's status -- so the `&&` never fires and a run that DID identify
+# itself is rejected. Every fixture in the test suite is small enough that
+# printf finishes before grep exits, which is why all 88 pins passed while the
+# real log failed. A herestring feeds grep without a pipe, so there is no
+# SIGPIPE and no pipefail interaction. Same fix in chain_outcome and
+# canary_verdict, which read the same large logs the same way.
 run_log_identifies_slot() {
   local log="$1" mode="$2" slot="$3" n
   [ -s "$log" ] || return 1
   n=$(normalize "$log")
   # 1. THE SCRIPT. The workflow's own confirmation line, printed by every run
   #    before it runs anything. This is the line that unmasked the park lane.
-  printf '%s' "$n" | grep -aq 'Script confirmed: backend/scripts/rematch-sold-comps\.cjs' || return 1
+  grep -aq 'Script confirmed: backend/scripts/rematch-sold-comps\.cjs' <<< "$n" || return 1
   # 2 + 3. MODE AND SLOT, from the one banner that states both at once.
-  printf '%s' "$n" | grep -aqE "^rematch-sold-comps  MODE=${mode}  .*[[:space:]]slot ${slot}/[0-9]+" && return 0
+  grep -aqE "^rematch-sold-comps  MODE=${mode}  .*[[:space:]]slot ${slot}/[0-9]+" <<< "$n" && return 0
   # The lane banner is absent on a run that died BEFORE printing one -- and a
   # startup refusal is a real outcome for this slot that must stay readable. So
   # fall back to the workflow's echoed inputs, which exist from the first step,
   # but only BOTH together and only alongside the script line proven above.
-  printf '%s' "$n" | grep -aqE "^(SLOT: ${slot}|slot=${slot})([^0-9]|$)" || return 1
-  printf '%s' "$n" | grep -aqE "(MODE: ${mode}|mode=${mode})([^-a-z]|$)" || return 1
+  grep -aqE "^(SLOT: ${slot}|slot=${slot})([^0-9]|$)" <<< "$n" || return 1
+  grep -aqE "(MODE: ${mode}|mode=${mode})([^-a-z]|$)" <<< "$n" || return 1
   return 0
 }
 
