@@ -1348,6 +1348,11 @@ describe("an occupied twin is a fold; an occupied rival stays refused", () => {
     ["31:international-red:no-auto:num-15", "Kyle Filipowski", "Seth Curry"],
     ["21:international-red:no-auto:num-15", "Ja'Kobe Walter", "Johnny Furphy"],
     ["10:international-red:no-auto:num-15", "Dalton Knecht", "Quincy Olivari"],
+    // THE THIRTEENTH, found by REPORT run 34255933237 (#2007). It was
+    // refused by run 34204256211 too, but its truncated log line reads
+    // identically to the #8 /27 Durant fold, so #1999 adjudicated the /27
+    // twin and left this one an unadjudicated reslug.
+    ["8:international-red:no-auto:num-15", "Matas Buzelis", "Jakob Poeltl"],
   ];
   const slug = (tail: string) => `hiq:basketball:2025:panini-immaculate:${tail}`;
   const FOLD = slug("8:international-red:no-auto:num-27");
@@ -1447,16 +1452,16 @@ describe("an occupied twin is a fold; an occupied rival stays refused", () => {
     }
   });
 
-  it("only those 13 entries differ in shape — the other 987 stay plain reslugs", () => {
+  it("only those 14 entries differ in shape — the other 986 stay plain reslugs", () => {
     const touched = new Set<string>([FOLD, ...REFUSED.map(([t]) => slug(t))]);
-    expect(touched.size).toBe(13);
+    expect(touched.size).toBe(14);
     const retires = entries.filter((e) => e.action === "retire");
     // Exactly ONE fold in the whole file.
     expect(retires).toHaveLength(1);
     expect(retires[0].id).toBe(FOLD);
-    // Exactly TWELVE parks, and they are the twelve collisions.
+    // Exactly THIRTEEN parks, and they are the thirteen collisions.
     const parks = entries.filter((e) => e.action === "park");
-    expect(parks).toHaveLength(12);
+    expect(parks).toHaveLength(13);
     for (const e of parks) expect(touched.has(e.id)).toBe(true);
     // The `note` form the parks replaced is gone -- a park states itself.
     expect(entries.filter((e) => typeof e.note === "string")).toHaveLength(0);
@@ -1832,5 +1837,98 @@ describe("topps-three-01: every occupied refusal is a park, and none is a fold",
     expect((doc as unknown as { keepSales?: boolean }).keepSales).toBe(true);
     expect(L.keepsSales({}, doc)).toBe(true);
     for (const e of entries) expect(L.keepsSales(e, doc)).toBe(true);
+  });
+});
+
+// ── a retire moves nothing, so occupancy can never refuse it ─────────────────
+
+/**
+ * CF-A-RETIRE-IS-NEVER-REFUSED-AS-OCCUPIED (#2007, 2026-09-08).
+ *
+ * REPORT run 34255933237 over immaculate-01 reconciled
+ * `1,000 = written 999 + refused 1`, and the single refusal printed as
+ *
+ *     REFUSED (occupied: different card)  hiq:basketball:2025:panini-immaculate:8:international-red:no-a
+ *
+ * which reads exactly like the #8 International Red Durant entry #1999 had
+ * converted to a fold. It is NOT that entry. The lane truncates ids to 62
+ * chars in the banner, and TWO entries in this list share that prefix:
+ *
+ *     ...:8:international-red:no-auto:num-27   Kevin Durant   (folded, #1999)
+ *     ...:8:international-red:no-auto:num-15   Matas Buzelis  (still a reslug)
+ *
+ * The Durant fold ran correctly in the same run -- `RETIRE ... Kevin Durant`
+ * appears ~1,800 log lines earlier. What was refused is the Buzelis row, a
+ * THIRTEENTH cross-player collision with the identical signature to the twelve
+ * #2002 parked: a hobbymonitor row whose 2024 address is held by a
+ * checklist-backed row naming a different player (Jakob Poeltl,
+ * checklistinsider-2026-08-27). #1999 read the earlier run's truncated line as
+ * the Durant entry and left this one unadjudicated.
+ *
+ * THE LANE IS NOT THE DEFECT, AND THIS PINS WHY. A retire moves nothing, so it
+ * never reads a destination: `incumbent` is computed inside the RESLUG branch
+ * alone, below the `if (action === "retire") { ... continue; }` that returns
+ * first. There is no path on which a retire consults playerIdentityKey, a
+ * printRun, or a `num-` segment. A refusal that names a retire would therefore
+ * be a real defect -- so it is asserted here rather than assumed.
+ */
+describe("a retire is never refused as occupied — it moves nothing", () => {
+  const src = readFileSync(lane, "utf8");
+
+  it("the retire branch reads no destination and runs no occupancy compare", () => {
+    const from = src.indexOf('if (action === "retire") {');
+    const to = src.indexOf('// ── RESLUG', from);
+    expect(from).toBeGreaterThan(-1);
+    expect(to).toBeGreaterThan(from);
+    const branch = src.slice(from, to);
+    expect(branch).not.toContain("occupancyRefusal");
+    expect(branch).not.toContain("occupiedByDifferentCard");
+    expect(branch).not.toContain("rowAt(to)");
+    expect(branch).not.toContain("incumbent");
+  });
+
+  it("the occupancy refusal is reachable only from the reslug path", () => {
+    // Every occupancyRefusal call site sits after the RESLUG marker.
+    const reslugAt = src.indexOf("// ── RESLUG");
+    let i = src.indexOf("occupancyRefusal(", reslugAt === -1 ? 0 : 0);
+    const callSites: number[] = [];
+    while (i !== -1) {
+      // Skip the declaration itself.
+      if (!/function\s+occupancyRefusal\($/.test(src.slice(Math.max(0, i - 30), i + 17))) {
+        callSites.push(i);
+      }
+      i = src.indexOf("occupancyRefusal(", i + 1);
+    }
+    // The refusal that increments the counter must live past the reslug marker.
+    const counted = src.indexOf("refusedOccupied++");
+    expect(counted).toBeGreaterThan(reslugAt);
+    expect(callSites.length).toBeGreaterThan(0);
+  });
+
+  /**
+   * THE TRUNCATION TRAP, PINNED SO IT CANNOT BE MISREAD TWICE. Two entries in
+   * this list share the first 62 characters of their id. A banner line alone
+   * therefore cannot identify an entry, and any future triage that reads one
+   * must disambiguate by the print-run tail.
+   */
+  it("two entries share the banner's 62-char prefix — a log line is not an id", () => {
+    const doc = readList(join(listDir, "2026-09-07-hobbymonitor-year-basketball-panini-immaculate-01.json"));
+    const durant = "hiq:basketball:2025:panini-immaculate:8:international-red:no-auto:num-27";
+    const buzelis = "hiq:basketball:2025:panini-immaculate:8:international-red:no-auto:num-15";
+    expect(durant.slice(0, 62)).toBe(buzelis.slice(0, 62));
+    const byId = new Map(doc.entries.map((e) => [e.id, e]));
+    // The two now carry DIFFERENT shapes, which is the whole point.
+    expect(byId.get(durant)?.action).toBe("retire");
+    expect(byId.get(buzelis)?.action).toBe("park");
+  });
+
+  it("no reslug entry is left on an address a park or retire already adjudicated", () => {
+    const doc = readList(join(listDir, "2026-09-07-hobbymonitor-year-basketball-panini-immaculate-01.json"));
+    // Every #8 international-red no-auto row in the list is adjudicated: the
+    // /27 twin folded, the /15 collision parked. Neither is still a move.
+    const eights = doc.entries.filter((e) =>
+      e.id.startsWith("hiq:basketball:2025:panini-immaculate:8:international-red:no-auto"));
+    expect(eights).toHaveLength(2);
+    for (const e of eights) expect(e.action).not.toBe("reslug");
   });
 });
