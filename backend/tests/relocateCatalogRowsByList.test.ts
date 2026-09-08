@@ -1612,3 +1612,225 @@ describe("park is a third shape: no move, no delete, one stamp", () => {
     expect(L.classifyEntry(withTo).ok).toBe(false);
   });
 });
+
+// ── topps-three-01: sixteen occupied refusals, sixteen parks, zero folds ─────
+
+/**
+ * CF-AN-UNCONFIRMED-ROW-IS-PARKED-NOT-DELETED, applied to a SECOND list
+ * (Drew's Ruling 17, 2026-09-08).
+ *
+ * REPORT run 34231543456 over the topps-three-01 list stopped 16 entries on
+ * `refused — occupied`, in a file whose other 984 entries reconciled clean
+ * (984 written + 16 refused = 1,000). Every one of the 16 was written as a
+ * `reslug` carrying the evidence string "destination read as vacant
+ * 2026-09-07" -- a vacancy the lane re-measured at run time and found false.
+ *
+ * ALL 16 WERE POINT-READ IN PROD 2026-09-08, and unlike immaculate-01 they are
+ * ONE population, not two: every single pair names TWO DIFFERENT PLAYERS.
+ * Michael Porter Jr. -> an address held by DeMar DeRozan; Kyrie Irving -> one
+ * held by Kyle Kuzma; Paul George -> Kevin Durant, and so on. There is NOT ONE
+ * same-player twin among them, so this file gains NO fold -- the shape
+ * immaculate-01 needed for Kevin Durant #8 has no instance here, and asserting
+ * the retire count is UNCHANGED at 733 is what keeps a future edit from
+ * inventing one.
+ *
+ * WHY IT IS A NUMBERING QUESTION AND NOT AN ADDRESSING ONE. Every moving row is
+ * `hobbymonitor-2026-09-04` with setKey `topps-three`; every occupant is
+ * `checklistinsider-2026-08-27` with setKey `topps-royalty`. The two are
+ * DIFFERENT PRODUCTS that collide only because both slug down to the bare
+ * `topps` stem -- the flagship catch-all this repo has hit before. Per
+ * CF-COUNT-BY-SOURCE-NOT-ROW-COUNT the checklist-backed row decides the number,
+ * so the hobbymonitor NUMBERING is what wants a source, not the destination.
+ *
+ * The remedy is therefore `park` for all 16: a reslug IS the collision, and a
+ * retire would hard-delete a row that is UNCONFIRMED rather than proven wrong.
+ */
+describe("topps-three-01: every occupied refusal is a park, and none is a fold", () => {
+  const toppsThreeList = join(listDir, "2026-09-07-hobbymonitor-year-basketball-topps-three-01.json");
+  const doc = readList(toppsThreeList);
+  type NotedEntry = Entry & { note?: string };
+  const entries = doc.entries as NotedEntry[];
+
+  // The 16 the REPORT refused: [cardNumber, moving player, occupant in prod].
+  const REFUSED: ReadonlyArray<readonly [string, string, string]> = [
+    ["16", "Michael Porter Jr.", "DeMar DeRozan"],
+    ["45", "Trey Murphy III", "Anfernee Simons"],
+    ["33", "Kyrie Irving", "Kyle Kuzma"],
+    ["67", "Chris Paul", "Bradley Beal"],
+    ["80", "Domantas Sabonis", "Alperen Sengun"],
+    ["69", "Paul George", "Kevin Durant"],
+    ["79", "De'Aaron Fox", "Hakeem Olajuwon"],
+    ["82", "Peja Stojaković", "Jalen Green"],
+    ["66", "Klay Thompson", "Shaquille O'Neal"],
+    ["40", "Hakeem Olajuwon", "Kevin Garnett"],
+    ["42", "Desmond Bane", "Chet Holmgren"],
+    ["94", "Carmelo Anthony", "Paul Pierce"],
+    ["58", "Paul Pierce", "Paul George"],
+    ["53", "Dennis Rodman", "Klay Thompson"],
+    ["63", "Khris Middleton", "Austin Reaves"],
+    ["24", "Jalen Williams", "Trae Young"],
+  ];
+  const slug = (n: string) => `hiq:basketball:2025:topps:${n}:gold:no-auto:num-10`;
+  const byId = new Map(entries.map((e) => [e.id, e]));
+
+  it("the list still holds 1,000 entries and names this lane", () => {
+    expect(doc.forLane).toBe("relocate-catalog-rows-by-list");
+    expect(entries).toHaveLength(1000);
+  });
+
+  it("every entry still passes the lane's own validation", () => {
+    for (const e of entries) expect(L.classifyEntry(e).ok).toBe(true);
+  });
+
+  /**
+   * THE PIN THIS CHANGE EXISTS FOR. Each of the 16 stays put: not a reslug
+   * (that is the collision the guard refuses on every run, so the entry would
+   * never be adjudicated) and not a retire (that hard-deletes an unconfirmed
+   * row and orphans its sales).
+   */
+  it("all sixteen DIFFERENT-PLAYER collisions are PARKED — never moved, never deleted", () => {
+    for (const [num, moving, held] of REFUSED) {
+      const e = byId.get(slug(num));
+      expect(e, num).toBeDefined();
+      expect(e?.action, num).toBe("park");
+      expect(e?.action, num).not.toBe("reslug");
+      expect(e?.action, num).not.toBe("retire");
+      // A park stays put, so it may never name a destination.
+      expect(e?.to, num).toBeUndefined();
+      // The lane's own compare still agrees these are two cards — the ruling
+      // changed the REMEDY, never the finding.
+      expect(L.occupiedByDifferentCard({ playerName: held }, { playerName: moving }), num).toBe(true);
+      const r = L.occupancyRefusal({ playerName: held }, { playerName: moving });
+      expect((r as { reason: string }).reason, num).toBe("occupied: different card");
+    }
+  });
+
+  /**
+   * NO FOLD IN THIS FILE. immaculate-01's Kevin Durant #8 was a same-player
+   * twin and became a `retire`. Here every pair is two players, so the file's
+   * retire count must be EXACTLY the 733 it already carried — a seventeenth
+   * "fold" would mean someone folded across players, the single defect the
+   * occupancy guard exists to prevent.
+   */
+  it("no occupied refusal became a fold — the retire count is untouched at 733", () => {
+    const retires = entries.filter((e) => e.action === "retire");
+    expect(retires).toHaveLength(733);
+    for (const [num] of REFUSED) {
+      expect(retires.some((e) => e.id === slug(num)), num).toBe(false);
+    }
+    // And no pair names one player on both sides, which is what a twin — the
+    // only thing that earns a fold — would look like.
+    for (const [num, moving, held] of REFUSED) expect(moving, num).not.toBe(held);
+  });
+
+  it("each park records the occupant and the source that outranks it", () => {
+    for (const [num, moving, held] of REFUSED) {
+      const e = byId.get(slug(num));
+      // The evidence names BOTH sides and both sources, so the ruling is
+      // auditable from the file alone.
+      expect(e?.evidence, num).toContain(held);
+      expect(e?.evidence, num).toContain(moving);
+      expect(e?.evidence, num).toContain("checklistinsider-2026-08-27");
+      expect(e?.evidence, num).toContain("hobbymonitor-2026-09-04");
+      // The two setKeys are the whole reason these addresses collide, so both
+      // are named rather than left for a reader to infer from the slug.
+      expect(e?.evidence, num).toContain("topps-three");
+      expect(e?.evidence, num).toContain("topps-royalty");
+      // The refusal is traced to the run that produced it.
+      expect(e?.evidence, num).toContain("34231543456");
+      // The reason states the ruling that produced the park.
+      expect(e?.reason, num).toContain("CHECKLIST DECIDES THE NUMBER");
+      expect(e?.reason, num).toContain("identityUnverified");
+    }
+  });
+
+  it("only those 16 entries changed shape — the other 984 keep the form they had", () => {
+    const touched = new Set<string>(REFUSED.map(([n]) => slug(n)));
+    expect(touched.size).toBe(16);
+    const parks = entries.filter((e) => e.action === "park");
+    expect(parks).toHaveLength(16);
+    for (const e of parks) expect(touched.has(e.id)).toBe(true);
+    // A park states itself; the `note` form is not used on this list either.
+    expect(entries.filter((e) => typeof e.note === "string")).toHaveLength(0);
+    // Every untouched entry is still a bare retire or reslug, and every
+    // surviving reslug still lands in the year-2023 product.
+    for (const e of entries) {
+      if (touched.has(e.id)) continue;
+      expect(["retire", "reslug"]).toContain(e.action);
+      expect(e.note).toBeUndefined();
+      if (e.action === "reslug") {
+        expect(String(e.to).startsWith("hiq:basketball:2023:topps:")).toBe(true);
+      } else {
+        expect(e.to).toBeUndefined();
+      }
+    }
+    expect(entries.filter((e) => e.action === "reslug")).toHaveLength(251);
+  });
+
+  it("the census and finding count the three shapes the file actually holds", () => {
+    const c = (doc as unknown as { census: Record<string, unknown> }).census;
+    expect(c.retireInThisFile).toBe(733);
+    expect(c.reslugInThisFile).toBe(251);
+    expect(c.parkInThisFile).toBe(16);
+    expect(
+      Number(c.retireInThisFile) + Number(c.reslugInThisFile) + Number(c.parkInThisFile),
+    ).toBe(entries.length);
+    expect((doc as unknown as { finding: string }).finding).toContain(
+      "733 retire, 251 reslug, 16 park",
+    );
+    // The ruling that produced the parks is stated in the file, not only here.
+    const rulings = (doc.rulings ?? []).join("\n");
+    expect(rulings).toContain("RULING 17");
+    expect(rulings).toContain("PARKED, NOT FOLDED");
+  });
+
+  it("no duplicate ids, and no two entries onto one destination", () => {
+    const ids = entries.map((e) => e.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    const tos = entries.filter((e) => e.action === "reslug").map((e) => String(e.to));
+    expect(new Set(tos).size).toBe(tos.length);
+  });
+
+  /**
+   * MUTATION. Re-arm one collision as the `reslug` the REPORT refused. It
+   * passes SHAPE validation -- which is exactly why shape alone is not enough:
+   * the lane refuses it at occupancy on every run, so the entry would sit
+   * unadjudicated forever. The assertion is that the COMMITTED action is not a
+   * reslug.
+   */
+  it("MUTATION: ship a collision as a reslug -> the lane refuses it forever -> red", () => {
+    const id = slug("16");
+    const mutant: Entry = {
+      id,
+      action: "reslug",
+      to: id.replace(":2025:", ":2023:"),
+      reason: "mutant: the shape run 34231543456 refused",
+    };
+    expect(L.classifyEntry(mutant).ok).toBe(true);
+    expect(byId.get(id)?.action).not.toBe("reslug");
+  });
+
+  /**
+   * MUTATION. Fold a collision instead of parking it -- immaculate-01's shape
+   * applied to the wrong population. Two players' sales would end up in one
+   * pricing pool, so the committed action must not be a retire.
+   */
+  it("MUTATION: fold a two-player collision as a retire -> one pool, two cards -> red", () => {
+    const id = slug("69"); // Paul George moving onto Kevin Durant's address
+    expect(L.classifyEntry({ id, action: "retire", reason: "mutant fold" }).ok).toBe(true);
+    expect(byId.get(id)?.action).not.toBe("retire");
+    expect(byId.get(id)?.action).toBe("park");
+  });
+
+  /**
+   * `keepSales: true` is load-bearing for all three shapes here, exactly as on
+   * immaculate-01: a reslug must not carry the genuine year-2025 sales back to
+   * 2023, a retire leaves them for the rematch, and a park leaves them on the
+   * row it stamped -- unpriced, not unplaced.
+   */
+  it("keepSales stays true, so no shape carries the other card's sales", () => {
+    expect((doc as unknown as { keepSales?: boolean }).keepSales).toBe(true);
+    expect(L.keepsSales({}, doc)).toBe(true);
+    for (const e of entries) expect(L.keepsSales(e, doc)).toBe(true);
+  });
+});
