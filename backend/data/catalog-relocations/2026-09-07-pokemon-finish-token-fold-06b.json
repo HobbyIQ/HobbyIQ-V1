@@ -5,7 +5,7 @@
   "finding": "CF-A-FINISH-TOKEN-IS-ONE-TOKEN (Drew, 2026-09-07). 14951 card_catalog rows sit on a NON-CANONICAL Pokemon finish token. The canonical tokens are 'holofoil' and 'reverse-holofoil', chosen by the mint-lane vocabulary (scripts/lib/pokemon-finish-vocab.cjs, #1935) and confirmed by source: the checklist-side scrape 'pokemon-tcg-data-scraped-2026-08-14' already spells them that way (27,559 reverse-holofoil + 12,039 holofoil), while every non-canonical spelling is ingest-auto-seed or sales-attested. RETIRE where the canonical twin already exists (the checklist/attested twin wins); RESLUG where the address is vacant. Graded children follow their parent row and are never given their own entry.",
   "part": "06b",
   "supersedes": "data/catalog-relocations/2026-09-07-pokemon-finish-token-fold-06.json",
-  "note": "Part 06 reported 1,388 RESLUGGED + 43 refused-occupied. All 43 refusals were adjudicated against the tcgdex checklist and prod point reads: every occupant is the SAME card under a fuller spelling (delta-species δ, ♀, α/γ, bracketed subtitle, curly apostrophe), never a different card. tcgdex names exactly ONE card at each (set, cardNumber) — there is no plain twin. So all 43 are folds, converted from reslug to retire; 0 wrong-number corrections and 0 true collisions.",
+  "note": "Part 06 reported 1,388 RESLUGGED + 43 refused-occupied. All 43 refusals were adjudicated against the tcgdex checklist and prod point reads: every occupant is the SAME card under a fuller spelling (delta-species δ, ♀, α/γ, bracketed subtitle, curly apostrophe), never a different card. tcgdex names exactly ONE card at each (set, cardNumber) — there is no plain twin. So all 43 are folds, converted from reslug to retire; 0 wrong-number corrections and 0 true collisions. REVISION 2026-09-07 (the occupied-unnamed pass): the report still refused 5 entries in THIS list as 'occupied: unnamed'. Point-read against prod, each destination twin carries a playerName BYTE-IDENTICAL to the source's — a Japanese name that playerIdentityKey's a-z0-9 reduction empties on both sides, so the guard read blank-vs-blank as unknown and refused rather than folding. Same set, same cardNumber, same year, same isAuto on both rows; the only difference is the finish spelling this fold exists to collapse. All 5 are converted from reslug to retire, the twin keeps the address, and 0 are folds across players.",
   "entries": [
     {
       "id": "hiq:pokemon:2019:sm11-unified-minds:173:reverse-holo:no-auto",
@@ -5076,10 +5076,9 @@
     },
     {
       "id": "hiq:pokemon:2023:sv4a:174:reverse-holo:no-auto",
-      "action": "reslug",
-      "to": "hiq:pokemon:2023:sv4a:174:reverse-holofoil:no-auto",
-      "reason": "CF-A-FINISH-TOKEN-IS-ONE-TOKEN: 'reverse-holo' folds onto the canonical 'reverse-holofoil'; the destination is vacant.",
-      "evidence": "source=tcgdex-ja-2026-09-04; ナンジャモ — Japanese レイジングサーフ"
+      "action": "retire",
+      "reason": "CF-A-FINISH-TOKEN-IS-ONE-TOKEN + CF-A-FOLD-NEVER-CHANGES-THE-PLAYER: the reslug refused as 'occupied: unnamed', but the occupant is the SAME card — the two rows carry a byte-identical Japanese playerName that playerIdentityKey's a-z0-9 reduction empties, and blank is unknown to that guard, never 'the same'. Point-read against prod: same set, same cardNumber, same year, same isAuto, differing only in the finish spelling this fold exists to collapse. One card gets one row and one pool, so the source is retired and the canonical twin keeps the address.",
+      "evidence": "refused-occupied ('occupied: unnamed') on the 2026-09-07 report; twin hiq:pokemon:2023:sv4a:174:reverse-holofoil:no-auto playerName=\"ナンジャモ\" source=finish-attested:cardhedge; this row playerName=\"ナンジャモ\" source=tcgdex-ja-2026-09-04; both names are byte-identical and playerIdentityKey reduces each to \"\" (kana/kanji carry no a-z0-9), which is why the guard refused rather than folded; prod point read: sv4a#174 2023 isAuto=false on both rows, parallel \"Reverse Holo\" -> \"Reverse Holofoil\"; 7 sales become UNPLACED for the rematch to re-place on the surviving canonical row."
     },
     {
       "id": "hiq:pokemon:2024:sv8a:139:reverse-holo:no-auto",
@@ -7450,10 +7449,9 @@
     },
     {
       "id": "hiq:pokemon:2023:sv2a:161:reverse-holo:no-auto",
-      "action": "reslug",
-      "to": "hiq:pokemon:2023:sv2a:161:reverse-holofoil:no-auto",
-      "reason": "CF-A-FINISH-TOKEN-IS-ONE-TOKEN: 'reverse-holo' folds onto the canonical 'reverse-holofoil'; the destination is vacant.",
-      "evidence": "source=tcgdex-ja-2026-09-04; エリカの招待 — Japanese ポケモンカード151"
+      "action": "retire",
+      "reason": "CF-A-FINISH-TOKEN-IS-ONE-TOKEN + CF-A-FOLD-NEVER-CHANGES-THE-PLAYER: the reslug refused as 'occupied: unnamed', but the occupant is the SAME card — the two rows carry a byte-identical Japanese playerName that playerIdentityKey's a-z0-9 reduction empties, and blank is unknown to that guard, never 'the same'. Point-read against prod: same set, same cardNumber, same year, same isAuto, differing only in the finish spelling this fold exists to collapse. One card gets one row and one pool, so the source is retired and the canonical twin keeps the address.",
+      "evidence": "refused-occupied ('occupied: unnamed') on the 2026-09-07 report; twin hiq:pokemon:2023:sv2a:161:reverse-holofoil:no-auto playerName=\"エリカの招待\" source=finish-attested:cardhedge; this row playerName=\"エリカの招待\" source=tcgdex-ja-2026-09-04; both names are byte-identical and playerIdentityKey reduces each to \"\" (kana/kanji carry no a-z0-9), which is why the guard refused rather than folded; prod point read: sv2a#161 2023 isAuto=false on both rows, parallel \"Reverse Holo\" -> \"Reverse Holofoil\"; 0 sales become UNPLACED for the rematch to re-place on the surviving canonical row."
     },
     {
       "id": "hiq:pokemon:2025:sv11b:086:reverse-holo:no-auto",
@@ -9897,10 +9895,9 @@
     },
     {
       "id": "hiq:pokemon:2023:sv2a:160:reverse-holo:no-auto",
-      "action": "reslug",
-      "to": "hiq:pokemon:2023:sv2a:160:reverse-holofoil:no-auto",
-      "reason": "CF-A-FINISH-TOKEN-IS-ONE-TOKEN: 'reverse-holo' folds onto the canonical 'reverse-holofoil'; the destination is vacant.",
-      "evidence": "source=tcgdex-ja-2026-09-04; たべのこし — Japanese ポケモンカード151"
+      "action": "retire",
+      "reason": "CF-A-FINISH-TOKEN-IS-ONE-TOKEN + CF-A-FOLD-NEVER-CHANGES-THE-PLAYER: the reslug refused as 'occupied: unnamed', but the occupant is the SAME card — the two rows carry a byte-identical Japanese playerName that playerIdentityKey's a-z0-9 reduction empties, and blank is unknown to that guard, never 'the same'. Point-read against prod: same set, same cardNumber, same year, same isAuto, differing only in the finish spelling this fold exists to collapse. One card gets one row and one pool, so the source is retired and the canonical twin keeps the address.",
+      "evidence": "refused-occupied ('occupied: unnamed') on the 2026-09-07 report; twin hiq:pokemon:2023:sv2a:160:reverse-holofoil:no-auto playerName=\"たべのこし\" source=finish-attested:cardhedge; this row playerName=\"たべのこし\" source=tcgdex-ja-2026-09-04; both names are byte-identical and playerIdentityKey reduces each to \"\" (kana/kanji carry no a-z0-9), which is why the guard refused rather than folded; prod point read: sv2a#160 2023 isAuto=false on both rows, parallel \"Reverse Holo\" -> \"Reverse Holofoil\"; 0 sales become UNPLACED for the rematch to re-place on the surviving canonical row."
     },
     {
       "id": "hiq:pokemon:2025:sv11b:046:reverse-holo:no-auto",
@@ -13160,10 +13157,9 @@
     },
     {
       "id": "hiq:pokemon:2023:sv2a:164:reverse-holo:no-auto",
-      "action": "reslug",
-      "to": "hiq:pokemon:2023:sv2a:164:reverse-holofoil:no-auto",
-      "reason": "CF-A-FINISH-TOKEN-IS-ONE-TOKEN: 'reverse-holo' folds onto the canonical 'reverse-holofoil'; the destination is vacant.",
-      "evidence": "source=tcgdex-ja-2026-09-04; マサキの転送 — Japanese ポケモンカード151"
+      "action": "retire",
+      "reason": "CF-A-FINISH-TOKEN-IS-ONE-TOKEN + CF-A-FOLD-NEVER-CHANGES-THE-PLAYER: the reslug refused as 'occupied: unnamed', but the occupant is the SAME card — the two rows carry a byte-identical Japanese playerName that playerIdentityKey's a-z0-9 reduction empties, and blank is unknown to that guard, never 'the same'. Point-read against prod: same set, same cardNumber, same year, same isAuto, differing only in the finish spelling this fold exists to collapse. One card gets one row and one pool, so the source is retired and the canonical twin keeps the address.",
+      "evidence": "refused-occupied ('occupied: unnamed') on the 2026-09-07 report; twin hiq:pokemon:2023:sv2a:164:reverse-holofoil:no-auto playerName=\"マサキの転送\" source=finish-attested:cardhedge; this row playerName=\"マサキの転送\" source=tcgdex-ja-2026-09-04; both names are byte-identical and playerIdentityKey reduces each to \"\" (kana/kanji carry no a-z0-9), which is why the guard refused rather than folded; prod point read: sv2a#164 2023 isAuto=false on both rows, parallel \"Reverse Holo\" -> \"Reverse Holofoil\"; 0 sales become UNPLACED for the rematch to re-place on the surviving canonical row."
     },
     {
       "id": "hiq:pokemon:2023:sv4a:104:reverse-holo:no-auto",
@@ -13174,10 +13170,9 @@
     },
     {
       "id": "hiq:pokemon:2023:sv4a:189:reverse-holo:no-auto",
-      "action": "reslug",
-      "to": "hiq:pokemon:2023:sv4a:189:reverse-holofoil:no-auto",
-      "reason": "CF-A-FINISH-TOKEN-IS-ONE-TOKEN: 'reverse-holo' folds onto the canonical 'reverse-holofoil'; the destination is vacant.",
-      "evidence": "source=tcgdex-ja-2026-09-04; リバーサルエネルギー — Japanese レイジングサーフ"
+      "action": "retire",
+      "reason": "CF-A-FINISH-TOKEN-IS-ONE-TOKEN + CF-A-FOLD-NEVER-CHANGES-THE-PLAYER: the reslug refused as 'occupied: unnamed', but the occupant is the SAME card — the two rows carry a byte-identical Japanese playerName that playerIdentityKey's a-z0-9 reduction empties, and blank is unknown to that guard, never 'the same'. Point-read against prod: same set, same cardNumber, same year, same isAuto, differing only in the finish spelling this fold exists to collapse. One card gets one row and one pool, so the source is retired and the canonical twin keeps the address.",
+      "evidence": "refused-occupied ('occupied: unnamed') on the 2026-09-07 report; twin hiq:pokemon:2023:sv4a:189:reverse-holofoil:no-auto playerName=\"リバーサルエネルギー\" source=finish-attested:cardhedge; this row playerName=\"リバーサルエネルギー\" source=tcgdex-ja-2026-09-04; both names are byte-identical and playerIdentityKey reduces each to \"\" (kana/kanji carry no a-z0-9), which is why the guard refused rather than folded; prod point read: sv4a#189 2023 isAuto=false on both rows, parallel \"Reverse Holo\" -> \"Reverse Holofoil\"; 2 sales become UNPLACED for the rematch to re-place on the surviving canonical row."
     },
     {
       "id": "hiq:pokemon:2023:sv4a:187:reverse-holo:no-auto",
