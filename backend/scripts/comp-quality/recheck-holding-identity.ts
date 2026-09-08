@@ -86,6 +86,10 @@ import { canAdjudicate, catalogAuthorityOf } from "../../src/services/catalog/ca
 // sourceCorroboration's header gives at length: four spellings of "is this row
 // checklist-backed" is how the rematch comes to write rows the gate refuses.
 import { identityBackingOf, isSelfDerivedIdentity } from "../../src/services/catalog/identityBacking.js";
+// GATE 2 compares a claimed parallel against a DESTINATION SLUG, so it must
+// build the claim with the very function the slug was built with — see
+// CF-A-GATE-MUST-SPEAK-THE-SLUG-GRAMMAR on droppedSpecificityAxes below.
+import { slugify } from "../../src/services/portfolioiq/hobbyIqCardId.service.js";
 
 // BACKFILL_APPLY is what the runner exports; APPLY is what a hand run types.
 // Reading BOTH is deliberate (feedback_runner_exports_backfill_apply): a
@@ -602,6 +606,32 @@ const SPECIFICITY_AXES = ["printRun", "serialNumber", "parallel"] as const;
  * grammar spells it `:base:` on the destination anyway. Everything else is
  * compared against the destination slug's own text, because the slug is the
  * identity — if the axis is not IN the slug, the destination does not carry it.
+ *
+ * ── THE PARALLEL COMPARISON USES `slugify`, NOT A LOCAL REPLACE ────────────
+ *
+ * CF-A-GATE-MUST-SPEAK-THE-SLUG-GRAMMAR (2026-09-08). This test used to
+ * lowercase the claimed parallel and turn whitespace into hyphens, and nothing
+ * else. That is NOT how a slug segment is built: `slugify` also strips
+ * punctuation, so "Black & White Red Ink" becomes `black-white-red-ink` in
+ * every id in the catalog, while the local replace produced
+ * `black-&-white-red-ink` — a string containing `&`, which no slug can ever
+ * contain. The gate therefore refused a holding against ITS OWN CORRECT ROW,
+ * and no destination could satisfy it: the refusal was unconditional, not a
+ * judgement about the card.
+ *
+ * Measured on the live portfolio 2026-09-08: 3 of 131 holdings carry `&` or
+ * `/` in `parallel` — Drew's `9f082213` (2026 Bowman Chrome CPA-VF, "Black &
+ * White Red Ink") and two copies of a 2025 CPA-DT whose parallel is written
+ * "Refractor Auto / 499". Small, and permanently stuck rather than merely
+ * unlucky, which is why it is fixed at the comparison instead of worked around
+ * per card.
+ *
+ * THE GATE IS NOT WEAKENED. Both sides are now put through the SAME function
+ * the ids were built with, so a real difference still refuses — "Bronze
+ * Refractor" against `:refractor:` is still a dropped axis, and the tests pin
+ * that alongside this. Widening a comparison to a shared normal form is not
+ * the same as lowering a threshold: nothing that refused for a REASON starts
+ * passing (feedback_right_guard_wrong_scope / mutation-check every guard).
  */
 export function droppedSpecificityAxes(
   holding: Record<string, unknown>,
@@ -614,7 +644,10 @@ export function droppedSpecificityAxes(
     // The destination carries the axis when its own slug states it.
     if (axis === "printRun") return !new RegExp(`:num-${Number(v)}(?::|$)`).test(to);
     if (axis === "serialNumber") return !/:num-\d+(?::|$)/.test(to);
-    return !to.toLowerCase().includes(String(v).toLowerCase().replace(/\s+/g, "-"));
+    // Compare in the slug's own grammar: the destination is a slug, so the
+    // claim has to be slugified the same way before asking whether it is in it.
+    const claim = slugify(String(v));
+    return claim === "" ? false : !to.toLowerCase().includes(claim);
   });
 }
 
