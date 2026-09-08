@@ -93,7 +93,6 @@ export function resolveVertical(input: {
   /** Used only when nothing else resolves. Explicit so the caller owns it. */
   fallback?: string;
 }): VerticalResolution {
-
   const declared = String(input.declared ?? "").trim().toLowerCase();
   const title = String(input.title ?? "");
 

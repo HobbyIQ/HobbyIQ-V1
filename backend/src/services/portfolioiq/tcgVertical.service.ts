@@ -343,7 +343,6 @@ export function classifyTcg(input: {
   /** Vendor set name, when the feed supplies one separately from the title. */
   setName?: string | null;
 }): TcgClassification {
-
   const sport = String(input.sport ?? "").trim().toLowerCase();
   if (sport && TCG_VERTICALS.has(sport)) {
     return { isTcg: true, reason: "vertical-field", vertical: sport };
