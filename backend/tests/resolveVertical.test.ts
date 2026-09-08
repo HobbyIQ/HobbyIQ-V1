@@ -91,3 +91,73 @@ describe("resolveVertical — the honest default", () => {
     expect(real.vertical).not.toBe(guess.vertical);
   });
 });
+
+// CF-TCA-TCGPLAYER-ON-THE-SCHEDULE (Drew, 2026-09-08).
+//
+// Putting TCGplayer on the scheduled firehose points ~58K sales/day at this
+// resolver, all of them in TCGplayer's own title shape rather than the
+// eBay-style titles the cases above cover. The shape carries no vertical word:
+//
+//   "<card> (<num>) - <set> - <finish>"
+//
+// Measured over 12,000 rows of the real 2026-09-07 TCGplayer feed, the whole
+// population lands in exactly two outcomes -- 8,102 pokemon and 3,898 with no
+// vertical at all. Not one row resolved to a SPORT, which is the property that
+// makes this feed safe to schedule: the failure it could have had is a Pokemon
+// sale minted at hiq:baseball:... and fused into a sports pool
+// (CF-ONE-CARD-ONE-ROW-ONE-POOL), and the honest-default rule prevents it.
+describe("resolveVertical — the TCGplayer feed title shape", () => {
+  // Real titles, taken verbatim from the 2026-09-07 dry-run.
+  const RESOLVED = [
+    "Gengar (48) - Expedition - Reverse Holofoil",
+    "Gengar (10) - Skyridge - Normal",
+    "Genesect - BW99 - Black and White Promos - Holofoil",
+  ];
+
+  // Also real Pokemon, but their set names are the ones the TCG detector
+  // deliberately OMITS because they collide with sports products ("Expedition",
+  // "Aquapolis", "Diamond and Pearl"). Coverage we do not yet have.
+  const UNRESOLVED = [
+    "Gastly - Expedition - Normal",
+    "Furret - Aquapolis - Normal",
+    "Floatzel - Diamond and Pearl - Normal",
+    "Fighting Energy - Expedition - Normal",
+  ];
+
+  it("resolves the era/set/finish shape to pokemon without the word 'Pokemon'", () => {
+    for (const title of RESOLVED) {
+      const r = resolveVertical({ title });
+      expect(r.vertical, title).toBe("pokemon");
+      expect(r.confident, title).toBe(true);
+    }
+  });
+
+  it("NEVER answers a sport for a TCGplayer title, resolved or not", () => {
+    // The load-bearing assertion. A miss here is a skipped row we can go fix;
+    // a sport here is a wrong row that silently corrupts a pool's FMV.
+    const SPORTS = ["baseball", "football", "basketball", "hockey", "soccer"];
+    for (const title of [...RESOLVED, ...UNRESOLVED]) {
+      const r = resolveVertical({ title });
+      expect(SPORTS, title).not.toContain(r.vertical);
+    }
+  });
+
+  it("declines to guess on the sports-colliding set names", () => {
+    // persistVendorSalesToPool turns a non-confident answer into sport=null and
+    // skips the row (CF-NO-DEFAULT-SPORT) rather than minting it at a sport.
+    for (const title of UNRESOLVED) {
+      const r = resolveVertical({ title });
+      expect(r.confident, title).toBe(false);
+      expect(r.reason, title).toBe("defaulted");
+    }
+  });
+
+  it("does not let a TCGplayer row inherit a sport from an absent hint", () => {
+    // Every row in the sampled feed had NO `sport` field, so `declared` is
+    // undefined and the detector alone decides. An undefined hint must not
+    // become a confident vertical.
+    const r = resolveVertical({ declared: undefined, title: "Gastly - Expedition - Normal" });
+    expect(r.confident).toBe(false);
+    expect(r.vertical).not.toBe("baseball");
+  });
+});

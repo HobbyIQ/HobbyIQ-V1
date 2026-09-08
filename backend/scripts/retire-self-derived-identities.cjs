@@ -575,6 +575,33 @@ async function main() {
   console.log(`  this run owns ${f(mine.length)} products
 `);
 
+  /** ── THE LOG MUST NEVER DEAD-END AT THIS BANNER ─────────────────────
+   *
+   * CF-A-SILENT-EXIT-ZERO-IS-NOT-A-FINISHED-LANE (2026-09-08). Run
+   * 34231217320 (football, slot 4/16, APPLY) printed the two lines above and
+   * then nothing at all — no progress, no RECONCILE, no VERIFY, no
+   * `finishLane: exiting code`, no FATAL — and the STEP REPORTED SUCCESS,
+   * because node exited 0 with an empty event loop while `main()` was still
+   * pending on a Cosmos request the SDK had dropped. runner-budget's keepalive
+   * block documents the mechanism and the reproduction.
+   *
+   * Two lines close it, and they are different lines doing different jobs:
+   *
+   *   - `keepalive()` arms the budget's REF'D interval, so an empty loop is no
+   *     longer possible and a stall becomes an observable stall — the lane
+   *     stays alive to be stopped by its own budget or, at worst, killed at
+   *     the ceiling with a truthful KILLED verdict — instead of a silent exit
+   *     that both witnesses misread.
+   *   - the per-product narration says WHICH product is in flight, so the next
+   *     run's log localises a wedge to one (year, setKey) rather than to the
+   *     85-product gap between the banner and the reconcile. This is the same
+   *     argument #1906 made on either side of the verify, applied to the loop
+   *     that was still dark.
+   *
+   * Both are `narrate:`-prefixed and therefore invisible to every runner grep.
+   */
+  LANE_BUDGET.keepalive(`retire-self-derived-identities ${SPORT} slot ${SLOT}/${SLOTS}`);
+
   const t0 = Date.now();
   let scanned = 0, rowsRead = 0, retired = 0, unverified = 0, gradedChildren = 0, written = 0;
   let cardLevelSeen = 0, failed = 0, alreadyMarked = 0;
@@ -608,6 +635,7 @@ async function main() {
   const pkOf = (row) => (row && row.cardId ? String(row.cardId) : String(row && row.id));
   const gaps = new Map();
   let stopReason = null;
+  let productsDone = 0;
 
   for (const p of mine) {
     // STOP BEFORE THE PRODUCT, NOT AFTER IT. The old check was `elapsed >
@@ -616,6 +644,8 @@ async function main() {
     // what keeps the loop's own overshoot bounded and the total under the
     // step ceiling (see the RUN_MINUTES block at the top).
     if (Date.now() - t0 > BUDGET_MS - PRODUCT_RESERVE_MS) { stopReason = "clock"; break; }
+    productsDone++;
+    narrate(`product ${productsDone}/${mine.length} — reading ${p.year} ${p.setKey}`);
     const { resources: rows } = await retry(() => cat.items.query({
       query: `SELECT c.id, c.cardId, c.source, c.year, c.setKey, c.cardNumber, c.playerName,
                      c.parallel, c.isAuto, c.retiredReason, c.identityUnverified,
@@ -881,6 +911,8 @@ async function main() {
       } catch (e) { failed++; }
     }
   }
+
+  narrate(`product loop finished — ${productsDone} of ${mine.length} products, ${stopReason || "scope drained"}`);
 
   const secs = Math.max(1, Math.round((Date.now() - t0) / 1000));
   console.log(`\n${APPLY ? "APPLIED" : "REPORT ONLY — nothing written"}`);

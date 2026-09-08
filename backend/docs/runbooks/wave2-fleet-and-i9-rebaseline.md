@@ -76,6 +76,53 @@ WAVE2_DISPATCH=true backend/scripts/wave2/wave2-fleet.sh census
 no write path at all and says so (`READ ONLY -- the census writes nothing to the
 pool.`).
 
+### How a slot's run is found — and why it used to be found wrong
+
+`backfill-runner.yml` is a **shared lane**: every repair, retire and park script
+in the repo dispatches into it. So "the newest run on this workflow" names
+whatever else happened to be dispatched in the same minute, and until #1974 that
+is exactly what the driver used — `latest_run_for_slot` took a `slot` argument
+and never referenced it.
+
+On **2026-09-08 01:44Z** all 32 census slots reported `outcome=killed`. The run
+the fleet had followed for slot 0 was a park lane: its log says `Script
+confirmed: backend/scripts/relocate-pool-rows-by-list.cjs`. Thirty-two verdicts
+were read off one stranger's log, and the census runs were never opened. Every
+banner reader found nothing in a foreign log, and `chain_outcome`'s else-branch
+calls "nothing" a kill.
+
+The driver now identifies a run **positively, from its own log**, on two lines
+the runner always prints:
+
+```
+Script confirmed: backend/scripts/rematch-sold-comps.cjs      <- the workflow
+rematch-sold-comps  MODE=census  READ ONLY  slot 0/32 ...     <- the lane
+```
+
+The second line states script, MODE and slot **together**, which is what makes
+it decisive. A candidate failing any of the three is rejected and polling
+continues. The same check re-runs on the completed log before any verdict is
+read from it, and on each link of a self-relaunch chain.
+
+**A give-up is `unfound`, never `killed`.** They are opposite claims: `killed`
+says a run was read and it died, `unfound` says the run was never found. After
+`WAVE2_IDENTIFY_TIMEOUT_MINUTES` (default 15) the slot is reported `unfound` and
+HELD.
+
+### Driving one slot without re-sharding the corpus
+
+`WAVE2_SLOTS` is the **denominator** — it is dispatched as `-f slots=` and
+decides which rows a slot owns, so lowering it to run one slot silently
+re-shards the corpus and produces a census describing a shard table that exists
+nowhere else. To drive a subset of the same 32-slot table:
+
+```bash
+WAVE2_DISPATCH=true WAVE2_ONLY_SLOTS=0 backend/scripts/wave2/wave2-fleet.sh census
+```
+
+`WAVE2_ONLY_SLOTS` takes a comma list, refuses a slot outside the table, and
+never touches the dispatched denominator.
+
 **#1950's scoped-apply prefilter does NOT apply to a census.** It is gated on
 `MODE === "apply-improve"` and additionally requires a single-kind scope, so
 `mode=census` never gets one. That matters for the re-baseline: a census

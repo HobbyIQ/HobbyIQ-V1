@@ -50,6 +50,14 @@ set -uo pipefail
 REPO="${WAVE2_REPO:-HobbyIQ/HobbyIQ-V1}"
 REF="${WAVE2_REF:-main}"
 SLOTS="${WAVE2_SLOTS:-32}"
+# WHICH slots this invocation drives -- NOT how many the shard table has.
+# WAVE2_SLOTS is the DENOMINATOR: it is dispatched as `-f slots=` and it decides
+# which rows a slot owns, so lowering it to run one slot would silently re-shard
+# the corpus and make the run's census meaningless. WAVE2_ONLY_SLOTS instead
+# selects a SUBSET of the same 32-slot table to dispatch and follow -- a comma
+# list, e.g. `WAVE2_ONLY_SLOTS=0` to verify the driver end-to-end on slot 0
+# alone. Empty (the default) means every slot.
+ONLY_SLOTS="${WAVE2_ONLY_SLOTS:-}"
 CONCURRENCY="${WAVE2_CONCURRENCY:-16}"
 WAVE_SIZE="${WAVE2_WAVE_SIZE:-4}"
 # The verdict-equality band. An apply slot must write within ±BAND% of the
@@ -172,13 +180,13 @@ apply_reconciled() {
 chain_outcome() {
   local f="$1" n
   n=$(normalize "$f")
-  if   printf '%s' "$n" | grep -aq 'rematch-sold-comps: STARTUP REFUSED'; then printf 'startup-refused'
+  if   grep -aq 'rematch-sold-comps: STARTUP REFUSED' <<< "$n"; then printf 'startup-refused'
   elif [ ! -s "$f" ];                                                     then printf 'empty-log'
-  elif printf '%s' "$n" | grep -aq 'rematch-sold-comps: STARTUP ok' \
-       && ! printf '%s' "$n" | grep -aqE '^rematch-sold-comps  MODE=';    then printf 'died-in-startup'
-  elif printf '%s' "$n" | grep -aqE 'stopped at the .*budget';            then printf 'budget'
-  elif printf '%s' "$n" | grep -aqE 'finishLane: exiting code 0( |$)';    then printf 'finished'
-  elif printf '%s' "$n" | grep -aqE 'finishLane: exiting code [0-9]+';    then printf 'verdict'
+  elif grep -aq 'rematch-sold-comps: STARTUP ok' <<< "$n" \
+       && ! grep -aqE '^rematch-sold-comps  MODE=' <<< "$n";    then printf 'died-in-startup'
+  elif grep -aqE 'stopped at the .*budget' <<< "$n";            then printf 'budget'
+  elif grep -aqE 'finishLane: exiting code 0( |$)' <<< "$n";    then printf 'finished'
+  elif grep -aqE 'finishLane: exiting code [0-9]+' <<< "$n";    then printf 'verdict'
   else                                                                         printf 'killed'
   fi
 }
@@ -197,8 +205,8 @@ chain_outcome() {
 # banner is not a zero.
 canary_verdict() {
   local n; n=$(normalize "$1")
-  if   printf '%s' "$n" | grep -aqE 'canaries REGRESSED';                     then printf 'regressed'
-  elif printf '%s' "$n" | grep -aqE 'canaries hold -- the shard may stand';   then printf 'hold'
+  if   grep -aqE 'canaries REGRESSED' <<< "$n";                     then printf 'regressed'
+  elif grep -aqE 'canaries hold -- the shard may stand' <<< "$n";   then printf 'hold'
   else                                                                            printf 'absent'
   fi
 }
@@ -246,46 +254,235 @@ dispatch() {
     say "WAVE2 dry-run: ${cmd[*]}"
     return 0
   fi
-  "${cmd[@]}" >/dev/null || { warn "dispatch failed for slot $slot"; return 1; }
-  say "WAVE2 dispatched slot $slot ($mode apply=$apply scope=$scope)"
+  # KEEP WHAT `gh` PRINTS. It emits the new run's URL on success, and that URL
+  # is the ONLY local evidence a run was actually created. Measured while
+  # verifying this change on 2026-09-08 13:13Z: a dispatch exited 0 and created
+  # NO run -- the lane list has a clean gap where it should be -- and because
+  # the output went to /dev/null the fleet announced "dispatched slot 0" and
+  # then spent fifteen minutes hunting a run that never existed. The finder
+  # correctly reported `unfound`, but the driver could have said so at once.
+  local out rc
+  out=$("${cmd[@]}" 2>&1); rc=$?
+  if [ "$rc" -ne 0 ]; then
+    warn "dispatch failed for slot $slot (gh exit $rc): $(printf '%s' "$out" | tr '\n' ' ')"
+    return 1
+  fi
+  # `gh workflow run` prints the run URL on success. No URL means gh accepted
+  # the request without creating a run, which is NOT a dispatch -- say so here
+  # rather than leaving the finder to discover it fifteen minutes later.
+  local url; url=$(printf '%s' "$out" | grep -aoE 'https://github.com/[^ ]*/actions/runs/[0-9]+' | tail -1)
+  if [ -z "${url:-}" ]; then
+    warn "slot $slot: gh exited 0 but printed no run URL -- NOTHING WAS DISPATCHED. gh said: $(printf '%s' "$out" | tr '\n' ' ')"
+    return 1
+  fi
+  say "WAVE2 dispatched slot $slot ($mode apply=$apply scope=$scope) -> $url"
 }
 
-# The newest run of this workflow for `slot`, on this ref. Used to pick the run
-# a dispatch created and to follow a self-relaunch to the next link.
-latest_run_for_slot() {
-  local slot="$1" since="$2"
-  gh run list --repo "$REPO" --workflow=backfill-runner.yml --limit 60 \
-    --json databaseId,createdAt,status,conclusion \
-    --jq "[.[] | select(.createdAt >= \"$since\")] | sort_by(.createdAt) | reverse | .[0].databaseId" 2>/dev/null
+# -- THE FINDER: A RUN IS THIS SLOT'S ONLY WHEN ITS OWN LOG SAYS SO ----------
+#
+# CF-A-RUN-IS-IDENTIFIED-BY-ITS-LOG-NOT-BY-ITS-TIMING (#1974). THE DEFECT THIS
+# REPLACES. The finder that stood here took `slot` as an argument and NEVER USED
+# IT. It asked `gh run list` for the newest backfill-runner run created after
+# the dispatch timestamp and returned that, for every slot. backfill-runner is a
+# SHARED lane -- every repair, retire and park script in the repo dispatches it
+# -- so "newest run on this workflow" names whatever else happened to be
+# dispatched in the same minute.
+#
+# Measured 2026-09-08 01:44Z: all 32 census slots reported `outcome=killed`, and
+# the run the fleet followed for slot 0 was a PARK LANE -- its log says
+# `Script confirmed: backend/scripts/relocate-pool-rows-by-list.cjs`. Thirty-two
+# verdicts were read off one stranger's run; the census runs themselves were
+# never opened. `killed` was not a measurement of anything. It was the shape a
+# foreign log makes when you ask it questions it has no answer to -- every
+# banner reader found nothing, and `chain_outcome`'s else-branch calls "nothing"
+# a kill.
+#
+# THE FIX IS POSITIVE IDENTIFICATION, NOT A NARROWER WINDOW. Timing cannot
+# separate two runs dispatched in the same second, and no amount of
+# window-tightening makes it able to. The run must SAY WHO IT IS, and the runner
+# already prints every fact needed, on two lines it emits unconditionally:
+#
+#   Script confirmed: backend/scripts/rematch-sold-comps.cjs   (workflow, always)
+#   rematch-sold-comps  MODE=census  READ ONLY  slot 0/32 ...  (lane, at startup)
+#
+# The second line carries script name, MODE and SLOT together, which is what
+# makes it decisive: a census of slot 7 cannot be mistaken for slot 0's, and an
+# apply-improve run cannot be mistaken for a census. A candidate failing ANY of
+# the three is REJECTED and polling continues -- it is not "close enough", it is
+# someone else's run.
+#
+# AND THE GIVE-UP IS NAMED `unfound`, NEVER `killed`. Those are opposite facts:
+# `killed` claims we read a run and it died; `unfound` says we never found the
+# run at all. Reporting the second as the first is exactly how #1974 read as a
+# fleet-wide failure rather than as a broken finder.
+#
+# HOW LONG TO WAIT FOR A RUN TO NAME ITSELF. 15 minutes by default. Note what
+# this clock actually has to cover: `gh run view --log` refuses while a run is
+# in progress, so a run can only be identified once it COMPLETES, and the
+# window therefore spans queue time plus the run itself. A census slot that sits
+# behind a deep backfill-runner queue will exceed it and be reported `unfound` —
+# which is honest (we did not find it) but is not the same as "it failed", so
+# raise WAVE2_IDENTIFY_TIMEOUT_MINUTES when queueing behind a busy lane rather
+# than reading an `unfound` as a dead slot. `preflight_lane` exists to keep the
+# fleet out of that situation in the first place.
+IDENTIFY_TIMEOUT_MINUTES="${WAVE2_IDENTIFY_TIMEOUT_MINUTES:-15}"
+
+# Does THIS log belong to THIS dispatch? Takes a log file, the mode and the
+# slot. Returns 0 only when all three identity facts are present.
+#
+# THE SLOT MATCH CARRIES THE `/`. The banner spells it `slot 0/32`, and matching
+# a bare `slot 1` would also match `slot 13/32` -- an off-by-a-digit that would
+# reintroduce the very bug this function exists to kill. `SLOT: N` and `slot=N`
+# are accepted as alternates because the workflow echoes the input that way in
+# its env block, but the lane banner is primary: it is the only spelling that
+# also proves MODE.
+#
+# NOTE THE HERESTRINGS, AND WHY THEY ARE NOT `printf | grep`. MEASURED against
+# the real 755KB log of run 34232404064 -- the FIRST full-size capture this
+# function ever saw: `printf '%s' "$n" | grep -aq PATTERN` RETURNS FAILURE ON A
+# SUCCESSFUL MATCH. `grep -q` exits the instant it matches, printf then dies of
+# SIGPIPE (141), and this file's `set -o pipefail` promotes that to the
+# pipeline's status -- so the `&&` never fires and a run that DID identify
+# itself is rejected. Every fixture in the test suite is small enough that
+# printf finishes before grep exits, which is why all 88 pins passed while the
+# real log failed. A herestring feeds grep without a pipe, so there is no
+# SIGPIPE and no pipefail interaction. Same fix in chain_outcome and
+# canary_verdict, which read the same large logs the same way.
+run_log_identifies_slot() {
+  local log="$1" mode="$2" slot="$3" n
+  [ -s "$log" ] || return 1
+  n=$(normalize "$log")
+  # 1. THE SCRIPT. The workflow's own confirmation line, printed by every run
+  #    before it runs anything. This is the line that unmasked the park lane.
+  grep -aq 'Script confirmed: backend/scripts/rematch-sold-comps\.cjs' <<< "$n" || return 1
+  # 2 + 3. MODE AND SLOT, from the one banner that states both at once.
+  grep -aqE "^rematch-sold-comps  MODE=${mode}  .*[[:space:]]slot ${slot}/[0-9]+" <<< "$n" && return 0
+  # The lane banner is absent on a run that died BEFORE printing one -- and a
+  # startup refusal is a real outcome for this slot that must stay readable. So
+  # fall back to the workflow's echoed inputs, which exist from the first step,
+  # but only BOTH together and only alongside the script line proven above.
+  grep -aqE "^(SLOT: ${slot}|slot=${slot})([^0-9]|$)" <<< "$n" || return 1
+  grep -aqE "(MODE: ${mode}|mode=${mode})([^-a-z]|$)" <<< "$n" || return 1
+  return 0
+}
+
+# Find the run THIS dispatch created for THIS slot by reading candidates' logs
+# until one identifies itself. Prints the run id, or prints nothing and returns
+# 1 after IDENTIFY_TIMEOUT_MINUTES.
+#
+# Candidates are every backfill-runner run created at or after `since`, OLDEST
+# FIRST -- oldest first because the fleet dispatches 32 slots in a loop and the
+# run we want is usually behind newer ones by the time anything starts. Rejected
+# ids are remembered, so a stranger's log is downloaded once rather than once
+# per poll.
+find_run_for_slot() {
+  local mode="$1" slot="$2" since="$3"
+  local deadline=$(( $(date +%s) + IDENTIFY_TIMEOUT_MINUTES * 60 ))
+  local probe="$LOGDIR/.probe-$mode-$slot.log"
+  local rejected=" " ids id st
+
+  while [ "$(date +%s)" -lt "$deadline" ]; do
+    ids=$(gh run list --repo "$REPO" --workflow=backfill-runner.yml --limit 100 \
+            --json databaseId,createdAt,status \
+            --jq "[.[] | select(.createdAt >= \"$since\")] | sort_by(.createdAt) | .[].databaseId" 2>/dev/null)
+    for id in ${ids:-}; do
+      case "$rejected" in *" $id "*) continue ;; esac
+      # A QUEUED run has no log yet. It is not rejected; it is not ready.
+      st=$(gh run view "$id" --repo "$REPO" --json status --jq .status 2>/dev/null)
+      [ "$st" = "queued" ] && continue
+      # AND NEITHER DOES AN IN-PROGRESS ONE: `gh run view --log` refuses
+      # outright while a run is running ("logs will be available when it is
+      # complete"), so identification necessarily happens at completion.
+      #
+      # THE STEP NAMES ARE NOT AN ALTERNATIVE, and that was measured rather than
+      # assumed. `--json jobs` does expose step names live, but they are the
+      # workflow's STATIC step list -- every backfill-runner run has the same
+      # one. Compared 34232404064 (this fleet's census) against 34231277782
+      # (the park lane): both carry "Canary gate AFTER the rematch apply",
+      # "Upload the shard census", "Self-relaunch rematch-sold-comps ...".
+      # Nothing in a step name varies with `script`, `mode` or `slot`, so a
+      # step-name match would re-create #1974 exactly. Only the log says who a
+      # run is.
+      [ "$st" = "in_progress" ] && continue
+      gh run view "$id" --repo "$REPO" --log >"$probe" 2>/dev/null || : >"$probe"
+      if run_log_identifies_slot "$probe" "$mode" "$slot"; then
+        rm -f "$probe"
+        printf '%s' "$id"; return 0
+      fi
+      # A COMPLETED run whose own log never named this script, mode and slot is
+      # somebody else's for good. Remember it so its log is downloaded once
+      # rather than once per poll.
+      rejected="$rejected$id "
+    done
+    sleep "$POLL_SECS"
+  done
+  rm -f "$probe"
+  return 1
 }
 
 # Follow ONE SLOT to the end of its chain. Prints the final run's log to
 # $LOGDIR/<phase>-slot-<N>.log and echoes the chain outcome word.
+#
+# THE SAME IDENTITY CHECK GUARDS THE VERDICT READ. Finding the right run once is
+# not enough. A chain follows a self-relaunch onto a NEW run id, and that link
+# is found the same way the first was -- by identifying itself -- so the fleet
+# cannot drift onto a stranger between links either. And the completed log is
+# re-checked before a single banner is read off it: the run was identified while
+# in progress, and this proves the file being grepped is still that run's.
 follow_slot() {
-  local phase="$1" slot="$2" since="$3"
+  local phase="$1" slot="$2" since="$3" mode="${4:-census}"
   local deadline=$(( $(date +%s) + MAX_CHAIN_MINUTES * 60 ))
   local log="$LOGDIR/$phase-slot-$slot.log"
-  local run="" outcome=""
+  local run="" outcome="" st=""
 
   while [ "$(date +%s)" -lt "$deadline" ]; do
-    run=$(latest_run_for_slot "$slot" "$since")
-    if [ -z "${run:-}" ] || [ "$run" = "null" ]; then sleep "$POLL_SECS"; continue; fi
-    local st
-    st=$(gh run view "$run" --repo "$REPO" --json status --jq .status 2>/dev/null)
-    if [ "$st" != "completed" ]; then sleep "$POLL_SECS"; continue; fi
+    run=$(find_run_for_slot "$mode" "$slot" "$since") || {
+      warn "slot $slot: NO run identified itself as rematch-sold-comps MODE=$mode slot $slot within ${IDENTIFY_TIMEOUT_MINUTES}m of $since -- this is not a kill, it is a run we never found."
+      printf 'unfound'; return 0
+    }
+    say "WAVE2 slot $slot: attached to run $run -- identified by its own log (rematch-sold-comps, MODE=$mode, slot $slot)" >&2
+
+    while [ "$(date +%s)" -lt "$deadline" ]; do
+      st=$(gh run view "$run" --repo "$REPO" --json status --jq .status 2>/dev/null)
+      [ "$st" = "completed" ] && break
+      sleep "$POLL_SECS"
+    done
+    [ "$st" = "completed" ] || { printf 'timeout'; return 0; }
 
     gh run view "$run" --repo "$REPO" --log >"$log" 2>/dev/null || : >"$log"
+    if ! run_log_identifies_slot "$log" "$mode" "$slot"; then
+      warn "slot $slot: run $run's completed log does not identify as MODE=$mode slot $slot -- refusing to read a verdict out of it."
+      printf 'unfound'; return 0
+    fi
     outcome=$(chain_outcome "$log")
     # A budget stop RELAUNCHES ITSELF. The slot is not done; wait for the next
     # link rather than judging this one.
     if [ "$outcome" = "budget" ]; then
-      say "WAVE2 slot $slot: budget stop on run $run — following the relaunch"
+      say "WAVE2 slot $slot: budget stop on run $run -- following the relaunch" >&2
       since=$(date -u -d "+1 second" +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u +%Y-%m-%dT%H:%M:%SZ)
       sleep "$POLL_SECS"; continue
     fi
     printf '%s' "$outcome"; return 0
   done
   printf 'timeout'; return 0
+}
+
+# The slots this invocation drives, as a space-separated list: WAVE2_ONLY_SLOTS
+# when set, otherwise 0..SLOTS-1. Refuses a slot outside the table rather than
+# dispatching a shard index the runner would read as out of range.
+selected_slots() {
+  local s
+  if [ -z "$ONLY_SLOTS" ]; then
+    seq 0 $((SLOTS - 1))
+    return 0
+  fi
+  for s in ${ONLY_SLOTS//,/ }; do
+    case "$s" in
+      ''|*[!0-9]*) die "WAVE2_ONLY_SLOTS contains '$s', which is not a slot number." ;;
+    esac
+    [ "$s" -lt "$SLOTS" ] || die "WAVE2_ONLY_SLOTS names slot $s, but the shard table has only $SLOTS slots (0..$((SLOTS - 1)))."
+    printf '%s\n' "$s"
+  done
 }
 
 # ── PHASE: CENSUS ────────────────────────────────────────────────────────────
@@ -298,14 +495,15 @@ follow_slot() {
 phase_census() {
   preflight_lane
   local since; since=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-  say "WAVE2 CENSUS — $SLOTS slots, mode=census apply=false (report-only)"
+  say "WAVE2 CENSUS — shard table $SLOTS slots, driving [$(selected_slots | tr "\n" " ")], mode=census apply=false (report-only)"
   local s
-  for s in $(seq 0 $((SLOTS - 1))); do dispatch census false improve "$s" || true; done
+  local selected; selected=$(selected_slots)
+  for s in $selected; do dispatch census false improve "$s" || true; done
   [ "$DISPATCH" = "true" ] || { say "WAVE2 dry-run: dispatched nothing."; return 0; }
 
   local held=0 ok=0
-  for s in $(seq 0 $((SLOTS - 1))); do
-    local out; out=$(follow_slot census "$s" "$since")
+  for s in $selected; do
+    local out; out=$(follow_slot census "$s" "$since" census)
     local log="$LOGDIR/census-slot-$s.log"
     if [ "$out" != "finished" ]; then
       warn "slot $s census outcome=$out — HELD"; held=$((held + 1)); continue
@@ -331,8 +529,11 @@ phase_collect() {
   local dir="${1:-$LOGDIR/census-artifacts}"
   mkdir -p "$dir"
   say "WAVE2 COLLECT -> $dir"
+  # Collect only the slots this invocation drives. A WAVE2_ONLY_SLOTS=0 run has
+  # no artifact for slots 1..31 and never claimed to, so warning about all 31 of
+  # them would bury the one line that matters.
   local s got=0
-  for s in $(seq 0 $((SLOTS - 1))); do
+  for s in $(selected_slots); do
     # -p matches the artifact name prefix; the newest run wins.
     if gh run download --repo "$REPO" --dir "$dir" -p "rematch-census-slot-$s-*" 2>/dev/null; then
       got=$((got + 1))
@@ -423,7 +624,7 @@ run_apply_slots() {
 
   local failed=0
   for s in "${slots[@]}"; do
-    local out; out=$(follow_slot apply "$s" "$since")
+    local out; out=$(follow_slot apply "$s" "$since" apply-improve)
     local log="$LOGDIR/apply-slot-$s.log"
     case "$out" in
       startup-refused)
