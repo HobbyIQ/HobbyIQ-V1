@@ -53,6 +53,7 @@ const L = require_(lane) as {
   ) => false | { reason: string; hint: string };
   crossProductFields: (id: string, to: string) => { setKey?: string };
   idSetKey: (slug: string) => string;
+  keepsSales: (entry: unknown, doc: unknown) => boolean;
   confirmRetired: (
     cat: unknown,
     id: string,
@@ -1283,5 +1284,184 @@ describe("occupancy folds spelling, refuses identity, and never guesses a suffix
     const sup = src.indexOf("refusedNameSuperset++");
     expect(occ).toBeGreaterThan(-1);
     expect(sup).toBeGreaterThan(occ);
+  });
+});
+
+// ── an occupied twin is a FOLD; an occupied RIVAL stays refused ──────────────
+
+/**
+ * CF-AN-OCCUPIED-TWIN-IS-A-FOLD-NOT-A-RESLUG (#1976, 2026-09-08).
+ *
+ * REPORT run 34204256211 over the immaculate-01 list stopped 13 entries on
+ * `refused — occupied`. Every one of those entries was written as a `reslug`
+ * carrying the evidence string "destination read as vacant 2026-09-07" -- a
+ * vacancy that was STALE by the time the lane read it. The list author cannot
+ * re-measure a destination at apply time; the lane can, and did.
+ *
+ * ALL 13 WERE POINT-READ IN PROD 2026-09-08, and they are NOT one population:
+ *
+ *   ONE of them is the same card at both addresses. #8 International Red /27
+ *   is Kevin Durant on both sides -- same player, same cardNumber, same
+ *   parallel, same isAuto, same printRun. Nothing distinguishes them but the
+ *   year segment and the source. That is a TWIN, and a reslug onto a twin is
+ *   the one shape this lane must never perform: the occupancy guard refuses
+ *   it forever, so the pair would stay two rows for one card through every
+ *   re-run. The fold form is `retire` -- the checklist-backed twin wins and
+ *   the source row stops existing, which is the ONLY thing that stops a
+ *   catalog row resolving.
+ *
+ *   TWELVE of them name two DIFFERENT PLAYERS. Terrence Shannon Jr. -> an
+ *   address held by Bub Carrington; Bub Carrington -> one held by Devin
+ *   Carter; Kyshawn George -> Anfernee Simons, and so on. These are NOT folds
+ *   and this test exists to keep them from ever becoming folds: folding across
+ *   players would put two cards' sales into one pricing pool, which is the
+ *   exact defect the occupancy guard was written to prevent. They keep their
+ *   `reslug` action and carry a `note` recording the measurement, so the next
+ *   reader sees an adjudicated refusal rather than an unexplained one.
+ *
+ * WHY THE COLLISIONS ARE A NUMBERING QUESTION, NOT AN ADDRESSING ONE. Every
+ * occupant is checklist-backed (source `checklistinsider-2026-08-27`, setKey
+ * `panini-immaculate-collection`); every source row is `hobbymonitor-2026-09-04`.
+ * The two disagree about which player holds which number in the 2024 product.
+ * Per CF-COUNT-BY-SOURCE-NOT-ROW-COUNT the checklist-backed row is the one that
+ * decides, so the hobbymonitor NUMBERING is what needs a ruling -- not the
+ * destination address. That ruling is not this lane's to make from a list.
+ */
+describe("an occupied twin is a fold; an occupied rival stays refused", () => {
+  const immaculateList = join(listDir, "2026-09-07-hobbymonitor-year-basketball-panini-immaculate-01.json");
+  const doc = readList(immaculateList);
+  type NotedEntry = Entry & { note?: string };
+  const entries = doc.entries as NotedEntry[];
+
+  // The 13 the REPORT refused, and the occupant prod named for each.
+  const REFUSED: ReadonlyArray<readonly [string, string, string]> = [
+    ["27:international-red:no-auto:num-15", "Terrence Shannon Jr.", "Bub Carrington"],
+    ["16:international-red:no-auto:num-15", "Bub Carrington", "Devin Carter"],
+    ["23:international-red:no-auto:num-15", "Kyshawn George", "Anfernee Simons"],
+    ["15:international-red:no-auto:num-15", "Tristan da Silva", "Bobi Klintman"],
+    ["26:international-red:no-auto:num-15", "Ryan Dunn", "Baylor Scheierman"],
+    ["17:international-red:no-auto:num-15", "Rob Dillingham", "Melvin Ajinca"],
+    ["18:international-red:no-auto:num-15", "Yuki Kawamura", "Dillon Jones"],
+    ["34:international-red:no-auto:num-15", "Ajay Mitchell", "Jared McCain"],
+    ["12:international-red:no-auto:num-15", "Cody Williams", "Onyeka Okongwu"],
+    ["31:international-red:no-auto:num-15", "Kyle Filipowski", "Seth Curry"],
+    ["21:international-red:no-auto:num-15", "Ja'Kobe Walter", "Johnny Furphy"],
+    ["10:international-red:no-auto:num-15", "Dalton Knecht", "Quincy Olivari"],
+  ];
+  const slug = (tail: string) => `hiq:basketball:2025:panini-immaculate:${tail}`;
+  const FOLD = slug("8:international-red:no-auto:num-27");
+  const byId = new Map(entries.map((e) => [e.id, e]));
+
+  it("the list still holds 1,000 entries and names this lane", () => {
+    expect(doc.forLane).toBe("relocate-catalog-rows-by-list");
+    expect(entries).toHaveLength(1000);
+  });
+
+  it("every entry still passes the lane's own validation", () => {
+    for (const e of entries) expect(L.classifyEntry(e).ok).toBe(true);
+  });
+
+  /**
+   * THE PIN THIS CHANGE EXISTS FOR. A list entry that targets an address held
+   * by a TWIN must not be a reslug -- the lane refuses that forever, so the
+   * fold would never land. The twin is identified the way the lane identifies
+   * it: by playerIdentityKey, the same reduction occupancyRefusal uses.
+   */
+  it("a reslug whose destination is an occupied TWIN is a defect — it must be a retire", () => {
+    const fold = byId.get(FOLD);
+    expect(fold).toBeDefined();
+    expect(fold?.action).toBe("retire");
+    // A retire names no destination -- the twin already sits there.
+    expect(fold?.to).toBeUndefined();
+    expect(L.classifyEntry(fold).ok).toBe(true);
+
+    // And the fold is a fold on the lane's OWN compare: same player both sides
+    // means occupancyRefusal returns false, i.e. "not occupied by a rival".
+    const durant = { playerName: "Kevin Durant" };
+    expect(L.occupancyRefusal(durant, durant)).toBe(false);
+    expect(L.occupiedByDifferentCard(durant, durant)).toBe(false);
+  });
+
+  /**
+   * MUTATION. Re-arm the fold as a `reslug` onto the twin's address -- the
+   * shape the REPORT refused. It passes SHAPE validation, which is exactly why
+   * shape alone is not enough: the lane would refuse it at occupancy on every
+   * run and the pair would stay two rows for one card forever. So the
+   * assertion is that the COMMITTED action is not a reslug.
+   */
+  it("MUTATION: ship the twin as a reslug -> the lane can never complete it -> red", () => {
+    const mutant: Entry = {
+      id: FOLD,
+      action: "reslug",
+      to: FOLD.replace(":2025:", ":2024:"),
+      reason: "mutant: the shape run 34204256211 refused",
+    };
+    expect(L.classifyEntry(mutant).ok).toBe(true);
+    expect(byId.get(FOLD)?.action).not.toBe("reslug");
+  });
+
+  it("the twelve DIFFERENT-PLAYER collisions stay reslugs and are never folded", () => {
+    for (const [tail, moving, held] of REFUSED) {
+      const e = byId.get(slug(tail));
+      expect(e, tail).toBeDefined();
+      // Still a reslug: a collision is reported, never routed around.
+      expect(e?.action, tail).toBe("reslug");
+      // Never rewritten to a retire -- that would delete a real card's row and
+      // hand its sales to an address holding a DIFFERENT player.
+      expect(e?.action, tail).not.toBe("retire");
+      // And the lane's own compare agrees these are two cards.
+      expect(L.occupiedByDifferentCard({ playerName: held }, { playerName: moving }), tail).toBe(true);
+      const r = L.occupancyRefusal({ playerName: held }, { playerName: moving });
+      expect((r as { reason: string }).reason, tail).toBe("occupied: different card");
+    }
+  });
+
+  it("each refused collision carries a note naming the occupant it was measured against", () => {
+    for (const [tail, , held] of REFUSED) {
+      const e = byId.get(slug(tail));
+      expect(e?.note, tail).toBeTruthy();
+      expect(e?.note, tail).toContain(held);
+      expect(e?.note, tail).toContain("#1976");
+    }
+  });
+
+  it("only those 13 entries differ in shape — the other 987 stay plain reslugs", () => {
+    const touched = new Set<string>([FOLD, ...REFUSED.map(([t]) => slug(t))]);
+    expect(touched.size).toBe(13);
+    const retires = entries.filter((e) => e.action === "retire");
+    // Exactly ONE fold in the whole file.
+    expect(retires).toHaveLength(1);
+    expect(retires[0].id).toBe(FOLD);
+    // Notes appear on the twelve collisions and nowhere else.
+    const noted = entries.filter((e) => typeof e.note === "string");
+    expect(noted).toHaveLength(12);
+    for (const e of noted) expect(touched.has(e.id)).toBe(true);
+    // Every untouched entry is still a bare reslug with no note.
+    for (const e of entries) {
+      if (touched.has(e.id)) continue;
+      expect(e.action).toBe("reslug");
+      expect(e.note).toBeUndefined();
+      expect(String(e.to).startsWith("hiq:basketball:2024:panini-immaculate:")).toBe(true);
+    }
+  });
+
+  it("no duplicate ids, and no two entries onto one destination", () => {
+    const ids = entries.map((e) => e.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    const tos = entries.filter((e) => e.action === "reslug").map((e) => String(e.to));
+    expect(new Set(tos).size).toBe(tos.length);
+  });
+
+  /**
+   * The file carries `keepSales: true`, and that is load-bearing for BOTH
+   * shapes here. #1925's measurement is that the sales resting on these
+   * year-2025 slugs are the genuine 2025 product's, not the moving row's --
+   * so a reslug must not carry them back to 2024, and the retire leaves them
+   * where they are for the rematch. Neither shape re-points a sale.
+   */
+  it("keepSales stays true, so no shape carries the other card's sales", () => {
+    expect((doc as unknown as { keepSales?: boolean }).keepSales).toBe(true);
+    expect(L.keepsSales({}, doc)).toBe(true);
+    for (const e of entries) expect(L.keepsSales(e, doc)).toBe(true);
   });
 });
