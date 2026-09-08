@@ -22,7 +22,7 @@ import { holdingProvenance } from "@/lib/rung";
 import { formatAsOf } from "@/lib/asOf";
 // CF-WITHHELD-SAYS-WHY (Drew, 2026-09-05): the refusal vocabulary, in one
 // place, so the row / the detail panel / the DailyIQ column cannot drift.
-import { withheldOf, withheldShort, withheldSentence } from "@/lib/withheld";
+import { withheldOf, withheldShort, withheldSentence, showsCheckingPrice } from "@/lib/withheld";
 
 type SortKey = "value" | "cost" | "gainPct" | "gain" | "title";
 type SortDir = "asc" | "desc";
@@ -116,6 +116,10 @@ async function pollUntilSettled(
     //   idle          — this worker has no entry; we DID dispatch, so this
     //                   cannot mean "no run"
     if (st.running || st.status === "running") continue;
+    // CF-REPRICE-SETTLES-ACROSS-INSTANCES (2026-09-08): the worker we polled
+    // did not own the run, but proved from the durable dispatch marker and
+    // the rows' own stamps that it finished. A settlement, not a keep-asking.
+    if (st.status === "settled-elsewhere") return { kind: "settled", result: st.result ?? null };
     if (st.status === "unknown-here" || st.status === "idle") continue;
     if (st.status === "error") {
       return { kind: "error", message: st.error ?? "Refresh failed." };
@@ -954,7 +958,18 @@ function HoldingRow({
   // confirm the same number, and putting a spinner on a good price would
   // make a working portfolio look broken for the ~40s a run takes. This is
   // the "never a frozen page" rule applied per row rather than globally.
-  const pricePending = repricing && value == null;
+  //
+  // CF-WITHHELD-OUTLIVES-THE-SPINNER (2026-09-08). A run being in flight is
+  // not a reason to un-say something already decided. These rows carry a
+  // terminal refusal — the engine looked, refused, and persisted the reason —
+  // and a fresh run will almost certainly reach the same verdict. Showing
+  // "CHECKING PRICE…" over them replaces a real answer with a promise of one
+  // for as long as a poll fails to settle: the reported symptom was six
+  // withheld holdings stuck on the spinner with their reason hidden.
+  //
+  // A row with no verdict at all still says "checking" — there the spinner is
+  // the honest claim. The header still reports the run either way.
+  const pricePending = showsCheckingPrice({ repricing, value, withheld });
 
   // CF-MOBILE-HOLDING-CARD (Drew, 2026-09-04: the mobile list is "horrible
   // looking"). At ~390px the single flex row put the title, the grade, the

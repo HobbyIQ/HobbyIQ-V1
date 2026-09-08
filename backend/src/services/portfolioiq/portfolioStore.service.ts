@@ -12079,7 +12079,78 @@ export async function getBatchRepriceStatus(req: Request, res: Response) {
   const auth = await requireUser(req, res);
   if (!auth) return;
   const jobId = typeof req.query?.jobId === "string" ? req.query.jobId : null;
-  return res.json(buildRepriceStatusPayload(auth.userId, jobId));
+  // CF-REPRICE-SETTLES-ACROSS-INSTANCES (2026-09-08): read the durable facts
+  // so a run dispatched on the OTHER instance can still be reported settled.
+  // Best-effort — a read failure degrades to the previous keep-polling answer
+  // rather than failing the poll.
+  let durable: DurableRepriceEvidence | null = null;
+  try {
+    const doc = await readUserDoc(auth.userId);
+    const holdings = Object.values(doc.holdings ?? {}) as PortfolioHolding[];
+    let oldestMs: number | null = null;
+    for (const h of holdings) {
+      const lu = (h as any).lastUpdated;
+      const t = typeof lu === "string" ? Date.parse(lu) : typeof lu === "number" ? lu : NaN;
+      if (!Number.isFinite(t) || t <= 0) {
+        // A row with no stamp cannot testify that the run reached it.
+        oldestMs = null;
+        break;
+      }
+      if (oldestMs === null || t < oldestMs) oldestMs = t;
+    }
+    durable = {
+      dispatchedAt: doc.lastRepriceDispatchAt ?? null,
+      oldestValuationAtMs: oldestMs,
+      holdingCount: holdings.length,
+    };
+  } catch {
+    durable = null;
+  }
+  return res.json(buildRepriceStatusPayload(auth.userId, jobId, Date.now(), durable));
+}
+
+/**
+ * CF-REPRICE-SETTLES-ACROSS-INSTANCES (2026-09-08): the cross-worker facts.
+ *
+ * Everything here is durable and visible to BOTH serving instances, unlike
+ * the in-process job map. Passed in rather than read here so
+ * `buildRepriceStatusPayload` stays a pure function.
+ */
+export type DurableRepriceEvidence = {
+  /** `lastRepriceDispatchAt` off the user doc — when a run was last started. */
+  dispatchedAt: number | null;
+  /** `lastUpdated` of the STALEST holding; null when any row lacks a stamp. */
+  oldestValuationAtMs: number | null;
+  holdingCount: number;
+};
+
+/**
+ * Did a run we cannot see already finish?
+ *
+ * True only when a dispatch is on record AND every holding carries a
+ * valuation stamp at or after it. A reprice writes each holding as it goes,
+ * so "the stalest row is newer than the dispatch" means the run reached all
+ * of them. Deliberately conservative — any missing fact returns false and the
+ * client keeps polling, which is the pre-existing behaviour.
+ *
+ * A run still mid-flight fails this: rows it has not reached yet keep their
+ * older stamps, so the oldest is older than the dispatch.
+ */
+export function settledElsewhere(
+  ev: DurableRepriceEvidence | null,
+  now = Date.now(),
+): { finishedAt: string } | null {
+  if (!ev) return null;
+  const { dispatchedAt, oldestValuationAtMs, holdingCount } = ev;
+  if (dispatchedAt == null || !Number.isFinite(dispatchedAt) || dispatchedAt <= 0) return null;
+  // A future-dated marker is a clock artifact, not evidence.
+  if (dispatchedAt > now) return null;
+  // No holdings means there was nothing for the run to write; a dispatch on
+  // record is then all the evidence available, and it is enough.
+  if (holdingCount === 0) return { finishedAt: new Date(dispatchedAt).toISOString() };
+  if (oldestValuationAtMs == null || !Number.isFinite(oldestValuationAtMs)) return null;
+  if (oldestValuationAtMs < dispatchedAt) return null;
+  return { finishedAt: new Date(oldestValuationAtMs).toISOString() };
 }
 
 /**
@@ -12100,7 +12171,7 @@ export async function getBatchRepriceStatus(req: Request, res: Response) {
  * watched reach done/error. Everything else means keep asking.
  */
 export type RepriceStatusPayload = {
-  status: "idle" | "unknown-here" | "running" | "done" | "error";
+  status: "idle" | "unknown-here" | "running" | "done" | "error" | "settled-elsewhere";
   running: boolean;
   /**
    * True ONLY when this worker observed the run settle. `idle` and
@@ -12119,14 +12190,40 @@ export function buildRepriceStatusPayload(
   userId: string,
   jobId?: string | null,
   now = Date.now(),
+  durable?: DurableRepriceEvidence | null,
 ): RepriceStatusPayload {
   const lookup = repriceJobs.lookupJob(userId, jobId);
-  if (lookup.kind === "idle") {
-    // Nobody dispatched, as far as this worker knows. Not settled: a client
-    // that DID dispatch is looking at the other instance's blind spot.
-    return { status: "idle", running: false, settled: false, jobId: jobId ?? null };
-  }
-  if (lookup.kind === "unknown-here") {
+  if (lookup.kind === "idle" || lookup.kind === "unknown-here") {
+    // CF-REPRICE-SETTLES-ACROSS-INSTANCES (2026-09-08).
+    //
+    // This worker has no view of the run. That is honest, but on its own it
+    // is also unfalsifiable: the client is told "keep asking" by a worker
+    // that will never know the answer, so it polls until its own deadline.
+    // Downstream that reads as a permanently in-flight run, and the portfolio
+    // row hides its withheld REASON behind "CHECKING PRICE…" for the whole
+    // window (apps/web .../portfolio/page.tsx: `withheld && !pricePending`).
+    //
+    // The two workers share exactly one set of facts: the durable dispatch
+    // marker and the holdings' own `lastUpdated` stamps. If every holding was
+    // written AFTER the run was dispatched, the run demonstrably finished —
+    // whichever instance ran it. That is a settlement we can prove, so we
+    // report it rather than leaving the client to time out.
+    const elsewhere = settledElsewhere(durable ?? null, now);
+    if (elsewhere) {
+      return {
+        status: "settled-elsewhere",
+        running: false,
+        settled: true,
+        jobId: jobId ?? null,
+        finishedAt: elsewhere.finishedAt,
+        result: null,
+      };
+    }
+    if (lookup.kind === "idle") {
+      // Nobody dispatched, as far as this worker knows. Not settled: a client
+      // that DID dispatch is looking at the other instance's blind spot.
+      return { status: "idle", running: false, settled: false, jobId: jobId ?? null };
+    }
     // The run was minted elsewhere (or already swept here). Say so plainly.
     return { status: "unknown-here", running: false, settled: false, jobId: jobId ?? null };
   }

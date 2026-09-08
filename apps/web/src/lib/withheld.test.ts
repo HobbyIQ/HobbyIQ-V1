@@ -15,7 +15,9 @@ import {
   withheldUnlock,
   withheldSentence,
   withheldPoolNote,
+  showsCheckingPrice,
   type WithheldReason,
+  type WithheldBlock,
 } from "./withheld";
 
 const ALL: WithheldReason[] = [
@@ -200,5 +202,60 @@ describe("per-row pending: only rows a run could change", () => {
   it("marks nothing when no run is in flight", () => {
     expect(pending(false, null)).toBe(false);
     expect(pending(false, 1415)).toBe(false);
+  });
+});
+
+/**
+ * CF-WITHHELD-OUTLIVES-THE-SPINNER (2026-09-08).
+ *
+ * Six eBay-imported holdings sat on "CHECKING PRICE…" with VALUE "—" and no
+ * reason shown, though the engine had already refused to price them and had
+ * written `no-checklist-match` to every row. The spinner was masking a
+ * verdict that existed. These pin the precedence.
+ */
+describe("showsCheckingPrice — the spinner never masks a decided row", () => {
+  // The incident's shape, as stored on the six holdings.
+  const w: WithheldBlock = {
+    reason: "no-checklist-match",
+    blockingId: "hiq:baseball:2005:bowman-chrome:bdp129:base:no-auto",
+    blockingCount: 1,
+    proposed: null,
+    retained: null,
+    retentionRefused: "no-prior-value",
+  };
+
+  it("does NOT show the spinner over a withheld row, even mid-run", () => {
+    // The incident, exactly: run in flight, no value, but a reason exists.
+    // The reason must win — it is an answer, the spinner is only a promise.
+    expect(showsCheckingPrice({ repricing: true, value: null, withheld: w })).toBe(false);
+  });
+
+  it("shows the spinner on an undecided valueless row mid-run", () => {
+    // No verdict of any kind: "we are looking" is the honest claim here.
+    expect(showsCheckingPrice({ repricing: true, value: null, withheld: null })).toBe(true);
+  });
+
+  it("never shows the spinner over a published price", () => {
+    // A working portfolio must not look broken for the ~40s a run takes.
+    expect(showsCheckingPrice({ repricing: true, value: 259, withheld: null })).toBe(false);
+  });
+
+  it("shows nothing when no run is in flight", () => {
+    expect(showsCheckingPrice({ repricing: false, value: null, withheld: null })).toBe(false);
+    expect(showsCheckingPrice({ repricing: false, value: null, withheld: w })).toBe(false);
+  });
+
+  it("holds for every withheld reason, not just the incident's", () => {
+    const reasons: WithheldBlock["reason"][] = [
+      "cost-basis-floor",
+      "no-checklist-match",
+      "identity-not-in-catalog",
+      "pool-migrating",
+    ];
+    for (const reason of reasons) {
+      expect(showsCheckingPrice({ repricing: true, value: null, withheld: { ...w, reason } })).toBe(
+        false,
+      );
+    }
   });
 });

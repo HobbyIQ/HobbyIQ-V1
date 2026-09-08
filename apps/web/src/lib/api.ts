@@ -2812,7 +2812,7 @@ export async function refreshAllHoldings(): Promise<RepriceDispatch> {
 // running". `idle` and `unknown-here` both mean "this worker can't see your
 // run", which is a reason to keep polling, never a completion.
 export interface RepriceStatus {
-  status: "idle" | "unknown-here" | "running" | "done" | "error";
+  status: "idle" | "unknown-here" | "running" | "done" | "error" | "settled-elsewhere";
   running: boolean;
   /** True only when a worker actually observed the run reach done/error. */
   settled?: boolean;
