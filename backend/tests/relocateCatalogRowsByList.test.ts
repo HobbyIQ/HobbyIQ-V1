@@ -1038,8 +1038,9 @@ describe("the move verifies its source the way the retire does", () => {
     expect(s).toContain("move landed; source retire failed ${f(moveSourceLeftBehind)}");
     expect(s).toContain("moves COMPLETED         ${f(movesCompleted)}");
     // Both wrote, so both are `written`; the reconcile identity must still
-    // account for every entry exactly once.
-    expect(s).toContain("const written = retired + resluged + movesCompleted + moveSourceLeftBehind;");
+    // account for every entry exactly once. A `park` writes too (it patches a
+    // field), so it joins the same sum -- see the park suite below.
+    expect(s).toContain("const written = retired + resluged + movesCompleted + moveSourceLeftBehind + parked;");
   });
 });
 
@@ -1400,28 +1401,49 @@ describe("an occupied twin is a fold; an occupied rival stays refused", () => {
     expect(byId.get(FOLD)?.action).not.toBe("reslug");
   });
 
-  it("the twelve DIFFERENT-PLAYER collisions stay reslugs and are never folded", () => {
+  /**
+   * DREW'S RULING, 2026-09-08: "the checklist decides the number — the 12
+   * cross-player hobbymonitor rows are PARKED identityUnverified (they stop
+   * resolving/pricing until a source confirms them; sales stay with them
+   * unpriced)."
+   *
+   * So these twelve are no longer refused reslugs waiting on a human. They are
+   * PARKS: the row stays, the sales stay with it, and nothing prices until a
+   * source confirms the number. A reslug would be the collision; a retire
+   * would delete a row that is unconfirmed rather than proven wrong.
+   */
+  it("the twelve DIFFERENT-PLAYER collisions are PARKED — never moved, never deleted", () => {
     for (const [tail, moving, held] of REFUSED) {
       const e = byId.get(slug(tail));
       expect(e, tail).toBeDefined();
-      // Still a reslug: a collision is reported, never routed around.
-      expect(e?.action, tail).toBe("reslug");
-      // Never rewritten to a retire -- that would delete a real card's row and
-      // hand its sales to an address holding a DIFFERENT player.
+      expect(e?.action, tail).toBe("park");
+      // NOT a reslug: that is the collision itself.
+      expect(e?.action, tail).not.toBe("reslug");
+      // NOT a retire: the row is unconfirmed, not proven wrong, and deleting
+      // it would orphan real sales with no way back.
       expect(e?.action, tail).not.toBe("retire");
-      // And the lane's own compare agrees these are two cards.
+      // A park stays put, so it may never name a destination.
+      expect(e?.to, tail).toBeUndefined();
+      // And the lane's own compare still agrees these are two cards -- the
+      // ruling changed the REMEDY, never the finding.
       expect(L.occupiedByDifferentCard({ playerName: held }, { playerName: moving }), tail).toBe(true);
       const r = L.occupancyRefusal({ playerName: held }, { playerName: moving });
       expect((r as { reason: string }).reason, tail).toBe("occupied: different card");
     }
   });
 
-  it("each refused collision carries a note naming the occupant it was measured against", () => {
-    for (const [tail, , held] of REFUSED) {
+  it("each park records the occupant and the source that outranks it", () => {
+    for (const [tail, moving, held] of REFUSED) {
       const e = byId.get(slug(tail));
-      expect(e?.note, tail).toBeTruthy();
-      expect(e?.note, tail).toContain(held);
-      expect(e?.note, tail).toContain("#1976");
+      // The evidence names BOTH sides and both sources, so the ruling is
+      // auditable from the file alone.
+      expect(e?.evidence, tail).toContain(held);
+      expect(e?.evidence, tail).toContain(moving);
+      expect(e?.evidence, tail).toContain("checklistinsider-2026-08-27");
+      expect(e?.evidence, tail).toContain("hobbymonitor-2026-09-04");
+      // The reason states the ruling that produced the park.
+      expect(e?.reason, tail).toContain("CHECKLIST DECIDES THE NUMBER");
+      expect(e?.reason, tail).toContain("identityUnverified");
     }
   });
 
@@ -1432,11 +1454,13 @@ describe("an occupied twin is a fold; an occupied rival stays refused", () => {
     // Exactly ONE fold in the whole file.
     expect(retires).toHaveLength(1);
     expect(retires[0].id).toBe(FOLD);
-    // Notes appear on the twelve collisions and nowhere else.
-    const noted = entries.filter((e) => typeof e.note === "string");
-    expect(noted).toHaveLength(12);
-    for (const e of noted) expect(touched.has(e.id)).toBe(true);
-    // Every untouched entry is still a bare reslug with no note.
+    // Exactly TWELVE parks, and they are the twelve collisions.
+    const parks = entries.filter((e) => e.action === "park");
+    expect(parks).toHaveLength(12);
+    for (const e of parks) expect(touched.has(e.id)).toBe(true);
+    // The `note` form the parks replaced is gone -- a park states itself.
+    expect(entries.filter((e) => typeof e.note === "string")).toHaveLength(0);
+    // Every untouched entry is still a bare reslug.
     for (const e of entries) {
       if (touched.has(e.id)) continue;
       expect(e.action).toBe("reslug");
@@ -1463,5 +1487,128 @@ describe("an occupied twin is a fold; an occupied rival stays refused", () => {
     expect((doc as unknown as { keepSales?: boolean }).keepSales).toBe(true);
     expect(L.keepsSales({}, doc)).toBe(true);
     for (const e of entries) expect(L.keepsSales(e, doc)).toBe(true);
+  });
+});
+
+// ── park: a third shape that neither moves nor deletes ───────────────────────
+
+/**
+ * CF-AN-UNCONFIRMED-ROW-IS-PARKED-NOT-DELETED (Drew, 2026-09-08).
+ *
+ * The immaculate-01 refusals forced a shape the lane did not have. Twelve
+ * hobbymonitor rows cannot move (a checklist-backed row for a DIFFERENT player
+ * holds the destination) and must not be deleted (they are UNCONFIRMED, not
+ * proven wrong -- deleting one orphans real sales with no way back). Drew's
+ * ruling:
+ *
+ *     "the checklist decides the number -- the 12 cross-player hobbymonitor
+ *      rows are PARKED identityUnverified (they stop resolving/pricing until a
+ *      source confirms them; sales stay with them unpriced)."
+ *
+ * So `park` is the third action: one patch through patchCatalogRowFields --
+ * the helper that owns catalog field writes, never a raw container.patch
+ * (#1614 left rows unfindable exactly that way) -- stamping
+ * `identityUnverified: true` and an `identityUnverifiedReason`. No move, no
+ * delete, and the sales stay on the row.
+ *
+ * WHAT THE STAMP DOES, HONESTLY. `identityUnverified` is the vocabulary
+ * identityBacking.ts owns for "an identity we decline to price", and this
+ * suite's own retire rationale proves the limit: catalog match paths filter on
+ * identity fields ONLY, so no such predicate exists there today. On
+ * card_catalog the stamp is a LABEL and an acquisition work item -- which is
+ * what IDENTITY_UNVERIFIED's docblock calls it -- while soldCompsStore's
+ * `identityParked` is what reads it on the sales side. Adding a catalog-read
+ * predicate is its own change with its own census, exactly as this file argues
+ * for the retire; a 12-row ruling does not get to reshape the matcher.
+ */
+describe("park is a third shape: no move, no delete, one stamp", () => {
+  const parkEntry = {
+    id: "hiq:basketball:2025:panini-immaculate:27:international-red:no-auto:num-15",
+    action: "park",
+    reason: "the checklist decides the number; this row is unconfirmed",
+  };
+
+  it("classifies a well-formed park", () => {
+    const c = L.classifyEntry(parkEntry);
+    expect(c.ok).toBe(true);
+    expect(c.action).toBe("park");
+  });
+
+  /**
+   * THE PIN THE RULING ASKED FOR. A park stays exactly where it is, so naming
+   * a destination is a contradiction -- a list author reaching for the reslug
+   * they were told not to write. It is REFUSED rather than ignored: silently
+   * dropping a stated `to` turns a rejected move into a no-op nobody notices.
+   */
+  it("REFUSES a park that carries a `to` — a parked row never moves", () => {
+    const c = L.classifyEntry({ ...parkEntry, to: "hiq:basketball:2024:panini-immaculate:27:international-red:no-auto:num-15" });
+    expect(c.ok).toBe(false);
+    expect(String(c.why)).toContain("must not name a");
+  });
+
+  it("still refuses a retire that carries a `to`, by the same rule", () => {
+    const c = L.classifyEntry({
+      id: "hiq:pokemon:2019:sm11-unified-minds:173:reverse-holo:no-auto",
+      action: "retire",
+      reason: "r",
+      to: "hiq:pokemon:2019:sm11-unified-minds:173:reverse-holofoil:no-auto",
+    });
+    expect(c.ok).toBe(false);
+  });
+
+  it("a park needs a reason — an unexplained stamp is not reviewable", () => {
+    const c = L.classifyEntry({ id: parkEntry.id, action: "park" });
+    expect(c.ok).toBe(false);
+    expect(String(c.why)).toContain("no reason");
+  });
+
+  it("an unknown action is still refused, and the message names all three", () => {
+    const c = L.classifyEntry({ id: parkEntry.id, action: "parked", reason: "r" });
+    expect(c.ok).toBe(false);
+    expect(String(c.why)).toContain("park");
+    expect(String(c.why)).toContain("retire");
+    expect(String(c.why)).toContain("reslug");
+  });
+
+  /**
+   * The lane writes the stamp through the field-patch helper and nowhere else,
+   * and it reconciles on the WRITTEN side -- a park patches a document, so
+   * counting it as a skip would break the identity the banner asserts.
+   */
+  it("the park branch patches via patchCatalogRowFields, never a raw patch", () => {
+    const src = readFileSync(lane, "utf8");
+    expect(src).toContain("patchCatalogRowFields");
+    expect(src).toContain("identityUnverified: true");
+    expect(src).toContain("identityUnverifiedReason");
+    // ONE call for both modes, with dryRun -- the report must predict the apply.
+    const call = src.slice(src.indexOf("if (action === \"park\")"));
+    expect(call).toContain("dryRun: !APPLY");
+    // No move and no delete on the park path.
+    const branch = call.slice(0, call.indexOf("if (action === \"retire\")"));
+    expect(branch).not.toContain("moveCatalogRow");
+    expect(branch).not.toContain("retireCatalogRow");
+  });
+
+  it("a park RECONCILES as written, and an already-parked row as skipped", () => {
+    const src = readFileSync(lane, "utf8");
+    expect(src).toContain("+ parked");
+    expect(src).toContain("+ alreadyParked");
+  });
+
+  /**
+   * A park of a row that is GONE is a refusal, not a silent no-op: park means
+   * "this row stays, unpriced" and there is no such row, so the entry's
+   * premise is false and the list is stale.
+   */
+  it("refuses to call a park done when the row is not there", () => {
+    const src = readFileSync(lane, "utf8");
+    expect(src).toContain("a park needs a row to stamp");
+  });
+
+  it("MUTATION: let a park carry a `to` -> a parked row would move -> red", () => {
+    const withTo = { ...parkEntry, to: "hiq:basketball:2024:panini-immaculate:27:international-red:no-auto:num-15" };
+    // The guard must reject it. If classifyEntry ever accepted this, the lane
+    // would hold an entry that both stays put and names somewhere to go.
+    expect(L.classifyEntry(withTo).ok).toBe(false);
   });
 });

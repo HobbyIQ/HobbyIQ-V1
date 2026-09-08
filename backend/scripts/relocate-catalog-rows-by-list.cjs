@@ -86,6 +86,61 @@
  *            an occupied address is a collision to report, not to route
  *            around.
  *
+ *   park     the row is at the right address but we do not know it is the
+ *            right CARD. Nothing moves and nothing is deleted: the row is
+ *            stamped `identityUnverified: true` plus an
+ *            `identityUnverifiedReason`, through patchCatalogRowFields.
+ *            Its sales stay exactly where they are.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * WHY PARK EXISTS, AND WHAT IT HONESTLY DOES (Drew, 2026-09-08)
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * The immaculate-01 list refused 13 reslugs as `occupied`. Point reads split
+ * them: ONE was the same card (folded to a retire, #1999) and TWELVE named two
+ * DIFFERENT players -- a hobbymonitor row moving onto an address a
+ * checklist-backed row already held, with the two sources disagreeing about
+ * which player owns which number.
+ *
+ * Neither existing shape answers that. A RETIRE deletes a row we have no
+ * evidence is wrong -- only unconfirmed -- and hands its sales to the rematch,
+ * which would re-derive them onto the same contested numbering. A RESLUG is
+ * the collision itself. Drew's ruling is the third answer:
+ *
+ *     "the checklist decides the number -- the 12 cross-player hobbymonitor
+ *      rows are PARKED identityUnverified (they stop resolving/pricing until a
+ *      source confirms them; sales stay with them unpriced)."
+ *
+ * WHAT THE STAMP IS, STATED PLAINLY RATHER THAN OVERSOLD. `identityUnverified`
+ * is the vocabulary `identityBacking.ts` already owns for "an identity we
+ * decline to price", and `initialsCollisionPark` / `makerlessCatchAll` use it
+ * for exactly this shape: we will not guess between two players, because FMV
+ * is the projected next sale from a pool and a wrong pool is a wrong price,
+ * silently, forever.
+ *
+ * BUT THE HONEST LIMIT, WRITTEN DOWN BECAUSE THIS FILE'S OWN HEADER ALREADY
+ * ARGUES IT. Read the retire rationale above: catalog match paths filter on
+ * IDENTITY fields only, and no `retired`/`flaggedWrong`/`identityUnverified`
+ * predicate appears in any of them. So this stamp does NOT by itself stop a
+ * catalog row being returned by the matcher today -- on card_catalog it is a
+ * LABEL and an acquisition work item, which is precisely what
+ * `IDENTITY_UNVERIFIED`'s own docblock calls it ("a LABEL and an acquisition
+ * work item, never a judgement that the card is fake"). The consumer that
+ * enforces it on the SALES side is soldCompsStore's `identityParked`.
+ *
+ * That limit is a reason to write the stamp, not to skip it: the ruling is
+ * recorded on the row, the acquisition queue can find it, and the enforcement
+ * predicate -- if one is ever wanted on the catalog read path -- is its own
+ * change with its own census and blast radius, exactly as this file argues
+ * for the retire. A 12-row ruling does not get to reshape the matcher.
+ *
+ * WHY NOT A DELETE, ONE MORE TIME. The 12 rows may well be RIGHT; what is
+ * unproven is the numbering. Deleting a possibly-correct row orphans real
+ * sales with no way back, which is the same reasoning
+ * `RETIRED_SUPERSEDED_BY_CHECKLIST` records for the self-derived lane. Park
+ * keeps the row, keeps the sales with it, and prices nothing until a source
+ * confirms the number.
+ *
  * ORDER WITHIN A LIST IS THE AUTHOR'S. Entries are applied top to bottom, so a
  * list that must vacate an alias address before reslugging onto it says so by
  * putting the retire first. The lane does not reorder.
@@ -303,8 +358,8 @@ function classifyEntry(e) {
   const reason = String(e?.reason ?? "").trim();
   if (!id) return { ok: false, why: "entry has no id" };
   if (!id.startsWith("hiq:")) return { ok: false, why: `id is not a hiq slug: ${id.slice(0, 60)}` };
-  if (action !== "retire" && action !== "reslug") {
-    return { ok: false, why: `action must be "retire" or "reslug", got ${JSON.stringify(e?.action ?? null)}` };
+  if (action !== "retire" && action !== "reslug" && action !== "park") {
+    return { ok: false, why: `action must be "retire", "reslug" or "park", got ${JSON.stringify(e?.action ?? null)}` };
   }
   // The reason is what a reviewer reads in the diff and what the write stamps.
   // An unexplained delete is not reviewable.
@@ -314,7 +369,12 @@ function classifyEntry(e) {
     if (!to.startsWith("hiq:")) return { ok: false, why: `"to" is not a hiq slug: ${to.slice(0, 60)}` };
     if (to === id) return { ok: false, why: `reslug "to" equals the id: ${id.slice(0, 60)}` };
   } else if (to) {
-    return { ok: false, why: `retire entry must not name a "to": ${id.slice(0, 60)}` };
+    // A PARK AND A RETIRE BOTH STAY PUT, so neither may name a destination.
+    // A `to` on a park is a list author reaching for the reslug they were
+    // told not to write, and it is refused rather than ignored: silently
+    // dropping a stated destination is how a rejected move becomes a
+    // no-op nobody notices.
+    return { ok: false, why: `${action} entry must not name a "to": ${id.slice(0, 60)}` };
   }
   return { ok: true, id, action, to, reason };
 }
@@ -615,7 +675,7 @@ async function main() {
   const { CosmosClient } = require("@azure/cosmos");
   const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReconciliation.js"));
   const {
-    moveCatalogRow, retireCatalogRow,
+    moveCatalogRow, retireCatalogRow, patchCatalogRowFields,
   } = require(path.join(backend, "dist/services/catalog/catalogRowOps.service.js"));
   const { marketVerdict } = require(path.join(__dirname, "lib", "market-guard.cjs"));
 
@@ -680,6 +740,15 @@ async function main() {
   };
 
   let retired = 0, resluged = 0, alreadyRight = 0, notFound = 0, failed = 0;
+  // Rows stamped identityUnverified. A park WRITES (it patches a field), so it
+  // reconciles on the written side beside retire and reslug -- never as a skip.
+  let parked = 0;
+  // Parks whose row already carried the stamp. Idempotent, and a SKIP rather
+  // than a write, so a re-run cannot inflate the parked count.
+  let alreadyParked = 0;
+  // Sales left sitting on a parked row. They are neither unplaced nor
+  // re-pointed: the row is still there, still theirs, and now unpriced.
+  let salesParked = 0;
   let refusedOccupied = 0, salesUnplaced = 0, salesRepointed = 0, gradedRetired = 0;
   // A SUBSET of refusedOccupied, never an addition to it: the reconciliation
   // identity below counts occupied refusals once, and a superset IS one.
@@ -757,9 +826,52 @@ async function main() {
       }
       // Already gone is the target state for a retire, and it is a SKIP, not a
       // success: a re-run must not inflate the written count.
+      // A PARK OF A ROW THAT IS GONE IS A REFUSAL, NOT A NO-OP. Park means
+      // "this row stays, unpriced, until a source confirms it" -- there is no
+      // such row, so the entry's premise is false and the list is out of date.
+      // Counting it as a skip would let a list quietly park nothing at all.
       alreadyRight += action === "retire" ? 1 : 0;
       notFound += action === "retire" ? 0 : 1;
       console.log(`  NOT FOUND  ${id.slice(0, 70)}`);
+      if (action === "park") {
+        console.error("      a park needs a row to stamp — this entry's premise is gone; re-measure the list");
+      }
+      continue;
+    }
+
+    // ── PARK ──────────────────────────────────────────────────────────────
+    //
+    // Nothing moves, nothing is deleted. One patch, through the helper that
+    // owns catalog field writes -- never a raw container.patch (#1614 left
+    // rows unfindable exactly that way).
+    if (action === "park") {
+      const pointing = await salesAt(id);
+      console.log(`  PARK  ${id.slice(0, 70)}`);
+      console.log(`      ${String(row.playerName ?? "(no player)")} — ${String(row.setName ?? "")}`.slice(0, 100));
+      console.log(`      reason: ${reason.slice(0, 90)}`);
+      if (evidence) console.log(`      evidence: ${evidence.slice(0, 90)}`);
+      console.log(`      sales staying on this row: ${pointing === null ? "unknown" : f(pointing)}   <- kept WITH the row, and unpriced`);
+      if (row.identityUnverified === true) {
+        alreadyParked++;
+        console.log("      already identityUnverified — nothing to write");
+        continue;
+      }
+      if (pointing) salesParked += pointing;
+      // ONE call for both modes, with dryRun -- the same contract the reslug
+      // path was fixed to honour: a report that cannot predict its apply is a
+      // green light for a write that will not happen.
+      try {
+        const res = await patchCatalogRowFields(
+          cat, id, row.cardId ?? id,
+          { identityUnverified: true, identityUnverifiedReason: reason },
+          { retry, dryRun: !APPLY },
+        );
+        if (res?.action === "noop") { alreadyParked++; continue; }
+        parked++;
+      } catch (err) {
+        failed++;
+        console.error(`      FAILED: ${String(err?.message ?? err).slice(0, 80)}`);
+      }
       continue;
     }
 
@@ -973,6 +1085,8 @@ async function main() {
   console.log(`  entries considered      ${f(considered)}${stoppedAt === null ? "   <- the whole list" : ""}`);
   console.log(`  RETIRED (deleted)       ${f(retired)}   <- deleted; a soft label does NOT stop a catalog row resolving`);
   console.log(`  RESLUGGED (moved)       ${f(resluged)}`);
+  console.log(`  PARKED (identityUnverified) ${f(parked)}   <- row and sales stay put, unpriced until a source confirms the identity`);
+  console.log(`  already parked          ${f(alreadyParked)}   <- the stamp was already there; a re-run writes nothing`);
   console.log(`  moves COMPLETED         ${f(movesCompleted)}   <- destination already held the row; the source was retired`);
   console.log(`  move landed; source retire failed ${f(moveSourceLeftBehind)}   <- TWO rows hold one card; re-run finishes it`);
   console.log(`  refused — occupied      ${f(refusedOccupied)}   <- a different card holds the target address`);
@@ -991,6 +1105,7 @@ async function main() {
   console.log(`  sales made UNPLACED     ${f(salesUnplaced)}   <- the rematch owns these`);
   console.log(`  sales re-pointed        ${f(salesRepointed)}`);
   console.log(`  sales LEFT BEHIND       ${f(salesLeftBehind)}   <- keepSales: the other card's sales, not carried`);
+  console.log(`  sales on PARKED rows    ${f(salesParked)}   <- still on their row, neither unplaced nor re-pointed`);
   console.log(`  graded children retired ${f(gradedRetired)}`);
   // RECONCILE IN BOTH MODES. A report that cannot account for its own entries
   // is not a report worth reading, and the apply's arithmetic must have been
@@ -1012,8 +1127,11 @@ async function main() {
     console.log("  re-run this same list: each is completed by retiring the source, not refused as occupied");
   }
 
-  const written = retired + resluged + movesCompleted + moveSourceLeftBehind;
-  const skipped = alreadyRight + notFound;
+  // A PARK WROTE: it patched a field on a row. `alreadyParked` did not -- the
+  // stamp was already there -- so it reconciles as a skip, the same way
+  // `already gone` does for a retire.
+  const written = retired + resluged + movesCompleted + moveSourceLeftBehind + parked;
+  const skipped = alreadyRight + notFound + alreadyParked;
   const refused = refusedOccupied + refusedCrossMarket;
   // A PARTIAL RUN STILL RECONCILES. The identity has to hold over what the
   // loop CONSIDERED, not over the file, or a budget stop reads as 6,695 lost
