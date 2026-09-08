@@ -254,8 +254,28 @@ dispatch() {
     say "WAVE2 dry-run: ${cmd[*]}"
     return 0
   fi
-  "${cmd[@]}" >/dev/null || { warn "dispatch failed for slot $slot"; return 1; }
-  say "WAVE2 dispatched slot $slot ($mode apply=$apply scope=$scope)"
+  # KEEP WHAT `gh` PRINTS. It emits the new run's URL on success, and that URL
+  # is the ONLY local evidence a run was actually created. Measured while
+  # verifying this change on 2026-09-08 13:13Z: a dispatch exited 0 and created
+  # NO run -- the lane list has a clean gap where it should be -- and because
+  # the output went to /dev/null the fleet announced "dispatched slot 0" and
+  # then spent fifteen minutes hunting a run that never existed. The finder
+  # correctly reported `unfound`, but the driver could have said so at once.
+  local out rc
+  out=$("${cmd[@]}" 2>&1); rc=$?
+  if [ "$rc" -ne 0 ]; then
+    warn "dispatch failed for slot $slot (gh exit $rc): $(printf '%s' "$out" | tr '\n' ' ')"
+    return 1
+  fi
+  # `gh workflow run` prints the run URL on success. No URL means gh accepted
+  # the request without creating a run, which is NOT a dispatch -- say so here
+  # rather than leaving the finder to discover it fifteen minutes later.
+  local url; url=$(printf '%s' "$out" | grep -aoE 'https://github.com/[^ ]*/actions/runs/[0-9]+' | tail -1)
+  if [ -z "${url:-}" ]; then
+    warn "slot $slot: gh exited 0 but printed no run URL -- NOTHING WAS DISPATCHED. gh said: $(printf '%s' "$out" | tr '\n' ' ')"
+    return 1
+  fi
+  say "WAVE2 dispatched slot $slot ($mode apply=$apply scope=$scope) -> $url"
 }
 
 # -- THE FINDER: A RUN IS THIS SLOT'S ONLY WHEN ITS OWN LOG SAYS SO ----------

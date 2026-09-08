@@ -857,3 +857,46 @@ describe("WAVE2_ONLY_SLOTS drives a subset without re-sharding the corpus", () =
     expect(fleetSrc).not.toMatch(/-f slots="\$ONLY_SLOTS"/);
   });
 });
+
+/**
+ * A DISPATCH THAT CREATED NO RUN IS NOT A DISPATCH.
+ *
+ * MEASURED while verifying the finder on 2026-09-08 13:13Z. `gh workflow run`
+ * exited 0 and created NO run — the lane's run list has a clean gap where it
+ * should be, between 13:13:06Z and 13:15:36Z. The driver piped gh's output to
+ * /dev/null and checked only the exit code, so it announced "WAVE2 dispatched
+ * slot 0" and then spent fifteen minutes hunting a run that never existed.
+ *
+ * The finder handled it correctly — `unfound`, HELD, never `killed` — which is
+ * the outcome that matters. But the driver had the evidence in its hand at
+ * dispatch time and threw it away: `gh workflow run` prints the new run's URL
+ * on success, and that URL is the only local proof a run was created.
+ */
+describe("a dispatch that creates no run is reported at dispatch time", () => {
+  const dispatchFn = fleetSrc.slice(fleetSrc.indexOf("dispatch() {"), fleetSrc.indexOf("# The slots this invocation drives"));
+
+  it("captures gh's output instead of discarding it", () => {
+    // the defect: the run URL went to /dev/null
+    expect(dispatchFn).not.toMatch(/"\$\{cmd\[@\]\}" >\/dev\/null/);
+    expect(dispatchFn).toMatch(/out=\$\("\$\{cmd\[@\]\}" 2>&1\); rc=\$\?/);
+  });
+
+  it("refuses a dispatch that exits 0 without printing a run URL", () => {
+    expect(dispatchFn).toContain("NOTHING WAS DISPATCHED");
+    expect(dispatchFn).toMatch(/grep -aoE 'https:\/\/github\.com\/\[\^ \]\*\/actions\/runs\/\[0-9\]\+'/);
+  });
+
+  it("reports the run URL it dispatched, so the run is traceable from the log", () => {
+    expect(dispatchFn).toMatch(/say "WAVE2 dispatched slot \$slot .*-> \$url"/);
+  });
+
+  /**
+   * The dry-run path must still dispatch NOTHING and must not be routed through
+   * the URL check — an apply is armed by hand, and a dry run that started
+   * refusing would be a fleet that cannot be rehearsed.
+   */
+  it("leaves the dry-run path dispatching nothing", () => {
+    const dry = dispatchFn.slice(dispatchFn.indexOf('if [ "$DISPATCH" != "true" ]'));
+    expect(dry).toMatch(/say "WAVE2 dry-run: \$\{cmd\[\*\]\}"\n\s*return 0/);
+  });
+});
