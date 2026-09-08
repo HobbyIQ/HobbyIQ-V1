@@ -97,20 +97,30 @@ on:
         type: string
         default: ''
       platforms:
-        description: 'Comma-separated TCA platforms to ingest. Defaults to "eBay". Options: eBay, TCGplayer, REA, SCP Auctions, Hakes, Lelands, goldin. Multiple platforms split max_minutes evenly.'
+        description: 'Comma-separated TCA platforms to ingest. Defaults to "eBay,TCGplayer". Options: eBay, TCGplayer, REA, SCP Auctions, Hakes, Lelands, goldin. Each platform gets the FULL per-run budget (they are sequential, not split).'
         required: false
         type: string
-        default: 'eBay'
+        default: 'eBay,TCGplayer'
 
 jobs:
   ingest:
     name: TCA firehose → sold_comps
     runs-on: ubuntu-latest
-    # 50 = the 40-min reset-window budget plus checkout/npm ci/build and the
-    # script's own drain. Must stay strictly above the largest MAX_MINUTES
-    # below, or the runner kills the job mid-page and the cursor advance is
-    # the one thing we lose.
-    timeout-minutes: 50
+    # Must stay strictly above the WORST-CASE total of the MAX_MINUTES budgets
+    # below, or the runner kills the job mid-page and the cursor advance is the
+    # one thing we lose.
+    #
+    # CF-TCA-BUDGET-IS-PER-PLATFORM (2026-09-08). The budget is now per platform
+    # and platforms run sequentially, so the worst case is (platforms x budget),
+    # not one budget: 2 x 40 = 80 for the reset-window run, plus ~10 for
+    # checkout/npm ci/build and the script's own drain.
+    #
+    # This is a CEILING, not an expectation. Measured, both lanes exit on
+    # end-of-feed far inside it — the 00:05 run drained eBay in 281s and a full
+    # TCGplayer day takes 73s — so the typical reset-window run is ~6 min of
+    # ingest. The ceiling only binds on the day a platform genuinely has 40
+    # minutes of backlog to walk.
+    timeout-minutes: 90
     permissions:
       id-token: write
       contents: read
@@ -181,10 +191,19 @@ jobs:
           # independent cursor (CRAWLER_ID varies), so runs are
           # idempotent and can be split across dispatches.
           #
-          # 200K/day pull quota is SHARED — divide max_minutes across
-          # platforms roughly by their expected fresh-row volume.
-          # eBay: 60% (mainstream), TCGplayer 15%, auction houses 5% each.
-          PLATFORMS="${{ inputs.platforms || 'eBay' }}"
+          # CF-TCA-TCGPLAYER-ON-THE-SCHEDULE (Drew, 2026-09-08). TCGplayer is
+          # now in the SCHEDULED default, not just available to a dispatch.
+          # TCA holds 39K-54K TCGplayer sales/day against the ~30-500/day our
+          # pool was actually landing, because nothing but a manual dispatch
+          # ever pulled the platform.
+          #
+          # It is quota-free on this lane for the same reason eBay is: the
+          # daily-feed window (date_from=date_to=yesterday) is served outside
+          # the 200K/day cap, and TCGplayer's watermark is CURRENT rather than
+          # a day behind — the per-platform watermark check below clamps each
+          # lane to the day that platform has actually published, so adding a
+          # current platform to a lagging one needs no coordination.
+          PLATFORMS="${{ inputs.platforms || 'eBay,TCGplayer' }}"
           echo "Ingesting from platforms: $PLATFORMS"
           IFS=',' read -ra PLATFORM_ARR <<< "$PLATFORMS"
           PLATFORMS_OK=0
@@ -196,7 +215,37 @@ jobs:
           # apart from the platform-lag passes without a matrix — the same
           # mechanism promote-staging-pending.yml already uses.
           TOTAL_MIN="${{ inputs.max_minutes || (github.event.schedule == '5 0 * * *' && '40' || '12') }}"
-          PER_PLATFORM_MIN=$(( TOTAL_MIN / ${#PLATFORM_ARR[@]} ))
+          # CF-TCA-BUDGET-IS-PER-PLATFORM (2026-09-08). Adding TCGplayer to the
+          # scheduled lane made the old `TOTAL_MIN / n` split actively harmful,
+          # so the budget is now PER PLATFORM and the platforms run in sequence.
+          #
+          # The split assumed the budget binds on our wall clock and that the
+          # platforms compete for it. Measured, they do not compete — each one
+          # drains its own day and exits on `no next_cursor` well inside 12
+          # minutes:
+          #
+          #   34174828721 (00:05, 40m)  eBay        11 pages  10,864 rows  281s  end-of-feed
+          #   34226537967 (12:05, 12m)  eBay         5 pages   4,598 rows  158s  end-of-feed
+          #   34195261987 (06:05, 12m)  eBay        22 pages  22,000 rows  741s  WALL-CLOCK CAP
+          #   dry-run     (09-07 feed)  TCGplayer   59 pages  58,330 rows   73s  end-of-feed
+          #
+          # The 06:05 pass is the one that matters: eBay ALREADY spends its
+          # whole 12 minutes and still stops on the clock with the cursor
+          # parked mid-day. Halving it to 6 to make room for TCGplayer would
+          # truncate the eBay pull that is currently the tightest — trading a
+          # measured shortfall in one lane for coverage in the other, which is
+          # not a trade the daily feed needs to make.
+          #
+          # It does not need to because TCGplayer is CHEAP: a full day is
+          # 58,330 rows in 73 seconds (796 rows/s fetch — ~27x the 29 rows/s
+          # eBay sustains through the persist path, because these rows carry no
+          # LLM enrichment). Sequential budgets therefore cost ~1.5 extra
+          # minutes of wall clock in the common case, not 12.
+          #
+          # The ceiling that actually binds is the JOB timeout, so it moves
+          # with the worst case rather than the typical one: 2 platforms x 40
+          # min + checkout/npm ci/build. See timeout-minutes above.
+          PER_PLATFORM_MIN="$TOTAL_MIN"
           if [ $PER_PLATFORM_MIN -lt 2 ]; then PER_PLATFORM_MIN=2; fi
           for P in "${PLATFORM_ARR[@]}"; do
             P_CLEAN=$(echo "$P" | tr -d '[:space:]')
@@ -300,6 +349,12 @@ jobs:
     # Tracks the ingest budget: a 40-minute reset-window pull lands far more
     # unmatched rows than a 12-minute one, and an enricher that stops at 12
     # leaves them __pendingMatch for a full day.
+    #
+    # Deliberately NOT raised alongside the ingest job's move to 90
+    # (CF-TCA-BUDGET-IS-PER-PLATFORM): this job's own MAX_MINUTES is still
+    # 40/12, because the enricher walks the unmatched BACKLOG rather than a
+    # per-platform feed — adding a platform grows the queue it drains, not the
+    # number of passes it makes. 50 still clears its own ceiling.
     timeout-minutes: 50
     permissions:
       id-token: write

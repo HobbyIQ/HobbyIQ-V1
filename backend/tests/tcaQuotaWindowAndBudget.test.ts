@@ -40,6 +40,22 @@ function minuteOfDay(cron: string): number {
   return Number(hour) * 60 + Number(min);
 }
 
+/**
+ * The platforms a SCHEDULED run actually ingests — the fallback side of
+ * `inputs.platforms || '...'`, which is the only side a cron ever takes
+ * (workflow_dispatch inputs are empty on a schedule).
+ *
+ * Read from the shell line rather than the input's `default:`, because the
+ * default is what the dispatch FORM pre-fills and the fallback is what the
+ * cron RUNS. Those are two different values and only one of them is binding
+ * here; the test below pins them equal so they cannot drift apart.
+ */
+function scheduledPlatforms(): string[] {
+  const m = FIREHOSE.match(/PLATFORMS="\$\{\{ inputs\.platforms \|\| '([^']+)' \}\}"/);
+  expect(m, "the ingest step must resolve PLATFORMS with a literal fallback").not.toBeNull();
+  return m![1].split(",").map((p) => p.trim()).filter(Boolean);
+}
+
 describe("the priority pull and the firehose do not share a quota window", () => {
   it("the priority pull runs on exactly one daily cron", () => {
     expect(crons(PRIORITY)).toHaveLength(1);
@@ -107,6 +123,12 @@ describe("the firehose's reset-window run is budgeted on quota, not our clock", 
   it("every job ceiling clears the largest budget it can resolve", () => {
     // A timeout-minutes below MAX_MINUTES means the runner kills the job
     // mid-page, and the cursor advance is the one thing we lose.
+    //
+    // CF-TCA-BUDGET-IS-PER-PLATFORM (2026-09-08). The ingest budget is now
+    // PER PLATFORM and the platforms run in sequence, so the ingest job's
+    // worst case is (scheduled platforms x budget). Comparing the ceiling
+    // against ONE budget -- what this assertion used to do -- would have
+    // called a 50-minute ceiling safe for an 80-minute worst case.
     const budgets = [
       ...FIREHOSE.matchAll(/(?:TOTAL_MIN|MAX_MINUTES)="\$\{\{ inputs\.max_minutes \|\| \(github\.event\.schedule == '[^']+' && '(\d+)' \|\| '(\d+)'\) \}\}"/g),
     ].flatMap((m) => [Number(m[1]), Number(m[2])]);
@@ -117,7 +139,14 @@ describe("the firehose's reset-window run is budgeted on quota, not our clock", 
       (m) => Number(m[1]),
     );
     expect(timeouts).toHaveLength(2); // ingest + match-enricher
-    for (const t of timeouts) expect(t).toBeGreaterThanOrEqual(maxBudget + 5);
+    const [ingestTimeout, enricherTimeout] = timeouts;
+
+    // The ingest job pays the budget once per scheduled platform.
+    expect(ingestTimeout).toBeGreaterThanOrEqual(
+      maxBudget * scheduledPlatforms().length + 5,
+    );
+    // The enricher walks the shared backlog once, whatever the platform count.
+    expect(enricherTimeout).toBeGreaterThanOrEqual(maxBudget + 5);
   });
 
   it("keeps the cron APPLY guard and the quota-visibility gate intact", () => {
@@ -128,5 +157,64 @@ describe("the firehose's reset-window run is budgeted on quota, not our clock", 
     expect(FIREHOSE).toMatch(/PLATFORMS_OK/);
     expect(FIREHOSE).toMatch(/x-ratelimit-remaining/);
     expect(FIREHOSE).toMatch(/Build backend \(dist\/ for enricher requires\)/);
+  });
+});
+
+// CF-TCA-TCGPLAYER-ON-THE-SCHEDULE + CF-TCA-BUDGET-IS-PER-PLATFORM
+// (Drew, 2026-09-08).
+//
+// TCA holds 39K-54K TCGplayer sales/day and our pool was landing ~30-500,
+// because `platforms` defaulted to eBay and only a manual dispatch ever named
+// TCGplayer. Adding it to the scheduled lane is quota-free -- the daily-feed
+// window is served outside the 200K/day cap -- but it could not ride the old
+// budget rule, which DIVIDED max_minutes across platforms.
+//
+// The measurement that decides it (run logs, 2026-09-08):
+//
+//   34195261987  eBay       22 pages  22,000 rows  741s  WALL-CLOCK CAP at 12m
+//   dry-run      TCGplayer  59 pages  58,330 rows   73s  end-of-feed
+//
+// eBay already spends its entire 12-minute pass and still stops on the clock.
+// Halving it to 6 to seat TCGplayer would truncate the tighter lane to serve
+// the cheaper one. So the budget became per-platform and sequential.
+describe("the scheduled firehose ingests TCGplayer alongside eBay", () => {
+  it("names both platforms on the fallback a cron takes", () => {
+    const p = scheduledPlatforms().map((s) => s.toLowerCase());
+    expect(p).toContain("ebay");
+    expect(p).toContain("tcgplayer");
+  });
+
+  it("pre-fills the dispatch form with the same platforms the cron runs", () => {
+    // Two literals for one decision drift apart silently: the form would go on
+    // offering a single-platform run long after the schedule stopped doing one.
+    const formDefault = FIREHOSE.match(
+      /platforms:[\s\S]*?default:\s*'([^']+)'/,
+    );
+    expect(formDefault, "the platforms input must carry a default").not.toBeNull();
+    expect(formDefault![1].split(",").map((s) => s.trim()))
+      .toEqual(scheduledPlatforms());
+  });
+
+  it("gives each platform the FULL budget rather than a divided one", () => {
+    // The regression this pins: `PER_PLATFORM_MIN=$(( TOTAL_MIN / n ))` was
+    // correct while the lane held one platform and became a 50% cut to eBay
+    // the moment it held two.
+    expect(FIREHOSE).toMatch(/PER_PLATFORM_MIN="\$TOTAL_MIN"/);
+    expect(FIREHOSE).not.toMatch(/PER_PLATFORM_MIN=\$\(\(\s*TOTAL_MIN\s*\/\s*\$\{#PLATFORM_ARR\[@\]\}\s*\)\)/);
+  });
+
+  it("still passes each platform its own cursor and its own watermark check", () => {
+    // Independent CRAWLER_IDs are what make a two-platform run idempotent and
+    // let a lagging platform clamp to its own watermark (CF-TCA-PLATFORM-LAG)
+    // without dragging the current one back with it.
+    expect(FIREHOSE).toMatch(/CRAWLER_ID="tca-\$\{P_CLEAN,,\}/);
+    expect(FIREHOSE).toMatch(/PLATFORM="\$P_CLEAN"/);
+  });
+
+  it("keeps one platform's failure from aborting the others", () => {
+    // A TCGplayer outage must not cost us the eBay day, and vice versa. The
+    // loop continues per platform and only an all-platform failure goes red.
+    expect(FIREHOSE).toMatch(/failed or quota-capped — continuing/);
+    expect(FIREHOSE).toMatch(/if \[ "\$PLATFORMS_OK" -eq 0 \]/);
   });
 });
