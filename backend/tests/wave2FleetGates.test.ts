@@ -640,3 +640,220 @@ describe("the I9 re-baseline path is the artifact the workflow already uploads",
     expect(table).not.toMatch(/\[\s*IMPROVE\s*\]/);
   });
 });
+
+/**
+ * CF-A-RUN-IS-IDENTIFIED-BY-ITS-LOG-NOT-BY-ITS-TIMING (#1974) — THE FINDER PINS.
+ *
+ * THE DEFECT THESE EXIST TO KEEP DEAD. `latest_run_for_slot` accepted a `slot`
+ * argument and never referenced it. It returned the newest backfill-runner run
+ * created after the dispatch timestamp — and backfill-runner is a SHARED lane
+ * that every repair, retire and park script in the repo dispatches into. On
+ * 2026-09-08 01:44Z the fleet read all 32 census slots off ONE stranger's run: a
+ * park lane whose log says `Script confirmed:
+ * backend/scripts/relocate-pool-rows-by-list.cjs`. Every banner reader found
+ * nothing in it, `chain_outcome` called nothing a kill, and 32 slots reported
+ * `outcome=killed` without a single census run ever being opened.
+ *
+ * So the pin that matters most here is the NEGATIVE one: a stranger's log must
+ * be REJECTED. A finder that only proves it accepts the right run would have
+ * passed on 09-08 as well — the old one accepted the right run too, whenever it
+ * happened to be newest.
+ *
+ * Fixtures are the real line shapes, both spellings:
+ *   - the workflow's `Script confirmed: backend/scripts/<name>.cjs`
+ *   - the lane's `rematch-sold-comps  MODE=census  READ ONLY  slot 0/32 ...`
+ * which is the one line stating script, mode and slot together.
+ */
+describe("the finder identifies a run by its log, not by when it started (#1974)", () => {
+  const CONFIRM = (script: string) => `Script confirmed: backend/scripts/${script}.cjs`;
+  const BANNER = (mode: string, slot: number, slots = 32) =>
+    `rematch-sold-comps  MODE=${mode}  ${mode === "census" ? "READ ONLY" : "APPLY"}  slot ${slot}/${slots}  budget 140m  limit none`;
+
+  /** A whole plausible run log for one slot. */
+  const runLog = (script: string, mode: string, slot: number) =>
+    [
+      "rematch-sold-comps: STARTUP ok -- module load beginning (pid 1234)",
+      CONFIRM(script),
+      BANNER(mode, slot),
+      "CENSUS  slot " + slot + "/32  rows classified 514,583",
+      "finishLane: exiting code 0",
+      "",
+    ].join("\n");
+
+  /** THE ACTUAL 2026-09-08 STRANGER: a park lane dispatched in the same minute. */
+  const PARK_LANE = [
+    CONFIRM("relocate-pool-rows-by-list"),
+    "relocate-pool-rows-by-list  MODE=pool  slot 0/1",
+    "  relocated 1,204 row(s)",
+    "finishLane: exiting code 0",
+    "",
+  ].join("\n");
+
+  const ident = (log: string, mode: string, slot: number) =>
+    reader("run_log_identifies_slot", log, `${mode} ${slot}`).rc;
+
+  itShell("accepts the run whose log names this script, this mode and this slot", () => {
+    expect(ident(runLog("rematch-sold-comps", "census", 0), "census", 0)).toBe(0);
+    expect(ident(GH(runLog("rematch-sold-comps", "census", 0)), "census", 0)).toBe(0);
+  });
+
+  // THE PIN THIS FILE EXISTS FOR.
+  itShell("REJECTS the park lane the 09-08 fleet latched onto", () => {
+    expect(ident(PARK_LANE, "census", 0)).not.toBe(0);
+    expect(ident(GH(PARK_LANE), "census", 0)).not.toBe(0);
+  });
+
+  itShell("rejects another script's run even when it carries a slot 0 banner", () => {
+    const other = [CONFIRM("retire-self-derived-identities"), "SLOT: 0", "MODE: census", ""].join("\n");
+    expect(ident(other, "census", 0)).not.toBe(0);
+  });
+
+  itShell("rejects the right script running a DIFFERENT slot", () => {
+    const slot7 = runLog("rematch-sold-comps", "census", 7);
+    expect(ident(slot7, "census", 0)).not.toBe(0);
+    expect(ident(slot7, "census", 7)).toBe(0);
+  });
+
+  /**
+   * THE OFF-BY-A-DIGIT THAT WOULD REINTRODUCE THE BUG. The banner spells the
+   * slot `slot 1/32`. A pattern matching a bare `slot 1` also matches
+   * `slot 13/32`, so slot 1 would attach to slot 13's run — a different shard
+   * of the same corpus, which is the hardest kind of wrong run to notice
+   * because every banner reader finds plausible numbers in it.
+   */
+  itShell("does not let slot 1 attach to slot 13's run", () => {
+    const slot13 = runLog("rematch-sold-comps", "census", 13);
+    expect(ident(slot13, "census", 1)).not.toBe(0);
+    expect(ident(slot13, "census", 13)).toBe(0);
+  });
+
+  itShell("rejects the right script and slot in the WRONG mode", () => {
+    const applyRun = runLog("rematch-sold-comps", "apply-improve", 0);
+    expect(ident(applyRun, "census", 0)).not.toBe(0);
+    expect(ident(applyRun, "apply-improve", 0)).toBe(0);
+  });
+
+  // A run that refused at startup never printed the lane banner, but its
+  // outcome is a REAL outcome for this slot and must stay readable — otherwise
+  // #1963's startup refusals would come back as `unfound`.
+  itShell("still identifies a slot whose run refused before printing a banner", () => {
+    const refused = [
+      CONFIRM("rematch-sold-comps"),
+      "SLOT: 0",
+      "MODE: census",
+      "rematch-sold-comps: STARTUP REFUSED at phase=class-scope -- the lane never began work",
+      "",
+    ].join("\n");
+    expect(ident(refused, "census", 0)).toBe(0);
+    expect(reader("chain_outcome", refused).out).toBe("startup-refused");
+  });
+
+  itShell("an empty log identifies nothing", () => {
+    expect(ident("", "census", 0)).not.toBe(0);
+  });
+
+  it("the finder reads a log and never returns a run on timing alone", () => {
+    expect(fleetSrc).toContain("CF-A-RUN-IS-IDENTIFIED-BY-ITS-LOG-NOT-BY-ITS-TIMING");
+    expect(fleetSrc).toContain("run_log_identifies_slot() {");
+    expect(fleetSrc).toContain("find_run_for_slot() {");
+    // the defect's function is gone entirely — not left beside its replacement
+    expect(fleetSrc).not.toContain("latest_run_for_slot");
+    // and the finder's accept path really is gated on the identity check
+    expect(fleetSrc).toMatch(/if run_log_identifies_slot "\$probe" "\$mode" "\$slot"; then/);
+  });
+
+  /**
+   * `unfound` AND `killed` ARE OPPOSITE CLAIMS. `killed` says we read a run and
+   * it died; `unfound` says we never found the run. #1974 reported the second
+   * as the first, which is what made a broken finder look like a dead fleet.
+   */
+  it("gives up as `unfound`, never as `killed`", () => {
+    expect(fleetSrc).toMatch(/printf 'unfound'/);
+    // the give-up branch is the finder's failure, not chain_outcome's else
+    expect(fleetSrc).toMatch(/run=\$\(find_run_for_slot "\$mode" "\$slot" "\$since"\) \|\| \{/);
+    // and `killed` is still only ever chain_outcome's word about a log it READ
+    const killedUses = [...fleetSrc.matchAll(/printf 'killed'/g)];
+    expect(killedUses.length).toBe(1);
+  });
+
+  // The verdict is read from the SAME identity check, on the completed log.
+  // Finding the right run while it is in progress does not prove the file
+  // captured at the end is that run's.
+  it("re-asserts identity on the completed log before reading a verdict", () => {
+    const follow = fleetSrc.slice(fleetSrc.indexOf("follow_slot() {"), fleetSrc.indexOf("selected_slots() {"));
+    expect(follow).toMatch(/if ! run_log_identifies_slot "\$log" "\$mode" "\$slot"; then/);
+    // and that refusal precedes the chain_outcome read
+    expect(follow.indexOf("run_log_identifies_slot \"$log\"")).toBeLessThan(follow.indexOf("outcome=$(chain_outcome"));
+  });
+
+  // A chain follows a relaunch onto a NEW run id; that link is found the same
+  // way, so the fleet cannot drift onto a stranger between links.
+  it("follows a relaunch through the finder, not through `newest run`", () => {
+    const follow = fleetSrc.slice(fleetSrc.indexOf("follow_slot() {"), fleetSrc.indexOf("selected_slots() {"));
+    expect(follow).toContain("find_run_for_slot");
+    expect(follow).not.toContain("--limit 60");
+  });
+
+  // Each phase tells the finder which MODE it dispatched, or a census would
+  // accept an apply run of the same slot.
+  it("each phase passes the mode it dispatched", () => {
+    expect(fleetSrc).toContain('follow_slot census "$s" "$since" census');
+    expect(fleetSrc).toContain('follow_slot apply "$s" "$since" apply-improve');
+  });
+});
+
+/**
+ * WAVE2_ONLY_SLOTS — driving a SUBSET of the shard table, not a smaller one.
+ *
+ * WAVE2_SLOTS is the DENOMINATOR: it is dispatched as `-f slots=` and decides
+ * which rows a slot owns. Lowering it to 1 to verify the driver on one slot
+ * would silently re-shard the corpus, and the resulting census would describe a
+ * shard table that exists nowhere else. WAVE2_ONLY_SLOTS selects which slots of
+ * the SAME table to drive, and leaves the denominator alone.
+ */
+describe("WAVE2_ONLY_SLOTS drives a subset without re-sharding the corpus", () => {
+  const slots = (only: string, total = "32"): { rc: number; out: string } => {
+    const dir = mkdtempSync(join(tmpdir(), "wave2-slots-"));
+    const cut = fleetSrc.slice(0, fleetSrc.indexOf('case "${1:-}" in'));
+    const harness = join(dir, "h.sh");
+    writeFileSync(harness, `${cut}\nselected_slots | tr '\\n' ' '\n`, "utf8");
+    try {
+      const out = execFileSync(BASH!, [toShellPath(harness)], {
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "pipe"],
+        env: { ...process.env, WAVE2_ONLY_SLOTS: only, WAVE2_SLOTS: total },
+      });
+      return { rc: 0, out: out.trim() };
+    } catch (e: unknown) {
+      const err = e as { status?: number; stdout?: string };
+      return { rc: err.status ?? 1, out: (err.stdout ?? "").trim() };
+    }
+  };
+
+  itShell("unset drives the whole table", () => {
+    expect(slots("").out.split(/\s+/).length).toBe(32);
+  });
+
+  itShell("names one slot, and only that slot", () => {
+    expect(slots("0").out).toBe("0");
+    expect(slots("7").out).toBe("7");
+  });
+
+  itShell("accepts a comma list", () => {
+    expect(slots("0,3,31").out).toBe("0 3 31");
+  });
+
+  itShell("refuses a slot outside the shard table", () => {
+    expect(slots("32").rc).not.toBe(0);
+  });
+
+  itShell("refuses a value that is not a slot number", () => {
+    expect(slots("all").rc).not.toBe(0);
+  });
+
+  it("selecting slots never changes the dispatched denominator", () => {
+    // `-f slots=` is fed by SLOTS, never by ONLY_SLOTS
+    expect(fleetSrc).toContain('-f slot="$slot" -f slots="$SLOTS"');
+    expect(fleetSrc).not.toMatch(/-f slots="\$ONLY_SLOTS"/);
+  });
+});
