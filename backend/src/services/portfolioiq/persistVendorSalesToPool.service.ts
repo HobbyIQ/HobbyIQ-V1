@@ -457,6 +457,12 @@ export interface VendorPersistIdentityHint {
   isAuto?: boolean | null;
   printRun?: number | null;
   setName?: string | null;
+  /** CF-TCG-SPORTS-COLLIDING-SETS-NEED-A-MARKER (#2006 follow-up). Vendor
+   *  marketplace and product category. A TCG-only platform ("TCGplayer") or a
+   *  category of "tcg" proves the vertical for Pokemon set names that collide
+   *  with sports products and are otherwise left unresolved. */
+  platform?: string | null;
+  category?: string | null;
 }
 
 export interface VendorPersistResult {
@@ -464,6 +470,22 @@ export interface VendorPersistResult {
   deduped: number;
   skipped: number;                          // rows that couldn't be parsed to identity
   catalogUnmatched: number;
+  /** CF-NO-DEFAULT-SPORT (#1924 follow-up), PUT ON THE RESULT (#2006 follow-up,
+   *  2026-09-08). Rows skipped because NOTHING named a vertical, so the slug
+   *  had no first segment and therefore no address to be written at.
+   *
+   *  This was a function-local counter that only ever reached a log line, and
+   *  only when `inserted + deduped + catalogUnmatched > 0` -- so a batch where
+   *  EVERY row was unresolved printed nothing at all, which is precisely the
+   *  shape of the first live TCGplayer batches. A caller could not see the
+   *  number that decides whether its feed is landing.
+   *
+   *  SUBSET, NOT SIBLING: these rows are also counted in `skipped`. A caller
+   *  reconciling `fetched = written + skipped + ...` must NOT add this term
+   *  as well, or it double-counts and the identity stops balancing. It is a
+   *  BREAKDOWN of `skipped` -- reported so the class is visible, not so it is
+   *  summed. */
+  skippedSportUnresolved?: number;
   /** vendor product tags that disagreed with the title and were not adopted (CF-THE-TITLE-OUTRANKS-THE-VENDOR-TAG) */
   vendorParallelOverruled?: number;                 // rows whose computed slug has no matching card_catalog entry — held for admin review
   /** D22: a weak title marker (SP / SSP / IV / Short Print) corroborated a variation. */
@@ -598,7 +620,7 @@ export async function persistVendorSalesToPool(
   rows: VendorSaleRow[],
   identity: VendorPersistIdentityHint = {},
 ): Promise<VendorPersistResult> {
-  const result: VendorPersistResult = { inserted: 0, deduped: 0, skipped: 0, catalogUnmatched: 0, vendorParallelOverruled: 0, divertedToVerify: 0, twinAddressRefused: 0, twinFolded: 0 };
+  const result: VendorPersistResult = { inserted: 0, deduped: 0, skipped: 0, catalogUnmatched: 0, vendorParallelOverruled: 0, divertedToVerify: 0, twinAddressRefused: 0, twinFolded: 0, skippedSportUnresolved: 0 };
   // CF-NO-DEFAULT-SPORT (#1924 follow-up). Counted separately from the general
   // `skipped` tally because it is the number the ruling turns on: it is the
   // population that USED to be written at `hiq:baseball:...` on no evidence.
@@ -779,6 +801,14 @@ export async function persistVendorSalesToPool(
     const verticalRes = resolveVertical({
       declared: identity.sport,
       title,
+      // CF-TCG-SPORTS-COLLIDING-SETS-NEED-A-MARKER (#2006 follow-up). The
+      // vendor FIELDS, not just the title text: a TCGplayer row is never a
+      // sports card, which is what lets the detector read "Expedition" or
+      // "Diamond and Pearl" as Pokemon without weakening the collision guard
+      // for rows that carry no such marker.
+      platform: identity.platform,
+      category: identity.category,
+      setName: identity.setName,
     });
     let sport: string | null = verticalRes.confident === true ? verticalRes.vertical : null;
     // CF-A-DEFAULTED-SPORT-IS-NOT-EVIDENCE (2026-09-05), SHARPENED BY #1924.
@@ -1062,7 +1092,11 @@ export async function persistVendorSalesToPool(
     // vertical -- the same loop-back the catalog-unmatched skip relies on.
     if (!sport) {
       result.skipped++;
+      // Also on the RESULT (#2006 follow-up) so the caller can see it. Still
+      // counted in `skipped` above -- this is a breakdown of that number,
+      // never an additional bucket to sum alongside it.
       skippedSportUnresolved++;
+      result.skippedSportUnresolved = skippedSportUnresolved;
       continue;
     }
 
@@ -1982,7 +2016,14 @@ export async function persistVendorSalesToPool(
       result.skipped++;
     }
   }
-  if (result.inserted > 0 || result.deduped > 0 || result.catalogUnmatched > 0) {
+  // CF-EVERY-BATCH-REPORTS (#2006 follow-up, 2026-09-08). The condition used
+  // to be `inserted > 0 || deduped > 0 || catalogUnmatched > 0`, so a batch in
+  // which every row failed to resolve a vertical logged NOTHING -- silence
+  // that reads identically to "no batch ran". That is exactly what the first
+  // live TCGplayer day looked like from the logs. An all-unresolved batch is
+  // the single most important batch to hear about, so it now reports too.
+  if (result.inserted > 0 || result.deduped > 0 || result.catalogUnmatched > 0 ||
+      skippedSportUnresolved > 0) {
     console.log(JSON.stringify({
       event: "persist_vendor_sales",
       source: "persistVendorSalesToPool",
@@ -1992,7 +2033,8 @@ export async function persistVendorSalesToPool(
       skipped: result.skipped,
       catalogUnmatched: result.catalogUnmatched,
       // The rows that would previously have been minted under a guessed
-      // `baseball` address and gone on to price two cards.
+      // `baseball` address and gone on to price two cards. A BREAKDOWN of
+      // `skipped` above, not a term to add to it.
       skippedSportUnresolved,
     }));
   }

@@ -82,6 +82,14 @@ export function resolveVertical(input: {
   /** Vendor-supplied vertical, when the feed already knows. */
   declared?: string | null;
   hobbyiqCardId?: string | null;
+  /** Vendor marketplace ("TCGplayer", "eBay"). CF-TCG-SPORTS-COLLIDING-SETS-
+   *  NEED-A-MARKER: a TCG-only platform proves the vertical for set names that
+   *  would be ambiguous on their own. */
+  platform?: string | null;
+  /** Vendor product category ("tcg", "sports"). */
+  category?: string | null;
+  /** Vendor set name, when supplied separately from the title. */
+  setName?: string | null;
   /** Used only when nothing else resolves. Explicit so the caller owns it. */
   fallback?: string;
 }): VerticalResolution {
@@ -90,7 +98,14 @@ export function resolveVertical(input: {
 
   // A declared TCG vertical is authoritative — the feed knows better than a
   // keyword scan of a title.
-  const tcg = classifyTcg({ sport: declared, title, hobbyiqCardId: input.hobbyiqCardId });
+  const tcg = classifyTcg({
+    sport: declared,
+    title,
+    hobbyiqCardId: input.hobbyiqCardId,
+    platform: input.platform,
+    category: input.category,
+    setName: input.setName,
+  });
   if (tcg.isTcg) {
     return {
       vertical: tcg.vertical ?? "pokemon",

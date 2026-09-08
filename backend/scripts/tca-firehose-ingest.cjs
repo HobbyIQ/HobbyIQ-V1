@@ -46,6 +46,11 @@ const fs = require("fs");
 //   refused  = twinAddressRefused + twinFolded (2026-09-07, see below)
 //   failed   = persist calls that rejected (row-level)
 //
+// NOT a counter in that identity, and deliberately so (#2006 follow-up):
+//   skippedSportUnresolved = the share of `skipped` whose vertical nothing
+//   named. Reported on its own line, never added -- the same row is already
+//   inside `skipped`, so summing it would drive `unaccounted` negative.
+//
 // CF-A-REFUSAL-IS-AN-OUTCOME-NOT-A-LOSS (2026-09-07). Every scheduled run
 // since CF-ONE-SALE-ONE-ADDRESS landed reported a shortfall, because this
 // caller read four of the service's outcome counters and the service returns
@@ -204,6 +209,21 @@ function tcaToIdentityHint(t) {
   const y = (typeof t.year === "number") ? t.year : (t.year && Number.isFinite(Number(t.year)) ? Number(t.year) : null);
   if (y) hint.cardYear = y;
   if (t.sport) hint.sport = String(t.sport).toLowerCase();
+  // CF-TCG-SPORTS-COLLIDING-SETS-NEED-A-MARKER (#2006 follow-up). TCA stamps
+  // `platform` and `category` on every row, and a TCGplayer / category=tcg row
+  // is never a sports card. Passing them lets the detector resolve Pokemon set
+  // names that collide with sports products ("Expedition", "Diamond and
+  // Pearl", "Platinum", the 2025 "ME01:" Mega Evolution era) without loosening
+  // the collision guard for rows that carry no such marker. Measured on the
+  // 2026-09-07 TCGplayer window: 3,898 of 12,000 rows (32.5%) were skipped for
+  // an unresolved vertical, and every one of them carried platform=TCGplayer.
+  if (t.platform) hint.platform = String(t.platform);
+  if (t.category) hint.category = String(t.category);
+  // NOT setName: `identity.setName` is consumed as the raw setKey that builds
+  // the slug, so passing TCA card_set here would rewrite the ADDRESS of every
+  // TCGplayer row -- a much larger change than this one, and not this PR to
+  // make. The detector reads the set from the title, where TCA already puts it
+  // ("Gastly - Expedition - Normal").
   return hint;
 }
 
@@ -401,6 +421,9 @@ async function main() {
   // blind. Folding them together loses that signal.
   let totalTwinRefused = 0;
   let totalTwinFolded = 0;
+  // #2006 follow-up: the vertical-unresolved share of `skipped`. Reported, not
+  // summed -- see the reconcile block.
+  let totalSkippedSportUnresolved = 0;
   let totalErrors = 0;
   let fetchErrors = 0;
   let lastCursor = cursor;
@@ -471,6 +494,7 @@ async function main() {
             totalCatalogUnmatched += res.catalogUnmatched ?? 0;
             totalTwinRefused += res.twinAddressRefused ?? 0;
             totalTwinFolded += res.twinFolded ?? 0;
+            totalSkippedSportUnresolved += res.skippedSportUnresolved ?? 0;
           })
           .catch((err) => {
             totalErrors++;
@@ -523,6 +547,14 @@ async function main() {
   // that nothing here counts — which is the defect to go fix, not the
   // arithmetic to go adjust.
   if (APPLY) {
+    // `skippedSportUnresolved` is a BREAKDOWN of `skipped`, not a sibling of
+    // it. persistVendorSalesToPool increments BOTH `result.skipped` and
+    // `result.skippedSportUnresolved` for the same row (a row with no
+    // resolvable vertical has no slug first segment, so no address), and this
+    // script already folds `res.skipped` into `totalDedupSkipped`. Adding it
+    // again here would double-count and drive `unaccounted` NEGATIVE -- an
+    // imbalance that looks like a missing outcome but is really an invented
+    // one. So it is REPORTED beside the identity, never summed into it.
     const accountedFor =
       totalWritten + totalDedupSkipped + totalCatalogUnmatched +
       totalTwinFolded + totalTwinRefused + totalErrors;
@@ -532,6 +564,15 @@ async function main() {
       ` + skipped=${totalDedupSkipped} + catalogUnmatched=${totalCatalogUnmatched}` +
       ` + twinFolded=${totalTwinFolded} + twinRefused=${totalTwinRefused}` +
       ` + errors=${totalErrors}  (unaccounted=${unaccounted})`,
+    );
+    // The vertical-unresolved share of `skipped`, printed on its own line
+    // because it is the number that says whether a feed is LANDING. On the
+    // first live TCGplayer day it was 3,898 of 12,000 (32.5%) and nothing
+    // anywhere reported it.
+    console.log(
+      `[tca-firehose] of which skippedSportUnresolved=${totalSkippedSportUnresolved}` +
+      ` (${totalFetched ? (100 * totalSkippedSportUnresolved / totalFetched).toFixed(2) : "0.00"}% of fetched;` +
+      ` a subset of skipped, already counted above)`,
     );
     if (unaccounted !== 0) {
       console.error(
