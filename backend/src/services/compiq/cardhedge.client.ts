@@ -93,7 +93,13 @@ async function chFetch(url: string, init: RequestInit): Promise<Response> {
   const path = pathMatch ? pathMatch[1] : url;
   try {
     const res = await fetch(url, init);
-    console.log(JSON.stringify({
+    // WHY console.warn AND NOT console.log (2026-09-09, #1982 fallout). The App
+    // Insights console subscriber runs at `logSendingLevel: WARN`, which tags by
+    // stream: stderr (console.warn/error) -> WARN, KEPT; stdout (console.log/info)
+    // -> INFO, DROPPED. Measured on 2026-09-09: every structured event arriving in
+    // the last 6h was SeverityLevel 2; stdout events were absent fleet-wide.
+    // Read by docs/observability/ch-cost-tracking.md, the CH spend dashboard.
+    console.warn(JSON.stringify({
       event: "ch_call",
       source: "cardhedge.client",
       path,
@@ -103,7 +109,13 @@ async function chFetch(url: string, init: RequestInit): Promise<Response> {
     }));
     return res;
   } catch (err) {
-    console.log(JSON.stringify({
+    // WHY console.warn AND NOT console.log (2026-09-09, #1982 fallout). The App
+    // Insights console subscriber runs at `logSendingLevel: WARN`, which tags by
+    // stream: stderr (console.warn/error) -> WARN, KEPT; stdout (console.log/info)
+    // -> INFO, DROPPED. Measured on 2026-09-09: every structured event arriving in
+    // the last 6h was SeverityLevel 2; stdout events were absent fleet-wide.
+    // Read by docs/observability/ch-cost-tracking.md, the CH spend dashboard.
+    console.warn(JSON.stringify({
       event: "ch_call",
       source: "cardhedge.client",
       path,
