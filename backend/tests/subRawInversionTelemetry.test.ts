@@ -60,7 +60,7 @@ function makePricing(opts: {
 describe("CF-SUB-RAW-INVERSION-TELEMETRY — emission via buildGradeBreakdown", () => {
   let logSpy: ReturnType<typeof vi.spyOn>;
   beforeEach(() => {
-    logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    logSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
   });
   afterEach(() => {
     logSpy.mockRestore();
@@ -139,7 +139,7 @@ describe("CF-SUB-RAW-INVERSION-TELEMETRY — emission via buildGradeBreakdown", 
 describe("CF-SUB-RAW-INVERSION-TELEMETRY — logSubRawInversionObserved JSON shape", () => {
   let logSpy: ReturnType<typeof vi.spyOn>;
   beforeEach(() => {
-    logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    logSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
   });
   afterEach(() => {
     logSpy.mockRestore();
