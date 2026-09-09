@@ -77,6 +77,12 @@ const fs = require("fs");
 // A TCA FETCH that fails is fetchErrors — no rows, so nothing intended. The
 // crawl_state upsert is one doc; if it throws the run exits 1, not green.
 const { reportWrites } = require(path.join(__dirname, "..", "dist/services/ops/writeReconciliation.js"));
+// CF-A-TCGPLAYER-ROW-STATES-ITS-OWN-IDENTITY (2026-09-08). Reads a TCA
+// TCGplayer row into the Pokemon address fields. Compiled alongside
+// persistVendorSalesToPool, so it shares that helper's `npm run build`
+// requirement and is required from dist/ for the same reason.
+const { tcgPlayerRowIdentity, isTcgPlayerRow } =
+  require(path.join(__dirname, "..", "dist/services/portfolioiq/tcgPlayerRowIdentity.js"));
 
 // CF-TCA-USE-CLEAN-PIPELINE (Drew, 2026-08-02). Route through
 // persistVendorSalesToPool so TCA rows get the SAME treatment as CH
@@ -219,6 +225,39 @@ function tcaToIdentityHint(t) {
   // an unresolved vertical, and every one of them carried platform=TCGplayer.
   if (t.platform) hint.platform = String(t.platform);
   if (t.category) hint.category = String(t.category);
+  // CF-A-TCGPLAYER-ROW-STATES-ITS-OWN-IDENTITY (2026-09-08). A TCGplayer row
+  // carries player=null, year=null and sport=null on EVERY row, so the three
+  // hints above stay empty and the row arrives at persistVendorSalesToPool's
+  // `if (!cardYear) skip` / `if (!playerName) skip` gates with nothing to
+  // satisfy them. That is how run 34262947046 wrote 9 rows out of 26,000.
+  //
+  // The Pokemon address ruling says those gates are answerable, not
+  // inapplicable: the character is the player, the SET's release year is the
+  // year, and TCA hands us `card_set` / `card_number` structured. Read them.
+  //
+  // Deliberately AFTER the generic hints and unconditional on their absence:
+  // a TCGplayer row has no competing sports reading to preserve.
+  if (isTcgPlayerRow(t)) {
+    const id = tcgPlayerRowIdentity(t);
+    if (id.reason) {
+      // Named refusal. The caller counts it; nothing is guessed.
+      hint.tcgSkipReason = id.reason;
+    } else {
+      hint.playerName = id.playerName;
+      hint.cardYear = id.cardYear;
+      hint.cardNumber = id.cardNumber;
+      hint.sport = id.sport;
+      // The tcgdex CODE, per CF-THE-ENGLISH-SET-CODE-IS-THE-KEY. Passing it as
+      // `setName` is what the earlier note here warned against doing with TCA's
+      // RAW `card_set` -- and the warning was right about the raw field, which
+      // would have rewritten every address. A canonical code is the opposite
+      // case: it is the address these rows are ruled to have, and without it
+      // `inferSetKeyFromTitle` reads "Obsidian Flames" as the SPORTS pool
+      // "Panini Obsidian" (measured on real 2026-09-07 rows).
+      hint.setName = id.setKey;
+      if (id.parallel) hint.parallel = id.parallel;
+    }
+  }
   // NOT setName: `identity.setName` is consumed as the raw setKey that builds
   // the slug, so passing TCA card_set here would rewrite the ADDRESS of every
   // TCGplayer row -- a much larger change than this one, and not this PR to
@@ -424,6 +463,42 @@ async function main() {
   // #2006 follow-up: the vertical-unresolved share of `skipped`. Reported, not
   // summed -- see the reconcile block.
   let totalSkippedSportUnresolved = 0;
+  // CF-A-SKIP-MUST-SAY-WHY (2026-09-08). `skipped` was ONE number covering
+  // every way a row can fail to land, and run 34262947046 proved what that
+  // costs: 25,991 of 26,000 TCGplayer rows skipped, the reconcile identity
+  // balancing to zero unaccounted, and nothing anywhere naming a reason. A
+  // 99.9% skip and a quiet feed printed the same line.
+  //
+  // These are DISJOINT sub-buckets of `totalDedupSkipped`, which stays the
+  // reconcile term. They are printed beside it, never summed into it.
+  const skipReasons = {
+    // Pre-persist, in this script: the row is not a sale we can read.
+    missingSoldAt: 0,
+    nonPositivePrice: 0,
+    // Pre-persist: a TCG row whose set the vocabulary cannot name, so there is
+    // no year and no key. A refusal by design -- never guess a year.
+    setUnmapped: 0,
+    noCharacter: 0,
+    noCardNumber: 0,
+    // Returned by persistVendorSalesToPool, summed across batches.
+    serviceDeduped: 0,
+    serviceNoYear: 0,
+    serviceNoPlayer: 0,
+    serviceSportUnresolved: 0,
+    // The service's `skipped` minus the named breakdowns it reports. A
+    // climbing `serviceOther` is the signal that a NEW skip path exists that
+    // nothing here names -- the defect to go fix, not a number to explain.
+    serviceOther: 0,
+  };
+  // The set labels the vocabulary could not name, by row count. This is an
+  // ACQUISITION LIST, not an error log: each entry is a real product whose
+  // sales we are declining to file until someone maps it.
+  const unmappedSets = new Map();
+  const TCG_REASON_BUCKET = {
+    "set-unmapped": "setUnmapped",
+    "no-character": "noCharacter",
+    "no-card-number": "noCardNumber",
+  };
   let totalErrors = 0;
   let fetchErrors = 0;
   let lastCursor = cursor;
@@ -485,8 +560,24 @@ async function main() {
       for (const t of rows) {
         while (inflight.size >= CONCURRENCY) await Promise.race([...inflight]);
         const vsRow = tcaToVendorSaleRow(t);
-        if (!vsRow.soldAt || !(vsRow.price > 0)) { totalDedupSkipped++; continue; }
+        // Each pre-persist refusal now names itself. Same two conditions as
+        // before, counted apart: "no sale date" and "no price" are different
+        // vendor failures and only the split tells them apart.
+        if (!vsRow.soldAt) { totalDedupSkipped++; skipReasons.missingSoldAt++; continue; }
+        if (!(vsRow.price > 0)) { totalDedupSkipped++; skipReasons.nonPositivePrice++; continue; }
         const hint = tcaToIdentityHint(t);
+        // A TCG row whose identity the vocabulary could not read never reaches
+        // persist -- there is no address to write it at. Counted by reason
+        // here rather than dying inside the service's generic `skipped`.
+        if (hint.tcgSkipReason) {
+          totalDedupSkipped++;
+          skipReasons[TCG_REASON_BUCKET[hint.tcgSkipReason] ?? "serviceOther"]++;
+          if (hint.tcgSkipReason === "set-unmapped" && t.card_set) {
+            unmappedSets.set(t.card_set, (unmappedSets.get(t.card_set) || 0) + 1);
+          }
+          continue;
+        }
+        delete hint.tcgSkipReason;
         const p = persistVendorSalesToPool("tca-ebay", [vsRow], hint)
           .then((res) => {
             totalWritten += res.inserted;
@@ -495,6 +586,18 @@ async function main() {
             totalTwinRefused += res.twinAddressRefused ?? 0;
             totalTwinFolded += res.twinFolded ?? 0;
             totalSkippedSportUnresolved += res.skippedSportUnresolved ?? 0;
+            skipReasons.serviceDeduped += res.deduped;
+            skipReasons.serviceNoYear += res.skippedNoYear ?? 0;
+            skipReasons.serviceNoPlayer += res.skippedNoPlayer ?? 0;
+            skipReasons.serviceSportUnresolved += res.skippedSportUnresolved ?? 0;
+            // Whatever the service skipped that it did not name. All three
+            // subtracted terms are BREAKDOWNS of `res.skipped` (each of those
+            // paths increments `skipped` as well), so this is a remainder, not
+            // a difference of siblings -- subtracting a sibling would drive it
+            // negative and the clamp would hide that it had.
+            skipReasons.serviceOther += Math.max(0, res.skipped
+              - (res.skippedNoYear ?? 0) - (res.skippedNoPlayer ?? 0)
+              - (res.skippedSportUnresolved ?? 0));
           })
           .catch((err) => {
             totalErrors++;
@@ -505,7 +608,33 @@ async function main() {
       }
       await Promise.all([...inflight]);
     } else {
-      totalWritten += rows.length;
+      // CF-A-DRY-RUN-THAT-COUNTS-EVERY-ROW-AS-A-WRITE-PROVES-NOTHING
+      // (2026-09-08). This branch was `totalWritten += rows.length` -- it
+      // reported a would-write of 100% no matter what the rows contained, so
+      // the one cheap check that could have caught the TCGplayer collapse
+      // before it ran in production was the check guaranteed to pass.
+      //
+      // The dry run now walks the SAME readers the apply path does (mapper,
+      // then TCG identity) and reports what would actually land. It still
+      // writes nothing and still calls no Cosmos.
+      for (const t of rows) {
+        const vsRow = tcaToVendorSaleRow(t);
+        if (!vsRow.soldAt) { totalDedupSkipped++; skipReasons.missingSoldAt++; continue; }
+        if (!(vsRow.price > 0)) { totalDedupSkipped++; skipReasons.nonPositivePrice++; continue; }
+        const hint = tcaToIdentityHint(t);
+        if (hint.tcgSkipReason) {
+          totalDedupSkipped++;
+          skipReasons[TCG_REASON_BUCKET[hint.tcgSkipReason] ?? "serviceOther"]++;
+          if (hint.tcgSkipReason === "set-unmapped" && t.card_set) {
+            unmappedSets.set(t.card_set, (unmappedSets.get(t.card_set) || 0) + 1);
+          }
+          continue;
+        }
+        // "Would write" is as far as a dry run can honestly go: dedup and the
+        // twin check are decided against stored rows, which this path does not
+        // read. Named as would-write, never as written.
+        totalWritten++;
+      }
     }
 
     lastCursor = nextCursor;
@@ -536,6 +665,19 @@ async function main() {
 
   const elapsedS = ((Date.now() - startMs) / 1000).toFixed(0);
   console.log(`\n[tca-firehose] done — pages=${page} fetched=${totalFetched} written=${totalWritten} skipped=${totalDedupSkipped} catalogUnmatched=${totalCatalogUnmatched} twinFolded=${totalTwinFolded} twinRefused=${totalTwinRefused} errors=${totalErrors} fetchErrors=${fetchErrors} elapsed=${elapsedS}s`);
+  // CF-A-SKIP-MUST-SAY-WHY. `skipped` above is the reconcile term; this is what
+  // it was made of. Printed unconditionally, including all-zero, because a
+  // reason line that appears only when something is wrong is a line nobody
+  // learns to read.
+  console.log(`[tca-firehose] skipped by reason — ${
+    Object.entries(skipReasons).map(([k, v]) => `${k}=${v}`).join(" ")
+  }`);
+  if (unmappedSets.size > 0) {
+    const top = [...unmappedSets.entries()].sort((a, b) => b[1] - a[1]).slice(0, 15);
+    console.log(`[tca-firehose] top unmapped sets (${unmappedSets.size} distinct) — ${
+      top.map(([k, v]) => `${JSON.stringify(k)}:${v}`).join(" ")
+    }`);
+  }
 
   // CF-EVERY-WRITE-RECONCILES, printed as an identity a reader can check by
   // eye — because the failure this fixes was not a wrong number, it was a
@@ -565,6 +707,12 @@ async function main() {
       ` + twinFolded=${totalTwinFolded} + twinRefused=${totalTwinRefused}` +
       ` + errors=${totalErrors}  (unaccounted=${unaccounted})`,
     );
+    // The composition of the `skipped` term above. Same subset-not-sibling
+    // rule as skippedSportUnresolved: these break `skipped` down, they do not
+    // extend the identity.
+    console.log(`[tca-firehose] skipped by reason — ${
+      Object.entries(skipReasons).map(([k, v]) => `${k}=${v}`).join(" ")
+    }`);
     // The vertical-unresolved share of `skipped`, printed on its own line
     // because it is the number that says whether a feed is LANDING. On the
     // first live TCGplayer day it was 3,898 of 12,000 (32.5%) and nothing
