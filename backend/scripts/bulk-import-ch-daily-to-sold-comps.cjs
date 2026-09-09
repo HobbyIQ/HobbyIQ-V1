@@ -589,11 +589,24 @@ async function main() {
       // reported in the reconcile's `failed` column and re-attempted by the
       // next run, which re-reads the day and finds no contentHash for them.
       //
-      // This is deliberately caller-side. Making recordSoldComp return
-      // `{ written: false, reason: "error" }` -- which its OWN type already
-      // declares and its catch block never uses -- is the better fix and is
-      // NOT made here: it is a backend/src change on a path with 46 callers,
-      // and it owes a deploy. Filed as the follow-up in the PR body.
+      // CF-A-THROTTLED-WRITE-IS-NOT-A-WRITE (2026-09-09). The follow-up this
+      // comment filed IS NOW MADE: recordSoldComp's catch returns
+      // `{ written: false, reason: "error" }` instead of falling through to
+      // `written: true`, so the caller can finally tell a throttled write from
+      // a landed one directly.
+      //
+      // THIS LEDGER IS UNCHANGED ANYWAY, AND DELIBERATELY SO. The two signals
+      // report the SAME rows: a swallowed upsert increments the counter AND
+      // returns `written: false`, one row, both facts. Adding a `written`
+      // check here on top of the delta below would count every throttled sale
+      // TWICE and drive `emitted` negative under a real 429 storm -- an
+      // imbalance that looks like a missing outcome but is an invented one.
+      //
+      // So this lane keeps counting via the delta, which is exact, and does
+      // not also read the return value. One of the two, never their sum. The
+      // invariant that makes either one sufficient (delta === the number of
+      // `written: false` / "error" results) is pinned in
+      // tests/aThrottledWriteIsNotAWrite.test.ts.
       const swallowed = getEmitFailureCount() - failBefore;
       landed -= swallowed;
       emitted += batch.length - err - swallowed;
