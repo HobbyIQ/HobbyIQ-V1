@@ -233,16 +233,36 @@ async function main() {
   }
 }
 
+/**
+ * Exit without tearing a live socket out from under libuv.
+ *
+ * A bare `process.exit()` here aborted the process on Windows with
+ *   Assertion failed: !(handle->flags & UV_HANDLE_CLOSING), win/async.c:76
+ * and reported 3221226505 instead of the code we meant — which the
+ * workflows read to decide red or green, so a real failure could have
+ * surfaced as an unrecognised exit rather than as the error it is.
+ *
+ * So: publish the code, let the event loop drain normally, and keep a
+ * short unref'd timer as the backstop in case a keep-alive connection
+ * would otherwise hold the process open. The timer is unref'd, so it
+ * never delays a clean exit by itself.
+ */
+function exitWith(code) {
+  process.exitCode = code;
+  const t = setTimeout(() => process.exit(code), 2000);
+  if (t.unref) t.unref();
+}
+
 if (require.main === module) {
   main()
     .then((code) => {
       console.log(`finishLane: exiting code ${code}`);
-      process.exit(code);
+      exitWith(code);
     })
     .catch((err) => {
       console.error(`::error::poll-admin-job FATAL: ${(err && err.stack) || err}`);
       console.log("finishLane: exiting code 1");
-      process.exit(1);
+      exitWith(1);
     });
 }
 
