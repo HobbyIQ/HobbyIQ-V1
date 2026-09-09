@@ -1932,3 +1932,152 @@ describe("a retire is never refused as occupied — it moves nothing", () => {
     for (const e of eights) expect(e.action).not.toBe("reslug");
   });
 });
+
+// ── immaculate-02: nine occupied refusals, nine parks, zero folds ────────────
+
+/**
+ * CF-AN-UNCONFIRMED-ROW-IS-PARKED-NOT-DELETED, applied to a THIRD list
+ * (Drew's Ruling 17, 2026-09-08).
+ *
+ * REPORT run 34355726514 over immaculate-02 reconciled
+ * `intended 508 = written 499 + refused 9`. Every one of the 9 was written as
+ * a `reslug` whose evidence claimed the destination was vacant -- a vacancy
+ * the lane re-measured at run time and found false.
+ *
+ * ALL 9 WERE POINT-READ IN PROD 2026-09-09, and like topps-three-01 they are
+ * ONE population: every pair names TWO DIFFERENT PLAYERS. Zach Edey -> an
+ * address held by Ja'Kobe Walter; Zaccharie Risacher -> one held by Antonio
+ * Reeves; Isaiah Collier -> Zach Edey, and six more. There is NOT ONE
+ * same-player twin among them, so this file gains NO fold -- and asserting the
+ * retire count stays at 0 is what stops a future edit inventing one.
+ *
+ * THE SHAPE IS THE ONE RULING 17 NAMES. Every source row is
+ * `hobbymonitor-2026-09-04` on setKey `panini-immaculate`; every occupant is
+ * `checklistinsider-2026-08-27` on `panini-immaculate-collection`. The two
+ * sources disagree about who holds which number in the 2024 product, and per
+ * CF-COUNT-BY-SOURCE-NOT-ROW-COUNT the checklist-backed row decides. So the
+ * hobbymonitor NUMBERING is what needs a source, and the row is parked
+ * unpriced until it gets one -- never deleted (it is unconfirmed, not proven
+ * wrong) and never moved (that is the collision itself).
+ *
+ * AND THE IDS WERE RESOLVED FROM THE FILE, NOT THE BANNER (#2008's lesson,
+ * which this list makes urgent). The lane truncates ids to 62 chars, and
+ * immaculate-02 has TWENTY-ONE distinct 62-char prefixes shared by two entries
+ * apiece -- SIX of the nine refusals sit in such a pair, including
+ * `...:28:international-red:no-` which covers both the /15 and the /27 row. A
+ * banner line cannot identify an entry here at all. Each refusal was matched
+ * instead by the PLAYER NAME the lane prints beside it, which is unique per
+ * pair, and then confirmed by a point read.
+ */
+describe("immaculate-02: nine collisions, nine parks, and no fold invented", () => {
+  const list02 = join(listDir, "2026-09-07-hobbymonitor-year-basketball-panini-immaculate-02.json");
+  const doc = readList(list02);
+  const entries = doc.entries;
+
+  // The nine, as (cardNumber, moving, occupant) measured 2026-09-09.
+  const COLLISIONS: ReadonlyArray<readonly [string, string, string]> = [
+    ["13", "Zach Edey", "Ja'Kobe Walter"],
+    ["11", "Tidjane Salaun", "Luol Deng"],
+    ["32", "Jaylen Wells", "Yuki Kawamura"],
+    ["5", "Zaccharie Risacher", "Antonio Reeves"],
+    ["19", "Matas Buzelis", "Enrique Freeman"],
+    ["6", "Ron Holland II", "Reed Sheppard"],
+    ["24", "Pacome Dadiet", "Yongxi \"Jacky\" Cui"],
+    ["28", "Isaiah Collier", "Zach Edey"],
+    ["9", "Antonio Reeves", "Jamal Shead"],
+  ];
+  const slug = (n: string) => `hiq:basketball:2025:panini-immaculate:${n}:international-red:no-auto:num-15`;
+  const byId = new Map(entries.map((e) => [e.id, e]));
+
+  it("names this lane and still holds 508 entries", () => {
+    expect(doc.forLane).toBe("relocate-catalog-rows-by-list");
+    expect(entries).toHaveLength(508);
+  });
+
+  it("every entry passes the lane's own validation", () => {
+    for (const e of entries) expect(L.classifyEntry(e).ok).toBe(true);
+  });
+
+  it("the nine collisions are PARKED — never moved, never deleted", () => {
+    for (const [n, moving, held] of COLLISIONS) {
+      const e = byId.get(slug(n));
+      expect(e, n).toBeDefined();
+      expect(e?.action, n).toBe("park");
+      expect(e?.to, n).toBeUndefined();
+      // The lane's own compare must agree these are two cards.
+      expect(L.occupiedByDifferentCard({ playerName: held }, { playerName: moving }), n).toBe(true);
+      const r = L.occupancyRefusal({ playerName: held }, { playerName: moving });
+      expect((r as { reason: string }).reason, n).toBe("occupied: different card");
+    }
+  });
+
+  it("each park records both players and both sources", () => {
+    for (const [n, moving, held] of COLLISIONS) {
+      const e = byId.get(slug(n));
+      expect(e?.evidence, n).toContain(moving);
+      expect(e?.evidence, n).toContain(held);
+      expect(e?.evidence, n).toContain("checklistinsider-2026-08-27");
+      expect(e?.evidence, n).toContain("hobbymonitor-2026-09-04");
+      expect(e?.reason, n).toContain("CHECKLIST DECIDES THE NUMBER");
+      expect(e?.reason, n).toContain("identityUnverified");
+    }
+  });
+
+  /**
+   * NO FOLD IS INVENTED HERE. Not one of the nine is a same-player twin, so
+   * this file has NO retire at all. Pinning zero is what makes a future edit
+   * that folds across players go red.
+   */
+  it("ZERO folds — no retire exists in this file", () => {
+    expect(entries.filter((e) => e.action === "retire")).toHaveLength(0);
+  });
+
+  it("only those 9 entries differ — the other 499 stay plain reslugs", () => {
+    const touched = new Set(COLLISIONS.map(([n]) => slug(n)));
+    expect(touched.size).toBe(9);
+    const parks = entries.filter((e) => e.action === "park");
+    expect(parks).toHaveLength(9);
+    for (const e of parks) expect(touched.has(e.id)).toBe(true);
+    const reslugs = entries.filter((e) => e.action === "reslug");
+    expect(reslugs).toHaveLength(499);
+    for (const e of reslugs) {
+      expect(touched.has(e.id)).toBe(false);
+      expect(String(e.to).startsWith("hiq:basketball:2024:panini-immaculate:")).toBe(true);
+    }
+  });
+
+  it("no duplicate ids, and no two reslugs onto one destination", () => {
+    const ids = entries.map((e) => e.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    const tos = entries.filter((e) => e.action === "reslug").map((e) => String(e.to));
+    expect(new Set(tos).size).toBe(tos.length);
+  });
+
+  /**
+   * THE TRUNCATION TRAP, MEASURED ON THIS FILE. #2008 was caused by reading an
+   * entry's identity off a 62-char banner line. This list is far worse than
+   * immaculate-01 for it, so the collision count is pinned: if a future edit
+   * makes the banner authoritative again, the number here says why it cannot be.
+   */
+  it("many 62-char prefixes are shared, so a banner line is never an id", () => {
+    const seen = new Map<string, number>();
+    for (const e of entries) {
+      const p = e.id.slice(0, 62);
+      seen.set(p, (seen.get(p) ?? 0) + 1);
+    }
+    const shared = [...seen.values()].filter((v) => v > 1);
+    expect(shared.length).toBeGreaterThan(15);
+    // Specifically: the #28 pair, one of which is a park and one a reslug.
+    const a = "hiq:basketball:2025:panini-immaculate:28:international-red:no-auto:num-15";
+    const b = "hiq:basketball:2025:panini-immaculate:28:international-red:no-auto:num-27";
+    expect(a.slice(0, 62)).toBe(b.slice(0, 62));
+    expect(byId.get(a)?.action).toBe("park");
+    expect(byId.get(b)?.action).toBe("reslug");
+  });
+
+  it("keepSales stays true, so no shape carries the other card's sales", () => {
+    expect((doc as unknown as { keepSales?: boolean }).keepSales).toBe(true);
+    expect(L.keepsSales({}, doc)).toBe(true);
+    for (const e of entries) expect(L.keepsSales(e, doc)).toBe(true);
+  });
+});

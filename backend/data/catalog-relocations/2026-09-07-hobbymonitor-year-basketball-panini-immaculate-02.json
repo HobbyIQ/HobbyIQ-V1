@@ -632,10 +632,9 @@
     },
     {
       "id": "hiq:basketball:2025:panini-immaculate:13:international-red:no-auto:num-15",
-      "action": "reslug",
-      "to": "hiq:basketball:2024:panini-immaculate:13:international-red:no-auto:num-15",
-      "reason": "#1925 H1: setName \"2024/25 Panini Immaculate Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"Zach Edey\" #13; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-2024 address — a checklist-backed row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09: this row player \"Zach Edey\" #13 printRun 15 source=hobbymonitor-2026-09-04 setKey=panini-immaculate; the 2024 address hiq:basketball:2024:panini-immaculate:13:international-red:no-auto:num-15 is held by \"Ja'Kobe Walter\" source=checklistinsider-2026-08-27 setKey=panini-immaculate-collection. Two sources disagree on who holds #13 /15, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT). REPORT run 34355726514 refused the move as \"occupied: different card\"."
     },
     {
       "id": "hiq:basketball:2025:panini-immaculate:8:international-15-or-8:auto",
@@ -1073,10 +1072,9 @@
     },
     {
       "id": "hiq:basketball:2025:panini-immaculate:11:international-red:no-auto:num-15",
-      "action": "reslug",
-      "to": "hiq:basketball:2024:panini-immaculate:11:international-red:no-auto:num-15",
-      "reason": "#1925 H1: setName \"2024/25 Panini Immaculate Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"Tidjane Salaun\" #11; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-2024 address — a checklist-backed row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09: this row player \"Tidjane Salaun\" #11 printRun 15 source=hobbymonitor-2026-09-04 setKey=panini-immaculate; the 2024 address hiq:basketball:2024:panini-immaculate:11:international-red:no-auto:num-15 is held by \"Luol Deng\" source=checklistinsider-2026-08-27 setKey=panini-immaculate-collection. Two sources disagree on who holds #11 /15, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT). REPORT run 34355726514 refused the move as \"occupied: different card\"."
     },
     {
       "id": "hiq:basketball:2025:panini-immaculate:13:international-green-5-or-3:auto",
@@ -1283,10 +1281,9 @@
     },
     {
       "id": "hiq:basketball:2025:panini-immaculate:32:international-red:no-auto:num-15",
-      "action": "reslug",
-      "to": "hiq:basketball:2024:panini-immaculate:32:international-red:no-auto:num-15",
-      "reason": "#1925 H1: setName \"2024/25 Panini Immaculate Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"Jaylen Wells\" #32; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-2024 address — a checklist-backed row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09: this row player \"Jaylen Wells\" #32 printRun 15 source=hobbymonitor-2026-09-04 setKey=panini-immaculate; the 2024 address hiq:basketball:2024:panini-immaculate:32:international-red:no-auto:num-15 is held by \"Yuki Kawamura\" source=checklistinsider-2026-08-27 setKey=panini-immaculate-collection. Two sources disagree on who holds #32 /15, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT). REPORT run 34355726514 refused the move as \"occupied: different card\"."
     },
     {
       "id": "hiq:basketball:2025:panini-immaculate:32:base:auto:num-99",
@@ -2207,10 +2204,9 @@
     },
     {
       "id": "hiq:basketball:2025:panini-immaculate:5:international-red:no-auto:num-15",
-      "action": "reslug",
-      "to": "hiq:basketball:2024:panini-immaculate:5:international-red:no-auto:num-15",
-      "reason": "#1925 H1: setName \"2024/25 Panini Immaculate Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"Zaccharie Risacher\" #5; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-2024 address — a checklist-backed row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09: this row player \"Zaccharie Risacher\" #5 printRun 15 source=hobbymonitor-2026-09-04 setKey=panini-immaculate; the 2024 address hiq:basketball:2024:panini-immaculate:5:international-red:no-auto:num-15 is held by \"Antonio Reeves\" source=checklistinsider-2026-08-27 setKey=panini-immaculate-collection. Two sources disagree on who holds #5 /15, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT). REPORT run 34355726514 refused the move as \"occupied: different card\"."
     },
     {
       "id": "hiq:basketball:2025:panini-immaculate:63:pink:no-auto:num-15",
@@ -2249,17 +2245,15 @@
     },
     {
       "id": "hiq:basketball:2025:panini-immaculate:19:international-red:no-auto:num-15",
-      "action": "reslug",
-      "to": "hiq:basketball:2024:panini-immaculate:19:international-red:no-auto:num-15",
-      "reason": "#1925 H1: setName \"2024/25 Panini Immaculate Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"Matas Buzelis\" #19; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-2024 address — a checklist-backed row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09: this row player \"Matas Buzelis\" #19 printRun 15 source=hobbymonitor-2026-09-04 setKey=panini-immaculate; the 2024 address hiq:basketball:2024:panini-immaculate:19:international-red:no-auto:num-15 is held by \"Enrique Freeman\" source=checklistinsider-2026-08-27 setKey=panini-immaculate-collection. Two sources disagree on who holds #19 /15, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT). REPORT run 34355726514 refused the move as \"occupied: different card\"."
     },
     {
       "id": "hiq:basketball:2025:panini-immaculate:6:international-red:no-auto:num-15",
-      "action": "reslug",
-      "to": "hiq:basketball:2024:panini-immaculate:6:international-red:no-auto:num-15",
-      "reason": "#1925 H1: setName \"2024/25 Panini Immaculate Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"Ron Holland II\" #6; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-2024 address — a checklist-backed row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09: this row player \"Ron Holland II\" #6 printRun 15 source=hobbymonitor-2026-09-04 setKey=panini-immaculate; the 2024 address hiq:basketball:2024:panini-immaculate:6:international-red:no-auto:num-15 is held by \"Reed Sheppard\" source=checklistinsider-2026-08-27 setKey=panini-immaculate-collection. Two sources disagree on who holds #6 /15, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT). REPORT run 34355726514 refused the move as \"occupied: different card\"."
     },
     {
       "id": "hiq:basketball:2025:panini-immaculate:8:red:no-auto:num-75",
@@ -2284,10 +2278,9 @@
     },
     {
       "id": "hiq:basketball:2025:panini-immaculate:24:international-red:no-auto:num-15",
-      "action": "reslug",
-      "to": "hiq:basketball:2024:panini-immaculate:24:international-red:no-auto:num-15",
-      "reason": "#1925 H1: setName \"2024/25 Panini Immaculate Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"Pacome Dadiet\" #24; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-2024 address — a checklist-backed row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09: this row player \"Pacome Dadiet\" #24 printRun 15 source=hobbymonitor-2026-09-04 setKey=panini-immaculate; the 2024 address hiq:basketball:2024:panini-immaculate:24:international-red:no-auto:num-15 is held by \"Yongxi \"Jacky\" Cui\" source=checklistinsider-2026-08-27 setKey=panini-immaculate-collection. Two sources disagree on who holds #24 /15, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT). REPORT run 34355726514 refused the move as \"occupied: different card\"."
     },
     {
       "id": "hiq:basketball:2025:panini-immaculate:20:international-black:no-auto:num-1",
@@ -2907,10 +2900,9 @@
     },
     {
       "id": "hiq:basketball:2025:panini-immaculate:28:international-red:no-auto:num-15",
-      "action": "reslug",
-      "to": "hiq:basketball:2024:panini-immaculate:28:international-red:no-auto:num-15",
-      "reason": "#1925 H1: setName \"2024/25 Panini Immaculate Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"Isaiah Collier\" #28; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-2024 address — a checklist-backed row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09: this row player \"Isaiah Collier\" #28 printRun 15 source=hobbymonitor-2026-09-04 setKey=panini-immaculate; the 2024 address hiq:basketball:2024:panini-immaculate:28:international-red:no-auto:num-15 is held by \"Zach Edey\" source=checklistinsider-2026-08-27 setKey=panini-immaculate-collection. Two sources disagree on who holds #28 /15, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT). REPORT run 34355726514 refused the move as \"occupied: different card\"."
     },
     {
       "id": "hiq:basketball:2025:panini-immaculate:12:international-green:no-auto:num-5",
@@ -3488,10 +3480,9 @@
     },
     {
       "id": "hiq:basketball:2025:panini-immaculate:9:international-red:no-auto:num-15",
-      "action": "reslug",
-      "to": "hiq:basketball:2024:panini-immaculate:9:international-red:no-auto:num-15",
-      "reason": "#1925 H1: setName \"2024/25 Panini Immaculate Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"Antonio Reeves\" #9; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-2024 address — a checklist-backed row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09: this row player \"Antonio Reeves\" #9 printRun 15 source=hobbymonitor-2026-09-04 setKey=panini-immaculate; the 2024 address hiq:basketball:2024:panini-immaculate:9:international-red:no-auto:num-15 is held by \"Jamal Shead\" source=checklistinsider-2026-08-27 setKey=panini-immaculate-collection. Two sources disagree on who holds #9 /15, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT). REPORT run 34355726514 refused the move as \"occupied: different card\"."
     },
     {
       "id": "hiq:basketball:2025:panini-immaculate:81:international-red:no-auto:num-27",
