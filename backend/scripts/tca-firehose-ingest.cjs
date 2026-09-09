@@ -452,6 +452,14 @@ async function main() {
   let totalFetched = 0;
   let totalWritten = 0;
   let totalDedupSkipped = 0;
+  // CF-A-THROTTLED-WRITE-IS-NOT-A-WRITE (#2015 follow-up, 2026-09-09). Rows
+  // whose WRITE threw inside persistVendorSalesToPool. These used to be
+  // returned in `result.skipped` and folded into `totalDedupSkipped`, so the
+  // identity below balanced perfectly on sales that are not in the pool and
+  // `errors=` read 0 through a Cosmos throttle storm. Moving them OUT of the
+  // skip bucket and INTO the errors term keeps the sum unchanged -- the row is
+  // counted once, in the bucket that describes what actually happened to it.
+  let totalWriteErrors = 0;
   let totalCatalogUnmatched = 0;
   // Terminal twin-check outcomes. Counted separately from `skipped` because
   // "we understood this row and declined to write it" is a different fact from
@@ -582,6 +590,10 @@ async function main() {
           .then((res) => {
             totalWritten += res.inserted;
             totalDedupSkipped += res.deduped + res.skipped;
+            // CF-A-THROTTLED-WRITE-IS-NOT-A-WRITE (#2015 follow-up). Writes that
+            // THREW are their own term now. Folding them into the dedup/skip
+            // bucket said "this row is handled" about a sale that never landed.
+            totalWriteErrors += res.errors;
             totalCatalogUnmatched += res.catalogUnmatched ?? 0;
             totalTwinRefused += res.twinAddressRefused ?? 0;
             totalTwinFolded += res.twinFolded ?? 0;
@@ -642,7 +654,7 @@ async function main() {
       const elapsedS = ((Date.now() - startMs) / 1000).toFixed(0);
       const ratePerS = (totalWritten / Math.max(1, (Date.now() - startMs) / 1000)).toFixed(1);
       const fetchRatePerS = (totalFetched / Math.max(1, (Date.now() - startMs) / 1000)).toFixed(0);
-      console.log(`[tca-firehose] page ${page}: fetched=${totalFetched} (${fetchRatePerS}/s) written=${totalWritten} (${ratePerS}/s) skipped=${totalDedupSkipped} errors=${totalErrors} elapsed=${elapsedS}s`);
+      console.log(`[tca-firehose] page ${page}: fetched=${totalFetched} (${fetchRatePerS}/s) written=${totalWritten} (${ratePerS}/s) skipped=${totalDedupSkipped} errors=${totalErrors + totalWriteErrors} elapsed=${elapsedS}s`);
     }
     if (!lastCursor) {
       console.log(`[tca-firehose] no next_cursor — end of feed`);
@@ -664,7 +676,7 @@ async function main() {
   }
 
   const elapsedS = ((Date.now() - startMs) / 1000).toFixed(0);
-  console.log(`\n[tca-firehose] done — pages=${page} fetched=${totalFetched} written=${totalWritten} skipped=${totalDedupSkipped} catalogUnmatched=${totalCatalogUnmatched} twinFolded=${totalTwinFolded} twinRefused=${totalTwinRefused} errors=${totalErrors} fetchErrors=${fetchErrors} elapsed=${elapsedS}s`);
+  console.log(`\n[tca-firehose] done — pages=${page} fetched=${totalFetched} written=${totalWritten} skipped=${totalDedupSkipped} catalogUnmatched=${totalCatalogUnmatched} twinFolded=${totalTwinFolded} twinRefused=${totalTwinRefused} errors=${totalErrors + totalWriteErrors} fetchErrors=${fetchErrors} elapsed=${elapsedS}s`);
   // CF-A-SKIP-MUST-SAY-WHY. `skipped` above is the reconcile term; this is what
   // it was made of. Printed unconditionally, including all-zero, because a
   // reason line that appears only when something is wrong is a line nobody
@@ -699,13 +711,14 @@ async function main() {
     // one. So it is REPORTED beside the identity, never summed into it.
     const accountedFor =
       totalWritten + totalDedupSkipped + totalCatalogUnmatched +
-      totalTwinFolded + totalTwinRefused + totalErrors;
+      totalTwinFolded + totalTwinRefused + totalErrors + totalWriteErrors;
     const unaccounted = totalFetched - accountedFor;
     console.log(
       `[tca-firehose] reconcile — fetched=${totalFetched} = written=${totalWritten}` +
       ` + skipped=${totalDedupSkipped} + catalogUnmatched=${totalCatalogUnmatched}` +
       ` + twinFolded=${totalTwinFolded} + twinRefused=${totalTwinRefused}` +
-      ` + errors=${totalErrors}  (unaccounted=${unaccounted})`,
+      ` + errors=${totalErrors} + writeErrors=${totalWriteErrors}` +
+      `  (unaccounted=${unaccounted})`,
     );
     // The composition of the `skipped` term above. Same subset-not-sibling
     // rule as skippedSportUnresolved: these break `skipped` down, they do not
@@ -738,7 +751,9 @@ async function main() {
       written: totalWritten,
       skipped: totalDedupSkipped + totalCatalogUnmatched,
       refused: totalTwinFolded + totalTwinRefused,
-      failed: totalErrors,
+      // A write that threw is FAILED -- retryable, worth a relaunch. It was
+      // reaching this ledger as `skipped`, the one term that means "done with".
+      failed: totalErrors + totalWriteErrors,
     });
   }
 

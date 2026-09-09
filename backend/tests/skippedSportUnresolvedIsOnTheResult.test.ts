@@ -33,7 +33,7 @@ describe("skippedSportUnresolved reaches the caller", () => {
     // Type-level: this does not compile if the field is absent, which is the
     // regression being pinned.
     const r: VendorPersistResult = {
-      inserted: 0, deduped: 0, skipped: 0, catalogUnmatched: 0,
+      inserted: 0, deduped: 0, skipped: 0, errors: 0, catalogUnmatched: 0,
       skippedSportUnresolved: 0,
     };
     expect(r.skippedSportUnresolved).toBe(0);

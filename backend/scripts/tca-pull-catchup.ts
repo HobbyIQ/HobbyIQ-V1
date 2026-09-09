@@ -94,6 +94,12 @@ async function main(): Promise<void> {
           insertedTotal += r.inserted;
           dedupedTotal += r.deduped;
           skippedTotal += r.skipped;
+          // CF-A-THROTTLED-WRITE-IS-NOT-A-WRITE (#2015 follow-up). A row whose
+          // WRITE threw used to arrive here inside `r.skipped`, so `errors`
+          // read 0 through a throttle storm and the banner reconciled on sales
+          // that never entered the pool. It is its own term now, and it is
+          // added -- not folded -- so the identity still balances.
+          errorTotal += r.errors;
           persisted++;
         } catch (e) {
           errorTotal++;
