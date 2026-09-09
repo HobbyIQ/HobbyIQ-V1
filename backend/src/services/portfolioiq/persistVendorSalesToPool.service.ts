@@ -486,6 +486,23 @@ export interface VendorPersistResult {
    *  BREAKDOWN of `skipped` -- reported so the class is visible, not so it is
    *  summed. */
   skippedSportUnresolved?: number;
+  /** CF-A-SKIP-MUST-SAY-WHY (2026-09-08). The other named breakdowns of
+   *  `skipped`, added for the same reason `skippedSportUnresolved` was: run
+   *  34262947046 skipped 25,991 of 26,000 TCGplayer rows and the ledger
+   *  balanced perfectly, because one undifferentiated `skipped` counter cannot
+   *  tell "quiet day" from "the parser went blind on an entire vertical".
+   *
+   *  `skippedNoYear` and `skippedNoPlayer` are the two gates that ate that
+   *  feed; `skippedSetUnmapped` is the TCG row whose set the vocabulary cannot
+   *  name -- a refusal by design (never guess a year), and the number that
+   *  says how much vocabulary is still missing.
+   *
+   *  SUBSETS, NOT SIBLINGS, exactly as `skippedSportUnresolved` above: every
+   *  row counted here is ALSO in `skipped`. Reconcile with `skipped`; read
+   *  these to learn why. */
+  skippedNoYear?: number;
+  skippedNoPlayer?: number;
+  skippedSetUnmapped?: number;
   /** vendor product tags that disagreed with the title and were not adopted (CF-THE-TITLE-OUTRANKS-THE-VENDOR-TAG) */
   vendorParallelOverruled?: number;                 // rows whose computed slug has no matching card_catalog entry — held for admin review
   /** D22: a weak title marker (SP / SSP / IV / Short Print) corroborated a variation. */
@@ -932,8 +949,15 @@ export async function persistVendorSalesToPool(
       cardNumber = verdict.cardNumber;
     }
 
-    if (!cardYear) { result.skipped++; continue; }
-    if (!playerName) { result.skipped++; continue; }
+    // CF-A-SKIP-MUST-SAY-WHY (2026-09-08). These two lines silently ate 25,991
+    // of 26,000 TCGplayer rows in run 34262947046 -- they are sports gates
+    // ("what year was this card printed", "whose card is it") and a Pokemon row
+    // carries neither noun natively, so every one failed both. The gates STAY:
+    // a row with no year and no name has no address, whatever the vertical.
+    // What changes is that the refusal is now NAMED, so the next vertical that
+    // cannot answer them shows up as a number instead of as a quiet feed.
+    if (!cardYear) { result.skipped++; result.skippedNoYear = (result.skippedNoYear ?? 0) + 1; continue; }
+    if (!playerName) { result.skipped++; result.skippedNoPlayer = (result.skippedNoPlayer ?? 0) + 1; continue; }
 
     // CF-CHECKLIST-NARROWER + PRICE-BAND-SCORER (Drew, 2026-08-02).
     // Stage 3.5 + 3.6 of the Bayesian identity decoder:
@@ -2016,14 +2040,20 @@ export async function persistVendorSalesToPool(
       result.skipped++;
     }
   }
-  // CF-EVERY-BATCH-REPORTS (#2006 follow-up, 2026-09-08). The condition used
-  // to be `inserted > 0 || deduped > 0 || catalogUnmatched > 0`, so a batch in
-  // which every row failed to resolve a vertical logged NOTHING -- silence
-  // that reads identically to "no batch ran". That is exactly what the first
-  // live TCGplayer day looked like from the logs. An all-unresolved batch is
-  // the single most important batch to hear about, so it now reports too.
-  if (result.inserted > 0 || result.deduped > 0 || result.catalogUnmatched > 0 ||
-      skippedSportUnresolved > 0) {
+  // CF-EVERY-BATCH-REPORTS (#2006 follow-up, 2026-09-08), NOW WITHOUT A
+  // CONDITION AT ALL (2026-09-08). The first version of this fix widened the
+  // predicate from `inserted > 0 || deduped > 0 || catalogUnmatched > 0` to
+  // also admit `skippedSportUnresolved > 0`, reasoning that an all-unresolved
+  // batch is the most important one to hear about. It was the right reason and
+  // still the wrong shape: run 34262947046's TCGplayer lane skipped 25,991
+  // rows at the year/player gates, which set NONE of those four terms, and so
+  // logged nothing across 26 pages. Widening a silence predicate only moves
+  // where the silence is.
+  //
+  // A batch that ran is a batch that reports. There is no batch whose outcome
+  // is not worth a line, and any predicate here is a bet about which failures
+  // we can afford not to see -- a bet this file has now lost twice.
+  {
     console.log(JSON.stringify({
       event: "persist_vendor_sales",
       source: "persistVendorSalesToPool",
@@ -2036,6 +2066,10 @@ export async function persistVendorSalesToPool(
       // `baseball` address and gone on to price two cards. A BREAKDOWN of
       // `skipped` above, not a term to add to it.
       skippedSportUnresolved,
+      // The rest of the `skipped` breakdown. Same subset-not-sibling rule.
+      skippedNoYear: result.skippedNoYear ?? 0,
+      skippedNoPlayer: result.skippedNoPlayer ?? 0,
+      skippedSetUnmapped: result.skippedSetUnmapped ?? 0,
     }));
   }
   return result;
