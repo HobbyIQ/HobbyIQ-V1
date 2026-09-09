@@ -786,10 +786,9 @@
     },
     {
       "id": "hiq:football:2025:panini-contenders:181:base:auto",
-      "action": "reslug",
-      "to": "hiq:football:2024:panini-contenders:181:base:auto",
-      "reason": "#1925 H1: setName \"2024 Panini Contenders Football\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"Jordan Whittington\" #181; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-N address — a row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09 via the lane's own occupancy compare: this row player \"Jordan Whittington\" #181 source=hobbymonitor-2026-09-04 setKey=panini-contenders; the destination hiq:football:2024:panini-contenders:181:base:auto is held by \"Cornelius Johnson\" source=hobbymonitor-2026-09-04 setKey=panini-contenders-optic. Two sources disagree on who holds #181, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT)."
     },
     {
       "id": "hiq:football:2025:panini-contenders:132:base:auto",
@@ -912,10 +911,9 @@
     },
     {
       "id": "hiq:football:2025:panini-contenders:26:printing-plate:no-auto:num-1",
-      "action": "reslug",
-      "to": "hiq:football:2024:panini-contenders:26:printing-plate:no-auto:num-1",
-      "reason": "#1925 H1: setName \"2024 Panini Contenders Football\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"CeeDee Lamb\" #26; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-N address — a row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09 via the lane's own occupancy compare: this row player \"CeeDee Lamb\" #26 source=hobbymonitor-2026-09-04 setKey=panini-contenders; the destination hiq:football:2024:panini-contenders:26:printing-plate:no-auto:num-1 is held by \"Josh Hines-Allen\" source=hobbymonitor-2026-09-04 setKey=panini-contenders-optic. Two sources disagree on who holds #26, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT)."
     },
     {
       "id": "hiq:football:2025:panini-contenders:113:playoff-ticket:auto:num-149",
@@ -926,17 +924,15 @@
     },
     {
       "id": "hiq:football:2025:panini-contenders:29:printing-plate:no-auto:num-1",
-      "action": "reslug",
-      "to": "hiq:football:2024:panini-contenders:29:printing-plate:no-auto:num-1",
-      "reason": "#1925 H1: setName \"2024 Panini Contenders Football\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"Javonte Williams\" #29; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-N address — a row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09 via the lane's own occupancy compare: this row player \"Javonte Williams\" #29 source=hobbymonitor-2026-09-04 setKey=panini-contenders; the destination hiq:football:2024:panini-contenders:29:printing-plate:no-auto:num-1 is held by \"Maxx Crosby\" source=hobbymonitor-2026-09-04 setKey=panini-contenders-optic. Two sources disagree on who holds #29, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT)."
     },
     {
       "id": "hiq:football:2025:panini-contenders:28:printing-plate:no-auto:num-1",
-      "action": "reslug",
-      "to": "hiq:football:2024:panini-contenders:28:printing-plate:no-auto:num-1",
-      "reason": "#1925 H1: setName \"2024 Panini Contenders Football\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"Courtland Sutton\" #28; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-N address — a row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09 via the lane's own occupancy compare: this row player \"Courtland Sutton\" #28 source=hobbymonitor-2026-09-04 setKey=panini-contenders; the destination hiq:football:2024:panini-contenders:28:printing-plate:no-auto:num-1 is held by \"Travis Kelce\" source=hobbymonitor-2026-09-04 setKey=panini-contenders-optic. Two sources disagree on who holds #28, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT)."
     },
     {
       "id": "hiq:football:2025:panini-contenders:28:goal-line-ticket-fotl:no-auto:num-5",
@@ -1213,17 +1209,15 @@
     },
     {
       "id": "hiq:football:2025:panini-contenders:164:base:auto",
-      "action": "reslug",
-      "to": "hiq:football:2024:panini-contenders:164:base:auto",
-      "reason": "#1925 H1: setName \"2024 Panini Contenders Football\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"Malik Washington\" #164; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-N address — a row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09 via the lane's own occupancy compare: this row player \"Malik Washington\" #164 source=hobbymonitor-2026-09-04 setKey=panini-contenders; the destination hiq:football:2024:panini-contenders:164:base:auto is held by \"Kendall Milton\" source=hobbymonitor-2026-09-04 setKey=panini-contenders-optic. Two sources disagree on who holds #164, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT)."
     },
     {
       "id": "hiq:football:2025:panini-contenders:153:base:auto",
-      "action": "reslug",
-      "to": "hiq:football:2024:panini-contenders:153:base:auto",
-      "reason": "#1925 H1: setName \"2024 Panini Contenders Football\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"Tyler Nubin\" #153; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-N address — a row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09 via the lane's own occupancy compare: this row player \"Tyler Nubin\" #153 source=hobbymonitor-2026-09-04 setKey=panini-contenders; the destination hiq:football:2024:panini-contenders:153:base:auto is held by \"Jaheim Bell\" source=hobbymonitor-2026-09-04 setKey=panini-contenders-optic. Two sources disagree on who holds #153, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT)."
     },
     {
       "id": "hiq:football:2025:panini-contenders:2:ticket-stub:no-auto:num-98",
@@ -1241,10 +1235,9 @@
     },
     {
       "id": "hiq:football:2025:panini-contenders:2:printing-plate:no-auto:num-1",
-      "action": "reslug",
-      "to": "hiq:football:2024:panini-contenders:2:printing-plate:no-auto:num-1",
-      "reason": "#1925 H1: setName \"2024 Panini Contenders Football\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"James Conner\" #2; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-N address — a row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09 via the lane's own occupancy compare: this row player \"James Conner\" #2 source=hobbymonitor-2026-09-04 setKey=panini-contenders; the destination hiq:football:2024:panini-contenders:2:printing-plate:no-auto:num-1 is held by \"Michael Wilson\" source=hobbymonitor-2026-09-04 setKey=panini-contenders-optic. Two sources disagree on who holds #2, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT)."
     },
     {
       "id": "hiq:football:2025:panini-contenders:1:game-ticket-red:no-auto",
@@ -1381,10 +1374,9 @@
     },
     {
       "id": "hiq:football:2025:panini-contenders:7:gold:auto:num-10",
-      "action": "reslug",
-      "to": "hiq:football:2024:panini-contenders:7:gold:auto:num-10",
-      "reason": "#1925 H1: setName \"2024 Panini Contenders Football\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"Anthony Richardson\" #7; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-N address — a row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09 via the lane's own occupancy compare: this row player \"Anthony Richardson\" #7 source=hobbymonitor-2026-09-04 setKey=panini-contenders; the destination hiq:football:2024:panini-contenders:7:gold:auto:num-10 is held by \"Jamal Anderson\" source=checklistcenter-2026-09-05 setKey=panini-contenders-optic. Two sources disagree on who holds #7, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT)."
     },
     {
       "id": "hiq:football:2025:panini-contenders:140:goal-line-ticket-fotl:auto:num-5",
@@ -1444,10 +1436,9 @@
     },
     {
       "id": "hiq:football:2025:panini-contenders:2:bronze:auto:num-25",
-      "action": "reslug",
-      "to": "hiq:football:2024:panini-contenders:2:bronze:auto:num-25",
-      "reason": "#1925 H1: setName \"2024 Panini Contenders Football\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"Justin Jefferson\" #2; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-N address — a row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09 via the lane's own occupancy compare: this row player \"Justin Jefferson\" #2 source=hobbymonitor-2026-09-04 setKey=panini-contenders; the destination hiq:football:2024:panini-contenders:2:bronze:auto:num-25 is held by \"Zay Flowers\" source=checklistcenter-2026-09-06 setKey=panini-contenders-nfl. Two sources disagree on who holds #2, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT)."
     },
     {
       "id": "hiq:football:2025:panini-contenders:123:printing-plate:auto:num-1",
@@ -1493,10 +1484,9 @@
     },
     {
       "id": "hiq:football:2025:panini-contenders:69:printing-plate:no-auto:num-1",
-      "action": "reslug",
-      "to": "hiq:football:2024:panini-contenders:69:printing-plate:no-auto:num-1",
-      "reason": "#1925 H1: setName \"2024 Panini Contenders Football\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"Kendrick Bourne\" #69; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-N address — a row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09 via the lane's own occupancy compare: this row player \"Kendrick Bourne\" #69 source=hobbymonitor-2026-09-04 setKey=panini-contenders; the destination hiq:football:2024:panini-contenders:69:printing-plate:no-auto:num-1 is held by \"Dallas Turner\" source=hobbymonitor-2026-09-04 setKey=panini-contenders-optic. Two sources disagree on who holds #69, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT)."
     },
     {
       "id": "hiq:football:2025:panini-contenders:67:cracked-ice-ticket:no-auto:num-25",
@@ -1584,10 +1574,9 @@
     },
     {
       "id": "hiq:football:2025:panini-contenders:183:base:auto",
-      "action": "reslug",
-      "to": "hiq:football:2024:panini-contenders:183:base:auto",
-      "reason": "#1925 H1: setName \"2024 Panini Contenders Football\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"Bralen Trice\" #183; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-N address — a row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09 via the lane's own occupancy compare: this row player \"Bralen Trice\" #183 source=hobbymonitor-2026-09-04 setKey=panini-contenders; the destination hiq:football:2024:panini-contenders:183:base:auto is held by \"Cooper Beebe\" source=hobbymonitor-2026-09-04 setKey=panini-contenders-optic. Two sources disagree on who holds #183, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT)."
     },
     {
       "id": "hiq:football:2025:panini-contenders:282:base:auto",
@@ -1612,10 +1601,9 @@
     },
     {
       "id": "hiq:football:2025:panini-contenders:20:base:auto",
-      "action": "reslug",
-      "to": "hiq:football:2024:panini-contenders:20:base:auto",
-      "reason": "#1925 H1: setName \"2024 Panini Contenders Football\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"Tre Tucker\" #20; destination read as vacant 2026-09-07; 1 sale(s) rest here and STAY — they are the 2025 card's"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-N address — a row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09 via the lane's own occupancy compare: this row player \"Tre Tucker\" #20 source=hobbymonitor-2026-09-04 setKey=panini-contenders; the destination hiq:football:2024:panini-contenders:20:base:auto is held by \"Joe Ferguson\" source=hobbymonitor-2026-09-04 setKey=panini-contenders-optic. Two sources disagree on who holds #20, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT)."
     },
     {
       "id": "hiq:football:2025:panini-contenders:257:base:auto",
@@ -1633,10 +1621,9 @@
     },
     {
       "id": "hiq:football:2025:panini-contenders:177:base:auto",
-      "action": "reslug",
-      "to": "hiq:football:2024:panini-contenders:177:base:auto",
-      "reason": "#1925 H1: setName \"2024 Panini Contenders Football\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"Kendall Milton\" #177; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-N address — a row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09 via the lane's own occupancy compare: this row player \"Kendall Milton\" #177 source=hobbymonitor-2026-09-04 setKey=panini-contenders; the destination hiq:football:2024:panini-contenders:177:base:auto is held by \"Emani Bailey\" source=hobbymonitor-2026-09-04 setKey=panini-contenders-optic. Two sources disagree on who holds #177, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT)."
     },
     {
       "id": "hiq:football:2025:panini-contenders:255:base:auto",
@@ -1822,10 +1809,9 @@
     },
     {
       "id": "hiq:football:2025:panini-contenders:27:printing-plate:no-auto:num-1",
-      "action": "reslug",
-      "to": "hiq:football:2024:panini-contenders:27:printing-plate:no-auto:num-1",
-      "reason": "#1925 H1: setName \"2024 Panini Contenders Football\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"Micah Parsons\" #27; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-N address — a row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09 via the lane's own occupancy compare: this row player \"Micah Parsons\" #27 source=hobbymonitor-2026-09-04 setKey=panini-contenders; the destination hiq:football:2024:panini-contenders:27:printing-plate:no-auto:num-1 is held by \"Patrick Mahomes II\" source=hobbymonitor-2026-09-04 setKey=panini-contenders-optic. Two sources disagree on who holds #27, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT)."
     },
     {
       "id": "hiq:football:2025:panini-contenders:113:red-zone-ticket-fotl:auto",
@@ -1878,10 +1864,9 @@
     },
     {
       "id": "hiq:football:2025:panini-contenders:32:printing-plate:no-auto:num-1",
-      "action": "reslug",
-      "to": "hiq:football:2024:panini-contenders:32:printing-plate:no-auto:num-1",
-      "reason": "#1925 H1: setName \"2024 Panini Contenders Football\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"Jahmyr Gibbs\" #32; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-N address — a row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09 via the lane's own occupancy compare: this row player \"Jahmyr Gibbs\" #32 source=hobbymonitor-2026-09-04 setKey=panini-contenders; the destination hiq:football:2024:panini-contenders:32:printing-plate:no-auto:num-1 is held by \"Cooper Kupp\" source=hobbymonitor-2026-09-04 setKey=panini-contenders-optic. Two sources disagree on who holds #32, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT)."
     },
     {
       "id": "hiq:football:2025:panini-contenders:31:super-bowl-ticket:no-auto:num-1",
@@ -1948,10 +1933,9 @@
     },
     {
       "id": "hiq:football:2025:panini-contenders:8:blue:auto:num-50",
-      "action": "reslug",
-      "to": "hiq:football:2024:panini-contenders:8:blue:auto:num-50",
-      "reason": "#1925 H1: setName \"2024 Panini Contenders Football\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"Dwight Freeney\" #8; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-N address — a row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09 via the lane's own occupancy compare: this row player \"Dwight Freeney\" #8 source=hobbymonitor-2026-09-04 setKey=panini-contenders; the destination hiq:football:2024:panini-contenders:8:blue:auto:num-50 is held by \"Tony Hill\" source=hobbymonitor-2026-09-04 setKey=panini-contenders-optic. Two sources disagree on who holds #8, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT)."
     },
     {
       "id": "hiq:football:2025:panini-contenders:129:super-bowl-ticket:auto:num-1",
@@ -2235,10 +2219,9 @@
     },
     {
       "id": "hiq:football:2025:panini-contenders:79:printing-plate:no-auto:num-1",
-      "action": "reslug",
-      "to": "hiq:football:2024:panini-contenders:79:printing-plate:no-auto:num-1",
-      "reason": "#1925 H1: setName \"2024 Panini Contenders Football\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"Jalen Hurts\" #79; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-N address — a row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09 via the lane's own occupancy compare: this row player \"Jalen Hurts\" #79 source=hobbymonitor-2026-09-04 setKey=panini-contenders; the destination hiq:football:2024:panini-contenders:79:printing-plate:no-auto:num-1 is held by \"Jonathon Brooks\" source=hobbymonitor-2026-09-04 setKey=panini-contenders-optic. Two sources disagree on who holds #79, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT)."
     },
     {
       "id": "hiq:football:2025:panini-contenders:79:conference-ticket:no-auto:num-99",
@@ -2361,10 +2344,9 @@
     },
     {
       "id": "hiq:football:2025:panini-contenders:197:base:auto",
-      "action": "reslug",
-      "to": "hiq:football:2024:panini-contenders:197:base:auto",
-      "reason": "#1925 H1: setName \"2024 Panini Contenders Football\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"Kalen King\" #197; destination read as vacant 2026-09-07; 3 sale(s) rest here and STAY — they are the 2025 card's"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-N address — a row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09 via the lane's own occupancy compare: this row player \"Kalen King\" #197 source=hobbymonitor-2026-09-04 setKey=panini-contenders; the destination hiq:football:2024:panini-contenders:197:base:auto is held by \"Gabriel Murphy\" source=hobbymonitor-2026-09-04 setKey=panini-contenders-optic. Two sources disagree on who holds #197, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT)."
     },
     {
       "id": "hiq:football:2025:panini-contenders:226:base:auto",
@@ -2375,17 +2357,15 @@
     },
     {
       "id": "hiq:football:2025:panini-contenders:152:base:auto",
-      "action": "reslug",
-      "to": "hiq:football:2024:panini-contenders:152:base:auto",
-      "reason": "#1925 H1: setName \"2024 Panini Contenders Football\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"Cooper DeJean\" #152; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-N address — a row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09 via the lane's own occupancy compare: this row player \"Cooper DeJean\" #152 source=hobbymonitor-2026-09-04 setKey=panini-contenders; the destination hiq:football:2024:panini-contenders:152:base:auto is held by \"Tyler Nubin\" source=hobbymonitor-2026-09-04 setKey=panini-contenders-optic. Two sources disagree on who holds #152, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT)."
     },
     {
       "id": "hiq:football:2025:panini-contenders:191:base:auto",
-      "action": "reslug",
-      "to": "hiq:football:2024:panini-contenders:191:base:auto",
-      "reason": "#1925 H1: setName \"2024 Panini Contenders Football\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"Ainias Smith\" #191; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-N address — a row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09 via the lane's own occupancy compare: this row player \"Ainias Smith\" #191 source=hobbymonitor-2026-09-04 setKey=panini-contenders; the destination hiq:football:2024:panini-contenders:191:base:auto is held by \"Darius Muasau\" source=hobbymonitor-2026-09-04 setKey=panini-contenders-optic. Two sources disagree on who holds #191, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT)."
     },
     {
       "id": "hiq:football:2025:panini-contenders:230:base:auto",
@@ -2403,10 +2383,9 @@
     },
     {
       "id": "hiq:football:2025:panini-contenders:1:printing-plate:no-auto:num-1",
-      "action": "reslug",
-      "to": "hiq:football:2024:panini-contenders:1:printing-plate:no-auto:num-1",
-      "reason": "#1925 H1: setName \"2024 Panini Contenders Football\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"Trey McBride\" #1; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-N address — a row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09 via the lane's own occupancy compare: this row player \"Trey McBride\" #1 source=hobbymonitor-2026-09-04 setKey=panini-contenders; the destination hiq:football:2024:panini-contenders:1:printing-plate:no-auto:num-1 is held by \"Kyler Murray\" source=hobbymonitor-2026-09-04 setKey=panini-contenders-optic. Two sources disagree on who holds #1, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT)."
     },
     {
       "id": "hiq:football:2025:panini-contenders:1:super-bowl-ticket:no-auto:num-1",
@@ -2452,10 +2431,9 @@
     },
     {
       "id": "hiq:football:2025:panini-contenders:7:printing-plate:no-auto:num-1",
-      "action": "reslug",
-      "to": "hiq:football:2024:panini-contenders:7:printing-plate:no-auto:num-1",
-      "reason": "#1925 H1: setName \"2024 Panini Contenders Football\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"Lamar Jackson\" #7; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-N address — a row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09 via the lane's own occupancy compare: this row player \"Lamar Jackson\" #7 source=hobbymonitor-2026-09-04 setKey=panini-contenders; the destination hiq:football:2024:panini-contenders:7:printing-plate:no-auto:num-1 is held by \"Bryce Young\" source=hobbymonitor-2026-09-04 setKey=panini-contenders-optic. Two sources disagree on who holds #7, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT)."
     },
     {
       "id": "hiq:football:2025:panini-contenders:8:midfield-ticket:no-auto:num-50",
@@ -2508,10 +2486,9 @@
     },
     {
       "id": "hiq:football:2025:panini-contenders:16:printing-plate:no-auto:num-1",
-      "action": "reslug",
-      "to": "hiq:football:2024:panini-contenders:16:printing-plate:no-auto:num-1",
-      "reason": "#1925 H1: setName \"2024 Panini Contenders Football\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"D'Andre Swift\" #16; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-N address — a row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09 via the lane's own occupancy compare: this row player \"D'Andre Swift\" #16 source=hobbymonitor-2026-09-04 setKey=panini-contenders; the destination hiq:football:2024:panini-contenders:16:printing-plate:no-auto:num-1 is held by \"Courtland Sutton\" source=hobbymonitor-2026-09-04 setKey=panini-contenders-optic. Two sources disagree on who holds #16, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT)."
     },
     {
       "id": "hiq:football:2025:panini-contenders:17:red-zone-ticket-fotl:no-auto:num-49",
@@ -2543,10 +2520,9 @@
     },
     {
       "id": "hiq:football:2025:panini-contenders:20:printing-plate:no-auto:num-1",
-      "action": "reslug",
-      "to": "hiq:football:2024:panini-contenders:20:printing-plate:no-auto:num-1",
-      "reason": "#1925 H1: setName \"2024 Panini Contenders Football\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"Joe Burrow\" #20; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-N address — a row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09 via the lane's own occupancy compare: this row player \"Joe Burrow\" #20 source=hobbymonitor-2026-09-04 setKey=panini-contenders; the destination hiq:football:2024:panini-contenders:20:printing-plate:no-auto:num-1 is held by \"Jordan Love\" source=hobbymonitor-2026-09-04 setKey=panini-contenders-optic. Two sources disagree on who holds #20, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT)."
     },
     {
       "id": "hiq:football:2025:panini-contenders:1:goal-line-ticket-fotl:auto:num-5",
@@ -2557,10 +2533,9 @@
     },
     {
       "id": "hiq:football:2025:panini-contenders:23:printing-plate:no-auto:num-1",
-      "action": "reslug",
-      "to": "hiq:football:2024:panini-contenders:23:printing-plate:no-auto:num-1",
-      "reason": "#1925 H1: setName \"2024 Panini Contenders Football\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"Nick Chubb\" #23; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-N address — a row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09 via the lane's own occupancy compare: this row player \"Nick Chubb\" #23 source=hobbymonitor-2026-09-04 setKey=panini-contenders; the destination hiq:football:2024:panini-contenders:23:printing-plate:no-auto:num-1 is held by \"Anthony Richardson\" source=hobbymonitor-2026-09-04 setKey=panini-contenders-optic. Two sources disagree on who holds #23, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT)."
     },
     {
       "id": "hiq:football:2025:panini-contenders:25:super-bowl-ticket:no-auto:num-1",
@@ -2627,10 +2602,9 @@
     },
     {
       "id": "hiq:football:2025:panini-contenders:5:bronze:auto:num-25",
-      "action": "reslug",
-      "to": "hiq:football:2024:panini-contenders:5:bronze:auto:num-25",
-      "reason": "#1925 H1: setName \"2024 Panini Contenders Football\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"Jordan Love\" #5; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-N address — a row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09 via the lane's own occupancy compare: this row player \"Jordan Love\" #5 source=hobbymonitor-2026-09-04 setKey=panini-contenders; the destination hiq:football:2024:panini-contenders:5:bronze:auto:num-25 is held by \"Tank Bigsby\" source=checklistcenter-2026-09-06 setKey=panini-contenders-nfl. Two sources disagree on who holds #5, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT)."
     },
     {
       "id": "hiq:football:2025:panini-contenders:38:game-ticket-bronze:no-auto",
@@ -2809,10 +2783,9 @@
     },
     {
       "id": "hiq:football:2025:panini-contenders:3:bronze:auto:num-25",
-      "action": "reslug",
-      "to": "hiq:football:2024:panini-contenders:3:bronze:auto:num-25",
-      "reason": "#1925 H1: setName \"2024 Panini Contenders Football\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"Justin Herbert\" #3; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-N address — a row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09 via the lane's own occupancy compare: this row player \"Justin Herbert\" #3 source=hobbymonitor-2026-09-04 setKey=panini-contenders; the destination hiq:football:2024:panini-contenders:3:bronze:auto:num-25 is held by \"Zach Charbonnet\" source=checklistcenter-2026-09-06 setKey=panini-contenders-nfl. Two sources disagree on who holds #3, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT)."
     },
     {
       "id": "hiq:football:2025:panini-contenders:110:playoff-ticket:auto:num-149",
@@ -2823,10 +2796,9 @@
     },
     {
       "id": "hiq:football:2025:panini-contenders:55:printing-plate:no-auto:num-1",
-      "action": "reslug",
-      "to": "hiq:football:2024:panini-contenders:55:printing-plate:no-auto:num-1",
-      "reason": "#1925 H1: setName \"2024 Panini Contenders Football\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"Justin Herbert\" #55; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-N address — a row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09 via the lane's own occupancy compare: this row player \"Justin Herbert\" #55 source=hobbymonitor-2026-09-04 setKey=panini-contenders; the destination hiq:football:2024:panini-contenders:55:printing-plate:no-auto:num-1 is held by \"Tyjae Spears\" source=hobbymonitor-2026-09-04 setKey=panini-contenders-optic. Two sources disagree on who holds #55, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT)."
     },
     {
       "id": "hiq:football:2025:panini-contenders:112:divisional-ticket:auto:num-99",
@@ -2879,17 +2851,15 @@
     },
     {
       "id": "hiq:football:2025:panini-contenders:63:printing-plate:no-auto:num-1",
-      "action": "reslug",
-      "to": "hiq:football:2024:panini-contenders:63:printing-plate:no-auto:num-1",
-      "reason": "#1925 H1: setName \"2024 Panini Contenders Football\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"Jaylen Waddle\" #63; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-N address — a row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09 via the lane's own occupancy compare: this row player \"Jaylen Waddle\" #63 source=hobbymonitor-2026-09-04 setKey=panini-contenders; the destination hiq:football:2024:panini-contenders:63:printing-plate:no-auto:num-1 is held by \"Braelon Allen\" source=hobbymonitor-2026-09-04 setKey=panini-contenders-optic. Two sources disagree on who holds #63, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT)."
     },
     {
       "id": "hiq:football:2025:panini-contenders:2:gold:auto:num-10",
-      "action": "reslug",
-      "to": "hiq:football:2024:panini-contenders:2:gold:auto:num-10",
-      "reason": "#1925 H1: setName \"2024 Panini Contenders Football\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"Justin Jefferson\" #2; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-N address — a row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09 via the lane's own occupancy compare: this row player \"Justin Jefferson\" #2 source=hobbymonitor-2026-09-04 setKey=panini-contenders; the destination hiq:football:2024:panini-contenders:2:gold:auto:num-10 is held by \"Anthony Richardson\" source=hobbymonitor-2026-09-04 setKey=panini-contenders-optic. Two sources disagree on who holds #2, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT)."
     },
     {
       "id": "hiq:football:2025:panini-contenders:101:divisional-ticket:auto:num-99",
@@ -3012,10 +2982,9 @@
     },
     {
       "id": "hiq:football:2025:panini-contenders:5:printing-plate:auto:num-1",
-      "action": "reslug",
-      "to": "hiq:football:2024:panini-contenders:5:printing-plate:auto:num-1",
-      "reason": "#1925 H1: setName \"2024 Panini Contenders Football\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"DeVonta Smith\" #5; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-N address — a row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09 via the lane's own occupancy compare: this row player \"DeVonta Smith\" #5 source=hobbymonitor-2026-09-04 setKey=panini-contenders; the destination hiq:football:2024:panini-contenders:5:printing-plate:auto:num-1 is held by \"Marv Levy\" source=hobbymonitor-2026-09-04 setKey=panini-contenders-optic. Two sources disagree on who holds #5, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT)."
     },
     {
       "id": "hiq:football:2025:panini-contenders:81:game-ticket-gold:no-auto:num-10",
@@ -3131,10 +3100,9 @@
     },
     {
       "id": "hiq:football:2025:panini-contenders:6:base:auto",
-      "action": "reslug",
-      "to": "hiq:football:2024:panini-contenders:6:base:auto",
-      "reason": "#1925 H1: setName \"2024 Panini Contenders Football\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"Gervon Dexter Sr.\" #6; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-N address — a row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09 via the lane's own occupancy compare: this row player \"Gervon Dexter Sr.\" #6 source=hobbymonitor-2026-09-04 setKey=panini-contenders; the destination hiq:football:2024:panini-contenders:6:base:auto is held by \"Rome Odunze\" source=hobbymonitor-2026-09-04 setKey=panini-contenders-optic. Two sources disagree on who holds #6, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT)."
     },
     {
       "id": "hiq:football:2025:panini-contenders:140:base:auto",
@@ -3530,17 +3498,15 @@
     },
     {
       "id": "hiq:football:2025:panini-contenders:97:printing-plate:no-auto:num-1",
-      "action": "reslug",
-      "to": "hiq:football:2024:panini-contenders:97:printing-plate:no-auto:num-1",
-      "reason": "#1925 H1: setName \"2024 Panini Contenders Football\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"DeAndre Hopkins\" #97; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-N address — a row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09 via the lane's own occupancy compare: this row player \"DeAndre Hopkins\" #97 source=hobbymonitor-2026-09-04 setKey=panini-contenders; the destination hiq:football:2024:panini-contenders:97:printing-plate:no-auto:num-1 is held by \"Troy Franklin\" source=hobbymonitor-2026-09-04 setKey=panini-contenders-optic. Two sources disagree on who holds #97, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT)."
     },
     {
       "id": "hiq:football:2025:panini-contenders:53:printing-plate:no-auto:num-1",
-      "action": "reslug",
-      "to": "hiq:football:2024:panini-contenders:53:printing-plate:no-auto:num-1",
-      "reason": "#1925 H1: setName \"2024 Panini Contenders Football\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"Gardner Minshew II\" #53; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-N address — a row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09 via the lane's own occupancy compare: this row player \"Gardner Minshew II\" #53 source=hobbymonitor-2026-09-04 setKey=panini-contenders; the destination hiq:football:2024:panini-contenders:53:printing-plate:no-auto:num-1 is held by \"Mike Evans\" source=hobbymonitor-2026-09-04 setKey=panini-contenders-optic. Two sources disagree on who holds #53, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT)."
     },
     {
       "id": "hiq:football:2025:panini-contenders:13:playoff-ticket-149-or-49:auto",
@@ -3572,10 +3538,9 @@
     },
     {
       "id": "hiq:football:2025:panini-contenders:60:printing-plate:no-auto:num-1",
-      "action": "reslug",
-      "to": "hiq:football:2024:panini-contenders:60:printing-plate:no-auto:num-1",
-      "reason": "#1925 H1: setName \"2024 Panini Contenders Football\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"Kyren Williams\" #60; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-N address — a row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09 via the lane's own occupancy compare: this row player \"Kyren Williams\" #60 source=hobbymonitor-2026-09-04 setKey=panini-contenders; the destination hiq:football:2024:panini-contenders:60:printing-plate:no-auto:num-1 is held by \"Audric Estime\" source=hobbymonitor-2026-09-04 setKey=panini-contenders-optic. Two sources disagree on who holds #60, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT)."
     },
     {
       "id": "hiq:football:2025:panini-contenders:132:playoff-ticket:auto:num-149",
@@ -3607,10 +3572,9 @@
     },
     {
       "id": "hiq:football:2025:panini-contenders:67:printing-plate:no-auto:num-1",
-      "action": "reslug",
-      "to": "hiq:football:2024:panini-contenders:67:printing-plate:no-auto:num-1",
-      "reason": "#1925 H1: setName \"2024 Panini Contenders Football\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"Jacoby Brissett\" #67; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-N address — a row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09 via the lane's own occupancy compare: this row player \"Jacoby Brissett\" #67 source=hobbymonitor-2026-09-04 setKey=panini-contenders; the destination hiq:football:2024:panini-contenders:67:printing-plate:no-auto:num-1 is held by \"Bucky Irving\" source=hobbymonitor-2026-09-04 setKey=panini-contenders-optic. Two sources disagree on who holds #67, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT)."
     },
     {
       "id": "hiq:football:2025:panini-contenders:70:game-ticket-green:no-auto:num-175",
@@ -3649,10 +3613,9 @@
     },
     {
       "id": "hiq:football:2025:panini-contenders:72:printing-plate:no-auto:num-1",
-      "action": "reslug",
-      "to": "hiq:football:2024:panini-contenders:72:printing-plate:no-auto:num-1",
-      "reason": "#1925 H1: setName \"2024 Panini Contenders Football\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"Derek Carr\" #72; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-N address — a row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09 via the lane's own occupancy compare: this row player \"Derek Carr\" #72 source=hobbymonitor-2026-09-04 setKey=panini-contenders; the destination hiq:football:2024:panini-contenders:72:printing-plate:no-auto:num-1 is held by \"Jalen McMillan\" source=hobbymonitor-2026-09-04 setKey=panini-contenders-optic. Two sources disagree on who holds #72, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT)."
     },
     {
       "id": "hiq:football:2025:panini-contenders:71:game-ticket-gold:no-auto:num-10",
@@ -3747,10 +3710,9 @@
     },
     {
       "id": "hiq:football:2025:panini-contenders:83:printing-plate:no-auto:num-1",
-      "action": "reslug",
-      "to": "hiq:football:2024:panini-contenders:83:printing-plate:no-auto:num-1",
-      "reason": "#1925 H1: setName \"2024 Panini Contenders Football\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"T.J. Watt\" #83; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-N address — a row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09 via the lane's own occupancy compare: this row player \"T.J. Watt\" #83 source=hobbymonitor-2026-09-04 setKey=panini-contenders; the destination hiq:football:2024:panini-contenders:83:printing-plate:no-auto:num-1 is held by \"Laiatu Latu\" source=hobbymonitor-2026-09-04 setKey=panini-contenders-optic. Two sources disagree on who holds #83, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT)."
     },
     {
       "id": "hiq:football:2025:panini-contenders:84:red-zone-ticket-fotl:no-auto:num-49",
@@ -3915,17 +3877,15 @@
     },
     {
       "id": "hiq:football:2025:panini-contenders:7:base:auto",
-      "action": "reslug",
-      "to": "hiq:football:2024:panini-contenders:7:base:auto",
-      "reason": "#1925 H1: setName \"2024 Panini Contenders Football\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"Michael Wilson\" #7; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-N address — a row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09 via the lane's own occupancy compare: this row player \"Michael Wilson\" #7 source=hobbymonitor-2026-09-04 setKey=panini-contenders; the destination hiq:football:2024:panini-contenders:7:base:auto is held by \"Jamal Anderson\" source=hobbymonitor-2026-09-04 setKey=panini-contenders-optic. Two sources disagree on who holds #7, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT)."
     },
     {
       "id": "hiq:football:2025:panini-contenders:4:base:auto",
-      "action": "reslug",
-      "to": "hiq:football:2024:panini-contenders:4:base:auto",
-      "reason": "#1925 H1: setName \"2024 Panini Contenders Football\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"Clayton Tune\" #4; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-N address — a row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09 via the lane's own occupancy compare: this row player \"Clayton Tune\" #4 source=hobbymonitor-2026-09-04 setKey=panini-contenders; the destination hiq:football:2024:panini-contenders:4:base:auto is held by \"Xavier Legette\" source=hobbymonitor-2026-09-04 setKey=panini-contenders-optic. Two sources disagree on who holds #4, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT)."
     },
     {
       "id": "hiq:football:2025:panini-contenders:151:base:auto",
@@ -3936,10 +3896,9 @@
     },
     {
       "id": "hiq:football:2025:panini-contenders:22:base:auto",
-      "action": "reslug",
-      "to": "hiq:football:2024:panini-contenders:22:base:auto",
-      "reason": "#1925 H1: setName \"2024 Panini Contenders Football\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"Adonai Mitchell\" #22; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-N address — a row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09 via the lane's own occupancy compare: this row player \"Adonai Mitchell\" #22 source=hobbymonitor-2026-09-04 setKey=panini-contenders; the destination hiq:football:2024:panini-contenders:22:base:auto is held by \"Kellen Winslow\" source=hobbymonitor-2026-09-04 setKey=panini-contenders-optic. Two sources disagree on who holds #22, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT)."
     },
     {
       "id": "hiq:football:2025:panini-contenders:260:base:auto",
@@ -3957,10 +3916,9 @@
     },
     {
       "id": "hiq:football:2025:panini-contenders:176:base:auto",
-      "action": "reslug",
-      "to": "hiq:football:2024:panini-contenders:176:base:auto",
-      "reason": "#1925 H1: setName \"2024 Panini Contenders Football\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"Isaiah Davis\" #176; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-N address — a row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09 via the lane's own occupancy compare: this row player \"Isaiah Davis\" #176 source=hobbymonitor-2026-09-04 setKey=panini-contenders; the destination hiq:football:2024:panini-contenders:176:base:auto is held by \"Ramel Keyton\" source=hobbymonitor-2026-09-04 setKey=panini-contenders-optic. Two sources disagree on who holds #176, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT)."
     },
     {
       "id": "hiq:football:2025:panini-contenders:1:game-ticket-green:no-auto:num-175",
@@ -4006,10 +3964,9 @@
     },
     {
       "id": "hiq:football:2025:panini-contenders:9:printing-plate:no-auto:num-1",
-      "action": "reslug",
-      "to": "hiq:football:2024:panini-contenders:9:printing-plate:no-auto:num-1",
-      "reason": "#1925 H1: setName \"2024 Panini Contenders Football\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"Derrick Henry\" #9; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-N address — a row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09 via the lane's own occupancy compare: this row player \"Derrick Henry\" #9 source=hobbymonitor-2026-09-04 setKey=panini-contenders; the destination hiq:football:2024:panini-contenders:9:printing-plate:no-auto:num-1 is held by \"DJ Moore\" source=hobbymonitor-2026-09-04 setKey=panini-contenders-optic. Two sources disagree on who holds #9, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT)."
     },
     {
       "id": "hiq:football:2025:panini-contenders:7:goal-line-ticket-fotl:no-auto:num-5",
@@ -4286,10 +4243,9 @@
     },
     {
       "id": "hiq:football:2025:panini-contenders:48:printing-plate:no-auto:num-1",
-      "action": "reslug",
-      "to": "hiq:football:2024:panini-contenders:48:printing-plate:no-auto:num-1",
-      "reason": "#1925 H1: setName \"2024 Panini Contenders Football\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"Travis Kelce\" #48; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-N address — a row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09 via the lane's own occupancy compare: this row player \"Travis Kelce\" #48 source=hobbymonitor-2026-09-04 setKey=panini-contenders; the destination hiq:football:2024:panini-contenders:48:printing-plate:no-auto:num-1 is held by \"Brock Purdy\" source=hobbymonitor-2026-09-04 setKey=panini-contenders-optic. Two sources disagree on who holds #48, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT)."
     },
     {
       "id": "hiq:football:2025:panini-contenders:51:game-ticket-red:no-auto",
@@ -4335,10 +4291,9 @@
     },
     {
       "id": "hiq:football:2025:panini-contenders:56:printing-plate:no-auto:num-1",
-      "action": "reslug",
-      "to": "hiq:football:2024:panini-contenders:56:printing-plate:no-auto:num-1",
-      "reason": "#1925 H1: setName \"2024 Panini Contenders Football\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"Josh Palmer\" #56; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-N address — a row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09 via the lane's own occupancy compare: this row player \"Josh Palmer\" #56 source=hobbymonitor-2026-09-04 setKey=panini-contenders; the destination hiq:football:2024:panini-contenders:56:printing-plate:no-auto:num-1 is held by \"Austin Ekeler\" source=hobbymonitor-2026-09-04 setKey=panini-contenders-optic. Two sources disagree on who holds #56, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT)."
     },
     {
       "id": "hiq:football:2025:panini-contenders:56:super-bowl-ticket:no-auto:num-1",
@@ -4370,10 +4325,9 @@
     },
     {
       "id": "hiq:football:2025:panini-contenders:62:printing-plate:no-auto:num-1",
-      "action": "reslug",
-      "to": "hiq:football:2024:panini-contenders:62:printing-plate:no-auto:num-1",
-      "reason": "#1925 H1: setName \"2024 Panini Contenders Football\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"Tyreek Hill\" #62; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-N address — a row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09 via the lane's own occupancy compare: this row player \"Tyreek Hill\" #62 source=hobbymonitor-2026-09-04 setKey=panini-contenders; the destination hiq:football:2024:panini-contenders:62:printing-plate:no-auto:num-1 is held by \"Bo Nix\" source=hobbymonitor-2026-09-04 setKey=panini-contenders-optic. Two sources disagree on who holds #62, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT)."
     },
     {
       "id": "hiq:football:2025:panini-contenders:61:game-ticket-orange:no-auto",
@@ -4503,10 +4457,9 @@
     },
     {
       "id": "hiq:football:2025:panini-contenders:71:printing-plate:no-auto:num-1",
-      "action": "reslug",
-      "to": "hiq:football:2024:panini-contenders:71:printing-plate:no-auto:num-1",
-      "reason": "#1925 H1: setName \"2024 Panini Contenders Football\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"Alvin Kamara\" #71; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-N address — a row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09 via the lane's own occupancy compare: this row player \"Alvin Kamara\" #71 source=hobbymonitor-2026-09-04 setKey=panini-contenders; the destination hiq:football:2024:panini-contenders:71:printing-plate:no-auto:num-1 is held by \"J.J. McCarthy\" source=hobbymonitor-2026-09-04 setKey=panini-contenders-optic. Two sources disagree on who holds #71, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT)."
     },
     {
       "id": "hiq:football:2025:panini-contenders:73:game-ticket-green:no-auto:num-175",
@@ -4706,17 +4659,15 @@
     },
     {
       "id": "hiq:football:2025:panini-contenders:194:base:auto",
-      "action": "reslug",
-      "to": "hiq:football:2024:panini-contenders:194:base:auto",
-      "reason": "#1925 H1: setName \"2024 Panini Contenders Football\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"Darius Robinson\" #194; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-N address — a row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09 via the lane's own occupancy compare: this row player \"Darius Robinson\" #194 source=hobbymonitor-2026-09-04 setKey=panini-contenders; the destination hiq:football:2024:panini-contenders:194:base:auto is held by \"Evan Williams\" source=hobbymonitor-2026-09-04 setKey=panini-contenders-optic. Two sources disagree on who holds #194, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT)."
     },
     {
       "id": "hiq:football:2025:panini-contenders:21:base:auto",
-      "action": "reslug",
-      "to": "hiq:football:2024:panini-contenders:21:base:auto",
-      "reason": "#1925 H1: setName \"2024 Panini Contenders Football\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"Jonathon Brooks\" #21; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-N address — a row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09 via the lane's own occupancy compare: this row player \"Jonathon Brooks\" #21 source=hobbymonitor-2026-09-04 setKey=panini-contenders; the destination hiq:football:2024:panini-contenders:21:base:auto is held by \"Jermaine Burton\" source=hobbymonitor-2026-09-04 setKey=panini-contenders-optic. Two sources disagree on who holds #21, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT)."
     },
     {
       "id": "hiq:football:2025:panini-contenders:135:base:auto",
@@ -4734,10 +4685,9 @@
     },
     {
       "id": "hiq:football:2025:panini-contenders:147:base:auto",
-      "action": "reslug",
-      "to": "hiq:football:2024:panini-contenders:147:base:auto",
-      "reason": "#1925 H1: setName \"2024 Panini Contenders Football\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"Jared Verse\" #147; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-N address — a row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09 via the lane's own occupancy compare: this row player \"Jared Verse\" #147 source=hobbymonitor-2026-09-04 setKey=panini-contenders; the destination hiq:football:2024:panini-contenders:147:base:auto is held by \"Sam Hartman\" source=hobbymonitor-2026-09-04 setKey=panini-contenders-optic. Two sources disagree on who holds #147, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT)."
     },
     {
       "id": "hiq:football:2025:panini-contenders:268:base:auto",
@@ -4755,17 +4705,15 @@
     },
     {
       "id": "hiq:football:2025:panini-contenders:182:base:auto",
-      "action": "reslug",
-      "to": "hiq:football:2024:panini-contenders:182:base:auto",
-      "reason": "#1925 H1: setName \"2024 Panini Contenders Football\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"Graham Barton\" #182; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-N address — a row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09 via the lane's own occupancy compare: this row player \"Graham Barton\" #182 source=hobbymonitor-2026-09-04 setKey=panini-contenders; the destination hiq:football:2024:panini-contenders:182:base:auto is held by \"Dallin Holker\" source=hobbymonitor-2026-09-04 setKey=panini-contenders-optic. Two sources disagree on who holds #182, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT)."
     },
     {
       "id": "hiq:football:2025:panini-contenders:148:base:auto",
-      "action": "reslug",
-      "to": "hiq:football:2024:panini-contenders:148:base:auto",
-      "reason": "#1925 H1: setName \"2024 Panini Contenders Football\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"Sam Hartman\" #148; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-N address — a row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09 via the lane's own occupancy compare: this row player \"Sam Hartman\" #148 source=hobbymonitor-2026-09-04 setKey=panini-contenders; the destination hiq:football:2024:panini-contenders:148:base:auto is held by \"Nate Wiggins\" source=hobbymonitor-2026-09-04 setKey=panini-contenders-optic. Two sources disagree on who holds #148, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT)."
     },
     {
       "id": "hiq:football:2025:panini-contenders:1:playoff-ticket:no-auto:num-199",
@@ -4811,10 +4759,9 @@
     },
     {
       "id": "hiq:football:2025:panini-contenders:12:printing-plate:no-auto:num-1",
-      "action": "reslug",
-      "to": "hiq:football:2024:panini-contenders:12:printing-plate:no-auto:num-1",
-      "reason": "#1925 H1: setName \"2024 Panini Contenders Football\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"Dalton Kincaid\" #12; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-N address — a row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09 via the lane's own occupancy compare: this row player \"Dalton Kincaid\" #12 source=hobbymonitor-2026-09-04 setKey=panini-contenders; the destination hiq:football:2024:panini-contenders:12:printing-plate:no-auto:num-1 is held by \"Myles Garrett\" source=hobbymonitor-2026-09-04 setKey=panini-contenders-optic. Two sources disagree on who holds #12, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT)."
     },
     {
       "id": "hiq:football:2025:panini-contenders:12:super-bowl-ticket:no-auto:num-1",
@@ -5252,10 +5199,9 @@
     },
     {
       "id": "hiq:football:2025:panini-contenders:1:prime:no-auto:num-25",
-      "action": "reslug",
-      "to": "hiq:football:2024:panini-contenders:1:prime:no-auto:num-25",
-      "reason": "#1925 H1: setName \"2024 Panini Contenders Football\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"Malachi Corley\" #1; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-N address — a row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09 via the lane's own occupancy compare: this row player \"Malachi Corley\" #1 source=hobbymonitor-2026-09-04 setKey=panini-contenders; the destination hiq:football:2024:panini-contenders:1:prime:no-auto:num-25 is held by \"Jordan Travis\" source=checklistcenter-2026-09-06 setKey=panini-contenders-nfl. Two sources disagree on who holds #1, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT)."
     },
     {
       "id": "hiq:football:2025:panini-contenders:5:goal-line-ticket-fotl:auto:num-5",
@@ -5483,17 +5429,15 @@
     },
     {
       "id": "hiq:football:2025:panini-contenders:158:base:auto",
-      "action": "reslug",
-      "to": "hiq:football:2024:panini-contenders:158:base:auto",
-      "reason": "#1925 H1: setName \"2024 Panini Contenders Football\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"Xavier Weaver\" #158; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-N address — a row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09 via the lane's own occupancy compare: this row player \"Xavier Weaver\" #158 source=hobbymonitor-2026-09-04 setKey=panini-contenders; the destination hiq:football:2024:panini-contenders:158:base:auto is held by \"Austin Reed\" source=hobbymonitor-2026-09-04 setKey=panini-contenders-optic. Two sources disagree on who holds #158, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT)."
     },
     {
       "id": "hiq:football:2025:panini-contenders:160:base:auto",
-      "action": "reslug",
-      "to": "hiq:football:2024:panini-contenders:160:base:auto",
-      "reason": "#1925 H1: setName \"2024 Panini Contenders Football\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"Austin Reed\" #160; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-N address — a row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09 via the lane's own occupancy compare: this row player \"Austin Reed\" #160 source=hobbymonitor-2026-09-04 setKey=panini-contenders; the destination hiq:football:2024:panini-contenders:160:base:auto is held by \"Keilan Robinson\" source=hobbymonitor-2026-09-04 setKey=panini-contenders-optic. Two sources disagree on who holds #160, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT)."
     },
     {
       "id": "hiq:football:2025:panini-contenders:138:base:auto",
@@ -5504,10 +5448,9 @@
     },
     {
       "id": "hiq:football:2025:panini-contenders:202:base:auto",
-      "action": "reslug",
-      "to": "hiq:football:2024:panini-contenders:202:base:auto",
-      "reason": "#1925 H1: setName \"2024 Panini Contenders Football\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"Chris Braswell\" #202; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-N address — a row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09 via the lane's own occupancy compare: this row player \"Chris Braswell\" #202 source=hobbymonitor-2026-09-04 setKey=panini-contenders; the destination hiq:football:2024:panini-contenders:202:base:auto is held by \"Caelen Carson\" source=hobbymonitor-2026-09-04 setKey=panini-contenders-optic. Two sources disagree on who holds #202, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT)."
     },
     {
       "id": "hiq:football:2025:panini-contenders:210:base:auto",
@@ -6085,10 +6028,9 @@
     },
     {
       "id": "hiq:football:2025:panini-contenders:10:gold:auto:num-10",
-      "action": "reslug",
-      "to": "hiq:football:2024:panini-contenders:10:gold:auto:num-10",
-      "reason": "#1925 H1: setName \"2024 Panini Contenders Football\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"Brock Purdy\" #10; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-N address — a row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09 via the lane's own occupancy compare: this row player \"Brock Purdy\" #10 source=hobbymonitor-2026-09-04 setKey=panini-contenders; the destination hiq:football:2024:panini-contenders:10:gold:auto:num-10 is held by \"Jimbo Covert\" source=checklistcenter-2026-09-05 setKey=panini-contenders-optic. Two sources disagree on who holds #10, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT)."
     },
     {
       "id": "hiq:football:2025:panini-contenders:85:divisional-ticket:no-auto:num-149",
@@ -6197,10 +6139,9 @@
     },
     {
       "id": "hiq:football:2025:panini-contenders:24:base:auto",
-      "action": "reslug",
-      "to": "hiq:football:2024:panini-contenders:24:base:auto",
-      "reason": "#1925 H1: setName \"2024 Panini Contenders Football\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"Ladd McConkey\" #24; destination read as vacant 2026-09-07; 1 sale(s) rest here and STAY — they are the 2025 card's"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-N address — a row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09 via the lane's own occupancy compare: this row player \"Ladd McConkey\" #24 source=hobbymonitor-2026-09-04 setKey=panini-contenders; the destination hiq:football:2024:panini-contenders:24:base:auto is held by \"Jimbo Covert\" source=hobbymonitor-2026-09-04 setKey=panini-contenders-optic. Two sources disagree on who holds #24, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT)."
     },
     {
       "id": "hiq:football:2025:panini-contenders:106:base:auto",
@@ -6225,10 +6166,9 @@
     },
     {
       "id": "hiq:football:2025:panini-contenders:195:base:auto",
-      "action": "reslug",
-      "to": "hiq:football:2024:panini-contenders:195:base:auto",
-      "reason": "#1925 H1: setName \"2024 Panini Contenders Football\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"Jer'Zhan Newton\" #195; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-N address — a row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09 via the lane's own occupancy compare: this row player \"Jer'Zhan Newton\" #195 source=hobbymonitor-2026-09-04 setKey=panini-contenders; the destination hiq:football:2024:panini-contenders:195:base:auto is held by \"Fabien Lovett\" source=hobbymonitor-2026-09-04 setKey=panini-contenders-optic. Two sources disagree on who holds #195, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT)."
     },
     {
       "id": "hiq:football:2025:panini-contenders:1:goal-line-ticket-fotl:no-auto:num-5",
@@ -6309,17 +6249,15 @@
     },
     {
       "id": "hiq:football:2025:panini-contenders:8:printing-plate:no-auto:num-1",
-      "action": "reslug",
-      "to": "hiq:football:2024:panini-contenders:8:printing-plate:no-auto:num-1",
-      "reason": "#1925 H1: setName \"2024 Panini Contenders Football\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"Zay Flowers\" #8; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-N address — a row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09 via the lane's own occupancy compare: this row player \"Zay Flowers\" #8 source=hobbymonitor-2026-09-04 setKey=panini-contenders; the destination hiq:football:2024:panini-contenders:8:printing-plate:no-auto:num-1 is held by \"D'Andre Swift\" source=hobbymonitor-2026-09-04 setKey=panini-contenders-optic. Two sources disagree on who holds #8, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT)."
     },
     {
       "id": "hiq:football:2025:panini-contenders:11:printing-plate:no-auto:num-1",
-      "action": "reslug",
-      "to": "hiq:football:2024:panini-contenders:11:printing-plate:no-auto:num-1",
-      "reason": "#1925 H1: setName \"2024 Panini Contenders Football\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"Josh Allen\" #11; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-N address — a row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09 via the lane's own occupancy compare: this row player \"Josh Allen\" #11 source=hobbymonitor-2026-09-04 setKey=panini-contenders; the destination hiq:football:2024:panini-contenders:11:printing-plate:no-auto:num-1 is held by \"Ja'Marr Chase\" source=hobbymonitor-2026-09-04 setKey=panini-contenders-optic. Two sources disagree on who holds #11, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT)."
     },
     {
       "id": "hiq:football:2025:panini-contenders:22:goal-line-ticket-fotl:no-auto:num-5",
@@ -6351,10 +6289,9 @@
     },
     {
       "id": "hiq:football:2025:panini-contenders:13:printing-plate:no-auto:num-1",
-      "action": "reslug",
-      "to": "hiq:football:2024:panini-contenders:13:printing-plate:no-auto:num-1",
-      "reason": "#1925 H1: setName \"2024 Panini Contenders Football\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"Josey Jewell\" #13; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-N address — a row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09 via the lane's own occupancy compare: this row player \"Josey Jewell\" #13 source=hobbymonitor-2026-09-04 setKey=panini-contenders; the destination hiq:football:2024:panini-contenders:13:printing-plate:no-auto:num-1 is held by \"Nick Chubb\" source=hobbymonitor-2026-09-04 setKey=panini-contenders-optic. Two sources disagree on who holds #13, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT)."
     },
     {
       "id": "hiq:football:2025:panini-contenders:13:super-bowl-ticket:no-auto:num-1",
@@ -6421,10 +6358,9 @@
     },
     {
       "id": "hiq:football:2025:panini-contenders:4:gold:auto:num-10",
-      "action": "reslug",
-      "to": "hiq:football:2024:panini-contenders:4:gold:auto:num-10",
-      "reason": "#1925 H1: setName \"2024 Panini Contenders Football\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"Myles Garrett\" #4; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-N address — a row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09 via the lane's own occupancy compare: this row player \"Myles Garrett\" #4 source=hobbymonitor-2026-09-04 setKey=panini-contenders; the destination hiq:football:2024:panini-contenders:4:gold:auto:num-10 is held by \"Nico Collins\" source=hobbymonitor-2026-09-04 setKey=panini-contenders-optic. Two sources disagree on who holds #4, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT)."
     },
     {
       "id": "hiq:football:2025:panini-contenders:1:conference-ticket:auto:num-75",
@@ -6442,10 +6378,9 @@
     },
     {
       "id": "hiq:football:2025:panini-contenders:1:printing-plate:auto:num-1",
-      "action": "reslug",
-      "to": "hiq:football:2024:panini-contenders:1:printing-plate:auto:num-1",
-      "reason": "#1925 H1: setName \"2024 Panini Contenders Football\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"Myles Garrett\" #1; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-N address — a row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09 via the lane's own occupancy compare: this row player \"Myles Garrett\" #1 source=hobbymonitor-2026-09-04 setKey=panini-contenders; the destination hiq:football:2024:panini-contenders:1:printing-plate:auto:num-1 is held by \"Andy Reid\" source=hobbymonitor-2026-09-04 setKey=panini-contenders-optic. Two sources disagree on who holds #1, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT)."
     },
     {
       "id": "hiq:football:2025:panini-contenders:27:conference-ticket:no-auto:num-99",
@@ -6757,10 +6692,9 @@
     },
     {
       "id": "hiq:football:2025:panini-contenders:75:printing-plate:no-auto:num-1",
-      "action": "reslug",
-      "to": "hiq:football:2024:panini-contenders:75:printing-plate:no-auto:num-1",
-      "reason": "#1925 H1: setName \"2024 Panini Contenders Football\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"Darius Slayton\" #75; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-N address — a row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09 via the lane's own occupancy compare: this row player \"Darius Slayton\" #75 source=hobbymonitor-2026-09-04 setKey=panini-contenders; the destination hiq:football:2024:panini-contenders:75:printing-plate:no-auto:num-1 is held by \"Jayden Daniels\" source=hobbymonitor-2026-09-04 setKey=panini-contenders-optic. Two sources disagree on who holds #75, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT)."
     },
     {
       "id": "hiq:football:2025:panini-contenders:73:playoff-ticket:no-auto:num-199",
