@@ -1,0 +1,1765 @@
+{
+ "generatedAt": "2026-09-09T15:38:42.000000Z",
+ "forLane": "relocate-catalog-rows-by-list",
+ "reportOnlyUntil": "Drew's review - no apply is authorized by this PR",
+ "finding": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER (#2023, Drew 2026-09-09). baseballcardpedia nests card rosters inside the Parallels section as <h3>/<h4> SUBSECTIONS, and the ladder reader's heading loop -- unlike its <li> loop, which has refused card lines since D33 -- never asked whether a heading was a card line. BCP builds a heading id by replacing spaces with underscores, so \"BDP175_Colby_Rasmus_AU_RC\" detagged to \"BDP175 Colby Rasmus AU RC\" and became a PARALLEL of every base card on the page. These 2251 rows on 1996 sportflix carry 32 distinct such parallels: the row's \"parallel\" names ANOTHER CARD, often another player entirely (a Verlander BDP129 row whose parallel is \"BDP175 Colby Rasmus AU RC\"). A row whose parallel is another card is not a card and has no address, so it is RETIRED rather than repointed -- there is no correct destination to guess, and guessing one is what \"one card, one row, one pool\" forbids. Sales: measured read-only 2026-09-09, the whole 57,803-row population carries ONE sale, so keepSales:true leaves it for the GREAT REMATCH to re-place from the sale title rather than onto a guessed address. Every row is from the LEGACY baseballcardpedia / baseballcardpedia-graded scrapes; the census confirmed ZERO rows from any baseballcardpedia-ladders-* source, and the reader fix in this PR closes the hole so the next scrape cannot recreate them. LIST 2 of 2 for this product (<=2,000 entries per list, the measured runner budget at 1.826 s/row).",
+ "entries": [
+  {
+   "id": "hiq:baseball:1996:sportflix:102:2-chris-snopek:no-auto:bgs-10-black",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"2 Chris Snopek\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"102\", playerName=\"Mike Piazza\", parallel=\"2 Chris Snopek\", source=baseballcardpedia-graded, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:109:16-barry-bond:no-auto:raw",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"16 Barry Bond\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"109\", playerName=\"Ruben Rivera\", parallel=\"16 Barry Bond\", source=baseballcardpedia-graded, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:128:24-jay-buhner:no-auto:psa-10",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"24 Jay Buhner\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"128\", playerName=\"Chan Ho Park\", parallel=\"24 Jay Buhner\", source=baseballcardpedia-graded, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:2:3-frank-thoma:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"3 Frank Thoma\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"2\", playerName=\"Roberto Alomar / Craig Biggio\", parallel=\"3 Frank Thoma\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:16:9-mo-vaughn:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"9 Mo Vaughn\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"16\", playerName=\"Barry Bonds\", parallel=\"9 Mo Vaughn\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:19:22-johnny-damon:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"22 Johnny Damon\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"19\", playerName=\"Ruben Rivera\", parallel=\"22 Johnny Damon\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:20:20-matt-william:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"20 Matt William\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"20\", playerName=\"Garret Anderson\", parallel=\"20 Matt William\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:20:8-sammy-sosa:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"8 Sammy Sosa\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"20\", playerName=\"Garret Anderson\", parallel=\"8 Sammy Sosa\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:21:2-ken-griffey,-jr.:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"2 Ken Griffey, Jr.\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"21\", playerName=\"Mark McGwire\", parallel=\"2 Ken Griffey, Jr.\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:21:16-barry-bond:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"16 Barry Bond\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"21\", playerName=\"Mark McGwire\", parallel=\"16 Barry Bond\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:23:13-ruben-rivera:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"13 Ruben Rivera\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"23\", playerName=\"Eddie Murray\", parallel=\"13 Ruben Rivera\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:31:6-derek-jeter:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"6 Derek Jeter\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"31\", playerName=\"Mo Vaughn\", parallel=\"6 Derek Jeter\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:33:7-howard-battle:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"7 Howard Battle\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"33\", playerName=\"Marc Newfield\", parallel=\"7 Howard Battle\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:41:24-jay-buhner:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"24 Jay Buhner\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"41\", playerName=\"Eric Karros\", parallel=\"24 Jay Buhner\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:41:3-tony-clark:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"3 Tony Clark\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"41\", playerName=\"Eric Karros\", parallel=\"3 Tony Clark\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:45:3-frank-thoma:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"3 Frank Thoma\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"45\", playerName=\"Gary Sheffield\", parallel=\"3 Frank Thoma\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:45:13-ruben-rivera:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"13 Ruben Rivera\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"45\", playerName=\"Gary Sheffield\", parallel=\"13 Ruben Rivera\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:46:21-mark-mcgwire:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"21 Mark McGwire\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"46\", playerName=\"Chili Davis\", parallel=\"21 Mark McGwire\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:51:6-derek-jeter:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"6 Derek Jeter\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"51\", playerName=\"Randy Johnson\", parallel=\"6 Derek Jeter\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:53:7-dante-bichette:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"7 Dante Bichette\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"53\", playerName=\"Ozzie Smith\", parallel=\"7 Dante Bichette\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:55:2-chris-snopek:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"2 Chris Snopek\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"55\", playerName=\"Cecil Fielder\", parallel=\"2 Chris Snopek\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:68:13-ruben-rivera:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"13 Ruben Rivera\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"68\", playerName=\"Travis Fryman\", parallel=\"13 Ruben Rivera\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:73:4-todd-hollandsworth:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"4 Todd Hollandsworth\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"73\", playerName=\"Roberto Alomar\", parallel=\"4 Todd Hollandsworth\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:79:1-chipper-jone:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"1 Chipper Jone\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"79\", playerName=\"Robin Ventura\", parallel=\"1 Chipper Jone\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:84:22-johnny-damon:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"22 Johnny Damon\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"84\", playerName=\"Tino Martinez\", parallel=\"22 Johnny Damon\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:86:15-edgar-martinez:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"15 Edgar Martinez\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"86\", playerName=\"Pete Schourek\", parallel=\"15 Edgar Martinez\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:89:22-johnny-damon:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"22 Johnny Damon\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"89\", playerName=\"Darren Daulton\", parallel=\"22 Johnny Damon\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:94:11-reggie-sander:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"11 Reggie Sander\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"94\", playerName=\"Jose Canseco\", parallel=\"11 Reggie Sander\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:101:20-matt-william:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"20 Matt William\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"101\", playerName=\"Albert Belle\", parallel=\"20 Matt William\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:104:6-mike-piazza:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"6 Mike Piazza\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"104\", playerName=\"Sammy Sosa\", parallel=\"6 Mike Piazza\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:103:1-jason-schmidt:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"1 Jason Schmidt\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"103\", playerName=\"Dante Bichette\", parallel=\"1 Jason Schmidt\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:107:6-derek-jeter:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"6 Derek Jeter\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"107\", playerName=\"Reggie Sanders\", parallel=\"6 Derek Jeter\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:112:2-ken-griffey,-jr.:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"2 Ken Griffey, Jr.\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"112\", playerName=\"Barry Bonds\", parallel=\"2 Ken Griffey, Jr.\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:113:8-sammy-sosa:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"8 Sammy Sosa\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"113\", playerName=\"Manny Ramirez\", parallel=\"8 Sammy Sosa\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:115:7-dante-bichette:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"7 Dante Bichette\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"115\", playerName=\"Jeff Bagwell\", parallel=\"7 Dante Bichette\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:117:11-reggie-sander:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"11 Reggie Sander\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"117\", playerName=\"Mark McGwire\", parallel=\"11 Reggie Sander\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:121:24-jay-buhner:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"24 Jay Buhner\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"121\", playerName=\"Tim Unroe\", parallel=\"24 Jay Buhner\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:126:24-jay-buhner:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"24 Jay Buhner\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"126\", playerName=\"Ruben Rivera\", parallel=\"24 Jay Buhner\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:131:9-mo-vaughn:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"9 Mo Vaughn\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"131\", playerName=\"Yamil Benitez\", parallel=\"9 Mo Vaughn\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:134:2-ken-griffey,-jr.:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"2 Ken Griffey, Jr.\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"134\", playerName=\"Shawn Estes\", parallel=\"2 Ken Griffey, Jr.\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:22:9-mo-vaughn:no-auto:bgs-10-black",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"9 Mo Vaughn\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"22\", playerName=\"Johnny Damon\", parallel=\"9 Mo Vaughn\", source=baseballcardpedia-graded, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:31:13-ruben-rivera:no-auto:bgs-9-5",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"13 Ruben Rivera\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"31\", playerName=\"Mo Vaughn\", parallel=\"13 Ruben Rivera\", source=baseballcardpedia-graded, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:40:20-matt-william:no-auto:bgs-10-black",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"20 Matt William\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"40\", playerName=\"Gary Gaetti\", parallel=\"20 Matt William\", source=baseballcardpedia-graded, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:69:1-chipper-jone:no-auto:cgc-10",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"1 Chipper Jone\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"69\", playerName=\"Pedro Martinez\", parallel=\"1 Chipper Jone\", source=baseballcardpedia-graded, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:100:11-reggie-sander:no-auto:bgs-10",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"11 Reggie Sander\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"100\", playerName=\"Cal Ripken Jr.\", parallel=\"11 Reggie Sander\", source=baseballcardpedia-graded, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:102:2-chris-snopek:no-auto:sgc-10",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"2 Chris Snopek\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"102\", playerName=\"Mike Piazza\", parallel=\"2 Chris Snopek\", source=baseballcardpedia-graded, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:108:19-jeff-bagwell:no-auto:psa-10",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"19 Jeff Bagwell\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"108\", playerName=\"Gary Sheffield\", parallel=\"19 Jeff Bagwell\", source=baseballcardpedia-graded, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:28:5-albert-belle:no-auto:cgc-9-5",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"5 Albert Belle\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"28\", playerName=\"Ryan Klesko\", parallel=\"5 Albert Belle\", source=baseballcardpedia-graded, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:32:4-cal-ripken,-jr.:no-auto:bgs-10",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"4 Cal Ripken, Jr.\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"32\", playerName=\"Rico Brogna\", parallel=\"4 Cal Ripken, Jr.\", source=baseballcardpedia-graded, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:51:16-barry-bond:no-auto:cgc-9-5",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"16 Barry Bond\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"51\", playerName=\"Randy Johnson\", parallel=\"16 Barry Bond\", source=baseballcardpedia-graded, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:56:17-manny-ramirez:no-auto:bgs-10-black",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"17 Manny Ramirez\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"56\", playerName=\"Matt Williams\", parallel=\"17 Manny Ramirez\", source=baseballcardpedia-graded, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:59:13-ruben-rivera:no-auto:bgs-10",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"13 Ruben Rivera\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"59\", playerName=\"Brian L. Hunter\", parallel=\"13 Ruben Rivera\", source=baseballcardpedia-graded, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:65:2-ken-griffey,-jr.:no-auto:bgs-10",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"2 Ken Griffey, Jr.\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"65\", playerName=\"Derek Bell\", parallel=\"2 Ken Griffey, Jr.\", source=baseballcardpedia-graded, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:61:8-bob-wolcott:no-auto:psa-9",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"8 Bob Wolcott\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"61\", playerName=\"Charles Johnson\", parallel=\"8 Bob Wolcott\", source=baseballcardpedia-graded, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:77:8-sammy-sosa:no-auto:bgs-9",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"8 Sammy Sosa\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"77\", playerName=\"Ray Lankford\", parallel=\"8 Sammy Sosa\", source=baseballcardpedia-graded, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:108:19-jeff-bagwell:no-auto:sgc-10",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"19 Jeff Bagwell\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"108\", playerName=\"Gary Sheffield\", parallel=\"19 Jeff Bagwell\", source=baseballcardpedia-graded, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:120:4-cal-ripken,-jr.:no-auto:bgs-9-5",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"4 Cal Ripken, Jr.\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"120\", playerName=\"Jay Buhner\", parallel=\"4 Cal Ripken, Jr.\", source=baseballcardpedia-graded, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:124:24-jay-buhner:no-auto:cgc-10",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"24 Jay Buhner\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"124\", playerName=\"Roger Cedeno\", parallel=\"24 Jay Buhner\", source=baseballcardpedia-graded, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:128:24-jay-buhner:no-auto:cgc-9-5",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"24 Jay Buhner\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"128\", playerName=\"Chan Ho Park\", parallel=\"24 Jay Buhner\", source=baseballcardpedia-graded, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:1:8-sammy-sosa:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"8 Sammy Sosa\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"1\", playerName=\"Cal Ripken Jr. / Barry Larkin\", parallel=\"8 Sammy Sosa\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:6:5-albert-belle:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"5 Albert Belle\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"6\", playerName=\"Frank Thomas / Mo Vaughn\", parallel=\"5 Albert Belle\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:8:17-manny-ramirez:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"17 Manny Ramirez\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"8\", playerName=\"Barry Bonds / Albert Belle\", parallel=\"17 Manny Ramirez\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:14:8-sammy-sosa:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"8 Sammy Sosa\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"14\", playerName=\"Wade Boggs\", parallel=\"8 Sammy Sosa\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:14:2-chris-snopek:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"2 Chris Snopek\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"14\", playerName=\"Wade Boggs\", parallel=\"2 Chris Snopek\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:15:23-eddie-murray:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"23 Eddie Murray\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"15\", playerName=\"Chipper Jones\", parallel=\"23 Eddie Murray\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:20:2-chris-snopek:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"2 Chris Snopek\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"20\", playerName=\"Garret Anderson\", parallel=\"2 Chris Snopek\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:24:13-ruben-rivera:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"13 Ruben Rivera\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"24\", playerName=\"Jay Buhner\", parallel=\"13 Ruben Rivera\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:24:21-mark-mcgwire:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"21 Mark McGwire\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"24\", playerName=\"Jay Buhner\", parallel=\"21 Mark McGwire\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:28:9-mo-vaughn:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"9 Mo Vaughn\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"28\", playerName=\"Ryan Klesko\", parallel=\"9 Mo Vaughn\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:31:23-eddie-murray:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"23 Eddie Murray\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"31\", playerName=\"Mo Vaughn\", parallel=\"23 Eddie Murray\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:38:8-sammy-sosa:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"8 Sammy Sosa\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"38\", playerName=\"Jeff King\", parallel=\"8 Sammy Sosa\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:38:23-eddie-murray:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"23 Eddie Murray\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"38\", playerName=\"Jeff King\", parallel=\"23 Eddie Murray\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:39:13-ruben-rivera:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"13 Ruben Rivera\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"39\", playerName=\"Kenny Lofton\", parallel=\"13 Ruben Rivera\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:39:6-mike-piazza:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"6 Mike Piazza\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"39\", playerName=\"Kenny Lofton\", parallel=\"6 Mike Piazza\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:42:24-jay-buhner:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"24 Jay Buhner\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"42\", playerName=\"Jason Isringhausen\", parallel=\"24 Jay Buhner\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:43:8-sammy-sosa:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"8 Sammy Sosa\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"43\", playerName=\"B.J. Surhoff\", parallel=\"8 Sammy Sosa\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:46:2-chris-snopek:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"2 Chris Snopek\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"46\", playerName=\"Chili Davis\", parallel=\"2 Chris Snopek\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:65:20-matt-william:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"20 Matt William\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"65\", playerName=\"Derek Bell\", parallel=\"20 Matt William\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:67:24-jay-buhner:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"24 Jay Buhner\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"67\", playerName=\"Moises Alou\", parallel=\"24 Jay Buhner\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:68:15-edgar-martinez:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"15 Edgar Martinez\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"68\", playerName=\"Travis Fryman\", parallel=\"15 Edgar Martinez\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:69:7-howard-battle:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"7 Howard Battle\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"69\", playerName=\"Pedro Martinez\", parallel=\"7 Howard Battle\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:70:7-dante-bichette:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"7 Dante Bichette\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"70\", playerName=\"Carlos Baerga\", parallel=\"7 Dante Bichette\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:77:7-dante-bichette:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"7 Dante Bichette\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"77\", playerName=\"Ray Lankford\", parallel=\"7 Dante Bichette\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:80:11-reggie-sander:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"11 Reggie Sander\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"80\", playerName=\"Kenny Rogers\", parallel=\"11 Reggie Sander\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:81:9-mo-vaughn:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"9 Mo Vaughn\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"81\", playerName=\"Paul O'Neill\", parallel=\"9 Mo Vaughn\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:83:5-albert-belle:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"5 Albert Belle\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"83\", playerName=\"Deion Sanders\", parallel=\"5 Albert Belle\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:92:2-chris-snopek:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"2 Chris Snopek\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"92\", playerName=\"Jay Bell\", parallel=\"2 Chris Snopek\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:99:16-barry-bond:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"16 Barry Bond\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"99\", playerName=\"Frank Thomas\", parallel=\"16 Barry Bond\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:100:13-ruben-rivera:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"13 Ruben Rivera\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"100\", playerName=\"Cal Ripken Jr.\", parallel=\"13 Ruben Rivera\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:100:8-sammy-sosa:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"8 Sammy Sosa\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"100\", playerName=\"Cal Ripken Jr.\", parallel=\"8 Sammy Sosa\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:106:4-cal-ripken,-jr.:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"4 Cal Ripken, Jr.\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"106\", playerName=\"Tim Salmon\", parallel=\"4 Cal Ripken, Jr.\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:110:13-ruben-rivera:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"13 Ruben Rivera\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"110\", playerName=\"Rafael Palmeiro\", parallel=\"13 Ruben Rivera\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:110:6-derek-jeter:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"6 Derek Jeter\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"110\", playerName=\"Rafael Palmeiro\", parallel=\"6 Derek Jeter\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:112:17-manny-ramirez:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"17 Manny Ramirez\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"112\", playerName=\"Barry Bonds\", parallel=\"17 Manny Ramirez\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:112:16-barry-bond:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"16 Barry Bond\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"112\", playerName=\"Barry Bonds\", parallel=\"16 Barry Bond\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:116:19-jeff-bagwell:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"19 Jeff Bagwell\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"116\", playerName=\"Matt Williams\", parallel=\"19 Jeff Bagwell\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:118:5-alex-ochoa:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"5 Alex Ochoa\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"118\", playerName=\"Johnny Damon\", parallel=\"5 Alex Ochoa\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:123:22-johnny-damon:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"22 Johnny Damon\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"123\", playerName=\"Tony Clark\", parallel=\"22 Johnny Damon\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:128:2-ken-griffey,-jr.:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"2 Ken Griffey, Jr.\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"128\", playerName=\"Chan Ho Park\", parallel=\"2 Ken Griffey, Jr.\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:129:24-jay-buhner:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"24 Jay Buhner\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"129\", playerName=\"Chris Snopek\", parallel=\"24 Jay Buhner\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:131:7-howard-battle:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"7 Howard Battle\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"131\", playerName=\"Yamil Benitez\", parallel=\"7 Howard Battle\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:133:8-bob-wolcott:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"8 Bob Wolcott\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"133\", playerName=\"Dustin Hermanson\", parallel=\"8 Bob Wolcott\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:136:3-frank-thoma:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"3 Frank Thoma\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"136\", playerName=\"Matt Lawton\", parallel=\"3 Frank Thoma\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:135:2-chris-snopek:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"2 Chris Snopek\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"135\", playerName=\"Howard Battle\", parallel=\"2 Chris Snopek\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:135:23-eddie-murray:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"23 Eddie Murray\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"135\", playerName=\"Howard Battle\", parallel=\"23 Eddie Murray\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:137:8-bob-wolcott:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"8 Bob Wolcott\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"137\", playerName=\"Terrell Wade\", parallel=\"8 Bob Wolcott\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:144:4-cal-ripken,-jr.:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"4 Cal Ripken, Jr.\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"144\", playerName=\"Cal Ripken Jr.\", parallel=\"4 Cal Ripken, Jr.\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:4:5-albert-belle:no-auto:psa-9",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"5 Albert Belle\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"4\", playerName=\"Ken Griffey Jr. / Ruben Rivera\", parallel=\"5 Albert Belle\", source=baseballcardpedia-graded, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:22:9-mo-vaughn:no-auto:sgc-10",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"9 Mo Vaughn\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"22\", playerName=\"Johnny Damon\", parallel=\"9 Mo Vaughn\", source=baseballcardpedia-graded, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:32:4-cal-ripken,-jr.:no-auto:bgs-9",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"4 Cal Ripken, Jr.\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"32\", playerName=\"Rico Brogna\", parallel=\"4 Cal Ripken, Jr.\", source=baseballcardpedia-graded, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:29:6-derek-jeter:no-auto:cgc-9-5",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"6 Derek Jeter\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"29\", playerName=\"Rafael Palmeiro\", parallel=\"6 Derek Jeter\", source=baseballcardpedia-graded, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:77:8-sammy-sosa:no-auto:bgs-10",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"8 Sammy Sosa\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"77\", playerName=\"Ray Lankford\", parallel=\"8 Sammy Sosa\", source=baseballcardpedia-graded, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:120:4-cal-ripken,-jr.:no-auto:sgc-10",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"4 Cal Ripken, Jr.\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"120\", playerName=\"Jay Buhner\", parallel=\"4 Cal Ripken, Jr.\", source=baseballcardpedia-graded, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:137:2-chris-snopek:no-auto:psa-9",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"2 Chris Snopek\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"137\", playerName=\"Terrell Wade\", parallel=\"2 Chris Snopek\", source=baseballcardpedia-graded, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:139:13-ruben-rivera:no-auto:bgs-9",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"13 Ruben Rivera\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"139\", playerName=\"Derek Jeter\", parallel=\"13 Ruben Rivera\", source=baseballcardpedia-graded, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:144:9-mo-vaughn:no-auto:bgs-10",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"9 Mo Vaughn\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"144\", playerName=\"Cal Ripken Jr.\", parallel=\"9 Mo Vaughn\", source=baseballcardpedia-graded, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:3:14-rafael-palmeiro:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"14 Rafael Palmeiro\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"3\", playerName=\"Chipper Jones / Matt Williams\", parallel=\"14 Rafael Palmeiro\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:9:2-chris-snopek:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"2 Chris Snopek\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"9\", playerName=\"Alex Rodriguez / Derek Jeter\", parallel=\"2 Chris Snopek\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:10:8-bob-wolcott:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"8 Bob Wolcott\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"10\", playerName=\"Tony Gwynn / Kirby Puckett\", parallel=\"8 Bob Wolcott\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:12:8-bob-wolcott:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"8 Bob Wolcott\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"12\", playerName=\"Jeff Bagwell / Rico Brogna\", parallel=\"8 Bob Wolcott\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:18:2-ken-griffey,-jr.:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"2 Ken Griffey, Jr.\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"18\", playerName=\"Tim Salmon\", parallel=\"2 Ken Griffey, Jr.\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:30:1-chipper-jone:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"1 Chipper Jone\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"30\", playerName=\"Manny Ramirez\", parallel=\"1 Chipper Jone\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:29:22-johnny-damon:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"22 Johnny Damon\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"29\", playerName=\"Rafael Palmeiro\", parallel=\"22 Johnny Damon\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:47:21-mark-mcgwire:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"21 Mark McGwire\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"47\", playerName=\"Bobby Bonilla\", parallel=\"21 Mark McGwire\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:52:6-derek-jeter:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"6 Derek Jeter\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"52\", playerName=\"Bill Pulsipher\", parallel=\"6 Derek Jeter\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:56:23-eddie-murray:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"23 Eddie Murray\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"56\", playerName=\"Matt Williams\", parallel=\"23 Eddie Murray\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:57:22-johnny-damon:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"22 Johnny Damon\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"57\", playerName=\"Sammy Sosa\", parallel=\"22 Johnny Damon\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:58:23-eddie-murray:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"23 Eddie Murray\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"58\", playerName=\"Roger Clemens\", parallel=\"23 Eddie Murray\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:58:17-manny-ramirez:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"17 Manny Ramirez\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"58\", playerName=\"Roger Clemens\", parallel=\"17 Manny Ramirez\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:79:18-larry-walker:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"18 Larry Walker\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"79\", playerName=\"Robin Ventura\", parallel=\"18 Larry Walker\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:81:14-rafael-palmeiro:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"14 Rafael Palmeiro\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"81\", playerName=\"Paul O'Neill\", parallel=\"14 Rafael Palmeiro\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:86:6-mike-piazza:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"6 Mike Piazza\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"86\", playerName=\"Pete Schourek\", parallel=\"6 Mike Piazza\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:86:4-todd-hollandsworth:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"4 Todd Hollandsworth\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"86\", playerName=\"Pete Schourek\", parallel=\"4 Todd Hollandsworth\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:88:17-manny-ramirez:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"17 Manny Ramirez\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"88\", playerName=\"John Mabry\", parallel=\"17 Manny Ramirez\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:97:1-chipper-jone:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"1 Chipper Jone\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"97\", playerName=\"Chipper Jones\", parallel=\"1 Chipper Jone\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:105:8-bob-wolcott:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"8 Bob Wolcott\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"105\", playerName=\"Mo Vaughn\", parallel=\"8 Bob Wolcott\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:108:18-larry-walker:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"18 Larry Walker\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"108\", playerName=\"Gary Sheffield\", parallel=\"18 Larry Walker\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:119:23-eddie-murray:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"23 Eddie Murray\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"119\", playerName=\"Eddie Murray\", parallel=\"23 Eddie Murray\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:126:18-larry-walker:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"18 Larry Walker\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"126\", playerName=\"Ruben Rivera\", parallel=\"18 Larry Walker\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:131:14-rafael-palmeiro:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"14 Rafael Palmeiro\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"131\", playerName=\"Yamil Benitez\", parallel=\"14 Rafael Palmeiro\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:133:7-howard-battle:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"7 Howard Battle\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"133\", playerName=\"Dustin Hermanson\", parallel=\"7 Howard Battle\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:136:14-rafael-palmeiro:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"14 Rafael Palmeiro\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"136\", playerName=\"Matt Lawton\", parallel=\"14 Rafael Palmeiro\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:138:16-barry-bond:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"16 Barry Bond\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"138\", playerName=\"Jason Schmidt\", parallel=\"16 Barry Bond\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:139:1-chipper-jone:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"1 Chipper Jone\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"139\", playerName=\"Derek Jeter\", parallel=\"1 Chipper Jone\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:140:13-ruben-rivera:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"13 Ruben Rivera\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"140\", playerName=\"Shannon Stewart\", parallel=\"13 Ruben Rivera\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:3:11-reggie-sander:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"11 Reggie Sander\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"3\", playerName=\"Chipper Jones / Matt Williams\", parallel=\"11 Reggie Sander\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:20:18-larry-walker:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"18 Larry Walker\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"20\", playerName=\"Garret Anderson\", parallel=\"18 Larry Walker\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:23:7-dante-bichette:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"7 Dante Bichette\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"23\", playerName=\"Eddie Murray\", parallel=\"7 Dante Bichette\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:28:4-todd-hollandsworth:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"4 Todd Hollandsworth\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"28\", playerName=\"Ryan Klesko\", parallel=\"4 Todd Hollandsworth\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:36:12-gary-sheffield:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"12 Gary Sheffield\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"36\", playerName=\"Fred McGriff\", parallel=\"12 Gary Sheffield\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:45:5-albert-belle:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"5 Albert Belle\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"45\", playerName=\"Gary Sheffield\", parallel=\"5 Albert Belle\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:45:14-rafael-palmeiro:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"14 Rafael Palmeiro\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"45\", playerName=\"Gary Sheffield\", parallel=\"14 Rafael Palmeiro\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:48:7-dante-bichette:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"7 Dante Bichette\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"48\", playerName=\"Hideo Nomo\", parallel=\"7 Dante Bichette\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:48:20-matt-william:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"20 Matt William\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"48\", playerName=\"Hideo Nomo\", parallel=\"20 Matt William\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:52:14-rafael-palmeiro:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"14 Rafael Palmeiro\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"52\", playerName=\"Bill Pulsipher\", parallel=\"14 Rafael Palmeiro\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:53:11-reggie-sander:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"11 Reggie Sander\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"53\", playerName=\"Ozzie Smith\", parallel=\"11 Reggie Sander\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:57:1-jason-schmidt:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"1 Jason Schmidt\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"57\", playerName=\"Sammy Sosa\", parallel=\"1 Jason Schmidt\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:59:23-eddie-murray:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"23 Eddie Murray\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"59\", playerName=\"Brian L. Hunter\", parallel=\"23 Eddie Murray\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:60:6-mike-piazza:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"6 Mike Piazza\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"60\", playerName=\"Barry Larkin\", parallel=\"6 Mike Piazza\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:64:18-larry-walker:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"18 Larry Walker\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"64\", playerName=\"Rondell White\", parallel=\"18 Larry Walker\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:65:2-chris-snopek:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"2 Chris Snopek\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"65\", playerName=\"Derek Bell\", parallel=\"2 Chris Snopek\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:68:22-johnny-damon:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"22 Johnny Damon\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"68\", playerName=\"Travis Fryman\", parallel=\"22 Johnny Damon\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:69:24-jay-buhner:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"24 Jay Buhner\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"69\", playerName=\"Pedro Martinez\", parallel=\"24 Jay Buhner\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:71:1-chipper-jone:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"1 Chipper Jone\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"71\", playerName=\"John Valentin\", parallel=\"1 Chipper Jone\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:72:7-dante-bichette:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"7 Dante Bichette\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"72\", playerName=\"Larry Walker\", parallel=\"7 Dante Bichette\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:76:7-dante-bichette:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"7 Dante Bichette\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"76\", playerName=\"Bernie Williams\", parallel=\"7 Dante Bichette\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:77:1-jason-schmidt:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"1 Jason Schmidt\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"77\", playerName=\"Ray Lankford\", parallel=\"1 Jason Schmidt\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:80:2-chris-snopek:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"2 Chris Snopek\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"80\", playerName=\"Kenny Rogers\", parallel=\"2 Chris Snopek\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:80:4-todd-hollandsworth:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"4 Todd Hollandsworth\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"80\", playerName=\"Kenny Rogers\", parallel=\"4 Todd Hollandsworth\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:82:9-mo-vaughn:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"9 Mo Vaughn\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"82\", playerName=\"Mark Grace\", parallel=\"9 Mo Vaughn\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:83:23-eddie-murray:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"23 Eddie Murray\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"83\", playerName=\"Deion Sanders\", parallel=\"23 Eddie Murray\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:85:19-jeff-bagwell:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"19 Jeff Bagwell\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"85\", playerName=\"Joe Carter\", parallel=\"19 Jeff Bagwell\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:88:5-albert-belle:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"5 Albert Belle\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"88\", playerName=\"John Mabry\", parallel=\"5 Albert Belle\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:90:12-gary-sheffield:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"12 Gary Sheffield\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"90\", playerName=\"Jim Thome\", parallel=\"12 Gary Sheffield\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:92:13-ruben-rivera:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"13 Ruben Rivera\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"92\", playerName=\"Jay Bell\", parallel=\"13 Ruben Rivera\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:92:2-ken-griffey,-jr.:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"2 Ken Griffey, Jr.\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"92\", playerName=\"Jay Bell\", parallel=\"2 Ken Griffey, Jr.\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:93:4-todd-hollandsworth:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"4 Todd Hollandsworth\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"93\", playerName=\"Kevin Seitzer\", parallel=\"4 Todd Hollandsworth\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:97:5-albert-belle:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"5 Albert Belle\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"97\", playerName=\"Chipper Jones\", parallel=\"5 Albert Belle\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:101:2-ken-griffey,-jr.:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"2 Ken Griffey, Jr.\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"101\", playerName=\"Albert Belle\", parallel=\"2 Ken Griffey, Jr.\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:102:1-chipper-jone:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"1 Chipper Jone\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"102\", playerName=\"Mike Piazza\", parallel=\"1 Chipper Jone\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:110:7-dante-bichette:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"7 Dante Bichette\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"110\", playerName=\"Rafael Palmeiro\", parallel=\"7 Dante Bichette\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:110:10-tim-salmon:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"10 Tim Salmon\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"110\", playerName=\"Rafael Palmeiro\", parallel=\"10 Tim Salmon\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:112:4-cal-ripken,-jr.:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"4 Cal Ripken, Jr.\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"112\", playerName=\"Barry Bonds\", parallel=\"4 Cal Ripken, Jr.\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:114:24-jay-buhner:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"24 Jay Buhner\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"114\", playerName=\"Larry Walker\", parallel=\"24 Jay Buhner\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:123:6-mike-piazza:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"6 Mike Piazza\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"123\", playerName=\"Tony Clark\", parallel=\"6 Mike Piazza\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:125:23-eddie-murray:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"23 Eddie Murray\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"125\", playerName=\"Jim Pittsley\", parallel=\"23 Eddie Murray\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:130:16-barry-bond:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"16 Barry Bond\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"130\", playerName=\"Alex Ochoa\", parallel=\"16 Barry Bond\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:131:2-ken-griffey,-jr.:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"2 Ken Griffey, Jr.\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"131\", playerName=\"Yamil Benitez\", parallel=\"2 Ken Griffey, Jr.\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:143:12-gary-sheffield:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"12 Gary Sheffield\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"143\", playerName=\"Greg Maddux\", parallel=\"12 Gary Sheffield\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:4:5-albert-belle:no-auto:bgs-10",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"5 Albert Belle\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"4\", playerName=\"Ken Griffey Jr. / Ruben Rivera\", parallel=\"5 Albert Belle\", source=baseballcardpedia-graded, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:9:4-todd-hollandsworth:no-auto:sgc-10",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"4 Todd Hollandsworth\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"9\", playerName=\"Alex Rodriguez / Derek Jeter\", parallel=\"4 Todd Hollandsworth\", source=baseballcardpedia-graded, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:22:9-mo-vaughn:no-auto:bgs-9",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"9 Mo Vaughn\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"22\", playerName=\"Johnny Damon\", parallel=\"9 Mo Vaughn\", source=baseballcardpedia-graded, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:22:9-mo-vaughn:no-auto:cgc-9-5",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"9 Mo Vaughn\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"22\", playerName=\"Johnny Damon\", parallel=\"9 Mo Vaughn\", source=baseballcardpedia-graded, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:29:6-derek-jeter:no-auto:psa-10",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"6 Derek Jeter\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"29\", playerName=\"Rafael Palmeiro\", parallel=\"6 Derek Jeter\", source=baseballcardpedia-graded, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:40:20-matt-william:no-auto:raw",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"20 Matt William\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"40\", playerName=\"Gary Gaetti\", parallel=\"20 Matt William\", source=baseballcardpedia-graded, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:73:13-ruben-rivera:no-auto:sgc-10",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"13 Ruben Rivera\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"73\", playerName=\"Roberto Alomar\", parallel=\"13 Ruben Rivera\", source=baseballcardpedia-graded, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:100:11-reggie-sander:no-auto:psa-10",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"11 Reggie Sander\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"100\", playerName=\"Cal Ripken Jr.\", parallel=\"11 Reggie Sander\", source=baseballcardpedia-graded, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:108:19-jeff-bagwell:no-auto:raw",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"19 Jeff Bagwell\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"108\", playerName=\"Gary Sheffield\", parallel=\"19 Jeff Bagwell\", source=baseballcardpedia-graded, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:107:23-eddie-murray:no-auto:psa-10",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"23 Eddie Murray\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"107\", playerName=\"Reggie Sanders\", parallel=\"23 Eddie Murray\", source=baseballcardpedia-graded, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:108:19-jeff-bagwell:no-auto:psa-9",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"19 Jeff Bagwell\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"108\", playerName=\"Gary Sheffield\", parallel=\"19 Jeff Bagwell\", source=baseballcardpedia-graded, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:144:9-mo-vaughn:no-auto:cgc-10",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"9 Mo Vaughn\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"144\", playerName=\"Cal Ripken Jr.\", parallel=\"9 Mo Vaughn\", source=baseballcardpedia-graded, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:9:4-todd-hollandsworth:no-auto:bgs-10",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"4 Todd Hollandsworth\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"9\", playerName=\"Alex Rodriguez / Derek Jeter\", parallel=\"4 Todd Hollandsworth\", source=baseballcardpedia-graded, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:17:14-rafael-palmeiro:no-auto:psa-8",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"14 Rafael Palmeiro\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"17\", playerName=\"Reggie Sanders\", parallel=\"14 Rafael Palmeiro\", source=baseballcardpedia-graded, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:23:18-larry-walker:no-auto:bgs-10",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"18 Larry Walker\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"23\", playerName=\"Eddie Murray\", parallel=\"18 Larry Walker\", source=baseballcardpedia-graded, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:28:5-albert-belle:no-auto:bgs-9-5",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"5 Albert Belle\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"28\", playerName=\"Ryan Klesko\", parallel=\"5 Albert Belle\", source=baseballcardpedia-graded, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:29:17-manny-ramirez:no-auto:psa-9",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"17 Manny Ramirez\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"29\", playerName=\"Rafael Palmeiro\", parallel=\"17 Manny Ramirez\", source=baseballcardpedia-graded, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:28:5-albert-belle:no-auto:bgs-10-black",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"5 Albert Belle\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"28\", playerName=\"Ryan Klesko\", parallel=\"5 Albert Belle\", source=baseballcardpedia-graded, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:29:6-derek-jeter:no-auto:bgs-9-5",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"6 Derek Jeter\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"29\", playerName=\"Rafael Palmeiro\", parallel=\"6 Derek Jeter\", source=baseballcardpedia-graded, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:61:8-bob-wolcott:no-auto:bgs-10",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"8 Bob Wolcott\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"61\", playerName=\"Charles Johnson\", parallel=\"8 Bob Wolcott\", source=baseballcardpedia-graded, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:104:7-howard-battle:no-auto:psa-8",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"7 Howard Battle\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"104\", playerName=\"Sammy Sosa\", parallel=\"7 Howard Battle\", source=baseballcardpedia-graded, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:109:16-barry-bond:no-auto:sgc-10",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"16 Barry Bond\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"109\", playerName=\"Ruben Rivera\", parallel=\"16 Barry Bond\", source=baseballcardpedia-graded, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:117:24-jay-buhner:no-auto:raw",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"24 Jay Buhner\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"117\", playerName=\"Mark McGwire\", parallel=\"24 Jay Buhner\", source=baseballcardpedia-graded, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:124:24-jay-buhner:no-auto:psa-8",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"24 Jay Buhner\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"124\", playerName=\"Roger Cedeno\", parallel=\"24 Jay Buhner\", source=baseballcardpedia-graded, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:128:24-jay-buhner:no-auto:psa-9",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"24 Jay Buhner\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"128\", playerName=\"Chan Ho Park\", parallel=\"24 Jay Buhner\", source=baseballcardpedia-graded, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:144:9-mo-vaughn:no-auto:psa-9",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"9 Mo Vaughn\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"144\", playerName=\"Cal Ripken Jr.\", parallel=\"9 Mo Vaughn\", source=baseballcardpedia-graded, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:8:3-frank-thoma:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"3 Frank Thoma\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"8\", playerName=\"Barry Bonds / Albert Belle\", parallel=\"3 Frank Thoma\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:10:15-edgar-martinez:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"15 Edgar Martinez\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"10\", playerName=\"Tony Gwynn / Kirby Puckett\", parallel=\"15 Edgar Martinez\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:13:23-eddie-murray:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"23 Eddie Murray\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"13\", playerName=\"Tony Gwynn\", parallel=\"23 Eddie Murray\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:19:4-todd-hollandsworth:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"4 Todd Hollandsworth\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"19\", playerName=\"Ruben Rivera\", parallel=\"4 Todd Hollandsworth\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:22:12-gary-sheffield:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"12 Gary Sheffield\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"22\", playerName=\"Johnny Damon\", parallel=\"12 Gary Sheffield\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:26:7-dante-bichette:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"7 Dante Bichette\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"26\", playerName=\"Eddie Murray\", parallel=\"7 Dante Bichette\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:33:1-jason-schmidt:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"1 Jason Schmidt\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"33\", playerName=\"Marc Newfield\", parallel=\"1 Jason Schmidt\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:35:6-derek-jeter:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"6 Derek Jeter\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"35\", playerName=\"Reggie Sanders\", parallel=\"6 Derek Jeter\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:39:22-johnny-damon:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"22 Johnny Damon\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"39\", playerName=\"Kenny Lofton\", parallel=\"22 Johnny Damon\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:43:3-frank-thoma:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"3 Frank Thoma\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"43\", playerName=\"B.J. Surhoff\", parallel=\"3 Frank Thoma\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:47:22-johnny-damon:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"22 Johnny Damon\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"47\", playerName=\"Bobby Bonilla\", parallel=\"22 Johnny Damon\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:48:7-howard-battle:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"7 Howard Battle\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"48\", playerName=\"Hideo Nomo\", parallel=\"7 Howard Battle\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:57:8-bob-wolcott:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"8 Bob Wolcott\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"57\", playerName=\"Sammy Sosa\", parallel=\"8 Bob Wolcott\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:61:2-ken-griffey,-jr.:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"2 Ken Griffey, Jr.\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"61\", playerName=\"Charles Johnson\", parallel=\"2 Ken Griffey, Jr.\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:62:18-larry-walker:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"18 Larry Walker\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"62\", playerName=\"Dave Justice\", parallel=\"18 Larry Walker\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:81:22-johnny-damon:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"22 Johnny Damon\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"81\", playerName=\"Paul O'Neill\", parallel=\"22 Johnny Damon\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:93:3-frank-thoma:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"3 Frank Thoma\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"93\", playerName=\"Kevin Seitzer\", parallel=\"3 Frank Thoma\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:102:3-tony-clark:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"3 Tony Clark\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"102\", playerName=\"Mike Piazza\", parallel=\"3 Tony Clark\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:105:11-reggie-sander:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"11 Reggie Sander\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"105\", playerName=\"Mo Vaughn\", parallel=\"11 Reggie Sander\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:107:9-mo-vaughn:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"9 Mo Vaughn\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"107\", playerName=\"Reggie Sanders\", parallel=\"9 Mo Vaughn\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:109:19-jeff-bagwell:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"19 Jeff Bagwell\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"109\", playerName=\"Ruben Rivera\", parallel=\"19 Jeff Bagwell\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:110:4-todd-hollandsworth:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"4 Todd Hollandsworth\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"110\", playerName=\"Rafael Palmeiro\", parallel=\"4 Todd Hollandsworth\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:112:3-tony-clark:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"3 Tony Clark\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"112\", playerName=\"Barry Bonds\", parallel=\"3 Tony Clark\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:116:1-chipper-jone:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"1 Chipper Jone\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"116\", playerName=\"Matt Williams\", parallel=\"1 Chipper Jone\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:116:5-albert-belle:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"5 Albert Belle\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"116\", playerName=\"Matt Williams\", parallel=\"5 Albert Belle\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:117:16-barry-bond:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"16 Barry Bond\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"117\", playerName=\"Mark McGwire\", parallel=\"16 Barry Bond\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:117:1-jason-schmidt:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"1 Jason Schmidt\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"117\", playerName=\"Mark McGwire\", parallel=\"1 Jason Schmidt\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:119:1-chipper-jone:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"1 Chipper Jone\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"119\", playerName=\"Eddie Murray\", parallel=\"1 Chipper Jone\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:121:1-jason-schmidt:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"1 Jason Schmidt\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"121\", playerName=\"Tim Unroe\", parallel=\"1 Jason Schmidt\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:124:16-barry-bond:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"16 Barry Bond\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"124\", playerName=\"Roger Cedeno\", parallel=\"16 Barry Bond\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:129:10-tim-salmon:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"10 Tim Salmon\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"129\", playerName=\"Chris Snopek\", parallel=\"10 Tim Salmon\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:131:6-mike-piazza:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"6 Mike Piazza\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"131\", playerName=\"Yamil Benitez\", parallel=\"6 Mike Piazza\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:133:2-ken-griffey,-jr.:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"2 Ken Griffey, Jr.\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"133\", playerName=\"Dustin Hermanson\", parallel=\"2 Ken Griffey, Jr.\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:132:21-mark-mcgwire:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"21 Mark McGwire\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"132\", playerName=\"Jimmy Haynes\", parallel=\"21 Mark McGwire\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:137:20-matt-william:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"20 Matt William\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"137\", playerName=\"Terrell Wade\", parallel=\"20 Matt William\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:1996:sportflix:141:7-dante-bichette:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"7 Dante Bichette\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=sportflix, cardYear=1996, cardNumber=\"141\", playerName=\"Chris Stynes\", parallel=\"7 Dante Bichette\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  }
+ ]
+}
