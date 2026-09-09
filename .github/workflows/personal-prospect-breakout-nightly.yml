@@ -55,6 +55,17 @@ jobs:
           fi
           echo "::add-mask::$ADMIN_API_TOKEN"
 
+      - name: Checkout (poller)
+        uses: actions/checkout@v4
+
+      # CF-LONG-CRONS-DIE-AT-THE-IDLE-CUT (2026-09-09). This call still
+      # answered — 38 requests over 14 days, all 200 — but it was answering
+      # late: p95 142.5s, max 211.6s, against an App Service idle cut at
+      # 240s. One busier night and it joins the anomalies lane, and a run cut
+      # at the platform boundary cannot be told apart from "no pushes were
+      # owed" — the exact ambiguity D13's provider gate below exists to
+      # remove. So it dispatches (202 + jobId) and polls for the summary.
+      # The job, its rate limits and its pushes are unchanged.
       - name: POST personal-prospect-breakout/run
         env:
           ADMIN_API_TOKEN: ${{ secrets.ADMIN_API_TOKEN }}
@@ -67,21 +78,29 @@ jobs:
             --arg sport "$SPORT" \
             --argjson dryRun "$DRY_RUN" \
             '{ sport: $sport, dryRun: $dryRun }')
-          HTTP=$(curl -sS -w '\n%{http_code}' \
-            -X POST \
-            -H "Authorization: Bearer $ADMIN_API_TOKEN" \
-            -H "Content-Type: application/json" \
-            --data "$BODY" \
-            --max-time 900 \
-            "https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net/api/portfolio/admin/personal-prospect-breakout/run" \
-            -o response.json) || true
-          STATUS=$(echo "$HTTP" | tail -n1)
-          echo "HTTP status: $STATUS"
-          if [ "$STATUS" != "200" ]; then
-            echo "::error::personal-prospect-breakout failed: $STATUS"
-            cat response.json || true
+          set +e
+          node backend/scripts/poll-admin-job.cjs \
+            --label "personal-prospect-breakout[$SPORT]" \
+            --method POST \
+            --body "$BODY" \
+            --dispatch-url "https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net/api/portfolio/admin/personal-prospect-breakout/run" \
+            --status-url "https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net/api/portfolio/admin/personal-prospect-breakout/status" \
+            --status-query "sport=$SPORT" \
+            --auth-header "Authorization: Bearer $ADMIN_API_TOKEN" \
+            | tee poll.log
+          POLL_RC=${PIPESTATUS[0]}
+          set -e
+          if [ "$POLL_RC" -eq 2 ]; then
+            echo "::error::personal-prospect-breakout never reported settled — UNKNOWN, not a failure; the run may have finished on the other instance"
             exit 1
           fi
+          if [ "$POLL_RC" -ne 0 ]; then
+            echo "::error::personal-prospect-breakout failed"
+            exit 1
+          fi
+          # The polled status body carries the same {summary:{…}} the inline
+          # 200 used to, so every reader below is unchanged.
+          sed -n 's/^RESULT_JSON //p' poll.log | tail -n1 > response.json
           echo "Summary:"
           jq '.summary' response.json
           # D13 (2026-08-29) — alert gates prove delivery. HTTP 200 with

@@ -200,17 +200,43 @@ jobs:
             "https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net/api/dailyiq/players/top/milb?limit=25&fresh=true")
           echo "MiLB warm status: $STATUS"
 
+      # CF-LONG-CRONS-DIE-AT-THE-IDLE-CUT (2026-09-09). This warm was the
+      # single largest source of 240s aborts on the API. App Insights over 14
+      # days separates the two shapes of this request cleanly:
+      #
+      #   ?fresh=true   183 × 200 (p50 6.1s, p95 182.9s, max 220s)
+      #                  17 × ResultCode 0, every one at exactly 240.0s
+      #   no fresh       41 × 200 (p50 1.9s, p95 21.1s, max 61.1s), 63 × 204
+      #                   and ZERO aborts
+      #
+      # Every abort belongs to THIS step; no real client request has ever hit
+      # the cut. So only ?fresh=true became a dispatch (202 + jobId) — the
+      # user-facing read path is untouched and still answers inline, which is
+      # what keeps the app from regressing into a spinner. This step polls
+      # the rebuild to completion instead of holding one long connection.
       - name: Warm DailyIQ brief
         if: steps.et-gate.outputs.should_run == 'true'
         run: |
           # ?fresh=true forces buildAndPersistBriefPayload to run and write to
           # Cosmos; without it the route returns the in-memory _briefCache and
           # skips persistence entirely (root cause of issue #80).
-          RESPONSE=$(curl -s \
-            -H "x-session-id: ${{ steps.harness-token.outputs.token }}" \
-            "https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net/api/dailyiq/brief?fresh=true")
-          MLB_COUNT=$(echo "$RESPONSE" | python3 -c "import sys,json; d=json.load(sys.stdin); print(len(d.get('mlb',[])))" 2>/dev/null || echo "?")
-          MILB_COUNT=$(echo "$RESPONSE" | python3 -c "import sys,json; d=json.load(sys.stdin); print(len(d.get('milb',[])))" 2>/dev/null || echo "?")
+          set +e
+          node backend/scripts/poll-admin-job.cjs \
+            --label dailyiq-brief \
+            --method GET \
+            --dispatch-url "https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net/api/dailyiq/brief?fresh=true" \
+            --status-url "https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net/api/dailyiq/brief/status" \
+            --auth-header "x-session-id: ${{ steps.harness-token.outputs.token }}" \
+            | tee /tmp/brief-poll.log
+          POLL_RC=${PIPESTATUS[0]}
+          set -e
+          if [ "$POLL_RC" -ne 0 ]; then
+            echo "::error::DailyIQ brief warm did not settle (rc=$POLL_RC) — today's brief may not have been persisted"
+            exit 1
+          fi
+          RESULT=$(sed -n 's/^RESULT_JSON //p' /tmp/brief-poll.log | tail -n1)
+          MLB_COUNT=$(echo "$RESULT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('built',{}).get('mlb','?'))" 2>/dev/null || echo "?")
+          MILB_COUNT=$(echo "$RESULT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('built',{}).get('milb','?'))" 2>/dev/null || echo "?")
           echo "Daily brief warmed — MLB: $MLB_COUNT performers, MiLB: $MILB_COUNT performers"
 
       # CF-ERA-BASELINES-WORKFLOW-SPLIT (2026-07-16): the era-baselines
