@@ -15,6 +15,11 @@ import { requireAdmin } from "../middleware/requireAdmin.js";
 import { isRematchCandidate, rematchOne, type RematchResult } from "../services/portfolioiq/ebayImportRematch.service.js";
 
 import { sellerHandleFromHolding } from "../services/compiq/sellerIndependence.js";
+import * as longJobs from "../services/ops/longJobTracker.js";
+
+/** Job family for the nightly personal-prospect-breakout run (keyed by sport). */
+const PROSPECT_JOB_KIND = "personal-prospect-breakout";
+
 const router = Router();
 
 async function requireUserId(req: Request, res: Response): Promise<string | null> {
@@ -893,22 +898,73 @@ router.post("/admin/sub-raw-inversion/scan", requireAdmin, async (req: Request, 
 
 // CF-PERSONAL-PROSPECT-BREAKOUT (Drew, 2026-07-20). Admin trigger for
 // the nightly personal-breakout push job. Fires via GH Actions.
+//
+// CF-LONG-CRONS-DIE-AT-THE-IDLE-CUT (2026-09-09). This one still answers —
+// 38 requests over 14 days, all 200 — but it is answering LATE: p95 142.5s
+// and a measured max of 211.6s against an App Service idle cut at 240s. It
+// is one busier night from becoming the anomalies lane, and a cron that
+// dies at the cut cannot tell "no pushes were owed" from "the run was cut
+// before it sent them" — the exact ambiguity D13's provider gate exists to
+// remove. So it dispatches: 202 + jobId now, poll for the summary.
+//
+// Nothing about the job changes — same entry, same rate limits, same
+// pushes. Only when the caller is answered changes.
 router.post("/admin/personal-prospect-breakout/run", requireAdmin, async (req: Request, res: Response, next) => {
   try {
     const { runPersonalProspectBreakoutJob } = await import(
       "../services/portfolioiq/personalProspectBreakoutJob.service.js"
     );
-    const summary = await runPersonalProspectBreakoutJob({
-      sport: typeof req.body?.sport === "string" ? req.body.sport : undefined,
+    const { isPushProviderConfigured } = await import("../services/notification.service.js");
+    const sport = typeof req.body?.sport === "string" ? req.body.sport : undefined;
+    const opts = {
+      sport,
       windowDays: typeof req.body?.windowDays === "number" ? req.body.windowDays : undefined,
       minMarginPct: typeof req.body?.minMarginPct === "number" ? req.body.minMarginPct : undefined,
       perUserDailyCap: typeof req.body?.perUserDailyCap === "number" ? req.body.perUserDailyCap : undefined,
       perHoldingCooldownDays: typeof req.body?.perHoldingCooldownDays === "number" ? req.body.perHoldingCooldownDays : undefined,
       dryRun: req.body?.dryRun === true,
+    };
+    // Keyed by sport: the nightly matrix fires baseball, football and
+    // basketball concurrently, and those are three genuinely different runs
+    // that must not collapse into one another.
+    const { job, alreadyRunning } = longJobs.dispatch(
+      PROSPECT_JOB_KIND,
+      sport ?? "baseball",
+      async () => {
+        const summary = await runPersonalProspectBreakoutJob(opts);
+        // D13 (2026-08-29): see sell-side-notify above. Read the provider
+        // INSIDE the run so the polled summary carries the same field the
+        // inline response used to, and the cron's gate still works.
+        return { ...summary, pushProviderConfigured: isPushProviderConfigured() };
+      },
+    );
+    res.status(202).json({
+      accepted: true,
+      status: "running",
+      alreadyRunning,
+      jobId: job.jobId,
+      sport: sport ?? "baseball",
+      startedAt: new Date(job.startedAt).toISOString(),
+      poll: "/api/portfolio/admin/personal-prospect-breakout/status",
     });
-    // D13 (2026-08-29): see sell-side-notify above.
-    const { isPushProviderConfigured } = await import("../services/notification.service.js");
-    res.json({ computedAt: new Date().toISOString(), summary: { ...summary, pushProviderConfigured: isPushProviderConfigured() } });
+  } catch (err) { next(err); }
+});
+
+// Poll surface for the dispatched breakout run. `unknown-here` means this
+// worker never issued the id (2 serving instances) — keep polling, never
+// read it as settled.
+router.get("/admin/personal-prospect-breakout/status", requireAdmin, async (req: Request, res: Response, next) => {
+  try {
+    const sport = typeof req.query.sport === "string" ? req.query.sport : "baseball";
+    const jobId = typeof req.query.jobId === "string" ? req.query.jobId : null;
+    const lookup = longJobs.lookupJob(PROSPECT_JOB_KIND, sport, jobId);
+    const payload = longJobs.buildStatusPayload(lookup);
+    if (payload.status === "done") {
+      const { result, ...rest } = payload as Record<string, unknown>;
+      res.json({ computedAt: new Date().toISOString(), sport, ...rest, summary: result });
+      return;
+    }
+    res.json({ computedAt: new Date().toISOString(), sport, ...payload });
   } catch (err) { next(err); }
 });
 

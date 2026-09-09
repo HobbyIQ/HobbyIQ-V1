@@ -111,6 +111,12 @@ jobs:
     runs-on: ubuntu-latest
     needs: auto-quarantine-pools
     steps:
+      # The anomaly step below runs backend/scripts/poll-admin-job.cjs from
+      # the checkout. First step so it cannot clobber anything a later step
+      # has put in the workspace.
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Login to Azure
         uses: azure/login@v3
         with:
@@ -144,35 +150,61 @@ jobs:
             | head -c 500
           echo ""
 
+      # CF-LONG-CRONS-DIE-AT-THE-IDLE-CUT (2026-09-09). This step has never
+      # once received a drift comparison. App Insights, 14 days: 11 requests
+      # to /cleanliness/anomalies, ALL ResultCode 0, every one cut at 89.9s.
+      # CF-CLEANLINESS-ANOMALY-BUDGET read that as an impatient client and
+      # raised the curl ceiling from 90s to 900s — but the App Service front
+      # end cuts an IDLE connection at 240s regardless of what the client is
+      # willing to wait, so the lane would have gone on dying, just later.
+      # The scan completes server-side every night; nobody was holding the
+      # socket to receive it.
+      #
+      # ?force=true is now a dispatch (202 + jobId) and this step polls the
+      # status route to completion. Each poll is a short request, so nothing
+      # is ever idle and the platform cut cannot apply. No timeout anywhere
+      # was widened to fix this.
       - name: Anomaly detection (drift vs baseline)
         if: env.ADMIN_API_TOKEN != ''
         shell: bash
         run: |
-          echo "Running anomaly detection..."
-          # CF-CLEANLINESS-ANOMALY-BUDGET (2026-09-07). --max-time 90 was below
-          # what this endpoint needs: ?force=true bypasses the 5-min cache and
-          # rescans, and the nightly run died at exactly 90s with curl exit 28
-          # on 09-04/05/06/07. Raise the ceiling to 15 minutes (the budget
-          # daily-listings-snapshot already gives its ops call). Capture curl's
-          # status so a timeout reports AS a timeout instead of being flattened
-          # into the "returned empty" branch below — the two have different
-          # fixes, and the message has to say which one the reader is seeing.
+          echo "Running anomaly detection (dispatch + poll)..."
+          # CF-THE-LOG-IS-BOTH-STREAMS (#1963/#1975). `2>&1` because the
+          # poller writes its refusals — including the UNKNOWN verdict — with
+          # console.error, and a stdout-only tee would drop precisely the
+          # lines that explain a failure. `pipefail` because a pipeline's
+          # status is tee's, always 0, which would report SUCCESS for a lane
+          # that never settled.
+          set -o pipefail
           set +e
-          RESULT=$(curl -sf --max-time 900 -H "Authorization: Bearer $ADMIN_API_TOKEN" \
-            "https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net/api/cleanliness/anomalies?force=true")
-          CURL_RC=$?
+          node backend/scripts/poll-admin-job.cjs \
+            --label anomalies \
+            --method GET \
+            --dispatch-url "https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net/api/cleanliness/anomalies?force=true" \
+            --status-url "https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net/api/cleanliness/anomalies/status" \
+            --auth-header "Authorization: Bearer $ADMIN_API_TOKEN" \
+            2>&1 | tee /tmp/anomalies-poll.log
+          POLL_RC=$?
           set -e
-          if [ "$CURL_RC" -eq 28 ]; then
-            echo "::error::anomaly detection timed out after 900s (curl exit 28) — the endpoint never answered, so no drift comparison ran"
+          if [ "$POLL_RC" -eq 2 ]; then
+            echo "::error::anomaly detection never reported settled — UNKNOWN, not a failure; the scan may have finished on the other instance"
             exit 1
           fi
-          if [ "$CURL_RC" -ne 0 ]; then
-            echo "::error::anomaly detection request failed (curl exit $CURL_RC) — no drift comparison ran"
+          if [ "$POLL_RC" -ne 0 ]; then
+            echo "::error::anomaly detection failed — no drift comparison landed"
             exit 1
           fi
+          RESULT=$(sed -n 's/^RESULT_JSON //p' /tmp/anomalies-poll.log | tail -n1)
           if [ -z "$RESULT" ]; then
             # D13: an empty response used to warn and exit 0 — green with no detection.
-            echo "::error::anomaly detection returned empty (the API answered with nothing) — no drift comparison ran"
+            echo "::error::anomaly detection settled without a report body — no drift comparison ran"
+            exit 1
+          fi
+          # A settled scan that found NO BASELINE is a different fact from a
+          # scan that found no drift, and the parser below cannot tell them
+          # apart (both read as zero anomalies). Name it here.
+          if echo "$RESULT" | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{try{process.exit(JSON.parse(d).report===null?0:1)}catch{process.exit(1)}})"; then
+            echo "::error::anomaly detection settled with report=null — no baseline snapshot exists yet, so no drift comparison was possible (run baseline-pool-snapshot)"
             exit 1
           fi
           HIGH_COUNT=$(echo "$RESULT" | node -e "let d=''; process.stdin.on('data',c=>d+=c); process.stdin.on('end',()=>{ try { const r=JSON.parse(d); const highs=(r.report?.anomalies||[]).filter(a=>a.suspiciousness==='high'); console.log(highs.length); } catch { console.log('0'); } })")

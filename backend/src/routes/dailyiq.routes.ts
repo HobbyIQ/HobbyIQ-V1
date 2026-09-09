@@ -1,5 +1,6 @@
 import { Request, Response, Router } from "express";
 import { getUserBySession } from "../services/authService.js";
+import * as longJobs from "../services/ops/longJobTracker.js";
 import { resolveCurrentPlayerAssignments } from "../services/dailyiq/milbBoxScoreService.js";
 import { fetchRecentForm, type RecentForm } from "../services/dailyiq/recentFormService.js";
 import { readMarketPlayersPayload } from "../services/dailyiq/marketPlayers.service.js";
@@ -221,6 +222,22 @@ const router = Router();
 
 const BRIEF_BACKGROUND_REFRESH_MS = Number(process.env.DAILYIQ_BACKGROUND_REFRESH_MS ?? 300000);
 const BRIEF_CACHE_MAX_ENTRIES = 14;
+
+/**
+ * CF-LONG-CRONS-DIE-AT-THE-IDLE-CUT (2026-09-09). Job family for a
+ * ?fresh=true rebuild, keyed by brief date so two dates can rebuild
+ * independently while two callers asking for the same date collapse onto
+ * one run. What a finished rebuild reports: enough for the cron's banner to
+ * name the counts it warmed, without shipping the whole payload through a
+ * status poll (the brief itself is read from the brief route).
+ */
+const BRIEF_JOB_KIND = "dailyiq-brief";
+interface BriefBuildResult {
+  date: string;
+  generatedAt: string;
+  mlb: number;
+  milb: number;
+}
 const _briefCacheByDate = new Map<string, BriefCache>();
 const _briefRefreshByDate = new Map<string, Promise<void>>();
 
@@ -996,8 +1013,37 @@ const handleBriefRequest = async (req: Request, res: Response) => {
   try {
     const cachedForDate = getBriefCache(date);
     if (wantFresh) {
-      meta.cacheStatus = "fresh";
-      setBriefCache(date, await buildAndPersistBriefPayload(date));
+      // CF-LONG-CRONS-DIE-AT-THE-IDLE-CUT (2026-09-09). ?fresh=true forces a
+      // full rebuild, and it is the ONLY shape of this request that ever
+      // died: App Insights over 14 days separates them cleanly —
+      //
+      //   fresh=true   183 × 200 (p50 6.1s, p95 182.9s, max 220s)
+      //                 17 × ResultCode 0, every one at exactly 240.0s
+      //   no fresh      41 × 200 (p50 1.9s, p95 21.1s, max 61.1s)
+      //                 63 × 204, and ZERO aborts
+      //
+      // Every abort is the cron's own warm call; not one real client request
+      // has ever reached the 240s cut. So the rebuild dispatches and the
+      // caller is answered 202 immediately, while the READ path below is
+      // left exactly as it was. A user asking for the brief still gets the
+      // brief, synchronously, off cache or Cosmos — this must never become a
+      // spinner, and a brief that is withheld or partial still answers with
+      // its reason rather than hanging.
+      const { job, alreadyRunning } = longJobs.dispatch(BRIEF_JOB_KIND, date, async () => {
+        const built = await buildAndPersistBriefPayload(date);
+        setBriefCache(date, built);
+        return { date: built.date, generatedAt: built.generatedAt, mlb: built.mlb.length, milb: built.milb.length };
+      });
+      return res.status(202).json({
+        accepted: true,
+        status: "running",
+        alreadyRunning,
+        jobId: job.jobId,
+        date,
+        startedAt: new Date(job.startedAt).toISOString(),
+        poll: "/api/dailyiq/brief/status",
+        _meta: { ...meta, cacheStatus: "fresh-dispatched" },
+      });
     } else if (cachedForDate) {
       const isToday = date === defaultBriefDate();
       const isStale = Date.now() - cachedForDate.cachedAtMs >= BRIEF_BACKGROUND_REFRESH_MS;
@@ -1117,6 +1163,27 @@ const handleBriefRequest = async (req: Request, res: Response) => {
 // "/" is the iOS-visible alias. Both gated.
 router.get("/", requireSession, requireEntitlement("dailyIQBriefs"), handleBriefRequest);
 router.get("/brief", requireSession, requireEntitlement("dailyIQBriefs"), handleBriefRequest);
+
+// CF-LONG-CRONS-DIE-AT-THE-IDLE-CUT (2026-09-09). Poll surface for a
+// ?fresh=true rebuild. Same gate as the brief itself. `unknown-here` means
+// this worker never issued the id (2 serving instances) — keep polling; it
+// is never a settled verdict.
+router.get(
+  "/brief/status",
+  requireSession,
+  requireEntitlement("dailyIQBriefs"),
+  async (req: Request, res: Response) => {
+    const date = normalizeDate(req.query.date);
+    const jobId = typeof req.query.jobId === "string" ? req.query.jobId : null;
+    const lookup = longJobs.lookupJob<BriefBuildResult>(BRIEF_JOB_KIND, date, jobId);
+    const payload = longJobs.buildStatusPayload(lookup);
+    if (payload.status === "done") {
+      const { result, ...rest } = payload as Record<string, unknown>;
+      return res.json({ date, ...rest, built: result });
+    }
+    return res.json({ date, ...payload });
+  },
+);
 
 // CF-DAILYIQ-MY-PLAYERS (2026-07-01): per-user view of matched-cohort
 // trends for players the user OWNS. Complements /market/players
