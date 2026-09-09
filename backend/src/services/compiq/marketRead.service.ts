@@ -1351,7 +1351,14 @@ export function logSubRawInversionObserved(opts: {
   event: SubRawInversionEvent;
 }): void {
   try {
-    console.log(JSON.stringify({
+    // WHY console.warn AND NOT console.log (2026-09-09, #1982 fallout). The App
+    // Insights console subscriber runs at `logSendingLevel: WARN`, which tags by
+    // stream: stderr (console.warn/error) -> WARN, KEPT; stdout (console.log/info)
+    // -> INFO, DROPPED. Measured on 2026-09-09: every structured event arriving in
+    // the last 6h was SeverityLevel 2; stdout events were absent fleet-wide.
+    // `sub_raw_inversion_observed` IS the DailyIQ hot-prospects pipe: the nightly
+    // sub-raw-inversion-scan workflow emits it and the S1 KQL reads it back.
+    console.warn(JSON.stringify({
       event: "sub_raw_inversion_observed",
       source: opts.source,
       player: opts.player,
@@ -1538,7 +1545,15 @@ export function logCrossGraderInversionObserved(opts: {
   event: CrossGraderInversionEvent;
 }): void {
   try {
-    console.log(JSON.stringify({
+    // WHY console.warn AND NOT console.log (2026-09-09, #1982 fallout). The App
+    // Insights console subscriber runs at `logSendingLevel: WARN`, which tags by
+    // stream: stderr (console.warn/error) -> WARN, KEPT; stdout (console.log/info)
+    // -> INFO, DROPPED. Measured on 2026-09-09: every structured event arriving in
+    // the last 6h was SeverityLevel 2; stdout events were absent fleet-wide.
+    // `cross_grader_inversion_observed` is read by
+    // docs/observability/sub-raw-and-cross-grader-inversion-queries.md, which feeds
+    // the grade-calibration loop.
+    console.warn(JSON.stringify({
       event: "cross_grader_inversion_observed",
       source: opts.source,
       player: opts.player,
