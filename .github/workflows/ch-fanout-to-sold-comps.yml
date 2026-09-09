@@ -10,8 +10,10 @@ name: CH Fanout to sold_comps
 # any range. Checkpoints via BULK_START_DATE/BULK_END_DATE so
 # multi-dispatch drains resume cleanly.
 #
-# Default: 30-day slice ending yesterday. Use workflow_dispatch inputs
-# to pick a larger window or a historical range.
+# Default: a 10-day window (NIGHTLY_WINDOW_DAYS) walked ONE DAY AT A TIME,
+# newest first. The day is the unit the time budget can stop between and the
+# date the relaunch resumes from. Use workflow_dispatch inputs to pick a
+# larger window or a historical range.
 
 on:
   # CF-CH-FANOUT-NIGHTLY (Drew, 2026-08-13: "we need to be ingesting data from
@@ -26,7 +28,7 @@ on:
   #
   # 07:40 UTC runs after CH Daily Sales Ingest (~06:00 UTC, took 45m on its last
   # run) so each night's file is present before the fan-out walks back over it.
-  # The default 30-day window plus contentHash dedup in recordSoldComp makes an
+  # The default 10-day window plus contentHash dedup in recordSoldComp makes an
   # overlapping re-run a no-op, so a late or missed CH ingest self-heals the
   # next night instead of leaving a permanent hole.
   schedule:
@@ -38,7 +40,7 @@ on:
         required: false
         default: ''
       end_date:
-        description: 'Oldest date to stop at. YYYY-MM-DD. Default: 30 days back.'
+        description: 'Oldest date to stop at. YYYY-MM-DD. Default: NIGHTLY_WINDOW_DAYS (10) back.'
         required: false
         default: ''
       sport_filter:
@@ -49,6 +51,10 @@ on:
         description: 'Parallel recordSoldComp calls (default 8, max 32)'
         required: false
         default: '8'
+      slice_days:
+        description: 'Days per unit. Leave at 1 — the budget can only stop between units. Widen ONLY for an explicit historical bulk drain.'
+        required: false
+        default: '1'
 
 jobs:
   fanout:
@@ -104,11 +110,24 @@ jobs:
           BULK_START_DATE: ${{ inputs.start_date }}
           BULK_END_DATE: ${{ inputs.end_date }}
           BULK_SPORT_FILTER: ${{ inputs.sport_filter }}
-          BULK_SLICE_DAYS: '14'
+          # CF-THE-UNIT-IS-ONE-DAY (2026-09-08). Was '14', under a
+          # NIGHTLY_WINDOW_DAYS of 10 -- a unit WIDER THAN THE WHOLE WINDOW, so
+          # every nightly and default-dispatch run was a SINGLE unit. The
+          # budget loop's only seam is between units, so it could never stop:
+          # run 34234951079 announced `budget 300m loop + 5m unit reserve`,
+          # opened one slice, and was cancelled by the 340-minute job timeout
+          # 5h39m later with no finishLane, no marker and no reconcile.
+          #
+          # A blank input means the scheduled run, which takes 1. An explicit
+          # historical bulk drain can still pass a wider value; it is a
+          # deliberate choice by an operator who is watching, not the default
+          # that governs the cron.
+          BULK_SLICE_DAYS: ${{ inputs.slice_days || '1' }}
           NIGHTLY_WINDOW_DAYS: '10'
           # CF-CH-FANOUT-TIME-BUDGET (2026-08-22). 300m sits below this job's
-          # timeout-minutes: 340, so the script stops itself on a slice
-          # boundary and PRINTS A SUMMARY instead of being cancelled mid-walk
+          # timeout-minutes: 340, so the script stops itself on a DAY (and,
+          # within a day, a write-batch) boundary and PRINTS A SUMMARY
+          # instead of being cancelled mid-walk
           # with no output. A cancelled run reads as "the fan-out is broken";
           # a budgeted stop says exactly which window to resume from.
           BULK_TIME_BUDGET_MIN: '300'
@@ -131,6 +150,7 @@ jobs:
           echo "Running bulk-import-ch-daily-to-sold-comps.cjs"
           echo "  APPLY=$BACKFILL_APPLY  CONCURRENCY=$BACKFILL_CONCURRENCY"
           echo "  START=$BULK_START_DATE  END=$BULK_END_DATE  SPORTS=$BULK_SPORT_FILTER"
+          echo "  SLICE_DAYS=$BULK_SLICE_DAYS (the unit the budget stops between)"
           echo "  TIME_BUDGET=${BULK_TIME_BUDGET_MIN}m (job timeout is 340m)"
           node scripts/bulk-import-ch-daily-to-sold-comps.cjs
 
