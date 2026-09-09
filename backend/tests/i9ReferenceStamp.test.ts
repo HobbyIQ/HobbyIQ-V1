@@ -140,23 +140,49 @@ describe("the shipped reference carries its stamp", () => {
   it("records the stamp and the commit the census was measured under", () => {
     expect(TABLE.measuredUnder).toBeTruthy();
     expect(TABLE.measuredUnder.stamp).toMatch(/^d[0-9a-f]{12}\+/);
-    // 60807cb0 — the last commit before the census window closed 09-06T02:49Z.
-    expect(TABLE.measuredUnder.commit).toBe("60807cb0097676bb28b09602f16aea7ce71e1f36");
-    // pricingContract.ts did not exist at that commit.
-    expect(TABLE.measuredUnder.contract).toBeNull();
-    // The 32-slot reference itself is untouched by this PR (#1888 stands).
+    // e32b8481 — the tree the wave-2 census artifacts were re-baselined against.
+    expect(TABLE.measuredUnder.commit).toBe("e32b84814c253a71f141362b67fac08947ee315b");
+    // pricingContract.ts exists now, so the stamp carries its version.
+    expect(TABLE.measuredUnder.contract).toBe("2026-09-06.a");
+    // The 32-slot reference stays 32 slots (#1888 stands).
     expect(TABLE.slotCount).toBe(32);
-    expect(TABLE.classifiedTotal).toBeGreaterThan(16_000_000);
-    expect(INV.CENSUS_REFERENCE_SHARES.CONFLICT).toBeCloseTo(0.408, 2);
+    expect(TABLE.classifiedTotal).toBeGreaterThan(11_000_000);
+    expect(INV.CENSUS_REFERENCE_SHARES.CONFLICT).toBeCloseTo(0.430, 2);
   });
 
-  it("and that stamp is NOT this tree's — which is the finding", () => {
-    // The measured fact this PR is built on: the shipped reference predates
-    // every classifier change of 09-06/09-07, so today's I9 cannot honestly
-    // compare against it.
+  it("says WHAT FRACTION of the corpus it saw, and which slots are partial", () => {
+    // A REFERENCE BUILT FROM BUDGET-STOPPED WALKS IS STILL A REFERENCE, BUT IT
+    // MUST SAY SO. 18 of the 32 wave-2 slots hit their budget before finishing,
+    // so this reference is 72% of the expected corpus and its partial slots
+    // describe a PREFIX of their rows. Recording `classified` alone would have
+    // presented a 34%-walked slot and a finished one as equally authoritative.
+    expect(TABLE.coverage.classified).toBe(TABLE.classifiedTotal);
+    expect(TABLE.coverage.coverage).toBeCloseTo(0.72, 2);
+    expect(TABLE.coverage.partialSlots).toHaveLength(18);
+    expect(TABLE.coverage.completedSlots).toHaveLength(14);
+    // Every slot carries its own coverage, so a reader never has to guess.
+    for (const s of TABLE.slots) {
+      expect(typeof s.expectedRows, `slot ${s.slot} expectedRows`).toBe("number");
+      expect(typeof s.coverage, `slot ${s.slot} coverage`).toBe("number");
+      expect(typeof s.stoppedAtBudget, `slot ${s.slot} stoppedAtBudget`).toBe("boolean");
+      expect(s.coverage).toBeCloseTo(s.classified / s.expectedRows, 3);
+    }
+    // The partial list is exactly the slots flagged, never a hand-kept copy.
+    expect(TABLE.coverage.partialSlots)
+      .toEqual(TABLE.slots.filter((s) => s.stoppedAtBudget).map((s) => s.slot));
+    // And the _doc window is the artifacts' real generatedAt span.
+    expect(TABLE._doc).toContain(`${TABLE.coverage.window.from.slice(0, 16)}Z`);
+    expect(TABLE._doc).toContain(`${TABLE.coverage.window.to.slice(0, 16)}Z`);
+  });
+
+  it("and that stamp IS this tree's — the re-baseline re-armed the alarm", () => {
+    // THE POINT OF THE RE-BASELINE. Before it, the reference predated every
+    // classifier change of 09-06/09-07 and I9's alarm was suppressed. Recorded
+    // under THIS tree's stamp, the comparison is honest again and a drift from
+    // here on is a real corpus finding rather than a re-baseline owed.
     const v = INV.referenceStampAgreement();
-    expect(v.comparable).toBe(false);
-    expect(v.reason).toBe("stamp-changed");
+    expect(v.comparable).toBe(true);
+    expect(v.reason).toBeNull();
     expect(v.referenceStamp).toBe(TABLE.measuredUnder.stamp);
     expect(v.currentStamp).toBe(DV.currentStamp().combined);
   });
@@ -263,6 +289,58 @@ describe("the re-baseline recorder refuses to launder a regression", () => {
     expect(src).toMatch(/if \(agreement\.comparable && !forceStamp\)/);
     expect(src).toMatch(/laundering a regression|launder that finding/i);
     expect(src).toMatch(/process\.exit\(3\)/);
+  });
+
+  it("keeps the MIN_ROWS refusal — a sample is not a corpus reference", () => {
+    const src = fs.readFileSync(script, "utf8");
+    expect(src).toMatch(/MIN_ROWS/);
+    expect(src).toMatch(/that is a sample, not a corpus reference/);
+    expect(src).toMatch(/process\.exit\(4\)/);
+  });
+
+  it("buckets a unit by the SAME vintage boundary the shipped reference used", () => {
+    // THE BOUNDARY IS PART OF THE REFERENCE. Re-bucketing the corpus under a
+    // different cutoff would leave two references that share class NAMES and
+    // measure different populations — incomparable while looking comparable.
+    // 2000 is the cutoff recovered by reproducing all 32 classMix entries of
+    // the 2026-09-06 reference exactly; 1990 or 2001 each mismatch a slot.
+    expect(REC.VINTAGE_BEFORE).toBe(2000);
+    expect(REC.classOfUnit({ sportClass: "pokemon", year: 2025 })).toBe("pokemon");
+    expect(REC.classOfUnit({ sportClass: null, year: 1999 })).toBe("vintage");
+    expect(REC.classOfUnit({ sportClass: null, year: 2000 })).toBe("modern");
+    // A yearless unit is not vintage by default — absence is not a date.
+    expect(REC.classOfUnit({ sportClass: null, year: null })).toBe("modern");
+  });
+
+  it("apportions a slot's class mix BY ROWS, never counting it whole into each", () => {
+    // Slot 0's shape: 484,940 pokemon rows beside 39,000 rows of 1953 — 93/7.
+    const mix = REC.classMixOf([
+      { sportClass: "pokemon", year: 2025, rows: 484940 },
+      { sportClass: null, year: 1953, rows: 39000 },
+    ]);
+    expect(mix.pokemon).toBeCloseTo(0.9256, 3);
+    expect(mix.vintage).toBeCloseTo(0.0744, 3);
+    expect(Object.values(mix).reduce((a: number, b) => a + Number(b), 0)).toBeCloseTo(1, 3);
+    expect(REC.classMixOf([])).toBeNull();
+    expect(REC.classMixOf(undefined)).toBeNull();
+  });
+
+  it("derives bySportClass from THESE artifacts, not the previous reference", () => {
+    // Carrying the old per-class block forward would describe last week's frame
+    // with this week's counts — the same structural blindness as a single-slot
+    // reference, one level up.
+    const src = fs.readFileSync(script, "utf8");
+    expect(src).toMatch(/bySportClass: bySportClassOf\(slots\)/);
+    const by = REC.bySportClassOf([
+      { slot: 0, classified: 1000, shares: { AGREE: 0, IMPROVE: 0, CONFLICT: 1, UNDERIVABLE: 0 }, classMix: { pokemon: 1 } },
+      { slot: 1, classified: 1000, shares: { AGREE: 1, IMPROVE: 0, CONFLICT: 0, UNDERIVABLE: 0 }, classMix: { modern: 1 } },
+    ]);
+    expect(by.pokemon.shares.CONFLICT).toBe(1);
+    expect(by.pokemon.classified).toBe(1000);
+    expect(by.modern.shares.AGREE).toBe(1);
+    // A slot is listed under its DOMINANT class only.
+    expect(by.pokemon.slots).toEqual([0]);
+    expect(by.modern.slots).toEqual([1]);
   });
 
   it("never writes without APPLY, and never writes Cosmos at all", () => {
