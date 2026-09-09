@@ -169,6 +169,13 @@ jobs:
         shell: bash
         run: |
           echo "Running anomaly detection (dispatch + poll)..."
+          # CF-THE-LOG-IS-BOTH-STREAMS (#1963/#1975). `2>&1` because the
+          # poller writes its refusals — including the UNKNOWN verdict — with
+          # console.error, and a stdout-only tee would drop precisely the
+          # lines that explain a failure. `pipefail` because a pipeline's
+          # status is tee's, always 0, which would report SUCCESS for a lane
+          # that never settled.
+          set -o pipefail
           set +e
           node backend/scripts/poll-admin-job.cjs \
             --label anomalies \
@@ -176,8 +183,8 @@ jobs:
             --dispatch-url "https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net/api/cleanliness/anomalies?force=true" \
             --status-url "https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net/api/cleanliness/anomalies/status" \
             --auth-header "Authorization: Bearer $ADMIN_API_TOKEN" \
-            | tee /tmp/anomalies-poll.log
-          POLL_RC=${PIPESTATUS[0]}
+            2>&1 | tee /tmp/anomalies-poll.log
+          POLL_RC=$?
           set -e
           if [ "$POLL_RC" -eq 2 ]; then
             echo "::error::anomaly detection never reported settled — UNKNOWN, not a failure; the scan may have finished on the other instance"

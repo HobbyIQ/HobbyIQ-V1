@@ -78,6 +78,12 @@ jobs:
             --arg sport "$SPORT" \
             --argjson dryRun "$DRY_RUN" \
             '{ sport: $sport, dryRun: $dryRun }')
+          # CF-THE-LOG-IS-BOTH-STREAMS (#1963/#1975). `2>&1` so the poller's
+          # console.error refusals reach the log this step reads and uploads;
+          # `pipefail` so the status is the poller's and not tee's constant 0.
+          # (`set -euo pipefail` above already sets it; repeated here beside
+          # the pipe so the pairing is visible at the site it protects.)
+          set -o pipefail
           set +e
           node backend/scripts/poll-admin-job.cjs \
             --label "personal-prospect-breakout[$SPORT]" \
@@ -87,8 +93,8 @@ jobs:
             --status-url "https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net/api/portfolio/admin/personal-prospect-breakout/status" \
             --status-query "sport=$SPORT" \
             --auth-header "Authorization: Bearer $ADMIN_API_TOKEN" \
-            | tee poll.log
-          POLL_RC=${PIPESTATUS[0]}
+            2>&1 | tee poll.log
+          POLL_RC=$?
           set -e
           if [ "$POLL_RC" -eq 2 ]; then
             echo "::error::personal-prospect-breakout never reported settled — UNKNOWN, not a failure; the run may have finished on the other instance"

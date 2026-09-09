@@ -220,6 +220,11 @@ jobs:
           # ?fresh=true forces buildAndPersistBriefPayload to run and write to
           # Cosmos; without it the route returns the in-memory _briefCache and
           # skips persistence entirely (root cause of issue #80).
+          # CF-THE-LOG-IS-BOTH-STREAMS (#1963/#1975). `2>&1` so the poller's
+          # console.error refusals land in the log this step parses;
+          # `pipefail` so the status is the poller's, not tee's constant 0 —
+          # without it a warm that never settled would report SUCCESS.
+          set -o pipefail
           set +e
           node backend/scripts/poll-admin-job.cjs \
             --label dailyiq-brief \
@@ -227,8 +232,8 @@ jobs:
             --dispatch-url "https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net/api/dailyiq/brief?fresh=true" \
             --status-url "https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net/api/dailyiq/brief/status" \
             --auth-header "x-session-id: ${{ steps.harness-token.outputs.token }}" \
-            | tee /tmp/brief-poll.log
-          POLL_RC=${PIPESTATUS[0]}
+            2>&1 | tee /tmp/brief-poll.log
+          POLL_RC=$?
           set -e
           if [ "$POLL_RC" -ne 0 ]; then
             echo "::error::DailyIQ brief warm did not settle (rc=$POLL_RC) — today's brief may not have been persisted"
