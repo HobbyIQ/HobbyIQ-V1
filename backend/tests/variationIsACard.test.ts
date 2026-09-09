@@ -277,3 +277,44 @@ describe("product qualifiers in titles are identity", () => {
     expect(qualifiedSetKeyFromTitle("Topps Heritage", "2024 Topps Heritage Chrome #100").setKey).toBe("topps-heritage");
   });
 });
+
+/**
+ * CF-A-A-LEADING-FINISH-IS-A-FINISH (Drew ruling 20, 2026-09-08).
+ *
+ * 2022 Topps Chrome's Bobby Witt Jr. #221 reached us spelled BOTH ways --
+ * holding 2b62a93f sits on `refractor-image-variation` while the catalog's
+ * checklist row is `image-variation` -- and BCP lists ONE card: the Sonic
+ * variation of #221, under a section whose own note reads "All Gimmicks are
+ * Refractors". "Gimmick" is not our word; the vocabulary spells these Image
+ * Variation SP (Tier 1) and Image Variation SSP (Tier 2).
+ *
+ * The rule under test is narrow: a BARE finish word before "variation" is the
+ * finish the variation comes in, so it moves to the finish side and both
+ * spellings land on one address. A finish that belongs to a NAMED kind must
+ * NOT move -- which is why the named-kind cases are asserted alongside.
+ */
+describe("a leading finish is a finish, not a kind", () => {
+  it("folds both Witt spellings onto one address", () => {
+    expect(normalizeVariationSlug("refractor-image-variation")).toBe("image-variation-refractor");
+    expect(normalizeVariationSlug("image-variation-refractor")).toBe("image-variation-refractor");
+    expect(canonicalVariationName("Refractor Image Variation")).toBe("Image Variation Refractor");
+    expect(canonicalVariationName("Image Variation Refractor")).toBe("Image Variation Refractor");
+  });
+
+  it("keeps the SP tier unspelled and the SSP tier spelled", () => {
+    expect(canonicalVariationName("Image Variation SP")).toBe("Image Variation");
+    expect(canonicalVariationName("Image Variation SSP")).toBe("Image Variation SSP");
+  });
+
+  it("does not move a finish that is part of a named kind", () => {
+    expect(normalizeVariationSlug("chrome-variation")).toBe("chrome-variation");
+    expect(normalizeVariationSlug("frozenfractor-variation")).toBe("frozenfractor-variation");
+    expect(normalizeVariationSlug("golden-mirror-image-variation")).toBe("golden-mirror-variation");
+    expect(normalizeVariationSlug("true-photo-variation")).toBe("true-photo-variation");
+    expect(normalizeVariationSlug("murakami-variation-refractor")).toBe("murakami-variation-refractor");
+  });
+
+  it("leaves a trailing finish exactly where it already was", () => {
+    expect(normalizeVariationSlug("image-variation-gold-speckle-refractor")).toBe("image-variation-gold-speckle-refractor");
+  });
+});

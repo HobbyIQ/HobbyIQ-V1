@@ -1,0 +1,13 @@
+{
+  "source": "cardpedia-drew-ruling-2026-09-08",
+  "sourceUrl": "https://baseballcardpedia.com/index.php/1997_Finest",
+  "year": 1997,
+  "setKey": "topps-finest",
+  "setName": "1997 Topps Finest",
+  "sport": "baseball",
+  "rows": 350,
+  "parallelColumnAuthoritative": true,
+  "handAuthored": true,
+  "note": "Drew ruling 18, corrected against the source. BCP states the tier is a property of the CARD NUMBER, not a parallel axis: 'there are not Bronze, Silver, and Gold versions of every card in the set; rather, each card in the set had a designated theme and distinction... card #342 features Ken Griffey, Jr. with the Power theme and Rare/Gold distinction. There are no Common/Bronze or Uncommon/Silver versions of card #342.' So a tier x number cross would mint 1,050 rows for a 350-card set, 700 of which do not exist. This file mints ONE tier-stamped Refractor row per number: Bronze 1-100 and 176-275 (1:12), Silver 101-150 and 276-325 (1:48), Gold 151-175 and 326-350 (1:288). Transcribed from BCP's six tier sections (Bronze/Silver/Gold x Series One/Two); all 350 numbers resolved and every section heading agrees with the numeric range rule (zero mismatches). Griffey #238 is Series Two Bronze; his Gold card is #342. Print runs are blank because 1997 Finest predates serial numbering and BCP publishes odds only -- blank means unknown, never guessed. Embossed / Embossed Refractor / Die-Cut partial-parallels are NOT emitted here: they cover only the Silver and Gold subsets and already have rows.",
+  "authoredAt": "2026-09-08"
+}
