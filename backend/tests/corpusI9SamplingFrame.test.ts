@@ -170,18 +170,18 @@ describe("frame health — a rate whose frame is broken is not a corpus rate", (
     // movement is visible rather than assumed.
     expect(health.healthy).toBe(true);
     expect(health.drift.CONFLICT.sampled).toBeCloseTo(0.7, 3);
-    // The corpus number, not slot 31's 0.206.
-    expect(health.drift.CONFLICT.census).toBeCloseTo(0.408, 2);
+    // The corpus number, not slot 31's 0.231.
+    expect(health.drift.CONFLICT.census).toBeCloseTo(0.430, 2);
     expect(health.drift.CONFLICT.delta).toBeGreaterThan(0.25);
   });
 
   it("carries the census reference it compares against", () => {
     // CF-THE-REFERENCE-IS-THE-WHOLE-CORPUS-NOT-ONE-SLOT (2026-09-06). The
     // reference is the ROW-WEIGHTED average over all 32 census slots
-    // (16,716,343 rows), not slot 31 alone.
+    // (11,746,071 rows on the wave-2 re-baseline), not slot 31 alone.
     expect(INV.CENSUS_REFERENCE_SHARES.slots).toBe(32);
-    expect(INV.CENSUS_REFERENCE_SHARES.AGREE).toBeCloseTo(0.424, 2);
-    expect(INV.CENSUS_REFERENCE_SHARES.CONFLICT).toBeCloseTo(0.408, 2);
+    expect(INV.CENSUS_REFERENCE_SHARES.AGREE).toBeCloseTo(0.450, 2);
+    expect(INV.CENSUS_REFERENCE_SHARES.CONFLICT).toBeCloseTo(0.430, 2);
     expect(INV.CENSUS_REFERENCE_SHARES.source).toMatch(/32\/32 slots/);
     expect(INV.FRAME_MIN_DISTINCT_CARDS).toBe(100);
   });
@@ -198,20 +198,20 @@ describe("frame health — a rate whose frame is broken is not a corpus rate", (
     // Reverting to slot 31's numbers makes this test red: its CONFLICT share is
     // less than HALF the corpus's, which is the whole error.
     const slot31 = INV.censusSharesForSlot(31);
-    expect(slot31.CONFLICT).toBeCloseTo(0.206, 2);
+    expect(slot31.CONFLICT).toBeCloseTo(0.231, 2);
     expect(INV.CENSUS_REFERENCE_SHARES.CONFLICT).toBeGreaterThan(slot31.CONFLICT * 1.8);
     // And the table is genuinely 32 slots, not one repeated.
     expect(INV.CENSUS_TABLE.slots).toHaveLength(32);
     expect(new Set(INV.CENSUS_TABLE.slots.map((r) => r.slot)).size).toBe(32);
-    expect(INV.CENSUS_TABLE.classifiedTotal).toBeGreaterThan(16_000_000);
+    expect(INV.CENSUS_TABLE.classifiedTotal).toBeGreaterThan(11_000_000);
   });
 
   it("holds each slot's OWN shares, and they differ enormously", () => {
     // A per-slot reference is only worth holding if the slots actually differ.
-    // They differ by 20x on AGREE: slot 7 (pokemon) is 3.3%, slot 6 is 63.6%.
+    // They differ by 6x on AGREE: slot 7 (pokemon) is 10.2%, slot 6 is 63.9%.
     const s7 = INV.censusSharesForSlot(7);
     const s6 = INV.censusSharesForSlot(6);
-    expect(s7.AGREE).toBeLessThan(0.05);
+    expect(s7.AGREE).toBeLessThan(0.15);
     expect(s6.AGREE).toBeGreaterThan(0.60);
     for (let i = 0; i < 32; i++) {
       const sh = INV.censusSharesForSlot(i);
@@ -224,17 +224,17 @@ describe("frame health — a rate whose frame is broken is not a corpus rate", (
   });
 
   it("compares each slot's draw to that slot's own census, not to the average", () => {
-    // A draw that is entirely slot 7 (pokemon, census CONFLICT 0.605) at 60%
+    // A draw that is entirely slot 7 (pokemon, census CONFLICT 0.731) at 73%
     // CONFLICT is NORMAL for slot 7 and would look like a catastrophe against
-    // the corpus average of 0.408. The per-slot line is what says so.
+    // the corpus average of 0.430. The per-slot line is what says so.
     const verdicts = [
-      ...Array.from({ length: 60 }, () => ({ klass: "CONFLICT", __frameSlot: 7 })),
-      ...Array.from({ length: 24 }, () => ({ klass: "UNDERIVABLE", __frameSlot: 7 })),
-      ...Array.from({ length: 12 }, () => ({ klass: "IMPROVE", __frameSlot: 7 })),
-      ...Array.from({ length: 4 }, () => ({ klass: "AGREE", __frameSlot: 7 })),
+      ...Array.from({ length: 73 }, () => ({ klass: "CONFLICT", __frameSlot: 7 })),
+      ...Array.from({ length: 12 }, () => ({ klass: "UNDERIVABLE", __frameSlot: 7 })),
+      ...Array.from({ length: 5 }, () => ({ klass: "IMPROVE", __frameSlot: 7 })),
+      ...Array.from({ length: 10 }, () => ({ klass: "AGREE", __frameSlot: 7 })),
     ];
     const health = INV.frameHealth({
-      byClass: { CONFLICT: 60, UNDERIVABLE: 24, IMPROVE: 12, AGREE: 4 },
+      byClass: { CONFLICT: 73, UNDERIVABLE: 12, IMPROVE: 5, AGREE: 10 },
       distinctCards: 400,
       sampled: 100,
       verdicts,

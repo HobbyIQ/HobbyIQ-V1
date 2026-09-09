@@ -395,6 +395,12 @@ async function processBatchAsync(
         inserted += res.inserted;
         deduped += res.deduped;
         skipped += res.skipped;
+        // CF-A-THROTTLED-WRITE-IS-NOT-A-WRITE (#2015 follow-up). A row whose
+        // write threw is reported separately now; it used to arrive inside
+        // `res.skipped` and be filed as "could not parse", which is the one
+        // verdict that makes a retryable throttle look permanent. `errors` is
+        // the SAME counter a rejected persist promise already lands in below.
+        errors += res.errors;
         if (res.skipped > 0 && res.inserted === 0) {
           skipReasons.persist_skipped++;
           if (skipSamples.persist_skipped.length < 5) {

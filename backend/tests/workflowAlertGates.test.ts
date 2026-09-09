@@ -23,8 +23,12 @@ describe("5. nightly-cleanliness never goes red — fixed", () => {
     expect(yml).not.toContain("::warning::ADMIN_API_TOKEN not found");
   });
   it("an empty anomalies response is exit 1, not a warning", () => {
-    expect(yml).toMatch(/if \[ -z "\$RESULT" \]; then\n(\s+#[^\n]*\n)?\s+echo "::error::anomaly detection returned empty[^\n]*"\n\s+exit 1\n\s+fi/);
-    expect(yml).not.toContain("::warning::anomaly detection returned empty");
+    // CF-LONG-CRONS-DIE-AT-THE-IDLE-CUT (2026-09-09): the step now polls a
+    // dispatched scan, so "the API answered with nothing" became "the run
+    // settled without a report body". Same D13 property — an absent
+    // detection is red, never a warning — against the new mechanism.
+    expect(yml).toMatch(/if \[ -z "\$RESULT" \]; then\n(\s+#[^\n]*\n)?\s+echo "::error::anomaly detection settled without a report body[^\n]*"\n\s+exit 1\n\s+fi/);
+    expect(yml).not.toMatch(/::warning::anomaly detection (returned empty|settled without)/);
   });
   it("no guard exits 0 any more", () => {
     const code = yml.split("\n").filter((l) => !/^\s*#/.test(l)).join("\n");
@@ -328,26 +332,59 @@ describe("era-baselines-refresh builds dist before loading it", () => {
   });
 });
 
-describe("nightly-cleanliness anomaly detection has a workable budget", () => {
+/**
+ * CF-LONG-CRONS-DIE-AT-THE-IDLE-CUT (2026-09-09) — REPLACES the curl-budget
+ * pins that stood here.
+ *
+ * Those pins required `curl --max-time >= 900` on this step, and they were
+ * enforcing the wrong fix. The lane died at 89.9s on curl's own ceiling, so
+ * CF-CLEANLINESS-ANOMALY-BUDGET raised that ceiling to 900s — but App
+ * Insights over the 14 days after shows the truth: 11 requests to
+ * /cleanliness/anomalies, ALL ResultCode 0, and NOT ONE completion. The App
+ * Service front end cuts an idle connection at 240s whatever the client is
+ * willing to wait, so a bigger client budget could only move the death from
+ * 90s to 240s. The lane has never once received a drift comparison.
+ *
+ * A budget was never the mechanism, so pinning a budget pinned a defect.
+ * The step now dispatches (202 + jobId) and polls to completion, which has
+ * no idle window at all. The PROPERTIES those pins protected are real and
+ * are kept below, restated against the mechanism that actually holds them:
+ *
+ *   - a run that never answered is distinguishable from one that answered
+ *     with nothing (the two have different fixes, and the message must say
+ *     which the reader is seeing);
+ *   - no non-success can be read as success;
+ *   - every failure branch is exit 1, never a warning (D13).
+ */
+describe("nightly-cleanliness anomaly detection cannot die at the idle cut", () => {
   const yml = wf("nightly-cleanliness.yml");
 
-  it("allows the forced rescan more than 90s", () => {
-    // ?force=true bypasses the 5-min cache; the run died at exactly 90s with
-    // curl exit 28 on 09-04/05/06/07. Read the timeout off the curl calls
-    // themselves — the comment above them quotes the old value on purpose.
-    const timeouts = [...yml.matchAll(/curl[^\n]*--max-time (\d+)/g)].map((m) => Number(m[1]));
-    expect(timeouts.length).toBeGreaterThan(0);
-    for (const t of timeouts) expect(t).toBeGreaterThanOrEqual(900);
+  it("dispatches and polls instead of holding one long connection", () => {
+    expect(yml).toContain("poll-admin-job.cjs");
+    expect(yml).toContain("/api/cleanliness/anomalies/status");
+    // The retired mechanism must not creep back: no widened client budget
+    // on this lane, because widening one was never available as the fix.
+    expect(yml).not.toMatch(/curl[^\n]*--max-time/);
+    expect(yml).not.toContain("CURL_RC");
   });
 
-  it("reports a timeout AS a timeout, not as an empty response", () => {
-    expect(yml).toMatch(/if \[ "\$CURL_RC" -eq 28 \]; then\n\s+echo "::error::anomaly detection timed out[^\n]*"\n\s+exit 1\n\s+fi/);
-    // The empty-response branch stays, and stays exit 1 (D13).
-    expect(yml).toMatch(/if \[ -z "\$RESULT" \]; then\n(\s+#[^\n]*\n)?\s+echo "::error::anomaly detection returned empty[^\n]*"\n\s+exit 1\n\s+fi/);
+  it("reports 'never settled' AS unknown, not as a failure or a success", () => {
+    // The poller exits 2 when it never got a terminal answer. The run may
+    // have finished on the other instance, so the lane says so rather than
+    // guessing — but it still goes red, because it cannot prove the work.
+    expect(yml).toMatch(/if \[ "\$POLL_RC" -eq 2 \]; then\n\s+echo "::error::[^\n]*"\n\s+exit 1\n\s+fi/);
+    expect(yml).toContain("UNKNOWN, not a failure");
   });
 
-  it("a non-zero curl status can never be read as success", () => {
-    expect(yml).toMatch(/if \[ "\$CURL_RC" -ne 0 \]; then\n\s+echo "::error::[^\n]*"\n\s+exit 1\n\s+fi/);
+  it("a non-zero poll status can never be read as success", () => {
+    expect(yml).toMatch(/if \[ "\$POLL_RC" -ne 0 \]; then\n\s+echo "::error::[^\n]*"\n\s+exit 1\n\s+fi/);
+  });
+
+  it("an empty or baseline-less result is exit 1, not a warning (D13)", () => {
+    expect(yml).toMatch(/if \[ -z "\$RESULT" \]; then\n(\s+#[^\n]*\n)?\s+echo "::error::anomaly detection settled without a report body[^\n]*"\n\s+exit 1\n\s+fi/);
+    // A settled scan with report=null found no baseline — a different fact
+    // from "no drift", which the count parser below cannot tell apart.
+    expect(yml).toContain("no baseline snapshot exists yet");
   });
 });
 

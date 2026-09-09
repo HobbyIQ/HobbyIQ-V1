@@ -469,6 +469,18 @@ export interface VendorPersistResult {
   inserted: number;
   deduped: number;
   skipped: number;                          // rows that couldn't be parsed to identity
+  /** CF-A-THROTTLED-WRITE-IS-NOT-A-WRITE (#2015 follow-up, 2026-09-09). Rows
+   *  whose WRITE threw -- a Cosmos 429, a schema drift, a dropped connection.
+   *
+   *  SIBLING, NOT SUBSET: unlike `skippedSportUnresolved`, this is a term a
+   *  caller reconciling `fetched = inserted + deduped + skipped + ... + errors`
+   *  MUST add. It was previously folded into `skipped`, which reads as "we
+   *  could not parse this row" -- a permanent, unactionable verdict -- when in
+   *  fact the row parsed fine and the pool simply refused it. The two classes
+   *  call for opposite responses: a skipped row is done with, a failed write is
+   *  worth retrying. Merging them made a throttle storm indistinguishable from
+   *  a bad feed, and made `errors: 0` a lie in every caller's banner. */
+  errors: number;
   catalogUnmatched: number;
   /** CF-NO-DEFAULT-SPORT (#1924 follow-up), PUT ON THE RESULT (#2006 follow-up,
    *  2026-09-08). Rows skipped because NOTHING named a vertical, so the slug
@@ -637,7 +649,7 @@ export async function persistVendorSalesToPool(
   rows: VendorSaleRow[],
   identity: VendorPersistIdentityHint = {},
 ): Promise<VendorPersistResult> {
-  const result: VendorPersistResult = { inserted: 0, deduped: 0, skipped: 0, catalogUnmatched: 0, vendorParallelOverruled: 0, divertedToVerify: 0, twinAddressRefused: 0, twinFolded: 0, skippedSportUnresolved: 0 };
+  const result: VendorPersistResult = { inserted: 0, deduped: 0, skipped: 0, errors: 0, catalogUnmatched: 0, vendorParallelOverruled: 0, divertedToVerify: 0, twinAddressRefused: 0, twinFolded: 0, skippedSportUnresolved: 0 };
   // CF-NO-DEFAULT-SPORT (#1924 follow-up). Counted separately from the general
   // `skipped` tally because it is the number the ruling turns on: it is the
   // population that USED to be written at `hiq:baseball:...` on no evidence.
@@ -2037,7 +2049,10 @@ export async function persistVendorSalesToPool(
         slug,
         error: (err as Error)?.message ?? String(err),
       }));
-      result.skipped++;
+      // A write that THREW is not a row we could not read. It counted as
+      // `skipped` until #2015's follow-up, so a Cosmos throttle arrived at the
+      // caller wearing the one label that means "nothing more to do here".
+      result.errors++;
     }
   }
   // CF-EVERY-BATCH-REPORTS (#2006 follow-up, 2026-09-08), NOW WITHOUT A
@@ -2061,6 +2076,8 @@ export async function persistVendorSalesToPool(
       inserted: result.inserted,
       deduped: result.deduped,
       skipped: result.skipped,
+      // Writes that threw. A sibling of `skipped`, not a breakdown of it.
+      errors: result.errors,
       catalogUnmatched: result.catalogUnmatched,
       // The rows that would previously have been minted under a guessed
       // `baseball` address and gone on to price two cards. A BREAKDOWN of

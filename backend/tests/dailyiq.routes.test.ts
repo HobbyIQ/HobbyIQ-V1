@@ -204,4 +204,57 @@ describe("DailyIQ routes", () => {
     expect(dashboard.body.mlbTopPlayers.some((player: any) => player.playerId === "paul-skenes" && player.isOnWatchlist === true)).toBe(true);
     expect(dashboard.body.watchlistPlayers.some((player: any) => player.playerId === "paul-skenes" && player.isOnWatchlist === true)).toBe(true);
   });
+
+  // CF-LONG-CRONS-DIE-AT-THE-IDLE-CUT (2026-09-09). Only ?fresh=true — the
+  // nightly warm — became a dispatch. Every 240s abort App Insights recorded
+  // on this route over 14 days was a fresh=true call (17 of them); the plain
+  // read measured p50 1.9s with ZERO aborts. These pin the split, because
+  // the failure mode to avoid is turning a user's brief into a spinner.
+  it("still answers a user's brief inline, with the brief in it", async () => {
+    const response = await request(app)
+      .get("/api/dailyiq/brief")
+      .set("x-session-id", adminSession);
+
+    expect(response.status).toBe(200);
+    // Not a job handle: the actual brief.
+    expect(response.body.jobId).toBeUndefined();
+    expect(response.body.status).not.toBe("running");
+    expect(Array.isArray(response.body.mlb)).toBe(true);
+    expect(Array.isArray(response.body.milb)).toBe(true);
+    expect(response.body.generatedAt).toBeTruthy();
+  });
+
+  it("dispatches the ?fresh=true rebuild instead of holding the connection", async () => {
+    const response = await request(app)
+      .get("/api/dailyiq/brief?fresh=true")
+      .set("x-session-id", adminSession);
+
+    expect(response.status).toBe(202);
+    expect(response.body.accepted).toBe(true);
+    expect(response.body.status).toBe("running");
+    expect(response.body.jobId).toBeTruthy();
+    expect(response.body.poll).toBe("/api/dailyiq/brief/status");
+  });
+
+  it("reports the dispatched rebuild on the status route, and never claims done for an unknown id", async () => {
+    const dispatched = await request(app)
+      .get("/api/dailyiq/brief?fresh=true")
+      .set("x-session-id", adminSession);
+    const jobId = dispatched.body.jobId as string;
+
+    const mine = await request(app)
+      .get(`/api/dailyiq/brief/status?jobId=${encodeURIComponent(jobId)}`)
+      .set("x-session-id", adminSession);
+    expect(mine.status).toBe(200);
+    expect(["running", "done"]).toContain(mine.body.status);
+
+    // The id a client minted on the OTHER instance. Honest ignorance, never
+    // a settled verdict — this is what keeps a cron polling.
+    const foreign = await request(app)
+      .get("/api/dailyiq/brief/status?jobId=an-id-from-the-other-worker")
+      .set("x-session-id", adminSession);
+    expect(foreign.status).toBe(200);
+    expect(foreign.body.status).toBe("unknown-here");
+    expect(foreign.body.settled).toBe(false);
+  });
 });

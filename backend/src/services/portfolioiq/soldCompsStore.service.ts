@@ -2215,6 +2215,27 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<Record
       error: (err as Error)?.message ?? String(err),
       cumulativeEmitFailures: _emitFailureCounter,
     }));
+    // CF-A-THROTTLED-WRITE-IS-NOT-A-WRITE (#2015 follow-up, 2026-09-09).
+    // This catch used to log and then FALL THROUGH to `return { written: true }`
+    // below -- so a Cosmos 429, a schema drift, a missing container, every
+    // reason the upsert can throw, was reported to the caller as a landed sale.
+    //
+    // The result type has declared `{ written: false, reason: "error" }` since
+    // the loop-back fix; the catch simply never used it. The cost is paid by
+    // every caller that reconciles on the return value:
+    //
+    //   - ebayOrderPoll advanced its cursor past an order whose sale never
+    //     reached the pool (`writeFailed` never set)
+    //   - promotionJob stamped the staging row `promoted` -- done forever --
+    //     for a sale that is not in `sold_comps`
+    //   - emit-staging-to-pool flipped the staging row to `in-pool`
+    //   - every ledger balanced: `inserted` moved on a row that does not exist
+    //
+    // A throttle is the MOST likely failure here and the most retryable one;
+    // reporting it as success is precisely how a retryable loss becomes a
+    // permanent one. The emit-failure counter still increments and the warn
+    // still fires -- this only stops the lie in the return value.
+    return { written: false, reason: "error" };
   }
 
   // Reached only after the upsert succeeded — the sale is in the pool.

@@ -57,7 +57,14 @@ describe("admin notify routes spread pushProviderConfigured into the summary", (
       const start = src.indexOf(`"/admin/${route}"`);
       expect(start).toBeGreaterThan(0);
       const body = src.slice(start, src.indexOf("\n});", start));
-      expect(body).toContain("summary: { ...summary, pushProviderConfigured: isPushProviderConfigured() }");
+      // CF-LONG-CRONS-DIE-AT-THE-IDLE-CUT (2026-09-09). What D13 requires is
+      // that the summary the cron reads CARRIES the provider flag — not that
+      // it is spelled in one particular expression. personal-prospect-breakout
+      // now dispatches (202 + jobId) because it was answering at p95 142.5s
+      // against a 240s platform idle cut, so its summary is assembled inside
+      // the background run and returned through the status poll. Same fields,
+      // same gate, later delivery. Assert the property both shapes share.
+      expect(body).toMatch(/\.\.\.summary,\s*pushProviderConfigured: isPushProviderConfigured\(\)/);
     });
   }
 });

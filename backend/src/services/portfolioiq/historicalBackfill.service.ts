@@ -67,6 +67,12 @@ export interface BackfillTargetResult {
   csCardId: string | null;
   chSalesWritten: number;
   csSalesWritten: number;
+  /** CF-A-THROTTLED-WRITE-IS-NOT-A-WRITE (#2015 follow-up). Sales the pool
+   *  writer REFUSED -- throttled/failed upsert, unmatched catalog, invalid
+   *  row. `attempted = written + failed`; a run with a non-zero `failed` has
+   *  sales that are NOT in the pool and are worth re-running. */
+  chSalesFailed: number;
+  csSalesFailed: number;
   errors: string[];
 }
 
@@ -74,6 +80,10 @@ export interface BackfillRunResult {
   totalTargets: number;
   totalCHSalesWritten: number;
   totalCSSalesWritten: number;
+  /** Sales refused by the pool writer across every target. Non-zero means the
+   *  backfill is INCOMPLETE, however green the run looked. */
+  totalCHSalesFailed: number;
+  totalCSSalesFailed: number;
   perTarget: BackfillTargetResult[];
   durationMs: number;
 }
@@ -145,18 +155,25 @@ export function targetIsSspButProductIsBase(
   return titles.every((t) => parseListingTitle(t ?? "").parallel === null);
 }
 
-async function backfillOneCH(target: BackfillTarget): Promise<{ written: number; error?: string }> {
+/** CF-A-THROTTLED-WRITE-IS-NOT-A-WRITE (#2015 follow-up, 2026-09-09).
+ *  `failed` is the count of sales `recordSoldComp` REFUSED -- a throttled or
+ *  failed upsert (`reason: "error"`), an unmatched catalog, an invalid row.
+ *  Before the catch in `recordSoldComp` returned `written: false`, every one
+ *  of these counted as a write, so `chSalesWritten` was the number of sales we
+ *  ATTEMPTED, not the number in the pool. A backfill that Cosmos throttled end
+ *  to end reported a full success. */
+async function backfillOneCH(target: BackfillTarget): Promise<{ written: number; failed: number; error?: string }> {
   const chCardId = target.chCardId?.trim();
-  if (!chCardId) return { written: 0 };
+  if (!chCardId) return { written: 0, failed: 0 };
   const grade = target.grade ?? "Raw";
   const { gradeCompany, gradeValue } = parseGraderString(grade);
   let sales: CardHedgeSale[];
   try {
     sales = await getCardSales(chCardId, grade, CH_MAX_SALES);
   } catch (err) {
-    return { written: 0, error: `ch:${(err as Error)?.message ?? String(err)}` };
+    return { written: 0, failed: 0, error: `ch:${(err as Error)?.message ?? String(err)}` };
   }
-  if (sales.length === 0) return { written: 0 };
+  if (sales.length === 0) return { written: 0, failed: 0 };
 
   // Belt-and-braces: an SSP/rarity holding against a base vendor product.
   if (targetIsSspButProductIsBase(target.identity.parallel, sales.map((s) => s.title))) {
@@ -167,10 +184,11 @@ async function backfillOneCH(target: BackfillTarget): Promise<{ written: number;
       salesFetched: sales.length,
       reason: "ssp-target-base-product",
     });
-    return { written: 0 };
+    return { written: 0, failed: 0 };
   }
 
   let written = 0;
+  let failed = 0;
   const cardYear = target.identity.cardYear ?? null;
   for (const s of sales) {
     if (!Number.isFinite(s.price) || s.price <= 0) continue;
@@ -182,7 +200,7 @@ async function backfillOneCH(target: BackfillTarget): Promise<{ written: number;
     // price don't collide on the same doc id.
     const externalId = `${chCardId}::${s.date}::${Math.round(s.price * 100)}::${grade}`;
     try {
-      await recordSoldComp({
+      const res = await recordSoldComp({
         cardId: chCardId,
         playerName: target.identity.playerName,
         cardYear,
@@ -203,22 +221,27 @@ async function backfillOneCH(target: BackfillTarget): Promise<{ written: number;
         verifiedByUser: false,
         confidence: 0.8,
       });
-      written += 1;
+      // A refused write is not a write. `recordSoldComp` returns
+      // `written: false` for a throttled/failed upsert (reason "error"), an
+      // unmatched catalog, or an invalid row -- none of those sales are in the
+      // pool, so none of them may move `written`.
+      if (res.written) written += 1; else failed += 1;
     } catch {
       // swallow — individual write failures shouldn't kill the batch
+      failed += 1;
     }
   }
-  return { written };
+  return { written, failed };
 }
 
-async function backfillOneCS(target: BackfillTarget): Promise<{ written: number; error?: string }> {
+async function backfillOneCS(target: BackfillTarget): Promise<{ written: number; failed: number; error?: string }> {
   const csCardId = target.csCardId?.trim();
-  if (!csCardId) return { written: 0 };
+  if (!csCardId) return { written: 0, failed: 0 };
   let pricing: CardsightPricingResponse;
   try {
     pricing = await getPricing(csCardId);
   } catch (err) {
-    return { written: 0, error: `cs:${(err as Error)?.message ?? String(err)}` };
+    return { written: 0, failed: 0, error: `cs:${(err as Error)?.message ?? String(err)}` };
   }
 
   // Collect from raw + all graded arrays for full history.
@@ -233,7 +256,7 @@ async function backfillOneCS(target: BackfillTarget): Promise<{ written: number;
       }
     }
   }
-  if (allRecords.length === 0) return { written: 0 };
+  if (allRecords.length === 0) return { written: 0, failed: 0 };
 
   // Belt-and-braces: an SSP/rarity holding against a base vendor product.
   if (targetIsSspButProductIsBase(target.identity.parallel, allRecords.map((r) => r.title))) {
@@ -244,10 +267,11 @@ async function backfillOneCS(target: BackfillTarget): Promise<{ written: number;
       salesFetched: allRecords.length,
       reason: "ssp-target-base-product",
     });
-    return { written: 0 };
+    return { written: 0, failed: 0 };
   }
 
   let written = 0;
+  let failed = 0;
   const cardYear = target.identity.cardYear ?? null;
   for (const r of allRecords) {
     if (!Number.isFinite(r.price) || r.price <= 0) continue;
@@ -265,7 +289,7 @@ async function backfillOneCS(target: BackfillTarget): Promise<{ written: number;
     // the same date+price don't collide on the same doc id.
     const externalId = `${csCardId}::${r.date}::${Math.round(r.price * 100)}::${r.grade ?? "Raw"}`;
     try {
-      await recordSoldComp({
+      const res = await recordSoldComp({
         cardId: csCardId,
         playerName: target.identity.playerName,
         cardYear,
@@ -286,12 +310,13 @@ async function backfillOneCS(target: BackfillTarget): Promise<{ written: number;
         verifiedByUser: false,
         confidence: 0.6,
       });
-      written += 1;
+      if (res.written) written += 1; else failed += 1;
     } catch {
       // swallow
+      failed += 1;
     }
   }
-  return { written };
+  return { written, failed };
 }
 
 async function processTargetsWithConcurrency(
@@ -312,6 +337,8 @@ async function processTargetsWithConcurrency(
         csCardId: t.csCardId ?? null,
         chSalesWritten: ch.written,
         csSalesWritten: cs.written,
+        chSalesFailed: ch.failed,
+        csSalesFailed: cs.failed,
         errors,
       };
     }
@@ -334,11 +361,15 @@ export async function runHistoricalBackfill(
   const perTarget = await processTargetsWithConcurrency(targets);
   const totalCH = perTarget.reduce((sum, r) => sum + r.chSalesWritten, 0);
   const totalCS = perTarget.reduce((sum, r) => sum + r.csSalesWritten, 0);
+  const totalCHFailed = perTarget.reduce((sum, r) => sum + r.chSalesFailed, 0);
+  const totalCSFailed = perTarget.reduce((sum, r) => sum + r.csSalesFailed, 0);
 
   const result: BackfillRunResult = {
     totalTargets: targets.length,
     totalCHSalesWritten: totalCH,
     totalCSSalesWritten: totalCS,
+    totalCHSalesFailed: totalCHFailed,
+    totalCSSalesFailed: totalCSFailed,
     perTarget,
     durationMs: Date.now() - start,
   };
@@ -346,6 +377,10 @@ export async function runHistoricalBackfill(
     totalTargets: result.totalTargets,
     totalCHSalesWritten: totalCH,
     totalCSSalesWritten: totalCS,
+    // A backfill with refusals is INCOMPLETE. Logged so a throttled run is
+    // visibly different from a clean one -- before this, both read identical.
+    totalCHSalesFailed: totalCHFailed,
+    totalCSSalesFailed: totalCSFailed,
     durationMs: result.durationMs,
   });
   return result;
