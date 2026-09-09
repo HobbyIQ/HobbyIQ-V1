@@ -1,0 +1,13 @@
+{
+  "source": "cardpedia-drew-ruling-2026-09-08",
+  "sourceUrl": "https://baseballcardpedia.com/index.php/1996_Metal_Universe",
+  "year": 1996,
+  "setKey": "metal-universe-heavy-metal",
+  "setName": "1996 Metal Universe Heavy Metal",
+  "sport": "baseball",
+  "rows": 10,
+  "parallelColumnAuthoritative": true,
+  "handAuthored": true,
+  "note": "Drew item 21. Ten-card insert, 1:8 hobby and retail, transcribed verbatim from BCP's Heavy Metal section. This is its own product, not a parallel of the 250-card base set: Heavy Metal #2 is Barry Bonds while BASE #2 is Brady Anderson, so a holding pinned to the base row prices Bonds off Brady Anderson's pool. That is exactly the defect PR #2010 recorded for holding 46f3dd96 (hiq:baseball:1996:fleer-metal-universe:2:base:no-auto). No parallels are emitted: BCP lists none for this insert.",
+  "authoredAt": "2026-09-08"
+}

@@ -1,0 +1,13 @@
+{
+  "source": "cardpedia-drew-ruling-2026-09-08",
+  "sourceUrl": "https://baseballcardpedia.com/index.php/2017_Topps_Gold_Label",
+  "year": 2017,
+  "setKey": "topps-gold-label",
+  "setName": "2017 Topps Gold Label",
+  "sport": "baseball",
+  "rows": 1500,
+  "parallelColumnAuthoritative": true,
+  "handAuthored": true,
+  "note": "Drew ruling 19. Class 1/2/3 x colour is the card: Class 1 Blue is NOT Class 2 Blue, and BCP proves they are distinct by print run -- Blue is /150, /99, /50 and Red is /75, /50, /25 across Classes 1, 2, 3. 100 players x 3 classes x {Base, Black, Blue, Red, Gold} = 1,500 rows. Black is unnumbered (BCP gives odds 1:2, 1:6, 1:20 by class, not a run); Gold is one-of-one for all 300 base cards. The 500 existing flat-colour rows (Base/Black/Blue/Red/Gold with no class) are retired by the companion fold list: a colour alone is an ambiguous address that cannot say which of three print runs it is, and blank never means Class 1. The four stray 'Class 1 Blue' rows already in the catalog are the CORRECT vocabulary and are kept.",
+  "authoredAt": "2026-09-08"
+}

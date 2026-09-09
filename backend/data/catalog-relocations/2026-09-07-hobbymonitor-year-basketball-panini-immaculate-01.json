@@ -3146,10 +3146,9 @@
     },
     {
       "id": "hiq:basketball:2025:panini-immaculate:8:international-red:no-auto:num-15",
-      "action": "reslug",
-      "to": "hiq:basketball:2024:panini-immaculate:8:international-red:no-auto:num-15",
-      "reason": "#1925 H1: setName \"2024/25 Panini Immaculate Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"Matas Buzelis\" #8; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's ruling 2026-09-08: THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-2024 address — a checklist-backed row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-08: this row player \"Matas Buzelis\" #8 printRun 15 source=hobbymonitor-2026-09-04 setKey=panini-immaculate; the 2024 address hiq:basketball:2024:panini-immaculate:8:international-red:no-auto:num-15 is held by \"Jakob Poeltl\" source=checklistinsider-2026-08-27 setKey=panini-immaculate-collection. Two sources disagree on who holds #8 /15, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT). REPORT run 34255933237 refused the move as \"occupied: different card\"; run 34204256211 refused it too, where its truncated log line was misread as the #8 /27 Durant entry (#1999) and it was left unadjudicated."
     },
     {
       "id": "hiq:basketball:2025:panini-immaculate:14:black:no-auto:num-1",
