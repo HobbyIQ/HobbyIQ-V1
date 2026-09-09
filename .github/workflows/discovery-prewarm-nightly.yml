@@ -83,25 +83,52 @@ jobs:
         env:
           BASE: 'https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net'
         run: |
+          # CF-PREWARM-COLD-BUDGET (2026-09-09). --max-time 60 was below what
+          # the FIRST call of the night costs. This job runs right after the
+          # deploy restart, so the first sport pays the whole cold cross-
+          # partition scan: measured 42.8s (09-07), 55.0s and 57.0s (09-06),
+          # then 59.86s on 09-08 and 09-09 — curl exit 28 by a margin of
+          # 140ms. The endpoint was never broken; the budget was the defect,
+          # and it had been trending into the wall for days.
+          #
+          # 180s is a ceiling, not an expectation: warm calls in those same
+          # runs took 8-17s. It stays under the App Service 240s idle limit
+          # (which aborts with no response at all, ResultCode 0) and under
+          # this job's 15-minute timeout with six calls plus related-cards.
+          #
+          # A slow sport must not cost the OTHER sports their warm. The step
+          # ran under `set -e`, so the first curl 28 killed it outright and
+          # basketball and football were never warmed at all — the pre-warm
+          # did a third of its job on its best day and none of it on a bad
+          # one. Each call is now non-fatal; the step fails at the END only
+          # if EVERY warm failed, which is the case that means the API is
+          # down rather than slow.
+          WARMED=0
+          FAILED=0
           for sport in baseball basketball football; do
-            echo "--- warming trending sport=$sport ---"
-            t0=$(date +%s)
-            curl -sS "$BASE/api/compiq/trending?sport=$sport&limit=25" \
-              -H "x-session-id: $TIER1_TOKEN" \
-              --compressed \
-              --max-time 60 \
-              -o /tmp/trending-$sport.json
-            echo "  trending elapsed: $(($(date +%s) - t0))s  size: $(wc -c < /tmp/trending-$sport.json)"
-
-            echo "--- warming trending-players sport=$sport ---"
-            t0=$(date +%s)
-            curl -sS "$BASE/api/compiq/trending-players?sport=$sport&limit=25" \
-              -H "x-session-id: $TIER1_TOKEN" \
-              --compressed \
-              --max-time 60 \
-              -o /tmp/trending-players-$sport.json
-            echo "  trending-players elapsed: $(($(date +%s) - t0))s  size: $(wc -c < /tmp/trending-players-$sport.json)"
+            for path in trending trending-players; do
+              echo "--- warming $path sport=$sport ---"
+              t0=$(date +%s)
+              if curl -sS "$BASE/api/compiq/$path?sport=$sport&limit=25" \
+                -H "x-session-id: $TIER1_TOKEN" \
+                --compressed \
+                --max-time 180 \
+                -o "/tmp/$path-$sport.json"
+              then
+                WARMED=$((WARMED + 1))
+                echo "  $path elapsed: $(($(date +%s) - t0))s  size: $(wc -c < "/tmp/$path-$sport.json")"
+              else
+                RC=$?
+                FAILED=$((FAILED + 1))
+                echo "::warning::$path sport=$sport failed after $(($(date +%s) - t0))s (curl exit $RC) — continuing so the other sports still warm"
+              fi
+            done
           done
+          echo "prewarm summary: warmed=$WARMED failed=$FAILED"
+          if [ "$WARMED" -eq 0 ]; then
+            echo "::error::every discovery warm failed ($FAILED attempts) — the API is not answering, not merely slow"
+            exit 1
+          fi
 
       # Pre-warm related-cards for the top-10 slugs from the baseball
       # trending response. Extracting via jq (available on ubuntu-latest).

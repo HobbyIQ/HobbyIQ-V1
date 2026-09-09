@@ -367,6 +367,26 @@ export async function runBuyerIqDealScan(): Promise<DealScannerSummary> {
  * from runBuyerIqDealScan goes through here, so a cycle that scanned nothing,
  * was disabled, or threw is still visible to the canary — with `outcome`
  * saying which. Returns the summary so callers can `return emitSummary(...)`.
+ *
+ * WHY console.warn AND NOT console.log (2026-09-09). #1982 set the App Insights
+ * console subscriber to `logSendingLevel: WARN` to stop console.log minting a
+ * billed telemetry record per line. That subscriber tags by stream:
+ *
+ *     stderr (console.error, console.warn) -> SeverityNumber.WARN   KEPT
+ *     stdout (console.log,   console.info) -> SeverityNumber.INFO   DROPPED
+ *
+ * This heartbeat went out on stdout, so it stopped reaching App Insights the
+ * moment each role picked up #1982 — HobbyIQ3 on 2026-09-07 21:02Z, the worker
+ * on 2026-09-08 13:20Z. Measured in hobbyiq-insights: SeverityLevel 1 fell from
+ * 232k-762k per 6h bin to exactly ZERO from 2026-09-08 18:00Z onward, while
+ * api.ebay.com dependency calls from this scanner continued on both roles. The
+ * job never stopped running; only its heartbeat went dark, and the deal-scanner
+ * canary reads absence as "the scanner is dead".
+ *
+ * This trace is not chatter — it is one line per hourly cycle, and it IS the
+ * canary's source of truth (.github/workflows/deal-scanner-canary.yml). It must
+ * be emitted on the stream that survives the filter. Any future structured
+ * event that a canary or alert reads has the same requirement.
  */
 function emitSummary(
   summary: DealScannerSummary,
@@ -376,7 +396,7 @@ function emitSummary(
   const finishedAt = new Date();
   summary.finishedAt = finishedAt.toISOString();
   summary.durationMs = finishedAt.getTime() - startedAt.getTime();
-  console.log(JSON.stringify({
+  console.warn(JSON.stringify({
     event: "buyeriq_deal_scan_summary",
     source: "buyerIqDealScanner.service",
     outcome,
