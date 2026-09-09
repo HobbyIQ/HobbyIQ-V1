@@ -82,7 +82,7 @@ function makePricingWith(
 describe("CF-CROSS-GRADER-INVERSION-TELEMETRY — detection via buildGradeBreakdown", () => {
   let logSpy: ReturnType<typeof vi.spyOn>;
   beforeEach(() => {
-    logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    logSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
   });
   afterEach(() => {
     logSpy.mockRestore();
@@ -196,7 +196,7 @@ describe("CF-CROSS-GRADER-INVERSION-TELEMETRY — detection via buildGradeBreakd
 describe("CF-CROSS-GRADER-INVERSION-TELEMETRY — logCrossGraderInversionObserved JSON shape", () => {
   let logSpy: ReturnType<typeof vi.spyOn>;
   beforeEach(() => {
-    logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    logSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
   });
   afterEach(() => {
     logSpy.mockRestore();
@@ -262,12 +262,21 @@ describe("CF-CROSS-GRADER-INVERSION-TELEMETRY — logCrossGraderInversionObserve
 });
 
 describe("CF-CROSS-GRADER-INVERSION-TELEMETRY — same-grader guard still fires alongside", () => {
+  // This case spans BOTH streams on purpose. `cross_grader_inversion_observed`
+  // moved to stderr on 2026-09-09 because it has a KQL reader; its same-grader
+  // sibling `cross_observed_inversion_fired` has no reader and deliberately
+  // stays on stdout (the #1982 cost saving). So the assertion — one fires, the
+  // other stays quiet — has to watch both, or it would read a promoted event as
+  // absent purely because it changed stream.
   let logSpy: ReturnType<typeof vi.spyOn>;
+  let warnSpy: ReturnType<typeof vi.spyOn>;
   beforeEach(() => {
     logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
   });
   afterEach(() => {
     logSpy.mockRestore();
+    warnSpy.mockRestore();
   });
 
   it("same-grader (PSA 10 < PSA 9) fires reconstruction AND cross-grader stays quiet", () => {
@@ -290,7 +299,7 @@ describe("CF-CROSS-GRADER-INVERSION-TELEMETRY — same-grader guard still fires 
       { grader: "PSA", grade: "9", prices: [200, 210, 220, 230] },
     ], [38, 40, 42]);
     buildGradeBreakdown(pricing, null);
-    const events = logSpy.mock.calls
+    const events = [...logSpy.mock.calls, ...warnSpy.mock.calls]
       .map((c) => { try { return JSON.parse(String(c[0])); } catch { return null; } })
       .filter((p): p is Record<string, unknown> => p != null);
     const sameGraderEv = events.find((e) => e.event === "cross_observed_inversion_fired");

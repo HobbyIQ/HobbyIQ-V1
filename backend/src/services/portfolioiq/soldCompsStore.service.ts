@@ -1672,7 +1672,13 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<Record
       for (const e of existing) {
         try { await c.item(e.id, doc.cardId).delete(); } catch { /* best effort */ }
       }
-      console.log(JSON.stringify({
+      // WHY console.warn AND NOT console.log (2026-09-09, #1982 fallout). The App
+      // Insights console subscriber runs at `logSendingLevel: WARN`, which tags by
+      // stream: stderr (console.warn/error) -> WARN, KEPT; stdout (console.log/info)
+      // -> INFO, DROPPED. Measured on 2026-09-09: every structured event arriving in
+      // the last 6h was SeverityLevel 2; stdout events were absent fleet-wide.
+      // Read by backend/docs/runbooks/post-launch-oncall.md (the dedup-replaced count).
+      console.warn(JSON.stringify({
         event: "sold_comps_prewrite_dedup_replaced",
         source: "soldCompsStore.recordSoldComp",
         cardId: doc.cardId,
