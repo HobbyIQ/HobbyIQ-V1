@@ -55,16 +55,44 @@ describe("skippedSportUnresolved reaches the caller", () => {
 });
 
 describe("an all-unresolved batch still logs", () => {
-  it("the reconcile log fires on skippedSportUnresolved alone", () => {
+  it("the reconcile log fires on EVERY batch — there is no condition left to widen", () => {
+    // This test used to require the emit predicate to contain
+    // `skippedSportUnresolved > 0`, pinning the #2006 widening that admitted
+    // all-unresolved batches. That widening was necessary and insufficient:
+    // run 34262947046's TCGplayer lane skipped 25,991 rows at the year and
+    // player gates, which set none of the predicate's four terms, and logged
+    // nothing across 26 pages.
+    //
+    // The predicate is now GONE rather than widened again, so the assertion
+    // becomes the stronger one it was always reaching for: a batch that ran
+    // reports, whatever happened in it. Pinning the old substring here would
+    // now pin the bug.
     const src = readFileSync(SERVICE, "utf8");
-    const cond = src.match(/if \(result\.inserted > 0[^)]*\|\|[\s\S]{0,200}?\) \{\s*console\.log\(JSON\.stringify\(\{\s*event: "persist_vendor_sales"/)?.[0] ?? "";
-    expect(cond, "log condition must include skippedSportUnresolved").toContain("skippedSportUnresolved > 0");
+    const guarded = /if \([^)]*\)\s*\{\s*console\.log\(JSON\.stringify\(\{\s*event: "persist_vendor_sales"/;
+    expect(guarded.test(src), "the persist_vendor_sales emit must not sit behind a condition").toBe(false);
+    expect(src).toMatch(/\{\s*console\.log\(JSON\.stringify\(\{\s*event: "persist_vendor_sales"/);
   });
 
   it("the logged payload carries the counter", () => {
     const src = readFileSync(SERVICE, "utf8");
     const block = src.slice(src.indexOf('event: "persist_vendor_sales"'));
     expect(block.slice(0, 600)).toContain("skippedSportUnresolved,");
+  });
+
+  it("the logged payload names the OTHER skip reasons too", () => {
+    // CF-A-SKIP-MUST-SAY-WHY. The year and player gates are the two that ate
+    // the first TCGplayer day; a payload that reports a bare `skipped` cannot
+    // tell that from a quiet feed.
+    const src = readFileSync(SERVICE, "utf8");
+    const block = src.slice(src.indexOf('event: "persist_vendor_sales"')).slice(0, 900);
+    expect(block).toContain("skippedNoYear");
+    expect(block).toContain("skippedNoPlayer");
+  });
+
+  it("the year and player gates each increment their own named counter", () => {
+    const src = readFileSync(SERVICE, "utf8");
+    expect(src).toMatch(/if \(!cardYear\) \{ result\.skipped\+\+; result\.skippedNoYear/);
+    expect(src).toMatch(/if \(!playerName\) \{ result\.skipped\+\+; result\.skippedNoPlayer/);
   });
 });
 
