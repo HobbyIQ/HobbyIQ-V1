@@ -21,7 +21,7 @@
  *      /cleanliness/anomalies path is a completely separate module this
  *      script never touches, and a finished sweep DOES publish one.
  */
-import { execFileSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -58,6 +58,11 @@ function shimPath(opts: {
   /** ms to sleep on each page fetch once past slowAfterUnit, so a tiny
    *  BUDGET_MS is exceeded deterministically rather than racily. */
   sleepMs?: number;
+  /** Make the anomaly_scan_reports upsert throw this many times before
+   *  succeeding (shared across process invocations via the sink file), to
+   *  prove a report-write failure keeps a resumable cursor rather than
+   *  forcing a full re-scan on retry. */
+  failReportWriteTimes?: number;
 }): string {
   const p = path.join(tmp, `shim-${Math.random().toString(36).slice(2)}.cjs`);
   fs.writeFileSync(p, `
@@ -69,6 +74,7 @@ const SOLD_COMPS = ${JSON.stringify(opts.soldComps)};
 const BASELINE_ROWS = ${JSON.stringify(opts.baselineRows)};
 const SLOW_AFTER_UNIT = ${JSON.stringify(opts.slowAfterUnit ?? 999999)};
 const SLEEP_MS = ${JSON.stringify(opts.sleepMs ?? 0)};
+const FAIL_REPORT_WRITE_TIMES = ${JSON.stringify(opts.failReportWriteTimes ?? 0)};
 
 function readSink() {
   try { return JSON.parse(fs.readFileSync(SINK, "utf8")); }
@@ -201,6 +207,12 @@ const stub = {
                 items: {
                   upsert: async (doc) => {
                     const s = readSink();
+                    const failuresLeft = FAIL_REPORT_WRITE_TIMES - (s.reportWriteFailures || 0);
+                    if (failuresLeft > 0) {
+                      s.reportWriteFailures = (s.reportWriteFailures || 0) + 1;
+                      writeSink(s);
+                      throw new Error("stubbed transient report-write failure");
+                    }
                     s.reports[doc.id] = doc;
                     writeSink(s);
                     return { resource: doc };
@@ -245,6 +257,7 @@ function run(opts: {
   env?: Record<string, string>;
   slowAfterUnit?: number;
   sleepMs?: number;
+  failReportWriteTimes?: number;
 }) {
   const shim = shimPath({
     sinkPath: opts.sinkPath,
@@ -252,31 +265,33 @@ function run(opts: {
     baselineRows: opts.baselineRows,
     slowAfterUnit: opts.slowAfterUnit,
     sleepMs: opts.sleepMs,
+    failReportWriteTimes: opts.failReportWriteTimes,
   });
-  try {
-    const out = execFileSync(process.execPath, [script], {
-      cwd: backend,
-      env: {
-        PATH: process.env.PATH ?? "",
-        SystemRoot: process.env.SystemRoot ?? "",
-        NODE_OPTIONS: `--require ${JSON.stringify(shim).slice(1, -1)}`,
-        COSMOS_CONNECTION_STRING: "AccountEndpoint=https://stub/;AccountKey=c3R1Yg==;",
-        BACKFILL_APPLY: "true",
-        ...opts.env,
-      },
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "pipe"],
-      timeout: 60_000,
-    });
-    return { code: 0, out, sink: readSink(opts.sinkPath), reconcile: readReconcileLog(opts.sinkPath) };
-  } catch (e: any) {
-    return {
-      code: e.status as number,
-      out: String(e.stdout ?? "") + String(e.stderr ?? ""),
-      sink: readSink(opts.sinkPath),
-      reconcile: readReconcileLog(opts.sinkPath),
-    };
-  }
+  // spawnSync (not execFileSync) so stderr is captured on the SUCCESS path
+  // too -- the lane writes its "ERR writing anomaly report" line via
+  // console.error even when it still exits 0 (a declared, reconciled
+  // failure), and execFileSync only returns stdout when the child exits
+  // zero, which silently dropped that line from `out` in an earlier version
+  // of this harness.
+  const r = spawnSync(process.execPath, [script], {
+    cwd: backend,
+    env: {
+      PATH: process.env.PATH ?? "",
+      SystemRoot: process.env.SystemRoot ?? "",
+      NODE_OPTIONS: `--require ${JSON.stringify(shim).slice(1, -1)}`,
+      COSMOS_CONNECTION_STRING: "AccountEndpoint=https://stub/;AccountKey=c3R1Yg==;",
+      BACKFILL_APPLY: "true",
+      ...opts.env,
+    },
+    encoding: "utf8",
+    timeout: 60_000,
+  });
+  return {
+    code: r.status ?? -1,
+    out: String(r.stdout ?? "") + String(r.stderr ?? ""),
+    sink: readSink(opts.sinkPath),
+    reconcile: readReconcileLog(opts.sinkPath),
+  };
 }
 
 const BASELINE = [
@@ -384,6 +399,56 @@ describe("anomaly-force-scan — a budget stop leaves a resumable cursor, not a 
     expect(second.out).toMatch(new RegExp(`RESUMING from unit ${cursor1.nextUnitIndex}/`));
     expect(second.code).toBe(0);
     expect(Object.keys(second.sink.reports)).toHaveLength(1);
+  });
+
+  it("a report-write failure after a FINISHED sweep keeps a cursor at nextUnitIndex=total, so a retry does not re-scan", () => {
+    // A generous budget completes the whole 805-unit sweep in one process,
+    // but the final report upsert fails once (a transient Cosmos error).
+    // The lane must not throw the sweep's own work away: it should persist a
+    // cursor pointing PAST every unit, so the very next dispatch's for-loop
+    // runs zero iterations and goes straight to recomputing + retrying the
+    // write against the pool this run already assembled.
+    const sinkPath = path.join(tmp, `sink-${Math.random().toString(36).slice(2)}.json`);
+
+    const first = run({
+      sinkPath,
+      soldComps: [EARLY_ROW],
+      baselineRows: BASELINE,
+      env: { RUN_MINUTES: "30" },
+      failReportWriteTimes: 1,
+    });
+    // The sweep itself succeeded; only the write failed. reportWrites still
+    // reconciles (a declared failure is accounted for), so this is NOT the
+    // exit-5 refusal path -- it is exit 0 with failed=1 in the ledger.
+    expect(first.out).toContain("ERR writing anomaly report");
+    expect(first.out).toMatch(/cursor written at nextUnitIndex=total/);
+    expect(Object.keys(first.sink.reports)).toHaveLength(0);
+    const cursor1 = first.sink.control["anomaly-force-scan::cursor"];
+    expect(cursor1).toBeTruthy();
+    expect(cursor1.nextUnitIndex).toBe(cursor1.totalUnits);
+    const rec1 = first.reconcile.at(-1);
+    expect(rec1).toMatchObject({ job: "anomaly-force-scan", intended: 1, written: 0, failed: 1 });
+
+    // The retry: no failures this time, and the sink still has the ONE prior
+    // reconcile.log line from run 1 -- appended to, not replaced -- so a
+    // second reconcile line proves this run also ran main() rather than
+    // reading a cached result.
+    const second = run({
+      sinkPath,
+      soldComps: [EARLY_ROW],
+      baselineRows: BASELINE,
+      env: { RUN_MINUTES: "30" },
+    });
+    expect(second.out).toMatch(new RegExp(`RESUMING from unit ${cursor1.nextUnitIndex}/`));
+    // Zero units re-scanned: the for-loop's own range is empty when
+    // startUnitIndex === total, so "units scanned this run: 0" is the proof
+    // this was a pure write-retry, not a second full sweep.
+    expect(second.out).toMatch(/units scanned this run: 0\s/);
+    expect(second.code).toBe(0);
+    expect(Object.keys(second.sink.reports)).toHaveLength(1);
+    expect(second.sink.control["anomaly-force-scan::cursor"]).toBeUndefined();
+    const rec2 = second.reconcile.at(-1);
+    expect(rec2).toMatchObject({ job: "anomaly-force-scan", intended: 1, written: 1, failed: 0 });
   });
 });
 

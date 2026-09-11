@@ -361,12 +361,27 @@ async function main() {
       failed = 1;
       console.error("  ERR writing anomaly report:", e && e.message);
     }
-    // The sweep finished, so the cursor is retired -- a stale cursor left
-    // behind would make TOMORROW's run believe it can resume mid-sweep from
-    // a scanDate that is no longer today's, and readCursor()'s scanDate
-    // check already guards that, but clearing it is what makes the doc's own
-    // state match reality rather than relying solely on that guard.
-    await clearCursor(control);
+    if (written === 1) {
+      // The sweep finished AND the report landed, so the cursor is retired --
+      // a stale cursor left behind would make TOMORROW's run believe it can
+      // resume mid-sweep from a scanDate that is no longer today's, and
+      // readCursor()'s scanDate check already guards that, but clearing it
+      // is what makes the doc's own state match reality rather than relying
+      // solely on that guard.
+      await clearCursor(control);
+    } else {
+      // The sweep's own work -- every unit read, the whole pool assembled --
+      // is real and worth keeping even though the report upsert failed.
+      // Writing a cursor at nextUnitIndex=total (rather than leaving
+      // whatever cursor state predates this run, or none at all) means the
+      // NEXT dispatch's `for` loop runs zero iterations, falls straight
+      // through to the report-compute-and-write section with this run's
+      // full pool already restored, and simply retries the one write that
+      // failed -- rather than re-scanning all `total` units from scratch.
+      await writeCursor(control, { nextUnitIndex: total, totalUnits: total, scanDate, pool });
+      console.log("  cursor written at nextUnitIndex=total: the report write failed, so the next"
+        + " dispatch retries the write against this run's FINISHED sweep rather than re-scanning it");
+    }
   } else {
     console.log(`\nDRY: would write 1 anomaly report doc to ${REPORT_CONTAINER} and clear the cursor.`);
   }
