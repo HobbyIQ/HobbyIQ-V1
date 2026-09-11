@@ -46,6 +46,29 @@
  *                          accepted alias `image-variation-sp`.
  *   image-variation-ssp    the super-short-print tier — "SSP Variation",
  *                          "Super Short Print(s)", bare "SSP".
+ *   image-variation-sonic  CF-A-SONIC-IMAGE-VARIATION-IS-ITS-OWN-CARD-LINE
+ *                          (Ruling 23, Drew 2026-09-11). A THIRD, separate
+ *                          tier — not a rung of SP or SSP — pulled only from
+ *                          2022 Topps Chrome Sonic (a distinct 2023-released
+ *                          repack product, "Sonic packs"), never the base
+ *                          Chrome product's own SP/SSP pulls. BCP names all
+ *                          three tiers "Gimmicks" (never our vocabulary) with
+ *                          its own production code per tier and files the
+ *                          third as its own heading, "Sonic" — ten cards,
+ *                          hobby odds 1:6399, no per-card print run stated
+ *                          (BCP's own odds table states real serial counts
+ *                          elsewhere in the identical table, so the blank is
+ *                          deliberate, not a gap). Seller/market spellings:
+ *                          "Sonic Image Variation", "Image Variation Sonic",
+ *                          "Sonic Variation", "Sonic SP" (a market listing
+ *                          name — SCI's own card-title spelling — the "SP"
+ *                          there is NOT the Tier-1 SP rung; "Sonic" always
+ *                          wins so the two tiers are never fused). A bare
+ *                          "Sonic" (no variation/photo word nearby) is NOT a
+ *                          variation — it is 2022 Topps Chrome Sonic's own
+ *                          reprinted BASE card, and the product's own numbered
+ *                          "Sonic Refractor" parallels are colour refractors
+ *                          of that base card, not image variations.
  *   image-variation-chrome / -paper / -ssp-chrome
  *                          the stock a grader label names ("SP-CHROME",
  *                          "SSP-CHROME", "SP-PAPER") — kept only where the
@@ -83,7 +106,7 @@
  * base (twins differ only by `:num-N`) and never folds into it.
  */
 
-export type VariationTier = "sp" | "ssp";
+export type VariationTier = "sp" | "ssp" | "sonic";
 export type VariationStock = "chrome" | "paper";
 
 /** Weak markers: tokens that name a variation only with context — the
@@ -205,6 +228,17 @@ const IMAGE_VARIATION = /\b(?:image|photo|picture|pic)\s*(?:variations?|var)\b/;
 const SSP = /(?<!#\s*)\bssp\b(?!-[a-z0-9])|\bsuper\s+short\s+prints?\b/;
 const SP_TIER = /(?<!#\s*)\bsp\b(?!-[a-z0-9])/;
 const SHORT_PRINT = /\bshort\s+prints?\b/;
+/**
+ * CF-A-SONIC-IMAGE-VARIATION-IS-ITS-OWN-CARD-LINE (Ruling 23). "Sonic" names
+ * the variation ONLY beside a variation/photo/SP word — "Sonic Image
+ * Variation", "Image Variation Sonic", "Sonic Variation", "Sonic SP" (the
+ * market's own title form for this card, e.g. sportscardinvestor.com's "2022
+ * Topps Chrome Sonic SP #221" — SP there names the SONIC tier, not Tier 1's
+ * unspelled SP). A bare "Sonic" with no such neighbour (a Sonic-product base
+ * card, or one of the product's own numbered "Sonic Refractor" parallels) is
+ * NOT a variation and must never fold onto the plain SP tier.
+ */
+const SONIC = /\bsonic\b[^a-z0-9]{0,3}(?:image\s+|photo\s+)?(?:variations?|var|sp|ssp)\b|\b(?:variations?|var|image|photo|sp|ssp)\b[^a-z0-9]{0,3}sonic\b/;
 /** The grader-label form: "SP-CHROME", "SSP-CHROME", "SP Chrome", "SP-PAPER". */
 const LABEL_FORM = /\b(ssp|sp)[\s-]+(chrome|paper)\b/;
 /** A standalone "IV" token with UNICODE boundaries: not inside a word
@@ -223,7 +257,8 @@ const slugOf = (text: string): string => text.toLowerCase().replace(/[^a-z0-9&]+
 /** The display name for a kind + tier (+ a grader-label stock). */
 export function variationDisplayName(kind: string | null, tier: VariationTier | null, stock: VariationStock | null = null): string {
   const head = kind ? `${titleCase(kind)} Variation` : "Image Variation";
-  return `${head}${tier === "ssp" ? " SSP" : ""}${stock ? ` ${titleCase(stock)}` : ""}`;
+  const tierWord = tier === "ssp" ? " SSP" : tier === "sonic" ? " Sonic" : "";
+  return `${head}${tierWord}${stock ? ` ${titleCase(stock)}` : ""}`;
 }
 
 /**
@@ -242,6 +277,12 @@ export function readVariationFromTitle(lower: string): VariationRead {
   // The grader-label form is the strongest read: "SP-CHROME" IS the finish.
   const label = t.match(LABEL_FORM);
   if (label) { strong = true; tier = label[1] === "ssp" ? "ssp" : tier; stock = label[2] as VariationStock; consumed.push(label[0]); }
+  // Sonic is a THIRD tier, never a rung of SP/SSP (Ruling 23) — read before the
+  // KINDS loop and before SP/SSP tail-consumption, so "Sonic SP" reports the
+  // Sonic tier and "sp" is consumed as ITS tier word, not left as a stray
+  // weak marker or mistaken for Tier 1's unspelled SP.
+  const sonic = t.match(SONIC);
+  if (sonic) { strong = true; tier = "sonic"; consumed.push(sonic[0]); }
   for (const k of KINDS) {
     if (k.requires && !k.requires.test(t)) continue;
     const m = t.match(new RegExp(`\\b${k.re}\\b`));
@@ -255,8 +296,13 @@ export function readVariationFromTitle(lower: string): VariationRead {
   if (iv) { strong = true; consumed.push(iv[0]); }
   if (!strong && IV_TOKEN.test(t) && IV_CONTEXT.test(t)) { strong = true; consumed.push("iv"); }
   if (strong) {
-    const ssp = t.match(SSP); if (ssp) consumed.push(ssp[0]);
-    const sp = t.match(SP_TIER); if (sp) consumed.push(sp[0]);
+    // Sonic's own SP/SSP neighbour is already inside its consumed match
+    // (SONIC captures both tokens together) — re-matching here would push a
+    // duplicate "sp"/"ssp" into `words` and risk a false player-name token.
+    if (tier !== "sonic") {
+      const ssp = t.match(SSP); if (ssp) consumed.push(ssp[0]);
+      const sp = t.match(SP_TIER); if (sp) consumed.push(sp[0]);
+    }
     const shortPrint = t.match(SHORT_PRINT); if (shortPrint) consumed.push(shortPrint[0]);
     const words = consumed.flatMap((c) => c.split(/[\s&-]+/)).filter(Boolean);
     return { finish: variationDisplayName(kind, tier, stock), kind, tier, stock, marker: null, consumed, words };
@@ -314,9 +360,14 @@ export function normalizeVariationSlug(slug: string): string {
   if (/^short-prints?$/.test(s)) return "short-print";
   if (!/(^|-)(variations?|var)(-|$)/.test(s)) return s;
   s = s.replace(/(^|-)variations(-|$)/g, "$1variation$2").replace(/(^|-)var(-|$)/g, "$1variation$2");
-  // Tiers: SSP is spelled; SP is the default and is not.
+  // Tiers: SSP and Sonic are spelled; SP is the default and is not. Sonic is
+  // a THIRD, separate tier (Ruling 23) — stripped from the word list here so
+  // it is never read as a kind, then re-appended after "variation" below,
+  // same as SSP, but on its OWN address (never combined with ssp).
   let ssp = false;
+  let sonic = false;
   if (/(^|-)(ssp|super-short-prints?)(-|$)/.test(s)) { ssp = true; s = s.replace(/(^|-)(ssp|super-short-prints?)(?=-|$)/g, ""); }
+  if (/(^|-)sonic(-|$)/.test(s)) { sonic = true; s = s.replace(/(^|-)sonic(?=-|$)/g, ""); }
   s = s.replace(/(^|-)(sp|short-prints?)(?=-|$)/g, "");
   s = s.replace(/^-+|-+$/g, "").replace(/-{2,}/g, "-");
   // Split at the FIRST "variation": what precedes it is the kind, what
@@ -374,7 +425,7 @@ export function normalizeVariationSlug(slug: string): string {
     if (INTRINSIC_LEADING_FINISH.has(w)) continue;
     if (!tail.includes(w)) tail.push(w);
   }
-  return [kind, "variation", ...(ssp ? ["ssp"] : []), ...tail].join("-");
+  return [kind, "variation", ...(ssp ? ["ssp"] : []), ...(sonic ? ["sonic"] : []), ...tail].join("-");
 }
 
 /** True when a parallel slug names a member of the family. */
@@ -398,7 +449,7 @@ export function chromeRefractorSuffixForVariation(slug: string): string | null {
   if (!isVariationSlug(s)) return null;
   const parts = s.split("-");
   const at = parts.indexOf("variation");
-  const after = parts.slice(at + 1).filter((w) => w !== "ssp" && !STOCK_WORDS.has(w) && w !== "auto");
+  const after = parts.slice(at + 1).filter((w) => w !== "ssp" && w !== "sonic" && !STOCK_WORDS.has(w) && w !== "auto");
   if (after.length === 0) return s;
   if (after.some((w) => w === "refractor" || /fractor$/.test(w))) return s;
   return `${s}-refractor`;
