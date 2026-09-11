@@ -12,15 +12,25 @@ name: Deal Scanner Canary
 # total Cosmos outage produces a fully-zeroed, error-free summary that is
 # byte-for-byte identical to a quiet night.
 #
-# SOURCE OF TRUTH: App Insights traces, event `buyeriq_deal_scan_summary`
-# (backend/src/services/buyeriq/buyerIqDealScanner.service.ts:342), which
-# reaches App Insights because server.ts:39 arms setAutoCollectConsole.
-# NOT a container: the scanner's only Cosmos write (buyeriq_deals_sent) is
-# conditional on a deal clearing the threshold AND a push delivering, so a
-# healthy quiet hour and a three-day-dead process both write zero rows.
+# SOURCE OF TRUTH (2026-09-11): a durable Cosmos heartbeat DOC, container
+# `rematch_control`, id `heartbeat::buyeriq.deal.scanner`, upserted by
+# buyerIqDealScanner.service.ts's emitSummary() on every exit — ok, disabled
+# AND error. App Insights ingestion sampling on hobbyiq-insights is 10%: the
+# scanner's console.warn heartbeat trace (event `buyeriq_deal_scan_summary`,
+# fired once an hour) yielded only ~2.4 raw trace rows per 24h window, so a
+# trace-only canary failed on sampling noise (P(zero rows) ~= 9%) against a
+# scanner that ran every cycle. A point-read cannot be sampled away, so
+# checkDealScannerHeartbeat.cjs now reads the doc FIRST and falls back to the
+# App Insights trace only when the doc itself could not be reached (no
+# connection string, missing container, a thrown query) — an ABSENT doc, with
+# the container reachable, is read as a real "no scan yet" answer and still
+# fails the canary, it does not fall back. `rematch_control` is the same
+# ops/state container the GREAT REMATCH's settle markers already use
+# (poolMigrationGate.ts / rematch-sold-comps.cjs), partitioned `/id`.
 #
-# THE WORKSPACE, NOT THE CLASSIC API (2026-09-11, #2027). This canary reads
-# the Log Analytics workspace table `AppTraces`
+# THE FALLBACK READS THE WORKSPACE, NOT THE CLASSIC API (2026-09-11, #2027).
+# When the doc path is unreachable, the fallback query reads the Log
+# Analytics workspace table `AppTraces`
 # (`az monitor log-analytics query -w <workspace-id>`), not the classic
 # per-app `az monitor app-insights query` (table `traces`). hobbyiq-insights
 # is workspace-based, and the classic API is a compatibility shim over that
@@ -104,29 +114,41 @@ jobs:
           MAX_ERROR_RATE: ${{ inputs.max_error_rate || '0.5' }}
         run: |
           set -uo pipefail
-          # WORKSPACE, NOT THE CLASSIC API (2026-09-11). This used to call
-          # `az monitor app-insights query` (the classic per-app API, table
-          # `traces`). Measured 09-10/09-11: a `buyeriq_deal_scan_summary`
-          # trace that verifiably exists in the workspace's AppTraces table —
-          # same event, same timestamp, re-queried down to the exact hour —
-          # comes back EMPTY from the classic API every time. hobbyiq-insights
-          # is workspace-based; its classic-API query surface is a
-          # compatibility shim over the workspace and does not reliably
-          # surface a sparse, non-request-correlated trace like this one-a-
-          # cycle heartbeat. The workspace table is the one that actually has
-          # the rows, so that is what this canary now reads.
-          #
-          # The query lives HERE, not in the script, so an operator can paste
-          # it into the portal unchanged and get the same rows the canary saw.
-          # The script stays free of the Azure SDK and unit-testable on fixtures.
+          # DOC FIRST (2026-09-11). App Insights ingestion sampling is 10%; an
+          # hourly heartbeat trace yields ~2.4 raw rows per 24h window, so the
+          # trace-only canary failed on sampling noise (P(zero rows) ~= 9%)
+          # against a scanner that was running every cycle. The scanner now
+          # also upserts a durable heartbeat doc in Cosmos
+          # (rematch_control/heartbeat::buyeriq.deal.scanner) on every exit,
+          # which a point-read cannot be sampled away from. The connection
+          # string is sourced from HobbyIQ3's own app settings and piped
+          # STRAIGHT into the script's env — never written to disk — per this
+          # repo's secrets doctrine.
+          COSMOS_CONNECTION_STRING="$(az webapp config appsettings list \
+            --name HobbyIQ3 --resource-group rg-hobbyiq-dev \
+            --query "[?name=='COSMOS_CONNECTION_STRING'].value | [0]" -o tsv)"
+          export COSMOS_CONNECTION_STRING
+
+          # FALLBACK ONLY (2026-09-11): read only if the doc path could not be
+          # reached at all (see checkDealScannerHeartbeat.cjs main()) — an
+          # absent doc is itself a verdict, not a reason to fall back. When it
+          # IS reached, this query reads the Log Analytics WORKSPACE table
+          # `AppTraces`, not the classic per-app `traces` API (#2027,
+          # 2026-09-11): measured 09-10/09-11, a `buyeriq_deal_scan_summary`
+          # row that provably exists in AppTraces came back EMPTY from the
+          # classic API every time, on every window tried — the classic
+          # query surface never reliably showed this sparse, one-a-cycle
+          # trace. The query lives HERE, not in the script, so an operator
+          # can paste it into the portal unchanged and get the same rows the
+          # canary saw. The script stays free of the Azure SDK and
+          # unit-testable on fixtures. `|| true`: an empty/failed fetch here
+          # is tolerated — the .cjs script's own FETCH FAILURE guard is what
+          # distinguishes "the query didn't answer" from "zero runs" now that
+          # this is a fallback rather than the only signal.
           az monitor log-analytics query \
             --workspace 2a903998-79f4-4549-8042-5af803ab1e54 \
             --analytics-query "AppTraces | where TimeGenerated > ago(${WINDOW_HOURS}h) | where Message has 'buyeriq_deal_scan_summary' | project TimeGenerated, Message | order by TimeGenerated desc | take 500" \
-            -o json > /tmp/deal-scan-traces.json
-          if [ ! -s /tmp/deal-scan-traces.json ]; then
-            echo "::error::App Insights returned nothing at all — the scanner was NOT measured"
-            exit 2
-          fi
+            -o json > /tmp/deal-scan-traces.json || true
           TRACE_JSON=/tmp/deal-scan-traces.json node scripts/checkDealScannerHeartbeat.cjs
 
       # Same lane as the deploy-failure alert (#1954): github.token only, no
@@ -150,7 +172,7 @@ jobs:
             echo "| | |"
             echo "|---|---|"
             echo "| Run | [$GITHUB_RUN_ID]($RUN_URL) |"
-            echo "| Source of truth | App Insights \`AppTraces\` (workspace query), event \`buyeriq_deal_scan_summary\` |"
+            echo "| Source of truth | Cosmos doc \`rematch_control/heartbeat::buyeriq.deal.scanner\` (doc-first; falls back to App Insights workspace \`AppTraces\`, event \`buyeriq_deal_scan_summary\`, only if the doc is unreachable) |"
             echo "| Job interval | 60 min (\`BUYERIQ_DEAL_SCANNER_INTERVAL_MIN\`) |"
             echo "| Heartbeat ceiling | ${MAX_SILENCE_HOURS:-2}h (interval x 2) |"
             echo ""
@@ -162,6 +184,10 @@ jobs:
             echo ""
             echo '```bash'
             echo "curl -s https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net/api/health | jq '.build'"
+            echo "# Doc-first source of truth:"
+            echo "az cosmosdb sql container show --account-name hobbyiq-comps --database-name hobbyiq \\"
+            echo "  --resource-group rg-hobbyiq-dev --name rematch_control >/dev/null && echo container reachable"
+            echo "# Fallback source (App Insights workspace, sampled 10%):"
             echo "az monitor log-analytics query --workspace 2a903998-79f4-4549-8042-5af803ab1e54 \\"
             echo "  --analytics-query \"AppTraces | where TimeGenerated > ago(24h) | where Message has 'buyeriq_deal_scan' | project TimeGenerated, Message | order by TimeGenerated desc\""
             echo '```'

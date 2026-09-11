@@ -53,22 +53,51 @@
 //   exists to name: the job only runs while a process stays warm, and
 //   nobody was told when it stopped.
 //
+// THE DOC IS NOW THE PRIMARY SOURCE (2026-09-11). App Insights ingestion
+// sampling on hobbyiq-insights is 10%. This heartbeat fires once an hour, so
+// a 24h window holds ~2.4 raw trace rows on average and P(zero rows) is ~9%
+// BY CONSTRUCTION — the canary was failing on sampling noise against a
+// healthy scanner, not measuring a dead one. A point-read cannot be sampled
+// away, so buyerIqDealScanner.service.ts now also upserts a single durable
+// heartbeat doc (container `rematch_control`, id
+// `heartbeat::buyeriq.deal.scanner`) on every exit from runBuyerIqDealScan —
+// ok, disabled AND error. This checker reads that doc FIRST and decides
+// staleness from its `lastRunAt`; the App Insights trace path below runs only
+// when the doc could not be read at all (no COSMOS_CONNECTION_STRING, a
+// missing container, a thrown query) — see readHeartbeatDoc / main.
+//
 // Env:
-//   TRACE_JSON            required. The App Insights query result, as JSON,
-//                         on a path or on stdin ("-"). The workflow pipes
-//                         `az monitor app-insights query` into it. Keeping
-//                         the fetch OUTSIDE this script is deliberate: it
-//                         needs no Azure SDK, stays unit-testable against
-//                         fixtures, and the query text lives in the
-//                         workflow where an operator can re-run it by hand.
+//   COSMOS_CONNECTION_STRING  the doc-first path. When set, this script reads
+//                         the heartbeat doc directly and TRACE_JSON is not
+//                         required. A MISSING doc (container reachable, doc
+//                         absent) is read as "no scan yet" and still fails
+//                         heartbeatOk — it does not fall back to the trace,
+//                         because the doc being absent is itself the answer.
+//                         Only an unreachable read (no connection string,
+//                         thrown query) falls back to TRACE_JSON.
+//   TRACE_JSON            fallback path. The App Insights query result, as
+//                         JSON, on a path or on stdin ("-"). The workflow
+//                         pipes `az monitor app-insights query` into it.
+//                         Keeping the fetch OUTSIDE this script is
+//                         deliberate: it needs no Azure SDK, stays
+//                         unit-testable against fixtures, and the query text
+//                         lives in the workflow where an operator can re-run
+//                         it by hand.
 //   MAX_SILENCE_HOURS     default 2 (= 2x the 60-minute job interval).
 //   MAX_ERROR_RATE        default 0.5. Fires when errors/targetsScanned
-//                         across the window exceeds it. 0 disables.
-//   WINDOW_HOURS          default 24. Reported, and used for the rate axis.
+//                         across the window exceeds it. 0 disables. Only
+//                         meaningful on the trace path — the doc carries one
+//                         cycle's counters, not a window's, so the doc path
+//                         reports the latest cycle's own error count instead.
+//   WINDOW_HOURS          default 24. Reported, and used for the rate axis on
+//                         the trace path.
 
 const fs = require("node:fs");
 const path = require("node:path");
 const { finishLane } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
+
+const HEARTBEAT_CONTAINER = String(process.env.COSMOS_REMATCH_CONTROL_CONTAINER || "rematch_control").trim();
+const HEARTBEAT_DOC_ID = "heartbeat::buyeriq.deal.scanner";
 
 const MAX_SILENCE_HOURS = numEnv(process.env.MAX_SILENCE_HOURS, 2);
 const MAX_ERROR_RATE = numEnv(process.env.MAX_ERROR_RATE, 0.5);
@@ -208,10 +237,129 @@ function readInput() {
   } catch { return null; }
 }
 
+/**
+ * The verdict shape computed from a single doc read, kept parallel to
+ * `verdicts()` (the trace-window verdict) so main() can print + gate on
+ * either without branching downstream. `runs` is 0 or 1 — the doc carries
+ * exactly one cycle, never a window.
+ *
+ * heartbeatOk is silenceH <= maxSilenceHours, same rule as the trace path.
+ * errorsOk reads the doc's OWN errors/targetsScanned — one cycle's rate, not
+ * a window's — because the doc has no window to sum over.
+ */
+function docVerdict(doc, { now, maxSilenceHours, maxErrorRate }) {
+  const lastRunMs = doc && typeof doc.lastRunAt === "string" ? Date.parse(doc.lastRunAt) : NaN;
+  const silenceH = Number.isFinite(lastRunMs) ? (now - lastRunMs) / 3600000 : Infinity;
+  const scanned = Number(doc && doc.targetsScanned) || 0;
+  const errors = Number(doc && doc.errors) || 0;
+  const errorRate = scanned > 0 ? errors / scanned : null;
+  return {
+    runs: Number.isFinite(lastRunMs) ? 1 : 0,
+    latestIso: Number.isFinite(lastRunMs) ? new Date(lastRunMs).toISOString() : null,
+    silenceH,
+    heartbeatOk: silenceH <= maxSilenceHours,
+    scanned,
+    errors,
+    errorRate,
+    dealsFound: null,
+    notificationsSent: null,
+    outcome: doc && typeof doc.outcome === "string" ? doc.outcome : null,
+    roleInstance: doc && typeof doc.roleInstance === "string" ? doc.roleInstance : null,
+    errorsOk: !(maxErrorRate > 0) || errorRate === null || errorRate <= maxErrorRate,
+  };
+}
+
+/**
+ * Point-read the heartbeat doc. Returns `{ ok: true, doc }` (doc is `null`
+ * when genuinely absent — a real "no scan yet" answer, not a failure) or
+ * `{ ok: false, reason }` when the read itself could not be attempted or
+ * threw — the case that falls back to TRACE_JSON in main().
+ *
+ * `cosmosClientFactory` is injected so the pins can drive this without
+ * `@azure/cosmos` on a real network — the same shape the service-layer test
+ * mocks `CosmosClient` with.
+ */
+async function readHeartbeatDoc(cosmosClientFactory) {
+  const conn = process.env.COSMOS_CONNECTION_STRING;
+  if (!conn) return { ok: false, reason: "COSMOS_CONNECTION_STRING not set" };
+  try {
+    const CosmosClient = cosmosClientFactory || require("@azure/cosmos").CosmosClient;
+    const client = new CosmosClient({
+      connectionString: conn,
+      connectionPolicy: { retryOptions: { maxRetryAttemptsOnThrottledRequests: 10, maxWaitTimeInSeconds: 30 } },
+    });
+    const container = client
+      .database(process.env.COSMOS_DATABASE || "hobbyiq")
+      .container(HEARTBEAT_CONTAINER);
+    const { resource } = await container.item(HEARTBEAT_DOC_ID, HEARTBEAT_DOC_ID).read();
+    return { ok: true, doc: resource || null };
+  } catch (err) {
+    return { ok: false, reason: String((err && err.message) || err) };
+  }
+}
+
 async function main() {
+  const now = Date.now();
+
+  // DOC FIRST. A point-read cannot be sampled away, so this is tried before
+  // the trace path unconditionally — TRACE_JSON is read only if the doc
+  // could not be reached at all (see readHeartbeatDoc: ok:false).
+  const docResult = await readHeartbeatDoc();
+  if (docResult.ok) {
+    const v = docVerdict(docResult.doc, {
+      now,
+      maxSilenceHours: MAX_SILENCE_HOURS,
+      maxErrorRate: MAX_ERROR_RATE,
+    });
+
+    console.log(`[deal-scanner-canary] source of truth: Cosmos doc ${HEARTBEAT_CONTAINER}/${HEARTBEAT_DOC_ID} (doc-first — immune to App Insights sampling)`);
+    console.log(`[deal-scanner-canary] heartbeat threshold ${MAX_SILENCE_HOURS}h (2x the 60-min job interval)`);
+    console.log("");
+    console.log("axis        measured                          threshold        verdict");
+    console.log("---------   -------------------------------   --------------   -------");
+    const silenceStr = v.silenceH === Infinity ? "NEVER (no heartbeat doc)" : `${v.silenceH.toFixed(1)}h since last run`;
+    console.log(`heartbeat   ${silenceStr.padEnd(31)}   <= ${String(MAX_SILENCE_HOURS).padEnd(11)}   ${v.heartbeatOk ? "ok" : "SILENT"}`);
+    const rateStr = v.errorRate === null
+      ? "no targets scanned (n/a)"
+      : `${(v.errorRate * 100).toFixed(1)}% (${v.errors}/${v.scanned})`;
+    console.log(`errors      ${rateStr.padEnd(31)}   <= ${String(MAX_ERROR_RATE > 0 ? `${(MAX_ERROR_RATE * 100).toFixed(0)}%` : "off").padEnd(11)}   ${v.errorsOk ? "ok" : "ERRORING"}`);
+    console.log("");
+    console.log(`[deal-scanner-canary] last cycle: outcome=${v.outcome ?? "(none)"}  targetsScanned=${v.scanned}  errors=${v.errors}  roleInstance=${v.roleInstance ?? "(none)"}  lastRunAt=${v.latestIso ?? "(none)"}`);
+
+    let failed = false;
+    if (!v.heartbeatOk) {
+      failed = true;
+      const st = v.silenceH === Infinity
+        ? `NO heartbeat doc found at all (id ${HEARTBEAT_DOC_ID})`
+        : `last run ${v.silenceH.toFixed(1)}h ago`;
+      console.error(
+        `::error::deal scanner SILENT: ${st} (threshold ${MAX_SILENCE_HOURS}h = 2x the 60-minute interval). ` +
+        `The scanner is in-process on App Service — check that HobbyIQ3 is up and that BUYERIQ_DEAL_SCANNER_DISABLE is not "true"`,
+      );
+    }
+    if (!v.errorsOk) {
+      failed = true;
+      console.error(
+        `::error::deal scanner ERRORING: ${v.errors} errors on its last cycle across ${v.scanned} target-scans ` +
+        `(${((v.errorRate ?? 0) * 100).toFixed(1)}%, ceiling ${(MAX_ERROR_RATE * 100).toFixed(0)}%) — ` +
+        `the job is running but not working`,
+      );
+    }
+
+    if (failed) {
+      console.error("::error::Deal scanner health: https://portal.azure.com — Cosmos hobbyiq-comps, container rematch_control, doc heartbeat::buyeriq.deal.scanner");
+      return 1;
+    }
+
+    console.log(`[deal-scanner-canary] OK — last cycle ${v.silenceH.toFixed(1)}h old; error rate within ceiling`);
+    return 0;
+  }
+
+  console.log(`[deal-scanner-canary] heartbeat doc unreachable (${docResult.reason}) — falling back to the App Insights trace`);
+
   const raw = readInput();
   if (raw === null) {
-    console.error("::error::[deal-scanner-canary] TRACE_JSON required (a path, or \"-\" for stdin)");
+    console.error("::error::[deal-scanner-canary] heartbeat doc unreachable AND TRACE_JSON not set (a path, or \"-\" for stdin) — the scanner could not be measured at all");
     return 2;
   }
 
@@ -224,14 +372,13 @@ async function main() {
   }
 
   const { parsed, unparsed } = parseSummaries(rows);
-  const now = Date.now();
   const v = verdicts(parsed, {
     now,
     maxSilenceHours: MAX_SILENCE_HOURS,
     maxErrorRate: MAX_ERROR_RATE,
   });
 
-  console.log(`[deal-scanner-canary] source of truth: App Insights traces, event=buyeriq_deal_scan_summary`);
+  console.log(`[deal-scanner-canary] source of truth (FALLBACK): App Insights traces, event=buyeriq_deal_scan_summary`);
   console.log(`[deal-scanner-canary] window ${WINDOW_HOURS}h; heartbeat threshold ${MAX_SILENCE_HOURS}h (2x the 60-min job interval); max error rate ${MAX_ERROR_RATE > 0 ? MAX_ERROR_RATE : "off"}`);
   console.log("");
 
@@ -288,7 +435,7 @@ async function main() {
   return 0;
 }
 
-module.exports = { parseAiTable, parseSummaries, verdicts, numEnv };
+module.exports = { parseAiTable, parseSummaries, verdicts, numEnv, docVerdict, readHeartbeatDoc, HEARTBEAT_CONTAINER, HEARTBEAT_DOC_ID };
 
 if (require.main === module) {
   main()
