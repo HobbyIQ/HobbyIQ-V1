@@ -294,11 +294,43 @@ describe("product qualifiers in titles are identity", () => {
  * NOT move -- which is why the named-kind cases are asserted alongside.
  */
 describe("a leading finish is a finish, not a kind", () => {
-  it("folds both Witt spellings onto one address", () => {
-    expect(normalizeVariationSlug("refractor-image-variation")).toBe("image-variation-refractor");
+  // CF-AN-INTRINSIC-FINISH-IS-NOT-AN-ADDRESS (2026-09-09, COMPLETING the
+  // above). These four assertions ENCODED THE DEFECT: #2012 unified the two
+  // spellings onto `image-variation-refractor`, and measured against prod that
+  // is the address ONLY the self-derived seeds occupy --
+  //
+  //   Image Variation SP       20  beckett-scraped-2026-09-01 -> :image-variation:
+  //   Image Variation SSP       5  beckett-scraped-2026-09-01 -> :image-variation-ssp:
+  //   Image Variation Refractor 26 ingest-auto-seed           -> :image-variation-refractor:
+  //   Image Variation Refractor 23 ingest-auto-seed-graded    -> :image-variation-refractor:
+  //
+  // -- so holding 2b62a93f re-derived onto an ingest-auto-seed row and was
+  // reported "checklist-backed" by a row we minted from our own sales.
+  // Refractor is INTRINSIC ("All Gimmicks are Refractors"), so a LEADING one
+  // is dropped, not re-appended, and the title reaches the SP checklist row.
+  it("folds the leading-finish spelling onto the SP checklist address", () => {
+    expect(normalizeVariationSlug("refractor-image-variation")).toBe("image-variation");
+    expect(canonicalVariationName("Refractor Image Variation")).toBe("Image Variation");
+  });
+
+  // The TRAILING spelling keeps its address: those are the ingest-auto-seed
+  // rows, and they are retired by a report-first catalog list rather than
+  // silently re-pointed by the normalizer. A normalizer that moved them too
+  // would carry their sales across without a ledger.
+  it("leaves the trailing spelling on the address the seeded rows occupy", () => {
     expect(normalizeVariationSlug("image-variation-refractor")).toBe("image-variation-refractor");
-    expect(canonicalVariationName("Refractor Image Variation")).toBe("Image Variation Refractor");
     expect(canonicalVariationName("Image Variation Refractor")).toBe("Image Variation Refractor");
+  });
+
+  // NARROWNESS. Only the fractor family is intrinsic. A leading `wave` or
+  // `speckle` still moves to the tail exactly as #2012 shipped it, because
+  // those name a REAL second card ("Image Variations Red Speckle Refractor" is
+  // 20 distinct checklistcenter rows) and dropping one would fuse two pools.
+  it("drops only the intrinsic finish, and still moves the others", () => {
+    expect(normalizeVariationSlug("wave-image-variation")).toBe("image-variation-wave");
+    expect(normalizeVariationSlug("speckle-image-variation")).toBe("image-variation-speckle");
+    expect(normalizeVariationSlug("superfractor-image-variation")).toBe("image-variation-superfractor");
+    expect(normalizeVariationSlug("image-variations-red-speckle-refractor")).toBe("image-variation-red-speckle-refractor");
   });
 
   it("keeps the SP tier unspelled and the SSP tier spelled", () => {

@@ -262,7 +262,12 @@ describe("PIN C — every verdict line prints the ROW's player beside the holdin
     expect(gateA).toMatch(/verdict: "AGREE",[\s\S]{0,400}rowPlayer: own\?\.playerName \?\? null/);
     expect(gateA).toMatch(/row names \$\{JSON\.stringify\(own\?\.playerName \?\? null\)\}`\)/);
     // The main path's REDERIVE names the destination row's player on the line.
-    expect(SRC).toMatch(/backed by \$\{destinationBacking\.source\}, names \$\{JSON\.stringify\(destinationBacking\.playerName \?\? null\)\}/);
+    // The word before "by" is now the MEASURED backing rather than the literal
+    // "backed" (CF-THE-VERDICT-MUST-NAME-THE-BACKING-IT-ACTUALLY-HAS,
+    // 2026-09-09): a destination whose only row is self-derived was being
+    // printed as "backed by ingest-auto-seed". What this pin is about -- that
+    // the ROW's player appears on the line -- is unchanged and still asserted.
+    expect(SRC).toMatch(/\$\{destBacking\} by \$\{destinationBacking\.source\}, names \$\{JSON\.stringify\(destinationBacking\.playerName \?\? null\)\}/);
     // GATE A's checklist-twin re-point names the twin's player.
     expect(SRC).toMatch(/checklist twin, backed by \$\{twin\.source\}, names \$\{JSON\.stringify\(twin\.playerName \?\? null\)\}/);
     // AGREE-UNBACKED names its row's player too.

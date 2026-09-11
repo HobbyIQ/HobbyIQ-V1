@@ -11,7 +11,8 @@ name: Nightly Cleanliness Maintenance
 #   2. Trust-tier promotion (mature rows without flags → verifyStatus=confirmed).
 #   3. Baseline pool snapshot (freezes today's state — enables next-day drift comparison).
 #   4. Train confidence weights (reads last 30d of learning_events,
-#      adjusts scorer weights based on human decisions).
+#      adjusts scorer weights based on human decisions), then anomaly
+#      detection (drift vs the baseline from step 3 above).
 #
 # Manual trigger via workflow_dispatch also supported for one-off runs.
 #
@@ -20,6 +21,13 @@ name: Nightly Cleanliness Maintenance
 # empty anomalies response both warned and exited 0. Both are exit 1
 # now. The four dispatches stay; each prints the backfill-runner run URL
 # it produced so a green here can be traced to the run that did the work.
+#
+# CF-CLEANLINESS-ANOMALY-BUDGET (2026-09-11). The anomaly-detection leg of
+# step 4 is now a FIFTH dispatch (anomaly-force-scan, a backfill-runner
+# lane) rather than a direct HTTP call: the old ?force=true call was an
+# unbounded full sold_comps walk that never once finished inside
+# poll-admin-job.cjs's ceiling. See the "Dispatch anomaly-force-scan" step
+# below for the full history.
 
 on:
   schedule:
@@ -111,9 +119,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: auto-quarantine-pools
     steps:
-      # The anomaly step below runs backend/scripts/poll-admin-job.cjs from
-      # the checkout. First step so it cannot clobber anything a later step
-      # has put in the workspace.
+      # The anomaly steps below run backend/scripts/check-anomaly-scan-report
+      # .cjs from the checkout. First step so it cannot clobber anything a
+      # later step has put in the workspace.
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -150,66 +158,104 @@ jobs:
             | head -c 500
           echo ""
 
-      # CF-LONG-CRONS-DIE-AT-THE-IDLE-CUT (2026-09-09). This step has never
-      # once received a drift comparison. App Insights, 14 days: 11 requests
-      # to /cleanliness/anomalies, ALL ResultCode 0, every one cut at 89.9s.
-      # CF-CLEANLINESS-ANOMALY-BUDGET read that as an impatient client and
-      # raised the curl ceiling from 90s to 900s — but the App Service front
-      # end cuts an IDLE connection at 240s regardless of what the client is
-      # willing to wait, so the lane would have gone on dying, just later.
-      # The scan completes server-side every night; nobody was holding the
-      # socket to receive it.
+      # CF-LONG-CRONS-DIE-AT-THE-IDLE-CUT (2026-09-09) + CF-CLEANLINESS-
+      # ANOMALY-BUDGET (2026-09-11). This step never once received a drift
+      # comparison: App Insights, 14 days, 11 requests to
+      # /cleanliness/anomalies, ALL ResultCode 0, every one cut at 89.9s.
+      # #1985 read that as an impatient client and raised the curl ceiling
+      # from 90s to 900s; the App Service front end cuts an IDLE connection
+      # at 240s regardless of what the client is willing to wait, so the
+      # lane would have gone on dying, just later. Moving to a dispatch +
+      # poll-admin-job.cjs poller (202 + jobId) fixed the IDLE cut but not
+      # the underlying job: detectAnomalies({force:true}) is an UNBUDGETED
+      # full sold_comps walk, and the poller's own 1,501s ceiling was hit two
+      # nights straight (09-10, 09-11) with no terminal answer either way.
       #
-      # ?force=true is now a dispatch (202 + jobId) and this step polls the
-      # status route to completion. Each poll is a short request, so nothing
-      # is ever idle and the platform cut cannot apply. No timeout anywhere
-      # was widened to fix this.
-      - name: Anomaly detection (drift vs baseline)
+      # The scan is now the "anomaly-force-scan" backfill-runner lane (its
+      # script lives in backend scripts/, dispatched below -- not run
+      # directly by this workflow, so it builds its own dist/ the same way
+      # every other backfill-runner lane does) on the SAME runner_minutes/
+      # reserve/verify clock as baseline-pool-snapshot.cjs: it scans
+      # sold_comps by (cardYear, sportClass) unit, persists a crawl_state
+      # cursor so a budget stop resumes the next dispatch rather than
+      # restarting, and writes its finished report to the
+      # `anomaly_scan_reports` container -- see that lane's own header for
+      # the full contract, including why a scan-phase stop refuses to
+      # publish a partial report.
+      - name: Dispatch anomaly-force-scan (drift vs baseline)
+        if: env.ADMIN_API_TOKEN != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          gh workflow run backfill-runner.yml \
+            --repo "$GITHUB_REPOSITORY" \
+            --ref main \
+            -f script=anomaly-force-scan \
+            -f apply=true
+          sleep 20
+          RUN_ID=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow=backfill-runner.yml --limit 1 --json databaseId --jq '.[0].databaseId')
+          if [ -z "$RUN_ID" ]; then
+            echo "::error::could not find the backfill-runner run dispatched for anomaly-force-scan"
+            exit 1
+          fi
+          echo "anomaly-force-scan dispatched → run $RUN_ID"
+          echo "ANOMALY_SCAN_RUN_ID=$RUN_ID" >> "$GITHUB_ENV"
+
+      # A budget stop re-dispatches a NEW run (relaunch-on-marker), so
+      # waiting on the one run id above is not enough — this polls the
+      # NEWEST backfill-runner run each cycle, which follows the chain as it
+      # relaunches, and stops once the newest run id has been STABLE for one
+      # full poll cycle (unchanged since the previous iteration) AND has
+      # reached a terminal status: a relaunch would have replaced it with a
+      # fresher id within that same 60s window, since relaunch-on-marker
+      # dispatches immediately when the budget marker is present. Bounded
+      # attempts (30 x 60s = 30 minutes) rather than an unbounded loop, per
+      # CF-A-KILLED-JOB-CANNOT-REPORT-PROGRESS: a chain that is still
+      # relaunching past that is reported as such, not silently awaited
+      # forever, and the checker step below still reads whatever report
+      # (or absence of one) is actually on the pool.
+      - name: Wait for anomaly-force-scan (and any budget-stop relaunches) to settle
+        if: env.ADMIN_API_TOKEN != '' && env.ANOMALY_SCAN_RUN_ID != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set +e
+          LAST_ID="$ANOMALY_SCAN_RUN_ID"
+          for i in $(seq 1 30); do
+            RUN_ID=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow=backfill-runner.yml --limit 1 --json databaseId --jq '.[0].databaseId')
+            STATUS=$(gh run view "$RUN_ID" --repo "$GITHUB_REPOSITORY" --json status --jq '.status' 2>/dev/null || echo unknown)
+            CONCLUSION=$(gh run view "$RUN_ID" --repo "$GITHUB_REPOSITORY" --json conclusion --jq '.conclusion' 2>/dev/null || echo "")
+            echo "[$(date -u +%H:%M:%S)] attempt=$i run=$RUN_ID status=$STATUS conclusion=$CONCLUSION"
+            if [ "$STATUS" = "completed" ] && [ "$RUN_ID" = "$LAST_ID" ]; then
+              # The newest run is done AND it is the same run we saw last
+              # cycle — a relaunch would have replaced it with a fresher id
+              # within one 60s window, since relaunch-on-marker dispatches
+              # immediately when the marker is present.
+              echo "settled: run $RUN_ID concluded $CONCLUSION"
+              break
+            fi
+            LAST_ID="$RUN_ID"
+            sleep 60
+          done
+
+      - name: Install backend deps (check-anomaly-scan-report.cjs needs @azure/cosmos)
+        if: env.ADMIN_API_TOKEN != ''
+        working-directory: backend
+        run: npm ci --omit=dev
+
+      - name: Read anomaly scan report
         if: env.ADMIN_API_TOKEN != ''
         shell: bash
         run: |
-          echo "Running anomaly detection (dispatch + poll)..."
-          # CF-THE-LOG-IS-BOTH-STREAMS (#1963/#1975). `2>&1` because the
-          # poller writes its refusals — including the UNKNOWN verdict — with
-          # console.error, and a stdout-only tee would drop precisely the
-          # lines that explain a failure. `pipefail` because a pipeline's
-          # status is tee's, always 0, which would report SUCCESS for a lane
-          # that never settled.
-          set -o pipefail
-          set +e
-          node backend/scripts/poll-admin-job.cjs \
-            --label anomalies \
-            --method GET \
-            --dispatch-url "https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net/api/cleanliness/anomalies?force=true" \
-            --status-url "https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net/api/cleanliness/anomalies/status" \
-            --auth-header "Authorization: Bearer $ADMIN_API_TOKEN" \
-            2>&1 | tee /tmp/anomalies-poll.log
-          POLL_RC=$?
-          set -e
-          if [ "$POLL_RC" -eq 2 ]; then
-            echo "::error::anomaly detection never reported settled — UNKNOWN, not a failure; the scan may have finished on the other instance"
+          COSMOS_CONNECTION_STRING=$(az webapp config appsettings list \
+            --name HobbyIQ3 --resource-group rg-hobbyiq-dev \
+            --query "[?name=='COSMOS_CONNECTION_STRING'].value" -o tsv | tr -d '\r\n')
+          if [ -z "$COSMOS_CONNECTION_STRING" ]; then
+            echo "::error::COSMOS_CONNECTION_STRING empty from App Service"
             exit 1
           fi
-          if [ "$POLL_RC" -ne 0 ]; then
-            echo "::error::anomaly detection failed — no drift comparison landed"
-            exit 1
-          fi
-          RESULT=$(sed -n 's/^RESULT_JSON //p' /tmp/anomalies-poll.log | tail -n1)
-          if [ -z "$RESULT" ]; then
-            # D13: an empty response used to warn and exit 0 — green with no detection.
-            echo "::error::anomaly detection settled without a report body — no drift comparison ran"
-            exit 1
-          fi
-          # A settled scan that found NO BASELINE is a different fact from a
-          # scan that found no drift, and the parser below cannot tell them
-          # apart (both read as zero anomalies). Name it here.
-          if echo "$RESULT" | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{try{process.exit(JSON.parse(d).report===null?0:1)}catch{process.exit(1)}})"; then
-            echo "::error::anomaly detection settled with report=null — no baseline snapshot exists yet, so no drift comparison was possible (run baseline-pool-snapshot)"
-            exit 1
-          fi
-          HIGH_COUNT=$(echo "$RESULT" | node -e "let d=''; process.stdin.on('data',c=>d+=c); process.stdin.on('end',()=>{ try { const r=JSON.parse(d); const highs=(r.report?.anomalies||[]).filter(a=>a.suspiciousness==='high'); console.log(highs.length); } catch { console.log('0'); } })")
-          TOTAL=$(echo "$RESULT" | node -e "let d=''; process.stdin.on('data',c=>d+=c); process.stdin.on('end',()=>{ try { const r=JSON.parse(d); console.log((r.report?.anomalies||[]).length); } catch { console.log('0'); } })")
-          echo "Anomalies detected: $TOTAL total, $HIGH_COUNT high-suspiciousness"
-          if [ "$HIGH_COUNT" -gt "10" ]; then
-            echo "::warning::${HIGH_COUNT} slugs with high-suspiciousness drift — review /app/admin/cleanliness"
-          fi
+          COSMOS_CONNECTION_STRING="$COSMOS_CONNECTION_STRING" \
+          COSMOS_DATABASE=hobbyiq \
+          node backend/scripts/check-anomaly-scan-report.cjs

@@ -108,6 +108,90 @@ async function recordSent(userId: string, targetId: string, listingId: string, f
   try { await cont.items.upsert(doc); } catch { /* soft */ }
 }
 
+// ── Durable heartbeat (2026-09-11) ────────────────────────────────────
+//
+// THE PROBLEM THIS FIXES. The heartbeat's only home was a console.warn trace
+// (`buyeriq_deal_scan_summary`) picked up by App Insights. App Insights
+// ingestion sampling on hobbyiq-insights is 10%, and this trace fires once an
+// hour, so a 24h window holds ~2.4 raw rows on average and P(zero rows) is
+// ~9% BY CONSTRUCTION even when the scanner ran every cycle. The canary was
+// failing on sampling noise, not on a dead job.
+//
+// A trace can be sampled away; a point-read cannot. So every emitSummary()
+// call now ALSO upserts a small durable doc, ONE row, overwritten in place —
+// never a growing log — so "no scan in 2h" can be decided from a read that
+// sampling cannot touch. The trace stays: it is still useful for the
+// per-cycle counters (targets, deals, errors) a canary window wants to sum,
+// and console.warn is cheap insurance if the doc write itself fails.
+//
+// CONTAINER CHOICE. Reuses `rematch_control` (database `hobbyiq`), the same
+// container `poolMigrationGate.ts` / `rematch-sold-comps.cjs` use for the
+// GREAT REMATCH's settle markers — the existing "small durable ops/state
+// marker" container in this repo, partitioned `/id` (see
+// `getControlContainer` in poolMigrationGate.ts and `writeSettleMarkers` in
+// rematch-sold-comps.cjs: `container.item(docId, docId)`, doc id doubles as
+// the partition key). This heartbeat follows the same scheme — id
+// `heartbeat::buyeriq.deal.scanner`, partition key = id — rather than minting
+// a new container for one more small ops marker.
+//
+// FAILURE IS NON-FATAL, same doctrine as every other accessor in this file:
+// a failed doc write must never fail the scan itself, and the console.warn
+// trace is unaffected either way.
+export const HEARTBEAT_CONTROL_CONTAINER = "rematch_control";
+
+/** The heartbeat doc id for this job. Exported so the checker/tests agree on it. */
+export function heartbeatDocId(): string {
+  return "heartbeat::buyeriq.deal.scanner";
+}
+
+export interface DealScannerHeartbeatDoc {
+  id: string;
+  kind: "heartbeat";
+  lastRunAt: string;
+  outcome: "ok" | "disabled" | "error";
+  targetsScanned: number;
+  errors: number;
+  roleInstance: string | null;
+}
+
+let _heartbeatContainer: Container | null = null;
+async function getHeartbeatContainer(): Promise<Container | null> {
+  if (_heartbeatContainer) return _heartbeatContainer;
+  const conn = process.env.COSMOS_CONNECTION_STRING;
+  if (!conn) return null;
+  try {
+    const client = new CosmosClient(cosmosOptionsFromConnectionString(conn));
+    _heartbeatContainer = client
+      .database(process.env.COSMOS_DATABASE ?? "hobbyiq")
+      .container(process.env.COSMOS_REMATCH_CONTROL_CONTAINER ?? HEARTBEAT_CONTROL_CONTAINER);
+    return _heartbeatContainer;
+  } catch { return null; }
+}
+
+/**
+ * Upsert the durable heartbeat doc. Called on every exit from
+ * runBuyerIqDealScan via emitSummary — ok, disabled, and error alike — so the
+ * canary can decide "no scan in 2h" from a doc a 10% trace sampling rate
+ * cannot make disappear.
+ *
+ * Never throws: a Cosmos outage must cost the heartbeat DOC, not the scan
+ * itself, and the console.warn trace still fires regardless.
+ */
+async function writeHeartbeatDoc(summary: DealScannerSummary, outcome: "ok" | "disabled" | "error"): Promise<void> {
+  const cont = await getHeartbeatContainer();
+  if (!cont) return;
+  const doc: DealScannerHeartbeatDoc = {
+    id: heartbeatDocId(),
+    kind: "heartbeat",
+    lastRunAt: summary.finishedAt,
+    outcome,
+    targetsScanned: summary.targetsScanned,
+    errors: summary.errors,
+    roleInstance: process.env.WEBSITE_ROLE_INSTANCE_ID ?? process.env.WEBSITE_INSTANCE_ID ?? null,
+  };
+  try { await cont.items.upsert(doc); } catch { /* soft — trace still carries the heartbeat */ }
+}
+
 // ── Target iteration ─────────────────────────────────────────────────
 let _targetsContainer: Container | null = null;
 async function getTargetsContainer(): Promise<Container | null> {
@@ -388,11 +472,11 @@ export async function runBuyerIqDealScan(): Promise<DealScannerSummary> {
  * be emitted on the stream that survives the filter. Any future structured
  * event that a canary or alert reads has the same requirement.
  */
-function emitSummary(
+async function emitSummary(
   summary: DealScannerSummary,
   startedAt: Date,
   outcome: "ok" | "disabled" | "error",
-): DealScannerSummary {
+): Promise<DealScannerSummary> {
   const finishedAt = new Date();
   summary.finishedAt = finishedAt.toISOString();
   summary.durationMs = finishedAt.getTime() - startedAt.getTime();
@@ -402,5 +486,8 @@ function emitSummary(
     outcome,
     ...summary,
   }));
+  // The durable doc, not the trace, is what the canary now reads first (see
+  // the block above writeHeartbeatDoc). Every exit path emits both.
+  await writeHeartbeatDoc(summary, outcome);
   return summary;
 }
