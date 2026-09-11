@@ -775,6 +775,14 @@ export const PRODUCT_SET_KEYS: ReadonlyArray<ProductSetKey> = [
   P("skybox"),
   ...["skybox-metal-universe", "skybox-thunder", "skybox-premium", "skybox-molten-metal"].map((k) => P(k, { parent: "skybox" })),
   P("metal-universe"),
+  // CF-A-NAMED-INSERT-SET-IS-ITS-OWN-PRODUCT (Drew, 2026-09-09). Heavy Metal
+  // is a 10-card insert with its OWN numbering: its #2 is Barry Bonds while
+  // the 250-card base set's #2 is Brady Anderson. It is `parent`ed to
+  // metal-universe (it ships inside that release) but is its own product, so
+  // rows minted for it stop landing on base-set addresses and absorbing into
+  // another player's pool. See normalizeSetKey, where it precedes the
+  // /metal-universe/ family pattern.
+  P("metal-universe-heavy-metal", { parent: "metal-universe" }),
   P("pinnacle"),
   P("pinnacle-aficionado", { parent: "pinnacle" }),
   P("score"),
