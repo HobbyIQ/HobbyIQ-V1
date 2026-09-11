@@ -851,21 +851,6 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
     // products despite the shared "Metal Universe" name; keep them
     // separate. Studio ran under Donruss from 1991-1998 — collapses
     // to donruss-studio for pool unification.
-    // CF-AN-INSERT-SET-CAN-BE-ITS-OWN-PRODUCT (Drew ruling 21, 2026-09-08).
-    // Heavy Metal is the 10-card 1:8 insert of 1996 Metal Universe and is its
-    // OWN product, not a parallel of the 250-card base set: its #2 is Barry
-    // Bonds where BASE #2 is Brady Anderson, so one key for both prices Bonds
-    // off Anderson's pool (holding 46f3dd96). The checklist minted for it
-    // carries `setKey: "metal-universe-heavy-metal"`, and this rule is what
-    // lets a stated set name reach that key.
-    //
-    // ORDER IS LOAD-BEARING: it must precede the three plain Metal Universe
-    // rules below, which are PREFIX-anchored and would otherwise swallow the
-    // insert and drop the two words that make it a different card. The maker
-    // prefix is optional in the pattern because holdings spell the parent both
-    // ways ("1996 Fleer Metal Universe", "1996 Metal Universe") while the
-    // checklist key carries none.
-    [/(?:^|-)(?:fleer-|skybox-)?metal-universe-heavy-metal/, "metal-universe-heavy-metal"],
     [/(?:^|-)fleer-metal-universe/, "fleer-metal-universe"],
     [/(?:^|-)skybox-metal-universe/, "skybox-metal-universe"],
     [/(?:^|-)skybox-thunder/, "skybox-thunder"],

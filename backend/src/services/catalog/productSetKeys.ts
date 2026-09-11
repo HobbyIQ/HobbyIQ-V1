@@ -775,13 +775,6 @@ export const PRODUCT_SET_KEYS: ReadonlyArray<ProductSetKey> = [
   P("skybox"),
   ...["skybox-metal-universe", "skybox-thunder", "skybox-premium", "skybox-molten-metal"].map((k) => P(k, { parent: "skybox" })),
   P("metal-universe"),
-  // CF-AN-INSERT-SET-CAN-BE-ITS-OWN-PRODUCT (Drew ruling 21, 2026-09-08). The
-  // 10-card 1:8 Heavy Metal insert is its own product -- its #2 is Barry Bonds
-  // where the 250-card base set's #2 is Brady Anderson -- so it has its own
-  // setKey and needs its own family entry. Its PARENT is the product it is
-  // inserted into, which is how the ladder reaches the base pool when the
-  // insert's own pool is thin, exactly as the other insert products here do.
-  P("metal-universe-heavy-metal", { parent: "fleer-metal-universe" }),
   P("pinnacle"),
   P("pinnacle-aficionado", { parent: "pinnacle" }),
   P("score"),
