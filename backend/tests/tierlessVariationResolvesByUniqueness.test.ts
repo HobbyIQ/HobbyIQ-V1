@@ -20,6 +20,15 @@
  * exactly one checklist-adjudicable variation tier exists for the card
  * number, resolve to it; when the checklist backs two or more tiers, never
  * guess.
+ *
+ * CF-A-DETERMINISTIC-UNIQUENESS-CLEARS-THE-REDERIVE-GATE (2026-09-11,
+ * follow-up to #2049). Shipped at confidence 0.85, this step's own match
+ * (run 34657489782) still reported UNVERIFIED: recheck-holding-identity's
+ * re-derive gate (MIN_CONFIDENCE, comp-quality/recheck-holding-identity.ts,
+ * default 0.9) sits above 0.85. A uniqueness resolution against a
+ * checklist-adjudicable row is a deterministic identity — one candidate,
+ * checklist decides — not a fuzzy guess, so the confidence moved to 0.92:
+ * above the 0.9 gate, below exact-match's 0.98 and a checklist seed's 0.95.
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
@@ -102,14 +111,33 @@ beforeEach(() => {
   queryMock.mockReturnValue({ fetchAll: async () => ({ resources: [] }) });
 });
 
+/** The re-derive gate recheck-holding-identity.ts pins REDERIVE vs UNVERIFIED
+ *  on (comp-quality/recheck-holding-identity.ts:99, default). Not imported —
+ *  that file is an ops script, not a service module — so the value is
+ *  asserted directly against the constant it must clear. */
+const REDERIVE_GATE_MIN_CONFIDENCE = 0.9;
+
 describe("canonicalize — a tierless variation resolves by uniqueness (Ruling 24)", () => {
-  it("resolves Bobby Witt Jr. #221 to the Sonic row when it is the ONLY checklist-backed variation", async () => {
+  it("resolves Bobby Witt Jr. #221 to the Sonic row when it is the ONLY checklist-backed variation, at 0.92", async () => {
     mockQueriesFor([...SELF_DERIVED_ROWS, SONIC_ROW]);
     const r = await canonicalize({ ...WITT_221 });
     expect(r.found).toBe(true);
     expect(r.matchedBy).toBe("tierless-variation-unique");
     expect(r.slug).toBe(SONIC_ROW.id);
-    expect(r.confidence).toBeGreaterThanOrEqual(0.7); // clears MIN_REBIND_CONFIDENCE
+    // Pinned exactly: above the 0.9 re-derive gate, below exact (0.98) and a
+    // checklist seed (0.95) — this is inferred FROM a checklist row, not one.
+    expect(r.confidence).toBe(0.92);
+  });
+
+  it("clears recheck-holding-identity's re-derive gate (MIN_CONFIDENCE, default 0.9) — the bug this follow-up fixes", async () => {
+    // Run 34657489782: Step 2d found the Sonic row at 0.85 and the holding
+    // still reported UNVERIFIED, because 0.85 < 0.9. This pins the fix at the
+    // boundary the gate actually checks.
+    mockQueriesFor([...SELF_DERIVED_ROWS, SONIC_ROW]);
+    const r = await canonicalize({ ...WITT_221 });
+    expect(r.confidence).toBeGreaterThanOrEqual(REDERIVE_GATE_MIN_CONFIDENCE);
+    expect(r.confidence).toBeLessThan(0.95); // still below a checklist seed
+    expect(r.confidence).toBeLessThan(0.98); // still below exact-match
   });
 
   it("does NOT pick Sonic when a real SP row ALSO exists at the same number — never guess between tiers", async () => {
