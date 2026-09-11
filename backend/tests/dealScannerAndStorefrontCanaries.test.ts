@@ -357,6 +357,33 @@ describe("3. a broken query and a dead scanner are different incidents", () => {
     const { parsed } = deal.parseSummaries(rows);
     expect(parsed[0].targetsScanned).toBe(4);
   });
+
+  // #2027 (2026-09-11): a trace verifiably present in the workspace's
+  // AppTraces table came back EMPTY from the classic app-insights API on
+  // every window tried, even the exact hour. The canary now queries the
+  // workspace (`az monitor log-analytics query`), whose JSON output is a
+  // flat array of row objects, not { tables: [...] }. Both shapes must
+  // parse to the same normalized row array.
+  it("the workspace's flat-array shape (log-analytics query -o json) parses like the classic table shape", () => {
+    const flat = JSON.stringify([
+      { TimeGenerated: hoursAgo(1), Message: scanLine(), TableName: "PrimaryResult" },
+    ]);
+    const rows = deal.parseAiTable(flat)!;
+    expect(rows).toHaveLength(1);
+    expect(rows[0].Message).toBe(scanLine());
+    const { parsed, unparsed } = deal.parseSummaries(rows);
+    expect(unparsed).toBe(0);
+    expect(parsed[0].targetsScanned).toBe(4);
+    // TimeGenerated is the workspace's column name for the row timestamp —
+    // it must be read, not just Timestamp/timestamp.
+    expect(parsed[0].timestamp).toBe(hoursAgo(1));
+  });
+
+  it("an EMPTY workspace array is a real zero-runs answer, not a parse failure", () => {
+    const rows = deal.parseAiTable(JSON.stringify([]));
+    expect(rows).toEqual([]);
+    expect(deal.verdicts([], { now: NOW, maxSilenceHours: 2, maxErrorRate: 0.5 }).heartbeatOk).toBe(false);
+  });
 });
 
 // ── 4. MUTATION → RED ────────────────────────────────────────────────────
@@ -472,6 +499,26 @@ describe("6. the two canary workflows", () => {
     expect(storeYml).toContain("node scripts/checkStorefrontVisibility.cjs");
   });
 
+  // #2027 (2026-09-11): the classic app-insights API stopped reliably
+  // surfacing this heartbeat against the workspace-based hobbyiq-insights
+  // resource. The canary must read the workspace table directly.
+  it("the deal-scanner canary queries the WORKSPACE (AppTraces), not the classic app-insights API", () => {
+    expect(dealYml).toContain("az monitor log-analytics query");
+    expect(dealYml).toContain("--workspace 2a903998-79f4-4549-8042-5af803ab1e54");
+    expect(dealYml).toContain("AppTraces | where TimeGenerated > ago(${WINDOW_HOURS}h)");
+    expect(dealYml).toContain("Message has 'buyeriq_deal_scan_summary'");
+    // The classic per-app query must be gone from the canary step's
+    // EXECUTABLE lines, not just supplemented — a leftover call would
+    // re-introduce the same gap. The step's own comments are free to name
+    // the old command when explaining why it was replaced (as they do).
+    const canaryStep = dealYml.slice(dealYml.indexOf("Run deal scanner canary"), dealYml.indexOf("Open or update"));
+    const canaryStepCode = canaryStep
+      .split("\n")
+      .filter((l) => !/^\s*#/.test(l))
+      .join("\n");
+    expect(canaryStepCode).not.toContain("az monitor app-insights query");
+  });
+
   it("each files its issue on github.token alone — an Azure outage must not silence its own alert", () => {
     for (const yml of [dealYml, storeYml]) {
       expect(yml).toContain("GH_TOKEN: ${{ github.token }}");
@@ -527,8 +574,11 @@ describe("6. the two canary workflows", () => {
     expect(storeYml).toContain("MAX_REFRESH_AGE_HOURS=\"${{ inputs.max_refresh_age_hours || '48' }}\"");
   });
 
-  it("the deal-scanner workflow carries the App Insights app-id and the exact event it keys on", () => {
-    expect(dealYml).toContain("468bd437-5d16-47b4-90fb-5ee5d41726ae");
+  it("the deal-scanner workflow carries the Log Analytics workspace id and the exact event it keys on", () => {
+    // #2027 (2026-09-11): the canary reads the WORKSPACE, not the classic
+    // per-app API, so the operative identifier is the workspace id, not the
+    // App Insights app-id (468bd437-...) the classic `--app` flag took.
+    expect(dealYml).toContain("2a903998-79f4-4549-8042-5af803ab1e54");
     expect(dealYml).toContain("buyeriq_deal_scan_summary");
     // An empty file from the CLI is a failed query, not zero runs.
     expect(dealYml).toContain("the scanner was NOT measured");
