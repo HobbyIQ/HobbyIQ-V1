@@ -69,9 +69,22 @@ const crypto = require("crypto");
  * this module exists to remove, so `derivationInputsPresent()` refuses a
  * missing path loudly rather than hashing around it.
  */
+// CF-A-DERIVATION-STAMP-MUST-NOT-HASH-PLUMBING (2026-09-11, run 34360565942
+// follow-up). This list used to name "scripts/rematch-sold-comps.cjs" -- the
+// WHOLE file -- so a change to that script's worker pool, write ledger,
+// budget clock or exit-code handling (none of which decide a row's verdict)
+// invalidated the I9 reference exactly as if the derivation itself had
+// changed. `storedIdentity` and `deriveIdentity` -- the two functions that
+// actually decide what a row's stored fields say and what its title would
+// derive to -- were extracted, pure and alone, to
+// scripts/lib/rematch-derive-identity.cjs, and THAT is what is hashed below
+// instead. See that file's header and tests/derivationStampNarrowedToIdentity
+// .test.ts for the two properties the split exists to prove: a plumbing-only
+// change to rematch-sold-comps.cjs no longer moves the stamp, and a
+// one-token change to the deriver still does.
 const DERIVATION_INPUTS = Object.freeze([
   "scripts/lib/rematch-classify.cjs",
-  "scripts/rematch-sold-comps.cjs",
+  "scripts/lib/rematch-derive-identity.cjs",
   "src/services/portfolioiq/parseTitleIdentity.service.ts",
   "src/services/portfolioiq/hobbyIqCardId.service.ts",
   "src/services/portfolioiq/slugGuard.service.ts",
