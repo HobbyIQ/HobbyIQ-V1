@@ -154,6 +154,27 @@ async function clearCursor(control) {
   }
 }
 
+/**
+ * anomaly_scan_reports does not already exist (unlike crawl_state and
+ * pool_baseline_snapshots, which every other lane's prior runs already
+ * created) -- CF-A-KILLED-JOB-CANNOT-REPORT-PROGRESS's own lesson does not
+ * excuse skipping createIfNotExists just because baseline-pool-snapshot.cjs
+ * (this lane's reference implementation) never needed to call it for a
+ * container that already existed.
+ *
+ * Partition key is /id: one doc per scanDate, id `<scanDate>::anomaly-scan-
+ * report`, read back with a plain item(id, id) -- check-anomaly-scan-report
+ * .cjs assumes exactly this shape.
+ */
+async function ensureReportContainer(db) {
+  const { container } = await db.containers.createIfNotExists({
+    id: REPORT_CONTAINER,
+    partitionKey: { paths: ["/id"] },
+    defaultTtl: -1,
+  });
+  return container;
+}
+
 async function main() {
   if (!process.env.COSMOS_CONNECTION_STRING) { console.error("COSMOS_CONNECTION_STRING required"); process.exit(1); }
   // NAMED, not chained, so finishLane() can dispose it (#1809).
@@ -333,7 +354,7 @@ async function main() {
       computedAt: new Date().toISOString(),
     };
     try {
-      const reportContainer = db.container(REPORT_CONTAINER);
+      const reportContainer = await ensureReportContainer(db);
       await reportContainer.items.upsert(doc);
       written = 1;
     } catch (e) {

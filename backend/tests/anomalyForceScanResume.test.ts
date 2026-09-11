@@ -187,19 +187,28 @@ const stub = {
               },
             };
           }
-          if (name === "anomaly_scan_reports") {
+          // anomaly_scan_reports is NOT pre-existing (unlike crawl_state and
+          // pool_baseline_snapshots) -- the lane reaches it only through
+          // containers.createIfNotExists() below, never a bare container()
+          // call, so there is deliberately no branch for it here.
+          throw new Error("unstubbed container: " + name);
+        },
+        containers: {
+          async createIfNotExists(spec) {
+            if (spec.id !== "anomaly_scan_reports") throw new Error("unstubbed createIfNotExists: " + spec.id);
             return {
-              items: {
-                upsert: async (doc) => {
-                  const s = readSink();
-                  s.reports[doc.id] = doc;
-                  writeSink(s);
-                  return { resource: doc };
+              container: {
+                items: {
+                  upsert: async (doc) => {
+                    const s = readSink();
+                    s.reports[doc.id] = doc;
+                    writeSink(s);
+                    return { resource: doc };
+                  },
                 },
               },
             };
-          }
-          throw new Error("unstubbed container: " + name);
+          },
         },
       };
     }
