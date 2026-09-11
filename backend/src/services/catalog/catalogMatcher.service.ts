@@ -29,6 +29,7 @@ import {
 } from "../portfolioiq/hobbyIqCardId.service.js";
 import { productFamilyOf, productRefinementsOf } from "./productSetKeys.js";
 import { resolveIdentityToCatalogRow } from "./catalogIdentityResolver.js";
+import { isTierlessVariationSlug, normalizeVariationSlug, resolveTierlessVariationByUniqueness } from "./variationVocabulary.js";
 // The ONE grade-tier vocabulary. Shared with cardIdentityKey so the reader that
 // strips a grade and the writer that refuses to mint one cannot drift apart.
 import { GRADE_TIER_RE } from "../portfolioiq/cardIdentityKey.service.js";
@@ -118,7 +119,7 @@ export interface CatalogMatchResult {
   slug: string;
   found: boolean;         // true when a catalog row was matched (or freshly seeded and found on re-read)
   confidence: number;     // 0-1
-  matchedBy: "exact" | "fuzzy-parallel" | "long-form" | "family-refined" | "family-fallback" | "seeded" | "not-found";
+  matchedBy: "exact" | "fuzzy-parallel" | "long-form" | "family-refined" | "tierless-variation-unique" | "family-fallback" | "seeded" | "not-found";
   catalogId?: string;
 }
 
@@ -875,6 +876,39 @@ export async function variationParallelsForCard(input: { sport: string; year: nu
   }
 }
 
+/**
+ * CF-A-TIERLESS-VARIATION-RESOLVES-BY-UNIQUENESS (Ruling 24, 2026-09-11).
+ * Same query as variationParallelsForCard, but carries `source` too — the
+ * uniqueness resolver (resolveTierlessVariationByUniqueness) must exclude
+ * self-derived and vendor rows from the count, which the slug-only sibling
+ * above cannot support. A separate function rather than widening the
+ * existing one's return shape, so pickVariationForMarker's callers are
+ * untouched. Empty when the container is unavailable or the read throws.
+ */
+export async function variationCandidatesForCard(
+  input: { sport: string; year: number; setKey: string; cardNumber: string },
+): Promise<Array<{ id: string; parallelSlug: string; source: string | null }>> {
+  const container = await getContainer();
+  if (!container) return [];
+  try {
+    const num = cardNumberInClause(input.cardNumber);
+    const { resources } = await container.items.query<{ id: string; parallelSlug?: string; source?: string | null }>({
+      query: `SELECT c.id, c.parallelSlug, c.source FROM c WHERE c.sport = @s AND c.year = @y AND c.setKey = @k AND c.cardNumber IN (${num.sql}) AND CONTAINS(c.parallelSlug, 'variation') OFFSET 0 LIMIT 50`,
+      parameters: [
+        { name: "@s", value: String(input.sport).toLowerCase() },
+        { name: "@y", value: input.year },
+        { name: "@k", value: input.setKey },
+        ...num.params,
+      ],
+    }).fetchAll();
+    return (resources ?? [])
+      .map((r) => ({ id: String(r.id ?? ""), parallelSlug: String(r.parallelSlug ?? parallelSegmentOf(r.id) ?? ""), source: r.source ?? null }))
+      .filter((r) => r.id && r.parallelSlug);
+  } catch {
+    return [];
+  }
+}
+
 export async function lookupCatalogPlayerName(
   year: number | null | undefined,
   setKey: string | null | undefined,
@@ -1051,6 +1085,15 @@ function applyParallelInvariant(
   // CF-IMPLIED-REFRACTOR-EQUIVALENCE: "Yellow" and "Yellow Refractor" are one
   // parallel. Anything beyond that single relaxation still fails the invariant.
   if (parallelsEquivalentForAdoption(parallelTokenSet(seg), want)) return result;
+  // CF-A-TIERLESS-VARIATION-RESOLVES-BY-UNIQUENESS (Ruling 24, 2026-09-11).
+  // Step 2d is the ONLY step that may return a different tier than it was
+  // asked (matchedBy "tierless-variation-unique"), and only because the
+  // asked parallel (`image-variation`) is SP's own unspelled default, not a
+  // stated claim — the ask was silent on tier. Gated on matchedBy, not on
+  // isTierlessVariationSlug alone, so this exemption cannot be reached by
+  // any other step: a step that changes tier for any OTHER reason still
+  // fails this invariant exactly as before.
+  if (result.matchedBy === "tierless-variation-unique" && isTierlessVariationSlug(input.parallel)) return result;
 
   console.warn(JSON.stringify({
     event: "catalog_match_parallel_invariant_violated",
@@ -1330,6 +1373,77 @@ async function canonicalizeImpl(input: CatalogMatchInput): Promise<CatalogMatchR
       }
     } catch {
       // Query failure is non-fatal — fall through.
+    }
+  }
+
+  // Step 2d — CF-A-TIERLESS-VARIATION-RESOLVES-BY-UNIQUENESS (Ruling 24,
+  // 2026-09-11, #2047 follow-up). Steps 2/2b/2c above all require the
+  // candidate's parallel TOKENS to equal (or differ by one family word from)
+  // what was asked — correctly, because guessing between two real parallels
+  // is exactly the corruption CF-PARALLEL-IS-IDENTITY exists to prevent.
+  // Tier is different: SP is the vocabulary's unspelled DEFAULT
+  // (variationVocabulary.ts), so a title that names an image variation but
+  // no tier is not claiming "SP" — it is silent on tier, and its computed
+  // slug (`image-variation`) only LOOKS like a specific claim.
+  //
+  // Bobby Witt Jr. 2022 Topps Chrome #221 "Refractor Image Variation": Step 1
+  // finds no exact `image-variation` row (this product's checklist never
+  // minted an SP row at #221 — Beckett's own SP list has 20 cards, #221 is
+  // not one), and Step 2's token equality correctly refuses to fuzz
+  // `image-variation` against the catalog's only real row here,
+  // `image-variation-sonic` (Ruling 23) — {image,variation} is not a superset
+  // match for a THIRD, unrelated tier the way a family word is. So the card
+  // fell through to NO-MATCH even though it has exactly one variation.
+  //
+  // Fires ONLY when isTierlessVariationSlug(the asked parallel) is true — a
+  // title that already states SSP or Sonic is never rerouted here. Counts
+  // ONLY checklist-adjudicable rows (catalogAuthority.canAdjudicate) so the
+  // four self-derived `image-variation-refractor` / `refractor-image-
+  // variation` rows this same card carries (ingest-auto-seed,
+  // ingest-auto-seed-graded x2, ebay-user-purchase — the catalog confirming
+  // its own guesses that project_self_comp_publish_labeled.md warns against)
+  // do not inflate the count or win the slot. Resolves only when exactly ONE
+  // distinct checklist-backed tier survives; two or more is the ambiguity
+  // this must never guess across, and the existing SP-default / withhold
+  // behaviour stands untouched.
+  if (isTierlessVariationSlug(components.parallel) && components.cardNumber) {
+    try {
+      const candidates = await variationCandidatesForCard({
+        sport: components.sport,
+        year: components.year,
+        setKey: components.setKey,
+        cardNumber: components.cardNumber,
+      });
+      const resolved = resolveTierlessVariationByUniqueness(
+        parallelSlug,
+        candidates.map((c) => ({ parallelSlug: c.parallelSlug, source: c.source })),
+      );
+      if (resolved) {
+        // Adopt the winning candidate's OWN catalog id (CF-CANDIDATE-ID-IS-
+        // WHAT-WE-ADOPT, the same discipline Step 2 uses) rather than
+        // reconstructing one — a catalog row can disagree with its own
+        // parallelSlug field. Several rows can normalize to the resolved
+        // tier (a graded explode of the same card); prefer the ungraded one,
+        // `id` breaking ties, same ordering Step 2 uses.
+        const winners = candidates
+          .filter((c) => c.id.startsWith("hiq:") && normalizeVariationSlug(c.parallelSlug.toLowerCase()) === resolved.slug)
+          .sort((a, b) => {
+            const graded = (x: { id: string }) => (/:(raw|psa|bgs|sgc|cgc)(-|$)/.test(x.id) ? 1 : 0);
+            return graded(a) - graded(b) || a.id.localeCompare(b.id);
+          });
+        const winner = winners[0] ?? null;
+        if (winner) {
+          return {
+            slug: winner.id,
+            found: true,
+            confidence: 0.85,
+            matchedBy: "tierless-variation-unique",
+            catalogId: winner.id,
+          };
+        }
+      }
+    } catch {
+      // Non-fatal — fall through to Step 3.
     }
   }
 
