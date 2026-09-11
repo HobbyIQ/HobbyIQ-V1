@@ -15,6 +15,7 @@ import {
   pickVariationForMarker,
   readVariationFromTitle,
   reduceVariationStockToCatalog,
+  variationDisplayName,
   variationFinishOfSection,
   variationNameFromSlug,
 } from "../src/services/catalog/variationVocabulary.js";
@@ -38,6 +39,10 @@ describe("the vocabulary: one spelling per card", () => {
       ["image-variation-sp", "image-variation"], ["base-image-variation", "image-variation"], ["base-variation-set", "image-variation"],
       ["ssp", "image-variation-ssp"], ["super-short-print", "image-variation-ssp"], ["super-short-prints", "image-variation-ssp"],
       ["ssp-variation", "image-variation-ssp"], ["variation-ssp", "image-variation-ssp"], ["super-short-print-variation", "image-variation-ssp"],
+      // Ruling 23 (Drew 2026-09-11): Sonic is a THIRD tier, never folded onto SP or SSP.
+      ["sonic-variation", "image-variation-sonic"], ["variation-sonic", "image-variation-sonic"],
+      ["sonic-image-variation", "image-variation-sonic"], ["image-variation-sonic", "image-variation-sonic"],
+      ["sonic", "sonic"], // bare, with no variation word — NOT a variation (the Sonic product's own base card)
       ["golden-mirror-image-variations", "golden-mirror-variation"], ["golden-mirror-image-variation", "golden-mirror-variation"],
       ["golden-mirror-variations", "golden-mirror-variation"], ["base-golden-mirror-variation", "golden-mirror-variation"],
       ["golden-mirror-image-variation-short-print", "golden-mirror-variation"],
@@ -71,6 +76,14 @@ describe("the vocabulary: one spelling per card", () => {
     expect(canonicalVariationName("Gold Refractor")).toBeNull();
     expect(variationNameFromSlug("image-variation-ssp")).toBe("Image Variation SSP");
     expect(variationNameFromSlug("gold")).toBeNull();
+    // Ruling 23: Sonic is its own card line — never SP, never SSP, never a bare product name.
+    expect(canonicalVariationName("Sonic Image Variation")).toBe("Image Variation Sonic");
+    expect(canonicalVariationName("Image Variation Sonic")).toBe("Image Variation Sonic");
+    expect(canonicalVariationName("Sonic Variation")).toBe("Image Variation Sonic");
+    expect(canonicalVariationName("Sonic")).toBeNull(); // bare — the Sonic product's own reprinted base card
+    expect(canonicalVariationName("Sonic Refractor")).toBeNull(); // the product's own numbered colour parallel, not a variation
+    expect(variationNameFromSlug("image-variation-sonic")).toBe("Image Variation Sonic");
+    expect(variationDisplayName(null, "sonic")).toBe("Image Variation Sonic");
   });
 
   it("variationFinishOfSection — every page shape found on 29 real checklistcenter pages", () => {
@@ -196,6 +209,13 @@ describe("the title parser: every abbreviation sellers use (real pool titles)", 
     ["2023 Topps Heritage Aaron Judge Black and White Variation #100", "Black & White Variation", null],
     ["2023 Topps Heritage Julio Rodriguez Throwback Uniform Variation #250", "Throwback Uniform Variation", null],
     ["2024 Topps Chrome Sal Frelick 39 RC Logofractor Variation SP | Milwaukee Brewers - Raw 10", "Image Variation Logofractor", null],
+    // Ruling 23 (Drew 2026-09-11): Sonic is its own card line, never Tier 1's SP.
+    // "Sonic SP" is the market's own title spelling (sportscardinvestor.com:
+    // "2022 Topps Chrome Sonic SP #221" for Bobby Witt Jr.) — the exact form Drew named.
+    ["2022 Topps Chrome Sonic SP #221 Bobby Witt Jr", "Image Variation Sonic", "Bobby Witt Jr."],
+    ["2022 Topps Chrome Bobby Witt Jr Sonic Image Variation #221", "Image Variation Sonic", "Bobby Witt Jr."],
+    ["2022 Topps Chrome Julio Rodriguez Image Variation Sonic #222", "Image Variation Sonic", "Julio Rodriguez"],
+    ["2022 Topps Chrome Sonic Variation Wander Franco #35", "Image Variation Sonic", "Wander Franco"],
   ];
   for (const [title, want, player] of strong) {
     it(`"${title.slice(0, 60)}" → ${want}`, () => {
@@ -205,6 +225,18 @@ describe("the title parser: every abbreviation sellers use (real pool titles)", 
       if (player) expect(p.playerName).toBe(player);
     });
   }
+
+  it("Sonic never folds onto SP or SSP; a bare Sonic (no variation word) is not read at all", () => {
+    const p = parseListingTitle("2022 Topps Chrome Sonic SP #221 Bobby Witt Jr");
+    expect(p.parallel).toBe("Image Variation Sonic");
+    expect(p.parallel).not.toBe("Image Variation");
+    expect(p.parallel).not.toBe("Image Variation SSP");
+    // The product's own numbered "Sonic Refractor" colour parallel (Cardboard
+    // Connection's odds table) has no variation/photo word nearby and reads
+    // as a plain refractor tag, not a variation and not a weak marker.
+    expect(readVariationFromTitle("2022 topps chrome purple/yellow sonic refractor #35 /299").finish).toBeNull();
+    expect(readVariationFromTitle("2022 topps chrome purple/yellow sonic refractor #35 /299").marker).toBeNull();
+  });
 
   it("weak markers are reported, never guessed: bare SP / SSP / Short Print / IV out of context", () => {
     expect(parseListingTitle("2024 Topps Chrome - PSA 10 Shohei Ohtani SSP US#1")).toMatchObject({ parallel: null, variationMarker: "ssp" });
