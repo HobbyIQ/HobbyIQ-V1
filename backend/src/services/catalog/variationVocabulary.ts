@@ -106,6 +106,8 @@
  * base (twins differ only by `:num-N`) and never folds into it.
  */
 
+import { canAdjudicate } from "./catalogAuthority.service.js";
+
 export type VariationTier = "sp" | "ssp" | "sonic";
 export type VariationStock = "chrome" | "paper";
 
@@ -435,6 +437,33 @@ export function isVariationSlug(slug: string | null | undefined): boolean {
 }
 
 /**
+ * CF-A-TIERLESS-VARIATION-NAMES-NO-TIER (Drew ruling, 2026-09-11, #2047
+ * follow-up). True only for the bare, plain image variation — no named kind,
+ * no tier (SP is the unspelled default, SSP and Sonic are spelled), no
+ * grader-label stock. This is exactly the slug a title lands on when it
+ * states an image variation but names no tier word: Bobby Witt Jr.'s "2022
+ * Topps Chrome Refractor Image Variation #221" normalizes to bare
+ * `image-variation` (the leading, intrinsic "Refractor" is dropped per
+ * #2038/ruling 20) — a title that STATES no tier, not one that states SP.
+ *
+ * Used only to decide whether the caller's claim is silent on tier, so the
+ * uniqueness resolver (resolveTierlessVariationByUniqueness) knows when it is
+ * allowed to look. It must NOT be used to decide whether a CATALOG ROW is a
+ * tier — `image-variation-ssp` and `image-variation-sonic` both fail this
+ * check on purpose, because they DO state a tier.
+ *
+ * Accepts either form a caller holds: an already-hyphenated slug
+ * ("image-variation", "refractor-image-variation") or spaced display text
+ * ("Refractor Image Variation") — `canonicalize()`'s `components.parallel`
+ * is the latter. `slugOf` turns spaces into hyphens before normalizing so
+ * both reach the same answer.
+ */
+export function isTierlessVariationSlug(text: string | null | undefined): boolean {
+  const s = normalizeVariationSlug(slugOf(String(text ?? "").toLowerCase()));
+  return s === "image-variation";
+}
+
+/**
  * CF-A-VARIATION-IS-NOT-A-REFRACTOR. On chrome stock the slug grammar
  * appends "-refractor" to every non-base parallel (Blue ≡ Blue Refractor).
  * A variation is the base-finish card with a different photo, so a bare
@@ -471,6 +500,70 @@ export function pickVariationForMarker(marker: VariationMarker | null | undefine
   const slugs = new Set(parallelSlugs.map((p) => normalizeVariationSlug(String(p ?? "").toLowerCase())));
   if (marker === "ssp" && slugs.has("image-variation-ssp")) return "image-variation-ssp";
   return slugs.has("image-variation") ? "image-variation" : null;
+}
+
+/** One catalog row's variation slug and the source that put it there — the
+ *  minimum a caller needs so this resolver can tell a checklist transcription
+ *  from a row this pipeline minted from its own sales. */
+export interface VariationCandidateRow {
+  parallelSlug: string;
+  source: string | null | undefined;
+}
+
+/**
+ * CF-A-TIERLESS-VARIATION-RESOLVES-BY-UNIQUENESS (Drew ruling 24,
+ * 2026-09-11, #2047 follow-up). Bobby Witt Jr.'s 2022 Topps Chrome #221
+ * "Refractor Image Variation" states an image variation but names no tier —
+ * the title-side read (readVariationFromTitle / normalizeVariationSlug)
+ * lands on the bare `image-variation` slug, which is Tier 1's own unspelled
+ * SP address, NOT a claim that the card is Tier 1. #2038 taught the deriver
+ * to stop inventing a THIRD address for that title (`refractor-image-
+ * variation`); it did not teach it what to do when the product's checklist
+ * never minted an SP row at all — Beckett's SP list for this product has 20
+ * cards, #221 is not one of them, and the only variation row #221 actually
+ * has is `image-variation-sonic` (Ruling 23, source
+ * cardpedia-drew-ruling-2026-09-11). A tier-blind title and a card that only
+ * HAS one tier is not an ambiguity; refusing it as one left a real card
+ * unpriced.
+ *
+ * THE RULE, deliberately narrow:
+ *   - only fires when the caller's own claim is TIERLESS (isTierlessVariationSlug)
+ *     — a title that already states SSP or Sonic is never rerouted by this;
+ *   - only counts rows that CAN ADJUDICATE (catalogAuthority.canAdjudicate) —
+ *     self-derived seeds (`ingest-auto-seed*`) and vendor mirrors
+ *     (`ebay-user-purchase`, cardhedge, …) are exactly the rows #1811 and
+ *     project_self_comp_publish_labeled.md warn make the catalog confirm its
+ *     own guesses; they are excluded from the count on BOTH sides so a card
+ *     with four self-derived `image-variation-refractor` rows and one real
+ *     Sonic checklist row still reads as ONE candidate, not five;
+ *   - only resolves when EXACTLY ONE distinct tier survives that filter —
+ *     two or more (e.g. a real SP row AND a real Sonic row) is the ambiguity
+ *     this function must never guess across, and it returns null, same as
+ *     today: the caller's SP-default / withhold behaviour stands.
+ *
+ * Returns the parallel slug to adopt and the reason to log, or null when the
+ * claim already states a tier, no checklist-backed variation row exists, or
+ * more than one distinct tier does.
+ */
+export function resolveTierlessVariationByUniqueness(
+  claimedParallelSlug: string | null | undefined,
+  candidateRows: ReadonlyArray<VariationCandidateRow>,
+): { slug: string; reason: string } | null {
+  if (!isTierlessVariationSlug(claimedParallelSlug)) return null;
+  const adjudicable = candidateRows.filter((r) => canAdjudicate(r.source));
+  const distinctTiers = new Map<string, string>(); // normalized slug -> display name
+  for (const row of adjudicable) {
+    const slug = normalizeVariationSlug(String(row.parallelSlug ?? "").toLowerCase());
+    if (!isVariationSlug(slug)) continue;
+    if (!distinctTiers.has(slug)) distinctTiers.set(slug, titleCaseSlug(slug));
+  }
+  if (distinctTiers.size !== 1) return null;
+  const [[slug, displayName]] = distinctTiers;
+  // The claim was already the bare tierless slug; resolving to itself is not
+  // a reroute (the card genuinely has only the plain SP tier — Step 1/2 of
+  // the matcher would already have found it). Only a NAMED tier is news.
+  if (slug === "image-variation") return null;
+  return { slug, reason: `only variation at this number: ${displayName}` };
 }
 
 /**

@@ -11,10 +11,12 @@ import { describe, it, expect } from "vitest";
 import {
   canonicalVariationName,
   chromeRefractorSuffixForVariation,
+  isTierlessVariationSlug,
   normalizeVariationSlug,
   pickVariationForMarker,
   readVariationFromTitle,
   reduceVariationStockToCatalog,
+  resolveTierlessVariationByUniqueness,
   variationDisplayName,
   variationFinishOfSection,
   variationNameFromSlug,
@@ -129,6 +131,72 @@ describe("the vocabulary: one spelling per card", () => {
     expect(reduceVariationStockToCatalog("Gold Refractor", ["base"])).toBeNull();
     expect(pickVariationForMarker("ssp", ["base", "gold-refractor"])).toBeNull();
     expect(pickVariationForMarker(null, ["image-variation"])).toBeNull();
+  });
+
+  it("isTierlessVariationSlug — true only for the bare, tier-blind plain variation", () => {
+    // Bobby Witt Jr.'s actual title, and its already-slugged form.
+    expect(isTierlessVariationSlug("Refractor Image Variation")).toBe(true);
+    expect(isTierlessVariationSlug("refractor-image-variation")).toBe(true);
+    expect(isTierlessVariationSlug("Image Variation")).toBe(true);
+    expect(isTierlessVariationSlug("image-variation")).toBe(true);
+    expect(isTierlessVariationSlug("IV")).toBe(true);
+    // A title that STATES a tier is never tierless.
+    expect(isTierlessVariationSlug("Image Variation SSP")).toBe(false);
+    expect(isTierlessVariationSlug("image-variation-ssp")).toBe(false);
+    expect(isTierlessVariationSlug("Sonic Image Variation")).toBe(false);
+    expect(isTierlessVariationSlug("image-variation-sonic")).toBe(false);
+    // A named kind is not the plain variation either.
+    expect(isTierlessVariationSlug("Golden Mirror Variation")).toBe(false);
+    // Not a variation at all.
+    expect(isTierlessVariationSlug("Gold Refractor")).toBe(false);
+    expect(isTierlessVariationSlug(null)).toBe(false);
+  });
+
+  it("resolveTierlessVariationByUniqueness — CF-A-TIERLESS-VARIATION-RESOLVES-BY-UNIQUENESS (Ruling 24)", () => {
+    // Bobby Witt Jr. 2022 Topps Chrome #221: the title states an image
+    // variation with no tier, and the ONLY checklist-backed variation row
+    // this card has is Sonic (Ruling 23). Four self-derived rows exist too
+    // (ingest-auto-seed x2, ingest-auto-seed-graded, ebay-user-purchase) —
+    // they must not inflate the count or win the slot.
+    const witt221 = [
+      { parallelSlug: "image-variation-sonic", source: "cardpedia-drew-ruling-2026-09-11" },
+      { parallelSlug: "image-variation-refractor", source: "ingest-auto-seed" },
+      { parallelSlug: "image-variation-refractor", source: "ingest-auto-seed-graded" },
+      { parallelSlug: "image-variation-refractor", source: "ingest-auto-seed-graded" },
+      { parallelSlug: "refractor-image-variation", source: "ebay-user-purchase" },
+    ];
+    const resolved = resolveTierlessVariationByUniqueness("image-variation", witt221);
+    expect(resolved).not.toBeNull();
+    expect(resolved!.slug).toBe("image-variation-sonic");
+    expect(resolved!.reason).toContain("only variation at this number");
+    expect(resolved!.reason).toContain("Sonic");
+
+    // Two REAL checklist-backed tiers at the same number: never guess.
+    const twoRealTiers = [
+      { parallelSlug: "image-variation", source: "beckett-scraped-2026-09-01" },
+      { parallelSlug: "image-variation-sonic", source: "cardpedia-drew-ruling-2026-09-11" },
+    ];
+    expect(resolveTierlessVariationByUniqueness("image-variation", twoRealTiers)).toBeNull();
+
+    // The claim already states a tier — never rerouted by this function.
+    expect(resolveTierlessVariationByUniqueness("image-variation-ssp", witt221)).toBeNull();
+    expect(resolveTierlessVariationByUniqueness("Sonic Image Variation", witt221)).toBeNull();
+
+    // No checklist-backed row at all — every candidate is self-derived.
+    const allSelfDerived = [
+      { parallelSlug: "image-variation-refractor", source: "ingest-auto-seed" },
+      { parallelSlug: "refractor-image-variation", source: "ebay-user-purchase" },
+    ];
+    expect(resolveTierlessVariationByUniqueness("image-variation", allSelfDerived)).toBeNull();
+
+    // No candidates at all.
+    expect(resolveTierlessVariationByUniqueness("image-variation", [])).toBeNull();
+
+    // The single checklist-backed row IS the plain SP tier — resolving to
+    // itself is not news; Step 1/2 of the matcher would already have found
+    // it, so this returns null rather than a no-op "reason".
+    const onlyPlainSp = [{ parallelSlug: "image-variation", source: "beckett-scraped-2026-09-01" }];
+    expect(resolveTierlessVariationByUniqueness("image-variation", onlyPlainSp)).toBeNull();
   });
 });
 
