@@ -2252,3 +2252,144 @@ describe("the remaining hobbymonitor lists: 297 parks, and zero folds invented",
     }
   });
 });
+
+// ── Ruling 22: the 1,027 same-product twins fold onto the checklist key ──────
+
+/**
+ * CF-SAME-PRODUCT-FOLDS-ONTO-THE-CHECKLIST-KEY (Drew's Ruling 22, 2026-09-09).
+ *
+ * #2024 measured 1,075 same-player pairs across five lists and deliberately
+ * did NOT fold them, because the product name lives in `setKey` rather than in
+ * the slug and no ruling said whether `topps-three` and `topps-3` name one
+ * product. Ruling 22 says they do: same product, fold onto the CHECKLIST key,
+ * count-by-source decides the spelling.
+ *
+ * WHAT WAS FOLDED, AND WHAT WAS NOT. The ruling names its own test -- fold
+ * onto "the row whose key matches its own slug's product segment / the
+ * checklist-backed side" -- and applying it splits the 1,075:
+ *
+ *   1,027 have a CHECKLIST-BACKED occupant (checklistinsider /
+ *   checklistcenter) and are rewritten here as folds: topps-three -> topps-3
+ *   (1,024), topps-three -> topps-royalty (1), topps-three -> topps-motif (1),
+ *   panini-contenders -> panini-contenders-nfl (1).
+ *
+ *   48 do NOT: the panini-contenders -> panini-contenders-optic pairs are
+ *   hobbymonitor on BOTH sides, so no checklist row adjudicates them and the
+ *   occupant's key does not match its slug stem either. Neither limb of the
+ *   ruling's test is met, so they are left exactly as their author wrote them.
+ *   They are NOT a refusal: the lane's own compare calls them the same card
+ *   and folds them without stopping, which is why `refused` is still 0.
+ *
+ * THE SHAPE IS A RESLUG, NOT A RETIRE, AND THAT IS LOAD-BEARING. The ruling
+ * asks that the sales follow the row to the checklist twin. A `retire` CANNOT
+ * do that: `keepsSales` is read at exactly one call site, inside the reslug
+ * branch, and the retire path's contract is the opposite -- "the sales that
+ * pointed here are unplaced now, and the rematch owns unplaced sales". A retire
+ * would strand every sale. A RESLUG onto the twin's address is the shape that
+ * carries them: moveCatalogRow adjudicates a same-card destination, re-points
+ * the sales, and deletes the old row -- one card, one row, one pool. Each entry
+ * says `repointSales: true` explicitly, dissenting from the file-level
+ * `keepSales: true` that is right for the year-move rows and wrong for a fold.
+ *
+ * PROVEN, NOT ASSUMED. The occupancy pass was re-run against live
+ * card_catalog after the rewrite: all 1,075 occupied entries across the five
+ * lists now return the lane's NOT-occupied verdict (same card), and
+ * `occupied: different card` is ZERO. Nothing in these files can refuse.
+ */
+describe("Ruling 22: same-product twins fold onto the checklist key", () => {
+  // file -> [total entries, folds, parks]
+  const FOLDED: ReadonlyArray<readonly [string, number, number, number]> = [
+    ["2026-09-07-hobbymonitor-year-basketball-topps-three-02.json", 1000, 691, 60],
+    ["2026-09-07-hobbymonitor-year-basketball-topps-three-03.json", 479, 335, 23],
+    ["2026-09-07-hobbymonitor-year-football-panini-contenders-03.json", 807, 1, 48],
+  ];
+
+  for (const [file, total, folds, parks] of FOLDED) {
+    describe(file.replace("2026-09-07-hobbymonitor-year-", ""), () => {
+      const doc = readList(file.startsWith("/") ? file : join(listDir, file));
+      const entries = doc.entries as Array<Entry & { repointSales?: boolean }>;
+      const folded = entries.filter((e) => e.repointSales === true);
+
+      it(`holds ${total} entries, ${folds} folds and ${parks} parks`, () => {
+        expect(entries).toHaveLength(total);
+        expect(folded).toHaveLength(folds);
+        expect(entries.filter((e) => e.action === "park")).toHaveLength(parks);
+      });
+
+      it("every entry still passes the lane's own validation", () => {
+        for (const e of entries) expect(L.classifyEntry(e).ok).toBe(true);
+      });
+
+      /**
+       * THE SHAPE PIN. A fold must be a reslug carrying its sales -- a retire
+       * would strand them, since keepsSales is never consulted on that path.
+       */
+      it("every fold is a RESLUG that carries its sales", () => {
+        for (const e of folded) {
+          expect(e.action, e.id).toBe("reslug");
+          expect(e.action, e.id).not.toBe("retire");
+          expect(e.to, e.id).toBeTruthy();
+          // The entry dissents from the file's keepSales:true, so the sales
+          // follow the row onto the twin.
+          expect(L.keepsSales(e, doc), e.id).toBe(false);
+          expect(e.reason, e.id).toContain("FOLD ONTO THE CHECKLIST KEY");
+          expect(e.evidence, e.id).toContain("NOT-occupied");
+        }
+      });
+
+      /** The file-level default is untouched: only the folds dissent. */
+      it("non-fold entries still keep their sales where they are", () => {
+        expect((doc as unknown as { keepSales?: boolean }).keepSales).toBe(true);
+        for (const e of entries) {
+          if (e.repointSales === true) continue;
+          expect(L.keepsSales(e, doc), e.id).toBe(true);
+        }
+      });
+
+      it("no duplicate ids, and no two reslugs onto one destination", () => {
+        const ids = entries.map((e) => e.id);
+        expect(new Set(ids).size).toBe(ids.length);
+        const tos = entries.filter((e) => e.action === "reslug").map((e) => String(e.to));
+        expect(new Set(tos).size).toBe(tos.length);
+      });
+    });
+  }
+
+  /**
+   * THE PARKS #2024 WROTE ARE UNTOUCHED. A fold pass must never quietly
+   * un-park a different-player collision.
+   */
+  it("the 297 Ruling 17 parks across the six lists are unchanged", () => {
+    const parks: Record<string, number> = {
+      "2026-09-07-hobbymonitor-year-basketball-panini-prizm-black-01.json": 5,
+      "2026-09-07-hobbymonitor-year-basketball-panini-prizm-black-02.json": 4,
+      "2026-09-07-hobbymonitor-year-basketball-topps-three-02.json": 60,
+      "2026-09-07-hobbymonitor-year-basketball-topps-three-03.json": 23,
+      "2026-09-07-hobbymonitor-year-football-panini-contenders-01.json": 66,
+      "2026-09-07-hobbymonitor-year-football-panini-contenders-02.json": 91,
+      "2026-09-07-hobbymonitor-year-football-panini-contenders-03.json": 48,
+    };
+    let total = 0;
+    for (const [file, n] of Object.entries(parks)) {
+      const doc = readList(join(listDir, file));
+      expect(doc.entries.filter((e) => e.action === "park"), file).toHaveLength(n);
+      total += n;
+    }
+    expect(total).toBe(297);
+  });
+
+  /**
+   * THE 48 OPTIC PAIRS ARE STILL AS AUTHORED. Ruling 22's test is not met for
+   * them -- hobbymonitor on both sides, no checklist to fold onto -- so they
+   * carry no fold stamp. Pinned so a later pass does not sweep them in with
+   * the 1,027 on the strength of the name match alone.
+   */
+  it("the contenders lists gained no fold beyond the one checklist-backed row", () => {
+    const c1 = readList(join(listDir, "2026-09-07-hobbymonitor-year-football-panini-contenders-01.json"));
+    const c2 = readList(join(listDir, "2026-09-07-hobbymonitor-year-football-panini-contenders-02.json"));
+    const stamped = (d: ListDoc) =>
+      (d.entries as Array<Entry & { repointSales?: boolean }>).filter((e) => e.repointSales === true);
+    expect(stamped(c1)).toHaveLength(0);
+    expect(stamped(c2)).toHaveLength(0);
+  });
+});
