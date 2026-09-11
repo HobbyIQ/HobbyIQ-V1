@@ -5138,8 +5138,9 @@
       "id": "hiq:football:2025:panini-contenders:8:prime:no-auto:num-25",
       "action": "reslug",
       "to": "hiq:football:2024:panini-contenders:8:prime:no-auto:num-25",
-      "reason": "#1925 H1: setName \"2024 Panini Contenders Football\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"Ja'Lynn Polk\" #8; destination read as vacant 2026-09-07"
+      "repointSales": true,
+      "reason": "#1925 + Drew's Ruling 22 (2026-09-09): SAME PRODUCT — FOLD ONTO THE CHECKLIST KEY. The year-N address holds the SAME card under the checklist's spelling (setKey \"panini-contenders-nfl\" vs this row's \"panini-contenders\"); moveCatalogRow adjudicates a same-card destination, so the row folds onto the twin and the checklist-backed spelling wins (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT). repointSales carries this row's sales with it: one card, one pool.",
+      "evidence": "point-read 2026-09-09 via the lane's own occupancy compare, which returned NOT-occupied (same card, not a rival): this row player \"Ja'Lynn Polk\" #8 printRun 25 parallel Prime source=hobbymonitor-2026-09-04 setKey=panini-contenders setName '2024 Panini Contenders Football'; twin hiq:football:2024:panini-contenders:8:prime:no-auto:num-25 player \"Ja'Lynn Polk\" source=checklistcenter-2026-09-06 setKey=panini-contenders-nfl setName 'panini contenders nfl football'. normalizeSetKey now folds the vendor spelling onto the checklist's (Ruling 22)."
     },
     {
       "id": "hiq:football:2025:panini-contenders:67:playoff-ticket:no-auto:num-199",

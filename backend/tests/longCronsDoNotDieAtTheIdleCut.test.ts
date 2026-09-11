@@ -16,6 +16,15 @@
  *                                           17 × ResultCode 0 at exactly
  *                                           240.0s.
  *
+ * CF-LONG-CRONS-DIE-AT-THE-IDLE-CUT, fourth lane (2026-09-11 cron canary
+ * triage). sub-raw-inversion-scan-nightly.yml's baseball leg failed its
+ * last two scheduled runs (09-10, 09-11) the same way: HTTP 499 at exactly
+ * 240s. Baseball is sold_comps's largest sport partition — football and
+ * basketball settle in ~90-95s on the identical matrix — so it is the one
+ * leg whose unpaged scan + in-process grouping now runs long enough to hit
+ * the idle cut. /admin/sub-raw-inversion/scan got the same dispatch+poll
+ * treatment as the three lanes above.
+ *
  * 240.0s is the App Service front end's idle cut, not our timeout: it fires
  * when a connection carries no bytes for that long, whatever the client is
  * willing to wait. #1985 raised the anomalies curl ceiling to 900s on the
@@ -95,6 +104,37 @@ describe("the async handoff — a dispatch answers before the work finishes", ()
     await longJobs.__awaitSettledForTests("prospect", "baseball");
     await longJobs.__awaitSettledForTests("prospect", "football");
     expect(started.sort()).toEqual(["baseball", "football"]);
+  });
+
+  // CF-LONG-CRONS-DIE-AT-THE-IDLE-CUT, fourth lane. sub-raw-inversion/scan
+  // uses the same kind+sport keying as personal-prospect-breakout above —
+  // pinned separately under its own job kind so a baseball scan in flight
+  // cannot be mistaken for, or collapsed onto, a baseball prospect-breakout
+  // run that happens to be running at the same time.
+  it("sub-raw-inversion-scan: keys by sport and never collapses across job kinds", async () => {
+    const bb = longJobs.dispatch("sub-raw-inversion-scan", "baseball", () =>
+      Promise.resolve({ skusScanned: 42 }),
+    );
+    const otherKindSameKey = longJobs.dispatch("personal-prospect-breakout", "baseball", () =>
+      Promise.resolve({ pushed: 1 }),
+    );
+
+    expect(bb.job.jobId).not.toBe(otherKindSameKey.job.jobId);
+    await longJobs.__awaitSettledForTests("sub-raw-inversion-scan", "baseball");
+
+    const payload = longJobs.buildStatusPayload(
+      longJobs.lookupJob("sub-raw-inversion-scan", "baseball", bb.job.jobId),
+    );
+    expect(payload.status).toBe("done");
+    expect(payload.result).toEqual({ skusScanned: 42 });
+
+    // A poll naming baseball's jobId against the football slot must never
+    // read as this run settling early.
+    const wrongSport = longJobs.buildStatusPayload(
+      longJobs.lookupJob("sub-raw-inversion-scan", "football", bb.job.jobId),
+    );
+    expect(wrongSport.status).toBe("unknown-here");
+    expect(wrongSport.settled).toBe(false);
   });
 
   it("captures a failure onto the job instead of throwing into an unhandled rejection", async () => {
