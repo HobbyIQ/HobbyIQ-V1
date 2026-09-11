@@ -154,6 +154,10 @@ function productOf(csvPath) {
           // DISPLAY ONLY -- the identity slug has no subset axis -- but it makes
           // a cross-subset cardNumber collision visible instead of silent.
           subsetName: m.subset || null,
+          // CF-A-DECLARED-PARALLEL-IS-NOT-A-CARD-LINE: the closed list of
+          // parallel names this product declares as rungs. Absent = no
+          // exemption, which is every product that does not need one.
+          parallelVocabulary: Array.isArray(m.parallelVocabulary) ? m.parallelVocabulary : null,
         };
       }
     } catch { /* fall through */ }
@@ -191,8 +195,38 @@ const CARD_LINE_PARALLEL = /^[A-Za-z]{0,5}[-\s]?\d{1,4}[a-z]?\s+\p{L}/u;
 const NOT_A_NAME_AFTER_NUMBER = /^(?:in|of|to|and|the|for|per|on|at|by)\b/i;
 /** Finish vocabulary that legitimately follows a bare number in a parallel. */
 const FINISH_AFTER_NUMBER = /^(?:colou?r|tone|tool|of|piece|pc|patch|star|swatch|box|case|player|team|logo|letter|strand)\b/i;
-function isCardLineParallel(parallel) {
+/**
+ * CF-A-DECLARED-PARALLEL-IS-NOT-A-CARD-LINE (Drew, 2026-09-09).
+ *
+ * 2017 Topps Gold Label's parallel vocabulary is "Class 1 Blue" / "Class 2
+ * Black" -- a design word, a digit, then a colour. That is character-for-
+ * character the shape of a card line ("BD 154 Adley Rutschman"), so the guard
+ * above skipped 1,200 of the file's 1,500 rows while the 300 bare "Class N"
+ * rows (no trailing word) sailed through. Prod carried exactly that split.
+ *
+ * The guard is RIGHT in general and is NOT widened: "Series 2 Mike Trout" and
+ * "Level 3 Aaron Judge" must still read as card lines, and a blanket
+ * design-word exemption would admit both. Instead the exemption is scoped to
+ * the individual names a product's OWN manifest declares in
+ * `parallelVocabulary`. A name is exempt only for the file that declares it,
+ * only by exact (case-insensitive, whitespace-folded) match -- never by
+ * pattern -- so no vocabulary can widen the guard for any other product.
+ *
+ * The vocabulary is a CLOSED LIST: it cannot be a regex, and an entry that is
+ * not a string is ignored. Declaring a name here is an assertion by the person
+ * who transcribed the checklist that this exact string is a rung on this exact
+ * product.
+ */
+function declaredParallels(product) {
+  const raw = product && Array.isArray(product.parallelVocabulary) ? product.parallelVocabulary : [];
+  return new Set(raw.filter((v) => typeof v === "string").map((v) => v.trim().toLowerCase().replace(/\s+/g, " ")));
+}
+
+function isCardLineParallel(parallel, declared) {
   const v = String(parallel || "").trim();
+  // A name the product's manifest declares is a rung, by exact match, is never
+  // a card line. Checked FIRST so the shape tests below cannot overrule it.
+  if (declared && declared.size && declared.has(v.toLowerCase().replace(/\s+/g, " "))) return false;
   if (!CARD_LINE_PARALLEL.test(v)) return false;
   if (/^(?:19|20)\d{2}\s/.test(v)) return false;              // "1990 Bowman"
   const after = v.replace(/^[A-Za-z]{0,5}[-\s]?\d{1,4}[a-z]?\s+/u, "");
@@ -297,6 +331,9 @@ async function main() {
     const csvPath = path.join(DIR, name);
     const product = productOf(csvPath);
     if (!product) { noProduct++; continue; }
+    // CF-A-DECLARED-PARALLEL-IS-NOT-A-CARD-LINE: per-FILE, so one product's
+    // vocabulary can never exempt a name in another product's file.
+    const declaredVocab = declaredParallels(product);
     files_ok++;
 
     const lines = fs.readFileSync(csvPath, "utf8").split("\n");
@@ -313,7 +350,7 @@ async function main() {
       // CF-A-CARD-LINE-IS-NOT-A-RUNG (2026-08-29; widened D33 2026-08-30).
       // parallel column is a scraper joining a card line to a rung; it can
       // never name a parallel. Skipped per row, counted, never written.
-      if (isCardLineParallel(parallel)) { cardLineParallel++; continue; }
+      if (isCardLineParallel(parallel, declaredVocab)) { cardLineParallel++; continue; }
       rawRows.push({ category, cardNumber, parallel, isAuto, printRun, player, parallelNote });
       continue;
       batch.push({ category, cardNumber, parallel, isAuto, printRun, player, parallelNote: parallelNote || null });
@@ -755,7 +792,7 @@ async function main() {
   }
 }
 
-module.exports = { splitCsv, productOf };
+module.exports = { splitCsv, productOf, isCardLineParallel, declaredParallels };
 
 if (require.main === module) {
   // CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809). Success exits too: a lane
