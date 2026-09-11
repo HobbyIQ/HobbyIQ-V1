@@ -927,12 +927,21 @@ describe("SLUG CASE — the re-keyed row must land BYTE-EQUAL on the checklist r
     expect(runner).toContain("keep.hobbyiqCardId = target;");
     // both fields from ONE binding — never two separately-built strings
     expect(runner.split("keep.hobbyiqCardId = target;")).toHaveLength(2);
+    // `der` comes from `deriveIdentity`, which now lives in its own lib file
+    // (CF-A-DERIVATION-STAMP-MUST-NOT-HASH-PLUMBING, 2026-09-11) so the I9
+    // derivation stamp hashes the deriver alone, not this script's worker
+    // pool / ledger / budget plumbing — see rematch-derive-identity.cjs.
+    expect(runner).toContain('require(path.join(__dirname, "lib", "rematch-derive-identity.cjs"))');
+    const deriver = readFileSync(
+      new URL("../scripts/lib/rematch-derive-identity.cjs", import.meta.url), "utf8",
+    );
     // and the slug itself is built by the canonical builder, not concatenated
-    expect(runner).toContain("const slug = deps.computeHobbyIqCardId({");
-    expect(runner).toContain("const baseSlug = deps.computeHobbyIqCardId({");
+    expect(deriver).toContain("const slug = deps.computeHobbyIqCardId({");
+    expect(deriver).toContain("const baseSlug = deps.computeHobbyIqCardId({");
     // the rendered identity is a REPORTING artifact and must never be a key
     expect(runner).not.toContain("cardId = K.renderIdentity");
     expect(runner).not.toContain("hobbyiqCardId = K.renderIdentity");
+    expect(deriver).not.toContain("cardId = K.renderIdentity");
   });
 
   it("MUTATION — uppercasing the number in the writer splits the pool it means to join", () => {

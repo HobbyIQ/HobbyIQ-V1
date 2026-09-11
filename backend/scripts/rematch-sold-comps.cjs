@@ -153,6 +153,17 @@ const { CosmosClient } = require("@azure/cosmos");
 const { relocateSoldComp, stripSystem, contentHashOf } = require(path.join(__dirname, "lib", "relocate-sold-comp.cjs"));
 const { patchSoldCompFields } = require(path.join(__dirname, "lib", "patch-sold-comp-fields.cjs"));
 const K = require(path.join(__dirname, "lib", "rematch-classify.cjs"));
+// CF-A-DERIVATION-STAMP-MUST-NOT-HASH-PLUMBING (2026-09-11). storedIdentity
+// and deriveIdentity are THE DERIVATION -- what a row's own fields say, and
+// what today's parser + matcher would say from its title -- and they used to
+// live inline here, which meant the I9 derivation stamp hashed this whole
+// file: the worker pool, the write ledger, the budget clock, finishLane's
+// exit code, none of which decide a verdict. They are pure (no Cosmos, no
+// clock) and now live in lib/rematch-derive-identity.cjs, which is what
+// derivation-version.cjs hashes instead. Re-exported below unchanged so every
+// caller -- this file's own apply/revert loops, and any test doing
+// `require(".../rematch-sold-comps.cjs").deriveIdentity` -- sees the same API.
+const { storedIdentity, deriveIdentity } = require(path.join(__dirname, "lib", "rematch-derive-identity.cjs"));
 // CF-HOBBYMONITOR-IS-STRICT-ONLY-WHERE-A-SECOND-SOURCE-AGREES (Drew, 2026-09-05).
 // The ONE corroboration predicate, reached through the CJS bridge; never a copy.
 const CORROBORATION = require(path.join(__dirname, "lib", "source-corroboration.cjs"));
@@ -447,95 +458,11 @@ function rowInSlot(row, units) {
 }
 
 // ── derivation: the row's own title + stored fields, through today's parser ──
-
-/** The identity the row CARRIES today, read from its own stored fields. */
-function storedIdentity(row, deps) {
-  return {
-    sport: row.sport ?? null,
-    cardYear: row.cardYear ?? null,
-    setKey: row.setName ? deps.normalizeSetKey(String(row.setName)) : "",
-    cardNumber: row.cardNumber ?? null,
-    parallel: row.parallel ?? null,
-    isAuto: row.isAuto === true,
-    printRun: row.printRun ?? null,
-    gradeCompany: row.gradeCompany ?? null,
-    gradeValue: row.gradeValue ?? null,
-  };
-}
-
-/**
- * The identity today's parser + matcher produce for this row. Returns
- * { ok, identity, slug, reasons }.
- *
- * The title is the evidence; the stored raw fields fill only what the title
- * does not say. A blank title cannot be re-derived -- absent beats wrong.
- * The slug guard is the same one the live writers use, so a derivation this
- * function accepts is one the pool would accept from an ingest today.
- */
-function deriveIdentity(row, deps) {
-  const title = String(row.title ?? "").trim();
-  if (!title) return { ok: false, reasons: ["no-title"] };
-
-  const parsed = deps.parseListingIdentity(title, undefined, {
-    vertical: row.sport ?? null,
-    hobbyiqCardId: row.hobbyiqCardId ?? row.cardId ?? null,
-  });
-  // Grade lives in the fields AND the child slug. ingestGradeFromTitle is the
-  // one reader the write path uses; a title stating no grade yields RAW, which
-  // is an answer -- but it must never demote a row that STORES a grade, so the
-  // stored grade wins when the title is silent.
-  const g = deps.ingestGradeFromTitle(title);
-  const gradeCompany = g.gradeCompany ?? row.gradeCompany ?? null;
-  const gradeValue = g.gradeValue ?? (g.gradeCompany ? null : row.gradeValue ?? null);
-
-  const sportRaw = deps.inferSportFromTitle(title, "");
-  const sport = deps.normalizeSportStrict(sportRaw) ?? deps.normalizeSportStrict(row.sport);
-  const cardYear = deps.extractYearFromTitle(title) ?? (row.cardYear ?? null);
-  const cardNumber = parsed.cardNumber ?? row.cardNumber ?? "";
-  const setKeyRaw = deps.inferSetKeyFromTitle(title, cardNumber) || row.setName || "";
-  const setKey = deps.normalizeSetKey(setKeyRaw);
-
-  // CF-BOWMAN-DEFAULT-NOT-EVIDENCE + CF-UNKNOWN-IS-ALSO-A-GUESS: the parser's
-  // fallbacks are guesses, not readings, and a guess that passes the guard is
-  // a confident wrong slug -- exactly what this census exists to find, not to
-  // create. Both stay UNDERIVABLE for a later pass with a better vocabulary.
-  if (setKey.startsWith("bowman") && !/bowman/i.test(title)) return { ok: false, reasons: ["setkey-bowman-default-unsupported"] };
-  if (setKey === "unknown" || setKey === "") return { ok: false, reasons: ["setkey-unknown-unsupported"] };
-
-  const guard = deps.guardSlugInputs({ sport, year: cardYear, normalizedSetKey: setKey, cardNumber, playerName: row.playerName ?? null });
-  if (!guard.ok) return { ok: false, reasons: guard.reasons.map((r) => `guard:${r}`) };
-
-  const isAuto = parsed.isAuto || row.isAuto === true;
-  // THE ONE THING THAT LEGITIMATELY MAKES A ROW AN AUTO.
-  //
-  // parseListingIdentity ORs a title-word reader with the cardNumber reader
-  // and returns one flag, so by the time it lands here the evidence is gone.
-  // The census reported 33,283 rows flipped no-auto -> auto, 100% of them on
-  // the title word alone -- a cut signature mounted with a base card reads
-  // "PSA AUTHENTIC AUTO" and is still a base card. Carry the cardNumber
-  // verdict out separately so the classifier can tell the two apart.
-  const autoByCardNumber = deps.isCardNumberAutoSubset ? !!deps.isCardNumberAutoSubset(cardNumber) : false;
-  const parallel = parsed.parallel || row.parallel || "Base";
-  const printRun = parsed.printRun ?? row.printRun ?? null;
-  const identity = { sport: guard.sport, cardYear, setKey, setNameRaw: setKeyRaw, cardNumber, parallel, isAuto, printRun, gradeCompany, gradeValue };
-  const slug = deps.computeHobbyIqCardId({
-    sport: guard.sport, year: cardYear, setKey: setKeyRaw, cardNumber, parallel, isAuto, printRun,
-    playerName: row.playerName ?? null, gradeCompany, gradeValue,
-  });
-
-  // The BASE destination for this same card: the identity as derived, with the
-  // parallel forced to Base and the print run dropped. A parallel's print run
-  // belongs to the parallel -- a base card that is not serial-numbered must not
-  // carry `/499` to its base slug, or the eviction lands on a slug that names a
-  // numbered base card the checklist may never list. Everything else (set,
-  // number, auto flag, grade) is the row's own and travels unchanged.
-  const baseSlug = deps.computeHobbyIqCardId({
-    sport: guard.sport, year: cardYear, setKey: setKeyRaw, cardNumber, parallel: "Base", isAuto,
-    printRun: null, playerName: row.playerName ?? null, gradeCompany, gradeValue,
-  });
-  const baseIdentity = { ...identity, parallel: "Base", printRun: null };
-  return { ok: true, identity, slug, baseSlug, baseIdentity, autoByCardNumber, reasons: [] };
-}
+//
+// storedIdentity / deriveIdentity now live in lib/rematch-derive-identity.cjs
+// (required above) so the I9 derivation stamp hashes THE DERIVATION alone,
+// not this file's worker pool / ledger / budget plumbing. See that file's
+// header comment.
 
 // ── main ───────────────────────────────────────────────────────────────────
 /**
@@ -1776,9 +1703,21 @@ async function main() {
       const my = idx++;
       if (budgetLeft() < 90000) {
         stopReason = stopReason ?? `stopped at the ${RUN_MINUTES}-minute budget`;
-        stats.notReached += improvable.length - my;
-        for (let z = my; z < improvable.length; z++) perClass[improvable[z].kind].notReached++;
-        return;
+        // CF-A-CONCURRENT-STOP-COUNTS-ITS-OWN-CLAIM-ONLY (run 34360565942,
+        // 2026-09-09). This used to add `improvable.length - my` -- the WHOLE
+        // remaining tail from this worker's own claim point -- but `idx` is a
+        // shared counter and every one of the CONCURRENCY workers claims a
+        // DISJOINT `my` before checking the budget, so at a budget stop near
+        // t=0 all 16 workers see the clock expired on their own first claim
+        // and each added its own overlapping tail: sum_{my=0..15}(2179-my) =
+        // 34,744 "not reached" against 2,179 intended -- the exact drift this
+        // run's reconcile caught. Each worker owns exactly the ONE row `my`
+        // it claimed; the loop keeps draining `idx` (cheaply, no Cosmos read)
+        // so every remaining index is still claimed and counted by SOME
+        // worker exactly once, with no read, no write and no overlap.
+        stats.notReached++;
+        perClass[improvable[my].kind].notReached++;
+        continue;
       }
       const cand = improvable[my];
       // RE-READ: the row may have been re-keyed, enriched or deleted since the
@@ -2245,7 +2184,15 @@ async function revertEvictions({ pool, retry: retry_, reportWrites }) {
   const worker = async () => {
     while (idx < candidates.length) {
       const my = idx++;
-      if (budgetLeft() < 90000) { stats.notReached += candidates.length - my; return; }
+      // CF-A-CONCURRENT-STOP-COUNTS-ITS-OWN-CLAIM-ONLY (run 34360565942,
+      // 2026-09-09; same defect class as the apply-improve loop above). Each
+      // of the CONCURRENCY workers claims a disjoint `my` from the shared
+      // `idx` before checking the budget, so a stop near t=0 must not add
+      // `candidates.length - my` per worker -- that sums overlapping tails
+      // across every worker. Each worker counts only the ONE row it claimed
+      // and keeps draining `idx` (no Cosmos read) so the rest are still
+      // claimed and counted exactly once.
+      if (budgetLeft() < 90000) { stats.notReached++; continue; }
       const c = candidates[my];
       // RE-READ. The pool moves; the verdict is taken again on what is there
       // NOW, exactly as the eviction path re-checks its own class at write
@@ -2363,8 +2310,17 @@ module.exports = {
 if (require.main === module) // CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809). Success exits too: a lane
 // that lets the loop drain is betting every library released every handle.
 // Runs 33975816175/25863/34391/40824 lost that bet AFTER reconciling clean.
+//
+// CF-A-RECONCILE-VERDICT-MUST-REACH-THE-EXIT-CODE (run 34360565942, 2026-09-
+// 09). This used to be a hardcoded `finishLane(0, ...)`: the reconcile below
+// (`intended = written + skipped + failed + not reached`) correctly detects
+// drift and sets `process.exitCode = 4` (or 6 for a scope failure), but a
+// hardcoded 0 here threw that verdict away before `finishLane` ever saw it --
+// the step printed "WORK VANISHED / UNACCOUNTED 2,179 (100%)" and STILL
+// exited 0. `process.exitCode` is the one channel the reconcile has to reach
+// this call, so it is read here rather than assumed clean.
 main()
-  .then((ctx) => finishLane(0, ctx || {}))
+  .then((ctx) => finishLane(process.exitCode || 0, ctx || {}))
   .catch(async (e) => {
     // CF-AN-EMPTY-LOG-IS-NOT-A-BUDGET-KILL (2026-09-07). The runner reads
     // /tmp/backfill.log, which `tee` fills from STDOUT ONLY -- so a crash

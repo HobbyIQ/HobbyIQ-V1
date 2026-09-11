@@ -52,9 +52,21 @@ describe("the derivation stamp names what a measurement was taken under", () => 
   it("hashes the six files that decide a derivation, and no others", () => {
     // ADDING A FILE HERE IS A DELIBERATE ACT — a file that can change a verdict
     // and is not listed makes the stamp lie by omission.
+    //
+    // CF-A-DERIVATION-STAMP-MUST-NOT-HASH-PLUMBING (2026-09-11, run
+    // 34360565942 follow-up). This list used to carry the literal entry
+    // "scripts/rematch-sold-comps.cjs" — the WHOLE script, worker pool,
+    // write ledger, budget clock, finishLane exit code and all — so any
+    // change anywhere in that file invalidated the I9 reference exactly as
+    // if a row's VERDICT had changed, even for plumbing that decides nothing.
+    // storedIdentity/deriveIdentity — the two functions that actually decide
+    // a row's identity — were extracted, pure, to
+    // scripts/lib/rematch-derive-identity.cjs, and that is what is hashed
+    // instead now. See tests/derivationStampNarrowedToIdentity.test.ts for
+    // the two properties this split exists to prove.
     expect(DV.DERIVATION_INPUTS).toEqual([
       "scripts/lib/rematch-classify.cjs",
-      "scripts/rematch-sold-comps.cjs",
+      "scripts/lib/rematch-derive-identity.cjs",
       "src/services/portfolioiq/parseTitleIdentity.service.ts",
       "src/services/portfolioiq/hobbyIqCardId.service.ts",
       "src/services/portfolioiq/slugGuard.service.ts",
