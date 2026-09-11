@@ -21,6 +21,35 @@
  *                      step (falls back to a parseable CENSUS_JSON line).
  *                      Touches nothing, ever -- there is no write path in this
  *                      mode at all, not even behind APPLY.
+ *
+ *                      RESUMABLE ACROSS THE RUNNER'S SELF-RELAUNCH
+ *                      (2026-09-11). A census walks its shard UNIT BY UNIT --
+ *                      the same (cardYear, sportClass, sha1(id) % parts) units
+ *                      SHARD_TABLE packs a slot from -- and checkpoints a
+ *                      per-slot cursor to the `rematch_control` container
+ *                      after every unit that finishes inside budget. A run
+ *                      that hits `RUN_MINUTES` stops at the NEXT unit boundary
+ *                      (never mid-unit), saves the units done so far plus the
+ *                      merged counts they produced, and prints `stopped at the
+ *                      ... budget` exactly as before -- the runner's existing
+ *                      relaunch fires on that line with no new dispatch input.
+ *                      The relaunch's own pass reads that cursor, MERGES its
+ *                      saved counts into its own and skips every unit already
+ *                      marked done, so a slot's `classified` climbs pass over
+ *                      pass toward `expectedRows` instead of resetting to zero
+ *                      every ~2h10m. A pass that finishes its WHOLE shard
+ *                      prints `finished within budget` and clears the cursor,
+ *                      so an unrelated later dispatch of the same slot (a
+ *                      re-run, an audit re-check) starts clean rather than
+ *                      "resuming" a slot with nothing left to resume. The
+ *                      cursor is invalidated (dropped, not repaired) by any
+ *                      change to the shard table's `measuredAt`, `scope`,
+ *                      `sports`, `setkey_like` or `years` -- see
+ *                      censusCursorSignature. MODE=apply-improve is
+ *                      untouched: its queue is rebuilt from a census-fresh
+ *                      read on every dispatch and every candidate is
+ *                      re-checked at write time, so there is nothing for a
+ *                      cursor to resume.
  *   MODE=apply-improve  SCOPE=revert-eviction
  *                      THE ONE WAY BACK. Reads the rows this script's own
  *                      base-eviction wave WROTE -- the ones carrying
@@ -1238,6 +1267,83 @@ async function main() {
    * `sampleCards` tracks, per class, how many lines each cardId holds.
    */
   const sampleCards = new Map();   // klass -> Map(cardId -> line count)
+  /**
+   * THE NAMED AGGREGATE, so a resume can save and reload it as ONE object
+   * instead of the cursor helpers having to know each counter's shape by
+   * hand. Every entry here is either a `Map<string, number>` (bumped
+   * counters), a `Map<string, Map<string, number>>` (the per-class sample
+   * reservoirs' per-card tallies), an array (capped sample lines) or a plain
+   * number -- `censusAggregateToJSON`/`FromJSON` below switch on which.
+   */
+  const AGGREGATE_FIELDS = {
+    counts: "object", stats: "object", splitTotal: "number",
+    byTier: "map", defects: "map", reasons: "map", subclasses: "map",
+    splitByClass: "map", splitSegments: "map",
+    slugShapeCounts: "map", slugShapeByClass: "map",
+    gftByGrader: "map", gftByGrade: "map", gftBySport: "map",
+    yfvByDecade: "map", yfvBySetKey: "map", yfvBySport: "map",
+    sfpByPair: "map", sfpBySetKey: "map",
+    samples: "mapOfArrays", sampleCards: "mapOfMaps",
+    slugShapeSamples: "mapOfArrays",
+    splitSamples: "array", gftSamples: "array", yfvSamples: "array", sfpSamples: "array",
+  };
+  const aggregateRefs = {
+    counts, stats, get splitTotal() { return splitTotal; }, set splitTotal(v) { splitTotal = v; },
+    byTier, defects, reasons, subclasses, splitByClass, splitSegments,
+    slugShapeCounts, slugShapeByClass, gftByGrader, gftByGrade, gftBySport,
+    yfvByDecade, yfvBySetKey, yfvBySport, sfpByPair, sfpBySetKey,
+    samples, sampleCards, slugShapeSamples,
+    splitSamples, gftSamples, yfvSamples, sfpSamples,
+  };
+  /** Serialize the whole in-memory aggregate to a plain JSON-safe object. */
+  const censusAggregateToJSON = () => {
+    const out = {};
+    for (const [name, kind] of Object.entries(AGGREGATE_FIELDS)) {
+      const v = aggregateRefs[name];
+      if (kind === "map") out[name] = Object.fromEntries(v);
+      else if (kind === "mapOfArrays") out[name] = Object.fromEntries([...v].map(([k, arr]) => [k, arr]));
+      else if (kind === "mapOfMaps") out[name] = Object.fromEntries([...v].map(([k, m]) => [k, Object.fromEntries(m)]));
+      else out[name] = v; // "object" | "number" | "array" -- already plain
+    }
+    return out;
+  };
+  /** Merge a PRIOR pass's saved aggregate into the live in-memory one, BEFORE
+   *  this pass classifies a single row of its remaining units. Counters add;
+   *  arrays concatenate then re-cap at the same limit the live sampler uses,
+   *  so a resumed sample stays within its documented cap. This is called at
+   *  most once, at the top of a resumed pass -- the live counters are empty
+   *  at that point, so "merge" and "load" are the same operation here. */
+  const mergeCensusAggregate = (prior) => {
+    if (!prior || typeof prior !== "object") return;
+    for (const [name, kind] of Object.entries(AGGREGATE_FIELDS)) {
+      const saved = prior[name];
+      if (saved === undefined || saved === null) continue;
+      if (kind === "map") { for (const [k, n] of Object.entries(saved)) bump(aggregateRefs[name], k, Number(n) || 0); }
+      else if (kind === "mapOfArrays") {
+        const m = aggregateRefs[name];
+        for (const [k, arr] of Object.entries(saved)) {
+          const cap = name === "samples" ? SAMPLE_CAP : 20;
+          const existing = m.get(k) ?? [];
+          m.set(k, [...existing, ...(Array.isArray(arr) ? arr : [])].slice(0, Math.max(existing.length, cap)));
+        }
+      } else if (kind === "mapOfMaps") {
+        const m = aggregateRefs[name];
+        for (const [k, inner] of Object.entries(saved)) {
+          const cur = m.get(k) ?? new Map();
+          for (const [ck, cn] of Object.entries(inner)) cur.set(ck, (cur.get(ck) ?? 0) + (Number(cn) || 0));
+          m.set(k, cur);
+        }
+      } else if (kind === "array") {
+        aggregateRefs[name].push(...(Array.isArray(saved) ? saved : []).slice(0, 30));
+      } else if (name === "counts") {
+        for (const k of Object.keys(counts)) counts[k] += Number(saved[k]) || 0;
+      } else if (name === "stats") {
+        for (const k of Object.keys(stats)) stats[k] += Number(saved[k]) || 0;
+      } else if (name === "splitTotal") {
+        splitTotal += Number(saved) || 0;
+      }
+    }
+  };
   const sample = (klass, cardId, line) => {
     if (!samples.has(klass)) { samples.set(klass, []); sampleCards.set(klass, new Map()); }
     const arr = samples.get(klass);
@@ -1270,7 +1376,6 @@ async function main() {
    *  in the census JSON so the audit gate can assert on it. */
   const sampleCardCount = (klass) => (sampleCards.get(klass) ?? new Map()).size;
 
-  const it = pool.items.query(q, { maxItemCount: 500 });
   const improvable = [];
   /** Writable candidates the class scope held back, per class. Counted so the
    *  reconcile can show what a scoped run declined to write. */
@@ -1280,7 +1385,53 @@ async function main() {
    *  GUARD 5 still fires without it. */
   const safeIsLot = (t) => { try { return deps.isMultiCardLot ? !!deps.isMultiCardLot(t) : false; } catch { return false; } };
   let stopReason = null;
-  page: while (it.hasMoreResults()) {
+
+  // ── THE CENSUS CURSOR: SKIP DONE UNITS, MERGE THEIR SAVED COUNTS ──────────
+  //
+  // MODE=census only -- see censusCursorId's header comment for why. An apply
+  // is not resumable the same way (its queue is built from a census-fresh
+  // read and re-checked row by row at write time), and this cursor never
+  // touches it: `unitsForCensus` below is exactly `q.units` unless a PRIOR
+  // pass's saved cursor says some of them are already classified and counted.
+  const control = MODE === "census" ? cosmos(conn).container(REMATCH_CONTROL_CONTAINER) : null;
+  const priorCursor = MODE === "census" ? await loadCensusCursor(control, SLOT) : null;
+  const doneUnitKeys = new Set(priorCursor?.unitsDone ?? []);
+  if (priorCursor) {
+    // `mergeCensusAggregate` adds the saved `stats` (seen, otherSlot,
+    // filtered, prefiltered, ...) into the live counters below, so `stats.seen`
+    // after this call already IS the carried-forward classified count --
+    // `priorCursor.classified` is a redundant witness of the same number,
+    // read here only for the narration line, never assigned over the merge.
+    mergeCensusAggregate(priorCursor.aggregate);
+    console.log(`  CENSUS CURSOR: resuming slot ${SLOT} -- ${doneUnitKeys.size} of ${q.units.length} unit(s) already classified in a prior pass (${f(stats.seen)} rows carried forward, cursor said ${f(Number(priorCursor.classified) || 0)}). Signature matched: same shard table, scope and filters.`);
+  } else if (MODE === "census") {
+    console.log(`  CENSUS CURSOR: no usable prior checkpoint for slot ${SLOT} -- starting from unit 0.`);
+  }
+  // MODE=apply-improve keeps the ORIGINAL single-query shape -- one query
+  // object over every unit combined, walked once. Splitting it per unit like
+  // the census below would reissue the whole combined query once PER UNIT
+  // (N-fold read amplification) and let `rowInSlot` admit the same row once
+  // per unit it is not excluded by, double-classifying it. Only a census's
+  // OWN pass needs to be resumable across a relaunch; an apply's queue is
+  // rebuilt from a census-fresh read every dispatch and re-checked per row at
+  // write time (see the re-read block below), so there is nothing here for a
+  // cursor to resume -- unfinished work is simply not queued and is caught by
+  // the next census + apply cycle.
+  const unitsThisPass = MODE === "census"
+    ? q.units.filter((u) => !doneUnitKeys.has(String(u.key)))
+    : [{ key: "__apply-improve-whole-slot__", __wholeSlotQuery: true }];
+  // A unit's own row count is what "reached its whole shard" is measured
+  // against in `stopAccounting` -- rows already classified in a prior pass
+  // still count toward `expected`, via `stats.seen` carried forward above.
+
+  page: for (const unit of unitsThisPass) {
+    if (MODE === "census" && budgetLeft() < 90000) { stopReason = `stopped at the ${RUN_MINUTES}-minute budget`; break; }
+    // `unit` already survived slotQuery's own YEARS filter once, when `q.units`
+    // was built above -- re-applying the identical filter to a one-unit array
+    // is idempotent and can never come back null for a unit already in q.units.
+    const unitQuery = MODE === "census" ? slotQuery([unit], YEARS) : q;
+    const it = pool.items.query(unitQuery, { maxItemCount: 500 });
+    while (it.hasMoreResults()) {
     if (budgetLeft() < 90000) { stopReason = `stopped at the ${RUN_MINUTES}-minute budget`; break; }
     const { resources } = await retry(() => it.fetchNext());
     for (const row of resources ?? []) {
@@ -1459,6 +1610,42 @@ async function main() {
           }
         }
       }
+    }
+    } // end `while (it.hasMoreResults())` for this unit
+    if (MODE === "census") {
+      if (stopReason) {
+        // Stopped MID-UNIT (or at its very start): this unit is NOT marked
+        // done. The checkpoint below therefore resumes at THIS unit again,
+        // not the one after it -- a partially classified unit is reported by
+        // its own re-run, never by a resumed pass that skipped it as if it
+        // were whole. `page` breaks the OUTER loop too, so no further unit is
+        // even attempted once the budget is gone.
+        break page;
+      }
+      doneUnitKeys.add(String(unit.key));
+    }
+  }
+
+  // ── CHECKPOINT: PERSIST THE CURSOR BEFORE THE BANNER, WHILE THE MERGED ────
+  // AGGREGATE IS STILL THE ONE THIS PASS JUST BUILT (census only).
+  //
+  // Written on EVERY census pass, not only a budget stop: a pass that
+  // finishes its whole shard in one go still needs its cursor CLEARED (never
+  // left behind for a later independent dispatch of the same slot to
+  // misread as "resume from here"), and a pass that stops partway needs it
+  // SAVED. Both are one call, gated on whether every unit is now done.
+  if (MODE === "census") {
+    const allDone = doneUnitKeys.size >= q.units.length;
+    if (allDone) {
+      await clearCensusCursor(control, SLOT);
+      console.log(`  CENSUS CURSOR: slot ${SLOT} finished within budget -- every unit classified, cursor cleared.`);
+    } else {
+      await saveCensusCursor(control, SLOT, {
+        unitsDone: [...doneUnitKeys],
+        aggregate: censusAggregateToJSON(),
+        classified: stats.seen,
+      });
+      console.log(`  CENSUS CURSOR: checkpointed ${doneUnitKeys.size} of ${q.units.length} unit(s) for slot ${SLOT} -- the relaunch continues from the next unit.`);
     }
   }
 
@@ -2066,6 +2253,132 @@ function cosmos(conn) {
 }
 
 /**
+ * THE CENSUS CURSOR -- a per-slot checkpoint that survives the runner's own
+ * self-relaunch (2026-09-11).
+ *
+ * THE DEFECT THIS REPLACES. The relaunch dispatch for rematch-sold-comps
+ * forwards slot/slots/years/limit/scope/sports/setkey_like VERBATIM and
+ * nothing else -- there is no field to carry a resume position, and
+ * backfill-runner.yml is the one file this fix may not touch (a new dispatch
+ * input needs a workflow change, and #1974's finder pin already asserts the
+ * fleet driver dispatches ONLY the seven inputs that exist today). So a slot
+ * has to find its OWN way back to where it stopped, with nothing the runner
+ * passes it -- which means the checkpoint has to live somewhere both the
+ * dying run and its own relaunch can reach: Cosmos, in the SAME control
+ * container SETTLE MARKERS already write to (`rematch_control`), keyed by
+ * slot so two slots' cursors can never collide.
+ *
+ * THE DAMAGE, MEASURED 2026-09-08/09. Slot 0 (523,940 rows measured at
+ * capture, ~231,480 classified per 140-minute pass) is one of 18 of 32 slots
+ * that never finish inside one budget. Every relaunch re-read the WHOLE slot
+ * from unit zero, so the pass count reset every ~2h10m forever -- 26 runners
+ * held ~20 hours before a human cancelled 28 runs. A census that restarts is
+ * not merely slow: it never converges, because there is no unit the next pass
+ * starts later than the last one did.
+ *
+ * THE UNIT IS THE CHECKPOINT GRAIN. `q.units` -- the (cardYear, sportClass,
+ * sha1(id) % parts) axis SHARD_TABLE already packs a slot into -- is what
+ * gets marked done, one unit at a time, never a row offset within a unit. A
+ * Cosmos continuation token is not durable across a brand-new query object on
+ * a brand-new process (the SDK does not promise it survives a version skew or
+ * even a re-issued query shape), so the granularity that IS safe to persist
+ * and safe to resume from is "this whole unit's rows are classified and
+ * counted", which is exactly the boundary the shard table already draws.
+ *
+ * WHAT IS PERSISTED. `unitsDone` (the completed units' `key`s), plus the
+ * MERGED partial aggregate every reader in this file already builds in
+ * memory -- counts, byTier, defects, reasons, samples, subclasses, and the
+ * rest -- serialised through `censusAggregateToJSON`/`censusAggregateFromJSON`
+ * below so a resumed pass adds its own units' rows to the SAME totals rather
+ * than starting a new set that a human then has to add by hand. `classified`
+ * is carried too, so the final artifact's `classified` reaches `expectedRows`
+ * once every unit is done, not just the last pass's slice of it.
+ *
+ * WHAT INVALIDATES A CURSOR. The shard table's `measuredAt` and this run's
+ * `scope`/`rowFilter` signature. A cursor written against an OLDER shard
+ * table or a DIFFERENT scope is not this run's own progress -- resuming from
+ * it would silently merge two different questions' answers into one count.
+ * An invalidated cursor is dropped, not repaired: the pass starts clean and
+ * says so in the banner, rather than guessing which of its old units are
+ * still valid.
+ */
+const CENSUS_CURSOR_KIND = "rematch-census-cursor";
+
+/** The one document id a slot's cursor lives at. Slot-scoped so two slots
+ *  dispatched at once can never read or clobber each other's progress. */
+function censusCursorId(slot) { return `census-cursor::slot-${slot}`; }
+
+/** A signature that MUST match between the pass that wrote a cursor and the
+ *  pass that would resume from it. Anything that changes what a unit's rows
+ *  are being classified AGAINST invalidates the cursor -- a stale resume
+ *  would merge answers to two different questions into one count. */
+function censusCursorSignature() {
+  return {
+    measuredAt: SHARD_TABLE.measuredAt,
+    scope: APPLY_SCOPE_RAW,
+    sports: SPORTS_FILTER.slice().sort(),
+    setkeyLike: SETKEY_LIKE,
+    years: YEARS.slice().sort((a, b) => a - b),
+  };
+}
+
+function signaturesMatch(a, b) {
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
+/** Read this slot's cursor, or null when there is none or it does not match
+ *  THIS pass's signature (see censusCursorSignature above). A refused read
+ *  (missing container on a first-ever run, a throttle) is treated the same
+ *  as "no cursor" -- a census must be able to start cold, and a resume is an
+ *  optimization, never a dependency. */
+async function loadCensusCursor(control, slot) {
+  if (!control) return null;
+  try {
+    const { resource } = await control.item(censusCursorId(slot), censusCursorId(slot)).read();
+    if (!resource || resource.kind !== CENSUS_CURSOR_KIND) return null;
+    if (!signaturesMatch(resource.signature, censusCursorSignature())) return null;
+    return resource;
+  } catch (e) {
+    if (e?.code === 404 || e?.statusCode === 404) return null;
+    console.error(`  !! could not read census cursor for slot ${slot} (${String(e?.message ?? e).slice(0, 140)}) -- starting this pass from unit 0.`);
+    return null;
+  }
+}
+
+/** Persist this slot's checkpoint: the units finished so far and the merged
+ *  aggregate they produced. Failure is non-fatal -- the classification this
+ *  pass already did is not lost, only the NEXT pass's ability to skip it, and
+ *  that pass falls back to a cold start exactly as a first-ever run does. */
+async function saveCensusCursor(control, slot, { unitsDone, aggregate, classified }) {
+  if (!control) return false;
+  const doc = {
+    id: censusCursorId(slot), kind: CENSUS_CURSOR_KIND, slot, slots: SLOTS,
+    signature: censusCursorSignature(),
+    unitsDone, classified, aggregate,
+    updatedAt: new Date().toISOString(),
+  };
+  try {
+    await control.items.upsert(doc);
+    return true;
+  } catch (e) {
+    console.error(`  !! could not save census cursor for slot ${slot} (${String(e?.message ?? e).slice(0, 140)}) -- the next pass will restart this shard from unit 0.`);
+    return false;
+  }
+}
+
+/** Delete a finished slot's cursor. A completed cursor left behind would be
+ *  read by the NEXT independent dispatch of this slot (a re-run, an audit
+ *  re-check) as "resume from here" when there is nothing left to resume --
+ *  every unit is already done. Non-fatal: a leftover cursor is caught by the
+ *  signature check the next time the shard table or scope changes, so this
+ *  is tidiness, not correctness. */
+async function clearCensusCursor(control, slot) {
+  if (!control) return;
+  try { await control.item(censusCursorId(slot), censusCursorId(slot)).delete(); }
+  catch (e) { if (e?.code !== 404 && e?.statusCode !== 404) { /* leftover cursor; signature check catches it later */ } }
+}
+
+/**
  * THE REVERT PASS -- MODE=apply-improve SCOPE=revert-eviction.
  *
  * Reads the rows this script's own base-eviction wave WROTE, re-reads each
@@ -2305,6 +2618,14 @@ module.exports = {
   // tests use, so the WRITE is pinned on the committed script rather than on a
   // test's re-implementation of it.
   revertVerdict, revertEvictions,
+  // THE CENSUS CURSOR (2026-09-11): exported so its checkpoint/resume/
+  // invalidation rules are pinned on the SHIPPED functions, not a test's
+  // re-implementation of them. `censusCursorId` and `censusCursorSignature`
+  // are pure; `loadCensusCursor`/`saveCensusCursor`/`clearCensusCursor` are
+  // driven against a stubbed `control` container the same way the other apply
+  // tests drive `pool`.
+  censusCursorId, censusCursorSignature, signaturesMatch,
+  loadCensusCursor, saveCensusCursor, clearCensusCursor, CENSUS_CURSOR_KIND,
 };
 
 if (require.main === module) // CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809). Success exits too: a lane
