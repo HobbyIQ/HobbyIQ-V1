@@ -2081,3 +2081,315 @@ describe("immaculate-02: nine collisions, nine parks, and no fold invented", () 
     for (const e of entries) expect(L.keepsSales(e, doc)).toBe(true);
   });
 });
+
+// ── the remaining hobbymonitor lists: Ruling 17 applied in one pass ──────────
+
+/**
+ * CF-AN-UNCONFIRMED-ROW-IS-PARKED-NOT-DELETED, pre-resolved across every
+ * REMAINING hobbymonitor year-repair list (2026-09-09).
+ *
+ * Rather than let each list hold its lane on `refused — occupied` one dispatch
+ * at a time, all twenty remaining lists were resolved OFFLINE and READ-ONLY:
+ * the lane's OWN exported `classifyEntry` and `occupancyRefusal` -- the latter
+ * reducing both names through playerIdentityKey, exactly as the lane does --
+ * were driven against live card_catalog point reads. So the verdict pinned
+ * here is the verdict the lane reaches, not a re-implementation of it, and no
+ * id was ever read off a truncated banner line (#2008).
+ *
+ * FOURTEEN OF THE TWENTY LISTS HAVE NO OCCUPIED ENTRY AT ALL and are therefore
+ * untouched. Six do, and they split into two populations:
+ *
+ *   297 DIFFERENT-PLAYER collisions -> PARKED here, under Ruling 17. Every one
+ *   is a hobbymonitor row whose destination is held by a row naming another
+ *   player, with the two sources disagreeing about who owns the number. The
+ *   checklist-backed row decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT), so the
+ *   hobbymonitor NUMBERING is what wants a source and the row is parked
+ *   unpriced until it gets one.
+ *
+ *   1,075 SAME-PLAYER twins -> DELIBERATELY NOT FOLDED, and this is the
+ *   load-bearing decision in this change. See below.
+ *
+ * ─────────────────────────────────────────────────────────────────────────────
+ * WHY 1,075 SAME-PLAYER PAIRS ARE **NOT** WRITTEN AS FOLDS
+ * ─────────────────────────────────────────────────────────────────────────────
+ *
+ * On name, number, parallel, print run and isAuto these pairs match, which is
+ * the Kevin Durant shape #1999 folded. They are NOT that shape, because of
+ * where the product name actually lives.
+ *
+ * MEASURED on all 1,075: the occupant's STORED setKey never equals its own
+ * slug's product segment, and on 1,026 of them neither does the source's.
+ *
+ *     slug stem        stored setKey            count
+ *     topps            topps-3                  1,024   (source setKey: topps-three)
+ *     panini-contenders panini-contenders-optic     48
+ *     topps            topps-royalty                1
+ *     topps            topps-motif                  1
+ *     panini-contenders panini-contenders-nfl        1
+ *
+ * The slug stem is a GENERIC maker token; the real product is in `setKey`. So
+ * these are not two addresses for one card -- they are a `topps-three` row and
+ * a `topps-3` row, a `panini-contenders` row and a `panini-contenders-optic`
+ * row. Whether `topps-three` and `topps-3` NAME ONE PRODUCT is a vocabulary
+ * question, and there is no ruling for it: neither key appears in
+ * normalizeSetKey's alias table. `panini-contenders-optic` is plainly a
+ * DIFFERENT product from `panini-contenders`, and its 48 pairs have
+ * hobbymonitor on BOTH sides -- no checklist row adjudicates them at all.
+ *
+ * A fold here is a DELETE of the source row. Deleting 1,075 rows on the
+ * assumption that two product keys are synonyms -- when the collector taxonomy
+ * is authoritative and has not been asked -- is exactly the
+ * "normalizeSetKey collapses products, needs a vocabulary decision" hazard,
+ * and CF-RATIO-SIMILARITY-IS-NOT-IDENTITY applies: matching on every field we
+ * happen to store is not proof of identity when the field that names the
+ * PRODUCT is the one in dispute.
+ *
+ * So they are left as reslugs, refused by the lane exactly as before, and
+ * reported for a ruling. That is the honest state: this change makes the
+ * adjudicated 297 stop blocking their lanes and CHANGES NOTHING about the
+ * 1,075, rather than silently resolving them the convenient way. Pinning the
+ * fold count at ZERO across these lists is what stops a later pass folding
+ * them in without the ruling.
+ */
+describe("the remaining hobbymonitor lists: 297 parks, and zero folds invented", () => {
+  // file -> [parks expected, entries total]
+  const PARKED: ReadonlyArray<readonly [string, number, number]> = [
+    ["2026-09-07-hobbymonitor-year-basketball-panini-prizm-black-01.json", 5, 1000],
+    ["2026-09-07-hobbymonitor-year-basketball-panini-prizm-black-02.json", 4, 666],
+    ["2026-09-07-hobbymonitor-year-basketball-topps-three-02.json", 60, 1000],
+    ["2026-09-07-hobbymonitor-year-basketball-topps-three-03.json", 23, 479],
+    ["2026-09-07-hobbymonitor-year-football-panini-contenders-01.json", 66, 1000],
+    ["2026-09-07-hobbymonitor-year-football-panini-contenders-02.json", 91, 1000],
+    ["2026-09-07-hobbymonitor-year-football-panini-contenders-03.json", 48, 807],
+  ];
+
+  // The lists resolved clean -- no occupied entry, so nothing to rewrite. They
+  // are named so that a future run finding refusals in one of them is a CHANGE,
+  // not a surprise.
+  const CLEAN: ReadonlyArray<string> = [
+    "2026-09-07-hobbymonitor-year-basketball-panini-national-treasures-01.json",
+    "2026-09-07-hobbymonitor-year-basketball-panini-national-treasures-02.json",
+    "2026-09-07-hobbymonitor-year-basketball-panini-eminence-01.json",
+    "2026-09-07-hobbymonitor-year-football-panini-impeccable-01.json",
+    "2026-09-07-hobbymonitor-year-basketball-topps-cosmic-chrome-05.json",
+    "2026-09-07-hobbymonitor-year-basketball-topps-cosmic-chrome-06.json",
+    "2026-09-07-hobbymonitor-year-basketball-topps-cosmic-chrome-07.json",
+    "2026-09-07-hobbymonitor-year-basketball-panini-silhouette-01.json",
+    "2026-09-07-hobbymonitor-year-basketball-panini-silhouette-02.json",
+    "2026-09-07-hobbymonitor-year-basketball-panini-silhouette-03.json",
+    "2026-09-07-hobbymonitor-year-basketball-panini-origins-01.json",
+    "2026-09-07-hobbymonitor-year-basketball-panini-origins-02.json",
+    "2026-09-07-hobbymonitor-year-basketball-topps-chrome-01.json",
+  ];
+
+  for (const [file, parks, total] of PARKED) {
+    describe(file.replace("2026-09-07-hobbymonitor-year-", ""), () => {
+      const doc = readList(join(listDir, file));
+      const entries = doc.entries;
+
+      it(`holds ${total} entries and ${parks} parks`, () => {
+        expect(doc.forLane).toBe("relocate-catalog-rows-by-list");
+        expect(entries).toHaveLength(total);
+        expect(entries.filter((e) => e.action === "park")).toHaveLength(parks);
+      });
+
+      it("every entry passes the lane's own validation", () => {
+        for (const e of entries) expect(L.classifyEntry(e).ok).toBe(true);
+      });
+
+      it("no park names a destination, and every park states Ruling 17", () => {
+        for (const e of entries) {
+          if (e.action !== "park") continue;
+          expect(e.to, e.id).toBeUndefined();
+          expect(e.reason, e.id).toContain("CHECKLIST DECIDES THE NUMBER");
+          expect(e.reason, e.id).toContain("identityUnverified");
+          // The evidence names both sides and both sources.
+          expect(e.evidence, e.id).toContain("is held by");
+          expect(e.evidence, e.id).toContain("setKey=");
+        }
+      });
+
+      it("no duplicate ids, and no two reslugs onto one destination", () => {
+        const ids = entries.map((e) => e.id);
+        expect(new Set(ids).size).toBe(ids.length);
+        const tos = entries.filter((e) => e.action === "reslug").map((e) => String(e.to));
+        expect(new Set(tos).size).toBe(tos.length);
+      });
+    });
+  }
+
+  it("the fourteen clean lists exist and hold no park", () => {
+    for (const file of CLEAN) {
+      const p = join(listDir, file);
+      expect(existsSync(p), file).toBe(true);
+      const doc = readList(p);
+      // Nothing was rewritten in these, so a park appearing here means the
+      // population changed and the resolution must be re-run.
+      expect(doc.entries.filter((e) => e.action === "park"), file).toHaveLength(0);
+    }
+  });
+
+  /**
+   * THE ZERO-FOLD PIN. Not one same-player twin in these lists was converted to
+   * a retire, because each turns on an undecided product-key question. If a
+   * later pass folds them, this goes red and asks for the ruling first.
+   */
+  it("ZERO folds were invented in the six rewritten lists", () => {
+    // prizm-black-01 and contenders-01 carry retires the ORIGINAL list authors
+    // wrote; this change added none. The counts are pinned as authored.
+    const asAuthored: Record<string, number> = {
+      "2026-09-07-hobbymonitor-year-basketball-panini-prizm-black-01.json": 309,
+      "2026-09-07-hobbymonitor-year-basketball-panini-prizm-black-02.json": 0,
+      "2026-09-07-hobbymonitor-year-basketball-topps-three-02.json": 0,
+      "2026-09-07-hobbymonitor-year-basketball-topps-three-03.json": 0,
+      "2026-09-07-hobbymonitor-year-football-panini-contenders-01.json": 126,
+      "2026-09-07-hobbymonitor-year-football-panini-contenders-02.json": 0,
+      "2026-09-07-hobbymonitor-year-football-panini-contenders-03.json": 0,
+    };
+    for (const [file, retires] of Object.entries(asAuthored)) {
+      const doc = readList(join(listDir, file));
+      expect(doc.entries.filter((e) => e.action === "retire"), file).toHaveLength(retires);
+    }
+  });
+});
+
+// ── Ruling 22: the 1,027 same-product twins fold onto the checklist key ──────
+
+/**
+ * CF-SAME-PRODUCT-FOLDS-ONTO-THE-CHECKLIST-KEY (Drew's Ruling 22, 2026-09-09).
+ *
+ * #2024 measured 1,075 same-player pairs across five lists and deliberately
+ * did NOT fold them, because the product name lives in `setKey` rather than in
+ * the slug and no ruling said whether `topps-three` and `topps-3` name one
+ * product. Ruling 22 says they do: same product, fold onto the CHECKLIST key,
+ * count-by-source decides the spelling.
+ *
+ * WHAT WAS FOLDED, AND WHAT WAS NOT. The ruling names its own test -- fold
+ * onto "the row whose key matches its own slug's product segment / the
+ * checklist-backed side" -- and applying it splits the 1,075:
+ *
+ *   1,027 have a CHECKLIST-BACKED occupant (checklistinsider /
+ *   checklistcenter) and are rewritten here as folds: topps-three -> topps-3
+ *   (1,024), topps-three -> topps-royalty (1), topps-three -> topps-motif (1),
+ *   panini-contenders -> panini-contenders-nfl (1).
+ *
+ *   48 do NOT: the panini-contenders -> panini-contenders-optic pairs are
+ *   hobbymonitor on BOTH sides, so no checklist row adjudicates them and the
+ *   occupant's key does not match its slug stem either. Neither limb of the
+ *   ruling's test is met, so they are left exactly as their author wrote them.
+ *   They are NOT a refusal: the lane's own compare calls them the same card
+ *   and folds them without stopping, which is why `refused` is still 0.
+ *
+ * THE SHAPE IS A RESLUG, NOT A RETIRE, AND THAT IS LOAD-BEARING. The ruling
+ * asks that the sales follow the row to the checklist twin. A `retire` CANNOT
+ * do that: `keepsSales` is read at exactly one call site, inside the reslug
+ * branch, and the retire path's contract is the opposite -- "the sales that
+ * pointed here are unplaced now, and the rematch owns unplaced sales". A retire
+ * would strand every sale. A RESLUG onto the twin's address is the shape that
+ * carries them: moveCatalogRow adjudicates a same-card destination, re-points
+ * the sales, and deletes the old row -- one card, one row, one pool. Each entry
+ * says `repointSales: true` explicitly, dissenting from the file-level
+ * `keepSales: true` that is right for the year-move rows and wrong for a fold.
+ *
+ * PROVEN, NOT ASSUMED. The occupancy pass was re-run against live
+ * card_catalog after the rewrite: all 1,075 occupied entries across the five
+ * lists now return the lane's NOT-occupied verdict (same card), and
+ * `occupied: different card` is ZERO. Nothing in these files can refuse.
+ */
+describe("Ruling 22: same-product twins fold onto the checklist key", () => {
+  // file -> [total entries, folds, parks]
+  const FOLDED: ReadonlyArray<readonly [string, number, number, number]> = [
+    ["2026-09-07-hobbymonitor-year-basketball-topps-three-02.json", 1000, 691, 60],
+    ["2026-09-07-hobbymonitor-year-basketball-topps-three-03.json", 479, 335, 23],
+    ["2026-09-07-hobbymonitor-year-football-panini-contenders-03.json", 807, 1, 48],
+  ];
+
+  for (const [file, total, folds, parks] of FOLDED) {
+    describe(file.replace("2026-09-07-hobbymonitor-year-", ""), () => {
+      const doc = readList(file.startsWith("/") ? file : join(listDir, file));
+      const entries = doc.entries as Array<Entry & { repointSales?: boolean }>;
+      const folded = entries.filter((e) => e.repointSales === true);
+
+      it(`holds ${total} entries, ${folds} folds and ${parks} parks`, () => {
+        expect(entries).toHaveLength(total);
+        expect(folded).toHaveLength(folds);
+        expect(entries.filter((e) => e.action === "park")).toHaveLength(parks);
+      });
+
+      it("every entry still passes the lane's own validation", () => {
+        for (const e of entries) expect(L.classifyEntry(e).ok).toBe(true);
+      });
+
+      /**
+       * THE SHAPE PIN. A fold must be a reslug carrying its sales -- a retire
+       * would strand them, since keepsSales is never consulted on that path.
+       */
+      it("every fold is a RESLUG that carries its sales", () => {
+        for (const e of folded) {
+          expect(e.action, e.id).toBe("reslug");
+          expect(e.action, e.id).not.toBe("retire");
+          expect(e.to, e.id).toBeTruthy();
+          // The entry dissents from the file's keepSales:true, so the sales
+          // follow the row onto the twin.
+          expect(L.keepsSales(e, doc), e.id).toBe(false);
+          expect(e.reason, e.id).toContain("FOLD ONTO THE CHECKLIST KEY");
+          expect(e.evidence, e.id).toContain("NOT-occupied");
+        }
+      });
+
+      /** The file-level default is untouched: only the folds dissent. */
+      it("non-fold entries still keep their sales where they are", () => {
+        expect((doc as unknown as { keepSales?: boolean }).keepSales).toBe(true);
+        for (const e of entries) {
+          if (e.repointSales === true) continue;
+          expect(L.keepsSales(e, doc), e.id).toBe(true);
+        }
+      });
+
+      it("no duplicate ids, and no two reslugs onto one destination", () => {
+        const ids = entries.map((e) => e.id);
+        expect(new Set(ids).size).toBe(ids.length);
+        const tos = entries.filter((e) => e.action === "reslug").map((e) => String(e.to));
+        expect(new Set(tos).size).toBe(tos.length);
+      });
+    });
+  }
+
+  /**
+   * THE PARKS #2024 WROTE ARE UNTOUCHED. A fold pass must never quietly
+   * un-park a different-player collision.
+   */
+  it("the 297 Ruling 17 parks across the six lists are unchanged", () => {
+    const parks: Record<string, number> = {
+      "2026-09-07-hobbymonitor-year-basketball-panini-prizm-black-01.json": 5,
+      "2026-09-07-hobbymonitor-year-basketball-panini-prizm-black-02.json": 4,
+      "2026-09-07-hobbymonitor-year-basketball-topps-three-02.json": 60,
+      "2026-09-07-hobbymonitor-year-basketball-topps-three-03.json": 23,
+      "2026-09-07-hobbymonitor-year-football-panini-contenders-01.json": 66,
+      "2026-09-07-hobbymonitor-year-football-panini-contenders-02.json": 91,
+      "2026-09-07-hobbymonitor-year-football-panini-contenders-03.json": 48,
+    };
+    let total = 0;
+    for (const [file, n] of Object.entries(parks)) {
+      const doc = readList(join(listDir, file));
+      expect(doc.entries.filter((e) => e.action === "park"), file).toHaveLength(n);
+      total += n;
+    }
+    expect(total).toBe(297);
+  });
+
+  /**
+   * THE 48 OPTIC PAIRS ARE STILL AS AUTHORED. Ruling 22's test is not met for
+   * them -- hobbymonitor on both sides, no checklist to fold onto -- so they
+   * carry no fold stamp. Pinned so a later pass does not sweep them in with
+   * the 1,027 on the strength of the name match alone.
+   */
+  it("the contenders lists gained no fold beyond the one checklist-backed row", () => {
+    const c1 = readList(join(listDir, "2026-09-07-hobbymonitor-year-football-panini-contenders-01.json"));
+    const c2 = readList(join(listDir, "2026-09-07-hobbymonitor-year-football-panini-contenders-02.json"));
+    const stamped = (d: ListDoc) =>
+      (d.entries as Array<Entry & { repointSales?: boolean }>).filter((e) => e.repointSales === true);
+    expect(stamped(c1)).toHaveLength(0);
+    expect(stamped(c2)).toHaveLength(0);
+  });
+});

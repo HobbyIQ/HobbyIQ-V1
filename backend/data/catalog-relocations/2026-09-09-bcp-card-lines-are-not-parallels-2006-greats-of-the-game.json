@@ -1,0 +1,113 @@
+{
+ "generatedAt": "2026-09-09T15:38:42.000000Z",
+ "forLane": "relocate-catalog-rows-by-list",
+ "reportOnlyUntil": "Drew's review - no apply is authorized by this PR",
+ "finding": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER (#2023, Drew 2026-09-09). baseballcardpedia nests card rosters inside the Parallels section as <h3>/<h4> SUBSECTIONS, and the ladder reader's heading loop -- unlike its <li> loop, which has refused card lines since D33 -- never asked whether a heading was a card line. BCP builds a heading id by replacing spaces with underscores, so \"BDP175_Colby_Rasmus_AU_RC\" detagged to \"BDP175 Colby Rasmus AU RC\" and became a PARALLEL of every base card on the page. These 15 rows on 2006 greats-of-the-game carry 15 distinct such parallels: the row's \"parallel\" names ANOTHER CARD, often another player entirely (a Verlander BDP129 row whose parallel is \"BDP175 Colby Rasmus AU RC\"). A row whose parallel is another card is not a card and has no address, so it is RETIRED rather than repointed -- there is no correct destination to guess, and guessing one is what \"one card, one row, one pool\" forbids. Sales: measured read-only 2026-09-09, the whole 57,803-row population carries ONE sale, so keepSales:true leaves it for the GREAT REMATCH to re-place from the sale title rather than onto a guessed address. Every row is from the LEGACY baseballcardpedia / baseballcardpedia-graded scrapes; the census confirmed ZERO rows from any baseballcardpedia-ladders-* source, and the reader fix in this PR closes the hole so the next scrape cannot recreate them.",
+ "entries": [
+  {
+   "id": "hiq:baseball:2006:greats-of-the-game:bf:22-chris-chambliss-t3:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"22 Chris Chambliss T3\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=greats-of-the-game, cardYear=2006, cardNumber=\"BF\", playerName=\"Bob Feller\", parallel=\"22 Chris Chambliss T3\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:2006:greats-of-the-game:bh:57-kirk-gibson-t2:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"57 Kirk Gibson T2\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=greats-of-the-game, cardYear=2006, cardNumber=\"BH\", playerName=\"Burt Hooton\", parallel=\"57 Kirk Gibson T2\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:2006:greats-of-the-game:db:80a-ron-guidry-t3:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"80a Ron Guidry T3\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=greats-of-the-game, cardYear=2006, cardNumber=\"DB\", playerName=\"Don Baylor\", parallel=\"80a Ron Guidry T3\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:2006:greats-of-the-game:ev:56-kirby-puckett-t2:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"56 Kirby Puckett T2\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=greats-of-the-game, cardYear=2006, cardNumber=\"EV\", playerName=\"Ellis Valentine\", parallel=\"56 Kirby Puckett T2\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:2006:greats-of-the-game:gf:40-garry-maddox-t2:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"40 Garry Maddox T2\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=greats-of-the-game, cardYear=2006, cardNumber=\"GF\", playerName=\"George Foster\", parallel=\"40 Garry Maddox T2\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:2006:greats-of-the-game:gm:63-mark-fidrych-t2:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"63 Mark Fidrych T2\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=greats-of-the-game, cardYear=2006, cardNumber=\"GM\", playerName=\"Garry Maddox\", parallel=\"63 Mark Fidrych T2\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:2006:greats-of-the-game:gs:45-graig-nettles-t3:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"45 Graig Nettles T3\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=greats-of-the-game, cardYear=2006, cardNumber=\"GS\", playerName=\"George Scott\", parallel=\"45 Graig Nettles T3\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:2006:greats-of-the-game:gs:81-ron-santo-t3:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"81 Ron Santo T3\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=greats-of-the-game, cardYear=2006, cardNumber=\"GS\", playerName=\"George Scott\", parallel=\"81 Ron Santo T3\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:2006:greats-of-the-game:lm:9-billy-williams-t3:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"9 Billy Williams T3\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=greats-of-the-game, cardYear=2006, cardNumber=\"LM\", playerName=\"Lee Mazzilli\", parallel=\"9 Billy Williams T3\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:2006:greats-of-the-game:rc:36-frank-robinson-t2:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"36 Frank Robinson T2\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=greats-of-the-game, cardYear=2006, cardNumber=\"RC\", playerName=\"Ron Cey\", parallel=\"36 Frank Robinson T2\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:2006:greats-of-the-game:rr:33-eric-davis-t4:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"33 Eric Davis T4\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=greats-of-the-game, cardYear=2006, cardNumber=\"RR\", playerName=\"Rick Reuschel\", parallel=\"33 Eric Davis T4\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:2006:greats-of-the-game:rs:98-willie-horton-t4:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"98 Willie Horton T4\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=greats-of-the-game, cardYear=2006, cardNumber=\"RS\", playerName=\"Rusty Staub\", parallel=\"98 Willie Horton T4\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:2006:greats-of-the-game:sf:60-lou-piniella-t3:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"60 Lou Piniella T3\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=greats-of-the-game, cardYear=2006, cardNumber=\"SF\", playerName=\"Sid Fernandez\", parallel=\"60 Lou Piniella T3\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:2006:greats-of-the-game:th:16-brooks-robinson-t3:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"16 Brooks Robinson T3\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=greats-of-the-game, cardYear=2006, cardNumber=\"TH\", playerName=\"Tom Henke\", parallel=\"16 Brooks Robinson T3\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:2006:greats-of-the-game:wc:21-carlton-fisk-t2:no-auto",
+   "action": "retire",
+   "reason": "CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER: parallel \"21 Carlton Fisk T2\" is another CARD, not a finish of this one. A row whose parallel names a different card has no address and cannot be repointed to a guessed one.",
+   "evidence": "Row: setKey=greats-of-the-game, cardYear=2006, cardNumber=\"WC\", playerName=\"Will Clark\", parallel=\"21 Carlton Fisk T2\", source=baseballcardpedia, sport=baseball. The parallel text carries a leading card-number token and a PERSON tail, which is a checklist line, never a finish. Sales on this row: 0 (counted read-only per-partition against sold_comps, 2026-09-09).",
+   "keepSales": true
+  }
+ ]
+}

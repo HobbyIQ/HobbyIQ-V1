@@ -314,9 +314,20 @@ const CARD_NUM = /^([A-Z]{0,4}-?\d+[a-z]?|[A-Z0-9]{1,6}-[A-Z0-9]{1,6})$/i;
  * bcpCardLineIsNotARung.test.ts holds it.
  */
 const CARD_LINE = /^[A-Za-z]{0,5}[-\s]?\d{1,4}[a-z]?\s+\p{L}/u;
+/**
+ * A NAMED SET is not a card line (#2023, 2026-09-09). "582 Montgomery Club" is
+ * a real <h3> parallel on 2024 Topps -- the Montgomery Club factory-set
+ * foilboard run, 700 live catalog rows -- and it has exactly the shape of a
+ * card line: a number, then two capitalised words. What tells it apart is the
+ * TAIL: a card line ends in a PERSON, a named set ends in a set/product noun.
+ * Listed as a closed vocabulary rather than inferred, because the mirror-image
+ * error (reading a real surname as a product word) would delete a real card.
+ */
+const SET_TAIL = /\b(club|set|series|edition|collection|parallels?|insert|subset|update|factory|foilboard|refractors?|variations?|chrome|holiday|oversized|jumbos?|choice|team|league|classic|anniversary)\b/i;
 /** A 4-digit lead is a YEAR ("1990 Bowman"); a stop-word or finish word
- *  after the number means a parallel ("20 in '20", "3 Color Patch"). */
-const isCardLine = (s) => { const v = String(s ?? "").trim(); if (!CARD_LINE.test(v)) return false; if (/^(?:19|20)\d{2}\s/.test(v)) return false; const after = v.replace(/^[A-Za-z]{0,5}[-\s]?\d{1,4}[a-z]?\s+/u, ""); if (/^(?:in|of|to|and|the|for|per|on|at|by)\b/i.test(after)) return false; if (!/^[A-Za-z]{1,5}[-\s]/.test(v) && /^(?:colou?r|tone|tool|of|piece|pc|patch|star|swatch|box|case|player|team|logo|letter|strand)\b/i.test(after)) return false; return true; };
+ *  after the number means a parallel ("20 in '20", "3 Color Patch"); a
+ *  set/product noun anywhere in the tail means a NAMED SET, not a person. */
+const isCardLine = (s) => { const v = String(s ?? "").trim(); if (!CARD_LINE.test(v)) return false; if (/^(?:19|20)\d{2}\s/.test(v)) return false; const after = v.replace(/^[A-Za-z]{0,5}[-\s]?\d{1,4}[a-z]?\s+/u, ""); if (/^(?:in|of|to|and|the|for|per|on|at|by)\b/i.test(after)) return false; if (SET_TAIL.test(after)) return false; if (!/^[A-Za-z]{1,5}[-\s]/.test(v) && /^(?:colou?r|tone|tool|of|piece|pc|patch|star|swatch|box|case|player|team|logo|letter|strand)\b/i.test(after)) return false; return true; };
 /** An insert-style number carries letters: 90CB-1, UL-7, RS-12. A pure
  *  number inside an insert section would collide with the base set. */
 const INSERT_NUM = /[A-Z]/i;
@@ -1083,6 +1094,38 @@ function parseLadder(parallelsBody, playerNames = new Set(), opts = {}) {
     const name = detag(m[1].replace(/_/g, " "));
     if (/^series (one|two)/i.test(name) || UMBRELLA.test(name)) continue;
     if (name.length > 60) continue;
+    // CF-A-CARD-LINE-IS-NOT-A-RUNG-IN-A-HEADING-EITHER (#2023, Drew
+    // 2026-09-09: a Verlander BDP129 row whose parallel is "BDP175 Colby
+    // Rasmus AU RC").
+    //
+    // The <li> loop below has refused card lines since D33, but THIS loop --
+    // the one that reads <h3>/<h4> subsection headings -- never asked. BCP
+    // turns a heading into an id by replacing spaces with underscores, so a
+    // subsection whose heading IS a card line arrives here as an ordinary
+    // rung name:
+    //
+    //   <h4 id="First-Year_Player_Autographs">      <- the real heading
+    //   <li>BDP175 Colby Rasmus AU RC</li>          <- refused by the li loop
+    //
+    // ...but on pages where the roster lines are themselves promoted to
+    // headings, "BDP175_Colby_Rasmus_AU_RC" detags to "BDP175 Colby Rasmus AU
+    // RC" and became a PARALLEL of every base card on the page. That is the
+    // 2005 Bowman Draft defect: 682 live rows on the paper key whose parallel
+    // is another card, and 57,803 rows across 36 (year, setKey) pairs in
+    // total from the legacy baseballcardpedia / -graded scrapes.
+    //
+    // The guard is `isCardLine` ALONE -- deliberately NOT the <li> loop's
+    // wider `CARD_NUM || leadingCardNumber` pair. Those two ask only "does a
+    // number lead?", which is safe in the <li> loop because a list item that
+    // leads with a number in the Parallels section really is a roster line;
+    // as a HEADING it is not. Measured against the live corpus, the wider
+    // test deletes real rungs: "1990 Bowman" (a retro subset), "20 in '20"
+    // (an insert) and "582 Montgomery Club" -- a genuine 2024 Topps parallel
+    // carrying 700 catalog rows, which the census confirmed is NOT damage.
+    // isCardLine already carries the year and stop-word arms that tell those
+    // apart from "BDP175 Colby Rasmus AU RC", so it is the calibrated
+    // predicate and the accept half is pinned as hard as the refuse half.
+    if (isCardLine(name)) continue;
     const body = section(parallelsBody, m[1], m[0].includes("<h3") ? 3 : 4).slice(0, 2500);
     const text = detag(body);
     // CF-A-FAMILY-HEADING-IS-NOT-ITS-FIRST-RUNG. "Radiance" is an h3 whose

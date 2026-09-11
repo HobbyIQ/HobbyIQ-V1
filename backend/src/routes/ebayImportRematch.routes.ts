@@ -20,6 +20,9 @@ import * as longJobs from "../services/ops/longJobTracker.js";
 /** Job family for the nightly personal-prospect-breakout run (keyed by sport). */
 const PROSPECT_JOB_KIND = "personal-prospect-breakout";
 
+/** Job family for the nightly sub-raw-inversion scan (keyed by sport). */
+const SUB_RAW_SCAN_JOB_KIND = "sub-raw-inversion-scan";
+
 const router = Router();
 
 async function requireUserId(req: Request, res: Response): Promise<string | null> {
@@ -878,21 +881,67 @@ router.post("/admin/weekly-digest/preview", requireAdmin, async (req: Request, r
 // CF-SUB-RAW-INVERSION-SCAN (Drew, 2026-07-19). Admin trigger for the
 // nightly sub-raw inversion scanner. Emits sub_raw_inversion_observed
 // telemetry per SKU where a Raw sale exceeds the graded median.
+//
+// CF-LONG-CRONS-DIE-AT-THE-IDLE-CUT (2026-09-11 cron canary triage). The
+// baseball leg of sub-raw-inversion-scan-nightly.yml has failed its last
+// two scheduled runs with HTTP 499 at exactly 240s (09-10, 09-11) while
+// football and basketball settle in ~90-95s on the same matrix — baseball
+// is sold_comps's largest sport partition (the historical pre-sport-tag
+// default; see project_split_identity_pool_rows) and its unpaged scan +
+// in-process grouping simply outruns the App Service front end's idle
+// cut before curl's own timeout (already 900s) is ever reached. This is
+// the same defect #2020 fixed for dailyiq/brief, personal-prospect-
+// breakout, and cleanliness/anomalies (see longJobTracker.ts) — dispatch
+// + poll, not a bigger timeout, because no client-side timeout can move
+// the platform's idle cut. Same fix, fourth lane.
 router.post("/admin/sub-raw-inversion/scan", requireAdmin, async (req: Request, res: Response, next) => {
   try {
     const { runSubRawInversionScan } = await import(
       "../services/signals/subRawInversionScan.service.js"
     );
     const sport = typeof req.body?.sport === "string" ? req.body.sport : "baseball";
-    const summary = await runSubRawInversionScan({
+    const opts = {
       sport,
       windowDays: typeof req.body?.windowDays === "number" ? req.body.windowDays : undefined,
       minRawSales: typeof req.body?.minRawSales === "number" ? req.body.minRawSales : undefined,
       minGradedSales: typeof req.body?.minGradedSales === "number" ? req.body.minGradedSales : undefined,
       minMarginPct: typeof req.body?.minMarginPct === "number" ? req.body.minMarginPct : undefined,
       dryRun: req.body?.dryRun === true,
+    };
+    // Keyed by sport: the nightly matrix fires baseball, football and
+    // basketball concurrently as three genuinely different runs.
+    const { job, alreadyRunning } = longJobs.dispatch(
+      SUB_RAW_SCAN_JOB_KIND,
+      sport,
+      () => runSubRawInversionScan(opts),
+    );
+    res.status(202).json({
+      accepted: true,
+      status: "running",
+      alreadyRunning,
+      jobId: job.jobId,
+      sport,
+      startedAt: new Date(job.startedAt).toISOString(),
+      poll: "/api/portfolio/admin/sub-raw-inversion/scan/status",
     });
-    res.json({ computedAt: new Date().toISOString(), summary });
+  } catch (err) { next(err); }
+});
+
+// Poll surface for the dispatched scan. `unknown-here` means this worker
+// never issued the id (2 serving instances) — keep polling, never read it
+// as settled.
+router.get("/admin/sub-raw-inversion/scan/status", requireAdmin, async (req: Request, res: Response, next) => {
+  try {
+    const sport = typeof req.query.sport === "string" ? req.query.sport : "baseball";
+    const jobId = typeof req.query.jobId === "string" ? req.query.jobId : null;
+    const lookup = longJobs.lookupJob(SUB_RAW_SCAN_JOB_KIND, sport, jobId);
+    const payload = longJobs.buildStatusPayload(lookup);
+    if (payload.status === "done") {
+      const { result, ...rest } = payload as Record<string, unknown>;
+      res.json({ computedAt: new Date().toISOString(), sport, ...rest, summary: result });
+      return;
+    }
+    res.json({ computedAt: new Date().toISOString(), sport, ...payload });
   } catch (err) { next(err); }
 });
 

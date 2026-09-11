@@ -1877,10 +1877,9 @@
     },
     {
       "id": "hiq:basketball:2025:panini-prizm:289:base:auto",
-      "action": "reslug",
-      "to": "hiq:basketball:2024:panini-prizm:289:base:auto",
-      "reason": "#1925 H1: setName \"2024/25 Panini Prizm Black Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"Ben Wallace\" #289; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-N address — a row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09 via the lane's own occupancy compare: this row player \"Ben Wallace\" #289 source=hobbymonitor-2026-09-04 setKey=panini-prizm-black; the destination hiq:basketball:2024:panini-prizm:289:base:auto is held by \"Karl Malone\" source=ingest-auto-seed setKey=panini-prizm. Two sources disagree on who holds #289, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT)."
     },
     {
       "id": "hiq:basketball:2025:panini-prizm:294:base:auto",
@@ -2227,10 +2226,9 @@
     },
     {
       "id": "hiq:basketball:2025:panini-prizm:277:base:auto",
-      "action": "reslug",
-      "to": "hiq:basketball:2024:panini-prizm:277:base:auto",
-      "reason": "#1925 H1: setName \"2024/25 Panini Prizm Black Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"Anfernee Hardaway\" #277; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-N address — a row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09 via the lane's own occupancy compare: this row player \"Anfernee Hardaway\" #277 source=hobbymonitor-2026-09-04 setKey=panini-prizm-black; the destination hiq:basketball:2024:panini-prizm:277:base:auto is held by \"Dennis Rodman\" source=ingest-auto-seed setKey=panini-prizm. Two sources disagree on who holds #277, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT)."
     },
     {
       "id": "hiq:basketball:2025:panini-prizm:233:base:auto",
@@ -2640,10 +2638,9 @@
     },
     {
       "id": "hiq:basketball:2025:panini-prizm:41:blue-shimmer-fotl-prizm:auto:num-25",
-      "action": "reslug",
-      "to": "hiq:basketball:2024:panini-prizm:41:blue-shimmer-fotl-prizm:auto:num-25",
-      "reason": "#1925 H1: setName \"2024/25 Panini Prizm Black Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"David Robinson\" #41; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-N address — a row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09 via the lane's own occupancy compare: this row player \"David Robinson\" #41 source=hobbymonitor-2026-09-04 setKey=panini-prizm-black; the destination hiq:basketball:2024:panini-prizm:41:blue-shimmer-fotl-prizm:auto:num-25 is held by \"Matas Buzelis\" source=ingest-auto-seed setKey=panini-prizm. Two sources disagree on who holds #41, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT)."
     },
     {
       "id": "hiq:basketball:2025:panini-prizm-black:168:base:auto",
@@ -4978,10 +4975,9 @@
     },
     {
       "id": "hiq:basketball:2025:panini-prizm:35:blue-shimmer-fotl-prizm:auto:num-25",
-      "action": "reslug",
-      "to": "hiq:basketball:2024:panini-prizm:35:blue-shimmer-fotl-prizm:auto:num-25",
-      "reason": "#1925 H1: setName \"2024/25 Panini Prizm Black Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"Franz Wagner\" #35; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-N address — a row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09 via the lane's own occupancy compare: this row player \"Franz Wagner\" #35 source=hobbymonitor-2026-09-04 setKey=panini-prizm-black; the destination hiq:basketball:2024:panini-prizm:35:blue-shimmer-fotl-prizm:auto:num-25 is held by \"De'Aaron Fox\" source=ingest-auto-seed setKey=panini-prizm. Two sources disagree on who holds #35, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT)."
     },
     {
       "id": "hiq:basketball:2025:panini-prizm-black:129:base:auto",
@@ -6231,10 +6227,9 @@
     },
     {
       "id": "hiq:basketball:2025:panini-prizm:70:base:auto",
-      "action": "reslug",
-      "to": "hiq:basketball:2024:panini-prizm:70:base:auto",
-      "reason": "#1925 H1: setName \"2024/25 Panini Prizm Black Basketball\" states 2024; the year field says 2025. The 2024 address is vacant",
-      "evidence": "player \"P.J. Washington Jr.\" #70; destination read as vacant 2026-09-07"
+      "action": "park",
+      "reason": "#1925 + Drew's Ruling 17 (2026-09-08): THE CHECKLIST DECIDES THE NUMBER. This hobbymonitor row cannot move to its year-N address — a row for a DIFFERENT player already holds it — and it is not proven wrong either, only unconfirmed. Parked identityUnverified: the row and its sales stay put and price nothing until a source confirms this number.",
+      "evidence": "point-read 2026-09-09 via the lane's own occupancy compare: this row player \"P.J. Washington Jr.\" #70 source=hobbymonitor-2026-09-04 setKey=panini-prizm-black; the destination hiq:basketball:2024:panini-prizm:70:base:auto is held by \"Seth Lundy\" source=beckett-scraped-2026-08-26 setKey=panini-prizm. Two sources disagree on who holds #70, and the checklist-backed one decides (CF-COUNT-BY-SOURCE-NOT-ROW-COUNT)."
     },
     {
       "id": "hiq:basketball:2025:panini-prizm:220:base:auto",

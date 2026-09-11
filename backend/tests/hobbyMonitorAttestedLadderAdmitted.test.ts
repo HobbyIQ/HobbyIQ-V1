@@ -124,8 +124,19 @@ describe("B: the verification asks for both keys the child may have written", ()
   // second spelling to ask for. It has its own case below -- a ruling that
   // stops a key collapsing must SHRINK the candidate list, and that is the
   // outcome worth pinning.
+  // Topps Three is NOT in this list any more, for the same reason Exquisite
+  // left it. Until Ruling 22 this case read
+  //
+  //     ["2025/26 Topps Three Basketball", 2025, "topps"],
+  //
+  // i.e. the name collapsed to the bare FLAGSHIP -- no rule named the product,
+  // so it fell through to the `/topps/` family pattern. Drew ruled 2026-09-09
+  // that Topps Three IS Topps 3 (one product, two spellings, the
+  // checklist-backed spelling canonical), so `topps-3` is now a named product
+  // and a normalizeSetKey fixed point. There is no collapse left to ask for,
+  // and the candidate list SHRINKS -- the outcome this suite already pins for
+  // Exquisite. Its own case is below.
   const cases: Array<[string, number, string]> = [
-    ["2025/26 Topps Three Basketball", 2025, "topps"],
     ["2024 Panini Clearly Donruss Football", 2024, "panini-donruss"],
     ["2025 Panini Score-A-Treat Football", 2025, "panini-score"],
   ];
@@ -155,6 +166,25 @@ describe("B: the verification asks for both keys the child may have written", ()
     });
     expect(keys).toEqual(["upper-deck-exquisite"]);
     expect(driver.canonicalSetKey("upper-deck-exquisite")).toBe("upper-deck-exquisite");
+  });
+
+  it("Topps Three folds onto the checklist key, and stops collapsing to the flagship", () => {
+    // Drew's Ruling 22 (2026-09-09). Before it, "Topps Three" was named by NO
+    // rule and fell to the bare `/topps/` family pattern, so this name answered
+    // `topps` -- the flagship -- and pooled a specialized product with it
+    // (CF-FLAGSHIP-CATCHALL-SWALLOWS-SPECIALIZATIONS). The ruling says Topps
+    // Three IS Topps 3: one product, two spellings, and count-by-source makes
+    // the checklist's spelling canonical.
+    const keys = driver.setKeyCandidates({
+      lane: "hobbymonitor",
+      setName: "2025/26 Topps Three Basketball",
+      year: 2025,
+    });
+    // The bare flagship is gone from the candidates -- that is the whole fix.
+    expect(keys).not.toContain("topps");
+    // Both spellings answer the ruled key, which is a fixed point.
+    expect(driver.canonicalSetKey("topps-three")).toBe("topps-3");
+    expect(driver.canonicalSetKey("topps-3")).toBe("topps-3");
   });
 
   it("never drops the stated key in favour of the alias", () => {
