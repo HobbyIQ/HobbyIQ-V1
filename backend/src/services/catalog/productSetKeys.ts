@@ -387,6 +387,22 @@ export const PRODUCT_SET_KEYS: ReadonlyArray<ProductSetKey> = [
   // A vendor spelling with its own regex rule; spelled here so the longer
   // name wins over the `topps-update` alias above.
   S("topps-update-sapphire", { parent: "topps-update-series" }),
+  // TOPPS THREE IS TOPPS 3 (Drew's Ruling 22, 2026-09-09). One product, two
+  // spellings: hobbymonitor writes "2023/24 Topps Three Basketball", the
+  // checklist writes "2023 topps 3". Count-by-source decides the spelling and
+  // the checklist-backed side wins, so `topps-3` is canonical and
+  // `topps-three` is its alias.
+  //
+  // AND THIS IS ALSO A CATCH-ALL FIX, which is why it belongs in the PRODUCT
+  // table rather than only in RULED_ALIASES. Measured on this branch BEFORE
+  // the change, "Topps Three" did not normalize to `topps-three` at all — it
+  // fell through every rule to the bare `/topps/` family pattern and came back
+  // `topps`, the flagship. That is CF-FLAGSHIP-CATCHALL-SWALLOWS-
+  // SPECIALIZATIONS exactly: a specialized product answered by the family key,
+  // which pools Topps Three cards with flagship Topps. Naming the product here
+  // stops the catch-all before it can answer, and the alias folds the vendor
+  // spelling onto the checklist's.
+  S("topps-3", { names: ["topps-three"], family: "topps", parent: "topps", refines: "topps" }),
   P("topps-chrome", { parent: "topps" }),
   S("topps-chrome-update-series", { names: ["topps-chrome-update"], family: "topps-chrome", parent: "topps-chrome", refines: "topps-chrome" }),
   S("topps-chrome-updates-and-highlights", { names: ["topps-chrome-updates-highlights"], family: "topps-chrome", parent: "topps-chrome", refines: "topps-chrome" }),

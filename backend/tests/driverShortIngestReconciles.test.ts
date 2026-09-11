@@ -87,9 +87,21 @@ describe("A. a collapsed key is a different product", () => {
     // normalizeSetKey, and a product whose manifest omitted a setKey must still
     // be counted rather than reported wholly missing. A wrong guess there costs
     // a false `failed`; dropping it costs a real ingest reported as zero rows.
+    //
+    // RULING 22 NARROWED THIS CASE, 2026-09-09. It used to assert
+    //
+    //     expect(noManifest).toContain("topps");
+    //
+    // because "Topps Three" was named by no rule and fell through to the bare
+    // `/topps/` family pattern, so the flagship WAS one of the keys the child
+    // might have written. Drew ruled Topps Three IS Topps 3 -- one product, two
+    // spellings, the checklist-backed one canonical -- so the product is named
+    // now and the flagship is no longer a candidate. The rule under test is
+    // unchanged: without a manifest the RAW key still stays.
     const noManifest = driver.setKeyCandidates({ lane: "hobbymonitor", setName: "2025/26 Topps Three Basketball", year: 2025 });
     expect(noManifest).toContain("topps-three");
-    expect(noManifest).toContain("topps");
+    expect(noManifest).toContain("topps-3");
+    expect(noManifest).not.toContain("topps");
     // and the SAME entry, once a manifest states the key, drops the collapse.
     const withManifest = driver.setKeyCandidates(JUVENTUS, [fix("juventus.csv")]);
     expect(withManifest).not.toContain("topps");

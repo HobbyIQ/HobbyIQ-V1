@@ -22,19 +22,26 @@ describe("5. nightly-cleanliness never goes red — fixed", () => {
     expect(yml).toMatch(/if \[ -z "\$TOK" \]; then\n(\s+#[^\n]*\n)?\s+echo "::error::ADMIN_API_TOKEN not found[^\n]*"\n\s+exit 1\n\s+fi/);
     expect(yml).not.toContain("::warning::ADMIN_API_TOKEN not found");
   });
-  it("an empty anomalies response is exit 1, not a warning", () => {
-    // CF-LONG-CRONS-DIE-AT-THE-IDLE-CUT (2026-09-09): the step now polls a
-    // dispatched scan, so "the API answered with nothing" became "the run
-    // settled without a report body". Same D13 property — an absent
-    // detection is red, never a warning — against the new mechanism.
-    expect(yml).toMatch(/if \[ -z "\$RESULT" \]; then\n(\s+#[^\n]*\n)?\s+echo "::error::anomaly detection settled without a report body[^\n]*"\n\s+exit 1\n\s+fi/);
-    expect(yml).not.toMatch(/::warning::anomaly detection (returned empty|settled without)/);
+  it("a missing anomaly scan report is exit 1, not a warning", () => {
+    // CF-CLEANLINESS-ANOMALY-BUDGET (2026-09-11): the anomaly leg is now a
+    // dispatched backfill-runner lane (anomaly-force-scan.cjs) read back via
+    // check-anomaly-scan-report.cjs, so "the API answered with nothing"
+    // became "no report doc exists for today". Same D13 property — an
+    // absent detection is red, never a warning — against the new mechanism.
+    // The script itself owns the exit code (1 for missing/error, 2 for
+    // report=null), so the workflow-level pin is that its failure is never
+    // swallowed by `|| true` / `continue-on-error` and never followed only
+    // by a warning annotation.
+    const step = yml.slice(yml.indexOf("- name: Read anomaly scan report"));
+    expect(step).toContain("node backend/scripts/check-anomaly-scan-report.cjs");
+    expect(step).not.toContain("continue-on-error");
+    expect(step.split("\n").slice(0, 20).join("\n")).not.toMatch(/\|\|\s*true\b/);
   });
   it("no guard exits 0 any more", () => {
     const code = yml.split("\n").filter((l) => !/^\s*#/.test(l)).join("\n");
     expect(code).not.toMatch(/\bexit 0\b/);
   });
-  it("the four dispatches stay and each prints its run URL", () => {
+  it("the four original dispatches stay and each prints its run URL", () => {
     for (const s of [
       "backfill-catalog-driven-canonicalize",
       "promote-sold-comps-trust-tier",
@@ -44,7 +51,18 @@ describe("5. nightly-cleanliness never goes red — fixed", () => {
       expect(yml).toContain(`-f script=${s} \\`);
       expect(yml).toContain(`'"dispatched ${s} → " + .[0].url + " (" + .[0].status + ")"'`);
     }
-    expect(yml.match(/--workflow=backfill-runner\.yml --limit 1/g)?.length).toBe(4);
+    // The four ORIGINAL fire-and-forget dispatches use this exact
+    // url/displayTitle/status jq shape — CF-CLEANLINESS-ANOMALY-BUDGET's
+    // fifth dispatch (anomaly-force-scan) is awaited rather than fired and
+    // forgotten, so it identifies its run differently (a bare databaseId it
+    // then polls on), and is pinned separately below rather than folded into
+    // this count.
+    expect(yml.match(/--json url,displayTitle,status --jq/g)?.length).toBe(4);
+  });
+  it("the fifth dispatch (anomaly-force-scan) identifies and is awaited by run id, not fire-and-forget", () => {
+    expect(yml).toContain("-f script=anomaly-force-scan \\");
+    expect(yml).toMatch(/RUN_ID=\$\(gh run list --repo "\$GITHUB_REPOSITORY" --workflow=backfill-runner\.yml --limit 1 --json databaseId --jq '\.\[0\]\.databaseId'\)/);
+    expect(yml).toContain('echo "ANOMALY_SCAN_RUN_ID=$RUN_ID" >> "$GITHUB_ENV"');
   });
 });
 
@@ -333,58 +351,78 @@ describe("era-baselines-refresh builds dist before loading it", () => {
 });
 
 /**
- * CF-LONG-CRONS-DIE-AT-THE-IDLE-CUT (2026-09-09) — REPLACES the curl-budget
- * pins that stood here.
+ * CF-LONG-CRONS-DIE-AT-THE-IDLE-CUT (2026-09-09) then CF-CLEANLINESS-
+ * ANOMALY-BUDGET (2026-09-11) — REPLACES the curl-budget pins that
+ * originally stood here, and then the dispatch+poll pins that replaced
+ * those.
  *
- * Those pins required `curl --max-time >= 900` on this step, and they were
- * enforcing the wrong fix. The lane died at 89.9s on curl's own ceiling, so
- * CF-CLEANLINESS-ANOMALY-BUDGET raised that ceiling to 900s — but App
- * Insights over the 14 days after shows the truth: 11 requests to
- * /cleanliness/anomalies, ALL ResultCode 0, and NOT ONE completion. The App
- * Service front end cuts an idle connection at 240s whatever the client is
- * willing to wait, so a bigger client budget could only move the death from
- * 90s to 240s. The lane has never once received a drift comparison.
+ * Generation 1 required `curl --max-time >= 900` and was enforcing the wrong
+ * fix (App Service cuts an idle connection at 240s regardless of client
+ * budget). Generation 2 moved to a dispatch (202 + jobId) + poll-admin-job
+ * .cjs poller, which killed the IDLE-CUT death but not the underlying job:
+ * detectAnomalies({force:true}) is an UNBUDGETED full sold_comps walk, and
+ * the poller's own 1,501s ceiling was hit two nights straight with no
+ * terminal answer either way — CI green on generation 2's own pins the whole
+ * time, because those pins checked the SHAPE of the retry, never whether the
+ * scan itself could finish.
  *
- * A budget was never the mechanism, so pinning a budget pinned a defect.
- * The step now dispatches (202 + jobId) and polls to completion, which has
- * no idle window at all. The PROPERTIES those pins protected are real and
- * are kept below, restated against the mechanism that actually holds them:
+ * Generation 3 (this one) replaces the HTTP dispatch entirely with a
+ * backfill-runner lane (anomaly-force-scan.cjs, budgeted + resumable via a
+ * crawl_state cursor) and reads its result back from a Cosmos doc via
+ * check-anomaly-scan-report.cjs. The PROPERTIES the earlier pins protected
+ * are real and are kept below, restated against the mechanism that actually
+ * holds them:
  *
- *   - a run that never answered is distinguishable from one that answered
- *     with nothing (the two have different fixes, and the message must say
- *     which the reader is seeing);
+ *   - the HTTP dispatch to ?force=true is gone, so it cannot silently creep
+ *     back in and start dying at the idle cut again;
+ *   - a missing report is distinguishable from a report whose own `report`
+ *     field is null (no baseline exists) — two different facts, two
+ *     different exit codes (1 vs 2), never conflated;
  *   - no non-success can be read as success;
- *   - every failure branch is exit 1, never a warning (D13).
+ *   - the underlying job is now BOUNDED (RUN_MINUTES/RESERVE_MS/VERIFY_MS),
+ *     not merely polled for longer, which is the property generation 2's
+ *     pins never actually checked.
  */
-describe("nightly-cleanliness anomaly detection cannot die at the idle cut", () => {
+describe("nightly-cleanliness anomaly detection is a budgeted, resumable lane", () => {
   const yml = wf("nightly-cleanliness.yml");
 
-  it("dispatches and polls instead of holding one long connection", () => {
-    expect(yml).toContain("poll-admin-job.cjs");
-    expect(yml).toContain("/api/cleanliness/anomalies/status");
-    // The retired mechanism must not creep back: no widened client budget
-    // on this lane, because widening one was never available as the fix.
+  it("dispatches the anomaly-force-scan backfill-runner lane instead of the HTTP endpoint", () => {
+    expect(yml).toContain("-f script=anomaly-force-scan");
+    // The retired mechanisms must not creep back as an actual invocation —
+    // history comments naming them for context are fine and expected.
+    expect(yml).not.toMatch(/node backend\/scripts\/poll-admin-job\.cjs/);
+    expect(yml).not.toMatch(/--dispatch-url "[^"]*\/api\/cleanliness\/anomalies\?force=true"/);
+    expect(yml).not.toMatch(/--status-url "[^"]*\/api\/cleanliness\/anomalies\/status"/);
     expect(yml).not.toMatch(/curl[^\n]*--max-time/);
-    expect(yml).not.toContain("CURL_RC");
   });
 
-  it("reports 'never settled' AS unknown, not as a failure or a success", () => {
-    // The poller exits 2 when it never got a terminal answer. The run may
-    // have finished on the other instance, so the lane says so rather than
-    // guessing — but it still goes red, because it cannot prove the work.
-    expect(yml).toMatch(/if \[ "\$POLL_RC" -eq 2 \]; then\n\s+echo "::error::[^\n]*"\n\s+exit 1\n\s+fi/);
-    expect(yml).toContain("UNKNOWN, not a failure");
+  it("waits for the dispatched run (and any budget-stop relaunches) with a bounded number of attempts, never an unbounded loop", () => {
+    const step = yml.slice(yml.indexOf("- name: Wait for anomaly-force-scan"));
+    expect(step).toMatch(/for i in \$\(seq 1 \d+\); do/);
+    expect(step).toContain("sleep 60");
   });
 
-  it("a non-zero poll status can never be read as success", () => {
-    expect(yml).toMatch(/if \[ "\$POLL_RC" -ne 0 \]; then\n\s+echo "::error::[^\n]*"\n\s+exit 1\n\s+fi/);
+  it("reads the result from the anomaly_scan_reports container, via the dedicated checker script", () => {
+    expect(yml).toContain("check-anomaly-scan-report.cjs");
+    expect(yml).toContain("COSMOS_CONNECTION_STRING=$(az webapp config appsettings list");
   });
 
-  it("an empty or baseline-less result is exit 1, not a warning (D13)", () => {
-    expect(yml).toMatch(/if \[ -z "\$RESULT" \]; then\n(\s+#[^\n]*\n)?\s+echo "::error::anomaly detection settled without a report body[^\n]*"\n\s+exit 1\n\s+fi/);
-    // A settled scan with report=null found no baseline — a different fact
-    // from "no drift", which the count parser below cannot tell apart.
-    expect(yml).toContain("no baseline snapshot exists yet");
+  it("the checker distinguishes a missing report from a report=null (no-baseline) result — two facts, two exit codes", () => {
+    const src = read("backend", "scripts", "check-anomaly-scan-report.cjs");
+    expect(src).toMatch(/no anomaly scan report for/);
+    expect(src).toMatch(/no baseline snapshot exists yet/);
+    // Different exit codes for the two facts (1 vs 2) so they are never
+    // conflated by a caller reading only the process exit code.
+    expect(src).toMatch(/return 1;[\s\S]*no anomaly scan report/);
+    expect(src).toMatch(/report === null[\s\S]*return 2;/);
+  });
+
+  it("the lane itself is bounded — RUN_MINUTES / RESERVE_MS / VERIFY_MS, not a longer poll", () => {
+    const src = read("backend", "scripts", "anomaly-force-scan.cjs");
+    expect(src).toMatch(/RUN_MINUTES/);
+    expect(src).toMatch(/RESERVE_MS/);
+    expect(src).toMatch(/VERIFY_MS/);
+    expect(src).toContain('require(path.join(__dirname, "lib", "runner-budget.cjs"))');
   });
 });
 

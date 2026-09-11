@@ -6,6 +6,8 @@ import {
   userAuthoredIdentity,
   evidenceContradictsBase,
 } from "../src/services/portfolioiq/holdingFieldRecovery.service.js";
+import { catalogAuthorityOf } from "../src/services/catalog/catalogAuthority.service.js";
+import { identityBackingOf, isChecklistBackedIdentity } from "../src/services/catalog/identityBacking.js";
 import {
   normalizePlayerForCompare,
   recoveredSetNameIsCorroborated,
@@ -429,5 +431,50 @@ describe("the rederive pass wires recovery in without losing its gates", () => {
     expect(SRC).toMatch(/CATALOG_MATCH_ONLY_ENABLED/);
     expect(SRC).toMatch(/no catalog row backs the derived slug/);
     expect(SRC).toMatch(/RECONCILIATION: re-reading/);
+  });
+});
+/**
+ * CF-THE-VERDICT-MUST-NAME-THE-BACKING-IT-ACTUALLY-HAS (2026-09-09).
+ *
+ * The REDERIVE verdict's reason was the LITERAL string "checklist-backed by
+ * <source>", written for every destination that had a row at all -- GATE 1
+ * asks only whether a row EXISTS, never what class it is. So holding 2b62a93f,
+ * re-derived onto an `ingest-auto-seed` row, was reported "checklist-backed by
+ * ingest-auto-seed": a row we minted from our own sales, vouching for the sale
+ * that minted it.
+ *
+ * The CLASSIFIER was never wrong -- these assertions prove it -- so the fix is
+ * that the reason now ASKS it instead of asserting a constant.
+ */
+describe("the re-derive verdict states the backing it measured", () => {
+  const SRC = readFileSync(
+    join(__dirname, "..", "scripts", "comp-quality", "recheck-holding-identity.ts"), "utf8");
+
+  it("classifies ingest-auto-seed as derived, never as a checklist", () => {
+    expect(catalogAuthorityOf("ingest-auto-seed")).toBe("derived");
+    expect(catalogAuthorityOf("ingest-auto-seed-graded")).toBe("derived");
+    expect(isChecklistBackedIdentity("ingest-auto-seed")).toBe(false);
+    // ...while the row the Witt holding should have reached IS one.
+    expect(catalogAuthorityOf("beckett-scraped-2026-09-01")).toBe("checklist");
+    expect(isChecklistBackedIdentity("beckett-scraped-2026-09-01")).toBe(true);
+  });
+
+  it("reads a seeded destination as self-derived-only, not checklist-backed", () => {
+    expect(identityBackingOf(
+      "hiq:baseball:2022:topps-chrome:221:image-variation-refractor:no-auto",
+      [{ source: "ingest-auto-seed", playerName: "Bobby Witt Jr." }],
+    )).toBe("self-derived-only");
+    expect(identityBackingOf(
+      "hiq:baseball:2022:topps-chrome:99:image-variation:no-auto",
+      [{ source: "beckett-scraped-2026-09-01", playerName: "Aaron Judge" }],
+    )).toBe("checklist-backed");
+  });
+
+  it("no longer hard-codes the phrase it should be measuring", () => {
+    // The constant that produced the false label is gone, and the verdict is
+    // built from identityBackingOf's answer about the destination row.
+    expect(SRC).not.toMatch(/reason: `checklist-backed by \$\{destinationBacking\.source\}`/);
+    expect(SRC).toMatch(/const destBacking = identityBackingOf\(destination, \[\{/);
+    expect(SRC).toMatch(/reason: `\$\{destBacking\} by \$\{destinationBacking\.source\}`/);
   });
 });

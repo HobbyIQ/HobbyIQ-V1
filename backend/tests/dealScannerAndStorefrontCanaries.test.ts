@@ -20,7 +20,7 @@
 //      columns are pinned as text.
 //   5. THE WORKFLOWS carry the schedule, the issue lane and the thresholds
 //      they claim to carry.
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, afterEach } from "vitest";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { createRequire } from "node:module";
@@ -39,6 +39,11 @@ type Summary = {
   durationMs: number;
 };
 
+type HeartbeatDoc = {
+  id: string; kind: string; lastRunAt: string; outcome: string;
+  targetsScanned: number; errors: number; roleInstance: string | null;
+};
+
 const deal = require("../scripts/checkDealScannerHeartbeat.cjs") as {
   parseAiTable: (raw: string) => Array<Record<string, unknown>> | null;
   parseSummaries: (rows: Array<Record<string, unknown>>) => { parsed: Summary[]; unparsed: number };
@@ -51,6 +56,19 @@ const deal = require("../scripts/checkDealScannerHeartbeat.cjs") as {
     dealsFound: number; notificationsSent: number; errorsOk: boolean;
   };
   numEnv: (raw: string | undefined, dflt: number) => number;
+  docVerdict: (
+    doc: HeartbeatDoc | null,
+    opts: { now: number; maxSilenceHours: number; maxErrorRate: number },
+  ) => {
+    runs: number; latestIso: string | null; silenceH: number; heartbeatOk: boolean;
+    scanned: number; errors: number; errorRate: number | null;
+    outcome: string | null; roleInstance: string | null; errorsOk: boolean;
+  };
+  readHeartbeatDoc: (
+    cosmosClientFactory?: new (opts: unknown) => unknown,
+  ) => Promise<{ ok: true; doc: HeartbeatDoc | null } | { ok: false; reason: string }>;
+  HEARTBEAT_CONTAINER: string;
+  HEARTBEAT_DOC_ID: string;
 };
 
 const store = require("../scripts/checkStorefrontVisibility.cjs") as {
@@ -97,22 +115,36 @@ const scanLine = (over: Record<string, unknown> = {}) =>
   });
 
 // ── 1. SOURCE OF TRUTH ───────────────────────────────────────────────────
-describe("1. the deal-scanner canary reads traces, not a container", () => {
+describe("1. the deal-scanner canary reads a durable heartbeat DOC first, never a row count over buyeriq_deals_sent", () => {
   const src = read("backend", "scripts", "checkDealScannerHeartbeat.cjs");
 
-  it("never opens a Cosmos client — the heartbeat is a trace, not a row count", () => {
-    // Strip comments first: the header MUST be free to name buyeriq_deals_sent
-    // when explaining why counting it would be wrong. What may not exist is
-    // executable code that opens a client or reads that container.
+  // DOC-FIRST (2026-09-11). App Insights ingestion sampling is 10%; an
+  // hourly heartbeat trace yields ~2.4 raw rows per 24h window, so a
+  // trace-only canary failed on sampling noise (P(zero rows) ~= 9%) against a
+  // scanner that ran every cycle. The checker now DOES open a Cosmos client —
+  // that is the whole point, a point-read cannot be sampled away — but it
+  // must open it against the heartbeat container/doc, never derive a verdict
+  // from buyeriq_deals_sent, whose writes are conditional on a deal clearing
+  // threshold AND a push delivering (a healthy quiet hour and a dead process
+  // both write zero rows there).
+  it("opens a Cosmos client for the doc-first path, but never reads buyeriq_deals_sent", () => {
     const code = src
       .split("\n")
       .filter((l) => !/^\s*(\/\/|\*|\/\*)/.test(l))
       .join("\n");
-    expect(code).not.toMatch(/@azure\/cosmos/);
-    expect(code).not.toMatch(/CosmosClient/);
+    expect(code).toMatch(/@azure\/cosmos/);
+    expect(code).toMatch(/CosmosClient/);
     expect(code).not.toMatch(/buyeriq_deals_sent/);
-    // and the explanation itself must survive, or the next editor loses the reason
+    // and the explanation of why buyeriq_deals_sent would be the wrong
+    // container must survive, or the next editor loses the reason
     expect(src).toContain("buyeriq_deals_sent");
+  });
+
+  it("reads the heartbeat doc by its documented container and id", () => {
+    expect(deal.HEARTBEAT_CONTAINER).toBe("rematch_control");
+    expect(deal.HEARTBEAT_DOC_ID).toBe("heartbeat::buyeriq.deal.scanner");
+    expect(src).toContain('"rematch_control"');
+    expect(src).toContain("heartbeat::buyeriq.deal.scanner");
   });
 
   it("names the event it keys on, and rejects rows carrying any other event", () => {
@@ -154,6 +186,138 @@ describe("1b. the storefront canary reads the pool the public route serves", () 
     // or the two would measure different populations.
     expect(writer).toContain("usernameLower");
     expect(src).toContain("usernameLower");
+  });
+});
+
+// ── 1c. DOC-FIRST, TRACE FALLBACK (2026-09-11) ───────────────────────────
+describe("1c. docVerdict computes staleness from the heartbeat doc alone", () => {
+  const opts = { now: NOW, maxSilenceHours: 2, maxErrorRate: 0.5 };
+
+  function doc(over: Partial<HeartbeatDoc> = {}): HeartbeatDoc {
+    return {
+      id: "heartbeat::buyeriq.deal.scanner", kind: "heartbeat",
+      lastRunAt: hoursAgo(1), outcome: "ok",
+      targetsScanned: 4, errors: 0, roleInstance: "hobbyiq3-abc", ...over,
+    };
+  }
+
+  it("a fresh doc (1h old, ceiling 2h) is heartbeatOk", () => {
+    const v = deal.docVerdict(doc({ lastRunAt: hoursAgo(1) }), opts);
+    expect(v.silenceH).toBeCloseTo(1, 5);
+    expect(v.heartbeatOk).toBe(true);
+    expect(v.runs).toBe(1);
+  });
+
+  // BOUNDARY: exactly at the ceiling is still ok (<=), one hour past is not —
+  // same <= rule the trace-window verdicts() uses, pinned here so the two
+  // paths cannot silently diverge on the boundary.
+  it("exactly at the 2h ceiling is ok; past it is SILENT", () => {
+    expect(deal.docVerdict(doc({ lastRunAt: hoursAgo(2) }), opts).heartbeatOk).toBe(true);
+    expect(deal.docVerdict(doc({ lastRunAt: hoursAgo(2.01) }), opts).heartbeatOk).toBe(false);
+  });
+
+  // MUTATION -> RED: a NULL doc (container reachable, no doc written yet —
+  // the genuine "no scan yet" case, distinct from an unreachable read) must
+  // read as infinitely silent, never as healthy-by-absence.
+  it("a null doc (present container, no heartbeat yet) is infinitely silent, not healthy", () => {
+    const v = deal.docVerdict(null, opts);
+    expect(v.silenceH).toBe(Infinity);
+    expect(v.heartbeatOk).toBe(false);
+    expect(v.runs).toBe(0);
+    expect(v.latestIso).toBeNull();
+  });
+
+  it("an unparseable lastRunAt reads the same as a missing doc — infinitely silent", () => {
+    const v = deal.docVerdict(doc({ lastRunAt: "not-a-date" }), opts);
+    expect(v.silenceH).toBe(Infinity);
+    expect(v.heartbeatOk).toBe(false);
+  });
+
+  it("errorsOk reads the doc's OWN cycle rate, not a window sum", () => {
+    const ok = deal.docVerdict(doc({ targetsScanned: 4, errors: 2 }), opts); // 50% == ceiling
+    expect(ok.errorRate).toBeCloseTo(0.5, 5);
+    expect(ok.errorsOk).toBe(true);
+    const bad = deal.docVerdict(doc({ targetsScanned: 4, errors: 3 }), opts); // 75% > ceiling
+    expect(bad.errorsOk).toBe(false);
+  });
+
+  it("zero targets scanned has no error rate and cannot fire the error axis", () => {
+    const v = deal.docVerdict(doc({ targetsScanned: 0, errors: 0 }), opts);
+    expect(v.errorRate).toBeNull();
+    expect(v.errorsOk).toBe(true);
+  });
+
+  it("carries outcome and roleInstance through for the operator banner", () => {
+    const v = deal.docVerdict(doc({ outcome: "error", roleInstance: "hobbyiq3-worker-9" }), opts);
+    expect(v.outcome).toBe("error");
+    expect(v.roleInstance).toBe("hobbyiq3-worker-9");
+  });
+});
+
+describe("1d. readHeartbeatDoc: an unreachable read is distinguished from a genuinely absent doc", () => {
+  const RealCosmosClient = class {
+    database() {
+      return {
+        container: () => ({
+          item: () => ({
+            read: async () => ({ resource: doc() }),
+          }),
+        }),
+      };
+    }
+  };
+  function doc() {
+    return {
+      id: "heartbeat::buyeriq.deal.scanner", kind: "heartbeat",
+      lastRunAt: hoursAgo(0.5), outcome: "ok", targetsScanned: 4, errors: 0,
+      roleInstance: "hobbyiq3-abc",
+    };
+  }
+
+  const savedConn = process.env.COSMOS_CONNECTION_STRING;
+  afterEach(() => {
+    if (savedConn === undefined) delete process.env.COSMOS_CONNECTION_STRING;
+    else process.env.COSMOS_CONNECTION_STRING = savedConn;
+  });
+
+  it("no COSMOS_CONNECTION_STRING at all is UNREACHABLE (ok:false), the trigger for falling back to TRACE_JSON", async () => {
+    delete process.env.COSMOS_CONNECTION_STRING;
+    const r = await deal.readHeartbeatDoc(RealCosmosClient as any);
+    expect(r.ok).toBe(false);
+  });
+
+  it("a reachable container with a real doc reads it as ok:true", async () => {
+    process.env.COSMOS_CONNECTION_STRING = "AccountEndpoint=https://x/;AccountKey=k==;";
+    const r = await deal.readHeartbeatDoc(RealCosmosClient as any);
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.doc?.outcome).toBe("ok");
+  });
+
+  it("a reachable container with NO doc (point read returns undefined) is ok:true, doc:null — a real answer, not a fetch failure", async () => {
+    process.env.COSMOS_CONNECTION_STRING = "AccountEndpoint=https://x/;AccountKey=k==;";
+    const EmptyCosmosClient = class {
+      database() {
+        return { container: () => ({ item: () => ({ read: async () => ({ resource: undefined }) }) }) };
+      }
+    };
+    const r = await deal.readHeartbeatDoc(EmptyCosmosClient as any);
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.doc).toBeNull();
+  });
+
+  it("a thrown query is UNREACHABLE (ok:false), not a crash — this is what falls back to TRACE_JSON", async () => {
+    process.env.COSMOS_CONNECTION_STRING = "AccountEndpoint=https://x/;AccountKey=k==;";
+    const ThrowingCosmosClient = class {
+      database() {
+        return {
+          container: () => ({
+            item: () => ({ read: async () => { throw new Error("cosmos down"); } }),
+          }),
+        };
+      }
+    };
+    const r = await deal.readHeartbeatDoc(ThrowingCosmosClient as any);
+    expect(r.ok).toBe(false);
   });
 });
 
@@ -357,6 +521,33 @@ describe("3. a broken query and a dead scanner are different incidents", () => {
     const { parsed } = deal.parseSummaries(rows);
     expect(parsed[0].targetsScanned).toBe(4);
   });
+
+  // #2027 (2026-09-11): a trace verifiably present in the workspace's
+  // AppTraces table came back EMPTY from the classic app-insights API on
+  // every window tried, even the exact hour. The canary now queries the
+  // workspace (`az monitor log-analytics query`), whose JSON output is a
+  // flat array of row objects, not { tables: [...] }. Both shapes must
+  // parse to the same normalized row array.
+  it("the workspace's flat-array shape (log-analytics query -o json) parses like the classic table shape", () => {
+    const flat = JSON.stringify([
+      { TimeGenerated: hoursAgo(1), Message: scanLine(), TableName: "PrimaryResult" },
+    ]);
+    const rows = deal.parseAiTable(flat)!;
+    expect(rows).toHaveLength(1);
+    expect(rows[0].Message).toBe(scanLine());
+    const { parsed, unparsed } = deal.parseSummaries(rows);
+    expect(unparsed).toBe(0);
+    expect(parsed[0].targetsScanned).toBe(4);
+    // TimeGenerated is the workspace's column name for the row timestamp —
+    // it must be read, not just Timestamp/timestamp.
+    expect(parsed[0].timestamp).toBe(hoursAgo(1));
+  });
+
+  it("an EMPTY workspace array is a real zero-runs answer, not a parse failure", () => {
+    const rows = deal.parseAiTable(JSON.stringify([]));
+    expect(rows).toEqual([]);
+    expect(deal.verdicts([], { now: NOW, maxSilenceHours: 2, maxErrorRate: 0.5 }).heartbeatOk).toBe(false);
+  });
 });
 
 // ── 4. MUTATION → RED ────────────────────────────────────────────────────
@@ -394,9 +585,10 @@ describe("4. mutation turns each axis red", () => {
 
 // ── 5. BANNER SHAPE ──────────────────────────────────────────────────────
 describe("5. the banner an operator reads at 3am", () => {
-  it("the deal-scanner banner names its source of truth, its axes and reconciles", () => {
+  it("the deal-scanner banner names its source of truth (doc-first), its axes, and the fallback path reconciles", () => {
     const src = read("backend", "scripts", "checkDealScannerHeartbeat.cjs");
-    expect(src).toContain("[deal-scanner-canary] source of truth: App Insights traces");
+    expect(src).toContain("[deal-scanner-canary] source of truth: Cosmos doc");
+    expect(src).toContain("[deal-scanner-canary] source of truth (FALLBACK): App Insights traces");
     expect(src).toContain("axis        measured                          threshold        verdict");
     expect(src).toMatch(/reconcile: \$\{rows\.length\} trace rows = /);
     expect(src).toContain("RECONCILES");
@@ -472,6 +664,26 @@ describe("6. the two canary workflows", () => {
     expect(storeYml).toContain("node scripts/checkStorefrontVisibility.cjs");
   });
 
+  // #2027 (2026-09-11): the classic app-insights API stopped reliably
+  // surfacing this heartbeat against the workspace-based hobbyiq-insights
+  // resource. The canary must read the workspace table directly.
+  it("the deal-scanner canary queries the WORKSPACE (AppTraces), not the classic app-insights API", () => {
+    expect(dealYml).toContain("az monitor log-analytics query");
+    expect(dealYml).toContain("--workspace 2a903998-79f4-4549-8042-5af803ab1e54");
+    expect(dealYml).toContain("AppTraces | where TimeGenerated > ago(${WINDOW_HOURS}h)");
+    expect(dealYml).toContain("Message has 'buyeriq_deal_scan_summary'");
+    // The classic per-app query must be gone from the canary step's
+    // EXECUTABLE lines, not just supplemented — a leftover call would
+    // re-introduce the same gap. The step's own comments are free to name
+    // the old command when explaining why it was replaced (as they do).
+    const canaryStep = dealYml.slice(dealYml.indexOf("Run deal scanner canary"), dealYml.indexOf("Open or update"));
+    const canaryStepCode = canaryStep
+      .split("\n")
+      .filter((l) => !/^\s*#/.test(l))
+      .join("\n");
+    expect(canaryStepCode).not.toContain("az monitor app-insights query");
+  });
+
   it("each files its issue on github.token alone — an Azure outage must not silence its own alert", () => {
     for (const yml of [dealYml, storeYml]) {
       expect(yml).toContain("GH_TOKEN: ${{ github.token }}");
@@ -527,11 +739,29 @@ describe("6. the two canary workflows", () => {
     expect(storeYml).toContain("MAX_REFRESH_AGE_HOURS=\"${{ inputs.max_refresh_age_hours || '48' }}\"");
   });
 
-  it("the deal-scanner workflow carries the App Insights app-id and the exact event it keys on", () => {
-    expect(dealYml).toContain("468bd437-5d16-47b4-90fb-5ee5d41726ae");
+  it("the deal-scanner workflow's fallback path carries the Log Analytics workspace id and the exact event it keys on", () => {
+    // #2027 (2026-09-11): the FALLBACK path — used only when the doc-first
+    // read is unreachable — reads the WORKSPACE, not the classic per-app
+    // API, so the operative identifier is the workspace id, not the App
+    // Insights app-id (468bd437-...) the classic `--app` flag took.
+    expect(dealYml).toContain("2a903998-79f4-4549-8042-5af803ab1e54");
     expect(dealYml).toContain("buyeriq_deal_scan_summary");
-    // An empty file from the CLI is a failed query, not zero runs.
-    expect(dealYml).toContain("the scanner was NOT measured");
+  });
+
+  it("the deal-scanner workflow sources COSMOS_CONNECTION_STRING for the doc-first path, and never prints it", () => {
+    expect(dealYml).toContain("az webapp config appsettings list");
+    expect(dealYml).toContain("COSMOS_CONNECTION_STRING=\"$(az webapp config appsettings list");
+    expect(dealYml).toContain("--name HobbyIQ3 --resource-group rg-hobbyiq-dev");
+    expect(dealYml).not.toMatch(/echo .*\$COSMOS_CONNECTION_STRING/);
+  });
+
+  it("an empty/failed App Insights fetch on the fallback path is still a failed query, not zero runs — the checker script owns that guard now", () => {
+    // Moved from the workflow (which now tolerates an empty trace fetch with
+    // `|| true`, because the trace is fallback-only) into
+    // checkDealScannerHeartbeat.cjs: parseAiTable(null-shaped payload)
+    // reports FETCH FAILURE via this exact string, not "zero runs".
+    const src = read("backend", "scripts", "checkDealScannerHeartbeat.cjs");
+    expect(src).toContain("the scanner was NOT measured");
   });
 
   it("the storefront workflow reads the connection string from App Service and never prints it", () => {
