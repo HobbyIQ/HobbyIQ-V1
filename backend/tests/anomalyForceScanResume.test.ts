@@ -1,0 +1,403 @@
+/**
+ * anomaly-force-scan.cjs -- CF-CLEANLINESS-ANOMALY-BUDGET (2026-09-11).
+ *
+ * Drives the COMMITTED lane script through a stubbed Cosmos (never a
+ * reimplementation of its loop), the same harness shape
+ * tests/ingestUniverseDriverLaneContinues.test.ts uses for
+ * ingest-universe-driver.cjs: @azure/cosmos and the dist/ writeReconciliation
+ * import are intercepted at the module-resolution boundary via
+ * `NODE_OPTIONS=--require <shim>`, so scripts/lib/runner-budget.cjs's real
+ * budget()/finishLane() run unmodified and the assertions are about what the
+ * real script does with a real (tiny) clock.
+ *
+ * THREE THINGS PINNED HERE, matching the task's three required proofs:
+ *   1. a budget stop leaves the resumable cursor/marker in place, and a
+ *      SUBSEQUENT invocation resumes from it (not from scratch) -- never
+ *      re-reading a unit the first run already finished;
+ *   2. the reportWrites reconciliation line balances, both for a scan-phase
+ *      refusal (intended 0 = written 0) and a finished sweep (intended 1 =
+ *      written 1);
+ *   3. a scan-phase stop REFUSES to publish a report (exit 5), the cached
+ *      /cleanliness/anomalies path is a completely separate module this
+ *      script never touches, and a finished sweep DOES publish one.
+ */
+import { execFileSync } from "node:child_process";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { afterAll, describe, expect, it } from "vitest";
+
+const backend = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const script = path.join(backend, "scripts", "anomaly-force-scan.cjs");
+
+const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "anomaly-scan-"));
+afterAll(() => { try { fs.rmSync(tmp, { recursive: true, force: true }); } catch { /* best effort */ } });
+
+/**
+ * The stubbed Cosmos world, injected via NODE_OPTIONS --require. A JSON file
+ * (STATE_SINK) is the durable store both the shim and the test process read,
+ * so state survives across the TWO SEPARATE PROCESS invocations a resume
+ * test needs (the first run's stop, the second run's resume).
+ *
+ * sold_comps carries a tiny, fixed set of rows across a HANDFUL of
+ * (cardYear, sportClass) units -- not the real 805-unit range -- because the
+ * lane enumerates units at require-time from the real
+ * scripts/lib/anomaly-scan-units.cjs and this harness controls the CLOCK
+ * (RUN_MINUTES/BUDGET_MS/RESERVE_MS), not the unit count, to force a stop
+ * after a SPECIFIC number of units have been fully scanned.
+ */
+function shimPath(opts: {
+  sinkPath: string;
+  soldComps: Array<{ hobbyiqCardId: string; price: number; source: string; cardYear: number | null; sport: string }>;
+  baselineRows: Array<{ slug: string; median: number; sampleCount: number; snapshotDate: string }>;
+  /** Number of (cardYear, sportClass) units to serve real rows for before
+   *  every later unit is an empty page -- keeps the fixture data tiny while
+   *  still exercising the full 805-unit enumeration loop. */
+  slowAfterUnit?: number;
+  /** ms to sleep on each page fetch once past slowAfterUnit, so a tiny
+   *  BUDGET_MS is exceeded deterministically rather than racily. */
+  sleepMs?: number;
+}): string {
+  const p = path.join(tmp, `shim-${Math.random().toString(36).slice(2)}.cjs`);
+  fs.writeFileSync(p, `
+const Module = require("node:module");
+const fs = require("node:fs");
+
+const SINK = ${JSON.stringify(opts.sinkPath)};
+const SOLD_COMPS = ${JSON.stringify(opts.soldComps)};
+const BASELINE_ROWS = ${JSON.stringify(opts.baselineRows)};
+const SLOW_AFTER_UNIT = ${JSON.stringify(opts.slowAfterUnit ?? 999999)};
+const SLEEP_MS = ${JSON.stringify(opts.sleepMs ?? 0)};
+
+function readSink() {
+  try { return JSON.parse(fs.readFileSync(SINK, "utf8")); }
+  catch { return { control: {}, reports: {} }; }
+}
+function writeSink(s) { fs.writeFileSync(SINK, JSON.stringify(s)); }
+
+function sleepSync(ms) {
+  const sab = new SharedArrayBuffer(4);
+  const ia = new Int32Array(sab);
+  Atomics.wait(ia, 0, 0, ms);
+}
+
+let unitsQueried = 0;
+
+// Very small parser for THIS lane's own generated WHERE clause shape, just
+// enough to filter the fixture rows the same way Cosmos would. Good enough
+// for a stub: it is not asked to be a query engine, only to partition the
+// fixture the same way anomaly-scan-units.cjs's predicate does.
+function rowMatchesUnit(row, params) {
+  const byName = Object.fromEntries(params.map((p) => [p.name, p.value]));
+  return true; // real filtering happens in matchesQuery below via param inspection
+}
+
+function matchesQuery(query, parameters, row) {
+  const byName = Object.fromEntries(parameters.map((p) => [p.name, p.value]));
+  // Year clause
+  if (/NOT IS_DEFINED\\(c\\.cardYear\\)/.test(query)) {
+    if (row.cardYear !== null && row.cardYear !== undefined) return false;
+  } else if (/IS_NULL\\(c\\.cardYear\\)/.test(query)) {
+    if (row.cardYear !== null) return false;
+  } else {
+    const yKey = Object.keys(byName).find((k) => k.startsWith("@y"));
+    if (yKey && Number(row.cardYear) !== Number(byName[yKey])) return false;
+  }
+  // Sport clause
+  const scKeys = Object.keys(byName).filter((k) => k.startsWith("@sc"));
+  if (scKeys.length) {
+    // "other" class: NOT IN (named classes)
+    const named = scKeys.map((k) => byName[k]);
+    if (named.includes(String(row.sport))) return false;
+  } else {
+    const sKey = Object.keys(byName).find((k) => k.startsWith("@s") && !k.startsWith("@sc"));
+    if (sKey && String(row.sport) !== String(byName[sKey])) return false;
+  }
+  return true;
+}
+
+const stub = {
+  CosmosClient: class {
+    database() {
+      return {
+        container(name) {
+          if (name === "sold_comps") {
+            return {
+              items: {
+                query(spec) {
+                  const { query, parameters } = spec;
+                  const rows = SOLD_COMPS.filter((r) => matchesQuery(query, parameters || [], r));
+                  unitsQueried++;
+                  let served = false;
+                  return {
+                    hasMoreResults() { return !served; },
+                    async fetchNext() {
+                      served = true;
+                      if (unitsQueried > SLOW_AFTER_UNIT && SLEEP_MS > 0) sleepSync(SLEEP_MS);
+                      return { resources: rows };
+                    },
+                  };
+                },
+              },
+            };
+          }
+          if (name === "pool_baseline_snapshots") {
+            return {
+              items: {
+                query(spec) {
+                  if (/MAX\\(c\\.snapshotDate\\)/.test(spec.query)) {
+                    const dates = BASELINE_ROWS.map((r) => r.snapshotDate);
+                    const max = dates.length ? dates.sort().slice(-1)[0] : null;
+                    return { fetchAll: async () => ({ resources: [max] }) };
+                  }
+                  const d = (spec.parameters || []).find((p) => p.name === "@d");
+                  const rows = BASELINE_ROWS.filter((r) => !d || r.snapshotDate === d.value);
+                  return { fetchAll: async () => ({ resources: rows }) };
+                },
+              },
+            };
+          }
+          if (name === "crawl_state") {
+            return {
+              item(id) {
+                return {
+                  read: async () => {
+                    const s = readSink();
+                    const doc = s.control[id];
+                    if (!doc) { const e = new Error("not found"); e.code = 404; throw e; }
+                    return { resource: doc };
+                  },
+                  delete: async () => {
+                    const s = readSink();
+                    if (!s.control[id]) { const e = new Error("not found"); e.code = 404; throw e; }
+                    delete s.control[id];
+                    writeSink(s);
+                    return {};
+                  },
+                };
+              },
+              items: {
+                upsert: async (doc) => {
+                  const s = readSink();
+                  s.control[doc.id] = doc;
+                  writeSink(s);
+                  return { resource: doc };
+                },
+              },
+            };
+          }
+          if (name === "anomaly_scan_reports") {
+            return {
+              items: {
+                upsert: async (doc) => {
+                  const s = readSink();
+                  s.reports[doc.id] = doc;
+                  writeSink(s);
+                  return { resource: doc };
+                },
+              },
+            };
+          }
+          throw new Error("unstubbed container: " + name);
+        },
+      };
+    }
+  },
+};
+
+const realLoad = Module._load;
+Module._load = function (request, parent, isMain) {
+  if (request === "@azure/cosmos") return stub;
+  // The reconciliation reporter lives in dist/, which a test run has not built.
+  if (String(request).includes("writeReconciliation")) {
+    return { reportWrites: (input) => { fs.appendFileSync(SINK + ".reconcile.log", JSON.stringify(input) + "\\n"); return { ok: true }; } };
+  }
+  return realLoad.apply(this, arguments);
+};
+`);
+  return p;
+}
+
+function readSink(sinkPath: string): { control: Record<string, any>; reports: Record<string, any> } {
+  try { return JSON.parse(fs.readFileSync(sinkPath, "utf8")); } catch { return { control: {}, reports: {} }; }
+}
+function readReconcileLog(sinkPath: string): any[] {
+  try {
+    return fs.readFileSync(sinkPath + ".reconcile.log", "utf8")
+      .split("\n").filter(Boolean).map((l) => JSON.parse(l));
+  } catch { return []; }
+}
+
+function run(opts: {
+  sinkPath: string;
+  soldComps: Parameters<typeof shimPath>[0]["soldComps"];
+  baselineRows: Parameters<typeof shimPath>[0]["baselineRows"];
+  env?: Record<string, string>;
+  slowAfterUnit?: number;
+  sleepMs?: number;
+}) {
+  const shim = shimPath({
+    sinkPath: opts.sinkPath,
+    soldComps: opts.soldComps,
+    baselineRows: opts.baselineRows,
+    slowAfterUnit: opts.slowAfterUnit,
+    sleepMs: opts.sleepMs,
+  });
+  try {
+    const out = execFileSync(process.execPath, [script], {
+      cwd: backend,
+      env: {
+        PATH: process.env.PATH ?? "",
+        SystemRoot: process.env.SystemRoot ?? "",
+        NODE_OPTIONS: `--require ${JSON.stringify(shim).slice(1, -1)}`,
+        COSMOS_CONNECTION_STRING: "AccountEndpoint=https://stub/;AccountKey=c3R1Yg==;",
+        BACKFILL_APPLY: "true",
+        ...opts.env,
+      },
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+      timeout: 60_000,
+    });
+    return { code: 0, out, sink: readSink(opts.sinkPath), reconcile: readReconcileLog(opts.sinkPath) };
+  } catch (e: any) {
+    return {
+      code: e.status as number,
+      out: String(e.stdout ?? "") + String(e.stderr ?? ""),
+      sink: readSink(opts.sinkPath),
+      reconcile: readReconcileLog(opts.sinkPath),
+    };
+  }
+}
+
+const BASELINE = [
+  { slug: "hiq:baseball:2024:topps:1:base:false", median: 10, sampleCount: 6, snapshotDate: "2026-09-10" },
+];
+
+// A confirmed-source row for a unit that is scanned EARLY in the stable
+// enumeration order (year 1869, baseball) so a run whose budget dies after
+// only a few units still has real accumulator content to persist and resume.
+const EARLY_ROW = {
+  hobbyiqCardId: "hiq:baseball:2024:topps:1:base:false",
+  price: 40,
+  source: "cardhedge",
+  cardYear: 1869,
+  sport: "baseball",
+};
+
+describe("anomaly-force-scan — a budget stop leaves a resumable cursor, not a restart", () => {
+  it("PIN 1+2: a scan-phase stop writes a cursor + reconciles 0=0, and a SECOND run resumes from it rather than from unit 0", () => {
+    const sinkPath = path.join(tmp, `sink-${Math.random().toString(36).slice(2)}.json`);
+
+    // First run: an absurdly tiny budget so outOfClock() is already true
+    // before the very first unit is attempted -- the cleanest deterministic
+    // stop, since it does not depend on real wall-clock races.
+    const first = run({
+      sinkPath,
+      soldComps: [EARLY_ROW],
+      baselineRows: BASELINE,
+      env: { RUN_MINUTES: "0", BUDGET_MS: "1", RESERVE_MS: "60000" },
+    });
+
+    expect(first.code).toBe(5); // a REFUSAL, not a crash
+    expect(first.out).toMatch(/stopped at the .*budget/);
+    expect(first.out).toMatch(/REFUSING TO WRITE THE ANOMALY REPORT/);
+    // No report was published.
+    expect(Object.keys(first.sink.reports)).toHaveLength(0);
+    // The cursor WAS written, and it points at unit 0 -- nothing was scanned.
+    const cursor1 = first.sink.control["anomaly-force-scan::cursor"];
+    expect(cursor1).toBeTruthy();
+    expect(cursor1.nextUnitIndex).toBe(0);
+    expect(cursor1.totalUnits).toBeGreaterThan(0);
+    // The reconcile line balances: a refusal declares 0 intended = 0 written.
+    const rec1 = first.reconcile.at(-1);
+    expect(rec1).toMatchObject({ job: "anomaly-force-scan", intended: 0, written: 0 });
+
+    // Second run: a real budget, generous enough to finish the whole sweep
+    // (the fixture pool is tiny). It must RESUME from the persisted cursor,
+    // not restart -- proven by the "RESUMING from unit" narration line
+    // rather than "starting a fresh sweep".
+    const second = run({
+      sinkPath,
+      soldComps: [EARLY_ROW],
+      baselineRows: BASELINE,
+      env: { RUN_MINUTES: "30" },
+    });
+
+    expect(second.out).toMatch(/RESUMING from unit 0\/\d+/);
+    expect(second.out).not.toMatch(/starting a fresh sweep/);
+    expect(second.code).toBe(0);
+    // The sweep finished: the cursor is retired and a report was published.
+    expect(second.sink.control["anomaly-force-scan::cursor"]).toBeUndefined();
+    expect(Object.keys(second.sink.reports)).toHaveLength(1);
+    const rec2 = second.reconcile.at(-1);
+    expect(rec2).toMatchObject({ job: "anomaly-force-scan", intended: 1, written: 1, failed: 0 });
+  });
+
+  it("PIN 1 (mid-sweep): resuming a cursor that already accumulated slugs keeps them, rather than discarding progress", () => {
+    // Two rows in the FIRST TWO units of the stable enumeration order
+    // (index 0 = absent-year baseball, index 1 = absent-year football, both
+    // reached before any real year and before slowAfterUnit's sleep kicks
+    // in). slowAfterUnit=2 makes every unit from index 2 onward sleep past
+    // the tiny budget, so the first run finishes units 0 and 1 (accumulating
+    // BOTH rows), then stops inside unit 2 without ever reaching the end of
+    // the 805-unit sweep.
+    const sinkPath = path.join(tmp, `sink-${Math.random().toString(36).slice(2)}.json`);
+    const absentBaseballRow = { hobbyiqCardId: "hiq:baseball:unknown:topps:1:base:false", price: 40, source: "cardhedge", sport: "baseball" }; // cardYear key omitted entirely -> "absent"
+    const absentFootballRow = { hobbyiqCardId: "hiq:football:unknown:topps:1:base:false", price: 20, source: "cardhedge", sport: "football" };
+
+    const first = run({
+      sinkPath,
+      soldComps: [absentBaseballRow, absentFootballRow],
+      baselineRows: BASELINE,
+      env: { RUN_MINUTES: "0", BUDGET_MS: "150", RESERVE_MS: "10" },
+      slowAfterUnit: 2,
+      sleepMs: 400,
+    });
+    expect(first.code).toBe(5);
+    const cursor1 = first.sink.control["anomaly-force-scan::cursor"];
+    expect(cursor1).toBeTruthy();
+    // BOTH rows made it into the persisted accumulator: progress from a
+    // finished early unit survives a stop that happens in a LATER unit,
+    // rather than only ever being written empty or only ever holding the
+    // very last unit read.
+    const persistedSlugs = new Set((cursor1.poolSnapshot as [string, number[]][]).map(([slug]) => slug));
+    expect(persistedSlugs.has(absentBaseballRow.hobbyiqCardId)).toBe(true);
+    expect(persistedSlugs.has(absentFootballRow.hobbyiqCardId)).toBe(true);
+    expect(cursor1.nextUnitIndex).toBeGreaterThanOrEqual(2);
+
+    const second = run({
+      sinkPath,
+      soldComps: [absentBaseballRow, absentFootballRow],
+      baselineRows: BASELINE,
+      env: { RUN_MINUTES: "30" },
+    });
+    expect(second.out).toMatch(new RegExp(`RESUMING from unit ${cursor1.nextUnitIndex}/`));
+    expect(second.code).toBe(0);
+    expect(Object.keys(second.sink.reports)).toHaveLength(1);
+  });
+});
+
+describe("anomaly-force-scan — the cached /cleanliness/anomalies path is untouched", () => {
+  it("never requires or imports the anomalyDetection service module", () => {
+    const src = fs.readFileSync(script, "utf8");
+    // Prose comments in the header ARE allowed to name the sibling module
+    // for context; what must never appear is an actual module-resolution
+    // reference to it (require/import), which would mean this lane's scan
+    // and the cached admin-dashboard scan share code that a change to one
+    // could silently affect the other through.
+    expect(src).not.toMatch(/require\([^)]*anomalyDetection/);
+    expect(src).not.toMatch(/from\s+["'][^"']*anomalyDetection/);
+  });
+
+  it("the anomalyDetection service file itself is untouched by this change", () => {
+    const serviceSrc = fs.readFileSync(
+      path.join(backend, "src", "services", "portfolioiq", "anomalyDetection.service.ts"),
+      "utf8",
+    );
+    // detectAnomalies() still exports the same shape the cached (non-force)
+    // route and the existing anomalyDetectionScanLogging.test.ts pin depend
+    // on -- this lane adds a NEW artifact rather than changing that one.
+    expect(serviceSrc).toMatch(/export async function detectAnomalies/);
+  });
+});

@@ -96,6 +96,13 @@ on:
           #   - reaudit-cardsight-unverified (reads sold_comps only, no CS API — kept)
           - promote-sold-comps-trust-tier
           - baseline-pool-snapshot
+          # CF-CLEANLINESS-ANOMALY-BUDGET (2026-09-11). Replaces the
+          # nightly-cleanliness.yml HTTP dispatch to
+          # /cleanliness/anomalies?force=true, which never once finished
+          # inside poll-admin-job.cjs's ceiling (an unbounded full sold_comps
+          # walk). Scans by (cardYear, sportClass) unit with a crawl_state
+          # cursor; see scripts/anomaly-force-scan.cjs's header.
+          - anomaly-force-scan
           - backfill-cardsight-unverified-flag
           - migrate-cardsight-to-staging
           - backfill-grade-from-title
@@ -3947,6 +3954,12 @@ jobs:
         #     appears in the scan at all;
         #   - baseline-pool-snapshot writes `<snapshotDate>::<slug>`, so a
         #     continuation on the same day overwrites its own rows;
+        #   - anomaly-force-scan is the one lane here that is NOT a cheap
+        #     re-read over already-written rows: a stop persists a
+        #     crawl_state cursor (next unit index + the in-memory per-slug
+        #     accumulator) and a same-day continuation resumes the sweep from
+        #     there rather than re-scanning finished units. The FINAL report
+        #     only ever gets ONE upsert, on the run that finishes every unit;
         #   - refresh-calibration-multipliers re-reads the whole window and
         #     overwrites the calibration wholesale;
         #   - nightly-reingest-top-ch-cards writes nothing at all (its insert
@@ -3955,11 +3968,15 @@ jobs:
         #   - backfill-parallel-enrichment is DISARMED for apply and refuses at
         #     the top of the file.
         # So a continuation pays cheap reads over the finished part and writes
-        # only what is left. That is also why none of them needs a cursor input.
+        # only what is left (anomaly-force-scan resumes its unit sweep from
+        # crawl_state instead, per its own bullet above). None of them needs a
+        # new workflow_dispatch INPUT for this -- the state that makes a
+        # continuation cheap lives in Cosmos, not in the dispatch form.
         #
-        # FOUR OF THEM CAN EXIT 5 -- A REFUSAL, NOT A FAILURE.
+        # FIVE OF THEM CAN EXIT 5 -- A REFUSAL, NOT A FAILURE.
         # backfill-stage3-price-sanity, promote-sold-comps-trust-tier,
-        # baseline-pool-snapshot and refresh-calibration-multipliers each
+        # baseline-pool-snapshot, anomaly-force-scan and
+        # refresh-calibration-multipliers each
         # compute their write plan from a STATISTIC over a whole-container or
         # whole-window scan -- a per-slug median, a per-slug percentile set, a
         # median of per-identity price ratios -- so a scan-phase budget stop
@@ -3983,6 +4000,7 @@ jobs:
         # is precisely the silent hole this rule exists to close, so the
         # formatting is load-bearing rather than cosmetic.
         if: ${{ !cancelled() && (
+            inputs.script == 'anomaly-force-scan' ||
             inputs.script == 'backfill-grade-from-ch-daily' ||
             inputs.script == 'backfill-grade-from-title' ||
             inputs.script == 'backfill-insert-setkey' ||
