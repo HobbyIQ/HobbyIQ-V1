@@ -28,6 +28,19 @@ name: Deal Scanner Canary
 # ops/state container the GREAT REMATCH's settle markers already use
 # (poolMigrationGate.ts / rematch-sold-comps.cjs), partitioned `/id`.
 #
+# THE FALLBACK READS THE WORKSPACE, NOT THE CLASSIC API (2026-09-11, #2027).
+# When the doc path is unreachable, the fallback query reads the Log
+# Analytics workspace table `AppTraces`
+# (`az monitor log-analytics query -w <workspace-id>`), not the classic
+# per-app `az monitor app-insights query` (table `traces`). hobbyiq-insights
+# is workspace-based, and the classic API is a compatibility shim over that
+# workspace: measured 09-10/09-11, a `buyeriq_deal_scan_summary` row that
+# provably exists in AppTraces (re-queried down to its exact hour) came back
+# EMPTY from the classic API every time, on every window tried. That is why
+# every run since the 09-09 RBAC fix and the 09-09 #2018 stream fix still
+# read "0 trace rows = 0 summaries" — the rows existed, the classic query
+# surface just never showed them. AppTraces is the table that has them.
+#
 # THRESHOLD ARITHMETIC. The job's interval is 60 minutes
 # (BUYERIQ_DEAL_SCANNER_INTERVAL_MIN, default 60). The heartbeat ceiling is
 # schedule x 2 = 2h, so one missed cycle is tolerated and two is not. This
@@ -116,15 +129,25 @@ jobs:
             --query "[?name=='COSMOS_CONNECTION_STRING'].value | [0]" -o tsv)"
           export COSMOS_CONNECTION_STRING
 
-          # The query lives HERE, not in the script, so an operator can paste
-          # it into the portal unchanged and get the same rows the canary saw.
-          # The script stays free of the Azure SDK and unit-testable on fixtures.
-          # FALLBACK ONLY: read only if the doc path could not be reached at
-          # all (see checkDealScannerHeartbeat.cjs main()) — an absent doc is
-          # itself a verdict, not a reason to fall back.
-          az monitor app-insights query \
-            --app 468bd437-5d16-47b4-90fb-5ee5d41726ae \
-            --analytics-query "traces | where timestamp > ago(${WINDOW_HOURS}h) | where message has 'buyeriq_deal_scan_summary' | project timestamp, message | order by timestamp desc | take 500" \
+          # FALLBACK ONLY (2026-09-11): read only if the doc path could not be
+          # reached at all (see checkDealScannerHeartbeat.cjs main()) — an
+          # absent doc is itself a verdict, not a reason to fall back. When it
+          # IS reached, this query reads the Log Analytics WORKSPACE table
+          # `AppTraces`, not the classic per-app `traces` API (#2027,
+          # 2026-09-11): measured 09-10/09-11, a `buyeriq_deal_scan_summary`
+          # row that provably exists in AppTraces came back EMPTY from the
+          # classic API every time, on every window tried — the classic
+          # query surface never reliably showed this sparse, one-a-cycle
+          # trace. The query lives HERE, not in the script, so an operator
+          # can paste it into the portal unchanged and get the same rows the
+          # canary saw. The script stays free of the Azure SDK and
+          # unit-testable on fixtures. `|| true`: an empty/failed fetch here
+          # is tolerated — the .cjs script's own FETCH FAILURE guard is what
+          # distinguishes "the query didn't answer" from "zero runs" now that
+          # this is a fallback rather than the only signal.
+          az monitor log-analytics query \
+            --workspace 2a903998-79f4-4549-8042-5af803ab1e54 \
+            --analytics-query "AppTraces | where TimeGenerated > ago(${WINDOW_HOURS}h) | where Message has 'buyeriq_deal_scan_summary' | project TimeGenerated, Message | order by TimeGenerated desc | take 500" \
             -o json > /tmp/deal-scan-traces.json || true
           TRACE_JSON=/tmp/deal-scan-traces.json node scripts/checkDealScannerHeartbeat.cjs
 
@@ -149,7 +172,7 @@ jobs:
             echo "| | |"
             echo "|---|---|"
             echo "| Run | [$GITHUB_RUN_ID]($RUN_URL) |"
-            echo "| Source of truth | Cosmos doc \`rematch_control/heartbeat::buyeriq.deal.scanner\` (doc-first; falls back to App Insights \`traces\`, event \`buyeriq_deal_scan_summary\`, only if the doc is unreachable) |"
+            echo "| Source of truth | Cosmos doc \`rematch_control/heartbeat::buyeriq.deal.scanner\` (doc-first; falls back to App Insights workspace \`AppTraces\`, event \`buyeriq_deal_scan_summary\`, only if the doc is unreachable) |"
             echo "| Job interval | 60 min (\`BUYERIQ_DEAL_SCANNER_INTERVAL_MIN\`) |"
             echo "| Heartbeat ceiling | ${MAX_SILENCE_HOURS:-2}h (interval x 2) |"
             echo ""
@@ -164,9 +187,9 @@ jobs:
             echo "# Doc-first source of truth:"
             echo "az cosmosdb sql container show --account-name hobbyiq-comps --database-name hobbyiq \\"
             echo "  --resource-group rg-hobbyiq-dev --name rematch_control >/dev/null && echo container reachable"
-            echo "# Fallback source (App Insights, sampled 10%):"
-            echo "az monitor app-insights query --app 468bd437-5d16-47b4-90fb-5ee5d41726ae \\"
-            echo "  --analytics-query \"traces | where timestamp > ago(24h) | where message has 'buyeriq_deal_scan' | project timestamp, message | order by timestamp desc\""
+            echo "# Fallback source (App Insights workspace, sampled 10%):"
+            echo "az monitor log-analytics query --workspace 2a903998-79f4-4549-8042-5af803ab1e54 \\"
+            echo "  --analytics-query \"AppTraces | where TimeGenerated > ago(24h) | where Message has 'buyeriq_deal_scan' | project TimeGenerated, Message | order by TimeGenerated desc\""
             echo '```'
             echo ""
             echo "<sub>Filed automatically by the \`Deal Scanner Canary\` workflow. Close it once a scan reports again.</sub>"

@@ -111,19 +111,35 @@ function numEnv(raw, dflt) {
 }
 
 /**
- * `az monitor app-insights query -o json` returns
+ * Two CLIs, two shapes. `az monitor app-insights query -o json` (the classic
+ * per-app API, table `traces`) returns
  * { tables: [ { columns: [{name}], rows: [[...]] } ] }.
+ * `az monitor log-analytics query -o json` (the workspace API, table
+ * `AppTraces` — the source of truth since #2027, 2026-09-11: see the
+ * workflow header for why the classic API stopped being trustworthy here)
+ * returns a flat array of row objects already keyed by column name:
+ * [ { TimeGenerated, Message, ... }, ... ].
  *
- * Returned as an array of objects keyed by column name so the caller never
- * indexes by position — a reordered projection in the workflow would
- * otherwise silently read the wrong column. An unparseable or shapeless
- * payload yields null, which main() reports as a FETCH FAILURE rather than
- * as zero runs: "the query did not answer" and "the job is dead" are
- * different incidents and must not share an error message.
+ * Both are normalized to the same array-of-objects-by-column-name shape so
+ * parseSummaries never has to know which CLI produced its input — it already
+ * reads `message ?? Message` and `timestamp ?? Timestamp` for exactly this
+ * reason. The classic shape is read BY COLUMN NAME, never by position, so a
+ * reordered projection in the workflow cannot silently shift the reading.
+ * An unparseable or shapeless payload yields null, which main() reports as a
+ * FETCH FAILURE rather than as zero runs: "the query did not answer" and
+ * "the job is dead" are different incidents and must not share an error
+ * message.
  */
 function parseAiTable(raw) {
   let doc;
   try { doc = typeof raw === "string" ? JSON.parse(raw) : raw; } catch { return null; }
+
+  // Workspace shape: log-analytics query's JSON output is already a flat
+  // array of row objects. An empty array is a real answer (zero rows), not
+  // a parse failure.
+  if (Array.isArray(doc)) return doc;
+
+  // Classic shape: { tables: [ { columns, rows } ] }.
   const table = doc && Array.isArray(doc.tables) ? doc.tables[0] : null;
   if (!table || !Array.isArray(table.columns) || !Array.isArray(table.rows)) return null;
   const names = table.columns.map((c) => (c && c.name) || "");
@@ -143,6 +159,11 @@ function parseAiTable(raw) {
  * first `{` through the last `}` is taken rather than assuming the line is
  * pure JSON. A row whose message does not parse is counted as unparsed and
  * reported — never silently dropped.
+ *
+ * Field names are read across all three shapes this canary has queried:
+ * `message`/`timestamp` (classic API, as projected), `Message`/`Timestamp`
+ * (classic API, PascalCase), and `Message`/`TimeGenerated` (workspace API's
+ * AppTraces column name — #2027, 2026-09-11).
  */
 function parseSummaries(rows) {
   const parsed = [];
@@ -156,7 +177,7 @@ function parseSummaries(rows) {
     try { obj = JSON.parse(msg.slice(a, b + 1)); } catch { unparsed++; continue; }
     if (!obj || obj.event !== "buyeriq_deal_scan_summary") { unparsed++; continue; }
     parsed.push({
-      timestamp: (r && (r.timestamp ?? r.Timestamp)) ?? obj.finishedAt ?? obj.startedAt ?? null,
+      timestamp: (r && (r.timestamp ?? r.Timestamp ?? r.TimeGenerated)) ?? obj.finishedAt ?? obj.startedAt ?? null,
       targetsScanned: Number(obj.targetsScanned ?? 0),
       dealsFound: Number(obj.dealsFound ?? 0),
       notificationsSent: Number(obj.notificationsSent ?? 0),
