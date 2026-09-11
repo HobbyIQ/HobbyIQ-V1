@@ -43,11 +43,29 @@ let cachedSc: Container | null = null;
 let cachedBaseline: Container | null = null;
 
 // CF-ANOMALY-REPORT-CACHE (Drew, 2026-08-02). Full sold_comps scan
-// is expensive (3.5M rows, ~30s under load). Cache the report for
-// 5 minutes in-process so admin dashboard refreshes are instant.
-// Nightly cron passes { force: true } to bypass. Consumer-side
-// staleness of 5min is fine — anomaly detection is a health signal,
-// not a live indicator.
+// is expensive. Cache the report for 5 minutes in-process so admin
+// dashboard refreshes are instant. Nightly cron passes { force: true }
+// to bypass. Consumer-side staleness of 5min is fine — anomaly
+// detection is a health signal, not a live indicator.
+//
+// CF-CLEANLINESS-ANOMALY-BUDGET (2026-09-11, cron canary triage). The
+// "~30s" this comment used to claim is stale and was never re-measured
+// against the current pool size / RU ceiling (sold_comps has grown well
+// past the row count that estimate was based on, and card_catalog +
+// sold_comps RU were both raised to 100k for launch week — see
+// project_cosmos_ru_state_2026_09_07). nightly-cleanliness.yml's forced
+// rescan (?force=true, dispatched via longJobTracker) has now gone two
+// nights straight without a single terminal answer inside
+// poll-admin-job.cjs's 1501s ceiling — this scan is no longer the ~30s
+// job the cache comment describes, and there is currently no signal
+// anywhere (App Insights request telemetry only covers the instant 202
+// dispatch, not the in-process work after it) for how long a forced scan
+// actually takes. Start/finish logging below exists so the NEXT triage
+// has that number instead of re-deriving it from absence. Widening the
+// poller deadline or moving this scan onto the same bounded-lane pattern
+// as baseline-pool-snapshot.cjs (runner-budget clock, paged writes) is
+// the real fix and is deliberately NOT done here — it changes prod
+// scan behavior / cron timing and needs its own reviewed change.
 const ANOMALY_CACHE_TTL_MS = 5 * 60 * 1000;
 let cachedAnomalyReport: { at: number; report: AnomalyReport } | null = null;
 
@@ -87,6 +105,19 @@ export async function detectAnomalies(opts: { force?: boolean } = {}): Promise<A
   const now = Date.now();
   if (!opts.force && cachedAnomalyReport && (now - cachedAnomalyReport.at) < ANOMALY_CACHE_TTL_MS) {
     return cachedAnomalyReport.report;
+  }
+  // CF-CLEANLINESS-ANOMALY-BUDGET (2026-09-11). Only a force=true scan is
+  // slow enough to matter (the cached path above returns in microseconds);
+  // log its wall-clock start/finish so a scan that outruns the nightly
+  // poller's deadline leaves a number behind instead of a silent UNKNOWN.
+  const scanStartedAt = opts.force ? Date.now() : null;
+  if (scanStartedAt) {
+    console.warn(JSON.stringify({
+      event: "anomaly_detection_scan_started",
+      source: "anomalyDetection.service",
+      force: true,
+      startedAt: new Date(scanStartedAt).toISOString(),
+    }));
   }
   const sc = getSc();
   const baseline = await getBaselineContainer();
@@ -171,5 +202,15 @@ export async function detectAnomalies(opts: { force?: boolean } = {}): Promise<A
     computedAt: new Date().toISOString(),
   };
   cachedAnomalyReport = { at: Date.now(), report };
+  if (scanStartedAt) {
+    console.warn(JSON.stringify({
+      event: "anomaly_detection_scan_finished",
+      source: "anomalyDetection.service",
+      force: true,
+      elapsedMs: Date.now() - scanStartedAt,
+      slugsWithBaseline: baselineMap.size,
+      slugsChanged: anomalies.length,
+    }));
+  }
   return report;
 }
