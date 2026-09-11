@@ -135,6 +135,19 @@ const STOCK_WORDS = new Set(["chrome", "paper"]);
  * before this set is consulted, and stock words (chrome / paper) are NOT here
  * because "Chrome Variation" is a real Heritage kind.
  */
+/**
+ * The subset of LEADING_FINISH that is INTRINSIC to the variation rather than
+ * an axis crossed with it -- so a LEADING occurrence is dropped, not moved to
+ * the tail. "All Gimmicks are Refractors" (BCP, 2022 Topps Chrome): there is
+ * no non-Refractor Image Variation for the Refractor word to distinguish.
+ *
+ * Deliberately NARROW. `wave`, `speckle`, `prizm` and the rest stay out: those
+ * name a REAL second card when they appear ("Image Variations Red Speckle
+ * Refractor" is 20 distinct checklistcenter rows), and dropping a leading one
+ * would fuse two pools. The fractor family is the only one BCP declares
+ * intrinsic, and it is the only one measured as a pure duplicate address.
+ */
+const INTRINSIC_LEADING_FINISH = new Set(["refractor", "refractors"]);
 const LEADING_FINISH = new Set([
   "refractor", "refractors", "xfractor", "x-fractor", "superfractor", "superfractors",
   "raywave", "wave", "prizm", "holo", "foil", "atomic", "mojo", "shimmer", "speckle", "sparkle",
@@ -327,8 +340,40 @@ export function normalizeVariationSlug(slug: string): string {
   const withoutImageWords = before.filter((w) => !IMAGE_WORDS.has(w));
   const kindWords = withoutImageWords.length === 0 || KNOWN_KIND_SLUGS.has(withoutImageWords.join("-")) ? withoutImageWords : before;
   const kind = kindWords.length ? kindWords.join("-") : "image";
+  // CF-AN-INTRINSIC-FINISH-IS-NOT-AN-ADDRESS (Drew ruling 20, 2026-09-08 --
+  // COMPLETING #2012). The LEADING_FINISH move above unified the two title
+  // spellings, and unified them onto the WRONG ADDRESS. BCP's own note on the
+  // heading is "All Gimmicks are Refractors": Refractor is INTRINSIC to the
+  // Image Variation, not a finish axis it is crossed with. Our vocabulary for
+  // that card is `Image Variation SP` (Tier 1) and `Image Variation SSP`
+  // (Tier 2), and SP is the default tier the slug does not spell -- so the
+  // checklist row's address is the BARE `image-variation`.
+  //
+  // Measured on 2022 Topps Chrome (2026-09-09, card_catalog):
+  //
+  //   Image Variation SP      20  beckett-scraped-2026-09-01  -> :image-variation:
+  //   Image Variation SSP      5  beckett-scraped-2026-09-01  -> :image-variation-ssp:
+  //   Image Variation Refractor 26  ingest-auto-seed          -> :image-variation-refractor:
+  //   Image Variation Refractor 23  ingest-auto-seed-graded    -> :image-variation-refractor:
+  //
+  // Both title spellings normalised to `image-variation-refractor`, which is
+  // the address ONLY the self-derived seeds occupy. Holding 2b62a93f
+  // (`parallel: "Refractor Image Variation"`) therefore re-derived onto an
+  // ingest-auto-seed row and was reported "checklist-backed" -- a row we
+  // minted from our own sales confirming the sale that minted it.
+  //
+  // So an intrinsic finish that arrived BEFORE the variation word is dropped
+  // rather than re-appended. It is NOT dropped when it FOLLOWS the variation
+  // word: `chromeRefractorSuffixForVariation` (below) documents that a finish
+  // named after the variation is chrome's colour shorthand and a real second
+  // card ("Image Variation Gold Speckle Refractor"), and `after` is left
+  // untouched here for exactly that reason. The move-to-tail therefore only
+  // ever collapses a DUPLICATE address; it never merges two real cards.
   const tail = [...after];
-  for (const w of movedFinish) if (!tail.includes(w)) tail.push(w);
+  for (const w of movedFinish) {
+    if (INTRINSIC_LEADING_FINISH.has(w)) continue;
+    if (!tail.includes(w)) tail.push(w);
+  }
   return [kind, "variation", ...(ssp ? ["ssp"] : []), ...tail].join("-");
 }
 

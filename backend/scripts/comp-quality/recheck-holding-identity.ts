@@ -1442,11 +1442,33 @@ async function rederive(
       continue;
     }
 
+    // CF-THE-VERDICT-MUST-NAME-THE-BACKING-IT-ACTUALLY-HAS (2026-09-09).
+    //
+    // This reason was the LITERAL string "checklist-backed by <source>" for
+    // every destination that had a row at all, because GATE 1 above asks only
+    // whether a row EXISTS ("no catalog row backs the derived slug"), never
+    // what CLASS that row is. A destination whose only row is self-derived was
+    // therefore reported as checklist-backed by the very source name that
+    // proves it is not: holding 2b62a93f re-derived onto
+    // `...:221:image-variation-refractor:no-auto` and the report read
+    // "checklist-backed by ingest-auto-seed".
+    //
+    // `ingest-auto-seed` is ALREADY classified `derived` by catalogAuthorityOf
+    // and `self-derived-only` by identityBackingOf -- the classifier was never
+    // wrong and is not touched here. What was wrong is that this line did not
+    // ASK either of them, and a hand-written label that cannot disagree with
+    // its subject is not a report. So the verdict states the backing it
+    // MEASURED, and the seeded case reads "self-derived-only" where it is one.
+    const destBacking = identityBackingOf(destination, [{
+      source: destinationBacking.source,
+      id: destinationBacking.id,
+      playerName: destinationBacking.playerName ?? null,
+    }]);
     push({ to: destination, backedBy: destinationBacking.source, verdict: "REDERIVE",
-      reason: `checklist-backed by ${destinationBacking.source}`, matchedBy: r.matchedBy, confidence: r.confidence,
+      reason: `${destBacking} by ${destinationBacking.source}`, matchedBy: r.matchedBy, confidence: r.confidence,
       recoveredFields, userAuthored: false,
       rowPlayer: destinationBacking.playerName ?? null });
-    console.log(`  REDERIVE   ${label}\n             ${from}\n          -> ${destination}   (${r.matchedBy}, conf ${r.confidence})  backed by ${destinationBacking.source}, names ${JSON.stringify(destinationBacking.playerName ?? null)}${destinationBacking.setName ? ` — "${destinationBacking.setName}"` : ""}`);
+    console.log(`  REDERIVE   ${label}\n             ${from}\n          -> ${destination}   (${r.matchedBy}, conf ${r.confidence})  ${destBacking} by ${destinationBacking.source}, names ${JSON.stringify(destinationBacking.playerName ?? null)}${destinationBacking.setName ? ` — "${destinationBacking.setName}"` : ""}`);
   }
 
   const counts = verdicts.reduce<Record<string, number>>((a, v) => { a[v.verdict] = (a[v.verdict] ?? 0) + 1; return a; }, {});

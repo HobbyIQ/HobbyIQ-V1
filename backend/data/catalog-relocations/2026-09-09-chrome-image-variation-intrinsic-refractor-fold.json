@@ -1,0 +1,621 @@
+{
+ "generatedAt": "2026-09-11T19:20:05.544Z",
+ "forLane": "relocate-catalog-rows-by-list",
+ "reportOnlyUntil": "Drew's review -- no apply is authorized by this PR",
+ "finding": "CF-AN-INTRINSIC-FINISH-IS-NOT-AN-ADDRESS (Drew ruling 20, 2026-09-08; completing PR #2012). Refractor is INTRINSIC to the 2022 Topps Chrome Image Variation -- BCP's own heading note is \"All Gimmicks are Refractors\" -- so `:image-variation-refractor:` and `:image-variation:` are ONE card at two addresses. Measured 2026-09-09 over 2022 Topps Chrome baseball: the Refractor-suffixed address is occupied ONLY by ingest-auto-seed rows (26 ungraded + 23 graded), while the Image Variation SP (20) and SSP (5) checklist rows from beckett-scraped-2026-09-01 sit on the bare address. #2012 fixed the normalizer to unify the two TITLE spellings and unified them onto the SEEDED address, so holding 2b62a93f re-derived onto an ingest-auto-seed row and was reported checklist-backed by a row minted from our own sales. The normalizer fix in this PR sends the leading-finish spelling to the checklist address; this list retires the seeded twins it leaves behind. SCOPE IS sport=baseball AND year=2022 AND setKey=topps-chrome ONLY: catalog-wide the same address string carries 1,183 `checklist` and 95 checklistcenter rows in OTHER products, and not one is touched. A seeded row whose number has NO SP/SSP row is PARKED, never retired: #221 (the holding's own card), #112, #114, #223, #25, #96 and #4 are not in Beckett's Tier 1/Tier 2 lists, and #113's SP row names Jarren Duran where the seed names Hunter Greene.",
+ "counts": {
+  "retire": 33,
+  "park": 14,
+  "salesCarried": 15,
+  "bySource": {
+   "ingest-auto-seed-graded": 23,
+   "ingest-auto-seed": 24
+  }
+ },
+ "entries": [
+  {
+   "id": "hiq:baseball:2022:topps-chrome:128:image-variation-refractor:no-auto:sgc-9",
+   "action": "retire",
+   "foldTo": "hiq:baseball:2022:topps-chrome:128:image-variation:no-auto:sgc-9",
+   "reason": "CF-AN-INTRINSIC-FINISH-IS-NOT-AN-ADDRESS: an ingest-auto-seed row at the Refractor-suffixed address for a card whose Image Variation SP/SSP checklist row (beckett-scraped-2026-09-01, \"Oneil Cruz\") is hiq:baseball:2022:topps-chrome:128:image-variation:no-auto:sgc-9. Refractor is intrinsic to the variation (\"All Gimmicks are Refractors\"), so these are one card at two addresses and the seeded one is the self-derived twin. No sales.",
+   "evidence": {
+    "source": "ingest-auto-seed-graded",
+    "player": "Oneil Cruz",
+    "cardNumber": "128",
+    "parallel": "Image Variation Refractor",
+    "sales": 0
+   }
+  },
+  {
+   "id": "hiq:baseball:2022:topps-chrome:81:image-variation-refractor:no-auto:psa-9",
+   "action": "retire",
+   "foldTo": "hiq:baseball:2022:topps-chrome:81:image-variation:no-auto:psa-9",
+   "reason": "CF-AN-INTRINSIC-FINISH-IS-NOT-AN-ADDRESS: an ingest-auto-seed row at the Refractor-suffixed address for a card whose Image Variation SP/SSP checklist row (beckett-scraped-2026-09-01, \"Vladimir Guerrero Jr.\") is hiq:baseball:2022:topps-chrome:81:image-variation:no-auto:psa-9. Refractor is intrinsic to the variation (\"All Gimmicks are Refractors\"), so these are one card at two addresses and the seeded one is the self-derived twin. No sales.",
+   "evidence": {
+    "source": "ingest-auto-seed-graded",
+    "player": "Vladimir Guerrero Jr.",
+    "cardNumber": "81",
+    "parallel": "Image Variation Refractor",
+    "sales": 0
+   }
+  },
+  {
+   "id": "hiq:baseball:2022:topps-chrome:99:image-variation-refractor:no-auto",
+   "action": "retire",
+   "foldTo": "hiq:baseball:2022:topps-chrome:99:image-variation:no-auto",
+   "reason": "CF-AN-INTRINSIC-FINISH-IS-NOT-AN-ADDRESS: an ingest-auto-seed row at the Refractor-suffixed address for a card whose Image Variation SP/SSP checklist row (beckett-scraped-2026-09-01, \"Aaron Judge\") is hiq:baseball:2022:topps-chrome:99:image-variation:no-auto. Refractor is intrinsic to the variation (\"All Gimmicks are Refractors\"), so these are one card at two addresses and the seeded one is the self-derived twin. No sales.",
+   "evidence": {
+    "source": "ingest-auto-seed",
+    "player": "Aaron Judge",
+    "cardNumber": "99",
+    "parallel": "Image Variation Refractor",
+    "sales": 0
+   }
+  },
+  {
+   "id": "hiq:baseball:2022:topps-chrome:133:image-variation-refractor:no-auto",
+   "action": "retire",
+   "foldTo": "hiq:baseball:2022:topps-chrome:133:image-variation:no-auto",
+   "reason": "CF-AN-INTRINSIC-FINISH-IS-NOT-AN-ADDRESS: an ingest-auto-seed row at the Refractor-suffixed address for a card whose Image Variation SP/SSP checklist row (beckett-scraped-2026-09-01, \"Brandon Marsh\") is hiq:baseball:2022:topps-chrome:133:image-variation:no-auto. Refractor is intrinsic to the variation (\"All Gimmicks are Refractors\"), so these are one card at two addresses and the seeded one is the self-derived twin. No sales.",
+   "evidence": {
+    "source": "ingest-auto-seed",
+    "player": "Brandon Marsh",
+    "cardNumber": "133",
+    "parallel": "Image Variation Refractor",
+    "sales": 0
+   }
+  },
+  {
+   "id": "hiq:baseball:2022:topps-chrome:220:image-variation-refractor:no-auto:psa-8",
+   "action": "retire",
+   "foldTo": "hiq:baseball:2022:topps-chrome:220:image-variation:no-auto:psa-8",
+   "reason": "CF-AN-INTRINSIC-FINISH-IS-NOT-AN-ADDRESS: an ingest-auto-seed row at the Refractor-suffixed address for a card whose Image Variation SP/SSP checklist row (beckett-scraped-2026-09-01, \"Bryce Harper\") is hiq:baseball:2022:topps-chrome:220:image-variation:no-auto:psa-8. Refractor is intrinsic to the variation (\"All Gimmicks are Refractors\"), so these are one card at two addresses and the seeded one is the self-derived twin. No sales.",
+   "evidence": {
+    "source": "ingest-auto-seed-graded",
+    "player": "Bryce Harper",
+    "cardNumber": "220",
+    "parallel": "Image Variation Refractor",
+    "sales": 0
+   }
+  },
+  {
+   "id": "hiq:baseball:2022:topps-chrome:6:image-variation-refractor:no-auto",
+   "action": "retire",
+   "foldTo": "hiq:baseball:2022:topps-chrome:6:image-variation:no-auto",
+   "reason": "CF-AN-INTRINSIC-FINISH-IS-NOT-AN-ADDRESS: an ingest-auto-seed row at the Refractor-suffixed address for a card whose Image Variation SP/SSP checklist row (beckett-scraped-2026-09-01, \"Jose Altuve\") is hiq:baseball:2022:topps-chrome:6:image-variation:no-auto. Refractor is intrinsic to the variation (\"All Gimmicks are Refractors\"), so these are one card at two addresses and the seeded one is the self-derived twin. Carries 1 sale(s); keepSales so the GREAT REMATCH re-places them onto the checklist row.",
+   "evidence": {
+    "source": "ingest-auto-seed",
+    "player": "Jose Altuve",
+    "cardNumber": "6",
+    "parallel": "Image Variation Refractor",
+    "sales": 1
+   },
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:2022:topps-chrome:96:image-variation-refractor:no-auto",
+   "action": "retire",
+   "foldTo": "hiq:baseball:2022:topps-chrome:96:image-variation:no-auto",
+   "reason": "CF-AN-INTRINSIC-FINISH-IS-NOT-AN-ADDRESS: an ingest-auto-seed row at the Refractor-suffixed address for a card whose Image Variation SP/SSP checklist row (beckett-scraped-2026-09-01, \"Miguel Cabrera\") is hiq:baseball:2022:topps-chrome:96:image-variation:no-auto. Refractor is intrinsic to the variation (\"All Gimmicks are Refractors\"), so these are one card at two addresses and the seeded one is the self-derived twin. No sales.",
+   "evidence": {
+    "source": "ingest-auto-seed",
+    "player": "Miguel Cabrera",
+    "cardNumber": "96",
+    "parallel": "Image Variation Refractor",
+    "sales": 0
+   }
+  },
+  {
+   "id": "hiq:baseball:2022:topps-chrome:81:image-variation-refractor:no-auto",
+   "action": "retire",
+   "foldTo": "hiq:baseball:2022:topps-chrome:81:image-variation:no-auto",
+   "reason": "CF-AN-INTRINSIC-FINISH-IS-NOT-AN-ADDRESS: an ingest-auto-seed row at the Refractor-suffixed address for a card whose Image Variation SP/SSP checklist row (beckett-scraped-2026-09-01, \"Vladimir Guerrero Jr.\") is hiq:baseball:2022:topps-chrome:81:image-variation:no-auto. Refractor is intrinsic to the variation (\"All Gimmicks are Refractors\"), so these are one card at two addresses and the seeded one is the self-derived twin. Carries 2 sale(s); keepSales so the GREAT REMATCH re-places them onto the checklist row.",
+   "evidence": {
+    "source": "ingest-auto-seed",
+    "player": "Vladimir Guerrero Jr.",
+    "cardNumber": "81",
+    "parallel": "Image Variation Refractor",
+    "sales": 2
+   },
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:2022:topps-chrome:35:image-variation-refractor:no-auto",
+   "action": "retire",
+   "foldTo": "hiq:baseball:2022:topps-chrome:35:image-variation:no-auto",
+   "reason": "CF-AN-INTRINSIC-FINISH-IS-NOT-AN-ADDRESS: an ingest-auto-seed row at the Refractor-suffixed address for a card whose Image Variation SP/SSP checklist row (beckett-scraped-2026-09-01, \"Wander Franco\") is hiq:baseball:2022:topps-chrome:35:image-variation:no-auto. Refractor is intrinsic to the variation (\"All Gimmicks are Refractors\"), so these are one card at two addresses and the seeded one is the self-derived twin. No sales.",
+   "evidence": {
+    "source": "ingest-auto-seed",
+    "player": "Wander Franco",
+    "cardNumber": "35",
+    "parallel": "Image Variation Refractor",
+    "sales": 0
+   }
+  },
+  {
+   "id": "hiq:baseball:2022:topps-chrome:220:image-variation-refractor:no-auto",
+   "action": "retire",
+   "foldTo": "hiq:baseball:2022:topps-chrome:220:image-variation:no-auto",
+   "reason": "CF-AN-INTRINSIC-FINISH-IS-NOT-AN-ADDRESS: an ingest-auto-seed row at the Refractor-suffixed address for a card whose Image Variation SP/SSP checklist row (beckett-scraped-2026-09-01, \"Bryce Harper\") is hiq:baseball:2022:topps-chrome:220:image-variation:no-auto. Refractor is intrinsic to the variation (\"All Gimmicks are Refractors\"), so these are one card at two addresses and the seeded one is the self-derived twin. Carries 2 sale(s); keepSales so the GREAT REMATCH re-places them onto the checklist row.",
+   "evidence": {
+    "source": "ingest-auto-seed",
+    "player": "Bryce Harper",
+    "cardNumber": "220",
+    "parallel": "Image Variation Refractor",
+    "sales": 2
+   },
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:2022:topps-chrome:128:image-variation-refractor:no-auto:bgs-9",
+   "action": "retire",
+   "foldTo": "hiq:baseball:2022:topps-chrome:128:image-variation:no-auto:bgs-9",
+   "reason": "CF-AN-INTRINSIC-FINISH-IS-NOT-AN-ADDRESS: an ingest-auto-seed row at the Refractor-suffixed address for a card whose Image Variation SP/SSP checklist row (beckett-scraped-2026-09-01, \"Oneil Cruz\") is hiq:baseball:2022:topps-chrome:128:image-variation:no-auto:bgs-9. Refractor is intrinsic to the variation (\"All Gimmicks are Refractors\"), so these are one card at two addresses and the seeded one is the self-derived twin. No sales.",
+   "evidence": {
+    "source": "ingest-auto-seed-graded",
+    "player": "Oneil Cruz",
+    "cardNumber": "128",
+    "parallel": "Image Variation Refractor",
+    "sales": 0
+   }
+  },
+  {
+   "id": "hiq:baseball:2022:topps-chrome:177:image-variation-refractor:no-auto",
+   "action": "retire",
+   "foldTo": "hiq:baseball:2022:topps-chrome:177:image-variation:no-auto",
+   "reason": "CF-AN-INTRINSIC-FINISH-IS-NOT-AN-ADDRESS: an ingest-auto-seed row at the Refractor-suffixed address for a card whose Image Variation SP/SSP checklist row (beckett-scraped-2026-09-01, \"Joey Votto\") is hiq:baseball:2022:topps-chrome:177:image-variation:no-auto. Refractor is intrinsic to the variation (\"All Gimmicks are Refractors\"), so these are one card at two addresses and the seeded one is the self-derived twin. No sales.",
+   "evidence": {
+    "source": "ingest-auto-seed",
+    "player": "Joey Votto",
+    "cardNumber": "177",
+    "parallel": "Image Variation Refractor",
+    "sales": 0
+   }
+  },
+  {
+   "id": "hiq:baseball:2022:topps-chrome:66:image-variation-refractor:no-auto",
+   "action": "retire",
+   "foldTo": "hiq:baseball:2022:topps-chrome:66:image-variation:no-auto",
+   "reason": "CF-AN-INTRINSIC-FINISH-IS-NOT-AN-ADDRESS: an ingest-auto-seed row at the Refractor-suffixed address for a card whose Image Variation SP/SSP checklist row (beckett-scraped-2026-09-01, \"Max Scherzer\") is hiq:baseball:2022:topps-chrome:66:image-variation:no-auto. Refractor is intrinsic to the variation (\"All Gimmicks are Refractors\"), so these are one card at two addresses and the seeded one is the self-derived twin. No sales.",
+   "evidence": {
+    "source": "ingest-auto-seed",
+    "player": "Max Scherzer",
+    "cardNumber": "66",
+    "parallel": "Image Variation Refractor",
+    "sales": 0
+   }
+  },
+  {
+   "id": "hiq:baseball:2022:topps-chrome:150:image-variation-refractor:no-auto:psa-10",
+   "action": "retire",
+   "foldTo": "hiq:baseball:2022:topps-chrome:150:image-variation:no-auto:psa-10",
+   "reason": "CF-AN-INTRINSIC-FINISH-IS-NOT-AN-ADDRESS: an ingest-auto-seed row at the Refractor-suffixed address for a card whose Image Variation SP/SSP checklist row (beckett-scraped-2026-09-01, \"Fernando Tatis Jr.\") is hiq:baseball:2022:topps-chrome:150:image-variation:no-auto:psa-10. Refractor is intrinsic to the variation (\"All Gimmicks are Refractors\"), so these are one card at two addresses and the seeded one is the self-derived twin. No sales.",
+   "evidence": {
+    "source": "ingest-auto-seed-graded",
+    "player": "Fernando Tatis Jr.",
+    "cardNumber": "150",
+    "parallel": "Image Variation Refractor",
+    "sales": 0
+   }
+  },
+  {
+   "id": "hiq:baseball:2022:topps-chrome:1:image-variation-refractor:no-auto",
+   "action": "retire",
+   "foldTo": "hiq:baseball:2022:topps-chrome:1:image-variation:no-auto",
+   "reason": "CF-AN-INTRINSIC-FINISH-IS-NOT-AN-ADDRESS: an ingest-auto-seed row at the Refractor-suffixed address for a card whose Image Variation SP/SSP checklist row (beckett-scraped-2026-09-01, \"Shohei Ohtani\") is hiq:baseball:2022:topps-chrome:1:image-variation:no-auto. Refractor is intrinsic to the variation (\"All Gimmicks are Refractors\"), so these are one card at two addresses and the seeded one is the self-derived twin. No sales.",
+   "evidence": {
+    "source": "ingest-auto-seed",
+    "player": "Shohei Ohtani",
+    "cardNumber": "1",
+    "parallel": "Image Variation Refractor",
+    "sales": 0
+   }
+  },
+  {
+   "id": "hiq:baseball:2022:topps-chrome:200:image-variation-refractor:no-auto:psa-9",
+   "action": "retire",
+   "foldTo": "hiq:baseball:2022:topps-chrome:200:image-variation:no-auto:psa-9",
+   "reason": "CF-AN-INTRINSIC-FINISH-IS-NOT-AN-ADDRESS: an ingest-auto-seed row at the Refractor-suffixed address for a card whose Image Variation SP/SSP checklist row (beckett-scraped-2026-09-01, \"Mike Trout\") is hiq:baseball:2022:topps-chrome:200:image-variation:no-auto:psa-9. Refractor is intrinsic to the variation (\"All Gimmicks are Refractors\"), so these are one card at two addresses and the seeded one is the self-derived twin. No sales.",
+   "evidence": {
+    "source": "ingest-auto-seed-graded",
+    "player": "Mike Trout",
+    "cardNumber": "200",
+    "parallel": "Image Variation Refractor",
+    "sales": 0
+   }
+  },
+  {
+   "id": "hiq:baseball:2022:topps-chrome:201:image-variation-refractor:no-auto",
+   "action": "retire",
+   "foldTo": "hiq:baseball:2022:topps-chrome:201:image-variation:no-auto",
+   "reason": "CF-AN-INTRINSIC-FINISH-IS-NOT-AN-ADDRESS: an ingest-auto-seed row at the Refractor-suffixed address for a card whose Image Variation SP/SSP checklist row (beckett-scraped-2026-09-01, \"Shane Baz\") is hiq:baseball:2022:topps-chrome:201:image-variation:no-auto. Refractor is intrinsic to the variation (\"All Gimmicks are Refractors\"), so these are one card at two addresses and the seeded one is the self-derived twin. No sales.",
+   "evidence": {
+    "source": "ingest-auto-seed",
+    "player": "Shane Baz",
+    "cardNumber": "201",
+    "parallel": "Image Variation Refractor",
+    "sales": 0
+   }
+  },
+  {
+   "id": "hiq:baseball:2022:topps-chrome:166:image-variation-refractor:no-auto",
+   "action": "retire",
+   "foldTo": "hiq:baseball:2022:topps-chrome:166:image-variation:no-auto",
+   "reason": "CF-AN-INTRINSIC-FINISH-IS-NOT-AN-ADDRESS: an ingest-auto-seed row at the Refractor-suffixed address for a card whose Image Variation SP/SSP checklist row (beckett-scraped-2026-09-01, \"Francisco Lindor\") is hiq:baseball:2022:topps-chrome:166:image-variation:no-auto. Refractor is intrinsic to the variation (\"All Gimmicks are Refractors\"), so these are one card at two addresses and the seeded one is the self-derived twin. No sales.",
+   "evidence": {
+    "source": "ingest-auto-seed",
+    "player": "Francisco Lindor",
+    "cardNumber": "166",
+    "parallel": "Image Variation Refractor",
+    "sales": 0
+   }
+  },
+  {
+   "id": "hiq:baseball:2022:topps-chrome:6:image-variation-refractor:no-auto:psa-10",
+   "action": "retire",
+   "foldTo": "hiq:baseball:2022:topps-chrome:6:image-variation:no-auto:psa-10",
+   "reason": "CF-AN-INTRINSIC-FINISH-IS-NOT-AN-ADDRESS: an ingest-auto-seed row at the Refractor-suffixed address for a card whose Image Variation SP/SSP checklist row (beckett-scraped-2026-09-01, \"Jose Altuve\") is hiq:baseball:2022:topps-chrome:6:image-variation:no-auto:psa-10. Refractor is intrinsic to the variation (\"All Gimmicks are Refractors\"), so these are one card at two addresses and the seeded one is the self-derived twin. No sales.",
+   "evidence": {
+    "source": "ingest-auto-seed-graded",
+    "player": "Jose Altuve",
+    "cardNumber": "6",
+    "parallel": "Image Variation Refractor",
+    "sales": 0
+   }
+  },
+  {
+   "id": "hiq:baseball:2022:topps-chrome:35:image-variation-refractor:no-auto:bgs-9",
+   "action": "retire",
+   "foldTo": "hiq:baseball:2022:topps-chrome:35:image-variation:no-auto:bgs-9",
+   "reason": "CF-AN-INTRINSIC-FINISH-IS-NOT-AN-ADDRESS: an ingest-auto-seed row at the Refractor-suffixed address for a card whose Image Variation SP/SSP checklist row (beckett-scraped-2026-09-01, \"Wander Franco\") is hiq:baseball:2022:topps-chrome:35:image-variation:no-auto:bgs-9. Refractor is intrinsic to the variation (\"All Gimmicks are Refractors\"), so these are one card at two addresses and the seeded one is the self-derived twin. No sales.",
+   "evidence": {
+    "source": "ingest-auto-seed-graded",
+    "player": "Wander Franco",
+    "cardNumber": "35",
+    "parallel": "Image Variation Refractor",
+    "sales": 0
+   }
+  },
+  {
+   "id": "hiq:baseball:2022:topps-chrome:150:image-variation-refractor:no-auto",
+   "action": "retire",
+   "foldTo": "hiq:baseball:2022:topps-chrome:150:image-variation:no-auto",
+   "reason": "CF-AN-INTRINSIC-FINISH-IS-NOT-AN-ADDRESS: an ingest-auto-seed row at the Refractor-suffixed address for a card whose Image Variation SP/SSP checklist row (beckett-scraped-2026-09-01, \"Fernando Tatis Jr.\") is hiq:baseball:2022:topps-chrome:150:image-variation:no-auto. Refractor is intrinsic to the variation (\"All Gimmicks are Refractors\"), so these are one card at two addresses and the seeded one is the self-derived twin. Carries 2 sale(s); keepSales so the GREAT REMATCH re-places them onto the checklist row.",
+   "evidence": {
+    "source": "ingest-auto-seed",
+    "player": "Fernando Tatis Jr.",
+    "cardNumber": "150",
+    "parallel": "Image Variation Refractor",
+    "sales": 2
+   },
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:2022:topps-chrome:201:image-variation-refractor:no-auto:sgc-10",
+   "action": "retire",
+   "foldTo": "hiq:baseball:2022:topps-chrome:201:image-variation:no-auto:sgc-10",
+   "reason": "CF-AN-INTRINSIC-FINISH-IS-NOT-AN-ADDRESS: an ingest-auto-seed row at the Refractor-suffixed address for a card whose Image Variation SP/SSP checklist row (beckett-scraped-2026-09-01, \"Shane Baz\") is hiq:baseball:2022:topps-chrome:201:image-variation:no-auto:sgc-10. Refractor is intrinsic to the variation (\"All Gimmicks are Refractors\"), so these are one card at two addresses and the seeded one is the self-derived twin. No sales.",
+   "evidence": {
+    "source": "ingest-auto-seed-graded",
+    "player": "Shane Baz",
+    "cardNumber": "201",
+    "parallel": "Image Variation Refractor",
+    "sales": 0
+   }
+  },
+  {
+   "id": "hiq:baseball:2022:topps-chrome:14:image-variation-refractor:no-auto",
+   "action": "retire",
+   "foldTo": "hiq:baseball:2022:topps-chrome:14:image-variation:no-auto",
+   "reason": "CF-AN-INTRINSIC-FINISH-IS-NOT-AN-ADDRESS: an ingest-auto-seed row at the Refractor-suffixed address for a card whose Image Variation SP/SSP checklist row (beckett-scraped-2026-09-01, \"Freddie Freeman\") is hiq:baseball:2022:topps-chrome:14:image-variation:no-auto. Refractor is intrinsic to the variation (\"All Gimmicks are Refractors\"), so these are one card at two addresses and the seeded one is the self-derived twin. No sales.",
+   "evidence": {
+    "source": "ingest-auto-seed",
+    "player": "Freddie Freeman",
+    "cardNumber": "14",
+    "parallel": "Image Variation Refractor",
+    "sales": 0
+   }
+  },
+  {
+   "id": "hiq:baseball:2022:topps-chrome:128:image-variation-refractor:no-auto",
+   "action": "retire",
+   "foldTo": "hiq:baseball:2022:topps-chrome:128:image-variation:no-auto",
+   "reason": "CF-AN-INTRINSIC-FINISH-IS-NOT-AN-ADDRESS: an ingest-auto-seed row at the Refractor-suffixed address for a card whose Image Variation SP/SSP checklist row (beckett-scraped-2026-09-01, \"Oneil Cruz\") is hiq:baseball:2022:topps-chrome:128:image-variation:no-auto. Refractor is intrinsic to the variation (\"All Gimmicks are Refractors\"), so these are one card at two addresses and the seeded one is the self-derived twin. Carries 1 sale(s); keepSales so the GREAT REMATCH re-places them onto the checklist row.",
+   "evidence": {
+    "source": "ingest-auto-seed",
+    "player": "Oneil Cruz",
+    "cardNumber": "128",
+    "parallel": "Image Variation Refractor",
+    "sales": 1
+   },
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:2022:topps-chrome:129:image-variation-refractor:no-auto",
+   "action": "retire",
+   "foldTo": "hiq:baseball:2022:topps-chrome:129:image-variation:no-auto",
+   "reason": "CF-AN-INTRINSIC-FINISH-IS-NOT-AN-ADDRESS: an ingest-auto-seed row at the Refractor-suffixed address for a card whose Image Variation SP/SSP checklist row (beckett-scraped-2026-09-01, \"Juan Soto\") is hiq:baseball:2022:topps-chrome:129:image-variation:no-auto. Refractor is intrinsic to the variation (\"All Gimmicks are Refractors\"), so these are one card at two addresses and the seeded one is the self-derived twin. Carries 1 sale(s); keepSales so the GREAT REMATCH re-places them onto the checklist row.",
+   "evidence": {
+    "source": "ingest-auto-seed",
+    "player": "Juan Soto",
+    "cardNumber": "129",
+    "parallel": "Image Variation Refractor",
+    "sales": 1
+   },
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:2022:topps-chrome:129:image-variation-refractor:no-auto:psa-8",
+   "action": "retire",
+   "foldTo": "hiq:baseball:2022:topps-chrome:129:image-variation:no-auto:psa-8",
+   "reason": "CF-AN-INTRINSIC-FINISH-IS-NOT-AN-ADDRESS: an ingest-auto-seed row at the Refractor-suffixed address for a card whose Image Variation SP/SSP checklist row (beckett-scraped-2026-09-01, \"Juan Soto\") is hiq:baseball:2022:topps-chrome:129:image-variation:no-auto:psa-8. Refractor is intrinsic to the variation (\"All Gimmicks are Refractors\"), so these are one card at two addresses and the seeded one is the self-derived twin. No sales.",
+   "evidence": {
+    "source": "ingest-auto-seed-graded",
+    "player": "Juan Soto",
+    "cardNumber": "129",
+    "parallel": "Image Variation Refractor",
+    "sales": 0
+   }
+  },
+  {
+   "id": "hiq:baseball:2022:topps-chrome:1:image-variation-refractor:no-auto:psa-10",
+   "action": "retire",
+   "foldTo": "hiq:baseball:2022:topps-chrome:1:image-variation:no-auto:psa-10",
+   "reason": "CF-AN-INTRINSIC-FINISH-IS-NOT-AN-ADDRESS: an ingest-auto-seed row at the Refractor-suffixed address for a card whose Image Variation SP/SSP checklist row (beckett-scraped-2026-09-01, \"Shohei Ohtani\") is hiq:baseball:2022:topps-chrome:1:image-variation:no-auto:psa-10. Refractor is intrinsic to the variation (\"All Gimmicks are Refractors\"), so these are one card at two addresses and the seeded one is the self-derived twin. No sales.",
+   "evidence": {
+    "source": "ingest-auto-seed-graded",
+    "player": "Shohei Ohtani",
+    "cardNumber": "1",
+    "parallel": "Image Variation Refractor",
+    "sales": 0
+   }
+  },
+  {
+   "id": "hiq:baseball:2022:topps-chrome:1:image-variation-refractor:no-auto:sgc-10",
+   "action": "retire",
+   "foldTo": "hiq:baseball:2022:topps-chrome:1:image-variation:no-auto:sgc-10",
+   "reason": "CF-AN-INTRINSIC-FINISH-IS-NOT-AN-ADDRESS: an ingest-auto-seed row at the Refractor-suffixed address for a card whose Image Variation SP/SSP checklist row (beckett-scraped-2026-09-01, \"Shohei Ohtani\") is hiq:baseball:2022:topps-chrome:1:image-variation:no-auto:sgc-10. Refractor is intrinsic to the variation (\"All Gimmicks are Refractors\"), so these are one card at two addresses and the seeded one is the self-derived twin. No sales.",
+   "evidence": {
+    "source": "ingest-auto-seed-graded",
+    "player": "Shohei Ohtani",
+    "cardNumber": "1",
+    "parallel": "Image Variation Refractor",
+    "sales": 0
+   }
+  },
+  {
+   "id": "hiq:baseball:2022:topps-chrome:200:image-variation-refractor:no-auto",
+   "action": "retire",
+   "foldTo": "hiq:baseball:2022:topps-chrome:200:image-variation:no-auto",
+   "reason": "CF-AN-INTRINSIC-FINISH-IS-NOT-AN-ADDRESS: an ingest-auto-seed row at the Refractor-suffixed address for a card whose Image Variation SP/SSP checklist row (beckett-scraped-2026-09-01, \"Mike Trout\") is hiq:baseball:2022:topps-chrome:200:image-variation:no-auto. Refractor is intrinsic to the variation (\"All Gimmicks are Refractors\"), so these are one card at two addresses and the seeded one is the self-derived twin. Carries 6 sale(s); keepSales so the GREAT REMATCH re-places them onto the checklist row.",
+   "evidence": {
+    "source": "ingest-auto-seed",
+    "player": "Mike Trout",
+    "cardNumber": "200",
+    "parallel": "Image Variation Refractor",
+    "sales": 6
+   },
+   "keepSales": true
+  },
+  {
+   "id": "hiq:baseball:2022:topps-chrome:200:image-variation-refractor:no-auto:psa-10",
+   "action": "retire",
+   "foldTo": "hiq:baseball:2022:topps-chrome:200:image-variation:no-auto:psa-10",
+   "reason": "CF-AN-INTRINSIC-FINISH-IS-NOT-AN-ADDRESS: an ingest-auto-seed row at the Refractor-suffixed address for a card whose Image Variation SP/SSP checklist row (beckett-scraped-2026-09-01, \"Mike Trout\") is hiq:baseball:2022:topps-chrome:200:image-variation:no-auto:psa-10. Refractor is intrinsic to the variation (\"All Gimmicks are Refractors\"), so these are one card at two addresses and the seeded one is the self-derived twin. No sales.",
+   "evidence": {
+    "source": "ingest-auto-seed-graded",
+    "player": "Mike Trout",
+    "cardNumber": "200",
+    "parallel": "Image Variation Refractor",
+    "sales": 0
+   }
+  },
+  {
+   "id": "hiq:baseball:2022:topps-chrome:1:image-variation-refractor:no-auto:psa-9",
+   "action": "retire",
+   "foldTo": "hiq:baseball:2022:topps-chrome:1:image-variation:no-auto:psa-9",
+   "reason": "CF-AN-INTRINSIC-FINISH-IS-NOT-AN-ADDRESS: an ingest-auto-seed row at the Refractor-suffixed address for a card whose Image Variation SP/SSP checklist row (beckett-scraped-2026-09-01, \"Shohei Ohtani\") is hiq:baseball:2022:topps-chrome:1:image-variation:no-auto:psa-9. Refractor is intrinsic to the variation (\"All Gimmicks are Refractors\"), so these are one card at two addresses and the seeded one is the self-derived twin. No sales.",
+   "evidence": {
+    "source": "ingest-auto-seed-graded",
+    "player": "Shohei Ohtani",
+    "cardNumber": "1",
+    "parallel": "Image Variation Refractor",
+    "sales": 0
+   }
+  },
+  {
+   "id": "hiq:baseball:2022:topps-chrome:220:image-variation-refractor:no-auto:psa-10",
+   "action": "retire",
+   "foldTo": "hiq:baseball:2022:topps-chrome:220:image-variation:no-auto:psa-10",
+   "reason": "CF-AN-INTRINSIC-FINISH-IS-NOT-AN-ADDRESS: an ingest-auto-seed row at the Refractor-suffixed address for a card whose Image Variation SP/SSP checklist row (beckett-scraped-2026-09-01, \"Bryce Harper\") is hiq:baseball:2022:topps-chrome:220:image-variation:no-auto:psa-10. Refractor is intrinsic to the variation (\"All Gimmicks are Refractors\"), so these are one card at two addresses and the seeded one is the self-derived twin. No sales.",
+   "evidence": {
+    "source": "ingest-auto-seed-graded",
+    "player": "Bryce Harper",
+    "cardNumber": "220",
+    "parallel": "Image Variation Refractor",
+    "sales": 0
+   }
+  },
+  {
+   "id": "hiq:baseball:2022:topps-chrome:1:image-variation-refractor:no-auto:psa-8",
+   "action": "retire",
+   "foldTo": "hiq:baseball:2022:topps-chrome:1:image-variation:no-auto:psa-8",
+   "reason": "CF-AN-INTRINSIC-FINISH-IS-NOT-AN-ADDRESS: an ingest-auto-seed row at the Refractor-suffixed address for a card whose Image Variation SP/SSP checklist row (beckett-scraped-2026-09-01, \"Shohei Ohtani\") is hiq:baseball:2022:topps-chrome:1:image-variation:no-auto:psa-8. Refractor is intrinsic to the variation (\"All Gimmicks are Refractors\"), so these are one card at two addresses and the seeded one is the self-derived twin. No sales.",
+   "evidence": {
+    "source": "ingest-auto-seed-graded",
+    "player": "Shohei Ohtani",
+    "cardNumber": "1",
+    "parallel": "Image Variation Refractor",
+    "sales": 0
+   }
+  },
+  {
+   "id": "hiq:baseball:2022:topps-chrome:112:image-variation-refractor:no-auto:psa-9",
+   "action": "park",
+   "reason": "PARKED, NOT RETIRED: no Image Variation SP/SSP row at this number - Beckett Tier 1/Tier 2 does not list it. A seeded row with no checklist twin is an ACQUISITION QUEUE ENTRY, not a duplicate -- retiring it would delete the only row a real card has. Holding 2b62a93f sits on #221, and Beckett Tier 1/Tier 2 does not list #221: whether that card exists is a checklist question, not a fold.",
+   "evidence": {
+    "source": "ingest-auto-seed-graded",
+    "player": "Bobby Witt Jr.",
+    "cardNumber": "112",
+    "parallel": "Image Variation Refractor",
+    "sales": 0
+   }
+  },
+  {
+   "id": "hiq:baseball:2022:topps-chrome:25:image-variation-refractor:auto:num-25",
+   "action": "park",
+   "reason": "PARKED, NOT RETIRED: no Image Variation SP/SSP row at this number - Beckett Tier 1/Tier 2 does not list it. A seeded row with no checklist twin is an ACQUISITION QUEUE ENTRY, not a duplicate -- retiring it would delete the only row a real card has. Holding 2b62a93f sits on #221, and Beckett Tier 1/Tier 2 does not list #221: whether that card exists is a checklist question, not a fold.",
+   "evidence": {
+    "source": "ingest-auto-seed",
+    "player": "Brandon Marsh",
+    "cardNumber": "25",
+    "parallel": "Image Variation Refractor",
+    "sales": 0
+   }
+  },
+  {
+   "id": "hiq:baseball:2022:topps-chrome:114:image-variation-refractor:no-auto",
+   "action": "park",
+   "reason": "PARKED, NOT RETIRED: no Image Variation SP/SSP row at this number - Beckett Tier 1/Tier 2 does not list it. A seeded row with no checklist twin is an ACQUISITION QUEUE ENTRY, not a duplicate -- retiring it would delete the only row a real card has. Holding 2b62a93f sits on #221, and Beckett Tier 1/Tier 2 does not list #221: whether that card exists is a checklist question, not a fold.",
+   "evidence": {
+    "source": "ingest-auto-seed",
+    "player": "CJ Abrams",
+    "cardNumber": "114",
+    "parallel": "Image Variation Refractor",
+    "sales": 0
+   }
+  },
+  {
+   "id": "hiq:baseball:2022:topps-chrome:223:image-variation-refractor:no-auto",
+   "action": "park",
+   "reason": "PARKED, NOT RETIRED: no Image Variation SP/SSP row at this number - Beckett Tier 1/Tier 2 does not list it. A seeded row with no checklist twin is an ACQUISITION QUEUE ENTRY, not a duplicate -- retiring it would delete the only row a real card has. Holding 2b62a93f sits on #221, and Beckett Tier 1/Tier 2 does not list #221: whether that card exists is a checklist question, not a fold.",
+   "evidence": {
+    "source": "ingest-auto-seed",
+    "player": "Spencer Torkelson",
+    "cardNumber": "223",
+    "parallel": "Image Variation Refractor",
+    "sales": 0
+   }
+  },
+  {
+   "id": "hiq:baseball:2022:topps-chrome:96:image-variation-refractor:no-auto:num-25",
+   "action": "park",
+   "reason": "PARKED, NOT RETIRED: no Image Variation SP/SSP row at this number - Beckett Tier 1/Tier 2 does not list it. A seeded row with no checklist twin is an ACQUISITION QUEUE ENTRY, not a duplicate -- retiring it would delete the only row a real card has. Holding 2b62a93f sits on #221, and Beckett Tier 1/Tier 2 does not list #221: whether that card exists is a checklist question, not a fold.",
+   "evidence": {
+    "source": "ingest-auto-seed",
+    "player": "Miguel Cabrera",
+    "cardNumber": "96",
+    "parallel": "Image Variation Refractor",
+    "sales": 0
+   }
+  },
+  {
+   "id": "hiq:baseball:2022:topps-chrome:221:image-variation-refractor:no-auto:psa-10",
+   "action": "park",
+   "reason": "PARKED, NOT RETIRED: no Image Variation SP/SSP row at this number - Beckett Tier 1/Tier 2 does not list it. A seeded row with no checklist twin is an ACQUISITION QUEUE ENTRY, not a duplicate -- retiring it would delete the only row a real card has. Holding 2b62a93f sits on #221, and Beckett Tier 1/Tier 2 does not list #221: whether that card exists is a checklist question, not a fold.",
+   "evidence": {
+    "source": "ingest-auto-seed-graded",
+    "player": "Bobby Witt Jr.",
+    "cardNumber": "221",
+    "parallel": "Image Variation Refractor",
+    "sales": 0
+   }
+  },
+  {
+   "id": "hiq:baseball:2022:topps-chrome:221:image-variation-refractor:no-auto:psa-9",
+   "action": "park",
+   "reason": "PARKED, NOT RETIRED: no Image Variation SP/SSP row at this number - Beckett Tier 1/Tier 2 does not list it. A seeded row with no checklist twin is an ACQUISITION QUEUE ENTRY, not a duplicate -- retiring it would delete the only row a real card has. Holding 2b62a93f sits on #221, and Beckett Tier 1/Tier 2 does not list #221: whether that card exists is a checklist question, not a fold.",
+   "evidence": {
+    "source": "ingest-auto-seed-graded",
+    "player": "Bobby Witt Jr.",
+    "cardNumber": "221",
+    "parallel": "Image Variation Refractor",
+    "sales": 0
+   }
+  },
+  {
+   "id": "hiq:baseball:2022:topps-chrome:223:image-variation-refractor:no-auto:psa-10",
+   "action": "park",
+   "reason": "PARKED, NOT RETIRED: no Image Variation SP/SSP row at this number - Beckett Tier 1/Tier 2 does not list it. A seeded row with no checklist twin is an ACQUISITION QUEUE ENTRY, not a duplicate -- retiring it would delete the only row a real card has. Holding 2b62a93f sits on #221, and Beckett Tier 1/Tier 2 does not list #221: whether that card exists is a checklist question, not a fold.",
+   "evidence": {
+    "source": "ingest-auto-seed-graded",
+    "player": "Spencer Torkelson",
+    "cardNumber": "223",
+    "parallel": "Image Variation Refractor",
+    "sales": 0
+   }
+  },
+  {
+   "id": "hiq:baseball:2022:topps-chrome:223:image-variation-refractor:no-auto:psa-9",
+   "action": "park",
+   "reason": "PARKED, NOT RETIRED: no Image Variation SP/SSP row at this number - Beckett Tier 1/Tier 2 does not list it. A seeded row with no checklist twin is an ACQUISITION QUEUE ENTRY, not a duplicate -- retiring it would delete the only row a real card has. Holding 2b62a93f sits on #221, and Beckett Tier 1/Tier 2 does not list #221: whether that card exists is a checklist question, not a fold.",
+   "evidence": {
+    "source": "ingest-auto-seed-graded",
+    "player": "Spencer Torkelson",
+    "cardNumber": "223",
+    "parallel": "Image Variation Refractor",
+    "sales": 0
+   }
+  },
+  {
+   "id": "hiq:baseball:2022:topps-chrome:113:image-variation-refractor:no-auto",
+   "action": "park",
+   "reason": "PARKED, NOT RETIRED: SP row names \"Jarren Duran\", seed names \"Hunter Greene\". A seeded row with no checklist twin is an ACQUISITION QUEUE ENTRY, not a duplicate -- retiring it would delete the only row a real card has. Holding 2b62a93f sits on #221, and Beckett Tier 1/Tier 2 does not list #221: whether that card exists is a checklist question, not a fold.",
+   "evidence": {
+    "source": "ingest-auto-seed",
+    "player": "Hunter Greene",
+    "cardNumber": "113",
+    "parallel": "Image Variation Refractor",
+    "sales": 0
+   }
+  },
+  {
+   "id": "hiq:baseball:2022:topps-chrome:4:image-variation-refractor:no-auto:psa-9",
+   "action": "park",
+   "reason": "PARKED, NOT RETIRED: no Image Variation SP/SSP row at this number - Beckett Tier 1/Tier 2 does not list it. A seeded row with no checklist twin is an ACQUISITION QUEUE ENTRY, not a duplicate -- retiring it would delete the only row a real card has. Holding 2b62a93f sits on #221, and Beckett Tier 1/Tier 2 does not list #221: whether that card exists is a checklist question, not a fold.",
+   "evidence": {
+    "source": "ingest-auto-seed-graded",
+    "player": "Jarren Duran",
+    "cardNumber": "4",
+    "parallel": "Image Variation Refractor",
+    "sales": 0
+   }
+  },
+  {
+   "id": "hiq:baseball:2022:topps-chrome:221:image-variation-refractor:no-auto",
+   "action": "park",
+   "reason": "PARKED, NOT RETIRED: no Image Variation SP/SSP row at this number - Beckett Tier 1/Tier 2 does not list it. A seeded row with no checklist twin is an ACQUISITION QUEUE ENTRY, not a duplicate -- retiring it would delete the only row a real card has. Holding 2b62a93f sits on #221, and Beckett Tier 1/Tier 2 does not list #221: whether that card exists is a checklist question, not a fold.",
+   "evidence": {
+    "source": "ingest-auto-seed",
+    "player": "Bobby Witt Jr.",
+    "cardNumber": "221",
+    "parallel": "Image Variation Refractor",
+    "sales": 0
+   }
+  },
+  {
+   "id": "hiq:baseball:2022:topps-chrome:114:image-variation-refractor:no-auto:psa-10",
+   "action": "park",
+   "reason": "PARKED, NOT RETIRED: no Image Variation SP/SSP row at this number - Beckett Tier 1/Tier 2 does not list it. A seeded row with no checklist twin is an ACQUISITION QUEUE ENTRY, not a duplicate -- retiring it would delete the only row a real card has. Holding 2b62a93f sits on #221, and Beckett Tier 1/Tier 2 does not list #221: whether that card exists is a checklist question, not a fold.",
+   "evidence": {
+    "source": "ingest-auto-seed-graded",
+    "player": "CJ Abrams",
+    "cardNumber": "114",
+    "parallel": "Image Variation Refractor",
+    "sales": 0
+   }
+  },
+  {
+   "id": "hiq:baseball:2022:topps-chrome:112:image-variation-refractor:no-auto",
+   "action": "park",
+   "reason": "PARKED, NOT RETIRED: no Image Variation SP/SSP row at this number - Beckett Tier 1/Tier 2 does not list it. A seeded row with no checklist twin is an ACQUISITION QUEUE ENTRY, not a duplicate -- retiring it would delete the only row a real card has. Holding 2b62a93f sits on #221, and Beckett Tier 1/Tier 2 does not list #221: whether that card exists is a checklist question, not a fold.",
+   "evidence": {
+    "source": "ingest-auto-seed",
+    "player": "Bobby Witt Jr.",
+    "cardNumber": "112",
+    "parallel": "Image Variation Refractor",
+    "sales": 0
+   }
+  }
+ ]
+}
