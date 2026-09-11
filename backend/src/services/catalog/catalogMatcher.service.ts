@@ -1406,6 +1406,21 @@ async function canonicalizeImpl(input: CatalogMatchInput): Promise<CatalogMatchR
   // distinct checklist-backed tier survives; two or more is the ambiguity
   // this must never guess across, and the existing SP-default / withhold
   // behaviour stands untouched.
+  //
+  // CF-A-DETERMINISTIC-UNIQUENESS-CLEARS-THE-REDERIVE-GATE (2026-09-11,
+  // follow-up to #2049). Shipped at 0.85 and measured live: run 34657489782
+  // found Witt's Sonic row via this exact step and still reported UNVERIFIED,
+  // because recheck-holding-identity's re-derive gate (MIN_CONFIDENCE, default
+  // 0.9 — comp-quality/recheck-holding-identity.ts) sits ABOVE fuzzy-parallel
+  // and below exact, and 0.85 landed under it. That gate exists to keep a
+  // GUESS from overwriting a holding's identity — but this is not a guess:
+  // the candidate pool is reduced to ONE by an authoritative checklist row
+  // (canAdjudicate), the same authority that lets a "checklist" source seed
+  // at 0.95 elsewhere in this file. One candidate, checklist decides, is a
+  // deterministic identity claim, not a fuzzy one — raised to 0.92: above the
+  // 0.9 re-derive gate, still below exact-match's 0.98 and below a checklist
+  // seed's 0.95, because this is inferred FROM a checklist row, not itself
+  // one.
   if (isTierlessVariationSlug(components.parallel) && components.cardNumber) {
     try {
       const candidates = await variationCandidatesForCard({
@@ -1436,7 +1451,7 @@ async function canonicalizeImpl(input: CatalogMatchInput): Promise<CatalogMatchR
           return {
             slug: winner.id,
             found: true,
-            confidence: 0.85,
+            confidence: 0.92,
             matchedBy: "tierless-variation-unique",
             catalogId: winner.id,
           };
