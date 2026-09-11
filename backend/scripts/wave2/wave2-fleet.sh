@@ -71,6 +71,18 @@ POLL_SECS="${WAVE2_POLL_SECS:-60}"
 # A slot's chain may relaunch several times under the 180-minute job ceiling.
 MAX_CHAIN_MINUTES="${WAVE2_MAX_CHAIN_MINUTES:-600}"
 LOGDIR="${WAVE2_LOGDIR:-/tmp/wave2}"
+# THE DISPATCH STAGGER (2026-09-11). On 2026-09-08/09 the census fan-out
+# dispatched all 32 slots in one tight loop with no ceiling on how many ran at
+# once, and each of the 18 slots that could not finish in one budget
+# re-dispatched itself every ~2h10m forever -- ~26 runners held for ~20 hours
+# before a human cancelled 28 runs. `preflight_lane` refuses to START a fresh
+# fan-out into an already-stalled queue, but nothing stopped THIS driver from
+# being the thing that stalls it. So the census phase now polls the
+# in_progress count before EVERY dispatch and waits for room, capping how many
+# of ITS OWN slots can be in flight at once -- independent of whatever else is
+# using the shared backfill-runner lane.
+MAX_INFLIGHT_CENSUS_SLOTS="${WAVE2_MAX_INFLIGHT_CENSUS_SLOTS:-8}"
+INFLIGHT_POLL_SECS="${WAVE2_INFLIGHT_POLL_SECS:-30}"
 
 mkdir -p "$LOGDIR"
 
@@ -244,6 +256,44 @@ preflight_lane() {
   return 0
 }
 
+# How many of THIS driver's own census dispatches are currently queued or
+# in_progress, counted by matching `-f script=rematch-sold-comps -f
+# mode=census` in each run's own dispatch inputs (`gh run view --json
+# displayTitle,name` does not carry input values, so the inputs are read off
+# the run same as everywhere else in this file: from its log, via
+# run_log_identifies_slot -- but that requires a COMPLETED log, which an
+# in_progress run never has). So the count here is coarser than identification
+# is elsewhere: it is every NOT-YET-COMPLETED backfill-runner run created at or
+# after `since`, on the theory that this driver is the only caller staggering
+# ITS OWN dispatches and a shared-lane run started by something else belongs
+# to preflight_lane's question, not this one. `since` keeps a long WAVE2
+# session from counting runs that predate it.
+inflight_census_count() {
+  local since="$1"
+  gh run list --repo "$REPO" --workflow=backfill-runner.yml --limit 100 \
+    --json createdAt,status \
+    --jq "[.[] | select(.createdAt >= \"$since\") | select(.status==\"queued\" or .status==\"in_progress\")] | length" 2>/dev/null
+}
+
+# Block until fewer than MAX_INFLIGHT_CENSUS_SLOTS of this driver's own
+# dispatches (since `since`) are queued or in_progress. Never blocks forever:
+# a `gh` failure is read as "cannot confirm room" and proceeds rather than
+# wedging the fleet on a transient API error, the same non-fatal posture
+# preflight_lane takes on the same failure.
+wait_for_inflight_room() {
+  local since="$1" n
+  while :; do
+    n=$(inflight_census_count "$since")
+    if [ -z "${n:-}" ]; then
+      warn "could not read in-flight census count — proceeding without the stagger for this dispatch"
+      return 0
+    fi
+    [ "$n" -lt "$MAX_INFLIGHT_CENSUS_SLOTS" ] && return 0
+    say "WAVE2 stagger: $n slot(s) already in flight (cap $MAX_INFLIGHT_CENSUS_SLOTS) — waiting for room"
+    sleep "$INFLIGHT_POLL_SECS"
+  done
+}
+
 dispatch() {
   local mode="$1" apply="$2" scope="$3" slot="$4"
   local cmd=(gh workflow run backfill-runner.yml --repo "$REPO" --ref "$REF"
@@ -316,16 +366,47 @@ dispatch() {
 # run at all. Reporting the second as the first is exactly how #1974 read as a
 # fleet-wide failure rather than as a broken finder.
 #
-# HOW LONG TO WAIT FOR A RUN TO NAME ITSELF. 15 minutes by default. Note what
-# this clock actually has to cover: `gh run view --log` refuses while a run is
-# in progress, so a run can only be identified once it COMPLETES, and the
-# window therefore spans queue time plus the run itself. A census slot that sits
-# behind a deep backfill-runner queue will exceed it and be reported `unfound` —
-# which is honest (we did not find it) but is not the same as "it failed", so
-# raise WAVE2_IDENTIFY_TIMEOUT_MINUTES when queueing behind a busy lane rather
-# than reading an `unfound` as a dead slot. `preflight_lane` exists to keep the
-# fleet out of that situation in the first place.
+# HOW LONG TO WAIT FOR A RUN TO NAME ITSELF -- TWO SEPARATE CLOCKS
+# (2026-09-11, replacing the single IDENTIFY_TIMEOUT_MINUTES this comment used
+# to describe).
+#
+# THE DEFECT. Run 34360565942 -- a real census slot, not a stranger -- was
+# reported `unfound`. `find_run_for_slot`'s own deadline bounded the ENTIRE
+# search, and `gh run view --log` refuses outright while a run is in_progress
+# (see run_log_identifies_slot's header), so identification necessarily
+# happens at COMPLETION. A 140-minute census run therefore had to be found,
+# confirmed in_progress, watched, AND have its completed log read to confirm
+# identity -- all inside one 15-minute window whose own comment already
+# admitted "the window spans queue time plus the run itself" and told the
+# operator to raise it by hand rather than fixing the clock. The run was
+# found, was correctly the right one, and was still discarded because it had
+# not FINISHED inside a timeout meant for FINDING it.
+#
+# THE FIX SPLITS THE TWO QUESTIONS A CALLER WAS CONFLATING:
+#
+#   DISCOVERY   "does a candidate exist that COULD be ours?" -- bounded by
+#               IDENTIFY_TIMEOUT_MINUTES (15m default). This covers the case
+#               nothing was ever dispatched, or the dispatch never queued a
+#               job (the #1974 failure this file's `dispatch()` already
+#               guards). A queued/running candidate satisfies discovery the
+#               moment it is SEEN -- it does not have to finish first.
+#   COMPLETION  "has the candidate we are already watching finished, so its
+#               log can be read?" -- once a NOT-YET-REJECTED in_progress
+#               candidate has been seen, waiting for it to complete is no
+#               longer a search and must not share the search's clock. It is
+#               bounded by RUN_COMPLETION_TIMEOUT_MINUTES instead, sized for
+#               the longest a budgeted lane can legitimately run
+#               (RUN_MINUTES + reserve + verify, same arithmetic
+#               runner-budget.cjs documents) rather than for how long an
+#               operator is willing to watch a `gh run list` poll.
+#
+# A candidate that COMPLETES and turns out to be a stranger (rejected by
+# run_log_identifies_slot) does not consume the completion clock for the NEXT
+# candidate -- discovery resumes and gets its own fresh window, because a
+# stranger finishing tells us nothing about whether another dispatch is still
+# queued behind it.
 IDENTIFY_TIMEOUT_MINUTES="${WAVE2_IDENTIFY_TIMEOUT_MINUTES:-15}"
+RUN_COMPLETION_TIMEOUT_MINUTES="${WAVE2_RUN_COMPLETION_TIMEOUT_MINUTES:-200}"
 
 # Does THIS log belong to THIS dispatch? Takes a log file, the mode and the
 # slot. Returns 0 only when all three identity facts are present.
@@ -368,7 +449,7 @@ run_log_identifies_slot() {
 
 # Find the run THIS dispatch created for THIS slot by reading candidates' logs
 # until one identifies itself. Prints the run id, or prints nothing and returns
-# 1 after IDENTIFY_TIMEOUT_MINUTES.
+# 1 after the relevant clock (see the two-clock comment above) runs out.
 #
 # Candidates are every backfill-runner run created at or after `since`, OLDEST
 # FIRST -- oldest first because the fleet dispatches 32 slots in a loop and the
@@ -377,47 +458,89 @@ run_log_identifies_slot() {
 # per poll.
 find_run_for_slot() {
   local mode="$1" slot="$2" since="$3"
-  local deadline=$(( $(date +%s) + IDENTIFY_TIMEOUT_MINUTES * 60 ))
+  local discover_deadline=$(( $(date +%s) + IDENTIFY_TIMEOUT_MINUTES * 60 ))
   local probe="$LOGDIR/.probe-$mode-$slot.log"
   local rejected=" " ids id st
+  # THE WATCHED CANDIDATE. Once a not-yet-rejected run is seen queued or
+  # in_progress, it is "found" for discovery purposes -- what remains is only
+  # waiting for it to COMPLETE, which is bounded by its own clock below, never
+  # by discover_deadline. Empty means "nothing watched yet".
+  local watched="" watch_deadline=0
 
-  while [ "$(date +%s)" -lt "$deadline" ]; do
-    ids=$(gh run list --repo "$REPO" --workflow=backfill-runner.yml --limit 100 \
-            --json databaseId,createdAt,status \
-            --jq "[.[] | select(.createdAt >= \"$since\")] | sort_by(.createdAt) | .[].databaseId" 2>/dev/null)
-    for id in ${ids:-}; do
-      case "$rejected" in *" $id "*) continue ;; esac
-      # A QUEUED run has no log yet. It is not rejected; it is not ready.
-      st=$(gh run view "$id" --repo "$REPO" --json status --jq .status 2>/dev/null)
-      [ "$st" = "queued" ] && continue
-      # AND NEITHER DOES AN IN-PROGRESS ONE: `gh run view --log` refuses
-      # outright while a run is running ("logs will be available when it is
-      # complete"), so identification necessarily happens at completion.
-      #
-      # THE STEP NAMES ARE NOT AN ALTERNATIVE, and that was measured rather than
-      # assumed. `--json jobs` does expose step names live, but they are the
-      # workflow's STATIC step list -- every backfill-runner run has the same
-      # one. Compared 34232404064 (this fleet's census) against 34231277782
-      # (the park lane): both carry "Canary gate AFTER the rematch apply",
-      # "Upload the shard census", "Self-relaunch rematch-sold-comps ...".
-      # Nothing in a step name varies with `script`, `mode` or `slot`, so a
-      # step-name match would re-create #1974 exactly. Only the log says who a
-      # run is.
-      [ "$st" = "in_progress" ] && continue
-      gh run view "$id" --repo "$REPO" --log >"$probe" 2>/dev/null || : >"$probe"
-      if run_log_identifies_slot "$probe" "$mode" "$slot"; then
-        rm -f "$probe"
-        printf '%s' "$id"; return 0
+  while :; do
+    if [ -n "$watched" ]; then
+      # COMPLETION CLOCK. A candidate is already attached; do not re-poll
+      # `gh run list` (or age it out) while it may still be legitimately
+      # running -- just ask whether IT is done.
+      if [ "$(date +%s)" -ge "$watch_deadline" ]; then
+        warn "slot $slot: run $watched has not completed within ${RUN_COMPLETION_TIMEOUT_MINUTES}m of being watched -- giving up on it as a candidate."
+        rejected="$rejected$watched "
+        watched=""
+      else
+        st=$(gh run view "$watched" --repo "$REPO" --json status --jq .status 2>/dev/null)
+        if [ "$st" = "completed" ]; then
+          gh run view "$watched" --repo "$REPO" --log >"$probe" 2>/dev/null || : >"$probe"
+          if run_log_identifies_slot "$probe" "$mode" "$slot"; then
+            rm -f "$probe"
+            printf '%s' "$watched"; return 0
+          fi
+          # A completed stranger frees the completion clock; discovery gets a
+          # FRESH discover_deadline, because a stranger finishing says nothing
+          # about whether our own dispatch is still queued behind it.
+          rejected="$rejected$watched "
+          watched=""
+          discover_deadline=$(( $(date +%s) + IDENTIFY_TIMEOUT_MINUTES * 60 ))
+        fi
+        # Still queued or in_progress: fall through to the sleep at the
+        # bottom and check again next poll. No deadline applies here.
       fi
-      # A COMPLETED run whose own log never named this script, mode and slot is
-      # somebody else's for good. Remember it so its log is downloaded once
-      # rather than once per poll.
-      rejected="$rejected$id "
-    done
+    else
+      # DISCOVERY CLOCK. No candidate is attached yet.
+      if [ "$(date +%s)" -ge "$discover_deadline" ]; then
+        rm -f "$probe"
+        return 1
+      fi
+      ids=$(gh run list --repo "$REPO" --workflow=backfill-runner.yml --limit 100 \
+              --json databaseId,createdAt,status \
+              --jq "[.[] | select(.createdAt >= \"$since\")] | sort_by(.createdAt) | .[].databaseId" 2>/dev/null)
+      for id in ${ids:-}; do
+        case "$rejected" in *" $id "*) continue ;; esac
+        st=$(gh run view "$id" --repo "$REPO" --json status --jq .status 2>/dev/null)
+        # A QUEUED or IN-PROGRESS run is a legitimate candidate the moment it
+        # is SEEN -- `gh run view --log` refuses outright while a run is
+        # running ("logs will be available when it is complete"), so
+        # identification necessarily happens at completion, and completion is
+        # exactly what the WATCH clock below now waits for instead of the
+        # search clock. Discovery's job ends here.
+        #
+        # THE STEP NAMES ARE NOT AN ALTERNATIVE, and that was measured rather
+        # than assumed. `--json jobs` does expose step names live, but they
+        # are the workflow's STATIC step list -- every backfill-runner run has
+        # the same one. Compared 34232404064 (this fleet's census) against
+        # 34231277782 (the park lane): both carry "Canary gate AFTER the
+        # rematch apply", "Upload the shard census", "Self-relaunch
+        # rematch-sold-comps ...". Nothing in a step name varies with
+        # `script`, `mode` or `slot`, so a step-name match would re-create
+        # #1974 exactly. Only the log says who a run is.
+        if [ "$st" = "queued" ] || [ "$st" = "in_progress" ]; then
+          watched="$id"
+          watch_deadline=$(( $(date +%s) + RUN_COMPLETION_TIMEOUT_MINUTES * 60 ))
+          break
+        fi
+        if [ "$st" = "completed" ]; then
+          gh run view "$id" --repo "$REPO" --log >"$probe" 2>/dev/null || : >"$probe"
+          if run_log_identifies_slot "$probe" "$mode" "$slot"; then
+            rm -f "$probe"
+            printf '%s' "$id"; return 0
+          fi
+          rejected="$rejected$id "
+        fi
+        # An unreadable status ($st empty -- gh failed) is neither watched nor
+        # rejected; the next poll asks again.
+      done
+    fi
     sleep "$POLL_SECS"
   done
-  rm -f "$probe"
-  return 1
 }
 
 # Follow ONE SLOT to the end of its chain. Prints the final run's log to
@@ -495,10 +618,21 @@ selected_slots() {
 phase_census() {
   preflight_lane
   local since; since=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-  say "WAVE2 CENSUS — shard table $SLOTS slots, driving [$(selected_slots | tr "\n" " ")], mode=census apply=false (report-only)"
+  say "WAVE2 CENSUS — shard table $SLOTS slots, driving [$(selected_slots | tr "\n" " ")], mode=census apply=false (report-only), stagger cap $MAX_INFLIGHT_CENSUS_SLOTS"
   local s
   local selected; selected=$(selected_slots)
-  for s in $selected; do dispatch census false improve "$s" || true; done
+  # THE STAGGER: at most MAX_INFLIGHT_CENSUS_SLOTS of this phase's own
+  # dispatches queued or in_progress at once. Checked BEFORE every dispatch,
+  # not only the first, so the cap holds across the whole fan-out and not just
+  # at its start -- see the 2026-09-11 comment above MAX_INFLIGHT_CENSUS_SLOTS.
+  if [ "$DISPATCH" = "true" ]; then
+    for s in $selected; do
+      wait_for_inflight_room "$since"
+      dispatch census false improve "$s" || true
+    done
+  else
+    for s in $selected; do dispatch census false improve "$s" || true; done
+  fi
   [ "$DISPATCH" = "true" ] || { say "WAVE2 dry-run: dispatched nothing."; return 0; }
 
   local held=0 ok=0

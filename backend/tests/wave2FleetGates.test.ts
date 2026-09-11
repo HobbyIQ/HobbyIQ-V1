@@ -936,20 +936,54 @@ describe("identity comes from the log, because step names cannot carry it", () =
   });
 
   // A run that cannot yet be read is not a run that failed identification.
+  // (2026-09-11: queued/in_progress runs used to `continue` the discovery
+  // loop and re-poll `gh run list` every time; they now ATTACH as `watched`
+  // and are waited on directly, on their own clock -- see the two-clock
+  // comment above IDENTIFY_TIMEOUT_MINUTES. Either way, the property this pin
+  // exists for holds: a run that is not yet readable is never rejected.)
   it("holds queued and in-progress runs as candidates rather than rejecting them", () => {
     const finder = fleetSrc.slice(fleetSrc.indexOf("find_run_for_slot() {"), fleetSrc.indexOf("# Follow ONE SLOT"));
-    expect(finder).toMatch(/\[ "\$st" = "queued" \] && continue/);
-    expect(finder).toMatch(/\[ "\$st" = "in_progress" \] && continue/);
-    // and only a run whose log was actually read gets remembered as a stranger
-    const rejectAt = finder.indexOf('rejected="$rejected$id "');
-    expect(rejectAt).toBeGreaterThan(finder.indexOf('--log >"$probe"'));
+    expect(finder).toMatch(/\[ "\$st" = "queued" \] \|\| \[ "\$st" = "in_progress" \]/);
+    expect(finder).toContain('watched="$id"');
+    // THREE places `rejected=` grows a run, not one: the discovery branch's
+    // completed-and-read check, the watch branch's own completed-and-read
+    // check (both preceded by their own `--log >"$probe"` read -- a run whose
+    // log was actually read and did not identify itself), and the watch
+    // branch's COMPLETION-TIMEOUT give-up (no log read at all -- a run that
+    // never finished being watched is not "read and rejected", it is
+    // "given up on", and the warn() beside it says so).
+    const rejectSites = [...finder.matchAll(/rejected="\$rejected\$(?:id|watched) "/g)].map((m) => m.index ?? -1);
+    expect(rejectSites.length).toBe(3);
+    const readThenRejected = rejectSites.filter((rejectAt) => {
+      const precedingLog = finder.lastIndexOf('--log >"$probe"', rejectAt);
+      return precedingLog > -1 && precedingLog < rejectAt;
+    });
+    expect(readThenRejected.length).toBe(2);
+    // the third site is the completion-timeout give-up, named as such
+    expect(finder).toMatch(/has not completed within \$\{RUN_COMPLETION_TIMEOUT_MINUTES\}m/);
   });
 
-  // The identify clock spans queue time plus the run, since identification can
-  // only happen at completion. That is worth stating where the default lives.
-  it("says what the identify timeout has to cover", () => {
+  // The identify clock covers DISCOVERY only -- finding a queued/in_progress
+  // candidate at all -- never waiting for a known candidate to complete.
+  // That used to be one conflated clock (#2000-era) and 34360565942, a real
+  // census run, was reported `unfound` because completion could outlast a
+  // 15-minute search window. The completion wait now has its own separate,
+  // much longer clock.
+  it("says what the identify timeout has to cover, and separates it from the completion wait", () => {
     expect(fleetSrc).toContain("HOW LONG TO WAIT FOR A RUN TO NAME ITSELF");
     expect(fleetSrc).toMatch(/IDENTIFY_TIMEOUT_MINUTES="\$\{WAVE2_IDENTIFY_TIMEOUT_MINUTES:-15\}"/);
+    expect(fleetSrc).toMatch(/RUN_COMPLETION_TIMEOUT_MINUTES="\$\{WAVE2_RUN_COMPLETION_TIMEOUT_MINUTES:-\d+\}"/);
+    expect(fleetSrc).toContain("DISCOVERY CLOCK");
+    expect(fleetSrc).toContain("COMPLETION CLOCK");
+  });
+
+  // A candidate already being watched must not be re-aged out by the
+  // discovery deadline -- that IS the 34360565942 defect.
+  it("does not bound a watched candidate's completion by the discovery deadline", () => {
+    const finder = fleetSrc.slice(fleetSrc.indexOf("find_run_for_slot() {"), fleetSrc.indexOf("# Follow ONE SLOT"));
+    const watchBlock = finder.slice(finder.indexOf('if [ -n "$watched" ]'), finder.indexOf("else"));
+    expect(watchBlock).not.toContain("discover_deadline");
+    expect(watchBlock).toContain("watch_deadline");
   });
 });
 
