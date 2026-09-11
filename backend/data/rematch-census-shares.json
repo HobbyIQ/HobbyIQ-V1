@@ -3,11 +3,17 @@
  "source": "rematch IMPROVE fleet census artifacts, 32/32 slots, 2026-09-08/09",
  "measuredAt": "2026-09-09",
  "measuredUnder": {
-  "stamp": "df5073ac5c0e2+2026-09-06.a",
-  "derivation": "df5073ac5c0e2",
+  "stamp": "decbe3f2b1bf6+2026-09-06.a",
+  "derivation": "decbe3f2b1bf6",
   "contract": "2026-09-06.a",
   "commit": "e32b84814c253a71f141362b67fac08947ee315b",
-  "note": "Recorded by scripts/rebaseline-i9-reference.cjs. The alarm compares only against a reference carrying THIS stamp; a stamp change makes the drift a finding, not an alarm."
+  "hashDefinition": "v2",
+  "note": "Recorded by scripts/rebaseline-i9-reference.cjs. The alarm compares only against a reference carrying THIS stamp; a stamp change makes the drift a finding, not an alarm.",
+  "migratedFrom": {
+   "hashDefinition": "v1",
+   "stamp": "df5073ac5c0e2+2026-09-06.a",
+   "reason": "RE-LABEL, NOT A RE-MEASURE (2026-09-11, run 34360565942 follow-up). derivation-version.cjs's DERIVATION_INPUTS narrowed from naming scripts/rematch-sold-comps.cjs WHOLE (v1) to naming the pure derivation it was extracted into, scripts/lib/rematch-derive-identity.cjs (v2) -- see that file and tests/derivationStampNarrowedToIdentity.test.ts. A path rename inside the hash's own preimage changes the stamp VALUE even when the DERIVATION is untouched, so this reference's stamp is being RE-LABELLED to what v2 computes, not re-measured from a fresh census: verified by computing v2's stamp on a git worktree AT COMMIT e32b84814c253a71f141362b67fac08947ee315b (this reference's own measuredUnder.commit, with the extracted lib file's content reconstructed byte-for-byte from that commit's inline storedIdentity/deriveIdentity) and confirming it equals v2's stamp on the branch that did the narrowing: both decbe3f2b1bf6. Equal stamps under the new definition at the old and new commit is the proof that no derivation-deciding file moved between them; had they differed, the correct action would have been to identify and report which one, not to relabel."
+  }
  },
  "container": "sold_comps",
  "slotCount": 32,

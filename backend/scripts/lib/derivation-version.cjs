@@ -69,27 +69,62 @@ const crypto = require("crypto");
  * this module exists to remove, so `derivationInputsPresent()` refuses a
  * missing path loudly rather than hashing around it.
  */
-// CF-A-DERIVATION-STAMP-MUST-NOT-HASH-PLUMBING (2026-09-11, run 34360565942
-// follow-up). This list used to name "scripts/rematch-sold-comps.cjs" -- the
-// WHOLE file -- so a change to that script's worker pool, write ledger,
-// budget clock or exit-code handling (none of which decide a row's verdict)
-// invalidated the I9 reference exactly as if the derivation itself had
-// changed. `storedIdentity` and `deriveIdentity` -- the two functions that
-// actually decide what a row's stored fields say and what its title would
-// derive to -- were extracted, pure and alone, to
-// scripts/lib/rematch-derive-identity.cjs, and THAT is what is hashed below
-// instead. See that file's header and tests/derivationStampNarrowedToIdentity
-// .test.ts for the two properties the split exists to prove: a plumbing-only
-// change to rematch-sold-comps.cjs no longer moves the stamp, and a
-// one-token change to the deriver still does.
-const DERIVATION_INPUTS = Object.freeze([
-  "scripts/lib/rematch-classify.cjs",
-  "scripts/lib/rematch-derive-identity.cjs",
-  "src/services/portfolioiq/parseTitleIdentity.service.ts",
-  "src/services/portfolioiq/hobbyIqCardId.service.ts",
-  "src/services/portfolioiq/slugGuard.service.ts",
-  "src/services/portfolioiq/slugRederivation.service.ts",
-]);
+/**
+ * HASH DEFINITION VERSIONS (2026-09-11, run 34360565942 follow-up).
+ *
+ * CF-A-NARROWED-HASH-IS-A-RE-LABEL-NOT-A-REGRESSION. Narrowing which files
+ * are hashed changes the STAMP VALUE even when the DERIVATION those files
+ * decide has not moved a byte -- `derivationStamp` hashes `path + "\0" +
+ * contents` per input, so a renamed/removed path is a different preimage no
+ * matter what the bytes say. Bumping the hash definition and re-labelling the
+ * reference under the NEW definition -- once proven byte-identical to what
+ * the OLD definition saw at the commit the reference was measured under -- is
+ * therefore the legitimate move, not a hand-edited stamp.
+ *
+ * v1 (retired) hashed `scripts/rematch-sold-comps.cjs` WHOLE: the derivation
+ * (storedIdentity/deriveIdentity) plus that script's worker pool, write
+ * ledger, budget clock and finishLane exit-code handling -- none of which
+ * decide a row's verdict. A plumbing-only change (e.g. a worker-pool
+ * counting fix) moved the v1 stamp exactly as if the derivation itself had
+ * changed.
+ *
+ * v2 (current) replaces that entry with scripts/lib/rematch-derive-identity
+ * .cjs, the file storedIdentity/deriveIdentity were extracted to, pure and
+ * alone. Every other entry is unchanged between v1 and v2.
+ *
+ * HASH_DEFINITIONS is keyed by version so a stamp can be recomputed under
+ * EITHER definition, at any commit, for exactly the re-label proof this
+ * exists for: v2's stamp on the file set as it stood at the commit that
+ * measured the current reference must equal v2's stamp now, or the
+ * derivation moved between then and now and no re-label is safe.
+ */
+const HASH_DEFINITIONS = Object.freeze({
+  v1: Object.freeze([
+    "scripts/lib/rematch-classify.cjs",
+    "scripts/rematch-sold-comps.cjs",
+    "src/services/portfolioiq/parseTitleIdentity.service.ts",
+    "src/services/portfolioiq/hobbyIqCardId.service.ts",
+    "src/services/portfolioiq/slugGuard.service.ts",
+    "src/services/portfolioiq/slugRederivation.service.ts",
+  ]),
+  v2: Object.freeze([
+    "scripts/lib/rematch-classify.cjs",
+    "scripts/lib/rematch-derive-identity.cjs",
+    "src/services/portfolioiq/parseTitleIdentity.service.ts",
+    "src/services/portfolioiq/hobbyIqCardId.service.ts",
+    "src/services/portfolioiq/slugGuard.service.ts",
+    "src/services/portfolioiq/slugRederivation.service.ts",
+  ]),
+});
+
+/** The hash definition every NEW stamp is computed and recorded under. */
+const HASH_DEFINITION_VERSION = "v2";
+
+/** THE FILES THAT DECIDE A DERIVATION, under the current hash definition.
+ *  Kept as its own export -- unchanged shape -- so `derivationInputsPresent`
+ *  and every existing caller that reads `DERIVATION_INPUTS` directly (tests
+ *  included) keeps working without knowing hash definitions exist. */
+const DERIVATION_INPUTS = HASH_DEFINITIONS[HASH_DEFINITION_VERSION];
 
 const BACKEND_ROOT = path.join(__dirname, "..", "..");
 
@@ -102,9 +137,13 @@ function inputPath(rel, root = BACKEND_ROOT) {
  * Which declared inputs are missing. A stamp computed over a missing file
  * would be a DIFFERENT stamp that looks like a real one, so the caller must be
  * able to refuse rather than publish a hash it cannot stand behind.
+ *
+ * `inputs` defaults to the CURRENT hash definition's list; pass one of
+ * `HASH_DEFINITIONS.v1` / `.v2` explicitly to check a specific, named
+ * definition against a specific root (e.g. an old commit's worktree).
  */
-function missingInputs(root = BACKEND_ROOT) {
-  return DERIVATION_INPUTS.filter((rel) => !fs.existsSync(inputPath(rel, root)));
+function missingInputs(root = BACKEND_ROOT, inputs = DERIVATION_INPUTS) {
+  return inputs.filter((rel) => !fs.existsSync(inputPath(rel, root)));
 }
 
 /**
@@ -118,11 +157,18 @@ function missingInputs(root = BACKEND_ROOT) {
  *
  * Returns null when any declared input is missing — never a hash over what
  * happened to be there.
+ *
+ * `inputs` defaults to the CURRENT hash definition (`DERIVATION_INPUTS`, i.e.
+ * `HASH_DEFINITIONS[HASH_DEFINITION_VERSION]`). Passing `HASH_DEFINITIONS.v1`
+ * or `.v2` explicitly computes THAT definition's stamp regardless of which
+ * one is current — the one operation a hash-definition bump needs: proving
+ * the NEW definition's stamp is unchanged between the commit the reference
+ * was measured under and now, before re-labelling the reference to it.
  */
-function derivationStamp(root = BACKEND_ROOT) {
-  if (missingInputs(root).length) return null;
+function derivationStamp(root = BACKEND_ROOT, inputs = DERIVATION_INPUTS) {
+  if (missingInputs(root, inputs).length) return null;
   const h = crypto.createHash("sha256");
-  for (const rel of DERIVATION_INPUTS) {
+  for (const rel of inputs) {
     h.update(rel);
     h.update("\0");
     h.update(fs.readFileSync(inputPath(rel, root), "utf8").replace(/\r\n/g, "\n"));
@@ -152,17 +198,25 @@ function pricingContractVersion(root = BACKEND_ROOT) {
 /**
  * The full stamp a measurement is recorded under, and an alarm compares by.
  *
- * `{ derivation, contract, combined }` — `combined` is the one string a
- * reference carries and an equality test reads. Null `derivation` propagates,
- * so a stamp that could not be computed never compares EQUAL to anything.
+ * `{ derivation, contract, combined, hashDefinition }` — `combined` is the
+ * one string a reference carries and an equality test reads. Null
+ * `derivation` propagates, so a stamp that could not be computed never
+ * compares EQUAL to anything. `hashDefinition` names WHICH version of
+ * DERIVATION_INPUTS produced `derivation`, so a reference can say what it was
+ * hashed under even after the list itself is narrowed again later.
+ *
+ * `inputs`/`hashDefinition` let a caller compute a NAMED definition's stamp
+ * (e.g. `HASH_DEFINITIONS.v2`) rather than whatever is current — the re-label
+ * proof needs exactly this: v2's stamp at an old commit vs v2's stamp now.
  */
-function currentStamp(root = BACKEND_ROOT) {
-  const derivation = derivationStamp(root);
+function currentStamp(root = BACKEND_ROOT, inputs = DERIVATION_INPUTS, hashDefinition = HASH_DEFINITION_VERSION) {
+  const derivation = derivationStamp(root, inputs);
   const contract = pricingContractVersion(root);
   return {
     derivation,
     contract,
     combined: derivation ? `${derivation}+${contract ?? "no-contract"}` : null,
+    hashDefinition,
   };
 }
 
@@ -195,6 +249,7 @@ function stampsAgree(referenceStamp, current = currentStamp()) {
 
 module.exports = {
   DERIVATION_INPUTS, BACKEND_ROOT,
+  HASH_DEFINITIONS, HASH_DEFINITION_VERSION,
   inputPath, missingInputs,
   derivationStamp, pricingContractVersion, currentStamp, stampsAgree,
 };

@@ -1,33 +1,4 @@
-// rematch-derive-identity.cjs -- THE DERIVATION, extracted out of
-// rematch-sold-comps.cjs (2026-09-11, run 34360565942 follow-up).
-//
-// CF-A-DERIVATION-STAMP-MUST-NOT-HASH-PLUMBING. derivation-version.cjs hashes
-// a small set of files into the I9 reference's "derivation stamp" -- the
-// thing that answers "would two measurements have been produced by the same
-// code?" Before this file existed, `scripts/rematch-sold-comps.cjs` was
-// hashed WHOLE, so a change to ANYTHING in that file -- the worker pool's
-// concurrency, the write ledger, the budget clock, finishLane's exit code --
-// invalidated the I9 reference exactly as if the row's VERDICT had changed,
-// even though none of that plumbing decides AGREE/IMPROVE/CONFLICT/
-// UNDERIVABLE or the slug a row derives to.
-//
-// So the two functions that actually DECIDE a derivation -- `storedIdentity`
-// (what the row's own stored fields say) and `deriveIdentity` (what today's
-// parser + matcher would say from the title) -- live here, alone, pure (no
-// Cosmos, no clock, no I/O beyond what `deps` is handed), and
-// `derivation-version.cjs`'s DERIVATION_INPUTS hashes THIS file instead of
-// the whole rematch-sold-comps.cjs. rematch-sold-comps.cjs still exports both
-// names (re-exported from here) so no caller -- the apply loop, the revert
-// loop, or a test that does `require(".../rematch-sold-comps.cjs").deriveIdentity`
-// -- has to change.
-//
-// THE OLD DERIVATION_INPUTS ENTRY this replaces was the literal string
-// "scripts/rematch-sold-comps.cjs" (the whole file). See
-// tests/derivationStampNarrowedToIdentity.test.ts for the two properties this
-// split exists to prove: a plumbing-only change to rematch-sold-comps.cjs no
-// longer moves the stamp, and a one-token change to deriveIdentity still does.
-
-/** The row's OWN stored identity -- no title reading, no parser. */
+/** The identity the row CARRIES today, read from its own stored fields. */
 function storedIdentity(row, deps) {
   return {
     sport: row.sport ?? null,
@@ -115,5 +86,4 @@ function deriveIdentity(row, deps) {
   const baseIdentity = { ...identity, parallel: "Base", printRun: null };
   return { ok: true, identity, slug, baseSlug, baseIdentity, autoByCardNumber, reasons: [] };
 }
-
 module.exports = { storedIdentity, deriveIdentity };
