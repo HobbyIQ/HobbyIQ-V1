@@ -12,12 +12,24 @@ name: Deal Scanner Canary
 # total Cosmos outage produces a fully-zeroed, error-free summary that is
 # byte-for-byte identical to a quiet night.
 #
-# SOURCE OF TRUTH: App Insights `traces`, event `buyeriq_deal_scan_summary`
+# SOURCE OF TRUTH: App Insights traces, event `buyeriq_deal_scan_summary`
 # (backend/src/services/buyeriq/buyerIqDealScanner.service.ts:342), which
 # reaches App Insights because server.ts:39 arms setAutoCollectConsole.
 # NOT a container: the scanner's only Cosmos write (buyeriq_deals_sent) is
 # conditional on a deal clearing the threshold AND a push delivering, so a
 # healthy quiet hour and a three-day-dead process both write zero rows.
+#
+# THE WORKSPACE, NOT THE CLASSIC API (2026-09-11, #2027). This canary reads
+# the Log Analytics workspace table `AppTraces`
+# (`az monitor log-analytics query -w <workspace-id>`), not the classic
+# per-app `az monitor app-insights query` (table `traces`). hobbyiq-insights
+# is workspace-based, and the classic API is a compatibility shim over that
+# workspace: measured 09-10/09-11, a `buyeriq_deal_scan_summary` row that
+# provably exists in AppTraces (re-queried down to its exact hour) came back
+# EMPTY from the classic API every time, on every window tried. That is why
+# every run since the 09-09 RBAC fix and the 09-09 #2018 stream fix still
+# read "0 trace rows = 0 summaries" — the rows existed, the classic query
+# surface just never showed them. AppTraces is the table that has them.
 #
 # THRESHOLD ARITHMETIC. The job's interval is 60 minutes
 # (BUYERIQ_DEAL_SCANNER_INTERVAL_MIN, default 60). The heartbeat ceiling is
@@ -92,12 +104,24 @@ jobs:
           MAX_ERROR_RATE: ${{ inputs.max_error_rate || '0.5' }}
         run: |
           set -uo pipefail
+          # WORKSPACE, NOT THE CLASSIC API (2026-09-11). This used to call
+          # `az monitor app-insights query` (the classic per-app API, table
+          # `traces`). Measured 09-10/09-11: a `buyeriq_deal_scan_summary`
+          # trace that verifiably exists in the workspace's AppTraces table —
+          # same event, same timestamp, re-queried down to the exact hour —
+          # comes back EMPTY from the classic API every time. hobbyiq-insights
+          # is workspace-based; its classic-API query surface is a
+          # compatibility shim over the workspace and does not reliably
+          # surface a sparse, non-request-correlated trace like this one-a-
+          # cycle heartbeat. The workspace table is the one that actually has
+          # the rows, so that is what this canary now reads.
+          #
           # The query lives HERE, not in the script, so an operator can paste
           # it into the portal unchanged and get the same rows the canary saw.
           # The script stays free of the Azure SDK and unit-testable on fixtures.
-          az monitor app-insights query \
-            --app 468bd437-5d16-47b4-90fb-5ee5d41726ae \
-            --analytics-query "traces | where timestamp > ago(${WINDOW_HOURS}h) | where message has 'buyeriq_deal_scan_summary' | project timestamp, message | order by timestamp desc | take 500" \
+          az monitor log-analytics query \
+            --workspace 2a903998-79f4-4549-8042-5af803ab1e54 \
+            --analytics-query "AppTraces | where TimeGenerated > ago(${WINDOW_HOURS}h) | where Message has 'buyeriq_deal_scan_summary' | project TimeGenerated, Message | order by TimeGenerated desc | take 500" \
             -o json > /tmp/deal-scan-traces.json
           if [ ! -s /tmp/deal-scan-traces.json ]; then
             echo "::error::App Insights returned nothing at all — the scanner was NOT measured"
@@ -126,7 +150,7 @@ jobs:
             echo "| | |"
             echo "|---|---|"
             echo "| Run | [$GITHUB_RUN_ID]($RUN_URL) |"
-            echo "| Source of truth | App Insights \`traces\`, event \`buyeriq_deal_scan_summary\` |"
+            echo "| Source of truth | App Insights \`AppTraces\` (workspace query), event \`buyeriq_deal_scan_summary\` |"
             echo "| Job interval | 60 min (\`BUYERIQ_DEAL_SCANNER_INTERVAL_MIN\`) |"
             echo "| Heartbeat ceiling | ${MAX_SILENCE_HOURS:-2}h (interval x 2) |"
             echo ""
@@ -138,8 +162,8 @@ jobs:
             echo ""
             echo '```bash'
             echo "curl -s https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net/api/health | jq '.build'"
-            echo "az monitor app-insights query --app 468bd437-5d16-47b4-90fb-5ee5d41726ae \\"
-            echo "  --analytics-query \"traces | where timestamp > ago(24h) | where message has 'buyeriq_deal_scan' | project timestamp, message | order by timestamp desc\""
+            echo "az monitor log-analytics query --workspace 2a903998-79f4-4549-8042-5af803ab1e54 \\"
+            echo "  --analytics-query \"AppTraces | where TimeGenerated > ago(24h) | where Message has 'buyeriq_deal_scan' | project TimeGenerated, Message | order by TimeGenerated desc\""
             echo '```'
             echo ""
             echo "<sub>Filed automatically by the \`Deal Scanner Canary\` workflow. Close it once a scan reports again.</sub>"
