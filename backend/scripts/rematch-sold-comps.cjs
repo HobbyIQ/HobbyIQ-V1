@@ -1776,9 +1776,21 @@ async function main() {
       const my = idx++;
       if (budgetLeft() < 90000) {
         stopReason = stopReason ?? `stopped at the ${RUN_MINUTES}-minute budget`;
-        stats.notReached += improvable.length - my;
-        for (let z = my; z < improvable.length; z++) perClass[improvable[z].kind].notReached++;
-        return;
+        // CF-A-CONCURRENT-STOP-COUNTS-ITS-OWN-CLAIM-ONLY (run 34360565942,
+        // 2026-09-09). This used to add `improvable.length - my` -- the WHOLE
+        // remaining tail from this worker's own claim point -- but `idx` is a
+        // shared counter and every one of the CONCURRENCY workers claims a
+        // DISJOINT `my` before checking the budget, so at a budget stop near
+        // t=0 all 16 workers see the clock expired on their own first claim
+        // and each added its own overlapping tail: sum_{my=0..15}(2179-my) =
+        // 34,744 "not reached" against 2,179 intended -- the exact drift this
+        // run's reconcile caught. Each worker owns exactly the ONE row `my`
+        // it claimed; the loop keeps draining `idx` (cheaply, no Cosmos read)
+        // so every remaining index is still claimed and counted by SOME
+        // worker exactly once, with no read, no write and no overlap.
+        stats.notReached++;
+        perClass[improvable[my].kind].notReached++;
+        continue;
       }
       const cand = improvable[my];
       // RE-READ: the row may have been re-keyed, enriched or deleted since the
@@ -2245,7 +2257,15 @@ async function revertEvictions({ pool, retry: retry_, reportWrites }) {
   const worker = async () => {
     while (idx < candidates.length) {
       const my = idx++;
-      if (budgetLeft() < 90000) { stats.notReached += candidates.length - my; return; }
+      // CF-A-CONCURRENT-STOP-COUNTS-ITS-OWN-CLAIM-ONLY (run 34360565942,
+      // 2026-09-09; same defect class as the apply-improve loop above). Each
+      // of the CONCURRENCY workers claims a disjoint `my` from the shared
+      // `idx` before checking the budget, so a stop near t=0 must not add
+      // `candidates.length - my` per worker -- that sums overlapping tails
+      // across every worker. Each worker counts only the ONE row it claimed
+      // and keeps draining `idx` (no Cosmos read) so the rest are still
+      // claimed and counted exactly once.
+      if (budgetLeft() < 90000) { stats.notReached++; continue; }
       const c = candidates[my];
       // RE-READ. The pool moves; the verdict is taken again on what is there
       // NOW, exactly as the eviction path re-checks its own class at write
@@ -2363,8 +2383,17 @@ module.exports = {
 if (require.main === module) // CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809). Success exits too: a lane
 // that lets the loop drain is betting every library released every handle.
 // Runs 33975816175/25863/34391/40824 lost that bet AFTER reconciling clean.
+//
+// CF-A-RECONCILE-VERDICT-MUST-REACH-THE-EXIT-CODE (run 34360565942, 2026-09-
+// 09). This used to be a hardcoded `finishLane(0, ...)`: the reconcile below
+// (`intended = written + skipped + failed + not reached`) correctly detects
+// drift and sets `process.exitCode = 4` (or 6 for a scope failure), but a
+// hardcoded 0 here threw that verdict away before `finishLane` ever saw it --
+// the step printed "WORK VANISHED / UNACCOUNTED 2,179 (100%)" and STILL
+// exited 0. `process.exitCode` is the one channel the reconcile has to reach
+// this call, so it is read here rather than assumed clean.
 main()
-  .then((ctx) => finishLane(0, ctx || {}))
+  .then((ctx) => finishLane(process.exitCode || 0, ctx || {}))
   .catch(async (e) => {
     // CF-AN-EMPTY-LOG-IS-NOT-A-BUDGET-KILL (2026-09-07). The runner reads
     // /tmp/backfill.log, which `tee` fills from STDOUT ONLY -- so a crash
