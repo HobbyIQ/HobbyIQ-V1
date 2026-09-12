@@ -203,7 +203,19 @@ jobs:
           # a day behind — the per-platform watermark check below clamps each
           # lane to the day that platform has actually published, so adding a
           # current platform to a lagging one needs no coordination.
-          PLATFORMS="${{ inputs.platforms || 'eBay,TCGplayer' }}"
+          # TEMPORARY 2026-09-13 → 2026-09-18: TCGplayer paused to free quota
+          # for the eBay back-fill (Drew 2026-09-12); revert on 09-18.
+          #
+          # Scheduled (cron) runs get ONLY eBay for this window — TCGplayer's
+          # ~100K rows/day of the 200K/day cap is freed for an eBay-only
+          # back-fill of feed days 2026-09-04..09-12. Manual dispatches are
+          # UNCHANGED: `inputs.platforms` still resolves to its own value (or
+          # the 'eBay,TCGplayer' default) so the steward can still pull
+          # TCGplayer explicitly on demand. `inputs.platforms` is empty on a
+          # schedule event (workflow_dispatch inputs never populate on
+          # `schedule`), so it is the schedule branch of this ternary — not
+          # the fallback default — that must change to pause the cron.
+          PLATFORMS="${{ inputs.platforms || (github.event_name == 'schedule' && 'eBay' || 'eBay,TCGplayer') }}"
           echo "Ingesting from platforms: $PLATFORMS"
           IFS=',' read -ra PLATFORM_ARR <<< "$PLATFORMS"
           PLATFORMS_OK=0
