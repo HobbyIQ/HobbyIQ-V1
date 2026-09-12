@@ -82,6 +82,7 @@ import {
   scheduledSnapshotShapes,
   SCHEDULED_SNAPSHOT_SPORTS,
   SCHEDULED_SNAPSHOT_WINDOWS,
+  SCHEDULED_SNAPSHOT_MIN_SALES,
 } from "../src/services/compiq/marketMoversSnapshot.service.js";
 
 function findHandler(path: string, method: "get" | "post"): (req: Request, res: Response, next: (err?: unknown) => void) => void | Promise<void> {
@@ -116,14 +117,22 @@ beforeEach(() => {
 });
 
 describe("scheduledSnapshotShapes — bounded, not a combinatorial sweep", () => {
-  it("is exactly sports × windows, at direction=both with the route's own defaults", () => {
+  it("is exactly sports × windows × minSales values, at direction=both with the route's own default limit", () => {
+    // CF-SNAPSHOT-MISS-INCIDENT (2026-09-12): minSales now covers both 1
+    // (the Tier 1 harness's own request, and the honest floor "any sale
+    // counts") and 3 (the route's own default) — the coverage gap that let
+    // a harness request fall through to an unbounded live scan.
     const shapes = scheduledSnapshotShapes();
-    expect(shapes.length).toBe(SCHEDULED_SNAPSHOT_SPORTS.length * SCHEDULED_SNAPSHOT_WINDOWS.length);
+    expect(shapes.length).toBe(
+      SCHEDULED_SNAPSHOT_SPORTS.length * SCHEDULED_SNAPSHOT_WINDOWS.length * SCHEDULED_SNAPSHOT_MIN_SALES.length,
+    );
     for (const s of shapes) {
       expect(s.direction).toBe("both");
       expect(s.limit).toBe(20);
-      expect(s.minSales).toBe(3);
+      expect(SCHEDULED_SNAPSHOT_MIN_SALES).toContain(s.minSales);
     }
+    // The exact shape the Tier 1 harness requests must be one of them.
+    expect(shapes).toContainEqual({ sport: "baseball", windowDays: 30, direction: "both", limit: 20, minSales: 1 });
   });
 });
 

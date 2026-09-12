@@ -228,11 +228,12 @@ describe("market-movers — persisted snapshot read order", () => {
 
   it("sold_comps unavailable still returns 503, not a thrown error", async () => {
     // Regression guard for the refactor: the route source still guards on
-    // a null container from computeMarketMovers's sentinel return.
+    // a null container from computeMarketMoversBounded's sentinel return
+    // (CF-COLD-SHAPE-NEVER-HANGS renamed the cold-shape compute call).
     const { readFileSync } = await import("fs");
     const { resolve } = await import("path");
     const src = readFileSync(resolve(__dirname, "..", "src", "routes", "marketMovers.routes.ts"), "utf8");
     expect(src).toContain("sold_comps container unavailable");
-    expect(src).toContain('"unavailable" in computed');
+    expect(src).toContain('"unavailable" in bounded');
   });
 });

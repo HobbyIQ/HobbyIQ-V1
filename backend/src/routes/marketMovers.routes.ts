@@ -45,7 +45,7 @@
 import { Router, type Request, type Response } from "express";
 import { requireSession } from "../middleware/requireSession.js";
 import {
-  computeMarketMovers,
+  computeMarketMoversBounded,
   readMarketMoversSnapshot,
   type MarketMoversParams,
   type MarketMoversResult,
@@ -105,16 +105,34 @@ router.get("/market-movers", requireSession, async (req: Request, res: Response,
     }
 
     // 3. Cold shape — nobody has warmed this (sport, window, direction,
-    // limit, minSales) combination yet. Compute inline, exactly as the
-    // route always has, and seed the in-process cache so a burst of
-    // requests for this same cold shape doesn't each pay for it.
-    const computed = await computeMarketMovers(params);
-    if ("unavailable" in computed) {
+    // limit, minSales) combination yet. CF-COLD-SHAPE-NEVER-HANGS
+    // (2026-09-12): compute with a hard wall-clock ceiling rather than an
+    // unbounded scan — the minSales=1 coverage-gap incident measured a
+    // 25,000ms+ hang here under fleet load. A shape that cannot finish in
+    // time gets a bounded, labelled, honestly-empty 200 (never null,
+    // never a partial/invented result) instead of hanging past the
+    // client's own timeout; the compute keeps running in the background
+    // and persists a snapshot for the shape once it finishes, so a repeat
+    // request for the SAME cold shape is fast even before the next
+    // scheduled refresh.
+    const bounded = await computeMarketMoversBounded(params);
+    if ("unavailable" in bounded) {
       res.status(503).json({ error: "sold_comps container unavailable" });
       return;
     }
-    inProcessCache.set(key, { result: computed, computedAtMs: Date.now() });
-    res.json({ ...computed, cache: { state: "miss", ageMs: 0 } });
+    // Only cache a result that actually finished — caching the bounded
+    // placeholder would make a genuinely slow shape look "warm" and serve
+    // the empty placeholder to every viewer for the next 5 minutes.
+    if (!bounded.timedOut) {
+      inProcessCache.set(key, { result: bounded.result, computedAtMs: Date.now() });
+    }
+    res.json({
+      ...bounded.result,
+      cache: {
+        state: bounded.timedOut ? "cold-shape-timeout" : "miss",
+        ageMs: 0,
+      },
+    });
   } catch (err) { next(err); }
 });
 
