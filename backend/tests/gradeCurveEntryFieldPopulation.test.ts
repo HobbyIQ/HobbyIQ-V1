@@ -83,11 +83,21 @@ const sale = (price: number, d: number, grade: { c: string; v: number } | null =
 //                   so the fit at now sits ABOVE the weighted median and the
 //                   two are distinguishable.
 //   leading-edge    4 <= n < 8 — median of the newest three sales.
-//   weighted-median n < 4 — the recency-weighted median, labelled as such.
+//   last-sale       RULING R25 (Drew, 2026-09-12): n=2 or 3 — too few for a
+//                   trend, so the most recent sale IS the market.
+//   weighted-median n >= 4 but < 3 of them have a parseable soldAt, so
+//                   neither the fit nor the leading edge can read a date
+//                   order — the pool's only remaining rung (undated-thin
+//                   residue; R25 does not touch n >= 4).
 const POOLS = {
   "exact-pool-projection": Array.from({ length: 10 }, (_, i) => sale(100 + i * 4, 45 - i * 5)),
   "exact-pool-leading-edge": [sale(100, 1), sale(104, 2), sale(98, 3), sale(101, 4), sale(97, 5)],
-  "exact-pool-weighted-median": [sale(100, 3), sale(110, 9)],
+  "exact-pool-last-sale": [sale(100, 3), sale(110, 9)],
+  "exact-pool-weighted-median": [
+    sale(100, 3), sale(110, 9),
+    { ...sale(105, 20), soldAt: "unparseable" },
+    { ...sale(108, 25), soldAt: "unparseable" },
+  ],
 } as const;
 type Rung = keyof typeof POOLS;
 

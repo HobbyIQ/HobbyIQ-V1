@@ -36,19 +36,27 @@ export type ExactPoolRungLabel =
   | "exact-pool-projection"
   /** Newest exact sale: canonical / hobbyIqFmv when n < 3 (drift-adjusted
    *  by the broader trend since it sold); unified when the widest window
-   *  holds exactly ONE sale, or when one sale carries a thin window and
-   *  disagrees with its leading edge under ONE_SALE_WINDOW_POLICY=last-sale
-   *  — the default, Drew's ruling: the latest sale is the market (D22). */
+   *  holds exactly ONE sale, or — since RULING R25 (Drew, 2026-09-12) — TWO
+   *  or THREE: too few for a trend, so the most recent sale IS the market,
+   *  unconditionally (ONE_SALE_WINDOW_POLICY=last-sale, the default, D22's
+   *  still-live ruling that the latest sale is the market). Low-confidence
+   *  via computeConfidence(sampleCount, newestDate). */
   | "exact-pool-last-sale"
-  /** Median of the newest three exact sales (unified, 4 <= n < 8) — and,
-   *  since D22, the widest window's leading edge (newest <= 3) when a thin
-   *  window's one carrying sale disagrees with it under the named
-   *  alternative ONE_SALE_WINDOW_POLICY=widen (off). */
+  /** Median of the newest three exact sales (unified, 4 <= n < 8) — and, for
+   *  n=2/3, the widest window's leading edge (which for n<=3 IS just those
+   *  sales, never a wider-window median) when the named alternative
+   *  ONE_SALE_WINDOW_POLICY=widen (off) is set. Since RULING R25 this is the
+   *  ONLY way a 2/3-sale pool avoids `exact-pool-last-sale` — there is no
+   *  weighted-median fallback left to reach for either policy. */
   | "exact-pool-leading-edge"
-  /** Recency-weighted median of the exact pool (unified, n < 4 — the last
-   *  resort; the basis note already exposes it). Since D22 it stands only
-   *  when no single sale carries the window, or the carrying sale agrees
-   *  with the leading edge. */
+  /** Recency-weighted median of the exact pool (unified, n >= 4 — the last
+   *  resort when neither the projection nor the leading edge can fire; the
+   *  basis note already exposes it). RULING R25 (Drew, 2026-09-12) retired
+   *  this rung for n < 4: a 2- or 3-sale pool is too thin for a trend OR a
+   *  median — it publishes the most recent sale under `exact-pool-last-sale`
+   *  instead (n=1 already did). The one exception is an undated thin pool
+   *  (no row has a parseable soldAt to call "most recent") — there this rung
+   *  still stands, for lack of any sale to name. */
   | "exact-pool-weighted-median"
   /** Plain median of the exact pool (hobbyIqFmv's belt-and-braces branch
    *  when the projection returns nothing — logged when it fires). */

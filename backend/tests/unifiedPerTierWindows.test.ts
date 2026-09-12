@@ -68,8 +68,9 @@ describe("computeUnifiedPrice — perTierWindows", () => {
     expect(tier("PSA 10").sampleCount).toBe(8);
     expect(tier("PSA 10").rungLabel).toBe("exact-pool-projection");
     // Raw never reaches 5 in 60 / 90 and has 3 at 180 -> all three, at 180d.
+    // RULING R25: 3 sales is too few for a trend, so the most recent stands.
     expect(tier("Raw").sampleCount).toBe(3);
-    expect(tier("Raw").rungLabel).toBe("exact-pool-weighted-median");
+    expect(tier("Raw").rungLabel).toBe("exact-pool-last-sale");
     // PSA 9 has 5 sales inside 90d and fewer inside 60d -> the 90d rows.
     expect(tier("PSA 9").sampleCount).toBe(5);
   });

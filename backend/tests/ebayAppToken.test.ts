@@ -141,6 +141,26 @@ describe("getAppScopeToken — mint + cache", () => {
     expect(t).toBeNull();
   });
 
+  it("mint request carries an AbortSignal (2026-09-12 deal-scanner-silent incident)", async () => {
+    // A stalled TCP connection to eBay's token endpoint used to hang this
+    // fetch forever with no AbortSignal — and because _inflight only clears
+    // in the mint's own `finally`, every caller across the process piled
+    // onto that one permanently-pending promise. See ebayListingSearch's
+    // FETCH_TIMEOUT_MS sibling fix.
+    process.env.EBAY_CLIENT_ID = "id";
+    process.env.EBAY_CLIENT_SECRET = "secret";
+    const fetchStub = vi.fn(async () => ({
+      ok: true, status: 200,
+      json: async () => ({ access_token: "tok-timeout-guarded", expires_in: 7200 }),
+    }));
+    vi.stubGlobal("fetch", fetchStub);
+
+    await getAppScopeToken();
+    expect(fetchStub).toHaveBeenCalledTimes(1);
+    const [, init] = fetchStub.mock.calls[0] as [string, RequestInit];
+    expect(init.signal).toBeInstanceOf(AbortSignal);
+  });
+
   it("caps refresh at 90% of returned lifetime (guards against clock drift)", async () => {
     process.env.EBAY_CLIENT_ID = "id";
     process.env.EBAY_CLIENT_SECRET = "secret";

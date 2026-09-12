@@ -283,7 +283,16 @@ export interface PricingProvenance {
       // dropped to null — a checklist-backed identity with zero sales in
       // the search window reached the client as an indistinguishable "—",
       // identical to an outage. See the D24 Diamond Dominance case.
-      | "no-exact-pool";
+      | "no-exact-pool"
+      // CF-LADDER-TIME-BUDGET (2026-09-12): the fallback ladder was
+      // withdrawn before it could finish checking this identity's pool
+      // (a wall-clock budget, most likely sold_comps under fleet RU
+      // pressure — see ladderBudget.service.ts) — NOT the same fact as
+      // no-exact-pool, which means every rung looked and found nothing.
+      // Joined the same way #2059 joined no-exact-pool: already a real,
+      // persisted holdingValuation.ts reason (NoBasisRefusalReason) that
+      // would otherwise silently drop to null at withheldOf below.
+      | "ladder-timeout";
     /** The pool that blocked it, and that pool's size. */
     blockingId: string | null;
     blockingCount: number | null;

@@ -42,13 +42,23 @@ import type { PortfolioHolding } from "./api";
  *  `withheldOf` (pricingEnvelope.builder.ts) — the holding reached the UI as
  *  an unreasoned "—" though the engine had, in fact, answered. See the D24
  *  Diamond Dominance / Magnetic Field case: the identity is known and
- *  checklist-backed, no sale of it exists yet in the window searched. */
+ *  checklist-backed, no sale of it exists yet in the window searched.
+ *
+ *  `ladder-timeout` joined the same day, same shape: the engine's own
+ *  fallback-ladder wall-clock budget (ladderBudget.service.ts) can withdraw
+ *  a rung walk before it finishes checking every rung — most likely because
+ *  sold_comps was under fleet load. This is DIFFERENT from `no-exact-pool`,
+ *  which means every rung looked and found nothing: a timed-out ladder made
+ *  no claim about the pool at all, so the copy must not imply "no sale
+ *  exists" — that would send an owner looking for a match under another
+ *  slug when the truth is simply "try again once things are less busy". */
 export type WithheldReason =
   | "cost-basis-floor"
   | "no-checklist-match"
   | "identity-not-in-catalog"
   | "pool-migrating"
-  | "no-exact-pool";
+  | "no-exact-pool"
+  | "ladder-timeout";
 
 export interface WithheldBlock {
   reason: WithheldReason;
@@ -80,6 +90,7 @@ const SHORT: Record<WithheldReason, string> = {
   "identity-not-in-catalog": "card not in catalog yet",
   "pool-migrating": "comps settling",
   "no-exact-pool": "no sales yet for this exact card",
+  "ladder-timeout": "price still computing",
 };
 
 /** Rule 2: what would unlock a price, per reason. */
@@ -96,6 +107,10 @@ const UNLOCK: Record<WithheldReason, string> = {
   // happened. Time and new data are the only unlock, same shape as the
   // cost-basis floor.
   "no-exact-pool": "Pricing resumes once a sale of this exact card is recorded.",
+  // Also not the owner's to fix, and unlike no-exact-pool it is not even a
+  // statement about the market — the engine simply did not finish checking
+  // in time. The next repricing pass is the unlock, not a new sale.
+  "ladder-timeout": "This usually resolves on its own — try refreshing in a moment.",
 };
 
 /** The words for the attention column and the row chip. */
@@ -145,6 +160,9 @@ export function withheldSentence(
   }
   if (w.reason === "no-exact-pool") {
     return "This card is in the catalog, but no sale of it has been recorded yet, so there is no pool to price it from.";
+  }
+  if (w.reason === "ladder-timeout") {
+    return "We could not finish checking this card's sales in time, likely due to high demand on our pricing data. This is not a statement that no sale exists — just try again in a moment.";
   }
   // cost-basis-floor with nothing computed: no number to quote, and Rule 3
   // forbids borrowing one.
