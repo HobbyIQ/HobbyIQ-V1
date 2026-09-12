@@ -24,6 +24,17 @@ const REFRESH_MARGIN_FRACTION = 0.9;
 /** Absolute floor on lifetime we'll trust (30s), guards against a server
  *  returning `expires_in: 0` or garbage. */
 const MIN_LIFETIME_SEC = 30;
+/**
+ * FETCH TIMEOUT (2026-09-12, incident: BuyerIQ deal scanner silent from
+ * 07:37Z). mintFreshToken() had no AbortSignal, unlike the rest of the
+ * codebase's fetch calls (cardhedge.client.ts's DEFAULT_TIMEOUT_MS
+ * convention). A stalled TCP connection to eBay's token endpoint would hang
+ * this await forever — and because _inflight is only cleared in the
+ * mint's own `finally`, EVERY caller across the process (not just the deal
+ * scanner) piles onto that one permanently-pending promise. Same ceiling as
+ * ebayListingSearch.service.ts's FETCH_TIMEOUT_MS.
+ */
+const FETCH_TIMEOUT_MS = 20_000;
 
 interface CachedToken {
   accessToken: string;
@@ -101,6 +112,7 @@ async function mintFreshToken(): Promise<CachedToken | null> {
         Accept: "application/json",
       },
       body,
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     });
     if (!res.ok) {
       console.warn(JSON.stringify({

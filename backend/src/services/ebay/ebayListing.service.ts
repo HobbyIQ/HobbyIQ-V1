@@ -168,6 +168,13 @@ export interface EbayOfferStatus {
 
 const MARKETPLACE_ID   = process.env.EBAY_MARKETPLACE_ID ?? "EBAY_US";
 const DEFAULT_CATEGORY = process.env.EBAY_SPORTS_CARDS_CATEGORY_ID ?? "261328";
+/**
+ * FETCH TIMEOUT (2026-09-12, follow-up to PR #2072's deal-scanner-silent
+ * fix). ebayRequest's fetch had no AbortSignal, unlike the codebase's
+ * AbortSignal.timeout convention (cardhedge.client.ts's DEFAULT_TIMEOUT_MS).
+ * Every seller-listing operation (create/update/end) funnels through here.
+ */
+const FETCH_TIMEOUT_MS = 20_000;
 
 // ---------------------------------------------------------------------------
 // Seller policy resolution (inline, per-user)
@@ -799,6 +806,7 @@ async function ebayRequest<T = unknown>(
       "X-EBAY-C-MARKETPLACE-ID":  MARKETPLACE_ID,
     },
     body: body ? JSON.stringify(body) : undefined,
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
   });
 
   if (res.status === 204) return {} as T;

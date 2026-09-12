@@ -31,6 +31,19 @@
  * marked done, unit 2 never even queried. Pass 2 (no sleep, same
  * RUN_MINUTES/CONTROL_STATE_FILE) then reads the saved cursor, skips unit 1,
  * and classifies only unit 2.
+ *
+ * THE SIMULATED MID-UNIT (PAGE) BUDGET STOP (2026-09-12, #2058 follow-up).
+ * When UNIT_A_PAGE_ROWS is set, unit A's rows are split into pages of that
+ * size instead of being served in one `fetchNext()` -- each page carries a
+ * `continuationToken` of the form `"unitA:<nextIndex>"`, and a query issued
+ * WITH that token as `continuationToken` in its options resumes from
+ * `nextIndex` instead of serving page 1 again, exactly like the real SDK's
+ * non-ORDER-BY replay contract this fix relies on (see rematch-sold-comps
+ * .cjs's THE CENSUS CURSOR header). SLOW_UNIT_MS then sleeps on EVERY page of
+ * unit A (not just its one-and-only page as before), so a small enough
+ * RUN_MINUTES trips the budget check strictly BETWEEN two pages, never at
+ * the unit's own end -- proving the checkpoint that lands is the mid-unit
+ * page cursor, not the coarser unit-done one.
  */
 "use strict";
 const fs = require("fs");
@@ -38,6 +51,11 @@ const path = require("path");
 
 const CONTROL_STATE_FILE = process.env.CONTROL_STATE_FILE;
 const SLOW_UNIT_MS = Number(process.env.SLOW_UNIT_MS || 0);
+// PAGE-CHECKPOINT FIXTURE KNOBS (2026-09-12, #2058 follow-up). Unset (0)
+// preserves the original one-page-per-unit behaviour every pre-existing test
+// in this suite relies on.
+const UNIT_A_ROW_COUNT = Number(process.env.UNIT_A_ROW_COUNT || 3);
+const UNIT_A_PAGE_ROWS = Number(process.env.UNIT_A_PAGE_ROWS || 0); // 0 = one page, all rows
 if (!CONTROL_STATE_FILE) throw new Error("CONTROL_STATE_FILE must be set for the fake cosmos preload");
 
 function loadControlState() {
@@ -48,7 +66,7 @@ function saveControlState(state) {
   fs.writeFileSync(CONTROL_STATE_FILE, JSON.stringify(state), "utf8");
 }
 
-const UNIT_A_ROWS = [1, 2, 3].map((n) => ({
+const UNIT_A_ROWS = Array.from({ length: UNIT_A_ROW_COUNT }, (_, i) => i + 1).map((n) => ({
   id: `unitA-${n}`, cardId: `hiq:pokemon:2025:some-set:${n}:base:no-auto`,
   hobbyiqCardId: `hiq:pokemon:2025:some-set:${n}:base:no-auto`,
   title: "", sport: "pokemon", cardYear: 2025, setName: "Some Set",
@@ -80,9 +98,40 @@ function fakeContainer(name) {
   if (name === "sold_comps") {
     return {
       items: {
-        query: (spec) => {
+        // `spec` carries the query text + parameters, same as `unitPredicate`
+        // binds. `options.continuationToken`, when present, is exactly what
+        // rematch-sold-comps.cjs's `resumeToken` passes through from a saved
+        // `partialUnit.continuationToken` -- honouring it here is what proves
+        // the SCRIPT actually threads a resumed token into `items.query`
+        // rather than silently discarding it and re-paging from the start.
+        query: (spec, options) => {
           const rows = rowsForQuery(spec);
           const isUnitA = rows === UNIT_A_ROWS || (rows.length && rows[0].id.startsWith("unitA"));
+          if (isUnitA && UNIT_A_PAGE_ROWS > 0) {
+            // Multi-page unit A. A continuation token is this fake's own
+            // opaque string "unitA:<nextIndex>" -- never inspected by the
+            // real script, only round-tripped, matching how an actual Cosmos
+            // token is opaque to callers.
+            let nextIndex = 0;
+            const startToken = options && options.continuationToken;
+            if (startToken) {
+              const m = /^unitA:(\d+)$/.exec(String(startToken));
+              if (!m) throw new Error(`fake cosmos: unrecognised continuation token "${startToken}"`);
+              nextIndex = Number(m[1]);
+            }
+            return {
+              hasMoreResults: () => nextIndex < rows.length,
+              fetchNext: async () => {
+                if (SLOW_UNIT_MS > 0) await new Promise((r) => setTimeout(r, SLOW_UNIT_MS));
+                const page = rows.slice(nextIndex, nextIndex + UNIT_A_PAGE_ROWS);
+                nextIndex += page.length;
+                const more = nextIndex < rows.length;
+                return { resources: page, continuationToken: more ? `unitA:${nextIndex}` : undefined, hasMoreResults: more };
+              },
+            };
+          }
+          // Original one-page-per-unit shape, unchanged, for every test that
+          // does not set UNIT_A_PAGE_ROWS.
           let served = false;
           return {
             hasMoreResults: () => !served,
