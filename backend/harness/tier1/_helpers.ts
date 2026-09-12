@@ -573,23 +573,35 @@ export interface ReadPathResult {
   status: number;
   json: Record<string, unknown>;
   ms: number;
-  /** True when `ms` exceeded the budget passed in (or the default) — the
-   *  network call itself is never aborted at the budget line (see
-   *  NETWORK_ABORT_MS below), so this is always a measured, real number,
-   *  not a timeout guess. */
+  /** True when `ms` exceeded the budget passed in (or the default). Always
+   *  false when `timedOut` is true — no response arrived, so there is
+   *  nothing to compare against the budget, only the fact that it never
+   *  answered inside FETCH_TIMEOUT_MS. */
   overBudget: boolean;
+  /** True when the fetch itself was aborted (no response arrived) at
+   *  FETCH_TIMEOUT_MS. This is a genuine "no answer," not a slow-but-real
+   *  one — status/json are meaningless (0 / {}) when this is true. Under
+   *  REPORT-ONLY mode a timeout is a recorded verdict, never a throw; under
+   *  READ_PATH_ENFORCE it fails the case exactly like today. */
+  timedOut: boolean;
 }
 
-// CF-TIER1-READ-PATH-ENFORCE (2026-09-12). The budget constants
-// (READ_PATH_BUDGET_MS / LATENCY_DEBT_BUDGET_MS) are report-only numbers
-// while READ_PATH_ENFORCE is off — aborting the actual network call at
-// those thresholds would throw away the one thing report-only mode exists
-// to capture: how long the call ACTUALLY took. So the network-level abort
-// uses its own, much longer ceiling (30s — matched to /search's
-// CASE_BUDGET_MS neighborhood, since these are the same prod fleet under
-// the same load) and is purely a dead-request guard, never a budget. The
-// 5s/10s numbers are applied afterward, against the real measured `ms`.
-const NETWORK_ABORT_MS = 30_000;
+// CF-TIER1-READ-PATH-ENFORCE (2026-09-12). The fetch itself gets its own
+// explicit, generous timeout — independent of the 5s/10s REPORT budgets —
+// so a slow-but-healthy prod answer still gets schema/doctrine-checked
+// instead of being cut off before a body ever arrives. 25s: comfortably
+// above market-movers' observed ~10-30s tail under tonight's fleet load
+// (card-line retire lanes + 32-slot census + ingests at 100k RU —
+// project_cosmos_ru_state_2026_09_07), with margin under the vitest
+// per-test timeout (35s, see readPaths.test.ts NETWORK_TEST_TIMEOUT_MS) so
+// a genuine timeout is caught and reported by fetchReadPath itself rather
+// than surfacing as an uncaught vitest hook timeout.
+//
+// This is a dead-request guard, never a budget: whether hitting it fails a
+// case is entirely up to READ_PATH_ENFORCE (see verdict handling in
+// readPaths.test.ts) — fetchReadPath never throws on it, it returns
+// {timedOut: true} so the caller decides.
+export const FETCH_TIMEOUT_MS = 25_000;
 
 async function fetchReadPath(
   pathName: string,
@@ -597,19 +609,31 @@ async function fetchReadPath(
 ): Promise<ReadPathResult> {
   const budgetMs = opts.timeoutMs ?? READ_PATH_BUDGET_MS;
   const ctl = new AbortController();
-  const timer = setTimeout(() => ctl.abort(), NETWORK_ABORT_MS);
+  const timer = setTimeout(() => ctl.abort(), FETCH_TIMEOUT_MS);
   const startedMs = Date.now();
   try {
     const headers: Record<string, string> = {};
     if (HARNESS_SESSION_ID) headers["x-session-id"] = HARNESS_SESSION_ID;
     const method = opts.method ?? "GET";
     if (method === "POST") headers["Content-Type"] = "application/json";
-    const res = await fetch(`${API_BASE}${pathName}`, {
-      method,
-      headers,
-      body: method === "POST" ? JSON.stringify(opts.body ?? {}) : undefined,
-      signal: ctl.signal,
-    });
+    let res: Response;
+    try {
+      res = await fetch(`${API_BASE}${pathName}`, {
+        method,
+        headers,
+        body: method === "POST" ? JSON.stringify(opts.body ?? {}) : undefined,
+        signal: ctl.signal,
+      });
+    } catch (e) {
+      const ms = Date.now() - startedMs;
+      const isAbort = e instanceof Error && e.name === "AbortError";
+      if (isAbort) {
+        // No response arrived inside FETCH_TIMEOUT_MS. Recorded, not thrown
+        // — the case decides (via READ_PATH_ENFORCE) whether this fails.
+        return { status: 0, json: {}, ms, overBudget: false, timedOut: true };
+      }
+      throw e;
+    }
     const ms = Date.now() - startedMs;
     let json: Record<string, unknown> = {};
     try {
@@ -624,7 +648,7 @@ async function fetchReadPath(
           `(GitHub Secret in CI, env var locally). See backend/docs/runbooks/tier1-harness-session.md.`
       );
     }
-    return { status: res.status, json, ms, overBudget: ms > budgetMs };
+    return { status: res.status, json, ms, overBudget: ms > budgetMs, timedOut: false };
   } finally {
     clearTimeout(timer);
   }
@@ -696,7 +720,14 @@ export function isServerError(status: number): boolean {
 export type ReadPathVerdict =
   | { kind: "ok" }
   | { kind: "withheld"; reason: string }
-  | { kind: "error"; reason: string };
+  | { kind: "error"; reason: string }
+  // CF-TIER1-READ-PATH-ENFORCE (2026-09-12). A genuine "no response arrived
+  // inside FETCH_TIMEOUT_MS" — distinct from "error", which means a request
+  // failed for a reason OTHER than a timeout (401 config issue, network
+  // fault). Under report-only this is recorded and does NOT fail the case;
+  // under READ_PATH_ENFORCE it does. Schema/doctrine assertions never run
+  // for a timeout verdict — there is no body to check.
+  | { kind: "timeout"; budgetMs: number };
 
 export interface ReadPathReport {
   name: string;
@@ -720,7 +751,32 @@ export function recordReadPathResult(r: ReadPathReport): void {
 }
 
 function verdictStr(v: ReadPathVerdict): string {
-  return v.kind === "ok" ? "ok" : v.kind === "withheld" ? `withheld:${v.reason}` : `error:${v.reason}`;
+  switch (v.kind) {
+    case "ok": return "ok";
+    case "withheld": return `withheld:${v.reason}`;
+    case "error": return `error:${v.reason}`;
+    case "timeout": return `timeout:no-response-in-${v.budgetMs}ms`;
+  }
+}
+
+/**
+ * CF-TIER1-READ-PATH-ENFORCE (2026-09-12). Central place a case calls once
+ * it has a ReadPathResult: decides the verdict (timeout vs ok, given the
+ * caller already ran its own schema/doctrine checks for a non-timeout
+ * result) and fails the case ONLY when READ_PATH_ENFORCE is on. A timeout
+ * never runs schema/doctrine assertions — callers must check
+ * `result.timedOut` themselves BEFORE reading result.json — this only
+ * gates whether the timeout itself throws.
+ */
+export function expectNotTimedOut(result: ReadPathResult, label: string): void {
+  if (!result.timedOut) return;
+  if (READ_PATH_ENFORCE) {
+    throw new Error(
+      `${label}: no response arrived inside ${FETCH_TIMEOUT_MS}ms (READ_PATH_ENFORCE=true — this fails the case)`
+    );
+  }
+  // Report-only: recorded by the caller via recordReadPathResult with a
+  // {kind:"timeout"} verdict; intentionally does not throw here.
 }
 
 export function printReadPathSummary(): void {
@@ -747,29 +803,31 @@ export function printReadPathSummary(): void {
   );
   console.log(`═══════════════════════════════════════\n`);
 
-  // CF-TIER1-READ-PATH-ENFORCE (2026-09-12). Separate, clearly labelled
-  // table so a slow-but-passing case is never mistaken for a real check
-  // failure — timing is informational while READ_PATH_ENFORCE is off (see
-  // the flag's doc comment: tonight's 100k-RU fleet load on sold_comps /
-  // card_catalog makes a 5s measurement right now unrepresentative of
-  // launch-week steady state). Flip READ_PATH_ENFORCE=true once the
-  // market-movers precompute + zero-comp ladder cap land AND the fleets
-  // quiesce — at that point this table's numbers become the check.
+  // CF-TIER1-READ-PATH-ENFORCE (2026-09-12). Clearly labelled, dedicated
+  // (path, ms, verdict) table so a slow-but-passing (or timed-out) case is
+  // never mistaken for a real check failure — timing is informational while
+  // READ_PATH_ENFORCE is off (see the flag's doc comment: tonight's
+  // 100k-RU fleet load on sold_comps / card_catalog makes a 5-25s
+  // measurement right now unrepresentative of launch-week steady state).
+  // Flip READ_PATH_ENFORCE=true once the market-movers precompute + zero-
+  // comp ladder cap land AND the fleets quiesce — at that point this
+  // table's numbers become the check.
   // eslint-disable-next-line no-console
   console.log(
     `\n══════ READ-PATH LATENCY (informational) — READ_PATH_ENFORCE=${READ_PATH_ENFORCE} ══════`
   );
+  // eslint-disable-next-line no-console
+  console.log(`  ${"path".padEnd(34)} ${"ms".padStart(7)}  verdict`);
   for (const r of READ_PATH_REPORTS) {
-    const budget = r.budgetMs ?? READ_PATH_BUDGET_MS;
-    const flag = r.overBudget ? "OVER BUDGET" : "within budget";
     const debtTag = r.latencyDebt ? " (latencyDebt)" : "";
     // eslint-disable-next-line no-console
-    console.log(`  ${r.name}: ${r.ms}ms / ${budget}ms budget${debtTag} — ${flag}`);
+    console.log(`  ${r.name.padEnd(34)} ${String(r.ms).padStart(7)}  ${verdictStr(r.verdict)}${debtTag}`);
   }
   // eslint-disable-next-line no-console
   console.log(
-    `  (enforcement is OFF: only a 5xx, a schema violation, or a null-price-with-no-reason ` +
-      `doctrine violation fails this check right now — see READ_PATH_ENFORCE in _helpers.ts)`
+    `  (enforcement is OFF: only a 5xx, a schema violation on a body that DID arrive, or a ` +
+      `null-price-with-no-reason doctrine violation fails this check right now — a timeout or ` +
+      `a slow-but-successful response does not. See READ_PATH_ENFORCE in _helpers.ts.)`
   );
   console.log(`═══════════════════════════════════════════════════════════════\n`);
 }

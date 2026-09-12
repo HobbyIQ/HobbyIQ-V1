@@ -21,21 +21,29 @@
  * The 5s default (READ_PATH_BUDGET_MS) and 10s latencyDebt ceiling
  * (LATENCY_DEBT_BUDGET_MS) below are both still measured and recorded for
  * every case — the printReadPathSummary() "READ-PATH LATENCY (informational)"
- * table at the end of the run always shows the real numbers. But per Fable's
- * 2026-09-12 directive, timing alone does not fail the build while
+ * table at the end of the run always shows the real (path, ms, verdict)
+ * numbers, including a dedicated "timeout" verdict when no response arrives
+ * inside FETCH_TIMEOUT_MS (25s). But per Fable's 2026-09-12 directive,
+ * TIMING ALONE — including a timeout — does not fail the build while
  * READ_PATH_ENFORCE is unset/false: tonight's prod load (card-line retire
  * lanes + 32-slot census + ingests hammering sold_comps/card_catalog at
- * 100k RU — project_cosmos_ru_state_2026_09_07) makes a 5s measurement taken
- * right now unrepresentative of launch-week steady state. Only a 5xx, a
- * schema violation, or an FMV-doctrine violation (null price with no reason)
- * fails a case. See READ_PATH_ENFORCE's doc comment in _helpers.ts for the
- * exact flip condition (latency PR lands + fleets quiesce).
+ * 100k RU — project_cosmos_ru_state_2026_09_07) makes even a 10-30s
+ * measurement taken right now unrepresentative of launch-week steady state.
+ * Only a 5xx, a schema violation ON A BODY THAT ACTUALLY ARRIVED, or an
+ * FMV-doctrine violation (null price with no reason) fails a case. A
+ * timeout means no body arrived, so schema/doctrine checks are skipped for
+ * that case entirely (there is nothing to check) — never treated as a
+ * missing-field failure. See READ_PATH_ENFORCE's doc comment in
+ * _helpers.ts for the exact flip condition (latency PR lands + fleets
+ * quiesce).
  */
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   API_BASE,
+  expectNotTimedOut,
   expectWithinLatencyDebtCeiling,
   expectWithinReadBudget,
+  FETCH_TIMEOUT_MS,
   getReadPath,
   isServerError,
   LATENCY_DEBT_BUDGET_MS,
@@ -50,12 +58,15 @@ import {
 
 const describeTier = TIER1_ENABLED ? describe : describe.skip;
 
-// Vitest per-test timeouts below are sized to the 30s NETWORK_ABORT_MS in
-// _helpers.ts (the real dead-request guard) plus margin — NOT to the 5s/10s
-// report-only budgets, since a slow-but-real response must be allowed to
-// finish and get measured rather than being cut off by the test framework
-// before fetchReadPath's own numbers can be recorded.
-const NETWORK_TEST_TIMEOUT_MS = 35_000;
+// Vitest per-test timeouts sized to FETCH_TIMEOUT_MS (the real dead-request
+// guard inside fetchReadPath) plus margin — NOT to the 5s/10s report-only
+// budgets, since a slow-but-real response must be allowed to finish and get
+// measured rather than being cut off by the test framework before
+// fetchReadPath's own numbers can be recorded. fetchReadPath itself never
+// lets a call run past FETCH_TIMEOUT_MS (it aborts and returns
+// {timedOut:true} rather than hanging), so this margin only needs to cover
+// scheduling/JSON-parse overhead around that ceiling.
+const NETWORK_TEST_TIMEOUT_MS = FETCH_TIMEOUT_MS + 10_000;
 
 // The three checklist-backed cards named in the task. All three are real
 // hobbyiqCardId slugs pulled from Drew's own portfolio holdings (Verlander,
@@ -102,6 +113,20 @@ describeTier("Tier 1 · read-path coverage", () => {
           });
           throw e;
         }
+        // A timeout is a distinct outcome from a slow-but-real response: no
+        // body arrived, so schema checks below are meaningless and must not
+        // run. expectNotTimedOut only throws when READ_PATH_ENFORCE=true;
+        // otherwise this records the verdict and returns.
+        if (result.timedOut) {
+          recordReadPathResult({
+            name: `recent-sales:${key}`,
+            verdict: { kind: "timeout", budgetMs: FETCH_TIMEOUT_MS },
+            ms: result.ms,
+          });
+          expectNotTimedOut(result, `recent-sales:${key}`);
+          return;
+        }
+
         // Report-only: measures + logs against the 5s budget but does not
         // fail the case on timing alone (READ_PATH_ENFORCE gate).
         expectWithinReadBudget(result.ms, `recent-sales:${key}`);
@@ -158,6 +183,16 @@ describeTier("Tier 1 · read-path coverage", () => {
         });
         throw e;
       }
+      if (result.timedOut) {
+        recordReadPathResult({
+          name: "listing-range:goldLabelBlue",
+          verdict: { kind: "timeout", budgetMs: FETCH_TIMEOUT_MS },
+          ms: result.ms,
+        });
+        expectNotTimedOut(result, "listing-range:goldLabelBlue");
+        return;
+      }
+
       expectWithinReadBudget(result.ms, "listing-range:goldLabelBlue");
 
       expect(isServerError(result.status), `listing-range returned ${result.status}`).toBe(false);
@@ -237,10 +272,26 @@ describeTier("Tier 1 · read-path coverage", () => {
         });
         throw e;
       }
-      // Layer A: still enforced regardless of READ_PATH_ENFORCE — this is a
-      // hard ceiling on the debt override itself (10s), not the report-only
-      // 5s/10s budget check below. A latencyDebt case that blows past DOUBLE
-      // its already-doubled budget is not "measuring the fleet," it's broken.
+
+      // CF-TIER1-READ-PATH-ENFORCE (2026-09-12, Fable's directive). market-
+      // movers?window=30d observed 10-30s under tonight's fleet load — a
+      // timeout here (no response arrived) is a TIMING outcome, same as any
+      // other case's, and must not throw or fail the case under report-only.
+      // The schema checks below never run when no body arrived.
+      if (result.timedOut) {
+        recordReadPathResult({
+          name: "market-movers",
+          verdict: { kind: "timeout", budgetMs: FETCH_TIMEOUT_MS },
+          ms: result.ms,
+          latencyDebt: LATENCY_DEBT,
+        });
+        expectNotTimedOut(result, "market-movers");
+        return;
+      }
+
+      // A real response arrived inside FETCH_TIMEOUT_MS — still report-only
+      // against the 10s debt ceiling (not a hard throw), consistent with
+      // every other case here under READ_PATH_ENFORCE=false.
       expectWithinLatencyDebtCeiling(result.ms, "market-movers");
 
       expect(isServerError(result.status), `market-movers returned ${result.status}`).toBe(false);
@@ -315,6 +366,20 @@ describeTier("Tier 1 · read-path coverage", () => {
           });
           throw e;
         }
+
+        // A timeout (no body arrived) is recorded, not thrown, under
+        // report-only — and schema/doctrine checks never run on it.
+        if (result.timedOut) {
+          recordReadPathResult({
+            name: `canonical-fmv:${key}`,
+            verdict: { kind: "timeout", budgetMs: FETCH_TIMEOUT_MS },
+            ms: result.ms,
+            latencyDebt,
+          });
+          expectNotTimedOut(result, `canonical-fmv:${key}`);
+          return;
+        }
+
         // Report-only under CF-TIER1-READ-PATH-ENFORCE for every card here —
         // debt cards still get the hard 10s ceiling check (never bypassed),
         // non-debt cards get the report-only 5s check. Neither fails the
@@ -427,6 +492,17 @@ describeTier("Tier 1 · read-path coverage", () => {
         });
         throw e;
       }
+
+      if (result.timedOut) {
+        recordReadPathResult({
+          name: "lookup-by-cert",
+          verdict: { kind: "timeout", budgetMs: FETCH_TIMEOUT_MS },
+          ms: result.ms,
+        });
+        expectNotTimedOut(result, "lookup-by-cert");
+        return;
+      }
+
       expectWithinReadBudget(result.ms, "lookup-by-cert");
       expect(isServerError(result.status), `lookup-by-cert returned ${result.status}`).toBe(false);
       expect(result.status).toBe(200);
