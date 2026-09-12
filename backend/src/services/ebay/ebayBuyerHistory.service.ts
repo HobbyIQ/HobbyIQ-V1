@@ -25,6 +25,16 @@ import { fetchEbayItemDetailsBatch } from "./ebayItemDetails.service.js";
 const TRADING_API_URL = "https://api.ebay.com/ws/api.dll";
 const COMPATIBILITY_LEVEL = "1349";
 const SITE_ID = "0"; // US
+/**
+ * FETCH TIMEOUT (2026-09-12, follow-up to PR #2072's deal-scanner-silent
+ * fix). This fetch had no AbortSignal, unlike the codebase's
+ * AbortSignal.timeout convention (cardhedge.client.ts's DEFAULT_TIMEOUT_MS).
+ * fetchEbayBuyerHistory is the entry point of the eBay purchase-import flow
+ * (holding creation from purchases) — a stalled connection here would hang
+ * an import request exactly like the deal scanner's stalled listing search
+ * hung its cycle.
+ */
+const FETCH_TIMEOUT_MS = 20_000;
 
 /** GetMyeBayBuying WonList.DurationInDays cap per eBay Trading API docs. */
 export const MAX_DURATION_DAYS = 90;
@@ -152,6 +162,7 @@ export async function fetchEbayBuyerHistory(
       "Content-Type": "text/xml",
     },
     body,
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
   });
   if (!res.ok) {
     throw new Error(`GetMyeBayBuying HTTP ${res.status}: ${(await res.text()).slice(0, 300)}`);

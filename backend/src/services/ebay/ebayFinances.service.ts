@@ -34,6 +34,14 @@ const FINANCES_BASE_URL =
 const MARKETPLACE_HEADER = "EBAY_US";
 const MAX_PAGES = 10; // safety cap; Finances rarely returns more than 1-2 pages per order
 const PAGE_LIMIT = 50;
+/**
+ * FETCH TIMEOUT (2026-09-12, follow-up to PR #2072's deal-scanner-silent
+ * fix). fetchFinancesPage had no AbortSignal, unlike the codebase's
+ * AbortSignal.timeout convention (cardhedge.client.ts's DEFAULT_TIMEOUT_MS).
+ * A stalled connection here would hang getTransactionsForOrder's page loop
+ * exactly like the deal scanner's stalled listing search hung its cycle.
+ */
+const FETCH_TIMEOUT_MS = 20_000;
 
 // ─── Public types ──────────────────────────────────────────────────────────
 
@@ -168,6 +176,7 @@ async function fetchFinancesPage(
       Accept: "application/json",
       "X-EBAY-C-MARKETPLACE-ID": MARKETPLACE_HEADER,
     },
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
   });
   if (r.status === 404) return { transactions: [] };
   if (!r.ok) {

@@ -45,6 +45,17 @@ const EBAY_IDENTITY_API = SANDBOX
   ? "https://apiz.sandbox.ebay.com"
   : "https://apiz.ebay.com";
 
+/**
+ * FETCH TIMEOUT (2026-09-12, follow-up to the BuyerIQ deal-scanner-silent
+ * incident, PR #2072). Neither fetch() in this file carried an AbortSignal,
+ * unlike the rest of the codebase's AbortSignal.timeout convention (see
+ * cardhedge.client.ts's DEFAULT_TIMEOUT_MS). getAccessToken/handleCallback
+ * sit on the OAuth connect + every-request token-refresh path that the eBay
+ * import flow (holding creation from purchases) depends on — a stalled
+ * connection here would hang that path exactly like the deal scanner's did.
+ */
+const FETCH_TIMEOUT_MS = 20_000;
+
 // Scopes needed for fixed-price sell listings + finances reconciliation
 const REQUIRED_SCOPES = [
   "https://api.ebay.com/oauth/api_scope",
@@ -192,6 +203,7 @@ export async function handleCallback(
   try {
     const idRes = await fetch(`${EBAY_IDENTITY_API}/commerce/identity/v1/user/`, {
       headers: { Authorization: `Bearer ${tokenRes.access_token}` },
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     });
     const idText = await idRes.text();
     console.log("[eBayAuth] Identity API status ->", idRes.status);
@@ -367,6 +379,7 @@ async function fetchEbayToken(body: URLSearchParams): Promise<EbayTokenResponse>
       "Authorization": `Basic ${credentials}`,
     },
     body: body.toString(),
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
   });
 
   const text = await res.text();
