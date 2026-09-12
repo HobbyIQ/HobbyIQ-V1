@@ -130,12 +130,50 @@ export function holdingValuationIds(holding: PortfolioHolding): { id: string; ca
  */
 export const COST_BASIS_FLOOR_RATIO = 0.15;
 
-export function costBasisFloor(holding: PortfolioHolding, proposedUnit: number): { rejects: boolean; costBasis: number; proposedTotal: number } {
+/**
+ * RULING R24 (Drew, 2026-09-12). "When the exact, checklist-backed pool is
+ * correct but the projected price is far under cost, SHOW IT — the
+ * cost-basis floor applies only to fallback rungs."
+ *
+ * Motivating case: holding 277b05a3 (1997 Metal Universe Magnetic Field Cal
+ * Ripken Jr. PSA 8, cost $52.98) — the exact PSA 8 tier has one in-window
+ * sale, $5.40, under `exact-pool-last-sale`. The floor refused it at 10.19%
+ * of basis, on the theory that a price this far under cost is a slug or
+ * pool mismatch rather than a market. That theory is right when the number
+ * came from a NEIGHBOURING identity or grade — a sibling parallel, a family
+ * baseline, a cross-grade rescale — because there the pool itself might be
+ * the wrong one. It is wrong when the number came from the holding's OWN
+ * exact (identity, grade) pool: the pool cannot be a mismatch for itself,
+ * and refusing it does not protect against a bad match, it just hides a
+ * real, if thin (n=1, confidence 0.15, "low confidence"), market read.
+ *
+ * So the floor takes the rung that produced the number and, when it is an
+ * EXACT-POOL rung (`isExactPoolRung` — the closed allowlist declared next to
+ * the rung vocabulary in fmvRung.ts, so a new rung must say for itself
+ * whether it reads the exact pool), never rejects. Every other rung —
+ * sibling-parallel, family-baseline, graded-pool-inverse, grade-curve /
+ * player-index estimates, any rung that reads a pool other than the
+ * holding's own — is unaffected: the floor still asks the same ratio
+ * question of them, at the same 15%, because there a number far under basis
+ * remains evidence of a wrong pool.
+ *
+ * `rungLabel` is OPTIONAL and, when omitted, the floor behaves exactly as it
+ * always has — every caller that has no rung to give (or is judging a PRIOR
+ * value's retention, which is a different question from this one) keeps its
+ * existing behaviour rather than being silently exempted by an absent label.
+ */
+export function costBasisFloor(
+  holding: PortfolioHolding,
+  proposedUnit: number,
+  rungLabel?: string | null,
+): { rejects: boolean; costBasis: number; proposedTotal: number } {
   const qty = Math.max(1, num(holding.quantity, 1));
   const costBasis = num(holding.totalCostBasis, num(holding.purchasePrice, 0) * qty);
   const proposedTotal = proposedUnit * qty;
+  const exemptExactPool = isExactPoolRung(rungLabel);
   return {
-    rejects: costBasis > 0 && proposedTotal > 0 && proposedTotal / costBasis < COST_BASIS_FLOOR_RATIO,
+    rejects: !exemptExactPool
+      && costBasis > 0 && proposedTotal > 0 && proposedTotal / costBasis < COST_BASIS_FLOOR_RATIO,
     costBasis,
     proposedTotal,
   };
@@ -1209,7 +1247,13 @@ export async function valueHoldingThroughOneEntry(
   // withhold the number.
   const observed = v.valueSource === "observed" && isExactPoolRung(v.rungLabel);
 
-  const floor = costBasisFloor(holding, v.fairMarketValue as number);
+  // RULING R24 (Drew, 2026-09-12): the floor exempts exact-pool rungs for a
+  // checklist-backed identity (mayPublishPrice already cleared above) — the
+  // pool cannot be a mismatch for itself. `costBasisFloor` reads the rung
+  // through the same `isExactPoolRung` allowlist and never rejects when it
+  // names the exact pool; every fallback rung still faces the floor exactly
+  // as before.
+  const floor = costBasisFloor(holding, v.fairMarketValue as number, v.rungLabel);
   if (floor.rejects) {
     console.warn(JSON.stringify({
       event: "one_valuation_path_rejected_cost_basis_floor",
