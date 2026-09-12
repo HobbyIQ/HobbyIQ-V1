@@ -1,0 +1,138 @@
+{
+ "lane": "relocate-pool-rows-by-list",
+ "reason": "witt-221-image-variation-is-sonic",
+ "generatedAt": "2026-09-12T13:07:59.000Z",
+ "reportOnlyUntil": "Drew's review — no apply is authorized by this PR",
+ "rulings": [
+  "R23 (Drew, 2026-09-11): 2022 Topps Chrome #221 Bobby Witt Jr.'s image/photo variation is the SONIC tier -- a distinct card line, address hiq:baseball:2022:topps-chrome:221:image-variation-sonic:no-auto, source cardpedia-drew-ruling-2026-09-11 (PRs #2047/#2049/#2051). Card_catalog confirms this row stands (checklist-backed) and confirms NO SP or SSP variation row was ever minted for #221 -- Beckett's 20-card SP list and 5-card SSP list do not include card 221; Sonic is the card's only variation tier.",
+  "Ruling 24 (tierless-variation-unique, #2047 follow-up): a title or field that states an image/photo variation but names NO tier resolves to Sonic for this card specifically, because Sonic is the only variation tier #221 has -- a tier-blind claim is not an ambiguity when only one tier exists to claim. A title that DOES name a different tier word (SP, SSP) is not silent, and is PARKED rather than guessed onto Sonic: the checklist attests no SP/SSP row for this card number, so a title claiming one names a card that does not exist in this product's checklist.",
+  "One card, one row, one pool: the census below covers BOTH sold_comps identity fields (cardId partition and hobbyiqCardId) and both address families -- the hiq-slug-partitioned rows (tca-ebay, ebay-user-purchase) and the vendor-id-partitioned CardHedge rows the exact-pool reader ORs in by hobbyiqCardId today. Every entry here RELOCATES (never REPOINTs) so the Sonic cardId partition itself holds the row -- the engine's partition-scoped exact-pool read must find these without depending on the OR fallback.",
+  "fromCardId is the row's STORED cardId (the partition key), never its hobbyiqCardId. Twelve of the sixteen rows here are CardHedge sales keyed on the CH product id 1664553883976x293772727399522100 (2022 Topps Chrome #221's CardHedge product), not on any hiq slug -- built the other way this list would point-read 0 of them.",
+  "Drew's own holding (2b62a93f-f24c-454e-8d5f-1101eb417358) was re-derived onto the Sonic catalog row at 23:43Z (verdict REDERIVE, matchedBy tierless-variation-unique, confidence 0.92), but its sold_comps row never followed: its STORED cardId is the stale pre-ruling slug hiq:baseball:2022:topps-chrome-sonic-lite:221:image-variations:no-auto (a distinct, non-Sonic catalog row, source checklistcenter, left over from an earlier repair -- see the row's own parallelRepairedBy/reslugedFrom history), and its hobbyiqCardId points at the old self-derived image-variation-refractor address. Neither identity field named Sonic, which is why the 12:55Z exact-pool read found zero rows at the Sonic partition. This entry RELOCATES it directly onto the ruled address.",
+  "Excluded from this list, in scope for the census but not the apply: two 'Red Speckle Refractor' rows (a distinct, numbered /5 parallel -- no variation word in either title, out of the variation family entirely); the plain 'Sonic SP/Refractor #221' CardHedge and tca-ebay rows that name Sonic but never state a variation (per variationVocabulary.ts, the product's own numbered Sonic Refractor parallels are colour refractors of the reprinted base card, not image variations); two mis-slugged Franmil Reyes rows sharing this cardId by a different, unrelated defect (wrong player, out of scope for this ruling).",
+  "uniqueness is on (id, fromCardId)."
+ ],
+ "census": {
+  "sonicSlugRowsAtBothAddresses": 0,
+  "oldAddressRowsCardIdPartitioned": 4,
+  "oldAddressRowsVendorPartitioned": 12,
+  "titleStatesTierlessVariation": 12,
+  "titleStatesOtherTier": 4,
+  "relocate": 12,
+  "park": 4
+ },
+ "entries": [
+  {
+   "id": "ebay-user-purchase::holding::2b62a93f-f24c-454e-8d5f-1101eb417358",
+   "fromCardId": "hiq:baseball:2022:topps-chrome-sonic-lite:221:image-variations:no-auto",
+   "toCardId": "hiq:baseball:2022:topps-chrome:221:image-variation-sonic:no-auto",
+   "price": 229.74,
+   "evidence": "Drew's own holding purchase, verifiedByUser=true, verifyStatus=confirmed. Catalog-level re-derivation already landed this holding on the Sonic identity (verdict REDERIVE, matchedBy tierless-variation-unique, confidence 0.92, 2026-09-11T23:43Z) but the pool row's stored cardId is a stale pre-ruling slug (topps-chrome-sonic-lite:221:image-variations, source checklistcenter) and hobbyiqCardId still names the old self-derived image-variation-refractor address -- neither identity field is Sonic, which is why the identity was reported no-exact-pool. RELOCATE onto the ruled address; both identity fields land at the target."
+  },
+  {
+   "id": "ebay-user-purchase::128012724525-10083011221909",
+   "fromCardId": "hiq:baseball:2022:topps-chrome:221:refractor-image-variation:no-auto",
+   "toCardId": "hiq:baseball:2022:topps-chrome:221:image-variation-sonic:no-auto",
+   "price": 224.75,
+   "evidence": "Stored parallel field states 'Refractor Image Variation' (parallelSlug refractor-image-variation) -- a tierless variation claim, and Witt #221 has only the Sonic tier. This row is also the store's own recorded __phashDuplicate of Drew's holding sale above (same listing image) -- an independent sighting of the identical Sonic sale, not a second card."
+  },
+  {
+   "id": "tca-ebay::206430896499",
+   "fromCardId": "hiq:baseball:2022:topps-chrome:221:refractor:no-auto",
+   "toCardId": "hiq:baseball:2022:topps-chrome:221:image-variation-sonic:no-auto",
+   "price": 1000,
+   "evidence": "Title states 'Rookie SP Variation Refractor' -- a tierless variation claim (the leading 'SP' here is the product's common short-print shorthand, not a compound 'Variation SP' tier claim; the word VARIATION stands alone, unqualified by a tier). Currently mis-slugged onto the plain refractor address by the ingest parser, which never read the variation word at all."
+  },
+  {
+   "id": "tca-ebay::EBAY-v1|227492732652|0",
+   "fromCardId": "hiq:baseball:2022:topps-chrome:221:refractor:no-auto",
+   "toCardId": "hiq:baseball:2022:topps-chrome:221:image-variation-sonic:no-auto",
+   "price": 975.99,
+   "evidence": "Title states 'SP Variation Refractor Rookie #221 SP' -- VARIATION stands alone, unqualified by a tier word (both 'SP' occurrences bracket the phrase as the product's own short-print shorthand, never combined into 'Variation SP'). Currently mis-slugged onto the plain refractor address; the parser never read the variation word."
+  },
+  {
+   "id": "cardhedge::ch-daily::1741275174784x947262707499217900",
+   "fromCardId": "1664553883976x293772727399522100",
+   "toCardId": "hiq:baseball:2022:topps-chrome:221:image-variation-sonic:no-auto",
+   "price": 225,
+   "evidence": "Title: '2022 Topps Chrome Sonic - Image Variation #221 Bobby Witt Jr  Short Print RC - Raw 10' -- states Sonic AND Image Variation explicitly, tierless. Stored cardId is the CardHedge product id, not a hiq slug; hobbyiqCardId currently reads the old self-derived image-variation-refractor address."
+  },
+  {
+   "id": "cardhedge::ch-daily::1742926254440x597683734370108900",
+   "fromCardId": "1664553883976x293772727399522100",
+   "toCardId": "hiq:baseball:2022:topps-chrome:221:image-variation-sonic:no-auto",
+   "price": 250,
+   "evidence": "Title: '2022 Topps Chrome Sonic - Image Variation #221 Bobby Witt Jr  Short Print RC - Raw 10' -- states Sonic AND Image Variation explicitly, tierless."
+  },
+  {
+   "id": "cardhedge::ch-daily::1742973206091x738689555220716000",
+   "fromCardId": "1664553883976x293772727399522100",
+   "toCardId": "hiq:baseball:2022:topps-chrome:221:image-variation-sonic:no-auto",
+   "price": 205,
+   "evidence": "Title: '2022 Topps Chrome Sonic - Image Variation #221 Bobby Witt Jr  Short Print RC - Raw 10' -- states Sonic AND Image Variation explicitly, tierless."
+  },
+  {
+   "id": "cardhedge::ch-daily::1743534398954x443017444859990400",
+   "fromCardId": "1664553883976x293772727399522100",
+   "toCardId": "hiq:baseball:2022:topps-chrome:221:image-variation-sonic:no-auto",
+   "price": 1050,
+   "evidence": "Title: 'BOBBY WITT JR 2022 TOPPS CHROME SP PSA 10 IMAGE VARIATION RC #221 JC' -- IMAGE VARIATION stands alone, unqualified by a tier word (leading SP sits before the PSA grade, CardHedge's own boilerplate placement, not compounded with Image Variation)."
+  },
+  {
+   "id": "cardhedge::ch-daily::1744145438882x650999295170409600",
+   "fromCardId": "1664553883976x293772727399522100",
+   "toCardId": "hiq:baseball:2022:topps-chrome:221:image-variation-sonic:no-auto",
+   "price": 177.59,
+   "evidence": "Title: '2022 Topps Chrome Sonic - Image Variation #221 Bobby Witt Jr  Short Print RC - Raw 10' -- states Sonic AND Image Variation explicitly, tierless."
+  },
+  {
+   "id": "cardhedge::ch-daily::1747969269905x716985292797942500",
+   "fromCardId": "1664553883976x293772727399522100",
+   "toCardId": "hiq:baseball:2022:topps-chrome:221:image-variation-sonic:no-auto",
+   "price": 725,
+   "evidence": "Title: 'BOBBY WITT JR 2022 TOPPS CHROME SP PSA 10 IMAGE VARIATION RC #221 ' -- IMAGE VARIATION stands alone, unqualified by a tier word (leading SP sits before the PSA grade, the same CardHedge boilerplate placement as the JC-suffixed sibling above)."
+  },
+  {
+   "id": "cardhedge::ch-daily::1747416601449x585079087029438000",
+   "fromCardId": "1664553883976x293772727399522100",
+   "toCardId": "hiq:baseball:2022:topps-chrome:221:image-variation-sonic:no-auto",
+   "price": 250,
+   "evidence": "Title: '2022 Topps Chrome Bobby Witt Jr Refractor Rookie Photo Variation #221 RC - Raw 10' -- 'Photo Variation' is the plain-tier synonym for Image Variation (variationVocabulary.ts), tierless -- no SP/SSP word anywhere in the title."
+  },
+  {
+   "id": "cardhedge::ch-daily::1747884239449x428927935890369000",
+   "fromCardId": "1664553883976x293772727399522100",
+   "toCardId": "hiq:baseball:2022:topps-chrome:221:image-variation-sonic:no-auto",
+   "price": 250,
+   "evidence": "Title: '2022 Topps Chrome Bobby Witt Jr Refractor Rookie Photo Variation #221 RC  - Raw 10' -- 'Photo Variation' is the plain-tier synonym for Image Variation, tierless -- no SP/SSP word anywhere in the title."
+  },
+  {
+   "id": "cardhedge::ch-daily::1746544357535x132886934759926420",
+   "fromCardId": "1664553883976x293772727399522100",
+   "parkIdentityUnverified": true,
+   "price": 282.82,
+   "evidence": "Title: '2022 Topps Chrome - BOBBY WITT JR - #221 Rookie Image Variation SP - PSA 9' -- states the compound 'Image Variation SP', naming Tier 1 (the standard SP tier) explicitly. Beckett's 20-card SP list does not include card #221 (Ruling 23 census); the checklist attests no SP variation row for this card, so this title names a card the product's own checklist does not mint. PARK rather than guess onto Sonic -- the title is not silent on tier, it names the wrong one."
+  },
+  {
+   "id": "cardhedge::ch-daily::1748833398454x676143609912286800",
+   "fromCardId": "1664553883976x293772727399522100",
+   "parkIdentityUnverified": true,
+   "price": 667.88,
+   "evidence": "Title: 'Bobby Witt Jr 2022 Topps Chrome 221 Image Variation SP Rookie RC PSA 10' -- states the compound 'Image Variation SP', naming Tier 1 explicitly. Same defect as the sibling entry above: the checklist attests no SP row for #221, so PARK rather than guess onto Sonic."
+  },
+  {
+   "id": "cardhedge::ch-daily::1745261564556x586812167469995500",
+   "fromCardId": "1664553883976x293772727399522100",
+   "parkIdentityUnverified": true,
+   "price": 1500,
+   "evidence": "Title: '2022 Topps Chrome Sonic BOBBY WITT JR #221 SSP Variation RC - PSA 9 MINT - RARE' -- states 'SSP Variation' explicitly, naming Tier 2. Beckett's 5-card SSP list does not include card #221 (Ruling 23 census); the checklist attests no SSP variation row for this card. PARK rather than guess onto Sonic -- the title names a specific, wrong tier alongside the word Sonic, not a tierless Sonic claim."
+  },
+  {
+   "id": "cardhedge::ch-daily::1748657335925x230745526276940000",
+   "fromCardId": "1664553883976x293772727399522100",
+   "parkIdentityUnverified": true,
+   "price": 1600,
+   "evidence": "Title: '2022 Topps Chrome Sonic Refractor Variation SSP Bobby Witt Jr #221 PSA 9 MINT' -- states Sonic AND 'Variation SSP' in the same title, a conflicting/ambiguous tier claim the checklist cannot resolve (no SSP row exists for #221). PARK rather than guess which half of a self-contradicting title is the finish."
+  }
+ ]
+}
