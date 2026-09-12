@@ -1,0 +1,27 @@
+{
+ "generatedAt": "2026-09-12T14:20:00.000Z",
+ "forLane": "relocate-pool-rows-by-list",
+ "reportOnlyUntil": "Drew's review — no apply is authorized by this PR",
+ "finding": "RULING (Drew, 2026-09-12 widget): Victor Figueroa's 2026 \"Black & White Red Ink\" Chrome Prospect Autograph (CPA-VF) belongs to the 2026 BOWMAN (paper) product, setKey `bowman`, not `bowman-chrome`. backend/data/checklists/scraped/2026-bowman-full.csv (setKey `bowman`) lists CPA-VF twice — category `auto-chrome-prospect-autographs` (base auto) and `auto-chrome-prospect-gold-ink-autographs` — both Victor Figueroa; backend/data/checklists/scraped/2026-bowman-chrome.csv (1,197 rows) carries ZERO CPA-VF rows. The 08-30 ruling row backend/data/checklists/drew-rulings/2026-bowman-chrome-cpa-red-ink-baseball.manifest.json was keyed to the wrong product (`bowman-chrome`) and is corrected in this PR to `bowman`. This list moves the ONE live sale resident at the superseded bowman-chrome address onto the corrected bowman address, AFTER the corrected checklist file has been ingested and minted hiq:baseball:2026:bowman:cpa-vf:black-white-red-ink:auto — point-read against prod card_catalog on 2026-09-12 confirmed that address does not yet exist, so this list cannot run before the ingest step without hitting an unminted destination.",
+ "rulings": [
+  "fromCardId is the row's STORED cardId (the partition key), never its hobbyiqCardId — this lane repoints BOTH fields to `toCardId` on RELOCATE (relocate-pool-rows-by-list.cjs: 'A moved row carries ONE identity. Both fields land at `to`').",
+  "ONLY ONE sale is resident at the superseded address. Point-read against prod sold_comps on 2026-09-12: cardId = hiq:baseball:2026:bowman-chrome:cpa-vf:black-white-red-ink:auto holds exactly 1 row — ebay-user-purchase::147344007201-10082410797719, $270, Drew's own verified purchase, title '2026 Bowman Chrome Black White Red Ink'. This is the row PR #2062 relocated off the self-derived twin onto the (then-mis-keyed) checklist ruling row.",
+  "THE PARKED CARDHEDGE ROW DOES NOT MOVE, AND IS OUT OF SCOPE FOR THIS LIST. cardhedge::1778540428361x447194681698603460::2026-08-24T17:51:13.000Z::1900::Raw (identityUnverified: true, stamped by PR #2062's fold on 2026-09-12) is partitioned at its own CardHedge product id (cardId = '1778540428361x447194681698603460'), and its stored hobbyiqCardId still names the RETIRED self-derived twin (hiq:baseball:2026:bowman-chrome:cpa-vf:black-white-red-ink-refractor:auto), not the ruling row this PR corrects. It was never resident at the ruling row's address by either field, and re-pointing a deliberately-PARKed row (title names no finish; no checklist-backed base row exists for CPA-VF in EITHER bowman-chrome or bowman) is a separate decision this product-key correction does not make. Point-read verified 2026-09-12 (see PR body).",
+  "The destination MUST already exist before this list runs — it is minted by ingest-checklist-csv-to-catalog reading the corrected backend/data/checklists/drew-rulings/2026-bowman-chrome-cpa-red-ink-baseball.manifest.json (setKey now `bowman`), which must be dispatched BEFORE this list. Point-read against prod card_catalog on 2026-09-12 confirmed hiq:baseball:2026:bowman:cpa-vf:black-white-red-ink:auto does not yet exist.",
+  "This list moves the SALE only. It never mints, retires, or reslugs a card_catalog row — the catalog retire of the superseded ruling row is the companion list data/catalog-relocations/2026-09-12-figueroa-red-ink-bowman-chrome-retire.json, which runs AFTER this one (its own precondition is salesAt = 0 at the superseded address)."
+ ],
+ "census": {
+  "supersededAddressSoldCompsRows": 1,
+  "relocated": 1,
+  "parkedRowsOutOfScope": 1
+ },
+ "entries": [
+  {
+   "id": "ebay-user-purchase::147344007201-10082410797719",
+   "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-vf:black-white-red-ink:auto",
+   "toCardId": "hiq:baseball:2026:bowman:cpa-vf:black-white-red-ink:auto",
+   "price": 270,
+   "evidence": "title='2026 Bowman Chrome Black White Red Ink'; source=ebay-user-purchase, verifiedByUser=true, contributorUserId=user-199fcbc9-58ba-4643-a0c9-f75bcbc90bd4 (Drew's own purchase, the holding this repair is for). RELOCATE onto the corrected checklist row per the 2026-09-12 widget ruling: CPA-VF Black & White Red Ink is a 2026 Bowman (paper) card, not Bowman Chrome — backend/data/checklists/scraped/2026-bowman-full.csv lists CPA-VF (base + Gold Ink auto), backend/data/checklists/scraped/2026-bowman-chrome.csv lists it nowhere. Destination hiq:baseball:2026:bowman:cpa-vf:black-white-red-ink:auto is minted by the corrected drew-ruling checklist ingest, which MUST run before this list."
+  }
+ ]
+}
