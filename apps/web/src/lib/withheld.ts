@@ -33,12 +33,22 @@
 
 import type { PortfolioHolding } from "./api";
 
-/** The engine's closed vocabulary, mirrored from the wire. */
+/** The engine's closed vocabulary, mirrored from the wire.
+ *
+ *  `no-exact-pool` joined 2026-09-12 (#2059): the engine already named this
+ *  refusal internally (holdingValuation.ts's `NoBasisRefusalReason`), but the
+ *  wire type in pricingEnvelope.ts only recognised the original four, so a
+ *  persisted `no-exact-pool` block was silently dropped to `null` at
+ *  `withheldOf` (pricingEnvelope.builder.ts) — the holding reached the UI as
+ *  an unreasoned "—" though the engine had, in fact, answered. See the D24
+ *  Diamond Dominance / Magnetic Field case: the identity is known and
+ *  checklist-backed, no sale of it exists yet in the window searched. */
 export type WithheldReason =
   | "cost-basis-floor"
   | "no-checklist-match"
   | "identity-not-in-catalog"
-  | "pool-migrating";
+  | "pool-migrating"
+  | "no-exact-pool";
 
 export interface WithheldBlock {
   reason: WithheldReason;
@@ -69,6 +79,7 @@ const SHORT: Record<WithheldReason, string> = {
   "no-checklist-match": "checklist being acquired",
   "identity-not-in-catalog": "card not in catalog yet",
   "pool-migrating": "comps settling",
+  "no-exact-pool": "no sales yet for this exact card",
 };
 
 /** Rule 2: what would unlock a price, per reason. */
@@ -80,6 +91,11 @@ const UNLOCK: Record<WithheldReason, string> = {
   "no-checklist-match": "Confirm the card details to price it now.",
   "identity-not-in-catalog": "We are adding this card to the catalog.",
   "pool-migrating": "Recent sales are still settling into this card's pool.",
+  // The owner cannot act on this one either — the card is known and
+  // checklist-backed, and nothing they confirm produces a sale that has not
+  // happened. Time and new data are the only unlock, same shape as the
+  // cost-basis floor.
+  "no-exact-pool": "Pricing resumes once a sale of this exact card is recorded.",
 };
 
 /** The words for the attention column and the row chip. */
@@ -126,6 +142,9 @@ export function withheldSentence(
   }
   if (w.reason === "pool-migrating") {
     return "This card's sales are moving between pools right now. A price would be measured against a pool that is still changing.";
+  }
+  if (w.reason === "no-exact-pool") {
+    return "This card is in the catalog, but no sale of it has been recorded yet, so there is no pool to price it from.";
   }
   // cost-basis-floor with nothing computed: no number to quote, and Rule 3
   // forbids borrowing one.
