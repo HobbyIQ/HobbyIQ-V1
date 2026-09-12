@@ -945,10 +945,13 @@ export async function computeUnifiedPrice(
    * competing with a median to get there.
    *
    * n=1 and n=2/3 share one shape: the newest sale stands under
-   * `exact-pool-last-sale`, confidence via computeConfidence(sampleCount,
-   * newestDate) — which already grades n=1 (0.15) below n=2 (0.25) below
-   * n=3 (0.35), so the label does not need to fork by sample count; the
-   * caller's own `sampleCount` field on the tier carries that distinction.
+   * `exact-pool-last-sale`, confidence via this module's own
+   * confidenceScore(sampleCount, newestMs, nowMs) — a log-of-sample-count
+   * score that already grades n=1 below n=2 below n=3, so the label does not
+   * need to fork by sample count; the caller's own `sampleCount` field on
+   * the tier carries that distinction. (observedGradeCurve.service.ts's
+   * computeConfidence is the sibling used by the oneValuationPath /
+   * portfolio surfaces; same shape, same doctrine, different module.)
    */
   function thinPoolReading(rows: RawCompRow[], wMedian: number | null): ReturnType<typeof computeTrendAndPrediction> {
     const timed = rows
