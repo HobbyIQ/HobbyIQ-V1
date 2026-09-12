@@ -1,0 +1,44 @@
+{
+ "generatedAt": "2026-09-12T03:02:03.200Z",
+ "forLane": "relocate-pool-rows-by-list",
+ "issue": "key-twins-marconi-chipper-0912 CASE B, pass 1 of 2 -- THIS POOL LIST RUNS FIRST",
+ "applyOrder": "1 of 2 -- THIS POOL LIST RUNS FIRST. The catalog retire list (2026-09-12-skybox-metal-universe-1997-self-derived-retire.json) runs ONLY after this one has applied: it deletes the self-derived skybox-metal-universe row these sales point at today, and a sale must never be left on a slug that no longer resolves.",
+ "reportOnlyUntil": "Drew's review -- no apply is authorized by this PR",
+ "finding": "1997 Skybox Metal Universe Chipper Jones #31 (holding 69eab153-8285-4b6a-8aa1-c20d8a089729) is pinned to hiq:baseball:1997:skybox-metal-universe:31:base:no-auto, whose only catalog row is source=user-verified -- self-derived (isSelfDerivedIdentity, identityBacking.ts: user-verified is explicitly NOT checklist-backed). The repo already holds a real, checklist-backed 1997 Metal Universe baseball checklist on disk: backend/data/checklists/scraped/1997-metal-universe-baseball.csv (source sportscardchecklist.com, scraped 2026-09-04, 250 base cards including `base,31,,false,,Chipper Jones,,`), ingested into card_catalog as hiq:baseball:1997:metal-universe:31:base:no-auto (source sportscardchecklist-2026-09-06). Card-number census (GROUP BY source, point-read 2026-09-12): metal-universe/1997 carries 250 sportscardchecklist-2026-09-06 rows plus thousands of sales-attested/graded rows; skybox-metal-universe/1997 carries only 15 sales-attested + 1 user-verified + assorted graded rows, zero checklist source. This is the same finding as the prior 1996 Fleer Metal Universe split (fleer-metal-universe had one defective row; the real checklists file under plain metal-universe).",
+ "rulings": [
+  "fromCardId is the row's STORED cardId (the partition key). Both entries repoint cardId AND hobbyiqCardId to the checklist address (relocate-pool-rows-by-list.cjs RELOCATE semantics: 'Both fields land at `to`').",
+  "Scope: sold_comps rows whose cardId STARTS WITH hiq:baseball:1997:skybox-metal-universe:31: (card #31 only, this holding's number). Censused by number: card_catalog and sold_comps also carry other skybox-metal-universe 1997 numbers (5, 23, 34, 38, 50, 111, 118, 145) for OTHER players (Michael Jordan #23, Ken Griffey Jr #145, Derek Jeter #118, etc.) -- none of those are in scope for this ruling, which is Chipper Jones #31 only.",
+  "One sale under this same partition (tca-ebay::206470795807) is a DIFFERENT CARD -- Shannon Sharpe, football, already carrying hobbyiqCardId hiq:football:1997:skybox-metal-universe:31:base:no-auto -- and is excluded, not moved.",
+  "Three cardhedge sales for this exact card (e.g. cardhedge::1675906490784x846796386248036100::...) already carry hobbyiqCardId=hiq:baseball:1997:metal-universe:31:base:no-auto and a cardId that is a raw vendor id, not a hiq: slug -- they are not in the wrong partition and are NOT in this list."
+ ],
+ "census": {
+  "skyboxMetalUniverse1997Card31SoldComps": 3,
+  "relocated": 2,
+  "excludedDifferentCard": 1
+ },
+ "excluded": [
+  {
+   "id": "tca-ebay::206470795807",
+   "fromCardId": "hiq:baseball:1997:skybox-metal-universe:31:base:no-auto",
+   "price": 2,
+   "title": "1997 Skybox Metal Universe - Shannon Sharpe #31",
+   "excludeReason": "Different card: this sale's own hobbyiqCardId already reads hiq:football:1997:skybox-metal-universe:31:base:no-auto (Shannon Sharpe, football, a different #31 in a different sport's checklist). Not Chipper Jones and not this ruling's scope -- left untouched."
+  }
+ ],
+ "entries": [
+  {
+   "id": "tca-ebay::158100982036",
+   "fromCardId": "hiq:baseball:1997:skybox-metal-universe:31:base:no-auto",
+   "toCardId": "hiq:baseball:1997:metal-universe:31:base:no-auto",
+   "price": 40,
+   "evidence": "title=\"1997 Skybox Metal Universe - Chipper Jones #31 - PSA 9\"; destination hiq:baseball:1997:metal-universe:31:base:no-auto is checklist-backed (source sportscardchecklist-2026-09-06, card_catalog point-read 2026-09-12); the repo's scraped 1997 Metal Universe checklists are filed under plain metal-universe (project_split_identity_pool_rows / prior finding), skybox-metal-universe is a self-derived duplicate address for the same product."
+  },
+  {
+   "id": "ebay-user-purchase::398008421282-10087868414521",
+   "fromCardId": "hiq:baseball:1997:skybox-metal-universe:31:base:no-auto",
+   "toCardId": "hiq:baseball:1997:metal-universe:31:base:no-auto",
+   "price": 20,
+   "evidence": "title=\"1997 Skybox Foil Chipper Jones Hof #31\"; this is holding 69eab153-8285-4b6a-8aa1-c20d8a089729's own eBay-purchase sale; destination hiq:baseball:1997:metal-universe:31:base:no-auto is checklist-backed (source sportscardchecklist-2026-09-06). Both this sale and its holding are Chipper Jones #31, base, no-auto -- the exact same card as the checklist row."
+  }
+ ]
+}
