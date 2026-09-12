@@ -43,7 +43,27 @@ function deriveIdentity(row, deps) {
   const cardYear = deps.extractYearFromTitle(title) ?? (row.cardYear ?? null);
   const cardNumber = parsed.cardNumber ?? row.cardNumber ?? "";
   const setKeyRaw = deps.inferSetKeyFromTitle(title, cardNumber) || row.setName || "";
-  const setKey = deps.normalizeSetKey(setKeyRaw);
+  // CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT (#2060 follow-on). `identity`
+  // below is what the census/classifier compares against the row's STORED
+  // fields, and `slug` further down is computed independently through
+  // deps.computeHobbyIqCardId, which already applies this same override
+  // internally. Without applying it here too, a title reading "Bowman Chrome
+  // ... CPA-MG" would derive identity.setKey = "bowman-chrome" while its own
+  // slug's setKey segment says "bowman" -- one function disagreeing with
+  // itself. Applying it at this ONE seam keeps both answers in agreement, the
+  // same discipline CF-THE-YEAR-DOES-NOT-SPLIT-THE-PRODUCT states for the
+  // interposed-year lift.
+  // CF-METAL-UNIVERSE-NAME-WAS-REVIVED (#2060 follow-on). Same reasoning:
+  // computeHobbyIqCardId's slug already runs spellForEra via
+  // resolveSetKeyForSlug, so identity.setKey has to run it too or a vintage
+  // "Skybox Metal Universe" title would derive identity.setKey =
+  // "skybox-metal-universe" while its own slug says "metal-universe".
+  const eraSpelled = deps.spellForEra
+    ? deps.spellForEra(deps.normalizeSetKey(setKeyRaw), cardYear ?? null)
+    : deps.normalizeSetKey(setKeyRaw);
+  const setKey = deps.applySiblingChecklistOverride
+    ? deps.applySiblingChecklistOverride(eraSpelled, cardNumber, cardYear ?? 0)
+    : eraSpelled;
 
   // CF-BOWMAN-DEFAULT-NOT-EVIDENCE + CF-UNKNOWN-IS-ALSO-A-GUESS: the parser's
   // fallbacks are guesses, not readings, and a guess that passes the guard is

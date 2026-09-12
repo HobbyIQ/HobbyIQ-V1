@@ -1752,6 +1752,88 @@ function applyChromePrefixOverride(setKey: string, cardNumber: string, year: num
   return setKey;
 }
 
+// CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT (Drew, 2026-09-12, #2060 follow-on).
+//
+// THE DEFECT. `inferSetKeyFromTitle`'s bare `/bowman\s+chrome/` rule pins ANY
+// title containing those two words to bowman-chrome, even when the card
+// number belongs to a DIFFERENT sibling in the Bowman family. "2026 Bowman
+// Chrome Gold Refractor Marconi German #CPA-MG" derives bowman-chrome, but
+// CPA-MG is a 2026 BOWMAN (paper) number — Chrome Prospect Autographs is a
+// SECTION of 2026 Bowman, not of 2026 Bowman Chrome. 2026 Bowman Chrome's own
+// checklist (2026-bowman-chrome.csv, 1,197 rows) carries zero CPA-MG rows;
+// 2026-bowman-full.csv carries three (base/gold-ink/packfractor autos). The
+// title says "Chrome" because the CARD IS chrome stock (Bowman prints its
+// prospect autos on chrome paper) — that is a STOCK word, not evidence of the
+// Bowman CHROME product line, and CF-CHROME-PREFIX-OVERRIDE-NARROW's own
+// header already makes exactly this distinction for the forward direction.
+//
+// WHY THIS CANNOT BE A PREFIX RULE. CHROME_PREFIX_OVERRIDES the older fix
+// literally warns about, is right to stay a narrow whitelist of PREFIXES for
+// the ambiguous-vendor-text direction — but the same prefix can, and does,
+// name two different cards in the two products in the SAME year:
+// 2026 Bowman Chrome CPA-AG is Angeibel Gomez (259 CPA autos in that
+// checklist); 2026 Bowman CPA-AG is Adrian Gil (173 CPA autos in that one).
+// A blanket "CPA- belongs to Bowman" rule would silently move Angeibel
+// Gomez's card onto Adrian Gil's — collision, not correction (measured
+// 2026-09-12: of 179 CPA- numbers shared by the two 2026 checklists, 8 name
+// different people in each: AG, BC, DF, EM, HL, JS, LA, WA). So this table is
+// keyed on the EXACT card number, never the prefix, and an entry may only be
+// added once BOTH sibling checklists have been read and the number is
+// confirmed present in exactly one of them.
+//
+// THE MECHANISM ANSWERS "WITHOUT A PER-TITLE CROSS-PARTITION QUERY" (the
+// constraint the fix is required to meet) the same way CHROME_PREFIX_OVERRIDES
+// already does: a small, checked-in, hand-verified table stands in for a
+// checklist-presence lookup, so the deriver never needs I/O to answer the
+// question. It is consulted from the SAME seam CHROME_PREFIX_OVERRIDES uses —
+// computeHobbyIqCardId — so every caller that derives a slug (the live title
+// parser, slugRederivation's rederive lane, and the rematch lane's
+// rematch-derive-identity.cjs, which all funnel into this one function) agrees
+// by construction rather than by keeping three copies of the rule in sync.
+interface SiblingChecklistOverride {
+  fromSetKey: string;
+  toSetKey: string;
+  /** Exact card numbers, upper-cased, that this year's `toSetKey` checklist
+   *  lists and `fromSetKey`'s checklist does not. Never a prefix. */
+  cardNumbers: ReadonlySet<string>;
+  year: number;
+}
+const SIBLING_CHECKLIST_OVERRIDES: readonly SiblingChecklistOverride[] = [
+  // #2060: read 2026-09-12 against data/checklists/scraped/2026-bowman-full.csv
+  // (has CPA-MG, three rows: auto-chrome-prospect-autographs, -gold-ink-
+  // autographs, -packfractor-autographs, all Marconi German) and
+  // 2026-bowman-chrome.csv (zero CPA-MG rows of any kind). CPA-MG is
+  // unambiguous for 2026 — it is not one of the eight colliding CPA- numbers
+  // above — so a title that names Bowman Chrome but a Bowman-only number is
+  // read as the Bowman card the checklist says it is.
+  { fromSetKey: "bowman-chrome", toSetKey: "bowman", cardNumbers: new Set(["CPA-MG"]), year: 2026 },
+];
+export function applySiblingChecklistOverride(setKey: string, cardNumber: string, year: number): string {
+  const cn = String(cardNumber ?? "").trim().toUpperCase();
+  for (const rule of SIBLING_CHECKLIST_OVERRIDES) {
+    if (setKey !== rule.fromSetKey || year !== rule.year) continue;
+    if (rule.cardNumbers.has(cn)) return rule.toSetKey;
+  }
+  return setKey;
+}
+
+/**
+ * The OTHER setKey(s) this table knows `setKey` can be confused with, in
+ * `year` — i.e. `rule.toSetKey` for any rule whose `fromSetKey` matches.
+ * `applySiblingChecklistOverride` answers "which product does THIS card
+ * number belong to"; this answers "which sibling product should a lookup
+ * that does not have a card number yet ALSO check", so a by-player catalog
+ * query (resolveCardNumberByPlayer) can find a card whose true address is
+ * the sibling the title's stated product does not name. No new blast
+ * radius — the same hand-verified table, read the other direction. */
+export function siblingSetKeysToAlsoCheck(setKey: string, year: number): string[] {
+  const out = new Set<string>();
+  for (const rule of SIBLING_CHECKLIST_OVERRIDES) {
+    if (rule.fromSetKey === setKey && rule.year === year) out.add(rule.toSetKey);
+  }
+  return [...out];
+}
+
 // CF-CHROME-COLOR-IMPLIES-REFRACTOR (Drew, 2026-08-07). On chrome stock,
 // bare colors like "Blue" and colored-pattern parallels like "Blue Shimmer"
 // are market shorthand for "<color> Refractor" / "<color> Shimmer
@@ -2193,7 +2275,11 @@ export function computeHobbyIqCardId(components: HobbyIqCardIdComponents): strin
   // nothing and keep the repair behaviour unchanged.
   const setKey = components.authoritativeSetKey === true
     ? baseSetKey
-    : applyChromePrefixOverride(baseSetKey, cardNumber, year);
+    : applySiblingChecklistOverride(
+        applyChromePrefixOverride(baseSetKey, cardNumber, year),
+        cardNumber,
+        year,
+      );
   // CF-AUTO-ONLY-FORCE (Drew, 2026-08-11). Auto-only prefixes always
   // produce autograph cards — force isAuto=true so vendor label drift
   // (isAuto=false on a CPA- sale, etc.) can't fragment the pool.
