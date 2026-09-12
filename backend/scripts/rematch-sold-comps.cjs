@@ -2275,8 +2275,10 @@ async function writeSettleMarkers(ledger, ledgerDoc, conn) {
     }
     console.log(`    SETTLE MARKERS  ${f(written)} written, ${f(failed)} failed  ->  ${REMATCH_CONTROL_CONTAINER}`);
   } catch (err) {
-    // A missing container is the expected first-run case, not an error worth
-    // failing a re-key over.
+    // getOrCreateControlContainer provisions the container itself, so a
+    // failure reaching here is a genuine Cosmos problem (throttling,
+    // permissions, an outage) rather than "the container doesn't exist yet" --
+    // still non-fatal, since the engine's age window covers an absent marker.
     console.error(`    !! settle markers could not be written (${String(err?.message ?? err).slice(0, 140)}) -- the engine's age window still gates these pools.`);
   }
 }
