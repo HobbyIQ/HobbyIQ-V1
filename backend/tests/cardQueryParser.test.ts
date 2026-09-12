@@ -486,3 +486,44 @@ describe("parseCardQuery — modern Panini + historic brand set patterns", () =>
     expect(p.set).toBe("Pacific Crown Royale");
   });
 });
+
+// CF-A-BARE-BRAND-ABBREVIATION-KILLS-THE-WHOLE-NAME (2026-09-12). Follow-up
+// to the TCA eBay write-rate collapse (#2084): a live 1,000-row 2026-09-10
+// eBay sample classified through the ingest's title-only path found a second,
+// independent defect once #2084's Young Guns / UD Canvas sport-inference fix
+// let these rows reach the player-name gate at all — "UD" (Upper Deck's own
+// shorthand for its own insert names, "UD Canvas" / "UD Exclusives" / "UD
+// Update") was not in NOISE, so it survived the strip as a bare 2-letter
+// token. boundName's trailing-token length check then refused the WHOLE
+// name over that one stray token, not just the token: real, already-present
+// player names ("Tyler Seguin", "Connor Bedard") were lost entirely.
+//
+// Titles below are real eBay listing titles from that sample (no id/url/
+// price/image — title text only, same as tcaEbay0910Sample100.json).
+describe("parseCardQuery — bare 'UD' / 'Encore' no longer erase a stated player", () => {
+  it("'UD Canvas' with a leading card-number token keeps the player", () => {
+    const p = parseCardQuery("C-206 Tyler Seguin UD Canvas 2025-26 Upper Deck");
+    expect(p.playerName).toBe("Tyler Seguin");
+  });
+
+  it("'UD CANVAS' (all caps, card number after the player) keeps the player", () => {
+    const p = parseCardQuery("2025 UPPER DECK SERIES 1 #C-58 CONNOR BEDARD UD CANVAS");
+    expect(p.playerName).toBe("Connor Bedard");
+  });
+
+  it("'UD Exclusives' with a print run keeps the player", () => {
+    const p = parseCardQuery("2025 UPPER DECK EXTENDED SERIES #607 KAAPO KAKKO UD EXCLUSIVES /100");
+    expect(p.playerName).toBe("Kaapo Kakko");
+  });
+
+  it("bare 'UD' alone (no Canvas/Exclusives) also no longer eats the whole name", () => {
+    const p = parseCardQuery("Tyler Seguin UD 2025-26 Upper Deck");
+    expect(p.playerName).toBe("Tyler Seguin");
+  });
+
+  it("'Encore' (Upper Deck's own insert-line name) does not leak into the player", () => {
+    const p = parseCardQuery("E-18 Timo Meier Encore 2025-26 Upper Deck");
+    expect(p.playerName).toBe("Timo Meier");
+    expect(p.playerName?.toLowerCase()).not.toContain("encore");
+  });
+});
