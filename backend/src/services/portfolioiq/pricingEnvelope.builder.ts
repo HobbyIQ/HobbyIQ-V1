@@ -426,6 +426,9 @@ export function withheldOf(
     && reason !== "no-checklist-match"
     && reason !== "identity-not-in-catalog"
     && reason !== "pool-migrating"
+    // #2059: join the engine's own no-exact-pool reason rather than let it
+    // fall through to null — see the type's own comment in pricingEnvelope.ts.
+    && reason !== "no-exact-pool"
   ) {
     return null;
   }

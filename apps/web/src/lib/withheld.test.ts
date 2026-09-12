@@ -25,6 +25,7 @@ const ALL: WithheldReason[] = [
   "no-checklist-match",
   "identity-not-in-catalog",
   "pool-migrating",
+  "no-exact-pool",
 ];
 
 function holding(withheld: unknown): PortfolioHolding {
@@ -51,16 +52,17 @@ describe("withheldOf: reads the envelope, invents nothing", () => {
   });
 });
 
-describe("Rule 1: four causes, four different sentences", () => {
+describe("Rule 1: five causes, five different sentences", () => {
   it("gives every reason its own short label", () => {
     const seen = new Set(ALL.map((r) => withheldShort(r)));
-    // The bug: all four collapsed to "cost-basis check". Four distinct
-    // strings is the assertion that cannot pass if they ever re-collapse.
-    expect(seen.size).toBe(4);
+    // The bug: all four collapsed to "cost-basis check". Five distinct
+    // strings (now that no-exact-pool has joined the union) is the assertion
+    // that cannot pass if they ever re-collapse.
+    expect(seen.size).toBe(5);
   });
 
   it("gives every reason its own unlock line", () => {
-    expect(new Set(ALL.map((r) => withheldUnlock(r))).size).toBe(4);
+    expect(new Set(ALL.map((r) => withheldUnlock(r))).size).toBe(5);
   });
 
   it("never leaks the engine's vocabulary onto the glass", () => {
@@ -71,6 +73,7 @@ describe("Rule 1: four causes, four different sentences", () => {
       expect(words).not.toContain("no-checklist-match");
       expect(words).not.toContain("identity-not-in-catalog");
       expect(words).not.toContain("pool-migrating");
+      expect(words).not.toContain("no-exact-pool");
     }
   });
 
@@ -96,6 +99,10 @@ describe("Rule 2: every reason says what would unlock it", () => {
     // would be worse than saying nothing.
     expect(withheldUnlock("no-checklist-match").toLowerCase()).toContain("confirm");
     expect(withheldUnlock("cost-basis-floor").toLowerCase()).not.toContain("confirm");
+    // no-exact-pool is the same shape as the cost-basis floor: the card is
+    // known, and nothing the owner confirms produces a sale that has not
+    // happened. Time is the only unlock.
+    expect(withheldUnlock("no-exact-pool").toLowerCase()).not.toContain("confirm");
   });
 });
 
@@ -251,6 +258,7 @@ describe("showsCheckingPrice — the spinner never masks a decided row", () => {
       "no-checklist-match",
       "identity-not-in-catalog",
       "pool-migrating",
+      "no-exact-pool",
     ];
     for (const reason of reasons) {
       expect(showsCheckingPrice({ repricing: true, value: null, withheld: { ...w, reason } })).toBe(
