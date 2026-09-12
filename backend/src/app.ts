@@ -88,6 +88,10 @@ import labelerRoutes from "./routes/labeler.routes.js";
 // dashboard. The number Drew calls when someone asks "how clean is
 // the data?".
 import cleanlinessRoutes from "./routes/cleanliness.routes.js";
+// CF-MARKET-MOVERS-PERSISTED-SNAPSHOT (Fable, 2026-09-12): admin dispatch
+// + poll surface for refreshing the persisted market-movers snapshots
+// (path-scoped requireAdmin, same shape as cleanlinessRoutes).
+import marketMoversAdminRoutes from "./routes/marketMoversAdmin.routes.js";
 // CF-FLAG-COMP-ROUTES (2026-08-01, Drew): user "this looks wrong"
 // button — flags a sold_comp row into verify_queue for admin review.
 // After N distinct users flag the same row, auto-quarantine kicks in.
@@ -297,6 +301,9 @@ app.use("/api/verify", verifyCompsRoutes);
 app.use("/api", labelerRoutes);
 // CF-CLEANLINESS-ROUTES (Drew, 2026-08-01): pool cleanliness dashboard.
 app.use("/api", cleanlinessRoutes);
+// CF-MARKET-MOVERS-PERSISTED-SNAPSHOT (Fable, 2026-09-12): admin dispatch
+// + poll surface for the scheduled market-movers snapshot refresh.
+app.use("/api", marketMoversAdminRoutes);
 // CF-FLAG-COMP-ROUTES (Drew, 2026-08-01): user "flag this comp" endpoint.
 app.use("/api", flagCompRoutes);
 // CF-QUARANTINE-ROUTES (Drew, 2026-08-01): admin quarantine browser.

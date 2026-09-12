@@ -72,4 +72,14 @@ describe("admin gate is path-scoped, not blanket /api", () => {
       expect(res.status, `${p} should still be admin-gated`).toBe(503);
     }
   });
+
+  // CF-MARKET-MOVERS-PERSISTED-SNAPSHOT (Fable, 2026-09-12). New admin
+  // router, same path-scoped pattern as cleanlinessRoutes — pinned here so
+  // a future edit that widens its router.use(requireAdmin) scope (the
+  // exact defect this whole file exists to catch) fails loudly.
+  it("gates the market-movers snapshot refresh admin routes", async () => {
+    const res = await request(app).post("/api/admin/market-movers/refresh-snapshots");
+    expect(res.status).toBe(503);
+    expect(res.body.error).toMatch(/ADMIN_API_TOKEN not configured/);
+  });
 });
