@@ -140,11 +140,12 @@ describe("valueIdentity — the exact pool prices the requested tier", () => {
     expect(psaTierOnRawCall.trendAdjustedValue).toBe(psa10.fairMarketValue);
   });
 
-  it("a thin pool (n=2) is still the exact pool: weighted-median rung, no ladder", async () => {
+  it("a thin pool (n=2) is still the exact pool: RULING R25 — too few for a trend, the most recent sale stands, no ladder", async () => {
     h.catalog.set(GOLD, identityRow());
     h.rows = [sale(GOLD, 50, 3), sale(GOLD, 60, 30)];
     const v = await valueIdentity({ id: GOLD });
-    expect(v.rungLabel).toBe("exact-pool-weighted-median");
+    expect(v.rungLabel).toBe("exact-pool-last-sale");
+    expect(v.fairMarketValue).toBe(50);
     expect(v.valueSource).toBe("observed");
     expect(v.compsUsed).toBe(2);
     expect(h.ladderCalls).toEqual([]);

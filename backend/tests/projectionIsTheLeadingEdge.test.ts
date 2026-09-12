@@ -209,9 +209,11 @@ describe("B. a one-sale window does not win on its own (Gillen CPA-TG Blue /150)
     expect(v.rungLabel).toBe("exact-pool-last-sale");
     expect(v.valueSource).toBe("observed");
     expect(v.basis).toMatch(/window=180d \[60d n=1, 90d n=1, 180d n=2, 180d with all 2\]/);
-    expect(v.basis).toMatch(/carries >99\.9% of the window's recency weight/);
-    expect(v.basis).toMatch(/ONE_SALE_WINDOW_POLICY=last-sale/);
-    expect(v.basis).toMatch(/widen would say \$489\.5/);
+    // RULING R25: 2 sales is too few for a trend — the newest stands
+    // unconditionally, and the note still prints what the named `widen`
+    // alternative would have said, for audit.
+    expect(v.basis).toMatch(/too few for a trend/);
+    expect(v.basis).toMatch(/leading edge of the newest 2 would say \$489\.5/);
   });
 
   it("widen (the named alternative, off): a one-sale window does not win on its own — the 180d leading edge $489.50 under its own label, with $729 printed beside it", async () => {
@@ -227,13 +229,13 @@ describe("B. a one-sale window does not win on its own (Gillen CPA-TG Blue /150)
     expect(v.basis).toMatch(/last-sale would say \$729/);
   });
 
-  it("a carrying sale that AGREES with the leading edge leaves the weighted median standing (the D16 thin fixture)", async () => {
+  it("RULING R25 supersedes the D16 thin fixture: 2 sales is too few for a trend, the newest stands regardless of agreement with the leading edge", async () => {
     h.catalog.set(TG, catalogRow({ year: 2024, cardNumber: "CPA-TG", parallel: "Blue Refractor", printRun: 150 }));
     h.rows = [row(TG, 50, 3), row(TG, 60, 30)];
     const v = await valueIdentity({ id: TG });
-    expect(v.rungLabel).toBe("exact-pool-weighted-median");
+    expect(v.rungLabel).toBe("exact-pool-last-sale");
     expect(v.fairMarketValue).toBe(50);
-    expect(v.basis).toMatch(/agrees with the leading edge/);
+    expect(v.basis).toMatch(/too few for a trend/);
   });
 
   it("exactly one sale in the widest window: nothing to widen to — the sale stands under exact-pool-last-sale", async () => {
@@ -246,11 +248,12 @@ describe("B. a one-sale window does not win on its own (Gillen CPA-TG Blue /150)
     expect(v.basis).toMatch(/nothing wider to widen to/);
   });
 
-  it("a thin window no single sale carries is the plain recency-weighted median", async () => {
+  it("RULING R25: a thin window no single sale carries is STILL the most recent sale, not a median of any kind", async () => {
     h.catalog.set(TG, catalogRow({ year: 2024, cardNumber: "CPA-TG", parallel: "Blue Refractor", printRun: 150 }));
     h.rows = [row(TG, 100, 5), row(TG, 120, 8), row(TG, 90, 12)];
     const v = await valueIdentity({ id: TG });
-    expect(v.rungLabel).toBe("exact-pool-weighted-median");
-    expect(v.basis).toMatch(/the newest carries \d+% of the weight/);
+    expect(v.rungLabel).toBe("exact-pool-last-sale");
+    expect(v.fairMarketValue).toBe(100);
+    expect(v.basis).toMatch(/too few for a trend/);
   });
 });
