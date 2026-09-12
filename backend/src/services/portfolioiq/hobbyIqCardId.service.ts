@@ -1790,6 +1790,32 @@ function applyChromePrefixOverride(setKey: string, cardNumber: string, year: num
 // parser, slugRederivation's rederive lane, and the rematch lane's
 // rematch-derive-identity.cjs, which all funnel into this one function) agrees
 // by construction rather than by keeping three copies of the rule in sync.
+//
+// #2064 shipped one entry (CPA-MG, Marconi German). #2069 found the SAME
+// defect on CPA-VF (Victor Figueroa) the same night, which meant the class
+// was open, not one holding: EVERY CPA- number present in exactly one of the
+// two 2026 checklists is the identical shape. Generalized here to the FULL
+// set, read 2026-09-12 against
+// data/checklists/scraped/2026-bowman-full.csv (779 CPA- rows, one row per
+// category per number — several numbers appear 2-3x for base/gold-ink/
+// packfractor) and 2026-bowman-chrome.csv (1,197 rows total, 259 CPA- rows):
+//
+//   179 CPA- numbers appear in BOTH checklists' cardNumber column
+//    79 appear ONLY in 2026-bowman-full.csv           -> bowman-chrome -> bowman
+//    92 appear ONLY in 2026-bowman-chrome.csv          -> bowman -> bowman-chrome
+//     8 of the 179 shared numbers name DIFFERENT PEOPLE in each product and
+//       are EXCLUDED, never mapped either direction: AG (Adrian Gil / Angeibel
+//       Gomez), BC, DF, EM, HL, JS, LA, WA.
+//
+// HARDCODED, NOT READ FROM THE CSVS AT RUNTIME. This module has zero
+// filesystem I/O today and sits on the hot path of every minted id
+// (CF-RECONCILIATION-DEFENSIVE-LOAD next door describes exactly the class of
+// risk a throw-at-import here would create) — adding a CSV read + parse here
+// would be a heavier, riskier change than the two-list generalization itself.
+// The two lists below are pinned against a live re-read of both CSVs by
+// tests/siblingChecklistOverrideMatchesChecklists.test.ts, which fails on
+// drift (a checklist re-scrape adding/removing a CPA- number) rather than
+// silently going stale.
 interface SiblingChecklistOverride {
   fromSetKey: string;
   toSetKey: string;
@@ -1798,15 +1824,41 @@ interface SiblingChecklistOverride {
   cardNumbers: ReadonlySet<string>;
   year: number;
 }
+/** 2026 CPA- numbers present ONLY in 2026-bowman-full.csv (setKey `bowman`) —
+ *  a title naming Bowman Chrome but one of these numbers is read as Bowman.
+ *  Exported so the drift test can pin it against a live re-read of the CSV. */
+export const CPA_2026_BOWMAN_ONLY: readonly string[] = [
+  "CPA-AA", "CPA-AF", "CPA-AFR", "CPA-ANA", "CPA-AT", "CPA-BA", "CPA-BB", "CPA-BG", "CPA-BI",
+  "CPA-BT", "CPA-CC", "CPA-CGU", "CPA-CJ", "CPA-CSC", "CPA-CV", "CPA-DD", "CPA-DDA",
+  "CPA-DH", "CPA-DL", "CPA-DOR", "CPA-DP", "CPA-DSH", "CPA-EDO", "CPA-EF", "CPA-EH",
+  "CPA-EHA", "CPA-EME", "CPA-EW", "CPA-GJ", "CPA-GL", "CPA-GR", "CPA-GS", "CPA-HE", "CPA-HR",
+  "CPA-IJ", "CPA-JG", "CPA-JJ", "CPA-JK", "CPA-JM", "CPA-JQ", "CPA-JQU", "CPA-JSL", "CPA-JU",
+  "CPA-JW", "CPA-JWH", "CPA-KAN", "CPA-KC", "CPA-KG", "CPA-KH", "CPA-KHE", "CPA-KMC",
+  "CPA-KSN", "CPA-LDE", "CPA-MC", "CPA-MCH", "CPA-MF", "CPA-MG", "CPA-MHO", "CPA-MS",
+  "CPA-NM", "CPA-NT", "CPA-OC", "CPA-PI", "CPA-PN", "CPA-RB", "CPA-RC", "CPA-RN", "CPA-SK",
+  "CPA-SP", "CPA-TB", "CPA-TGI", "CPA-TM", "CPA-TR", "CPA-TW", "CPA-VA", "CPA-VF", "CPA-WL",
+  "CPA-WS", "CPA-YCA",
+];
+/** 2026 CPA- numbers present ONLY in 2026-bowman-chrome.csv (setKey
+ *  `bowman-chrome`) — a title naming bare Bowman but one of these numbers is
+ *  read as Bowman Chrome. Exported so the drift test can pin it against a
+ *  live re-read of the CSV. */
+export const CPA_2026_BOWMAN_CHROME_ONLY: readonly string[] = [
+  "CPA-AC", "CPA-AD", "CPA-AH", "CPA-AL", "CPA-ALO", "CPA-AMA", "CPA-AN", "CPA-AO",
+  "CPA-AOW", "CPA-AP", "CPA-AR", "CPA-AS", "CPA-ASA", "CPA-BBU", "CPA-BJ", "CPA-BN",
+  "CPA-BW", "CPA-CA", "CPA-CR", "CPA-CZ", "CPA-DB", "CPA-DK", "CPA-DM", "CPA-DT", "CPA-EA",
+  "CPA-EC", "CPA-ED", "CPA-EMER", "CPA-EPE", "CPA-EQ", "CPA-ER", "CPA-FA", "CPA-FB",
+  "CPA-FE", "CPA-FR", "CPA-GB", "CPA-GP", "CPA-IC", "CPA-JC", "CPA-JCA", "CPA-JCI",
+  "CPA-JCU", "CPA-JGO", "CPA-JH", "CPA-JHE", "CPA-JLO", "CPA-JPA", "CPA-JR", "CPA-JRO",
+  "CPA-JRU", "CPA-JSU", "CPA-JT", "CPA-KA", "CPA-KCA", "CPA-KMA", "CPA-LC", "CPA-LD",
+  "CPA-LDA", "CPA-LH", "CPA-LP", "CPA-LR", "CPA-MB", "CPA-MM", "CPA-NDE", "CPA-OA", "CPA-PC",
+  "CPA-PG", "CPA-RA", "CPA-RAR", "CPA-RD", "CPA-RE", "CPA-RG", "CPA-RM", "CPA-RS", "CPA-SB",
+  "CPA-SDE", "CPA-SDO", "CPA-SJ", "CPA-SL", "CPA-SN", "CPA-SS", "CPA-SSE", "CPA-ST",
+  "CPA-TH", "CPA-WAR", "CPA-WD", "CPA-WG", "CPA-WV", "CPA-WW", "CPA-YA", "CPA-YM", "CPA-YS",
+];
 const SIBLING_CHECKLIST_OVERRIDES: readonly SiblingChecklistOverride[] = [
-  // #2060: read 2026-09-12 against data/checklists/scraped/2026-bowman-full.csv
-  // (has CPA-MG, three rows: auto-chrome-prospect-autographs, -gold-ink-
-  // autographs, -packfractor-autographs, all Marconi German) and
-  // 2026-bowman-chrome.csv (zero CPA-MG rows of any kind). CPA-MG is
-  // unambiguous for 2026 — it is not one of the eight colliding CPA- numbers
-  // above — so a title that names Bowman Chrome but a Bowman-only number is
-  // read as the Bowman card the checklist says it is.
-  { fromSetKey: "bowman-chrome", toSetKey: "bowman", cardNumbers: new Set(["CPA-MG"]), year: 2026 },
+  { fromSetKey: "bowman-chrome", toSetKey: "bowman", cardNumbers: new Set(CPA_2026_BOWMAN_ONLY), year: 2026 },
+  { fromSetKey: "bowman", toSetKey: "bowman-chrome", cardNumbers: new Set(CPA_2026_BOWMAN_CHROME_ONLY), year: 2026 },
 ];
 export function applySiblingChecklistOverride(setKey: string, cardNumber: string, year: number): string {
   const cn = String(cardNumber ?? "").trim().toUpperCase();

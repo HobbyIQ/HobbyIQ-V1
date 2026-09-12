@@ -12,6 +12,11 @@ import {
 
 describe("cardCatalog — deriveCatalogEntry", () => {
   it("real Hartman Gold Refractor Auto /50 → canonical entry", () => {
+    // CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT (#2064/#2069, 2026-09-12).
+    // Eric Hartman's CPA-EHA is a genuine 2026 BOWMAN-only number
+    // (2026-bowman-full.csv lists him; 2026-bowman-chrome.csv does not — the
+    // same shape as Marconi German's CPA-MG and Owen Carey's CPA-OC), so a
+    // seed carrying setKey "Bowman Chrome" now correctly derives bowman.
     const e = deriveCatalogEntry({
       sport: "baseball",
       year: 2026,
@@ -25,7 +30,7 @@ describe("cardCatalog — deriveCatalogEntry", () => {
       confidence: 0.9,
     });
     expect(e).not.toBeNull();
-    expect(e!.id).toBe("hiq:baseball:2026:bowman-chrome:cpa-eha:gold-refractor:auto:num-50");
+    expect(e!.id).toBe("hiq:baseball:2026:bowman:cpa-eha:gold-refractor:auto:num-50");
     expect(e!.sport).toBe("baseball");
     expect(e!.cardNumber).toBe("CPA-EHA");
     expect(e!.parallelSlug).toBe("gold-refractor");

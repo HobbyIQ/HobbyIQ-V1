@@ -80,14 +80,28 @@ describe("DEFECT 1 — CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT", () => {
     });
 
     it("a genuine 2026 Bowman Chrome title with a number present ONLY in bowman-chrome stays bowman-chrome", () => {
-      // CPA-EW is not in the 2026-bowman-full.csv full-only or both lists per
-      // the read census — use a chrome-only number the override table does
-      // not name, which must pass through unchanged.
+      // CPA-DT (Deward Tovar) is genuinely chrome-only per both 2026
+      // checklists -- CPA_2026_BOWMAN_CHROME_ONLY, pinned against a live
+      // re-read of the CSVs in siblingChecklistOverrideMatchesChecklists.
+      // test.ts. (An earlier draft of this test used CPA-EW, which turned
+      // out to be a BOWMAN-only number per the checklist -- Eli Willits'
+      // Chrome Prospect Autograph is a section of 2026 Bowman, the same
+      // shape as Marconi German's, and computeHobbyIqCardId now correctly
+      // reads it as bowman too. Fixed here rather than left as a false
+      // "stays chrome" pin.)
+      const id = computeHobbyIqCardId({
+        sport: "baseball", year: 2026, setKey: "Bowman Chrome", cardNumber: "CPA-DT",
+        parallel: "Refractor", isAuto: true, printRun: 499, playerName: "Deward Tovar",
+      });
+      expect(setKeyOf(id)).toBe("bowman-chrome");
+    });
+
+    it("Eli Willits' CPA-EW is ALSO bowman-only per the checklist -- corrected the same way as Marconi German", () => {
       const id = computeHobbyIqCardId({
         sport: "baseball", year: 2026, setKey: "Bowman Chrome", cardNumber: "CPA-EW",
         parallel: "Refractor", isAuto: true, printRun: 499, playerName: "Eli Willits",
       });
-      expect(setKeyOf(id)).toBe("bowman-chrome");
+      expect(setKeyOf(id)).toBe("bowman");
     });
 
     it("a number present in both checklists (CPA-AG) is untouched — stays whatever the title said", () => {
@@ -116,6 +130,23 @@ describe("DEFECT 1 — CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT", () => {
     });
   });
 
+  describe("computeHobbyIqCardId — the Figueroa Red Ink title lands on bowman too (#2069)", () => {
+    // #2069: Drew's 2026-09-12 ruling on Victor Figueroa's "Black & White Red
+    // Ink" Chrome Prospect Autograph, CPA-VF — the SAME defect class as
+    // Marconi German, found the same night, which is why the override table
+    // was generalized to the full checklist-derived set rather than left as
+    // a single hardcoded entry. CPA-VF is not one of the 8 both-checklist
+    // collision numbers (AG/BC/DF/EM/HL/JS/LA/WA), so this is unambiguous.
+    it('"2026 Bowman Chrome Black White Red Ink Victor Figueroa CPA-VF" derives bowman, not bowman-chrome', () => {
+      const id = computeHobbyIqCardId({
+        sport: "baseball", year: 2026, setKey: "Bowman Chrome", cardNumber: "CPA-VF",
+        parallel: "Black White Red Ink", isAuto: true, playerName: "Victor Figueroa",
+      });
+      expect(setKeyOf(id)).toBe("bowman");
+      expect(id).toBe("hiq:baseball:2026:bowman:cpa-vf:black-white-red-ink:auto");
+    });
+  });
+
   describe("slugRederivation.rederiveRow — the guard-pass branch now catches this", () => {
     it("MODE=rederive now moves Marconi German's holding off bowman-chrome onto bowman", () => {
       // RederiveRow carries no printRun field (pre-existing shape, shared with
@@ -138,15 +169,32 @@ describe("DEFECT 1 — CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT", () => {
       expect(setKeyOf(res.hobbyiqCardId as string)).toBe("bowman");
     });
 
-    it("a genuinely bowman-chrome row (chrome-only number) is still ok-untouched", () => {
+    it("MODE=rederive (dry run) moves Victor Figueroa's Red Ink holding off bowman-chrome onto bowman (#2069)", () => {
+      const res = rederiveRow({
+        hobbyiqCardId: "hiq:baseball:2026:bowman-chrome:cpa-vf:black-white-red-ink:auto",
+        sport: "baseball",
+        cardYear: 2026,
+        setName: "Bowman Chrome",
+        cardNumber: "CPA-VF",
+        parallel: "Black White Red Ink",
+        isAuto: true,
+        title: "2026 Bowman Chrome Black White Red Ink Victor Figueroa CPA-VF",
+      });
+      expect(res.action).toBe("sibling-corrected");
+      expect(res.setName).toBe("bowman");
+      expect(res.hobbyiqCardId).toBe("hiq:baseball:2026:bowman:cpa-vf:black-white-red-ink:auto");
+      expect(setKeyOf(res.hobbyiqCardId as string)).toBe("bowman");
+    });
+
+    it("a genuinely bowman-chrome row (chrome-only number, CPA-DT) is still ok-untouched", () => {
       const res = rederiveRow({
         sport: "baseball",
         cardYear: 2026,
         setName: "Bowman Chrome",
-        cardNumber: "CPA-EW",
+        cardNumber: "CPA-DT",
         parallel: "Refractor",
         isAuto: true,
-        title: "2026 Bowman Chrome Refractor Eli Willits Auto /499 #CPA-EW",
+        title: "2026 Bowman Chrome Refractor Deward Tovar Auto /499 #CPA-DT",
       });
       expect(res.action).toBe("ok-untouched");
     });
@@ -296,11 +344,13 @@ describe("the fixes are load-bearing in source, not just in these tests", () => 
     "utf8",
   );
 
-  it("SIBLING_CHECKLIST_OVERRIDES is keyed on an exact card number set, never a prefix regex", () => {
-    expect(hobbyIqCardIdSrc).toMatch(/cardNumbers:\s*new Set\(\["CPA-MG"\]\)/);
-    // The whole point of the table: no cardNumberPrefix-shaped entry exists in it.
+  it("SIBLING_CHECKLIST_OVERRIDES is keyed on exact card number sets, never a prefix regex", () => {
+    expect(hobbyIqCardIdSrc).toMatch(/cardNumbers:\s*new Set\(CPA_2026_BOWMAN_ONLY\)/);
+    expect(hobbyIqCardIdSrc).toMatch(/cardNumbers:\s*new Set\(CPA_2026_BOWMAN_CHROME_ONLY\)/);
+    // The whole point of the table: no cardNumberPrefix-shaped entry exists in
+    // it, from the exported number lists through the override table itself.
     const tableBody = hobbyIqCardIdSrc.slice(
-      hobbyIqCardIdSrc.indexOf("SIBLING_CHECKLIST_OVERRIDES: readonly SiblingChecklistOverride[]"),
+      hobbyIqCardIdSrc.indexOf("export const CPA_2026_BOWMAN_ONLY"),
       hobbyIqCardIdSrc.indexOf("function applySiblingChecklistOverride"),
     );
     expect(tableBody).not.toMatch(/cardNumberPrefix/);
