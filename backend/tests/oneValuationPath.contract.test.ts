@@ -796,13 +796,35 @@ describe("D17 — the portfolio persist site: what is written is what the routes
     expect(pb.fmvReason).toBe("identity-not-in-catalog");
   });
 
-  it("the cost-basis floor still stands: an exact-pool number under 15% of a > $50 cost basis is not written", async () => {
+  // REVISED by RULING R24 (Drew, 2026-09-12 ~05:05Z): "When the exact,
+  // checklist-backed pool is correct but the projected price is far under
+  // cost, SHOW IT — the cost-basis floor applies only to fallback rungs."
+  //
+  // THIN's own pool ($0.88 and $0.15, both real sales of this exact
+  // checklist-backed card) is exactly the shape R24 describes: the engine
+  // reads `exact-pool-last-sale` off the identity's own exact pool at
+  // 0.22% of a $400 basis. Before this PR the floor withheld it on the
+  // theory that a price this far under cost is a slug or pool mismatch —
+  // right for a fallback rung reasoning across to a DIFFERENT pool, wrong
+  // here: THIN's pool cannot be a mismatch for itself. So this pin's old
+  // title and assertions ("still stands" / "skipped" / no exact-pool rung
+  // on the row) encoded the pre-R24 defect this PR fixes, not a floor that
+  // remains correct.
+  it("RULING R24: an exact-pool rung far under a > $50 cost basis PUBLISHES — the floor no longer applies to it", async () => {
     const id = await seed({ hobbyiqCardId: THIN, cardYear: 2019, setName: "Topps Stadium Club", cardNumber: "100", parallel: "Base", isAuto: true, purchasePrice: 400, totalCostBasis: 400 });
     const res = await store.repriceHoldingsForUser(USER);
-    expect(res.updates.find((u) => u.id === id)?.status).toBe("skipped");
+    // MUTATION CHECK: reintroduce an unconditional floor (drop the rung
+    // argument from `costBasisFloor`'s call in `valueHoldingThroughOneEntry`,
+    // or drop the `isExactPoolRung` exemption from `costBasisFloor` itself)
+    // and this goes red — THIN goes back to `skipped` with a null FMV.
+    expect(res.updates.find((u) => u.id === id)?.status).toBe("repriced");
     const hld = await stored(id);
-    expect(hld.fairMarketValue ?? null).toBeNull();
-    expect(EXACT.has(String(hld.fmvRung))).toBe(false);
+    expect(hld.fairMarketValue).toBeCloseTo(0.88, 2);
+    expect(EXACT.has(String(hld.fmvRung))).toBe(true);
+    expect(hld.fmvRung).toBe("exact-pool-last-sale");
+    // Not withheld: no cost-basis-floor reason on the row.
+    const meta = (hld as unknown as { pricingSourceMeta?: Record<string, unknown> }).pricingSourceMeta;
+    expect(meta?.withheld).toBeUndefined();
   });
 });
 
