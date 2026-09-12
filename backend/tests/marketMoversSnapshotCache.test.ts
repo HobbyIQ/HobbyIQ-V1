@@ -1,24 +1,32 @@
-// CF-MARKET-MOVERS-SNAPSHOT-CACHE (Fable, 2026-09-12).
+// CF-MARKET-MOVERS-PERSISTED-SNAPSHOT (Fable, 2026-09-12, revised same day).
 //
-// A Tier 1 harness run (PR #2056) measured GET /api/compiq/market-movers?
-// window=30d at 5.0s+ on a live prod request — a full cross-partition scan
-// of every comp in the window, aggregated in memory, on the request path.
-// sold_comps_daily (the rollup path the route already prefers) has never
-// been written to in prod, so the fix cannot lean on turning a flag on.
+// D1 (PR #2057) added an in-process, per-worker snapshot cache in front of
+// the raw cross-partition scan. The post-deploy Tier 1 harness run found
+// that alone doesn't fix the real deployment shape: HobbyIQ3 runs on 2 App
+// Service instances and workers recycle every 8-19 minutes, so the first
+// viewer of any shape on any worker after any recycle still pays for the
+// scan — and under fleet load that scan can take >25s, not the quiet-pool
+// 5s D1 was sized against.
 //
-// The fix: a request-scoped, short-TTL snapshot cache with stale-while-
-// revalidate, so at most one live viewer per (sport, window, direction,
-// limit, minSales) shape ever pays for the scan; every other viewer in that
-// window gets the cached snapshot with zero Cosmos round-trips. These tests
-// pin that behavior directly against the route handler (bypassing auth,
-// which is orthogonal) using the same @azure/cosmos mock pattern the other
-// unified-pricing unit tests use (see unifiedPerTierWindows.test.ts).
+// D2 (this revision) adds a PERSISTED snapshot in the existing
+// daily_snapshots container (partition /type), refreshed on its own
+// schedule by an admin job (see marketMoversAdminRoutes + the "Daily
+// Market Signals Refresh" workflow), read via one Cosmos point read. The
+// route's read order is now: in-process cache (fresh) -> persisted
+// snapshot (one point read) -> live compute (only on a genuinely cold
+// shape). These tests pin that order directly against the route handler
+// (bypassing auth, which is orthogonal) using a Cosmos mock that models
+// BOTH container shapes the route touches: sold_comps (cross-partition
+// query, via computeMarketMovers) and daily_snapshots (point read/write,
+// via readMarketMoversSnapshot).
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import type { Request, Response } from "express";
 
 const h = vi.hoisted(() => ({
   rows: [] as Array<Record<string, unknown>>,
   queryCount: 0,
+  snapshots: new Map<string, Record<string, unknown>>(),
+  snapshotReadCount: 0,
 }));
 
 vi.mock("@azure/cosmos", () => {
@@ -26,21 +34,48 @@ vi.mock("@azure/cosmos", () => {
     constructor(_conn: unknown) {}
     database() {
       return {
-        container: () => ({
-          items: {
-            query: () => {
-              h.queryCount++;
-              let done = false;
-              return {
-                hasMoreResults: () => !done,
-                fetchNext: async () => {
-                  done = true;
-                  return { resources: h.rows };
+        // Both sold_comps and daily_snapshots resolve through this same
+        // factory — route by container id so each keeps its own shape.
+        container: (id: string) => {
+          if (id === "daily_snapshots") {
+            return {
+              items: {
+                upsert: async (doc: Record<string, unknown>) => {
+                  h.snapshots.set(String(doc.id), doc);
+                  return { resource: doc };
                 },
-              };
+              },
+              item: (docId: string, _pk: string) => ({
+                read: async () => {
+                  h.snapshotReadCount++;
+                  const resource = h.snapshots.get(docId);
+                  if (!resource) {
+                    const err = new Error("NotFound") as Error & { code: number };
+                    err.code = 404;
+                    throw err;
+                  }
+                  return { resource };
+                },
+              }),
+            };
+          }
+          // sold_comps (or sold_comps_daily): cross-partition query mock.
+          return {
+            items: {
+              query: () => {
+                h.queryCount++;
+                let done = false;
+                return {
+                  hasMoreResults: () => !done,
+                  fetchNext: async () => {
+                    done = true;
+                    return { resources: h.rows };
+                  },
+                };
+              },
             },
-          },
-        }),
+          };
+        },
       };
     }
   }
@@ -58,6 +93,7 @@ vi.mock("../src/middleware/requireSession.js", () => ({
 }));
 
 import marketMoversRouter from "../src/routes/marketMovers.routes.js";
+import { computeAndPersistMarketMoversSnapshot, type MarketMoversParams } from "../src/services/compiq/marketMoversSnapshot.service.js";
 
 // Express Router() exposes its routes on .stack; pull the GET
 // /market-movers handler out directly so the test can drive it without
@@ -104,19 +140,21 @@ const sale = (price: number, daysAgo: number, cardId = "hiq:baseball:2024:topps:
 beforeEach(() => {
   h.rows = [];
   h.queryCount = 0;
+  h.snapshots.clear();
+  h.snapshotReadCount = 0;
 });
 
-// The snapshot cache is a module-level Map keyed on (sport, window,
-// direction, limit, minSales) — intentional (it survives across requests,
-// that IS the fix), but it also survives across tests in this file since
-// the module is imported once. Each test uses a distinct sport name as a
-// cheap, collision-free cache key so tests stay independent without
+// The in-process cache is a module-level Map keyed on (sport, window,
+// direction, limit, minSales) — intentional (it survives across requests
+// on the SAME worker), but it also survives across tests in this file
+// since the module is imported once. Each test uses a distinct sport name
+// as a cheap, collision-free cache key so tests stay independent without
 // needing an exported reset hook.
 let sportCounter = 0;
 const freshSport = () => `test-sport-${++sportCounter}`;
 
-describe("market-movers snapshot cache", () => {
-  it("first request for a shape computes from Cosmos (cache miss)", async () => {
+describe("market-movers — persisted snapshot read order", () => {
+  it("a cold shape (no snapshot, empty in-process cache) computes live from sold_comps", async () => {
     h.rows = [sale(10, 6), sale(12, 5), sale(20, 2), sale(22, 1)];
     const handler = findHandler();
     const res = fakeRes();
@@ -125,7 +163,30 @@ describe("market-movers snapshot cache", () => {
     expect((res._json as { cache: { state: string } }).cache.state).toBe("miss");
   });
 
-  it("a second request for the SAME shape within TTL is served from cache with zero Cosmos round-trips", async () => {
+  it("a shape with a PERSISTED snapshot is served from one Cosmos point read — never the raw scan", async () => {
+    const sport = freshSport();
+    const shape: MarketMoversParams = { sport, windowDays: 7, direction: "both", limit: 20, minSales: 3 };
+    h.rows = [sale(10, 6), sale(12, 5), sale(20, 2), sale(22, 1)];
+    // Warm the snapshot the way the scheduled admin job would.
+    const outcome = await computeAndPersistMarketMoversSnapshot(shape);
+    if ("unavailable" in outcome) throw new Error("snapshot compute unavailable in test");
+    expect(outcome.persisted).toBe(true);
+    const queriesAfterWarm = h.queryCount;
+    expect(queriesAfterWarm).toBeGreaterThan(0); // the warm itself did scan once
+
+    // A live request for the SAME shape must NOT re-scan sold_comps — it
+    // reads the persisted snapshot instead (one point read).
+    const handler = findHandler();
+    const res = fakeRes();
+    await handler(fakeReq({ sport, window: "7d", minSales: "3" }), res, (e) => { throw e; });
+    expect(h.queryCount).toBe(queriesAfterWarm); // no new sold_comps scan
+    expect(h.snapshotReadCount).toBeGreaterThan(0);
+    const body = res._json as { cache: { state: string }; movers: unknown[] };
+    expect(body.cache.state).toBe("persisted-snapshot");
+    expect(body.movers).toEqual(outcome.result.movers);
+  });
+
+  it("a second request for the SAME shape within the in-process TTL skips even the snapshot point read", async () => {
     h.rows = [sale(10, 6), sale(12, 5), sale(20, 2), sale(22, 1)];
     const handler = findHandler();
     const sport = freshSport();
@@ -133,16 +194,17 @@ describe("market-movers snapshot cache", () => {
     const res1 = fakeRes();
     await handler(fakeReq({ sport, window: "7d", minSales: "3" }), res1, (e) => { throw e; });
     const queriesAfterFirst = h.queryCount;
-    expect(queriesAfterFirst).toBeGreaterThan(0);
+    const snapshotReadsAfterFirst = h.snapshotReadCount;
 
     const res2 = fakeRes();
     await handler(fakeReq({ sport, window: "7d", minSales: "3" }), res2, (e) => { throw e; });
 
-    // No new Cosmos queries — the second request never touched sold_comps.
+    // No new Cosmos activity at all — served from the in-process cache.
     expect(h.queryCount).toBe(queriesAfterFirst);
-    expect((res2._json as { cache: { state: string } }).cache.state).toBe("fresh");
+    expect(h.snapshotReadCount).toBe(snapshotReadsAfterFirst);
+    expect((res2._json as { cache: { state: string } }).cache.state).toBe("in-process");
     // Byte-identical movers payload (minus the cache metadata) between the
-    // fresh compute and the cache hit.
+    // cold compute and the in-process cache hit.
     const { cache: _c1, ...body1 } = res1._json as Record<string, unknown>;
     const { cache: _c2, ...body2 } = res2._json as Record<string, unknown>;
     expect(body2).toEqual(body1);
@@ -165,19 +227,12 @@ describe("market-movers snapshot cache", () => {
   });
 
   it("sold_comps unavailable still returns 503, not a thrown error", async () => {
-    const prev = process.env.COSMOS_CONNECTION_STRING;
-    delete process.env.COSMOS_CONNECTION_STRING;
-    // Force a fresh module load path isn't practical here since the shared
-    // container is memoized per-process by getContainer's module-level
-    // cache; this test instead documents the 503 contract by asserting the
-    // route source still guards on a null container (regression guard for
-    // the refactor, since computeMarketMovers now returns a sentinel
-    // instead of writing res.json directly).
+    // Regression guard for the refactor: the route source still guards on
+    // a null container from computeMarketMovers's sentinel return.
     const { readFileSync } = await import("fs");
     const { resolve } = await import("path");
     const src = readFileSync(resolve(__dirname, "..", "src", "routes", "marketMovers.routes.ts"), "utf8");
     expect(src).toContain("sold_comps container unavailable");
     expect(src).toContain('"unavailable" in computed');
-    if (prev !== undefined) process.env.COSMOS_CONNECTION_STRING = prev;
   });
 });

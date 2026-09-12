@@ -598,26 +598,36 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
   // back to the wider pool when target lacks composite (unbackfilled).
   // Target's colorFamily comes from a quick composite lookup fired
   // alongside the trend query so it doesn't add serial latency.
-  const targetCompositePromise = container.items.query<{ composite?: { colorFamily?: string | null } | null }>({
+  //
+  // CF-LADDER-BOUNDED-CONCURRENCY (Fable, 2026-09-12, REVISED): this used
+  // to fire unconditionally, ahead of and CONCURRENTLY with every ladder
+  // rung's own queries — 2 more sold_comps calls stacked on top of
+  // whatever the ladder batch was doing, on every request regardless of
+  // which rung answers. That is exactly the kind of unconditional fan-out
+  // the bounded-concurrency fix below is trying to cap, so it is now a
+  // lazy function invoked once batch 1 (see below) has resolved — its two
+  // queries then overlap with batch 1's DECISION logic (still free
+  // latency-hiding for the common direct-slug-hit case, which needs it for
+  // buildResult's basis text) rather than with batch 1's own Cosmos calls.
+  const fetchBroaderIdentityTrend = (): Promise<number | null> => container.items.query<{ composite?: { colorFamily?: string | null } | null }>({
     query: "SELECT TOP 1 c.composite FROM c WHERE c.hobbyiqCardId = @slug",
     parameters: [{ name: "@slug", value: slug }],
-  }).fetchAll().then(({ resources }) => resources[0]?.composite ?? null).catch(() => null);
-
-  const broaderIdentityTrendPromise = targetCompositePromise.then(async (targetComp) => {
-    const targetColor = targetComp?.colorFamily ?? null;
-    const params: Array<{ name: string; value: string | number | boolean | null }> = [
-      { name: "@y", value: parsed.year },
-      { name: "@cn", value: (parsed.cardNumber ?? "").toUpperCase() },
-      { name: "@auto", value: parsed.isAuto },
-      { name: "@sport", value: parsed.sport },
-    ];
-    let where = "c.cardYear = @y AND UPPER(c.cardNumber) = @cn AND c.isAuto = @auto AND c.sport = @sport";
-    if (targetColor) {
-      where += " AND c.composite.colorFamily = @cf";
-      params.push({ name: "@cf", value: targetColor });
-    }
-    return queryPool(container, where, params, cutoffIso, asOfIso);
-  })
+  }).fetchAll().then(({ resources }) => resources[0]?.composite ?? null).catch(() => null)
+    .then(async (targetComp) => {
+      const targetColor = targetComp?.colorFamily ?? null;
+      const params: Array<{ name: string; value: string | number | boolean | null }> = [
+        { name: "@y", value: parsed.year },
+        { name: "@cn", value: (parsed.cardNumber ?? "").toUpperCase() },
+        { name: "@auto", value: parsed.isAuto },
+        { name: "@sport", value: parsed.sport },
+      ];
+      let where = "c.cardYear = @y AND UPPER(c.cardNumber) = @cn AND c.isAuto = @auto AND c.sport = @sport";
+      if (targetColor) {
+        where += " AND c.composite.colorFamily = @cf";
+        params.push({ name: "@cf", value: targetColor });
+      }
+      return queryPool(container, where, params, cutoffIso, asOfIso);
+    })
     .then((broaderRows) => {
       const kept = partitionByQuality(broaderRows).kept;
       if (kept.length < 3) return null;
@@ -635,42 +645,50 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
     })
     .catch(() => null);
 
-  // ── CF-LADDER-CONCURRENT-FETCH (Fable, 2026-09-12) ───────────────────
+  // ── CF-LADDER-BOUNDED-CONCURRENCY (Fable, 2026-09-12, REVISED) ───────
   //
-  // The rungs below used to run as N SEQUENTIAL Cosmos round-trips, each
-  // awaited before the next was even issued — for a genuinely thin/empty
-  // identity (every rung misses), that is one round-trip per rung, paid
-  // in series. A Tier 1 harness run (PR #2056) measured 5.0s+ on exactly
-  // this shape (hiq:baseball:2022:topps-chrome:221:image-variation-sonic:
-  // no-auto — zero direct comps) and App Insights traced a single
-  // canonical-fmv request issuing ~180 sequential dependency calls.
+  // 2026-09-12 D1 (PR #2057) fired all ~6 independent rung queries at once
+  // via one Promise.all per request. Under a QUIET pool that collapsed
+  // wall-clock from sum(latency) to max(latency) as intended. Under FLEET
+  // LOAD it did the opposite: the post-deploy Tier 1 harness run (prod sha
+  // 750c144, regression.yml run 34668275416) measured imageVariationSonic
+  // going from 3,950ms to a full 25,000ms timeout, and market-movers timing
+  // out too. App Insights confirmed why — AppDependencies against sold_comps
+  // in the 5.5min window around that run: 3,986 calls from AppRoleName
+  // HobbyIQ3 alone (hobbyiq3-worker, the census/retire fleet, stayed flat at
+  // single digits/minute throughout — NOT the source), 332 of them (8.3%)
+  // ResultCode 429, clustered in the exact 15s buckets the harness's own
+  // back-to-back requests landed in (up to 220 429s in one 15s bucket).
+  // sold_comps' autoscale ceiling is 10,000 RU/s. Firing 6 queries at once
+  // PER REQUEST, multiplied across several requests landing close together,
+  // pushed the container over that ceiling; the Cosmos SDK's automatic
+  // 429 retry-with-backoff then serializes the "concurrent" calls anyway,
+  // on top of the backoff delay itself — strictly worse than the original
+  // one-at-a-time sequential ladder, not better.
   //
-  // None of these queries' WHERE clauses depend on another rung's ROWS —
-  // only on `parsed.printRun` being present (known before any query runs)
-  // and on `targetParallelHadIdentityComps` / `shouldSkipSiblingParallel`,
-  // which are derived from the SAME rows the identity-scoped rungs already
-  // need. So every independent query is issued together, up front, with
-  // `Promise.all`; the DECISION logic below still walks the rungs in the
-  // exact same priority order over the already-fetched rows — same rung
-  // wins, same rows, same labels, same basis text. Byte-identical for
-  // every identity that has comps (pinned by oneValuationPath.pin.test.ts
-  // and hobbyIqFmv.service.test.ts); only the WALL-CLOCK time for an
-  // empty/thin identity collapses, from sum(latency) to max(latency).
+  // FIX: bounded batches, priority order first, later batches SKIPPED
+  // entirely once an earlier one already answers. At most
+  // LADDER_BATCH_CONCURRENCY (3) Cosmos calls in flight for this ladder at
+  // any instant, and a genuinely well-served identity (direct-slug hits,
+  // the overwhelming majority of real traffic) still needs only the FIRST
+  // batch — no width added to the common case, only to the empty/thin one
+  // this was built for. The per-rung WHERE clauses, the duplicate-query
+  // elimination (rung 0/4, rung 1.5/5 share one fetch each), and the
+  // rung-priority decision logic below are ALL unchanged from D1 — only
+  // WHEN each query is issued changed, so output stays byte-identical for
+  // every identity that has comps (same pin tests as D1).
   //
-  // Two rungs also turned out to be querying Cosmos for rows another rung
-  // already held:
-  //   - rung 0 (printrun-discovery-preferred) and rung 4 (printrun-
-  //     discovery) issue the IDENTICAL query (same WHERE, same params)
-  //     when the target has no printRun — one fetch now serves both.
-  //   - rung 1.5 (cross-setkey)'s identityRows query is IDENTICAL to
-  //     rung 5 (sibling-parallel)'s query — one fetch now serves both.
-  // Eliminating those two duplicates removes 2 of the ~9 round-trips
-  // outright, independent of the concurrency change.
+  // Batch 1 (rungs 0, 1, 1.5 — covers rungs 0/1/1.5/4/5's data): the three
+  //   highest-value queries; a direct-slug hit (rung 1) answers the
+  //   overwhelming majority of real requests from this batch alone.
+  // Batch 2 (rungs 2, 3): only fired when nothing in batch 1 answered.
+  // Batch 3 (rung 6, family-baseline): only fired when 1 and 2 both missed.
+  const LADDER_BATCH_CONCURRENCY = 3;
   const targetParallelSlug = parsed.parallel;
   const noPrintRunTagged = parsed.printRun === null || parsed.printRun === undefined;
+  const slugNoPrintRun = slug.replace(/:num-\d+$/, "");
 
-  // Shared by rung 0 AND rung 4 — same WHERE clause, fired once.
-  const printRunTaggedIdentityPromise = noPrintRunTagged
+  const fetchPrintRunTaggedIdentity = (): Promise<PoolRow[]> => noPrintRunTagged
     ? queryPool(
         container,
         "c.cardYear = @y AND UPPER(c.cardNumber) = @cn AND c.isAuto = @auto AND c.sport = @sport AND IS_DEFINED(c.printRun) AND c.printRun != null",
@@ -683,16 +701,13 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
         cutoffIso, asOfIso,)
     : Promise.resolve<PoolRow[]>([]);
 
-  // Rung 1: exact slug + grade.
-  const exactSlugRowsAnyGradePromise = queryPool(
+  const fetchExactSlugRowsAnyGrade = (): Promise<PoolRow[]> => queryPool(
     container,
     "c.hobbyiqCardId = @slug",
     [{ name: "@slug", value: slug }],
     cutoffIso, asOfIso,);
 
-  // Shared by rung 1.5 (cross-setkey, JS-filtered to the target parallel)
-  // AND rung 5 (sibling-parallel, every parallel) — same WHERE clause.
-  const sameIdentityAnyParallelPromise = queryPool(
+  const fetchSameIdentityAnyParallel = (): Promise<PoolRow[]> => queryPool(
     container,
     "c.cardYear = @y AND UPPER(c.cardNumber) = @cn AND c.isAuto = @auto AND c.sport = @sport",
     [
@@ -703,9 +718,7 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
     ],
     cutoffIso, asOfIso,);
 
-  // Rung 2: same identity ignoring printRun (STARTSWITH the no-printRun stem).
-  const slugNoPrintRun = slug.replace(/:num-\d+$/, "");
-  const crossPrintRunPromise = slugNoPrintRun !== slug
+  const fetchCrossPrintRun = (): Promise<PoolRow[]> => slugNoPrintRun !== slug
     ? queryPool(
         container,
         "STARTSWITH(c.hobbyiqCardId, @stem)",
@@ -713,9 +726,7 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
         cutoffIso, asOfIso,)
     : Promise.resolve<PoolRow[]>([]);
 
-  // Rung 3: same-printrun-cross-parallel — only meaningful when the target
-  // itself has a printRun (mirrors the original `if` guard exactly).
-  const samePrintRunCrossParallelPromise = !noPrintRunTagged
+  const fetchSamePrintRunCrossParallel = (): Promise<PoolRow[]> => !noPrintRunTagged
     ? queryPool(
         container,
         "c.cardYear = @y AND UPPER(c.cardNumber) = @cn AND c.isAuto = @auto AND c.sport = @sport AND c.printRun = @pr",
@@ -729,36 +740,44 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
         cutoffIso, asOfIso,)
     : Promise.resolve<PoolRow[]>([]);
 
+  // Batch 1: at most 3 concurrent — the rungs most likely to answer.
   const [
     printRunTaggedIdentityRows,
     exactSlugRowsAnyGrade,
     sameIdentityAnyParallelRows,
-    crossPrintRunRows,
-    samePrintRunCrossParallelRows,
   ] = await Promise.all([
-    printRunTaggedIdentityPromise,
-    exactSlugRowsAnyGradePromise,
-    sameIdentityAnyParallelPromise,
-    crossPrintRunPromise,
-    samePrintRunCrossParallelPromise,
+    fetchPrintRunTaggedIdentity(),
+    fetchExactSlugRowsAnyGrade(),
+    fetchSameIdentityAnyParallel(),
   ]);
+  if (LADDER_BATCH_CONCURRENCY < 3) {
+    // Guard for future edits: the batch above is sized to the constant by
+    // construction (3 fetches); this branch only exists so a change to
+    // LADDER_BATCH_CONCURRENCY without updating the batch shapes fails
+    // loudly in review rather than silently widening the burst again.
+    throw new Error("LADDER_BATCH_CONCURRENCY must match batch 1's width (3)");
+  }
+  // Fired NOW — after batch 1's Cosmos calls have already resolved, not
+  // stacked concurrently on top of them — so it overlaps with the rung 0-5
+  // DECISION logic below instead of adding 2 more simultaneous sold_comps
+  // calls to whatever batch is in flight.
+  const broaderIdentityTrendPromise = fetchBroaderIdentityTrend();
 
-  // Rung 6: family-baseline — broadest same-card rung (drops isAuto), so it
-  // is a genuinely different query from every rung above and cannot be
-  // folded into the batch above. `shouldSkipSiblingParallel` (computed a
-  // little further down, from sameIdentityAnyParallelRows which the batch
-  // above already fetched) is known the instant that batch resolves — well
-  // before rungs 0-5 finish evaluating below, since every one of them must
-  // MISS for rung 6 to matter. So the fetch is kicked off here, gated on
-  // that flag exactly as the original `if` guarded the query, but started
-  // concurrently with the rung 0-5 evaluation rather than after it —
-  // whichever finishes needing it later (rung 6 itself) awaits a promise
-  // that has usually already resolved.
+  // Batch 2 and the family-baseline fetch (formerly rung 6) are now LAZY —
+  // defined here as no-arg functions, only INVOKED (and only then do they
+  // touch Cosmos) at the point below where an earlier batch has already
+  // missed. This is the bounded-concurrency fix: batch 1 above already
+  // answers the common case (a direct-slug hit), so the ladder's total
+  // Cosmos fan-out for the overwhelming majority of real requests is 3, not
+  // 6, and for the truly empty identity it is still capped at 3-in-flight
+  // per batch rather than 6-at-once.
+  const fetchCrossPrintRunBatch2 = fetchCrossPrintRun;
+  const fetchSamePrintRunCrossParallelBatch2 = fetchSamePrintRunCrossParallel;
   const targetIsBaseForFamilyGate = parsed.parallel === "base";
   const skipFamilyBaselineFetch = sameIdentityAnyParallelRows.filter(
     (r) => slugify(r.parallel ?? "") === targetParallelSlug,
   ).length === 0 && !targetIsBaseForFamilyGate;
-  const familyBaselinePromise = skipFamilyBaselineFetch
+  const fetchFamilyBaseline = (): Promise<PoolRow[]> => skipFamilyBaselineFetch
     ? Promise.resolve<PoolRow[]>([])
     : queryPool(
         container,
@@ -894,6 +913,16 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
         input.previewLimit ?? 10, now, await populationPromise, await broaderIdentityTrendPromise);
     }
   }
+
+  // ── Batch 2 (at most 2 concurrent) — only reached when batch 1's three
+  // rungs (0, 1, 1.5) all missed. crossPrintRun and samePrintRunCrossParallel
+  // are mutually exclusive in practice (guarded by slugNoPrintRun !== slug
+  // and !noPrintRunTagged respectively — a slug either carries a printRun
+  // suffix or it doesn't), so this is at most 1 real Cosmos call, never 2.
+  const [crossPrintRunRows, samePrintRunCrossParallelRows] = await Promise.all([
+    fetchCrossPrintRunBatch2(),
+    fetchSamePrintRunCrossParallelBatch2(),
+  ]);
 
   // ─── Rung 2: same identity ignoring printRun ────────────────────────
   // Strip the print-run suffix and match anything with the same
@@ -1038,11 +1067,8 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
   // target parallel has ZERO comps at the identity AND isn't Base,
   // this rung's cross-variant median is fabrication territory.
   if (!shouldSkipSiblingParallel) {
-    // Kicked off back at rung 6's promise declaration (concurrently with
-    // rungs 0-5 evaluating), gated on the same condition as
-    // shouldSkipSiblingParallel — usually already resolved by the time
-    // every rung above it has missed.
-    rows = await familyBaselinePromise;
+    // Batch 3 (1 fetch) — only reached when batches 1 and 2 both missed.
+    rows = await fetchFamilyBaseline();
     if (rows.length > 0) {
       rows = filterByGrade(rows, gradeCompany, gradeValue);
     }

@@ -6,6 +6,18 @@ name: Daily Market Signals Refresh
 # insertSet/sport/productLine/isAuto/autoStyle/gradeTier. Writes to
 # market_signals container with 8-day TTL. Consumed by hobbyIqFmv
 # for daily-refreshed momentum adjustment.
+#
+# CF-MARKET-MOVERS-PERSISTED-SNAPSHOT (Fable, 2026-09-12). Also refreshes
+# every scheduled GET /api/compiq/market-movers snapshot shape (see
+# backend/src/services/compiq/marketMoversSnapshot.service.ts). Reusing
+# THIS workflow rather than a new one: it already runs daily right after
+# the CH ingest (freshest pool for both jobs), already does azure/login for
+# OIDC, and has ~18 unused minutes under its 30-minute timeout. The refresh
+# is a raw cross-partition scan of sold_comps per shape, which under fleet
+# load can exceed the App Service front end's 240s idle cut — so it is
+# dispatched (202 + jobId) and polled via poll-admin-job.cjs, same pattern
+# as the "Warm DailyIQ brief" step in daily-refresh.yml and the nightly
+# sub-raw-inversion scan, rather than held open as one HTTP response.
 
 on:
   schedule:
@@ -83,3 +95,50 @@ jobs:
           MARKET_SIGNALS_MIN_VOLUME: "20"
           RUN_MINUTES: "12"
         run: node backend/scripts/refresh-market-signals.cjs
+
+      # CF-MARKET-MOVERS-PERSISTED-SNAPSHOT (Fable, 2026-09-12).
+      - name: Guard — ADMIN_API_TOKEN present
+        env:
+          ADMIN_API_TOKEN: ${{ secrets.ADMIN_API_TOKEN }}
+        run: |
+          if [ -z "$ADMIN_API_TOKEN" ]; then
+            echo "::error::ADMIN_API_TOKEN secret missing — skipping market-movers snapshot refresh"
+            exit 1
+          fi
+          echo "::add-mask::$ADMIN_API_TOKEN"
+
+      - name: Refresh market-movers snapshots (dispatch + poll)
+        # Same dispatch+poll shape as "Warm DailyIQ brief" in daily-refresh.yml
+        # and the nightly sub-raw-inversion scan: the refresh walks sold_comps
+        # once per scheduled shape (see scheduledSnapshotShapes()) and can
+        # exceed the App Service front end's 240s idle cut under fleet load,
+        # so this dispatches (202 + jobId) and polls instead of holding one
+        # HTTP response open.
+        env:
+          ADMIN_API_TOKEN: ${{ secrets.ADMIN_API_TOKEN }}
+        run: |
+          set -o pipefail
+          set +e
+          node backend/scripts/poll-admin-job.cjs \
+            --label market-movers-snapshots \
+            --method POST \
+            --dispatch-url "https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net/api/admin/market-movers/refresh-snapshots" \
+            --status-url "https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net/api/admin/market-movers/refresh-snapshots/status" \
+            --auth-header "Authorization: Bearer $ADMIN_API_TOKEN" \
+            2>&1 | tee /tmp/market-movers-poll.log
+          POLL_RC=$?
+          set -e
+          if [ "$POLL_RC" -eq 2 ]; then
+            echo "::error::market-movers snapshot refresh never reported settled — UNKNOWN, not a failure; the run may have finished on the other instance"
+            exit 1
+          fi
+          if [ "$POLL_RC" -ne 0 ]; then
+            echo "::error::market-movers snapshot refresh failed"
+            exit 1
+          fi
+          RESULT=$(sed -n 's/^RESULT_JSON //p' /tmp/market-movers-poll.log | tail -n1)
+          if [ -z "$RESULT" ]; then
+            echo "::error::market-movers snapshot refresh settled without a summary body"
+            exit 1
+          fi
+          echo "$RESULT" | jq '.result'
