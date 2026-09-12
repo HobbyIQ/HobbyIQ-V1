@@ -451,6 +451,31 @@ export function parseCardQuery(input: string): ParsedCardQuery {
     "playoff", "wildcard", "wc", "allstar", "all-star",
     // Upper Deck rookie-subset names (hockey heavy)
     "young", "guns", "canvas", "trilogy", "artifacts", "sp", "spx",
+    // CF-A-BARE-BRAND-ABBREVIATION-KILLS-THE-WHOLE-NAME (2026-09-12). "UD" is
+    // Upper Deck's own shorthand for its own insert names ("UD Canvas", "UD
+    // Exclusives", "UD Update") and carries no player content. Before this it
+    // survived the strip as a 2-letter `kept` token; boundName's trailing-
+    // token length check (`last.length < 3`) then refused the WHOLE name, not
+    // just the stray token — "Tyler Seguin UD Canvas 2025-26 Upper Deck" and
+    // "Connor Bedard UD Exclusives" both lost a real, already-present player
+    // name. Measured on a live 2026-09-10 sample: 7/1,000 rows carried a bare
+    // "UD" token and every one fell to noPlayer despite naming its player in
+    // plain text. "canvas"/"spx" above are the insert names themselves; "ud"
+    // is the missing prefix abbreviation, same class of fix.
+    "ud",
+    // CF-A-RESIDUAL-CLASS-CENSUS (2026-09-12). "Encore" is Upper Deck
+    // Hockey's own current insert-line name and was never in NOISE, so it
+    // survived the strip and appended itself to the player: "Timo Meier
+    // Encore" instead of "Timo Meier". That leak was pre-existing — it was
+    // simply invisible, because these rows are still refused earlier at
+    // inferSportFromTitle's sport-unresolved gate (see that function's
+    // CF-A-RESIDUAL-CLASS-CENSUS comment, same date: "Encore" is deliberately
+    // NOT added there — it collides with a real, checklist-backed 2000-era
+    // multi-sport Encore ruling). Stripped here anyway, ahead of whichever
+    // future PR does the per-name history research needed to add a safe,
+    // gated sport rule for it — that PR should inherit a clean player name,
+    // not a fresh defect.
+    "encore",
     // Set-name single tokens (subsets) that survive when brand extraction misses
     "update", "heritage", "finest", "stadium", "club", "diamond", "kings",
     "mosaic", "phoenix", "immaculate", "absolute", "national", "treasures",

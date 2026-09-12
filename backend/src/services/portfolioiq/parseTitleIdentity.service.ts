@@ -3960,6 +3960,24 @@ export function inferSportFromTitle(title: string, fallback = "baseball"): strin
     if (y === null || y >= 2000) return "hockey";
   }
 
+  // CF-A-RESIDUAL-CLASS-CENSUS (2026-09-12 follow-up). A live 1,000-row
+  // 2026-09-10 eBay sample classified through this same title-only path put
+  // 55 of 325 sportUnresolved rows on modern (2025-26) Upper Deck hockey
+  // titles naming an insert line this function doesn't yet know (Encore, SP
+  // Authentic, O-Pee-Chee, Ultimate Collection, Black Diamond, Allure,
+  // SPX...). "Encore" looked like the safest single addition — Upper Deck's
+  // current (2024-25/2025-26) Encore is hockey-only — but is DELIBERATELY
+  // NOT added: `splitIdentitySportSegmentTranche2.test.ts` caught a real
+  // collision this fix would have re-flipped, "2000 Upper Deck Encore #254
+  // Tom Brady Patriots RC" — Encore was a genuine multi-sport line (baseball,
+  // basketball, football all shipped Encore products) circa 1999-2001, and
+  // #254 is a checklist-backed BASEBALL card (data/pool-relocations/2026-09-
+  // 07-split-identity-sport-segment-49.json), not football, let alone hockey.
+  // A year gate does not fix this without researching exactly when Encore
+  // stopped being multi-sport (unresearched, so not done here — see the PR
+  // backlog). Every name in this list needs the same per-name history check
+  // #2084 did for Young Guns/UD Canvas before it can be added safely.
+
   // CF-SPORT-TEAM-OVERMATCH (Drew, 2026-08-15). TCG/non-sport detection
   // used to sit BELOW the team-name heuristics. A title literally
   // reading "2025 Pokemon Mega Evolution Phantasmal Flames" therefore
