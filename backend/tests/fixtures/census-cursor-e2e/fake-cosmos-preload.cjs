@@ -106,7 +106,17 @@ function fakeContainer(name) {
   if (name === "rematch_control") {
     return {
       items: {
+        // FAIL_CURSOR_UPSERT (2026-09-12): simulates run 34658848883 slot 3's
+        // real failure -- the container-level 404 -- so rematchCensusCursor
+        // SaveFailureE2E.test.ts can drive the ACTUAL caller-side checkpoint
+        // block in main() (not a re-implementation of it) through a save that
+        // fails, and assert on what reaches stdout and the process exit code.
         upsert: async (doc) => {
+          if (process.env.FAIL_CURSOR_UPSERT === "true") {
+            const e = new Error('Resource Not Found. Learn more: https://aka.ms/cosmosdb-tsg-not-found');
+            e.code = 404;
+            throw e;
+          }
           const state = loadControlState();
           state[doc.id] = doc;
           saveControlState(state);
@@ -134,7 +144,18 @@ function fakeContainer(name) {
 }
 
 function FakeCosmosClient() {
-  this.database = () => ({ container: (name) => fakeContainer(name) });
+  this.database = () => ({
+    container: (name) => fakeContainer(name),
+    // getOrCreateControlContainer (rematch-sold-comps.cjs, 2026-09-12) calls
+    // `containers.createIfNotExists` instead of a bare `.container()` lookup,
+    // to fix the real defect this fixture predates: `rematch_control` was
+    // never actually provisioned in Cosmos, so every lazy `.container()`
+    // reference 404'd on first use. This fake's `rematch_control` container
+    // is always "present" (an in-memory Map), so createIfNotExists is a
+    // straight pass-through -- it exists ONLY so the real call shape resolves
+    // under this fixture rather than throwing "not a function".
+    containers: { createIfNotExists: async (spec) => ({ container: fakeContainer(spec.id) }) },
+  });
   this.dispose = async () => {};
 }
 

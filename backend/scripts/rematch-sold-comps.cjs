@@ -247,6 +247,11 @@ const LEDGER_IDS_PER_POOL = Math.max(1, Number(process.env.LEDGER_IDS_PER_POOL |
 // window), so this is an optimization that must never become a dependency.
 const SETTLE_MARKERS = String(process.env.SETTLE_MARKERS || "").trim() === "true";
 const REMATCH_CONTROL_CONTAINER = String(process.env.COSMOS_REMATCH_CONTROL_CONTAINER || "rematch_control").trim();
+/** This file's exit codes so far: 3 (uncaught exception, via finishLane's
+ *  catch), 4 (reconcile/class drift), 6 (apply class-scope failure). 5 is
+ *  free and is what a census pass exits when its cursor save failed -- see
+ *  saveCensusCursor's header comment and the checkpoint block in main(). */
+const CENSUS_CURSOR_SAVE_FAILED_EXIT_CODE = 5;
 /**
  * THE APPLY CLASS SCOPE (audit gate item 8, 2026-09-03).
  *
@@ -1393,7 +1398,15 @@ async function main() {
   // read and re-checked row by row at write time), and this cursor never
   // touches it: `unitsForCensus` below is exactly `q.units` unless a PRIOR
   // pass's saved cursor says some of them are already classified and counted.
-  const control = MODE === "census" ? cosmos(conn).container(REMATCH_CONTROL_CONTAINER) : null;
+  // getOrCreateControlContainer (not a bare `.container()` reference) so the
+  // FIRST slot to ever touch `rematch_control` provisions it instead of every
+  // read/write 404ing against a container the SDK never checked for -- see
+  // that function's header comment for the incident this replaces.
+  let control = null;
+  if (MODE === "census") {
+    try { control = await getOrCreateControlContainer(conn); }
+    catch (e) { console.warn(`  !! could not open/create the ${REMATCH_CONTROL_CONTAINER} container (${String(e?.message ?? e).slice(0, 140)}) -- this census will run without a durable cursor.`); }
+  }
   const priorCursor = MODE === "census" ? await loadCensusCursor(control, SLOT) : null;
   const doneUnitKeys = new Set(priorCursor?.unitsDone ?? []);
   if (priorCursor) {
@@ -1640,12 +1653,37 @@ async function main() {
       await clearCensusCursor(control, SLOT);
       console.log(`  CENSUS CURSOR: slot ${SLOT} finished within budget -- every unit classified, cursor cleared.`);
     } else {
-      await saveCensusCursor(control, SLOT, {
+      const saved = await saveCensusCursor(control, SLOT, {
         unitsDone: [...doneUnitKeys],
         aggregate: censusAggregateToJSON(),
         classified: stats.seen,
       });
-      console.log(`  CENSUS CURSOR: checkpointed ${doneUnitKeys.size} of ${q.units.length} unit(s) for slot ${SLOT} -- the relaunch continues from the next unit.`);
+      if (saved) {
+        console.log(`  CENSUS CURSOR: checkpointed ${doneUnitKeys.size} of ${q.units.length} unit(s) for slot ${SLOT} -- the relaunch continues from the next unit.`);
+      } else {
+        // CF-A-FAILED-CHECKPOINT-IS-NOT-A-CHECKPOINT (run 34658848883 slot 3).
+        // The save above already warned (console.warn, load-bearing). This
+        // pass must not ALSO claim "checkpointed" -- there is no cursor for a
+        // relaunch to resume from, so saying so would be a lie a human reading
+        // the log would reasonably act on. It also must not let a bare
+        // "stopped at the ... budget" line reach the log: relaunch-on-marker's
+        // outcome (a) re-dispatches on that phrase ALONE, with no exit-code
+        // check, and re-dispatching here reproduces the exact restart-from-
+        // zero loop #2045 was written to end (the next pass finds no cursor
+        // and starts at unit 0 again, same as this one did). Overriding
+        // stopReason keeps stopAccounting's arithmetic (rows/s, shard
+        // coverage) but drops it out of the budget-marker regex, so the
+        // relaunch action falls through to its "finishLane with a NON-ZERO
+        // code" arm instead: verdict reported, re-dispatch withheld, step red.
+        console.warn(`  CENSUS CURSOR: NOT checkpointed for slot ${SLOT} -- the cursor save failed, so this pass's ${doneUnitKeys.size} of ${q.units.length} completed unit(s) will NOT be skipped by a relaunch. Re-dispatching this slot as-is would restart it from unit 0; do not re-dispatch until the cursor save is fixed.`);
+        // MUST NOT contain the substring the relaunch action's unanchored
+        // `grep -aqE "stopped at the .*budget"` matches ANYWHERE in the line
+        // -- rewording only the prefix (e.g. "X, stopped at the N-minute
+        // budget") still matches and still re-dispatches blindly. The
+        // replacement below is deliberately budget-word-free.
+        stopReason = "CURSOR SAVE FAILED -- this pass halted its checkpoint, not its budget clock";
+        process.exitCode = CENSUS_CURSOR_SAVE_FAILED_EXIT_CODE;
+      }
     }
   }
 
@@ -2211,7 +2249,11 @@ async function writeSettleMarkers(ledger, ledgerDoc, conn) {
   const settledAt = new Date().toISOString();
   let written = 0, failed = 0;
   try {
-    const control = cosmos(conn).container(REMATCH_CONTROL_CONTAINER);
+    // getOrCreateControlContainer, not a bare `.container()` reference -- see
+    // that function's header comment. A settle marker write is still
+    // non-fatal (the gate's age window covers an absent marker), but it
+    // should not 404 forever against a container nobody ever provisioned.
+    const control = await getOrCreateControlContainer(conn);
     for (const [slug, e] of ledger) {
       const id = `identity::${slug}`;
       try {
@@ -2250,6 +2292,49 @@ function cosmos(conn) {
     connectionString: conn,
     connectionPolicy: { retryOptions: { maxRetryAttemptsOnThrottledRequests: 30, maxWaitTimeInSeconds: 120 } },
   }).database("hobbyiq");
+}
+
+/**
+ * CF-A-LAZY-REFERENCE-IS-NOT-A-CONTAINER (2026-09-12).
+ *
+ * THE DEFECT THIS FIXES. `db.container(REMATCH_CONTROL_CONTAINER)` -- the
+ * pattern this file, `poolMigrationGate.ts` and `buyerIqDealScanner.service.ts`
+ * all used -- returns a CLIENT-SIDE HANDLE unconditionally; the SDK never
+ * checks the container exists until the first request against it. The
+ * `rematch_control` container was never actually provisioned in the `hobbyiq`
+ * database (confirmed read-only via `az cosmosdb sql container show` /
+ * `container list` on 2026-09-12: it is absent from the database's container
+ * list), so every read and write through that handle 404s with "Resource Not
+ * Found". Every one of those call sites caught the error and treated it as
+ * soft/non-fatal (a settle marker miss costs a few hours of extra caution; a
+ * heartbeat miss falls back to the trace path), so the 404 was silently
+ * swallowed everywhere -- until the census cursor made a successful write
+ * LOAD-BEARING: a cursor that never saves can never be resumed from, which is
+ * the exact runaway #2045 was written to end (run 34658848883 slot 3: the
+ * cursor write 404s, the relaunch restarts the whole shard from unit 0, and
+ * a 32-slot fleet the size of the large shards never converges).
+ *
+ * THE FIX. `containers.createIfNotExists` -- the same call
+ * `buyerIqDealScanner.service.ts`'s OTHER container (`buyeriq_deals_sent`)
+ * already uses -- creates the container on first use and is a no-op thereafter.
+ * Partition key `/id`: every existing reader/writer of this container already
+ * assumes that shape (`container.item(docId, docId)` in
+ * `poolMigrationGate.ts`'s `read()`, `writeSettleMarkers` and
+ * `censusCursorId`/`loadCensusCursor`/`saveCensusCursor`/`clearCensusCursor`
+ * below all address a doc by `(id, id)`), so this does not change the shape
+ * anything already reads or writes -- it only makes the container the SDK
+ * finally checks for actually exist first.
+ *
+ * Only the census cursor path is wired through this (the load-bearing one);
+ * `writeSettleMarkers` is switched too, since it is the other in-process
+ * writer of the same container and the failure mode is identical.
+ */
+async function getOrCreateControlContainer(conn) {
+  const { container } = await cosmos(conn).containers.createIfNotExists({
+    id: REMATCH_CONTROL_CONTAINER,
+    partitionKey: { paths: ["/id"] },
+  });
+  return container;
 }
 
 /**
@@ -2345,10 +2430,26 @@ async function loadCensusCursor(control, slot) {
   }
 }
 
-/** Persist this slot's checkpoint: the units finished so far and the merged
- *  aggregate they produced. Failure is non-fatal -- the classification this
- *  pass already did is not lost, only the NEXT pass's ability to skip it, and
- *  that pass falls back to a cold start exactly as a first-ever run does. */
+/**
+ * Persist this slot's checkpoint: the units finished so far and the merged
+ * aggregate they produced.
+ *
+ * FAILURE IS NO LONGER NON-FATAL TO THE PASS'S VERDICT (2026-09-12, run
+ * 34658848883 slot 3). It used to be treated the same as a read miss --
+ * logged and shrugged off -- on the theory that "the next pass will restart
+ * this shard from unit 0" is merely slow. It is not: a census cursor that
+ * can never save can never be resumed from, so every relaunch restarts from
+ * unit 0 FOREVER, which is the exact runaway #2045 exists to end. So a failed
+ * save must be LOUD (console.warn -- plain console.log/stdout is dropped by
+ * the #1982 WARN floor) and the CALLER must not print "checkpointed" or let
+ * the ordinary "stopped at the ... budget" phrase reach the log unqualified:
+ * that phrase alone makes relaunch-on-marker's outcome (a) fire an
+ * unconditional re-dispatch (it greps the log for the phrase and does not
+ * consult the exit code at all), and re-dispatching a slot whose cursor did
+ * not save reproduces the restart-from-zero loop rather than escaping it.
+ * See the call site below for how the caller turns this `false` into a
+ * distinct non-zero exit and a non-budget stop line.
+ */
 async function saveCensusCursor(control, slot, { unitsDone, aggregate, classified }) {
   if (!control) return false;
   const doc = {
@@ -2361,7 +2462,7 @@ async function saveCensusCursor(control, slot, { unitsDone, aggregate, classifie
     await control.items.upsert(doc);
     return true;
   } catch (e) {
-    console.error(`  !! could not save census cursor for slot ${slot} (${String(e?.message ?? e).slice(0, 140)}) -- the next pass will restart this shard from unit 0.`);
+    console.warn(`  !! could not save census cursor for slot ${slot} (${String(e?.message ?? e).slice(0, 140)}) -- the next pass would restart this shard from unit 0, so this pass does NOT report a checkpoint.`);
     return false;
   }
 }
@@ -2626,6 +2727,10 @@ module.exports = {
   // tests drive `pool`.
   censusCursorId, censusCursorSignature, signaturesMatch,
   loadCensusCursor, saveCensusCursor, clearCensusCursor, CENSUS_CURSOR_KIND,
+  // 2026-09-12 (run 34658848883 slot 3): the container-provisioning fix and
+  // its exit-code contract, exported so both are pinned on the SHIPPED
+  // functions/constants rather than a test's re-implementation of them.
+  getOrCreateControlContainer, CENSUS_CURSOR_SAVE_FAILED_EXIT_CODE,
 };
 
 if (require.main === module) // CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809). Success exits too: a lane
