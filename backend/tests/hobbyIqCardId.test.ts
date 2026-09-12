@@ -231,9 +231,16 @@ describe("computeHobbyIqCardId — set key controlled vocabulary", () => {
     expect(slug).toContain(":bowman-chrome:");
   });
   it("bare 'Chrome Prospects Autographs' setName → bowman-chrome", () => {
+    // CPA-DT (Deward Tovar) is a genuine 2026 bowman-chrome-ONLY number
+    // (CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT, #2064/#2069) -- CPA-EHA
+    // (Eric Hartman) used here previously turned out to be bowman-only per
+    // the real checklist, which is a different question from the one this
+    // test asks (does "Chrome Prospects Autographs" text normalize into the
+    // Chrome family) and would now be correctly moved to bowman, hiding
+    // what this test means to pin.
     const slug = computeHobbyIqCardId({
       sport: "baseball", year: 2026, setKey: "Chrome Prospects Autographs",
-      cardNumber: "CPA-EHA", parallel: "Base", isAuto: true,
+      cardNumber: "CPA-DT", parallel: "Base", isAuto: true,
     });
     expect(slug).toContain(":bowman-chrome:");
   });
@@ -306,12 +313,28 @@ describe("computeHobbyIqCardId — cardNumber-prefix override (bare→chrome)", 
       sport: "baseball", year: 2026, setKey: "Bowman",
       cardNumber: "CPA-OC", parallel: "Refractor", isAuto: true, printRun: 499,
     })).toBe("hiq:baseball:2026:bowman:cpa-oc:refractor:auto:num-499");
-    // A title that SAYS Bowman Chrome still resolves bowman-chrome -- the
-    // override never had jurisdiction there, normalizeSetKey answers first.
+    // CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT (#2064/#2069, 2026-09-12).
+    // This assertion previously claimed "a title that SAYS Bowman Chrome
+    // still resolves bowman-chrome — the override never had jurisdiction
+    // there". That was true when written but is not true of THIS card: Owen
+    // Carey's CPA-OC is a genuine 2026 BOWMAN-only number (2026-bowman-full
+    // .csv lists him three times; 2026-bowman-chrome.csv lists him zero
+    // times) — the same shape as Marconi German's CPA-MG. A title naming
+    // "Bowman Chrome" now correctly reads through to the checklist's real
+    // product, exactly as #2064 fixed for CPA-MG.
     expect(computeHobbyIqCardId({
       sport: "baseball", year: 2026, setKey: "Bowman Chrome",
       cardNumber: "CPA-OC", parallel: "Refractor", isAuto: true, printRun: 499,
-    })).toBe("hiq:baseball:2026:bowman-chrome:cpa-oc:refractor:auto:num-499");
+    })).toBe("hiq:baseball:2026:bowman:cpa-oc:refractor:auto:num-499");
+    // The claim the assertion above used to make is still TRUE for a number
+    // the sibling table does not name — e.g. CPA-AG, one of the 8 numbers
+    // that collide (Adrian Gil in Bowman, Angeibel Gomez in Bowman Chrome)
+    // and so is deliberately excluded from the table. There, an explicit
+    // title still resolves exactly as stated.
+    expect(computeHobbyIqCardId({
+      sport: "baseball", year: 2026, setKey: "Bowman Chrome",
+      cardNumber: "CPA-AG", parallel: "Refractor", isAuto: true, printRun: 499,
+    })).toBe("hiq:baseball:2026:bowman-chrome:cpa-ag:refractor:auto:num-499");
   });
 
   it("bowman + BDC- → bowman-chrome", () => {
