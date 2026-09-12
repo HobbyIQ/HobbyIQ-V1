@@ -51,6 +51,7 @@ import { readFileSync } from "node:fs";
 
 import {
   costBasisFloorRefusalWrite,
+  noBasisRefusalWrite,
   retentionThroughFloor,
   type CostBasisFloorRefusalFacts,
   type HoldingValuationOutcome,
@@ -833,4 +834,108 @@ describe("every withheld write rewrites its stamps — no prior method may stand
       expect((holding.pricingSourceMeta as Record<string, unknown>).confidence).toBe(0.4);
     });
   }
+});
+
+/**
+ * CF-THE-SLUG-NAMES-THIS-PASS'S-POOL (2026-09-12, holding 277b05a3 — Cal
+ * Ripken Jr. 1997 Metal Universe #8 PSA 8).
+ *
+ * `meta.slug` used to prefer `priorMeta?.slug` over this pass's own
+ * `entry.pooledAs` in both refusal writers — backwards from `withheld
+ * .blockingId` and `withheld.blockingCount` two lines below, which are always
+ * this pass's own facts and never carried.
+ *
+ * The live shape, read read-only from prod on 2026-09-12: 277b05a3's identity
+ * was ruled onto `hiq:baseball:1997:metal-universe:8:magnetic-field:no-auto`
+ * on 2026-09-05 (`identityResolvedBy: "ruling:Drew:2026-09-05"`). Every
+ * refusal write since has correctly priced and blocked on THAT identity — the
+ * one genuine PSA 8 sale of the Magnetic Field card, $5.40, one comp — while
+ * `pricingSourceMeta.slug` kept re-stating the PRE-RULING
+ * `…:base:no-auto` slug an earlier pass had written, because nothing since
+ * had a reason to overwrite it. A reader of `meta.slug` alone — including a
+ * support engineer diagnosing "why did this price off the wrong card" —
+ * concluded the engine was pricing off the base pool, when every other field
+ * on the row (`blockingId`, `compsUsed`, the $5.40 itself) already said
+ * Magnetic Field.
+ */
+describe("meta.slug is this pass's pooled identity, never a carried-forward one", () => {
+  /** Holding 277b05a3 exactly as prod holds it: ruled onto Magnetic Field,
+   *  but pricingSourceMeta.slug still stuck on the pre-ruling base slug. */
+  const RIPKEN_STALE_SLUG = {
+    ...RIPKEN,
+    hobbyiqCardId: "hiq:baseball:1997:metal-universe:8:magnetic-field:no-auto",
+    cardId: "hiq:baseball:1997:metal-universe:8:magnetic-field:no-auto",
+    identityResolvedBy: "ruling:Drew:2026-09-05",
+    pricingSourceMeta: {
+      slug: "hiq:baseball:1997:metal-universe:8:base:no-auto",
+      compsUsed: 50,
+    },
+  } as unknown as PortfolioHolding;
+
+  /** This pass's real valuation: the Magnetic Field identity's own PSA 8
+   *  tier, one comp, $5.40 — exactly what the engine actually priced. */
+  const RIPKEN_MAGNETIC_FIELD_FLOOR = floorOutcome(
+    "hiq:baseball:1997:metal-universe:8:magnetic-field:no-auto",
+    "exact-pool-last-sale",
+    5.4,
+    52.98,
+    1,
+  );
+
+  it("costBasisFloorRefusalWrite names the CURRENT pooled identity, not the stale prior slug", () => {
+    const { holding } = costBasisFloorRefusalWrite(RIPKEN_STALE_SLUG, RIPKEN_MAGNETIC_FIELD_FLOOR, NOW);
+    const meta = holding.pricingSourceMeta as Record<string, unknown>;
+    // MUTATION CHECK: restore `typeof priorMeta?.slug === "string" ?
+    // priorMeta.slug : entry.pooledAs` and this goes red — meta.slug reverts
+    // to the pre-ruling base slug while blockingId correctly names Magnetic
+    // Field, which is the exact defect: two fields on one row naming two
+    // different cards.
+    expect(meta.slug).toBe("hiq:baseball:1997:metal-universe:8:magnetic-field:no-auto");
+    expect(meta.slug).not.toBe("hiq:baseball:1997:metal-universe:8:base:no-auto");
+    // slug and blockingId now agree — both name the identity this pass
+    // actually priced and refused.
+    const withheld = meta.withheld as Record<string, unknown>;
+    expect(withheld.blockingId).toBe(meta.slug);
+    expect(withheld.blockingCount).toBe(1);
+    expect(withheld.proposed).toBe(5.4);
+  });
+
+  it("falls back to the prior slug only when this pass named no identity at all", () => {
+    const noIdentityFloor = floorOutcome(null, "exact-pool-last-sale", 5.4, 52.98, 1);
+    const { holding } = costBasisFloorRefusalWrite(RIPKEN_STALE_SLUG, noIdentityFloor, NOW);
+    const meta = holding.pricingSourceMeta as Record<string, unknown>;
+    // No fresher identity to report — the prior slug is better than nothing.
+    expect(meta.slug).toBe("hiq:baseball:1997:metal-universe:8:base:no-auto");
+  });
+
+  it("noBasisRefusalWrite has the identical rule: the engine's current identity wins", () => {
+    const holdingWithStaleSlug = {
+      ...RIPKEN_STALE_SLUG,
+      fairMarketValue: 49.99,
+    } as unknown as PortfolioHolding;
+    const v = {
+      identity: {
+        slug: "hiq:baseball:1997:metal-universe:8:magnetic-field:no-auto",
+        pooledAs: "hiq:baseball:1997:metal-universe:8:magnetic-field:no-auto",
+        requestedId: "hiq:baseball:1997:metal-universe:8:magnetic-field:no-auto",
+        pooledVia: "hobbyiqCardId",
+      },
+      compsUsed: 1,
+    } as unknown as Parameters<typeof noBasisRefusalWrite>[2];
+    const { holding } = noBasisRefusalWrite(holdingWithStaleSlug, "no-exact-pool-at-tier", v, NOW);
+    const meta = holding.pricingSourceMeta as Record<string, unknown>;
+    expect(meta.slug).toBe("hiq:baseball:1997:metal-universe:8:magnetic-field:no-auto");
+    const withheld = meta.withheld as Record<string, unknown>;
+    expect(withheld.blockingId).toBe(meta.slug);
+  });
+
+  it("noBasisRefusalWrite falls back to the prior slug when v is null", () => {
+    const holdingWithStaleSlug = {
+      ...RIPKEN_STALE_SLUG,
+      fairMarketValue: 49.99,
+    } as unknown as PortfolioHolding;
+    const { holding } = noBasisRefusalWrite(holdingWithStaleSlug, "identity-not-in-catalog", null, NOW);
+    const meta = holding.pricingSourceMeta as Record<string, unknown>;
+    expect(meta.slug).toBe("hiq:baseball:1997:metal-universe:8:base:no-auto");
+  });
 });
