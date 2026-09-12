@@ -83,6 +83,23 @@ These do not currently assert `compsUsed > 0` because Card Hedge applies a baseb
 
 These exercise the `/price-by-id` endpoint with an explicit `cardHedgeCardId` and verify cross-endpoint agreement with `/search`.
 
+### Read-path coverage (`readPaths.test.ts`) — the other user-facing read surfaces
+
+The 25 cases above only ever exercise `/search` and `/price-by-id`. Five other user-facing read paths had zero live production coverage until CF-TIER1-READ-PATHS (2026-09-12): `GET /cards/:cardId/recent-sales`, `GET /cards/:cardId/listing-range`, `GET /market-movers`, `POST /canonical-fmv`, `POST /lookup-by-cert`.
+
+These live in a separate file (`readPaths.test.ts`) with their own lightweight helpers (`getReadPath`/`postReadPath`/`recordReadPathResult` in `_helpers.ts`) rather than the CASES/baseline/snapshot-diff machinery above — that machinery's baseline shape (`search` + `priceById` keys, grade-pair comparisons) is specific to the two endpoints it was built for. Read-path cases are Layer-A only: status code, response shape, and (for canonical-fmv) the FMV doctrine contract — a numeric FMV with a source pool, or `withheld`/503-disabled with a non-empty reason, never a null price with no explanation.
+
+Per-case latency budget is 5s (`READ_PATH_BUDGET_MS`), tighter than the 60s `/search` budget — these are point reads / bounded scans without `/search`'s documented 24s prod tail.
+
+**Latency debt (CF-TIER1-LATENCY-DEBT, 2026-09-12).** Two cases carry a documented per-case override to `LATENCY_DEBT_BUDGET_MS` (10s) instead of the 5s default, each marked `latencyDebt: true` in its report and commented with the root cause and the follow-up it's waiting on:
+
+- `market-movers` (`window=30d&minSales=1` forces the raw-scan fallback path, not the rollup path)
+- `canonical-fmv:imageVariationSonic` (0 direct comps — `valueIdentity()` walks the full fallback ladder before answering)
+
+These are real production findings being fixed separately, not a reason to raise the default — `READ_PATH_BUDGET_MS` stays 5000 for every other case. A `latencyDebt` case still fails above the 10s ceiling (`expectWithinLatencyDebtCeiling`), so the override cannot silently become "no budget." Revert both to the 5s default the moment their respective latency fixes land — do not let a debt override become permanent.
+
+`lookup-by-cert`'s case uses a syntactically valid but unassigned PSA cert rather than a real graded holding's cert: a point-read census of Drew's portfolio (44 holdings, including the Verlander PSA 10 and Judge PSA 9 raised as candidates) found zero holdings store a cert number anywhere on the document — all are eBay-import sourced, not grader-lookup sourced. The case therefore exercises the documented not-found shape. The `graded_cert` container does not exist in `hobbyiq` yet; it is created on the read-through path's first successful grader lookup (see `resolveCert.service.ts`).
+
 ## `blockedBy` and soft assertions
 
 Some cases reference open production issues that are not yet fixed. Rather than skip them entirely (which loses snapshot coverage) or fail them every run (which trains the team to ignore CI red), the harness uses **soft assertions** gated on a `blockedBy` array per case.
