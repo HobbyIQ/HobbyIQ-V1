@@ -87,6 +87,9 @@ const TIER_SALES_ON_WIRE = 50;
 const HALF_LIFE_DAYS = 14;
 
 // ── CF-ONE-SALE-WINDOW-POLICY (D22, Drew 2026-08-30) ─────────────────────
+// ── superseded for n=2/3 by RULING R25 (Drew, 2026-09-12) — see
+//    thinPoolReading below; this section is kept for the n=1 / `widen`
+//    history the policy still governs. ─────────────────────────────────
 //
 // Holding afd40fed — Theo Gillen 2024 Bowman Draft CPA-TG Blue Refractor
 // /150, raw. Five sales: $125, $161.50, $192.51, $250 (2025) and $729 on
@@ -98,22 +101,26 @@ const HALF_LIFE_DAYS = 14;
 // The rule, as a named policy Drew can flip. Drew ruled 2026-08-30 19:50Z:
 // "Keep — the latest sale is the market."
 //
-//   "last-sale"  (DEFAULT, Drew's ruling) the latest sale IS the market. When
-//                a thin window's newest sale carries >= ONE_SALE_WEIGHT_SHARE
-//                of the recency weight and DISAGREES (beyond
-//                ONE_SALE_AGREEMENT_PCT) with the leading edge of the widest
-//                window — the plain median of its newest <= 3 sales — the
-//                newest sale stands under exact-pool-last-sale, and the basis
-//                prints what widen would have said. Gillen: $729
-//                (widen would say $489.50).
-//   "widen"      the named alternative, off: a one-sale window does not win
-//                on its own — the widest window's leading edge stands under
-//                exact-pool-leading-edge, the basis printing $729 beside it.
+//   "last-sale"  (DEFAULT, Drew's ruling) the latest sale IS the market.
+//                Since R25, this is the outcome for EVERY thin window (n=1,
+//                2 or 3) unconditionally — there is no median alternative
+//                left to outrank. Gillen: $729.
+//   "widen"      the named alternative, off: for n=2/3 the widest window's
+//                leading edge (the plain median of its newest <= 3 sales —
+//                for n<=3 that is just those sales, never a wider-window
+//                median) stands under exact-pool-leading-edge instead,
+//                printing last-sale's number beside it. Gillen: $489.50
+//                (last-sale says $729). A window with exactly ONE sale
+//                stands under exact-pool-last-sale in either policy — there
+//                is nothing else to widen to.
 //
-// When the carrying sale AGREES with the leading edge there is nothing to
-// decide and the weighted median stands under its own label. A window with
-// exactly ONE sale stands under exact-pool-last-sale in either policy. The
-// env var is the flip; the constant is the default.
+// ONE_SALE_WEIGHT_SHARE / ONE_SALE_AGREEMENT_PCT remain exported (a prior
+// contract other code may still read) but no longer gate which RESULT wins
+// for n=2/3: R25 retired the weighted-median branch they used to protect,
+// so "does one sale carry enough weight to beat a median" is no longer the
+// question — there is no median left to beat. ONE_SALE_AGREEMENT_PCT still
+// decides whether `widen` (when enabled) prints a different number at all.
+// The env var is the flip; the constant is the default.
 export type OneSaleWindowPolicy = "widen" | "last-sale";
 export const ONE_SALE_WINDOW_POLICY_DEFAULT: OneSaleWindowPolicy = "last-sale";
 export function oneSaleWindowPolicy(): OneSaleWindowPolicy {
@@ -911,22 +918,55 @@ export async function computeUnifiedPrice(
   }
 
   /**
-   * CF-ONE-SALE-WINDOW-POLICY (D22). The thin rung (n < 4): the
-   * recency-weighted median, UNLESS one sale carries the window — then the
-   * policy above decides between that sale and the widest window's leading
-   * edge, and the note prints the number the other policy would have given.
+   * RULING R25 (Drew, 2026-09-12). "When an exact pool has only 2 or 3 sales
+   * (too few for a trend), FMV is the MOST RECENT sale, published with the
+   * low-confidence label. Retire the weighted-median rung."
+   *
+   * Live case: Drew's Chipper Jones holding priced $2 under
+   * `exact-pool-weighted-median` from a 3-sale raw pool whose largest member
+   * was a PSA 9 sale that had landed in the raw tier by a since-fixed grade
+   * bug (CF-A-GRADED-SALE-NEVER-ENTERS-THE-RAW-TIER) — but the deeper defect
+   * was that the ladder was willing to average three sales into a number NO
+   * SINGLE ONE of them supports, exactly the thing the golden rule forbids:
+   * FMV is the projected next sale, never a median or mean.
+   *
+   * This retires the CF-ONE-SALE-WINDOW-POLICY (D22) heuristic's
+   * weighted-median branches for n=2/3: that policy asked "does one sale
+   * carry ENOUGH of the window's recency weight to outrank a median" — the
+   * right question when the alternative to last-sale was a median at all.
+   * R25 removes that alternative: with 2 or 3 sales there is no trend to
+   * read, so the newest sale simply IS the answer, unconditionally, the same
+   * way n=1 already always resolves to `exact-pool-last-sale`. The
+   * ONE_SALE_WINDOW_POLICY env flip (last-sale / widen) and its two named
+   * branches remain — Drew's own separate, still-live ruling — but with the
+   * median alternative gone, "widen" now means "the leading edge of the
+   * newest <= 3 sales", which for n <= 3 IS just those sales, so the note
+   * still names both numbers for audit even though last-sale is no longer
+   * competing with a median to get there.
+   *
+   * n=1 and n=2/3 share one shape: the newest sale stands under
+   * `exact-pool-last-sale`, confidence via computeConfidence(sampleCount,
+   * newestDate) — which already grades n=1 (0.15) below n=2 (0.25) below
+   * n=3 (0.35), so the label does not need to fork by sample count; the
+   * caller's own `sampleCount` field on the tier carries that distinction.
    */
   function thinPoolReading(rows: RawCompRow[], wMedian: number | null): ReturnType<typeof computeTrendAndPrediction> {
     const timed = rows
       .map((r) => ({ price: Number(r.price), t: Date.parse(r.soldAt) }))
       .filter((x) => Number.isFinite(x.t) && Number.isFinite(x.price) && x.price > 0)
       .sort((a, b) => b.t - a.t);
-    const plain = { marketValue: wMedian, predictedPrice: wMedian, trendPctPerWeek: null as number | null, trendDirection: "flat" as const, rungLabel: "exact-pool-weighted-median" as const };
-    if (wMedian === null || timed.length === 0) return { ...plain, projectionNote: "recency-weighted median of an undated thin pool" };
+    if (timed.length === 0) {
+      // No dated, positively-priced rows to anchor on — nothing to project
+      // from. This is the one shape left that still needs the pool's
+      // recency-weighted median as a last resort (an undated thin pool has
+      // no "most recent sale" to name).
+      return {
+        marketValue: wMedian, predictedPrice: wMedian, trendPctPerWeek: null, trendDirection: "flat",
+        rungLabel: "exact-pool-weighted-median",
+        projectionNote: "recency-weighted median of an undated thin pool",
+      };
+    }
     const r2 = (n: number) => Math.round(n * 100) / 100;
-    const weights = timed.map((x) => Math.exp(-Math.max(0, (nowMs - x.t) / 86400_000) / HALF_LIFE_DAYS));
-    const totalW = weights.reduce((s, w) => s + w, 0);
-    const share = totalW > 0 ? weights[0] / totalW : 1;
     const newest = timed[0];
     const newestAge = Math.round((nowMs - newest.t) / 86400_000);
     if (timed.length === 1) {
@@ -936,34 +976,34 @@ export async function computeUnifiedPrice(
         projectionNote: `one sale in the widest window ($${r2(newest.price)}, ${newestAge}d ago) and nothing wider to widen to — the sale stands`,
       };
     }
-    if (share < ONE_SALE_WEIGHT_SHARE) {
-      return { ...plain, projectionNote: `recency-weighted median of ${timed.length} sales; the newest carries ${Math.round(share * 100)}% of the weight (< ${Math.round(ONE_SALE_WEIGHT_SHARE * 100)}%)` };
-    }
-    // One sale carries the window.
+    // R25: 2 or 3 sales is too few for a trend — the most recent sale IS the
+    // market, unconditionally. The `widen` policy's leading edge (median of
+    // the newest <= 3) is still computed and printed for audit, but it no
+    // longer stands as an alternative RESULT: R25 supersedes D22's
+    // "widen wins when no single sale carries the window" outcome for this
+    // n-range specifically, because that outcome was a median.
     const edgeSales = timed.slice(0, 3).map((x) => x.price);
     const sorted = edgeSales.slice().sort((a, b) => a - b);
     const mid = Math.floor(sorted.length / 2);
     const edge = sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
     const disagreePct = edge > 0 ? Math.abs(newest.price - edge) / edge : 0;
     const policy = oneSaleWindowPolicy();
-    const sharePct = share >= 0.9995 ? ">99.9" : String(Math.round(share * 1000) / 10);
-    if (disagreePct <= ONE_SALE_AGREEMENT_PCT) {
+    if (policy === "widen" && disagreePct > ONE_SALE_AGREEMENT_PCT) {
+      // The named alternative, off by default: the leading edge of the
+      // newest <= 3 stands instead of the newest sale alone. For n <= 3 this
+      // IS "the newest <= 3 sales", so it is still real evidence (never a
+      // wider-window median) — just a different aggregation of the same thin
+      // pool than R25's default.
       return {
-        ...plain,
-        projectionNote: `the newest sale ($${r2(newest.price)}, ${newestAge}d ago) carries ${sharePct}% of the window's recency weight and agrees with the leading edge of the newest ${edgeSales.length} ($${r2(edge)}) within ${Math.round(disagreePct * 100)}% — the weighted median stands`,
-      };
-    }
-    if (policy === "last-sale") {
-      return {
-        marketValue: r2(newest.price), predictedPrice: r2(newest.price), trendPctPerWeek: null, trendDirection: "flat",
-        rungLabel: "exact-pool-last-sale",
-        projectionNote: `the newest sale ($${r2(newest.price)}, ${newestAge}d ago) carries ${sharePct}% of the window's recency weight and disagrees with the leading edge of the newest ${edgeSales.length} ($${r2(edge)}) by ${Math.round(disagreePct * 100)}%; ONE_SALE_WINDOW_POLICY=last-sale (Drew: the latest sale is the market) — the sale stands (widen would say $${r2(edge)})`,
+        marketValue: r2(edge), predictedPrice: r2(edge), trendPctPerWeek: null, trendDirection: "flat",
+        rungLabel: "exact-pool-leading-edge",
+        projectionNote: `${timed.length} sales, too few for a trend (R25); the newest ($${r2(newest.price)}, ${newestAge}d ago) disagrees with the leading edge of the newest ${edgeSales.length} ($${r2(edge)}) by ${Math.round(disagreePct * 100)}%; ONE_SALE_WINDOW_POLICY=widen — the leading edge stands (last-sale would say $${r2(newest.price)})`,
       };
     }
     return {
-      marketValue: r2(edge), predictedPrice: r2(edge), trendPctPerWeek: null, trendDirection: "flat",
-      rungLabel: "exact-pool-leading-edge",
-      projectionNote: `the newest sale ($${r2(newest.price)}, ${newestAge}d ago) carries ${sharePct}% of the window's recency weight and disagrees with the leading edge of the newest ${edgeSales.length} ($${r2(edge)}) by ${Math.round(disagreePct * 100)}%; ONE_SALE_WINDOW_POLICY=widen — the leading edge stands (last-sale would say $${r2(newest.price)})`,
+      marketValue: r2(newest.price), predictedPrice: r2(newest.price), trendPctPerWeek: null, trendDirection: "flat",
+      rungLabel: "exact-pool-last-sale",
+      projectionNote: `${timed.length} sales, too few for a trend (R25: FMV is the most recent sale) — $${r2(newest.price)}, ${newestAge}d ago${disagreePct > ONE_SALE_AGREEMENT_PCT ? ` (leading edge of the newest ${edgeSales.length} would say $${r2(edge)})` : ""}`,
     };
   }
 

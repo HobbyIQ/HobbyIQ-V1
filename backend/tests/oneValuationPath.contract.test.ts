@@ -278,7 +278,10 @@ describe("D16 — one fixture pool, four handlers, one number", () => {
   it("(slug, PSA 9 — a thin graded tier) and a thin Raw pool: still one number, an honest thin-pool rung", async () => {
     const psa9 = await four(GOLD, { company: "PSA", value: 9 });
     expect(new Set([psa9.pb.marketValue, psa9.cf.fmv, psa9.hf.fmv, psa9.tile?.trendAdjustedValue]).size).toBe(1);
-    expect(psa9.pb.rungLabel).toBe("exact-pool-weighted-median");
+    // RULING R25 (Drew, 2026-09-12): 2 sales is too few for a trend — the
+    // most recent ($300, 8d ago) IS the market, unconditionally.
+    expect(psa9.pb.rungLabel).toBe("exact-pool-last-sale");
+    expect(psa9.pb.marketValue).toBe(300);
     const thin = await four(THIN);
     expect(new Set([thin.pb.marketValue, thin.cf.fmv, thin.hf.fmv, thin.tile?.trendAdjustedValue]).size).toBe(1);
     // D22 (CF-ONE-SALE-WINDOW-POLICY): this fixture — $0.88 at 12d, $0.15 at
