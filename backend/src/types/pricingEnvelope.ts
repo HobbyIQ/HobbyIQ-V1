@@ -276,7 +276,14 @@ export interface PricingProvenance {
       | "cost-basis-floor"
       | "no-checklist-match"
       | "identity-not-in-catalog"
-      | "pool-migrating";
+      | "pool-migrating"
+      // #2059 (2026-09-12): the engine's own `no-exact-pool` join to this
+      // wire union. It was already a real, persisted holdingValuation.ts
+      // reason (NoBasisRefusalReason) that `withheldOf` below silently
+      // dropped to null — a checklist-backed identity with zero sales in
+      // the search window reached the client as an indistinguishable "—",
+      // identical to an outage. See the D24 Diamond Dominance case.
+      | "no-exact-pool";
     /** The pool that blocked it, and that pool's size. */
     blockingId: string | null;
     blockingCount: number | null;
