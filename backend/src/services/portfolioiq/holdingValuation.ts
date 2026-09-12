@@ -772,6 +772,16 @@ export type NoBasisRefusalReason =
   | "no-checklist-match"
   | "no-exact-pool"
   | "no-exact-pool-at-tier"
+  /** CF-LADDER-TIME-BUDGET (Fable, 2026-09-12). The gated fallback ladder
+   *  did not settle within its wall-clock budget (ladderBudget.service.ts)
+   *  — a rung, or the walk as a whole, was withdrawn before it could
+   *  answer. Joined the same way #2059/#2071 joined `no-exact-pool`: the
+   *  engine already names this reason (oneValuationPath.service.ts's
+   *  ValuationReason), and without an explicit case here it would fall
+   *  through to `confidence-gate` below — losing the more specific,
+   *  actionable fact that the engine did not decline on evidence, it ran
+   *  out of time (most likely fleet RU pressure on sold_comps). */
+  | "ladder-timeout"
   /** The confidence gate declined and the engine named no reason of its own. */
   | "confidence-gate";
 
@@ -791,6 +801,7 @@ export function noBasisReasonFromEngine(engineReason: string | null | undefined)
     case "no-checklist-match":
     case "no-exact-pool":
     case "no-exact-pool-at-tier":
+    case "ladder-timeout":
       return engineReason;
     default:
       return "confidence-gate";
@@ -845,8 +856,11 @@ export function noBasisRefusalWrite(
           : reason === "confidence-gate"
             ? `the confidence gate declined to publish a new number for ${slug ?? "this holding"}`
               + `; ${retentionClause}`
-            : `${slug ?? "this identity"} is still having its sales re-keyed — the pool is incomplete`
-              + `; ${retentionClause}`;
+            : reason === "ladder-timeout"
+              ? `the fallback ladder for ${slug ?? "this identity"} did not settle within its time`
+                + ` budget — withheld rather than a stale or partial number; ${retentionClause}`
+              : `${slug ?? "this identity"} is still having its sales re-keyed — the pool is incomplete`
+                + `; ${retentionClause}`;
   const refusal = reason === "identity-not-in-catalog"
     ? `no price was published: the catalog holds no identity for this holding`
       + `${slug ? ` (${slug})` : ""}, so there is no pool to price it from.`
@@ -877,6 +891,18 @@ export function noBasisRefusalWrite(
     : reason === "confidence-gate"
     ? `no price was published: the confidence gate declined to publish a new number for this`
       + ` holding on this pass, and no lane below it produced one either.`
+    : reason === "ladder-timeout"
+    // CF-LADDER-TIME-BUDGET. Distinct from no-exact-pool: the engine did NOT
+    // determine there is no sale — it was withdrawn before it could finish
+    // checking every rung, most likely because sold_comps was under load.
+    // Naming the cause (load, not absence) is the point: a reader told "no
+    // sale exists" would look in the wrong place (matching sales under
+    // another slug); the honest fact here is "try again" — this identity's
+    // own pool was never actually exhausted.
+    ? `no price was published: the fallback ladder did not finish checking this identity's`
+      + ` pool within its time budget, most likely because sold_comps was under heavy load —`
+      + ` this is NOT a statement that no sale exists, only that the engine could not confirm`
+      + ` one in time. Pricing resumes on the next repricing pass under normal load.`
     : `no price was published: this card's identity was created recently and its sales are still`
       + ` being re-keyed onto it, so the pool is a partial view. Pricing resumes once the re-key for`
       + ` this identity has settled. No fallback number is published in the meantime — a partial pool`
