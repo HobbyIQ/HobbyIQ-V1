@@ -81,6 +81,11 @@ LOGDIR="${WAVE2_LOGDIR:-/tmp/wave2}"
 # in_progress count before EVERY dispatch and waits for room, capping how many
 # of ITS OWN slots can be in flight at once -- independent of whatever else is
 # using the shared backfill-runner lane.
+#
+# 2026-09-12: "independent of whatever else is using the shared lane" was the
+# INTENT here from the start but not what the code measured -- see the
+# comment above inflight_state_dir() for the gap between the two and the
+# per-slot chain table that closes it.
 MAX_INFLIGHT_CENSUS_SLOTS="${WAVE2_MAX_INFLIGHT_CENSUS_SLOTS:-8}"
 INFLIGHT_POLL_SECS="${WAVE2_INFLIGHT_POLL_SECS:-30}"
 
@@ -256,34 +261,197 @@ preflight_lane() {
   return 0
 }
 
-# How many of THIS driver's own census dispatches are currently queued or
-# in_progress, counted by matching `-f script=rematch-sold-comps -f
-# mode=census` in each run's own dispatch inputs (`gh run view --json
-# displayTitle,name` does not carry input values, so the inputs are read off
-# the run same as everywhere else in this file: from its log, via
-# run_log_identifies_slot -- but that requires a COMPLETED log, which an
-# in_progress run never has). So the count here is coarser than identification
-# is elsewhere: it is every NOT-YET-COMPLETED backfill-runner run created at or
-# after `since`, on the theory that this driver is the only caller staggering
-# ITS OWN dispatches and a shared-lane run started by something else belongs
-# to preflight_lane's question, not this one. `since` keeps a long WAVE2
-# session from counting runs that predate it.
+# ── THE STAGGER'S OWN SLOT TABLE (2026-09-12) ───────────────────────────────
+#
+# THE DEFECT THIS REPLACES. The original `inflight_census_count` counted every
+# queued/in_progress run on the SHARED backfill-runner.yml lane created since
+# the phase started -- no filter on script, mode or slot. Measured tonight: 6
+# real census slots plus 2 unrelated baseline-pool-snapshot cron runs read as
+# "8 in flight" against a cap of 8, and slot 10+ never dispatched though this
+# fleet genuinely had room. The workflow has no free-text or marker INPUT to
+# filter on -- `script` is a fixed dropdown (see the `on.workflow_dispatch`
+# block above) -- and `gh run list`'s `displayTitle`/`name` are the workflow's
+# STATIC name for every run regardless of script/mode/slot (the same fact
+# `find_run_for_slot`'s "THE STEP NAMES ARE NOT AN ALTERNATIVE" comment
+# already established for job step names), so neither can substitute.
+#
+# THE FIX IS A TABLE OF THIS FLEET'S OWN CHAINS, ONE ROW PER SLOT --
+# `$LOGDIR/.inflight-<tag>/<slot>.run_id` -- keyed by the run id THIS driver
+# dispatched for that slot, or a self-relaunch successor of that run. A
+# slot's row is never a foreign run: it starts from a run id `dispatch()`
+# itself just created, and moves only to a run id `run_log_identifies_slot`
+# positively identifies (the SAME log check every other verdict in this file
+# uses, never touched here) as MODE=census slot N.
+#
+# CHAINS, NOT RUNS (the second defect named alongside the first). A link that
+# stops at its budget is not the end of the slot -- `relaunch-on-marker`
+# dispatches the successor inline, in the same job step, seconds after the
+# predecessor's completed status is visible. So a slot whose current link just
+# went `budget` must still count as ONE in-flight slot for a grace window
+# after that completion: the successor is real but not yet visible to
+# `gh run list`, and undercounting it is exactly the race that would let a
+# 9th dispatch through while 8 chains are still alive.
+INFLIGHT_BUDGET_GRACE_SECS="${WAVE2_INFLIGHT_BUDGET_GRACE_SECS:-90}"
+
+# Where this phase's per-slot tracking rows live. Cleared per invocation of
+# phase_census (never across CLI runs) so a stale row from an earlier session
+# cannot mis-attribute a run id that has since finished and moved on.
+inflight_state_dir() { printf '%s/.inflight-%s' "$LOGDIR" "$1"; }
+
+inflight_reset_state() {
+  local tag="$1"
+  rm -rf "$(inflight_state_dir "$tag")"
+  mkdir -p "$(inflight_state_dir "$tag")"
+}
+
+# Record the run THIS dispatch just created as slot `$2`'s current chain link.
+# Called only from dispatch()'s success path, so `run_id` is always a run this
+# driver itself created -- never a candidate found by searching the lane.
+inflight_track_dispatch() {
+  local tag="$1" slot="$2" run_id="$3" dir
+  dir="$(inflight_state_dir "$tag")"
+  mkdir -p "$dir"
+  printf '%s' "$run_id" >"$dir/$slot.run_id"
+  rm -f "$dir/$slot.budget_at"
+}
+
+# Refresh ONE slot's row against `gh` and print whether it still counts as
+# in-flight ("1" or "0"). Never touches a run id this driver did not itself
+# attach: the only way a new id ever lands in the row is
+# run_log_identifies_slot() confirming it as MODE=census slot N's successor,
+# the identical check follow_slot() gates its own verdict reads on.
+inflight_refresh_slot() {
+  local tag="$1" slot="$2" dir run_id st
+  dir="$(inflight_state_dir "$tag")"
+  run_id=$(cat "$dir/$slot.run_id" 2>/dev/null) || return 1
+  [ -n "${run_id:-}" ] || return 1
+
+  st=$(gh run view "$run_id" --repo "$REPO" --json status --jq .status 2>/dev/null)
+  case "$st" in
+    queued|in_progress)
+      rm -f "$dir/$slot.budget_at"
+      printf '1'; return 0
+      ;;
+    completed)
+      local log="$LOGDIR/.probe-inflight-$tag-$slot.log"
+      gh run view "$run_id" --repo "$REPO" --log >"$log" 2>/dev/null || : >"$log"
+      if ! run_log_identifies_slot "$log" census "$slot"; then
+        # Not a run we can attribute to this slot's census -- stop tracking it
+        # rather than guessing. A slot with no attributable row is simply not
+        # counted (never assumed in-flight, never assumed clear): the next
+        # dispatch loop iteration for THIS slot has not happened yet, so there
+        # is nothing further to track until it does.
+        rm -f "$log" "$dir/$slot.run_id" "$dir/$slot.budget_at"
+        printf '0'; return 0
+      fi
+      if [ "$(chain_outcome "$log")" = "budget" ]; then
+        rm -f "$log"
+        # First time we have seen THIS link report budget: stamp the grace
+        # window clock. Re-checking the same completed run on a later poll
+        # must not keep resetting the clock -- only replacing run_id with a
+        # newly found successor (below) clears it.
+        [ -s "$dir/$slot.budget_at" ] || date +%s >"$dir/$slot.budget_at"
+        # Look for the successor now: find_run_for_slot with a short discovery
+        # window and NO completion wait (WAVE2_IDENTIFY_TIMEOUT_MINUTES=0 would
+        # be a no-op deadline in bash's integer arithmetic, so a one-shot probe
+        # is done inline instead of borrowing the full finder's blocking loop).
+        local since succ
+        since=$(date -u -d "@$(( $(cat "$dir/$slot.budget_at") - 5 ))" +%Y-%m-%dT%H:%M:%SZ 2>/dev/null \
+                || date -u +%Y-%m-%dT%H:%M:%SZ)
+        succ=$(inflight_find_successor census "$slot" "$since" "$run_id")
+        if [ -n "${succ:-}" ]; then
+          printf '%s' "$succ" >"$dir/$slot.run_id"
+          rm -f "$dir/$slot.budget_at"
+          printf '1'; return 0
+        fi
+        # No successor visible yet. Still counts as in-flight while inside the
+        # grace window -- the chain is not over, `gh run list` just has not
+        # shown the new run yet.
+        local age=$(( $(date +%s) - $(cat "$dir/$slot.budget_at") ))
+        if [ "$age" -lt "$INFLIGHT_BUDGET_GRACE_SECS" ]; then
+          printf '1'; return 0
+        fi
+        warn "slot $slot: budget stop on run $run_id but no self-relaunch successor became visible within ${INFLIGHT_BUDGET_GRACE_SECS}s -- no longer counted in-flight."
+        rm -f "$dir/$slot.run_id" "$dir/$slot.budget_at"
+        printf '0'; return 0
+      fi
+      # Any other completed outcome (finished, verdict, killed, startup-refused,
+      # died-in-startup) ends the chain for stagger purposes -- follow_slot is
+      # what judges the slot; this table only tracks whether it is still using
+      # a runner slot.
+      rm -f "$log" "$dir/$slot.run_id" "$dir/$slot.budget_at"
+      printf '0'; return 0
+      ;;
+    *)
+      # gh failed or returned nothing for a run id we DO hold -- not proof the
+      # run ended, so it is not dropped from the table. Read as "cannot
+      # confirm" rather than "clear", the same non-fatal-but-not-optimistic
+      # posture wait_for_inflight_room already takes on a whole-query failure.
+      return 1
+      ;;
+  esac
+}
+
+# A single, non-blocking probe for a budget-stopped slot's self-relaunch
+# successor: the SAME identification find_run_for_slot uses (script + MODE +
+# slot, off the completed log -- run_log_identifies_slot, untouched), but
+# capped to one pass over the candidate list with no polling loop, because
+# inflight_refresh_slot is itself called repeatedly from the stagger's own
+# poll loop and must not block behind a second nested wait.
+inflight_find_successor() {
+  local mode="$1" slot="$2" since="$3" exclude="$4"
+  local ids id st probe
+  ids=$(gh run list --repo "$REPO" --workflow=backfill-runner.yml --limit 100 \
+          --json databaseId,createdAt --jq "[.[] | select(.createdAt >= \"$since\")] | sort_by(.createdAt) | .[].databaseId" 2>/dev/null)
+  for id in ${ids:-}; do
+    [ "$id" = "$exclude" ] && continue
+    st=$(gh run view "$id" --repo "$REPO" --json status --jq .status 2>/dev/null)
+    case "$st" in
+      queued|in_progress)
+        printf '%s' "$id"; return 0
+        ;;
+      completed)
+        probe="$LOGDIR/.probe-successor-$mode-$slot.log"
+        gh run view "$id" --repo "$REPO" --log >"$probe" 2>/dev/null || : >"$probe"
+        if run_log_identifies_slot "$probe" "$mode" "$slot"; then
+          rm -f "$probe"
+          printf '%s' "$id"; return 0
+        fi
+        rm -f "$probe"
+        ;;
+    esac
+  done
+  return 1
+}
+
+# How many of THIS driver's own census CHAINS are currently in flight: every
+# tracked slot whose inflight_refresh_slot() call returns "1". `tag` scopes
+# the state table to one phase_census invocation. Prints NOTHING (not "0")
+# and returns nonzero if any tracked slot's status could not be confirmed --
+# same "cannot confirm, don't guess" contract the old whole-query read had,
+# just evaluated per row instead of per call.
 inflight_census_count() {
-  local since="$1"
-  gh run list --repo "$REPO" --workflow=backfill-runner.yml --limit 100 \
-    --json createdAt,status \
-    --jq "[.[] | select(.createdAt >= \"$since\") | select(.status==\"queued\" or .status==\"in_progress\")] | length" 2>/dev/null
+  local tag="$1" dir slot n=0 r
+  dir="$(inflight_state_dir "$tag")"
+  [ -d "$dir" ] || { printf '0'; return 0; }
+  for f in "$dir"/*.run_id; do
+    [ -e "$f" ] || continue
+    slot=$(basename "$f" .run_id)
+    r=$(inflight_refresh_slot "$tag" "$slot") || return 1
+    [ "$r" = "1" ] && n=$((n + 1))
+  done
+  printf '%s' "$n"
 }
 
 # Block until fewer than MAX_INFLIGHT_CENSUS_SLOTS of this driver's own
-# dispatches (since `since`) are queued or in_progress. Never blocks forever:
-# a `gh` failure is read as "cannot confirm room" and proceeds rather than
-# wedging the fleet on a transient API error, the same non-fatal posture
+# CHAINS (tracked in `$tag`'s state table) are in flight. Never blocks
+# forever: a `gh` failure is read as "cannot confirm room" and proceeds rather
+# than wedging the fleet on a transient API error, the same non-fatal posture
 # preflight_lane takes on the same failure.
 wait_for_inflight_room() {
-  local since="$1" n
+  local tag="$1" n
   while :; do
-    n=$(inflight_census_count "$since")
+    n=$(inflight_census_count "$tag")
     if [ -z "${n:-}" ]; then
       warn "could not read in-flight census count — proceeding without the stagger for this dispatch"
       return 0
@@ -295,7 +463,7 @@ wait_for_inflight_room() {
 }
 
 dispatch() {
-  local mode="$1" apply="$2" scope="$3" slot="$4"
+  local mode="$1" apply="$2" scope="$3" slot="$4" inflight_tag="${5:-}"
   local cmd=(gh workflow run backfill-runner.yml --repo "$REPO" --ref "$REF"
              -f script=rematch-sold-comps
              -f mode="$mode" -f apply="$apply" -f scope="$scope"
@@ -326,6 +494,18 @@ dispatch() {
     return 1
   fi
   say "WAVE2 dispatched slot $slot ($mode apply=$apply scope=$scope) -> $url"
+  # THE STAGGER'S OWN TABLE. `$inflight_tag`, when given (only the census
+  # phase's dispatch loop passes it), seeds this slot's in-flight tracking row
+  # with the run id `gh` just handed back. This is a SEED, not a trusted
+  # identity: inflight_refresh_slot() never counts a completed run toward the
+  # cap without first passing it through run_log_identifies_slot, the same
+  # check follow_slot() gates every verdict on -- so a URL that (rarely) named
+  # the wrong run is simply dropped from the table once it completes and fails
+  # that check, never miscounted as a foreign slot's chain link.
+  if [ -n "$inflight_tag" ]; then
+    local run_id; run_id=$(printf '%s' "$url" | grep -aoE '[0-9]+$')
+    [ -n "${run_id:-}" ] && inflight_track_dispatch "$inflight_tag" "$slot" "$run_id"
+  fi
 }
 
 # -- THE FINDER: A RUN IS THIS SLOT'S ONLY WHEN ITS OWN LOG SAYS SO ----------
@@ -618,17 +798,27 @@ selected_slots() {
 phase_census() {
   preflight_lane
   local since; since=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-  say "WAVE2 CENSUS — shard table $SLOTS slots, driving [$(selected_slots | tr "\n" " ")], mode=census apply=false (report-only), stagger cap $MAX_INFLIGHT_CENSUS_SLOTS"
+  # THE STAGGER'S TABLE TAG. One per phase_census invocation, never reused
+  # across a CLI run -- inflight_reset_state wipes any row a previous
+  # invocation in this same $LOGDIR left behind, so a stale run id from a
+  # prior session cannot be counted toward THIS fan-out's cap.
+  local tag="census-$$"
+  inflight_reset_state "$tag"
+  say "WAVE2 CENSUS — shard table $SLOTS slots, driving [$(selected_slots | tr "\n" " ")], mode=census apply=false (report-only), stagger cap $MAX_INFLIGHT_CENSUS_SLOTS (own chains only, grace ${INFLIGHT_BUDGET_GRACE_SECS}s)"
   local s
   local selected; selected=$(selected_slots)
-  # THE STAGGER: at most MAX_INFLIGHT_CENSUS_SLOTS of this phase's own
-  # dispatches queued or in_progress at once. Checked BEFORE every dispatch,
-  # not only the first, so the cap holds across the whole fan-out and not just
-  # at its start -- see the 2026-09-11 comment above MAX_INFLIGHT_CENSUS_SLOTS.
+  # THE STAGGER: at most MAX_INFLIGHT_CENSUS_SLOTS of THIS FLEET'S OWN CHAINS
+  # -- tracked in `$tag`'s per-slot table, never the shared lane's whole
+  # queued/in_progress count -- in flight at once. Checked BEFORE every
+  # dispatch, not only the first, so the cap holds across the whole fan-out
+  # and not just at its start -- see the 2026-09-11 comment above
+  # MAX_INFLIGHT_CENSUS_SLOTS and the 2026-09-12 comment above
+  # inflight_state_dir for why a shared-lane count over-attributed foreign
+  # runs (a snapshot cron, an ad-hoc dispatch) to this fleet's own cap.
   if [ "$DISPATCH" = "true" ]; then
     for s in $selected; do
-      wait_for_inflight_room "$since"
-      dispatch census false improve "$s" || true
+      wait_for_inflight_room "$tag"
+      dispatch census false improve "$s" "$tag" || true
     done
   else
     for s in $selected; do dispatch census false improve "$s" || true; done
