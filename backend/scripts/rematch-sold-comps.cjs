@@ -22,27 +22,46 @@
  *                      Touches nothing, ever -- there is no write path in this
  *                      mode at all, not even behind APPLY.
  *
- *                      RESUMABLE ACROSS THE RUNNER'S SELF-RELAUNCH
- *                      (2026-09-11). A census walks its shard UNIT BY UNIT --
+ *                      RESUMABLE ACROSS THE RUNNER'S SELF-RELAUNCH, AT TWO
+ *                      GRAINS (2026-09-11, finer-grained 2026-09-12 -- #2058
+ *                      follow-up). A census walks its shard UNIT BY UNIT --
  *                      the same (cardYear, sportClass, sha1(id) % parts) units
  *                      SHARD_TABLE packs a slot from -- and checkpoints a
  *                      per-slot cursor to the `rematch_control` container
- *                      after every unit that finishes inside budget. A run
- *                      that hits `RUN_MINUTES` stops at the NEXT unit boundary
- *                      (never mid-unit), saves the units done so far plus the
- *                      merged counts they produced, and prints `stopped at the
- *                      ... budget` exactly as before -- the runner's existing
- *                      relaunch fires on that line with no new dispatch input.
- *                      The relaunch's own pass reads that cursor, MERGES its
- *                      saved counts into its own and skips every unit already
- *                      marked done, so a slot's `classified` climbs pass over
- *                      pass toward `expectedRows` instead of resetting to zero
- *                      every ~2h10m. A pass that finishes its WHOLE shard
- *                      prints `finished within budget` and clears the cursor,
- *                      so an unrelated later dispatch of the same slot (a
- *                      re-run, an audit re-check) starts clean rather than
- *                      "resuming" a slot with nothing left to resume. The
- *                      cursor is invalidated (dropped, not repaired) by any
+ *                      after every unit that finishes inside budget. Several
+ *                      units (measured: slot 0's 484,940-row first unit
+ *                      among them) are themselves bigger than one link's
+ *                      throughput at sold_comps' fixed 10,000 RU autoscale
+ *                      (~150-200 in-slot rows/s), so a SECOND checkpoint
+ *                      saves the Cosmos query iterator's own continuation
+ *                      token for the unit currently in flight -- every
+ *                      `CENSUS_PAGE_CHECKPOINT_PAGES` pages (default 40) or
+ *                      `CENSUS_PAGE_CHECKPOINT_MS` (default 5 minutes),
+ *                      whichever comes first. The query behind each unit has
+ *                      no ORDER BY (see slotQuery), which is exactly the
+ *                      shape whose continuation token the SDK guarantees is
+ *                      safe to replay against a brand-new query object on a
+ *                      brand-new process. A run that hits `RUN_MINUTES` stops
+ *                      at the next of either boundary, saves the units done
+ *                      so far, the in-flight unit's resume token (if any) and
+ *                      the merged counts produced up to that exact page, and
+ *                      prints `stopped at the ... budget` exactly as before
+ *                      -- the runner's existing relaunch fires on that line
+ *                      with no new dispatch input. The relaunch's own pass
+ *                      reads that cursor, MERGES its saved counts into its
+ *                      own, skips every unit already marked done, and --
+ *                      when a partial unit's key matches the next unit it
+ *                      would otherwise start cold -- resumes it from the
+ *                      saved token instead of its first row, so a slot's
+ *                      `classified` climbs EVERY link toward `expectedRows`,
+ *                      including inside a unit too large for one link alone,
+ *                      instead of resetting to zero every ~2h10m. A pass that
+ *                      finishes its WHOLE shard prints `finished within
+ *                      budget` and clears the cursor, so an unrelated later
+ *                      dispatch of the same slot (a re-run, an audit
+ *                      re-check) starts clean rather than "resuming" a slot
+ *                      with nothing left to resume. The cursor is invalidated
+ *                      (dropped, not repaired -- page token included) by any
  *                      change to the shard table's `measuredAt`, `scope`,
  *                      `sports`, `setkey_like` or `years` -- see
  *                      censusCursorSignature. MODE=apply-improve is
@@ -1409,6 +1428,27 @@ async function main() {
   }
   const priorCursor = MODE === "census" ? await loadCensusCursor(control, SLOT) : null;
   const doneUnitKeys = new Set(priorCursor?.unitsDone ?? []);
+  // THE PAGE CHECKPOINT (2026-09-12, #2058 follow-up). A unit is 500k-1M+
+  // rows and this shard's measured rate (~150-200 rows/s in-slot) classifies
+  // roughly 1-1.4M rows per 120-minute link -- so a slot whose FIRST unit
+  // alone is ~485k-1.1M rows can spend its entire budget inside that one
+  // unit and never reach the unit-done line at all. `unitsDone` alone is
+  // therefore not a fine enough grain: every run 34686318652/34686403508/
+  // 34686374165/34688675098 checkpointed "0 of 2 unit(s)" while burning the
+  // full 118+ minutes, and the next dispatch reads that as "nothing done"
+  // and re-pages unit 0 from its first row again -- forever, for any slot
+  // whose per-unit row count exceeds one link's throughput.
+  //
+  // `partialUnit` is the sub-unit grain: which unit is IN PROGRESS, the
+  // Cosmos query iterator's own `continuationToken` for it (the SDK's exact
+  // resume point for a plain `WHERE` query with no ORDER BY -- see
+  // slotQuery's header, this query is never cross-partition-sorted, so a
+  // token issued by one process is valid input to `items.query` on a brand
+  // new one), and the aggregate this pass had accumulated as of that token.
+  // It is saved every PAGE_CHECKPOINT_PAGES pages or PAGE_CHECKPOINT_MS,
+  // whichever comes first, so a budget stop mid-unit still leaves a resume
+  // point at most one checkpoint interval behind the kill, not at unit 0.
+  const priorPartialUnit = priorCursor?.partialUnit ?? null;
   if (priorCursor) {
     // `mergeCensusAggregate` adds the saved `stats` (seen, otherSlot,
     // filtered, prefiltered, ...) into the live counters below, so `stats.seen`
@@ -1416,10 +1456,21 @@ async function main() {
     // `priorCursor.classified` is a redundant witness of the same number,
     // read here only for the narration line, never assigned over the merge.
     mergeCensusAggregate(priorCursor.aggregate);
-    console.log(`  CENSUS CURSOR: resuming slot ${SLOT} -- ${doneUnitKeys.size} of ${q.units.length} unit(s) already classified in a prior pass (${f(stats.seen)} rows carried forward, cursor said ${f(Number(priorCursor.classified) || 0)}). Signature matched: same shard table, scope and filters.`);
+    const partialNote = priorPartialUnit
+      ? ` A page checkpoint inside unit ${priorPartialUnit.key} carries this pass straight to its saved continuation token.`
+      : "";
+    console.log(`  CENSUS CURSOR: resuming slot ${SLOT} -- ${doneUnitKeys.size} of ${q.units.length} unit(s) already classified in a prior pass (${f(stats.seen)} rows carried forward, cursor said ${f(Number(priorCursor.classified) || 0)}). Signature matched: same shard table, scope and filters.${partialNote}`);
   } else if (MODE === "census") {
     console.log(`  CENSUS CURSOR: no usable prior checkpoint for slot ${SLOT} -- starting from unit 0.`);
   }
+  /** How often the in-flight unit's continuation token is checkpointed.
+   *  Pages are 500 rows (maxItemCount above); at the measured ~150-200
+   *  in-slot rows/s, 40 pages is ~2,000-2,700 rows -- comfortably under a
+   *  minute even at the slow end, so PAGE_CHECKPOINT_MS below (the tighter
+   *  of the two) is what actually governs in practice. Both are configurable
+   *  for tests. */
+  const PAGE_CHECKPOINT_PAGES = Math.max(1, Number(process.env.CENSUS_PAGE_CHECKPOINT_PAGES || 40));
+  const PAGE_CHECKPOINT_MS = Math.max(1000, Number(process.env.CENSUS_PAGE_CHECKPOINT_MS || 5 * 60 * 1000));
   // MODE=apply-improve keeps the ORIGINAL single-query shape -- one query
   // object over every unit combined, walked once. Splitting it per unit like
   // the census below would reissue the whole combined query once PER UNIT
@@ -1437,16 +1488,40 @@ async function main() {
   // against in `stopAccounting` -- rows already classified in a prior pass
   // still count toward `expected`, via `stats.seen` carried forward above.
 
+  // The in-progress unit's latest known resume point, kept in memory across
+  // the whole `page:` loop (not just one unit's iteration) so the FINAL
+  // checkpoint after the loop -- reached on a budget stop, a LIMIT stop, or
+  // a save failure -- always has this pass's best available token, not only
+  // whatever the periodic in-loop save last managed to persist. Cleared the
+  // instant a unit finishes (see `doneUnitKeys.add` below): a unit marked
+  // done must never also carry a stale in-progress token into the cursor.
+  let pendingPartialUnit = null;
+
   page: for (const unit of unitsThisPass) {
     if (MODE === "census" && budgetLeft() < 90000) { stopReason = `stopped at the ${RUN_MINUTES}-minute budget`; break; }
     // `unit` already survived slotQuery's own YEARS filter once, when `q.units`
     // was built above -- re-applying the identical filter to a one-unit array
     // is idempotent and can never come back null for a unit already in q.units.
     const unitQuery = MODE === "census" ? slotQuery([unit], YEARS) : q;
-    const it = pool.items.query(unitQuery, { maxItemCount: 500 });
+    // RESUME MID-UNIT: a saved page checkpoint for THIS EXACT unit hands its
+    // continuationToken straight to `items.query`, so this pass's first
+    // `fetchNext()` returns the page AFTER the one the prior pass last
+    // classified -- not unit 0's first page again. `priorPartialUnit` is
+    // read at most once (a prior pass can only ever have been stopped
+    // inside ONE unit), but the read itself is naturally one-shot here since
+    // `unitsThisPass` visits each unit at most once per process.
+    const resumeToken = (MODE === "census" && priorPartialUnit && String(priorPartialUnit.key) === String(unit.key))
+      ? priorPartialUnit.continuationToken
+      : undefined;
+    const it = MODE === "census"
+      ? pool.items.query(unitQuery, { maxItemCount: 500, continuationToken: resumeToken })
+      : pool.items.query(unitQuery, { maxItemCount: 500 });
+    let pagesSinceCheckpoint = 0;
+    let lastCheckpointAt = Date.now();
     while (it.hasMoreResults()) {
     if (budgetLeft() < 90000) { stopReason = `stopped at the ${RUN_MINUTES}-minute budget`; break; }
-    const { resources } = await retry(() => it.fetchNext());
+    const page = await retry(() => it.fetchNext());
+    const { resources } = page;
     for (const row of resources ?? []) {
       if (!rowInSlot(row, q.units)) { stats.otherSlot++; continue; }
       // THE IN-SLOT ROW FILTER, applied after slot membership and before any
@@ -1624,6 +1699,65 @@ async function main() {
         }
       }
     }
+    // ── MID-UNIT PAGE CHECKPOINT ──────────────────────────────────────────
+    //
+    // A unit only reaches `doneUnitKeys.add` below once EVERY page of it has
+    // been read -- which for slot 0's 484,940-row first unit at ~150-200
+    // in-slot rows/s is 40-55 minutes on its own, and several measured units
+    // exceed a whole 120-minute link. Waiting for the unit boundary to
+    // checkpoint is exactly the defect: `page.continuationToken` (present on
+    // every FeedResponse from a query with no ORDER BY, which this one never
+    // has -- see slotQuery's header) is the SDK's own exact resume point, so
+    // it is saved here, well inside the unit, the same way a completed unit
+    // is saved at the loop's outer level. Gated on `hasMoreResults()` still
+    // being true: a token from the FINAL page of a unit is meaningless (the
+    // unit's own "done" checkpoint below supersedes it) and some SDK
+    // versions return an empty/stale token there.
+    if (MODE === "census" && it.hasMoreResults() && page.continuationToken) {
+      // The in-memory resume point is updated on EVERY page, budget-write or
+      // not: it is what the final checkpoint (after the `page:` loop) falls
+      // back to if a budget or LIMIT stop lands between two periodic Cosmos
+      // saves, so it must always be this pass's truly latest token, not only
+      // its last successfully PERSISTED one.
+      pendingPartialUnit = { key: String(unit.key), continuationToken: page.continuationToken };
+      pagesSinceCheckpoint++;
+      const dueByPages = pagesSinceCheckpoint >= PAGE_CHECKPOINT_PAGES;
+      const dueByTime = (Date.now() - lastCheckpointAt) >= PAGE_CHECKPOINT_MS;
+      if (dueByPages || dueByTime) {
+        const saved = await saveCensusCursor(control, SLOT, {
+          unitsDone: [...doneUnitKeys],
+          aggregate: censusAggregateToJSON(),
+          classified: stats.seen,
+          partialUnit: pendingPartialUnit,
+        });
+        if (saved) {
+          pagesSinceCheckpoint = 0;
+          lastCheckpointAt = Date.now();
+        }
+        // A failed periodic save is NOT reported here (no console.warn, no
+        // exit-code change): it must not abort a pass that is still making
+        // in-memory progress, and the pass keeps trying on the NEXT interval
+        // -- Cosmos throttling is often transient. What is load-bearing is
+        // the LAST save of the pass, at or after the `page:` loop exits,
+        // which is unconditionally re-attempted below and IS what turns a
+        // still-failing save into the loud CENSUS_CURSOR_SAVE_FAILED_EXIT_CODE
+        // exit, exactly as a unit-boundary failure already does.
+      }
+    }
+    // Re-check the budget after a checkpoint save's own wall-clock cost --
+    // but ONLY if there is more of this unit left to read. A unit whose
+    // just-processed page WAS its last (`hasMoreResults()` now false) is
+    // finished, full stop, regardless of how little budget remains: ending
+    // the `while` here via `hasMoreResults()` itself (not this check) is
+    // what lets the loop fall through to `doneUnitKeys.add` below as a
+    // clean completion. Applying this check unconditionally would misfile a
+    // unit that finished with the budget merely LOW as a mid-unit stop,
+    // discarding its "done" status for no reason -- exactly the bug an
+    // earlier draft of this fix introduced.
+    if (MODE === "census" && it.hasMoreResults() && budgetLeft() < 90000) {
+      stopReason = stopReason ?? `stopped at the ${RUN_MINUTES}-minute budget`;
+      break;
+    }
     } // end `while (it.hasMoreResults())` for this unit
     if (MODE === "census") {
       if (stopReason) {
@@ -1632,10 +1766,19 @@ async function main() {
         // not the one after it -- a partially classified unit is reported by
         // its own re-run, never by a resumed pass that skipped it as if it
         // were whole. `page` breaks the OUTER loop too, so no further unit is
-        // even attempted once the budget is gone.
+        // even attempted once the budget is gone. `pendingPartialUnit` (this
+        // pass's latest token for the unit it stopped inside, updated on
+        // every page above) is what the checkpoint below saves, so the
+        // relaunch resumes AT MOST one page-checkpoint-interval behind where
+        // this pass actually stopped -- never at unit 0.
         break page;
       }
       doneUnitKeys.add(String(unit.key));
+      // The unit that just finished is no longer "in progress" -- any
+      // pending partial-unit token for it must not survive into the cursor
+      // the outer checkpoint writes after this loop, or a resume would seek
+      // a token for a unit `doneUnitKeys` already marks complete.
+      pendingPartialUnit = null;
     }
   }
 
@@ -1648,6 +1791,13 @@ async function main() {
   // misread as "resume from here"), and a pass that stops partway needs it
   // SAVED. Both are one call, gated on whether every unit is now done.
   if (MODE === "census") {
+    // `pendingPartialUnit` is non-null here ONLY when the `page:` loop broke
+    // out of a unit mid-stream (a budget stop, a LIMIT stop, or a still-
+    // failing periodic save) -- every unit that finished cleanly nulled it
+    // out the moment it was marked done, above. `allDone` therefore cannot
+    // be true at the same time a partial unit is pending: a unit either
+    // finished (counted in `doneUnitKeys`, token discarded) or it did not
+    // (token pending, unit absent from `doneUnitKeys`).
     const allDone = doneUnitKeys.size >= q.units.length;
     if (allDone) {
       await clearCensusCursor(control, SLOT);
@@ -1657,9 +1807,13 @@ async function main() {
         unitsDone: [...doneUnitKeys],
         aggregate: censusAggregateToJSON(),
         classified: stats.seen,
+        partialUnit: pendingPartialUnit,
       });
       if (saved) {
-        console.log(`  CENSUS CURSOR: checkpointed ${doneUnitKeys.size} of ${q.units.length} unit(s) for slot ${SLOT} -- the relaunch continues from the next unit.`);
+        const pageNote = pendingPartialUnit
+          ? ` -- unit ${pendingPartialUnit.key} is IN PROGRESS and resumes from its own last page, not from its first row`
+          : "";
+        console.log(`  CENSUS CURSOR: checkpointed ${doneUnitKeys.size} of ${q.units.length} unit(s) for slot ${SLOT} -- the relaunch continues from the next unit${pageNote}.`);
       } else {
         // CF-A-FAILED-CHECKPOINT-IS-NOT-A-CHECKPOINT (run 34658848883 slot 3).
         // The save above already warned (console.warn, load-bearing). This
@@ -2363,31 +2517,65 @@ async function getOrCreateControlContainer(conn) {
  * not merely slow: it never converges, because there is no unit the next pass
  * starts later than the last one did.
  *
- * THE UNIT IS THE CHECKPOINT GRAIN. `q.units` -- the (cardYear, sportClass,
- * sha1(id) % parts) axis SHARD_TABLE already packs a slot into -- is what
- * gets marked done, one unit at a time, never a row offset within a unit. A
- * Cosmos continuation token is not durable across a brand-new query object on
- * a brand-new process (the SDK does not promise it survives a version skew or
- * even a re-issued query shape), so the granularity that IS safe to persist
- * and safe to resume from is "this whole unit's rows are classified and
- * counted", which is exactly the boundary the shard table already draws.
+ * THE UNIT GRAIN WAS NOT FINE ENOUGH (2026-09-12 follow-up, #2058). The first
+ * version of this cursor checkpointed only `unitsDone` -- one unit at a time,
+ * never a row offset within a unit. That is correct but not sufficient: a
+ * slot whose FIRST unit alone exceeds one link's throughput never reaches the
+ * unit boundary at all. Measured on the real fleet the same day this
+ * comment was updated -- runs 34686318652 (slot 0), 34686403508 (slot 8),
+ * 34686374165 (slot 7) and 34688675098 (slot 0 again) all printed
+ * `checkpointed 0 of 2 unit(s)` after burning the full ~118.5-120 minute
+ * budget classifying 1.0-1.4M rows at 144-203 in-slot rows/s, because slot
+ * 0's own first unit is 484,940 rows and even the FASTEST measured rate
+ * (203 rows/s) clears only ~1.44M rows in 118 minutes -- barely past ONE
+ * unit, never two. Every relaunch re-read that same first unit from row
+ * zero, forever: `unitsDone` was durable, but nothing durable ever landed in
+ * it for these slots.
  *
- * WHAT IS PERSISTED. `unitsDone` (the completed units' `key`s), plus the
+ * THE PAGE IS THE FINER GRAIN. Within a unit, `slotQuery` issues a plain
+ * `SELECT * FROM c WHERE (...)` with no `ORDER BY` (see its header) --
+ * exactly the query shape whose Cosmos continuation token IS safe to persist
+ * and replay against a brand-new query object on a brand-new process; the
+ * SDK's cross-partition token replay guarantee is specifically voided by an
+ * ORDER BY over multiple partitions, which this query never has. So a
+ * SECOND, finer checkpoint saves `partialUnit: { key, continuationToken }`
+ * for the unit currently in flight, every `CENSUS_PAGE_CHECKPOINT_PAGES`
+ * pages (default 40, ~20,000 rows) or `CENSUS_PAGE_CHECKPOINT_MS` (default
+ * 5 minutes), whichever comes first. A relaunch that finds a `partialUnit`
+ * whose `key` matches the next unit it would otherwise start cold hands that
+ * token straight to `items.query`'s options, so its first `fetchNext()`
+ * returns the page immediately after the one the dying pass last classified
+ * -- at most one checkpoint interval of rows re-read, never a whole unit.
+ * `unitsDone` is UNCHANGED as the coarse grain for units that DO finish
+ * inside a link (most of the 14 of 32 slots that already converged); the
+ * page checkpoint only matters for the units that do not.
+ *
+ * WHAT IS PERSISTED. `unitsDone` (the completed units' `key`s), `partialUnit`
+ * (`null`, or the in-flight unit's key + continuation token), plus the
  * MERGED partial aggregate every reader in this file already builds in
  * memory -- counts, byTier, defects, reasons, samples, subclasses, and the
  * rest -- serialised through `censusAggregateToJSON`/`censusAggregateFromJSON`
  * below so a resumed pass adds its own units' rows to the SAME totals rather
  * than starting a new set that a human then has to add by hand. `classified`
  * is carried too, so the final artifact's `classified` reaches `expectedRows`
- * once every unit is done, not just the last pass's slice of it.
+ * once every unit is done, not just the last pass's slice of it. Because the
+ * aggregate snapshot saved alongside a page checkpoint already reflects every
+ * row up to and including that exact page, and the saved token is the SDK's
+ * own boundary for "everything before here, never again" a resumed pass adds
+ * to those totals starting from the very next page -- no page is ever read,
+ * and therefore counted, twice, and none is skipped.
  *
  * WHAT INVALIDATES A CURSOR. The shard table's `measuredAt` and this run's
- * `scope`/`rowFilter` signature. A cursor written against an OLDER shard
- * table or a DIFFERENT scope is not this run's own progress -- resuming from
- * it would silently merge two different questions' answers into one count.
- * An invalidated cursor is dropped, not repaired: the pass starts clean and
- * says so in the banner, rather than guessing which of its old units are
- * still valid.
+ * `scope`/`rowFilter` signature -- unchanged by the page checkpoint, since a
+ * continuation token is only ever replayed against a query built from the
+ * SAME predicate (`unitPredicate` over the SAME unit) that produced it in the
+ * first place; a signature mismatch invalidates the WHOLE cursor, page token
+ * included. A cursor written against an OLDER shard table or a DIFFERENT
+ * scope is not this run's own progress -- resuming from it would silently
+ * merge two different questions' answers into one count. An invalidated
+ * cursor is dropped, not repaired: the pass starts clean and says so in the
+ * banner, rather than guessing which of its old units (or pages) are still
+ * valid.
  */
 const CENSUS_CURSOR_KIND = "rematch-census-cursor";
 
@@ -2452,12 +2640,21 @@ async function loadCensusCursor(control, slot) {
  * See the call site below for how the caller turns this `false` into a
  * distinct non-zero exit and a non-budget stop line.
  */
-async function saveCensusCursor(control, slot, { unitsDone, aggregate, classified }) {
+async function saveCensusCursor(control, slot, { unitsDone, aggregate, classified, partialUnit = null }) {
   if (!control) return false;
   const doc = {
     id: censusCursorId(slot), kind: CENSUS_CURSOR_KIND, slot, slots: SLOTS,
     signature: censusCursorSignature(),
     unitsDone, classified, aggregate,
+    // THE PAGE CHECKPOINT (2026-09-12). `null` when nothing is mid-flight
+    // (a save right after a unit boundary, or the very first save of a
+    // pass): NOT an object with a null token, so `loadCensusCursor`'s reader
+    // can tell "no unit in progress" apart from "in progress, resume from
+    // the unit's own start" without a second field. `{ key, continuationToken }`
+    // otherwise -- `key` matches one of `q.units[].key` on the resuming
+    // pass, and `continuationToken` is opaque, handed straight back to
+    // `items.query`'s options unexamined.
+    partialUnit: partialUnit ? { key: String(partialUnit.key), continuationToken: partialUnit.continuationToken } : null,
     updatedAt: new Date().toISOString(),
   };
   try {
