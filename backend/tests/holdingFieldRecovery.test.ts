@@ -5,9 +5,11 @@ import {
   recoverHoldingFields,
   userAuthoredIdentity,
   evidenceContradictsBase,
+  insertSetProduct,
 } from "../src/services/portfolioiq/holdingFieldRecovery.service.js";
 import { catalogAuthorityOf } from "../src/services/catalog/catalogAuthority.service.js";
 import { identityBackingOf, isChecklistBackedIdentity } from "../src/services/catalog/identityBacking.js";
+import { normalizeSetKey } from "../src/services/portfolioiq/hobbyIqCardId.service.js";
 import {
   normalizePlayerForCompare,
   recoveredSetNameIsCorroborated,
@@ -433,6 +435,7 @@ describe("the rederive pass wires recovery in without losing its gates", () => {
     expect(SRC).toMatch(/RECONCILIATION: re-reading/);
   });
 });
+
 /**
  * CF-THE-VERDICT-MUST-NAME-THE-BACKING-IT-ACTUALLY-HAS (2026-09-09).
  *
@@ -476,5 +479,108 @@ describe("the re-derive verdict states the backing it measured", () => {
     expect(SRC).not.toMatch(/reason: `checklist-backed by \$\{destinationBacking\.source\}`/);
     expect(SRC).toMatch(/const destBacking = identityBackingOf\(destination, \[\{/);
     expect(SRC).toMatch(/reason: `\$\{destBacking\} by \$\{destinationBacking\.source\}`/);
+  });
+});
+
+/**
+ * CF-AN-INSERT-SET-CAN-BE-ITS-OWN-PRODUCT (Drew ruling 21, 2026-09-08).
+ *
+ * The suite above pins the rule that a recovered insert goes on `parallel`,
+ * which is right for Diamond Dominance -- a real parallel of Black Diamond.
+ * Holding 46f3dd96 is the case that rule gets WRONG, and it is a wrong-player
+ * defect rather than a cosmetic one:
+ *
+ *   stored setName   "1996 Fleer Metal Universe"   cardNumber "2"
+ *   Insert Set       "Heavy Metal"                 Features   "Insert"
+ *   pinned to        hiq:baseball:1996:fleer-metal-universe:2:base:no-auto
+ *
+ * That row's player is BRADY ANDERSON. Heavy Metal #2 is BARRY BONDS. Asking
+ * for a "Heavy Metal" PARALLEL of Metal Universe #2 finds nothing, the
+ * recovery is discarded as not-found, the original question stands, and the
+ * holding keeps pricing Bonds off Anderson's pool.
+ *
+ * Ruling 21: Heavy Metal "is its own product, not a parallel of the 250-card
+ * base set". So the insert belongs on the `setName` axis, and the fixture
+ * below is the REAL stored shape read out of Cosmos 2026-09-09.
+ *
+ * FIXTURE-BASED DELIBERATELY. The 10 checklist rows are minted by a separate
+ * ingest; a test that queried for them would go red on an ingest schedule
+ * rather than on a code change. What is under test here is the AXIS the
+ * recovery chooses and the setKey that axis resolves to -- both pure.
+ */
+describe("an insert set that is its own product goes on setName, not parallel", () => {
+  /** Holding 46f3dd96, as stored (2026-09-09). Note `parallel` is ABSENT --
+   *  not "Base" -- and the title names the insert while the stored setName
+   *  names only the parent. */
+  const bonds = {
+    cardYear: 1996,
+    playerName: "Barry Bonds",
+    setName: "1996 Fleer Metal Universe",
+    product: "1996 Fleer Metal Universe",
+    cardNumber: "2",
+    cardTitle: "1996 Fleer Heavy Metal Barry Bonds #2",
+    isAuto: false,
+    sport: "Baseball",
+    hobbyiqCardId: "hiq:baseball:1996:fleer-metal-universe:2:base:no-auto",
+    ebayItemAspects: {
+      Set: "1996 Fleer Metal Universe",
+      "Insert Set": "Heavy Metal",
+      Features: "Insert",
+      "Card Number": "2",
+      "Player/Athlete": "Barry Bonds",
+    },
+  };
+
+  it("recovers the PRODUCT from the Insert Set aspect, leaving parallel blank", () => {
+    const r = recoverHoldingFields({ holding: bonds });
+    expect(r.fields.setName).toBe("Metal Universe Heavy Metal");
+    // The insert's checklist emits no parallels, so blank is correct here.
+    // Inventing "Base" would put a word in the checklist's mouth.
+    expect(r.fields.parallel).toBeNull();
+    expect(r.fields.cardNumber).toBe("2");
+    const prov = r.recovered.find((f) => f.field === "setName");
+    expect(prov?.source).toBe('ebayItemAspects["Insert Set"]');
+    expect(prov?.via).toBe("aspect");
+    // The insert must NOT also be recovered onto the parallel axis: two axes
+    // carrying it asks for a Heavy Metal parallel OF Heavy Metal.
+    expect(r.recovered.some((f) => f.field === "parallel")).toBe(false);
+  });
+
+  it("resolves that setName to the checklist's own setKey, not the parent's", () => {
+    const r = recoverHoldingFields({ holding: bonds });
+    expect(normalizeSetKey(r.fields.setName)).toBe("metal-universe-heavy-metal");
+    // The PARENT keeps its key. A rule that moved this would repoint the
+    // whole 250-card base set, which is the opposite of the fix.
+    expect(normalizeSetKey("1996 Fleer Metal Universe")).toBe("fleer-metal-universe");
+    expect(normalizeSetKey("1996 Metal Universe")).toBe("metal-universe");
+    expect(normalizeSetKey("1997 Skybox Metal Universe")).toBe("skybox-metal-universe");
+  });
+
+  // THE MUTATION CHECK. The declared table is what makes this safe: 30 of the
+  // 31 holdings carrying an `Insert Set` aspect use it for the AUTOGRAPH
+  // subset, and promoting those to setName would move 30 correct identities.
+  it("declares only the ruled insert, and leaves every other one alone", () => {
+    expect(insertSetProduct("fleer-metal-universe", "Heavy Metal")).toMatchObject({
+      setName: "Metal Universe Heavy Metal",
+      setKey: "metal-universe-heavy-metal",
+    });
+    // Case-insensitive on the aspect value, which sellers type freely.
+    expect(insertSetProduct("fleer-metal-universe", "heavy metal")).not.toBeNull();
+    // Not ruled: a real parallel of the same parent product.
+    expect(insertSetProduct("fleer-metal-universe", "Precious Metal Gems")).toBeNull();
+    // Not ruled: the header's own example, which stays on the parallel axis.
+    expect(insertSetProduct("upper-deck-black-diamond", "Diamond Dominance")).toBeNull();
+    // Not ruled: the autograph subset, the 30-holding majority case.
+    expect(insertSetProduct("bowman-chrome", "Chrome Prospect Autographs")).toBeNull();
+    expect(insertSetProduct(null, "Heavy Metal")).toBeNull();
+    expect(insertSetProduct("fleer-metal-universe", null)).toBeNull();
+  });
+
+  // The header's rule 1 -- a field the holding already states is never
+  // touched -- must survive: a holding that already names a parallel keeps it.
+  it("never unseats a parallel the holding actually states", () => {
+    const r = recoverHoldingFields({ holding: { ...bonds, parallel: "Precious Metal Gems" } });
+    expect(r.fields.parallel).toBe("Precious Metal Gems");
+    expect(r.fields.setName).toBe("Fleer Metal Universe");
   });
 });
