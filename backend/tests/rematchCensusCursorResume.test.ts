@@ -144,6 +144,58 @@ describe("loadCensusCursor / saveCensusCursor / clearCensusCursor -- the WRITE, 
     expect(loaded.classified).toBe(100);
   });
 
+  // THE PAGE CHECKPOINT (2026-09-12, #2058 follow-up): `unitsDone` alone
+  // checkpoints only whole units, and several measured units (slot 0's
+  // 484,940-row first unit among them) exceed a single 120-minute link's
+  // throughput at sold_comps' fixed 10,000 RU autoscale -- so every relaunch
+  // re-paged that same unit from row zero forever. `partialUnit` is the
+  // finer grain: the in-flight unit's own Cosmos continuation token, saved
+  // and round-tripped exactly like `unitsDone` and `aggregate` already are.
+  it("saveCensusCursor persists a partialUnit (in-flight unit + continuation token) alongside unitsDone", async () => {
+    const S = loadScript();
+    const control = fakeControl();
+    const partialUnit = { key: "y=2025/s=pokemon", continuationToken: "opaque-token-abc123" };
+    const ok = await S.saveCensusCursor(control, 0, {
+      unitsDone: ["y=1953"], aggregate: { counts: {} }, classified: 40000, partialUnit,
+    });
+    expect(ok).toBe(true);
+    const saved = control.store.get("census-cursor::slot-0");
+    expect(saved.partialUnit).toEqual(partialUnit);
+  });
+
+  it("saveCensusCursor with no partialUnit persists null, not undefined or an absent field", async () => {
+    const S = loadScript();
+    const control = fakeControl();
+    await S.saveCensusCursor(control, 0, { unitsDone: ["a"], aggregate: {}, classified: 1 });
+    const saved = control.store.get("census-cursor::slot-0");
+    expect(saved.partialUnit).toBeNull();
+  });
+
+  it("a saved partialUnit round-trips through loadCensusCursor", async () => {
+    const S = loadScript();
+    const control = fakeControl();
+    const partialUnit = { key: "y=2025/s=pokemon", continuationToken: "tok-1" };
+    await S.saveCensusCursor(control, 0, { unitsDone: [], aggregate: {}, classified: 20000, partialUnit });
+    const loaded = await S.loadCensusCursor(control, 0);
+    expect(loaded.partialUnit).toEqual(partialUnit);
+  });
+
+  it("a later save with partialUnit:null overwrites a previously saved in-flight token (the unit finished)", async () => {
+    const S = loadScript();
+    const control = fakeControl();
+    await S.saveCensusCursor(control, 0, {
+      unitsDone: [], aggregate: {}, classified: 20000,
+      partialUnit: { key: "y=2025/s=pokemon", continuationToken: "tok-1" },
+    });
+    // The unit that was in flight just finished: the next save marks it done
+    // and must not leave the stale token behind for a resume to misread as
+    // "still in progress".
+    await S.saveCensusCursor(control, 0, { unitsDone: ["y=2025/s=pokemon"], aggregate: {}, classified: 484940, partialUnit: null });
+    const loaded = await S.loadCensusCursor(control, 0);
+    expect(loaded.unitsDone).toEqual(["y=2025/s=pokemon"]);
+    expect(loaded.partialUnit).toBeNull();
+  });
+
   it("a cursor written under a DIFFERENT signature is invalidated -- dropped, not repaired", async () => {
     const S = loadScript();
     const control = fakeControl();
