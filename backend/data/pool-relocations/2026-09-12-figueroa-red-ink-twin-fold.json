@@ -1,0 +1,37 @@
+{
+ "generatedAt": "2026-09-12T03:11:04.012Z",
+ "forLane": "relocate-pool-rows-by-list",
+ "reportOnlyUntil": "Drew's review — no apply is authorized by this PR",
+ "finding": "CF-RED-INK-IS-ITS-OWN-CARD twin fold + CF-THE-ENGINE-CONSUMES-CH-SALES-NOT-CH-PRODUCT-FIELDS (2026-09-12). Drew's holding 9f082213 (2026 Bowman Chrome Black & White Red Ink, Victor Figueroa, CPA-VF) prices off hobbyiqCardId hiq:baseball:2026:bowman-chrome:cpa-vf:black-white-red-ink-refractor:auto — a SELF-DERIVED catalog row (source user-verified) that is a key-spelling twin of the checklist-backed row minted by PR history at hiq:baseball:2026:bowman-chrome:cpa-vf:black-white-red-ink:auto (source checklist-drew-ruling-2026-08-30-red-ink, per Drew's 2026-08-30 ruling that Red Ink is the distinct SSP of the Black & White Shimmer auto parallel, R22: key-spelling twins fold onto the checklist key). Measured read-only 2026-09-12: the checklist slug carries ZERO sold_comps rows; the self-derived twin carries exactly TWO, at cardId hiq:baseball:2026:bowman-chrome:cpa-vf:black-white-red-ink-refractor:auto (both rows are hiq-slug-partitioned, not vendor-id-partitioned). A bounded scan of all 716 2026 CPA-VF rows (cardYear=2026, cardNumber CONTAINS 'cpa-vf', no unfiltered title scan) found exactly ONE row anywhere whose title states Red Ink — the one already named below — so no third Red Ink sale is stranded on any other cpa-vf address; the other 714 rows all belong to the UNRELATED '2026 Bowman' product (non-Chrome), out of scope.",
+ "rulings": [
+  "CF-THE-TITLE-DECIDES. Row 1 (ebay-user-purchase::147344007201-10082410797719, $270, Drew's own verified purchase) titles '2026 Bowman Chrome Black White Red Ink' — states Red Ink explicitly. It RELOCATES onto the checklist address; nothing about the sale changes except which catalog row it prices.",
+  "CF-THE-ENGINE-CONSUMES-CH-SALES-NOT-CH-PRODUCT-FIELDS. Row 2 (cardhedge::1778540428361x447194681698603460::2026-08-24T17:51:13.000Z::1900::Raw, $19) titles '2026 Bowman Chrome Victor Figueroa 1st Prospect Auto #CPA-VF Orioles HOT - Raw' — NO finish is named at all (no Red Ink, no Shimmer, no colour). Its parallel field and hobbyiqCardId both read 'Black & White Red Ink' only because CardHedge product 1778540428361x447194681698603460 is itself labelled that way in CardHedge's own catalog and the historical backfill stamped the PRODUCT's label onto the sale — the same root scripts/lib/ch-product-label.cjs and repair-ch-product-label-parallel.cjs already document for this exact product. This row is a plain base auto sale wearing the Red Ink SSP's slug.",
+  "A DESTINATION MUST BE CHECKLIST-BACKED, NEVER MINTED FROM A SALE. card_catalog holds NO base/no-parallel row for hiq:baseball:2026:bowman-chrome:cpa-vf (verified read-only 2026-09-12: 9 catalog rows exist for this card number in this product, none of them a base row — Gold Ink Variation, Black & White Red Ink Refractor (the self-derived twin being folded), Orange X Fractor, Superfractor, Mini Diamond Refractor, Bowman Logofractor, Black & White Red Ink (checklist), PackFractor, Black & White Shimmer). Routing the $19 sale to a base slug would mint an identity from a sale — refused by doctrine. It PARKS.",
+  "R22 (key-spelling twins fold onto the checklist key): both entries move OFF the self-derived slug and ONTO the checklist slug's address family. Row 1 RELOCATES there directly. Row 2 cannot relocate anywhere (no checklist-backed base row exists) so it PARKS at its current address, out of every pool, rather than continuing to contaminate the Red Ink slug or being guessed into a card_catalog row nothing attests.",
+  "ORDER: this list runs BEFORE data/catalog-relocations/2026-09-12-figueroa-red-ink-twin-retire.json, which retires the self-derived catalog row. Retiring the row first would leave Row 1's relocate target undisturbed (it moves to the CHECKLIST row, not the self-derived one) but would delete the self-derived row while Row 2 still points at it via hobbyiqCardId — parking Row 2 in place does not require the self-derived row to still exist, but running the fold first keeps the self-derived row's sales-count verifiably at zero before it is retired, which is the catalog lane's own precondition."
+ ],
+ "census": {
+  "checklistRedInkSlugRows": 0,
+  "selfDerivedRedInkSlugRows": 2,
+  "cpaVf2026RowsScanned": 716,
+  "titleStatesRedInkAnywhere": 1,
+  "relocate": 1,
+  "park": 1
+ },
+ "entries": [
+  {
+   "id": "ebay-user-purchase::147344007201-10082410797719",
+   "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-vf:black-white-red-ink-refractor:auto",
+   "toCardId": "hiq:baseball:2026:bowman-chrome:cpa-vf:black-white-red-ink:auto",
+   "price": 270,
+   "evidence": "Title states Red Ink in full: '2026 Bowman Chrome Black White Red Ink'. source=ebay-user-purchase, verifiedByUser=true, contributorUserId=user-199fcbc9-58ba-4643-a0c9-f75bcbc90bd4 (Drew's own purchase, the holding this whole repair is for). RELOCATE onto the checklist-backed Red Ink row (source checklist-drew-ruling-2026-08-30-red-ink) per R22 key-spelling-twin fold: the self-derived address it currently sits at is a twin of the checklist address, spelled with a redundant '-refractor' suffix the checklist row does not carry."
+  },
+  {
+   "id": "cardhedge::1778540428361x447194681698603460::2026-08-24T17:51:13.000Z::1900::Raw",
+   "fromCardId": "1778540428361x447194681698603460",
+   "parkIdentityUnverified": true,
+   "price": 19,
+   "evidence": "Title names NO finish at all: '2026 Bowman Chrome Victor Figueroa 1st Prospect Auto #CPA-VF Orioles HOT - Raw' — no Red Ink, no Shimmer, no colour. source=cardhedge; cardId is the CH PRODUCT id 1778540428361x447194681698603460 (CardHedge's own catalog mislabels this product 'Black & White Red Ink', and the historical backfill stamped that PRODUCT label onto the sale — the same defect scripts/lib/ch-product-label.cjs and repair-ch-product-label-parallel.cjs document for this identical product id). The rematch destination would be a base/no-parallel CPA-VF row in 2026 bowman-chrome, but NONE exists in card_catalog (verified read-only 2026-09-12: 9 rows for this card number, all named parallels, no base row). PARK rather than mint an identity from a sale — this is the ELSE branch of CF-A-WHOLE-SCOPE-WRITE-REFUSES-WITHOUT-ITS-SCOPE: no checklist-backed destination exists, so nothing is guessed."
+  }
+ ]
+}
