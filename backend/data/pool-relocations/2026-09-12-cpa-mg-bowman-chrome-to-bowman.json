@@ -1,0 +1,305 @@
+{
+ "generatedAt": "2026-09-12T03:01:14.808Z",
+ "forLane": "relocate-pool-rows-by-list",
+ "issue": "key-twins-marconi-chipper-0912 CASE A",
+ "reportOnlyUntil": "Drew's review -- no apply is authorized by this PR",
+ "finding": "CF-IT-CAME-OUT-OF-BOWMAN (Drew, 2026-08-13, re-affirmed 2026-09-05). Chrome Prospect Autographs (CPA-xx) are 2026 BOWMAN cards (Beckett 2026-bowman-full.csv, productKey 2026-bowman, section \"Chrome Prospect Autographs\", 87 base + 47 Gold Ink + 39 PackFractor); 2026 Bowman CHROME is a separate, later product whose own Beckett checklist (2026-bowman-chrome.csv, 1197 rows) carries zero CPA-MG / Marconi German rows. The card_catalog fold for the Gold Refractor /50 address already ran on 2026-09-05 (row hiq:baseball:2026:bowman:cpa-mg:gold-refractor:auto:num-50 carries movedFrom: hiq:baseball:2026:bowman-chrome:cpa-mg:gold-refractor:auto:num-50, movedAt 2026-09-05T21:20:46Z) -- the old bowman-chrome catalog row no longer exists. But the POOL rows were never relocated: every one of these sold_comps rows still carries cardId (its partition key) at the old bowman-chrome address, even though most already carry the CORRECT hobbyiqCardId pointing at bowman. This list finishes that fold on the partition side. inferSetKeyFromTitle (parseTitleIdentity.service.ts:3550, `if (/bowman\\s+chrome/.test(t)) return \"Bowman Chrome\";`) is a bare regex on the words \"Bowman Chrome\" appearing anywhere in a title, with no card-number-prefix precedent check comparable to the #1860 Bowman-Draft CPA-DT fix (project_beckett_initials_card_numbers_collide) and no checklist-presence guard -- so every eBay title reading \"...Bowman Chrome...CPA-MG...\" derives to bowman-chrome even though CPA-MG's number exists only in the sibling bowman product's checklist.",
+ "rulings": [
+  "fromCardId is the row's STORED cardId (the partition key), never its hobbyiqCardId -- this lane repoints BOTH fields to `toCardId` on RELOCATE (relocate-pool-rows-by-list.cjs: 'A moved row carries ONE identity. Both fields land at `to`').",
+  "Where the sale's title states an explicit print run and the STORED hobbyiqCardId names an unnumbered address, this list targets the NUMBERED checklist-backed row instead of reproducing the stored (wrong) hobbyiqCardId -- e.g. three Speckle Refractor sales stating /299 in the title move to :speckle-refractor:auto:num-299 (which exists, hobbymonitor-scraped-2026-08-31), not the ingest-auto-seed unnumbered stub.",
+  "One entry (tca-ebay::178410615046, Mini Diamond Refractor /100) is EXCLUDED: no hiq:baseball:2026:bowman:cpa-mg:mini-diamond-refractor:auto:num-100 checklist row exists in card_catalog. Absent beats wrong -- this sale stays at its current address pending that checklist gap being closed, and is never minted from the sale itself.",
+  "One eBay-title cross-collision (tca-ebay::206470795807, \"1997 Skybox Metal Universe - Shannon Sharpe #31\") is UNRELATED to this list: it is Case B's football-card collision on a different sport segment and is out of this list's scope.",
+  "Every toCardId in this list was point-read against card_catalog on 2026-09-12 and confirmed to exist with source classified checklist-backed (catalogAuthorityOf) EXCEPT the Mini Diamond exclusion above.",
+  "Destination catalog rows keep their identity: this list moves SALES only. It never mints, retires, or reslugs a card_catalog row."
+ ],
+ "census": {
+  "totalBowmanChromeCpaMgSoldComps": 39,
+  "relocated": 39,
+  "excludedNoChecklistRow": 1,
+  "excludedOtherSport": 1
+ },
+ "excluded": [
+  {
+   "id": "tca-ebay::178410615046",
+   "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-mg:mini-diamond-refractor:auto:num-100",
+   "price": 30,
+   "title": "Marconi German 2026 Bowman Chrome #CPA-MG 1st Mini Diamond Refractor Auto /100",
+   "excludeReason": "No hiq:baseball:2026:bowman:cpa-mg:mini-diamond-refractor:auto:num-100 checklist row exists (point-read 2026-09-12, card_catalog). CPA-MG's Mini Diamond Refractor /100 parallel is not attested in any acquired 2026 Bowman checklist source on disk. Left at its current (wrong-product) address rather than moved to an address with no row -- absent beats wrong, never mint from sales."
+  }
+ ],
+ "entries": [
+  {
+   "id": "tca-ebay::377401957369",
+   "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-mg:speckle-refractor:auto:num-299",
+   "toCardId": "hiq:baseball:2026:bowman:cpa-mg:speckle-refractor:auto:num-299",
+   "price": 29,
+   "evidence": "title=\"2026 Bowman Marconi German Chrome Auto Speckle Refractor 1st #/299 Nationals\"; destination hiq:baseball:2026:bowman:cpa-mg:speckle-refractor:auto:num-299 is checklist-backed in card_catalog (point-read 2026-09-12); CPA-MG is a 2026 Bowman card per Beckett 2026-bowman-full.csv."
+  },
+  {
+   "id": "tca-ebay::278220494450",
+   "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-mg:speckle-refractor:auto:num-299",
+   "toCardId": "hiq:baseball:2026:bowman:cpa-mg:speckle-refractor:auto:num-299",
+   "price": 22.76,
+   "evidence": "title=\"Marconi German Auto 2026 Bowman Chrome Speckle Refractor 166/299 #CPA-MG Auto\"; destination hiq:baseball:2026:bowman:cpa-mg:speckle-refractor:auto:num-299 is checklist-backed in card_catalog (point-read 2026-09-12); CPA-MG is a 2026 Bowman card per Beckett 2026-bowman-full.csv."
+  },
+  {
+   "id": "tca-ebay::318735170774",
+   "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-mg:speckle-refractor:auto:num-299",
+   "toCardId": "hiq:baseball:2026:bowman:cpa-mg:speckle-refractor:auto:num-299",
+   "price": 22,
+   "evidence": "title=\"2026 Bowman MARCONI GERMAN 1st Bowman Speckle Auto 155/299 #CPA-MG Nationals\"; destination hiq:baseball:2026:bowman:cpa-mg:speckle-refractor:auto:num-299 is checklist-backed in card_catalog (point-read 2026-09-12); CPA-MG is a 2026 Bowman card per Beckett 2026-bowman-full.csv."
+  },
+  {
+   "id": "cardhedge::ch-daily::1778541255486x728152197831719400::2026-07-12T02:21:00+00:00::2150",
+   "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-mg:speckle-refractor:auto:num-299",
+   "toCardId": "hiq:baseball:2026:bowman:cpa-mg:speckle-refractor:auto:num-299",
+   "price": 21.5,
+   "evidence": "title=\"2026 2026 Bowman Baseball #CPA-MG Speckle Refractor\"; destination hiq:baseball:2026:bowman:cpa-mg:speckle-refractor:auto:num-299 is checklist-backed in card_catalog (point-read 2026-09-12); CPA-MG is a 2026 Bowman card per Beckett 2026-bowman-full.csv."
+  },
+  {
+   "id": "cardhedge::ch-daily::1778541255486x728152197831719400::2026-07-16T17:02:00+00:00::2499",
+   "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-mg:speckle-refractor:auto:num-299",
+   "toCardId": "hiq:baseball:2026:bowman:cpa-mg:speckle-refractor:auto:num-299",
+   "price": 24.99,
+   "evidence": "title=\"2026 2026 Bowman Baseball #CPA-MG Speckle Refractor\"; destination hiq:baseball:2026:bowman:cpa-mg:speckle-refractor:auto:num-299 is checklist-backed in card_catalog (point-read 2026-09-12); CPA-MG is a 2026 Bowman card per Beckett 2026-bowman-full.csv."
+  },
+  {
+   "id": "cardsight::4e99add34871d79c304c66dc",
+   "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-mg:speckle-refractor:auto:num-299",
+   "toCardId": "hiq:baseball:2026:bowman:cpa-mg:speckle-refractor:auto:num-299",
+   "price": 22.5,
+   "evidence": "title=\"Marconi German 2026 Bowman Chrome #CPA-MG Speckle Refractor 1st RC Auto /299\"; destination hiq:baseball:2026:bowman:cpa-mg:speckle-refractor:auto:num-299 is checklist-backed in card_catalog (point-read 2026-09-12); CPA-MG is a 2026 Bowman card per Beckett 2026-bowman-full.csv."
+  },
+  {
+   "id": "cardhedge::ch-comp::1778541255486x728152197831719400::2026-07-05T03:07:00.000Z::2272",
+   "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-mg:speckle-refractor:auto:num-299",
+   "toCardId": "hiq:baseball:2026:bowman:cpa-mg:speckle-refractor:auto:num-299",
+   "price": 22.72,
+   "evidence": "title=\"2026 Bowman Chrome Marconi German 1st Bowman Speckle Auto CPA-MG /299 Nats - Raw\"; destination hiq:baseball:2026:bowman:cpa-mg:speckle-refractor:auto:num-299 is checklist-backed in card_catalog (point-read 2026-09-12); CPA-MG is a 2026 Bowman card per Beckett 2026-bowman-full.csv."
+  },
+  {
+   "id": "tca-ebay::377416279700",
+   "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-mg:green-lava-refractor:auto:num-99",
+   "toCardId": "hiq:baseball:2026:bowman:cpa-mg:green-lava-refractor:auto:num-99",
+   "price": 33,
+   "evidence": "title=\"2026 Bowman Marconi German Chrome Auto Green Lava Refractor 1st #/99 Nationals\"; destination hiq:baseball:2026:bowman:cpa-mg:green-lava-refractor:auto:num-99 is checklist-backed in card_catalog (point-read 2026-09-12); CPA-MG is a 2026 Bowman card per Beckett 2026-bowman-full.csv."
+  },
+  {
+   "id": "cardsight::fea20c28b067a923e9cd478d",
+   "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-mg:base:auto",
+   "toCardId": "hiq:baseball:2026:bowman:cpa-mg:base:auto",
+   "price": 8.5,
+   "evidence": "title=\"2026 Bowman 1st Bowman Auto Marconi German PSA 8 #CPA-MG\"; destination hiq:baseball:2026:bowman:cpa-mg:base:auto is checklist-backed in card_catalog (point-read 2026-09-12); CPA-MG is a 2026 Bowman card per Beckett 2026-bowman-full.csv."
+  },
+  {
+   "id": "cardsight::36e53008c0136a0b4f59d6e4",
+   "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-mg:base:auto",
+   "toCardId": "hiq:baseball:2026:bowman:cpa-mg:base:auto",
+   "price": 10.5,
+   "evidence": "title=\"2026 Bowman Marconi German Chrome Auto Autograph 1st Prospect #CPA-MG Nationals\"; destination hiq:baseball:2026:bowman:cpa-mg:base:auto is checklist-backed in card_catalog (point-read 2026-09-12); CPA-MG is a 2026 Bowman card per Beckett 2026-bowman-full.csv."
+  },
+  {
+   "id": "tca-ebay::178167417216",
+   "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-mg:base:auto",
+   "toCardId": "hiq:baseball:2026:bowman:cpa-mg:base:auto",
+   "price": 13.5,
+   "evidence": "title=\"2026 Bowman Chrome Marconi German 1st Bowman Auto Prospect #CPA-MG\"; destination hiq:baseball:2026:bowman:cpa-mg:base:auto is checklist-backed in card_catalog (point-read 2026-09-12); CPA-MG is a 2026 Bowman card per Beckett 2026-bowman-full.csv."
+  },
+  {
+   "id": "tca-ebay::298554278157",
+   "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-mg:base:auto",
+   "toCardId": "hiq:baseball:2026:bowman:cpa-mg:base:auto",
+   "price": 7,
+   "evidence": "title=\"2026 Bowman Chrome Prospect Auto Marconi German (#CPA-MG) Nationals 1st Bowman\"; destination hiq:baseball:2026:bowman:cpa-mg:base:auto is checklist-backed in card_catalog (point-read 2026-09-12); CPA-MG is a 2026 Bowman card per Beckett 2026-bowman-full.csv."
+  },
+  {
+   "id": "tca-ebay::257507482198",
+   "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-mg:base:auto",
+   "toCardId": "hiq:baseball:2026:bowman:cpa-mg:base:auto",
+   "price": 15.99,
+   "evidence": "title=\"2026 Bowman Chrome Prospect Auto Marconi German (#CPA-MG) Nationals 1st Bowman\"; destination hiq:baseball:2026:bowman:cpa-mg:base:auto is checklist-backed in card_catalog (point-read 2026-09-12); CPA-MG is a 2026 Bowman card per Beckett 2026-bowman-full.csv."
+  },
+  {
+   "id": "tca-ebay::227478782909",
+   "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-mg:base:auto",
+   "toCardId": "hiq:baseball:2026:bowman:cpa-mg:base:auto",
+   "price": 10.01,
+   "evidence": "title=\"2026 Bowman Chrome 1st Marconi German Auto Nationals CPA-MG\"; destination hiq:baseball:2026:bowman:cpa-mg:base:auto is checklist-backed in card_catalog (point-read 2026-09-12); CPA-MG is a 2026 Bowman card per Beckett 2026-bowman-full.csv."
+  },
+  {
+   "id": "tca-ebay::236989594412",
+   "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-mg:base:auto",
+   "toCardId": "hiq:baseball:2026:bowman:cpa-mg:base:auto",
+   "price": 10.5,
+   "evidence": "title=\"2026 Bowman Chrome Marconi German 1st Bowman Base Auto Washington Nationals\"; destination hiq:baseball:2026:bowman:cpa-mg:base:auto is checklist-backed in card_catalog (point-read 2026-09-12); CPA-MG is a 2026 Bowman card per Beckett 2026-bowman-full.csv."
+  },
+  {
+   "id": "tca-ebay::800325319647",
+   "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-mg:base:auto",
+   "toCardId": "hiq:baseball:2026:bowman:cpa-mg:base:auto",
+   "price": 14.95,
+   "evidence": "title=\"2026 Bowman Chrome - Marconi German #CPA-MG 1st Auto Nationals\"; destination hiq:baseball:2026:bowman:cpa-mg:base:auto is checklist-backed in card_catalog (point-read 2026-09-12); CPA-MG is a 2026 Bowman card per Beckett 2026-bowman-full.csv."
+  },
+  {
+   "id": "tca-ebay::820018050101",
+   "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-mg:base:auto",
+   "toCardId": "hiq:baseball:2026:bowman:cpa-mg:base:auto",
+   "price": 9.99,
+   "evidence": "title=\"2026 Bowman Chrome Prospect Autographs Marconi German #CPA-MG\"; destination hiq:baseball:2026:bowman:cpa-mg:base:auto is checklist-backed in card_catalog (point-read 2026-09-12); CPA-MG is a 2026 Bowman card per Beckett 2026-bowman-full.csv."
+  },
+  {
+   "id": "tca-ebay::EBAY-v1|820018050101|0",
+   "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-mg:base:auto",
+   "toCardId": "hiq:baseball:2026:bowman:cpa-mg:base:auto",
+   "price": 15.42,
+   "evidence": "title=\"2026 Bowman Chrome Prospect Autographs Marconi German #CPA-MG\"; destination hiq:baseball:2026:bowman:cpa-mg:base:auto is checklist-backed in card_catalog (point-read 2026-09-12); CPA-MG is a 2026 Bowman card per Beckett 2026-bowman-full.csv."
+  },
+  {
+   "id": "tca-ebay::EBAY-v1|278296209898|0",
+   "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-mg:base:auto",
+   "toCardId": "hiq:baseball:2026:bowman:cpa-mg:base:auto",
+   "price": 6.5,
+   "evidence": "title=\"MARCONI GERMAN 2026 BOWMAN CHROME BASEBALL 1ST AUTO #CPA-MG NATIONALS B Q7684\"; destination hiq:baseball:2026:bowman:cpa-mg:base:auto is checklist-backed in card_catalog (point-read 2026-09-12); CPA-MG is a 2026 Bowman card per Beckett 2026-bowman-full.csv."
+  },
+  {
+   "id": "ebay-user-purchase::377413083669-10083183646909",
+   "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-mg:gold-refractor:auto",
+   "toCardId": "hiq:baseball:2026:bowman:cpa-mg:gold-refractor:auto:num-50",
+   "price": 182.5,
+   "evidence": "title=\"2026 Bowman Marconi German Chrome Auto Gold Refractor 1st #/50 Nationals\"; destination hiq:baseball:2026:bowman:cpa-mg:gold-refractor:auto:num-50 is checklist-backed in card_catalog (point-read 2026-09-12); CPA-MG is a 2026 Bowman card per Beckett 2026-bowman-full.csv."
+  },
+  {
+   "id": "tca-ebay::377413083669",
+   "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-mg:gold-refractor:auto:num-50",
+   "toCardId": "hiq:baseball:2026:bowman:cpa-mg:gold-refractor:auto:num-50",
+   "price": 182.5,
+   "evidence": "title=\"2026 Bowman Marconi German Chrome Auto Gold Refractor 1st #/50 Nationals\"; destination hiq:baseball:2026:bowman:cpa-mg:gold-refractor:auto:num-50 is checklist-backed in card_catalog (point-read 2026-09-12); CPA-MG is a 2026 Bowman card per Beckett 2026-bowman-full.csv."
+  },
+  {
+   "id": "tca-ebay::EBAY-v1|398287674680|0",
+   "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-mg:refractor:auto:num-75",
+   "toCardId": "hiq:baseball:2026:bowman:cpa-mg:yellow-refractor:auto:num-75",
+   "price": 78.6,
+   "evidence": "title=\"2026 Bowman #CPA-MG Marconi German 1st Prospect Auto Yellow 21/75 BJAL\"; destination hiq:baseball:2026:bowman:cpa-mg:yellow-refractor:auto:num-75 is checklist-backed in card_catalog (point-read 2026-09-12); CPA-MG is a 2026 Bowman card per Beckett 2026-bowman-full.csv."
+  },
+  {
+   "id": "tca-ebay::267724318514",
+   "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-mg:refractor:auto:num-499",
+   "toCardId": "hiq:baseball:2026:bowman:cpa-mg:refractor:auto:num-499",
+   "price": 9,
+   "evidence": "title=\"2026 Bowman #CPA-MG Marconi German Chrome Prospect Autographs\"; destination hiq:baseball:2026:bowman:cpa-mg:refractor:auto:num-499 is checklist-backed in card_catalog (point-read 2026-09-12); CPA-MG is a 2026 Bowman card per Beckett 2026-bowman-full.csv."
+  },
+  {
+   "id": "tca-ebay::267724318473",
+   "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-mg:refractor:auto:num-499",
+   "toCardId": "hiq:baseball:2026:bowman:cpa-mg:refractor:auto:num-499",
+   "price": 9.99,
+   "evidence": "title=\"2026 Bowman #CPA-MG Marconi German Chrome Prospect Autographs\"; destination hiq:baseball:2026:bowman:cpa-mg:refractor:auto:num-499 is checklist-backed in card_catalog (point-read 2026-09-12); CPA-MG is a 2026 Bowman card per Beckett 2026-bowman-full.csv."
+  },
+  {
+   "id": "tca-ebay::407117071852",
+   "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-mg:refractor:auto:num-499",
+   "toCardId": "hiq:baseball:2026:bowman:cpa-mg:refractor:auto:num-499",
+   "price": 5.5,
+   "evidence": "title=\"2026 Bowman #CPA-MG Marconi German Chrome Prospect Auto 1st RC\"; destination hiq:baseball:2026:bowman:cpa-mg:refractor:auto:num-499 is checklist-backed in card_catalog (point-read 2026-09-12); CPA-MG is a 2026 Bowman card per Beckett 2026-bowman-full.csv."
+  },
+  {
+   "id": "tca-ebay::800451126507",
+   "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-mg:refractor:auto:num-499",
+   "toCardId": "hiq:baseball:2026:bowman:cpa-mg:refractor:auto:num-499",
+   "price": 7.99,
+   "evidence": "title=\"2026 Bowman #CPA-MG Chrome Prospect Auto - Marconi German Nationals 1st Bowman\"; destination hiq:baseball:2026:bowman:cpa-mg:refractor:auto:num-499 is checklist-backed in card_catalog (point-read 2026-09-12); CPA-MG is a 2026 Bowman card per Beckett 2026-bowman-full.csv."
+  },
+  {
+   "id": "tca-ebay::377407992278",
+   "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-mg:refractor:auto:num-499",
+   "toCardId": "hiq:baseball:2026:bowman:cpa-mg:refractor:auto:num-499",
+   "price": 11,
+   "evidence": "title=\"2026 Bowman Marconi German Chrome Auto Autograph 1st Prospect #CPA-MG Nationals\"; destination hiq:baseball:2026:bowman:cpa-mg:refractor:auto:num-499 is checklist-backed in card_catalog (point-read 2026-09-12); CPA-MG is a 2026 Bowman card per Beckett 2026-bowman-full.csv."
+  },
+  {
+   "id": "tca-ebay::128019313457",
+   "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-mg:refractor:auto:num-499",
+   "toCardId": "hiq:baseball:2026:bowman:cpa-mg:refractor:auto:num-499",
+   "price": 10.72,
+   "evidence": "title=\"2026 Bowman Marconi German Chrome Auto Autograph 1st Prospect #CPA-MG Nationals\"; destination hiq:baseball:2026:bowman:cpa-mg:refractor:auto:num-499 is checklist-backed in card_catalog (point-read 2026-09-12); CPA-MG is a 2026 Bowman card per Beckett 2026-bowman-full.csv."
+  },
+  {
+   "id": "tca-ebay::128019313419",
+   "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-mg:refractor:auto:num-499",
+   "toCardId": "hiq:baseball:2026:bowman:cpa-mg:refractor:auto:num-499",
+   "price": 12.5,
+   "evidence": "title=\"2026 Bowman Marconi German Chrome Auto Autograph 1st Prospect #CPA-MG Nationals\"; destination hiq:baseball:2026:bowman:cpa-mg:refractor:auto:num-499 is checklist-backed in card_catalog (point-read 2026-09-12); CPA-MG is a 2026 Bowman card per Beckett 2026-bowman-full.csv."
+  },
+  {
+   "id": "ebay-user-purchase::holding::ca7a150b-f126-49e0-bd5b-f899ff964a1f",
+   "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-mg:refractor:auto:num-499",
+   "toCardId": "hiq:baseball:2026:bowman:cpa-mg:refractor:auto:num-499",
+   "price": 187.49,
+   "evidence": "title=\"2026 Bowman Chrome Refractor Marconi German\"; destination hiq:baseball:2026:bowman:cpa-mg:refractor:auto:num-499 is checklist-backed in card_catalog (point-read 2026-09-12); CPA-MG is a 2026 Bowman card per Beckett 2026-bowman-full.csv."
+  },
+  {
+   "id": "tca-ebay::128022329908",
+   "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-mg:refractor:auto:num-499",
+   "toCardId": "hiq:baseball:2026:bowman:cpa-mg:refractor:auto:num-499",
+   "price": 9.8,
+   "evidence": "title=\"2026 Bowman Marconi German Chrome Auto Autograph 1st Prospect #CPA-MG Nationals\"; destination hiq:baseball:2026:bowman:cpa-mg:refractor:auto:num-499 is checklist-backed in card_catalog (point-read 2026-09-12); CPA-MG is a 2026 Bowman card per Beckett 2026-bowman-full.csv."
+  },
+  {
+   "id": "tca-ebay::158185593693",
+   "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-mg:refractor:auto:num-499",
+   "toCardId": "hiq:baseball:2026:bowman:cpa-mg:refractor:auto:num-499",
+   "price": 8.5,
+   "evidence": "title=\"Marconi German 2026 Bowman #CPA-MG Chrome Auto Rookie 1st RC\"; destination hiq:baseball:2026:bowman:cpa-mg:refractor:auto:num-499 is checklist-backed in card_catalog (point-read 2026-09-12); CPA-MG is a 2026 Bowman card per Beckett 2026-bowman-full.csv."
+  },
+  {
+   "id": "tca-ebay::EBAY-v1|306992537748|0",
+   "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-mg:refractor:auto:num-499",
+   "toCardId": "hiq:baseball:2026:bowman:cpa-mg:refractor:auto:num-499",
+   "price": 75,
+   "evidence": "title=\"2026 Bowman Chrome Marconi German Refractor Redemption Auto Variation Nationals\"; destination hiq:baseball:2026:bowman:cpa-mg:refractor:auto:num-499 is checklist-backed in card_catalog (point-read 2026-09-12); CPA-MG is a 2026 Bowman card per Beckett 2026-bowman-full.csv."
+  },
+  {
+   "id": "tca-ebay::168544649966",
+   "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-mg:packfractor:auto:num-89",
+   "toCardId": "hiq:baseball:2026:bowman:cpa-mg:packfractor:auto:num-89",
+   "price": 160,
+   "evidence": "title=\"Marconi German 2026 Bowman 1st Auto Packfractor /89 #CPA-MG Nationals REDEMPTION\"; destination hiq:baseball:2026:bowman:cpa-mg:packfractor:auto:num-89 is checklist-backed in card_catalog (point-read 2026-09-12); CPA-MG is a 2026 Bowman card per Beckett 2026-bowman-full.csv."
+  },
+  {
+   "id": "cardhedge::ch-daily::1782495038462x730876899191066400",
+   "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-mg:packfractor:auto:num-89",
+   "toCardId": "hiq:baseball:2026:bowman:cpa-mg:packfractor:auto:num-89",
+   "price": 109,
+   "evidence": "title=\"Marconi German 2026 Bowman 1st Auto Packfractor /89 #CPA-MG Nationals Redemption - Raw\"; destination hiq:baseball:2026:bowman:cpa-mg:packfractor:auto:num-89 is checklist-backed in card_catalog (point-read 2026-09-12); CPA-MG is a 2026 Bowman card per Beckett 2026-bowman-full.csv."
+  },
+  {
+   "id": "tca-ebay::168604258848",
+   "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-mg:purple-refractor:auto:num-250",
+   "toCardId": "hiq:baseball:2026:bowman:cpa-mg:purple-refractor:auto:num-250",
+   "price": 22,
+   "evidence": "title=\"2026 Bowman Baseball Prospect Auto Marconi German #CPA-MG Purple Refractor /250\"; destination hiq:baseball:2026:bowman:cpa-mg:purple-refractor:auto:num-250 is checklist-backed in card_catalog (point-read 2026-09-12); CPA-MG is a 2026 Bowman card per Beckett 2026-bowman-full.csv."
+  },
+  {
+   "id": "tca-ebay::800108601122",
+   "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-mg:blue-refractor:auto:num-150",
+   "toCardId": "hiq:baseball:2026:bowman:cpa-mg:blue-refractor:auto:num-150",
+   "price": 65,
+   "evidence": "title=\"2026 Bowman Marconi German  Auto Blue Refractor 1st #/150 Nationals #CPA-MG\"; destination hiq:baseball:2026:bowman:cpa-mg:blue-refractor:auto:num-150 is checklist-backed in card_catalog (point-read 2026-09-12); CPA-MG is a 2026 Bowman card per Beckett 2026-bowman-full.csv."
+  },
+  {
+   "id": "tca-ebay::157958648063",
+   "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-mg:superfractor:auto:num-1",
+   "toCardId": "hiq:baseball:2026:bowman:cpa-mg:superfractor:auto:num-1",
+   "price": 2500,
+   "evidence": "title=\"2026 Bowman 1st Marconi German Superfractor 1/1 Nationals\"; destination hiq:baseball:2026:bowman:cpa-mg:superfractor:auto:num-1 is checklist-backed in card_catalog (point-read 2026-09-12); CPA-MG is a 2026 Bowman card per Beckett 2026-bowman-full.csv."
+  },
+  {
+   "id": "tca-ebay::398287674680",
+   "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-mg:yellow-refractor:auto:num-75",
+   "toCardId": "hiq:baseball:2026:bowman:cpa-mg:yellow-refractor:auto:num-75",
+   "price": 56,
+   "evidence": "title=\"2026 Bowman #CPA-MG Marconi German 1st Prospect Auto Yellow 21/75 BJAL\"; destination hiq:baseball:2026:bowman:cpa-mg:yellow-refractor:auto:num-75 is checklist-backed in card_catalog (point-read 2026-09-12); CPA-MG is a 2026 Bowman card per Beckett 2026-bowman-full.csv."
+  }
+ ]
+}
