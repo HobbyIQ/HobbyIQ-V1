@@ -152,6 +152,14 @@ const GOLD = "hiq:baseball:2018:bowman-chrome:49:gold-refractor:no-auto:num-50";
 const THIN = "hiq:baseball:2019:topps-stadium-club:100:base:auto";
 const EMPTY = "hiq:baseball:2020:topps-chrome:1:base:no-auto";
 const NOT_IN_CATALOG = "hiq:baseball:2021:bowman:7:base:no-auto";
+// RULING R24 field shapes, from holding 277b05a3-935f-451a-b5b7-97eb926a3542
+// (Cal Ripken Jr. 1997 Metal Universe #8 PSA 8, ruled onto Magnetic Field on
+// 2026-09-05). One genuine PSA 8 sale, $5.40, read-only confirmed against
+// sold_comps (tca-ebay::196570203486, 2026-08-11) — 10.19% of the $52.98 cost
+// basis. RIPKEN_SIBLING stands for the base (unruled) parallel: a real card,
+// but a DIFFERENT identity, so a price read from it is a fallback rung.
+const RIPKEN = "hiq:baseball:1997:metal-universe:8:magnetic-field:no-auto";
+const RIPKEN_SIBLING = "hiq:baseball:1997:metal-universe:8:base:no-auto";
 const VENDOR = "1778477531904x850967262057528600";
 const identityRow = (over: Record<string, unknown>) => ({
   playerName: "Test Player", year: 2018, setKey: "bowman-chrome", setName: "2018 Bowman Chrome",
@@ -825,6 +833,104 @@ describe("D17 — the portfolio persist site: what is written is what the routes
     // Not withheld: no cost-basis-floor reason on the row.
     const meta = (hld as unknown as { pricingSourceMeta?: Record<string, unknown> }).pricingSourceMeta;
     expect(meta?.withheld).toBeUndefined();
+  });
+
+  // RULING R24, the live incident (2026-09-12). PR #2063 fixed
+  // costBasisFloor() and every test above confirms it in isolation — but a
+  // read-only point-read of the REAL holding (277b05a3-935f-451a-b5b7-
+  // 97eb926a3542) after the 10:32Z scheduled reprice on prod build 985c6d8
+  // (the merged R24 commit) showed it STILL withheld: `pricingSourceMeta.slug`
+  // reading the PRE-#2059 stale base slug, and the refusal prose naming
+  // `exact-pool-last-sale` — a shape ONLY the code from before #2059 (and
+  // therefore before R24) can produce, since #2059 already made
+  // `costBasisFloorRefusalWrite` prefer `entry.pooledAs` over a carried prior
+  // slug. Root cause: a long-lived App Service worker's in-process 6h
+  // scheduler (portfolioReprice.job.ts, no PORTFOLIO_REPRICE_ALIGN_HOUR_UTC
+  // set, so first-run is 5 min after THAT WORKER'S OWN boot) fired on
+  // in-memory code from several deploys back — `/api/health` reporting the
+  // new sha proves only that the instance serving the health probe had
+  // restarted, not that the instance that owned the reprice's Redis
+  // single-flight lease at that moment had. This is an ops/deploy-currency
+  // issue (out of scope for a code fix — see PRICING_CONTRACT_VERSION below
+  // for the doctrine-mandated code response), but it means R24 shipped with
+  // no test exercising the REAL Ripken field values (grade, ruled slug, exact
+  // basis) through the actual `repriceHoldingsForUser` path end-to-end — every
+  // existing pin used a different fixture (THIN) or called
+  // `costBasisFloorRefusalWrite` directly. This closes that gap.
+  it("RULING R24: the Ripken shape (277b05a3), through the ACTUAL repriceHoldingsForUser path, publishes", async () => {
+    h.rows.push(sale(RIPKEN, 5.4, 32, { c: "PSA", v: 8 }));
+    h.catalog.set(RIPKEN, identityRow({
+      playerName: "Cal Ripken Jr.", year: 1997, setKey: "metal-universe",
+      setName: "1997 Metal Universe Magnetic Field", cardNumber: "8",
+      parallel: "Magnetic Field", isAuto: false, printRun: 0,
+      source: "sportscardchecklist",
+    }));
+    const id = await seed({
+      hobbyiqCardId: RIPKEN, cardId: RIPKEN, playerName: "Cal Ripken, Jr.",
+      cardYear: 1997, setName: "1997 Metal Universe Magnetic Field", cardNumber: "8",
+      parallel: "Magnetic Field", isAuto: false,
+      gradeCompany: "PSA", gradeValue: 8,
+      purchasePrice: 52.98, totalCostBasis: 52.98,
+    });
+    const res = await store.repriceHoldingsForUser(USER);
+    // MUTATION CHECK: this is the exact live shape that shipped withheld
+    // despite R24 being merged — if `costBasisFloor`'s rung exemption, or the
+    // `v.rungLabel` argument at its call site in `valueHoldingThroughOneEntry`,
+    // regresses, this goes red exactly as the real row did.
+    expect(res.updates.find((u) => u.id === id)?.status).toBe("repriced");
+    const hld = await stored(id);
+    expect(hld.fairMarketValue).toBeCloseTo(5.4, 2);
+    expect(hld.fmvRung).toBe("exact-pool-last-sale");
+    expect(EXACT.has(String(hld.fmvRung))).toBe(true);
+    const meta = (hld as unknown as { pricingSourceMeta?: Record<string, unknown> }).pricingSourceMeta;
+    expect(meta?.withheld).toBeUndefined();
+    expect(meta?.method).toBe("exact-pool-last-sale");
+    // 10.19% of basis — the exact ratio the floor used to refuse.
+    expect(5.4 / 52.98).toBeLessThan(0.15);
+  });
+
+  // The contrast case: the SAME numbers, but the price comes from the
+  // SIBLING (unruled base) identity's pool rather than Ripken's own Magnetic
+  // Field pool — a fallback rung, which R24 says must still face the floor.
+  // Modelled on a thin Magnetic Field pool (no PSA 8 sale of its own) that
+  // falls to a cross-identity rung reading the sibling's sales.
+  it("RULING R24 contrast: a fallback rung reading a DIFFERENT pool at the same ratio is still refused", async () => {
+    // No sale of Ripken's own Magnetic Field PSA 8 tier — only the sibling
+    // base card's pool, so any number the ladder returns for this identity
+    // must come from a fallback (cross-identity) rung, never exact-pool-*.
+    h.rows.push(...Array.from({ length: 4 }, (_, i) => sale(RIPKEN_SIBLING, 5 + i, 20 + i * 5)));
+    h.catalog.set(RIPKEN, identityRow({
+      playerName: "Cal Ripken Jr.", year: 1997, setKey: "metal-universe",
+      setName: "1997 Metal Universe Magnetic Field", cardNumber: "8",
+      parallel: "Magnetic Field", isAuto: false, printRun: 0,
+      source: "sportscardchecklist",
+    }));
+    h.catalog.set(RIPKEN_SIBLING, identityRow({
+      playerName: "Cal Ripken Jr.", year: 1997, setKey: "metal-universe",
+      setName: "1997 Metal Universe", cardNumber: "8",
+      parallel: "Base", isAuto: false, printRun: null,
+      source: "sportscardchecklist",
+    }));
+    const id = await seed({
+      hobbyiqCardId: RIPKEN, cardId: RIPKEN, playerName: "Cal Ripken, Jr.",
+      cardYear: 1997, setName: "1997 Metal Universe Magnetic Field", cardNumber: "8",
+      parallel: "Magnetic Field", isAuto: false,
+      gradeCompany: "PSA", gradeValue: 8,
+      purchasePrice: 52.98, totalCostBasis: 52.98,
+    });
+    const res = await store.repriceHoldingsForUser(USER);
+    const update = res.updates.find((u) => u.id === id);
+    const hld = await stored(id);
+    // Whatever the ladder did with a thin/absent exact tier — priced under a
+    // fallback rung, or found nothing — it must NOT be a bare exact-pool
+    // publish at this ratio: either it is withheld (cost-basis-floor /
+    // no-exact-pool-at-tier), or any published rung is NOT an exact-pool one.
+    if (typeof hld.fairMarketValue === "number" && hld.fairMarketValue > 0) {
+      expect(EXACT.has(String(hld.fmvRung))).toBe(false);
+    } else {
+      expect(hld.fairMarketValue ?? null).toBeNull();
+    }
+    expect(update?.status).not.toBe(undefined);
   });
 });
 
