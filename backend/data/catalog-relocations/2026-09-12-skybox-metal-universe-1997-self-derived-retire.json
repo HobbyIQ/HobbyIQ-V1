@@ -1,0 +1,30 @@
+{
+ "generatedAt": "2026-09-12T03:02:03.207Z",
+ "forLane": "relocate-catalog-rows-by-list",
+ "issue": "key-twins-marconi-chipper-0912 CASE B, pass 2 of 2 -- RUNS SECOND",
+ "applyOrder": "2 of 2 -- RUNS SECOND. data/pool-relocations/2026-09-12-skybox-metal-universe-1997-chipper-31-repoint.json MUST have applied first. This retire DELETES the row those sales point at today; running this list first would strand them on a slug that no longer resolves.",
+ "reportOnlyUntil": "Drew's review -- no apply is authorized by this PR",
+ "finding": "hiq:baseball:1997:skybox-metal-universe:31:base:no-auto is self-derived (source=user-verified, isSelfDerivedIdentity=true) and has a checklist-backed twin at hiq:baseball:1997:metal-universe:31:base:no-auto (source=sportscardchecklist-2026-09-06, from backend/data/checklists/scraped/1997-metal-universe-baseball.csv). Per doctrine (a self-derived row with a checklist twin is retired), this row is retired by delete once its sales have moved (pass 1).",
+ "rulings": [
+  "Retire is a DELETE via retireCatalogRow, never a soft flag -- card_catalog has no visibility-exclusion field equivalent to sold_comps' flaggedWrong (catalogVisibility.ts). Deleting is safe here because pass 1 already moved every sale off this address; retireCatalogRow re-points nothing on its own.",
+  "The graded child hiq:baseball:1997:skybox-metal-universe:31:base:no-auto:psa-9 (source user-verified-graded) is carried by retireCatalogRow automatically when its plain parent retires and is NOT a separate entry in this list, per the Heavy Metal absorbed-rows precedent (a graded child follows its parent when the PARENT is the row being retired).",
+  "This list runs ONLY after the pool list above has applied and been verified (0 sold_comps rows remaining at the skybox-metal-universe:31 base address for Chipper Jones)."
+ ],
+ "census": {
+  "metalUniverse1997Card31Sources": {
+   "sportscardchecklist-2026-09-06": 1
+  },
+  "skyboxMetalUniverse1997Card31Sources": {
+   "user-verified": 1,
+   "user-verified-graded": 1
+  }
+ },
+ "entries": [
+  {
+   "id": "hiq:baseball:1997:skybox-metal-universe:31:base:no-auto",
+   "action": "retire",
+   "reason": "Self-derived (source=user-verified) row with a checklist-backed twin at hiq:baseball:1997:metal-universe:31:base:no-auto (sportscardchecklist-2026-09-06, from backend/data/checklists/scraped/1997-metal-universe-baseball.csv, card 31 = Chipper Jones, base). One card, one row, one pool -- the self-derived duplicate is retired once its sales have moved (pass 1 of this PR's two-pass order).",
+   "evidence": "card_catalog point-read 2026-09-12: id=hiq:baseball:1997:skybox-metal-universe:31:base:no-auto, source=user-verified, playerName=Chipper Jones, parallel=Base. Destination hiq:baseball:1997:metal-universe:31:base:no-auto exists, source=sportscardchecklist-2026-09-06, playerName=Chipper Jones, same card."
+  }
+ ]
+}

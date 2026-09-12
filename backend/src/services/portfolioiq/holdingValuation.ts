@@ -520,9 +520,24 @@ export function costBasisFloorRefusalWrite(
       valueSource: "estimated",
       nowIso,
       meta: {
-        slug: typeof priorMeta?.slug === "string"
-          ? (priorMeta.slug as string)
-          : (entry.pooledAs ?? null),
+        // CF-THE-SLUG-NAMES-THIS-PASS'S-POOL (2026-09-12). `slug` sits beside
+        // `withheld.blockingId` and `withheld.blockingCount` — both of which
+        // are ALWAYS this pass's `entry.pooledAs` / `entry.compsUsed`, never
+        // carried — and it must describe the SAME pool they do. Preferring
+        // `priorMeta?.slug` did the opposite: holding 277b05a3 (Ripken 1997
+        // Metal Universe #8 PSA 8) was ruled onto `…:magnetic-field:no-auto`
+        // on 2026-09-05, and every refusal write since has correctly priced
+        // and blocked on that identity (`withheld.blockingId` names it,
+        // `compsUsed: 1`, the genuine PSA 8 sale at $5.40) while `meta.slug`
+        // kept re-stating the pre-ruling `…:base:no-auto` because an EARLIER
+        // pass had written that slug into `pricingSourceMeta` and nothing
+        // since had a reason to overwrite it. A reader open to `meta.slug`
+        // alone — including this file's own doctrine comments — sees the
+        // wrong card. `entry.pooledAs` is this write's own evidence and wins;
+        // the prior slug is a fallback for the narrow-facts caller that
+        // genuinely has no identity of its own (`pooledAs: null`).
+        slug: entry.pooledAs
+          ?? (typeof priorMeta?.slug === "string" ? (priorMeta.slug as string) : null),
         compsUsed: typeof priorMeta?.compsUsed === "number" ? (priorMeta.compsUsed as number) : null,
         confidence: typeof priorMeta?.confidence === "number" && Number.isFinite(priorMeta.confidence as number)
           ? (priorMeta.confidence as number)
@@ -862,7 +877,14 @@ export function noBasisRefusalWrite(
       valueSource: "estimated",
       nowIso,
       meta: {
-        slug: typeof priorMeta?.slug === "string" ? (priorMeta.slug as string) : slug,
+        // CF-THE-SLUG-NAMES-THIS-PASS'S-POOL (2026-09-12): the same rule as
+        // costBasisFloorRefusalWrite. `slug` here is this refusal's own
+        // identity — the same value `withheld.blockingId` states two lines
+        // below — never the value a PRIOR pass's write happened to leave in
+        // `pricingSourceMeta`. Falling back to `priorMeta?.slug` only when
+        // this pass named no identity at all (`slug` null: an
+        // `identity-not-in-catalog` refusal with nothing to resolve).
+        slug: slug ?? (typeof priorMeta?.slug === "string" ? (priorMeta.slug as string) : null),
         compsUsed: typeof priorMeta?.compsUsed === "number" ? (priorMeta.compsUsed as number) : null,
         confidence: typeof priorMeta?.confidence === "number" && Number.isFinite(priorMeta.confidence as number)
           ? (priorMeta.confidence as number)
