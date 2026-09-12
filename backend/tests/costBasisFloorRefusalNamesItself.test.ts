@@ -30,13 +30,35 @@
  *     ladder proposed $5.40 under `exact-pool-weighted-median`, rejected at
  *     10.19%.
  *
- * The floor was CORRECT in both cases and these pins do not relitigate it —
- * 9f082213's slug pool holds 57 rows of which exactly one ($270) is a Black &
- * White Red Ink sale, the other 56 being base Chrome prospect autos at $5-$20
+ * 9f082213's refusal was CORRECT and these pins do not relitigate it — its
+ * slug pool holds 57 rows of which exactly one ($270) is a Black & White Red
+ * Ink sale, the other 56 being base Chrome prospect autos at $5-$20
  * mis-slugged onto the SSP row. Per Drew's 2026-08-30 ruling the Red Ink is a
  * distinct card with its own row, and that row exists and is `user-verified`;
  * it is the POOL that is contaminated, so $8.70 is the base auto's price and
- * refusing it is right.
+ * refusing it is right — `exact-pool-projection` here reads a pool with real
+ * contamination, not the exemption RULING R24 describes below.
+ *
+ * RULING R24 (Drew, 2026-09-12 ~05:05Z), superseding the Ripken half of this
+ * doctrine: "When the exact, checklist-backed pool is correct but the
+ * projected price is far under cost, SHOW IT — the cost-basis floor applies
+ * only to fallback rungs." 277b05a3's own pool is NOT contaminated the way
+ * 9f082213's is — its PSA 8 tier's one sale, $5.40, is a genuine read of the
+ * holding's own exact identity and grade, and a pool cannot be a mismatch
+ * for itself. So the floor now exempts exact-pool rungs (`isExactPoolRung`,
+ * the allowlist declared beside the rung vocabulary in fmvRung.ts) and this
+ * shape publishes $5.40 at confidence 0.15 ("low confidence") instead of
+ * being withheld — pinned directly in
+ * `pricingRefusalGates.test.ts` ("A''. R24 — the floor exempts exact-pool
+ * rungs"). The pin below ("277b05a3 (Ripken PSA 8) gets the identical
+ * treatment") stays as a test of `costBasisFloorRefusalWrite` in ISOLATION —
+ * what the shared writer does when a caller hands it a cost-basis-floor
+ * outcome — because a caller upstream of the floor (a script replaying an
+ * old outcome, a future lane) can still reach it. It is deliberately no
+ * longer a claim that `valueHoldingThroughOneEntry` reaches this writer for
+ * the real Ripken shape today: `costBasisFloor` now declines to reject an
+ * exact-pool rung before the writer is ever called, so the real 277b05a3
+ * publishes and never takes this branch.
  *
  * What these pins encode is that a correct refusal LEAVES A TRACE: the number
  * is kept, the row names `method: "withheld"` with the machine-readable
@@ -169,7 +191,17 @@ describe("a cost-basis-floor refusal is persisted, never a silent fall-through",
     expect(withheld.retentionRefused).toBe("prior-fails-floor");
   });
 
-  it("277b05a3 (Ripken PSA 8) gets the identical treatment", () => {
+  it("277b05a3 (Ripken PSA 8) gets the identical treatment, IF this writer is reached", () => {
+    // RULING R24 (2026-09-12): for the real holding, `valueHoldingThroughOneEntry`
+    // no longer reaches `costBasisFloorRefusalWrite` for this shape at all —
+    // `costBasisFloor` exempts `exact-pool-weighted-median` (an exact-pool
+    // rung) before the refusal is ever decided, and 277b05a3 publishes $5.40.
+    // See `pricingRefusalGates.test.ts` ("A''. R24") for that pin. This test
+    // stays to pin the WRITER's own contract in isolation — a caller that
+    // (incorrectly, post-R24) still decides to refuse an exact-pool rung and
+    // hands this function the outcome must still get a coherent, traced
+    // refusal, not a crash or a silent write. It is no longer a claim about
+    // what the real Ripken holding does today.
     const { holding } = costBasisFloorRefusalWrite(RIPKEN, RIPKEN_FLOOR, NOW);
     const meta = holding.pricingSourceMeta as Record<string, unknown>;
     expect(holding.fairMarketValue).toBe(49.99);
@@ -442,7 +474,12 @@ describe("the our-pool reprice lane refuses through the SAME write", () => {
     // which is both the dollar gate that let the $29.45 Chipper Jones through
     // and a second implementation of the doctrine. It now calls the SAME
     // `costBasisFloor` both one-entry lanes call, so the anchor is that call.
-    const laneStart = src.indexOf("const floor = costBasisFloor(holding, fmv);");
+    //
+    // RULING R24 (2026-09-12): the call now also passes `ourPool.rungLabel`
+    // so this lane gets the same exact-pool exemption as the one-entry
+    // lanes — the anchor string is updated to match, still identifying the
+    // one shared call.
+    const laneStart = src.indexOf("const floor = costBasisFloor(holding, fmv, ourPool.rungLabel);");
     expect(laneStart).toBeGreaterThan(0);
     // The dollar gate must not come back, in this lane or anywhere.
     expect(src).not.toMatch(/costBasis > 50/);

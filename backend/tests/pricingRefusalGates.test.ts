@@ -177,6 +177,119 @@ describe("A. the cost-basis floor gates on the RATIO, at any basis", () => {
   });
 });
 
+/**
+ * ── A''. RULING R24 (Drew, 2026-09-12 ~05:05Z) ────────────────────────────
+ *
+ * "When the exact, checklist-backed pool is correct but the projected price
+ * is far under cost, SHOW IT — the cost-basis floor applies only to fallback
+ * rungs."
+ *
+ * Motivating case, read-only verified: holding 277b05a3 (Drew's portfolio,
+ * 1997 Metal Universe Magnetic Field Cal Ripken Jr. PSA 8, cost $52.98) — the
+ * exact PSA 8 tier has one in-window sale, `tca-ebay::196570203486` $5.40
+ * (2026-08-11), under `exact-pool-last-sale`. That is 10.19% of basis, and
+ * the floor (section A above) refused it as a "slug or pool mismatch, not a
+ * market". It is not: the pool the price was read from IS the holding's own
+ * exact identity and grade, so there is no other pool it could have been
+ * confused with. Refusing it hid a real, thin (n=1) market read behind a
+ * guard meant to catch a DIFFERENT failure — a neighbouring identity's pool
+ * standing in for this one.
+ *
+ * So `costBasisFloor` takes the rung as a third, optional argument and never
+ * rejects when `isExactPoolRung` says the rung read the exact pool — the
+ * SAME closed allowlist declared next to the rung vocabulary in fmvRung.ts,
+ * not a second predicate sniffing rung names or refusal reasons here. Every
+ * fallback rung (sibling-parallel, family-baseline, graded-pool-inverse,
+ * cross-grade-fallback, grade-curve-estimate, player-index-projection, …) is
+ * unaffected: omitting the rung, or passing a fallback one, reproduces
+ * section A's behaviour exactly.
+ */
+describe("A''. R24 — the floor exempts exact-pool rungs, never fallback rungs", () => {
+  it("an exact-pool rung far under basis is NOT refused, whatever the ratio", () => {
+    // 10.19% of basis — squarely below COST_BASIS_FLOOR_RATIO — and exempt.
+    for (const rung of [
+      "exact-pool-projection",
+      "exact-pool-last-sale",
+      "exact-pool-leading-edge",
+      "exact-pool-weighted-median",
+      "exact-pool-median",
+      "exact-pool-trajectory",
+    ] as const) {
+      expect(costBasisFloor(CHIPPER, 2, rung).rejects, rung).toBe(false);
+    }
+  });
+
+  it("a fallback rung far under basis is STILL refused — the floor is not disabled", () => {
+    // The exact opposite of the case above: a rung that reads a DIFFERENT
+    // pool (a sibling, a family baseline, a cross-grade rescale, an
+    // estimate) is exactly where a number far under basis is evidence of a
+    // wrong pool, and R24 says nothing changes there.
+    for (const rung of [
+      "sibling-estimate",
+      "sibling-parallel",
+      "family-baseline",
+      "cross-grade-fallback",
+      "grade-curve-estimate",
+      "graded-pool-inverse",
+      "player-index-projection",
+      "cross-setkey",
+      "grade-cross-raw",
+      "rare-card-anchor",
+    ] as const) {
+      expect(costBasisFloor(CHIPPER, 2, rung).rejects, rung).toBe(true);
+    }
+  });
+
+  it("omitting the rung reproduces section A exactly — no silent exemption", () => {
+    expect(costBasisFloor(CHIPPER, 2).rejects).toBe(true);
+    expect(costBasisFloor(CHIPPER, 2, null).rejects).toBe(true);
+    expect(costBasisFloor(CHIPPER, 2, undefined).rejects).toBe(true);
+    // An unrecognised / made-up label is not the exact pool either — the
+    // allowlist is closed, so an unknown string does not fall open.
+    expect(costBasisFloor(CHIPPER, 2, "not-a-real-rung").rejects).toBe(true);
+  });
+
+  it("the Ripken shape, from the real field values: $5.40 on a $52.98 basis publishes", () => {
+    // 277b05a3-935f-451a-b5b7-97eb926a3542, 1997 Metal Universe Magnetic
+    // Field Cal Ripken Jr. PSA 8. cost basis $52.98, one exact-pool sale at
+    // $5.40 under `exact-pool-last-sale` — 10.19% of basis, read-only
+    // confirmed against sold_comps (tca-ebay::196570203486, 2026-08-11).
+    const ripken = {
+      id: "277b05a3-935f-451a-b5b7-97eb926a3542",
+      playerName: "Cal Ripken, Jr.",
+      gradeCompany: "PSA",
+      gradeValue: 8,
+      purchasePrice: 52.98,
+      totalCostBasis: 52.98,
+      quantity: 1,
+    } as unknown as PortfolioHolding;
+    const proposedUnit = 5.4;
+    expect(proposedUnit / ripken.totalCostBasis!).toBeCloseTo(0.1019, 3);
+    expect(proposedUnit / ripken.totalCostBasis! < COST_BASIS_FLOOR_RATIO).toBe(true);
+    const floor = costBasisFloor(ripken, proposedUnit, "exact-pool-last-sale");
+    // MUTATION CHECK: drop the third argument, or drop `exemptExactPool` from
+    // `costBasisFloor`'s `rejects` expression, and this goes red — the
+    // Ripken PSA 8 sale goes back to being silently withheld.
+    expect(floor.rejects).toBe(false);
+    expect(floor.proposedTotal).toBeCloseTo(5.4, 2);
+    expect(floor.costBasis).toBeCloseTo(52.98, 2);
+  });
+
+  it("the identical shape at a fallback rung is still refused — the exemption is the RUNG, not the number", () => {
+    // Same $5.40, same $52.98 basis — the only thing that changes is the
+    // rung. If a sibling/family rung produced this exact number it would
+    // remain evidence of a wrong pool, per R24's own text.
+    const ripken = {
+      id: "277b05a3-935f-451a-b5b7-97eb926a3542",
+      purchasePrice: 52.98,
+      totalCostBasis: 52.98,
+      quantity: 1,
+    } as unknown as PortfolioHolding;
+    expect(costBasisFloor(ripken, 5.4, "family-baseline").rejects).toBe(true);
+    expect(costBasisFloor(ripken, 5.4, "sibling-parallel").rejects).toBe(true);
+  });
+});
+
 describe("A'. a graded sale never enters the raw tier", () => {
   // The tier classifier is module-private, so the pin reads it through the
   // exported constant and the source itself — the predicate is one line and

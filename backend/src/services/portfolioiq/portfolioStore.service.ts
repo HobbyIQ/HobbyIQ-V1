@@ -4328,7 +4328,12 @@ async function autoPriceHolding(
         : typeof ourPool.estimatedValue === "number" && ourPool.estimatedValue > 0
           ? ourPool.estimatedValue
           : 0;
-      const opFloor = costBasisFloor(holding, proposedUnit);
+      // RULING R24 (Drew, 2026-09-12): the floor exempts exact-pool rungs —
+      // `ourPool.rungLabel` is the exact (identity, grade) pool's own read
+      // when `isExactPoolRung` says so, and the pool cannot be a mismatch
+      // for itself. Every fallback rung (sibling-parallel, family-baseline,
+      // grade-cross-raw, …) still faces the floor exactly as before.
+      const opFloor = costBasisFloor(holding, proposedUnit, ourPool.rungLabel);
       const costBasis = opFloor.costBasis;
       const proposed = opFloor.proposedTotal;
       const suspiciouslyLow = opFloor.rejects;
@@ -11065,7 +11070,11 @@ export async function repriceHoldingsForUser(
               // predicate now comes from `costBasisFloor` — the SAME function
               // both one-entry lanes call — so the doctrine has one
               // implementation and this lane cannot drift from it again.
-              const floor = costBasisFloor(holding, fmv);
+              //
+              // RULING R24 (Drew, 2026-09-12): pass `ourPool.rungLabel` too —
+              // the floor exempts an exact-pool read of this identity's own
+              // pool, the same exemption the one-entry lanes get.
+              const floor = costBasisFloor(holding, fmv, ourPool.rungLabel);
               const costBasis = floor.costBasis;
               const proposedTotal = floor.proposedTotal;
               if (floor.rejects) {
