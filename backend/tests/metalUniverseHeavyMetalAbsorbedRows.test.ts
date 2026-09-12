@@ -17,17 +17,32 @@ const require_ = createRequire(import.meta.url);
  * metal-universe address of a different player. #2041's PR comments hold the
  * 5-number/18-row table this list is built from.
  *
- * THE SHAPE, AND WHY IT IS NOT 18 ENTRIES. 17 of the 18 are graded children
- * (`${parentSlug}:${tier}`) of the CORRECT base-player parent row -- point-
- * read 2026-09-12 confirms all five plain (`:base:no-auto`, no grade tier)
- * parent rows are the checklist-backed base player, not the Heavy Metal one.
- * moveCatalogRow refuses a graded child given its own entry onto a plain
- * card address ("a graded child cannot move onto a card address" -- #2041's
- * own comment names this the 53-failure mode on REPORT run 34356734615), and
- * reslugging one there would also drop its grade. So this list carries ONLY
- * the one card-level (non-graded) row -- the `ssp` parallel minted by
- * `ingest-auto-seed` -- and lists the 17 graded children in `excluded`
- * instead of `entries`.
+ * THE SHAPE IS 18 ENTRIES, NOT 1. An earlier draft of this file excluded the
+ * 17 graded children on the theory that "a graded child follows its parent"
+ * when a card moves. That rule applies when the PARENT is the row being
+ * moved -- it is not this shape. Point-read 2026-09-12 confirms all five
+ * plain (`:base:no-auto`, no grade tier) parent rows ARE the correct
+ * checklist-backed base player (Alomar, Anderson, Mussina, Palmeiro,
+ * Surhoff) and stay exactly where they are. The 17 graded children
+ * themselves are what's mis-parented: each carries the HEAVY METAL player's
+ * name while sitting under the correct base parent's id (a Bonds PSA-9 row
+ * under Brady Anderson's card, for example) -- and that mis-parenting does
+ * real damage, since the graded-to-raw rung prices the base card's raw pool
+ * from the wrongly-attached graded sale.
+ *
+ * Verified against the real moveCatalogRow (dist/services/catalog/
+ * catalogRowOps.service.js) with an in-memory fake container, 2026-09-12: a
+ * graded child CAN reslug to another graded address across a setKey change
+ * -- buildIncoming's guard only refuses when gradeTier PRESENCE disagrees
+ * between the old id and the new slug (a graded child aimed at a plain card
+ * address, or the reverse). Every entry in this file keeps the same grade
+ * tier on both sides, so none hits that guard; the move was confirmed to
+ * land cleanly and to derive the correct new parentSlug automatically.
+ *
+ * So: 1 entry for the ungraded SSP row, 17 entries for the graded children,
+ * each reslugging graded-address-to-graded-address under the Heavy Metal
+ * key. No entry in this file ever names one of the five plain base-parent
+ * ids -- those cards are correct and untouched.
  *
  * These pins hold the LIST SHAPE and run the lane's OWN validators
  * (classifyEntry, keepsSales, idSetKey/crossProductFields) rather than a copy
@@ -45,7 +60,7 @@ type List = {
   keepSales?: boolean;
   finding: string;
   rulings: string[];
-  excluded: Array<{ note: string; ids: string[] }>;
+  excluded: unknown[];
   census: Record<string, unknown>;
   entries: Entry[];
 };
@@ -61,6 +76,13 @@ const { classifyEntry, keepsSales, idSetKey, crossProductFields } = require_(
   crossProductFields: (id: string, to: string) => { setKey?: string };
 };
 
+const BASE_NAME: Record<number, string> = {
+  1: "Roberto Alomar",
+  2: "Brady Anderson",
+  6: "Mike Mussina",
+  8: "Rafael Palmeiro",
+  10: "B.J. Surhoff",
+};
 const HM_NAME: Record<number, string> = {
   1: "Albert Belle",
   2: "Barry Bonds",
@@ -69,122 +91,139 @@ const HM_NAME: Record<number, string> = {
   10: "Matt Williams",
 };
 
+const PLAIN_PARENT_IDS = new Set(
+  [1, 2, 6, 8, 10].map((n) => `hiq:baseball:1996:metal-universe:${n}:base:no-auto`),
+);
+
 describe("the file is shaped the way relocate-catalog-rows-by-list requires", () => {
   it("names the lane and holds the APPLY-ONLY-AFTER-#2041 gate in reportOnlyUntil", () => {
     expect(doc.forLane).toBe("relocate-catalog-rows-by-list");
     expect(doc.reportOnlyUntil).toMatch(/APPLY ONLY AFTER #2041/);
     expect(doc.reportOnlyUntil).toMatch(/merged AND deployed AND the Heavy Metal rows are ingested/);
     expect(doc.reportOnlyUntil).toMatch(/metal-universe-heavy-metal:N exists/);
-    expect(doc.reportOnlyUntil).toMatch(/refused\/occupied until then/);
   });
 
-  it("states, in the header, that graded children get no entries and why", () => {
+  it("states, in the header, the correction that graded children ARE entries and why", () => {
     const allText = JSON.stringify(doc.rulings);
-    expect(allText).toMatch(/NO ENTRIES FOR GRADED CHILDREN/);
-    expect(allText).toMatch(/drop.{0,20}grade|DROP THE GRADE/i);
-    expect(allText).toMatch(/follow/i);
+    expect(allText).toMatch(/CORRECTED/i);
+    expect(allText).toMatch(/mis-parented/i);
+    expect(allText).toMatch(/graded-to-raw rung/i);
   });
 
   it("carries keepSales: true at the file level", () => {
     expect(doc.keepSales).toBe(true);
   });
 
-  it("is non-empty and Array-shaped", () => {
-    expect(Array.isArray(doc.entries)).toBe(true);
-    expect(doc.entries.length).toBeGreaterThan(0);
+  it("has no `excluded` entries -- nothing is deliberately left out this time", () => {
+    expect(Array.isArray(doc.excluded)).toBe(true);
+    expect(doc.excluded).toHaveLength(0);
   });
 });
 
-describe("no entry is a graded child", () => {
-  it("no entry id or destination carries a grade-tier segment", () => {
-    // A graded id is `${parentSlug}:${tier}` -- one extra colon-segment past
-    // the 7-9 part hiq slug grammar, and it never round-trips through
-    // idSetKey/crossProductFields the way a plain card id does. The
-    // authoritative check: the lane's own parser rejects it as a card id.
+describe("count-pinned: 18 entries total -- 1 ungraded + 17 graded-to-graded", () => {
+  it("exactly 18 entries", () => {
+    expect(doc.entries).toHaveLength(18);
+  });
+
+  it("exactly 1 ungraded entry (no grade-tier segment) and 17 graded entries", () => {
+    const graded = doc.entries.filter((e) => /:(psa|sgc|cgc|bgs|beckett)-[0-9a-z.-]+$/i.test(e.id));
+    const ungraded = doc.entries.filter((e) => !/:(psa|sgc|cgc|bgs|beckett)-[0-9a-z.-]+$/i.test(e.id));
+    expect(graded).toHaveLength(17);
+    expect(ungraded).toHaveLength(1);
+    expect(ungraded[0].id).toBe("hiq:baseball:1996:metal-universe:2:ssp:no-auto");
+  });
+
+  it("no entry's id or destination is one of the five plain base-parent addresses", () => {
     for (const e of doc.entries) {
-      expect(e.id.split(":").length).toBeLessThanOrEqual(9);
-      expect(e.to?.split(":").length).toBeLessThanOrEqual(9);
+      expect(PLAIN_PARENT_IDS.has(e.id)).toBe(false);
+      expect(PLAIN_PARENT_IDS.has(String(e.to))).toBe(false);
     }
   });
 
-  it("count-pinned: exactly 1 entry, exactly 17 excluded graded children", () => {
-    expect(doc.entries.length).toBe(1);
-    expect(doc.excluded).toHaveLength(1);
-    expect(doc.excluded[0].ids).toHaveLength(17);
-  });
-
-  it("every excluded id is a graded child (STARTSWITH a :base:no-auto card address, IS_DEFINED tier)", () => {
-    // Mirrors isGradedChildOf's own rule: id = `${parentSlug}:${tier}`, tier
-    // is one segment and never a print-run segment.
-    for (const id of doc.excluded[0].ids) {
-      const m = /^(hiq:baseball:1996:metal-universe:\d+:base:no-auto):([a-z0-9-]+)$/.exec(id);
-      expect(m, `not a graded-child id: ${id}`).toBeTruthy();
-      expect(m![2]).not.toMatch(/^num-/);
+  it("no duplicate ids, and every id is unique to one entry", () => {
+    const seen = new Set<string>();
+    for (const e of doc.entries) {
+      expect(seen.has(e.id), `duplicate id ${e.id}`).toBe(false);
+      seen.add(e.id);
     }
-  });
-
-  it("no excluded id appears in entries, and no entry id appears in excluded", () => {
-    const excludedSet = new Set(doc.excluded[0].ids);
-    for (const e of doc.entries) expect(excludedSet.has(e.id)).toBe(false);
-    const entrySet = new Set(doc.entries.map((e) => e.id));
-    for (const id of doc.excluded[0].ids) expect(entrySet.has(id)).toBe(false);
+    expect(seen.size).toBe(18);
   });
 });
 
-describe("the five Heavy Metal numbers each match the right name, in the excluded census", () => {
-  it("every excluded graded child's number maps to a name #2041's table names", () => {
-    for (const id of doc.excluded[0].ids) {
-      const num = Number(/:(\d+):base:no-auto:/.exec(id)?.[1]);
-      expect(HM_NAME[num], `number ${num} is not one of the five HM numbers`).toBeTruthy();
-    }
-  });
-
-  it("by-number counts match #2041's table: 1->3, 2->5(of6,1 is the entry), 6->5, 8->2, 10->2", () => {
-    const byNumber = (n: number) =>
-      doc.excluded[0].ids.filter((id) => id.startsWith(`hiq:baseball:1996:metal-universe:${n}:base:no-auto:`)).length;
-    expect(byNumber(1)).toBe(3);
-    expect(byNumber(2)).toBe(5); // 6 total for #2, 1 of which (the ssp row) is the entry, not a graded child
-    expect(byNumber(6)).toBe(5);
-    expect(byNumber(8)).toBe(2);
-    expect(byNumber(10)).toBe(2);
-    // 3 + 5 + 5 + 2 + 2 = 17
-    expect(byNumber(1) + byNumber(2) + byNumber(6) + byNumber(8) + byNumber(10)).toBe(17);
-  });
-});
-
-describe("the one entry is the ungraded Barry Bonds SSP row, reslugged correctly", () => {
-  const entry = doc.entries[0];
-
-  it("classifyEntry accepts it as a reslug with a reason", () => {
+describe("every entry classifies as a reslug the lane accepts", () => {
+  it.each(
+    // vitest it.each needs a stable array; index each entry for a readable name
+    (JSON.parse(readFileSync(path.join(DIR, FILE), "utf8")) as List).entries.map((e, i) => [i, e] as const),
+  )("entry %i: %s", (_i, entry) => {
     const v = classifyEntry(entry);
     expect(v.ok, v.why).toBeTruthy();
     expect(v.action).toBe("reslug");
+    expect(entry.to).toBeTruthy();
+  });
+});
+
+describe("every graded entry moves graded-address to graded-address, same tier both sides", () => {
+  it("the grade-tier suffix is identical on id and to, for every graded entry", () => {
+    for (const e of doc.entries) {
+      const idTier = /:([a-z]+-[0-9a-z.-]+)$/i.exec(e.id)?.[1];
+      const toTier = /:([a-z]+-[0-9a-z.-]+)$/i.exec(e.to ?? "")?.[1];
+      if (e.id === "hiq:baseball:1996:metal-universe:2:ssp:no-auto") continue; // the one ungraded entry
+      expect(idTier, `no grade tier parsed from ${e.id}`).toBeTruthy();
+      expect(toTier, `no grade tier parsed from ${e.to}`).toBe(idTier);
+    }
+  });
+
+  it("every graded id's parent (strip the tier) is one of the five plain base-parent ids", () => {
+    for (const e of doc.entries) {
+      if (e.id === "hiq:baseball:1996:metal-universe:2:ssp:no-auto") continue;
+      const parent = e.id.replace(/:[a-z]+-[0-9a-z.-]+$/i, "");
+      expect(PLAIN_PARENT_IDS.has(parent), `${e.id} does not parent to a known base row`).toBe(true);
+    }
+  });
+});
+
+describe("the five Heavy Metal numbers are each matched to the right name", () => {
+  const numOf = (slug: string) => Number(/^hiq:baseball:1996:metal-universe:(\d+):/.exec(slug)?.[1]);
+
+  it("every entry's number is one of the five Heavy Metal numbers (1, 2, 6, 8, 10)", () => {
+    for (const e of doc.entries) {
+      const n = numOf(e.id);
+      expect(HM_NAME[n], `number ${n} is not one of the five HM numbers`).toBeTruthy();
+    }
+  });
+
+  it("every entry's reason/evidence names the HM player for its number and the base occupant it displaces from", () => {
+    for (const e of doc.entries) {
+      const n = numOf(e.id);
+      const hm = HM_NAME[n];
+      const base = BASE_NAME[n];
+      expect(e.reason, `${e.id}: reason should name ${hm}`).toMatch(new RegExp(hm.replace(".", "\\.")));
+      expect(e.evidence, `${e.id}: evidence should name ${base}`).toMatch(new RegExp(base.replace(".", "\\.")));
+    }
+  });
+
+  it("by-number counts match #2041's table: 1->3, 2->6, 6->5, 8->2, 10->2 (18 total)", () => {
+    const byNumber = (n: number) => doc.entries.filter((e) => numOf(e.id) === n).length;
+    expect(byNumber(1)).toBe(3);
+    expect(byNumber(2)).toBe(6); // 5 graded + 1 ungraded ssp
+    expect(byNumber(6)).toBe(5);
+    expect(byNumber(8)).toBe(2);
+    expect(byNumber(10)).toBe(2);
+    expect(byNumber(1) + byNumber(2) + byNumber(6) + byNumber(8) + byNumber(10)).toBe(18);
+  });
+});
+
+describe("the ungraded Barry Bonds SSP entry, reslugged correctly", () => {
+  const entry = doc.entries.find((e) => e.id === "hiq:baseball:1996:metal-universe:2:ssp:no-auto")!;
+
+  it("exists and is the ungraded row", () => {
+    expect(entry).toBeTruthy();
+  });
+
+  it("classifyEntry accepts it as a reslug to the Heavy Metal SSP address", () => {
+    const v = classifyEntry(entry);
+    expect(v.ok, v.why).toBeTruthy();
     expect(v.to).toBe("hiq:baseball:1996:metal-universe-heavy-metal:2:ssp:no-auto");
-  });
-
-  it("id is the base-address SSP row; destination is the Heavy Metal address, same number, same parallel", () => {
-    expect(entry.id).toBe("hiq:baseball:1996:metal-universe:2:ssp:no-auto");
-    expect(entry.to).toBe("hiq:baseball:1996:metal-universe-heavy-metal:2:ssp:no-auto");
-  });
-
-  it("carries the Heavy Metal player's name (Barry Bonds, #2) in its evidence, and names the base occupant it was absorbed onto (Brady Anderson)", () => {
-    expect(entry.evidence).toMatch(/Barry Bonds/);
-    expect(entry.evidence).toMatch(/Brady Anderson/);
-    expect(entry.reason).toMatch(/Barry Bonds/);
-  });
-
-  it("names the checklist row #2041's ingest will mint", () => {
-    expect(entry.evidence).toMatch(/metal-universe-heavy-metal:2:base:no-auto/);
-  });
-
-  it("is a cross-product move: idSetKey differs and crossProductFields supplies the new setKey", () => {
-    expect(idSetKey(entry.id)).toBe("metal-universe");
-    expect(idSetKey(entry.to!)).toBe("metal-universe-heavy-metal");
-    expect(crossProductFields(entry.id, entry.to!)).toEqual({ setKey: "metal-universe-heavy-metal" });
-  });
-
-  it("keepsSales resolves true for this entry (file-level keepSales: true, uncontested by the entry)", () => {
-    expect(keepsSales(entry, doc)).toBe(true);
   });
 
   it("evidence states the sale count measured on BOTH cardId and hobbyiqCardId", () => {
@@ -194,6 +233,48 @@ describe("the one entry is the ungraded Barry Bonds SSP row, reslugged correctly
     expect(entry.evidence).toMatch(/byHobbyiqCardId=1/);
     expect(entry.evidence).toMatch(/byEither=1/);
   });
+
+  it("is the only entry keepSales matters for -- it is the only one with a sale", () => {
+    expect(keepsSales(entry, doc)).toBe(true);
+  });
+});
+
+describe("a sample graded entry (Bonds PSA-9 under Anderson's card) is fully correct", () => {
+  const ID = "hiq:baseball:1996:metal-universe:2:base:no-auto:psa-9";
+  const TO = "hiq:baseball:1996:metal-universe-heavy-metal:2:base:no-auto:psa-9";
+  const entry = doc.entries.find((e) => e.id === ID)!;
+
+  it("exists, reslugs graded-to-graded with the same tier", () => {
+    expect(entry).toBeTruthy();
+    expect(entry.to).toBe(TO);
+  });
+
+  it("classifyEntry accepts it (the lane's own validator, not a re-implementation)", () => {
+    const v = classifyEntry(entry);
+    expect(v.ok, v.why).toBeTruthy();
+    expect(v.action).toBe("reslug");
+  });
+
+  it("is a cross-product move: idSetKey differs and crossProductFields supplies the new setKey", () => {
+    expect(idSetKey(entry.id)).toBe("metal-universe");
+    expect(idSetKey(entry.to!)).toBe("metal-universe-heavy-metal");
+    expect(crossProductFields(entry.id, entry.to!)).toEqual({ setKey: "metal-universe-heavy-metal" });
+  });
+
+  it("names the wrong parent (Brady Anderson) and the right player (Barry Bonds)", () => {
+    expect(entry.evidence).toMatch(/Brady Anderson/);
+    expect(entry.reason).toMatch(/Barry Bonds/);
+  });
+
+  it("has zero sales, unlike the ungraded SSP row", () => {
+    expect(entry.evidence).toMatch(/byCardId=0/);
+    expect(entry.evidence).toMatch(/byHobbyiqCardId=0/);
+    expect(entry.evidence).toMatch(/byEither=0/);
+  });
+
+  it("keepsSales still resolves true (file-level default), even though this entry carries no sale", () => {
+    expect(keepsSales(entry, doc)).toBe(true);
+  });
 });
 
 describe("the header states the apply gate names the exact precondition", () => {
@@ -202,5 +283,121 @@ describe("the header states the apply gate names the exact precondition", () => 
     expect(allText).toMatch(/#2041/);
     expect(allText).toMatch(/ingest/i);
     expect(allText).toMatch(/10 rows|Heavy Metal checklist/);
+  });
+
+  it("states the measured correction that a REPORT run today shows a clean move, not a refusal -- and names that as the hazard", () => {
+    const allText = JSON.stringify(doc.rulings);
+    expect(allText).toMatch(/does NOT show refused\/occupied/i);
+    expect(allText).toMatch(/orphaned/i);
+    expect(allText).toMatch(/process gate/i);
+  });
+});
+
+describe("moveCatalogRow itself accepts a graded-to-graded cross-product reslug (not a copy of the guard)", () => {
+  // This is the empirical claim the whole file rests on: read the REAL mover
+  // from the lane's own require path, against a minimal in-memory container,
+  // and prove the graded-to-graded shape lands rather than assert it in prose.
+  it("moveCatalogRow lands a graded child on a graded address under a different setKey", async () => {
+    const { moveCatalogRow } = await import("../src/services/catalog/catalogRowOps.service.js");
+
+    function notFound(): Error & { code: number } {
+      return Object.assign(new Error("not found"), { code: 404 });
+    }
+    type Doc = Record<string, any>;
+    const keyOf = (id: string, pk?: string | null) => (pk == null || pk === id ? id : `${id}@${pk}`);
+    class FakeContainer {
+      docs = new Map<string, Doc>();
+      constructor(seed: Doc[] = []) {
+        for (const d of seed) this.docs.set(keyOf(d.id, d.cardId), structuredClone(d));
+      }
+      get(id: string) {
+        return this.docs.get(id) ?? [...this.docs.values()].find((d) => d.id === id);
+      }
+      item(id: string, pk?: string) {
+        const k = keyOf(id, pk);
+        return {
+          read: async () => {
+            const d = this.docs.get(k);
+            if (!d) throw notFound();
+            return { resource: structuredClone(d), statusCode: 200 };
+          },
+          patch: async () => { throw new Error("not used"); },
+          delete: async () => {
+            if (!this.docs.has(k)) throw notFound();
+            this.docs.delete(k);
+            return {};
+          },
+        };
+      }
+      items = {
+        upsert: async (doc: Doc) => {
+          this.docs.set(keyOf(doc.id, doc.cardId), structuredClone(doc));
+          return { resource: structuredClone(doc) };
+        },
+        query: (spec: { query: string; parameters?: Array<{ name: string; value: unknown }> }) => ({
+          fetchNext: async () => ({ resources: this.run(spec), continuationToken: undefined }),
+          fetchAll: async () => ({ resources: this.run(spec) }),
+        }),
+      };
+      run(spec: { query: string; parameters?: Array<{ name: string; value: unknown }> }) {
+        const p = Object.fromEntries((spec.parameters ?? []).map((x) => [x.name, x.value]));
+        const all = [...this.docs.values()];
+        if (spec.query.includes("STARTSWITH(c.id, @p)") && spec.query.includes("IS_DEFINED(c.gradeTier)")) {
+          return all
+            .filter((d) => String(d.id).startsWith(String(p["@p"])) && d.gradeTier !== undefined)
+            .map((d) => ({ id: d.id, cardId: d.cardId, parentSlug: d.parentSlug }));
+        }
+        return [];
+      }
+    }
+
+    const OLD = "hiq:baseball:1996:metal-universe:2:base:no-auto:psa-9";
+    const NEW = "hiq:baseball:1996:metal-universe-heavy-metal:2:base:no-auto:psa-9";
+    const gradedRow: Doc = {
+      id: OLD, cardId: OLD, hobbyiqCardId: OLD,
+      sport: "baseball", year: 1996, cardYear: 1996,
+      setKey: "metal-universe", setName: "Metal Universe",
+      cardNumber: "2", playerName: "Barry Bonds",
+      parallel: "Base", parallelSlug: "base", isAuto: false, printRun: null,
+      source: "baseballcardpedia-graded",
+      parentSlug: "hiq:baseball:1996:metal-universe:2:base:no-auto",
+      gradeCompany: "PSA", gradeValue: 9, gradeTier: "psa-9",
+      vendorIds: {},
+    };
+    const cat = new FakeContainer([gradedRow]);
+
+    const res = await moveCatalogRow(cat as any, gradedRow, NEW, { setKey: "metal-universe-heavy-metal" }, {
+      reason: "test: graded-to-graded reslug across setKey",
+      dryRun: false,
+      known: null,
+    });
+
+    expect(res.action).not.toBe("refused");
+    expect(cat.get(NEW)).toBeTruthy();
+    expect(cat.get(OLD)).toBeUndefined();
+    expect(cat.get(NEW)?.gradeTier).toBe("psa-9");
+    expect(cat.get(NEW)?.parentSlug).toBe("hiq:baseball:1996:metal-universe-heavy-metal:2:base:no-auto");
+  });
+
+  it("moveCatalogRow REFUSES the mismatched shape -- a graded child aimed at a plain card address", async () => {
+    const { moveCatalogRow } = await import("../src/services/catalog/catalogRowOps.service.js");
+    const gradedRow = {
+      id: "hiq:baseball:1996:metal-universe:2:base:no-auto:psa-9",
+      cardId: "hiq:baseball:1996:metal-universe:2:base:no-auto:psa-9",
+      sport: "baseball", year: 1996, setKey: "metal-universe", cardNumber: "2",
+      playerName: "Barry Bonds", parallel: "Base", parallelSlug: "base", isAuto: false,
+      source: "baseballcardpedia-graded",
+      parentSlug: "hiq:baseball:1996:metal-universe:2:base:no-auto",
+      gradeTier: "psa-9", vendorIds: {},
+    };
+    const fakeContainerNoRow = {
+      item: () => ({ read: async () => { throw Object.assign(new Error("nf"), { code: 404 }); } }),
+    };
+    await expect(
+      moveCatalogRow(fakeContainerNoRow as any, gradedRow as any,
+        "hiq:baseball:1996:metal-universe-heavy-metal:2:base:no-auto", // no grade suffix
+        { setKey: "metal-universe-heavy-metal" },
+        { reason: "test: mismatched shape must refuse", dryRun: true, known: null }),
+    ).rejects.toThrow(/a graded child cannot move onto a card address/);
   });
 });
