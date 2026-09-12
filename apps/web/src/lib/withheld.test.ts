@@ -26,6 +26,7 @@ const ALL: WithheldReason[] = [
   "identity-not-in-catalog",
   "pool-migrating",
   "no-exact-pool",
+  "ladder-timeout",
 ];
 
 function holding(withheld: unknown): PortfolioHolding {
@@ -52,17 +53,17 @@ describe("withheldOf: reads the envelope, invents nothing", () => {
   });
 });
 
-describe("Rule 1: five causes, five different sentences", () => {
+describe("Rule 1: six causes, six different sentences", () => {
   it("gives every reason its own short label", () => {
     const seen = new Set(ALL.map((r) => withheldShort(r)));
-    // The bug: all four collapsed to "cost-basis check". Five distinct
-    // strings (now that no-exact-pool has joined the union) is the assertion
-    // that cannot pass if they ever re-collapse.
-    expect(seen.size).toBe(5);
+    // The bug: all four collapsed to "cost-basis check". Six distinct
+    // strings (now that no-exact-pool and ladder-timeout have joined the
+    // union) is the assertion that cannot pass if they ever re-collapse.
+    expect(seen.size).toBe(6);
   });
 
   it("gives every reason its own unlock line", () => {
-    expect(new Set(ALL.map((r) => withheldUnlock(r))).size).toBe(5);
+    expect(new Set(ALL.map((r) => withheldUnlock(r))).size).toBe(6);
   });
 
   it("never leaks the engine's vocabulary onto the glass", () => {
@@ -74,6 +75,7 @@ describe("Rule 1: five causes, five different sentences", () => {
       expect(words).not.toContain("identity-not-in-catalog");
       expect(words).not.toContain("pool-migrating");
       expect(words).not.toContain("no-exact-pool");
+      expect(words).not.toContain("ladder-timeout");
     }
   });
 
@@ -103,6 +105,9 @@ describe("Rule 2: every reason says what would unlock it", () => {
     // known, and nothing the owner confirms produces a sale that has not
     // happened. Time is the only unlock.
     expect(withheldUnlock("no-exact-pool").toLowerCase()).not.toContain("confirm");
+    // ladder-timeout is not even the owner's card to fix — the engine ran
+    // out of time, not out of evidence. No card-detail action applies.
+    expect(withheldUnlock("ladder-timeout").toLowerCase()).not.toContain("confirm");
   });
 });
 
@@ -146,6 +151,24 @@ describe("Rule 3: the refused number is evidence, never a price", () => {
       });
       expect(s.length).toBeGreaterThan(20);
     }
+  });
+
+  it("ladder-timeout does NOT claim no sale exists — that is no-exact-pool's claim, not this one's", () => {
+    // The whole reason ladder-timeout exists as its OWN reason (rather than
+    // folding into no-exact-pool) is that the ladder made no determination
+    // about the pool at all. The copy must say so EXPLICITLY (a disclaimer),
+    // never state absence as a bare, undisclaimed fact the way no-exact-pool
+    // legitimately does.
+    const s = withheldSentence({
+      reason: "ladder-timeout", proposed: null, retained: null, blockingId: null, blockingCount: null, retentionRefused: null,
+    });
+    expect(s.toLowerCase()).toContain("not a statement that no sale exists");
+    // Contrast: no-exact-pool's sentence states absence plainly, with no
+    // such disclaimer — the two reasons must read differently.
+    const noExactPool = withheldSentence({
+      reason: "no-exact-pool", proposed: null, retained: null, blockingId: null, blockingCount: null, retentionRefused: null,
+    });
+    expect(noExactPool.toLowerCase()).not.toContain("not a statement that no sale exists");
   });
 });
 
@@ -259,6 +282,7 @@ describe("showsCheckingPrice — the spinner never masks a decided row", () => {
       "identity-not-in-catalog",
       "pool-migrating",
       "no-exact-pool",
+      "ladder-timeout",
     ];
     for (const reason of reasons) {
       expect(showsCheckingPrice({ repricing: true, value: null, withheld: { ...w, reason } })).toBe(

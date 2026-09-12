@@ -429,6 +429,9 @@ export function withheldOf(
     // #2059: join the engine's own no-exact-pool reason rather than let it
     // fall through to null — see the type's own comment in pricingEnvelope.ts.
     && reason !== "no-exact-pool"
+    // CF-LADDER-TIME-BUDGET: same join, for the ladder's own timeout
+    // reason — see the type's own comment in pricingEnvelope.ts.
+    && reason !== "ladder-timeout"
   ) {
     return null;
   }
