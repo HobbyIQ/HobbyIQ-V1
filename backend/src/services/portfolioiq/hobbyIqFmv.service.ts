@@ -32,6 +32,7 @@ import { fetchPlayerInSetMomentum, momentumMultiplierToPctPerMonth } from "../co
 import { findNeighborComps, compositeFilterFromCardId, summarizeByDistance } from "./findNeighborComps.service.js";
 import { computeAxisAdjustment, getLatestMomentum } from "./marketMomentum.service.js";
 import { cosmosOptionsFromConnectionString } from "../ops/cosmosConnectionPolicy.js";
+import { LadderBudget, DEFAULT_LADDER_BUDGET, withEnrichmentTimeout } from "../compiq/ladderBudget.service.js";
 
 // CF-HOBBYIQ-FMV-INCLUDE-USER-PURCHASE (Drew, 2026-07-27). Reverses the
 // 2026-07-24 exclusion of source="ebay-user-purchase". The rationale
@@ -89,6 +90,10 @@ export interface HobbyIqFmvInput {
    *  every window and trend reckons from it, and every rung's pool read
    *  refuses rows at or after it. Undefined in production. */
   asOfMs?: number | null;
+  /** CF-LADDER-TIME-BUDGET (Fable, 2026-09-12). Test-only override of the
+   *  {totalMs, perRungMs} ceiling (see ladderBudget.service.ts). Undefined
+   *  in production, where DEFAULT_LADDER_BUDGET (8000ms / 3000ms) applies. */
+  ladderBudgetOverride?: { totalMs: number; perRungMs: number };
 }
 
 export interface HobbyIqFmvComp {
@@ -170,6 +175,17 @@ export interface HobbyIqFmvResult {
   };
   computedAt: string;
   cachedFrom: "sold_comps";
+  /** CF-LADDER-TIME-BUDGET (Fable, 2026-09-12). True when this no-basis
+   *  result came from the ladder's wall-clock budget being exhausted
+   *  (a rung, or the walk as a whole, did not settle in time) rather than
+   *  from every rung genuinely finding zero rows. A STRUCTURED field, not
+   *  a basisNote substring match — prose is not a contract (fmvRung.ts's
+   *  own doctrine). oneValuationPath.service.ts reads this to set
+   *  ValuationReason "ladder-timeout" instead of "no-exact-pool", so a
+   *  reader can tell "this card has no comps" from "the engine could not
+   *  finish checking in time" — two different facts that both currently
+   *  render as method: "no-basis". */
+  ladderTimedOut?: boolean;
 }
 
 interface PoolRow {
@@ -359,6 +375,31 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
 
   if (!slug || !slug.startsWith("hiq:")) return noBasis;
 
+  // CF-LADDER-TIME-BUDGET (Fable, 2026-09-12). One wall-clock budget for
+  // this entire ladder walk (see ladderBudget.service.ts for the incident
+  // this answers). A rung that blows its own ceiling, or a walk that
+  // exhausts its total budget, degrades HONESTLY: no-basis with a visible
+  // `ladder-timeout` note, logged per-rung via console.warn, rather than
+  // hanging until the client aborts. `input.ladderBudgetOverride` exists
+  // only for tests that need a tight ceiling to exercise the timeout path
+  // without a real multi-second wait; production never sets it.
+  const ladderBudget = new LadderBudget(input.ladderBudgetOverride ?? DEFAULT_LADDER_BUDGET);
+  const ladderTimeoutResult = (): HobbyIqFmvResult => {
+    console.warn(JSON.stringify({
+      event: "ladder_walk_summary",
+      source: "hobbyIqFmv",
+      slug,
+      outcome: "ladder-timeout",
+      totalElapsedMs: ladderBudget.elapsedMs(),
+      rungTimings: ladderBudget.rungTimings,
+    }));
+    return {
+      ...noBasis,
+      basisNote: `ladder-timeout: the fallback ladder did not settle within its ${ladderBudget.elapsedMs()}ms budget — withheld rather than returning a stale or partial number`,
+      ladderTimedOut: true,
+    };
+  };
+
   // CF-UNIFIED-PRICING-CONVERGE (Drew, 2026-08-04). Portfolio pricing
   // pipeline already bypasses this function via unified early-exit,
   // but external endpoints (/api/compiq/hobbyiq-fmv, /canonical-fmv,
@@ -368,7 +409,12 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
   // fmv = unified.marketValue (trend-lifted current — the ONE number)
   // basisNote carries the math trace. Ladder + composite + rare-card
   // paths below only fire when unified has no data (thin pool).
-  if (input.skipExactPool !== true) try {
+  // CF-LADDER-TIME-BUDGET (Fable, 2026-09-12): timeBox'd for the same
+  // reason as the rare-card-anchor probe below — this runs before the
+  // ladder's own batches and must not be able to defeat the budget on its
+  // own. A timeout here is read the same as "unified had no data": fall
+  // through to the rare-card rung and then the ladder.
+  if (input.skipExactPool !== true && !ladderBudget.isExhausted()) try {
     const { computeUnifiedPrice } = await import("../compiq/unifiedPricing.service.js");
     const gradeCo = typeof input.gradeCompany === "string" && input.gradeCompany.trim().length > 0
       ? input.gradeCompany.trim()
@@ -376,10 +422,15 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
     const gradeVal = typeof input.gradeValue === "number" && Number.isFinite(input.gradeValue)
       ? input.gradeValue
       : null;
-    const u = await computeUnifiedPrice(slug, {
-      hobbyiqCardId: slug,
-      grade: gradeCo ? { company: gradeCo, value: gradeVal } : null,
-    });
+    const unifiedOutcome = await ladderBudget.timeBox(
+      () => computeUnifiedPrice(slug, {
+        hobbyiqCardId: slug,
+        grade: gradeCo ? { company: gradeCo, value: gradeVal } : null,
+      }),
+      "unified-price-early-exit-probe",
+    );
+    if (!unifiedOutcome.ok) throw new Error(`unified-price-early-exit ${unifiedOutcome.reason}`);
+    const u = unifiedOutcome.value;
     // CF-NEVER-A-BARE-MEDIAN (Drew, 2026-08-28). u.fmv is the recency-decayed
     // weighted median -- an INPUT to the projection, never the answer. The
     // doctrine is FMV = projected next sale: marketValue (trend-lifted
@@ -522,11 +573,24 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
   // exact slug and projects forward by the parent pool's delta since
   // that sale. Runs BEFORE the ladder as an early-return when the
   // direct-slug pool is genuinely thin.
-  try {
+  //
+  // CF-LADDER-TIME-BUDGET (Fable, 2026-09-12): this rung runs UNCONDITIONALLY
+  // before the ladder's own batches even start, so it is timeBox'd through
+  // the same budget — a hang here must not be able to defeat the whole
+  // fix by burning the wall clock before the ladder gets a chance to run.
+  if (ladderBudget.isExhausted()) return ladderTimeoutResult();
+  const rareCardOutcome = await ladderBudget.timeBox(async () => {
     const { computeRareCardFmv } = await import("./rareCardFmv.service.js");
-    const rare = await computeRareCardFmv({ hobbyiqCardId: slug });
-    if (rare.qualifies && rare.fmv !== null) {
-      const population = await loadPopulationForSlug(slug).catch(() => null);
+    return computeRareCardFmv({ hobbyiqCardId: slug });
+  }, "rare-card-anchor-probe");
+  try {
+    const rare = rareCardOutcome.ok ? rareCardOutcome.value : null;
+    if (rare && rare.qualifies && rare.fmv !== null) {
+      const population = await withEnrichmentTimeout(
+        loadPopulationForSlug(slug).catch(() => null),
+        ladderBudget.perRungCeilingMs(),
+        null,
+      );
       return {
         slug,
         fmv: rare.fmv,
@@ -569,11 +633,22 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
     }
     // rare.qualifies=false means the pool is NOT thin — normal ladder handles it
   } catch { /* silent-safe — fall through to legacy ladder */ }
+  if (ladderBudget.isExhausted()) return ladderTimeoutResult();
 
   // Fire the population lookup in parallel with the first ladder rung. It
   // reads OUR containers (card_catalog → card_population) so it's cheap;
   // running it concurrently with the pool queries hides its latency.
-  const populationPromise = loadPopulationForSlug(slug).catch(() => null);
+  //
+  // CF-LADDER-TIME-BUDGET: bounded to the same per-rung ceiling. This is a
+  // best-effort ENRICHMENT (a scarcity badge), not a pricing rung, so a
+  // timeout here degrades to `population: null` — never withholds the
+  // price itself — but it is still awaited on every return path below (9
+  // call sites), so an unbounded hang here would defeat the whole budget.
+  const populationPromise = withEnrichmentTimeout(
+    loadPopulationForSlug(slug).catch(() => null),
+    ladderBudget.perRungCeilingMs(),
+    null,
+  );
 
   const maxAgeDays = input.maxAgeDays ?? 180;
   const cutoffIso = new Date(now.getTime() - maxAgeDays * 86_400_000).toISOString();
@@ -740,16 +815,20 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
         cutoffIso, asOfIso,)
     : Promise.resolve<PoolRow[]>([]);
 
-  // Batch 1: at most 3 concurrent — the rungs most likely to answer.
-  const [
-    printRunTaggedIdentityRows,
-    exactSlugRowsAnyGrade,
-    sameIdentityAnyParallelRows,
-  ] = await Promise.all([
-    fetchPrintRunTaggedIdentity(),
-    fetchExactSlugRowsAnyGrade(),
-    fetchSameIdentityAnyParallel(),
+  // Batch 1: at most 3 concurrent — the rungs most likely to answer. Each
+  // fetch is timeBox'd: a rung that blows its own ceiling is treated as
+  // empty (never a confident hit OR a confident miss — see rung 0/1/1.5's
+  // guards below, which all already treat zero rows as "this rung didn't
+  // answer" rather than "this identity has no comps"), and its timing is
+  // logged regardless of outcome.
+  const [batch1a, batch1b, batch1c] = await Promise.all([
+    ladderBudget.timeBox(fetchPrintRunTaggedIdentity, "printrun-tagged-identity"),
+    ladderBudget.timeBox(fetchExactSlugRowsAnyGrade, "exact-slug-any-grade"),
+    ladderBudget.timeBox(fetchSameIdentityAnyParallel, "same-identity-any-parallel"),
   ]);
+  const printRunTaggedIdentityRows = batch1a.ok ? batch1a.value : [];
+  const exactSlugRowsAnyGrade = batch1b.ok ? batch1b.value : [];
+  const sameIdentityAnyParallelRows = batch1c.ok ? batch1c.value : [];
   if (LADDER_BATCH_CONCURRENCY < 3) {
     // Guard for future edits: the batch above is sized to the constant by
     // construction (3 fetches); this branch only exists so a change to
@@ -757,11 +836,27 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
     // loudly in review rather than silently widening the burst again.
     throw new Error("LADDER_BATCH_CONCURRENCY must match batch 1's width (3)");
   }
+  // The whole POINT of a per-rung ceiling is bounded worst-case latency —
+  // if batch 1 alone burned the entire budget (every fetch timed out, or
+  // Cosmos itself is unreachable), there is no honest number this walk can
+  // still produce. Withhold now rather than limping into batch 2/3 with a
+  // budget of ~0ms that would just repeat the same timeout on each of
+  // them, adding wall-clock time for no chance of an answer.
+  if (ladderBudget.isExhausted()) return ladderTimeoutResult();
   // Fired NOW — after batch 1's Cosmos calls have already resolved, not
   // stacked concurrently on top of them — so it overlaps with the rung 0-5
   // DECISION logic below instead of adding 2 more simultaneous sold_comps
   // calls to whatever batch is in flight.
-  const broaderIdentityTrendPromise = fetchBroaderIdentityTrend();
+  //
+  // CF-LADDER-TIME-BUDGET: bounded the same way as populationPromise above
+  // — a best-effort enrichment (the trend note in buildResult's basis
+  // text), awaited unconditionally on every return path, so it must not be
+  // able to hang the whole walk on its own 2 chained sold_comps queries.
+  const broaderIdentityTrendPromise = withEnrichmentTimeout(
+    fetchBroaderIdentityTrend(),
+    ladderBudget.perRungCeilingMs(),
+    null,
+  );
 
   // Batch 2 and the family-baseline fetch (formerly rung 6) are now LAZY —
   // defined here as no-arg functions, only INVOKED (and only then do they
@@ -919,10 +1014,13 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
   // are mutually exclusive in practice (guarded by slugNoPrintRun !== slug
   // and !noPrintRunTagged respectively — a slug either carries a printRun
   // suffix or it doesn't), so this is at most 1 real Cosmos call, never 2.
-  const [crossPrintRunRows, samePrintRunCrossParallelRows] = await Promise.all([
-    fetchCrossPrintRunBatch2(),
-    fetchSamePrintRunCrossParallelBatch2(),
+  if (ladderBudget.isExhausted()) return ladderTimeoutResult();
+  const [batch2a, batch2b] = await Promise.all([
+    ladderBudget.timeBox(fetchCrossPrintRunBatch2, "cross-printrun"),
+    ladderBudget.timeBox(fetchSamePrintRunCrossParallelBatch2, "same-printrun-cross-parallel"),
   ]);
+  const crossPrintRunRows = batch2a.ok ? batch2a.value : [];
+  const samePrintRunCrossParallelRows = batch2b.ok ? batch2b.value : [];
 
   // ─── Rung 2: same identity ignoring printRun ────────────────────────
   // Strip the print-run suffix and match anything with the same
@@ -1068,7 +1166,9 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
   // this rung's cross-variant median is fabrication territory.
   if (!shouldSkipSiblingParallel) {
     // Batch 3 (1 fetch) — only reached when batches 1 and 2 both missed.
-    rows = await fetchFamilyBaseline();
+    if (ladderBudget.isExhausted()) return ladderTimeoutResult();
+    const batch3 = await ladderBudget.timeBox(fetchFamilyBaseline, "family-baseline");
+    rows = batch3.ok ? batch3.value : [];
     if (rows.length > 0) {
       rows = filterByGrade(rows, gradeCompany, gradeValue);
     }
@@ -1245,6 +1345,14 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
   }
 
   const population = await populationPromise;
+  console.warn(JSON.stringify({
+    event: "ladder_walk_summary",
+    source: "hobbyIqFmv",
+    slug,
+    outcome: "no-basis",
+    totalElapsedMs: ladderBudget.elapsedMs(),
+    rungTimings: ladderBudget.rungTimings,
+  }));
   return {
     ...noBasis,
     basisNote: shouldSkipSiblingParallel

@@ -18,6 +18,19 @@ name: Daily Market Signals Refresh
 # dispatched (202 + jobId) and polled via poll-admin-job.cjs, same pattern
 # as the "Warm DailyIQ brief" step in daily-refresh.yml and the nightly
 # sub-raw-inversion scan, rather than held open as one HTTP response.
+#
+# CF-STEPS-DO-NOT-SHARE-FATE (2026-09-12, incident triage). The market-
+# movers steps landed WITHOUT `if: always()` and inherited GitHub Actions'
+# default: a step only runs if every step before it in the SAME JOB
+# succeeded. "Run market signals refresh" is a pre-existing, unrelated lane
+# with its own 12-minute budget that can legitimately fail (exit 5) when
+# sold_comps is under fleet load and the scan does not finish in time — and
+# when it does, both new steps below were silently SKIPPED, so the
+# snapshot was never written even though the workflow "ran" that day. Both
+# now carry `if: always()` so a failure in the unrelated signals lane can
+# never again suppress the movers refresh — each step's own success/
+# failure still determines whether the JOB reports red, so a genuine
+# movers-refresh failure is still visible.
 
 on:
   schedule:
@@ -97,7 +110,12 @@ jobs:
         run: node backend/scripts/refresh-market-signals.cjs
 
       # CF-MARKET-MOVERS-PERSISTED-SNAPSHOT (Fable, 2026-09-12).
+      # `if: always()` — see CF-STEPS-DO-NOT-SHARE-FATE above. Runs even
+      # when the unrelated "Run market signals refresh" step failed. (A
+      # cancelled workflow run still short-circuits before this — always()
+      # only overrides a normal step FAILURE, not a run cancellation.)
       - name: Guard — ADMIN_API_TOKEN present
+        if: always()
         env:
           ADMIN_API_TOKEN: ${{ secrets.ADMIN_API_TOKEN }}
         run: |
@@ -108,6 +126,7 @@ jobs:
           echo "::add-mask::$ADMIN_API_TOKEN"
 
       - name: Refresh market-movers snapshots (dispatch + poll)
+        if: always()
         # Same dispatch+poll shape as "Warm DailyIQ brief" in daily-refresh.yml
         # and the nightly sub-raw-inversion scan: the refresh walks sold_comps
         # once per scheduled shape (see scheduledSnapshotShapes()) and can

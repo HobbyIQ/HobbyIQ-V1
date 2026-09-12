@@ -258,6 +258,36 @@ describe("valueIdentity — no pool at the requested tier", () => {
     expect(v.reason).toBe("no-exact-pool");
     expect(v.gradeCurve.every((e) => e.valueSource === "unavailable")).toBe(true);
   });
+
+  // CF-LADDER-TIME-BUDGET (Fable, 2026-09-12). The ladder did not determine
+  // "no sale" — it was withdrawn before it could finish checking. That is a
+  // narrower, more honest, and more operationally actionable fact than
+  // no-exact-pool (which claims every rung looked and found nothing), so it
+  // gets its OWN reason rather than being folded into no-exact-pool.
+  it("the ladder timing out: null, rung no-basis, reason ladder-timeout — NOT no-exact-pool", async () => {
+    h.catalog.set(EMPTY, identityRow({ setKey: "topps-chrome", setName: "2020 Topps Chrome", printRun: null }));
+    h.rows = [];
+    h.ladder = () => ({
+      slug: EMPTY, fmv: null, compCount: 0, min: null, max: null,
+      breakdown: { bySource: {}, byAutoStyle: { onCard: 0, sticker: 0, unknown: 0 }, byGradeQualifier: {} },
+      trend: { direction: "flat", slopePerMonthPct: 0, method: "none" },
+      recentComps: [],
+      method: "no-basis", rungLabel: "no-basis",
+      basisNote: "ladder-timeout: the fallback ladder did not settle within its 8000ms budget — withheld rather than returning a stale or partial number",
+      confidence: 0,
+      population: null, quality: { score: 0, flaggedCompCount: 0, sources: [] },
+      computedAt: new Date().toISOString(), cachedFrom: "sold_comps",
+      ladderTimedOut: true,
+    });
+    const v = await valueIdentity({ id: EMPTY });
+    expect(v.fairMarketValue).toBeNull();
+    expect(v.rungLabel).toBe("no-basis");
+    expect(v.valueSource).toBe("unavailable");
+    expect(v.reason).toBe("ladder-timeout");
+    expect(v.reason).not.toBe("no-exact-pool");
+    expect(v.basis).toContain("ladder-timeout");
+    expect(v.gradeCurve.every((e) => e.valueSource === "unavailable")).toBe(true);
+  });
 });
 
 describe("valueIdentity — identity", () => {
