@@ -857,6 +857,25 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
     [/(?:^|-)skybox-premium/, "skybox-premium"],
     [/(?:^|-)skybox-molten-metal/, "skybox-molten-metal"],
     [/(?:^|-)skybox/, "skybox"],
+    // CF-A-NAMED-INSERT-SET-IS-ITS-OWN-PRODUCT (Drew, 2026-09-09). Same
+    // principle as CF-UD-INSERT-LINES above and as image variations being
+    // NAMED cards: a named insert set is a product, not a rung of its parent.
+    //
+    // Measured 2026-09-09 (prod card_catalog): the 1996 Metal Universe Heavy
+    // Metal ruling file ingested 10 rows and wrote ZERO under its own key.
+    // `normalizeSetKey("metal-universe-heavy-metal")` returned
+    // "metal-universe", so every row resolved onto a BASE-SET address that
+    // another source already held at higher authority, and all ten were
+    // absorbed as `keptExisting` -- the run counted "10 written" and the
+    // catalog gained nothing. Heavy Metal #2 is Barry Bonds while BASE #2 is
+    // Brady Anderson, so the absorption did not merely lose the insert: it
+    // pointed Bonds's card at Brady Anderson's row and its pool.
+    //
+    // MUST precede the /metal-universe/ family pattern below, exactly as
+    // Black Diamond Rookie Edition precedes its family and Mega Box precedes
+    // /bowman-chrome/. A longer product name always wins over the family
+    // pattern it contains.
+    [/(?:^|-)metal-universe-heavy-metal/, "metal-universe-heavy-metal"],
     [/(?:^|-)metal-universe/, "metal-universe"],
     // CF-VINTAGE-PRODUCT-RULES (Drew, 2026-08-17). Vintage and oddball products
     // that had NO rule, so they slugified year-prefixed and slugGuard correctly
@@ -2200,6 +2219,39 @@ export function computeHobbyIqCardId(components: HobbyIqCardIdComponents): strin
   const isAuto = components.isAuto === true
     || AUTO_ONLY_CARDNUMBER_PREFIX.test(cardNumber);
   let parallelSlug = normalizeParallel(components.parallel);
+  // CF-A-FINEST-TIER-IS-THE-NUMBER (Drew, 2026-09-08/09). Applied at this same
+  // seam, and for the same reason: this is the one place that holds the
+  // normalized parallel, the sport, the year AND the card number together.
+  //
+  // 1997 Topps Finest tiers its BASE set Bronze / Silver / Gold, and the tier
+  // is a property of the CARD NUMBER, not a parallel axis crossed with it.
+  // BCP states it outright: "there are not Bronze, Silver, and Gold versions
+  // of every card in the set... There are no 'Common/Bronze' or
+  // 'Uncommon/Silver' versions of card #342." Each number has exactly ONE
+  // tier, fixed by its range, in both series.
+  //
+  // So a sale titled plain "1997 Finest Refractor #238" names the BRONZE
+  // Refractor -- there is no other Refractor that #238 could be -- and
+  // deriving bare `refractor` splits one card's pool across two addresses.
+  // 555 plain-Refractor rows sat beside the tier-stamped checklist rows in
+  // prod for exactly this reason.
+  //
+  // NARROW BY CONSTRUCTION: baseball, year 1997, topps-finest, a purely
+  // numeric card number inside 1-350, and ONLY the bare `refractor` slug. A
+  // tier already stated is never rewritten; Embossed / Die-Cut / any other
+  // rung is untouched; 1997-98 Topps Finest BASKETBALL is a different sport
+  // and is tiered on its own numbering, so it is excluded by the sport check.
+  if (
+    sport === "baseball" && year === 1997 && baseSetKey === "topps-finest"
+    && parallelSlug === "refractor" && /^\d{1,3}$/.test(cardNumber)
+  ) {
+    const n = Number(cardNumber);
+    const tier = (n >= 1 && n <= 100) || (n >= 176 && n <= 275) ? "bronze"
+      : (n >= 101 && n <= 150) || (n >= 276 && n <= 325) ? "silver"
+      : (n >= 151 && n <= 175) || (n >= 326 && n <= 350) ? "gold"
+      : null;
+    if (tier) parallelSlug = `${tier}-refractor`;
+  }
   // CF-A-FINISH-TOKEN-IS-ONE-TOKEN (Drew, 2026-09-07). THE ONE SEAM.
   //
   // Applied HERE and only here, because this is the one place in the deriver
