@@ -504,6 +504,149 @@ export function hitSearch(query: string): Promise<Record<string, unknown>> {
   return postJson("/api/compiq/search", { query });
 }
 
+// ---------------------------------------------------------------------------
+// Read-path helpers (CF-TIER1-READ-PATHS, 2026-09-12)
+//
+// The five endpoints below (recent-sales, listing-range, market-movers,
+// canonical-fmv, lookup-by-cert) have no live production check today — Tier 1
+// only ever exercised /search and /price-by-id. Their contract differs from
+// postJson()'s in one load-bearing way: a non-2xx status is sometimes the
+// CORRECT, doctrine-compliant answer (canonical-fmv returns 503 when
+// CANONICAL_FMV_ENABLED isn't set; lookup-by-cert returns 200 with
+// success:false on a documented not-found). These helpers therefore return
+// {status, json} instead of throwing on !res.ok, so the case decides what a
+// given status means instead of the helper deciding for it.
+//
+// Per-case latency budget (Fable's directive, 2026-09-11): fail the case
+// above 5s. This is intentionally tighter than CASE_BUDGET_MS (60s), which
+// exists for /search's known prod tail latency. These are simpler reads
+// (point lookups / bounded scans) with no comparable history of a 24s tail,
+// so 5s is the actual spec rather than a borrowed constant.
+export const READ_PATH_BUDGET_MS = 5_000;
+
+export interface ReadPathResult {
+  status: number;
+  json: Record<string, unknown>;
+  ms: number;
+}
+
+async function fetchReadPath(
+  pathName: string,
+  opts: { method?: "GET" | "POST"; body?: Record<string, unknown> } = {}
+): Promise<ReadPathResult> {
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), READ_PATH_BUDGET_MS);
+  const startedMs = Date.now();
+  try {
+    const headers: Record<string, string> = {};
+    if (HARNESS_SESSION_ID) headers["x-session-id"] = HARNESS_SESSION_ID;
+    const method = opts.method ?? "GET";
+    if (method === "POST") headers["Content-Type"] = "application/json";
+    const res = await fetch(`${API_BASE}${pathName}`, {
+      method,
+      headers,
+      body: method === "POST" ? JSON.stringify(opts.body ?? {}) : undefined,
+      signal: ctl.signal,
+    });
+    const ms = Date.now() - startedMs;
+    let json: Record<string, unknown> = {};
+    try {
+      json = (await res.json()) as Record<string, unknown>;
+    } catch {
+      // Non-JSON body (e.g. a bare 5xx from an upstream proxy) — leave {}
+      // so the case's own assertions decide whether that's a failure.
+    }
+    if (res.status === 401 && !HARNESS_SESSION_ID) {
+      throw new Error(
+        `${pathName} returned HTTP 401 because TIER1_HARNESS_SESSION_ID is not set ` +
+          `(GitHub Secret in CI, env var locally). See backend/docs/runbooks/tier1-harness-session.md.`
+      );
+    }
+    return { status: res.status, json, ms };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+export function getReadPath(pathName: string): Promise<ReadPathResult> {
+  return fetchReadPath(pathName, { method: "GET" });
+}
+
+export function postReadPath(
+  pathName: string,
+  body: Record<string, unknown>
+): Promise<ReadPathResult> {
+  return fetchReadPath(pathName, { method: "POST", body });
+}
+
+/** Fails the assertion when a case exceeded the 5s read-path latency budget. */
+export function expectWithinReadBudget(ms: number, label: string): void {
+  expect(
+    ms,
+    `${label} took ${ms}ms, over the ${READ_PATH_BUDGET_MS}ms Tier 1 read-path budget`
+  ).toBeLessThanOrEqual(READ_PATH_BUDGET_MS);
+}
+
+/** True for any 5xx — the one outcome no read-path case may ever accept. */
+export function isServerError(status: number): boolean {
+  return status >= 500 && status < 600;
+}
+
+// ---------------------------------------------------------------------------
+// Read-path result reporting (separate ledger from the CASES/REPORTS above —
+// those are keyed to the 25-case /search+/price-by-id corpus and its
+// snapshot-diff machinery, which read-path cases don't use).
+// ---------------------------------------------------------------------------
+
+export type ReadPathVerdict =
+  | { kind: "ok" }
+  | { kind: "withheld"; reason: string }
+  | { kind: "error"; reason: string };
+
+export interface ReadPathReport {
+  name: string;
+  verdict: ReadPathVerdict;
+  ms: number;
+}
+
+const READ_PATH_REPORTS: ReadPathReport[] = [];
+
+export function recordReadPathResult(r: ReadPathReport): void {
+  READ_PATH_REPORTS.push(r);
+}
+
+export function printReadPathSummary(): void {
+  if (READ_PATH_REPORTS.length === 0) return;
+  // eslint-disable-next-line no-console
+  console.log(`\n══════ Tier 1 Read-Path Summary ══════`);
+  for (const r of READ_PATH_REPORTS) {
+    const verdictStr =
+      r.verdict.kind === "ok"
+        ? "ok"
+        : r.verdict.kind === "withheld"
+          ? `withheld:${r.verdict.reason}`
+          : `error:${r.verdict.reason}`;
+    // eslint-disable-next-line no-console
+    console.log(`  [${verdictStr}] ${r.name} (${r.ms}ms)`);
+  }
+  // eslint-disable-next-line no-console
+  console.log(
+    `  JSON: ${JSON.stringify(
+      READ_PATH_REPORTS.map((r) => ({
+        name: r.name,
+        verdict:
+          r.verdict.kind === "ok"
+            ? "ok"
+            : r.verdict.kind === "withheld"
+              ? `withheld:${r.verdict.reason}`
+              : `error:${r.verdict.reason}`,
+        ms: r.ms,
+      }))
+    )}`
+  );
+  console.log(`═══════════════════════════════════════\n`);
+}
+
 // CF-TIER1-PRICE-BY-ID-FIELD (2026-08-21). This sent `cardHedgeCardId`.
 // The route has never accepted that name — it reads `cardId`, plus legacy
 // `cardsightCardId` for unmigrated iOS clients (CF-CARDID-RENAME,
