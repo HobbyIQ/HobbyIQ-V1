@@ -74,26 +74,55 @@ jobs:
         # CF-A-KILLED-JOB-CANNOT-REPORT-PROGRESS. refresh-market-signals gained
         # the shared clock in the #1944 ratchet's wave 4, and its DEFAULT is
         # sized for the backfill runner's 150-minute step. THIS job has
-        # `timeout-minutes: 30` -- shared with npm ci and a full backend build --
-        # so the default would be a "budget" a whole order of magnitude above
-        # the ceiling it is supposed to stop under, i.e. no budget at all.
+        # `timeout-minutes: 30` -- shared with npm ci, a full backend build,
+        # AND the market-movers snapshot dispatch+poll step below -- so the
+        # default would be a "budget" a whole order of magnitude above the
+        # ceiling it is supposed to stop under, i.e. no budget at all.
         #
-        # 12 minutes leaves the install + build their share and still stops the
-        # lane with time to print its refusal, reconcile and finishLane line
-        # before the 30-minute kill. RESERVE_MS stays at the lane's own default
-        # (one 5,000-row page).
+        # THE ARITHMETIC (2026-09-12, #2080). Measured against the 30-minute
+        # job ceiling, from run 34699396520:
+        #
+        #   checkout + setup-node + npm ci + build + azure login + fetch CS
+        #                                                        ~1 minute
+        #   this step (RUN_MINUTES)                             <= 20 minutes
+        #   market-movers snapshot dispatch+poll                 ~5.5 minutes
+        #   -------------------------------------------------------------
+        #   worst case                                          ~26.5 minutes
+        #
+        # leaving ~3.5 minutes of margin under the 30-minute kill for
+        # variance in the setup steps and the poll's own overhead. 20 minutes
+        # replaces the original 12: run 34688789170 (2026-09-12) measured
+        # 7,697 rows/s over a 5.3M-row scan and needed ~11.5 minutes for the
+        # scan alone plus ~90s for the emit loop -- ~13 minutes total, no
+        # longer inside a 12-minute budget, and sold_comps grows daily. 20
+        # minutes covers that need with real margin rather than clearing it
+        # by luck on the RU-contention of a given night.
+        #
+        # THE RESUMABLE CURSOR (#2080) IS THE SAFETY NET, NOT THE FIX FOR
+        # THIS. refresh-market-signals.cjs now persists a scan continuation
+        # token (crawl_state, chunked, <20h old) on a budget stop, so a night
+        # where even 20 minutes is not enough (heavier census-fleet
+        # contention on the shared 10k RU/s, or the pool growing past what
+        # 20 minutes clears) still finishes across this run and the next
+        # scheduled dispatch instead of losing the same race by a wider
+        # margin every day. Raising RUN_MINUTES further from here is the
+        # signal to shrink MARKET_SIGNALS_WINDOW_DAYS instead (scan cost is
+        # roughly linear in the window) -- see the script's own header
+        # comment for that tradeoff -- never to push this step's share past
+        # what the market-movers step and the job's own ceiling can still
+        # absorb.
         #
         # A STOP HERE REFUSES AND EXITS 5, by design: the signals are ratios of
         # medians and counts over the whole window, so a partial scan would
         # publish wrong momentum over the top of right momentum. A red run
-        # saying "the window did not fit in 12 minutes" is the correct outcome
+        # saying "the window did not fit in 20 minutes" is the correct outcome
         # and the signal to widen this job, never to widen the budget past the
         # ceiling.
         env:
           MARKET_SIGNALS_APPLY: "true"
           MARKET_SIGNALS_WINDOW_DAYS: "30"
           MARKET_SIGNALS_MIN_VOLUME: "20"
-          RUN_MINUTES: "12"
+          RUN_MINUTES: "20"
         run: node backend/scripts/refresh-market-signals.cjs
 
       # CF-MARKET-MOVERS-PERSISTED-SNAPSHOT (Fable, 2026-09-12).
