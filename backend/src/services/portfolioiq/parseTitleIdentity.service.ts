@@ -3932,6 +3932,52 @@ export function inferSportFromTitle(title: string, fallback = "baseball"): strin
   // a strong basketball signal by product convention.
   if (/fleer\s+sticker/i.test(t)) return "basketball";
 
+  // CF-HOCKEY-BY-PRODUCT (2026-09-12). Same shape as CF-BASKETBALL-BY-PRODUCT
+  // above, for the eBay write-rate collapse: TCA's eBay feed stopped sending
+  // structured player/year/sport hints on any row (measured 09-10, 0/1000
+  // populated, down from 5.5% on a healthy 08-22 sample), so title text is
+  // now the ONLY signal for a large share of rows, and modern Upper Deck
+  // Hockey titles routinely carry no team name and no "hockey"/"NHL" word at
+  // all — just the insert/product line and a player:
+  //   "2025-26 Upper Deck Series 1 Swagnificent Variations Nikita Zadorov #12"
+  //   "E-18 Timo Meier Encore 2025-26 Upper Deck"
+  //   "467 Marshall Warren Young Guns 2025-26 Upper Deck"
+  // "Young Guns" and "UD Canvas" are Upper Deck's own hockey rookie insert
+  // brands in the MODERN catalog. NOT collision-free across all eras, though:
+  // the tranche-2 sport-segment split list (data/pool-relocations/2026-09-07-
+  // split-identity-sport-segment-51.json) already adjudicated
+  // "1991-92 Upper Deck - Young Guns Vladimir Konstantinov #594 (RC)" to
+  // hiq:baseball:1991:upper-deck:594:base:no-auto — a checklist-backed 1991
+  // Upper Deck BASEBALL card #594, with the hockey reading unbacked
+  // (self-derived-only). Gated to 2000+ so this rule cannot re-flip that
+  // ruling or any other pre-2000 Upper Deck row: Young Guns/UD Canvas as
+  // hockey-exclusive is unambiguous for the modern catalog this fix targets
+  // (2025-26 product) but not proven back to 1991. A bare "Upper Deck" is
+  // NOT added at all: UD also prints baseball/basketball (SP Authentic,
+  // O-Pee-Chee baseball, etc.), so the brand alone would be a guess.
+  if (/young\s+guns|ud\s+canvas/i.test(t)) {
+    const y = statedYearFromTitle(t);
+    if (y === null || y >= 2000) return "hockey";
+  }
+
+  // CF-A-RESIDUAL-CLASS-CENSUS (2026-09-12 follow-up). A live 1,000-row
+  // 2026-09-10 eBay sample classified through this same title-only path put
+  // 55 of 325 sportUnresolved rows on modern (2025-26) Upper Deck hockey
+  // titles naming an insert line this function doesn't yet know (Encore, SP
+  // Authentic, O-Pee-Chee, Ultimate Collection, Black Diamond, Allure,
+  // SPX...). "Encore" looked like the safest single addition — Upper Deck's
+  // current (2024-25/2025-26) Encore is hockey-only — but is DELIBERATELY
+  // NOT added: `splitIdentitySportSegmentTranche2.test.ts` caught a real
+  // collision this fix would have re-flipped, "2000 Upper Deck Encore #254
+  // Tom Brady Patriots RC" — Encore was a genuine multi-sport line (baseball,
+  // basketball, football all shipped Encore products) circa 1999-2001, and
+  // #254 is a checklist-backed BASEBALL card (data/pool-relocations/2026-09-
+  // 07-split-identity-sport-segment-49.json), not football, let alone hockey.
+  // A year gate does not fix this without researching exactly when Encore
+  // stopped being multi-sport (unresearched, so not done here — see the PR
+  // backlog). Every name in this list needs the same per-name history check
+  // #2084 did for Young Guns/UD Canvas before it can be added safely.
+
   // CF-SPORT-TEAM-OVERMATCH (Drew, 2026-08-15). TCG/non-sport detection
   // used to sit BELOW the team-name heuristics. A title literally
   // reading "2025 Pokemon Mega Evolution Phantasmal Flames" therefore
