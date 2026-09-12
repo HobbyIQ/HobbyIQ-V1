@@ -63,6 +63,11 @@ function shimPath(opts: {
    *  prove a report-write failure keeps a resumable cursor rather than
    *  forcing a full re-scan on retry. */
   failReportWriteTimes?: number;
+  /** Make sold_comps' fetchNext() throw a Cosmos 429 shape this many times
+   *  (shared across process invocations via the sink file) before serving
+   *  rows normally, to prove a rate-limited page read stops the sweep like a
+   *  budget stop rather than escaping to the outer .catch as a hard crash. */
+  fail429Times?: number;
 }): string {
   const p = path.join(tmp, `shim-${Math.random().toString(36).slice(2)}.cjs`);
   fs.writeFileSync(p, `
@@ -75,6 +80,7 @@ const BASELINE_ROWS = ${JSON.stringify(opts.baselineRows)};
 const SLOW_AFTER_UNIT = ${JSON.stringify(opts.slowAfterUnit ?? 999999)};
 const SLEEP_MS = ${JSON.stringify(opts.sleepMs ?? 0)};
 const FAIL_REPORT_WRITE_TIMES = ${JSON.stringify(opts.failReportWriteTimes ?? 0)};
+const FAIL_429_TIMES = ${JSON.stringify(opts.fail429Times ?? 0)};
 
 function readSink() {
   try { return JSON.parse(fs.readFileSync(SINK, "utf8")); }
@@ -139,6 +145,17 @@ const stub = {
                   return {
                     hasMoreResults() { return !served; },
                     async fetchNext() {
+                      if (FAIL_429_TIMES > 0) {
+                        const s = readSink();
+                        const usedSoFar = s.rateLimitFailuresUsed || 0;
+                        if (usedSoFar < FAIL_429_TIMES) {
+                          s.rateLimitFailuresUsed = usedSoFar + 1;
+                          writeSink(s);
+                          const e = new Error("ErrorResponse: The request rate is too large. Please retry after sometime. Learn more: http://aka.ms/cosmosdb-error-429");
+                          e.code = 429;
+                          throw e;
+                        }
+                      }
                       served = true;
                       if (unitsQueried > SLOW_AFTER_UNIT && SLEEP_MS > 0) sleepSync(SLEEP_MS);
                       return { resources: rows };
@@ -258,6 +275,7 @@ function run(opts: {
   slowAfterUnit?: number;
   sleepMs?: number;
   failReportWriteTimes?: number;
+  fail429Times?: number;
 }) {
   const shim = shimPath({
     sinkPath: opts.sinkPath,
@@ -266,6 +284,7 @@ function run(opts: {
     slowAfterUnit: opts.slowAfterUnit,
     sleepMs: opts.sleepMs,
     failReportWriteTimes: opts.failReportWriteTimes,
+    fail429Times: opts.fail429Times,
   });
   // spawnSync (not execFileSync) so stderr is captured on the SUCCESS path
   // too -- the lane writes its "ERR writing anomaly report" line via
@@ -449,6 +468,113 @@ describe("anomaly-force-scan — a budget stop leaves a resumable cursor, not a 
     expect(second.sink.control["anomaly-force-scan::cursor"]).toBeUndefined();
     const rec2 = second.reconcile.at(-1);
     expect(rec2).toMatchObject({ job: "anomaly-force-scan", intended: 1, written: 1, failed: 0 });
+  });
+});
+
+describe("anomaly-force-scan — a Cosmos 429 is a backoff, not a crash", () => {
+  // CF-CLEANLINESS-ANOMALY-BUDGET follow-up (2026-09-12). Run 34669670351 --
+  // the first real dispatch of this lane the night after it merged -- read
+  // 400/805 units clean, then a bare `await iter.fetchNext()` let a Cosmos
+  // 429 escape uncaught straight to main()'s outer .catch, which called
+  // finishLane(1, ...): the SAME exit code and the SAME absence of a
+  // "stopped at the .*budget" marker as a genuine defect, so
+  // relaunch-on-marker withheld the re-dispatch and killed the whole chain.
+  // These two pins are the fix: a transient throttle rides out the
+  // in-process backoff invisibly, and a sustained one stops the sweep
+  // through the SAME cursor-write + budget-marker path a clock exhaustion
+  // uses, rather than crashing the process.
+
+  it("a transient 429 (fewer failures than the backoff budget) is absorbed silently -- the sweep still finishes", () => {
+    const sinkPath = path.join(tmp, `sink-${Math.random().toString(36).slice(2)}.json`);
+    const result = run({
+      sinkPath,
+      soldComps: [EARLY_ROW],
+      baselineRows: BASELINE,
+      env: { RUN_MINUTES: "30", ANOMALY_SCAN_429_BACKOFF_MS: "1,1,1" },
+      fail429Times: 2, // fewer than the 3 backoff slots above
+    });
+
+    expect(result.out).toMatch(/Cosmos 429 on this page -- backing off/);
+    expect(result.code).toBe(0);
+    expect(result.out).toMatch(/units scanned this run: \d/);
+    expect(Object.keys(result.sink.reports)).toHaveLength(1);
+    // No budget-stop banner: this run finished the whole sweep despite the
+    // transient throttle, so relaunch-on-marker's outcome (b) applies, not (a).
+    expect(result.out).not.toMatch(/stopped at the .*budget/);
+    const rec = result.reconcile.at(-1);
+    expect(rec).toMatchObject({ job: "anomaly-force-scan", intended: 1, written: 1, failed: 0 });
+  });
+
+  it("a 429 that outlives the backoff budget stops the sweep like a budget stop -- cursor written, marker printed, exit 5, NOT a crash", () => {
+    const sinkPath = path.join(tmp, `sink-${Math.random().toString(36).slice(2)}.json`);
+    const result = run({
+      sinkPath,
+      soldComps: [EARLY_ROW],
+      baselineRows: BASELINE,
+      env: { RUN_MINUTES: "30", ANOMALY_SCAN_429_BACKOFF_MS: "1,1,1" },
+      fail429Times: 10, // more than the 3 backoff slots above -- every retry fails
+    });
+
+    // This is the exact regression: before the fix, this shape produced
+    // `finishLane: exiting code 1` with no budget marker at all (a hard
+    // crash relaunch-on-marker refuses to re-dispatch). Now it must look
+    // EXACTLY like a clock-exhaustion stop: same marker, same exit code,
+    // same cursor write, so the existing relaunch contract (which already
+    // re-dispatches on this marker) picks it up with no new grep pattern.
+    expect(result.out).toMatch(/stopped at the .*budget/);
+    expect(result.out).toMatch(/Cosmos 429 throttling on sold_comps/);
+    expect(result.out).toMatch(/REFUSING TO WRITE THE ANOMALY REPORT/);
+    expect(result.code).toBe(5); // a REFUSAL/backoff verdict, not exit 1
+    expect(Object.keys(result.sink.reports)).toHaveLength(0);
+    const cursor = result.sink.control["anomaly-force-scan::cursor"];
+    expect(cursor).toBeTruthy();
+    expect(cursor.nextUnitIndex).toBe(0); // the FIRST unit never finished -- resumed from here, not past it
+    const rec = result.reconcile.at(-1);
+    expect(rec).toMatchObject({ job: "anomaly-force-scan", intended: 0, written: 0 });
+  });
+
+  it("a NON-retryable Cosmos error still propagates and hard-fails the run -- 429 handling is not a blanket catch-and-continue", () => {
+    const sinkPath = path.join(tmp, `sink-${Math.random().toString(36).slice(2)}.json`);
+    // A shim that throws a non-429 error on the very first fetchNext, via the
+    // same fail429Times mechanism repurposed with a distinguishable message
+    // is not available directly -- instead this drives the real distinction
+    // through isRetryableCosmosError by asserting the OTHER two tests' 429
+    // path is code-429-specific: a plain thrown Error with no code/429 text
+    // must still exit non-zero WITHOUT the budget marker or a written cursor,
+    // proving the retry/backoff branch does not swallow arbitrary exceptions.
+    const shim = shimPath({
+      sinkPath,
+      soldComps: [EARLY_ROW],
+      baselineRows: BASELINE,
+    });
+    const badShimPath = shim.replace(/\.cjs$/, "-bad.cjs");
+    const src = fs.readFileSync(shim, "utf8").replace(
+      "served = true;\n                      if (unitsQueried > SLOW_AFTER_UNIT && SLEEP_MS > 0) sleepSync(SLEEP_MS);\n                      return { resources: rows };",
+      "throw new Error(\"boom: not a rate limit\");",
+    );
+    fs.writeFileSync(badShimPath, src);
+
+    const r = spawnSync(process.execPath, [script], {
+      cwd: backend,
+      env: {
+        PATH: process.env.PATH ?? "",
+        SystemRoot: process.env.SystemRoot ?? "",
+        NODE_OPTIONS: `--require ${JSON.stringify(badShimPath).slice(1, -1)}`,
+        COSMOS_CONNECTION_STRING: "AccountEndpoint=https://stub/;AccountKey=c3R1Yg==;",
+        BACKFILL_APPLY: "true",
+        RUN_MINUTES: "30",
+      },
+      encoding: "utf8",
+      timeout: 60_000,
+    });
+
+    const out = String(r.stdout ?? "") + String(r.stderr ?? "");
+    expect(out).toMatch(/boom: not a rate limit/);
+    expect(out).not.toMatch(/stopped at the .*budget/);
+    expect(r.status).not.toBe(0);
+    expect(r.status).not.toBe(5);
+    const sink = readSink(sinkPath);
+    expect(sink.control["anomaly-force-scan::cursor"]).toBeUndefined();
   });
 });
 

@@ -1,0 +1,28 @@
+{
+ "generatedAt": "2026-09-12T12:59:03.000Z",
+ "forLane": "relocate-pool-rows-by-list",
+ "issue": "bowman-chrome-2026-phantom-parallels-0912",
+ "reportOnlyUntil": "Drew's review -- no apply is authorized by this PR",
+ "finding": "CF-A-GENERIC-LADDER-IS-NOT-A-CHECKLIST (Drew, 2026-09-12 widget ruling). backend/data/checklists/hand-fetched/parallels-2026-bowman-chrome-baseball.json (source baseballcardpedia+observed-sold-comps) was applied mechanically to every CPA-* card number under bowman-chrome, minting card_catalog rows (source \"checklist\") for numbers that exist ONLY in the 2026 BOWMAN (paper) product's own checklist (backend/data/checklists/scraped/2026-bowman-full.csv) -- never in 2026 Bowman Chrome's own checklist (backend/data/checklists/scraped/2026-bowman-chrome.csv). Bowman vs Bowman Chrome are DIFFERENT cards (project_bowman_setkey_taxonomy); no synthetic parallels -- every row traces to a scraped source. Census (read-only, 2026-09-12): 79 CPA-* card numbers exist only in the Bowman paper checklist (excluding the 8 numbers -- CPA-AG, BC, DF, EM, HL, JS, LA, WA -- that are legitimate DIFFERENT-player cards in both products per Drew's ruling, and CPA-MG, already handled by the separate #2060/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json lane). Of the resulting 27 bowman-chrome CPA catalog rows scanned for these phantom numbers, one (CPA-VF black-white-red-ink) is EXCLUDED as the 08-30 Red Ink ruling's scope (owned by data/pool-relocations/2026-09-12-figueroa-red-ink-twin-fold.json + data/catalog-relocations/2026-09-12-figueroa-red-ink-twin-retire.json, already merged/PR'd separately) -- leaving 26 phantom-in-chrome catalog rows. Of those 26, exactly ONE carries a sold_comps sale on either address (cardId partition read + hobbyiqCardId filtered query, both counted): this one, CPA-EHA PackFractor /89.",
+ "rulings": [
+  "CF-THE-CHECKLIST-DECIDES-THE-PRODUCT, NEVER MINT FROM A SALE. This sale's title ('2026 1st Bowman Chrome Ethan Holliday PackFractor Auto /89 Rockies SSP') states the Bowman Chrome product and PackFractor parallel, matching its current (phantom) address exactly -- but no hiq:baseball:2026:bowman:cpa-eha:packfractor:auto:num-89 checklist row exists in card_catalog (point-read confirmed 2026-09-12; the only Bowman CPA-EHA rows on this number's family are Refractor-ladder variants -- Refractor, Yellow, Orange, Orange X-Fractor, Blue, Blue X-Fractor, Green, Purple, Gold, Gold Lava, Superfractor, Speckle, Mini-Diamond, Platinum, Red, Red Lava, HTA Choice, Aqua, Black & White Shimmer, plus flavour-text refractors -- none named PackFractor). CPA-EHA's Bowman checklist entry sits in the plain 'Chrome Prospect Autographs' section (no parallel column; see manifest), which is a SEPARATE section from 'Chrome Prospect Packfractor Autographs' (its own 39-card section with its own numbering) -- so a PackFractor parallel for this exact player+number is a genuine gap in the acquired Bowman checklist, not a card that does not exist. Absent beats wrong: this sale PARKS rather than relocating to a row nothing attests, per the pool lane's own park-when-no-checklist-destination contract (CF-A-WHOLE-SCOPE-WRITE-REFUSES-WITHOUT-ITS-SCOPE, ELSE branch, as used in 2026-09-12-figueroa-red-ink-twin-fold.json Row 2).",
+  "This is a CHECKLIST GAP, not a retire-only cleanup: the 2026 Bowman CPA PackFractor Autographs section (39 cards per the acquired 2026-bowman-full.csv sectionsReport) needs its own per-number acquisition pass before this sale (and any sibling PackFractor CPA sales sharing the same defect) can resolve to a real Bowman address. Flagged for the acquisition queue rather than guessed.",
+  "The phantom catalog row this sale currently sits on (hiq:baseball:2026:bowman-chrome:cpa-eha:packfractor:auto:num-89) is retired in the paired catalog list (data/catalog-relocations/2026-09-12-bowman-chrome-cpa-phantom-parallels-retire.json) ONLY AFTER this park has applied and salesAt reads 0 -- the same two-list ordering data/pool-relocations/2026-09-12-figueroa-red-ink-twin-fold.json used with its catalog retire twin.",
+  "The 25 other phantom rows in the paired catalog retire list carry ZERO sold_comps rows on either address (cardId partition read + hobbyiqCardId filtered query, both confirmed 2026-09-12) and need no pool-side action at all -- they are not listed here."
+ ],
+ "census": {
+  "phantomCatalogRowsInScope": 26,
+  "rowsWithSales": 1,
+  "salesParked": 1,
+  "rowsWithZeroSales": 25
+ },
+ "entries": [
+  {
+   "id": "tca-ebay::366600338471",
+   "fromCardId": "hiq:baseball:2026:bowman-chrome:cpa-eha:packfractor:auto:num-89",
+   "parkIdentityUnverified": true,
+   "price": 695,
+   "evidence": "title=\"2026 1st Bowman Chrome Ethan Holliday PackFractor Auto /89 Rockies SSP\" -- states Bowman Chrome + PackFractor, matching its current (phantom) address, but hiq:baseball:2026:bowman-chrome:cpa-eha:packfractor:auto:num-89 is a mechanically-minted row from the generic parallel ladder for a card number (CPA-EHA) that exists only in the 2026 Bowman (paper) checklist, never in 2026 Bowman Chrome's own checklist. No hiq:baseball:2026:bowman:cpa-eha:packfractor:auto:num-89 checklist row exists in card_catalog to relocate to (point-read 2026-09-12) -- the Bowman CPA PackFractor Autographs section is a checklist gap for this player+number. PARK rather than mint an identity from a sale or repoint to an unattested address."
+  }
+ ]
+}
