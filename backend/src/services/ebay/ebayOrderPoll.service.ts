@@ -86,6 +86,16 @@ const EBAY_API_BASE = SANDBOX ? "https://api.sandbox.ebay.com" : "https://api.eb
 const OVERLAP_BACK_WALK_MS = 60 * 60 * 1000;     // 1h query-window overlap
 const PAGE_LIMIT = 50;                            // getOrders limit per page
 const MAX_PAGES = 20;                             // safety cap (50 × 20 = 1000 orders / poll)
+/**
+ * FETCH TIMEOUT (2026-09-12, follow-up to PR #2072's deal-scanner-silent
+ * fix). defaultFetchPage had no AbortSignal, unlike the codebase's
+ * AbortSignal.timeout convention (cardhedge.client.ts's DEFAULT_TIMEOUT_MS).
+ * A stalled connection here would hang pollEbayOrdersForUser's page loop
+ * exactly like the deal scanner's stalled listing search hung its cycle —
+ * and this poll is what turns a sale into a pool row + a marked-sold
+ * holding, so a hang here is launch-relevant the same way.
+ */
+const FETCH_TIMEOUT_MS = 20_000;
 
 interface EbayOrderLineItem {
   lineItemId?: string;
@@ -191,6 +201,7 @@ async function defaultFetchPage(url: string, accessToken: string): Promise<EbayG
       Accept: "application/json",
       "X-EBAY-C-MARKETPLACE-ID": "EBAY_US",
     },
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
   });
   if (!r.ok) {
     const body = await r.text().catch(() => "");
@@ -709,4 +720,14 @@ export const __ebayOrderPollInternals = {
   resetResolveIdentityImpl(): void {
     _resolveIdentityImpl = resolveEbaySaleIdentity;
   },
+  /**
+   * The REAL page-fetch impl (not the swappable `_fetchPageImpl` seam).
+   * Exposed only so a test can stub global fetch and pin that this function
+   * itself — the one that actually talks to eBay — carries the timeout
+   * signal (2026-09-12, PR #2072 follow-up). Every other test in this file
+   * uses setFetchPageImpl instead, deliberately, to avoid stubbing global
+   * fetch; this export exists for the one test that needs to look past that
+   * seam at what defaultFetchPage does.
+   */
+  defaultFetchPage,
 };

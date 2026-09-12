@@ -29,6 +29,18 @@ function browseApiBase(): string {
     : BROWSE_API_BASE_SANDBOX;
 }
 
+/**
+ * FETCH TIMEOUT (2026-09-12, follow-up to PR #2072's deal-scanner-silent
+ * fix). This fetch had no AbortSignal, unlike the codebase's
+ * AbortSignal.timeout convention (cardhedge.client.ts's DEFAULT_TIMEOUT_MS).
+ * fetchEbayItemDetails / fetchEbayItemDetailsBatch run the Browse
+ * enrichment pass inside the eBay purchase-import flow (holding creation
+ * from purchases) — a stalled connection here would hang enrichment for
+ * every remaining item in the batch exactly like the deal scanner's stalled
+ * listing search hung its cycle.
+ */
+const FETCH_TIMEOUT_MS = 20_000;
+
 // ─── Return shape (normalized) ─────────────────────────────────────────────
 
 export interface EbayItemDetails {
@@ -88,6 +100,7 @@ export async function fetchEbayItemDetails(
       "X-EBAY-C-MARKETPLACE-ID": "EBAY_US",
       Accept: "application/json",
     },
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
   });
   if (res.status === 404) return null;
   if (!res.ok) {

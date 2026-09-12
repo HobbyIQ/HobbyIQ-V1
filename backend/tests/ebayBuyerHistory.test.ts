@@ -201,3 +201,46 @@ describe("fetchEbayBuyerHistory — XML parse", () => {
     expect(result.purchases[0].totalCost).toBe(60);
   });
 });
+
+// CF-EBAY-FETCH-TIMEOUTS (2026-09-12, follow-up to PR #2072's
+// deal-scanner-silent fix). fetchEbayBuyerHistory's fetch had no
+// AbortSignal, unlike the codebase's AbortSignal.timeout convention. A
+// stalled Trading API connection would hang the import request the same way
+// the deal scanner's stalled listing search hung its cycle.
+describe("fetchEbayBuyerHistory — fetch timeout", () => {
+  it("passes an AbortSignal to fetch", async () => {
+    vi.doMock("../src/services/ebay/ebayAuth.service.js", async (orig) => {
+      const actual = await orig<any>();
+      return { ...actual, getAccessToken: async () => "mock-token" };
+    });
+    const fetchStub = vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      text: async () => `<?xml version="1.0" encoding="utf-8"?>
+<GetMyeBayBuyingResponse xmlns="urn:ebay:apis:eBLBaseComponents">
+  <Ack>Success</Ack>
+  <WonList></WonList>
+</GetMyeBayBuyingResponse>`,
+    }));
+    vi.stubGlobal("fetch", fetchStub);
+
+    const { fetchEbayBuyerHistory } = await import("../src/services/ebay/ebayBuyerHistory.service.js");
+    await fetchEbayBuyerHistory("test-user", 30);
+    expect(fetchStub).toHaveBeenCalledTimes(1);
+    const [, init] = fetchStub.mock.calls[0] as [string, RequestInit];
+    expect(init.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it("an abort/timeout error propagates the same way any other thrown network error already does", async () => {
+    vi.doMock("../src/services/ebay/ebayAuth.service.js", async (orig) => {
+      const actual = await orig<any>();
+      return { ...actual, getAccessToken: async () => "mock-token" };
+    });
+    vi.stubGlobal("fetch", vi.fn(async () => {
+      throw new DOMException("The operation was aborted.", "TimeoutError");
+    }));
+
+    const { fetchEbayBuyerHistory } = await import("../src/services/ebay/ebayBuyerHistory.service.js");
+    await expect(fetchEbayBuyerHistory("test-user", 30)).rejects.toThrow();
+  });
+});
