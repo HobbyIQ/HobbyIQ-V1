@@ -9,6 +9,21 @@
 // Uses the same OAuth token as GetMyeBayBuying — no new scope required.
 // Rate: eBay Browse tier = 5000 calls/day free. Daily player snapshots
 // stay well within budget (top-500 players × 1 call each per day).
+//
+// FETCH TIMEOUT (2026-09-12, incident: BuyerIQ deal scanner silent from
+// 07:37Z). Neither fetch() call in this file carried an AbortSignal, unlike
+// every other fetch in the backend (see cardhedge.client.ts's
+// DEFAULT_TIMEOUT_MS / AbortSignal.timeout convention). runBuyerIqDealScan
+// awaits fetchCardActiveListings() synchronously, once per target, inside a
+// plain for-loop with no cycle-level deadline. A single stalled TCP
+// connection to eBay Browse (a hang, not an HTTP error — those already
+// resolve the promise and are handled) therefore parks the await forever:
+// tick() never returns, _running never clears, and the Redis single-flight
+// lease (capped at 15 min, see _singleFlight.ts) simply gets re-acquired by
+// the next tick, which hangs on the same call again. The heartbeat doc is
+// written from emitSummary() at the END of a cycle, so a cycle that never
+// ends never reports — indistinguishable from silence. Every fetch below
+// now carries the same AbortSignal.timeout the rest of the codebase uses.
 
 import { getAccessToken } from "./ebayAuth.service.js";
 import {
@@ -18,6 +33,9 @@ import {
 
 const BROWSE_API_BASE_PROD = "https://api.ebay.com/buy/browse/v1";
 const BROWSE_API_BASE_SANDBOX = "https://api.sandbox.ebay.com/buy/browse/v1";
+/** Same ceiling cardhedge.client.ts uses for an external API call. A hung
+ *  TCP connection must not be able to wedge a scheduled job forever. */
+const FETCH_TIMEOUT_MS = 20_000;
 
 function browseApiBase(): string {
   return (process.env.EBAY_ENV ?? "sandbox") === "production"
@@ -85,6 +103,7 @@ export async function fetchPlayerListingsSummary(
         "X-EBAY-C-MARKETPLACE-ID": "EBAY_US",
         Accept: "application/json",
       },
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     });
 
   try {
@@ -242,6 +261,7 @@ export async function fetchCardActiveListings(
         "X-EBAY-C-MARKETPLACE-ID": "EBAY_US",
         Accept: "application/json",
       },
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     });
 
   try {
