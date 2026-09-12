@@ -1,0 +1,20 @@
+{
+ "generatedAt": "2026-09-12T03:11:04.012Z",
+ "forLane": "relocate-catalog-rows-by-list",
+ "applyOrder": "2 of 2 — RUNS SECOND. data/pool-relocations/2026-09-12-figueroa-red-ink-twin-fold.json MUST have applied first. This retire DELETES the self-derived row; if it ran first, the RELOCATE entry's evidence review (this row currently holds the 2 sales) would apply against a row already gone, and any later read of the row for audit would 404 before the fold's own outcome was verified.",
+ "reportOnlyUntil": "Drew's review — no apply is authorized by this PR",
+ "finding": "CF-SELF-COMP-PUBLISH-LABELLED + doctrine (2026-08-30 ruling, Red Ink is its own card): the self-derived catalog row hiq:baseball:2026:bowman-chrome:cpa-vf:black-white-red-ink-refractor:auto (source user-verified, minted from Drew's own eBay purchase listing) is a KEY-SPELLING TWIN of the checklist-backed row hiq:baseball:2026:bowman-chrome:cpa-vf:black-white-red-ink:auto (source checklist-drew-ruling-2026-08-30-red-ink). Per 'Self-comps publish labeled' and R22 (key-spelling twins fold onto the checklist key): retire where a checklist twin exists. The checklist twin exists (measured read-only 2026-09-12: card_catalog holds it, source checklist-drew-ruling-2026-08-30-red-ink, player Victor Figueroa). This retire runs ONLY after data/pool-relocations/2026-09-12-figueroa-red-ink-twin-fold.json has moved BOTH sales off this row (one RELOCATE onto the checklist row, one PARK in place) — the pool lane's own precondition for a safe retire is that the row's sale count is verifiably 0 before the row is deleted, so a fresh read-only recount of sold_comps against this cardId MUST show 0 immediately before this list is dispatched.",
+ "rulings": [
+  "CF-A-FOLD-NEVER-CHANGES-THE-PLAYER: both rows name Victor Figueroa; this is a pure key-spelling fold onto an EXISTING checklist row for the same player and the same card, not a cross-player merge.",
+  "THE SELF-DERIVED ROW STOPS BEING RESOLVABLE THE MOMENT ITS SALES ARE GONE. After the pool fold applies, this row backs zero live sales (the PARKed CardHedge row is identityUnverified and excluded from every pool read; the RELOCATEd purchase now lives under the checklist row). A self-derived, non-checklist row with zero live sales and a checklist twin is exactly the population 'retire where a checklist twin exists' names.",
+  "salesAt (post-fold recount) MUST be 0 before this list is dispatched — the runner operator re-verifies with a fresh read-only query against sold_comps WHERE cardId = 'hiq:baseball:2026:bowman-chrome:cpa-vf:black-white-red-ink-refractor:auto' OR hobbyiqCardId = same, immediately before running this list, per the two-HALT discipline for a delete that follows a write it depends on."
+ ],
+ "entries": [
+  {
+   "id": "hiq:baseball:2026:bowman-chrome:cpa-vf:black-white-red-ink-refractor:auto",
+   "action": "retire",
+   "reason": "Self-derived (source user-verified) key-spelling twin of the checklist-backed hiq:baseball:2026:bowman-chrome:cpa-vf:black-white-red-ink:auto (source checklist-drew-ruling-2026-08-30-red-ink). Both name Victor Figueroa's Black & White Red Ink SSP. R22: a key-spelling twin folds onto the checklist key. Retired ONLY after data/pool-relocations/2026-09-12-figueroa-red-ink-twin-fold.json has emptied its sales (1 RELOCATE onto the checklist row, 1 PARK in place) — salesAt must read 0 immediately before this entry is applied.",
+   "evidence": "card_catalog row hiq:baseball:2026:bowman-chrome:cpa-vf:black-white-red-ink-refractor:auto, source=user-verified, parallel='Black White Red Ink Refractor', player=Victor Figueroa. Twin: hiq:baseball:2026:bowman-chrome:cpa-vf:black-white-red-ink:auto, source=checklist-drew-ruling-2026-08-30-red-ink, parallel='Black & White Red Ink', player=Victor Figueroa. Pre-retire sold_comps count at the self-derived address, measured 2026-09-12 before the fold: 2 (1 title-confirmed Red Ink purchase, 1 title-silent CardHedge base auto wearing the product's label)."
+  }
+ ]
+}
