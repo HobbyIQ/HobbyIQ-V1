@@ -144,6 +144,17 @@ export type ValuationReason =
    *  evidence being absent; it is a statement about evidence being INCOMPLETE,
    *  which is why it withholds instead of falling through the ladder. */
   | "pool-migrating"
+  /** CF-LADDER-TIME-BUDGET (Fable, 2026-09-12). The gated fallback ladder
+   *  did not settle within its wall-clock budget (see
+   *  hobbyIqFmv.service.ts / ladderBudget.service.ts) — a rung, or the
+   *  walk as a whole, was withdrawn before it could answer. This is
+   *  DIFFERENT from "no-exact-pool": that reason means every rung
+   *  answered and found nothing; this one means the engine could not
+   *  finish checking in the time it was given, most likely because
+   *  sold_comps was under RU pressure from concurrent traffic. Doctrine:
+   *  a withheld price is null + a reason, never a slow number and never
+   *  a number invented to answer within budget. */
+  | "ladder-timeout"
   | null;
 
 export interface ValuationIdentity {
@@ -830,6 +841,19 @@ export async function valueIdentity(req: ValuationRequest): Promise<Valuation> {
 
   // ── 4. Nothing — and every route says so the same way ──────────────────
   //
+  // CF-LADDER-TIME-BUDGET (Fable, 2026-09-12). Checked FIRST: a ladder that
+  // timed out did not actually determine "no sale" — it was withdrawn
+  // before it could check every rung. Reporting it as `no-exact-pool`
+  // would claim a certainty (every rung looked and found nothing) the
+  // engine does not have; `ladder-timeout` states the honest, narrower
+  // fact (the engine could not finish checking in time), which is also
+  // the more actionable one operationally — it points at load/latency,
+  // not at data absence.
+  if (fb?.ladderTimedOut) {
+    v.reason = "ladder-timeout";
+    v.basis = fb.basisNote;
+    return v;
+  }
   // A MIGRATING identity that reaches here is the one case where "no sale"
   // must not be reported as such: the pool is not empty, it is INCOMPLETE, and
   // `no-exact-pool` would tell the caller the opposite of the truth — an
