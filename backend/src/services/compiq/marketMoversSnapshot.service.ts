@@ -467,6 +467,106 @@ export async function computeAndPersistMarketMoversSnapshot(
   return { result: computed, persisted };
 }
 
+// CF-COLD-SHAPE-NEVER-HANGS (2026-09-12). The scheduled job (see
+// scheduledSnapshotShapes above) keeps a KNOWN list of shapes warm, but the
+// route's own query params are not restricted to that list — a shape
+// nobody has warmed yet (a coverage gap like the minSales=1 incident, or a
+// caller passing a limit/direction combination the schedule doesn't cover)
+// falls through to computeMarketMovers's live raw scan, which has NO bound
+// of its own and can run for 25s+ under fleet load. That is the exact
+// defect this wraps: a live compute on a genuinely cold shape gets a hard
+// wall-clock ceiling, and a shape that cannot finish in time gets a
+// bounded, HONESTLY LABELLED response — never the unbounded hang.
+//
+// On a timeout, the compute is NOT abandoned: it keeps running in the
+// background (Node cannot cancel an in-flight Cosmos SDK call, same
+// reasoning as ladderBudget.service.ts) and, if it eventually finishes, its
+// result is persisted as a snapshot — so the SAME cold shape served empty
+// this time serves fast from the persisted snapshot on every subsequent
+// request, and the coverage gap heals itself without waiting for the next
+// scheduled refresh.
+const COLD_SHAPE_COMPUTE_BUDGET_MS = 8_000;
+
+export interface BoundedMarketMoversOutcome {
+  result: MarketMoversResult;
+  /** True when the live scan did not finish within the budget — `result`
+   *  is then a bounded, honestly-empty placeholder, never a partial or
+   *  invented scan result. */
+  timedOut: boolean;
+}
+
+export async function computeMarketMoversBounded(
+  params: MarketMoversParams,
+  /** Test-only override of the wall-clock ceiling. Undefined in
+   *  production, where COLD_SHAPE_COMPUTE_BUDGET_MS (8000ms) applies. */
+  budgetMsOverride?: number,
+): Promise<BoundedMarketMoversOutcome | { unavailable: true }> {
+  const startedAtMs = Date.now();
+  const budgetMs = budgetMsOverride ?? COLD_SHAPE_COMPUTE_BUDGET_MS;
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  const timeoutPromise = new Promise<{ timedOut: true }>((resolve) => {
+    timer = setTimeout(() => resolve({ timedOut: true }), budgetMs);
+  });
+
+  // Fire-and-forget: whether this request waits it out or times out, the
+  // computed result (once it lands) is written to the snapshot so the NEXT
+  // request for this shape is a fast point read instead of a repeat scan.
+  const computePromise = computeMarketMovers(params)
+    .then((computed) => {
+      if (!("unavailable" in computed)) {
+        void writeMarketMoversSnapshot(params, computed).catch(() => {});
+      }
+      return computed;
+    })
+    .catch((err) => {
+      console.error(JSON.stringify({
+        event: "market_movers.cold_shape_compute_failed",
+        shape: params,
+        error: (err as Error)?.message ?? String(err),
+      }));
+      return { unavailable: true as const };
+    });
+
+  try {
+    const raced = await Promise.race([
+      computePromise.then((value) => ({ timedOut: false as const, value })),
+      timeoutPromise,
+    ]);
+    const elapsedMs = Date.now() - startedAtMs;
+    if (raced.timedOut) {
+      console.warn(JSON.stringify({
+        event: "market_movers.cold_shape_timed_out",
+        shape: params,
+        budgetMs,
+        elapsedMs,
+        detail: "the live scan did not finish in time; the compute keeps running in the background and will persist a snapshot for the next request",
+      }));
+      return {
+        result: {
+          sport: params.sport,
+          windowDays: params.windowDays,
+          totalSkusInWindow: 0,
+          qualifyingMovers: 0,
+          returned: 0,
+          computedAt: new Date().toISOString(),
+          source: "raw",
+          movers: [],
+        },
+        timedOut: true,
+      };
+    }
+    if ("unavailable" in raced.value) return raced.value;
+    console.warn(JSON.stringify({
+      event: "market_movers.cold_shape_computed_in_time",
+      shape: params,
+      elapsedMs,
+    }));
+    return { result: raced.value, timedOut: false };
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 // CF-SHAPE-COUNT-IS-BOUNDED (per research: sport × window × direction ×
 // limit × minSales is combinatorially large — snapshotting the full
 // product would mean thousands of docs and a scheduled job that never
@@ -478,14 +578,35 @@ export async function computeAndPersistMarketMoversSnapshot(
 // still gets a live compute on a cache/snapshot miss — this list only
 // decides what the BACKGROUND job keeps warm, never what the route can
 // answer.
+//
+// CF-SNAPSHOT-MISS-INCIDENT (2026-09-12). The first deploy of this module
+// shipped ONE minSales value (3, the route's own default) in this list.
+// The Tier 1 harness's OWN market-movers case sends minSales=1 (deliberately
+// — a wider pool "isn't hostage to a quiet week", per that test's own
+// comment) — a shape this list never warmed. The route's read order worked
+// exactly as designed (in-process cache miss -> persisted-snapshot point
+// read miss, 404 in ~50-90ms, confirmed against prod -> live scan), but the
+// live scan itself has no bound, so a genuinely uncovered shape still paid
+// the full unbounded raw-scan cost and timed out at the HARNESS's 25s
+// ceiling. Fixed two ways: (1) widen this list to the minSales values real
+// callers are known to send — 1 (the harness, and the honest floor: "any
+// sale counts") alongside 3 (the route's own default, still the richest
+// signal for a "typical" viewer) — so the coverage gap that caused THIS
+// incident is closed; (2) computeMarketMoversWithBudget below bounds the
+// live-scan path itself, so a FUTURE shape this list still doesn't cover
+// degrades to a bounded, labelled response instead of repeating the same
+// 25s hang under a different combination of query params.
 export const SCHEDULED_SNAPSHOT_SPORTS = ["baseball", "football", "basketball", "hockey"] as const;
 export const SCHEDULED_SNAPSHOT_WINDOWS = [7, 14, 30] as const;
+export const SCHEDULED_SNAPSHOT_MIN_SALES = [1, 3] as const;
 
 export function scheduledSnapshotShapes(): MarketMoversParams[] {
   const shapes: MarketMoversParams[] = [];
   for (const sport of SCHEDULED_SNAPSHOT_SPORTS) {
     for (const windowDays of SCHEDULED_SNAPSHOT_WINDOWS) {
-      shapes.push({ sport, windowDays, direction: "both", limit: 20, minSales: 3 });
+      for (const minSales of SCHEDULED_SNAPSHOT_MIN_SALES) {
+        shapes.push({ sport, windowDays, direction: "both", limit: 20, minSales });
+      }
     }
   }
   return shapes;
