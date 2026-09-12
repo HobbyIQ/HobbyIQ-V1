@@ -158,6 +158,9 @@ describe("cards 3-6 — GATE 2 refuses on a PARALLEL the destination does not sp
    * row or a ruling, never a loosened gate.
    */
   const REFUSALS: [string, Record<string, unknown>, string][] = [
+    // Destination is the B&W Shimmer row, still under bowman-chrome (that
+    // parallel's own product placement is unaffected by the 2026-09-12
+    // product-key correction — only the Red Ink row's product changed).
     ["Figueroa Red Ink -> B&W Shimmer", { parallel: "Black & White Red Ink" },
       "hiq:baseball:2026:bowman-chrome:cpa-vf:black-white-shimmer:auto"],
     ["Judge Class 1 Blue -> Blue", { parallel: "Class 1 Blue" },
@@ -179,11 +182,15 @@ describe("cards 3-6 — GATE 2 refuses on a PARALLEL the destination does not sp
     // The catalog already proves the pair is distinct for a DIFFERENT player:
     // CPA-BA carries BOTH `black-white-red-ink` and `black-white-shimmer`
     // rows from source `checklist`. So the refusal above is not a spelling
-    // problem to fold away — it is a genuinely missing ROW for CPA-VF, which
-    // this PR's drew-ruling file mints (one card, matching CPA-BA's spelling).
+    // problem to fold away — it was a genuinely missing ROW for CPA-VF, which
+    // the drew-ruling file minted (one card, matching CPA-BA's spelling).
+    //
+    // CORRECTED 2026-09-12 (Drew widget ruling): the row's PRODUCT was wrong,
+    // not its parallel identity. It lives at `bowman` now, not
+    // `bowman-chrome` — see figueroaRedInkBowmanChromeToBowman.test.ts.
     expect(droppedSpecificityAxes(
       { parallel: "Black & White Red Ink" },
-      "hiq:baseball:2026:bowman-chrome:cpa-vf:black-white-red-ink:auto",
+      "hiq:baseball:2026:bowman:cpa-vf:black-white-red-ink:auto",
     )).toEqual([]);
   });
 
@@ -214,9 +221,11 @@ describe("cards 3-6 — GATE 2 refuses on a PARALLEL the destination does not sp
     // `&` — slugify strips it — so the claim could not appear in ANY
     // destination and the refusal was unconditional rather than a judgement.
     // Drew's 9f082213 is the live case: it was refused against its own row.
+    // Destination is the CORRECTED (2026-09-12) bowman address; the parallel
+    // grammar this pin exercises is unaffected by which product the row is in.
     const claim = { parallel: "Black & White Red Ink" };
     expect(droppedSpecificityAxes(claim,
-      "hiq:baseball:2026:bowman-chrome:cpa-vf:black-white-red-ink:auto")).toEqual([]);
+      "hiq:baseball:2026:bowman:cpa-vf:black-white-red-ink:auto")).toEqual([]);
     // ...and the same slugification must not make it match a DIFFERENT rung.
     expect(droppedSpecificityAxes(claim,
       "hiq:baseball:2026:bowman-chrome:cpa-vf:black-white-shimmer:auto")).toEqual(["parallel"]);
@@ -235,12 +244,13 @@ describe("cards 3-6 — GATE 2 refuses on a PARALLEL the destination does not sp
   it("MUTATION: reverting GATE 2 to a whitespace-only replace re-breaks the `&` case", () => {
     // The revert stated as its damage. This is the OLD expression; if the gate
     // goes back to it, a punctuated parallel is unmatchable again.
+    // Destination is the CORRECTED (2026-09-12) bowman address.
     const old = (v: string, to: string) => !to.toLowerCase().includes(v.toLowerCase().replace(/\s+/g, "-"));
     expect(old("Black & White Red Ink",
-      "hiq:baseball:2026:bowman-chrome:cpa-vf:black-white-red-ink:auto")).toBe(true); // refuses its OWN row
+      "hiq:baseball:2026:bowman:cpa-vf:black-white-red-ink:auto")).toBe(true); // refuses its OWN row
     // The shipped gate does not.
     expect(droppedSpecificityAxes({ parallel: "Black & White Red Ink" },
-      "hiq:baseball:2026:bowman-chrome:cpa-vf:black-white-red-ink:auto")).toEqual([]);
+      "hiq:baseball:2026:bowman:cpa-vf:black-white-red-ink:auto")).toEqual([]);
   });
 
   it("MUTATION: folding the tier away would fuse Bronze with Gold", () => {
@@ -264,9 +274,14 @@ describe("the drew-ruling row this PR adds", () => {
     expect(existsSync(MANIFEST)).toBe(true);
     const m = JSON.parse(readFileSync(MANIFEST, "utf-8"));
     // READS THE MANIFEST, NOT THE FILENAME (ingest-checklist-csv-to-catalog).
+    // CORRECTED 2026-09-12 (Drew widget ruling): this row was originally
+    // minted under setKey `bowman-chrome`; CPA-VF is a 2026 BOWMAN (paper)
+    // card per data/checklists/scraped/2026-bowman-full.csv, and
+    // 2026-bowman-chrome.csv lists no CPA-VF row at all. See
+    // figueroaRedInkBowmanChromeToBowman.test.ts for the full correction.
     expect(m.sport).toBe("baseball");
     expect(m.year).toBe(2026);
-    expect(m.setKey).toBe("bowman-chrome");
+    expect(m.setKey).toBe("bowman");
     expect(m.parallelColumnAuthoritative).toBe(true);
   });
 
