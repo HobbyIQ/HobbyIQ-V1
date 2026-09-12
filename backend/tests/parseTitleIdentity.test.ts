@@ -935,6 +935,55 @@ describe("inferSetKeyFromTitle + inferSportFromTitle — Fleer Stickers", () => 
   });
 });
 
+// CF-HOCKEY-BY-PRODUCT (2026-09-12). TCA's eBay feed stopped sending
+// structured player/year/sport hints on any row (measured 09-10: 0/1000
+// populated, vs 5.5% on a healthy 08-22 sample) right as #1929
+// (CF-NO-DEFAULT-SPORT) stopped silently defaulting an unresolved vertical
+// to "baseball" — so a title with no explicit sport word and no team name
+// now correctly PARKS instead of being mis-filed, and modern Upper Deck
+// Hockey titles routinely carry neither: just the insert/product line and a
+// player ("467 Marshall Warren Young Guns 2025-26 Upper Deck",
+// "Yaroslav Askarov UD Canvas #C-290 Sharks"). "Young Guns" and "UD Canvas"
+// are Upper Deck's own hockey rookie insert brands in the MODERN catalog —
+// so naming them recovers real signal rather than guessing. A bare
+// "Upper Deck" is deliberately NOT added: UD also prints baseball/basketball,
+// so the brand alone would be a guess.
+//
+// NOT collision-free across every era, though: the tranche-2 sport-segment
+// split list (data/pool-relocations/2026-09-07-split-identity-sport-segment-
+// 51.json) already adjudicated "1991-92 Upper Deck - Young Guns Vladimir
+// Konstantinov #594 (RC)" to hiq:baseball:1991:upper-deck:594:base:no-auto —
+// a checklist-backed 1991 Upper Deck BASEBALL card #594, with the hockey
+// reading unbacked (self-derived-only). Gated to stated year >= 2000 so this
+// rule cannot re-flip that ruling or any other pre-2000 Upper Deck row.
+describe("inferSportFromTitle — Upper Deck hockey-exclusive product lines", () => {
+  it("'Young Guns' with no team name or hockey keyword → hockey", () => {
+    expect(inferSportFromTitle("467 Marshall Warren Young Guns 2025-26 Upper Deck"))
+      .toBe("hockey");
+  });
+  it("'UD Canvas' with no team name or hockey keyword → hockey", () => {
+    expect(inferSportFromTitle("LANE HUTSON 2025-26 Upper Deck Extended Series UD Canvas - #C-289"))
+      .toBe("hockey");
+  });
+  it("'UD Canvas' alongside a team name still resolves hockey", () => {
+    expect(inferSportFromTitle("2025 UPPER DECK EXTENDED Yaroslav Askarov UD Canvas #C-290 Sharks"))
+      .toBe("hockey");
+  });
+  it("guardrail: the adjudicated 1991 Young Guns collision stays OFF this rule (pre-2000, checklist says baseball)", () => {
+    // Must NOT return "hockey" — the checklist-backed ruling for this exact
+    // row is hiq:baseball:1991:upper-deck:594:base:no-auto. This rule staying
+    // silent here does not by itself PROVE baseball (a real sport keyword or
+    // team-name rule elsewhere may still resolve the row); it only pins that
+    // this rule does not re-introduce the collision the tranche-2 list closed.
+    expect(inferSportFromTitle("1991-92 Upper Deck - Young Guns Vladimir Konstantinov #594 (RC)"))
+      .not.toBe("hockey");
+  });
+  it("guardrail: bare 'Upper Deck' with no hockey-exclusive insert stays unresolved (baseball fallback, not a hockey guess)", () => {
+    expect(inferSportFromTitle("2007-08 Upper Deck Series 1 Blaster Box Factory Sealed"))
+      .toBe("baseball");
+  });
+});
+
 // CF-TEAM-NAME-SPORT-HINTS (Drew, 2026-07-29). Recover sport for
 // titles that carry no explicit football/NFL/basketball/NBA keyword
 // but do carry an unambiguous team name.
