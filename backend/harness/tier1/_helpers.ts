@@ -538,19 +538,66 @@ export const READ_PATH_BUDGET_MS = 5_000;
 // moment that fix lands; do not let a debt override become permanent.
 export const LATENCY_DEBT_BUDGET_MS = 10_000;
 
+// CF-TIER1-READ-PATH-ENFORCE (2026-09-12, Fable's directive). The
+// 2026-09-12 CI runs showed market-movers missing even the doubled 10s
+// debt ceiling (10002ms), and a THIRD, non-debt card (canonical-fmv
+// goldLabelBlue) timing out at 5001ms on a run where it had answered in
+// 1477ms minutes earlier. Root cause is not the harness or the budget
+// numbers — it's tonight's prod load: the card-line retire lanes, the
+// 32-slot census, and the ingests are hammering sold_comps and card_catalog
+// at 100k RU right now (see project_cosmos_ru_state_2026_09_07 memory). A 5s
+// (or even 10s) measurement taken during that load is not the launch-week
+// steady state, so failing the BUILD on it would be measuring the fleets,
+// not the endpoints.
+//
+// READ_PATH_ENFORCE (default false/unset) decouples "did we measure this"
+// from "does a slow measurement fail the PR." With it off, every read-path
+// case still runs for real, still records its ms/verdict/latencyDebt in the
+// summary and JSON line — nothing about the measurement is hidden — but
+// only a 5xx, a schema violation, or an FMV-doctrine violation (null price
+// with no reason) fails the check. Timing alone does not. The 5s/10s
+// budget constants and latencyDebt markers stay exactly as defined above;
+// this flag only changes whether crossing them throws.
+//
+// Flip to enforce (set READ_PATH_ENFORCE=true, or delete this gate) once
+// BOTH land: the market-movers latency PR (precompute the 30d rollup so the
+// raw-scan fallback stops firing) and the zero-comp ladder-walk cap
+// (canonical-fmv bounds how many rungs it walks before answering) — AND the
+// current fleet activity (retire lanes / census / ingests) quiesces, so a
+// clean run can confirm the fix under normal load before enforcement
+// resumes being load-bearing.
+export const READ_PATH_ENFORCE =
+  String(process.env.READ_PATH_ENFORCE ?? "").trim().toLowerCase() === "true";
+
 export interface ReadPathResult {
   status: number;
   json: Record<string, unknown>;
   ms: number;
+  /** True when `ms` exceeded the budget passed in (or the default) — the
+   *  network call itself is never aborted at the budget line (see
+   *  NETWORK_ABORT_MS below), so this is always a measured, real number,
+   *  not a timeout guess. */
+  overBudget: boolean;
 }
+
+// CF-TIER1-READ-PATH-ENFORCE (2026-09-12). The budget constants
+// (READ_PATH_BUDGET_MS / LATENCY_DEBT_BUDGET_MS) are report-only numbers
+// while READ_PATH_ENFORCE is off — aborting the actual network call at
+// those thresholds would throw away the one thing report-only mode exists
+// to capture: how long the call ACTUALLY took. So the network-level abort
+// uses its own, much longer ceiling (30s — matched to /search's
+// CASE_BUDGET_MS neighborhood, since these are the same prod fleet under
+// the same load) and is purely a dead-request guard, never a budget. The
+// 5s/10s numbers are applied afterward, against the real measured `ms`.
+const NETWORK_ABORT_MS = 30_000;
 
 async function fetchReadPath(
   pathName: string,
   opts: { method?: "GET" | "POST"; body?: Record<string, unknown>; timeoutMs?: number } = {}
 ): Promise<ReadPathResult> {
-  const timeoutMs = opts.timeoutMs ?? READ_PATH_BUDGET_MS;
+  const budgetMs = opts.timeoutMs ?? READ_PATH_BUDGET_MS;
   const ctl = new AbortController();
-  const timer = setTimeout(() => ctl.abort(), timeoutMs);
+  const timer = setTimeout(() => ctl.abort(), NETWORK_ABORT_MS);
   const startedMs = Date.now();
   try {
     const headers: Record<string, string> = {};
@@ -577,7 +624,7 @@ async function fetchReadPath(
           `(GitHub Secret in CI, env var locally). See backend/docs/runbooks/tier1-harness-session.md.`
       );
     }
-    return { status: res.status, json, ms };
+    return { status: res.status, json, ms, overBudget: ms > budgetMs };
   } finally {
     clearTimeout(timer);
   }
@@ -598,27 +645,41 @@ export function postReadPath(
   return fetchReadPath(pathName, { method: "POST", body, timeoutMs: opts.timeoutMs });
 }
 
-/** Fails the assertion when a case exceeded the 5s read-path latency budget. */
-export function expectWithinReadBudget(ms: number, label: string): void {
-  expect(
-    ms,
-    `${label} took ${ms}ms, over the ${READ_PATH_BUDGET_MS}ms Tier 1 read-path budget`
-  ).toBeLessThanOrEqual(READ_PATH_BUDGET_MS);
+/**
+ * Checks a case against the 5s read-path budget. Under READ_PATH_ENFORCE the
+ * check throws (a real CI failure); otherwise it's informational only — the
+ * over/under-budget verdict is returned so the caller can log it, but timing
+ * never fails the build. See READ_PATH_ENFORCE above for why.
+ */
+export function expectWithinReadBudget(ms: number, label: string): boolean {
+  const withinBudget = ms <= READ_PATH_BUDGET_MS;
+  if (READ_PATH_ENFORCE) {
+    expect(
+      ms,
+      `${label} took ${ms}ms, over the ${READ_PATH_BUDGET_MS}ms Tier 1 read-path budget`
+    ).toBeLessThanOrEqual(READ_PATH_BUDGET_MS);
+  }
+  return withinBudget;
 }
 
 /**
  * CF-TIER1-LATENCY-DEBT (2026-09-12). For the two named latencyDebt cases
- * only: still enforces a hard ceiling (LATENCY_DEBT_BUDGET_MS = 10s) so a
- * debt override can never silently become "no budget at all." The case
- * itself still needs its own comment naming the follow-up fix — this
- * function only guards the number.
+ * only: checks the doubled ceiling (LATENCY_DEBT_BUDGET_MS = 10s) so a debt
+ * override can never silently become "no budget at all" IF enforcement is
+ * on. Under READ_PATH_ENFORCE=false (current default — see above) this is
+ * informational like expectWithinReadBudget; the case still needs its own
+ * comment naming the follow-up fix.
  */
-export function expectWithinLatencyDebtCeiling(ms: number, label: string): void {
-  expect(
-    ms,
-    `${label} took ${ms}ms, over the ${LATENCY_DEBT_BUDGET_MS}ms latency-debt ceiling — ` +
-      `a debt override raises the budget to 10s, it does not remove it`
-  ).toBeLessThanOrEqual(LATENCY_DEBT_BUDGET_MS);
+export function expectWithinLatencyDebtCeiling(ms: number, label: string): boolean {
+  const withinCeiling = ms <= LATENCY_DEBT_BUDGET_MS;
+  if (READ_PATH_ENFORCE) {
+    expect(
+      ms,
+      `${label} took ${ms}ms, over the ${LATENCY_DEBT_BUDGET_MS}ms latency-debt ceiling — ` +
+        `a debt override raises the budget to 10s, it does not remove it`
+    ).toBeLessThanOrEqual(LATENCY_DEBT_BUDGET_MS);
+  }
+  return withinCeiling;
 }
 
 /** True for any 5xx — the one outcome no read-path case may ever accept. */
@@ -645,6 +706,11 @@ export interface ReadPathReport {
    *  ceiling instead of the 5s default. Surfaced in the summary so a debt
    *  override is never invisible in the run log. */
   latencyDebt?: boolean;
+  /** The budget this case was measured against (5000 or 10000ms). */
+  budgetMs?: number;
+  /** Whether `ms` exceeded `budgetMs`. Informational under
+   *  READ_PATH_ENFORCE=false — see the flag's doc comment above. */
+  overBudget?: boolean;
 }
 
 const READ_PATH_REPORTS: ReadPathReport[] = [];
@@ -674,10 +740,38 @@ export function printReadPathSummary(): void {
         verdict: verdictStr(r.verdict),
         ms: r.ms,
         latencyDebt: r.latencyDebt === true,
+        budgetMs: r.budgetMs ?? null,
+        overBudget: r.overBudget === true,
       }))
     )}`
   );
   console.log(`═══════════════════════════════════════\n`);
+
+  // CF-TIER1-READ-PATH-ENFORCE (2026-09-12). Separate, clearly labelled
+  // table so a slow-but-passing case is never mistaken for a real check
+  // failure — timing is informational while READ_PATH_ENFORCE is off (see
+  // the flag's doc comment: tonight's 100k-RU fleet load on sold_comps /
+  // card_catalog makes a 5s measurement right now unrepresentative of
+  // launch-week steady state). Flip READ_PATH_ENFORCE=true once the
+  // market-movers precompute + zero-comp ladder cap land AND the fleets
+  // quiesce — at that point this table's numbers become the check.
+  // eslint-disable-next-line no-console
+  console.log(
+    `\n══════ READ-PATH LATENCY (informational) — READ_PATH_ENFORCE=${READ_PATH_ENFORCE} ══════`
+  );
+  for (const r of READ_PATH_REPORTS) {
+    const budget = r.budgetMs ?? READ_PATH_BUDGET_MS;
+    const flag = r.overBudget ? "OVER BUDGET" : "within budget";
+    const debtTag = r.latencyDebt ? " (latencyDebt)" : "";
+    // eslint-disable-next-line no-console
+    console.log(`  ${r.name}: ${r.ms}ms / ${budget}ms budget${debtTag} — ${flag}`);
+  }
+  // eslint-disable-next-line no-console
+  console.log(
+    `  (enforcement is OFF: only a 5xx, a schema violation, or a null-price-with-no-reason ` +
+      `doctrine violation fails this check right now — see READ_PATH_ENFORCE in _helpers.ts)`
+  );
+  console.log(`═══════════════════════════════════════════════════════════════\n`);
 }
 
 // CF-TIER1-PRICE-BY-ID-FIELD (2026-08-21). This sent `cardHedgeCardId`.

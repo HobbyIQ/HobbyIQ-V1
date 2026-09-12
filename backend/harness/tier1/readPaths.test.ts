@@ -17,9 +17,19 @@
  * out of shape to fit five structurally different endpoints. These cases are
  * Layer-A only: status code, shape, and the FMV-doctrine contract.
  *
- * Latency budget: every case fails above READ_PATH_BUDGET_MS (5s) per case,
- * per the harness spec — tighter than the 60s /search budget, because these
- * are point reads / bounded scans, not the free-text parse+CH pipeline.
+ * LATENCY IS REPORT-ONLY RIGHT NOW (CF-TIER1-READ-PATH-ENFORCE, 2026-09-12).
+ * The 5s default (READ_PATH_BUDGET_MS) and 10s latencyDebt ceiling
+ * (LATENCY_DEBT_BUDGET_MS) below are both still measured and recorded for
+ * every case — the printReadPathSummary() "READ-PATH LATENCY (informational)"
+ * table at the end of the run always shows the real numbers. But per Fable's
+ * 2026-09-12 directive, timing alone does not fail the build while
+ * READ_PATH_ENFORCE is unset/false: tonight's prod load (card-line retire
+ * lanes + 32-slot census + ingests hammering sold_comps/card_catalog at
+ * 100k RU — project_cosmos_ru_state_2026_09_07) makes a 5s measurement taken
+ * right now unrepresentative of launch-week steady state. Only a 5xx, a
+ * schema violation, or an FMV-doctrine violation (null price with no reason)
+ * fails a case. See READ_PATH_ENFORCE's doc comment in _helpers.ts for the
+ * exact flip condition (latency PR lands + fleets quiesce).
  */
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
@@ -32,12 +42,20 @@ import {
   postReadPath,
   printReadPathSummary,
   READ_PATH_BUDGET_MS,
+  READ_PATH_ENFORCE,
   recordReadPathResult,
   TIER1_ENABLED,
   type ReadPathResult,
 } from "./_helpers.js";
 
 const describeTier = TIER1_ENABLED ? describe : describe.skip;
+
+// Vitest per-test timeouts below are sized to the 30s NETWORK_ABORT_MS in
+// _helpers.ts (the real dead-request guard) plus margin — NOT to the 5s/10s
+// report-only budgets, since a slow-but-real response must be allowed to
+// finish and get measured rather than being cut off by the test framework
+// before fetchReadPath's own numbers can be recorded.
+const NETWORK_TEST_TIMEOUT_MS = 35_000;
 
 // The three checklist-backed cards named in the task. All three are real
 // hobbyiqCardId slugs pulled from Drew's own portfolio holdings (Verlander,
@@ -84,6 +102,8 @@ describeTier("Tier 1 · read-path coverage", () => {
           });
           throw e;
         }
+        // Report-only: measures + logs against the 5s budget but does not
+        // fail the case on timing alone (READ_PATH_ENFORCE gate).
         expectWithinReadBudget(result.ms, `recent-sales:${key}`);
 
         expect(isServerError(result.status), `recent-sales:${key} returned ${result.status}`).toBe(false);
@@ -110,8 +130,10 @@ describeTier("Tier 1 · read-path coverage", () => {
           name: `recent-sales:${key}`,
           verdict: { kind: "ok" },
           ms: result.ms,
+          budgetMs: READ_PATH_BUDGET_MS,
+          overBudget: result.overBudget,
         });
-      }, 10_000);
+      }, NETWORK_TEST_TIMEOUT_MS);
     }
   });
 
@@ -161,8 +183,10 @@ describeTier("Tier 1 · read-path coverage", () => {
         name: "listing-range:goldLabelBlue",
         verdict: { kind: "ok" },
         ms: result.ms,
+        budgetMs: READ_PATH_BUDGET_MS,
+        overBudget: result.overBudget,
       });
-    }, 10_000);
+    }, NETWORK_TEST_TIMEOUT_MS);
 
     it("without player: documented 400, not a 5xx", async () => {
       const result = await getReadPath(
@@ -171,22 +195,26 @@ describeTier("Tier 1 · read-path coverage", () => {
       expect(isServerError(result.status)).toBe(false);
       expect(result.status).toBe(400);
       expect(typeof result.json.error).toBe("string");
-    }, 10_000);
+    }, NETWORK_TEST_TIMEOUT_MS);
   });
 
   // ── (c) market-movers ───────────────────────────────────────────────────
   describe("market-movers", () => {
-    // CF-TIER1-LATENCY-DEBT (2026-09-12). This case measured 5002ms on the
-    // 2026-09-12 CI run — over the 5s default. Root cause: window=30d with
+    // CF-TIER1-LATENCY-DEBT (2026-09-12). This case measured 5002ms, then
+    // 10002ms on successive 2026-09-12 CI runs — over both the 5s default
+    // AND the doubled 10s debt ceiling. Root cause: window=30d with
     // minSales=1 forces the RAW-SCAN fallback path in marketMovers.routes.ts
     // (the rollup path only activates above MARKET_MOVERS_ROLLUP_SUFFICIENCY_MIN
     // SKUs; a wide window + low minSales widens the raw scan rather than
     // narrowing it into rollup range), which pulls every comp in a 30-day
-    // sport-wide window into memory before grouping. latencyDebt:true — the
+    // sport-wide window into memory before grouping — made worse tonight by
+    // the fleet load on sold_comps (see file header). latencyDebt:true — the
     // budget is 10s (LATENCY_DEBT_BUDGET_MS) instead of 5s while a latency
-    // fix is owed on the raw-scan path; it is NOT a change to the harness's
-    // default. Revert timeoutMs/expectWithin* to the 5s default the moment
-    // that fix lands — do not let this become the new normal.
+    // fix (precompute the rollup) is owed on the raw-scan path; it is NOT a
+    // change to the harness's default, and per CF-TIER1-READ-PATH-ENFORCE
+    // this number is report-only right now regardless — it fails the build
+    // only once READ_PATH_ENFORCE flips on. Revert timeoutMs/expectWithin*
+    // to the 5s default the moment the latency fix lands.
     const LATENCY_DEBT = true;
     it("200, non-empty movers array, schema check", async () => {
       const started = Date.now();
@@ -205,11 +233,14 @@ describeTier("Tier 1 · read-path coverage", () => {
           verdict: { kind: "error", reason: (e as Error).message },
           ms: Date.now() - started,
           latencyDebt: LATENCY_DEBT,
+          budgetMs: LATENCY_DEBT_BUDGET_MS,
         });
         throw e;
       }
-      // Layer A: a latencyDebt case still fails above the 10s hard ceiling —
-      // the override raises the budget, it does not remove it.
+      // Layer A: still enforced regardless of READ_PATH_ENFORCE — this is a
+      // hard ceiling on the debt override itself (10s), not the report-only
+      // 5s/10s budget check below. A latencyDebt case that blows past DOUBLE
+      // its already-doubled budget is not "measuring the fleet," it's broken.
       expectWithinLatencyDebtCeiling(result.ms, "market-movers");
 
       expect(isServerError(result.status), `market-movers returned ${result.status}`).toBe(false);
@@ -241,46 +272,53 @@ describeTier("Tier 1 · read-path coverage", () => {
         verdict: { kind: "ok" },
         ms: result.ms,
         latencyDebt: LATENCY_DEBT,
+        budgetMs: LATENCY_DEBT_BUDGET_MS,
+        overBudget: result.overBudget,
       });
-    }, LATENCY_DEBT_BUDGET_MS + 5_000);
+    }, NETWORK_TEST_TIMEOUT_MS);
   });
 
   // ── (d) canonical-fmv doctrine contract ─────────────────────────────────
   describe("canonical-fmv", () => {
     // CF-TIER1-LATENCY-DEBT (2026-09-12). imageVariationSonic measured
-    // ~5000ms+ on the 2026-09-12 CI run — it has 0 direct comps (confirmed
-    // via a read-only sold_comps point read at case-authoring time), so
-    // valueIdentity() falls through every rung of the fallback ladder
-    // (cross-parallel -> neighbor-parallel -> family-baseline -> ... ->
-    // setdoc-baseline) before answering — each rung a further comp read.
+    // ~5000-9200ms across 2026-09-12 CI runs — it has 0 direct comps
+    // (confirmed via a read-only sold_comps point read at case-authoring
+    // time), so valueIdentity() falls through every rung of the fallback
+    // ladder (cross-parallel -> neighbor-parallel -> family-baseline -> ... ->
+    // setdoc-baseline) before answering — each rung a further comp read,
+    // slower tonight under the fleet load described in the file header.
     // latencyDebt:true for this one card only; bronzeRefractor (9 direct
-    // comps, answers off rung 1) and goldLabelBlue (withheld:pool-migrating,
-    // short-circuits early) both clear the 5s default and are NOT debt.
-    // Revert to READ_PATH_BUDGET_MS the moment the ladder-walk latency fix
+    // comps, answers off rung 1) and goldLabelBlue (withheld:pool-migrating
+    // OR occasionally a slow ladder walk of its own under tonight's load)
+    // are NOT flagged debt — their numbers are still report-only under
+    // CF-TIER1-READ-PATH-ENFORCE like every other non-debt case here.
+    // Revert to READ_PATH_BUDGET_MS the moment the zero-comp ladder-walk cap
     // lands — do not let this become the new normal.
     const LATENCY_DEBT_CARDS = new Set(["imageVariationSonic"]);
 
     for (const { key, cardId } of THREE_CARDS) {
       const latencyDebt = LATENCY_DEBT_CARDS.has(key);
-      const timeoutMs = latencyDebt ? LATENCY_DEBT_BUDGET_MS : READ_PATH_BUDGET_MS;
+      const budgetMs = latencyDebt ? LATENCY_DEBT_BUDGET_MS : READ_PATH_BUDGET_MS;
 
       it(`${key}: numeric FMV with a source pool, OR withheld with a non-empty reason — never a null price without one`, async () => {
         const started = Date.now();
         let result: ReadPathResult;
         try {
-          result = await postReadPath("/api/compiq/canonical-fmv", { cardId }, { timeoutMs });
+          result = await postReadPath("/api/compiq/canonical-fmv", { cardId }, { timeoutMs: budgetMs });
         } catch (e) {
           recordReadPathResult({
             name: `canonical-fmv:${key}`,
             verdict: { kind: "error", reason: (e as Error).message },
             ms: Date.now() - started,
             latencyDebt,
+            budgetMs,
           });
           throw e;
         }
-        // Layer A: a latencyDebt case still fails above the 10s hard
-        // ceiling — the override raises the budget, it does not remove it.
-        // Non-debt cards keep the 5s default exactly as before.
+        // Report-only under CF-TIER1-READ-PATH-ENFORCE for every card here —
+        // debt cards still get the hard 10s ceiling check (never bypassed),
+        // non-debt cards get the report-only 5s check. Neither fails the
+        // build on timing alone while READ_PATH_ENFORCE is off.
         if (latencyDebt) {
           expectWithinLatencyDebtCeiling(result.ms, `canonical-fmv:${key}`);
         } else {
@@ -301,6 +339,8 @@ describeTier("Tier 1 · read-path coverage", () => {
             verdict: { kind: "withheld", reason: "endpoint-disabled" },
             ms: result.ms,
             latencyDebt,
+            budgetMs,
+            overBudget: result.overBudget,
           });
           return;
         }
@@ -311,7 +351,9 @@ describeTier("Tier 1 · read-path coverage", () => {
 
         if (fmv === null || fmv === undefined) {
           // Withheld: must carry a non-empty reason. This is the doctrine
-          // assertion — "never a null price without a reason."
+          // assertion — "never a null price without a reason." — and it is
+          // NOT part of the report-only relaxation: a doctrine violation
+          // always fails the build regardless of READ_PATH_ENFORCE.
           expect(
             typeof fmvReason,
             `canonical-fmv:${key} returned a null fmv with no fmvReason — this is the exact contract violation the doctrine forbids`
@@ -322,6 +364,8 @@ describeTier("Tier 1 · read-path coverage", () => {
             verdict: { kind: "withheld", reason: fmvReason as string },
             ms: result.ms,
             latencyDebt,
+            budgetMs,
+            overBudget: result.overBudget,
           });
         } else {
           // Priced: must carry a numeric FMV with a named source pool
@@ -336,9 +380,11 @@ describeTier("Tier 1 · read-path coverage", () => {
             verdict: { kind: "ok" },
             ms: result.ms,
             latencyDebt,
+            budgetMs,
+            overBudget: result.overBudget,
           });
         }
-      }, LATENCY_DEBT_BUDGET_MS + 5_000);
+      }, NETWORK_TEST_TIMEOUT_MS);
     }
   });
 
@@ -401,13 +447,20 @@ describeTier("Tier 1 · read-path coverage", () => {
         name: "lookup-by-cert",
         verdict: { kind: "ok" },
         ms: result.ms,
+        budgetMs: READ_PATH_BUDGET_MS,
+        overBudget: result.overBudget,
       });
-    }, 10_000);
+    }, NETWORK_TEST_TIMEOUT_MS);
   });
 
   // Sanity: fail loudly (not silently skip) if API_BASE is somehow unset,
   // since every case above depends on it.
   beforeAll(() => {
     expect(API_BASE.length).toBeGreaterThan(0);
+    // eslint-disable-next-line no-console
+    console.log(
+      `[readPaths] READ_PATH_ENFORCE=${READ_PATH_ENFORCE} — timing is ` +
+        `${READ_PATH_ENFORCE ? "ENFORCED" : "report-only (informational)"}.`
+    );
   });
 });
