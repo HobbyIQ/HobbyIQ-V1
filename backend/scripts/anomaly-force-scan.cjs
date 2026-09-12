@@ -96,6 +96,70 @@ const CONTROL_CONTAINER = process.env.CONTROL_CONTAINER || "crawl_state";
 const BASELINE_CONTAINER = process.env.COSMOS_BASELINE_CONTAINER || "pool_baseline_snapshots";
 const REPORT_CONTAINER = process.env.ANOMALY_REPORT_CONTAINER || "anomaly_scan_reports";
 
+// ── A 429 IS A BACKOFF, NOT A CRASH (2026-09-12) ────────────────────────────
+//
+// Run 34669670351 (the FIRST real dispatch of this lane, the night after
+// #2044 merged) read 400/805 units clean, then Cosmos answered
+//
+//   ErrorResponse: The request rate is too large... http://aka.ms/cosmosdb-error-429
+//
+// on a bare `await iter.fetchNext()` with no try/catch around it at all. That
+// escaped straight to main()'s outer `.catch`, which calls
+// `finishLane(1, ...)` -- the SAME exit code and the SAME absence of a
+// "stopped at the .*budget" marker as a genuine defect, so
+// relaunch-on-marker's outcome (d) correctly read it as "FINISHED WITH
+// VERDICT code 1 -- (no SYSTEMIC/ABORT/BACKOFF/VERIFY line in the log);
+// re-dispatch withheld" and killed the whole chain five units from a third of
+// the way through the sweep. sold_comps runs at 10k RU shared with a 32-slot
+// census fleet (CLAUDE.md), so throttling here is routine load, not an
+// anomaly in itself -- the anomaly-force-scan lane must treat it exactly like
+// clock exhaustion: persist the cursor for the units already finished and let
+// the SAME budget-stop path (cursor write + "stopped at the .*budget" banner
+// + exit 5) trigger the relaunch, rather than inventing a second marker the
+// composite action does not already grep for.
+//
+// A few short in-process retries absorb a transient throttle without paying
+// for a whole relaunch dispatch; only a 429 that outlives them becomes a
+// stop. Both counts are small and bounded on purpose -- this is inside the
+// per-page budget check, not a substitute for it.
+const RATE_LIMIT_RETRY_DELAYS_MS = String(process.env.ANOMALY_SCAN_429_BACKOFF_MS || "500,1500,4000")
+  .split(",").map((s) => Number(s.trim())).filter((n) => Number.isFinite(n) && n >= 0);
+
+function isRetryableCosmosError(e) {
+  if (!e) return false;
+  if (e.code === 429 || e.code === "429") return true;
+  if (Number(e.code) === 429) return true;
+  if (typeof e.retryAfterInMs === "number") return true;
+  const msg = String(e.message || e.body || "");
+  return /request rate is too large/i.test(msg) || /cosmosdb-error-429/i.test(msg);
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * fetchNext() wrapped with a short, bounded retry for exactly the retryable
+ * Cosmos throttle shape -- never a blanket catch-and-continue, so a
+ * NON-retryable error (a bad query, an auth failure) still propagates to the
+ * outer .catch and fails the run loudly, which is the correct outcome for a
+ * defect this lane cannot recover from by waiting.
+ */
+async function fetchNextWithBackoff(iter) {
+  let attempt = 0;
+  for (;;) {
+    try {
+      return await iter.fetchNext();
+    } catch (e) {
+      if (!isRetryableCosmosError(e) || attempt >= RATE_LIMIT_RETRY_DELAYS_MS.length) throw e;
+      const waitMs = Number(e.retryAfterInMs) || RATE_LIMIT_RETRY_DELAYS_MS[attempt];
+      console.log(`  Cosmos 429 on this page -- backing off ${waitMs}ms (retry ${attempt + 1}/${RATE_LIMIT_RETRY_DELAYS_MS.length})`);
+      await sleep(waitMs);
+      attempt++;
+    }
+  }
+}
+
 // ── THE CURSOR ───────────────────────────────────────────────────────────
 //
 // One control doc, id-partitioned like every other crawl_state row
@@ -214,6 +278,11 @@ async function main() {
   let rowsScanned = 0;
   let stoppedAtBudget = false;
   let stopUnitIndex = null;
+  // True when the stop below was forced by an exhausted 429 backoff rather
+  // than the wall clock -- named separately in the banner so an operator
+  // reading the log does not mistake sustained RU throttling for a slow
+  // sweep that simply needs a bigger RUN_MINUTES.
+  let rateLimited = false;
 
   for (let i = startUnitIndex; i < total; i++) {
     // THE PRE-CHECK, before the unit's first page. A unit whose largest page
@@ -225,6 +294,7 @@ async function main() {
     const { query, parameters } = unitQuery(unit, 0);
     const iter = sc.items.query({ query, parameters }, { maxItemCount: PAGE_SIZE });
     let unitStoppedAtBudget = false;
+    let unitStoppedOnBackoff = false;
     while (iter.hasMoreResults()) {
       // THE PRE-CHECK, before EACH PAGE inside the unit -- not only between
       // units. The largest single unit measured (2025 pokemon, 484,940 raw
@@ -232,7 +302,25 @@ async function main() {
       // the budget expires is exactly the #1799 loop-top defect one level
       // down.
       if (CLOCK.outOfClock()) { stoppedAtBudget = true; unitStoppedAtBudget = true; stopUnitIndex = i; break; }
-      const { resources } = await iter.fetchNext();
+      let resources;
+      try {
+        ({ resources } = await fetchNextWithBackoff(iter));
+      } catch (e) {
+        // A 429 that outlived the short in-process backoff above. THIS unit
+        // is unfinished -- same handling as a clock-exhaustion stop, so the
+        // shared refusal path below writes the cursor at THIS unit index
+        // (not past it) and prints the SAME "stopped at the .*budget" marker
+        // relaunch-on-marker already greps for. Run 34669670351 let this
+        // escape uncaught and hard-failed the whole chain five units later.
+        if (!isRetryableCosmosError(e)) throw e;
+        console.log(`  Cosmos is throttling this container (429) past the retry budget at unit ${i}/${total} -- `
+          + "stopping here rather than crashing; the relaunch resumes this same unit.");
+        stoppedAtBudget = true;
+        unitStoppedAtBudget = true;
+        unitStoppedOnBackoff = true;
+        stopUnitIndex = i;
+        break;
+      }
       if (!Array.isArray(resources)) break;
       for (const r of resources) {
         rowsScanned++;
@@ -244,6 +332,7 @@ async function main() {
         pool.get(slug).push(p);
       }
     }
+    if (unitStoppedOnBackoff) rateLimited = true;
     if (unitStoppedAtBudget) break; // this unit is UNFINISHED; do not count it done, do not advance past it
     unitsScanned++;
     if (unitsScanned % 50 === 0) {
@@ -267,10 +356,17 @@ async function main() {
     } else {
       console.log(`  DRY: would write cursor nextUnitIndex=${stopUnitIndex}/${total} (no write in dry mode)`);
     }
+    // CF-RELAUNCH-ONLY-ON-BUDGET (#1361): the composite action greps this
+    // EXACT phrase, "stopped at the .*budget", to decide whether to
+    // re-dispatch -- so a rate-limit stop reuses it verbatim rather than a
+    // parallel marker the action does not know about. The rateLimited clause
+    // is prose ADDED to the same line, not a replacement for it.
     console.log(`
   stopped at the ${CLOCK.RUN_MINUTES}-minute budget -- `
       + `the (cardYear, sportClass) sweep is UNFINISHED (${stopUnitIndex}/${total} units); `
-      + `the relaunch continues from here`);
+      + `the relaunch continues from here`
+      + (rateLimited ? " (this stop was Cosmos 429 throttling on sold_comps outlasting the in-process"
+        + " backoff, not clock exhaustion -- the relaunch's fresh dispatch is also a fresh RU window)" : ""));
     console.error("  REFUSING TO WRITE THE ANOMALY REPORT: driftPct is computed from the CURRENT"
       + " median across the WHOLE pool, and a partial scan is a DIFFERENT set of medians, not a"
       + " smaller one. Publishing it would report drift that never happened or hide drift that"
