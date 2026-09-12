@@ -91,6 +91,13 @@ These live in a separate file (`readPaths.test.ts`) with their own lightweight h
 
 Per-case latency budget is 5s (`READ_PATH_BUDGET_MS`), tighter than the 60s `/search` budget — these are point reads / bounded scans without `/search`'s documented 24s prod tail.
 
+**Latency debt (CF-TIER1-LATENCY-DEBT, 2026-09-12).** Two cases carry a documented per-case override to `LATENCY_DEBT_BUDGET_MS` (10s) instead of the 5s default, each marked `latencyDebt: true` in its report and commented with the root cause and the follow-up it's waiting on:
+
+- `market-movers` (`window=30d&minSales=1` forces the raw-scan fallback path, not the rollup path)
+- `canonical-fmv:imageVariationSonic` (0 direct comps — `valueIdentity()` walks the full fallback ladder before answering)
+
+These are real production findings being fixed separately, not a reason to raise the default — `READ_PATH_BUDGET_MS` stays 5000 for every other case. A `latencyDebt` case still fails above the 10s ceiling (`expectWithinLatencyDebtCeiling`), so the override cannot silently become "no budget." Revert both to the 5s default the moment their respective latency fixes land — do not let a debt override become permanent.
+
 `lookup-by-cert`'s case uses a syntactically valid but unassigned PSA cert rather than a real graded holding's cert: a point-read census of Drew's portfolio (44 holdings, including the Verlander PSA 10 and Judge PSA 9 raised as candidates) found zero holdings store a cert number anywhere on the document — all are eBay-import sourced, not grader-lookup sourced. The case therefore exercises the documented not-found shape. The `graded_cert` container does not exist in `hobbyiq` yet; it is created on the read-through path's first successful grader lookup (see `resolveCert.service.ts`).
 
 ## `blockedBy` and soft assertions

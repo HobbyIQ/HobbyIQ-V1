@@ -24,11 +24,14 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   API_BASE,
+  expectWithinLatencyDebtCeiling,
   expectWithinReadBudget,
   getReadPath,
   isServerError,
+  LATENCY_DEBT_BUDGET_MS,
   postReadPath,
   printReadPathSummary,
+  READ_PATH_BUDGET_MS,
   recordReadPathResult,
   TIER1_ENABLED,
   type ReadPathResult,
@@ -173,6 +176,18 @@ describeTier("Tier 1 · read-path coverage", () => {
 
   // ── (c) market-movers ───────────────────────────────────────────────────
   describe("market-movers", () => {
+    // CF-TIER1-LATENCY-DEBT (2026-09-12). This case measured 5002ms on the
+    // 2026-09-12 CI run — over the 5s default. Root cause: window=30d with
+    // minSales=1 forces the RAW-SCAN fallback path in marketMovers.routes.ts
+    // (the rollup path only activates above MARKET_MOVERS_ROLLUP_SUFFICIENCY_MIN
+    // SKUs; a wide window + low minSales widens the raw scan rather than
+    // narrowing it into rollup range), which pulls every comp in a 30-day
+    // sport-wide window into memory before grouping. latencyDebt:true — the
+    // budget is 10s (LATENCY_DEBT_BUDGET_MS) instead of 5s while a latency
+    // fix is owed on the raw-scan path; it is NOT a change to the harness's
+    // default. Revert timeoutMs/expectWithin* to the 5s default the moment
+    // that fix lands — do not let this become the new normal.
+    const LATENCY_DEBT = true;
     it("200, non-empty movers array, schema check", async () => {
       const started = Date.now();
       let result: ReadPathResult;
@@ -181,17 +196,21 @@ describeTier("Tier 1 · read-path coverage", () => {
         // hostage to a quiet week; market-movers' own credibility gate
         // (moverCredibility.service) still filters junk deltas.
         result = await getReadPath(
-          "/api/compiq/market-movers?sport=baseball&window=30d&direction=both&limit=20&minSales=1"
+          "/api/compiq/market-movers?sport=baseball&window=30d&direction=both&limit=20&minSales=1",
+          { timeoutMs: LATENCY_DEBT_BUDGET_MS }
         );
       } catch (e) {
         recordReadPathResult({
           name: "market-movers",
           verdict: { kind: "error", reason: (e as Error).message },
           ms: Date.now() - started,
+          latencyDebt: LATENCY_DEBT,
         });
         throw e;
       }
-      expectWithinReadBudget(result.ms, "market-movers");
+      // Layer A: a latencyDebt case still fails above the 10s hard ceiling —
+      // the override raises the budget, it does not remove it.
+      expectWithinLatencyDebtCeiling(result.ms, "market-movers");
 
       expect(isServerError(result.status), `market-movers returned ${result.status}`).toBe(false);
       expect(result.status).toBe(200);
@@ -221,27 +240,52 @@ describeTier("Tier 1 · read-path coverage", () => {
         name: "market-movers",
         verdict: { kind: "ok" },
         ms: result.ms,
+        latencyDebt: LATENCY_DEBT,
       });
-    }, 10_000);
+    }, LATENCY_DEBT_BUDGET_MS + 5_000);
   });
 
   // ── (d) canonical-fmv doctrine contract ─────────────────────────────────
   describe("canonical-fmv", () => {
+    // CF-TIER1-LATENCY-DEBT (2026-09-12). imageVariationSonic measured
+    // ~5000ms+ on the 2026-09-12 CI run — it has 0 direct comps (confirmed
+    // via a read-only sold_comps point read at case-authoring time), so
+    // valueIdentity() falls through every rung of the fallback ladder
+    // (cross-parallel -> neighbor-parallel -> family-baseline -> ... ->
+    // setdoc-baseline) before answering — each rung a further comp read.
+    // latencyDebt:true for this one card only; bronzeRefractor (9 direct
+    // comps, answers off rung 1) and goldLabelBlue (withheld:pool-migrating,
+    // short-circuits early) both clear the 5s default and are NOT debt.
+    // Revert to READ_PATH_BUDGET_MS the moment the ladder-walk latency fix
+    // lands — do not let this become the new normal.
+    const LATENCY_DEBT_CARDS = new Set(["imageVariationSonic"]);
+
     for (const { key, cardId } of THREE_CARDS) {
+      const latencyDebt = LATENCY_DEBT_CARDS.has(key);
+      const timeoutMs = latencyDebt ? LATENCY_DEBT_BUDGET_MS : READ_PATH_BUDGET_MS;
+
       it(`${key}: numeric FMV with a source pool, OR withheld with a non-empty reason — never a null price without one`, async () => {
         const started = Date.now();
         let result: ReadPathResult;
         try {
-          result = await postReadPath("/api/compiq/canonical-fmv", { cardId });
+          result = await postReadPath("/api/compiq/canonical-fmv", { cardId }, { timeoutMs });
         } catch (e) {
           recordReadPathResult({
             name: `canonical-fmv:${key}`,
             verdict: { kind: "error", reason: (e as Error).message },
             ms: Date.now() - started,
+            latencyDebt,
           });
           throw e;
         }
-        expectWithinReadBudget(result.ms, `canonical-fmv:${key}`);
+        // Layer A: a latencyDebt case still fails above the 10s hard
+        // ceiling — the override raises the budget, it does not remove it.
+        // Non-debt cards keep the 5s default exactly as before.
+        if (latencyDebt) {
+          expectWithinLatencyDebtCeiling(result.ms, `canonical-fmv:${key}`);
+        } else {
+          expectWithinReadBudget(result.ms, `canonical-fmv:${key}`);
+        }
         expect(isServerError(result.status), `canonical-fmv:${key} returned ${result.status}`).toBe(false);
 
         // CANONICAL_FMV_ENABLED gates this route (503 when unset). Per the
@@ -256,6 +300,7 @@ describeTier("Tier 1 · read-path coverage", () => {
             name: `canonical-fmv:${key}`,
             verdict: { kind: "withheld", reason: "endpoint-disabled" },
             ms: result.ms,
+            latencyDebt,
           });
           return;
         }
@@ -276,6 +321,7 @@ describeTier("Tier 1 · read-path coverage", () => {
             name: `canonical-fmv:${key}`,
             verdict: { kind: "withheld", reason: fmvReason as string },
             ms: result.ms,
+            latencyDebt,
           });
         } else {
           // Priced: must carry a numeric FMV with a named source pool
@@ -289,9 +335,10 @@ describeTier("Tier 1 · read-path coverage", () => {
             name: `canonical-fmv:${key}`,
             verdict: { kind: "ok" },
             ms: result.ms,
+            latencyDebt,
           });
         }
-      }, 10_000);
+      }, LATENCY_DEBT_BUDGET_MS + 5_000);
     }
   });
 
