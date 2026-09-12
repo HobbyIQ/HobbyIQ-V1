@@ -635,6 +635,141 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
     })
     .catch(() => null);
 
+  // ── CF-LADDER-CONCURRENT-FETCH (Fable, 2026-09-12) ───────────────────
+  //
+  // The rungs below used to run as N SEQUENTIAL Cosmos round-trips, each
+  // awaited before the next was even issued — for a genuinely thin/empty
+  // identity (every rung misses), that is one round-trip per rung, paid
+  // in series. A Tier 1 harness run (PR #2056) measured 5.0s+ on exactly
+  // this shape (hiq:baseball:2022:topps-chrome:221:image-variation-sonic:
+  // no-auto — zero direct comps) and App Insights traced a single
+  // canonical-fmv request issuing ~180 sequential dependency calls.
+  //
+  // None of these queries' WHERE clauses depend on another rung's ROWS —
+  // only on `parsed.printRun` being present (known before any query runs)
+  // and on `targetParallelHadIdentityComps` / `shouldSkipSiblingParallel`,
+  // which are derived from the SAME rows the identity-scoped rungs already
+  // need. So every independent query is issued together, up front, with
+  // `Promise.all`; the DECISION logic below still walks the rungs in the
+  // exact same priority order over the already-fetched rows — same rung
+  // wins, same rows, same labels, same basis text. Byte-identical for
+  // every identity that has comps (pinned by oneValuationPath.pin.test.ts
+  // and hobbyIqFmv.service.test.ts); only the WALL-CLOCK time for an
+  // empty/thin identity collapses, from sum(latency) to max(latency).
+  //
+  // Two rungs also turned out to be querying Cosmos for rows another rung
+  // already held:
+  //   - rung 0 (printrun-discovery-preferred) and rung 4 (printrun-
+  //     discovery) issue the IDENTICAL query (same WHERE, same params)
+  //     when the target has no printRun — one fetch now serves both.
+  //   - rung 1.5 (cross-setkey)'s identityRows query is IDENTICAL to
+  //     rung 5 (sibling-parallel)'s query — one fetch now serves both.
+  // Eliminating those two duplicates removes 2 of the ~9 round-trips
+  // outright, independent of the concurrency change.
+  const targetParallelSlug = parsed.parallel;
+  const noPrintRunTagged = parsed.printRun === null || parsed.printRun === undefined;
+
+  // Shared by rung 0 AND rung 4 — same WHERE clause, fired once.
+  const printRunTaggedIdentityPromise = noPrintRunTagged
+    ? queryPool(
+        container,
+        "c.cardYear = @y AND UPPER(c.cardNumber) = @cn AND c.isAuto = @auto AND c.sport = @sport AND IS_DEFINED(c.printRun) AND c.printRun != null",
+        [
+          { name: "@y", value: parsed.year },
+          { name: "@cn", value: (parsed.cardNumber ?? "").toUpperCase() },
+          { name: "@auto", value: parsed.isAuto },
+          { name: "@sport", value: parsed.sport },
+        ],
+        cutoffIso, asOfIso,)
+    : Promise.resolve<PoolRow[]>([]);
+
+  // Rung 1: exact slug + grade.
+  const exactSlugRowsAnyGradePromise = queryPool(
+    container,
+    "c.hobbyiqCardId = @slug",
+    [{ name: "@slug", value: slug }],
+    cutoffIso, asOfIso,);
+
+  // Shared by rung 1.5 (cross-setkey, JS-filtered to the target parallel)
+  // AND rung 5 (sibling-parallel, every parallel) — same WHERE clause.
+  const sameIdentityAnyParallelPromise = queryPool(
+    container,
+    "c.cardYear = @y AND UPPER(c.cardNumber) = @cn AND c.isAuto = @auto AND c.sport = @sport",
+    [
+      { name: "@y", value: parsed.year },
+      { name: "@cn", value: (parsed.cardNumber ?? "").toUpperCase() },
+      { name: "@auto", value: parsed.isAuto },
+      { name: "@sport", value: parsed.sport },
+    ],
+    cutoffIso, asOfIso,);
+
+  // Rung 2: same identity ignoring printRun (STARTSWITH the no-printRun stem).
+  const slugNoPrintRun = slug.replace(/:num-\d+$/, "");
+  const crossPrintRunPromise = slugNoPrintRun !== slug
+    ? queryPool(
+        container,
+        "STARTSWITH(c.hobbyiqCardId, @stem)",
+        [{ name: "@stem", value: slugNoPrintRun }],
+        cutoffIso, asOfIso,)
+    : Promise.resolve<PoolRow[]>([]);
+
+  // Rung 3: same-printrun-cross-parallel — only meaningful when the target
+  // itself has a printRun (mirrors the original `if` guard exactly).
+  const samePrintRunCrossParallelPromise = !noPrintRunTagged
+    ? queryPool(
+        container,
+        "c.cardYear = @y AND UPPER(c.cardNumber) = @cn AND c.isAuto = @auto AND c.sport = @sport AND c.printRun = @pr",
+        [
+          { name: "@y", value: parsed.year },
+          { name: "@cn", value: (parsed.cardNumber ?? "").toUpperCase() },
+          { name: "@auto", value: parsed.isAuto },
+          { name: "@sport", value: parsed.sport },
+          { name: "@pr", value: parsed.printRun ?? 0 },
+        ],
+        cutoffIso, asOfIso,)
+    : Promise.resolve<PoolRow[]>([]);
+
+  const [
+    printRunTaggedIdentityRows,
+    exactSlugRowsAnyGrade,
+    sameIdentityAnyParallelRows,
+    crossPrintRunRows,
+    samePrintRunCrossParallelRows,
+  ] = await Promise.all([
+    printRunTaggedIdentityPromise,
+    exactSlugRowsAnyGradePromise,
+    sameIdentityAnyParallelPromise,
+    crossPrintRunPromise,
+    samePrintRunCrossParallelPromise,
+  ]);
+
+  // Rung 6: family-baseline — broadest same-card rung (drops isAuto), so it
+  // is a genuinely different query from every rung above and cannot be
+  // folded into the batch above. `shouldSkipSiblingParallel` (computed a
+  // little further down, from sameIdentityAnyParallelRows which the batch
+  // above already fetched) is known the instant that batch resolves — well
+  // before rungs 0-5 finish evaluating below, since every one of them must
+  // MISS for rung 6 to matter. So the fetch is kicked off here, gated on
+  // that flag exactly as the original `if` guarded the query, but started
+  // concurrently with the rung 0-5 evaluation rather than after it —
+  // whichever finishes needing it later (rung 6 itself) awaits a promise
+  // that has usually already resolved.
+  const targetIsBaseForFamilyGate = parsed.parallel === "base";
+  const skipFamilyBaselineFetch = sameIdentityAnyParallelRows.filter(
+    (r) => slugify(r.parallel ?? "") === targetParallelSlug,
+  ).length === 0 && !targetIsBaseForFamilyGate;
+  const familyBaselinePromise = skipFamilyBaselineFetch
+    ? Promise.resolve<PoolRow[]>([])
+    : queryPool(
+        container,
+        "c.cardYear = @y AND UPPER(c.cardNumber) = @cn AND c.sport = @sport",
+        [
+          { name: "@y", value: parsed.year },
+          { name: "@cn", value: (parsed.cardNumber ?? "").toUpperCase() },
+          { name: "@sport", value: parsed.sport },
+        ],
+        cutoffIso, asOfIso,);
+
   // ─── Rung 0 (PRE-empts direct-slug): printrun-discovery-preferred ──
   // When the target slug has NO printRun tag AND the identity has a
   // substantial pool of comps at a specific print run, that /N pool is
@@ -646,24 +781,9 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
   // that legitimately have no numbered variant (Base, unnumbered
   // Refractors, etc.).
   let rows: PoolRow[];
-  if (parsed.printRun === null || parsed.printRun === undefined) {
-    // Query without the parallel filter — c.parallel in sold_comps is
-    // the human label ("Blue Refractor") but parsed.parallel is the
-    // slug fragment ("blue-refractor"). Filter parallel in JS after slug
-    // normalization.
-    const identityRows = await queryPool(
-      container,
-      "c.cardYear = @y AND UPPER(c.cardNumber) = @cn AND c.isAuto = @auto AND c.sport = @sport AND IS_DEFINED(c.printRun) AND c.printRun != null",
-      [
-        { name: "@y", value: parsed.year },
-        { name: "@cn", value: (parsed.cardNumber ?? "").toUpperCase() },
-        { name: "@auto", value: parsed.isAuto },
-        { name: "@sport", value: parsed.sport },
-      ],
-      cutoffIso, asOfIso,);
+  if (noPrintRunTagged) {
     // Filter by parallel using slug-side normalization on both sides.
-    const targetParallelSlug = parsed.parallel;
-    const parallelMatched = identityRows.filter((r) => slugify(r.parallel ?? "") === targetParallelSlug);
+    const parallelMatched = printRunTaggedIdentityRows.filter((r) => slugify(r.parallel ?? "") === targetParallelSlug);
     const graded = filterByGrade(parallelMatched, gradeCompany, gradeValue);
     if (graded.length >= 5) {
       const byRun = new Map<number, PoolRow[]>();
@@ -688,11 +808,6 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
   }
 
   // ─── Rung 1: exact slug + grade ─────────────────────────────────────
-  const exactSlugRowsAnyGrade = await queryPool(
-    container,
-    "c.hobbyiqCardId = @slug",
-    [{ name: "@slug", value: slug }],
-    cutoffIso, asOfIso,);
   rows = filterByGrade(exactSlugRowsAnyGrade, gradeCompany, gradeValue);
   if (rows.length > 0) {
     return buildResult(slug, rows, "direct-slug",
@@ -728,17 +843,7 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
   // and route to verify_queue so Drew can spot-check.
   let targetParallelHadIdentityComps = false;
   {
-    const identityRows = await queryPool(
-      container,
-      "c.cardYear = @y AND UPPER(c.cardNumber) = @cn AND c.isAuto = @auto AND c.sport = @sport",
-      [
-        { name: "@y", value: parsed.year },
-        { name: "@cn", value: (parsed.cardNumber ?? "").toUpperCase() },
-        { name: "@auto", value: parsed.isAuto },
-        { name: "@sport", value: parsed.sport },
-      ],
-      cutoffIso, asOfIso,);
-    const targetParallelSlug = parsed.parallel;
+    const identityRows = sameIdentityAnyParallelRows;
     const parallelMatched = identityRows.filter(
       (r) => slugify(r.parallel ?? "") === targetParallelSlug,
     );
@@ -795,14 +900,8 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
   // player/year/set/cardNumber/parallel/auto. Useful when the /50 auto
   // has no sales but the /150 and /99 variants do — approximate but
   // grounded.
-  const slugNoPrintRun = slug.replace(/:num-\d+$/, "");
   if (slugNoPrintRun !== slug) {
-    rows = await queryPool(
-      container,
-      "STARTSWITH(c.hobbyiqCardId, @stem)",
-      [{ name: "@stem", value: slugNoPrintRun }],
-      cutoffIso, asOfIso,);
-    rows = filterByGrade(rows, gradeCompany, gradeValue);
+    rows = filterByGrade(crossPrintRunRows, gradeCompany, gradeValue);
     if (rows.length > 0) {
       return buildResult(slug, rows, "cross-printrun",
         `Estimated from ${rows.length} sale${rows.length === 1 ? "" : "s"} of the same card at other print runs`,
@@ -818,18 +917,8 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
   // printRun). This rung finds the "right" price stratum without
   // getting polluted by cheap base autos. Only fires when the target
   // slug has a print run.
-  if (parsed.printRun !== null && parsed.printRun !== undefined) {
-    rows = await queryPool(
-      container,
-      "c.cardYear = @y AND UPPER(c.cardNumber) = @cn AND c.isAuto = @auto AND c.sport = @sport AND c.printRun = @pr",
-      [
-        { name: "@y", value: parsed.year },
-        { name: "@cn", value: (parsed.cardNumber ?? "").toUpperCase() },
-        { name: "@auto", value: parsed.isAuto },
-        { name: "@sport", value: parsed.sport },
-        { name: "@pr", value: parsed.printRun },
-      ],
-      cutoffIso, asOfIso,);
+  if (!noPrintRunTagged) {
+    rows = samePrintRunCrossParallelRows;
     if (rows.length > 0) rows = filterByGrade(rows, gradeCompany, gradeValue);
     if (rows.length > 0) {
       return buildResult(slug, rows, "same-printrun-cross-parallel",
@@ -847,20 +936,10 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
   // where Ingest split the same physical /150 card across a "/150"-
   // tagged pool and a "no-printRun" ghost pool depending on whether
   // the listing title spelled out the run.
-  if (parsed.printRun === null || parsed.printRun === undefined) {
-    rows = await queryPool(
-      container,
-      "c.cardYear = @y AND UPPER(c.cardNumber) = @cn AND c.isAuto = @auto AND c.sport = @sport AND IS_DEFINED(c.printRun) AND c.printRun != null",
-      [
-        { name: "@y", value: parsed.year },
-        { name: "@cn", value: (parsed.cardNumber ?? "").toUpperCase() },
-        { name: "@auto", value: parsed.isAuto },
-        { name: "@sport", value: parsed.sport },
-      ],
-      cutoffIso, asOfIso,);
-    // Filter parallel in JS (persisted label vs slug fragment) then apply grade.
-    const targetParallelSlug = parsed.parallel;
-    rows = rows.filter((r) => slugify(r.parallel ?? "") === targetParallelSlug);
+  if (noPrintRunTagged) {
+    // Same fetch as rung 0 (printRunTaggedIdentityRows) — filter parallel in
+    // JS (persisted label vs slug fragment) then apply grade.
+    rows = printRunTaggedIdentityRows.filter((r) => slugify(r.parallel ?? "") === targetParallelSlug);
     if (rows.length > 0) rows = filterByGrade(rows, gradeCompany, gradeValue);
     if (rows.length >= 3) {
       // Group by printRun, pick the pool with the most sales (that's
@@ -900,16 +979,9 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
   const targetIsBase = parsed.parallel === "base";
   const shouldSkipSiblingParallel = !targetParallelHadIdentityComps && !targetIsBase;
   if (!shouldSkipSiblingParallel) {
-    rows = await queryPool(
-      container,
-      "c.cardYear = @y AND UPPER(c.cardNumber) = @cn AND c.isAuto = @auto AND c.sport = @sport",
-      [
-        { name: "@y", value: parsed.year },
-        { name: "@cn", value: (parsed.cardNumber ?? "").toUpperCase() },
-        { name: "@auto", value: parsed.isAuto },
-        { name: "@sport", value: parsed.sport },
-      ],
-      cutoffIso, asOfIso,);
+    // Same fetch as rung 1.5 (sameIdentityAnyParallelRows) — identical
+    // WHERE clause, so no second round-trip for the same rows.
+    rows = sameIdentityAnyParallelRows;
     if (rows.length > 0) {
       rows = filterByGrade(rows, gradeCompany, gradeValue);
     }
@@ -966,15 +1038,11 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
   // target parallel has ZERO comps at the identity AND isn't Base,
   // this rung's cross-variant median is fabrication territory.
   if (!shouldSkipSiblingParallel) {
-    rows = await queryPool(
-      container,
-      "c.cardYear = @y AND UPPER(c.cardNumber) = @cn AND c.sport = @sport",
-      [
-        { name: "@y", value: parsed.year },
-        { name: "@cn", value: (parsed.cardNumber ?? "").toUpperCase() },
-        { name: "@sport", value: parsed.sport },
-      ],
-      cutoffIso, asOfIso,);
+    // Kicked off back at rung 6's promise declaration (concurrently with
+    // rungs 0-5 evaluating), gated on the same condition as
+    // shouldSkipSiblingParallel — usually already resolved by the time
+    // every rung above it has missed.
+    rows = await familyBaselinePromise;
     if (rows.length > 0) {
       rows = filterByGrade(rows, gradeCompany, gradeValue);
     }
