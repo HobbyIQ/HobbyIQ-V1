@@ -404,11 +404,18 @@ async function fetchRecentSales(sc, sinceIso, resume) {
     lastContinuation = resp.continuationToken ?? resp.continuation ?? lastContinuation;
     if (rows.length % 25000 < 5000) process.stdout.write(`\r  fetching ${rows.length}`);
   }
+  // elapsedS can legitimately round to 0 on a very fast/tiny scan (a CI
+  // fixture, or a handful of pages served from a warm connection) -- that is
+  // still a real measurement (an unmeasurably high rate), not an absence of
+  // one, so the guard is on ROWS FETCHED, not on elapsed time. Dividing by a
+  // near-zero elapsedS would print an absurd rows/s figure, so the rate
+  // figure itself is only shown once elapsed time is measurable; below that
+  // the row count and duration are still printed honestly.
   const elapsedS = (Date.now() - t0) / 1000;
   const fetchedThisRun = rows.length - startCount;
-  if (elapsedS > 0 && fetchedThisRun > 0) {
-    console.warn(`  scan rate: ${(fetchedThisRun / elapsedS).toFixed(0)} rows/s `
-      + `(${fetchedThisRun.toLocaleString("en-US")} rows in ${elapsedS.toFixed(1)}s this run)`);
+  if (fetchedThisRun > 0) {
+    const rate = elapsedS > 0 ? `${(fetchedThisRun / elapsedS).toFixed(0)} rows/s` : "rate unmeasurable (elapsed < 1ms)";
+    console.warn(`  scan rate: ${rate} (${fetchedThisRun.toLocaleString("en-US")} rows in ${elapsedS.toFixed(1)}s this run)`);
   }
   console.log(`\r  ${rows.length} sales with composite since ${sinceIso}                     `);
   return { rows, stoppedAtBudget, continuationToken: stoppedAtBudget ? lastContinuation : null };

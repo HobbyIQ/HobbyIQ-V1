@@ -496,11 +496,30 @@ describe("refresh-market-signals — a Cosmos 429 mid-scan is a backoff, not a c
 
 describe("refresh-market-signals — the scan rate is measured and printed", () => {
   it("prints a rows/s line via a warning-level channel after a scan that read at least one row", () => {
+    // sleepMsPerPage guarantees measurable elapsed time deterministically --
+    // without it, a CI runner fast enough to serve every in-memory page
+    // inside the same millisecond legitimately measures elapsedS=0, which is
+    // the OTHER (unmeasurable-rate) branch this line supports, not a bug in
+    // either the line or this pin.
+    const sinkPath = path.join(tmp, `sink-${Math.random().toString(36).slice(2)}.json`);
+    const rows = fixtureRows(4);
+    const result = run({ sinkPath, soldComps: rows, pageSize: 2, sleepMsPerPage: 5, env: { RUN_MINUTES: "30" } });
+
+    expect(result.code).toBe(0);
+    expect(result.out).toMatch(/scan rate: [\d,]+ rows\/s/);
+  });
+
+  it("still prints the row count and elapsed time when elapsed time rounds to unmeasurable", () => {
+    // The regression this pins: run 34700743614 (PR #2080's own first CI
+    // check) failed here because the ORIGINAL guard was `elapsedS > 0 &&
+    // fetchedThisRun > 0` -- a scan fast enough that Date.now() before and
+    // after the loop round to the SAME millisecond skipped the line
+    // entirely, silently, rather than reporting an unmeasurably high rate.
     const sinkPath = path.join(tmp, `sink-${Math.random().toString(36).slice(2)}.json`);
     const rows = fixtureRows(4);
     const result = run({ sinkPath, soldComps: rows, pageSize: 2, env: { RUN_MINUTES: "30" } });
 
     expect(result.code).toBe(0);
-    expect(result.out).toMatch(/scan rate: [\d,]+ rows\/s/);
+    expect(result.out).toMatch(/scan rate: ([\d,]+ rows\/s|rate unmeasurable \(elapsed < 1ms\))/);
   });
 });
