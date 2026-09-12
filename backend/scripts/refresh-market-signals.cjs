@@ -33,6 +33,248 @@ const { reportWrites } = require(path.join(backend, "dist/services/ops/writeReco
 // The clock and the exit come from the SHARED helper, never a local copy.
 const { budget, finishLane } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
 
+// ── THE SCAN OUTGREW A 12-MINUTE BUDGET (2026-09-12) ────────────────────────
+//
+// Run 34688789170 read 5,071,211 of the 60-day window's rows in the full
+// 12-minute budget and never reached the end of the scan -- the FIRST time
+// that happened; the three prior days (5.27M-5.30M rows) finished the scan
+// with 0-1 minutes to spare and left the emit loop to eat what was left
+// (34590057476: 1,311 signals emitted, 09-10: 0, 09-09: 328 -- see the run
+// history). The pool grows every day and sold_comps runs at a shared 10k
+// RU/s with a 32-slot census fleet overnight (CLAUDE.md), so the scan's own
+// wall-clock cost is both GROWING and NOISY -- and until now a stop mid-scan
+// meant literally nothing was kept: fetchRecentSales() built its row array
+// entirely in memory with no persisted position, so tomorrow's run re-reads
+// the identical prefix from byte zero and can only ever lose the race by a
+// wider margin as the pool keeps growing.
+//
+// Two independent fixes, same shape as #2068 (anomaly-force-scan.cjs):
+//
+//   1. A 429 (or any retryable Cosmos throttle) on a page fetch gets a short
+//      bounded in-process backoff instead of taking down the loop -- reusing
+//      #2068's exact isRetryableCosmosError/backoff-delay pattern rather than
+//      re-deriving it, since the failure shape (shared 10k RU, transient
+//      throttle) is identical.
+//
+//   2. The scan now persists a Cosmos QueryIterator continuation token in
+//      crawl_state after every page, keyed to the EXACT @since parameter this
+//      run used. A resumed run passes that token back into the SAME query
+//      text and parameters -- the one shape the SDK's continuation token
+//      contract guarantees still means something -- so a budget stop (or a
+//      429 that outlives the backoff) picks the physical scan back up at the
+//      next page rather than restarting the 5M+-row prefix from scratch. NO
+//      composite index or ORDER BY is added: the composite-index runbook
+//      (backend/docs/runbooks/sold-comps-composite-indexes.md) is explicitly
+//      "proposed, NOT applied", and an indexing-policy change on a live
+//      Cosmos container is a live-prod-config HALT per CLAUDE.md, not
+//      something a scan-resumability fix should smuggle in. The continuation
+//      token resumes the SAME physically-ordered scan Cosmos was already
+//      doing; it does not change what order rows arrive in, so the existing
+//      "no ORDER BY, so a partial fetch is a partition-ordered slice, not a
+//      sample" refusal below is UNCHANGED and still fires on any run whose
+//      scan does not finish -- resuming across runs is what lets a scan
+//      EVENTUALLY finish rather than what excuses publishing a partial one.
+//
+// A cursor older than CURSOR_MAX_AGE_MS is discarded: the window has moved on
+// far enough that it no longer means the same dispatch (yesterday's cron, not
+// a same-day relaunch), and resuming means re-issuing the query with the
+// CURSOR's OWN @since -- a continuation token is only meaningful against the
+// exact parameters that produced it -- so an unbounded age would let an
+// arbitrarily stale window keep being resumed forever. Same reasoning as
+// anomaly-force-scan's scanDate-mismatch discard, one level down, but keyed
+// on elapsed time rather than a calendar-day boundary because this lane's
+// window boundary is a moving `now`, not a fixed day.
+//
+// THE ARITHMETIC, HONESTLY. Run 34688789170 measured 7,697 rows/s over
+// 5,071,211 rows in 658.8s. At that rate a 5.3M-row window (today's size,
+// growing) needs ~11.5 minutes of SCAN ALONE -- before the emit loop's own
+// ~90s (colorFamily..gradeTier, from the days the scan left room to run it)
+// -- against daily-market-signals.yml's 12-minute RUN_MINUTES. 11.5 + 1.5 =
+// 13 minutes needed vs 12 budgeted: this job DOES NOT FIT ANY MORE, and it is
+// getting worse every day as sold_comps grows. Nothing in this fix "solves"
+// that by making the scan faster -- 10k RU/s shared with a 32-slot census
+// fleet is a Drew-fixed ceiling (CLAUDE.md), not a tuning knob this script
+// owns. What this fix buys instead is that the SAME 11.5-13 minutes of work
+// no longer has to be re-paid from zero every single day: a run that reads
+// ~85-95% of the window and stops leaves that fraction banked, so the next
+// dispatch (tomorrow's cron, or a same-day relaunch on backfill-runner /
+// overnight-auto-chain, which already whitelist this script for relaunch)
+// finishes the remaining 5-15% in under a minute and reaches the emit loop
+// with most of its budget still intact. The job self-heals across 1-2 runs
+// instead of losing the same race by a wider margin every day.
+//
+// THE CUT, IF ONE IS EVER NEEDED. If the pool keeps growing and even a
+// resumed run stops finishing within 2 dispatches, the honest lever is
+// WINDOW_DAYS: scan cost is roughly linear in the 2xWINDOW_DAYS range this
+// query reads (measured: 60 days -> 5.3M rows -> 11.5 min), so a 20-day
+// window (40-day scan range) would cut the scan to roughly 2/3 -- about 7.7
+// minutes, comfortably inside 12 with room for emit -- at the cost of a
+// noisier, less-smoothed momentum signal. That is a product tradeoff for
+// Drew to make explicitly, not a default this script should reach for on its
+// own; the resumable cursor above is what keeps the job alive in the
+// meantime without raising RUN_MINUTES past the workflow's own ceiling.
+const RATE_LIMIT_RETRY_DELAYS_MS = String(process.env.MARKET_SIGNALS_429_BACKOFF_MS || "500,1500,4000")
+  .split(",").map((s) => Number(s.trim())).filter((n) => Number.isFinite(n) && n >= 0);
+
+function isRetryableCosmosError(e) {
+  if (!e) return false;
+  if (e.code === 429 || e.code === "429") return true;
+  if (Number(e.code) === 429) return true;
+  if (typeof e.retryAfterInMs === "number") return true;
+  const msg = String(e.message || e.body || "");
+  return /request rate is too large/i.test(msg) || /cosmosdb-error-429/i.test(msg);
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * fetchNext() wrapped with a short, bounded retry for exactly the retryable
+ * Cosmos throttle shape -- never a blanket catch-and-continue, so a
+ * NON-retryable error (a bad query, an auth failure) still propagates to the
+ * outer .catch and fails the run loudly, matching #2068's anomaly-force-scan
+ * helper verbatim.
+ */
+async function fetchNextWithBackoff(iter) {
+  let attempt = 0;
+  for (;;) {
+    try {
+      return await iter.fetchNext();
+    } catch (e) {
+      if (!isRetryableCosmosError(e) || attempt >= RATE_LIMIT_RETRY_DELAYS_MS.length) throw e;
+      const waitMs = Number(e.retryAfterInMs) || RATE_LIMIT_RETRY_DELAYS_MS[attempt];
+      console.log(`  Cosmos 429 on this page -- backing off ${waitMs}ms (retry ${attempt + 1}/${RATE_LIMIT_RETRY_DELAYS_MS.length})`);
+      await sleep(waitMs);
+      attempt++;
+    }
+  }
+}
+
+// ── THE SCAN CURSOR ──────────────────────────────────────────────────────
+//
+// One MANIFEST doc plus N CHUNK docs, all id-partitioned like every other
+// crawl_state row (anomaly-force-scan.cjs, tca-firehose-ingest.cjs,
+// ingest-universe-driver.cjs). CURSOR_ID/chunkId() are SOURCE LITERALS for
+// the same reason: a drifted id would resume from nothing and silently
+// re-scan from row 0.
+//
+// WHY CHUNKED, NOT ONE DOC. A Cosmos document caps at 2MB. The nine-field
+// projection fetchRecentSales() already SELECTs runs ~300 bytes/row as JSON
+// (measured against a populated `composite` object), which puts that ceiling
+// at roughly 7,000 rows per document -- and a stopped scan has read MILLIONS
+// (5,071,211 rows in the run this fix responds to). One doc holding `rows`
+// would throw on its very first upsert past that ceiling, which would turn
+// "the scan didn't finish" into "the scan didn't finish AND the attempt to
+// remember that threw" -- strictly worse than the unbounded-memory defect
+// this file already documents fixing. Chunking at CURSOR_CHUNK_SIZE rows per
+// doc keeps every individual write on the safe side of the 2MB ceiling
+// regardless of how large the pool grows.
+//
+// NOTHING IS TRIMMED FROM THE ROW SHAPE. `composite` is kept as a whole
+// (colorFamily/edition/finishModifier/insertSet all live under it and
+// groupBy() reads it as one object) -- every field fetchRecentSales already
+// SELECTs is load-bearing for one of the nine emitted dimensions or for the
+// curr/prior split itself, so none of them can be dropped from the persisted
+// shape without also dropping it from the emit this cursor exists to make
+// possible.
+const CONTROL_CONTAINER = process.env.CONTROL_CONTAINER || "crawl_state";
+const CURSOR_ID = "refresh-market-signals::scan-cursor";
+// 5,000 rows/chunk keeps each chunk doc comfortably under Cosmos' 2MB
+// document ceiling even for the widest rows this scan reads (a populated
+// `composite` object): ~300 bytes/row measured x 5,000 = ~1.5MB, leaving
+// margin for Cosmos' own system properties. This is a RARE-PATH cost -- it
+// is only paid on a run that stops mid-scan and the run that resumes it --
+// so trading some chunk-doc RU for skipping a full re-scan (which would
+// re-spend the RU of reading those same rows again, on top of the wall-clock
+// this whole fix exists to stop losing) is the cheaper side of the trade.
+const CURSOR_CHUNK_SIZE = Number(process.env.MARKET_SIGNALS_CURSOR_CHUNK_SIZE || 5000);
+const chunkId = (n) => `refresh-market-signals::scan-cursor::chunk::${n}`;
+
+/** Runs `fn` over `items` with at most `limit` in flight at once -- bounded
+ *  concurrency for the chunk reads/writes so a cursor spanning hundreds of
+ *  chunks does not serialize into hundreds of sequential round trips, and
+ *  does not fire them all at once against a container already RU-constrained. */
+async function mapWithConcurrency(items, limit, fn) {
+  const results = new Array(items.length);
+  let next = 0;
+  async function worker() {
+    for (;;) {
+      const i = next++;
+      if (i >= items.length) return;
+      results[i] = await fn(items[i], i);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+  return results;
+}
+const CURSOR_IO_CONCURRENCY = Number(process.env.MARKET_SIGNALS_CURSOR_IO_CONCURRENCY || 8);
+
+async function readScanCursor(control) {
+  let manifest;
+  try {
+    const { resource } = await control.item(CURSOR_ID, CURSOR_ID).read();
+    manifest = resource || null;
+  } catch (e) {
+    if (e.code === 404) return null;
+    throw e;
+  }
+  if (!manifest) return null;
+  const chunkResults = await mapWithConcurrency(
+    Array.from({ length: manifest.chunkCount }, (_, i) => i),
+    CURSOR_IO_CONCURRENCY,
+    async (i) => {
+      const { resource } = await control.item(chunkId(i), chunkId(i)).read();
+      return Array.isArray(resource?.rows) ? resource.rows : [];
+    }
+  );
+  return { ...manifest, rows: chunkResults.flat() };
+}
+
+/** Persist scan progress: the continuation token, the exact @since this
+ *  token is valid against, and the rows accumulated so far chunked across
+ *  several docs (so a resumed run does not have to re-fetch what it already
+ *  read, and no single write risks the 2MB document ceiling). */
+async function writeScanCursor(control, { sinceIso, continuationToken, rows }) {
+  const chunkCount = Math.max(1, Math.ceil(rows.length / CURSOR_CHUNK_SIZE));
+  await mapWithConcurrency(
+    Array.from({ length: chunkCount }, (_, i) => i),
+    CURSOR_IO_CONCURRENCY,
+    (i) => {
+      const slice = rows.slice(i * CURSOR_CHUNK_SIZE, (i + 1) * CURSOR_CHUNK_SIZE);
+      return control.items.upsert({ id: chunkId(i), docType: "market_signals_scan_cursor_chunk", rows: slice });
+    }
+  );
+  const manifest = {
+    id: CURSOR_ID,
+    docType: "market_signals_scan_cursor",
+    sinceIso,
+    continuationToken,
+    rowCount: rows.length,
+    chunkCount,
+    updatedAt: new Date().toISOString(),
+  };
+  await control.items.upsert(manifest);
+  return manifest;
+}
+
+async function clearScanCursor(control, priorManifest) {
+  const chunkCount = priorManifest?.chunkCount ?? 0;
+  await mapWithConcurrency(
+    Array.from({ length: chunkCount }, (_, i) => i),
+    CURSOR_IO_CONCURRENCY,
+    async (i) => {
+      try { await control.item(chunkId(i), chunkId(i)).delete(); }
+      catch (e) { if (e.code !== 404) throw e; }
+    }
+  );
+  try {
+    await control.item(CURSOR_ID, CURSOR_ID).delete();
+  } catch (e) {
+    if (e.code !== 404) throw e;
+  }
+}
+
 // CF-RUNNER-FLAG-HYGIENE (D18, 2026-08-29). Default-on meant `apply=false`
 // under the runner still wrote — the runner exports BACKFILL_APPLY, not
 // MARKET_SIGNALS_APPLY. Precedence: an explicit MARKET_SIGNALS_APPLY (the cron
@@ -86,11 +328,18 @@ const MIN_VOLUME = Number(process.env.MARKET_SIGNALS_MIN_VOLUME || "20");
 //
 // So a scan-phase stop exits 5 having written NOTHING, and still prints the
 // marker -- the relaunch marker arm runs BEFORE its outcome check, so a refusal
-// re-dispatches and the next run re-scans from the top with a full clock.
+// re-dispatches and the next run RESUMES the scan from the persisted
+// continuation token (see THE SCAN CURSOR above) rather than re-reading the
+// same multi-million-row prefix with a full clock and no progress to show
+// for it.
 //
 // TWO UNITS, TWO SIZES. The scan unit is one 5,000-row page of a nine-field
 // projection; the emit unit is one dimension key, an in-memory median plus one
-// upsert. The reserve is sized to the LARGER, the scan page: 60 seconds.
+// upsert. The reserve is sized to the LARGER, the scan page: 60 seconds --
+// comfortably above the worst-case in-process 429 backoff for one page
+// (500+1500+4000 = 6s) plus the page fetch itself, so a page that needs its
+// full backoff still fits inside the reserve rather than being cut off
+// mid-retry.
 //
 // VERIFY_MS is nominal: this lane reads nothing after its loops.
 // Worst case 110 + 1 + 1 + 1 + 1 = 114m under the 150m ceiling.
@@ -105,30 +354,71 @@ const RESERVE_MS = Number(process.env.RESERVE_MS || 60 * 1000);
 const VERIFY_MS = Number(process.env.VERIFY_MS || 60 * 1000);
 const CLOCK = budget({ minutes: RUN_MINUTES, reserveMs: RESERVE_MS, verifyMs: VERIFY_MS });
 
-async function fetchRecentSales(sc, sinceIso) {
-  const query = `
+const SCAN_QUERY = `
     SELECT c.soldAt, c.price, c.sport, c.isAuto, c.autoStyle, c.hobbyiqCardId,
            c.gradeCompany, c.gradeValue, c.composite
     FROM c
     WHERE c.soldAt >= @since AND c.price > 0
       AND IS_DEFINED(c.composite) AND c.composite != null
   `;
+
+/**
+ * @param {object} sc               sold_comps container
+ * @param {string} sinceIso         the window's @since parameter
+ * @param {object} [resume]         { continuationToken, rows } from a cursor
+ *                                   written against this EXACT sinceIso
+ */
+async function fetchRecentSales(sc, sinceIso, resume) {
+  const rows = resume ? resume.rows.slice() : [];
+  const startingContinuation = resume ? resume.continuationToken : undefined;
+  const t0 = Date.now();
+  const startCount = rows.length;
   const it = sc.items.query(
-    { query, parameters: [{ name: "@since", value: sinceIso }] },
-    { maxItemCount: 5000 }
+    { query: SCAN_QUERY, parameters: [{ name: "@since", value: sinceIso }] },
+    { maxItemCount: 5000, continuationToken: startingContinuation }
   );
-  const rows = [];
   let stoppedAtBudget = false;
+  let lastContinuation = startingContinuation ?? null;
   while (it.hasMoreResults()) {
     // THE PRE-CHECK, before the page is fetched. A stop here is FATAL to the
-    // write phase -- see THE CLOCK above -- not merely a shorter run.
+    // write phase -- see THE CLOCK above -- not merely a shorter run. It is
+    // ALSO the point a resumable cursor is written, so a stop here no longer
+    // means the next run re-reads this same prefix.
     if (CLOCK.outOfClock()) { stoppedAtBudget = true; break; }
-    const { resources } = await it.fetchNext();
+    let resp;
+    try {
+      resp = await fetchNextWithBackoff(it);
+    } catch (e) {
+      if (!isRetryableCosmosError(e)) throw e;
+      // A 429 that outlived the in-process backoff. Same handling as a
+      // clock-exhaustion stop: the cursor below persists lastContinuation
+      // (the last page THIS call fully committed to `rows`), never the
+      // in-flight page that just threw.
+      console.log(`  Cosmos is throttling sold_comps (429) past the retry budget at ${rows.length} rows -- `
+        + "stopping the scan here rather than crashing; the relaunch resumes from this page.");
+      stoppedAtBudget = true;
+      break;
+    }
+    const { resources } = resp;
     if (Array.isArray(resources)) rows.push(...resources);
+    lastContinuation = resp.continuationToken ?? resp.continuation ?? lastContinuation;
     if (rows.length % 25000 < 5000) process.stdout.write(`\r  fetching ${rows.length}`);
   }
+  // elapsedS can legitimately round to 0 on a very fast/tiny scan (a CI
+  // fixture, or a handful of pages served from a warm connection) -- that is
+  // still a real measurement (an unmeasurably high rate), not an absence of
+  // one, so the guard is on ROWS FETCHED, not on elapsed time. Dividing by a
+  // near-zero elapsedS would print an absurd rows/s figure, so the rate
+  // figure itself is only shown once elapsed time is measurable; below that
+  // the row count and duration are still printed honestly.
+  const elapsedS = (Date.now() - t0) / 1000;
+  const fetchedThisRun = rows.length - startCount;
+  if (fetchedThisRun > 0) {
+    const rate = elapsedS > 0 ? `${(fetchedThisRun / elapsedS).toFixed(0)} rows/s` : "rate unmeasurable (elapsed < 1ms)";
+    console.warn(`  scan rate: ${rate} (${fetchedThisRun.toLocaleString("en-US")} rows in ${elapsedS.toFixed(1)}s this run)`);
+  }
   console.log(`\r  ${rows.length} sales with composite since ${sinceIso}                     `);
-  return { rows, stoppedAtBudget };
+  return { rows, stoppedAtBudget, continuationToken: stoppedAtBudget ? lastContinuation : null };
 }
 
 function median(arr) {
@@ -219,7 +509,9 @@ async function emitDimension(name, currGroups, priorGroups, computedAt) {
 async function main() {
   // NAMED and RETURNED, so finishLane() can dispose it (#1809).
   const client = new CosmosClient(process.env.COSMOS_CONNECTION_STRING);
-  const sc = client.database("hobbyiq").container("sold_comps");
+  const db = client.database("hobbyiq");
+  const sc = db.container("sold_comps");
+  const control = db.container(CONTROL_CONTAINER);
 
   console.log(`[refresh-market-signals]`);
   console.log(`  apply: ${APPLY}`);
@@ -231,7 +523,39 @@ async function main() {
   const computedAt = new Date(now).toISOString();
   const currStart = now - WINDOW_DAYS * 86400000;
   const priorStart = now - 2 * WINDOW_DAYS * 86400000;
-  const { rows, stoppedAtBudget: scanStoppedAtBudget } = await fetchRecentSales(sc, new Date(priorStart).toISOString());
+  const freshSinceIso = new Date(priorStart).toISOString();
+
+  // -- RESUME THE SCAN FROM A CURSOR, IF ONE IS RECENT ENOUGH TO TRUST -------
+  //
+  // `now` is computed FRESH every run, so a resumed run's own @since would
+  // never byte-match a cursor written minutes or hours earlier even on a
+  // same-day relaunch -- and a Cosmos continuation token is only meaningful
+  // against the EXACT query parameters that produced it, so resuming means
+  // re-issuing the query with the CURSOR's @since, not today's recomputed
+  // one. The two are close enough to be the same 60-day window in practice
+  // (the window only moves 1ms per 1ms of wall-clock, so a same-day resume
+  // shifts it by minutes out of 60 days) -- what matters is bounding how OLD
+  // a cursor may be before it is discarded instead of resumed, so a cursor
+  // from a genuinely different dispatch (yesterday's cron, a window that has
+  // since rolled past MARKET_SIGNALS_WINDOW_DAYS) does not get spliced onto
+  // a run that no longer means the same thing.
+  //
+  // CURSOR_MAX_AGE_MS defaults to 20 hours: shorter than the 24-hour cron
+  // cadence (so YESTERDAY's leftover cursor is never mistaken for today's),
+  // long enough to cover any same-day relaunch chain (backfill-runner and
+  // overnight-auto-chain both dispatch this script within a single job).
+  const CURSOR_MAX_AGE_MS = Number(process.env.MARKET_SIGNALS_CURSOR_MAX_AGE_MS || 20 * 60 * 60 * 1000);
+  const priorCursor = await readScanCursor(control);
+  const cursorAgeMs = priorCursor ? now - new Date(priorCursor.updatedAt).getTime() : Infinity;
+  const resuming = !!(priorCursor && priorCursor.continuationToken && cursorAgeMs >= 0 && cursorAgeMs <= CURSOR_MAX_AGE_MS);
+  const sinceIso = resuming ? priorCursor.sinceIso : freshSinceIso;
+  console.log(resuming
+    ? `  RESUMING scan from cursor (${priorCursor.rowCount.toLocaleString("en-US")} rows already read this window, `
+      + `cursor age ${Math.round(cursorAgeMs / 60000)}m)`
+    : `  starting a fresh scan${priorCursor ? ` (discarding a cursor too old to trust, age ${Math.round(cursorAgeMs / 60000)}m)` : ""}`);
+
+  const { rows, stoppedAtBudget: scanStoppedAtBudget, continuationToken } =
+    await fetchRecentSales(sc, sinceIso, resuming ? priorCursor : undefined);
 
   // -- THE REFUSAL -----------------------------------------------------------
   //
@@ -245,8 +569,15 @@ async function main() {
   //
   // Exit 5 is a VERDICT, not a crash (#1955 outcome (d)). The marker is printed
   // FIRST, because the relaunch marker arm runs BEFORE its outcome check -- so
-  // this re-dispatches and the next run re-scans from the top.
+  // this re-dispatches and the next run re-scans from here.
   if (scanStoppedAtBudget) {
+    // THE SCAN CURSOR. Unlike the old all-or-nothing fetch, a stop here now
+    // persists the continuation token AND the rows already read, so the next
+    // dispatch (the relaunch, if this workflow gains one, or tomorrow's cron
+    // if it stays bare) resumes the physical scan at the next page instead of
+    // re-reading this same multi-million-row prefix from byte zero.
+    await writeScanCursor(control, { sinceIso, continuationToken, rows });
+    console.log(`  scan cursor written: ${rows.length.toLocaleString("en-US")} rows persisted for this window`);
     console.log(`
   stopped at the ${CLOCK.RUN_MINUTES}-minute budget -- `
       + `the sales scan is UNFINISHED; the relaunch continues from here`);
@@ -262,6 +593,10 @@ async function main() {
     process.exitCode = 5;
     return { client, budget: CLOCK };
   }
+
+  // The scan FINISHED -- clear any cursor from a prior stop so a later run
+  // does not mistake a stale continuation token for a valid resume point.
+  if (priorCursor) await clearScanCursor(control, priorCursor);
 
   const curr = rows.filter(r => new Date(r.soldAt).getTime() >= currStart);
   const prior = rows.filter(r => new Date(r.soldAt).getTime() < currStart);
