@@ -29,7 +29,8 @@ import { decideTwinAddress, type TwinCandidate } from "./twinAddressRule.js";
 import { playerTheTitleAllows } from "./playerTheTitleAllows.js";
 import { yearTheTitleAllows } from "./yearTheTitleAllows.js";
 import { extractYearFromTitle } from "./slugRederivation.service.js";
-import { canonicalizeParallelName, variationParallelsForCard } from "../catalog/catalogMatcher.service.js";
+import { canonicalizeParallelName, variationParallelsForCard, getCatalogContainerForRead } from "../catalog/catalogMatcher.service.js";
+import { resolveProductByChecklist, newResolveCache } from "../catalog/resolveProductByChecklist.js";
 import { canonicalVariationName, pickVariationForMarker, reduceVariationStockToCatalog, variationNameFromSlug } from "../catalog/variationVocabulary.js";
 import { qualifiedSetKeyFromTitle } from "../catalog/productQualifiers.js";
 import { parseGradeFromTitle } from "./gradeParser.js";
@@ -743,6 +744,11 @@ export interface VendorPersistResult {
   variationFromMarker?: number;
   /** D22: the title named a product qualifier (1st Edition / Sapphire / Chrome / Update) the vendor's product tag lacked. */
   productQualifierApplied?: number;
+  /** R29: the checklist MOVED the product off what the title parser read. */
+  productResolvedByChecklist?: number;
+  /** R29: the checklist AGREED with the parser. Counted separately so the
+   *  two numbers can be read against each other in a dry run. */
+  productConfirmedByChecklist?: number;
   /** D22: a qualifier whose move is a ruling (bowman ↔ bowman-chrome, Topps Chrome Update) — counted, not made. */
   productQualifierRefused?: number;
   /** CF-ONE-SALE-ONE-ADDRESS: this sale id is already resident under a
@@ -952,6 +958,11 @@ export async function persistVendorSalesToPool(
   // D22: the catalog's variation rows per (sport, year, setKey, cardNumber),
   // asked only when a title carries a weak variation marker.
   const variationRowsByCard = new Map<string, string[]>();
+  // ONE R29 product-resolution cache for the whole batch. The resolver asks
+  // the same (year, setKey, cardNumber) question for every sale of the same
+  // card, and a batch is overwhelmingly repeats -- sharing the cache is what
+  // keeps this a few hundred indexed reads instead of one per row.
+  const productResolveCache = newResolveCache();
 
   for (const row of rows) {
     const title = String(row.title ?? "").trim();
@@ -1404,6 +1415,53 @@ export async function persistVendorSalesToPool(
       skippedSportUnresolved++;
       result.skippedSportUnresolved = skippedSportUnresolved;
       continue;
+    }
+
+    // RULING R29 (Drew, 2026-09-13): THE CHECKLIST DECIDES THE PRODUCT.
+    //
+    // This is the one seam on the sale path where sport, year, setKey,
+    // cardNumber and player are ALL in hand -- which is exactly what the
+    // question needs, and why the resolver is asked here rather than beside
+    // `inferSetKeyFromTitle` a few hundred lines up (the card number is not
+    // settled until the player-fallback block above).
+    //
+    // NARROWED TO THE DEFECT R29 NAMES, ON PURPOSE. The resolver is allowed to
+    // move the key only when it lands on a product the title's own words put
+    // in play AND whose checklist names this card -- i.e. the flagship-swallow
+    // and alias classes. It is NOT a licence to re-key every sale: a verdict of
+    // `unknown` or `no-checklist` leaves `setKey` exactly as the parser read
+    // it, so this change can only make a product MORE specific and correct,
+    // never less. CF-ONLY-IMPROVE, applied to the product axis.
+    //
+    // A failure here is never fatal to the sale. The catalog is a network call
+    // and the pool write is not allowed to depend on it: on any throw the
+    // parser's answer stands, which is today's behaviour exactly.
+    if (cardYear && parsed.cardNumber && setKey) {
+      try {
+        const res = await resolveProductByChecklist(
+          {
+            productText: canonicalNormalizeSetKey(setKey, sport),
+            year: cardYear,
+            cardNumber: String(parsed.cardNumber),
+            player: playerName ?? null,
+            sport,
+            // The parser's own answer, so the resolver can refuse to fold a
+            // named product up to its flagship (see wouldFoldUpToAnAncestor).
+            parsedSetKey: canonicalNormalizeSetKey(setKey, sport),
+          },
+          { container: await getCatalogContainerForRead(), cache: productResolveCache },
+        );
+        const decided = res.setKey;
+        if (decided && decided !== canonicalNormalizeSetKey(setKey, sport)) {
+          setKey = decided;
+          result.productResolvedByChecklist = (result.productResolvedByChecklist ?? 0) + 1;
+        } else if (decided) {
+          result.productConfirmedByChecklist = (result.productConfirmedByChecklist ?? 0) + 1;
+        }
+      } catch {
+        // The parser's answer stands. Absent beats wrong, and a catalog blip
+        // must not change what a sale is.
+      }
     }
 
     let slug: string;
