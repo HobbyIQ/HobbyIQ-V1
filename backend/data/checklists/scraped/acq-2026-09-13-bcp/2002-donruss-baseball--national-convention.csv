@@ -1,0 +1,441 @@
+category,cardNumber,parallel,isAuto,printRun,player,parallelNote,rarity
+base,1,Base,false,,Alex Rodriguez
+base,1,National Convention,false,,Alex Rodriguez,,
+base,2,Base,false,,Barry Bonds
+base,2,National Convention,false,,Barry Bonds,,
+base,3,Base,false,,Derek Jeter
+base,3,National Convention,false,,Derek Jeter,,
+base,4,Base,false,,Robert Fick
+base,4,National Convention,false,,Robert Fick,,
+base,5,Base,false,,Juan Pierre
+base,5,National Convention,false,,Juan Pierre,,
+base,6,Base,false,,Torii Hunter
+base,6,National Convention,false,,Torii Hunter,,
+base,7,Base,false,,Todd Helton
+base,7,National Convention,false,,Todd Helton,,
+base,8,Base,false,,Cal Ripken Jr.
+base,8,National Convention,false,,Cal Ripken Jr.,,
+base,9,Base,false,,Manny Ramirez
+base,9,National Convention,false,,Manny Ramirez,,
+base,10,Base,false,,Johnny Damon
+base,10,National Convention,false,,Johnny Damon,,
+base,11,Base,false,,Mike Piazza
+base,11,National Convention,false,,Mike Piazza,,
+base,12,Base,false,,Nomar Garciaparra
+base,12,National Convention,false,,Nomar Garciaparra,,
+base,13,Base,false,,Pedro Martinez
+base,13,National Convention,false,,Pedro Martinez,,
+base,14,Base,false,,Brian Giles
+base,14,National Convention,false,,Brian Giles,,
+base,15,Base,false,,Albert Pujols
+base,15,National Convention,false,,Albert Pujols,,
+base,16,Base,false,,Roger Clemens
+base,16,National Convention,false,,Roger Clemens,,
+base,17,Base,false,,Sammy Sosa
+base,17,National Convention,false,,Sammy Sosa,,
+base,18,Base,false,,Vladimir Guerrero
+base,18,National Convention,false,,Vladimir Guerrero,,
+base,19,Base,false,,Tony Gwynn
+base,19,National Convention,false,,Tony Gwynn,,
+base,20,Base,false,,Pat Burrell
+base,20,National Convention,false,,Pat Burrell,,
+base,21,Base,false,,Carlos Delgado
+base,21,National Convention,false,,Carlos Delgado,,
+base,22,Base,false,,Tino Martinez
+base,22,National Convention,false,,Tino Martinez,,
+base,23,Base,false,,Jim Edmonds
+base,23,National Convention,false,,Jim Edmonds,,
+base,24,Base,false,,Jason Giambi
+base,24,National Convention,false,,Jason Giambi,,
+base,25,Base,false,,Tom Glavine
+base,25,National Convention,false,,Tom Glavine,,
+base,26,Base,false,,Mark Grace
+base,26,National Convention,false,,Mark Grace,,
+base,27,Base,false,,Tony Armas Jr.
+base,27,National Convention,false,,Tony Armas Jr.,,
+base,28,Base,false,,Andruw Jones
+base,28,National Convention,false,,Andruw Jones,,
+base,29,Base,false,,Ben Sheets
+base,29,National Convention,false,,Ben Sheets,,
+base,30,Base,false,,Jeff Kent
+base,30,National Convention,false,,Jeff Kent,,
+base,31,Base,false,,Barry Larkin
+base,31,National Convention,false,,Barry Larkin,,
+base,32,Base,false,,Joe Mays
+base,32,National Convention,false,,Joe Mays,,
+base,33,Base,false,,Mike Mussina
+base,33,National Convention,false,,Mike Mussina,,
+base,34,Base,false,,Hideo Nomo
+base,34,National Convention,false,,Hideo Nomo,,
+base,35,Base,false,,Rafael Palmeiro
+base,35,National Convention,false,,Rafael Palmeiro,,
+base,36,Base,false,,Scott Brosius
+base,36,National Convention,false,,Scott Brosius,,
+base,37,Base,false,,Scott Rolen
+base,37,National Convention,false,,Scott Rolen,,
+base,38,Base,false,,Gary Sheffield
+base,38,National Convention,false,,Gary Sheffield,,
+base,39,Base,false,,Bernie Williams
+base,39,National Convention,false,,Bernie Williams,,
+base,40,Base,false,,Bob Abreu
+base,40,National Convention,false,,Bob Abreu,,
+base,41,Base,false,,Edgardo Alfonzo
+base,41,National Convention,false,,Edgardo Alfonzo,,
+base,42,Base,false,,C.C. Sabathia
+base,42,National Convention,false,,C.C. Sabathia,,
+base,43,Base,false,,Jeremy Giambi
+base,43,National Convention,false,,Jeremy Giambi,,
+base,44,Base,false,,Craig Biggio
+base,44,National Convention,false,,Craig Biggio,,
+base,45,Base,false,,Andres Galarraga
+base,45,National Convention,false,,Andres Galarraga,,
+base,46,Base,false,,Edgar Martinez
+base,46,National Convention,false,,Edgar Martinez,,
+base,47,Base,false,,Fred McGriff
+base,47,National Convention,false,,Fred McGriff,,
+base,48,Base,false,,Magglio Ordonez
+base,48,National Convention,false,,Magglio Ordonez,,
+base,49,Base,false,,Jim Thome
+base,49,National Convention,false,,Jim Thome,,
+base,50,Base,false,,Matt Williams
+base,50,National Convention,false,,Matt Williams,,
+base,51,Base,false,,Kerry Wood
+base,51,National Convention,false,,Kerry Wood,,
+base,52,Base,false,,Moises Alou
+base,52,National Convention,false,,Moises Alou,,
+base,53,Base,false,,Brady Anderson
+base,53,National Convention,false,,Brady Anderson,,
+base,54,Base,false,,Garret Anderson
+base,54,National Convention,false,,Garret Anderson,,
+base,55,Base,false,,Juan Gonzalez
+base,55,National Convention,false,,Juan Gonzalez,,
+base,56,Base,false,,Bret Boone
+base,56,National Convention,false,,Bret Boone,,
+base,57,Base,false,,Jose Cruz Jr.
+base,57,National Convention,false,,Jose Cruz Jr.,,
+base,58,Base,false,,Carlos Beltran
+base,58,National Convention,false,,Carlos Beltran,,
+base,59,Base,false,,Adrian Beltre
+base,59,National Convention,false,,Adrian Beltre,,
+base,60,Base,false,,Joe Kennedy
+base,60,National Convention,false,,Joe Kennedy,,
+base,61,Base,false,,Lance Berkman
+base,61,National Convention,false,,Lance Berkman,,
+base,62,Base,false,,Kevin Brown
+base,62,National Convention,false,,Kevin Brown,,
+base,63,Base,false,,Tim Hudson
+base,63,National Convention,false,,Tim Hudson,,
+base,64,Base,false,,Jeromy Burnitz
+base,64,National Convention,false,,Jeromy Burnitz,,
+base,65,Base,false,,Jarrod Washburn
+base,65,National Convention,false,,Jarrod Washburn,,
+base,66,Base,false,,Sean Casey
+base,66,National Convention,false,,Sean Casey,,
+base,67,Base,false,,Eric Chavez
+base,67,National Convention,false,,Eric Chavez,,
+base,68,Base,false,,Bartolo Colon
+base,68,National Convention,false,,Bartolo Colon,,
+base,69,Base,false,,Freddy Garcia
+base,69,National Convention,false,,Freddy Garcia,,
+base,70,Base,false,,Jermaine Dye
+base,70,National Convention,false,,Jermaine Dye,,
+base,71,Base,false,,Terrence Long
+base,71,National Convention,false,,Terrence Long,,
+base,72,Base,false,,Cliff Floyd
+base,72,National Convention,false,,Cliff Floyd,,
+base,73,Base,false,,Luis Gonzalez
+base,73,National Convention,false,,Luis Gonzalez,,
+base,74,Base,false,,Ichiro
+base,74,National Convention,false,,Ichiro,,
+base,75,Base,false,,Mike Hampton
+base,75,National Convention,false,,Mike Hampton,,
+base,76,Base,false,,Richard Hidalgo
+base,76,National Convention,false,,Richard Hidalgo,,
+base,77,Base,false,,Geoff Jenkins
+base,77,National Convention,false,,Geoff Jenkins,,
+base,78,Base,false,,Gabe Kapler
+base,78,National Convention,false,,Gabe Kapler,,
+base,79,Base,false,,Ken Griffey Jr.
+base,79,National Convention,false,,Ken Griffey Jr.,,
+base,80,Base,false,,Jason Kendall
+base,80,National Convention,false,,Jason Kendall,,
+base,81,Base,false,,Josh Towers
+base,81,National Convention,false,,Josh Towers,,
+base,82,Base,false,,Ryan Klesko
+base,82,National Convention,false,,Ryan Klesko,,
+base,83,Base,false,,Paul Konerko
+base,83,National Convention,false,,Paul Konerko,,
+base,84,Base,false,,Carlos Lee
+base,84,National Convention,false,,Carlos Lee,,
+base,85,Base,false,,Kenny Lofton
+base,85,National Convention,false,,Kenny Lofton,,
+base,86,Base,false,,Josh Beckett
+base,86,National Convention,false,,Josh Beckett,,
+base,87,Base,false,,Raul Mondesi
+base,87,National Convention,false,,Raul Mondesi,,
+base,88,Base,false,,Trot Nixon
+base,88,National Convention,false,,Trot Nixon,,
+base,89,Base,false,,John Olerud
+base,89,National Convention,false,,John Olerud,,
+base,90,Base,false,,Paul O'Neill
+base,90,National Convention,false,,Paul O'Neill,,
+base,91,Base,false,,Chan Ho Park
+base,91,National Convention,false,,Chan Ho Park,,
+base,92,Base,false,,Andy Pettitte
+base,92,National Convention,false,,Andy Pettitte,,
+base,93,Base,false,,Jorge Posada
+base,93,National Convention,false,,Jorge Posada,,
+base,94,Base,false,,Mark Quinn
+base,94,National Convention,false,,Mark Quinn,,
+base,95,Base,false,,Aramis Ramirez
+base,95,National Convention,false,,Aramis Ramirez,,
+base,96,Base,false,,Curt Schilling
+base,96,National Convention,false,,Curt Schilling,,
+base,97,Base,false,,Richie Sexson
+base,97,National Convention,false,,Richie Sexson,,
+base,98,Base,false,,John Smoltz
+base,98,National Convention,false,,John Smoltz,,
+base,99,Base,false,,Wilson Betemit
+base,99,National Convention,false,,Wilson Betemit,,
+base,100,Base,false,,Shannon Stewart
+base,100,National Convention,false,,Shannon Stewart,,
+base,101,Base,false,,Alfonso Soriano
+base,101,National Convention,false,,Alfonso Soriano,,
+base,102,Base,false,,Mike Sweeney
+base,102,National Convention,false,,Mike Sweeney,,
+base,103,Base,false,,Miguel Tejada
+base,103,National Convention,false,,Miguel Tejada,,
+base,104,Base,false,,Greg Vaughn
+base,104,National Convention,false,,Greg Vaughn,,
+base,105,Base,false,,Robin Ventura
+base,105,National Convention,false,,Robin Ventura,,
+base,106,Base,false,,Jose Vidro
+base,106,National Convention,false,,Jose Vidro,,
+base,107,Base,false,,Larry Walker
+base,107,National Convention,false,,Larry Walker,,
+base,108,Base,false,,Preston Wilson
+base,108,National Convention,false,,Preston Wilson,,
+base,109,Base,false,,Corey Patterson
+base,109,National Convention,false,,Corey Patterson,,
+base,110,Base,false,,Mark Mulder
+base,110,National Convention,false,,Mark Mulder,,
+base,111,Base,false,,Tony Clark
+base,111,National Convention,false,,Tony Clark,,
+base,112,Base,false,,Roy Oswalt
+base,112,National Convention,false,,Roy Oswalt,,
+base,113,Base,false,,Jimmy Rollins
+base,113,National Convention,false,,Jimmy Rollins,,
+base,114,Base,false,,Kazuhiro Sasaki
+base,114,National Convention,false,,Kazuhiro Sasaki,,
+base,115,Base,false,,Barry Zito
+base,115,National Convention,false,,Barry Zito,,
+base,116,Base,false,,Javier Vazquez
+base,116,National Convention,false,,Javier Vazquez,,
+base,117,Base,false,,Mike Cameron
+base,117,National Convention,false,,Mike Cameron,,
+base,118,Base,false,,Phil Nevin
+base,118,National Convention,false,,Phil Nevin,,
+base,119,Base,false,,Bud Smith
+base,119,National Convention,false,,Bud Smith,,
+base,120,Base,false,,Cristian Guzman
+base,120,National Convention,false,,Cristian Guzman,,
+base,121,Base,false,,Al Leiter
+base,121,National Convention,false,,Al Leiter,,
+base,122,Base,false,,Brad Radke
+base,122,National Convention,false,,Brad Radke,,
+base,123,Base,false,,Bob Higginson
+base,123,National Convention,false,,Bob Higginson,,
+base,124,Base,false,,Robert Person
+base,124,National Convention,false,,Robert Person,,
+base,125,Base,false,,Adam Dunn
+base,125,National Convention,false,,Adam Dunn,,
+base,126,Base,false,,Ben Grieve
+base,126,National Convention,false,,Ben Grieve,,
+base,127,Base,false,,Rafael Furcal
+base,127,National Convention,false,,Rafael Furcal,,
+base,128,Base,false,,Jay Gibbons
+base,128,National Convention,false,,Jay Gibbons,,
+base,129,Base,false,,Paul LoDuca
+base,129,National Convention,false,,Paul LoDuca,,
+base,130,Base,false,,Wade Miller
+base,130,National Convention,false,,Wade Miller,,
+base,131,Base,false,,Tsuyoshi Shinjo
+base,131,National Convention,false,,Tsuyoshi Shinjo,,
+base,132,Base,false,,Eric Milton
+base,132,National Convention,false,,Eric Milton,,
+base,133,Base,false,,Rickey Henderson
+base,133,National Convention,false,,Rickey Henderson,,
+base,134,Base,false,,Roberto Alomar
+base,134,National Convention,false,,Roberto Alomar,,
+base,135,Base,false,,Darin Erstad
+base,135,National Convention,false,,Darin Erstad,,
+base,136,Base,false,,J.D. Drew
+base,136,National Convention,false,,J.D. Drew,,
+base,137,Base,false,,Shawn Green
+base,137,National Convention,false,,Shawn Green,,
+base,138,Base,false,,Randy Johnson
+base,138,National Convention,false,,Randy Johnson,,
+base,139,Base,false,,Austin Kearns
+base,139,National Convention,false,,Austin Kearns,,
+base,140,Base,false,,Jose Canseco
+base,140,National Convention,false,,Jose Canseco,,
+base,141,Base,false,,Jeff Bagwell
+base,141,National Convention,false,,Jeff Bagwell,,
+base,142,Base,false,,Greg Maddux
+base,142,National Convention,false,,Greg Maddux,,
+base,143,Base,false,,Mark Buehrle
+base,143,National Convention,false,,Mark Buehrle,,
+base,144,Base,false,,Ivan Rodriguez
+base,144,National Convention,false,,Ivan Rodriguez,,
+base,145,Base,false,,Frank Thomas
+base,145,National Convention,false,,Frank Thomas,,
+base,146,Base,false,,Rich Aurilia
+base,146,National Convention,false,,Rich Aurilia,,
+base,147,Base,false,,Troy Glaus
+base,147,National Convention,false,,Troy Glaus,,
+base,148,Base,false,,Ryan Dempster
+base,148,National Convention,false,,Ryan Dempster,,
+base,149,Base,false,,Chipper Jones
+base,149,National Convention,false,,Chipper Jones,,
+base,150,Base,false,,Matt Morris
+base,150,National Convention,false,,Matt Morris,,
+base,151,Base,false,,Marlon Byrd RR
+base,151,National Convention,false,,Marlon Byrd RR,,
+base,152,Base,false,,Ben Howard RR RC
+base,152,National Convention,false,,Ben Howard RR RC,,
+base,153,Base,false,,Brandon Backe RR RC
+base,153,National Convention,false,,Brandon Backe RR RC,,
+base,154,Base,false,,Jorge De La Rosa RR RC
+base,154,National Convention,false,,Jorge De La Rosa RR RC,,
+base,155,Base,false,,Corky Miller RR
+base,155,National Convention,false,,Corky Miller RR,,
+base,156,Base,false,,Dennis Tankersley RR
+base,156,National Convention,false,,Dennis Tankersley RR,,
+base,157,Base,false,,Kyle Kane RR RC*
+base,157,National Convention,false,,Kyle Kane RR RC*,,
+base,158,Base,false,,Justin Duchscherer RR
+base,158,National Convention,false,,Justin Duchscherer RR,,
+base,159,Base,false,,Brian Mallette RR RC
+base,159,National Convention,false,,Brian Mallette RR RC,,
+base,160,Base,false,,Chris Baker RR RC*
+base,160,National Convention,false,,Chris Baker RR RC*,,
+base,161,Base,false,,Jason Lane RR
+base,161,National Convention,false,,Jason Lane RR,,
+base,162,Base,false,,Hee Seop Choi RR
+base,162,National Convention,false,,Hee Seop Choi RR,,
+base,163,Base,false,,Juan Cruz RR
+base,163,National Convention,false,,Juan Cruz RR,,
+base,164,Base,false,,Rodrigo Rosario RR RC
+base,164,National Convention,false,,Rodrigo Rosario RR RC,,
+base,165,Base,false,,Matt Guerrier RR
+base,165,National Convention,false,,Matt Guerrier RR,,
+base,166,Base,false,,Anderson Machado RR RC
+base,166,National Convention,false,,Anderson Machado RR RC,,
+base,167,Base,false,,Geronimo Gil RR
+base,167,National Convention,false,,Geronimo Gil RR,,
+base,168,Base,false,,Dewon Brazelton RR
+base,168,National Convention,false,,Dewon Brazelton RR,,
+base,169,Base,false,,Mark Prior RR
+base,169,National Convention,false,,Mark Prior RR,,
+base,170,Base,false,,Bill Hall RR
+base,170,National Convention,false,,Bill Hall RR,,
+base,171,Base,false,,Jorge Padilla RR RC
+base,171,National Convention,false,,Jorge Padilla RR RC,,
+base,172,Base,false,,Jose Cueto RR
+base,172,National Convention,false,,Jose Cueto RR,,
+base,173,Base,false,,Allan Simpson RR RC
+base,173,National Convention,false,,Allan Simpson RR RC,,
+base,174,Base,false,,Doug Devore RR RC
+base,174,National Convention,false,,Doug Devore RR RC,,
+base,175,Base,false,,Josh Pearce RR
+base,175,National Convention,false,,Josh Pearce RR,,
+base,176,Base,false,,Angel Berroa RR
+base,176,National Convention,false,,Angel Berroa RR,,
+base,177,Base,false,,Steve Bechler RR RC
+base,177,National Convention,false,,Steve Bechler RR RC,,
+base,178,Base,false,,Antonio Perez RR
+base,178,National Convention,false,,Antonio Perez RR,,
+base,179,Base,false,,Mark Teixeira RR
+base,179,National Convention,false,,Mark Teixeira RR,,
+base,180,Base,false,,Erick Almonte RR
+base,180,National Convention,false,,Erick Almonte RR,,
+base,181,Base,false,,Orlando Hudson RR
+base,181,National Convention,false,,Orlando Hudson RR,,
+base,182,Base,false,,Michael Rivera RR
+base,182,National Convention,false,,Michael Rivera RR,,
+base,183,Base,false,,Raul Chavez RR RC
+base,183,National Convention,false,,Raul Chavez RR RC,,
+base,184,Base,false,,Juan Pena RR
+base,184,National Convention,false,,Juan Pena RR,,
+base,185,Base,false,,Travis Hughes RR RC
+base,185,National Convention,false,,Travis Hughes RR RC,,
+base,186,Base,false,,Ryan Ludwick RR
+base,186,National Convention,false,,Ryan Ludwick RR,,
+base,187,Base,false,,Ed Rogers RR
+base,187,National Convention,false,,Ed Rogers RR,,
+base,188,Base,false,,Andy Pratt RR RC
+base,188,National Convention,false,,Andy Pratt RR RC,,
+base,189,Base,false,,Nick Neugebauer RR
+base,189,National Convention,false,,Nick Neugebauer RR,,
+base,190,Base,false,,Tom Shearn RR RC
+base,190,National Convention,false,,Tom Shearn RR RC,,
+base,191,Base,false,,Eric Cyr RR
+base,191,National Convention,false,,Eric Cyr RR,,
+base,192,Base,false,,Victor Martinez RR
+base,192,National Convention,false,,Victor Martinez RR,,
+base,193,Base,false,,Brandon Berger RR
+base,193,National Convention,false,,Brandon Berger RR,,
+base,194,Base,false,,Erik Bedard RR
+base,194,National Convention,false,,Erik Bedard RR,,
+base,195,Base,false,,Fernando Rodney RR
+base,195,National Convention,false,,Fernando Rodney RR,,
+base,196,Base,false,,Joe Thurston RR
+base,196,National Convention,false,,Joe Thurston RR,,
+base,197,Base,false,,John Buck RR
+base,197,National Convention,false,,John Buck RR,,
+base,198,Base,false,,Jeff Deardorff RR
+base,198,National Convention,false,,Jeff Deardorff RR,,
+base,199,Base,false,,Ryan Jamison RR
+base,199,National Convention,false,,Ryan Jamison RR,,
+base,200,Base,false,,Alfredo Amezaga RR
+base,200,National Convention,false,,Alfredo Amezaga RR,,
+base,201,Base,false,,Luis Gonzalez
+base,201,National Convention,false,,Luis Gonzalez,,
+base,202,Base,false,,Roger Clemens
+base,202,National Convention,false,,Roger Clemens,,
+base,203,Base,false,,Barry Zito
+base,203,National Convention,false,,Barry Zito,,
+base,204,Base,false,,Bud Smith
+base,204,National Convention,false,,Bud Smith,,
+base,205,Base,false,,Magglio Ordonez
+base,205,National Convention,false,,Magglio Ordonez,,
+base,206,Base,false,,Kerry Wood
+base,206,National Convention,false,,Kerry Wood,,
+base,207,Base,false,,Freddy Garcia
+base,207,National Convention,false,,Freddy Garcia,,
+base,208,Base,false,,Adam Dunn
+base,208,National Convention,false,,Adam Dunn,,
+base,209,Base,false,,Curt Schilling
+base,209,National Convention,false,,Curt Schilling,,
+base,210,Base,false,,Lance Berkman
+base,210,National Convention,false,,Lance Berkman,,
+base,211,Base,false,,Rafael Palmeiro
+base,211,National Convention,false,,Rafael Palmeiro,,
+base,212,Base,false,,Ichiro
+base,212,National Convention,false,,Ichiro,,
+base,213,Base,false,,Bob Abreu
+base,213,National Convention,false,,Bob Abreu,,
+base,214,Base,false,,Mark Mulder
+base,214,National Convention,false,,Mark Mulder,,
+base,215,Base,false,,Roy Oswalt
+base,215,National Convention,false,,Roy Oswalt,,
+base,216,Base,false,,Mike Sweeney
+base,216,National Convention,false,,Mike Sweeney,,
+base,217,Base,false,,Paul LoDuca
+base,217,National Convention,false,,Paul LoDuca,,
+base,218,Base,false,,Aramis Ramirez
+base,218,National Convention,false,,Aramis Ramirez,,
+base,219,Base,false,,Randy Johnson
+base,219,National Convention,false,,Randy Johnson,,
+base,220,Base,false,,Albert Pujols
+base,220,National Convention,false,,Albert Pujols,,
