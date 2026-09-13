@@ -120,6 +120,7 @@ const path = require("path");
 const SPLIT = require(path.join(__dirname, "split-identity.cjs"));
 const SUBSET = require(path.join(__dirname, "subset-identity.cjs"));
 const VOCAB = require(path.join(__dirname, "rematch-finish-vocab.cjs"));
+const SPLIT_SCOPE = require(path.join(__dirname, "split-scope.cjs"));
 
 // ── the classes ────────────────────────────────────────────────────────────
 const AGREE = "AGREE", IMPROVE = "IMPROVE", CONFLICT = "CONFLICT", UNDERIVABLE = "UNDERIVABLE";
@@ -6047,6 +6048,34 @@ function parseApplyScope(raw) {
   const out = { classes: new Set(), ok: false, reason: "", raw: str(raw), revert: false };
   if (!v) { out.reason = "scope is empty -- an apply must name the class it writes"; return out; }
   const parts = v.split(",").map((x) => x.trim()).filter(Boolean);
+  // THE `split` SCOPE HAS NO APPLY PATH, BY RULING, AND THAT IS PERMANENT --
+  // NOT A GAP TO BE FILLED LATER.
+  //
+  // Drew, 2026-09-13: "report first, rule later" on split-identity repair.
+  // The `split` census scope (lib/split-scope.cjs) answers "would a row move,
+  // and to which side" for every HIQ-SPLIT row -- it is a REPORT, produced so
+  // Drew can read move/park estimates per axis before anything is armed.
+  // Deliberately absent from APPLY_SCOPE_ALIASES: an alias table entry (even
+  // one that armed no class, the way `revert-eviction` does) would still let
+  // `scope=split` PARSE as a recognised, "ok: true" dispatch -- indistinguishable
+  // from a scope somebody actually intends to run -- and a fleet script reading
+  // `.ok` alone would sail past the refusal. So this is checked FIRST, before
+  // token parsing, and BEFORE the alias table gets a chance to say anything --
+  // `split` on ITS OWN or inside a comma list ("split,improve") both refuse,
+  // because a scope that means two things about the same rows in one dispatch
+  // is exactly the shape #2093's revert-exclusivity check above refuses for
+  // the undo, and "one recognised class plus an unwritable one" is not a
+  // partial arm of the recognised class -- it is a dispatch that asked for
+  // something this apply path will never do.
+  if (parts.includes("split")) {
+    out.reason = "scope \"split\" has no apply path -- Drew's ruling (2026-09-13) is "
+      + "\"report first, rule later\" on split-identity repair: mode=census with "
+      + "scope naming split (or WAVE2_APPLY_SCOPE=split) REPORTS move/park estimates "
+      + "per axis (lib/split-scope.cjs), and a repoint is never auto-applied from "
+      + "this scope. Run mode=census and read the splitIdentity.scopes.split block "
+      + "in the artifact instead.";
+    return out;
+  }
   const unknown = [];
   for (const part of parts) {
     const hit = APPLY_SCOPE_ALIASES.get(part);
@@ -6297,6 +6326,12 @@ module.exports = {
     UNKNOWN_VENDOR: SPLIT.UNKNOWN_VENDOR, HIQ_SPLIT: SPLIT.HIQ_SPLIT, MALFORMED: SPLIT.MALFORMED,
   },
   classifyIdentity: SPLIT.classifyIdentity,
+  // The `split` census scope (report-only, Drew 2026-09-13 "report first, rule
+  // later"), re-exported the same way the SPLIT-IDENTITY signal above is, so a
+  // census banner or a test reading this module does not have to know the
+  // move/park logic lives in its own leaf file.
+  classifySplitScope: SPLIT_SCOPE.classifySplitScope,
+  SPLIT_SCOPE_AXES: SPLIT_SCOPE.AXES_THIS_SCOPE_JUDGES,
   titleNamesFinish, titleStatesSerial, slugParallelSegment, slugNamesParallel, baseEvictionEvidence,
   titleEchoesSlugParallel,
   // G6 -- the stored identity's own parallel, stated in the title, refuses the

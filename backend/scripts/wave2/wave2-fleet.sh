@@ -152,6 +152,20 @@ die()  { printf 'WAVE2 REFUSED — %s\n' "$*" >&2; exit 2; }
 # THE APPLY CLASS, validated now that die() exists. An unrecognised
 # WAVE2_APPLY_SCOPE is refused outright rather than falling through to
 # `improve` -- a typo must never silently apply the wrong class of rows.
+#
+# `split` IS RECOGNISED AND STILL REFUSED, BY NAME, PERMANENTLY (2026-09-13).
+# The `split` census scope (lib/split-scope.cjs) exists to REPORT a move/park
+# estimate for every HIQ-SPLIT row -- Drew's ruling is "report first, rule
+# later" on split-identity repair, and there is no apply path for it at all
+# (rematch-classify.cjs's parseApplyScope refuses "split" the same way, for
+# the same reason). Falling through to the generic "not one of ..." message
+# below would be technically true but would not tell an operator WHY split is
+# different from a typo -- it is a real, understood scope with zero write
+# authority, not an unrecognised one -- so it gets its own message naming the
+# ruling before the allowlist check below ever runs.
+case "$SCOPE" in
+  split) die "WAVE2_APPLY_SCOPE='split' has no apply path -- Drew's ruling (2026-09-13) is \"report first, rule later\" on split-identity repair. Run mode=census (scope is ignored by census) and read splitIdentity.scopes.split in the collected artifact instead of dispatching canary/apply for this scope." ;;
+esac
 case "$SCOPE" in
   improve|r26|r27|r28) ;;
   *) die "WAVE2_APPLY_SCOPE='$SCOPE' is not one of improve|r26|r27|r28 — refusing rather than guess which class of rows to write." ;;
