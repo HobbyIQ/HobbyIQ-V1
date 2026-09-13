@@ -1,0 +1,17 @@
+{
+  "scrapedAt": "2026-09-13T02:13:17.820Z",
+  "fetchedAt": "2026-09-13",
+  "sourceUrl": "https://www.checklistinsider.com/2025-panini-rookies-stars-football",
+  "xlsxUrl": "https://xcdn.checklistinsider.com/public/2025/12/2025-Panini-Rookies-Stars-Football-Checklist-Downloads-Excel-spreadsheet.xlsx",
+  "source": "checklistinsider-2026-09-13",
+  "sport": "football",
+  "year": 2025,
+  "setName": "2025 Panini Rookies & Stars Thrillers Signatures",
+  "productKey": "2025-panini-rookies-and-stars-thrillers-signatures-football",
+  "setKey": "panini-rookies-and-stars-thrillers-signatures",
+  "rowCount": 28,
+  "autoCount": 28,
+  "parallelCount": 0,
+  "parallelColumnAuthoritative": true,
+  "note": "R30 (Drew 2026-09-13): a same-numbered autograph subset is its own card set within the product. This is the \"Thrillers Signatures\" subset of 2025 Panini Rookies & Stars Football, keyed the way productSetKeys.ts forms an insert-set-as-product key. Its colour variants are PARALLELS on this key, not separate keys -- a named parallel is a distinct card, not a distinct set -- so the plain run carries a blank parallel (unknown, never \"Base\") and each colour carries its own rung. Every row is signed: the section name is the only place this workbook states a signature."
+}
