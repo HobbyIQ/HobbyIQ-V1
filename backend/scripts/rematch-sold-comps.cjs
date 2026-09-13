@@ -672,6 +672,9 @@ async function main() {
   const pti = d(["portfolioiq", "parseTitleIdentity.service.js"]);
   const hic = d(["portfolioiq", "hobbyIqCardId.service.js"]);
   const psk = d(["catalog", "productSetKeys.js"]);
+  // RULING R29: the checklist-first product resolver. Only its KEY helper is
+  // needed here -- the resolution map itself is built by the driver.
+  const rpc = d(["catalog", "resolveProductByChecklist.js"]);
   const guard = d(["portfolioiq", "slugGuard.service.js"]);
   const pvs = d(["portfolioiq", "persistVendorSalesToPool.service.js"]);
   const slugRe = d(["portfolioiq", "slugRederivation.service.js"]);
@@ -712,6 +715,10 @@ async function main() {
     normalizeSetKey: hic.normalizeSetKey,
     computeHobbyIqCardId: hic.computeHobbyIqCardId,
     applySiblingChecklistOverride: hic.applySiblingChecklistOverride,
+    // RULING R29: the shared key convention the resolver and this deriver both
+    // use. `resolvedProducts` itself is supplied per batch; an absent map means
+    // no R29 answers and the parser's key stands.
+    productResolutionKey: rpc.productResolutionKey,
     spellForEra: psk.spellForEra,
     guardSlugInputs: guard.guardSlugInputs,
     normalizeSportStrict: guard.normalizeSportStrict,
