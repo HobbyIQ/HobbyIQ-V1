@@ -1,0 +1,71 @@
+{
+ "lane": "relocate-pool-rows-by-list",
+ "reason": "witt-2020-bowman-chrome-auto-consolidate",
+ "generatedAt": "2026-09-13T22:50:45.000Z",
+ "reportOnlyUntil": "Drew's review -- no apply is authorized by this PR",
+ "finding": "Analyst trace (scratchpad/witt-sgc9-trace-2026-09-13.md) flagged Bobby Witt Jr.'s 2020 Bowman Chrome Prospect Autograph base card (hiq:baseball:2020:bowman-chrome:cpa-bwj:base:auto) as split across multiple identities, naming candidate keys bmabwj (card number without hyphen), cpa-bwi (card-number typo) and an orphaned null-key row. Live census (2026-09-13, single-partition reads on every named candidate plus the base and refractor-num-10 addresses) found the bmabwj and cpa-bwi partitions EMPTY -- those exact keys do not exist as stored sold_comps rows today -- but confirmed the underlying defect the trace was pointing at: 4 real sales sit at the sibling cardId hiq:baseball:2020:bowman:cpa-bwj:base:auto (product segment 'bowman' instead of 'bowman-chrome', all from the cardsight source, all with titles that explicitly read '...Chrome Auto...'), 1 base-partition row already carries a third-slug hobbyiqCardId naming that same wrong 'bowman' address, and the orphaned null-cardNumber row (reslugedFrom hiq:baseball:2020:bowman-chrome::base:auto, catalogUnplacedReason 'superseded by the clean checklistcenter re-ingest') is an unfolded duplicate of an already-present base sale. card_catalog point-reads confirm hiq:baseball:2020:bowman-chrome:cpa-bwj:base:auto (source checklistcenter-2026-08-29, verificationStatus verified, confidence 0.95) and hiq:baseball:2020:bowman-chrome:cpa-bwj:refractor:auto:num-10 both exist and are checklist-backed; no hiq:baseball:2020:bowman:cpa-bwj:* address (base or refractor) has any card_catalog row at all -- the 'bowman' partition is unattested and exists only because the cardsight ingest wrote setName='Bowman' verbatim while every one of its own titles names the Chrome product.",
+ "rulings": [
+  "One card, one row, one pool: sales of the SAME physical 2020 Bowman Chrome #CPA-BWJ autograph must resolve to ONE sold_comps pool, keyed on the checklist-backed card_catalog address. A card-number typo or a mis-derived product segment is the same card, not a different one.",
+  "CF-IT-CAME-OUT-OF-BOWMAN does not apply here in reverse: unlike the 2026 CPA-MG precedent (data/pool-relocations/2026-09-12-cpa-mg-bowman-chrome-to-bowman.json), where Chrome Prospect Autographs are genuinely 2026 BOWMAN (paper) cards with zero Bowman Chrome checklist presence, 2020 Bowman Chrome CPA-BWJ is checklist-backed under bowman-chrome (card_catalog point-read confirmed, checklistcenter-2026-08-29, verified) and has NO card_catalog row under plain bowman at any parallel. The direction of this fold is bowman -> bowman-chrome, the opposite of the CPA-MG list, decided per-product by the checklist each time, never by name collision alone.",
+  "The title decides the parallel: three of the four 'bowman'-partitioned sales state no parallel word beyond the product name and grade (Base auto), and relocate to the base address. The fourth (cardsight::d8e4d85c712470a6f7590688) states 'Refractor' with printRun 10 and a 'BGS 9/10' grade format matching /10 -- its own stored hobbyiqCardId already reads the correct refractor:auto:num-10 address; only its cardId partition is wrong. Both destination addresses (base and refractor:auto:num-10) are point-read confirmed checklist-backed in card_catalog.",
+  "A moved row carries ONE identity: every RELOCATE entry lands both cardId and hobbyiqCardId at the target, per relocate-pool-rows-by-list.cjs's own planRelocatedIdentity rule. fromCardId is each row's STORED cardId (the partition key), never its hobbyiqCardId.",
+  "Grades are not identity: BGS/PSA grade fields on every row are left as stored. Only the two address fields move.",
+  "The null-cardNumber orphan (ebay-user-purchase::holding::8bb15382-6e68-4a56-8683-adc21281e2c4) shares its title, image URL and __imagePhash-eligible listing with the ebay-user-sale row already resident at the base address, but is not marked as a __phashDuplicate of it, so it is RELOCATED rather than retired -- consolidating both onto the base pool keeps them both readable and lets any later phash pass make the duplicate call rather than this list guessing it.",
+  "uniqueness is on (id, fromCardId)."
+ ],
+ "census": {
+  "candidateKeysFromTrace": ["bmabwj", "cpa-bwi", "null"],
+  "candidateKeysFoundEmpty": ["bmabwj", "cpa-bwi"],
+  "baseAddressRowsAlreadyCorrect": 6,
+  "bowmanSiblingPartitionRows": 4,
+  "nullKeyPartitionRows": 1,
+  "relocateToBase": 4,
+  "relocateToRefractorNum10": 1,
+  "repointHobbyiqCardId": 1,
+  "totalRowsInScope": 6
+ },
+ "entries": [
+  {
+   "id": "cardsight::0a7d036d5a8ae9a1b750263f",
+   "fromCardId": "hiq:baseball:2020:bowman:cpa-bwj:base:auto",
+   "toCardId": "hiq:baseball:2020:bowman-chrome:cpa-bwj:base:auto",
+   "price": 2455,
+   "evidence": "title=\"2020 Bowman Bobby Witt Jr. Chrome Auto 1st Prospect #CPA-BWJ Royals PSA 10\" -- states Chrome Auto, no parallel beyond base; stored cardId partition reads plain 'bowman' though the title names Chrome. Destination hiq:baseball:2020:bowman-chrome:cpa-bwj:base:auto is checklist-backed in card_catalog (point-read 2026-09-13, source checklistcenter-2026-08-29, verified)."
+  },
+  {
+   "id": "cardsight::e033b8ea188f05192400a3f7",
+   "fromCardId": "hiq:baseball:2020:bowman:cpa-bwj:base:auto",
+   "toCardId": "hiq:baseball:2020:bowman-chrome:cpa-bwj:base:auto",
+   "price": 941.77,
+   "evidence": "title=\"2020 Bowman Bobby Witt Jr. Chrome Auto 1st Prospect #CPA-BWJ Royals PSA 9\" -- states Chrome Auto, no parallel beyond base; same mis-derived 'bowman' partition as its sibling above. Destination checklist-backed, point-read 2026-09-13."
+  },
+  {
+   "id": "cardsight::aed97a2725e4f5af1f44f015",
+   "fromCardId": "hiq:baseball:2020:bowman:cpa-bwj:base:auto",
+   "toCardId": "hiq:baseball:2020:bowman-chrome:cpa-bwj:base:auto",
+   "price": 1145,
+   "evidence": "title=\"2020 Bowman Bobby Witt Jr. Chrome Auto 1st Prospect #CPA-BWJ Royals PSA 9\" -- states Chrome Auto, no parallel beyond base; same mis-derived 'bowman' partition. Destination checklist-backed, point-read 2026-09-13."
+  },
+  {
+   "id": "cardsight::d8e4d85c712470a6f7590688",
+   "fromCardId": "hiq:baseball:2020:bowman:cpa-bwj:base:auto",
+   "toCardId": "hiq:baseball:2020:bowman-chrome:cpa-bwj:refractor:auto:num-10",
+   "price": 891,
+   "evidence": "title=\"2020 Bowman Bobby Witt Jr. Chrome Auto 1st Prospect #CPA-BWJ Royals BGS 9/10\" -- stored parallel='Refractor', printRun=10, matching the /10 grade-line format; stored hobbyiqCardId already correctly reads hiq:baseball:2020:bowman-chrome:cpa-bwj:refractor:auto:num-10 -- only the cardId PARTITION is wrong (stuck at the base 'bowman' address from an earlier reslug). Destination is checklist-backed in card_catalog (point-read 2026-09-13, setKey bowman-chrome)."
+  },
+  {
+   "id": "ebay-user-purchase::holding::8bb15382-6e68-4a56-8683-adc21281e2c4",
+   "fromCardId": "hiq:baseball:2020:bowman-chrome:null:base:auto",
+   "toCardId": "hiq:baseball:2020:bowman-chrome:cpa-bwj:base:auto",
+   "price": 904.03,
+   "evidence": "title=\"2020 Bowman Chrome Bobby Witt Jr. Beckett\" -- states the base Chrome auto, no parallel; cardNumber field is null so the derived key reads 'null:base:auto', an orphan address with no checklist row (reslugedFrom hiq:baseball:2020:bowman-chrome::base:auto; catalogUnplacedReason 'superseded by the clean checklistcenter re-ingest'). Shares its title and imageUrl with the already-resident base-partition ebay-user-sale row but carries no __phashDuplicate marker, so it is relocated onto the checklist-backed base pool (checklistcenter-2026-08-29, verified) rather than guessed as a duplicate."
+  },
+  {
+   "id": "ebay-user-sale::hiq:baseball:2020:bowman-chrome:cpa-bwj:base:auto::2026-07-29T01:51:00.000Z",
+   "fromCardId": "hiq:baseball:2020:bowman-chrome:cpa-bwj:base:auto",
+   "repointHobbyiqCardId": "hiq:baseball:2020:bowman-chrome:cpa-bwj:base:auto",
+   "price": 950,
+   "evidence": "title=\"2020 Bowman Chrome Bobby Witt Jr. Beckett\" -- cardId partition is already correct at the base Chrome address, but the stored hobbyiqCardId is a third slug reading hiq:baseball:2020:bowman:cpa-bwj:base:auto (the same mis-derived 'bowman' segment as the relocated cardsight rows) -- the pricing engine reads hobbyiqCardId, so this sale's influence was split onto an unattested address despite sitting in the right partition. REPOINT only; no partition move needed."
+  }
+ ]
+}
