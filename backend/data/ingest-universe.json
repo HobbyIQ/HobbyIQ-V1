@@ -139858,10 +139858,11 @@
    "sport": "basketball",
    "year": 1997,
    "setName": "1997-98 Fleer Metal Universe Basketball",
-   "setKey": "fleer-metal-universe",
+   "setKey": "metal-universe",
    "estimatedCards": null,
    "seededStatus": "missing",
-   "seededNote": "sitemap-discovered 2026-09-04; cell basketball/fleer/1990-2009; season=1997-98; set-30163; not yet fetched"
+   "seededNote": "sitemap-discovered 2026-09-04; cell basketball/fleer/1990-2009; season=1997-98; set-30163; not yet fetched | setKey ruled metal-universe 2026-09-13 (was fleer-metal-universe): the era brand name is a misnomer twin of the registered key; metal-universe is the ruled canonical (productSetKeys.ts P(\"metal-universe\"), and the 2026-09-12 relocation retires a self-derived skybox-metal-universe row in its favour).",
+   "derivedSetKey": "fleer-metal-universe"
   },
   {
    "id": "sportscardchecklist::https://www.sportscardchecklist.com/set-30164/1997-98-fleer-metal-universe-gold-basketball-trading-card-checklist",
@@ -139870,11 +139871,11 @@
    "sport": "basketball",
    "year": 1997,
    "setName": "1997-98 Fleer Metal Universe Gold Basketball",
-   "setKey": "fleer-metal-universe",
+   "setKey": "metal-universe",
    "derivedSetKey": "fleer-metal-universe-gold",
    "estimatedCards": null,
    "seededStatus": "missing",
-   "seededNote": "sitemap-discovered 2026-09-04; cell basketball/fleer/1990-2009; season=1997-98; set-30164; not yet fetched"
+   "seededNote": "sitemap-discovered 2026-09-04; cell basketball/fleer/1990-2009; season=1997-98; set-30164; not yet fetched | setKey ruled metal-universe 2026-09-13 (was fleer-metal-universe): the era brand name is a misnomer twin of the registered key; metal-universe is the ruled canonical (productSetKeys.ts P(\"metal-universe\"), and the 2026-09-12 relocation retires a self-derived skybox-metal-universe row in its favour)."
   },
   {
    "id": "sportscardchecklist::https://www.sportscardchecklist.com/set-30165/1997-98-fleer-metal-universe-planet-metal-basketball-trading-card-checklist",
@@ -139883,11 +139884,11 @@
    "sport": "basketball",
    "year": 1997,
    "setName": "1997-98 Fleer Metal Universe Planet Metal Basketball",
-   "setKey": "fleer-metal-universe",
+   "setKey": "metal-universe",
    "derivedSetKey": "fleer-metal-universe-planet-metal",
    "estimatedCards": null,
    "seededStatus": "missing",
-   "seededNote": "sitemap-discovered 2026-09-04; cell basketball/fleer/1990-2009; season=1997-98; set-30165; not yet fetched"
+   "seededNote": "sitemap-discovered 2026-09-04; cell basketball/fleer/1990-2009; season=1997-98; set-30165; not yet fetched | setKey ruled metal-universe 2026-09-13 (was fleer-metal-universe): the era brand name is a misnomer twin of the registered key; metal-universe is the ruled canonical (productSetKeys.ts P(\"metal-universe\"), and the 2026-09-12 relocation retires a self-derived skybox-metal-universe row in its favour)."
   },
   {
    "id": "sportscardchecklist::https://www.sportscardchecklist.com/set-30166/1997-98-fleer-metal-universe-platinum-portraits-basketball-trading-card-checklist",
@@ -139896,11 +139897,11 @@
    "sport": "basketball",
    "year": 1997,
    "setName": "1997-98 Fleer Metal Universe Platinum Portraits Basketball",
-   "setKey": "fleer-metal-universe",
+   "setKey": "metal-universe",
    "derivedSetKey": "fleer-metal-universe-platinum-portraits",
    "estimatedCards": null,
    "seededStatus": "missing",
-   "seededNote": "sitemap-discovered 2026-09-04; cell basketball/fleer/1990-2009; season=1997-98; set-30166; not yet fetched"
+   "seededNote": "sitemap-discovered 2026-09-04; cell basketball/fleer/1990-2009; season=1997-98; set-30166; not yet fetched | setKey ruled metal-universe 2026-09-13 (was fleer-metal-universe): the era brand name is a misnomer twin of the registered key; metal-universe is the ruled canonical (productSetKeys.ts P(\"metal-universe\"), and the 2026-09-12 relocation retires a self-derived skybox-metal-universe row in its favour)."
   },
   {
    "id": "sportscardchecklist::https://www.sportscardchecklist.com/set-30167/1997-98-fleer-metal-universe-precious-metal-gems-basketball-trading-card-checklist",
@@ -139909,11 +139910,11 @@
    "sport": "basketball",
    "year": 1997,
    "setName": "1997-98 Fleer Metal Universe Precious Metal Gems Basketball",
-   "setKey": "fleer-metal-universe",
+   "setKey": "metal-universe",
    "derivedSetKey": "fleer-metal-universe-precious-metal-gems",
    "estimatedCards": null,
    "seededStatus": "missing",
-   "seededNote": "sitemap-discovered 2026-09-04; cell basketball/fleer/1990-2009; season=1997-98; set-30167; not yet fetched"
+   "seededNote": "sitemap-discovered 2026-09-04; cell basketball/fleer/1990-2009; season=1997-98; set-30167; not yet fetched | setKey ruled metal-universe 2026-09-13 (was fleer-metal-universe): the era brand name is a misnomer twin of the registered key; metal-universe is the ruled canonical (productSetKeys.ts P(\"metal-universe\"), and the 2026-09-12 relocation retires a self-derived skybox-metal-universe row in its favour)."
   },
   {
    "id": "sportscardchecklist::https://www.sportscardchecklist.com/set-30168/1997-98-fleer-metal-universe-precious-metal-gems-emerald-basketball-trading-card-checklist",
@@ -139922,11 +139923,11 @@
    "sport": "basketball",
    "year": 1997,
    "setName": "1997-98 Fleer Metal Universe Precious Metal Gems Emerald Basketball",
-   "setKey": "fleer-metal-universe",
+   "setKey": "metal-universe",
    "derivedSetKey": "fleer-metal-universe-precious-metal-gems-emerald",
    "estimatedCards": null,
    "seededStatus": "missing",
-   "seededNote": "sitemap-discovered 2026-09-04; cell basketball/fleer/1990-2009; season=1997-98; set-30168; not yet fetched"
+   "seededNote": "sitemap-discovered 2026-09-04; cell basketball/fleer/1990-2009; season=1997-98; set-30168; not yet fetched | setKey ruled metal-universe 2026-09-13 (was fleer-metal-universe): the era brand name is a misnomer twin of the registered key; metal-universe is the ruled canonical (productSetKeys.ts P(\"metal-universe\"), and the 2026-09-12 relocation retires a self-derived skybox-metal-universe row in its favour)."
   },
   {
    "id": "sportscardchecklist::https://www.sportscardchecklist.com/set-30170/1997-98-fleer-metal-universe-silver-slams-basketball-trading-card-checklist",
@@ -139935,11 +139936,11 @@
    "sport": "basketball",
    "year": 1997,
    "setName": "1997-98 Fleer Metal Universe Silver Slams Basketball",
-   "setKey": "fleer-metal-universe",
+   "setKey": "metal-universe",
    "derivedSetKey": "fleer-metal-universe-silver-slams",
    "estimatedCards": null,
    "seededStatus": "missing",
-   "seededNote": "sitemap-discovered 2026-09-04; cell basketball/fleer/1990-2009; season=1997-98; set-30170; not yet fetched"
+   "seededNote": "sitemap-discovered 2026-09-04; cell basketball/fleer/1990-2009; season=1997-98; set-30170; not yet fetched | setKey ruled metal-universe 2026-09-13 (was fleer-metal-universe): the era brand name is a misnomer twin of the registered key; metal-universe is the ruled canonical (productSetKeys.ts P(\"metal-universe\"), and the 2026-09-12 relocation retires a self-derived skybox-metal-universe row in its favour)."
   },
   {
    "id": "sportscardchecklist::https://www.sportscardchecklist.com/set-30171/1997-98-fleer-metal-universe-titanium-basketball-trading-card-checklist",
@@ -139948,11 +139949,11 @@
    "sport": "basketball",
    "year": 1997,
    "setName": "1997-98 Fleer Metal Universe Titanium Basketball",
-   "setKey": "fleer-metal-universe",
+   "setKey": "metal-universe",
    "derivedSetKey": "fleer-metal-universe-titanium",
    "estimatedCards": null,
    "seededStatus": "missing",
-   "seededNote": "sitemap-discovered 2026-09-04; cell basketball/fleer/1990-2009; season=1997-98; set-30171; not yet fetched"
+   "seededNote": "sitemap-discovered 2026-09-04; cell basketball/fleer/1990-2009; season=1997-98; set-30171; not yet fetched | setKey ruled metal-universe 2026-09-13 (was fleer-metal-universe): the era brand name is a misnomer twin of the registered key; metal-universe is the ruled canonical (productSetKeys.ts P(\"metal-universe\"), and the 2026-09-12 relocation retires a self-derived skybox-metal-universe row in its favour)."
   },
   {
    "id": "sportscardchecklist::https://www.sportscardchecklist.com/set-30144/1997-98-fleer-million-dollar-moments-basketball-trading-card-checklist",
