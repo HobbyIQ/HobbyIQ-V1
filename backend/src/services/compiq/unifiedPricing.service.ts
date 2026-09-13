@@ -26,6 +26,13 @@ import { dedupeSoldComps } from "../portfolioiq/dedupeSoldComps.js";
 import { projectFromLeadingEdge } from "./nextSaleProjection.service.js";
 import { readExactPoolRows, type ExactPoolRow } from "./exactPoolReader.js";
 import type { ExactPoolRungLabel } from "./fmvRung.js";
+import {
+  projectGradeIndex,
+  EXACT_POOL_INDEX_MIN_POOL,
+  EXACT_POOL_INDEX_TIER_OWN_OLS,
+  EXACT_POOL_INDEX_HALF_LIFE_DAYS,
+  type GradeIndexProjection,
+} from "./gradeIndexProjection.js";
 import { cosmosOptionsFromConnectionString } from "../ops/cosmosConnectionPolicy.js";
 
 const COSMOS_DATABASE = process.env.COSMOS_DATABASE ?? "hobbyiq";
@@ -191,6 +198,31 @@ export interface UnifiedGradeEntry {
   // D22: why this window — the cascade's path for this tier ("60d n=15" or
   // "60d n=1, 90d n=1, 180d n=2"), stated so the basis can say it.
   windowNote: string | null;
+  // CF-EXACT-POOL-GRADE-INDEX (Drew, 2026-09-13). The number of comps the
+  // tier's PRICE was read from, when that differs from `sampleCount` (the
+  // tier's own pool). Only the grade-index rung sets it — it prices off the
+  // whole card's index points, not off this tier's rows alone — so a null
+  // here means "the tier's own pool is what priced it", which is the case
+  // for every other rung.
+  compsUsed?: number | null;
+  // CF-EXACT-POOL-GRADE-INDEX (Drew, 2026-09-13). Present ONLY on a tier
+  // priced by `exact-pool-grade-index`: which tiers of this identity fed the
+  // grade-free index, at what empirical multiplier, and what the index level
+  // came out at. The rung reads sales from tiers OTHER than this one, so the
+  // provenance has to say which — a reader cannot infer it from the tier's
+  // own sample count, and `compsUsed` for this rung is the index's point
+  // count, not the tier's. Rides onto pricingSourceMeta.
+  gradeIndexMeta?: {
+    indexAtNow: number;
+    requestedMultiplier: number;
+    halfLifeDays: number;
+    /** Every tier that contributed index points, largest first. */
+    contributions: Array<{ tier: string; sampleCount: number; multiplier: number }>;
+    /** Tiers whose sales could NOT be indexed (no empirical multiplier). */
+    skipped: Array<{ tier: string; sampleCount: number }>;
+    /** How many points were this tier's own sales. */
+    ownTierPoints: number;
+  } | null;
 }
 
 export interface UnifiedPriceResult {
@@ -631,6 +663,10 @@ export async function computeUnifiedPrice(
   const tierRows = new Map<string, { rows: RawCompRow[]; windowDays: number }>();
   // D22: the cascade's path per tier, for the basis ("60d n=1, 90d n=1, 180d n=2").
   const tierWindowNotes = new Map<string, string>();
+  // CF-EXACT-POOL-GRADE-INDEX (2026-09-13): the identity's rows at the WIDEST
+  // window, captured in whichever branch ran. See the index block below for
+  // why the index reads these rather than the cascade's selection.
+  let widestWindowRows: RawCompRow[] = [];
   if (opts.perTierWindows) {
     const all = await fetchPoolRows(cardId, opts.hobbyiqCardId ?? null, maxWindow, nowMs, opts.hobbyiqCardIds ?? null, asOfMs);
     if (all === null || all.length === 0) return empty;
@@ -666,11 +702,13 @@ export async function computeUnifiedPrice(
     // — the same numbers the cascade reported for it.
     selectedWindow = (requestedTier && tierRows.get(requestedTier)?.windowDays) || maxWindow;
     comps = rowsWithin(selectedWindow);
+    widestWindowRows = rowsWithin(maxWindow);
   } else if (opts.fixedWindowDays && opts.fixedWindowDays > 0) {
     selectedWindow = opts.fixedWindowDays;
     const rows = await queryComps(cardId, opts.hobbyiqCardId ?? null, selectedWindow, nowMs, opts.excludeContributorUserId ?? null, opts.hobbyiqCardIds ?? null, asOfMs);
     if (rows === null) return empty;
     comps = rows;
+    widestWindowRows = rows;
   } else {
     const path: string[] = [];
     for (const w of WINDOWS) {
@@ -690,6 +728,12 @@ export async function computeUnifiedPrice(
       }
     }
     if (requestedTier) tierWindowNotes.set(requestedTier, path.join(", "));
+    // The index needs the card's widest window regardless of where the
+    // cascade stopped for the requested tier. When the cascade already read
+    // 180d, reuse it; otherwise one more read of the same pool.
+    widestWindowRows = selectedWindow === maxWindow
+      ? comps
+      : (await queryComps(cardId, opts.hobbyiqCardId ?? null, maxWindow, nowMs, opts.excludeContributorUserId ?? null, opts.hobbyiqCardIds ?? null, asOfMs)) ?? comps;
   }
   if (comps.length === 0 && tierRows.size === 0) return empty;
 
@@ -707,17 +751,131 @@ export async function computeUnifiedPrice(
     }
   }
 
+  // ── CF-EXACT-POOL-GRADE-INDEX (Drew, 2026-09-13): the card's grade-free
+  // index, resolved ONCE before the per-tier loop. ─────────────────────────
+  //
+  // The index is a property of the CARD, not of a tier: the same points and
+  // the same fit answer for every tier, and only the final multiplier
+  // differs. Building it once here (rather than per tier) is what makes
+  // "PSA 10 and SGC 9 of one card disagree only by their measured
+  // multipliers" true by construction instead of by coincidence — and it is
+  // also the only place the async calibration read can happen, since the
+  // per-tier trend function is synchronous.
+  //
+  // The multiplier table is scoped the SAME way every other cross-tier path
+  // scopes it — `calibrationScopeFor`, which reads (sport, family) off the
+  // hiq slug — so the index and the raw→graded fill can never end up on
+  // different tables for one card (project_per_sport_calibration_doctrine).
+  //
+  // Per-tier lookup order, both empirical, both from OUR pool:
+  //   1. `lookupGradeRatioByTier` — the measured ratio for THIS grade
+  //      (bowman-chrome/baseball SGC 9 = 1.29x, n=44). Preferred: it is the
+  //      actual per-tier observation.
+  //   2. `empiricalGradeMultiplier` — the company-level median x the shared
+  //      sub-tier scaling, for a grade the byTier table does not cover.
+  //   3. null — the tier is SKIPPED. Never a hardcoded matrix
+  //      (project_empirical_only_multiplier_doctrine).
+  const gradeIndexCache = new Map<string, GradeIndexProjection | null>();
+  let indexMultiplierFor: ((tier: string) => number | null) | null = null;
+  // Every sale of this identity at every tier, as the index needs them.
+  //
+  // CF-THE-INDEX-POOL-IS-THE-CARD-NOT-THE-CASCADE (2026-09-13). The rows are
+  // the WHOLE window's, deliberately — NOT the union of whatever window each
+  // tier's own density cascade happened to stop at.
+  //
+  // Two reasons, and the second is a contract. First, the index describes the
+  // CARD's trend: the cascade is a per-tier density device answering "how far
+  // back must THIS tier reach to have enough of its own sales", which says
+  // nothing about how much of the card's history belongs in a card-wide fit.
+  // Second, `perTierWindows` mode and the plain cascade select different rows
+  // by construction, so an index built from the selected rows would give a
+  // card two different prices depending on which mode the caller used —
+  // precisely the disagreement `unifiedPerTierWindows.test.ts` pins against
+  // ("the requested tier's headline equals … the cascade's own answer"), and
+  // precisely the two-valuation-paths failure D16 exists to prevent.
+  //
+  // It must also not depend on WHICH TIER was requested, and that rules out
+  // the cascade's selection for a second, independent reason: in per-tier
+  // mode `comps` is the REQUESTED tier's window, so asking about a tier that
+  // stopped at 90d would build the index from 10 rows while asking about a
+  // tier that widened to 180d built it from 21 — the same card, the same
+  // instant, two different index levels depending on the question. Measured
+  // on the live Witt pool before this was fixed: PSA 10 saw 10 points and
+  // PSA 9 saw 21.
+  //
+  // So the index reads the WIDEST window in every mode: the card's full
+  // observed history, identical for every caller, every tier and both modes.
+  // That is the right pool on the merits too — the cascade window is a
+  // per-tier DENSITY device answering "how far back must THIS tier reach to
+  // have enough of its own sales", which says nothing about how much of the
+  // card's history belongs in a card-wide fit. Recency weighting, not window
+  // truncation, is what decides how much an old sale counts here.
+  const allIdentitySales: Array<{ tier: string; price: number; soldAt: string }> = [];
+  for (const r of widestWindowRows) {
+    allIdentitySales.push({
+      tier: gradeLabel(r.gradeCompany, r.gradeValue),
+      price: Number(r.price),
+      soldAt: String(r.soldAt),
+    });
+  }
+  if (allIdentitySales.length >= EXACT_POOL_INDEX_MIN_POOL) {
+    try {
+      const [{ empiricalGradeMultiplier }, { calibrationScopeFor }, { lookupGradeRatioByTier }] = await Promise.all([
+        import("./canonicalFmv.service.js"),
+        import("./observedGradeCurve.service.js"),
+        import("./gradeCalibrationConfig.js"),
+      ]);
+      const { family, sport } = calibrationScopeFor({ slug: opts.hobbyiqCardId ?? cardId });
+      indexMultiplierFor = (tier: string): number | null => {
+        if (tier === "Raw") return 1;             // a definition, not a multiplier
+        if (tier === UNKNOWN_GRADER_TIER) return null;  // deliberately unmatchable
+        const sp = tier.lastIndexOf(" ");
+        if (sp <= 0) return null;
+        const company = tier.slice(0, sp);
+        const value = Number(tier.slice(sp + 1));
+        if (!Number.isFinite(value)) return null;
+        const byTier = lookupGradeRatioByTier(family, company.toUpperCase(), value, sport);
+        if (byTier !== null && Number.isFinite(byTier) && byTier > 0) return byTier;
+        const companyLevel = empiricalGradeMultiplier(company, value, family, sport);
+        return companyLevel !== null && Number.isFinite(companyLevel) && companyLevel > 0 ? companyLevel : null;
+      };
+    } catch {
+      // No calibration reachable is no basis for an index. The tiers fall
+      // through to the rungs they had before, which is the honest outcome.
+      indexMultiplierFor = null;
+    }
+  }
+  /** The card's index projected for one requested tier, memoized per tier. */
+  function gradeIndexFor(tierLabel: string): GradeIndexProjection | null {
+    if (!indexMultiplierFor) return null;
+    const cached = gradeIndexCache.get(tierLabel);
+    if (cached !== undefined) return cached;
+    let built: GradeIndexProjection | null = null;
+    try {
+      built = projectGradeIndex(allIdentitySales, tierLabel, indexMultiplierFor, {
+        nowMs,
+        minPool: EXACT_POOL_INDEX_MIN_POOL,
+        halfLifeDays: EXACT_POOL_INDEX_HALF_LIFE_DAYS,
+      });
+    } catch {
+      built = null;
+    }
+    gradeIndexCache.set(tierLabel, built);
+    return built;
+  }
+
   // Trend + projected next sale per grade. Split rows into recent 14d
   // and prior 14d, compare weighted medians. Ratio > 1 = up trend.
   // predictedPrice = current weighted median × trend ratio (clamped
   // to ±50% to prevent thin-pool wild extrapolations).
-  function computeTrendAndPrediction(rows: RawCompRow[], wMedian: number | null): {
+  function computeTrendAndPrediction(rows: RawCompRow[], wMedian: number | null, tierLabel?: string): {
     marketValue: number | null;
     predictedPrice: number | null;
     trendPctPerWeek: number | null;
     trendDirection: "up" | "down" | "flat";
     rungLabel: ExactPoolRungLabel;
     projectionNote: string | null;
+    gradeIndex?: GradeIndexProjection | null;
   } {
     // ── CF-TREND-FROM-FIT-NOT-LAST-THREE (2026-08-22) ──────────────────
     //
@@ -775,6 +933,120 @@ export async function computeUnifiedPrice(
           rungLabel: "exact-pool-projection",
           projectionNote: `anchored on the leading edge: recency-weighted level $${atNow.anchorPrice} sitting ${atNow.anchorAgeDays}d back (n=${atNow.n}); ${trendWord}${capWord}`,
         };
+      }
+    }
+
+    // ── CF-EXACT-POOL-GRADE-INDEX (RULING, Drew 2026-09-13) ───────────────
+    //
+    //   "A graded tier must be priced from the WHOLE card's trend across
+    //    grades, recency-weighted, not frozen on the tier's own last sale."
+    //
+    // This tier cannot fit its own trend (it did not reach the >= 8 branch
+    // above), but the CARD might still have one. When the identity's pool —
+    // raw and every grader/grade of the SAME hobbyiqCardId, never a sibling
+    // card — holds at least EXACT_POOL_INDEX_MIN_POOL indexable sales, each
+    // sale is divided by its own tier's empirical multiplier to give a
+    // grade-free index point, the index is projected the same way the >= 8
+    // OLS projects a single tier, and this tier's value is that projection
+    // times ITS multiplier. See gradeIndexProjection.ts for the full note.
+    //
+    // Ordering is the doctrine, not a preference. It sits BELOW the >= 8
+    // exact-tier OLS (direct evidence outranks derived: a tier that can fit
+    // its own trend always keeps it) and ABOVE the thin-pool last-sale rung
+    // (R25's "the newest sale is the market" is the right answer when there
+    // is NOTHING better — a card-wide trend measured off this same card is
+    // something better). It is an EXACT-POOL rung: every sale it reads is a
+    // sale of this card, so R24's cost floor exempts it through
+    // `isExactPoolRung` by construction.
+    //
+    // The Witt case this was written for
+    // (hiq:baseball:2020:bowman-chrome:cpa-bwj:base:auto, 2026-09-13): 3 Raw,
+    // 2 PSA 10, 1 BGS 9.5 and one 2-week-old SGC 9 at $1,300. Before: SGC 9
+    // read exactly $1,300 under `exact-pool-last-sale` and no sale of any
+    // other tier could move it. After: the seven sales index to a
+    // raw-equivalent level of ~$956 at now, and SGC 9 = $956 x 1.29 =
+    // ~$1,233. The $1,300 sale is still in the fit, at its own date, with its
+    // own weight — it just no longer IS the answer.
+    if (tierLabel) {
+      // CF-THE-OLS-GATE-READS-THE-SAME-WINDOW-THE-INDEX-DOES (2026-09-13).
+      // "Can this tier fit its own trend?" is measured over the SAME widest
+      // window the index is built from, not over the rows the density cascade
+      // selected for pricing. Otherwise the two disagree about what the tier
+      // has: on the live Witt pool the PSA 10 tier holds 14 sales in 180d but
+      // cascades to 90d (6 rows, the first window meeting minDirect=5), so a
+      // gate reading the selected rows called a 14-sale tier too thin to fit
+      // its own trend while the index beside it was reading all 14. The tier
+      // has the evidence either way; a window chosen for density must not
+      // decide which RUNG it gets.
+      const ownTierSalesInWidestWindow = widestWindowRows.reduce(
+        (n, r) => (gradeLabel(r.gradeCompany, r.gradeValue) === tierLabel
+          && Number.isFinite(Date.parse(r.soldAt)) && Number(r.price) > 0 ? n + 1 : n),
+        0,
+      );
+      const ownTierOls = datedForFit.length >= EXACT_POOL_INDEX_TIER_OWN_OLS
+        || ownTierSalesInWidestWindow >= EXACT_POOL_INDEX_TIER_OWN_OLS;
+      // CF-THE-INDEX-DOES-NOT-OVERRIDE-A-KEPT-SELF-COMP (2026-09-13).
+      //
+      // Two live rulings meet here, and the older one wins on its own ground.
+      // `applySelfCompRule` has a deliberate reprieve: a tier whose ONLY
+      // evidence is the owner's own purchase KEEPS that purchase, because
+      // their own trade is the market signal for a tier that has no other
+      // (CF-SELF-COMP-THIN-POOL, Drew 2026-08-04; published labelled, per
+      // project_self_comp_publish_labeled). That reprieve was written against
+      // a measured failure: Verlander 2005 Bowman Chrome BDP129 PSA 10
+      // (holding bba3b7ad), whose only PSA 10 sale is Drew's own $251. When
+      // the tier went empty it fell to a $96.34 grade-curve estimate — a
+      // $155 gap on a real purchase price.
+      //
+      // Left unguarded, this rung re-opens exactly that gap by another door:
+      // on that same fixture the index (raw sales of $20, $30.68 and $199.99,
+      // anchoring near $30) prices the PSA 10 tier at ~$89 — within a few
+      // dollars of the $96.34 the reprieve exists to prevent, and against a
+      // sale the owner actually made. A cross-tier index is a strong signal
+      // about a tier with THIN evidence; it is not a reason to overrule the
+      // one trade of this exact card at this exact grade that we know
+      // happened and deliberately kept.
+      //
+      // So: when every one of the tier's own sales is a CONTRIBUTED sale — a
+      // purchase someone imported rather than a sale we observed on the open
+      // market — the tier keeps the rung the self-comp doctrine gave it. A
+      // tier with ANY independent sale of its own is thin, not self-anchored,
+      // and the index prices it as normal.
+      //
+      // The test is on the ROWS, never on who is asking. Keying it off
+      // `excludeContributorUserId` (which only the portfolio caller passes)
+      // would hand the owner $251 and the public route $89 for the same card
+      // at the same instant — two valuation paths, which is the one thing
+      // this engine exists not to have. `selfCompThinPoolPerTier.test.ts`
+      // pins that equality directly.
+      const ownSales = rows.filter((r) => Number.isFinite(Date.parse(r.soldAt)));
+      const selfAnchored = ownSales.length > 0 && ownSales.every((r) => !!r.contributorUserId);
+      if (!ownTierOls && !selfAnchored) {
+        const idx = gradeIndexFor(tierLabel);
+        if (idx) {
+          const contribWord = idx.contributions
+            .map((c) => `${c.tier} n=${c.sampleCount} @${c.multiplier}x`)
+            .join(", ");
+          const trendWord = idx.slopeNote === "fit"
+            ? `index trend ${idx.trendPctPerWeek >= 0 ? "+" : ""}${idx.trendPctPerWeek}%/wk applied forward ${idx.anchorAgeDays}d to now`
+            : idx.slopeNote === "insane-fit"
+              ? "the index fit is noise (>300%/month) — no trend applied"
+              : "no index trend could be fit — the index anchor stands";
+          const capWord = idx.cap === "newest-band" ? "; held inside ±25% of the newest index point" : "";
+          const skipWord = idx.skipped.length > 0
+            ? `; ${idx.skipped.map((s) => `${s.tier} n=${s.sampleCount}`).join(", ")} could not be indexed (no empirical multiplier) and contributed nothing`
+            : "";
+          return {
+            marketValue: idx.tierValue,
+            predictedPrice: idx.tierPredicted,
+            trendPctPerWeek: idx.trendPctPerWeek,
+            trendDirection: idx.trendDirection,
+            rungLabel: "exact-pool-grade-index",
+            projectionNote:
+              `${datedForFit.length === 0 ? "no" : datedForFit.length} sale${datedForFit.length === 1 ? "" : "s"} at ${tierLabel} alone — too few to fit this tier's own trend, so the whole card's ${idx.points.length} sales across ${idx.contributions.length} tier${idx.contributions.length === 1 ? "" : "s"} (${contribWord}) were divided by their own empirical multipliers into one grade-free index; ${trendWord}${capWord}; index $${idx.indexAtNow} at now × the ${tierLabel} multiplier ${idx.requestedMultiplier}x = $${idx.tierValue}${skipWord}`,
+            gradeIndex: idx,
+          };
+        }
       }
     }
 
@@ -1018,7 +1290,8 @@ export async function computeUnifiedPrice(
       return Number.isFinite(t) && t > mx ? t : mx;
     }, 0);
     const wMed = weightedMedian(rows, nowMs);
-    const trend = computeTrendAndPrediction(rows, wMed);
+    const trend = computeTrendAndPrediction(rows, wMed, label);
+    const gi = trend.gradeIndex ?? null;
     gradeCurve.push({
       grade: label,
       gradeCompany: rows[0].gradeCompany,
@@ -1038,6 +1311,24 @@ export async function computeUnifiedPrice(
       rungLabel: trend.rungLabel,
       projectionNote: trend.projectionNote,
       windowNote: tierWindowNotes.get(label) ?? null,
+      // CF-EXACT-POOL-GRADE-INDEX: the comps this tier was PRICED FROM. For
+      // every other rung that is the tier's own pool and this is absent; for
+      // the index rung it is every index point, because that is what the
+      // number was actually read off. `sampleCount` deliberately stays the
+      // tier's OWN sales — it is what `unifiedTierHasPool` and the confidence
+      // score mean by "this tier's pool", and inflating it with other tiers'
+      // sales would claim a directness this rung does not have.
+      compsUsed: gi ? gi.points.length : null,
+      gradeIndexMeta: gi
+        ? {
+            indexAtNow: gi.indexAtNow,
+            requestedMultiplier: gi.requestedMultiplier,
+            halfLifeDays: EXACT_POOL_INDEX_HALF_LIFE_DAYS,
+            contributions: gi.contributions,
+            skipped: gi.skipped,
+            ownTierPoints: gi.ownTierPoints,
+          }
+        : null,
       sales: rows
         .map((r) => ({ price: Number(r.price), soldAt: String(r.soldAt), source: r.source ?? null, contributorUserId: r.contributorUserId ?? null, sellerHandle: r.sellerHandle ?? null, t: Date.parse(r.soldAt) }))
         .sort((a, b) => (Number.isFinite(b.t) ? b.t : 0) - (Number.isFinite(a.t) ? a.t : 0))
