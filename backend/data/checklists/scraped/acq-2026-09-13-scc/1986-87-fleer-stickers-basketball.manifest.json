@@ -1,0 +1,29 @@
+{
+ "scrapedAt": "2026-09-13T01:59:20.486Z",
+ "source": "sportscardchecklist",
+ "sourceUrl": "https://www.sportscardchecklist.com/set-15944/1986-87-fleer-stickers-basketball-trading-card-checklist",
+ "sport": "basketball",
+ "year": 1986,
+ "season": "1986-87",
+ "setName": "1986 Fleer Stickers Basketball",
+ "productKey": "1986-fleer-stickers",
+ "setKey": "fleer-stickers",
+ "setKeyRequested": "fleer-stickers",
+ "parallelOfParent": false,
+ "parallelName": null,
+ "subset": "Stickers",
+ "rowCount": 11,
+ "parallelColumnAuthoritative": true,
+ "converterVersion": 6,
+ "cardRows": 11,
+ "ladderRows": 0,
+ "subsetRows": 0,
+ "printRunsFound": 0,
+ "sectionsReport": [],
+ "setKeyOverrideCorrected": {
+  "fetcherEmitted": "fleer",
+  "correctedTo": "fleer-stickers",
+  "why": "fetchSportsCardChecklist effectiveSetKey generalised the brand-qualified product key to its parent brand. The qualified key is the CANONICAL registered key in productSetKeys.ts and normalizeSetKey maps the bare spelling onto it, so the emitted key would have minted rows under a different product and split the pool. Corrected to the queue/registry key; verified a normalizeSetKey fixed point.",
+  "correctedBy": "acquirer 2026-09-13"
+ }
+}

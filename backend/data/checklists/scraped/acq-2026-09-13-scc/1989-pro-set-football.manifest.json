@@ -1,0 +1,62 @@
+{
+ "scrapedAt": "2026-09-13T02:02:56.126Z",
+ "source": "sportscardchecklist",
+ "sourceUrl": "https://www.sportscardchecklist.com/set-12024/1989-pro-set-football-trading-card-checklist",
+ "sport": "football",
+ "year": 1989,
+ "season": "1989",
+ "setName": "1989 Pro Set Football",
+ "productKey": "1989-pro-set",
+ "setKey": "pro-set",
+ "setKeyRequested": "pro-set",
+ "parallelOfParent": false,
+ "parallelName": null,
+ "subset": null,
+ "rowCount": 564,
+ "parallelColumnAuthoritative": true,
+ "converterVersion": 6,
+ "cardRows": 564,
+ "ladderRows": 0,
+ "subsetRows": 0,
+ "printRunsFound": 0,
+ "sectionsReport": [],
+ "identicalRowsDeduped": 21,
+ "dedupeNote": "The source page listed these rows twice, byte-identical. Only exact-duplicate LINES were removed; a same-cardNumber row whose player text differs is a distinct card (error/corrected, CO/HOF, promo) and was preserved.",
+ "variationAxisApplied": {
+  "ruling": "R18-R20: a named variation is a distinct card. The checklist-stated label is written on the variation/parallel axis so two distinct cards no longer share one hobbyIqCardId. The plain/issued card keeps parallel blank.",
+  "appliedOn": "2026-09-13",
+  "labelsAreSourceVerbatim": true,
+  "edits": [
+   {
+    "cardNumber": "47",
+    "player": "William Perry/",
+    "parallel": "SP"
+   },
+   {
+    "cardNumber": "47",
+    "player": "Ron Morris",
+    "parallel": null
+   },
+   {
+    "cardNumber": "53",
+    "player": "Mike Ditka CO",
+    "parallel": "CO"
+   },
+   {
+    "cardNumber": "53",
+    "player": "Mike Ditka/HOF",
+    "parallel": "HOF"
+   },
+   {
+    "cardNumber": "260",
+    "player": "Raymond Berry CO",
+    "parallel": "CO"
+   },
+   {
+    "cardNumber": "260",
+    "player": "Raymond Berry/HOF",
+    "parallel": "HOF"
+   }
+  ]
+ }
+}

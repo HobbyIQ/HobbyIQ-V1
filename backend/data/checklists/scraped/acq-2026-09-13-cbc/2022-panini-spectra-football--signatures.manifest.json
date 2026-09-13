@@ -1,0 +1,44 @@
+{
+  "source": "cardboardconnection-2026-09-13",
+  "sourceUrl": "https://www.cardboardconnection.com/2022-panini-spectra-football-nfl-cards",
+  "xlsxUrl": "https://www.cardboardconnection.com/wp-content/uploads/2023/01/2022-Panini-Spectra-Football-checklist-Excel-spreadsheet.xlsx",
+  "fetchedAt": "2026-09-13",
+  "sport": "football",
+  "year": 2022,
+  "setName": "2022 Panini Spectra Football",
+  "productKey": "2022-panini-spectra-football",
+  "setKey": "panini-spectra",
+  "subset": "Signatures",
+  "rowCount": 234,
+  "autoCount": 234,
+  "printRunCount": 234,
+  "distinctParallels": 5,
+  "parallelColumnAuthoritative": true,
+  "queueRank": 113,
+  "sectionsReport": [
+    {
+      "category": "auto-signatures",
+      "rows": 55
+    },
+    {
+      "category": "auto-signatures-meta",
+      "rows": 46
+    },
+    {
+      "category": "auto-signatures-neon-pink",
+      "rows": 45
+    },
+    {
+      "category": "auto-signatures-neon-blue",
+      "rows": 32
+    },
+    {
+      "category": "auto-signatures-celestial",
+      "rows": 28
+    },
+    {
+      "category": "auto-signatures-hyper",
+      "rows": 28
+    }
+  ]
+}

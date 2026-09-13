@@ -1,0 +1,51 @@
+{
+ "scrapedAt": "2026-09-13T02:01:19.195Z",
+ "source": "sportscardchecklist",
+ "sourceUrl": "https://www.sportscardchecklist.com/set-35936/1991-upper-deck-football-trading-card-checklist",
+ "sport": "football",
+ "year": 1991,
+ "season": "1991",
+ "setName": "1991 Upper Deck Football",
+ "productKey": "1991-upper-deck",
+ "setKey": "upper-deck",
+ "setKeyRequested": "upper-deck",
+ "parallelOfParent": false,
+ "parallelName": null,
+ "subset": null,
+ "rowCount": 704,
+ "parallelColumnAuthoritative": true,
+ "converterVersion": 6,
+ "cardRows": 704,
+ "ladderRows": 0,
+ "subsetRows": 33,
+ "printRunsFound": 0,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Checklist",
+   "category": "insert-checklist",
+   "playerCount": 4,
+   "rungs": 0,
+   "rowCount": 4,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Team Checklist",
+   "category": "insert-team-checklist",
+   "playerCount": 28,
+   "rungs": 0,
+   "rowCount": 28,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > League Leaders",
+   "category": "insert-league-leaders",
+   "playerCount": 1,
+   "rungs": 0,
+   "rowCount": 1,
+   "refused": false,
+   "printRun": null
+  }
+ ]
+}

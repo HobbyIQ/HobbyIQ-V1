@@ -1,0 +1,33 @@
+{
+ "scrapedAt": "2026-09-13T02:22:56.154Z",
+ "source": "sportscardchecklist",
+ "sourceUrl": "https://www.sportscardchecklist.com/set-68676/1998-99-ud-choice-basketball-trading-card-checklist",
+ "sport": "basketball",
+ "year": 1998,
+ "season": "1998-99",
+ "setName": "1998-99 Upper Deck Choice Basketball",
+ "productKey": "1998-upper-deck-choice",
+ "setKey": "upper-deck-choice",
+ "setKeyRequested": "upper-deck-choice",
+ "parallelOfParent": false,
+ "parallelName": null,
+ "subset": null,
+ "rowCount": 199,
+ "parallelColumnAuthoritative": true,
+ "converterVersion": 6,
+ "cardRows": 199,
+ "ladderRows": 0,
+ "subsetRows": 2,
+ "printRunsFound": 0,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Checklist",
+   "category": "insert-checklist",
+   "playerCount": 2,
+   "rungs": 0,
+   "rowCount": 2,
+   "refused": false,
+   "printRun": null
+  }
+ ]
+}

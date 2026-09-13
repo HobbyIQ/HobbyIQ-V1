@@ -1,0 +1,325 @@
+category,cardNumber,parallel,isAuto,printRun,player
+base,1,,true,,Justin Herbert
+base,3,,true,,Jim Harbaugh
+base,10,,true,,Jamaal Charles
+base,13,,true,,Marcus Allen
+base,20,,true,,Brock Purdy
+base,21,,true,,George Kittle
+base,22,,true,,Joe Montana
+base,40,,true,,Michael Irvin
+base,43,,true,,Phil Simms
+base,47,,true,,Brian Dawkins
+base,49,,true,,Deebo Samuel
+base,54,,true,,Ray Lewis
+base,66,,true,,Devin Hester
+base,70,,true,,Calvin Johnson
+base,73,,true,,Sterling Sharpe
+base,74,,true,,J.J. McCarthy
+base,75,,true,,Justin Jefferson
+base,76,,true,,Randy Moss
+base,82,,true,,Peyton Manning
+base,84,,true,,Trevor Lawrence
+base,91,,true,,Michael Vick
+base,93,,true,,Xavier Legette
+base,94,,true,,Julius Peppers
+base,97,,true,,Drew Brees
+base,98,,true,,Baker Mayfield
+base,99,,true,,Mike Evans
+base,100,,true,,Mike Alstott
+insert-gold,1,Gold,true,10,Justin Herbert
+insert-gold,3,Gold,true,10,Jim Harbaugh
+insert-gold,6,Gold,true,10,John Elway
+insert-gold,7,Gold,true,10,Patrick Mahomes II
+insert-gold,10,Gold,true,10,Jamaal Charles
+insert-gold,13,Gold,true,10,Marcus Allen
+insert-gold,20,Gold,true,10,Brock Purdy
+insert-gold,21,Gold,true,10,George Kittle
+insert-gold,22,Gold,true,10,Joe Montana
+insert-gold,24,Gold,true,10,Sam Darnold
+insert-gold,25,Gold,true,10,Kam Chancellor
+insert-gold,28,Gold,true,10,Thurman Thomas
+insert-gold,30,Gold,true,10,Jaylen Waddle
+insert-gold,31,Gold,true,10,Jason Taylor
+insert-gold,37,Gold,true,10,Boomer Esiason
+insert-gold,38,Gold,true,10,Dak Prescott
+insert-gold,40,Gold,true,10,Michael Irvin
+insert-gold,41,Gold,true,10,Tyrone Tracy Jr.
+insert-gold,42,Gold,true,10,Dexter Lawrence
+insert-gold,43,Gold,true,10,Phil Simms
+insert-gold,47,Gold,true,10,Brian Dawkins
+insert-gold,49,Gold,true,10,Deebo Samuel
+insert-gold,50,Gold,true,10,Art Monk
+insert-gold,52,Gold,true,10,Derrick Henry
+insert-gold,54,Gold,true,10,Ray Lewis
+insert-gold,57,Gold,true,10,A.J. Green
+insert-gold,60,Gold,true,10,Earnest Byner
+insert-gold,63,Gold,true,10,Ben Roethlisberger
+insert-gold,65,Gold,true,10,D'Andre Swift
+insert-gold,66,Gold,true,10,Devin Hester
+insert-gold,68,Gold,true,10,Aidan Hutchinson
+insert-gold,69,Gold,true,10,Amon-Ra St. Brown
+insert-gold,70,Gold,true,10,Calvin Johnson
+insert-gold,72,Gold,true,10,Josh Jacobs
+insert-gold,73,Gold,true,10,Sterling Sharpe
+insert-gold,74,Gold,true,10,J.J. McCarthy
+insert-gold,75,Gold,true,10,Justin Jefferson
+insert-gold,76,Gold,true,10,Randy Moss
+insert-gold,82,Gold,true,10,Peyton Manning
+insert-gold,84,Gold,true,10,Trevor Lawrence
+insert-gold,85,Gold,true,10,Fred Taylor
+insert-gold,88,Gold,true,10,Jevon Kearse
+insert-gold,91,Gold,true,10,Michael Vick
+insert-gold,93,Gold,true,10,Xavier Legette
+insert-gold,94,Gold,true,10,Julius Peppers
+insert-gold,96,Gold,true,10,Chris Olave
+insert-gold,97,Gold,true,10,Drew Brees
+insert-gold,98,Gold,true,10,Baker Mayfield
+insert-gold,99,Gold,true,10,Mike Evans
+insert-gold,100,Gold,true,10,Mike Alstott
+insert-green,1,Green,true,5,Justin Herbert
+insert-green,3,Green,true,5,Jim Harbaugh
+insert-green,5,Green,true,5,Courtland Sutton
+insert-green,6,Green,true,5,John Elway
+insert-green,7,Green,true,5,Patrick Mahomes II
+insert-green,10,Green,true,5,Jamaal Charles
+insert-green,13,Green,true,5,Marcus Allen
+insert-green,14,Green,true,5,Kyler Murray
+insert-green,18,Green,true,5,Puka Nacua
+insert-green,19,Green,true,5,Eric Dickerson
+insert-green,20,Green,true,5,Brock Purdy
+insert-green,21,Green,true,5,George Kittle
+insert-green,22,Green,true,5,Joe Montana
+insert-green,25,Green,true,5,Kam Chancellor
+insert-green,28,Green,true,5,Thurman Thomas
+insert-green,30,Green,true,5,Jaylen Waddle
+insert-green,31,Green,true,5,Jason Taylor
+insert-green,36,Green,true,5,Garrett Wilson
+insert-green,37,Green,true,5,Boomer Esiason
+insert-green,38,Green,true,5,Dak Prescott
+insert-green,40,Green,true,5,Michael Irvin
+insert-green,41,Green,true,5,Tyrone Tracy Jr.
+insert-green,42,Green,true,5,Dexter Lawrence
+insert-green,43,Green,true,5,Phil Simms
+insert-green,47,Green,true,5,Brian Dawkins
+insert-green,49,Green,true,5,Deebo Samuel
+insert-green,52,Green,true,5,Derrick Henry
+insert-green,53,Green,true,5,Kyle Hamilton
+insert-green,54,Green,true,5,Ray Lewis
+insert-green,57,Green,true,5,A.J. Green
+insert-green,58,Green,true,5,Myles Garrett
+insert-green,59,Green,true,5,Jerry Jeudy
+insert-green,60,Green,true,5,Earnest Byner
+insert-green,63,Green,true,5,Ben Roethlisberger
+insert-green,66,Green,true,5,Devin Hester
+insert-green,68,Green,true,5,Aidan Hutchinson
+insert-green,69,Green,true,5,Amon-Ra St. Brown
+insert-green,70,Green,true,5,Calvin Johnson
+insert-green,72,Green,true,5,Josh Jacobs
+insert-green,73,Green,true,5,Sterling Sharpe
+insert-green,74,Green,true,5,J.J. McCarthy
+insert-green,75,Green,true,5,Justin Jefferson
+insert-green,76,Green,true,5,Randy Moss
+insert-green,82,Green,true,5,Peyton Manning
+insert-green,84,Green,true,5,Trevor Lawrence
+insert-green,85,Green,true,5,Fred Taylor
+insert-green,88,Green,true,5,Jevon Kearse
+insert-green,91,Green,true,5,Michael Vick
+insert-green,93,Green,true,5,Xavier Legette
+insert-green,94,Green,true,5,Julius Peppers
+insert-green,96,Green,true,5,Chris Olave
+insert-green,97,Green,true,5,Drew Brees
+insert-green,98,Green,true,5,Baker Mayfield
+insert-green,99,Green,true,5,Mike Evans
+insert-green,100,Green,true,5,Mike Alstott
+insert-orange,3,Orange,true,199,Jim Harbaugh
+insert-orange,10,Orange,true,199,Jamaal Charles
+insert-orange,66,Orange,true,199,Devin Hester
+insert-orange,73,Orange,true,25,Sterling Sharpe
+insert-orange,74,Orange,true,25,J.J. McCarthy
+insert-orange,84,Orange,true,199,Trevor Lawrence
+insert-orange,91,Orange,true,199,Michael Vick
+insert-orange,93,Orange,true,199,Xavier Legette
+insert-orange,94,Orange,true,199,Julius Peppers
+insert-platinum,1,Platinum,true,1,Justin Herbert
+insert-platinum,3,Platinum,true,1,Jim Harbaugh
+insert-platinum,5,Platinum,true,1,Courtland Sutton
+insert-platinum,6,Platinum,true,1,John Elway
+insert-platinum,7,Platinum,true,1,Patrick Mahomes II
+insert-platinum,10,Platinum,true,1,Jamaal Charles
+insert-platinum,13,Platinum,true,1,Marcus Allen
+insert-platinum,14,Platinum,true,1,Kyler Murray
+insert-platinum,18,Platinum,true,1,Puka Nacua
+insert-platinum,19,Platinum,true,1,Eric Dickerson
+insert-platinum,20,Platinum,true,1,Brock Purdy
+insert-platinum,21,Platinum,true,1,George Kittle
+insert-platinum,22,Platinum,true,1,Joe Montana
+insert-platinum,24,Platinum,true,1,Sam Darnold
+insert-platinum,25,Platinum,true,1,Kam Chancellor
+insert-platinum,28,Platinum,true,1,Thurman Thomas
+insert-platinum,30,Platinum,true,1,Jaylen Waddle
+insert-platinum,31,Platinum,true,1,Jason Taylor
+insert-platinum,36,Platinum,true,1,Garrett Wilson
+insert-platinum,37,Platinum,true,1,Boomer Esiason
+insert-platinum,38,Platinum,true,1,Dak Prescott
+insert-platinum,40,Platinum,true,1,Michael Irvin
+insert-platinum,41,Platinum,true,1,Tyrone Tracy Jr.
+insert-platinum,42,Platinum,true,1,Dexter Lawrence
+insert-platinum,43,Platinum,true,1,Phil Simms
+insert-platinum,47,Platinum,true,1,Brian Dawkins
+insert-platinum,49,Platinum,true,1,Deebo Samuel
+insert-platinum,50,Platinum,true,1,Art Monk
+insert-platinum,52,Platinum,true,1,Derrick Henry
+insert-platinum,53,Platinum,true,1,Kyle Hamilton
+insert-platinum,54,Platinum,true,1,Ray Lewis
+insert-platinum,57,Platinum,true,1,A.J. Green
+insert-platinum,58,Platinum,true,1,Myles Garrett
+insert-platinum,59,Platinum,true,1,Jerry Jeudy
+insert-platinum,60,Platinum,true,1,Earnest Byner
+insert-platinum,63,Platinum,true,1,Ben Roethlisberger
+insert-platinum,65,Platinum,true,1,D'Andre Swift
+insert-platinum,66,Platinum,true,1,Devin Hester
+insert-platinum,68,Platinum,true,1,Aidan Hutchinson
+insert-platinum,69,Platinum,true,1,Amon-Ra St. Brown
+insert-platinum,70,Platinum,true,1,Calvin Johnson
+insert-platinum,72,Platinum,true,1,Josh Jacobs
+insert-platinum,73,Platinum,true,1,Sterling Sharpe
+insert-platinum,74,Platinum,true,1,J.J. McCarthy
+insert-platinum,75,Platinum,true,1,Justin Jefferson
+insert-platinum,76,Platinum,true,1,Randy Moss
+insert-platinum,82,Platinum,true,1,Peyton Manning
+insert-platinum,84,Platinum,true,1,Trevor Lawrence
+insert-platinum,85,Platinum,true,1,Fred Taylor
+insert-platinum,88,Platinum,true,1,Jevon Kearse
+insert-platinum,91,Platinum,true,1,Michael Vick
+insert-platinum,93,Platinum,true,1,Xavier Legette
+insert-platinum,94,Platinum,true,1,Julius Peppers
+insert-platinum,96,Platinum,true,1,Chris Olave
+insert-platinum,97,Platinum,true,1,Drew Brees
+insert-platinum,98,Platinum,true,1,Baker Mayfield
+insert-platinum,99,Platinum,true,1,Mike Evans
+insert-platinum,100,Platinum,true,1,Mike Alstott
+insert-preferred,3,Preferred,true,299,Jim Harbaugh
+insert-preferred,6,Preferred,true,25,John Elway
+insert-preferred,7,Preferred,true,25,Patrick Mahomes II
+insert-preferred,10,Preferred,true,299,Jamaal Charles
+insert-preferred,13,Preferred,true,25,Marcus Allen
+insert-preferred,18,Preferred,true,5,Puka Nacua
+insert-preferred,20,Preferred,true,25,Brock Purdy
+insert-preferred,21,Preferred,true,25,George Kittle
+insert-preferred,22,Preferred,true,99,Joe Montana
+insert-preferred,25,Preferred,true,50,Kam Chancellor
+insert-preferred,28,Preferred,true,50,Thurman Thomas
+insert-preferred,31,Preferred,true,25,Jason Taylor
+insert-preferred,38,Preferred,true,50,Dak Prescott
+insert-preferred,40,Preferred,true,100,Michael Irvin
+insert-preferred,42,Preferred,true,50,Dexter Lawrence
+insert-preferred,43,Preferred,true,100,Phil Simms
+insert-preferred,47,Preferred,true,25,Brian Dawkins
+insert-preferred,49,Preferred,true,25,Deebo Samuel
+insert-preferred,52,Preferred,true,25,Derrick Henry
+insert-preferred,54,Preferred,true,150,Ray Lewis
+insert-preferred,60,Preferred,true,299,Earnest Byner
+insert-preferred,63,Preferred,true,5,Ben Roethlisberger
+insert-preferred,66,Preferred,true,100,Devin Hester
+insert-preferred,70,Preferred,true,25,Calvin Johnson
+insert-preferred,72,Preferred,true,25,Josh Jacobs
+insert-preferred,73,Preferred,true,25,Sterling Sharpe
+insert-preferred,75,Preferred,true,100,Justin Jefferson
+insert-preferred,76,Preferred,true,50,Randy Moss
+insert-preferred,82,Preferred,true,50,Peyton Manning
+insert-preferred,84,Preferred,true,299,Trevor Lawrence
+insert-preferred,91,Preferred,true,299,Michael Vick
+insert-preferred,93,Preferred,true,50,Xavier Legette
+insert-preferred,94,Preferred,true,50,Julius Peppers
+insert-preferred,97,Preferred,true,50,Drew Brees
+insert-preferred,98,Preferred,true,50,Baker Mayfield
+insert-preferred,99,Preferred,true,50,Mike Evans
+insert-preferred,100,Preferred,true,50,Mike Alstott
+insert-purple,3,Purple,true,25,Jim Harbaugh
+insert-purple,6,Purple,true,25,John Elway
+insert-purple,7,Purple,true,25,Patrick Mahomes II
+insert-purple,10,Purple,true,25,Jamaal Charles
+insert-purple,13,Purple,true,25,Marcus Allen
+insert-purple,20,Purple,true,25,Brock Purdy
+insert-purple,21,Purple,true,25,George Kittle
+insert-purple,22,Purple,true,25,Joe Montana
+insert-purple,25,Purple,true,25,Kam Chancellor
+insert-purple,28,Purple,true,25,Thurman Thomas
+insert-purple,31,Purple,true,25,Jason Taylor
+insert-purple,37,Purple,true,25,Boomer Esiason
+insert-purple,38,Purple,true,25,Dak Prescott
+insert-purple,40,Purple,true,25,Michael Irvin
+insert-purple,42,Purple,true,25,Dexter Lawrence
+insert-purple,43,Purple,true,25,Phil Simms
+insert-purple,47,Purple,true,25,Brian Dawkins
+insert-purple,49,Purple,true,25,Deebo Samuel
+insert-purple,52,Purple,true,25,Derrick Henry
+insert-purple,54,Purple,true,25,Ray Lewis
+insert-purple,57,Purple,true,25,A.J. Green
+insert-purple,60,Purple,true,25,Earnest Byner
+insert-purple,63,Purple,true,25,Ben Roethlisberger
+insert-purple,66,Purple,true,25,Devin Hester
+insert-purple,69,Purple,true,25,Amon-Ra St. Brown
+insert-purple,70,Purple,true,25,Calvin Johnson
+insert-purple,72,Purple,true,25,Josh Jacobs
+insert-purple,73,Purple,true,25,Sterling Sharpe
+insert-purple,74,Purple,true,25,J.J. McCarthy
+insert-purple,75,Purple,true,25,Justin Jefferson
+insert-purple,76,Purple,true,25,Randy Moss
+insert-purple,82,Purple,true,25,Peyton Manning
+insert-purple,84,Purple,true,25,Trevor Lawrence
+insert-purple,85,Purple,true,25,Fred Taylor
+insert-purple,88,Purple,true,25,Jevon Kearse
+insert-purple,91,Purple,true,25,Michael Vick
+insert-purple,93,Purple,true,25,Xavier Legette
+insert-purple,94,Purple,true,25,Julius Peppers
+insert-purple,97,Purple,true,25,Drew Brees
+insert-purple,98,Purple,true,25,Baker Mayfield
+insert-purple,99,Purple,true,25,Mike Evans
+insert-purple,100,Purple,true,25,Mike Alstott
+insert-red,3,Red,true,,Jim Harbaugh
+insert-red,10,Red,true,,Jamaal Charles
+insert-red,13,Red,true,,Marcus Allen
+insert-red,21,Red,true,,George Kittle
+insert-red,22,Red,true,,Joe Montana
+insert-red,40,Red,true,,Michael Irvin
+insert-red,43,Red,true,,Phil Simms
+insert-red,49,Red,true,,Deebo Samuel
+insert-red,54,Red,true,,Ray Lewis
+insert-red,66,Red,true,,Devin Hester
+insert-red,70,Red,true,,Calvin Johnson
+insert-red,73,Red,true,,Sterling Sharpe
+insert-red,75,Red,true,,Justin Jefferson
+insert-red,76,Red,true,,Randy Moss
+insert-red,84,Red,true,,Trevor Lawrence
+insert-red,91,Red,true,,Michael Vick
+insert-red,93,Red,true,,Xavier Legette
+insert-red,94,Red,true,,Julius Peppers
+insert-red,97,Red,true,,Drew Brees
+insert-red,98,Red,true,,Baker Mayfield
+insert-red,99,Red,true,,Mike Evans
+insert-red,100,Red,true,,Mike Alstott
+insert-true-blue,3,True Blue,true,99,Jim Harbaugh
+insert-true-blue,7,True Blue,true,49,Patrick Mahomes II
+insert-true-blue,10,True Blue,true,99,Jamaal Charles
+insert-true-blue,21,True Blue,true,99,George Kittle
+insert-true-blue,22,True Blue,true,99,Joe Montana
+insert-true-blue,28,True Blue,true,99,Thurman Thomas
+insert-true-blue,31,True Blue,true,99,Jason Taylor
+insert-true-blue,40,True Blue,true,99,Michael Irvin
+insert-true-blue,42,True Blue,true,99,Dexter Lawrence
+insert-true-blue,43,True Blue,true,99,Phil Simms
+insert-true-blue,49,True Blue,true,99,Deebo Samuel
+insert-true-blue,54,True Blue,true,99,Ray Lewis
+insert-true-blue,60,True Blue,true,99,Earnest Byner
+insert-true-blue,66,True Blue,true,99,Devin Hester
+insert-true-blue,74,True Blue,true,99,J.J. McCarthy
+insert-true-blue,75,True Blue,true,99,Justin Jefferson
+insert-true-blue,84,True Blue,true,99,Trevor Lawrence
+insert-true-blue,91,True Blue,true,99,Michael Vick
+insert-true-blue,93,True Blue,true,99,Xavier Legette
+insert-true-blue,94,True Blue,true,99,Julius Peppers
+insert-true-blue,97,True Blue,true,99,Drew Brees
+insert-true-blue,98,True Blue,true,99,Baker Mayfield
+insert-true-blue,99,True Blue,true,99,Mike Evans
+insert-true-blue,100,True Blue,true,99,Mike Alstott

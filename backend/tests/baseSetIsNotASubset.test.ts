@@ -261,8 +261,23 @@ describe("the ingest child uses the claim, everywhere it used the raw field", ()
     expect(src).toContain('require(path.join(__dirname, "lib", "subset-identity.cjs"))');
     expect(src).toContain("const knownClaim = claimedSubsetOf(known && known.subsetName);");
     expect(src).toContain("const productClaim = claimedSubsetOf(product.subsetName);");
-    expect(src).toContain("if (known && knownClaim && knownClaim !== (productClaim || null)) {");
+    // The clash test still reads the CLAIM on both sides, which is what this
+    // file is about. It is now guarded by `separatedOntoOwnKey` -- R30's rule
+    // (CF-ONE-CARD-ONE-ADDRESS-WHICHEVER-COLUMN-SAID-SO) settles the same
+    // question by giving the subset its own card SET KEY, and running both
+    // mechanisms would spell the subset twice and give one card a third
+    // address. The condition itself is unchanged; only a disarm sits in front.
+    expect(src).toContain("known && knownClaim && knownClaim !== (productClaim || null)) {");
+    expect(src).toContain("const separatedOntoOwnKey = rowSetKey !== product.setKey;");
     expect(src).toContain("if (!productClaim) {");
+  });
+
+  it("disarms the :sub- path only for a row already separated onto its own key", () => {
+    // The `:sub-` mechanism is NOT retired: it answers the clash the CATALOG
+    // discovers between two STORED rows, where no checklist asserts anything
+    // (#1741). It is skipped only where the pre-flight has already moved this
+    // row to `<product>-<subset>` and there is no rival at the plain id.
+    expect(src).toContain("if (!separatedOntoOwnKey && known && knownClaim");
   });
 
   it("no longer branches on the raw subsetName strings", () => {

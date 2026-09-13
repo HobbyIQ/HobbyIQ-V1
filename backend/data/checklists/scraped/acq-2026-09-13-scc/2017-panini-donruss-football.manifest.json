@@ -1,0 +1,29 @@
+{
+ "scrapedAt": "2026-09-13T01:59:29.391Z",
+ "source": "sportscardchecklist",
+ "sourceUrl": "https://www.sportscardchecklist.com/set-121087/2017-donruss-football-trading-card-checklist",
+ "sport": "football",
+ "year": 2017,
+ "season": "2017",
+ "setName": "2017 Panini Donruss Football",
+ "productKey": "2017-panini-donruss",
+ "setKey": "panini-donruss",
+ "setKeyRequested": "panini-donruss",
+ "parallelOfParent": false,
+ "parallelName": null,
+ "subset": null,
+ "rowCount": 400,
+ "parallelColumnAuthoritative": true,
+ "converterVersion": 6,
+ "cardRows": 400,
+ "ladderRows": 0,
+ "subsetRows": 0,
+ "printRunsFound": 0,
+ "sectionsReport": [],
+ "setKeyOverrideCorrected": {
+  "fetcherEmitted": "donruss",
+  "correctedTo": "panini-donruss",
+  "why": "fetchSportsCardChecklist effectiveSetKey generalised the brand-qualified product key to its parent brand. The qualified key is the CANONICAL registered key in productSetKeys.ts and normalizeSetKey maps the bare spelling onto it, so the emitted key would have minted rows under a different product and split the pool. Corrected to the queue/registry key; verified a normalizeSetKey fixed point.",
+  "correctedBy": "acquirer 2026-09-13"
+ }
+}

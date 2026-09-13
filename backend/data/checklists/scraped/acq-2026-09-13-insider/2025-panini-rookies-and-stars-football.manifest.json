@@ -1,0 +1,17 @@
+{
+  "scrapedAt": "2026-09-13T02:13:17.798Z",
+  "fetchedAt": "2026-09-13",
+  "sourceUrl": "https://www.checklistinsider.com/2025-panini-rookies-stars-football",
+  "xlsxUrl": "https://xcdn.checklistinsider.com/public/2025/12/2025-Panini-Rookies-Stars-Football-Checklist-Downloads-Excel-spreadsheet.xlsx",
+  "source": "checklistinsider-2026-09-13",
+  "sport": "football",
+  "year": 2025,
+  "setName": "2025 Panini Rookies & Stars Football",
+  "productKey": "2025-panini-rookies-and-stars-football",
+  "setKey": "panini-rookies-and-stars",
+  "rowCount": 6360,
+  "autoCount": 0,
+  "parallelCount": 170,
+  "parallelColumnAuthoritative": true,
+  "note": "2025 Panini Rookies & Stars Football, base and insert sections. The autograph subsets are NOT here: under R30 (Drew 2026-09-13) each same-numbered autograph subset is its own card set and carries its own setKey (panini-rookies-and-stars-<subset>). Splitting them out is what removes the 1,296 duplicate slugs -- 41 of them merging different players -- that this product produced when all 25 subsets shared one key and one blank parallel. isAuto comes from the section name by word boundary: the Insider workbooks publish no Auto column, and an unanchored /auto/ would read 'Airborne Pink' as an autograph on the 'ink' substring."
+}

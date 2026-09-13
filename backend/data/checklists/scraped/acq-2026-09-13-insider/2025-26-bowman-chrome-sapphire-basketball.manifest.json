@@ -1,0 +1,18 @@
+{
+  "scrapedAt": "2026-09-13T02:01:05.685Z",
+  "fetchedAt": "2026-09-13",
+  "sourceUrl": "https://www.checklistinsider.com/2025-26-bowman-sapphire-basketball",
+  "xlsxUrl": "https://xcdn.checklistinsider.com/public/2026/05/2025-26-Bowman-Sapphire-Basketball-Checklist-Downloads-Excel-spreadsheet-Checklist-Insider-.xlsx",
+  "source": "checklistinsider-2026-09-13",
+  "sport": "basketball",
+  "year": 2025,
+  "setName": "2025-26 Bowman Sapphire Basketball",
+  "productKey": "2025-26-bowman-chrome-sapphire-basketball",
+  "setKey": "bowman-chrome-sapphire",
+  "rowCount": 441,
+  "autoCount": 126,
+  "parallelCount": 0,
+  "categoryCount": 8,
+  "parallelColumnAuthoritative": true,
+  "note": "Topps section-stream workbook. The source page names the product '2025-26 Bowman Sapphire Basketball'; normalizeSetKey maps that name to bowman-chrome-sapphire, which is the queue's key and a fixed point, so the source name and the queue agree and no key question arises. Autograph sections (CHROME PROSPECT AUTOGRAPH, BASE CHROME AUTOGRAPH, SAPPHIRE SELECTIONS AUTOGRAPHS NBA/NIL) are the only place this workbook states a signature; every row under them is flagged isAuto=true. No print runs are stated in this workbook, so printRun is left blank rather than inferred."
+}

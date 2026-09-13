@@ -1,0 +1,32 @@
+{
+  "source": "cardboardconnection-2026-09-13",
+  "sourceUrl": "https://www.cardboardconnection.com/2022-panini-spectra-football-nfl-cards",
+  "xlsxUrl": "https://www.cardboardconnection.com/wp-content/uploads/2023/01/2022-Panini-Spectra-Football-checklist-Excel-spreadsheet.xlsx",
+  "fetchedAt": "2026-09-13",
+  "sport": "football",
+  "year": 2022,
+  "setName": "2022 Panini Spectra Football",
+  "productKey": "2022-panini-spectra-football",
+  "setKey": "panini-spectra",
+  "subset": "Aspiring Patch Autographs Gold",
+  "rowCount": 55,
+  "autoCount": 55,
+  "printRunCount": 55,
+  "distinctParallels": 2,
+  "parallelColumnAuthoritative": true,
+  "queueRank": 113,
+  "sectionsReport": [
+    {
+      "category": "auto-aspiring-patch-autographs-gold",
+      "rows": 19
+    },
+    {
+      "category": "auto-aspiring-patch-autographs-gold-laundry-tags-nfl-shield",
+      "rows": 18
+    },
+    {
+      "category": "auto-aspiring-patch-autographs-gold-laundry-tags-nike-swoosh",
+      "rows": 18
+    }
+  ]
+}

@@ -51,6 +51,18 @@ describe("CF-CATALOG-AUTHORITY", () => {
     expect(catalogAuthorityOf("catalog-explode-actuals-2026-08-12")).toBe("derived");
   });
 
+  it("a dated bcp acquisition tag must spell the source family, not the abbreviation", () => {
+    // 2026-09-13: two staged checklist acquisitions (acq-2026-09-13-bcp,
+    // acq-2026-09-13-bcp-flair, 69,593 + 1,620 rows) shipped their manifests
+    // with source "bcp-2026-09-13". The ingester refused at startup — FATAL:
+    // SOURCE "bcp-2026-09-13" classifies as unknown, not checklist — because
+    // CHECKLIST matches "cardpedia" (baseballcardpedia's existing rows), and
+    // "bcp" alone is not a recognised stem. The source family already has a
+    // name; the data was renamed to it rather than widening the regex.
+    expect(catalogAuthorityOf("baseballcardpedia-2026-09-13")).toBe("checklist");
+    expect(catalogAuthorityOf("bcp-2026-09-13")).toBe("unknown");
+  });
+
   it("treats missing/undefined source as unknown, never as evidence", () => {
     // 133,568 production rows literally have source "undefined".
     for (const s of [null, undefined, "", "   ", "undefined", "null"]) {

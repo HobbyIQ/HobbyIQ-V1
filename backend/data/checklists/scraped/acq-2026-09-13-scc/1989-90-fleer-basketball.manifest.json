@@ -1,0 +1,35 @@
+{
+ "scrapedAt": "2026-09-13T02:00:59.308Z",
+ "source": "sportscardchecklist",
+ "sourceUrl": "https://www.sportscardchecklist.com/set-12098/1989-90-fleer-basketball-trading-card-checklist",
+ "sport": "basketball",
+ "year": 1989,
+ "season": "1989-90",
+ "setName": "1989 Fleer Basketball",
+ "productKey": "1989-fleer",
+ "setKey": "fleer",
+ "setKeyRequested": "fleer",
+ "parallelOfParent": false,
+ "parallelName": null,
+ "subset": null,
+ "rowCount": 168,
+ "parallelColumnAuthoritative": true,
+ "converterVersion": 6,
+ "cardRows": 168,
+ "ladderRows": 0,
+ "subsetRows": 5,
+ "printRunsFound": 0,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > All-Star",
+   "category": "insert-all-star",
+   "playerCount": 5,
+   "rungs": 0,
+   "rowCount": 5,
+   "refused": false,
+   "printRun": null
+  }
+ ],
+ "identicalRowsDeduped": 3,
+ "dedupeNote": "The source page listed these rows twice, byte-identical. Only exact-duplicate LINES were removed; a same-cardNumber row whose player text differs is a distinct card (error/corrected, CO/HOF, promo) and was preserved."
+}

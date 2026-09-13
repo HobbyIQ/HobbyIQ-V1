@@ -1,0 +1,23 @@
+{
+ "scrapedAt": "2026-09-13T02:00:27.736Z",
+ "source": "sportscardchecklist",
+ "sourceUrl": "https://www.sportscardchecklist.com/set-163961/1995-fleer-football-trading-card-checklist",
+ "sport": "football",
+ "year": 1995,
+ "season": "1995",
+ "setName": "1995 Fleer Football",
+ "productKey": "1995-fleer",
+ "setKey": "fleer",
+ "setKeyRequested": "fleer",
+ "parallelOfParent": false,
+ "parallelName": null,
+ "subset": null,
+ "rowCount": 401,
+ "parallelColumnAuthoritative": true,
+ "converterVersion": 6,
+ "cardRows": 401,
+ "ladderRows": 0,
+ "subsetRows": 0,
+ "printRunsFound": 0,
+ "sectionsReport": []
+}

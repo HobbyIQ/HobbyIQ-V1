@@ -1,0 +1,32 @@
+{
+  "source": "cardboardconnection-2026-09-13",
+  "sourceUrl": "https://www.cardboardconnection.com/2022-donruss-football-nfl-cards",
+  "xlsxUrl": "https://cconnect.s3.amazonaws.com/wp-content/uploads/2023/02/2022-Donruss-Football-checklist-Excel-spreadsheet-update-new.xlsx",
+  "fetchedAt": "2026-09-13",
+  "sport": "football",
+  "year": 2022,
+  "setName": "2022 Donruss Football",
+  "productKey": "2022-panini-donruss-football",
+  "setKey": "panini-donruss",
+  "subset": "Rated Rookies Autographs",
+  "rowCount": 252,
+  "autoCount": 252,
+  "printRunCount": 0,
+  "distinctParallels": 2,
+  "parallelColumnAuthoritative": true,
+  "queueRank": 22,
+  "sectionsReport": [
+    {
+      "category": "auto-rated-rookies-autographs",
+      "rows": 89
+    },
+    {
+      "category": "auto-rated-rookies-autographs-blue",
+      "rows": 82
+    },
+    {
+      "category": "auto-rated-rookies-autographs-orange",
+      "rows": 81
+    }
+  ]
+}

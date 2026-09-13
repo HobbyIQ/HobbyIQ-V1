@@ -1039,8 +1039,12 @@ describe("the move verifies its source the way the retire does", () => {
     expect(s).toContain("moves COMPLETED         ${f(movesCompleted)}");
     // Both wrote, so both are `written`; the reconcile identity must still
     // account for every entry exactly once. A `park` writes too (it patches a
-    // field), so it joins the same sum -- see the park suite below.
-    expect(s).toContain("const written = retired + resluged + movesCompleted + moveSourceLeftBehind + parked;");
+    // field), so it joins the same sum -- see the park suite below. A
+    // `verify` writes the same way (it patches verificationStatus +
+    // verifiedBy), and joins it too -- see relocateCatalogRowsByListVerify.
+    expect(s).toContain(
+      "const written = retired + resluged + movesCompleted + moveSourceLeftBehind + parked + verified;",
+    );
   });
 });
 

@@ -1,0 +1,23 @@
+{
+ "scrapedAt": "2026-09-13T02:02:19.984Z",
+ "source": "sportscardchecklist",
+ "sourceUrl": "https://www.sportscardchecklist.com/set-11929/1964-philadelphia-football-trading-card-checklist",
+ "sport": "football",
+ "year": 1964,
+ "season": "1964",
+ "setName": "1964 Philadelphia Football",
+ "productKey": "1964-philadelphia",
+ "setKey": "philadelphia",
+ "setKeyRequested": "philadelphia",
+ "parallelOfParent": false,
+ "parallelName": null,
+ "subset": null,
+ "rowCount": 198,
+ "parallelColumnAuthoritative": true,
+ "converterVersion": 6,
+ "cardRows": 198,
+ "ladderRows": 0,
+ "subsetRows": 0,
+ "printRunsFound": 0,
+ "sectionsReport": []
+}

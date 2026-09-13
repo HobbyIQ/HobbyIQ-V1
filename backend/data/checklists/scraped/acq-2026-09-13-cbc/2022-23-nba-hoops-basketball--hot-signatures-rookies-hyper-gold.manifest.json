@@ -1,0 +1,24 @@
+{
+  "source": "cardboardconnection-2026-09-13",
+  "sourceUrl": "https://www.cardboardconnection.com/2022-23-panini-nba-hoops-basketball-cards",
+  "xlsxUrl": "https://cconnect.s3.amazonaws.com/wp-content/uploads/2022/12/2022-23-Panini-NBA-Hoops-Basketball-checklist-Excel-spreadsheet.xlsx",
+  "fetchedAt": "2026-09-13",
+  "sport": "basketball",
+  "year": 2022,
+  "setName": "2022-23 Panini NBA Hoops Basketball",
+  "productKey": "2022-23-nba-hoops-basketball",
+  "setKey": "nba-hoops",
+  "subset": "Hot Signatures Rookies Hyper Gold",
+  "rowCount": 50,
+  "autoCount": 50,
+  "printRunCount": 0,
+  "distinctParallels": 1,
+  "parallelColumnAuthoritative": true,
+  "queueRank": 112,
+  "sectionsReport": [
+    {
+      "category": "auto-hot-signatures-rookies-hyper-gold",
+      "rows": 50
+    }
+  ]
+}

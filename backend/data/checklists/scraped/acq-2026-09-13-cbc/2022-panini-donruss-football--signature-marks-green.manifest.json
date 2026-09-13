@@ -1,0 +1,24 @@
+{
+  "source": "cardboardconnection-2026-09-13",
+  "sourceUrl": "https://www.cardboardconnection.com/2022-donruss-football-nfl-cards",
+  "xlsxUrl": "https://cconnect.s3.amazonaws.com/wp-content/uploads/2023/02/2022-Donruss-Football-checklist-Excel-spreadsheet-update-new.xlsx",
+  "fetchedAt": "2026-09-13",
+  "sport": "football",
+  "year": 2022,
+  "setName": "2022 Donruss Football",
+  "productKey": "2022-panini-donruss-football",
+  "setKey": "panini-donruss",
+  "subset": "Signature Marks Green",
+  "rowCount": 44,
+  "autoCount": 44,
+  "printRunCount": 44,
+  "distinctParallels": 0,
+  "parallelColumnAuthoritative": true,
+  "queueRank": 22,
+  "sectionsReport": [
+    {
+      "category": "auto-signature-marks-green",
+      "rows": 44
+    }
+  ]
+}

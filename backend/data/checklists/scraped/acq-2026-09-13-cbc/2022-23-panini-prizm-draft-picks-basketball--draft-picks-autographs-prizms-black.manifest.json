@@ -1,0 +1,28 @@
+{
+  "source": "cardboardconnection-2026-09-13",
+  "sourceUrl": "https://www.cardboardconnection.com/2022-23-panini-prizm-draft-picks-basketball-cards",
+  "xlsxUrl": "https://cconnect.s3.amazonaws.com/wp-content/uploads/2023/02/2022-23-Panini-Prizm-Draft-Picks-Basketball-checklist-Excel-spreadsheet-new.xlsx",
+  "fetchedAt": "2026-09-13",
+  "sport": "basketball",
+  "year": 2022,
+  "setName": "2022-23 Panini Prizm Draft Picks Basketball",
+  "productKey": "2022-23-panini-prizm-draft-picks-basketball",
+  "setKey": "panini-prizm-draft-picks",
+  "subset": "Draft Picks Autographs Prizms Black",
+  "rowCount": 154,
+  "autoCount": 154,
+  "printRunCount": 154,
+  "distinctParallels": 1,
+  "parallelColumnAuthoritative": true,
+  "queueRank": 143,
+  "sectionsReport": [
+    {
+      "category": "auto-draft-picks-autographs-prizms-black",
+      "rows": 77
+    },
+    {
+      "category": "auto-draft-picks-autographs-prizms-black-gold",
+      "rows": 77
+    }
+  ]
+}

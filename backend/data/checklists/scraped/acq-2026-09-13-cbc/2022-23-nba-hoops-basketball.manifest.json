@@ -1,0 +1,655 @@
+{
+  "source": "cardboardconnection-2026-09-13",
+  "sourceUrl": "https://www.cardboardconnection.com/2022-23-panini-nba-hoops-basketball-cards",
+  "xlsxUrl": "https://cconnect.s3.amazonaws.com/wp-content/uploads/2022/12/2022-23-Panini-NBA-Hoops-Basketball-checklist-Excel-spreadsheet.xlsx",
+  "fetchedAt": "2026-09-13",
+  "sport": "basketball",
+  "year": 2022,
+  "setName": "2022-23 Panini NBA Hoops Basketball",
+  "productKey": "2022-23-nba-hoops-basketball",
+  "setKey": "nba-hoops",
+  "rowCount": 9203,
+  "autoCount": 20,
+  "printRunCount": 4867,
+  "distinctParallels": 107,
+  "parallelColumnAuthoritative": true,
+  "queueRank": 112,
+  "sectionsReport": [
+    {
+      "category": "base",
+      "rows": 230
+    },
+    {
+      "category": "insert-base-artist-proof",
+      "rows": 230
+    },
+    {
+      "category": "insert-base-artist-proof-black",
+      "rows": 230
+    },
+    {
+      "category": "insert-base-artist-proof-gold",
+      "rows": 230
+    },
+    {
+      "category": "insert-base-blue",
+      "rows": 230
+    },
+    {
+      "category": "insert-base-blue-explosion",
+      "rows": 230
+    },
+    {
+      "category": "insert-base-gravity",
+      "rows": 230
+    },
+    {
+      "category": "insert-base-green",
+      "rows": 230
+    },
+    {
+      "category": "insert-base-hyper-blue",
+      "rows": 230
+    },
+    {
+      "category": "insert-base-hyper-gold",
+      "rows": 230
+    },
+    {
+      "category": "insert-base-hyper-green",
+      "rows": 230
+    },
+    {
+      "category": "insert-base-hyper-red",
+      "rows": 230
+    },
+    {
+      "category": "insert-base-impulse",
+      "rows": 230
+    },
+    {
+      "category": "insert-base-neon-green",
+      "rows": 230
+    },
+    {
+      "category": "insert-base-orange-explosion",
+      "rows": 230
+    },
+    {
+      "category": "insert-base-premium-box-set",
+      "rows": 230
+    },
+    {
+      "category": "insert-base-purple",
+      "rows": 230
+    },
+    {
+      "category": "insert-base-purple-winter",
+      "rows": 230
+    },
+    {
+      "category": "insert-base-red",
+      "rows": 230
+    },
+    {
+      "category": "insert-base-red-backs",
+      "rows": 230
+    },
+    {
+      "category": "insert-base-red-explosion",
+      "rows": 230
+    },
+    {
+      "category": "insert-base-silver",
+      "rows": 230
+    },
+    {
+      "category": "insert-base-teal-explosion",
+      "rows": 230
+    },
+    {
+      "category": "insert-base-winter",
+      "rows": 230
+    },
+    {
+      "category": "insert-base-yellow",
+      "rows": 230
+    },
+    {
+      "category": "insert-base-rookies",
+      "rows": 50
+    },
+    {
+      "category": "insert-base-rookies-artist-proof",
+      "rows": 50
+    },
+    {
+      "category": "insert-base-rookies-artist-proof-black",
+      "rows": 50
+    },
+    {
+      "category": "insert-base-rookies-artist-proof-gold",
+      "rows": 50
+    },
+    {
+      "category": "insert-base-rookies-blue",
+      "rows": 50
+    },
+    {
+      "category": "insert-base-rookies-blue-explosion",
+      "rows": 50
+    },
+    {
+      "category": "insert-base-rookies-gravity",
+      "rows": 50
+    },
+    {
+      "category": "insert-base-rookies-green",
+      "rows": 50
+    },
+    {
+      "category": "insert-base-rookies-hyper-blue",
+      "rows": 50
+    },
+    {
+      "category": "insert-base-rookies-hyper-gold",
+      "rows": 50
+    },
+    {
+      "category": "insert-base-rookies-hyper-green",
+      "rows": 50
+    },
+    {
+      "category": "insert-base-rookies-hyper-red",
+      "rows": 50
+    },
+    {
+      "category": "insert-base-rookies-impulse",
+      "rows": 50
+    },
+    {
+      "category": "insert-base-rookies-neon-green",
+      "rows": 50
+    },
+    {
+      "category": "insert-base-rookies-orange-explosion",
+      "rows": 50
+    },
+    {
+      "category": "insert-base-rookies-premium-box-set",
+      "rows": 50
+    },
+    {
+      "category": "insert-base-rookies-purple",
+      "rows": 50
+    },
+    {
+      "category": "insert-base-rookies-purple-winter",
+      "rows": 50
+    },
+    {
+      "category": "insert-base-rookies-red",
+      "rows": 50
+    },
+    {
+      "category": "insert-base-rookies-red-backs",
+      "rows": 50
+    },
+    {
+      "category": "insert-base-rookies-red-explosion",
+      "rows": 50
+    },
+    {
+      "category": "insert-base-rookies-silver",
+      "rows": 50
+    },
+    {
+      "category": "insert-base-rookies-teal-explosion",
+      "rows": 50
+    },
+    {
+      "category": "insert-base-rookies-winter",
+      "rows": 50
+    },
+    {
+      "category": "insert-base-rookies-yellow",
+      "rows": 50
+    },
+    {
+      "category": "insert-road-to-the-finals-first-round",
+      "rows": 43
+    },
+    {
+      "category": "insert-rise-n-shine-memorabilia",
+      "rows": 35
+    },
+    {
+      "category": "insert-rise-n-shine-memorabilia-prime",
+      "rows": 35
+    },
+    {
+      "category": "insert-rise-n-shine-memorabilia-winter",
+      "rows": 35
+    },
+    {
+      "category": "insert-we-got-next",
+      "rows": 35
+    },
+    {
+      "category": "insert-we-got-next-holo",
+      "rows": 35
+    },
+    {
+      "category": "insert-rookie-sweaters",
+      "rows": 33
+    },
+    {
+      "category": "insert-now-playing",
+      "rows": 31
+    },
+    {
+      "category": "insert-now-playing-holo",
+      "rows": 31
+    },
+    {
+      "category": "insert-arriving-now",
+      "rows": 30
+    },
+    {
+      "category": "insert-arriving-now-holo",
+      "rows": 30
+    },
+    {
+      "category": "insert-arriving-now-winter",
+      "rows": 30
+    },
+    {
+      "category": "insert-arriving-now-winter-holo",
+      "rows": 30
+    },
+    {
+      "category": "insert-city-edition",
+      "rows": 30
+    },
+    {
+      "category": "insert-city-edition-holo",
+      "rows": 30
+    },
+    {
+      "category": "insert-city-edition-holo-artist-proof",
+      "rows": 30
+    },
+    {
+      "category": "insert-city-edition-holo-artist-proof-gold",
+      "rows": 30
+    },
+    {
+      "category": "insert-city-edition-hyper-gold",
+      "rows": 30
+    },
+    {
+      "category": "insert-city-edition-hyper-green",
+      "rows": 30
+    },
+    {
+      "category": "insert-city-edition-hyper-red",
+      "rows": 30
+    },
+    {
+      "category": "insert-class-action",
+      "rows": 30
+    },
+    {
+      "category": "insert-class-action-holo",
+      "rows": 30
+    },
+    {
+      "category": "insert-road-to-the-finals-second-round",
+      "rows": 26
+    },
+    {
+      "category": "insert-hoops-throwback",
+      "rows": 25
+    },
+    {
+      "category": "insert-jam-tastic",
+      "rows": 25
+    },
+    {
+      "category": "insert-prime-twine",
+      "rows": 25
+    },
+    {
+      "category": "insert-prime-twine-holo",
+      "rows": 25
+    },
+    {
+      "category": "insert-prime-twine-holo-artist-proof",
+      "rows": 25
+    },
+    {
+      "category": "insert-prime-twine-holo-artist-proof-gold",
+      "rows": 25
+    },
+    {
+      "category": "insert-prime-twine-hyper-gold",
+      "rows": 25
+    },
+    {
+      "category": "insert-prime-twine-hyper-green",
+      "rows": 25
+    },
+    {
+      "category": "insert-prime-twine-hyper-red",
+      "rows": 25
+    },
+    {
+      "category": "insert-skyview",
+      "rows": 25
+    },
+    {
+      "category": "insert-skyview-holo",
+      "rows": 25
+    },
+    {
+      "category": "insert-skyview-winter",
+      "rows": 25
+    },
+    {
+      "category": "insert-skyview-winter-holo",
+      "rows": 25
+    },
+    {
+      "category": "insert-spark-plugs",
+      "rows": 25
+    },
+    {
+      "category": "insert-base-hoops-tribute",
+      "rows": 20
+    },
+    {
+      "category": "insert-base-hoops-tribute-artist-proof",
+      "rows": 20
+    },
+    {
+      "category": "insert-base-hoops-tribute-artist-proof-black",
+      "rows": 20
+    },
+    {
+      "category": "insert-base-hoops-tribute-artist-proof-gold",
+      "rows": 20
+    },
+    {
+      "category": "insert-base-hoops-tribute-blue",
+      "rows": 20
+    },
+    {
+      "category": "insert-base-hoops-tribute-blue-explosion",
+      "rows": 20
+    },
+    {
+      "category": "insert-base-hoops-tribute-gravity",
+      "rows": 20
+    },
+    {
+      "category": "insert-base-hoops-tribute-green",
+      "rows": 20
+    },
+    {
+      "category": "insert-base-hoops-tribute-hyper-blue",
+      "rows": 20
+    },
+    {
+      "category": "insert-base-hoops-tribute-hyper-gold",
+      "rows": 20
+    },
+    {
+      "category": "insert-base-hoops-tribute-hyper-green",
+      "rows": 20
+    },
+    {
+      "category": "insert-base-hoops-tribute-hyper-red",
+      "rows": 20
+    },
+    {
+      "category": "insert-base-hoops-tribute-impulse",
+      "rows": 20
+    },
+    {
+      "category": "insert-base-hoops-tribute-neon-green",
+      "rows": 20
+    },
+    {
+      "category": "insert-base-hoops-tribute-orange-explosion",
+      "rows": 20
+    },
+    {
+      "category": "insert-base-hoops-tribute-premium-box-set",
+      "rows": 20
+    },
+    {
+      "category": "insert-base-hoops-tribute-purple",
+      "rows": 20
+    },
+    {
+      "category": "insert-base-hoops-tribute-purple-winter",
+      "rows": 20
+    },
+    {
+      "category": "insert-base-hoops-tribute-red",
+      "rows": 20
+    },
+    {
+      "category": "insert-base-hoops-tribute-red-backs",
+      "rows": 20
+    },
+    {
+      "category": "insert-base-hoops-tribute-red-explosion",
+      "rows": 20
+    },
+    {
+      "category": "insert-base-hoops-tribute-silver",
+      "rows": 20
+    },
+    {
+      "category": "insert-base-hoops-tribute-teal-explosion",
+      "rows": 20
+    },
+    {
+      "category": "insert-base-hoops-tribute-winter",
+      "rows": 20
+    },
+    {
+      "category": "insert-base-hoops-tribute-yellow",
+      "rows": 20
+    },
+    {
+      "category": "insert-hipnotized",
+      "rows": 20
+    },
+    {
+      "category": "insert-rookie-greetings",
+      "rows": 20
+    },
+    {
+      "category": "insert-rookie-greetings-holo",
+      "rows": 20
+    },
+    {
+      "category": "insert-rookie-greetings-winter",
+      "rows": 20
+    },
+    {
+      "category": "insert-rookie-greetings-winter-holo",
+      "rows": 20
+    },
+    {
+      "category": "insert-zero-gravity",
+      "rows": 20
+    },
+    {
+      "category": "insert-zero-gravity-holo",
+      "rows": 20
+    },
+    {
+      "category": "insert-zero-gravity-holo-artist-proof",
+      "rows": 20
+    },
+    {
+      "category": "insert-zero-gravity-holo-artist-proof-gold",
+      "rows": 20
+    },
+    {
+      "category": "insert-zero-gravity-hyper-gold",
+      "rows": 20
+    },
+    {
+      "category": "insert-zero-gravity-hyper-green",
+      "rows": 20
+    },
+    {
+      "category": "insert-zero-gravity-hyper-red",
+      "rows": 20
+    },
+    {
+      "category": "auto-base-hoops-tribute-premium-box-set-autographs",
+      "rows": 20
+    },
+    {
+      "category": "insert-frequent-flyers",
+      "rows": 15
+    },
+    {
+      "category": "insert-frequent-flyers-holo",
+      "rows": 15
+    },
+    {
+      "category": "insert-frequent-flyers-winter",
+      "rows": 15
+    },
+    {
+      "category": "insert-frequent-flyers-winter-holo",
+      "rows": 15
+    },
+    {
+      "category": "insert-hoopla",
+      "rows": 15
+    },
+    {
+      "category": "insert-hoopla-holo",
+      "rows": 15
+    },
+    {
+      "category": "insert-hoopla-holo-artist-proof",
+      "rows": 15
+    },
+    {
+      "category": "insert-hoopla-holo-artist-proof-gold",
+      "rows": 15
+    },
+    {
+      "category": "insert-hoopla-hyper-gold",
+      "rows": 15
+    },
+    {
+      "category": "insert-hoopla-hyper-green",
+      "rows": 15
+    },
+    {
+      "category": "insert-hoopla-hyper-red",
+      "rows": 15
+    },
+    {
+      "category": "insert-rookie-remembrance",
+      "rows": 15
+    },
+    {
+      "category": "insert-rookie-remembrance-prime",
+      "rows": 15
+    },
+    {
+      "category": "insert-rookie-remembrance-winter",
+      "rows": 15
+    },
+    {
+      "category": "insert-road-to-the-finals-conference-finals",
+      "rows": 12
+    },
+    {
+      "category": "insert-championship-moments",
+      "rows": 10
+    },
+    {
+      "category": "insert-panini-presents",
+      "rows": 10
+    },
+    {
+      "category": "insert-panini-presents-holo",
+      "rows": 10
+    },
+    {
+      "category": "insert-panini-presents-holo-artist-proof",
+      "rows": 10
+    },
+    {
+      "category": "insert-panini-presents-holo-artist-proof-gold",
+      "rows": 10
+    },
+    {
+      "category": "insert-panini-presents-hyper-gold",
+      "rows": 10
+    },
+    {
+      "category": "insert-panini-presents-hyper-green",
+      "rows": 10
+    },
+    {
+      "category": "insert-panini-presents-hyper-red",
+      "rows": 10
+    },
+    {
+      "category": "insert-pure-players",
+      "rows": 10
+    },
+    {
+      "category": "insert-pure-players-holo",
+      "rows": 10
+    },
+    {
+      "category": "insert-pure-players-winter",
+      "rows": 10
+    },
+    {
+      "category": "insert-pure-players-winter-holo",
+      "rows": 10
+    },
+    {
+      "category": "insert-road-to-the-finals-nba-championship",
+      "rows": 6
+    },
+    {
+      "category": "insert-highlights",
+      "rows": 5
+    },
+    {
+      "category": "insert-rookie-special",
+      "rows": 4
+    },
+    {
+      "category": "insert-rookie-special-holo",
+      "rows": 4
+    },
+    {
+      "category": "insert-champions",
+      "rows": 1
+    },
+    {
+      "category": "insert-finals-mvp",
+      "rows": 1
+    },
+    {
+      "category": "insert-parade",
+      "rows": 1
+    }
+  ]
+}

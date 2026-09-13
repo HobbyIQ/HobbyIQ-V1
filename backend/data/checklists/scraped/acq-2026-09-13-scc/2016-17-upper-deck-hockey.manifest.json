@@ -1,0 +1,42 @@
+{
+ "scrapedAt": "2026-09-13T02:00:14.236Z",
+ "source": "sportscardchecklist",
+ "sourceUrl": "https://www.sportscardchecklist.com/set-85459/2016-17-upper-deck-hockey-trading-card-checklist",
+ "sport": "hockey",
+ "year": 2016,
+ "season": "2016-17",
+ "setName": "2016-17 Upper Deck Hockey",
+ "productKey": "2016-upper-deck",
+ "setKey": "upper-deck",
+ "setKeyRequested": "upper-deck",
+ "parallelOfParent": false,
+ "parallelName": null,
+ "subset": null,
+ "rowCount": 529,
+ "parallelColumnAuthoritative": true,
+ "converterVersion": 6,
+ "cardRows": 529,
+ "ladderRows": 0,
+ "subsetRows": 8,
+ "printRunsFound": 0,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Checklist",
+   "category": "insert-checklist",
+   "playerCount": 3,
+   "rungs": 0,
+   "rowCount": 3,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Highlights",
+   "category": "insert-highlights",
+   "playerCount": 5,
+   "rungs": 0,
+   "rowCount": 5,
+   "refused": false,
+   "printRun": null
+  }
+ ]
+}

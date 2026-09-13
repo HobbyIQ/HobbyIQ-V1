@@ -1,0 +1,235 @@
+category,cardNumber,parallel,isAuto,printRun,player
+auto-signatures,1,,true,60,Jake Plummer
+auto-signatures,2,,true,50,Julio Jones
+auto-signatures,3,,true,50,Earl Thomas III
+auto-signatures,4,,true,60,Antwaan Randle El
+auto-signatures,5,,true,60,Kenny Golladay
+auto-signatures,6,,true,60,Mike Williams
+auto-signatures,7,,true,50,Eli Manning
+auto-signatures,8,,true,60,Rod Smith
+auto-signatures,9,,true,60,Lawyer Milloy
+auto-signatures,10,,true,60,Tiki Barber
+auto-signatures,11,,true,60,Willie Lanier
+auto-signatures,12,,true,50,Marcus Mariota
+auto-signatures,13,,true,50,Antonio Gates
+auto-signatures,14,,true,50,Justin Jefferson
+auto-signatures,15,,true,60,Rex Burkhead
+auto-signatures,16,,true,60,Jonathan Ogden
+auto-signatures,17,,true,60,Mike Alstott
+auto-signatures,18,,true,25,Justin Herbert
+auto-signatures,19,,true,60,Tyler Boyd
+auto-signatures,20,,true,60,Terry McLaurin
+auto-signatures,21,,true,60,Bernie Kosar
+auto-signatures,22,,true,50,Doug Williams
+auto-signatures,23,,true,60,Christian Kirk
+auto-signatures,24,,true,50,Carson Wentz
+auto-signatures,25,,true,60,Isaac Bruce
+auto-signatures,26,,true,60,Miles Sanders
+auto-signatures,27,,true,60,Brent Celek
+auto-signatures,28,,true,60,DJ Moore
+auto-signatures,29,,true,50,Mitchell Trubisky
+auto-signatures,30,,true,60,Sebastian Janikowski
+auto-signatures,31,,true,50,A.J. Brown
+auto-signatures,32,,true,60,LeRoy Butler
+auto-signatures,33,,true,50,Brock Lesnar
+auto-signatures,34,,true,60,Ronnie Lott
+auto-signatures,35,,true,60,Marvin Jones Jr.
+auto-signatures,36,,true,50,Ray Lewis
+auto-signatures,37,,true,50,Cris Collinsworth
+auto-signatures,38,,true,60,Greg Lloyd
+auto-signatures,39,,true,50,Michael Strahan
+auto-signatures,40,,true,60,Shaquil Barrett
+auto-signatures,41,,true,60,Alvin Harper
+auto-signatures,44,,true,60,T.J. Houshmandzadeh
+auto-signatures,45,,true,60,Billy Joe DuPree
+auto-signatures,46,,true,60,Willie Roaf
+auto-signatures,47,,true,50,Ty Law
+auto-signatures,48,,true,60,Darius Slay Jr.
+auto-signatures,50,,true,60,Devin McCourty
+auto-signatures,53,,true,50,Fred Biletnikoff
+auto-signatures,54,,true,60,LeSean McCoy
+auto-signatures,55,,true,60,Jamal Lewis
+auto-signatures,56,,true,50,Bob Griese
+auto-signatures,57,,true,60,Ken Houston
+auto-signatures,58,,true,50,Lawrence Taylor
+auto-signatures,59,,true,60,Rex Ryan
+auto-signatures,60,,true,50,AJ Dillon
+auto-signatures-celestial,1,Celestial,true,50,Jake Plummer
+auto-signatures-celestial,4,Celestial,true,50,Antwaan Randle El
+auto-signatures-celestial,5,Celestial,true,50,Kenny Golladay
+auto-signatures-celestial,8,Celestial,true,50,Rod Smith
+auto-signatures-celestial,9,Celestial,true,50,Lawyer Milloy
+auto-signatures-celestial,11,Celestial,true,50,Willie Lanier
+auto-signatures-celestial,15,Celestial,true,50,Rex Burkhead
+auto-signatures-celestial,16,Celestial,true,50,Jonathan Ogden
+auto-signatures-celestial,17,Celestial,true,50,Mike Alstott
+auto-signatures-celestial,20,Celestial,true,50,Terry McLaurin
+auto-signatures-celestial,21,Celestial,true,50,Bernie Kosar
+auto-signatures-celestial,23,Celestial,true,50,Christian Kirk
+auto-signatures-celestial,25,Celestial,true,50,Isaac Bruce
+auto-signatures-celestial,27,Celestial,true,50,Brent Celek
+auto-signatures-celestial,30,Celestial,true,50,Sebastian Janikowski
+auto-signatures-celestial,32,Celestial,true,50,LeRoy Butler
+auto-signatures-celestial,35,Celestial,true,50,Marvin Jones Jr.
+auto-signatures-celestial,38,Celestial,true,50,Greg Lloyd
+auto-signatures-celestial,40,Celestial,true,50,Shaquil Barrett
+auto-signatures-celestial,41,Celestial,true,50,Alvin Harper
+auto-signatures-celestial,44,Celestial,true,50,T.J. Houshmandzadeh
+auto-signatures-celestial,45,Celestial,true,50,Billy Joe DuPree
+auto-signatures-celestial,46,Celestial,true,50,Willie Roaf
+auto-signatures-celestial,50,Celestial,true,50,Devin McCourty
+auto-signatures-celestial,54,Celestial,true,50,LeSean McCoy
+auto-signatures-celestial,55,Celestial,true,50,Jamal Lewis
+auto-signatures-celestial,57,Celestial,true,50,Ken Houston
+auto-signatures-celestial,59,Celestial,true,50,Rex Ryan
+auto-signatures-hyper,1,Hyper,true,35,Jake Plummer
+auto-signatures-hyper,4,Hyper,true,35,Antwaan Randle El
+auto-signatures-hyper,5,Hyper,true,35,Kenny Golladay
+auto-signatures-hyper,8,Hyper,true,35,Rod Smith
+auto-signatures-hyper,9,Hyper,true,35,Lawyer Milloy
+auto-signatures-hyper,11,Hyper,true,35,Willie Lanier
+auto-signatures-hyper,15,Hyper,true,35,Rex Burkhead
+auto-signatures-hyper,16,Hyper,true,35,Jonathan Ogden
+auto-signatures-hyper,17,Hyper,true,35,Mike Alstott
+auto-signatures-hyper,20,Hyper,true,35,Terry McLaurin
+auto-signatures-hyper,21,Hyper,true,35,Bernie Kosar
+auto-signatures-hyper,23,Hyper,true,35,Christian Kirk
+auto-signatures-hyper,25,Hyper,true,35,Isaac Bruce
+auto-signatures-hyper,27,Hyper,true,35,Brent Celek
+auto-signatures-hyper,30,Hyper,true,35,Sebastian Janikowski
+auto-signatures-hyper,32,Hyper,true,35,LeRoy Butler
+auto-signatures-hyper,35,Hyper,true,35,Marvin Jones Jr.
+auto-signatures-hyper,38,Hyper,true,35,Greg Lloyd
+auto-signatures-hyper,40,Hyper,true,35,Shaquil Barrett
+auto-signatures-hyper,41,Hyper,true,35,Alvin Harper
+auto-signatures-hyper,44,Hyper,true,35,T.J. Houshmandzadeh
+auto-signatures-hyper,45,Hyper,true,35,Billy Joe DuPree
+auto-signatures-hyper,46,Hyper,true,35,Willie Roaf
+auto-signatures-hyper,50,Hyper,true,35,Devin McCourty
+auto-signatures-hyper,54,Hyper,true,35,LeSean McCoy
+auto-signatures-hyper,55,Hyper,true,35,Jamal Lewis
+auto-signatures-hyper,57,Hyper,true,35,Ken Houston
+auto-signatures-hyper,59,Hyper,true,35,Rex Ryan
+auto-signatures-meta,1,Meta,true,20,Jake Plummer
+auto-signatures-meta,2,Meta,true,20,Julio Jones
+auto-signatures-meta,3,Meta,true,20,Earl Thomas III
+auto-signatures-meta,4,Meta,true,20,Antwaan Randle El
+auto-signatures-meta,5,Meta,true,20,Kenny Golladay
+auto-signatures-meta,8,Meta,true,20,Rod Smith
+auto-signatures-meta,9,Meta,true,20,Lawyer Milloy
+auto-signatures-meta,11,Meta,true,20,Willie Lanier
+auto-signatures-meta,12,Meta,true,20,Marcus Mariota
+auto-signatures-meta,14,Meta,true,20,Justin Jefferson
+auto-signatures-meta,15,Meta,true,20,Rex Burkhead
+auto-signatures-meta,16,Meta,true,20,Jonathan Ogden
+auto-signatures-meta,17,Meta,true,20,Mike Alstott
+auto-signatures-meta,18,Meta,true,8,Justin Herbert
+auto-signatures-meta,20,Meta,true,20,Terry McLaurin
+auto-signatures-meta,21,Meta,true,20,Bernie Kosar
+auto-signatures-meta,22,Meta,true,20,Doug Williams
+auto-signatures-meta,23,Meta,true,20,Christian Kirk
+auto-signatures-meta,24,Meta,true,20,Carson Wentz
+auto-signatures-meta,25,Meta,true,20,Isaac Bruce
+auto-signatures-meta,27,Meta,true,20,Brent Celek
+auto-signatures-meta,29,Meta,true,20,Mitchell Trubisky
+auto-signatures-meta,30,Meta,true,20,Sebastian Janikowski
+auto-signatures-meta,31,Meta,true,20,A.J. Brown
+auto-signatures-meta,32,Meta,true,20,LeRoy Butler
+auto-signatures-meta,33,Meta,true,20,Brock Lesnar
+auto-signatures-meta,34,Meta,true,20,Ronnie Lott
+auto-signatures-meta,35,Meta,true,20,Marvin Jones Jr.
+auto-signatures-meta,36,Meta,true,20,Ray Lewis
+auto-signatures-meta,37,Meta,true,20,Cris Collinsworth
+auto-signatures-meta,38,Meta,true,20,Greg Lloyd
+auto-signatures-meta,40,Meta,true,20,Shaquil Barrett
+auto-signatures-meta,41,Meta,true,20,Alvin Harper
+auto-signatures-meta,44,Meta,true,20,T.J. Houshmandzadeh
+auto-signatures-meta,45,Meta,true,20,Billy Joe DuPree
+auto-signatures-meta,46,Meta,true,20,Willie Roaf
+auto-signatures-meta,47,Meta,true,20,Ty Law
+auto-signatures-meta,50,Meta,true,20,Devin McCourty
+auto-signatures-meta,53,Meta,true,20,Fred Biletnikoff
+auto-signatures-meta,54,Meta,true,20,LeSean McCoy
+auto-signatures-meta,55,Meta,true,20,Jamal Lewis
+auto-signatures-meta,56,Meta,true,20,Bob Griese
+auto-signatures-meta,57,Meta,true,20,Ken Houston
+auto-signatures-meta,58,Meta,true,20,Lawrence Taylor
+auto-signatures-meta,59,Meta,true,20,Rex Ryan
+auto-signatures-meta,60,Meta,true,20,AJ Dillon
+auto-signatures-neon-blue,1,Neon Blue,true,30,Jake Plummer
+auto-signatures-neon-blue,4,Neon Blue,true,30,Antwaan Randle El
+auto-signatures-neon-blue,5,Neon Blue,true,30,Kenny Golladay
+auto-signatures-neon-blue,8,Neon Blue,true,30,Rod Smith
+auto-signatures-neon-blue,9,Neon Blue,true,30,Lawyer Milloy
+auto-signatures-neon-blue,11,Neon Blue,true,30,Willie Lanier
+auto-signatures-neon-blue,15,Neon Blue,true,30,Rex Burkhead
+auto-signatures-neon-blue,16,Neon Blue,true,30,Jonathan Ogden
+auto-signatures-neon-blue,17,Neon Blue,true,30,Mike Alstott
+auto-signatures-neon-blue,18,Neon Blue,true,10,Justin Herbert
+auto-signatures-neon-blue,21,Neon Blue,true,30,Bernie Kosar
+auto-signatures-neon-blue,23,Neon Blue,true,30,Christian Kirk
+auto-signatures-neon-blue,25,Neon Blue,true,30,Isaac Bruce
+auto-signatures-neon-blue,27,Neon Blue,true,30,Brent Celek
+auto-signatures-neon-blue,30,Neon Blue,true,30,Sebastian Janikowski
+auto-signatures-neon-blue,32,Neon Blue,true,30,LeRoy Butler
+auto-signatures-neon-blue,34,Neon Blue,true,30,Ronnie Lott
+auto-signatures-neon-blue,35,Neon Blue,true,30,Marvin Jones Jr.
+auto-signatures-neon-blue,37,Neon Blue,true,30,Cris Collinsworth
+auto-signatures-neon-blue,38,Neon Blue,true,30,Greg Lloyd
+auto-signatures-neon-blue,40,Neon Blue,true,30,Shaquil Barrett
+auto-signatures-neon-blue,41,Neon Blue,true,30,Alvin Harper
+auto-signatures-neon-blue,44,Neon Blue,true,30,T.J. Houshmandzadeh
+auto-signatures-neon-blue,45,Neon Blue,true,30,Billy Joe DuPree
+auto-signatures-neon-blue,46,Neon Blue,true,30,Willie Roaf
+auto-signatures-neon-blue,50,Neon Blue,true,30,Devin McCourty
+auto-signatures-neon-blue,53,Neon Blue,true,30,Fred Biletnikoff
+auto-signatures-neon-blue,54,Neon Blue,true,30,LeSean McCoy
+auto-signatures-neon-blue,55,Neon Blue,true,30,Jamal Lewis
+auto-signatures-neon-blue,56,Neon Blue,true,30,Bob Griese
+auto-signatures-neon-blue,57,Neon Blue,true,30,Ken Houston
+auto-signatures-neon-blue,59,Neon Blue,true,30,Rex Ryan
+auto-signatures-neon-pink,1,Neon Pink,true,15,Jake Plummer
+auto-signatures-neon-pink,2,Neon Pink,true,15,Julio Jones
+auto-signatures-neon-pink,3,Neon Pink,true,15,Earl Thomas III
+auto-signatures-neon-pink,4,Neon Pink,true,15,Antwaan Randle El
+auto-signatures-neon-pink,5,Neon Pink,true,15,Kenny Golladay
+auto-signatures-neon-pink,8,Neon Pink,true,15,Rod Smith
+auto-signatures-neon-pink,9,Neon Pink,true,15,Lawyer Milloy
+auto-signatures-neon-pink,11,Neon Pink,true,15,Willie Lanier
+auto-signatures-neon-pink,12,Neon Pink,true,15,Marcus Mariota
+auto-signatures-neon-pink,14,Neon Pink,true,15,Justin Jefferson
+auto-signatures-neon-pink,15,Neon Pink,true,15,Rex Burkhead
+auto-signatures-neon-pink,16,Neon Pink,true,15,Jonathan Ogden
+auto-signatures-neon-pink,17,Neon Pink,true,15,Mike Alstott
+auto-signatures-neon-pink,18,Neon Pink,true,7,Justin Herbert
+auto-signatures-neon-pink,20,Neon Pink,true,15,Terry McLaurin
+auto-signatures-neon-pink,21,Neon Pink,true,15,Bernie Kosar
+auto-signatures-neon-pink,22,Neon Pink,true,15,Doug Williams
+auto-signatures-neon-pink,23,Neon Pink,true,15,Christian Kirk
+auto-signatures-neon-pink,24,Neon Pink,true,15,Carson Wentz
+auto-signatures-neon-pink,25,Neon Pink,true,15,Isaac Bruce
+auto-signatures-neon-pink,27,Neon Pink,true,15,Brent Celek
+auto-signatures-neon-pink,29,Neon Pink,true,15,Mitchell Trubisky
+auto-signatures-neon-pink,30,Neon Pink,true,15,Sebastian Janikowski
+auto-signatures-neon-pink,31,Neon Pink,true,15,A.J. Brown
+auto-signatures-neon-pink,32,Neon Pink,true,15,LeRoy Butler
+auto-signatures-neon-pink,33,Neon Pink,true,15,Brock Lesnar
+auto-signatures-neon-pink,34,Neon Pink,true,15,Ronnie Lott
+auto-signatures-neon-pink,35,Neon Pink,true,15,Marvin Jones Jr.
+auto-signatures-neon-pink,36,Neon Pink,true,15,Ray Lewis
+auto-signatures-neon-pink,38,Neon Pink,true,15,Greg Lloyd
+auto-signatures-neon-pink,40,Neon Pink,true,15,Shaquil Barrett
+auto-signatures-neon-pink,41,Neon Pink,true,15,Alvin Harper
+auto-signatures-neon-pink,44,Neon Pink,true,15,T.J. Houshmandzadeh
+auto-signatures-neon-pink,45,Neon Pink,true,15,Billy Joe DuPree
+auto-signatures-neon-pink,46,Neon Pink,true,15,Willie Roaf
+auto-signatures-neon-pink,47,Neon Pink,true,15,Ty Law
+auto-signatures-neon-pink,50,Neon Pink,true,15,Devin McCourty
+auto-signatures-neon-pink,53,Neon Pink,true,15,Fred Biletnikoff
+auto-signatures-neon-pink,54,Neon Pink,true,15,LeSean McCoy
+auto-signatures-neon-pink,55,Neon Pink,true,15,Jamal Lewis
+auto-signatures-neon-pink,56,Neon Pink,true,15,Bob Griese
+auto-signatures-neon-pink,57,Neon Pink,true,15,Ken Houston
+auto-signatures-neon-pink,58,Neon Pink,true,15,Lawrence Taylor
+auto-signatures-neon-pink,59,Neon Pink,true,15,Rex Ryan
+auto-signatures-neon-pink,60,Neon Pink,true,15,AJ Dillon

@@ -1,0 +1,98 @@
+category,cardNumber,parallel,isAuto,printRun,player
+auto-retrospect-autographs,1,,true,10,Joe Burrow
+auto-retrospect-autographs,2,,true,25,Justin Herbert
+auto-retrospect-autographs,4,,true,25,Josh Allen
+auto-retrospect-autographs,5,,true,10,Aaron Rodgers
+auto-retrospect-autographs,6,,true,10,Russell Wilson
+auto-retrospect-autographs,7,,true,25,Ben Roethlisberger
+auto-retrospect-autographs,8,,true,25,Eli Manning
+auto-retrospect-autographs,9,,true,25,Tony Romo
+auto-retrospect-autographs,10,,true,149,Warren Moon
+auto-retrospect-autographs-celestial,10,Celestial,true,99,Warren Moon
+auto-retrospect-autographs-gold,1,Gold,true,1,Joe Burrow
+auto-retrospect-autographs-gold,2,Gold,true,1,Justin Herbert
+auto-retrospect-autographs-gold,4,Gold,true,1,Josh Allen
+auto-retrospect-autographs-gold,5,Gold,true,1,Aaron Rodgers
+auto-retrospect-autographs-gold,6,Gold,true,1,Russell Wilson
+auto-retrospect-autographs-gold,7,Gold,true,1,Ben Roethlisberger
+auto-retrospect-autographs-gold,8,Gold,true,1,Eli Manning
+auto-retrospect-autographs-gold,9,Gold,true,1,Tony Romo
+auto-retrospect-autographs-gold,10,Gold,true,1,Warren Moon
+auto-retrospect-autographs-hyper,10,Hyper,true,75,Warren Moon
+auto-retrospect-autographs-meta,1,Meta,true,8,Joe Burrow
+auto-retrospect-autographs-meta,2,Meta,true,8,Justin Herbert
+auto-retrospect-autographs-meta,4,Meta,true,8,Josh Allen
+auto-retrospect-autographs-meta,5,Meta,true,8,Aaron Rodgers
+auto-retrospect-autographs-meta,6,Meta,true,8,Russell Wilson
+auto-retrospect-autographs-meta,7,Meta,true,8,Ben Roethlisberger
+auto-retrospect-autographs-meta,8,Meta,true,8,Eli Manning
+auto-retrospect-autographs-meta,9,Meta,true,8,Tony Romo
+auto-retrospect-autographs-meta,10,Meta,true,25,Warren Moon
+auto-retrospect-autographs-nebula,1,Nebula,true,2,Joe Burrow
+auto-retrospect-autographs-nebula,2,Nebula,true,2,Justin Herbert
+auto-retrospect-autographs-nebula,4,Nebula,true,2,Josh Allen
+auto-retrospect-autographs-nebula,5,Nebula,true,2,Aaron Rodgers
+auto-retrospect-autographs-nebula,6,Nebula,true,2,Russell Wilson
+auto-retrospect-autographs-nebula,7,Nebula,true,2,Ben Roethlisberger
+auto-retrospect-autographs-nebula,8,Nebula,true,2,Eli Manning
+auto-retrospect-autographs-nebula,9,Nebula,true,2,Tony Romo
+auto-retrospect-autographs-nebula,10,Nebula,true,2,Warren Moon
+auto-retrospect-autographs-neon-blue,2,Neon Blue,true,10,Justin Herbert
+auto-retrospect-autographs-neon-blue,4,Neon Blue,true,10,Josh Allen
+auto-retrospect-autographs-neon-blue,7,Neon Blue,true,10,Ben Roethlisberger
+auto-retrospect-autographs-neon-blue,8,Neon Blue,true,10,Eli Manning
+auto-retrospect-autographs-neon-blue,9,Neon Blue,true,10,Tony Romo
+auto-retrospect-autographs-neon-blue,10,Neon Blue,true,50,Warren Moon
+auto-retrospect-autographs-neon-green,1,Neon Green,true,9,Joe Burrow
+auto-retrospect-autographs-neon-green,2,Neon Green,true,9,Justin Herbert
+auto-retrospect-autographs-neon-green,4,Neon Green,true,9,Josh Allen
+auto-retrospect-autographs-neon-green,5,Neon Green,true,9,Aaron Rodgers
+auto-retrospect-autographs-neon-green,6,Neon Green,true,9,Russell Wilson
+auto-retrospect-autographs-neon-green,7,Neon Green,true,9,Ben Roethlisberger
+auto-retrospect-autographs-neon-green,8,Neon Green,true,9,Eli Manning
+auto-retrospect-autographs-neon-green,9,Neon Green,true,9,Tony Romo
+auto-retrospect-autographs-neon-green,10,Neon Green,true,35,Warren Moon
+auto-retrospect-autographs-neon-marble,1,Neon Marble,true,3,Joe Burrow
+auto-retrospect-autographs-neon-marble,2,Neon Marble,true,3,Justin Herbert
+auto-retrospect-autographs-neon-marble,4,Neon Marble,true,3,Josh Allen
+auto-retrospect-autographs-neon-marble,5,Neon Marble,true,3,Aaron Rodgers
+auto-retrospect-autographs-neon-marble,6,Neon Marble,true,3,Russell Wilson
+auto-retrospect-autographs-neon-marble,7,Neon Marble,true,3,Ben Roethlisberger
+auto-retrospect-autographs-neon-marble,8,Neon Marble,true,3,Eli Manning
+auto-retrospect-autographs-neon-marble,9,Neon Marble,true,3,Tony Romo
+auto-retrospect-autographs-neon-marble,10,Neon Marble,true,4,Warren Moon
+auto-retrospect-autographs-neon-orange,1,Neon Orange,true,6,Joe Burrow
+auto-retrospect-autographs-neon-orange,2,Neon Orange,true,6,Justin Herbert
+auto-retrospect-autographs-neon-orange,4,Neon Orange,true,6,Josh Allen
+auto-retrospect-autographs-neon-orange,5,Neon Orange,true,6,Aaron Rodgers
+auto-retrospect-autographs-neon-orange,6,Neon Orange,true,6,Russell Wilson
+auto-retrospect-autographs-neon-orange,7,Neon Orange,true,6,Ben Roethlisberger
+auto-retrospect-autographs-neon-orange,8,Neon Orange,true,6,Eli Manning
+auto-retrospect-autographs-neon-orange,9,Neon Orange,true,6,Tony Romo
+auto-retrospect-autographs-neon-orange,10,Neon Orange,true,10,Warren Moon
+auto-retrospect-autographs-neon-pink,1,Neon Pink,true,7,Joe Burrow
+auto-retrospect-autographs-neon-pink,2,Neon Pink,true,7,Justin Herbert
+auto-retrospect-autographs-neon-pink,4,Neon Pink,true,7,Josh Allen
+auto-retrospect-autographs-neon-pink,5,Neon Pink,true,7,Aaron Rodgers
+auto-retrospect-autographs-neon-pink,6,Neon Pink,true,7,Russell Wilson
+auto-retrospect-autographs-neon-pink,7,Neon Pink,true,7,Ben Roethlisberger
+auto-retrospect-autographs-neon-pink,8,Neon Pink,true,7,Eli Manning
+auto-retrospect-autographs-neon-pink,9,Neon Pink,true,7,Tony Romo
+auto-retrospect-autographs-neon-pink,10,Neon Pink,true,15,Warren Moon
+auto-retrospect-autographs-neon-splatter,1,Neon Splatter,true,5,Joe Burrow
+auto-retrospect-autographs-neon-splatter,2,Neon Splatter,true,5,Justin Herbert
+auto-retrospect-autographs-neon-splatter,4,Neon Splatter,true,5,Josh Allen
+auto-retrospect-autographs-neon-splatter,5,Neon Splatter,true,5,Aaron Rodgers
+auto-retrospect-autographs-neon-splatter,6,Neon Splatter,true,5,Russell Wilson
+auto-retrospect-autographs-neon-splatter,7,Neon Splatter,true,5,Ben Roethlisberger
+auto-retrospect-autographs-neon-splatter,8,Neon Splatter,true,5,Eli Manning
+auto-retrospect-autographs-neon-splatter,9,Neon Splatter,true,5,Tony Romo
+auto-retrospect-autographs-neon-splatter,10,Neon Splatter,true,8,Warren Moon
+auto-retrospect-autographs-psychedelic,2,Psychedelic,true,4,Justin Herbert
+auto-retrospect-autographs-psychedelic,4,Psychedelic,true,4,Josh Allen
+auto-retrospect-autographs-psychedelic,5,Psychedelic,true,4,Aaron Rodgers
+auto-retrospect-autographs-psychedelic,6,Psychedelic,true,4,Russell Wilson
+auto-retrospect-autographs-psychedelic,7,Psychedelic,true,4,Ben Roethlisberger
+auto-retrospect-autographs-psychedelic,8,Psychedelic,true,4,Eli Manning
+auto-retrospect-autographs-psychedelic,9,Psychedelic,true,4,Tony Romo
+auto-retrospect-autographs-psychedelic,10,Psychedelic,true,5,Warren Moon

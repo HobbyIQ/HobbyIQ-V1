@@ -1,0 +1,567 @@
+{
+  "source": "cardboardconnection-2026-09-13",
+  "sourceUrl": "https://www.cardboardconnection.com/2022-donruss-football-nfl-cards",
+  "xlsxUrl": "https://cconnect.s3.amazonaws.com/wp-content/uploads/2023/02/2022-Donruss-Football-checklist-Excel-spreadsheet-update-new.xlsx",
+  "fetchedAt": "2026-09-13",
+  "sport": "football",
+  "year": 2022,
+  "setName": "2022 Donruss Football",
+  "productKey": "2022-panini-donruss-football",
+  "setKey": "panini-donruss",
+  "rowCount": 9699,
+  "autoCount": 50,
+  "printRunCount": 4619,
+  "distinctParallels": 118,
+  "parallelColumnAuthoritative": true,
+  "queueRank": 22,
+  "sectionsReport": [
+    {
+      "category": "base",
+      "rows": 300
+    },
+    {
+      "category": "insert-base-aqueous-test",
+      "rows": 300
+    },
+    {
+      "category": "insert-base-canvas",
+      "rows": 300
+    },
+    {
+      "category": "insert-base-jersey-number",
+      "rows": 300
+    },
+    {
+      "category": "insert-base-no-name",
+      "rows": 300
+    },
+    {
+      "category": "insert-base-press-proof-black",
+      "rows": 300
+    },
+    {
+      "category": "insert-base-press-proof-black-die-cut",
+      "rows": 300
+    },
+    {
+      "category": "insert-base-press-proof-blue",
+      "rows": 300
+    },
+    {
+      "category": "insert-base-press-proof-gold",
+      "rows": 300
+    },
+    {
+      "category": "insert-base-press-proof-gold-die-cut",
+      "rows": 300
+    },
+    {
+      "category": "insert-base-press-proof-hyper",
+      "rows": 300
+    },
+    {
+      "category": "insert-base-press-proof-premium",
+      "rows": 300
+    },
+    {
+      "category": "insert-base-press-proof-red",
+      "rows": 300
+    },
+    {
+      "category": "insert-base-press-proof-silver",
+      "rows": 300
+    },
+    {
+      "category": "insert-base-press-proof-silver-die-cut",
+      "rows": 300
+    },
+    {
+      "category": "insert-base-press-proof-yellow",
+      "rows": 300
+    },
+    {
+      "category": "insert-base-season-stat-line",
+      "rows": 300
+    },
+    {
+      "category": "insert-optic-rated-rookies-preview-black-pandora",
+      "rows": 100
+    },
+    {
+      "category": "insert-optic-rated-rookies-preview-black-pandora-gold-ice",
+      "rows": 100
+    },
+    {
+      "category": "insert-optic-rated-rookies-preview-black-pandora-green-mojo",
+      "rows": 100
+    },
+    {
+      "category": "insert-optic-rated-rookies-preview-black-pandora-green-velocity",
+      "rows": 100
+    },
+    {
+      "category": "insert-optic-rated-rookies-preview-black-pandora-holo",
+      "rows": 100
+    },
+    {
+      "category": "insert-optic-rated-rookies-preview-black-pandora-purple",
+      "rows": 100
+    },
+    {
+      "category": "insert-optic-rated-rookies-preview-black-pandora-red-and-green",
+      "rows": 100
+    },
+    {
+      "category": "insert-rated-rookies",
+      "rows": 100
+    },
+    {
+      "category": "insert-rated-rookies-aqueous-test",
+      "rows": 100
+    },
+    {
+      "category": "insert-rated-rookies-canvas",
+      "rows": 100
+    },
+    {
+      "category": "insert-rated-rookies-jersey-number",
+      "rows": 100
+    },
+    {
+      "category": "insert-rated-rookies-no-name",
+      "rows": 100
+    },
+    {
+      "category": "insert-rated-rookies-press-proof-black",
+      "rows": 100
+    },
+    {
+      "category": "insert-rated-rookies-press-proof-black-die-cut",
+      "rows": 100
+    },
+    {
+      "category": "insert-rated-rookies-press-proof-blue",
+      "rows": 100
+    },
+    {
+      "category": "insert-rated-rookies-press-proof-gold",
+      "rows": 100
+    },
+    {
+      "category": "insert-rated-rookies-press-proof-gold-die-cut",
+      "rows": 100
+    },
+    {
+      "category": "insert-rated-rookies-press-proof-hyper",
+      "rows": 100
+    },
+    {
+      "category": "insert-rated-rookies-press-proof-premium",
+      "rows": 100
+    },
+    {
+      "category": "insert-rated-rookies-press-proof-red",
+      "rows": 100
+    },
+    {
+      "category": "insert-rated-rookies-press-proof-silver",
+      "rows": 100
+    },
+    {
+      "category": "insert-rated-rookies-press-proof-silver-die-cut",
+      "rows": 100
+    },
+    {
+      "category": "insert-rated-rookies-press-proof-yellow",
+      "rows": 100
+    },
+    {
+      "category": "insert-rated-rookies-season-stat-line",
+      "rows": 100
+    },
+    {
+      "category": "insert-base-variations",
+      "rows": 50
+    },
+    {
+      "category": "insert-rated-rookies-portrait",
+      "rows": 50
+    },
+    {
+      "category": "insert-rated-rookies-portrait-studio-series",
+      "rows": 50
+    },
+    {
+      "category": "insert-rookie-holiday-sweater",
+      "rows": 42
+    },
+    {
+      "category": "insert-rookie-holiday-sweater-shield",
+      "rows": 42
+    },
+    {
+      "category": "insert-dominators",
+      "rows": 40
+    },
+    {
+      "category": "insert-donruss-threads",
+      "rows": 40
+    },
+    {
+      "category": "insert-donruss-threads-laundry-tag-brand-logo",
+      "rows": 40
+    },
+    {
+      "category": "insert-donruss-threads-laundry-tag-nfl-players-logo",
+      "rows": 40
+    },
+    {
+      "category": "insert-donruss-threads-laundry-tag-nfl-shield",
+      "rows": 40
+    },
+    {
+      "category": "insert-donruss-threads-orange",
+      "rows": 40
+    },
+    {
+      "category": "insert-donruss-threads-prime",
+      "rows": 40
+    },
+    {
+      "category": "insert-retro-1992",
+      "rows": 40
+    },
+    {
+      "category": "insert-retro-2002",
+      "rows": 40
+    },
+    {
+      "category": "insert-rookie-phenom-jerseys",
+      "rows": 40
+    },
+    {
+      "category": "insert-rookie-phenom-jerseys-laundry-tag-brand-logo",
+      "rows": 40
+    },
+    {
+      "category": "insert-rookie-phenom-jerseys-laundry-tag-nfl-players-logo",
+      "rows": 40
+    },
+    {
+      "category": "insert-rookie-phenom-jerseys-laundry-tag-nfl-shield",
+      "rows": 40
+    },
+    {
+      "category": "insert-rookie-phenom-jerseys-orange",
+      "rows": 40
+    },
+    {
+      "category": "insert-rookie-phenom-jerseys-prime",
+      "rows": 40
+    },
+    {
+      "category": "insert-rookie-revolution",
+      "rows": 40
+    },
+    {
+      "category": "insert-rookie-revolution-cosmic",
+      "rows": 40
+    },
+    {
+      "category": "insert-rookie-revolution-cubic",
+      "rows": 40
+    },
+    {
+      "category": "insert-rookie-revolution-galactic",
+      "rows": 40
+    },
+    {
+      "category": "insert-rookie-revolution-lava",
+      "rows": 40
+    },
+    {
+      "category": "insert-the-rookies",
+      "rows": 40
+    },
+    {
+      "category": "insert-downtown",
+      "rows": 30
+    },
+    {
+      "category": "insert-franchise-future",
+      "rows": 30
+    },
+    {
+      "category": "insert-franchise-future-holo",
+      "rows": 30
+    },
+    {
+      "category": "insert-jersey-kings",
+      "rows": 30
+    },
+    {
+      "category": "insert-jersey-kings-studio-series",
+      "rows": 30
+    },
+    {
+      "category": "insert-the-elite-series",
+      "rows": 30
+    },
+    {
+      "category": "insert-the-elite-series-rookies",
+      "rows": 30
+    },
+    {
+      "category": "auto-the-elite-series-rookies-autographs",
+      "rows": 30
+    },
+    {
+      "category": "insert-night-moves",
+      "rows": 25
+    },
+    {
+      "category": "insert-vortex",
+      "rows": 25
+    },
+    {
+      "category": "insert-vortex-cosmic",
+      "rows": 25
+    },
+    {
+      "category": "insert-vortex-cubic",
+      "rows": 25
+    },
+    {
+      "category": "insert-vortex-galactic",
+      "rows": 25
+    },
+    {
+      "category": "insert-vortex-lava",
+      "rows": 25
+    },
+    {
+      "category": "insert-highlights",
+      "rows": 24
+    },
+    {
+      "category": "insert-highlights-holo",
+      "rows": 24
+    },
+    {
+      "category": "insert-action-all-pros",
+      "rows": 20
+    },
+    {
+      "category": "insert-all-pro-kings",
+      "rows": 20
+    },
+    {
+      "category": "insert-all-pro-kings-studio-series",
+      "rows": 20
+    },
+    {
+      "category": "insert-canton-kings",
+      "rows": 20
+    },
+    {
+      "category": "insert-canton-kings-studio-series",
+      "rows": 20
+    },
+    {
+      "category": "insert-champ-is-here",
+      "rows": 20
+    },
+    {
+      "category": "insert-champ-is-here-holo",
+      "rows": 20
+    },
+    {
+      "category": "insert-champ-is-here-red",
+      "rows": 20
+    },
+    {
+      "category": "insert-gridiron-marvels",
+      "rows": 20
+    },
+    {
+      "category": "insert-passing-the-torch-jerseys",
+      "rows": 20
+    },
+    {
+      "category": "insert-passing-the-torch-jerseys-prime",
+      "rows": 20
+    },
+    {
+      "category": "insert-power-plus",
+      "rows": 20
+    },
+    {
+      "category": "insert-production-line",
+      "rows": 20
+    },
+    {
+      "category": "insert-production-line-cosmic",
+      "rows": 20
+    },
+    {
+      "category": "insert-production-line-cubic",
+      "rows": 20
+    },
+    {
+      "category": "insert-production-line-galactic",
+      "rows": 20
+    },
+    {
+      "category": "insert-production-line-lava",
+      "rows": 20
+    },
+    {
+      "category": "insert-rookie-gridiron-kings",
+      "rows": 20
+    },
+    {
+      "category": "insert-rookie-gridiron-kings-studio-series",
+      "rows": 20
+    },
+    {
+      "category": "insert-the-legends-series",
+      "rows": 20
+    },
+    {
+      "category": "auto-rookie-phenom-jersey-autographs-laundry-tag-nfl-players-logo",
+      "rows": 20
+    },
+    {
+      "category": "insert-all-time-gridiron-kings",
+      "rows": 15
+    },
+    {
+      "category": "insert-all-time-gridiron-kings-studio-series",
+      "rows": 15
+    },
+    {
+      "category": "insert-crunch-time",
+      "rows": 15
+    },
+    {
+      "category": "insert-crunch-time-cosmic",
+      "rows": 15
+    },
+    {
+      "category": "insert-crunch-time-cubic",
+      "rows": 15
+    },
+    {
+      "category": "insert-crunch-time-galactic",
+      "rows": 15
+    },
+    {
+      "category": "insert-crunch-time-lava",
+      "rows": 15
+    },
+    {
+      "category": "insert-gridiron-kings",
+      "rows": 15
+    },
+    {
+      "category": "insert-gridiron-kings-studio-series",
+      "rows": 15
+    },
+    {
+      "category": "insert-rated-rookies-premium",
+      "rows": 15
+    },
+    {
+      "category": "insert-leather-kings",
+      "rows": 10
+    },
+    {
+      "category": "insert-leather-kings-studio-series",
+      "rows": 10
+    },
+    {
+      "category": "insert-red-hot-rookies",
+      "rows": 10
+    },
+    {
+      "category": "insert-super-bowl-downtown",
+      "rows": 10
+    },
+    {
+      "category": "insert-white-hot-rookies",
+      "rows": 10
+    },
+    {
+      "category": "insert-fans-of-the-game",
+      "rows": 8
+    },
+    {
+      "category": "insert-rookie-holiday-sweater-dual",
+      "rows": 8
+    },
+    {
+      "category": "insert-rookie-holiday-sweater-dual-shield",
+      "rows": 8
+    },
+    {
+      "category": "insert-fans-of-the-game-holo",
+      "rows": 7
+    },
+    {
+      "category": "insert-road-to-the-super-bowl-wild-card",
+      "rows": 6
+    },
+    {
+      "category": "insert-road-to-the-super-bowl-wild-card-holo",
+      "rows": 6
+    },
+    {
+      "category": "insert-road-to-the-super-bowl-divisional-round",
+      "rows": 4
+    },
+    {
+      "category": "insert-road-to-the-super-bowl-divisional-round-holo",
+      "rows": 4
+    },
+    {
+      "category": "insert-inducted",
+      "rows": 3
+    },
+    {
+      "category": "insert-inducted-holo",
+      "rows": 3
+    },
+    {
+      "category": "insert-road-to-the-super-bowl-conference-championship",
+      "rows": 2
+    },
+    {
+      "category": "insert-road-to-the-super-bowl-conference-championship-holo",
+      "rows": 2
+    },
+    {
+      "category": "insert-champions",
+      "rows": 1
+    },
+    {
+      "category": "insert-champions-holo",
+      "rows": 1
+    },
+    {
+      "category": "insert-road-to-the-super-bowl-championship",
+      "rows": 1
+    },
+    {
+      "category": "insert-road-to-the-super-bowl-championship-holo",
+      "rows": 1
+    },
+    {
+      "category": "insert-super-bowl-mvp",
+      "rows": 1
+    },
+    {
+      "category": "insert-super-bowl-mvp-holo",
+      "rows": 1
+    }
+  ]
+}

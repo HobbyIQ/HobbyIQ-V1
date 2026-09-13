@@ -1,0 +1,32 @@
+{
+  "source": "cardboardconnection-2026-09-13",
+  "sourceUrl": "https://www.cardboardconnection.com/2023-24-panini-nba-hoops-basketball-cards",
+  "xlsxUrl": "https://cconnect.s3.amazonaws.com/wp-content/uploads/2023/11/2023-24-Panini-NBA-Hoops-Basketball-checklist-Excel-spreadsheet.xlsx",
+  "fetchedAt": "2026-09-13",
+  "sport": "basketball",
+  "year": 2023,
+  "setName": "2023-24 Panini NBA Hoops Basketball",
+  "productKey": "2023-24-nba-hoops-basketball",
+  "setKey": "nba-hoops",
+  "subset": "Hoops Ink",
+  "rowCount": 147,
+  "autoCount": 147,
+  "printRunCount": 49,
+  "distinctParallels": 2,
+  "parallelColumnAuthoritative": true,
+  "queueRank": 31,
+  "sectionsReport": [
+    {
+      "category": "auto-hoops-ink",
+      "rows": 49
+    },
+    {
+      "category": "auto-hoops-ink-hyper-gold",
+      "rows": 49
+    },
+    {
+      "category": "auto-hoops-ink-red",
+      "rows": 49
+    }
+  ]
+}

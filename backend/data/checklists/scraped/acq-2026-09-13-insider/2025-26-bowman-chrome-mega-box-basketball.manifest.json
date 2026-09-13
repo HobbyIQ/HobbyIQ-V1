@@ -1,0 +1,18 @@
+{
+  "scrapedAt": "2026-09-13T02:01:05.705Z",
+  "fetchedAt": "2026-09-13",
+  "sourceUrl": "https://www.checklistinsider.com/2025-26-bowman-mega-box-basketball",
+  "xlsxUrl": "https://xcdn.checklistinsider.com/public/2026/05/2025-26-Bowman-Mega-Box-Basketball-Checklist-Downloads-Excel-spreadsheet-Checklist-Insider-.xlsx",
+  "source": "checklistinsider-2026-09-13",
+  "sport": "basketball",
+  "year": 2025,
+  "setName": "2025-26 Bowman Mega Box Basketball",
+  "productKey": "2025-26-bowman-chrome-mega-box-basketball",
+  "setKey": "bowman-chrome-mega-box",
+  "rowCount": 5023,
+  "autoCount": 190,
+  "parallelCount": 14,
+  "categoryCount": 8,
+  "parallelColumnAuthoritative": true,
+  "note": "Topps section-stream workbook. The source page names the product '2025-26 Bowman Mega Box Basketball'; normalizeSetKey maps that name to bowman-chrome-mega-box, the queue's key and a fixed point. Autograph sections (CHROME PROSPECT AUTOGRAPH, BASE CHROME AUTOGRAPH) carry the only signature statement in the workbook and every row under them is flagged isAuto=true. No print runs are stated, so printRun is left blank rather than inferred."
+}

@@ -1,0 +1,72 @@
+{
+  "source": "cardboardconnection-2026-09-13",
+  "sourceUrl": "https://www.cardboardconnection.com/2022-panini-spectra-football-nfl-cards",
+  "xlsxUrl": "https://www.cardboardconnection.com/wp-content/uploads/2023/01/2022-Panini-Spectra-Football-checklist-Excel-spreadsheet.xlsx",
+  "fetchedAt": "2026-09-13",
+  "sport": "football",
+  "year": 2022,
+  "setName": "2022 Panini Spectra Football",
+  "productKey": "2022-panini-spectra-football",
+  "setKey": "panini-spectra",
+  "subset": "Retrospect Autographs",
+  "rowCount": 97,
+  "autoCount": 97,
+  "printRunCount": 97,
+  "distinctParallels": 12,
+  "parallelColumnAuthoritative": true,
+  "queueRank": 113,
+  "sectionsReport": [
+    {
+      "category": "auto-retrospect-autographs",
+      "rows": 9
+    },
+    {
+      "category": "auto-retrospect-autographs-gold",
+      "rows": 9
+    },
+    {
+      "category": "auto-retrospect-autographs-meta",
+      "rows": 9
+    },
+    {
+      "category": "auto-retrospect-autographs-nebula",
+      "rows": 9
+    },
+    {
+      "category": "auto-retrospect-autographs-neon-green",
+      "rows": 9
+    },
+    {
+      "category": "auto-retrospect-autographs-neon-marble",
+      "rows": 9
+    },
+    {
+      "category": "auto-retrospect-autographs-neon-orange",
+      "rows": 9
+    },
+    {
+      "category": "auto-retrospect-autographs-neon-pink",
+      "rows": 9
+    },
+    {
+      "category": "auto-retrospect-autographs-neon-splatter",
+      "rows": 9
+    },
+    {
+      "category": "auto-retrospect-autographs-psychedelic",
+      "rows": 8
+    },
+    {
+      "category": "auto-retrospect-autographs-neon-blue",
+      "rows": 6
+    },
+    {
+      "category": "auto-retrospect-autographs-celestial",
+      "rows": 1
+    },
+    {
+      "category": "auto-retrospect-autographs-hyper",
+      "rows": 1
+    }
+  ]
+}

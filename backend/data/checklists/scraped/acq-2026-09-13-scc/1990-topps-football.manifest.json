@@ -1,0 +1,51 @@
+{
+ "scrapedAt": "2026-09-13T02:01:37.038Z",
+ "source": "sportscardchecklist",
+ "sourceUrl": "https://www.sportscardchecklist.com/set-153202/1990-topps-football-trading-card-checklist",
+ "sport": "football",
+ "year": 1990,
+ "season": "1990",
+ "setName": "1990 Topps Football",
+ "productKey": "1990-topps",
+ "setKey": "topps",
+ "setKeyRequested": "topps",
+ "parallelOfParent": false,
+ "parallelName": null,
+ "subset": null,
+ "rowCount": 528,
+ "parallelColumnAuthoritative": true,
+ "converterVersion": 6,
+ "cardRows": 528,
+ "ladderRows": 0,
+ "subsetRows": 31,
+ "printRunsFound": 0,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Record Breaker",
+   "category": "insert-record-breaker",
+   "playerCount": 4,
+   "rungs": 0,
+   "rowCount": 4,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Pro Action",
+   "category": "insert-pro-action",
+   "playerCount": 23,
+   "rungs": 0,
+   "rowCount": 23,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > League Leaders",
+   "category": "insert-league-leaders",
+   "playerCount": 4,
+   "rungs": 0,
+   "rowCount": 4,
+   "refused": false,
+   "printRun": null
+  }
+ ]
+}

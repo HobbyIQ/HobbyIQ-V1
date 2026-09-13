@@ -1,0 +1,34 @@
+{
+ "year": 1996,
+ "sport": "baseball",
+ "setKey": "topps-finest",
+ "setName": "1996 Finest",
+ "sourceUrl": "http://www.baseballcardpedia.com/index.php/1996_Finest",
+ "source": "baseballcardpedia-2026-09-13",
+ "acquiredAt": "2026-09-13",
+ "parallelColumnAuthoritative": true,
+ "scope": "Base Set",
+ "scopeOfPage": "1996 Finest",
+ "baseReadFrom": "Base_Set heading",
+ "ladder": [],
+ "ladderAbsentReason": "the page states its parallels in PROSE only (no list rungs and no inline card list), so no rung can be read without guessing its scope; base set emitted alone",
+ "sections": [
+  {
+   "name": "Base Set",
+   "category": null,
+   "isAuto": false,
+   "cards": 359,
+   "rungs": 0
+  }
+ ],
+ "variationAxisApplied": {
+  "appliedAt": "2026-09-13",
+  "source": "baseballcardpedia-2026-09-13",
+  "why": "#2112's insert-set-key guard refused this file: rows would have landed on fewer distinct ids than there are rows, so a later row would have overwritten an earlier one inside one run and the last writer would have decided which card the address holds. Every decision below was verified against the live baseballcardpedia page before it was applied; nothing here invents a label the source does not print.",
+  "decisions": {},
+  "rowsBefore": 359,
+  "rowsAfter": 359,
+  "distinctIdsAfter": 359,
+  "verdictAfter": "pass"
+ }
+}

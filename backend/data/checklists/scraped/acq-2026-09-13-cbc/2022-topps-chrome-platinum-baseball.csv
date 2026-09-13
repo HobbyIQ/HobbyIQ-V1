@@ -1,0 +1,670 @@
+category,cardNumber,parallel,isAuto,printRun,player
+insert-base-cards,1,,false,,Shohei Ohtani
+insert-base-cards,2,,false,,Derek Jeter
+insert-base-cards,3,,false,,Babe Ruth
+insert-base-cards,4,,false,,Lou Gehrig
+insert-base-cards,5,,false,,George Brett
+insert-base-cards,6,,false,,Don Mattingly
+insert-base-cards,7,,false,,Mike Yastrzemski
+insert-base-cards,8,,false,,Yogi Berra
+insert-base-cards,9,,false,,Stan Musial
+insert-base-cards,10,,false,,Dwight Gooden
+insert-base-cards,11,,false,,Walker Buehler
+insert-base-cards,12,,false,,Albert Pujols
+insert-base-cards,13,,false,,Gleyber Torres
+insert-base-cards,14,,false,,Ernie Banks
+insert-base-cards,15,,false,,Josiah Gray RC
+insert-base-cards,16,,false,,Andrew Vaughn
+insert-base-cards,17,,false,,Thurman Munson
+insert-base-cards,18,,false,,Chris Bassitt
+insert-base-cards,19,,false,,Mariano Rivera
+insert-base-cards,20,,false,,Royce Lewis RC
+insert-base-cards,21,,false,,Roberto Clemente
+insert-base-cards,22,,false,,Byron Buxton
+insert-base-cards,23,,false,,Wade Boggs
+insert-base-cards,24,,false,,Willie Mays
+insert-base-cards,25,,false,,Kyle Tucker
+insert-base-cards,26,,false,,Colton Welker RC
+insert-base-cards,27,,false,,Marcus Stroman
+insert-base-cards,28,,false,,Daulton Varsho
+insert-base-cards,29,,false,,David Cone
+insert-base-cards,30,,false,,Jakson Reetz RC
+insert-base-cards,31,,false,,Connor Wong RC
+insert-base-cards,32,,false,,Vidal Brujan RC
+insert-base-cards,33,,false,,MJ Melendez RC
+insert-base-cards,34,,false,,Monte Irvin
+insert-base-cards,35,,false,,Wander Franco RC
+insert-base-cards,36,,false,,George Springer
+insert-base-cards,37,,false,,Seiya Suzuki
+insert-base-cards,38,,false,,Bryan Reynolds
+insert-base-cards,39,,false,,Ryan Feltner RC
+insert-base-cards,40,,false,,Chipper Jones
+insert-base-cards,41,,false,,Joc Pederson
+insert-base-cards,42,,false,,Jackie Robinson
+insert-base-cards,43,,false,,Jim Palmer
+insert-base-cards,44,,false,,Hank Aaron
+insert-base-cards,45,,false,,Strawberry
+insert-base-cards,46,,false,,Torii Hunter
+insert-base-cards,47,,false,,Vladimir Guerrero
+insert-base-cards,48,,false,,Kirby Puckett
+insert-base-cards,49,,false,,Austin Meadows
+insert-base-cards,50,,false,,Mike Trout
+insert-base-cards,51,,false,,Angel Zerpa RC
+insert-base-cards,52,,false,,Jack Flaherty
+insert-base-cards,53,,false,,Bruce Sutter
+insert-base-cards,54,,false,,Matt Chapman
+insert-base-cards,55,,false,,Mark Kolozsvary RC
+insert-base-cards,56,,false,,Roger Maris
+insert-base-cards,57,,false,,Tyler Stephenson
+insert-base-cards,58,,false,,Andre Dawson
+insert-base-cards,59,,false,,Fergie Jenkins
+insert-base-cards,60,,false,,Trea Turner
+insert-base-cards,61,,false,,Bobby Witt Jr. RC
+insert-base-cards,62,,false,,Tyler Glasnow
+insert-base-cards,63,,false,,Anthony Rendon
+insert-base-cards,64,,false,,Greg Maddux
+insert-base-cards,65,,false,,Steven Kwan RC
+insert-base-cards,66,,false,,Jared Walsh
+insert-base-cards,67,,false,,Juan Marichal
+insert-base-cards,68,,false,,Mike Mussina
+insert-base-cards,69,,false,,Dansby Swanson
+insert-base-cards,70,,false,,Ted Simmons
+insert-base-cards,71,,false,,Keibert Ruiz
+insert-base-cards,72,,false,,Trevor Hoffman
+insert-base-cards,73,,false,,Satchel Paige
+insert-base-cards,74,,false,,Barry Larkin
+insert-base-cards,75,,false,,Craig Biggio
+insert-base-cards,76,,false,,Griffin Jax RC
+insert-base-cards,77,,false,,Hunter Greene RC
+insert-base-cards,78,,false,,Andruw Jones
+insert-base-cards,79,,false,,Bryson Stott RC
+insert-base-cards,80,,false,,Kyle Muller RC
+insert-base-cards,81,,false,,Joe Musgrove
+insert-base-cards,82,,false,,Nick Plummer RC
+insert-base-cards,83,,false,,Hideki Matsui
+insert-base-cards,84,,false,,Trey Amburgey RC
+insert-base-cards,85,,false,,Al Lopez
+insert-base-cards,86,,false,,Ryan McMahon
+insert-base-cards,87,,false,,Hunter Renfroe
+insert-base-cards,88,,false,,Gio Urshela
+insert-base-cards,89,,false,,Ted Williams
+insert-base-cards,90,,false,,Oliver Ortega RC
+insert-base-cards,91,,false,,Hal Newhouser
+insert-base-cards,92,,false,,Jacob Stallings
+insert-base-cards,93,,false,,Zach Thompson RC
+insert-base-cards,94,,false,,Rafael Devers
+insert-base-cards,95,,false,,Roansy Contreras RC
+insert-base-cards,96,,false,,Josh Donaldson
+insert-base-cards,97,,false,,Nick Lodolo RC
+insert-base-cards,98,,false,,Payton Henry RC
+insert-base-cards,99,,false,,Gabriel Arias RC
+insert-base-cards,100,,false,,Fernando Tatis Jr.
+insert-base-cards,101,,false,,Whit Merrifield
+insert-base-cards,102,,false,,Adalberto Mondesi
+insert-base-cards,103,,false,,Noah Syndergaard
+insert-base-cards,104,,false,,Reid Detmers RC
+insert-base-cards,105,,false,,Hyun-Jin Ryu
+insert-base-cards,106,,false,,Phil Niekro
+insert-base-cards,107,,false,,Pavin Smith
+insert-base-cards,108,,false,,Dustin Pedroia
+insert-base-cards,109,,false,,Tony La Russa
+insert-base-cards,110,,false,,Stephen Strasburg
+insert-base-cards,111,,false,,Jorge Soler
+insert-base-cards,112,,false,,Greg Deichmann RC
+insert-base-cards,113,,false,,Glenn Otto RC
+insert-base-cards,114,,false,,Hoyt Wilhelm
+insert-base-cards,115,,false,,Josh Winder RC
+insert-base-cards,116,,false,,Luis Frias RC
+insert-base-cards,117,,false,,Julio Urias
+insert-base-cards,118,,false,,Dylan Carlson
+insert-base-cards,119,,false,,David Peralta
+insert-base-cards,120,,false,,Eduardo Rodriguez
+insert-base-cards,121,,false,,Adrian Beltre
+insert-base-cards,122,,false,,Heliot Ramos RC
+insert-base-cards,123,,false,,Jose Altuve
+insert-base-cards,124,,false,,Jose Siri RC
+insert-base-cards,125,,false,,Duke Snider
+insert-base-cards,126,,false,,Jake Burger RC
+insert-base-cards,127,,false,,Romy Gonzalez RC
+insert-base-cards,128,,false,,Chas McCormick RC
+insert-base-cards,129,,false,,Starling Marte
+insert-base-cards,130,,false,,Jazz Chisholm Jr.
+insert-base-cards,131,,false,,Willson Contreras
+insert-base-cards,132,,false,,MacKenzie Gore RC
+insert-base-cards,133,,false,,Billy Martin
+insert-base-cards,134,,false,,Nick Castellanos
+insert-base-cards,135,,false,,Jack Lopez RC
+insert-base-cards,136,,false,,Gary Sanchez
+insert-base-cards,137,,false,,Ryne Sandberg
+insert-base-cards,138,,false,,Eddie Murray
+insert-base-cards,139,,false,,Tom Seaver
+insert-base-cards,140,,false,,CC Sabathia
+insert-base-cards,141,,false,,Adam Frazier
+insert-base-cards,142,,false,,Rick Ferrell
+insert-base-cards,143,,false,,Elehuris Montero RC
+insert-base-cards,144,,false,,Nick Fortes RC
+insert-base-cards,145,,false,,Joe Ryan RC
+insert-base-cards,146,,false,,Tony Gwynn
+insert-base-cards,147,,false,,Cal Ripken Jr.
+insert-base-cards,148,,false,,Nick Madrigal
+insert-base-cards,149,,false,,Enos Slaughter
+insert-base-cards,150,,false,,Vladimir Guerrero Jr.
+insert-base-cards,151,,false,,Ernie Clement RC
+insert-base-cards,152,,false,,Ralph Kiner
+insert-base-cards,153,,false,,Joe Morgan
+insert-base-cards,154,,false,,Carlos Rodon
+insert-base-cards,155,,false,,Buster Posey
+insert-base-cards,156,,false,,Robin Roberts
+insert-base-cards,157,,false,,Trevor Story
+insert-base-cards,158,,false,,TJ Friedl RC
+insert-base-cards,159,,false,,Randy Arozarena
+insert-base-cards,160,,false,,Ian Happ
+insert-base-cards,161,,false,,Johnny Bench
+insert-base-cards,162,,false,,Bryce Elder RC
+insert-base-cards,163,,false,,Goose Gossage
+insert-base-cards,164,,false,,Jacob deGrom
+insert-base-cards,165,,false,,Derrek Lee
+insert-base-cards,166,,false,,Luis Robert
+insert-base-cards,167,,false,,Aaron Nola
+insert-base-cards,168,,false,,Emmanuel Clase
+insert-base-cards,169,,false,,Yohel Pozo RC
+insert-base-cards,170,,false,,Patrick Wisdom
+insert-base-cards,171,,false,,Julio Rodriguez RC
+insert-base-cards,172,,false,,Hans Crouse RC
+insert-base-cards,173,,false,,Will Smith
+insert-base-cards,174,,false,,Bobby Dalbec
+insert-base-cards,175,,false,,Jake Cousins RC
+insert-base-cards,176,,false,,Stuart Fairchild RC
+insert-base-cards,177,,false,,Kevin Smith RC
+insert-base-cards,178,,false,,Bryan De La Cruz RC
+insert-base-cards,179,,false,,Dave Stewart
+insert-base-cards,180,,false,,Orlando Cepeda
+insert-base-cards,181,,false,,Jackson Kowar RC
+insert-base-cards,182,,false,,Isiah Kiner-Falefa
+insert-base-cards,183,,false,,J.D. Martinez
+insert-base-cards,184,,false,,Rod Carew
+insert-base-cards,185,,false,,Alfonso Rivas RC
+insert-base-cards,186,,false,,Spencer Strider RC
+insert-base-cards,187,,false,,Mark McGwire
+insert-base-cards,188,,false,,Alan Trammell
+insert-base-cards,189,,false,,Shane Bieber
+insert-base-cards,190,,false,,Trevor Rogers
+insert-base-cards,191,,false,,Charlie Blackmon
+insert-base-cards,192,,false,,Willie Stargell
+insert-base-cards,193,,false,,Miguel Rojas
+insert-base-cards,194,,false,,Eli Morgan RC
+insert-base-cards,195,,false,,Brandon Woodruff
+insert-base-cards,196,,false,,Patrick Mazeika RC
+insert-base-cards,197,,false,,David Ortiz
+insert-base-cards,198,,false,,Mike Moustakas
+insert-base-cards,199,,false,,Lou Boudreau
+insert-base-cards,200,,false,,Aaron Judge
+insert-base-cards,201,,false,,Jim Thome
+insert-base-cards,202,,false,,Yu Darvish
+insert-base-cards,203,,false,,Brandon Marsh RC
+insert-base-cards,204,,false,,Matt Vierling RC
+insert-base-cards,205,,false,,Enrique Hernandez
+insert-base-cards,206,,false,,Miguel Tejada
+insert-base-cards,207,,false,,Joan Adon RC
+insert-base-cards,208,,false,,Harold Baines
+insert-base-cards,209,,false,,Kolten Wong
+insert-base-cards,210,,false,,Early Wynn
+insert-base-cards,211,,false,,Steve Carlton
+insert-base-cards,212,,false,,Bobby Doerr
+insert-base-cards,213,,false,,Gary Carter
+insert-base-cards,214,,false,,Gavin Lux
+insert-base-cards,215,,false,,Jarred Kelenic
+insert-base-cards,216,,false,,Nico Hoerner
+insert-base-cards,217,,false,,Deion Sanders
+insert-base-cards,218,,false,,Mitch Moreland
+insert-base-cards,219,,false,,Jarren Duran RC
+insert-base-cards,220,,false,,Tony Santillan RC
+insert-base-cards,221,,false,,Franmil Reyes
+insert-base-cards,222,,false,,Joey Bart
+insert-base-cards,223,,false,,Ozzie Albies
+insert-base-cards,224,,false,,Scott Rolen
+insert-base-cards,225,,false,,Jack Morris
+insert-base-cards,226,,false,,Alex Rodriguez
+insert-base-cards,227,,false,,Yasmani Grandal
+insert-base-cards,228,,false,,Akil Baddoo
+insert-base-cards,229,,false,,Paul Goldschmidt
+insert-base-cards,230,,false,,Eloy Jimenez
+insert-base-cards,231,,false,,Shane Baz RC
+insert-base-cards,232,,false,,Adam Wainwright
+insert-base-cards,233,,false,,Francisco Lindor
+insert-base-cards,234,,false,,Dale Murphy
+insert-base-cards,235,,false,,Nick Allen RC
+insert-base-cards,236,,false,,Alex Kirilloff
+insert-base-cards,237,,false,,Cal Raleigh RC
+insert-base-cards,238,,false,,Manny Ramirez
+insert-base-cards,239,,false,,Ketel Marte
+insert-base-cards,240,,false,,Mike Piazza
+insert-base-cards,241,,false,,Tony Oliva
+insert-base-cards,242,,false,,Mike Baumann RC
+insert-base-cards,243,,false,,Carlos Santana
+insert-base-cards,244,,false,,Sean Murphy
+insert-base-cards,245,,false,,Jason Heyward
+insert-base-cards,246,,false,,Gavin Sheets RC
+insert-base-cards,247,,false,,Kyle Lewis
+insert-base-cards,248,,false,,Eric Davis
+insert-base-cards,249,,false,,Jeff Bagwell
+insert-base-cards,250,,false,,Ronald Acuña Jr.
+insert-base-cards,251,,false,,John Smoltz
+insert-base-cards,252,,false,,Paul O'Neill
+insert-base-cards,253,,false,,Cesar Hernandez
+insert-base-cards,254,,false,,Warren Spahn
+insert-base-cards,255,,false,,Paul Molitor
+insert-base-cards,256,,false,,Carlos Correa
+insert-base-cards,257,,false,,CJ Abrams RC
+insert-base-cards,258,,false,,Ryan Vilade RC
+insert-base-cards,259,,false,,Edgar Martinez
+insert-base-cards,260,,false,,Matt Brash RC
+insert-base-cards,261,,false,,Liam Hendriks
+insert-base-cards,262,,false,,Max Kepler
+insert-base-cards,263,,false,,Jake Meyers RC
+insert-base-cards,264,,false,,Ron Santo
+insert-base-cards,265,,false,,Kyle Schwarber
+insert-base-cards,266,,false,,Jon Heasley RC
+insert-base-cards,267,,false,,Tarik Skubal
+insert-base-cards,268,,false,,Bob Gibson
+insert-base-cards,269,,false,,Catfish Hunter
+insert-base-cards,270,,false,,Larry Doby
+insert-base-cards,271,,false,,Zac Lowther RC
+insert-base-cards,272,,false,,Andrew Benintendi
+insert-base-cards,273,,false,,Oneil Cruz RC
+insert-base-cards,274,,false,,Jon Gray
+insert-base-cards,275,,false,,Brandon Crawford
+insert-base-cards,276,,false,,Jonathan India
+insert-base-cards,277,,false,,Evan Longoria
+insert-base-cards,278,,false,,Trent Grisham
+insert-base-cards,279,,false,,German Marquez
+insert-base-cards,280,,false,,Janson Junk RC
+insert-base-cards,281,,false,,Ozzie Smith
+insert-base-cards,282,,false,,Alek Thomas RC
+insert-base-cards,283,,false,,Dick Allen
+insert-base-cards,284,,false,,Carson Kelly
+insert-base-cards,285,,false,,Giancarlo Stanton
+insert-base-cards,286,,false,,Brian Miller RC
+insert-base-cards,287,,false,,Felix Hernandez
+insert-base-cards,288,,false,,Magglio Ordonez
+insert-base-cards,289,,false,,Frankie Montas
+insert-base-cards,290,,false,,Bo Jackson
+insert-base-cards,291,,false,,Zack Short RC
+insert-base-cards,292,,false,,Ichiro
+insert-base-cards,293,,false,,Jo Adell
+insert-base-cards,294,,false,,Will Clark
+insert-base-cards,295,,false,,Mason Thompson RC
+insert-base-cards,296,,false,,Nolan Arenado
+insert-base-cards,297,,false,,Whitey Ford
+insert-base-cards,298,,false,,LaMonte Wade Jr.
+insert-base-cards,299,,false,,Cooper Hummel RC
+insert-base-cards,300,,false,,Juan Soto
+insert-base-cards,301,,false,,Luis Aparicio
+insert-base-cards,302,,false,,Trey Mancini
+insert-base-cards,303,,false,,Yonny Hernandez RC
+insert-base-cards,304,,false,,Emmanuel Rivera RC
+insert-base-cards,305,,false,,Yordan Alvarez
+insert-base-cards,306,,false,,Hoy Park RC
+insert-base-cards,307,,false,,Joe Perez RC
+insert-base-cards,308,,false,,Anthony Bender RC
+insert-base-cards,309,,false,,Ke'Bryan Hayes
+insert-base-cards,310,,false,,Corey Seager
+insert-base-cards,311,,false,,Earl Weaver
+insert-base-cards,312,,false,,Tyler O'Neill
+insert-base-cards,313,,false,,Corey Kluber
+insert-base-cards,314,,false,,Tyler Gilbert RC
+insert-base-cards,315,,false,,Kris Bryant
+insert-base-cards,316,,false,,Jed Lowrie
+insert-base-cards,317,,false,,Max Muncy
+insert-base-cards,318,,false,,Michael Brantley
+insert-base-cards,319,,false,,Paul Konerko
+insert-base-cards,320,,false,,Rhys Hoskins
+insert-base-cards,321,,false,,Joey Votto
+insert-base-cards,322,,false,,Alec Bohm
+insert-base-cards,323,,false,,Adolis Garcia
+insert-base-cards,324,,false,,Teoscar Hernandez
+insert-base-cards,325,,false,,Gaylord Perry
+insert-base-cards,326,,false,,Robbie Ray
+insert-base-cards,327,,false,,Roger Clemens
+insert-base-cards,328,,false,,Johnny Damon
+insert-base-cards,329,,false,,Salvador Perez
+insert-base-cards,330,,false,,Connor Seabold RC
+insert-base-cards,331,,false,,Javier Baez
+insert-base-cards,332,,false,,Luis Garcia
+insert-base-cards,333,,false,,Vida Blue
+insert-base-cards,334,,false,,Mike Zunino
+insert-base-cards,335,,false,,Don Drysdale
+insert-base-cards,336,,false,,Bernie Williams
+insert-base-cards,337,,false,,David Wright
+insert-base-cards,338,,false,,Whitey Herzog
+insert-base-cards,339,,false,,Steve Garvey
+insert-base-cards,340,,false,,Casey Mize
+insert-base-cards,341,,false,,Pee Wee Reese
+insert-base-cards,342,,false,,Mitch Haniger
+insert-base-cards,343,,false,,Bert Blyleven
+insert-base-cards,344,,false,,Cody Bellinger
+insert-base-cards,345,,false,,Edward Cabrera RC
+insert-base-cards,346,,false,,Kevin Gausman
+insert-base-cards,347,,false,,Billy Williams
+insert-base-cards,348,,false,,Zach Pop RC
+insert-base-cards,349,,false,,Richie Ashburn
+insert-base-cards,350,,false,,Mookie Betts
+insert-base-cards,351,,false,,Jake McCarthy RC
+insert-base-cards,352,,false,,Nolan Ryan
+insert-base-cards,353,,false,,Yadier Molina
+insert-base-cards,354,,false,,Curtis Terry RC
+insert-base-cards,355,,false,,Ivan Rodriguez
+insert-base-cards,356,,false,,Tommy Lasorda
+insert-base-cards,357,,false,,Miguel Sano
+insert-base-cards,358,,false,,Al Kaline
+insert-base-cards,359,,false,,Manny Machado
+insert-base-cards,360,,false,,Moises Alou
+insert-base-cards,361,,false,,Alex Bregman
+insert-base-cards,362,,false,,A.J. Alexy RC
+insert-base-cards,363,,false,,Josh Lowe RC
+insert-base-cards,364,,false,,George Kell
+insert-base-cards,365,,false,,Rodolfo Castro RC
+insert-base-cards,366,,false,,Phil Rizzuto
+insert-base-cards,367,,false,,Clayton Kershaw
+insert-base-cards,368,,false,,Tim Anderson
+insert-base-cards,369,,false,,Brandon Belt
+insert-base-cards,370,,false,,Tom Glavine
+insert-base-cards,371,,false,,Luke Williams RC
+insert-base-cards,372,,false,,Lee Smith
+insert-base-cards,373,,false,,Jesse Winker
+insert-base-cards,374,,false,,Jacob Robson RC
+insert-base-cards,375,,false,,Pete Alonso
+insert-base-cards,376,,false,,Dave Winfield
+insert-base-cards,377,,false,,Jeremy Pena RC
+insert-base-cards,378,,false,,Aaron Ashby RC
+insert-base-cards,379,,false,,Willy Adames
+insert-base-cards,380,,false,,Marcus Semien
+insert-base-cards,381,,false,,Stephen Ridings RC
+insert-base-cards,382,,false,,Brendan Rodgers
+insert-base-cards,383,,false,,Bob Feller
+insert-base-cards,384,,false,,Robbie Grossman
+insert-base-cards,385,,false,,Juan Yepez RC
+insert-base-cards,386,,false,,Juan Gonzalez
+insert-base-cards,387,,false,,Matt Olson
+insert-base-cards,388,,false,,Zack Greinke
+insert-base-cards,389,,false,,Miguel Cabrera
+insert-base-cards,390,,false,,Bob Lemon
+insert-base-cards,391,,false,,Andre Jackson RC
+insert-base-cards,392,,false,,John Means
+insert-base-cards,393,,false,,Lars Nootbaar RC
+insert-base-cards,394,,false,,Xander Bogaerts
+insert-base-cards,395,,false,,George Foster
+insert-base-cards,396,,false,,Packy Naughton RC
+insert-base-cards,397,,false,,Max Kranick RC
+insert-base-cards,398,,false,,Jim Rice
+insert-base-cards,399,,false,,Ronnie Dawson RC
+insert-base-cards,400,,false,,Bryce Harper
+insert-base-cards,401,,false,,Mike Schmidt
+insert-base-cards,402,,false,,Lou Brock
+insert-base-cards,403,,false,,Brian Anderson
+insert-base-cards,404,,false,,Gerrit Cole
+insert-base-cards,405,,false,,Ryan Mountcastle
+insert-base-cards,406,,false,,Riley Adams RC
+insert-base-cards,407,,false,,Edgar Renteria
+insert-base-cards,408,,false,,Don Sutton
+insert-base-cards,409,,false,,Robin Yount
+insert-base-cards,410,,false,,Carlton Fisk
+insert-base-cards,411,,false,,Tony Pérez
+insert-base-cards,412,,false,,Larry Walker
+insert-base-cards,413,,false,,Jose Abreu
+insert-base-cards,414,,false,,Brandon Lowe
+insert-base-cards,415,,false,,Jim Bunning
+insert-base-cards,416,,false,,Jose Canseco
+insert-base-cards,417,,false,,Lucas Giolito
+insert-base-cards,418,,false,,Jose Berrios
+insert-base-cards,419,,false,,Andrew McCutchen
+insert-base-cards,420,,false,,Michael Chavis
+insert-base-cards,421,,false,,Jake Cronenworth
+insert-base-cards,422,,false,,Bill Buckner
+insert-base-cards,423,,false,,Max Scherzer
+insert-base-cards,424,,false,,Reggie Jackson
+insert-base-cards,425,,false,,Gary Sheffield
+insert-base-cards,426,,false,,Bo Bichette
+insert-base-cards,427,,false,,Kyle Bradish RC
+insert-base-cards,428,,false,,Red Schoendienst
+insert-base-cards,429,,false,,Otto Lopez RC
+insert-base-cards,430,,false,,Willie McCovey
+insert-base-cards,431,,false,,Ivan Castillo RC
+insert-base-cards,432,,false,,Drew Ellis RC
+insert-base-cards,433,,false,,Rickey Henderson
+insert-base-cards,434,,false,,Alexander Wells RC
+insert-base-cards,435,,false,,Carl Yastrzemski
+insert-base-cards,436,,false,,Nelson Cruz
+insert-base-cards,437,,false,,Anthony Rizzo
+insert-base-cards,438,,false,,Josh Hader
+insert-base-cards,439,,false,,Pedro Martinez
+insert-base-cards,440,,false,,Luke Voit
+insert-base-cards,441,,false,,Reiver Sanmartin RC
+insert-base-cards,442,,false,,Alex Verdugo
+insert-base-cards,443,,false,,Chris Sale
+insert-base-cards,444,,false,,Matt Manning RC
+insert-base-cards,445,,false,,Frank Viola
+insert-base-cards,446,,false,,Austin Riley
+insert-base-cards,447,,false,,Nathaniel Lowe
+insert-base-cards,448,,false,,Jorge Mateo
+insert-base-cards,449,,false,,Rollie Fingers
+insert-base-cards,450,,false,,Ken Griffey Jr.
+insert-base-cards,451,,false,,Nomar Garciaparra
+insert-base-cards,452,,false,,Cedric Mullins
+insert-base-cards,453,,false,,Justin Morneau
+insert-base-cards,454,,false,,Randy Johnson
+insert-base-cards,455,,false,,Brooks Robinson
+insert-base-cards,456,,false,,Corbin Burnes
+insert-base-cards,457,,false,,Spencer Torkelson RC
+insert-base-cards,458,,false,,Justin Verlander
+insert-base-cards,459,,false,,Harmon Killebrew
+insert-base-cards,460,,false,,George Kirby RC
+insert-base-cards,461,,false,,Seth Beer RC
+insert-base-cards,462,,false,,Ryan Howard
+insert-base-cards,463,,false,,Jose Miranda RC
+insert-base-cards,464,,false,,Keith Hernandez
+insert-base-cards,465,,false,,Marcos Diplan RC
+insert-base-cards,466,,false,,Frank Thomas
+insert-base-cards,467,,false,,Jackie Bradley Jr.
+insert-base-cards,468,,false,,Jeff McNeil
+insert-base-cards,469,,false,,Luis Gil RC
+insert-base-cards,470,,false,,Jorge Posada
+insert-base-cards,471,,false,,Jose Ramirez
+insert-base-cards,472,,false,,Josh Bell
+insert-base-cards,473,,false,,Dennis Eckersley
+insert-base-cards,474,,false,,Kyle Hendricks
+insert-base-cards,475,,false,,Aroldis Chapman
+insert-base-cards,476,,false,,Lucius Fox RC
+insert-base-cards,477,,false,,Kervin Castro RC
+insert-base-cards,478,,false,,Tim Raines
+insert-base-cards,479,,false,,Joe Mauer
+insert-base-cards,480,,false,,Lorenzo Cain
+insert-base-cards,481,,false,,Zack Wheeler
+insert-base-cards,482,,false,,Chris Taylor
+insert-base-cards,483,,false,,Carlos Delgado
+insert-base-cards,484,,false,,Jesus Aguilar
+insert-base-cards,485,,false,,Cristian Pache
+insert-base-cards,486,,false,,Sammy Long RC
+insert-base-cards,487,,false,,Sparky Anderson
+insert-base-cards,488,,false,,Bill Mazeroski
+insert-base-cards,489,,false,,Christian Yelich
+insert-base-cards,490,,false,,J.T. Realmuto
+insert-base-cards,491,,false,,Pablo Lopez
+insert-base-cards,492,,false,,DJ LeMahieu
+insert-base-cards,493,,false,,Mark Buehrle
+insert-base-cards,494,,false,,J.P. Crawford
+insert-base-cards,495,,false,,Eddie Mathews
+insert-base-cards,496,,false,,Tylor Megill RC
+insert-base-cards,497,,false,,Dontrelle Willis
+insert-base-cards,498,,false,,Kenta Maeda
+insert-base-cards,499,,false,,Jean Segura
+insert-base-cards,500,,false,,Freddie Freeman
+insert-base-cards-image-variations,1,IMAGE VARIATION,false,,Shohei Ohtani
+insert-base-cards-image-variations,2,IMAGE VARIATION,false,,Derek Jeter
+insert-base-cards-image-variations,3,IMAGE VARIATION,false,,Babe Ruth
+insert-base-cards-image-variations,21,IMAGE VARIATION,false,,Roberto Clemente
+insert-base-cards-image-variations,24,IMAGE VARIATION,false,,Willie Mays
+insert-base-cards-image-variations,35,IMAGE VARIATION,false,,Wander Franco RC
+insert-base-cards-image-variations,37,IMAGE VARIATION,false,,Seiya Suzuki RC
+insert-base-cards-image-variations,42,IMAGE VARIATION,false,,Jackie Robinson
+insert-base-cards-image-variations,44,IMAGE VARIATION,false,,Hank Aaron
+insert-base-cards-image-variations,50,IMAGE VARIATION,false,,Mike Trout
+insert-base-cards-image-variations,61,IMAGE VARIATION,false,,Bobby Witt Jr. RC
+insert-base-cards-image-variations,77,IMAGE VARIATION,false,,Hunter Greene RC
+insert-base-cards-image-variations,89,IMAGE VARIATION,false,,Ted Williams
+insert-base-cards-image-variations,100,IMAGE VARIATION,false,,Fernando Tatis Jr.
+insert-base-cards-image-variations,150,IMAGE VARIATION,false,,Vladimir Guerrero Jr.
+insert-base-cards-image-variations,171,IMAGE VARIATION,false,,Julio Rodriguez RC
+insert-base-cards-image-variations,200,IMAGE VARIATION,false,,Aaron Judge
+insert-base-cards-image-variations,219,IMAGE VARIATION,false,,Jarren Duran RC
+insert-base-cards-image-variations,250,IMAGE VARIATION,false,,Ronald Acuña Jr.
+insert-base-cards-image-variations,273,IMAGE VARIATION,false,,Oneil Cruz RC
+insert-base-cards-image-variations,300,IMAGE VARIATION,false,,Juan Soto
+insert-base-cards-image-variations,350,IMAGE VARIATION,false,,Mookie Betts
+insert-base-cards-image-variations,400,IMAGE VARIATION,false,,Bryce Harper
+insert-base-cards-image-variations,450,IMAGE VARIATION,false,,Ken Griffey Jr.
+insert-base-cards-image-variations,457,IMAGE VARIATION,false,,Spencer Torkelson RC
+insert-1953-topps-employee-super-short-prints,EMP-AA,,false,,Aaron Abrams
+insert-1953-topps-employee-super-short-prints,EMP-CB,,false,,Colin Butler
+insert-1953-topps-employee-super-short-prints,EMP-CK,,false,,Coby Kerr
+insert-1953-topps-employee-super-short-prints,EMP-JF,,false,,Jeremy Fullerton
+insert-1953-topps-employee-super-short-prints,EMP-JM,,false,,JP Mericle
+insert-1953-topps-employee-super-short-prints,EMP-JZ,,false,,Jeff Zachowski
+insert-1953-topps-employee-super-short-prints,EMP-KE,,false,,Kevin Eger
+insert-1953-topps-employee-super-short-prints,EMP-KO,,false,,Kevin O'Neill
+insert-1953-topps-employee-super-short-prints,EMP-MS,,false,,Michelle Smith
+insert-1953-topps-employee-super-short-prints,EMP-OV,,false,,Olga Vega
+insert-1953-topps-employee-super-short-prints,EMP-RH,,false,,Ryan Hickey
+insert-1953-topps-employee-super-short-prints,EMP-RL,,false,,Ryan Lee
+insert-1953-topps-employee-super-short-prints,EMP-SD,,false,,Sabrina Doyno
+insert-1953-topps-employee-super-short-prints,EMP-TM,,false,,Tayler May
+auto-autograph-cards,CPA-ABE,,true,,Anthony Bender RC
+auto-autograph-cards,CPA-AD,,true,,Andre Dawson
+auto-autograph-cards,CPA-AG,,true,,Adolis Garcia
+auto-autograph-cards,CPA-AJ,,true,,Aaron Judge
+auto-autograph-cards,CPA-AL,,true,,Alejo Lopez RC
+auto-autograph-cards,CPA-AR,,true,,Alfonso Rivas RC
+auto-autograph-cards,CPA-BB,,true,,Bert Blyleven
+auto-autograph-cards,CPA-BD,,true,,Bobby Dalbec
+auto-autograph-cards,CPA-BDC,,true,,Bryan De La Cruz RC
+auto-autograph-cards,CPA-BH,,true,,Bryce Harper
+auto-autograph-cards,CPA-BL,,true,,Barry Larkin
+auto-autograph-cards,CPA-BM,,true,,Bill Mazeroski
+auto-autograph-cards,CPA-BMA,,true,,Brandon Marsh RC
+auto-autograph-cards,CPA-BRE,,true,,Bryan Reynolds
+auto-autograph-cards,CPA-BS,,true,,Bryson Stott RC
+auto-autograph-cards,CPA-BW,,true,,Brandon Woodruff
+auto-autograph-cards,CPA-BWJ,,true,,Bobby Witt Jr. RC
+auto-autograph-cards,CPA-CA,,true,,CJ Abrams RC
+auto-autograph-cards,CPA-CF,,true,,Carlton Fisk
+auto-autograph-cards,CPA-CJ,,true,,Chipper Jones
+auto-autograph-cards,CPA-CM,,true,,Casey Mize
+auto-autograph-cards,CPA-CMC,,true,,Chas McCormick RC
+auto-autograph-cards,CPA-CR,,true,,Cal Raleigh RC
+auto-autograph-cards,CPA-CT,,true,,Curtis Terry RC
+auto-autograph-cards,CPA-CW,,true,,Connor Wong RC
+auto-autograph-cards,CPA-DC,,true,,Dylan Cease
+auto-autograph-cards,CPA-DCA,,true,,Dylan Carlson
+auto-autograph-cards,CPA-DE,,true,,Dennis Eckersley
+auto-autograph-cards,CPA-DEL,,true,,Drew Ellis RC
+auto-autograph-cards,CPA-DJ,,true,,Derek Jeter
+auto-autograph-cards,CPA-DW,,true,,Dave Winfield
+auto-autograph-cards,CPA-EM,,true,,Eddie Murray
+auto-autograph-cards,CPA-EMA,,true,,Edgar Martinez
+auto-autograph-cards,CPA-FJ,,true,,Fergie Jenkins
+auto-autograph-cards,CPA-FR,,true,,Franmil Reyes
+auto-autograph-cards,CPA-FT,,true,,Frank Thomas
+auto-autograph-cards,CPA-GD,,true,,Greg Deichmann RC
+auto-autograph-cards,CPA-GG,,true,,Goose Gossage
+auto-autograph-cards,CPA-GJ,,true,,Griffin Jax RC
+auto-autograph-cards,CPA-GS,,true,,George Springer
+auto-autograph-cards,CPA-GSH,,true,,Gavin Sheets RC
+auto-autograph-cards,CPA-HK,,true,,Ha-Seong Kim
+auto-autograph-cards,CPA-HP,,true,,Hoy Park RC
+auto-autograph-cards,CPA-HR,,true,,Heliot Ramos RC
+auto-autograph-cards,CPA-IC,,true,,Ivan Castillo RC
+auto-autograph-cards,CPA-JAB,,true,,Jose Abreu
+auto-autograph-cards,CPA-JBA,,true,,Jeff Bagwell
+auto-autograph-cards,CPA-JBT,,true,,Joey Bart
+auto-autograph-cards,CPA-JCO,,true,,Jake Cousins RC
+auto-autograph-cards,CPA-JHE,,true,,Jon Heasley RC
+auto-autograph-cards,CPA-JM,,true,,Juan Marichal
+auto-autograph-cards,CPA-JMO,,true,,Jovani Moran RC
+auto-autograph-cards,CPA-JP,,true,,Jim Palmer
+auto-autograph-cards,CPA-JPE,,true,,Jeremy Pena RC
+auto-autograph-cards,CPA-JRE,,true,,Jakson Reetz RC
+auto-autograph-cards,CPA-JRI,,true,,Jim Rice
+auto-autograph-cards,CPA-JRO,,true,,Julio Rodriguez RC
+auto-autograph-cards,CPA-JS,,true,,Juan Soto
+auto-autograph-cards,CPA-JSM,,true,,John Smoltz
+auto-autograph-cards,CPA-JV,,true,,Joey Votto
+auto-autograph-cards,CPA-JW,,true,,Jesse Winker
+auto-autograph-cards,CPA-JWA,,true,,Jared Walsh
+auto-autograph-cards,CPA-JWE,,true,,Joey Wendle
+auto-autograph-cards,CPA-JY,,true,,Juan Yepez RC
+auto-autograph-cards,CPA-KC,,true,,Kervin Castro RC
+auto-autograph-cards,CPA-KL,,true,,Kyle Lewis
+auto-autograph-cards,CPA-KS,,true,,Kevin Smith RC
+auto-autograph-cards,CPA-LF,,true,,Luis Frias RC
+auto-autograph-cards,CPA-LR,,true,,Luis Robert
+auto-autograph-cards,CPA-LS,,true,,Lee Smith
+auto-autograph-cards,CPA-LV,,true,,Luke Voit
+auto-autograph-cards,CPA-LW,,true,,Larry Walker
+auto-autograph-cards,CPA-LWI,,true,,Luke Williams RC
+auto-autograph-cards,CPA-MB,,true,,Michael Brantley
+auto-autograph-cards,CPA-MBA,,true,,Mike Baumann RC
+auto-autograph-cards,CPA-MBR,,true,,Matt Brash RC
+auto-autograph-cards,CPA-MD,,true,,Marcos Diplan RC
+auto-autograph-cards,CPA-MG,,true,,MacKenzie Gore RC
+auto-autograph-cards,CPA-MH,,true,,Mitch Haniger
+auto-autograph-cards,CPA-MK,,true,,Max Kranick RC
+auto-autograph-cards,CPA-MMU,,true,,Max Muncy
+auto-autograph-cards,CPA-MP,,true,,Mike Piazza
+auto-autograph-cards,CPA-MR,,true,,Mariano Rivera
+auto-autograph-cards,CPA-MS,,true,,Mike Schmidt
+auto-autograph-cards,CPA-MT,,true,,Mike Trout
+auto-autograph-cards,CPA-MZ,,true,,Mike Zunino
+auto-autograph-cards,CPA-NL,,true,,Nick Lodolo RC
+auto-autograph-cards,CPA-OA,,true,,OZZIE Albies
+auto-autograph-cards,CPA-OC,,true,,Orlando Cepeda
+auto-autograph-cards,CPA-OCR,,true,,Oneil Cruz RC
+auto-autograph-cards,CPA-OS,,true,,Ozzie Smith
+auto-autograph-cards,CPA-PA,,true,,Pete Alonso
+auto-autograph-cards,CPA-PG,,true,,Paul Goldschmidt
+auto-autograph-cards,CPA-PH,,true,,Payton Henry RC
+auto-autograph-cards,CPA-PMO,,true,,Paul Molitor
+auto-autograph-cards,CPA-RAD,,true,,Riley Adams RC
+auto-autograph-cards,CPA-RC,,true,,Rod Carew
+auto-autograph-cards,CPA-RCO,,true,,Roansy Contreras RC
+auto-autograph-cards,CPA-RD,,true,,Rafael Devers
+auto-autograph-cards,CPA-RF,,true,,Rollie Fingers
+auto-autograph-cards,CPA-RG,,true,,Romy Gonzalez RC
+auto-autograph-cards,CPA-RJ,,true,,Randy Johnson
+auto-autograph-cards,CPA-RM,,true,,Ryan Mountcastle
+auto-autograph-cards,CPA-SC,,true,,Steve Carlton
+auto-autograph-cards,CPA-SF,,true,,Stuart Fairchild RC
+auto-autograph-cards,CPA-SG,,true,,Sonny Gray
+auto-autograph-cards,CPA-SK,,true,,Steven Kwan RC
+auto-autograph-cards,CPA-SO,,true,,Shohei Ohtani
+auto-autograph-cards,CPA-SS,,true,,Spencer Strider RC
+auto-autograph-cards,CPA-ST,,true,,Spencer Torkelson RC
+auto-autograph-cards,CPA-TF,,true,,TJ Friedl RC
+auto-autograph-cards,CPA-TG,,true,,Tom Glavine
+auto-autograph-cards,CPA-TH,,true,,Trevor Hoffman
+auto-autograph-cards,CPA-TJ,,true,,TOMMY John
+auto-autograph-cards,CPA-TM,,true,,Trey Mancini
+auto-autograph-cards,CPA-TME,,true,,Tylor Megill RC
+auto-autograph-cards,CPA-TP,,true,,Tony Pérez
+auto-autograph-cards,CPA-TS,,true,,Ted Simmons
+auto-autograph-cards,CPA-VG,,true,,Vladimir Guerrero
+auto-autograph-cards,CPA-VGJ,,true,,Vladimir Guerrero Jr.
+auto-autograph-cards,CPA-WB,,true,,Wade Boggs
+auto-autograph-cards,CPA-WF,,true,,Wander Franco RC
+auto-autograph-cards,CPA-WM,,true,,Whit Merrifield
+auto-autograph-cards,CPA-WR,,true,,Willie Randolph
+auto-autograph-cards,CPA-XB,,true,,Xander Bogaerts
+auto-autograph-cards,CPA-ZG,,true,,Zac Gallen
+auto-autograph-cards,CPA-ZL,,true,,Zac Lowther RC
+auto-autograph-cards,CPA-ZP,,true,,Zach Pop RC
+auto-autograph-cards,CPA-ZS,,true,,Zack Short RC
+auto-autograph-cards,CPA-ZT,,true,,Zach Thompson RC

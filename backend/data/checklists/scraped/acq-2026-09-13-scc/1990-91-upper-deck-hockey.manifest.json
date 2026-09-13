@@ -1,0 +1,51 @@
+{
+ "scrapedAt": "2026-09-13T02:00:48.961Z",
+ "source": "sportscardchecklist",
+ "sourceUrl": "https://www.sportscardchecklist.com/set-57707/1990-91-upper-deck-hockey-trading-card-checklist",
+ "sport": "hockey",
+ "year": 1990,
+ "season": "1990-91",
+ "setName": "1990-91 Upper Deck Hockey",
+ "productKey": "1990-upper-deck",
+ "setKey": "upper-deck",
+ "setKeyRequested": "upper-deck",
+ "parallelOfParent": false,
+ "parallelName": null,
+ "subset": null,
+ "rowCount": 550,
+ "parallelColumnAuthoritative": true,
+ "converterVersion": 6,
+ "cardRows": 550,
+ "ladderRows": 0,
+ "subsetRows": 47,
+ "printRunsFound": 0,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Team Checklist",
+   "category": "insert-team-checklist",
+   "playerCount": 19,
+   "rungs": 0,
+   "rowCount": 19,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Checklist",
+   "category": "insert-checklist",
+   "playerCount": 2,
+   "rungs": 0,
+   "rowCount": 2,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > All-Star",
+   "category": "insert-all-star",
+   "playerCount": 26,
+   "rungs": 0,
+   "rowCount": 26,
+   "refused": false,
+   "printRun": null
+  }
+ ]
+}

@@ -1,0 +1,593 @@
+{
+ "year": 2018,
+ "sport": "baseball",
+ "setKey": "diamond-kings",
+ "parallelColumnAuthoritative": true,
+ "setName": "2018 Diamond Kings",
+ "sourceUrl": "http://www.baseballcardpedia.com/index.php/2018_Diamond_Kings",
+ "scope": "Framed",
+ "scopeOfPage": "Diamond Kings",
+ "cardNumberPrefix": null,
+ "prefixDerivedFrom": "unresolved",
+ "prefixUnresolved": false,
+ "ladder": [
+  {
+   "name": "Framed",
+   "printRun": 99,
+   "rarity": null
+  },
+  {
+   "name": "Blue",
+   "printRun": null,
+   "rarity": null
+  },
+  {
+   "name": "Red",
+   "printRun": null,
+   "rarity": null
+  },
+  {
+   "name": "Gray",
+   "printRun": 99,
+   "rarity": null
+  },
+  {
+   "name": "Brown",
+   "printRun": 49,
+   "rarity": null
+  },
+  {
+   "name": "Green",
+   "printRun": 5,
+   "rarity": null
+  },
+  {
+   "name": "Black",
+   "printRun": 1,
+   "rarity": null
+  }
+ ],
+ "autographs": [
+  {
+   "name": "DK Signatures",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 53,
+   "ladder": []
+  },
+  {
+   "name": "DK Signatures Purple",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 53,
+   "ladder": []
+  },
+  {
+   "name": "DK Rookie Signatures",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 47,
+   "ladder": [
+    {
+     "name": "Holo Silver",
+     "printRun": 49
+    },
+    {
+     "name": "Holo Gold",
+     "printRun": 25
+    },
+    {
+     "name": "Holo Blue",
+     "printRun": 15
+    },
+    {
+     "name": "Purple",
+     "printRun": null
+    },
+    {
+     "name": "Masterpiece",
+     "printRun": 1
+    }
+   ]
+  },
+  {
+   "name": "Recollection Buybacks",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 22,
+   "ladder": []
+  },
+  {
+   "name": "DK Materials Signatures",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 39,
+   "ladder": []
+  },
+  {
+   "name": "Retro 1982 DK Materials Signatures",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 18,
+   "ladder": []
+  },
+  {
+   "name": "DK Rookie Materials Signatures",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 48,
+   "ladder": [
+    {
+     "name": "Holo Silver",
+     "printRun": 49
+    },
+    {
+     "name": "Holo Gold",
+     "printRun": 25
+    },
+    {
+     "name": "Holo Blue",
+     "printRun": 15
+    },
+    {
+     "name": "Masterpiece",
+     "printRun": 1
+    }
+   ]
+  },
+  {
+   "name": "DK Triple Materials Signatures",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 13,
+   "ladder": []
+  },
+  {
+   "name": "DK Jumbo Materials Signatures",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 15,
+   "ladder": []
+  },
+  {
+   "name": "DK Jumbo Rookie Materials Signatures",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 20,
+   "ladder": []
+  },
+  {
+   "name": "Diamond Cuts",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 16,
+   "ladder": []
+  },
+  {
+   "name": "Diamond Cuts Masterpiece",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 28,
+   "ladder": []
+  },
+  {
+   "name": "Diamond Material Cuts",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 6,
+   "ladder": []
+  },
+  {
+   "name": "Bat Kings",
+   "type": "relic",
+   "isAuto": false,
+   "cards": 24,
+   "ladder": []
+  },
+  {
+   "name": "Jersey Kings",
+   "type": "relic",
+   "isAuto": false,
+   "cards": 25,
+   "ladder": []
+  }
+ ],
+ "setRarity": null,
+ "sections": [
+  {
+   "name": "Aurora",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 10,
+   "rungs": 0
+  },
+  {
+   "name": "Gallery of Stars",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 18,
+   "rungs": 0
+  },
+  {
+   "name": "Mickey Mantle Collection",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 8,
+   "rungs": 0
+  },
+  {
+   "name": "Past and Present",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 15,
+   "rungs": 0
+  },
+  {
+   "name": "Portraits",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 15,
+   "rungs": 0
+  },
+  {
+   "name": "Royalty",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 1,
+   "rungs": 0
+  },
+  {
+   "name": "Trophy Club",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 15,
+   "rungs": 0
+  },
+  {
+   "name": "DK Signatures",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 53,
+   "rungs": 0
+  },
+  {
+   "name": "DK Signatures Purple",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 53,
+   "rungs": 0
+  },
+  {
+   "name": "DK Rookie Signatures",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 47,
+   "rungs": 5
+  },
+  {
+   "name": "Recollection Buybacks",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 22,
+   "rungs": 0
+  },
+  {
+   "name": "DK Materials Signatures",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 39,
+   "rungs": 0
+  },
+  {
+   "name": "Retro 1982 DK Materials Signatures",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 18,
+   "rungs": 0
+  },
+  {
+   "name": "DK Rookie Materials Signatures",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 48,
+   "rungs": 4
+  },
+  {
+   "name": "DK Triple Materials Signatures",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 13,
+   "rungs": 0
+  },
+  {
+   "name": "DK Jumbo Materials Signatures",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 15,
+   "rungs": 0
+  },
+  {
+   "name": "DK Jumbo Rookie Materials Signatures",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 20,
+   "rungs": 0
+  },
+  {
+   "name": "Diamond Cuts",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 16,
+   "rungs": 0
+  },
+  {
+   "name": "Diamond Cuts Masterpiece",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 28,
+   "rungs": 0
+  },
+  {
+   "name": "Diamond Material Cuts",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 6,
+   "rungs": 0
+  },
+  {
+   "name": "DK Materials",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 93,
+   "rungs": 0
+  },
+  {
+   "name": "DK Materials Holo Silver",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 93,
+   "rungs": 0
+  },
+  {
+   "name": "DK Materials Holo Gold",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 98,
+   "rungs": 0
+  },
+  {
+   "name": "DK Materials Holo Blue",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 95,
+   "rungs": 0
+  },
+  {
+   "name": "DK Originals Materials",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 39,
+   "rungs": 0
+  },
+  {
+   "name": "Bat Kings",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 24,
+   "rungs": 0
+  },
+  {
+   "name": "Jersey Kings",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 25,
+   "rungs": 0
+  },
+  {
+   "name": "Diamond Deco",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 7,
+   "rungs": 0
+  }
+ ],
+ "source": "baseballcardpedia-2026-09-13",
+ "acquiredAt": "2026-09-13",
+ "duplicateIdentityRowsDropped": 160,
+ "duplicateIdentityNote": "BCP relists a card under Gimmicks/Errors-and-Variations with the same number and the same player text to note an UNNAMED variation; those rows carry the identity of the base row, so they were dropped (one card, one row, one pool). A variation the page NAMES differs in its player text and is kept as the distinct card it is.",
+ "variationAxisApplied": {
+  "appliedAt": "2026-09-13",
+  "source": "baseballcardpedia-2026-09-13",
+  "why": "#2112's insert-set-key guard refused this file: rows would have landed on fewer distinct ids than there are rows, so a later row would have overwritten an earlier one inside one run and the last writer would have decided which card the address holds. Every decision below was verified against the live baseballcardpedia page before it was applied; nothing here invents a label the source does not print.",
+  "decisions": {
+   "imageVariations": {
+    "rows": 328,
+    "rule": "image variation — the photo descriptor bcp prints after the player's name moves to the parallel axis as \"<Name> Image Variation SP\" (#1613), and the photo names the subset so the base ladder is not multiplied by it"
+   },
+   "declaredParallelRungs": {
+    "rows": 367,
+    "rule": "declared parallel — the source's own prose calls this a parallel, so the rung folds onto its root set and the colour rides the parallel axis"
+   },
+   "trailingPrintRunMoved": {
+    "rows": 533,
+    "rule": "trailing serial — bcp writes a rung's print run inside the player cell (\"Adrian Beltre 25\"); it is moved to printRun, which is what lets a rung's roster compare equal to its root's"
+   }
+  },
+  "rowsBefore": 2705,
+  "rowsAfter": 2675,
+  "distinctIdsAfter": 2668,
+  "verdictAfter": "refuse",
+  "heldRows": {
+   "rows": 30,
+   "groups": 15,
+   "rule": "held — the source prints this number more than once and prints nothing that distinguishes the printings; both sides are withheld (absent beats wrong)",
+   "detail": [
+    {
+     "address": "base|35|Base|false|",
+     "cardNumber": "35",
+     "category": "base",
+     "parallel": "Base",
+     "players": [
+      "Billy Herman",
+      "Ty Cobb (Away Jersey)"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|35|Framed|false|99",
+     "cardNumber": "35",
+     "category": "base",
+     "parallel": "Framed",
+     "players": [
+      "Billy Herman",
+      "Ty Cobb (Away Jersey)"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|35|Blue|false|",
+     "cardNumber": "35",
+     "category": "base",
+     "parallel": "Blue",
+     "players": [
+      "Billy Herman",
+      "Ty Cobb (Away Jersey)"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|35|Red|false|",
+     "cardNumber": "35",
+     "category": "base",
+     "parallel": "Red",
+     "players": [
+      "Billy Herman",
+      "Ty Cobb (Away Jersey)"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|35|Gray|false|99",
+     "cardNumber": "35",
+     "category": "base",
+     "parallel": "Gray",
+     "players": [
+      "Billy Herman",
+      "Ty Cobb (Away Jersey)"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|35|Brown|false|49",
+     "cardNumber": "35",
+     "category": "base",
+     "parallel": "Brown",
+     "players": [
+      "Billy Herman",
+      "Ty Cobb (Away Jersey)"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|35|Green|false|5",
+     "cardNumber": "35",
+     "category": "base",
+     "parallel": "Green",
+     "players": [
+      "Billy Herman",
+      "Ty Cobb (Away Jersey)"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|35|Black|false|1",
+     "cardNumber": "35",
+     "category": "base",
+     "parallel": "Black",
+     "players": [
+      "Billy Herman",
+      "Ty Cobb (Away Jersey)"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "auto-diamond-cuts|DC-BT|Masterpiece|true|",
+     "cardNumber": "DC-BT",
+     "category": "auto-diamond-cuts",
+     "parallel": "Masterpiece",
+     "players": [
+      "Bobby Thomson",
+      "Bill Terry"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "auto-diamond-cuts|DC-WS|Masterpiece|true|",
+     "cardNumber": "DC-WS",
+     "category": "auto-diamond-cuts",
+     "parallel": "Masterpiece",
+     "players": [
+      "Warren Spahn",
+      "Willie Stargell"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-dk-materials|DKM-CF||false|",
+     "cardNumber": "DKM-CF",
+     "category": "insert-dk-materials",
+     "parallel": "",
+     "players": [
+      "Clint Frazier",
+      "Carl Furillo"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-dk-materials|DKM-GS||false|",
+     "cardNumber": "DKM-GS",
+     "category": "insert-dk-materials",
+     "parallel": "",
+     "players": [
+      "George Kelly",
+      "Gary Sheffield"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-dk-materials|DKM-GS|Holo Gold|false|49",
+     "cardNumber": "DKM-GS",
+     "category": "insert-dk-materials",
+     "parallel": "Holo Gold",
+     "players": [
+      "Gary Sheffield",
+      "Giancarlo Stanton"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-dk-materials|DKM-GS|Holo Blue|false|5",
+     "cardNumber": "DKM-GS",
+     "category": "insert-dk-materials",
+     "parallel": "Holo Blue",
+     "players": [
+      "George Kelly",
+      "Gary Sheffield"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-dk-originals-materials|OM-CY||false|",
+     "cardNumber": "OM-CY",
+     "category": "insert-dk-originals-materials",
+     "parallel": "",
+     "players": [
+      "Cody Bellinger",
+      "Clayton Kershaw"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    }
+   ]
+  }
+ }
+}

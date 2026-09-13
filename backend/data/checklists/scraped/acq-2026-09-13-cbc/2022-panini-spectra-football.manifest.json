@@ -1,0 +1,1247 @@
+{
+  "source": "cardboardconnection-2026-09-13",
+  "sourceUrl": "https://www.cardboardconnection.com/2022-panini-spectra-football-nfl-cards",
+  "xlsxUrl": "https://www.cardboardconnection.com/wp-content/uploads/2023/01/2022-Panini-Spectra-Football-checklist-Excel-spreadsheet.xlsx",
+  "fetchedAt": "2026-09-13",
+  "sport": "football",
+  "year": 2022,
+  "setName": "2022 Panini Spectra Football",
+  "productKey": "2022-panini-spectra-football",
+  "setKey": "panini-spectra",
+  "rowCount": 9222,
+  "autoCount": 762,
+  "printRunCount": 8703,
+  "distinctParallels": 289,
+  "parallelColumnAuthoritative": true,
+  "queueRank": 113,
+  "sectionsReport": [
+    {
+      "category": "base",
+      "rows": 135
+    },
+    {
+      "category": "insert-base-astral",
+      "rows": 135
+    },
+    {
+      "category": "insert-base-celestial",
+      "rows": 135
+    },
+    {
+      "category": "insert-base-gold",
+      "rows": 135
+    },
+    {
+      "category": "insert-base-hyper",
+      "rows": 135
+    },
+    {
+      "category": "insert-base-interstellar",
+      "rows": 135
+    },
+    {
+      "category": "insert-base-meta",
+      "rows": 135
+    },
+    {
+      "category": "insert-base-nebula",
+      "rows": 135
+    },
+    {
+      "category": "insert-base-neon-blue-die-cut",
+      "rows": 135
+    },
+    {
+      "category": "insert-base-neon-green-die-cut",
+      "rows": 135
+    },
+    {
+      "category": "insert-base-neon-marble",
+      "rows": 135
+    },
+    {
+      "category": "insert-base-neon-orange-die-cut",
+      "rows": 135
+    },
+    {
+      "category": "insert-base-neon-pink-die-cut",
+      "rows": 135
+    },
+    {
+      "category": "insert-base-neon-splatter",
+      "rows": 135
+    },
+    {
+      "category": "insert-base-psychedelic",
+      "rows": 135
+    },
+    {
+      "category": "insert-base-silver",
+      "rows": 135
+    },
+    {
+      "category": "insert-base-universal-die-cut",
+      "rows": 135
+    },
+    {
+      "category": "insert-base-wave",
+      "rows": 135
+    },
+    {
+      "category": "insert-rookies",
+      "rows": 65
+    },
+    {
+      "category": "insert-rookies-astral",
+      "rows": 65
+    },
+    {
+      "category": "insert-rookies-celestial",
+      "rows": 65
+    },
+    {
+      "category": "insert-rookies-gold",
+      "rows": 65
+    },
+    {
+      "category": "insert-rookies-hyper",
+      "rows": 65
+    },
+    {
+      "category": "insert-rookies-insterstellar",
+      "rows": 65
+    },
+    {
+      "category": "insert-rookies-meta",
+      "rows": 65
+    },
+    {
+      "category": "insert-rookies-nebula",
+      "rows": 65
+    },
+    {
+      "category": "insert-rookies-neon-blue-die-cut",
+      "rows": 65
+    },
+    {
+      "category": "insert-rookies-neon-green-die-cut",
+      "rows": 65
+    },
+    {
+      "category": "insert-rookies-neon-marble",
+      "rows": 65
+    },
+    {
+      "category": "insert-rookies-neon-orange-die-cut",
+      "rows": 65
+    },
+    {
+      "category": "insert-rookies-neon-pink-die-cut",
+      "rows": 65
+    },
+    {
+      "category": "insert-rookies-neon-splatter",
+      "rows": 65
+    },
+    {
+      "category": "insert-rookies-psychedelic",
+      "rows": 65
+    },
+    {
+      "category": "insert-rookies-silver",
+      "rows": 65
+    },
+    {
+      "category": "insert-rookies-universal-die-cut",
+      "rows": 65
+    },
+    {
+      "category": "insert-rookies-wave",
+      "rows": 65
+    },
+    {
+      "category": "insert-monumental-memorabilia",
+      "rows": 42
+    },
+    {
+      "category": "insert-monumental-memorabilia-gold",
+      "rows": 42
+    },
+    {
+      "category": "insert-monumental-memorabilia-gold-laundry-nike",
+      "rows": 42
+    },
+    {
+      "category": "insert-monumental-memorabilia-gold-nfl-shield",
+      "rows": 42
+    },
+    {
+      "category": "insert-monumental-memorabilia-gold-nike-brand-logo",
+      "rows": 42
+    },
+    {
+      "category": "insert-monumental-memorabilia-hyper",
+      "rows": 42
+    },
+    {
+      "category": "insert-monumental-memorabilia-meta",
+      "rows": 42
+    },
+    {
+      "category": "insert-monumental-memorabilia-nebula",
+      "rows": 42
+    },
+    {
+      "category": "insert-monumental-memorabilia-neon-blue",
+      "rows": 42
+    },
+    {
+      "category": "insert-monumental-memorabilia-neon-marble",
+      "rows": 42
+    },
+    {
+      "category": "insert-monumental-memorabilia-neon-orange",
+      "rows": 42
+    },
+    {
+      "category": "insert-monumental-memorabilia-neon-pink",
+      "rows": 42
+    },
+    {
+      "category": "insert-monumental-memorabilia-neon-splatter",
+      "rows": 42
+    },
+    {
+      "category": "insert-monumental-memorabilia-psychedelic",
+      "rows": 42
+    },
+    {
+      "category": "insert-rookie-spectris",
+      "rows": 42
+    },
+    {
+      "category": "insert-rookie-spectris-gold",
+      "rows": 42
+    },
+    {
+      "category": "insert-rookie-spectris-interstellar",
+      "rows": 42
+    },
+    {
+      "category": "insert-rookie-spectris-meta",
+      "rows": 42
+    },
+    {
+      "category": "insert-rookie-spectris-nebula",
+      "rows": 42
+    },
+    {
+      "category": "insert-rookie-spectris-neon-marble",
+      "rows": 42
+    },
+    {
+      "category": "insert-rookie-spectris-neon-splatter",
+      "rows": 42
+    },
+    {
+      "category": "insert-rookie-spectris-psychedelic",
+      "rows": 42
+    },
+    {
+      "category": "insert-rookie-spectris-universal",
+      "rows": 42
+    },
+    {
+      "category": "insert-max-impact",
+      "rows": 40
+    },
+    {
+      "category": "insert-max-impact-gold",
+      "rows": 40
+    },
+    {
+      "category": "insert-max-impact-hyper",
+      "rows": 40
+    },
+    {
+      "category": "insert-max-impact-neon-blue",
+      "rows": 40
+    },
+    {
+      "category": "auto-rookie-patch-autographs-gold-laundry-tags-nfl-players-logo",
+      "rows": 40
+    },
+    {
+      "category": "insert-max-impact-meta",
+      "rows": 39
+    },
+    {
+      "category": "insert-max-impact-nebula",
+      "rows": 39
+    },
+    {
+      "category": "insert-max-impact-neon-orange",
+      "rows": 39
+    },
+    {
+      "category": "insert-max-impact-neon-pink",
+      "rows": 39
+    },
+    {
+      "category": "insert-max-impact-neon-splatter",
+      "rows": 39
+    },
+    {
+      "category": "insert-max-impact-psychedelic",
+      "rows": 39
+    },
+    {
+      "category": "insert-max-impact-neon-marble",
+      "rows": 37
+    },
+    {
+      "category": "insert-building-blocks",
+      "rows": 30
+    },
+    {
+      "category": "insert-building-blocks-gold",
+      "rows": 30
+    },
+    {
+      "category": "insert-building-blocks-hyper",
+      "rows": 30
+    },
+    {
+      "category": "insert-building-blocks-meta",
+      "rows": 30
+    },
+    {
+      "category": "insert-building-blocks-nebula",
+      "rows": 30
+    },
+    {
+      "category": "insert-building-blocks-neon-blue",
+      "rows": 30
+    },
+    {
+      "category": "insert-building-blocks-neon-marble",
+      "rows": 30
+    },
+    {
+      "category": "insert-building-blocks-neon-orange",
+      "rows": 30
+    },
+    {
+      "category": "insert-building-blocks-neon-pink",
+      "rows": 30
+    },
+    {
+      "category": "insert-building-blocks-neon-splatter",
+      "rows": 30
+    },
+    {
+      "category": "insert-building-blocks-psychedelic",
+      "rows": 30
+    },
+    {
+      "category": "insert-rising-rookie-materials",
+      "rows": 30
+    },
+    {
+      "category": "insert-rising-rookie-materials-gold",
+      "rows": 30
+    },
+    {
+      "category": "insert-rising-rookie-materials-gold-laundry-tags-nfl-players-logo",
+      "rows": 30
+    },
+    {
+      "category": "insert-rising-rookie-materials-gold-laundry-tags-nfl-shield",
+      "rows": 30
+    },
+    {
+      "category": "insert-rising-rookie-materials-gold-laundry-tags-nike-swoosh",
+      "rows": 30
+    },
+    {
+      "category": "insert-rising-rookie-materials-hyper",
+      "rows": 30
+    },
+    {
+      "category": "insert-rising-rookie-materials-meta",
+      "rows": 30
+    },
+    {
+      "category": "insert-rising-rookie-materials-nebula",
+      "rows": 30
+    },
+    {
+      "category": "insert-rising-rookie-materials-neon-blue",
+      "rows": 30
+    },
+    {
+      "category": "insert-rising-rookie-materials-neon-marble",
+      "rows": 30
+    },
+    {
+      "category": "insert-rising-rookie-materials-neon-orange",
+      "rows": 30
+    },
+    {
+      "category": "insert-rising-rookie-materials-neon-pink",
+      "rows": 30
+    },
+    {
+      "category": "insert-rising-rookie-materials-neon-splatter",
+      "rows": 30
+    },
+    {
+      "category": "insert-rising-rookie-materials-psychedelic",
+      "rows": 30
+    },
+    {
+      "category": "insert-sunday-spectacle",
+      "rows": 30
+    },
+    {
+      "category": "insert-sunday-spectacle-gold",
+      "rows": 30
+    },
+    {
+      "category": "insert-sunday-spectacle-hyper",
+      "rows": 30
+    },
+    {
+      "category": "insert-sunday-spectacle-meta",
+      "rows": 30
+    },
+    {
+      "category": "insert-sunday-spectacle-nebula",
+      "rows": 30
+    },
+    {
+      "category": "insert-sunday-spectacle-neon-blue",
+      "rows": 30
+    },
+    {
+      "category": "insert-sunday-spectacle-neon-marble",
+      "rows": 30
+    },
+    {
+      "category": "insert-sunday-spectacle-neon-orange",
+      "rows": 30
+    },
+    {
+      "category": "insert-sunday-spectacle-neon-pink",
+      "rows": 30
+    },
+    {
+      "category": "insert-sunday-spectacle-neon-splatter",
+      "rows": 30
+    },
+    {
+      "category": "insert-sunday-spectacle-psychedelic",
+      "rows": 30
+    },
+    {
+      "category": "insert-catalysts",
+      "rows": 29
+    },
+    {
+      "category": "insert-catalysts-gold",
+      "rows": 29
+    },
+    {
+      "category": "insert-catalysts-hyper",
+      "rows": 29
+    },
+    {
+      "category": "insert-catalysts-meta",
+      "rows": 29
+    },
+    {
+      "category": "insert-catalysts-nebula",
+      "rows": 29
+    },
+    {
+      "category": "insert-catalysts-neon-blue",
+      "rows": 29
+    },
+    {
+      "category": "insert-catalysts-neon-marble",
+      "rows": 29
+    },
+    {
+      "category": "insert-catalysts-neon-orange",
+      "rows": 29
+    },
+    {
+      "category": "insert-catalysts-neon-pink",
+      "rows": 29
+    },
+    {
+      "category": "insert-catalysts-neon-splatter",
+      "rows": 29
+    },
+    {
+      "category": "insert-catalysts-psychedelic",
+      "rows": 29
+    },
+    {
+      "category": "insert-brilliance",
+      "rows": 28
+    },
+    {
+      "category": "insert-brilliance-gold",
+      "rows": 28
+    },
+    {
+      "category": "insert-brilliance-gold-laundry-tags-nfl-players-logo",
+      "rows": 28
+    },
+    {
+      "category": "insert-brilliance-gold-laundry-tags-nfl-shield",
+      "rows": 28
+    },
+    {
+      "category": "insert-brilliance-gold-laundry-tags-nike-swoosh",
+      "rows": 28
+    },
+    {
+      "category": "insert-brilliance-hyper",
+      "rows": 28
+    },
+    {
+      "category": "insert-brilliance-meta",
+      "rows": 28
+    },
+    {
+      "category": "insert-brilliance-nebula",
+      "rows": 28
+    },
+    {
+      "category": "insert-brilliance-neon-blue",
+      "rows": 28
+    },
+    {
+      "category": "insert-brilliance-neon-marble",
+      "rows": 28
+    },
+    {
+      "category": "insert-brilliance-neon-orange",
+      "rows": 28
+    },
+    {
+      "category": "insert-brilliance-neon-pink",
+      "rows": 28
+    },
+    {
+      "category": "insert-brilliance-neon-splatter",
+      "rows": 28
+    },
+    {
+      "category": "insert-brilliance-psychedelic",
+      "rows": 28
+    },
+    {
+      "category": "insert-high-voltage",
+      "rows": 25
+    },
+    {
+      "category": "insert-high-voltage-gold",
+      "rows": 25
+    },
+    {
+      "category": "insert-high-voltage-hyper",
+      "rows": 25
+    },
+    {
+      "category": "insert-high-voltage-meta",
+      "rows": 25
+    },
+    {
+      "category": "insert-high-voltage-nebula",
+      "rows": 25
+    },
+    {
+      "category": "insert-high-voltage-neon-blue",
+      "rows": 25
+    },
+    {
+      "category": "insert-high-voltage-neon-marble",
+      "rows": 25
+    },
+    {
+      "category": "insert-high-voltage-neon-orange",
+      "rows": 25
+    },
+    {
+      "category": "insert-high-voltage-neon-pink",
+      "rows": 25
+    },
+    {
+      "category": "insert-high-voltage-neon-splatter",
+      "rows": 25
+    },
+    {
+      "category": "insert-high-voltage-psychedelic",
+      "rows": 25
+    },
+    {
+      "category": "insert-retro-spectacle",
+      "rows": 25
+    },
+    {
+      "category": "insert-rookie-aura",
+      "rows": 25
+    },
+    {
+      "category": "insert-rookie-aura-gold",
+      "rows": 25
+    },
+    {
+      "category": "insert-rookie-aura-interstellar",
+      "rows": 25
+    },
+    {
+      "category": "insert-rookie-aura-meta",
+      "rows": 25
+    },
+    {
+      "category": "insert-rookie-aura-nebula",
+      "rows": 25
+    },
+    {
+      "category": "insert-rookie-aura-neon-marble",
+      "rows": 25
+    },
+    {
+      "category": "insert-rookie-aura-neon-splatter",
+      "rows": 25
+    },
+    {
+      "category": "insert-rookie-aura-psychedelic",
+      "rows": 25
+    },
+    {
+      "category": "insert-rookie-aura-universal",
+      "rows": 25
+    },
+    {
+      "category": "insert-spectraverse",
+      "rows": 25
+    },
+    {
+      "category": "insert-wavelength",
+      "rows": 23
+    },
+    {
+      "category": "insert-wavelength-gold",
+      "rows": 23
+    },
+    {
+      "category": "insert-wavelength-interstellar",
+      "rows": 23
+    },
+    {
+      "category": "insert-wavelength-meta",
+      "rows": 23
+    },
+    {
+      "category": "insert-wavelength-nebula",
+      "rows": 23
+    },
+    {
+      "category": "insert-wavelength-neon-marble",
+      "rows": 23
+    },
+    {
+      "category": "insert-wavelength-neon-splatter",
+      "rows": 23
+    },
+    {
+      "category": "insert-wavelength-psychedelic",
+      "rows": 23
+    },
+    {
+      "category": "insert-wavelength-universal",
+      "rows": 23
+    },
+    {
+      "category": "auto-radiant-rookie-patch-signatures",
+      "rows": 21
+    },
+    {
+      "category": "auto-radiant-rookie-patch-signatures-celestial",
+      "rows": 21
+    },
+    {
+      "category": "auto-radiant-rookie-patch-signatures-gold",
+      "rows": 21
+    },
+    {
+      "category": "auto-radiant-rookie-patch-signatures-gold-laundry-tags-nfl-players-logo",
+      "rows": 21
+    },
+    {
+      "category": "auto-radiant-rookie-patch-signatures-gold-laundry-tags-nfl-shield",
+      "rows": 21
+    },
+    {
+      "category": "auto-radiant-rookie-patch-signatures-gold-laundry-tags-nike-swoosh",
+      "rows": 21
+    },
+    {
+      "category": "auto-radiant-rookie-patch-signatures-hyper",
+      "rows": 21
+    },
+    {
+      "category": "auto-radiant-rookie-patch-signatures-meta",
+      "rows": 21
+    },
+    {
+      "category": "auto-radiant-rookie-patch-signatures-nebula",
+      "rows": 21
+    },
+    {
+      "category": "auto-radiant-rookie-patch-signatures-neon-black-light",
+      "rows": 21
+    },
+    {
+      "category": "auto-radiant-rookie-patch-signatures-neon-blue",
+      "rows": 21
+    },
+    {
+      "category": "auto-radiant-rookie-patch-signatures-neon-green",
+      "rows": 21
+    },
+    {
+      "category": "auto-radiant-rookie-patch-signatures-neon-marble",
+      "rows": 21
+    },
+    {
+      "category": "auto-radiant-rookie-patch-signatures-neon-orange",
+      "rows": 21
+    },
+    {
+      "category": "auto-radiant-rookie-patch-signatures-neon-pink",
+      "rows": 21
+    },
+    {
+      "category": "auto-radiant-rookie-patch-signatures-neon-purple",
+      "rows": 21
+    },
+    {
+      "category": "auto-radiant-rookie-patch-signatures-neon-splatter",
+      "rows": 21
+    },
+    {
+      "category": "auto-radiant-rookie-patch-signatures-psychedelic",
+      "rows": 21
+    },
+    {
+      "category": "auto-radiant-rookie-patch-signatures-wave",
+      "rows": 21
+    },
+    {
+      "category": "insert-epic-legends-materials",
+      "rows": 20
+    },
+    {
+      "category": "insert-epic-legends-materials-hyper",
+      "rows": 20
+    },
+    {
+      "category": "insert-epic-legends-materials-neon-blue",
+      "rows": 20
+    },
+    {
+      "category": "insert-phosphorescent",
+      "rows": 20
+    },
+    {
+      "category": "insert-illustrious-legends",
+      "rows": 19
+    },
+    {
+      "category": "insert-illustrious-legends-meta",
+      "rows": 19
+    },
+    {
+      "category": "insert-illustrious-legends-nebula",
+      "rows": 19
+    },
+    {
+      "category": "insert-illustrious-legends-neon-marble",
+      "rows": 19
+    },
+    {
+      "category": "insert-illustrious-legends-neon-orange",
+      "rows": 19
+    },
+    {
+      "category": "insert-illustrious-legends-neon-pink",
+      "rows": 19
+    },
+    {
+      "category": "insert-illustrious-legends-neon-splatter",
+      "rows": 19
+    },
+    {
+      "category": "insert-illustrious-legends-psychedelic",
+      "rows": 19
+    },
+    {
+      "category": "auto-champion-signatures",
+      "rows": 19
+    },
+    {
+      "category": "insert-illustrious-legends-gold",
+      "rows": 18
+    },
+    {
+      "category": "insert-illustrious-legends-neon-green",
+      "rows": 18
+    },
+    {
+      "category": "auto-champion-signatures-gold",
+      "rows": 18
+    },
+    {
+      "category": "auto-champion-signatures-meta",
+      "rows": 18
+    },
+    {
+      "category": "auto-champion-signatures-nebula",
+      "rows": 18
+    },
+    {
+      "category": "auto-champion-signatures-neon-orange",
+      "rows": 18
+    },
+    {
+      "category": "auto-champion-signatures-neon-pink",
+      "rows": 18
+    },
+    {
+      "category": "auto-champion-signatures-neon-splatter",
+      "rows": 18
+    },
+    {
+      "category": "insert-epic-legends-materials-gold",
+      "rows": 17
+    },
+    {
+      "category": "auto-champion-signatures-neon-marble",
+      "rows": 17
+    },
+    {
+      "category": "auto-champion-signatures-psychedelic",
+      "rows": 17
+    },
+    {
+      "category": "insert-epic-legends-materials-nebula",
+      "rows": 16
+    },
+    {
+      "category": "insert-championship-gear",
+      "rows": 15
+    },
+    {
+      "category": "insert-epic-legends-materials-neon-marble",
+      "rows": 15
+    },
+    {
+      "category": "insert-neon-nights",
+      "rows": 15
+    },
+    {
+      "category": "insert-solar-eclipse",
+      "rows": 15
+    },
+    {
+      "category": "auto-champion-signatures-neon-green",
+      "rows": 15
+    },
+    {
+      "category": "insert-championship-gear-gold",
+      "rows": 14
+    },
+    {
+      "category": "insert-championship-gear-hyper",
+      "rows": 14
+    },
+    {
+      "category": "insert-epic-legends-materials-meta",
+      "rows": 14
+    },
+    {
+      "category": "auto-2021-super-bowl-signatures-prizm",
+      "rows": 14
+    },
+    {
+      "category": "insert-championship-gear-meta",
+      "rows": 13
+    },
+    {
+      "category": "insert-championship-gear-nebula",
+      "rows": 13
+    },
+    {
+      "category": "insert-championship-gear-neon-blue",
+      "rows": 13
+    },
+    {
+      "category": "insert-championship-gear-neon-marble",
+      "rows": 13
+    },
+    {
+      "category": "insert-epic-legends-materials-neon-orange",
+      "rows": 13
+    },
+    {
+      "category": "insert-epic-legends-materials-neon-pink",
+      "rows": 13
+    },
+    {
+      "category": "insert-epic-legends-materials-neon-splatter",
+      "rows": 13
+    },
+    {
+      "category": "insert-epic-legends-materials-psychedelic",
+      "rows": 13
+    },
+    {
+      "category": "insert-illustrious-legends-neon-blue",
+      "rows": 13
+    },
+    {
+      "category": "insert-championship-gear-neon-orange",
+      "rows": 12
+    },
+    {
+      "category": "insert-championship-gear-neon-pink",
+      "rows": 12
+    },
+    {
+      "category": "insert-championship-gear-neon-splatter",
+      "rows": 12
+    },
+    {
+      "category": "insert-championship-gear-psychedelic",
+      "rows": 12
+    },
+    {
+      "category": "insert-icons",
+      "rows": 12
+    },
+    {
+      "category": "insert-icons-meta",
+      "rows": 12
+    },
+    {
+      "category": "insert-icons-nebula",
+      "rows": 12
+    },
+    {
+      "category": "insert-icons-neon-green",
+      "rows": 12
+    },
+    {
+      "category": "insert-icons-neon-marble",
+      "rows": 12
+    },
+    {
+      "category": "insert-icons-neon-orange",
+      "rows": 12
+    },
+    {
+      "category": "insert-icons-neon-pink",
+      "rows": 12
+    },
+    {
+      "category": "insert-icons-neon-splatter",
+      "rows": 12
+    },
+    {
+      "category": "insert-icons-psychedelic",
+      "rows": 12
+    },
+    {
+      "category": "insert-icons-gold",
+      "rows": 11
+    },
+    {
+      "category": "auto-champion-signatures-neon-blue",
+      "rows": 11
+    },
+    {
+      "category": "insert-icons-neon-blue",
+      "rows": 10
+    },
+    {
+      "category": "insert-next-era",
+      "rows": 10
+    },
+    {
+      "category": "insert-next-era-gold",
+      "rows": 10
+    },
+    {
+      "category": "insert-next-era-hyper",
+      "rows": 10
+    },
+    {
+      "category": "insert-next-era-meta",
+      "rows": 10
+    },
+    {
+      "category": "insert-next-era-nebula",
+      "rows": 10
+    },
+    {
+      "category": "insert-next-era-neon-blue",
+      "rows": 10
+    },
+    {
+      "category": "insert-next-era-neon-marble",
+      "rows": 10
+    },
+    {
+      "category": "insert-next-era-neon-orange",
+      "rows": 10
+    },
+    {
+      "category": "insert-next-era-neon-pink",
+      "rows": 10
+    },
+    {
+      "category": "insert-next-era-neon-splatter",
+      "rows": 10
+    },
+    {
+      "category": "insert-next-era-psychedelic",
+      "rows": 10
+    },
+    {
+      "category": "insert-spectracular",
+      "rows": 10
+    },
+    {
+      "category": "insert-spectracular-gold",
+      "rows": 10
+    },
+    {
+      "category": "insert-spectracular-interstellar",
+      "rows": 10
+    },
+    {
+      "category": "insert-spectracular-meta",
+      "rows": 10
+    },
+    {
+      "category": "insert-spectracular-nebula",
+      "rows": 10
+    },
+    {
+      "category": "insert-spectracular-neon-marble",
+      "rows": 10
+    },
+    {
+      "category": "insert-spectracular-neon-splatter",
+      "rows": 10
+    },
+    {
+      "category": "insert-spectracular-psychedelic",
+      "rows": 10
+    },
+    {
+      "category": "insert-spectracular-universal",
+      "rows": 10
+    },
+    {
+      "category": "insert-icons-hyper",
+      "rows": 8
+    },
+    {
+      "category": "insert-illustrious-legends-hyper",
+      "rows": 8
+    },
+    {
+      "category": "auto-sky-high-signatures",
+      "rows": 8
+    },
+    {
+      "category": "auto-sky-high-signatures-gold",
+      "rows": 8
+    },
+    {
+      "category": "auto-sky-high-signatures-meta",
+      "rows": 8
+    },
+    {
+      "category": "auto-sky-high-signatures-nebula",
+      "rows": 8
+    },
+    {
+      "category": "auto-sky-high-signatures-neon-orange",
+      "rows": 8
+    },
+    {
+      "category": "auto-sky-high-signatures-neon-pink",
+      "rows": 8
+    },
+    {
+      "category": "auto-sky-high-signatures-neon-splatter",
+      "rows": 8
+    },
+    {
+      "category": "auto-sky-high-signatures-psychedelic",
+      "rows": 8
+    },
+    {
+      "category": "auto-sky-high-signatures-neon-green",
+      "rows": 7
+    },
+    {
+      "category": "auto-sky-high-signatures-neon-marble",
+      "rows": 7
+    },
+    {
+      "category": "auto-sky-high-signatures-neon-blue",
+      "rows": 6
+    },
+    {
+      "category": "auto-2020-super-bowl-signatures-prizm",
+      "rows": 5
+    },
+    {
+      "category": "auto-champion-signatures-celestial",
+      "rows": 2
+    },
+    {
+      "category": "auto-sky-high-signatures-celestial",
+      "rows": 2
+    },
+    {
+      "category": "auto-sky-high-signatures-hyper",
+      "rows": 2
+    },
+    {
+      "category": "insert-icons-celestial",
+      "rows": 1
+    },
+    {
+      "category": "insert-illustrious-legends-celestial",
+      "rows": 1
+    },
+    {
+      "category": "auto-2021-spectra-football-champion-signatures",
+      "rows": 1
+    },
+    {
+      "category": "auto-2021-spectra-football-champion-signatures-celestial",
+      "rows": 1
+    },
+    {
+      "category": "auto-2021-spectra-football-champion-signatures-gold",
+      "rows": 1
+    },
+    {
+      "category": "auto-2021-spectra-football-champion-signatures-hyper",
+      "rows": 1
+    },
+    {
+      "category": "auto-2021-spectra-football-champion-signatures-meta",
+      "rows": 1
+    },
+    {
+      "category": "auto-2021-spectra-football-champion-signatures-nebula",
+      "rows": 1
+    },
+    {
+      "category": "auto-2021-spectra-football-champion-signatures-neon-blue",
+      "rows": 1
+    },
+    {
+      "category": "auto-2021-spectra-football-champion-signatures-neon-green",
+      "rows": 1
+    },
+    {
+      "category": "auto-2021-spectra-football-champion-signatures-neon-marble",
+      "rows": 1
+    },
+    {
+      "category": "auto-2021-spectra-football-champion-signatures-neon-orange",
+      "rows": 1
+    },
+    {
+      "category": "auto-2021-spectra-football-champion-signatures-neon-pink",
+      "rows": 1
+    },
+    {
+      "category": "auto-2021-spectra-football-champion-signatures-neon-splatter",
+      "rows": 1
+    },
+    {
+      "category": "auto-2021-spectra-football-champion-signatures-psychedelic",
+      "rows": 1
+    },
+    {
+      "category": "auto-2021-spectra-football-signatures-celestial",
+      "rows": 1
+    },
+    {
+      "category": "auto-2021-spectra-football-sky-high-signatures",
+      "rows": 1
+    },
+    {
+      "category": "auto-2021-spectra-football-sky-high-signatures-gold",
+      "rows": 1
+    },
+    {
+      "category": "auto-2021-spectra-football-sky-high-signatures-hyper",
+      "rows": 1
+    },
+    {
+      "category": "auto-2021-spectra-football-sky-high-signatures-meta",
+      "rows": 1
+    },
+    {
+      "category": "auto-2021-spectra-football-sky-high-signatures-nebula",
+      "rows": 1
+    },
+    {
+      "category": "auto-2021-spectra-football-sky-high-signatures-neon-blue",
+      "rows": 1
+    },
+    {
+      "category": "auto-2021-spectra-football-sky-high-signatures-neon-green",
+      "rows": 1
+    },
+    {
+      "category": "auto-2021-spectra-football-sky-high-signatures-neon-marble",
+      "rows": 1
+    },
+    {
+      "category": "auto-2021-spectra-football-sky-high-signatures-neon-orange",
+      "rows": 1
+    },
+    {
+      "category": "auto-2021-spectra-football-sky-high-signatures-neon-pink",
+      "rows": 1
+    },
+    {
+      "category": "auto-2021-spectra-football-sky-high-signatures-neon-splatter",
+      "rows": 1
+    },
+    {
+      "category": "auto-2021-spectra-football-sky-high-signatures-psychedelic",
+      "rows": 1
+    },
+    {
+      "category": "auto-champion-signatures-hyper",
+      "rows": 1
+    }
+  ]
+}

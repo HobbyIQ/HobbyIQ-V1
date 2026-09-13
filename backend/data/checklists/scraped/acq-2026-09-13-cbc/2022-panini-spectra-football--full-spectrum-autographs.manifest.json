@@ -1,0 +1,68 @@
+{
+  "source": "cardboardconnection-2026-09-13",
+  "sourceUrl": "https://www.cardboardconnection.com/2022-panini-spectra-football-nfl-cards",
+  "xlsxUrl": "https://www.cardboardconnection.com/wp-content/uploads/2023/01/2022-Panini-Spectra-Football-checklist-Excel-spreadsheet.xlsx",
+  "fetchedAt": "2026-09-13",
+  "sport": "football",
+  "year": 2022,
+  "setName": "2022 Panini Spectra Football",
+  "productKey": "2022-panini-spectra-football",
+  "setKey": "panini-spectra",
+  "subset": "Full Spectrum Autographs",
+  "rowCount": 115,
+  "autoCount": 115,
+  "printRunCount": 115,
+  "distinctParallels": 11,
+  "parallelColumnAuthoritative": true,
+  "queueRank": 113,
+  "sectionsReport": [
+    {
+      "category": "auto-full-spectrum-autographs",
+      "rows": 11
+    },
+    {
+      "category": "auto-full-spectrum-autographs-meta",
+      "rows": 11
+    },
+    {
+      "category": "auto-full-spectrum-autographs-nebula",
+      "rows": 11
+    },
+    {
+      "category": "auto-full-spectrum-autographs-neon-marble",
+      "rows": 11
+    },
+    {
+      "category": "auto-full-spectrum-autographs-neon-orange",
+      "rows": 11
+    },
+    {
+      "category": "auto-full-spectrum-autographs-neon-splatter",
+      "rows": 11
+    },
+    {
+      "category": "auto-full-spectrum-autographs-psychedelic",
+      "rows": 11
+    },
+    {
+      "category": "auto-full-spectrum-autographs-neon-green",
+      "rows": 10
+    },
+    {
+      "category": "auto-full-spectrum-autographs-neon-pink",
+      "rows": 10
+    },
+    {
+      "category": "auto-full-spectrum-autographs-neon-blue",
+      "rows": 9
+    },
+    {
+      "category": "auto-full-spectrum-autographs-celestial",
+      "rows": 5
+    },
+    {
+      "category": "auto-full-spectrum-autographs-hyper",
+      "rows": 4
+    }
+  ]
+}

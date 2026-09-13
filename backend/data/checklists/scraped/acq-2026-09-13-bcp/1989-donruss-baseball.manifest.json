@@ -1,0 +1,39 @@
+{
+ "year": 1989,
+ "sport": "baseball",
+ "setKey": "donruss",
+ "setName": "1989 Donruss",
+ "sourceUrl": "http://www.baseballcardpedia.com/index.php/1989_Donruss",
+ "source": "baseballcardpedia-2026-09-13",
+ "acquiredAt": "2026-09-13",
+ "parallelColumnAuthoritative": true,
+ "scope": "Base Set",
+ "scopeOfPage": "1989 Donruss",
+ "baseReadFrom": "Base_Set heading",
+ "ladder": [],
+ "ladderAbsentReason": "the page states its parallels in PROSE only (no list rungs and no inline card list), so no rung can be read without guessing its scope; base set emitted alone",
+ "sections": [
+  {
+   "name": "Base Set",
+   "category": null,
+   "isAuto": false,
+   "cards": 658,
+   "rungs": 0
+  }
+ ],
+ "variationAxisApplied": {
+  "appliedAt": "2026-09-13",
+  "source": "baseballcardpedia-2026-09-13",
+  "why": "#2112's insert-set-key guard refused this file: rows would have landed on fewer distinct ids than there are rows, so a later row would have overwritten an earlier one inside one run and the last writer would have decided which card the address holds. Every decision below was verified against the live baseballcardpedia page before it was applied; nothing here invents a label the source does not print.",
+  "decisions": {
+   "imageVariations": {
+    "rows": 22,
+    "rule": "image variation — the photo descriptor bcp prints after the player's name moves to the parallel axis as \"<Name> Image Variation SP\" (#1613), and the photo names the subset so the base ladder is not multiplied by it"
+   }
+  },
+  "rowsBefore": 658,
+  "rowsAfter": 658,
+  "distinctIdsAfter": 658,
+  "verdictAfter": "pass"
+ }
+}
