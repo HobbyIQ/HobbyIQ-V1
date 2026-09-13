@@ -637,6 +637,17 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
     // Topps Cracker Jack is a MODERN Topps product, distinct from the 1915
     // vintage Cracker Jack line. Must precede bare topps or it is swallowed.
     [/topps-cracker-jack/, "topps-cracker-jack"],
+    // CF-A-SAME-NUMBERED-INSERT-SET-IS-ITS-OWN-CARD-SET (R30, bcp 2026-09-13).
+    // Five Topps flagship insert sets that restart their numbering and so
+    // collide with base and with each other on the bare product key:
+    // The Babe Ruth Story BR-1 is "St. Mary's Industrial School Student" while
+    // Baseball Royalty BR-1 is "Babe Ruth". Anchored and ABOVE bare /topps/,
+    // which would otherwise swallow every one of them.
+    [/topps-factory-set-rookie-variations/, "topps-factory-set-rookie-variations"],
+    [/topps-the-babe-ruth-story/, "topps-the-babe-ruth-story"],
+    [/topps-baseball-history/, "topps-baseball-history"],
+    [/topps-baseball-royalty/, "topps-baseball-royalty"],
+    [/topps-cal-ripken-jr-refractor/, "topps-cal-ripken-jr-refractor"],
     [/topps/, "topps"],
     // Panini — STRICT tier (fully-qualified "panini-X"). See two-tier
     // comment on knownSetKeyPatterns. National Treasures is included
@@ -878,6 +889,17 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
     [/(?:^|-)cracker-jack/, "cracker-jack"],
     [/all-time-diamond-kings/, "all-time-diamond-kings"],
     [/panini-diamond-kings/, "panini-diamond-kings"],
+    // CF-A-SAME-NUMBERED-INSERT-SET-IS-ITS-OWN-CARD-SET (R30, bcp 2026-09-13).
+    // DK Signatures and DK Rookie Signatures share the S-<initials> numbering
+    // and collide on seven cards (S-AH Aaron Hicks / Austin Hays, S-CS Chris
+    // Sale / Chance Sisco, S-JD Jacob deGrom / J.D. Davis, ...). Anchored and
+    // ABOVE the bare diamond-kings family rule.
+    //
+    // Their COLOUR rungs are deliberately absent: the source calls Holo
+    // Silver/Gold/Blue, Purple and Masterpiece parallels, so they ride the
+    // parallel axis on these keys and must not become keys of their own.
+    [/diamond-kings-dk-rookie-signatures/, "diamond-kings-dk-rookie-signatures"],
+    [/diamond-kings-dk-signatures/, "diamond-kings-dk-signatures"],
     [/(?:^|-)diamond-kings/, "diamond-kings"],
     [/(?:^|-)t206/, "t206"],
     [/(?:^|-)play-ball/, "play-ball"],
