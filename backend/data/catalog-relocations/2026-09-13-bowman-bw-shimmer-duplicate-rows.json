@@ -1,0 +1,13 @@
+{
+  "generatedAt": "2026-09-13T17:05:00.000Z",
+  "reason": "In cell (baseball, 2026, bowman), CPA-VF and CPA-MG each carry TWO rows for the identical parallel 'Black & White Shimmer Refractor': a verified :num-15 row (printRun 15, source checklistcenter-2026-08-29) and an unverified, unnumbered duplicate (printRun null, source hobbymonitor-scraped-2026-08-31) at a different id. One card, one row: the unnumbered duplicates are retired, the verified :num-15 rows are the surviving address for this parallel. Zero sales sit on either duplicate today (confirmed by point-read + sold_comps count before this list was authored).",
+  "rulings": [
+    "feedback_one_card_one_row_one_pool.md: a duplicate row splits the pool and must consolidate onto the checklist-backed row -- here the :num-15 row (checklistcenter-2026-08-29, printRun 15) is the more specific, verified address; the unnumbered hobbymonitor row is strictly less specific (no print run stated) and unverified, so it retires rather than the reverse.",
+    "The distinct CPA-VF 'Black & White Red Ink' row (hiq:baseball:2026:bowman:cpa-vf:black-white-red-ink:auto, verified, source checklist-drew-ruling-2026-08-30-red-ink) is UNTOUCHED by this list -- it is a different parallel entirely (Drew's 2026-08-30 Red Ink ruling cell), not a duplicate of Black & White Shimmer Refractor, and is not named in entries below."
+  ],
+  "excluded": [],
+  "entries": [
+    { "id": "hiq:baseball:2026:bowman:cpa-vf:black-white-shimmer-refractor:auto", "action": "retire", "reason": "duplicate of the verified :num-15 row -- one card, one row (Drew 2026-08-30 Red Ink ruling cell; source hobbymonitor-scraped-2026-08-31 unverified)." },
+    { "id": "hiq:baseball:2026:bowman:cpa-mg:black-white-shimmer-refractor:auto", "action": "retire", "reason": "duplicate of the verified :num-15 row -- one card, one row (Drew 2026-08-30 Red Ink ruling cell; source hobbymonitor-scraped-2026-08-31 unverified)." }
+  ]
+}
