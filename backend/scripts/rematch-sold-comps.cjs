@@ -446,6 +446,7 @@ const { finishLane } = require(path.join(__dirname, "lib", "runner-budget.cjs"))
 const APPLY_KINDS = [
   K.IMPROVE, K.BASE_EVICTION,
   K.GRADE_FROM_TITLE, K.YEAR_FROM_TITLE_VINTAGE, K.SPORT_FROM_PRODUCT,
+  K.FLAGSHIP_SWALLOWED_NAMED_PRODUCT, K.POKEMON_SET_CODE, K.FINISH_IS_A_PARALLEL,
 ];
 
 /** The units this slot owns. */
@@ -675,6 +676,17 @@ async function main() {
   const pvs = d(["portfolioiq", "persistVendorSalesToPool.service.js"]);
   const slugRe = d(["portfolioiq", "slugRederivation.service.js"]);
   const { reportWrites } = d(["ops", "writeReconciliation.js"]);
+  // R27-POKEMON-SET-CODE's own table (Drew, 2026-09-13). Required directly --
+  // not through `psk`, a different module -- because pokemonSetCodes.ts owns
+  // this vocabulary and productSetKeys.ts owns a different one; see
+  // POKEMON_SET_CODE's doc for why the two must not merge into one lookup.
+  const pkc = d(["catalog", "pokemonSetCodes.js"]);
+  const POKEMON_CODE_SET = new Set([
+    ...Object.keys(pkc.POKEMON_EN_SET_CODES ?? {}),
+    ...Object.keys(pkc.POKEMON_PROMO_SET_CODES ?? {}),
+    ...Object.keys(pkc.POKEMON_JA_SET_CODES ?? {}),
+  ].map((k) => k.toLowerCase()));
+  const POKEMON_AMBIGUOUS_CODES = new Set([...(pkc.AMBIGUOUS_MARKET_CODES ?? [])].map((k) => k.toLowerCase()));
   const deps = {
     parseListingIdentity: pti.parseListingIdentity,
     // isAuto's boundary is the CARD NUMBER, never title text
@@ -1259,6 +1271,118 @@ async function main() {
     return { productSport: ps, sportDestBacked: await checklistBacked(der.slug) };
   };
 
+  /**
+   * R26-FLAGSHIP-SWALLOWED-NAMED-PRODUCT's one catalog fact (Drew, 2026-09-13).
+   *
+   * Gated on pure string work first, exactly like `specInputs`/`vintageInputs`
+   * above: `productParentOf` is a synchronous table read (no I/O), so the
+   * ONLY cost this function can ever add is the one `checklistBacked` call,
+   * and only for a row whose derived key really is a productSetKeys.ts
+   * product whose declared parent is the stored key.
+   */
+  const r26Inputs = async (row, stored, der) => {
+    const none = { derivedIsNamedProduct: false, derivedBackedR26: false };
+    if (!der?.ok) return none;
+    const storedKey = String(stored?.setKey ?? "").toLowerCase();
+    const derivedKey = String(der.identity?.setKey ?? "").toLowerCase();
+    if (!storedKey || !derivedKey || storedKey === derivedKey) return none;
+    if (!psk.isProductSetKey(derivedKey)) return none;
+    if (psk.productParentOf(derivedKey) !== storedKey) return none;
+    return { derivedIsNamedProduct: true, derivedBackedR26: await checklistBacked(der.slug) };
+  };
+
+  /**
+   * R27-POKEMON-SET-CODE's facts (Drew, 2026-09-13; CF-THE-SET-CODE-IS-THE-KEY).
+   *
+   * Gated on the sport and a Set membership test first -- both pure and
+   * synchronous -- so only a genuine Pokemon-code candidate pays for the
+   * catalog read. `storedIsRivalPokemonSetCode` answers straight off the SAME
+   * table: the ruling's "stale default" excludes a second real code, and this
+   * is the one fact that tells the two apart without a catalog read either.
+   *
+   * THE LANGUAGE FLAG. `languageResolves` reads the row's OWN stored
+   * `language` field -- never the title, and never a guess -- because the
+   * ruling's whole point is that a bare code says nothing about which market
+   * a colliding row belongs to; only a fact the row itself carries may answer
+   * for it. A row with no language field stays unresolved, which is the safe
+   * default the ruling asks for (`ambiguous-code-language-unresolved`).
+   */
+  const r27Inputs = async (row, stored, der) => {
+    const none = {
+      derivedIsPokemonSetCode: false, storedIsRivalPokemonSetCode: false,
+      pokemonCodeIsAmbiguous: false, pokemonLanguageResolves: null, derivedBackedR27: false,
+    };
+    if (!der?.ok) return none;
+    if (String(stored?.sport ?? der.identity?.sport ?? "").toLowerCase() !== "pokemon") return none;
+    const derivedKey = String(der.identity?.setKey ?? "").toLowerCase();
+    if (!derivedKey || !POKEMON_CODE_SET.has(derivedKey)) return none;
+    const storedKey = String(stored?.setKey ?? "").toLowerCase();
+    const isAmbiguous = POKEMON_AMBIGUOUS_CODES.has(derivedKey);
+    let languageResolves = null;
+    if (isAmbiguous) {
+      // The row's own language flag -- `language`/`cardLanguage`, whichever
+      // the ingest wrote -- read directly, no catalog call. `en`/`english`
+      // resolves an EN code, `ja`/`jp`/`japanese` resolves neither (the
+      // colliding code is EN-keyed by construction; see AMBIGUOUS_MARKET_
+      // CODES's own doc -- a JAPANESE flag on a colliding code names the
+      // JAPANESE product, which this table does not carry under this code at
+      // all, so the row is a rival reading, not a match, and stays refused
+      // rather than resolved).
+      const lang = String(stored?.language ?? stored?.cardLanguage ?? row?.language ?? "").trim().toLowerCase();
+      if (lang === "en" || lang === "english") languageResolves = true;
+      else if (lang) languageResolves = false;
+    }
+    const storedIsRivalPokemonSetCode = !!storedKey && storedKey !== derivedKey && POKEMON_CODE_SET.has(storedKey);
+    if (storedIsRivalPokemonSetCode) {
+      return {
+        derivedIsPokemonSetCode: true, storedIsRivalPokemonSetCode: true,
+        pokemonCodeIsAmbiguous: isAmbiguous, pokemonLanguageResolves: languageResolves, derivedBackedR27: false,
+      };
+    }
+    return {
+      derivedIsPokemonSetCode: true, storedIsRivalPokemonSetCode: false,
+      pokemonCodeIsAmbiguous: isAmbiguous, pokemonLanguageResolves: languageResolves,
+      derivedBackedR27: await checklistBacked(der.slug),
+    };
+  };
+
+  /**
+   * R28-FINISH-IS-A-PARALLEL's facts (Drew, 2026-09-13). See
+   * FINISH_IS_A_PARALLEL's doc in the classifier for the whole argument; this
+   * mirrors its own guard order so the driver never asks the checklist about
+   * a shape the classifier would have refused anyway.
+   *
+   * Gated the same way as every input function above: the suffix test, the
+   * DISTINCT-product guard and the finish-vocabulary test are all pure
+   * synchronous table/string work, so `checklistListsParallel` -- the one
+   * call with real cost -- runs only for a row that survived all three.
+   */
+  const r28Inputs = async (row, stored, der) => {
+    const none = { checklistListsFinishAsParallel: false, derivedBackedR28: false };
+    if (!der?.ok) return none;
+    const storedKey = String(stored?.setKey ?? "").toLowerCase();
+    const derivedKey = String(der.identity?.setKey ?? "").toLowerCase();
+    if (!derivedKey || !storedKey.startsWith(`${derivedKey}-`) || storedKey === derivedKey) return none;
+    const finishWord = storedKey.slice(derivedKey.length + 1);
+    if (!finishWord) return none;
+    // THE 2026-09-03 DISTINCT-PRODUCT GUARD, asked here too so the driver
+    // never spends a checklist read on a shape the classifier refuses anyway
+    // -- see FINISH_IS_A_PARALLEL's doc for why `topps-chrome-platinum` is
+    // the measured reason this guard exists.
+    if (K.DISTINCT_PRODUCT_SETKEYS.includes(storedKey)) return none;
+    if (K.ruledCollapsePair(storedKey, derivedKey)) return none;
+    const isFinishVocab = K.FINISH_COLOR_TOKENS.includes(finishWord)
+      || K.VOCAB.CORE_FINISH_TOKENS.includes(finishWord)
+      || K.VOCAB.FINISH_FAMILY_TOKENS.includes(finishWord);
+    if (!isFinishVocab) return none;
+    const year = stored?.cardYear ?? der.identity?.cardYear ?? null;
+    const listsIt = year ? K.VOCAB.checklistListsParallel(finishWord, year, derivedKey) : false;
+    return {
+      checklistListsFinishAsParallel: listsIt,
+      derivedBackedR28: await checklistBacked(der.slug),
+    };
+  };
+
   // ── page the shard ────────────────────────────────────────────────────────
   const counts = { [K.AGREE]: 0, [K.IMPROVE]: 0, [K.CONFLICT]: 0, [K.UNDERIVABLE]: 0 };
   const byTier = new Map(), defects = new Map(), reasons = new Map(), samples = new Map(), subclasses = new Map();
@@ -1275,6 +1399,11 @@ async function main() {
   const gftByGrader = new Map(), gftByGrade = new Map(), gftBySport = new Map(), gftSamples = [];
   const yfvByDecade = new Map(), yfvBySetKey = new Map(), yfvBySport = new Map(), yfvSamples = [];
   const sfpByPair = new Map(), sfpBySetKey = new Map(), sfpSamples = [];
+  // THE THREE RULED SCOPES OF 2026-09-13 (R26/R27/R28) -- same shape as the
+  // trio above: a count says how many, these say WHAT.
+  const r26ByPair = new Map(), r26Samples = [];
+  const r27ByPair = new Map(), r27Samples = [];
+  const r28ByPair = new Map(), r28Samples = [];
   let splitTotal = 0;
   const stats = { seen: 0, otherSlot: 0, filtered: 0, prefiltered: 0, intended: 0, written: 0, skipped: 0, failed: 0, duplicatesLeft: 0, alreadyGone: 0, notReached: 0 };
   const bump = (m, k, n = 1) => m.set(k, (m.get(k) ?? 0) + n);
@@ -1591,6 +1720,12 @@ async function main() {
         // a row that cannot qualify issues no catalog read at all.
         ...(await vintageInputs(row, stored, der)),
         ...(await sportInputs(row, stored, der)),
+        // THE THREE RULED SCOPES OF 2026-09-13 (R26/R27/R28). Same discipline
+        // as the trio above: supplied at BOTH call sites, each helper
+        // cost-gated on pure synchronous work first.
+        ...(await r26Inputs(row, stored, der)),
+        ...(await r27Inputs(row, stored, der)),
+        ...(await r28Inputs(row, stored, der)),
       });
       counts[res.klass]++;
       // THE SPLIT-IDENTITY SIGNAL, tallied ACROSS classes (Drew 2026-09-02).
@@ -1636,6 +1771,18 @@ async function main() {
         bump(sfpByPair, String(e.pair ?? "?"));
         bump(sfpBySetKey, String(e.setKey ?? "?"));
         if (sfpSamples.length < 30) sfpSamples.push(`${String(e.pair).padEnd(24)} ${row.cardId}  "${String(row.title ?? "").slice(0, 92)}"`);
+      } else if (res.subclass === K.FLAGSHIP_SWALLOWED_NAMED_PRODUCT) {
+        const e = res.flagshipSwallowedNamedProductEvidence ?? {};
+        bump(r26ByPair, `${e.storedSetKey ?? "?"}->${e.derivedSetKey ?? "?"}`);
+        if (r26Samples.length < 30) r26Samples.push(`${String(`${e.storedSetKey}->${e.derivedSetKey}`).padEnd(36)} ${row.cardId}  "${String(row.title ?? "").slice(0, 88)}"`);
+      } else if (res.subclass === K.POKEMON_SET_CODE) {
+        const e = res.pokemonSetCodeEvidence ?? {};
+        bump(r27ByPair, String(e.pair ?? "?"));
+        if (r27Samples.length < 30) r27Samples.push(`${String(e.pair).padEnd(24)} ${row.cardId}  "${String(row.title ?? "").slice(0, 92)}"`);
+      } else if (res.subclass === K.FINISH_IS_A_PARALLEL) {
+        const e = res.finishIsAParallelEvidence ?? {};
+        bump(r28ByPair, String(e.pair ?? "?"));
+        if (r28Samples.length < 30) r28Samples.push(`${String(e.pair).padEnd(36)} ${row.cardId}  "${String(row.title ?? "").slice(0, 88)}"`);
       }
       bump(byTier, `${res.klass}/${res.tier}`);
       for (const a of K.defectAxes(res)) bump(defects, `${res.klass}  ${a}`);
@@ -1692,7 +1839,13 @@ async function main() {
                 gradeValue: res.gradeFromTitleEvidence?.gradeValue ?? null,
               },
             });
-          } else if (kind === K.YEAR_FROM_TITLE_VINTAGE || kind === K.SPORT_FROM_PRODUCT) {
+          } else if (kind === K.YEAR_FROM_TITLE_VINTAGE || kind === K.SPORT_FROM_PRODUCT
+            || kind === K.FLAGSHIP_SWALLOWED_NAMED_PRODUCT || kind === K.POKEMON_SET_CODE
+            || kind === K.FINISH_IS_A_PARALLEL) {
+            // THE THREE RULED SCOPES OF 2026-09-13, same shape as the trio
+            // above: each moves setKey (R28 also moves parallel) TO the
+            // derived identity, so the destination is `der.slug`/`der.identity`
+            // exactly as YEAR-FROM-TITLE-VINTAGE and SPORT-FROM-PRODUCT are.
             improvable.push({ kind, row, stored, slug: der.slug, identity: der.identity });
           } else if (kind === K.IMPROVE) {
             improvable.push({ kind: K.IMPROVE, row, stored, slug: der.slug, identity: der.identity });
@@ -1929,6 +2082,42 @@ async function main() {
       if (sfpSamples.length) { console.log(`                      sample (${sfpSamples.length}):`); for (const s of sfpSamples) console.log(`                        ${s}`); }
     }
   }
+  {
+    const rAuto = subclasses.get(`${K.IMPROVE}/${K.FLAGSHIP_SWALLOWED_NAMED_PRODUCT}/${K.AUTO}`) ?? 0;
+    const rProt = subclasses.get(`${K.IMPROVE}/${K.FLAGSHIP_SWALLOWED_NAMED_PRODUCT}/${K.PROTECTED}`) ?? 0;
+    if (rAuto || rProt) {
+      console.log(`\n  R26-FLAGSHIP-SWALLOWED-NAMED-PRODUCT  ${f(rAuto + rProt)} rows: a specialty release filed under its`);
+      console.log(`                                        bare flagship key; derived key is a declared productSetKeys.ts`);
+      console.log(`                                        child of the stored flagship, title states the product's own words.`);
+      console.log(`                                        ${f(rAuto)} AUTO (writable under audit), ${f(rProt)} PROTECTED (never).`);
+      console.log(`                                        by pair: ${topOf(r26ByPair)}`);
+      if (r26Samples.length) { console.log(`                                        sample (${r26Samples.length}):`); for (const s of r26Samples) console.log(`                                          ${s}`); }
+    }
+  }
+  {
+    const rAuto = subclasses.get(`${K.IMPROVE}/${K.POKEMON_SET_CODE}/${K.AUTO}`) ?? 0;
+    const rProt = subclasses.get(`${K.IMPROVE}/${K.POKEMON_SET_CODE}/${K.PROTECTED}`) ?? 0;
+    if (rAuto || rProt) {
+      console.log(`\n  R27-POKEMON-SET-CODE  ${f(rAuto + rProt)} rows: the set CODE is the key (pokemonSetCodes.ts); stored key`);
+      console.log(`                        is a descriptive name / unknown / stale default. The 24 colliding EN/JA codes move`);
+      console.log(`                        only when the row's own language flag resolves them; unresolved stays CONFLICT.`);
+      console.log(`                        ${f(rAuto)} AUTO (writable under audit), ${f(rProt)} PROTECTED (never).`);
+      console.log(`                        by pair: ${topOf(r27ByPair)}`);
+      if (r27Samples.length) { console.log(`                        sample (${r27Samples.length}):`); for (const s of r27Samples) console.log(`                          ${s}`); }
+    }
+  }
+  {
+    const rAuto = subclasses.get(`${K.IMPROVE}/${K.FINISH_IS_A_PARALLEL}/${K.AUTO}`) ?? 0;
+    const rProt = subclasses.get(`${K.IMPROVE}/${K.FINISH_IS_A_PARALLEL}/${K.PROTECTED}`) ?? 0;
+    if (rAuto || rProt) {
+      console.log(`\n  R28-FINISH-IS-A-PARALLEL  ${f(rAuto + rProt)} rows: stored setKey is <product>-<finish>; the finish moves`);
+      console.log(`                           to the parallel field. REFUSED on any DISTINCT_PRODUCT_SETKEYS / ruled collapse`);
+      console.log(`                           pair BEFORE the checklist is asked (topps-chrome-platinum is the measured trap).`);
+      console.log(`                           ${f(rAuto)} AUTO (writable under audit), ${f(rProt)} PROTECTED (never).`);
+      console.log(`                           by pair: ${topOf(r28ByPair)}`);
+      if (r28Samples.length) { console.log(`                           sample (${r28Samples.length}):`); for (const s of r28Samples) console.log(`                             ${s}`); }
+    }
+  }
   // SPLIT-IDENTITY: reported as its own block, not as a class. A split row
   // has already been counted under whichever derivation class it landed in;
   // this says how many of those rows ALSO contradict themselves.
@@ -2155,6 +2344,12 @@ async function main() {
         // a row that cannot qualify issues no catalog read at all.
         ...(await vintageInputs(fresh, stored, der)),
         ...(await sportInputs(fresh, stored, der)),
+        // THE THREE RULED SCOPES OF 2026-09-13 (R26/R27/R28), at write time --
+        // same reason as `spec` above: a gate that disagrees with itself
+        // between the census and the apply is a gate nobody can audit.
+        ...(await r26Inputs(fresh, stored, der)),
+        ...(await r27Inputs(fresh, stored, der)),
+        ...(await r28Inputs(fresh, stored, der)),
       });
       // The class is decided again on what is there NOW, and it must come back
       // as the SAME kind the census queued. A row the census saw as an eviction
@@ -2292,6 +2487,18 @@ async function main() {
         const e = res.sportFromProductEvidence ?? {};
         keep.rekeyedReason = `GREAT REMATCH (2026-09-06): SPORT-FROM-PRODUCT -- a card's sport is the PRODUCT's sport; ${e.pair} on setKey ${e.setKey}, product sport read from its own checklist, destination checklist-backed. Title "${e.titleQuoted}"`;
         keep.sportFromProductEvidence = e;
+      } else if (cand.kind === K.FLAGSHIP_SWALLOWED_NAMED_PRODUCT) {
+        const e = res.flagshipSwallowedNamedProductEvidence ?? {};
+        keep.rekeyedReason = `GREAT REMATCH (2026-09-13): R26-FLAGSHIP-SWALLOWED-NAMED-PRODUCT -- a specialty release filed under its flagship; ${e.storedSetKey}->${e.derivedSetKey}, title states "${(e.distinguishingWords ?? []).join("+")}", destination checklist-backed. Title "${e.titleQuoted}"`;
+        keep.flagshipSwallowedNamedProductEvidence = e;
+      } else if (cand.kind === K.POKEMON_SET_CODE) {
+        const e = res.pokemonSetCodeEvidence ?? {};
+        keep.rekeyedReason = `GREAT REMATCH (2026-09-13): R27-POKEMON-SET-CODE -- the set code is the key; ${e.pair}, destination checklist-backed${e.isAmbiguousCode ? `, ambiguous code resolved by language` : ""}`;
+        keep.pokemonSetCodeEvidence = e;
+      } else if (cand.kind === K.FINISH_IS_A_PARALLEL) {
+        const e = res.finishIsAParallelEvidence ?? {};
+        keep.rekeyedReason = `GREAT REMATCH (2026-09-13): R28-FINISH-IS-A-PARALLEL -- a finish word minted as a setKey; ${e.pair}, checklist lists it as a parallel of the derived product, destination checklist-backed`;
+        keep.finishIsAParallelEvidence = e;
       } else {
         keep.rekeyedReason = `GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled ${res.axes.filled.join(",")}`;
       }
