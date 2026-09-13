@@ -61,9 +61,30 @@ function deriveIdentity(row, deps) {
   const eraSpelled = deps.spellForEra
     ? deps.spellForEra(deps.normalizeSetKey(setKeyRaw), cardYear ?? null)
     : deps.normalizeSetKey(setKeyRaw);
-  const setKey = deps.applySiblingChecklistOverride
+  const siblingCorrected = deps.applySiblingChecklistOverride
     ? deps.applySiblingChecklistOverride(eraSpelled, cardNumber, cardYear ?? 0)
     : eraSpelled;
+  // RULING R29 (Drew, 2026-09-13): THE CHECKLIST DECIDES THE PRODUCT.
+  //
+  // THE SAME DECISION THE SERVICE PATH MAKES, READ FROM A MAP RATHER THAN
+  // RE-ASKED. `deriveIdentity` is synchronous and six census/rematch call
+  // sites depend on that; the resolver is a catalog read. Making this function
+  // async would turn a one-seam change into a rewrite of every fleet driver --
+  // so the CALLER resolves products for its batch (one bounded, cached,
+  // indexed read per distinct year+product+number, never per row) and hands
+  // the answers down as a plain Map. The decision is identical because it is
+  // literally the same resolver's output; only the moment it was computed
+  // differs. tests/r29DeriverParity.test.ts proves the two paths agree on the
+  // 1,000-row fixture rather than asserting it here.
+  //
+  // ONLY-IMPROVE, exactly as on the service path: a miss leaves the parser's
+  // answer standing, so this can make a product more specific and never less.
+  // The KEY is built by the shared helper (productResolutionKey), injected as
+  // a dep, so the two paths cannot drift on the string that joins them.
+  const r29 = deps.resolvedProducts && deps.productResolutionKey
+    ? deps.resolvedProducts.get(deps.productResolutionKey(cardYear ?? 0, siblingCorrected, cardNumber))
+    : null;
+  const setKey = r29 || siblingCorrected;
 
   // CF-BOWMAN-DEFAULT-NOT-EVIDENCE + CF-UNKNOWN-IS-ALSO-A-GUESS: the parser's
   // fallbacks are guesses, not readings, and a guess that passes the guard is
