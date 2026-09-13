@@ -1,0 +1,2383 @@
+category,cardNumber,parallel,isAuto,printRun,player,parallelNote,rarity
+base,1,Base,false,,Derek Jeter
+base,1,Oversized,false,499,Derek Jeter,,1000 sets will be produced
+base,1,"10"" X 14"" Posters",false,,Derek Jeter,,1000 sets will be produced
+base,2,Base,false,,Jose Altuve / Victor Martinez / Michael Brantley LL
+base,2,Oversized,false,499,Jose Altuve / Victor Martinez / Michael Brantley LL,,1000 sets will be produced
+base,2,"10"" X 14"" Posters",false,,Jose Altuve / Victor Martinez / Michael Brantley LL,,1000 sets will be produced
+base,3,Base,false,,Rene Rivera
+base,3,Oversized,false,499,Rene Rivera,,1000 sets will be produced
+base,3,"10"" X 14"" Posters",false,,Rene Rivera,,1000 sets will be produced
+base,4,Base,false,,Curtis Granderson
+base,4,Oversized,false,499,Curtis Granderson,,1000 sets will be produced
+base,4,"10"" X 14"" Posters",false,,Curtis Granderson,,1000 sets will be produced
+base,5,Base,false,,Josh Donaldson
+base,5,Oversized,false,499,Josh Donaldson,,1000 sets will be produced
+base,5,"10"" X 14"" Posters",false,,Josh Donaldson,,1000 sets will be produced
+base,6,Base,false,,Jayson Werth
+base,6,Oversized,false,499,Jayson Werth,,1000 sets will be produced
+base,6,"10"" X 14"" Posters",false,,Jayson Werth,,1000 sets will be produced
+base,8,Base,false,,Miguel Gonzalez
+base,8,Oversized,false,499,Miguel Gonzalez,,1000 sets will be produced
+base,8,"10"" X 14"" Posters",false,,Miguel Gonzalez,,1000 sets will be produced
+base,9,Base,false,,Hunter Pence WS
+base,9,Oversized,false,499,Hunter Pence WS,,1000 sets will be produced
+base,9,"10"" X 14"" Posters",false,,Hunter Pence WS,,1000 sets will be produced
+base,10,Base,false,,Cole Hamels
+base,10,Oversized,false,499,Cole Hamels,,1000 sets will be produced
+base,10,"10"" X 14"" Posters",false,,Cole Hamels,,1000 sets will be produced
+base,11,Base,false,,Jon Jay
+base,11,Oversized,false,499,Jon Jay,,1000 sets will be produced
+base,11,"10"" X 14"" Posters",false,,Jon Jay,,1000 sets will be produced
+base,12,Base,false,,James McCann RC
+base,12,Oversized,false,499,James McCann RC,,1000 sets will be produced
+base,12,"10"" X 14"" Posters",false,,James McCann RC,,1000 sets will be produced
+base,13,Base,false,,Toronto Blue Jays TC
+base,13,Oversized,false,499,Toronto Blue Jays TC,,1000 sets will be produced
+base,13,"10"" X 14"" Posters",false,,Toronto Blue Jays TC,,1000 sets will be produced
+base,14,Base,false,,Kendall Graveman RC
+base,14,Oversized,false,499,Kendall Graveman RC,,1000 sets will be produced
+base,14,"10"" X 14"" Posters",false,,Kendall Graveman RC,,1000 sets will be produced
+base,15,Base,false,,Joey Votto
+base,15,Oversized,false,499,Joey Votto,,1000 sets will be produced
+base,15,"10"" X 14"" Posters",false,,Joey Votto,,1000 sets will be produced
+base,16,Base,false,,David DeJesus
+base,16,Oversized,false,499,David DeJesus,,1000 sets will be produced
+base,16,"10"" X 14"" Posters",false,,David DeJesus,,1000 sets will be produced
+base,17,Base,false,,Brian McCann
+base,17,Oversized,false,499,Brian McCann,,1000 sets will be produced
+base,17,"10"" X 14"" Posters",false,,Brian McCann,,1000 sets will be produced
+base,18,Base,false,,Cody Allen
+base,18,Oversized,false,499,Cody Allen,,1000 sets will be produced
+base,18,"10"" X 14"" Posters",false,,Cody Allen,,1000 sets will be produced
+base,19,Base,false,,Baltimore Orioles TC
+base,19,Oversized,false,499,Baltimore Orioles TC,,1000 sets will be produced
+base,19,"10"" X 14"" Posters",false,,Baltimore Orioles TC,,1000 sets will be produced
+base,20,Base,false,,Madison Bumgarner
+base,20,Oversized,false,499,Madison Bumgarner,,1000 sets will be produced
+base,20,"10"" X 14"" Posters",false,,Madison Bumgarner,,1000 sets will be produced
+base,21,Base,false,,Brett Gardner
+base,21,Oversized,false,499,Brett Gardner,,1000 sets will be produced
+base,21,"10"" X 14"" Posters",false,,Brett Gardner,,1000 sets will be produced
+base,22,Base,false,,Tyler Flowers
+base,22,Oversized,false,499,Tyler Flowers,,1000 sets will be produced
+base,22,"10"" X 14"" Posters",false,,Tyler Flowers,,1000 sets will be produced
+base,23,Base,false,,Michael Bourn
+base,23,Oversized,false,499,Michael Bourn,,1000 sets will be produced
+base,23,"10"" X 14"" Posters",false,,Michael Bourn,,1000 sets will be produced
+base,24,Base,false,,New York Mets TC
+base,24,Oversized,false,499,New York Mets TC,,1000 sets will be produced
+base,24,"10"" X 14"" Posters",false,,New York Mets TC,,1000 sets will be produced
+base,25,Base,false,,Jose Bautista
+base,25,Oversized,false,499,Jose Bautista,,1000 sets will be produced
+base,25,"10"" X 14"" Posters",false,,Jose Bautista,,1000 sets will be produced
+base,26,Base,false,,Bryce Brentz RC
+base,26,Oversized,false,499,Bryce Brentz RC,,1000 sets will be produced
+base,26,"10"" X 14"" Posters",false,,Bryce Brentz RC,,1000 sets will be produced
+base,27,Base,false,,Kendrys Morales
+base,27,Oversized,false,499,Kendrys Morales,,1000 sets will be produced
+base,27,"10"" X 14"" Posters",false,,Kendrys Morales,,1000 sets will be produced
+base,28,Base,false,,Alex Cobb
+base,28,Oversized,false,499,Alex Cobb,,1000 sets will be produced
+base,28,"10"" X 14"" Posters",false,,Alex Cobb,,1000 sets will be produced
+base,29,Base,false,,Brandon Belt HL
+base,29,Oversized,false,499,Brandon Belt HL,,1000 sets will be produced
+base,29,"10"" X 14"" Posters",false,,Brandon Belt HL,,1000 sets will be produced
+base,30,Base,false,,Tanner Roark FS
+base,30,Oversized,false,499,Tanner Roark FS,,1000 sets will be produced
+base,30,"10"" X 14"" Posters",false,,Tanner Roark FS,,1000 sets will be produced
+base,31,Base,false,,Nick Tropeano RC
+base,31,Oversized,false,499,Nick Tropeano RC,,1000 sets will be produced
+base,31,"10"" X 14"" Posters",false,,Nick Tropeano RC,,1000 sets will be produced
+base,32,Base,false,,Carlos Quentin
+base,32,Oversized,false,499,Carlos Quentin,,1000 sets will be produced
+base,32,"10"" X 14"" Posters",false,,Carlos Quentin,,1000 sets will be produced
+base,33,Base,false,,Oakland Athletics TC
+base,33,Oversized,false,499,Oakland Athletics TC,,1000 sets will be produced
+base,33,"10"" X 14"" Posters",false,,Oakland Athletics TC,,1000 sets will be produced
+base,34,Base,false,,Charlie Blackmon
+base,34,Oversized,false,499,Charlie Blackmon,,1000 sets will be produced
+base,34,"10"" X 14"" Posters",false,,Charlie Blackmon,,1000 sets will be produced
+base,35,Base,false,,Brandon Moss
+base,35,Oversized,false,499,Brandon Moss,,1000 sets will be produced
+base,35,"10"" X 14"" Posters",false,,Brandon Moss,,1000 sets will be produced
+base,36,Base,false,,Julio Teheran
+base,36,Oversized,false,499,Julio Teheran,,1000 sets will be produced
+base,36,"10"" X 14"" Posters",false,,Julio Teheran,,1000 sets will be produced
+base,37,Base,false,,Arismendy Alcantara FS
+base,37,Oversized,false,499,Arismendy Alcantara FS,,1000 sets will be produced
+base,37,"10"" X 14"" Posters",false,,Arismendy Alcantara FS,,1000 sets will be produced
+base,38,Base,false,,Jordan Zimmermann
+base,38,Oversized,false,499,Jordan Zimmermann,,1000 sets will be produced
+base,38,"10"" X 14"" Posters",false,,Jordan Zimmermann,,1000 sets will be produced
+base,39,Base,false,,Salvador Perez
+base,39,Oversized,false,499,Salvador Perez,,1000 sets will be produced
+base,39,"10"" X 14"" Posters",false,,Salvador Perez,,1000 sets will be produced
+base,40,Base,false,,Joakim Soria
+base,40,Oversized,false,499,Joakim Soria,,1000 sets will be produced
+base,40,"10"" X 14"" Posters",false,,Joakim Soria,,1000 sets will be produced
+base,41,Base,false,,Chris Colabello
+base,41,Oversized,false,499,Chris Colabello,,1000 sets will be produced
+base,41,"10"" X 14"" Posters",false,,Chris Colabello,,1000 sets will be produced
+base,42,Base,false,,Todd Frazier
+base,42,Oversized,false,499,Todd Frazier,,1000 sets will be produced
+base,42,"10"" X 14"" Posters",false,,Todd Frazier,,1000 sets will be produced
+base,43,Base,false,,Starlin Castro
+base,43,Oversized,false,499,Starlin Castro,,1000 sets will be produced
+base,43,"10"" X 14"" Posters",false,,Starlin Castro,,1000 sets will be produced
+base,44,Base,false,,Gio Gonzalez
+base,44,Oversized,false,499,Gio Gonzalez,,1000 sets will be produced
+base,44,"10"" X 14"" Posters",false,,Gio Gonzalez,,1000 sets will be produced
+base,45,Base,false,,Carlos Beltran
+base,45,Oversized,false,499,Carlos Beltran,,1000 sets will be produced
+base,45,"10"" X 14"" Posters",false,,Carlos Beltran,,1000 sets will be produced
+base,46,Base,false,,Wilson Ramos
+base,46,Oversized,false,499,Wilson Ramos,,1000 sets will be produced
+base,46,"10"" X 14"" Posters",false,,Wilson Ramos,,1000 sets will be produced
+base,47,Base,false,,Anthony Rizzo
+base,47,Oversized,false,499,Anthony Rizzo,,1000 sets will be produced
+base,47,"10"" X 14"" Posters",false,,Anthony Rizzo,,1000 sets will be produced
+base,48,Base,false,,John Axford
+base,48,Oversized,false,499,John Axford,,1000 sets will be produced
+base,48,"10"" X 14"" Posters",false,,John Axford,,1000 sets will be produced
+base,49,Base,false,,Dominic Leone
+base,49,Oversized,false,499,Dominic Leone,,1000 sets will be produced
+base,49,"10"" X 14"" Posters",false,,Dominic Leone,,1000 sets will be produced
+base,50,Base,false,,Yu Darvish
+base,50,Oversized,false,499,Yu Darvish,,1000 sets will be produced
+base,50,"10"" X 14"" Posters",false,,Yu Darvish,,1000 sets will be produced
+base,51,Base,false,,Ryan Howard
+base,51,Oversized,false,499,Ryan Howard,,1000 sets will be produced
+base,51,"10"" X 14"" Posters",false,,Ryan Howard,,1000 sets will be produced
+base,52,Base,false,,Fernando Rodney
+base,52,Oversized,false,499,Fernando Rodney,,1000 sets will be produced
+base,52,"10"" X 14"" Posters",false,,Fernando Rodney,,1000 sets will be produced
+base,53,Base,false,,Nathan Eovaldi
+base,53,Oversized,false,499,Nathan Eovaldi,,1000 sets will be produced
+base,53,"10"" X 14"" Posters",false,,Nathan Eovaldi,,1000 sets will be produced
+base,54,Base,false,,Joe Nathan
+base,54,Oversized,false,499,Joe Nathan,,1000 sets will be produced
+base,54,"10"" X 14"" Posters",false,,Joe Nathan,,1000 sets will be produced
+base,55,Base,false,,Trevor May RC
+base,55,Oversized,false,499,Trevor May RC,,1000 sets will be produced
+base,55,"10"" X 14"" Posters",false,,Trevor May RC,,1000 sets will be produced
+base,56,Base,false,,Matt Garza
+base,56,Oversized,false,499,Matt Garza,,1000 sets will be produced
+base,56,"10"" X 14"" Posters",false,,Matt Garza,,1000 sets will be produced
+base,57,Base,false,,Lyle Overbay
+base,57,Oversized,false,499,Lyle Overbay,,1000 sets will be produced
+base,57,"10"" X 14"" Posters",false,,Lyle Overbay,,1000 sets will be produced
+base,58,Base,false,,Evan Gattis FS
+base,58,Oversized,false,499,Evan Gattis FS,,1000 sets will be produced
+base,58,"10"" X 14"" Posters",false,,Evan Gattis FS,,1000 sets will be produced
+base,59,Base,false,,Jake Odorizzi
+base,59,Oversized,false,499,Jake Odorizzi,,1000 sets will be produced
+base,59,"10"" X 14"" Posters",false,,Jake Odorizzi,,1000 sets will be produced
+base,60,Base,false,,Michael Wacha
+base,60,Oversized,false,499,Michael Wacha,,1000 sets will be produced
+base,60,"10"" X 14"" Posters",false,,Michael Wacha,,1000 sets will be produced
+base,61,Base,false,,Johnny Cueto / Clayton Kershaw / Adam Wainwright LL
+base,61,Oversized,false,499,Johnny Cueto / Clayton Kershaw / Adam Wainwright LL,,1000 sets will be produced
+base,61,"10"" X 14"" Posters",false,,Johnny Cueto / Clayton Kershaw / Adam Wainwright LL,,1000 sets will be produced
+base,62,Base,false,,Nolan Arenado
+base,62,Oversized,false,499,Nolan Arenado,,1000 sets will be produced
+base,62,"10"" X 14"" Posters",false,,Nolan Arenado,,1000 sets will be produced
+base,63,Base,false,,Chris Owings FS
+base,63,Oversized,false,499,Chris Owings FS,,1000 sets will be produced
+base,63,"10"" X 14"" Posters",false,,Chris Owings FS,,1000 sets will be produced
+base,64,Base,false,,Atlanta Braves TC
+base,64,Oversized,false,499,Atlanta Braves TC,,1000 sets will be produced
+base,64,"10"" X 14"" Posters",false,,Atlanta Braves TC,,1000 sets will be produced
+base,65,Base,false,,Alexei Ramirez
+base,65,Oversized,false,499,Alexei Ramirez,,1000 sets will be produced
+base,65,"10"" X 14"" Posters",false,,Alexei Ramirez,,1000 sets will be produced
+base,66,Base,false,,Vance Worley
+base,66,Oversized,false,499,Vance Worley,,1000 sets will be produced
+base,66,"10"" X 14"" Posters",false,,Vance Worley,,1000 sets will be produced
+base,67,Base,false,,Hunter Pence
+base,67,Oversized,false,499,Hunter Pence,,1000 sets will be produced
+base,67,"10"" X 14"" Posters",false,,Hunter Pence,,1000 sets will be produced
+base,68,Base,false,,Lonnie Chisenhall
+base,68,Oversized,false,499,Lonnie Chisenhall,,1000 sets will be produced
+base,68,"10"" X 14"" Posters",false,,Lonnie Chisenhall,,1000 sets will be produced
+base,69,Base,false,,Justin Upton
+base,69,Oversized,false,499,Justin Upton,,1000 sets will be produced
+base,69,"10"" X 14"" Posters",false,,Justin Upton,,1000 sets will be produced
+base,70,Base,false,,Charlie Furbush
+base,70,Oversized,false,499,Charlie Furbush,,1000 sets will be produced
+base,70,"10"" X 14"" Posters",false,,Charlie Furbush,,1000 sets will be produced
+base,71,Base,false,,Adrian Beltre HL
+base,71,Oversized,false,499,Adrian Beltre HL,,1000 sets will be produced
+base,71,"10"" X 14"" Posters",false,,Adrian Beltre HL,,1000 sets will be produced
+base,72,Base,false,,Jordan Lyles
+base,72,Oversized,false,499,Jordan Lyles,,1000 sets will be produced
+base,72,"10"" X 14"" Posters",false,,Jordan Lyles,,1000 sets will be produced
+base,73,Base,false,,Freddie Freeman
+base,73,Oversized,false,499,Freddie Freeman,,1000 sets will be produced
+base,73,"10"" X 14"" Posters",false,,Freddie Freeman,,1000 sets will be produced
+base,74,Base,false,,Tyler Skaggs
+base,74,Oversized,false,499,Tyler Skaggs,,1000 sets will be produced
+base,74,"10"" X 14"" Posters",false,,Tyler Skaggs,,1000 sets will be produced
+base,75,Base,false,,Dustin Pedroia
+base,75,Oversized,false,499,Dustin Pedroia,,1000 sets will be produced
+base,75,"10"" X 14"" Posters",false,,Dustin Pedroia,,1000 sets will be produced
+base,76,Base,false,,Ian Kennedy
+base,76,Oversized,false,499,Ian Kennedy,,1000 sets will be produced
+base,76,"10"" X 14"" Posters",false,,Ian Kennedy,,1000 sets will be produced
+base,77,Base,false,,Edwin Escobar RC
+base,77,Oversized,false,499,Edwin Escobar RC,,1000 sets will be produced
+base,77,"10"" X 14"" Posters",false,,Edwin Escobar RC,,1000 sets will be produced
+base,78,Base,false,,Yordano Ventura
+base,78,Oversized,false,499,Yordano Ventura,,1000 sets will be produced
+base,78,"10"" X 14"" Posters",false,,Yordano Ventura,,1000 sets will be produced
+base,79,Base,false,,Starling Marte
+base,79,Oversized,false,499,Starling Marte,,1000 sets will be produced
+base,79,"10"" X 14"" Posters",false,,Starling Marte,,1000 sets will be produced
+base,80,Base,false,,Adam Wainwright
+base,80,Oversized,false,499,Adam Wainwright,,1000 sets will be produced
+base,80,"10"" X 14"" Posters",false,,Adam Wainwright,,1000 sets will be produced
+base,81,Base,false,,Chris Young
+base,81,Oversized,false,499,Chris Young,,1000 sets will be produced
+base,81,"10"" X 14"" Posters",false,,Chris Young,,1000 sets will be produced
+base,82,Base,false,,Nick Tepesch
+base,82,Oversized,false,499,Nick Tepesch,,1000 sets will be produced
+base,82,"10"" X 14"" Posters",false,,Nick Tepesch,,1000 sets will be produced
+base,83,Base,false,,David Wright
+base,83,Oversized,false,499,David Wright,,1000 sets will be produced
+base,83,"10"" X 14"" Posters",false,,David Wright,,1000 sets will be produced
+base,84,Base,false,,Jonathan Schoop
+base,84,Oversized,false,499,Jonathan Schoop,,1000 sets will be produced
+base,84,"10"" X 14"" Posters",false,,Jonathan Schoop,,1000 sets will be produced
+base,85,Base,false,,Adam Wainwright / Johnny Cueto / Clayton Kershaw LL
+base,85,Oversized,false,499,Adam Wainwright / Johnny Cueto / Clayton Kershaw LL,,1000 sets will be produced
+base,85,"10"" X 14"" Posters",false,,Adam Wainwright / Johnny Cueto / Clayton Kershaw LL,,1000 sets will be produced
+base,86,Base,false,,Tim Hudson
+base,86,Oversized,false,499,Tim Hudson,,1000 sets will be produced
+base,86,"10"" X 14"" Posters",false,,Tim Hudson,,1000 sets will be produced
+base,87,Base,false,,Eric Sogard
+base,87,Oversized,false,499,Eric Sogard,,1000 sets will be produced
+base,87,"10"" X 14"" Posters",false,,Eric Sogard,,1000 sets will be produced
+base,88,Base,false,,Madison Bumgarner WS
+base,88,Oversized,false,499,Madison Bumgarner WS,,1000 sets will be produced
+base,88,"10"" X 14"" Posters",false,,Madison Bumgarner WS,,1000 sets will be produced
+base,89,Base,false,,Michael Choice UER: Born in Fort Worth
+base,89,Oversized,false,499,Michael Choice UER: Born in Fort Worth,,1000 sets will be produced
+base,89,"10"" X 14"" Posters",false,,Michael Choice UER: Born in Fort Worth,,1000 sets will be produced
+base,90,Base,false,,Marcus Stroman FS
+base,90,Oversized,false,499,Marcus Stroman FS,,1000 sets will be produced
+base,90,"10"" X 14"" Posters",false,,Marcus Stroman FS,,1000 sets will be produced
+base,91,Base,false,,Corey Dickerson
+base,91,Oversized,false,499,Corey Dickerson,,1000 sets will be produced
+base,91,"10"" X 14"" Posters",false,,Corey Dickerson,,1000 sets will be produced
+base,92,Base,false,,Ian Kinsler
+base,92,Oversized,false,499,Ian Kinsler,,1000 sets will be produced
+base,92,"10"" X 14"" Posters",false,,Ian Kinsler,,1000 sets will be produced
+base,93,Base,false,,Andre Ethier
+base,93,Oversized,false,499,Andre Ethier,,1000 sets will be produced
+base,93,"10"" X 14"" Posters",false,,Andre Ethier,,1000 sets will be produced
+base,94,Base,false,,Tommy Kahnle
+base,94,Oversized,false,499,Tommy Kahnle,,1000 sets will be produced
+base,94,"10"" X 14"" Posters",false,,Tommy Kahnle,,1000 sets will be produced
+base,95,Base,false,,Junior Lake
+base,95,Oversized,false,499,Junior Lake,,1000 sets will be produced
+base,95,"10"" X 14"" Posters",false,,Junior Lake,,1000 sets will be produced
+base,96,Base,false,,Sergio Santos
+base,96,Oversized,false,499,Sergio Santos,,1000 sets will be produced
+base,96,"10"" X 14"" Posters",false,,Sergio Santos,,1000 sets will be produced
+base,97,Base,false,,Dalton Pompey RC
+base,97,Oversized,false,499,Dalton Pompey RC,,1000 sets will be produced
+base,97,"10"" X 14"" Posters",false,,Dalton Pompey RC,,1000 sets will be produced
+base,98,Base,false,,Mike Trout / Nelson Cruz / Miguel Cabrera LL
+base,98,Oversized,false,499,Mike Trout / Nelson Cruz / Miguel Cabrera LL,,1000 sets will be produced
+base,98,"10"" X 14"" Posters",false,,Mike Trout / Nelson Cruz / Miguel Cabrera LL,,1000 sets will be produced
+base,99,Base,false,,Yonder Alonso
+base,99,Oversized,false,499,Yonder Alonso,,1000 sets will be produced
+base,99,"10"" X 14"" Posters",false,,Yonder Alonso,,1000 sets will be produced
+base,100,Base,false,,Clayton Kershaw
+base,100,Oversized,false,499,Clayton Kershaw,,1000 sets will be produced
+base,100,"10"" X 14"" Posters",false,,Clayton Kershaw,,1000 sets will be produced
+base,101,Base,false,,Scooter Gennett
+base,101,Oversized,false,499,Scooter Gennett,,1000 sets will be produced
+base,101,"10"" X 14"" Posters",false,,Scooter Gennett,,1000 sets will be produced
+base,102,Base,false,,Gordon Beckham
+base,102,Oversized,false,499,Gordon Beckham,,1000 sets will be produced
+base,102,"10"" X 14"" Posters",false,,Gordon Beckham,,1000 sets will be produced
+base,103,Base,false,,Guilder Rodriguez RC ERR: Bio and Stats are for Ken Giles
+base,103,Oversized,false,499,Guilder Rodriguez RC ERR: Bio and Stats are for Ken Giles,,1000 sets will be produced
+base,103,"10"" X 14"" Posters",false,,Guilder Rodriguez RC ERR: Bio and Stats are for Ken Giles,,1000 sets will be produced
+base,104,Base,false,,Bud Norris
+base,104,Oversized,false,499,Bud Norris,,1000 sets will be produced
+base,104,"10"" X 14"" Posters",false,,Bud Norris,,1000 sets will be produced
+base,105,Base,false,,Jeff Baker
+base,105,Oversized,false,499,Jeff Baker,,1000 sets will be produced
+base,105,"10"" X 14"" Posters",false,,Jeff Baker,,1000 sets will be produced
+base,106,Base,false,,Pedro Alvarez
+base,106,Oversized,false,499,Pedro Alvarez,,1000 sets will be produced
+base,106,"10"" X 14"" Posters",false,,Pedro Alvarez,,1000 sets will be produced
+base,107,Base,false,,James Loney
+base,107,Oversized,false,499,James Loney,,1000 sets will be produced
+base,107,"10"" X 14"" Posters",false,,James Loney,,1000 sets will be produced
+base,108,Base,false,,Jorge Soler RC
+base,108,Oversized,false,499,Jorge Soler RC,,1000 sets will be produced
+base,108,"10"" X 14"" Posters",false,,Jorge Soler RC,,1000 sets will be produced
+base,109,Base,false,,Doug Fister
+base,109,Oversized,false,499,Doug Fister,,1000 sets will be produced
+base,109,"10"" X 14"" Posters",false,,Doug Fister,,1000 sets will be produced
+base,110,Base,false,,Tony Sipp
+base,110,Oversized,false,499,Tony Sipp,,1000 sets will be produced
+base,110,"10"" X 14"" Posters",false,,Tony Sipp,,1000 sets will be produced
+base,111,Base,false,,Trevor Bauer
+base,111,Oversized,false,499,Trevor Bauer,,1000 sets will be produced
+base,111,"10"" X 14"" Posters",false,,Trevor Bauer,,1000 sets will be produced
+base,112,Base,false,,Daniel Nava
+base,112,Oversized,false,499,Daniel Nava,,1000 sets will be produced
+base,112,"10"" X 14"" Posters",false,,Daniel Nava,,1000 sets will be produced
+base,113,Base,false,,Jason Castro
+base,113,Oversized,false,499,Jason Castro,,1000 sets will be produced
+base,113,"10"" X 14"" Posters",false,,Jason Castro,,1000 sets will be produced
+base,114,Base,false,,Mike Zunino
+base,114,Oversized,false,499,Mike Zunino,,1000 sets will be produced
+base,114,"10"" X 14"" Posters",false,,Mike Zunino,,1000 sets will be produced
+base,115,Base,false,,Khris Davis
+base,115,Oversized,false,499,Khris Davis,,1000 sets will be produced
+base,115,"10"" X 14"" Posters",false,,Khris Davis,,1000 sets will be produced
+base,116,Base,false,,Vidal Nuno
+base,116,Oversized,false,499,Vidal Nuno,,1000 sets will be produced
+base,116,"10"" X 14"" Posters",false,,Vidal Nuno,,1000 sets will be produced
+base,117,Base,false,,Sean Doolittle
+base,117,Oversized,false,499,Sean Doolittle,,1000 sets will be produced
+base,117,"10"" X 14"" Posters",false,,Sean Doolittle,,1000 sets will be produced
+base,118,Base,false,,Domonic Brown
+base,118,Oversized,false,499,Domonic Brown,,1000 sets will be produced
+base,118,"10"" X 14"" Posters",false,,Domonic Brown,,1000 sets will be produced
+base,119,Base,false,,Anibal Sanchez
+base,119,Oversized,false,499,Anibal Sanchez,,1000 sets will be produced
+base,119,"10"" X 14"" Posters",false,,Anibal Sanchez,,1000 sets will be produced
+base,120,Base,false,,Yoenis Cespedes
+base,120,Oversized,false,499,Yoenis Cespedes,,1000 sets will be produced
+base,120,"10"" X 14"" Posters",false,,Yoenis Cespedes,,1000 sets will be produced
+base,121,Base,false,,Garrett Jones
+base,121,Oversized,false,499,Garrett Jones,,1000 sets will be produced
+base,121,"10"" X 14"" Posters",false,,Garrett Jones,,1000 sets will be produced
+base,122,Base,false,,Corey Kluber
+base,122,Oversized,false,499,Corey Kluber,,1000 sets will be produced
+base,122,"10"" X 14"" Posters",false,,Corey Kluber,,1000 sets will be produced
+base,123,Base,false,,Ben Revere
+base,123,Oversized,false,499,Ben Revere,,1000 sets will be produced
+base,123,"10"" X 14"" Posters",false,,Ben Revere,,1000 sets will be produced
+base,124,Base,false,,Mark Melancon
+base,124,Oversized,false,499,Mark Melancon,,1000 sets will be produced
+base,124,"10"" X 14"" Posters",false,,Mark Melancon,,1000 sets will be produced
+base,125,Base,false,,Troy Tulowitzki
+base,125,Oversized,false,499,Troy Tulowitzki,,1000 sets will be produced
+base,125,"10"" X 14"" Posters",false,,Troy Tulowitzki,,1000 sets will be produced
+base,126,Base,false,,Detroit Tigers TC
+base,126,Oversized,false,499,Detroit Tigers TC,,1000 sets will be produced
+base,126,"10"" X 14"" Posters",false,,Detroit Tigers TC,,1000 sets will be produced
+base,127,Base,false,,Andrew McCutchen / Justin Morneau / Josh Harrison LL
+base,127,Oversized,false,499,Andrew McCutchen / Justin Morneau / Josh Harrison LL,,1000 sets will be produced
+base,127,"10"" X 14"" Posters",false,,Andrew McCutchen / Justin Morneau / Josh Harrison LL,,1000 sets will be produced
+base,128,Base,false,,Anthony Swarzak
+base,128,Oversized,false,499,Anthony Swarzak,,1000 sets will be produced
+base,128,"10"" X 14"" Posters",false,,Anthony Swarzak,,1000 sets will be produced
+base,129,Base,false,,Jacob deGrom FS
+base,129,Oversized,false,499,Jacob deGrom FS,,1000 sets will be produced
+base,129,"10"" X 14"" Posters",false,,Jacob deGrom FS,,1000 sets will be produced
+base,130,Base,false,,Mike Napoli
+base,130,Oversized,false,499,Mike Napoli,,1000 sets will be produced
+base,130,"10"" X 14"" Posters",false,,Mike Napoli,,1000 sets will be produced
+base,131,Base,false,,Edward Mujica
+base,131,Oversized,false,499,Edward Mujica,,1000 sets will be produced
+base,131,"10"" X 14"" Posters",false,,Edward Mujica,,1000 sets will be produced
+base,132,Base,false,,Michael Taylor RC
+base,132,Oversized,false,499,Michael Taylor RC,,1000 sets will be produced
+base,132,"10"" X 14"" Posters",false,,Michael Taylor RC,,1000 sets will be produced
+base,133,Base,false,,Daisuke Matsuzaka
+base,133,Oversized,false,499,Daisuke Matsuzaka,,1000 sets will be produced
+base,133,"10"" X 14"" Posters",false,,Daisuke Matsuzaka,,1000 sets will be produced
+base,134,Base,false,,Brett Lawrie
+base,134,Oversized,false,499,Brett Lawrie,,1000 sets will be produced
+base,134,"10"" X 14"" Posters",false,,Brett Lawrie,,1000 sets will be produced
+base,135,Base,false,,Matt Dominguez
+base,135,Oversized,false,499,Matt Dominguez,,1000 sets will be produced
+base,135,"10"" X 14"" Posters",false,,Matt Dominguez,,1000 sets will be produced
+base,136,Base,false,,Manny Machado
+base,136,Oversized,false,499,Manny Machado,,1000 sets will be produced
+base,136,"10"" X 14"" Posters",false,,Manny Machado,,1000 sets will be produced
+base,137,Base,false,,Alcides Escobar
+base,137,Oversized,false,499,Alcides Escobar,,1000 sets will be produced
+base,137,"10"" X 14"" Posters",false,,Alcides Escobar,,1000 sets will be produced
+base,138,Base,false,,Tim Lincecum
+base,138,Oversized,false,499,Tim Lincecum,,1000 sets will be produced
+base,138,"10"" X 14"" Posters",false,,Tim Lincecum,,1000 sets will be produced
+base,139,Base,false,,Gary Brown RC
+base,139,Oversized,false,499,Gary Brown RC,,1000 sets will be produced
+base,139,"10"" X 14"" Posters",false,,Gary Brown RC,,1000 sets will be produced
+base,140,Base,false,,Alex Avila
+base,140,Oversized,false,499,Alex Avila,,1000 sets will be produced
+base,140,"10"" X 14"" Posters",false,,Alex Avila,,1000 sets will be produced
+base,141,Base,false,,Cory Spangenberg RC
+base,141,Oversized,false,499,Cory Spangenberg RC,,1000 sets will be produced
+base,141,"10"" X 14"" Posters",false,,Cory Spangenberg RC,,1000 sets will be produced
+base,142,Base,false,,Masahiro Tanaka FS
+base,142,Oversized,false,499,Masahiro Tanaka FS,,1000 sets will be produced
+base,142,"10"" X 14"" Posters",false,,Masahiro Tanaka FS,,1000 sets will be produced
+base,143,Base,false,,Jonathan Papelbon
+base,143,Oversized,false,499,Jonathan Papelbon,,1000 sets will be produced
+base,143,"10"" X 14"" Posters",false,,Jonathan Papelbon,,1000 sets will be produced
+base,144,Base,false,,Rusney Castillo RC
+base,144,Oversized,false,499,Rusney Castillo RC,,1000 sets will be produced
+base,144,"10"" X 14"" Posters",false,,Rusney Castillo RC,,1000 sets will be produced
+base,145,Base,false,,Jesse Hahn
+base,145,Oversized,false,499,Jesse Hahn,,1000 sets will be produced
+base,145,"10"" X 14"" Posters",false,,Jesse Hahn,,1000 sets will be produced
+base,146,Base,false,,Tony Watson
+base,146,Oversized,false,499,Tony Watson,,1000 sets will be produced
+base,146,"10"" X 14"" Posters",false,,Tony Watson,,1000 sets will be produced
+base,147,Base,false,,Andrew Heaney FS
+base,147,Oversized,false,499,Andrew Heaney FS,,1000 sets will be produced
+base,147,"10"" X 14"" Posters",false,,Andrew Heaney FS,,1000 sets will be produced
+base,148,Base,false,,J.D. Martinez
+base,148,Oversized,false,499,J.D. Martinez,,1000 sets will be produced
+base,148,"10"" X 14"" Posters",false,,J.D. Martinez,,1000 sets will be produced
+base,149,Base,false,,Daniel Murphy
+base,149,Oversized,false,499,Daniel Murphy,,1000 sets will be produced
+base,149,"10"" X 14"" Posters",false,,Daniel Murphy,,1000 sets will be produced
+base,150,Base,false,,Giancarlo Stanton
+base,150,Oversized,false,499,Giancarlo Stanton,,1000 sets will be produced
+base,150,"10"" X 14"" Posters",false,,Giancarlo Stanton,,1000 sets will be produced
+base,151,Base,false,,C.J. Cron FS
+base,151,Oversized,false,499,C.J. Cron FS,,1000 sets will be produced
+base,151,"10"" X 14"" Posters",false,,C.J. Cron FS,,1000 sets will be produced
+base,152,Base,false,,Michael Pineda
+base,152,Oversized,false,499,Michael Pineda,,1000 sets will be produced
+base,152,"10"" X 14"" Posters",false,,Michael Pineda,,1000 sets will be produced
+base,153,Base,false,,Josh Reddick
+base,153,Oversized,false,499,Josh Reddick,,1000 sets will be produced
+base,153,"10"" X 14"" Posters",false,,Josh Reddick,,1000 sets will be produced
+base,154,Base,false,,Brandon Finnegan RC
+base,154,Oversized,false,499,Brandon Finnegan RC,,1000 sets will be produced
+base,154,"10"" X 14"" Posters",false,,Brandon Finnegan RC,,1000 sets will be produced
+base,155,Base,false,,Jesse Chavez
+base,155,Oversized,false,499,Jesse Chavez,,1000 sets will be produced
+base,155,"10"" X 14"" Posters",false,,Jesse Chavez,,1000 sets will be produced
+base,156,Base,false,,Santiago Casilla
+base,156,Oversized,false,499,Santiago Casilla,,1000 sets will be produced
+base,156,"10"" X 14"" Posters",false,,Santiago Casilla,,1000 sets will be produced
+base,157,Base,false,,Ubaldo Jimenez
+base,157,Oversized,false,499,Ubaldo Jimenez,,1000 sets will be produced
+base,157,"10"" X 14"" Posters",false,,Ubaldo Jimenez,,1000 sets will be produced
+base,158,Base,false,,Kevin Kiermaier FS UER: Missing WAR stats
+base,158,Oversized,false,499,Kevin Kiermaier FS UER: Missing WAR stats,,1000 sets will be produced
+base,158,"10"" X 14"" Posters",false,,Kevin Kiermaier FS UER: Missing WAR stats,,1000 sets will be produced
+base,159,Base,false,,Brandon Crawford
+base,159,Oversized,false,499,Brandon Crawford,,1000 sets will be produced
+base,159,"10"" X 14"" Posters",false,,Brandon Crawford,,1000 sets will be produced
+base,160,Base,false,,Washington Nationals TC
+base,160,Oversized,false,499,Washington Nationals TC,,1000 sets will be produced
+base,160,"10"" X 14"" Posters",false,,Washington Nationals TC,,1000 sets will be produced
+base,161,Base,false,,Howie Kendrick
+base,161,Oversized,false,499,Howie Kendrick,,1000 sets will be produced
+base,161,"10"" X 14"" Posters",false,,Howie Kendrick,,1000 sets will be produced
+base,162,Base,false,,Drew Pomeranz
+base,162,Oversized,false,499,Drew Pomeranz,,1000 sets will be produced
+base,162,"10"" X 14"" Posters",false,,Drew Pomeranz,,1000 sets will be produced
+base,163,Base,false,,Chase Utley
+base,163,Oversized,false,499,Chase Utley,,1000 sets will be produced
+base,163,"10"" X 14"" Posters",false,,Chase Utley,,1000 sets will be produced
+base,164,Base,false,,Brian Schlitter
+base,164,Oversized,false,499,Brian Schlitter,,1000 sets will be produced
+base,164,"10"" X 14"" Posters",false,,Brian Schlitter,,1000 sets will be produced
+base,165,Base,false,,John Jaso
+base,165,Oversized,false,499,John Jaso,,1000 sets will be produced
+base,165,"10"" X 14"" Posters",false,,John Jaso,,1000 sets will be produced
+base,166,Base,false,,Jenrry Mejia
+base,166,Oversized,false,499,Jenrry Mejia,,1000 sets will be produced
+base,166,"10"" X 14"" Posters",false,,Jenrry Mejia,,1000 sets will be produced
+base,167,Base,false,,Matt Cain
+base,167,Oversized,false,499,Matt Cain,,1000 sets will be produced
+base,167,"10"" X 14"" Posters",false,,Matt Cain,,1000 sets will be produced
+base,168,Base,false,,Colorado Rockies TC
+base,168,Oversized,false,499,Colorado Rockies TC,,1000 sets will be produced
+base,168,"10"" X 14"" Posters",false,,Colorado Rockies TC,,1000 sets will be produced
+base,169,Base,false,,Adam Jones
+base,169,Oversized,false,499,Adam Jones,,1000 sets will be produced
+base,169,"10"" X 14"" Posters",false,,Adam Jones,,1000 sets will be produced
+base,170,Base,false,,Tommy Medica
+base,170,Oversized,false,499,Tommy Medica,,1000 sets will be produced
+base,170,"10"" X 14"" Posters",false,,Tommy Medica,,1000 sets will be produced
+base,171,Base,false,,Mike Foltynewicz RC
+base,171,Oversized,false,499,Mike Foltynewicz RC,,1000 sets will be produced
+base,171,"10"" X 14"" Posters",false,,Mike Foltynewicz RC,,1000 sets will be produced
+base,172,Base,false,,Didi Gregorius
+base,172,Oversized,false,499,Didi Gregorius,,1000 sets will be produced
+base,172,"10"" X 14"" Posters",false,,Didi Gregorius,,1000 sets will be produced
+base,173,Base,false,,Carlos Torres
+base,173,Oversized,false,499,Carlos Torres,,1000 sets will be produced
+base,173,"10"" X 14"" Posters",false,,Carlos Torres,,1000 sets will be produced
+base,174,Base,false,,Jesus Guzman
+base,174,Oversized,false,499,Jesus Guzman,,1000 sets will be produced
+base,174,"10"" X 14"" Posters",false,,Jesus Guzman,,1000 sets will be produced
+base,175,Base,false,,Adrian Beltre
+base,175,Oversized,false,499,Adrian Beltre,,1000 sets will be produced
+base,175,"10"" X 14"" Posters",false,,Adrian Beltre,,1000 sets will be produced
+base,176,Base,false,,Jose Abreu FS ERR: Incorrect Cuban stats
+base,176,Oversized,false,499,Jose Abreu FS ERR: Incorrect Cuban stats,,1000 sets will be produced
+base,176,"10"" X 14"" Posters",false,,Jose Abreu FS ERR: Incorrect Cuban stats,,1000 sets will be produced
+base,177,Base,false,,Paul Konerko
+base,177,Oversized,false,499,Paul Konerko,,1000 sets will be produced
+base,177,"10"" X 14"" Posters",false,,Paul Konerko,,1000 sets will be produced
+base,178,Base,false,,Christian Yelich
+base,178,Oversized,false,499,Christian Yelich,,1000 sets will be produced
+base,178,"10"" X 14"" Posters",false,,Christian Yelich,,1000 sets will be produced
+base,179,Base,false,,Jason Vargas
+base,179,Oversized,false,499,Jason Vargas,,1000 sets will be produced
+base,179,"10"" X 14"" Posters",false,,Jason Vargas,,1000 sets will be produced
+base,180,Base,false,,Steve Pearce
+base,180,Oversized,false,499,Steve Pearce,,1000 sets will be produced
+base,180,"10"" X 14"" Posters",false,,Steve Pearce,,1000 sets will be produced
+base,181,Base,false,,Jason Heyward
+base,181,Oversized,false,499,Jason Heyward,,1000 sets will be produced
+base,181,"10"" X 14"" Posters",false,,Jason Heyward,,1000 sets will be produced
+base,182,Base,false,,Devin Mesoraco
+base,182,Oversized,false,499,Devin Mesoraco,,1000 sets will be produced
+base,182,"10"" X 14"" Posters",false,,Devin Mesoraco,,1000 sets will be produced
+base,183,Base,false,,Craig Gentry
+base,183,Oversized,false,499,Craig Gentry,,1000 sets will be produced
+base,183,"10"" X 14"" Posters",false,,Craig Gentry,,1000 sets will be produced
+base,184,Base,false,,B.J. Upton
+base,184,Oversized,false,499,B.J. Upton,,1000 sets will be produced
+base,184,"10"" X 14"" Posters",false,,B.J. Upton,,1000 sets will be produced
+base,185,Base,false,,Ricky Nolasco
+base,185,Oversized,false,499,Ricky Nolasco,,1000 sets will be produced
+base,185,"10"" X 14"" Posters",false,,Ricky Nolasco,,1000 sets will be produced
+base,186,Base,false,,Rex Brothers
+base,186,Oversized,false,499,Rex Brothers,,1000 sets will be produced
+base,186,"10"" X 14"" Posters",false,,Rex Brothers,,1000 sets will be produced
+base,187,Base,false,,Marlon Byrd
+base,187,Oversized,false,499,Marlon Byrd,,1000 sets will be produced
+base,187,"10"" X 14"" Posters",false,,Marlon Byrd,,1000 sets will be produced
+base,188,Base,false,,Madison Bumgarner WS
+base,188,Oversized,false,499,Madison Bumgarner WS,,1000 sets will be produced
+base,188,"10"" X 14"" Posters",false,,Madison Bumgarner WS,,1000 sets will be produced
+base,189,Base,false,,Dustin Ackley
+base,189,Oversized,false,499,Dustin Ackley,,1000 sets will be produced
+base,189,"10"" X 14"" Posters",false,,Dustin Ackley,,1000 sets will be produced
+base,190,Base,false,,Zach Britton
+base,190,Oversized,false,499,Zach Britton,,1000 sets will be produced
+base,190,"10"" X 14"" Posters",false,,Zach Britton,,1000 sets will be produced
+base,191,Base,false,,Yimi Garcia RC
+base,191,Oversized,false,499,Yimi Garcia RC,,1000 sets will be produced
+base,191,"10"" X 14"" Posters",false,,Yimi Garcia RC,,1000 sets will be produced
+base,192,Base,false,,Joc Pederson RC
+base,192,Oversized,false,499,Joc Pederson RC,,1000 sets will be produced
+base,192,"10"" X 14"" Posters",false,,Joc Pederson RC,,1000 sets will be produced
+base,193,Base,false,,Buck Farmer RC
+base,193,Oversized,false,499,Buck Farmer RC,,1000 sets will be produced
+base,193,"10"" X 14"" Posters",false,,Buck Farmer RC,,1000 sets will be produced
+base,194,Base,false,,David Murphy
+base,194,Oversized,false,499,David Murphy,,1000 sets will be produced
+base,194,"10"" X 14"" Posters",false,,David Murphy,,1000 sets will be produced
+base,195,Base,false,,Garrett Richards
+base,195,Oversized,false,499,Garrett Richards,,1000 sets will be produced
+base,195,"10"" X 14"" Posters",false,,Garrett Richards,,1000 sets will be produced
+base,196,Base,false,,Chicago Cubs TC
+base,196,Oversized,false,499,Chicago Cubs TC,,1000 sets will be produced
+base,196,"10"" X 14"" Posters",false,,Chicago Cubs TC,,1000 sets will be produced
+base,197,Base,false,,Glen Perkins
+base,197,Oversized,false,499,Glen Perkins,,1000 sets will be produced
+base,197,"10"" X 14"" Posters",false,,Glen Perkins,,1000 sets will be produced
+base,198,Base,false,,Alexi Ogando
+base,198,Oversized,false,499,Alexi Ogando,,1000 sets will be produced
+base,198,"10"" X 14"" Posters",false,,Alexi Ogando,,1000 sets will be produced
+base,199,Base,false,,Eric Young Jr.
+base,199,Oversized,false,499,Eric Young Jr.,,1000 sets will be produced
+base,199,"10"" X 14"" Posters",false,,Eric Young Jr.,,1000 sets will be produced
+base,200,Base,false,,Miguel Cabrera
+base,200,Oversized,false,499,Miguel Cabrera,,1000 sets will be produced
+base,200,"10"" X 14"" Posters",false,,Miguel Cabrera,,1000 sets will be produced
+base,201,Base,false,,Tommy La Stella
+base,201,Oversized,false,499,Tommy La Stella,,1000 sets will be produced
+base,201,"10"" X 14"" Posters",false,,Tommy La Stella,,1000 sets will be produced
+base,202,Base,false,,Mike Minor
+base,202,Oversized,false,499,Mike Minor,,1000 sets will be produced
+base,202,"10"" X 14"" Posters",false,,Mike Minor,,1000 sets will be produced
+base,203,Base,false,,Paul Goldschmidt
+base,203,Oversized,false,499,Paul Goldschmidt,,1000 sets will be produced
+base,203,"10"" X 14"" Posters",false,,Paul Goldschmidt,,1000 sets will be produced
+base,204,Base,false,,Eduardo Escobar
+base,204,Oversized,false,499,Eduardo Escobar,,1000 sets will be produced
+base,204,"10"" X 14"" Posters",false,,Eduardo Escobar,,1000 sets will be produced
+base,205,Base,false,,Josh Harrison
+base,205,Oversized,false,499,Josh Harrison,,1000 sets will be produced
+base,205,"10"" X 14"" Posters",false,,Josh Harrison,,1000 sets will be produced
+base,206,Base,false,,Rick Porcello
+base,206,Oversized,false,499,Rick Porcello,,1000 sets will be produced
+base,206,"10"" X 14"" Posters",false,,Rick Porcello,,1000 sets will be produced
+base,207,Base,false,,Bryce Harper
+base,207,Oversized,false,499,Bryce Harper,,1000 sets will be produced
+base,207,"10"" X 14"" Posters",false,,Bryce Harper,,1000 sets will be produced
+base,208,Base,false,,Wilin Rosario
+base,208,Oversized,false,499,Wilin Rosario,,1000 sets will be produced
+base,208,"10"" X 14"" Posters",false,,Wilin Rosario,,1000 sets will be produced
+base,209,Base,false,,Daniel Corcino RC
+base,209,Oversized,false,499,Daniel Corcino RC,,1000 sets will be produced
+base,209,"10"" X 14"" Posters",false,,Daniel Corcino RC,,1000 sets will be produced
+base,210,Base,false,,Salvador Perez HL
+base,210,Oversized,false,499,Salvador Perez HL,,1000 sets will be produced
+base,210,"10"" X 14"" Posters",false,,Salvador Perez HL,,1000 sets will be produced
+base,211,Base,false,,Clay Buchholz
+base,211,Oversized,false,499,Clay Buchholz,,1000 sets will be produced
+base,211,"10"" X 14"" Posters",false,,Clay Buchholz,,1000 sets will be produced
+base,212,Base,false,,Cliff Lee
+base,212,Oversized,false,499,Cliff Lee,,1000 sets will be produced
+base,212,"10"" X 14"" Posters",false,,Cliff Lee,,1000 sets will be produced
+base,213,Base,false,,Jered Weaver
+base,213,Oversized,false,499,Jered Weaver,,1000 sets will be produced
+base,213,"10"" X 14"" Posters",false,,Jered Weaver,,1000 sets will be produced
+base,214,Base,false,,Corey Kluber / Max Scherzer / Jered Weaver LL
+base,214,Oversized,false,499,Corey Kluber / Max Scherzer / Jered Weaver LL,,1000 sets will be produced
+base,214,"10"" X 14"" Posters",false,,Corey Kluber / Max Scherzer / Jered Weaver LL,,1000 sets will be produced
+base,215,Base,false,,Alejandro De Aza
+base,215,Oversized,false,499,Alejandro De Aza,,1000 sets will be produced
+base,215,"10"" X 14"" Posters",false,,Alejandro De Aza,,1000 sets will be produced
+base,216,Base,false,,Greg Holland
+base,216,Oversized,false,499,Greg Holland,,1000 sets will be produced
+base,216,"10"" X 14"" Posters",false,,Greg Holland,,1000 sets will be produced
+base,217,Base,false,,Daniel Norris RC
+base,217,Oversized,false,499,Daniel Norris RC,,1000 sets will be produced
+base,217,"10"" X 14"" Posters",false,,Daniel Norris RC,,1000 sets will be produced
+base,218,Base,false,,David Buchanan
+base,218,Oversized,false,499,David Buchanan,,1000 sets will be produced
+base,218,"10"" X 14"" Posters",false,,David Buchanan,,1000 sets will be produced
+base,219,Base,false,,Kennys Vargas
+base,219,Oversized,false,499,Kennys Vargas,,1000 sets will be produced
+base,219,"10"" X 14"" Posters",false,,Kennys Vargas,,1000 sets will be produced
+base,220,Base,false,,Shelby Miller
+base,220,Oversized,false,499,Shelby Miller,,1000 sets will be produced
+base,220,"10"" X 14"" Posters",false,,Shelby Miller,,1000 sets will be produced
+base,221,Base,false,,Jason Kipnis
+base,221,Oversized,false,499,Jason Kipnis,,1000 sets will be produced
+base,221,"10"" X 14"" Posters",false,,Jason Kipnis,,1000 sets will be produced
+base,222,Base,false,,Antonio Bastardo
+base,222,Oversized,false,499,Antonio Bastardo,,1000 sets will be produced
+base,222,"10"" X 14"" Posters",false,,Antonio Bastardo,,1000 sets will be produced
+base,223,Base,false,,Los Angeles Angels of Anaheim TC
+base,223,Oversized,false,499,Los Angeles Angels of Anaheim TC,,1000 sets will be produced
+base,223,"10"" X 14"" Posters",false,,Los Angeles Angels of Anaheim TC,,1000 sets will be produced
+base,224,Base,false,,Bryan Mitchell RC
+base,224,Oversized,false,499,Bryan Mitchell RC,,1000 sets will be produced
+base,224,"10"" X 14"" Posters",false,,Bryan Mitchell RC,,1000 sets will be produced
+base,225,Base,false,,Jacoby Ellsbury
+base,225,Oversized,false,499,Jacoby Ellsbury,,1000 sets will be produced
+base,225,"10"" X 14"" Posters",false,,Jacoby Ellsbury,,1000 sets will be produced
+base,226,Base,false,,Dioner Navarro
+base,226,Oversized,false,499,Dioner Navarro,,1000 sets will be produced
+base,226,"10"" X 14"" Posters",false,,Dioner Navarro,,1000 sets will be produced
+base,227,Base,false,,Madison Bumgarner WS
+base,227,Oversized,false,499,Madison Bumgarner WS,,1000 sets will be produced
+base,227,"10"" X 14"" Posters",false,,Madison Bumgarner WS,,1000 sets will be produced
+base,228,Base,false,,Jake Peavy
+base,228,Oversized,false,499,Jake Peavy,,1000 sets will be produced
+base,228,"10"" X 14"" Posters",false,,Jake Peavy,,1000 sets will be produced
+base,229,Base,false,,Bryan Morris
+base,229,Oversized,false,499,Bryan Morris,,1000 sets will be produced
+base,229,"10"" X 14"" Posters",false,,Bryan Morris,,1000 sets will be produced
+base,230,Base,false,,Jean Segura
+base,230,Oversized,false,499,Jean Segura,,1000 sets will be produced
+base,230,"10"" X 14"" Posters",false,,Jean Segura,,1000 sets will be produced
+base,231,Base,false,,Andrew Cashner
+base,231,Oversized,false,499,Andrew Cashner,,1000 sets will be produced
+base,231,"10"" X 14"" Posters",false,,Andrew Cashner,,1000 sets will be produced
+base,232,Base,false,,Andrew Susac
+base,232,Oversized,false,499,Andrew Susac,,1000 sets will be produced
+base,232,"10"" X 14"" Posters",false,,Andrew Susac,,1000 sets will be produced
+base,233,Base,false,,Carlos Ruiz
+base,233,Oversized,false,499,Carlos Ruiz,,1000 sets will be produced
+base,233,"10"" X 14"" Posters",false,,Carlos Ruiz,,1000 sets will be produced
+base,234,Base,false,,Brandon Belt
+base,234,Oversized,false,499,Brandon Belt,,1000 sets will be produced
+base,234,"10"" X 14"" Posters",false,,Brandon Belt,,1000 sets will be produced
+base,235,Base,false,,Jeremy Guthrie
+base,235,Oversized,false,499,Jeremy Guthrie,,1000 sets will be produced
+base,235,"10"" X 14"" Posters",false,,Jeremy Guthrie,,1000 sets will be produced
+base,236,Base,false,,Zack Wheeler
+base,236,Oversized,false,499,Zack Wheeler,,1000 sets will be produced
+base,236,"10"" X 14"" Posters",false,,Zack Wheeler,,1000 sets will be produced
+base,237,Base,false,,Lucas Duda
+base,237,Oversized,false,499,Lucas Duda,,1000 sets will be produced
+base,237,"10"" X 14"" Posters",false,,Lucas Duda,,1000 sets will be produced
+base,238,Base,false,,Hyun-Jin Ryu
+base,238,Oversized,false,499,Hyun-Jin Ryu,,1000 sets will be produced
+base,238,"10"" X 14"" Posters",false,,Hyun-Jin Ryu,,1000 sets will be produced
+base,239,Base,false,,Jose Iglesias
+base,239,Oversized,false,499,Jose Iglesias,,1000 sets will be produced
+base,239,"10"" X 14"" Posters",false,,Jose Iglesias,,1000 sets will be produced
+base,240,Base,false,,Anthony Ranaudo RC
+base,240,Oversized,false,499,Anthony Ranaudo RC,,1000 sets will be produced
+base,240,"10"" X 14"" Posters",false,,Anthony Ranaudo RC,,1000 sets will be produced
+base,241,Base,false,,Dilson Herrera RC
+base,241,Oversized,false,499,Dilson Herrera RC,,1000 sets will be produced
+base,241,"10"" X 14"" Posters",false,,Dilson Herrera RC,,1000 sets will be produced
+base,242,Base,false,,Edwin Encarnacion
+base,242,Oversized,false,499,Edwin Encarnacion,,1000 sets will be produced
+base,242,"10"" X 14"" Posters",false,,Edwin Encarnacion,,1000 sets will be produced
+base,243,Base,false,,Al Alburquerque
+base,243,Oversized,false,499,Al Alburquerque,,1000 sets will be produced
+base,243,"10"" X 14"" Posters",false,,Al Alburquerque,,1000 sets will be produced
+base,244,Base,false,,Bartolo Colon
+base,244,Oversized,false,499,Bartolo Colon,,1000 sets will be produced
+base,244,"10"" X 14"" Posters",false,,Bartolo Colon,,1000 sets will be produced
+base,245,Base,false,,Tyler Colvin
+base,245,Oversized,false,499,Tyler Colvin,,1000 sets will be produced
+base,245,"10"" X 14"" Posters",false,,Tyler Colvin,,1000 sets will be produced
+base,246,Base,false,,Chris Carter
+base,246,Oversized,false,499,Chris Carter,,1000 sets will be produced
+base,246,"10"" X 14"" Posters",false,,Chris Carter,,1000 sets will be produced
+base,247,Base,false,,Aaron Hill
+base,247,Oversized,false,499,Aaron Hill,,1000 sets will be produced
+base,247,"10"" X 14"" Posters",false,,Aaron Hill,,1000 sets will be produced
+base,248,Base,false,,Addison Reed
+base,248,Oversized,false,499,Addison Reed,,1000 sets will be produced
+base,248,"10"" X 14"" Posters",false,,Addison Reed,,1000 sets will be produced
+base,249,Base,false,,Jose Reyes
+base,249,Oversized,false,499,Jose Reyes,,1000 sets will be produced
+base,249,"10"" X 14"" Posters",false,,Jose Reyes,,1000 sets will be produced
+base,250,Base,false,,Evan Longoria
+base,250,Oversized,false,499,Evan Longoria,,1000 sets will be produced
+base,250,"10"" X 14"" Posters",false,,Evan Longoria,,1000 sets will be produced
+base,251,Base,false,,Anthony Rendon
+base,251,Oversized,false,499,Anthony Rendon,,1000 sets will be produced
+base,251,"10"" X 14"" Posters",false,,Anthony Rendon,,1000 sets will be produced
+base,252,Base,false,,Travis Wood
+base,252,Oversized,false,499,Travis Wood,,1000 sets will be produced
+base,252,"10"" X 14"" Posters",false,,Travis Wood,,1000 sets will be produced
+base,253,Base,false,,Gregory Polanco FS
+base,253,Oversized,false,499,Gregory Polanco FS,,1000 sets will be produced
+base,253,"10"" X 14"" Posters",false,,Gregory Polanco FS,,1000 sets will be produced
+base,254,Base,false,,Steve Cishek
+base,254,Oversized,false,499,Steve Cishek,,1000 sets will be produced
+base,254,"10"" X 14"" Posters",false,,Steve Cishek,,1000 sets will be produced
+base,255,Base,false,,James Russell
+base,255,Oversized,false,499,James Russell,,1000 sets will be produced
+base,255,"10"" X 14"" Posters",false,,James Russell,,1000 sets will be produced
+base,256,Base,false,,Adam Eaton
+base,256,Oversized,false,499,Adam Eaton,,1000 sets will be produced
+base,256,"10"" X 14"" Posters",false,,Adam Eaton,,1000 sets will be produced
+base,257,Base,false,,Jarrod Saltalamacchia
+base,257,Oversized,false,499,Jarrod Saltalamacchia,,1000 sets will be produced
+base,257,"10"" X 14"" Posters",false,,Jarrod Saltalamacchia,,1000 sets will be produced
+base,258,Base,false,,Kansas City Royals TC
+base,258,Oversized,false,499,Kansas City Royals TC,,1000 sets will be produced
+base,258,"10"" X 14"" Posters",false,,Kansas City Royals TC,,1000 sets will be produced
+base,259,Base,false,,Brian Dozier
+base,259,Oversized,false,499,Brian Dozier,,1000 sets will be produced
+base,259,"10"" X 14"" Posters",false,,Brian Dozier,,1000 sets will be produced
+base,260,Base,false,,David Peralta
+base,260,Oversized,false,499,David Peralta,,1000 sets will be produced
+base,260,"10"" X 14"" Posters",false,,David Peralta,,1000 sets will be produced
+base,261,Base,false,,Lance Lynn
+base,261,Oversized,false,499,Lance Lynn,,1000 sets will be produced
+base,261,"10"" X 14"" Posters",false,,Lance Lynn,,1000 sets will be produced
+base,262,Base,false,,Ryan Braun
+base,262,Oversized,false,499,Ryan Braun,,1000 sets will be produced
+base,262,"10"" X 14"" Posters",false,,Ryan Braun,,1000 sets will be produced
+base,263,Base,false,,Dillon Gee
+base,263,Oversized,false,499,Dillon Gee,,1000 sets will be produced
+base,263,"10"" X 14"" Posters",false,,Dillon Gee,,1000 sets will be produced
+base,264,Base,false,,Tony Cingrani
+base,264,Oversized,false,499,Tony Cingrani,,1000 sets will be produced
+base,264,"10"" X 14"" Posters",false,,Tony Cingrani,,1000 sets will be produced
+base,265,Base,false,,Arizona Diamondbacks TC
+base,265,Oversized,false,499,Arizona Diamondbacks TC,,1000 sets will be produced
+base,265,"10"" X 14"" Posters",false,,Arizona Diamondbacks TC,,1000 sets will be produced
+base,266,Base,false,,Brandon Phillips
+base,266,Oversized,false,499,Brandon Phillips,,1000 sets will be produced
+base,266,"10"" X 14"" Posters",false,,Brandon Phillips,,1000 sets will be produced
+base,267,Base,false,,Zack Greinke
+base,267,Oversized,false,499,Zack Greinke,,1000 sets will be produced
+base,267,"10"" X 14"" Posters",false,,Zack Greinke,,1000 sets will be produced
+base,268,Base,false,,Aroldis Chapman
+base,268,Oversized,false,499,Aroldis Chapman,,1000 sets will be produced
+base,268,"10"" X 14"" Posters",false,,Aroldis Chapman,,1000 sets will be produced
+base,269,Base,false,,Jordy Mercer
+base,269,Oversized,false,499,Jordy Mercer,,1000 sets will be produced
+base,269,"10"" X 14"" Posters",false,,Jordy Mercer,,1000 sets will be produced
+base,270,Base,false,,Steven Moya RC
+base,270,Oversized,false,499,Steven Moya RC,,1000 sets will be produced
+base,270,"10"" X 14"" Posters",false,,Steven Moya RC,,1000 sets will be produced
+base,271,Base,false,,Pittsburgh Pirates TC
+base,271,Oversized,false,499,Pittsburgh Pirates TC,,1000 sets will be produced
+base,271,"10"" X 14"" Posters",false,,Pittsburgh Pirates TC,,1000 sets will be produced
+base,272,Base,false,,Matt Kemp
+base,272,Oversized,false,499,Matt Kemp,,1000 sets will be produced
+base,272,"10"" X 14"" Posters",false,,Matt Kemp,,1000 sets will be produced
+base,273,Base,false,,Brandon Hicks
+base,273,Oversized,false,499,Brandon Hicks,,1000 sets will be produced
+base,273,"10"" X 14"" Posters",false,,Brandon Hicks,,1000 sets will be produced
+base,274,Base,false,,Ryan Zimmerman
+base,274,Oversized,false,499,Ryan Zimmerman,,1000 sets will be produced
+base,274,"10"" X 14"" Posters",false,,Ryan Zimmerman,,1000 sets will be produced
+base,275,Base,false,,Buster Posey
+base,275,Oversized,false,499,Buster Posey,,1000 sets will be produced
+base,275,"10"" X 14"" Posters",false,,Buster Posey,,1000 sets will be produced
+base,276,Base,false,,Conor Gillaspie
+base,276,Oversized,false,499,Conor Gillaspie,,1000 sets will be produced
+base,276,"10"" X 14"" Posters",false,,Conor Gillaspie,,1000 sets will be produced
+base,277,Base,false,,Cincinnati Reds TC
+base,277,Oversized,false,499,Cincinnati Reds TC,,1000 sets will be produced
+base,277,"10"" X 14"" Posters",false,,Cincinnati Reds TC,,1000 sets will be produced
+base,278,Base,false,,David Phelps
+base,278,Oversized,false,499,David Phelps,,1000 sets will be produced
+base,278,"10"" X 14"" Posters",false,,David Phelps,,1000 sets will be produced
+base,279,Base,false,,Coco Crisp
+base,279,Oversized,false,499,Coco Crisp,,1000 sets will be produced
+base,279,"10"" X 14"" Posters",false,,Coco Crisp,,1000 sets will be produced
+base,280,Base,false,,Miguel Montero
+base,280,Oversized,false,499,Miguel Montero,,1000 sets will be produced
+base,280,"10"" X 14"" Posters",false,,Miguel Montero,,1000 sets will be produced
+base,281,Base,false,,Elvis Andrus
+base,281,Oversized,false,499,Elvis Andrus,,1000 sets will be produced
+base,281,"10"" X 14"" Posters",false,,Elvis Andrus,,1000 sets will be produced
+base,282,Base,false,,Alex Presley
+base,282,Oversized,false,499,Alex Presley,,1000 sets will be produced
+base,282,"10"" X 14"" Posters",false,,Alex Presley,,1000 sets will be produced
+base,283,Base,false,,Chris Johnson
+base,283,Oversized,false,499,Chris Johnson,,1000 sets will be produced
+base,283,"10"" X 14"" Posters",false,,Chris Johnson,,1000 sets will be produced
+base,284,Base,false,,Brandon League
+base,284,Oversized,false,499,Brandon League,,1000 sets will be produced
+base,284,"10"" X 14"" Posters",false,,Brandon League,,1000 sets will be produced
+base,285,Base,false,,Chris Carter / Mike Trout / Nelson Cruz LL
+base,285,Oversized,false,499,Chris Carter / Mike Trout / Nelson Cruz LL,,1000 sets will be produced
+base,285,"10"" X 14"" Posters",false,,Chris Carter / Mike Trout / Nelson Cruz LL,,1000 sets will be produced
+base,286,Base,false,,Trevor Rosenthal
+base,286,Oversized,false,499,Trevor Rosenthal,,1000 sets will be produced
+base,286,"10"" X 14"" Posters",false,,Trevor Rosenthal,,1000 sets will be produced
+base,287,Base,false,,Everth Cabrera
+base,287,Oversized,false,499,Everth Cabrera,,1000 sets will be produced
+base,287,"10"" X 14"" Posters",false,,Everth Cabrera,,1000 sets will be produced
+base,288,Base,false,,Chris Parmelee
+base,288,Oversized,false,499,Chris Parmelee,,1000 sets will be produced
+base,288,"10"" X 14"" Posters",false,,Chris Parmelee,,1000 sets will be produced
+base,289,Base,false,,Matt Joyce
+base,289,Oversized,false,499,Matt Joyce,,1000 sets will be produced
+base,289,"10"" X 14"" Posters",false,,Matt Joyce,,1000 sets will be produced
+base,290,Base,false,,David Lough
+base,290,Oversized,false,499,David Lough,,1000 sets will be produced
+base,290,"10"" X 14"" Posters",false,,David Lough,,1000 sets will be produced
+base,291,Base,false,,Mark Reynolds
+base,291,Oversized,false,499,Mark Reynolds,,1000 sets will be produced
+base,291,"10"" X 14"" Posters",false,,Mark Reynolds,,1000 sets will be produced
+base,292,Base,false,,Neil Walker
+base,292,Oversized,false,499,Neil Walker,,1000 sets will be produced
+base,292,"10"" X 14"" Posters",false,,Neil Walker,,1000 sets will be produced
+base,293,Base,false,,Zach Duke
+base,293,Oversized,false,499,Zach Duke,,1000 sets will be produced
+base,293,"10"" X 14"" Posters",false,,Zach Duke,,1000 sets will be produced
+base,294,Base,false,,Aaron Sanchez FS
+base,294,Oversized,false,499,Aaron Sanchez FS,,1000 sets will be produced
+base,294,"10"" X 14"" Posters",false,,Aaron Sanchez FS,,1000 sets will be produced
+base,295,Base,false,,Erick Aybar
+base,295,Oversized,false,499,Erick Aybar,,1000 sets will be produced
+base,295,"10"" X 14"" Posters",false,,Erick Aybar,,1000 sets will be produced
+base,296,Base,false,,Charlie Morton
+base,296,Oversized,false,499,Charlie Morton,,1000 sets will be produced
+base,296,"10"" X 14"" Posters",false,,Charlie Morton,,1000 sets will be produced
+base,297,Base,false,,Scott Kazmir
+base,297,Oversized,false,499,Scott Kazmir,,1000 sets will be produced
+base,297,"10"" X 14"" Posters",false,,Scott Kazmir,,1000 sets will be produced
+base,298,Base,false,,Rymer Liriano RC
+base,298,Oversized,false,499,Rymer Liriano RC,,1000 sets will be produced
+base,298,"10"" X 14"" Posters",false,,Rymer Liriano RC,,1000 sets will be produced
+base,299,Base,false,,Joaquin Arias
+base,299,Oversized,false,499,Joaquin Arias,,1000 sets will be produced
+base,299,"10"" X 14"" Posters",false,,Joaquin Arias,,1000 sets will be produced
+base,300,Base,false,,Mike Trout
+base,300,Oversized,false,499,Mike Trout,,1000 sets will be produced
+base,300,"10"" X 14"" Posters",false,,Mike Trout,,1000 sets will be produced
+base,301,Base,false,,Zack Cozart
+base,301,Oversized,false,499,Zack Cozart,,1000 sets will be produced
+base,301,"10"" X 14"" Posters",false,,Zack Cozart,,1000 sets will be produced
+base,302,Base,false,,Martin Prado
+base,302,Oversized,false,499,Martin Prado,,1000 sets will be produced
+base,302,"10"" X 14"" Posters",false,,Martin Prado,,1000 sets will be produced
+base,303,Base,false,,Ike Davis
+base,303,Oversized,false,499,Ike Davis,,1000 sets will be produced
+base,303,"10"" X 14"" Posters",false,,Ike Davis,,1000 sets will be produced
+base,304,Base,false,,Shawn Kelley
+base,304,Oversized,false,499,Shawn Kelley,,1000 sets will be produced
+base,304,"10"" X 14"" Posters",false,,Shawn Kelley,,1000 sets will be produced
+base,305,Base,false,,Sonny Gray
+base,305,Oversized,false,499,Sonny Gray,,1000 sets will be produced
+base,305,"10"" X 14"" Posters",false,,Sonny Gray,,1000 sets will be produced
+base,306,Base,false,,Juan Lagares FS
+base,306,Oversized,false,499,Juan Lagares FS,,1000 sets will be produced
+base,306,"10"" X 14"" Posters",false,,Juan Lagares FS,,1000 sets will be produced
+base,307,Base,false,,Mark Teixeira
+base,307,Oversized,false,499,Mark Teixeira,,1000 sets will be produced
+base,307,"10"" X 14"" Posters",false,,Mark Teixeira,,1000 sets will be produced
+base,308,Base,false,,Carl Crawford
+base,308,Oversized,false,499,Carl Crawford,,1000 sets will be produced
+base,308,"10"" X 14"" Posters",false,,Carl Crawford,,1000 sets will be produced
+base,309,Base,false,,Maikel Franco RC
+base,309,Oversized,false,499,Maikel Franco RC,,1000 sets will be produced
+base,309,"10"" X 14"" Posters",false,,Maikel Franco RC,,1000 sets will be produced
+base,310,Base,false,,Jake Lamb RC
+base,310,Oversized,false,499,Jake Lamb RC,,1000 sets will be produced
+base,310,"10"" X 14"" Posters",false,,Jake Lamb RC,,1000 sets will be produced
+base,311,Base,false,,Jhonny Peralta
+base,311,Oversized,false,499,Jhonny Peralta,,1000 sets will be produced
+base,311,"10"" X 14"" Posters",false,,Jhonny Peralta,,1000 sets will be produced
+base,312,Base,false,,Kyle Lobstein RC
+base,312,Oversized,false,499,Kyle Lobstein RC,,1000 sets will be produced
+base,312,"10"" X 14"" Posters",false,,Kyle Lobstein RC,,1000 sets will be produced
+base,313,Base,false,,Anthony Rizzo / Giancarlo Stanton / Lucas Duda LL
+base,313,Oversized,false,499,Anthony Rizzo / Giancarlo Stanton / Lucas Duda LL,,1000 sets will be produced
+base,313,"10"" X 14"" Posters",false,,Anthony Rizzo / Giancarlo Stanton / Lucas Duda LL,,1000 sets will be produced
+base,314,Base,false,,Jackie Bradley Jr.
+base,314,Oversized,false,499,Jackie Bradley Jr.,,1000 sets will be produced
+base,314,"10"" X 14"" Posters",false,,Jackie Bradley Jr.,,1000 sets will be produced
+base,315,Base,false,,Javier Baez RC ERR: SS on front
+base,315,Oversized,false,499,Javier Baez RC ERR: SS on front,,1000 sets will be produced
+base,315,"10"" X 14"" Posters",false,,Javier Baez RC ERR: SS on front,,1000 sets will be produced
+base,316,Base,false,,R.A. Dickey
+base,316,Oversized,false,499,R.A. Dickey,,1000 sets will be produced
+base,316,"10"" X 14"" Posters",false,,R.A. Dickey,,1000 sets will be produced
+base,317,Base,false,,Clayton Kershaw HL
+base,317,Oversized,false,499,Clayton Kershaw HL,,1000 sets will be produced
+base,317,"10"" X 14"" Posters",false,,Clayton Kershaw HL,,1000 sets will be produced
+base,318,Base,false,,George Springer FS
+base,318,Oversized,false,499,George Springer FS,,1000 sets will be produced
+base,318,"10"" X 14"" Posters",false,,George Springer FS,,1000 sets will be produced
+base,319,Base,false,,Derek Jeter HL
+base,319,Oversized,false,499,Derek Jeter HL,,1000 sets will be produced
+base,319,"10"" X 14"" Posters",false,,Derek Jeter HL,,1000 sets will be produced
+base,320,Base,false,,Shin-Soo Choo
+base,320,Oversized,false,499,Shin-Soo Choo,,1000 sets will be produced
+base,320,"10"" X 14"" Posters",false,,Shin-Soo Choo,,1000 sets will be produced
+base,321,Base,false,,Josh Hamilton
+base,321,Oversized,false,499,Josh Hamilton,,1000 sets will be produced
+base,321,"10"" X 14"" Posters",false,,Josh Hamilton,,1000 sets will be produced
+base,322,Base,false,,Phil Hughes
+base,322,Oversized,false,499,Phil Hughes,,1000 sets will be produced
+base,322,"10"" X 14"" Posters",false,,Phil Hughes,,1000 sets will be produced
+base,323,Base,false,,Eric Hosmer
+base,323,Oversized,false,499,Eric Hosmer,,1000 sets will be produced
+base,323,"10"" X 14"" Posters",false,,Eric Hosmer,,1000 sets will be produced
+base,324,Base,false,,Chris Archer
+base,324,Oversized,false,499,Chris Archer,,1000 sets will be produced
+base,324,"10"" X 14"" Posters",false,,Chris Archer,,1000 sets will be produced
+base,325,Base,false,,Felix Hernandez
+base,325,Oversized,false,499,Felix Hernandez,,1000 sets will be produced
+base,325,"10"" X 14"" Posters",false,,Felix Hernandez,,1000 sets will be produced
+base,326,Base,false,,C.J. Wilson
+base,326,Oversized,false,499,C.J. Wilson,,1000 sets will be produced
+base,326,"10"" X 14"" Posters",false,,C.J. Wilson,,1000 sets will be produced
+base,327,Base,false,,Xander Bogaerts FS
+base,327,Oversized,false,499,Xander Bogaerts FS,,1000 sets will be produced
+base,327,"10"" X 14"" Posters",false,,Xander Bogaerts FS,,1000 sets will be produced
+base,328,Base,false,,Adrian Gonzalez
+base,328,Oversized,false,499,Adrian Gonzalez,,1000 sets will be produced
+base,328,"10"" X 14"" Posters",false,,Adrian Gonzalez,,1000 sets will be produced
+base,329,Base,false,,Logan Forsythe
+base,329,Oversized,false,499,Logan Forsythe,,1000 sets will be produced
+base,329,"10"" X 14"" Posters",false,,Logan Forsythe,,1000 sets will be produced
+base,330,Base,false,,Brian Duensing
+base,330,Oversized,false,499,Brian Duensing,,1000 sets will be produced
+base,330,"10"" X 14"" Posters",false,,Brian Duensing,,1000 sets will be produced
+base,331,Base,false,,Danny Espinosa
+base,331,Oversized,false,499,Danny Espinosa,,1000 sets will be produced
+base,331,"10"" X 14"" Posters",false,,Danny Espinosa,,1000 sets will be produced
+base,332,Base,false,,Kyle Seager
+base,332,Oversized,false,499,Kyle Seager,,1000 sets will be produced
+base,332,"10"" X 14"" Posters",false,,Kyle Seager,,1000 sets will be produced
+base,333,Base,false,,Billy Hamilton FS
+base,333,Oversized,false,499,Billy Hamilton FS,,1000 sets will be produced
+base,333,"10"" X 14"" Posters",false,,Billy Hamilton FS,,1000 sets will be produced
+base,334,Base,false,,Gerardo Parra
+base,334,Oversized,false,499,Gerardo Parra,,1000 sets will be produced
+base,334,"10"" X 14"" Posters",false,,Gerardo Parra,,1000 sets will be produced
+base,335,Base,false,,Matt Barnes RC
+base,335,Oversized,false,499,Matt Barnes RC,,1000 sets will be produced
+base,335,"10"" X 14"" Posters",false,,Matt Barnes RC,,1000 sets will be produced
+base,336,Base,false,,Matt Carpenter
+base,336,Oversized,false,499,Matt Carpenter,,1000 sets will be produced
+base,336,"10"" X 14"" Posters",false,,Matt Carpenter,,1000 sets will be produced
+base,337,Base,false,,Jedd Gyorko
+base,337,Oversized,false,499,Jedd Gyorko,,1000 sets will be produced
+base,337,"10"" X 14"" Posters",false,,Jedd Gyorko,,1000 sets will be produced
+base,338,Base,false,,Yasmani Grandal
+base,338,Oversized,false,499,Yasmani Grandal,,1000 sets will be produced
+base,338,"10"" X 14"" Posters",false,,Yasmani Grandal,,1000 sets will be produced
+base,339,Base,false,,Austin Jackson
+base,339,Oversized,false,499,Austin Jackson,,1000 sets will be produced
+base,339,"10"" X 14"" Posters",false,,Austin Jackson,,1000 sets will be produced
+base,340,Base,false,,Carlos Gomez
+base,340,Oversized,false,499,Carlos Gomez,,1000 sets will be produced
+base,340,"10"" X 14"" Posters",false,,Carlos Gomez,,1000 sets will be produced
+base,341,Base,false,,Corey Kluber / Chris Sale / Felix Hernandez LL
+base,341,Oversized,false,499,Corey Kluber / Chris Sale / Felix Hernandez LL,,1000 sets will be produced
+base,341,"10"" X 14"" Posters",false,,Corey Kluber / Chris Sale / Felix Hernandez LL,,1000 sets will be produced
+base,342,Base,false,,San Diego Padres TC
+base,342,Oversized,false,499,San Diego Padres TC,,1000 sets will be produced
+base,342,"10"" X 14"" Posters",false,,San Diego Padres TC,,1000 sets will be produced
+base,343,Base,false,,Shane Greene
+base,343,Oversized,false,499,Shane Greene,,1000 sets will be produced
+base,343,"10"" X 14"" Posters",false,,Shane Greene,,1000 sets will be produced
+base,344,Base,false,,Manny Parra
+base,344,Oversized,false,499,Manny Parra,,1000 sets will be produced
+base,344,"10"" X 14"" Posters",false,,Manny Parra,,1000 sets will be produced
+base,345,Base,false,,Brandon Cumpton
+base,345,Oversized,false,499,Brandon Cumpton,,1000 sets will be produced
+base,345,"10"" X 14"" Posters",false,,Brandon Cumpton,,1000 sets will be produced
+base,346,Base,false,,Trevor Cahill
+base,346,Oversized,false,499,Trevor Cahill,,1000 sets will be produced
+base,346,"10"" X 14"" Posters",false,,Trevor Cahill,,1000 sets will be produced
+base,347,Base,false,,Dexter Fowler
+base,347,Oversized,false,499,Dexter Fowler,,1000 sets will be produced
+base,347,"10"" X 14"" Posters",false,,Dexter Fowler,,1000 sets will be produced
+base,348,Base,false,,Carlos Santana
+base,348,Oversized,false,499,Carlos Santana,,1000 sets will be produced
+base,348,"10"" X 14"" Posters",false,,Carlos Santana,,1000 sets will be produced
+base,349,Base,false,,Justin Upton / Adrian Gonzalez / Giancarlo Stanton LL
+base,349,Oversized,false,499,Justin Upton / Adrian Gonzalez / Giancarlo Stanton LL,,1000 sets will be produced
+base,349,"10"" X 14"" Posters",false,,Justin Upton / Adrian Gonzalez / Giancarlo Stanton LL,,1000 sets will be produced
+base,350,Base,false,,Yasiel Puig
+base,350,Oversized,false,499,Yasiel Puig,,1000 sets will be produced
+base,350,"10"" X 14"" Posters",false,,Yasiel Puig,,1000 sets will be produced
+base,351,Base,false,,Tom Koehler
+base,351,Oversized,false,499,Tom Koehler,,1000 sets will be produced
+base,351,"10"" X 14"" Posters",false,,Tom Koehler,,1000 sets will be produced
+base,352,Base,false,,Jaime Garcia
+base,352,Oversized,false,499,Jaime Garcia,,1000 sets will be produced
+base,352,"10"" X 14"" Posters",false,,Jaime Garcia,,1000 sets will be produced
+base,353,Base,false,,Mike Leake
+base,353,Oversized,false,499,Mike Leake,,1000 sets will be produced
+base,353,"10"" X 14"" Posters",false,,Mike Leake,,1000 sets will be produced
+base,354,Base,false,,Kyle Hendricks
+base,354,Oversized,false,499,Kyle Hendricks,,1000 sets will be produced
+base,354,"10"" X 14"" Posters",false,,Kyle Hendricks,,1000 sets will be produced
+base,355,Base,false,,Travis Snider
+base,355,Oversized,false,499,Travis Snider,,1000 sets will be produced
+base,355,"10"" X 14"" Posters",false,,Travis Snider,,1000 sets will be produced
+base,356,Base,false,,Marcus Semien
+base,356,Oversized,false,499,Marcus Semien,,1000 sets will be produced
+base,356,"10"" X 14"" Posters",false,,Marcus Semien,,1000 sets will be produced
+base,357,Base,false,,Derek Holland
+base,357,Oversized,false,499,Derek Holland,,1000 sets will be produced
+base,357,"10"" X 14"" Posters",false,,Derek Holland,,1000 sets will be produced
+base,358,Base,false,,Jon Singleton FS
+base,358,Oversized,false,499,Jon Singleton FS,,1000 sets will be produced
+base,358,"10"" X 14"" Posters",false,,Jon Singleton FS,,1000 sets will be produced
+base,359,Base,false,,Robinson Chirinos
+base,359,Oversized,false,499,Robinson Chirinos,,1000 sets will be produced
+base,359,"10"" X 14"" Posters",false,,Robinson Chirinos,,1000 sets will be produced
+base,360,Base,false,,Adam LaRoche
+base,360,Oversized,false,499,Adam LaRoche,,1000 sets will be produced
+base,360,"10"" X 14"" Posters",false,,Adam LaRoche,,1000 sets will be produced
+base,361,Base,false,,Matt Holliday
+base,361,Oversized,false,499,Matt Holliday,,1000 sets will be produced
+base,361,"10"" X 14"" Posters",false,,Matt Holliday,,1000 sets will be produced
+base,362,Base,false,,Jason Bourgeois
+base,362,Oversized,false,499,Jason Bourgeois,,1000 sets will be produced
+base,362,"10"" X 14"" Posters",false,,Jason Bourgeois,,1000 sets will be produced
+base,363,Base,false,,Avisail Garcia
+base,363,Oversized,false,499,Avisail Garcia,,1000 sets will be produced
+base,363,"10"" X 14"" Posters",false,,Avisail Garcia,,1000 sets will be produced
+base,364,Base,false,,Travis Ishikawa
+base,364,Oversized,false,499,Travis Ishikawa,,1000 sets will be produced
+base,364,"10"" X 14"" Posters",false,,Travis Ishikawa,,1000 sets will be produced
+base,365,Base,false,,L.J. Hoes
+base,365,Oversized,false,499,L.J. Hoes,,1000 sets will be produced
+base,365,"10"" X 14"" Posters",false,,L.J. Hoes,,1000 sets will be produced
+base,366,Base,false,,Jhoulys Chacin
+base,366,Oversized,false,499,Jhoulys Chacin,,1000 sets will be produced
+base,366,"10"" X 14"" Posters",false,,Jhoulys Chacin,,1000 sets will be produced
+base,367,Base,false,,Sam Fuld
+base,367,Oversized,false,499,Sam Fuld,,1000 sets will be produced
+base,367,"10"" X 14"" Posters",false,,Sam Fuld,,1000 sets will be produced
+base,368,Base,false,,David Robertson
+base,368,Oversized,false,499,David Robertson,,1000 sets will be produced
+base,368,"10"" X 14"" Posters",false,,David Robertson,,1000 sets will be produced
+base,369,Base,false,,Aaron Loup
+base,369,Oversized,false,499,Aaron Loup,,1000 sets will be produced
+base,369,"10"" X 14"" Posters",false,,Aaron Loup,,1000 sets will be produced
+base,370,Base,false,,Marcell Ozuna FS
+base,370,Oversized,false,499,Marcell Ozuna FS,,1000 sets will be produced
+base,370,"10"" X 14"" Posters",false,,Marcell Ozuna FS,,1000 sets will be produced
+base,371,Base,false,,Koji Uehara
+base,371,Oversized,false,499,Koji Uehara,,1000 sets will be produced
+base,371,"10"" X 14"" Posters",false,,Koji Uehara,,1000 sets will be produced
+base,372,Base,false,,Matt Adams
+base,372,Oversized,false,499,Matt Adams,,1000 sets will be produced
+base,372,"10"" X 14"" Posters",false,,Matt Adams,,1000 sets will be produced
+base,373,Base,false,,Kurt Suzuki
+base,373,Oversized,false,499,Kurt Suzuki,,1000 sets will be produced
+base,373,"10"" X 14"" Posters",false,,Kurt Suzuki,,1000 sets will be produced
+base,374,Base,false,,Nick Martinez
+base,374,Oversized,false,499,Nick Martinez,,1000 sets will be produced
+base,374,"10"" X 14"" Posters",false,,Nick Martinez,,1000 sets will be produced
+base,375,Base,false,,Johnny Cueto
+base,375,Oversized,false,499,Johnny Cueto,,1000 sets will be produced
+base,375,"10"" X 14"" Posters",false,,Johnny Cueto,,1000 sets will be produced
+base,376,Base,false,,Chris Sale
+base,376,Oversized,false,499,Chris Sale,,1000 sets will be produced
+base,376,"10"" X 14"" Posters",false,,Chris Sale,,1000 sets will be produced
+base,377,Base,false,,Tommy Hunter
+base,377,Oversized,false,499,Tommy Hunter,,1000 sets will be produced
+base,377,"10"" X 14"" Posters",false,,Tommy Hunter,,1000 sets will be produced
+base,378,Base,false,,Danny Duffy
+base,378,Oversized,false,499,Danny Duffy,,1000 sets will be produced
+base,378,"10"" X 14"" Posters",false,,Danny Duffy,,1000 sets will be produced
+base,379,Base,false,,Phil Gosselin
+base,379,Oversized,false,499,Phil Gosselin,,1000 sets will be produced
+base,379,"10"" X 14"" Posters",false,,Phil Gosselin,,1000 sets will be produced
+base,380,Base,false,,Hector Noesi
+base,380,Oversized,false,499,Hector Noesi,,1000 sets will be produced
+base,380,"10"" X 14"" Posters",false,,Hector Noesi,,1000 sets will be produced
+base,381,Base,false,,Stephen Drew
+base,381,Oversized,false,499,Stephen Drew,,1000 sets will be produced
+base,381,"10"" X 14"" Posters",false,,Stephen Drew,,1000 sets will be produced
+base,382,Base,false,,Ivan Nova
+base,382,Oversized,false,499,Ivan Nova,,1000 sets will be produced
+base,382,"10"" X 14"" Posters",false,,Ivan Nova,,1000 sets will be produced
+base,383,Base,false,,Delmon Young
+base,383,Oversized,false,499,Delmon Young,,1000 sets will be produced
+base,383,"10"" X 14"" Posters",false,,Delmon Young,,1000 sets will be produced
+base,384,Base,false,,Justin Ruggiano
+base,384,Oversized,false,499,Justin Ruggiano,,1000 sets will be produced
+base,384,"10"" X 14"" Posters",false,,Justin Ruggiano,,1000 sets will be produced
+base,385,Base,false,,James Paxton FS
+base,385,Oversized,false,499,James Paxton FS,,1000 sets will be produced
+base,385,"10"" X 14"" Posters",false,,James Paxton FS,,1000 sets will be produced
+base,386,Base,false,,Ben Zobrist
+base,386,Oversized,false,499,Ben Zobrist,,1000 sets will be produced
+base,386,"10"" X 14"" Posters",false,,Ben Zobrist,,1000 sets will be produced
+base,387,Base,false,,Jacob deGrom ROY
+base,387,Oversized,false,499,Jacob deGrom ROY,,1000 sets will be produced
+base,387,"10"" X 14"" Posters",false,,Jacob deGrom ROY,,1000 sets will be produced
+base,388,Base,false,,Francisco Liriano
+base,388,Oversized,false,499,Francisco Liriano,,1000 sets will be produced
+base,388,"10"" X 14"" Posters",false,,Francisco Liriano,,1000 sets will be produced
+base,389,Base,false,,Mookie Betts FS
+base,389,Oversized,false,499,Mookie Betts FS,,1000 sets will be produced
+base,389,"10"" X 14"" Posters",false,,Mookie Betts FS,,1000 sets will be produced
+base,390,Base,false,,Cody Ross
+base,390,Oversized,false,499,Cody Ross,,1000 sets will be produced
+base,390,"10"" X 14"" Posters",false,,Cody Ross,,1000 sets will be produced
+base,391,Base,false,,Hisashi Iwakuma
+base,391,Oversized,false,499,Hisashi Iwakuma,,1000 sets will be produced
+base,391,"10"" X 14"" Posters",false,,Hisashi Iwakuma,,1000 sets will be produced
+base,392,Base,false,,Brandon Guyer
+base,392,Oversized,false,499,Brandon Guyer,,1000 sets will be produced
+base,392,"10"" X 14"" Posters",false,,Brandon Guyer,,1000 sets will be produced
+base,393,Base,false,,Danny Salazar
+base,393,Oversized,false,499,Danny Salazar,,1000 sets will be produced
+base,393,"10"" X 14"" Posters",false,,Danny Salazar,,1000 sets will be produced
+base,394,Base,false,,Marco Scutaro
+base,394,Oversized,false,499,Marco Scutaro,,1000 sets will be produced
+base,394,"10"" X 14"" Posters",false,,Marco Scutaro,,1000 sets will be produced
+base,395,Base,false,,Chris Taylor
+base,395,Oversized,false,499,Chris Taylor,,1000 sets will be produced
+base,395,"10"" X 14"" Posters",false,,Chris Taylor,,1000 sets will be produced
+base,396,Base,false,,Alex Colome
+base,396,Oversized,false,499,Alex Colome,,1000 sets will be produced
+base,396,"10"" X 14"" Posters",false,,Alex Colome,,1000 sets will be produced
+base,397,Base,false,,Mike Aviles
+base,397,Oversized,false,499,Mike Aviles,,1000 sets will be produced
+base,397,"10"" X 14"" Posters",false,,Mike Aviles,,1000 sets will be produced
+base,398,Base,false,,Jordan Zimmermann HL
+base,398,Oversized,false,499,Jordan Zimmermann HL,,1000 sets will be produced
+base,398,"10"" X 14"" Posters",false,,Jordan Zimmermann HL,,1000 sets will be produced
+base,399,Base,false,,Josmil Pinto
+base,399,Oversized,false,499,Josmil Pinto,,1000 sets will be produced
+base,399,"10"" X 14"" Posters",false,,Josmil Pinto,,1000 sets will be produced
+base,400,Base,false,,Andrew McCutchen
+base,400,Oversized,false,499,Andrew McCutchen,,1000 sets will be produced
+base,400,"10"" X 14"" Posters",false,,Andrew McCutchen,,1000 sets will be produced
+base,401,Base,false,,Chris Coghlan
+base,401,Oversized,false,499,Chris Coghlan,,1000 sets will be produced
+base,401,"10"" X 14"" Posters",false,,Chris Coghlan,,1000 sets will be produced
+base,402,Base,false,,Jeurys Familia
+base,402,Oversized,false,499,Jeurys Familia,,1000 sets will be produced
+base,402,"10"" X 14"" Posters",false,,Jeurys Familia,,1000 sets will be produced
+base,403,Base,false,,Leury Garcia
+base,403,Oversized,false,499,Leury Garcia,,1000 sets will be produced
+base,403,"10"" X 14"" Posters",false,,Leury Garcia,,1000 sets will be produced
+base,404,Base,false,,Tanner Scheppers
+base,404,Oversized,false,499,Tanner Scheppers,,1000 sets will be produced
+base,404,"10"" X 14"" Posters",false,,Tanner Scheppers,,1000 sets will be produced
+base,405,Base,false,,Ross Detwiler
+base,405,Oversized,false,499,Ross Detwiler,,1000 sets will be produced
+base,405,"10"" X 14"" Posters",false,,Ross Detwiler,,1000 sets will be produced
+base,406,Base,false,,Jon Lester
+base,406,Oversized,false,499,Jon Lester,,1000 sets will be produced
+base,406,"10"" X 14"" Posters",false,,Jon Lester,,1000 sets will be produced
+base,407,Base,false,,Jed Lowrie
+base,407,Oversized,false,499,Jed Lowrie,,1000 sets will be produced
+base,407,"10"" X 14"" Posters",false,,Jed Lowrie,,1000 sets will be produced
+base,408,Base,false,,Jake Smolinski
+base,408,Oversized,false,499,Jake Smolinski,,1000 sets will be produced
+base,408,"10"" X 14"" Posters",false,,Jake Smolinski,,1000 sets will be produced
+base,409,Base,false,,Juan Uribe
+base,409,Oversized,false,499,Juan Uribe,,1000 sets will be produced
+base,409,"10"" X 14"" Posters",false,,Juan Uribe,,1000 sets will be produced
+base,410,Base,false,,Kyle Lohse
+base,410,Oversized,false,499,Kyle Lohse,,1000 sets will be produced
+base,410,"10"" X 14"" Posters",false,,Kyle Lohse,,1000 sets will be produced
+base,411,Base,false,,Nelson Cruz
+base,411,Oversized,false,499,Nelson Cruz,,1000 sets will be produced
+base,411,"10"" X 14"" Posters",false,,Nelson Cruz,,1000 sets will be produced
+base,412,Base,false,,Hector Rondon
+base,412,Oversized,false,499,Hector Rondon,,1000 sets will be produced
+base,412,"10"" X 14"" Posters",false,,Hector Rondon,,1000 sets will be produced
+base,413,Base,false,,Anthony Gose
+base,413,Oversized,false,499,Anthony Gose,,1000 sets will be produced
+base,413,"10"" X 14"" Posters",false,,Anthony Gose,,1000 sets will be produced
+base,414,Base,false,,J.A. Happ
+base,414,Oversized,false,499,J.A. Happ,,1000 sets will be produced
+base,414,"10"" X 14"" Posters",false,,J.A. Happ,,1000 sets will be produced
+base,415,Base,false,,Ervin Santana
+base,415,Oversized,false,499,Ervin Santana,,1000 sets will be produced
+base,415,"10"" X 14"" Posters",false,,Ervin Santana,,1000 sets will be produced
+base,416,Base,false,,Francisco Cervelli
+base,416,Oversized,false,499,Francisco Cervelli,,1000 sets will be produced
+base,416,"10"" X 14"" Posters",false,,Francisco Cervelli,,1000 sets will be produced
+base,417,Base,false,,Leonys Martin
+base,417,Oversized,false,499,Leonys Martin,,1000 sets will be produced
+base,417,"10"" X 14"" Posters",false,,Leonys Martin,,1000 sets will be produced
+base,418,Base,false,,Jung Ho Kang RC
+base,418,Oversized,false,499,Jung Ho Kang RC,,1000 sets will be produced
+base,418,"10"" X 14"" Posters",false,,Jung Ho Kang RC,,1000 sets will be produced
+base,419,Base,false,,Omar Infante
+base,419,Oversized,false,499,Omar Infante,,1000 sets will be produced
+base,419,"10"" X 14"" Posters",false,,Omar Infante,,1000 sets will be produced
+base,420,Base,false,,Cody Asche
+base,420,Oversized,false,499,Cody Asche,,1000 sets will be produced
+base,420,"10"" X 14"" Posters",false,,Cody Asche,,1000 sets will be produced
+base,421,Base,false,,Joe Kelly
+base,421,Oversized,false,499,Joe Kelly,,1000 sets will be produced
+base,421,"10"" X 14"" Posters",false,,Joe Kelly,,1000 sets will be produced
+base,422,Base,false,,Prince Fielder
+base,422,Oversized,false,499,Prince Fielder,,1000 sets will be produced
+base,422,"10"" X 14"" Posters",false,,Prince Fielder,,1000 sets will be produced
+base,423,Base,false,,Javy Guerra
+base,423,Oversized,false,499,Javy Guerra,,1000 sets will be produced
+base,423,"10"" X 14"" Posters",false,,Javy Guerra,,1000 sets will be produced
+base,424,Base,false,,Michael Saunders
+base,424,Oversized,false,499,Michael Saunders,,1000 sets will be produced
+base,424,"10"" X 14"" Posters",false,,Michael Saunders,,1000 sets will be produced
+base,425,Base,false,,Bryan Shaw
+base,425,Oversized,false,499,Bryan Shaw,,1000 sets will be produced
+base,425,"10"" X 14"" Posters",false,,Bryan Shaw,,1000 sets will be produced
+base,426,Base,false,,Trevor Plouffe
+base,426,Oversized,false,499,Trevor Plouffe,,1000 sets will be produced
+base,426,"10"" X 14"" Posters",false,,Trevor Plouffe,,1000 sets will be produced
+base,427,Base,false,,Raisel Iglesias RC
+base,427,Oversized,false,499,Raisel Iglesias RC,,1000 sets will be produced
+base,427,"10"" X 14"" Posters",false,,Raisel Iglesias RC,,1000 sets will be produced
+base,428,Base,false,,Jon Niese
+base,428,Oversized,false,499,Jon Niese,,1000 sets will be produced
+base,428,"10"" X 14"" Posters",false,,Jon Niese,,1000 sets will be produced
+base,429,Base,false,,A.J. Ellis
+base,429,Oversized,false,499,A.J. Ellis,,1000 sets will be produced
+base,429,"10"" X 14"" Posters",false,,A.J. Ellis,,1000 sets will be produced
+base,430,Base,false,,Jarred Cosart
+base,430,Oversized,false,499,Jarred Cosart,,1000 sets will be produced
+base,430,"10"" X 14"" Posters",false,,Jarred Cosart,,1000 sets will be produced
+base,431,Base,false,,Brandon McCarthy
+base,431,Oversized,false,499,Brandon McCarthy,,1000 sets will be produced
+base,431,"10"" X 14"" Posters",false,,Brandon McCarthy,,1000 sets will be produced
+base,432,Base,false,,Alex Rios
+base,432,Oversized,false,499,Alex Rios,,1000 sets will be produced
+base,432,"10"" X 14"" Posters",false,,Alex Rios,,1000 sets will be produced
+base,433,Base,false,,Justin Masterson
+base,433,Oversized,false,499,Justin Masterson,,1000 sets will be produced
+base,433,"10"" X 14"" Posters",false,,Justin Masterson,,1000 sets will be produced
+base,434,Base,false,,Carlos Frias RC
+base,434,Oversized,false,499,Carlos Frias RC,,1000 sets will be produced
+base,434,"10"" X 14"" Posters",false,,Carlos Frias RC,,1000 sets will be produced
+base,435,Base,false,,Mike Fiers
+base,435,Oversized,false,499,Mike Fiers,,1000 sets will be produced
+base,435,"10"" X 14"" Posters",false,,Mike Fiers,,1000 sets will be produced
+base,436,Base,false,,Russell Martin
+base,436,Oversized,false,499,Russell Martin,,1000 sets will be produced
+base,436,"10"" X 14"" Posters",false,,Russell Martin,,1000 sets will be produced
+base,437,Base,false,,Jake Marisnick
+base,437,Oversized,false,499,Jake Marisnick,,1000 sets will be produced
+base,437,"10"" X 14"" Posters",false,,Jake Marisnick,,1000 sets will be produced
+base,438,Base,false,,DJ LeMahieu
+base,438,Oversized,false,499,DJ LeMahieu,,1000 sets will be produced
+base,438,"10"" X 14"" Posters",false,,DJ LeMahieu,,1000 sets will be produced
+base,439,Base,false,,Kenley Jansen
+base,439,Oversized,false,499,Kenley Jansen,,1000 sets will be produced
+base,439,"10"" X 14"" Posters",false,,Kenley Jansen,,1000 sets will be produced
+base,440,Base,false,,Denard Span
+base,440,Oversized,false,499,Denard Span,,1000 sets will be produced
+base,440,"10"" X 14"" Posters",false,,Denard Span,,1000 sets will be produced
+base,441,Base,false,,Philadelphia Phillies TC
+base,441,Oversized,false,499,Philadelphia Phillies TC,,1000 sets will be produced
+base,441,"10"" X 14"" Posters",false,,Philadelphia Phillies TC,,1000 sets will be produced
+base,442,Base,false,,Tyler Matzek
+base,442,Oversized,false,499,Tyler Matzek,,1000 sets will be produced
+base,442,"10"" X 14"" Posters",false,,Tyler Matzek,,1000 sets will be produced
+base,443,Base,false,,Maicer Izturis
+base,443,Oversized,false,499,Maicer Izturis,,1000 sets will be produced
+base,443,"10"" X 14"" Posters",false,,Maicer Izturis,,1000 sets will be produced
+base,444,Base,false,,Lonnie Chisenhall HL
+base,444,Oversized,false,499,Lonnie Chisenhall HL,,1000 sets will be produced
+base,444,"10"" X 14"" Posters",false,,Lonnie Chisenhall HL,,1000 sets will be produced
+base,445,Base,false,,Christian Vazquez
+base,445,Oversized,false,499,Christian Vazquez,,1000 sets will be produced
+base,445,"10"" X 14"" Posters",false,,Christian Vazquez,,1000 sets will be produced
+base,446,Base,false,,Nick Franklin
+base,446,Oversized,false,499,Nick Franklin,,1000 sets will be produced
+base,446,"10"" X 14"" Posters",false,,Nick Franklin,,1000 sets will be produced
+base,447,Base,false,,Jose Ramirez
+base,447,Oversized,false,499,Jose Ramirez,,1000 sets will be produced
+base,447,"10"" X 14"" Posters",false,,Jose Ramirez,,1000 sets will be produced
+base,448,Base,false,,Ryan Hanigan
+base,448,Oversized,false,499,Ryan Hanigan,,1000 sets will be produced
+base,448,"10"" X 14"" Posters",false,,Ryan Hanigan,,1000 sets will be produced
+base,449,Base,false,,Joe Panik HL UER: #616 is Kris Bryant
+base,449,Oversized,false,499,Joe Panik HL UER: #616 is Kris Bryant,,1000 sets will be produced
+base,449,"10"" X 14"" Posters",false,,Joe Panik HL UER: #616 is Kris Bryant,,1000 sets will be produced
+base,450,Base,false,,Robinson Cano
+base,450,Oversized,false,499,Robinson Cano,,1000 sets will be produced
+base,450,"10"" X 14"" Posters",false,,Robinson Cano,,1000 sets will be produced
+base,451,Base,false,,Clayton Kershaw AW
+base,451,Oversized,false,499,Clayton Kershaw AW,,1000 sets will be produced
+base,451,"10"" X 14"" Posters",false,,Clayton Kershaw AW,,1000 sets will be produced
+base,452,Base,false,,Drew Smyly
+base,452,Oversized,false,499,Drew Smyly,,1000 sets will be produced
+base,452,"10"" X 14"" Posters",false,,Drew Smyly,,1000 sets will be produced
+base,453,Base,false,,Elian Herrera
+base,453,Oversized,false,499,Elian Herrera,,1000 sets will be produced
+base,453,"10"" X 14"" Posters",false,,Elian Herrera,,1000 sets will be produced
+base,454,Base,false,,Wade Davis
+base,454,Oversized,false,499,Wade Davis,,1000 sets will be produced
+base,454,"10"" X 14"" Posters",false,,Wade Davis,,1000 sets will be produced
+base,455,Base,false,,Adam Lind
+base,455,Oversized,false,499,Adam Lind,,1000 sets will be produced
+base,455,"10"" X 14"" Posters",false,,Adam Lind,,1000 sets will be produced
+base,456,Base,false,,Alex Gordon
+base,456,Oversized,false,499,Alex Gordon,,1000 sets will be produced
+base,456,"10"" X 14"" Posters",false,,Alex Gordon,,1000 sets will be produced
+base,457,Base,false,,Aaron Hicks
+base,457,Oversized,false,499,Aaron Hicks,,1000 sets will be produced
+base,457,"10"" X 14"" Posters",false,,Aaron Hicks,,1000 sets will be produced
+base,458,Base,false,,Junichi Tazawa
+base,458,Oversized,false,499,Junichi Tazawa,,1000 sets will be produced
+base,458,"10"" X 14"" Posters",false,,Junichi Tazawa,,1000 sets will be produced
+base,459,Base,false,,Tuffy Gosewisch
+base,459,Oversized,false,499,Tuffy Gosewisch,,1000 sets will be produced
+base,459,"10"" X 14"" Posters",false,,Tuffy Gosewisch,,1000 sets will be produced
+base,460,Base,false,,San Francisco Giants TC
+base,460,Oversized,false,499,San Francisco Giants TC,,1000 sets will be produced
+base,460,"10"" X 14"" Posters",false,,San Francisco Giants TC,,1000 sets will be produced
+base,461,Base,false,,Mike Moustakas
+base,461,Oversized,false,499,Mike Moustakas,,1000 sets will be produced
+base,461,"10"" X 14"" Posters",false,,Mike Moustakas,,1000 sets will be produced
+base,462,Base,false,,Shae Simmons
+base,462,Oversized,false,499,Shae Simmons,,1000 sets will be produced
+base,462,"10"" X 14"" Posters",false,,Shae Simmons,,1000 sets will be produced
+base,463,Base,false,,Justin Verlander
+base,463,Oversized,false,499,Justin Verlander,,1000 sets will be produced
+base,463,"10"" X 14"" Posters",false,,Justin Verlander,,1000 sets will be produced
+base,464,Base,false,,Brett Cecil
+base,464,Oversized,false,499,Brett Cecil,,1000 sets will be produced
+base,464,"10"" X 14"" Posters",false,,Brett Cecil,,1000 sets will be produced
+base,465,Base,false,,Seattle Mariners TC
+base,465,Oversized,false,499,Seattle Mariners TC,,1000 sets will be produced
+base,465,"10"" X 14"" Posters",false,,Seattle Mariners TC,,1000 sets will be produced
+base,466,Base,false,,A.J. Burnett
+base,466,Oversized,false,499,A.J. Burnett,,1000 sets will be produced
+base,466,"10"" X 14"" Posters",false,,A.J. Burnett,,1000 sets will be produced
+base,467,Base,false,,Mat Latos
+base,467,Oversized,false,499,Mat Latos,,1000 sets will be produced
+base,467,"10"" X 14"" Posters",false,,Mat Latos,,1000 sets will be produced
+base,468,Base,false,,CC Sabathia
+base,468,Oversized,false,499,CC Sabathia,,1000 sets will be produced
+base,468,"10"" X 14"" Posters",false,,CC Sabathia,,1000 sets will be produced
+base,469,Base,false,,James Shields
+base,469,Oversized,false,499,James Shields,,1000 sets will be produced
+base,469,"10"" X 14"" Posters",false,,James Shields,,1000 sets will be produced
+base,470,Base,false,,Mark Trumbo
+base,470,Oversized,false,499,Mark Trumbo,,1000 sets will be produced
+base,470,"10"" X 14"" Posters",false,,Mark Trumbo,,1000 sets will be produced
+base,471,Base,false,,Pat Neshek
+base,471,Oversized,false,499,Pat Neshek,,1000 sets will be produced
+base,471,"10"" X 14"" Posters",false,,Pat Neshek,,1000 sets will be produced
+base,472,Base,false,,T.J. House
+base,472,Oversized,false,499,T.J. House,,1000 sets will be produced
+base,472,"10"" X 14"" Posters",false,,T.J. House,,1000 sets will be produced
+base,473,Base,false,,Ryan Raburn
+base,473,Oversized,false,499,Ryan Raburn,,1000 sets will be produced
+base,473,"10"" X 14"" Posters",false,,Ryan Raburn,,1000 sets will be produced
+base,474,Base,false,,Alexi Amarista
+base,474,Oversized,false,499,Alexi Amarista,,1000 sets will be produced
+base,474,"10"" X 14"" Posters",false,,Alexi Amarista,,1000 sets will be produced
+base,475,Base,false,,Juan Perez UER: Stat headings for a pitcer
+base,475,Oversized,false,499,Juan Perez UER: Stat headings for a pitcer,,1000 sets will be produced
+base,475,"10"" X 14"" Posters",false,,Juan Perez UER: Stat headings for a pitcer,,1000 sets will be produced
+base,476,Base,false,,Jose Lobaton
+base,476,Oversized,false,499,Jose Lobaton,,1000 sets will be produced
+base,476,"10"" X 14"" Posters",false,,Jose Lobaton,,1000 sets will be produced
+base,477,Base,false,,Dallas Keuchel
+base,477,Oversized,false,499,Dallas Keuchel,,1000 sets will be produced
+base,477,"10"" X 14"" Posters",false,,Dallas Keuchel,,1000 sets will be produced
+base,478,Base,false,,Los Angeles Dodgers TC
+base,478,Oversized,false,499,Los Angeles Dodgers TC,,1000 sets will be produced
+base,478,"10"" X 14"" Posters",false,,Los Angeles Dodgers TC,,1000 sets will be produced
+base,479,Base,false,,Carlos Gonzalez
+base,479,Oversized,false,499,Carlos Gonzalez,,1000 sets will be produced
+base,479,"10"" X 14"" Posters",false,,Carlos Gonzalez,,1000 sets will be produced
+base,480,Base,false,,Matt Harvey FS
+base,480,Oversized,false,499,Matt Harvey FS,,1000 sets will be produced
+base,480,"10"" X 14"" Posters",false,,Matt Harvey FS,,1000 sets will be produced
+base,481,Base,false,,Freddy Galvis
+base,481,Oversized,false,499,Freddy Galvis,,1000 sets will be produced
+base,481,"10"" X 14"" Posters",false,,Freddy Galvis,,1000 sets will be produced
+base,482,Base,false,,Joaquin Benoit
+base,482,Oversized,false,499,Joaquin Benoit,,1000 sets will be produced
+base,482,"10"" X 14"" Posters",false,,Joaquin Benoit,,1000 sets will be produced
+base,483,Base,false,,Randal Grichuk
+base,483,Oversized,false,499,Randal Grichuk,,1000 sets will be produced
+base,483,"10"" X 14"" Posters",false,,Randal Grichuk,,1000 sets will be produced
+base,484,Base,false,,Melvin Mercedes RC
+base,484,Oversized,false,499,Melvin Mercedes RC,,1000 sets will be produced
+base,484,"10"" X 14"" Posters",false,,Melvin Mercedes RC,,1000 sets will be produced
+base,485,Base,false,,Daniel Hudson
+base,485,Oversized,false,499,Daniel Hudson,,1000 sets will be produced
+base,485,"10"" X 14"" Posters",false,,Daniel Hudson,,1000 sets will be produced
+base,486,Base,false,,Erik Goeddel RC
+base,486,Oversized,false,499,Erik Goeddel RC,,1000 sets will be produced
+base,486,"10"" X 14"" Posters",false,,Erik Goeddel RC,,1000 sets will be produced
+base,487,Base,false,,Corey Kluber AW
+base,487,Oversized,false,499,Corey Kluber AW,,1000 sets will be produced
+base,487,"10"" X 14"" Posters",false,,Corey Kluber AW,,1000 sets will be produced
+base,488,Base,false,,John Lackey
+base,488,Oversized,false,499,John Lackey,,1000 sets will be produced
+base,488,"10"" X 14"" Posters",false,,John Lackey,,1000 sets will be produced
+base,489,Base,false,,Jeremy Hellickson
+base,489,Oversized,false,499,Jeremy Hellickson,,1000 sets will be produced
+base,489,"10"" X 14"" Posters",false,,Jeremy Hellickson,,1000 sets will be produced
+base,490,Base,false,,Gavin Floyd
+base,490,Oversized,false,499,Gavin Floyd,,1000 sets will be produced
+base,490,"10"" X 14"" Posters",false,,Gavin Floyd,,1000 sets will be produced
+base,491,Base,false,,Rougned Odor FS
+base,491,Oversized,false,499,Rougned Odor FS,,1000 sets will be produced
+base,491,"10"" X 14"" Posters",false,,Rougned Odor FS,,1000 sets will be produced
+base,492,Base,false,,Brandon Barnes
+base,492,Oversized,false,499,Brandon Barnes,,1000 sets will be produced
+base,492,"10"" X 14"" Posters",false,,Brandon Barnes,,1000 sets will be produced
+base,493,Base,false,,Alex Rodriguez
+base,493,Oversized,false,499,Alex Rodriguez,,1000 sets will be produced
+base,493,"10"" X 14"" Posters",false,,Alex Rodriguez,,1000 sets will be produced
+base,494,Base,false,,James Jones
+base,494,Oversized,false,499,James Jones,,1000 sets will be produced
+base,494,"10"" X 14"" Posters",false,,James Jones,,1000 sets will be produced
+base,495,Base,false,,Christian Colon
+base,495,Oversized,false,499,Christian Colon,,1000 sets will be produced
+base,495,"10"" X 14"" Posters",false,,Christian Colon,,1000 sets will be produced
+base,496,Base,false,,Houston Astros TC
+base,496,Oversized,false,499,Houston Astros TC,,1000 sets will be produced
+base,496,"10"" X 14"" Posters",false,,Houston Astros TC,,1000 sets will be produced
+base,497,Base,false,,Hunter Strickland RC
+base,497,Oversized,false,499,Hunter Strickland RC,,1000 sets will be produced
+base,497,"10"" X 14"" Posters",false,,Hunter Strickland RC,,1000 sets will be produced
+base,498,Base,false,,Anthony Desclafani
+base,498,Oversized,false,499,Anthony Desclafani,,1000 sets will be produced
+base,498,"10"" X 14"" Posters",false,,Anthony Desclafani,,1000 sets will be produced
+base,499,Base,false,,Eduardo Nunez
+base,499,Oversized,false,499,Eduardo Nunez,,1000 sets will be produced
+base,499,"10"" X 14"" Posters",false,,Eduardo Nunez,,1000 sets will be produced
+base,500,Base,false,,David Ortiz
+base,500,Oversized,false,499,David Ortiz,,1000 sets will be produced
+base,500,"10"" X 14"" Posters",false,,David Ortiz,,1000 sets will be produced
+base,501,Base,false,,Will Venable
+base,501,Oversized,false,499,Will Venable,,1000 sets will be produced
+base,501,"10"" X 14"" Posters",false,,Will Venable,,1000 sets will be produced
+base,502,Base,false,,Kevin Frandsen
+base,502,Oversized,false,499,Kevin Frandsen,,1000 sets will be produced
+base,502,"10"" X 14"" Posters",false,,Kevin Frandsen,,1000 sets will be produced
+base,503,Base,false,,Joe Panik FS
+base,503,Oversized,false,499,Joe Panik FS,,1000 sets will be produced
+base,503,"10"" X 14"" Posters",false,,Joe Panik FS,,1000 sets will be produced
+base,504,Base,false,,Minnesota Twins TC
+base,504,Oversized,false,499,Minnesota Twins TC,,1000 sets will be produced
+base,504,"10"" X 14"" Posters",false,,Minnesota Twins TC,,1000 sets will be produced
+base,505,Base,false,,Arodys Vizcaino UER: Yoanner Negrin depicted
+base,505,Oversized,false,499,Arodys Vizcaino UER: Yoanner Negrin depicted,,1000 sets will be produced
+base,505,"10"" X 14"" Posters",false,,Arodys Vizcaino UER: Yoanner Negrin depicted,,1000 sets will be produced
+base,506,Base,false,,Chase Anderson
+base,506,Oversized,false,499,Chase Anderson,,1000 sets will be produced
+base,506,"10"" X 14"" Posters",false,,Chase Anderson,,1000 sets will be produced
+base,507,Base,false,,A.J. Pierzynski
+base,507,Oversized,false,499,A.J. Pierzynski,,1000 sets will be produced
+base,507,"10"" X 14"" Posters",false,,A.J. Pierzynski,,1000 sets will be produced
+base,508,Base,false,,Collin McHugh
+base,508,Oversized,false,499,Collin McHugh,,1000 sets will be produced
+base,508,"10"" X 14"" Posters",false,,Collin McHugh,,1000 sets will be produced
+base,509,Base,false,,Danny Santana FS
+base,509,Oversized,false,499,Danny Santana FS,,1000 sets will be produced
+base,509,"10"" X 14"" Posters",false,,Danny Santana FS,,1000 sets will be produced
+base,510,Base,false,,Mike Trout AW UER: '14 OPS was .939
+base,510,Oversized,false,499,Mike Trout AW UER: '14 OPS was .939,,1000 sets will be produced
+base,510,"10"" X 14"" Posters",false,,Mike Trout AW UER: '14 OPS was .939,,1000 sets will be produced
+base,511,Base,false,,Asdrubal Cabrera
+base,511,Oversized,false,499,Asdrubal Cabrera,,1000 sets will be produced
+base,511,"10"" X 14"" Posters",false,,Asdrubal Cabrera,,1000 sets will be produced
+base,512,Base,false,,Jay Bruce
+base,512,Oversized,false,499,Jay Bruce,,1000 sets will be produced
+base,512,"10"" X 14"" Posters",false,,Jay Bruce,,1000 sets will be produced
+base,513,Base,false,,Michael Cuddyer
+base,513,Oversized,false,499,Michael Cuddyer,,1000 sets will be produced
+base,513,"10"" X 14"" Posters",false,,Michael Cuddyer,,1000 sets will be produced
+base,514,Base,false,,Will Smith
+base,514,Oversized,false,499,Will Smith,,1000 sets will be produced
+base,514,"10"" X 14"" Posters",false,,Will Smith,,1000 sets will be produced
+base,515,Base,false,,Victor Martinez
+base,515,Oversized,false,499,Victor Martinez,,1000 sets will be produced
+base,515,"10"" X 14"" Posters",false,,Victor Martinez,,1000 sets will be produced
+base,516,Base,false,,Lorenzo Cain
+base,516,Oversized,false,499,Lorenzo Cain,,1000 sets will be produced
+base,516,"10"" X 14"" Posters",false,,Lorenzo Cain,,1000 sets will be produced
+base,517,Base,false,,Yusmeiro Petit
+base,517,Oversized,false,499,Yusmeiro Petit,,1000 sets will be produced
+base,517,"10"" X 14"" Posters",false,,Yusmeiro Petit,,1000 sets will be produced
+base,518,Base,false,,Rajai Davis
+base,518,Oversized,false,499,Rajai Davis,,1000 sets will be produced
+base,518,"10"" X 14"" Posters",false,,Rajai Davis,,1000 sets will be produced
+base,519,Base,false,,Archie Bradley RC
+base,519,Oversized,false,499,Archie Bradley RC,,1000 sets will be produced
+base,519,"10"" X 14"" Posters",false,,Archie Bradley RC,,1000 sets will be produced
+base,520,Base,false,,Brayan Pena
+base,520,Oversized,false,499,Brayan Pena,,1000 sets will be produced
+base,520,"10"" X 14"" Posters",false,,Brayan Pena,,1000 sets will be produced
+base,521,Base,false,,Nick Castellanos FS
+base,521,Oversized,false,499,Nick Castellanos FS,,1000 sets will be produced
+base,521,"10"" X 14"" Posters",false,,Nick Castellanos FS,,1000 sets will be produced
+base,522,Base,false,,Sam Tuivailala RC
+base,522,Oversized,false,499,Sam Tuivailala RC,,1000 sets will be produced
+base,522,"10"" X 14"" Posters",false,,Sam Tuivailala RC,,1000 sets will be produced
+base,523,Base,false,,Christian Bethancourt FS
+base,523,Oversized,false,499,Christian Bethancourt FS,,1000 sets will be produced
+base,523,"10"" X 14"" Posters",false,,Christian Bethancourt FS,,1000 sets will be produced
+base,524,Base,false,,John Danks
+base,524,Oversized,false,499,John Danks,,1000 sets will be produced
+base,524,"10"" X 14"" Posters",false,,John Danks,,1000 sets will be produced
+base,525,Base,false,,Luke Gregerson
+base,525,Oversized,false,499,Luke Gregerson,,1000 sets will be produced
+base,525,"10"" X 14"" Posters",false,,Luke Gregerson,,1000 sets will be produced
+base,526,Base,false,,Will Middlebrooks
+base,526,Oversized,false,499,Will Middlebrooks,,1000 sets will be produced
+base,526,"10"" X 14"" Posters",false,,Will Middlebrooks,,1000 sets will be produced
+base,527,Base,false,,Carlos Martinez FS
+base,527,Oversized,false,499,Carlos Martinez FS,,1000 sets will be produced
+base,527,"10"" X 14"" Posters",false,,Carlos Martinez FS,,1000 sets will be produced
+base,528,Base,false,,Brad Ziegler
+base,528,Oversized,false,499,Brad Ziegler,,1000 sets will be produced
+base,528,"10"" X 14"" Posters",false,,Brad Ziegler,,1000 sets will be produced
+base,529,Base,false,,Ryan Flaherty
+base,529,Oversized,false,499,Ryan Flaherty,,1000 sets will be produced
+base,529,"10"" X 14"" Posters",false,,Ryan Flaherty,,1000 sets will be produced
+base,530,Base,false,,Chris Heston RC
+base,530,Oversized,false,499,Chris Heston RC,,1000 sets will be produced
+base,530,"10"" X 14"" Posters",false,,Chris Heston RC,,1000 sets will be produced
+base,531,Base,false,,Drew Hutchison
+base,531,Oversized,false,499,Drew Hutchison,,1000 sets will be produced
+base,531,"10"" X 14"" Posters",false,,Drew Hutchison,,1000 sets will be produced
+base,532,Base,false,,Dellin Betances FS
+base,532,Oversized,false,499,Dellin Betances FS,,1000 sets will be produced
+base,532,"10"" X 14"" Posters",false,,Dellin Betances FS,,1000 sets will be produced
+base,533,Base,false,,Marwin Gonzalez FS
+base,533,Oversized,false,499,Marwin Gonzalez FS,,1000 sets will be produced
+base,533,"10"" X 14"" Posters",false,,Marwin Gonzalez FS,,1000 sets will be produced
+base,534,Base,false,,Chris Capuano
+base,534,Oversized,false,499,Chris Capuano,,1000 sets will be produced
+base,534,"10"" X 14"" Posters",false,,Chris Capuano,,1000 sets will be produced
+base,535,Base,false,,Erik Cordier RC
+base,535,Oversized,false,499,Erik Cordier RC,,1000 sets will be produced
+base,535,"10"" X 14"" Posters",false,,Erik Cordier RC,,1000 sets will be produced
+base,536,Base,false,,Logan Morrison
+base,536,Oversized,false,499,Logan Morrison,,1000 sets will be produced
+base,536,"10"" X 14"" Posters",false,,Logan Morrison,,1000 sets will be produced
+base,537,Base,false,,Steven Souza Jr.
+base,537,Oversized,false,499,Steven Souza Jr.,,1000 sets will be produced
+base,537,"10"" X 14"" Posters",false,,Steven Souza Jr.,,1000 sets will be produced
+base,538,Base,false,,Brad Boxberger
+base,538,Oversized,false,499,Brad Boxberger,,1000 sets will be produced
+base,538,"10"" X 14"" Posters",false,,Brad Boxberger,,1000 sets will be produced
+base,539,Base,false,,Jimmy Nelson FS
+base,539,Oversized,false,499,Jimmy Nelson FS,,1000 sets will be produced
+base,539,"10"" X 14"" Posters",false,,Jimmy Nelson FS,,1000 sets will be produced
+base,540,Base,false,,Drew Stubbs
+base,540,Oversized,false,499,Drew Stubbs,,1000 sets will be produced
+base,540,"10"" X 14"" Posters",false,,Drew Stubbs,,1000 sets will be produced
+base,541,Base,false,,Homer Bailey
+base,541,Oversized,false,499,Homer Bailey,,1000 sets will be produced
+base,541,"10"" X 14"" Posters",false,,Homer Bailey,,1000 sets will be produced
+base,542,Base,false,,Yasmany Tomas RC
+base,542,Oversized,false,499,Yasmany Tomas RC,,1000 sets will be produced
+base,542,"10"" X 14"" Posters",false,,Yasmany Tomas RC,,1000 sets will be produced
+base,543,Base,false,,Alberto Callaspo
+base,543,Oversized,false,499,Alberto Callaspo,,1000 sets will be produced
+base,543,"10"" X 14"" Posters",false,,Alberto Callaspo,,1000 sets will be produced
+base,544,Base,false,,Travis d'Arnaud FS
+base,544,Oversized,false,499,Travis d'Arnaud FS,,1000 sets will be produced
+base,544,"10"" X 14"" Posters",false,,Travis d'Arnaud FS,,1000 sets will be produced
+base,545,Base,false,,Clayton Kershaw AW
+base,545,Oversized,false,499,Clayton Kershaw AW,,1000 sets will be produced
+base,545,"10"" X 14"" Posters",false,,Clayton Kershaw AW,,1000 sets will be produced
+base,546,Base,false,,Tyler Clippard
+base,546,Oversized,false,499,Tyler Clippard,,1000 sets will be produced
+base,546,"10"" X 14"" Posters",false,,Tyler Clippard,,1000 sets will be produced
+base,547,Base,false,,Kristopher Negron
+base,547,Oversized,false,499,Kristopher Negron,,1000 sets will be produced
+base,547,"10"" X 14"" Posters",false,,Kristopher Negron,,1000 sets will be produced
+base,548,Base,false,,Cleveland Indians TC
+base,548,Oversized,false,499,Cleveland Indians TC,,1000 sets will be produced
+base,548,"10"" X 14"" Posters",false,,Cleveland Indians TC,,1000 sets will be produced
+base,549,Base,false,,Christian Walker RS
+base,549,Oversized,false,499,Christian Walker RS,,1000 sets will be produced
+base,549,"10"" X 14"" Posters",false,,Christian Walker RS,,1000 sets will be produced
+base,550,Base,false,,David Price
+base,550,Oversized,false,499,David Price,,1000 sets will be produced
+base,550,"10"" X 14"" Posters",false,,David Price,,1000 sets will be produced
+base,551,Base,false,,Corey Hart
+base,551,Oversized,false,499,Corey Hart,,1000 sets will be produced
+base,551,"10"" X 14"" Posters",false,,Corey Hart,,1000 sets will be produced
+base,552,Base,false,,Yovani Gallardo
+base,552,Oversized,false,499,Yovani Gallardo,,1000 sets will be produced
+base,552,"10"" X 14"" Posters",false,,Yovani Gallardo,,1000 sets will be produced
+base,553,Base,false,,Grady Sizemore
+base,553,Oversized,false,499,Grady Sizemore,,1000 sets will be produced
+base,553,"10"" X 14"" Posters",false,,Grady Sizemore,,1000 sets will be produced
+base,554,Base,false,,A.J. Griffin
+base,554,Oversized,false,499,A.J. Griffin,,1000 sets will be produced
+base,554,"10"" X 14"" Posters",false,,A.J. Griffin,,1000 sets will be produced
+base,555,Base,false,,Jake Arrieta
+base,555,Oversized,false,499,Jake Arrieta,,1000 sets will be produced
+base,555,"10"" X 14"" Posters",false,,Jake Arrieta,,1000 sets will be produced
+base,556,Base,false,,Jake McGee
+base,556,Oversized,false,499,Jake McGee,,1000 sets will be produced
+base,556,"10"" X 14"" Posters",false,,Jake McGee,,1000 sets will be produced
+base,557,Base,false,,Nick Markakis
+base,557,Oversized,false,499,Nick Markakis,,1000 sets will be produced
+base,557,"10"" X 14"" Posters",false,,Nick Markakis,,1000 sets will be produced
+base,558,Base,false,,Patrick Corbin ERR: Photo is Vidal Nuno
+base,558,Oversized,false,499,Patrick Corbin ERR: Photo is Vidal Nuno,,1000 sets will be produced
+base,558,"10"" X 14"" Posters",false,,Patrick Corbin ERR: Photo is Vidal Nuno,,1000 sets will be produced
+base,559,Base,false,,Dee Gordon
+base,559,Oversized,false,499,Dee Gordon,,1000 sets will be produced
+base,559,"10"" X 14"" Posters",false,,Dee Gordon,,1000 sets will be produced
+base,560,Base,false,,Jerome Williams
+base,560,Oversized,false,499,Jerome Williams,,1000 sets will be produced
+base,560,"10"" X 14"" Posters",false,,Jerome Williams,,1000 sets will be produced
+base,561,Base,false,,Ken Giles
+base,561,Oversized,false,499,Ken Giles,,1000 sets will be produced
+base,561,"10"" X 14"" Posters",false,,Ken Giles,,1000 sets will be produced
+base,562,Base,false,,Wilmer Flores
+base,562,Oversized,false,499,Wilmer Flores,,1000 sets will be produced
+base,562,"10"" X 14"" Posters",false,,Wilmer Flores,,1000 sets will be produced
+base,563,Base,false,,J.J. Hardy
+base,563,Oversized,false,499,J.J. Hardy,,1000 sets will be produced
+base,563,"10"" X 14"" Posters",false,,J.J. Hardy,,1000 sets will be produced
+base,564,Base,false,,Jose Quintana
+base,564,Oversized,false,499,Jose Quintana,,1000 sets will be produced
+base,564,"10"" X 14"" Posters",false,,Jose Quintana,,1000 sets will be produced
+base,565,Base,false,,Michael Morse
+base,565,Oversized,false,499,Michael Morse,,1000 sets will be produced
+base,565,"10"" X 14"" Posters",false,,Michael Morse,,1000 sets will be produced
+base,566,Base,false,,Chris Davis
+base,566,Oversized,false,499,Chris Davis,,1000 sets will be produced
+base,566,"10"" X 14"" Posters",false,,Chris Davis,,1000 sets will be produced
+base,567,Base,false,,Brennan Boesch
+base,567,Oversized,false,499,Brennan Boesch,,1000 sets will be produced
+base,567,"10"" X 14"" Posters",false,,Brennan Boesch,,1000 sets will be produced
+base,568,Base,false,,Chris Tillman
+base,568,Oversized,false,499,Chris Tillman,,1000 sets will be produced
+base,568,"10"" X 14"" Posters",false,,Chris Tillman,,1000 sets will be produced
+base,569,Base,false,,Marco Estrada
+base,569,Oversized,false,499,Marco Estrada,,1000 sets will be produced
+base,569,"10"" X 14"" Posters",false,,Marco Estrada,,1000 sets will be produced
+base,570,Base,false,,Jarrod Dyson
+base,570,Oversized,false,499,Jarrod Dyson,,1000 sets will be produced
+base,570,"10"" X 14"" Posters",false,,Jarrod Dyson,,1000 sets will be produced
+base,571,Base,false,,Devon Travis RC
+base,571,Oversized,false,499,Devon Travis RC,,1000 sets will be produced
+base,571,"10"" X 14"" Posters",false,,Devon Travis RC,,1000 sets will be produced
+base,572,Base,false,,A.J. Pollock
+base,572,Oversized,false,499,A.J. Pollock,,1000 sets will be produced
+base,572,"10"" X 14"" Posters",false,,A.J. Pollock,,1000 sets will be produced
+base,573,Base,false,,Ryan Rua RC
+base,573,Oversized,false,499,Ryan Rua RC,,1000 sets will be produced
+base,573,"10"" X 14"" Posters",false,,Ryan Rua RC,,1000 sets will be produced
+base,574,Base,false,,Mitch Moreland
+base,574,Oversized,false,499,Mitch Moreland,,1000 sets will be produced
+base,574,"10"" X 14"" Posters",false,,Mitch Moreland,,1000 sets will be produced
+base,575,Base,false,,Kris Medlen
+base,575,Oversized,false,499,Kris Medlen,,1000 sets will be produced
+base,575,"10"" X 14"" Posters",false,,Kris Medlen,,1000 sets will be produced
+base,576,Base,false,,Chase Headley
+base,576,Oversized,false,499,Chase Headley,,1000 sets will be produced
+base,576,"10"" X 14"" Posters",false,,Chase Headley,,1000 sets will be produced
+base,577,Base,false,,Henderson Alvarez
+base,577,Oversized,false,499,Henderson Alvarez,,1000 sets will be produced
+base,577,"10"" X 14"" Posters",false,,Henderson Alvarez,,1000 sets will be produced
+base,578,Base,false,,Ender Inciarte
+base,578,Oversized,false,499,Ender Inciarte,,1000 sets will be produced
+base,578,"10"" X 14"" Posters",false,,Ender Inciarte,,1000 sets will be produced
+base,579,Base,false,,Jason Hammel
+base,579,Oversized,false,499,Jason Hammel,,1000 sets will be produced
+base,579,"10"" X 14"" Posters",false,,Jason Hammel,,1000 sets will be produced
+base,580,Base,false,,Chris Bassitt RC
+base,580,Oversized,false,499,Chris Bassitt RC,,1000 sets will be produced
+base,580,"10"" X 14"" Posters",false,,Chris Bassitt RC,,1000 sets will be produced
+base,581,Base,false,,John Holdzkom RC
+base,581,Oversized,false,499,John Holdzkom RC,,1000 sets will be produced
+base,581,"10"" X 14"" Posters",false,,John Holdzkom RC,,1000 sets will be produced
+base,582,Base,false,,Wei-Yin Chen
+base,582,Oversized,false,499,Wei-Yin Chen,,1000 sets will be produced
+base,582,"10"" X 14"" Posters",false,,Wei-Yin Chen,,1000 sets will be produced
+base,583,Base,false,,Jose Abreu ROY
+base,583,Oversized,false,499,Jose Abreu ROY,,1000 sets will be produced
+base,583,"10"" X 14"" Posters",false,,Jose Abreu ROY,,1000 sets will be produced
+base,584,Base,false,,Danny Farquhar
+base,584,Oversized,false,499,Danny Farquhar,,1000 sets will be produced
+base,584,"10"" X 14"" Posters",false,,Danny Farquhar,,1000 sets will be produced
+base,585,Base,false,,Matt Moore
+base,585,Oversized,false,499,Matt Moore,,1000 sets will be produced
+base,585,"10"" X 14"" Posters",false,,Matt Moore,,1000 sets will be produced
+base,586,Base,false,,Max Scherzer
+base,586,Oversized,false,499,Max Scherzer,,1000 sets will be produced
+base,586,"10"" X 14"" Posters",false,,Max Scherzer,,1000 sets will be produced
+base,587,Base,false,,Daniel Descalso
+base,587,Oversized,false,499,Daniel Descalso,,1000 sets will be produced
+base,587,"10"" X 14"" Posters",false,,Daniel Descalso,,1000 sets will be produced
+base,588,Base,false,,Kolten Wong FS
+base,588,Oversized,false,499,Kolten Wong FS,,1000 sets will be produced
+base,588,"10"" X 14"" Posters",false,,Kolten Wong FS,,1000 sets will be produced
+base,589,Base,false,,Jeff Locke
+base,589,Oversized,false,499,Jeff Locke,,1000 sets will be produced
+base,589,"10"" X 14"" Posters",false,,Jeff Locke,,1000 sets will be produced
+base,590,Base,false,,Torii Hunter
+base,590,Oversized,false,499,Torii Hunter,,1000 sets will be produced
+base,590,"10"" X 14"" Posters",false,,Torii Hunter,,1000 sets will be produced
+base,591,Base,false,,Josh Collmenter
+base,591,Oversized,false,499,Josh Collmenter,,1000 sets will be produced
+base,591,"10"" X 14"" Posters",false,,Josh Collmenter,,1000 sets will be produced
+base,592,Base,false,,Martin Maldonado
+base,592,Oversized,false,499,Martin Maldonado,,1000 sets will be produced
+base,592,"10"" X 14"" Posters",false,,Martin Maldonado,,1000 sets will be produced
+base,593,Base,false,,Ruben Tejada
+base,593,Oversized,false,499,Ruben Tejada,,1000 sets will be produced
+base,593,"10"" X 14"" Posters",false,,Ruben Tejada,,1000 sets will be produced
+base,594,Base,false,,Jose Pirela RC
+base,594,Oversized,false,499,Jose Pirela RC,,1000 sets will be produced
+base,594,"10"" X 14"" Posters",false,,Jose Pirela RC,,1000 sets will be produced
+base,595,Base,false,,Craig Kimbrel
+base,595,Oversized,false,499,Craig Kimbrel,,1000 sets will be produced
+base,595,"10"" X 14"" Posters",false,,Craig Kimbrel,,1000 sets will be produced
+base,596,Base,false,,Bronson Arroyo
+base,596,Oversized,false,499,Bronson Arroyo,,1000 sets will be produced
+base,596,"10"" X 14"" Posters",false,,Bronson Arroyo,,1000 sets will be produced
+base,597,Base,false,,Matt Shoemaker FS
+base,597,Oversized,false,499,Matt Shoemaker FS,,1000 sets will be produced
+base,597,"10"" X 14"" Posters",false,,Matt Shoemaker FS,,1000 sets will be produced
+base,598,Base,false,,Nick Swisher
+base,598,Oversized,false,499,Nick Swisher,,1000 sets will be produced
+base,598,"10"" X 14"" Posters",false,,Nick Swisher,,1000 sets will be produced
+base,599,Base,false,,Michael Brantley
+base,599,Oversized,false,499,Michael Brantley,,1000 sets will be produced
+base,599,"10"" X 14"" Posters",false,,Michael Brantley,,1000 sets will be produced
+base,600,Base,false,,Albert Pujols
+base,600,Oversized,false,499,Albert Pujols,,1000 sets will be produced
+base,600,"10"" X 14"" Posters",false,,Albert Pujols,,1000 sets will be produced
+base,601,Base,false,,Wade Miley
+base,601,Oversized,false,499,Wade Miley,,1000 sets will be produced
+base,601,"10"" X 14"" Posters",false,,Wade Miley,,1000 sets will be produced
+base,602,Base,false,,Drew Storen
+base,602,Oversized,false,499,Drew Storen,,1000 sets will be produced
+base,602,"10"" X 14"" Posters",false,,Drew Storen,,1000 sets will be produced
+base,603,Base,false,,Jose Fernandez FS
+base,603,Oversized,false,499,Jose Fernandez FS,,1000 sets will be produced
+base,603,"10"" X 14"" Posters",false,,Jose Fernandez FS,,1000 sets will be produced
+base,604,Base,false,,Jordan Schafer
+base,604,Oversized,false,499,Jordan Schafer,,1000 sets will be produced
+base,604,"10"" X 14"" Posters",false,,Jordan Schafer,,1000 sets will be produced
+base,605,Base,false,,Huston Street
+base,605,Oversized,false,499,Huston Street,,1000 sets will be produced
+base,605,"10"" X 14"" Posters",false,,Huston Street,,1000 sets will be produced
+base,606,Base,false,,Ian Desmond
+base,606,Oversized,false,499,Ian Desmond,,1000 sets will be produced
+base,606,"10"" X 14"" Posters",false,,Ian Desmond,,1000 sets will be produced
+base,607,Base,false,,Jarrod Parker
+base,607,Oversized,false,499,Jarrod Parker,,1000 sets will be produced
+base,607,"10"" X 14"" Posters",false,,Jarrod Parker,,1000 sets will be produced
+base,608,Base,false,,Justin Smoak
+base,608,Oversized,false,499,Justin Smoak,,1000 sets will be produced
+base,608,"10"" X 14"" Posters",false,,Justin Smoak,,1000 sets will be produced
+base,609,Base,false,,Luke Hochevar
+base,609,Oversized,false,499,Luke Hochevar,,1000 sets will be produced
+base,609,"10"" X 14"" Posters",false,,Luke Hochevar,,1000 sets will be produced
+base,610,Base,false,,David Freese
+base,610,Oversized,false,499,David Freese,,1000 sets will be produced
+base,610,"10"" X 14"" Posters",false,,David Freese,,1000 sets will be produced
+base,611,Base,false,,Gregor Blanco
+base,611,Oversized,false,499,Gregor Blanco,,1000 sets will be produced
+base,611,"10"" X 14"" Posters",false,,Gregor Blanco,,1000 sets will be produced
+base,612,Base,false,,Caleb Joseph
+base,612,Oversized,false,499,Caleb Joseph,,1000 sets will be produced
+base,612,"10"" X 14"" Posters",false,,Caleb Joseph,,1000 sets will be produced
+base,613,Base,false,,Josh Beckett HL
+base,613,Oversized,false,499,Josh Beckett HL,,1000 sets will be produced
+base,613,"10"" X 14"" Posters",false,,Josh Beckett HL,,1000 sets will be produced
+base,614,Base,false,,Jordan Walden
+base,614,Oversized,false,499,Jordan Walden,,1000 sets will be produced
+base,614,"10"" X 14"" Posters",false,,Jordan Walden,,1000 sets will be produced
+base,615,Base,false,,Carlos Sanchez
+base,615,Oversized,false,499,Carlos Sanchez,,1000 sets will be produced
+base,615,"10"" X 14"" Posters",false,,Carlos Sanchez,,1000 sets will be produced
+base,616,Base,false,,Kris Bryant RC
+base,616,Oversized,false,499,Kris Bryant RC,,1000 sets will be produced
+base,616,"10"" X 14"" Posters",false,,Kris Bryant RC,,1000 sets will be produced
+base,617,Base,false,,Terrance Gore RC
+base,617,Oversized,false,499,Terrance Gore RC,,1000 sets will be produced
+base,617,"10"" X 14"" Posters",false,,Terrance Gore RC,,1000 sets will be produced
+base,618,Base,false,,Billy Butler
+base,618,Oversized,false,499,Billy Butler,,1000 sets will be produced
+base,618,"10"" X 14"" Posters",false,,Billy Butler,,1000 sets will be produced
+base,619,Base,false,,Kevin Gausman
+base,619,Oversized,false,499,Kevin Gausman,,1000 sets will be produced
+base,619,"10"" X 14"" Posters",false,,Kevin Gausman,,1000 sets will be produced
+base,620,Base,false,,Jose Altuve
+base,620,Oversized,false,499,Jose Altuve,,1000 sets will be produced
+base,620,"10"" X 14"" Posters",false,,Jose Altuve,,1000 sets will be produced
+base,621,Base,false,,Luis Valbuena
+base,621,Oversized,false,499,Luis Valbuena,,1000 sets will be produced
+base,621,"10"" X 14"" Posters",false,,Luis Valbuena,,1000 sets will be produced
+base,622,Base,false,,Yan Gomes
+base,622,Oversized,false,499,Yan Gomes,,1000 sets will be produced
+base,622,"10"" X 14"" Posters",false,,Yan Gomes,,1000 sets will be produced
+base,623,Base,false,,Melky Cabrera
+base,623,Oversized,false,499,Melky Cabrera,,1000 sets will be produced
+base,623,"10"" X 14"" Posters",false,,Melky Cabrera,,1000 sets will be produced
+base,624,Base,false,,Miguel Alfredo Gonzalez RC
+base,624,Oversized,false,499,Miguel Alfredo Gonzalez RC,,1000 sets will be produced
+base,624,"10"" X 14"" Posters",false,,Miguel Alfredo Gonzalez RC,,1000 sets will be produced
+base,625,Base,false,,Mark Buehrle
+base,625,Oversized,false,499,Mark Buehrle,,1000 sets will be produced
+base,625,"10"" X 14"" Posters",false,,Mark Buehrle,,1000 sets will be produced
+base,626,Base,false,,Hanley Ramirez
+base,626,Oversized,false,499,Hanley Ramirez,,1000 sets will be produced
+base,626,"10"" X 14"" Posters",false,,Hanley Ramirez,,1000 sets will be produced
+base,627,Base,false,,Jason Grilli
+base,627,Oversized,false,499,Jason Grilli,,1000 sets will be produced
+base,627,"10"" X 14"" Posters",false,,Jason Grilli,,1000 sets will be produced
+base,628,Base,false,,Peter Bourjos
+base,628,Oversized,false,499,Peter Bourjos,,1000 sets will be produced
+base,628,"10"" X 14"" Posters",false,,Peter Bourjos,,1000 sets will be produced
+base,629,Base,false,,Robbie Grossman
+base,629,Oversized,false,499,Robbie Grossman,,1000 sets will be produced
+base,629,"10"" X 14"" Posters",false,,Robbie Grossman,,1000 sets will be produced
+base,630,Base,false,,Carlos Carrasco
+base,630,Oversized,false,499,Carlos Carrasco,,1000 sets will be produced
+base,630,"10"" X 14"" Posters",false,,Carlos Carrasco,,1000 sets will be produced
+base,631,Base,false,,Chris Iannetta
+base,631,Oversized,false,499,Chris Iannetta,,1000 sets will be produced
+base,631,"10"" X 14"" Posters",false,,Chris Iannetta,,1000 sets will be produced
+base,632,Base,false,,Kyle Gibson
+base,632,Oversized,false,499,Kyle Gibson,,1000 sets will be produced
+base,632,"10"" X 14"" Posters",false,,Kyle Gibson,,1000 sets will be produced
+base,633,Base,false,,Skip Schumaker
+base,633,Oversized,false,499,Skip Schumaker,,1000 sets will be produced
+base,633,"10"" X 14"" Posters",false,,Skip Schumaker,,1000 sets will be produced
+base,634,Base,false,,Roenis Elias FS
+base,634,Oversized,false,499,Roenis Elias FS,,1000 sets will be produced
+base,634,"10"" X 14"" Posters",false,,Roenis Elias FS,,1000 sets will be produced
+base,635,Base,false,,Scott Feldman
+base,635,Oversized,false,499,Scott Feldman,,1000 sets will be produced
+base,635,"10"" X 14"" Posters",false,,Scott Feldman,,1000 sets will be produced
+base,636,Base,false,,Micah Johnson RC
+base,636,Oversized,false,499,Micah Johnson RC,,1000 sets will be produced
+base,636,"10"" X 14"" Posters",false,,Micah Johnson RC,,1000 sets will be produced
+base,637,Base,false,,Matt Szczur RC
+base,637,Oversized,false,499,Matt Szczur RC,,1000 sets will be produced
+base,637,"10"" X 14"" Posters",false,,Matt Szczur RC,,1000 sets will be produced
+base,638,Base,false,,Jimmy Rollins
+base,638,Oversized,false,499,Jimmy Rollins,,1000 sets will be produced
+base,638,"10"" X 14"" Posters",false,,Jimmy Rollins,,1000 sets will be produced
+base,639,Base,false,,Cameron Maybin
+base,639,Oversized,false,499,Cameron Maybin,,1000 sets will be produced
+base,639,"10"" X 14"" Posters",false,,Cameron Maybin,,1000 sets will be produced
+base,640,Base,false,,Matt Clark RC
+base,640,Oversized,false,499,Matt Clark RC,,1000 sets will be produced
+base,640,"10"" X 14"" Posters",false,,Matt Clark RC,,1000 sets will be produced
+base,641,Base,false,,Yorman Rodriguez RC
+base,641,Oversized,false,499,Yorman Rodriguez RC,,1000 sets will be produced
+base,641,"10"" X 14"" Posters",false,,Yorman Rodriguez RC,,1000 sets will be produced
+base,642,Base,false,,Alex Wood
+base,642,Oversized,false,499,Alex Wood,,1000 sets will be produced
+base,642,"10"" X 14"" Posters",false,,Alex Wood,,1000 sets will be produced
+base,643,Base,false,,Oswaldo Arcia
+base,643,Oversized,false,499,Oswaldo Arcia,,1000 sets will be produced
+base,643,"10"" X 14"" Posters",false,,Oswaldo Arcia,,1000 sets will be produced
+base,644,Base,false,,Chicago White Sox TC
+base,644,Oversized,false,499,Chicago White Sox TC,,1000 sets will be produced
+base,644,"10"" X 14"" Posters",false,,Chicago White Sox TC,,1000 sets will be produced
+base,645,Base,false,,Neftali Feliz
+base,645,Oversized,false,499,Neftali Feliz,,1000 sets will be produced
+base,645,"10"" X 14"" Posters",false,,Neftali Feliz,,1000 sets will be produced
+base,646,Base,false,,Aramis Ramirez
+base,646,Oversized,false,499,Aramis Ramirez,,1000 sets will be produced
+base,646,"10"" X 14"" Posters",false,,Aramis Ramirez,,1000 sets will be produced
+base,647,Base,false,,Yadier Molina
+base,647,Oversized,false,499,Yadier Molina,,1000 sets will be produced
+base,647,"10"" X 14"" Posters",false,,Yadier Molina,,1000 sets will be produced
+base,648,Base,false,,St. Louis Cardinals TC
+base,648,Oversized,false,499,St. Louis Cardinals TC,,1000 sets will be produced
+base,648,"10"" X 14"" Posters",false,,St. Louis Cardinals TC,,1000 sets will be produced
+base,649,Base,false,,Emilio Bonifacio
+base,649,Oversized,false,499,Emilio Bonifacio,,1000 sets will be produced
+base,649,"10"" X 14"" Posters",false,,Emilio Bonifacio,,1000 sets will be produced
+base,650,Base,false,,Pablo Sandoval
+base,650,Oversized,false,499,Pablo Sandoval,,1000 sets will be produced
+base,650,"10"" X 14"" Posters",false,,Pablo Sandoval,,1000 sets will be produced
+base,651,Base,false,,Andrelton Simmons
+base,651,Oversized,false,499,Andrelton Simmons,,1000 sets will be produced
+base,651,"10"" X 14"" Posters",false,,Andrelton Simmons,,1000 sets will be produced
+base,652,Base,false,,Stephen Vogt
+base,652,Oversized,false,499,Stephen Vogt,,1000 sets will be produced
+base,652,"10"" X 14"" Posters",false,,Stephen Vogt,,1000 sets will be produced
+base,653,Base,false,,Rafael Montero FS
+base,653,Oversized,false,499,Rafael Montero FS,,1000 sets will be produced
+base,653,"10"" X 14"" Posters",false,,Rafael Montero FS,,1000 sets will be produced
+base,654,Base,false,,Alfredo Simon
+base,654,Oversized,false,499,Alfredo Simon,,1000 sets will be produced
+base,654,"10"" X 14"" Posters",false,,Alfredo Simon,,1000 sets will be produced
+base,655,Base,false,,Taylor Hill
+base,655,Oversized,false,499,Taylor Hill,,1000 sets will be produced
+base,655,"10"" X 14"" Posters",false,,Taylor Hill,,1000 sets will be produced
+base,656,Base,false,,Adeiny Hechavarria FS
+base,656,Oversized,false,499,Adeiny Hechavarria FS,,1000 sets will be produced
+base,656,"10"" X 14"" Posters",false,,Adeiny Hechavarria FS,,1000 sets will be produced
+base,657,Base,false,,Justin Morneau
+base,657,Oversized,false,499,Justin Morneau,,1000 sets will be produced
+base,657,"10"" X 14"" Posters",false,,Justin Morneau,,1000 sets will be produced
+base,658,Base,false,,Tsuyoshi Wada
+base,658,Oversized,false,499,Tsuyoshi Wada,,1000 sets will be produced
+base,658,"10"" X 14"" Posters",false,,Tsuyoshi Wada,,1000 sets will be produced
+base,659,Base,false,,Jimmy Rollins HL
+base,659,Oversized,false,499,Jimmy Rollins HL,,1000 sets will be produced
+base,659,"10"" X 14"" Posters",false,,Jimmy Rollins HL,,1000 sets will be produced
+base,660,Base,false,,Roberto Osuna RC
+base,660,Oversized,false,499,Roberto Osuna RC,,1000 sets will be produced
+base,660,"10"" X 14"" Posters",false,,Roberto Osuna RC,,1000 sets will be produced
+base,661,Base,false,,Grant Balfour
+base,661,Oversized,false,499,Grant Balfour,,1000 sets will be produced
+base,661,"10"" X 14"" Posters",false,,Grant Balfour,,1000 sets will be produced
+base,662,Base,false,,Darin Ruf
+base,662,Oversized,false,499,Darin Ruf,,1000 sets will be produced
+base,662,"10"" X 14"" Posters",false,,Darin Ruf,,1000 sets will be produced
+base,663,Base,false,,Jake Diekman
+base,663,Oversized,false,499,Jake Diekman,,1000 sets will be produced
+base,663,"10"" X 14"" Posters",false,,Jake Diekman,,1000 sets will be produced
+base,664,Base,false,,Hector Santiago
+base,664,Oversized,false,499,Hector Santiago,,1000 sets will be produced
+base,664,"10"" X 14"" Posters",false,,Hector Santiago,,1000 sets will be produced
+base,665,Base,false,,Stephen Strasburg
+base,665,Oversized,false,499,Stephen Strasburg,,1000 sets will be produced
+base,665,"10"" X 14"" Posters",false,,Stephen Strasburg,,1000 sets will be produced
+base,666,Base,false,,Jonathan Broxton
+base,666,Oversized,false,499,Jonathan Broxton,,1000 sets will be produced
+base,666,"10"" X 14"" Posters",false,,Jonathan Broxton,,1000 sets will be produced
+base,667,Base,false,,Kole Calhoun
+base,667,Oversized,false,499,Kole Calhoun,,1000 sets will be produced
+base,667,"10"" X 14"" Posters",false,,Kole Calhoun,,1000 sets will be produced
+base,668,Base,false,,Jairo Diaz RC
+base,668,Oversized,false,499,Jairo Diaz RC,,1000 sets will be produced
+base,668,"10"" X 14"" Posters",false,,Jairo Diaz RC,,1000 sets will be produced
+base,669,Base,false,,Tampa Bay Rays TC
+base,669,Oversized,false,499,Tampa Bay Rays TC,,1000 sets will be produced
+base,669,"10"" X 14"" Posters",false,,Tampa Bay Rays TC,,1000 sets will be produced
+base,670,Base,false,,Darren O'Day
+base,670,Oversized,false,499,Darren O'Day,,1000 sets will be produced
+base,670,"10"" X 14"" Posters",false,,Darren O'Day,,1000 sets will be produced
+base,671,Base,false,,Gerrit Cole
+base,671,Oversized,false,499,Gerrit Cole,,1000 sets will be produced
+base,671,"10"" X 14"" Posters",false,,Gerrit Cole,,1000 sets will be produced
+base,672,Base,false,,Wily Peralta
+base,672,Oversized,false,499,Wily Peralta,,1000 sets will be produced
+base,672,"10"" X 14"" Posters",false,,Wily Peralta,,1000 sets will be produced
+base,673,Base,false,,Brett Oberholtzer
+base,673,Oversized,false,499,Brett Oberholtzer,,1000 sets will be produced
+base,673,"10"" X 14"" Posters",false,,Brett Oberholtzer,,1000 sets will be produced
+base,674,Base,false,,Desmond Jennings
+base,674,Oversized,false,499,Desmond Jennings,,1000 sets will be produced
+base,674,"10"" X 14"" Posters",false,,Desmond Jennings,,1000 sets will be produced
+base,675,Base,false,,Jonathan Lucroy
+base,675,Oversized,false,499,Jonathan Lucroy,,1000 sets will be produced
+base,675,"10"" X 14"" Posters",false,,Jonathan Lucroy,,1000 sets will be produced
+base,676,Base,false,,Nate McLouth
+base,676,Oversized,false,499,Nate McLouth,,1000 sets will be produced
+base,676,"10"" X 14"" Posters",false,,Nate McLouth,,1000 sets will be produced
+base,677,Base,false,,Ryan Goins
+base,677,Oversized,false,499,Ryan Goins,,1000 sets will be produced
+base,677,"10"" X 14"" Posters",false,,Ryan Goins,,1000 sets will be produced
+base,678,Base,false,,Sam Freeman
+base,678,Oversized,false,499,Sam Freeman,,1000 sets will be produced
+base,678,"10"" X 14"" Posters",false,,Sam Freeman,,1000 sets will be produced
+base,679,Base,false,,Jorge De La Rosa
+base,679,Oversized,false,499,Jorge De La Rosa,,1000 sets will be produced
+base,679,"10"" X 14"" Posters",false,,Jorge De La Rosa,,1000 sets will be produced
+base,680,Base,false,,Nick Hundley
+base,680,Oversized,false,499,Nick Hundley,,1000 sets will be produced
+base,680,"10"" X 14"" Posters",false,,Nick Hundley,,1000 sets will be produced
+base,681,Base,false,,Zoilo Almonte
+base,681,Oversized,false,499,Zoilo Almonte,,1000 sets will be produced
+base,681,"10"" X 14"" Posters",false,,Zoilo Almonte,,1000 sets will be produced
+base,682,Base,false,,Christian Bergman
+base,682,Oversized,false,499,Christian Bergman,,1000 sets will be produced
+base,682,"10"" X 14"" Posters",false,,Christian Bergman,,1000 sets will be produced
+base,683,Base,false,,LaTroy Hawkins
+base,683,Oversized,false,499,LaTroy Hawkins,,1000 sets will be produced
+base,683,"10"" X 14"" Posters",false,,LaTroy Hawkins,,1000 sets will be produced
+base,684,Base,false,,Wil Myers
+base,684,Oversized,false,499,Wil Myers,,1000 sets will be produced
+base,684,"10"" X 14"" Posters",false,,Wil Myers,,1000 sets will be produced
+base,685,Base,false,,Yangervis Solarte
+base,685,Oversized,false,499,Yangervis Solarte,,1000 sets will be produced
+base,685,"10"" X 14"" Posters",false,,Yangervis Solarte,,1000 sets will be produced
+base,686,Base,false,,Tyson Ross
+base,686,Oversized,false,499,Tyson Ross,,1000 sets will be produced
+base,686,"10"" X 14"" Posters",false,,Tyson Ross,,1000 sets will be produced
+base,687,Base,false,,Odubel Herrera RC
+base,687,Oversized,false,499,Odubel Herrera RC,,1000 sets will be produced
+base,687,"10"" X 14"" Posters",false,,Odubel Herrera RC,,1000 sets will be produced
+base,688,Base,false,,Angel Pagan
+base,688,Oversized,false,499,Angel Pagan,,1000 sets will be produced
+base,688,"10"" X 14"" Posters",false,,Angel Pagan,,1000 sets will be produced
+base,689,Base,false,,R.J. Alvarez RC
+base,689,Oversized,false,499,R.J. Alvarez RC,,1000 sets will be produced
+base,689,"10"" X 14"" Posters",false,,R.J. Alvarez RC,,1000 sets will be produced
+base,690,Base,false,,Brett Bochy RC
+base,690,Oversized,false,499,Brett Bochy RC,,1000 sets will be produced
+base,690,"10"" X 14"" Posters",false,,Brett Bochy RC,,1000 sets will be produced
+base,691,Base,false,,Lisalverto Bonilla RC
+base,691,Oversized,false,499,Lisalverto Bonilla RC,,1000 sets will be produced
+base,691,"10"" X 14"" Posters",false,,Lisalverto Bonilla RC,,1000 sets will be produced
+base,692,Base,false,,Andrew Chafin RC
+base,692,Oversized,false,499,Andrew Chafin RC,,1000 sets will be produced
+base,692,"10"" X 14"" Posters",false,,Andrew Chafin RC,,1000 sets will be produced
+base,693,Base,false,,Jason Rogers RC
+base,693,Oversized,false,499,Jason Rogers RC,,1000 sets will be produced
+base,693,"10"" X 14"" Posters",false,,Jason Rogers RC,,1000 sets will be produced
+base,694,Base,false,,Xavier Scruggs RC
+base,694,Oversized,false,499,Xavier Scruggs RC,,1000 sets will be produced
+base,694,"10"" X 14"" Posters",false,,Xavier Scruggs RC,,1000 sets will be produced
+base,695,Base,false,,Rafael Ynoa RC
+base,695,Oversized,false,499,Rafael Ynoa RC,,1000 sets will be produced
+base,695,"10"" X 14"" Posters",false,,Rafael Ynoa RC,,1000 sets will be produced
+base,696,Base,false,,Boston Red Sox TC
+base,696,Oversized,false,499,Boston Red Sox TC,,1000 sets will be produced
+base,696,"10"" X 14"" Posters",false,,Boston Red Sox TC,,1000 sets will be produced
+base,697,Base,false,,New York Yankees TC
+base,697,Oversized,false,499,New York Yankees TC,,1000 sets will be produced
+base,697,"10"" X 14"" Posters",false,,New York Yankees TC,,1000 sets will be produced
+base,698,Base,false,,Texas Rangers TC
+base,698,Oversized,false,499,Texas Rangers TC,,1000 sets will be produced
+base,698,"10"" X 14"" Posters",false,,Texas Rangers TC,,1000 sets will be produced
+base,699,Base,false,,Miami Marlins TC
+base,699,Oversized,false,499,Miami Marlins TC,,1000 sets will be produced
+base,699,"10"" X 14"" Posters",false,,Miami Marlins TC,,1000 sets will be produced
+base,700,Base,false,,Joe Mauer
+base,700,Oversized,false,499,Joe Mauer,,1000 sets will be produced
+base,700,"10"" X 14"" Posters",false,,Joe Mauer,,1000 sets will be produced
+base,701,Base,false,,Milwaukee Brewers TC
+base,701,Oversized,false,499,Milwaukee Brewers TC,,1000 sets will be produced
+base,701,"10"" X 14"" Posters",false,,Milwaukee Brewers TC,,1000 sets will be produced
+base,1,Base,false,,Derek Jeter tipping cap
+base,1,Oversized,false,499,Derek Jeter tipping cap,,1000 sets will be produced
+base,1,"10"" X 14"" Posters",false,,Derek Jeter tipping cap,,1000 sets will be produced
+base,5,Base,false,,Josh Donaldson Gatorade
+base,5,Oversized,false,499,Josh Donaldson Gatorade,,1000 sets will be produced
+base,5,"10"" X 14"" Posters",false,,Josh Donaldson Gatorade,,1000 sets will be produced
+base,20,Base,false,,Madison Bumgardner hitting
+base,20,Oversized,false,499,Madison Bumgardner hitting,,1000 sets will be produced
+base,20,"10"" X 14"" Posters",false,,Madison Bumgardner hitting,,1000 sets will be produced
+base,25,Base,false,,Jose Bautista looking over shoulder
+base,25,Oversized,false,499,Jose Bautista looking over shoulder,,1000 sets will be produced
+base,25,"10"" X 14"" Posters",false,,Jose Bautista looking over shoulder,,1000 sets will be produced
+base,39,Base,false,,Salvador Perez seated w/catcher's gear
+base,39,Oversized,false,499,Salvador Perez seated w/catcher's gear,,1000 sets will be produced
+base,39,"10"" X 14"" Posters",false,,Salvador Perez seated w/catcher's gear,,1000 sets will be produced
+base,46,Base,false,,Wilson Ramos Gatorade
+base,46,Oversized,false,499,Wilson Ramos Gatorade,,1000 sets will be produced
+base,46,"10"" X 14"" Posters",false,,Wilson Ramos Gatorade,,1000 sets will be produced
+base,50,Base,false,,Yu Darvish hitting
+base,50,Oversized,false,499,Yu Darvish hitting,,1000 sets will be produced
+base,50,"10"" X 14"" Posters",false,,Yu Darvish hitting,,1000 sets will be produced
+base,92,Base,false,,Ian Kinsler w/bat
+base,92,Oversized,false,499,Ian Kinsler w/bat,,1000 sets will be produced
+base,92,"10"" X 14"" Posters",false,,Ian Kinsler w/bat,,1000 sets will be produced
+base,100,Base,false,,Clayton Kershaw bubble gum
+base,100,Oversized,false,499,Clayton Kershaw bubble gum,,1000 sets will be produced
+base,100,"10"" X 14"" Posters",false,,Clayton Kershaw bubble gum,,1000 sets will be produced
+base,135,Base,false,,Brett Lawrie tossing baseballs
+base,135,Oversized,false,499,Brett Lawrie tossing baseballs,,1000 sets will be produced
+base,135,"10"" X 14"" Posters",false,,Brett Lawrie tossing baseballs,,1000 sets will be produced
+base,136,Base,false,,Manny Machado w/Mike Trout
+base,136,Oversized,false,499,Manny Machado w/Mike Trout,,1000 sets will be produced
+base,136,"10"" X 14"" Posters",false,,Manny Machado w/Mike Trout,,1000 sets will be produced
+base,150,Base,false,,Giancarlo Stanton w/teammates
+base,150,Oversized,false,499,Giancarlo Stanton w/teammates,,1000 sets will be produced
+base,150,"10"" X 14"" Posters",false,,Giancarlo Stanton w/teammates,,1000 sets will be produced
+base,163,Base,false,,Chase Utley in dugout
+base,163,Oversized,false,499,Chase Utley in dugout,,1000 sets will be produced
+base,163,"10"" X 14"" Posters",false,,Chase Utley in dugout,,1000 sets will be produced
+base,169,Base,false,,Adam Jones bubble gum
+base,169,Oversized,false,499,Adam Jones bubble gum,,1000 sets will be produced
+base,169,"10"" X 14"" Posters",false,,Adam Jones bubble gum,,1000 sets will be produced
+base,177,Base,false,,Paul Konerko greeting fans
+base,177,Oversized,false,499,Paul Konerko greeting fans,,1000 sets will be produced
+base,177,"10"" X 14"" Posters",false,,Paul Konerko greeting fans,,1000 sets will be produced
+base,181,Base,false,,Jason Heyward waving
+base,181,Oversized,false,499,Jason Heyward waving,,1000 sets will be produced
+base,181,"10"" X 14"" Posters",false,,Jason Heyward waving,,1000 sets will be produced
+base,200,Base,false,,Miguel Cabrera signing autograph
+base,200,Oversized,false,499,Miguel Cabrera signing autograph,,1000 sets will be produced
+base,200,"10"" X 14"" Posters",false,,Miguel Cabrera signing autograph,,1000 sets will be produced
+base,207,Base,false,,Bryce Harper screaming
+base,207,Oversized,false,499,Bryce Harper screaming,,1000 sets will be produced
+base,207,"10"" X 14"" Posters",false,,Bryce Harper screaming,,1000 sets will be produced
+base,216,Base,false,,Greg Holland Gatorade
+base,216,Oversized,false,499,Greg Holland Gatorade,,1000 sets will be produced
+base,216,"10"" X 14"" Posters",false,,Greg Holland Gatorade,,1000 sets will be produced
+base,219,Base,false,,Kennys Vargas seated in dugout
+base,219,Oversized,false,499,Kennys Vargas seated in dugout,,1000 sets will be produced
+base,219,"10"" X 14"" Posters",false,,Kennys Vargas seated in dugout,,1000 sets will be produced
+base,221,Base,false,,Jason Kipnis sliding during rain delay
+base,221,Oversized,false,499,Jason Kipnis sliding during rain delay,,1000 sets will be produced
+base,221,"10"" X 14"" Posters",false,,Jason Kipnis sliding during rain delay,,1000 sets will be produced
+base,250,Base,false,,Evan Longoria in dugout
+base,250,Oversized,false,499,Evan Longoria in dugout,,1000 sets will be produced
+base,250,"10"" X 14"" Posters",false,,Evan Longoria in dugout,,1000 sets will be produced
+base,281,Base,false,,Elvis Andrus w/Derek Jeter
+base,281,Oversized,false,499,Elvis Andrus w/Derek Jeter,,1000 sets will be produced
+base,281,"10"" X 14"" Posters",false,,Elvis Andrus w/Derek Jeter,,1000 sets will be produced
+base,302,Base,false,,Martin Prado Gatorade
+base,302,Oversized,false,499,Martin Prado Gatorade,,1000 sets will be produced
+base,302,"10"" X 14"" Posters",false,,Martin Prado Gatorade,,1000 sets will be produced
+base,318,Base,false,,George Springer Gatorade
+base,318,Oversized,false,499,George Springer Gatorade,,1000 sets will be produced
+base,318,"10"" X 14"" Posters",false,,George Springer Gatorade,,1000 sets will be produced
+base,387,Base,false,,Jacob deGrom
+base,387,Oversized,false,499,Jacob deGrom,,1000 sets will be produced
+base,387,"10"" X 14"" Posters",false,,Jacob deGrom,,1000 sets will be produced
+base,389,Base,false,,Mookie Betts
+base,389,Oversized,false,499,Mookie Betts,,1000 sets will be produced
+base,389,"10"" X 14"" Posters",false,,Mookie Betts,,1000 sets will be produced
+base,487,Base,false,,Corey Kluber
+base,487,Oversized,false,499,Corey Kluber,,1000 sets will be produced
+base,487,"10"" X 14"" Posters",false,,Corey Kluber,,1000 sets will be produced
+base,503,Base,false,,Joe Panik
+base,503,Oversized,false,499,Joe Panik,,1000 sets will be produced
+base,503,"10"" X 14"" Posters",false,,Joe Panik,,1000 sets will be produced
+base,588,Base,false,,Kolten Wong
+base,588,Oversized,false,499,Kolten Wong,,1000 sets will be produced
+base,588,"10"" X 14"" Posters",false,,Kolten Wong,,1000 sets will be produced
+base,603,Base,false,,Jose Fernandez
+base,603,Oversized,false,499,Jose Fernandez,,1000 sets will be produced
+base,603,"10"" X 14"" Posters",false,,Jose Fernandez,,1000 sets will be produced
+base,5,Base,false,,Josh Donaldson bat
+base,5,Oversized,false,499,Josh Donaldson bat,,1000 sets will be produced
+base,5,"10"" X 14"" Posters",false,,Josh Donaldson bat,,1000 sets will be produced
+base,6,Base,false,,Jayson Werth button
+base,6,Oversized,false,499,Jayson Werth button,,1000 sets will be produced
+base,6,"10"" X 14"" Posters",false,,Jayson Werth button,,1000 sets will be produced
+base,15,Base,false,,Joey Votto bat knob
+base,15,Oversized,false,499,Joey Votto bat knob,,1000 sets will be produced
+base,15,"10"" X 14"" Posters",false,,Joey Votto bat knob,,1000 sets will be produced
+base,20,Base,false,,Madison Bumgarner glove
+base,20,Oversized,false,499,Madison Bumgarner glove,,1000 sets will be produced
+base,20,"10"" X 14"" Posters",false,,Madison Bumgarner glove,,1000 sets will be produced
+base,25,Base,false,,Jose Bautista foot
+base,25,Oversized,false,499,Jose Bautista foot,,1000 sets will be produced
+base,25,"10"" X 14"" Posters",false,,Jose Bautista foot,,1000 sets will be produced
+base,34,Base,false,,Charlie Blackmon wrist
+base,34,Oversized,false,499,Charlie Blackmon wrist,,1000 sets will be produced
+base,34,"10"" X 14"" Posters",false,,Charlie Blackmon wrist,,1000 sets will be produced
+base,42,Base,false,,Todd Frazier elbow
+base,42,Oversized,false,499,Todd Frazier elbow,,1000 sets will be produced
+base,42,"10"" X 14"" Posters",false,,Todd Frazier elbow,,1000 sets will be produced
+base,43,Base,false,,Starlin Castro ball
+base,43,Oversized,false,499,Starlin Castro ball,,1000 sets will be produced
+base,43,"10"" X 14"" Posters",false,,Starlin Castro ball,,1000 sets will be produced
+base,47,Base,false,,Anthony Rizzo helmet
+base,47,Oversized,false,499,Anthony Rizzo helmet,,1000 sets will be produced
+base,47,"10"" X 14"" Posters",false,,Anthony Rizzo helmet,,1000 sets will be produced
+base,50,Base,false,,Yu Darvish glove
+base,50,Oversized,false,499,Yu Darvish glove,,1000 sets will be produced
+base,50,"10"" X 14"" Posters",false,,Yu Darvish glove,,1000 sets will be produced
+base,60,Base,false,,Michael Wacha necklace
+base,60,Oversized,false,499,Michael Wacha necklace,,1000 sets will be produced
+base,60,"10"" X 14"" Posters",false,,Michael Wacha necklace,,1000 sets will be produced
+base,62,Base,false,,Nolan Arenado thumb
+base,62,Oversized,false,499,Nolan Arenado thumb,,1000 sets will be produced
+base,62,"10"" X 14"" Posters",false,,Nolan Arenado thumb,,1000 sets will be produced
+base,67,Base,false,,Hunter Pence hand
+base,67,Oversized,false,499,Hunter Pence hand,,1000 sets will be produced
+base,67,"10"" X 14"" Posters",false,,Hunter Pence hand,,1000 sets will be produced
+base,73,Base,false,,Freddie Freeman belt
+base,73,Oversized,false,499,Freddie Freeman belt,,1000 sets will be produced
+base,73,"10"" X 14"" Posters",false,,Freddie Freeman belt,,1000 sets will be produced
+base,75,Base,false,,Dustin Pedroia wrist
+base,75,Oversized,false,499,Dustin Pedroia wrist,,1000 sets will be produced
+base,75,"10"" X 14"" Posters",false,,Dustin Pedroia wrist,,1000 sets will be produced
+base,80,Base,false,,Adam Wainwright glove
+base,80,Oversized,false,499,Adam Wainwright glove,,1000 sets will be produced
+base,80,"10"" X 14"" Posters",false,,Adam Wainwright glove,,1000 sets will be produced
+base,83,Base,false,,David Wright bat
+base,83,Oversized,false,499,David Wright bat,,1000 sets will be produced
+base,83,"10"" X 14"" Posters",false,,David Wright bat,,1000 sets will be produced
+base,92,Base,false,,Ian Kinsler belt
+base,92,Oversized,false,499,Ian Kinsler belt,,1000 sets will be produced
+base,92,"10"" X 14"" Posters",false,,Ian Kinsler belt,,1000 sets will be produced
+base,100,Base,false,,Clayton Kershaw arm
+base,100,Oversized,false,499,Clayton Kershaw arm,,1000 sets will be produced
+base,100,"10"" X 14"" Posters",false,,Clayton Kershaw arm,,1000 sets will be produced
+base,109,Base,false,,Doug Fister hat
+base,109,Oversized,false,499,Doug Fister hat,,1000 sets will be produced
+base,109,"10"" X 14"" Posters",false,,Doug Fister hat,,1000 sets will be produced
+base,120,Base,false,,Yoenis Cespedes wrist
+base,120,Oversized,false,499,Yoenis Cespedes wrist,,1000 sets will be produced
+base,120,"10"" X 14"" Posters",false,,Yoenis Cespedes wrist,,1000 sets will be produced
+base,125,Base,false,,Troy Tulowitzki shoulder
+base,125,Oversized,false,499,Troy Tulowitzki shoulder,,1000 sets will be produced
+base,125,"10"" X 14"" Posters",false,,Troy Tulowitzki shoulder,,1000 sets will be produced
+base,136,Base,false,,Manny Machado base
+base,136,Oversized,false,499,Manny Machado base,,1000 sets will be produced
+base,136,"10"" X 14"" Posters",false,,Manny Machado base,,1000 sets will be produced
+base,144,Base,false,,Rusney Castillo wrist
+base,144,Oversized,false,499,Rusney Castillo wrist,,1000 sets will be produced
+base,144,"10"" X 14"" Posters",false,,Rusney Castillo wrist,,1000 sets will be produced
+base,149,Base,false,,Daniel Murphy helmet
+base,149,Oversized,false,499,Daniel Murphy helmet,,1000 sets will be produced
+base,149,"10"" X 14"" Posters",false,,Daniel Murphy helmet,,1000 sets will be produced
+base,150,Base,false,,Giancarlo Stanton elbow
+base,150,Oversized,false,499,Giancarlo Stanton elbow,,1000 sets will be produced
+base,150,"10"" X 14"" Posters",false,,Giancarlo Stanton elbow,,1000 sets will be produced
+base,163,Base,false,,Chase Utley ball
+base,163,Oversized,false,499,Chase Utley ball,,1000 sets will be produced
+base,163,"10"" X 14"" Posters",false,,Chase Utley ball,,1000 sets will be produced
+base,169,Base,false,,Adam Jones bat
+base,169,Oversized,false,499,Adam Jones bat,,1000 sets will be produced
+base,169,"10"" X 14"" Posters",false,,Adam Jones bat,,1000 sets will be produced
+base,175,Base,false,,Adrian Beltre back
+base,175,Oversized,false,499,Adrian Beltre back,,1000 sets will be produced
+base,175,"10"" X 14"" Posters",false,,Adrian Beltre back,,1000 sets will be produced
+base,181,Base,false,,Jason Heyward helmet
+base,181,Oversized,false,499,Jason Heyward helmet,,1000 sets will be produced
+base,181,"10"" X 14"" Posters",false,,Jason Heyward helmet,,1000 sets will be produced
+base,192,Base,false,,Joc Pederson wrist
+base,192,Oversized,false,499,Joc Pederson wrist,,1000 sets will be produced
+base,192,"10"" X 14"" Posters",false,,Joc Pederson wrist,,1000 sets will be produced
+base,200,Base,false,,Miguel Cabrera forearm
+base,200,Oversized,false,499,Miguel Cabrera forearm,,1000 sets will be produced
+base,200,"10"" X 14"" Posters",false,,Miguel Cabrera forearm,,1000 sets will be produced
+base,203,Base,false,,Paul Goldschmidt hand
+base,203,Oversized,false,499,Paul Goldschmidt hand,,1000 sets will be produced
+base,203,"10"" X 14"" Posters",false,,Paul Goldschmidt hand,,1000 sets will be produced
+base,207,Base,false,,Bryce Harper helmet
+base,207,Oversized,false,499,Bryce Harper helmet,,1000 sets will be produced
+base,207,"10"" X 14"" Posters",false,,Bryce Harper helmet,,1000 sets will be produced
+base,250,Base,false,,Evan Longoria ball
+base,250,Oversized,false,499,Evan Longoria ball,,1000 sets will be produced
+base,250,"10"" X 14"" Posters",false,,Evan Longoria ball,,1000 sets will be produced
+base,251,Base,false,,Anthony Rendon hat
+base,251,Oversized,false,499,Anthony Rendon hat,,1000 sets will be produced
+base,251,"10"" X 14"" Posters",false,,Anthony Rendon hat,,1000 sets will be produced
+base,262,Base,false,,Ryan Braun elbow
+base,262,Oversized,false,499,Ryan Braun elbow,,1000 sets will be produced
+base,262,"10"" X 14"" Posters",false,,Ryan Braun elbow,,1000 sets will be produced
+base,272,Base,false,,Matt Kemp finger
+base,272,Oversized,false,499,Matt Kemp finger,,1000 sets will be produced
+base,272,"10"" X 14"" Posters",false,,Matt Kemp finger,,1000 sets will be produced
+base,275,Base,false,,Buster Posey shoulder
+base,275,Oversized,false,499,Buster Posey shoulder,,1000 sets will be produced
+base,275,"10"" X 14"" Posters",false,,Buster Posey shoulder,,1000 sets will be produced
+base,300,Base,false,,Mike Trout helmet
+base,300,Oversized,false,499,Mike Trout helmet,,1000 sets will be produced
+base,300,"10"" X 14"" Posters",false,,Mike Trout helmet,,1000 sets will be produced
+base,315,Base,false,,Javier Baez helmet
+base,315,Oversized,false,499,Javier Baez helmet,,1000 sets will be produced
+base,315,"10"" X 14"" Posters",false,,Javier Baez helmet,,1000 sets will be produced
+base,320,Base,false,,Shin-Soo Choo shoulder
+base,320,Oversized,false,499,Shin-Soo Choo shoulder,,1000 sets will be produced
+base,320,"10"" X 14"" Posters",false,,Shin-Soo Choo shoulder,,1000 sets will be produced
+base,321,Base,false,,Josh Hamilton wrist
+base,321,Oversized,false,499,Josh Hamilton wrist,,1000 sets will be produced
+base,321,"10"" X 14"" Posters",false,,Josh Hamilton wrist,,1000 sets will be produced
+base,325,Base,false,,Felix Hernandez glove
+base,325,Oversized,false,499,Felix Hernandez glove,,1000 sets will be produced
+base,325,"10"" X 14"" Posters",false,,Felix Hernandez glove,,1000 sets will be produced
+base,336,Base,false,,Matt Carpenter elbow
+base,336,Oversized,false,499,Matt Carpenter elbow,,1000 sets will be produced
+base,336,"10"" X 14"" Posters",false,,Matt Carpenter elbow,,1000 sets will be produced
+base,348,Base,false,,Carlos Santana wrist
+base,348,Oversized,false,499,Carlos Santana wrist,,1000 sets will be produced
+base,348,"10"" X 14"" Posters",false,,Carlos Santana wrist,,1000 sets will be produced
+base,350,Base,false,,Yasiel Puig wrist
+base,350,Oversized,false,499,Yasiel Puig wrist,,1000 sets will be produced
+base,350,"10"" X 14"" Posters",false,,Yasiel Puig wrist,,1000 sets will be produced
+base,475,Base,false,,Juan Perez
+base,475,Oversized,false,499,Juan Perez,,1000 sets will be produced
+base,475,"10"" X 14"" Posters",false,,Juan Perez,,1000 sets will be produced
+base,497,Base,false,,Hunter Strickland
+base,497,Oversized,false,499,Hunter Strickland,,1000 sets will be produced
+base,497,"10"" X 14"" Posters",false,,Hunter Strickland,,1000 sets will be produced
+base,590,Base,false,,Torii Hunger
+base,590,Oversized,false,499,Torii Hunger,,1000 sets will be produced
+base,590,"10"" X 14"" Posters",false,,Torii Hunger,,1000 sets will be produced
+base,624,Base,false,,Miguel Alfredo Gonzalez
+base,624,Oversized,false,499,Miguel Alfredo Gonzalez,,1000 sets will be produced
+base,624,"10"" X 14"" Posters",false,,Miguel Alfredo Gonzalez,,1000 sets will be produced
+base,645,Base,false,,Neftali Perez
+base,645,Oversized,false,499,Neftali Perez,,1000 sets will be produced
+base,645,"10"" X 14"" Posters",false,,Neftali Perez,,1000 sets will be produced
+base,690,Base,false,,Brett Bochy
+base,690,Oversized,false,499,Brett Bochy,,1000 sets will be produced
+base,690,"10"" X 14"" Posters",false,,Brett Bochy,,1000 sets will be produced
+base,691,Base,false,,Lisalverto Bonilla
+base,691,Oversized,false,499,Lisalverto Bonilla,,1000 sets will be produced
+base,691,"10"" X 14"" Posters",false,,Lisalverto Bonilla,,1000 sets will be produced
+base,103,Base,false,,Guilder Rodriguez RC COR
+base,103,Oversized,false,499,Guilder Rodriguez RC COR,,1000 sets will be produced
+base,103,"10"" X 14"" Posters",false,,Guilder Rodriguez RC COR,,1000 sets will be produced
+base,176,Base,false,,Jose Abreu FS COR
+base,176,Oversized,false,499,Jose Abreu FS COR,,1000 sets will be produced
+base,176,"10"" X 14"" Posters",false,,Jose Abreu FS COR,,1000 sets will be produced
+base,315,Base,false,,Javier Baez RC COR
+base,315,Oversized,false,499,Javier Baez RC COR,,1000 sets will be produced
+base,315,"10"" X 14"" Posters",false,,Javier Baez RC COR,,1000 sets will be produced
+base,558,Base,false,,Patrick Corbin COR
+base,558,Oversized,false,499,Patrick Corbin COR,,1000 sets will be produced
+base,558,"10"" X 14"" Posters",false,,Patrick Corbin COR,,1000 sets will be produced
+base,108,Base,false,,Jorge Soler
+base,108,Oversized,false,499,Jorge Soler,,1000 sets will be produced
+base,108,"10"" X 14"" Posters",false,,Jorge Soler,,1000 sets will be produced
+base,192,Base,false,,Joc Pederson
+base,192,Oversized,false,499,Joc Pederson,,1000 sets will be produced
+base,192,"10"" X 14"" Posters",false,,Joc Pederson,,1000 sets will be produced
+base,519,Base,false,,Archie Bradley
+base,519,Oversized,false,499,Archie Bradley,,1000 sets will be produced
+base,519,"10"" X 14"" Posters",false,,Archie Bradley,,1000 sets will be produced
+base,571,Base,false,,Devon Travis
+base,571,Oversized,false,499,Devon Travis,,1000 sets will be produced
+base,571,"10"" X 14"" Posters",false,,Devon Travis,,1000 sets will be produced
+base,616,Base,false,,Kris Bryant
+base,616,Oversized,false,499,Kris Bryant,,1000 sets will be produced
+base,616,"10"" X 14"" Posters",false,,Kris Bryant,,1000 sets will be produced

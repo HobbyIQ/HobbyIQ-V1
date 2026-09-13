@@ -1,0 +1,72 @@
+{
+ "source": "bcp-2026-09-13",
+ "acquiredAt": "2026-09-13",
+ "sport": "baseball",
+ "sourceFamily": "baseballcardpedia",
+ "scraper": "backend/scripts/scrape-bcp-ladders.cjs (staging/parse-only; no code changes)",
+ "queue": "checklist-gap-queue.json — the 23 entries whose recommended source is baseballcardpedia",
+ "directory": "acq-2026-09-13-bcp-flair",
+ "readyToIngest": false,
+ "DO_NOT_INGEST_UNTIL": "the three flair-showcase-row-* keys are registered in backend/src/services/catalog/productSetKeys.ts",
+ "whyASeparateDirectory": "ingest-checklist-csv-to-catalog.cjs ingests EVERY .csv in its DIR (readdirSync at line 261) and reads no manifest gate — setKeyRegistrationRequired on a product manifest stops nothing. Splitting the directory is the only real gate, so these three files sit apart from the 28 that are ready.",
+ "ruling": "R30 (Drew, 2026-09-12): a same-numbered SUBSET within a product is its own card set. 1997 Flair Showcase states it under Parallels (Section 0): \"All 540 base cards (180 players from all three \\\"Rows\\\")\" = 180 x 3. Rows 0/1/2 share numbers 1-180, so each is its own key.",
+ "blockingDependency": {
+  "problem": "normalizeSetKey(\"flair-showcase-row-0\") returns \"flair\". The strict-tier rule [/flair-showcase|flair/, \"flair\"] in hobbyIqCardId.service.ts collapses every flair-showcase-* spelling, and that rule is deliberate and pinned (hobbyIqCardId.test.ts \"both variants pool\"). These keys are therefore NOT normalizeSetKey fixed points.",
+  "measured": "1,080 of the 1,620 minted ids COLLIDE. All three rows mint hiq:baseball:1997:flair:1:base:no-auto for card #1 — one pool for three cards, the exact identity collapse R30 exists to prevent.",
+  "fix": "Register each key in productSetKeys.ts as S(\"flair-showcase-row-N\", { parent: \"flair\" }) and add a strict-tier rule ordered BEFORE the /flair-showcase|flair/ catch-all, exactly as upper-deck-black-diamond and topps-finest-flashbacks are registered.",
+  "owner": "routed to Drew — a code change in productSetKeys.ts is outside an acquirer's scope",
+  "verifyBeforeIngest": "normalizeSetKey(\"flair-showcase-row-0\") === \"flair-showcase-row-0\" for all three keys, and computeHobbyIqCardId mints three DISTINCT ids for card #1."
+ },
+ "filesStaged": 3,
+ "rows": 1620,
+ "products": [
+  {
+   "file": "1997-flair-showcase-row-0-baseball.csv",
+   "year": 1997,
+   "sport": "baseball",
+   "setKey": "flair-showcase-row-0",
+   "setName": "1997 Flair Showcase Row 0",
+   "scope": "Row 0",
+   "sourceUrl": "http://www.baseballcardpedia.com/index.php/1997_Flair_Showcase",
+   "rows": 540,
+   "baseRows": 180,
+   "rungs": 2,
+   "printRunCoveragePct": 67,
+   "scopesWithheld": [],
+   "duplicateIdentityRowsDropped": 0,
+   "setKeyRegistrationRequired": true
+  },
+  {
+   "file": "1997-flair-showcase-row-1-baseball.csv",
+   "year": 1997,
+   "sport": "baseball",
+   "setKey": "flair-showcase-row-1",
+   "setName": "1997 Flair Showcase Row 1",
+   "scope": "Row 1",
+   "sourceUrl": "http://www.baseballcardpedia.com/index.php/1997_Flair_Showcase",
+   "rows": 540,
+   "baseRows": 180,
+   "rungs": 2,
+   "printRunCoveragePct": 67,
+   "scopesWithheld": [],
+   "duplicateIdentityRowsDropped": 0,
+   "setKeyRegistrationRequired": true
+  },
+  {
+   "file": "1997-flair-showcase-row-2-baseball.csv",
+   "year": 1997,
+   "sport": "baseball",
+   "setKey": "flair-showcase-row-2",
+   "setName": "1997 Flair Showcase Row 2",
+   "scope": "Row 2",
+   "sourceUrl": "http://www.baseballcardpedia.com/index.php/1997_Flair_Showcase",
+   "rows": 540,
+   "baseRows": 180,
+   "rungs": 2,
+   "printRunCoveragePct": 67,
+   "scopesWithheld": [],
+   "duplicateIdentityRowsDropped": 0,
+   "setKeyRegistrationRequired": true
+  }
+ ]
+}

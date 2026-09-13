@@ -1,0 +1,398 @@
+{
+ "year": 2018,
+ "sport": "baseball",
+ "setKey": "diamond-kings",
+ "parallelColumnAuthoritative": true,
+ "setName": "2018 Diamond Kings",
+ "sourceUrl": "http://www.baseballcardpedia.com/index.php/2018_Diamond_Kings",
+ "scope": "Framed",
+ "scopeOfPage": "Diamond Kings",
+ "cardNumberPrefix": null,
+ "prefixDerivedFrom": "unresolved",
+ "prefixUnresolved": false,
+ "ladder": [
+  {
+   "name": "Framed",
+   "printRun": 99,
+   "rarity": null
+  },
+  {
+   "name": "Blue",
+   "printRun": null,
+   "rarity": null
+  },
+  {
+   "name": "Red",
+   "printRun": null,
+   "rarity": null
+  },
+  {
+   "name": "Gray",
+   "printRun": 99,
+   "rarity": null
+  },
+  {
+   "name": "Brown",
+   "printRun": 49,
+   "rarity": null
+  },
+  {
+   "name": "Green",
+   "printRun": 5,
+   "rarity": null
+  },
+  {
+   "name": "Black",
+   "printRun": 1,
+   "rarity": null
+  }
+ ],
+ "autographs": [
+  {
+   "name": "DK Signatures",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 53,
+   "ladder": []
+  },
+  {
+   "name": "DK Signatures Purple",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 53,
+   "ladder": []
+  },
+  {
+   "name": "DK Rookie Signatures",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 47,
+   "ladder": [
+    {
+     "name": "Holo Silver",
+     "printRun": 49
+    },
+    {
+     "name": "Holo Gold",
+     "printRun": 25
+    },
+    {
+     "name": "Holo Blue",
+     "printRun": 15
+    },
+    {
+     "name": "Purple",
+     "printRun": null
+    },
+    {
+     "name": "Masterpiece",
+     "printRun": 1
+    }
+   ]
+  },
+  {
+   "name": "Recollection Buybacks",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 22,
+   "ladder": []
+  },
+  {
+   "name": "DK Materials Signatures",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 39,
+   "ladder": []
+  },
+  {
+   "name": "Retro 1982 DK Materials Signatures",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 18,
+   "ladder": []
+  },
+  {
+   "name": "DK Rookie Materials Signatures",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 48,
+   "ladder": [
+    {
+     "name": "Holo Silver",
+     "printRun": 49
+    },
+    {
+     "name": "Holo Gold",
+     "printRun": 25
+    },
+    {
+     "name": "Holo Blue",
+     "printRun": 15
+    },
+    {
+     "name": "Masterpiece",
+     "printRun": 1
+    }
+   ]
+  },
+  {
+   "name": "DK Triple Materials Signatures",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 13,
+   "ladder": []
+  },
+  {
+   "name": "DK Jumbo Materials Signatures",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 15,
+   "ladder": []
+  },
+  {
+   "name": "DK Jumbo Rookie Materials Signatures",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 20,
+   "ladder": []
+  },
+  {
+   "name": "Diamond Cuts",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 16,
+   "ladder": []
+  },
+  {
+   "name": "Diamond Cuts Masterpiece",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 28,
+   "ladder": []
+  },
+  {
+   "name": "Diamond Material Cuts",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 6,
+   "ladder": []
+  },
+  {
+   "name": "Bat Kings",
+   "type": "relic",
+   "isAuto": false,
+   "cards": 24,
+   "ladder": []
+  },
+  {
+   "name": "Jersey Kings",
+   "type": "relic",
+   "isAuto": false,
+   "cards": 25,
+   "ladder": []
+  }
+ ],
+ "setRarity": null,
+ "sections": [
+  {
+   "name": "Aurora",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 10,
+   "rungs": 0
+  },
+  {
+   "name": "Gallery of Stars",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 18,
+   "rungs": 0
+  },
+  {
+   "name": "Mickey Mantle Collection",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 8,
+   "rungs": 0
+  },
+  {
+   "name": "Past and Present",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 15,
+   "rungs": 0
+  },
+  {
+   "name": "Portraits",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 15,
+   "rungs": 0
+  },
+  {
+   "name": "Royalty",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 1,
+   "rungs": 0
+  },
+  {
+   "name": "Trophy Club",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 15,
+   "rungs": 0
+  },
+  {
+   "name": "DK Signatures",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 53,
+   "rungs": 0
+  },
+  {
+   "name": "DK Signatures Purple",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 53,
+   "rungs": 0
+  },
+  {
+   "name": "DK Rookie Signatures",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 47,
+   "rungs": 5
+  },
+  {
+   "name": "Recollection Buybacks",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 22,
+   "rungs": 0
+  },
+  {
+   "name": "DK Materials Signatures",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 39,
+   "rungs": 0
+  },
+  {
+   "name": "Retro 1982 DK Materials Signatures",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 18,
+   "rungs": 0
+  },
+  {
+   "name": "DK Rookie Materials Signatures",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 48,
+   "rungs": 4
+  },
+  {
+   "name": "DK Triple Materials Signatures",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 13,
+   "rungs": 0
+  },
+  {
+   "name": "DK Jumbo Materials Signatures",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 15,
+   "rungs": 0
+  },
+  {
+   "name": "DK Jumbo Rookie Materials Signatures",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 20,
+   "rungs": 0
+  },
+  {
+   "name": "Diamond Cuts",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 16,
+   "rungs": 0
+  },
+  {
+   "name": "Diamond Cuts Masterpiece",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 28,
+   "rungs": 0
+  },
+  {
+   "name": "Diamond Material Cuts",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 6,
+   "rungs": 0
+  },
+  {
+   "name": "DK Materials",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 93,
+   "rungs": 0
+  },
+  {
+   "name": "DK Materials Holo Silver",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 93,
+   "rungs": 0
+  },
+  {
+   "name": "DK Materials Holo Gold",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 98,
+   "rungs": 0
+  },
+  {
+   "name": "DK Materials Holo Blue",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 95,
+   "rungs": 0
+  },
+  {
+   "name": "DK Originals Materials",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 39,
+   "rungs": 0
+  },
+  {
+   "name": "Bat Kings",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 24,
+   "rungs": 0
+  },
+  {
+   "name": "Jersey Kings",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 25,
+   "rungs": 0
+  },
+  {
+   "name": "Diamond Deco",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 7,
+   "rungs": 0
+  }
+ ],
+ "source": "bcp-2026-09-13",
+ "acquiredAt": "2026-09-13",
+ "duplicateIdentityRowsDropped": 160,
+ "duplicateIdentityNote": "BCP relists a card under Gimmicks/Errors-and-Variations with the same number and the same player text to note an UNNAMED variation; those rows carry the identity of the base row, so they were dropped (one card, one row, one pool). A variation the page NAMES differs in its player text and is kept as the distinct card it is."
+}

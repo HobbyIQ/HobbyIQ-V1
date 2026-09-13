@@ -1,0 +1,1546 @@
+category,cardNumber,parallel,isAuto,printRun,player,parallelNote,rarity
+base,1,Base,false,,Darin Erstad
+base,1,Refractors,false,,Darin Erstad,,
+base,1,Gold Refractors,false,100,Darin Erstad,serial-numbered to 100 copies,
+base,2,Base,false,,Javy Lopez
+base,2,Refractors,false,,Javy Lopez,,
+base,2,Gold Refractors,false,100,Javy Lopez,serial-numbered to 100 copies,
+base,3,Base,false,,Vinny Castilla
+base,3,Refractors,false,,Vinny Castilla,,
+base,3,Gold Refractors,false,100,Vinny Castilla,serial-numbered to 100 copies,
+base,4,Base,false,,Jim Thome
+base,4,Refractors,false,,Jim Thome,,
+base,4,Gold Refractors,false,100,Jim Thome,serial-numbered to 100 copies,
+base,5,Base,false,,Tino Martinez
+base,5,Refractors,false,,Tino Martinez,,
+base,5,Gold Refractors,false,100,Tino Martinez,serial-numbered to 100 copies,
+base,6,Base,false,,Mark Grace
+base,6,Refractors,false,,Mark Grace,,
+base,6,Gold Refractors,false,100,Mark Grace,serial-numbered to 100 copies,
+base,7,Base,false,,Shawn Green
+base,7,Refractors,false,,Shawn Green,,
+base,7,Gold Refractors,false,100,Shawn Green,serial-numbered to 100 copies,
+base,8,Base,false,,Dustin Hermanson
+base,8,Refractors,false,,Dustin Hermanson,,
+base,8,Gold Refractors,false,100,Dustin Hermanson,serial-numbered to 100 copies,
+base,9,Base,false,,Kevin Young
+base,9,Refractors,false,,Kevin Young,,
+base,9,Gold Refractors,false,100,Kevin Young,serial-numbered to 100 copies,
+base,10,Base,false,,Tony Clark
+base,10,Refractors,false,,Tony Clark,,
+base,10,Gold Refractors,false,100,Tony Clark,serial-numbered to 100 copies,
+base,11,Base,false,,Scott Brosius
+base,11,Refractors,false,,Scott Brosius,,
+base,11,Gold Refractors,false,100,Scott Brosius,serial-numbered to 100 copies,
+base,12,Base,false,,Craig Biggio
+base,12,Refractors,false,,Craig Biggio,,
+base,12,Gold Refractors,false,100,Craig Biggio,serial-numbered to 100 copies,
+base,13,Base,false,,Brian McRae
+base,13,Refractors,false,,Brian McRae,,
+base,13,Gold Refractors,false,100,Brian McRae,serial-numbered to 100 copies,
+base,14,Base,false,,Chan Ho Park
+base,14,Refractors,false,,Chan Ho Park,,
+base,14,Gold Refractors,false,100,Chan Ho Park,serial-numbered to 100 copies,
+base,15,Base,false,,Manny Ramirez
+base,15,Refractors,false,,Manny Ramirez,,
+base,15,Gold Refractors,false,100,Manny Ramirez,serial-numbered to 100 copies,
+base,16,Base,false,,Chipper Jones
+base,16,Refractors,false,,Chipper Jones,,
+base,16,Gold Refractors,false,100,Chipper Jones,serial-numbered to 100 copies,
+base,17,Base,false,,Rico Brogna
+base,17,Refractors,false,,Rico Brogna,,
+base,17,Gold Refractors,false,100,Rico Brogna,serial-numbered to 100 copies,
+base,18,Base,false,,Quinton McCracken
+base,18,Refractors,false,,Quinton McCracken,,
+base,18,Gold Refractors,false,100,Quinton McCracken,serial-numbered to 100 copies,
+base,19,Base,false,,J.T. Snow
+base,19,Refractors,false,,J.T. Snow,,
+base,19,Gold Refractors,false,100,J.T. Snow,serial-numbered to 100 copies,
+base,20,Base,false,,Tony Gwynn
+base,20,Refractors,false,,Tony Gwynn,,
+base,20,Gold Refractors,false,100,Tony Gwynn,serial-numbered to 100 copies,
+base,21,Base,false,,Juan Guzman
+base,21,Refractors,false,,Juan Guzman,,
+base,21,Gold Refractors,false,100,Juan Guzman,serial-numbered to 100 copies,
+base,22,Base,false,,John Valentin
+base,22,Refractors,false,,John Valentin,,
+base,22,Gold Refractors,false,100,John Valentin,serial-numbered to 100 copies,
+base,23,Base,false,,Rick Helling
+base,23,Refractors,false,,Rick Helling,,
+base,23,Gold Refractors,false,100,Rick Helling,serial-numbered to 100 copies,
+base,24,Base,false,,Sandy Alomar Jr.
+base,24,Refractors,false,,Sandy Alomar Jr.,,
+base,24,Gold Refractors,false,100,Sandy Alomar Jr.,serial-numbered to 100 copies,
+base,25,Base,false,,Frank Thomas
+base,25,Refractors,false,,Frank Thomas,,
+base,25,Gold Refractors,false,100,Frank Thomas,serial-numbered to 100 copies,
+base,26,Base,false,,Jorge Posada
+base,26,Refractors,false,,Jorge Posada,,
+base,26,Gold Refractors,false,100,Jorge Posada,serial-numbered to 100 copies,
+base,27,Base,false,,Dmitri Young
+base,27,Refractors,false,,Dmitri Young,,
+base,27,Gold Refractors,false,100,Dmitri Young,serial-numbered to 100 copies,
+base,28,Base,false,,Rick Reed
+base,28,Refractors,false,,Rick Reed,,
+base,28,Gold Refractors,false,100,Rick Reed,serial-numbered to 100 copies,
+base,29,Base,false,,Kevin Tapani
+base,29,Refractors,false,,Kevin Tapani,,
+base,29,Gold Refractors,false,100,Kevin Tapani,serial-numbered to 100 copies,
+base,30,Base,false,,Troy Glaus
+base,30,Refractors,false,,Troy Glaus,,
+base,30,Gold Refractors,false,100,Troy Glaus,serial-numbered to 100 copies,
+base,31,Base,false,,Kenny Rogers
+base,31,Refractors,false,,Kenny Rogers,,
+base,31,Gold Refractors,false,100,Kenny Rogers,serial-numbered to 100 copies,
+base,32,Base,false,,Jeromy Burnitz
+base,32,Refractors,false,,Jeromy Burnitz,,
+base,32,Gold Refractors,false,100,Jeromy Burnitz,serial-numbered to 100 copies,
+base,33,Base,false,,Mark Grudzielanek
+base,33,Refractors,false,,Mark Grudzielanek,,
+base,33,Gold Refractors,false,100,Mark Grudzielanek,serial-numbered to 100 copies,
+base,34,Base,false,,Mike Mussina
+base,34,Refractors,false,,Mike Mussina,,
+base,34,Gold Refractors,false,100,Mike Mussina,serial-numbered to 100 copies,
+base,35,Base,false,,Scott Rolen
+base,35,Refractors,false,,Scott Rolen,,
+base,35,Gold Refractors,false,100,Scott Rolen,serial-numbered to 100 copies,
+base,36,Base,false,,Neifi Perez
+base,36,Refractors,false,,Neifi Perez,,
+base,36,Gold Refractors,false,100,Neifi Perez,serial-numbered to 100 copies,
+base,37,Base,false,,Brad Radke
+base,37,Refractors,false,,Brad Radke,,
+base,37,Gold Refractors,false,100,Brad Radke,serial-numbered to 100 copies,
+base,38,Base,false,,Darryl Strawberry
+base,38,Refractors,false,,Darryl Strawberry,,
+base,38,Gold Refractors,false,100,Darryl Strawberry,serial-numbered to 100 copies,
+base,39,Base,false,,Robb Nen
+base,39,Refractors,false,,Robb Nen,,
+base,39,Gold Refractors,false,100,Robb Nen,serial-numbered to 100 copies,
+base,40,Base,false,,Moises Alou
+base,40,Refractors,false,,Moises Alou,,
+base,40,Gold Refractors,false,100,Moises Alou,serial-numbered to 100 copies,
+base,41,Base,false,,Eric Young
+base,41,Refractors,false,,Eric Young,,
+base,41,Gold Refractors,false,100,Eric Young,serial-numbered to 100 copies,
+base,42,Base,false,,Livan Hernandez
+base,42,Refractors,false,,Livan Hernandez,,
+base,42,Gold Refractors,false,100,Livan Hernandez,serial-numbered to 100 copies,
+base,43,Base,false,,John Wetteland
+base,43,Refractors,false,,John Wetteland,,
+base,43,Gold Refractors,false,100,John Wetteland,serial-numbered to 100 copies,
+base,44,Base,false,,Matt Lawton
+base,44,Refractors,false,,Matt Lawton,,
+base,44,Gold Refractors,false,100,Matt Lawton,serial-numbered to 100 copies,
+base,45,Base,false,,Ben Grieve
+base,45,Refractors,false,,Ben Grieve,,
+base,45,Gold Refractors,false,100,Ben Grieve,serial-numbered to 100 copies,
+base,46,Base,false,,Fernando Tatis
+base,46,Refractors,false,,Fernando Tatis,,
+base,46,Gold Refractors,false,100,Fernando Tatis,serial-numbered to 100 copies,
+base,47,Base,false,,Travis Fryman
+base,47,Refractors,false,,Travis Fryman,,
+base,47,Gold Refractors,false,100,Travis Fryman,serial-numbered to 100 copies,
+base,48,Base,false,,David Segui
+base,48,Refractors,false,,David Segui,,
+base,48,Gold Refractors,false,100,David Segui,serial-numbered to 100 copies,
+base,49,Base,false,,Bobby Abreu
+base,49,Refractors,false,,Bobby Abreu,,
+base,49,Gold Refractors,false,100,Bobby Abreu,serial-numbered to 100 copies,
+base,50,Base,false,,Nomar Garciaparra
+base,50,Refractors,false,,Nomar Garciaparra,,
+base,50,Gold Refractors,false,100,Nomar Garciaparra,serial-numbered to 100 copies,
+base,51,Base,false,,Paul O'Neill
+base,51,Refractors,false,,Paul O'Neill,,
+base,51,Gold Refractors,false,100,Paul O'Neill,serial-numbered to 100 copies,
+base,52,Base,false,,Jeff King
+base,52,Refractors,false,,Jeff King,,
+base,52,Gold Refractors,false,100,Jeff King,serial-numbered to 100 copies,
+base,53,Base,false,,Francisco Cordova
+base,53,Refractors,false,,Francisco Cordova,,
+base,53,Gold Refractors,false,100,Francisco Cordova,serial-numbered to 100 copies,
+base,54,Base,false,,John Olerud
+base,54,Refractors,false,,John Olerud,,
+base,54,Gold Refractors,false,100,John Olerud,serial-numbered to 100 copies,
+base,55,Base,false,,Vladimir Guerrero
+base,55,Refractors,false,,Vladimir Guerrero,,
+base,55,Gold Refractors,false,100,Vladimir Guerrero,serial-numbered to 100 copies,
+base,56,Base,false,,Fernando Vina
+base,56,Refractors,false,,Fernando Vina,,
+base,56,Gold Refractors,false,100,Fernando Vina,serial-numbered to 100 copies,
+base,57,Base,false,,Shane Reynolds
+base,57,Refractors,false,,Shane Reynolds,,
+base,57,Gold Refractors,false,100,Shane Reynolds,serial-numbered to 100 copies,
+base,58,Base,false,,Chuck Finley
+base,58,Refractors,false,,Chuck Finley,,
+base,58,Gold Refractors,false,100,Chuck Finley,serial-numbered to 100 copies,
+base,59,Base,false,,Rondell White
+base,59,Refractors,false,,Rondell White,,
+base,59,Gold Refractors,false,100,Rondell White,serial-numbered to 100 copies,
+base,60,Base,false,,Greg Vaughn
+base,60,Refractors,false,,Greg Vaughn,,
+base,60,Gold Refractors,false,100,Greg Vaughn,serial-numbered to 100 copies,
+base,61,Base,false,,Ryan Minor
+base,61,Refractors,false,,Ryan Minor,,
+base,61,Gold Refractors,false,100,Ryan Minor,serial-numbered to 100 copies,
+base,62,Base,false,,Tom Gordon
+base,62,Refractors,false,,Tom Gordon,,
+base,62,Gold Refractors,false,100,Tom Gordon,serial-numbered to 100 copies,
+base,63,Base,false,,Damion Easley
+base,63,Refractors,false,,Damion Easley,,
+base,63,Gold Refractors,false,100,Damion Easley,serial-numbered to 100 copies,
+base,64,Base,false,,Ray Durham
+base,64,Refractors,false,,Ray Durham,,
+base,64,Gold Refractors,false,100,Ray Durham,serial-numbered to 100 copies,
+base,65,Base,false,,Orlando Hernandez
+base,65,Refractors,false,,Orlando Hernandez,,
+base,65,Gold Refractors,false,100,Orlando Hernandez,serial-numbered to 100 copies,
+base,66,Base,false,,Bartolo Colon
+base,66,Refractors,false,,Bartolo Colon,,
+base,66,Gold Refractors,false,100,Bartolo Colon,serial-numbered to 100 copies,
+base,67,Base,false,,Jaret Wright
+base,67,Refractors,false,,Jaret Wright,,
+base,67,Gold Refractors,false,100,Jaret Wright,serial-numbered to 100 copies,
+base,68,Base,false,,Royce Clayton
+base,68,Refractors,false,,Royce Clayton,,
+base,68,Gold Refractors,false,100,Royce Clayton,serial-numbered to 100 copies,
+base,69,Base,false,,Tim Salmon
+base,69,Refractors,false,,Tim Salmon,,
+base,69,Gold Refractors,false,100,Tim Salmon,serial-numbered to 100 copies,
+base,70,Base,false,,Mark McGwire
+base,70,Refractors,false,,Mark McGwire,,
+base,70,Gold Refractors,false,100,Mark McGwire,serial-numbered to 100 copies,
+base,71,Base,false,,Alex Gonzalez
+base,71,Refractors,false,,Alex Gonzalez,,
+base,71,Gold Refractors,false,100,Alex Gonzalez,serial-numbered to 100 copies,
+base,72,Base,false,,Tom Glavine
+base,72,Refractors,false,,Tom Glavine,,
+base,72,Gold Refractors,false,100,Tom Glavine,serial-numbered to 100 copies,
+base,73,Base,false,,Dave Justice
+base,73,Refractors,false,,Dave Justice,,
+base,73,Gold Refractors,false,100,Dave Justice,serial-numbered to 100 copies,
+base,74,Base,false,,Omar Vizquel
+base,74,Refractors,false,,Omar Vizquel,,
+base,74,Gold Refractors,false,100,Omar Vizquel,serial-numbered to 100 copies,
+base,75,Base,false,,Juan Gonzalez
+base,75,Refractors,false,,Juan Gonzalez,,
+base,75,Gold Refractors,false,100,Juan Gonzalez,serial-numbered to 100 copies,
+base,76,Base,false,,Bob Higginson
+base,76,Refractors,false,,Bob Higginson,,
+base,76,Gold Refractors,false,100,Bob Higginson,serial-numbered to 100 copies,
+base,77,Base,false,,Todd Walker
+base,77,Refractors,false,,Todd Walker,,
+base,77,Gold Refractors,false,100,Todd Walker,serial-numbered to 100 copies,
+base,78,Base,false,,Dante Bichette
+base,78,Refractors,false,,Dante Bichette,,
+base,78,Gold Refractors,false,100,Dante Bichette,serial-numbered to 100 copies,
+base,79,Base,false,,Kevin Millwood
+base,79,Refractors,false,,Kevin Millwood,,
+base,79,Gold Refractors,false,100,Kevin Millwood,serial-numbered to 100 copies,
+base,80,Base,false,,Roger Clemens
+base,80,Refractors,false,,Roger Clemens,,
+base,80,Gold Refractors,false,100,Roger Clemens,serial-numbered to 100 copies,
+base,81,Base,false,,Kerry Wood
+base,81,Refractors,false,,Kerry Wood,,
+base,81,Gold Refractors,false,100,Kerry Wood,serial-numbered to 100 copies,
+base,82,Base,false,,Cal Ripken Jr.
+base,82,Refractors,false,,Cal Ripken Jr.,,
+base,82,Gold Refractors,false,100,Cal Ripken Jr.,serial-numbered to 100 copies,
+base,83,Base,false,,Jay Bell
+base,83,Refractors,false,,Jay Bell,,
+base,83,Gold Refractors,false,100,Jay Bell,serial-numbered to 100 copies,
+base,84,Base,false,,Barry Bonds
+base,84,Refractors,false,,Barry Bonds,,
+base,84,Gold Refractors,false,100,Barry Bonds,serial-numbered to 100 copies,
+base,85,Base,false,,Alex Rodriguez
+base,85,Refractors,false,,Alex Rodriguez,,
+base,85,Gold Refractors,false,100,Alex Rodriguez,serial-numbered to 100 copies,
+base,86,Base,false,,Doug Glanville
+base,86,Refractors,false,,Doug Glanville,,
+base,86,Gold Refractors,false,100,Doug Glanville,serial-numbered to 100 copies,
+base,87,Base,false,,Jason Kendall
+base,87,Refractors,false,,Jason Kendall,,
+base,87,Gold Refractors,false,100,Jason Kendall,serial-numbered to 100 copies,
+base,88,Base,false,,Sean Casey
+base,88,Refractors,false,,Sean Casey,,
+base,88,Gold Refractors,false,100,Sean Casey,serial-numbered to 100 copies,
+base,89,Base,false,,Aaron Sele
+base,89,Refractors,false,,Aaron Sele,,
+base,89,Gold Refractors,false,100,Aaron Sele,serial-numbered to 100 copies,
+base,90,Base,false,,Derek Jeter
+base,90,Refractors,false,,Derek Jeter,,
+base,90,Gold Refractors,false,100,Derek Jeter,serial-numbered to 100 copies,
+base,91,Base,false,,Andy Ashby
+base,91,Refractors,false,,Andy Ashby,,
+base,91,Gold Refractors,false,100,Andy Ashby,serial-numbered to 100 copies,
+base,92,Base,false,,Rusty Greer
+base,92,Refractors,false,,Rusty Greer,,
+base,92,Gold Refractors,false,100,Rusty Greer,serial-numbered to 100 copies,
+base,93,Base,false,,Rod Beck
+base,93,Refractors,false,,Rod Beck,,
+base,93,Gold Refractors,false,100,Rod Beck,serial-numbered to 100 copies,
+base,94,Base,false,,Matt Williams
+base,94,Refractors,false,,Matt Williams,,
+base,94,Gold Refractors,false,100,Matt Williams,serial-numbered to 100 copies,
+base,95,Base,false,,Mike Piazza
+base,95,Refractors,false,,Mike Piazza,,
+base,95,Gold Refractors,false,100,Mike Piazza,serial-numbered to 100 copies,
+base,96,Base,false,,Wally Joyner
+base,96,Refractors,false,,Wally Joyner,,
+base,96,Gold Refractors,false,100,Wally Joyner,serial-numbered to 100 copies,
+base,97,Base,false,,Barry Larkin
+base,97,Refractors,false,,Barry Larkin,,
+base,97,Gold Refractors,false,100,Barry Larkin,serial-numbered to 100 copies,
+base,98,Base,false,,Eric Milton
+base,98,Refractors,false,,Eric Milton,,
+base,98,Gold Refractors,false,100,Eric Milton,serial-numbered to 100 copies,
+base,99,Base,false,,Gary Sheffield
+base,99,Refractors,false,,Gary Sheffield,,
+base,99,Gold Refractors,false,100,Gary Sheffield,serial-numbered to 100 copies,
+base,100,Base,false,,Greg Maddux UER: 2-hit CG was in the '95 WS
+base,100,Refractors,false,,Greg Maddux UER: 2-hit CG was in the '95 WS,,
+base,100,Gold Refractors,false,100,Greg Maddux UER: 2-hit CG was in the '95 WS,serial-numbered to 100 copies,
+base,101,Base,false,,Ken Griffey Jr.
+base,101,Refractors,false,,Ken Griffey Jr.,,
+base,101,Gold Refractors,false,100,Ken Griffey Jr.,serial-numbered to 100 copies,
+base,102,Base,false,,Frank Thomas
+base,102,Refractors,false,,Frank Thomas,,
+base,102,Gold Refractors,false,100,Frank Thomas,serial-numbered to 100 copies,
+base,103,Base,false,,Nomar Garciaparra
+base,103,Refractors,false,,Nomar Garciaparra,,
+base,103,Gold Refractors,false,100,Nomar Garciaparra,serial-numbered to 100 copies,
+base,104,Base,false,,Mark McGwire
+base,104,Refractors,false,,Mark McGwire,,
+base,104,Gold Refractors,false,100,Mark McGwire,serial-numbered to 100 copies,
+base,105,Base,false,,Alex Rodriguez
+base,105,Refractors,false,,Alex Rodriguez,,
+base,105,Gold Refractors,false,100,Alex Rodriguez,serial-numbered to 100 copies,
+base,106,Base,false,,Tony Gwynn
+base,106,Refractors,false,,Tony Gwynn,,
+base,106,Gold Refractors,false,100,Tony Gwynn,serial-numbered to 100 copies,
+base,107,Base,false,,Juan Gonzalez
+base,107,Refractors,false,,Juan Gonzalez,,
+base,107,Gold Refractors,false,100,Juan Gonzalez,serial-numbered to 100 copies,
+base,108,Base,false,,Jeff Bagwell
+base,108,Refractors,false,,Jeff Bagwell,,
+base,108,Gold Refractors,false,100,Jeff Bagwell,serial-numbered to 100 copies,
+base,109,Base,false,,Sammy Sosa
+base,109,Refractors,false,,Sammy Sosa,,
+base,109,Gold Refractors,false,100,Sammy Sosa,serial-numbered to 100 copies,
+base,110,Base,false,,Vladimir Guerrero
+base,110,Refractors,false,,Vladimir Guerrero,,
+base,110,Gold Refractors,false,100,Vladimir Guerrero,serial-numbered to 100 copies,
+base,111,Base,false,,Roger Clemens
+base,111,Refractors,false,,Roger Clemens,,
+base,111,Gold Refractors,false,100,Roger Clemens,serial-numbered to 100 copies,
+base,112,Base,false,,Barry Bonds
+base,112,Refractors,false,,Barry Bonds,,
+base,112,Gold Refractors,false,100,Barry Bonds,serial-numbered to 100 copies,
+base,113,Base,false,,Darin Erstad
+base,113,Refractors,false,,Darin Erstad,,
+base,113,Gold Refractors,false,100,Darin Erstad,serial-numbered to 100 copies,
+base,114,Base,false,,Mike Piazza
+base,114,Refractors,false,,Mike Piazza,,
+base,114,Gold Refractors,false,100,Mike Piazza,serial-numbered to 100 copies,
+base,115,Base,false,,Derek Jeter
+base,115,Refractors,false,,Derek Jeter,,
+base,115,Gold Refractors,false,100,Derek Jeter,serial-numbered to 100 copies,
+base,116,Base,false,,Chipper Jones
+base,116,Refractors,false,,Chipper Jones,,
+base,116,Gold Refractors,false,100,Chipper Jones,serial-numbered to 100 copies,
+base,117,Base,false,,Larry Walker
+base,117,Refractors,false,,Larry Walker,,
+base,117,Gold Refractors,false,100,Larry Walker,serial-numbered to 100 copies,
+base,118,Base,false,,Scott Rolen
+base,118,Refractors,false,,Scott Rolen,,
+base,118,Gold Refractors,false,100,Scott Rolen,serial-numbered to 100 copies,
+base,119,Base,false,,Cal Ripken Jr.
+base,119,Refractors,false,,Cal Ripken Jr.,,
+base,119,Gold Refractors,false,100,Cal Ripken Jr.,serial-numbered to 100 copies,
+base,120,Base,false,,Greg Maddux
+base,120,Refractors,false,,Greg Maddux,,
+base,120,Gold Refractors,false,100,Greg Maddux,serial-numbered to 100 copies,
+base,121,Base,false,,Troy Glaus
+base,121,Refractors,false,,Troy Glaus,,
+base,121,Gold Refractors,false,100,Troy Glaus,serial-numbered to 100 copies,
+base,122,Base,false,,Ben Grieve
+base,122,Refractors,false,,Ben Grieve,,
+base,122,Gold Refractors,false,100,Ben Grieve,serial-numbered to 100 copies,
+base,123,Base,false,,Ryan Minor
+base,123,Refractors,false,,Ryan Minor,,
+base,123,Gold Refractors,false,100,Ryan Minor,serial-numbered to 100 copies,
+base,124,Base,false,,Kerry Wood
+base,124,Refractors,false,,Kerry Wood,,
+base,124,Gold Refractors,false,100,Kerry Wood,serial-numbered to 100 copies,
+base,125,Base,false,,Travis Lee
+base,125,Refractors,false,,Travis Lee,,
+base,125,Gold Refractors,false,100,Travis Lee,serial-numbered to 100 copies,
+base,126,Base,false,,Adrian Beltre
+base,126,Refractors,false,,Adrian Beltre,,
+base,126,Gold Refractors,false,100,Adrian Beltre,serial-numbered to 100 copies,
+base,127,Base,false,,Brad Fullmer
+base,127,Refractors,false,,Brad Fullmer,,
+base,127,Gold Refractors,false,100,Brad Fullmer,serial-numbered to 100 copies,
+base,128,Base,false,,Aramis Ramirez
+base,128,Refractors,false,,Aramis Ramirez,,
+base,128,Gold Refractors,false,100,Aramis Ramirez,serial-numbered to 100 copies,
+base,129,Base,false,,Eric Chavez
+base,129,Refractors,false,,Eric Chavez,,
+base,129,Gold Refractors,false,100,Eric Chavez,serial-numbered to 100 copies,
+base,130,Base,false,,Todd Helton
+base,130,Refractors,false,,Todd Helton,,
+base,130,Gold Refractors,false,100,Todd Helton,serial-numbered to 100 copies,
+base,131,Base,false,,Pat Burrell ROOK RC
+base,131,Refractors,false,,Pat Burrell ROOK RC,,
+base,131,Gold Refractors,false,100,Pat Burrell ROOK RC,serial-numbered to 100 copies,
+base,132,Base,false,,Ryan Mills ROOK RC*
+base,132,Refractors,false,,Ryan Mills ROOK RC*,,
+base,132,Gold Refractors,false,100,Ryan Mills ROOK RC*,serial-numbered to 100 copies,
+base,133,Base,false,,Austin Kearns ROOK RC
+base,133,Refractors,false,,Austin Kearns ROOK RC,,
+base,133,Gold Refractors,false,100,Austin Kearns ROOK RC,serial-numbered to 100 copies,
+base,134,Base,false,,Josh McKinley ROOK RC*
+base,134,Refractors,false,,Josh McKinley ROOK RC*,,
+base,134,Gold Refractors,false,100,Josh McKinley ROOK RC*,serial-numbered to 100 copies,
+base,135,Base,false,,Adam Everett ROOK RC
+base,135,Refractors,false,,Adam Everett ROOK RC,,
+base,135,Gold Refractors,false,100,Adam Everett ROOK RC,serial-numbered to 100 copies,
+base,136,Base,false,,Marlon Anderson ROOK
+base,136,Refractors,false,,Marlon Anderson ROOK,,
+base,136,Gold Refractors,false,100,Marlon Anderson ROOK,serial-numbered to 100 copies,
+base,137,Base,false,,Bruce Chen ROOK
+base,137,Refractors,false,,Bruce Chen ROOK,,
+base,137,Gold Refractors,false,100,Bruce Chen ROOK,serial-numbered to 100 copies,
+base,138,Base,false,,Matt Clement ROOK
+base,138,Refractors,false,,Matt Clement ROOK,,
+base,138,Gold Refractors,false,100,Matt Clement ROOK,serial-numbered to 100 copies,
+base,139,Base,false,,Alex Gonzalez ROOK
+base,139,Refractors,false,,Alex Gonzalez ROOK,,
+base,139,Gold Refractors,false,100,Alex Gonzalez ROOK,serial-numbered to 100 copies,
+base,140,Base,false,,Roy Halladay ROOK
+base,140,Refractors,false,,Roy Halladay ROOK,,
+base,140,Gold Refractors,false,100,Roy Halladay ROOK,serial-numbered to 100 copies,
+base,141,Base,false,,Calvin Pickering ROOK
+base,141,Refractors,false,,Calvin Pickering ROOK,,
+base,141,Gold Refractors,false,100,Calvin Pickering ROOK,serial-numbered to 100 copies,
+base,142,Base,false,,Randy Wolf ROOK
+base,142,Refractors,false,,Randy Wolf ROOK,,
+base,142,Gold Refractors,false,100,Randy Wolf ROOK,serial-numbered to 100 copies,
+base,143,Base,false,,Ryan Anderson ROOK
+base,143,Refractors,false,,Ryan Anderson ROOK,,
+base,143,Gold Refractors,false,100,Ryan Anderson ROOK,serial-numbered to 100 copies,
+base,144,Base,false,,Ruben Mateo ROOK
+base,144,Refractors,false,,Ruben Mateo ROOK,,
+base,144,Gold Refractors,false,100,Ruben Mateo ROOK,serial-numbered to 100 copies,
+base,145,Base,false,,Alex Escobar ROOK RC
+base,145,Refractors,false,,Alex Escobar ROOK RC,,
+base,145,Gold Refractors,false,100,Alex Escobar ROOK RC,serial-numbered to 100 copies,
+base,146,Base,false,,Jeremy Giambi ROOK
+base,146,Refractors,false,,Jeremy Giambi ROOK,,
+base,146,Gold Refractors,false,100,Jeremy Giambi ROOK,serial-numbered to 100 copies,
+base,147,Base,false,,Lance Berkman ROOK
+base,147,Refractors,false,,Lance Berkman ROOK,,
+base,147,Gold Refractors,false,100,Lance Berkman ROOK,serial-numbered to 100 copies,
+base,148,Base,false,,Michael Barrett ROOK
+base,148,Refractors,false,,Michael Barrett ROOK,,
+base,148,Gold Refractors,false,100,Michael Barrett ROOK,serial-numbered to 100 copies,
+base,149,Base,false,,Preston Wilson ROOK
+base,149,Refractors,false,,Preston Wilson ROOK,,
+base,149,Gold Refractors,false,100,Preston Wilson ROOK,serial-numbered to 100 copies,
+base,150,Base,false,,Gabe Kapler ROOK UER: Born 8/31
+base,150,Refractors,false,,Gabe Kapler ROOK UER: Born 8/31,,
+base,150,Gold Refractors,false,100,Gabe Kapler ROOK UER: Born 8/31,serial-numbered to 100 copies,
+base,151,Base,false,,Roger Clemens
+base,151,Refractors,false,,Roger Clemens,,
+base,151,Gold Refractors,false,100,Roger Clemens,serial-numbered to 100 copies,
+base,152,Base,false,,Jay Buhner
+base,152,Refractors,false,,Jay Buhner,,
+base,152,Gold Refractors,false,100,Jay Buhner,serial-numbered to 100 copies,
+base,153,Base,false,,Brad Fullmer
+base,153,Refractors,false,,Brad Fullmer,,
+base,153,Gold Refractors,false,100,Brad Fullmer,serial-numbered to 100 copies,
+base,154,Base,false,,Ray Lankford
+base,154,Refractors,false,,Ray Lankford,,
+base,154,Gold Refractors,false,100,Ray Lankford,serial-numbered to 100 copies,
+base,155,Base,false,,Jim Edmonds
+base,155,Refractors,false,,Jim Edmonds,,
+base,155,Gold Refractors,false,100,Jim Edmonds,serial-numbered to 100 copies,
+base,156,Base,false,,Jason Giambi
+base,156,Refractors,false,,Jason Giambi,,
+base,156,Gold Refractors,false,100,Jason Giambi,serial-numbered to 100 copies,
+base,157,Base,false,,Bret Boone
+base,157,Refractors,false,,Bret Boone,,
+base,157,Gold Refractors,false,100,Bret Boone,serial-numbered to 100 copies,
+base,158,Base,false,,Jeff Cirillo
+base,158,Refractors,false,,Jeff Cirillo,,
+base,158,Gold Refractors,false,100,Jeff Cirillo,serial-numbered to 100 copies,
+base,159,Base,false,,Rickey Henderson
+base,159,Refractors,false,,Rickey Henderson,,
+base,159,Gold Refractors,false,100,Rickey Henderson,serial-numbered to 100 copies,
+base,160,Base,false,,Edgar Martinez
+base,160,Refractors,false,,Edgar Martinez,,
+base,160,Gold Refractors,false,100,Edgar Martinez,serial-numbered to 100 copies,
+base,161,Base,false,,Ron Gant
+base,161,Refractors,false,,Ron Gant,,
+base,161,Gold Refractors,false,100,Ron Gant,serial-numbered to 100 copies,
+base,162,Base,false,,Mark Kotsay
+base,162,Refractors,false,,Mark Kotsay,,
+base,162,Gold Refractors,false,100,Mark Kotsay,serial-numbered to 100 copies,
+base,163,Base,false,,Trevor Hoffman
+base,163,Refractors,false,,Trevor Hoffman,,
+base,163,Gold Refractors,false,100,Trevor Hoffman,serial-numbered to 100 copies,
+base,164,Base,false,,Jason Schmidt
+base,164,Refractors,false,,Jason Schmidt,,
+base,164,Gold Refractors,false,100,Jason Schmidt,serial-numbered to 100 copies,
+base,165,Base,false,,Brett Tomko
+base,165,Refractors,false,,Brett Tomko,,
+base,165,Gold Refractors,false,100,Brett Tomko,serial-numbered to 100 copies,
+base,166,Base,false,,David Ortiz
+base,166,Refractors,false,,David Ortiz,,
+base,166,Gold Refractors,false,100,David Ortiz,serial-numbered to 100 copies,
+base,167,Base,false,,Dean Palmer
+base,167,Refractors,false,,Dean Palmer,,
+base,167,Gold Refractors,false,100,Dean Palmer,serial-numbered to 100 copies,
+base,168,Base,false,,Hideki Irabu
+base,168,Refractors,false,,Hideki Irabu,,
+base,168,Gold Refractors,false,100,Hideki Irabu,serial-numbered to 100 copies,
+base,169,Base,false,,Mike Cameron
+base,169,Refractors,false,,Mike Cameron,,
+base,169,Gold Refractors,false,100,Mike Cameron,serial-numbered to 100 copies,
+base,170,Base,false,,Pedro Martinez
+base,170,Refractors,false,,Pedro Martinez,,
+base,170,Gold Refractors,false,100,Pedro Martinez,serial-numbered to 100 copies,
+base,171,Base,false,,Tom Goodwin
+base,171,Refractors,false,,Tom Goodwin,,
+base,171,Gold Refractors,false,100,Tom Goodwin,serial-numbered to 100 copies,
+base,172,Base,false,,Brian Hunter
+base,172,Refractors,false,,Brian Hunter,,
+base,172,Gold Refractors,false,100,Brian Hunter,serial-numbered to 100 copies,
+base,173,Base,false,,Al Leiter
+base,173,Refractors,false,,Al Leiter,,
+base,173,Gold Refractors,false,100,Al Leiter,serial-numbered to 100 copies,
+base,174,Base,false,,Charles Johnson
+base,174,Refractors,false,,Charles Johnson,,
+base,174,Gold Refractors,false,100,Charles Johnson,serial-numbered to 100 copies,
+base,175,Base,false,,Curt Schilling
+base,175,Refractors,false,,Curt Schilling,,
+base,175,Gold Refractors,false,100,Curt Schilling,serial-numbered to 100 copies,
+base,176,Base,false,,Robin Ventura
+base,176,Refractors,false,,Robin Ventura,,
+base,176,Gold Refractors,false,100,Robin Ventura,serial-numbered to 100 copies,
+base,177,Base,false,,Travis Lee
+base,177,Refractors,false,,Travis Lee,,
+base,177,Gold Refractors,false,100,Travis Lee,serial-numbered to 100 copies,
+base,178,Base,false,,Jeff Shaw
+base,178,Refractors,false,,Jeff Shaw,,
+base,178,Gold Refractors,false,100,Jeff Shaw,serial-numbered to 100 copies,
+base,179,Base,false,,Ugueth Urbina
+base,179,Refractors,false,,Ugueth Urbina,,
+base,179,Gold Refractors,false,100,Ugueth Urbina,serial-numbered to 100 copies,
+base,180,Base,false,,Roberto Alomar
+base,180,Refractors,false,,Roberto Alomar,,
+base,180,Gold Refractors,false,100,Roberto Alomar,serial-numbered to 100 copies,
+base,181,Base,false,,Cliff Floyd
+base,181,Refractors,false,,Cliff Floyd,,
+base,181,Gold Refractors,false,100,Cliff Floyd,serial-numbered to 100 copies,
+base,182,Base,false,,Adrian Beltre
+base,182,Refractors,false,,Adrian Beltre,,
+base,182,Gold Refractors,false,100,Adrian Beltre,serial-numbered to 100 copies,
+base,183,Base,false,,Tony Womack
+base,183,Refractors,false,,Tony Womack,,
+base,183,Gold Refractors,false,100,Tony Womack,serial-numbered to 100 copies,
+base,184,Base,false,,Brian Jordan
+base,184,Refractors,false,,Brian Jordan,,
+base,184,Gold Refractors,false,100,Brian Jordan,serial-numbered to 100 copies,
+base,185,Base,false,,Randy Johnson
+base,185,Refractors,false,,Randy Johnson,,
+base,185,Gold Refractors,false,100,Randy Johnson,serial-numbered to 100 copies,
+base,186,Base,false,,Mickey Morandini
+base,186,Refractors,false,,Mickey Morandini,,
+base,186,Gold Refractors,false,100,Mickey Morandini,serial-numbered to 100 copies,
+base,187,Base,false,,Todd Hundley
+base,187,Refractors,false,,Todd Hundley,,
+base,187,Gold Refractors,false,100,Todd Hundley,serial-numbered to 100 copies,
+base,188,Base,false,,Jose Valentin
+base,188,Refractors,false,,Jose Valentin,,
+base,188,Gold Refractors,false,100,Jose Valentin,serial-numbered to 100 copies,
+base,189,Base,false,,Eric Davis
+base,189,Refractors,false,,Eric Davis,,
+base,189,Gold Refractors,false,100,Eric Davis,serial-numbered to 100 copies,
+base,190,Base,false,,Ken Caminiti
+base,190,Refractors,false,,Ken Caminiti,,
+base,190,Gold Refractors,false,100,Ken Caminiti,serial-numbered to 100 copies,
+base,191,Base,false,,David Wells
+base,191,Refractors,false,,David Wells,,
+base,191,Gold Refractors,false,100,David Wells,serial-numbered to 100 copies,
+base,192,Base,false,,Ryan Klesko
+base,192,Refractors,false,,Ryan Klesko,,
+base,192,Gold Refractors,false,100,Ryan Klesko,serial-numbered to 100 copies,
+base,193,Base,false,,Garret Anderson
+base,193,Refractors,false,,Garret Anderson,,
+base,193,Gold Refractors,false,100,Garret Anderson,serial-numbered to 100 copies,
+base,194,Base,false,,Eric Karros
+base,194,Refractors,false,,Eric Karros,,
+base,194,Gold Refractors,false,100,Eric Karros,serial-numbered to 100 copies,
+base,195,Base,false,,Ivan Rodriguez
+base,195,Refractors,false,,Ivan Rodriguez,,
+base,195,Gold Refractors,false,100,Ivan Rodriguez,serial-numbered to 100 copies,
+base,196,Base,false,,Aramis Ramirez
+base,196,Refractors,false,,Aramis Ramirez,,
+base,196,Gold Refractors,false,100,Aramis Ramirez,serial-numbered to 100 copies,
+base,197,Base,false,,Mike Lieberthal
+base,197,Refractors,false,,Mike Lieberthal,,
+base,197,Gold Refractors,false,100,Mike Lieberthal,serial-numbered to 100 copies,
+base,198,Base,false,,Will Clark
+base,198,Refractors,false,,Will Clark,,
+base,198,Gold Refractors,false,100,Will Clark,serial-numbered to 100 copies,
+base,199,Base,false,,Rey Ordonez
+base,199,Refractors,false,,Rey Ordonez,,
+base,199,Gold Refractors,false,100,Rey Ordonez,serial-numbered to 100 copies,
+base,200,Base,false,,Ken Griffey Jr.
+base,200,Refractors,false,,Ken Griffey Jr.,,
+base,200,Gold Refractors,false,100,Ken Griffey Jr.,serial-numbered to 100 copies,
+base,201,Base,false,,Jose Guillen
+base,201,Refractors,false,,Jose Guillen,,
+base,201,Gold Refractors,false,100,Jose Guillen,serial-numbered to 100 copies,
+base,202,Base,false,,Scott Erickson
+base,202,Refractors,false,,Scott Erickson,,
+base,202,Gold Refractors,false,100,Scott Erickson,serial-numbered to 100 copies,
+base,203,Base,false,,Paul Konerko
+base,203,Refractors,false,,Paul Konerko,,
+base,203,Gold Refractors,false,100,Paul Konerko,serial-numbered to 100 copies,
+base,204,Base,false,,Johnny Damon
+base,204,Refractors,false,,Johnny Damon,,
+base,204,Gold Refractors,false,100,Johnny Damon,serial-numbered to 100 copies,
+base,205,Base,false,,Larry Walker
+base,205,Refractors,false,,Larry Walker,,
+base,205,Gold Refractors,false,100,Larry Walker,serial-numbered to 100 copies,
+base,206,Base,false,,Denny Neagle
+base,206,Refractors,false,,Denny Neagle,,
+base,206,Gold Refractors,false,100,Denny Neagle,serial-numbered to 100 copies,
+base,207,Base,false,,Jose Offerman
+base,207,Refractors,false,,Jose Offerman,,
+base,207,Gold Refractors,false,100,Jose Offerman,serial-numbered to 100 copies,
+base,208,Base,false,,Andy Pettitte
+base,208,Refractors,false,,Andy Pettitte,,
+base,208,Gold Refractors,false,100,Andy Pettitte,serial-numbered to 100 copies,
+base,209,Base,false,,Bobby Jones
+base,209,Refractors,false,,Bobby Jones,,
+base,209,Gold Refractors,false,100,Bobby Jones,serial-numbered to 100 copies,
+base,210,Base,false,,Kevin Brown
+base,210,Refractors,false,,Kevin Brown,,
+base,210,Gold Refractors,false,100,Kevin Brown,serial-numbered to 100 copies,
+base,211,Base,false,,John Smoltz
+base,211,Refractors,false,,John Smoltz,,
+base,211,Gold Refractors,false,100,John Smoltz,serial-numbered to 100 copies,
+base,212,Base,false,,Henry Rodriguez
+base,212,Refractors,false,,Henry Rodriguez,,
+base,212,Gold Refractors,false,100,Henry Rodriguez,serial-numbered to 100 copies,
+base,213,Base,false,,Tim Belcher
+base,213,Refractors,false,,Tim Belcher,,
+base,213,Gold Refractors,false,100,Tim Belcher,serial-numbered to 100 copies,
+base,214,Base,false,,Carlos Delgado
+base,214,Refractors,false,,Carlos Delgado,,
+base,214,Gold Refractors,false,100,Carlos Delgado,serial-numbered to 100 copies,
+base,215,Base,false,,Andruw Jones
+base,215,Refractors,false,,Andruw Jones,,
+base,215,Gold Refractors,false,100,Andruw Jones,serial-numbered to 100 copies,
+base,216,Base,false,,Andy Benes
+base,216,Refractors,false,,Andy Benes,,
+base,216,Gold Refractors,false,100,Andy Benes,serial-numbered to 100 copies,
+base,217,Base,false,,Fred McGriff
+base,217,Refractors,false,,Fred McGriff,,
+base,217,Gold Refractors,false,100,Fred McGriff,serial-numbered to 100 copies,
+base,218,Base,false,,Edgar Renteria
+base,218,Refractors,false,,Edgar Renteria,,
+base,218,Gold Refractors,false,100,Edgar Renteria,serial-numbered to 100 copies,
+base,219,Base,false,,Miguel Tejada
+base,219,Refractors,false,,Miguel Tejada,,
+base,219,Gold Refractors,false,100,Miguel Tejada,serial-numbered to 100 copies,
+base,220,Base,false,,Bernie Williams
+base,220,Refractors,false,,Bernie Williams,,
+base,220,Gold Refractors,false,100,Bernie Williams,serial-numbered to 100 copies,
+base,221,Base,false,,Justin Thompson
+base,221,Refractors,false,,Justin Thompson,,
+base,221,Gold Refractors,false,100,Justin Thompson,serial-numbered to 100 copies,
+base,222,Base,false,,Marty Cordova
+base,222,Refractors,false,,Marty Cordova,,
+base,222,Gold Refractors,false,100,Marty Cordova,serial-numbered to 100 copies,
+base,223,Base,false,,Delino DeShields
+base,223,Refractors,false,,Delino DeShields,,
+base,223,Gold Refractors,false,100,Delino DeShields,serial-numbered to 100 copies,
+base,224,Base,false,,Ellis Burks
+base,224,Refractors,false,,Ellis Burks,,
+base,224,Gold Refractors,false,100,Ellis Burks,serial-numbered to 100 copies,
+base,225,Base,false,,Kenny Lofton
+base,225,Refractors,false,,Kenny Lofton,,
+base,225,Gold Refractors,false,100,Kenny Lofton,serial-numbered to 100 copies,
+base,226,Base,false,,Steve Finley
+base,226,Refractors,false,,Steve Finley,,
+base,226,Gold Refractors,false,100,Steve Finley,serial-numbered to 100 copies,
+base,227,Base,false,,Eric Chavez
+base,227,Refractors,false,,Eric Chavez,,
+base,227,Gold Refractors,false,100,Eric Chavez,serial-numbered to 100 copies,
+base,228,Base,false,,Jose Cruz Jr.
+base,228,Refractors,false,,Jose Cruz Jr.,,
+base,228,Gold Refractors,false,100,Jose Cruz Jr.,serial-numbered to 100 copies,
+base,229,Base,false,,Marquis Grissom
+base,229,Refractors,false,,Marquis Grissom,,
+base,229,Gold Refractors,false,100,Marquis Grissom,serial-numbered to 100 copies,
+base,230,Base,false,,Jeff Bagwell
+base,230,Refractors,false,,Jeff Bagwell,,
+base,230,Gold Refractors,false,100,Jeff Bagwell,serial-numbered to 100 copies,
+base,231,Base,false,,Jose Canseco
+base,231,Refractors,false,,Jose Canseco,,
+base,231,Gold Refractors,false,100,Jose Canseco,serial-numbered to 100 copies,
+base,232,Base,false,,Edgardo Alfonzo
+base,232,Refractors,false,,Edgardo Alfonzo,,
+base,232,Gold Refractors,false,100,Edgardo Alfonzo,serial-numbered to 100 copies,
+base,233,Base,false,,Richie Sexson
+base,233,Refractors,false,,Richie Sexson,,
+base,233,Gold Refractors,false,100,Richie Sexson,serial-numbered to 100 copies,
+base,234,Base,false,,Jeff Kent
+base,234,Refractors,false,,Jeff Kent,,
+base,234,Gold Refractors,false,100,Jeff Kent,serial-numbered to 100 copies,
+base,235,Base,false,,Rafael Palmeiro
+base,235,Refractors,false,,Rafael Palmeiro,,
+base,235,Gold Refractors,false,100,Rafael Palmeiro,serial-numbered to 100 copies,
+base,236,Base,false,,David Cone
+base,236,Refractors,false,,David Cone,,
+base,236,Gold Refractors,false,100,David Cone,serial-numbered to 100 copies,
+base,237,Base,false,,Gregg Jefferies
+base,237,Refractors,false,,Gregg Jefferies,,
+base,237,Gold Refractors,false,100,Gregg Jefferies,serial-numbered to 100 copies,
+base,238,Base,false,,Mike Lansing
+base,238,Refractors,false,,Mike Lansing,,
+base,238,Gold Refractors,false,100,Mike Lansing,serial-numbered to 100 copies,
+base,239,Base,false,,Mariano Rivera
+base,239,Refractors,false,,Mariano Rivera,,
+base,239,Gold Refractors,false,100,Mariano Rivera,serial-numbered to 100 copies,
+base,240,Base,false,,Albert Belle
+base,240,Refractors,false,,Albert Belle,,
+base,240,Gold Refractors,false,100,Albert Belle,serial-numbered to 100 copies,
+base,241,Base,false,,Chuck Knoblauch
+base,241,Refractors,false,,Chuck Knoblauch,,
+base,241,Gold Refractors,false,100,Chuck Knoblauch,serial-numbered to 100 copies,
+base,242,Base,false,,Derek Bell
+base,242,Refractors,false,,Derek Bell,,
+base,242,Gold Refractors,false,100,Derek Bell,serial-numbered to 100 copies,
+base,243,Base,false,,Pat Hentgen
+base,243,Refractors,false,,Pat Hentgen,,
+base,243,Gold Refractors,false,100,Pat Hentgen,serial-numbered to 100 copies,
+base,244,Base,false,,Andres Galarraga
+base,244,Refractors,false,,Andres Galarraga,,
+base,244,Gold Refractors,false,100,Andres Galarraga,serial-numbered to 100 copies,
+base,245,Base,false,,Mo Vaughn
+base,245,Refractors,false,,Mo Vaughn,,
+base,245,Gold Refractors,false,100,Mo Vaughn,serial-numbered to 100 copies,
+base,246,Base,false,,Wade Boggs
+base,246,Refractors,false,,Wade Boggs,,
+base,246,Gold Refractors,false,100,Wade Boggs,serial-numbered to 100 copies,
+base,247,Base,false,,Devon White
+base,247,Refractors,false,,Devon White,,
+base,247,Gold Refractors,false,100,Devon White,serial-numbered to 100 copies,
+base,248,Base,false,,Todd Helton
+base,248,Refractors,false,,Todd Helton,,
+base,248,Gold Refractors,false,100,Todd Helton,serial-numbered to 100 copies,
+base,249,Base,false,,Raul Mondesi
+base,249,Refractors,false,,Raul Mondesi,,
+base,249,Gold Refractors,false,100,Raul Mondesi,serial-numbered to 100 copies,
+base,250,Base,false,,Sammy Sosa
+base,250,Refractors,false,,Sammy Sosa,,
+base,250,Gold Refractors,false,100,Sammy Sosa,serial-numbered to 100 copies,
+base,251,Base,false,,Nomar Garciaparra
+base,251,Refractors,false,,Nomar Garciaparra,,
+base,251,Gold Refractors,false,100,Nomar Garciaparra,serial-numbered to 100 copies,
+base,252,Base,false,,Mark McGwire
+base,252,Refractors,false,,Mark McGwire,,
+base,252,Gold Refractors,false,100,Mark McGwire,serial-numbered to 100 copies,
+base,253,Base,false,,Alex Rodriguez
+base,253,Refractors,false,,Alex Rodriguez,,
+base,253,Gold Refractors,false,100,Alex Rodriguez,serial-numbered to 100 copies,
+base,254,Base,false,,Juan Gonzalez
+base,254,Refractors,false,,Juan Gonzalez,,
+base,254,Gold Refractors,false,100,Juan Gonzalez,serial-numbered to 100 copies,
+base,255,Base,false,,Vladimir Guerrero
+base,255,Refractors,false,,Vladimir Guerrero,,
+base,255,Gold Refractors,false,100,Vladimir Guerrero,serial-numbered to 100 copies,
+base,256,Base,false,,Ken Griffey Jr.
+base,256,Refractors,false,,Ken Griffey Jr.,,
+base,256,Gold Refractors,false,100,Ken Griffey Jr.,serial-numbered to 100 copies,
+base,257,Base,false,,Mike Piazza
+base,257,Refractors,false,,Mike Piazza,,
+base,257,Gold Refractors,false,100,Mike Piazza,serial-numbered to 100 copies,
+base,258,Base,false,,Derek Jeter
+base,258,Refractors,false,,Derek Jeter,,
+base,258,Gold Refractors,false,100,Derek Jeter,serial-numbered to 100 copies,
+base,259,Base,false,,Albert Belle
+base,259,Refractors,false,,Albert Belle,,
+base,259,Gold Refractors,false,100,Albert Belle,serial-numbered to 100 copies,
+base,260,Base,false,,Greg Vaughn
+base,260,Refractors,false,,Greg Vaughn,,
+base,260,Gold Refractors,false,100,Greg Vaughn,serial-numbered to 100 copies,
+base,261,Base,false,,Sammy Sosa
+base,261,Refractors,false,,Sammy Sosa,,
+base,261,Gold Refractors,false,100,Sammy Sosa,serial-numbered to 100 copies,
+base,262,Base,false,,Greg Maddux
+base,262,Refractors,false,,Greg Maddux,,
+base,262,Gold Refractors,false,100,Greg Maddux,serial-numbered to 100 copies,
+base,263,Base,false,,Frank Thomas
+base,263,Refractors,false,,Frank Thomas,,
+base,263,Gold Refractors,false,100,Frank Thomas,serial-numbered to 100 copies,
+base,264,Base,false,,Mark Grace
+base,264,Refractors,false,,Mark Grace,,
+base,264,Gold Refractors,false,100,Mark Grace,serial-numbered to 100 copies,
+base,265,Base,false,,Ivan Rodriguez
+base,265,Refractors,false,,Ivan Rodriguez,,
+base,265,Gold Refractors,false,100,Ivan Rodriguez,serial-numbered to 100 copies,
+base,266,Base,false,,Roger Clemens
+base,266,Refractors,false,,Roger Clemens,,
+base,266,Gold Refractors,false,100,Roger Clemens,serial-numbered to 100 copies,
+base,267,Base,false,,Mo Vaughn
+base,267,Refractors,false,,Mo Vaughn,,
+base,267,Gold Refractors,false,100,Mo Vaughn,serial-numbered to 100 copies,
+base,268,Base,false,,Jim Thome
+base,268,Refractors,false,,Jim Thome,,
+base,268,Gold Refractors,false,100,Jim Thome,serial-numbered to 100 copies,
+base,269,Base,false,,Darin Erstad
+base,269,Refractors,false,,Darin Erstad,,
+base,269,Gold Refractors,false,100,Darin Erstad,serial-numbered to 100 copies,
+base,270,Base,false,,Chipper Jones
+base,270,Refractors,false,,Chipper Jones,,
+base,270,Gold Refractors,false,100,Chipper Jones,serial-numbered to 100 copies,
+base,271,Base,false,,Larry Walker
+base,271,Refractors,false,,Larry Walker,,
+base,271,Gold Refractors,false,100,Larry Walker,serial-numbered to 100 copies,
+base,272,Base,false,,Cal Ripken Jr.
+base,272,Refractors,false,,Cal Ripken Jr.,,
+base,272,Gold Refractors,false,100,Cal Ripken Jr.,serial-numbered to 100 copies,
+base,273,Base,false,,Scott Rolen
+base,273,Refractors,false,,Scott Rolen,,
+base,273,Gold Refractors,false,100,Scott Rolen,serial-numbered to 100 copies,
+base,274,Base,false,,Randy Johnson
+base,274,Refractors,false,,Randy Johnson,,
+base,274,Gold Refractors,false,100,Randy Johnson,serial-numbered to 100 copies,
+base,275,Base,false,,Tony Gwynn
+base,275,Refractors,false,,Tony Gwynn,,
+base,275,Gold Refractors,false,100,Tony Gwynn,serial-numbered to 100 copies,
+base,276,Base,false,,Barry Bonds
+base,276,Refractors,false,,Barry Bonds,,
+base,276,Gold Refractors,false,100,Barry Bonds,serial-numbered to 100 copies,
+base,277,Base,false,,Sean Burroughs ROOK RC
+base,277,Refractors,false,,Sean Burroughs ROOK RC,,
+base,277,Gold Refractors,false,100,Sean Burroughs ROOK RC,serial-numbered to 100 copies,
+base,278,Base,false,,J.M. Gold ROOK RC*
+base,278,Refractors,false,,J.M. Gold ROOK RC*,,
+base,278,Gold Refractors,false,100,J.M. Gold ROOK RC*,serial-numbered to 100 copies,
+base,279,Base,false,,Carlos Lee ROOK
+base,279,Refractors,false,,Carlos Lee ROOK,,
+base,279,Gold Refractors,false,100,Carlos Lee ROOK,serial-numbered to 100 copies,
+base,280,Base,false,,George Lombard ROOK
+base,280,Refractors,false,,George Lombard ROOK,,
+base,280,Gold Refractors,false,100,George Lombard ROOK,serial-numbered to 100 copies,
+base,281,Base,false,,Carlos Beltran ROOK
+base,281,Refractors,false,,Carlos Beltran ROOK,,
+base,281,Gold Refractors,false,100,Carlos Beltran ROOK,serial-numbered to 100 copies,
+base,282,Base,false,,Fernando Seguignol ROOK
+base,282,Refractors,false,,Fernando Seguignol ROOK,,
+base,282,Gold Refractors,false,100,Fernando Seguignol ROOK,serial-numbered to 100 copies,
+base,283,Base,false,,Eric Chavez ROOK
+base,283,Refractors,false,,Eric Chavez ROOK,,
+base,283,Gold Refractors,false,100,Eric Chavez ROOK,serial-numbered to 100 copies,
+base,284,Base,false,,Carlos Pena ROOK RC
+base,284,Refractors,false,,Carlos Pena ROOK RC,,
+base,284,Gold Refractors,false,100,Carlos Pena ROOK RC,serial-numbered to 100 copies,
+base,285,Base,false,,Corey Patterson ROOK RC
+base,285,Refractors,false,,Corey Patterson ROOK RC,,
+base,285,Gold Refractors,false,100,Corey Patterson ROOK RC,serial-numbered to 100 copies,
+base,286,Base,false,,Alfonso Soriano ROOK RC
+base,286,Refractors,false,,Alfonso Soriano ROOK RC,,
+base,286,Gold Refractors,false,100,Alfonso Soriano ROOK RC,serial-numbered to 100 copies,
+base,287,Base,false,,Nick Johnson ROOK RC
+base,287,Refractors,false,,Nick Johnson ROOK RC,,
+base,287,Gold Refractors,false,100,Nick Johnson ROOK RC,serial-numbered to 100 copies,
+base,288,Base,false,,Jorge Toca ROOK RC
+base,288,Refractors,false,,Jorge Toca ROOK RC,,
+base,288,Gold Refractors,false,100,Jorge Toca ROOK RC,serial-numbered to 100 copies,
+base,289,Base,false,,A.J. Burnett ROOK RC
+base,289,Refractors,false,,A.J. Burnett ROOK RC,,
+base,289,Gold Refractors,false,100,A.J. Burnett ROOK RC,serial-numbered to 100 copies,
+base,290,Base,false,,Andy Brown ROOK RC*
+base,290,Refractors,false,,Andy Brown ROOK RC*,,
+base,290,Gold Refractors,false,100,Andy Brown ROOK RC*,serial-numbered to 100 copies,
+base,291,Base,false,,Doug Mientkiewicz ROOK RC
+base,291,Refractors,false,,Doug Mientkiewicz ROOK RC,,
+base,291,Gold Refractors,false,100,Doug Mientkiewicz ROOK RC,serial-numbered to 100 copies,
+base,292,Base,false,,Bobby Seay ROOK RC*
+base,292,Refractors,false,,Bobby Seay ROOK RC*,,
+base,292,Gold Refractors,false,100,Bobby Seay ROOK RC*,serial-numbered to 100 copies,
+base,293,Base,false,,Chip Ambres ROOK RC
+base,293,Refractors,false,,Chip Ambres ROOK RC,,
+base,293,Gold Refractors,false,100,Chip Ambres ROOK RC,serial-numbered to 100 copies,
+base,294,Base,false,,C.C. Sabathia ROOK RC
+base,294,Refractors,false,,C.C. Sabathia ROOK RC,,
+base,294,Gold Refractors,false,100,C.C. Sabathia ROOK RC,serial-numbered to 100 copies,
+base,295,Base,false,,Choo Freeman ROOK RC
+base,295,Refractors,false,,Choo Freeman ROOK RC,,
+base,295,Gold Refractors,false,100,Choo Freeman ROOK RC,serial-numbered to 100 copies,
+base,296,Base,false,,Eric Valent ROOK RC
+base,296,Refractors,false,,Eric Valent ROOK RC,,
+base,296,Gold Refractors,false,100,Eric Valent ROOK RC,serial-numbered to 100 copies,
+base,297,Base,false,,Matt Belisle ROOK RC
+base,297,Refractors,false,,Matt Belisle ROOK RC,,
+base,297,Gold Refractors,false,100,Matt Belisle ROOK RC,serial-numbered to 100 copies,
+base,298,Base,false,,Jason Tyner ROOK RC
+base,298,Refractors,false,,Jason Tyner ROOK RC,,
+base,298,Gold Refractors,false,100,Jason Tyner ROOK RC,serial-numbered to 100 copies,
+base,299,Base,false,,Masao Kida ROOK RC
+base,299,Refractors,false,,Masao Kida ROOK RC,,
+base,299,Gold Refractors,false,100,Masao Kida ROOK RC,serial-numbered to 100 copies,
+base,300,Base,false,,Hank Aaron / Mark McGwire
+base,300,Refractors,false,,Hank Aaron / Mark McGwire,,
+base,300,Gold Refractors,false,100,Hank Aaron / Mark McGwire,serial-numbered to 100 copies,
+insert-split-screen,SS1,,false,,Mark McGwire / Sammy Sosa
+insert-split-screen,SS2,,false,,Ken Griffey
+insert-split-screen,SS3,,false,,Nomar Garciaparra / Derek Jeter
+insert-split-screen,SS4,,false,,Barry Bonds / Albert Belle
+insert-split-screen,SS5,,false,,Cal Ripken
+insert-split-screen,SS6,,false,,Manny Ramirez / Juan Gonzalez
+insert-split-screen,SS7,,false,,Frank Thomas / Andres Galarraga
+insert-split-screen,SS8,,false,,Scott Rolen / Chipper Jones
+insert-split-screen,SS9,,false,,Ivan Rodriguez / Mike Piazza
+insert-split-screen,SS10,,false,,Kerry Wood / Roger Clemens
+insert-split-screen,SS11,,false,,Greg Maddux / Tom Glavine
+insert-split-screen,SS12,,false,,Troy Glaus / Eric Chavez
+insert-split-screen,SS13,,false,,Ben Grieve / Todd Helton
+insert-split-screen,SS14,,false,,Travis Lee / Pat Burrell
+insert-prominent-figures,PF1,,false,,Mark McGwire HR 70
+insert-prominent-figures,PF1,Home Runs,false,,Mark McGwire HR 70,"1:1749 packs, serial-numbered to 70",1:1749 packs
+insert-prominent-figures,PF1,Slugging Percentage,false,,Mark McGwire HR 70,"1:145, serial-numbered to 847","1:145,"
+insert-prominent-figures,PF1,Batting Average,false,,Mark McGwire HR 70,"1:289, serial-numbered to 424","1:289,"
+insert-prominent-figures,PF1,Runs Batted In,false,,Mark McGwire HR 70,"1:644, serial-numbered to 190","1:644,"
+insert-prominent-figures,PF1,Total Bases,false,,Mark McGwire HR 70,"1:268, serial-numbered to 457","1:268,"
+insert-prominent-figures,PF2,,false,,Sammy Sosa HR 70
+insert-prominent-figures,PF2,Home Runs,false,,Sammy Sosa HR 70,"1:1749 packs, serial-numbered to 70",1:1749 packs
+insert-prominent-figures,PF2,Slugging Percentage,false,,Sammy Sosa HR 70,"1:145, serial-numbered to 847","1:145,"
+insert-prominent-figures,PF2,Batting Average,false,,Sammy Sosa HR 70,"1:289, serial-numbered to 424","1:289,"
+insert-prominent-figures,PF2,Runs Batted In,false,,Sammy Sosa HR 70,"1:644, serial-numbered to 190","1:644,"
+insert-prominent-figures,PF2,Total Bases,false,,Sammy Sosa HR 70,"1:268, serial-numbered to 457","1:268,"
+insert-prominent-figures,PF3,,false,,Ken Griffey
+insert-prominent-figures,PF3,Home Runs,false,,Ken Griffey,"1:1749 packs, serial-numbered to 70",1:1749 packs
+insert-prominent-figures,PF3,Slugging Percentage,false,,Ken Griffey,"1:145, serial-numbered to 847","1:145,"
+insert-prominent-figures,PF3,Batting Average,false,,Ken Griffey,"1:289, serial-numbered to 424","1:289,"
+insert-prominent-figures,PF3,Runs Batted In,false,,Ken Griffey,"1:644, serial-numbered to 190","1:644,"
+insert-prominent-figures,PF3,Total Bases,false,,Ken Griffey,"1:268, serial-numbered to 457","1:268,"
+insert-prominent-figures,PF4,,false,,Mike Piazza HR 70
+insert-prominent-figures,PF4,Home Runs,false,,Mike Piazza HR 70,"1:1749 packs, serial-numbered to 70",1:1749 packs
+insert-prominent-figures,PF4,Slugging Percentage,false,,Mike Piazza HR 70,"1:145, serial-numbered to 847","1:145,"
+insert-prominent-figures,PF4,Batting Average,false,,Mike Piazza HR 70,"1:289, serial-numbered to 424","1:289,"
+insert-prominent-figures,PF4,Runs Batted In,false,,Mike Piazza HR 70,"1:644, serial-numbered to 190","1:644,"
+insert-prominent-figures,PF4,Total Bases,false,,Mike Piazza HR 70,"1:268, serial-numbered to 457","1:268,"
+insert-prominent-figures,PF5,,false,,Juan Gonzalez HR 70
+insert-prominent-figures,PF5,Home Runs,false,,Juan Gonzalez HR 70,"1:1749 packs, serial-numbered to 70",1:1749 packs
+insert-prominent-figures,PF5,Slugging Percentage,false,,Juan Gonzalez HR 70,"1:145, serial-numbered to 847","1:145,"
+insert-prominent-figures,PF5,Batting Average,false,,Juan Gonzalez HR 70,"1:289, serial-numbered to 424","1:289,"
+insert-prominent-figures,PF5,Runs Batted In,false,,Juan Gonzalez HR 70,"1:644, serial-numbered to 190","1:644,"
+insert-prominent-figures,PF5,Total Bases,false,,Juan Gonzalez HR 70,"1:268, serial-numbered to 457","1:268,"
+insert-prominent-figures,PF6,,false,,Greg Vaughn HR 70
+insert-prominent-figures,PF6,Home Runs,false,,Greg Vaughn HR 70,"1:1749 packs, serial-numbered to 70",1:1749 packs
+insert-prominent-figures,PF6,Slugging Percentage,false,,Greg Vaughn HR 70,"1:145, serial-numbered to 847","1:145,"
+insert-prominent-figures,PF6,Batting Average,false,,Greg Vaughn HR 70,"1:289, serial-numbered to 424","1:289,"
+insert-prominent-figures,PF6,Runs Batted In,false,,Greg Vaughn HR 70,"1:644, serial-numbered to 190","1:644,"
+insert-prominent-figures,PF6,Total Bases,false,,Greg Vaughn HR 70,"1:268, serial-numbered to 457","1:268,"
+insert-prominent-figures,PF7,,false,,Alex Rodriguez HR 70
+insert-prominent-figures,PF7,Home Runs,false,,Alex Rodriguez HR 70,"1:1749 packs, serial-numbered to 70",1:1749 packs
+insert-prominent-figures,PF7,Slugging Percentage,false,,Alex Rodriguez HR 70,"1:145, serial-numbered to 847","1:145,"
+insert-prominent-figures,PF7,Batting Average,false,,Alex Rodriguez HR 70,"1:289, serial-numbered to 424","1:289,"
+insert-prominent-figures,PF7,Runs Batted In,false,,Alex Rodriguez HR 70,"1:644, serial-numbered to 190","1:644,"
+insert-prominent-figures,PF7,Total Bases,false,,Alex Rodriguez HR 70,"1:268, serial-numbered to 457","1:268,"
+insert-prominent-figures,PF8,,false,,Manny Ramirez HR 70
+insert-prominent-figures,PF8,Home Runs,false,,Manny Ramirez HR 70,"1:1749 packs, serial-numbered to 70",1:1749 packs
+insert-prominent-figures,PF8,Slugging Percentage,false,,Manny Ramirez HR 70,"1:145, serial-numbered to 847","1:145,"
+insert-prominent-figures,PF8,Batting Average,false,,Manny Ramirez HR 70,"1:289, serial-numbered to 424","1:289,"
+insert-prominent-figures,PF8,Runs Batted In,false,,Manny Ramirez HR 70,"1:644, serial-numbered to 190","1:644,"
+insert-prominent-figures,PF8,Total Bases,false,,Manny Ramirez HR 70,"1:268, serial-numbered to 457","1:268,"
+insert-prominent-figures,PF9,,false,,Jeff Bagwell HR 70
+insert-prominent-figures,PF9,Home Runs,false,,Jeff Bagwell HR 70,"1:1749 packs, serial-numbered to 70",1:1749 packs
+insert-prominent-figures,PF9,Slugging Percentage,false,,Jeff Bagwell HR 70,"1:145, serial-numbered to 847","1:145,"
+insert-prominent-figures,PF9,Batting Average,false,,Jeff Bagwell HR 70,"1:289, serial-numbered to 424","1:289,"
+insert-prominent-figures,PF9,Runs Batted In,false,,Jeff Bagwell HR 70,"1:644, serial-numbered to 190","1:644,"
+insert-prominent-figures,PF9,Total Bases,false,,Jeff Bagwell HR 70,"1:268, serial-numbered to 457","1:268,"
+insert-prominent-figures,PF10,,false,,Andres Galarraga HR 70
+insert-prominent-figures,PF10,Home Runs,false,,Andres Galarraga HR 70,"1:1749 packs, serial-numbered to 70",1:1749 packs
+insert-prominent-figures,PF10,Slugging Percentage,false,,Andres Galarraga HR 70,"1:145, serial-numbered to 847","1:145,"
+insert-prominent-figures,PF10,Batting Average,false,,Andres Galarraga HR 70,"1:289, serial-numbered to 424","1:289,"
+insert-prominent-figures,PF10,Runs Batted In,false,,Andres Galarraga HR 70,"1:644, serial-numbered to 190","1:644,"
+insert-prominent-figures,PF10,Total Bases,false,,Andres Galarraga HR 70,"1:268, serial-numbered to 457","1:268,"
+insert-prominent-figures,PF11,,false,,Mark McGwire SLG 847
+insert-prominent-figures,PF11,Home Runs,false,,Mark McGwire SLG 847,"1:1749 packs, serial-numbered to 70",1:1749 packs
+insert-prominent-figures,PF11,Slugging Percentage,false,,Mark McGwire SLG 847,"1:145, serial-numbered to 847","1:145,"
+insert-prominent-figures,PF11,Batting Average,false,,Mark McGwire SLG 847,"1:289, serial-numbered to 424","1:289,"
+insert-prominent-figures,PF11,Runs Batted In,false,,Mark McGwire SLG 847,"1:644, serial-numbered to 190","1:644,"
+insert-prominent-figures,PF11,Total Bases,false,,Mark McGwire SLG 847,"1:268, serial-numbered to 457","1:268,"
+insert-prominent-figures,PF12,,false,,Sammy Sosa SLG 847
+insert-prominent-figures,PF12,Home Runs,false,,Sammy Sosa SLG 847,"1:1749 packs, serial-numbered to 70",1:1749 packs
+insert-prominent-figures,PF12,Slugging Percentage,false,,Sammy Sosa SLG 847,"1:145, serial-numbered to 847","1:145,"
+insert-prominent-figures,PF12,Batting Average,false,,Sammy Sosa SLG 847,"1:289, serial-numbered to 424","1:289,"
+insert-prominent-figures,PF12,Runs Batted In,false,,Sammy Sosa SLG 847,"1:644, serial-numbered to 190","1:644,"
+insert-prominent-figures,PF12,Total Bases,false,,Sammy Sosa SLG 847,"1:268, serial-numbered to 457","1:268,"
+insert-prominent-figures,PF13,,false,,Juan Gonzalez SLG 847
+insert-prominent-figures,PF13,Home Runs,false,,Juan Gonzalez SLG 847,"1:1749 packs, serial-numbered to 70",1:1749 packs
+insert-prominent-figures,PF13,Slugging Percentage,false,,Juan Gonzalez SLG 847,"1:145, serial-numbered to 847","1:145,"
+insert-prominent-figures,PF13,Batting Average,false,,Juan Gonzalez SLG 847,"1:289, serial-numbered to 424","1:289,"
+insert-prominent-figures,PF13,Runs Batted In,false,,Juan Gonzalez SLG 847,"1:644, serial-numbered to 190","1:644,"
+insert-prominent-figures,PF13,Total Bases,false,,Juan Gonzalez SLG 847,"1:268, serial-numbered to 457","1:268,"
+insert-prominent-figures,PF14,,false,,Ken Griffey
+insert-prominent-figures,PF14,Home Runs,false,,Ken Griffey,"1:1749 packs, serial-numbered to 70",1:1749 packs
+insert-prominent-figures,PF14,Slugging Percentage,false,,Ken Griffey,"1:145, serial-numbered to 847","1:145,"
+insert-prominent-figures,PF14,Batting Average,false,,Ken Griffey,"1:289, serial-numbered to 424","1:289,"
+insert-prominent-figures,PF14,Runs Batted In,false,,Ken Griffey,"1:644, serial-numbered to 190","1:644,"
+insert-prominent-figures,PF14,Total Bases,false,,Ken Griffey,"1:268, serial-numbered to 457","1:268,"
+insert-prominent-figures,PF15,,false,,Barry Bonds SLG 847
+insert-prominent-figures,PF15,Home Runs,false,,Barry Bonds SLG 847,"1:1749 packs, serial-numbered to 70",1:1749 packs
+insert-prominent-figures,PF15,Slugging Percentage,false,,Barry Bonds SLG 847,"1:145, serial-numbered to 847","1:145,"
+insert-prominent-figures,PF15,Batting Average,false,,Barry Bonds SLG 847,"1:289, serial-numbered to 424","1:289,"
+insert-prominent-figures,PF15,Runs Batted In,false,,Barry Bonds SLG 847,"1:644, serial-numbered to 190","1:644,"
+insert-prominent-figures,PF15,Total Bases,false,,Barry Bonds SLG 847,"1:268, serial-numbered to 457","1:268,"
+insert-prominent-figures,PF16,,false,,Greg Vaughn SLG 847
+insert-prominent-figures,PF16,Home Runs,false,,Greg Vaughn SLG 847,"1:1749 packs, serial-numbered to 70",1:1749 packs
+insert-prominent-figures,PF16,Slugging Percentage,false,,Greg Vaughn SLG 847,"1:145, serial-numbered to 847","1:145,"
+insert-prominent-figures,PF16,Batting Average,false,,Greg Vaughn SLG 847,"1:289, serial-numbered to 424","1:289,"
+insert-prominent-figures,PF16,Runs Batted In,false,,Greg Vaughn SLG 847,"1:644, serial-numbered to 190","1:644,"
+insert-prominent-figures,PF16,Total Bases,false,,Greg Vaughn SLG 847,"1:268, serial-numbered to 457","1:268,"
+insert-prominent-figures,PF17,,false,,Larry Walker SLG 847
+insert-prominent-figures,PF17,Home Runs,false,,Larry Walker SLG 847,"1:1749 packs, serial-numbered to 70",1:1749 packs
+insert-prominent-figures,PF17,Slugging Percentage,false,,Larry Walker SLG 847,"1:145, serial-numbered to 847","1:145,"
+insert-prominent-figures,PF17,Batting Average,false,,Larry Walker SLG 847,"1:289, serial-numbered to 424","1:289,"
+insert-prominent-figures,PF17,Runs Batted In,false,,Larry Walker SLG 847,"1:644, serial-numbered to 190","1:644,"
+insert-prominent-figures,PF17,Total Bases,false,,Larry Walker SLG 847,"1:268, serial-numbered to 457","1:268,"
+insert-prominent-figures,PF18,,false,,Andres Galarraga SLG 847
+insert-prominent-figures,PF18,Home Runs,false,,Andres Galarraga SLG 847,"1:1749 packs, serial-numbered to 70",1:1749 packs
+insert-prominent-figures,PF18,Slugging Percentage,false,,Andres Galarraga SLG 847,"1:145, serial-numbered to 847","1:145,"
+insert-prominent-figures,PF18,Batting Average,false,,Andres Galarraga SLG 847,"1:289, serial-numbered to 424","1:289,"
+insert-prominent-figures,PF18,Runs Batted In,false,,Andres Galarraga SLG 847,"1:644, serial-numbered to 190","1:644,"
+insert-prominent-figures,PF18,Total Bases,false,,Andres Galarraga SLG 847,"1:268, serial-numbered to 457","1:268,"
+insert-prominent-figures,PF19,,false,,Jeff Bagwell SLG 847
+insert-prominent-figures,PF19,Home Runs,false,,Jeff Bagwell SLG 847,"1:1749 packs, serial-numbered to 70",1:1749 packs
+insert-prominent-figures,PF19,Slugging Percentage,false,,Jeff Bagwell SLG 847,"1:145, serial-numbered to 847","1:145,"
+insert-prominent-figures,PF19,Batting Average,false,,Jeff Bagwell SLG 847,"1:289, serial-numbered to 424","1:289,"
+insert-prominent-figures,PF19,Runs Batted In,false,,Jeff Bagwell SLG 847,"1:644, serial-numbered to 190","1:644,"
+insert-prominent-figures,PF19,Total Bases,false,,Jeff Bagwell SLG 847,"1:268, serial-numbered to 457","1:268,"
+insert-prominent-figures,PF20,,false,,Albert Belle SLG 847
+insert-prominent-figures,PF20,Home Runs,false,,Albert Belle SLG 847,"1:1749 packs, serial-numbered to 70",1:1749 packs
+insert-prominent-figures,PF20,Slugging Percentage,false,,Albert Belle SLG 847,"1:145, serial-numbered to 847","1:145,"
+insert-prominent-figures,PF20,Batting Average,false,,Albert Belle SLG 847,"1:289, serial-numbered to 424","1:289,"
+insert-prominent-figures,PF20,Runs Batted In,false,,Albert Belle SLG 847,"1:644, serial-numbered to 190","1:644,"
+insert-prominent-figures,PF20,Total Bases,false,,Albert Belle SLG 847,"1:268, serial-numbered to 457","1:268,"
+insert-prominent-figures,PF21,,false,,Tony Gwynn BAT 424
+insert-prominent-figures,PF21,Home Runs,false,,Tony Gwynn BAT 424,"1:1749 packs, serial-numbered to 70",1:1749 packs
+insert-prominent-figures,PF21,Slugging Percentage,false,,Tony Gwynn BAT 424,"1:145, serial-numbered to 847","1:145,"
+insert-prominent-figures,PF21,Batting Average,false,,Tony Gwynn BAT 424,"1:289, serial-numbered to 424","1:289,"
+insert-prominent-figures,PF21,Runs Batted In,false,,Tony Gwynn BAT 424,"1:644, serial-numbered to 190","1:644,"
+insert-prominent-figures,PF21,Total Bases,false,,Tony Gwynn BAT 424,"1:268, serial-numbered to 457","1:268,"
+insert-prominent-figures,PF22,,false,,Mike Piazza BAT 424
+insert-prominent-figures,PF22,Home Runs,false,,Mike Piazza BAT 424,"1:1749 packs, serial-numbered to 70",1:1749 packs
+insert-prominent-figures,PF22,Slugging Percentage,false,,Mike Piazza BAT 424,"1:145, serial-numbered to 847","1:145,"
+insert-prominent-figures,PF22,Batting Average,false,,Mike Piazza BAT 424,"1:289, serial-numbered to 424","1:289,"
+insert-prominent-figures,PF22,Runs Batted In,false,,Mike Piazza BAT 424,"1:644, serial-numbered to 190","1:644,"
+insert-prominent-figures,PF22,Total Bases,false,,Mike Piazza BAT 424,"1:268, serial-numbered to 457","1:268,"
+insert-prominent-figures,PF23,,false,,Larry Walker BAT 424
+insert-prominent-figures,PF23,Home Runs,false,,Larry Walker BAT 424,"1:1749 packs, serial-numbered to 70",1:1749 packs
+insert-prominent-figures,PF23,Slugging Percentage,false,,Larry Walker BAT 424,"1:145, serial-numbered to 847","1:145,"
+insert-prominent-figures,PF23,Batting Average,false,,Larry Walker BAT 424,"1:289, serial-numbered to 424","1:289,"
+insert-prominent-figures,PF23,Runs Batted In,false,,Larry Walker BAT 424,"1:644, serial-numbered to 190","1:644,"
+insert-prominent-figures,PF23,Total Bases,false,,Larry Walker BAT 424,"1:268, serial-numbered to 457","1:268,"
+insert-prominent-figures,PF24,,false,,Alex Rodriguez BAT 424
+insert-prominent-figures,PF24,Home Runs,false,,Alex Rodriguez BAT 424,"1:1749 packs, serial-numbered to 70",1:1749 packs
+insert-prominent-figures,PF24,Slugging Percentage,false,,Alex Rodriguez BAT 424,"1:145, serial-numbered to 847","1:145,"
+insert-prominent-figures,PF24,Batting Average,false,,Alex Rodriguez BAT 424,"1:289, serial-numbered to 424","1:289,"
+insert-prominent-figures,PF24,Runs Batted In,false,,Alex Rodriguez BAT 424,"1:644, serial-numbered to 190","1:644,"
+insert-prominent-figures,PF24,Total Bases,false,,Alex Rodriguez BAT 424,"1:268, serial-numbered to 457","1:268,"
+insert-prominent-figures,PF25,,false,,John Olerud BAT 424
+insert-prominent-figures,PF25,Home Runs,false,,John Olerud BAT 424,"1:1749 packs, serial-numbered to 70",1:1749 packs
+insert-prominent-figures,PF25,Slugging Percentage,false,,John Olerud BAT 424,"1:145, serial-numbered to 847","1:145,"
+insert-prominent-figures,PF25,Batting Average,false,,John Olerud BAT 424,"1:289, serial-numbered to 424","1:289,"
+insert-prominent-figures,PF25,Runs Batted In,false,,John Olerud BAT 424,"1:644, serial-numbered to 190","1:644,"
+insert-prominent-figures,PF25,Total Bases,false,,John Olerud BAT 424,"1:268, serial-numbered to 457","1:268,"
+insert-prominent-figures,PF26,,false,,Frank Thomas BAT 424
+insert-prominent-figures,PF26,Home Runs,false,,Frank Thomas BAT 424,"1:1749 packs, serial-numbered to 70",1:1749 packs
+insert-prominent-figures,PF26,Slugging Percentage,false,,Frank Thomas BAT 424,"1:145, serial-numbered to 847","1:145,"
+insert-prominent-figures,PF26,Batting Average,false,,Frank Thomas BAT 424,"1:289, serial-numbered to 424","1:289,"
+insert-prominent-figures,PF26,Runs Batted In,false,,Frank Thomas BAT 424,"1:644, serial-numbered to 190","1:644,"
+insert-prominent-figures,PF26,Total Bases,false,,Frank Thomas BAT 424,"1:268, serial-numbered to 457","1:268,"
+insert-prominent-figures,PF27,,false,,Bernie Williams BAT 424
+insert-prominent-figures,PF27,Home Runs,false,,Bernie Williams BAT 424,"1:1749 packs, serial-numbered to 70",1:1749 packs
+insert-prominent-figures,PF27,Slugging Percentage,false,,Bernie Williams BAT 424,"1:145, serial-numbered to 847","1:145,"
+insert-prominent-figures,PF27,Batting Average,false,,Bernie Williams BAT 424,"1:289, serial-numbered to 424","1:289,"
+insert-prominent-figures,PF27,Runs Batted In,false,,Bernie Williams BAT 424,"1:644, serial-numbered to 190","1:644,"
+insert-prominent-figures,PF27,Total Bases,false,,Bernie Williams BAT 424,"1:268, serial-numbered to 457","1:268,"
+insert-prominent-figures,PF28,,false,,Chipper Jones BAT 424
+insert-prominent-figures,PF28,Home Runs,false,,Chipper Jones BAT 424,"1:1749 packs, serial-numbered to 70",1:1749 packs
+insert-prominent-figures,PF28,Slugging Percentage,false,,Chipper Jones BAT 424,"1:145, serial-numbered to 847","1:145,"
+insert-prominent-figures,PF28,Batting Average,false,,Chipper Jones BAT 424,"1:289, serial-numbered to 424","1:289,"
+insert-prominent-figures,PF28,Runs Batted In,false,,Chipper Jones BAT 424,"1:644, serial-numbered to 190","1:644,"
+insert-prominent-figures,PF28,Total Bases,false,,Chipper Jones BAT 424,"1:268, serial-numbered to 457","1:268,"
+insert-prominent-figures,PF29,,false,,Jim Thome BAT 424
+insert-prominent-figures,PF29,Home Runs,false,,Jim Thome BAT 424,"1:1749 packs, serial-numbered to 70",1:1749 packs
+insert-prominent-figures,PF29,Slugging Percentage,false,,Jim Thome BAT 424,"1:145, serial-numbered to 847","1:145,"
+insert-prominent-figures,PF29,Batting Average,false,,Jim Thome BAT 424,"1:289, serial-numbered to 424","1:289,"
+insert-prominent-figures,PF29,Runs Batted In,false,,Jim Thome BAT 424,"1:644, serial-numbered to 190","1:644,"
+insert-prominent-figures,PF29,Total Bases,false,,Jim Thome BAT 424,"1:268, serial-numbered to 457","1:268,"
+insert-prominent-figures,PF30,,false,,Barry Bonds BAT 424
+insert-prominent-figures,PF30,Home Runs,false,,Barry Bonds BAT 424,"1:1749 packs, serial-numbered to 70",1:1749 packs
+insert-prominent-figures,PF30,Slugging Percentage,false,,Barry Bonds BAT 424,"1:145, serial-numbered to 847","1:145,"
+insert-prominent-figures,PF30,Batting Average,false,,Barry Bonds BAT 424,"1:289, serial-numbered to 424","1:289,"
+insert-prominent-figures,PF30,Runs Batted In,false,,Barry Bonds BAT 424,"1:644, serial-numbered to 190","1:644,"
+insert-prominent-figures,PF30,Total Bases,false,,Barry Bonds BAT 424,"1:268, serial-numbered to 457","1:268,"
+insert-prominent-figures,PF31,,false,,Juan Gonzalez RBI 190
+insert-prominent-figures,PF31,Home Runs,false,,Juan Gonzalez RBI 190,"1:1749 packs, serial-numbered to 70",1:1749 packs
+insert-prominent-figures,PF31,Slugging Percentage,false,,Juan Gonzalez RBI 190,"1:145, serial-numbered to 847","1:145,"
+insert-prominent-figures,PF31,Batting Average,false,,Juan Gonzalez RBI 190,"1:289, serial-numbered to 424","1:289,"
+insert-prominent-figures,PF31,Runs Batted In,false,,Juan Gonzalez RBI 190,"1:644, serial-numbered to 190","1:644,"
+insert-prominent-figures,PF31,Total Bases,false,,Juan Gonzalez RBI 190,"1:268, serial-numbered to 457","1:268,"
+insert-prominent-figures,PF32,,false,,Sammy Sosa RBI 190
+insert-prominent-figures,PF32,Home Runs,false,,Sammy Sosa RBI 190,"1:1749 packs, serial-numbered to 70",1:1749 packs
+insert-prominent-figures,PF32,Slugging Percentage,false,,Sammy Sosa RBI 190,"1:145, serial-numbered to 847","1:145,"
+insert-prominent-figures,PF32,Batting Average,false,,Sammy Sosa RBI 190,"1:289, serial-numbered to 424","1:289,"
+insert-prominent-figures,PF32,Runs Batted In,false,,Sammy Sosa RBI 190,"1:644, serial-numbered to 190","1:644,"
+insert-prominent-figures,PF32,Total Bases,false,,Sammy Sosa RBI 190,"1:268, serial-numbered to 457","1:268,"
+insert-prominent-figures,PF33,,false,,Mark McGwire RBI 190
+insert-prominent-figures,PF33,Home Runs,false,,Mark McGwire RBI 190,"1:1749 packs, serial-numbered to 70",1:1749 packs
+insert-prominent-figures,PF33,Slugging Percentage,false,,Mark McGwire RBI 190,"1:145, serial-numbered to 847","1:145,"
+insert-prominent-figures,PF33,Batting Average,false,,Mark McGwire RBI 190,"1:289, serial-numbered to 424","1:289,"
+insert-prominent-figures,PF33,Runs Batted In,false,,Mark McGwire RBI 190,"1:644, serial-numbered to 190","1:644,"
+insert-prominent-figures,PF33,Total Bases,false,,Mark McGwire RBI 190,"1:268, serial-numbered to 457","1:268,"
+insert-prominent-figures,PF34,,false,,Albert Belle RBI 190
+insert-prominent-figures,PF34,Home Runs,false,,Albert Belle RBI 190,"1:1749 packs, serial-numbered to 70",1:1749 packs
+insert-prominent-figures,PF34,Slugging Percentage,false,,Albert Belle RBI 190,"1:145, serial-numbered to 847","1:145,"
+insert-prominent-figures,PF34,Batting Average,false,,Albert Belle RBI 190,"1:289, serial-numbered to 424","1:289,"
+insert-prominent-figures,PF34,Runs Batted In,false,,Albert Belle RBI 190,"1:644, serial-numbered to 190","1:644,"
+insert-prominent-figures,PF34,Total Bases,false,,Albert Belle RBI 190,"1:268, serial-numbered to 457","1:268,"
+insert-prominent-figures,PF35,,false,,Ken Griffey
+insert-prominent-figures,PF35,Home Runs,false,,Ken Griffey,"1:1749 packs, serial-numbered to 70",1:1749 packs
+insert-prominent-figures,PF35,Slugging Percentage,false,,Ken Griffey,"1:145, serial-numbered to 847","1:145,"
+insert-prominent-figures,PF35,Batting Average,false,,Ken Griffey,"1:289, serial-numbered to 424","1:289,"
+insert-prominent-figures,PF35,Runs Batted In,false,,Ken Griffey,"1:644, serial-numbered to 190","1:644,"
+insert-prominent-figures,PF35,Total Bases,false,,Ken Griffey,"1:268, serial-numbered to 457","1:268,"
+insert-prominent-figures,PF36,,false,,Jeff Bagwell RBI 190
+insert-prominent-figures,PF36,Home Runs,false,,Jeff Bagwell RBI 190,"1:1749 packs, serial-numbered to 70",1:1749 packs
+insert-prominent-figures,PF36,Slugging Percentage,false,,Jeff Bagwell RBI 190,"1:145, serial-numbered to 847","1:145,"
+insert-prominent-figures,PF36,Batting Average,false,,Jeff Bagwell RBI 190,"1:289, serial-numbered to 424","1:289,"
+insert-prominent-figures,PF36,Runs Batted In,false,,Jeff Bagwell RBI 190,"1:644, serial-numbered to 190","1:644,"
+insert-prominent-figures,PF36,Total Bases,false,,Jeff Bagwell RBI 190,"1:268, serial-numbered to 457","1:268,"
+insert-prominent-figures,PF37,,false,,Chipper Jones RBI 190
+insert-prominent-figures,PF37,Home Runs,false,,Chipper Jones RBI 190,"1:1749 packs, serial-numbered to 70",1:1749 packs
+insert-prominent-figures,PF37,Slugging Percentage,false,,Chipper Jones RBI 190,"1:145, serial-numbered to 847","1:145,"
+insert-prominent-figures,PF37,Batting Average,false,,Chipper Jones RBI 190,"1:289, serial-numbered to 424","1:289,"
+insert-prominent-figures,PF37,Runs Batted In,false,,Chipper Jones RBI 190,"1:644, serial-numbered to 190","1:644,"
+insert-prominent-figures,PF37,Total Bases,false,,Chipper Jones RBI 190,"1:268, serial-numbered to 457","1:268,"
+insert-prominent-figures,PF38,,false,,Vinny Castilla RBI 190
+insert-prominent-figures,PF38,Home Runs,false,,Vinny Castilla RBI 190,"1:1749 packs, serial-numbered to 70",1:1749 packs
+insert-prominent-figures,PF38,Slugging Percentage,false,,Vinny Castilla RBI 190,"1:145, serial-numbered to 847","1:145,"
+insert-prominent-figures,PF38,Batting Average,false,,Vinny Castilla RBI 190,"1:289, serial-numbered to 424","1:289,"
+insert-prominent-figures,PF38,Runs Batted In,false,,Vinny Castilla RBI 190,"1:644, serial-numbered to 190","1:644,"
+insert-prominent-figures,PF38,Total Bases,false,,Vinny Castilla RBI 190,"1:268, serial-numbered to 457","1:268,"
+insert-prominent-figures,PF39,,false,,Alex Rodriguez RBI 190
+insert-prominent-figures,PF39,Home Runs,false,,Alex Rodriguez RBI 190,"1:1749 packs, serial-numbered to 70",1:1749 packs
+insert-prominent-figures,PF39,Slugging Percentage,false,,Alex Rodriguez RBI 190,"1:145, serial-numbered to 847","1:145,"
+insert-prominent-figures,PF39,Batting Average,false,,Alex Rodriguez RBI 190,"1:289, serial-numbered to 424","1:289,"
+insert-prominent-figures,PF39,Runs Batted In,false,,Alex Rodriguez RBI 190,"1:644, serial-numbered to 190","1:644,"
+insert-prominent-figures,PF39,Total Bases,false,,Alex Rodriguez RBI 190,"1:268, serial-numbered to 457","1:268,"
+insert-prominent-figures,PF40,,false,,Andres Galarraga RBI 190
+insert-prominent-figures,PF40,Home Runs,false,,Andres Galarraga RBI 190,"1:1749 packs, serial-numbered to 70",1:1749 packs
+insert-prominent-figures,PF40,Slugging Percentage,false,,Andres Galarraga RBI 190,"1:145, serial-numbered to 847","1:145,"
+insert-prominent-figures,PF40,Batting Average,false,,Andres Galarraga RBI 190,"1:289, serial-numbered to 424","1:289,"
+insert-prominent-figures,PF40,Runs Batted In,false,,Andres Galarraga RBI 190,"1:644, serial-numbered to 190","1:644,"
+insert-prominent-figures,PF40,Total Bases,false,,Andres Galarraga RBI 190,"1:268, serial-numbered to 457","1:268,"
+insert-prominent-figures,PF41,,false,,Sammy Sosa TB 457
+insert-prominent-figures,PF41,Home Runs,false,,Sammy Sosa TB 457,"1:1749 packs, serial-numbered to 70",1:1749 packs
+insert-prominent-figures,PF41,Slugging Percentage,false,,Sammy Sosa TB 457,"1:145, serial-numbered to 847","1:145,"
+insert-prominent-figures,PF41,Batting Average,false,,Sammy Sosa TB 457,"1:289, serial-numbered to 424","1:289,"
+insert-prominent-figures,PF41,Runs Batted In,false,,Sammy Sosa TB 457,"1:644, serial-numbered to 190","1:644,"
+insert-prominent-figures,PF41,Total Bases,false,,Sammy Sosa TB 457,"1:268, serial-numbered to 457","1:268,"
+insert-prominent-figures,PF42,,false,,Mark McGwire TB 457
+insert-prominent-figures,PF42,Home Runs,false,,Mark McGwire TB 457,"1:1749 packs, serial-numbered to 70",1:1749 packs
+insert-prominent-figures,PF42,Slugging Percentage,false,,Mark McGwire TB 457,"1:145, serial-numbered to 847","1:145,"
+insert-prominent-figures,PF42,Batting Average,false,,Mark McGwire TB 457,"1:289, serial-numbered to 424","1:289,"
+insert-prominent-figures,PF42,Runs Batted In,false,,Mark McGwire TB 457,"1:644, serial-numbered to 190","1:644,"
+insert-prominent-figures,PF42,Total Bases,false,,Mark McGwire TB 457,"1:268, serial-numbered to 457","1:268,"
+insert-prominent-figures,PF43,,false,,Albert Belle TB 457
+insert-prominent-figures,PF43,Home Runs,false,,Albert Belle TB 457,"1:1749 packs, serial-numbered to 70",1:1749 packs
+insert-prominent-figures,PF43,Slugging Percentage,false,,Albert Belle TB 457,"1:145, serial-numbered to 847","1:145,"
+insert-prominent-figures,PF43,Batting Average,false,,Albert Belle TB 457,"1:289, serial-numbered to 424","1:289,"
+insert-prominent-figures,PF43,Runs Batted In,false,,Albert Belle TB 457,"1:644, serial-numbered to 190","1:644,"
+insert-prominent-figures,PF43,Total Bases,false,,Albert Belle TB 457,"1:268, serial-numbered to 457","1:268,"
+insert-prominent-figures,PF44,,false,,Ken Griffey
+insert-prominent-figures,PF44,Home Runs,false,,Ken Griffey,"1:1749 packs, serial-numbered to 70",1:1749 packs
+insert-prominent-figures,PF44,Slugging Percentage,false,,Ken Griffey,"1:145, serial-numbered to 847","1:145,"
+insert-prominent-figures,PF44,Batting Average,false,,Ken Griffey,"1:289, serial-numbered to 424","1:289,"
+insert-prominent-figures,PF44,Runs Batted In,false,,Ken Griffey,"1:644, serial-numbered to 190","1:644,"
+insert-prominent-figures,PF44,Total Bases,false,,Ken Griffey,"1:268, serial-numbered to 457","1:268,"
+insert-prominent-figures,PF45,,false,,Jeff Bagwell TB 457
+insert-prominent-figures,PF45,Home Runs,false,,Jeff Bagwell TB 457,"1:1749 packs, serial-numbered to 70",1:1749 packs
+insert-prominent-figures,PF45,Slugging Percentage,false,,Jeff Bagwell TB 457,"1:145, serial-numbered to 847","1:145,"
+insert-prominent-figures,PF45,Batting Average,false,,Jeff Bagwell TB 457,"1:289, serial-numbered to 424","1:289,"
+insert-prominent-figures,PF45,Runs Batted In,false,,Jeff Bagwell TB 457,"1:644, serial-numbered to 190","1:644,"
+insert-prominent-figures,PF45,Total Bases,false,,Jeff Bagwell TB 457,"1:268, serial-numbered to 457","1:268,"
+insert-prominent-figures,PF46,,false,,Juan Gonzalez TB 457
+insert-prominent-figures,PF46,Home Runs,false,,Juan Gonzalez TB 457,"1:1749 packs, serial-numbered to 70",1:1749 packs
+insert-prominent-figures,PF46,Slugging Percentage,false,,Juan Gonzalez TB 457,"1:145, serial-numbered to 847","1:145,"
+insert-prominent-figures,PF46,Batting Average,false,,Juan Gonzalez TB 457,"1:289, serial-numbered to 424","1:289,"
+insert-prominent-figures,PF46,Runs Batted In,false,,Juan Gonzalez TB 457,"1:644, serial-numbered to 190","1:644,"
+insert-prominent-figures,PF46,Total Bases,false,,Juan Gonzalez TB 457,"1:268, serial-numbered to 457","1:268,"
+insert-prominent-figures,PF47,,false,,Barry Bonds TB 457
+insert-prominent-figures,PF47,Home Runs,false,,Barry Bonds TB 457,"1:1749 packs, serial-numbered to 70",1:1749 packs
+insert-prominent-figures,PF47,Slugging Percentage,false,,Barry Bonds TB 457,"1:145, serial-numbered to 847","1:145,"
+insert-prominent-figures,PF47,Batting Average,false,,Barry Bonds TB 457,"1:289, serial-numbered to 424","1:289,"
+insert-prominent-figures,PF47,Runs Batted In,false,,Barry Bonds TB 457,"1:644, serial-numbered to 190","1:644,"
+insert-prominent-figures,PF47,Total Bases,false,,Barry Bonds TB 457,"1:268, serial-numbered to 457","1:268,"
+insert-prominent-figures,PF48,,false,,Vladimir Guerrero TB 457
+insert-prominent-figures,PF48,Home Runs,false,,Vladimir Guerrero TB 457,"1:1749 packs, serial-numbered to 70",1:1749 packs
+insert-prominent-figures,PF48,Slugging Percentage,false,,Vladimir Guerrero TB 457,"1:145, serial-numbered to 847","1:145,"
+insert-prominent-figures,PF48,Batting Average,false,,Vladimir Guerrero TB 457,"1:289, serial-numbered to 424","1:289,"
+insert-prominent-figures,PF48,Runs Batted In,false,,Vladimir Guerrero TB 457,"1:644, serial-numbered to 190","1:644,"
+insert-prominent-figures,PF48,Total Bases,false,,Vladimir Guerrero TB 457,"1:268, serial-numbered to 457","1:268,"
+insert-prominent-figures,PF49,,false,,Larry Walker TB 457
+insert-prominent-figures,PF49,Home Runs,false,,Larry Walker TB 457,"1:1749 packs, serial-numbered to 70",1:1749 packs
+insert-prominent-figures,PF49,Slugging Percentage,false,,Larry Walker TB 457,"1:145, serial-numbered to 847","1:145,"
+insert-prominent-figures,PF49,Batting Average,false,,Larry Walker TB 457,"1:289, serial-numbered to 424","1:289,"
+insert-prominent-figures,PF49,Runs Batted In,false,,Larry Walker TB 457,"1:644, serial-numbered to 190","1:644,"
+insert-prominent-figures,PF49,Total Bases,false,,Larry Walker TB 457,"1:268, serial-numbered to 457","1:268,"
+insert-prominent-figures,PF50,,false,,Alex Rodriguez TB 457
+insert-prominent-figures,PF50,Home Runs,false,,Alex Rodriguez TB 457,"1:1749 packs, serial-numbered to 70",1:1749 packs
+insert-prominent-figures,PF50,Slugging Percentage,false,,Alex Rodriguez TB 457,"1:145, serial-numbered to 847","1:145,"
+insert-prominent-figures,PF50,Batting Average,false,,Alex Rodriguez TB 457,"1:289, serial-numbered to 424","1:289,"
+insert-prominent-figures,PF50,Runs Batted In,false,,Alex Rodriguez TB 457,"1:644, serial-numbered to 190","1:644,"
+insert-prominent-figures,PF50,Total Bases,false,,Alex Rodriguez TB 457,"1:268, serial-numbered to 457","1:268,"
+insert-leading-indicators,L1,,false,,Mark McGwire
+insert-leading-indicators,L2,,false,,Sammy Sosa
+insert-leading-indicators,L3,,false,,Ken Griffey Jr.
+insert-leading-indicators,L4,,false,,Greg Vaughn
+insert-leading-indicators,L5,,false,,Albert Belle
+insert-leading-indicators,L6,,false,,Juan Gonzalez
+insert-leading-indicators,L7,,false,,Andres Galarraga
+insert-leading-indicators,L8,,false,,Alex Rodriguez
+insert-leading-indicators,L9,,false,,Barry Bonds
+insert-leading-indicators,L10,,false,,Jeff Bagwell
+insert-team-finest,TF1,,false,,Greg Maddux
+insert-team-finest,TF1,Blue,false,1500,Greg Maddux,serial-numbered to 1500 copies,
+insert-team-finest,TF1,Red,false,500,Greg Maddux,serial-numbered to 500,
+insert-team-finest,TF1,Gold,false,250,Greg Maddux,serial-numbered to 250,
+insert-team-finest,TF1,Blue Refractor,false,150,Greg Maddux,serial-numbered to 150,
+insert-team-finest,TF1,Red Refractor,false,50,Greg Maddux,serial-numbered to 50,
+insert-team-finest,TF1,Gold Refractor,false,25,Greg Maddux,serial-numbered to 25,
+insert-team-finest,TF2,,false,,Mark McGwire
+insert-team-finest,TF2,Blue,false,1500,Mark McGwire,serial-numbered to 1500 copies,
+insert-team-finest,TF2,Red,false,500,Mark McGwire,serial-numbered to 500,
+insert-team-finest,TF2,Gold,false,250,Mark McGwire,serial-numbered to 250,
+insert-team-finest,TF2,Blue Refractor,false,150,Mark McGwire,serial-numbered to 150,
+insert-team-finest,TF2,Red Refractor,false,50,Mark McGwire,serial-numbered to 50,
+insert-team-finest,TF2,Gold Refractor,false,25,Mark McGwire,serial-numbered to 25,
+insert-team-finest,TF3,,false,,Sammy Sosa
+insert-team-finest,TF3,Blue,false,1500,Sammy Sosa,serial-numbered to 1500 copies,
+insert-team-finest,TF3,Red,false,500,Sammy Sosa,serial-numbered to 500,
+insert-team-finest,TF3,Gold,false,250,Sammy Sosa,serial-numbered to 250,
+insert-team-finest,TF3,Blue Refractor,false,150,Sammy Sosa,serial-numbered to 150,
+insert-team-finest,TF3,Red Refractor,false,50,Sammy Sosa,serial-numbered to 50,
+insert-team-finest,TF3,Gold Refractor,false,25,Sammy Sosa,serial-numbered to 25,
+insert-team-finest,TF4,,false,,Juan Gonzalez
+insert-team-finest,TF4,Blue,false,1500,Juan Gonzalez,serial-numbered to 1500 copies,
+insert-team-finest,TF4,Red,false,500,Juan Gonzalez,serial-numbered to 500,
+insert-team-finest,TF4,Gold,false,250,Juan Gonzalez,serial-numbered to 250,
+insert-team-finest,TF4,Blue Refractor,false,150,Juan Gonzalez,serial-numbered to 150,
+insert-team-finest,TF4,Red Refractor,false,50,Juan Gonzalez,serial-numbered to 50,
+insert-team-finest,TF4,Gold Refractor,false,25,Juan Gonzalez,serial-numbered to 25,
+insert-team-finest,TF5,,false,,Alex Rodriguez
+insert-team-finest,TF5,Blue,false,1500,Alex Rodriguez,serial-numbered to 1500 copies,
+insert-team-finest,TF5,Red,false,500,Alex Rodriguez,serial-numbered to 500,
+insert-team-finest,TF5,Gold,false,250,Alex Rodriguez,serial-numbered to 250,
+insert-team-finest,TF5,Blue Refractor,false,150,Alex Rodriguez,serial-numbered to 150,
+insert-team-finest,TF5,Red Refractor,false,50,Alex Rodriguez,serial-numbered to 50,
+insert-team-finest,TF5,Gold Refractor,false,25,Alex Rodriguez,serial-numbered to 25,
+insert-team-finest,TF6,,false,,Travis Lee
+insert-team-finest,TF6,Blue,false,1500,Travis Lee,serial-numbered to 1500 copies,
+insert-team-finest,TF6,Red,false,500,Travis Lee,serial-numbered to 500,
+insert-team-finest,TF6,Gold,false,250,Travis Lee,serial-numbered to 250,
+insert-team-finest,TF6,Blue Refractor,false,150,Travis Lee,serial-numbered to 150,
+insert-team-finest,TF6,Red Refractor,false,50,Travis Lee,serial-numbered to 50,
+insert-team-finest,TF6,Gold Refractor,false,25,Travis Lee,serial-numbered to 25,
+insert-team-finest,TF7,,false,,Roger Clemens
+insert-team-finest,TF7,Blue,false,1500,Roger Clemens,serial-numbered to 1500 copies,
+insert-team-finest,TF7,Red,false,500,Roger Clemens,serial-numbered to 500,
+insert-team-finest,TF7,Gold,false,250,Roger Clemens,serial-numbered to 250,
+insert-team-finest,TF7,Blue Refractor,false,150,Roger Clemens,serial-numbered to 150,
+insert-team-finest,TF7,Red Refractor,false,50,Roger Clemens,serial-numbered to 50,
+insert-team-finest,TF7,Gold Refractor,false,25,Roger Clemens,serial-numbered to 25,
+insert-team-finest,TF8,,false,,Darin Erstad
+insert-team-finest,TF8,Blue,false,1500,Darin Erstad,serial-numbered to 1500 copies,
+insert-team-finest,TF8,Red,false,500,Darin Erstad,serial-numbered to 500,
+insert-team-finest,TF8,Gold,false,250,Darin Erstad,serial-numbered to 250,
+insert-team-finest,TF8,Blue Refractor,false,150,Darin Erstad,serial-numbered to 150,
+insert-team-finest,TF8,Red Refractor,false,50,Darin Erstad,serial-numbered to 50,
+insert-team-finest,TF8,Gold Refractor,false,25,Darin Erstad,serial-numbered to 25,
+insert-team-finest,TF9,,false,,Todd Helton
+insert-team-finest,TF9,Blue,false,1500,Todd Helton,serial-numbered to 1500 copies,
+insert-team-finest,TF9,Red,false,500,Todd Helton,serial-numbered to 500,
+insert-team-finest,TF9,Gold,false,250,Todd Helton,serial-numbered to 250,
+insert-team-finest,TF9,Blue Refractor,false,150,Todd Helton,serial-numbered to 150,
+insert-team-finest,TF9,Red Refractor,false,50,Todd Helton,serial-numbered to 50,
+insert-team-finest,TF9,Gold Refractor,false,25,Todd Helton,serial-numbered to 25,
+insert-team-finest,TF10,,false,,Mike Piazza
+insert-team-finest,TF10,Blue,false,1500,Mike Piazza,serial-numbered to 1500 copies,
+insert-team-finest,TF10,Red,false,500,Mike Piazza,serial-numbered to 500,
+insert-team-finest,TF10,Gold,false,250,Mike Piazza,serial-numbered to 250,
+insert-team-finest,TF10,Blue Refractor,false,150,Mike Piazza,serial-numbered to 150,
+insert-team-finest,TF10,Red Refractor,false,50,Mike Piazza,serial-numbered to 50,
+insert-team-finest,TF10,Gold Refractor,false,25,Mike Piazza,serial-numbered to 25,
+insert-team-finest,TF11,,false,,Kerry Wood
+insert-team-finest,TF11,Blue,false,1500,Kerry Wood,serial-numbered to 1500 copies,
+insert-team-finest,TF11,Red,false,500,Kerry Wood,serial-numbered to 500,
+insert-team-finest,TF11,Gold,false,250,Kerry Wood,serial-numbered to 250,
+insert-team-finest,TF11,Blue Refractor,false,150,Kerry Wood,serial-numbered to 150,
+insert-team-finest,TF11,Red Refractor,false,50,Kerry Wood,serial-numbered to 50,
+insert-team-finest,TF11,Gold Refractor,false,25,Kerry Wood,serial-numbered to 25,
+insert-team-finest,TF12,,false,,Ken Griffey Jr.
+insert-team-finest,TF12,Blue,false,1500,Ken Griffey Jr.,serial-numbered to 1500 copies,
+insert-team-finest,TF12,Red,false,500,Ken Griffey Jr.,serial-numbered to 500,
+insert-team-finest,TF12,Gold,false,250,Ken Griffey Jr.,serial-numbered to 250,
+insert-team-finest,TF12,Blue Refractor,false,150,Ken Griffey Jr.,serial-numbered to 150,
+insert-team-finest,TF12,Red Refractor,false,50,Ken Griffey Jr.,serial-numbered to 50,
+insert-team-finest,TF12,Gold Refractor,false,25,Ken Griffey Jr.,serial-numbered to 25,
+insert-team-finest,TF13,,false,,Frank Thomas
+insert-team-finest,TF13,Blue,false,1500,Frank Thomas,serial-numbered to 1500 copies,
+insert-team-finest,TF13,Red,false,500,Frank Thomas,serial-numbered to 500,
+insert-team-finest,TF13,Gold,false,250,Frank Thomas,serial-numbered to 250,
+insert-team-finest,TF13,Blue Refractor,false,150,Frank Thomas,serial-numbered to 150,
+insert-team-finest,TF13,Red Refractor,false,50,Frank Thomas,serial-numbered to 50,
+insert-team-finest,TF13,Gold Refractor,false,25,Frank Thomas,serial-numbered to 25,
+insert-team-finest,TF14,,false,,Jeff Bagwell
+insert-team-finest,TF14,Blue,false,1500,Jeff Bagwell,serial-numbered to 1500 copies,
+insert-team-finest,TF14,Red,false,500,Jeff Bagwell,serial-numbered to 500,
+insert-team-finest,TF14,Gold,false,250,Jeff Bagwell,serial-numbered to 250,
+insert-team-finest,TF14,Blue Refractor,false,150,Jeff Bagwell,serial-numbered to 150,
+insert-team-finest,TF14,Red Refractor,false,50,Jeff Bagwell,serial-numbered to 50,
+insert-team-finest,TF14,Gold Refractor,false,25,Jeff Bagwell,serial-numbered to 25,
+insert-team-finest,TF15,,false,,Nomar Garciaparra
+insert-team-finest,TF15,Blue,false,1500,Nomar Garciaparra,serial-numbered to 1500 copies,
+insert-team-finest,TF15,Red,false,500,Nomar Garciaparra,serial-numbered to 500,
+insert-team-finest,TF15,Gold,false,250,Nomar Garciaparra,serial-numbered to 250,
+insert-team-finest,TF15,Blue Refractor,false,150,Nomar Garciaparra,serial-numbered to 150,
+insert-team-finest,TF15,Red Refractor,false,50,Nomar Garciaparra,serial-numbered to 50,
+insert-team-finest,TF15,Gold Refractor,false,25,Nomar Garciaparra,serial-numbered to 25,
+insert-team-finest,TF16,,false,,Derek Jeter
+insert-team-finest,TF16,Blue,false,1500,Derek Jeter,serial-numbered to 1500 copies,
+insert-team-finest,TF16,Red,false,500,Derek Jeter,serial-numbered to 500,
+insert-team-finest,TF16,Gold,false,250,Derek Jeter,serial-numbered to 250,
+insert-team-finest,TF16,Blue Refractor,false,150,Derek Jeter,serial-numbered to 150,
+insert-team-finest,TF16,Red Refractor,false,50,Derek Jeter,serial-numbered to 50,
+insert-team-finest,TF16,Gold Refractor,false,25,Derek Jeter,serial-numbered to 25,
+insert-team-finest,TF17,,false,,Chipper Jones
+insert-team-finest,TF17,Blue,false,1500,Chipper Jones,serial-numbered to 1500 copies,
+insert-team-finest,TF17,Red,false,500,Chipper Jones,serial-numbered to 500,
+insert-team-finest,TF17,Gold,false,250,Chipper Jones,serial-numbered to 250,
+insert-team-finest,TF17,Blue Refractor,false,150,Chipper Jones,serial-numbered to 150,
+insert-team-finest,TF17,Red Refractor,false,50,Chipper Jones,serial-numbered to 50,
+insert-team-finest,TF17,Gold Refractor,false,25,Chipper Jones,serial-numbered to 25,
+insert-team-finest,TF18,,false,,Barry Bonds
+insert-team-finest,TF18,Blue,false,1500,Barry Bonds,serial-numbered to 1500 copies,
+insert-team-finest,TF18,Red,false,500,Barry Bonds,serial-numbered to 500,
+insert-team-finest,TF18,Gold,false,250,Barry Bonds,serial-numbered to 250,
+insert-team-finest,TF18,Blue Refractor,false,150,Barry Bonds,serial-numbered to 150,
+insert-team-finest,TF18,Red Refractor,false,50,Barry Bonds,serial-numbered to 50,
+insert-team-finest,TF18,Gold Refractor,false,25,Barry Bonds,serial-numbered to 25,
+insert-team-finest,TF19,,false,,Tony Gwynn
+insert-team-finest,TF19,Blue,false,1500,Tony Gwynn,serial-numbered to 1500 copies,
+insert-team-finest,TF19,Red,false,500,Tony Gwynn,serial-numbered to 500,
+insert-team-finest,TF19,Gold,false,250,Tony Gwynn,serial-numbered to 250,
+insert-team-finest,TF19,Blue Refractor,false,150,Tony Gwynn,serial-numbered to 150,
+insert-team-finest,TF19,Red Refractor,false,50,Tony Gwynn,serial-numbered to 50,
+insert-team-finest,TF19,Gold Refractor,false,25,Tony Gwynn,serial-numbered to 25,
+insert-team-finest,TF20,,false,,Ben Grieve
+insert-team-finest,TF20,Blue,false,1500,Ben Grieve,serial-numbered to 1500 copies,
+insert-team-finest,TF20,Red,false,500,Ben Grieve,serial-numbered to 500,
+insert-team-finest,TF20,Gold,false,250,Ben Grieve,serial-numbered to 250,
+insert-team-finest,TF20,Blue Refractor,false,150,Ben Grieve,serial-numbered to 150,
+insert-team-finest,TF20,Red Refractor,false,50,Ben Grieve,serial-numbered to 50,
+insert-team-finest,TF20,Gold Refractor,false,25,Ben Grieve,serial-numbered to 25,
+insert-peel-and-reveal,PR1,,false,,Kerry Wood
+insert-peel-and-reveal,PR1,Sparkle,false,,Kerry Wood,common,
+insert-peel-and-reveal,PR1,Hyperplaid,false,,Kerry Wood,uncommon,
+insert-peel-and-reveal,PR1,Stadium Star,false,,Kerry Wood,rare,
+insert-peel-and-reveal,PR2,,false,,Mark McGwire
+insert-peel-and-reveal,PR2,Sparkle,false,,Mark McGwire,common,
+insert-peel-and-reveal,PR2,Hyperplaid,false,,Mark McGwire,uncommon,
+insert-peel-and-reveal,PR2,Stadium Star,false,,Mark McGwire,rare,
+insert-peel-and-reveal,PR3,,false,,Sammy Sosa
+insert-peel-and-reveal,PR3,Sparkle,false,,Sammy Sosa,common,
+insert-peel-and-reveal,PR3,Hyperplaid,false,,Sammy Sosa,uncommon,
+insert-peel-and-reveal,PR3,Stadium Star,false,,Sammy Sosa,rare,
+insert-peel-and-reveal,PR4,,false,,Ken Griffey Jr.
+insert-peel-and-reveal,PR4,Sparkle,false,,Ken Griffey Jr.,common,
+insert-peel-and-reveal,PR4,Hyperplaid,false,,Ken Griffey Jr.,uncommon,
+insert-peel-and-reveal,PR4,Stadium Star,false,,Ken Griffey Jr.,rare,
+insert-peel-and-reveal,PR5,,false,,Nomar Garciaparra
+insert-peel-and-reveal,PR5,Sparkle,false,,Nomar Garciaparra,common,
+insert-peel-and-reveal,PR5,Hyperplaid,false,,Nomar Garciaparra,uncommon,
+insert-peel-and-reveal,PR5,Stadium Star,false,,Nomar Garciaparra,rare,
+insert-peel-and-reveal,PR6,,false,,Greg Maddux
+insert-peel-and-reveal,PR6,Sparkle,false,,Greg Maddux,common,
+insert-peel-and-reveal,PR6,Hyperplaid,false,,Greg Maddux,uncommon,
+insert-peel-and-reveal,PR6,Stadium Star,false,,Greg Maddux,rare,
+insert-peel-and-reveal,PR7,,false,,Derek Jeter
+insert-peel-and-reveal,PR7,Sparkle,false,,Derek Jeter,common,
+insert-peel-and-reveal,PR7,Hyperplaid,false,,Derek Jeter,uncommon,
+insert-peel-and-reveal,PR7,Stadium Star,false,,Derek Jeter,rare,
+insert-peel-and-reveal,PR8,,false,,Andres Galarraga
+insert-peel-and-reveal,PR8,Sparkle,false,,Andres Galarraga,common,
+insert-peel-and-reveal,PR8,Hyperplaid,false,,Andres Galarraga,uncommon,
+insert-peel-and-reveal,PR8,Stadium Star,false,,Andres Galarraga,rare,
+insert-peel-and-reveal,PR9,,false,,Alex Rodriguez
+insert-peel-and-reveal,PR9,Sparkle,false,,Alex Rodriguez,common,
+insert-peel-and-reveal,PR9,Hyperplaid,false,,Alex Rodriguez,uncommon,
+insert-peel-and-reveal,PR9,Stadium Star,false,,Alex Rodriguez,rare,
+insert-peel-and-reveal,PR10,,false,,Frank Thomas
+insert-peel-and-reveal,PR10,Sparkle,false,,Frank Thomas,common,
+insert-peel-and-reveal,PR10,Hyperplaid,false,,Frank Thomas,uncommon,
+insert-peel-and-reveal,PR10,Stadium Star,false,,Frank Thomas,rare,
+insert-peel-and-reveal,PR11,,false,,Roger Clemens
+insert-peel-and-reveal,PR11,Sparkle,false,,Roger Clemens,common,
+insert-peel-and-reveal,PR11,Hyperplaid,false,,Roger Clemens,uncommon,
+insert-peel-and-reveal,PR11,Stadium Star,false,,Roger Clemens,rare,
+insert-peel-and-reveal,PR12,,false,,Juan Gonzalez
+insert-peel-and-reveal,PR12,Sparkle,false,,Juan Gonzalez,common,
+insert-peel-and-reveal,PR12,Hyperplaid,false,,Juan Gonzalez,uncommon,
+insert-peel-and-reveal,PR12,Stadium Star,false,,Juan Gonzalez,rare,
+insert-peel-and-reveal,PR13,,false,,Ben Grieve
+insert-peel-and-reveal,PR13,Sparkle,false,,Ben Grieve,common,
+insert-peel-and-reveal,PR13,Hyperplaid,false,,Ben Grieve,uncommon,
+insert-peel-and-reveal,PR13,Stadium Star,false,,Ben Grieve,rare,
+insert-peel-and-reveal,PR14,,false,,Jeff Bagwell
+insert-peel-and-reveal,PR14,Sparkle,false,,Jeff Bagwell,common,
+insert-peel-and-reveal,PR14,Hyperplaid,false,,Jeff Bagwell,uncommon,
+insert-peel-and-reveal,PR14,Stadium Star,false,,Jeff Bagwell,rare,
+insert-peel-and-reveal,PR15,,false,,Todd Helton
+insert-peel-and-reveal,PR15,Sparkle,false,,Todd Helton,common,
+insert-peel-and-reveal,PR15,Hyperplaid,false,,Todd Helton,uncommon,
+insert-peel-and-reveal,PR15,Stadium Star,false,,Todd Helton,rare,
+insert-peel-and-reveal,PR16,,false,,Chipper Jones
+insert-peel-and-reveal,PR16,Sparkle,false,,Chipper Jones,common,
+insert-peel-and-reveal,PR16,Hyperplaid,false,,Chipper Jones,uncommon,
+insert-peel-and-reveal,PR16,Stadium Star,false,,Chipper Jones,rare,
+insert-peel-and-reveal,PR17,,false,,Barry Bonds
+insert-peel-and-reveal,PR17,Sparkle,false,,Barry Bonds,common,
+insert-peel-and-reveal,PR17,Hyperplaid,false,,Barry Bonds,uncommon,
+insert-peel-and-reveal,PR17,Stadium Star,false,,Barry Bonds,rare,
+insert-peel-and-reveal,PR18,,false,,Travis Lee
+insert-peel-and-reveal,PR18,Sparkle,false,,Travis Lee,common,
+insert-peel-and-reveal,PR18,Hyperplaid,false,,Travis Lee,uncommon,
+insert-peel-and-reveal,PR18,Stadium Star,false,,Travis Lee,rare,
+insert-peel-and-reveal,PR19,,false,,Vladimir Guerrero
+insert-peel-and-reveal,PR19,Sparkle,false,,Vladimir Guerrero,common,
+insert-peel-and-reveal,PR19,Hyperplaid,false,,Vladimir Guerrero,uncommon,
+insert-peel-and-reveal,PR19,Stadium Star,false,,Vladimir Guerrero,rare,
+insert-peel-and-reveal,PR20,,false,,Pat Burrell
+insert-peel-and-reveal,PR20,Sparkle,false,,Pat Burrell,common,
+insert-peel-and-reveal,PR20,Hyperplaid,false,,Pat Burrell,uncommon,
+insert-peel-and-reveal,PR20,Stadium Star,false,,Pat Burrell,rare,
+insert-future-s-finest,FF1,,false,,Pat Burrell
+insert-future-s-finest,FF2,,false,,Troy Glaus
+insert-future-s-finest,FF3,,false,,Eric Chavez
+insert-future-s-finest,FF4,,false,,Ryan Anderson
+insert-future-s-finest,FF5,,false,,Ruben Mateo
+insert-future-s-finest,FF6,,false,,Gabe Kapler UER: Born 8/31
+insert-future-s-finest,FF7,,false,,Alex Gonzalez
+insert-future-s-finest,FF8,,false,,Michael Barrett
+insert-future-s-finest,FF9,,false,,Adrian Beltre
+insert-future-s-finest,FF10,,false,,Fernando Seguignol
+insert-aaron-award-contenders,HA1,,false,,1:216 wax
+insert-aaron-award-contenders,HA2,,false,,1:108 wax
+insert-aaron-award-contenders,HA3,,false,,1:72 wax
+insert-aaron-award-contenders,HA4,,false,,1:54 wax
+insert-aaron-award-contenders,HA5,,false,,1:43 wax
+insert-aaron-award-contenders,HA6,,false,,1:36 wax
+insert-aaron-award-contenders,HA7,,false,,1:31 wax
+insert-aaron-award-contenders,HA8,,false,,1:27 wax
+insert-aaron-award-contenders,HA9,,false,,1:24 wax
+insert-aaron-award-contenders,HA1,,false,,1:1728 wax
+insert-aaron-award-contenders,HA2,,false,,1:864 wax
+insert-aaron-award-contenders,HA3,,false,,1:576 wax
+insert-aaron-award-contenders,HA4,,false,,1:432 wax
+insert-aaron-award-contenders,HA5,,false,,1:344 wax
+insert-aaron-award-contenders,HA6,,false,,1:288 wax
+insert-aaron-award-contenders,HA7,,false,,1:248 wax
+insert-aaron-award-contenders,HA8,,false,,1:216 wax
+insert-aaron-award-contenders,HA9,,false,,1:192 wax
+insert-aaron-award-contenders,HA1,,false,,Juan Gonzalez
+insert-aaron-award-contenders,HA2,,false,,Vladimir Guerrero
+insert-aaron-award-contenders,HA3,,false,,Nomar Garciaparra
+insert-aaron-award-contenders,HA4,,false,,Albert Belle
+insert-aaron-award-contenders,HA5,,false,,Frank Thomas
+insert-aaron-award-contenders,HA6,,false,,Sammy Sosa
+insert-aaron-award-contenders,HA7,,false,,Alex Rodriguez
+insert-aaron-award-contenders,HA8,,false,,Ken Griffey Jr.
+insert-aaron-award-contenders,HA9,,false,,Mark McGwire
+insert-complements,C1,,false,,Mike Piazza / Ivan Rodriguez
+insert-complements,C2,,false,,Tony Gwynn / Wade Boggs
+insert-complements,C3,,false,,Kerry Wood / Roger Clemens
+insert-complements,C4,,false,,Juan Gonzalez / Sammy Sosa
+insert-complements,C5,,false,,Derek Jeter / Nomar Garciaparra
+insert-complements,C6,,false,,Mark McGwire / Frank Thomas
+insert-complements,C7,,false,,Vladimir Guerrero / Andruw Jones
+insert-double-feature,DF1,,false,,Ken Griffey
+insert-double-feature,DF2,,false,,Chipper Jones / Andruw Jones
+insert-double-feature,DF3,,false,,Darin Erstad / Mo Vaughn
+insert-double-feature,DF4,,false,,Craig Biggio / Jeff Bagwell
+insert-double-feature,DF5,,false,,Ben Grieve / Eric Chavez
+insert-double-feature,DF6,,false,,Albert Belle / Cal Ripken Jr.
+insert-double-feature,DF7,,false,,Scott Rolen / Pat Burrell
+insert-franchise-records,FR1,,false,,Frank Thomas
+insert-franchise-records,FR2,,false,,Ken Griffey Jr.
+insert-franchise-records,FR3,,false,,Mark McGwire
+insert-franchise-records,FR4,,false,,Juan Gonzalez
+insert-franchise-records,FR5,,false,,Nomar Garciaparra
+insert-franchise-records,FR6,,false,,Mike Piazza
+insert-franchise-records,FR7,,false,,Cal Ripken Jr.
+insert-franchise-records,FR8,,false,,Sammy Sosa
+insert-franchise-records,FR9,,false,,Barry Bonds
+insert-franchise-records,FR10,,false,,Tony Gwynn
+insert-milestones,M1,,false,,Tony Gwynn H 3000
+insert-milestones,M2,,false,,Cal Ripken
+insert-milestones,M3,,false,,Wade Boggs H 3000
+insert-milestones,M4,,false,,Ken Griffey
+insert-milestones,M5,,false,,Frank Thomas H 3000
+insert-milestones,M6,,false,,Barry Bonds H 3000
+insert-milestones,M7,,false,,Travis Lee H 3000
+insert-milestones,M8,,false,,Alex Rodriguez H 3000
+insert-milestones,M9,,false,,Derek Jeter H 3000
+insert-milestones,M10,,false,,Vladimir Guerrero H 3000
+insert-milestones,M11,,false,,Mark McGwire HR 500
+insert-milestones,M12,,false,,Ken Griffey
+insert-milestones,M13,,false,,Vladimir Guerrero HR 500
+insert-milestones,M14,,false,,Alex Rodriguez HR 500
+insert-milestones,M15,,false,,Barry Bonds HR 500
+insert-milestones,M16,,false,,Sammy Sosa HR 500
+insert-milestones,M17,,false,,Albert Belle HR 500
+insert-milestones,M18,,false,,Frank Thomas HR 500
+insert-milestones,M19,,false,,Jose Canseco HR 500
+insert-milestones,M20,,false,,Mike Piazza HR 500
+insert-milestones,M21,,false,,Jeff Bagwell RBI 1400
+insert-milestones,M22,,false,,Barry Bonds RBI 1400
+insert-milestones,M23,,false,,Ken Griffey
+insert-milestones,M24,,false,,Albert Belle RBI 1400
+insert-milestones,M25,,false,,Juan Gonzalez RBI 1400
+insert-milestones,M26,,false,,Vinny Castilla RBI 1400
+insert-milestones,M27,,false,,Mark McGwire RBI 1400
+insert-milestones,M28,,false,,Alex Rodriguez RBI 1400
+insert-milestones,M29,,false,,Nomar Garciaparra RBI 1400
+insert-milestones,M30,,false,,Frank Thomas RBI 1400
+insert-milestones,M31,,false,,Barry Bonds 2B 500
+insert-milestones,M32,,false,,Albert Belle 2B 500
+insert-milestones,M33,,false,,Ben Grieve 2B 500
+insert-milestones,M34,,false,,Craig Biggio 2B 500
+insert-milestones,M35,,false,,Vladimir Guerrero 2B 500
+insert-milestones,M36,,false,,Nomar Garciaparra 2B 500
+insert-milestones,M37,,false,,Alex Rodriguez 2B 500
+insert-milestones,M38,,false,,Derek Jeter 2B 500
+insert-milestones,M39,,false,,Ken Griffey
+insert-milestones,M40,,false,,Brad Fullmer 2B 500

@@ -1,0 +1,35 @@
+{
+ "year": 1986,
+ "sport": "baseball",
+ "setKey": "donruss",
+ "parallelColumnAuthoritative": true,
+ "setName": "1986 Donruss",
+ "sourceUrl": "http://www.baseballcardpedia.com/index.php/1986_Donruss",
+ "scope": "Super Diamond Kings",
+ "scopeOfPage": "Donruss",
+ "cardNumberPrefix": null,
+ "prefixDerivedFrom": "unresolved",
+ "prefixUnresolved": false,
+ "ladder": [],
+ "autographs": [],
+ "setRarity": null,
+ "sections": [
+  {
+   "name": "Box Bottoms",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 6,
+   "rungs": 2
+  }
+ ],
+ "source": "bcp-2026-09-13",
+ "acquiredAt": "2026-09-13",
+ "scopesWithheld": [
+  {
+   "name": "Super Diamond Kings",
+   "reason": "page states a narrower applicability in prose (partial-parallel / subset-only) with no inline card list; emitting it would cross-join the rung over the whole base set"
+  }
+ ],
+ "duplicateIdentityRowsDropped": 9,
+ "duplicateIdentityNote": "BCP relists a card under Gimmicks/Errors-and-Variations with the same number and the same player text to note an UNNAMED variation; those rows carry the identity of the base row, so they were dropped (one card, one row, one pool). A variation the page NAMES differs in its player text and is kept as the distinct card it is."
+}

@@ -1,0 +1,24 @@
+{
+ "year": 1983,
+ "sport": "baseball",
+ "setKey": "donruss",
+ "setName": "1983 Donruss",
+ "sourceUrl": "http://www.baseballcardpedia.com/index.php/1983_Donruss",
+ "source": "bcp-2026-09-13",
+ "acquiredAt": "2026-09-13",
+ "parallelColumnAuthoritative": true,
+ "scope": "Base Set",
+ "scopeOfPage": "1983 Donruss",
+ "baseReadFrom": "Base_Set heading",
+ "ladder": [],
+ "ladderAbsentReason": "the page states its parallels in PROSE only (no list rungs and no inline card list), so no rung can be read without guessing its scope; base set emitted alone",
+ "sections": [
+  {
+   "name": "Base Set",
+   "category": null,
+   "isAuto": false,
+   "cards": 661,
+   "rungs": 0
+  }
+ ]
+}

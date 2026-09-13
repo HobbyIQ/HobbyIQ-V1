@@ -1,0 +1,95 @@
+{
+ "year": 2002,
+ "sport": "baseball",
+ "setKey": "topps-finest",
+ "parallelColumnAuthoritative": true,
+ "setName": "2002 Finest",
+ "sourceUrl": "http://www.baseballcardpedia.com/index.php/2002_Finest",
+ "scope": null,
+ "scopeOfPage": "Finest",
+ "cardNumberPrefix": null,
+ "prefixDerivedFrom": "paper",
+ "prefixUnresolved": false,
+ "ladder": [
+  {
+   "name": "Refractor",
+   "printRun": 499,
+   "rarity": null
+  },
+  {
+   "name": "X-Fractor",
+   "printRun": 299,
+   "rarity": null
+  },
+  {
+   "name": "X-Fractor w/Protector",
+   "printRun": 99,
+   "rarity": null
+  }
+ ],
+ "autographs": [
+  {
+   "name": "Jersey Relics",
+   "type": "relic",
+   "isAuto": false,
+   "cards": 23,
+   "ladder": []
+  },
+  {
+   "name": "Bat Relics",
+   "type": "relic",
+   "isAuto": false,
+   "cards": 15,
+   "ladder": []
+  },
+  {
+   "name": "Moments Autographs",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 14,
+   "ladder": []
+  },
+  {
+   "name": "Autographed First Year Players",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 9,
+   "ladder": []
+  }
+ ],
+ "setRarity": null,
+ "sections": [
+  {
+   "name": "Jersey Relics",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 23,
+   "rungs": 0
+  },
+  {
+   "name": "Bat Relics",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 15,
+   "rungs": 0
+  },
+  {
+   "name": "Moments Autographs",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 14,
+   "rungs": 0
+  },
+  {
+   "name": "Autographed First Year Players",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 9,
+   "rungs": 0
+  }
+ ],
+ "source": "bcp-2026-09-13",
+ "acquiredAt": "2026-09-13",
+ "setKeyWas": "finest",
+ "setKeyNote": "the BCP page names this product \"Finest\"; the catalog vocabulary keys it topps-finest (normalizeSetKey(\"finest\") === \"topps-finest\")"
+}

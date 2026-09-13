@@ -1,0 +1,33 @@
+{
+ "year": 1987,
+ "sport": "baseball",
+ "setKey": "donruss",
+ "parallelColumnAuthoritative": true,
+ "setName": "1987 Donruss",
+ "sourceUrl": "http://www.baseballcardpedia.com/index.php/1987_Donruss",
+ "scope": "Super DK's",
+ "scopeOfPage": "Donruss",
+ "cardNumberPrefix": null,
+ "prefixDerivedFrom": "unresolved",
+ "prefixUnresolved": false,
+ "ladder": [],
+ "autographs": [],
+ "setRarity": null,
+ "sections": [
+  {
+   "name": "Box Bottoms",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 3,
+   "rungs": 0
+  }
+ ],
+ "source": "bcp-2026-09-13",
+ "acquiredAt": "2026-09-13",
+ "scopesWithheld": [
+  {
+   "name": "Super DK's",
+   "reason": "page states a narrower applicability in prose (partial-parallel / subset-only) with no inline card list; emitting it would cross-join the rung over the whole base set"
+  }
+ ]
+}

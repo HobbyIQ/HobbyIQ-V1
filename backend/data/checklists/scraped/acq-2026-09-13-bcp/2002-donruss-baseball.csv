@@ -1,0 +1,822 @@
+category,cardNumber,parallel,isAuto,printRun,player,parallelNote,rarity
+base,1,Base,false,,Alex Rodriguez
+base,1,Chicago Collection,false,,Alex Rodriguez,,
+base,2,Base,false,,Barry Bonds
+base,2,Chicago Collection,false,,Barry Bonds,,
+base,3,Base,false,,Derek Jeter
+base,3,Chicago Collection,false,,Derek Jeter,,
+base,4,Base,false,,Robert Fick
+base,4,Chicago Collection,false,,Robert Fick,,
+base,5,Base,false,,Juan Pierre
+base,5,Chicago Collection,false,,Juan Pierre,,
+base,6,Base,false,,Torii Hunter
+base,6,Chicago Collection,false,,Torii Hunter,,
+base,7,Base,false,,Todd Helton
+base,7,Chicago Collection,false,,Todd Helton,,
+base,8,Base,false,,Cal Ripken Jr.
+base,8,Chicago Collection,false,,Cal Ripken Jr.,,
+base,9,Base,false,,Manny Ramirez
+base,9,Chicago Collection,false,,Manny Ramirez,,
+base,10,Base,false,,Johnny Damon
+base,10,Chicago Collection,false,,Johnny Damon,,
+base,11,Base,false,,Mike Piazza
+base,11,Chicago Collection,false,,Mike Piazza,,
+base,12,Base,false,,Nomar Garciaparra
+base,12,Chicago Collection,false,,Nomar Garciaparra,,
+base,13,Base,false,,Pedro Martinez
+base,13,Chicago Collection,false,,Pedro Martinez,,
+base,14,Base,false,,Brian Giles
+base,14,Chicago Collection,false,,Brian Giles,,
+base,15,Base,false,,Albert Pujols
+base,15,Chicago Collection,false,,Albert Pujols,,
+base,16,Base,false,,Roger Clemens
+base,16,Chicago Collection,false,,Roger Clemens,,
+base,17,Base,false,,Sammy Sosa
+base,17,Chicago Collection,false,,Sammy Sosa,,
+base,18,Base,false,,Vladimir Guerrero
+base,18,Chicago Collection,false,,Vladimir Guerrero,,
+base,19,Base,false,,Tony Gwynn
+base,19,Chicago Collection,false,,Tony Gwynn,,
+base,20,Base,false,,Pat Burrell
+base,20,Chicago Collection,false,,Pat Burrell,,
+base,21,Base,false,,Carlos Delgado
+base,21,Chicago Collection,false,,Carlos Delgado,,
+base,22,Base,false,,Tino Martinez
+base,22,Chicago Collection,false,,Tino Martinez,,
+base,23,Base,false,,Jim Edmonds
+base,23,Chicago Collection,false,,Jim Edmonds,,
+base,24,Base,false,,Jason Giambi
+base,24,Chicago Collection,false,,Jason Giambi,,
+base,25,Base,false,,Tom Glavine
+base,25,Chicago Collection,false,,Tom Glavine,,
+base,26,Base,false,,Mark Grace
+base,26,Chicago Collection,false,,Mark Grace,,
+base,27,Base,false,,Tony Armas Jr.
+base,27,Chicago Collection,false,,Tony Armas Jr.,,
+base,28,Base,false,,Andruw Jones
+base,28,Chicago Collection,false,,Andruw Jones,,
+base,29,Base,false,,Ben Sheets
+base,29,Chicago Collection,false,,Ben Sheets,,
+base,30,Base,false,,Jeff Kent
+base,30,Chicago Collection,false,,Jeff Kent,,
+base,31,Base,false,,Barry Larkin
+base,31,Chicago Collection,false,,Barry Larkin,,
+base,32,Base,false,,Joe Mays
+base,32,Chicago Collection,false,,Joe Mays,,
+base,33,Base,false,,Mike Mussina
+base,33,Chicago Collection,false,,Mike Mussina,,
+base,34,Base,false,,Hideo Nomo
+base,34,Chicago Collection,false,,Hideo Nomo,,
+base,35,Base,false,,Rafael Palmeiro
+base,35,Chicago Collection,false,,Rafael Palmeiro,,
+base,36,Base,false,,Scott Brosius
+base,36,Chicago Collection,false,,Scott Brosius,,
+base,37,Base,false,,Scott Rolen
+base,37,Chicago Collection,false,,Scott Rolen,,
+base,38,Base,false,,Gary Sheffield
+base,38,Chicago Collection,false,,Gary Sheffield,,
+base,39,Base,false,,Bernie Williams
+base,39,Chicago Collection,false,,Bernie Williams,,
+base,40,Base,false,,Bob Abreu
+base,40,Chicago Collection,false,,Bob Abreu,,
+base,41,Base,false,,Edgardo Alfonzo
+base,41,Chicago Collection,false,,Edgardo Alfonzo,,
+base,42,Base,false,,C.C. Sabathia
+base,42,Chicago Collection,false,,C.C. Sabathia,,
+base,43,Base,false,,Jeremy Giambi
+base,43,Chicago Collection,false,,Jeremy Giambi,,
+base,44,Base,false,,Craig Biggio
+base,44,Chicago Collection,false,,Craig Biggio,,
+base,45,Base,false,,Andres Galarraga
+base,45,Chicago Collection,false,,Andres Galarraga,,
+base,46,Base,false,,Edgar Martinez
+base,46,Chicago Collection,false,,Edgar Martinez,,
+base,47,Base,false,,Fred McGriff
+base,47,Chicago Collection,false,,Fred McGriff,,
+base,48,Base,false,,Magglio Ordonez
+base,48,Chicago Collection,false,,Magglio Ordonez,,
+base,49,Base,false,,Jim Thome
+base,49,Chicago Collection,false,,Jim Thome,,
+base,50,Base,false,,Matt Williams
+base,50,Chicago Collection,false,,Matt Williams,,
+base,51,Base,false,,Kerry Wood
+base,51,Chicago Collection,false,,Kerry Wood,,
+base,52,Base,false,,Moises Alou
+base,52,Chicago Collection,false,,Moises Alou,,
+base,53,Base,false,,Brady Anderson
+base,53,Chicago Collection,false,,Brady Anderson,,
+base,54,Base,false,,Garret Anderson
+base,54,Chicago Collection,false,,Garret Anderson,,
+base,55,Base,false,,Juan Gonzalez
+base,55,Chicago Collection,false,,Juan Gonzalez,,
+base,56,Base,false,,Bret Boone
+base,56,Chicago Collection,false,,Bret Boone,,
+base,57,Base,false,,Jose Cruz Jr.
+base,57,Chicago Collection,false,,Jose Cruz Jr.,,
+base,58,Base,false,,Carlos Beltran
+base,58,Chicago Collection,false,,Carlos Beltran,,
+base,59,Base,false,,Adrian Beltre
+base,59,Chicago Collection,false,,Adrian Beltre,,
+base,60,Base,false,,Joe Kennedy
+base,60,Chicago Collection,false,,Joe Kennedy,,
+base,61,Base,false,,Lance Berkman
+base,61,Chicago Collection,false,,Lance Berkman,,
+base,62,Base,false,,Kevin Brown
+base,62,Chicago Collection,false,,Kevin Brown,,
+base,63,Base,false,,Tim Hudson
+base,63,Chicago Collection,false,,Tim Hudson,,
+base,64,Base,false,,Jeromy Burnitz
+base,64,Chicago Collection,false,,Jeromy Burnitz,,
+base,65,Base,false,,Jarrod Washburn
+base,65,Chicago Collection,false,,Jarrod Washburn,,
+base,66,Base,false,,Sean Casey
+base,66,Chicago Collection,false,,Sean Casey,,
+base,67,Base,false,,Eric Chavez
+base,67,Chicago Collection,false,,Eric Chavez,,
+base,68,Base,false,,Bartolo Colon
+base,68,Chicago Collection,false,,Bartolo Colon,,
+base,69,Base,false,,Freddy Garcia
+base,69,Chicago Collection,false,,Freddy Garcia,,
+base,70,Base,false,,Jermaine Dye
+base,70,Chicago Collection,false,,Jermaine Dye,,
+base,71,Base,false,,Terrence Long
+base,71,Chicago Collection,false,,Terrence Long,,
+base,72,Base,false,,Cliff Floyd
+base,72,Chicago Collection,false,,Cliff Floyd,,
+base,73,Base,false,,Luis Gonzalez
+base,73,Chicago Collection,false,,Luis Gonzalez,,
+base,74,Base,false,,Ichiro
+base,74,Chicago Collection,false,,Ichiro,,
+base,75,Base,false,,Mike Hampton
+base,75,Chicago Collection,false,,Mike Hampton,,
+base,76,Base,false,,Richard Hidalgo
+base,76,Chicago Collection,false,,Richard Hidalgo,,
+base,77,Base,false,,Geoff Jenkins
+base,77,Chicago Collection,false,,Geoff Jenkins,,
+base,78,Base,false,,Gabe Kapler
+base,78,Chicago Collection,false,,Gabe Kapler,,
+base,79,Base,false,,Ken Griffey Jr.
+base,79,Chicago Collection,false,,Ken Griffey Jr.,,
+base,80,Base,false,,Jason Kendall
+base,80,Chicago Collection,false,,Jason Kendall,,
+base,81,Base,false,,Josh Towers
+base,81,Chicago Collection,false,,Josh Towers,,
+base,82,Base,false,,Ryan Klesko
+base,82,Chicago Collection,false,,Ryan Klesko,,
+base,83,Base,false,,Paul Konerko
+base,83,Chicago Collection,false,,Paul Konerko,,
+base,84,Base,false,,Carlos Lee
+base,84,Chicago Collection,false,,Carlos Lee,,
+base,85,Base,false,,Kenny Lofton
+base,85,Chicago Collection,false,,Kenny Lofton,,
+base,86,Base,false,,Josh Beckett
+base,86,Chicago Collection,false,,Josh Beckett,,
+base,87,Base,false,,Raul Mondesi
+base,87,Chicago Collection,false,,Raul Mondesi,,
+base,88,Base,false,,Trot Nixon
+base,88,Chicago Collection,false,,Trot Nixon,,
+base,89,Base,false,,John Olerud
+base,89,Chicago Collection,false,,John Olerud,,
+base,90,Base,false,,Paul O'Neill
+base,90,Chicago Collection,false,,Paul O'Neill,,
+base,91,Base,false,,Chan Ho Park
+base,91,Chicago Collection,false,,Chan Ho Park,,
+base,92,Base,false,,Andy Pettitte
+base,92,Chicago Collection,false,,Andy Pettitte,,
+base,93,Base,false,,Jorge Posada
+base,93,Chicago Collection,false,,Jorge Posada,,
+base,94,Base,false,,Mark Quinn
+base,94,Chicago Collection,false,,Mark Quinn,,
+base,95,Base,false,,Aramis Ramirez
+base,95,Chicago Collection,false,,Aramis Ramirez,,
+base,96,Base,false,,Curt Schilling
+base,96,Chicago Collection,false,,Curt Schilling,,
+base,97,Base,false,,Richie Sexson
+base,97,Chicago Collection,false,,Richie Sexson,,
+base,98,Base,false,,John Smoltz
+base,98,Chicago Collection,false,,John Smoltz,,
+base,99,Base,false,,Wilson Betemit
+base,99,Chicago Collection,false,,Wilson Betemit,,
+base,100,Base,false,,Shannon Stewart
+base,100,Chicago Collection,false,,Shannon Stewart,,
+base,101,Base,false,,Alfonso Soriano
+base,101,Chicago Collection,false,,Alfonso Soriano,,
+base,102,Base,false,,Mike Sweeney
+base,102,Chicago Collection,false,,Mike Sweeney,,
+base,103,Base,false,,Miguel Tejada
+base,103,Chicago Collection,false,,Miguel Tejada,,
+base,104,Base,false,,Greg Vaughn
+base,104,Chicago Collection,false,,Greg Vaughn,,
+base,105,Base,false,,Robin Ventura
+base,105,Chicago Collection,false,,Robin Ventura,,
+base,106,Base,false,,Jose Vidro
+base,106,Chicago Collection,false,,Jose Vidro,,
+base,107,Base,false,,Larry Walker
+base,107,Chicago Collection,false,,Larry Walker,,
+base,108,Base,false,,Preston Wilson
+base,108,Chicago Collection,false,,Preston Wilson,,
+base,109,Base,false,,Corey Patterson
+base,109,Chicago Collection,false,,Corey Patterson,,
+base,110,Base,false,,Mark Mulder
+base,110,Chicago Collection,false,,Mark Mulder,,
+base,111,Base,false,,Tony Clark
+base,111,Chicago Collection,false,,Tony Clark,,
+base,112,Base,false,,Roy Oswalt
+base,112,Chicago Collection,false,,Roy Oswalt,,
+base,113,Base,false,,Jimmy Rollins
+base,113,Chicago Collection,false,,Jimmy Rollins,,
+base,114,Base,false,,Kazuhiro Sasaki
+base,114,Chicago Collection,false,,Kazuhiro Sasaki,,
+base,115,Base,false,,Barry Zito
+base,115,Chicago Collection,false,,Barry Zito,,
+base,116,Base,false,,Javier Vazquez
+base,116,Chicago Collection,false,,Javier Vazquez,,
+base,117,Base,false,,Mike Cameron
+base,117,Chicago Collection,false,,Mike Cameron,,
+base,118,Base,false,,Phil Nevin
+base,118,Chicago Collection,false,,Phil Nevin,,
+base,119,Base,false,,Bud Smith
+base,119,Chicago Collection,false,,Bud Smith,,
+base,120,Base,false,,Cristian Guzman
+base,120,Chicago Collection,false,,Cristian Guzman,,
+base,121,Base,false,,Al Leiter
+base,121,Chicago Collection,false,,Al Leiter,,
+base,122,Base,false,,Brad Radke
+base,122,Chicago Collection,false,,Brad Radke,,
+base,123,Base,false,,Bob Higginson
+base,123,Chicago Collection,false,,Bob Higginson,,
+base,124,Base,false,,Robert Person
+base,124,Chicago Collection,false,,Robert Person,,
+base,125,Base,false,,Adam Dunn
+base,125,Chicago Collection,false,,Adam Dunn,,
+base,126,Base,false,,Ben Grieve
+base,126,Chicago Collection,false,,Ben Grieve,,
+base,127,Base,false,,Rafael Furcal
+base,127,Chicago Collection,false,,Rafael Furcal,,
+base,128,Base,false,,Jay Gibbons
+base,128,Chicago Collection,false,,Jay Gibbons,,
+base,129,Base,false,,Paul LoDuca
+base,129,Chicago Collection,false,,Paul LoDuca,,
+base,130,Base,false,,Wade Miller
+base,130,Chicago Collection,false,,Wade Miller,,
+base,131,Base,false,,Tsuyoshi Shinjo
+base,131,Chicago Collection,false,,Tsuyoshi Shinjo,,
+base,132,Base,false,,Eric Milton
+base,132,Chicago Collection,false,,Eric Milton,,
+base,133,Base,false,,Rickey Henderson
+base,133,Chicago Collection,false,,Rickey Henderson,,
+base,134,Base,false,,Roberto Alomar
+base,134,Chicago Collection,false,,Roberto Alomar,,
+base,135,Base,false,,Darin Erstad
+base,135,Chicago Collection,false,,Darin Erstad,,
+base,136,Base,false,,J.D. Drew
+base,136,Chicago Collection,false,,J.D. Drew,,
+base,137,Base,false,,Shawn Green
+base,137,Chicago Collection,false,,Shawn Green,,
+base,138,Base,false,,Randy Johnson
+base,138,Chicago Collection,false,,Randy Johnson,,
+base,139,Base,false,,Austin Kearns
+base,139,Chicago Collection,false,,Austin Kearns,,
+base,140,Base,false,,Jose Canseco
+base,140,Chicago Collection,false,,Jose Canseco,,
+base,141,Base,false,,Jeff Bagwell
+base,141,Chicago Collection,false,,Jeff Bagwell,,
+base,142,Base,false,,Greg Maddux
+base,142,Chicago Collection,false,,Greg Maddux,,
+base,143,Base,false,,Mark Buehrle
+base,143,Chicago Collection,false,,Mark Buehrle,,
+base,144,Base,false,,Ivan Rodriguez
+base,144,Chicago Collection,false,,Ivan Rodriguez,,
+base,145,Base,false,,Frank Thomas
+base,145,Chicago Collection,false,,Frank Thomas,,
+base,146,Base,false,,Rich Aurilia
+base,146,Chicago Collection,false,,Rich Aurilia,,
+base,147,Base,false,,Troy Glaus
+base,147,Chicago Collection,false,,Troy Glaus,,
+base,148,Base,false,,Ryan Dempster
+base,148,Chicago Collection,false,,Ryan Dempster,,
+base,149,Base,false,,Chipper Jones
+base,149,Chicago Collection,false,,Chipper Jones,,
+base,150,Base,false,,Matt Morris
+base,150,Chicago Collection,false,,Matt Morris,,
+base,151,Base,false,,Marlon Byrd RR
+base,151,Chicago Collection,false,,Marlon Byrd RR,,
+base,152,Base,false,,Ben Howard RR RC
+base,152,Chicago Collection,false,,Ben Howard RR RC,,
+base,153,Base,false,,Brandon Backe RR RC
+base,153,Chicago Collection,false,,Brandon Backe RR RC,,
+base,154,Base,false,,Jorge De La Rosa RR RC
+base,154,Chicago Collection,false,,Jorge De La Rosa RR RC,,
+base,155,Base,false,,Corky Miller RR
+base,155,Chicago Collection,false,,Corky Miller RR,,
+base,156,Base,false,,Dennis Tankersley RR
+base,156,Chicago Collection,false,,Dennis Tankersley RR,,
+base,157,Base,false,,Kyle Kane RR RC*
+base,157,Chicago Collection,false,,Kyle Kane RR RC*,,
+base,158,Base,false,,Justin Duchscherer RR
+base,158,Chicago Collection,false,,Justin Duchscherer RR,,
+base,159,Base,false,,Brian Mallette RR RC
+base,159,Chicago Collection,false,,Brian Mallette RR RC,,
+base,160,Base,false,,Chris Baker RR RC*
+base,160,Chicago Collection,false,,Chris Baker RR RC*,,
+base,161,Base,false,,Jason Lane RR
+base,161,Chicago Collection,false,,Jason Lane RR,,
+base,162,Base,false,,Hee Seop Choi RR
+base,162,Chicago Collection,false,,Hee Seop Choi RR,,
+base,163,Base,false,,Juan Cruz RR
+base,163,Chicago Collection,false,,Juan Cruz RR,,
+base,164,Base,false,,Rodrigo Rosario RR RC
+base,164,Chicago Collection,false,,Rodrigo Rosario RR RC,,
+base,165,Base,false,,Matt Guerrier RR
+base,165,Chicago Collection,false,,Matt Guerrier RR,,
+base,166,Base,false,,Anderson Machado RR RC
+base,166,Chicago Collection,false,,Anderson Machado RR RC,,
+base,167,Base,false,,Geronimo Gil RR
+base,167,Chicago Collection,false,,Geronimo Gil RR,,
+base,168,Base,false,,Dewon Brazelton RR
+base,168,Chicago Collection,false,,Dewon Brazelton RR,,
+base,169,Base,false,,Mark Prior RR
+base,169,Chicago Collection,false,,Mark Prior RR,,
+base,170,Base,false,,Bill Hall RR
+base,170,Chicago Collection,false,,Bill Hall RR,,
+base,171,Base,false,,Jorge Padilla RR RC
+base,171,Chicago Collection,false,,Jorge Padilla RR RC,,
+base,172,Base,false,,Jose Cueto RR
+base,172,Chicago Collection,false,,Jose Cueto RR,,
+base,173,Base,false,,Allan Simpson RR RC
+base,173,Chicago Collection,false,,Allan Simpson RR RC,,
+base,174,Base,false,,Doug Devore RR RC
+base,174,Chicago Collection,false,,Doug Devore RR RC,,
+base,175,Base,false,,Josh Pearce RR
+base,175,Chicago Collection,false,,Josh Pearce RR,,
+base,176,Base,false,,Angel Berroa RR
+base,176,Chicago Collection,false,,Angel Berroa RR,,
+base,177,Base,false,,Steve Bechler RR RC
+base,177,Chicago Collection,false,,Steve Bechler RR RC,,
+base,178,Base,false,,Antonio Perez RR
+base,178,Chicago Collection,false,,Antonio Perez RR,,
+base,179,Base,false,,Mark Teixeira RR
+base,179,Chicago Collection,false,,Mark Teixeira RR,,
+base,180,Base,false,,Erick Almonte RR
+base,180,Chicago Collection,false,,Erick Almonte RR,,
+base,181,Base,false,,Orlando Hudson RR
+base,181,Chicago Collection,false,,Orlando Hudson RR,,
+base,182,Base,false,,Michael Rivera RR
+base,182,Chicago Collection,false,,Michael Rivera RR,,
+base,183,Base,false,,Raul Chavez RR RC
+base,183,Chicago Collection,false,,Raul Chavez RR RC,,
+base,184,Base,false,,Juan Pena RR
+base,184,Chicago Collection,false,,Juan Pena RR,,
+base,185,Base,false,,Travis Hughes RR RC
+base,185,Chicago Collection,false,,Travis Hughes RR RC,,
+base,186,Base,false,,Ryan Ludwick RR
+base,186,Chicago Collection,false,,Ryan Ludwick RR,,
+base,187,Base,false,,Ed Rogers RR
+base,187,Chicago Collection,false,,Ed Rogers RR,,
+base,188,Base,false,,Andy Pratt RR RC
+base,188,Chicago Collection,false,,Andy Pratt RR RC,,
+base,189,Base,false,,Nick Neugebauer RR
+base,189,Chicago Collection,false,,Nick Neugebauer RR,,
+base,190,Base,false,,Tom Shearn RR RC
+base,190,Chicago Collection,false,,Tom Shearn RR RC,,
+base,191,Base,false,,Eric Cyr RR
+base,191,Chicago Collection,false,,Eric Cyr RR,,
+base,192,Base,false,,Victor Martinez RR
+base,192,Chicago Collection,false,,Victor Martinez RR,,
+base,193,Base,false,,Brandon Berger RR
+base,193,Chicago Collection,false,,Brandon Berger RR,,
+base,194,Base,false,,Erik Bedard RR
+base,194,Chicago Collection,false,,Erik Bedard RR,,
+base,195,Base,false,,Fernando Rodney RR
+base,195,Chicago Collection,false,,Fernando Rodney RR,,
+base,196,Base,false,,Joe Thurston RR
+base,196,Chicago Collection,false,,Joe Thurston RR,,
+base,197,Base,false,,John Buck RR
+base,197,Chicago Collection,false,,John Buck RR,,
+base,198,Base,false,,Jeff Deardorff RR
+base,198,Chicago Collection,false,,Jeff Deardorff RR,,
+base,199,Base,false,,Ryan Jamison RR
+base,199,Chicago Collection,false,,Ryan Jamison RR,,
+base,200,Base,false,,Alfredo Amezaga RR
+base,200,Chicago Collection,false,,Alfredo Amezaga RR,,
+base,201,Base,false,,Luis Gonzalez
+base,201,Chicago Collection,false,,Luis Gonzalez,,
+base,202,Base,false,,Roger Clemens
+base,202,Chicago Collection,false,,Roger Clemens,,
+base,203,Base,false,,Barry Zito
+base,203,Chicago Collection,false,,Barry Zito,,
+base,204,Base,false,,Bud Smith
+base,204,Chicago Collection,false,,Bud Smith,,
+base,205,Base,false,,Magglio Ordonez
+base,205,Chicago Collection,false,,Magglio Ordonez,,
+base,206,Base,false,,Kerry Wood
+base,206,Chicago Collection,false,,Kerry Wood,,
+base,207,Base,false,,Freddy Garcia
+base,207,Chicago Collection,false,,Freddy Garcia,,
+base,208,Base,false,,Adam Dunn
+base,208,Chicago Collection,false,,Adam Dunn,,
+base,209,Base,false,,Curt Schilling
+base,209,Chicago Collection,false,,Curt Schilling,,
+base,210,Base,false,,Lance Berkman
+base,210,Chicago Collection,false,,Lance Berkman,,
+base,211,Base,false,,Rafael Palmeiro
+base,211,Chicago Collection,false,,Rafael Palmeiro,,
+base,212,Base,false,,Ichiro
+base,212,Chicago Collection,false,,Ichiro,,
+base,213,Base,false,,Bob Abreu
+base,213,Chicago Collection,false,,Bob Abreu,,
+base,214,Base,false,,Mark Mulder
+base,214,Chicago Collection,false,,Mark Mulder,,
+base,215,Base,false,,Roy Oswalt
+base,215,Chicago Collection,false,,Roy Oswalt,,
+base,216,Base,false,,Mike Sweeney
+base,216,Chicago Collection,false,,Mike Sweeney,,
+base,217,Base,false,,Paul LoDuca
+base,217,Chicago Collection,false,,Paul LoDuca,,
+base,218,Base,false,,Aramis Ramirez
+base,218,Chicago Collection,false,,Aramis Ramirez,,
+base,219,Base,false,,Randy Johnson
+base,219,Chicago Collection,false,,Randy Johnson,,
+base,220,Base,false,,Albert Pujols
+base,220,Chicago Collection,false,,Albert Pujols,,
+insert-all-time-diamond-kings,ATDK-1,,false,,Ted Williams
+insert-all-time-diamond-kings,ATDK-2,,false,,Cal Ripken Jr.
+insert-all-time-diamond-kings,ATDK-3,,false,,Lou Gehrig
+insert-all-time-diamond-kings,ATDK-4,,false,,Babe Ruth
+insert-all-time-diamond-kings,ATDK-5,,false,,Roberto Clemente
+insert-all-time-diamond-kings,ATDK-6,,false,,Don Mattingly
+insert-all-time-diamond-kings,ATDK-7,,false,,Kirby Puckett
+insert-all-time-diamond-kings,ATDK-8,,false,,Stan Musial
+insert-all-time-diamond-kings,ATDK-9,,false,,Yogi Berra
+insert-all-time-diamond-kings,ATDK-10,,false,,Ernie Banks
+insert-diamond-kings,DK-1,,false,,Nomar Garciaparra
+insert-diamond-kings,DK-2,,false,,Shawn Green
+insert-diamond-kings,DK-3,,false,,Randy Johnson
+insert-diamond-kings,DK-4,,false,,Derek Jeter
+insert-diamond-kings,DK-5,,false,,Carlos Delgado
+insert-diamond-kings,DK-6,,false,,Roger Clemens
+insert-diamond-kings,DK-7,,false,,Jeff Bagwell
+insert-diamond-kings,DK-8,,false,,Vladimir Guerrero
+insert-diamond-kings,DK-9,,false,,Luis Gonzalez
+insert-diamond-kings,DK-10,,false,,Mike Piazza
+insert-diamond-kings,DK-11,,false,,Ichiro Suzuki
+insert-diamond-kings,DK-12,,false,,Pedro Martinez
+insert-diamond-kings,DK-13,,false,,Todd Helton
+insert-diamond-kings,DK-14,,false,,Sammy Sosa
+insert-diamond-kings,DK-15,,false,,Ivan Rodriguez
+insert-diamond-kings,DK-16,,false,,Barry Bonds
+insert-diamond-kings,DK-17,,false,,Albert Pujols
+insert-diamond-kings,DK-18,,false,,Jim Thome
+insert-diamond-kings,DK-19,,false,,Alex Rodriguez
+insert-diamond-kings,DK-20,,false,,Jason Giambi
+insert-elite-series,ES-01,,false,,Barry Bonds
+insert-elite-series,ES-02,,false,,Lance Berkman
+insert-elite-series,ES-03,,false,,Jason Giambi
+insert-elite-series,ES-04,,false,,Nomar Garciaparra
+insert-elite-series,ES-05,,false,,Curt Schilling
+insert-elite-series,ES-06,,false,,Vladimir Guerrero
+insert-elite-series,ES-07,,false,,Shawn Green
+insert-elite-series,ES-08,,false,,Troy Glaus
+insert-elite-series,ES-09,,false,,Jeff Bagwell
+insert-elite-series,ES-10,,false,,Manny Ramirez
+insert-elite-series,ES-11,,false,,Eric Chavez
+insert-elite-series,ES-12,,false,,Carlos Delgado
+insert-elite-series,ES-13,,false,,Mike Sweeney
+insert-elite-series,ES-14,,false,,Todd Helton
+insert-elite-series,ES-15,,false,,Luis Gonzalez
+insert-elite-series,ES-16,,false,,Enos Slaughter
+insert-elite-series,ES-17,,false,,Frank Robinson
+insert-elite-series,ES-18,,false,,Bob Gibson
+insert-elite-series,ES-19,,false,,Warren Spahn
+insert-elite-series,ES-20,,false,,Whitey Ford
+insert-longball-leaders,LL-1,,false,,Barry Bonds 73
+insert-longball-leaders,LL-2,,false,,Sammy Sosa 64
+insert-longball-leaders,LL-3,,false,,Luis Gonzalez 57
+insert-longball-leaders,LL-4,,false,,Alex Rodriguez 52
+insert-longball-leaders,LL-5,,false,,Shawn Green 49
+insert-longball-leaders,LL-6,,false,,Todd Helton 49
+insert-longball-leaders,LL-7,,false,,Jim Thome 49
+insert-longball-leaders,LL-8,,false,,Rafael Palmeiro 47
+insert-longball-leaders,LL-9,,false,,Richie Sexson 45
+insert-longball-leaders,LL-10,,false,,Troy Glaus 41
+insert-longball-leaders,LL-11,,false,,Manny Ramirez 41
+insert-longball-leaders,LL-12,,false,,Phil Nevin 41
+insert-longball-leaders,LL-13,,false,,Jeff Bagwell 39
+insert-longball-leaders,LL-14,,false,,Carlos Delgado 39
+insert-longball-leaders,LL-15,,false,,Jason Giambi 38
+insert-longball-leaders,LL-16,,false,,Chipper Jones 38
+insert-longball-leaders,LL-17,,false,,Larry Walker 38
+insert-longball-leaders,LL-18,,false,,Albert Pujols 37
+insert-longball-leaders,LL-19,,false,,Brian Giles 37
+insert-longball-leaders,LL-20,,false,,Bret Boone 37
+insert-production-line,PL-1,,false,,Barry Bonds 415
+insert-production-line,PL-1,On-Base Percentage,false,,Barry Bonds 415,,
+insert-production-line,PL-1,Slugging Percentage,false,,Barry Bonds 415,,
+insert-production-line,PL-1,OPS,false,,Barry Bonds 415,,
+insert-production-line,PL-2,,false,,Jason Giambi 377
+insert-production-line,PL-2,On-Base Percentage,false,,Jason Giambi 377,,
+insert-production-line,PL-2,Slugging Percentage,false,,Jason Giambi 377,,
+insert-production-line,PL-2,OPS,false,,Jason Giambi 377,,
+insert-production-line,PL-3,,false,,Larry Walker 349
+insert-production-line,PL-3,On-Base Percentage,false,,Larry Walker 349,,
+insert-production-line,PL-3,Slugging Percentage,false,,Larry Walker 349,,
+insert-production-line,PL-3,OPS,false,,Larry Walker 349,,
+insert-production-line,PL-4,,false,,Sammy Sosa 337
+insert-production-line,PL-4,On-Base Percentage,false,,Sammy Sosa 337,,
+insert-production-line,PL-4,Slugging Percentage,false,,Sammy Sosa 337,,
+insert-production-line,PL-4,OPS,false,,Sammy Sosa 337,,
+insert-production-line,PL-5,,false,,Todd Helton 332
+insert-production-line,PL-5,On-Base Percentage,false,,Todd Helton 332,,
+insert-production-line,PL-5,Slugging Percentage,false,,Todd Helton 332,,
+insert-production-line,PL-5,OPS,false,,Todd Helton 332,,
+insert-production-line,PL-6,,false,,Lance Berkman 330
+insert-production-line,PL-6,On-Base Percentage,false,,Lance Berkman 330,,
+insert-production-line,PL-6,Slugging Percentage,false,,Lance Berkman 330,,
+insert-production-line,PL-6,OPS,false,,Lance Berkman 330,,
+insert-production-line,PL-7,,false,,Luis Gonzalez 329
+insert-production-line,PL-7,On-Base Percentage,false,,Luis Gonzalez 329,,
+insert-production-line,PL-7,Slugging Percentage,false,,Luis Gonzalez 329,,
+insert-production-line,PL-7,OPS,false,,Luis Gonzalez 329,,
+insert-production-line,PL-8,,false,,Chipper Jones 327
+insert-production-line,PL-8,On-Base Percentage,false,,Chipper Jones 327,,
+insert-production-line,PL-8,Slugging Percentage,false,,Chipper Jones 327,,
+insert-production-line,PL-8,OPS,false,,Chipper Jones 327,,
+insert-production-line,PL-9,,false,,Edgar Martinez 323
+insert-production-line,PL-9,On-Base Percentage,false,,Edgar Martinez 323,,
+insert-production-line,PL-9,Slugging Percentage,false,,Edgar Martinez 323,,
+insert-production-line,PL-9,OPS,false,,Edgar Martinez 323,,
+insert-production-line,PL-10,,false,,Gary Sheffield 317
+insert-production-line,PL-10,On-Base Percentage,false,,Gary Sheffield 317,,
+insert-production-line,PL-10,Slugging Percentage,false,,Gary Sheffield 317,,
+insert-production-line,PL-10,OPS,false,,Gary Sheffield 317,,
+insert-production-line,PL-11,,false,,Jim Thome 316
+insert-production-line,PL-11,On-Base Percentage,false,,Jim Thome 316,,
+insert-production-line,PL-11,Slugging Percentage,false,,Jim Thome 316,,
+insert-production-line,PL-11,OPS,false,,Jim Thome 316,,
+insert-production-line,PL-12,,false,,Roberto Alomar 315
+insert-production-line,PL-12,On-Base Percentage,false,,Roberto Alomar 315,,
+insert-production-line,PL-12,Slugging Percentage,false,,Roberto Alomar 315,,
+insert-production-line,PL-12,OPS,false,,Roberto Alomar 315,,
+insert-production-line,PL-13,,false,,J.D. Drew 314
+insert-production-line,PL-13,On-Base Percentage,false,,J.D. Drew 314,,
+insert-production-line,PL-13,Slugging Percentage,false,,J.D. Drew 314,,
+insert-production-line,PL-13,OPS,false,,J.D. Drew 314,,
+insert-production-line,PL-14,,false,,Jim Edmonds 310
+insert-production-line,PL-14,On-Base Percentage,false,,Jim Edmonds 310,,
+insert-production-line,PL-14,Slugging Percentage,false,,Jim Edmonds 310,,
+insert-production-line,PL-14,OPS,false,,Jim Edmonds 310,,
+insert-production-line,PL-15,,false,,Carlos Delgado 308
+insert-production-line,PL-15,On-Base Percentage,false,,Carlos Delgado 308,,
+insert-production-line,PL-15,Slugging Percentage,false,,Carlos Delgado 308,,
+insert-production-line,PL-15,OPS,false,,Carlos Delgado 308,,
+insert-production-line,PL-16,,false,,Manny Ramirez 305
+insert-production-line,PL-16,On-Base Percentage,false,,Manny Ramirez 305,,
+insert-production-line,PL-16,Slugging Percentage,false,,Manny Ramirez 305,,
+insert-production-line,PL-16,OPS,false,,Manny Ramirez 305,,
+insert-production-line,PL-17,,false,,Brian Giles 304
+insert-production-line,PL-17,On-Base Percentage,false,,Brian Giles 304,,
+insert-production-line,PL-17,Slugging Percentage,false,,Brian Giles 304,,
+insert-production-line,PL-17,OPS,false,,Brian Giles 304,,
+insert-production-line,PL-18,,false,,Albert Pujols 303
+insert-production-line,PL-18,On-Base Percentage,false,,Albert Pujols 303,,
+insert-production-line,PL-18,Slugging Percentage,false,,Albert Pujols 303,,
+insert-production-line,PL-18,OPS,false,,Albert Pujols 303,,
+insert-production-line,PL-19,,false,,John Olerud 301
+insert-production-line,PL-19,On-Base Percentage,false,,John Olerud 301,,
+insert-production-line,PL-19,Slugging Percentage,false,,John Olerud 301,,
+insert-production-line,PL-19,OPS,false,,John Olerud 301,,
+insert-production-line,PL-20,,false,,Alex Rodriguez 299
+insert-production-line,PL-20,On-Base Percentage,false,,Alex Rodriguez 299,,
+insert-production-line,PL-20,Slugging Percentage,false,,Alex Rodriguez 299,,
+insert-production-line,PL-20,OPS,false,,Alex Rodriguez 299,,
+insert-production-line,PL-21,,false,,Barry Bonds 763
+insert-production-line,PL-21,On-Base Percentage,false,,Barry Bonds 763,,
+insert-production-line,PL-21,Slugging Percentage,false,,Barry Bonds 763,,
+insert-production-line,PL-21,OPS,false,,Barry Bonds 763,,
+insert-production-line,PL-22,,false,,Sammy Sosa 637
+insert-production-line,PL-22,On-Base Percentage,false,,Sammy Sosa 637,,
+insert-production-line,PL-22,Slugging Percentage,false,,Sammy Sosa 637,,
+insert-production-line,PL-22,OPS,false,,Sammy Sosa 637,,
+insert-production-line,PL-23,,false,,Luis Gonzalez 588
+insert-production-line,PL-23,On-Base Percentage,false,,Luis Gonzalez 588,,
+insert-production-line,PL-23,Slugging Percentage,false,,Luis Gonzalez 588,,
+insert-production-line,PL-23,OPS,false,,Luis Gonzalez 588,,
+insert-production-line,PL-24,,false,,Todd Helton 585
+insert-production-line,PL-24,On-Base Percentage,false,,Todd Helton 585,,
+insert-production-line,PL-24,Slugging Percentage,false,,Todd Helton 585,,
+insert-production-line,PL-24,OPS,false,,Todd Helton 585,,
+insert-production-line,PL-25,,false,,Larry Walker 562
+insert-production-line,PL-25,On-Base Percentage,false,,Larry Walker 562,,
+insert-production-line,PL-25,Slugging Percentage,false,,Larry Walker 562,,
+insert-production-line,PL-25,OPS,false,,Larry Walker 562,,
+insert-production-line,PL-26,,false,,Jason Giambi 560
+insert-production-line,PL-26,On-Base Percentage,false,,Jason Giambi 560,,
+insert-production-line,PL-26,Slugging Percentage,false,,Jason Giambi 560,,
+insert-production-line,PL-26,OPS,false,,Jason Giambi 560,,
+insert-production-line,PL-27,,false,,Jim Thome 524
+insert-production-line,PL-27,On-Base Percentage,false,,Jim Thome 524,,
+insert-production-line,PL-27,Slugging Percentage,false,,Jim Thome 524,,
+insert-production-line,PL-27,OPS,false,,Jim Thome 524,,
+insert-production-line,PL-28,,false,,Alex Rodriguez 522
+insert-production-line,PL-28,On-Base Percentage,false,,Alex Rodriguez 522,,
+insert-production-line,PL-28,Slugging Percentage,false,,Alex Rodriguez 522,,
+insert-production-line,PL-28,OPS,false,,Alex Rodriguez 522,,
+insert-production-line,PL-29,,false,,Lance Berkman 520
+insert-production-line,PL-29,On-Base Percentage,false,,Lance Berkman 520,,
+insert-production-line,PL-29,Slugging Percentage,false,,Lance Berkman 520,,
+insert-production-line,PL-29,OPS,false,,Lance Berkman 520,,
+insert-production-line,PL-30,,false,,J.D. Drew 513
+insert-production-line,PL-30,On-Base Percentage,false,,J.D. Drew 513,,
+insert-production-line,PL-30,Slugging Percentage,false,,J.D. Drew 513,,
+insert-production-line,PL-30,OPS,false,,J.D. Drew 513,,
+insert-production-line,PL-31,,false,,Albert Pujols 510
+insert-production-line,PL-31,On-Base Percentage,false,,Albert Pujols 510,,
+insert-production-line,PL-31,Slugging Percentage,false,,Albert Pujols 510,,
+insert-production-line,PL-31,OPS,false,,Albert Pujols 510,,
+insert-production-line,PL-32,,false,,Manny Ramirez 509
+insert-production-line,PL-32,On-Base Percentage,false,,Manny Ramirez 509,,
+insert-production-line,PL-32,Slugging Percentage,false,,Manny Ramirez 509,,
+insert-production-line,PL-32,OPS,false,,Manny Ramirez 509,,
+insert-production-line,PL-33,,false,,Chipper Jones 505
+insert-production-line,PL-33,On-Base Percentage,false,,Chipper Jones 505,,
+insert-production-line,PL-33,Slugging Percentage,false,,Chipper Jones 505,,
+insert-production-line,PL-33,OPS,false,,Chipper Jones 505,,
+insert-production-line,PL-34,,false,,Shawn Green 498
+insert-production-line,PL-34,On-Base Percentage,false,,Shawn Green 498,,
+insert-production-line,PL-34,Slugging Percentage,false,,Shawn Green 498,,
+insert-production-line,PL-34,OPS,false,,Shawn Green 498,,
+insert-production-line,PL-35,,false,,Brian Giles 490
+insert-production-line,PL-35,On-Base Percentage,false,,Brian Giles 490,,
+insert-production-line,PL-35,Slugging Percentage,false,,Brian Giles 490,,
+insert-production-line,PL-35,OPS,false,,Brian Giles 490,,
+insert-production-line,PL-36,,false,,Juan Gonzalez 490
+insert-production-line,PL-36,On-Base Percentage,false,,Juan Gonzalez 490,,
+insert-production-line,PL-36,Slugging Percentage,false,,Juan Gonzalez 490,,
+insert-production-line,PL-36,OPS,false,,Juan Gonzalez 490,,
+insert-production-line,PL-37,,false,,Phil Nevin 488
+insert-production-line,PL-37,On-Base Percentage,false,,Phil Nevin 488,,
+insert-production-line,PL-37,Slugging Percentage,false,,Phil Nevin 488,,
+insert-production-line,PL-37,OPS,false,,Phil Nevin 488,,
+insert-production-line,PL-38,,false,,Gary Sheffield 483
+insert-production-line,PL-38,On-Base Percentage,false,,Gary Sheffield 483,,
+insert-production-line,PL-38,Slugging Percentage,false,,Gary Sheffield 483,,
+insert-production-line,PL-38,OPS,false,,Gary Sheffield 483,,
+insert-production-line,PL-39,,false,,Bret Boone 478
+insert-production-line,PL-39,On-Base Percentage,false,,Bret Boone 478,,
+insert-production-line,PL-39,Slugging Percentage,false,,Bret Boone 478,,
+insert-production-line,PL-39,OPS,false,,Bret Boone 478,,
+insert-production-line,PL-40,,false,,Cliff Floyd 478
+insert-production-line,PL-40,On-Base Percentage,false,,Cliff Floyd 478,,
+insert-production-line,PL-40,Slugging Percentage,false,,Cliff Floyd 478,,
+insert-production-line,PL-40,OPS,false,,Cliff Floyd 478,,
+insert-production-line,PL-41,,false,,Barry Bonds 1278
+insert-production-line,PL-41,On-Base Percentage,false,,Barry Bonds 1278,,
+insert-production-line,PL-41,Slugging Percentage,false,,Barry Bonds 1278,,
+insert-production-line,PL-41,OPS,false,,Barry Bonds 1278,,
+insert-production-line,PL-42,,false,,Sammy Sosa 1074
+insert-production-line,PL-42,On-Base Percentage,false,,Sammy Sosa 1074,,
+insert-production-line,PL-42,Slugging Percentage,false,,Sammy Sosa 1074,,
+insert-production-line,PL-42,OPS,false,,Sammy Sosa 1074,,
+insert-production-line,PL-43,,false,,Jason Giambi 1037
+insert-production-line,PL-43,On-Base Percentage,false,,Jason Giambi 1037,,
+insert-production-line,PL-43,Slugging Percentage,false,,Jason Giambi 1037,,
+insert-production-line,PL-43,OPS,false,,Jason Giambi 1037,,
+insert-production-line,PL-44,,false,,Todd Helton 1017
+insert-production-line,PL-44,On-Base Percentage,false,,Todd Helton 1017,,
+insert-production-line,PL-44,Slugging Percentage,false,,Todd Helton 1017,,
+insert-production-line,PL-44,OPS,false,,Todd Helton 1017,,
+insert-production-line,PL-45,,false,,Luis Gonzalez 1017
+insert-production-line,PL-45,On-Base Percentage,false,,Luis Gonzalez 1017,,
+insert-production-line,PL-45,Slugging Percentage,false,,Luis Gonzalez 1017,,
+insert-production-line,PL-45,OPS,false,,Luis Gonzalez 1017,,
+insert-production-line,PL-46,,false,,Larry Walker 1011
+insert-production-line,PL-46,On-Base Percentage,false,,Larry Walker 1011,,
+insert-production-line,PL-46,Slugging Percentage,false,,Larry Walker 1011,,
+insert-production-line,PL-46,OPS,false,,Larry Walker 1011,,
+insert-production-line,PL-47,,false,,Lance Berkman 950
+insert-production-line,PL-47,On-Base Percentage,false,,Lance Berkman 950,,
+insert-production-line,PL-47,Slugging Percentage,false,,Lance Berkman 950,,
+insert-production-line,PL-47,OPS,false,,Lance Berkman 950,,
+insert-production-line,PL-48,,false,,Jim Thome 940
+insert-production-line,PL-48,On-Base Percentage,false,,Jim Thome 940,,
+insert-production-line,PL-48,Slugging Percentage,false,,Jim Thome 940,,
+insert-production-line,PL-48,OPS,false,,Jim Thome 940,,
+insert-production-line,PL-49,,false,,Chipper Jones 932
+insert-production-line,PL-49,On-Base Percentage,false,,Chipper Jones 932,,
+insert-production-line,PL-49,Slugging Percentage,false,,Chipper Jones 932,,
+insert-production-line,PL-49,OPS,false,,Chipper Jones 932,,
+insert-production-line,PL-50,,false,,J.D. Drew 927
+insert-production-line,PL-50,On-Base Percentage,false,,J.D. Drew 927,,
+insert-production-line,PL-50,Slugging Percentage,false,,J.D. Drew 927,,
+insert-production-line,PL-50,OPS,false,,J.D. Drew 927,,
+insert-production-line,PL-51,,false,,Alex Rodriguez 921
+insert-production-line,PL-51,On-Base Percentage,false,,Alex Rodriguez 921,,
+insert-production-line,PL-51,Slugging Percentage,false,,Alex Rodriguez 921,,
+insert-production-line,PL-51,OPS,false,,Alex Rodriguez 921,,
+insert-production-line,PL-52,,false,,Manny Ramirez 914
+insert-production-line,PL-52,On-Base Percentage,false,,Manny Ramirez 914,,
+insert-production-line,PL-52,Slugging Percentage,false,,Manny Ramirez 914,,
+insert-production-line,PL-52,OPS,false,,Manny Ramirez 914,,
+insert-production-line,PL-53,,false,,Albert Pujols 913
+insert-production-line,PL-53,On-Base Percentage,false,,Albert Pujols 913,,
+insert-production-line,PL-53,Slugging Percentage,false,,Albert Pujols 913,,
+insert-production-line,PL-53,OPS,false,,Albert Pujols 913,,
+insert-production-line,PL-54,,false,,Gary Sheffield 900
+insert-production-line,PL-54,On-Base Percentage,false,,Gary Sheffield 900,,
+insert-production-line,PL-54,Slugging Percentage,false,,Gary Sheffield 900,,
+insert-production-line,PL-54,OPS,false,,Gary Sheffield 900,,
+insert-production-line,PL-55,,false,,Brian Giles 894
+insert-production-line,PL-55,On-Base Percentage,false,,Brian Giles 894,,
+insert-production-line,PL-55,Slugging Percentage,false,,Brian Giles 894,,
+insert-production-line,PL-55,OPS,false,,Brian Giles 894,,
+insert-production-line,PL-56,,false,,Phil Nevin 876
+insert-production-line,PL-56,On-Base Percentage,false,,Phil Nevin 876,,
+insert-production-line,PL-56,Slugging Percentage,false,,Phil Nevin 876,,
+insert-production-line,PL-56,OPS,false,,Phil Nevin 876,,
+insert-production-line,PL-57,,false,,Jim Edmonds 874
+insert-production-line,PL-57,On-Base Percentage,false,,Jim Edmonds 874,,
+insert-production-line,PL-57,Slugging Percentage,false,,Jim Edmonds 874,,
+insert-production-line,PL-57,OPS,false,,Jim Edmonds 874,,
+insert-production-line,PL-58,,false,,Shawn Green 870
+insert-production-line,PL-58,On-Base Percentage,false,,Shawn Green 870,,
+insert-production-line,PL-58,Slugging Percentage,false,,Shawn Green 870,,
+insert-production-line,PL-58,OPS,false,,Shawn Green 870,,
+insert-production-line,PL-59,,false,,Cliff Floyd 868
+insert-production-line,PL-59,On-Base Percentage,false,,Cliff Floyd 868,,
+insert-production-line,PL-59,Slugging Percentage,false,,Cliff Floyd 868,,
+insert-production-line,PL-59,OPS,false,,Cliff Floyd 868,,
+insert-production-line,PL-60,,false,,Edgar Martinez 866
+insert-production-line,PL-60,On-Base Percentage,false,,Edgar Martinez 866,,
+insert-production-line,PL-60,Slugging Percentage,false,,Edgar Martinez 866,,
+insert-production-line,PL-60,OPS,false,,Edgar Martinez 866,,
+insert-bat-kings,BK-1,,false,,Jason Giambi 250
+insert-bat-kings,BK-2,,false,,Alex Rodriguez 250
+insert-bat-kings,BK-3,,false,,Mike Piazza 250
+insert-bat-kings,BK-4,,false,,Roberto Clemente 125
+insert-bat-kings,BK-5,,false,,Babe Ruth 125
+insert-jersey-kings,JK-1,,false,,Alex Rodriguez 250
+insert-jersey-kings,JK-2,,false,,Jason Giambi 250
+insert-jersey-kings,JK-3,,false,,Carlos Delgado 250
+insert-jersey-kings,JK-4,,false,,Barry Bonds 250
+insert-jersey-kings,JK-5,,false,,Randy Johnson 250
+insert-jersey-kings,JK-6,,false,,Jim Thome 250
+insert-jersey-kings,JK-8,,false,,Pedro Martinez 250
+insert-jersey-kings,JK-9,,false,,Jeff Bagwell 250
+insert-jersey-kings,JK-10,,false,,Vladimir Guerrero 250
+insert-jersey-kings,JK-11,,false,,Ivan Rodriguez 250
+insert-jersey-kings,JK-12,,false,,Nomar Garciaparra 250
+insert-jersey-kings,JK-13,,false,,Don Mattingly 125
+insert-jersey-kings,JK-14,,false,,Ted Williams 125
+insert-jersey-kings,JK-15,,false,,Lou Gehrig 125
+insert-rookie-year-materials-bats,RYB-1,,false,,Barry Bonds 86
+insert-rookie-year-materials-bats,RYB-2,,false,,Cal Ripken
+insert-rookie-year-materials-bats,RYB-3,,false,,Kirby Puckett 84
+insert-rookie-year-materials-bats,RYB-4,,false,,Johnny Bench 68
+insert-rookie-year-materials-jerseys,RYJ-1,,false,,Nomar Garciaparra 250
+insert-rookie-year-materials-jerseys,RYJ-2,,false,,Randy Johnson 250
+insert-rookie-year-materials-jerseys,RYJ-3,,false,,Ivan Rodriguez 250
+insert-rookie-year-materials-jerseys,RYJ-4,,false,,Vladimir Guerrero 250
+insert-rookie-year-materials-jerseys,RYJ-5,,false,,Stan Musial 50
+insert-rookie-year-materials-jerseys,RYJ-6,,false,,Yogi Berra 50
+insert-rookie-year-materials-jerseys-jersey-number,RYJ-1,,false,,Nomar Garciaparra 5
+insert-rookie-year-materials-jerseys-jersey-number,RYJ-2,,false,,Randy Johnson 51
+insert-rookie-year-materials-jerseys-jersey-number,RYJ-3,,false,,Ivan Rodriguez 7
+insert-rookie-year-materials-jerseys-jersey-number,RYJ-4,,false,,Vladimir Guerrero 27
+insert-rookie-year-materials-jerseys-jersey-number,RYJ-5,,false,,Stan Musial 6
+insert-rookie-year-materials-jerseys-jersey-number,RYJ-6,,false,,Yogi Berra 35
+auto-autographed-fan-club,201,,true,,Luis Gonzalez 25
+auto-autographed-fan-club,202,,true,,Roger Clemens 25
+auto-autographed-fan-club,203,,true,,Barry Zito 200
+auto-autographed-fan-club,204,,true,,Bud Smith 200
+auto-autographed-fan-club,205,,true,,Magglio Ordonez 200
+auto-autographed-fan-club,206,,true,,Kerry Wood 200
+auto-autographed-fan-club,207,,true,,Freddy Garcia 200
+auto-autographed-fan-club,208,,true,,Adam Dunn 200
+auto-autographed-fan-club,209,,true,,Curt Schilling 25
+auto-autographed-fan-club,210,,true,,Lance Berkman 175
+auto-autographed-fan-club,211,,true,,Rafael Palmeiro 25
+auto-autographed-fan-club,213,,true,,Bob Abreu 200
+auto-autographed-fan-club,214,,true,,Mark Mulder 200
+auto-autographed-fan-club,215,,true,,Roy Oswalt 200
+auto-autographed-fan-club,216,,true,,Mike Sweeney 200
+auto-autographed-fan-club,217,,true,,Paul LoDuca 200
+auto-autographed-fan-club,218,,true,,Aramis Ramirez 200
+auto-autographed-fan-club,219,,true,,Randy Johnson 10
+auto-autographed-fan-club,220,,true,,Albert Pujols 200
+auto-elite-series-signatures,ES-02,,true,,Lance Berkman 25
+auto-elite-series-signatures,ES-03,,true,,Jason Giambi 25
+auto-elite-series-signatures,ES-04,,true,,Nomar Garciaparra 25
+auto-elite-series-signatures,ES-05,,true,,Curt Schilling 25
+auto-elite-series-signatures,ES-06,,true,,Vladimir Guerrero 25
+auto-elite-series-signatures,ES-08,,true,,Troy Glaus 25
+auto-elite-series-signatures,ES-09,,true,,Jeff Bagwell 25
+auto-elite-series-signatures,ES-10,,true,,Manny Ramirez 25
+auto-elite-series-signatures,ES-11,,true,,Eric Chavez 25
+auto-elite-series-signatures,ES-13,,true,,Mike Sweeney 25
+auto-elite-series-signatures,ES-14,,true,,Todd Helton 25
+auto-elite-series-signatures,ES-15,,true,,Luis Gonzalez 25
+auto-elite-series-signatures,ES-16,,true,,Enos Slaughter 250
+auto-elite-series-signatures,ES-17,,true,,Frank Robinson 250
+auto-elite-series-signatures,ES-18,,true,,Bob Gibson 250
+auto-elite-series-signatures,ES-19,,true,,Warren Spahn 250
+auto-elite-series-signatures,ES-20,,true,,Whitey Ford 250
