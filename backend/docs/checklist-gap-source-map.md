@@ -190,6 +190,60 @@ is invisible to every sweep and silently splits or merges a comp pool. Per
 `verify output, not process`: the acceptance test for this work is **the emitted
 numbers matched against page text**, not the staged row count.
 
+### 3.4 FIXED (2026-09-13) — `scrape-tcdb.cjs`: pagination clipped at 100, and two row shapes read as zero cards
+
+Found building the 2014 Panini Prizm FIFA World Cup file (PR #2105). Both are
+the "looks acquired, empty of the thing we needed" shape, this time in the
+TCDB backup scraper rather than BCP.
+
+**Pagination.** TCDB checklist pages list 100 rows per page
+(`?PageIndex=N`). The shipped pagination loop was reachable only from behind
+an empty-rows guard that ran after a `<td>` grid-walk assuming
+`<td>{number}</td><td>{player}</td>` — a shape TCDB's current markup never
+produces (no `<th>` cells anywhere on the page, so that walk always returns
+0 rows and always fell through). That made the real page-walking logic
+fragile rather than load-bearing: any future page shape that let the grid-walk
+match even a handful of decoy rows would have skipped pagination entirely and
+silently clipped at whatever page 1 produced. A single-page read gave 100 of
+the 201-card base set and clipped every 100+ parallel rung at the same
+boundary. Fixed by making the page walk unconditional and the only extraction
+path — the dead grid-walk fallback is removed rather than kept as a no-op.
+
+**Name extraction.** The row reader pulled player names ONLY from
+`Person.cfm` anchors. Two real row shapes on this product carry no
+`Person.cfm` anchor at all:
+
+- **Team cards** (Team Photos rung): the name cell is plain text ("Algerie
+  TC"); the `Team.cfm` link is in a *later* cell, not the name cell.
+- **Multi-player cards** (Combo Signatures rung): the name cell is plain
+  text with a `/` separator ("Bobby Charlton / Steven Gerrard AU, SN10") —
+  no anchor of any kind.
+
+15 of 136 rungs on this product extracted **zero** rows. Fixed by reading the
+row's own cells: Person.cfm anchors first (the common case), falling back to
+the name cell's plain text when there is none. Splitting on `/` recovers both
+names on a multi-player card rather than dropping one.
+
+**Attribute tokens.** Reading the name cell as text also recovers the
+trailing `AU` / `SNnnn` tokens TCDB states inline on signature/serial rungs
+("... AU, SN10"). Parsed into `isAuto` / `printRun`, scoped to the rung that
+actually states them — Team Photos never says AU or SN and is emitted
+unsigned with a blank print run; a print run stated on one rung is never
+carried onto another. Per doctrine: every row traces to the page, blank means
+unknown, and autos are never minted unsigned.
+
+**Fixed in this PR** (`fix/tcdb-scraper-pagination-names-0913-*`, 2026-09-13):
+`backend/scripts/scrape-tcdb.cjs` rewritten (`extractRowsFromPage`,
+`parseNameAttributes`, `splitPlayers`, unconditional `fetchAllPages`); 5
+fixture-based tests in `backend/tests/tcdbPaginationAndNames.test.ts` pinned
+against the real 2014 Prizm World Cup base set (3 pages, 100+100+1=201,
+TCDB's own stated count) and its Team Photos (32 rows) and Combo Signatures
+(10 rows, AU/SN10) rungs, fetched 2026-09-13
+(`backend/tests/fixtures/tcdb/`). The env-read-at-module-load defect
+(`TCDB_URL` missing called `process.exit(2)` before any test could `require`
+the file — the #1985 shape) is fixed alongside it, since it blocked writing
+these tests at all.
+
 ---
 
 ## 4. Build order
