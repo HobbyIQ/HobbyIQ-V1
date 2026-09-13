@@ -1,0 +1,23 @@
+{
+ "scrapedAt": "2026-09-13T02:03:05.891Z",
+ "source": "sportscardchecklist",
+ "sourceUrl": "https://www.sportscardchecklist.com/set-68598/1998-99-sp-authentic-basketball-trading-card-checklist",
+ "sport": "basketball",
+ "year": 1998,
+ "season": "1998-99",
+ "setName": "1998-99 SP Authentic Basketball",
+ "productKey": "1998-sp-authentic",
+ "setKey": "sp-authentic",
+ "setKeyRequested": "sp-authentic",
+ "parallelOfParent": false,
+ "parallelName": null,
+ "subset": null,
+ "rowCount": 121,
+ "parallelColumnAuthoritative": true,
+ "converterVersion": 6,
+ "cardRows": 121,
+ "ladderRows": 0,
+ "subsetRows": 0,
+ "printRunsFound": 0,
+ "sectionsReport": []
+}

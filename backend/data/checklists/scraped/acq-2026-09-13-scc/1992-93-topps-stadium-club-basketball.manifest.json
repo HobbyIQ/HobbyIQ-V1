@@ -1,0 +1,23 @@
+{
+ "scrapedAt": "2026-09-13T01:59:07.674Z",
+ "source": "sportscardchecklist",
+ "sourceUrl": "https://www.sportscardchecklist.com/set-12429/1992-93-stadium-club-basketball-trading-card-checklist",
+ "sport": "basketball",
+ "year": 1992,
+ "season": "1992-93",
+ "setName": "1992-93 Topps Stadium Club Basketball",
+ "productKey": "1992-topps-stadium-club",
+ "setKey": "topps-stadium-club",
+ "setKeyRequested": "topps-stadium-club",
+ "parallelOfParent": false,
+ "parallelName": null,
+ "subset": null,
+ "rowCount": 400,
+ "parallelColumnAuthoritative": true,
+ "converterVersion": 6,
+ "cardRows": 400,
+ "ladderRows": 0,
+ "subsetRows": 0,
+ "printRunsFound": 0,
+ "sectionsReport": []
+}

@@ -1,0 +1,23 @@
+{
+ "scrapedAt": "2026-09-13T02:01:53.609Z",
+ "source": "sportscardchecklist",
+ "sourceUrl": "https://www.sportscardchecklist.com/set-136961/2018-score-football-trading-card-checklist",
+ "sport": "football",
+ "year": 2018,
+ "season": "2018",
+ "setName": "2018 Score Football",
+ "productKey": "2018-score",
+ "setKey": "score",
+ "setKeyRequested": "score",
+ "parallelOfParent": false,
+ "parallelName": null,
+ "subset": null,
+ "rowCount": 440,
+ "parallelColumnAuthoritative": true,
+ "converterVersion": 6,
+ "cardRows": 440,
+ "ladderRows": 0,
+ "subsetRows": 0,
+ "printRunsFound": 0,
+ "sectionsReport": []
+}

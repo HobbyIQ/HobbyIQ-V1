@@ -1,0 +1,23 @@
+{
+ "scrapedAt": "2026-09-13T02:01:47.888Z",
+ "source": "sportscardchecklist",
+ "sourceUrl": "https://www.sportscardchecklist.com/set-12441/1992-93-ultra-basketball-trading-card-checklist",
+ "sport": "basketball",
+ "year": 1992,
+ "season": "1992-93",
+ "setName": "1992-93 Ultra Basketball",
+ "productKey": "1992-ultra",
+ "setKey": "ultra",
+ "setKeyRequested": "ultra",
+ "parallelOfParent": false,
+ "parallelName": null,
+ "subset": null,
+ "rowCount": 380,
+ "parallelColumnAuthoritative": true,
+ "converterVersion": 6,
+ "cardRows": 380,
+ "ladderRows": 0,
+ "subsetRows": 0,
+ "printRunsFound": 0,
+ "sectionsReport": []
+}

@@ -1,0 +1,33 @@
+{
+ "scrapedAt": "2026-09-13T02:03:01.722Z",
+ "source": "sportscardchecklist",
+ "sourceUrl": "https://www.sportscardchecklist.com/set-11939/1966-philadelphia-football-trading-card-checklist",
+ "sport": "football",
+ "year": 1966,
+ "season": "1966",
+ "setName": "1966 Philadelphia Football",
+ "productKey": "1966-philadelphia",
+ "setKey": "philadelphia",
+ "setKeyRequested": "philadelphia",
+ "parallelOfParent": false,
+ "parallelName": null,
+ "subset": null,
+ "rowCount": 198,
+ "parallelColumnAuthoritative": true,
+ "converterVersion": 6,
+ "cardRows": 198,
+ "ladderRows": 0,
+ "subsetRows": 1,
+ "printRunsFound": 0,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Pro Action",
+   "category": "insert-pro-action",
+   "playerCount": 1,
+   "rungs": 0,
+   "rowCount": 1,
+   "refused": false,
+   "printRun": null
+  }
+ ]
+}

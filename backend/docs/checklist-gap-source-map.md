@@ -8,6 +8,14 @@ premise did not survive that probe, the correction is called out inline. Read
 "Premise corrections" first — three of the four lanes were scoped against a
 stale picture of what we already own.
 
+> **This document is dated. Read source verdicts against the later docs.** Its
+> probes are a snapshot of 2026-08-30 and at least one has since been overturned
+> outright: §5 listed `sportscardchecklist.com` as a dead end, and it is **GO** —
+> see the retirement notice in §5 and
+> [`docs/checklists/2026-09-04-vintage-checklist-sources.md`](checklists/2026-09-04-vintage-checklist-sources.md),
+> which is the authority for vintage source permissions. A "do not re-probe" verdict
+> here is evidence about one day's probe, not a standing rule.
+
 ---
 
 ## 0. Premise corrections (read before planning work)
@@ -303,7 +311,42 @@ No clean source. Blocked on a card-number conflict, not on acquisition (§6.1).
 | `https://www.baseballcardpedia.com` | **TLS fail** | `ERR_TLS_CERT_ALTNAME_INVALID` — cert covers bare host only. `https://` bare = 200; `http://www.` = 301 → bare. Existing scraper is safe; do not "upgrade" it to `https://www.` |
 | `checklistinsider.com` for vintage | **structurally impossible** | Min year 2022, confirmed 3 ways |
 | `checklistcentral.cards` free DB | **unlaunched template** | Emits raw `[[S1_PARALLELS]]` shortcodes; `/pages/2025-topps-series-1` 404s |
-| `sportscardchecklist.com` | rejected | Directory pages, no card-level data, no print runs |
+
+> ### RETIRED 2026-09-13 — `sportscardchecklist.com` was listed here and is **GO**
+>
+> This table carried the row
+> `` | `sportscardchecklist.com` | rejected | Directory pages, no card-level data, no print runs | ``
+> from this document's 2026-08-30 synthesis. **It is withdrawn.** The verdict was
+> superseded five days later by
+> [`docs/checklists/2026-09-04-vintage-checklist-sources.md`](checklists/2026-09-04-vintage-checklist-sources.md),
+> which probed the host directly and ruled it **GO — rank 1**: *"covers every target
+> cell, serves real card-by-card checklists, and its robots.txt permits the paths we
+> need"*, ~709,773 unblockable pool rows, *"Build the lane against
+> sportscardchecklist.com and nothing else."*
+>
+> The three original claims, re-checked against the `/set-<id>/` pages:
+>
+> | claim | verdict |
+> |---|---|
+> | "Directory pages" | **false** — card rows are server-rendered, with two independent anchors per card (the `<h5 class="h4">` header and the `ebay_search` hidden input) |
+> | "No card-level data" | **false** — T206 524 rows, 1933 Goudey 241, 1972 Topps Football 351; the 2026-09-13 package A acquisition parsed 11,666 rows from 37 pages |
+> | "No print runs" | **true, and not disqualifying** — pre-serial vintage has none to acquire. The lane emits `printRun` blank by design, which is the ruling, not a gap |
+>
+> **How the wrong verdict happened, so it is not repeated.** The 2026-08-30 pass
+> almost certainly probed `/search/?search_terms=…` — which is `Disallow`ed by the
+> host's robots.txt *and* is a documented false-negative machine: querying
+> "1972 topps football" returns 18 results, none of them the set, which lives at
+> `set-11959`. Discovery here is the robots-advertised **sitemap**, always.
+>
+> Leaving the row in a section titled "do not re-probe" was the expensive part: it
+> instructed every later agent to skip the repo's highest-yield checklist source. The
+> lane has shipped catalog rows since 2026-09-04 (`sportscardchecklist-<date>`), owns
+> two committed scripts (`fetchSportsCardChecklist.cjs`,
+> `discoverSportsCardChecklistSets.cjs`), 10,359 manifest entries, 18 test files and
+> 19 page fixtures.
+>
+> Anything genuinely dead about this host would be recorded in the vintage-sources
+> doc above, which is now the authority for it.
 
 **Products with no print runs to acquire — a product fact, not a source gap.**
 1997 Finest, 1999 Finest, 1996 Metal Universe predate serial numbering; they
