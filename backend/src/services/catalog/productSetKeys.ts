@@ -114,6 +114,70 @@ const FLEER_TIFFANY_ERA_MISNOMERS: Readonly<Record<string, string>> = Object.fre
 });
 
 /**
+ * CF-METAL-UNIVERSE-NAME-WAS-REVIVED (Drew, 2026-09-12, #2060 follow-on).
+ *
+ * THE SHAPE IS THE FLEER-TIFFANY SHAPE, NOT A KEY-SPELLING TWIN. R22 ("a
+ * key-spelling twin folds onto the checklist key") was the first read of this
+ * defect: sportscardchecklist's 1996-1998 baseball checklists for Metal
+ * Universe are filed bare (`metal-universe`), while a "1997 Skybox Metal
+ * Universe" title normalizes to `skybox-metal-universe` — looks like the same
+ * product under two spellings. It is not. Measured read-only against prod
+ * card_catalog 2026-09-12, `skybox-metal-universe` is a REAL, currently
+ * produced Upper Deck hockey/multi-sport revival with its own checklists:
+ *
+ *     skybox-metal-universe  2020-2025  19,462 hockey + ~250 basketball/
+ *                            multi-sport/other rows, checklistcenter-2026-09-06
+ *                            (8,326) and checklistinsider (10,830 more) —
+ *                            genuinely checklist-backed, its own product.
+ *     skybox-metal-universe  1996-1999  ~45 baseball + ~86 football rows,
+ *                            sources `ingest-auto-seed`/`sales-attested`/
+ *                            `user-verified` ONLY — zero checklist rows.
+ *                            Sample content is garbage (an "ingest-auto-seed"
+ *                            row at #23 reads "Michael Jordan Championship").
+ *     metal-universe         1996-1999  5,237 baseball rows, the plurality
+ *                            `sportscardchecklist-2026-09-06` and
+ *                            `baseballcardpedia*` — checklist-backed. Chipper
+ *                            Jones #31 lives here (`hiq:baseball:1997:
+ *                            metal-universe:31:base:no-auto`).
+ *
+ * A blanket `skybox-metal-universe` -> `metal-universe` alias — R22 applied
+ * literally — would fold 19,700+ real modern hockey/multi-sport checklist
+ * rows into the 1990s baseball pool: the opposite of "one card, one row, one
+ * pool". Even SPORT alone does not separate the two eras cleanly: baseball
+ * itself carries a 12-row 2021 cohort under the same key, alongside the real
+ * 1997-1999 vintage cohort.
+ *
+ * THE RULE THIS ACTUALLY IS. Exactly CF-THERE-IS-NO-FLEER-TIFFANY's shape:
+ * "Skybox Metal Universe" written on a card from BEFORE Skybox's 2020s revival
+ * is a misnomer for the one Metal Universe product that existed then — Fleer
+ * printed it as plain "Metal Universe" from 1996 (Skybox and Fleer were both
+ * Marvel Entertainment brands by then; sportscardchecklist's own checklist
+ * pages for 1996-1998 carry no maker qualifier at all, see
+ * data/checklists/scraped/1996–1998-metal-universe-baseball.csv). FROM the
+ * revival's first year the key is the product the source actually names, and
+ * passes through untouched — exactly as a post-1996 "Fleer Tiffany" does.
+ *
+ * THE BOUNDARY. 2000 — a full year past the last vintage checklist year found
+ * (1999) and two decades before the earliest revival-era row found (2020), so
+ * there is no evidence on either side of the boundary to contradict it; unlike
+ * Donruss/Fleer-Tiffany this date is not itself Drew-ruled, only bounded by
+ * measurement, so treat it as an ASSUMPTION the way ERA_SPLIT_TABLE's
+ * unruled entries already are.
+ *
+ * `fleer-metal-universe` is NOT included here. It carries a single
+ * `user-verified` catalog row (1996) and zero checklist rows on either side —
+ * no measured collision to rule on, and CF-NO-SYNTHETIC-PARALLELS means this
+ * table does not invent a destination a checklist has not written.
+ */
+export const METAL_UNIVERSE_REVIVAL_FROM_YEAR = 2000;
+
+/** The vintage Fleer/Skybox-era product a "Skybox Metal Universe" text
+ *  before the revival is a misnomer for. */
+const METAL_UNIVERSE_ERA_MISNOMERS: Readonly<Record<string, string>> = Object.freeze({
+  "skybox-metal-universe": "metal-universe",
+});
+
+/**
  * CF-A-CHECKLIST-ROW-SPELLS-ITS-ERA-LIKE-A-SALE-DOES (Drew, 2026-09-05).
  *
  * THE DEFECT. `ERA_SPLIT_TABLE` (setKeyReconciliation.ts) rules that Score,
@@ -1102,6 +1166,18 @@ export function spellForEra(setKey: string, year: number | null | undefined, pol
   if (misnomer !== undefined) {
     if (typeof year !== "number" || !Number.isFinite(year) || year <= 0) return setKey;
     return year < FLEER_TIFFANY_IS_GLOSSY_BEFORE_YEAR ? misnomer : setKey;
+  }
+  // CF-METAL-UNIVERSE-NAME-WAS-REVIVED: before the 2020s Skybox revival a
+  // "Skybox Metal Universe" text names the one vintage product that existed
+  // then, plain "Metal Universe" (see METAL_UNIVERSE_REVIVAL_FROM_YEAR). From
+  // the revival year the key is the real, separately checklist-backed modern
+  // product and passes through untouched — same shape, same reason as
+  // Fleer-Tiffany just above. An absent year cannot decide, so it leaves the
+  // key alone rather than guessing an era.
+  const metalUniverseMisnomer = METAL_UNIVERSE_ERA_MISNOMERS[setKey];
+  if (metalUniverseMisnomer !== undefined) {
+    if (typeof year !== "number" || !Number.isFinite(year) || year <= 0) return setKey;
+    return year < METAL_UNIVERSE_REVIVAL_FROM_YEAR ? metalUniverseMisnomer : setKey;
   }
   // CF-A-CHECKLIST-ROW-SPELLS-ITS-ERA-LIKE-A-SALE-DOES: the era table's
   // never-acquired brands take the bare key in EVERY year, so this fires
