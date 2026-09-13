@@ -1,0 +1,47 @@
+{
+ "year": 2018,
+ "sport": "baseball",
+ "setKey": "diamond-kings",
+ "parallelColumnAuthoritative": true,
+ "setName": "2018 Diamond Kings",
+ "sourceUrl": "http://www.baseballcardpedia.com/index.php/2018_Diamond_Kings",
+ "scope": "Artist Proof",
+ "scopeOfPage": "Diamond Kings",
+ "cardNumberPrefix": "",
+ "prefixDerivedFrom": "images",
+ "prefixUnresolved": false,
+ "ladder": [
+  {
+   "name": "Artist Proof",
+   "printRun": 99,
+   "rarity": null
+  },
+  {
+   "name": "Red",
+   "printRun": null,
+   "rarity": null
+  },
+  {
+   "name": "Gold",
+   "printRun": 99,
+   "rarity": null
+  },
+  {
+   "name": "Blue",
+   "printRun": 25,
+   "rarity": null
+  },
+  {
+   "name": "Masterpiece",
+   "printRun": 1,
+   "rarity": null
+  }
+ ],
+ "autographs": [],
+ "setRarity": null,
+ "sections": [],
+ "source": "bcp-2026-09-13",
+ "acquiredAt": "2026-09-13",
+ "duplicateIdentityRowsDropped": 120,
+ "duplicateIdentityNote": "BCP relists a card under Gimmicks/Errors-and-Variations with the same number and the same player text to note an UNNAMED variation; those rows carry the identity of the base row, so they were dropped (one card, one row, one pool). A variation the page NAMES differs in its player text and is kept as the distinct card it is."
+}
