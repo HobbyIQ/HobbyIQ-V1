@@ -587,6 +587,20 @@ function rungFoldingFor(rows) {
       }
       // One disagreement means these are not printings of one checklist.
       if (differ > 0 || agreed === 0) continue;
+      // CF-A-SHARED-TAIL-IS-PART-OF-THE-NAME. The siblings must differ AFTER
+      // the shared prefix, or the tail belongs to the set's NAME, not to a
+      // rung. Measured: all 19 Donruss subsets are spelled "<Name> Autographs",
+      // so a prefix rule alone derived `dominators` -- a set the source never
+      // names -- and made "Autographs" a parallel. Autograph status is `isAuto`
+      // and was never a parallel; the source states "Dominators Autographs" and
+      // that IS the card set.
+      //
+      // Drew's ruling turns on the siblings naming ONE set and differing only
+      // by colour ("Dual Patch Autographs Gold" vs "... Meta"). When every
+      // sibling carries the SAME tail there is no colour to move and nothing to
+      // derive.
+      const tails = new Set(sibs.map((x) => x.slice(pre.length + 1)));
+      if (tails.size < 2) continue;
       rosters.set(pre, merged);
       derivedRoots.add(pre);
       for (const sib of sibs) claimed.add(sib);
@@ -619,6 +633,24 @@ function rungFoldingFor(rows) {
     // ONE disagreement is enough to refuse: a rung reprints its root's roster,
     // and a single number naming a different player means these are two sets.
     if (differ > 0 || same === 0) continue;
+    // CF-AUTOGRAPH-IS-NOT-A-PARALLEL. `isAuto` already separates a signed card
+    // from its unsigned twin, and it is part of the id -- so a tail that only
+    // says "signed" names no rung and must never become a parallel (feedback:
+    // the isAuto boundary is not text).
+    //
+    // Measured on acq-2026-09-13-cbc: Donruss publishes "Dominators" (40 cards,
+    // unsigned) AND "Dominators Autographs" (22 cards, signed, /10). They share
+    // numbers and players, so the roster test passes -- but the second is not a
+    // colour rung of the first, it is the product's autograph subset, and the
+    // source names it "Dominators Autographs". Folding it produced the key
+    // `panini-donruss-dominators` with parallel "Autographs" for all 19 Donruss
+    // subsets: a parallel that is not one, on a key the source never names.
+    //
+    // The ids stayed distinct (isAuto is in the slug), so this was a NAMING
+    // defect rather than a collision -- which is exactly why it needs stating:
+    // a wrong name on a right address is still a wrong row.
+    const tail = slug.slice(root.length + 1);
+    if (/^(?:autographs?|signatures?|signed|auto)$/.test(tail)) continue;
     folding.set(slug, {
       root,
       // The source's own spelling of the tail, un-slugged for display only.

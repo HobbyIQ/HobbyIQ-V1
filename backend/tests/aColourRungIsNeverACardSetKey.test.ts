@@ -135,6 +135,30 @@ describe("a subset the rosters do NOT vouch for stays a card set", () => {
     expect(fold.has("hoops-art-signatures-horizontal")).toBe(false);
   });
 
+  it("refuses the fold when the tail says SIGNED — autograph status is isAuto, not a parallel", () => {
+    // CF-AUTOGRAPH-IS-NOT-A-PARALLEL. Donruss publishes "Dominators" (40 cards,
+    // unsigned) AND "Dominators Autographs" (22 cards, signed, /10). They share
+    // numbers and players, so the roster test passes — but the second is the
+    // product's autograph subset, not a colour rung, and the source names it
+    // "Dominators Autographs".
+    //
+    // The ids stayed distinct either way (isAuto is in the slug), so this was a
+    // NAMING defect rather than a collision — which is why it needs stating: a
+    // wrong name on a right address is still a wrong row.
+    const all = [
+      ...rows("Dominators", ROSTER),
+      ...rows("Dominators Autographs", ROSTER),
+    ];
+    expect(IS.rungFoldingFor(all).size).toBe(0);
+    // The signed subset keeps the name the source states.
+    expect(IS.setKeyForRow({
+      productSetKey: "panini-donruss", category: "", parallel: "",
+      subsetName: "Dominators Autographs",
+      separate: new Set(["dominators", "dominators-autographs"]),
+      foldRungs: IS.rungFoldingFor(all),
+    }).setKey).toBe("panini-donruss-dominators-autographs");
+  });
+
   it("refuses the fold when a LONE colour file has no sibling to agree with", () => {
     // One file names a set and a colour and nothing corroborates it, so there
     // is no evidence the plain set exists at all. Absent beats wrong.
@@ -223,6 +247,18 @@ describe("sibling colour files name their set even when no base tier is printed"
     ]);
     expect(fold.get("dual-patch-autographs-neon-pink").root).toBe("dual-patch-autographs-neon");
     expect(new Set([...fold.values()].map((f: { root: string }) => f.root)).size).toBe(1);
+  });
+
+  it("refuses to derive when every sibling carries the SAME tail — it is part of the name", () => {
+    // CF-A-SHARED-TAIL-IS-PART-OF-THE-NAME. All 19 Donruss subsets are spelled
+    // "<Name> Autographs". A prefix rule alone derived `dominators` — a set the
+    // source never names — and made "Autographs" a parallel. The ruling turns on
+    // siblings that differ BY COLOUR; when they all carry one tail there is no
+    // colour to move and nothing to derive.
+    expect(IS.rungFoldingFor([
+      ...rows("Dominators Autographs", A),
+      ...rows("Canton Kings Autographs", [["5", "Trevor Lawrence"], ["6", "Justin Fields"]]),
+    ]).size).toBe(0);
   });
 
   it("refuses to derive a root when the siblings' rosters DISAGREE", () => {
