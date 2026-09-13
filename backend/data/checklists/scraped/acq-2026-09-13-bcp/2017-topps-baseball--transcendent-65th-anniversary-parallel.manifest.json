@@ -23,5 +23,304 @@
  "source": "baseballcardpedia-2026-09-13",
  "acquiredAt": "2026-09-13",
  "duplicateIdentityRowsDropped": 70,
- "duplicateIdentityNote": "BCP relists a card under Gimmicks/Errors-and-Variations with the same number and the same player text to note an UNNAMED variation; those rows carry the identity of the base row, so they were dropped (one card, one row, one pool). A variation the page NAMES differs in its player text and is kept as the distinct card it is."
+ "duplicateIdentityNote": "BCP relists a card under Gimmicks/Errors-and-Variations with the same number and the same player text to note an UNNAMED variation; those rows carry the identity of the base row, so they were dropped (one card, one row, one pool). A variation the page NAMES differs in its player text and is kept as the distinct card it is.",
+ "variationAxisApplied": {
+  "appliedAt": "2026-09-13",
+  "source": "baseballcardpedia-2026-09-13",
+  "why": "#2112's insert-set-key guard refused this file: rows would have landed on fewer distinct ids than there are rows, so a later row would have overwritten an earlier one inside one run and the last writer would have decided which card the address holds. Every decision below was verified against the live baseballcardpedia page before it was applied; nothing here invents a label the source does not print.",
+  "decisions": {
+   "imageVariations": {
+    "rows": 100,
+    "rule": "image variation — the photo descriptor bcp prints after the player's name moves to the parallel axis as \"<Name> Image Variation SP\" (#1613), and the photo names the subset so the base ladder is not multiplied by it"
+   },
+   "namedSubsetRestored": {
+    "rows": 8,
+    "rule": "named subset — the source prints a heading for these rows that the scrape flattened into `base`; the category is restored to the section the source names"
+   },
+   "duplicatesDropped": {
+    "rows": 2,
+    "rule": "duplicate — a byte-identical row, or a repeat of a checklist line under a misspelling of the same player with no descriptor to make it a distinct card"
+   }
+  },
+  "rowsBefore": 1538,
+  "rowsAfter": 1486,
+  "distinctIdsAfter": 1478,
+  "verdictAfter": "refuse",
+  "heldRows": {
+   "rows": 50,
+   "groups": 24,
+   "rule": "held — the source prints this number more than once and prints nothing that distinguishes the printings; both sides are withheld (absent beats wrong)",
+   "detail": [
+    {
+     "address": "base|341|Base|false|",
+     "cardNumber": "341",
+     "category": "base",
+     "parallel": "Base",
+     "players": [
+      "Alex Bregman RC RCup",
+      "Alex Bregman (dugout)",
+      "Alex Bregman"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|341|Transcendent 65th Anniversary Parallel|false|",
+     "cardNumber": "341",
+     "category": "base",
+     "parallel": "Transcendent 65th Anniversary Parallel",
+     "players": [
+      "Alex Bregman RC RCup",
+      "Alex Bregman (dugout)",
+      "Alex Bregman"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|375|Base|false|",
+     "cardNumber": "375",
+     "category": "base",
+     "parallel": "Base",
+     "players": [
+      "Yasiel Puig",
+      "Jackie Robinson"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|375|Transcendent 65th Anniversary Parallel|false|",
+     "cardNumber": "375",
+     "category": "base",
+     "parallel": "Transcendent 65th Anniversary Parallel",
+     "players": [
+      "Yasiel Puig",
+      "Jackie Robinson"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|382|Base|false|",
+     "cardNumber": "382",
+     "category": "base",
+     "parallel": "Base",
+     "players": [
+      "Josh Harrison",
+      "Honus Wagner"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|382|Transcendent 65th Anniversary Parallel|false|",
+     "cardNumber": "382",
+     "category": "base",
+     "parallel": "Transcendent 65th Anniversary Parallel",
+     "players": [
+      "Josh Harrison",
+      "Honus Wagner"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|482|Base|false|",
+     "cardNumber": "482",
+     "category": "base",
+     "parallel": "Base",
+     "players": [
+      "Didi Gregorius",
+      "Lou Gehrig"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|482|Transcendent 65th Anniversary Parallel|false|",
+     "cardNumber": "482",
+     "category": "base",
+     "parallel": "Transcendent 65th Anniversary Parallel",
+     "players": [
+      "Didi Gregorius",
+      "Lou Gehrig"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|485|Base|false|",
+     "cardNumber": "485",
+     "category": "base",
+     "parallel": "Base",
+     "players": [
+      "Greg Bird",
+      "Roger Maris"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|485|Transcendent 65th Anniversary Parallel|false|",
+     "cardNumber": "485",
+     "category": "base",
+     "parallel": "Transcendent 65th Anniversary Parallel",
+     "players": [
+      "Greg Bird",
+      "Roger Maris"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|500|Base|false|",
+     "cardNumber": "500",
+     "category": "base",
+     "parallel": "Base",
+     "players": [
+      "Anthony Rizzo",
+      "Ernie Banks"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|500|Transcendent 65th Anniversary Parallel|false|",
+     "cardNumber": "500",
+     "category": "base",
+     "parallel": "Transcendent 65th Anniversary Parallel",
+     "players": [
+      "Anthony Rizzo",
+      "Ernie Banks"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|508|Base|false|",
+     "cardNumber": "508",
+     "category": "base",
+     "parallel": "Base",
+     "players": [
+      "Hanley Ramirez",
+      "Ted Williams"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|508|Transcendent 65th Anniversary Parallel|false|",
+     "cardNumber": "508",
+     "category": "base",
+     "parallel": "Transcendent 65th Anniversary Parallel",
+     "players": [
+      "Hanley Ramirez",
+      "Ted Williams"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|580|Base|false|",
+     "cardNumber": "580",
+     "category": "base",
+     "parallel": "Base",
+     "players": [
+      "Matt Holliday",
+      "Babe Ruth"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|580|Transcendent 65th Anniversary Parallel|false|",
+     "cardNumber": "580",
+     "category": "base",
+     "parallel": "Transcendent 65th Anniversary Parallel",
+     "players": [
+      "Matt Holliday",
+      "Babe Ruth"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|611|Base|false|",
+     "cardNumber": "611",
+     "category": "base",
+     "parallel": "Base",
+     "players": [
+      "Victor Martinez",
+      "Ty Cobb"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|611|Transcendent 65th Anniversary Parallel|false|",
+     "cardNumber": "611",
+     "category": "base",
+     "parallel": "Transcendent 65th Anniversary Parallel",
+     "players": [
+      "Victor Martinez",
+      "Ty Cobb"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|639|Base|false|",
+     "cardNumber": "639",
+     "category": "base",
+     "parallel": "Base",
+     "players": [
+      "Matt Kemp",
+      "Hank Aaron"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|639|Transcendent 65th Anniversary Parallel|false|",
+     "cardNumber": "639",
+     "category": "base",
+     "parallel": "Transcendent 65th Anniversary Parallel",
+     "players": [
+      "Matt Kemp",
+      "Hank Aaron"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|650|Base|false|",
+     "cardNumber": "650",
+     "category": "base",
+     "parallel": "Base",
+     "players": [
+      "Andrew McCutchen",
+      "Roberto Clemente"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|650|Transcendent 65th Anniversary Parallel|false|",
+     "cardNumber": "650",
+     "category": "base",
+     "parallel": "Transcendent 65th Anniversary Parallel",
+     "players": [
+      "Andrew McCutchen",
+      "Roberto Clemente"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|597|Base|false|",
+     "cardNumber": "597",
+     "category": "base",
+     "parallel": "Base",
+     "players": [
+      "Kenta Maeda",
+      "Sandy Koufax"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|597|Transcendent 65th Anniversary Parallel|false|",
+     "cardNumber": "597",
+     "category": "base",
+     "parallel": "Transcendent 65th Anniversary Parallel",
+     "players": [
+      "Kenta Maeda",
+      "Sandy Koufax"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    }
+   ]
+  },
+  "notes": [
+   "Dropped 2 rows that repeat a card already on the checklist under a MISSPELLING of the same player (\"Torii Hunger\" for \"Torii Hunter\", \"Neftali Perez\" for \"Neftali Feliz\", \"Russel Martin\" for \"Russell Martin\") with no descriptor to make them a distinct card. Verified on the source: these sit in its hand-typed Gimmicks/Twinks lists. The checklist's own spelling stands."
+  ]
+ }
 }

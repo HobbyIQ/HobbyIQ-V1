@@ -91,5 +91,20 @@
  "source": "baseballcardpedia-2026-09-13",
  "acquiredAt": "2026-09-13",
  "setKeyWas": "finest",
- "setKeyNote": "the BCP page names this product \"Finest\"; the catalog vocabulary keys it topps-finest (normalizeSetKey(\"finest\") === \"topps-finest\")"
+ "setKeyNote": "the BCP page names this product \"Finest\"; the catalog vocabulary keys it topps-finest (normalizeSetKey(\"finest\") === \"topps-finest\")",
+ "variationAxisApplied": {
+  "appliedAt": "2026-09-13",
+  "source": "baseballcardpedia-2026-09-13",
+  "why": "#2112's insert-set-key guard refused this file: rows would have landed on fewer distinct ids than there are rows, so a later row would have overwritten an earlier one inside one run and the last writer would have decided which card the address holds. Every decision below was verified against the live baseballcardpedia page before it was applied; nothing here invents a label the source does not print.",
+  "decisions": {
+   "imageVariations": {
+    "rows": 4,
+    "rule": "image variation — the photo descriptor bcp prints after the player's name moves to the parallel axis as \"<Name> Image Variation SP\" (#1613), and the photo names the subset so the base ladder is not multiplied by it"
+   }
+  },
+  "rowsBefore": 501,
+  "rowsAfter": 501,
+  "distinctIdsAfter": 501,
+  "verdictAfter": "pass"
+ }
 }

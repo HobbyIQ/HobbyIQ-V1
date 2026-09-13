@@ -93,5 +93,20 @@
   }
  ],
  "source": "baseballcardpedia-2026-09-13",
- "acquiredAt": "2026-09-13"
+ "acquiredAt": "2026-09-13",
+ "variationAxisApplied": {
+  "appliedAt": "2026-09-13",
+  "source": "baseballcardpedia-2026-09-13",
+  "why": "#2112's insert-set-key guard refused this file: rows would have landed on fewer distinct ids than there are rows, so a later row would have overwritten an earlier one inside one run and the last writer would have decided which card the address holds. Every decision below was verified against the live baseballcardpedia page before it was applied; nothing here invents a label the source does not print.",
+  "decisions": {
+   "trailingPrintRunMoved": {
+    "rows": 126,
+    "rule": "trailing serial — bcp writes a rung's print run inside the player cell (\"Adrian Beltre 25\"); it is moved to printRun, which is what lets a rung's roster compare equal to its root's"
+   }
+  },
+  "rowsBefore": 953,
+  "rowsAfter": 953,
+  "distinctIdsAfter": 953,
+  "verdictAfter": "pass"
+ }
 }

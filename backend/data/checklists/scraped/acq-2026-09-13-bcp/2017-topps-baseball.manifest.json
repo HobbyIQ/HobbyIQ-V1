@@ -608,5 +608,2420 @@
  "source": "baseballcardpedia-2026-09-13",
  "acquiredAt": "2026-09-13",
  "duplicateIdentityRowsDropped": 455,
- "duplicateIdentityNote": "BCP relists a card under Gimmicks/Errors-and-Variations with the same number and the same player text to note an UNNAMED variation; those rows carry the identity of the base row, so they were dropped (one card, one row, one pool). A variation the page NAMES differs in its player text and is kept as the distinct card it is."
+ "duplicateIdentityNote": "BCP relists a card under Gimmicks/Errors-and-Variations with the same number and the same player text to note an UNNAMED variation; those rows carry the identity of the base row, so they were dropped (one card, one row, one pool). A variation the page NAMES differs in its player text and is kept as the distinct card it is.",
+ "variationAxisApplied": {
+  "appliedAt": "2026-09-13",
+  "source": "baseballcardpedia-2026-09-13",
+  "why": "#2112's insert-set-key guard refused this file: rows would have landed on fewer distinct ids than there are rows, so a later row would have overwritten an earlier one inside one run and the last writer would have decided which card the address holds. Every decision below was verified against the live baseballcardpedia page before it was applied; nothing here invents a label the source does not print.",
+  "decisions": {
+   "imageVariations": {
+    "rows": 678,
+    "rule": "image variation — the photo descriptor bcp prints after the player's name moves to the parallel axis as \"<Name> Image Variation SP\" (#1613), and the photo names the subset so the base ladder is not multiplied by it"
+   },
+   "trailingPrintRunMoved": {
+    "rows": 14,
+    "rule": "trailing serial — bcp writes a rung's print run inside the player cell (\"Adrian Beltre 25\"); it is moved to printRun, which is what lets a rung's roster compare equal to its root's"
+   },
+   "namedSubsetRestored": {
+    "rows": 52,
+    "rule": "named subset — the source prints a heading for these rows that the scrape flattened into `base`; the category is restored to the section the source names"
+   },
+   "duplicatesDropped": {
+    "rows": 13,
+    "rule": "duplicate — a byte-identical row, or a repeat of a checklist line under a misspelling of the same player with no descriptor to make it a distinct card"
+   }
+  },
+  "rowsBefore": 12065,
+  "rowsAfter": 11609,
+  "distinctIdsAfter": 11557,
+  "verdictAfter": "refuse",
+  "heldRows": {
+   "rows": 443,
+   "groups": 215,
+   "rule": "held — the source prints this number more than once and prints nothing that distinguishes the printings; both sides are withheld (absent beats wrong)",
+   "detail": [
+    {
+     "address": "base|341|Base|false|",
+     "cardNumber": "341",
+     "category": "base",
+     "parallel": "Base",
+     "players": [
+      "Alex Bregman RC RCup",
+      "Alex Bregman (dugout)",
+      "Alex Bregman"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|341|Rainbow Foil|false|",
+     "cardNumber": "341",
+     "category": "base",
+     "parallel": "Rainbow Foil",
+     "players": [
+      "Alex Bregman RC RCup",
+      "Alex Bregman (dugout)",
+      "Alex Bregman"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|341|Purple|false|",
+     "cardNumber": "341",
+     "category": "base",
+     "parallel": "Purple",
+     "players": [
+      "Alex Bregman RC RCup",
+      "Alex Bregman (dugout)",
+      "Alex Bregman"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|341|Negative|false|",
+     "cardNumber": "341",
+     "category": "base",
+     "parallel": "Negative",
+     "players": [
+      "Alex Bregman RC RCup",
+      "Alex Bregman (dugout)",
+      "Alex Bregman"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|341|Gold|false|2017",
+     "cardNumber": "341",
+     "category": "base",
+     "parallel": "Gold",
+     "players": [
+      "Alex Bregman RC RCup",
+      "Alex Bregman (dugout)",
+      "Alex Bregman"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|341|Sparkle Foil|false|175",
+     "cardNumber": "341",
+     "category": "base",
+     "parallel": "Sparkle Foil",
+     "players": [
+      "Alex Bregman RC RCup",
+      "Alex Bregman (dugout)",
+      "Alex Bregman"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|341|Vintage Stock|false|99",
+     "cardNumber": "341",
+     "category": "base",
+     "parallel": "Vintage Stock",
+     "players": [
+      "Alex Bregman RC RCup",
+      "Alex Bregman (dugout)",
+      "Alex Bregman"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|341|Black|false|66",
+     "cardNumber": "341",
+     "category": "base",
+     "parallel": "Black",
+     "players": [
+      "Alex Bregman RC RCup",
+      "Alex Bregman (dugout)",
+      "Alex Bregman"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|341|Mother’s Day Hot Pink|false|50",
+     "cardNumber": "341",
+     "category": "base",
+     "parallel": "Mother’s Day Hot Pink",
+     "players": [
+      "Alex Bregman RC RCup",
+      "Alex Bregman (dugout)",
+      "Alex Bregman"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|341|Father’s Day Powder Blue|false|50",
+     "cardNumber": "341",
+     "category": "base",
+     "parallel": "Father’s Day Powder Blue",
+     "players": [
+      "Alex Bregman RC RCup",
+      "Alex Bregman (dugout)",
+      "Alex Bregman"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|341|Memorial Day Camo|false|25",
+     "cardNumber": "341",
+     "category": "base",
+     "parallel": "Memorial Day Camo",
+     "players": [
+      "Alex Bregman RC RCup",
+      "Alex Bregman (dugout)",
+      "Alex Bregman"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|341|Platinum|false|1",
+     "cardNumber": "341",
+     "category": "base",
+     "parallel": "Platinum",
+     "players": [
+      "Alex Bregman RC RCup",
+      "Alex Bregman (dugout)",
+      "Alex Bregman"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|341|Printing Plates|false|",
+     "cardNumber": "341",
+     "category": "base",
+     "parallel": "Printing Plates",
+     "players": [
+      "Alex Bregman RC RCup",
+      "Alex Bregman (dugout)",
+      "Alex Bregman"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|375|Base|false|",
+     "cardNumber": "375",
+     "category": "base",
+     "parallel": "Base",
+     "players": [
+      "Yasiel Puig",
+      "Jackie Robinson"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|375|Rainbow Foil|false|",
+     "cardNumber": "375",
+     "category": "base",
+     "parallel": "Rainbow Foil",
+     "players": [
+      "Yasiel Puig",
+      "Jackie Robinson"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|375|Purple|false|",
+     "cardNumber": "375",
+     "category": "base",
+     "parallel": "Purple",
+     "players": [
+      "Yasiel Puig",
+      "Jackie Robinson"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|375|Negative|false|",
+     "cardNumber": "375",
+     "category": "base",
+     "parallel": "Negative",
+     "players": [
+      "Yasiel Puig",
+      "Jackie Robinson"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|375|Gold|false|2017",
+     "cardNumber": "375",
+     "category": "base",
+     "parallel": "Gold",
+     "players": [
+      "Yasiel Puig",
+      "Jackie Robinson"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|375|Sparkle Foil|false|175",
+     "cardNumber": "375",
+     "category": "base",
+     "parallel": "Sparkle Foil",
+     "players": [
+      "Yasiel Puig",
+      "Jackie Robinson"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|375|Vintage Stock|false|99",
+     "cardNumber": "375",
+     "category": "base",
+     "parallel": "Vintage Stock",
+     "players": [
+      "Yasiel Puig",
+      "Jackie Robinson"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|375|Black|false|66",
+     "cardNumber": "375",
+     "category": "base",
+     "parallel": "Black",
+     "players": [
+      "Yasiel Puig",
+      "Jackie Robinson"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|375|Mother’s Day Hot Pink|false|50",
+     "cardNumber": "375",
+     "category": "base",
+     "parallel": "Mother’s Day Hot Pink",
+     "players": [
+      "Yasiel Puig",
+      "Jackie Robinson"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|375|Father’s Day Powder Blue|false|50",
+     "cardNumber": "375",
+     "category": "base",
+     "parallel": "Father’s Day Powder Blue",
+     "players": [
+      "Yasiel Puig",
+      "Jackie Robinson"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|375|Memorial Day Camo|false|25",
+     "cardNumber": "375",
+     "category": "base",
+     "parallel": "Memorial Day Camo",
+     "players": [
+      "Yasiel Puig",
+      "Jackie Robinson"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|375|Platinum|false|1",
+     "cardNumber": "375",
+     "category": "base",
+     "parallel": "Platinum",
+     "players": [
+      "Yasiel Puig",
+      "Jackie Robinson"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|375|Printing Plates|false|",
+     "cardNumber": "375",
+     "category": "base",
+     "parallel": "Printing Plates",
+     "players": [
+      "Yasiel Puig",
+      "Jackie Robinson"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|382|Base|false|",
+     "cardNumber": "382",
+     "category": "base",
+     "parallel": "Base",
+     "players": [
+      "Josh Harrison",
+      "Honus Wagner"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|382|Rainbow Foil|false|",
+     "cardNumber": "382",
+     "category": "base",
+     "parallel": "Rainbow Foil",
+     "players": [
+      "Josh Harrison",
+      "Honus Wagner"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|382|Purple|false|",
+     "cardNumber": "382",
+     "category": "base",
+     "parallel": "Purple",
+     "players": [
+      "Josh Harrison",
+      "Honus Wagner"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|382|Negative|false|",
+     "cardNumber": "382",
+     "category": "base",
+     "parallel": "Negative",
+     "players": [
+      "Josh Harrison",
+      "Honus Wagner"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|382|Gold|false|2017",
+     "cardNumber": "382",
+     "category": "base",
+     "parallel": "Gold",
+     "players": [
+      "Josh Harrison",
+      "Honus Wagner"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|382|Sparkle Foil|false|175",
+     "cardNumber": "382",
+     "category": "base",
+     "parallel": "Sparkle Foil",
+     "players": [
+      "Josh Harrison",
+      "Honus Wagner"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|382|Vintage Stock|false|99",
+     "cardNumber": "382",
+     "category": "base",
+     "parallel": "Vintage Stock",
+     "players": [
+      "Josh Harrison",
+      "Honus Wagner"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|382|Black|false|66",
+     "cardNumber": "382",
+     "category": "base",
+     "parallel": "Black",
+     "players": [
+      "Josh Harrison",
+      "Honus Wagner"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|382|Mother’s Day Hot Pink|false|50",
+     "cardNumber": "382",
+     "category": "base",
+     "parallel": "Mother’s Day Hot Pink",
+     "players": [
+      "Josh Harrison",
+      "Honus Wagner"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|382|Father’s Day Powder Blue|false|50",
+     "cardNumber": "382",
+     "category": "base",
+     "parallel": "Father’s Day Powder Blue",
+     "players": [
+      "Josh Harrison",
+      "Honus Wagner"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|382|Memorial Day Camo|false|25",
+     "cardNumber": "382",
+     "category": "base",
+     "parallel": "Memorial Day Camo",
+     "players": [
+      "Josh Harrison",
+      "Honus Wagner"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|382|Platinum|false|1",
+     "cardNumber": "382",
+     "category": "base",
+     "parallel": "Platinum",
+     "players": [
+      "Josh Harrison",
+      "Honus Wagner"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|382|Printing Plates|false|",
+     "cardNumber": "382",
+     "category": "base",
+     "parallel": "Printing Plates",
+     "players": [
+      "Josh Harrison",
+      "Honus Wagner"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|482|Base|false|",
+     "cardNumber": "482",
+     "category": "base",
+     "parallel": "Base",
+     "players": [
+      "Didi Gregorius",
+      "Lou Gehrig"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|482|Rainbow Foil|false|",
+     "cardNumber": "482",
+     "category": "base",
+     "parallel": "Rainbow Foil",
+     "players": [
+      "Didi Gregorius",
+      "Lou Gehrig"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|482|Purple|false|",
+     "cardNumber": "482",
+     "category": "base",
+     "parallel": "Purple",
+     "players": [
+      "Didi Gregorius",
+      "Lou Gehrig"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|482|Negative|false|",
+     "cardNumber": "482",
+     "category": "base",
+     "parallel": "Negative",
+     "players": [
+      "Didi Gregorius",
+      "Lou Gehrig"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|482|Gold|false|2017",
+     "cardNumber": "482",
+     "category": "base",
+     "parallel": "Gold",
+     "players": [
+      "Didi Gregorius",
+      "Lou Gehrig"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|482|Sparkle Foil|false|175",
+     "cardNumber": "482",
+     "category": "base",
+     "parallel": "Sparkle Foil",
+     "players": [
+      "Didi Gregorius",
+      "Lou Gehrig"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|482|Vintage Stock|false|99",
+     "cardNumber": "482",
+     "category": "base",
+     "parallel": "Vintage Stock",
+     "players": [
+      "Didi Gregorius",
+      "Lou Gehrig"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|482|Black|false|66",
+     "cardNumber": "482",
+     "category": "base",
+     "parallel": "Black",
+     "players": [
+      "Didi Gregorius",
+      "Lou Gehrig"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|482|Mother’s Day Hot Pink|false|50",
+     "cardNumber": "482",
+     "category": "base",
+     "parallel": "Mother’s Day Hot Pink",
+     "players": [
+      "Didi Gregorius",
+      "Lou Gehrig"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|482|Father’s Day Powder Blue|false|50",
+     "cardNumber": "482",
+     "category": "base",
+     "parallel": "Father’s Day Powder Blue",
+     "players": [
+      "Didi Gregorius",
+      "Lou Gehrig"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|482|Memorial Day Camo|false|25",
+     "cardNumber": "482",
+     "category": "base",
+     "parallel": "Memorial Day Camo",
+     "players": [
+      "Didi Gregorius",
+      "Lou Gehrig"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|482|Platinum|false|1",
+     "cardNumber": "482",
+     "category": "base",
+     "parallel": "Platinum",
+     "players": [
+      "Didi Gregorius",
+      "Lou Gehrig"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|482|Printing Plates|false|",
+     "cardNumber": "482",
+     "category": "base",
+     "parallel": "Printing Plates",
+     "players": [
+      "Didi Gregorius",
+      "Lou Gehrig"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|485|Base|false|",
+     "cardNumber": "485",
+     "category": "base",
+     "parallel": "Base",
+     "players": [
+      "Greg Bird",
+      "Roger Maris"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|485|Rainbow Foil|false|",
+     "cardNumber": "485",
+     "category": "base",
+     "parallel": "Rainbow Foil",
+     "players": [
+      "Greg Bird",
+      "Roger Maris"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|485|Purple|false|",
+     "cardNumber": "485",
+     "category": "base",
+     "parallel": "Purple",
+     "players": [
+      "Greg Bird",
+      "Roger Maris"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|485|Negative|false|",
+     "cardNumber": "485",
+     "category": "base",
+     "parallel": "Negative",
+     "players": [
+      "Greg Bird",
+      "Roger Maris"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|485|Gold|false|2017",
+     "cardNumber": "485",
+     "category": "base",
+     "parallel": "Gold",
+     "players": [
+      "Greg Bird",
+      "Roger Maris"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|485|Sparkle Foil|false|175",
+     "cardNumber": "485",
+     "category": "base",
+     "parallel": "Sparkle Foil",
+     "players": [
+      "Greg Bird",
+      "Roger Maris"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|485|Vintage Stock|false|99",
+     "cardNumber": "485",
+     "category": "base",
+     "parallel": "Vintage Stock",
+     "players": [
+      "Greg Bird",
+      "Roger Maris"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|485|Black|false|66",
+     "cardNumber": "485",
+     "category": "base",
+     "parallel": "Black",
+     "players": [
+      "Greg Bird",
+      "Roger Maris"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|485|Mother’s Day Hot Pink|false|50",
+     "cardNumber": "485",
+     "category": "base",
+     "parallel": "Mother’s Day Hot Pink",
+     "players": [
+      "Greg Bird",
+      "Roger Maris"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|485|Father’s Day Powder Blue|false|50",
+     "cardNumber": "485",
+     "category": "base",
+     "parallel": "Father’s Day Powder Blue",
+     "players": [
+      "Greg Bird",
+      "Roger Maris"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|485|Memorial Day Camo|false|25",
+     "cardNumber": "485",
+     "category": "base",
+     "parallel": "Memorial Day Camo",
+     "players": [
+      "Greg Bird",
+      "Roger Maris"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|485|Platinum|false|1",
+     "cardNumber": "485",
+     "category": "base",
+     "parallel": "Platinum",
+     "players": [
+      "Greg Bird",
+      "Roger Maris"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|485|Printing Plates|false|",
+     "cardNumber": "485",
+     "category": "base",
+     "parallel": "Printing Plates",
+     "players": [
+      "Greg Bird",
+      "Roger Maris"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|500|Base|false|",
+     "cardNumber": "500",
+     "category": "base",
+     "parallel": "Base",
+     "players": [
+      "Anthony Rizzo",
+      "Ernie Banks"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|500|Rainbow Foil|false|",
+     "cardNumber": "500",
+     "category": "base",
+     "parallel": "Rainbow Foil",
+     "players": [
+      "Anthony Rizzo",
+      "Ernie Banks"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|500|Purple|false|",
+     "cardNumber": "500",
+     "category": "base",
+     "parallel": "Purple",
+     "players": [
+      "Anthony Rizzo",
+      "Ernie Banks"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|500|Negative|false|",
+     "cardNumber": "500",
+     "category": "base",
+     "parallel": "Negative",
+     "players": [
+      "Anthony Rizzo",
+      "Ernie Banks"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|500|Gold|false|2017",
+     "cardNumber": "500",
+     "category": "base",
+     "parallel": "Gold",
+     "players": [
+      "Anthony Rizzo",
+      "Ernie Banks"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|500|Sparkle Foil|false|175",
+     "cardNumber": "500",
+     "category": "base",
+     "parallel": "Sparkle Foil",
+     "players": [
+      "Anthony Rizzo",
+      "Ernie Banks"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|500|Vintage Stock|false|99",
+     "cardNumber": "500",
+     "category": "base",
+     "parallel": "Vintage Stock",
+     "players": [
+      "Anthony Rizzo",
+      "Ernie Banks"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|500|Black|false|66",
+     "cardNumber": "500",
+     "category": "base",
+     "parallel": "Black",
+     "players": [
+      "Anthony Rizzo",
+      "Ernie Banks"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|500|Mother’s Day Hot Pink|false|50",
+     "cardNumber": "500",
+     "category": "base",
+     "parallel": "Mother’s Day Hot Pink",
+     "players": [
+      "Anthony Rizzo",
+      "Ernie Banks"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|500|Father’s Day Powder Blue|false|50",
+     "cardNumber": "500",
+     "category": "base",
+     "parallel": "Father’s Day Powder Blue",
+     "players": [
+      "Anthony Rizzo",
+      "Ernie Banks"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|500|Memorial Day Camo|false|25",
+     "cardNumber": "500",
+     "category": "base",
+     "parallel": "Memorial Day Camo",
+     "players": [
+      "Anthony Rizzo",
+      "Ernie Banks"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|500|Platinum|false|1",
+     "cardNumber": "500",
+     "category": "base",
+     "parallel": "Platinum",
+     "players": [
+      "Anthony Rizzo",
+      "Ernie Banks"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|500|Printing Plates|false|",
+     "cardNumber": "500",
+     "category": "base",
+     "parallel": "Printing Plates",
+     "players": [
+      "Anthony Rizzo",
+      "Ernie Banks"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|508|Base|false|",
+     "cardNumber": "508",
+     "category": "base",
+     "parallel": "Base",
+     "players": [
+      "Hanley Ramirez",
+      "Ted Williams"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|508|Rainbow Foil|false|",
+     "cardNumber": "508",
+     "category": "base",
+     "parallel": "Rainbow Foil",
+     "players": [
+      "Hanley Ramirez",
+      "Ted Williams"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|508|Purple|false|",
+     "cardNumber": "508",
+     "category": "base",
+     "parallel": "Purple",
+     "players": [
+      "Hanley Ramirez",
+      "Ted Williams"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|508|Negative|false|",
+     "cardNumber": "508",
+     "category": "base",
+     "parallel": "Negative",
+     "players": [
+      "Hanley Ramirez",
+      "Ted Williams"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|508|Gold|false|2017",
+     "cardNumber": "508",
+     "category": "base",
+     "parallel": "Gold",
+     "players": [
+      "Hanley Ramirez",
+      "Ted Williams"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|508|Sparkle Foil|false|175",
+     "cardNumber": "508",
+     "category": "base",
+     "parallel": "Sparkle Foil",
+     "players": [
+      "Hanley Ramirez",
+      "Ted Williams"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|508|Vintage Stock|false|99",
+     "cardNumber": "508",
+     "category": "base",
+     "parallel": "Vintage Stock",
+     "players": [
+      "Hanley Ramirez",
+      "Ted Williams"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|508|Black|false|66",
+     "cardNumber": "508",
+     "category": "base",
+     "parallel": "Black",
+     "players": [
+      "Hanley Ramirez",
+      "Ted Williams"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|508|Mother’s Day Hot Pink|false|50",
+     "cardNumber": "508",
+     "category": "base",
+     "parallel": "Mother’s Day Hot Pink",
+     "players": [
+      "Hanley Ramirez",
+      "Ted Williams"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|508|Father’s Day Powder Blue|false|50",
+     "cardNumber": "508",
+     "category": "base",
+     "parallel": "Father’s Day Powder Blue",
+     "players": [
+      "Hanley Ramirez",
+      "Ted Williams"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|508|Memorial Day Camo|false|25",
+     "cardNumber": "508",
+     "category": "base",
+     "parallel": "Memorial Day Camo",
+     "players": [
+      "Hanley Ramirez",
+      "Ted Williams"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|508|Platinum|false|1",
+     "cardNumber": "508",
+     "category": "base",
+     "parallel": "Platinum",
+     "players": [
+      "Hanley Ramirez",
+      "Ted Williams"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|508|Printing Plates|false|",
+     "cardNumber": "508",
+     "category": "base",
+     "parallel": "Printing Plates",
+     "players": [
+      "Hanley Ramirez",
+      "Ted Williams"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|580|Base|false|",
+     "cardNumber": "580",
+     "category": "base",
+     "parallel": "Base",
+     "players": [
+      "Matt Holliday",
+      "Babe Ruth"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|580|Rainbow Foil|false|",
+     "cardNumber": "580",
+     "category": "base",
+     "parallel": "Rainbow Foil",
+     "players": [
+      "Matt Holliday",
+      "Babe Ruth"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|580|Purple|false|",
+     "cardNumber": "580",
+     "category": "base",
+     "parallel": "Purple",
+     "players": [
+      "Matt Holliday",
+      "Babe Ruth"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|580|Negative|false|",
+     "cardNumber": "580",
+     "category": "base",
+     "parallel": "Negative",
+     "players": [
+      "Matt Holliday",
+      "Babe Ruth"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|580|Gold|false|2017",
+     "cardNumber": "580",
+     "category": "base",
+     "parallel": "Gold",
+     "players": [
+      "Matt Holliday",
+      "Babe Ruth"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|580|Sparkle Foil|false|175",
+     "cardNumber": "580",
+     "category": "base",
+     "parallel": "Sparkle Foil",
+     "players": [
+      "Matt Holliday",
+      "Babe Ruth"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|580|Vintage Stock|false|99",
+     "cardNumber": "580",
+     "category": "base",
+     "parallel": "Vintage Stock",
+     "players": [
+      "Matt Holliday",
+      "Babe Ruth"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|580|Black|false|66",
+     "cardNumber": "580",
+     "category": "base",
+     "parallel": "Black",
+     "players": [
+      "Matt Holliday",
+      "Babe Ruth"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|580|Mother’s Day Hot Pink|false|50",
+     "cardNumber": "580",
+     "category": "base",
+     "parallel": "Mother’s Day Hot Pink",
+     "players": [
+      "Matt Holliday",
+      "Babe Ruth"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|580|Father’s Day Powder Blue|false|50",
+     "cardNumber": "580",
+     "category": "base",
+     "parallel": "Father’s Day Powder Blue",
+     "players": [
+      "Matt Holliday",
+      "Babe Ruth"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|580|Memorial Day Camo|false|25",
+     "cardNumber": "580",
+     "category": "base",
+     "parallel": "Memorial Day Camo",
+     "players": [
+      "Matt Holliday",
+      "Babe Ruth"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|580|Platinum|false|1",
+     "cardNumber": "580",
+     "category": "base",
+     "parallel": "Platinum",
+     "players": [
+      "Matt Holliday",
+      "Babe Ruth"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|580|Printing Plates|false|",
+     "cardNumber": "580",
+     "category": "base",
+     "parallel": "Printing Plates",
+     "players": [
+      "Matt Holliday",
+      "Babe Ruth"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|611|Base|false|",
+     "cardNumber": "611",
+     "category": "base",
+     "parallel": "Base",
+     "players": [
+      "Victor Martinez",
+      "Ty Cobb"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|611|Rainbow Foil|false|",
+     "cardNumber": "611",
+     "category": "base",
+     "parallel": "Rainbow Foil",
+     "players": [
+      "Victor Martinez",
+      "Ty Cobb"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|611|Purple|false|",
+     "cardNumber": "611",
+     "category": "base",
+     "parallel": "Purple",
+     "players": [
+      "Victor Martinez",
+      "Ty Cobb"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|611|Negative|false|",
+     "cardNumber": "611",
+     "category": "base",
+     "parallel": "Negative",
+     "players": [
+      "Victor Martinez",
+      "Ty Cobb"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|611|Gold|false|2017",
+     "cardNumber": "611",
+     "category": "base",
+     "parallel": "Gold",
+     "players": [
+      "Victor Martinez",
+      "Ty Cobb"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|611|Sparkle Foil|false|175",
+     "cardNumber": "611",
+     "category": "base",
+     "parallel": "Sparkle Foil",
+     "players": [
+      "Victor Martinez",
+      "Ty Cobb"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|611|Vintage Stock|false|99",
+     "cardNumber": "611",
+     "category": "base",
+     "parallel": "Vintage Stock",
+     "players": [
+      "Victor Martinez",
+      "Ty Cobb"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|611|Black|false|66",
+     "cardNumber": "611",
+     "category": "base",
+     "parallel": "Black",
+     "players": [
+      "Victor Martinez",
+      "Ty Cobb"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|611|Mother’s Day Hot Pink|false|50",
+     "cardNumber": "611",
+     "category": "base",
+     "parallel": "Mother’s Day Hot Pink",
+     "players": [
+      "Victor Martinez",
+      "Ty Cobb"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|611|Father’s Day Powder Blue|false|50",
+     "cardNumber": "611",
+     "category": "base",
+     "parallel": "Father’s Day Powder Blue",
+     "players": [
+      "Victor Martinez",
+      "Ty Cobb"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|611|Memorial Day Camo|false|25",
+     "cardNumber": "611",
+     "category": "base",
+     "parallel": "Memorial Day Camo",
+     "players": [
+      "Victor Martinez",
+      "Ty Cobb"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|611|Platinum|false|1",
+     "cardNumber": "611",
+     "category": "base",
+     "parallel": "Platinum",
+     "players": [
+      "Victor Martinez",
+      "Ty Cobb"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|611|Printing Plates|false|",
+     "cardNumber": "611",
+     "category": "base",
+     "parallel": "Printing Plates",
+     "players": [
+      "Victor Martinez",
+      "Ty Cobb"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|639|Base|false|",
+     "cardNumber": "639",
+     "category": "base",
+     "parallel": "Base",
+     "players": [
+      "Matt Kemp",
+      "Hank Aaron"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|639|Rainbow Foil|false|",
+     "cardNumber": "639",
+     "category": "base",
+     "parallel": "Rainbow Foil",
+     "players": [
+      "Matt Kemp",
+      "Hank Aaron"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|639|Purple|false|",
+     "cardNumber": "639",
+     "category": "base",
+     "parallel": "Purple",
+     "players": [
+      "Matt Kemp",
+      "Hank Aaron"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|639|Negative|false|",
+     "cardNumber": "639",
+     "category": "base",
+     "parallel": "Negative",
+     "players": [
+      "Matt Kemp",
+      "Hank Aaron"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|639|Gold|false|2017",
+     "cardNumber": "639",
+     "category": "base",
+     "parallel": "Gold",
+     "players": [
+      "Matt Kemp",
+      "Hank Aaron"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|639|Sparkle Foil|false|175",
+     "cardNumber": "639",
+     "category": "base",
+     "parallel": "Sparkle Foil",
+     "players": [
+      "Matt Kemp",
+      "Hank Aaron"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|639|Vintage Stock|false|99",
+     "cardNumber": "639",
+     "category": "base",
+     "parallel": "Vintage Stock",
+     "players": [
+      "Matt Kemp",
+      "Hank Aaron"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|639|Black|false|66",
+     "cardNumber": "639",
+     "category": "base",
+     "parallel": "Black",
+     "players": [
+      "Matt Kemp",
+      "Hank Aaron"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|639|Mother’s Day Hot Pink|false|50",
+     "cardNumber": "639",
+     "category": "base",
+     "parallel": "Mother’s Day Hot Pink",
+     "players": [
+      "Matt Kemp",
+      "Hank Aaron"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|639|Father’s Day Powder Blue|false|50",
+     "cardNumber": "639",
+     "category": "base",
+     "parallel": "Father’s Day Powder Blue",
+     "players": [
+      "Matt Kemp",
+      "Hank Aaron"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|639|Memorial Day Camo|false|25",
+     "cardNumber": "639",
+     "category": "base",
+     "parallel": "Memorial Day Camo",
+     "players": [
+      "Matt Kemp",
+      "Hank Aaron"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|639|Platinum|false|1",
+     "cardNumber": "639",
+     "category": "base",
+     "parallel": "Platinum",
+     "players": [
+      "Matt Kemp",
+      "Hank Aaron"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|639|Printing Plates|false|",
+     "cardNumber": "639",
+     "category": "base",
+     "parallel": "Printing Plates",
+     "players": [
+      "Matt Kemp",
+      "Hank Aaron"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|650|Base|false|",
+     "cardNumber": "650",
+     "category": "base",
+     "parallel": "Base",
+     "players": [
+      "Andrew McCutchen",
+      "Roberto Clemente"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|650|Rainbow Foil|false|",
+     "cardNumber": "650",
+     "category": "base",
+     "parallel": "Rainbow Foil",
+     "players": [
+      "Andrew McCutchen",
+      "Roberto Clemente"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|650|Purple|false|",
+     "cardNumber": "650",
+     "category": "base",
+     "parallel": "Purple",
+     "players": [
+      "Andrew McCutchen",
+      "Roberto Clemente"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|650|Negative|false|",
+     "cardNumber": "650",
+     "category": "base",
+     "parallel": "Negative",
+     "players": [
+      "Andrew McCutchen",
+      "Roberto Clemente"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|650|Gold|false|2017",
+     "cardNumber": "650",
+     "category": "base",
+     "parallel": "Gold",
+     "players": [
+      "Andrew McCutchen",
+      "Roberto Clemente"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|650|Sparkle Foil|false|175",
+     "cardNumber": "650",
+     "category": "base",
+     "parallel": "Sparkle Foil",
+     "players": [
+      "Andrew McCutchen",
+      "Roberto Clemente"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|650|Vintage Stock|false|99",
+     "cardNumber": "650",
+     "category": "base",
+     "parallel": "Vintage Stock",
+     "players": [
+      "Andrew McCutchen",
+      "Roberto Clemente"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|650|Black|false|66",
+     "cardNumber": "650",
+     "category": "base",
+     "parallel": "Black",
+     "players": [
+      "Andrew McCutchen",
+      "Roberto Clemente"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|650|Mother’s Day Hot Pink|false|50",
+     "cardNumber": "650",
+     "category": "base",
+     "parallel": "Mother’s Day Hot Pink",
+     "players": [
+      "Andrew McCutchen",
+      "Roberto Clemente"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|650|Father’s Day Powder Blue|false|50",
+     "cardNumber": "650",
+     "category": "base",
+     "parallel": "Father’s Day Powder Blue",
+     "players": [
+      "Andrew McCutchen",
+      "Roberto Clemente"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|650|Memorial Day Camo|false|25",
+     "cardNumber": "650",
+     "category": "base",
+     "parallel": "Memorial Day Camo",
+     "players": [
+      "Andrew McCutchen",
+      "Roberto Clemente"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|650|Platinum|false|1",
+     "cardNumber": "650",
+     "category": "base",
+     "parallel": "Platinum",
+     "players": [
+      "Andrew McCutchen",
+      "Roberto Clemente"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|650|Printing Plates|false|",
+     "cardNumber": "650",
+     "category": "base",
+     "parallel": "Printing Plates",
+     "players": [
+      "Andrew McCutchen",
+      "Roberto Clemente"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|597|Base|false|",
+     "cardNumber": "597",
+     "category": "base",
+     "parallel": "Base",
+     "players": [
+      "Kenta Maeda",
+      "Sandy Koufax"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|597|Rainbow Foil|false|",
+     "cardNumber": "597",
+     "category": "base",
+     "parallel": "Rainbow Foil",
+     "players": [
+      "Kenta Maeda",
+      "Sandy Koufax"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|597|Purple|false|",
+     "cardNumber": "597",
+     "category": "base",
+     "parallel": "Purple",
+     "players": [
+      "Kenta Maeda",
+      "Sandy Koufax"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|597|Negative|false|",
+     "cardNumber": "597",
+     "category": "base",
+     "parallel": "Negative",
+     "players": [
+      "Kenta Maeda",
+      "Sandy Koufax"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|597|Gold|false|2017",
+     "cardNumber": "597",
+     "category": "base",
+     "parallel": "Gold",
+     "players": [
+      "Kenta Maeda",
+      "Sandy Koufax"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|597|Sparkle Foil|false|175",
+     "cardNumber": "597",
+     "category": "base",
+     "parallel": "Sparkle Foil",
+     "players": [
+      "Kenta Maeda",
+      "Sandy Koufax"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|597|Vintage Stock|false|99",
+     "cardNumber": "597",
+     "category": "base",
+     "parallel": "Vintage Stock",
+     "players": [
+      "Kenta Maeda",
+      "Sandy Koufax"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|597|Black|false|66",
+     "cardNumber": "597",
+     "category": "base",
+     "parallel": "Black",
+     "players": [
+      "Kenta Maeda",
+      "Sandy Koufax"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|597|Mother’s Day Hot Pink|false|50",
+     "cardNumber": "597",
+     "category": "base",
+     "parallel": "Mother’s Day Hot Pink",
+     "players": [
+      "Kenta Maeda",
+      "Sandy Koufax"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|597|Father’s Day Powder Blue|false|50",
+     "cardNumber": "597",
+     "category": "base",
+     "parallel": "Father’s Day Powder Blue",
+     "players": [
+      "Kenta Maeda",
+      "Sandy Koufax"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|597|Memorial Day Camo|false|25",
+     "cardNumber": "597",
+     "category": "base",
+     "parallel": "Memorial Day Camo",
+     "players": [
+      "Kenta Maeda",
+      "Sandy Koufax"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|597|Platinum|false|1",
+     "cardNumber": "597",
+     "category": "base",
+     "parallel": "Platinum",
+     "players": [
+      "Kenta Maeda",
+      "Sandy Koufax"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|597|Printing Plates|false|",
+     "cardNumber": "597",
+     "category": "base",
+     "parallel": "Printing Plates",
+     "players": [
+      "Kenta Maeda",
+      "Sandy Koufax"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-pitch|FP-21||false|",
+     "cardNumber": "FP-21",
+     "category": "insert-first-pitch",
+     "parallel": "",
+     "players": [
+      "Jon Lovitz",
+      "Bonnie Hunt"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-pitch|FP-22||false|",
+     "cardNumber": "FP-22",
+     "category": "insert-first-pitch",
+     "parallel": "",
+     "players": [
+      "Stephen Colbert",
+      "Isaiah Mustafa"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-pitch|FP-23||false|",
+     "cardNumber": "FP-23",
+     "category": "insert-first-pitch",
+     "parallel": "",
+     "players": [
+      "Mase",
+      "Ben Higgins"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-1987-chrome-refractors|87-AJ||false|",
+     "cardNumber": "87-AJ",
+     "category": "insert-1987-chrome-refractors",
+     "parallel": "",
+     "players": [
+      "Aaron Judge",
+      "Adam Jones"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-1987-chrome-refractors|87-AJ|Green Refractor|false|",
+     "cardNumber": "87-AJ",
+     "category": "insert-1987-chrome-refractors",
+     "parallel": "Green Refractor",
+     "players": [
+      "Aaron Judge",
+      "Adam Jones"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-1987-chrome-refractors|87-AJ|Blue Refractor|false|",
+     "cardNumber": "87-AJ",
+     "category": "insert-1987-chrome-refractors",
+     "parallel": "Blue Refractor",
+     "players": [
+      "Aaron Judge",
+      "Adam Jones"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-1987-chrome-refractors|87-AJ|Orange Refractor|false|",
+     "cardNumber": "87-AJ",
+     "category": "insert-1987-chrome-refractors",
+     "parallel": "Orange Refractor",
+     "players": [
+      "Aaron Judge",
+      "Adam Jones"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-1987-chrome-refractors|87-AJ|Gold Refractor|false|50",
+     "cardNumber": "87-AJ",
+     "category": "insert-1987-chrome-refractors",
+     "parallel": "Gold Refractor",
+     "players": [
+      "Aaron Judge",
+      "Adam Jones"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-1987-chrome-refractors|87-AJ|Red Refractor|false|20",
+     "cardNumber": "87-AJ",
+     "category": "insert-1987-chrome-refractors",
+     "parallel": "Red Refractor",
+     "players": [
+      "Aaron Judge",
+      "Adam Jones"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-1987-chrome-refractors|87-AJ|Black Refractor|false|1",
+     "cardNumber": "87-AJ",
+     "category": "insert-1987-chrome-refractors",
+     "parallel": "Black Refractor",
+     "players": [
+      "Aaron Judge",
+      "Adam Jones"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-1987-chrome-refractors|87-CK||false|",
+     "cardNumber": "87-CK",
+     "category": "insert-1987-chrome-refractors",
+     "parallel": "",
+     "players": [
+      "Clayton Kershaw",
+      "Corey Kluber"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-1987-chrome-refractors|87-CK|Green Refractor|false|",
+     "cardNumber": "87-CK",
+     "category": "insert-1987-chrome-refractors",
+     "parallel": "Green Refractor",
+     "players": [
+      "Clayton Kershaw",
+      "Corey Kluber"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-1987-chrome-refractors|87-CK|Blue Refractor|false|",
+     "cardNumber": "87-CK",
+     "category": "insert-1987-chrome-refractors",
+     "parallel": "Blue Refractor",
+     "players": [
+      "Clayton Kershaw",
+      "Corey Kluber"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-1987-chrome-refractors|87-CK|Orange Refractor|false|",
+     "cardNumber": "87-CK",
+     "category": "insert-1987-chrome-refractors",
+     "parallel": "Orange Refractor",
+     "players": [
+      "Clayton Kershaw",
+      "Corey Kluber"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-1987-chrome-refractors|87-CK|Gold Refractor|false|50",
+     "cardNumber": "87-CK",
+     "category": "insert-1987-chrome-refractors",
+     "parallel": "Gold Refractor",
+     "players": [
+      "Clayton Kershaw",
+      "Corey Kluber"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-1987-chrome-refractors|87-CK|Red Refractor|false|20",
+     "cardNumber": "87-CK",
+     "category": "insert-1987-chrome-refractors",
+     "parallel": "Red Refractor",
+     "players": [
+      "Clayton Kershaw",
+      "Corey Kluber"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-1987-chrome-refractors|87-CK|Black Refractor|false|1",
+     "cardNumber": "87-CK",
+     "category": "insert-1987-chrome-refractors",
+     "parallel": "Black Refractor",
+     "players": [
+      "Clayton Kershaw",
+      "Corey Kluber"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-1987-chrome-refractors|87-GS||false|",
+     "cardNumber": "87-GS",
+     "category": "insert-1987-chrome-refractors",
+     "parallel": "",
+     "players": [
+      "Gary Sanchez",
+      "George Springer"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-1987-chrome-refractors|87-GS|Green Refractor|false|",
+     "cardNumber": "87-GS",
+     "category": "insert-1987-chrome-refractors",
+     "parallel": "Green Refractor",
+     "players": [
+      "Gary Sanchez",
+      "George Springer"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-1987-chrome-refractors|87-GS|Blue Refractor|false|",
+     "cardNumber": "87-GS",
+     "category": "insert-1987-chrome-refractors",
+     "parallel": "Blue Refractor",
+     "players": [
+      "Gary Sanchez",
+      "George Springer"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-1987-chrome-refractors|87-GS|Orange Refractor|false|",
+     "cardNumber": "87-GS",
+     "category": "insert-1987-chrome-refractors",
+     "parallel": "Orange Refractor",
+     "players": [
+      "Gary Sanchez",
+      "George Springer"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-1987-chrome-refractors|87-GS|Gold Refractor|false|50",
+     "cardNumber": "87-GS",
+     "category": "insert-1987-chrome-refractors",
+     "parallel": "Gold Refractor",
+     "players": [
+      "Gary Sanchez",
+      "George Springer"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-1987-chrome-refractors|87-GS|Red Refractor|false|20",
+     "cardNumber": "87-GS",
+     "category": "insert-1987-chrome-refractors",
+     "parallel": "Red Refractor",
+     "players": [
+      "Gary Sanchez",
+      "George Springer"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-1987-chrome-refractors|87-GS|Black Refractor|false|1",
+     "cardNumber": "87-GS",
+     "category": "insert-1987-chrome-refractors",
+     "parallel": "Black Refractor",
+     "players": [
+      "Gary Sanchez",
+      "George Springer"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-1987-chrome-refractors|87-JV||false|",
+     "cardNumber": "87-JV",
+     "category": "insert-1987-chrome-refractors",
+     "parallel": "",
+     "players": [
+      "Joey Votto",
+      "Justin Verlander"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-1987-chrome-refractors|87-JV|Green Refractor|false|",
+     "cardNumber": "87-JV",
+     "category": "insert-1987-chrome-refractors",
+     "parallel": "Green Refractor",
+     "players": [
+      "Joey Votto",
+      "Justin Verlander"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-1987-chrome-refractors|87-JV|Blue Refractor|false|",
+     "cardNumber": "87-JV",
+     "category": "insert-1987-chrome-refractors",
+     "parallel": "Blue Refractor",
+     "players": [
+      "Joey Votto",
+      "Justin Verlander"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-1987-chrome-refractors|87-JV|Orange Refractor|false|",
+     "cardNumber": "87-JV",
+     "category": "insert-1987-chrome-refractors",
+     "parallel": "Orange Refractor",
+     "players": [
+      "Joey Votto",
+      "Justin Verlander"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-1987-chrome-refractors|87-JV|Gold Refractor|false|50",
+     "cardNumber": "87-JV",
+     "category": "insert-1987-chrome-refractors",
+     "parallel": "Gold Refractor",
+     "players": [
+      "Joey Votto",
+      "Justin Verlander"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-1987-chrome-refractors|87-JV|Red Refractor|false|20",
+     "cardNumber": "87-JV",
+     "category": "insert-1987-chrome-refractors",
+     "parallel": "Red Refractor",
+     "players": [
+      "Joey Votto",
+      "Justin Verlander"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-1987-chrome-refractors|87-JV|Black Refractor|false|1",
+     "cardNumber": "87-JV",
+     "category": "insert-1987-chrome-refractors",
+     "parallel": "Black Refractor",
+     "players": [
+      "Joey Votto",
+      "Justin Verlander"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-1987-chrome-refractors|87-MB||false|",
+     "cardNumber": "87-MB",
+     "category": "insert-1987-chrome-refractors",
+     "parallel": "",
+     "players": [
+      "Madison Bumgarner",
+      "Mookie Betts"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-1987-chrome-refractors|87-MB|Green Refractor|false|",
+     "cardNumber": "87-MB",
+     "category": "insert-1987-chrome-refractors",
+     "parallel": "Green Refractor",
+     "players": [
+      "Madison Bumgarner",
+      "Mookie Betts"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-1987-chrome-refractors|87-MB|Blue Refractor|false|",
+     "cardNumber": "87-MB",
+     "category": "insert-1987-chrome-refractors",
+     "parallel": "Blue Refractor",
+     "players": [
+      "Madison Bumgarner",
+      "Mookie Betts"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-1987-chrome-refractors|87-MB|Orange Refractor|false|",
+     "cardNumber": "87-MB",
+     "category": "insert-1987-chrome-refractors",
+     "parallel": "Orange Refractor",
+     "players": [
+      "Madison Bumgarner",
+      "Mookie Betts"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-1987-chrome-refractors|87-MB|Gold Refractor|false|50",
+     "cardNumber": "87-MB",
+     "category": "insert-1987-chrome-refractors",
+     "parallel": "Gold Refractor",
+     "players": [
+      "Madison Bumgarner",
+      "Mookie Betts"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-1987-chrome-refractors|87-MB|Red Refractor|false|20",
+     "cardNumber": "87-MB",
+     "category": "insert-1987-chrome-refractors",
+     "parallel": "Red Refractor",
+     "players": [
+      "Madison Bumgarner",
+      "Mookie Betts"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-1987-chrome-refractors|87-MB|Black Refractor|false|1",
+     "cardNumber": "87-MB",
+     "category": "insert-1987-chrome-refractors",
+     "parallel": "Black Refractor",
+     "players": [
+      "Madison Bumgarner",
+      "Mookie Betts"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-1987-chrome-refractors|87-MC||false|",
+     "cardNumber": "87-MC",
+     "category": "insert-1987-chrome-refractors",
+     "parallel": "",
+     "players": [
+      "Miguel Cabrera",
+      "Matt Carpenter"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-1987-chrome-refractors|87-MC|Green Refractor|false|",
+     "cardNumber": "87-MC",
+     "category": "insert-1987-chrome-refractors",
+     "parallel": "Green Refractor",
+     "players": [
+      "Miguel Cabrera",
+      "Matt Carpenter"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-1987-chrome-refractors|87-MC|Blue Refractor|false|",
+     "cardNumber": "87-MC",
+     "category": "insert-1987-chrome-refractors",
+     "parallel": "Blue Refractor",
+     "players": [
+      "Miguel Cabrera",
+      "Matt Carpenter"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-1987-chrome-refractors|87-MC|Orange Refractor|false|",
+     "cardNumber": "87-MC",
+     "category": "insert-1987-chrome-refractors",
+     "parallel": "Orange Refractor",
+     "players": [
+      "Miguel Cabrera",
+      "Matt Carpenter"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-1987-chrome-refractors|87-MC|Gold Refractor|false|50",
+     "cardNumber": "87-MC",
+     "category": "insert-1987-chrome-refractors",
+     "parallel": "Gold Refractor",
+     "players": [
+      "Miguel Cabrera",
+      "Matt Carpenter"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-1987-chrome-refractors|87-MC|Red Refractor|false|20",
+     "cardNumber": "87-MC",
+     "category": "insert-1987-chrome-refractors",
+     "parallel": "Red Refractor",
+     "players": [
+      "Miguel Cabrera",
+      "Matt Carpenter"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-1987-chrome-refractors|87-MC|Black Refractor|false|1",
+     "cardNumber": "87-MC",
+     "category": "insert-1987-chrome-refractors",
+     "parallel": "Black Refractor",
+     "players": [
+      "Miguel Cabrera",
+      "Matt Carpenter"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-1987-chrome-refractors|87-MM||false|",
+     "cardNumber": "87-MM",
+     "category": "insert-1987-chrome-refractors",
+     "parallel": "",
+     "players": [
+      "Manny Machado",
+      "Manny Margot"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-1987-chrome-refractors|87-MM|Green Refractor|false|",
+     "cardNumber": "87-MM",
+     "category": "insert-1987-chrome-refractors",
+     "parallel": "Green Refractor",
+     "players": [
+      "Manny Machado",
+      "Manny Margot"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-1987-chrome-refractors|87-MM|Blue Refractor|false|",
+     "cardNumber": "87-MM",
+     "category": "insert-1987-chrome-refractors",
+     "parallel": "Blue Refractor",
+     "players": [
+      "Manny Machado",
+      "Manny Margot"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-1987-chrome-refractors|87-MM|Orange Refractor|false|",
+     "cardNumber": "87-MM",
+     "category": "insert-1987-chrome-refractors",
+     "parallel": "Orange Refractor",
+     "players": [
+      "Manny Machado",
+      "Manny Margot"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-1987-chrome-refractors|87-MM|Gold Refractor|false|50",
+     "cardNumber": "87-MM",
+     "category": "insert-1987-chrome-refractors",
+     "parallel": "Gold Refractor",
+     "players": [
+      "Manny Machado",
+      "Manny Margot"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-1987-chrome-refractors|87-MM|Red Refractor|false|20",
+     "cardNumber": "87-MM",
+     "category": "insert-1987-chrome-refractors",
+     "parallel": "Red Refractor",
+     "players": [
+      "Manny Machado",
+      "Manny Margot"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-1987-chrome-refractors|87-MM|Black Refractor|false|1",
+     "cardNumber": "87-MM",
+     "category": "insert-1987-chrome-refractors",
+     "parallel": "Black Refractor",
+     "players": [
+      "Manny Machado",
+      "Manny Margot"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-1987-chrome-refractors|87-MT||false|",
+     "cardNumber": "87-MT",
+     "category": "insert-1987-chrome-refractors",
+     "parallel": "",
+     "players": [
+      "Mike Trout",
+      "Masahiro Tanaka"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-1987-chrome-refractors|87-MT|Green Refractor|false|",
+     "cardNumber": "87-MT",
+     "category": "insert-1987-chrome-refractors",
+     "parallel": "Green Refractor",
+     "players": [
+      "Mike Trout",
+      "Masahiro Tanaka"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-1987-chrome-refractors|87-MT|Blue Refractor|false|",
+     "cardNumber": "87-MT",
+     "category": "insert-1987-chrome-refractors",
+     "parallel": "Blue Refractor",
+     "players": [
+      "Mike Trout",
+      "Masahiro Tanaka"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-1987-chrome-refractors|87-MT|Orange Refractor|false|",
+     "cardNumber": "87-MT",
+     "category": "insert-1987-chrome-refractors",
+     "parallel": "Orange Refractor",
+     "players": [
+      "Mike Trout",
+      "Masahiro Tanaka"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-1987-chrome-refractors|87-MT|Gold Refractor|false|50",
+     "cardNumber": "87-MT",
+     "category": "insert-1987-chrome-refractors",
+     "parallel": "Gold Refractor",
+     "players": [
+      "Mike Trout",
+      "Masahiro Tanaka"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-1987-chrome-refractors|87-MT|Red Refractor|false|20",
+     "cardNumber": "87-MT",
+     "category": "insert-1987-chrome-refractors",
+     "parallel": "Red Refractor",
+     "players": [
+      "Mike Trout",
+      "Masahiro Tanaka"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-1987-chrome-refractors|87-MT|Black Refractor|false|1",
+     "cardNumber": "87-MT",
+     "category": "insert-1987-chrome-refractors",
+     "parallel": "Black Refractor",
+     "players": [
+      "Mike Trout",
+      "Masahiro Tanaka"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    }
+   ]
+  },
+  "notes": [
+   "Dropped 13 rows that repeat a card already on the checklist under a MISSPELLING of the same player (\"Torii Hunger\" for \"Torii Hunter\", \"Neftali Perez\" for \"Neftali Feliz\", \"Russel Martin\" for \"Russell Martin\") with no descriptor to make them a distinct card. Verified on the source: these sit in its hand-typed Gimmicks/Twinks lists. The checklist's own spelling stands."
+  ]
+ }
 }

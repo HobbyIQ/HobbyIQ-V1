@@ -1,502 +1,502 @@
 category,cardNumber,parallel,isAuto,printRun,player,parallelNote,rarity
-base,1,Base,false,,Mike Mussina
+base,1,Base,false,,Mike Mussina,,
 base,1,Refractor,false,499,Mike Mussina,serial-numbered to 499 copies,
 base,1,X-Fractor,false,299,Mike Mussina,serial-numbered to 299 copies,
 base,1,X-Fractor w/Protector,false,99,Mike Mussina,serial-numbered to 99 copies,
-base,2,Base,false,,Steve Sparks
+base,2,Base,false,,Steve Sparks,,
 base,2,Refractor,false,499,Steve Sparks,serial-numbered to 499 copies,
 base,2,X-Fractor,false,299,Steve Sparks,serial-numbered to 299 copies,
 base,2,X-Fractor w/Protector,false,99,Steve Sparks,serial-numbered to 99 copies,
-base,3,Base,false,,Randy Johnson
+base,3,Base,false,,Randy Johnson,,
 base,3,Refractor,false,499,Randy Johnson,serial-numbered to 499 copies,
 base,3,X-Fractor,false,299,Randy Johnson,serial-numbered to 299 copies,
 base,3,X-Fractor w/Protector,false,99,Randy Johnson,serial-numbered to 99 copies,
-base,4,Base,false,,Orlando Cabrera
+base,4,Base,false,,Orlando Cabrera,,
 base,4,Refractor,false,499,Orlando Cabrera,serial-numbered to 499 copies,
 base,4,X-Fractor,false,299,Orlando Cabrera,serial-numbered to 299 copies,
 base,4,X-Fractor w/Protector,false,99,Orlando Cabrera,serial-numbered to 99 copies,
-base,5,Base,false,,Jeff Kent
+base,5,Base,false,,Jeff Kent,,
 base,5,Refractor,false,499,Jeff Kent,serial-numbered to 499 copies,
 base,5,X-Fractor,false,299,Jeff Kent,serial-numbered to 299 copies,
 base,5,X-Fractor w/Protector,false,99,Jeff Kent,serial-numbered to 99 copies,
-base,6,Base,false,,Carlos Delgado
+base,6,Base,false,,Carlos Delgado,,
 base,6,Refractor,false,499,Carlos Delgado,serial-numbered to 499 copies,
 base,6,X-Fractor,false,299,Carlos Delgado,serial-numbered to 299 copies,
 base,6,X-Fractor w/Protector,false,99,Carlos Delgado,serial-numbered to 99 copies,
-base,7,Base,false,,Ivan Rodriguez
+base,7,Base,false,,Ivan Rodriguez,,
 base,7,Refractor,false,499,Ivan Rodriguez,serial-numbered to 499 copies,
 base,7,X-Fractor,false,299,Ivan Rodriguez,serial-numbered to 299 copies,
 base,7,X-Fractor w/Protector,false,99,Ivan Rodriguez,serial-numbered to 99 copies,
-base,8,Base,false,,Jose Cruz Jr.
+base,8,Base,false,,Jose Cruz Jr.,,
 base,8,Refractor,false,499,Jose Cruz Jr.,serial-numbered to 499 copies,
 base,8,X-Fractor,false,299,Jose Cruz Jr.,serial-numbered to 299 copies,
 base,8,X-Fractor w/Protector,false,99,Jose Cruz Jr.,serial-numbered to 99 copies,
-base,9,Base,false,,Jason Giambi
+base,9,Base,false,,Jason Giambi,,
 base,9,Refractor,false,499,Jason Giambi,serial-numbered to 499 copies,
 base,9,X-Fractor,false,299,Jason Giambi,serial-numbered to 299 copies,
 base,9,X-Fractor w/Protector,false,99,Jason Giambi,serial-numbered to 99 copies,
-base,10,Base,false,,Brad Penny
+base,10,Base,false,,Brad Penny,,
 base,10,Refractor,false,499,Brad Penny,serial-numbered to 499 copies,
 base,10,X-Fractor,false,299,Brad Penny,serial-numbered to 299 copies,
 base,10,X-Fractor w/Protector,false,99,Brad Penny,serial-numbered to 99 copies,
-base,11,Base,false,,Moises Alou
+base,11,Base,false,,Moises Alou,,
 base,11,Refractor,false,499,Moises Alou,serial-numbered to 499 copies,
 base,11,X-Fractor,false,299,Moises Alou,serial-numbered to 299 copies,
 base,11,X-Fractor w/Protector,false,99,Moises Alou,serial-numbered to 99 copies,
-base,12,Base,false,,Mike Piazza
+base,12,Base,false,,Mike Piazza,,
 base,12,Refractor,false,499,Mike Piazza,serial-numbered to 499 copies,
 base,12,X-Fractor,false,299,Mike Piazza,serial-numbered to 299 copies,
 base,12,X-Fractor w/Protector,false,99,Mike Piazza,serial-numbered to 99 copies,
-base,13,Base,false,,Ben Grieve
+base,13,Base,false,,Ben Grieve,,
 base,13,Refractor,false,499,Ben Grieve,serial-numbered to 499 copies,
 base,13,X-Fractor,false,299,Ben Grieve,serial-numbered to 299 copies,
 base,13,X-Fractor w/Protector,false,99,Ben Grieve,serial-numbered to 99 copies,
-base,14,Base,false,,Derek Jeter
+base,14,Base,false,,Derek Jeter,,
 base,14,Refractor,false,499,Derek Jeter,serial-numbered to 499 copies,
 base,14,X-Fractor,false,299,Derek Jeter,serial-numbered to 299 copies,
 base,14,X-Fractor w/Protector,false,99,Derek Jeter,serial-numbered to 99 copies,
-base,15,Base,false,,Roy Oswalt
+base,15,Base,false,,Roy Oswalt,,
 base,15,Refractor,false,499,Roy Oswalt,serial-numbered to 499 copies,
 base,15,X-Fractor,false,299,Roy Oswalt,serial-numbered to 299 copies,
 base,15,X-Fractor w/Protector,false,99,Roy Oswalt,serial-numbered to 99 copies,
-base,16,Base,false,,Pat Burrell
+base,16,Base,false,,Pat Burrell,,
 base,16,Refractor,false,499,Pat Burrell,serial-numbered to 499 copies,
 base,16,X-Fractor,false,299,Pat Burrell,serial-numbered to 299 copies,
 base,16,X-Fractor w/Protector,false,99,Pat Burrell,serial-numbered to 99 copies,
-base,17,Base,false,,Preston Wilson
+base,17,Base,false,,Preston Wilson,,
 base,17,Refractor,false,499,Preston Wilson,serial-numbered to 499 copies,
 base,17,X-Fractor,false,299,Preston Wilson,serial-numbered to 299 copies,
 base,17,X-Fractor w/Protector,false,99,Preston Wilson,serial-numbered to 99 copies,
-base,18,Base,false,,Kevin Brown
+base,18,Base,false,,Kevin Brown,,
 base,18,Refractor,false,499,Kevin Brown,serial-numbered to 499 copies,
 base,18,X-Fractor,false,299,Kevin Brown,serial-numbered to 299 copies,
 base,18,X-Fractor w/Protector,false,99,Kevin Brown,serial-numbered to 99 copies,
-base,19,Base,false,,Barry Bonds
+base,19,Base,false,,Barry Bonds,,
 base,19,Refractor,false,499,Barry Bonds,serial-numbered to 499 copies,
 base,19,X-Fractor,false,299,Barry Bonds,serial-numbered to 299 copies,
 base,19,X-Fractor w/Protector,false,99,Barry Bonds,serial-numbered to 99 copies,
-base,20,Base,false,,Phil Nevin
+base,20,Base,false,,Phil Nevin,,
 base,20,Refractor,false,499,Phil Nevin,serial-numbered to 499 copies,
 base,20,X-Fractor,false,299,Phil Nevin,serial-numbered to 299 copies,
 base,20,X-Fractor w/Protector,false,99,Phil Nevin,serial-numbered to 99 copies,
-base,21,Base,false,,Aramis Ramirez
+base,21,Base,false,,Aramis Ramirez,,
 base,21,Refractor,false,499,Aramis Ramirez,serial-numbered to 499 copies,
 base,21,X-Fractor,false,299,Aramis Ramirez,serial-numbered to 299 copies,
 base,21,X-Fractor w/Protector,false,99,Aramis Ramirez,serial-numbered to 99 copies,
-base,22,Base,false,,Carlos Beltran
+base,22,Base,false,,Carlos Beltran,,
 base,22,Refractor,false,499,Carlos Beltran,serial-numbered to 499 copies,
 base,22,X-Fractor,false,299,Carlos Beltran,serial-numbered to 299 copies,
 base,22,X-Fractor w/Protector,false,99,Carlos Beltran,serial-numbered to 99 copies,
-base,23,Base,false,,Chipper Jones
+base,23,Base,false,,Chipper Jones,,
 base,23,Refractor,false,499,Chipper Jones,serial-numbered to 499 copies,
 base,23,X-Fractor,false,299,Chipper Jones,serial-numbered to 299 copies,
 base,23,X-Fractor w/Protector,false,99,Chipper Jones,serial-numbered to 99 copies,
-base,24,Base,false,,Curt Schilling
+base,24,Base,false,,Curt Schilling,,
 base,24,Refractor,false,499,Curt Schilling,serial-numbered to 499 copies,
 base,24,X-Fractor,false,299,Curt Schilling,serial-numbered to 299 copies,
 base,24,X-Fractor w/Protector,false,99,Curt Schilling,serial-numbered to 99 copies,
-base,25,Base,false,,Jorge Posada
+base,25,Base,false,,Jorge Posada,,
 base,25,Refractor,false,499,Jorge Posada,serial-numbered to 499 copies,
 base,25,X-Fractor,false,299,Jorge Posada,serial-numbered to 299 copies,
 base,25,X-Fractor w/Protector,false,99,Jorge Posada,serial-numbered to 99 copies,
-base,26,Base,false,,Alfonso Soriano
+base,26,Base,false,,Alfonso Soriano,,
 base,26,Refractor,false,499,Alfonso Soriano,serial-numbered to 499 copies,
 base,26,X-Fractor,false,299,Alfonso Soriano,serial-numbered to 299 copies,
 base,26,X-Fractor w/Protector,false,99,Alfonso Soriano,serial-numbered to 99 copies,
-base,27,Base,false,,Cliff Floyd
+base,27,Base,false,,Cliff Floyd,,
 base,27,Refractor,false,499,Cliff Floyd,serial-numbered to 499 copies,
 base,27,X-Fractor,false,299,Cliff Floyd,serial-numbered to 299 copies,
 base,27,X-Fractor w/Protector,false,99,Cliff Floyd,serial-numbered to 99 copies,
-base,28,Base,false,,Rafael Palmeiro
+base,28,Base,false,,Rafael Palmeiro,,
 base,28,Refractor,false,499,Rafael Palmeiro,serial-numbered to 499 copies,
 base,28,X-Fractor,false,299,Rafael Palmeiro,serial-numbered to 299 copies,
 base,28,X-Fractor w/Protector,false,99,Rafael Palmeiro,serial-numbered to 99 copies,
-base,29,Base,false,,Terrence Long
+base,29,Base,false,,Terrence Long,,
 base,29,Refractor,false,499,Terrence Long,serial-numbered to 499 copies,
 base,29,X-Fractor,false,299,Terrence Long,serial-numbered to 299 copies,
 base,29,X-Fractor w/Protector,false,99,Terrence Long,serial-numbered to 99 copies,
-base,30,Base,false,,Ken Griffey Jr.
+base,30,Base,false,,Ken Griffey Jr.,,
 base,30,Refractor,false,499,Ken Griffey Jr.,serial-numbered to 499 copies,
 base,30,X-Fractor,false,299,Ken Griffey Jr.,serial-numbered to 299 copies,
 base,30,X-Fractor w/Protector,false,99,Ken Griffey Jr.,serial-numbered to 99 copies,
-base,31,Base,false,,Jason Kendall
+base,31,Base,false,,Jason Kendall,,
 base,31,Refractor,false,499,Jason Kendall,serial-numbered to 499 copies,
 base,31,X-Fractor,false,299,Jason Kendall,serial-numbered to 299 copies,
 base,31,X-Fractor w/Protector,false,99,Jason Kendall,serial-numbered to 99 copies,
-base,32,Base,false,,Jose Vidro
+base,32,Base,false,,Jose Vidro,,
 base,32,Refractor,false,499,Jose Vidro,serial-numbered to 499 copies,
 base,32,X-Fractor,false,299,Jose Vidro,serial-numbered to 299 copies,
 base,32,X-Fractor w/Protector,false,99,Jose Vidro,serial-numbered to 99 copies,
-base,33,Base,false,,Jermaine Dye
+base,33,Base,false,,Jermaine Dye,,
 base,33,Refractor,false,499,Jermaine Dye,serial-numbered to 499 copies,
 base,33,X-Fractor,false,299,Jermaine Dye,serial-numbered to 299 copies,
 base,33,X-Fractor w/Protector,false,99,Jermaine Dye,serial-numbered to 99 copies,
-base,34,Base,false,,Bob Higginson
+base,34,Base,false,,Bob Higginson,,
 base,34,Refractor,false,499,Bob Higginson,serial-numbered to 499 copies,
 base,34,X-Fractor,false,299,Bob Higginson,serial-numbered to 299 copies,
 base,34,X-Fractor w/Protector,false,99,Bob Higginson,serial-numbered to 99 copies,
-base,35,Base,false,,Albert Pujols
+base,35,Base,false,,Albert Pujols,,
 base,35,Refractor,false,499,Albert Pujols,serial-numbered to 499 copies,
 base,35,X-Fractor,false,299,Albert Pujols,serial-numbered to 299 copies,
 base,35,X-Fractor w/Protector,false,99,Albert Pujols,serial-numbered to 99 copies,
-base,36,Base,false,,Miguel Tejada
+base,36,Base,false,,Miguel Tejada,,
 base,36,Refractor,false,499,Miguel Tejada,serial-numbered to 499 copies,
 base,36,X-Fractor,false,299,Miguel Tejada,serial-numbered to 299 copies,
 base,36,X-Fractor w/Protector,false,99,Miguel Tejada,serial-numbered to 99 copies,
-base,37,Base,false,,Jim Edmonds
+base,37,Base,false,,Jim Edmonds,,
 base,37,Refractor,false,499,Jim Edmonds,serial-numbered to 499 copies,
 base,37,X-Fractor,false,299,Jim Edmonds,serial-numbered to 299 copies,
 base,37,X-Fractor w/Protector,false,99,Jim Edmonds,serial-numbered to 99 copies,
-base,38,Base,false,,Barry Zito
+base,38,Base,false,,Barry Zito,,
 base,38,Refractor,false,499,Barry Zito,serial-numbered to 499 copies,
 base,38,X-Fractor,false,299,Barry Zito,serial-numbered to 299 copies,
 base,38,X-Fractor w/Protector,false,99,Barry Zito,serial-numbered to 99 copies,
-base,39,Base,false,,Jimmy Rollins
+base,39,Base,false,,Jimmy Rollins,,
 base,39,Refractor,false,499,Jimmy Rollins,serial-numbered to 499 copies,
 base,39,X-Fractor,false,299,Jimmy Rollins,serial-numbered to 299 copies,
 base,39,X-Fractor w/Protector,false,99,Jimmy Rollins,serial-numbered to 99 copies,
-base,40,Base,false,,Rafael Furcal
+base,40,Base,false,,Rafael Furcal,,
 base,40,Refractor,false,499,Rafael Furcal,serial-numbered to 499 copies,
 base,40,X-Fractor,false,299,Rafael Furcal,serial-numbered to 299 copies,
 base,40,X-Fractor w/Protector,false,99,Rafael Furcal,serial-numbered to 99 copies,
-base,41,Base,false,,Omar Vizquel
+base,41,Base,false,,Omar Vizquel,,
 base,41,Refractor,false,499,Omar Vizquel,serial-numbered to 499 copies,
 base,41,X-Fractor,false,299,Omar Vizquel,serial-numbered to 299 copies,
 base,41,X-Fractor w/Protector,false,99,Omar Vizquel,serial-numbered to 99 copies,
-base,42,Base,false,,Kazuhiro Sasaki
+base,42,Base,false,,Kazuhiro Sasaki,,
 base,42,Refractor,false,499,Kazuhiro Sasaki,serial-numbered to 499 copies,
 base,42,X-Fractor,false,299,Kazuhiro Sasaki,serial-numbered to 299 copies,
 base,42,X-Fractor w/Protector,false,99,Kazuhiro Sasaki,serial-numbered to 99 copies,
-base,43,Base,false,,Brian Giles
+base,43,Base,false,,Brian Giles,,
 base,43,Refractor,false,499,Brian Giles,serial-numbered to 499 copies,
 base,43,X-Fractor,false,299,Brian Giles,serial-numbered to 299 copies,
 base,43,X-Fractor w/Protector,false,99,Brian Giles,serial-numbered to 99 copies,
-base,44,Base,false,,Darin Erstad
+base,44,Base,false,,Darin Erstad,,
 base,44,Refractor,false,499,Darin Erstad,serial-numbered to 499 copies,
 base,44,X-Fractor,false,299,Darin Erstad,serial-numbered to 299 copies,
 base,44,X-Fractor w/Protector,false,99,Darin Erstad,serial-numbered to 99 copies,
-base,45,Base,false,,Mariano Rivera
+base,45,Base,false,,Mariano Rivera,,
 base,45,Refractor,false,499,Mariano Rivera,serial-numbered to 499 copies,
 base,45,X-Fractor,false,299,Mariano Rivera,serial-numbered to 299 copies,
 base,45,X-Fractor w/Protector,false,99,Mariano Rivera,serial-numbered to 99 copies,
-base,46,Base,false,,Troy Percival
+base,46,Base,false,,Troy Percival,,
 base,46,Refractor,false,499,Troy Percival,serial-numbered to 499 copies,
 base,46,X-Fractor,false,299,Troy Percival,serial-numbered to 299 copies,
 base,46,X-Fractor w/Protector,false,99,Troy Percival,serial-numbered to 99 copies,
-base,47,Base,false,,Mike Sweeney
+base,47,Base,false,,Mike Sweeney,,
 base,47,Refractor,false,499,Mike Sweeney,serial-numbered to 499 copies,
 base,47,X-Fractor,false,299,Mike Sweeney,serial-numbered to 299 copies,
 base,47,X-Fractor w/Protector,false,99,Mike Sweeney,serial-numbered to 99 copies,
-base,48,Base,false,,Vladimir Guerrero
+base,48,Base,false,,Vladimir Guerrero,,
 base,48,Refractor,false,499,Vladimir Guerrero,serial-numbered to 499 copies,
 base,48,X-Fractor,false,299,Vladimir Guerrero,serial-numbered to 299 copies,
 base,48,X-Fractor w/Protector,false,99,Vladimir Guerrero,serial-numbered to 99 copies,
-base,49,Base,false,,Troy Glaus
+base,49,Base,false,,Troy Glaus,,
 base,49,Refractor,false,499,Troy Glaus,serial-numbered to 499 copies,
 base,49,X-Fractor,false,299,Troy Glaus,serial-numbered to 299 copies,
 base,49,X-Fractor w/Protector,false,99,Troy Glaus,serial-numbered to 99 copies,
-base,50,Base,false,,So Taguchi RC
+base,50,Base,false,,So Taguchi RC,,
 base,50,Refractor,false,499,So Taguchi RC,serial-numbered to 499 copies,
 base,50,X-Fractor,false,299,So Taguchi RC,serial-numbered to 299 copies,
 base,50,X-Fractor w/Protector,false,99,So Taguchi RC,serial-numbered to 99 copies,
-base,51,Base,false,,Edgardo Alfonzo
+base,51,Base,false,,Edgardo Alfonzo,,
 base,51,Refractor,false,499,Edgardo Alfonzo,serial-numbered to 499 copies,
 base,51,X-Fractor,false,299,Edgardo Alfonzo,serial-numbered to 299 copies,
 base,51,X-Fractor w/Protector,false,99,Edgardo Alfonzo,serial-numbered to 99 copies,
-base,52,Base,false,,Roger Clemens
+base,52,Base,false,,Roger Clemens,,
 base,52,Refractor,false,499,Roger Clemens,serial-numbered to 499 copies,
 base,52,X-Fractor,false,299,Roger Clemens,serial-numbered to 299 copies,
 base,52,X-Fractor w/Protector,false,99,Roger Clemens,serial-numbered to 99 copies,
-base,53,Base,false,,Eric Chavez
+base,53,Base,false,,Eric Chavez,,
 base,53,Refractor,false,499,Eric Chavez,serial-numbered to 499 copies,
 base,53,X-Fractor,false,299,Eric Chavez,serial-numbered to 299 copies,
 base,53,X-Fractor w/Protector,false,99,Eric Chavez,serial-numbered to 99 copies,
-base,54,Base,false,,Alex Rodriguez
+base,54,Base,false,,Alex Rodriguez,,
 base,54,Refractor,false,499,Alex Rodriguez,serial-numbered to 499 copies,
 base,54,X-Fractor,false,299,Alex Rodriguez,serial-numbered to 299 copies,
 base,54,X-Fractor w/Protector,false,99,Alex Rodriguez,serial-numbered to 99 copies,
-base,55,Base,false,,Cristian Guzman
+base,55,Base,false,,Cristian Guzman,,
 base,55,Refractor,false,499,Cristian Guzman,serial-numbered to 499 copies,
 base,55,X-Fractor,false,299,Cristian Guzman,serial-numbered to 299 copies,
 base,55,X-Fractor w/Protector,false,99,Cristian Guzman,serial-numbered to 99 copies,
-base,56,Base,false,,Jeff Bagwell
+base,56,Base,false,,Jeff Bagwell,,
 base,56,Refractor,false,499,Jeff Bagwell,serial-numbered to 499 copies,
 base,56,X-Fractor,false,299,Jeff Bagwell,serial-numbered to 299 copies,
 base,56,X-Fractor w/Protector,false,99,Jeff Bagwell,serial-numbered to 99 copies,
-base,57,Base,false,,Bernie Williams
+base,57,Base,false,,Bernie Williams,,
 base,57,Refractor,false,499,Bernie Williams,serial-numbered to 499 copies,
 base,57,X-Fractor,false,299,Bernie Williams,serial-numbered to 299 copies,
 base,57,X-Fractor w/Protector,false,99,Bernie Williams,serial-numbered to 99 copies,
-base,58,Base,false,,Kerry Wood
+base,58,Base,false,,Kerry Wood,,
 base,58,Refractor,false,499,Kerry Wood,serial-numbered to 499 copies,
 base,58,X-Fractor,false,299,Kerry Wood,serial-numbered to 299 copies,
 base,58,X-Fractor w/Protector,false,99,Kerry Wood,serial-numbered to 99 copies,
-base,59,Base,false,,Ryan Klesko
+base,59,Base,false,,Ryan Klesko,,
 base,59,Refractor,false,499,Ryan Klesko,serial-numbered to 499 copies,
 base,59,X-Fractor,false,299,Ryan Klesko,serial-numbered to 299 copies,
 base,59,X-Fractor w/Protector,false,99,Ryan Klesko,serial-numbered to 99 copies,
-base,60,Base,false,,Ichiro
+base,60,Base,false,,Ichiro,,
 base,60,Refractor,false,499,Ichiro,serial-numbered to 499 copies,
 base,60,X-Fractor,false,299,Ichiro,serial-numbered to 299 copies,
 base,60,X-Fractor w/Protector,false,99,Ichiro,serial-numbered to 99 copies,
-base,61,Base,false,,Larry Walker
+base,61,Base,false,,Larry Walker,,
 base,61,Refractor,false,499,Larry Walker,serial-numbered to 499 copies,
 base,61,X-Fractor,false,299,Larry Walker,serial-numbered to 299 copies,
 base,61,X-Fractor w/Protector,false,99,Larry Walker,serial-numbered to 99 copies,
-base,62,Base,false,,Nomar Garciaparra
+base,62,Base,false,,Nomar Garciaparra,,
 base,62,Refractor,false,499,Nomar Garciaparra,serial-numbered to 499 copies,
 base,62,X-Fractor,false,299,Nomar Garciaparra,serial-numbered to 299 copies,
 base,62,X-Fractor w/Protector,false,99,Nomar Garciaparra,serial-numbered to 99 copies,
-base,63,Base,false,,Craig Biggio
+base,63,Base,false,,Craig Biggio,,
 base,63,Refractor,false,499,Craig Biggio,serial-numbered to 499 copies,
 base,63,X-Fractor,false,299,Craig Biggio,serial-numbered to 299 copies,
 base,63,X-Fractor w/Protector,false,99,Craig Biggio,serial-numbered to 99 copies,
-base,64,Base,false,,J.D. Drew
+base,64,Base,false,,J.D. Drew,,
 base,64,Refractor,false,499,J.D. Drew,serial-numbered to 499 copies,
 base,64,X-Fractor,false,299,J.D. Drew,serial-numbered to 299 copies,
 base,64,X-Fractor w/Protector,false,99,J.D. Drew,serial-numbered to 99 copies,
-base,65,Base,false,,Juan Pierre
+base,65,Base,false,,Juan Pierre,,
 base,65,Refractor,false,499,Juan Pierre,serial-numbered to 499 copies,
 base,65,X-Fractor,false,299,Juan Pierre,serial-numbered to 299 copies,
 base,65,X-Fractor w/Protector,false,99,Juan Pierre,serial-numbered to 99 copies,
-base,66,Base,false,,Roberto Alomar
+base,66,Base,false,,Roberto Alomar,,
 base,66,Refractor,false,499,Roberto Alomar,serial-numbered to 499 copies,
 base,66,X-Fractor,false,299,Roberto Alomar,serial-numbered to 299 copies,
 base,66,X-Fractor w/Protector,false,99,Roberto Alomar,serial-numbered to 99 copies,
-base,67,Base,false,,Luis Gonzalez
+base,67,Base,false,,Luis Gonzalez,,
 base,67,Refractor,false,499,Luis Gonzalez,serial-numbered to 499 copies,
 base,67,X-Fractor,false,299,Luis Gonzalez,serial-numbered to 299 copies,
 base,67,X-Fractor w/Protector,false,99,Luis Gonzalez,serial-numbered to 99 copies,
-base,68,Base,false,,Bud Smith
+base,68,Base,false,,Bud Smith,,
 base,68,Refractor,false,499,Bud Smith,serial-numbered to 499 copies,
 base,68,X-Fractor,false,299,Bud Smith,serial-numbered to 299 copies,
 base,68,X-Fractor w/Protector,false,99,Bud Smith,serial-numbered to 99 copies,
-base,69,Base,false,,Magglio Ordonez
+base,69,Base,false,,Magglio Ordonez,,
 base,69,Refractor,false,499,Magglio Ordonez,serial-numbered to 499 copies,
 base,69,X-Fractor,false,299,Magglio Ordonez,serial-numbered to 299 copies,
 base,69,X-Fractor w/Protector,false,99,Magglio Ordonez,serial-numbered to 99 copies,
-base,70,Base,false,,Scott Rolen
+base,70,Base,false,,Scott Rolen,,
 base,70,Refractor,false,499,Scott Rolen,serial-numbered to 499 copies,
 base,70,X-Fractor,false,299,Scott Rolen,serial-numbered to 299 copies,
 base,70,X-Fractor w/Protector,false,99,Scott Rolen,serial-numbered to 99 copies,
-base,71,Base,false,,Tsuyoshi Shinjo
+base,71,Base,false,,Tsuyoshi Shinjo,,
 base,71,Refractor,false,499,Tsuyoshi Shinjo,serial-numbered to 499 copies,
 base,71,X-Fractor,false,299,Tsuyoshi Shinjo,serial-numbered to 299 copies,
 base,71,X-Fractor w/Protector,false,99,Tsuyoshi Shinjo,serial-numbered to 99 copies,
-base,72,Base,false,,Paul Konerko
+base,72,Base,false,,Paul Konerko,,
 base,72,Refractor,false,499,Paul Konerko,serial-numbered to 499 copies,
 base,72,X-Fractor,false,299,Paul Konerko,serial-numbered to 299 copies,
 base,72,X-Fractor w/Protector,false,99,Paul Konerko,serial-numbered to 99 copies,
-base,73,Base,false,,Garret Anderson
+base,73,Base,false,,Garret Anderson,,
 base,73,Refractor,false,499,Garret Anderson,serial-numbered to 499 copies,
 base,73,X-Fractor,false,299,Garret Anderson,serial-numbered to 299 copies,
 base,73,X-Fractor w/Protector,false,99,Garret Anderson,serial-numbered to 99 copies,
-base,74,Base,false,,Tim Hudson
+base,74,Base,false,,Tim Hudson,,
 base,74,Refractor,false,499,Tim Hudson,serial-numbered to 499 copies,
 base,74,X-Fractor,false,299,Tim Hudson,serial-numbered to 299 copies,
 base,74,X-Fractor w/Protector,false,99,Tim Hudson,serial-numbered to 99 copies,
-base,75,Base,false,,Adam Dunn
+base,75,Base,false,,Adam Dunn,,
 base,75,Refractor,false,499,Adam Dunn,serial-numbered to 499 copies,
 base,75,X-Fractor,false,299,Adam Dunn,serial-numbered to 299 copies,
 base,75,X-Fractor w/Protector,false,99,Adam Dunn,serial-numbered to 99 copies,
-base,76,Base,false,,Gary Sheffield
+base,76,Base,false,,Gary Sheffield,,
 base,76,Refractor,false,499,Gary Sheffield,serial-numbered to 499 copies,
 base,76,X-Fractor,false,299,Gary Sheffield,serial-numbered to 299 copies,
 base,76,X-Fractor w/Protector,false,99,Gary Sheffield,serial-numbered to 99 copies,
-base,77,Base,false,,Johnny Damon
+base,77,Base,false,,Johnny Damon,,
 base,77,Refractor,false,499,Johnny Damon,serial-numbered to 499 copies,
 base,77,X-Fractor,false,299,Johnny Damon,serial-numbered to 299 copies,
 base,77,X-Fractor w/Protector,false,99,Johnny Damon,serial-numbered to 99 copies,
-base,78,Base,false,,Todd Helton
+base,78,Base,false,,Todd Helton,,
 base,78,Refractor,false,499,Todd Helton,serial-numbered to 499 copies,
 base,78,X-Fractor,false,299,Todd Helton,serial-numbered to 299 copies,
 base,78,X-Fractor w/Protector,false,99,Todd Helton,serial-numbered to 99 copies,
-base,79,Base,false,,Geoff Jenkins
+base,79,Base,false,,Geoff Jenkins,,
 base,79,Refractor,false,499,Geoff Jenkins,serial-numbered to 499 copies,
 base,79,X-Fractor,false,299,Geoff Jenkins,serial-numbered to 299 copies,
 base,79,X-Fractor w/Protector,false,99,Geoff Jenkins,serial-numbered to 99 copies,
-base,80,Base,false,,Shawn Green
+base,80,Base,false,,Shawn Green,,
 base,80,Refractor,false,499,Shawn Green,serial-numbered to 499 copies,
 base,80,X-Fractor,false,299,Shawn Green,serial-numbered to 299 copies,
 base,80,X-Fractor w/Protector,false,99,Shawn Green,serial-numbered to 99 copies,
-base,81,Base,false,,C.C. Sabathia
+base,81,Base,false,,C.C. Sabathia,,
 base,81,Refractor,false,499,C.C. Sabathia,serial-numbered to 499 copies,
 base,81,X-Fractor,false,299,C.C. Sabathia,serial-numbered to 299 copies,
 base,81,X-Fractor w/Protector,false,99,C.C. Sabathia,serial-numbered to 99 copies,
-base,82,Base,false,,Kazuhisa Ishii RC
+base,82,Base,false,,Kazuhisa Ishii RC,,
 base,82,Refractor,false,499,Kazuhisa Ishii RC,serial-numbered to 499 copies,
 base,82,X-Fractor,false,299,Kazuhisa Ishii RC,serial-numbered to 299 copies,
 base,82,X-Fractor w/Protector,false,99,Kazuhisa Ishii RC,serial-numbered to 99 copies,
-base,83,Base,false,,Rich Aurilia
+base,83,Base,false,,Rich Aurilia,,
 base,83,Refractor,false,499,Rich Aurilia,serial-numbered to 499 copies,
 base,83,X-Fractor,false,299,Rich Aurilia,serial-numbered to 299 copies,
 base,83,X-Fractor w/Protector,false,99,Rich Aurilia,serial-numbered to 99 copies,
-base,84,Base,false,,Mike Hampton
+base,84,Base,false,,Mike Hampton,,
 base,84,Refractor,false,499,Mike Hampton,serial-numbered to 499 copies,
 base,84,X-Fractor,false,299,Mike Hampton,serial-numbered to 299 copies,
 base,84,X-Fractor w/Protector,false,99,Mike Hampton,serial-numbered to 99 copies,
-base,85,Base,false,,Ben Sheets
+base,85,Base,false,,Ben Sheets,,
 base,85,Refractor,false,499,Ben Sheets,serial-numbered to 499 copies,
 base,85,X-Fractor,false,299,Ben Sheets,serial-numbered to 299 copies,
 base,85,X-Fractor w/Protector,false,99,Ben Sheets,serial-numbered to 99 copies,
-base,86,Base,false,,Andruw Jones
+base,86,Base,false,,Andruw Jones,,
 base,86,Refractor,false,499,Andruw Jones,serial-numbered to 499 copies,
 base,86,X-Fractor,false,299,Andruw Jones,serial-numbered to 299 copies,
 base,86,X-Fractor w/Protector,false,99,Andruw Jones,serial-numbered to 99 copies,
-base,87,Base,false,,Richie Sexson
+base,87,Base,false,,Richie Sexson,,
 base,87,Refractor,false,499,Richie Sexson,serial-numbered to 499 copies,
 base,87,X-Fractor,false,299,Richie Sexson,serial-numbered to 299 copies,
 base,87,X-Fractor w/Protector,false,99,Richie Sexson,serial-numbered to 99 copies,
-base,88,Base,false,,Jim Thome
+base,88,Base,false,,Jim Thome,,
 base,88,Refractor,false,499,Jim Thome,serial-numbered to 499 copies,
 base,88,X-Fractor,false,299,Jim Thome,serial-numbered to 299 copies,
 base,88,X-Fractor w/Protector,false,99,Jim Thome,serial-numbered to 99 copies,
-base,89,Base,false,,Sammy Sosa
+base,89,Base,false,,Sammy Sosa,,
 base,89,Refractor,false,499,Sammy Sosa,serial-numbered to 499 copies,
 base,89,X-Fractor,false,299,Sammy Sosa,serial-numbered to 299 copies,
 base,89,X-Fractor w/Protector,false,99,Sammy Sosa,serial-numbered to 99 copies,
-base,90,Base,false,,Greg Maddux
+base,90,Base,false,,Greg Maddux,,
 base,90,Refractor,false,499,Greg Maddux,serial-numbered to 499 copies,
 base,90,X-Fractor,false,299,Greg Maddux,serial-numbered to 299 copies,
 base,90,X-Fractor w/Protector,false,99,Greg Maddux,serial-numbered to 99 copies,
-base,91,Base,false,,Pedro Martinez
+base,91,Base,false,,Pedro Martinez,,
 base,91,Refractor,false,499,Pedro Martinez,serial-numbered to 499 copies,
 base,91,X-Fractor,false,299,Pedro Martinez,serial-numbered to 299 copies,
 base,91,X-Fractor w/Protector,false,99,Pedro Martinez,serial-numbered to 99 copies,
-base,92,Base,false,,Jeromy Burnitz
+base,92,Base,false,,Jeromy Burnitz,,
 base,92,Refractor,false,499,Jeromy Burnitz,serial-numbered to 499 copies,
 base,92,X-Fractor,false,299,Jeromy Burnitz,serial-numbered to 299 copies,
 base,92,X-Fractor w/Protector,false,99,Jeromy Burnitz,serial-numbered to 99 copies,
-base,93,Base,false,,Raul Mondesi
+base,93,Base,false,,Raul Mondesi,,
 base,93,Refractor,false,499,Raul Mondesi,serial-numbered to 499 copies,
 base,93,X-Fractor,false,299,Raul Mondesi,serial-numbered to 299 copies,
 base,93,X-Fractor w/Protector,false,99,Raul Mondesi,serial-numbered to 99 copies,
-base,94,Base,false,,Bret Boone
+base,94,Base,false,,Bret Boone,,
 base,94,Refractor,false,499,Bret Boone,serial-numbered to 499 copies,
 base,94,X-Fractor,false,299,Bret Boone,serial-numbered to 299 copies,
 base,94,X-Fractor w/Protector,false,99,Bret Boone,serial-numbered to 99 copies,
-base,95,Base,false,,Jerry Hairston
+base,95,Base,false,,Jerry Hairston,,
 base,95,Refractor,false,499,Jerry Hairston,serial-numbered to 499 copies,
 base,95,X-Fractor,false,299,Jerry Hairston,serial-numbered to 299 copies,
 base,95,X-Fractor w/Protector,false,99,Jerry Hairston,serial-numbered to 99 copies,
-base,96,Base,false,,Mike Rivera
+base,96,Base,false,,Mike Rivera,,
 base,96,Refractor,false,499,Mike Rivera,serial-numbered to 499 copies,
 base,96,X-Fractor,false,299,Mike Rivera,serial-numbered to 299 copies,
 base,96,X-Fractor w/Protector,false,99,Mike Rivera,serial-numbered to 99 copies,
-base,97,Base,false,,Juan Cruz
+base,97,Base,false,,Juan Cruz,,
 base,97,Refractor,false,499,Juan Cruz,serial-numbered to 499 copies,
 base,97,X-Fractor,false,299,Juan Cruz,serial-numbered to 299 copies,
 base,97,X-Fractor w/Protector,false,99,Juan Cruz,serial-numbered to 99 copies,
-base,98,Base,false,,Morgan Ensberg
+base,98,Base,false,,Morgan Ensberg,,
 base,98,Refractor,false,499,Morgan Ensberg,serial-numbered to 499 copies,
 base,98,X-Fractor,false,299,Morgan Ensberg,serial-numbered to 299 copies,
 base,98,X-Fractor w/Protector,false,99,Morgan Ensberg,serial-numbered to 99 copies,
-base,99,Base,false,,Nathan Haynes
+base,99,Base,false,,Nathan Haynes,,
 base,99,Refractor,false,499,Nathan Haynes,serial-numbered to 499 copies,
 base,99,X-Fractor,false,299,Nathan Haynes,serial-numbered to 299 copies,
 base,99,X-Fractor w/Protector,false,99,Nathan Haynes,serial-numbered to 99 copies,
-base,100,Base,false,,Xavier Nady
+base,100,Base,false,,Xavier Nady,,
 base,100,Refractor,false,499,Xavier Nady,serial-numbered to 499 copies,
 base,100,X-Fractor,false,299,Xavier Nady,serial-numbered to 299 copies,
 base,100,X-Fractor w/Protector,false,99,Xavier Nady,serial-numbered to 99 copies,
-base,101,Base,false,,Nic Jackson AU RC*
+base,101,Base,false,,Nic Jackson AU RC*,,
 base,101,Refractor,false,499,Nic Jackson AU RC*,serial-numbered to 499 copies,
 base,101,X-Fractor,false,299,Nic Jackson AU RC*,serial-numbered to 299 copies,
 base,101,X-Fractor w/Protector,false,99,Nic Jackson AU RC*,serial-numbered to 99 copies,
-base,102,Base,false,,Mauricio Lara AU RC*
+base,102,Base,false,,Mauricio Lara AU RC*,,
 base,102,Refractor,false,499,Mauricio Lara AU RC*,serial-numbered to 499 copies,
 base,102,X-Fractor,false,299,Mauricio Lara AU RC*,serial-numbered to 299 copies,
 base,102,X-Fractor w/Protector,false,99,Mauricio Lara AU RC*,serial-numbered to 99 copies,
-base,103,Base,false,,Freddy Sanchez AU RC
+base,103,Base,false,,Freddy Sanchez AU RC,,
 base,103,Refractor,false,499,Freddy Sanchez AU RC,serial-numbered to 499 copies,
 base,103,X-Fractor,false,299,Freddy Sanchez AU RC,serial-numbered to 299 copies,
 base,103,X-Fractor w/Protector,false,99,Freddy Sanchez AU RC,serial-numbered to 99 copies,
-base,104,Base,false,,Clint Nageotte AU RC
+base,104,Base,false,,Clint Nageotte AU RC,,
 base,104,Refractor,false,499,Clint Nageotte AU RC,serial-numbered to 499 copies,
 base,104,X-Fractor,false,299,Clint Nageotte AU RC,serial-numbered to 299 copies,
 base,104,X-Fractor w/Protector,false,99,Clint Nageotte AU RC,serial-numbered to 99 copies,
-base,105,Base,false,,Beltran Perez AU RC
+base,105,Base,false,,Beltran Perez AU RC,,
 base,105,Refractor,false,499,Beltran Perez AU RC,serial-numbered to 499 copies,
 base,105,X-Fractor,false,299,Beltran Perez AU RC,serial-numbered to 299 copies,
 base,105,X-Fractor w/Protector,false,99,Beltran Perez AU RC,serial-numbered to 99 copies,
-base,106,Base,false,,"Garett Gentry AU RC* UER (mispelled ""Garrett"")"
-base,106,Refractor,false,499,"Garett Gentry AU RC* UER (mispelled ""Garrett"")",serial-numbered to 499 copies,
-base,106,X-Fractor,false,299,"Garett Gentry AU RC* UER (mispelled ""Garrett"")",serial-numbered to 299 copies,
-base,106,X-Fractor w/Protector,false,99,"Garett Gentry AU RC* UER (mispelled ""Garrett"")",serial-numbered to 99 copies,
-base,107,Base,false,,Chad Qualls AU RC
+base,106,UER Mispelled Garrett,false,,Garett Gentry AU RC*,,
+base,106,Refractor UER Mispelled Garrett,false,499,Garett Gentry AU RC*,serial-numbered to 499 copies,
+base,106,X-Fractor UER Mispelled Garrett,false,299,Garett Gentry AU RC*,serial-numbered to 299 copies,
+base,106,X-Fractor w/Protector UER Mispelled Garrett,false,99,Garett Gentry AU RC*,serial-numbered to 99 copies,
+base,107,Base,false,,Chad Qualls AU RC,,
 base,107,Refractor,false,499,Chad Qualls AU RC,serial-numbered to 499 copies,
 base,107,X-Fractor,false,299,Chad Qualls AU RC,serial-numbered to 299 copies,
 base,107,X-Fractor w/Protector,false,99,Chad Qualls AU RC,serial-numbered to 99 copies,
-base,108,Base,false,,Jason Bay AU RC
+base,108,Base,false,,Jason Bay AU RC,,
 base,108,Refractor,false,499,Jason Bay AU RC,serial-numbered to 499 copies,
 base,108,X-Fractor,false,299,Jason Bay AU RC,serial-numbered to 299 copies,
 base,108,X-Fractor w/Protector,false,99,Jason Bay AU RC,serial-numbered to 99 copies,
-base,109,Base,false,,Michael Hill AU RC*
+base,109,Base,false,,Michael Hill AU RC*,,
 base,109,Refractor,false,499,Michael Hill AU RC*,serial-numbered to 499 copies,
 base,109,X-Fractor,false,299,Michael Hill AU RC*,serial-numbered to 299 copies,
 base,109,X-Fractor w/Protector,false,99,Michael Hill AU RC*,serial-numbered to 99 copies,
-base,110,Base,false,,Brian Tallet AU RC
+base,110,Base,false,,Brian Tallet AU RC,,
 base,110,Refractor,false,499,Brian Tallet AU RC,serial-numbered to 499 copies,
 base,110,X-Fractor,false,299,Brian Tallet AU RC,serial-numbered to 299 copies,
 base,110,X-Fractor w/Protector,false,99,Brian Tallet AU RC,serial-numbered to 99 copies,
-insert-jersey-relics,FJR-AJ,,false,,Andruw Jones
-insert-jersey-relics,FJR-AR,,false,,Alex Rodriguez
-insert-jersey-relics,FJR-BB,,false,,Barry Bonds
-insert-jersey-relics,FJR-BO,,false,,Bret Boone
-insert-jersey-relics,FJR-CD,,false,,Carlos Delgado
-insert-jersey-relics,FJR-CJ,,false,,Chipper Jones
-insert-jersey-relics,FJR-CS,,false,,Curt Schilling
-insert-jersey-relics,FJR-FT,,false,,Frank Thomas
-insert-jersey-relics,FJR-GM,,false,,Greg Maddux
-insert-jersey-relics,FJR-HN,,false,,Hideo Nomo
-insert-jersey-relics,FJR-IR,,false,,Ivan Rodriguez
-insert-jersey-relics,FJR-JB,,false,,Jeff Bagwell
-insert-jersey-relics,FJR-LG,,false,,Luis Gonzalez
-insert-jersey-relics,FJR-LW,,false,,Larry Walker
-insert-jersey-relics,FJR-MG,,false,,Mark Grace
-insert-jersey-relics,FJR-MP,,false,,Mike Piazza
-insert-jersey-relics,FJR-PM,,false,,Pedro Martinez
-insert-jersey-relics,FJR-RA,,false,,Roberto Alomar
-insert-jersey-relics,FJR-RH,,false,,Rickey Henderson
-insert-jersey-relics,FJR-RP,,false,,Rafael Palmeiro
-insert-jersey-relics,FJR-TG,,false,,Tony Gwynn
-insert-jersey-relics,FJR-TH,,false,,Todd Helton
-insert-jersey-relics,FJR-TS,,false,,Tsuyoshi Shinjo
-insert-bat-relics,FBR-AJ,,false,,Andruw Jones
-insert-bat-relics,FBR-AP,,false,,Albert Pujols
-insert-bat-relics,FBR-AR,,false,,Alex Rodriguez
-insert-bat-relics,FBR-AS,,false,,Alfonso Soriano
-insert-bat-relics,FBR-BB,,false,,Barry Bonds
-insert-bat-relics,FBR-BO,,false,,Bret Boone
-insert-bat-relics,FBR-BW,,false,,Bernie Williams
-insert-bat-relics,FBR-CJ,,false,,Chipper Jones
-insert-bat-relics,FBR-IR,,false,,Ivan Rodriguez
-insert-bat-relics,FBR-LG,,false,,Luis Gonzalez
-insert-bat-relics,FBR-MP,,false,,Mike Piazza
-insert-bat-relics,FBR-NG,,false,,Nomar Garciaparra
-insert-bat-relics,FBR-TG,,false,,Tony Gwynn
-insert-bat-relics,FBR-TH,,false,,Todd Helton
-insert-bat-relics,FBR-TS,,false,,Tsuyoshi Shinjo
-auto-moments-autographs,FMA-BG,,true,,Bob Gibson
-auto-moments-autographs,FMA-BR,,true,,Bobby Richardson
-auto-moments-autographs,FMA-BT,,true,,Bobby Thomson
-auto-moments-autographs,FMA-DL,,true,,Don Larsen
-auto-moments-autographs,FMA-DM,,true,,Don Mattingly
-auto-moments-autographs,FMA-FJ,,true,,Fergie Jenkins
-auto-moments-autographs,FMA-GG,,true,,Goose Gossage
-auto-moments-autographs,FMA-GP,,true,,Gaylord Perry
-auto-moments-autographs,FMA-JB,,true,,Jim Bunning
-auto-moments-autographs,FMA-JS,,true,,Johnny Sain
-auto-moments-autographs,FMA-LA,,true,,Luis Aparicio
-auto-moments-autographs,FMA-MS,,true,,Mike Schmidt
-auto-moments-autographs,FMA-YB,,true,,Yogi Berra
-auto-moments-autographs,FMA-BRO,,true,,Brooks Robinson
-auto-autographed-first-year-players,101,,true,,Nic Jackson AU RC*
-auto-autographed-first-year-players,102,,true,,Mauricio Lara AU RC*
-auto-autographed-first-year-players,103,,true,,Freddy Sanchez AU RC
-auto-autographed-first-year-players,104,,true,,Clint Nageotte AU RC
-auto-autographed-first-year-players,105,,true,,Beltran Perez AU RC
-auto-autographed-first-year-players,107,,true,,Chad Qualls AU RC
-auto-autographed-first-year-players,108,,true,,Jason Bay AU RC
-auto-autographed-first-year-players,109,,true,,Michael Hill AU RC*
-auto-autographed-first-year-players,110,,true,,Brian Tallet AU RC
+insert-jersey-relics,FJR-AJ,,false,,Andruw Jones,,
+insert-jersey-relics,FJR-AR,,false,,Alex Rodriguez,,
+insert-jersey-relics,FJR-BB,,false,,Barry Bonds,,
+insert-jersey-relics,FJR-BO,,false,,Bret Boone,,
+insert-jersey-relics,FJR-CD,,false,,Carlos Delgado,,
+insert-jersey-relics,FJR-CJ,,false,,Chipper Jones,,
+insert-jersey-relics,FJR-CS,,false,,Curt Schilling,,
+insert-jersey-relics,FJR-FT,,false,,Frank Thomas,,
+insert-jersey-relics,FJR-GM,,false,,Greg Maddux,,
+insert-jersey-relics,FJR-HN,,false,,Hideo Nomo,,
+insert-jersey-relics,FJR-IR,,false,,Ivan Rodriguez,,
+insert-jersey-relics,FJR-JB,,false,,Jeff Bagwell,,
+insert-jersey-relics,FJR-LG,,false,,Luis Gonzalez,,
+insert-jersey-relics,FJR-LW,,false,,Larry Walker,,
+insert-jersey-relics,FJR-MG,,false,,Mark Grace,,
+insert-jersey-relics,FJR-MP,,false,,Mike Piazza,,
+insert-jersey-relics,FJR-PM,,false,,Pedro Martinez,,
+insert-jersey-relics,FJR-RA,,false,,Roberto Alomar,,
+insert-jersey-relics,FJR-RH,,false,,Rickey Henderson,,
+insert-jersey-relics,FJR-RP,,false,,Rafael Palmeiro,,
+insert-jersey-relics,FJR-TG,,false,,Tony Gwynn,,
+insert-jersey-relics,FJR-TH,,false,,Todd Helton,,
+insert-jersey-relics,FJR-TS,,false,,Tsuyoshi Shinjo,,
+insert-bat-relics,FBR-AJ,,false,,Andruw Jones,,
+insert-bat-relics,FBR-AP,,false,,Albert Pujols,,
+insert-bat-relics,FBR-AR,,false,,Alex Rodriguez,,
+insert-bat-relics,FBR-AS,,false,,Alfonso Soriano,,
+insert-bat-relics,FBR-BB,,false,,Barry Bonds,,
+insert-bat-relics,FBR-BO,,false,,Bret Boone,,
+insert-bat-relics,FBR-BW,,false,,Bernie Williams,,
+insert-bat-relics,FBR-CJ,,false,,Chipper Jones,,
+insert-bat-relics,FBR-IR,,false,,Ivan Rodriguez,,
+insert-bat-relics,FBR-LG,,false,,Luis Gonzalez,,
+insert-bat-relics,FBR-MP,,false,,Mike Piazza,,
+insert-bat-relics,FBR-NG,,false,,Nomar Garciaparra,,
+insert-bat-relics,FBR-TG,,false,,Tony Gwynn,,
+insert-bat-relics,FBR-TH,,false,,Todd Helton,,
+insert-bat-relics,FBR-TS,,false,,Tsuyoshi Shinjo,,
+auto-moments-autographs,FMA-BG,,true,,Bob Gibson,,
+auto-moments-autographs,FMA-BR,,true,,Bobby Richardson,,
+auto-moments-autographs,FMA-BT,,true,,Bobby Thomson,,
+auto-moments-autographs,FMA-DL,,true,,Don Larsen,,
+auto-moments-autographs,FMA-DM,,true,,Don Mattingly,,
+auto-moments-autographs,FMA-FJ,,true,,Fergie Jenkins,,
+auto-moments-autographs,FMA-GG,,true,,Goose Gossage,,
+auto-moments-autographs,FMA-GP,,true,,Gaylord Perry,,
+auto-moments-autographs,FMA-JB,,true,,Jim Bunning,,
+auto-moments-autographs,FMA-JS,,true,,Johnny Sain,,
+auto-moments-autographs,FMA-LA,,true,,Luis Aparicio,,
+auto-moments-autographs,FMA-MS,,true,,Mike Schmidt,,
+auto-moments-autographs,FMA-YB,,true,,Yogi Berra,,
+auto-moments-autographs,FMA-BRO,,true,,Brooks Robinson,,
+auto-autographed-first-year-players,101,,true,,Nic Jackson AU RC*,,
+auto-autographed-first-year-players,102,,true,,Mauricio Lara AU RC*,,
+auto-autographed-first-year-players,103,,true,,Freddy Sanchez AU RC,,
+auto-autographed-first-year-players,104,,true,,Clint Nageotte AU RC,,
+auto-autographed-first-year-players,105,,true,,Beltran Perez AU RC,,
+auto-autographed-first-year-players,107,,true,,Chad Qualls AU RC,,
+auto-autographed-first-year-players,108,,true,,Jason Bay AU RC,,
+auto-autographed-first-year-players,109,,true,,Michael Hill AU RC*,,
+auto-autographed-first-year-players,110,,true,,Brian Tallet AU RC,,
