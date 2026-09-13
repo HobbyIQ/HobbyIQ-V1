@@ -193,13 +193,29 @@ export function candidateProducts(productText: string, year?: number | null): st
   if (!text) return [];
   const segs = text.split("-").filter(Boolean);
   if (segs.length === 0) return [];
+  // THE JOINING WORD IS NOT PART OF THE PRODUCT'S NAME, and dropping it is the
+  // difference between finding a product and refusing it. Measured on the real
+  // titles: "Topps Allen & Ginter" slugifies to `topps-allen-ginter` and
+  // matches the registered key, while "Topps Allen and Ginter" -- the SAME
+  // product, the spelling the brand rules actually parse correctly -- yields
+  // `topps-allen-and-ginter`, which contains no run equal to the key. So the
+  // ampersand form resolved and the written-out form did not, which is the
+  // mechanism this ruling is about, inverted. Registry keys never carry `and`
+  // (`topps-allen-ginter`, `stars-stripes`), so a second pass with the joining
+  // words removed can only ever ADD the product the title plainly names.
+  const segsNoJoiner = segs.filter((x) => x !== "and" && x !== "n");
+  const segViews = segsNoJoiner.length === segs.length ? [segs] : [segs, segsNoJoiner];
   const found = new Set<string>();
   for (const key of productSetKeys()) {
     const entry = productEntry(key);
     if (!entry) continue;
+    let hit = false;
     for (const name of [entry.setKey, ...(entry.names ?? [])]) {
-      if (containsRun(segs, name.split("-"))) { found.add(entry.setKey); break; }
+      const needle = name.split("-");
+      for (const view of segViews) if (containsRun(view, needle)) { hit = true; break; }
+      if (hit) break;
     }
+    if (hit) found.add(entry.setKey);
   }
   // Add each hit's parent chain: the flagship is a real rival, and the
   // checklist -- not this function -- is what rules it out.
