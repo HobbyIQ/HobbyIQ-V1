@@ -53,8 +53,77 @@ import type { PortfolioHolding } from "../../types/portfolioiq.types.js";
 import { valueIdentity, type Valuation } from "../compiq/oneValuationPath.service.js";
 import { isExactPoolRung, isPricingRung } from "../compiq/fmvRung.js";
 import { identityBackingOf, mayPublishPrice, NO_CHECKLIST_MATCH } from "../catalog/identityBacking.js";
+import { readCatalogIdentityBySlug } from "../catalog/catalogMatcher.service.js";
 import { persistedLabelsForValuation } from "../compiq/valuationLabels.js";
 import { writeHoldingValuation } from "./writeHoldingValuation.js";
+
+/**
+ * CF-THE-LEGACY-SHORTCUT-NEVER-ASKED (Fable, 2026-09-13).
+ *
+ * `valueHoldingThroughOneEntry` runs `mayPublishPrice` before it will ever
+ * write `observed`/`estimated` on a holding (see the CF-WE-DONT-WANT-
+ * SELF-DERIVED gate above). But four call sites in portfolioStore.service.ts
+ * — the `PORTFOLIO_OBSERVED_GRADE_OVERRIDE_ENABLED` "unified early-exit"
+ * blocks in `autoPriceHolding` and `repriceHoldingsForUser` — are LEGACY,
+ * pre-D17 shortcuts that fire only when the one entry returned `unresolved`
+ * (i.e. `holdingValuationIds` had nothing to give it: a `no-slug` holding
+ * whose only identity is a raw `cardId`/`hobbyiqCardId`). They call
+ * `priceHoldingFromExactPool` directly — which reads `sold_comps` by id and
+ * knows nothing about `card_catalog` provenance — and persist whatever it
+ * finds as `valueSource: "observed"` with NO identity-backing check at all.
+ *
+ * Measured read-only against prod on 2026-09-13 (139 holdings, 12 users): 9
+ * of 139 holdings carry a live `fairMarketValue` under an exact-pool rung
+ * with `no-slug` or `no-catalog-row` backing, every one stamped in the SAME
+ * reprice pass, every one's rung inside `isExactPoolRung` — exactly the
+ * shape this shortcut produces and the one-entry gate would have refused.
+ * `holdingId 69eab153` (Chipper Jones 1997 Metal Universe #31, no catalog
+ * row at all) is the same holding #1781's doctrine comment used to
+ * illustrate the cost-basis-floor defect two rulings ago — the identity was
+ * never fixed, only the floor around it.
+ *
+ * So the shortcut asks the SAME question the one entry asks, of the SAME
+ * identity it is about to publish (`attempt.cardId` — the id the pool was
+ * actually read under, not the holding's stored, possibly-different, slug).
+ * Reusing `identityBackingOf`/`mayPublishPrice` rather than a new predicate
+ * is deliberate: two independent implementations of "may a price rest on
+ * this row" is precisely the shape CF-RIGHT-GUARD-WRONG-SCOPE warns about.
+ *
+ * Returns `true` (publish allowed) only for a `checklist-backed` identity.
+ * A `hiq:`-shaped id that names no catalog row, or names one this codebase
+ * minted itself, refuses — the caller falls through to the legacy
+ * confidence-gated chain below it, which already knows how to persist a
+ * proper withheld reason (`identity-not-in-catalog` / `no-checklist-match`)
+ * instead of silently publishing.
+ */
+export async function mayPublishFromLegacyExactPoolShortcut(
+  attemptCardId: string | null | undefined,
+): Promise<boolean> {
+  const id = String(attemptCardId ?? "").trim();
+  if (!id) return false;
+  // A non-`hiq:` id (a bare vendor cardId) names no catalog row by
+  // definition — `readCatalogIdentityBySlug` itself refuses to look one up
+  // for exactly that reason. `identityBackingOf` correctly reads that as
+  // `no-slug`/`no-catalog-row` territory without a wasted read.
+  let row: { source: string | null } | null = null;
+  try {
+    row = await readCatalogIdentityBySlug(id);
+  } catch (err) {
+    // Fails CLOSED, unlike the resolver's read-error tolerance elsewhere:
+    // this shortcut is optional legacy coverage, and a throttled read is not
+    // grounds to skip the one check that stands between a holding and an
+    // unbacked publish. The legacy confidence-gated chain still runs.
+    console.warn(JSON.stringify({
+      event: "legacy_exact_pool_shortcut_identity_check_error",
+      source: "holdingValuation.mayPublishFromLegacyExactPoolShortcut",
+      attemptCardId: id,
+      error: (err as Error)?.message ?? String(err),
+    }));
+    return false;
+  }
+  const backing = identityBackingOf(id, row ? [{ source: row.source }] : []);
+  return mayPublishPrice(backing);
+}
 
 export type HoldingValuationOutcome =
   | { outcome: "observed"; holding: PortfolioHolding; valuation: Valuation }

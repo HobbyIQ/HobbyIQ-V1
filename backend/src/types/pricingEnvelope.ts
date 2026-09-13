@@ -292,7 +292,21 @@ export interface PricingProvenance {
       // Joined the same way #2059 joined no-exact-pool: already a real,
       // persisted holdingValuation.ts reason (NoBasisRefusalReason) that
       // would otherwise silently drop to null at withheldOf below.
-      | "ladder-timeout";
+      | "ladder-timeout"
+      // CF-THE-DOMINANT-REFUSAL-WAS-UNNAMED (Fable, 2026-09-13). The SAME
+      // join #2059 and #2071 made, for the SAME reason: `confidence-gate` is
+      // `noBasisReasonFromEngine`'s own default fallback in
+      // holdingValuation.ts (`NoBasisRefusalReason`) — a real, persisted
+      // reason on every holding the legacy confidence-gated reprice lane
+      // declines — and this wire union never named it, so `withheldOf`
+      // silently dropped every one of those blocks to `null`. Measured
+      // read-only against prod on 2026-09-13 (139 holdings, 12 users):
+      // `confidence-gate` is not a rare edge, it is the DOMINANT refusal —
+      // 39 of 139 holdings (67% of every withhold on the live portfolio) —
+      // and every one of them was reaching the client as an unreasoned "—",
+      // indistinguishable from an outage, exactly the defect #1815 ("a
+      // refusal is a fact the client is entitled to") exists to forbid.
+      | "confidence-gate";
     /** The pool that blocked it, and that pool's size. */
     blockingId: string | null;
     blockingCount: number | null;

@@ -51,14 +51,25 @@ import type { PortfolioHolding } from "./api";
  *  which means every rung looked and found nothing: a timed-out ladder made
  *  no claim about the pool at all, so the copy must not imply "no sale
  *  exists" — that would send an owner looking for a match under another
- *  slug when the truth is simply "try again once things are less busy". */
+ *  slug when the truth is simply "try again once things are less busy".
+ *
+ *  `confidence-gate` joined 2026-09-13, the SAME shape again: the legacy
+ *  confidence-gated reprice lane's own decline reason
+ *  (`noBasisReasonFromEngine`'s fallback in holdingValuation.ts) was already
+ *  persisted on every holding it declined, and this file's union — like the
+ *  wire type it mirrors — never named it, so `withheldOf` dropped it to
+ *  `null`. Unlike the other five, this is not a rare edge: measured
+ *  read-only against prod on 2026-09-13, it is the SINGLE LARGEST refusal
+ *  reason on the live portfolio (39 of 139 holdings, 67% of every withhold),
+ *  every one of them reaching the glass as an unreasoned "—". */
 export type WithheldReason =
   | "cost-basis-floor"
   | "no-checklist-match"
   | "identity-not-in-catalog"
   | "pool-migrating"
   | "no-exact-pool"
-  | "ladder-timeout";
+  | "ladder-timeout"
+  | "confidence-gate";
 
 export interface WithheldBlock {
   reason: WithheldReason;
@@ -91,6 +102,7 @@ const SHORT: Record<WithheldReason, string> = {
   "pool-migrating": "comps settling",
   "no-exact-pool": "no sales yet for this exact card",
   "ladder-timeout": "price still computing",
+  "confidence-gate": "not enough evidence yet",
 };
 
 /** Rule 2: what would unlock a price, per reason. */
@@ -111,6 +123,11 @@ const UNLOCK: Record<WithheldReason, string> = {
   // statement about the market — the engine simply did not finish checking
   // in time. The next repricing pass is the unlock, not a new sale.
   "ladder-timeout": "This usually resolves on its own — try refreshing in a moment.",
+  // Not the owner's to fix either. The legacy pricing pass looked and could
+  // not clear its own confidence bar — thin comps, a stale read, or a low
+  // sample count — and declined rather than guess. The next scheduled
+  // reprice, or more sales landing in the pool, is the unlock.
+  "confidence-gate": "The next pricing pass may find enough evidence to publish a value.",
 };
 
 /** The words for the attention column and the row chip. */
@@ -163,6 +180,9 @@ export function withheldSentence(
   }
   if (w.reason === "ladder-timeout") {
     return "We could not finish checking this card's sales in time, likely due to high demand on our pricing data. This is not a statement that no sale exists — just try again in a moment.";
+  }
+  if (w.reason === "confidence-gate") {
+    return "We found some evidence for this card, but not enough to publish a confident value yet. We will keep checking on the next pricing pass.";
   }
   // cost-basis-floor with nothing computed: no number to quote, and Rule 3
   // forbids borrowing one.

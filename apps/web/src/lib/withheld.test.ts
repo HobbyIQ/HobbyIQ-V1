@@ -27,6 +27,7 @@ const ALL: WithheldReason[] = [
   "pool-migrating",
   "no-exact-pool",
   "ladder-timeout",
+  "confidence-gate",
 ];
 
 function holding(withheld: unknown): PortfolioHolding {
@@ -53,17 +54,18 @@ describe("withheldOf: reads the envelope, invents nothing", () => {
   });
 });
 
-describe("Rule 1: six causes, six different sentences", () => {
+describe("Rule 1: seven causes, seven different sentences", () => {
   it("gives every reason its own short label", () => {
     const seen = new Set(ALL.map((r) => withheldShort(r)));
-    // The bug: all four collapsed to "cost-basis check". Six distinct
-    // strings (now that no-exact-pool and ladder-timeout have joined the
-    // union) is the assertion that cannot pass if they ever re-collapse.
-    expect(seen.size).toBe(6);
+    // The bug: all four collapsed to "cost-basis check". Seven distinct
+    // strings (now that no-exact-pool, ladder-timeout and confidence-gate
+    // have joined the union) is the assertion that cannot pass if they ever
+    // re-collapse.
+    expect(seen.size).toBe(7);
   });
 
   it("gives every reason its own unlock line", () => {
-    expect(new Set(ALL.map((r) => withheldUnlock(r))).size).toBe(6);
+    expect(new Set(ALL.map((r) => withheldUnlock(r))).size).toBe(7);
   });
 
   it("never leaks the engine's vocabulary onto the glass", () => {
@@ -76,6 +78,7 @@ describe("Rule 1: six causes, six different sentences", () => {
       expect(words).not.toContain("pool-migrating");
       expect(words).not.toContain("no-exact-pool");
       expect(words).not.toContain("ladder-timeout");
+      expect(words).not.toContain("confidence-gate");
     }
   });
 
@@ -108,6 +111,9 @@ describe("Rule 2: every reason says what would unlock it", () => {
     // ladder-timeout is not even the owner's card to fix — the engine ran
     // out of time, not out of evidence. No card-detail action applies.
     expect(withheldUnlock("ladder-timeout").toLowerCase()).not.toContain("confirm");
+    // confidence-gate: the card is known, the engine looked and declined for
+    // its own reasons — nothing on the card record is what is missing.
+    expect(withheldUnlock("confidence-gate").toLowerCase()).not.toContain("confirm");
   });
 });
 
@@ -283,6 +289,7 @@ describe("showsCheckingPrice — the spinner never masks a decided row", () => {
       "pool-migrating",
       "no-exact-pool",
       "ladder-timeout",
+      "confidence-gate",
     ];
     for (const reason of reasons) {
       expect(showsCheckingPrice({ repricing: true, value: null, withheld: { ...w, reason } })).toBe(
