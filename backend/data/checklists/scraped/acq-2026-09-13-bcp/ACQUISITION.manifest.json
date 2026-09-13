@@ -6,9 +6,18 @@
  "scraper": "backend/scripts/scrape-bcp-ladders.cjs (staging/parse-only; no code changes)",
  "queue": "checklist-gap-queue.json — the 23 entries whose recommended source is baseballcardpedia",
  "productsQueued": 23,
- "productsStaged": 19,
- "filesStaged": 28,
- "rows": 69593,
+ "productsStaged": 22,
+ "filesStaged": 31,
+ "rows": 71213,
+ "ingestGate": {
+  "blockedFiles": [
+   "1997-flair-showcase-row-0-baseball.csv",
+   "1997-flair-showcase-row-1-baseball.csv",
+   "1997-flair-showcase-row-2-baseball.csv"
+  ],
+  "reason": "R30 row keys are not yet normalizeSetKey fixed points — the [/flair-showcase|flair/] strict rule collapses all three to `flair`, minting ONE id for three cards (measured: 1,080 of 1,620 ids collide). Register them in productSetKeys.ts with a strict rule ordered before that catch-all, then ingest.",
+  "ingestTheRestFreely": true
+ },
  "products": [
   {
    "file": "1959-fleer-baseball.csv",
@@ -139,6 +148,57 @@
    "scopesWithheld": [],
    "duplicateIdentityRowsDropped": 0,
    "ladderAbsentReason": "prose-only parallels; base emitted alone"
+  },
+  {
+   "file": "1997-flair-showcase-row-0-baseball.csv",
+   "year": 1997,
+   "sport": "baseball",
+   "setKey": "flair-showcase-row-0",
+   "setName": "1997 Flair Showcase Row 0",
+   "scope": "Row 0",
+   "sourceUrl": "http://www.baseballcardpedia.com/index.php/1997_Flair_Showcase",
+   "rows": 540,
+   "baseRows": 180,
+   "rungs": 2,
+   "printRunCoveragePct": 67,
+   "scopesWithheld": [],
+   "duplicateIdentityRowsDropped": 0,
+   "setKeyRegistrationRequired": true,
+   "blockedFromIngest": true
+  },
+  {
+   "file": "1997-flair-showcase-row-1-baseball.csv",
+   "year": 1997,
+   "sport": "baseball",
+   "setKey": "flair-showcase-row-1",
+   "setName": "1997 Flair Showcase Row 1",
+   "scope": "Row 1",
+   "sourceUrl": "http://www.baseballcardpedia.com/index.php/1997_Flair_Showcase",
+   "rows": 540,
+   "baseRows": 180,
+   "rungs": 2,
+   "printRunCoveragePct": 67,
+   "scopesWithheld": [],
+   "duplicateIdentityRowsDropped": 0,
+   "setKeyRegistrationRequired": true,
+   "blockedFromIngest": true
+  },
+  {
+   "file": "1997-flair-showcase-row-2-baseball.csv",
+   "year": 1997,
+   "sport": "baseball",
+   "setKey": "flair-showcase-row-2",
+   "setName": "1997 Flair Showcase Row 2",
+   "scope": "Row 2",
+   "sourceUrl": "http://www.baseballcardpedia.com/index.php/1997_Flair_Showcase",
+   "rows": 540,
+   "baseRows": 180,
+   "rungs": 2,
+   "printRunCoveragePct": 67,
+   "scopesWithheld": [],
+   "duplicateIdentityRowsDropped": 0,
+   "setKeyRegistrationRequired": true,
+   "blockedFromIngest": true
   },
   {
    "file": "1999-finest-baseball.csv",

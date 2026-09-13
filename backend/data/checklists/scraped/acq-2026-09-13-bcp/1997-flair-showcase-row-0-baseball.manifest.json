@@ -1,0 +1,37 @@
+{
+ "year": 1997,
+ "sport": "baseball",
+ "setKey": "flair-showcase-row-0",
+ "setName": "1997 Flair Showcase Row 0",
+ "sourceUrl": "http://www.baseballcardpedia.com/index.php/1997_Flair_Showcase",
+ "source": "bcp-2026-09-13",
+ "acquiredAt": "2026-09-13",
+ "parallelColumnAuthoritative": true,
+ "scope": "Row 0",
+ "scopeOfPage": "Flair Showcase",
+ "rowDesign": "Showcase front; Showtime back",
+ "subsetRuling": "R30 (Drew, 2026-09-12): a same-numbered subset within a product is its own card set. The page states \"All 540 base cards (180 players from all three \\\"Rows\\\")\" = 180 x 3; Rows 0/1/2 share numbers 1-180, so each is its own key.",
+ "setKeyRegistrationRequired": true,
+ "setKeyRegistrationNote": "normalizeSetKey(\"flair-showcase-row-0\") currently returns \"flair\": the strict-tier rule [/flair-showcase|flair/, \"flair\"] in hobbyIqCardId.service.ts collapses every flair-showcase-* spelling. This key is NOT yet a normalizeSetKey fixed point and MUST be registered in productSetKeys.ts (as S(\"flair-showcase-row-0\", { parent: \"flair\" })) with a strict-tier rule ordered BEFORE that catch-all, exactly as upper-deck-black-diamond and topps-finest-flashbacks are. DO NOT INGEST until that lands, or all three rows collapse back onto flair and the identity split this file exists to make is undone.",
+ "ladder": [
+  {
+   "name": "Legacy Collection",
+   "printRun": "100",
+   "rarity": null
+  },
+  {
+   "name": "Masterpiece",
+   "printRun": "1",
+   "rarity": null
+  }
+ ],
+ "sections": [
+  {
+   "name": "Row 0",
+   "category": null,
+   "isAuto": false,
+   "cards": 180,
+   "rungs": 2
+  }
+ ]
+}
