@@ -306,7 +306,31 @@ export interface PricingProvenance {
       // and every one of them was reaching the client as an unreasoned "—",
       // indistinguishable from an outage, exactly the defect #1815 ("a
       // refusal is a fact the client is entitled to") exists to forbid.
-      | "confidence-gate";
+      | "confidence-gate"
+      // CF-A-REVIEW-STATUS-IS-NOT-A-CONFIRMED-IDENTITY (Claude Fable 5.1,
+      // 2026-09-13). The holding is `cardStatus: "pending-review"` — an
+      // eBay auto-import (or any lane using the same review gate) the owner
+      // has not yet confirmed. Distinct from `no-checklist-match`: this
+      // reason can fire even on a genuinely checklist-backed identity,
+      // because review confirmation and catalog backing are two separate
+      // questions and BOTH must clear before a number publishes. Same join
+      // pattern as #2059/#2071/#2078/ladder-timeout/confidence-gate: already
+      // a real, persisted holdingValuation.ts reason (NoBasisRefusalReason)
+      // that would otherwise silently drop to null at withheldOf below.
+      //
+      // THE FINDING (go-live census, 2026-09-13): holdings 925ccfe7 /
+      // 4e70af40 (Jack Wheeler, user-67878bb5) sat at
+      // cardStatus: "pending-review" since their 2026-09-04 import, carrying
+      // a published fairMarketValue of $14.79 under exact-pool-projection
+      // with NO withheld block at all — the import-time number, untouched
+      // for ~8 days. #2094 closed the identity-backing gap the legacy
+      // exact-pool shortcuts had (these two holdings' slug names no
+      // card_catalog row, so #2094 alone would also have withheld them once
+      // repriced); this reason closes the narrower, still-open gap: even an
+      // identity that WOULD clear `mayPublishPrice` must not publish while a
+      // human has not yet confirmed the row is the card the parser thinks it
+      // is.
+      | "pending-review";
     /** The pool that blocked it, and that pool's size. */
     blockingId: string | null;
     blockingCount: number | null;
