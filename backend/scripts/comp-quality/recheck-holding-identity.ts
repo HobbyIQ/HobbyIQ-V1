@@ -76,7 +76,8 @@
  */
 import { pathToFileURL } from "node:url";
 import path from "node:path";
-import { recoverHoldingFields, titleStatedProduct } from "../../src/services/portfolioiq/holdingFieldRecovery.service.js";
+import fs from "node:fs";
+import { recoverHoldingFields, titleStatedProduct, userAuthoredIdentity } from "../../src/services/portfolioiq/holdingFieldRecovery.service.js";
 // GATE R2's authority test — the SAME one the catalog uses to decide which row
 // may adjudicate a card. A ruling is not licence to pin a user's holding to a
 // row we derived from our own sales.
@@ -194,11 +195,24 @@ const INCLUDE_PARKED = process.env.INCLUDE_PARKED === "true";
 const MODE = String(process.env.MODE ?? "").trim().toLowerCase();
 const REDERIVE = MODE === "rederive";
 const RULE = MODE === "rule";
+const RULED = MODE === "ruled";
 
 /** The ruling this mode stamps. Dated, because a ruling is an event: the
  *  2026-08-30 ruling on 6f4f079b was correct for the catalog that existed
  *  then, and is superseded rather than erased. */
 const RULING_ID = String(process.env.RULING_ID ?? "ruling:Drew:2026-09-05").trim();
+
+/**
+ * MODE=ruled's scope: a committed .json list, never a value typed into a
+ * dispatch box. `RULED_LIST` is the primary spelling; `SCOPE` is accepted too
+ * because the runner already forwards it unconditionally
+ * (`SCOPE: ${{ inputs.scope }}` in backfill-runner.yml) and several sibling
+ * list lanes (relocate-catalog-rows-by-list.cjs, purge-seed-queue-sport-
+ * hygiene) already use SCOPE to carry a list path — this mode rides that
+ * existing convention rather than asking for a new workflow input.
+ * `RULED_LIST` wins when both are set, so a hand run typing the more legible
+ * name is never silently overridden by an inherited SCOPE default. */
+const RULED_LIST = String(process.env.RULED_LIST ?? process.env.SCOPE ?? "").trim();
 
 /** The runner's `titles` input, reused as the holding-id list (workflow_dispatch
  *  is at its input cap; see the backfill-runner comment for this script).
@@ -333,6 +347,387 @@ export function fieldsFromRuledRow(
   return fills;
 }
 
+/**
+ * MODE=ruled — THE LIST IS THE SCOPE (Drew, 2026-09-13).
+ *
+ * MODE=rule already lets a human override a human, but it is typed into a
+ * dispatch box as `titles=id8=slug,...` — reviewable in the workflow log
+ * after the fact, never in a diff before it runs. Drew's ca7a150b is exactly
+ * the case that wants the other shape: `MODE=rederive` correctly refuses it
+ * ("ruled by manual-confirm — a human's identity is never overwritten by
+ * this pass"), and the fix is not a better derivation, it is Drew re-ruling
+ * the same card onto its post-fold address
+ * (`hiq:baseball:2026:bowman:cpa-mg:gold-refractor:auto:num-50`, the row
+ * `a78a5ea` folded the checklist onto) with the reasoning committed and
+ * reviewable — the catalog list lane's shape
+ * (relocate-catalog-rows-by-list.cjs / #1858), applied to holdings instead of
+ * catalog rows.
+ *
+ * SO THIS MODE IS MODE=rule's WRITE PATH, ENTERED FROM A FILE INSTEAD OF A
+ * COMMAND LINE. It does not touch `rule()` or `RuleVerdict` — a list of
+ * entries typed by hand into `titles` and a list read from a committed JSON
+ * file are different enough scopes (one validated before any read, banner by
+ * entry, refused whole-list on a malformed entry) that forcing them through
+ * one parser would make neither shape legible on its own. What both share is
+ * the write itself: cardId/hobbyiqCardId move to the ruled target, and
+ * nothing about a human's prior ruling is erased.
+ *
+ * ONE HOLDING MAY BE MANUAL-CONFIRM WITHOUT MEANING THIS MODE'S PREMISE:
+ * an entry may name a holding that MODE=rederive would have rederived on its
+ * own (no ruling on it at all) — "a ruling is a ruling" regardless, so it is
+ * still re-addressed, but the banner says the guard it did NOT need to
+ * bypass, because a report a reviewer trusts says exactly what changed and
+ * why, never just "success".
+ *
+ * WHAT IT STILL REFUSES, and why each is separate from MODE=rule's gates:
+ *
+ *   EVERY ENTRY VALIDATED BEFORE ANY READ. A list author's typo must fail the
+ *     whole dispatch, not the one entry it broke — the same rule
+ *     classifyEntry enforces for the catalog lane, and the same reason:
+ *     silently dropping a malformed entry is how a partial run reads as a
+ *     complete one.
+ *   THE TARGET MUST EXIST IN card_catalog, read back by id. A ruling never
+ *     mints a card (GATE RL1).
+ *   THE TARGET MUST BE verificationStatus "verified" — stricter than MODE=
+ *     rule's canAdjudicate (checklist-backed OR ruled-with-citation): this
+ *     mode's targets are re-addresses off a PRIOR fold, and #2098's own
+ *     lesson is that a row can be checklist-backed in provenance and still
+ *     sit `pending-review` until a citation confirms it, so this mode reads
+ *     the status the way pricing itself does rather than re-deriving
+ *     "may this adjudicate" from the source tag alone (GATE RL2).
+ */
+export interface RuledEntry {
+  holdingId: string;
+  userId: string;
+  to: string;
+  ruling: { by: string; date: string; note?: string };
+}
+
+/**
+ * Validate one raw list entry. Returns `{ ok: true, entry }` or
+ * `{ ok: false, why }` — never throws, so the caller can collect every
+ * refusal in the list before deciding whether to run at all.
+ *
+ * Exported so a mutation check can drive it alone, the same reason
+ * `classifyEntry` is exported from the catalog list lane.
+ */
+export function validateRuledEntry(
+  raw: unknown,
+): { ok: true; entry: RuledEntry } | { ok: false; why: string } {
+  const e = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
+  const holdingId = String(e.holdingId ?? "").trim();
+  const userId = String(e.userId ?? "").trim();
+  const to = String(e.to ?? "").trim();
+  const ruling = (e.ruling && typeof e.ruling === "object" ? e.ruling : {}) as Record<string, unknown>;
+  const by = String(ruling.by ?? "").trim();
+  const date = String(ruling.date ?? "").trim();
+  const note = ruling.note === undefined ? undefined : String(ruling.note ?? "").trim();
+
+  const label = holdingId ? holdingId.slice(0, 8) : "(no holdingId)";
+  if (!holdingId) return { ok: false, why: `entry has no holdingId: ${JSON.stringify(raw).slice(0, 120)}` };
+  if (!userId) return { ok: false, why: `entry ${label} has no userId` };
+  if (!to) return { ok: false, why: `entry ${label} has no "to"` };
+  if (!to.startsWith("hiq:")) return { ok: false, why: `entry ${label} "to" is not a hiq: slug: ${to.slice(0, 60)}` };
+  if (!by) return { ok: false, why: `entry ${label} has no ruling.by` };
+  if (!date) return { ok: false, why: `entry ${label} has no ruling.date` };
+
+  return { ok: true, entry: { holdingId, userId, to, ruling: { by, date, ...(note ? { note } : {}) } } };
+}
+
+/**
+ * Parse and validate an entire RULED_LIST file's `entries` array. Throws on
+ * the FIRST bad entry, naming it, rather than skipping it — the same
+ * whole-list refusal `parseRulingPairs` and `classifyEntry` both enforce
+ * (feedback_scope_formats_are_per_script): a list with one typo must never
+ * yield a shorter, silently-successful list.
+ *
+ * Exported so a pin can drive it alone against a fixture with no Cosmos
+ * connection at all.
+ */
+export function parseRuledList(doc: unknown): RuledEntry[] {
+  const entries = (doc && typeof doc === "object" ? (doc as Record<string, unknown>).entries : null);
+  if (!Array.isArray(entries) || !entries.length) {
+    throw new Error("RULED_LIST has no entries — an empty ruling list is a typo, not a no-op.");
+  }
+  const out: RuledEntry[] = [];
+  const seen = new Set<string>();
+  for (const raw of entries) {
+    const v = validateRuledEntry(raw);
+    if (!v.ok) throw new Error(`RULED_LIST entry refused: ${v.why}`);
+    if (seen.has(v.entry.holdingId)) {
+      throw new Error(`RULED_LIST names holding ${v.entry.holdingId} twice. One card, one ruling — refusing an ambiguous list.`);
+    }
+    seen.add(v.entry.holdingId);
+    out.push(v.entry);
+  }
+  return out;
+}
+
+interface RuledVerdict {
+  hid: string;
+  userId: string;
+  docId: string;
+  from: string | null;
+  to: string;
+  verdict: "RULED" | "AGREE" | "REFUSED";
+  reason: string;
+  bypassedManualConfirm: boolean;
+  manualConfirmBy: string | null;
+  backedBy?: string | null;
+  ruling: RuledEntry["ruling"];
+}
+
+/**
+ * Apply a RULED_LIST. Mirrors `rule()`'s shape (locate every entry first and
+ * refuse the whole run if one is missing; GATE RL1/RL2 before any write;
+ * etag-guarded replace; verify by re-read) but is driven by validated file
+ * entries rather than `id8=slug` command-line pairs, and its target gate is
+ * `verificationStatus === "verified"` rather than `canAdjudicate`.
+ */
+export async function ruled(
+  { entries, docs, container, catalog }:
+  { entries: RuledEntry[]; docs: any[]; container: any; catalog: any },
+): Promise<void> {
+  console.log(`[scope]  ${entries.length} ruled entr${entries.length === 1 ? "y" : "ies"}: `
+    + entries.map((e) => `${e.holdingId} -> ${e.to}`).join("; "));
+  console.log(`[list]   ${RULED_LIST}`);
+  console.log(`[mode]   ruled — ${APPLY ? "APPLY, WILL WRITE" : "report only"}\n`);
+
+  if (!docs.length) {
+    console.error("FATAL: zero portfolio docs returned. The pass proved nothing.");
+    process.exit(2);
+  }
+
+  // Locate every named holding FIRST, and refuse the whole run if one is
+  // missing — the same discipline `rule()` uses, for the same reason: a
+  // ruling list is a set of decisions about specific cards, and running three
+  // of four silently would leave the operator believing all four moved.
+  const located = new Map<string, { docId: string; userId: string; hid: string; h: any; entry: RuledEntry }>();
+  let scanned = 0;
+  for (const doc of docs) {
+    for (const [hid, h] of Object.entries<any>(doc.holdings || {})) {
+      if (!h) continue;
+      scanned++;
+      for (const entry of entries) {
+        // Exact id or an id PREFIX — the same convention `rule()` and
+        // HOLDING_IDS use, so a list author may write the 8-char form
+        // (as printed in every console label and doc comment) or the full
+        // UUID interchangeably.
+        if (hid !== entry.holdingId && !hid.startsWith(entry.holdingId)) continue;
+        if (doc.userId !== entry.userId && doc.id !== entry.userId) {
+          console.error(`FATAL: ${hid} matched under userId ${doc.userId}, not the ${entry.userId} the list names.\n`
+            + "A ruling names a specific user's card; a userId mismatch means the list is describing a\n"
+            + "different holding than the one this scan found, and running it would rule the wrong owner's card.");
+          process.exit(2);
+        }
+        if (located.has(entry.holdingId)) {
+          console.error(`FATAL: ruling id ${entry.holdingId} matches more than one holding (${located.get(entry.holdingId)!.hid}, ${hid}).\n`
+            + "An id prefix that names two cards cannot rule either — pass the full holding id.");
+          process.exit(2);
+        }
+        located.set(entry.holdingId, { docId: doc.id, userId: doc.userId, hid, h, entry });
+      }
+    }
+  }
+  if (!scanned) {
+    console.error("FATAL: portfolio docs exist but contain zero holdings. The pass proved nothing.");
+    process.exit(2);
+  }
+  const missing = entries.filter((e) => !located.has(e.holdingId));
+  if (missing.length) {
+    console.error(`FATAL: ${missing.length} ruled holding(s) matched NOTHING out of ${scanned} scanned: `
+      + `${missing.map((m) => m.holdingId).join(", ")}.\n`
+      + "A ruling that names no card is a typo, not an empty result — refusing the whole list so a\n"
+      + "partial run cannot read as a complete one.");
+    process.exit(2);
+  }
+  console.log(`holdings scanned: ${scanned}   ruled: ${located.size}\n`);
+
+  const verdicts: RuledVerdict[] = [];
+
+  for (const entry of entries) {
+    const t = located.get(entry.holdingId)!;
+    const h = t.h;
+    const from = h.hobbyiqCardId ?? h.cardId ?? null;
+    const label = `${String(h.playerName ?? "?").slice(0, 22).padEnd(22)} ${String(h.cardYear ?? "?")} #${String(h.cardNumber ?? "?").padEnd(8)}`;
+    const push = (v: Omit<RuledVerdict, "hid" | "userId" | "docId" | "from" | "to" | "ruling">) =>
+      verdicts.push({ hid: t.hid, userId: t.userId, docId: t.docId, from, to: entry.to, ruling: entry.ruling, ...v });
+
+    // GATE RL1 — THE ROW MUST EXIST. Read by id, exactly as GATE R1 does. A
+    // ruling never mints a card.
+    const { resources: rows } = await catalog.items
+      .query({
+        query: "SELECT c.id, c.source, c.verificationStatus, c.setName, c.cardNumber, c.parallel, c.printRun, c.playerName FROM c WHERE c.id = @id",
+        parameters: [{ name: "@id", value: entry.to }],
+      })
+      .fetchAll();
+    const row = rows?.[0];
+    const auth = userAuthoredIdentity(h);
+    if (!row) {
+      push({ verdict: "REFUSED", backedBy: null, bypassedManualConfirm: false, manualConfirmBy: auth.by,
+        reason: `no catalog row carries ${entry.to} — a ruling never mints a card` });
+      console.log(`  REFUSED    ${label}  -> ${entry.to}\n             no catalog row carries that id`);
+      continue;
+    }
+
+    // GATE RL2 — THE TARGET MUST BE verificationStatus "verified". Stricter
+    // than MODE=rule's canAdjudicate: a row can be checklist-provenanced and
+    // still be `pending-review` (#2098) until a citation confirms it, and a
+    // re-address off a prior fold is exactly the case that wants the status
+    // pricing itself reads, not just the source tag.
+    const status = String(row.verificationStatus ?? "").trim();
+    if (status !== "verified") {
+      const source = String(row.source ?? "unknown");
+      push({ verdict: "REFUSED", backedBy: source, bypassedManualConfirm: false, manualConfirmBy: auth.by,
+        reason: `${entry.to} is ${status || "unset"} (source ${source}), not "verified" — a ruling may only land on a verified row` });
+      console.log(`  REFUSED    ${label}  -> ${entry.to}\n             verificationStatus=${JSON.stringify(status || null)}, not "verified"`);
+      continue;
+    }
+
+    const source = String(row.source ?? "unknown");
+    // A HOLDING IN THE LIST THAT IS NOT manual-confirm STILL GETS RULED — a
+    // ruling is a ruling — but the banner says so, because bypassing a guard
+    // that was never armed is a fact a reviewer should be able to see rather
+    // than infer.
+    const bypassed = auth.authored;
+
+    if (from === entry.to) {
+      push({ verdict: "AGREE", backedBy: source, bypassedManualConfirm: bypassed, manualConfirmBy: auth.by,
+        reason: "the holding already carries the ruled identity" });
+      console.log(`  AGREE      ${label}  ${entry.to}`);
+      continue;
+    }
+
+    push({ verdict: "RULED", backedBy: source, bypassedManualConfirm: bypassed, manualConfirmBy: auth.by,
+      reason: bypassed
+        ? `re-addressed over a standing ${auth.by} ruling, per ${entry.ruling.by} ${entry.ruling.date}`
+        : `ruled onto a verified row — the holding carried no standing human ruling to bypass` });
+    console.log(`  RULED      ${label}\n             ${from}\n          -> ${entry.to}   verified, source ${source}`);
+    console.log(`             ${bypassed ? `BYPASSES manual-confirm (${auth.by})` : "no manual-confirm guard on this holding"} — ${entry.ruling.by} ${entry.ruling.date}${entry.ruling.note ? `: ${entry.ruling.note}` : ""}`);
+  }
+
+  const counts = verdicts.reduce<Record<string, number>>((a, v) => { a[v.verdict] = (a[v.verdict] ?? 0) + 1; return a; }, {});
+  console.log(`\nSUMMARY  ${JSON.stringify(counts)}`);
+  console.log(JSON.stringify({ event: "holding_ruled_list_report", mode: "ruled", list: RULED_LIST, apply: APPLY, verdicts }, null, 1));
+
+  const writable = verdicts.filter((v) => v.verdict === "RULED");
+  if (!APPLY) {
+    console.log(`\nReport only — nothing written.${writable.length ? ` Re-run with BACKFILL_APPLY=true to apply the ${writable.length} above.` : ""}`);
+    if (verdicts.some((v) => v.verdict === "REFUSED")) process.exit(6);
+    return;
+  }
+  if (!writable.length) {
+    console.log("\nAPPLY requested, but nothing qualified. Nothing written.");
+    if (verdicts.some((v) => v.verdict === "REFUSED")) process.exit(6);
+    return;
+  }
+
+  // ---- APPLY -------------------------------------------------------------
+  console.log(`\n=== APPLY: ${writable.length} ruled re-address(es) ===`);
+  let wrote = 0, skipped = 0, conflicts = 0, failed = 0;
+  const byDoc = new Map<string, RuledVerdict[]>();
+  for (const v of writable) byDoc.set(v.docId, [...(byDoc.get(v.docId) ?? []), v]);
+
+  for (const [docId, list] of byDoc) {
+    const userId = list[0].userId;
+    let doc: any, etag: string | undefined;
+    try {
+      const read = await container.item(docId, userId).read();
+      doc = read.resource; etag = (read.resource as any)?._etag;
+    } catch (e: any) {
+      failed += list.length; console.log(`  READ FAIL  ${docId}  ${e?.message}`); continue;
+    }
+    if (!doc?.holdings) { failed += list.length; console.log(`  READ FAIL  ${docId}  doc has no holdings`); continue; }
+
+    const now = new Date().toISOString();
+    let mutated = 0;
+    for (const v of list) {
+      const h = doc.holdings[v.hid];
+      if (!h) { skipped++; console.log(`  SKIP       ${v.hid}  holding vanished between passes`); continue; }
+      // Re-assert against the FRESH doc: the identity we are replacing must
+      // still be the one the report described.
+      const cur = h.hobbyiqCardId ?? h.cardId ?? null;
+      if (cur !== v.from) { skipped++; console.log(`  SKIP       ${v.hid}  identity changed under us (${cur})`); continue; }
+
+      h.hobbyiqCardId = v.to;
+      h.cardId = v.to;
+      h.catalogMatchSlug = v.to;
+      h.catalogMatchedBy = "ruled-list";
+      h.catalogMatchConfidence = 1;
+      h.lastUpdated = now;
+
+      // identityVerifiedBy IS KEPT — a human's manual-confirm provenance is
+      // never erased by this mode, only re-confirmed. A NEW field records
+      // that a human looked again and where the identity moved FROM, which
+      // is what lets a later pass tell "always been here" from "re-addressed
+      // today" without losing the original attestation.
+      h.identityReconfirmedBy = {
+        source: "drew-ruling",
+        date: v.ruling.date,
+        note: v.ruling.note ?? null,
+        from: v.from,
+      };
+      h.identityRederivedFrom = v.from;
+      h.identityRederivedAt = now;
+      h.identityRederivedBy = "recheck-holding-identity MODE=ruled";
+      h.identityRederivedBackedBy = v.backedBy ?? null;
+
+      // The stored price was computed for the OLD identity and is not ours.
+      h.predictedPrice = null;
+      h.predictedPriceUpdatedAt = null;
+      h.fairMarketValue = null;
+      if (h.needsReview === true && String(h.reviewReason ?? "").startsWith(UNIDENTIFIED_REVIEW_PREFIX)) {
+        h.needsReview = false; h.reviewReason = null;
+      }
+
+      mutated++;
+      console.log(JSON.stringify({
+        event: "holding_identity_ruled_by_list", source: "recheck-holding-identity/ruled",
+        list: RULED_LIST, userId, holdingId: v.hid, from: v.from, to: v.to,
+        bypassedManualConfirm: v.bypassedManualConfirm, manualConfirmBy: v.manualConfirmBy,
+        ruling: v.ruling,
+      }));
+    }
+    if (!mutated) continue;
+
+    try {
+      await container.item(docId, userId).replace(doc, { accessCondition: { type: "IfMatch", condition: etag! } });
+      wrote += mutated;
+      console.log(`  WROTE      ${docId}  ${mutated} holding(s)`);
+    } catch (e: any) {
+      if (e?.code === 412) { conflicts += mutated; console.log(`  CONFLICT   ${docId}  doc changed under us — nothing written, re-run`); }
+      else { failed += mutated; console.log(`  WRITE FAIL ${docId}  ${e?.message}`); }
+    }
+  }
+
+  console.log(`\nAPPLY DONE  written=${wrote}  skipped=${skipped}  conflicts=${conflicts}  failed=${failed}`);
+
+  // VERIFY BY READ, on BOTH cardId and hobbyiqCardId — feedback_green_
+  // workflow_is_not_data_flow: a green run is not a written row.
+  if (wrote > 0) {
+    console.log(`\n=== RECONCILIATION: re-reading ${byDoc.size} document(s) ===`);
+    let confirmed = 0, wrong = 0;
+    for (const [docId, list] of byDoc) {
+      const read = await container.item(docId, list[0].userId).read();
+      for (const v of list) {
+        const h = (read.resource as any)?.holdings?.[v.hid];
+        const gotCardId = h?.cardId ?? null;
+        const gotHobbyiqCardId = h?.hobbyiqCardId ?? null;
+        if (gotCardId === v.to && gotHobbyiqCardId === v.to) {
+          confirmed++; console.log(`  OK         ${v.hid}  cardId=${gotCardId}  hobbyiqCardId=${gotHobbyiqCardId}`);
+        } else {
+          wrong++;
+          console.log(`  MISMATCH   ${v.hid}  expected ${v.to}, stored cardId=${gotCardId} hobbyiqCardId=${gotHobbyiqCardId}`);
+        }
+      }
+    }
+    console.log(`\nVERIFIED   confirmed=${confirmed}  mismatched=${wrong}`);
+    if (wrong) process.exit(5);
+  }
+  if (conflicts || failed) process.exit(4);
+  if (verdicts.some((v) => v.verdict === "REFUSED")) process.exit(6);
+}
+
 interface Pin {
   hid: string;
   slug: string;
@@ -378,6 +773,47 @@ async function main(): Promise<void> {
   if (RULE) {
     const catalogReadOnly = db.container("card_catalog");
     await rule({ docs: resources as any[], container: c, catalog: catalogReadOnly });
+    return;
+  }
+
+  // MODE=ruled is MODE=rule's write path entered from a committed file
+  // instead of a command line — see the doc block above `ruled()`. The list
+  // is read and validated BEFORE any Cosmos read of the catalog or a
+  // portfolio doc beyond the one query already issued above, so a malformed
+  // list refuses before it costs anything.
+  if (RULED) {
+    if (!RULED_LIST) {
+      console.error("FATAL: MODE=ruled needs a scope. Pass RULED_LIST=<repo path to a committed .json list>\n"
+        + "(or SCOPE, which the runner already forwards) — this mode never runs off a value typed into\n"
+        + "a dispatch box, and there is no default list.");
+      process.exit(2);
+    }
+    // RULED_LIST is documented as a repo-root path (e.g.
+    // "backend/data/holding-rulings/<file>.json"), matching the task's list
+    // convention, but the shim runs this script with cwd=backend (see its
+    // own header) — so try both the path as given from cwd AND with a
+    // leading "backend/" stripped, exactly as the runner's other cwd-
+    // sensitive scopes do.
+    const candidates = [
+      path.resolve(process.cwd(), RULED_LIST),
+      path.resolve(process.cwd(), RULED_LIST.replace(/^backend[/\\]/, "")),
+    ];
+    const found = candidates.find((p) => fs.existsSync(p));
+    if (!found) {
+      console.error(`FATAL: RULED_LIST="${RULED_LIST}" does not exist (tried ${candidates.join(", ")}). `
+        + "This mode refuses to run without an explicit committed list.");
+      process.exit(2);
+    }
+    let entries: RuledEntry[] | null = null;
+    try {
+      const raw = JSON.parse(fs.readFileSync(found, "utf8"));
+      entries = parseRuledList(raw);
+    } catch (e: any) {
+      console.error(`FATAL: ${e?.message}`);
+      process.exit(2);
+    }
+    const catalogReadOnly = db.container("card_catalog");
+    await ruled({ entries: entries ?? [], docs: resources as any[], container: c, catalog: catalogReadOnly });
     return;
   }
 
