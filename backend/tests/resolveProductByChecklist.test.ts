@@ -417,14 +417,20 @@ describe("R29: the checklist decides the product", () => {
      * The tests above hand the resolver an already-normalized productText. These
      * start at the eBay title and run the WHOLE path -- parseListingIdentity,
      * inferSetKeyFromTitle, normalizeSetKey, then the resolver -- because the
-     * defect lives in the seam between them and a test that skips the parser
+     * defect lived in the seam between them and a test that skips the parser
      * would keep passing while the bug returned.
      *
-     * The mechanism is punctuation, and it is worth pinning both sides of it:
-     * "Allen and Ginter" parses correctly TODAY and "Allen & Ginter" does not;
-     * "Bowman Best" reaches `bowman` and "Bowman-apostrophe-s Best" reaches
-     * `bowman` too, while the bare "Bowmans Best" reaches `unknown`. Three
-     * spellings of one product, three different answers, none of them right.
+     * The mechanism was punctuation: "Allen and Ginter" parsed correctly and
+     * "Allen & Ginter" did not; "Bowman Best" reached `bowman` and
+     * "Bowman-apostrophe-s Best" reached `bowman` too, while the bare
+     * "Bowmans Best" reached `unknown`. #2135 (class B, "a named product is
+     * its own product") closed this at the source: `inferSetKeyFromTitle` now
+     * carries rules for the ampersand, the apostrophe, and the WNBA qualifier,
+     * so `parsedSetKey` itself lands on the specific product for all three
+     * titles below and the resolver is no longer doing the recovery. These
+     * tests are kept as regression pins on the whole path rather than deleted,
+     * per CF-ONE-VALUATION-PATH: a future change that reintroduces the fold
+     * should fail here, at the seam, not just in a parser-only unit test.
      */
     const e2e = async (title: string, player: string | null) => {
       const parsed = parseListingIdentity(title, undefined, {} as never);
@@ -440,9 +446,10 @@ describe("R29: the checklist decides the product", () => {
 
     it("an ampersand: Topps Allen & Ginter is not Topps", async () => {
       const r = await e2e("2025 Topps Allen & Ginter Baseball #234 Base", "Alec Bohm");
-      // The parser's answer is the flagship -- this is the bug, pinned.
-      expect(r.parsedSetKey).toBe("topps");
-      // The checklist restores the product.
+      // #2135 taught inferSetKeyFromTitle the ampersand, so the parser itself
+      // now lands on the product -- the flagship fold this test used to pin
+      // is fixed upstream of the resolver.
+      expect(r.parsedSetKey).toBe("topps-allen-ginter");
       expect(r.resolved).toBe("topps-allen-ginter");
     });
 
@@ -455,27 +462,29 @@ describe("R29: the checklist decides the product", () => {
 
     it("an apostrophe: Bowman's Best is not Bowman", async () => {
       const r = await e2e("2024 Bowman's Best Baseball #B24-GW Base", "George Wolkow");
-      // The apostrophe defeats the product rule: the parser answers the
-      // flagship. (For the record, ALL THREE spellings are wrong in different
-      // ways -- "Bowmans Best" reaches `unknown` and "Bowman Best" also reaches
-      // `bowman`.)
-      expect(r.parsedSetKey).toBe("bowman");
-      // A SECOND, INDEPENDENT DEFECT used to be in the way here: before the
-      // dash-suffix fix (#2122), parseListingIdentity truncated the card
+      // #2135 taught inferSetKeyFromTitle all four apostrophe spellings, so
+      // the parser itself now lands on the product. (For the record, before
+      // #2135 the three spellings were wrong in three different ways --
+      // "Bowmans Best" reached `unknown` and "Bowman Best"/"Bowman's Best"
+      // both reached `bowman`.)
+      expect(r.parsedSetKey).toBe("bowmans-best");
+      // A SECOND, INDEPENDENT DEFECT used to be in the way here too: before
+      // the dash-suffix fix (#2122), parseListingIdentity truncated the card
       // number "B24-GW" to "B24" -- visible in the census too, where
       // "2024 Bowman's Best #B24-GW" derived `bowman:B24`. With the number
-      // read whole, the resolver now has the evidence it needs and resolves
-      // past the flagship guess to the real product.
+      // read whole, the resolver has the evidence it needs and confirms the
+      // product the parser now names directly.
       expect(r.cardNumber).toBe("B24-GW");
       expect(r.resolved).toBe("bowmans-best");
       expect(r.verdict).toBe("resolved");
     });
 
     it("...and with the card number the title actually states, the product resolves", async () => {
-      // The SAME title, differing only in that the card number is read whole.
+      // The SAME title, differing only in that the card number is read whole
+      // and parsedSetKey is pinned to the PRE-#2135 flagship fold by hand.
       // This confirms in isolation what the dash-suffix number-parser fix
-      // (#2122) now unlocks end to end above: the resolver half of the pair
-      // was already correct.
+      // (#2122) unlocks even when the parser handed the resolver the wrong
+      // starting guess: the resolver half of the pair was already correct.
       const res = await resolveProductByChecklist(
         {
           productText: "bowmans-best-baseball-b24-gw-base",
@@ -491,7 +500,9 @@ describe("R29: the checklist decides the product", () => {
 
     it("a qualifier the parser drops: Panini Prizm WNBA is not Panini Prizm", async () => {
       const r = await e2e("2024 Panini Prizm WNBA Basketball #5 Base", "Betnijah Laney-Hamilton");
-      expect(r.parsedSetKey).toBe("panini-prizm");
+      // #2135 taught inferSetKeyFromTitle the WNBA qualifier, so the parser
+      // itself now lands on the product -- the qualifier is no longer dropped.
+      expect(r.parsedSetKey).toBe("panini-prizm-wnba");
       expect(r.resolved).toBe("panini-prizm-wnba");
     });
 
