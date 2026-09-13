@@ -770,9 +770,27 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
     [/pinnacle-aficionado/, "pinnacle-aficionado"],
     [/pinnacle/, "pinnacle"],
     [/goudey/, "goudey"],
-    // Flair Showcase pools into flair DELIBERATELY (pinned by
+    // CF-FLAIR-SHOWCASE-ROWS-ARE-THREE-SETS (R30, Drew 2026-09-13). 1997 Flair
+    // Showcase publishes Rows 0, 1 and 2 as three distinct 180-card sets that
+    // SHARE NUMBERS 1-180 — bcp: "all 540 base cards (180 players from all
+    // three Rows)", and 540 = 180 x 3. The number cannot separate a Row 0
+    // Griffey from a Row 2 Griffey, so the row must. Measured on the #2107
+    // staged rows: 1,080 of 1,620 ids collided on `...:flair:1:base:no-auto`
+    // before these rules existed.
+    //
+    // These sit ABOVE the catch-all, where they must stay: a longer product
+    // name always precedes the family pattern it contains, exactly as Mega Box
+    // and NSCC precede /bowman-chrome/ and black-diamond-rookie-edition
+    // precedes /black-diamond/. `-row-N` is anchored at a segment boundary on
+    // both sides so it can only match a spelling that really names a row.
+    [/(?:^|-)flair-showcase-row-0(?:-|$)/, "flair-showcase-row-0"],
+    [/(?:^|-)flair-showcase-row-1(?:-|$)/, "flair-showcase-row-1"],
+    [/(?:^|-)flair-showcase-row-2(?:-|$)/, "flair-showcase-row-2"],
+    // Flair Showcase WITHOUT A ROW pools into flair DELIBERATELY (pinned by
     // hobbyIqCardId.test.ts "both variants pool"). The collapsed-setkey audit
     // flags it because it compares words, not intent — see that script's header.
+    // The three row rules above are the only exception, and they are named
+    // spellings rather than a widening of this one.
     [/flair-showcase|flair/, "flair"],
     [/sp-prospects/, "sp-prospects"],
     [/sp-authentic/, "sp-authentic"],
