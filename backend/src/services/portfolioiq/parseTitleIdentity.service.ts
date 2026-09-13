@@ -411,9 +411,27 @@ export function extractGradeFromTitle(title: string): { gradeCompany: "PSA" | "B
 // matching only its "83T" prefix would split a real SKU. Pinned by
 // cardNumberIntegrityParity.test.ts, which caught exactly that on the first
 // version of this alternative.
-
+//
+// CF-DASH-SUFFIX-IS-PART-OF-THE-NUMBER (2026-09-13). The letter-LED branch
+// `[A-Z]{1,3}\d{1,4}` had no equivalent tail, so a title stating a
+// LETTERS+DIGITS-LETTERS number truncated at the digits:
+//
+//   "2024 Bowman's Best Baseball #B24-GW"  -> cardNumber "B24", not "B24-GW"
+//
+// The census shows this as a CONFLICT: "B24" names no card in any checklist
+// while "B24-GW" (George Wolkow, bowmans-best) does. Bowman's Best (B24-xx),
+// Topps Chrome / Bowman Chrome autos written without a letters-only prefix of
+// 2+ chars (the first alternative already covers CA-xx, RA-xx, BCP-xx), and
+// many inserts use exactly this <1-3 LETTERS><DIGITS>-<SUFFIX> shape. The
+// suffix is pinned immediately against the digits (no whitespace) so a title
+// that puts a space or an unrelated dash-word after the number is untouched:
+// "#12 - PSA 10" and "#5 -Refractor" (space before the dash) do not match the
+// tail and still read "12" / "5". A trailing `/NN` is a print run, not part
+// of the number -- the slash is not in this alternative's suffix class, so
+// "#B24-GW /99" reads cardNumber "B24-GW" and printRun still comes from the
+// existing `/NN` extraction, untouched by this change.
 const DEFAULT_CARD_NUMBER_RE =
-  /#\s*([A-Z]{2,5}-[A-Z0-9]{1,6}|[A-Z]{1,3}\d{1,4}|BCP-\d+|CPA-\w+|BSPA-\w+|BCPA-\w+|BDCA-\w+|BPA-\w+|BDA-\w+|BCRA-\w+|TCRA-\w+|CPALD|CPATWH|BDC-\d+|HL\d+|US\d+|\d{1,4}[A-Z](?:-[A-Z0-9]{1,6})?|\d{1,4})\b/i;
+  /#\s*([A-Z]{2,5}-[A-Z0-9]{1,6}|[A-Z]{1,3}\d{1,4}(?:-[A-Z0-9]{1,6})?|BCP-\d+|CPA-\w+|BSPA-\w+|BCPA-\w+|BDCA-\w+|BPA-\w+|BDA-\w+|BCRA-\w+|TCRA-\w+|CPALD|CPATWH|BDC-\d+|HL\d+|US\d+|\d{1,4}[A-Z](?:-[A-Z0-9]{1,6})?|\d{1,4})\b/i;
 
 // CF-CARDNUM-STANDALONE (Drew, 2026-08-02). Second-chance regex for when
 // the title has no `#` at all but a plausible card-number-shaped token
@@ -1208,9 +1226,12 @@ export function inferIsAuto(input: InferIsAutoInput): boolean {
 /** A `#`-prefixed token that is a PRODUCT-CODED card number (USC88, PDC-171,
  *  CPA-EW, BCP-102) rather than a bare integer. Deliberately the letter-led
  *  alternatives of DEFAULT_CARD_NUMBER_RE and nothing more: this decides only
- *  which of two stated numbers wins, never whether a number is stated. */
+ *  which of two stated numbers wins, never whether a number is stated.
+ *  Carries the same CF-DASH-SUFFIX-IS-PART-OF-THE-NUMBER tail as
+ *  DEFAULT_CARD_NUMBER_RE's letter-led branch, so "#1 2024 ... #B24-GW"
+ *  promotes the whole "B24-GW", not the truncated "B24". */
 const PREFIXED_HASH_CARD_NUMBER_RE =
-  /#\s*([A-Z]{2,5}-[A-Z0-9]{1,6}|[A-Z]{1,3}\d{1,4})\b/gi;
+  /#\s*([A-Z]{2,5}-[A-Z0-9]{1,6}|[A-Z]{1,3}\d{1,4}(?:-[A-Z0-9]{1,6})?)\b/gi;
 /** A bare `#N`, the shape a listing-position prefix also takes. */
 const BARE_HASH_CARD_NUMBER_RE = /#\s*(\d{1,4})\b/g;
 
@@ -1237,7 +1258,7 @@ function preferPrefixedCardNumber(title: string): string | null {
   const bare = BARE_HASH_CARD_NUMBER_RE.exec(t);
   BARE_HASH_CARD_NUMBER_RE.lastIndex = 0;
   if (!bare) return null;
-  const firstPrefixedAt = t.search(/#\s*(?:[A-Z]{2,5}-[A-Z0-9]{1,6}|[A-Z]{1,3}\d{1,4})\b/i);
+  const firstPrefixedAt = t.search(/#\s*(?:[A-Z]{2,5}-[A-Z0-9]{1,6}|[A-Z]{1,3}\d{1,4}(?:-[A-Z0-9]{1,6})?)\b/i);
   if (firstPrefixedAt < 0 || bare.index < firstPrefixedAt) return prefixed[0];
   return null;
 }

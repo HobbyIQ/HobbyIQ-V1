@@ -1470,6 +1470,64 @@ describe("condition compounds are never card numbers", () => {
   });
 });
 
+// CF-DASH-SUFFIX-IS-PART-OF-THE-NUMBER (2026-09-13, found by the R29 builder,
+// pinned in PR #2116's resolveProductByChecklist.test.ts as a known,
+// not-yet-fixed defect; fixed here).
+//
+// THE BUG. DEFAULT_CARD_NUMBER_RE's letter-led alternative `[A-Z]{1,3}\d{1,4}`
+// had no trailing dash-suffix tail (unlike its digit-led sibling
+// `\d{1,4}[A-Z](?:-[A-Z0-9]{1,6})?`), so a LETTERS+DIGITS-LETTERS number
+// truncated at the digits:
+//
+//   "2024 Bowman's Best Baseball #B24-GW"  -> cardNumber "B24"
+//
+// "B24" names no card in any checklist; "B24-GW" is George Wolkow in
+// bowmans-best. The card number is identity and the checklist is the
+// authority on which numbers exist -- a truncated read manufactures a card
+// that was never printed, which the census surfaces as a CONFLICT.
+//
+// THE FIX. The same optional `(?:-[A-Z0-9]{1,6})?` tail the digit-led
+// alternative already carries, pinned immediately against the digits (no
+// whitespace) so an unrelated trailing dash-word is never swallowed.
+describe("a dash-suffixed card number is one token, not truncated at the digits", () => {
+  it("reads B24-GW whole (the #2116 pinned case)", () => {
+    expect(parseListingIdentity("2024 Bowman's Best Baseball #B24-GW Base").cardNumber).toBe("B24-GW");
+  });
+
+  it("reads other LETTERS+DIGITS-LETTERS/DIGITS SKUs whole", () => {
+    expect(parseListingIdentity("2024 Topps Chrome #CA-JS Auto").cardNumber).toBe("CA-JS");
+    expect(parseListingIdentity("2024 Bowman Chrome #BCP-150").cardNumber).toBe("BCP-150");
+    expect(parseListingIdentity("2024 Leaf #RA-BC Refractor").cardNumber).toBe("RA-BC");
+  });
+
+  it("does not disturb the prefix-dash form that already worked", () => {
+    // [A-Z]{2,5}-[A-Z0-9]{1,6} (BCP-102, CPA-EW) is a separate, earlier
+    // alternative and is unaffected by this change.
+    expect(parseListingIdentity("2025 Bowman Chrome #BCP-102 Refractor").cardNumber).toBe("BCP-102");
+    expect(parseListingIdentity("2025 Bowman Draft #CPA-EW Eli Willits Yellow Auto").cardNumber).toBe("CPA-EW");
+  });
+
+  it("does not disturb bare letter-led numbers with no suffix", () => {
+    expect(parseListingIdentity("2024 Topps Traded #US1 Rookie").cardNumber).toBe("US1");
+    expect(parseListingIdentity("2024 Topps #70T").cardNumber).toBe("70T");
+  });
+
+  it("a slash after the number is a print run, not part of the number", () => {
+    const r = parseListingIdentity("2024 Bowman's Best #B24-GW /99 Base");
+    expect(r.cardNumber).toBe("B24-GW");
+    expect(r.printRun).toBe(99);
+  });
+
+  it("NEGATIVE: a space before the dash is not the number's suffix", () => {
+    // "#12 - PSA 10" -- the dash introduces a grade clause, not a SKU tail.
+    expect(parseListingIdentity("2024 Topps Chrome #12 - PSA 10").cardNumber).toBe("12");
+  });
+
+  it("NEGATIVE: a space-led trailing dash-word is not swallowed", () => {
+    expect(parseListingIdentity("2023 Panini Prizm #5 -Refractor").cardNumber).toBe("5");
+  });
+});
+
 // CF-BOWMAN-CHROME-DRAFT-KEEPS-DRAFT (Drew, 2026-09-06, #1860 / #1896).
 //
 // THE BUG THESE PIN. `inferSetKeyFromTitle`'s Bowman rules were ADJACENT
