@@ -907,6 +907,32 @@ export function statedFinishFromChecklist(
       // words that name the SET is the residue this ruling refuses.
       if (setNameWords.size && ws.every((w) => setNameWords.has(w))) continue;
     }
+    // A SPORT-ONLY NAME IS DISQUALIFIED AS A CANDIDATE, NOT AS THE ANSWER
+    // (2026-09-13, class-A residual).
+    //
+    // THE DEFECT IT FIXES. The identical test ran BELOW the loop, on the
+    // winner only. A name with no content besides the sport and this
+    // product's stock words matches EVERY title of the product, and because
+    // longest-match decides the winner it frequently IS the longest match --
+    // so it won the race and then failed the test, and the whole call
+    // returned null. The real rung was a live candidate and never got to be
+    // the answer:
+    //
+    //   "2024 Panini Prizm Basketball #217 Glitter"
+    //     candidates: "Prizms Basketball" (17ch) and "Prizms Glitter" (14ch)
+    //     -> "Prizms Basketball" wins on length -> sport-only -> null, Base
+    //
+    // Measured on the sports census: this single ordering fault is the
+    // largest cause of the class-A residual on Panini products, and every
+    // one of them had the correct rung sitting in `candidates`.
+    //
+    // THE TEST IS UNCHANGED, ONLY ITS POSITION. It still refuses exactly the
+    // names with no distinguishing content -- "USA Basketball Gold" keeps
+    // `gold` and "Football Leather Refractor" keeps `leather refractor`, so
+    // both remain candidates, which is why this may be a `continue` rather
+    // than a refusal of the call. Disqualifying the name lets the next-longest
+    // REAL rung win instead of poisoning the answer for the whole product.
+    if (words(name).every((w) => SPORT_WORDS.has(w) || elidable.has(w))) continue;
     // The longest name that the title fully states is the most specific one.
     if (!best || name.length > best.length) best = name;
   }
@@ -1185,7 +1211,64 @@ export function statedFinishFromChecklist(
   //
   // A word the TITLE stated is always kept, even when it is a stock word: the
   // seller wrote it, and dropping it would be the mirror defect.
-  const spelled = words(best).filter((w) => titleWordSet.has(w) || !elidable.has(w));
+  //
+  // AND A STOCK WORD IS STATED IN EITHER NUMBER (2026-09-13, class-A residual).
+  //
+  // THE DEFECT. The test was exact-token, and a checklist spells its stock word
+  // in the PLURAL while a seller writes the SINGULAR -- Panini lists "Prizms
+  // Silver" and the title says "Silver Prizm". `prizms` was not in the title's
+  // word set, so the "keep what the seller wrote" arm did not fire, the elision
+  // arm did, and the answer came back "Silver" -- the stock word stripped off a
+  // title that plainly states it. Measured on the sports census: 60
+  // previously-AGREEing Panini rows re-spelled this way ("Silver Prizm" ->
+  // "Silver", "Green Ice Prizm" -> "Green Ice"), every one of them a correct
+  // row moved off its own pool, which is the exact harm
+  // CF-ONE-CARD-ONE-ROW-ONE-POOL names.
+  //
+  // Singular/plural is the only variation admitted, and only for a word already
+  // measured as this product's stock word -- so it can never rescue a
+  // DISTINGUISHING word the title omitted. It asks the one question the exact
+  // test meant to ask: did the seller write this product's stock word?
+  // AND IT IS KEPT IN THE NUMBER THE SELLER WROTE. The point of keeping a
+  // stated stock word is to leave a correct row on the pool it is already in,
+  // and that pool is keyed by the TITLE's spelling -- so answering "Silver
+  // Prizms" for a title saying "Silver Prizm" trades the dropped-word
+  // disagreement for a plural one and moves the row just the same. The
+  // checklist's spelling governs the DISTINGUISHING words, which is what the
+  // vocabulary ruling is about; the stock word is boilerplate either way, and
+  // for boilerplate the seller's number is the one the pool uses.
+  // AND "STATED" MEANS STATED AS PART OF THE RUNG, NOT AS THE PRODUCT'S NAME.
+  //
+  // On `panini-prizm` the word `prizm` is in EVERY title twice over -- once
+  // naming the product ("2024 Panini Prizm Basketball ...") and once, when the
+  // seller writes it, inside the rung ("... #130 Silver Prizm"). A bare
+  // set-membership test cannot tell the two apart, so it read the product's own
+  // name as evidence the seller spelled the rung out and injected the stock word
+  // into answers for titles that never wrote it ("... #217 Glitter" -> "Prizm
+  // Glitter", where the checklist and the pool both say "Prizms Glitter").
+  //
+  // The rung is what the title says APART from the product's name, so the stock
+  // word counts as stated only where it occurs somewhere the product name does
+  // not account for -- i.e. the title uses it more often than the product name
+  // spends it. `own` is this product's setKey words, which is exactly the
+  // budget the product name draws on.
+  const titleWordCounts = new Map<string, number>();
+  for (const w of words(t)) titleWordCounts.set(w, (titleWordCounts.get(w) ?? 0) + 1);
+  const spentByProductName = (w: string): number => (own.has(w) ? 1 : 0);
+  const statedInRung = (w: string): boolean =>
+    (titleWordCounts.get(w) ?? 0) > spentByProductName(w);
+  const statedStockWord = (w: string): string | null => {
+    if (statedInRung(w)) return w;
+    if (!elidable.has(w)) return null;
+    if (w.endsWith("s") && statedInRung(w.slice(0, -1))) return w.slice(0, -1);
+    if (statedInRung(`${w}s`)) return `${w}s`;
+    return null;
+  };
+  const spelled = words(best).flatMap((w) => {
+    const stated = statedStockWord(w);
+    if (stated !== null) return [stated];
+    return elidable.has(w) ? [] : [w];
+  });
   // Never answer with nothing. If every word was elidable the candidate floor
   // above should already have refused it, but a reader that can return "" would
   // write a blank parallel onto a real sale, so this refuses instead.
