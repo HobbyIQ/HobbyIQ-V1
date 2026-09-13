@@ -483,7 +483,7 @@ ${line}
   });
 
   it("every IMPROVE arm calls allImproveRefusals — none restates its pushes", () => {
-    // SIX CALL sites and exactly one definition:
+    // NINE CALL sites and exactly one definition:
     //   1. the ordinary IMPROVE arm
     //   2. SPECIALIZATION-STATED (this file's subject)
     //   3. SELLER-NAME-AUTO (CF-A-SELLER-NAME-IS-NOT-A-SIGNATURE, 2026-09-04),
@@ -492,6 +492,9 @@ ${line}
     //      also rides the gate from the AGREE path.
     //   5. YEAR-FROM-TITLE-VINTAGE (Drew, 2026-09-06) — from the CONFLICT path.
     //   6. SPORT-FROM-PRODUCT (Drew, 2026-09-06) — from the CONFLICT path.
+    //   7. R26-FLAGSHIP-SWALLOWED-NAMED-PRODUCT (Drew, 2026-09-13) — CONFLICT path.
+    //   8. R27-POKEMON-SET-CODE (Drew, 2026-09-13) — CONFLICT path.
+    //   9. R28-FINISH-IS-A-PARALLEL (Drew, 2026-09-13) — CONFLICT path.
     //
     // The NUMBER is incidental; the invariant is that it equals the number of
     // arms and that the definition stays singular. A new arm that restated the
@@ -502,7 +505,7 @@ ${line}
     // `const refusals = ` is what distinguishes a call from the
     // `function allImproveRefusals({` declaration, which contains the same
     // characters.
-    expect(src.split("const refusals = allImproveRefusals({").length - 1).toBe(6);
+    expect(src.split("const refusals = allImproveRefusals({").length - 1).toBe(9);
     expect(src.split("function allImproveRefusals").length - 1).toBe(1);
   });
 
