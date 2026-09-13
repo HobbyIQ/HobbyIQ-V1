@@ -1,0 +1,1513 @@
+category,cardNumber,parallel,isAuto,printRun,player,parallelNote,rarity
+base,1,Base,false,,Mike Trout
+base,1,Factory Sets,false,,Mike Trout,,
+base,2,Base,false,,Jerad Eickhoff RC
+base,2,Factory Sets,false,,Jerad Eickhoff RC,,
+base,3,Base,false,,Richie Shaffer RC
+base,3,Factory Sets,false,,Richie Shaffer RC,,
+base,4,Base,false,,Sonny Gray
+base,4,Factory Sets,false,,Sonny Gray,,
+base,5,Base,false,,Kyle Seager
+base,5,Factory Sets,false,,Kyle Seager,,
+base,6,Base,false,,Jimmy Paredes
+base,6,Factory Sets,false,,Jimmy Paredes,,
+base,8,Base,false,,Michael Brantley
+base,8,Factory Sets,false,,Michael Brantley,,
+base,9,Base,false,,Eric Hosmer
+base,9,Factory Sets,false,,Eric Hosmer,,
+base,10,Base,false,,Nelson Cruz
+base,10,Factory Sets,false,,Nelson Cruz,,
+base,11,Base,false,,Andre Ethier
+base,11,Factory Sets,false,,Andre Ethier,,
+base,12,Base,false,,Nolan Arenado
+base,12,Factory Sets,false,,Nolan Arenado,,
+base,13,Base,false,,Craig Kimbrel
+base,13,Factory Sets,false,,Craig Kimbrel,,
+base,14,Base,false,,Chris Davis
+base,14,Factory Sets,false,,Chris Davis,,
+base,15,Base,false,,Ryan Howard
+base,15,Factory Sets,false,,Ryan Howard,,
+base,16,Base,false,,Rougned Odor
+base,16,Factory Sets,false,,Rougned Odor,,
+base,17,Base,false,,Billy Butler
+base,17,Factory Sets,false,,Billy Butler,,
+base,18,Base,false,,Francisco Rodriguez
+base,18,Factory Sets,false,,Francisco Rodriguez,,
+base,19,Base,false,,Delino DeShields
+base,19,Factory Sets,false,,Delino DeShields,,
+base,20,Base,false,,Andrew McCutchen
+base,20,Factory Sets,false,,Andrew McCutchen,,
+base,21,Base,false,,Mike Moustakas WSH
+base,21,Factory Sets,false,,Mike Moustakas WSH,,
+base,22,Base,false,,John Hicks RC
+base,22,Factory Sets,false,,John Hicks RC,,
+base,23,Base,false,,Jeff Francoeur
+base,23,Factory Sets,false,,Jeff Francoeur,,
+base,24,Base,false,,Clayton Kershaw
+base,24,Factory Sets,false,,Clayton Kershaw,,
+base,25,Base,false,,Brad Ziegler
+base,25,Factory Sets,false,,Brad Ziegler,,
+base,26,Base,false,,Chris Davis / Mike Trout / Nelson Cruz LL
+base,26,Factory Sets,false,,Chris Davis / Mike Trout / Nelson Cruz LL,,
+base,27,Base,false,,Alec Asher RC
+base,27,Factory Sets,false,,Alec Asher RC,,
+base,28,Base,false,,Brian McCann
+base,28,Factory Sets,false,,Brian McCann,,
+base,29,Base,false,,Jose Altuve / Miguel Cabrera / Xander Bogaerts LL
+base,29,Factory Sets,false,,Jose Altuve / Miguel Cabrera / Xander Bogaerts LL,,
+base,30,Base,false,,Yan Gomes
+base,30,Factory Sets,false,,Yan Gomes,,
+base,31,Base,false,,Travis d'Arnaud
+base,31,Factory Sets,false,,Travis d'Arnaud,,
+base,32,Base,false,,Zack Greinke
+base,32,Factory Sets,false,,Zack Greinke,,
+base,33,Base,false,,Edinson Volquez
+base,33,Factory Sets,false,,Edinson Volquez,,
+base,34,Base,false,,Omar Infante
+base,34,Factory Sets,false,,Omar Infante,,
+base,35,Base,false,,Luke Hochevar
+base,35,Factory Sets,false,,Luke Hochevar,,
+base,36,Base,false,,Miguel Montero
+base,36,Factory Sets,false,,Miguel Montero,,
+base,37,Base,false,,C.J. Cron
+base,37,Factory Sets,false,,C.J. Cron,,
+base,38,Base,false,,Jed Lowrie
+base,38,Factory Sets,false,,Jed Lowrie,,
+base,39,Base,false,,Mark Trumbo
+base,39,Factory Sets,false,,Mark Trumbo,,
+base,40,Base,false,,Jedd Gyorko
+base,40,Factory Sets,false,,Jedd Gyorko,,
+base,41,Base,false,,Josh Harrison
+base,41,Factory Sets,false,,Josh Harrison,,
+base,42,Base,false,,A.J. Ramos
+base,42,Factory Sets,false,,A.J. Ramos,,
+base,43,Base,false,,Noah Syndergaard FS
+base,43,Factory Sets,false,,Noah Syndergaard FS,,
+base,44,Base,false,,David Freese
+base,44,Factory Sets,false,,David Freese,,
+base,45,Base,false,,Ryan Zimmerman
+base,45,Factory Sets,false,,Ryan Zimmerman,,
+base,46,Base,false,,Jhonny Peralta
+base,46,Factory Sets,false,,Jhonny Peralta,,
+base,47,Base,false,,Gio Gonzalez
+base,47,Factory Sets,false,,Gio Gonzalez,,
+base,48,Base,false,,J.J. Hoover
+base,48,Factory Sets,false,,J.J. Hoover,,
+base,49,Base,false,,Ike Davis
+base,49,Factory Sets,false,,Ike Davis,,
+base,50,Base,false,,Salvador Perez
+base,50,Factory Sets,false,,Salvador Perez,,
+base,51,Base,false,,Dustin Garneau RC
+base,51,Factory Sets,false,,Dustin Garneau RC,,
+base,52,Base,false,,Julio Teheran
+base,52,Factory Sets,false,,Julio Teheran,,
+base,53,Base,false,,George Springer
+base,53,Factory Sets,false,,George Springer,,
+base,54,Base,false,,Jung Ho Kang FS
+base,54,Factory Sets,false,,Jung Ho Kang FS,,
+base,55,Base,false,,Jesus Montero
+base,55,Factory Sets,false,,Jesus Montero,,
+base,56,Base,false,,Salvador Perez WSH
+base,56,Factory Sets,false,,Salvador Perez WSH,,
+base,57,Base,false,,Adam Lind
+base,57,Factory Sets,false,,Adam Lind,,
+base,58,Base,false,,Zack Greinke / Clayton Kershaw / Jake Arrieta LL
+base,58,Factory Sets,false,,Zack Greinke / Clayton Kershaw / Jake Arrieta LL,,
+base,59,Base,false,,John Lamb RC
+base,59,Factory Sets,false,,John Lamb RC,,
+base,60,Base,false,,Shelby Miller
+base,60,Factory Sets,false,,Shelby Miller,,
+base,61,Base,false,,Johnny Cueto WSH
+base,61,Factory Sets,false,,Johnny Cueto WSH,,
+base,62,Base,false,,Trayce Thompson RC
+base,62,Factory Sets,false,,Trayce Thompson RC,,
+base,63,Base,false,,Zach Britton
+base,63,Factory Sets,false,,Zach Britton,,
+base,64,Base,false,,Corey Kluber
+base,64,Factory Sets,false,,Corey Kluber,,
+base,65,Base,false,,Pittsburgh Pirates TC
+base,65,Factory Sets,false,,Pittsburgh Pirates TC,,
+base,66,Base,false,,Kyle Schwarber RC
+base,66,Factory Sets,false,,Kyle Schwarber RC,,
+base,67,Base,false,,Matt Harvey
+base,67,Factory Sets,false,,Matt Harvey,,
+base,68,Base,false,,Odubel Herrera FS
+base,68,Factory Sets,false,,Odubel Herrera FS,,
+base,69,Base,false,,Anibal Sanchez
+base,69,Factory Sets,false,,Anibal Sanchez,,
+base,70,Base,false,,Kendrys Morales
+base,70,Factory Sets,false,,Kendrys Morales,,
+base,71,Base,false,,John Danks
+base,71,Factory Sets,false,,John Danks,,
+base,72,Base,false,,Chris Young
+base,72,Factory Sets,false,,Chris Young,,
+base,73,Base,false,,Ketel Marte RC
+base,73,Factory Sets,false,,Ketel Marte RC,,
+base,74,Base,false,,Troy Tulowitzki
+base,74,Factory Sets,false,,Troy Tulowitzki,,
+base,75,Base,false,,Rusney Castillo
+base,75,Factory Sets,false,,Rusney Castillo,,
+base,76,Base,false,,Glen Perkins
+base,76,Factory Sets,false,,Glen Perkins,,
+base,77,Base,false,,Clay Buchholz
+base,77,Factory Sets,false,,Clay Buchholz,,
+base,78,Base,false,,Miguel Sano RC
+base,78,Factory Sets,false,,Miguel Sano RC,,
+base,79,Base,false,,Seattle Mariners TC
+base,79,Factory Sets,false,,Seattle Mariners TC,,
+base,80,Base,false,,Carson Smith
+base,80,Factory Sets,false,,Carson Smith,,
+base,81,Base,false,,Alexei Ramirez
+base,81,Factory Sets,false,,Alexei Ramirez,,
+base,82,Base,false,,Michael Bourn
+base,82,Factory Sets,false,,Michael Bourn,,
+base,83,Base,false,,Starling Marte
+base,83,Factory Sets,false,,Starling Marte,,
+base,84,Base,false,,Mookie Betts
+base,84,Factory Sets,false,,Mookie Betts,,
+base,85,Base,false,,Corey Seager RC
+base,85,Factory Sets,false,,Corey Seager RC,,
+base,86,Base,false,,Wilmer Flores
+base,86,Factory Sets,false,,Wilmer Flores,,
+base,87,Base,false,,Jorge De La Rosa
+base,87,Factory Sets,false,,Jorge De La Rosa,,
+base,88,Base,false,,Ubaldo Jimenez
+base,88,Factory Sets,false,,Ubaldo Jimenez,,
+base,89,Base,false,,Edwin Encarnacion
+base,89,Factory Sets,false,,Edwin Encarnacion,,
+base,90,Base,false,,Koji Uehara
+base,90,Factory Sets,false,,Koji Uehara,,
+base,91,Base,false,,Yasmani Grandal FS
+base,91,Factory Sets,false,,Yasmani Grandal FS,,
+base,92,Base,false,,Darren O'Day
+base,92,Factory Sets,false,,Darren O'Day,,
+base,93,Base,false,,Charlie Blackmon
+base,93,Factory Sets,false,,Charlie Blackmon,,
+base,94,Base,false,,Miguel Cabrera
+base,94,Factory Sets,false,,Miguel Cabrera,,
+base,95,Base,false,,Kole Calhoun FS
+base,95,Factory Sets,false,,Kole Calhoun FS,,
+base,96,Base,false,,Jose Bautista
+base,96,Factory Sets,false,,Jose Bautista,,
+base,97,Base,false,,Ender Inciarte FS
+base,97,Factory Sets,false,,Ender Inciarte FS,,
+base,98,Base,false,,Garrett Richards
+base,98,Factory Sets,false,,Garrett Richards,,
+base,99,Base,false,,Taijuan Walker
+base,99,Factory Sets,false,,Taijuan Walker,,
+base,100,Base,false,,Bryce Harper
+base,100,Factory Sets,false,,Bryce Harper,,
+base,101,Base,false,,Justin Turner
+base,101,Factory Sets,false,,Justin Turner,,
+base,102,Base,false,,Doug Fister
+base,102,Factory Sets,false,,Doug Fister,,
+base,103,Base,false,,Trea Turner RC
+base,103,Factory Sets,false,,Trea Turner RC,,
+base,104,Base,false,,Jeremy Hellickson
+base,104,Factory Sets,false,,Jeremy Hellickson,,
+base,105,Base,false,,Marcus Semien
+base,105,Factory Sets,false,,Marcus Semien,,
+base,106,Base,false,,Jordan Walden
+base,106,Factory Sets,false,,Jordan Walden,,
+base,107,Base,false,,Kevin Siegrist
+base,107,Factory Sets,false,,Kevin Siegrist,,
+base,108,Base,false,,Ben Paulsen
+base,108,Factory Sets,false,,Ben Paulsen,,
+base,109,Base,false,,Henry Owens RC
+base,109,Factory Sets,false,,Henry Owens RC,,
+base,110,Base,false,,J.D. Martinez FS
+base,110,Factory Sets,false,,J.D. Martinez FS,,
+base,111,Base,false,,Coco Crisp
+base,111,Factory Sets,false,,Coco Crisp,,
+base,112,Base,false,,Matt Kemp
+base,112,Factory Sets,false,,Matt Kemp,,
+base,113,Base,false,,Aaron Sanchez
+base,113,Factory Sets,false,,Aaron Sanchez,,
+base,114,Base,false,,Brett Lawrie
+base,114,Factory Sets,false,,Brett Lawrie,,
+base,115,Base,false,,Aaron Harang
+base,115,Factory Sets,false,,Aaron Harang,,
+base,116,Base,false,,Brett Gardner
+base,116,Factory Sets,false,,Brett Gardner,,
+base,117,Base,false,,Liam Hendriks
+base,117,Factory Sets,false,,Liam Hendriks,,
+base,118,Base,false,,Jose Fernandez
+base,118,Factory Sets,false,,Jose Fernandez,,
+base,119,Base,false,,Sean Doolittle
+base,119,Factory Sets,false,,Sean Doolittle,,
+base,120,Base,false,,Alcides Escobar WSH
+base,120,Factory Sets,false,,Alcides Escobar WSH,,
+base,121,Base,false,,Roberto Osuna FS
+base,121,Factory Sets,false,,Roberto Osuna FS,,
+base,122,Base,false,,Melky Cabrera
+base,122,Factory Sets,false,,Melky Cabrera,,
+base,123,Base,false,,J.P. Howell
+base,123,Factory Sets,false,,J.P. Howell,,
+base,124,Base,false,,Melvin Upton Jr.
+base,124,Factory Sets,false,,Melvin Upton Jr.,,
+base,125,Base,false,,Jake Arrieta / Clayton Kershaw / Zack Greinke LL
+base,125,Factory Sets,false,,Jake Arrieta / Clayton Kershaw / Zack Greinke LL,,
+base,126,Base,false,,David Ortiz
+base,126,Factory Sets,false,,David Ortiz,,
+base,127,Base,false,,Zach Lee RC
+base,127,Factory Sets,false,,Zach Lee RC,,
+base,128,Base,false,,Eddie Rosario
+base,128,Factory Sets,false,,Eddie Rosario,,
+base,129,Base,false,,Kendall Graveman
+base,129,Factory Sets,false,,Kendall Graveman,,
+base,130,Base,false,,A.J. Pollock
+base,130,Factory Sets,false,,A.J. Pollock,,
+base,131,Base,false,,Adam LaRoche
+base,131,Factory Sets,false,,Adam LaRoche,,
+base,132,Base,false,,Joe Ross FS
+base,132,Factory Sets,false,,Joe Ross FS,,
+base,133,Base,false,,Aaron Nola RC
+base,133,Factory Sets,false,,Aaron Nola RC,,
+base,134,Base,false,,Yadier Molina
+base,134,Factory Sets,false,,Yadier Molina,,
+base,135,Base,false,,Colby Rasmus
+base,135,Factory Sets,false,,Colby Rasmus,,
+base,136,Base,false,,Michael Cuddyer
+base,136,Factory Sets,false,,Michael Cuddyer,,
+base,137,Base,false,,Joe Panik
+base,137,Factory Sets,false,,Joe Panik,,
+base,138,Base,false,,Francisco Liriano
+base,138,Factory Sets,false,,Francisco Liriano,,
+base,139,Base,false,,Yasiel Puig
+base,139,Factory Sets,false,,Yasiel Puig,,
+base,140,Base,false,,Carlos Carrasco FS
+base,140,Factory Sets,false,,Carlos Carrasco FS,,
+base,141,Base,false,,Colin Rea RC
+base,141,Factory Sets,false,,Colin Rea RC,,
+base,142,Base,false,,CC Sabathia
+base,142,Factory Sets,false,,CC Sabathia,,
+base,143,Base,false,,Oliver Perez
+base,143,Factory Sets,false,,Oliver Perez,,
+base,144,Base,false,,Jose Iglesias
+base,144,Factory Sets,false,,Jose Iglesias,,
+base,145,Base,false,,Jon Niese
+base,145,Factory Sets,false,,Jon Niese,,
+base,146,Base,false,,Stephen Piscotty RC
+base,146,Factory Sets,false,,Stephen Piscotty RC,,
+base,147,Base,false,,Dee Gordon
+base,147,Factory Sets,false,,Dee Gordon,,
+base,148,Base,false,,Yangervis Solarte
+base,148,Factory Sets,false,,Yangervis Solarte,,
+base,149,Base,false,,Chad Bettis
+base,149,Factory Sets,false,,Chad Bettis,,
+base,150,Base,false,,Clayton Kershaw
+base,150,Factory Sets,false,,Clayton Kershaw,,
+base,151,Base,false,,Jon Lester
+base,151,Factory Sets,false,,Jon Lester,,
+base,152,Base,false,,Kyle Lohse
+base,152,Factory Sets,false,,Kyle Lohse,,
+base,153,Base,false,,Jason Hammel
+base,153,Factory Sets,false,,Jason Hammel,,
+base,154,Base,false,,Hunter Pence
+base,154,Factory Sets,false,,Hunter Pence,,
+base,155,Base,false,,New York Yankees TC
+base,155,Factory Sets,false,,New York Yankees TC,,
+base,156,Base,false,,Cameron Maybin
+base,156,Factory Sets,false,,Cameron Maybin,,
+base,157,Base,false,,Darnell Sweeney RC
+base,157,Factory Sets,false,,Darnell Sweeney RC,,
+base,158,Base,false,,Henry Urrutia
+base,158,Factory Sets,false,,Henry Urrutia,,
+base,159,Base,false,,Erick Aybar
+base,159,Factory Sets,false,,Erick Aybar,,
+base,160,Base,false,,Chris Sale
+base,160,Factory Sets,false,,Chris Sale,,
+base,161,Base,false,,Phil Hughes
+base,161,Factory Sets,false,,Phil Hughes,,
+base,162,Base,false,,Jose Bautista / Josh Donaldson / Chris Davis LL
+base,162,Factory Sets,false,,Jose Bautista / Josh Donaldson / Chris Davis LL,,
+base,163,Base,false,,Joaquin Benoit
+base,163,Factory Sets,false,,Joaquin Benoit,,
+base,164,Base,false,,Andrew Heaney
+base,164,Factory Sets,false,,Andrew Heaney,,
+base,165,Base,false,,Adam Eaton
+base,165,Factory Sets,false,,Adam Eaton,,
+base,166,Base,false,,Paul Goldschmidt / Anthony Rizzo / Nolan Arenado LL
+base,166,Factory Sets,false,,Paul Goldschmidt / Anthony Rizzo / Nolan Arenado LL,,
+base,167,Base,false,,Jacoby Ellsbury
+base,167,Factory Sets,false,,Jacoby Ellsbury,,
+base,168,Base,false,,Nathan Eovaldi
+base,168,Factory Sets,false,,Nathan Eovaldi,,
+base,169,Base,false,,Charlie Morton
+base,169,Factory Sets,false,,Charlie Morton,,
+base,170,Base,false,,Carlos Gomez
+base,170,Factory Sets,false,,Carlos Gomez,,
+base,171,Base,false,,Matt Cain
+base,171,Factory Sets,false,,Matt Cain,,
+base,172,Base,false,,Carter Capps
+base,172,Factory Sets,false,,Carter Capps,,
+base,173,Base,false,,Jose Abreu
+base,173,Factory Sets,false,,Jose Abreu,,
+base,174,Base,false,,Jered Weaver
+base,174,Factory Sets,false,,Jered Weaver,,
+base,175,Base,false,,Manny Machado
+base,175,Factory Sets,false,,Manny Machado,,
+base,176,Base,false,,Brandon Phillips
+base,176,Factory Sets,false,,Brandon Phillips,,
+base,177,Base,false,,Gregor Blanco
+base,177,Factory Sets,false,,Gregor Blanco,,
+base,178,Base,false,,Rob Refsnyder RC
+base,178,Factory Sets,false,,Rob Refsnyder RC,,
+base,179,Base,false,,Jose Peraza RC
+base,179,Factory Sets,false,,Jose Peraza RC,,
+base,180,Base,false,,Kevin Gausman
+base,180,Factory Sets,false,,Kevin Gausman,,
+base,181,Base,false,,Minnesota Twins TC
+base,181,Factory Sets,false,,Minnesota Twins TC,,
+base,182,Base,false,,Kevin Pillar
+base,182,Factory Sets,false,,Kevin Pillar,,
+base,183,Base,false,,Andrelton Simmons
+base,183,Factory Sets,false,,Andrelton Simmons,,
+base,184,Base,false,,Travis Jankowski RC
+base,184,Factory Sets,false,,Travis Jankowski RC,,
+base,185,Base,false,,Dallas Keuchel / Sonny Gray / David Price LL
+base,185,Factory Sets,false,,Dallas Keuchel / Sonny Gray / David Price LL,,
+base,186,Base,false,,Yasmany Tomas FS
+base,186,Factory Sets,false,,Yasmany Tomas FS,,
+base,187,Base,false,,Dallas Keuchel / Collin McHugh / David Price LL
+base,187,Factory Sets,false,,Dallas Keuchel / Collin McHugh / David Price LL,,
+base,188,Base,false,,Greg Bird RC
+base,188,Factory Sets,false,,Greg Bird RC,,
+base,189,Base,false,,Jake McGee
+base,189,Factory Sets,false,,Jake McGee,,
+base,190,Base,false,,Jeurys Familia
+base,190,Factory Sets,false,,Jeurys Familia,,
+base,191,Base,false,,Brian Johnson RC
+base,191,Factory Sets,false,,Brian Johnson RC,,
+base,192,Base,false,,John Jaso
+base,192,Factory Sets,false,,John Jaso,,
+base,193,Base,false,,Trevor Bauer
+base,193,Factory Sets,false,,Trevor Bauer,,
+base,194,Base,false,,Chase Headley
+base,194,Factory Sets,false,,Chase Headley,,
+base,195,Base,false,,Jason Kipnis
+base,195,Factory Sets,false,,Jason Kipnis,,
+base,196,Base,false,,Hunter Strickland
+base,196,Factory Sets,false,,Hunter Strickland,,
+base,197,Base,false,,Neil Walker
+base,197,Factory Sets,false,,Neil Walker,,
+base,198,Base,false,,Oakland Athletics TC
+base,198,Factory Sets,false,,Oakland Athletics TC,,
+base,199,Base,false,,Jay Bruce
+base,199,Factory Sets,false,,Jay Bruce,,
+base,200,Base,false,,Josh Donaldson
+base,200,Factory Sets,false,,Josh Donaldson,,
+base,201,Base,false,,Adam Jones
+base,201,Factory Sets,false,,Adam Jones,,
+base,202,Base,false,,Colorado Rockies TC
+base,202,Factory Sets,false,,Colorado Rockies TC,,
+base,203,Base,false,,Aaron Hill
+base,203,Factory Sets,false,,Aaron Hill,,
+base,204,Base,false,,Mark Teixeira
+base,204,Factory Sets,false,,Mark Teixeira,,
+base,205,Base,false,,Taylor Jungmann FS
+base,205,Factory Sets,false,,Taylor Jungmann FS,,
+base,206,Base,false,,Alex Gordon
+base,206,Factory Sets,false,,Alex Gordon,,
+base,207,Base,false,,Maikel Franco FS
+base,207,Factory Sets,false,,Maikel Franco FS,,
+base,208,Base,false,,Kurt Suzuki
+base,208,Factory Sets,false,,Kurt Suzuki,,
+base,209,Base,false,,Max Scherzer
+base,209,Factory Sets,false,,Max Scherzer,,
+base,210,Base,false,,Mike Zunino
+base,210,Factory Sets,false,,Mike Zunino,,
+base,211,Base,false,,Nick Ahmed
+base,211,Factory Sets,false,,Nick Ahmed,,
+base,212,Base,false,,Starlin Castro
+base,212,Factory Sets,false,,Starlin Castro,,
+base,213,Base,false,,Matt Shoemaker
+base,213,Factory Sets,false,,Matt Shoemaker,,
+base,214,Base,false,,Chris Colabello
+base,214,Factory Sets,false,,Chris Colabello,,
+base,215,Base,false,,Adrian Gonzalez
+base,215,Factory Sets,false,,Adrian Gonzalez,,
+base,216,Base,false,,Logan Forsythe
+base,216,Factory Sets,false,,Logan Forsythe,,
+base,217,Base,false,,Lance Lynn
+base,217,Factory Sets,false,,Lance Lynn,,
+base,218,Base,false,,Andrew Miller
+base,218,Factory Sets,false,,Andrew Miller,,
+base,219,Base,false,,Hector Olivera RC
+base,219,Factory Sets,false,,Hector Olivera RC,,
+base,220,Base,false,,Zack Greinke / Gerrit Cole / Jake Arrieta LL
+base,220,Factory Sets,false,,Zack Greinke / Gerrit Cole / Jake Arrieta LL,,
+base,221,Base,false,,Ryan LaMarre RC
+base,221,Factory Sets,false,,Ryan LaMarre RC,,
+base,222,Base,false,,Homer Bailey
+base,222,Factory Sets,false,,Homer Bailey,,
+base,223,Base,false,,Christian Yelich
+base,223,Factory Sets,false,,Christian Yelich,,
+base,224,Base,false,,Billy Burns FS
+base,224,Factory Sets,false,,Billy Burns FS,,
+base,225,Base,false,,Scooter Gennett
+base,225,Factory Sets,false,,Scooter Gennett,,
+base,226,Base,false,,Brian Ellington RC
+base,226,Factory Sets,false,,Brian Ellington RC,,
+base,227,Base,false,,David Murphy
+base,227,Factory Sets,false,,David Murphy,,
+base,228,Base,false,,Matt Garza
+base,228,Factory Sets,false,,Matt Garza,,
+base,229,Base,false,,Jesse Hahn
+base,229,Factory Sets,false,,Jesse Hahn,,
+base,230,Base,false,,Ryan Vogelsong
+base,230,Factory Sets,false,,Ryan Vogelsong,,
+base,231,Base,false,,Chris Coghlan
+base,231,Factory Sets,false,,Chris Coghlan,,
+base,232,Base,false,,Michael Conforto RC
+base,232,Factory Sets,false,,Michael Conforto RC,,
+base,233,Base,false,,J.J. Hardy
+base,233,Factory Sets,false,,J.J. Hardy,,
+base,234,Base,false,,David Robertson
+base,234,Factory Sets,false,,David Robertson,,
+base,235,Base,false,,Blaine Boyer
+base,235,Factory Sets,false,,Blaine Boyer,,
+base,236,Base,false,,Juan Lagares
+base,236,Factory Sets,false,,Juan Lagares,,
+base,237,Base,false,,Carlos Ruiz
+base,237,Factory Sets,false,,Carlos Ruiz,,
+base,238,Base,false,,Baltimore Orioles TC
+base,238,Factory Sets,false,,Baltimore Orioles TC,,
+base,239,Base,false,,Huston Street
+base,239,Factory Sets,false,,Huston Street,,
+base,240,Base,false,,Nick Markakis
+base,240,Factory Sets,false,,Nick Markakis,,
+base,241,Base,false,,Freddie Freeman
+base,241,Factory Sets,false,,Freddie Freeman,,
+base,242,Base,false,,Matt Wisler FS
+base,242,Factory Sets,false,,Matt Wisler FS,,
+base,243,Base,false,,Luke Gregerson
+base,243,Factory Sets,false,,Luke Gregerson,,
+base,244,Base,false,,Matt Carpenter
+base,244,Factory Sets,false,,Matt Carpenter,,
+base,245,Base,false,,Tommy Kahnle
+base,245,Factory Sets,false,,Tommy Kahnle,,
+base,246,Base,false,,Dustin Pedroia
+base,246,Factory Sets,false,,Dustin Pedroia,,
+base,247,Base,false,,Yunel Escobar
+base,247,Factory Sets,false,,Yunel Escobar,,
+base,248,Base,false,,Atlanta Braves TC
+base,248,Factory Sets,false,,Atlanta Braves TC,,
+base,249,Base,false,,Carlos Gomez
+base,249,Factory Sets,false,,Carlos Gomez,,
+base,250,Base,false,,Miguel Cabrera
+base,250,Factory Sets,false,,Miguel Cabrera,,
+base,251,Base,false,,Silvino Bracho RC
+base,251,Factory Sets,false,,Silvino Bracho RC,,
+base,252,Base,false,,Jorge Soler
+base,252,Factory Sets,false,,Jorge Soler,,
+base,253,Base,false,,Nick Castellanos
+base,253,Factory Sets,false,,Nick Castellanos,,
+base,254,Base,false,,Matt Holliday
+base,254,Factory Sets,false,,Matt Holliday,,
+base,255,Base,false,,Justin Verlander
+base,255,Factory Sets,false,,Justin Verlander,,
+base,256,Base,false,,C.J. Wilson
+base,256,Factory Sets,false,,C.J. Wilson,,
+base,257,Base,false,,Jake Marisnick
+base,257,Factory Sets,false,,Jake Marisnick,,
+base,258,Base,false,,Devon Travis FS
+base,258,Factory Sets,false,,Devon Travis FS,,
+base,259,Base,false,,Paul Goldschmidt
+base,259,Factory Sets,false,,Paul Goldschmidt,,
+base,260,Base,false,,Ryan Hanigan
+base,260,Factory Sets,false,,Ryan Hanigan,,
+base,261,Base,false,,Russell Martin
+base,261,Factory Sets,false,,Russell Martin,,
+base,262,Base,false,,Ervin Santana
+base,262,Factory Sets,false,,Ervin Santana,,
+base,263,Base,false,,Joc Pederson FS
+base,263,Factory Sets,false,,Joc Pederson FS,,
+base,264,Base,false,,Jake Arrieta
+base,264,Factory Sets,false,,Jake Arrieta,,
+base,265,Base,false,,Luis Severino RC
+base,265,Factory Sets,false,,Luis Severino RC,,
+base,266,Base,false,,Jonathan Papelbon
+base,266,Factory Sets,false,,Jonathan Papelbon,,
+base,267,Base,false,,Chris Heston FS
+base,267,Factory Sets,false,,Chris Heston FS,,
+base,268,Base,false,,Robinson Cano
+base,268,Factory Sets,false,,Robinson Cano,,
+base,269,Base,false,,Giancarlo Stanton
+base,269,Factory Sets,false,,Giancarlo Stanton,,
+base,270,Base,false,,Pat Neshek
+base,270,Factory Sets,false,,Pat Neshek,,
+base,271,Base,false,,Kevin Kiermaier
+base,271,Factory Sets,false,,Kevin Kiermaier,,
+base,272,Base,false,,Denard Span
+base,272,Factory Sets,false,,Denard Span,,
+base,273,Base,false,,New York Mets TC
+base,273,Factory Sets,false,,New York Mets TC,,
+base,274,Base,false,,Ryan Goins
+base,274,Factory Sets,false,,Ryan Goins,,
+base,275,Base,false,,Ian Kinsler
+base,275,Factory Sets,false,,Ian Kinsler,,
+base,276,Base,false,,Francisco Cervelli
+base,276,Factory Sets,false,,Francisco Cervelli,,
+base,277,Base,false,,Elvis Andrus
+base,277,Factory Sets,false,,Elvis Andrus,,
+base,278,Base,false,,Evan Gattis
+base,278,Factory Sets,false,,Evan Gattis,,
+base,279,Base,false,,Alex Guerrero FS
+base,279,Factory Sets,false,,Alex Guerrero FS,,
+base,280,Base,false,,Brock Holt
+base,280,Factory Sets,false,,Brock Holt,,
+base,281,Base,false,,Alex Dickerson RC
+base,281,Factory Sets,false,,Alex Dickerson RC,,
+base,282,Base,false,,Scott Feldman
+base,282,Factory Sets,false,,Scott Feldman,,
+base,283,Base,false,,Felix Hernandez
+base,283,Factory Sets,false,,Felix Hernandez,,
+base,284,Base,false,,Jon Gray RC
+base,284,Factory Sets,false,,Jon Gray RC,,
+base,285,Base,false,,Pablo Sandoval
+base,285,Factory Sets,false,,Pablo Sandoval,,
+base,286,Base,false,,Joe Mauer
+base,286,Factory Sets,false,,Joe Mauer,,
+base,287,Base,false,,Alcides Escobar
+base,287,Factory Sets,false,,Alcides Escobar,,
+base,288,Base,false,,Jake Lamb FS
+base,288,Factory Sets,false,,Jake Lamb FS,,
+base,289,Base,false,,Nick Hundley
+base,289,Factory Sets,false,,Nick Hundley,,
+base,290,Base,false,,Zack Godley RC
+base,290,Factory Sets,false,,Zack Godley RC,,
+base,291,Base,false,,Asdrubal Cabrera
+base,291,Factory Sets,false,,Asdrubal Cabrera,,
+base,292,Base,false,,Todd Frazier
+base,292,Factory Sets,false,,Todd Frazier,,
+base,293,Base,false,,Hyun-Jin Ryu
+base,293,Factory Sets,false,,Hyun-Jin Ryu,,
+base,294,Base,false,,White Sox
+base,294,Factory Sets,false,,White Sox,,
+base,295,Base,false,,Jonathan Schoop
+base,295,Factory Sets,false,,Jonathan Schoop,,
+base,296,Base,false,,Yordano Ventura
+base,296,Factory Sets,false,,Yordano Ventura,,
+base,297,Base,false,,Detroit Tigers TC
+base,297,Factory Sets,false,,Detroit Tigers TC,,
+base,298,Base,false,,Ryan Braun
+base,298,Factory Sets,false,,Ryan Braun,,
+base,299,Base,false,,Angel Pagan
+base,299,Factory Sets,false,,Angel Pagan,,
+base,300,Base,false,,Buster Posey
+base,300,Factory Sets,false,,Buster Posey,,
+base,301,Base,false,,Wade Miley
+base,301,Factory Sets,false,,Wade Miley,,
+base,302,Base,false,,Houston Astros TC
+base,302,Factory Sets,false,,Houston Astros TC,,
+base,303,Base,false,,Steve Pearce
+base,303,Factory Sets,false,,Steve Pearce,,
+base,304,Base,false,,Charlie Furbush
+base,304,Factory Sets,false,,Charlie Furbush,,
+base,305,Base,false,,Colby Lewis
+base,305,Factory Sets,false,,Colby Lewis,,
+base,306,Base,false,,Jarrod Saltalamacchia
+base,306,Factory Sets,false,,Jarrod Saltalamacchia,,
+base,307,Base,false,,Wade Davis
+base,307,Factory Sets,false,,Wade Davis,,
+base,308,Base,false,,Brian Dozier
+base,308,Factory Sets,false,,Brian Dozier,,
+base,309,Base,false,,Shin-Soo Choo
+base,309,Factory Sets,false,,Shin-Soo Choo,,
+base,310,Base,false,,David Wright
+base,310,Factory Sets,false,,David Wright,,
+base,311,Base,false,,Dariel Alvarez RC
+base,311,Factory Sets,false,,Dariel Alvarez RC,,
+base,312,Base,false,,Curtis Granderson
+base,312,Factory Sets,false,,Curtis Granderson,,
+base,313,Base,false,,Martin Maldonado
+base,313,Factory Sets,false,,Martin Maldonado,,
+base,314,Base,false,,Kyle Hendricks
+base,314,Factory Sets,false,,Kyle Hendricks,,
+base,315,Base,false,,San Diego Padres TC
+base,315,Factory Sets,false,,San Diego Padres TC,,
+base,316,Base,false,,Jake Odorizzi FS
+base,316,Factory Sets,false,,Jake Odorizzi FS,,
+base,317,Base,false,,Jose Altuve
+base,317,Factory Sets,false,,Jose Altuve,,
+base,318,Base,false,,Washington Nationals TC
+base,318,Factory Sets,false,,Washington Nationals TC,,
+base,319,Base,false,,Adam Wainwright
+base,319,Factory Sets,false,,Adam Wainwright,,
+base,320,Base,false,,Jake Peavy
+base,320,Factory Sets,false,,Jake Peavy,,
+base,321,Base,false,,Hanley Ramirez
+base,321,Factory Sets,false,,Hanley Ramirez,,
+base,322,Base,false,,Kelby Tomlinson RC
+base,322,Factory Sets,false,,Kelby Tomlinson RC,,
+base,323,Base,false,,Jacob deGrom
+base,323,Factory Sets,false,,Jacob deGrom,,
+base,324,Base,false,,Steven Souza Jr.
+base,324,Factory Sets,false,,Steven Souza Jr.,,
+base,325,Base,false,,Kaleb Cowart RC
+base,325,Factory Sets,false,,Kaleb Cowart RC,,
+base,326,Base,false,,Kevin Plawecki FS
+base,326,Factory Sets,false,,Kevin Plawecki FS,,
+base,327,Base,false,,Anthony Rizzo
+base,327,Factory Sets,false,,Anthony Rizzo,,
+base,328,Base,false,,Anthony DeSclafani
+base,328,Factory Sets,false,,Anthony DeSclafani,,
+base,329,Base,false,,Alex Rodriguez
+base,329,Factory Sets,false,,Alex Rodriguez,,
+base,330,Base,false,,Edward Mujica
+base,330,Factory Sets,false,,Edward Mujica,,
+base,331,Base,false,,Will Harris
+base,331,Factory Sets,false,,Will Harris,,
+base,332,Base,false,,Blue Jays
+base,332,Factory Sets,false,,Blue Jays,,
+base,333,Base,false,,Keyvius Sampson RC
+base,333,Factory Sets,false,,Keyvius Sampson RC,,
+base,334,Base,false,,Brandon McCarthy
+base,334,Factory Sets,false,,Brandon McCarthy,,
+base,335,Base,false,,Mitch Moreland
+base,335,Factory Sets,false,,Mitch Moreland,,
+base,336,Base,false,,Mark Melancon
+base,336,Factory Sets,false,,Mark Melancon,,
+base,337,Base,false,,Nolan Arenado / Bryce Harper / Carlos Gonzalez LL
+base,337,Factory Sets,false,,Nolan Arenado / Bryce Harper / Carlos Gonzalez LL,,
+base,338,Base,false,,Paul Goldschmidt / Dee Gordon / Bryce Harper
+base,338,Factory Sets,false,,Paul Goldschmidt / Dee Gordon / Bryce Harper,,
+base,339,Base,false,,Carlos Santana
+base,339,Factory Sets,false,,Carlos Santana,,
+base,340,Base,false,,Victor Martinez
+base,340,Factory Sets,false,,Victor Martinez,,
+base,341,Base,false,,Josh Hamilton
+base,341,Factory Sets,false,,Josh Hamilton,,
+base,342,Base,false,,Jayson Werth
+base,342,Factory Sets,false,,Jayson Werth,,
+base,343,Base,false,,Drew Hutchison
+base,343,Factory Sets,false,,Drew Hutchison,,
+base,344,Base,false,,Jonathan Lucroy
+base,344,Factory Sets,false,,Jonathan Lucroy,,
+base,345,Base,false,,Yonder Alonso
+base,345,Factory Sets,false,,Yonder Alonso,,
+base,346,Base,false,,Corey Kluber / Dallas Keuchel / Marco Estrada LL
+base,346,Factory Sets,false,,Corey Kluber / Dallas Keuchel / Marco Estrada LL,,
+base,347,Base,false,,Jason Grilli
+base,347,Factory Sets,false,,Jason Grilli,,
+base,348,Base,false,,Seth Smith
+base,348,Factory Sets,false,,Seth Smith,,
+base,349,Base,false,,Ben Revere
+base,349,Factory Sets,false,,Ben Revere,,
+base,350,Base,false,,Kris Bryant FS
+base,350,Factory Sets,false,,Kris Bryant FS,,
+base,351,Base,false,,Chase Utley
+base,351,Factory Sets,false,,Chase Utley,,
+base,352,Base,false,,Carson Blair RC
+base,352,Factory Sets,false,,Carson Blair RC,,
+base,353,Base,false,,Joey Gallo
+base,353,Factory Sets,false,,Joey Gallo,,
+base,354,Base,false,,Tyson Ross
+base,354,Factory Sets,false,,Tyson Ross,,
+base,355,Base,false,,Avisail Garcia
+base,355,Factory Sets,false,,Avisail Garcia,,
+base,356,Base,false,,Odrisamer Despaigne
+base,356,Factory Sets,false,,Odrisamer Despaigne,,
+base,357,Base,false,,Jace Peterson
+base,357,Factory Sets,false,,Jace Peterson,,
+base,358,Base,false,,Chris Young
+base,358,Factory Sets,false,,Chris Young,,
+base,359,Base,false,,Christian Colon
+base,359,Factory Sets,false,,Christian Colon,,
+base,360,Base,false,,Eduardo Escobar
+base,360,Factory Sets,false,,Eduardo Escobar,,
+base,361,Base,false,,Jeff Locke
+base,361,Factory Sets,false,,Jeff Locke,,
+base,362,Base,false,,Cory Spangenberg
+base,362,Factory Sets,false,,Cory Spangenberg,,
+base,363,Base,false,,Brett Cecil
+base,363,Factory Sets,false,,Brett Cecil,,
+base,364,Base,false,,Keon Broxton RC
+base,364,Factory Sets,false,,Keon Broxton RC,,
+base,365,Base,false,,James Pazos RC
+base,365,Factory Sets,false,,James Pazos RC,,
+base,366,Base,false,,Scott Alexander RC
+base,366,Factory Sets,false,,Scott Alexander RC,,
+base,367,Base,false,,Pedro Alvarez
+base,367,Factory Sets,false,,Pedro Alvarez,,
+base,368,Base,false,,Xander Bogaerts
+base,368,Factory Sets,false,,Xander Bogaerts,,
+base,369,Base,false,,Dellin Betances
+base,369,Factory Sets,false,,Dellin Betances,,
+base,370,Base,false,,Bud Norris
+base,370,Factory Sets,false,,Bud Norris,,
+base,371,Base,false,,Jason Heyward
+base,371,Factory Sets,false,,Jason Heyward,,
+base,372,Base,false,,Zack Cosart
+base,372,Factory Sets,false,,Zack Cosart,,
+base,373,Base,false,,Tucker Barnhart
+base,373,Factory Sets,false,,Tucker Barnhart,,
+base,374,Base,false,,Zach McAllister
+base,374,Factory Sets,false,,Zach McAllister,,
+base,375,Base,false,,Jordan Lyles
+base,375,Factory Sets,false,,Jordan Lyles,,
+base,376,Base,false,,Brandon Barnes
+base,376,Factory Sets,false,,Brandon Barnes,,
+base,377,Base,false,,Scott Kazmir
+base,377,Factory Sets,false,,Scott Kazmir,,
+base,378,Base,false,,Jeff Mathis
+base,378,Factory Sets,false,,Jeff Mathis,,
+base,379,Base,false,,Wei-Yin Chen
+base,379,Factory Sets,false,,Wei-Yin Chen,,
+base,380,Base,false,,Michael Blazek
+base,380,Factory Sets,false,,Michael Blazek,,
+base,381,Base,false,,Bartolo Colon
+base,381,Factory Sets,false,,Bartolo Colon,,
+base,382,Base,false,,"David Price / David Ortiz ""David2 = Winning Formula"" UER"
+base,382,Factory Sets,false,,"David Price / David Ortiz ""David2 = Winning Formula"" UER",,
+base,383,Base,false,,Andres Blanco
+base,383,Factory Sets,false,,Andres Blanco,,
+base,384,Base,false,,Michael Morse
+base,384,Factory Sets,false,,Michael Morse,,
+base,385,Base,false,,Jon Jay
+base,385,Factory Sets,false,,Jon Jay,,
+base,386,Base,false,,Nori Aoki
+base,386,Factory Sets,false,,Nori Aoki,,
+base,387,Base,false,,"""Kansas City Clutch"""
+base,387,Factory Sets,false,,"""Kansas City Clutch""",,
+base,388,Base,false,,Evan Longoria
+base,388,Factory Sets,false,,Evan Longoria,,
+base,389,Base,false,,Sam Dyson
+base,389,Factory Sets,false,,Sam Dyson,,
+base,390,Base,false,,Danny Espinosa
+base,390,Factory Sets,false,,Danny Espinosa,,
+base,391,Base,false,,Matt Boyd FS
+base,391,Factory Sets,false,,Matt Boyd FS,,
+base,392,Base,false,,Jon Singleton
+base,392,Factory Sets,false,,Jon Singleton,,
+base,393,Base,false,,Kelvin Herrera
+base,393,Factory Sets,false,,Kelvin Herrera,,
+base,394,Base,false,,Abel De Los Santos RC
+base,394,Factory Sets,false,,Abel De Los Santos RC,,
+base,395,Base,false,,Raul Mondesi
+base,395,Factory Sets,false,,Raul Mondesi,,
+base,396,Base,false,,Matt Reynolds RC
+base,396,Factory Sets,false,,Matt Reynolds RC,,
+base,397,Base,false,,Mac Williamson RC
+base,397,Factory Sets,false,,Mac Williamson RC,,
+base,398,Base,false,,Cleveland Indians TC
+base,398,Factory Sets,false,,Cleveland Indians TC,,
+base,399,Base,false,,Kansas City Royals TC
+base,399,Factory Sets,false,,Kansas City Royals TC,,
+base,400,Base,false,,David Ortiz
+base,400,Factory Sets,false,,David Ortiz,,
+base,401,Base,false,,Peter O'Brien RC
+base,401,Factory Sets,false,,Peter O'Brien RC,,
+base,402,Base,false,,Daniel Norris FS
+base,402,Factory Sets,false,,Daniel Norris FS,,
+base,403,Base,false,,David Peralta
+base,403,Factory Sets,false,,David Peralta,,
+base,404,Base,false,,Miami Marlins TC
+base,404,Factory Sets,false,,Miami Marlins TC,,
+base,405,Base,false,,Ruben Tejada
+base,405,Factory Sets,false,,Ruben Tejada,,
+base,406,Base,false,,Marwin Gonzalez
+base,406,Factory Sets,false,,Marwin Gonzalez,,
+base,407,Base,false,,Yoenis Cespedes
+base,407,Factory Sets,false,,Yoenis Cespedes,,
+base,408,Base,false,,Jason Castro
+base,408,Factory Sets,false,,Jason Castro,,
+base,409,Base,false,,Jean Segura
+base,409,Factory Sets,false,,Jean Segura,,
+base,410,Base,false,,Mike Moustakas
+base,410,Factory Sets,false,,Mike Moustakas,,
+base,411,Base,false,,Brian Matuz
+base,411,Factory Sets,false,,Brian Matuz,,
+base,412,Base,false,,Mark Lowe
+base,412,Factory Sets,false,,Mark Lowe,,
+base,413,Base,false,,David Phelps
+base,413,Factory Sets,false,,David Phelps,,
+base,414,Base,false,,Wily Peralta
+base,414,Factory Sets,false,,Wily Peralta,,
+base,415,Base,false,,Brett Wallace
+base,415,Factory Sets,false,,Brett Wallace,,
+base,416,Base,false,,Johnny Cueto
+base,416,Factory Sets,false,,Johnny Cueto,,
+base,417,Base,false,,Brad Boxberger
+base,417,Factory Sets,false,,Brad Boxberger,,
+base,418,Base,false,,Yu Darvish
+base,418,Factory Sets,false,,Yu Darvish,,
+base,419,Base,false,,Aaron Altherr RC
+base,419,Factory Sets,false,,Aaron Altherr RC,,
+base,420,Base,false,,Pedro Severino RC
+base,420,Factory Sets,false,,Pedro Severino RC,,
+base,421,Base,false,,Cesar Hernandez
+base,421,Factory Sets,false,,Cesar Hernandez,,
+base,422,Base,false,,Miguel Gonzalez
+base,422,Factory Sets,false,,Miguel Gonzalez,,
+base,423,Base,false,,Carl Crawford
+base,423,Factory Sets,false,,Carl Crawford,,
+base,424,Base,false,,Brandon Belt
+base,424,Factory Sets,false,,Brandon Belt,,
+base,425,Base,false,,Jackie Bradley Jr.
+base,425,Factory Sets,false,,Jackie Bradley Jr.,,
+base,426,Base,false,,Joey Votto
+base,426,Factory Sets,false,,Joey Votto,,
+base,427,Base,false,,Travis Shaw
+base,427,Factory Sets,false,,Travis Shaw,,
+base,428,Base,false,,Gregory Polanco
+base,428,Factory Sets,false,,Gregory Polanco,,
+base,429,Base,false,,Kenta Maeda RC
+base,429,Factory Sets,false,,Kenta Maeda RC,,
+base,430,Base,false,,Ariel Pena RC
+base,430,Factory Sets,false,,Ariel Pena RC,,
+base,431,Base,false,,Philadelphia Phillies TC
+base,431,Factory Sets,false,,Philadelphia Phillies TC,,
+base,432,Base,false,,Cameron Rupp
+base,432,Factory Sets,false,,Cameron Rupp,,
+base,433,Base,false,,Trevor Brown RC
+base,433,Factory Sets,false,,Trevor Brown RC,,
+base,434,Base,false,,Matt Adams
+base,434,Factory Sets,false,,Matt Adams,,
+base,435,Base,false,,Enrique Hernandez
+base,435,Factory Sets,false,,Enrique Hernandez,,
+base,436,Base,false,,Raudel Lazo RC
+base,436,Factory Sets,false,,Raudel Lazo RC,,
+base,437,Base,false,,Michael Lorenzen
+base,437,Factory Sets,false,,Michael Lorenzen,,
+base,438,Base,false,,Paulo Orlando
+base,438,Factory Sets,false,,Paulo Orlando,,
+base,439,Base,false,,Francisco Lindor FS
+base,439,Factory Sets,false,,Francisco Lindor FS,,
+base,440,Base,false,,Tommy Pham FS
+base,440,Factory Sets,false,,Tommy Pham FS,,
+base,441,Base,false,,David Ross
+base,441,Factory Sets,false,,David Ross,,
+base,442,Base,false,,Brandon Crawford
+base,442,Factory Sets,false,,Brandon Crawford,,
+base,443,Base,false,,Prince Fielder
+base,443,Factory Sets,false,,Prince Fielder,,
+base,444,Base,false,,Jordan Zimmermann
+base,444,Factory Sets,false,,Jordan Zimmermann,,
+base,445,Base,false,,Robbie Ray
+base,445,Factory Sets,false,,Robbie Ray,,
+base,446,Base,false,,Tom Murphy RC
+base,446,Factory Sets,false,,Tom Murphy RC,,
+base,447,Base,false,,Ben Zobrist
+base,447,Factory Sets,false,,Ben Zobrist,,
+base,448,Base,false,,St. Louis Cardinals TC
+base,448,Factory Sets,false,,St. Louis Cardinals TC,,
+base,449,Base,false,,J.A. Happ
+base,449,Factory Sets,false,,J.A. Happ,,
+base,450,Base,false,,David Price
+base,450,Factory Sets,false,,David Price,,
+base,451,Base,false,,Jose Reyes
+base,451,Factory Sets,false,,Jose Reyes,,
+base,452,Base,false,,Gerrit Cole
+base,452,Factory Sets,false,,Gerrit Cole,,
+base,453,Base,false,,"""Young Cubs Buds"""
+base,453,Factory Sets,false,,"""Young Cubs Buds""",,
+base,454,Base,false,,Greg Holland
+base,454,Factory Sets,false,,Greg Holland,,
+base,455,Base,false,,Preston Tucker
+base,455,Factory Sets,false,,Preston Tucker,,
+base,456,Base,false,,Gordon Beckham
+base,456,Factory Sets,false,,Gordon Beckham,,
+base,457,Base,false,,Nick Swisher
+base,457,Factory Sets,false,,Nick Swisher,,
+base,458,Base,false,,Kenley Jansen
+base,458,Factory Sets,false,,Kenley Jansen,,
+base,459,Base,false,,James Loney
+base,459,Factory Sets,false,,James Loney,,
+base,460,Base,false,,Danny Salazar
+base,460,Factory Sets,false,,Danny Salazar,,
+base,461,Base,false,,Freddy Galvis
+base,461,Factory Sets,false,,Freddy Galvis,,
+base,462,Base,false,,Jumbo Diaz
+base,462,Factory Sets,false,,Jumbo Diaz,,
+base,463,Base,false,,Boston Red Sox TC
+base,463,Factory Sets,false,,Boston Red Sox TC,,
+base,464,Base,false,,Robinson Chirinos
+base,464,Factory Sets,false,,Robinson Chirinos,,
+base,465,Base,false,,Jesse Chavez
+base,465,Factory Sets,false,,Jesse Chavez,,
+base,466,Base,false,,Marco Estrada
+base,466,Factory Sets,false,,Marco Estrada,,
+base,467,Base,false,,Giovanny Urshela
+base,467,Factory Sets,false,,Giovanny Urshela,,
+base,468,Base,false,,Rajai Davis
+base,468,Factory Sets,false,,Rajai Davis,,
+base,469,Base,false,,Logan Morrison
+base,469,Factory Sets,false,,Logan Morrison,,
+base,470,Base,false,,John Lackey
+base,470,Factory Sets,false,,John Lackey,,
+base,471,Base,false,,Kolten Wong
+base,471,Factory Sets,false,,Kolten Wong,,
+base,472,Base,false,,Josh Reddick
+base,472,Factory Sets,false,,Josh Reddick,,
+base,473,Base,false,,Robbie Erlin
+base,473,Factory Sets,false,,Robbie Erlin,,
+base,474,Base,false,,Chicago Cubs TC
+base,474,Factory Sets,false,,Chicago Cubs TC,,
+base,475,Base,false,,Max Kepler RC
+base,475,Factory Sets,false,,Max Kepler RC,,
+base,476,Base,false,,Hisashi Iwakuma
+base,476,Factory Sets,false,,Hisashi Iwakuma,,
+base,477,Base,false,,Chris Tillman
+base,477,Factory Sets,false,,Chris Tillman,,
+base,478,Base,false,,Cody Asche
+base,478,Factory Sets,false,,Cody Asche,,
+base,479,Base,false,,Marcus Stroman
+base,479,Factory Sets,false,,Marcus Stroman,,
+base,480,Base,false,,Mike Foltynewicz
+base,480,Factory Sets,false,,Mike Foltynewicz,,
+base,481,Base,false,,Hector Rondon
+base,481,Factory Sets,false,,Hector Rondon,,
+base,482,Base,false,,Drew Smyly
+base,482,Factory Sets,false,,Drew Smyly,,
+base,483,Base,false,,Erasmo Ramirez
+base,483,Factory Sets,false,,Erasmo Ramirez,,
+base,484,Base,false,,Trevor Rosenthal
+base,484,Factory Sets,false,,Trevor Rosenthal,,
+base,485,Base,false,,James Paxton
+base,485,Factory Sets,false,,James Paxton,,
+base,486,Base,false,,Chris Rusin
+base,486,Factory Sets,false,,Chris Rusin,,
+base,487,Base,false,,Martin Prado
+base,487,Factory Sets,false,,Martin Prado,,
+base,488,Base,false,,Colton Murray RC
+base,488,Factory Sets,false,,Colton Murray RC,,
+base,489,Base,false,,Adeiny Hechavarria
+base,489,Factory Sets,false,,Adeiny Hechavarria,,
+base,490,Base,false,,Guido Knudson RC
+base,490,Factory Sets,false,,Guido Knudson RC,,
+base,491,Base,false,,Rich Hill
+base,491,Factory Sets,false,,Rich Hill,,
+base,492,Base,false,,"""Many Healthy Returns"""
+base,492,Factory Sets,false,,"""Many Healthy Returns""",,
+base,493,Base,false,,R.A. Dickey
+base,493,Factory Sets,false,,R.A. Dickey,,
+base,494,Base,false,,Luis Avilan
+base,494,Factory Sets,false,,Luis Avilan,,
+base,495,Base,false,,Luke Maile RC
+base,495,Factory Sets,false,,Luke Maile RC,,
+base,496,Base,false,,Brett Anderson
+base,496,Factory Sets,false,,Brett Anderson,,
+base,497,Base,false,,Devin Mesoraco
+base,497,Factory Sets,false,,Devin Mesoraco,,
+base,498,Base,false,,Steve Cishek
+base,498,Factory Sets,false,,Steve Cishek,,
+base,499,Base,false,,Carlos Perez
+base,499,Factory Sets,false,,Carlos Perez,,
+base,500,Base,false,,Albert Pujols
+base,500,Factory Sets,false,,Albert Pujols,,
+base,501,Base,false,,Alex Rios
+base,501,Factory Sets,false,,Alex Rios,,
+base,502,Base,false,,Austin Hedges
+base,502,Factory Sets,false,,Austin Hedges,,
+base,503,Base,false,,Luis Valbuena
+base,503,Factory Sets,false,,Luis Valbuena,,
+base,504,Base,false,,Elias Diaz RC
+base,504,Factory Sets,false,,Elias Diaz RC,,
+base,505,Base,false,,Frankie Montas RC
+base,505,Factory Sets,false,,Frankie Montas RC,,
+base,506,Base,false,,Stephen Vogt
+base,506,Factory Sets,false,,Stephen Vogt,,
+base,507,Base,false,,Travis Wood
+base,507,Factory Sets,false,,Travis Wood,,
+base,508,Base,false,,Jaime Garcia
+base,508,Factory Sets,false,,Jaime Garcia,,
+base,509,Base,false,,Mark Canha
+base,509,Factory Sets,false,,Mark Canha,,
+base,510,Base,false,,Tony Watson
+base,510,Factory Sets,false,,Tony Watson,,
+base,511,Base,false,,Manny Banuelos
+base,511,Factory Sets,false,,Manny Banuelos,,
+base,512,Base,false,,Ryan Madson
+base,512,Factory Sets,false,,Ryan Madson,,
+base,513,Base,false,,Caleb Joseph
+base,513,Factory Sets,false,,Caleb Joseph,,
+base,514,Base,false,,Michael Taylor
+base,514,Factory Sets,false,,Michael Taylor,,
+base,515,Base,false,,Ryan Flaherty
+base,515,Factory Sets,false,,Ryan Flaherty,,
+base,516,Base,false,,Steve Johnson
+base,516,Factory Sets,false,,Steve Johnson,,
+base,517,Base,false,,Corey Knebel
+base,517,Factory Sets,false,,Corey Knebel,,
+base,518,Base,false,,Matt Duffy
+base,518,Factory Sets,false,,Matt Duffy,,
+base,519,Base,false,,Kyle Barraclough RC
+base,519,Factory Sets,false,,Kyle Barraclough RC,,
+base,520,Base,false,,Anthony Rendon
+base,520,Factory Sets,false,,Anthony Rendon,,
+base,521,Base,false,,Chris Archer
+base,521,Factory Sets,false,,Chris Archer,,
+base,522,Base,false,,Alex Avila
+base,522,Factory Sets,false,,Alex Avila,,
+base,523,Base,false,,Blake Swihart FS
+base,523,Factory Sets,false,,Blake Swihart FS,,
+base,524,Base,false,,Justin Nicolino FS
+base,524,Factory Sets,false,,Justin Nicolino FS,,
+base,525,Base,false,,Jurickson Profar
+base,525,Factory Sets,false,,Jurickson Profar,,
+base,526,Base,false,,T.J. McFarland
+base,526,Factory Sets,false,,T.J. McFarland,,
+base,527,Base,false,,Jordy Mercer
+base,527,Factory Sets,false,,Jordy Mercer,,
+base,528,Base,false,,Byron Buxton FS
+base,528,Factory Sets,false,,Byron Buxton FS,,
+base,529,Base,false,,Zack Wheeler
+base,529,Factory Sets,false,,Zack Wheeler,,
+base,530,Base,false,,Caleb Cotham RC
+base,530,Factory Sets,false,,Caleb Cotham RC,,
+base,531,Base,false,,Cody Allen
+base,531,Factory Sets,false,,Cody Allen,,
+base,532,Base,false,,Matt Marksberry RC
+base,532,Factory Sets,false,,Matt Marksberry RC,,
+base,533,Base,false,,Jonathan Villar
+base,533,Factory Sets,false,,Jonathan Villar,,
+base,534,Base,false,,Eduardo Nunez
+base,534,Factory Sets,false,,Eduardo Nunez,,
+base,535,Base,false,,Ivan Nova
+base,535,Factory Sets,false,,Ivan Nova,,
+base,536,Base,false,,Alex Wood
+base,536,Factory Sets,false,,Alex Wood,,
+base,537,Base,false,,Tampa Bay Rays TC
+base,537,Factory Sets,false,,Tampa Bay Rays TC,,
+base,538,Base,false,,Michael Reed
+base,538,Factory Sets,false,,Michael Reed,,
+base,539,Base,false,,Nate Karns
+base,539,Factory Sets,false,,Nate Karns,,
+base,540,Base,false,,Curt Casali
+base,540,Factory Sets,false,,Curt Casali,,
+base,541,Base,false,,James Shields
+base,541,Factory Sets,false,,James Shields,,
+base,542,Base,false,,Scott Van Slyke
+base,542,Factory Sets,false,,Scott Van Slyke,,
+base,543,Base,false,,Carlos Rodon FS
+base,543,Factory Sets,false,,Carlos Rodon FS,,
+base,544,Base,false,,Jeremy Jeffress
+base,544,Factory Sets,false,,Jeremy Jeffress,,
+base,545,Base,false,,Hector Santiago
+base,545,Factory Sets,false,,Hector Santiago,,
+base,546,Base,false,,Ricky Nolasco
+base,546,Factory Sets,false,,Ricky Nolasco,,
+base,547,Base,false,,Nick Goody RC
+base,547,Factory Sets,false,,Nick Goody RC,,
+base,548,Base,false,,Lucas Duda
+base,548,Factory Sets,false,,Lucas Duda,,
+base,549,Base,false,,Luke Jackson RC
+base,549,Factory Sets,false,,Luke Jackson RC,,
+base,550,Base,false,,Dallas Keuchel
+base,550,Factory Sets,false,,Dallas Keuchel,,
+base,551,Base,false,,Steven Matz FS
+base,551,Factory Sets,false,,Steven Matz FS,,
+base,552,Base,false,,Texas Rangers TC
+base,552,Factory Sets,false,,Texas Rangers TC,,
+base,553,Base,false,,Adrian Houser RC
+base,553,Factory Sets,false,,Adrian Houser RC,,
+base,554,Base,false,,Daniel Murphy
+base,554,Factory Sets,false,,Daniel Murphy,,
+base,555,Base,false,,Franklin Gutierrez
+base,555,Factory Sets,false,,Franklin Gutierrez,,
+base,556,Base,false,,Abraham Almonte
+base,556,Factory Sets,false,,Abraham Almonte,,
+base,557,Base,false,,Alexi Amarista
+base,557,Factory Sets,false,,Alexi Amarista,,
+base,558,Base,false,,Sean Rodriguez
+base,558,Factory Sets,false,,Sean Rodriguez,,
+base,559,Base,false,,Cliff Pennington
+base,559,Factory Sets,false,,Cliff Pennington,,
+base,560,Base,false,,Kennys Vargas
+base,560,Factory Sets,false,,Kennys Vargas,,
+base,561,Base,false,,Kyle Gibson
+base,561,Factory Sets,false,,Kyle Gibson,,
+base,562,Base,false,,Addison Russell FS
+base,562,Factory Sets,false,,Addison Russell FS,,
+base,563,Base,false,,Lance McCullers FS
+base,563,Factory Sets,false,,Lance McCullers FS,,
+base,564,Base,false,,Tanner Roark
+base,564,Factory Sets,false,,Tanner Roark,,
+base,565,Base,false,,Matt den Dekker
+base,565,Factory Sets,false,,Matt den Dekker,,
+base,566,Base,false,,Alex Rodriguez
+base,566,Factory Sets,false,,Alex Rodriguez,,
+base,567,Base,false,,Carlos Beltran
+base,567,Factory Sets,false,,Carlos Beltran,,
+base,568,Base,false,,Arizona Diamondbacks TC
+base,568,Factory Sets,false,,Arizona Diamondbacks TC,,
+base,569,Base,false,,Los Angeles Dodgers TC
+base,569,Factory Sets,false,,Los Angeles Dodgers TC,,
+base,570,Base,false,,Corey Dickerson
+base,570,Factory Sets,false,,Corey Dickerson,,
+base,571,Base,false,,Mark Reynolds
+base,571,Factory Sets,false,,Mark Reynolds,,
+base,572,Base,false,,Marcell Ozuna
+base,572,Factory Sets,false,,Marcell Ozuna,,
+base,573,Base,false,,Tom Koehler
+base,573,Factory Sets,false,,Tom Koehler,,
+base,574,Base,false,,Ryan Dull RC
+base,574,Factory Sets,false,,Ryan Dull RC,,
+base,575,Base,false,,Ryan Strausborger RC
+base,575,Factory Sets,false,,Ryan Strausborger RC,,
+base,576,Base,false,,Tyler Duffey RC
+base,576,Factory Sets,false,,Tyler Duffey RC,,
+base,577,Base,false,,Jason Gurka RC
+base,577,Factory Sets,false,,Jason Gurka RC,,
+base,578,Base,false,,Mike Leake
+base,578,Factory Sets,false,,Mike Leake,,
+base,579,Base,false,,Michael Wacha
+base,579,Factory Sets,false,,Michael Wacha,,
+base,580,Base,false,,Socrates Brito RC
+base,580,Factory Sets,false,,Socrates Brito RC,,
+base,581,Base,false,,Zach Davies RC
+base,581,Factory Sets,false,,Zach Davies RC,,
+base,582,Base,false,,Jose Quintana
+base,582,Factory Sets,false,,Jose Quintana,,
+base,583,Base,false,,Didi Gregorius
+base,583,Factory Sets,false,,Didi Gregorius,,
+base,584,Base,false,,Adam Duvall
+base,584,Factory Sets,false,,Adam Duvall,,
+base,585,Base,false,,Raisel Iglesias FS
+base,585,Factory Sets,false,,Raisel Iglesias FS,,
+base,586,Base,false,,Chris Stewart
+base,586,Factory Sets,false,,Chris Stewart,,
+base,587,Base,false,,Neftali Feliz
+base,587,Factory Sets,false,,Neftali Feliz,,
+base,588,Base,false,,Cole Hamels
+base,588,Factory Sets,false,,Cole Hamels,,
+base,589,Base,false,,Derek Holland
+base,589,Factory Sets,false,,Derek Holland,,
+base,590,Base,false,,Anthony Gose
+base,590,Factory Sets,false,,Anthony Gose,,
+base,591,Base,false,,Trevor Plouffe
+base,591,Factory Sets,false,,Trevor Plouffe,,
+base,592,Base,false,,Adrian Beltre
+base,592,Factory Sets,false,,Adrian Beltre,,
+base,593,Base,false,,Alex Cobb
+base,593,Factory Sets,false,,Alex Cobb,,
+base,594,Base,false,,Lonnie Chisenhall
+base,594,Factory Sets,false,,Lonnie Chisenhall,,
+base,595,Base,false,,Mike Napoil
+base,595,Factory Sets,false,,Mike Napoil,,
+base,596,Base,false,,Sergio Romo
+base,596,Factory Sets,false,,Sergio Romo,,
+base,597,Base,false,,Chi Chi Gonzalez
+base,597,Factory Sets,false,,Chi Chi Gonzalez,,
+base,598,Base,false,,Khris Davis
+base,598,Factory Sets,false,,Khris Davis,,
+base,599,Base,false,,Domingo Santana
+base,599,Factory Sets,false,,Domingo Santana,,
+base,600,Base,false,,Madison Bumgarner
+base,600,Factory Sets,false,,Madison Bumgarner,,
+base,601,Base,false,,Leonys Martin
+base,601,Factory Sets,false,,Leonys Martin,,
+base,602,Base,false,,Keith Hessler RC
+base,602,Factory Sets,false,,Keith Hessler RC,,
+base,603,Base,false,,Shawn Armstrong
+base,603,Factory Sets,false,,Shawn Armstrong,,
+base,604,Base,false,,Jeff Samardzija
+base,604,Factory Sets,false,,Jeff Samardzija,,
+base,605,Base,false,,Santiago Casilla
+base,605,Factory Sets,false,,Santiago Casilla,,
+base,606,Base,false,,Miguel Almonte RC
+base,606,Factory Sets,false,,Miguel Almonte RC,,
+base,607,Base,false,,Brandon Drury RC
+base,607,Factory Sets,false,,Brandon Drury RC,,
+base,608,Base,false,,Rick Porcello
+base,608,Factory Sets,false,,Rick Porcello,,
+base,609,Base,false,,Billy Hamilton
+base,609,Factory Sets,false,,Billy Hamilton,,
+base,610,Base,false,,Adam Morgan
+base,610,Factory Sets,false,,Adam Morgan,,
+base,611,Base,false,,Darin Ruf
+base,611,Factory Sets,false,,Darin Ruf,,
+base,612,Base,false,,Cincinnati Reds TC
+base,612,Factory Sets,false,,Cincinnati Reds TC,,
+base,613,Base,false,,Milwaukee Brewers TC
+base,613,Factory Sets,false,,Milwaukee Brewers TC,,
+base,614,Base,false,,Dalton Pompey
+base,614,Factory Sets,false,,Dalton Pompey,,
+base,615,Base,false,,Miguel Castro
+base,615,Factory Sets,false,,Miguel Castro,,
+base,616,Base,false,,Keone Kela
+base,616,Factory Sets,false,,Keone Kela,,
+base,617,Base,false,,Justin Smoak
+base,617,Factory Sets,false,,Justin Smoak,,
+base,618,Base,false,,Desmond Jennings
+base,618,Factory Sets,false,,Desmond Jennings,,
+base,619,Base,false,,Dustin Ackley
+base,619,Factory Sets,false,,Dustin Ackley,,
+base,620,Base,false,,Daniel Hudson
+base,620,Factory Sets,false,,Daniel Hudson,,
+base,621,Base,false,,Zach Duke
+base,621,Factory Sets,false,,Zach Duke,,
+base,622,Base,false,,Ken Giles
+base,622,Factory Sets,false,,Ken Giles,,
+base,623,Base,false,,Tyler Saladino
+base,623,Factory Sets,false,,Tyler Saladino,,
+base,624,Base,false,,Tommy Milone
+base,624,Factory Sets,false,,Tommy Milone,,
+base,625,Base,false,,Wil Myers
+base,625,Factory Sets,false,,Wil Myers,,
+base,626,Base,false,,Danny Valencia
+base,626,Factory Sets,false,,Danny Valencia,,
+base,627,Base,false,,Mike Fiers
+base,627,Factory Sets,false,,Mike Fiers,,
+base,628,Base,false,,Welington Castillo
+base,628,Factory Sets,false,,Welington Castillo,,
+base,629,Base,false,,Patrick Corbin
+base,629,Factory Sets,false,,Patrick Corbin,,
+base,630,Base,false,,Michael Saunders
+base,630,Factory Sets,false,,Michael Saunders,,
+base,631,Base,false,,Chris Reed RC
+base,631,Factory Sets,false,,Chris Reed RC,,
+base,632,Base,false,,Ramon Cabrera RC
+base,632,Factory Sets,false,,Ramon Cabrera RC,,
+base,633,Base,false,,Martin Perez
+base,633,Factory Sets,false,,Martin Perez,,
+base,634,Base,false,,Jorge Lopez RC
+base,634,Factory Sets,false,,Jorge Lopez RC,,
+base,635,Base,false,,A.J. Pierzynski
+base,635,Factory Sets,false,,A.J. Pierzynski,,
+base,636,Base,false,,Arodys Vizcaino
+base,636,Factory Sets,false,,Arodys Vizcaino,,
+base,637,Base,false,,Stephen Strasburg
+base,637,Factory Sets,false,,Stephen Strasburg,,
+base,638,Base,false,,Michael Pineda
+base,638,Factory Sets,false,,Michael Pineda,,
+base,639,Base,false,,Rubby De La Rosa
+base,639,Factory Sets,false,,Rubby De La Rosa,,
+base,640,Base,false,,Carl Edwards
+base,640,Factory Sets,false,,Carl Edwards,,
+base,641,Base,false,,Vidal Nuno
+base,641,Factory Sets,false,,Vidal Nuno,,
+base,642,Base,false,,Mike Pelfrey
+base,642,Factory Sets,false,,Mike Pelfrey,,
+base,643,Base,false,,"""Elite Meet & Greet"""
+base,643,Factory Sets,false,,"""Elite Meet & Greet""",,
+base,644,Base,false,,Los Angeles Angels of Anaheim TC
+base,644,Factory Sets,false,,Los Angeles Angels of Anaheim TC,,
+base,645,Base,false,,Danny Santana
+base,645,Factory Sets,false,,Danny Santana,,
+base,646,Base,false,,Brad Miller
+base,646,Factory Sets,false,,Brad Miller,,
+base,647,Base,false,,Eduardo Rodriguez FS
+base,647,Factory Sets,false,,Eduardo Rodriguez FS,,
+base,648,Base,false,,San Francisco Giants TC
+base,648,Factory Sets,false,,San Francisco Giants TC,,
+base,649,Base,false,,Aroldis Chapman
+base,649,Factory Sets,false,,Aroldis Chapman,,
+base,650,Base,false,,Carlos Correa FS
+base,650,Factory Sets,false,,Carlos Correa FS,,
+base,651,Base,false,,Dioner Navarro
+base,651,Factory Sets,false,,Dioner Navarro,,
+base,652,Base,false,,Collin McHugh
+base,652,Factory Sets,false,,Collin McHugh,,
+base,653,Base,false,,Chris Iannetta
+base,653,Factory Sets,false,,Chris Iannetta,,
+base,654,Base,false,,Brandon Guyer
+base,654,Factory Sets,false,,Brandon Guyer,,
+base,655,Base,false,,Domonic Brown
+base,655,Factory Sets,false,,Domonic Brown,,
+base,656,Base,false,,Randal Grichuk FS
+base,656,Factory Sets,false,,Randal Grichuk FS,,
+base,657,Base,false,,Johnny Giavotella
+base,657,Factory Sets,false,,Johnny Giavotella,,
+base,658,Base,false,,Wilson Ramos
+base,658,Factory Sets,false,,Wilson Ramos,,
+base,659,Base,false,,Adonis Garcia
+base,659,Factory Sets,false,,Adonis Garcia,,
+base,660,Base,false,,John Axford
+base,660,Factory Sets,false,,John Axford,,
+base,661,Base,false,,DJ LeMahieu
+base,661,Factory Sets,false,,DJ LeMahieu,,
+base,662,Base,false,,Masahiro Tanaka
+base,662,Factory Sets,false,,Masahiro Tanaka,,
+base,663,Base,false,,Jake Petricka
+base,663,Factory Sets,false,,Jake Petricka,,
+base,664,Base,false,,Mikie Mahtook
+base,664,Factory Sets,false,,Mikie Mahtook,,
+base,665,Base,false,,Jared Hughes
+base,665,Factory Sets,false,,Jared Hughes,,
+base,666,Base,false,,J.T. Realmuto FS
+base,666,Factory Sets,false,,J.T. Realmuto FS,,
+base,667,Base,false,,James McCann FS
+base,667,Factory Sets,false,,James McCann FS,,
+base,668,Base,false,,Javier Baez FS
+base,668,Factory Sets,false,,Javier Baez FS,,
+base,669,Base,false,,Tyler Skaggs
+base,669,Factory Sets,false,,Tyler Skaggs,,
+base,670,Base,false,,Will Smith
+base,670,Factory Sets,false,,Will Smith,,
+base,671,Base,false,,Tony Cingrani
+base,671,Factory Sets,false,,Tony Cingrani,,
+base,672,Base,false,,Shane Peterson
+base,672,Factory Sets,false,,Shane Peterson,,
+base,673,Base,false,,Justin Upton
+base,673,Factory Sets,false,,Justin Upton,,
+base,674,Base,false,,Tyler Chatwood
+base,674,Factory Sets,false,,Tyler Chatwood,,
+base,675,Base,false,,Gary Sanchez RC
+base,675,Factory Sets,false,,Gary Sanchez RC,,
+base,676,Base,false,,Jarred Cosart
+base,676,Factory Sets,false,,Jarred Cosart,,
+base,677,Base,false,,Derek Norris
+base,677,Factory Sets,false,,Derek Norris,,
+base,678,Base,false,,Carlos Martinez
+base,678,Factory Sets,false,,Carlos Martinez,,
+base,679,Base,false,,Nate Jones
+base,679,Factory Sets,false,,Nate Jones,,
+base,680,Base,false,,Tuffy Gosewisch
+base,680,Factory Sets,false,,Tuffy Gosewisch,,
+base,681,Base,false,,Joe Smith
+base,681,Factory Sets,false,,Joe Smith,,
+base,682,Base,false,,Danny Duffy
+base,682,Factory Sets,false,,Danny Duffy,,
+base,683,Base,false,,Carlos Gonzalez
+base,683,Factory Sets,false,,Carlos Gonzalez,,
+base,684,Base,false,,Jarrod Dyson
+base,684,Factory Sets,false,,Jarrod Dyson,,
+base,685,Base,false,,Kyle Waldrop RC
+base,685,Factory Sets,false,,Kyle Waldrop RC,,
+base,686,Base,false,,Brandon Finnegan FS
+base,686,Factory Sets,false,,Brandon Finnegan FS,,
+base,687,Base,false,,Chris Owings
+base,687,Factory Sets,false,,Chris Owings,,
+base,688,Base,false,,Shawn Tolleson
+base,688,Factory Sets,false,,Shawn Tolleson,,
+base,689,Base,false,,Eugenio Suarez
+base,689,Factory Sets,false,,Eugenio Suarez,,
+base,690,Base,false,,Jimmy Nelson
+base,690,Factory Sets,false,,Jimmy Nelson,,
+base,691,Base,false,,Kris Medlen
+base,691,Factory Sets,false,,Kris Medlen,,
+base,692,Base,false,,Giovanni Soto RC
+base,692,Factory Sets,false,,Giovanni Soto RC,,
+base,693,Base,false,,Josh Tomlin
+base,693,Factory Sets,false,,Josh Tomlin,,
+base,694,Base,false,,Scott McGough RC
+base,694,Factory Sets,false,,Scott McGough RC,,
+base,695,Base,false,,Kyle Crockett
+base,695,Factory Sets,false,,Kyle Crockett,,
+base,696,Base,false,,Lorenzo Cain
+base,696,Factory Sets,false,,Lorenzo Cain,,
+base,697,Base,false,,Andrew Cashner
+base,697,Factory Sets,false,,Andrew Cashner,,
+base,698,Base,false,,Matt Moore
+base,698,Factory Sets,false,,Matt Moore,,
+base,699,Base,false,,Justin Bour FS
+base,699,Factory Sets,false,,Justin Bour FS,,
+base,700,Base,false,,Ichiro
+base,700,Factory Sets,false,,Ichiro,,
+base,701,Base,false,,Tyler Flowers
+base,701,Factory Sets,false,,Tyler Flowers,,
+base,232,Base,false,,Michael Conforto
+base,232,Factory Sets,false,,Michael Conforto,,
+base,350,Base,false,,Kris Bryant
+base,350,Factory Sets,false,,Kris Bryant,,
+base,1,Base,false,,Mike Trout (warmup jacket
+base,1,Factory Sets,false,,Mike Trout (warmup jacket,,
+base,4,Base,false,,Sonny Gray (KC hat
+base,4,Factory Sets,false,,Sonny Gray (KC hat,,
+base,8,Base,false,,Michael Brantley (landscape)
+base,8,Factory Sets,false,,Michael Brantley (landscape),,
+base,78,Base,false,,Miguel Sano (emerging from dugout)
+base,78,Factory Sets,false,,Miguel Sano (emerging from dugout),,
+base,132,Base,false,,Joe Ross (headshot w/sunglasses)
+base,132,Factory Sets,false,,Joe Ross (headshot w/sunglasses),,
+base,133,Base,false,,Aaron Nola (running out of dugout)
+base,133,Factory Sets,false,,Aaron Nola (running out of dugout),,
+base,134,Base,false,,Yadier Molina (w/mitt)
+base,134,Factory Sets,false,,Yadier Molina (w/mitt),,
+base,139,Base,false,,Yasiel Puig (w/Bat)
+base,139,Factory Sets,false,,Yasiel Puig (w/Bat),,
+base,150,Base,false,,Clayton Kershaw (w/bat)
+base,150,Factory Sets,false,,Clayton Kershaw (w/bat),,
+base,173,Base,false,,Jose Abreu (flashing gang signs)
+base,173,Factory Sets,false,,Jose Abreu (flashing gang signs),,
+base,188,Base,false,,Greg Bird (tipping helmet)
+base,188,Factory Sets,false,,Greg Bird (tipping helmet),,
+base,250,Base,false,,Miguel Cabrera (sticking tongue out)
+base,250,Factory Sets,false,,Miguel Cabrera (sticking tongue out),,
+base,253,Base,false,,Nick Castellanos (w/glove on head and blowing bubble)
+base,253,Factory Sets,false,,Nick Castellanos (w/glove on head and blowing bubble),,
+base,259,Base,false,,Paul Goldschmidt (w/framed jerseys)
+base,259,Factory Sets,false,,Paul Goldschmidt (w/framed jerseys),,
+base,261,Base,false,,Russel Martin (running out of dugout)
+base,261,Factory Sets,false,,Russel Martin (running out of dugout),,
+base,264,Base,false,,Jake Arrieta (on mound
+base,264,Factory Sets,false,,Jake Arrieta (on mound,,
+base,268,Base,false,,Robinson Cano (w/base)
+base,268,Factory Sets,false,,Robinson Cano (w/base),,
+base,286,Base,false,,Joe Mauer (landscape
+base,286,Factory Sets,false,,Joe Mauer (landscape,,
+base,298,Base,false,,Ryan Braun (in dugout)
+base,298,Factory Sets,false,,Ryan Braun (in dugout),,
+base,300,Base,false,,Buster Posey (running bases
+base,300,Factory Sets,false,,Buster Posey (running bases,,
+base,312,Base,false,,Curtis Granderson (in locker room)
+base,312,Factory Sets,false,,Curtis Granderson (in locker room),,
+base,317,Base,false,,Jose Altuve (landscape
+base,317,Factory Sets,false,,Jose Altuve (landscape,,
+base,321,Base,false,,Hanley Ramirez (jacket w/glove)
+base,321,Factory Sets,false,,Hanley Ramirez (jacket w/glove),,
+base,327,Base,false,,Anthony Rizzo (leaning on dugout railing)
+base,327,Factory Sets,false,,Anthony Rizzo (leaning on dugout railing),,
+base,350,Base,false,,Kris Bryant (bat on shoulder in dugout)
+base,350,Factory Sets,false,,Kris Bryant (bat on shoulder in dugout),,
+base,661,Base,false,,DJ LaMahieu
+base,661,Factory Sets,false,,DJ LaMahieu,,
+base,354,Base,false,,Tyson Ross (batting)
+base,354,Factory Sets,false,,Tyson Ross (batting),,
+base,400,Base,false,,David Ortiz (red jersey)
+base,400,Factory Sets,false,,David Ortiz (red jersey),,
+base,405,Base,false,,Ruben Tejada (black sleeves)
+base,405,Factory Sets,false,,Ruben Tejada (black sleeves),,
+base,407,Base,false,,Yoenis Cespedes (w/horse)
+base,407,Factory Sets,false,,Yoenis Cespedes (w/horse),,
+base,426,Base,false,,Joey Votto (All-Star jersey)
+base,426,Factory Sets,false,,Joey Votto (All-Star jersey),,
+base,440,Base,false,,"Tommy Pham (batting; no ""Future Stars"" notation)"
+base,440,Factory Sets,false,,"Tommy Pham (batting; no ""Future Stars"" notation)",,
+base,442,Base,false,,Brandon Crawford (batting practice jersey)
+base,442,Factory Sets,false,,Brandon Crawford (batting practice jersey),,
+base,443,Base,false,,Prince Fielder (in dugout)
+base,443,Factory Sets,false,,Prince Fielder (in dugout),,
+base,450,Base,false,,David Price (w/dog)
+base,450,Factory Sets,false,,David Price (w/dog),,
+base,452,Base,false,,Gerrit Cole (in dugout)
+base,452,Factory Sets,false,,Gerrit Cole (in dugout),,
+base,464,Base,false,,Robinson Chirinos (red jersey)
+base,464,Factory Sets,false,,Robinson Chirinos (red jersey),,
+base,471,Base,false,,Kolten Wong (in dugout)
+base,471,Factory Sets,false,,Kolten Wong (in dugout),,
+base,479,Base,false,,Marcus Stroman (w/Bobblehead)
+base,479,Factory Sets,false,,Marcus Stroman (w/Bobblehead),,
+base,521,Base,false,,Chris Archer (w/sweatshirt)
+base,521,Factory Sets,false,,Chris Archer (w/sweatshirt),,
+base,548,Base,false,,Lucas Duda (in dugout; blue jersey)
+base,548,Factory Sets,false,,Lucas Duda (in dugout; blue jersey),,
+base,550,Base,false,,Dallas Keuchel (w/jacket on shoulder)
+base,550,Factory Sets,false,,Dallas Keuchel (w/jacket on shoulder),,
+base,554,Base,false,,Daniel Murphy (press conference)
+base,554,Factory Sets,false,,Daniel Murphy (press conference),,
+base,579,Base,false,,Michael Wacha (hands covering face)
+base,579,Factory Sets,false,,Michael Wacha (hands covering face),,
+base,600,Base,false,,Madison Bumgarner (in dugout)
+base,600,Factory Sets,false,,Madison Bumgarner (in dugout),,
+base,609,Base,false,,Billy Hamilton (bat on shoulder)
+base,609,Factory Sets,false,,Billy Hamilton (bat on shoulder),,
+base,661,Base,false,,DJ LeMahieu (black sweatshirt)
+base,661,Factory Sets,false,,DJ LeMahieu (black sweatshirt),,
+base,673,Base,false,,Justin Upton (w/microphone)
+base,673,Factory Sets,false,,Justin Upton (w/microphone),,
+base,696,Base,false,,Lorenzo Cain (World Series victory parade)
+base,696,Factory Sets,false,,Lorenzo Cain (World Series victory parade),,
+base,66,Base,false,,Kyle Schwarber (Gray jersey)
+base,66,Factory Sets,false,,Kyle Schwarber (Gray jersey),,
+base,78,Base,false,,Miguel Sano (Dark Jersey)
+base,78,Factory Sets,false,,Miguel Sano (Dark Jersey),,
+base,85,Base,false,,Corey Seager (Fielding)
+base,85,Factory Sets,false,,Corey Seager (Fielding),,
+base,232,Base,false,,Michael Conforto (Fielding)
+base,232,Factory Sets,false,,Michael Conforto (Fielding),,
+base,265,Base,false,,Luis Severino (Gray jersey)
+base,265,Factory Sets,false,,Luis Severino (Gray jersey),,

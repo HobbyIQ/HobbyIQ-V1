@@ -1,0 +1,24 @@
+{
+ "year": 2001,
+ "sport": "baseball",
+ "setKey": "donruss",
+ "setName": "2001 Donruss",
+ "sourceUrl": "http://www.baseballcardpedia.com/index.php/2001_Donruss",
+ "source": "bcp-2026-09-13",
+ "acquiredAt": "2026-09-13",
+ "parallelColumnAuthoritative": true,
+ "scope": "Base Set",
+ "scopeOfPage": "2001 Donruss",
+ "baseReadFrom": "Base_Set heading",
+ "ladder": [],
+ "ladderAbsentReason": "the page states its parallels in PROSE only (no list rungs and no inline card list), so no rung can be read without guessing its scope; base set emitted alone",
+ "sections": [
+  {
+   "name": "Base Set",
+   "category": null,
+   "isAuto": false,
+   "cards": 220,
+   "rungs": 0
+  }
+ ]
+}

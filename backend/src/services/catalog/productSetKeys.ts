@@ -830,6 +830,52 @@ export const PRODUCT_SET_KEYS: ReadonlyArray<ProductSetKey> = [
   P("metal-universe"),
   P("pinnacle"),
   P("pinnacle-aficionado", { parent: "pinnacle" }),
+  /**
+   * 1992 PINNACLE'S SIX INSERT SETS ARE THEIR OWN CARD SETS (R30/R21,
+   * 2026-09-13). Drew's ruling class: a same-numbered insert set that is not
+   * a rung of the flagship's OWN checklist is a card set of its own, the way
+   * an autograph subset that restarts numbering is (see the Panini Rookies &
+   * Stars R30 entry above).
+   *
+   * THE INCIDENT THIS FIXES. Tonight's SCC universe driver APPLY run
+   * (34732777018) staged and ingested six 1992 Pinnacle insert products —
+   * Mickey Mantle (30 rows), Rookie Idols (18), Rookies (30), Slugfest (15),
+   * Team 2000, Team Pinnacle — and the CHILD'S OWN COUNT said every one wrote
+   * successfully (`catalog rows written 30`, etc.). The driver's verification
+   * read the product back at ZERO rows for all six ("green ingest, 0 rows
+   * landed" x6) and a direct Cosmos read confirmed why: every row landed
+   * under `setKey: "pinnacle"`, `setName: "1992 Pinnacle Baseball"` — the
+   * FLAGSHIP'S identity, not the insert's — merging six inserts silently
+   * onto the base set at colliding card numbers.
+   *
+   * THE ROOT CAUSE IS UPSTREAM OF THIS TABLE, and worth naming so nobody re-
+   * discovers it by reading this comment out of context: `computeHobbyIqCardId`
+   * accepts `authoritativeSetKey: true` and its own doc comment there claims
+   * "a caller that KNOWS the product ... keeps its setKey verbatim" — but the
+   * code only skips the LATER chrome-prefix override with that flag.
+   * `resolveSetKeyForSlug` still runs `normalizeSetKey(setName)` FIRST,
+   * unconditionally, for every mainstream-sport call — so an authoritative,
+   * checklist-backed `setKey: "pinnacle-mickey-mantle"` still collapses to
+   * `pinnacle` exactly as an untrusted vendor guess would. That promise-
+   * violation is a separate, wider defect (15+ scripts pass
+   * authoritativeSetKey trusting the same false claim) and is NOT fixed here
+   * — flagged for its own fix, out of scope for a card-set registration PR.
+   *
+   * REGISTERING HERE IS THE IMMEDIATE, SAFE FIX for these six products
+   * specifically, because `normalizeSetKey` consults this table (via the
+   * reconciliation route `S()` unlocks) BEFORE it ever reaches the
+   * unanchored `/pinnacle/` regex that was collapsing them. `S`, not `P`, and
+   * that is the whole point (see the Fleer Tiffany/Glossy note above): a
+   * brand-new key with ZERO existing catalog rows has no census entry for
+   * the reconciliation route to rule from, so only a SPELLED product answers
+   * `productSetKeyForName` ahead of the regex. `P("pinnacle-aficionado")`
+   * above is a fixed point today only because it already has catalog rows
+   * and a standing reconciliation verdict — these six do not yet, so `P`
+   * alone would silently reproduce tonight's incident.
+   */
+  ...["pinnacle-mickey-mantle", "pinnacle-rookie-idols", "pinnacle-rookies",
+    "pinnacle-slugfest", "pinnacle-team-2000", "pinnacle-team-pinnacle",
+  ].map((k) => S(k, { parent: "pinnacle" })),
   P("score"),
   P("score-select", { parent: "score" }),
   /**

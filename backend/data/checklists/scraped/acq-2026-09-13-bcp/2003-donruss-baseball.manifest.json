@@ -1,0 +1,97 @@
+{
+ "year": 2003,
+ "sport": "baseball",
+ "setKey": "donruss",
+ "parallelColumnAuthoritative": true,
+ "setName": "2003 Donruss",
+ "sourceUrl": "http://www.baseballcardpedia.com/index.php/2003_Donruss",
+ "scope": "Chicago Collection",
+ "scopeOfPage": "Donruss",
+ "cardNumberPrefix": "",
+ "prefixDerivedFrom": "images",
+ "prefixUnresolved": false,
+ "ladder": [
+  {
+   "name": "Chicago Collection",
+   "printRun": null,
+   "rarity": null
+  }
+ ],
+ "autographs": [
+  {
+   "name": "Timber and Threads",
+   "type": "relic",
+   "isAuto": false,
+   "cards": 48,
+   "ladder": []
+  },
+  {
+   "name": "Bat Kings",
+   "type": "relic",
+   "isAuto": false,
+   "cards": 20,
+   "ladder": []
+  },
+  {
+   "name": "Jersey Kings",
+   "type": "relic",
+   "isAuto": false,
+   "cards": 20,
+   "ladder": []
+  }
+ ],
+ "setRarity": null,
+ "sections": [
+  {
+   "name": "Elite Series",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 15,
+   "rungs": 0
+  },
+  {
+   "name": "Production Line",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 30,
+   "rungs": 0
+  },
+  {
+   "name": "Longball Leaders",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 10,
+   "rungs": 0
+  },
+  {
+   "name": "All-Stars",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 10,
+   "rungs": 0
+  },
+  {
+   "name": "Timber and Threads",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 48,
+   "rungs": 0
+  },
+  {
+   "name": "Bat Kings",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 20,
+   "rungs": 0
+  },
+  {
+   "name": "Jersey Kings",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 20,
+   "rungs": 0
+  }
+ ],
+ "source": "bcp-2026-09-13",
+ "acquiredAt": "2026-09-13"
+}

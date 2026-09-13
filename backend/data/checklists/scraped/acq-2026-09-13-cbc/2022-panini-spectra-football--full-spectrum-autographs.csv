@@ -1,0 +1,116 @@
+category,cardNumber,parallel,isAuto,printRun,player
+auto-full-spectrum-autographs,1,,true,99,AJ Dillon
+auto-full-spectrum-autographs,3,,true,50,Tyreek Hill - Tyreek Hill
+auto-full-spectrum-autographs,5,,true,50,Marcus Allen - Marcus Allen
+auto-full-spectrum-autographs,7,,true,149,Cordarrelle Patterson - Cordarrelle Patterson
+auto-full-spectrum-autographs,10,,true,99,Dallas Goedert
+auto-full-spectrum-autographs,11,,true,99,Dalton Schultz
+auto-full-spectrum-autographs,12,,true,99,Kareem Hunt - Kareem Hunt
+auto-full-spectrum-autographs,13,,true,149,Fred Warner
+auto-full-spectrum-autographs,15,,true,99,James Robinson
+auto-full-spectrum-autographs,16,,true,99,Josh Jacobs
+auto-full-spectrum-autographs,17,,true,99,Leighton Vander Esch
+auto-full-spectrum-autographs-celestial,7,Celestial,true,99,Cordarrelle Patterson - Cordarrelle Patterson
+auto-full-spectrum-autographs-celestial,10,Celestial,true,75,Dallas Goedert
+auto-full-spectrum-autographs-celestial,11,Celestial,true,75,Dalton Schultz
+auto-full-spectrum-autographs-celestial,13,Celestial,true,99,Fred Warner
+auto-full-spectrum-autographs-celestial,17,Celestial,true,75,Leighton Vander Esch
+auto-full-spectrum-autographs-hyper,7,Hyper,true,75,Cordarrelle Patterson - Cordarrelle Patterson
+auto-full-spectrum-autographs-hyper,10,Hyper,true,60,Dallas Goedert
+auto-full-spectrum-autographs-hyper,13,Hyper,true,75,Fred Warner
+auto-full-spectrum-autographs-hyper,17,Hyper,true,60,Leighton Vander Esch
+auto-full-spectrum-autographs-meta,1,Meta,true,25,AJ Dillon
+auto-full-spectrum-autographs-meta,3,Meta,true,25,Tyreek Hill - Tyreek Hill
+auto-full-spectrum-autographs-meta,5,Meta,true,25,Marcus Allen - Marcus Allen
+auto-full-spectrum-autographs-meta,7,Meta,true,25,Cordarrelle Patterson - Cordarrelle Patterson
+auto-full-spectrum-autographs-meta,10,Meta,true,25,Dallas Goedert
+auto-full-spectrum-autographs-meta,11,Meta,true,25,Dalton Schultz
+auto-full-spectrum-autographs-meta,12,Meta,true,25,Kareem Hunt - Kareem Hunt
+auto-full-spectrum-autographs-meta,13,Meta,true,25,Fred Warner
+auto-full-spectrum-autographs-meta,15,Meta,true,25,James Robinson
+auto-full-spectrum-autographs-meta,16,Meta,true,25,Josh Jacobs
+auto-full-spectrum-autographs-meta,17,Meta,true,25,Leighton Vander Esch
+auto-full-spectrum-autographs-nebula,1,Nebula,true,2,AJ Dillon
+auto-full-spectrum-autographs-nebula,3,Nebula,true,2,Tyreek Hill - Tyreek Hill
+auto-full-spectrum-autographs-nebula,5,Nebula,true,2,Marcus Allen - Marcus Allen
+auto-full-spectrum-autographs-nebula,7,Nebula,true,2,Cordarrelle Patterson - Cordarrelle Patterson
+auto-full-spectrum-autographs-nebula,10,Nebula,true,2,Dallas Goedert
+auto-full-spectrum-autographs-nebula,11,Nebula,true,2,Dalton Schultz
+auto-full-spectrum-autographs-nebula,12,Nebula,true,2,Kareem Hunt - Kareem Hunt
+auto-full-spectrum-autographs-nebula,13,Nebula,true,2,Fred Warner
+auto-full-spectrum-autographs-nebula,15,Nebula,true,2,James Robinson
+auto-full-spectrum-autographs-nebula,16,Nebula,true,2,Josh Jacobs
+auto-full-spectrum-autographs-nebula,17,Nebula,true,2,Leighton Vander Esch
+auto-full-spectrum-autographs-neon-blue,1,Neon Blue,true,50,AJ Dillon
+auto-full-spectrum-autographs-neon-blue,7,Neon Blue,true,50,Cordarrelle Patterson - Cordarrelle Patterson
+auto-full-spectrum-autographs-neon-blue,10,Neon Blue,true,50,Dallas Goedert
+auto-full-spectrum-autographs-neon-blue,11,Neon Blue,true,50,Dalton Schultz
+auto-full-spectrum-autographs-neon-blue,12,Neon Blue,true,50,Kareem Hunt - Kareem Hunt
+auto-full-spectrum-autographs-neon-blue,13,Neon Blue,true,50,Fred Warner
+auto-full-spectrum-autographs-neon-blue,15,Neon Blue,true,50,James Robinson
+auto-full-spectrum-autographs-neon-blue,16,Neon Blue,true,50,Josh Jacobs
+auto-full-spectrum-autographs-neon-blue,17,Neon Blue,true,50,Leighton Vander Esch
+auto-full-spectrum-autographs-neon-green,1,Neon Green,true,35,AJ Dillon
+auto-full-spectrum-autographs-neon-green,5,Neon Green,true,35,Marcus Allen - Marcus Allen
+auto-full-spectrum-autographs-neon-green,7,Neon Green,true,35,Cordarrelle Patterson - Cordarrelle Patterson
+auto-full-spectrum-autographs-neon-green,10,Neon Green,true,35,Dallas Goedert
+auto-full-spectrum-autographs-neon-green,11,Neon Green,true,35,Dalton Schultz
+auto-full-spectrum-autographs-neon-green,12,Neon Green,true,35,Kareem Hunt - Kareem Hunt
+auto-full-spectrum-autographs-neon-green,13,Neon Green,true,35,Fred Warner
+auto-full-spectrum-autographs-neon-green,15,Neon Green,true,35,James Robinson
+auto-full-spectrum-autographs-neon-green,16,Neon Green,true,35,Josh Jacobs
+auto-full-spectrum-autographs-neon-green,17,Neon Green,true,35,Leighton Vander Esch
+auto-full-spectrum-autographs-neon-marble,1,Neon Marble,true,4,AJ Dillon
+auto-full-spectrum-autographs-neon-marble,3,Neon Marble,true,4,Tyreek Hill - Tyreek Hill
+auto-full-spectrum-autographs-neon-marble,5,Neon Marble,true,4,Marcus Allen - Marcus Allen
+auto-full-spectrum-autographs-neon-marble,7,Neon Marble,true,4,Cordarrelle Patterson - Cordarrelle Patterson
+auto-full-spectrum-autographs-neon-marble,10,Neon Marble,true,4,Dallas Goedert
+auto-full-spectrum-autographs-neon-marble,11,Neon Marble,true,4,Dalton Schultz
+auto-full-spectrum-autographs-neon-marble,12,Neon Marble,true,4,Kareem Hunt - Kareem Hunt
+auto-full-spectrum-autographs-neon-marble,13,Neon Marble,true,4,Fred Warner
+auto-full-spectrum-autographs-neon-marble,15,Neon Marble,true,4,James Robinson
+auto-full-spectrum-autographs-neon-marble,16,Neon Marble,true,4,Josh Jacobs
+auto-full-spectrum-autographs-neon-marble,17,Neon Marble,true,4,Leighton Vander Esch
+auto-full-spectrum-autographs-neon-orange,1,Neon Orange,true,10,AJ Dillon
+auto-full-spectrum-autographs-neon-orange,3,Neon Orange,true,10,Tyreek Hill - Tyreek Hill
+auto-full-spectrum-autographs-neon-orange,5,Neon Orange,true,10,Marcus Allen - Marcus Allen
+auto-full-spectrum-autographs-neon-orange,7,Neon Orange,true,10,Cordarrelle Patterson - Cordarrelle Patterson
+auto-full-spectrum-autographs-neon-orange,10,Neon Orange,true,10,Dallas Goedert
+auto-full-spectrum-autographs-neon-orange,11,Neon Orange,true,10,Dalton Schultz
+auto-full-spectrum-autographs-neon-orange,12,Neon Orange,true,10,Kareem Hunt - Kareem Hunt
+auto-full-spectrum-autographs-neon-orange,13,Neon Orange,true,10,Fred Warner
+auto-full-spectrum-autographs-neon-orange,15,Neon Orange,true,10,James Robinson
+auto-full-spectrum-autographs-neon-orange,16,Neon Orange,true,10,Josh Jacobs
+auto-full-spectrum-autographs-neon-orange,17,Neon Orange,true,10,Leighton Vander Esch
+auto-full-spectrum-autographs-neon-pink,3,Neon Pink,true,15,Tyreek Hill - Tyreek Hill
+auto-full-spectrum-autographs-neon-pink,5,Neon Pink,true,15,Marcus Allen - Marcus Allen
+auto-full-spectrum-autographs-neon-pink,7,Neon Pink,true,15,Cordarrelle Patterson - Cordarrelle Patterson
+auto-full-spectrum-autographs-neon-pink,10,Neon Pink,true,15,Dallas Goedert
+auto-full-spectrum-autographs-neon-pink,11,Neon Pink,true,15,Dalton Schultz
+auto-full-spectrum-autographs-neon-pink,12,Neon Pink,true,15,Kareem Hunt - Kareem Hunt
+auto-full-spectrum-autographs-neon-pink,13,Neon Pink,true,15,Fred Warner
+auto-full-spectrum-autographs-neon-pink,15,Neon Pink,true,15,James Robinson
+auto-full-spectrum-autographs-neon-pink,16,Neon Pink,true,15,Josh Jacobs
+auto-full-spectrum-autographs-neon-pink,17,Neon Pink,true,15,Leighton Vander Esch
+auto-full-spectrum-autographs-neon-splatter,1,Neon Splatter,true,8,AJ Dillon
+auto-full-spectrum-autographs-neon-splatter,3,Neon Splatter,true,8,Tyreek Hill - Tyreek Hill
+auto-full-spectrum-autographs-neon-splatter,5,Neon Splatter,true,8,Marcus Allen - Marcus Allen
+auto-full-spectrum-autographs-neon-splatter,7,Neon Splatter,true,8,Cordarrelle Patterson - Cordarrelle Patterson
+auto-full-spectrum-autographs-neon-splatter,10,Neon Splatter,true,8,Dallas Goedert
+auto-full-spectrum-autographs-neon-splatter,11,Neon Splatter,true,8,Dalton Schultz
+auto-full-spectrum-autographs-neon-splatter,12,Neon Splatter,true,8,Kareem Hunt - Kareem Hunt
+auto-full-spectrum-autographs-neon-splatter,13,Neon Splatter,true,8,Fred Warner
+auto-full-spectrum-autographs-neon-splatter,15,Neon Splatter,true,8,James Robinson
+auto-full-spectrum-autographs-neon-splatter,16,Neon Splatter,true,8,Josh Jacobs
+auto-full-spectrum-autographs-neon-splatter,17,Neon Splatter,true,8,Leighton Vander Esch
+auto-full-spectrum-autographs-psychedelic,1,Psychedelic,true,5,AJ Dillon
+auto-full-spectrum-autographs-psychedelic,3,Psychedelic,true,5,Tyreek Hill - Tyreek Hill
+auto-full-spectrum-autographs-psychedelic,5,Psychedelic,true,5,Marcus Allen - Marcus Allen
+auto-full-spectrum-autographs-psychedelic,7,Psychedelic,true,5,Cordarrelle Patterson - Cordarrelle Patterson
+auto-full-spectrum-autographs-psychedelic,10,Psychedelic,true,5,Dallas Goedert
+auto-full-spectrum-autographs-psychedelic,11,Psychedelic,true,5,Dalton Schultz
+auto-full-spectrum-autographs-psychedelic,12,Psychedelic,true,5,Kareem Hunt - Kareem Hunt
+auto-full-spectrum-autographs-psychedelic,13,Psychedelic,true,5,Fred Warner
+auto-full-spectrum-autographs-psychedelic,15,Psychedelic,true,5,James Robinson
+auto-full-spectrum-autographs-psychedelic,16,Psychedelic,true,5,Josh Jacobs
+auto-full-spectrum-autographs-psychedelic,17,Psychedelic,true,5,Leighton Vander Esch

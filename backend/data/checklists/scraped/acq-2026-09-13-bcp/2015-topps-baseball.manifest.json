@@ -1,0 +1,606 @@
+{
+ "year": 2015,
+ "sport": "baseball",
+ "setKey": "topps",
+ "parallelColumnAuthoritative": true,
+ "setName": "2015 Topps",
+ "sourceUrl": "http://www.baseballcardpedia.com/index.php/2015_Topps",
+ "scope": null,
+ "scopeOfPage": "Topps",
+ "cardNumberPrefix": null,
+ "prefixDerivedFrom": "paper",
+ "prefixUnresolved": false,
+ "ladder": [
+  {
+   "name": "Rainbow Foil",
+   "printRun": null,
+   "rarity": null
+  },
+  {
+   "name": "Purple",
+   "printRun": null,
+   "rarity": null
+  },
+  {
+   "name": "Gold",
+   "printRun": 2015,
+   "rarity": null
+  },
+  {
+   "name": "Sparkle Foil",
+   "printRun": 179,
+   "rarity": null
+  },
+  {
+   "name": "Snow Camo",
+   "printRun": 99,
+   "rarity": null
+  },
+  {
+   "name": "Black",
+   "printRun": 64,
+   "rarity": null
+  },
+  {
+   "name": "Pink",
+   "printRun": 50,
+   "rarity": null
+  },
+  {
+   "name": "Framed",
+   "printRun": 20,
+   "rarity": null
+  },
+  {
+   "name": "Clear",
+   "printRun": 10,
+   "rarity": null
+  },
+  {
+   "name": "Platinum",
+   "printRun": 1,
+   "rarity": null
+  }
+ ],
+ "autographs": [
+  {
+   "name": "Gimmick Autographs",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 4,
+   "ladder": []
+  },
+  {
+   "name": "Inspired Play Dual Autographs",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 5,
+   "ladder": []
+  },
+  {
+   "name": "Heart of the Order Autographs",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 10,
+   "ladder": []
+  },
+  {
+   "name": "'Til It's Over Autographs",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 5,
+   "ladder": []
+  },
+  {
+   "name": "Baseball Royalty Autographs",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 10,
+   "ladder": []
+  },
+  {
+   "name": "Hot Streak Autographs",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 10,
+   "ladder": []
+  },
+  {
+   "name": "MLB All-Star Autographs",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 32,
+   "ladder": []
+  },
+  {
+   "name": "Eclipsing History Dual Autographs",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 5,
+   "ladder": []
+  },
+  {
+   "name": "'Til It's Over Autographed Relics",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 15,
+   "ladder": []
+  },
+  {
+   "name": "Heart of the Order Autographed Relics",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 10,
+   "ladder": []
+  },
+  {
+   "name": "Stepping Up Autographed Relics",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 10,
+   "ladder": []
+  },
+  {
+   "name": "Baseball Royalty Autographed Relics",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 10,
+   "ladder": []
+  },
+  {
+   "name": "Hot Streak Autographed Relics",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 10,
+   "ladder": []
+  },
+  {
+   "name": "Eclipsing History Dual Autographed Relics",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 5,
+   "ladder": []
+  },
+  {
+   "name": "Strata Signature Relics",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 45,
+   "ladder": []
+  },
+  {
+   "name": "Strata Cut Signatures",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 59,
+   "ladder": []
+  },
+  {
+   "name": "Baseball History Cut Signatures",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 29,
+   "ladder": []
+  },
+  {
+   "name": "MLB All-Star Cut Signatures",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 5,
+   "ladder": []
+  },
+  {
+   "name": "Inspired Play Dual Relics",
+   "type": "relic",
+   "isAuto": false,
+   "cards": 5,
+   "ladder": []
+  },
+  {
+   "name": "In the Name Relics",
+   "type": "relic",
+   "isAuto": false,
+   "cards": 66,
+   "ladder": []
+  },
+  {
+   "name": "Heart of the Order Relics",
+   "type": "relic",
+   "isAuto": false,
+   "cards": 10,
+   "ladder": []
+  },
+  {
+   "name": "Stepping Up Relics",
+   "type": "relic",
+   "isAuto": false,
+   "cards": 10,
+   "ladder": []
+  },
+  {
+   "name": "'Til It's Over Relics",
+   "type": "relic",
+   "isAuto": false,
+   "cards": 10,
+   "ladder": []
+  },
+  {
+   "name": "Baseball Royalty Relics",
+   "type": "relic",
+   "isAuto": false,
+   "cards": 15,
+   "ladder": []
+  },
+  {
+   "name": "Hot Streak Relics",
+   "type": "relic",
+   "isAuto": false,
+   "cards": 10,
+   "ladder": []
+  },
+  {
+   "name": "Eclipsing History Dual Relics",
+   "type": "relic",
+   "isAuto": false,
+   "cards": 5,
+   "ladder": []
+  }
+ ],
+ "setRarity": "1000 sets will be produced",
+ "sections": [
+  {
+   "name": "First Pitch",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 25,
+   "rungs": 0
+  },
+  {
+   "name": "Highlight of the Year",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 60,
+   "rungs": 0
+  },
+  {
+   "name": "First Home Run",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 75,
+   "rungs": 4
+  },
+  {
+   "name": "Archetypes",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 25,
+   "rungs": 0
+  },
+  {
+   "name": "Baseball History",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 30,
+   "rungs": 0
+  },
+  {
+   "name": "Inspired Play",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 15,
+   "rungs": 0
+  },
+  {
+   "name": "Gallery of Greats",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 25,
+   "rungs": 0
+  },
+  {
+   "name": "Robbed",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 15,
+   "rungs": 0
+  },
+  {
+   "name": "The Babe Ruth Story",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 10,
+   "rungs": 0
+  },
+  {
+   "name": "The Jackie Robinson Story",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 10,
+   "rungs": 0
+  },
+  {
+   "name": "Spring Fever",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 50,
+   "rungs": 0
+  },
+  {
+   "name": "Heart of the Order",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 20,
+   "rungs": 0
+  },
+  {
+   "name": "Stepping Up",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 20,
+   "rungs": 0
+  },
+  {
+   "name": "'Til It's Over",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 15,
+   "rungs": 0
+  },
+  {
+   "name": "Eclipsing History",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 10,
+   "rungs": 0
+  },
+  {
+   "name": "Baseball Royalty",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 25,
+   "rungs": 0
+  },
+  {
+   "name": "Hot Streak",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 20,
+   "rungs": 0
+  },
+  {
+   "name": "The Sultan of Swat",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 10,
+   "rungs": 0
+  },
+  {
+   "name": "All-Stars",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 5,
+   "rungs": 0
+  },
+  {
+   "name": "Ken Griffey, Jr. Refractor",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 1,
+   "rungs": 0
+  },
+  {
+   "name": "Cal Ripken, Jr. Refractor",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 3,
+   "rungs": 0
+  },
+  {
+   "name": "Gimmick Autographs",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 4,
+   "rungs": 0
+  },
+  {
+   "name": "Inspired Play Dual Autographs",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 5,
+   "rungs": 0
+  },
+  {
+   "name": "Heart of the Order Autographs",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 10,
+   "rungs": 0
+  },
+  {
+   "name": "'Til It's Over Autographs",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 5,
+   "rungs": 0
+  },
+  {
+   "name": "Baseball Royalty Autographs",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 10,
+   "rungs": 0
+  },
+  {
+   "name": "Hot Streak Autographs",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 10,
+   "rungs": 0
+  },
+  {
+   "name": "MLB All-Star Autographs",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 32,
+   "rungs": 0
+  },
+  {
+   "name": "Eclipsing History Dual Autographs",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 5,
+   "rungs": 0
+  },
+  {
+   "name": "'Til It's Over Autographed Relics",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 15,
+   "rungs": 0
+  },
+  {
+   "name": "Heart of the Order Autographed Relics",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 10,
+   "rungs": 0
+  },
+  {
+   "name": "Stepping Up Autographed Relics",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 10,
+   "rungs": 0
+  },
+  {
+   "name": "Baseball Royalty Autographed Relics",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 10,
+   "rungs": 0
+  },
+  {
+   "name": "Hot Streak Autographed Relics",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 10,
+   "rungs": 0
+  },
+  {
+   "name": "Eclipsing History Dual Autographed Relics",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 5,
+   "rungs": 0
+  },
+  {
+   "name": "Strata Signature Relics",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 45,
+   "rungs": 0
+  },
+  {
+   "name": "Strata Cut Signatures",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 59,
+   "rungs": 0
+  },
+  {
+   "name": "Baseball History Cut Signatures",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 29,
+   "rungs": 0
+  },
+  {
+   "name": "MLB All-Star Cut Signatures",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 5,
+   "rungs": 0
+  },
+  {
+   "name": "Inspired Play Dual Relics",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 5,
+   "rungs": 0
+  },
+  {
+   "name": "Postseason Performance",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 25,
+   "rungs": 0
+  },
+  {
+   "name": "World Champion",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 15,
+   "rungs": 0
+  },
+  {
+   "name": "In the Name Relics",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 66,
+   "rungs": 0
+  },
+  {
+   "name": "Heart of the Order Relics",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 10,
+   "rungs": 0
+  },
+  {
+   "name": "Stepping Up Relics",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 10,
+   "rungs": 0
+  },
+  {
+   "name": "'Til It's Over Relics",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 10,
+   "rungs": 0
+  },
+  {
+   "name": "Baseball Royalty Relics",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 15,
+   "rungs": 0
+  },
+  {
+   "name": "Hot Streak Relics",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 10,
+   "rungs": 0
+  },
+  {
+   "name": "Eclipsing History Dual Relics",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 5,
+   "rungs": 0
+  },
+  {
+   "name": "Own the Name",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 74,
+   "rungs": 0
+  }
+ ],
+ "source": "bcp-2026-09-13",
+ "acquiredAt": "2026-09-13",
+ "duplicateIdentityRowsDropped": 693,
+ "duplicateIdentityNote": "BCP relists a card under Gimmicks/Errors-and-Variations with the same number and the same player text to note an UNNAMED variation; those rows carry the identity of the base row, so they were dropped (one card, one row, one pool). A variation the page NAMES differs in its player text and is kept as the distinct card it is."
+}

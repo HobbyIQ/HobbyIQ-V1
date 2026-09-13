@@ -1,0 +1,25 @@
+{
+ "year": 2002,
+ "sport": "baseball",
+ "setKey": "donruss",
+ "parallelColumnAuthoritative": true,
+ "setName": "2002 Donruss",
+ "sourceUrl": "http://www.baseballcardpedia.com/index.php/2002_Donruss",
+ "scope": "National Convention",
+ "scopeOfPage": "Donruss",
+ "cardNumberPrefix": null,
+ "prefixDerivedFrom": "unresolved",
+ "prefixUnresolved": false,
+ "ladder": [
+  {
+   "name": "National Convention",
+   "printRun": null,
+   "rarity": null
+  }
+ ],
+ "autographs": [],
+ "setRarity": null,
+ "sections": [],
+ "source": "bcp-2026-09-13",
+ "acquiredAt": "2026-09-13"
+}
