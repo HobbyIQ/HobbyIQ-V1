@@ -125,24 +125,31 @@ describe("the corrected drew-ruling checklist file mints the bowman address", ()
     expect(slug).toBe(CORRECTED_ID);
   });
 
-  it("MUTATION: title-derived setKey resolution (inferSetKeyFromTitle) is a SEPARATE seam from computeHobbyIqCardId's prefix override, and is the gap #2064 leaves open for CPA-VF", () => {
-    // computeHobbyIqCardId never sees a title -- it only sees whatever setKey
-    // its caller already resolved. A title parser that resolves "2026 Bowman
-    // Chrome ... CPA-VF" to setKey=bowman-chrome BEFORE calling
-    // computeHobbyIqCardId will pass that (wrong) setKey straight through:
-    // CHROME_PREFIX_OVERRIDES only ever WIDENS bare bowman toward
-    // bowman-chrome, it never narrows bowman-chrome back to bowman. Only
-    // applySiblingChecklistOverride (added by #2064, not yet covering
-    // CPA-VF) narrows in that direction. This is stated here, not asserted
-    // against dist/, because #2064 is unmerged -- see the PR body for the
-    // read-only confirmation against that branch.
+  it("title-derived setKey resolution now narrows CPA-VF back onto bowman -- the gap this test used to pin is the class #2064 generalized to close", () => {
+    // Originally written (2026-09-12, #2069) as a MUTATION pinning a known
+    // gap: computeHobbyIqCardId never sees a title, only whatever setKey its
+    // caller already resolved, and CHROME_PREFIX_OVERRIDES only ever WIDENS
+    // bare bowman toward bowman-chrome -- it never narrows bowman-chrome back
+    // to bowman. At the time, applySiblingChecklistOverride (#2064) shipped
+    // with exactly one entry (CPA-MG) and did not yet cover CPA-VF, so a
+    // title parser that resolved "2026 Bowman Chrome ... CPA-VF" to
+    // setKey=bowman-chrome would pass that wrong setKey straight through.
+    //
+    // #2064's integration commit (26c7921, "generalize the sibling-checklist
+    // override to the full 2026 CPA- class") read this test's own finding as
+    // proof the defect was a CLASS, not one holding, and generalized
+    // SIBLING_CHECKLIST_OVERRIDES to every CPA- number present in exactly one
+    // of the two 2026 checklists -- CPA-VF (Figueroa) is explicitly named in
+    // that table's header comment and sits in CPA_2026_BOWMAN_ONLY. So the
+    // gap this test pinned is now closed at the same seam, for the same
+    // reason CPA-MG was: the checklist decides, not the title's own words.
     const { computeHobbyIqCardId } = require_("../dist/services/portfolioiq/hobbyIqCardId.service.js");
     const slugFromWrongTitleResolution = computeHobbyIqCardId({
       sport: "baseball", year: 2026, setKey: "bowman-chrome",
       cardNumber: "CPA-VF", parallel: "Black & White Red Ink", isAuto: true,
       printRun: null,
     });
-    expect(slugFromWrongTitleResolution).toBe(SUPERSEDED_ID);
+    expect(slugFromWrongTitleResolution).toBe(CORRECTED_ID);
   });
 });
 

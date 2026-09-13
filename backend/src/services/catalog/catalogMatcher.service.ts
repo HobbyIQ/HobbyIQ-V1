@@ -24,10 +24,12 @@ import {
   cardNumberInClause,
   computeHobbyIqCardId,
   normalizeSetKey,
+  applySiblingChecklistOverride,
+  siblingSetKeysToAlsoCheck,
   slugify,
   type HobbyIqCardIdComponents,
 } from "../portfolioiq/hobbyIqCardId.service.js";
-import { productFamilyOf, productRefinementsOf } from "./productSetKeys.js";
+import { productFamilyOf, productRefinementsOf, spellForEra } from "./productSetKeys.js";
 import { resolveIdentityToCatalogRow } from "./catalogIdentityResolver.js";
 import { isTierlessVariationSlug, normalizeVariationSlug, resolveTierlessVariationByUniqueness } from "./variationVocabulary.js";
 // The ONE grade-tier vocabulary. Shared with cardIdentityKey so the reader that
@@ -672,6 +674,30 @@ export function clearCatalogMatchCache(): void { _matchCache.clear(); }
  * The parallel is what usually breaks the tie, which is why it is part of the
  * key rather than an afterthought.
  */
+async function cardNumbersForSetKey(
+  container: Container,
+  args: { year: number; setKey: string; player: string; isAuto: boolean; parallel: string | null },
+): Promise<string[]> {
+  try {
+    const { resources } = await container.items.query<string>({
+      query: `SELECT DISTINCT VALUE c.cardNumber FROM c
+              WHERE c.year = @y AND c.setKey = @s AND c.playerName = @p
+                AND c.isAuto = @a AND c.parallel = @par
+                AND IS_DEFINED(c.cardNumber) AND NOT IS_NULL(c.cardNumber)`,
+      parameters: [
+        { name: "@y", value: args.year },
+        { name: "@s", value: args.setKey },
+        { name: "@p", value: args.player },
+        { name: "@a", value: !!args.isAuto },
+        { name: "@par", value: args.parallel },
+      ],
+    }).fetchAll();
+    return (resources ?? []).filter(Boolean).map(String);
+  } catch {
+    return [];
+  }
+}
+
 export async function resolveCardNumberByPlayer(input: {
   year: number;
   setKey: string;
@@ -687,28 +713,30 @@ export async function resolveCardNumberByPlayer(input: {
   if (!year || !setKey || !player) return { cardNumber: null, candidates: [] };
 
   const parallel = canonicalizeParallelName(input.parallel ?? null);
-  try {
-    const { resources } = await container.items.query<string>({
-      query: `SELECT DISTINCT VALUE c.cardNumber FROM c
-              WHERE c.year = @y AND c.setKey = @s AND c.playerName = @p
-                AND c.isAuto = @a AND c.parallel = @par
-                AND IS_DEFINED(c.cardNumber) AND NOT IS_NULL(c.cardNumber)`,
-      parameters: [
-        { name: "@y", value: year },
-        { name: "@s", value: setKey },
-        { name: "@p", value: player },
-        { name: "@a", value: !!input.isAuto },
-        { name: "@par", value: parallel },
-      ],
-    }).fetchAll();
-    const candidates = (resources ?? []).filter(Boolean).map(String);
-    return {
-      cardNumber: candidates.length === 1 ? candidates[0] : null,
-      candidates,
-    };
-  } catch {
-    return { cardNumber: null, candidates: [] };
+  const args = { year, setKey, player, isAuto: input.isAuto, parallel };
+  let candidates = await cardNumbersForSetKey(container, args);
+
+  // CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT (#2060 follow-on). A title can
+  // name the wrong sibling product (Marconi German's title says "Bowman
+  // Chrome"; his checklist row is filed under "Bowman") and still carry no
+  // card number for judgeCardNumber to read — the ONLY signal left is this
+  // by-player lookup, and asking it a single setKey misses the row entirely.
+  // Widened to the SAME hand-verified pairs applySiblingChecklistOverride
+  // uses (never a blanket family search), and only when the primary setKey
+  // came up empty — a query that already found candidates under the stated
+  // product is left alone, so this never introduces a new ambiguity where
+  // none existed.
+  if (candidates.length === 0) {
+    for (const sibling of siblingSetKeysToAlsoCheck(setKey, year)) {
+      const fromSibling = await cardNumbersForSetKey(container, { ...args, setKey: sibling });
+      if (fromSibling.length) { candidates = fromSibling; break; }
+    }
   }
+
+  return {
+    cardNumber: candidates.length === 1 ? candidates[0] : null,
+    candidates,
+  };
 }
 
 // CF-CARD-IDENTITY-PLAYER (2026-08-22). A hiq: slug carries sport, year,
@@ -1051,7 +1079,23 @@ function applySetKeyInvariant(
   // Without it this invariant asked the SPORTS vocabulary what a Pokemon row
   // wanted, got `panini-obsidian`, and then rejected the correct `sv03` match
   // for disagreeing with it — a right guard measuring the wrong question.
-  const want = normalizeSetKey(input.setName ?? "", String(input.sport ?? "").trim().toLowerCase());
+  // CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT + CF-METAL-UNIVERSE-NAME-WAS-
+  // REVIVED (#2060 follow-on). `want` has to be judged by the SAME rules
+  // computeHobbyIqCardId uses to answer a query, or this invariant rejects
+  // exactly the corrections those rules exist to make: a title says "Bowman
+  // Chrome" + CPA-MG and the checklist correctly returns `bowman` — bare
+  // normalizeSetKey alone still says `bowman-chrome`, so without layering the
+  // same era + sibling-checklist rules on here, a RIGHT answer reads as a
+  // "silent crossing" and gets thrown away as not-found. Both rules are
+  // narrow, hand-verified, checklist-backed corrections (never a guess), so
+  // agreeing with them here is not loosening the invariant — it is asking it
+  // the same question the rest of the deriver already answers.
+  const rawWant = normalizeSetKey(input.setName ?? "", String(input.sport ?? "").trim().toLowerCase());
+  const want = applySiblingChecklistOverride(
+    spellForEra(rawWant, input.year),
+    input.cardNumber ?? "",
+    input.year ?? 0,
+  );
   if (!want || got === want) return result;
 
   console.warn(JSON.stringify({

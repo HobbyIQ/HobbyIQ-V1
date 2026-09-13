@@ -85,6 +85,7 @@ async function main() {
   const d = (p) => require(path.join(backend, "dist", "services", ...p));
   const pti = d(["portfolioiq", "parseTitleIdentity.service.js"]);
   const hic = d(["portfolioiq", "hobbyIqCardId.service.js"]);
+  const psk = d(["catalog", "productSetKeys.js"]);
   const guard = d(["portfolioiq", "slugGuard.service.js"]);
   const pvs = d(["portfolioiq", "persistVendorSalesToPool.service.js"]);
   const slugRe = d(["portfolioiq", "slugRederivation.service.js"]);
@@ -97,6 +98,8 @@ async function main() {
     isMultiCardLot: pti.isMultiCardLot,
     normalizeSetKey: hic.normalizeSetKey,
     computeHobbyIqCardId: hic.computeHobbyIqCardId,
+    applySiblingChecklistOverride: hic.applySiblingChecklistOverride,
+    spellForEra: psk.spellForEra,
     guardSlugInputs: guard.guardSlugInputs,
     normalizeSportStrict: guard.normalizeSportStrict,
     extractYearFromTitle: slugRe.extractYearFromTitle,

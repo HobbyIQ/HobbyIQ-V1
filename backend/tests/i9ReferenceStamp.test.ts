@@ -152,26 +152,31 @@ describe("the shipped reference carries its stamp", () => {
   it("records the stamp and the commit the census was measured under", () => {
     expect(TABLE.measuredUnder).toBeTruthy();
     expect(TABLE.measuredUnder.stamp).toMatch(/^d[0-9a-f]{12}\+/);
-    // e32b8481 — the tree the wave-2 census artifacts were re-baselined against.
-    expect(TABLE.measuredUnder.commit).toBe("e32b84814c253a71f141362b67fac08947ee315b");
+    // 77e305a0 — main at the start of the 2026-09-12/13 wave2d4 census. None of
+    // the six DERIVATION_INPUTS changed on main inside the census window, so one
+    // commit names the tree every artifact was measured under.
+    expect(TABLE.measuredUnder.commit).toBe("77e305a00c172849c1e58ef6dd31b411c1c685f5");
     // pricingContract.ts exists now, so the stamp carries its version.
     expect(TABLE.measuredUnder.contract).toBe("2026-09-06.a");
-    // The 32-slot reference stays 32 slots (#1888 stands).
+    // The 32-slot reference stays 32 slots (#1888 stands). Slot 31 is a
+    // budget-stopped PREFIX in this reference (see the coverage pins below).
     expect(TABLE.slotCount).toBe(32);
     expect(TABLE.classifiedTotal).toBeGreaterThan(11_000_000);
-    expect(INV.CENSUS_REFERENCE_SHARES.CONFLICT).toBeCloseTo(0.430, 2);
+    expect(INV.CENSUS_REFERENCE_SHARES.CONFLICT).toBeCloseTo(0.507, 2);
   });
 
   it("says WHAT FRACTION of the corpus it saw, and which slots are partial", () => {
     // A REFERENCE BUILT FROM BUDGET-STOPPED WALKS IS STILL A REFERENCE, BUT IT
-    // MUST SAY SO. 18 of the 32 wave-2 slots hit their budget before finishing,
-    // so this reference is 72% of the expected corpus and its partial slots
-    // describe a PREFIX of their rows. Recording `classified` alone would have
-    // presented a 34%-walked slot and a finished one as equally authoritative.
+    // MUST SAY SO. In the 2026-09-12/13 census 31 of the 32 slots finished their
+    // walk (page-level checkpoints, #2073); slot 31 hit its budget at 49% and
+    // is recorded as a PREFIX. Coverage reads 139% because the three Pokémon
+    // shards classify far more rows than the shard table expected for them.
+    // Recording `classified` alone would have presented a 49%-walked slot and
+    // a finished one as equally authoritative.
     expect(TABLE.coverage.classified).toBe(TABLE.classifiedTotal);
-    expect(TABLE.coverage.coverage).toBeCloseTo(0.72, 2);
-    expect(TABLE.coverage.partialSlots).toHaveLength(18);
-    expect(TABLE.coverage.completedSlots).toHaveLength(14);
+    expect(TABLE.coverage.coverage).toBeCloseTo(1.39, 2);
+    expect(TABLE.coverage.partialSlots).toEqual([31]);
+    expect(TABLE.coverage.completedSlots).toHaveLength(31);
     // Every slot carries its own coverage, so a reader never has to guess.
     for (const s of TABLE.slots) {
       expect(typeof s.expectedRows, `slot ${s.slot} expectedRows`).toBe("number");

@@ -210,6 +210,7 @@ describe("A. verdict equality -- the fix bought speed and nothing else", () => {
     const moved: Array<{ i: number; field: string; was: string; now: string }> = [];
     const gainedCollapseReason: number[] = [];
     const gainedEchoRefusal: number[] = [];
+    const gainedR28DistinctProductRefusal: number[] = [];
     const setKeyNoLongerConflicts: number[] = [];
     got.forEach((v, i) => {
       const now = parts(v), was = parts(recorded.verdicts[i]);
@@ -286,6 +287,40 @@ describe("A. verdict equality -- the fix bought speed and nothing else", () => {
             return;
           }
         }
+        // THE FOURTH LICENSED DIFFERENCE: R28-FINISH-IS-A-PARALLEL's refusal
+        // on a stored DISTINCT_PRODUCT_SETKEYS/ruled-collapse-pair entry
+        // (Drew ruling, 2026-09-13, #2093).
+        //
+        // R28 moves a finish word minted into the setKey segment to the
+        // parallel field, but refuses FIRST whenever the stored setKey is a
+        // declared-DISTINCT product being asked to collapse onto a ruled
+        // sibling -- `topps-chrome-platinum` -> `topps-chrome` is the
+        // measured trap the ruling names. Every row in this fixture whose
+        // stored setKey is `topps-chrome-platinum` now carries an additive
+        // block of refusal reasons ahead of `not-base-eviction`:
+        // not-finish-is-a-parallel:stored-is-a-declared-distinct-product:...,
+        // ruled-collapse-pair:...->...,
+        // checklist-does-not-list-parallel:...,
+        // destination-not-checklist-backed,
+        // and optionally identity-axis-moved:sport when sport also changed.
+        // setkey-collapses-distinct-product:...:ruled:... is the SAME segment
+        // COLLAPSE_REASON already strips above; the rest is new to R28.
+        // DISQUALIFYING ONLY (same shape as the echo refusal): it can only
+        // ADD reasons to a row already CONFLICT/unwritable, never move class,
+        // writable, subclass or tier -- those are compared with full equality
+        // regardless. Composed with the strips above so a row carrying the
+        // echo refusal AND/OR the collapse reason AND R28's block (fixture
+        // row 32 carries all three) still reduces to the recorded string.
+        const R28_REASON =
+          /^(not-finish-is-a-parallel:stored-is-a-declared-distinct-product:[^,]+|ruled-collapse-pair:[^,]+->[^,]+|checklist-does-not-list-parallel:[^,]+|destination-not-checklist-backed|identity-axis-moved:sport)$/;
+        const r28Stripped = echoStripped.split(",").filter((r) => !R28_REASON.test(r)).join(",");
+        if (r28Stripped !== echoStripped) {
+          const alsoCollapse = r28Stripped.split(",").filter((r) => !COLLAPSE_REASON.test(r)).join(",");
+          if (r28Stripped === wasR || alsoCollapse === wasR) {
+            gainedR28DistinctProductRefusal.push(i);
+            return;
+          }
+        }
         moved.push({ i, field, was: wasR, now: nowR });
       });
     });
@@ -317,6 +352,19 @@ describe("A. verdict equality -- the fix bought speed and nothing else", () => {
       const r = K.classifyRow(inputFor(rows[i]));
       expect(r.writable).toBe(false);
       expect(r.axes.changed).not.toContain("setKey");
+    }
+    // Guard the guard: if R28's distinct-product refusal ever stops firing on
+    // this fixture's topps-chrome-platinum rows, this pin must fail loudly
+    // rather than pass vacuously over a list that no longer exercises the
+    // ruling at all.
+    expect(gainedR28DistinctProductRefusal.length).toBeGreaterThan(0);
+    // Every row that gained R28's refusal is still CONFLICT and still
+    // unwritable -- the ruling only ever adds a reason, it never changes what
+    // the apply pass reads.
+    for (const i of gainedR28DistinctProductRefusal) {
+      const r = K.classifyRow(inputFor(rows[i]));
+      expect(r.klass).toBe("CONFLICT");
+      expect(r.writable).toBe(false);
     }
   });
 });

@@ -237,6 +237,143 @@ const YEAR_FROM_TITLE_VINTAGE = "YEAR-FROM-TITLE-VINTAGE";
  */
 const SPORT_FROM_PRODUCT = "SPORT-FROM-PRODUCT";
 
+/**
+ * R26-FLAGSHIP-SWALLOWED-NAMED-PRODUCT -- a sale on a specialty release, filed
+ * under its flagship's bare key (Drew, 2026-09-13, widget).
+ *
+ * "2025 Topps Cosmic Chrome Football #122" is a Topps Cosmic Chrome card: the
+ * product has its own productSetKeys.ts entry and its own checklist, and the
+ * TITLE names it in full. The stored `topps:122:...` address is the flagship
+ * catch-all this class of defect always is (CF-FLAGSHIP-CATCHALL-SWALLOWS-
+ * SPECIALIZATIONS) -- the derivation reads the right product but the row on
+ * disk still carries whatever a staler pass (or CardHedge's own coarse
+ * `card_set` field) wrote before the product was named at all.
+ *
+ * THIS IS THE SAME SHAPE AS SPECIALIZATION-STATED, NARROWED THE OTHER WAY.
+ * SPECIALIZATION-STATED asks "is the derived key a strict descendant of the
+ * stored one on the SPECIALIZATION_PARENTS ladder, with every distinguishing
+ * word stated?" -- a ladder built by hand, product by product, as each one is
+ * discovered. R26 asks a narrower, table-driven question instead: is the
+ * DERIVED key exactly one of the products `productSetKeys.ts` already
+ * declares, and is the STORED key exactly the bare flagship that table says
+ * the product belongs to? Where SPECIALIZATION-STATED needs a ladder entry
+ * added by hand for each new specialty release, R26 is answered directly by
+ * the table that already exists for a different reason -- so a product the
+ * table names is reachable HERE the day it is declared, with no new ladder
+ * edge to write.
+ *
+ * MEASURED against the census sample artifacts, 2026-09-13: every genuine
+ * `<flagship> -> <named product>` row with no other axis moved carries the
+ * product's full name in its own title, because that IS the CardHedge /
+ * tca-ebay listing title convention for a modern release ("2025 Topps
+ * Cosmic Chrome Football #122 Base", "2025 Donruss Optic Football #38
+ * Freedom") -- so the same title-states-the-words leg SPECIALIZATION-STATED
+ * uses is the right leg here too, not a looser one.
+ *
+ * CHECKLIST-BACKED IS NOT OPTIONAL, exactly as it never is: the caller
+ * supplies whether the DERIVED identity landed on a checklist row from a real
+ * scraped source (never a `derived-from-base-checklist-*` mint, for the same
+ * reason SPECIALIZATION-STATED's `derivedBackedStrict` refuses one -- citing a
+ * row that exists only because the specialization's checklist was assumed
+ * would be circular).
+ *
+ * WHY THE FLAGSHIP MUST BE THE EXACT PARENT AND NOT MERELY "A" FLAGSHIP.
+ * `donruss-elite` and `donruss-studio` are RULED DISTINCT from `panini-donruss`
+ * (Drew, 2026-09-03; RULED_COLLAPSE_PAIRS) in the COLLAPSING direction -- a
+ * stored `donruss-elite` row deriving to `panini-donruss` stays CONFLICT
+ * forever. That ruling says nothing about THIS direction: a row stored on the
+ * bare flagship that the title and the derivation both say is actually
+ * `donruss-elite` is a refinement, not a collapse, and
+ * `derivationCollapsesProduct` already treats parent->child as no collapse at
+ * all (see its own doc: "`bowman` -> `bowman-chrome` does not [collapse]").
+ * The two rulings point opposite directions on the same pair and neither
+ * contradicts the other.
+ */
+const FLAGSHIP_SWALLOWED_NAMED_PRODUCT = "R26-FLAGSHIP-SWALLOWED-NAMED-PRODUCT";
+
+/**
+ * R27-POKEMON-SET-CODE -- the set CODE is the key (Drew, 2026-09-13, widget;
+ * CF-THE-SET-CODE-IS-THE-KEY, pokemonSetCodes.ts).
+ *
+ * A Pokemon row whose derived setKey is a bare code from pokemonSetCodes.ts
+ * (`sv08-5`, `me02`, `swsh12-5`, ...) and whose stored key is a descriptive
+ * name, `unknown`, or a stale default is the exact defect that table was
+ * built to close: sellers write the code as often as the set name, the
+ * name-keyed alias table cannot see any of them, and the census measured the
+ * Pokemon "unknown setKey" bucket as overwhelmingly promo and code spellings.
+ *
+ * THE 24 COLLIDING CODES ARE THE ONE CARVE-OUT, and it is load-bearing. 24
+ * codes exist in BOTH the English and Japanese tables naming DIFFERENT
+ * products (`AMBIGUOUS_MARKET_CODES` in pokemonSetCodes.ts -- `neo1`, `sm1`,
+ * `xy2`, ...). A bare `sv...` or a bare number does not say which product a
+ * colliding code names, so this subclass MOVES a colliding-code row only when
+ * the row's OWN language flag resolves the ambiguity; otherwise it stays
+ * CONFLICT under a NAMED reason (`ruled:R27-language-unresolved`) rather than
+ * the generic `changed:setKey`, so the census can count exactly this
+ * carve-out separately from an ordinary near miss.
+ *
+ * CHECKLIST-BACKED, as always: the caller supplies whether the derived
+ * (year, setKey) address is backed by a real scraped checklist row, and an
+ * unanswered or false verdict refuses the row -- absent beats wrong.
+ *
+ * ONLY THE SETKEY AXIS MOVES. A row whose derivation also disagrees about the
+ * card number, the sport, or the grade is a rival reading, not a stale key,
+ * and stays on the ordinary CONFLICT path.
+ */
+const POKEMON_SET_CODE = "R27-POKEMON-SET-CODE";
+/** The CONFLICT reason a colliding Pokemon code carries when the row's own
+ *  language flag does not resolve which market it belongs to. Named so the
+ *  census can count this carve-out separately from an ordinary near miss. */
+const POKEMON_SET_CODE_LANGUAGE_UNRESOLVED = "ruled:R27-language-unresolved";
+
+/**
+ * R28-FINISH-IS-A-PARALLEL -- a finish word minted as a setKey (Drew,
+ * 2026-09-13, widget).
+ *
+ * The shape: stored setKey is `<product>-<finish>` (e.g.
+ * `topps-chrome-logofractor`), the derived identity is `<product>` with that
+ * same finish word carried as the PARALLEL instead, and the checklist backs
+ * the derived (product, parallel) pair. The finish was never a product --
+ * some older writer minted it into the setKey segment instead of the
+ * parallel field, splitting the card's pool from the rest of its finish's.
+ *
+ * THE ENTIRE DANGER OF THIS SUBCLASS IS THAT ITS OWN SHAPE TEST -- "stored key
+ * is `<derived>-<word>`" -- is indistinguishable by string-splitting ALONE
+ * from a declared DISTINCT PRODUCT that merely happens to share the
+ * flagship's prefix and end in a word that also reads as a finish.
+ * `topps-chrome-platinum` is exactly this trap: "platinum" is both a
+ * FINISH_COLOR_TOKENS word AND the tail of a DISTINCT_PRODUCT_SETKEYS entry
+ * ruled distinct from `topps-chrome` on 2026-09-03 (its own 700+-card
+ * checklist, its own parallels, its own price curve). MEASURED against the
+ * census sample artifacts, 2026-09-13 (9 slot files, every sampled CONFLICT
+ * row whose stored key is `<derived>-<word>`): 262 syntactic matches, of
+ * which 246 are refusals this subclass MUST make -- 15 `topps-chrome-
+ * platinum` and 1 `bowman-university-chrome` (declared distinct products) and
+ * the rest real undeclared products whose tail is not finish vocabulary at
+ * all (`panini-prizm-deca`, `topps-midnight`, `topps-206`, `topps-diamond-
+ * icons`, ...) -- against 16 GENUINE positives, all `topps-chrome-
+ * logofractor` and `topps-heritage-mini`, where the tail word really is a
+ * checklist-listed finish of the derived product. So the guard below is not
+ * theoretical: on this sample it separates a 16-row genuine population from a
+ * 246-row false-positive population that outnumbers it 15 to 1.
+ *
+ * SO THIS SUBCLASS REFUSES BEFORE IT EVER ASKS THE CHECKLIST: the stored key
+ * must not itself be a DISTINCT_PRODUCT_SETKEYS entry, and the (stored,
+ * derived) pair must not be a RULED_COLLAPSE_PAIR -- the exact same "do not
+ * touch the 18 collapse pairs ruled DISTINCT on 2026-09-03" guard R26 states
+ * above, applied here because the finish-suffix shape collides with it far
+ * more often than it does not. AND the tail word itself must be drawn from
+ * the FINISH vocabulary this module already keeps (FINISH_COLOR_TOKENS,
+ * CORE_FINISH_TOKENS, FINISH_FAMILY_TOKENS) -- a word that is not itself a
+ * known finish is not this defect, whatever else it might be.
+ *
+ * CHECKLIST-BACKED on the (product, parallel) pair: `checklistListsParallel`
+ * (rematch-finish-vocab.cjs) is the same primitive the finish-family guards
+ * already call, asked here for the FINISH WORD as a parallel of the DERIVED
+ * product rather than of the stored one.
+ */
+const FINISH_IS_A_PARALLEL = "R28-FINISH-IS-A-PARALLEL";
+
 /** Sources that are a real person's own record of their own transaction.
  *  These are never re-keyed by a fleet, only by Drew. */
 const PROTECTED_SOURCES = new Set(["ebay-user-purchase", "ebay-user-sale", "ebay-account", "manual-user-entry"]);
@@ -3298,7 +3435,13 @@ function setKeyNamesFormat(setKey, format) {
   return words.every((w) => segs.has(w) || segs.has(stem(w)) || segs.has(`${stem(w)}s`));
 }
 
-function improveRefusals({ row, stored, derived, axes, parserSaysLot = false }) {
+function improveRefusals({
+  row, stored, derived, axes, parserSaysLot = false,
+  // GUARD 10 (R27, 2026-09-13). See its own comment beside the push below --
+  // caller-supplied because only a pokemonSetCodes.ts read can answer it, and
+  // this module must not hold that table itself.
+  pokemonAmbiguousCodeUnresolved = false,
+}) {
   const refusals = [];
   const title = str(row?.title);
   const year = derived?.cardYear ?? stored?.cardYear ?? null;
@@ -3822,6 +3965,31 @@ function improveRefusals({ row, stored, derived, axes, parserSaysLot = false }) 
   const collapse = derivationCollapsesProduct(stored, derived);
   if (collapse) refusals.push(`improve-setkey-collapses-distinct-product:${collapse}`);
 
+  // GUARD 10 -- AN UNRESOLVED AMBIGUOUS POKEMON SET CODE NEVER FEEDS IMPROVE,
+  // EVEN THROUGH THE ORDINARY filled:setKey ARM (R27, Drew 2026-09-13).
+  //
+  // R27's own gate (pokemonSetCodeEvidence) lives on the `changed:setKey`
+  // CONFLICT path, because that is where a STORED descriptive name or a
+  // rival code reaches it. But `unknown` and every other GENERIC_SETKEYS
+  // spelling are treated as BLANK by diffAxes, so filling one in is
+  // `filled:setKey` -- the ORDINARY improve path, which never calls R27's
+  // evidence function at all. Measured: the ruling's own worst case (a bare
+  // `sm1`/`neo1`/... code with no language flag) reaches the pool through
+  // THIS arm, not the CONFLICT one, on every row whose stored key was
+  // already blank -- which is the common case for a vendor ingest that never
+  // wrote a setKey. So the carve-out has to be enforced HERE too, or it is
+  // enforced on paper only.
+  //
+  // The caller answers the one fact only a pokemonSetCodes.ts read can
+  // supply: is the DERIVED key one of the 24 AMBIGUOUS_MARKET_CODES, and did
+  // the row's own language flag fail to resolve which market it names? A
+  // caller that cannot answer for a non-Pokemon row, or for a code this
+  // table does not know, passes `false` and this guard is silent -- absent
+  // beats wrong applies to the GUARD firing, not to the row it guards.
+  if (pokemonAmbiguousCodeUnresolved) {
+    refusals.push(`improve-pokemon-ambiguous-code-unresolved:${lower(derived?.setKey)}`);
+  }
+
   return refusals;
 }
 
@@ -3860,8 +4028,11 @@ function improveRefusals({ row, stored, derived, axes, parserSaysLot = false }) 
  *          and would have been written, pooling a distinct card into its
  *          family.
  */
-function allImproveRefusals({ row, stored, derived, axes, parserSaysLot, family, derivationRefused = [] }) {
-  const refusals = improveRefusals({ row, stored, derived, axes, parserSaysLot });
+function allImproveRefusals({
+  row, stored, derived, axes, parserSaysLot, family, derivationRefused = [],
+  pokemonAmbiguousCodeUnresolved = false,
+}) {
+  const refusals = improveRefusals({ row, stored, derived, axes, parserSaysLot, pokemonAmbiguousCodeUnresolved });
   if (family.qualifies) refusals.push("finish-family-collision:not-writable-until-ruled");
   refusals.push(...derivationRefused);
   return refusals;
@@ -4738,6 +4909,211 @@ function sportFromProductEvidence({ row, stored, derived, axes, productSport = n
 }
 
 /**
+ * The R26 evidence for one row.
+ *
+ * `derivedIsNamedProduct` -- is the DERIVED setKey exactly one of the products
+ *   `productSetKeys.ts` declares (a `PRODUCT_SET_KEYS` entry), and is the
+ *   STORED setKey exactly that entry's declared flagship parent? A catalog-
+ *   table read, so the caller supplies it and this module stays pure -- see
+ *   `productParentSetKey` in the driver for how it is answered.
+ * `derivedBacked` -- is the derived (year, setKey, cardNumber) address backed
+ *   by a checklist row from a REAL SCRAPED source? Deliberately the same
+ *   strict test SPECIALIZATION-STATED uses (never a `derived-from-base-
+ *   checklist-*` mint): citing a row that exists only because the named
+ *   product's checklist was assumed would be circular.
+ */
+function flagshipSwallowedNamedProductEvidence({
+  row, stored, derived, axes,
+  derivedIsNamedProduct = false,
+  derivedBacked = false,
+}) {
+  const failed = [];
+  const title = str(row?.title);
+  const storedKey = lower(stored?.setKey), derivedKey = lower(derived?.setKey);
+
+  // F1 -- the derived key must be a productSetKeys.ts product whose declared
+  // flagship parent is EXACTLY the stored key. Answered by the caller from the
+  // table -- see FLAGSHIP_SWALLOWED_NAMED_PRODUCT's doc for why this table and
+  // not the hand-built SPECIALIZATION_PARENTS ladder.
+  if (!derivedIsNamedProduct) failed.push("derived-not-a-declared-flagship-child");
+
+  // F2 -- the title must state the product's own distinguishing words, same
+  // leg SPECIALIZATION-STATED uses and for the same reason: a match proves
+  // nothing about WHICH product unless the seller's own words name it.
+  const words = distinguishingWords(derivedKey, storedKey);
+  const unstated = words.filter((w) => !titleStatesWord(title, w));
+  if (derivedIsNamedProduct && !words.length) failed.push("no-distinguishing-words");
+  else if (unstated.length) failed.push(`title-does-not-state:${unstated.join("+")}`);
+
+  // F3 -- the DERIVED identity is checklist-backed by a real scraped source.
+  if (!derivedBacked) failed.push("derived-not-checklist-backed");
+
+  // F4 -- ONLY setKey MOVES. Every other changed or dropped axis is the
+  // derivation disagreeing about identity, not a mis-filed product.
+  const moved = [...(axes?.changed ?? []), ...(axes?.dropped ?? [])].filter((a) => a !== "setKey");
+  if (moved.length) failed.push(`identity-axis-moved:${moved.join(",")}`);
+
+  return {
+    qualifies: failed.length === 0,
+    failed,
+    evidence: {
+      storedSetKey: storedKey, derivedSetKey: derivedKey,
+      distinguishingWords: words, unstatedWords: unstated,
+      derivedBacked, titleQuoted: title.slice(0, 160),
+    },
+  };
+}
+
+/**
+ * The R27 evidence for one row.
+ *
+ * `derivedIsPokemonSetCode` -- is the derived setKey exactly a bare code from
+ *   pokemonSetCodes.ts (POKEMON_EN_SET_CODES / POKEMON_PROMO_SET_CODES /
+ *   POKEMON_JA_SET_CODES)? A vocabulary-table read, so the caller supplies it.
+ * `storedIsRivalSetCode` -- is the STORED key ALSO a bare code from
+ *   pokemonSetCodes.ts (a different one than the derived key)? That is a
+ *   rival reading of the same table, not staleness -- the ruling's "stale
+ *   default" means a descriptive name, `unknown`, or blank, never a second
+ *   real code the derivation merely disagrees with. Caller-supplied for the
+ *   same reason `derivedIsPokemonSetCode` is: only a vocab-table read can
+ *   answer it, and this module must not hold that table itself.
+ * `isAmbiguousCode` -- is that code one of the 24 AMBIGUOUS_MARKET_CODES that
+ *   name a different product in each market?
+ * `languageResolves` -- for an ambiguous code ONLY, does the row's own
+ *   language flag (its stored `language` field, or a title read the caller
+ *   trusts) say which market's product this is? `null` means unanswered, and
+ *   unanswered REFUSES -- the row stays CONFLICT under the named carve-out
+ *   reason rather than moving on a guess.
+ * `derivedBacked` -- is the derived (year, setKey, cardNumber) checklist-backed?
+ */
+function pokemonSetCodeEvidence({
+  row, stored, derived, axes,
+  derivedIsPokemonSetCode = false,
+  storedIsRivalSetCode = false,
+  isAmbiguousCode = false,
+  languageResolves = null,
+  derivedBacked = false,
+}) {
+  const failed = [];
+  const storedKey = lower(stored?.setKey), derivedKey = lower(derived?.setKey);
+
+  // P1 -- the derived key must BE a bare Pokemon set code.
+  if (!derivedIsPokemonSetCode) failed.push("derived-not-a-pokemon-set-code");
+
+  // P2 -- THE STORED KEY MUST NOT ITSELF BE A RIVAL SET CODE. "Descriptive
+  // name / unknown / stale default" (the ruling's own words) covers every
+  // stored spelling EXCEPT another real code from the same table -- a
+  // descriptive name or `unknown` is never a checklist-backed rival product,
+  // while a second bare code is a genuine rival reading the fleet must not
+  // settle by itself.
+  if (derivedIsPokemonSetCode && storedIsRivalSetCode) failed.push(`stored-is-a-rival-set-code:${storedKey}`);
+
+  // P3 -- THE 24-CODE COLLISION CARVE-OUT. An ambiguous code moves ONLY when
+  // the row's own language flag resolves which market it belongs to.
+  // Unanswered is a refusal, exactly like every other "caller could not
+  // prove it" gate in this file -- absent beats wrong.
+  if (isAmbiguousCode && languageResolves !== true) {
+    failed.push(languageResolves === false
+      ? "ambiguous-code-language-says-other-market"
+      : "ambiguous-code-language-unresolved");
+  }
+
+  // P4 -- THE DESTINATION MUST BE CHECKLIST-BACKED.
+  if (!derivedBacked) failed.push("destination-not-checklist-backed");
+
+  // P5 -- ONLY setKey MOVES.
+  const moved = [...(axes?.changed ?? []), ...(axes?.dropped ?? [])].filter((a) => a !== "setKey");
+  if (moved.length) failed.push(`identity-axis-moved:${moved.join(",")}`);
+
+  return {
+    qualifies: failed.length === 0,
+    failed,
+    evidence: {
+      storedSetKey: storedKey, derivedSetKey: derivedKey,
+      isAmbiguousCode, languageResolves, derivedBacked,
+      pair: `${storedKey || "(blank)"}->${derivedKey || "?"}`,
+    },
+  };
+}
+
+/**
+ * The R28 evidence for one row. See FINISH_IS_A_PARALLEL's doc for why this
+ * refuses BEFORE it ever asks the checklist -- the shape test alone cannot
+ * tell a mis-filed finish from a declared distinct product that happens to
+ * share a prefix and end in a finish-shaped word.
+ *
+ * `finishWord` -- the tail segment of the stored key once the derived key's
+ *   own segments are stripped from its front (e.g. `logofractor` out of
+ *   `topps-chrome-logofractor` / `topps-chrome`). Computed here, from the two
+ *   keys alone -- no catalog read needed for this leg.
+ * `checklistListsAsParallel` -- does the DERIVED product's checklist list
+ *   `finishWord` as a parallel (rematch-finish-vocab.cjs's
+ *   `checklistListsParallel`, called by the caller because it needs the
+ *   corpus)? The caller supplies it so this module stays pure.
+ */
+function finishIsAParallelEvidence({
+  row, stored, derived, axes,
+  checklistListsAsParallel = false,
+  derivedBacked = false,
+}) {
+  const failed = [];
+  const storedKey = lower(stored?.setKey), derivedKey = lower(derived?.setKey);
+
+  // R1 -- the shape: stored is `<derived>-<word>`, a strict suffix on a
+  // segment boundary.
+  let finishWord = null;
+  if (derivedKey && storedKey.startsWith(`${derivedKey}-`)) {
+    finishWord = storedKey.slice(derivedKey.length + 1);
+  }
+  if (!finishWord) failed.push("not-a-suffix-of-the-derived-key");
+
+  // R2 -- THE 2026-09-03 DISTINCT-PRODUCT GUARD. Never move a row off a
+  // DECLARED DISTINCT product or a RULED collapse pair, whatever its suffix
+  // looks like. This is the guard that keeps `topps-chrome-platinum` (a real,
+  // ruled-distinct product whose tail is ALSO a finish-colour word) out of
+  // this subclass entirely -- see FINISH_IS_A_PARALLEL's doc for the measured
+  // 116-row false-positive population this closes.
+  if (finishWord) {
+    if (DISTINCT_PRODUCT_SETKEYS.includes(storedKey)) failed.push(`stored-is-a-declared-distinct-product:${storedKey}`);
+    const ruled = ruledCollapsePair(storedKey, derivedKey);
+    if (ruled) failed.push(`ruled-collapse-pair:${storedKey}->${derivedKey}`);
+  }
+
+  // R3 -- the suffix must be a KNOWN FINISH WORD, not merely a word. A
+  // product name this table does not know is not this defect (Panini Prizm
+  // Deca, Topps Midnight -- measured, neither is finish vocabulary).
+  const finishVocab = finishWord
+    ? (VOCAB.FINISH_COLOR_TOKENS.includes(finishWord) || VOCAB.CORE_FINISH_TOKENS.includes(finishWord)
+      || VOCAB.FINISH_FAMILY_TOKENS.includes(finishWord))
+    : false;
+  if (finishWord && !finishVocab) failed.push(`suffix-not-a-known-finish:${finishWord}`);
+
+  // R4 -- THE CHECKLIST MUST LIST THE FINISH AS A PARALLEL OF THE DERIVED
+  // PRODUCT. Not merely "some product has this parallel" -- THIS one.
+  if (finishWord && finishVocab && !checklistListsAsParallel) failed.push(`checklist-does-not-list-parallel:${finishWord}`);
+
+  // R5 -- THE DESTINATION IDENTITY ITSELF MUST BE CHECKLIST-BACKED.
+  if (!derivedBacked) failed.push("destination-not-checklist-backed");
+
+  // R6 -- every axis but setKey and parallel is unchanged. The finish is
+  // DEFINED to move from the setKey segment to the parallel field, so those
+  // two are the only ones a write may cross -- exactly the EVICTION_MOVABLE_
+  // AXES discipline, restated for this subclass's own two moving axes.
+  const moved = [...(axes?.changed ?? []), ...(axes?.dropped ?? [])].filter((a) => a !== "setKey" && a !== "parallel");
+  if (moved.length) failed.push(`identity-axis-moved:${moved.join(",")}`);
+
+  return {
+    qualifies: failed.length === 0,
+    failed,
+    evidence: {
+      storedSetKey: storedKey, derivedSetKey: derivedKey, finishWord,
+      checklistListsAsParallel, derivedBacked,
+      pair: `${storedKey || "(blank)"}->${derivedKey || "?"}:${finishWord || "?"}`,
+    },
+  };
+}
+
+/**
  * Classify ONE row.
  *
  * `stored`   the identity the row carries today (from its own fields).
@@ -4841,6 +5217,40 @@ function classifyRow({
   // supplies the catalog facts above. Defaults FALSE -- every caller that
   // cannot answer, and every non-soccer lane, gets today's strict L2.
   competitionStated = false,
+  // THE THREE RULED SUBCLASSES OF 2026-09-13 (R26/R27/R28). Each takes a
+  // CATALOG or VOCAB-TABLE fact the caller supplies, for the same reason as
+  // the block above: this module is pure and none of these reads may happen
+  // here. Every one defaults to the value that REFUSES.
+  //
+  //   derivedIsNamedProduct   is the derived setKey exactly a productSetKeys.ts
+  //                           product whose declared parent is the stored key?
+  //   derivedBackedR26        the derived (year,setKey,cardNumber) is checklist-
+  //                           backed by a real scraped source (R26's own strict
+  //                           gate, named separately from `derivedBackedStrict`
+  //                           above so a caller answering one does not silently
+  //                           answer both for two different products).
+  //   derivedIsPokemonSetCode is the derived setKey exactly a bare code from
+  //                           pokemonSetCodes.ts?
+  //   storedIsRivalPokemonSetCode  is the STORED key ALSO a bare code from
+  //                           pokemonSetCodes.ts (a rival reading, not
+  //                           staleness)?
+  //   pokemonCodeIsAmbiguous  is that code one of the 24 AMBIGUOUS_MARKET_CODES?
+  //   pokemonLanguageResolves for an ambiguous code, does the row's own language
+  //                           flag say which market? null = unanswered = refuse.
+  //   derivedBackedR27        the derived Pokemon address is checklist-backed.
+  //   checklistListsFinishAsParallel  does the DERIVED product's checklist list
+  //                           the stored key's suffix word as a parallel?
+  //   derivedBackedR28        the derived (product, parallel) address is
+  //                           checklist-backed.
+  derivedIsNamedProduct = false,
+  derivedBackedR26 = false,
+  derivedIsPokemonSetCode = false,
+  storedIsRivalPokemonSetCode = false,
+  pokemonCodeIsAmbiguous = false,
+  pokemonLanguageResolves = null,
+  derivedBackedR27 = false,
+  checklistListsFinishAsParallel = false,
+  derivedBackedR28 = false,
 }) {
   const prov = provenanceTier(row);
   // THE SLUG-SHAPE DEFECTS ARE COMPUTED FOR EVERY ROW AND CHANGE NOTHING.
@@ -4861,6 +5271,15 @@ function classifyRow({
   // they change is `writable`, and the reason string is what lets this
   // population be subtracted from the conflicts Drew reads.
   const derivationRefused = derivationRefusals({ row, stored, derived, autoByCardNumber });
+
+  // GUARD 10's OWN FACT, COMPUTED ONCE (R27, 2026-09-13). An ambiguous
+  // Pokemon set code the row's language does not resolve refuses IMPROVE on
+  // EVERY arm that can reach a `filled:setKey`/`changed:setKey` row -- the
+  // ordinary path included, which is why this is computed here beside
+  // `derivationRefused` rather than only inside R27's own CONFLICT-path
+  // evidence function. See GUARD 10 in `improveRefusals` for the full reason.
+  const pokemonAmbiguousCodeUnresolved = derivedIsPokemonSetCode
+    && pokemonCodeIsAmbiguous && pokemonLanguageResolves !== true;
 
   // THE SPLIT-IDENTITY SIGNAL IS ORTHOGONAL TO THE DERIVATION CLASS.
   //
@@ -5075,7 +5494,7 @@ function classifyRow({
       row, stored, derived, axes, checklistSaysNotAuto, autoByCardNumber,
     });
     if (sna.qualifies) {
-      const refusals = allImproveRefusals({ row, stored, derived, axes, parserSaysLot, family, derivationRefused });
+      const refusals = allImproveRefusals({ row, stored, derived, axes, parserSaysLot, family, derivationRefused, pokemonAmbiguousCodeUnresolved });
       const snaReasons = [
         `subclass:${SELLER_NAME_AUTO}`,
         "seller-name-auto:isAuto true->false",
@@ -5123,7 +5542,7 @@ function classifyRow({
     // copies of a gate is one gate that silently is not there.
     const gft = gradeFromTitleEvidence({ row, stored, axes });
     if (gft.qualifies) {
-      const refusals = allImproveRefusals({ row, stored, derived, axes, parserSaysLot, family, derivationRefused });
+      const refusals = allImproveRefusals({ row, stored, derived, axes, parserSaysLot, family, derivationRefused, pokemonAmbiguousCodeUnresolved });
       return {
         ...base,
         klass: IMPROVE, subclass: GRADE_FROM_TITLE,
@@ -5198,7 +5617,7 @@ function classifyRow({
       // in rematchDerivationDefects.test.ts revert exactly those pushes and
       // assert there is EXACTLY ONE site to revert. Two copies would leave
       // this arm silently unguarded by the pin that guards the other.
-      const refusals = allImproveRefusals({ row, stored, derived, axes, parserSaysLot, family, derivationRefused });
+      const refusals = allImproveRefusals({ row, stored, derived, axes, parserSaysLot, family, derivationRefused, pokemonAmbiguousCodeUnresolved });
       const specReasons = [
         `subclass:${SPECIALIZATION_STATED}`,
         `specialization:${spec.evidence.storedSetKey}->${spec.evidence.derivedSetKey}`,
@@ -5236,7 +5655,7 @@ function classifyRow({
       row, stored, derived, axes, storedSlug, destBacked: vintageDestBacked,
     });
     if (vint.qualifies) {
-      const refusals = allImproveRefusals({ row, stored, derived, axes, parserSaysLot, family, derivationRefused });
+      const refusals = allImproveRefusals({ row, stored, derived, axes, parserSaysLot, family, derivationRefused, pokemonAmbiguousCodeUnresolved });
       return {
         ...base,
         klass: IMPROVE, subclass: YEAR_FROM_TITLE_VINTAGE, axes,
@@ -5273,7 +5692,7 @@ function classifyRow({
       row, stored, derived, axes, productSport, destBacked: sportDestBacked,
     });
     if (sfp.qualifies) {
-      const refusals = allImproveRefusals({ row, stored, derived, axes, parserSaysLot, family, derivationRefused });
+      const refusals = allImproveRefusals({ row, stored, derived, axes, parserSaysLot, family, derivationRefused, pokemonAmbiguousCodeUnresolved });
       return {
         ...base,
         klass: IMPROVE, subclass: SPORT_FROM_PRODUCT, axes,
@@ -5297,6 +5716,120 @@ function classifyRow({
       && !sfp.failed.includes("product-sport-unreadable")
       && !sfp.failed.some((fl) => fl.startsWith("stored-sport-is-not-a-sport"));
     if (sfpNearMiss) reasons.push(`not-sport-from-product:${sfp.failed.join(",")}`);
+
+    // R26-FLAGSHIP-SWALLOWED-NAMED-PRODUCT: THE `changed:setKey` THAT IS A
+    // SPECIALTY RELEASE FILED UNDER ITS FLAGSHIP (Drew, 2026-09-13, widget).
+    //
+    // The fourth door. Table-driven rather than title-vocabulary-driven like
+    // SPECIALIZATION-STATED: the caller answers straight from productSetKeys.ts
+    // whether the derived key is a declared child of the exact stored flagship,
+    // so a product the table already names is reachable the day it is declared.
+    const r26 = flagshipSwallowedNamedProductEvidence({
+      row, stored, derived, axes,
+      derivedIsNamedProduct, derivedBacked: derivedBackedR26,
+    });
+    if (r26.qualifies) {
+      const refusals = allImproveRefusals({ row, stored, derived, axes, parserSaysLot, family, derivationRefused, pokemonAmbiguousCodeUnresolved });
+      return {
+        ...base,
+        klass: IMPROVE, subclass: FLAGSHIP_SWALLOWED_NAMED_PRODUCT, axes,
+        reasons: [
+          ...reasons,
+          `subclass:${FLAGSHIP_SWALLOWED_NAMED_PRODUCT}`,
+          `flagship-swallowed-named-product:${r26.evidence.storedSetKey}->${r26.evidence.derivedSetKey}`,
+          `title-states:${r26.evidence.distinguishingWords.join("+")}`,
+          ...refusals, ...splitReasons,
+        ],
+        improveRefusals: refusals,
+        flagshipSwallowedNamedProductEvidence: r26.evidence,
+        writable: prov.tier === AUTO && refusals.length === 0,
+      };
+    }
+    // Named only for real candidates: the derived key really is a declared
+    // flagship child. A row whose derived key the table never heard of was
+    // never a candidate, and tagging every `changed:setKey` row with this
+    // reason would count the corpus rather than the defect.
+    if (!r26.failed.includes("derived-not-a-declared-flagship-child")) {
+      reasons.push(`not-flagship-swallowed-named-product:${r26.failed.join(",")}`);
+    }
+
+    // R27-POKEMON-SET-CODE: THE `changed:setKey` THAT IS A BARE CODE (Drew,
+    // 2026-09-13, widget; CF-THE-SET-CODE-IS-THE-KEY).
+    //
+    // The fifth door, Pokemon-only by construction: it fires only when the
+    // caller says the derived key IS one of pokemonSetCodes.ts's own codes.
+    const r27 = pokemonSetCodeEvidence({
+      row, stored, derived, axes,
+      derivedIsPokemonSetCode, storedIsRivalSetCode: storedIsRivalPokemonSetCode,
+      isAmbiguousCode: pokemonCodeIsAmbiguous,
+      languageResolves: pokemonLanguageResolves, derivedBacked: derivedBackedR27,
+    });
+    if (r27.qualifies) {
+      const refusals = allImproveRefusals({ row, stored, derived, axes, parserSaysLot, family, derivationRefused, pokemonAmbiguousCodeUnresolved });
+      return {
+        ...base,
+        klass: IMPROVE, subclass: POKEMON_SET_CODE, axes,
+        reasons: [
+          ...reasons,
+          `subclass:${POKEMON_SET_CODE}`,
+          `pokemon-set-code:${r27.evidence.pair}`,
+          ...refusals, ...splitReasons,
+        ],
+        improveRefusals: refusals,
+        pokemonSetCodeEvidence: r27.evidence,
+        writable: prov.tier === AUTO && refusals.length === 0,
+      };
+    }
+    // Named only for real candidates: the derived key really is a Pokemon set
+    // code. THE COLLISION CARVE-OUT GETS ITS OWN NAMED REASON (not merely a
+    // near-miss tag) so the census can count it apart from an ordinary refusal
+    // -- an unresolved collision is the ONE population this subclass expects
+    // to see in volume and never move.
+    if (derivedIsPokemonSetCode && pokemonCodeIsAmbiguous && pokemonLanguageResolves !== true) {
+      reasons.push(POKEMON_SET_CODE_LANGUAGE_UNRESOLVED);
+    } else if (!r27.failed.includes("derived-not-a-pokemon-set-code")) {
+      reasons.push(`not-pokemon-set-code:${r27.failed.join(",")}`);
+    }
+
+    // R28-FINISH-IS-A-PARALLEL: THE `changed:setKey` THAT IS A FINISH WORD
+    // MINTED AS A PRODUCT (Drew, 2026-09-13, widget).
+    //
+    // The sixth door, and the narrowest: see FINISH_IS_A_PARALLEL's doc for
+    // why it refuses on the 2026-09-03 DISTINCT-product guard BEFORE it ever
+    // asks the checklist. Also moves `parallel`, unlike the five doors above --
+    // the finish is DEFINED to relocate from the setKey segment to the
+    // parallel field, so this is the one subclass whose evidence function
+    // itself allows a second axis, exactly as BASE-EVICTION's
+    // EVICTION_MOVABLE_AXES allows `parallel` alone.
+    const r28 = finishIsAParallelEvidence({
+      row, stored, derived, axes,
+      checklistListsAsParallel: checklistListsFinishAsParallel,
+      derivedBacked: derivedBackedR28,
+    });
+    if (r28.qualifies) {
+      const refusals = allImproveRefusals({ row, stored, derived, axes, parserSaysLot, family, derivationRefused, pokemonAmbiguousCodeUnresolved });
+      return {
+        ...base,
+        klass: IMPROVE, subclass: FINISH_IS_A_PARALLEL, axes,
+        reasons: [
+          ...reasons,
+          `subclass:${FINISH_IS_A_PARALLEL}`,
+          `finish-is-a-parallel:${r28.evidence.pair}`,
+          ...refusals, ...splitReasons,
+        ],
+        improveRefusals: refusals,
+        finishIsAParallelEvidence: r28.evidence,
+        writable: prov.tier === AUTO && refusals.length === 0,
+      };
+    }
+    // Named only for real candidates: the stored key really does carry the
+    // derived key as a prefix. Every OTHER `changed:setKey` row (the vast
+    // majority) never had this shape at all, and tagging it would count the
+    // corpus rather than the defect.
+    if (!r28.failed.includes("not-a-suffix-of-the-derived-key")) {
+      reasons.push(`not-finish-is-a-parallel:${r28.failed.join(",")}`);
+    }
+
     // A PRODUCT-FAMILY COLLAPSE IS REFUSED BY NAME (Drew, 2026-09-03).
     //
     // `changed:setKey` already lands in CONFLICT, and CONFLICT is already
@@ -5351,7 +5884,7 @@ function classifyRow({
   // onto base rows. A refusal keeps the CLASS -- the census must still count
   // the shape, and Drew must be able to read what was refused and why -- and
   // takes `writable` to false, the same way the provenance tier does.
-  const refusals = allImproveRefusals({ row, stored, derived, axes, parserSaysLot, family, derivationRefused });
+  const refusals = allImproveRefusals({ row, stored, derived, axes, parserSaysLot, family, derivationRefused, pokemonAmbiguousCodeUnresolved });
 
   // A FLAGGED FAMILY COLLISION IS A REFUSAL LIKE THE OTHER THREE.
   //
@@ -5431,7 +5964,13 @@ function isPhantomGradeArtifact(stored, derived, axes) {
  *  its own canary. `applyKindOf` reads the SUBCLASS first for exactly this
  *  reason, so the ordinary IMPROVE scope keeps writing exactly what it wrote
  *  yesterday and no more. */
-const APPLY_CLASSES = { IMPROVE, BASE_EVICTION, GRADE_FROM_TITLE, YEAR_FROM_TITLE_VINTAGE, SPORT_FROM_PRODUCT };
+const APPLY_CLASSES = {
+  IMPROVE, BASE_EVICTION, GRADE_FROM_TITLE, YEAR_FROM_TITLE_VINTAGE, SPORT_FROM_PRODUCT,
+  // THE THREE RULED SUBCLASSES OF 2026-09-13 (R26/R27/R28). Same discipline as
+  // the 2026-09-06 trio directly above: `klass` is IMPROVE, so they need their
+  // OWN entry here or `applyKindOf` could not name them apart from it.
+  FLAGSHIP_SWALLOWED_NAMED_PRODUCT, POKEMON_SET_CODE, FINISH_IS_A_PARALLEL,
+};
 
 /** Spellings of each class a dispatch may use. Deliberately generous on
  *  punctuation (base-eviction / base_eviction / baseeviction) and deliberately
@@ -5474,6 +6013,17 @@ const APPLY_SCOPE_ALIASES = new Map([
   ["vintage-year", [YEAR_FROM_TITLE_VINTAGE]],
   ["sport-from-product", [SPORT_FROM_PRODUCT]],
   ["sportfromproduct", [SPORT_FROM_PRODUCT]],
+  // THE THREE RULED SCOPES OF 2026-09-13 (R26/R27/R28). Same discipline as the
+  // 2026-09-06 trio directly above: DELIBERATELY ABSENT from "both" and "all"
+  // -- a scope ruled today must not be armed by a dispatch written before the
+  // ruling existed. Each is asked for by name or it does not run.
+  ["flagship-swallowed-named-product", [FLAGSHIP_SWALLOWED_NAMED_PRODUCT]],
+  ["r26", [FLAGSHIP_SWALLOWED_NAMED_PRODUCT]],
+  ["pokemon-set-code", [POKEMON_SET_CODE]],
+  ["pokemonsetcode", [POKEMON_SET_CODE]],
+  ["r27", [POKEMON_SET_CODE]],
+  ["finish-is-a-parallel", [FINISH_IS_A_PARALLEL]],
+  ["r28", [FINISH_IS_A_PARALLEL]],
   // "both" and "all" keep meaning what they meant when the fleet dispatches
   // that use them were written: the two classes that existed then.
   ["both", [IMPROVE, BASE_EVICTION]],
@@ -5523,7 +6073,7 @@ function parseApplyScope(raw) {
     // to learn what the accepted scopes actually are -- including the revert,
     // which is otherwise undiscoverable.
     out.reason = `scope ${JSON.stringify(str(raw))} carries unrecognised token(s) ${unknown.join(",")} `
-      + `(expected one of: improve, base-eviction, both, revert-eviction, grade-from-title, year-from-title-vintage, sport-from-product)`;
+      + `(expected one of: improve, base-eviction, both, revert-eviction, grade-from-title, year-from-title-vintage, sport-from-product, flagship-swallowed-named-product, pokemon-set-code, finish-is-a-parallel)`;
     return out;
   }
   if (out.revert) {
@@ -5533,7 +6083,7 @@ function parseApplyScope(raw) {
   }
   if (!out.classes.size) {
     out.reason = `scope ${JSON.stringify(str(raw))} names no apply class ` +
-      `(expected one of: improve, base-eviction, both, revert-eviction, grade-from-title, year-from-title-vintage, sport-from-product)`;
+      `(expected one of: improve, base-eviction, both, revert-eviction, grade-from-title, year-from-title-vintage, sport-from-product, flagship-swallowed-named-product, pokemon-set-code, finish-is-a-parallel)`;
     return out;
   }
   out.ok = true;
@@ -5571,6 +6121,13 @@ function applyKindOf(result) {
   if (result.subclass === GRADE_FROM_TITLE) return GRADE_FROM_TITLE;
   if (result.subclass === YEAR_FROM_TITLE_VINTAGE) return YEAR_FROM_TITLE_VINTAGE;
   if (result.subclass === SPORT_FROM_PRODUCT) return SPORT_FROM_PRODUCT;
+  // THE THREE RULED SUBCLASSES OF 2026-09-13, read before the bare IMPROVE
+  // fallback for the identical reason the 2026-09-06 trio above is: their
+  // `klass` is IMPROVE, and a `scope=improve` dispatch written before today's
+  // ruling must keep arming exactly what it armed yesterday.
+  if (result.subclass === FLAGSHIP_SWALLOWED_NAMED_PRODUCT) return FLAGSHIP_SWALLOWED_NAMED_PRODUCT;
+  if (result.subclass === POKEMON_SET_CODE) return POKEMON_SET_CODE;
+  if (result.subclass === FINISH_IS_A_PARALLEL) return FINISH_IS_A_PARALLEL;
   if (result.subclass === BASE_EVICTION) return BASE_EVICTION;
   if (result.klass === IMPROVE) return IMPROVE;
   return null;
@@ -5782,5 +6339,11 @@ module.exports = {
   APPLY_CLASSES, APPLY_SCOPE_ALIASES, parseApplyScope, applyKindOf, writableUnderScope,
   // The undo scope. A NAME, not a class -- see REVERT_EVICTION above.
   REVERT_EVICTION, REVERT_SCOPE_WORDS,
+  // THE THREE RULED SUBCLASSES OF 2026-09-13 (R26/R27/R28), exported piece by
+  // piece -- the subclass name and its evidence function -- so a pin can drive
+  // one alone and the mutation check can revert one alone.
+  FLAGSHIP_SWALLOWED_NAMED_PRODUCT, flagshipSwallowedNamedProductEvidence,
+  POKEMON_SET_CODE, POKEMON_SET_CODE_LANGUAGE_UNRESOLVED, pokemonSetCodeEvidence,
+  FINISH_IS_A_PARALLEL, finishIsAParallelEvidence,
   VOCAB,
 };

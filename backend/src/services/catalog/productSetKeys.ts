@@ -114,6 +114,70 @@ const FLEER_TIFFANY_ERA_MISNOMERS: Readonly<Record<string, string>> = Object.fre
 });
 
 /**
+ * CF-METAL-UNIVERSE-NAME-WAS-REVIVED (Drew, 2026-09-12, #2060 follow-on).
+ *
+ * THE SHAPE IS THE FLEER-TIFFANY SHAPE, NOT A KEY-SPELLING TWIN. R22 ("a
+ * key-spelling twin folds onto the checklist key") was the first read of this
+ * defect: sportscardchecklist's 1996-1998 baseball checklists for Metal
+ * Universe are filed bare (`metal-universe`), while a "1997 Skybox Metal
+ * Universe" title normalizes to `skybox-metal-universe` — looks like the same
+ * product under two spellings. It is not. Measured read-only against prod
+ * card_catalog 2026-09-12, `skybox-metal-universe` is a REAL, currently
+ * produced Upper Deck hockey/multi-sport revival with its own checklists:
+ *
+ *     skybox-metal-universe  2020-2025  19,462 hockey + ~250 basketball/
+ *                            multi-sport/other rows, checklistcenter-2026-09-06
+ *                            (8,326) and checklistinsider (10,830 more) —
+ *                            genuinely checklist-backed, its own product.
+ *     skybox-metal-universe  1996-1999  ~45 baseball + ~86 football rows,
+ *                            sources `ingest-auto-seed`/`sales-attested`/
+ *                            `user-verified` ONLY — zero checklist rows.
+ *                            Sample content is garbage (an "ingest-auto-seed"
+ *                            row at #23 reads "Michael Jordan Championship").
+ *     metal-universe         1996-1999  5,237 baseball rows, the plurality
+ *                            `sportscardchecklist-2026-09-06` and
+ *                            `baseballcardpedia*` — checklist-backed. Chipper
+ *                            Jones #31 lives here (`hiq:baseball:1997:
+ *                            metal-universe:31:base:no-auto`).
+ *
+ * A blanket `skybox-metal-universe` -> `metal-universe` alias — R22 applied
+ * literally — would fold 19,700+ real modern hockey/multi-sport checklist
+ * rows into the 1990s baseball pool: the opposite of "one card, one row, one
+ * pool". Even SPORT alone does not separate the two eras cleanly: baseball
+ * itself carries a 12-row 2021 cohort under the same key, alongside the real
+ * 1997-1999 vintage cohort.
+ *
+ * THE RULE THIS ACTUALLY IS. Exactly CF-THERE-IS-NO-FLEER-TIFFANY's shape:
+ * "Skybox Metal Universe" written on a card from BEFORE Skybox's 2020s revival
+ * is a misnomer for the one Metal Universe product that existed then — Fleer
+ * printed it as plain "Metal Universe" from 1996 (Skybox and Fleer were both
+ * Marvel Entertainment brands by then; sportscardchecklist's own checklist
+ * pages for 1996-1998 carry no maker qualifier at all, see
+ * data/checklists/scraped/1996–1998-metal-universe-baseball.csv). FROM the
+ * revival's first year the key is the product the source actually names, and
+ * passes through untouched — exactly as a post-1996 "Fleer Tiffany" does.
+ *
+ * THE BOUNDARY. 2000 — a full year past the last vintage checklist year found
+ * (1999) and two decades before the earliest revival-era row found (2020), so
+ * there is no evidence on either side of the boundary to contradict it; unlike
+ * Donruss/Fleer-Tiffany this date is not itself Drew-ruled, only bounded by
+ * measurement, so treat it as an ASSUMPTION the way ERA_SPLIT_TABLE's
+ * unruled entries already are.
+ *
+ * `fleer-metal-universe` is NOT included here. It carries a single
+ * `user-verified` catalog row (1996) and zero checklist rows on either side —
+ * no measured collision to rule on, and CF-NO-SYNTHETIC-PARALLELS means this
+ * table does not invent a destination a checklist has not written.
+ */
+export const METAL_UNIVERSE_REVIVAL_FROM_YEAR = 2000;
+
+/** The vintage Fleer/Skybox-era product a "Skybox Metal Universe" text
+ *  before the revival is a misnomer for. */
+const METAL_UNIVERSE_ERA_MISNOMERS: Readonly<Record<string, string>> = Object.freeze({
+  "skybox-metal-universe": "metal-universe",
+});
+
+/**
  * CF-A-CHECKLIST-ROW-SPELLS-ITS-ERA-LIKE-A-SALE-DOES (Drew, 2026-09-05).
  *
  * THE DEFECT. `ERA_SPLIT_TABLE` (setKeyReconciliation.ts) rules that Score,
@@ -824,10 +888,53 @@ export const PRODUCT_SET_KEYS: ReadonlyArray<ProductSetKey> = [
   S("fleer-update-glossy", { family: "fleer-update", parent: "fleer-update" }),
   S("fleer-tradition-tiffany", { family: "fleer-tradition", parent: "fleer-tradition" }),
   P("flair", { parent: "fleer" }),
+
+  /**
+   * 1997 FLAIR SHOWCASE IS THREE CARD SETS (R30, Drew 2026-09-13).
+   *
+   * The same ruling as the Rookies & Stars autograph subsets: a same-numbered
+   * subset is its own card set. baseballcardpedia states it outright -- "all
+   * 540 base cards (180 players from all three Rows) are available in a Legacy
+   * and Masterpiece parallel" -- and 540 = 180 x 3. Rows 0, 1 and 2 are three
+   * distinct 180-card sets that SHARE NUMBERS 1-180, so the number cannot tell
+   * a Row 0 Griffey from a Row 2 Griffey and only the row can.
+   *
+   * Measured on the #2107 staged rows before this entry existed: 1,080 of
+   * 1,620 minted ids collided, all three rows landing on
+   * `hiq:baseball:1997:flair:1:base:no-auto`.
+   *
+   * REGISTRATION IS THE MECHANISM, NOT BOOKKEEPING. `normalizeSetKey` returned
+   * `flair` for all three, because the strict-tier rule `/flair-showcase|flair/`
+   * swallows every `flair-showcase-*` spelling. A key that is not a
+   * normalizeSetKey FIXED POINT cannot hold a pool, so `spelled` is what makes
+   * productSetKeyForName answer ahead of the regex vocabulary -- and the
+   * anchored rule added beside that catch-all in hobbyIqCardId.service.ts is
+   * what holds if this table is ever absent (its loader degrades to an EMPTY
+   * doc by design, so "absent" is a state that really occurs).
+   *
+   * LEGACY COLLECTION (/100) AND MASTERPIECE (/1) ARE NOT ROWS. The same
+   * sentence names them as parallels of every row, so they are rungs ON these
+   * three keys rather than keys of their own, and there is no Row 3 -- only
+   * 0, 1 and 2 appear anywhere on the page.
+   *
+   * THE BARE SPELLINGS STILL POOL INTO `flair`. "Flair Showcase" with no row,
+   * and plain "Flair", are untouched and keep folding to `flair` exactly as
+   * the pinned test requires; only a spelling that NAMES a row is separated.
+   */
+  ...["flair-showcase-row-0", "flair-showcase-row-1", "flair-showcase-row-2"]
+    .map((k) => S(k, { parent: "flair" })),
   P("ultra"),
   P("skybox"),
   ...["skybox-metal-universe", "skybox-thunder", "skybox-premium", "skybox-molten-metal"].map((k) => P(k, { parent: "skybox" })),
   P("metal-universe"),
+  // CF-A-NAMED-INSERT-SET-IS-ITS-OWN-PRODUCT (Drew, 2026-09-09). Heavy Metal
+  // is a 10-card insert with its OWN numbering: its #2 is Barry Bonds while
+  // the 250-card base set's #2 is Brady Anderson. It is `parent`ed to
+  // metal-universe (it ships inside that release) but is its own product, so
+  // rows minted for it stop landing on base-set addresses and absorbing into
+  // another player's pool. See normalizeSetKey, where it precedes the
+  // /metal-universe/ family pattern.
+  P("metal-universe-heavy-metal", { parent: "metal-universe" }),
   P("pinnacle"),
   P("pinnacle-aficionado", { parent: "pinnacle" }),
   /**
@@ -1049,6 +1156,68 @@ export const PRODUCT_SET_KEYS: ReadonlyArray<ProductSetKey> = [
   P("panini-mosaic-la-liga", { parent: "panini-mosaic" }),
   P("panini-mosaic-fifa-road-to-world-cup", { parent: "panini-mosaic" }),
   P("panini-prizm-fifa-world-cup-qatar", { parent: "panini-prizm" }),
+  /**
+   * The 2014 release's own product key. It was already a normalizeSetKey FIXED
+   * POINT through `setkey-reconciliation.json` (verdict `distinct`, canonical
+   * itself, 96,562 checklist rows, `final: true`) but was NOT in this table, so
+   * it had no family or parent recorded. Registering the nine insert sets under
+   * it makes that gap load-bearing: `family`/`parent` must name a key the table
+   * spells (pinned by productFamilyIsATable), and a child cannot nest under a
+   * product that is absent. `P`, not `S` — the reconciliation already decides
+   * this key's spelling ahead of both the table and the vocabulary, so spelling
+   * it here would add a second authority for one answer.
+   */
+  P("panini-prizm-fifa-world-cup", { parent: "panini-prizm" }),
+
+  /**
+   * 2014 PANINI PRIZM FIFA WORLD CUP — NINE INSERT SETS ARE NINE CARD SETS
+   * (R30, Drew 2026-09-13; the same ruling as the Flair Showcase Rows and the
+   * Rookies & Stars autograph subsets).
+   *
+   * TCDB's page for this product carries 136 sub-checklists, and NINE of the
+   * insert families RESTART NUMBERING AT 1 alongside the 201-card base set.
+   * Measured on the staged file (`acq-2026-09-13-tcdb`, 5,462 rows) before
+   * #2112 existed:
+   *
+   *     5,462 upserts  ->  2,949 distinct documents
+   *
+   * Card number 1, blank parallel, no auto, no print run occurs TEN times —
+   * the base card plus these nine inserts, nine different players — and all
+   * ten computed `hiq:soccer:2014:panini-prizm-fifa-world-cup:1:base:no-auto`.
+   * Rais M'Bolhi (base) was buried by Cristiano Ronaldo (Aerial Assault),
+   * Lionel Messi (World Cup Stars), Gonzalo Higuain (Net Finders), the Fuleco
+   * mascot and a Belo Horizonte stadium poster. The number cannot say which
+   * card it is; only the insert set can.
+   *
+   * REGISTRATION IS THE MECHANISM, NOT BOOKKEEPING. Every one of these nine
+   * folded PAST the product key onto the bare flagship before this entry
+   * existed — `normalizeSetKey("panini-prizm-fifa-world-cup-guardians")` was
+   * `panini-prizm`, through the unanchored `/panini-prizm/` rule — and a key
+   * that is not a normalizeSetKey FIXED POINT cannot hold a pool. Writing
+   * there would have been strictly worse than the collision it was meant to
+   * fix, which is why #2112 refuses the file until these land. `spelled` is
+   * what makes productSetKeyForName answer ahead of the regex vocabulary; the
+   * anchored rules added above that catch-all in hobbyIqCardId.service.ts are
+   * the second half.
+   *
+   * THE COLOUR RUNGS ARE NOT HERE, DELIBERATELY. The page publishes 13 Prizm
+   * parallels of these inserts (Gold, Black, Purple, El Samba, ...), and TCDB
+   * states each in the row's OWN `parallel` column. A named parallel is a
+   * distinct CARD, not a distinct SET, so the colour rides the parallel axis
+   * ON these nine keys. Within one insert key, number + rung is unique again.
+   *
+   * THE OTHER FOUR FAMILIES ARE NOT HERE EITHER, for the opposite reason.
+   * Signatures, Combo Signatures, Fans of the Game and Eusebio Tribute number
+   * their cards with a PREFIX (`S-XX`, `CS-BS`), so they never collided with
+   * the base set and separating them would split pools that are already
+   * correct — right guard, right scope.
+   */
+  ...["aerial-assault", "cup-captains", "fuleco", "guardians", "net-finders",
+    "team-photos", "world-cup-matchups", "world-cup-posters", "world-cup-stars",
+  ].map((sub) => S(`panini-prizm-fifa-world-cup-${sub}`, {
+    family: "panini-prizm-fifa-world-cup",
+    parent: "panini-prizm-fifa-world-cup",
+  })),
   P("panini-select-uefa-euro-preview", { parent: "panini-select" }),
   P("panini-revolution-premier-league", { parent: "panini-revolution" }),
   P("panini-national-treasures-fifa-road-to-world-cup", { parent: "panini-national-treasures" }),
@@ -1148,6 +1317,18 @@ export function spellForEra(setKey: string, year: number | null | undefined, pol
   if (misnomer !== undefined) {
     if (typeof year !== "number" || !Number.isFinite(year) || year <= 0) return setKey;
     return year < FLEER_TIFFANY_IS_GLOSSY_BEFORE_YEAR ? misnomer : setKey;
+  }
+  // CF-METAL-UNIVERSE-NAME-WAS-REVIVED: before the 2020s Skybox revival a
+  // "Skybox Metal Universe" text names the one vintage product that existed
+  // then, plain "Metal Universe" (see METAL_UNIVERSE_REVIVAL_FROM_YEAR). From
+  // the revival year the key is the real, separately checklist-backed modern
+  // product and passes through untouched — same shape, same reason as
+  // Fleer-Tiffany just above. An absent year cannot decide, so it leaves the
+  // key alone rather than guessing an era.
+  const metalUniverseMisnomer = METAL_UNIVERSE_ERA_MISNOMERS[setKey];
+  if (metalUniverseMisnomer !== undefined) {
+    if (typeof year !== "number" || !Number.isFinite(year) || year <= 0) return setKey;
+    return year < METAL_UNIVERSE_REVIVAL_FROM_YEAR ? metalUniverseMisnomer : setKey;
   }
   // CF-A-CHECKLIST-ROW-SPELLS-ITS-ERA-LIKE-A-SALE-DOES: the era table's
   // never-acquired brands take the bare key in EVERY year, so this fires

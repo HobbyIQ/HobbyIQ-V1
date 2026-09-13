@@ -231,9 +231,16 @@ describe("computeHobbyIqCardId — set key controlled vocabulary", () => {
     expect(slug).toContain(":bowman-chrome:");
   });
   it("bare 'Chrome Prospects Autographs' setName → bowman-chrome", () => {
+    // CPA-DT (Deward Tovar) is a genuine 2026 bowman-chrome-ONLY number
+    // (CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT, #2064/#2069) -- CPA-EHA
+    // (Eric Hartman) used here previously turned out to be bowman-only per
+    // the real checklist, which is a different question from the one this
+    // test asks (does "Chrome Prospects Autographs" text normalize into the
+    // Chrome family) and would now be correctly moved to bowman, hiding
+    // what this test means to pin.
     const slug = computeHobbyIqCardId({
       sport: "baseball", year: 2026, setKey: "Chrome Prospects Autographs",
-      cardNumber: "CPA-EHA", parallel: "Base", isAuto: true,
+      cardNumber: "CPA-DT", parallel: "Base", isAuto: true,
     });
     expect(slug).toContain(":bowman-chrome:");
   });
@@ -306,12 +313,28 @@ describe("computeHobbyIqCardId — cardNumber-prefix override (bare→chrome)", 
       sport: "baseball", year: 2026, setKey: "Bowman",
       cardNumber: "CPA-OC", parallel: "Refractor", isAuto: true, printRun: 499,
     })).toBe("hiq:baseball:2026:bowman:cpa-oc:refractor:auto:num-499");
-    // A title that SAYS Bowman Chrome still resolves bowman-chrome -- the
-    // override never had jurisdiction there, normalizeSetKey answers first.
+    // CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT (#2064/#2069, 2026-09-12).
+    // This assertion previously claimed "a title that SAYS Bowman Chrome
+    // still resolves bowman-chrome — the override never had jurisdiction
+    // there". That was true when written but is not true of THIS card: Owen
+    // Carey's CPA-OC is a genuine 2026 BOWMAN-only number (2026-bowman-full
+    // .csv lists him three times; 2026-bowman-chrome.csv lists him zero
+    // times) — the same shape as Marconi German's CPA-MG. A title naming
+    // "Bowman Chrome" now correctly reads through to the checklist's real
+    // product, exactly as #2064 fixed for CPA-MG.
     expect(computeHobbyIqCardId({
       sport: "baseball", year: 2026, setKey: "Bowman Chrome",
       cardNumber: "CPA-OC", parallel: "Refractor", isAuto: true, printRun: 499,
-    })).toBe("hiq:baseball:2026:bowman-chrome:cpa-oc:refractor:auto:num-499");
+    })).toBe("hiq:baseball:2026:bowman:cpa-oc:refractor:auto:num-499");
+    // The claim the assertion above used to make is still TRUE for a number
+    // the sibling table does not name — e.g. CPA-AG, one of the 8 numbers
+    // that collide (Adrian Gil in Bowman, Angeibel Gomez in Bowman Chrome)
+    // and so is deliberately excluded from the table. There, an explicit
+    // title still resolves exactly as stated.
+    expect(computeHobbyIqCardId({
+      sport: "baseball", year: 2026, setKey: "Bowman Chrome",
+      cardNumber: "CPA-AG", parallel: "Refractor", isAuto: true, printRun: 499,
+    })).toBe("hiq:baseball:2026:bowman-chrome:cpa-ag:refractor:auto:num-499");
   });
 
   it("bowman + BDC- → bowman-chrome", () => {
@@ -1056,7 +1079,44 @@ describe("matchKnownProductLine — strict product-line detection", () => {
     expect(matchKnownProductLine("2003 Flair Baseball #2 Base")).toBe("flair");
   });
   it("Flair Showcase → flair (both variants pool)", () => {
-    expect(matchKnownProductLine("1998 Flair Showcase Row 2 Ken Griffey Jr")).toBe("flair");
+    // The row-less spelling is the one this rule is about, and it still pools.
+    // This case previously used a "Row 2" title; see the R30 block below for
+    // why a title that NAMES a row no longer answers `flair`.
+    expect(matchKnownProductLine("1998 Flair Showcase Ken Griffey Jr")).toBe("flair");
+  });
+
+  /**
+   * CF-FLAIR-SHOWCASE-ROWS-ARE-THREE-SETS (R30, Drew 2026-09-13).
+   *
+   * 1997 Flair Showcase publishes Rows 0, 1 and 2 as three distinct 180-card
+   * sets SHARING NUMBERS 1-180 (bcp: "all 540 base cards — 180 players from
+   * all three Rows"; 540 = 180 x 3). The number cannot separate a Row 0
+   * Griffey from a Row 2 Griffey, so the row must: 1,080 of #2107's 1,620
+   * staged ids collided on `...:flair:1:base:no-auto` before registration.
+   *
+   * The pooling rule above is NARROWED, not retired — only a spelling that
+   * names a row is separated, which is why the test above now asserts the
+   * row-less title.
+   */
+  it("R30: each Flair Showcase row is its own normalizeSetKey fixed point", () => {
+    for (const key of ["flair-showcase-row-0", "flair-showcase-row-1", "flair-showcase-row-2"]) {
+      expect(normalizeSetKey(key), `${key} must be a fixed point`).toBe(key);
+    }
+  });
+
+  it("R30: a title naming a row resolves to that row, not to flair", () => {
+    expect(matchKnownProductLine("1997 Flair Showcase Row 0 Ken Griffey Jr")).toBe("flair-showcase-row-0");
+    expect(matchKnownProductLine("1997 Flair Showcase Row 1 Frank Thomas")).toBe("flair-showcase-row-1");
+    expect(matchKnownProductLine("1997 Flair Showcase Row 2 Ken Griffey Jr")).toBe("flair-showcase-row-2");
+  });
+
+  it("R30: the row rules do not widen the catch-all — bare spellings still pool to flair", () => {
+    expect(normalizeSetKey("flair")).toBe("flair");
+    expect(normalizeSetKey("flair-showcase")).toBe("flair");
+    expect(matchKnownProductLine("2003 Flair Baseball #2 Base")).toBe("flair");
+    expect(matchKnownProductLine("1998 Flair Showcase Ken Griffey Jr")).toBe("flair");
+    // There is no Row 3 on the page, so it must not be minted as a product.
+    expect(normalizeSetKey("flair-showcase-row-3")).toBe("flair");
   });
   it("Goudey vintage → goudey", () => {
     expect(matchKnownProductLine("1933 R319 Goudey Baseball #53 Babe Ruth")).toBe("goudey");

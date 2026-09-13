@@ -255,6 +255,228 @@ async function checklistNarrow(playerName: string, cardYear: number, setKeyHint:
   } catch { return null; }
 }
 
+// CF-TCA-EBAY-PLAYER-NAME-CHECKLIST-LOOKUP (2026-09-12, follow-up to #2088's
+// residual-class census). 147 of the census's 1,000-row 09-10 fixture are
+// 2025 Panini Select football rookies (and similar) where the title states
+// year + product + a player-shaped segment but NAMES NO TEAM and NO SPORT
+// WORD -- "2025 Panini Select - Concourse Tetairoa McMillan #44 Zebra Prizm
+// (RC)" carries nothing resolveVertical's team/keyword/PLAYER_SPORT_HINTS
+// rules can read, so the row parks at sportUnresolved even though a real,
+// checklist-backed card is sitting right there.
+//
+// THE MECHANISM IS THE SAME BOUNDED LOOKUP HOLDINGS ALREADY USE. This is not
+// a new kind of guess -- resolveCardNumberByPlayer (catalogMatcher.service.ts)
+// and checklistNarrow (this file, above) both confirm an identity against
+// card_catalog scoped to (year, setKey), never a cross-partition scan with no
+// bound. This function asks the SAME question from the other direction: not
+// "does this exact player have exactly one card number", but "does exactly
+// ONE checklist-backed player in this year+product match the title's
+// player-shaped segment" -- and if so, the CHECKLIST ROW'S OWN sport is the
+// answer, never a guess. Doctrine: the checklist is the authority; price only
+// checklist-matched identities; sport comes from the checklist row that
+// matched, never guessed alongside it.
+//
+// SCOPING, ON PURPOSE, TO STAY BOUNDED. Every candidate query below filters
+// by c.year AND c.setKey together (never year alone, never a bare CONTAINS
+// over the whole container) -- the same (year, setKey) partition-narrowing
+// checklistNarrow already relies on to keep this off a cross-partition scan
+// per row. Results are cached per (year, setKey) for the run so a firehose
+// batch naming the same product hundreds of times pays for the query once.
+//
+// EXACTLY-ONE OR NOTHING. Several checklist rows can share a normalized
+// surname within one product (two "Smith"s on one Panini Select checklist is
+// not rare) -- ambiguity between them is refused, not guessed, the same
+// "absent beats wrong" rule resolveCardNumberByPlayer already enforces. When
+// the title ALSO states a card number, that number must agree with the
+// checklist's own number for the matched player or the whole candidate is
+// dropped -- a stated number that disagrees with the checklist is evidence
+// the segment matched the WRONG row, not evidence to override with.
+const PLAYER_CHECKLIST_CACHE = new Map<string, Array<{ playerName: string; cardNumber: string; sport: string }>>();
+const PLAYER_CHECKLIST_CACHE_MAX = 2000;
+
+/** Strip punctuation/diacritics and fold suffixes so "Cam Ward", "CAM WARD",
+ *  "Cam Ward Jr.", "Michael Peña" and "Peña, Michael" compare equal. Mirrors
+ *  the normalization playerTheTitleAllows already applies for the vendor/
+ *  title comparison -- a second, drifting copy would be its own defect. */
+function normalizePlayerForMatch(name: string): string {
+  return String(name ?? "")
+    .normalize("NFD").replace(/[̀-ͯ]/g, "")   // strip diacritics
+    .toLowerCase()
+    .replace(/[.,]/g, " ")
+    .replace(/\bjr\b|\bsr\b|\bii\b|\biii\b|\biv\b/g, " ")
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/** All checklist rows (playerName, cardNumber, sport) for one (year, setKey),
+ *  deduped by (player, number). Bounded by setKey+year exactly like
+ *  checklistNarrow's own query -- never a scan of the whole container. */
+async function checklistPlayersForProduct(
+  cardYear: number,
+  setKeyHint: string,
+): Promise<Array<{ playerName: string; cardNumber: string; sport: string }>> {
+  const key = `${cardYear}|${setKeyHint.toLowerCase()}`;
+  const hit = PLAYER_CHECKLIST_CACHE.get(key);
+  if (hit) return hit;
+
+  const catalog = await getCatalogContainer();
+  if (!catalog) return [];
+
+  try {
+    // Bounded to ONE (year, setKey) — one product's checklist, never a
+    // cross-partition scan of the whole container. TOP is defense-in-depth on
+    // top of that filter, matching the same discipline checklistNarrow's own
+    // queries use.
+    const q = {
+      query: `SELECT TOP 1000 c.playerName, c.cardNumber, c.sport FROM c
+              WHERE c.year = @y AND c.setKey = @sk
+                AND IS_DEFINED(c.playerName) AND c.playerName != null
+                AND IS_DEFINED(c.cardNumber) AND c.cardNumber != null
+                AND IS_DEFINED(c.sport) AND c.sport != null`,
+      parameters: [
+        { name: "@y", value: Number(cardYear) },
+        { name: "@sk", value: setKeyHint.toLowerCase() },
+      ],
+    };
+    const { resources } = await catalog.items.query(q).fetchAll();
+    const seen = new Set<string>();
+    const rows: Array<{ playerName: string; cardNumber: string; sport: string }> = [];
+    for (const r of resources as Array<{ playerName?: string; cardNumber?: string; sport?: string }>) {
+      const playerName = String(r.playerName ?? "").trim();
+      const cardNumber = String(r.cardNumber ?? "").trim();
+      const sport = String(r.sport ?? "").trim().toLowerCase();
+      if (!playerName || !cardNumber || !sport) continue;
+      const dedupeKey = `${playerName.toLowerCase()}|${cardNumber.toLowerCase()}`;
+      if (seen.has(dedupeKey)) continue;
+      seen.add(dedupeKey);
+      rows.push({ playerName, cardNumber, sport });
+    }
+    if (PLAYER_CHECKLIST_CACHE.size >= PLAYER_CHECKLIST_CACHE_MAX) {
+      const firstKey = PLAYER_CHECKLIST_CACHE.keys().next().value;
+      if (firstKey) PLAYER_CHECKLIST_CACHE.delete(firstKey);
+    }
+    PLAYER_CHECKLIST_CACHE.set(key, rows);
+    return rows;
+  } catch {
+    return [];
+  }
+}
+
+export interface ChecklistPlayerVerticalResolution {
+  /** The checklist's OWN sport for the one matched row. Never a guess. */
+  sport: string | null;
+  /** The checklist's OWN spelling of the player, when exactly one matched
+   *  (so callers can adopt it in place of the title's paraphrase — same
+   *  "the checklist outranks the title" rule playerSegmentIsAPerson uses). */
+  checklistPlayer: string | null;
+  /** The matched row's own card number, only when it agrees with a stated
+   *  number (or none was stated). */
+  cardNumber: string | null;
+  reason:
+    | "resolved"                  // exactly one checklist player matched
+    | "no-candidates"              // no checklist rows for this year+setKey at all
+    | "no-match"                   // rows exist, none match the segment
+    | "ambiguous"                  // 2+ distinct players matched the segment
+    | "number-disagreement"        // exactly one player matched, but the
+                                    // title's stated number names a DIFFERENT
+                                    // checklist row for that player
+    | "unavailable";               // no container (offline/local dev)
+}
+
+/**
+ * CF-TCA-EBAY-PLAYER-NAME-CHECKLIST-LOOKUP. Resolve a title's player-shaped
+ * segment against the (year, setKey) checklist, and hand back the sport the
+ * MATCHED ROW carries. Never guesses: fewer than one or more than one match
+ * both refuse (see ChecklistPlayerVerticalResolution.reason).
+ *
+ * `titleCardNumber` is optional. When given, a matched player whose ONLY
+ * checklist rows disagree with it is refused as "number-disagreement" rather
+ * than resolved to a player who does not hold that number — the same
+ * "number+player agreement" rule resolveCardNumberByPlayer enforces from the
+ * other direction.
+ */
+export async function resolveVerticalByChecklistPlayer(input: {
+  year: number;
+  setKey: string;
+  playerSegment: string;
+  titleCardNumber?: string | null;
+}): Promise<ChecklistPlayerVerticalResolution> {
+  const year = Number(input.year);
+  // CF-A-SETKEY-IS-A-SLUG (same rule catalogMatcher's resolveCardNumberByPlayer
+  // follows). card_catalog stores setKey as canonicalNormalizeSetKey's output
+  // ("panini-select"), never the display form ("Panini Select") a title
+  // parser hands back — a bare .toLowerCase() would ask for "panini select"
+  // (a space, not a hyphen) and silently match nothing.
+  const setKey = canonicalNormalizeSetKey(String(input.setKey ?? "").trim());
+  const segment = normalizePlayerForMatch(input.playerSegment ?? "");
+  if (!year || !setKey || !segment) {
+    return { sport: null, checklistPlayer: null, cardNumber: null, reason: "no-match" };
+  }
+
+  const catalog = await getCatalogContainer();
+  if (!catalog) {
+    return { sport: null, checklistPlayer: null, cardNumber: null, reason: "unavailable" };
+  }
+
+  const rows = await checklistPlayersForProduct(year, setKey);
+  if (rows.length === 0) {
+    return { sport: null, checklistPlayer: null, cardNumber: null, reason: "no-candidates" };
+  }
+
+  // Group the product's checklist rows by NORMALIZED player, so "Cam Ward"
+  // and "CAM WARD" collapse to one candidate but "Cam Ward" and "Cam Newton"
+  // (two-surname collision guard) stay two.
+  const byNormPlayer = new Map<string, { playerName: string; sport: string; numbers: Set<string> }>();
+  for (const r of rows) {
+    const norm = normalizePlayerForMatch(r.playerName);
+    let g = byNormPlayer.get(norm);
+    if (!g) { g = { playerName: r.playerName, sport: r.sport, numbers: new Set() }; byNormPlayer.set(norm, g); }
+    g.numbers.add(r.cardNumber.toUpperCase());
+  }
+
+  // Exact normalized match wins outright when unique — this is the common
+  // case ("cam ward" in the title, "Cam Ward" on the checklist).
+  const exact = byNormPlayer.get(segment);
+  const candidates = exact ? [exact] : [...byNormPlayer.values()].filter((g) => {
+    const norm = normalizePlayerForMatch(g.playerName);
+    // A whole-token match either direction (segment inside the checklist
+    // name, or vice versa) — never a bare substring, so "Cam Ward" cannot
+    // match a checklist row for "Cameron Wardell" and a surname alone
+    // ("Ward") cannot match every "Ward" on the product's checklist. Tokens
+    // must match COMPLETELY (both first and last), not partially.
+    const segTokens = segment.split(" ").filter(Boolean);
+    const normTokens = norm.split(" ").filter(Boolean);
+    if (segTokens.length < 2 || normTokens.length < 2) return norm === segment;
+    return segTokens.every((t) => normTokens.includes(t)) || normTokens.every((t) => segTokens.includes(t));
+  });
+
+  if (candidates.length === 0) {
+    return { sport: null, checklistPlayer: null, cardNumber: null, reason: "no-match" };
+  }
+  if (candidates.length > 1) {
+    return { sport: null, checklistPlayer: null, cardNumber: null, reason: "ambiguous" };
+  }
+
+  const winner = candidates[0];
+  const statedNumber = String(input.titleCardNumber ?? "").trim().toUpperCase();
+  if (statedNumber && !winner.numbers.has(statedNumber)) {
+    return { sport: null, checklistPlayer: null, cardNumber: null, reason: "number-disagreement" };
+  }
+
+  return {
+    sport: winner.sport,
+    checklistPlayer: winner.playerName,
+    cardNumber: statedNumber || (winner.numbers.size === 1 ? [...winner.numbers][0] : null),
+    reason: "resolved",
+  };
+}
+
+/** Test seam: clear the module-local checklist-player cache between runs. */
+export function _clearPlayerChecklistCache(): void {
+  PLAYER_CHECKLIST_CACHE.clear();
+}
+
 // CF-PRICE-BAND-SCORER (Drew, 2026-08-02). Stage 3.6 of the Bayesian
 // identity decoder. When checklistNarrow returns 2-5 ambiguous
 // candidates, query sold_comps for each candidate's historical price
@@ -563,6 +785,12 @@ export interface VendorPersistResult {
   /** D28: a candidate card number the title showed to be a grade, a print run,
    *  a year, an ordinal or a lot count. Refused, not written. */
   cardNumberRefused?: number;
+  /** CF-TCA-EBAY-PLAYER-NAME-CHECKLIST-LOOKUP (2026-09-12): resolveVertical
+   *  found nothing (no team, no sport keyword, no PLAYER_SPORT_HINTS entry),
+   *  but exactly ONE checklist-backed player in the title's stated
+   *  (year, setKey) matched its player-shaped segment, so the row's sport
+   *  came from that checklist row instead of parking as sportUnresolved. */
+  sportResolvedByChecklistPlayer?: number;
   /**
    * CF-PROMOTER-VERIFY-LOOP (Drew, 2026-08-15). Rows diverted to
    * verify_queue rather than written to the pool. These are a SUBSET of
@@ -853,7 +1081,49 @@ export async function persistVendorSalesToPool(
     // So the stamp stays -- it is how the class is counted from stored rows --
     // but it is now the reason the row PARKS rather than a label on a row that
     // was written regardless. Absent beats wrong.
-    const sportDefaulted = verticalRes.confident !== true;
+    let sportDefaulted = verticalRes.confident !== true;
+
+    // CF-TCA-EBAY-PLAYER-NAME-CHECKLIST-LOOKUP (2026-09-12). resolveVertical
+    // just gave up: the title names no team, no sport keyword, and no
+    // PLAYER_SPORT_HINTS entry. Before parking the row, ask the CHECKLIST --
+    // the same bounded (year, setKey) lookup resolveCardNumberByPlayer and
+    // checklistNarrow already use, never a cross-partition scan -- whether
+    // exactly one product checklist player matches the title's player-shaped
+    // segment. When it does, the sport comes from the MATCHED CHECKLIST ROW,
+    // never a guess: "2025 Panini Select - Concourse Tetairoa McMillan #44"
+    // names no team and no sport word, but the 2025 Panini Select football
+    // checklist has exactly one "Tetairoa McMillan", so that row's own sport
+    // answers it. Two same-surname checklist players, a player who exists in
+    // the checklist under a DIFFERENT year/product, or a stated number that
+    // disagrees with the matched player's own number all refuse (see
+    // ChecklistPlayerVerticalResolution.reason) rather than guess.
+    //
+    // Gated on having a real setKey (never "Unknown", the inferSetKeyFromTitle
+    // sentinel) and a player segment -- both already computed above -- so
+    // this never widens to a title the parser could not address at all.
+    if (sportDefaulted && playerName && cardYear && setKey && setKey !== "Unknown") {
+      try {
+        const checklistVertical = await resolveVerticalByChecklistPlayer({
+          year: cardYear,
+          setKey,
+          playerSegment: playerName,
+          titleCardNumber: cardNumber,
+        });
+        if (checklistVertical.reason === "resolved" && checklistVertical.sport) {
+          sport = checklistVertical.sport;
+          sportDefaulted = false;
+          // CF-THE-CHECKLIST-OUTRANKS-THE-TITLE: adopt the checklist's own
+          // spelling, the same rule playerSegmentIsAPerson already applies
+          // when a checklist player is available for the (year, setKey,
+          // cardNumber) triple.
+          if (checklistVertical.checklistPlayer) playerName = checklistVertical.checklistPlayer;
+          if (!cardNumber && checklistVertical.cardNumber) cardNumber = checklistVertical.cardNumber;
+          result.sportResolvedByChecklistPlayer = (result.sportResolvedByChecklistPlayer ?? 0) + 1;
+        }
+      } catch {
+        // Never block the row on this lookup -- it is a rescue, not a gate.
+      }
+    }
 
     // CF-LLM-FALLBACK (Drew, 2026-08-03). When regex + guess helpers
     // couldn't extract cardYear OR playerName from the title, but the

@@ -107,6 +107,17 @@ const PLATFORM = process.env.PLATFORM || "";
 const CATEGORY = process.env.CATEGORY || "";
 const PAGE_LIMIT = Math.min(1000, Math.max(1, Number(process.env.PAGE_LIMIT || 1000)));
 const SORT = (process.env.SORT || "date_desc").toLowerCase();
+// CF-A-PRE-FLIGHT-QUOTA-GATE (2026-09-12). One row of the 200K/day cap costs
+// nothing to check and everything to run out of mid-page: a cursor-paged
+// continuation bills ~1 unit/row (see the CF-TCA-WATERMARK-CLAMP comment
+// below), so a run that starts with too little headroom stops on a 429 partway
+// through a page rather than cleanly at the top of one. EXPECTED_ROWS is the
+// run's own estimate of what it is about to spend — operators already pass
+// PAGE_LIMIT/MAX_MINUTES per invocation, so this is one more explicit input
+// rather than a guess: default is a single page's worth (PAGE_LIMIT), which
+// is the minimum any run can usefully do. Set higher for a run expected to
+// page multiple times (e.g. a DAILY_FEED pull of a full ~50-90K-row day).
+const EXPECTED_ROWS = Math.max(1, Number(process.env.EXPECTED_ROWS || PAGE_LIMIT));
 // A daily-feed run is a different query shape (date-scoped, one day) from the
 // open-ended incremental crawl, so it needs its OWN cursor state. Sharing one
 // has each run resume from the other's position: the first scheduled daily-feed
@@ -163,6 +174,44 @@ function tcaFetch(qs) {
     });
     req.on("timeout", () => { req.destroy(); reject({ code: -2, message: "timeout" }); });
     req.on("error", (err) => reject({ code: -3, message: err.message }));
+    req.end();
+  });
+}
+
+// CF-A-PRE-FLIGHT-QUOTA-GATE. A minimal, header-reading sibling of tcaFetch —
+// that function discards headers and resolves only the parsed body, which is
+// all the pipelined loop needs. The gate needs `x-ratelimit-remaining`, so it
+// gets its own tiny request rather than reworking tcaFetch's contract.
+function tcaProbeRemaining() {
+  return new Promise((resolve, reject) => {
+    const qs = new URLSearchParams({ limit: "1" }).toString();
+    const req = https.request({
+      hostname: TCA_HOST,
+      port: 443,
+      path: `${TCA_PATH}?${qs}`,
+      method: "GET",
+      headers: {
+        "x-market-api-key": process.env.TCA_API_KEY,
+        "Accept": "application/json",
+      },
+      timeout: 30_000,
+    }, (res) => {
+      // Drain the body — we only need the headers, but the socket must be
+      // consumed or the request never completes.
+      res.on("data", () => {});
+      res.on("end", () => {
+        const remainingHeader = res.headers["x-ratelimit-remaining"];
+        const limitHeader = res.headers["x-ratelimit-limit"];
+        const remaining = remainingHeader === "unlimited" ? Infinity : Number(remainingHeader);
+        resolve({
+          remaining: Number.isFinite(remaining) ? remaining : null,
+          limit: limitHeader ?? null,
+          statusCode: res.statusCode,
+        });
+      });
+    });
+    req.on("timeout", () => { req.destroy(); reject(new Error("quota probe timeout")); });
+    req.on("error", (err) => reject(err));
     req.end();
   });
 }
@@ -288,6 +337,33 @@ async function main() {
   const cs = process.env.COSMOS_CONNECTION_STRING;
   if (!cs) { console.error("COSMOS_CONNECTION_STRING required"); process.exit(1); }
   if (!process.env.TCA_API_KEY) { console.error("TCA_API_KEY required"); process.exit(1); }
+
+  // CF-A-PRE-FLIGHT-QUOTA-GATE (2026-09-12). Cheapest possible check — one
+  // limit=1 request — before anything else runs. A run that starts with less
+  // headroom than it expects to spend should abort cleanly at the top, not
+  // discover the cap mid-page via a 429 with the cursor left in an unclear
+  // spot. Failure to probe (network hiccup, unexpected header shape) does NOT
+  // block the run — the existing per-page 429 retry/backoff already handles
+  // the case this gate is trying to catch early, so a probe failure just
+  // loses the early warning, not the run itself.
+  try {
+    const probe = await tcaProbeRemaining();
+    if (probe.remaining !== null) {
+      console.warn(`[tca-firehose] quota probe — remaining=${probe.remaining} limit=${probe.limit ?? "?"} expectedRows=${EXPECTED_ROWS}`);
+      if (probe.remaining < EXPECTED_ROWS) {
+        console.error(
+          `[tca-firehose] budget: remaining quota (${probe.remaining}) is below this run's expected rows` +
+          ` (${EXPECTED_ROWS}, from PAGE_LIMIT/EXPECTED_ROWS) — aborting cleanly before any fetch or write.` +
+          ` Cursor untouched; resume once the 200K/day cap resets.`,
+        );
+        process.exit(1);
+      }
+    } else {
+      console.warn(`[tca-firehose] quota probe — no numeric x-ratelimit-remaining header (status=${probe.statusCode}); proceeding without a pre-flight gate`);
+    }
+  } catch (err) {
+    console.warn(`[tca-firehose] quota probe failed (${err?.message ?? err}) — proceeding without a pre-flight gate`);
+  }
 
   const c = new CosmosClient(cs);
   const db = c.database(process.env.COSMOS_DATABASE || "hobbyiq");

@@ -52,6 +52,7 @@ import {
 } from "../catalog/pokemonSetCodes.js";
 import { slugify } from "./hobbyIqCardId.service.js";
 import { statedFinishFromChecklist } from "./statedFinishFromChecklist.js";
+import { bareColourAliasFromChecklist } from "./bareColourAliasFromChecklist.js";
 import { pokemonFinishFromTitle } from "./pokemonFinishFromTitle.js";
 
 /** TCG `POS/TOTAL` card number, e.g. "008/132". Position CAN exceed the total
@@ -1813,6 +1814,65 @@ function extractParallel(
     const cm2 = T.match(/chrome\s+(white|purple|black|blue|red|green|gold|orange|yellow)\b/i);
     if (cm2) return "Chrome " + capFirst(cm2[1]);
     if (/chrome\s+refractor/i.test(T)) return "Chrome Refractor";
+    // CF-CHROME-NAMES-THE-PRODUCT-NOT-THE-FINISH (2026-09-13). "Chrome" here
+    // is doing double duty: on `topps-heritage-chrome` it is literally the
+    // product's own name (a setKey word), and on plain `topps-heritage` it is
+    // the base chromium parallel ONLY when the title states no more specific
+    // finish. The adjacency rules just above catch "Chrome <Color>" and
+    // "Chrome Refractor", but a title that states the finish somewhere else
+    // ("2024 Topps Heritage Chrome Baseball #405 Purple", "...#229 Refractor")
+    // fell straight past them to the bare-Chrome return below, which threw
+    // the specific finish away and answered with the sub-product word
+    // instead — a Purple Refractor and a plain Chrome auto landing in the
+    // SAME pool. Measured: 942 changed:parallel census samples generalize
+    // this way corpus-wide (round-2 parallel-semantics ruling, item 2).
+    //
+    // Give the checklist a chance to name the SPECIFIC finish before the
+    // generic "Chrome" answer is allowed to win. `statedFinishFromChecklist`
+    // already refuses a candidate made entirely of this product's own words
+    // (own.has(w) suppression keyed off ctx.setKey), so it cannot merely echo
+    // "Chrome" back — it can only answer with something the title states in
+    // addition to it, e.g. "Refractor" (plain topps-heritage) or "Purple"
+    // resolving to a checklist-named "Purple Refractor"/"Chrome Purple"
+    // entry. Never overrides an adjacency rule above; only fills what the
+    // bare fallback below was about to flatten.
+    //
+    // SCOPED TO A KNOWN PRODUCT (ctx.setKey truthy) for the same reason the
+    // bare-Refractor and SSP fallbacks are: with no setKey the reader falls
+    // to its global index, which can answer with an unrelated product's own
+    // multi-word name rather than refusing.
+    if (ctx?.setKey && !isMultiCardLot(T)) {
+      const stated = statedFinishFromChecklist(T, {
+        year: ctx?.year ?? null,
+        setKey: ctx.setKey,
+        pokemonSetKeyForResidue: ctx?.pokemonSetKeyForResidue ?? null,
+      });
+      if (stated && !/^chrome$/i.test(stated)) return stated;
+    }
+    // CF-A-NON-ADJACENT-FINISH-IS-STILL-STATED (2026-09-13). The three
+    // adjacency rules above only catch "Chrome <Color>" / "Chrome Refractor"
+    // when the two words sit next to each other. CardHedge/CH-style titles
+    // commonly separate them with the card number or other title furniture:
+    //
+    //   "2024 Topps Heritage Chrome Baseball #229 Refractor"    (Chrome ... Refractor)
+    //   "2024 Topps Heritage Chrome Baseball #405 Purple"       (Chrome ... Purple)
+    //
+    // Both plainly state a Chrome-ladder finish; the checklist call above has
+    // no coverage for this year's Chrome parallel family yet (a separate,
+    // tracked checklist-ingest gap — CF-A-TITLE-THAT-NAMES-A-FINISH doctrine),
+    // so fall back to the SAME colour/Refractor vocabulary the adjacent-form
+    // rules above already use, just without requiring adjacency. This cannot
+    // fire on plain "Bowman/Topps Chrome" titles: it is still gated on
+    // /heritage/i, exactly like every other rule in this block.
+    {
+      const nm = T.match(/\b(white|purple|black|blue|red|green|gold|orange|yellow)\b/i);
+      if (nm) {
+        return /\brefractor\b/i.test(T)
+          ? "Chrome " + capFirst(nm[1]) + " Refractor"
+          : "Chrome " + capFirst(nm[1]);
+      }
+      if (/\brefractor\b/i.test(T)) return "Chrome Refractor";
+    }
     // Bare "Chrome" in a Heritage title = the base chromium parallel.
     if (/\bchrome\b/i.test(T)) return "Chrome";
   }
@@ -1974,6 +2034,45 @@ function extractParallel(
     !isMultiCardLot(T) &&
     !/\bsapphire\b/i.test(T)
   ) {
+    // CF-A-NAMED-FINISH-BEATS-BARE-REFRACTOR (2026-09-13). Every colour and
+    // pattern rule above has already had its turn, so reaching here with the
+    // bare word "Refractor" usually means the title's finish uses a pattern
+    // name this ladder has no rule for — Topps Cosmic Chrome's "Nucleus
+    // Refractor" / "Gold Interstellar Refractor" / "Purple Nebula Refractor" /
+    // "White Hole Refractor" / "Black Eclipse Refractor", 2026 Topps
+    // Heritage's "<Colour> Sparkle Refractor" ladder, Topps Signature Class's
+    // "Kaleidoscope Refractor", Bowman Draft's "HTA Choice Refractor" /
+    // "Steel Metal Refractor" — all checklist-named parallels this file has
+    // never enumerated, so the generic word "Refractor" was answering in
+    // place of the specific one the title states. That is a DIFFERENT card
+    // (own price curve, own print run), not a smaller answer.
+    //
+    // Ask the checklist before accepting the generic word: if it can name a
+    // MORE SPECIFIC parallel the title states — and only one strictly longer
+    // than the bare "Refractor" we are about to return — take that instead.
+    // `statedFinishFromChecklist` already carries its own truncation and
+    // set-name guards, so this cannot mint an answer the corpus does not
+    // list; it can only stop this fallback from discarding a finish a
+    // narrower rule should have caught.
+    //
+    // SCOPED TO A KNOWN PRODUCT (ctx.setKey truthy) ONLY. With no setKey the
+    // reader falls back to its GLOBAL name index, which lists whole-phrase
+    // names from OTHER products too — "Topps Refractor" is a real
+    // topps-chrome-platinum/topps-chrome parallel, and a title merely
+    // containing the words "Topps" and "Refractor" separately (e.g. "1993
+    // Topps Finest Baseball #100 Refractor") satisfied it, misreading an
+    // unrelated product's own name as this card's finish. Pinned by
+    // pokemonFinishReachesTheTitleParser.test.ts's sports-negative case.
+    // Product-scoped lookups don't have this failure mode: `own` there is
+    // THIS card's actual setKey words, not a stranger's.
+    if (ctx?.setKey && !isMultiCardLot(T)) {
+      const stated = statedFinishFromChecklist(T, {
+        year: ctx?.year ?? null,
+        setKey: ctx.setKey,
+        pokemonSetKeyForResidue: ctx?.pokemonSetKeyForResidue ?? null,
+      });
+      if (stated && stated.length > "Refractor".length) return stated;
+    }
     return "Refractor";
   }
 
@@ -2079,6 +2178,42 @@ function extractParallel(
   // PRODUCT LINES; a bare "SP" rule would have mislabelled ~22,000 sales into
   // a tier that does not exist. Only unambiguous forms are matched.
   const isSpBrand = /\b(?:sp\s+authentic|upper\s+deck\s+sp|sp\s+legendary|sp\s+game\s+used|sp\s+signature)\b/i.test(T);
+  // CF-SCARCITY-TAG-NEVER-REPLACES-A-FINISH (2026-09-13). "SSP" / "Short
+  // Print" / "Case Hit" describe how RARE a card is, not what it IS — a
+  // separate axis from the finish/parallel name, per market-language-
+  // normalization doctrine. The comment above already says this fires "only
+  // at the fallback, never over a colour rule," but that promise assumed
+  // every colour/pattern rule had a chance to run, which is only true when
+  // the pattern is one this file enumerates. Two real shapes get here with
+  // their own finish still unread:
+  //
+  //   "...Panini Obsidian Silver Pulsar Prizm #151...SSP..."  -> SSP
+  //     (the pulsar-colour ladder a few hundred lines up lists
+  //     blue/green/red/purple/gold/orange/pink/black — not silver, so
+  //     "Silver Pulsar Prizm" never matched it and fell all the way here)
+  //   "...Panini Mosaic Honeycomb SSP Case Hit #43..."        -> SSP
+  //     ("Honeycomb" is a real Mosaic parallel with no rule anywhere in
+  //     this file)
+  //
+  // Both titles name a real finish AND a scarcity tag; answering with the
+  // scarcity tag discards the finish, which is a different (and wrong) card
+  // address, not a smaller one. Ask the checklist for the specific finish
+  // first — it already refuses to answer with a bare scarcity word or a
+  // truncation, so it can only pre-empt SSP/Short Print with something the
+  // title actually states more specifically.
+  //
+  // SCOPED TO A KNOWN PRODUCT (ctx.setKey truthy), same reasoning as the
+  // bare-Refractor fallback above: with no setKey the reader's global index
+  // can answer with an unrelated product's own multi-word name, which is not
+  // a safe pre-emption of a scarcity tag we can already answer correctly.
+  if (ctx?.setKey && !isMultiCardLot(T)) {
+    const statedBeforeScarcity = statedFinishFromChecklist(T, {
+      year: ctx?.year ?? null,
+      setKey: ctx.setKey,
+      pokemonSetKeyForResidue: ctx?.pokemonSetKeyForResidue ?? null,
+    });
+    if (statedBeforeScarcity) return statedBeforeScarcity;
+  }
   if (/\bssp\b/i.test(T) && !isSpBrand) return "SSP";
   if (/\bcase\s+hit\b/i.test(T)) return "Case Hit";
   if (/\bshort\s+print\b/i.test(T) && !isSpBrand) return "Short Print";
@@ -2117,6 +2252,33 @@ function extractParallel(
       pokemonSetKeyForResidue: ctx?.pokemonSetKeyForResidue ?? null,
     });
     if (stated) return stated;
+  }
+
+  // CF-A-BARE-COLOUR-IS-WHATEVER-ITS-OWN-CHECKLIST-SAYS (2026-09-13).
+  //
+  // STILL LAST-CHANCE, AND ONLY UNDER THE SAME REFUSAL. `statedFinishFromChecklist`
+  // above requires a checklist name with a non-colour residue ("Black Foil"),
+  // so it never answers a title whose ONLY finish evidence is a bare colour
+  // word ("2025 Donruss Elite Football #9 Green"). Round-2 parallel-semantics
+  // rulings (2026-09-13) found this is 448 of 450 sampled `dropped:parallel`
+  // rows: the row's own stored `parallel` field already says the bare colour,
+  // the title says it too, and no rule above -- the Chrome colour=refractor
+  // scan, the Prizm/Optic/Select/Contenders families -- was ever extended to
+  // `donruss-elite`, `panini-certified`, `panini-prizm-draft-picks`,
+  // `topps-signature-class` and the rest of that release slate. Rather than
+  // hand-add another product to a hand-built list (the shape that produced
+  // the gap), this asks the product's OWN checklist whether the bare colour
+  // is unambiguous for it and answers with the checklist's own spelling only
+  // when it is -- see bareColourAliasFromChecklist.ts for the full doctrine
+  // and the tie-refusal that keeps a product with two same-colour parallels
+  // (e.g. donruss-elite's own "Green Disco" vs. "Spellbound Green") from
+  // being force-resolved.
+  if (!isMultiCardLot(T)) {
+    const bareColour = bareColourAliasFromChecklist(T, {
+      year: ctx?.year ?? null,
+      setKey: ctx?.setKey ?? null,
+    });
+    if (bareColour) return bareColour;
   }
 
   // CF-A-FINISH-IS-A-CARD-LINE, AT THE TITLE PARSER (Drew, 2026-09-07).
@@ -3479,6 +3641,22 @@ function inferFamilySetKeyFromTitle(title: string, cardNumber?: string | null): 
   if (/panini\s+noir\b/i.test(t)) return "Panini Noir";
   if (/leaf\s+metal/i.test(t)) return "Leaf Metal";
 
+  // CF-FOLD-UP-COLLAPSE-IS-FORBIDDEN (Drew ruling 2026-09-03, extended here
+  // 2026-09-13 to the title parser). The 2026-09-03 census ruled
+  // `topps-chrome-platinum` and `topps-chrome-update-series` DISTINCT from
+  // `topps-chrome` — "every pair is a normalizeSetKey fixed point" — and
+  // `normalizeSetKey`/`knownSetKeyPatterns` have carried that ruling since
+  // (hobbyIqCardId.service.ts:539,562). This parser never got the same
+  // qualifier check: `/topps\s+chrome/` below fires on ANY title containing
+  // those two words, so "2024 Topps Chrome Update Series" and "2023 Topps
+  // Chrome Platinum Anniversary" both returned bare "Topps Chrome" HERE,
+  // before `normalizeSetKey` ever saw the qualifying word — the fixed point
+  // downstream can't rescue a word this function already discarded. The
+  // 2026-09-13 census caught 114 CONFLICT samples of exactly this shape: a
+  // live regression of an already-ruled pair. Must precede the bare
+  // `/topps\s+chrome/` rule, same ordering doctrine as Sapphire above.
+  if (/topps\s+chrome\s+platinum/i.test(t)) return "Topps Chrome Platinum";
+  if (/topps\s+chrome\s+update(\s+series)?/i.test(t)) return "Topps Chrome Update Series";
   if (/topps\s+chrome/.test(t)) return "Topps Chrome";
   // CF-FLEER-STICKERS (Drew, 2026-07-29). 1986 Fleer Stickers (basketball)
   // is a distinct product from base 1986 Fleer — Michael Jordan #8 Sticker
@@ -3636,6 +3814,22 @@ function inferFamilySetKeyFromTitle(title: string, cardNumber?: string | null): 
   // is gated on the Hoops product word and never on the stock words alone.
   if (/haunted\s+hoops/i.test(t)) return "Panini Haunted Hoops";
   if (/hoops\s+premium\s+stock/i.test(t)) return "Panini NBA Hoops Premium Stock";
+  // CF-FOLD-UP-COLLAPSE-IS-FORBIDDEN (Drew ruling 2026-09-03, extended here
+  // 2026-09-13). `panini-prizm-draft-picks` was ruled DISTINCT from
+  // `panini-prizm` on 2026-09-03 ("panini-prizm-wnba/panini-prizm-draft-picks
+  // != panini-prizm... every pair is a normalizeSetKey fixed point") and
+  // `panini-prizm-deca` is the same shape -- its own checklist-backed product
+  // (setkey-reconciliation.json carries it as verdict "distinct", canonical
+  // "panini-prizm-deca", 20,116 catalog rows, 100% checklist-backed; it has
+  // no productSetKeys.ts entry yet, but the reconciled fixed point already
+  // makes normalizeSetKey answer correctly once this parser stops discarding
+  // "Deca" first). Neither had a qualifier check here,
+  // so the bare `/\bprizm\b/` rule two lines down swallowed both BEFORE
+  // normalizeSetKey ever saw "Deca" or "Draft Picks" -- the 2026-09-13 census
+  // measured the live cost (39 sampled CONFLICT rows). Must precede the bare
+  // Prizm arm, same ordering doctrine as the Hoops specializations above.
+  if (/prizm\s+deca\b/i.test(t)) return "Panini Prizm Deca";
+  if (/prizm\s+(?:perennial\s+)?draft\s+picks\b/i.test(t)) return "Panini Prizm Draft Picks";
   if (/panini\s+prizm|\bprizm\b/i.test(t)) return "Panini Prizm";
   if (/topps/.test(t)) return "Topps";
   // CF-INFER-SET-POKEMON-GUARD (Drew, 2026-08-03). Bowman is the
@@ -3931,6 +4125,52 @@ export function inferSportFromTitle(title: string, fallback = "baseball"): strin
   // — no basketball keyword, defaulted to baseball. Fleer Sticker is
   // a strong basketball signal by product convention.
   if (/fleer\s+sticker/i.test(t)) return "basketball";
+
+  // CF-HOCKEY-BY-PRODUCT (2026-09-12). Same shape as CF-BASKETBALL-BY-PRODUCT
+  // above, for the eBay write-rate collapse: TCA's eBay feed stopped sending
+  // structured player/year/sport hints on any row (measured 09-10, 0/1000
+  // populated, down from 5.5% on a healthy 08-22 sample), so title text is
+  // now the ONLY signal for a large share of rows, and modern Upper Deck
+  // Hockey titles routinely carry no team name and no "hockey"/"NHL" word at
+  // all — just the insert/product line and a player:
+  //   "2025-26 Upper Deck Series 1 Swagnificent Variations Nikita Zadorov #12"
+  //   "E-18 Timo Meier Encore 2025-26 Upper Deck"
+  //   "467 Marshall Warren Young Guns 2025-26 Upper Deck"
+  // "Young Guns" and "UD Canvas" are Upper Deck's own hockey rookie insert
+  // brands in the MODERN catalog. NOT collision-free across all eras, though:
+  // the tranche-2 sport-segment split list (data/pool-relocations/2026-09-07-
+  // split-identity-sport-segment-51.json) already adjudicated
+  // "1991-92 Upper Deck - Young Guns Vladimir Konstantinov #594 (RC)" to
+  // hiq:baseball:1991:upper-deck:594:base:no-auto — a checklist-backed 1991
+  // Upper Deck BASEBALL card #594, with the hockey reading unbacked
+  // (self-derived-only). Gated to 2000+ so this rule cannot re-flip that
+  // ruling or any other pre-2000 Upper Deck row: Young Guns/UD Canvas as
+  // hockey-exclusive is unambiguous for the modern catalog this fix targets
+  // (2025-26 product) but not proven back to 1991. A bare "Upper Deck" is
+  // NOT added at all: UD also prints baseball/basketball (SP Authentic,
+  // O-Pee-Chee baseball, etc.), so the brand alone would be a guess.
+  if (/young\s+guns|ud\s+canvas/i.test(t)) {
+    const y = statedYearFromTitle(t);
+    if (y === null || y >= 2000) return "hockey";
+  }
+
+  // CF-A-RESIDUAL-CLASS-CENSUS (2026-09-12 follow-up). A live 1,000-row
+  // 2026-09-10 eBay sample classified through this same title-only path put
+  // 55 of 325 sportUnresolved rows on modern (2025-26) Upper Deck hockey
+  // titles naming an insert line this function doesn't yet know (Encore, SP
+  // Authentic, O-Pee-Chee, Ultimate Collection, Black Diamond, Allure,
+  // SPX...). "Encore" looked like the safest single addition — Upper Deck's
+  // current (2024-25/2025-26) Encore is hockey-only — but is DELIBERATELY
+  // NOT added: `splitIdentitySportSegmentTranche2.test.ts` caught a real
+  // collision this fix would have re-flipped, "2000 Upper Deck Encore #254
+  // Tom Brady Patriots RC" — Encore was a genuine multi-sport line (baseball,
+  // basketball, football all shipped Encore products) circa 1999-2001, and
+  // #254 is a checklist-backed BASEBALL card (data/pool-relocations/2026-09-
+  // 07-split-identity-sport-segment-49.json), not football, let alone hockey.
+  // A year gate does not fix this without researching exactly when Encore
+  // stopped being multi-sport (unresearched, so not done here — see the PR
+  // backlog). Every name in this list needs the same per-name history check
+  // #2084 did for Young Guns/UD Canvas before it can be added safely.
 
   // CF-SPORT-TEAM-OVERMATCH (Drew, 2026-08-15). TCG/non-sport detection
   // used to sit BELOW the team-name heuristics. A title literally

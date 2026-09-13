@@ -417,30 +417,35 @@ describe("no scope value can ever arm CONFLICT", () => {
   // CONFLICT is a contradiction about WHICH CARD a sale is, and a fleet never
   // settles that -- Drew does. This is structural: CONFLICT is not a member of
   // APPLY_CLASSES, so no alias can name it.
-  // The list grew on 2026-09-06 with Drew's three ruled scopes. What must NOT
-  // grow is what it means: every member is a class a ruling authorized, and
-  // CONFLICT is still not one of them. Pinned as an EXACT set so a fourth
-  // member cannot appear without a ruling and a test edit.
+  // The list grew on 2026-09-06 with Drew's three ruled scopes, and again on
+  // 2026-09-13 with R26/R27/R28. What must NOT grow is what it means: every
+  // member is a class a ruling authorized, and CONFLICT is still not one of
+  // them. Pinned as an EXACT set so a new member cannot appear without a
+  // ruling and a test edit.
   it("APPLY_CLASSES holds only the classes a ruling has authorized", () => {
     expect(Object.values(K.APPLY_CLASSES).sort()).toEqual([
       K.BASE_EVICTION, K.IMPROVE,
       K.GRADE_FROM_TITLE, K.YEAR_FROM_TITLE_VINTAGE, K.SPORT_FROM_PRODUCT,
+      K.FLAGSHIP_SWALLOWED_NAMED_PRODUCT, K.POKEMON_SET_CODE, K.FINISH_IS_A_PARALLEL,
     ].sort());
     expect(Object.values(K.APPLY_CLASSES)).not.toContain(K.CONFLICT);
   });
 
   // THE RULED SCOPES ARE NOT ARMED BY THE WORDS THAT PREDATE THEM. Every
   // fleet dispatch in flight says `improve`, `base-eviction`, `both` or `all`,
-  // and all four were written before these three scopes existed. A scope
-  // ruled yesterday must be asked for BY NAME or a running fleet starts
-  // writing a population nobody armed.
+  // and all four were written before the 2026-09-06 and 2026-09-13 scopes
+  // existed. A scope ruled after a dispatch was written must be asked for BY
+  // NAME or a running fleet starts writing a population nobody armed.
   it.each(["improve", "base-eviction", "both", "all", "all-classes"])(
-    "legacy scope %j never arms a 2026-09-06 ruled scope",
+    "legacy scope %j never arms a ruled scope from 2026-09-06 or 2026-09-13",
     (scope) => {
       const armed = [...K.parseApplyScope(scope).classes];
       expect(armed).not.toContain(K.GRADE_FROM_TITLE);
       expect(armed).not.toContain(K.YEAR_FROM_TITLE_VINTAGE);
       expect(armed).not.toContain(K.SPORT_FROM_PRODUCT);
+      expect(armed).not.toContain(K.FLAGSHIP_SWALLOWED_NAMED_PRODUCT);
+      expect(armed).not.toContain(K.POKEMON_SET_CODE);
+      expect(armed).not.toContain(K.FINISH_IS_A_PARALLEL);
     },
   );
 

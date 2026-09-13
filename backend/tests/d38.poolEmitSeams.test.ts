@@ -405,9 +405,20 @@ describe("D38 ITEM 2 — an UNPINNED emit still recomputes (the other direction)
 
     // THE CONTROL for the honored-pin test above: the SAME checklist row is in
     // the catalog and the SAME fields are supplied. Only the pin is missing —
-    // and the store recomputes "bowman-chrome", reconciles, and refuses,
-    // reproducing the 20:08Z skip exactly. The pin is what changes the outcome,
-    // not the fake, not the fields.
+    // and the store recomputes from the free text, reconciles against the
+    // catalog, and refuses because the recompute (the printRun-less stem; see
+    // the vendor-source test below for why the pin's own printRun-carrying
+    // address is a different question) does not match the checklist row the
+    // fake seeds at JG_PIN, reproducing the 20:08Z skip exactly. The pin is
+    // what changes the outcome, not the fake, not the fields.
+    //
+    // CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT (#2064/#2069, 2026-09-12): the
+    // recompute used to land on "bowman-chrome" here, for the wrong reason
+    // (free text says Chrome); it now lands on `bowman` too, for the RIGHT
+    // reason (CPA-JG's own checklist says Bowman) — either way it still
+    // disagrees with the catalog's specific :num-499 row, so this test's
+    // outcome (refused) is unaffected by which wrong-in-one-way address the
+    // recompute used to reach.
     expect(res.written).toBe(false);
     expect(res.reason).toBe("catalog-unmatched");
     expect(allRows()).toHaveLength(0);
@@ -419,9 +430,30 @@ describe("D38 ITEM 2 — an UNPINNED emit still recomputes (the other direction)
     const res = await recordSoldComp({ ...unpinned, source: "tca-ebay", sourceExternalId: "tca-jg" });
     // A vendor source does not reconcile (CATALOG_MATCH_ONLY_ENABLED is unset
     // in tests), so it writes — under the RECOMPUTED slug, never the pin's.
+    //
+    // CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT (#2064/#2069, 2026-09-12). The
+    // recomputed slug used to say "bowman-chrome" here because the free-text
+    // setName reads "Bowman Chrome" and CPA-JG's own checklist affiliation
+    // was invisible to the deriver — exactly this file's premise ("the
+    // holding's text says Chrome, the checklist ruled Bowman"). CPA-JG is a
+    // real 2026 number (2026-bowman-full.csv: Justin Gonzales, absent from
+    // 2026-bowman-chrome.csv), one of the ones the sibling table now
+    // corrects, so the free-text recompute now lands EXACTLY on the same
+    // address the checklist ruling already pinned (JG_PIN) — printRun 499
+    // included, since JG_INPUT states it and the recompute keeps it, unlike
+    // JG_STEM's own definition above (deliberately printRun-less, used only
+    // as the twin-rule stem in the tests above this one).
+    //
+    // This test's point — a vendor source recomputes rather than trusting
+    // the pin — is unchanged and still provable: drop the `source: tca-ebay`
+    // override above and the SAME input goes through reconciliation instead
+    // (see the "UNPINNED emit" test just above), which still refuses. What
+    // changed is that the recompute this vendor path lands on is now
+    // correct, so it happens to equal the pin instead of contradicting it —
+    // the class of bug D38 exists to describe is fixed at its root instead
+    // of only patched at the pin-honoring seam.
     expect(res.written).toBe(true);
-    expect(res.hobbyiqCardId).toContain("bowman-chrome");
-    expect(res.hobbyiqCardId).not.toBe(JG_PIN);
+    expect(res.hobbyiqCardId).toBe(JG_PIN);
   });
 });
 

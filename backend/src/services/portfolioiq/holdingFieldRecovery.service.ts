@@ -87,6 +87,7 @@
  */
 import { normalizeHoldingFields } from "./holdingFieldNormalizer.service.js";
 import { parseListingIdentity, inferSetKeyFromTitle } from "./parseTitleIdentity.service.js";
+import { normalizeSetKey } from "./hobbyIqCardId.service.js";
 
 /** The axes recovery can fill. Deliberately the same five the rederive pass
  *  sends to `canonicalize`, minus the two it can always read (sport, year). */
@@ -245,6 +246,78 @@ function evidenceText(holding: Record<string, unknown>): Array<{ text: string; s
 }
 
 /**
+ * CF-AN-INSERT-SET-CAN-BE-ITS-OWN-PRODUCT (Drew ruling 21, 2026-09-08).
+ *
+ * The header above rules that a recovered insert goes on the `parallel` axis,
+ * "the axis the destination row actually uses". That is right for Diamond
+ * Dominance, whose row IS a parallel of Black Diamond -- and it is WRONG for
+ * an insert the catalog files under a setKey of its OWN.
+ *
+ * Holding 46f3dd96 is the measured case. It stores
+ *
+ *   setName:  "1996 Fleer Metal Universe"        cardNumber: "2"
+ *   ebayItemAspects["Insert Set"]: "Heavy Metal"  Features: "Insert"
+ *
+ * Recovery filled `parallel: "Heavy Metal"` and asked the matcher for a HEAVY
+ * METAL PARALLEL OF METAL UNIVERSE #2. No such row exists, the recovery was
+ * discarded as not-found, the original question stood, and the holding stayed
+ * pinned to `hiq:baseball:1996:fleer-metal-universe:2:base:no-auto` -- whose
+ * player is BRADY ANDERSON. Heavy Metal #2 is Barry Bonds. The holding has
+ * been pricing Bonds off Brady Anderson's pool.
+ *
+ * Ruling 21 says Heavy Metal "is its own product, not a parallel of the
+ * 250-card base set", and the checklist minted for it carries
+ * `setKey: "metal-universe-heavy-metal"` -- a PRODUCT key, so the insert
+ * belongs on the `setName` axis, joined to the parent product the holding
+ * already states.
+ *
+ * WHY A DECLARED LIST AND NOT A RULE. There is no readable difference between
+ * "Heavy Metal" and "Diamond Dominance" in a holding's fields: both are insert
+ * names on products of the same era. What separates them is which AXIS THE
+ * CATALOG USED, and that is a fact about our checklists, not about the text.
+ * Inferring it would mean guessing, and guessing wrong fuses two pools (the
+ * exact harm the header's rule-2 exists to prevent). So the list is DECLARED,
+ * each entry naming the ruling and the setKey that justifies it, and anything
+ * not on it keeps the parallel-axis behaviour unchanged.
+ *
+ * Keyed by the parent product's normalized setKey so one entry covers every
+ * spelling of the parent the normalizer already folds ("1996 Fleer Metal
+ * Universe" and "1996 Metal Universe" both key `fleer-metal-universe`).
+ */
+const INSERT_SET_IS_A_PRODUCT: Readonly<Record<string, ReadonlyArray<{
+  /** The `Insert Set` aspect value, lowercased. */
+  insert: string;
+  /** How the insert joins the parent to name the product. */
+  setName: string;
+  /** The catalog setKey this must reach -- the evidence for the entry. */
+  setKey: string;
+  why: string;
+}>>> = Object.freeze({
+  "fleer-metal-universe": Object.freeze([
+    Object.freeze({
+      insert: "heavy metal",
+      setName: "Metal Universe Heavy Metal",
+      setKey: "metal-universe-heavy-metal",
+      why: "Drew ruling 21 (2026-09-08): the 10-card 1:8 insert is its own product -- Heavy Metal #2 is Barry Bonds where BASE #2 is Brady Anderson, so a holding on the base row prices Bonds off Anderson's pool (holding 46f3dd96).",
+    }),
+  ]),
+});
+
+/** The product an `Insert Set` aspect names, when the catalog files that
+ *  insert under a setKey of its own. Null for every other insert, which keeps
+ *  the parallel axis. */
+export function insertSetProduct(
+  parentSetKey: string | null | undefined,
+  insertValue: string | null | undefined,
+): { setName: string; setKey: string; why: string } | null {
+  const parent = String(parentSetKey ?? "").trim().toLowerCase();
+  const insert = String(insertValue ?? "").trim().toLowerCase();
+  if (!parent || !insert) return null;
+  const entry = (INSERT_SET_IS_A_PRODUCT[parent] ?? []).find((e) => e.insert === insert);
+  return entry ? { setName: entry.setName, setKey: entry.setKey, why: entry.why } : null;
+}
+
+/**
  * Recover the blank axes of one holding's identity question from its own
  * evidence.
  *
@@ -349,7 +422,20 @@ export function recoverHoldingFields({ holding }: RecoveryInput): RecoveryResult
   const parallelIsBase = parallel !== null && /^\[?base\]?$/i.test(parallel);
   if (parallel === null || (parallelIsBase && evidenceContradictsBase(holding))) {
     const insert = aspect(holding, "Insert Set", "Insert");
-    if (insert) {
+    // CF-AN-INSERT-SET-CAN-BE-ITS-OWN-PRODUCT. When the catalog files this
+    // insert under a setKey of its own, the insert names the PRODUCT and goes
+    // on `setName`; putting it on `parallel` asks for a parallel that does not
+    // exist and leaves the holding on the parent's row (46f3dd96 -> Brady
+    // Anderson). Checked BEFORE the parallel assignment so the two axes can
+    // never both carry it.
+    const asProduct = insert ? insertSetProduct(normalizeSetKey(setName), insert.value) : null;
+    if (insert && asProduct) {
+      setName = asProduct.setName;
+      recovered.push({ field: "setName", value: setName, source: `ebayItemAspects["${insert.key}"]`, via: "aspect" });
+      // The parallel stays whatever the holding stated (here: nothing). The
+      // insert's own checklist emits no parallels, so a blank is correct and
+      // inventing "Base" would put a word in the checklist's mouth.
+    } else if (insert) {
       parallel = insert.value;
       recovered.push({ field: "parallel", value: parallel, source: `ebayItemAspects["${insert.key}"]`, via: "aspect" });
     } else {

@@ -36,13 +36,26 @@
 // canonicalizes on read. Those rows get the stored value normalized
 // without otherwise touching identity. That is Phase 3.
 
-import { computeHobbyIqCardId, normalizeSetKey } from "./hobbyIqCardId.service.js";
+import { computeHobbyIqCardId, normalizeSetKey, applySiblingChecklistOverride } from "./hobbyIqCardId.service.js";
 import { guardSlugInputs, normalizeSportStrict } from "./slugGuard.service.js";
 import {
   parseListingIdentity,
   inferSetKeyFromTitle,
   inferSportFromTitle,
 } from "./parseTitleIdentity.service.js";
+import { spellForEra } from "../catalog/productSetKeys.js";
+
+/** normalizeSetKey has no year parameter by design (CF-A-RULED-KEY-IS-A-
+ *  FIXED-POINT's era rules live one layer up); computeHobbyIqCardId already
+ *  layers spellForEra on top of it via resolveSetKeyForSlug. This helper
+ *  applies that same layering here so a row's CURRENT setKey is judged by the
+ *  era-aware spelling, not the bare vocabulary answer — otherwise a stored
+ *  "skybox-metal-universe" from 1997 would pass the guard as a well-formed
+ *  (if wrong) key and never reach the correction below. */
+function eraAwareSetKey(setName: string, year: unknown): string {
+  const y = Number(year);
+  return spellForEra(normalizeSetKey(setName ?? ""), Number.isFinite(y) ? y : null);
+}
 
 /** A card year embedded in a title: "1978 Kellogg's ...", "2026 Bowman".
  *  The `(?<!#)` is load-bearing: "Card #1978" is a CARD NUMBER, and a
@@ -160,6 +173,7 @@ export interface RederiveRow {
 export type RederiveAction =
   | "ok-untouched"        // current fields pass the guard — left alone
   | "sport-normalized"    // guard passes but stored sport was non-canonical
+  | "sibling-corrected"   // guard passes but the number belongs to a sibling product's checklist
   | "rederived"           // guard failed, title produced a valid identity
   | "unrecoverable";      // guard failed and the title could not fix it
 
@@ -187,7 +201,7 @@ export function rederiveRow(row: RederiveRow): RederiveResult {
   const currentGuard = guardSlugInputs({
     sport: row.sport,
     year: row.cardYear,
-    normalizedSetKey: normalizeSetKey(row.setName ?? ""),
+    normalizedSetKey: eraAwareSetKey(row.setName ?? "", row.cardYear),
     cardNumber: row.cardNumber ?? "",
   });
 
@@ -211,6 +225,62 @@ export function rederiveRow(row: RederiveRow): RederiveResult {
         }),
       };
     }
+
+    // CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT (#2060 follow-on). A row can
+    // pass the shape guard — "bowman-chrome" + "CPA-MG" is a well-formed
+    // setKey/cardNumber pair — while still naming the WRONG sibling product.
+    // The guard has no notion of checklist presence, so a wrong-but-
+    // well-shaped slug would otherwise fall into "ok-untouched" forever, which
+    // is exactly what left Drew's Marconi German holding pinned to a
+    // bowman-chrome address with no catalog row behind it. Like the sport
+    // check above, this is additive to the ONLY-IMPROVE rule rather than a
+    // reopening of it: the row's OWN stored setKey/cardNumber decide whether
+    // the small, hand-verified override table has anything to say, and a row
+    // it does not name is left exactly as untouched as before.
+    const storedSetKey = normalizeSetKey(row.setName ?? "");
+    const siblingCorrected = applySiblingChecklistOverride(
+      storedSetKey,
+      row.cardNumber ?? "",
+      Number(row.cardYear) || 0,
+    );
+    if (siblingCorrected !== storedSetKey) {
+      return {
+        action: "sibling-corrected",
+        setName: siblingCorrected,
+        hobbyiqCardId: computeHobbyIqCardId({
+          sport: canonical ?? (normalizeSportStrict(row.sport) as string),
+          year: row.cardYear as number,
+          setKey: siblingCorrected,
+          cardNumber: row.cardNumber ?? "",
+          parallel: row.parallel ?? "Base",
+          isAuto: row.isAuto ?? false,
+        }),
+      };
+    }
+
+    // CF-METAL-UNIVERSE-NAME-WAS-REVIVED (#2060 follow-on). Same shape as the
+    // sibling-checklist branch above, but the era-misnomer half of it: a
+    // stored "skybox-metal-universe" from BEFORE the 2020s revival is a
+    // well-formed key that still names the wrong product. `eraAwareSetKey`
+    // is what the guard above was already judged by, so recomputing it here
+    // and comparing to the bare vocabulary answer finds exactly the rows the
+    // guard let through only because spellForEra silently corrected them.
+    const eraCorrected = eraAwareSetKey(row.setName ?? "", row.cardYear);
+    if (eraCorrected !== storedSetKey) {
+      return {
+        action: "sibling-corrected",
+        setName: eraCorrected,
+        hobbyiqCardId: computeHobbyIqCardId({
+          sport: canonical ?? (normalizeSportStrict(row.sport) as string),
+          year: row.cardYear as number,
+          setKey: eraCorrected,
+          cardNumber: row.cardNumber ?? "",
+          parallel: row.parallel ?? "Base",
+          isAuto: row.isAuto ?? false,
+        }),
+      };
+    }
+
     return { action: "ok-untouched" };
   }
 

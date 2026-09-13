@@ -651,6 +651,35 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
     [/prizm-monopoly-wnba|monopoly-wnba/, "panini-prizm-monopoly-wnba"],
     [/prizm-wnba/, "panini-prizm-wnba"],
     [/prizm-(perennial-)?draft-picks/, "panini-prizm-draft-picks"],
+    // CF-WORLD-CUP-INSERT-SETS-ARE-CARD-SETS (R30, Drew 2026-09-13). The 2014
+    // Panini Prizm FIFA World Cup page publishes nine insert families that
+    // RESTART NUMBERING AT 1 beside the 201-card base set, so card number 1
+    // with a blank parallel names ten different cards. Measured on the staged
+    // file before #2112: 5,462 upserts landed on 2,949 documents, and the last
+    // writer for each id decided which player the card is.
+    //
+    // These sit ABOVE the /panini-prizm/ catch-all, where they must stay — a
+    // longer product name always precedes the family pattern it contains,
+    // exactly as Mega Box and NSCC precede /bowman-chrome/. Without them each
+    // key folded PAST its own product onto the bare flagship
+    // (`...-world-cup-guardians` -> `panini-prizm`), which is worse than the
+    // collision: a key that is not a normalizeSetKey FIXED POINT cannot hold a
+    // pool at all.
+    //
+    // Each insert name is anchored at a segment boundary on both sides, so
+    // only a spelling that really names the insert can match. The 13 Prizm
+    // COLOUR RUNGS of these inserts are deliberately absent: a named parallel
+    // is a distinct card, not a distinct set, and rides the parallel axis on
+    // these keys.
+    [/(?:^|-)panini-prizm-fifa-world-cup-aerial-assault(?:-|$)/, "panini-prizm-fifa-world-cup-aerial-assault"],
+    [/(?:^|-)panini-prizm-fifa-world-cup-cup-captains(?:-|$)/, "panini-prizm-fifa-world-cup-cup-captains"],
+    [/(?:^|-)panini-prizm-fifa-world-cup-fuleco(?:-|$)/, "panini-prizm-fifa-world-cup-fuleco"],
+    [/(?:^|-)panini-prizm-fifa-world-cup-guardians(?:-|$)/, "panini-prizm-fifa-world-cup-guardians"],
+    [/(?:^|-)panini-prizm-fifa-world-cup-net-finders(?:-|$)/, "panini-prizm-fifa-world-cup-net-finders"],
+    [/(?:^|-)panini-prizm-fifa-world-cup-team-photos(?:-|$)/, "panini-prizm-fifa-world-cup-team-photos"],
+    [/(?:^|-)panini-prizm-fifa-world-cup-world-cup-matchups(?:-|$)/, "panini-prizm-fifa-world-cup-world-cup-matchups"],
+    [/(?:^|-)panini-prizm-fifa-world-cup-world-cup-posters(?:-|$)/, "panini-prizm-fifa-world-cup-world-cup-posters"],
+    [/(?:^|-)panini-prizm-fifa-world-cup-world-cup-stars(?:-|$)/, "panini-prizm-fifa-world-cup-world-cup-stars"],
     [/panini-prizm/, "panini-prizm"],
     // CF-COLLAPSED-SETKEY-AUDIT: Elite is its own line (236,976 catalog rows),
     // and Elite Extra Edition is a further distinct product (394,549) — so the
@@ -770,9 +799,27 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
     [/pinnacle-aficionado/, "pinnacle-aficionado"],
     [/pinnacle/, "pinnacle"],
     [/goudey/, "goudey"],
-    // Flair Showcase pools into flair DELIBERATELY (pinned by
+    // CF-FLAIR-SHOWCASE-ROWS-ARE-THREE-SETS (R30, Drew 2026-09-13). 1997 Flair
+    // Showcase publishes Rows 0, 1 and 2 as three distinct 180-card sets that
+    // SHARE NUMBERS 1-180 — bcp: "all 540 base cards (180 players from all
+    // three Rows)", and 540 = 180 x 3. The number cannot separate a Row 0
+    // Griffey from a Row 2 Griffey, so the row must. Measured on the #2107
+    // staged rows: 1,080 of 1,620 ids collided on `...:flair:1:base:no-auto`
+    // before these rules existed.
+    //
+    // These sit ABOVE the catch-all, where they must stay: a longer product
+    // name always precedes the family pattern it contains, exactly as Mega Box
+    // and NSCC precede /bowman-chrome/ and black-diamond-rookie-edition
+    // precedes /black-diamond/. `-row-N` is anchored at a segment boundary on
+    // both sides so it can only match a spelling that really names a row.
+    [/(?:^|-)flair-showcase-row-0(?:-|$)/, "flair-showcase-row-0"],
+    [/(?:^|-)flair-showcase-row-1(?:-|$)/, "flair-showcase-row-1"],
+    [/(?:^|-)flair-showcase-row-2(?:-|$)/, "flair-showcase-row-2"],
+    // Flair Showcase WITHOUT A ROW pools into flair DELIBERATELY (pinned by
     // hobbyIqCardId.test.ts "both variants pool"). The collapsed-setkey audit
     // flags it because it compares words, not intent — see that script's header.
+    // The three row rules above are the only exception, and they are named
+    // spellings rather than a widening of this one.
     [/flair-showcase|flair/, "flair"],
     [/sp-prospects/, "sp-prospects"],
     [/sp-authentic/, "sp-authentic"],
@@ -857,6 +904,25 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
     [/(?:^|-)skybox-premium/, "skybox-premium"],
     [/(?:^|-)skybox-molten-metal/, "skybox-molten-metal"],
     [/(?:^|-)skybox/, "skybox"],
+    // CF-A-NAMED-INSERT-SET-IS-ITS-OWN-PRODUCT (Drew, 2026-09-09). Same
+    // principle as CF-UD-INSERT-LINES above and as image variations being
+    // NAMED cards: a named insert set is a product, not a rung of its parent.
+    //
+    // Measured 2026-09-09 (prod card_catalog): the 1996 Metal Universe Heavy
+    // Metal ruling file ingested 10 rows and wrote ZERO under its own key.
+    // `normalizeSetKey("metal-universe-heavy-metal")` returned
+    // "metal-universe", so every row resolved onto a BASE-SET address that
+    // another source already held at higher authority, and all ten were
+    // absorbed as `keptExisting` -- the run counted "10 written" and the
+    // catalog gained nothing. Heavy Metal #2 is Barry Bonds while BASE #2 is
+    // Brady Anderson, so the absorption did not merely lose the insert: it
+    // pointed Bonds's card at Brady Anderson's row and its pool.
+    //
+    // MUST precede the /metal-universe/ family pattern below, exactly as
+    // Black Diamond Rookie Edition precedes its family and Mega Box precedes
+    // /bowman-chrome/. A longer product name always wins over the family
+    // pattern it contains.
+    [/(?:^|-)metal-universe-heavy-metal/, "metal-universe-heavy-metal"],
     [/(?:^|-)metal-universe/, "metal-universe"],
     // CF-VINTAGE-PRODUCT-RULES (Drew, 2026-08-17). Vintage and oddball products
     // that had NO rule, so they slugified year-prefixed and slugGuard correctly
@@ -1752,6 +1818,140 @@ function applyChromePrefixOverride(setKey: string, cardNumber: string, year: num
   return setKey;
 }
 
+// CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT (Drew, 2026-09-12, #2060 follow-on).
+//
+// THE DEFECT. `inferSetKeyFromTitle`'s bare `/bowman\s+chrome/` rule pins ANY
+// title containing those two words to bowman-chrome, even when the card
+// number belongs to a DIFFERENT sibling in the Bowman family. "2026 Bowman
+// Chrome Gold Refractor Marconi German #CPA-MG" derives bowman-chrome, but
+// CPA-MG is a 2026 BOWMAN (paper) number — Chrome Prospect Autographs is a
+// SECTION of 2026 Bowman, not of 2026 Bowman Chrome. 2026 Bowman Chrome's own
+// checklist (2026-bowman-chrome.csv, 1,197 rows) carries zero CPA-MG rows;
+// 2026-bowman-full.csv carries three (base/gold-ink/packfractor autos). The
+// title says "Chrome" because the CARD IS chrome stock (Bowman prints its
+// prospect autos on chrome paper) — that is a STOCK word, not evidence of the
+// Bowman CHROME product line, and CF-CHROME-PREFIX-OVERRIDE-NARROW's own
+// header already makes exactly this distinction for the forward direction.
+//
+// WHY THIS CANNOT BE A PREFIX RULE. CHROME_PREFIX_OVERRIDES the older fix
+// literally warns about, is right to stay a narrow whitelist of PREFIXES for
+// the ambiguous-vendor-text direction — but the same prefix can, and does,
+// name two different cards in the two products in the SAME year:
+// 2026 Bowman Chrome CPA-AG is Angeibel Gomez (259 CPA autos in that
+// checklist); 2026 Bowman CPA-AG is Adrian Gil (173 CPA autos in that one).
+// A blanket "CPA- belongs to Bowman" rule would silently move Angeibel
+// Gomez's card onto Adrian Gil's — collision, not correction (measured
+// 2026-09-12: of 179 CPA- numbers shared by the two 2026 checklists, 8 name
+// different people in each: AG, BC, DF, EM, HL, JS, LA, WA). So this table is
+// keyed on the EXACT card number, never the prefix, and an entry may only be
+// added once BOTH sibling checklists have been read and the number is
+// confirmed present in exactly one of them.
+//
+// THE MECHANISM ANSWERS "WITHOUT A PER-TITLE CROSS-PARTITION QUERY" (the
+// constraint the fix is required to meet) the same way CHROME_PREFIX_OVERRIDES
+// already does: a small, checked-in, hand-verified table stands in for a
+// checklist-presence lookup, so the deriver never needs I/O to answer the
+// question. It is consulted from the SAME seam CHROME_PREFIX_OVERRIDES uses —
+// computeHobbyIqCardId — so every caller that derives a slug (the live title
+// parser, slugRederivation's rederive lane, and the rematch lane's
+// rematch-derive-identity.cjs, which all funnel into this one function) agrees
+// by construction rather than by keeping three copies of the rule in sync.
+//
+// #2064 shipped one entry (CPA-MG, Marconi German). #2069 found the SAME
+// defect on CPA-VF (Victor Figueroa) the same night, which meant the class
+// was open, not one holding: EVERY CPA- number present in exactly one of the
+// two 2026 checklists is the identical shape. Generalized here to the FULL
+// set, read 2026-09-12 against
+// data/checklists/scraped/2026-bowman-full.csv (779 CPA- rows, one row per
+// category per number — several numbers appear 2-3x for base/gold-ink/
+// packfractor) and 2026-bowman-chrome.csv (1,197 rows total, 259 CPA- rows):
+//
+//   179 CPA- numbers appear in BOTH checklists' cardNumber column
+//    79 appear ONLY in 2026-bowman-full.csv           -> bowman-chrome -> bowman
+//    92 appear ONLY in 2026-bowman-chrome.csv          -> bowman -> bowman-chrome
+//     8 of the 179 shared numbers name DIFFERENT PEOPLE in each product and
+//       are EXCLUDED, never mapped either direction: AG (Adrian Gil / Angeibel
+//       Gomez), BC, DF, EM, HL, JS, LA, WA.
+//
+// HARDCODED, NOT READ FROM THE CSVS AT RUNTIME. This module has zero
+// filesystem I/O today and sits on the hot path of every minted id
+// (CF-RECONCILIATION-DEFENSIVE-LOAD next door describes exactly the class of
+// risk a throw-at-import here would create) — adding a CSV read + parse here
+// would be a heavier, riskier change than the two-list generalization itself.
+// The two lists below are pinned against a live re-read of both CSVs by
+// tests/siblingChecklistOverrideMatchesChecklists.test.ts, which fails on
+// drift (a checklist re-scrape adding/removing a CPA- number) rather than
+// silently going stale.
+interface SiblingChecklistOverride {
+  fromSetKey: string;
+  toSetKey: string;
+  /** Exact card numbers, upper-cased, that this year's `toSetKey` checklist
+   *  lists and `fromSetKey`'s checklist does not. Never a prefix. */
+  cardNumbers: ReadonlySet<string>;
+  year: number;
+}
+/** 2026 CPA- numbers present ONLY in 2026-bowman-full.csv (setKey `bowman`) —
+ *  a title naming Bowman Chrome but one of these numbers is read as Bowman.
+ *  Exported so the drift test can pin it against a live re-read of the CSV. */
+export const CPA_2026_BOWMAN_ONLY: readonly string[] = [
+  "CPA-AA", "CPA-AF", "CPA-AFR", "CPA-ANA", "CPA-AT", "CPA-BA", "CPA-BB", "CPA-BG", "CPA-BI",
+  "CPA-BT", "CPA-CC", "CPA-CGU", "CPA-CJ", "CPA-CSC", "CPA-CV", "CPA-DD", "CPA-DDA",
+  "CPA-DH", "CPA-DL", "CPA-DOR", "CPA-DP", "CPA-DSH", "CPA-EDO", "CPA-EF", "CPA-EH",
+  "CPA-EHA", "CPA-EME", "CPA-EW", "CPA-GJ", "CPA-GL", "CPA-GR", "CPA-GS", "CPA-HE", "CPA-HR",
+  "CPA-IJ", "CPA-JG", "CPA-JJ", "CPA-JK", "CPA-JM", "CPA-JQ", "CPA-JQU", "CPA-JSL", "CPA-JU",
+  "CPA-JW", "CPA-JWH", "CPA-KAN", "CPA-KC", "CPA-KG", "CPA-KH", "CPA-KHE", "CPA-KMC",
+  "CPA-KSN", "CPA-LDE", "CPA-MC", "CPA-MCH", "CPA-MF", "CPA-MG", "CPA-MHO", "CPA-MS",
+  "CPA-NM", "CPA-NT", "CPA-OC", "CPA-PI", "CPA-PN", "CPA-RB", "CPA-RC", "CPA-RN", "CPA-SK",
+  "CPA-SP", "CPA-TB", "CPA-TGI", "CPA-TM", "CPA-TR", "CPA-TW", "CPA-VA", "CPA-VF", "CPA-WL",
+  "CPA-WS", "CPA-YCA",
+];
+/** 2026 CPA- numbers present ONLY in 2026-bowman-chrome.csv (setKey
+ *  `bowman-chrome`) — a title naming bare Bowman but one of these numbers is
+ *  read as Bowman Chrome. Exported so the drift test can pin it against a
+ *  live re-read of the CSV. */
+export const CPA_2026_BOWMAN_CHROME_ONLY: readonly string[] = [
+  "CPA-AC", "CPA-AD", "CPA-AH", "CPA-AL", "CPA-ALO", "CPA-AMA", "CPA-AN", "CPA-AO",
+  "CPA-AOW", "CPA-AP", "CPA-AR", "CPA-AS", "CPA-ASA", "CPA-BBU", "CPA-BJ", "CPA-BN",
+  "CPA-BW", "CPA-CA", "CPA-CR", "CPA-CZ", "CPA-DB", "CPA-DK", "CPA-DM", "CPA-DT", "CPA-EA",
+  "CPA-EC", "CPA-ED", "CPA-EMER", "CPA-EPE", "CPA-EQ", "CPA-ER", "CPA-FA", "CPA-FB",
+  "CPA-FE", "CPA-FR", "CPA-GB", "CPA-GP", "CPA-IC", "CPA-JC", "CPA-JCA", "CPA-JCI",
+  "CPA-JCU", "CPA-JGO", "CPA-JH", "CPA-JHE", "CPA-JLO", "CPA-JPA", "CPA-JR", "CPA-JRO",
+  "CPA-JRU", "CPA-JSU", "CPA-JT", "CPA-KA", "CPA-KCA", "CPA-KMA", "CPA-LC", "CPA-LD",
+  "CPA-LDA", "CPA-LH", "CPA-LP", "CPA-LR", "CPA-MB", "CPA-MM", "CPA-NDE", "CPA-OA", "CPA-PC",
+  "CPA-PG", "CPA-RA", "CPA-RAR", "CPA-RD", "CPA-RE", "CPA-RG", "CPA-RM", "CPA-RS", "CPA-SB",
+  "CPA-SDE", "CPA-SDO", "CPA-SJ", "CPA-SL", "CPA-SN", "CPA-SS", "CPA-SSE", "CPA-ST",
+  "CPA-TH", "CPA-WAR", "CPA-WD", "CPA-WG", "CPA-WV", "CPA-WW", "CPA-YA", "CPA-YM", "CPA-YS",
+];
+const SIBLING_CHECKLIST_OVERRIDES: readonly SiblingChecklistOverride[] = [
+  { fromSetKey: "bowman-chrome", toSetKey: "bowman", cardNumbers: new Set(CPA_2026_BOWMAN_ONLY), year: 2026 },
+  { fromSetKey: "bowman", toSetKey: "bowman-chrome", cardNumbers: new Set(CPA_2026_BOWMAN_CHROME_ONLY), year: 2026 },
+];
+export function applySiblingChecklistOverride(setKey: string, cardNumber: string, year: number): string {
+  const cn = String(cardNumber ?? "").trim().toUpperCase();
+  for (const rule of SIBLING_CHECKLIST_OVERRIDES) {
+    if (setKey !== rule.fromSetKey || year !== rule.year) continue;
+    if (rule.cardNumbers.has(cn)) return rule.toSetKey;
+  }
+  return setKey;
+}
+
+/**
+ * The OTHER setKey(s) this table knows `setKey` can be confused with, in
+ * `year` — i.e. `rule.toSetKey` for any rule whose `fromSetKey` matches.
+ * `applySiblingChecklistOverride` answers "which product does THIS card
+ * number belong to"; this answers "which sibling product should a lookup
+ * that does not have a card number yet ALSO check", so a by-player catalog
+ * query (resolveCardNumberByPlayer) can find a card whose true address is
+ * the sibling the title's stated product does not name. No new blast
+ * radius — the same hand-verified table, read the other direction. */
+export function siblingSetKeysToAlsoCheck(setKey: string, year: number): string[] {
+  const out = new Set<string>();
+  for (const rule of SIBLING_CHECKLIST_OVERRIDES) {
+    if (rule.fromSetKey === setKey && rule.year === year) out.add(rule.toSetKey);
+  }
+  return [...out];
+}
+
 // CF-CHROME-COLOR-IMPLIES-REFRACTOR (Drew, 2026-08-07). On chrome stock,
 // bare colors like "Blue" and colored-pattern parallels like "Blue Shimmer"
 // are market shorthand for "<color> Refractor" / "<color> Shimmer
@@ -2193,13 +2393,50 @@ export function computeHobbyIqCardId(components: HobbyIqCardIdComponents): strin
   // nothing and keep the repair behaviour unchanged.
   const setKey = components.authoritativeSetKey === true
     ? baseSetKey
-    : applyChromePrefixOverride(baseSetKey, cardNumber, year);
+    : applySiblingChecklistOverride(
+        applyChromePrefixOverride(baseSetKey, cardNumber, year),
+        cardNumber,
+        year,
+      );
   // CF-AUTO-ONLY-FORCE (Drew, 2026-08-11). Auto-only prefixes always
   // produce autograph cards — force isAuto=true so vendor label drift
   // (isAuto=false on a CPA- sale, etc.) can't fragment the pool.
   const isAuto = components.isAuto === true
     || AUTO_ONLY_CARDNUMBER_PREFIX.test(cardNumber);
   let parallelSlug = normalizeParallel(components.parallel);
+  // CF-A-FINEST-TIER-IS-THE-NUMBER (Drew, 2026-09-08/09). Applied at this same
+  // seam, and for the same reason: this is the one place that holds the
+  // normalized parallel, the sport, the year AND the card number together.
+  //
+  // 1997 Topps Finest tiers its BASE set Bronze / Silver / Gold, and the tier
+  // is a property of the CARD NUMBER, not a parallel axis crossed with it.
+  // BCP states it outright: "there are not Bronze, Silver, and Gold versions
+  // of every card in the set... There are no 'Common/Bronze' or
+  // 'Uncommon/Silver' versions of card #342." Each number has exactly ONE
+  // tier, fixed by its range, in both series.
+  //
+  // So a sale titled plain "1997 Finest Refractor #238" names the BRONZE
+  // Refractor -- there is no other Refractor that #238 could be -- and
+  // deriving bare `refractor` splits one card's pool across two addresses.
+  // 555 plain-Refractor rows sat beside the tier-stamped checklist rows in
+  // prod for exactly this reason.
+  //
+  // NARROW BY CONSTRUCTION: baseball, year 1997, topps-finest, a purely
+  // numeric card number inside 1-350, and ONLY the bare `refractor` slug. A
+  // tier already stated is never rewritten; Embossed / Die-Cut / any other
+  // rung is untouched; 1997-98 Topps Finest BASKETBALL is a different sport
+  // and is tiered on its own numbering, so it is excluded by the sport check.
+  if (
+    sport === "baseball" && year === 1997 && baseSetKey === "topps-finest"
+    && parallelSlug === "refractor" && /^\d{1,3}$/.test(cardNumber)
+  ) {
+    const n = Number(cardNumber);
+    const tier = (n >= 1 && n <= 100) || (n >= 176 && n <= 275) ? "bronze"
+      : (n >= 101 && n <= 150) || (n >= 276 && n <= 325) ? "silver"
+      : (n >= 151 && n <= 175) || (n >= 326 && n <= 350) ? "gold"
+      : null;
+    if (tier) parallelSlug = `${tier}-refractor`;
+  }
   // CF-A-FINISH-TOKEN-IS-ONE-TOKEN (Drew, 2026-09-07). THE ONE SEAM.
   //
   // Applied HERE and only here, because this is the one place in the deriver

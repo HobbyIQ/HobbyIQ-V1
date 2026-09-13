@@ -21,8 +21,16 @@ describe("an interposed year does not split a product name", () => {
   it("reads the product when the year sits between brand and product", () => {
     expect(inferSetKeyFromTitle("Topps 2024 Chrome Yamamoto X-Fractor RC #18"))
       .toBe("Topps Chrome");
+    // Updated 2026-09-13 for #2091 (fix/deriver-no-parent-collapse): before
+    // that PR, inferFamilySetKeyFromTitle's bare Chrome catch-all discarded
+    // "Update" and both word orders returned "Topps Chrome". #2091 added a
+    // qualifier ahead of the catch-all so "Update Series" survives in BOTH
+    // orderings -- the invariant this test exists to pin (year-interposition
+    // doesn't matter) still holds; only the correct, more specific answer
+    // changed, in both orders together (see "reads the conventional word
+    // order identically" below, which still passes unmodified).
     expect(inferSetKeyFromTitle("Topps 2024 Chrome Update Paul Skenes X-Fractor #USC88"))
-      .toBe("Topps Chrome");
+      .toBe("Topps Chrome Update Series");
     expect(inferSetKeyFromTitle("Topps 2024 Finest Aaron Judge X-Fractor"))
       .toBe("Topps Finest");
     expect(inferSetKeyFromTitle("Bowman 2024 Chrome Prospects BCP-102 Refractor"))
