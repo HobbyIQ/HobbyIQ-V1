@@ -303,6 +303,35 @@ async function main() {
     files = files.filter((n) => !fs.existsSync(path.join(DIR, n + ".ingested")));
     alreadyDone = before - files.length;
   }
+  // CF-A-HELD-FILE-IS-NOT-THIS-PRODUCT'S (Drew 2026-09-13). A manifest may
+  // declare `heldRows` -- a stated reason its rows do NOT belong to the product
+  // the rest of the directory describes. The rows stay staged and unwritten
+  // until they can be filed correctly; ABSENT BEATS WRONG.
+  //
+  // The measured case: cardboardconnection's 2022 Spectra page lists a
+  // "2021 Spectra Football Vested Veterans Autographs" subset (65 rows, 13
+  // colour rungs). A card set's year is the PRODUCT's year and a key never
+  // carries a year or a sport word, so these are a 2021 set the source
+  // carried over onto the 2022 page, not a 2022 subset. They belong to the
+  // 2021 product's directory if the source publishes one.
+  //
+  // Held BEFORE either pass: the cell measurement must not see them either, or
+  // a held subset would still shape the separation of the rows that stay.
+  const held = [];
+  files = files.filter((n) => {
+    const mf = path.join(DIR, n.replace(/\.csv$/, ".manifest.json"));
+    if (!fs.existsSync(mf)) return true;
+    let m = null;
+    try { m = JSON.parse(fs.readFileSync(mf, "utf8")); } catch { return true; }
+    if (!m || !m.heldRows || !m.heldRows.reason) return true;
+    held.push({ name: n, reason: m.heldRows.reason, rows: Number(m.heldRows.rows) || 0 });
+    return false;
+  });
+  if (held.length) {
+    console.log(`${f(held.length)} file(s) HELD by their manifest — staged, not this product's, never written:`);
+    for (const h of held) console.log(`   ${h.name}  ${f(h.rows)} rows\n      ${h.reason}`);
+    console.log("");
+  }
   console.log(`${f(files.length)} files  source=${SOURCE} (${authority})  ${APPLY ? "APPLY" : "REPORT ONLY"}\n`);
 
   let rows = 0, written = 0, skippedRow = 0, noProduct = 0, failed = 0, files_ok = 0;
@@ -922,6 +951,7 @@ async function main() {
   console.log(`  files ingested         ${f(files_ok)}${SLOTS > 1 ? `   of ${f(allFiles.length)} in the directory — SHARD ${SLOT}/${SLOTS}, NOT the whole set` : ""}`);
   console.log(`  files already done     ${f(alreadyDone)}   <- resumed past these`);
   console.log(`  files with no manifest ${f(noProduct)}   <- could not name the product`);
+  console.log(`  files HELD by their manifest ${f(held.length)} (${f(held.reduce((a, h) => a + h.rows, 0))} rows)   <- a stated reason these rows are not this product's; staged, never written`);
   console.log(`  categories REFUSED, exploded ${f(explodedCategories)} (${f(explodedRows)} rows)   <- >${f(EXPLODED_PAR_MAX)} rungs or >${f(EXPLODED_NUM_MAX)} card numbers inside ONE category; a cross-join, not a checklist`);
   console.log(`  files with nothing left ${f(explodedFiles)}   <- every category refused`);
   console.log(`  rows with card-line parallel ${f(cardLineParallel)}   <- "100 Mike Trout" is not a rung; skipped`);

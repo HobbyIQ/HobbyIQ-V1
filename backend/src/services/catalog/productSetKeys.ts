@@ -698,6 +698,86 @@ export const PRODUCT_SET_KEYS: ReadonlyArray<ProductSetKey> = [
   })),
 
   /**
+   * THE 2026-09-13 CARDBOARDCONNECTION ACQUISITION — 43 SAME-NUMBERED SUBSETS
+   * ACROSS FIVE PRODUCTS (R30, Drew 2026-09-13).
+   *
+   * The same ruling as the Flair Showcase Rows, the Rookies & Stars autograph
+   * subsets above, and the 2014 World Cup inserts: a same-numbered subset is
+   * its own card set. cardboardconnection ships ONE FILE PER SUBSET (207 files,
+   * 68,329 rows), and #2112's cell-wide guard measured 1,803 contested
+   * addresses inside five product cells:
+   *
+   *     nba-hoops 2022             10,111 rows ->  9,703 ids   200 contested
+   *     panini-prizm-draft-picks    9,591 rows ->  7,748 ids   835 contested
+   *     panini-spectra             11,766 rows -> 11,033 ids   485 contested
+   *     panini-donruss             10,715 rows -> 10,420 ids   124 contested
+   *     nba-hoops 2023             10,166 rows ->  9,739 ids   159 contested
+   *
+   * `hiq:basketball:2022:nba-hoops:1:base:auto` is claimed by Great
+   * Significance #1 (Joe Ingles), Hoops Art Signatures #1 (Paolo Banchero),
+   * Hoops Ink #1 (Cade Cunningham) and Hot Signatures Hyper Gold #1 (Luka
+   * Doncic). In NOT ONE of the 1,803 does an unclaimed row take part -- every
+   * contested address is claimed by two or more NAMED subsets, the R30 shape
+   * exactly.
+   *
+   * THE COLOUR RUNGS ARE NOT HERE, and that is the whole reason this list is 43
+   * and not 170. cardboardconnection folds the colour into the manifest's
+   * `subset` and leaves the parallel column BLANK, so #2112's deriver first
+   * proposed 110 colour keys -- `...-college-penmanship-prizms-gold`,
+   * `...-aspiring-patch-autographs-neon-splatter`. #2119 measures them instead:
+   * a subset that reprints its root's roster (same number -> same player, zero
+   * disagreements across 111 cells and 4,146 rows) is a RUNG, and its colour
+   * rides the parallel axis on the root's key.
+   *
+   * THREE SUFFIXED KEYS ARE HERE ANYWAY, because the rosters refused the fold
+   * and Drew ruled them card sets: the source publishes Hot Signatures Rookies
+   * (98 different players from Hot Signatures), Art Signatures Horizontal and
+   * Art Signatures Vertical (disjoint numbering) as separate checklists with
+   * their own rosters.
+   *
+   * `panini-spectra-dual-patch-autographs` HAS NO BASE TIER. The source prints
+   * fourteen "Dual Patch Autographs <colour>" files and no uncoloured one; all
+   * fourteen name the set, so it is ONE card set with the colours on the
+   * parallel axis and NO base row minted (Drew 2026-09-13). Blank stays unknown.
+   *
+   * NOT REGISTERED, deliberately: `2021 Spectra Football Vested Veterans
+   * Autographs`, which cardboardconnection lists on the 2022 Spectra page. A
+   * card set's year is the PRODUCT's year and a key never carries a year or a
+   * sport word, so those 65 rows are a 2021 set carried over onto the 2022 page
+   * and are HELD in the staged directory until the 2021 product can hold them.
+   */
+  ...["calligraphy-signatures", "great-significance", "hoops-art-signatures",
+    "hoops-art-signatures-horizontal", "hoops-art-signatures-vertical",
+    "hoops-ink", "hot-signatures", "hot-signatures-rookies",
+    "private-signings", "rookie-ink",
+  ].map((sub) => S(`nba-hoops-${sub}`, { family: "nba-hoops", parent: "nba-hoops" })),
+
+  ...["action-all-pros-autographs", "all-pro-kings-autographs",
+    "all-time-gridiron-kings-autographs", "canton-kings-autographs",
+    "champ-is-here-autographs", "dominators-autographs",
+    "fans-of-the-game-autographs", "franchise-future-autographs",
+    "gridiron-kings-autographs", "highlights-autographs",
+    "inducted-autographs", "jersey-kings-autographs",
+    "leather-kings-autographs", "power-plus-autographs",
+    "retro-1992-autographs", "retro-2002-autographs",
+    "rookie-gridiron-kings-autographs", "rookie-phenom-jersey-autographs",
+    "signature-marks", "the-elite-series-autographs",
+    "the-legends-series-autographs", "the-rookies-autographs",
+    "white-hot-rookies-autographs",
+  ].map((sub) => S(`panini-donruss-${sub}`, { family: "panini-donruss", parent: "panini-donruss" })),
+
+  ...["college-penmanship", "draft-picks-autographs", "freshman-signatures",
+    "sensational-signatures",
+  ].map((sub) => S(`panini-prizm-draft-picks-${sub}`, {
+    family: "panini-prizm-draft-picks", parent: "panini-prizm-draft-picks",
+  })),
+
+  ...["aspiring-patch-autographs", "dual-patch-autographs",
+    "full-spectrum-autographs", "retrospect-autographs", "rookie-autographs",
+    "signatures",
+  ].map((sub) => S(`panini-spectra-${sub}`, { family: "panini-spectra", parent: "panini-spectra" })),
+
+  /**
    * PANINI HAUNTED HOOPS IS ITS OWN PRODUCT (#1715 class, 2026-09-07).
    *
    * The Halloween release is a SEPARATE product from Panini NBA Hoops: its own
