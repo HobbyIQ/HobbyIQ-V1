@@ -1,0 +1,110 @@
+{
+ "year": 1999,
+ "sport": "baseball",
+ "setKey": "topps-finest",
+ "parallelColumnAuthoritative": true,
+ "setName": "1999 Finest",
+ "sourceUrl": "http://www.baseballcardpedia.com/index.php/1999_Finest",
+ "scope": null,
+ "scopeOfPage": "Finest",
+ "cardNumberPrefix": null,
+ "prefixDerivedFrom": "paper",
+ "prefixUnresolved": false,
+ "ladder": [
+  {
+   "name": "Refractors",
+   "printRun": null,
+   "rarity": null
+  },
+  {
+   "name": "Gold Refractors",
+   "printRun": 100,
+   "rarity": null
+  }
+ ],
+ "autographs": [],
+ "setRarity": null,
+ "sections": [
+  {
+   "name": "Split Screen",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 14,
+   "rungs": 0
+  },
+  {
+   "name": "Prominent Figures",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 50,
+   "rungs": 5
+  },
+  {
+   "name": "Leading Indicators",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 10,
+   "rungs": 0
+  },
+  {
+   "name": "Team Finest",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 20,
+   "rungs": 6
+  },
+  {
+   "name": "Peel and Reveal",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 20,
+   "rungs": 3
+  },
+  {
+   "name": "Future's Finest",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 10,
+   "rungs": 0
+  },
+  {
+   "name": "Aaron Award Contenders",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 27,
+   "rungs": 0
+  },
+  {
+   "name": "Complements",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 7,
+   "rungs": 0
+  },
+  {
+   "name": "Double Feature",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 7,
+   "rungs": 0
+  },
+  {
+   "name": "Franchise Records",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 10,
+   "rungs": 0
+  },
+  {
+   "name": "Milestones",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 40,
+   "rungs": 0
+  }
+ ],
+ "source": "bcp-2026-09-13",
+ "acquiredAt": "2026-09-13",
+ "setKeyWas": "finest",
+ "setKeyNote": "the BCP page names this product \"Finest\"; the catalog vocabulary keys it topps-finest (normalizeSetKey(\"finest\") === \"topps-finest\")"
+}

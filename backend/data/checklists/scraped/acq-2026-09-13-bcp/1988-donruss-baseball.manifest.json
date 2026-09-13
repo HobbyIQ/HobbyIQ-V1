@@ -1,0 +1,26 @@
+{
+ "year": 1988,
+ "sport": "baseball",
+ "setKey": "donruss",
+ "setName": "1988 Donruss",
+ "sourceUrl": "http://www.baseballcardpedia.com/index.php/1988_Donruss",
+ "source": "bcp-2026-09-13",
+ "acquiredAt": "2026-09-13",
+ "parallelColumnAuthoritative": true,
+ "scope": "Base Set",
+ "scopeOfPage": "1988 Donruss",
+ "baseReadFrom": "Base_Set heading",
+ "ladder": [],
+ "ladderAbsentReason": "the page states its parallels in PROSE only (no list rungs and no inline card list), so no rung can be read without guessing its scope; base set emitted alone",
+ "sections": [
+  {
+   "name": "Base Set",
+   "category": null,
+   "isAuto": false,
+   "cards": 668,
+   "rungs": 0
+  }
+ ],
+ "duplicateIdentityRowsDropped": 2,
+ "duplicateIdentityNote": "BCP relists a card under Gimmicks/Errors-and-Variations with the same number and the same player text to note an UNNAMED variation; those rows carry the identity of the base row, so they were dropped (one card, one row, one pool). A variation the page NAMES differs in its player text and is kept as the distinct card it is."
+}

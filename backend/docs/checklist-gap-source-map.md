@@ -8,6 +8,14 @@ premise did not survive that probe, the correction is called out inline. Read
 "Premise corrections" first — three of the four lanes were scoped against a
 stale picture of what we already own.
 
+> **This document is dated. Read source verdicts against the later docs.** Its
+> probes are a snapshot of 2026-08-30 and at least one has since been overturned
+> outright: §5 listed `sportscardchecklist.com` as a dead end, and it is **GO** —
+> see the retirement notice in §5 and
+> [`docs/checklists/2026-09-04-vintage-checklist-sources.md`](checklists/2026-09-04-vintage-checklist-sources.md),
+> which is the authority for vintage source permissions. A "do not re-probe" verdict
+> here is evidence about one day's probe, not a standing rule.
+
 ---
 
 ## 0. Premise corrections (read before planning work)
@@ -182,6 +190,60 @@ is invisible to every sweep and silently splits or merges a comp pool. Per
 `verify output, not process`: the acceptance test for this work is **the emitted
 numbers matched against page text**, not the staged row count.
 
+### 3.4 FIXED (2026-09-13) — `scrape-tcdb.cjs`: pagination clipped at 100, and two row shapes read as zero cards
+
+Found building the 2014 Panini Prizm FIFA World Cup file (PR #2105). Both are
+the "looks acquired, empty of the thing we needed" shape, this time in the
+TCDB backup scraper rather than BCP.
+
+**Pagination.** TCDB checklist pages list 100 rows per page
+(`?PageIndex=N`). The shipped pagination loop was reachable only from behind
+an empty-rows guard that ran after a `<td>` grid-walk assuming
+`<td>{number}</td><td>{player}</td>` — a shape TCDB's current markup never
+produces (no `<th>` cells anywhere on the page, so that walk always returns
+0 rows and always fell through). That made the real page-walking logic
+fragile rather than load-bearing: any future page shape that let the grid-walk
+match even a handful of decoy rows would have skipped pagination entirely and
+silently clipped at whatever page 1 produced. A single-page read gave 100 of
+the 201-card base set and clipped every 100+ parallel rung at the same
+boundary. Fixed by making the page walk unconditional and the only extraction
+path — the dead grid-walk fallback is removed rather than kept as a no-op.
+
+**Name extraction.** The row reader pulled player names ONLY from
+`Person.cfm` anchors. Two real row shapes on this product carry no
+`Person.cfm` anchor at all:
+
+- **Team cards** (Team Photos rung): the name cell is plain text ("Algerie
+  TC"); the `Team.cfm` link is in a *later* cell, not the name cell.
+- **Multi-player cards** (Combo Signatures rung): the name cell is plain
+  text with a `/` separator ("Bobby Charlton / Steven Gerrard AU, SN10") —
+  no anchor of any kind.
+
+15 of 136 rungs on this product extracted **zero** rows. Fixed by reading the
+row's own cells: Person.cfm anchors first (the common case), falling back to
+the name cell's plain text when there is none. Splitting on `/` recovers both
+names on a multi-player card rather than dropping one.
+
+**Attribute tokens.** Reading the name cell as text also recovers the
+trailing `AU` / `SNnnn` tokens TCDB states inline on signature/serial rungs
+("... AU, SN10"). Parsed into `isAuto` / `printRun`, scoped to the rung that
+actually states them — Team Photos never says AU or SN and is emitted
+unsigned with a blank print run; a print run stated on one rung is never
+carried onto another. Per doctrine: every row traces to the page, blank means
+unknown, and autos are never minted unsigned.
+
+**Fixed in this PR** (`fix/tcdb-scraper-pagination-names-0913-*`, 2026-09-13):
+`backend/scripts/scrape-tcdb.cjs` rewritten (`extractRowsFromPage`,
+`parseNameAttributes`, `splitPlayers`, unconditional `fetchAllPages`); 5
+fixture-based tests in `backend/tests/tcdbPaginationAndNames.test.ts` pinned
+against the real 2014 Prizm World Cup base set (3 pages, 100+100+1=201,
+TCDB's own stated count) and its Team Photos (32 rows) and Combo Signatures
+(10 rows, AU/SN10) rungs, fetched 2026-09-13
+(`backend/tests/fixtures/tcdb/`). The env-read-at-module-load defect
+(`TCDB_URL` missing called `process.exit(2)` before any test could `require`
+the file — the #1985 shape) is fixed alongside it, since it blocked writing
+these tests at all.
+
 ---
 
 ## 4. Build order
@@ -249,7 +311,42 @@ No clean source. Blocked on a card-number conflict, not on acquisition (§6.1).
 | `https://www.baseballcardpedia.com` | **TLS fail** | `ERR_TLS_CERT_ALTNAME_INVALID` — cert covers bare host only. `https://` bare = 200; `http://www.` = 301 → bare. Existing scraper is safe; do not "upgrade" it to `https://www.` |
 | `checklistinsider.com` for vintage | **structurally impossible** | Min year 2022, confirmed 3 ways |
 | `checklistcentral.cards` free DB | **unlaunched template** | Emits raw `[[S1_PARALLELS]]` shortcodes; `/pages/2025-topps-series-1` 404s |
-| `sportscardchecklist.com` | rejected | Directory pages, no card-level data, no print runs |
+
+> ### RETIRED 2026-09-13 — `sportscardchecklist.com` was listed here and is **GO**
+>
+> This table carried the row
+> `` | `sportscardchecklist.com` | rejected | Directory pages, no card-level data, no print runs | ``
+> from this document's 2026-08-30 synthesis. **It is withdrawn.** The verdict was
+> superseded five days later by
+> [`docs/checklists/2026-09-04-vintage-checklist-sources.md`](checklists/2026-09-04-vintage-checklist-sources.md),
+> which probed the host directly and ruled it **GO — rank 1**: *"covers every target
+> cell, serves real card-by-card checklists, and its robots.txt permits the paths we
+> need"*, ~709,773 unblockable pool rows, *"Build the lane against
+> sportscardchecklist.com and nothing else."*
+>
+> The three original claims, re-checked against the `/set-<id>/` pages:
+>
+> | claim | verdict |
+> |---|---|
+> | "Directory pages" | **false** — card rows are server-rendered, with two independent anchors per card (the `<h5 class="h4">` header and the `ebay_search` hidden input) |
+> | "No card-level data" | **false** — T206 524 rows, 1933 Goudey 241, 1972 Topps Football 351; the 2026-09-13 package A acquisition parsed 11,666 rows from 37 pages |
+> | "No print runs" | **true, and not disqualifying** — pre-serial vintage has none to acquire. The lane emits `printRun` blank by design, which is the ruling, not a gap |
+>
+> **How the wrong verdict happened, so it is not repeated.** The 2026-08-30 pass
+> almost certainly probed `/search/?search_terms=…` — which is `Disallow`ed by the
+> host's robots.txt *and* is a documented false-negative machine: querying
+> "1972 topps football" returns 18 results, none of them the set, which lives at
+> `set-11959`. Discovery here is the robots-advertised **sitemap**, always.
+>
+> Leaving the row in a section titled "do not re-probe" was the expensive part: it
+> instructed every later agent to skip the repo's highest-yield checklist source. The
+> lane has shipped catalog rows since 2026-09-04 (`sportscardchecklist-<date>`), owns
+> two committed scripts (`fetchSportsCardChecklist.cjs`,
+> `discoverSportsCardChecklistSets.cjs`), 10,359 manifest entries, 18 test files and
+> 19 page fixtures.
+>
+> Anything genuinely dead about this host would be recorded in the vintage-sources
+> doc above, which is now the authority for it.
 
 **Products with no print runs to acquire — a product fact, not a source gap.**
 1997 Finest, 1999 Finest, 1996 Metal Universe predate serial numbering; they

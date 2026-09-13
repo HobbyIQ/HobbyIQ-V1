@@ -1,0 +1,25 @@
+{
+ "year": 2003,
+ "sport": "baseball",
+ "setKey": "donruss",
+ "parallelColumnAuthoritative": true,
+ "setName": "2003 Donruss",
+ "sourceUrl": "http://www.baseballcardpedia.com/index.php/2003_Donruss",
+ "scope": "Atlantic City National",
+ "scopeOfPage": "Donruss",
+ "cardNumberPrefix": null,
+ "prefixDerivedFrom": "unresolved",
+ "prefixUnresolved": false,
+ "ladder": [
+  {
+   "name": "Atlantic City National",
+   "printRun": null,
+   "rarity": null
+  }
+ ],
+ "autographs": [],
+ "setRarity": null,
+ "sections": [],
+ "source": "bcp-2026-09-13",
+ "acquiredAt": "2026-09-13"
+}

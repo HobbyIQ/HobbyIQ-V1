@@ -457,10 +457,29 @@ describe("orderQueue — the rest follow beneath in value order, not alphabetica
     // What the proxy promised: the modern flagships lead. A STAGED entry may
     // still precede them whatever its year -- #1718's contract, and the reason
     // this is a floor on the chrome count rather than a floor on every year.
-    expect(next16.filter((l: string) => /topps chrome|bowman chrome/i.test(l)).length).toBeGreaterThanOrEqual(8);
-    // Every non-staged entry in the head is modern.
-    const stagedCount = orderQueue(queue, titles).staged;
-    for (const l of next16.slice(stagedCount)) {
+    //
+    // CF-THE-CHROME-FLOOR-IS-A-FLOOR-ON-THE-PROXY-REGION (2026-09-13). The
+    // floor used to be measured over `next16` -- a fixed slice(4, 20) -- which
+    // silently assumed the staged set was small enough to leave room for chrome
+    // inside those sixteen. That assumption is not part of any contract this
+    // file pins, and an ACQUISITION is exactly what breaks it: staging the bcp
+    // gap queue took `staged` from 1 to 20, so slots 4..19 filled with staged
+    // work and the chrome count fell to 1. That is CF-A-STAGED-FILE-WINS
+    // working -- work already on disk cannot be lost to a source outage, so it
+    // never queues behind work that can -- and a pin that turns red when the
+    // lane's own contract is honoured is measuring the wrong window.
+    //
+    // The proxy claim is about the region the PROXY orders, which starts after
+    // the named leads and the staged block. Measure it there, and the pin says
+    // what it always meant: once staged work is exhausted, the modern flagships
+    // head the remainder. Staging more checklists now moves this window along
+    // instead of turning it red.
+    const { staged: stagedCount } = orderQueue(queue, titles);
+    const proxyHead = q.slice(4 + stagedCount, 4 + stagedCount + 16).map(label);
+    expect(proxyHead.filter((l: string) => /topps chrome|bowman chrome/i.test(l)).length).toBeGreaterThanOrEqual(8);
+    // Every entry the PROXY placed in the head is modern (the staged block is
+    // era-blind by contract, so it is not part of this claim).
+    for (const l of proxyHead) {
       expect(Number(String(l).slice(0, 4))).toBeGreaterThanOrEqual(2000);
     }
   });

@@ -1,0 +1,26 @@
+{
+ "year": 1959,
+ "sport": "baseball",
+ "setKey": "fleer",
+ "setName": "1959 Fleer Ted Williams",
+ "sourceUrl": "http://www.baseballcardpedia.com/index.php/1959_Fleer_Ted_Williams",
+ "source": "bcp-2026-09-13",
+ "acquiredAt": "2026-09-13",
+ "parallelColumnAuthoritative": true,
+ "scope": "Base Set",
+ "scopeOfPage": "1959 Fleer Ted Williams",
+ "baseReadFrom": "Base_Set heading",
+ "ladder": [],
+ "ladderAbsentReason": "the page states its parallels in PROSE only (no list rungs and no inline card list), so no rung can be read without guessing its scope; base set emitted alone",
+ "sections": [
+  {
+   "name": "Base Set",
+   "category": null,
+   "isAuto": false,
+   "cards": 79,
+   "rungs": 0
+  }
+ ],
+ "setKeyWas": "fleer-ted-williams",
+ "setKeyNote": "the BCP page is titled \"1959 Fleer Ted Williams\", which is the FULL name of the only 1959 Fleer baseball product; normalizeSetKey(\"fleer-ted-williams\") === \"fleer\", so fleer is the fixed point and matches the queue key"
+}

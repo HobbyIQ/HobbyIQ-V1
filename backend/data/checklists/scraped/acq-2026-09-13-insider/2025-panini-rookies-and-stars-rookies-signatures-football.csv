@@ -1,0 +1,660 @@
+category,cardNumber,parallel,isAuto,printRun,player
+base,101,,true,,Abdul Carter
+base,102,,true,,Alfred Collins
+base,104,,true,,Arian Smith
+base,106,,true,,Ashton Jeanty
+base,107,,true,,Azareye'h Thomas
+base,108,,true,,Benjamin Morrison
+base,109,,true,,Bhayshul Tuten
+base,110,,true,,Cam Skattebo
+base,113,,true,,Chimere Dike
+base,114,,true,,Colston Loveland
+base,116,,true,,Derrick Harmon
+base,117,,true,,Dillon Gabriel
+base,118,,true,,DJ Giddens
+base,120,,true,,Donovan Jackson
+base,121,,true,,Dylan Sampson
+base,122,,true,,Elic Ayomanor
+base,123,,true,,Elijah Arroyo
+base,125,,true,,Grey Zabel
+base,126,,true,,Harold Fannin Jr.
+base,127,,true,,Isaac TeSlaa
+base,128,,true,,Jack Bech
+base,129,,true,,Jack Kiser
+base,130,,true,,Jack Sawyer
+base,131,,true,,Jahdae Barron
+base,132,,true,,Jalen Milroe
+base,133,,true,,Jalen Royals
+base,134,,true,,Jalon Walker
+base,136,,true,,Jarquez Hunter
+base,138,,true,,Jayden Higgins
+base,139,,true,,Jaydon Blue
+base,140,,true,,Jaylin Lane
+base,141,,true,,Jaylin Noel
+base,142,,true,,Jihaad Campbell
+base,143,,true,,Jordan Burch
+base,144,,true,,Jordan James
+base,145,,true,,Josh Conerly Jr.
+base,146,,true,,Josh Simmons
+base,147,,true,,JT Tuimoloau
+base,148,,true,,Kaleb Johnson
+base,150,,true,,Kenneth Grant
+base,151,,true,,Kyle McCord
+base,152,,true,,Kyle Williams
+base,153,,true,,Landon Jackson
+base,155,,true,,Malaki Starks
+base,156,,true,,Mason Graham
+base,157,,true,,Mason Taylor
+base,158,,true,,Matthew Golden
+base,159,,true,,Maxwell Hairston
+base,162,,true,,Nic Scourton
+base,166,,true,,Omarion Hampton
+base,168,,true,,Pat Bryant
+base,170,,true,,Quinn Ewers
+base,171,,true,,Quinshon Judkins
+base,172,,true,,Riley Leonard
+base,173,,true,,RJ Harvey
+base,174,,true,,Savion Williams
+base,176,,true,,Shavon Revel Jr.
+base,177,,true,,Shedeur Sanders
+base,178,,true,,Shemar James
+base,179,,true,,Shemar Stewart
+base,181,,true,,Tai Felton
+base,182,,true,,Terrance Ferguson
+base,183,,true,,Tetairoa McMillan
+base,184,,true,,Tez Johnson
+base,185,,true,,Tory Horton
+base,186,,true,,Travis Hunter
+base,187,,true,,Tre Harris
+base,188,,true,,TreVeyon Henderson
+base,189,,true,,Trevor Etienne
+base,191,,true,,Ty Robinson
+base,194,,true,,Tyler Shough
+base,197,,true,,Will Howard
+insert-gold,101,Gold,true,10,Abdul Carter
+insert-gold,102,Gold,true,10,Alfred Collins
+insert-gold,104,Gold,true,10,Arian Smith
+insert-gold,106,Gold,true,10,Ashton Jeanty
+insert-gold,107,Gold,true,10,Azareye'h Thomas
+insert-gold,108,Gold,true,10,Benjamin Morrison
+insert-gold,109,Gold,true,10,Bhayshul Tuten
+insert-gold,110,Gold,true,10,Cam Skattebo
+insert-gold,113,Gold,true,10,Chimere Dike
+insert-gold,114,Gold,true,10,Colston Loveland
+insert-gold,116,Gold,true,10,Derrick Harmon
+insert-gold,117,Gold,true,10,Dillon Gabriel
+insert-gold,118,Gold,true,10,DJ Giddens
+insert-gold,119,Gold,true,10,Donovan Ezeiruaku
+insert-gold,120,Gold,true,10,Donovan Jackson
+insert-gold,121,Gold,true,10,Dylan Sampson
+insert-gold,122,Gold,true,10,Elic Ayomanor
+insert-gold,123,Gold,true,10,Elijah Arroyo
+insert-gold,125,Gold,true,10,Grey Zabel
+insert-gold,126,Gold,true,10,Harold Fannin Jr.
+insert-gold,127,Gold,true,10,Isaac TeSlaa
+insert-gold,128,Gold,true,10,Jack Bech
+insert-gold,129,Gold,true,10,Jack Kiser
+insert-gold,130,Gold,true,10,Jack Sawyer
+insert-gold,131,Gold,true,10,Jahdae Barron
+insert-gold,132,Gold,true,10,Jalen Milroe
+insert-gold,133,Gold,true,10,Jalen Royals
+insert-gold,134,Gold,true,10,Jalon Walker
+insert-gold,136,Gold,true,10,Jarquez Hunter
+insert-gold,138,Gold,true,10,Jayden Higgins
+insert-gold,139,Gold,true,10,Jaydon Blue
+insert-gold,140,Gold,true,10,Jaylin Lane
+insert-gold,141,Gold,true,10,Jaylin Noel
+insert-gold,142,Gold,true,10,Jihaad Campbell
+insert-gold,143,Gold,true,10,Jordan Burch
+insert-gold,144,Gold,true,10,Jordan James
+insert-gold,145,Gold,true,10,Josh Conerly Jr.
+insert-gold,146,Gold,true,10,Josh Simmons
+insert-gold,147,Gold,true,10,JT Tuimoloau
+insert-gold,148,Gold,true,10,Kaleb Johnson
+insert-gold,150,Gold,true,10,Kenneth Grant
+insert-gold,151,Gold,true,10,Kyle McCord
+insert-gold,152,Gold,true,10,Kyle Williams
+insert-gold,153,Gold,true,10,Landon Jackson
+insert-gold,155,Gold,true,10,Malaki Starks
+insert-gold,156,Gold,true,10,Mason Graham
+insert-gold,157,Gold,true,10,Mason Taylor
+insert-gold,158,Gold,true,10,Matthew Golden
+insert-gold,159,Gold,true,10,Maxwell Hairston
+insert-gold,161,Gold,true,10,Mykel Williams
+insert-gold,162,Gold,true,10,Nic Scourton
+insert-gold,163,Gold,true,10,Nick Emmanwori
+insert-gold,164,Gold,true,10,Nick Martin
+insert-gold,166,Gold,true,10,Omarion Hampton
+insert-gold,168,Gold,true,10,Pat Bryant
+insert-gold,170,Gold,true,10,Quinn Ewers
+insert-gold,171,Gold,true,10,Quinshon Judkins
+insert-gold,172,Gold,true,10,Riley Leonard
+insert-gold,173,Gold,true,10,RJ Harvey
+insert-gold,174,Gold,true,10,Savion Williams
+insert-gold,176,Gold,true,10,Shavon Revel Jr.
+insert-gold,177,Gold,true,10,Shedeur Sanders
+insert-gold,178,Gold,true,10,Shemar James
+insert-gold,179,Gold,true,10,Shemar Stewart
+insert-gold,180,Gold,true,10,T.J. Sanders
+insert-gold,181,Gold,true,10,Tai Felton
+insert-gold,182,Gold,true,10,Terrance Ferguson
+insert-gold,183,Gold,true,10,Tetairoa McMillan
+insert-gold,184,Gold,true,10,Tez Johnson
+insert-gold,185,Gold,true,10,Tory Horton
+insert-gold,186,Gold,true,10,Travis Hunter
+insert-gold,187,Gold,true,10,Tre Harris
+insert-gold,188,Gold,true,10,TreVeyon Henderson
+insert-gold,189,Gold,true,10,Trevor Etienne
+insert-gold,191,Gold,true,10,Ty Robinson
+insert-gold,192,Gold,true,10,Tyleik Williams
+insert-gold,194,Gold,true,10,Tyler Shough
+insert-gold,195,Gold,true,10,Tyler Warren
+insert-gold,197,Gold,true,10,Will Howard
+insert-gold,198,Gold,true,10,Will Johnson
+insert-gold,200,Gold,true,10,Xavier Watts
+insert-green,101,Green,true,5,Abdul Carter
+insert-green,102,Green,true,5,Alfred Collins
+insert-green,104,Green,true,5,Arian Smith
+insert-green,106,Green,true,5,Ashton Jeanty
+insert-green,107,Green,true,5,Azareye'h Thomas
+insert-green,108,Green,true,5,Benjamin Morrison
+insert-green,109,Green,true,5,Bhayshul Tuten
+insert-green,110,Green,true,5,Cam Skattebo
+insert-green,113,Green,true,5,Chimere Dike
+insert-green,114,Green,true,5,Colston Loveland
+insert-green,116,Green,true,5,Derrick Harmon
+insert-green,117,Green,true,5,Dillon Gabriel
+insert-green,118,Green,true,5,DJ Giddens
+insert-green,119,Green,true,5,Donovan Ezeiruaku
+insert-green,120,Green,true,5,Donovan Jackson
+insert-green,121,Green,true,5,Dylan Sampson
+insert-green,122,Green,true,5,Elic Ayomanor
+insert-green,123,Green,true,5,Elijah Arroyo
+insert-green,125,Green,true,5,Grey Zabel
+insert-green,126,Green,true,5,Harold Fannin Jr.
+insert-green,127,Green,true,5,Isaac TeSlaa
+insert-green,128,Green,true,5,Jack Bech
+insert-green,129,Green,true,5,Jack Kiser
+insert-green,130,Green,true,5,Jack Sawyer
+insert-green,131,Green,true,5,Jahdae Barron
+insert-green,132,Green,true,5,Jalen Milroe
+insert-green,133,Green,true,5,Jalen Royals
+insert-green,134,Green,true,5,Jalon Walker
+insert-green,136,Green,true,5,Jarquez Hunter
+insert-green,138,Green,true,5,Jayden Higgins
+insert-green,139,Green,true,5,Jaydon Blue
+insert-green,140,Green,true,5,Jaylin Lane
+insert-green,141,Green,true,5,Jaylin Noel
+insert-green,142,Green,true,5,Jihaad Campbell
+insert-green,143,Green,true,5,Jordan Burch
+insert-green,144,Green,true,5,Jordan James
+insert-green,145,Green,true,5,Josh Conerly Jr.
+insert-green,146,Green,true,5,Josh Simmons
+insert-green,147,Green,true,5,JT Tuimoloau
+insert-green,148,Green,true,5,Kaleb Johnson
+insert-green,150,Green,true,5,Kenneth Grant
+insert-green,151,Green,true,5,Kyle McCord
+insert-green,152,Green,true,5,Kyle Williams
+insert-green,153,Green,true,5,Landon Jackson
+insert-green,155,Green,true,5,Malaki Starks
+insert-green,156,Green,true,5,Mason Graham
+insert-green,157,Green,true,5,Mason Taylor
+insert-green,158,Green,true,5,Matthew Golden
+insert-green,159,Green,true,5,Maxwell Hairston
+insert-green,161,Green,true,5,Mykel Williams
+insert-green,162,Green,true,5,Nic Scourton
+insert-green,163,Green,true,5,Nick Emmanwori
+insert-green,164,Green,true,5,Nick Martin
+insert-green,166,Green,true,5,Omarion Hampton
+insert-green,168,Green,true,5,Pat Bryant
+insert-green,169,Green,true,5,Princely Umanmielen
+insert-green,170,Green,true,5,Quinn Ewers
+insert-green,171,Green,true,5,Quinshon Judkins
+insert-green,172,Green,true,5,Riley Leonard
+insert-green,173,Green,true,5,RJ Harvey
+insert-green,174,Green,true,5,Savion Williams
+insert-green,176,Green,true,5,Shavon Revel Jr.
+insert-green,177,Green,true,5,Shedeur Sanders
+insert-green,178,Green,true,5,Shemar James
+insert-green,179,Green,true,5,Shemar Stewart
+insert-green,180,Green,true,5,T.J. Sanders
+insert-green,181,Green,true,5,Tai Felton
+insert-green,182,Green,true,5,Terrance Ferguson
+insert-green,183,Green,true,5,Tetairoa McMillan
+insert-green,184,Green,true,5,Tez Johnson
+insert-green,185,Green,true,5,Tory Horton
+insert-green,186,Green,true,5,Travis Hunter
+insert-green,187,Green,true,5,Tre Harris
+insert-green,188,Green,true,5,TreVeyon Henderson
+insert-green,189,Green,true,5,Trevor Etienne
+insert-green,191,Green,true,5,Ty Robinson
+insert-green,192,Green,true,5,Tyleik Williams
+insert-green,194,Green,true,5,Tyler Shough
+insert-green,195,Green,true,5,Tyler Warren
+insert-green,197,Green,true,5,Will Howard
+insert-green,198,Green,true,5,Will Johnson
+insert-green,200,Green,true,5,Xavier Watts
+insert-orange,102,Orange,true,199,Alfred Collins
+insert-orange,104,Orange,true,199,Arian Smith
+insert-orange,106,Orange,true,199,Ashton Jeanty
+insert-orange,107,Orange,true,199,Azareye'h Thomas
+insert-orange,108,Orange,true,199,Benjamin Morrison
+insert-orange,109,Orange,true,199,Bhayshul Tuten
+insert-orange,110,Orange,true,199,Cam Skattebo
+insert-orange,113,Orange,true,199,Chimere Dike
+insert-orange,114,Orange,true,199,Colston Loveland
+insert-orange,116,Orange,true,199,Derrick Harmon
+insert-orange,117,Orange,true,199,Dillon Gabriel
+insert-orange,118,Orange,true,199,DJ Giddens
+insert-orange,120,Orange,true,199,Donovan Jackson
+insert-orange,121,Orange,true,199,Dylan Sampson
+insert-orange,122,Orange,true,199,Elic Ayomanor
+insert-orange,123,Orange,true,199,Elijah Arroyo
+insert-orange,125,Orange,true,199,Grey Zabel
+insert-orange,126,Orange,true,199,Harold Fannin Jr.
+insert-orange,127,Orange,true,199,Isaac TeSlaa
+insert-orange,128,Orange,true,199,Jack Bech
+insert-orange,129,Orange,true,199,Jack Kiser
+insert-orange,130,Orange,true,199,Jack Sawyer
+insert-orange,131,Orange,true,199,Jahdae Barron
+insert-orange,132,Orange,true,199,Jalen Milroe
+insert-orange,133,Orange,true,199,Jalen Royals
+insert-orange,134,Orange,true,199,Jalon Walker
+insert-orange,136,Orange,true,199,Jarquez Hunter
+insert-orange,138,Orange,true,199,Jayden Higgins
+insert-orange,139,Orange,true,199,Jaydon Blue
+insert-orange,140,Orange,true,199,Jaylin Lane
+insert-orange,141,Orange,true,199,Jaylin Noel
+insert-orange,142,Orange,true,199,Jihaad Campbell
+insert-orange,143,Orange,true,199,Jordan Burch
+insert-orange,144,Orange,true,199,Jordan James
+insert-orange,145,Orange,true,199,Josh Conerly Jr.
+insert-orange,146,Orange,true,199,Josh Simmons
+insert-orange,147,Orange,true,199,JT Tuimoloau
+insert-orange,148,Orange,true,199,Kaleb Johnson
+insert-orange,150,Orange,true,199,Kenneth Grant
+insert-orange,151,Orange,true,199,Kyle McCord
+insert-orange,152,Orange,true,199,Kyle Williams
+insert-orange,153,Orange,true,199,Landon Jackson
+insert-orange,155,Orange,true,199,Malaki Starks
+insert-orange,156,Orange,true,199,Mason Graham
+insert-orange,157,Orange,true,199,Mason Taylor
+insert-orange,158,Orange,true,199,Matthew Golden
+insert-orange,159,Orange,true,199,Maxwell Hairston
+insert-orange,161,Orange,true,199,Mykel Williams
+insert-orange,162,Orange,true,199,Nic Scourton
+insert-orange,163,Orange,true,199,Nick Emmanwori
+insert-orange,166,Orange,true,199,Omarion Hampton
+insert-orange,168,Orange,true,199,Pat Bryant
+insert-orange,170,Orange,true,199,Quinn Ewers
+insert-orange,171,Orange,true,199,Quinshon Judkins
+insert-orange,172,Orange,true,199,Riley Leonard
+insert-orange,173,Orange,true,199,RJ Harvey
+insert-orange,174,Orange,true,199,Savion Williams
+insert-orange,176,Orange,true,199,Shavon Revel Jr.
+insert-orange,177,Orange,true,199,Shedeur Sanders
+insert-orange,178,Orange,true,199,Shemar James
+insert-orange,179,Orange,true,199,Shemar Stewart
+insert-orange,180,Orange,true,199,T.J. Sanders
+insert-orange,181,Orange,true,199,Tai Felton
+insert-orange,182,Orange,true,199,Terrance Ferguson
+insert-orange,183,Orange,true,199,Tetairoa McMillan
+insert-orange,184,Orange,true,199,Tez Johnson
+insert-orange,185,Orange,true,199,Tory Horton
+insert-orange,186,Orange,true,199,Travis Hunter
+insert-orange,187,Orange,true,199,Tre Harris
+insert-orange,188,Orange,true,199,TreVeyon Henderson
+insert-orange,189,Orange,true,199,Trevor Etienne
+insert-orange,191,Orange,true,199,Ty Robinson
+insert-orange,192,Orange,true,199,Tyleik Williams
+insert-orange,194,Orange,true,199,Tyler Shough
+insert-orange,197,Orange,true,199,Will Howard
+insert-orange,198,Orange,true,199,Will Johnson
+insert-orange,200,Orange,true,199,Xavier Watts
+insert-platinum,101,Platinum,true,1,Abdul Carter
+insert-platinum,102,Platinum,true,1,Alfred Collins
+insert-platinum,104,Platinum,true,1,Arian Smith
+insert-platinum,106,Platinum,true,1,Ashton Jeanty
+insert-platinum,107,Platinum,true,1,Azareye'h Thomas
+insert-platinum,108,Platinum,true,1,Benjamin Morrison
+insert-platinum,109,Platinum,true,1,Bhayshul Tuten
+insert-platinum,110,Platinum,true,1,Cam Skattebo
+insert-platinum,113,Platinum,true,1,Chimere Dike
+insert-platinum,114,Platinum,true,1,Colston Loveland
+insert-platinum,116,Platinum,true,1,Derrick Harmon
+insert-platinum,117,Platinum,true,1,Dillon Gabriel
+insert-platinum,118,Platinum,true,1,DJ Giddens
+insert-platinum,119,Platinum,true,1,Donovan Ezeiruaku
+insert-platinum,120,Platinum,true,1,Donovan Jackson
+insert-platinum,121,Platinum,true,1,Dylan Sampson
+insert-platinum,122,Platinum,true,1,Elic Ayomanor
+insert-platinum,123,Platinum,true,1,Elijah Arroyo
+insert-platinum,125,Platinum,true,1,Grey Zabel
+insert-platinum,126,Platinum,true,1,Harold Fannin Jr.
+insert-platinum,127,Platinum,true,1,Isaac TeSlaa
+insert-platinum,128,Platinum,true,1,Jack Bech
+insert-platinum,129,Platinum,true,1,Jack Kiser
+insert-platinum,130,Platinum,true,1,Jack Sawyer
+insert-platinum,131,Platinum,true,1,Jahdae Barron
+insert-platinum,132,Platinum,true,1,Jalen Milroe
+insert-platinum,133,Platinum,true,1,Jalen Royals
+insert-platinum,134,Platinum,true,1,Jalon Walker
+insert-platinum,136,Platinum,true,1,Jarquez Hunter
+insert-platinum,138,Platinum,true,1,Jayden Higgins
+insert-platinum,139,Platinum,true,1,Jaydon Blue
+insert-platinum,140,Platinum,true,1,Jaylin Lane
+insert-platinum,141,Platinum,true,1,Jaylin Noel
+insert-platinum,142,Platinum,true,1,Jihaad Campbell
+insert-platinum,143,Platinum,true,1,Jordan Burch
+insert-platinum,144,Platinum,true,1,Jordan James
+insert-platinum,145,Platinum,true,1,Josh Conerly Jr.
+insert-platinum,146,Platinum,true,1,Josh Simmons
+insert-platinum,147,Platinum,true,1,JT Tuimoloau
+insert-platinum,148,Platinum,true,1,Kaleb Johnson
+insert-platinum,150,Platinum,true,1,Kenneth Grant
+insert-platinum,151,Platinum,true,1,Kyle McCord
+insert-platinum,152,Platinum,true,1,Kyle Williams
+insert-platinum,153,Platinum,true,1,Landon Jackson
+insert-platinum,155,Platinum,true,1,Malaki Starks
+insert-platinum,156,Platinum,true,1,Mason Graham
+insert-platinum,157,Platinum,true,1,Mason Taylor
+insert-platinum,158,Platinum,true,1,Matthew Golden
+insert-platinum,159,Platinum,true,1,Maxwell Hairston
+insert-platinum,161,Platinum,true,1,Mykel Williams
+insert-platinum,162,Platinum,true,1,Nic Scourton
+insert-platinum,163,Platinum,true,1,Nick Emmanwori
+insert-platinum,164,Platinum,true,1,Nick Martin
+insert-platinum,166,Platinum,true,1,Omarion Hampton
+insert-platinum,168,Platinum,true,1,Pat Bryant
+insert-platinum,169,Platinum,true,1,Princely Umanmielen
+insert-platinum,170,Platinum,true,1,Quinn Ewers
+insert-platinum,171,Platinum,true,1,Quinshon Judkins
+insert-platinum,172,Platinum,true,1,Riley Leonard
+insert-platinum,173,Platinum,true,1,RJ Harvey
+insert-platinum,174,Platinum,true,1,Savion Williams
+insert-platinum,176,Platinum,true,1,Shavon Revel Jr.
+insert-platinum,177,Platinum,true,1,Shedeur Sanders
+insert-platinum,178,Platinum,true,1,Shemar James
+insert-platinum,179,Platinum,true,1,Shemar Stewart
+insert-platinum,180,Platinum,true,1,T.J. Sanders
+insert-platinum,181,Platinum,true,1,Tai Felton
+insert-platinum,182,Platinum,true,1,Terrance Ferguson
+insert-platinum,183,Platinum,true,1,Tetairoa McMillan
+insert-platinum,184,Platinum,true,1,Tez Johnson
+insert-platinum,185,Platinum,true,1,Tory Horton
+insert-platinum,186,Platinum,true,1,Travis Hunter
+insert-platinum,187,Platinum,true,1,Tre Harris
+insert-platinum,188,Platinum,true,1,TreVeyon Henderson
+insert-platinum,189,Platinum,true,1,Trevor Etienne
+insert-platinum,191,Platinum,true,1,Ty Robinson
+insert-platinum,192,Platinum,true,1,Tyleik Williams
+insert-platinum,194,Platinum,true,1,Tyler Shough
+insert-platinum,195,Platinum,true,1,Tyler Warren
+insert-platinum,197,Platinum,true,1,Will Howard
+insert-platinum,198,Platinum,true,1,Will Johnson
+insert-platinum,200,Platinum,true,1,Xavier Watts
+insert-preferred,106,Preferred,true,349,Ashton Jeanty
+insert-preferred,109,Preferred,true,349,Bhayshul Tuten
+insert-preferred,110,Preferred,true,349,Cam Skattebo
+insert-preferred,113,Preferred,true,349,Chimere Dike
+insert-preferred,114,Preferred,true,349,Colston Loveland
+insert-preferred,117,Preferred,true,349,Dillon Gabriel
+insert-preferred,120,Preferred,true,349,Donovan Jackson
+insert-preferred,121,Preferred,true,349,Dylan Sampson
+insert-preferred,122,Preferred,true,349,Elic Ayomanor
+insert-preferred,123,Preferred,true,349,Elijah Arroyo
+insert-preferred,127,Preferred,true,349,Isaac TeSlaa
+insert-preferred,128,Preferred,true,349,Jack Bech
+insert-preferred,129,Preferred,true,349,Jack Kiser
+insert-preferred,130,Preferred,true,349,Jack Sawyer
+insert-preferred,131,Preferred,true,349,Jahdae Barron
+insert-preferred,132,Preferred,true,349,Jalen Milroe
+insert-preferred,133,Preferred,true,349,Jalen Royals
+insert-preferred,134,Preferred,true,349,Jalon Walker
+insert-preferred,136,Preferred,true,349,Jarquez Hunter
+insert-preferred,138,Preferred,true,349,Jayden Higgins
+insert-preferred,139,Preferred,true,349,Jaydon Blue
+insert-preferred,140,Preferred,true,349,Jaylin Lane
+insert-preferred,141,Preferred,true,349,Jaylin Noel
+insert-preferred,142,Preferred,true,349,Jihaad Campbell
+insert-preferred,143,Preferred,true,349,Jordan Burch
+insert-preferred,145,Preferred,true,349,Josh Conerly Jr.
+insert-preferred,148,Preferred,true,349,Kaleb Johnson
+insert-preferred,150,Preferred,true,349,Kenneth Grant
+insert-preferred,151,Preferred,true,349,Kyle McCord
+insert-preferred,152,Preferred,true,349,Kyle Williams
+insert-preferred,155,Preferred,true,349,Malaki Starks
+insert-preferred,156,Preferred,true,349,Mason Graham
+insert-preferred,158,Preferred,true,349,Matthew Golden
+insert-preferred,159,Preferred,true,349,Maxwell Hairston
+insert-preferred,162,Preferred,true,349,Nic Scourton
+insert-preferred,163,Preferred,true,349,Nick Emmanwori
+insert-preferred,164,Preferred,true,349,Nick Martin
+insert-preferred,166,Preferred,true,349,Omarion Hampton
+insert-preferred,168,Preferred,true,349,Pat Bryant
+insert-preferred,170,Preferred,true,349,Quinn Ewers
+insert-preferred,171,Preferred,true,349,Quinshon Judkins
+insert-preferred,172,Preferred,true,349,Riley Leonard
+insert-preferred,173,Preferred,true,349,RJ Harvey
+insert-preferred,174,Preferred,true,349,Savion Williams
+insert-preferred,175,Preferred,true,349,Sai'vion Jones
+insert-preferred,176,Preferred,true,349,Shavon Revel Jr.
+insert-preferred,177,Preferred,true,349,Shedeur Sanders
+insert-preferred,178,Preferred,true,349,Shemar James
+insert-preferred,179,Preferred,true,349,Shemar Stewart
+insert-preferred,181,Preferred,true,349,Tai Felton
+insert-preferred,182,Preferred,true,349,Terrance Ferguson
+insert-preferred,183,Preferred,true,349,Tetairoa McMillan
+insert-preferred,184,Preferred,true,349,Tez Johnson
+insert-preferred,185,Preferred,true,349,Tory Horton
+insert-preferred,186,Preferred,true,349,Travis Hunter
+insert-preferred,187,Preferred,true,349,Tre Harris
+insert-preferred,188,Preferred,true,349,TreVeyon Henderson
+insert-preferred,189,Preferred,true,349,Trevor Etienne
+insert-preferred,191,Preferred,true,349,Ty Robinson
+insert-preferred,194,Preferred,true,349,Tyler Shough
+insert-preferred,195,Preferred,true,349,Tyler Warren
+insert-preferred,197,Preferred,true,349,Will Howard
+insert-preferred,198,Preferred,true,349,Will Johnson
+insert-preferred,200,Preferred,true,349,Xavier Watts
+insert-purple,102,Purple,true,25,Alfred Collins
+insert-purple,104,Purple,true,25,Arian Smith
+insert-purple,106,Purple,true,25,Ashton Jeanty
+insert-purple,107,Purple,true,25,Azareye'h Thomas
+insert-purple,108,Purple,true,25,Benjamin Morrison
+insert-purple,109,Purple,true,25,Bhayshul Tuten
+insert-purple,110,Purple,true,25,Cam Skattebo
+insert-purple,113,Purple,true,25,Chimere Dike
+insert-purple,114,Purple,true,25,Colston Loveland
+insert-purple,116,Purple,true,25,Derrick Harmon
+insert-purple,117,Purple,true,25,Dillon Gabriel
+insert-purple,118,Purple,true,25,DJ Giddens
+insert-purple,119,Purple,true,25,Donovan Ezeiruaku
+insert-purple,120,Purple,true,25,Donovan Jackson
+insert-purple,121,Purple,true,25,Dylan Sampson
+insert-purple,122,Purple,true,25,Elic Ayomanor
+insert-purple,123,Purple,true,25,Elijah Arroyo
+insert-purple,125,Purple,true,25,Grey Zabel
+insert-purple,126,Purple,true,25,Harold Fannin Jr.
+insert-purple,127,Purple,true,25,Isaac TeSlaa
+insert-purple,128,Purple,true,25,Jack Bech
+insert-purple,129,Purple,true,25,Jack Kiser
+insert-purple,130,Purple,true,25,Jack Sawyer
+insert-purple,131,Purple,true,25,Jahdae Barron
+insert-purple,132,Purple,true,25,Jalen Milroe
+insert-purple,133,Purple,true,25,Jalen Royals
+insert-purple,134,Purple,true,25,Jalon Walker
+insert-purple,136,Purple,true,25,Jarquez Hunter
+insert-purple,138,Purple,true,25,Jayden Higgins
+insert-purple,139,Purple,true,25,Jaydon Blue
+insert-purple,140,Purple,true,25,Jaylin Lane
+insert-purple,141,Purple,true,25,Jaylin Noel
+insert-purple,142,Purple,true,25,Jihaad Campbell
+insert-purple,143,Purple,true,25,Jordan Burch
+insert-purple,144,Purple,true,25,Jordan James
+insert-purple,145,Purple,true,25,Josh Conerly Jr.
+insert-purple,146,Purple,true,25,Josh Simmons
+insert-purple,147,Purple,true,25,JT Tuimoloau
+insert-purple,148,Purple,true,25,Kaleb Johnson
+insert-purple,150,Purple,true,25,Kenneth Grant
+insert-purple,151,Purple,true,25,Kyle McCord
+insert-purple,152,Purple,true,25,Kyle Williams
+insert-purple,153,Purple,true,25,Landon Jackson
+insert-purple,155,Purple,true,25,Malaki Starks
+insert-purple,156,Purple,true,25,Mason Graham
+insert-purple,157,Purple,true,25,Mason Taylor
+insert-purple,158,Purple,true,25,Matthew Golden
+insert-purple,159,Purple,true,25,Maxwell Hairston
+insert-purple,161,Purple,true,25,Mykel Williams
+insert-purple,162,Purple,true,25,Nic Scourton
+insert-purple,163,Purple,true,25,Nick Emmanwori
+insert-purple,164,Purple,true,25,Nick Martin
+insert-purple,166,Purple,true,25,Omarion Hampton
+insert-purple,168,Purple,true,25,Pat Bryant
+insert-purple,170,Purple,true,25,Quinn Ewers
+insert-purple,171,Purple,true,25,Quinshon Judkins
+insert-purple,172,Purple,true,25,Riley Leonard
+insert-purple,173,Purple,true,25,RJ Harvey
+insert-purple,174,Purple,true,25,Savion Williams
+insert-purple,176,Purple,true,25,Shavon Revel Jr.
+insert-purple,177,Purple,true,25,Shedeur Sanders
+insert-purple,178,Purple,true,25,Shemar James
+insert-purple,179,Purple,true,25,Shemar Stewart
+insert-purple,180,Purple,true,25,T.J. Sanders
+insert-purple,181,Purple,true,25,Tai Felton
+insert-purple,182,Purple,true,25,Terrance Ferguson
+insert-purple,183,Purple,true,25,Tetairoa McMillan
+insert-purple,184,Purple,true,25,Tez Johnson
+insert-purple,185,Purple,true,25,Tory Horton
+insert-purple,186,Purple,true,25,Travis Hunter
+insert-purple,187,Purple,true,25,Tre Harris
+insert-purple,188,Purple,true,25,TreVeyon Henderson
+insert-purple,189,Purple,true,25,Trevor Etienne
+insert-purple,191,Purple,true,25,Ty Robinson
+insert-purple,192,Purple,true,25,Tyleik Williams
+insert-purple,194,Purple,true,25,Tyler Shough
+insert-purple,195,Purple,true,25,Tyler Warren
+insert-purple,197,Purple,true,25,Will Howard
+insert-purple,198,Purple,true,25,Will Johnson
+insert-purple,200,Purple,true,25,Xavier Watts
+insert-red,106,Red,true,,Ashton Jeanty
+insert-red,109,Red,true,,Bhayshul Tuten
+insert-red,110,Red,true,,Cam Skattebo
+insert-red,113,Red,true,,Chimere Dike
+insert-red,114,Red,true,,Colston Loveland
+insert-red,117,Red,true,,Dillon Gabriel
+insert-red,120,Red,true,,Donovan Jackson
+insert-red,122,Red,true,,Elic Ayomanor
+insert-red,128,Red,true,,Jack Bech
+insert-red,129,Red,true,,Jack Kiser
+insert-red,130,Red,true,,Jack Sawyer
+insert-red,132,Red,true,,Jalen Milroe
+insert-red,133,Red,true,,Jalen Royals
+insert-red,134,Red,true,,Jalon Walker
+insert-red,136,Red,true,,Jarquez Hunter
+insert-red,138,Red,true,,Jayden Higgins
+insert-red,140,Red,true,,Jaylin Lane
+insert-red,141,Red,true,,Jaylin Noel
+insert-red,142,Red,true,,Jihaad Campbell
+insert-red,145,Red,true,,Josh Conerly Jr.
+insert-red,150,Red,true,,Kenneth Grant
+insert-red,151,Red,true,,Kyle McCord
+insert-red,155,Red,true,,Malaki Starks
+insert-red,156,Red,true,,Mason Graham
+insert-red,158,Red,true,,Matthew Golden
+insert-red,161,Red,true,,Mykel Williams
+insert-red,162,Red,true,,Nic Scourton
+insert-red,172,Red,true,,Riley Leonard
+insert-red,173,Red,true,,RJ Harvey
+insert-red,176,Red,true,,Shavon Revel Jr.
+insert-red,177,Red,true,,Shedeur Sanders
+insert-red,179,Red,true,,Shemar Stewart
+insert-red,182,Red,true,,Terrance Ferguson
+insert-red,183,Red,true,,Tetairoa McMillan
+insert-red,184,Red,true,,Tez Johnson
+insert-red,185,Red,true,,Tory Horton
+insert-red,186,Red,true,,Travis Hunter
+insert-red,187,Red,true,,Tre Harris
+insert-red,188,Red,true,,TreVeyon Henderson
+insert-red,189,Red,true,,Trevor Etienne
+insert-red,194,Red,true,,Tyler Shough
+insert-red,197,Red,true,,Will Howard
+insert-red,198,Red,true,,Will Johnson
+insert-true-blue,102,True Blue,true,99,Alfred Collins
+insert-true-blue,104,True Blue,true,99,Arian Smith
+insert-true-blue,106,True Blue,true,99,Ashton Jeanty
+insert-true-blue,107,True Blue,true,99,Azareye'h Thomas
+insert-true-blue,108,True Blue,true,99,Benjamin Morrison
+insert-true-blue,109,True Blue,true,99,Bhayshul Tuten
+insert-true-blue,110,True Blue,true,99,Cam Skattebo
+insert-true-blue,113,True Blue,true,99,Chimere Dike
+insert-true-blue,114,True Blue,true,99,Colston Loveland
+insert-true-blue,116,True Blue,true,99,Derrick Harmon
+insert-true-blue,117,True Blue,true,99,Dillon Gabriel
+insert-true-blue,118,True Blue,true,99,DJ Giddens
+insert-true-blue,120,True Blue,true,99,Donovan Jackson
+insert-true-blue,121,True Blue,true,99,Dylan Sampson
+insert-true-blue,122,True Blue,true,99,Elic Ayomanor
+insert-true-blue,123,True Blue,true,99,Elijah Arroyo
+insert-true-blue,125,True Blue,true,99,Grey Zabel
+insert-true-blue,126,True Blue,true,99,Harold Fannin Jr.
+insert-true-blue,127,True Blue,true,99,Isaac TeSlaa
+insert-true-blue,128,True Blue,true,99,Jack Bech
+insert-true-blue,129,True Blue,true,99,Jack Kiser
+insert-true-blue,130,True Blue,true,99,Jack Sawyer
+insert-true-blue,131,True Blue,true,99,Jahdae Barron
+insert-true-blue,132,True Blue,true,99,Jalen Milroe
+insert-true-blue,133,True Blue,true,99,Jalen Royals
+insert-true-blue,134,True Blue,true,99,Jalon Walker
+insert-true-blue,136,True Blue,true,99,Jarquez Hunter
+insert-true-blue,138,True Blue,true,99,Jayden Higgins
+insert-true-blue,139,True Blue,true,99,Jaydon Blue
+insert-true-blue,140,True Blue,true,99,Jaylin Lane
+insert-true-blue,141,True Blue,true,99,Jaylin Noel
+insert-true-blue,142,True Blue,true,99,Jihaad Campbell
+insert-true-blue,143,True Blue,true,99,Jordan Burch
+insert-true-blue,144,True Blue,true,99,Jordan James
+insert-true-blue,145,True Blue,true,99,Josh Conerly Jr.
+insert-true-blue,146,True Blue,true,99,Josh Simmons
+insert-true-blue,147,True Blue,true,99,JT Tuimoloau
+insert-true-blue,148,True Blue,true,99,Kaleb Johnson
+insert-true-blue,150,True Blue,true,99,Kenneth Grant
+insert-true-blue,151,True Blue,true,99,Kyle McCord
+insert-true-blue,152,True Blue,true,99,Kyle Williams
+insert-true-blue,153,True Blue,true,99,Landon Jackson
+insert-true-blue,155,True Blue,true,99,Malaki Starks
+insert-true-blue,156,True Blue,true,99,Mason Graham
+insert-true-blue,157,True Blue,true,99,Mason Taylor
+insert-true-blue,158,True Blue,true,99,Matthew Golden
+insert-true-blue,159,True Blue,true,99,Maxwell Hairston
+insert-true-blue,161,True Blue,true,99,Mykel Williams
+insert-true-blue,162,True Blue,true,99,Nic Scourton
+insert-true-blue,163,True Blue,true,99,Nick Emmanwori
+insert-true-blue,164,True Blue,true,99,Nick Martin
+insert-true-blue,166,True Blue,true,99,Omarion Hampton
+insert-true-blue,168,True Blue,true,99,Pat Bryant
+insert-true-blue,170,True Blue,true,99,Quinn Ewers
+insert-true-blue,171,True Blue,true,99,Quinshon Judkins
+insert-true-blue,172,True Blue,true,99,Riley Leonard
+insert-true-blue,173,True Blue,true,99,RJ Harvey
+insert-true-blue,174,True Blue,true,99,Savion Williams
+insert-true-blue,176,True Blue,true,99,Shavon Revel Jr.
+insert-true-blue,177,True Blue,true,99,Shedeur Sanders
+insert-true-blue,178,True Blue,true,99,Shemar James
+insert-true-blue,179,True Blue,true,99,Shemar Stewart
+insert-true-blue,180,True Blue,true,99,T.J. Sanders
+insert-true-blue,181,True Blue,true,99,Tai Felton
+insert-true-blue,182,True Blue,true,99,Terrance Ferguson
+insert-true-blue,183,True Blue,true,99,Tetairoa McMillan
+insert-true-blue,184,True Blue,true,99,Tez Johnson
+insert-true-blue,185,True Blue,true,99,Tory Horton
+insert-true-blue,186,True Blue,true,99,Travis Hunter
+insert-true-blue,187,True Blue,true,99,Tre Harris
+insert-true-blue,188,True Blue,true,99,TreVeyon Henderson
+insert-true-blue,189,True Blue,true,99,Trevor Etienne
+insert-true-blue,191,True Blue,true,99,Ty Robinson
+insert-true-blue,192,True Blue,true,99,Tyleik Williams
+insert-true-blue,194,True Blue,true,99,Tyler Shough
+insert-true-blue,197,True Blue,true,99,Will Howard
+insert-true-blue,198,True Blue,true,99,Will Johnson
+insert-true-blue,200,True Blue,true,99,Xavier Watts

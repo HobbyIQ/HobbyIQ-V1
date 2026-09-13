@@ -1,0 +1,50 @@
+category,cardNumber,parallel,isAuto,printRun,player
+base,1,,true,99,Kirk Cousins
+base,2,,true,99,Odell Beckham Jr.
+base,3,,true,99,DJ Moore
+base,4,,true,99,Christian Kirk
+base,5,,true,99,Joe Milton III
+base,7,,true,99,Ricky Pearsall
+base,8,,true,99,Marquise Brown
+base,9,,true,99,Zack Baun
+base,10,,true,99,Troy Franklin
+base,11,,true,25,Spencer Rattler
+base,12,,true,99,Jonathan Allen
+base,13,,true,99,Jonathan Mingo
+base,14,,true,99,Ja'Tavion Sanders
+base,15,,true,99,Laiatu Latu
+base,17,,true,99,Jaylen Wright
+base,19,,true,99,Ray Davis
+insert-platinum,1,Platinum,true,1,Kirk Cousins
+insert-platinum,2,Platinum,true,1,Odell Beckham Jr.
+insert-platinum,3,Platinum,true,1,DJ Moore
+insert-platinum,4,Platinum,true,1,Christian Kirk
+insert-platinum,5,Platinum,true,1,Joe Milton III
+insert-platinum,7,Platinum,true,1,Ricky Pearsall
+insert-platinum,8,Platinum,true,1,Marquise Brown
+insert-platinum,9,Platinum,true,1,Zack Baun
+insert-platinum,10,Platinum,true,1,Troy Franklin
+insert-platinum,11,Platinum,true,1,Spencer Rattler
+insert-platinum,12,Platinum,true,1,Jonathan Allen
+insert-platinum,13,Platinum,true,1,Jonathan Mingo
+insert-platinum,14,Platinum,true,1,Ja'Tavion Sanders
+insert-platinum,15,Platinum,true,1,Laiatu Latu
+insert-platinum,17,Platinum,true,1,Jaylen Wright
+insert-platinum,18,Platinum,true,1,Andrew Van Ginkel
+insert-platinum,19,Platinum,true,1,Ray Davis
+insert-prime,1,Prime,true,25,Kirk Cousins
+insert-prime,2,Prime,true,25,Odell Beckham Jr.
+insert-prime,3,Prime,true,25,DJ Moore
+insert-prime,4,Prime,true,25,Christian Kirk
+insert-prime,5,Prime,true,25,Joe Milton III
+insert-prime,7,Prime,true,25,Ricky Pearsall
+insert-prime,8,Prime,true,25,Marquise Brown
+insert-prime,9,Prime,true,25,Zack Baun
+insert-prime,10,Prime,true,25,Troy Franklin
+insert-prime,11,Prime,true,25,Spencer Rattler
+insert-prime,12,Prime,true,25,Jonathan Allen
+insert-prime,13,Prime,true,25,Jonathan Mingo
+insert-prime,14,Prime,true,25,Ja'Tavion Sanders
+insert-prime,15,Prime,true,25,Laiatu Latu
+insert-prime,17,Prime,true,25,Jaylen Wright
+insert-prime,19,Prime,true,25,Ray Davis
