@@ -100,6 +100,18 @@ export const APP_NAV: NavItem[] = [
     label: "eBay",
     iconPath: "M20 4H4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V6a2 2 0 00-2-2zM12 15l-6-6h4V6h4v3h4l-6 6z",
   },
+  // CF-WEB-GUIDE (2026-08-22). "How HobbyIQ works" — the teaching layer.
+  // Sits directly above Settings, at the bottom of the nav, because it is a
+  // reference people return to rather than a daily surface. It is in the NAV
+  // and not buried inside Settings because the thing it teaches — FMV is a
+  // projected next sale, not a median — was previously explained ONLY on the
+  // public marketing site. Signed-in users had no way to learn it at all.
+  {
+    href: "/app/guide",
+    label: "Guide",
+    // Open book.
+    iconPath: "M12 6.5C10.5 5.5 8.5 5 6 5H2v13h4c2.5 0 4.5.5 6 1.5 1.5-1 3.5-1.5 6-1.5h4V5h-4c-2.5 0-4.5.5-6 1.5zm-1 10.2c-1.4-.6-3-.9-5-.9H4V7h2c2 0 3.6.3 5 .9v8.8zm9-.9c-2 0-3.6.3-5 .9V7.9c1.4-.6 3-.9 5-.9h2v8.8h-2z",
+  },
   {
     href: "/app/settings",
     label: "Settings",
