@@ -121,7 +121,7 @@ const RECORDED: Record<string, string> = {
   "fetcher:canonicalSlug": "f0c397eb06ab28ca",
   "fetcher:parseSetUrl": "97144f0493f00e31",
   "fetcher:buildRows": "e328487558b2f244",
-  "fetcher:splitParentAndSubset": "17f62334a02e1960",
+  "fetcher:splitParentAndSubset": "433ad0b700af0e18",
   "fetcher:parallelFromSlug": "fd2bea5160dd904e",
 };
 
@@ -141,9 +141,9 @@ function currentHashes(): Record<string, string> {
 
 // ── the bump itself ──────────────────────────────────────────────────────────
 
-describe("the SCC converter is at v6, because the Preview mints different rows", () => {
-  it("the fetcher stamps v6", () => {
-    expect(CONVERTER_VERSION).toBe(6);
+describe("the SCC converter is at v7, because a qualified product is not its brand", () => {
+  it("the fetcher stamps v7", () => {
+    expect(CONVERTER_VERSION).toBe(7);
   });
 
   it("the driver's lane table agrees -- a disagreement re-opens nothing", () => {
@@ -170,6 +170,9 @@ describe("the SCC converter is at v6, because the Preview mints different rows",
     expect(src).toContain("#1901");
     expect(src).toContain("Bowman's Best Preview is its own product key");
     expect(src).toContain("BBP prefix");
+    // v7: a brand-qualified product is not a subset of its brand (#2108).
+    expect(src).toContain("#2108");
+    expect(src).toContain("brand-qualified product is not a subset of its brand");
   });
 
   it("v4 names #1894 and the heading it folded", () => {

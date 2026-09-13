@@ -474,6 +474,75 @@ const PARENT_BRANDS = [
 const BRAND_CANONICAL = { "pacific-prisms": "pacific-prism" };
 
 /**
+ * CF-A-BRAND-QUALIFIED-PRODUCT-IS-NOT-A-SUBSET-OF-ITS-BRAND (2026-09-13, from
+ * PR #2108's acquirer, who caught this by hand on all seven manifests before
+ * it reached main).
+ *
+ * The PARENT_BRANDS walk below is right for a VINTAGE subset page -- `1955
+ * topps-all-american` really is Topps, subset "All American", because
+ * `topps-all-american` names no product of its own. It is WRONG for a modern
+ * Panini/Fleer product whose brand-qualified spelling IS the registered
+ * product: `panini-donruss`, `panini-select`, `panini-crown-royale` and
+ * `fleer-stickers` are declared in productSetKeys.ts as their OWN keys (each
+ * `P(..., { parent: "<brand>" })`), not as subsets of the brand. Generalising
+ * them the way #1741 generalises a vintage insert would emit `donruss`,
+ * `panini` and `fleer` -- a different, ALSO-registered product -- and ingest
+ * every row under the wrong pool. Measured on PR #2108: six manifests
+ * (`donruss` x4, `panini` x2) and one Fleer (`fleer` x1) all needed a hand
+ * correction before merge.
+ *
+ * THE DISTINCTION THE BRAND-PREFIX TEST CANNOT MAKE FROM THE SLUG ALONE is
+ * exactly the one productSetKeys.ts already answers: is the FULL remainder
+ * (before any brand is stripped from it) itself a distinct registered
+ * product, or does the brand exhaust it? A vintage subset slug like
+ * `topps-all-american` or `bowman-all-american` is NOT a registered key, so
+ * it still falls through to the brand walk untouched -- this list narrows
+ * nothing for the two cases it was never meant to touch.
+ *
+ * KEPT AS A LOCAL LIST, deliberately, for the reason every other list in this
+ * file is (CF-A-JUNK-WAX-PRODUCT-IS-NOT-A-SUBSET-OF-ITS-BRAND above): this
+ * file runs offline against cached HTML with no dist/, so it cannot import
+ * productSetKeys.ts. The pin test asserts every entry against that table, so
+ * the two cannot drift silently.
+ *
+ * `donruss` is deliberately NOT unconditionally listed here: one product line
+ * spans two owners, and the era decides the spelling (DONRUSS_SPELLING_POLICY
+ * / spellForEra in productSetKeys.ts, boundary year 2009). `donruss` is
+ * itself registered too (`P("donruss", { family: "donruss" })`), so a
+ * pre-2009 Donruss page must NOT be corrected to `panini-donruss` -- doing so
+ * would mint the modern product's key over a 1990 checklist. `spellDonrussForEra`
+ * below mirrors that one boundary rule; everything else stays a straight
+ * membership test.
+ *
+ * `fleer-metal-universe` is included for the same reason `fleer-stickers` is:
+ * both are `P(k, { parent: "fleer" })` in the table, the identical shape the
+ * acquirer's fix was needed for. Its era twin `skybox-metal-universe` and the
+ * un-prefixed `metal-universe` are NOT brand-qualified in a way this list's
+ * generalisation ever reaches (`skybox-` and bare `metal-universe` slugs never
+ * match a PARENT_BRANDS entry that would shorten them), so they need no entry
+ * here -- see #2108's note on the era-twin naming question, left open.
+ */
+const QUALIFIED_PRODUCT_KEYS = new Set([
+  "panini-donruss", "panini-select", "panini-crown-royale", "fleer-stickers",
+  "fleer-metal-universe",
+]);
+
+/** Panini acquired Donruss in 2009 (CF-PANINI-IS-ANACHRONISTIC-BEFORE-2009),
+ *  mirroring PANINI_DONRUSS_FROM_YEAR / DONRUSS_SPELLING_POLICY in
+ *  productSetKeys.ts -- pinned against that table so the two never drift. */
+const PANINI_DONRUSS_FROM_YEAR = 2009;
+
+/** The era-correct spelling for a bare `donruss` remainder; every other key
+ *  passes through untouched. Applied ONLY to the exact brand `donruss`, never
+ *  to a longer remainder (`donruss-optic` etc. are their own products and
+ *  never reach this function with the bare brand). */
+function spellDonrussForEra(r, year) {
+  if (r !== "donruss") return r;
+  if (typeof year !== "number" || !Number.isFinite(year) || year <= 0) return r;
+  return year >= PANINI_DONRUSS_FROM_YEAR ? "panini-donruss" : "donruss";
+}
+
+/**
  * CF-A-TIFFANY-IS-NOT-A-SUBSET (2026-09-04, follow-on to #1741 and #1719).
  *
  * #1741 ruled that a page whose slug extends a known brand belongs to that
@@ -726,8 +795,11 @@ function parallelTailOf(rest) {
  * different pools, and collapsing them is the exact harm #1666 documented.
  * A slug naming no known brand returns the slug unchanged and NO parent claim,
  * so an unrecognised product is never silently reparented.
+ *
+ * `year` decides ERA SPELLING ONLY (Donruss's one owner boundary, see
+ * QUALIFIED_PRODUCT_KEYS above) and is optional: every other branch ignores it.
  */
-function splitParentAndSubset(rest, tailRe) {
+function splitParentAndSubset(rest, tailRe, year) {
   let r = String(rest || "");
   if (tailRe) r = r.replace(tailRe, "");
   // THE RULED PRODUCT WINS OVER THE BRAND SPLIT. A remainder naming a coated
@@ -745,6 +817,15 @@ function splitParentAndSubset(rest, tailRe) {
   // the packed-out brand and mint the preview onto the flagship's pool.
   const nested = nestedProduct(r);
   if (nested) return nested;
+  // A BRAND-QUALIFIED PRODUCT WINS OVER THE BRAND SPLIT TOO, and must be
+  // checked before the walk ever shortens `r` to a brand: `panini-select` is
+  // the registered product, not a "Select" subset of `panini`. `donruss`
+  // spells by era first (one product line, two owners), because the bare
+  // brand is ALSO a registered key and the walk below would otherwise never
+  // be wrong often enough to notice -- the era decides which registered key
+  // wins, not the brand-prefix test.
+  const eraSpelled = spellDonrussForEra(r, year);
+  if (QUALIFIED_PRODUCT_KEYS.has(eraSpelled)) return { parentSetKey: eraSpelled, subset: "" };
   for (const b of PARENT_BRANDS) {
     if (r === b) return { parentSetKey: BRAND_CANONICAL[b] || b, subset: "" };
     if (r.startsWith(b + "-")) {
@@ -957,8 +1038,19 @@ function splitCardHeader(raw) {
  *    pages produce DIFFERENT rows than they did at v5 -- a different setKey and
  *    a different cardNumber on every row -- so any verdict recorded against the
  *    old output has to be re-attempted rather than trusted.
+ * 7  2026-09-13: a brand-qualified product is not a subset of its brand
+ *    (PR #2108's acquirer, hand-correcting seven manifests before merge).
+ *    `splitParentAndSubset` no longer generalises `panini-donruss`,
+ *    `panini-select`, `panini-crown-royale`, `fleer-stickers` or
+ *    `fleer-metal-universe` down to `donruss`/`panini`/`fleer` -- each is a
+ *    separately registered product in productSetKeys.ts and the old output
+ *    would have minted rows under a different, also-registered pool. Donruss
+ *    additionally now spells by era (pre-2009 `donruss`, 2009+
+ *    `panini-donruss`) instead of always emitting the bare brand. Every page
+ *    of one of these products produces a DIFFERENT setKey than it did at v6,
+ *    so any verdict recorded against the old output has to be re-attempted.
  */
-const CONVERTER_VERSION = 6;
+const CONVERTER_VERSION = 7;
 
 const NOT_FOUND_RE = /Checklist Not Found|NOT FOUND\s*-\s*https?:\/\//i;
 
@@ -1199,7 +1291,7 @@ async function main() {
   // driver is the DISPLAY-NAME slug and is not trusted on a rung page: it is
   // the invented `topps-chrome-refractors-gold` shape this fix exists to stop.
   const parentSplit = parsedUrl
-    ? splitParentAndSubset(parsedUrl.rest, parallelTailOf(parsedUrl.rest))
+    ? splitParentAndSubset(parsedUrl.rest, parallelTailOf(parsedUrl.rest), year)
     : { parentSetKey: "", subset: "" };
   const isAuto = autoEvidence(html, setName || (parsedUrl ? parsedUrl.rest : ""));
 
@@ -1336,4 +1428,5 @@ module.exports = {
   unescapeAddslashes, canonicalSlug, canonicalSetUrl,
   QUALIFIED_REFRACTOR, NESTED_PRODUCT_SLUGS, nestedProduct, SLUG_PARALLEL_TAIL, PARENT_BRANDS,
   SET_CARD_NUMBER_PREFIX, applyCardNumberPrefix,
+  QUALIFIED_PRODUCT_KEYS, spellDonrussForEra, PANINI_DONRUSS_FROM_YEAR,
 };
