@@ -147,10 +147,11 @@ describe("frame health — a rate whose frame is broken is not a corpus rate", (
   });
 
   it("passes a sample that reproduces the census shares", () => {
-    // Reproduces the 32-SLOT weighted corpus average (AGREE 0.424, IMPROVE
-    // 0.034, CONFLICT 0.408, UNDERIVABLE 0.082), not slot 31's.
+    // Reproduces the 32-SLOT weighted corpus average of the 2026-09-12/13
+    // reference (AGREE 0.351, IMPROVE 0.031, CONFLICT 0.507, UNDERIVABLE
+    // 0.087), not slot 31's.
     const health = INV.frameHealth({
-      byClass: { AGREE: 848, IMPROVE: 69, CONFLICT: 816, UNDERIVABLE: 165 },
+      byClass: { AGREE: 701, IMPROVE: 62, CONFLICT: 1014, UNDERIVABLE: 174 },
       distinctCards: 850,
       sampled: 2000,
     });
@@ -170,18 +171,18 @@ describe("frame health — a rate whose frame is broken is not a corpus rate", (
     // movement is visible rather than assumed.
     expect(health.healthy).toBe(true);
     expect(health.drift.CONFLICT.sampled).toBeCloseTo(0.7, 3);
-    // The corpus number, not slot 31's 0.231.
-    expect(health.drift.CONFLICT.census).toBeCloseTo(0.430, 2);
-    expect(health.drift.CONFLICT.delta).toBeGreaterThan(0.25);
+    // The corpus number, not slot 31's 0.229.
+    expect(health.drift.CONFLICT.census).toBeCloseTo(0.507, 2);
+    expect(health.drift.CONFLICT.delta).toBeGreaterThan(0.15);
   });
 
   it("carries the census reference it compares against", () => {
     // CF-THE-REFERENCE-IS-THE-WHOLE-CORPUS-NOT-ONE-SLOT (2026-09-06). The
     // reference is the ROW-WEIGHTED average over all 32 census slots
-    // (11,746,071 rows on the wave-2 re-baseline), not slot 31 alone.
+    // (22,694,704 rows on the 2026-09-12/13 re-baseline), not slot 31 alone.
     expect(INV.CENSUS_REFERENCE_SHARES.slots).toBe(32);
-    expect(INV.CENSUS_REFERENCE_SHARES.AGREE).toBeCloseTo(0.450, 2);
-    expect(INV.CENSUS_REFERENCE_SHARES.CONFLICT).toBeCloseTo(0.430, 2);
+    expect(INV.CENSUS_REFERENCE_SHARES.AGREE).toBeCloseTo(0.351, 2);
+    expect(INV.CENSUS_REFERENCE_SHARES.CONFLICT).toBeCloseTo(0.507, 2);
     expect(INV.CENSUS_REFERENCE_SHARES.source).toMatch(/32\/32 slots/);
     expect(INV.FRAME_MIN_DISTINCT_CARDS).toBe(100);
   });
@@ -198,7 +199,7 @@ describe("frame health — a rate whose frame is broken is not a corpus rate", (
     // Reverting to slot 31's numbers makes this test red: its CONFLICT share is
     // less than HALF the corpus's, which is the whole error.
     const slot31 = INV.censusSharesForSlot(31);
-    expect(slot31.CONFLICT).toBeCloseTo(0.231, 2);
+    expect(slot31.CONFLICT).toBeCloseTo(0.229, 2);
     expect(INV.CENSUS_REFERENCE_SHARES.CONFLICT).toBeGreaterThan(slot31.CONFLICT * 1.8);
     // And the table is genuinely 32 slots, not one repeated.
     expect(INV.CENSUS_TABLE.slots).toHaveLength(32);
@@ -270,12 +271,12 @@ describe("frame health — a rate whose frame is broken is not a corpus rate", (
   it("reports frame health per sportClass so a hard draw is not a regression", () => {
     // The classes have very different CONFLICT rates, and that is the whole
     // reason a mix statement is needed:
-    //     pokemon 0.596   modern 0.418   vintage 0.319
+    //     pokemon 0.754   modern 0.429   vintage 0.367   (2026-09-12/13 reference)
     const pokemon = INV.censusSharesForClass("pokemon");
     const vintage = INV.censusSharesForClass("vintage");
     const modern = INV.censusSharesForClass("modern");
     expect(pokemon.CONFLICT).toBeGreaterThan(0.55);
-    expect(vintage.CONFLICT).toBeLessThan(0.35);
+    expect(vintage.CONFLICT).toBeLessThan(0.40);
     expect(modern.CONFLICT).toBeGreaterThan(vintage.CONFLICT);
     // A pokemon-heavy draw reports its class mix, so the reader can see that a
     // high CONFLICT share is the FRAME and not corpus movement.

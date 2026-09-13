@@ -154,20 +154,37 @@ insert-world-cup-stars,2,,false,,Sergio Aguero
     expect(keys.find((k: any) => k.setKey.endsWith("-guardians")).rows).toBe(3);
   });
 
-  it("REFUSES, because those keys are not normalizeSetKey fixed points yet", () => {
-    // This is the real, measured state of the product on main: the derived
-    // keys fold PAST the product onto the bare `panini-prizm` flagship, so
-    // writing them would be strictly worse than the collision.
-    expect(normalizeSetKey("panini-prizm-fifa-world-cup-guardians")).toBe("panini-prizm");
+  it("PASSES once the keys are registered (#2118) — and still REFUSES an insert the checklist never named", () => {
+    // Until #2118 the derived keys folded PAST the product onto the bare
+    // `panini-prizm` flagship and this file was refused. #2118 registered the
+    // nine 2014 World Cup insert sets as fixed points, so the same file now
+    // plans clean: three keys, one per set, every id distinct.
+    expect(normalizeSetKey("panini-prizm-fifa-world-cup-guardians")).toBe("panini-prizm-fifa-world-cup-guardians");
+    expect(normalizeSetKey("panini-prizm-fifa-world-cup-world-cup-stars")).toBe("panini-prizm-fifa-world-cup-world-cup-stars");
     const plan = lib.planFile({ rows, productSetKey, computeId, normalize: normalizeSetKey });
-    expect(plan.verdict).toBe("refuse");
-    expect(plan.reason).toBe("unregistered-set-keys");
-    expect(plan.unregistered.map((u: any) => u.setKey).sort()).toEqual([
-      "panini-prizm-fifa-world-cup-guardians",
-      "panini-prizm-fifa-world-cup-world-cup-stars",
-    ]);
-    // The refusal must NAME what it folds to, or nobody can act on it.
-    expect(plan.unregistered[0].resolvesTo).toBe("panini-prizm");
+    expect(plan.verdict).toBe("pass");
+    expect(plan.reason).toBeNull();
+    expect(plan.unregistered).toHaveLength(0);
+    expect(plan.collisions).toHaveLength(0);
+
+    // The refusal contract did not go anywhere: an insert set the checklist
+    // never published has no registered key, folds elsewhere, and refuses the
+    // whole file -- naming the key AND what it folds to, so someone can act.
+    const withUnpublished = fixture(`
+category,cardNumber,parallel,isAuto,printRun,player
+base,1,,false,,Rais M'Bolhi
+base,2,,false,,Madjid Bougherra
+insert-guardians,1,,false,,Thibaut Courtois
+insert-stadium-mascots-unpublished,1,,false,,Fuleco the Armadillo
+insert-stadium-mascots-unpublished,2,,false,,Zakumi
+`);
+    const unregisteredKey = "panini-prizm-fifa-world-cup-stadium-mascots-unpublished";
+    expect(normalizeSetKey(unregisteredKey)).not.toBe(unregisteredKey);
+    const refused = lib.planFile({ rows: withUnpublished, productSetKey, computeId, normalize: normalizeSetKey });
+    expect(refused.verdict).toBe("refuse");
+    expect(refused.reason).toBe("unregistered-set-keys");
+    expect(refused.unregistered.map((u: any) => u.setKey)).toEqual([unregisteredKey]);
+    expect(refused.unregistered[0].resolvesTo).toBe(normalizeSetKey(unregisteredKey));
   });
 
   it("mints DISTINCT ids for all eight rows once the keys are registered", () => {
@@ -435,10 +452,13 @@ base,260,HOF,false,,Raymond Berry/HOF
 });
 
 describe("the refusal contract cannot be bypassed", () => {
+  // An insert set no checklist ever published: its derived key is not a
+  // fixed point on any branch (Guardians stopped being usable here once #2118
+  // registered the real 2014 World Cup inserts).
   const rows = fixture(`
 category,cardNumber,parallel,isAuto,printRun,player
 base,1,,false,,Rais M'Bolhi
-insert-guardians,1,,false,,Thibaut Courtois
+insert-stadium-mascots-unpublished,1,,false,,Fuleco the Armadillo
 `);
   const computeId = idFor("soccer", 2014);
 

@@ -158,24 +158,24 @@ describe("the shipped reference carries its stamp", () => {
     expect(TABLE.measuredUnder.commit).toBe("77e305a00c172849c1e58ef6dd31b411c1c685f5");
     // pricingContract.ts exists now, so the stamp carries its version.
     expect(TABLE.measuredUnder.contract).toBe("2026-09-06.a");
-    // 31 of 32 slots: Drew waived the 32/32 rule once on 2026-09-13 so the batch
-    // could ship; slot 31 folds in at the post-deploy verification census. #1888
-    // otherwise stands — the next reference is 32 slots again.
-    expect(TABLE.slotCount).toBe(31);
+    // The 32-slot reference stays 32 slots (#1888 stands). Slot 31 is a
+    // budget-stopped PREFIX in this reference (see the coverage pins below).
+    expect(TABLE.slotCount).toBe(32);
     expect(TABLE.classifiedTotal).toBeGreaterThan(11_000_000);
-    expect(INV.CENSUS_REFERENCE_SHARES.CONFLICT).toBeCloseTo(0.510, 2);
+    expect(INV.CENSUS_REFERENCE_SHARES.CONFLICT).toBeCloseTo(0.507, 2);
   });
 
   it("says WHAT FRACTION of the corpus it saw, and which slots are partial", () => {
     // A REFERENCE BUILT FROM BUDGET-STOPPED WALKS IS STILL A REFERENCE, BUT IT
-    // MUST SAY SO. In the 2026-09-12/13 census every one of the 31 slots finished
-    // its walk (page-level checkpoints, #2073), so no slot is partial. Coverage
-    // reads 142% because the three Pokémon shards classify far more rows than
-    // the shard table expected for them. Recording `classified` alone would have
-    // presented a 34%-walked slot and a finished one as equally authoritative.
+    // MUST SAY SO. In the 2026-09-12/13 census 31 of the 32 slots finished their
+    // walk (page-level checkpoints, #2073); slot 31 hit its budget at 49% and
+    // is recorded as a PREFIX. Coverage reads 139% because the three Pokémon
+    // shards classify far more rows than the shard table expected for them.
+    // Recording `classified` alone would have presented a 49%-walked slot and
+    // a finished one as equally authoritative.
     expect(TABLE.coverage.classified).toBe(TABLE.classifiedTotal);
-    expect(TABLE.coverage.coverage).toBeCloseTo(1.42, 2);
-    expect(TABLE.coverage.partialSlots).toHaveLength(0);
+    expect(TABLE.coverage.coverage).toBeCloseTo(1.39, 2);
+    expect(TABLE.coverage.partialSlots).toEqual([31]);
     expect(TABLE.coverage.completedSlots).toHaveLength(31);
     // Every slot carries its own coverage, so a reader never has to guess.
     for (const s of TABLE.slots) {

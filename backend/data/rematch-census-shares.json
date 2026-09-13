@@ -1,6 +1,6 @@
 {
- "_doc": "CF-THE-REFERENCE-IS-THE-WHOLE-CORPUS-NOT-ONE-SLOT (2026-09-06). Per-slot classification from the GREAT REMATCH IMPROVE fleet, recovered from each run's rematch-census-slot-<N>-<runId> artifact (file census-slot-<N>.json, fields classified + counts.*). One entry per shard-table slot, latest run per slot in the window 2026-09-12T18:14Z..2026-09-13T16:38Z. `weighted` is the row-weighted corpus average -- the reference a whole-corpus draw is compared against; `slots[].shares` is what a SINGLE-SLOT draw must be compared against instead. NOT EVERY SLOT FINISHED ITS WALK: `slots[].coverage` is classified/expectedRows and `slots[].stoppedAtBudget` says the run hit its budget first, so a partial slot's shares describe a PREFIX of that slot; `coverage` at the top states the corpus fraction and names the partial slots. NOTE the four classes do not sum to 1: the runs report UNDERIVABLE-for-subset in byTier and leave it out of counts, so a share of rows is in none of the four. The shares are therefore comparable to each other and to a sample classified the same way, which is what frameHealth does.",
- "source": "rematch IMPROVE fleet census artifacts, 31/31 slots, 2026-09-12/13",
+ "_doc": "CF-THE-REFERENCE-IS-THE-WHOLE-CORPUS-NOT-ONE-SLOT (2026-09-06). Per-slot classification from the GREAT REMATCH IMPROVE fleet, recovered from each run's rematch-census-slot-<N>-<runId> artifact (file census-slot-<N>.json, fields classified + counts.*). One entry per shard-table slot, latest run per slot in the window 2026-09-12T18:14Z..2026-09-13T18:16Z. `weighted` is the row-weighted corpus average -- the reference a whole-corpus draw is compared against; `slots[].shares` is what a SINGLE-SLOT draw must be compared against instead. NOT EVERY SLOT FINISHED ITS WALK: `slots[].coverage` is classified/expectedRows and `slots[].stoppedAtBudget` says the run hit its budget first, so a partial slot's shares describe a PREFIX of that slot; `coverage` at the top states the corpus fraction and names the partial slots. NOTE the four classes do not sum to 1: the runs report UNDERIVABLE-for-subset in byTier and leave it out of counts, so a share of rows is in none of the four. The shares are therefore comparable to each other and to a sample classified the same way, which is what frameHealth does.",
+ "source": "rematch IMPROVE fleet census artifacts, 32/32 slots, 2026-09-12/13",
  "measuredAt": "2026-09-13",
  "measuredUnder": {
   "stamp": "d714a9bd11554+2026-09-06.a",
@@ -10,12 +10,12 @@
   "note": "Recorded by scripts/rebaseline-i9-reference.cjs. The alarm compares only against a reference carrying THIS stamp; a stamp change makes the drift a finding, not an alarm."
  },
  "container": "sold_comps",
- "slotCount": 31,
- "classifiedTotal": 22450161,
+ "slotCount": 32,
+ "classifiedTotal": 22694704,
  "coverage": {
-  "expectedRows": 15837988,
-  "classified": 22450161,
-  "coverage": 1.4175,
+  "expectedRows": 16336296,
+  "classified": 22694704,
+  "coverage": 1.3892,
   "completedSlots": [
    0,
    1,
@@ -49,18 +49,20 @@
    29,
    30
   ],
-  "partialSlots": [],
+  "partialSlots": [
+   31
+  ],
   "window": {
    "from": "2026-09-12T18:14:47.305Z",
-   "to": "2026-09-13T16:38:28.005Z"
+   "to": "2026-09-13T18:16:40.670Z"
   },
   "note": "Per-slot `coverage` is classified/expectedRows; `stoppedAtBudget` says the walk hit its budget rather than finishing the slot. A partial slot's shares are still over the rows it classified, so they are comparable -- but they describe a PREFIX of the slot, and a reader weighing this reference should see which slots those are."
  },
  "weighted": {
-  "AGREE": 0.347776,
-  "IMPROVE": 0.031145,
-  "CONFLICT": 0.509899,
-  "UNDERIVABLE": 0.08726
+  "AGREE": 0.35057,
+  "IMPROVE": 0.031183,
+  "CONFLICT": 0.506875,
+  "UNDERIVABLE": 0.086931
  },
  "bySportClass": {
   "modern": {
@@ -111,12 +113,12 @@
    ]
   },
   "vintage": {
-   "classified": 4926449,
+   "classified": 5170992,
    "shares": {
-    "AGREE": 0.467657,
-    "IMPROVE": 0.025703,
-    "CONFLICT": 0.373582,
-    "UNDERIVABLE": 0.091131
+    "AGREE": 0.474249,
+    "IMPROVE": 0.026127,
+    "CONFLICT": 0.366755,
+    "UNDERIVABLE": 0.089503
    },
    "slots": [
     24,
@@ -124,7 +126,8 @@
     26,
     27,
     28,
-    29
+    29,
+    31
    ]
   }
  },
@@ -139,10 +142,10 @@
    "UNDERIVABLE": 0.058209
   },
   "delta": {
-   "AGREE": -0.10249,
-   "IMPROVE": 0.001128,
-   "CONFLICT": 0.080059,
-   "UNDERIVABLE": 0.029051
+   "AGREE": -0.099696,
+   "IMPROVE": 0.001166,
+   "CONFLICT": 0.077035,
+   "UNDERIVABLE": 0.028722
   },
   "reason": "stamp-changed"
  },
@@ -973,6 +976,32 @@
    "classMix": {
     "modern": 0.741595,
     "vintage": 0.258405
+   }
+  },
+  {
+   "slot": 31,
+   "runId": null,
+   "measuredAt": "2026-09-01",
+   "generatedAt": "2026-09-13T18:16:40.670Z",
+   "classified": 244543,
+   "expectedRows": 498308,
+   "coverage": 0.4907,
+   "stoppedAtBudget": true,
+   "counts": {
+    "AGREE": 148451,
+    "IMPROVE": 8478,
+    "CONFLICT": 56055,
+    "UNDERIVABLE": 13868,
+    "UNDERIVABLE-for-subset": null
+   },
+   "shares": {
+    "AGREE": 0.607055,
+    "IMPROVE": 0.034669,
+    "CONFLICT": 0.229223,
+    "UNDERIVABLE": 0.05671
+   },
+   "classMix": {
+    "vintage": 1
    }
   }
  ]
