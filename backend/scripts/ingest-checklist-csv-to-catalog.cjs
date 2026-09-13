@@ -101,6 +101,11 @@ const { runnerShardScope } = require("./lib/runner-shard-scope.cjs");
 // CF-BASE-SET-IS-NOT-A-SUBSET: a page-section heading ("Base Set", "Checklist")
 // is not a claim that the row belongs to a named subset.
 const { claimedSubsetOf } = require(path.join(__dirname, "lib", "subset-identity.cjs"));
+// CF-A-NAMED-INSERT-SET-IS-ITS-OWN-CARD-SET (R30, Drew 2026-09-13). The
+// `category` column was READ AND DISCARDED: 5,462 World Cup upserts landed on
+// 2,949 documents because base #1 and nine inserts' #1 all computed one id.
+// See lib/insert-set-key.cjs for the rule, the measurement and the refusal.
+const INSERT_SET = require(path.join(__dirname, "lib", "insert-set-key.cjs"));
 // CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809): the one exit path.
 const { finishLane } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
 const SHARD_SCOPE = runnerShardScope({ label: "ingest-checklist-csv-to-catalog" });
@@ -324,7 +329,62 @@ async function main() {
   const disambiguatedExamples = [];
   // Written, but the merge kept the row another source already held there.
   let keptExisting = 0;
+  // CF-A-NAMED-INSERT-SET-IS-ITS-OWN-CARD-SET / CF-COMPUTE-EVERY-ID-BEFORE-
+  // WRITING-ANY. `plannedIds` is the DOCUMENT count the pre-flight measured;
+  // `written` counts upsert CALLS, and the whole defect is that those two can
+  // differ silently. They are reconciled at the end of the run.
+  let filesRefused = 0, refusedRows = 0, insertSetKeys = 0, insertSetRows = 0, plannedIds = 0;
   let stopReason = null;
+
+  // CF-THE-CLASH-IS-A-FACT-ABOUT-THE-PRODUCT-NOT-THE-FILE (2026-09-13).
+  //
+  // A per-file measurement cannot see a clash between two FILES, and that is
+  // exactly cardboardconnection's shape: ONE FILE PER SUBSET, 197 of them
+  // across 6 products, every file internally distinct. A per-file guard passes
+  // all 207 and reports 68,329 rows on 67,789 ids, while the product cells
+  // underneath hold 1,803 contested addresses -- Great Significance #1 (Joe
+  // Ingles), Hoops Art Signatures #1 (Paolo Banchero), Hoops Ink #1 (Cade
+  // Cunningham) and Hot Signatures Hyper Gold #1 (Luka Doncic) all computing
+  // `hiq:basketball:2022:nba-hoops:1:base:auto`.
+  //
+  // So the measurement is taken ONCE, over every staged file, grouped by
+  // (sport, year, setKey). The unit of REFUSAL stays the file -- that is what
+  // the resume marker is written for -- but the question is asked of the
+  // product. Reading every CSV twice costs one pass over staged disk, which is
+  // nothing beside writing a wrong address 1,803 times.
+  const cellSeparation = (() => {
+    const byCell = new Map();
+    for (const name of files) {
+      const csvPath = path.join(DIR, name);
+      const product = productOf(csvPath);
+      if (!product) continue;
+      const cell = `${product.sport}/${product.year}/${product.setKey}`;
+      if (!byCell.has(cell)) {
+        byCell.set(cell, { productSetKey: product.setKey, sport: product.sport, year: product.year, rows: [] });
+      }
+      const entry = byCell.get(cell);
+      for (const line of fs.readFileSync(csvPath, "utf8").split("\n").slice(1)) {
+        const t = line.trim(); if (!t) continue;
+        const [category, cardNumber, parallel, isAuto, printRun, rawPlayer] = splitCsv(t);
+        const player = cleanPlayerName(rawPlayer);
+        if (!cardNumber || !player) continue;
+        entry.rows.push({
+          category, cardNumber, parallel, isAuto, printRun, player,
+          subsetName: product.subsetName || null,
+          // Carried on the row so one computeId closure serves every cell.
+          _sport: product.sport, _year: product.year,
+        });
+      }
+    }
+    // The SAME slug function the write path uses, so the separation is measured
+    // over the exact addresses the run would take.
+    return INSERT_SET.separationByCell(byCell, (r) => computeHobbyIqCardId({
+      sport: r._sport, year: r._year, setKey: r.setKey,
+      cardNumber: String(r.cardNumber), parallel: r.parallel || "Base",
+      isAuto: r.isAuto === "true", printRun: r.printRun ? Number(r.printRun) : null,
+      authoritativeSetKey: true,
+    }));
+  })();
 
   for (const name of files) {
     if (stopReason) break;
@@ -363,7 +423,11 @@ async function main() {
       const players = new Set(rawRows.map((r) => r.player).filter(isPersonName).map(foldName));
       for (const r of rawRows) {
         if (r.parallel && players.has(foldName(r.parallel))) { playerNameParallel++; continue; }
-        batch.push({ category: r.category, cardNumber: r.cardNumber, parallel: r.parallel, isAuto: r.isAuto, printRun: r.printRun, player: r.player, parallelNote: r.parallelNote || null });
+        // CF-ONE-CARD-ONE-ADDRESS-WHICHEVER-COLUMN-SAID-SO. The manifest's
+        // `subset` rides with every row of the file, so a per-FILE declaration
+        // (cardboardconnection #2114: 197 subset-declaring files) and a
+        // per-ROW `category` (tcdb, checklistinsider) reach the SAME key.
+        batch.push({ category: r.category, cardNumber: r.cardNumber, parallel: r.parallel, isAuto: r.isAuto, printRun: r.printRun, player: r.player, parallelNote: r.parallelNote || null, subsetName: product.subsetName || null });
       }
     }
 
@@ -392,6 +456,84 @@ async function main() {
       if (!batch.length) { explodedFiles++; continue; }
     }
 
+    // CF-A-NAMED-INSERT-SET-IS-ITS-OWN-CARD-SET + CF-COMPUTE-EVERY-ID-BEFORE-
+    // WRITING-ANY (R30, Drew 2026-09-13). BOTH halves run BEFORE the first
+    // upsert of this file, because the defect they exist to stop is invisible
+    // afterwards: an overwrite inside one run leaves no trace except a row
+    // whose player is the last writer's, and "catalog rows written" counts
+    // upsert CALLS, so 5,462 calls onto 2,949 documents reconciled clean.
+    //
+    // THE UNIT OF REFUSAL IS THE FILE. A partial write -- base lands, the
+    // inserts are skipped -- would leave the product half-ingested under a
+    // resume marker claiming it is done, and the half that landed would be the
+    // half that already answers for the other nine cards.
+    const plan = INSERT_SET.planFile({
+      rows: batch,
+      productSetKey: product.setKey,
+      computeId: (r) => computeHobbyIqCardId({
+        sport: product.sport, year: product.year, setKey: r.setKey,
+        cardNumber: String(r.cardNumber),
+        parallel: r.parallel || "Base",
+        isAuto: r.isAuto === "true",
+        printRun: r.printRun ? Number(r.printRun) : null,
+        authoritativeSetKey: true,
+      }),
+      normalize: normalizeSetKey,
+      // THE CELL'S separation, measured over every staged file of this product
+      // -- not this file's view of itself, which cannot see a sibling file.
+      separate: cellSeparation.get(`${product.sport}/${product.year}/${product.setKey}`),
+    });
+    if (plan.verdict === "refuse") {
+      filesRefused++;
+      refusedRows += batch.length;
+      console.log(`\n!! REFUSED ${name} — ${plan.reason}`);
+      console.log(`   ${f(batch.length)} rows would have landed on ${f(plan.ids)} distinct ids.`);
+      if (plan.reason === "unregistered-set-keys") {
+        // REGISTRATION IS THE MECHANISM, NOT BOOKKEEPING. `normalizeSetKey`
+        // runs INSIDE computeHobbyIqCardId even under authoritativeSetKey, so
+        // an unregistered key cannot reach an id at all -- it folds, and the
+        // World Cup keys fold PAST the product onto the bare `panini-prizm`
+        // flagship. Writing anyway would be strictly worse than the collision.
+        console.log(`   These card set keys are not normalizeSetKey FIXED POINTS. Register each in`);
+        console.log(`   BOTH halves -- productSetKeys.ts (S(key, { parent })) and an anchored rule`);
+        console.log(`   in hobbyIqCardId.service.ts ABOVE the family catch-all -- then re-run:`);
+        for (const u of plan.unregistered) {
+          console.log(`     ${u.setKey}  -> currently folds to "${u.resolvesTo}"  (${f(u.rows)} rows; ${u.categories.join(", ")})`);
+          console.log(`         e.g. ${u.examples.join("; ")}`);
+        }
+      } else {
+        // A collision the SET KEY CANNOT FIX: the checklist itself prints one
+        // number twice inside one subset (1989 Pro Set #47 "William Perry/"
+        // and "Ron Morris"). Naming it is the honest answer; inventing an
+        // axis to separate them would be minting from nothing.
+        console.log(`   ${f(plan.collisions.length)} ids are claimed by more than one row. Every group, with the`);
+        console.log(`   categories and players that decide whether this is an unregistered insert`);
+        console.log(`   set or a checklist that numbers two cards alike:`);
+        for (const c of plan.collisions.slice(0, 25)) console.log(INSERT_SET.formatCollision(c));
+        if (plan.collisions.length > 25) console.log(`    ... and ${f(plan.collisions.length - 25)} more groups`);
+      }
+      continue;
+    }
+    // The plan PASSED, so every row's address is known and distinct. Stamp the
+    // derived key onto the row: the write below reads `r.setKey`, never
+    // `product.setKey`, so the id and the stored setKey field can never
+    // disagree -- the split that CF-AUTHORITATIVE-SETKEY was written for.
+    for (const r of batch) {
+      r.setKey = INSERT_SET.setKeyForRow({
+        productSetKey: product.setKey, category: r.category,
+        parallel: r.parallel, subsetName: r.subsetName, separate: plan.separate,
+      }).setKey;
+      if (r.setKey !== product.setKey) insertSetRows++;
+    }
+    if (plan.keys.length) {
+      insertSetKeys += plan.keys.length;
+      console.log(`\n   ${name}: ${f(plan.keys.length)} same-numbered insert sets take their own registered key`);
+      for (const k of plan.keys) console.log(`     ${k.setKey}  ${f(k.rows)} rows`);
+    }
+    // CF-RECONCILE-DOCUMENTS-NOT-CALLS: the denominator this file contributes
+    // to the `written = distinct ids` check at the end of the run.
+    plannedIds += plan.ids;
+
     for (let i = 0; i < batch.length; i += CONCURRENCY) {
       await Promise.all(batch.slice(i, i + CONCURRENCY).map(async (r) => {
         try {
@@ -399,8 +541,23 @@ async function main() {
           // reads as Base. It is NOT the string "Base" in the CSV, and that
           // distinction is what lets a later pass tell "plain" from "nobody
           // told us".
+          //
+          // CF-A-NAMED-INSERT-SET-IS-ITS-OWN-CARD-SET. The key is the ROW'S,
+          // stamped by the pre-flight plan above, not the file's: a
+          // same-numbered insert set takes its own registered key and
+          // everything else takes the product key unchanged. Read once, here,
+          // so the id, the stored `setKey` field and the search fields cannot
+          // disagree -- a row filed at one product and labelled with another is
+          // exactly the split CF-AUTHORITATIVE-SETKEY measured at 19,867 rows.
+          const rowSetKey = r.setKey || product.setKey;
+          // The display name follows the key. An insert set's rows must not
+          // read "2014 Panini Prizm FIFA World Cup" in the app while living on
+          // the Guardians key -- the name is what a person sees.
+          const rowSetName = rowSetKey === product.setKey
+            ? product.setName
+            : `${product.setName} ${INSERT_SET.subsetDisplayName(r)}`;
           const slug = computeHobbyIqCardId({
-            sport: product.sport, year: product.year, setKey: product.setKey,
+            sport: product.sport, year: product.year, setKey: rowSetKey,
             cardNumber: String(r.cardNumber),
             parallel: r.parallel || "Base",
             isAuto: r.isAuto === "true",
@@ -508,7 +665,25 @@ async function main() {
           // page lands.
           const knownClaim = claimedSubsetOf(known && known.subsetName);
           const productClaim = claimedSubsetOf(product.subsetName);
-          if (known && knownClaim && knownClaim !== (productClaim || null)) {
+          // CF-ONE-CARD-ONE-ADDRESS-WHICHEVER-COLUMN-SAID-SO, the disarm.
+          //
+          // THE `:sub-` MECHANISM AND THE R30 KEY ARE TWO ANSWERS TO ONE
+          // QUESTION, and running both would give one card two addresses.
+          // When the pre-flight has ALREADY separated this row's subset onto
+          // its own card set key, the question is settled: the row is at
+          // `<product>-<subset>`, alone, and no incumbent at the plain id is
+          // its rival any more. Re-minting it with a `:sub-` segment on top
+          // would produce `…:nba-hoops-great-significance:1:base:auto:sub-
+          // great-significance` -- the subset stated twice, and a third
+          // address for a card that already has one.
+          //
+          // THE `:sub-` PATH IS NOT RETIRED. It answers the question this one
+          // cannot: a clash the CATALOG discovers between two STORED rows,
+          // where no checklist is present to assert anything (#1741's Johnson
+          // Reprints, the 2026-09-04 ruling). It stays for exactly that, and
+          // for every row whose subset was NOT separated.
+          const separatedOntoOwnKey = rowSetKey !== product.setKey;
+          if (!separatedOntoOwnKey && known && knownClaim && knownClaim !== (productClaim || null)) {
             if (!productClaim) {
               subsetCollision++;
               if (collisionExamples.length < 8) {
@@ -519,7 +694,7 @@ async function main() {
             }
             subsetInId = true;
             slugForWrite = computeHobbyIqCardId({
-              sport: product.sport, year: product.year, setKey: product.setKey,
+              sport: product.sport, year: product.year, setKey: rowSetKey,
               cardNumber: String(r.cardNumber),
               parallel: r.parallel || "Base",
               isAuto: r.isAuto === "true",
@@ -534,7 +709,7 @@ async function main() {
             // MOVE THE INCUMBENT TOO. Leaving it on the plain id leaves one of
             // the two cards at an address the other one also answers to.
             const incumbentSlug = computeHobbyIqCardId({
-              sport: product.sport, year: product.year, setKey: product.setKey,
+              sport: product.sport, year: product.year, setKey: rowSetKey,
               cardNumber: String(known.cardNumber ?? r.cardNumber),
               parallel: known.parallel || "Base",
               isAuto: known.isAuto === true,
@@ -622,7 +797,7 @@ async function main() {
             // cardYear is a MIRROR of year, never a second fact: same value,
             // one expression, so the two can never drift.
             cardYear: product.year,
-            setKey: product.setKey, setName: product.setName,
+            setKey: rowSetKey, setName: rowSetName,
             ...(product.subsetName ? { subsetName: product.subsetName } : {}),
             // PERSISTED, so the decision is the CATALOG'S and every later reader
             // reaches the same slug without re-deriving the clash for itself.
@@ -673,8 +848,8 @@ async function main() {
             ...rebuildSearchFields({
               sport: product.sport,
               year: product.year,
-              setKey: product.setKey,
-              setName: product.setName,
+              setKey: rowSetKey,
+              setName: rowSetName,
               cardNumber: String(r.cardNumber).toUpperCase(),
               playerName: r.player,
               parallel: r.parallel || null,
@@ -731,7 +906,16 @@ async function main() {
   console.log(`  rows with card-line parallel ${f(cardLineParallel)}   <- "100 Mike Trout" is not a rung; skipped`);
   console.log(`  rows with player-name parallel ${f(playerNameParallel)}   <- a roster line, not a rung; skipped`);
   console.log(`  csv rows read          ${f(rows)}`);
+  console.log(`  files REFUSED, id integrity ${f(filesRefused)} (${f(refusedRows)} rows)   <- unregistered insert-set keys, or ids claimed by two rows; named above, whole file, never half-ingested`);
+  console.log(`  insert sets on their own key ${f(insertSetKeys)} (${f(insertSetRows)} rows)   <- SAME-NUMBERED subsets only; base and its rungs stay on the product key`);
   console.log(`  catalog rows written   ${f(written)}`);
+  // CF-RECONCILE-DOCUMENTS-NOT-CALLS (2026-09-13). `written` counts upsert
+  // CALLS. The defect this run exists to end is 5,462 calls landing on 2,949
+  // DOCUMENTS -- a number no counter here could see, which is why it survived a
+  // clean reconciliation. `plannedIds` is the distinct-id count the pre-flight
+  // measured over exactly the rows that were about to be written, so the two
+  // must agree; a gap means rows overwrote each other inside this run.
+  console.log(`  distinct ids           ${f(plannedIds)}   <- documents, measured before writing; must equal rows written`);
   console.log(`  ${APPLY ? "ingested" : "would ingest"} ${f(written)} rows (${f(signed)} signed)   <- signed = isAuto, from a section the page attested; never inferred from a rung name`);
   if (APPLY) console.log(`    of which kept the existing row ${f(keptExisting)}   <- same id already held by another source at equal/higher authority and confidence; only lastSeenAt moved, the row does NOT carry source=${SOURCE}`);
   {
@@ -788,18 +972,48 @@ async function main() {
     // `subsetDisambiguated` is deliberately NOT added: those rows ARE written,
     // just at a subset-bearing slug, so they are already inside `written`.
     // Adding them would double-count and overshoot `intended` instead.
-    reportWrites({ job: "ingest-checklist-csv-to-catalog", intended: rows, written, skipped: skippedRow + notReached + unnamedParallel + cardLineParallel + playerNameParallel + explodedRows + subsetCollision, failed });
+    reportWrites({ job: "ingest-checklist-csv-to-catalog", intended: rows, written, skipped: skippedRow + notReached + unnamedParallel + cardLineParallel + playerNameParallel + explodedRows + subsetCollision + refusedRows, failed });
+  }
+
+  // CF-RECONCILE-DOCUMENTS-NOT-CALLS, the assertion.
+  //
+  // `written` may legitimately fall SHORT of `plannedIds`: a budget stop, a
+  // refused row, a failed upsert. It can never legitimately EXCEED it -- an
+  // upsert call with no distinct document behind it is a row that overwrote
+  // another row of this same run, which is the defect. The pre-flight is
+  // supposed to make that impossible; this says so out loud rather than
+  // trusting that it did.
+  //
+  // The check is stated on the REPORT path too. A dry run counts `written` for
+  // every row it would write, so report mode exercises exactly the same
+  // arithmetic and a regression is caught before anything is at stake.
+  if (written > plannedIds) {
+    console.error(`\nFATAL: ${f(written)} rows written but only ${f(plannedIds)} distinct ids were planned.`);
+    console.error(`       ${f(written - plannedIds)} upserts had no document of their own — rows of this run overwrote each other.`);
+    console.error(`       The pre-flight collision guard is supposed to make this impossible; it did not.`);
+    return { exitCode: 4 };
   }
 }
 
-module.exports = { splitCsv, productOf, isCardLineParallel, declaredParallels };
+module.exports = {
+  splitCsv, productOf, isCardLineParallel, declaredParallels,
+  // Re-exported so a test can reach the id-integrity rule through the lane
+  // that uses it, not only through the library: the pin is that THIS script
+  // refuses, and a test that only exercised the library could stay green
+  // while the wiring was deleted.
+  insertSetKey: INSERT_SET,
+};
 
 if (require.main === module) {
   // CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809). Success exits too: a lane
 // that lets the loop drain is betting every library released every handle.
 // Runs 33975816175/25863/34391/40824 lost that bet AFTER reconciling clean.
+// CF-A-FAILED-RECONCILIATION-IS-A-FAILED-RUN. `main` returns a non-zero
+// `exitCode` when `written > distinct ids` -- rows of this run overwrote each
+// other. Hardcoding 0 here would print the FATAL and then exit green, which is
+// how the World Cup clobber reconciled clean the first time.
 main()
-  .then((ctx) => finishLane(0, ctx || {}))
+  .then((ctx) => finishLane((ctx && ctx.exitCode) || 0, ctx || {}))
   .catch(async (e) => { console.error("FATAL:", e?.stack || e?.message); 
     await finishLane(3);
   });

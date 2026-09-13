@@ -1,0 +1,201 @@
+category,cardNumber,parallel,isAuto,printRun,player
+auto-rookie-ink,1,,true,,Paolo Banchero
+auto-rookie-ink,2,,true,,Chet Holmgren
+auto-rookie-ink,3,,true,,Jabari Smith Jr.
+auto-rookie-ink,4,,true,,Keegan Murray
+auto-rookie-ink,5,,true,,Jaden Ivey
+auto-rookie-ink,6,,true,,Bennedict Mathurin
+auto-rookie-ink,7,,true,,Shaedon Sharpe
+auto-rookie-ink,8,,true,,Dyson Daniels
+auto-rookie-ink,9,,true,,Jeremy Sochan
+auto-rookie-ink,10,,true,,Johnny Davis
+auto-rookie-ink,11,,true,,Ousmane Dieng
+auto-rookie-ink,12,,true,,Jalen Williams
+auto-rookie-ink,13,,true,,Jalen Duren
+auto-rookie-ink,14,,true,,Ochai Agbaji
+auto-rookie-ink,15,,true,,Mark Williams
+auto-rookie-ink,16,,true,,AJ Griffin
+auto-rookie-ink,17,,true,,Tari Eason
+auto-rookie-ink,18,,true,,Dalen Terry
+auto-rookie-ink,19,,true,,Jake LaRavia
+auto-rookie-ink,20,,true,,Malaki Branham
+auto-rookie-ink,21,,true,,Christian Braun
+auto-rookie-ink,22,,true,,Walker Kessler
+auto-rookie-ink,23,,true,,David Roddy
+auto-rookie-ink,24,,true,,MarJon Beauchamp
+auto-rookie-ink,25,,true,,Blake Wesley
+auto-rookie-ink,26,,true,,Wendell Moore Jr.
+auto-rookie-ink,27,,true,,Nikola Jovic
+auto-rookie-ink,28,,true,,Patrick Baldwin Jr.
+auto-rookie-ink,29,,true,,TyTy Washington Jr.
+auto-rookie-ink,30,,true,,Peyton Watson
+auto-rookie-ink,31,,true,,Andrew Nembhard
+auto-rookie-ink,32,,true,,Caleb Houstan
+auto-rookie-ink,33,,true,,Christian Koloko
+auto-rookie-ink,34,,true,,Max Christie
+auto-rookie-ink,35,,true,,Jaden Hardy
+auto-rookie-ink,36,,true,,Kennedy Chandler
+auto-rookie-ink,37,,true,,Moussa Diabate
+auto-rookie-ink,38,,true,,E.J. Liddell
+auto-rookie-ink,39,,true,,Trevor Keels
+auto-rookie-ink,40,,true,,Isaiah Mobley
+auto-rookie-ink,41,,true,,Jaylin Williams
+auto-rookie-ink,42,,true,,Kendall Brown
+auto-rookie-ink,43,,true,,Bryce McGowens
+auto-rookie-ink,44,,true,,Vince Williams Jr.
+auto-rookie-ink,45,,true,,Justin Lewis
+auto-rookie-ink,46,,true,,Alondes Williams
+auto-rookie-ink,47,,true,,Collin Gillespie
+auto-rookie-ink,48,,true,,Jabari Walker
+auto-rookie-ink,49,,true,,Scotty Pippen Jr.
+auto-rookie-ink,50,,true,,Ryan Rollins
+auto-rookie-ink-green,1,Green,true,,Paolo Banchero
+auto-rookie-ink-green,2,Green,true,,Chet Holmgren
+auto-rookie-ink-green,3,Green,true,,Jabari Smith Jr.
+auto-rookie-ink-green,4,Green,true,,Keegan Murray
+auto-rookie-ink-green,5,Green,true,,Jaden Ivey
+auto-rookie-ink-green,6,Green,true,,Bennedict Mathurin
+auto-rookie-ink-green,7,Green,true,,Shaedon Sharpe
+auto-rookie-ink-green,8,Green,true,,Dyson Daniels
+auto-rookie-ink-green,9,Green,true,,Jeremy Sochan
+auto-rookie-ink-green,10,Green,true,,Johnny Davis
+auto-rookie-ink-green,11,Green,true,,Ousmane Dieng
+auto-rookie-ink-green,12,Green,true,,Jalen Williams
+auto-rookie-ink-green,13,Green,true,,Jalen Duren
+auto-rookie-ink-green,14,Green,true,,Ochai Agbaji
+auto-rookie-ink-green,15,Green,true,,Mark Williams
+auto-rookie-ink-green,16,Green,true,,AJ Griffin
+auto-rookie-ink-green,17,Green,true,,Tari Eason
+auto-rookie-ink-green,18,Green,true,,Dalen Terry
+auto-rookie-ink-green,19,Green,true,,Jake LaRavia
+auto-rookie-ink-green,20,Green,true,,Malaki Branham
+auto-rookie-ink-green,21,Green,true,,Christian Braun
+auto-rookie-ink-green,22,Green,true,,Walker Kessler
+auto-rookie-ink-green,23,Green,true,,David Roddy
+auto-rookie-ink-green,24,Green,true,,MarJon Beauchamp
+auto-rookie-ink-green,25,Green,true,,Blake Wesley
+auto-rookie-ink-green,26,Green,true,,Wendell Moore Jr.
+auto-rookie-ink-green,27,Green,true,,Nikola Jovic
+auto-rookie-ink-green,28,Green,true,,Patrick Baldwin Jr.
+auto-rookie-ink-green,29,Green,true,,TyTy Washington Jr.
+auto-rookie-ink-green,30,Green,true,,Peyton Watson
+auto-rookie-ink-green,31,Green,true,,Andrew Nembhard
+auto-rookie-ink-green,32,Green,true,,Caleb Houstan
+auto-rookie-ink-green,33,Green,true,,Christian Koloko
+auto-rookie-ink-green,34,Green,true,,Max Christie
+auto-rookie-ink-green,35,Green,true,,Jaden Hardy
+auto-rookie-ink-green,36,Green,true,,Kennedy Chandler
+auto-rookie-ink-green,37,Green,true,,Moussa Diabate
+auto-rookie-ink-green,38,Green,true,,E.J. Liddell
+auto-rookie-ink-green,39,Green,true,,Trevor Keels
+auto-rookie-ink-green,40,Green,true,,Isaiah Mobley
+auto-rookie-ink-green,41,Green,true,,Jaylin Williams
+auto-rookie-ink-green,42,Green,true,,Kendall Brown
+auto-rookie-ink-green,43,Green,true,,Bryce McGowens
+auto-rookie-ink-green,44,Green,true,,Vince Williams Jr.
+auto-rookie-ink-green,45,Green,true,,Justin Lewis
+auto-rookie-ink-green,46,Green,true,,Alondes Williams
+auto-rookie-ink-green,47,Green,true,,Collin Gillespie
+auto-rookie-ink-green,48,Green,true,,Jabari Walker
+auto-rookie-ink-green,49,Green,true,,Scotty Pippen Jr.
+auto-rookie-ink-green,50,Green,true,,Ryan Rollins
+auto-rookie-ink-hyper-gold,1,Hyper Gold,true,,Paolo Banchero
+auto-rookie-ink-hyper-gold,2,Hyper Gold,true,,Chet Holmgren
+auto-rookie-ink-hyper-gold,3,Hyper Gold,true,,Jabari Smith Jr.
+auto-rookie-ink-hyper-gold,4,Hyper Gold,true,,Keegan Murray
+auto-rookie-ink-hyper-gold,5,Hyper Gold,true,,Jaden Ivey
+auto-rookie-ink-hyper-gold,6,Hyper Gold,true,,Bennedict Mathurin
+auto-rookie-ink-hyper-gold,7,Hyper Gold,true,,Shaedon Sharpe
+auto-rookie-ink-hyper-gold,8,Hyper Gold,true,,Dyson Daniels
+auto-rookie-ink-hyper-gold,9,Hyper Gold,true,,Jeremy Sochan
+auto-rookie-ink-hyper-gold,10,Hyper Gold,true,,Johnny Davis
+auto-rookie-ink-hyper-gold,11,Hyper Gold,true,,Ousmane Dieng
+auto-rookie-ink-hyper-gold,12,Hyper Gold,true,,Jalen Williams
+auto-rookie-ink-hyper-gold,13,Hyper Gold,true,,Jalen Duren
+auto-rookie-ink-hyper-gold,14,Hyper Gold,true,,Ochai Agbaji
+auto-rookie-ink-hyper-gold,15,Hyper Gold,true,,Mark Williams
+auto-rookie-ink-hyper-gold,16,Hyper Gold,true,,AJ Griffin
+auto-rookie-ink-hyper-gold,17,Hyper Gold,true,,Tari Eason
+auto-rookie-ink-hyper-gold,18,Hyper Gold,true,,Dalen Terry
+auto-rookie-ink-hyper-gold,19,Hyper Gold,true,,Jake LaRavia
+auto-rookie-ink-hyper-gold,20,Hyper Gold,true,,Malaki Branham
+auto-rookie-ink-hyper-gold,21,Hyper Gold,true,,Christian Braun
+auto-rookie-ink-hyper-gold,22,Hyper Gold,true,,Walker Kessler
+auto-rookie-ink-hyper-gold,23,Hyper Gold,true,,David Roddy
+auto-rookie-ink-hyper-gold,24,Hyper Gold,true,,MarJon Beauchamp
+auto-rookie-ink-hyper-gold,25,Hyper Gold,true,,Blake Wesley
+auto-rookie-ink-hyper-gold,26,Hyper Gold,true,,Wendell Moore Jr.
+auto-rookie-ink-hyper-gold,27,Hyper Gold,true,,Nikola Jovic
+auto-rookie-ink-hyper-gold,28,Hyper Gold,true,,Patrick Baldwin Jr.
+auto-rookie-ink-hyper-gold,29,Hyper Gold,true,,TyTy Washington Jr.
+auto-rookie-ink-hyper-gold,30,Hyper Gold,true,,Peyton Watson
+auto-rookie-ink-hyper-gold,31,Hyper Gold,true,,Andrew Nembhard
+auto-rookie-ink-hyper-gold,32,Hyper Gold,true,,Caleb Houstan
+auto-rookie-ink-hyper-gold,33,Hyper Gold,true,,Christian Koloko
+auto-rookie-ink-hyper-gold,34,Hyper Gold,true,,Max Christie
+auto-rookie-ink-hyper-gold,35,Hyper Gold,true,,Jaden Hardy
+auto-rookie-ink-hyper-gold,36,Hyper Gold,true,,Kennedy Chandler
+auto-rookie-ink-hyper-gold,37,Hyper Gold,true,,Moussa Diabate
+auto-rookie-ink-hyper-gold,38,Hyper Gold,true,,E.J. Liddell
+auto-rookie-ink-hyper-gold,39,Hyper Gold,true,,Trevor Keels
+auto-rookie-ink-hyper-gold,40,Hyper Gold,true,,Isaiah Mobley
+auto-rookie-ink-hyper-gold,41,Hyper Gold,true,,Jaylin Williams
+auto-rookie-ink-hyper-gold,42,Hyper Gold,true,,Kendall Brown
+auto-rookie-ink-hyper-gold,43,Hyper Gold,true,,Bryce McGowens
+auto-rookie-ink-hyper-gold,44,Hyper Gold,true,,Vince Williams Jr.
+auto-rookie-ink-hyper-gold,45,Hyper Gold,true,,Justin Lewis
+auto-rookie-ink-hyper-gold,46,Hyper Gold,true,,Alondes Williams
+auto-rookie-ink-hyper-gold,47,Hyper Gold,true,,Collin Gillespie
+auto-rookie-ink-hyper-gold,48,Hyper Gold,true,,Jabari Walker
+auto-rookie-ink-hyper-gold,49,Hyper Gold,true,,Scotty Pippen Jr.
+auto-rookie-ink-hyper-gold,50,Hyper Gold,true,,Ryan Rollins
+auto-rookie-ink-red,1,Red,true,25,Paolo Banchero
+auto-rookie-ink-red,2,Red,true,25,Chet Holmgren
+auto-rookie-ink-red,3,Red,true,25,Jabari Smith Jr.
+auto-rookie-ink-red,4,Red,true,25,Keegan Murray
+auto-rookie-ink-red,5,Red,true,25,Jaden Ivey
+auto-rookie-ink-red,6,Red,true,25,Bennedict Mathurin
+auto-rookie-ink-red,7,Red,true,25,Shaedon Sharpe
+auto-rookie-ink-red,8,Red,true,25,Dyson Daniels
+auto-rookie-ink-red,9,Red,true,25,Jeremy Sochan
+auto-rookie-ink-red,10,Red,true,25,Johnny Davis
+auto-rookie-ink-red,11,Red,true,25,Ousmane Dieng
+auto-rookie-ink-red,12,Red,true,25,Jalen Williams
+auto-rookie-ink-red,13,Red,true,25,Jalen Duren
+auto-rookie-ink-red,14,Red,true,25,Ochai Agbaji
+auto-rookie-ink-red,15,Red,true,25,Mark Williams
+auto-rookie-ink-red,16,Red,true,25,AJ Griffin
+auto-rookie-ink-red,17,Red,true,25,Tari Eason
+auto-rookie-ink-red,18,Red,true,25,Dalen Terry
+auto-rookie-ink-red,19,Red,true,25,Jake LaRavia
+auto-rookie-ink-red,20,Red,true,25,Malaki Branham
+auto-rookie-ink-red,21,Red,true,25,Christian Braun
+auto-rookie-ink-red,22,Red,true,25,Walker Kessler
+auto-rookie-ink-red,23,Red,true,25,David Roddy
+auto-rookie-ink-red,24,Red,true,25,MarJon Beauchamp
+auto-rookie-ink-red,25,Red,true,25,Blake Wesley
+auto-rookie-ink-red,26,Red,true,25,Wendell Moore Jr.
+auto-rookie-ink-red,27,Red,true,25,Nikola Jovic
+auto-rookie-ink-red,28,Red,true,25,Patrick Baldwin Jr.
+auto-rookie-ink-red,29,Red,true,25,TyTy Washington Jr.
+auto-rookie-ink-red,30,Red,true,25,Peyton Watson
+auto-rookie-ink-red,31,Red,true,25,Andrew Nembhard
+auto-rookie-ink-red,32,Red,true,25,Caleb Houstan
+auto-rookie-ink-red,33,Red,true,25,Christian Koloko
+auto-rookie-ink-red,34,Red,true,25,Max Christie
+auto-rookie-ink-red,35,Red,true,25,Jaden Hardy
+auto-rookie-ink-red,36,Red,true,25,Kennedy Chandler
+auto-rookie-ink-red,37,Red,true,25,Moussa Diabate
+auto-rookie-ink-red,38,Red,true,25,E.J. Liddell
+auto-rookie-ink-red,39,Red,true,25,Trevor Keels
+auto-rookie-ink-red,40,Red,true,25,Isaiah Mobley
+auto-rookie-ink-red,41,Red,true,25,Jaylin Williams
+auto-rookie-ink-red,42,Red,true,25,Kendall Brown
+auto-rookie-ink-red,43,Red,true,25,Bryce McGowens
+auto-rookie-ink-red,44,Red,true,25,Vince Williams Jr.
+auto-rookie-ink-red,45,Red,true,25,Justin Lewis
+auto-rookie-ink-red,46,Red,true,25,Alondes Williams
+auto-rookie-ink-red,47,Red,true,25,Collin Gillespie
+auto-rookie-ink-red,48,Red,true,25,Jabari Walker
+auto-rookie-ink-red,49,Red,true,25,Scotty Pippen Jr.
+auto-rookie-ink-red,50,Red,true,25,Ryan Rollins

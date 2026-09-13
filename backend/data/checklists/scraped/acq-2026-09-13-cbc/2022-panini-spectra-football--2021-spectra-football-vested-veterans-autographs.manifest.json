@@ -1,0 +1,72 @@
+{
+  "source": "cardboardconnection-2026-09-13",
+  "sourceUrl": "https://www.cardboardconnection.com/2022-panini-spectra-football-nfl-cards",
+  "xlsxUrl": "https://www.cardboardconnection.com/wp-content/uploads/2023/01/2022-Panini-Spectra-Football-checklist-Excel-spreadsheet.xlsx",
+  "fetchedAt": "2026-09-13",
+  "sport": "football",
+  "year": 2022,
+  "setName": "2022 Panini Spectra Football",
+  "productKey": "2022-panini-spectra-football",
+  "setKey": "panini-spectra",
+  "subset": "2021 Spectra Football Vested Veterans Autographs",
+  "rowCount": 65,
+  "autoCount": 65,
+  "printRunCount": 65,
+  "distinctParallels": 12,
+  "parallelColumnAuthoritative": true,
+  "queueRank": 113,
+  "sectionsReport": [
+    {
+      "category": "auto-2021-spectra-football-vested-veterans-autographs",
+      "rows": 5
+    },
+    {
+      "category": "auto-2021-spectra-football-vested-veterans-autographs-celestial",
+      "rows": 5
+    },
+    {
+      "category": "auto-2021-spectra-football-vested-veterans-autographs-gold",
+      "rows": 5
+    },
+    {
+      "category": "auto-2021-spectra-football-vested-veterans-autographs-hyper",
+      "rows": 5
+    },
+    {
+      "category": "auto-2021-spectra-football-vested-veterans-autographs-meta",
+      "rows": 5
+    },
+    {
+      "category": "auto-2021-spectra-football-vested-veterans-autographs-nebula",
+      "rows": 5
+    },
+    {
+      "category": "auto-2021-spectra-football-vested-veterans-autographs-neon-blue",
+      "rows": 5
+    },
+    {
+      "category": "auto-2021-spectra-football-vested-veterans-autographs-neon-green",
+      "rows": 5
+    },
+    {
+      "category": "auto-2021-spectra-football-vested-veterans-autographs-neon-marble",
+      "rows": 5
+    },
+    {
+      "category": "auto-2021-spectra-football-vested-veterans-autographs-neon-orange",
+      "rows": 5
+    },
+    {
+      "category": "auto-2021-spectra-football-vested-veterans-autographs-neon-pink",
+      "rows": 5
+    },
+    {
+      "category": "auto-2021-spectra-football-vested-veterans-autographs-neon-splatter",
+      "rows": 5
+    },
+    {
+      "category": "auto-2021-spectra-football-vested-veterans-autographs-psychedelic",
+      "rows": 5
+    }
+  ]
+}
