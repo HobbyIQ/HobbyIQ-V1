@@ -1,0 +1,35 @@
+{
+  "source": "cardboardconnection-2026-09-13",
+  "sourceUrl": "https://www.cardboardconnection.com/2022-topps-chrome-platinum-baseball-cards",
+  "xlsxUrl": "https://cconnect.s3.amazonaws.com/wp-content/uploads/2023/06/2022-Topps-Chrome-Platinum-Anniversary-Baseball-checklist-Excel-spreadsheet.xlsx",
+  "fetchedAt": "2026-09-13",
+  "sport": "baseball",
+  "year": 2022,
+  "setName": "2022 Topps Chrome Platinum Anniversary Baseball",
+  "productKey": "2022-topps-chrome-platinum-baseball",
+  "setKey": "topps-chrome-platinum",
+  "rowCount": 669,
+  "autoCount": 130,
+  "printRunCount": 0,
+  "distinctParallels": 1,
+  "parallelColumnAuthoritative": true,
+  "queueRank": 107,
+  "sectionsReport": [
+    {
+      "category": "insert-base-cards",
+      "rows": 500
+    },
+    {
+      "category": "auto-autograph-cards",
+      "rows": 130
+    },
+    {
+      "category": "insert-base-cards-image-variations",
+      "rows": 25
+    },
+    {
+      "category": "insert-1953-topps-employee-super-short-prints",
+      "rows": 14
+    }
+  ]
+}
