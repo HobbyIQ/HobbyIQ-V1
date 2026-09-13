@@ -19,5 +19,22 @@
  "ladderRows": 0,
  "subsetRows": 0,
  "printRunsFound": 0,
- "sectionsReport": []
+ "sectionsReport": [],
+ "variationAxisApplied": {
+  "ruling": "R18-R20: a named variation is a distinct card. The checklist-stated label is written on the variation/parallel axis so two distinct cards no longer share one hobbyIqCardId. The plain/issued card keeps parallel blank.",
+  "appliedOn": "2026-09-13",
+  "labelsAreSourceVerbatim": true,
+  "edits": [
+   {
+    "cardNumber": "23",
+    "player": "Michael Jordan PROMO",
+    "parallel": "PROMO"
+   },
+   {
+    "cardNumber": "23",
+    "player": "Shawn Kemp",
+    "parallel": null
+   }
+  ]
+ }
 }

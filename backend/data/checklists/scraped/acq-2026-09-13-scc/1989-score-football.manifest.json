@@ -58,5 +58,22 @@
   }
  ],
  "identicalRowsDeduped": 7,
- "dedupeNote": "The source page listed these rows twice, byte-identical. Only exact-duplicate LINES were removed; a same-cardNumber row whose player text differs is a distinct card (error/corrected, CO/HOF, promo) and was preserved."
+ "dedupeNote": "The source page listed these rows twice, byte-identical. Only exact-duplicate LINES were removed; a same-cardNumber row whose player text differs is a distinct card (error/corrected, CO/HOF, promo) and was preserved.",
+ "variationAxisApplied": {
+  "ruling": "R18-R20: a named variation is a distinct card. The checklist-stated label is written on the variation/parallel axis so two distinct cards no longer share one hobbyIqCardId. The plain/issued card keeps parallel blank.",
+  "appliedOn": "2026-09-13",
+  "labelsAreSourceVerbatim": true,
+  "edits": [
+   {
+    "cardNumber": "316",
+    "player": "Eric Thomas ERR SB",
+    "parallel": "ERR"
+   },
+   {
+    "cardNumber": "316",
+    "player": "Eric Thomas COR SB",
+    "parallel": "COR"
+   }
+  ]
+ }
 }
