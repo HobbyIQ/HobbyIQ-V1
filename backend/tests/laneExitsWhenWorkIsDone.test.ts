@@ -1264,7 +1264,19 @@ describe("the retire lane verifies by reading its own write ledger", () => {
   });
 
   it("it keeps a ledger of the ids it wrote, with their partition keys", () => {
-    expect(codeOnly, "the ledger is declared").toMatch(/const ledger = \[\]/);
+    // CF-NAME-THE-ROWS-BEFORE-CALLING-DAMAGE (2026-09-13): the ledger's own
+    // dedupe-by-id and the verify's mismatch classification moved to
+    // lib/write-ledger-verify.cjs so both are unit-testable against a mocked
+    // read with no Cosmos client involved (see
+    // retireSelfDerivedLedgerVerify.test.ts). The lane now builds its ledger
+    // via `createLedger()` and records through the local `ledgerPush`
+    // wrapper rather than a bare array + `ledger.push`.
+    expect(codeOnly, "the ledger comes from the shared, tested helper").toMatch(
+      /const writeLedger = createLedger\(\)/,
+    );
+    expect(codeOnly, "the local wrapper routes through the shared dedupe").toMatch(
+      /const ledgerPush = \(entry\) => writeLedger\.push\(entry\)/,
+    );
     // EVERY write site records. The markers are written by different branches
     // and a ledger missing one would report a real write as absent.
     //
@@ -1279,17 +1291,29 @@ describe("the retire lane verifies by reading its own write ledger", () => {
     // The right way to break this pin is to add a write that does NOT record —
     // so the assertion is stated against every `patchCatalogRowFields` call in
     // the loop, which is the population a ledger must cover.
-    const pushes = codeOnly.match(/ledger\.push\(/g) ?? [];
+    const pushes = codeOnly.match(/ledgerPush\(/g) ?? [];
     expect(pushes.length, "every write site must record to the ledger").toBe(7);
     // A write the ledger does not know about is a write the verify cannot
     // confirm. Each `written++` is one such write, so the two must agree.
     const writes = codeOnly.match(/\bwritten\+\+/g) ?? [];
     expect(
       writes.length,
-      "every `written++` must be matched by a ledger.push -- an unrecorded write is unverifiable",
+      "every `written++` must be matched by a ledgerPush -- an unrecorded write is unverifiable",
     ).toBe(pushes.length);
     // The partition key travels with the id: a point-read needs both.
-    expect(codeOnly).toMatch(/ledger\.push\(\{ id: String\([^)]+\), pk: pkOf\([^)]+\), field:/);
+    expect(codeOnly).toMatch(/ledgerPush\(\{ id: String\([^)]+\), pk: pkOf\([^)]+\), field:/);
+  });
+
+  it("a graded child ledgered via two paths in one pass is recorded ONCE, not twice", () => {
+    // The double-ledger defect this investigation found while tracing the
+    // 2026-09-13 false-mismatch reports: a graded child is reachable both as
+    // its own self-derived entry AND as a member of its parent's `kids` list
+    // when the parent retires and takes its children with it. `createLedger`
+    // (unit-pinned directly in retireSelfDerivedLedgerVerify.test.ts) keeps
+    // only the first write for a given id; this checks the lane actually
+    // reads that ledger back through `writeLedger.entries` rather than a
+    // second, un-deduped array.
+    expect(codeOnly).toMatch(/const ledger = writeLedger\.entries/);
   });
 
   it("the ledger's partition key MIRRORS the one the write used", () => {

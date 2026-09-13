@@ -203,9 +203,18 @@ describe("sport contamination — the cross-sport probe", () => {
   it("a cross-sport retire is verified against the marker it actually wrote", () => {
     // The verify used to compare every retire against the plain RETIRED
     // marker. A `sport-contaminated:twin-in-baseball` row would have read as
-    // MISSING THE MARKER and turned a healthy APPLY run red.
-    expect(laneSrc).toContain("const want = e.expect || RETIRED;");
-    expect(laneSrc).toContain("String(got1 || \"\") === want");
+    // MISSING THE MARKER and turned a healthy APPLY run red. The decision
+    // itself moved to lib/write-ledger-verify.cjs on 2026-09-13 (CF-NAME-THE-
+    // ROWS-BEFORE-CALLING-DAMAGE) so it is unit-testable against a mocked
+    // read with no Cosmos client in the path — see
+    // retireSelfDerivedLedgerVerify.test.ts for the classifyLedgerRead pins
+    // that exercise this exact `expect`-carrying shape. What is pinned HERE
+    // is the wiring: the lane calls the shared decision rather than a
+    // re-implementation that could drift and hard-code RETIRED again.
+    expect(laneSrc).toContain("classifyLedgerRead(e, resource, RETIRED)");
+    expect(laneSrc).toContain(
+      'require(path.join(__dirname, "lib", "write-ledger-verify.cjs"))',
+    );
   });
 
   it("a contaminated product does not let the already-marked shortcut swallow its rows", () => {
