@@ -207,11 +207,17 @@ describe("D17 pins — card-detail, card-panel, the bulk curves and the persist 
     // before it is allowed to publish — the whole point being that this
     // legacy pool-only read knows nothing about card_catalog provenance and
     // must not stand in for the one entry's identity gate.
+    //
+    // CF-A-REVIEW-STATUS-IS-NOT-A-CONFIRMED-IDENTITY (2026-09-13): the
+    // predicate now also takes the holding's `cardStatus` as a second,
+    // optional argument, so a `pending-review` holding refuses here too,
+    // regardless of catalog backing — see holdingValuation.ts's own header.
+    // Every call site is pinned WITH that second argument now.
     for (const [scope, attemptExpr] of [
       [auto, "exact?.attempt.cardId"],
       [src, "midExact?.attempt.cardId"],
     ] as const) {
-      expect(scope.includes(`await mayPublishFromLegacyExactPoolShortcut(${attemptExpr} ?? null)`), attemptExpr).toBe(true);
+      expect(scope.includes(`await mayPublishFromLegacyExactPoolShortcut(${attemptExpr} ?? null, (holding as any).cardStatus)`), attemptExpr).toBe(true);
     }
     // repriceHoldingsForUser: the same shape, both flagged reads gated.
     const reprice = between("export async function repriceHoldingsForUser(", "const estimate = await computeEstimate(");
@@ -221,7 +227,7 @@ describe("D17 pins — card-detail, card-panel, the bulk curves and the persist 
     expect(rLegacy).toBeGreaterThan(rEntry);
     expect(reprice).toMatch(/if \(\s*!bEntryDecided && process\.env\.PORTFOLIO_OBSERVED_GRADE_OVERRIDE_ENABLED === "true" && bEarlyId/);
     expect(src).toMatch(/if \(!bEntryDecided && process\.env\.PORTFOLIO_OBSERVED_GRADE_OVERRIDE_ENABLED === "true"\) \{/);
-    expect(reprice.includes("await mayPublishFromLegacyExactPoolShortcut(bExactEarly?.attempt.cardId ?? null)")).toBe(true);
+    expect(reprice.includes("await mayPublishFromLegacyExactPoolShortcut(bExactEarly?.attempt.cardId ?? null, (holding as any).cardStatus)")).toBe(true);
     // The FOURTH flagged site (`bExact`, the legacy confidence-gated lane's
     // own bonus unified-pricing attempt) sits structurally AFTER
     // repriceHoldingsForUser's `computeEstimate` call, so it falls outside
@@ -231,7 +237,7 @@ describe("D17 pins — card-detail, card-panel, the bulk curves and the persist 
       "const bExact = await priceHoldingFromExactPool(",
       "writeHoldingValuation(holding, {",
     );
-    expect(bExactSite.includes("await mayPublishFromLegacyExactPoolShortcut(bExact?.attempt.cardId ?? null)")).toBe(true);
+    expect(bExactSite.includes("await mayPublishFromLegacyExactPoolShortcut(bExact?.attempt.cardId ?? null, (holding as any).cardStatus)")).toBe(true);
     // The supremacy gate: the entry replaces a blocked estimate; the legacy
     // re-price only when the entry could not resolve the identity.
     const gate = between("async function gateEstimateAgainstExactPool(", "async function autoPriceHolding(");

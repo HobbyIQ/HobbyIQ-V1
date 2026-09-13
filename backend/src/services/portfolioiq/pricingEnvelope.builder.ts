@@ -437,6 +437,11 @@ export function withheldOf(
     // type's own comment in pricingEnvelope.ts. This was the single largest
     // silent drop on the live portfolio (39 of 139 holdings, 2026-09-13).
     && reason !== "confidence-gate"
+    // CF-A-REVIEW-STATUS-IS-NOT-A-CONFIRMED-IDENTITY (Claude Fable 5.1,
+    // 2026-09-13): same join, for a holding awaiting the owner's review —
+    // see the type's own comment in pricingEnvelope.ts. The Jack Wheeler
+    // holdings (925ccfe7 / 4e70af40) are the case this closes.
+    && reason !== "pending-review"
   ) {
     return null;
   }
