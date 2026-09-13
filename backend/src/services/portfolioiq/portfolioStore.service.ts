@@ -3603,8 +3603,11 @@ async function autoPriceHolding(
         // (`!entryDecidedExactPool`) — it must not publish a number the one
         // entry's own identity gate would have refused. Asked of the id the
         // pool was actually read under (`exact.attempt.cardId`), not the
-        // holding's stored slug, which may differ.
-        && (await mayPublishFromLegacyExactPoolShortcut(exact?.attempt.cardId ?? null))
+        // holding's stored slug, which may differ. `cardStatus` closes the
+        // narrower pending-review gap (CF-A-REVIEW-STATUS-IS-NOT-A-CONFIRMED-
+        // IDENTITY): a holding awaiting the owner's review must not publish
+        // here even when it names a real, checklist-backed identity.
+        && (await mayPublishFromLegacyExactPoolShortcut(exact?.attempt.cardId ?? null, (holding as any).cardStatus))
       ) {
         const nowIso = new Date().toISOString();
         console.log(JSON.stringify({
@@ -3797,10 +3800,11 @@ async function autoPriceHolding(
       // `unifiedIsFinalAuthority && unifiedResult`), none of which re-checks
       // identity backing — so the gate belongs HERE, at the one place the
       // variable is populated, asked of the id the pool was actually read
-      // under (`midExact.attempt.cardId`).
+      // under (`midExact.attempt.cardId`). `cardStatus` closes the narrower
+      // pending-review gap (CF-A-REVIEW-STATUS-IS-NOT-A-CONFIRMED-IDENTITY).
       if (
         unified !== null && chosen !== null && chosen > 0 && unified.totalSampleCount >= 1
-        && (await mayPublishFromLegacyExactPoolShortcut(midExact?.attempt.cardId ?? null))
+        && (await mayPublishFromLegacyExactPoolShortcut(midExact?.attempt.cardId ?? null, (holding as any).cardStatus))
       ) {
         unifiedResult = {
           totalSampleCount: unified.totalSampleCount,
@@ -10556,7 +10560,9 @@ export async function repriceHoldingsForUser(
             // runs when the one entry could not resolve the holding, and
             // must not publish an identity the one entry's gate would have
             // refused. Asked of the id the pool was actually read under.
-            && (await mayPublishFromLegacyExactPoolShortcut(bExactEarly?.attempt.cardId ?? null))
+            // `cardStatus` closes the narrower pending-review gap
+            // (CF-A-REVIEW-STATUS-IS-NOT-A-CONFIRMED-IDENTITY).
+            && (await mayPublishFromLegacyExactPoolShortcut(bExactEarly?.attempt.cardId ?? null, (holding as any).cardStatus))
           ) {
             const bNow = new Date().toISOString();
             console.log(JSON.stringify({
@@ -10688,10 +10694,12 @@ export async function repriceHoldingsForUser(
             // instead, so a thin exact pool could fall through to the rescues.
             // CF-THE-LEGACY-SHORTCUT-NEVER-ASKED (Fable, 2026-09-13): same
             // gate as every other `PORTFOLIO_OBSERVED_GRADE_OVERRIDE_ENABLED`
-            // site — this is the fourth and last of them.
+            // site — this is the fourth and last of them. `cardStatus` closes
+            // the narrower pending-review gap (CF-A-REVIEW-STATUS-IS-NOT-A-
+            // CONFIRMED-IDENTITY).
             if (
               unified !== null && bChosen !== null && bChosen > 0 && unified.totalSampleCount >= 1
-              && (await mayPublishFromLegacyExactPoolShortcut(bExact?.attempt.cardId ?? null))
+              && (await mayPublishFromLegacyExactPoolShortcut(bExact?.attempt.cardId ?? null, (holding as any).cardStatus))
             ) {
               const uNow = new Date().toISOString();
               console.log(JSON.stringify({
