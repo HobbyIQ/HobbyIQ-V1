@@ -34,7 +34,7 @@ import { describe, expect, it } from "vitest";
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const {
   splitParentAndSubset, parallelTailOf, QUALIFIED_PRODUCT_KEYS, spellDonrussForEra,
-  PANINI_DONRUSS_FROM_YEAR,
+  PANINI_DONRUSS_FROM_YEAR, METAL_UNIVERSE_TO,
 } = require("../scripts/fetchSportsCardChecklist.cjs");
 import { normalizeSetKey } from "../src/services/portfolioiq/hobbyIqCardId.service";
 import { isProductSetKey } from "../src/services/catalog/productSetKeys";
@@ -142,40 +142,67 @@ describe("the Donruss era boundary decides which REGISTERED key wins", () => {
 });
 
 /**
- * TASK 3 (NOTED, NOT FIXED): the skybox / metal-universe era-twin naming
- * question #2108 raised. These tests establish what the registry actually
- * carries today so a future ruling has a fixed baseline, and pin the ONE
- * trivial correction that follows the same shape as fleer-stickers
- * (fleer-metal-universe is P(k, { parent: "fleer" }), identical to
- * fleer-stickers) without resolving the open naming question itself.
+ * TASK 3: the skybox / metal-universe era-twin naming question #2108 raised,
+ * CORRECTED per Drew's ruling (2026-09-11/12) rather than left as brand-
+ * qualified products of their own. `fleer-metal-universe` and
+ * `skybox-metal-universe` are era-misnomer twins of ONE product,
+ * `metal-universe` -- the maker prefix names whichever owner issued a LATER
+ * era's card, not this one. #2108's acquirer had already measured this and
+ * re-pointed its three metal-universe manifests (1996/1997/1998 Metal
+ * Universe Baseball) from `fleer-metal-universe` to `metal-universe` before
+ * merge; this fetcher must not undo that by treating the misnomer as a
+ * registered key worth keeping. PR #2064 ("Deriver: checklist decides Bowman
+ * vs Bowman Chrome, Metal Universe vs its revival") adds the durable
+ * `METAL_UNIVERSE_ERA_MISNOMERS` / `spellForEra` handling for this pair in
+ * productSetKeys.ts; until it merges, this fetcher carries a small local
+ * `METAL_UNIVERSE_TO` map (TODO #2064 in its own comment) rather than
+ * depending on an unmerged PR's exports.
  */
-describe("NOTED: skybox / metal-universe era-twin naming (#2108, not resolved here)", () => {
-  it("fleer-metal-universe is registered exactly like fleer-stickers, and is now qualified", () => {
-    expect(isProductSetKey("fleer-metal-universe")).toBe(true);
-    expect(normalizeSetKey("fleer-metal-universe")).toBe("fleer-metal-universe");
-    expect(parentOf("fleer-metal-universe", 1997)).toBe("fleer-metal-universe");
+describe("the metal-universe era-misnomer twins correct to the ruled key", () => {
+  it('"1997 Fleer Metal Universe" corrects to metal-universe, not a brand-qualified key of its own', () => {
+    expect(parentOf("fleer-metal-universe", 1997)).toBe("metal-universe");
+    expect(METAL_UNIVERSE_TO["fleer-metal-universe"]).toBe("metal-universe");
   });
 
-  it("metal-universe, skybox and skybox-premium are all separately registered fixed points", () => {
-    for (const k of ["metal-universe", "skybox", "skybox-premium", "skybox-metal-universe"]) {
-      expect(isProductSetKey(k)).toBe(true);
-      expect(normalizeSetKey(k)).toBe(k);
-    }
+  it("its SkyBox-era twin corrects to the same ruled key", () => {
+    expect(parentOf("skybox-metal-universe", 2008)).toBe("metal-universe");
+    expect(METAL_UNIVERSE_TO["skybox-metal-universe"]).toBe("metal-universe");
+  });
+
+  it("fleer-metal-universe is NOT in QUALIFIED_PRODUCT_KEYS -- it must not win as a key of its own", () => {
+    // The opposite correction from Donruss/Panini: there the qualified
+    // spelling IS the registered key; here the qualified spelling is the
+    // WRONG one and must redirect, never survive as itself.
+    expect(QUALIFIED_PRODUCT_KEYS.has("fleer-metal-universe")).toBe(false);
+    expect(QUALIFIED_PRODUCT_KEYS.has("skybox-metal-universe")).toBe(false);
+  });
+
+  it("the ruled target is a normalizeSetKey fixed point and a registered key", () => {
+    expect(normalizeSetKey("metal-universe")).toBe("metal-universe");
+    expect(isProductSetKey("metal-universe")).toBe(true);
+  });
+
+  it("a bare metal-universe or skybox-premium slug is untouched -- already correct", () => {
+    // Neither is a misnomer twin, so the map must not rewrite them.
+    expect(parentOf("metal-universe", 1997)).toBe("");
+    expect(parentOf("skybox-premium", 1994)).toBe("");
+    expect(METAL_UNIVERSE_TO["metal-universe"]).toBeUndefined();
+    expect(METAL_UNIVERSE_TO["skybox-premium"]).toBeUndefined();
   });
 
   /**
-   * NOT FIXED HERE: neither `skybox-metal-universe`, `skybox-premium`, nor
-   * bare `metal-universe` is reachable through PARENT_BRANDS's generalisation
-   * (no PARENT_BRANDS entry is a prefix of them the way `fleer` is a prefix of
-   * `fleer-metal-universe`), so QUALIFIED_PRODUCT_KEYS needs no entry for them
-   * to fix a defect this fetcher does not have. The 1993-94/1994-95 SkyBox ->
-   * SkyBox Premium rename (#2108's "STOPPED, not guessed" question) is a
-   * separate acquisition-key ruling, left for Drew.
+   * NOT RULED HERE: the 1993-94/1994-95 SkyBox -> SkyBox Premium rename
+   * (#2108's "STOPPED, not guessed" question) is a separate acquisition-key
+   * question, left for Drew. `skybox` and `skybox-premium` stay separately
+   * registered fixed points and neither is reachable through PARENT_BRANDS's
+   * generalisation (no PARENT_BRANDS entry is a prefix of either).
    */
-  it("a bare skybox or metal-universe slug claims no PARENT_BRANDS entry to generalise from", () => {
-    expect(parentOf("skybox", 1996)).toBe("");
-    expect(parentOf("metal-universe", 1997)).toBe("");
-    expect(parentOf("skybox-premium", 1994)).toBe("");
+  it("skybox and skybox-premium remain separately registered fixed points", () => {
+    for (const k of ["skybox", "skybox-premium"]) {
+      expect(isProductSetKey(k)).toBe(true);
+      expect(normalizeSetKey(k)).toBe(k);
+      expect(parentOf(k, 1996)).toBe("");
+    }
   });
 });
 

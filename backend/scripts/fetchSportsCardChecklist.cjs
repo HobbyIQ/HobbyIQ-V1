@@ -514,18 +514,46 @@ const BRAND_CANONICAL = { "pacific-prisms": "pacific-prism" };
  * below mirrors that one boundary rule; everything else stays a straight
  * membership test.
  *
- * `fleer-metal-universe` is included for the same reason `fleer-stickers` is:
- * both are `P(k, { parent: "fleer" })` in the table, the identical shape the
- * acquirer's fix was needed for. Its era twin `skybox-metal-universe` and the
- * un-prefixed `metal-universe` are NOT brand-qualified in a way this list's
- * generalisation ever reaches (`skybox-` and bare `metal-universe` slugs never
- * match a PARENT_BRANDS entry that would shorten them), so they need no entry
- * here -- see #2108's note on the era-twin naming question, left open.
+ * `fleer-metal-universe` is DELIBERATELY NOT HERE, despite being the same
+ * `P(k, { parent: "fleer" })` shape `fleer-stickers` is. Drew's ruling
+ * (2026-09-11/12): the product is `metal-universe` for 1996-99 baseball, and
+ * `fleer-metal-universe` / `skybox-metal-universe` are ERA-MISNOMER TWINS of
+ * it -- the maker prefix names whichever owner issued a LATER era's card, not
+ * this one, the same shape Donruss/Panini is except the fixed point is the
+ * UN-prefixed key rather than the qualified one. #2108's acquirer already
+ * re-pointed its three metal-universe manifests to `metal-universe` for
+ * exactly this reason (1996/1997/1998 Metal Universe Baseball, merged to
+ * main). Membership here would have re-introduced the wrong key their own
+ * acquisition PR had just corrected. See METAL_UNIVERSE_TO below instead.
  */
 const QUALIFIED_PRODUCT_KEYS = new Set([
   "panini-donruss", "panini-select", "panini-crown-royale", "fleer-stickers",
-  "fleer-metal-universe",
 ]);
+
+/**
+ * CF-METAL-UNIVERSE-ERA-MISNOMERS (2026-09-13, Drew's ruling 2026-09-11/12).
+ *
+ * `fleer-metal-universe` and `skybox-metal-universe` both spell the SAME
+ * product `metal-universe` in an ERA-WRONG way -- the maker prefix names
+ * whichever company owned the brand at fetch time, not the year on the card.
+ * #2108's acquirer measured this directly and re-pointed all three
+ * `set-30163`-family manifests (1996/1997/1998 Metal Universe Baseball) from
+ * `fleer-metal-universe` to `metal-universe` before merge.
+ *
+ * TODO(#2064): PR #2064 ("Deriver: checklist decides Bowman vs Bowman Chrome,
+ * Metal Universe vs its revival") adds `METAL_UNIVERSE_ERA_MISNOMERS` +
+ * `spellForEra` handling for this exact pair in productSetKeys.ts. Once that
+ * lands on main, replace this local map with a call into that function (the
+ * same way Donruss's `spellDonrussForEra` mirrors `PANINI_DONRUSS_FROM_YEAR`)
+ * rather than keeping two rulings in two files. Left as an explicit map for
+ * now because #2064 has not merged yet and this fetcher must not depend on an
+ * unmerged PR's exports.
+ *
+ * KEPT LOCAL for the same reason every other list here is: this file imports
+ * nothing but node builtins so it runs offline against cached HTML. The pin
+ * test asserts this mapping's target is a normalizeSetKey fixed point.
+ */
+const METAL_UNIVERSE_TO = { "fleer-metal-universe": "metal-universe", "skybox-metal-universe": "metal-universe" };
 
 /** Panini acquired Donruss in 2009 (CF-PANINI-IS-ANACHRONISTIC-BEFORE-2009),
  *  mirroring PANINI_DONRUSS_FROM_YEAR / DONRUSS_SPELLING_POLICY in
@@ -817,6 +845,16 @@ function splitParentAndSubset(rest, tailRe, year) {
   // the packed-out brand and mint the preview onto the flagship's pool.
   const nested = nestedProduct(r);
   if (nested) return nested;
+  // AN ERA-MISNOMER TWIN CORRECTS TO ITS RULED KEY, ahead of everything else
+  // that follows: `fleer-metal-universe` / `skybox-metal-universe` are not a
+  // brand's subset OR a registered key of their own to keep -- they are the
+  // WRONG maker prefix on `metal-universe`, Drew's ruling. See
+  // METAL_UNIVERSE_TO above (TODO #2064: replace with productSetKeys.ts's
+  // spellForEra once that batch is on main). The host has not been observed
+  // to serve this slug form (it spells the page bare `metal-universe`), so
+  // this guards a driver-derived `--set-key` or a future page shape, not a
+  // live defect measured today.
+  if (METAL_UNIVERSE_TO[r]) return { parentSetKey: METAL_UNIVERSE_TO[r], subset: "" };
   // A BRAND-QUALIFIED PRODUCT WINS OVER THE BRAND SPLIT TOO, and must be
   // checked before the walk ever shortens `r` to a brand: `panini-select` is
   // the registered product, not a "Select" subset of `panini`. `donruss`
@@ -1041,14 +1079,18 @@ function splitCardHeader(raw) {
  * 7  2026-09-13: a brand-qualified product is not a subset of its brand
  *    (PR #2108's acquirer, hand-correcting seven manifests before merge).
  *    `splitParentAndSubset` no longer generalises `panini-donruss`,
- *    `panini-select`, `panini-crown-royale`, `fleer-stickers` or
- *    `fleer-metal-universe` down to `donruss`/`panini`/`fleer` -- each is a
- *    separately registered product in productSetKeys.ts and the old output
- *    would have minted rows under a different, also-registered pool. Donruss
- *    additionally now spells by era (pre-2009 `donruss`, 2009+
- *    `panini-donruss`) instead of always emitting the bare brand. Every page
- *    of one of these products produces a DIFFERENT setKey than it did at v6,
- *    so any verdict recorded against the old output has to be re-attempted.
+ *    `panini-select`, `panini-crown-royale` or `fleer-stickers` down to
+ *    `donruss`/`panini`/`fleer` -- each is a separately registered product in
+ *    productSetKeys.ts and the old output would have minted rows under a
+ *    different, also-registered pool. Donruss additionally now spells by era
+ *    (pre-2009 `donruss`, 2009+ `panini-donruss`) instead of always emitting
+ *    the bare brand. Also corrected in the same pass: `fleer-metal-universe`
+ *    and `skybox-metal-universe` now spell as their ruled key
+ *    `metal-universe` (Drew's 2026-09-11/12 ruling, TODO #2064) instead of
+ *    being kept as brand-qualified products of their own -- the opposite
+ *    correction from Donruss/Panini, same defect class. Every page of one of
+ *    these products produces a DIFFERENT setKey than it did at v6, so any
+ *    verdict recorded against the old output has to be re-attempted.
  */
 const CONVERTER_VERSION = 7;
 
@@ -1428,5 +1470,5 @@ module.exports = {
   unescapeAddslashes, canonicalSlug, canonicalSetUrl,
   QUALIFIED_REFRACTOR, NESTED_PRODUCT_SLUGS, nestedProduct, SLUG_PARALLEL_TAIL, PARENT_BRANDS,
   SET_CARD_NUMBER_PREFIX, applyCardNumberPrefix,
-  QUALIFIED_PRODUCT_KEYS, spellDonrussForEra, PANINI_DONRUSS_FROM_YEAR,
+  QUALIFIED_PRODUCT_KEYS, spellDonrussForEra, PANINI_DONRUSS_FROM_YEAR, METAL_UNIVERSE_TO,
 };

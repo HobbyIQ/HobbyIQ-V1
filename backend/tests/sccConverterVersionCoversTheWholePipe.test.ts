@@ -121,7 +121,7 @@ const RECORDED: Record<string, string> = {
   "fetcher:canonicalSlug": "f0c397eb06ab28ca",
   "fetcher:parseSetUrl": "97144f0493f00e31",
   "fetcher:buildRows": "e328487558b2f244",
-  "fetcher:splitParentAndSubset": "433ad0b700af0e18",
+  "fetcher:splitParentAndSubset": "9d469fce5c368c4b",
   "fetcher:parallelFromSlug": "fd2bea5160dd904e",
 };
 
