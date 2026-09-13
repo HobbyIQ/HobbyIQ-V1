@@ -1,0 +1,24 @@
+{
+  "source": "cardboardconnection-2026-09-13",
+  "sourceUrl": "https://www.cardboardconnection.com/2022-panini-spectra-football-nfl-cards",
+  "xlsxUrl": "https://www.cardboardconnection.com/wp-content/uploads/2023/01/2022-Panini-Spectra-Football-checklist-Excel-spreadsheet.xlsx",
+  "fetchedAt": "2026-09-13",
+  "sport": "football",
+  "year": 2022,
+  "setName": "2022 Panini Spectra Football",
+  "productKey": "2022-panini-spectra-football",
+  "setKey": "panini-spectra",
+  "subset": "Dual Patch Autographs Neon Purple",
+  "rowCount": 14,
+  "autoCount": 14,
+  "printRunCount": 14,
+  "distinctParallels": 0,
+  "parallelColumnAuthoritative": true,
+  "queueRank": 113,
+  "sectionsReport": [
+    {
+      "category": "auto-dual-patch-autographs-neon-purple",
+      "rows": 14
+    }
+  ]
+}

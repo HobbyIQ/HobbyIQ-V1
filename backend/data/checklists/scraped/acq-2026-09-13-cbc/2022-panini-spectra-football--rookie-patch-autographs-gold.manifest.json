@@ -1,0 +1,32 @@
+{
+  "source": "cardboardconnection-2026-09-13",
+  "sourceUrl": "https://www.cardboardconnection.com/2022-panini-spectra-football-nfl-cards",
+  "xlsxUrl": "https://www.cardboardconnection.com/wp-content/uploads/2023/01/2022-Panini-Spectra-Football-checklist-Excel-spreadsheet.xlsx",
+  "fetchedAt": "2026-09-13",
+  "sport": "football",
+  "year": 2022,
+  "setName": "2022 Panini Spectra Football",
+  "productKey": "2022-panini-spectra-football",
+  "setKey": "panini-spectra",
+  "subset": "Rookie Patch Autographs Gold",
+  "rowCount": 121,
+  "autoCount": 121,
+  "printRunCount": 121,
+  "distinctParallels": 2,
+  "parallelColumnAuthoritative": true,
+  "queueRank": 113,
+  "sectionsReport": [
+    {
+      "category": "auto-rookie-patch-autographs-gold",
+      "rows": 41
+    },
+    {
+      "category": "auto-rookie-patch-autographs-gold-laundry-tags-nfl-shield",
+      "rows": 40
+    },
+    {
+      "category": "auto-rookie-patch-autographs-gold-laundry-tags-nike-swoosh",
+      "rows": 40
+    }
+  ]
+}

@@ -1,0 +1,691 @@
+{
+  "source": "cardboardconnection-2026-09-13",
+  "sourceUrl": "https://www.cardboardconnection.com/2022-23-panini-prizm-draft-picks-basketball-cards",
+  "xlsxUrl": "https://cconnect.s3.amazonaws.com/wp-content/uploads/2023/02/2022-23-Panini-Prizm-Draft-Picks-Basketball-checklist-Excel-spreadsheet-new.xlsx",
+  "fetchedAt": "2026-09-13",
+  "sport": "basketball",
+  "year": 2022,
+  "setName": "2022-23 Panini Prizm Draft Picks Basketball",
+  "productKey": "2022-23-panini-prizm-draft-picks-basketball",
+  "setKey": "panini-prizm-draft-picks",
+  "rowCount": 6250,
+  "autoCount": 0,
+  "printRunCount": 3950,
+  "distinctParallels": 167,
+  "parallelColumnAuthoritative": true,
+  "queueRank": 143,
+  "sectionsReport": [
+    {
+      "category": "base",
+      "rows": 100
+    },
+    {
+      "category": "insert-base-prizms-black",
+      "rows": 100
+    },
+    {
+      "category": "insert-base-prizms-black-gold",
+      "rows": 100
+    },
+    {
+      "category": "insert-base-prizms-blue",
+      "rows": 100
+    },
+    {
+      "category": "insert-base-prizms-blue-circles",
+      "rows": 100
+    },
+    {
+      "category": "insert-base-prizms-blue-ice",
+      "rows": 100
+    },
+    {
+      "category": "insert-base-prizms-blue-shimmer",
+      "rows": 100
+    },
+    {
+      "category": "insert-base-prizms-blue-wave",
+      "rows": 100
+    },
+    {
+      "category": "insert-base-prizms-choice-blue-yellow-and-green",
+      "rows": 100
+    },
+    {
+      "category": "insert-base-prizms-choice-green",
+      "rows": 100
+    },
+    {
+      "category": "insert-base-prizms-choice-nebula",
+      "rows": 100
+    },
+    {
+      "category": "insert-base-prizms-choice-red",
+      "rows": 100
+    },
+    {
+      "category": "insert-base-prizms-choice-tiger-stripe",
+      "rows": 100
+    },
+    {
+      "category": "insert-base-prizms-gold",
+      "rows": 100
+    },
+    {
+      "category": "insert-base-prizms-green",
+      "rows": 100
+    },
+    {
+      "category": "insert-base-prizms-green-pulsar",
+      "rows": 100
+    },
+    {
+      "category": "insert-base-prizms-green-shimmer",
+      "rows": 100
+    },
+    {
+      "category": "insert-base-prizms-green-wave",
+      "rows": 100
+    },
+    {
+      "category": "insert-base-prizms-hyper",
+      "rows": 100
+    },
+    {
+      "category": "insert-base-prizms-mojo",
+      "rows": 100
+    },
+    {
+      "category": "insert-base-prizms-neon-green-circles",
+      "rows": 100
+    },
+    {
+      "category": "insert-base-prizms-orange-pulsar",
+      "rows": 100
+    },
+    {
+      "category": "insert-base-prizms-pink-circles",
+      "rows": 100
+    },
+    {
+      "category": "insert-base-prizms-purple",
+      "rows": 100
+    },
+    {
+      "category": "insert-base-prizms-purple-circles",
+      "rows": 100
+    },
+    {
+      "category": "insert-base-prizms-purple-ice",
+      "rows": 100
+    },
+    {
+      "category": "insert-base-prizms-purple-wave",
+      "rows": 100
+    },
+    {
+      "category": "insert-base-prizms-red",
+      "rows": 100
+    },
+    {
+      "category": "insert-base-prizms-red-circles",
+      "rows": 100
+    },
+    {
+      "category": "insert-base-prizms-red-shimmer",
+      "rows": 100
+    },
+    {
+      "category": "insert-base-prizms-silver",
+      "rows": 100
+    },
+    {
+      "category": "insert-base-prizms-venom",
+      "rows": 100
+    },
+    {
+      "category": "insert-base-prizms-white-sparkle",
+      "rows": 100
+    },
+    {
+      "category": "insert-base-variation",
+      "rows": 42
+    },
+    {
+      "category": "insert-base-variation-prizms-black",
+      "rows": 42
+    },
+    {
+      "category": "insert-base-variation-prizms-black-gold",
+      "rows": 42
+    },
+    {
+      "category": "insert-base-variation-prizms-blue",
+      "rows": 42
+    },
+    {
+      "category": "insert-base-variation-prizms-blue-ice",
+      "rows": 42
+    },
+    {
+      "category": "insert-base-variation-prizms-blue-shimmer",
+      "rows": 42
+    },
+    {
+      "category": "insert-base-variation-prizms-choice-blue-yellow-and-green",
+      "rows": 42
+    },
+    {
+      "category": "insert-base-variation-prizms-choice-green",
+      "rows": 42
+    },
+    {
+      "category": "insert-base-variation-prizms-choice-nebula",
+      "rows": 42
+    },
+    {
+      "category": "insert-base-variation-prizms-choice-red",
+      "rows": 42
+    },
+    {
+      "category": "insert-base-variation-prizms-choice-tiger-stripe",
+      "rows": 42
+    },
+    {
+      "category": "insert-base-variation-prizms-gold",
+      "rows": 42
+    },
+    {
+      "category": "insert-base-variation-prizms-green",
+      "rows": 42
+    },
+    {
+      "category": "insert-base-variation-prizms-green-pulsar",
+      "rows": 42
+    },
+    {
+      "category": "insert-base-variation-prizms-green-shimmer",
+      "rows": 42
+    },
+    {
+      "category": "insert-base-variation-prizms-green-wave",
+      "rows": 42
+    },
+    {
+      "category": "insert-base-variation-prizms-hyper",
+      "rows": 42
+    },
+    {
+      "category": "insert-base-variation-prizms-mojo",
+      "rows": 42
+    },
+    {
+      "category": "insert-base-variation-prizms-neon-green-circles",
+      "rows": 42
+    },
+    {
+      "category": "insert-base-variation-prizms-orange-pulsar",
+      "rows": 42
+    },
+    {
+      "category": "insert-base-variation-prizms-pink-circles",
+      "rows": 42
+    },
+    {
+      "category": "insert-base-variation-prizms-purple",
+      "rows": 42
+    },
+    {
+      "category": "insert-base-variation-prizms-purple-circles",
+      "rows": 42
+    },
+    {
+      "category": "insert-base-variation-prizms-purple-ice",
+      "rows": 42
+    },
+    {
+      "category": "insert-base-variation-prizms-purple-wave",
+      "rows": 42
+    },
+    {
+      "category": "insert-base-variation-prizms-red-shimmer",
+      "rows": 42
+    },
+    {
+      "category": "insert-base-variation-prizms-silver",
+      "rows": 42
+    },
+    {
+      "category": "insert-base-variation-prizms-venom",
+      "rows": 42
+    },
+    {
+      "category": "insert-base-variation-prizms-white-sparkle",
+      "rows": 42
+    },
+    {
+      "category": "insert-brilliance",
+      "rows": 20
+    },
+    {
+      "category": "insert-brilliance-prizms-black",
+      "rows": 20
+    },
+    {
+      "category": "insert-brilliance-prizms-blue-shimmer",
+      "rows": 20
+    },
+    {
+      "category": "insert-brilliance-prizms-cirlces",
+      "rows": 20
+    },
+    {
+      "category": "insert-brilliance-prizms-gold",
+      "rows": 20
+    },
+    {
+      "category": "insert-brilliance-prizms-green-pulsar",
+      "rows": 20
+    },
+    {
+      "category": "insert-brilliance-prizms-green-shimmer",
+      "rows": 20
+    },
+    {
+      "category": "insert-brilliance-prizms-hyper",
+      "rows": 20
+    },
+    {
+      "category": "insert-brilliance-prizms-mojo",
+      "rows": 20
+    },
+    {
+      "category": "insert-brilliance-prizms-neon-green-circles",
+      "rows": 20
+    },
+    {
+      "category": "insert-brilliance-prizms-pink-circles",
+      "rows": 20
+    },
+    {
+      "category": "insert-brilliance-prizms-red-shimmer",
+      "rows": 20
+    },
+    {
+      "category": "insert-brilliance-prizms-silver",
+      "rows": 20
+    },
+    {
+      "category": "insert-brilliance-prizms-white-sparkle",
+      "rows": 20
+    },
+    {
+      "category": "insert-fireworks",
+      "rows": 20
+    },
+    {
+      "category": "insert-fireworks-prizms-black",
+      "rows": 20
+    },
+    {
+      "category": "insert-fireworks-prizms-blue-shimmer",
+      "rows": 20
+    },
+    {
+      "category": "insert-fireworks-prizms-circles",
+      "rows": 20
+    },
+    {
+      "category": "insert-fireworks-prizms-gold",
+      "rows": 20
+    },
+    {
+      "category": "insert-fireworks-prizms-green-pulsar",
+      "rows": 20
+    },
+    {
+      "category": "insert-fireworks-prizms-green-shimmer",
+      "rows": 20
+    },
+    {
+      "category": "insert-fireworks-prizms-hyper",
+      "rows": 20
+    },
+    {
+      "category": "insert-fireworks-prizms-mojo",
+      "rows": 20
+    },
+    {
+      "category": "insert-fireworks-prizms-neon-green-circles",
+      "rows": 20
+    },
+    {
+      "category": "insert-fireworks-prizms-pink-cirlces",
+      "rows": 20
+    },
+    {
+      "category": "insert-fireworks-prizms-red-shimmer",
+      "rows": 20
+    },
+    {
+      "category": "insert-fireworks-prizms-silver",
+      "rows": 20
+    },
+    {
+      "category": "insert-fireworks-prizms-white-sparkle",
+      "rows": 20
+    },
+    {
+      "category": "insert-flashback",
+      "rows": 20
+    },
+    {
+      "category": "insert-flashback-prizms-black",
+      "rows": 20
+    },
+    {
+      "category": "insert-flashback-prizms-blue-shimmer",
+      "rows": 20
+    },
+    {
+      "category": "insert-flashback-prizms-circles",
+      "rows": 20
+    },
+    {
+      "category": "insert-flashback-prizms-gold",
+      "rows": 20
+    },
+    {
+      "category": "insert-flashback-prizms-green-pulsar",
+      "rows": 20
+    },
+    {
+      "category": "insert-flashback-prizms-green-shimmer",
+      "rows": 20
+    },
+    {
+      "category": "insert-flashback-prizms-hyper",
+      "rows": 20
+    },
+    {
+      "category": "insert-flashback-prizms-mojo",
+      "rows": 20
+    },
+    {
+      "category": "insert-flashback-prizms-neon-green-circles",
+      "rows": 20
+    },
+    {
+      "category": "insert-flashback-prizms-pink-circles",
+      "rows": 20
+    },
+    {
+      "category": "insert-flashback-prizms-red-shimmer",
+      "rows": 20
+    },
+    {
+      "category": "insert-flashback-prizms-silver",
+      "rows": 20
+    },
+    {
+      "category": "insert-flashback-prizms-white-sparkle",
+      "rows": 20
+    },
+    {
+      "category": "insert-instant-impact",
+      "rows": 20
+    },
+    {
+      "category": "insert-instant-impact-prizms-black",
+      "rows": 20
+    },
+    {
+      "category": "insert-instant-impact-prizms-blue-shimmer",
+      "rows": 20
+    },
+    {
+      "category": "insert-instant-impact-prizms-circles",
+      "rows": 20
+    },
+    {
+      "category": "insert-instant-impact-prizms-gold",
+      "rows": 20
+    },
+    {
+      "category": "insert-instant-impact-prizms-green-pulsar",
+      "rows": 20
+    },
+    {
+      "category": "insert-instant-impact-prizms-green-shimmer",
+      "rows": 20
+    },
+    {
+      "category": "insert-instant-impact-prizms-hyper",
+      "rows": 20
+    },
+    {
+      "category": "insert-instant-impact-prizms-mojo",
+      "rows": 20
+    },
+    {
+      "category": "insert-instant-impact-prizms-neon-green-circles",
+      "rows": 20
+    },
+    {
+      "category": "insert-instant-impact-prizms-pink-circles",
+      "rows": 20
+    },
+    {
+      "category": "insert-instant-impact-prizms-red-shimmer",
+      "rows": 20
+    },
+    {
+      "category": "insert-instant-impact-prizms-silver",
+      "rows": 20
+    },
+    {
+      "category": "insert-instant-impact-prizms-white-sparkle",
+      "rows": 20
+    },
+    {
+      "category": "insert-widescreen",
+      "rows": 20
+    },
+    {
+      "category": "insert-widescreen-prizms-black",
+      "rows": 20
+    },
+    {
+      "category": "insert-widescreen-prizms-blue-shimmer",
+      "rows": 20
+    },
+    {
+      "category": "insert-widescreen-prizms-circles",
+      "rows": 20
+    },
+    {
+      "category": "insert-widescreen-prizms-gold",
+      "rows": 20
+    },
+    {
+      "category": "insert-widescreen-prizms-green-pulsar",
+      "rows": 20
+    },
+    {
+      "category": "insert-widescreen-prizms-green-shimmer",
+      "rows": 20
+    },
+    {
+      "category": "insert-widescreen-prizms-hyper",
+      "rows": 20
+    },
+    {
+      "category": "insert-widescreen-prizms-mojo",
+      "rows": 20
+    },
+    {
+      "category": "insert-widescreen-prizms-neon-green-circles",
+      "rows": 20
+    },
+    {
+      "category": "insert-widescreen-prizms-pink-circles",
+      "rows": 20
+    },
+    {
+      "category": "insert-widescreen-prizms-red-shimmer",
+      "rows": 20
+    },
+    {
+      "category": "insert-widescreen-prizms-silver",
+      "rows": 20
+    },
+    {
+      "category": "insert-widescreen-prizms-white-sparkle",
+      "rows": 20
+    },
+    {
+      "category": "insert-black-colorblast",
+      "rows": 15
+    },
+    {
+      "category": "insert-colorblast",
+      "rows": 15
+    },
+    {
+      "category": "insert-manga",
+      "rows": 15
+    },
+    {
+      "category": "insert-national-pride",
+      "rows": 15
+    },
+    {
+      "category": "insert-on-campus",
+      "rows": 15
+    },
+    {
+      "category": "insert-stained-glass",
+      "rows": 15
+    },
+    {
+      "category": "insert-letter-of-intent",
+      "rows": 10
+    },
+    {
+      "category": "insert-rated-prospect",
+      "rows": 8
+    },
+    {
+      "category": "insert-rated-prospect-prizms-black",
+      "rows": 8
+    },
+    {
+      "category": "insert-rated-prospect-prizms-black-gold",
+      "rows": 8
+    },
+    {
+      "category": "insert-rated-prospect-prizms-blue",
+      "rows": 8
+    },
+    {
+      "category": "insert-rated-prospect-prizms-blue-ice",
+      "rows": 8
+    },
+    {
+      "category": "insert-rated-prospect-prizms-blue-shimmer",
+      "rows": 8
+    },
+    {
+      "category": "insert-rated-prospect-prizms-choice-blue-yellow-and-green",
+      "rows": 8
+    },
+    {
+      "category": "insert-rated-prospect-prizms-choice-green",
+      "rows": 8
+    },
+    {
+      "category": "insert-rated-prospect-prizms-choice-nebula",
+      "rows": 8
+    },
+    {
+      "category": "insert-rated-prospect-prizms-choice-red",
+      "rows": 8
+    },
+    {
+      "category": "insert-rated-prospect-prizms-choice-tiger-stripe",
+      "rows": 8
+    },
+    {
+      "category": "insert-rated-prospect-prizms-gold",
+      "rows": 8
+    },
+    {
+      "category": "insert-rated-prospect-prizms-green",
+      "rows": 8
+    },
+    {
+      "category": "insert-rated-prospect-prizms-green-pulsar",
+      "rows": 8
+    },
+    {
+      "category": "insert-rated-prospect-prizms-green-shimmer",
+      "rows": 8
+    },
+    {
+      "category": "insert-rated-prospect-prizms-green-wave",
+      "rows": 8
+    },
+    {
+      "category": "insert-rated-prospect-prizms-hyper",
+      "rows": 8
+    },
+    {
+      "category": "insert-rated-prospect-prizms-mojo",
+      "rows": 8
+    },
+    {
+      "category": "insert-rated-prospect-prizms-neon-green-circles",
+      "rows": 8
+    },
+    {
+      "category": "insert-rated-prospect-prizms-orange-pulsar",
+      "rows": 8
+    },
+    {
+      "category": "insert-rated-prospect-prizms-pink-circles",
+      "rows": 8
+    },
+    {
+      "category": "insert-rated-prospect-prizms-purple",
+      "rows": 8
+    },
+    {
+      "category": "insert-rated-prospect-prizms-purple-circles",
+      "rows": 8
+    },
+    {
+      "category": "insert-rated-prospect-prizms-purple-ice",
+      "rows": 8
+    },
+    {
+      "category": "insert-rated-prospect-prizms-purple-wave",
+      "rows": 8
+    },
+    {
+      "category": "insert-rated-prospect-prizms-red-shimmer",
+      "rows": 8
+    },
+    {
+      "category": "insert-rated-prospect-prizms-silver",
+      "rows": 8
+    },
+    {
+      "category": "insert-rated-prospect-prizms-venom",
+      "rows": 8
+    },
+    {
+      "category": "insert-rated-prospect-prizms-white-sparkle",
+      "rows": 8
+    }
+  ]
+}
