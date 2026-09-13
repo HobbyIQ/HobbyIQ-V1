@@ -460,22 +460,22 @@ describe("R29: the checklist decides the product", () => {
       // ways -- "Bowmans Best" reaches `unknown` and "Bowman Best" also reaches
       // `bowman`.)
       expect(r.parsedSetKey).toBe("bowman");
-      // A SECOND, INDEPENDENT DEFECT IS IN THE WAY, and this test records it
-      // rather than hiding it behind a pass. parseListingIdentity truncates the
-      // card number "B24-GW" to "B24" -- visible in the census too, where
-      // "2024 Bowman's Best #B24-GW" derived `bowman:B24`. The resolver is
-      // asked about a card that does not exist, so it correctly REFUSES. That
-      // refusal is the right behaviour on the evidence it was given (absent
-      // beats wrong); the product cannot be recovered until the number is.
-      expect(r.cardNumber).toBe("B24");
-      expect(r.resolved).toBeNull();
-      expect(r.verdict).toBe("unknown");
+      // A SECOND, INDEPENDENT DEFECT used to be in the way here: before the
+      // dash-suffix fix (#2122), parseListingIdentity truncated the card
+      // number "B24-GW" to "B24" -- visible in the census too, where
+      // "2024 Bowman's Best #B24-GW" derived `bowman:B24`. With the number
+      // read whole, the resolver now has the evidence it needs and resolves
+      // past the flagship guess to the real product.
+      expect(r.cardNumber).toBe("B24-GW");
+      expect(r.resolved).toBe("bowmans-best");
+      expect(r.verdict).toBe("resolved");
     });
 
     it("...and with the card number the title actually states, the product resolves", async () => {
       // The SAME title, differing only in that the card number is read whole.
-      // This is what the fix to the number parser will unlock, and it pins that
-      // the resolver half of the pair is already correct.
+      // This confirms in isolation what the dash-suffix number-parser fix
+      // (#2122) now unlocks end to end above: the resolver half of the pair
+      // was already correct.
       const res = await resolveProductByChecklist(
         {
           productText: "bowmans-best-baseball-b24-gw-base",
