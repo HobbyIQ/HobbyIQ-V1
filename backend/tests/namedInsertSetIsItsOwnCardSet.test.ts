@@ -64,10 +64,19 @@ describe("a named insert set is its own card set — the key derivation", () => 
       ["base", ""], ["base", "Gold Prizm"], ["base", "Black Prizm"],
       ["", ""], ["checklist", ""], ["inserts", ""],
     ]) {
+      // `rungParallel` joined this shape with CF-A-COLOUR-RUNG-IS-NEVER-A-CARD-
+      // SET-KEY: it carries the colour a rung fold moved off the key, and is
+      // null for every row that was not folded — base rows included. The pin
+      // keeps its intent (base and its rungs stay on the product key, naming no
+      // subset) and states the new field rather than matching a shape loosely,
+      // so a future field cannot slip in unnoticed either.
       expect(lib.setKeyForRow({
         productSetKey: "panini-prizm-fifa-world-cup", category, parallel,
         separate: new Set(["guardians"]),
-      })).toEqual({ setKey: "panini-prizm-fifa-world-cup", subsetSlug: "", isInsertSet: false });
+      })).toEqual({
+        setKey: "panini-prizm-fifa-world-cup", subsetSlug: "", isInsertSet: false,
+        rungParallel: null,
+      });
     }
   });
 
