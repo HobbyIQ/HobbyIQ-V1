@@ -21,5 +21,42 @@
  "printRunsFound": 0,
  "sectionsReport": [],
  "identicalRowsDeduped": 21,
- "dedupeNote": "The source page listed these rows twice, byte-identical. Only exact-duplicate LINES were removed; a same-cardNumber row whose player text differs is a distinct card (error/corrected, CO/HOF, promo) and was preserved."
+ "dedupeNote": "The source page listed these rows twice, byte-identical. Only exact-duplicate LINES were removed; a same-cardNumber row whose player text differs is a distinct card (error/corrected, CO/HOF, promo) and was preserved.",
+ "variationAxisApplied": {
+  "ruling": "R18-R20: a named variation is a distinct card. The checklist-stated label is written on the variation/parallel axis so two distinct cards no longer share one hobbyIqCardId. The plain/issued card keeps parallel blank.",
+  "appliedOn": "2026-09-13",
+  "labelsAreSourceVerbatim": true,
+  "edits": [
+   {
+    "cardNumber": "47",
+    "player": "William Perry/",
+    "parallel": "SP"
+   },
+   {
+    "cardNumber": "47",
+    "player": "Ron Morris",
+    "parallel": null
+   },
+   {
+    "cardNumber": "53",
+    "player": "Mike Ditka CO",
+    "parallel": "CO"
+   },
+   {
+    "cardNumber": "53",
+    "player": "Mike Ditka/HOF",
+    "parallel": "HOF"
+   },
+   {
+    "cardNumber": "260",
+    "player": "Raymond Berry CO",
+    "parallel": "CO"
+   },
+   {
+    "cardNumber": "260",
+    "player": "Raymond Berry/HOF",
+    "parallel": "HOF"
+   }
+  ]
+ }
 }
