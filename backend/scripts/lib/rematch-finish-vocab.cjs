@@ -94,6 +94,30 @@ const CORPUS_STOPWORDS = new Set([
   "relic", "relics", "patch", "patches", "memorabilia", "jersey",
   "dual", "triple", "quad", "booklet", "booklets", "combo",
   "signed", "letter", "letters", "name", "names", "nameplate",
+  // SCARCITY TAGS, NOT FINISH WORDS (2026-09-13, round-2 parallel-semantics
+  // ruling item 2). "SSP" describes how RARE a printing is, a separate axis
+  // from what the card IS -- doctrine: "SP =/= SSP and neither is a parallel
+  // name by itself; they are scarcity tags." It reaches the corpus's finish
+  // vocabulary anyway because real checklist rows quote it as a SUFFIX on
+  // their own name ("Image Variation SSP", "Pearl Refractor SSP") -- those
+  // stay evictable as their own full phrase, but leaving the bare token
+  // un-stopped poisoned every OTHER title that happens to also say "SSP":
+  // "Joe Burrow 2024 Panini Mosaic Honeycomb SSP Case Hit #43" answered null
+  // because the un-stopped "ssp" leftover refused the "Honeycomb" match, even
+  // though Mosaic's own checklist lists "Honeycomb" as a real, bare parallel
+  // and SSP there is scarcity commentary on top of it, not a rival reading.
+  //
+  // "hit" -- the second half of "Case Hit", the parser's own scarcity
+  // designation alongside SSP/Short Print -- has the identical shape:
+  // "case" was already stopped, so leaving "hit" un-stopped let it alone
+  // block the SAME Honeycomb match ("...Honeycomb SSP Case Hit #43").
+  // Stopping it costs nothing on the few real checklist names that also
+  // carry the word ("Hit Parade", "Hit List", "3,000 Hit Club") -- each
+  // keeps a second substantive word ("parade"/"list"/"club") that still
+  // proves the name states a finish, and a title that actually says one of
+  // those phrases still matches it as a whole, verbatim phrase; only the
+  // BARE leftover token loses its power to block an unrelated candidate.
+  "ssp", "hit",
   // SUBSET words, not finish words. `draft` reaches 29 products purely through
   // "Draft Signatures" and "Draft Class" -- subset names -- while colliding
   // head-on with the Bowman Draft PRODUCT family, where a title saying "Draft"
