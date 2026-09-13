@@ -31,7 +31,7 @@ import {
 } from "./holdingSaveDeferredWork.js";
 // CF-ONE-VALUATION-PATH (D17, 2026-08-30): the persist site prices the exact
 // pool through the ONE valuation entry (holdingValuation → valueIdentity).
-import { valueHoldingThroughOneEntry, holdingGrade as holdingGradeOf, costBasisFloorRefusalWrite, costBasisFloor, noBasisRefusalWrite, noBasisReasonFromEngine } from "./holdingValuation.js";
+import { valueHoldingThroughOneEntry, holdingGrade as holdingGradeOf, costBasisFloorRefusalWrite, costBasisFloor, noBasisRefusalWrite, noBasisReasonFromEngine, mayPublishFromLegacyExactPoolShortcut } from "./holdingValuation.js";
 // CF-A-PERSISTED-PRICE-CARRIES-ITS-LABELS (Drew, 2026-09-03). The legacy
 // exact-pool writers below persist prices too — only for identities the
 // catalog cannot name, but persist they do. They stamp the same label set
@@ -3596,7 +3596,16 @@ async function autoPriceHolding(
           totalSampleCount: u?.totalSampleCount ?? 0,
         }));
         // Fall through to legacy path — legacy has its own guards.
-      } else if (u !== null && canonical !== null && canonical > 0 && u.totalSampleCount >= 1) {
+      } else if (
+        u !== null && canonical !== null && canonical > 0 && u.totalSampleCount >= 1
+        // CF-THE-LEGACY-SHORTCUT-NEVER-ASKED (Fable, 2026-09-13): this
+        // shortcut only runs for a holding the one entry could not resolve
+        // (`!entryDecidedExactPool`) — it must not publish a number the one
+        // entry's own identity gate would have refused. Asked of the id the
+        // pool was actually read under (`exact.attempt.cardId`), not the
+        // holding's stored slug, which may differ.
+        && (await mayPublishFromLegacyExactPoolShortcut(exact?.attempt.cardId ?? null))
+      ) {
         const nowIso = new Date().toISOString();
         console.log(JSON.stringify({
           event: "portfolio_unified_early_exit_applied",
@@ -3783,7 +3792,16 @@ async function autoPriceHolding(
       const unified = midExact?.u ?? null;
       const chosen = unified ? (unified.marketValue ?? unified.predictedPrice ?? unified.fmv) : null;
       // CF-EXACT-POOL-SUPREMACY (D4 PR 5): >= 1 exact sale, as at the early exit.
-      if (unified !== null && chosen !== null && chosen > 0 && unified.totalSampleCount >= 1) {
+      // CF-THE-LEGACY-SHORTCUT-NEVER-ASKED (Fable, 2026-09-13): `unifiedResult`
+      // feeds several downstream persist sites below (all gated on
+      // `unifiedIsFinalAuthority && unifiedResult`), none of which re-checks
+      // identity backing — so the gate belongs HERE, at the one place the
+      // variable is populated, asked of the id the pool was actually read
+      // under (`midExact.attempt.cardId`).
+      if (
+        unified !== null && chosen !== null && chosen > 0 && unified.totalSampleCount >= 1
+        && (await mayPublishFromLegacyExactPoolShortcut(midExact?.attempt.cardId ?? null))
+      ) {
         unifiedResult = {
           totalSampleCount: unified.totalSampleCount,
           pricedId: midExact?.attempt.cardId ?? String(resolvedIdForPricing),
@@ -10531,7 +10549,15 @@ export async function repriceHoldingsForUser(
               confidence: bU?.confidence ?? null,
             }));
             // Fall through to legacy path.
-          } else if (bU !== null && bCanon !== null && bCanon > 0 && bU.totalSampleCount >= 1) {
+          } else if (
+            bU !== null && bCanon !== null && bCanon > 0 && bU.totalSampleCount >= 1
+            // CF-THE-LEGACY-SHORTCUT-NEVER-ASKED (Fable, 2026-09-13): same
+            // gate as the on-demand early exit above — this shortcut only
+            // runs when the one entry could not resolve the holding, and
+            // must not publish an identity the one entry's gate would have
+            // refused. Asked of the id the pool was actually read under.
+            && (await mayPublishFromLegacyExactPoolShortcut(bExactEarly?.attempt.cardId ?? null))
+          ) {
             const bNow = new Date().toISOString();
             console.log(JSON.stringify({
               event: "batch_reprice_unified_early_exit_applied",
@@ -10660,7 +10686,13 @@ export async function repriceHoldingsForUser(
             // holding — the rule autoPriceHolding's early exit already applies
             // (CF-UNIFIED-SAMPLE-FLOOR). This site demanded confidence >= 0.3
             // instead, so a thin exact pool could fall through to the rescues.
-            if (unified !== null && bChosen !== null && bChosen > 0 && unified.totalSampleCount >= 1) {
+            // CF-THE-LEGACY-SHORTCUT-NEVER-ASKED (Fable, 2026-09-13): same
+            // gate as every other `PORTFOLIO_OBSERVED_GRADE_OVERRIDE_ENABLED`
+            // site — this is the fourth and last of them.
+            if (
+              unified !== null && bChosen !== null && bChosen > 0 && unified.totalSampleCount >= 1
+              && (await mayPublishFromLegacyExactPoolShortcut(bExact?.attempt.cardId ?? null))
+            ) {
               const uNow = new Date().toISOString();
               console.log(JSON.stringify({
                 event: "batch_reprice_unified_pricing_applied",

@@ -794,14 +794,32 @@ describe("D17 — the portfolio persist site: what is written is what the routes
     expect(h.calls.estimate).toBe(1);
   });
 
-  it("a slug the catalog does not hold, with sales under it: the entry declines and the LEGACY exact-pool read still prices it — legacy survives only for identities the catalog cannot name", async () => {
+  // REVISED (Fable, 2026-09-13, CF-THE-LEGACY-SHORTCUT-NEVER-ASKED). This
+  // pin's old title and assertions ("the LEGACY exact-pool read still prices
+  // it") encoded the exact defect this PR fixes: `priceHoldingFromExactPool`
+  // reads `sold_comps` by id alone, with no idea whether `card_catalog` backs
+  // that id with a checklist row, so the flagged early-exit published a
+  // number for an identity `mayPublishPrice` would have refused — the same
+  // shape as `no-checklist-match`, just reached by a door that never asked.
+  // Measured read-only against prod on 2026-09-13: 9 of 139 live holdings
+  // carried exactly this shape (an exact-pool rung, `valueSource: "observed"`,
+  // no catalog row for the slug at all).
+  //
+  // MUTATION CHECK: remove the `mayPublishFromLegacyExactPoolShortcut` guard
+  // from either flagged site in `repriceHoldingsForUser` and this goes red —
+  // the holding goes back to `repriced` with a live, unbacked FMV.
+  it("a slug the catalog does not hold, with sales under it: the entry declines and the LEGACY exact-pool shortcut does NOT price it either — no identity, no publish, from any door", async () => {
     h.rows.push(...Array.from({ length: 5 }, (_, i) => sale(NOT_IN_CATALOG, 20 + i, 10 + i)));
     const id = await seed({ hobbyiqCardId: NOT_IN_CATALOG, cardYear: 2021, setName: "Bowman", cardNumber: "7", parallel: "Base" });
     const res = await store.repriceHoldingsForUser(USER);
-    expect(res.updates.find((u) => u.id === id)).toMatchObject({ status: "repriced", reason: "unified-pricing-early-exit" });
+    expect(res.updates.find((u) => u.id === id)).toMatchObject({ status: "skipped" });
     const hld = await stored(id);
-    expect(EXACT.has(String(hld.fmvRung))).toBe(true);
-    expect(hld.pricingSource).toBe("unified-pricing");
+    expect(hld.fairMarketValue ?? null).toBeNull();
+    expect(hld.valueSource).not.toBe("observed");
+    expect(hld.pricingSource).not.toBe("unified-pricing");
+    const meta = (hld as unknown as { pricingSourceMeta?: Record<string, unknown> }).pricingSourceMeta;
+    expect(meta?.method).toBe("withheld");
+    expect((meta?.withheld as Record<string, unknown> | undefined)?.reason).toBe("identity-not-in-catalog");
     // And the routes say null for it: the same identity rule, both sides.
     const { pb } = await four(NOT_IN_CATALOG);
     expect(pb.fmvReason).toBe("identity-not-in-catalog");
