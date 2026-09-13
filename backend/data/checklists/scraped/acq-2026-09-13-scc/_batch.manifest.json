@@ -1,0 +1,33 @@
+{
+ "generatedAt": "2026-09-13T02:11:06.089Z",
+ "batch": "acq-2026-09-13-scc",
+ "source": "sportscardchecklist",
+ "sourceTag": "sportscardchecklist-2026-09-13",
+ "acquiredBy": "acquirer agent, checklist acquisition program, package A (sportscardchecklist.com)",
+ "fetcher": "backend/scripts/fetchSportsCardChecklist.cjs (converterVersion 6)",
+ "discovery": "sitemap only (robots.txt-advertised site_maps/sitemap.xml, 30 child sitemaps, 130,032 set URLs). The /search endpoint is Disallow: /?* and is a documented false-negative machine; it was never used.",
+ "permission": "robots.txt re-fetched 2026-09-13, HTTP 200, byte-identical to the 2026-09-04 survey copy: two Disallow rules (/?* and /*.htm$), neither touching /set-<id>/ paths.",
+ "politeness": "one request at a time, >=2s jittered delay per page (fetcher SCC_PAGE_DELAY_MS default), 429/503 honoured with backoff.",
+ "products": 31,
+ "totalRows": 10153,
+ "salesRowsBehind": 136998,
+ "validation": {
+  "contract": "backend/docs/reference/checklist-csv-contract.md",
+  "errors": 0,
+  "warnings": 0,
+  "filesValidated": 31
+ },
+ "cardNumberCollisionsPreserved": [
+  "1989-pro-set-football.csv #47: \"William Perry/\" vs \"Ron Morris\"",
+  "1989-pro-set-football.csv #53: \"Mike Ditka CO\" vs \"Mike Ditka/HOF\"",
+  "1989-pro-set-football.csv #260: \"Raymond Berry CO\" vs \"Raymond Berry/HOF\"",
+  "1989-score-football.csv #316: \"Eric Thomas ERR SB\" vs \"Eric Thomas COR SB\"",
+  "1998-99-sp-authentic-basketball.csv #23: \"Michael Jordan PROMO\" vs \"Shawn Kemp\""
+ ],
+ "notes": [
+  "printRun is blank on every row: this source states none. Blank means unknown, never a guess.",
+  "parallel is blank on every row: none of these pages is a rung page (the slug names no parallel). Blank means unknown, never the string Base.",
+  "Card-number collisions (same number, different card) are PRESERVED, not folded: collision is not a duplicate. Byte-identical repeated lines WERE removed and are counted per file.",
+  "Every setKey here is a verified normalizeSetKey fixed point."
+ ]
+}

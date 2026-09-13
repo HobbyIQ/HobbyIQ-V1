@@ -1,0 +1,23 @@
+{
+ "scrapedAt": "2026-09-13T02:02:35.722Z",
+ "source": "sportscardchecklist",
+ "sourceUrl": "https://www.sportscardchecklist.com/set-158075/2018-19-upper-deck-hockey-trading-card-checklist",
+ "sport": "hockey",
+ "year": 2018,
+ "season": "2018-19",
+ "setName": "2018-19 Upper Deck Hockey",
+ "productKey": "2018-upper-deck",
+ "setKey": "upper-deck",
+ "setKeyRequested": "upper-deck",
+ "parallelOfParent": false,
+ "parallelName": null,
+ "subset": null,
+ "rowCount": 530,
+ "parallelColumnAuthoritative": true,
+ "converterVersion": 6,
+ "cardRows": 530,
+ "ladderRows": 0,
+ "subsetRows": 0,
+ "printRunsFound": 0,
+ "sectionsReport": []
+}
