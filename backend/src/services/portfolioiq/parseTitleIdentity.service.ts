@@ -1813,6 +1813,65 @@ function extractParallel(
     const cm2 = T.match(/chrome\s+(white|purple|black|blue|red|green|gold|orange|yellow)\b/i);
     if (cm2) return "Chrome " + capFirst(cm2[1]);
     if (/chrome\s+refractor/i.test(T)) return "Chrome Refractor";
+    // CF-CHROME-NAMES-THE-PRODUCT-NOT-THE-FINISH (2026-09-13). "Chrome" here
+    // is doing double duty: on `topps-heritage-chrome` it is literally the
+    // product's own name (a setKey word), and on plain `topps-heritage` it is
+    // the base chromium parallel ONLY when the title states no more specific
+    // finish. The adjacency rules just above catch "Chrome <Color>" and
+    // "Chrome Refractor", but a title that states the finish somewhere else
+    // ("2024 Topps Heritage Chrome Baseball #405 Purple", "...#229 Refractor")
+    // fell straight past them to the bare-Chrome return below, which threw
+    // the specific finish away and answered with the sub-product word
+    // instead — a Purple Refractor and a plain Chrome auto landing in the
+    // SAME pool. Measured: 942 changed:parallel census samples generalize
+    // this way corpus-wide (round-2 parallel-semantics ruling, item 2).
+    //
+    // Give the checklist a chance to name the SPECIFIC finish before the
+    // generic "Chrome" answer is allowed to win. `statedFinishFromChecklist`
+    // already refuses a candidate made entirely of this product's own words
+    // (own.has(w) suppression keyed off ctx.setKey), so it cannot merely echo
+    // "Chrome" back — it can only answer with something the title states in
+    // addition to it, e.g. "Refractor" (plain topps-heritage) or "Purple"
+    // resolving to a checklist-named "Purple Refractor"/"Chrome Purple"
+    // entry. Never overrides an adjacency rule above; only fills what the
+    // bare fallback below was about to flatten.
+    //
+    // SCOPED TO A KNOWN PRODUCT (ctx.setKey truthy) for the same reason the
+    // bare-Refractor and SSP fallbacks are: with no setKey the reader falls
+    // to its global index, which can answer with an unrelated product's own
+    // multi-word name rather than refusing.
+    if (ctx?.setKey && !isMultiCardLot(T)) {
+      const stated = statedFinishFromChecklist(T, {
+        year: ctx?.year ?? null,
+        setKey: ctx.setKey,
+        pokemonSetKeyForResidue: ctx?.pokemonSetKeyForResidue ?? null,
+      });
+      if (stated && !/^chrome$/i.test(stated)) return stated;
+    }
+    // CF-A-NON-ADJACENT-FINISH-IS-STILL-STATED (2026-09-13). The three
+    // adjacency rules above only catch "Chrome <Color>" / "Chrome Refractor"
+    // when the two words sit next to each other. CardHedge/CH-style titles
+    // commonly separate them with the card number or other title furniture:
+    //
+    //   "2024 Topps Heritage Chrome Baseball #229 Refractor"    (Chrome ... Refractor)
+    //   "2024 Topps Heritage Chrome Baseball #405 Purple"       (Chrome ... Purple)
+    //
+    // Both plainly state a Chrome-ladder finish; the checklist call above has
+    // no coverage for this year's Chrome parallel family yet (a separate,
+    // tracked checklist-ingest gap — CF-A-TITLE-THAT-NAMES-A-FINISH doctrine),
+    // so fall back to the SAME colour/Refractor vocabulary the adjacent-form
+    // rules above already use, just without requiring adjacency. This cannot
+    // fire on plain "Bowman/Topps Chrome" titles: it is still gated on
+    // /heritage/i, exactly like every other rule in this block.
+    {
+      const nm = T.match(/\b(white|purple|black|blue|red|green|gold|orange|yellow)\b/i);
+      if (nm) {
+        return /\brefractor\b/i.test(T)
+          ? "Chrome " + capFirst(nm[1]) + " Refractor"
+          : "Chrome " + capFirst(nm[1]);
+      }
+      if (/\brefractor\b/i.test(T)) return "Chrome Refractor";
+    }
     // Bare "Chrome" in a Heritage title = the base chromium parallel.
     if (/\bchrome\b/i.test(T)) return "Chrome";
   }
@@ -1974,6 +2033,45 @@ function extractParallel(
     !isMultiCardLot(T) &&
     !/\bsapphire\b/i.test(T)
   ) {
+    // CF-A-NAMED-FINISH-BEATS-BARE-REFRACTOR (2026-09-13). Every colour and
+    // pattern rule above has already had its turn, so reaching here with the
+    // bare word "Refractor" usually means the title's finish uses a pattern
+    // name this ladder has no rule for — Topps Cosmic Chrome's "Nucleus
+    // Refractor" / "Gold Interstellar Refractor" / "Purple Nebula Refractor" /
+    // "White Hole Refractor" / "Black Eclipse Refractor", 2026 Topps
+    // Heritage's "<Colour> Sparkle Refractor" ladder, Topps Signature Class's
+    // "Kaleidoscope Refractor", Bowman Draft's "HTA Choice Refractor" /
+    // "Steel Metal Refractor" — all checklist-named parallels this file has
+    // never enumerated, so the generic word "Refractor" was answering in
+    // place of the specific one the title states. That is a DIFFERENT card
+    // (own price curve, own print run), not a smaller answer.
+    //
+    // Ask the checklist before accepting the generic word: if it can name a
+    // MORE SPECIFIC parallel the title states — and only one strictly longer
+    // than the bare "Refractor" we are about to return — take that instead.
+    // `statedFinishFromChecklist` already carries its own truncation and
+    // set-name guards, so this cannot mint an answer the corpus does not
+    // list; it can only stop this fallback from discarding a finish a
+    // narrower rule should have caught.
+    //
+    // SCOPED TO A KNOWN PRODUCT (ctx.setKey truthy) ONLY. With no setKey the
+    // reader falls back to its GLOBAL name index, which lists whole-phrase
+    // names from OTHER products too — "Topps Refractor" is a real
+    // topps-chrome-platinum/topps-chrome parallel, and a title merely
+    // containing the words "Topps" and "Refractor" separately (e.g. "1993
+    // Topps Finest Baseball #100 Refractor") satisfied it, misreading an
+    // unrelated product's own name as this card's finish. Pinned by
+    // pokemonFinishReachesTheTitleParser.test.ts's sports-negative case.
+    // Product-scoped lookups don't have this failure mode: `own` there is
+    // THIS card's actual setKey words, not a stranger's.
+    if (ctx?.setKey && !isMultiCardLot(T)) {
+      const stated = statedFinishFromChecklist(T, {
+        year: ctx?.year ?? null,
+        setKey: ctx.setKey,
+        pokemonSetKeyForResidue: ctx?.pokemonSetKeyForResidue ?? null,
+      });
+      if (stated && stated.length > "Refractor".length) return stated;
+    }
     return "Refractor";
   }
 
@@ -2079,6 +2177,42 @@ function extractParallel(
   // PRODUCT LINES; a bare "SP" rule would have mislabelled ~22,000 sales into
   // a tier that does not exist. Only unambiguous forms are matched.
   const isSpBrand = /\b(?:sp\s+authentic|upper\s+deck\s+sp|sp\s+legendary|sp\s+game\s+used|sp\s+signature)\b/i.test(T);
+  // CF-SCARCITY-TAG-NEVER-REPLACES-A-FINISH (2026-09-13). "SSP" / "Short
+  // Print" / "Case Hit" describe how RARE a card is, not what it IS — a
+  // separate axis from the finish/parallel name, per market-language-
+  // normalization doctrine. The comment above already says this fires "only
+  // at the fallback, never over a colour rule," but that promise assumed
+  // every colour/pattern rule had a chance to run, which is only true when
+  // the pattern is one this file enumerates. Two real shapes get here with
+  // their own finish still unread:
+  //
+  //   "...Panini Obsidian Silver Pulsar Prizm #151...SSP..."  -> SSP
+  //     (the pulsar-colour ladder a few hundred lines up lists
+  //     blue/green/red/purple/gold/orange/pink/black — not silver, so
+  //     "Silver Pulsar Prizm" never matched it and fell all the way here)
+  //   "...Panini Mosaic Honeycomb SSP Case Hit #43..."        -> SSP
+  //     ("Honeycomb" is a real Mosaic parallel with no rule anywhere in
+  //     this file)
+  //
+  // Both titles name a real finish AND a scarcity tag; answering with the
+  // scarcity tag discards the finish, which is a different (and wrong) card
+  // address, not a smaller one. Ask the checklist for the specific finish
+  // first — it already refuses to answer with a bare scarcity word or a
+  // truncation, so it can only pre-empt SSP/Short Print with something the
+  // title actually states more specifically.
+  //
+  // SCOPED TO A KNOWN PRODUCT (ctx.setKey truthy), same reasoning as the
+  // bare-Refractor fallback above: with no setKey the reader's global index
+  // can answer with an unrelated product's own multi-word name, which is not
+  // a safe pre-emption of a scarcity tag we can already answer correctly.
+  if (ctx?.setKey && !isMultiCardLot(T)) {
+    const statedBeforeScarcity = statedFinishFromChecklist(T, {
+      year: ctx?.year ?? null,
+      setKey: ctx.setKey,
+      pokemonSetKeyForResidue: ctx?.pokemonSetKeyForResidue ?? null,
+    });
+    if (statedBeforeScarcity) return statedBeforeScarcity;
+  }
   if (/\bssp\b/i.test(T) && !isSpBrand) return "SSP";
   if (/\bcase\s+hit\b/i.test(T)) return "Case Hit";
   if (/\bshort\s+print\b/i.test(T) && !isSpBrand) return "Short Print";

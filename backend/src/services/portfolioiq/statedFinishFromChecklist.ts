@@ -145,6 +145,19 @@ const STOPWORDS: ReadonlySet<string> = new Set([
   "relic", "relics", "patch", "patches", "memorabilia", "jersey",
   "dual", "triple", "quad", "booklet", "booklets", "combo",
   "signed", "letter", "letters", "name", "names", "nameplate",
+  // SCARCITY TAG, NOT A FINISH WORD (2026-09-13, round-2 parallel-semantics
+  // ruling item 2) -- mirrors CORPUS_STOPWORDS's own "ssp" entry, added
+  // first. Left un-stopped it poisoned the leftover-word guard below:
+  // "Panini Mosaic Honeycomb SSP Case Hit #43" answered null because "ssp"
+  // (seen across 10 products' checklist names) was treated as an unexplained
+  // finish word, even though Mosaic's checklist lists "Honeycomb" as a real,
+  // bare parallel and SSP is scarcity commentary riding on top of it.
+  //
+  // "hit" (second half of "Case Hit", same scarcity-tag family) has the
+  // identical shape and mirrors CORPUS_STOPWORDS's own "hit" entry: "case"
+  // was already stopped, so the bare "hit" leftover from the same title kept
+  // blocking the match on its own.
+  "ssp", "hit",
   "draft", "drafted", "class", "classes", "update", "chase", "futures",
   "topps", "panini", "bowman", "fleer", "donruss", "upper", "deck", "leaf",
   "score", "pinnacle", "skybox", "pacific", "playoff", "sage",
@@ -244,12 +257,60 @@ let _loadFailed = false;
  * The odds tail is cut at the first ` - <digit>:` or the first `;`, which is
  * where Beckett's own formatting puts it. A name with no such tail is
  * untouched.
+ *
+ * A TRAILING PARENTHETICAL IS THE SAME KIND OF NOISE. The 2026-09-13 finish
+ * corpus carries rows like
+ *
+ *   "Aqua Sparkle Refractor (Fat Pack exclusive)"
+ *   "Nucleus Refractor (1:20 packs)"
+ *   "Purple Bordered Refractor (Hot Box)"
+ *
+ * where the parenthetical names a RETAILER CHANNEL or PACK ODDS the card was
+ * pulled from -- never part of the card's own name, and never something a
+ * seller's title states ("Fat Pack exclusive" is not eBay listing text). Left
+ * in, `titleStatesName` requires every one of those words too, so the whole
+ * checklist name can never match and the card's real, more specific finish
+ * ("Aqua Sparkle Refractor") stayed unreachable behind a decoration on its
+ * own listing (2026-09-13, round-2 parallel-semantics ruling item 2: the
+ * cluster this masked was Topps Heritage's Sparkle Refractor ladder falling
+ * through to the bare "Refractor"/"Chrome" fallbacks).
+ *
+ * Cut ONLY a parenthetical that runs to the END of the string, only after the
+ * odds-tail cut above has already run (so "Foo (Bar); 1:9 Hobby" loses the
+ * semicolon tail first, same as before), and only when the parenthetical's
+ * OWN CONTENT is recognizably a retailer/channel/odds annotation -- a digit
+ * ratio (`1:20`), a print run (`#1-100`), or one of a short list of retailer/
+ * distribution words ("exclusive", "hobby", "retail", "blaster", "box",
+ * "pack(s)", "only", "case"). A parenthetical that does NOT match stays
+ * untouched, because not every trailing parenthetical is decoration:
+ *
+ *   "Cosmos (H2)"  (basketball|2023|panini-origins)
+ *
+ * is a genuine, terse checklist disambiguator, not an odds note. Stripping it
+ * unconditionally normalised it down to the bare word "cosmos" and merged it,
+ * word-for-word, with an UNRELATED bare "Cosmos" entry on a different year of
+ * the same product -- which pushed "cosmos" over `GLOBAL_SINGLE_WORD_
+ * PRODUCT_FLOOR` in the no-context global index and let a 1999 Pokemon Jungle
+ * title ("1999 Pokemon Jungle Scyther #10 Cosmos") match a Panini Origins
+ * basketball parallel, overriding the Pokemon vocabulary's correct "Cosmos
+ * Holo" read. Pinned by pokemonFinishReachesTheTitleParser.test.ts. Requiring
+ * the parenthetical's content to look like known noise, rather than treating
+ * "ends in parentheses" as sufficient, keeps this fix from quietly merging
+ * two checklist rows that only coincidentally share a trailing `(...)`.
  */
+const RETAILER_OR_ODDS_PAREN_RE =
+  /^\(\s*(?:[^()]*\d+\s*:\s*[\d,]+[^()]*|#?\d+\s*-\s*\d+|[^()]*\b(?:exclusive|hobby|retail|blaster|mega|jumbo|fat\s*pack|hanger|value|box|boxes|case|pack|packs|only)\b[^()]*)\s*\)$/i;
+
 function stripOddsTail(s: string): string {
-  return String(s ?? "")
+  const withoutTail = String(s ?? "")
     .replace(/\s[-–—]\s*\d+\s*:.*$/s, "")
     .replace(/;.*$/s, "")
     .trim();
+  const parenMatch = withoutTail.match(/\s*(\([^()]*\))\s*$/);
+  if (parenMatch && RETAILER_OR_ODDS_PAREN_RE.test(parenMatch[1])) {
+    return withoutTail.slice(0, parenMatch.index).trim();
+  }
+  return withoutTail;
 }
 
 /**
