@@ -78,8 +78,12 @@ const repoRoot = path.resolve(backend, "..");
 const DV = require_(path.join(backend, "scripts", "lib", "derivation-version.cjs"));
 const TABLE = require_(path.join(backend, "data", "rematch-census-shares.json"));
 
-/** #2019's merge commit -- this reference's own `measuredUnder.commit`. */
-const REFERENCE_COMMIT = "e32b84814c253a71f141362b67fac08947ee315b";
+/** The integ/deriver-batch-0912-1600 head the 2026-09-13 reference was stamped
+ *  on (#2118 on top of #2086's thirteen PRs). The re-label commit sits on top
+ *  of it and touches no DERIVATION_INPUT, so v2 at this commit equals v2 now.
+ *  (`measuredUnder.commit` names something else: the MAIN tree the census
+ *  artifacts were measured under, 77e305a0.) */
+const REFERENCE_COMMIT = "d6afd28d7d3b6aae766ecc903b1986d244d55345";
 
 /** Read one file's content AT a commit via `git show <sha>:<path>` -- READ
  *  ONLY, no worktree, no checkout, nothing mutated. `relFromRepoRoot` is the
@@ -89,31 +93,12 @@ function gitShow(sha: string, relFromRepoRoot: string): string {
   return execFileSync("git", ["show", `${sha}:${relFromRepoRoot}`], { cwd: repoRoot, encoding: "utf8" });
 }
 
-/**
- * Reconstructs what `scripts/lib/rematch-derive-identity.cjs` would have
- * contained AT `sha`, by extracting the byte range of `storedIdentity` +
- * `deriveIdentity` (doc comment through closing brace) out of
- * `scripts/rematch-sold-comps.cjs` as it stood at that commit -- the same
- * range the real 2026-09-11 extraction cut, verified once by hand (this
- * repo's history: `git log -p` on the extraction commit shows the identical
- * range). Throws if the markers are not found, rather than silently hashing
- * an empty or partial reconstruction.
- */
-function reconstructDeriverAt(sha: string): string {
-  const src = gitShow(sha, "backend/scripts/rematch-sold-comps.cjs");
-  const lines = src.split("\n");
-  const startIdx = lines.findIndex(
-    (l) => l.trim() === "/** The identity the row CARRIES today, read from its own stored fields. */",
-  );
-  const mainMarkerIdx = lines.findIndex((l) => l.startsWith("// ── main"));
-  if (startIdx < 0 || mainMarkerIdx < 0) {
-    throw new Error(`could not locate the storedIdentity/deriveIdentity block at ${sha} -- markers moved or were renamed`);
-  }
-  let endIdx = mainMarkerIdx - 1;
-  while (lines[endIdx].trim() === "") endIdx--;
-  const block = lines.slice(startIdx, endIdx + 1).join("\n");
-  return `${block}\nmodule.exports = { storedIdentity, deriveIdentity };`;
-}
+// Until 2026-09-13 the reference commit predated the 2026-09-11 extraction of
+// storedIdentity/deriveIdentity out of rematch-sold-comps.cjs, and PROPERTY 3
+// reconstructed the deriver byte-for-byte from that inline block. The
+// reference now lives at a commit AFTER the extraction, so every v2 input --
+// the deriver included -- is a real file at REFERENCE_COMMIT and is read with
+// `git show` like the others. No reconstruction, nothing to guess.
 
 /** Copies DV.DERIVATION_INPUTS (plus pricingContract.ts, which currentStamp
  *  also reads) into a fresh temp tree, so a mutation there can never touch
@@ -191,22 +176,17 @@ describe("DERIVATION_INPUTS no longer names the whole rematch-sold-comps.cjs scr
   });
 });
 
-describe("the re-label: v2-at-#2019 == v2-now == the recorded reference", () => {
-  /** v2's stamp on a tree reconstructed AT #2019's commit: the 5 files that
-   *  did not move (read via `git show`, read-only) plus the deriver
-   *  reconstructed byte-for-byte from that commit's inline
-   *  storedIdentity/deriveIdentity. */
+describe("the re-label: v2-at-the-batch-head == v2-now == the recorded reference", () => {
+  /** v2's stamp on a tree read AT REFERENCE_COMMIT: every v2 input (the six
+   *  DERIVATION_INPUTS, deriver included) via `git show`, read-only, plus the
+   *  pricing contract the stamp also carries. */
   function v2StampAtReference(): string | null {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "derivstamp-v2-at-ref-"));
     for (const rel of DV.HASH_DEFINITIONS.v2 as string[]) {
-      if (rel === "scripts/lib/rematch-derive-identity.cjs") continue; // reconstructed below
       const dst = path.join(root, rel);
       fs.mkdirSync(path.dirname(dst), { recursive: true });
       fs.writeFileSync(dst, gitShow(REFERENCE_COMMIT, `backend/${rel}`));
     }
-    const deriverDst = path.join(root, "scripts", "lib", "rematch-derive-identity.cjs");
-    fs.mkdirSync(path.dirname(deriverDst), { recursive: true });
-    fs.writeFileSync(deriverDst, reconstructDeriverAt(REFERENCE_COMMIT));
     const pcRel = path.join("src", "services", "portfolioiq", "pricingContract.ts");
     fs.mkdirSync(path.dirname(path.join(root, pcRel)), { recursive: true });
     fs.writeFileSync(path.join(root, pcRel), gitShow(REFERENCE_COMMIT, `backend/${pcRel.split(path.sep).join("/")}`));
@@ -215,24 +195,25 @@ describe("the re-label: v2-at-#2019 == v2-now == the recorded reference", () => 
     return stamp;
   }
 
-  it("PROPERTY 3 — v2 at #2019's commit equals v2 now equals the recorded reference stamp", () => {
+  it("PROPERTY 3 — v2 at the batch head equals v2 now equals the recorded reference stamp", () => {
     const v2AtReference = v2StampAtReference();
     const v2Now = DV.derivationStamp(DV.BACKEND_ROOT, DV.HASH_DEFINITIONS.v2);
     expect(v2AtReference).toMatch(/^d[0-9a-f]{12}$/);
     // PROOF: no file in HASH_DEFINITIONS.v2 changed its DERIVATION content
-    // between #2019 (e32b8481) and this branch -- if it had, this equality
-    // would fail and the fix would be to report which file, not to relabel.
+    // between the batch head (d6afd28d) and this branch -- if it had, this
+    // equality would fail and the fix would be to report which file, not to
+    // relabel.
     expect(v2Now).toBe(v2AtReference);
-    // The recorded reference (data/rematch-census-shares.json) was relabelled
-    // to exactly this value -- never hand-typed independently of this proof.
+    // The recorded reference (data/rematch-census-shares.json) was re-baselined
+    // by scripts/rebaseline-i9-reference.cjs on exactly this tree -- never
+    // hand-typed independently of this proof.
     expect(TABLE.measuredUnder.derivation).toBe(v2AtReference);
-    expect(TABLE.measuredUnder.hashDefinition).toBe("v2");
-    // And the superseded v1 stamp is recorded alongside it, so the migration
-    // itself is auditable from the reference file rather than only from git
-    // history.
-    expect(TABLE.measuredUnder.migratedFrom?.hashDefinition).toBe("v1");
-    expect(TABLE.measuredUnder.migratedFrom?.stamp).toMatch(/^d[0-9a-f]{12}\+/);
-    expect(TABLE.measuredUnder.migratedFrom?.stamp).not.toBe(TABLE.measuredUnder.stamp);
+    // And the superseded reference (main's decbe3f2b1bf6, measured 2026-09-09,
+    // 11.7M rows) is recorded alongside it, so the re-baseline is auditable
+    // from the file itself rather than only from git history.
+    expect(TABLE.supersedes?.stamp).toMatch(/^d[0-9a-f]{12}\+/);
+    expect(TABLE.supersedes?.stamp).not.toBe(TABLE.measuredUnder.stamp);
+    expect(TABLE.supersedes?.classifiedTotal).toBeGreaterThan(11_000_000);
   });
 
   it("PROPERTY 4 — a one-token deriver change still moves the stamp away from the recorded reference (the re-label did not blunt the alarm)", () => {
