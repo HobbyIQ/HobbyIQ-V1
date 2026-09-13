@@ -1449,6 +1449,25 @@ async function main() {
   const r26ByPair = new Map(), r26Samples = [];
   const r27ByPair = new Map(), r27Samples = [];
   const r28ByPair = new Map(), r28Samples = [];
+  // THE `split` CENSUS SCOPE (report-only, Drew 2026-09-13 "report first, rule
+  // later"). Every HIQ-SPLIT row is ALSO judged move/park -- counted here,
+  // independent of the row's derivation class exactly like splitTotal/
+  // splitByClass/splitSegments above, and never armed by any apply scope (see
+  // parseApplyScope's permanent refusal of "split"). `splitScopeByAxis` keys
+  // on the judged axis ("setKey"/"printRun"/"parallel"/"cardNumber"/"sport"),
+  // each holding its own move/park counts and up to 50 samples -- one row can
+  // carry more than one judged axis (a setKey+parallel split, say), so a row
+  // is tallied under EVERY axis it differs on, and `splitScopeMove`/
+  // `splitScopePark` are the totals of ROWS, not of (row, axis) pairs.
+  const SPLIT_SCOPE_SAMPLE_CAP = 50;
+  const splitScopeByAxis = new Map(); // axis -> { move, park, parkReasons: Map, moveSamples: [], parkSamples: [] }
+  let splitScopeMove = 0, splitScopePark = 0;
+  const splitScopeAxis = (axis) => {
+    if (!splitScopeByAxis.has(axis)) {
+      splitScopeByAxis.set(axis, { move: 0, park: 0, parkReasons: new Map(), moveSamples: [], parkSamples: [] });
+    }
+    return splitScopeByAxis.get(axis);
+  };
   let splitTotal = 0;
   const stats = { seen: 0, otherSlot: 0, filtered: 0, prefiltered: 0, intended: 0, written: 0, skipped: 0, failed: 0, duplicatesLeft: 0, alreadyGone: 0, notReached: 0 };
   const bump = (m, k, n = 1) => m.set(k, (m.get(k) ?? 0) + n);
@@ -1478,6 +1497,7 @@ async function main() {
    */
   const AGGREGATE_FIELDS = {
     counts: "object", stats: "object", splitTotal: "number",
+    splitScopeMove: "number", splitScopePark: "number",
     byTier: "map", defects: "map", reasons: "map", subclasses: "map",
     splitByClass: "map", splitSegments: "map",
     slugShapeCounts: "map", slugShapeByClass: "map",
@@ -1486,14 +1506,17 @@ async function main() {
     sfpByPair: "map", sfpBySetKey: "map",
     samples: "mapOfArrays", sampleCards: "mapOfMaps",
     slugShapeSamples: "mapOfArrays",
+    splitScopeByAxis: "splitScopeAxisMap",
     splitSamples: "array", gftSamples: "array", yfvSamples: "array", sfpSamples: "array",
   };
   const aggregateRefs = {
     counts, stats, get splitTotal() { return splitTotal; }, set splitTotal(v) { splitTotal = v; },
+    get splitScopeMove() { return splitScopeMove; }, set splitScopeMove(v) { splitScopeMove = v; },
+    get splitScopePark() { return splitScopePark; }, set splitScopePark(v) { splitScopePark = v; },
     byTier, defects, reasons, subclasses, splitByClass, splitSegments,
     slugShapeCounts, slugShapeByClass, gftByGrader, gftByGrade, gftBySport,
     yfvByDecade, yfvBySetKey, yfvBySport, sfpByPair, sfpBySetKey,
-    samples, sampleCards, slugShapeSamples,
+    samples, sampleCards, slugShapeSamples, splitScopeByAxis,
     splitSamples, gftSamples, yfvSamples, sfpSamples,
   };
   /** Serialize the whole in-memory aggregate to a plain JSON-safe object. */
@@ -1504,6 +1527,13 @@ async function main() {
       if (kind === "map") out[name] = Object.fromEntries(v);
       else if (kind === "mapOfArrays") out[name] = Object.fromEntries([...v].map(([k, arr]) => [k, arr]));
       else if (kind === "mapOfMaps") out[name] = Object.fromEntries([...v].map(([k, m]) => [k, Object.fromEntries(m)]));
+      else if (kind === "splitScopeAxisMap") {
+        out[name] = Object.fromEntries([...v].map(([axis, a]) => [axis, {
+          move: a.move, park: a.park,
+          parkReasons: Object.fromEntries(a.parkReasons),
+          moveSamples: a.moveSamples, parkSamples: a.parkSamples,
+        }]));
+      }
       else out[name] = v; // "object" | "number" | "array" -- already plain
     }
     return out;
@@ -1536,6 +1566,23 @@ async function main() {
         }
       } else if (kind === "array") {
         aggregateRefs[name].push(...(Array.isArray(saved) ? saved : []).slice(0, 30));
+      } else if (kind === "splitScopeAxisMap") {
+        const m = aggregateRefs[name];
+        for (const [axis, a] of Object.entries(saved)) {
+          const cur = m.get(axis) ?? { move: 0, park: 0, parkReasons: new Map(), moveSamples: [], parkSamples: [] };
+          cur.move += Number(a?.move) || 0;
+          cur.park += Number(a?.park) || 0;
+          for (const [reason, n] of Object.entries(a?.parkReasons ?? {})) {
+            cur.parkReasons.set(reason, (cur.parkReasons.get(reason) ?? 0) + (Number(n) || 0));
+          }
+          cur.moveSamples = [...cur.moveSamples, ...(Array.isArray(a?.moveSamples) ? a.moveSamples : [])].slice(0, SPLIT_SCOPE_SAMPLE_CAP);
+          cur.parkSamples = [...cur.parkSamples, ...(Array.isArray(a?.parkSamples) ? a.parkSamples : [])].slice(0, SPLIT_SCOPE_SAMPLE_CAP);
+          m.set(axis, cur);
+        }
+      } else if (name === "splitScopeMove") {
+        splitScopeMove += Number(saved) || 0;
+      } else if (name === "splitScopePark") {
+        splitScopePark += Number(saved) || 0;
       } else if (name === "counts") {
         for (const k of Object.keys(counts)) counts[k] += Number(saved[k]) || 0;
       } else if (name === "stats") {
@@ -1826,6 +1873,44 @@ async function main() {
         for (const seg of res.splitSegments ?? []) bump(splitSegments, seg);
         if ((splitSamples.length) < SAMPLE_CAP) {
           splitSamples.push(`${row.id}  [${res.klass}/${res.tier}]  ${row.cardId}  ||  ${row.hobbyiqCardId}${res.splitSegments?.length ? `  [${res.splitSegments.join(",")}]` : ""}`);
+        }
+        // THE `split` CENSUS SCOPE (report-only, Drew 2026-09-13 "report first,
+        // rule later"). Only meaningful for the DAMAGE class -- HIQ-SPLIT, both
+        // sides genuine hiq: slugs naming different cards. VENDOR-DESIGN/
+        // UNKNOWN-VENDOR/MALFORMED rows are excluded by construction: `res.
+        // splitClass` is only ever HIQ-SPLIT here (split-identity.cjs's `split`
+        // boolean folds in VENDOR-DESIGN as false, but UNKNOWN-VENDOR and
+        // MALFORMED also set `split: true` with a DIFFERENT `klass` -- neither
+        // is a two-hiq-slug disagreement lib/split-scope.cjs can judge a move
+        // for, and it is a report of its own (slugShapeDefects), never this one).
+        if (res.splitClass === K.SPLIT_CLASSES.HIQ_SPLIT) {
+          const verdict = K.classifySplitScope(
+            { cardId: row.cardId, hobbyiqCardId: row.hobbyiqCardId, title: row.title },
+            res.splitSegments ?? [],
+          );
+          const forAxes = verdict.judgedAxes.length ? verdict.judgedAxes : ["(none)"];
+          if (verdict.verdict === "split-move") splitScopeMove++; else splitScopePark++;
+          for (const axis of forAxes) {
+            const bucket = splitScopeAxis(axis);
+            if (verdict.verdict === "split-move") {
+              bucket.move++;
+              if (bucket.moveSamples.length < SPLIT_SCOPE_SAMPLE_CAP) {
+                bucket.moveSamples.push(
+                  `${row.id}  [${res.tier}]  "${String(row.title ?? "").slice(0, 160)}"  `
+                  + `${row.cardId}  ||  ${row.hobbyiqCardId}  ->  ${verdict.destination}  (${verdict.reason})`,
+                );
+              }
+            } else {
+              bucket.park++;
+              bump(bucket.parkReasons, verdict.reason);
+              if (bucket.parkSamples.length < SPLIT_SCOPE_SAMPLE_CAP) {
+                bucket.parkSamples.push(
+                  `${row.id}  [${res.tier}]  "${String(row.title ?? "").slice(0, 160)}"  `
+                  + `${row.cardId}  ||  ${row.hobbyiqCardId}  (${verdict.reason})`,
+                );
+              }
+            }
+          }
         }
       }
       for (const d of res.slugShapeDefects ?? []) {
@@ -2231,6 +2316,22 @@ async function main() {
     for (const line of splitSamples) console.log(`      ${line}`);
     console.log(`                  The apply path lands BOTH fields, so an audited apply repairs the split with the re-key.`);
   }
+  // THE `split` CENSUS SCOPE (report-only, Drew 2026-09-13 "report first, rule
+  // later"). NO APPLY PATH -- see parseApplyScope's permanent refusal of
+  // "split" by name. This prints move/park per judged axis so a report can be
+  // read straight off the run banner as well as off the JSON artifact.
+  if (splitScopeMove + splitScopePark > 0) {
+    const scopeTotal = splitScopeMove + splitScopePark;
+    const scopePct = (n) => scopeTotal ? `${((n / scopeTotal) * 100).toFixed(2)}%` : "-";
+    console.log(`\n  SPLIT SCOPE (REPORT ONLY -- no apply path, Drew 2026-09-13 "report first, rule later")`);
+    console.log(`    ${f(scopeTotal)} HIQ-SPLIT row(s) judged -- would-move ${f(splitScopeMove)} (${scopePct(splitScopeMove)})  would-park ${f(splitScopePark)} (${scopePct(splitScopePark)})`);
+    for (const [axis, a] of [...splitScopeByAxis].sort((x, y) => (y[1].move + y[1].park) - (x[1].move + x[1].park))) {
+      const axisTotal = a.move + a.park;
+      console.log(`      ${axis.padEnd(11)} move ${f(a.move)}  park ${f(a.park)}  (${scopePct(axisTotal)} of judged rows)`);
+      const topReasons = [...a.parkReasons].sort((x, y) => y[1] - x[1]).slice(0, 3);
+      if (topReasons.length) console.log(`        top park reasons: ${topReasons.map(([r, n]) => `${r} ${f(n)}`).join(" | ")}`);
+    }
+  }
   // SLUG-SHAPE DEFECTS: reported, never acted on. Each row here has ALREADY
   // been counted in its derivation class -- this says how many of them carry a
   // key whose SHAPE is wrong, which is a different question from whether the
@@ -2310,6 +2411,28 @@ async function main() {
       byClass: Object.fromEntries(splitByClass),
       segments: Object.fromEntries(splitSegments),
       samples: splitSamples,
+      // THE `split` CENSUS SCOPE (report-only, Drew 2026-09-13 "report first,
+      // rule later"). Nested inside splitIdentity, never inside `counts` --
+      // this is a judgement about what a HIQ-SPLIT row's own title supports,
+      // not a fifth derivation class, and it must never be summed with
+      // AGREE/IMPROVE/CONFLICT/UNDERIVABLE or with splitTotal's byClass. There
+      // is no apply path for this scope (see parseApplyScope's refusal of
+      // "split" by name) -- it exists to be READ, not dispatched.
+      scopes: {
+        split: {
+          total: splitScopeMove + splitScopePark,
+          move: splitScopeMove,
+          park: splitScopePark,
+          byAxis: Object.fromEntries([...splitScopeByAxis].map(([axis, a]) => [axis, {
+            move: a.move,
+            park: a.park,
+            topParkReasons: [...a.parkReasons].sort((x, y) => y[1] - x[1]).slice(0, 10)
+              .map(([reason, n]) => ({ reason, n })),
+            moveSamples: a.moveSamples,
+            parkSamples: a.parkSamples,
+          }])),
+        },
+      },
     },
     // Orthogonal to `counts` in exactly the way splitIdentity is -- a row with
     // a malformed slug is ALSO counted in its derivation class. Report only.
