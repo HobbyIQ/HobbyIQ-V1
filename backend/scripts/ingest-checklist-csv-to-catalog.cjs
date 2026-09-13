@@ -246,6 +246,123 @@ function isCardLineParallel(parallel, declared) {
   return true;
 }
 
+/** CF-A-PLAYER-IS-NOT-A-RUNG helpers, module-level so planStagedDirectory can
+ *  reach them without a caller reconstructing this vocabulary by hand. */
+const foldName = (v) => String(v ?? "").normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+const PARALLEL_WORDS = new Set(["refractor","refractors","xfractor","x-fractor","fractor","prizm","prizms","mojo","wave","shimmer","foil","foilboard","holo","chrome","sapphire","superfractor","printing","plate","plates","black","gold","silver","blue","red","green","orange","purple","pink","yellow","aqua","teal","magenta","fuchsia","bronze","platinum","rainbow","atomic","lava","pattern","laser","crackle","mini","base","parallel","variation","variations","sp","ssp","auto","autograph","autographs","relic","patch","jersey","insert","inserts","checklist","1/1","numbered","border","camo","tie-dye","disco","cracked","ice","optic","velocity","hyper","speckle","sparkle","glitter","neon","negative","sepia","vintage","stock","paper","canvas","gilded","glossy","matte"]);
+const isPersonName = (v) => { const t = foldName(v).split(" ").filter(Boolean); return t.length >= 2 && t.length <= 5 && !t.some((w) => PARALLEL_WORDS.has(w)) && !/^\d/.test(t[0]); };
+const EXPLODED_PAR_MAX = Number(process.env.EXPLODED_PAR_MAX || 150), EXPLODED_NUM_MAX = Number(process.env.EXPLODED_NUM_MAX || 2000);
+
+/**
+ * CF-ONE-DERIVATION-OR-TWO-CENSUSES (2026-09-13). census-catalog-id-
+ * collisions.cjs computed a row's address with `product.setKey` for EVERY
+ * row, category discarded -- the exact PRE-#2112 shape this ingest no longer
+ * uses. It reported 363 "contested" ids for 2018 Diamond Kings that this
+ * ingest's own guard already resolves correctly (registered-insert-set
+ * separation, colour-rung folding, the exploded-category and card-line/
+ * player-name-parallel gates) or correctly REFUSES for a different, real
+ * reason (unregistered set keys) -- a census built on a stale derivation
+ * cannot tell which.
+ *
+ * THE FIX. This function is the read-only PLANNING half of `main`'s per-file
+ * loop -- everything up to and including `INSERT_SET.planFile`, with every
+ * row-selection gate `main` applies (card-line parallel, player-name
+ * parallel, exploded category) applied in the SAME ORDER -- extracted so a
+ * caller that only wants to know "what would this file's rows resolve to"
+ * (a census, a dry-run report, a test) uses the identical code path `main`
+ * writes from, and the two can never compute two different answers for one
+ * CSV again. It performs NO I/O beyond reading the staged files and NO
+ * writes; `main` is unchanged except that its own loop now calls this
+ * instead of repeating the gates inline.
+ *
+ * Returns a Map: filename -> { product, batch, plan } | { product: null }
+ * for a file with no manifest. `batch` is the row list AFTER every
+ * row-level gate below the file loop's `EXPLODED-FILE-GATE`, in the same
+ * shape `main` upserts from (still missing the final `setKeyForRow` /
+ * `parallelForRow` stamp `main` applies only once a file's plan PASSES,
+ * since a refused file's batch is never stamped either).
+ */
+function planStagedDirectory(DIR, files) {
+  const byFile = new Map();
+
+  // PASS 1: read every row of every file once, grouped by (sport, year,
+  // setKey) cell, so a same-numbered clash BETWEEN files of one product is
+  // measured before any single file is judged -- CF-THE-CLASH-IS-A-FACT-
+  // ABOUT-THE-PRODUCT-NOT-THE-FILE. Byte-for-byte the cellSeparation IIFE
+  // `main` used to run inline.
+  const byCell = new Map();
+  const perFile = new Map();
+  for (const name of files) {
+    const csvPath = path.join(DIR, name);
+    const product = productOf(csvPath);
+    if (!product) { byFile.set(name, { product: null }); continue; }
+    const declaredVocab = declaredParallels(product);
+    const lines = fs.readFileSync(csvPath, "utf8").split("\n");
+    const rawRows = [];
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+      const [category, cardNumber, parallel, isAuto, printRun, rawPlayer, parallelNote] = splitCsv(line);
+      const player = cleanPlayerName(rawPlayer);
+      if (!cardNumber || !player) continue;
+      if (isCardLineParallel(parallel, declaredVocab)) continue;
+      rawRows.push({ category, cardNumber, parallel, isAuto, printRun, player, parallelNote });
+    }
+    // CF-A-PLAYER-IS-NOT-A-RUNG, per file: the file knows its own players.
+    const players = new Set(rawRows.map((r) => r.player).filter(isPersonName).map(foldName));
+    const batch = [];
+    for (const r of rawRows) {
+      if (r.parallel && players.has(foldName(r.parallel))) continue;
+      batch.push({
+        category: r.category, cardNumber: r.cardNumber, parallel: r.parallel,
+        isAuto: r.isAuto, printRun: r.printRun, player: r.player,
+        parallelNote: r.parallelNote || null, subsetName: product.subsetName || null,
+      });
+    }
+    // CF-EXPLODED-FILE-GATE, per category.
+    const byCat = new Map();
+    for (const r of batch) { const c = String(r.category || "base"); if (!byCat.has(c)) byCat.set(c, { pars: new Set(), nums: new Set(), rows: 0 }); const g = byCat.get(c); g.pars.add(String(r.parallel || "")); g.nums.add(String(r.cardNumber)); g.rows++; }
+    const explodedCats = new Set();
+    for (const [c, g] of byCat) if (g.pars.size > EXPLODED_PAR_MAX || g.nums.size > EXPLODED_NUM_MAX) explodedCats.add(c);
+    const kept = explodedCats.size ? batch.filter((r) => !explodedCats.has(String(r.category || "base"))) : batch;
+
+    perFile.set(name, { product, batch: kept });
+    if (!kept.length) { byFile.set(name, { product, batch: kept, plan: null }); continue; }
+
+    const cell = `${product.sport}/${product.year}/${product.setKey}`;
+    if (!byCell.has(cell)) byCell.set(cell, { productSetKey: product.setKey, sport: product.sport, year: product.year, rows: [] });
+    const entry = byCell.get(cell);
+    for (const r of kept) entry.rows.push({ ...r, _sport: product.sport, _year: product.year });
+  }
+
+  const fold = INSERT_SET.rungFoldingByCell(byCell);
+  const separation = INSERT_SET.separationByCell(byCell, (r) => computeHobbyIqCardId({
+    sport: r._sport, year: r._year, setKey: r.setKey,
+    cardNumber: String(r.cardNumber), parallel: r.parallel || "Base",
+    isAuto: r.isAuto === "true", printRun: r.printRun ? Number(r.printRun) : null,
+    authoritativeSetKey: true,
+  }), fold);
+
+  // PASS 2: one planFile per file, fed the CELL's separation and folding --
+  // never the file's own view of itself, which cannot see a sibling file.
+  for (const [name, { product, batch }] of perFile) {
+    if (byFile.has(name)) continue; // no-manifest or empty-after-gates, already recorded
+    const computeId = (r) => computeHobbyIqCardId({
+      sport: product.sport, year: product.year, setKey: r.setKey,
+      cardNumber: String(r.cardNumber), parallel: r.parallel || "Base",
+      isAuto: r.isAuto === "true", printRun: r.printRun ? Number(r.printRun) : null,
+      authoritativeSetKey: true,
+    });
+    const cell = `${product.sport}/${product.year}/${product.setKey}`;
+    const plan = INSERT_SET.planFile({
+      rows: batch, productSetKey: product.setKey, computeId, normalize: normalizeSetKey,
+      separate: separation.get(cell), foldRungs: fold.get(cell),
+    });
+    byFile.set(name, { product, batch, plan });
+  }
+  return byFile;
+}
+
 async function main() {
   if (!process.env.COSMOS_CONNECTION_STRING) { console.error("FATAL: COSMOS_CONNECTION_STRING not set"); process.exit(1); }
   if (!DIR || !fs.existsSync(DIR)) { console.error(`FATAL: DIR not found: ${DIR}`); process.exit(1); }
@@ -1083,6 +1200,10 @@ module.exports = {
   // refuses, and a test that only exercised the library could stay green
   // while the wiring was deleted.
   insertSetKey: INSERT_SET,
+  // CF-ONE-DERIVATION-OR-TWO-CENSUSES. The read-only planning half of main's
+  // per-file loop, so a census or report never reimplements (and drifts from)
+  // the row-selection gates and the id derivation this script writes from.
+  planStagedDirectory,
 };
 
 if (require.main === module) {

@@ -33,6 +33,26 @@
  * ingested before the fix has the same shape, which is why (sport, year,
  * setKey) is an argument rather than a hardcoded product.
  *
+ * CF-ONE-DERIVATION-OR-TWO-CENSUSES (2026-09-13). This script USED to compute
+ * a row's address with the bare product key for every row, category AND
+ * colour-rung folding both discarded -- the PRE-#2112 shape the ingest no
+ * longer runs. Measured on the staged acq-2026-09-13-bcp directory, cell
+ * (baseball, 2018, diamond-kings): the old derivation reported 363 ids
+ * "contested inside the CSV" and 276 wrong-player rows for a file the
+ * ingest's OWN guard already refuses today, for a different, real reason
+ * (`unregistered-set-keys` -- the same-numbered DK Signatures / DK Rookie
+ * Signatures autograph sets are correctly separated onto their own keys, and
+ * those keys are simply not yet registered normalizeSetKey fixed points). A
+ * census computing its own approximation of the id cannot tell "the ingest
+ * is silently clobbering this" from "the ingest is already correctly
+ * refusing this for an unrelated reason" -- it can only report a number that
+ * happens not to match, either way. So this script no longer derives ids on
+ * its own: `ingest-checklist-csv-to-catalog.cjs`'s own `planStagedDirectory`
+ * (the read-only planning half of its per-file loop -- every row-selection
+ * gate, the cell-wide insert-set separation and colour-rung folding, the
+ * SAME `finalIdFor` composition the write path stamps from) is the only
+ * thing that builds `claims` below, so the two can never disagree again.
+ *
  * Env:
  *   COSMOS_CONNECTION_STRING  required (READ ONLY -- no write path exists here)
  *   SPORT, YEAR, SET_KEY      the catalog cell to census
@@ -46,11 +66,10 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const backend = path.resolve(__dirname, "..");
-const { computeHobbyIqCardId } = require(path.join(backend, "dist/services/portfolioiq/hobbyIqCardId.service.js"));
-const { cleanPlayerName } = require(path.join(backend, "dist/services/portfolioiq/cardCatalog.service.js"));
 const { CosmosClient } = require("@azure/cosmos");
-const { splitCsv, productOf } = require(path.join(__dirname, "ingest-checklist-csv-to-catalog.cjs"));
+const { planStagedDirectory } = require(path.join(__dirname, "ingest-checklist-csv-to-catalog.cjs"));
 const INSERT_SET = require(path.join(__dirname, "lib", "insert-set-key.cjs"));
+const { computeHobbyIqCardId } = require(path.join(backend, "dist/services/portfolioiq/hobbyIqCardId.service.js"));
 
 const SPORT = process.env.SPORT || "";
 const YEAR = Number(process.env.YEAR || 0);
@@ -100,47 +119,60 @@ async function main() {
   }
   if (!fs.existsSync(DIR)) { console.error(`FATAL: DIR not found: ${DIR}`); process.exit(1); }
 
-  // THE CHECKLIST IS THE AUTHORITY. Rebuild the addresses this cell's staged
-  // CSVs claim, using the SAME derivation the ingest uses, so a disagreement
-  // here is a disagreement about the data and never about the arithmetic.
+  // THE CHECKLIST IS THE AUTHORITY, AND THE INGEST'S OWN PLAN IS THE
+  // DERIVATION. planStagedDirectory runs every row-selection gate main()
+  // applies (card-line parallel, player-name parallel, exploded category)
+  // and INSERT_SET.planFile itself -- cell-wide insert-set separation and
+  // colour-rung folding included -- over every staged file, so a row this
+  // census claims is a row the ingest would ALSO claim, at the SAME address.
+  const allFiles = fs.readdirSync(DIR).filter((n) => n.endsWith(".csv")).sort();
+  const plans = planStagedDirectory(DIR, allFiles);
+
   const claims = new Map(); // id -> [{ player, category, cardNumber, parallel }]
-  let checklistRows = 0, filesRead = 0;
-  for (const name of fs.readdirSync(DIR).filter((n) => n.endsWith(".csv")).sort()) {
-    const csvPath = path.join(DIR, name);
-    const product = productOf(csvPath);
+  let checklistRows = 0, filesRead = 0, refusedFiles = 0, refusedRows = 0;
+  const refusedFileNames = [];
+  for (const [name, entry] of plans) {
+    const { product, batch, plan } = entry;
     if (!product) continue;
     if (product.sport !== SPORT || Number(product.year) !== YEAR || product.setKey !== SET_KEY) continue;
     filesRead++;
-    const rows = [];
-    for (const L of fs.readFileSync(csvPath, "utf8").split("\n").slice(1)) {
-      const t = L.trim(); if (!t) continue;
-      const [category, cardNumber, parallel, isAuto, printRun, rawPlayer] = splitCsv(t);
-      const player = cleanPlayerName(rawPlayer);
-      if (!cardNumber || !player) continue;
-      rows.push({ category, cardNumber, parallel, isAuto, printRun, player });
+    checklistRows += batch ? batch.length : 0;
+    if (!plan || plan.verdict === "refuse") {
+      // THE INGEST ALREADY REFUSED THIS FILE. Its rows have no address to
+      // claim -- reporting them as "contested" under some OTHER derivation
+      // would be exactly the two-derivations defect this rewrite ends. Named
+      // on its own line below, never folded into `claims`.
+      refusedFiles++;
+      refusedRows += batch ? batch.length : 0;
+      refusedFileNames.push({ name, reason: plan ? plan.reason : "exploded-category (no rows left)" });
+      continue;
     }
-    checklistRows += rows.length;
-    // THE ADDRESS AS THE DEFECTIVE RUN COMPUTED IT -- the product key for every
-    // row, category discarded. That is what the stored documents are keyed by,
-    // so that is what the join must use. (After a fixed re-ingest, the insert
-    // rows live on their own keys and simply are not in this cell any more,
-    // which is itself the confirmation the repair landed.)
-    for (const r of rows) {
+    // THE SAME finalId COMPOSITION THE WRITE PATH STAMPS FROM -- never a
+    // second approximation of it. A file whose plan PASSED has already
+    // proven every row's address is known and distinct; this just names
+    // them, exactly as main() would compute them.
+    const finalId = INSERT_SET.finalIdFor(
+      { productSetKey: product.setKey, separate: plan.separate, foldRungs: plan.foldRungs },
+      (r) => computeHobbyIqCardId({
+        sport: product.sport, year: product.year, setKey: r.setKey,
+        cardNumber: String(r.cardNumber), parallel: r.parallel || "Base",
+        isAuto: r.isAuto === "true", printRun: r.printRun ? Number(r.printRun) : null,
+        authoritativeSetKey: true,
+      }),
+    );
+    for (const r of batch) {
       let id = null;
-      try {
-        id = computeHobbyIqCardId({
-          sport: product.sport, year: product.year, setKey: product.setKey,
-          cardNumber: String(r.cardNumber), parallel: r.parallel || "Base",
-          isAuto: r.isAuto === "true", printRun: r.printRun ? Number(r.printRun) : null,
-          authoritativeSetKey: true,
-        });
-      } catch { id = null; }
+      try { id = finalId(r); } catch { id = null; }
       if (!id) continue;
       if (!claims.has(id)) claims.set(id, []);
       claims.get(id).push(r);
     }
   }
   console.log(`  checklist    ${f(checklistRows)} rows in ${f(filesRead)} file(s) of ${DIR}`);
+  if (refusedFiles) {
+    console.log(`  files the ingest REFUSES ${f(refusedFiles)} (${f(refusedRows)} rows)   <- no address to claim; not counted as contested, not counted as agreeing`);
+    for (const r of refusedFileNames) console.log(`      ${r.name}  — ${r.reason}`);
+  }
   console.log(`               claiming ${f(claims.size)} distinct ids  <- the gap to the row count IS the clobber`);
 
   // THREE VERDICTS, counted separately, because they are three different facts.

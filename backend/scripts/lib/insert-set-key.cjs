@@ -693,6 +693,37 @@ function rungFoldingByCell(rowsByCell) {
 }
 
 /**
+ * CF-ONE-DERIVATION-OR-TWO-CENSUSES (2026-09-13). The exact row -> id
+ * function `planFile` measures collisions with and the write path stamps
+ * from, exposed on its own so a caller that already HAS a `{ separate,
+ * foldRungs }` (from a passed `planFile` result, or from `separationByCell`/
+ * `rungFoldingByCell` directly) can compute the SAME final id for a row
+ * without recomputing this composition by hand.
+ *
+ * THE DEFECT THIS CLOSES. census-catalog-id-collisions.cjs computed a row's
+ * address with the bare product key for every row, category and colour-rung
+ * folding both discarded -- the PRE-#2112 shape this ingest no longer uses.
+ * It reported 363 ids "contested" for 2018 Diamond Kings that planFile
+ * either resolves (a same-numbered insert set separated onto its own key) or
+ * refuses for a different, real reason (the separated keys are not yet
+ * registered normalizeSetKey fixed points) -- a caller with its own
+ * approximation of the id cannot tell which, and TWO DERIVATIONS OF ONE
+ * ADDRESS is exactly the defect class R30 exists to end.
+ *
+ * `computeId({ ...row, setKey, parallel })` is the caller's slug function --
+ * the same one `planFile` was given.
+ */
+function finalIdFor({ productSetKey, separate, foldRungs }, computeId) {
+  return (r) => computeId({
+    ...r,
+    // The colour a fold moved off the key rides the parallel axis, so the id
+    // this measures is the id the write will take.
+    parallel: parallelForRow({ category: r.category, parallel: r.parallel, subsetName: r.subsetName, foldRungs }),
+    setKey: setKeyForRow({ productSetKey, category: r.category, parallel: r.parallel, subsetName: r.subsetName, separate, foldRungs }).setKey,
+  });
+}
+
+/**
  * THE WHOLE DECISION FOR ONE FILE, in one call, so the ingest and the tests
  * and any future census all reach the same verdict from the same code.
  *
@@ -717,13 +748,7 @@ function planFile({ rows, productSetKey, computeId, normalize, separate: given, 
   const separate = given || subsetsToSeparate(rows, productSetKey, computeId, foldRungs);
   const keys = insertSetKeysOf(rows, productSetKey, separate, foldRungs);
   const unregistered = unregisteredKeys(keys, normalize);
-  const finalId = (r) => computeId({
-    ...r,
-    // The colour a fold moved off the key rides the parallel axis, so the id
-    // this measures is the id the write will take.
-    parallel: parallelForRow({ category: r.category, parallel: r.parallel, subsetName: r.subsetName, foldRungs }),
-    setKey: setKeyForRow({ productSetKey, category: r.category, parallel: r.parallel, subsetName: r.subsetName, separate, foldRungs }).setKey,
-  });
+  const finalId = finalIdFor({ productSetKey, separate, foldRungs }, computeId);
   const { ids, collisions, unslugable } = idCollisions(rows, finalId);
   // ORDER IS LOAD-BEARING: an unregistered key is reported even when the
   // separation it would perform already removes every collision, because
@@ -781,6 +806,7 @@ module.exports = {
   insertSetKeysOf,
   unregisteredKeys,
   idCollisions,
+  finalIdFor,
   planFile,
   separationByCell,
   subsetDisplayName,
