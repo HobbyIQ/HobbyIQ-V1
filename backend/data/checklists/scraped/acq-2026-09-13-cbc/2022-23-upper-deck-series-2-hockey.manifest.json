@@ -1,0 +1,339 @@
+{
+  "source": "cardboardconnection-2026-09-13",
+  "sourceUrl": "https://www.cardboardconnection.com/2022-23-upper-deck-series-2-hockey-cards",
+  "xlsxUrl": "https://cconnect.s3.amazonaws.com/wp-content/uploads/2023/03/2022-23-Upper-Deck-Series-2-Hockey-checklist.xlsx",
+  "fetchedAt": "2026-09-13",
+  "sport": "hockey",
+  "year": 2022,
+  "setName": "2022-23 Upper Deck Series 2 Hockey",
+  "productKey": "2022-23-upper-deck-series-2-hockey",
+  "setKey": "upper-deck-series-2",
+  "rowCount": 3407,
+  "autoCount": 12,
+  "printRunCount": 577,
+  "distinctParallels": 27,
+  "parallelColumnAuthoritative": true,
+  "queueRank": 26,
+  "sectionsReport": [
+    {
+      "category": "base",
+      "rows": 200
+    },
+    {
+      "category": "insert-clear-cut-parallel",
+      "rows": 200
+    },
+    {
+      "category": "insert-exclusives-parallel",
+      "rows": 200
+    },
+    {
+      "category": "insert-french-parallel",
+      "rows": 200
+    },
+    {
+      "category": "insert-high-gloss-parallel",
+      "rows": 200
+    },
+    {
+      "category": "insert-ud-canvas",
+      "rows": 90
+    },
+    {
+      "category": "insert-ud-canvas-printing-plates-parallel",
+      "rows": 90
+    },
+    {
+      "category": "insert-base-set-young-guns",
+      "rows": 50
+    },
+    {
+      "category": "insert-base-set-young-guns-clear-cut-parallel",
+      "rows": 50
+    },
+    {
+      "category": "insert-base-set-young-guns-exclusives-parallel",
+      "rows": 50
+    },
+    {
+      "category": "insert-base-set-young-guns-french-parallel",
+      "rows": 50
+    },
+    {
+      "category": "insert-base-set-young-guns-high-gloss-parallel",
+      "rows": 50
+    },
+    {
+      "category": "insert-dazzlers",
+      "rows": 50
+    },
+    {
+      "category": "insert-dazzlers-green-parallel",
+      "rows": 50
+    },
+    {
+      "category": "insert-dazzlers-orange-parallel",
+      "rows": 50
+    },
+    {
+      "category": "insert-dazzlers-pink-parallel",
+      "rows": 50
+    },
+    {
+      "category": "insert-dazzlers-red-parallel",
+      "rows": 50
+    },
+    {
+      "category": "insert-dazzlers-printing-plates-parallel",
+      "rows": 50
+    },
+    {
+      "category": "insert-flourescence-gold-parallel",
+      "rows": 50
+    },
+    {
+      "category": "insert-flourescence-gold-parallel-blue-parallel",
+      "rows": 50
+    },
+    {
+      "category": "insert-flourescence-gold-parallel-green-parallel",
+      "rows": 50
+    },
+    {
+      "category": "insert-flourescence-gold-parallel-magenta-parallel",
+      "rows": 50
+    },
+    {
+      "category": "insert-honor-roll",
+      "rows": 50
+    },
+    {
+      "category": "insert-honor-roll-roll-rainbow-parallel",
+      "rows": 50
+    },
+    {
+      "category": "insert-honor-roll-roll-gold-rainbow-parallel",
+      "rows": 50
+    },
+    {
+      "category": "insert-honor-roll-roll-red-rainbow-parallel",
+      "rows": 50
+    },
+    {
+      "category": "insert-honor-roll-roll-printing-plates-parallel",
+      "rows": 50
+    },
+    {
+      "category": "insert-instant-impressions",
+      "rows": 50
+    },
+    {
+      "category": "insert-upper-deck-mvp-colors-contours-update",
+      "rows": 50
+    },
+    {
+      "category": "insert-welcome-to",
+      "rows": 32
+    },
+    {
+      "category": "insert-welcome-to-to-gold-parallel",
+      "rows": 32
+    },
+    {
+      "category": "insert-welcome-to-to-printing-plates-parallel",
+      "rows": 32
+    },
+    {
+      "category": "insert-lunch-box-legends",
+      "rows": 30
+    },
+    {
+      "category": "insert-lunch-box-legends-legends-gold-parallel",
+      "rows": 30
+    },
+    {
+      "category": "insert-lunch-box-legends-legends-printing-plates-parallel",
+      "rows": 30
+    },
+    {
+      "category": "insert-population-count-1000",
+      "rows": 30
+    },
+    {
+      "category": "insert-population-count-1000-500-parallel",
+      "rows": 30
+    },
+    {
+      "category": "insert-population-count-1000-100-parallel",
+      "rows": 30
+    },
+    {
+      "category": "insert-population-count-1000-50-parallel",
+      "rows": 30
+    },
+    {
+      "category": "insert-population-count-1000-25-parallel",
+      "rows": 30
+    },
+    {
+      "category": "insert-population-count-1000-10-parallel",
+      "rows": 30
+    },
+    {
+      "category": "insert-population-count-1000-1-parallel",
+      "rows": 30
+    },
+    {
+      "category": "insert-rookie-materials",
+      "rows": 30
+    },
+    {
+      "category": "insert-ud-canvas-young-guns",
+      "rows": 30
+    },
+    {
+      "category": "insert-ud-canvas-young-guns-guns-printing-plates-parallel",
+      "rows": 30
+    },
+    {
+      "category": "insert-ud-portraits-rookies",
+      "rows": 30
+    },
+    {
+      "category": "insert-ud-portraits-rookies-silver-parallel",
+      "rows": 30
+    },
+    {
+      "category": "insert-ud-portraits-rookies-printing-plates-parallel",
+      "rows": 30
+    },
+    {
+      "category": "insert-rookie-materials-patch-parallel",
+      "rows": 29
+    },
+    {
+      "category": "insert-rookie-materials-retro",
+      "rows": 28
+    },
+    {
+      "category": "insert-rookie-materials-retro-patch-parallel",
+      "rows": 28
+    },
+    {
+      "category": "insert-highlighters",
+      "rows": 25
+    },
+    {
+      "category": "insert-highlighters-green-parallel",
+      "rows": 25
+    },
+    {
+      "category": "insert-highlighters-orange-parallel",
+      "rows": 25
+    },
+    {
+      "category": "insert-highlighters-pink-parallel",
+      "rows": 25
+    },
+    {
+      "category": "insert-highlighters-purple-parallel",
+      "rows": 25
+    },
+    {
+      "category": "insert-world-junior-grads",
+      "rows": 25
+    },
+    {
+      "category": "insert-world-junior-grads-grads-gold-parallel",
+      "rows": 25
+    },
+    {
+      "category": "insert-world-junior-grads-grads-printing-plates-parallel",
+      "rows": 25
+    },
+    {
+      "category": "insert-retro-rookie-materials-veterans-flashbacks",
+      "rows": 19
+    },
+    {
+      "category": "insert-nhl-firsts",
+      "rows": 18
+    },
+    {
+      "category": "insert-day-with-the-cup",
+      "rows": 16
+    },
+    {
+      "category": "insert-2022-23-rookie-class-commemorative-class",
+      "rows": 15
+    },
+    {
+      "category": "insert-2022-23-rookie-class-commemorative-class-class-red-parallel",
+      "rows": 15
+    },
+    {
+      "category": "insert-ud-canvas-retired",
+      "rows": 15
+    },
+    {
+      "category": "insert-ud-canvas-program-of-excellence",
+      "rows": 15
+    },
+    {
+      "category": "insert-base-set-young-guns-jumbos-parallel",
+      "rows": 14
+    },
+    {
+      "category": "insert-calder-candidates",
+      "rows": 13
+    },
+    {
+      "category": "insert-calder-candidates-candidates-gold-parallel",
+      "rows": 13
+    },
+    {
+      "category": "insert-calder-candidates-candidates-printing-plates-parallel",
+      "rows": 13
+    },
+    {
+      "category": "auto-base-snow-spray-autographs",
+      "rows": 12
+    },
+    {
+      "category": "insert-1994-95-rookie-tribute-die-cuts",
+      "rows": 10
+    },
+    {
+      "category": "insert-1994-95-rookie-tribute-die-cuts-cuts-red-parallel",
+      "rows": 10
+    },
+    {
+      "category": "insert-o-pee-chee-glossy-rookies",
+      "rows": 10
+    },
+    {
+      "category": "insert-o-pee-chee-glossy-rookies-rookies-copper-parallel",
+      "rows": 10
+    },
+    {
+      "category": "insert-o-pee-chee-glossy-rookies-rookies-gold-parallel",
+      "rows": 10
+    },
+    {
+      "category": "insert-ud-portraits-rookies-sps",
+      "rows": 10
+    },
+    {
+      "category": "insert-ud-portraits-rookies-sps-silver-parallel",
+      "rows": 10
+    },
+    {
+      "category": "insert-ud-portraits-rookies-sps-printing-plates-parallel",
+      "rows": 10
+    },
+    {
+      "category": "insert-1991-92-young-guns-retro-achievements",
+      "rows": 8
+    }
+  ]
+}
