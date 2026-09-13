@@ -1,0 +1,20 @@
+{
+ "generatedAt": "2026-09-13T00:00:00.000Z",
+ "forLane": "relocate-catalog-rows-by-list",
+ "finding": "#2098: hiq:baseball:2026:bowman:cpa-mg:gold-refractor:auto:num-50 carries verificationStatus='pending-review' from repair-bowman-product-refile's CF-IT-CAME-OUT-OF-BOWMAN move (Drew, 2026-08-13, re-affirmed 2026-09-05) -- the row is correct but was never checklist-confirmed, so pricing withholds it with reason 'pending-review'. checklistinsider's 2026 Bowman Baseball Checklist Guide states the Chrome Prospects Autographs parallel ladder includes 'Gold Refractor /50', confirming the row's parallel and print run. This list uses the new `verify` action to stamp the confirmation rather than a hand edit, which is forbidden.",
+ "rulings": [
+  "Doctrine: 'verified' means checklist-backed or ruled by Drew with a citation -- never a bare word. checklistinsider is a checklist source, so this verify cites it directly rather than falling back to the drew-ruling citation that moved the row in the first place.",
+  "Verified 2026-09-13 by WebFetch against https://www.checklistinsider.com/2026-bowman-baseball: the page's Chrome Prospects Autographs parallel ladder reads '... Gold Refractor /50, Gold Shimmer Refractor /50, ...', confirming Gold Refractor at a /50 print run for this product's CPA autographs."
+ ],
+ "entries": [
+  {
+   "id": "hiq:baseball:2026:bowman:cpa-mg:gold-refractor:auto:num-50",
+   "action": "verify",
+   "reason": "checklistinsider's 2026 Bowman Baseball Checklist Guide lists 'Gold Refractor /50' on the Chrome Prospects Autographs parallel ladder, confirming this row's parallel (Gold Refractor) and print run (/50). The row moved here under CF-IT-CAME-OUT-OF-BOWMAN (Drew, 2026-08-13, re-affirmed 2026-09-05) and has sat pending-review since, withheld from pricing per #2098.",
+   "citation": {
+    "source": "checklistinsider",
+    "ref": "https://www.checklistinsider.com/2026-bowman-baseball (Chrome Prospects Autographs ladder: Gold Refractor /50)"
+   }
+  }
+ ]
+}

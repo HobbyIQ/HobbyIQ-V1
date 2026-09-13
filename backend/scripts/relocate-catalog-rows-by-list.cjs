@@ -71,7 +71,7 @@
  * own census -- not a side effect of this one.
  *
  * ────────────────────────────────────────────────────────────────────────────
- * THE TWO SHAPES
+ * THE SHAPES
  * ────────────────────────────────────────────────────────────────────────────
  *
  *   retire   the row should not exist. Deleted via retireCatalogRow (graded
@@ -91,6 +91,50 @@
  *            stamped `identityUnverified: true` plus an
  *            `identityUnverifiedReason`, through patchCatalogRowFields.
  *            Its sales stay exactly where they are.
+ *
+ *   verify   the row is `pending-review` (catalogVisibility keeps it
+ *            PROVISIONAL and pricing withholds with reason `pending-review`,
+ *            #2098) and a citation now confirms it. Nothing moves and nothing
+ *            is deleted: the row is stamped `verificationStatus: "verified"`
+ *            plus `verifiedBy: {citation, at, lane}`, through
+ *            patchCatalogRowFields -- see WHY VERIFY EXISTS below.
+ *
+ * ────────────────────────────────────────────────────────────────────────────
+ * WHY VERIFY EXISTS, AND WHAT IT HONESTLY DOES (2026-09-13, #2098)
+ * ────────────────────────────────────────────────────────────────────────────
+ *
+ * A catalog row can carry `verificationStatus: "pending-review"` because a
+ * repair moved it on a Drew ruling rather than a checklist match --
+ * repair-bowman-product-refile's own stamp is the example: a row moved under
+ * CF-IT-CAME-OUT-OF-BOWMAN, correct, but unconfirmed by a source, so pricing
+ * withholds it with reason `pending-review` (#2098) until something says
+ * otherwise. There was no lane to say otherwise. The row was correct and
+ * unpriced, with no committed path to change that, which is exactly the
+ * "hand edits are forbidden" gap this closes.
+ *
+ * WHAT "VERIFIED" HAS TO MEAN HERE. Doctrine: verified means checklist-backed
+ * OR ruled by Drew with a citation -- never a bare word. So a verify entry
+ * MUST carry `citation: { source, ref }`, both fields, or it is REFUSED at
+ * classify time, before any row is even read. `source` is a checklist source
+ * tag (e.g. "checklistinsider") or the literal `"drew-ruling"`; `ref` is the
+ * URL or the ruling id/date the reviewer can go re-read. An unexplained
+ * verify is not reviewable, exactly as an unexplained retire is not.
+ *
+ * WHY IT ONLY ACTS ON A pending-review ROW. Verify exists to answer one
+ * question -- "is this specific unconfirmed row now confirmed?" -- and that
+ * question is meaningless unless the row is actually pending. A row already
+ * `verified` has nothing to verify twice, so it is a NO-OP, reported as such
+ * (idempotent, the same shape `alreadyParked` gives park). A row that is
+ * retired, reslugged out from under this id, or never existed has no premise
+ * left to confirm, so it is REFUSED like a park of a gone row -- the entry's
+ * premise is false and the list is out of date.
+ *
+ * WHY A PATCH, NEVER A RAW ONE (#1614's rule: never a raw patch). The write
+ * goes through patchCatalogRowFields, the same helper park uses, so derived
+ * search fields are rebuilt exactly the way every other field repair rebuilds
+ * them and a hand-rolled `container.item().patch()` never reappears on this
+ * lane. It sets `verificationStatus: "verified"` and appends
+ * `verifiedBy: { citation, at, lane }` -- nothing else on the row moves.
  *
  * ────────────────────────────────────────────────────────────────────────────
  * WHY PARK EXISTS, AND WHAT IT HONESTLY DOES (Drew, 2026-09-08)
@@ -358,8 +402,8 @@ function classifyEntry(e) {
   const reason = String(e?.reason ?? "").trim();
   if (!id) return { ok: false, why: "entry has no id" };
   if (!id.startsWith("hiq:")) return { ok: false, why: `id is not a hiq slug: ${id.slice(0, 60)}` };
-  if (action !== "retire" && action !== "reslug" && action !== "park") {
-    return { ok: false, why: `action must be "retire", "reslug" or "park", got ${JSON.stringify(e?.action ?? null)}` };
+  if (action !== "retire" && action !== "reslug" && action !== "park" && action !== "verify") {
+    return { ok: false, why: `action must be "retire", "reslug", "park" or "verify", got ${JSON.stringify(e?.action ?? null)}` };
   }
   // The reason is what a reviewer reads in the diff and what the write stamps.
   // An unexplained delete is not reviewable.
@@ -369,12 +413,30 @@ function classifyEntry(e) {
     if (!to.startsWith("hiq:")) return { ok: false, why: `"to" is not a hiq slug: ${to.slice(0, 60)}` };
     if (to === id) return { ok: false, why: `reslug "to" equals the id: ${id.slice(0, 60)}` };
   } else if (to) {
-    // A PARK AND A RETIRE BOTH STAY PUT, so neither may name a destination.
-    // A `to` on a park is a list author reaching for the reslug they were
-    // told not to write, and it is refused rather than ignored: silently
-    // dropping a stated destination is how a rejected move becomes a
-    // no-op nobody notices.
+    // A PARK, A RETIRE AND A VERIFY ALL STAY PUT, so none may name a
+    // destination. A `to` on one of them is a list author reaching for the
+    // reslug they were told not to write, and it is refused rather than
+    // ignored: silently dropping a stated destination is how a rejected move
+    // becomes a no-op nobody notices.
     return { ok: false, why: `${action} entry must not name a "to": ${id.slice(0, 60)}` };
+  }
+  // A VERIFY MUST CITE ITS EVIDENCE, BOTH FIELDS, BEFORE ANY ROW IS EVEN READ.
+  // Doctrine: "verified" means checklist-backed or ruled by Drew WITH A
+  // CITATION -- never a bare word. `source` is a checklist source tag (e.g.
+  // "checklistinsider") or the literal "drew-ruling"; `ref` is the URL or the
+  // ruling id/date a reviewer can go re-read. Either field missing, or the
+  // whole object missing, is the same refusal an unexplained delete gets.
+  if (action === "verify") {
+    const citation = e && typeof e === "object" ? e.citation : null;
+    const source = String(citation?.source ?? "").trim();
+    const ref = String(citation?.ref ?? "").trim();
+    if (!source || !ref) {
+      return {
+        ok: false,
+        why: `verify entry needs citation.source AND citation.ref: ${id.slice(0, 60)}`,
+      };
+    }
+    return { ok: true, id, action, to, reason, citation: { source, ref } };
   }
   return { ok: true, id, action, to, reason };
 }
@@ -749,6 +811,23 @@ async function main() {
   // Sales left sitting on a parked row. They are neither unplaced nor
   // re-pointed: the row is still there, still theirs, and now unpriced.
   let salesParked = 0;
+  // Rows stamped verificationStatus: "verified" off a citation. A verify
+  // WRITES (it patches two fields), so it reconciles on the written side
+  // beside park, retire and reslug -- never as a skip.
+  let verified = 0;
+  // Verifies whose row already read "verified". Idempotent, and a SKIP rather
+  // than a write, so a re-run cannot inflate the verified count.
+  let alreadyVerified = 0;
+  // Verified writes, counted BY CITATION SOURCE (checklistinsider,
+  // drew-ruling, ...) so the banner shows what kind of evidence armed the
+  // list -- a "verified 40" line says nothing about whether that was 40
+  // checklist confirms or 40 bare rulings.
+  const verifiedBySource = new Map();
+  // Verifies whose row exists but is NOT pending-review — verify answers one
+  // question ("is this specific unconfirmed row now confirmed?") and that
+  // question is meaningless off a row with no pending state to confirm. A
+  // REFUSAL, not a skip: the entry's premise about the row's state is wrong.
+  let refusedNotPending = 0;
   let refusedOccupied = 0, salesUnplaced = 0, salesRepointed = 0, gradedRetired = 0;
   // A SUBSET of refusedOccupied, never an addition to it: the reconciliation
   // identity below counts occupied refusals once, and a superset IS one.
@@ -826,15 +905,20 @@ async function main() {
       }
       // Already gone is the target state for a retire, and it is a SKIP, not a
       // success: a re-run must not inflate the written count.
-      // A PARK OF A ROW THAT IS GONE IS A REFUSAL, NOT A NO-OP. Park means
-      // "this row stays, unpriced, until a source confirms it" -- there is no
-      // such row, so the entry's premise is false and the list is out of date.
-      // Counting it as a skip would let a list quietly park nothing at all.
+      // A PARK OR A VERIFY OF A ROW THAT IS GONE IS A REFUSAL, NOT A NO-OP.
+      // Park means "this row stays, unpriced, until a source confirms it" and
+      // verify means "this specific unconfirmed row is now confirmed" --
+      // there is no such row, so the entry's premise is false and the list is
+      // out of date. Counting it as a skip would let a list quietly park or
+      // verify nothing at all.
       alreadyRight += action === "retire" ? 1 : 0;
       notFound += action === "retire" ? 0 : 1;
       console.log(`  NOT FOUND  ${id.slice(0, 70)}`);
       if (action === "park") {
         console.error("      a park needs a row to stamp — this entry's premise is gone; re-measure the list");
+      }
+      if (action === "verify") {
+        console.error("      a verify needs a row to stamp — this entry's premise is gone; re-measure the list");
       }
       continue;
     }
@@ -868,6 +952,57 @@ async function main() {
         );
         if (res?.action === "noop") { alreadyParked++; continue; }
         parked++;
+      } catch (err) {
+        failed++;
+        console.error(`      FAILED: ${String(err?.message ?? err).slice(0, 80)}`);
+      }
+      continue;
+    }
+
+    // ── VERIFY ────────────────────────────────────────────────────────────
+    //
+    // Nothing moves, nothing is deleted. A citation confirms a row a repair
+    // left `pending-review`, and the confirmation is stamped through the
+    // same field-patch helper park uses -- never a raw container.patch
+    // (#1614 left rows unfindable exactly that way).
+    if (action === "verify") {
+      const status = String(row.verificationStatus ?? "").trim();
+      console.log(`  VERIFY  ${id.slice(0, 70)}`);
+      console.log(`      ${String(row.playerName ?? "(no player)")} — ${String(row.setName ?? "")}`.slice(0, 100));
+      console.log(`      reason: ${reason.slice(0, 90)}`);
+      console.log(`      citation: ${c.citation.source} — ${c.citation.ref.slice(0, 90)}`);
+      if (status === "verified") {
+        alreadyVerified++;
+        console.log("      already verified — nothing to write");
+        continue;
+      }
+      // VERIFY ONLY ANSWERS ONE QUESTION: is THIS unconfirmed row now
+      // confirmed? A row that is not pending-review has no pending state for
+      // this entry to resolve -- retired-and-recreated, reslugged onto this
+      // id by something else, hand-edited, or simply never the row the list
+      // author measured. Refused, not skipped: the entry's premise about the
+      // row's state is wrong, the same way a park of a gone row is wrong.
+      if (status !== "pending-review") {
+        refusedNotPending++;
+        console.error(`  REFUSED (not pending-review)  ${id.slice(0, 62)}`);
+        console.error(`      current verificationStatus: ${status || "(none)"} — verify only confirms a pending-review row`);
+        continue;
+      }
+      // ONE call for both modes, with dryRun -- the same contract park and
+      // the reslug path honour: a report that cannot predict its apply is a
+      // green light for a write that will not happen.
+      try {
+        const res = await patchCatalogRowFields(
+          cat, id, row.cardId ?? id,
+          {
+            verificationStatus: "verified",
+            verifiedBy: { citation: c.citation, at: new Date().toISOString(), lane: "relocate-catalog-rows-by-list" },
+          },
+          { retry, dryRun: !APPLY, noShadow: true },
+        );
+        if (res?.action === "noop") { alreadyVerified++; continue; }
+        verified++;
+        verifiedBySource.set(c.citation.source, (verifiedBySource.get(c.citation.source) ?? 0) + 1);
       } catch (err) {
         failed++;
         console.error(`      FAILED: ${String(err?.message ?? err).slice(0, 80)}`);
@@ -1087,6 +1222,12 @@ async function main() {
   console.log(`  RESLUGGED (moved)       ${f(resluged)}`);
   console.log(`  PARKED (identityUnverified) ${f(parked)}   <- row and sales stay put, unpriced until a source confirms the identity`);
   console.log(`  already parked          ${f(alreadyParked)}   <- the stamp was already there; a re-run writes nothing`);
+  console.log(`  VERIFIED                ${f(verified)}   <- verificationStatus: "verified"; pricing stops withholding pending-review`);
+  for (const [source, n] of verifiedBySource) {
+    console.log(`    of which ${source.padEnd(20)} ${f(n)}`);
+  }
+  console.log(`  already verified        ${f(alreadyVerified)}   <- the stamp was already there; a re-run writes nothing`);
+  console.log(`  refused — not pending-review ${f(refusedNotPending)}   <- verify only confirms a pending-review row`);
   console.log(`  moves COMPLETED         ${f(movesCompleted)}   <- destination already held the row; the source was retired`);
   console.log(`  move landed; source retire failed ${f(moveSourceLeftBehind)}   <- TWO rows hold one card; re-run finishes it`);
   console.log(`  refused — occupied      ${f(refusedOccupied)}   <- a different card holds the target address`);
@@ -1127,12 +1268,12 @@ async function main() {
     console.log("  re-run this same list: each is completed by retiring the source, not refused as occupied");
   }
 
-  // A PARK WROTE: it patched a field on a row. `alreadyParked` did not -- the
-  // stamp was already there -- so it reconciles as a skip, the same way
-  // `already gone` does for a retire.
-  const written = retired + resluged + movesCompleted + moveSourceLeftBehind + parked;
-  const skipped = alreadyRight + notFound + alreadyParked;
-  const refused = refusedOccupied + refusedCrossMarket;
+  // A PARK OR A VERIFY WROTE: each patches a field on a row. `alreadyParked`
+  // and `alreadyVerified` did not -- the stamp was already there -- so both
+  // reconcile as a skip, the same way `already gone` does for a retire.
+  const written = retired + resluged + movesCompleted + moveSourceLeftBehind + parked + verified;
+  const skipped = alreadyRight + notFound + alreadyParked + alreadyVerified;
+  const refused = refusedOccupied + refusedCrossMarket + refusedNotPending;
   // A PARTIAL RUN STILL RECONCILES. The identity has to hold over what the
   // loop CONSIDERED, not over the file, or a budget stop reads as 6,695 lost
   // entries. `not reached` carries the remainder explicitly so the two numbers
