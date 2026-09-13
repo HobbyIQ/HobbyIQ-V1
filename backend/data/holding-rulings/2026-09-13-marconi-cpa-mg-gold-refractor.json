@@ -1,0 +1,17 @@
+{
+ "generatedAt": "2026-09-13T00:00:00.000Z",
+ "forLane": "recheck-holding-identity MODE=ruled",
+ "finding": "Drew's holding ca7a150b (user user-199fcbc9-58ba-4643-a0c9-f75bcbc90bd4) carries identityVerifiedBy.source='manual-confirm' pointing at hiq:baseball:2026:bowman-chrome:cpa-mg:gold-refractor:auto:num-50 -- the address the a78a5ea key-twin fold retired when it proved 2026 Chrome Prospect Autographs is a Bowman section, not a Bowman Chrome one (Beckett's 2026-bowman-full.csv). MODE=rederive correctly refuses to move this holding on its own: 'ruled by manual-confirm -- a human's identity is never overwritten by this pass'. Drew ruled 2026-09-13 to re-address it onto hiq:baseball:2026:bowman:cpa-mg:gold-refractor:auto:num-50, the row the fold moved the checklist onto and #2130 (relocate-catalog-rows-by-list verify) since confirmed with a checklistinsider citation.",
+ "entries": [
+  {
+   "holdingId": "ca7a150b-f126-49e0-bd5b-f899ff964a1f",
+   "userId": "user-199fcbc9-58ba-4643-a0c9-f75bcbc90bd4",
+   "to": "hiq:baseball:2026:bowman:cpa-mg:gold-refractor:auto:num-50",
+   "ruling": {
+    "by": "drew",
+    "date": "2026-09-13",
+    "note": "Drew 2026-09-13: same card, re-addressed after the Bowman Chrome -> Bowman fold ruling; Gold Refractor /50 attested by checklistinsider"
+   }
+  }
+ ]
+}
