@@ -1383,6 +1383,44 @@ async function main() {
     };
   };
 
+  /**
+   * THE PER-SCOPE PREDICATE COUNTS (2026-09-13 follow-on to R26/R27/R28).
+   *
+   * `mode=census` must answer "how many rows would R26/R27/R28 improve" AS A
+   * COUNT INDEPENDENT OF THE CLASS A ROW ACTUALLY LANDED IN and INDEPENDENT
+   * OF ANY DISPATCHED APPLY SCOPE, so the per-scope apply passes tomorrow have
+   * a number to size against BEFORE any of them is armed. `res.klass` /
+   * `res.subclass` answer a different question -- which ONE subclass a row's
+   * single classification return path settled on, first-match-wins among
+   * R26 -> R27 -> R28 -> the older subclasses, because `classifyRow` only
+   * ever returns once per row. That ordering is right for CLASSIFYING a row
+   * (a row is one card, one verdict) and wrong for SIZING three independent
+   * rulings that were each measured, and will each be applied, on their own
+   * canary and their own schedule.
+   *
+   * So the driver asks each evidence function DIRECTLY, off the SAME axes
+   * `classifyRow` itself computed (`res.axes` -- never recomputed, so a
+   * future axis-comparison change cannot make this count disagree with the
+   * class the row actually got) and the SAME catalog-fact inputs already
+   * gathered for the `classifyRow` call (`r26In`/`r27In`/`r28In` below -- so
+   * this costs NO additional catalog read; the three input functions are
+   * called once, spread into `classifyRow`, and reused here).
+   *
+   * THIS NEVER CHANGES A ROW'S CLASS. It reads `res.axes` after the fact and
+   * calls three PURE functions that return `{ qualifies, failed, evidence }`
+   * with no side effect -- the exact same guards `classifyRow` itself runs
+   * (GUARD 10's ambiguous-code refusal included, because `pokemonSetCodeEvidence`
+   * IS the function GUARD 10's own gap analysis is about: the P3 leg inside
+   * it is the ambiguous-code-unresolved check, asked here exactly as
+   * `classifyRow` asks it internally on the `changed:setKey` path).
+   *
+   * ONLY IN MODE=CENSUS. An apply pass already knows its own scope and reads
+   * writability off `res.writable` + `K.writableUnderScope`; paying for three
+   * extra predicate evaluations per row on every apply dispatch would be pure
+   * waste for a number the apply banner never prints.
+   */
+  const scopeCounts = { r26: 0, r27: 0, r28: 0 };
+
   // ── page the shard ────────────────────────────────────────────────────────
   const counts = { [K.AGREE]: 0, [K.IMPROVE]: 0, [K.CONFLICT]: 0, [K.UNDERIVABLE]: 0 };
   const byTier = new Map(), defects = new Map(), reasons = new Map(), samples = new Map(), subclasses = new Map();
@@ -1688,6 +1726,13 @@ async function main() {
       // candidate costs no catalog read for a question it never asks.
       const beName = beCandidate ? await checklistPlayerNameFor(der.identity) : null;
       const spec = await specInputs(row, stored, der);
+      // THE THREE RULED SCOPES OF 2026-09-13 (R26/R27/R28). Named here (not
+      // inlined into the spread below) so `mode=census` can hand the SAME
+      // objects straight to the evidence functions afterward for the
+      // per-scope predicate counts, at no extra catalog-read cost.
+      const r26In = await r26Inputs(row, stored, der);
+      const r27In = await r27Inputs(row, stored, der);
+      const r28In = await r28Inputs(row, stored, der);
       const res = K.classifyRow({
         row, stored, derived: der.ok ? der.identity : null, checklistBacked: backed, derivationReasons: der.reasons,
         storedSlug: row.cardId, baseDestSlug: der.baseSlug ?? null, baseDestBacked: baseBacked,
@@ -1723,11 +1768,45 @@ async function main() {
         // THE THREE RULED SCOPES OF 2026-09-13 (R26/R27/R28). Same discipline
         // as the trio above: supplied at BOTH call sites, each helper
         // cost-gated on pure synchronous work first.
-        ...(await r26Inputs(row, stored, der)),
-        ...(await r27Inputs(row, stored, der)),
-        ...(await r28Inputs(row, stored, der)),
+        ...r26In, ...r27In, ...r28In,
       });
       counts[res.klass]++;
+      // THE PER-SCOPE PREDICATE COUNTS, MODE=CENSUS ONLY. Asks each of the
+      // three 2026-09-13 evidence functions DIRECTLY, off `res.axes` (the
+      // exact diff `classifyRow` itself computed for this row) and the SAME
+      // input objects already gathered above -- no new catalog read, no
+      // change to `res` or to which class the row counted under. See the
+      // `scopeCounts` declaration above for why this is not simply
+      // `res.subclass === K.FLAGSHIP_SWALLOWED_NAMED_PRODUCT` et al.
+      if (MODE === "census") {
+        const derivedForEvidence = der.ok ? der.identity : null;
+        // Parameter names differ from r26In/r27In/r28In's own keys on
+        // purpose -- those are shaped for `classifyRow`'s destructure (which
+        // needs `derivedBackedR26` distinct from `derivedBackedR27`/`R28` so
+        // one caller answer cannot silently answer three different
+        // subclasses' checklist gates at once). The evidence functions take
+        // their ordinary parameter names directly; this is the same mapping
+        // `classifyRow` itself does internally when it calls each evidence
+        // function from its own destructured options.
+        if (K.flagshipSwallowedNamedProductEvidence({
+          row, stored, derived: derivedForEvidence, axes: res.axes,
+          derivedIsNamedProduct: r26In.derivedIsNamedProduct,
+          derivedBacked: r26In.derivedBackedR26,
+        }).qualifies) scopeCounts.r26++;
+        if (K.pokemonSetCodeEvidence({
+          row, stored, derived: derivedForEvidence, axes: res.axes,
+          derivedIsPokemonSetCode: r27In.derivedIsPokemonSetCode,
+          storedIsRivalSetCode: r27In.storedIsRivalPokemonSetCode,
+          isAmbiguousCode: r27In.pokemonCodeIsAmbiguous,
+          languageResolves: r27In.pokemonLanguageResolves,
+          derivedBacked: r27In.derivedBackedR27,
+        }).qualifies) scopeCounts.r27++;
+        if (K.finishIsAParallelEvidence({
+          row, stored, derived: derivedForEvidence, axes: res.axes,
+          checklistListsAsParallel: r28In.checklistListsFinishAsParallel,
+          derivedBacked: r28In.derivedBackedR28,
+        }).qualifies) scopeCounts.r28++;
+      }
       // THE SPLIT-IDENTITY SIGNAL, tallied ACROSS classes (Drew 2026-09-02).
       // The row's own two identity fields disagree, which the exact pool
       // reader turns into one sale priced into two cards. It is orthogonal to
@@ -2118,6 +2197,21 @@ async function main() {
       if (r28Samples.length) { console.log(`                           sample (${r28Samples.length}):`); for (const s of r28Samples) console.log(`                             ${s}`); }
     }
   }
+  // THE PER-SCOPE PREDICATE COUNTS SUMMARY (2026-09-13 follow-on), MODE=CENSUS
+  // ONLY. `console.warn` deliberately -- not `console.log` -- so this line
+  // survives a log grep filtered to warnings/errors the way the runner's own
+  // STARTUP REFUSED marker does, and so a reader scanning for "what does this
+  // number mean before tomorrow's apply passes are sized" finds it without
+  // reading the whole banner. Printed EVEN WHEN ALL THREE ARE ZERO: an absent
+  // line and a zero line mean different things (the shard has none of this
+  // shape vs. this shard was never asked), and only one of those readings
+  // must be possible from the log alone.
+  if (MODE === "census") {
+    console.warn(`\n  PER-SCOPE PREDICATE COUNTS (independent of class/subclass and of any dispatched apply scope):`);
+    console.warn(`    counts.r26 (R26-FLAGSHIP-SWALLOWED-NAMED-PRODUCT)  ${f(scopeCounts.r26)}`);
+    console.warn(`    counts.r27 (R27-POKEMON-SET-CODE)                  ${f(scopeCounts.r27)}`);
+    console.warn(`    counts.r28 (R28-FINISH-IS-A-PARALLEL)              ${f(scopeCounts.r28)}`);
+  }
   // SPLIT-IDENTITY: reported as its own block, not as a class. A split row
   // has already been counted under whichever derivation class it landed in;
   // this says how many of those rows ALSO contradict themselves.
@@ -2178,7 +2272,15 @@ async function main() {
     applyPrefilter: APPLY_PREFILTER
       ? { armed: [...ARMED], skipped: stats.prefiltered, classified: total }
       : null,
-    counts, byTier: Object.fromEntries(byTier), defects: Object.fromEntries(defects),
+    // `counts.r26`/`counts.r27`/`counts.r28` (2026-09-13 follow-on): the
+    // PER-SCOPE PREDICATE counts, MODE=CENSUS only (`scopeCounts` stays
+    // {0,0,0} under apply-improve and is included as such rather than
+    // omitted, so a reader diffing two artifacts never has to ask whether
+    // the key's absence means zero or means "not this mode" -- see
+    // `scopeCounts`'s own declaration for why these are independent of
+    // `counts[K.IMPROVE]`/`subclasses` and must never be summed with them.
+    counts: { ...counts, r26: scopeCounts.r26, r27: scopeCounts.r27, r28: scopeCounts.r28 },
+    byTier: Object.fromEntries(byTier), defects: Object.fromEntries(defects),
     // Subclass counts are INCLUDED in `counts` -- BASE-EVICTION is a narrowing
     // of CONFLICT, so an auditor summing both would double-count.
     subclasses: Object.fromEntries(subclasses),
