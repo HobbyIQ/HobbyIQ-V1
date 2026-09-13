@@ -346,6 +346,85 @@ insert-world-cup-stars,1,,false,,Lionel Messi
   });
 });
 
+describe("1989 Pro Set #47/#53/#260 — a stated variation survives into the id (#2117 regression pin)", () => {
+  /**
+   * MEASURED 2026-09-13: a report run over the staged acq-2026-09-13-scc
+   * directory (37 files, 11,666 csv rows) prints `catalog rows written
+   * 11,663`, `distinct ids 11,663`, `files REFUSED, id integrity 0` — a
+   * trivial reconciliation, because both numbers are counted AFTER the same
+   * 3 unrelated NNO rows (1999-00 Skybox Premium; unslugable, counted as
+   * `failed`, never as `written` or `distinct ids`) are set aside. That is
+   * the correct, already-declared arithmetic — see the "the distinct-ids
+   * counter" describe block above and CF-RECONCILE-DOCUMENTS-NOT-CALLS.
+   *
+   * The three pairs actually worth pinning are 1989 Pro Set's own #47, #53
+   * and #260: before #2117 the checklist printed each number TWICE with an
+   * identical BLANK parallel --
+   *
+   *     base,47,,false,,William Perry/
+   *     base,47,,false,,Ron Morris
+   *
+   * -- a genuine collision this module's guard is proven below to catch
+   * (whole-file refusal, both rows named). #2117 (7880b66) re-read the live
+   * pages and found the source's OWN word for each: "SP" on the Perry line,
+   * "CO"/"HOF" on the two CO/HOF pairs. R18-R20 says a named variation is a
+   * distinct card, so that word belongs on the parallel/variation axis, and
+   * once it is there `computeHobbyIqCardId` — unmodified, no src touched --
+   * derives six DISTINCT ids from the six rows, because parallel is already
+   * a segment of the id. Pinned here so this exact class of drift (a
+   * write-path caller silently discarding a stated SP/CO/HOF/ERR/COR/PROMO
+   * token before deriving the id) can never regress unnoticed.
+   */
+  const computeId = idFor("football", 1989);
+
+  it("BEFORE #2117: identical blank parallels really do collide, and the guard refuses the whole file, naming both rows of every pair", () => {
+    const rows = fixture(`
+category,cardNumber,parallel,isAuto,printRun,player
+base,47,,false,,William Perry/
+base,47,,false,,Ron Morris
+base,53,,false,,Mike Ditka CO
+base,53,,false,,Mike Ditka/HOF
+base,260,,false,,Raymond Berry CO
+base,260,,false,,Raymond Berry/HOF
+`);
+    const plan = lib.planFile({ rows, productSetKey: "pro-set", computeId, normalize: normalizeSetKey });
+    expect(plan.verdict).toBe("refuse");
+    expect(plan.reason).toBe("id-collisions");
+    expect(plan.collisions).toHaveLength(3);
+    expect(plan.ids).toBe(3);
+    const byNumber = Object.fromEntries(plan.collisions.map((c: any) => [c.id, c.rows.map((r: Row) => r.player).sort()]));
+    expect(byNumber["hiq:football:1989:pro-set:47:base:no-auto"]).toEqual(["Ron Morris", "William Perry/"]);
+    expect(byNumber["hiq:football:1989:pro-set:53:base:no-auto"]).toEqual(["Mike Ditka CO", "Mike Ditka/HOF"]);
+    expect(byNumber["hiq:football:1989:pro-set:260:base:no-auto"]).toEqual(["Raymond Berry CO", "Raymond Berry/HOF"]);
+  });
+
+  it("AFTER #2117: the source's own SP/CO/HOF label on the parallel column survives into the id — six rows, six distinct ids, zero collisions", () => {
+    const rows = fixture(`
+category,cardNumber,parallel,isAuto,printRun,player
+base,47,SP,false,,William Perry/
+base,47,,false,,Ron Morris
+base,53,CO,false,,Mike Ditka CO
+base,53,HOF,false,,Mike Ditka/HOF
+base,260,CO,false,,Raymond Berry CO
+base,260,HOF,false,,Raymond Berry/HOF
+`);
+    const ids = rows.map((r) => computeId({ ...r, setKey: "pro-set" }));
+    expect(new Set(ids).size).toBe(6);
+    expect(ids).toEqual([
+      "hiq:football:1989:pro-set:47:sp:no-auto",
+      "hiq:football:1989:pro-set:47:base:no-auto",
+      "hiq:football:1989:pro-set:53:co:no-auto",
+      "hiq:football:1989:pro-set:53:hof:no-auto",
+      "hiq:football:1989:pro-set:260:co:no-auto",
+      "hiq:football:1989:pro-set:260:hof:no-auto",
+    ]);
+    const plan = lib.planFile({ rows, productSetKey: "pro-set", computeId, normalize: normalizeSetKey });
+    expect(plan.verdict).toBe("pass");
+    expect(plan.ids).toBe(6);
+    expect(plan.collisions).toHaveLength(0);
+  });
+});
+
 describe("the refusal contract cannot be bypassed", () => {
   const rows = fixture(`
 category,cardNumber,parallel,isAuto,printRun,player
