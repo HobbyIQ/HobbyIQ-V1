@@ -1,0 +1,954 @@
+category,cardNumber,parallel,isAuto,printRun,player,parallelNote,rarity
+base,1,Base,false,,Vladimir Guerrero
+base,1,Chicago Collection,false,,Vladimir Guerrero,,
+base,2,Base,false,,Derek Jeter
+base,2,Chicago Collection,false,,Derek Jeter,,
+base,3,Base,false,,Adam Dunn
+base,3,Chicago Collection,false,,Adam Dunn,,
+base,4,Base,false,,Greg Maddux
+base,4,Chicago Collection,false,,Greg Maddux,,
+base,5,Base,false,,Lance Berkman
+base,5,Chicago Collection,false,,Lance Berkman,,
+base,6,Base,false,,Ichiro
+base,6,Chicago Collection,false,,Ichiro,,
+base,7,Base,false,,Mike Piazza
+base,7,Chicago Collection,false,,Mike Piazza,,
+base,8,Base,false,,Alex Rodriguez
+base,8,Chicago Collection,false,,Alex Rodriguez,,
+base,9,Base,false,,Tom Glavine
+base,9,Chicago Collection,false,,Tom Glavine,,
+base,10,Base,false,,Randy Johnson
+base,10,Chicago Collection,false,,Randy Johnson,,
+base,11,Base,false,,Nomar Garciaparra
+base,11,Chicago Collection,false,,Nomar Garciaparra,,
+base,12,Base,false,,Jason Giambi
+base,12,Chicago Collection,false,,Jason Giambi,,
+base,13,Base,false,,Sammy Sosa
+base,13,Chicago Collection,false,,Sammy Sosa,,
+base,14,Base,false,,Barry Zito
+base,14,Chicago Collection,false,,Barry Zito,,
+base,15,Base,false,,Chipper Jones
+base,15,Chicago Collection,false,,Chipper Jones,,
+base,16,Base,false,,Magglio Ordonez
+base,16,Chicago Collection,false,,Magglio Ordonez,,
+base,17,Base,false,,Larry Walker
+base,17,Chicago Collection,false,,Larry Walker,,
+base,18,Base,false,,Alfonso Soriano
+base,18,Chicago Collection,false,,Alfonso Soriano,,
+base,19,Base,false,,Curt Schilling
+base,19,Chicago Collection,false,,Curt Schilling,,
+base,20,Base,false,,Barry Bonds
+base,20,Chicago Collection,false,,Barry Bonds,,
+base,21,Base,false,,Joe Borchard
+base,21,Chicago Collection,false,,Joe Borchard,,
+base,22,Base,false,,Chris Snelling
+base,22,Chicago Collection,false,,Chris Snelling,,
+base,23,Base,false,,Brian Tallet
+base,23,Chicago Collection,false,,Brian Tallet,,
+base,24,Base,false,,Cliff Lee
+base,24,Chicago Collection,false,,Cliff Lee,,
+base,25,Base,false,,Freddy Sanchez
+base,25,Chicago Collection,false,,Freddy Sanchez,,
+base,26,Base,false,,Chone Figgins
+base,26,Chicago Collection,false,,Chone Figgins,,
+base,27,Base,false,,Kevin Cash
+base,27,Chicago Collection,false,,Kevin Cash,,
+base,28,Base,false,,Josh Bard
+base,28,Chicago Collection,false,,Josh Bard,,
+base,29,Base,false,,Jeriome Robertson
+base,29,Chicago Collection,false,,Jeriome Robertson,,
+base,30,Base,false,,Jeremy Hill
+base,30,Chicago Collection,false,,Jeremy Hill,,
+base,31,Base,false,,Shane Nance
+base,31,Chicago Collection,false,,Shane Nance,,
+base,32,Base,false,,Jake Peavy
+base,32,Chicago Collection,false,,Jake Peavy,,
+base,33,Base,false,,Trey Hodges
+base,33,Chicago Collection,false,,Trey Hodges,,
+base,34,Base,false,,Eric Eckenstahler
+base,34,Chicago Collection,false,,Eric Eckenstahler,,
+base,35,Base,false,,Jim Rushford
+base,35,Chicago Collection,false,,Jim Rushford,,
+base,36,Base,false,,Oliver Perez
+base,36,Chicago Collection,false,,Oliver Perez,,
+base,37,Base,false,,Kirk Saarloos
+base,37,Chicago Collection,false,,Kirk Saarloos,,
+base,38,Base,false,,Hank Blalock
+base,38,Chicago Collection,false,,Hank Blalock,,
+base,39,Base,false,,Francisco Rodriguez
+base,39,Chicago Collection,false,,Francisco Rodriguez,,
+base,40,Base,false,,Runelvys Hernandez
+base,40,Chicago Collection,false,,Runelvys Hernandez,,
+base,41,Base,false,,Aaron Cook
+base,41,Chicago Collection,false,,Aaron Cook,,
+base,42,Base,false,,Josh Hancock
+base,42,Chicago Collection,false,,Josh Hancock,,
+base,43,Base,false,,P.J. Bevis
+base,43,Chicago Collection,false,,P.J. Bevis,,
+base,44,Base,false,,Jon Adkins
+base,44,Chicago Collection,false,,Jon Adkins,,
+base,45,Base,false,,Tim Kalita
+base,45,Chicago Collection,false,,Tim Kalita,,
+base,46,Base,false,,Nelson Castro
+base,46,Chicago Collection,false,,Nelson Castro,,
+base,47,Base,false,,Colin Young
+base,47,Chicago Collection,false,,Colin Young,,
+base,48,Base,false,,Adrian Burnside
+base,48,Chicago Collection,false,,Adrian Burnside,,
+base,49,Base,false,,Luis Martinez
+base,49,Chicago Collection,false,,Luis Martinez,,
+base,50,Base,false,,Pete Zamora
+base,50,Chicago Collection,false,,Pete Zamora,,
+base,51,Base,false,,Todd Donovan
+base,51,Chicago Collection,false,,Todd Donovan,,
+base,52,Base,false,,Jeremy Ward
+base,52,Chicago Collection,false,,Jeremy Ward,,
+base,53,Base,false,,Wilson Valdez
+base,53,Chicago Collection,false,,Wilson Valdez,,
+base,54,Base,false,,Eric Good
+base,54,Chicago Collection,false,,Eric Good,,
+base,55,Base,false,,Jeff Baker
+base,55,Chicago Collection,false,,Jeff Baker,,
+base,56,Base,false,,Mitch Wylie
+base,56,Chicago Collection,false,,Mitch Wylie,,
+base,57,Base,false,,Ron Calloway
+base,57,Chicago Collection,false,,Ron Calloway,,
+base,58,Base,false,,Jose Valverde
+base,58,Chicago Collection,false,,Jose Valverde,,
+base,59,Base,false,,Jason Davis
+base,59,Chicago Collection,false,,Jason Davis,,
+base,60,Base,false,,Scotty Layfield
+base,60,Chicago Collection,false,,Scotty Layfield,,
+base,61,Base,false,,Matt Thornton
+base,61,Chicago Collection,false,,Matt Thornton,,
+base,62,Base,false,,Adam Walker
+base,62,Chicago Collection,false,,Adam Walker,,
+base,63,Base,false,,Gustavo Chacin
+base,63,Chicago Collection,false,,Gustavo Chacin,,
+base,64,Base,false,,Ron Chiavacci
+base,64,Chicago Collection,false,,Ron Chiavacci,,
+base,65,Base,false,,Will Nieves
+base,65,Chicago Collection,false,,Will Nieves,,
+base,66,Base,false,,Cliff Bartosh
+base,66,Chicago Collection,false,,Cliff Bartosh,,
+base,67,Base,false,,Mike Gonzalez
+base,67,Chicago Collection,false,,Mike Gonzalez,,
+base,68,Base,false,,Justin Wayne
+base,68,Chicago Collection,false,,Justin Wayne,,
+base,69,Base,false,,Eric Junge
+base,69,Chicago Collection,false,,Eric Junge,,
+base,70,Base,false,,Ben Kozlowski
+base,70,Chicago Collection,false,,Ben Kozlowski,,
+base,71,Base,false,,Darin Erstad
+base,71,Chicago Collection,false,,Darin Erstad,,
+base,72,Base,false,,Garret Anderson
+base,72,Chicago Collection,false,,Garret Anderson,,
+base,73,Base,false,,Troy Glaus
+base,73,Chicago Collection,false,,Troy Glaus,,
+base,74,Base,false,,David Eckstein
+base,74,Chicago Collection,false,,David Eckstein,,
+base,75,Base,false,,Adam Kennedy
+base,75,Chicago Collection,false,,Adam Kennedy,,
+base,76,Base,false,,Kevin Appier
+base,76,Chicago Collection,false,,Kevin Appier,,
+base,77,Base,false,,Jarrod Washburn
+base,77,Chicago Collection,false,,Jarrod Washburn,,
+base,78,Base,false,,Scott Spiezio
+base,78,Chicago Collection,false,,Scott Spiezio,,
+base,79,Base,false,,Tim Salmon
+base,79,Chicago Collection,false,,Tim Salmon,,
+base,80,Base,false,,Ramon Ortiz
+base,80,Chicago Collection,false,,Ramon Ortiz,,
+base,81,Base,false,,Bengie Molina
+base,81,Chicago Collection,false,,Bengie Molina,,
+base,82,Base,false,,Brad Fullmer
+base,82,Chicago Collection,false,,Brad Fullmer,,
+base,83,Base,false,,Troy Percival
+base,83,Chicago Collection,false,,Troy Percival,,
+base,84,Base,false,,David Segui
+base,84,Chicago Collection,false,,David Segui,,
+base,85,Base,false,,Jay Gibbons
+base,85,Chicago Collection,false,,Jay Gibbons,,
+base,86,Base,false,,Tony Batista
+base,86,Chicago Collection,false,,Tony Batista,,
+base,87,Base,false,,Scott Erickson
+base,87,Chicago Collection,false,,Scott Erickson,,
+base,88,Base,false,,Jeff Conine
+base,88,Chicago Collection,false,,Jeff Conine,,
+base,89,Base,false,,Melvin Mora
+base,89,Chicago Collection,false,,Melvin Mora,,
+base,90,Base,false,,Buddy Groom
+base,90,Chicago Collection,false,,Buddy Groom,,
+base,91,Base,false,,Rodrigo Lopez
+base,91,Chicago Collection,false,,Rodrigo Lopez,,
+base,92,Base,false,,Marty Cordova
+base,92,Chicago Collection,false,,Marty Cordova,,
+base,93,Base,false,,Geronimo Gil
+base,93,Chicago Collection,false,,Geronimo Gil,,
+base,94,Base,false,,Kenny Lofton
+base,94,Chicago Collection,false,,Kenny Lofton,,
+base,95,Base,false,,Shea Hillenbrand
+base,95,Chicago Collection,false,,Shea Hillenbrand,,
+base,96,Base,false,,Manny Ramirez
+base,96,Chicago Collection,false,,Manny Ramirez,,
+base,97,Base,false,,Pedro Martinez
+base,97,Chicago Collection,false,,Pedro Martinez,,
+base,98,Base,false,,Nomar Garciaparra
+base,98,Chicago Collection,false,,Nomar Garciaparra,,
+base,99,Base,false,,Rickey Henderson
+base,99,Chicago Collection,false,,Rickey Henderson,,
+base,100,Base,false,,Johnny Damon
+base,100,Chicago Collection,false,,Johnny Damon,,
+base,101,Base,false,,Trot Nixon
+base,101,Chicago Collection,false,,Trot Nixon,,
+base,102,Base,false,,Derek Lowe
+base,102,Chicago Collection,false,,Derek Lowe,,
+base,103,Base,false,,Hee Seop Choi
+base,103,Chicago Collection,false,,Hee Seop Choi,,
+base,104,Base,false,,Mark Teixeira
+base,104,Chicago Collection,false,,Mark Teixeira,,
+base,105,Base,false,,Tim Wakefield
+base,105,Chicago Collection,false,,Tim Wakefield,,
+base,106,Base,false,,Jason Varitek
+base,106,Chicago Collection,false,,Jason Varitek,,
+base,107,Base,false,,Frank Thomas
+base,107,Chicago Collection,false,,Frank Thomas,,
+base,108,Base,false,,Joe Crede
+base,108,Chicago Collection,false,,Joe Crede,,
+base,109,Base,false,,Magglio Ordonez
+base,109,Chicago Collection,false,,Magglio Ordonez,,
+base,110,Base,false,,Ray Durham
+base,110,Chicago Collection,false,,Ray Durham,,
+base,111,Base,false,,Mark Buehrle
+base,111,Chicago Collection,false,,Mark Buehrle,,
+base,112,Base,false,,Paul Konerko
+base,112,Chicago Collection,false,,Paul Konerko,,
+base,113,Base,false,,Jose Valentin
+base,113,Chicago Collection,false,,Jose Valentin,,
+base,114,Base,false,,Carlos Lee
+base,114,Chicago Collection,false,,Carlos Lee,,
+base,115,Base,false,,Royce Clayton
+base,115,Chicago Collection,false,,Royce Clayton,,
+base,116,Base,false,,CC Sabathia
+base,116,Chicago Collection,false,,CC Sabathia,,
+base,117,Base,false,,Ellis Burks
+base,117,Chicago Collection,false,,Ellis Burks,,
+base,118,Base,false,,Omar Vizquel
+base,118,Chicago Collection,false,,Omar Vizquel,,
+base,119,Base,false,,Jim Thome
+base,119,Chicago Collection,false,,Jim Thome,,
+base,120,Base,false,,Matt Lawton
+base,120,Chicago Collection,false,,Matt Lawton,,
+base,121,Base,false,,Travis Fryman
+base,121,Chicago Collection,false,,Travis Fryman,,
+base,122,Base,false,,Earl Snyder
+base,122,Chicago Collection,false,,Earl Snyder,,
+base,123,Base,false,,Ricky Gutierrez
+base,123,Chicago Collection,false,,Ricky Gutierrez,,
+base,124,Base,false,,Einar Diaz
+base,124,Chicago Collection,false,,Einar Diaz,,
+base,125,Base,false,,Danys Baez
+base,125,Chicago Collection,false,,Danys Baez,,
+base,126,Base,false,,Robert Fick
+base,126,Chicago Collection,false,,Robert Fick,,
+base,127,Base,false,,Bobby Higginson
+base,127,Chicago Collection,false,,Bobby Higginson,,
+base,128,Base,false,,Steve Sparks
+base,128,Chicago Collection,false,,Steve Sparks,,
+base,129,Base,false,,Mike Rivera
+base,129,Chicago Collection,false,,Mike Rivera,,
+base,130,Base,false,,Wendell Magee
+base,130,Chicago Collection,false,,Wendell Magee,,
+base,131,Base,false,,Randall Simon
+base,131,Chicago Collection,false,,Randall Simon,,
+base,132,Base,false,,Carlos Pena
+base,132,Chicago Collection,false,,Carlos Pena,,
+base,133,Base,false,,Mark Redman
+base,133,Chicago Collection,false,,Mark Redman,,
+base,134,Base,false,,Juan Acevedo
+base,134,Chicago Collection,false,,Juan Acevedo,,
+base,135,Base,false,,Mike Sweeney
+base,135,Chicago Collection,false,,Mike Sweeney,,
+base,136,Base,false,,Aaron Guiel
+base,136,Chicago Collection,false,,Aaron Guiel,,
+base,137,Base,false,,Carlos Beltran
+base,137,Chicago Collection,false,,Carlos Beltran,,
+base,138,Base,false,,Joe Randa
+base,138,Chicago Collection,false,,Joe Randa,,
+base,139,Base,false,,Paul Byrd
+base,139,Chicago Collection,false,,Paul Byrd,,
+base,140,Base,false,,Shawn Sedlacek
+base,140,Chicago Collection,false,,Shawn Sedlacek,,
+base,141,Base,false,,Raul Ibanez
+base,141,Chicago Collection,false,,Raul Ibanez,,
+base,142,Base,false,,Michael Tucker
+base,142,Chicago Collection,false,,Michael Tucker,,
+base,143,Base,false,,Torii Hunter
+base,143,Chicago Collection,false,,Torii Hunter,,
+base,144,Base,false,,Jacque Jones
+base,144,Chicago Collection,false,,Jacque Jones,,
+base,145,Base,false,,David Ortiz
+base,145,Chicago Collection,false,,David Ortiz,,
+base,146,Base,false,,Corey Koskie
+base,146,Chicago Collection,false,,Corey Koskie,,
+base,147,Base,false,,Brad Radke
+base,147,Chicago Collection,false,,Brad Radke,,
+base,148,Base,false,,Doug Mientkiewicz
+base,148,Chicago Collection,false,,Doug Mientkiewicz,,
+base,149,Base,false,,A.J. Pierzynski
+base,149,Chicago Collection,false,,A.J. Pierzynski,,
+base,150,Base,false,,Dustan Mohr
+base,150,Chicago Collection,false,,Dustan Mohr,,
+base,151,Base,false,,Michael Cuddyer
+base,151,Chicago Collection,false,,Michael Cuddyer,,
+base,152,Base,false,,Eddie Guardado
+base,152,Chicago Collection,false,,Eddie Guardado,,
+base,153,Base,false,,Cristian Guzman
+base,153,Chicago Collection,false,,Cristian Guzman,,
+base,154,Base,false,,Derek Jeter
+base,154,Chicago Collection,false,,Derek Jeter,,
+base,155,Base,false,,Bernie Williams
+base,155,Chicago Collection,false,,Bernie Williams,,
+base,156,Base,false,,Roger Clemens
+base,156,Chicago Collection,false,,Roger Clemens,,
+base,157,Base,false,,Mike Mussina
+base,157,Chicago Collection,false,,Mike Mussina,,
+base,158,Base,false,,Jorge Posada
+base,158,Chicago Collection,false,,Jorge Posada,,
+base,159,Base,false,,Alfonso Soriano
+base,159,Chicago Collection,false,,Alfonso Soriano,,
+base,160,Base,false,,Jason Giambi
+base,160,Chicago Collection,false,,Jason Giambi,,
+base,161,Base,false,,Robin Ventura
+base,161,Chicago Collection,false,,Robin Ventura,,
+base,162,Base,false,,Andy Pettitte
+base,162,Chicago Collection,false,,Andy Pettitte,,
+base,163,Base,false,,David Wells
+base,163,Chicago Collection,false,,David Wells,,
+base,164,Base,false,,Nick Johnson
+base,164,Chicago Collection,false,,Nick Johnson,,
+base,165,Base,false,,Jeff Weaver
+base,165,Chicago Collection,false,,Jeff Weaver,,
+base,166,Base,false,,Raul Mondesi
+base,166,Chicago Collection,false,,Raul Mondesi,,
+base,167,Base,false,,Rondell White
+base,167,Chicago Collection,false,,Rondell White,,
+base,168,Base,false,,Tim Hudson
+base,168,Chicago Collection,false,,Tim Hudson,,
+base,169,Base,false,,Barry Zito
+base,169,Chicago Collection,false,,Barry Zito,,
+base,170,Base,false,,Mark Mulder
+base,170,Chicago Collection,false,,Mark Mulder,,
+base,171,Base,false,,Miguel Tejada
+base,171,Chicago Collection,false,,Miguel Tejada,,
+base,172,Base,false,,Eric Chavez
+base,172,Chicago Collection,false,,Eric Chavez,,
+base,173,Base,false,,Billy Koch
+base,173,Chicago Collection,false,,Billy Koch,,
+base,174,Base,false,,Jermaine Dye
+base,174,Chicago Collection,false,,Jermaine Dye,,
+base,175,Base,false,,Scott Hatteberg
+base,175,Chicago Collection,false,,Scott Hatteberg,,
+base,176,Base,false,,Terrence Long
+base,176,Chicago Collection,false,,Terrence Long,,
+base,177,Base,false,,David Justice
+base,177,Chicago Collection,false,,David Justice,,
+base,178,Base,false,,Ramon Hernandez
+base,178,Chicago Collection,false,,Ramon Hernandez,,
+base,179,Base,false,,Ted Lilly
+base,179,Chicago Collection,false,,Ted Lilly,,
+base,180,Base,false,,Ichiro
+base,180,Chicago Collection,false,,Ichiro,,
+base,181,Base,false,,Edgar Martinez
+base,181,Chicago Collection,false,,Edgar Martinez,,
+base,182,Base,false,,Mike Cameron
+base,182,Chicago Collection,false,,Mike Cameron,,
+base,183,Base,false,,John Olerud
+base,183,Chicago Collection,false,,John Olerud,,
+base,184,Base,false,,Bret Boone
+base,184,Chicago Collection,false,,Bret Boone,,
+base,185,Base,false,,Dan Wilson
+base,185,Chicago Collection,false,,Dan Wilson,,
+base,186,Base,false,,Freddy Garcia
+base,186,Chicago Collection,false,,Freddy Garcia,,
+base,187,Base,false,,Jamie Moyer
+base,187,Chicago Collection,false,,Jamie Moyer,,
+base,188,Base,false,,Carlos Guillen
+base,188,Chicago Collection,false,,Carlos Guillen,,
+base,189,Base,false,,Ruben Sierra
+base,189,Chicago Collection,false,,Ruben Sierra,,
+base,190,Base,false,,Kazuhiro Sasaki
+base,190,Chicago Collection,false,,Kazuhiro Sasaki,,
+base,191,Base,false,,Mark McLemore
+base,191,Chicago Collection,false,,Mark McLemore,,
+base,192,Base,false,,John Halama
+base,192,Chicago Collection,false,,John Halama,,
+base,193,Base,false,,Joel Pineiro
+base,193,Chicago Collection,false,,Joel Pineiro,,
+base,194,Base,false,,Jeff Cirillo
+base,194,Chicago Collection,false,,Jeff Cirillo,,
+base,195,Base,false,,Rafael Soriano
+base,195,Chicago Collection,false,,Rafael Soriano,,
+base,196,Base,false,,Ben Grieve
+base,196,Chicago Collection,false,,Ben Grieve,,
+base,197,Base,false,,Aubrey Huff
+base,197,Chicago Collection,false,,Aubrey Huff,,
+base,198,Base,false,,Steve Cox
+base,198,Chicago Collection,false,,Steve Cox,,
+base,199,Base,false,,Toby Hall
+base,199,Chicago Collection,false,,Toby Hall,,
+base,200,Base,false,,Randy Winn
+base,200,Chicago Collection,false,,Randy Winn,,
+base,201,Base,false,,Brent Abernathy
+base,201,Chicago Collection,false,,Brent Abernathy,,
+base,202,Base,false,,Chris Gomez
+base,202,Chicago Collection,false,,Chris Gomez,,
+base,203,Base,false,,John Flaherty
+base,203,Chicago Collection,false,,John Flaherty,,
+base,204,Base,false,,Paul Wilson
+base,204,Chicago Collection,false,,Paul Wilson,,
+base,205,Base,false,,Chan Ho Park
+base,205,Chicago Collection,false,,Chan Ho Park,,
+base,206,Base,false,,Alex Rodriguez
+base,206,Chicago Collection,false,,Alex Rodriguez,,
+base,207,Base,false,,Juan Gonzalez
+base,207,Chicago Collection,false,,Juan Gonzalez,,
+base,208,Base,false,,Rafael Palmeiro
+base,208,Chicago Collection,false,,Rafael Palmeiro,,
+base,209,Base,false,,Ivan Rodriguez
+base,209,Chicago Collection,false,,Ivan Rodriguez,,
+base,210,Base,false,,Rusty Greer
+base,210,Chicago Collection,false,,Rusty Greer,,
+base,211,Base,false,,Kenny Rogers
+base,211,Chicago Collection,false,,Kenny Rogers,,
+base,212,Base,false,,Ismael Valdes
+base,212,Chicago Collection,false,,Ismael Valdes,,
+base,213,Base,false,,Frank Catalanotto
+base,213,Chicago Collection,false,,Frank Catalanotto,,
+base,214,Base,false,,Hank Blalock
+base,214,Chicago Collection,false,,Hank Blalock,,
+base,215,Base,false,,Michael Young
+base,215,Chicago Collection,false,,Michael Young,,
+base,216,Base,false,,Kevin Mench
+base,216,Chicago Collection,false,,Kevin Mench,,
+base,217,Base,false,,Herb Perry
+base,217,Chicago Collection,false,,Herb Perry,,
+base,218,Base,false,,Gabe Kapler
+base,218,Chicago Collection,false,,Gabe Kapler,,
+base,219,Base,false,,Carlos Delgado
+base,219,Chicago Collection,false,,Carlos Delgado,,
+base,220,Base,false,,Shannon Stewart
+base,220,Chicago Collection,false,,Shannon Stewart,,
+base,221,Base,false,,Eric Hinske
+base,221,Chicago Collection,false,,Eric Hinske,,
+base,222,Base,false,,Roy Halladay
+base,222,Chicago Collection,false,,Roy Halladay,,
+base,223,Base,false,,Felipe Lopez
+base,223,Chicago Collection,false,,Felipe Lopez,,
+base,224,Base,false,,Vernon Wells
+base,224,Chicago Collection,false,,Vernon Wells,,
+base,225,Base,false,,Josh Phelps
+base,225,Chicago Collection,false,,Josh Phelps,,
+base,226,Base,false,,Jose Cruz
+base,226,Chicago Collection,false,,Jose Cruz,,
+base,227,Base,false,,Curt Schilling
+base,227,Chicago Collection,false,,Curt Schilling,,
+base,228,Base,false,,Randy Johnson
+base,228,Chicago Collection,false,,Randy Johnson,,
+base,229,Base,false,,Luis Gonzalez
+base,229,Chicago Collection,false,,Luis Gonzalez,,
+base,230,Base,false,,Mark Grace
+base,230,Chicago Collection,false,,Mark Grace,,
+base,231,Base,false,,Junior Spivey
+base,231,Chicago Collection,false,,Junior Spivey,,
+base,232,Base,false,,Tony Womack
+base,232,Chicago Collection,false,,Tony Womack,,
+base,233,Base,false,,Matt Williams
+base,233,Chicago Collection,false,,Matt Williams,,
+base,234,Base,false,,Steve Finley
+base,234,Chicago Collection,false,,Steve Finley,,
+base,235,Base,false,,Byung-Hyun Kim
+base,235,Chicago Collection,false,,Byung-Hyun Kim,,
+base,236,Base,false,,Craig Counsell
+base,236,Chicago Collection,false,,Craig Counsell,,
+base,237,Base,false,,Greg Maddux
+base,237,Chicago Collection,false,,Greg Maddux,,
+base,238,Base,false,,Tom Glavine
+base,238,Chicago Collection,false,,Tom Glavine,,
+base,239,Base,false,,John Smoltz
+base,239,Chicago Collection,false,,John Smoltz,,
+base,240,Base,false,,Chipper Jones
+base,240,Chicago Collection,false,,Chipper Jones,,
+base,241,Base,false,,Gary Sheffield
+base,241,Chicago Collection,false,,Gary Sheffield,,
+base,242,Base,false,,Andruw Jones
+base,242,Chicago Collection,false,,Andruw Jones,,
+base,243,Base,false,,Vinny Castilla
+base,243,Chicago Collection,false,,Vinny Castilla,,
+base,244,Base,false,,Damian Moss
+base,244,Chicago Collection,false,,Damian Moss,,
+base,245,Base,false,,Rafael Furcal
+base,245,Chicago Collection,false,,Rafael Furcal,,
+base,246,Base,false,,Javy Lopez
+base,246,Chicago Collection,false,,Javy Lopez,,
+base,247,Base,false,,Kevin Millwood
+base,247,Chicago Collection,false,,Kevin Millwood,,
+base,248,Base,false,,Kerry Wood
+base,248,Chicago Collection,false,,Kerry Wood,,
+base,249,Base,false,,Fred McGriff
+base,249,Chicago Collection,false,,Fred McGriff,,
+base,250,Base,false,,Sammy Sosa
+base,250,Chicago Collection,false,,Sammy Sosa,,
+base,251,Base,false,,Alex S. Gonzalez
+base,251,Chicago Collection,false,,Alex S. Gonzalez,,
+base,252,Base,false,,Corey Patterson
+base,252,Chicago Collection,false,,Corey Patterson,,
+base,253,Base,false,,Moises Alou
+base,253,Chicago Collection,false,,Moises Alou,,
+base,254,Base,false,,Juan Cruz
+base,254,Chicago Collection,false,,Juan Cruz,,
+base,255,Base,false,,Jon Lieber
+base,255,Chicago Collection,false,,Jon Lieber,,
+base,256,Base,false,,Matt Clement
+base,256,Chicago Collection,false,,Matt Clement,,
+base,257,Base,false,,Mark Prior
+base,257,Chicago Collection,false,,Mark Prior,,
+base,258,Base,false,,Ken Griffey Jr.
+base,258,Chicago Collection,false,,Ken Griffey Jr.,,
+base,259,Base,false,,Barry Larkin
+base,259,Chicago Collection,false,,Barry Larkin,,
+base,260,Base,false,,Adam Dunn
+base,260,Chicago Collection,false,,Adam Dunn,,
+base,261,Base,false,,Sean Casey
+base,261,Chicago Collection,false,,Sean Casey,,
+base,262,Base,false,,Jose Rijo
+base,262,Chicago Collection,false,,Jose Rijo,,
+base,263,Base,false,,Elmer Dessens
+base,263,Chicago Collection,false,,Elmer Dessens,,
+base,264,Base,false,,Austin Kearns
+base,264,Chicago Collection,false,,Austin Kearns,,
+base,265,Base,false,,Corky Miller
+base,265,Chicago Collection,false,,Corky Miller,,
+base,266,Base,false,,Todd Walker
+base,266,Chicago Collection,false,,Todd Walker,,
+base,267,Base,false,,Chris Reitsma
+base,267,Chicago Collection,false,,Chris Reitsma,,
+base,268,Base,false,,Ryan Dempster
+base,268,Chicago Collection,false,,Ryan Dempster,,
+base,269,Base,false,,Aaron Boone
+base,269,Chicago Collection,false,,Aaron Boone,,
+base,270,Base,false,,Danny Graves
+base,270,Chicago Collection,false,,Danny Graves,,
+base,271,Base,false,,Brandon Larson
+base,271,Chicago Collection,false,,Brandon Larson,,
+base,272,Base,false,,Larry Walker
+base,272,Chicago Collection,false,,Larry Walker,,
+base,273,Base,false,,Todd Helton
+base,273,Chicago Collection,false,,Todd Helton,,
+base,274,Base,false,,Juan Uribe
+base,274,Chicago Collection,false,,Juan Uribe,,
+base,275,Base,false,,Juan Pierre
+base,275,Chicago Collection,false,,Juan Pierre,,
+base,276,Base,false,,Mike Hampton
+base,276,Chicago Collection,false,,Mike Hampton,,
+base,277,Base,false,,Todd Zeile
+base,277,Chicago Collection,false,,Todd Zeile,,
+base,278,Base,false,,Todd Hollandsworth
+base,278,Chicago Collection,false,,Todd Hollandsworth,,
+base,279,Base,false,,Jason Jennings
+base,279,Chicago Collection,false,,Jason Jennings,,
+base,280,Base,false,,Josh Beckett
+base,280,Chicago Collection,false,,Josh Beckett,,
+base,281,Base,false,,Mike Lowell
+base,281,Chicago Collection,false,,Mike Lowell,,
+base,282,Base,false,,Derrek Lee
+base,282,Chicago Collection,false,,Derrek Lee,,
+base,283,Base,false,,A.J. Burnett
+base,283,Chicago Collection,false,,A.J. Burnett,,
+base,284,Base,false,,Luis Castillo
+base,284,Chicago Collection,false,,Luis Castillo,,
+base,285,Base,false,,Tim Raines
+base,285,Chicago Collection,false,,Tim Raines,,
+base,286,Base,false,,Preston Wilson
+base,286,Chicago Collection,false,,Preston Wilson,,
+base,287,Base,false,,Juan Encarnacion
+base,287,Chicago Collection,false,,Juan Encarnacion,,
+base,288,Base,false,,Charles Johnson
+base,288,Chicago Collection,false,,Charles Johnson,,
+base,289,Base,false,,Jeff Bagwell
+base,289,Chicago Collection,false,,Jeff Bagwell,,
+base,290,Base,false,,Craig Biggio
+base,290,Chicago Collection,false,,Craig Biggio,,
+base,291,Base,false,,Lance Berkman
+base,291,Chicago Collection,false,,Lance Berkman,,
+base,292,Base,false,,Daryle Ward
+base,292,Chicago Collection,false,,Daryle Ward,,
+base,293,Base,false,,Roy Oswalt
+base,293,Chicago Collection,false,,Roy Oswalt,,
+base,294,Base,false,,Richard Hidalgo
+base,294,Chicago Collection,false,,Richard Hidalgo,,
+base,295,Base,false,,Octavio Dotel
+base,295,Chicago Collection,false,,Octavio Dotel,,
+base,296,Base,false,,Wade Miller
+base,296,Chicago Collection,false,,Wade Miller,,
+base,297,Base,false,,Julio Lugo
+base,297,Chicago Collection,false,,Julio Lugo,,
+base,298,Base,false,,Billy Wagner
+base,298,Chicago Collection,false,,Billy Wagner,,
+base,299,Base,false,,Shawn Green
+base,299,Chicago Collection,false,,Shawn Green,,
+base,300,Base,false,,Adrian Beltre
+base,300,Chicago Collection,false,,Adrian Beltre,,
+base,301,Base,false,,Paul Lo Duca
+base,301,Chicago Collection,false,,Paul Lo Duca,,
+base,302,Base,false,,Eric Karros
+base,302,Chicago Collection,false,,Eric Karros,,
+base,303,Base,false,,Kevin Brown
+base,303,Chicago Collection,false,,Kevin Brown,,
+base,304,Base,false,,Hideo Nomo
+base,304,Chicago Collection,false,,Hideo Nomo,,
+base,305,Base,false,,Odalis Perez
+base,305,Chicago Collection,false,,Odalis Perez,,
+base,306,Base,false,,Eric Gagne
+base,306,Chicago Collection,false,,Eric Gagne,,
+base,307,Base,false,,Brian Jordan
+base,307,Chicago Collection,false,,Brian Jordan,,
+base,308,Base,false,,Cesar Izturis
+base,308,Chicago Collection,false,,Cesar Izturis,,
+base,309,Base,false,,Mark Grudzielanek
+base,309,Chicago Collection,false,,Mark Grudzielanek,,
+base,310,Base,false,,Kazuhisa Ishii
+base,310,Chicago Collection,false,,Kazuhisa Ishii,,
+base,311,Base,false,,Geoff Jenkins
+base,311,Chicago Collection,false,,Geoff Jenkins,,
+base,312,Base,false,,Richie Sexson
+base,312,Chicago Collection,false,,Richie Sexson,,
+base,313,Base,false,,Jose Hernandez
+base,313,Chicago Collection,false,,Jose Hernandez,,
+base,314,Base,false,,Ben Sheets
+base,314,Chicago Collection,false,,Ben Sheets,,
+base,315,Base,false,,Ruben Quevedo
+base,315,Chicago Collection,false,,Ruben Quevedo,,
+base,316,Base,false,,Jeffrey Hammonds
+base,316,Chicago Collection,false,,Jeffrey Hammonds,,
+base,317,Base,false,,Alex Sanchez
+base,317,Chicago Collection,false,,Alex Sanchez,,
+base,318,Base,false,,Eric Young
+base,318,Chicago Collection,false,,Eric Young,,
+base,319,Base,false,,Takahito Nomura
+base,319,Chicago Collection,false,,Takahito Nomura,,
+base,320,Base,false,,Vladimir Guerrero
+base,320,Chicago Collection,false,,Vladimir Guerrero,,
+base,321,Base,false,,Jose Vidro
+base,321,Chicago Collection,false,,Jose Vidro,,
+base,322,Base,false,,Orlando Cabrera
+base,322,Chicago Collection,false,,Orlando Cabrera,,
+base,323,Base,false,,Michael Barrett
+base,323,Chicago Collection,false,,Michael Barrett,,
+base,324,Base,false,,Javier Vazquez
+base,324,Chicago Collection,false,,Javier Vazquez,,
+base,325,Base,false,,Tony Armas Jr.
+base,325,Chicago Collection,false,,Tony Armas Jr.,,
+base,326,Base,false,,Andres Galarraga
+base,326,Chicago Collection,false,,Andres Galarraga,,
+base,327,Base,false,,Tomo Ohka
+base,327,Chicago Collection,false,,Tomo Ohka,,
+base,328,Base,false,,Bartolo Colon
+base,328,Chicago Collection,false,,Bartolo Colon,,
+base,329,Base,false,,Fernando Tatis
+base,329,Chicago Collection,false,,Fernando Tatis,,
+base,330,Base,false,,Brad Wilkerson
+base,330,Chicago Collection,false,,Brad Wilkerson,,
+base,331,Base,false,,Masato Yoshii
+base,331,Chicago Collection,false,,Masato Yoshii,,
+base,332,Base,false,,Mike Piazza
+base,332,Chicago Collection,false,,Mike Piazza,,
+base,333,Base,false,,Jeromy Burnitz
+base,333,Chicago Collection,false,,Jeromy Burnitz,,
+base,334,Base,false,,Roberto Alomar
+base,334,Chicago Collection,false,,Roberto Alomar,,
+base,335,Base,false,,Mo Vaughn
+base,335,Chicago Collection,false,,Mo Vaughn,,
+base,336,Base,false,,Al Leiter
+base,336,Chicago Collection,false,,Al Leiter,,
+base,337,Base,false,,Pedro Astacio
+base,337,Chicago Collection,false,,Pedro Astacio,,
+base,338,Base,false,,Edgardo Alfonzo
+base,338,Chicago Collection,false,,Edgardo Alfonzo,,
+base,339,Base,false,,Armando Benitez
+base,339,Chicago Collection,false,,Armando Benitez,,
+base,340,Base,false,,Timo Perez
+base,340,Chicago Collection,false,,Timo Perez,,
+base,341,Base,false,,Jay Payton
+base,341,Chicago Collection,false,,Jay Payton,,
+base,342,Base,false,,Roger Cedeno
+base,342,Chicago Collection,false,,Roger Cedeno,,
+base,343,Base,false,,Rey Ordonez
+base,343,Chicago Collection,false,,Rey Ordonez,,
+base,344,Base,false,,Steve Trachsel
+base,344,Chicago Collection,false,,Steve Trachsel,,
+base,345,Base,false,,Satoru Komiyama
+base,345,Chicago Collection,false,,Satoru Komiyama,,
+base,346,Base,false,,Scott Rolen
+base,346,Chicago Collection,false,,Scott Rolen,,
+base,347,Base,false,,Pat Burrell
+base,347,Chicago Collection,false,,Pat Burrell,,
+base,348,Base,false,,Bobby Abreu
+base,348,Chicago Collection,false,,Bobby Abreu,,
+base,349,Base,false,,Mike Lieberthal
+base,349,Chicago Collection,false,,Mike Lieberthal,,
+base,350,Base,false,,Brandon Duckworth
+base,350,Chicago Collection,false,,Brandon Duckworth,,
+base,351,Base,false,,Jimmy Rollins
+base,351,Chicago Collection,false,,Jimmy Rollins,,
+base,352,Base,false,,Marlon Anderson
+base,352,Chicago Collection,false,,Marlon Anderson,,
+base,353,Base,false,,Travis Lee
+base,353,Chicago Collection,false,,Travis Lee,,
+base,354,Base,false,,Vicente Padilla
+base,354,Chicago Collection,false,,Vicente Padilla,,
+base,355,Base,false,,Randy Wolf
+base,355,Chicago Collection,false,,Randy Wolf,,
+base,356,Base,false,,Jason Kendall
+base,356,Chicago Collection,false,,Jason Kendall,,
+base,357,Base,false,,Brian Giles
+base,357,Chicago Collection,false,,Brian Giles,,
+base,358,Base,false,,Aramis Ramirez
+base,358,Chicago Collection,false,,Aramis Ramirez,,
+base,359,Base,false,,Pokey Reese
+base,359,Chicago Collection,false,,Pokey Reese,,
+base,360,Base,false,,Kip Wells
+base,360,Chicago Collection,false,,Kip Wells,,
+base,361,Base,false,,Josh Fogg
+base,361,Chicago Collection,false,,Josh Fogg,,
+base,362,Base,false,,Mike Williams
+base,362,Chicago Collection,false,,Mike Williams,,
+base,363,Base,false,,Jack Wilson
+base,363,Chicago Collection,false,,Jack Wilson,,
+base,364,Base,false,,Craig Wilson
+base,364,Chicago Collection,false,,Craig Wilson,,
+base,365,Base,false,,Kevin Young
+base,365,Chicago Collection,false,,Kevin Young,,
+base,366,Base,false,,Ryan Klesko
+base,366,Chicago Collection,false,,Ryan Klesko,,
+base,367,Base,false,,Phil Nevin
+base,367,Chicago Collection,false,,Phil Nevin,,
+base,368,Base,false,,Brian Lawrence
+base,368,Chicago Collection,false,,Brian Lawrence,,
+base,369,Base,false,,Mark Kotsay
+base,369,Chicago Collection,false,,Mark Kotsay,,
+base,370,Base,false,,Brett Tomko
+base,370,Chicago Collection,false,,Brett Tomko,,
+base,371,Base,false,,Trevor Hoffman
+base,371,Chicago Collection,false,,Trevor Hoffman,,
+base,372,Base,false,,Deivi Cruz
+base,372,Chicago Collection,false,,Deivi Cruz,,
+base,373,Base,false,,Bubba Trammell
+base,373,Chicago Collection,false,,Bubba Trammell,,
+base,374,Base,false,,Sean Burroughs
+base,374,Chicago Collection,false,,Sean Burroughs,,
+base,375,Base,false,,Barry Bonds
+base,375,Chicago Collection,false,,Barry Bonds,,
+base,376,Base,false,,Jeff Kent
+base,376,Chicago Collection,false,,Jeff Kent,,
+base,377,Base,false,,Rich Aurilia
+base,377,Chicago Collection,false,,Rich Aurilia,,
+base,378,Base,false,,Tsuyoshi Shinjo
+base,378,Chicago Collection,false,,Tsuyoshi Shinjo,,
+base,379,Base,false,,Benito Santiago
+base,379,Chicago Collection,false,,Benito Santiago,,
+base,380,Base,false,,Kirk Rueter
+base,380,Chicago Collection,false,,Kirk Rueter,,
+base,381,Base,false,,Livan Hernandez
+base,381,Chicago Collection,false,,Livan Hernandez,,
+base,382,Base,false,,Russ Ortiz
+base,382,Chicago Collection,false,,Russ Ortiz,,
+base,383,Base,false,,David Bell
+base,383,Chicago Collection,false,,David Bell,,
+base,384,Base,false,,Jason Schmidt
+base,384,Chicago Collection,false,,Jason Schmidt,,
+base,385,Base,false,,Reggie Sanders
+base,385,Chicago Collection,false,,Reggie Sanders,,
+base,386,Base,false,,J.T. Snow
+base,386,Chicago Collection,false,,J.T. Snow,,
+base,387,Base,false,,Robb Nen
+base,387,Chicago Collection,false,,Robb Nen,,
+base,388,Base,false,,Ryan Jensen
+base,388,Chicago Collection,false,,Ryan Jensen,,
+base,389,Base,false,,Jim Edmonds
+base,389,Chicago Collection,false,,Jim Edmonds,,
+base,390,Base,false,,J.D. Drew
+base,390,Chicago Collection,false,,J.D. Drew,,
+base,391,Base,false,,Albert Pujols
+base,391,Chicago Collection,false,,Albert Pujols,,
+base,392,Base,false,,Fernando Vina
+base,392,Chicago Collection,false,,Fernando Vina,,
+base,393,Base,false,,Tino Martinez
+base,393,Chicago Collection,false,,Tino Martinez,,
+base,394,Base,false,,Edgar Renteria
+base,394,Chicago Collection,false,,Edgar Renteria,,
+base,395,Base,false,,Matt Morris
+base,395,Chicago Collection,false,,Matt Morris,,
+base,396,Base,false,,Woody Williams
+base,396,Chicago Collection,false,,Woody Williams,,
+base,397,Base,false,,Jason Isringhausen
+base,397,Chicago Collection,false,,Jason Isringhausen,,
+base,398,Base,false,,Placido Polanco
+base,398,Chicago Collection,false,,Placido Polanco,,
+base,399,Base,false,,Eli Marrero
+base,399,Chicago Collection,false,,Eli Marrero,,
+base,400,Base,false,,Jason Simontacchi
+base,400,Chicago Collection,false,,Jason Simontacchi,,
+insert-elite-series,ES-1,,false,,Alex Rodriguez
+insert-elite-series,ES-2,,false,,Barry Bonds
+insert-elite-series,ES-3,,false,,Ichiro
+insert-elite-series,ES-4,,false,,Vladimir Guerrero
+insert-elite-series,ES-5,,false,,Randy Johnson
+insert-elite-series,ES-6,,false,,Pedro Martinez
+insert-elite-series,ES-7,,false,,Adam Dunn
+insert-elite-series,ES-8,,false,,Sammy Sosa
+insert-elite-series,ES-9,,false,,Jim Edmonds
+insert-elite-series,ES-10,,false,,Greg Maddux
+insert-elite-series,ES-11,,false,,Kazuhisa Ishii
+insert-elite-series,ES-12,,false,,Jason Giambi
+insert-elite-series,ES-13,,false,,Nomar Garciaparra
+insert-elite-series,ES-14,,false,,Tom Glavine
+insert-elite-series,ES-15,,false,,Todd Helton
+insert-production-line,PL-1,,false,,Alex Rodriguez 1015
+insert-production-line,PL-2,,false,,Jim Thome 1122
+insert-production-line,PL-3,,false,,Lance Berkman 982
+insert-production-line,PL-4,,false,,Barry Bonds 1381
+insert-production-line,PL-5,,false,,Sammy Sosa 993
+insert-production-line,PL-6,,false,,Vladimir Guerrero 1010
+insert-production-line,PL-7,,false,,Barry Bonds 582
+insert-production-line,PL-8,,false,,Jason Giambi 435
+insert-production-line,PL-9,,false,,Vladimir Guerrero 417
+insert-production-line,PL-10,,false,,Adam Dunn 400
+insert-production-line,PL-11,,false,,Chipper Jones 435
+insert-production-line,PL-12,,false,,Todd Helton 429
+insert-production-line,PL-13,,false,,Rafael Palmeiro 571
+insert-production-line,PL-14,,false,,Sammy Sosa 594
+insert-production-line,PL-15,,false,,Alex Rodriguez 623
+insert-production-line,PL-16,,false,,Larry Walker 602
+insert-production-line,PL-17,,false,,Lance Berkman 578
+insert-production-line,PL-18,,false,,Alfonso Soriano 547
+insert-production-line,PL-19,,false,,Ichiro 321
+insert-production-line,PL-20,,false,,Mike Sweeney 340
+insert-production-line,PL-21,,false,,Manny Ramirez 349
+insert-production-line,PL-22,,false,,Larry Walker 338
+insert-production-line,PL-23,,false,,Barry Bonds 370
+insert-production-line,PL-24,,false,,Jim Edmonds 311
+insert-production-line,PL-25,,false,,Alfonso Soriano 381
+insert-production-line,PL-26,,false,,Jason Giambi 335
+insert-production-line,PL-27,,false,,Miguel Tejada 336
+insert-production-line,PL-28,,false,,Brian Giles 309
+insert-production-line,PL-29,,false,,Vladimir Guerrero 364
+insert-production-line,PL-30,,false,,Pat Burrell 319
+insert-longball-leaders,LL-1,,false,,Alex Rodriguez 57
+insert-longball-leaders,LL-2,,false,,Alfonso Soriano 39
+insert-longball-leaders,LL-3,,false,,Rafael Palmeiro 43
+insert-longball-leaders,LL-4,,false,,Jim Thome 52
+insert-longball-leaders,LL-5,,false,,Jason Giambi 41
+insert-longball-leaders,LL-6,,false,,Sammy Sosa 49
+insert-longball-leaders,LL-7,,false,,Barry Bonds 46
+insert-longball-leaders,LL-8,,false,,Lance Berkman 42
+insert-longball-leaders,LL-9,,false,,Shawn Green 42
+insert-longball-leaders,LL-10,,false,,Vladimir Guerrero 39
+insert-all-stars,AL-1,,false,,Ichiro
+insert-all-stars,AL-2,,false,,Alex Rodriguez
+insert-all-stars,AL-3,,false,,Nomar Garciaparra
+insert-all-stars,AL-4,,false,,Derek Jeter
+insert-all-stars,AL-5,,false,,Manny Ramirez
+insert-all-stars,NL-6,,false,,Barry Bonds
+insert-all-stars,NL-7,,false,,Adam Dunn
+insert-all-stars,NL-8,,false,,Mike Piazza
+insert-all-stars,NL-9,,false,,Sammy Sosa
+insert-all-stars,NL-10,,false,,Todd Helton
+insert-timber-and-threads,TT-1,,false,,Al Kaline 125
+insert-timber-and-threads,TT-2,,false,,Alex Rodriguez 350
+insert-timber-and-threads,TT-3,,false,,Carlos Delgado 250
+insert-timber-and-threads,TT-4,,false,,Cliff Floyd 250
+insert-timber-and-threads,TT-5,,false,,Eddie Mathews 125
+insert-timber-and-threads,TT-6,,false,,Edgar Martinez 125
+insert-timber-and-threads,TT-7,,false,,Ernie Banks 50
+insert-timber-and-threads,TT-8,,false,,Ivan Rodriguez 125
+insert-timber-and-threads,TT-9,,false,,J.D. Drew 125
+insert-timber-and-threads,TT-10,,false,,Jorge Posada 300
+insert-timber-and-threads,TT-11,,false,,Lou Brock 125
+insert-timber-and-threads,TT-12,,false,,Mike Piazza 125
+insert-timber-and-threads,TT-13,,false,,Mike Schmidt 125
+insert-timber-and-threads,TT-14,,false,,Reggie Jackson 125
+insert-timber-and-threads,TT-15,,false,,Rickey Henderson 125
+insert-timber-and-threads,TT-16,,false,,Robin Yount 125
+insert-timber-and-threads,TT-17,,false,,Rod Carew 125
+insert-timber-and-threads,TT-18,,false,,Scott Rolen 125
+insert-timber-and-threads,TT-20,,false,,Willie Stargell 125
+insert-timber-and-threads,TT-21,,false,,Alex Rodriguez 175
+insert-timber-and-threads,TT-22,,false,,Andruw Jones 275
+insert-timber-and-threads,TT-23,,false,,Brooks Robinson 150
+insert-timber-and-threads,TT-24,,false,,Chipper Jones 150
+insert-timber-and-threads,TT-25,,false,,Greg Maddux 175
+insert-timber-and-threads,TT-26,,false,,Hideo Nomo 300
+insert-timber-and-threads,TT-27,,false,,Ivan Rodriguez 225
+insert-timber-and-threads,TT-28,,false,,Jack Morris 150
+insert-timber-and-threads,TT-29,,false,,J.D. Drew 150
+insert-timber-and-threads,TT-30,,false,,Jeff Bagwell 500
+insert-timber-and-threads,TT-31,,false,,Jim Thome 200
+insert-timber-and-threads,TT-32,,false,,John Smoltz 175
+insert-timber-and-threads,TT-33,,false,,John Olerud 450
+insert-timber-and-threads,TT-34,,false,,Kerry Wood 200
+insert-timber-and-threads,TT-35,,false,,Harmon Killebrew 50
+insert-timber-and-threads,TT-36,,false,,Larry Walker 500
+insert-timber-and-threads,TT-37,,false,,Magglio Ordonez 150
+insert-timber-and-threads,TT-38,,false,,Manny Ramirez 500
+insert-timber-and-threads,TT-39,,false,,Mike Piazza 300
+insert-timber-and-threads,TT-40,,false,,Mike Sweeney 200
+insert-timber-and-threads,TT-41,,false,,Nomar Garciaparra 200
+insert-timber-and-threads,TT-42,,false,,Paul Konerko 500
+insert-timber-and-threads,TT-43,,false,,Pedro Martinez 175
+insert-timber-and-threads,TT-44,,false,,Randy Johnson 175
+insert-timber-and-threads,TT-45,,false,,Roger Clemens 350
+insert-timber-and-threads,TT-47,,false,,Todd Helton 175
+insert-timber-and-threads,TT-48,,false,,Tom Glavine 225
+insert-timber-and-threads,TT-49,,false,,Tony Gwynn 150
+insert-timber-and-threads,TT-50,,false,,Vladimir Guerrero 450
+insert-bat-kings,BK-1,,false,,Scott Rolen 250
+insert-bat-kings,BK-2,,false,,Frank Thomas 250
+insert-bat-kings,BK-3,,false,,Chipper Jones 250
+insert-bat-kings,BK-4,,false,,Ivan Rodriguez 250
+insert-bat-kings,BK-5,,false,,Stan Musial 100
+insert-bat-kings,BK-6,,false,,Nomar Garciaparra 250
+insert-bat-kings,BK-7,,false,,Vladimir Guerrero 250
+insert-bat-kings,BK-8,,false,,Adam Dunn 250
+insert-bat-kings,BK-9,,false,,Lance Berkman 250
+insert-bat-kings,BK-10,,false,,Magglio Ordonez 250
+insert-bat-kings,BK-11,,false,,Ernie Banks 50
+insert-bat-kings,BK-12,,false,,Manny Ramirez 100
+insert-bat-kings,BK-13,,false,,Mike Piazza 100
+insert-bat-kings,BK-14,,false,,Alex Rodriguez 100
+insert-bat-kings,BK-15,,false,,Todd Helton 100
+insert-bat-kings,BK-16,,false,,Andre Dawson 100
+insert-bat-kings,BK-17,,false,,Cal Ripken
+insert-bat-kings,BK-18,,false,,Tony Gwynn 100
+insert-bat-kings,BK-19,,false,,Don Mattingly 100
+insert-bat-kings,BK-20,,false,,Ryne Sandberg 100
+insert-jersey-kings,JK-1,,false,,Juan Gonzalez 250
+insert-jersey-kings,JK-2,,false,,Greg Maddux 250
+insert-jersey-kings,JK-3,,false,,Nomar Garciaparra 250
+insert-jersey-kings,JK-4,,false,,Troy Glaus 250
+insert-jersey-kings,JK-5,,false,,Reggie Jackson 100
+insert-jersey-kings,JK-6,,false,,Alex Rodriguez 250
+insert-jersey-kings,JK-7,,false,,Alfonso Soriano 250
+insert-jersey-kings,JK-8,,false,,Curt Schilling 250
+insert-jersey-kings,JK-9,,false,,Vladimir Guerrero 250
+insert-jersey-kings,JK-10,,false,,Adam Dunn 250
+insert-jersey-kings,JK-11,,false,,Mark Grace 100
+insert-jersey-kings,JK-12,,false,,Roger Clemens 100
+insert-jersey-kings,JK-13,,false,,Jeff Bagwell 100
+insert-jersey-kings,JK-14,,false,,Tom Glavine 100
+insert-jersey-kings,JK-15,,false,,Mike Piazza 100
+insert-jersey-kings,JK-16,,false,,Rod Carew 100
+insert-jersey-kings,JK-17,,false,,Rickey Henderson 100
+insert-jersey-kings,JK-18,,false,,Mike Schmidt 100
+insert-jersey-kings,JK-19,,false,,Cal Ripken
+insert-jersey-kings,JK-20,,false,,Dale Murphy 100
