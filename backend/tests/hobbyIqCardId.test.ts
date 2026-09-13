@@ -1274,3 +1274,85 @@ describe("computeHobbyIqCardId — panini Silver vs Silver Prizm (must stay dist
     expect(withPrizm).toContain(":silver-prizm:");
   });
 });
+
+describe("normalizeSetKey — bcp same-numbered insert sets (R30, 2026-09-13)", () => {
+  // Seven keys the bcp 2026-09-13 acquisition needs. Each was verified on the
+  // source as a separately-numbered named set whose numbers COLLIDE with a
+  // sibling's on the bare product key, which is what R30 measures.
+  const FIXED_POINTS = [
+    "topps-baseball-history",
+    "topps-baseball-royalty",
+    "topps-the-babe-ruth-story",
+    "topps-cal-ripken-jr-refractor",
+    "topps-factory-set-rookie-variations",
+    "diamond-kings-dk-signatures",
+    "diamond-kings-dk-rookie-signatures",
+  ];
+
+  it.each(FIXED_POINTS)("%s is a fixed point", (key) => {
+    // A key that is not a fixed point cannot hold a pool: the deriver, the
+    // matcher and the rematch all fold it somewhere else. Before this change
+    // every one of these folded PAST its product onto the bare flagship.
+    expect(normalizeSetKey(key)).toBe(key);
+  });
+
+  it("each key reaches its OWN id, distinct from the product key's", () => {
+    // The defect these keys exist to end: BR-1 is a different card in The Babe
+    // Ruth Story than in Baseball Royalty, and on the product key both compute
+    // one id, so one silently overwrites the other inside a single run.
+    const story = computeHobbyIqCardId({
+      sport: "baseball", year: 2015, setKey: "topps-the-babe-ruth-story",
+      cardNumber: "BR-1", parallel: "Base", isAuto: false, authoritativeSetKey: true,
+    });
+    const royalty = computeHobbyIqCardId({
+      sport: "baseball", year: 2015, setKey: "topps-baseball-royalty",
+      cardNumber: "BR-1", parallel: "Base", isAuto: false, authoritativeSetKey: true,
+    });
+    const flagship = computeHobbyIqCardId({
+      sport: "baseball", year: 2015, setKey: "topps",
+      cardNumber: "BR-1", parallel: "Base", isAuto: false, authoritativeSetKey: true,
+    });
+    expect(new Set([story, royalty, flagship]).size).toBe(3);
+
+    // Same question for the two Diamond Kings autograph sets: S-AH is Aaron
+    // Hicks in one and Austin Hays in the other.
+    const sigs = computeHobbyIqCardId({
+      sport: "baseball", year: 2018, setKey: "diamond-kings-dk-signatures",
+      cardNumber: "S-AH", parallel: "Base", isAuto: true, authoritativeSetKey: true,
+    });
+    const rookieSigs = computeHobbyIqCardId({
+      sport: "baseball", year: 2018, setKey: "diamond-kings-dk-rookie-signatures",
+      cardNumber: "S-AH", parallel: "Base", isAuto: true, authoritativeSetKey: true,
+    });
+    expect(sigs).not.toBe(rookieSigs);
+  });
+
+  it("the family catch-alls did NOT widen", () => {
+    // The anchored rules sit ABOVE `/topps/` and `/(?:^|-)diamond-kings/`, so
+    // the thing to pin is that everything those rules used to answer for, they
+    // still answer for -- a new rule that swallowed the flagship would be a
+    // far worse defect than the collision it fixed.
+    expect(normalizeSetKey("topps")).toBe("topps");
+    expect(normalizeSetKey("2015-topps")).toBe("topps");
+    expect(normalizeSetKey("topps-series-1")).toBe("topps-series-1");
+    expect(normalizeSetKey("topps-update-series")).toBe("topps-update-series");
+    expect(normalizeSetKey("diamond-kings")).toBe("diamond-kings");
+    expect(normalizeSetKey("panini-diamond-kings")).toBe("panini-diamond-kings");
+    expect(normalizeSetKey("all-time-diamond-kings")).toBe("all-time-diamond-kings");
+  });
+
+  it("a COLOUR RUNG of these sets is still not a key", () => {
+    // The guard also named these, and the source's own prose calls them
+    // parallels ("...also available in a one-of-one Masterpiece parallel").
+    // Registering them would split one pool per colour, so they must keep
+    // folding to their root -- this pins that no rule above minted them.
+    for (const rung of [
+      "diamond-kings-dk-materials-holo-gold",
+      "diamond-kings-dk-materials-holo-blue",
+      "diamond-kings-dk-signatures-purple",
+      "donruss-rookie-year-materials-jerseys-jersey-number",
+    ]) {
+      expect(normalizeSetKey(rung)).not.toBe(rung);
+    }
+  });
+});

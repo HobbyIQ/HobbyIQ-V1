@@ -698,6 +698,43 @@ export const PRODUCT_SET_KEYS: ReadonlyArray<ProductSetKey> = [
   })),
 
   /**
+   * BASEBALLCARDPEDIA'S SAME-NUMBERED INSERT SETS (R30, 2026-09-13).
+   *
+   * The bcp 2026-09-13 acquisition refused ten files for `unregistered-set-
+   * keys` after its variation axis was applied. These seven keys are what
+   * those files need, and every one was verified on the source as a
+   * SEPARATELY-NUMBERED named set with its own checklist -- measured by
+   * COLLISION, not by name:
+   *
+   *   BR-1  "St. Mary's Industrial School Student"  The Babe Ruth Story
+   *   BR-1  "Babe Ruth"                             Baseball Royalty
+   *   S-AH  "Aaron Hicks"                           DK Signatures
+   *   S-AH  "Austin Hays"                           DK Rookie Signatures
+   *
+   * Two different players, one card number, one product key -- so one of them
+   * would overwrite the other and the last writer would decide which card the
+   * address holds. That is R30's shape exactly.
+   *
+   * THE COLOUR RUNGS OF THESE SETS ARE NOT HERE, DELIBERATELY. The guard also
+   * named `diamond-kings-dk-materials-holo-gold`, `...-holo-blue`,
+   * `...-holo-silver`, `auto-dk-signatures-purple`, `...-masterpiece` and
+   * `donruss-rookie-year-materials-jerseys-jersey-number`. The source's own
+   * prose calls those PARALLELS ("Each DK Materials is also available in a
+   * one-of-one Masterpiece parallel"; "...are also available in a Jersey
+   * Number parallel") and prints them as subsections of their set. A colour
+   * rung is never a card set key, so they fold onto their root with the colour
+   * on the parallel axis and are NOT registered -- registering them would
+   * split one pool per colour.
+   */
+  S("topps-baseball-history", { family: "topps", parent: "topps" }),
+  S("topps-baseball-royalty", { family: "topps", parent: "topps" }),
+  S("topps-the-babe-ruth-story", { family: "topps", parent: "topps" }),
+  S("topps-cal-ripken-jr-refractor", { family: "topps", parent: "topps" }),
+  S("topps-factory-set-rookie-variations", { family: "topps", parent: "topps" }),
+  S("diamond-kings-dk-signatures", { family: "diamond-kings", parent: "diamond-kings" }),
+  S("diamond-kings-dk-rookie-signatures", { family: "diamond-kings", parent: "diamond-kings" }),
+
+  /**
    * PANINI HAUNTED HOOPS IS ITS OWN PRODUCT (#1715 class, 2026-09-07).
    *
    * The Halloween release is a SEPARATE product from Panini NBA Hoops: its own
