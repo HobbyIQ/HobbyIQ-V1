@@ -254,14 +254,36 @@ function subsetSlugFor({ category, parallel, subsetName }) {
  *
  * -> { setKey, subsetSlug, isInsertSet }
  */
-function setKeyForRow({ productSetKey, category, parallel, subsetName, separate }) {
+function setKeyForRow({ productSetKey, category, parallel, subsetName, separate, foldRungs }) {
   const product = String(productSetKey || "").trim();
-  const subsetSlug = subsetSlugFor({ category, parallel, subsetName });
-  if (!subsetSlug) return { setKey: product, subsetSlug: "", isInsertSet: false };
-  if (separate && !separate.has(subsetSlug)) {
-    return { setKey: product, subsetSlug, isInsertSet: false };
+  let subsetSlug = subsetSlugFor({ category, parallel, subsetName });
+  let rungParallel = null;
+  // CF-A-COLOUR-RUNG-IS-NEVER-A-CARD-SET-KEY: a subset the cell MEASURED to be
+  // a colour rung of another subset folds onto its root, and the colour moves
+  // to the parallel axis. Only ever one hop -- the fold is computed against the
+  // roster, so a rung's root is by construction a real subset, never a rung.
+  if (subsetSlug && foldRungs && foldRungs.has(subsetSlug)) {
+    const fold = foldRungs.get(subsetSlug);
+    rungParallel = fold.parallel;
+    subsetSlug = fold.root;
   }
-  return { setKey: product + "-" + subsetSlug, subsetSlug, isInsertSet: true };
+  if (!subsetSlug) return { setKey: product, subsetSlug: "", isInsertSet: false, rungParallel };
+  if (separate && !separate.has(subsetSlug)) {
+    return { setKey: product, subsetSlug, isInsertSet: false, rungParallel };
+  }
+  return { setKey: product + "-" + subsetSlug, subsetSlug, isInsertSet: true, rungParallel };
+}
+
+/** The parallel a row carries once rung folding is applied: the row's own
+ *  column when it states one, else the colour the fold moved off the key.
+ *  The row's own column WINS -- a file that states both is naming a rung of a
+ *  rung, and the column is the more specific statement. */
+function parallelForRow({ category, parallel, subsetName, foldRungs }) {
+  const own = String(parallel || "").trim();
+  if (own) return own;
+  const slug = subsetSlugFor({ category, parallel, subsetName });
+  if (slug && foldRungs && foldRungs.has(slug)) return foldRungs.get(slug).parallel;
+  return own;
 }
 
 /**
@@ -312,17 +334,31 @@ function idCollisions(rows, computeId) {
  *
  * Returns the set of subset SLUGS to separate.
  */
-function subsetsToSeparate(rows, productSetKey, computeId) {
+function subsetsToSeparate(rows, productSetKey, computeId, foldRungs) {
   // EVERY ROW ON THE PRODUCT KEY. This pass asks "what does the OLD behaviour
   // collide on?", so it must use the old behaviour's address -- the product
   // key for every row, category discarded. Routing it through setKeyForRow
   // with no `separate` gave each named insert its own key here and so measured
   // a world in which nothing collides: the guard answered "separate nothing"
   // for the very file it exists to catch.
-  const { collisions } = idCollisions(rows, (r) => computeId({ ...r, setKey: productSetKey }));
+  //
+  // The PARALLEL a rung fold moves onto the row is part of the old behaviour's
+  // address too: two rungs of one subset differ only by it, so measuring them
+  // with a blank parallel would report a clash the fold has already resolved
+  // and demand a key for a colour.
+  const { collisions } = idCollisions(rows, (r) => computeId({
+    ...r,
+    setKey: productSetKey,
+    parallel: parallelForRow({ category: r.category, parallel: r.parallel, subsetName: r.subsetName, foldRungs }),
+  }));
   const separate = new Set();
   for (const c of collisions) {
-    const slugs = new Set(c.rows.map((r) => subsetSlugFor({ category: r.category, parallel: r.parallel, subsetName: r.subsetName })));
+    const slugs = new Set(c.rows.map((r) => {
+      const slug = subsetSlugFor({ category: r.category, parallel: r.parallel, subsetName: r.subsetName });
+      // A rung answers as its ROOT: the colour is on the parallel axis now, so
+      // the subset that takes part in the clash is the root subset.
+      return slug && foldRungs && foldRungs.has(slug) ? foldRungs.get(slug).root : slug;
+    }));
     // Two or more DIFFERENT subsets (the empty slug is base, and counts as one
     // of them) sharing one address: every named one gets its own key.
     if (slugs.size < 2) continue;
@@ -336,11 +372,11 @@ function subsetsToSeparate(rows, productSetKey, computeId) {
  * the evidence for it: the categories that named it and how many rows ride on
  * it. This is the list a refusal prints, and it is the list someone registers.
  */
-function insertSetKeysOf(rows, productSetKey, separate) {
+function insertSetKeysOf(rows, productSetKey, separate, foldRungs) {
   const byKey = new Map();
   for (const r of rows) {
     const { setKey, subsetSlug, isInsertSet } = setKeyForRow({
-      productSetKey, category: r.category, parallel: r.parallel, subsetName: r.subsetName, separate,
+      productSetKey, category: r.category, parallel: r.parallel, subsetName: r.subsetName, separate, foldRungs,
     });
     if (!isInsertSet) continue;
     if (!byKey.has(setKey)) {
@@ -402,11 +438,257 @@ function unregisteredKeys(keys, normalize) {
  * `rowsByCell` is a Map of cell key -> rows, built once by the caller before
  * the file loop. Returns a Map of the same keys -> the `separate` Set.
  */
-function separationByCell(rowsByCell, computeId) {
+function separationByCell(rowsByCell, computeId, foldByCell) {
   const out = new Map();
   for (const [cell, entry] of rowsByCell) {
-    out.set(cell, subsetsToSeparate(entry.rows, entry.productSetKey, computeId));
+    out.set(cell, subsetsToSeparate(entry.rows, entry.productSetKey, computeId, foldByCell && foldByCell.get(cell)));
   }
+  return out;
+}
+
+/**
+ * CF-A-COLOUR-RUNG-IS-NEVER-A-CARD-SET-KEY (R30 corollary, Drew 2026-09-13).
+ *
+ * THE DEFECT THIS ENDS, measured on `acq-2026-09-13-cbc` after #2112 landed:
+ * of the 170 keys the refusal named, 110 WERE COLOUR RUNGS, not card sets.
+ *
+ *     panini-prizm-draft-picks-college-penmanship-prizms-gold
+ *     panini-prizm-draft-picks-college-penmanship-prizms-black
+ *     panini-spectra-aspiring-patch-autographs-neon-splatter
+ *     nba-hoops-hot-signatures-hyper-gold
+ *
+ * Registering those would split ONE POOL PER COLOUR -- `one card, one row, one
+ * pool` failing on a different axis from the collision #2112 fixed, and the
+ * ruling is explicit: a named parallel is a distinct CARD, not a distinct SET,
+ * so a colour rides the PARALLEL axis.
+ *
+ * WHY THE EXISTING STRIP COULD NOT SEE IT. `categorySubsetSlug` strips a
+ * parallel off a category's tail only when the ROW'S OWN `parallel` column
+ * states it. cardboardconnection ships ONE FILE PER RUNG with the colour folded
+ * into the manifest's `subset` string and the parallel column LEFT BLANK --
+ * 166 of its 197 subset-declaring files have `distinctParallels: 0`:
+ *
+ *     category,cardNumber,parallel,isAuto,printRun,player
+ *     auto-college-penmanship-prizms-gold,1,,true,10,Paolo Banchero
+ *     auto-college-penmanship,1,,true,,Paolo Banchero
+ *
+ * Same card, same player; the second is the base auto and the first its Gold
+ * /10 rung. Nothing in the row says "Gold" is a parallel, so the colour
+ * survived into the key.
+ *
+ * THE RULE IS A MEASUREMENT, NOT A LEXICON, and that is the whole point. A
+ * word list would fold "Gold Standard", "Black Gold" and "Red Zone" -- real
+ * products whose NAMES end in a colour word -- into a sibling that does not
+ * exist. A suffixed subset is a RUNG only when all three hold:
+ *
+ *   (a) a ROOT subset exists in the SAME (sport, year, product) cell, whose
+ *       slug is a prefix of this one at a segment boundary;
+ *   (b) the two ROSTERS AGREE -- every shared card number maps to the SAME
+ *       player, with ZERO disagreements. A rung reprints its root's roster;
+ *       a distinct set does not;
+ *   (c) the rung actually SHARES numbers with its root (an all-absent overlap
+ *       proves nothing and is left alone).
+ *
+ * Otherwise the suffixed subset STAYS A KEY CANDIDATE and is reported, which is
+ * how the four measured-distinct cbc subsets keep their own keys: Hot
+ * Signatures Rookies (98 different players), Art Signatures Horizontal and
+ * Vertical (disjoint numbers) -- the source publishes them as separate
+ * checklists with their own rosters, so under R30 they are card sets.
+ *
+ * THE COLOUR SPELLING IS THE SOURCE'S OWN. The parallel this returns is the
+ * tail the SOURCE wrote, un-slugged for display ("Prizms Gold", "Neon
+ * Splatter"), never a name this module invents -- `no synthetic parallels`.
+ *
+ * Measured over the whole directory with this folding in place:
+ *
+ *     68,329 rows -> 68,243 distinct ids   (1,803 contested -> 68)
+ *     all 68 residual groups are the SAME player: duplicate source rows,
+ *     not identity conflicts
+ *
+ * -> Map of rungSlug -> { root, parallel, rows, same, absent }
+ */
+function rungFoldingFor(rows) {
+  // Every subset slug this cell states, with its (number -> player) roster.
+  const rosters = new Map();
+  for (const r of rows) {
+    const slug = subsetSlugFor({ category: r.category, parallel: r.parallel, subsetName: r.subsetName });
+    if (!slug) continue;
+    if (!rosters.has(slug)) rosters.set(slug, new Map());
+    rosters.get(slug).set(String(r.cardNumber), String(r.player || ""));
+  }
+  // CF-THE-SIBLINGS-NAME-THE-SET-EVEN-WITH-NO-BASE-TIER (Drew 2026-09-13).
+  //
+  // A root need not be a FILE. Spectra publishes fourteen "Dual Patch
+  // Autographs <colour>" files and NO uncoloured tier, so guard (a) found no
+  // root and six colours survived as keys. But every one of the fourteen
+  // filenames STATES the set name -- the source simply prints no uncoloured
+  // print run. Reading the shared name is not inventing a root; refusing to
+  // read it is what split one card set fourteen ways.
+  //
+  // The evidence required is the same evidence a root file gives: >= 2 sibling
+  // colour slugs sharing a name prefix at a segment boundary, whose ROSTERS
+  // AGREE with each other -- same number -> same player, zero disagreements.
+  // Two files that merely start alike prove nothing; two files that print the
+  // same players at the same numbers are two printings of one checklist.
+  //
+  // NO BASE ROW IS MINTED. The derived root is an ADDRESS for the colours to
+  // share, never a row: blank stays unknown and nothing is written as Base
+  // (feedback: blank means unknown, never "Base"). Its roster is assembled from
+  // the siblings only so the fold below can measure against it.
+  //
+  // The longest shared prefix wins, so "Dual Patch Autographs Neon Pink" and
+  // "... Neon Purple" establish "dual-patch-autographs" (their agreeing name)
+  // rather than "dual-patch-autographs-neon", which no file names alone.
+  const derivedRoots = new Set();
+  {
+    const stated = new Set(rosters.keys());
+    const candidates = new Map(); // prefix -> [slug, ...]
+    for (const slug of stated) {
+      const segs = slug.split("-");
+      // Only a slug with NO stated root of its own needs one derived. When the
+      // source publishes "College Penmanship" beside "College Penmanship Prizms
+      // Gold", the set is already named and deriving "college" from the shared
+      // first segment would root a real card set on a fragment of its own name.
+      if (segs.some((_, n) => n > 0 && stated.has(segs.slice(0, n).join("-")))) continue;
+      // Every proper prefix at a segment boundary.
+      for (let n = 1; n < segs.length; n++) {
+        const pre = segs.slice(0, n).join("-");
+        if (stated.has(pre)) continue; // a real file already roots this
+        if (!candidates.has(pre)) candidates.set(pre, []);
+        candidates.get(pre).push(slug);
+      }
+    }
+    // WIDEST FIRST, THEN LONGEST. The name to derive is the one the MOST
+    // siblings agree on: with fourteen "Dual Patch Autographs <colour>" files,
+    // twelve share `dual-patch-autographs` while only two share
+    // `dual-patch-autographs-neon`, and the set is the former. Ordering by
+    // length alone over-fits a subgroup and derives a name NO FILE STATES --
+    // measured on a Neon Pink + Neon Purple pair, which alone would mint
+    // "Dual Patch Autographs Neon" and read the colours as "Pink" / "Purple".
+    //
+    // Once a prefix is established the slugs under it are SPOKEN FOR, so a
+    // narrower or shorter name cannot re-root them.
+    const claimed = new Set();
+    const byWidth = [...candidates.keys()].sort((a, b) =>
+      candidates.get(b).length - candidates.get(a).length || b.length - a.length);
+    for (const pre of byWidth) {
+      const sibs = candidates.get(pre).filter((x) => !claimed.has(x));
+      if (sibs.length < 2) continue;
+      // The siblings must AGREE with one another, pairwise against the first.
+      const merged = new Map();
+      let differ = 0, agreed = 0;
+      for (const sib of sibs) {
+        for (const [num, player] of rosters.get(sib)) {
+          const held = merged.get(num);
+          if (held === undefined) merged.set(num, player);
+          else if (held === player) agreed++;
+          else differ++;
+        }
+      }
+      // One disagreement means these are not printings of one checklist.
+      if (differ > 0 || agreed === 0) continue;
+      // CF-A-SHARED-TAIL-IS-PART-OF-THE-NAME. The siblings must differ AFTER
+      // the shared prefix, or the tail belongs to the set's NAME, not to a
+      // rung. Measured: all 19 Donruss subsets are spelled "<Name> Autographs",
+      // so a prefix rule alone derived `dominators` -- a set the source never
+      // names -- and made "Autographs" a parallel. Autograph status is `isAuto`
+      // and was never a parallel; the source states "Dominators Autographs" and
+      // that IS the card set.
+      //
+      // Drew's ruling turns on the siblings naming ONE set and differing only
+      // by colour ("Dual Patch Autographs Gold" vs "... Meta"). When every
+      // sibling carries the SAME tail there is no colour to move and nothing to
+      // derive.
+      const tails = new Set(sibs.map((x) => x.slice(pre.length + 1)));
+      if (tails.size < 2) continue;
+      rosters.set(pre, merged);
+      derivedRoots.add(pre);
+      for (const sib of sibs) claimed.add(sib);
+      // The derived root is itself spoken for: a shorter prefix must not adopt
+      // it, which is what would put the set under a fragment of its own name.
+      claimed.add(pre);
+    }
+  }
+
+  const slugs = [...rosters.keys()];
+  const folding = new Map();
+  for (const slug of slugs) {
+    // (a) The LONGEST other slug that is a segment-boundary prefix of this one.
+    // Longest, so "…-prizms-red-shimmer" is tested against "…-prizms-red"
+    // before "…" -- the nearest root is the one that can explain it.
+    let root = null;
+    for (const c of slugs) {
+      if (c !== slug && slug.startsWith(c + "-") && (!root || c.length > root.length)) root = c;
+    }
+    if (!root) continue;
+    // (b) + (c) The rosters must AGREE, over a non-empty shared span.
+    const rootRoster = rosters.get(root), rungRoster = rosters.get(slug);
+    let same = 0, differ = 0, absent = 0;
+    for (const [num, player] of rungRoster) {
+      const rootPlayer = rootRoster.get(num);
+      if (rootPlayer === undefined) absent++;
+      else if (rootPlayer === player) same++;
+      else differ++;
+    }
+    // ONE disagreement is enough to refuse: a rung reprints its root's roster,
+    // and a single number naming a different player means these are two sets.
+    if (differ > 0 || same === 0) continue;
+    // CF-AUTOGRAPH-IS-NOT-A-PARALLEL. `isAuto` already separates a signed card
+    // from its unsigned twin, and it is part of the id -- so a tail that only
+    // says "signed" names no rung and must never become a parallel (feedback:
+    // the isAuto boundary is not text).
+    //
+    // Measured on acq-2026-09-13-cbc: Donruss publishes "Dominators" (40 cards,
+    // unsigned) AND "Dominators Autographs" (22 cards, signed, /10). They share
+    // numbers and players, so the roster test passes -- but the second is not a
+    // colour rung of the first, it is the product's autograph subset, and the
+    // source names it "Dominators Autographs". Folding it produced the key
+    // `panini-donruss-dominators` with parallel "Autographs" for all 19 Donruss
+    // subsets: a parallel that is not one, on a key the source never names.
+    //
+    // The ids stayed distinct (isAuto is in the slug), so this was a NAMING
+    // defect rather than a collision -- which is exactly why it needs stating:
+    // a wrong name on a right address is still a wrong row.
+    const tail = slug.slice(root.length + 1);
+    if (/^(?:autographs?|signatures?|signed|auto)$/.test(tail)) continue;
+    folding.set(slug, {
+      root,
+      // The source's own spelling of the tail, un-slugged for display only.
+      parallel: slug.slice(root.length + 1).replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+      rows: rungRoster.size, same, absent,
+    });
+  }
+  // CF-A-RUNG-OF-A-RUNG-IS-A-SIBLING-COLOUR. The nearest prefix is not always
+  // the real card set: "Prizms Blue Ice" picks "Prizms Blue" and "Prizms Red
+  // Shimmer" picks "Prizms Red", but Blue Ice is a SIBLING COLOUR of Blue, not
+  // a rung of it -- both are rungs of the base subset. A root that is ITSELF
+  // folded is therefore not a card set, and following the chain to its end is
+  // what puts every colour of one subset on ONE key.
+  //
+  // Measured on acq-2026-09-13-cbc: without this, 13 of the 54 surviving keys
+  // were colour rungs whose root happened to be another colour rung.
+  //
+  // The PARALLEL keeps the source's own full spelling relative to the ULTIMATE
+  // root ("Prizms Blue Ice", never "Ice"), because that is what the source
+  // wrote and the rung is a rung OF THE BASE SUBSET.
+  for (const [slug, fold] of folding) {
+    let root = fold.root;
+    // The chain is finite: each hop is strictly shorter than the last.
+    const seen = new Set([slug]);
+    while (folding.has(root) && !seen.has(root)) { seen.add(root); root = folding.get(root).root; }
+    if (root === fold.root) continue;
+    fold.root = root;
+    fold.parallel = slug.slice(root.length + 1).replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+  return folding;
+}
+
+/** Per-cell rung folding, built once by the caller alongside separationByCell.
+ *  A rung is a fact about the PRODUCT -- the root can live in another file --
+ *  so the cell is the unit here for the same reason it is there. */
+function rungFoldingByCell(rowsByCell) {
+  const out = new Map();
+  for (const [cell, entry] of rowsByCell) out.set(cell, rungFoldingFor(entry.rows));
   return out;
 }
 
@@ -426,25 +708,33 @@ function separationByCell(rowsByCell, computeId) {
  * -> { verdict: "pass" | "refuse", reason, separate, keys, unregistered,
  *      ids, collisions, rows }
  */
-function planFile({ rows, productSetKey, computeId, normalize, separate: given }) {
-  const separate = given || subsetsToSeparate(rows, productSetKey, computeId);
-  const keys = insertSetKeysOf(rows, productSetKey, separate);
+function planFile({ rows, productSetKey, computeId, normalize, separate: given, foldRungs: givenFold }) {
+  // CF-A-COLOUR-RUNG-IS-NEVER-A-CARD-SET-KEY. Measured cell-wide by the caller
+  // (rungFoldingByCell) where a root can live in another file; a file that
+  // measures itself is right for one-file-per-product and is what the tests
+  // exercise directly, exactly as `separate` works.
+  const foldRungs = givenFold || rungFoldingFor(rows);
+  const separate = given || subsetsToSeparate(rows, productSetKey, computeId, foldRungs);
+  const keys = insertSetKeysOf(rows, productSetKey, separate, foldRungs);
   const unregistered = unregisteredKeys(keys, normalize);
   const finalId = (r) => computeId({
     ...r,
-    setKey: setKeyForRow({ productSetKey, category: r.category, parallel: r.parallel, subsetName: r.subsetName, separate }).setKey,
+    // The colour a fold moved off the key rides the parallel axis, so the id
+    // this measures is the id the write will take.
+    parallel: parallelForRow({ category: r.category, parallel: r.parallel, subsetName: r.subsetName, foldRungs }),
+    setKey: setKeyForRow({ productSetKey, category: r.category, parallel: r.parallel, subsetName: r.subsetName, separate, foldRungs }).setKey,
   });
   const { ids, collisions, unslugable } = idCollisions(rows, finalId);
   // ORDER IS LOAD-BEARING: an unregistered key is reported even when the
   // separation it would perform already removes every collision, because
   // writing to a key that folds elsewhere is the worse outcome of the two.
   if (unregistered.length) {
-    return { verdict: "refuse", reason: "unregistered-set-keys", separate, keys, unregistered, ids, collisions, unslugable, rows: rows.length };
+    return { verdict: "refuse", reason: "unregistered-set-keys", separate, foldRungs, keys, unregistered, ids, collisions, unslugable, rows: rows.length };
   }
   if (collisions.length) {
-    return { verdict: "refuse", reason: "id-collisions", separate, keys, unregistered, ids, collisions, unslugable, rows: rows.length };
+    return { verdict: "refuse", reason: "id-collisions", separate, foldRungs, keys, unregistered, ids, collisions, unslugable, rows: rows.length };
   }
-  return { verdict: "pass", reason: null, separate, keys, unregistered, ids, collisions, unslugable, rows: rows.length };
+  return { verdict: "pass", reason: null, separate, foldRungs, keys, unregistered, ids, collisions, unslugable, rows: rows.length };
 }
 
 /**
@@ -484,6 +774,9 @@ module.exports = {
   categorySubsetSlug,
   subsetSlugFor,
   setKeyForRow,
+  parallelForRow,
+  rungFoldingFor,
+  rungFoldingByCell,
   subsetsToSeparate,
   insertSetKeysOf,
   unregisteredKeys,

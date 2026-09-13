@@ -9,12 +9,19 @@ premise did not survive that probe, the correction is called out inline. Read
 stale picture of what we already own.
 
 > **This document is dated. Read source verdicts against the later docs.** Its
-> probes are a snapshot of 2026-08-30 and at least one has since been overturned
-> outright: §5 listed `sportscardchecklist.com` as a dead end, and it is **GO** —
-> see the retirement notice in §5 and
-> [`docs/checklists/2026-09-04-vintage-checklist-sources.md`](checklists/2026-09-04-vintage-checklist-sources.md),
-> which is the authority for vintage source permissions. A "do not re-probe" verdict
-> here is evidence about one day's probe, not a standing rule.
+> probes are a snapshot of 2026-08-30 and **two of them have since been overturned
+> outright**, both from §5's "do not re-probe" table:
+>
+> - `sportscardchecklist.com`, listed as a dead end, is **GO** — see the retirement
+>   notice in §5 and
+>   [`docs/checklists/2026-09-04-vintage-checklist-sources.md`](checklists/2026-09-04-vintage-checklist-sources.md),
+>   which is the authority for vintage source permissions.
+> - `cardboardconnection.com`, listed as **DNS-dead**, is **live** and publishes a
+>   full card-level checklist per release — see the retirement notice in §5. 68,329
+>   rows were acquired from it on 2026-09-13 (PR #2114).
+>
+> A "do not re-probe" verdict here is evidence about one day's probe, not a standing
+> rule — and in both cases the probe itself was the defect, not the host.
 
 ---
 
@@ -82,7 +89,7 @@ Fetch method legend: **GET** = plain `fetch`, no bot-block, works today.
 | 9 | 2024 Bowman **(not Chrome)** CPA-TSY | checklistinsider | `checklistinsider.com/2024-bowman-baseball` | GET | YES | YES | BCP `2024_Bowman` |
 | 10 | 2025 Bowman's Best (B25-KM) | checklistinsider | `checklistinsider.com/2025-bowmans-best-baseball` | GET | YES | YES | BCP `2025-26_Bowman's_Best` |
 | 11 | 1996 Fleer Metal Universe | BCP | `/index.php/1996_Metal_Universe` | GET | YES (Platinum Ed.) | **NO — pre-serial era** | TCDB |
-| 12 | 2020 Bowman Chrome (CPA-BWJ) | BCP | `/index.php/2020_Bowman_Chrome` | GET | YES | YES | TCDB (**not** cardboardconnection — DNS-dead) |
+| 12 | 2020 Bowman Chrome (CPA-BWJ) | BCP | `/index.php/2020_Bowman_Chrome` | GET | YES | YES | TCDB, or cardboardconnection (~~DNS-dead~~ — **live**, see §5) |
 
 **Structural verification (probed 2026-08-30):** all BCP pages above return
 HTTP 200 and carry the exact `<h2 id="Base_Set">` + `<h2 id="Parallels">`
@@ -115,7 +122,14 @@ Four priority products go from zero rungs to a full ladder with one command.
 
 ---
 
-## 3. Two correctness bugs found in the existing scraper
+## 3. Correctness bugs found in the scrapers and the sources
+
+Originally two (§3.1, §3.2, both BCP, both fixed in #1576). Later acquisitions
+added more, and they are kept together because they are **one failure class**:
+a value that is well-formed, plausible, and wrong. §3.3 says why that class
+matters more than a missing row. §3.4 is TCDB; §3.5–§3.8 are defects in the
+publisher workbooks themselves, found on cardboardconnection but not specific
+to it — any acquirer reading a publisher `.xlsx` should expect them.
 
 **Fixed in PR #1576** (2026-08-30, `3a27ee8a`) — both §3.1 and §3.2 below.
 Range-scoping (`parseCardRange` / `cardInRange`) and the EXCEPT-block split
@@ -244,6 +258,92 @@ TCDB's own stated count) and its Team Photos (32 rows) and Combo Signatures
 the file — the #1985 shape) is fixed alongside it, since it blocked writing
 these tests at all.
 
+### 3.5 (2026-09-13) — publisher workbooks shift their own columns
+
+Found across four Upper Deck hockey workbooks on cardboardconnection (PR
+#2114). The header row and the data rows do not line up: the `Rookie` column
+holds either the literal `"Rookie"` or a junk internal id, and **when it holds
+`"Rookie"` every later value moves one column right**. Read by header position,
+`Auto` returns the print run, `Serial #'d` returns the pack odds, and so on
+down the row.
+
+**3,588 rows across the four workbooks** carry the flag and therefore shift
+(589 on 2024-25 Series 1 alone). Fix: detect the flag per row and offset the
+column index for that row only. Never trust a header index for a whole sheet
+without checking a flag column for a value that is not a flag.
+
+### 3.6 (2026-09-13) — internal set ids leak into the serial column
+
+The same workbooks put `1572` in the serial column on all 200 Clear Cut cards
+and `1594` on all 200 Outburst Silver. These are the publisher's internal set
+ids, not print runs — they also appear in the `Rookie` and `Auto` columns as
+the junk values above, in a tight 1,5xx–1,6xx band.
+
+The page settles it: it states **pack odds** for both rungs (`1:180 packs`),
+and the sibling 2023-24 page names the whole ladder as *"Outburst Silver,
+Deluxe (#/250), Outburst Red (#/25), Outburst Gold (1/1)"* — Silver named with
+**no serial at all**. 400 false print runs blanked.
+
+This is §3.3's shape exactly, from a second source. A print run must be
+corroborated against the page's own words before it is written; **odds are
+never coerced into `printRun`**, and blank stays unknown.
+
+### 3.7 (2026-09-13) — the rung is not always a suffix, so siblings never fold
+
+`classifySections` folds a section onto an anchor only when the candidate's
+name **contains** every token of the anchor's ("X - Image Variations" extends
+"X"). Three real naming shapes defeat that, and each one leaves every sibling
+its own anchor emitting a **blank parallel** — so N different cards collapse
+onto one slug:
+
+| shape | example | effect |
+|---|---|---|
+| rung in the MIDDLE | `Clear Cut Parallel - Young Guns` vs the anchor `Base Set - Young Guns` | 9 cards on `…:201:base:no-auto` |
+| rung on the ANCHOR | `Dazzlers Blue` (the plain card) vs `Dazzlers Black Parallel` | 6 cards on `…:dz-1:base:no-auto` |
+| anchor only on the PAGE | `Optic Rated Rookies Preview Holo / Green Mojo / …`, with no bare "Optic Rated Rookies Preview" in the workbook | 5 cards on `…:301:base:no-auto` |
+
+Measured on one package: **1,819 rows collapsed onto 395 slugs.**
+
+Fix at the staging boundary, not in the classifier: rename each sibling as an
+extension of the run **the source itself names** — the page's own set-checklist
+heading for the third shape, a published sibling for the first two — and only
+when the members list **exactly the same card numbers**. A family is never
+rewritten on a colour word alone. The tiered variant is page-attested too:
+*"The 30-card set again offers tiered print runs of 1,000 copies or less"* is
+one 30-card set with seven Population Count tiers, not seven sets.
+
+### 3.8 (2026-09-13) — the auto flag comes from the page's Autograph heading
+
+The word-boundary test on the section name (#2106's discipline, and still
+required) is **necessary but not sufficient**. The hobby names autograph sets
+without saying "auto" or "signature":
+
+```
+Hoops Ink · Rookie Ink · Great SIGnificance · Private Signings · College Penmanship
+```
+
+None of those match any `/auto|sign/` test, and all of them are signed.
+**1,131 rows across two NBA Hoops products** would have minted UNSIGNED.
+
+cardboardconnection pages group their checklists under explicit class headings
+— `<Product> Autograph Checklist`, then `<Set> Set Checklist` for each signed
+set, until the next class heading (Insert / Memorabilia / Parallel). **That
+heading is the attestation**: read `isAuto` from which class a set is filed
+under, and keep the word-boundary test as the fallback for sets the page does
+not classify.
+
+Keep the boundary for the other direction. An unanchored `/auto|ink/` reads
+"Dazzlers **P**ink Parallel" and "Base Prizms **P**ink Circles" as autographs.
+Both errors are one-way harmful and both must be guarded: never mint a signed
+card unsigned, never mint an unsigned card signed.
+
+A related trap when merging a page checklist with a workbook: **an autograph
+subset can reuse the base cards' numbers AND players** ("Base Snow Spray
+Autographs"). A duplicate test keyed on `cardNumber + player` deletes it as a
+duplicate of the base card. Key on `cardNumber + signedness`, and not on the
+player string — one source folds an RC flag into the name ("Josiah Gray RC")
+and the other does not, which made 377 of 500 identical cards read as new.
+
 ---
 
 ## 4. Build order
@@ -304,7 +404,6 @@ No clean source. Blocked on a card-number conflict, not on acquisition (§6.1).
 
 | Source | Status | Evidence |
 |---|---|---|
-| `cardboardconnection.com` | **DNS-dead** | Health check 2026-08-25; ranks high in search but results are cached ghosts |
 | `groupbreakchecklists.com` | dead | 2026-08-25 health check |
 | `beckett.com` HTML | **403 bot-block** | Direct probe; only `img.beckett.com` XLSX archive works |
 | `tcdb.com` direct GET | **403 bot-block** | Use `backend/scripts/scrape-tcdb.cjs` |
@@ -347,6 +446,54 @@ No clean source. Blocked on a card-number conflict, not on acquisition (§6.1).
 >
 > Anything genuinely dead about this host would be recorded in the vintage-sources
 > doc above, which is now the authority for it.
+
+> ### RETIRED 2026-09-13 — `cardboardconnection.com` was listed here as DNS-dead and is **LIVE**
+>
+> This table carried the row
+> `` | `cardboardconnection.com` | **DNS-dead** | Health check 2026-08-25; ranks high in search but results are cached ghosts | ``
+> and §1 told product 12 to prefer TCDB "(**not** cardboardconnection — DNS-dead)".
+> **Both are withdrawn.** The host resolves and serves.
+>
+> Re-probed 2026-09-13, directly, twice (the acquisition run and a confirmation
+> pass before writing this note):
+>
+> | fact | measured |
+> |---|---|
+> | DNS | `www.cardboardconnection.com` **and** the bare host both resolve to `45.56.220.159` |
+> | HTML | product pages return **200** `text/html`; the sitemap index, `robots.txt` and the year indexes all 200 |
+> | checklist file | each product page links a **real `.xlsx`** on `cconnect.s3.amazonaws.com` — verified by `Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` and a `PK\x03\x04` zip header, not by the link existing |
+> | inline HTML | the page ALSO carries a full card-level checklist (`<h3 class="hot-title">X Set Checklist</h3>` + `.tablechecklist` blocks), which on Upper Deck holds autograph sets the workbook omits |
+> | coverage | year indexes run **2018–2024 only** for baseball/football/basketball/hockey/soccer. 2025 and 2026 products have no page — a real ceiling, and the main reason 30 of the 39 checklistinsider queue ranks stayed unsourced |
+>
+> Acquired against it the same day: **10 products, 68,329 rows, 9,781 signed,
+> 37,290 print runs** (PR #2114), including queue ranks 1, 13 and 26 — the three
+> highest-ranked entries no other source could reach.
+>
+> **How the wrong verdict happened, so it is not repeated.** "Ranks high in search
+> but results are cached ghosts" is what a *search-result* probe sees when the host
+> is rate-limiting: this server answers bursts with a **503 `Service Unavailable`
+> page that is served with an HTTP 200-shaped body**, so a fast unthrottled sweep
+> reads every page as junk and concludes the domain is gone. A probe must
+> distinguish "no host" from "host says slow down" — check DNS separately from
+> HTTP, and back off rather than concluding. One request per ~4s with retry got
+> 793 product pages without a single failure.
+>
+> **Discovery here is the year index, never a constructed URL.** The site's own
+> indexes live at `/sports-cards-sets/<sport-slug>/<year>-<sport>-cards`
+> (`mlb-baseball-cards`, `nfl-football-cards`, `nba-basketball-cards`,
+> `nhl-hockey-cards`, `soccer-card-sets`), with basketball and hockey on season
+> slugs (`2022-2023-basketball-cards`) that switch form for newer years
+> (`2024-25-hockey-cards`). The paged `post-sitemap2..10.xml` children of the
+> sitemap index return a **WordPress error page**, so the sitemap alone is not a
+> product index — only `post-sitemap.xml` works and it holds 2009-era news.
+> Product URL shape also changed over time (`2022-donruss-football-nfl-cards`
+> vs `2024-25-upper-deck-series-1-hockey-cards-review-and-checklist`), so
+> constructing URLs by rule fails; resolve every target against the index and
+> confirm by page title.
+>
+> `robots.txt` permits the product paths (it disallows only `/images/e/*`,
+> `/sports-collectibles-*`, `/partners/*`, query strings and `*.htm`, and blocks
+> `CCBot` / `GPTBot` / `Google-Extended` by name — not a general crawler).
 
 **Products with no print runs to acquire — a product fact, not a source gap.**
 1997 Finest, 1999 Finest, 1996 Metal Universe predate serial numbering; they

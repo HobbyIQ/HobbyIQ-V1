@@ -342,7 +342,7 @@ async function main() {
   // WRITING-ANY. `plannedIds` is the DOCUMENT count the pre-flight measured;
   // `written` counts upsert CALLS, and the whole defect is that those two can
   // differ silently. They are reconciled at the end of the run.
-  let filesRefused = 0, refusedRows = 0, insertSetKeys = 0, insertSetRows = 0, plannedIds = 0;
+  let filesRefused = 0, refusedRows = 0, insertSetKeys = 0, insertSetRows = 0, plannedIds = 0, rungRows = 0;
   let stopReason = null;
 
   // CF-THE-CLASH-IS-A-FACT-ABOUT-THE-PRODUCT-NOT-THE-FILE (2026-09-13).
@@ -385,14 +385,20 @@ async function main() {
         });
       }
     }
+    // CF-A-COLOUR-RUNG-IS-NEVER-A-CARD-SET-KEY. Measured cell-wide FIRST,
+    // because the separation must be measured in a world where a colour rung
+    // already sits on the parallel axis -- otherwise two rungs of one subset
+    // look like a clash and the guard demands a key for a colour.
+    const fold = INSERT_SET.rungFoldingByCell(byCell);
     // The SAME slug function the write path uses, so the separation is measured
     // over the exact addresses the run would take.
-    return INSERT_SET.separationByCell(byCell, (r) => computeHobbyIqCardId({
+    const separation = INSERT_SET.separationByCell(byCell, (r) => computeHobbyIqCardId({
       sport: r._sport, year: r._year, setKey: r.setKey,
       cardNumber: String(r.cardNumber), parallel: r.parallel || "Base",
       isAuto: r.isAuto === "true", printRun: r.printRun ? Number(r.printRun) : null,
       authoritativeSetKey: true,
-    }));
+    }), fold);
+    return { separation, fold };
   })();
 
   for (const name of files) {
@@ -490,7 +496,10 @@ async function main() {
       normalize: normalizeSetKey,
       // THE CELL'S separation, measured over every staged file of this product
       // -- not this file's view of itself, which cannot see a sibling file.
-      separate: cellSeparation.get(`${product.sport}/${product.year}/${product.setKey}`),
+      separate: cellSeparation.separation.get(`${product.sport}/${product.year}/${product.setKey}`),
+      // THE CELL'S rung folding, for the same reason: a rung's ROOT subset
+      // routinely lives in a different file of the same product.
+      foldRungs: cellSeparation.fold.get(`${product.sport}/${product.year}/${product.setKey}`),
     });
     if (plan.verdict === "refuse") {
       filesRefused++;
@@ -528,10 +537,22 @@ async function main() {
     // `product.setKey`, so the id and the stored setKey field can never
     // disagree -- the split that CF-AUTHORITATIVE-SETKEY was written for.
     for (const r of batch) {
-      r.setKey = INSERT_SET.setKeyForRow({
+      const placed = INSERT_SET.setKeyForRow({
         productSetKey: product.setKey, category: r.category,
-        parallel: r.parallel, subsetName: r.subsetName, separate: plan.separate,
-      }).setKey;
+        parallel: r.parallel, subsetName: r.subsetName,
+        separate: plan.separate, foldRungs: plan.foldRungs,
+      });
+      // CF-A-COLOUR-RUNG-IS-NEVER-A-CARD-SET-KEY. A colour the fold moved off
+      // the key becomes the row's PARALLEL, stamped here beside the key so
+      // every downstream read -- the id, the stored field, the search fields --
+      // sees one value. The row's own column always wins; the fold only ever
+      // fills a parallel the source left blank.
+      r.parallel = INSERT_SET.parallelForRow({
+        category: r.category, parallel: r.parallel,
+        subsetName: r.subsetName, foldRungs: plan.foldRungs,
+      });
+      if (placed.rungParallel) rungRows++;
+      r.setKey = placed.setKey;
       if (r.setKey !== product.setKey) insertSetRows++;
     }
     if (plan.keys.length) {
@@ -918,6 +939,7 @@ async function main() {
   console.log(`  csv rows read          ${f(rows)}`);
   console.log(`  files REFUSED, id integrity ${f(filesRefused)} (${f(refusedRows)} rows)   <- unregistered insert-set keys, or ids claimed by two rows; named above, whole file, never half-ingested`);
   console.log(`  insert sets on their own key ${f(insertSetKeys)} (${f(insertSetRows)} rows)   <- SAME-NUMBERED subsets only; base and its rungs stay on the product key`);
+  console.log(`  colour rungs folded onto the parallel axis ${f(rungRows)}   <- a subset MEASURED to reprint its root's roster (same number -> same player, zero disagreements); the colour is a CARD, never a card set`);
   console.log(`  catalog rows written   ${f(written)}`);
   // CF-RECONCILE-DOCUMENTS-NOT-CALLS (2026-09-13). `written` counts upsert
   // CALLS. The defect this run exists to end is 5,462 calls landing on 2,949

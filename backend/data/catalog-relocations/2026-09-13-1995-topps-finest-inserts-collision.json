@@ -1,0 +1,26 @@
+{
+  "generatedAt": "2026-09-13T04:00:00.000Z",
+  "reason": "1995 Topps Finest Inserts subset (older sportscardchecklist-2026-09-04 acquisition) minted onto the flagship topps-finest key without its own insert-set key, colliding with the base set's card numbers 1-15. Confirmed via census-catalog-id-collisions.cjs (see collision-census-2026-09-13.md, control cell baseball/1995/topps-finest): all 15 stored rows disagree with the checklist's true base-set player at the same card number. Retiring these 15 rows clears the addresses so a re-ingest of acq-2026-09-13-scc/1995-topps-finest-baseball.csv can write the correct base rows.",
+  "rulings": [
+    "retire=delete per project_catalog_retire_is_hard_delete.md: card_catalog has no soft-retire field any match path reads, so 'the row should not exist' means DELETE via retireCatalogRow, same as every other retire-* catalog lane.",
+    "Pool rows are keyed by hobbyiqCardId and are untouched by this catalog retire; this retire does not unplace them. A follow-up re-ingest (step 2 of the repair) writes the true base card back onto these SAME 15 ids, so from then on each id prices Mondesi/Abbott/etc. correctly -- and the Bagwell/Belle INSERT sales that were pooled there stay attached to the base card's pool. That is WRONG-POOL, not unplaced: known, accepted for now, until the 1995 Topps Finest Inserts subset is registered on its own key and rematched (coordinator instruction 2026-09-13)."
+  ],
+  "excluded": [],
+  "entries": [
+    { "id": "hiq:baseball:1995:topps-finest:1:base:no-auto", "action": "retire", "reason": "1995 Topps Finest Inserts card #1 (Jeff Bagwell, source sportscardchecklist-2026-09-04) occupies the base set's #1 address; checklist base card is Raul Mondesi." },
+    { "id": "hiq:baseball:1995:topps-finest:2:base:no-auto", "action": "retire", "reason": "Inserts card #2 (Albert Belle) occupies base #2; checklist base card is Kurt Abbott." },
+    { "id": "hiq:baseball:1995:topps-finest:3:base:no-auto", "action": "retire", "reason": "Inserts card #3 (Ken Griffey Jr.) occupies base #3; checklist base card is Chris Gomez." },
+    { "id": "hiq:baseball:1995:topps-finest:4:base:no-auto", "action": "retire", "reason": "Inserts card #4 (Frank Thomas) occupies base #4; checklist base card is Manny Ramirez." },
+    { "id": "hiq:baseball:1995:topps-finest:5:base:no-auto", "action": "retire", "reason": "Inserts card #5 (Matt Williams) occupies base #5; checklist base card is Rondell White." },
+    { "id": "hiq:baseball:1995:topps-finest:6:base:no-auto", "action": "retire", "reason": "Inserts card #6 (Dante Bichette) occupies base #6; checklist base card is William Van Landingham." },
+    { "id": "hiq:baseball:1995:topps-finest:7:base:no-auto", "action": "retire", "reason": "Inserts card #7 (Barry Bonds) occupies base #7; checklist base card is Jon Lieber." },
+    { "id": "hiq:baseball:1995:topps-finest:8:base:no-auto", "action": "retire", "reason": "Inserts card #8 (Moises Alou) occupies base #8; checklist base card is Ryan Klesko." },
+    { "id": "hiq:baseball:1995:topps-finest:9:base:no-auto", "action": "retire", "reason": "Inserts card #9 (Andres Galarraga) occupies base #9; checklist base card is John Hudek." },
+    { "id": "hiq:baseball:1995:topps-finest:10:base:no-auto", "action": "retire", "reason": "Inserts card #10 (Kenny Lofton) occupies base #10; checklist base card is Joey Hamilton." },
+    { "id": "hiq:baseball:1995:topps-finest:11:base:no-auto", "action": "retire", "reason": "Inserts card #11 (Rafael Palmeiro) occupies base #11; checklist base card is Bob Hamelin." },
+    { "id": "hiq:baseball:1995:topps-finest:12:base:no-auto", "action": "retire", "reason": "Inserts card #12 (Tony Gwynn) occupies base #12; checklist base card is Brian Anderson." },
+    { "id": "hiq:baseball:1995:topps-finest:13:base:no-auto", "action": "retire", "reason": "Inserts card #13 (Kirby Puckett) occupies base #13; checklist base card is Mike Lieberthal." },
+    { "id": "hiq:baseball:1995:topps-finest:14:base:no-auto", "action": "retire", "reason": "Inserts card #14 (Jose Canseco) occupies base #14; checklist base card is Rico Brogna." },
+    { "id": "hiq:baseball:1995:topps-finest:15:base:no-auto", "action": "retire", "reason": "Inserts card #15 (Jeff Conine) occupies base #15; checklist base card is Rusty Greer." }
+  ]
+}
