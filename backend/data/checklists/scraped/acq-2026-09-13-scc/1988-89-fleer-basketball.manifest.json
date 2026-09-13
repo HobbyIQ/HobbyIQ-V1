@@ -1,0 +1,33 @@
+{
+ "scrapedAt": "2026-09-13T01:59:14.882Z",
+ "source": "sportscardchecklist",
+ "sourceUrl": "https://www.sportscardchecklist.com/set-12095/1988-89-fleer-basketball-trading-card-checklist",
+ "sport": "basketball",
+ "year": 1988,
+ "season": "1988-89",
+ "setName": "1988 Fleer Basketball",
+ "productKey": "1988-fleer",
+ "setKey": "fleer",
+ "setKeyRequested": "fleer",
+ "parallelOfParent": false,
+ "parallelName": null,
+ "subset": null,
+ "rowCount": 132,
+ "parallelColumnAuthoritative": true,
+ "converterVersion": 6,
+ "cardRows": 132,
+ "ladderRows": 0,
+ "subsetRows": 12,
+ "printRunsFound": 0,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > All-Star",
+   "category": "insert-all-star",
+   "playerCount": 12,
+   "rungs": 0,
+   "rowCount": 12,
+   "refused": false,
+   "printRun": null
+  }
+ ]
+}

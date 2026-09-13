@@ -1,0 +1,62 @@
+{
+ "scrapedAt": "2026-09-13T01:59:35.456Z",
+ "source": "sportscardchecklist",
+ "sourceUrl": "https://www.sportscardchecklist.com/set-12021/1989-score-football-trading-card-checklist",
+ "sport": "football",
+ "year": 1989,
+ "season": "1989",
+ "setName": "1989 Score Football",
+ "productKey": "1989-score",
+ "setKey": "score",
+ "setKeyRequested": "score",
+ "parallelOfParent": false,
+ "parallelName": null,
+ "subset": null,
+ "rowCount": 331,
+ "parallelColumnAuthoritative": true,
+ "converterVersion": 6,
+ "cardRows": 331,
+ "ladderRows": 0,
+ "subsetRows": 30,
+ "printRunsFound": 0,
+ "sectionsReport": [
+  {
+   "breadcrumb": "Checklist > Record Breaker",
+   "category": "insert-record-breaker",
+   "playerCount": 5,
+   "rungs": 0,
+   "rowCount": 5,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > AFC Championship",
+   "category": "insert-afc-championship",
+   "playerCount": 1,
+   "rungs": 0,
+   "rowCount": 1,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > NFC Championship",
+   "category": "insert-nfc-championship",
+   "playerCount": 1,
+   "rungs": 0,
+   "rowCount": 1,
+   "refused": false,
+   "printRun": null
+  },
+  {
+   "breadcrumb": "Checklist > Pro Action",
+   "category": "insert-pro-action",
+   "playerCount": 23,
+   "rungs": 0,
+   "rowCount": 23,
+   "refused": false,
+   "printRun": null
+  }
+ ],
+ "identicalRowsDeduped": 7,
+ "dedupeNote": "The source page listed these rows twice, byte-identical. Only exact-duplicate LINES were removed; a same-cardNumber row whose player text differs is a distinct card (error/corrected, CO/HOF, promo) and was preserved."
+}
