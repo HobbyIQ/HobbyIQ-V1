@@ -3,7 +3,7 @@
   "reason": "1995 Topps Finest Inserts subset (older sportscardchecklist-2026-09-04 acquisition) minted onto the flagship topps-finest key without its own insert-set key, colliding with the base set's card numbers 1-15. Confirmed via census-catalog-id-collisions.cjs (see collision-census-2026-09-13.md, control cell baseball/1995/topps-finest): all 15 stored rows disagree with the checklist's true base-set player at the same card number. Retiring these 15 rows clears the addresses so a re-ingest of acq-2026-09-13-scc/1995-topps-finest-baseball.csv can write the correct base rows.",
   "rulings": [
     "retire=delete per project_catalog_retire_is_hard_delete.md: card_catalog has no soft-retire field any match path reads, so 'the row should not exist' means DELETE via retireCatalogRow, same as every other retire-* catalog lane.",
-    "Sales currently pooled under these 15 ids (the wrong-player Inserts rows' sales) become UNPLACED after this retire and are NOT re-pointed -- they stay unplaced until the 1995 Topps Finest Inserts subset is registered on its own key and rematched. Known, accepted for now (coordinator instruction 2026-09-13)."
+    "Pool rows are keyed by hobbyiqCardId and are untouched by this catalog retire; this retire does not unplace them. A follow-up re-ingest (step 2 of the repair) writes the true base card back onto these SAME 15 ids, so from then on each id prices Mondesi/Abbott/etc. correctly -- and the Bagwell/Belle INSERT sales that were pooled there stay attached to the base card's pool. That is WRONG-POOL, not unplaced: known, accepted for now, until the 1995 Topps Finest Inserts subset is registered on its own key and rematched (coordinator instruction 2026-09-13)."
   ],
   "excluded": [],
   "entries": [
