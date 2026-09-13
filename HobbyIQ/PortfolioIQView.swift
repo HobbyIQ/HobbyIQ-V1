@@ -136,6 +136,20 @@ struct PortfolioIQView: View {
                             // been logged and the read route is live.
                             EngineHitRatePill()
 
+                            // CF-PORTFOLIO-BREAKDOWN (2026-08-17). Entry point
+                            // to the allocation / risk / quality analysis.
+                            // Sits directly under the headline numbers because
+                            // "what is this made of" is the natural next
+                            // question after "what is it worth". Suppresses
+                            // itself with no holdings — an empty breakdown
+                            // teaches nothing.
+                            // MainAppView owns the NavigationStack (see the
+                            // CF-BACK-NAV-FIX note above), so a plain
+                            // NavigationLink is correct here.
+                            if vm.inventoryCards.isEmpty == false {
+                                PortfolioBreakdownEntryCard()
+                            }
+
                             if let errorMessage = vm.errorMessage {
                                 warningBanner(message: errorMessage)
                             }
