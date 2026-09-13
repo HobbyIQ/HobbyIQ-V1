@@ -183,9 +183,18 @@ export const MINTS: ReadonlyArray<readonly [string, string]> = [
  */
 const NEGATIVES: ReadonlyArray<readonly [string, string]> = [
   // -- "prism" is 99.0% not Pacific -----------------------------------------
-  ["2023 Topps Chrome Platinum Anniversary Prism Refractor #50", "topps-chrome"],
+  // The first and third rows also NAME a distinct product (Platinum
+  // Anniversary / Update Series) inside the same title, so the word "prism"
+  // is not the only thing under test any more once the title parser stopped
+  // folding those products up to bare Topps Chrome (2026-09-13,
+  // CF-FOLD-UP-COLLAPSE-IS-FORBIDDEN, title-parser extension). The point
+  // these two rows are here to make — "prism" alone never claims
+  // `pacific-prism` — still holds; `expected` is updated to the destination
+  // the title actually names, ruled DISTINCT from `topps-chrome` on
+  // 2026-09-03.
+  ["2023 Topps Chrome Platinum Anniversary Prism Refractor #50", "topps-chrome-platinum"],
   ["2022 Topps Chrome Prism Refractor Julio Rodriguez #189", "topps-chrome"],
-  ["2021 Topps Chrome Update Series Prism Refractor #USC12", "topps-chrome"],
+  ["2021 Topps Chrome Update Series Prism Refractor #USC12", "topps-chrome-update-series"],
   ["2022 Panini Prizm Baseball Bobby Witt Jr #22", "panini-prizm"],
 
   // -- the Hoops family word must keep the FLAGSHIP (#1715 class, 2026-09-07)

@@ -3479,6 +3479,22 @@ function inferFamilySetKeyFromTitle(title: string, cardNumber?: string | null): 
   if (/panini\s+noir\b/i.test(t)) return "Panini Noir";
   if (/leaf\s+metal/i.test(t)) return "Leaf Metal";
 
+  // CF-FOLD-UP-COLLAPSE-IS-FORBIDDEN (Drew ruling 2026-09-03, extended here
+  // 2026-09-13 to the title parser). The 2026-09-03 census ruled
+  // `topps-chrome-platinum` and `topps-chrome-update-series` DISTINCT from
+  // `topps-chrome` — "every pair is a normalizeSetKey fixed point" — and
+  // `normalizeSetKey`/`knownSetKeyPatterns` have carried that ruling since
+  // (hobbyIqCardId.service.ts:539,562). This parser never got the same
+  // qualifier check: `/topps\s+chrome/` below fires on ANY title containing
+  // those two words, so "2024 Topps Chrome Update Series" and "2023 Topps
+  // Chrome Platinum Anniversary" both returned bare "Topps Chrome" HERE,
+  // before `normalizeSetKey` ever saw the qualifying word — the fixed point
+  // downstream can't rescue a word this function already discarded. The
+  // 2026-09-13 census caught 114 CONFLICT samples of exactly this shape: a
+  // live regression of an already-ruled pair. Must precede the bare
+  // `/topps\s+chrome/` rule, same ordering doctrine as Sapphire above.
+  if (/topps\s+chrome\s+platinum/i.test(t)) return "Topps Chrome Platinum";
+  if (/topps\s+chrome\s+update(\s+series)?/i.test(t)) return "Topps Chrome Update Series";
   if (/topps\s+chrome/.test(t)) return "Topps Chrome";
   // CF-FLEER-STICKERS (Drew, 2026-07-29). 1986 Fleer Stickers (basketball)
   // is a distinct product from base 1986 Fleer — Michael Jordan #8 Sticker
@@ -3636,6 +3652,22 @@ function inferFamilySetKeyFromTitle(title: string, cardNumber?: string | null): 
   // is gated on the Hoops product word and never on the stock words alone.
   if (/haunted\s+hoops/i.test(t)) return "Panini Haunted Hoops";
   if (/hoops\s+premium\s+stock/i.test(t)) return "Panini NBA Hoops Premium Stock";
+  // CF-FOLD-UP-COLLAPSE-IS-FORBIDDEN (Drew ruling 2026-09-03, extended here
+  // 2026-09-13). `panini-prizm-draft-picks` was ruled DISTINCT from
+  // `panini-prizm` on 2026-09-03 ("panini-prizm-wnba/panini-prizm-draft-picks
+  // != panini-prizm... every pair is a normalizeSetKey fixed point") and
+  // `panini-prizm-deca` is the same shape -- its own checklist-backed product
+  // (setkey-reconciliation.json carries it as verdict "distinct", canonical
+  // "panini-prizm-deca", 20,116 catalog rows, 100% checklist-backed; it has
+  // no productSetKeys.ts entry yet, but the reconciled fixed point already
+  // makes normalizeSetKey answer correctly once this parser stops discarding
+  // "Deca" first). Neither had a qualifier check here,
+  // so the bare `/\bprizm\b/` rule two lines down swallowed both BEFORE
+  // normalizeSetKey ever saw "Deca" or "Draft Picks" -- the 2026-09-13 census
+  // measured the live cost (39 sampled CONFLICT rows). Must precede the bare
+  // Prizm arm, same ordering doctrine as the Hoops specializations above.
+  if (/prizm\s+deca\b/i.test(t)) return "Panini Prizm Deca";
+  if (/prizm\s+(?:perennial\s+)?draft\s+picks\b/i.test(t)) return "Panini Prizm Draft Picks";
   if (/panini\s+prizm|\bprizm\b/i.test(t)) return "Panini Prizm";
   if (/topps/.test(t)) return "Topps";
   // CF-INFER-SET-POKEMON-GUARD (Drew, 2026-08-03). Bowman is the
