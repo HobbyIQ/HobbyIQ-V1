@@ -651,6 +651,35 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
     [/prizm-monopoly-wnba|monopoly-wnba/, "panini-prizm-monopoly-wnba"],
     [/prizm-wnba/, "panini-prizm-wnba"],
     [/prizm-(perennial-)?draft-picks/, "panini-prizm-draft-picks"],
+    // CF-WORLD-CUP-INSERT-SETS-ARE-CARD-SETS (R30, Drew 2026-09-13). The 2014
+    // Panini Prizm FIFA World Cup page publishes nine insert families that
+    // RESTART NUMBERING AT 1 beside the 201-card base set, so card number 1
+    // with a blank parallel names ten different cards. Measured on the staged
+    // file before #2112: 5,462 upserts landed on 2,949 documents, and the last
+    // writer for each id decided which player the card is.
+    //
+    // These sit ABOVE the /panini-prizm/ catch-all, where they must stay — a
+    // longer product name always precedes the family pattern it contains,
+    // exactly as Mega Box and NSCC precede /bowman-chrome/. Without them each
+    // key folded PAST its own product onto the bare flagship
+    // (`...-world-cup-guardians` -> `panini-prizm`), which is worse than the
+    // collision: a key that is not a normalizeSetKey FIXED POINT cannot hold a
+    // pool at all.
+    //
+    // Each insert name is anchored at a segment boundary on both sides, so
+    // only a spelling that really names the insert can match. The 13 Prizm
+    // COLOUR RUNGS of these inserts are deliberately absent: a named parallel
+    // is a distinct card, not a distinct set, and rides the parallel axis on
+    // these keys.
+    [/(?:^|-)panini-prizm-fifa-world-cup-aerial-assault(?:-|$)/, "panini-prizm-fifa-world-cup-aerial-assault"],
+    [/(?:^|-)panini-prizm-fifa-world-cup-cup-captains(?:-|$)/, "panini-prizm-fifa-world-cup-cup-captains"],
+    [/(?:^|-)panini-prizm-fifa-world-cup-fuleco(?:-|$)/, "panini-prizm-fifa-world-cup-fuleco"],
+    [/(?:^|-)panini-prizm-fifa-world-cup-guardians(?:-|$)/, "panini-prizm-fifa-world-cup-guardians"],
+    [/(?:^|-)panini-prizm-fifa-world-cup-net-finders(?:-|$)/, "panini-prizm-fifa-world-cup-net-finders"],
+    [/(?:^|-)panini-prizm-fifa-world-cup-team-photos(?:-|$)/, "panini-prizm-fifa-world-cup-team-photos"],
+    [/(?:^|-)panini-prizm-fifa-world-cup-world-cup-matchups(?:-|$)/, "panini-prizm-fifa-world-cup-world-cup-matchups"],
+    [/(?:^|-)panini-prizm-fifa-world-cup-world-cup-posters(?:-|$)/, "panini-prizm-fifa-world-cup-world-cup-posters"],
+    [/(?:^|-)panini-prizm-fifa-world-cup-world-cup-stars(?:-|$)/, "panini-prizm-fifa-world-cup-world-cup-stars"],
     [/panini-prizm/, "panini-prizm"],
     // CF-COLLAPSED-SETKEY-AUDIT: Elite is its own line (236,976 catalog rows),
     // and Elite Extra Edition is a further distinct product (394,549) — so the

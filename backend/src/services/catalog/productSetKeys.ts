@@ -1073,6 +1073,68 @@ export const PRODUCT_SET_KEYS: ReadonlyArray<ProductSetKey> = [
   P("panini-mosaic-la-liga", { parent: "panini-mosaic" }),
   P("panini-mosaic-fifa-road-to-world-cup", { parent: "panini-mosaic" }),
   P("panini-prizm-fifa-world-cup-qatar", { parent: "panini-prizm" }),
+  /**
+   * The 2014 release's own product key. It was already a normalizeSetKey FIXED
+   * POINT through `setkey-reconciliation.json` (verdict `distinct`, canonical
+   * itself, 96,562 checklist rows, `final: true`) but was NOT in this table, so
+   * it had no family or parent recorded. Registering the nine insert sets under
+   * it makes that gap load-bearing: `family`/`parent` must name a key the table
+   * spells (pinned by productFamilyIsATable), and a child cannot nest under a
+   * product that is absent. `P`, not `S` — the reconciliation already decides
+   * this key's spelling ahead of both the table and the vocabulary, so spelling
+   * it here would add a second authority for one answer.
+   */
+  P("panini-prizm-fifa-world-cup", { parent: "panini-prizm" }),
+
+  /**
+   * 2014 PANINI PRIZM FIFA WORLD CUP — NINE INSERT SETS ARE NINE CARD SETS
+   * (R30, Drew 2026-09-13; the same ruling as the Flair Showcase Rows and the
+   * Rookies & Stars autograph subsets).
+   *
+   * TCDB's page for this product carries 136 sub-checklists, and NINE of the
+   * insert families RESTART NUMBERING AT 1 alongside the 201-card base set.
+   * Measured on the staged file (`acq-2026-09-13-tcdb`, 5,462 rows) before
+   * #2112 existed:
+   *
+   *     5,462 upserts  ->  2,949 distinct documents
+   *
+   * Card number 1, blank parallel, no auto, no print run occurs TEN times —
+   * the base card plus these nine inserts, nine different players — and all
+   * ten computed `hiq:soccer:2014:panini-prizm-fifa-world-cup:1:base:no-auto`.
+   * Rais M'Bolhi (base) was buried by Cristiano Ronaldo (Aerial Assault),
+   * Lionel Messi (World Cup Stars), Gonzalo Higuain (Net Finders), the Fuleco
+   * mascot and a Belo Horizonte stadium poster. The number cannot say which
+   * card it is; only the insert set can.
+   *
+   * REGISTRATION IS THE MECHANISM, NOT BOOKKEEPING. Every one of these nine
+   * folded PAST the product key onto the bare flagship before this entry
+   * existed — `normalizeSetKey("panini-prizm-fifa-world-cup-guardians")` was
+   * `panini-prizm`, through the unanchored `/panini-prizm/` rule — and a key
+   * that is not a normalizeSetKey FIXED POINT cannot hold a pool. Writing
+   * there would have been strictly worse than the collision it was meant to
+   * fix, which is why #2112 refuses the file until these land. `spelled` is
+   * what makes productSetKeyForName answer ahead of the regex vocabulary; the
+   * anchored rules added above that catch-all in hobbyIqCardId.service.ts are
+   * the second half.
+   *
+   * THE COLOUR RUNGS ARE NOT HERE, DELIBERATELY. The page publishes 13 Prizm
+   * parallels of these inserts (Gold, Black, Purple, El Samba, ...), and TCDB
+   * states each in the row's OWN `parallel` column. A named parallel is a
+   * distinct CARD, not a distinct SET, so the colour rides the parallel axis
+   * ON these nine keys. Within one insert key, number + rung is unique again.
+   *
+   * THE OTHER FOUR FAMILIES ARE NOT HERE EITHER, for the opposite reason.
+   * Signatures, Combo Signatures, Fans of the Game and Eusebio Tribute number
+   * their cards with a PREFIX (`S-XX`, `CS-BS`), so they never collided with
+   * the base set and separating them would split pools that are already
+   * correct — right guard, right scope.
+   */
+  ...["aerial-assault", "cup-captains", "fuleco", "guardians", "net-finders",
+    "team-photos", "world-cup-matchups", "world-cup-posters", "world-cup-stars",
+  ].map((sub) => S(`panini-prizm-fifa-world-cup-${sub}`, {
+    family: "panini-prizm-fifa-world-cup",
+    parent: "panini-prizm-fifa-world-cup",
+  })),
   P("panini-select-uefa-euro-preview", { parent: "panini-select" }),
   P("panini-revolution-premier-league", { parent: "panini-revolution" }),
   P("panini-national-treasures-fifa-road-to-world-cup", { parent: "panini-national-treasures" }),
