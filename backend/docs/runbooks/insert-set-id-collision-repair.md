@@ -170,3 +170,70 @@ silently overwrite the other — which is what would have happened before.
 
 `acq-2026-09-13-insider` passes all 11 files, 12,940 rows, 12,940 distinct ids,
 zero keys derived: its inserts number in their own ranges.
+
+## cardboardconnection (#2114) — the same rule, a different input shape
+
+#2114 stages **207 files, 68,329 rows**, one file per subset, and declares the
+subset in the **manifest** (`"subset": "Great Significance"`) rather than in the
+`category` column. It relies on the ingest's older `:sub-` mechanism (the
+2026-09-04 ruling) to separate them.
+
+**That mechanism cannot do this job, and if it could it would give one card two
+addresses.** Measured 2026-09-13:
+
+1. **It is reactive.** The branch is `if (known && knownClaim && knownClaim !==
+   productClaim)` — it fires only when a row is *already stored* at the plain id
+   claiming a different subset. Into an empty cell the first file's rows land
+   **plain**; only a later file's rows get a segment. The address a card ends up
+   at depends on **file order**.
+2. **It never runs in report mode** — `if (!APPLY) { written++; return; }`
+   precedes it, so a dry run cannot see any of it.
+3. **It is asymmetric by construction** — the incumbent is re-minted, *moved*,
+   and the plain id vacated. That is a repair for two rows, not an addressing
+   scheme for 197 files.
+4. **Two addresses for one card class.** Great Significance #1 would be
+   `…:nba-hoops:1:base:auto:sub-great-significance` under #2114 and
+   `…:nba-hoops-great-significance:1:base:auto` under #2106's form.
+
+**R30's key form is canonical** (Drew's ruling), and #2106 already proves it:
+`panini-rookies-and-stars-rookies-signatures` **is** a `normalizeSetKey` fixed
+point today, registered in src. So the guard reads a manifest-declared `subset`
+on the **same axis** as a per-row `category` and both derive the same key. The
+`:sub-` path is **not retired** — it still answers the clash the *catalog*
+discovers between two *stored* rows (#1741), where no checklist asserts
+anything — but it is disarmed for any row the pre-flight already moved onto its
+own key, so the subset is never spelled twice.
+
+### The measurement has to be per PRODUCT, not per file
+
+Each cbc file is internally distinct, so a per-file guard passes all 207 and
+reports 68,329 rows on 67,789 ids — while the product cells hold **1,803
+contested addresses**:
+
+```
+nba-hoops 2022             10,111 rows ->  9,703 ids   200 contested
+panini-prizm-draft-picks    9,591 rows ->  7,748 ids   835 contested
+panini-spectra             11,766 rows -> 11,033 ids   485 contested
+panini-donruss             10,715 rows -> 10,420 ids   124 contested
+nba-hoops 2023             10,166 rows ->  9,739 ids   159 contested
+```
+
+`hiq:basketball:2022:nba-hoops:1:base:auto` is claimed by Great Significance #1
+(Joe Ingles), Hoops Art Signatures #1 (Paolo Banchero), Hoops Ink #1 (Cade
+Cunningham) and Hot Signatures Hyper Gold #1 (Luka Doncic). In **none** of the
+1,803 does an unclaimed row take part — every contested address is claimed by
+two or more *named* subsets, which is the R30 shape exactly.
+
+So the ingest takes the measurement **once, over every staged file, grouped by
+(sport, year, setKey)**. The unit of refusal stays the file.
+
+### Verdict on `acq-2026-09-13-cbc`
+
+| | files | rows |
+|---|---|---|
+| **REFUSE** (`unregistered-set-keys`) | **175** | 7,385 |
+| **PASS** | **32** | 60,404 = 60,404 distinct ids |
+
+**170 distinct keys** to register, across the five contested products. The four
+clean products — `upper-deck-series-1` (2022/2023/2024), `upper-deck-series-2`,
+`topps-chrome-platinum` — declare no subset and pass untouched.

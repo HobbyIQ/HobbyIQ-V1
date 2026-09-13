@@ -176,6 +176,77 @@ function categorySubsetSlug(category, parallel) {
 }
 
 /**
+ * CF-ONE-CARD-ONE-ADDRESS-WHICHEVER-COLUMN-SAID-SO (2026-09-13, reconciling
+ * #2106 and #2114).
+ *
+ * TWO ACQUISITION LANES SPELL THE SAME FACT IN TWO PLACES, and until this
+ * function existed they reached two different addresses for one card class:
+ *
+ *   per-ROW      the `category` column names the subset, one file per product
+ *                (tcdb's World Cup, checklistinsider's big Rookies & Stars)
+ *   per-FILE     the MANIFEST declares `subset`, one file per subset
+ *                (cardboardconnection #2114: 197 subset-declaring files across
+ *                 6 products, and #2106's Rookies & Stars autograph subsets,
+ *                 which went further and gave each file its own `setKey`)
+ *
+ * They are the SAME CLAIM -- "these rows belong to a named subset of this
+ * product" -- so they must derive the SAME key. A subset stated in a manifest
+ * is not a weaker claim than one stated in a column, and a card's address must
+ * not depend on which scraper happened to fetch it.
+ *
+ * THE CANONICAL FORM IS R30'S KEY, NOT THE `:sub-` SEGMENT. Drew ruled it
+ * (R30, 2026-09-13): a same-numbered subset is its own card SET KEY, and
+ * #2106 already shipped it that way -- `panini-rookies-and-stars-rookies-
+ * signatures` is a normalizeSetKey FIXED POINT today, registered in src. The
+ * `:sub-` segment from the 2026-09-04 ruling stays where it belongs: it
+ * resolves a clash the CATALOG discovers between two stored rows, which is a
+ * different question from what a checklist asserts up front.
+ *
+ * WHY `:sub-` CANNOT BE THE CANONICAL FORM HERE, measured on #2114's staged
+ * files 2026-09-13:
+ *
+ *   1. IT IS REACTIVE. The branch is `if (known && knownClaim && knownClaim
+ *      !== productClaim)` -- it fires only when a row is ALREADY STORED at the
+ *      plain id claiming a different subset. Into an empty cell the first
+ *      file's rows land PLAIN; only a later file's rows get a segment. The
+ *      address a card ends up at therefore depends on FILE ORDER.
+ *   2. IT NEVER RUNS IN REPORT MODE. `if (!APPLY) { written++; return; }`
+ *      precedes it, so a dry run cannot see any of this.
+ *   3. IT IS ASYMMETRIC BY CONSTRUCTION. The incumbent is re-minted and MOVED
+ *      and the plain id vacated -- a repair for two rows, not an addressing
+ *      scheme for 197 files and 68,329 rows.
+ *   4. TWO ADDRESSES FOR ONE CARD CLASS. Great Significance #1 would be
+ *      `…:nba-hoops:1:base:auto:sub-great-significance` from #2114 and
+ *      `…:nba-hoops-great-significance:1:base:auto` from the #2106 form. One
+ *      card, two ids, two pools.
+ *
+ * Measured on `acq-2026-09-13-cbc`, plain ids per product cell:
+ *
+ *     nba-hoops 2022             10,111 rows ->  9,703 ids   200 contested
+ *     panini-prizm-draft-picks    9,591 rows ->  7,748 ids   835 contested
+ *     panini-spectra             11,766 rows -> 11,033 ids   485 contested
+ *     panini-donruss             10,715 rows -> 10,420 ids   124 contested
+ *     nba-hoops 2023             10,166 rows ->  9,739 ids   159 contested
+ *     (the four Upper Deck / Topps Chrome Platinum files: zero contested)
+ *
+ * 1,803 contested ids, and in NOT ONE of them does an unclaimed row take part
+ * -- every contested address is claimed by two or more NAMED subsets. That is
+ * the R30 shape exactly, so the R30 key is what they get.
+ */
+function subsetSlugFor({ category, parallel, subsetName }) {
+  // The row's own column first: it is the more specific statement, and a file
+  // that carries both is naming a subset WITHIN the file's subset.
+  const fromCategory = categorySubsetSlug(category, parallel);
+  if (fromCategory) return fromCategory;
+  // Then the manifest's declaration, folded through the SAME structural-
+  // heading vocabulary -- a manifest that says `subset: "Base Set"` claims
+  // nothing, exactly as a category of "base" does (CF-BASE-SET-IS-NOT-A-SUBSET).
+  const declared = slugifyKey(subsetName);
+  if (!declared || BASE_CATEGORIES.has(declared)) return "";
+  return declared;
+}
+
+/**
  * The card set key a row belongs on, given the set of subsets this file has
  * MEASURED to be same-numbered. `separate` empty -- the default, and the shape
  * of every file that does not clash -- returns the product key for every row,
@@ -183,9 +254,9 @@ function categorySubsetSlug(category, parallel) {
  *
  * -> { setKey, subsetSlug, isInsertSet }
  */
-function setKeyForRow({ productSetKey, category, parallel, separate }) {
+function setKeyForRow({ productSetKey, category, parallel, subsetName, separate }) {
   const product = String(productSetKey || "").trim();
-  const subsetSlug = categorySubsetSlug(category, parallel);
+  const subsetSlug = subsetSlugFor({ category, parallel, subsetName });
   if (!subsetSlug) return { setKey: product, subsetSlug: "", isInsertSet: false };
   if (separate && !separate.has(subsetSlug)) {
     return { setKey: product, subsetSlug, isInsertSet: false };
@@ -251,7 +322,7 @@ function subsetsToSeparate(rows, productSetKey, computeId) {
   const { collisions } = idCollisions(rows, (r) => computeId({ ...r, setKey: productSetKey }));
   const separate = new Set();
   for (const c of collisions) {
-    const slugs = new Set(c.rows.map((r) => categorySubsetSlug(r.category, r.parallel)));
+    const slugs = new Set(c.rows.map((r) => subsetSlugFor({ category: r.category, parallel: r.parallel, subsetName: r.subsetName })));
     // Two or more DIFFERENT subsets (the empty slug is base, and counts as one
     // of them) sharing one address: every named one gets its own key.
     if (slugs.size < 2) continue;
@@ -269,7 +340,7 @@ function insertSetKeysOf(rows, productSetKey, separate) {
   const byKey = new Map();
   for (const r of rows) {
     const { setKey, subsetSlug, isInsertSet } = setKeyForRow({
-      productSetKey, category: r.category, parallel: r.parallel, separate,
+      productSetKey, category: r.category, parallel: r.parallel, subsetName: r.subsetName, separate,
     });
     if (!isInsertSet) continue;
     if (!byKey.has(setKey)) {
@@ -305,8 +376,48 @@ function unregisteredKeys(keys, normalize) {
 }
 
 /**
+ * CF-THE-CLASH-IS-A-FACT-ABOUT-THE-PRODUCT-NOT-THE-FILE (2026-09-13,
+ * reconciling #2114).
+ *
+ * A per-FILE measurement cannot see a clash between two FILES, and that is
+ * exactly the shape cardboardconnection ships: one file per subset, 197 of
+ * them across 6 products. Each file is internally distinct, so a per-file
+ * guard passes all 207 and reports 68,329 rows on 67,789 ids -- while the
+ * PRODUCT cells underneath hold 1,803 contested addresses:
+ *
+ *     nba-hoops 2022             10,111 rows ->  9,703 ids   200 contested
+ *     panini-prizm-draft-picks    9,591 rows ->  7,748 ids   835 contested
+ *     panini-spectra             11,766 rows -> 11,033 ids   485 contested
+ *     panini-donruss             10,715 rows -> 10,420 ids   124 contested
+ *     nba-hoops 2023             10,166 rows ->  9,739 ids   159 contested
+ *
+ * Great Significance #1 (Joe Ingles), Hoops Art Signatures #1 (Paolo
+ * Banchero), Hoops Ink #1 (Cade Cunningham) and Hot Signatures Hyper Gold #1
+ * (Luka Doncic) all compute `hiq:basketball:2022:nba-hoops:1:base:auto`.
+ *
+ * So the unit of MEASUREMENT is the (sport, year, setKey) CELL across the whole
+ * directory. The unit of REFUSAL stays the FILE -- that is what a resume marker
+ * is written for -- but the question it answers is asked of the product.
+ *
+ * `rowsByCell` is a Map of cell key -> rows, built once by the caller before
+ * the file loop. Returns a Map of the same keys -> the `separate` Set.
+ */
+function separationByCell(rowsByCell, computeId) {
+  const out = new Map();
+  for (const [cell, entry] of rowsByCell) {
+    out.set(cell, subsetsToSeparate(entry.rows, entry.productSetKey, computeId));
+  }
+  return out;
+}
+
+/**
  * THE WHOLE DECISION FOR ONE FILE, in one call, so the ingest and the tests
  * and any future census all reach the same verdict from the same code.
+ *
+ * `separate` may be supplied by the caller -- the CELL-WIDE separation
+ * measured across every file of the product (see separationByCell). When it is
+ * absent the file measures itself, which is right for a directory of
+ * one-file-per-product and is what the tests exercise directly.
  *
  * `computeId({ ...row, setKey })` is the caller's slug function.
  * `normalize` is normalizeSetKey, or absent (then every derived key is
@@ -315,13 +426,13 @@ function unregisteredKeys(keys, normalize) {
  * -> { verdict: "pass" | "refuse", reason, separate, keys, unregistered,
  *      ids, collisions, rows }
  */
-function planFile({ rows, productSetKey, computeId, normalize }) {
-  const separate = subsetsToSeparate(rows, productSetKey, computeId);
+function planFile({ rows, productSetKey, computeId, normalize, separate: given }) {
+  const separate = given || subsetsToSeparate(rows, productSetKey, computeId);
   const keys = insertSetKeysOf(rows, productSetKey, separate);
   const unregistered = unregisteredKeys(keys, normalize);
   const finalId = (r) => computeId({
     ...r,
-    setKey: setKeyForRow({ productSetKey, category: r.category, parallel: r.parallel, separate }).setKey,
+    setKey: setKeyForRow({ productSetKey, category: r.category, parallel: r.parallel, subsetName: r.subsetName, separate }).setKey,
   });
   const { ids, collisions, unslugable } = idCollisions(rows, finalId);
   // ORDER IS LOAD-BEARING: an unregistered key is reported even when the
@@ -334,6 +445,24 @@ function planFile({ rows, productSetKey, computeId, normalize }) {
     return { verdict: "refuse", reason: "id-collisions", separate, keys, unregistered, ids, collisions, unslugable, rows: rows.length };
   }
   return { verdict: "pass", reason: null, separate, keys, unregistered, ids, collisions, unslugable, rows: rows.length };
+}
+
+/**
+ * The subset's name for DISPLAY, joined to the parent product's setName.
+ *
+ * The manifest's `subset` is a person's transcription of the checklist's own
+ * heading ("Great Significance", "The Legends Series Autographs") and is used
+ * verbatim when present; only a category slug has to be un-slugged, and that
+ * is a reconstruction, not the source's words. Display only -- the identity is
+ * the key, which both paths already agree on.
+ */
+function subsetDisplayName(row) {
+  const declared = String((row && row.subsetName) || "").trim();
+  if (declared) return declared;
+  return String((row && row.category) || "")
+    .replace(/^(?:insert|auto|subset|relic|parallel)-/, "")
+    .replace(/-/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 /** One colliding group, as the refusal prints it: the id, then every row's
@@ -353,11 +482,14 @@ module.exports = {
   BASE_CATEGORIES,
   CATEGORY_PREFIXES,
   categorySubsetSlug,
+  subsetSlugFor,
   setKeyForRow,
   subsetsToSeparate,
   insertSetKeysOf,
   unregisteredKeys,
   idCollisions,
   planFile,
+  separationByCell,
+  subsetDisplayName,
   formatCollision,
 };

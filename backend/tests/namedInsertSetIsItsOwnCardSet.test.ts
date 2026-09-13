@@ -370,6 +370,117 @@ insert-guardians,1,,false,,Thibaut Courtois
   });
 });
 
+describe("one card, one address — whichever column said so (#2106 vs #2114)", () => {
+  /**
+   * Two acquisition lanes spell the same claim in two places:
+   *
+   *   per-ROW    the `category` column names the subset (tcdb, insider)
+   *   per-FILE   the MANIFEST declares `subset` (cardboardconnection #2114:
+   *              197 subset-declaring files across 6 products)
+   *
+   * They must derive the SAME key, or Great Significance #1 has two addresses
+   * and two pools. R30's KEY form is canonical (Drew's ruling; #2106 already
+   * ships `panini-rookies-and-stars-rookies-signatures`, which IS a
+   * normalizeSetKey fixed point today).
+   */
+  it("a manifest-declared subset derives the same key a category would", () => {
+    const fromCategory = lib.setKeyForRow({
+      productSetKey: "nba-hoops", category: "auto-great-significance",
+      parallel: "", separate: new Set(["great-significance"]),
+    });
+    const fromManifest = lib.setKeyForRow({
+      productSetKey: "nba-hoops", category: "base", parallel: "",
+      subsetName: "Great Significance", separate: new Set(["great-significance"]),
+    });
+    expect(fromManifest.setKey).toBe("nba-hoops-great-significance");
+    expect(fromManifest.setKey).toBe(fromCategory.setKey);
+  });
+
+  it("folds a structural label in the MANIFEST exactly as it does in a category", () => {
+    // A manifest saying `subset: "Base Set"` claims nothing, the same way a
+    // category of "base" does (CF-BASE-SET-IS-NOT-A-SUBSET).
+    for (const s of ["Base Set", "Inserts", "Checklist", ""]) {
+      expect(lib.subsetSlugFor({ category: "base", parallel: "", subsetName: s })).toBe("");
+    }
+  });
+
+  it("the ROW's own column wins when a file states both", () => {
+    // A file-wide subset plus a per-row category means the row names a subset
+    // WITHIN the file's subset; the row is the more specific statement.
+    expect(lib.subsetSlugFor({
+      category: "auto-hoops-ink", parallel: "", subsetName: "Great Significance",
+    })).toBe("hoops-ink");
+  });
+
+  it("uses the source's own words for display and the key for identity", () => {
+    expect(lib.subsetDisplayName({ subsetName: "The Legends Series Autographs" }))
+      .toBe("The Legends Series Autographs");
+    // Only a slug has to be reconstructed, and that is display only.
+    expect(lib.subsetDisplayName({ category: "insert-world-cup-stars" })).toBe("World Cup Stars");
+  });
+});
+
+describe("the clash is a fact about the PRODUCT, not the file", () => {
+  /**
+   * cardboardconnection ships ONE FILE PER SUBSET. Every file is internally
+   * distinct, so a per-file measurement passes all 207 — while the product
+   * cells underneath hold 1,803 contested addresses. The measurement must
+   * therefore be taken over the whole (sport, year, setKey) cell.
+   */
+  const greatSignificance = fixture(`
+category,cardNumber,parallel,isAuto,printRun,player
+auto-great-significance,1,,true,,Joe Ingles
+auto-great-significance,2,,true,,Jordan Nwora
+`).map((r) => ({ ...r, subsetName: "Great Significance" }));
+  const hoopsInk = fixture(`
+category,cardNumber,parallel,isAuto,printRun,player
+auto-hoops-ink,1,,true,,Cade Cunningham
+auto-hoops-ink,2,,true,,LaMelo Ball
+`).map((r) => ({ ...r, subsetName: "Hoops Ink" }));
+  const computeId = idFor("basketball", 2022);
+
+  it("sees nothing when each file is measured alone — the gap this closes", () => {
+    for (const rows of [greatSignificance, hoopsInk]) {
+      const plan = lib.planFile({ rows, productSetKey: "nba-hoops", computeId, normalize: normalizeSetKey });
+      expect(plan.verdict).toBe("pass");
+      expect(plan.keys).toHaveLength(0);
+    }
+    // And yet the two files claim the same two addresses.
+    const together = lib.idCollisions([...greatSignificance, ...hoopsInk],
+      (r: Row) => computeId({ ...r, setKey: "nba-hoops" }));
+    expect(together.ids).toBe(2);
+    expect(together.collisions).toHaveLength(2);
+  });
+
+  it("separationByCell measures across every file of one product", () => {
+    const byCell = new Map([["basketball/2022/nba-hoops", {
+      productSetKey: "nba-hoops", rows: [...greatSignificance, ...hoopsInk],
+    }]]);
+    const sep = lib.separationByCell(byCell, (r: Row) => computeId({ ...r, setKey: r.setKey }));
+    expect([...sep.get("basketball/2022/nba-hoops")].sort())
+      .toEqual(["great-significance", "hoops-ink"]);
+  });
+
+  it("and each file then REFUSES, naming its own key to register", () => {
+    const separate = new Set(["great-significance", "hoops-ink"]);
+    const plan = lib.planFile({
+      rows: greatSignificance, productSetKey: "nba-hoops", computeId,
+      normalize: normalizeSetKey, separate,
+    });
+    expect(plan.verdict).toBe("refuse");
+    expect(plan.reason).toBe("unregistered-set-keys");
+    expect(plan.unregistered.map((u: any) => u.setKey)).toEqual(["nba-hoops-great-significance"]);
+    expect(plan.unregistered[0].resolvesTo).toBe("nba-hoops");
+  });
+
+  it("#2106's key form IS already a fixed point — the canonical shape, proven", () => {
+    // Registered in src by #2106. This is what the cbc keys must become, and
+    // it is why the key form is canonical rather than the `:sub-` segment.
+    expect(normalizeSetKey("panini-rookies-and-stars-rookies-signatures"))
+      .toBe("panini-rookies-and-stars-rookies-signatures");
+  });
+});
+
 describe("the ingest lane wires the rule in", () => {
   it("exposes the same module the library tests exercise", () => {
     // eslint-disable-next-line @typescript-eslint/no-var-requires

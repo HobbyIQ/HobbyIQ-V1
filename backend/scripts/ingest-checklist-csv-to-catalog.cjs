@@ -336,6 +336,56 @@ async function main() {
   let filesRefused = 0, refusedRows = 0, insertSetKeys = 0, insertSetRows = 0, plannedIds = 0;
   let stopReason = null;
 
+  // CF-THE-CLASH-IS-A-FACT-ABOUT-THE-PRODUCT-NOT-THE-FILE (2026-09-13).
+  //
+  // A per-file measurement cannot see a clash between two FILES, and that is
+  // exactly cardboardconnection's shape: ONE FILE PER SUBSET, 197 of them
+  // across 6 products, every file internally distinct. A per-file guard passes
+  // all 207 and reports 68,329 rows on 67,789 ids, while the product cells
+  // underneath hold 1,803 contested addresses -- Great Significance #1 (Joe
+  // Ingles), Hoops Art Signatures #1 (Paolo Banchero), Hoops Ink #1 (Cade
+  // Cunningham) and Hot Signatures Hyper Gold #1 (Luka Doncic) all computing
+  // `hiq:basketball:2022:nba-hoops:1:base:auto`.
+  //
+  // So the measurement is taken ONCE, over every staged file, grouped by
+  // (sport, year, setKey). The unit of REFUSAL stays the file -- that is what
+  // the resume marker is written for -- but the question is asked of the
+  // product. Reading every CSV twice costs one pass over staged disk, which is
+  // nothing beside writing a wrong address 1,803 times.
+  const cellSeparation = (() => {
+    const byCell = new Map();
+    for (const name of files) {
+      const csvPath = path.join(DIR, name);
+      const product = productOf(csvPath);
+      if (!product) continue;
+      const cell = `${product.sport}/${product.year}/${product.setKey}`;
+      if (!byCell.has(cell)) {
+        byCell.set(cell, { productSetKey: product.setKey, sport: product.sport, year: product.year, rows: [] });
+      }
+      const entry = byCell.get(cell);
+      for (const line of fs.readFileSync(csvPath, "utf8").split("\n").slice(1)) {
+        const t = line.trim(); if (!t) continue;
+        const [category, cardNumber, parallel, isAuto, printRun, rawPlayer] = splitCsv(t);
+        const player = cleanPlayerName(rawPlayer);
+        if (!cardNumber || !player) continue;
+        entry.rows.push({
+          category, cardNumber, parallel, isAuto, printRun, player,
+          subsetName: product.subsetName || null,
+          // Carried on the row so one computeId closure serves every cell.
+          _sport: product.sport, _year: product.year,
+        });
+      }
+    }
+    // The SAME slug function the write path uses, so the separation is measured
+    // over the exact addresses the run would take.
+    return INSERT_SET.separationByCell(byCell, (r) => computeHobbyIqCardId({
+      sport: r._sport, year: r._year, setKey: r.setKey,
+      cardNumber: String(r.cardNumber), parallel: r.parallel || "Base",
+      isAuto: r.isAuto === "true", printRun: r.printRun ? Number(r.printRun) : null,
+      authoritativeSetKey: true,
+    }));
+  })();
+
   for (const name of files) {
     if (stopReason) break;
     const csvPath = path.join(DIR, name);
@@ -373,7 +423,11 @@ async function main() {
       const players = new Set(rawRows.map((r) => r.player).filter(isPersonName).map(foldName));
       for (const r of rawRows) {
         if (r.parallel && players.has(foldName(r.parallel))) { playerNameParallel++; continue; }
-        batch.push({ category: r.category, cardNumber: r.cardNumber, parallel: r.parallel, isAuto: r.isAuto, printRun: r.printRun, player: r.player, parallelNote: r.parallelNote || null });
+        // CF-ONE-CARD-ONE-ADDRESS-WHICHEVER-COLUMN-SAID-SO. The manifest's
+        // `subset` rides with every row of the file, so a per-FILE declaration
+        // (cardboardconnection #2114: 197 subset-declaring files) and a
+        // per-ROW `category` (tcdb, checklistinsider) reach the SAME key.
+        batch.push({ category: r.category, cardNumber: r.cardNumber, parallel: r.parallel, isAuto: r.isAuto, printRun: r.printRun, player: r.player, parallelNote: r.parallelNote || null, subsetName: product.subsetName || null });
       }
     }
 
@@ -425,6 +479,9 @@ async function main() {
         authoritativeSetKey: true,
       }),
       normalize: normalizeSetKey,
+      // THE CELL'S separation, measured over every staged file of this product
+      // -- not this file's view of itself, which cannot see a sibling file.
+      separate: cellSeparation.get(`${product.sport}/${product.year}/${product.setKey}`),
     });
     if (plan.verdict === "refuse") {
       filesRefused++;
@@ -464,7 +521,7 @@ async function main() {
     for (const r of batch) {
       r.setKey = INSERT_SET.setKeyForRow({
         productSetKey: product.setKey, category: r.category,
-        parallel: r.parallel, separate: plan.separate,
+        parallel: r.parallel, subsetName: r.subsetName, separate: plan.separate,
       }).setKey;
       if (r.setKey !== product.setKey) insertSetRows++;
     }
@@ -498,7 +555,7 @@ async function main() {
           // the Guardians key -- the name is what a person sees.
           const rowSetName = rowSetKey === product.setKey
             ? product.setName
-            : `${product.setName} ${String(r.category || "").replace(/^(?:insert|auto|subset|relic|parallel)-/, "").replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}`;
+            : `${product.setName} ${INSERT_SET.subsetDisplayName(r)}`;
           const slug = computeHobbyIqCardId({
             sport: product.sport, year: product.year, setKey: rowSetKey,
             cardNumber: String(r.cardNumber),
@@ -608,7 +665,25 @@ async function main() {
           // page lands.
           const knownClaim = claimedSubsetOf(known && known.subsetName);
           const productClaim = claimedSubsetOf(product.subsetName);
-          if (known && knownClaim && knownClaim !== (productClaim || null)) {
+          // CF-ONE-CARD-ONE-ADDRESS-WHICHEVER-COLUMN-SAID-SO, the disarm.
+          //
+          // THE `:sub-` MECHANISM AND THE R30 KEY ARE TWO ANSWERS TO ONE
+          // QUESTION, and running both would give one card two addresses.
+          // When the pre-flight has ALREADY separated this row's subset onto
+          // its own card set key, the question is settled: the row is at
+          // `<product>-<subset>`, alone, and no incumbent at the plain id is
+          // its rival any more. Re-minting it with a `:sub-` segment on top
+          // would produce `…:nba-hoops-great-significance:1:base:auto:sub-
+          // great-significance` -- the subset stated twice, and a third
+          // address for a card that already has one.
+          //
+          // THE `:sub-` PATH IS NOT RETIRED. It answers the question this one
+          // cannot: a clash the CATALOG discovers between two STORED rows,
+          // where no checklist is present to assert anything (#1741's Johnson
+          // Reprints, the 2026-09-04 ruling). It stays for exactly that, and
+          // for every row whose subset was NOT separated.
+          const separatedOntoOwnKey = rowSetKey !== product.setKey;
+          if (!separatedOntoOwnKey && known && knownClaim && knownClaim !== (productClaim || null)) {
             if (!productClaim) {
               subsetCollision++;
               if (collisionExamples.length < 8) {
