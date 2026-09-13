@@ -1,0 +1,27 @@
+{
+ "year": 2017,
+ "sport": "baseball",
+ "setKey": "topps",
+ "parallelColumnAuthoritative": true,
+ "setName": "2017 Topps",
+ "sourceUrl": "http://www.baseballcardpedia.com/index.php/2017_Topps",
+ "scope": "Transcendent 65th Anniversary Parallel",
+ "scopeOfPage": "Topps",
+ "cardNumberPrefix": null,
+ "prefixDerivedFrom": "unresolved",
+ "prefixUnresolved": false,
+ "ladder": [
+  {
+   "name": "Transcendent 65th Anniversary Parallel",
+   "printRun": null,
+   "rarity": null
+  }
+ ],
+ "autographs": [],
+ "setRarity": null,
+ "sections": [],
+ "source": "bcp-2026-09-13",
+ "acquiredAt": "2026-09-13",
+ "duplicateIdentityRowsDropped": 70,
+ "duplicateIdentityNote": "BCP relists a card under Gimmicks/Errors-and-Variations with the same number and the same player text to note an UNNAMED variation; those rows carry the identity of the base row, so they were dropped (one card, one row, one pool). A variation the page NAMES differs in its player text and is kept as the distinct card it is."
+}

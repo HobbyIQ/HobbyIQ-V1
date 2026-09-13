@@ -1,0 +1,612 @@
+{
+ "year": 2017,
+ "sport": "baseball",
+ "setKey": "topps",
+ "parallelColumnAuthoritative": true,
+ "setName": "2017 Topps",
+ "sourceUrl": "http://www.baseballcardpedia.com/index.php/2017_Topps",
+ "scope": null,
+ "scopeOfPage": "Topps",
+ "cardNumberPrefix": null,
+ "prefixDerivedFrom": "paper",
+ "prefixUnresolved": false,
+ "ladder": [
+  {
+   "name": "Rainbow Foil",
+   "printRun": null,
+   "rarity": null
+  },
+  {
+   "name": "Purple",
+   "printRun": null,
+   "rarity": null
+  },
+  {
+   "name": "Negative",
+   "printRun": null,
+   "rarity": null
+  },
+  {
+   "name": "Gold",
+   "printRun": 2017,
+   "rarity": null
+  },
+  {
+   "name": "Sparkle Foil",
+   "printRun": 175,
+   "rarity": null
+  },
+  {
+   "name": "Vintage Stock",
+   "printRun": 99,
+   "rarity": null
+  },
+  {
+   "name": "Black",
+   "printRun": 66,
+   "rarity": null
+  },
+  {
+   "name": "Mother’s Day Hot Pink",
+   "printRun": 50,
+   "rarity": null
+  },
+  {
+   "name": "Father’s Day Powder Blue",
+   "printRun": 50,
+   "rarity": null
+  },
+  {
+   "name": "Memorial Day Camo",
+   "printRun": 25,
+   "rarity": null
+  },
+  {
+   "name": "Platinum",
+   "printRun": 1,
+   "rarity": null
+  },
+  {
+   "name": "Printing Plates",
+   "printRun": null,
+   "rarity": null
+  }
+ ],
+ "autographs": [
+  {
+   "name": "MLB Network Autographs",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 9,
+   "ladder": []
+  },
+  {
+   "name": "Postseason Performance Autographs",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 8,
+   "ladder": [
+    {
+     "name": "Red",
+     "printRun": 25
+    },
+    {
+     "name": "Platinum",
+     "printRun": 1
+    }
+   ]
+  },
+  {
+   "name": "World Champion Autographs",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 7,
+   "ladder": [
+    {
+     "name": "Red",
+     "printRun": null
+    },
+    {
+     "name": "Platinum",
+     "printRun": 1
+    }
+   ]
+  },
+  {
+   "name": "Major League Milestones Autographs",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 4,
+   "ladder": [
+    {
+     "name": "Red",
+     "printRun": 3
+    },
+    {
+     "name": "Platinum",
+     "printRun": 1
+    }
+   ]
+  },
+  {
+   "name": "Memorable Moments Autographs",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 10,
+   "ladder": [
+    {
+     "name": "Red",
+     "printRun": 5
+    },
+    {
+     "name": "Platinum",
+     "printRun": 1
+    }
+   ]
+  },
+  {
+   "name": "Independence Day Autographs",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 21,
+   "ladder": []
+  },
+  {
+   "name": "All-Star MVPs Autographs",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 15,
+   "ladder": []
+  },
+  {
+   "name": "HR Derby Champs Autographs",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 15,
+   "ladder": []
+  },
+  {
+   "name": "All-Time All Stars Autographs",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 29,
+   "ladder": []
+  },
+  {
+   "name": "Postseason Performance Autograph Relic",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 12,
+   "ladder": [
+    {
+     "name": "Red",
+     "printRun": 25
+    },
+    {
+     "name": "Platinum",
+     "printRun": 1
+    }
+   ]
+  },
+  {
+   "name": "World Champion Autograph Relic",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 7,
+   "ladder": [
+    {
+     "name": "Red",
+     "printRun": 25
+    },
+    {
+     "name": "Platinum",
+     "printRun": 1
+    }
+   ]
+  },
+  {
+   "name": "Major League Milestones Autograph Relics",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 4,
+   "ladder": [
+    {
+     "name": "Red",
+     "printRun": 3
+    },
+    {
+     "name": "Platinum",
+     "printRun": 1
+    }
+   ]
+  },
+  {
+   "name": "Memorable Moments Autograph Relics",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 10,
+   "ladder": [
+    {
+     "name": "Red",
+     "printRun": 5
+    },
+    {
+     "name": "Platinum",
+     "printRun": 1
+    }
+   ]
+  },
+  {
+   "name": "Postseason Performance Relics",
+   "type": "relic",
+   "isAuto": false,
+   "cards": 11,
+   "ladder": [
+    {
+     "name": "Red",
+     "printRun": 25
+    },
+    {
+     "name": "Platinum",
+     "printRun": 1
+    }
+   ]
+  },
+  {
+   "name": "World Champion Relics",
+   "type": "relic",
+   "isAuto": false,
+   "cards": 14,
+   "ladder": [
+    {
+     "name": "Red",
+     "printRun": 25
+    },
+    {
+     "name": "Platinum",
+     "printRun": 1
+    }
+   ]
+  },
+  {
+   "name": "Major League Milestones Relics",
+   "type": "relic",
+   "isAuto": false,
+   "cards": 18,
+   "ladder": [
+    {
+     "name": "Red",
+     "printRun": 25
+    },
+    {
+     "name": "Platinum",
+     "printRun": 1
+    }
+   ]
+  },
+  {
+   "name": "Memorable Moments Relics",
+   "type": "relic",
+   "isAuto": false,
+   "cards": 14,
+   "ladder": [
+    {
+     "name": "Red",
+     "printRun": 25
+    },
+    {
+     "name": "Platinum",
+     "printRun": 1
+    }
+   ]
+  },
+  {
+   "name": "Derek Jeter Reprint Relics",
+   "type": "relic",
+   "isAuto": false,
+   "cards": 5,
+   "ladder": []
+  },
+  {
+   "name": "MLB All-Star Team Medallion Autographs",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 20,
+   "ladder": []
+  },
+  {
+   "name": "Spring Training Logo Patch Autographs",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 21,
+   "ladder": []
+  },
+  {
+   "name": "Jackie Robinson Logo Patch Autographs",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 40,
+   "ladder": []
+  }
+ ],
+ "setRarity": null,
+ "sections": [
+  {
+   "name": "Salute",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 200,
+   "rungs": 0
+  },
+  {
+   "name": "First Pitch",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 40,
+   "rungs": 0
+  },
+  {
+   "name": "MLB Network",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 20,
+   "rungs": 0
+  },
+  {
+   "name": "Bowman Then and Now",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 20,
+   "rungs": 0
+  },
+  {
+   "name": "Five Tool",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 50,
+   "rungs": 0
+  },
+  {
+   "name": "Jackie Robinson Day",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 30,
+   "rungs": 0
+  },
+  {
+   "name": "Golden Glove Awards",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 18,
+   "rungs": 0
+  },
+  {
+   "name": "Silver Slugger",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 18,
+   "rungs": 0
+  },
+  {
+   "name": "MLB Awards",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 14,
+   "rungs": 5
+  },
+  {
+   "name": "Major League Milestones",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 20,
+   "rungs": 0
+  },
+  {
+   "name": "Memorable Moments",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 50,
+   "rungs": 0
+  },
+  {
+   "name": "Independence Day",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 30,
+   "rungs": 0
+  },
+  {
+   "name": "HR Derby Champs",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 21,
+   "rungs": 0
+  },
+  {
+   "name": "All-Star MVPs",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 25,
+   "rungs": 0
+  },
+  {
+   "name": "All-Time All Stars",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 50,
+   "rungs": 3
+  },
+  {
+   "name": "1987 Chrome Refractors",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 100,
+   "rungs": 6
+  },
+  {
+   "name": "Derek Jeter Blue Chrome Reprints",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 5,
+   "rungs": 0
+  },
+  {
+   "name": "Chrome Legends",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 5,
+   "rungs": 0
+  },
+  {
+   "name": "MLB Network Autographs",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 9,
+   "rungs": 0
+  },
+  {
+   "name": "Postseason Performance Autographs",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 8,
+   "rungs": 2
+  },
+  {
+   "name": "World Champion Autographs",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 7,
+   "rungs": 2
+  },
+  {
+   "name": "Major League Milestones Autographs",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 4,
+   "rungs": 2
+  },
+  {
+   "name": "Memorable Moments Autographs",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 10,
+   "rungs": 2
+  },
+  {
+   "name": "Independence Day Autographs",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 21,
+   "rungs": 0
+  },
+  {
+   "name": "All-Star MVPs Autographs",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 15,
+   "rungs": 0
+  },
+  {
+   "name": "HR Derby Champs Autographs",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 15,
+   "rungs": 0
+  },
+  {
+   "name": "All-Time All Stars Autographs",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 29,
+   "rungs": 0
+  },
+  {
+   "name": "Postseason Performance Autograph Relic",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 12,
+   "rungs": 2
+  },
+  {
+   "name": "World Champion Autograph Relic",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 7,
+   "rungs": 2
+  },
+  {
+   "name": "Major League Milestones Autograph Relics",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 4,
+   "rungs": 2
+  },
+  {
+   "name": "Memorable Moments Autograph Relics",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 10,
+   "rungs": 2
+  },
+  {
+   "name": "Postseason Performance Relics",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 11,
+   "rungs": 2
+  },
+  {
+   "name": "World Champion Relics",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 14,
+   "rungs": 2
+  },
+  {
+   "name": "Major League Milestones Relics",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 18,
+   "rungs": 2
+  },
+  {
+   "name": "Memorable Moments Relics",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 14,
+   "rungs": 2
+  },
+  {
+   "name": "Derek Jeter Reprint Relics",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 5,
+   "rungs": 0
+  },
+  {
+   "name": "MLB All-Star Team Medallion Autographs",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 20,
+   "rungs": 0
+  },
+  {
+   "name": "Spring Training Logo Patch Autographs",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 21,
+   "rungs": 0
+  },
+  {
+   "name": "Jackie Robinson Logo Patch Autographs",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 40,
+   "rungs": 0
+  }
+ ],
+ "source": "bcp-2026-09-13",
+ "acquiredAt": "2026-09-13",
+ "duplicateIdentityRowsDropped": 455,
+ "duplicateIdentityNote": "BCP relists a card under Gimmicks/Errors-and-Variations with the same number and the same player text to note an UNNAMED variation; those rows carry the identity of the base row, so they were dropped (one card, one row, one pool). A variation the page NAMES differs in its player text and is kept as the distinct card it is."
+}

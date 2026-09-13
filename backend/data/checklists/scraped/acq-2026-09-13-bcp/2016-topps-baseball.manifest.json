@@ -1,0 +1,611 @@
+{
+ "year": 2016,
+ "sport": "baseball",
+ "setKey": "topps",
+ "parallelColumnAuthoritative": true,
+ "setName": "2016 Topps",
+ "sourceUrl": "http://www.baseballcardpedia.com/index.php/2016_Topps",
+ "scope": null,
+ "scopeOfPage": "Topps",
+ "cardNumberPrefix": null,
+ "prefixDerivedFrom": "paper",
+ "prefixUnresolved": false,
+ "ladder": [
+  {
+   "name": "Purple",
+   "printRun": null,
+   "rarity": null
+  },
+  {
+   "name": "Rainbow Foil",
+   "printRun": null,
+   "rarity": null
+  },
+  {
+   "name": "Black & White Negatives",
+   "printRun": null,
+   "rarity": null
+  },
+  {
+   "name": "Gold",
+   "printRun": 2016,
+   "rarity": null
+  },
+  {
+   "name": "Sparkle Foil",
+   "printRun": 177,
+   "rarity": null
+  },
+  {
+   "name": "Vintage Stock",
+   "printRun": 99,
+   "rarity": null
+  },
+  {
+   "name": "Black",
+   "printRun": 65,
+   "rarity": null
+  },
+  {
+   "name": "Pink",
+   "printRun": 50,
+   "rarity": null
+  },
+  {
+   "name": "Framed",
+   "printRun": 16,
+   "rarity": null
+  },
+  {
+   "name": "Clear",
+   "printRun": 10,
+   "rarity": null
+  },
+  {
+   "name": "Platinum",
+   "printRun": 1,
+   "rarity": null
+  }
+ ],
+ "autographs": [
+  {
+   "name": "Pressed Into Service Autographs",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 5,
+   "ladder": []
+  },
+  {
+   "name": "Back to Back Dual Autographs",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 5,
+   "ladder": []
+  },
+  {
+   "name": "Walk Off Wins Autographs",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 5,
+   "ladder": []
+  },
+  {
+   "name": "Postseason Performance Autographs",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 10,
+   "ladder": []
+  },
+  {
+   "name": "World Champion Autographs",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 5,
+   "ladder": []
+  },
+  {
+   "name": "Record Setters Autographs",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 5,
+   "ladder": []
+  },
+  {
+   "name": "Hallowed Highlights Autographs",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 5,
+   "ladder": []
+  },
+  {
+   "name": "Tribute to The Kid Autographs",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 30,
+   "ladder": []
+  },
+  {
+   "name": "Spring Fever Autographs",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 32,
+   "ladder": []
+  },
+  {
+   "name": "Mike Trout Factory Set Chrome Refractor Autograph",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 5,
+   "ladder": []
+  },
+  {
+   "name": "No-Hitter Pin Autographs",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 5,
+   "ladder": []
+  },
+  {
+   "name": "Futures Game Pin Autographs",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 9,
+   "ladder": []
+  },
+  {
+   "name": "Pressed Into Service Autograph Relics",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 5,
+   "ladder": []
+  },
+  {
+   "name": "Back to Back Dual Autograph Relics",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 5,
+   "ladder": []
+  },
+  {
+   "name": "Postseason Performance Autograph Relics",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 10,
+   "ladder": []
+  },
+  {
+   "name": "World Series Champion Autograph Relics",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 4,
+   "ladder": []
+  },
+  {
+   "name": "Walk Off Wins Autograph Relics",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 5,
+   "ladder": []
+  },
+  {
+   "name": "Record Setters Autograph Relics",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 5,
+   "ladder": []
+  },
+  {
+   "name": "Hallowed Highlights Autograph Relics",
+   "type": "auto",
+   "isAuto": true,
+   "cards": 5,
+   "ladder": []
+  },
+  {
+   "name": "Pressed into Service Relics",
+   "type": "relic",
+   "isAuto": false,
+   "cards": 4,
+   "ladder": []
+  },
+  {
+   "name": "Back to Back Dual Relics",
+   "type": "relic",
+   "isAuto": false,
+   "cards": 5,
+   "ladder": []
+  },
+  {
+   "name": "Walk Off Wins Relics",
+   "type": "relic",
+   "isAuto": false,
+   "cards": 10,
+   "ladder": []
+  },
+  {
+   "name": "Postseason Performance Relics",
+   "type": "relic",
+   "isAuto": false,
+   "cards": 30,
+   "ladder": []
+  },
+  {
+   "name": "World Champion Relics",
+   "type": "relic",
+   "isAuto": false,
+   "cards": 9,
+   "ladder": []
+  },
+  {
+   "name": "In the Name Relics",
+   "type": "relic",
+   "isAuto": false,
+   "cards": 68,
+   "ladder": []
+  },
+  {
+   "name": "Record Setters Relics",
+   "type": "relic",
+   "isAuto": false,
+   "cards": 10,
+   "ladder": []
+  },
+  {
+   "name": "Tribute to The Kid Relics",
+   "type": "relic",
+   "isAuto": false,
+   "cards": 30,
+   "ladder": []
+  },
+  {
+   "name": "Hallowed Highlights Relics",
+   "type": "relic",
+   "isAuto": false,
+   "cards": 5,
+   "ladder": []
+  }
+ ],
+ "setRarity": null,
+ "sections": [
+  {
+   "name": "Berger's Best",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 130,
+   "rungs": 0
+  },
+  {
+   "name": "100 Years at Wrigley",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 51,
+   "rungs": 0
+  },
+  {
+   "name": "First Pitch",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 40,
+   "rungs": 0
+  },
+  {
+   "name": "Laser",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 50,
+   "rungs": 0
+  },
+  {
+   "name": "MLB Debut",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 80,
+   "rungs": 3
+  },
+  {
+   "name": "Perspectives",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 25,
+   "rungs": 0
+  },
+  {
+   "name": "Back to Back",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 15,
+   "rungs": 0
+  },
+  {
+   "name": "Pressed into Service",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 10,
+   "rungs": 0
+  },
+  {
+   "name": "Hallowed Highlights",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 16,
+   "rungs": 0
+  },
+  {
+   "name": "Tribute to the Kid",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 30,
+   "rungs": 0
+  },
+  {
+   "name": "Record Setters",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 15,
+   "rungs": 0
+  },
+  {
+   "name": "Double Play Rip Cards",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 5,
+   "rungs": 919
+  },
+  {
+   "name": "Walk Off Wins",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 15,
+   "rungs": 0
+  },
+  {
+   "name": "Amazing Milestones",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 10,
+   "rungs": 0
+  },
+  {
+   "name": "The Greatest Streaks",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 10,
+   "rungs": 0
+  },
+  {
+   "name": "Changing of the Guard",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 10,
+   "rungs": 0
+  },
+  {
+   "name": "Spring Fever",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 50,
+   "rungs": 0
+  },
+  {
+   "name": "Ichiro Factory Set Chrome Refractor",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 5,
+   "rungs": 0
+  },
+  {
+   "name": "Mike Trout Factory Set Chrome Refractor",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 5,
+   "rungs": 0
+  },
+  {
+   "name": "Pressed Into Service Autographs",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 5,
+   "rungs": 0
+  },
+  {
+   "name": "Back to Back Dual Autographs",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 5,
+   "rungs": 0
+  },
+  {
+   "name": "Walk Off Wins Autographs",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 5,
+   "rungs": 0
+  },
+  {
+   "name": "Postseason Performance Autographs",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 10,
+   "rungs": 0
+  },
+  {
+   "name": "World Champion Autographs",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 5,
+   "rungs": 0
+  },
+  {
+   "name": "Record Setters Autographs",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 5,
+   "rungs": 0
+  },
+  {
+   "name": "Hallowed Highlights Autographs",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 5,
+   "rungs": 0
+  },
+  {
+   "name": "Tribute to The Kid Autographs",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 30,
+   "rungs": 0
+  },
+  {
+   "name": "Spring Fever Autographs",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 32,
+   "rungs": 0
+  },
+  {
+   "name": "Mike Trout Factory Set Chrome Refractor Autograph",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 5,
+   "rungs": 0
+  },
+  {
+   "name": "No-Hitter Pin Autographs",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 5,
+   "rungs": 0
+  },
+  {
+   "name": "Futures Game Pin Autographs",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 9,
+   "rungs": 0
+  },
+  {
+   "name": "Pressed Into Service Autograph Relics",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 5,
+   "rungs": 0
+  },
+  {
+   "name": "Back to Back Dual Autograph Relics",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 5,
+   "rungs": 0
+  },
+  {
+   "name": "Postseason Performance Autograph Relics",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 10,
+   "rungs": 0
+  },
+  {
+   "name": "World Series Champion Autograph Relics",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 4,
+   "rungs": 0
+  },
+  {
+   "name": "Walk Off Wins Autograph Relics",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 5,
+   "rungs": 0
+  },
+  {
+   "name": "Record Setters Autograph Relics",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 5,
+   "rungs": 0
+  },
+  {
+   "name": "Hallowed Highlights Autograph Relics",
+   "category": "auto",
+   "isAuto": true,
+   "cards": 5,
+   "rungs": 0
+  },
+  {
+   "name": "Pressed into Service Relics",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 4,
+   "rungs": 0
+  },
+  {
+   "name": "Back to Back Dual Relics",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 5,
+   "rungs": 0
+  },
+  {
+   "name": "Walk Off Wins Relics",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 10,
+   "rungs": 0
+  },
+  {
+   "name": "Postseason Performance Relics",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 30,
+   "rungs": 0
+  },
+  {
+   "name": "World Champion Relics",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 9,
+   "rungs": 0
+  },
+  {
+   "name": "In the Name Relics",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 68,
+   "rungs": 0
+  },
+  {
+   "name": "Record Setters Relics",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 10,
+   "rungs": 0
+  },
+  {
+   "name": "Tribute to The Kid Relics",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 30,
+   "rungs": 0
+  },
+  {
+   "name": "Hallowed Highlights Relics",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 5,
+   "rungs": 0
+  },
+  {
+   "name": "Own the Name",
+   "category": "insert",
+   "isAuto": false,
+   "cards": 71,
+   "rungs": 0
+  }
+ ],
+ "source": "bcp-2026-09-13",
+ "acquiredAt": "2026-09-13",
+ "duplicateIdentityRowsDropped": 566,
+ "duplicateIdentityNote": "BCP relists a card under Gimmicks/Errors-and-Variations with the same number and the same player text to note an UNNAMED variation; those rows carry the identity of the base row, so they were dropped (one card, one row, one pool). A variation the page NAMES differs in its player text and is kept as the distinct card it is."
+}
