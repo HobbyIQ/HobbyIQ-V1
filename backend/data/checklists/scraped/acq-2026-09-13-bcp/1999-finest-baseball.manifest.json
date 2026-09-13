@@ -103,7 +103,7 @@
    "rungs": 0
   }
  ],
- "source": "bcp-2026-09-13",
+ "source": "baseballcardpedia-2026-09-13",
  "acquiredAt": "2026-09-13",
  "setKeyWas": "finest",
  "setKeyNote": "the BCP page names this product \"Finest\"; the catalog vocabulary keys it topps-finest (normalizeSetKey(\"finest\") === \"topps-finest\")"
