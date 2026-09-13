@@ -306,6 +306,15 @@ async function main() {
   console.log(`${f(files.length)} files  source=${SOURCE} (${authority})  ${APPLY ? "APPLY" : "REPORT ONLY"}\n`);
 
   let rows = 0, written = 0, skippedRow = 0, noProduct = 0, failed = 0, files_ok = 0;
+  // CF-A-FAILED-ROW-IS-NOT-A-SKIPPED-ROW (2026-09-13). The summary printed
+  // `rows skipped 0` on a run that ALSO printed `failed 3` for the three NNO
+  // rows a slugger throw on -- an operator reading "0 skipped, 3 failed" has
+  // no way to tell those three ARE the "no card number/player" case the
+  // skipped line's own caption names, because the failure detail (file,
+  // cardNumber, player) only ever reached stderr, truncated to the first 5
+  // of the whole run. Recorded here, per row, so the banner can name every
+  // one of them once instead of a handful of truncated exception strings.
+  const failedRows = [];
   // Signed rows, counted alongside written. The BCP autograph work (#1700 /
   // #1703) exists to make a signed card its own row, and "N rows written" is
   // silent about whether any of them were autographs -- a lane that dropped
@@ -861,7 +870,7 @@ async function main() {
           // The service swallows its own upsert error and returns null: that
           // row was NOT written, and counting it as written is how a run
           // reconciles green having lost rows.
-          if (!landed) { failed++; return; }
+          if (!landed) { failed++; failedRows.push({ file: name, cardNumber: r.cardNumber, player: r.player, reason: "upsert returned no document" }); return; }
           written++;
           if (r.isAuto === "true") signed++;
           // CF-THE-LABEL-IS-NOT-THE-ATTESTATION (2026-08-29, D3b). When the
@@ -873,6 +882,7 @@ async function main() {
           if (landed.source !== SOURCE) keptExisting++;
         } catch (e) {
           failed++;
+          failedRows.push({ file: name, cardNumber: r.cardNumber, player: r.player, reason: String(e.message || e).slice(0, 120) });
           if (failed <= 5) console.error(`  failed ${String(r.cardNumber)}: ${String(e.message || e).slice(0, 70)}`);
         }
       }));
@@ -943,6 +953,17 @@ async function main() {
   console.log(`  numbered, parallel blank ${f(unnamedParallel)}   <- NOT written as Base; the name is unknown`);
   console.log(`  rows not reached       ${f(notReached)}   <- the budget stopped before these`);
   console.log(`  failed                 ${f(failed)}`);
+  // CF-A-FAILED-ROW-IS-NOT-A-SKIPPED-ROW. `rows skipped` above and `failed`
+  // here were printed as two counters an operator has no way to cross-check:
+  // a run that printed "rows skipped 0" alongside "failed 3" for three NNO
+  // rows -- unslugable for exactly the reason the skipped line's own caption
+  // names -- reconciled by coincidence, not by anything the banner showed.
+  // Every failed row is named here, once, by file: the same discipline the
+  // id-integrity refusal above already applies to a colliding pair.
+  console.log(`  rows failed            ${f(failed)}   <- unslugable (no card number/player); listed below by file`);
+  for (const r of failedRows) {
+    console.log(`      ${r.file}  #${String(r.cardNumber ?? "")}  ${String(r.player ?? "")}  -- ${r.reason}`);
+  }
   if (APPLY) {
     // CF-A-SLICE-IS-NOT-A-SIBLING-COUNTER: every row the gates dropped before
     // the batch (card-line parallels, player-name parallels, exploded
@@ -973,6 +994,29 @@ async function main() {
     // just at a subset-bearing slug, so they are already inside `written`.
     // Adding them would double-count and overshoot `intended` instead.
     reportWrites({ job: "ingest-checklist-csv-to-catalog", intended: rows, written, skipped: skippedRow + notReached + unnamedParallel + cardLineParallel + playerNameParallel + explodedRows + subsetCollision + refusedRows, failed });
+  }
+
+  // CF-CSV-ROWS-READ-MUST-EQUAL-EVERY-BUCKET-THAT-CLAIMS-ONE (2026-09-13,
+  // follow-up to the id-integrity guard above). `rows skipped` and `failed`
+  // were two counters an operator had to trust reconciled on their own; nothing
+  // computed or asserted the sum. Stated here, the same way CF-RECONCILE-
+  // DOCUMENTS-NOT-CALLS below states `written` vs `plannedIds` out loud rather
+  // than trusting it: every row this run READ is either written, failed,
+  // skipped (a deliberate, declared per-row drop) or refused (a whole file or
+  // whole category dropped by the id-integrity / exploded-category guards).
+  // `skipped` here matches the bucket `reportWrites` above already sums, minus
+  // `refusedRows` and `explodedRows`, which are their own term so a whole-file
+  // refusal is never laundered into "skipped" the way CF-A-REFUSED-SUBSET-
+  // COLLISION-IS-A-DECLARED-SKIP warns against for the APPLY reconciler.
+  const skipped = skippedRow + notReached + unnamedParallel + cardLineParallel + playerNameParallel + subsetCollision;
+  const refused = refusedRows + explodedRows;
+  const reconciled = written + failed + skipped + refused;
+  console.log(`  csv rows read ${f(rows)} = written ${f(written)} + failed ${f(failed)} + skipped ${f(skipped)} + refused ${f(refused)}${rows === reconciled ? "  (balances)" : `  <- MISMATCH: sums to ${f(reconciled)}`}`);
+  if (rows !== reconciled) {
+    console.error(`\nFATAL: csv rows read (${f(rows)}) does not equal written + failed + skipped + refused (${f(reconciled)}).`);
+    console.error(`       ${f(Math.abs(rows - reconciled))} row(s) ${rows > reconciled ? "vanished from every counter this run declares" : "were double-counted across buckets"}.`);
+    console.error(`       A row this run read must land in exactly one bucket -- the banner cannot be trusted otherwise.`);
+    return { exitCode: 5 };
   }
 
   // CF-RECONCILE-DOCUMENTS-NOT-CALLS, the assertion.
