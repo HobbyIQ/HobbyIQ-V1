@@ -1,0 +1,23 @@
+{
+ "scrapedAt": "2026-09-13T02:00:08.637Z",
+ "source": "sportscardchecklist",
+ "sourceUrl": "https://www.sportscardchecklist.com/set-12030/1961-62-fleer-basketball-trading-card-checklist",
+ "sport": "basketball",
+ "year": 1961,
+ "season": "1961-62",
+ "setName": "1961 Fleer Basketball",
+ "productKey": "1961-fleer",
+ "setKey": "fleer",
+ "setKeyRequested": "fleer",
+ "parallelOfParent": false,
+ "parallelName": null,
+ "subset": null,
+ "rowCount": 66,
+ "parallelColumnAuthoritative": true,
+ "converterVersion": 6,
+ "cardRows": 66,
+ "ladderRows": 0,
+ "subsetRows": 0,
+ "printRunsFound": 0,
+ "sectionsReport": []
+}

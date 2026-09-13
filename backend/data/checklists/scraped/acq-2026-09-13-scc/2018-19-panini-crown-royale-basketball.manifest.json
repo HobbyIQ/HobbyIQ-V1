@@ -1,0 +1,29 @@
+{
+ "scrapedAt": "2026-09-13T01:59:43.482Z",
+ "source": "sportscardchecklist",
+ "sourceUrl": "https://www.sportscardchecklist.com/set-163522/2018-19-panini-crown-royale-basketball-trading-card-checklist",
+ "sport": "basketball",
+ "year": 2018,
+ "season": "2018-19",
+ "setName": "2018-19 Panini Crown Royale Basketball",
+ "productKey": "2018-panini-crown-royale",
+ "setKey": "panini-crown-royale",
+ "setKeyRequested": "panini-crown-royale",
+ "parallelOfParent": false,
+ "parallelName": null,
+ "subset": "Crown Royale",
+ "rowCount": 200,
+ "parallelColumnAuthoritative": true,
+ "converterVersion": 6,
+ "cardRows": 200,
+ "ladderRows": 0,
+ "subsetRows": 0,
+ "printRunsFound": 0,
+ "sectionsReport": [],
+ "setKeyOverrideCorrected": {
+  "fetcherEmitted": "panini",
+  "correctedTo": "panini-crown-royale",
+  "why": "fetchSportsCardChecklist effectiveSetKey generalised the brand-qualified product key to its parent brand. The qualified key is the CANONICAL registered key in productSetKeys.ts and normalizeSetKey maps the bare spelling onto it, so the emitted key would have minted rows under a different product and split the pool. Corrected to the queue/registry key; verified a normalizeSetKey fixed point.",
+  "correctedBy": "acquirer 2026-09-13"
+ }
+}

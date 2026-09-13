@@ -1,0 +1,846 @@
+{
+  "scrapedAt": "2026-09-13T02:13:20.801Z",
+  "sourceUrl": "https://www.tcdb.com/Inserts.cfm/sid/91110/2014-Panini-Prizm-FIFA-World-Cup",
+  "source": "tcdb-2026-09-13",
+  "sport": "soccer",
+  "year": 2014,
+  "setName": "2014 Panini Prizm FIFA World Cup",
+  "productKey": "2014-panini-prizm-fifa-world-cup-soccer",
+  "setKey": "panini-prizm-fifa-world-cup",
+  "rowCount": 5462,
+  "parallelColumnAuthoritative": true,
+  "parallelVocabulary": [
+    "Black Prizm",
+    "Blue Prizm",
+    "Blue Pulsar Prizm",
+    "Blue Red Wave Prizm",
+    "El Samba Prizm",
+    "Gold Power Prizm",
+    "Gold Prizm",
+    "Green Crystal Prizm",
+    "Prizm",
+    "Purple Prizm",
+    "Red Prizm",
+    "Red White Blue Power Plaid Prizm",
+    "Yellow Red Pulsar Prizm"
+  ],
+  "sectionsReport": [
+    {
+      "section": "2014 Panini Prizm FIFA World Cup",
+      "category": "base",
+      "parallel": "",
+      "cards": 201
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Aerial Assault",
+      "category": "insert-aerial-assault",
+      "parallel": "",
+      "cards": 5
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Aerial Assault Black Prizm",
+      "category": "insert-aerial-assault",
+      "parallel": "Black Prizm",
+      "cards": 5
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Aerial Assault Blue Red Wave Prizm",
+      "category": "insert-aerial-assault",
+      "parallel": "Blue Red Wave Prizm",
+      "cards": 5
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Aerial Assault Blue Prizm",
+      "category": "insert-aerial-assault",
+      "parallel": "Blue Prizm",
+      "cards": 5
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Aerial Assault Blue Pulsar Prizm",
+      "category": "insert-aerial-assault",
+      "parallel": "Blue Pulsar Prizm",
+      "cards": 5
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Aerial Assault Gold Power Prizm",
+      "category": "insert-aerial-assault",
+      "parallel": "Gold Power Prizm",
+      "cards": 5
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Aerial Assault Gold Prizm",
+      "category": "insert-aerial-assault",
+      "parallel": "Gold Prizm",
+      "cards": 5
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Aerial Assault Green Crystal Prizm",
+      "category": "insert-aerial-assault",
+      "parallel": "Green Crystal Prizm",
+      "cards": 5
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Aerial Assault Prizm",
+      "category": "insert-aerial-assault",
+      "parallel": "Prizm",
+      "cards": 5
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Aerial Assault Purple Prizm",
+      "category": "insert-aerial-assault",
+      "parallel": "Purple Prizm",
+      "cards": 5
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Aerial Assault Red Prizm",
+      "category": "insert-aerial-assault",
+      "parallel": "Red Prizm",
+      "cards": 5
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Aerial Assault Red White Blue Power Plaid Prizm",
+      "category": "insert-aerial-assault",
+      "parallel": "Red White Blue Power Plaid Prizm",
+      "cards": 5
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Aerial Assault Yellow Red Pulsar Prizm",
+      "category": "insert-aerial-assault",
+      "parallel": "Yellow Red Pulsar Prizm",
+      "cards": 5
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Combo Signatures",
+      "category": "insert-combo-signatures",
+      "parallel": "",
+      "cards": 10
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Combo Signatures El Samba Prizm",
+      "category": "insert-combo-signatures",
+      "parallel": "El Samba Prizm",
+      "cards": 10
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Combo Signatures Prizm",
+      "category": "insert-combo-signatures",
+      "parallel": "Prizm",
+      "cards": 10
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Cup Captains",
+      "category": "insert-cup-captains",
+      "parallel": "",
+      "cards": 30
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Cup Captains Black Prizm",
+      "category": "insert-cup-captains",
+      "parallel": "Black Prizm",
+      "cards": 30
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Cup Captains Blue Red Wave Prizm",
+      "category": "insert-cup-captains",
+      "parallel": "Blue Red Wave Prizm",
+      "cards": 30
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Cup Captains Blue Prizm",
+      "category": "insert-cup-captains",
+      "parallel": "Blue Prizm",
+      "cards": 30
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Cup Captains Gold Power Prizm",
+      "category": "insert-cup-captains",
+      "parallel": "Gold Power Prizm",
+      "cards": 30
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Cup Captains Gold Prizm",
+      "category": "insert-cup-captains",
+      "parallel": "Gold Prizm",
+      "cards": 30
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Cup Captains Green Crystal Prizm",
+      "category": "insert-cup-captains",
+      "parallel": "Green Crystal Prizm",
+      "cards": 30
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Cup Captains Prizm",
+      "category": "insert-cup-captains",
+      "parallel": "Prizm",
+      "cards": 30
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Cup Captains Purple Prizm",
+      "category": "insert-cup-captains",
+      "parallel": "Purple Prizm",
+      "cards": 30
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Cup Captains Red Prizm",
+      "category": "insert-cup-captains",
+      "parallel": "Red Prizm",
+      "cards": 30
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Cup Captains Red White Blue Power Plaid Prizm",
+      "category": "insert-cup-captains",
+      "parallel": "Red White Blue Power Plaid Prizm",
+      "cards": 30
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Cup Captains Yellow Red Pulsar Prizm",
+      "category": "insert-cup-captains",
+      "parallel": "Yellow Red Pulsar Prizm",
+      "cards": 30
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Eusebio Tribute",
+      "category": "insert-eusebio-tribute",
+      "parallel": "",
+      "cards": 1
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Eusebio Tribute Blue Pulsar Prizm",
+      "category": "insert-eusebio-tribute",
+      "parallel": "Blue Pulsar Prizm",
+      "cards": 1
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Eusebio Tribute Prizm",
+      "category": "insert-eusebio-tribute",
+      "parallel": "Prizm",
+      "cards": 1
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Fans of the Game",
+      "category": "insert-fans-of-the-game",
+      "parallel": "",
+      "cards": 2
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Fans of the Game Black Prizm",
+      "category": "insert-fans-of-the-game",
+      "parallel": "Black Prizm",
+      "cards": 2
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Fans of the Game Prizm",
+      "category": "insert-fans-of-the-game",
+      "parallel": "Prizm",
+      "cards": 2
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Fuleco",
+      "category": "insert-fuleco",
+      "parallel": "",
+      "cards": 3
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Fuleco Black Prizm",
+      "category": "insert-fuleco",
+      "parallel": "Black Prizm",
+      "cards": 3
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Fuleco Blue Red Wave Prizm",
+      "category": "insert-fuleco",
+      "parallel": "Blue Red Wave Prizm",
+      "cards": 3
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Fuleco Blue Prizm",
+      "category": "insert-fuleco",
+      "parallel": "Blue Prizm",
+      "cards": 3
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Fuleco Gold Power Prizm",
+      "category": "insert-fuleco",
+      "parallel": "Gold Power Prizm",
+      "cards": 3
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Fuleco Gold Prizm",
+      "category": "insert-fuleco",
+      "parallel": "Gold Prizm",
+      "cards": 3
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Fuleco Green Crystal Prizm",
+      "category": "insert-fuleco",
+      "parallel": "Green Crystal Prizm",
+      "cards": 3
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Fuleco Prizm",
+      "category": "insert-fuleco",
+      "parallel": "Prizm",
+      "cards": 3
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Fuleco Purple Prizm",
+      "category": "insert-fuleco",
+      "parallel": "Purple Prizm",
+      "cards": 3
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Fuleco Red Prizm",
+      "category": "insert-fuleco",
+      "parallel": "Red Prizm",
+      "cards": 3
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Fuleco Red White Blue Power Plaid Prizm",
+      "category": "insert-fuleco",
+      "parallel": "Red White Blue Power Plaid Prizm",
+      "cards": 3
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Fuleco Yellow Red Pulsar Prizm",
+      "category": "insert-fuleco",
+      "parallel": "Yellow Red Pulsar Prizm",
+      "cards": 3
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Guardians",
+      "category": "insert-guardians",
+      "parallel": "",
+      "cards": 25
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Guardians Black Prizm",
+      "category": "insert-guardians",
+      "parallel": "Black Prizm",
+      "cards": 25
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Guardians Blue Red Wave Prizm",
+      "category": "insert-guardians",
+      "parallel": "Blue Red Wave Prizm",
+      "cards": 25
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Guardians Blue Prizm",
+      "category": "insert-guardians",
+      "parallel": "Blue Prizm",
+      "cards": 25
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Guardians Gold Power Prizm",
+      "category": "insert-guardians",
+      "parallel": "Gold Power Prizm",
+      "cards": 25
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Guardians Gold Prizm",
+      "category": "insert-guardians",
+      "parallel": "Gold Prizm",
+      "cards": 25
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Guardians Green Crystal Prizm",
+      "category": "insert-guardians",
+      "parallel": "Green Crystal Prizm",
+      "cards": 25
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Guardians Prizm",
+      "category": "insert-guardians",
+      "parallel": "Prizm",
+      "cards": 25
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Guardians Purple Prizm",
+      "category": "insert-guardians",
+      "parallel": "Purple Prizm",
+      "cards": 25
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Guardians Red Prizm",
+      "category": "insert-guardians",
+      "parallel": "Red Prizm",
+      "cards": 25
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Guardians Red White Blue Power Plaid Prizm",
+      "category": "insert-guardians",
+      "parallel": "Red White Blue Power Plaid Prizm",
+      "cards": 25
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Guardians Yellow Red Pulsar Prizm",
+      "category": "insert-guardians",
+      "parallel": "Yellow Red Pulsar Prizm",
+      "cards": 25
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Net Finders",
+      "category": "insert-net-finders",
+      "parallel": "",
+      "cards": 25
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Net Finders Black Prizm",
+      "category": "insert-net-finders",
+      "parallel": "Black Prizm",
+      "cards": 25
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Net Finders Blue Red Wave Prizm",
+      "category": "insert-net-finders",
+      "parallel": "Blue Red Wave Prizm",
+      "cards": 25
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Net Finders Blue Prizm",
+      "category": "insert-net-finders",
+      "parallel": "Blue Prizm",
+      "cards": 25
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Net Finders Gold Power Prizm",
+      "category": "insert-net-finders",
+      "parallel": "Gold Power Prizm",
+      "cards": 25
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Net Finders Gold Prizm",
+      "category": "insert-net-finders",
+      "parallel": "Gold Prizm",
+      "cards": 25
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Net Finders Green Crystal Prizm",
+      "category": "insert-net-finders",
+      "parallel": "Green Crystal Prizm",
+      "cards": 25
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Net Finders Prizm",
+      "category": "insert-net-finders",
+      "parallel": "Prizm",
+      "cards": 25
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Net Finders Purple Prizm",
+      "category": "insert-net-finders",
+      "parallel": "Purple Prizm",
+      "cards": 25
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Net Finders Red Prizm",
+      "category": "insert-net-finders",
+      "parallel": "Red Prizm",
+      "cards": 25
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Net Finders Red White Blue Power Plaid Prizm",
+      "category": "insert-net-finders",
+      "parallel": "Red White Blue Power Plaid Prizm",
+      "cards": 25
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Net Finders Yellow Red Pulsar Prizm",
+      "category": "insert-net-finders",
+      "parallel": "Yellow Red Pulsar Prizm",
+      "cards": 25
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Signatures",
+      "category": "insert-signatures",
+      "parallel": "",
+      "cards": 50
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Signatures Black Prizm",
+      "category": "insert-signatures",
+      "parallel": "Black Prizm",
+      "cards": 50
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Signatures El Samba Prizm",
+      "category": "insert-signatures",
+      "parallel": "El Samba Prizm",
+      "cards": 47
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Signatures Prizm",
+      "category": "insert-signatures",
+      "parallel": "Prizm",
+      "cards": 50
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Team Photos",
+      "category": "insert-team-photos",
+      "parallel": "",
+      "cards": 32
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Team Photos Black Prizm",
+      "category": "insert-team-photos",
+      "parallel": "Black Prizm",
+      "cards": 32
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Team Photos Blue Red Wave Prizm",
+      "category": "insert-team-photos",
+      "parallel": "Blue Red Wave Prizm",
+      "cards": 32
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Team Photos Blue Prizm",
+      "category": "insert-team-photos",
+      "parallel": "Blue Prizm",
+      "cards": 32
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Team Photos Gold Power Prizm",
+      "category": "insert-team-photos",
+      "parallel": "Gold Power Prizm",
+      "cards": 32
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Team Photos Gold Prizm",
+      "category": "insert-team-photos",
+      "parallel": "Gold Prizm",
+      "cards": 32
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Team Photos Green Crystal Prizm",
+      "category": "insert-team-photos",
+      "parallel": "Green Crystal Prizm",
+      "cards": 32
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Team Photos Prizm",
+      "category": "insert-team-photos",
+      "parallel": "Prizm",
+      "cards": 32
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Team Photos Purple Prizm",
+      "category": "insert-team-photos",
+      "parallel": "Purple Prizm",
+      "cards": 32
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Team Photos Red Prizm",
+      "category": "insert-team-photos",
+      "parallel": "Red Prizm",
+      "cards": 32
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Team Photos Red White Blue Power Plaid Prizm",
+      "category": "insert-team-photos",
+      "parallel": "Red White Blue Power Plaid Prizm",
+      "cards": 32
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Team Photos Yellow Red Pulsar Prizm",
+      "category": "insert-team-photos",
+      "parallel": "Yellow Red Pulsar Prizm",
+      "cards": 32
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup World Cup Matchups",
+      "category": "insert-world-cup-matchups",
+      "parallel": "",
+      "cards": 28
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup World Cup Matchups Black Prizm",
+      "category": "insert-world-cup-matchups",
+      "parallel": "Black Prizm",
+      "cards": 28
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup World Cup Matchups Blue Red Wave Prizm",
+      "category": "insert-world-cup-matchups",
+      "parallel": "Blue Red Wave Prizm",
+      "cards": 28
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup World Cup Matchups Blue Prizm",
+      "category": "insert-world-cup-matchups",
+      "parallel": "Blue Prizm",
+      "cards": 28
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup World Cup Matchups Gold Power Prizm",
+      "category": "insert-world-cup-matchups",
+      "parallel": "Gold Power Prizm",
+      "cards": 28
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup World Cup Matchups Gold Prizm",
+      "category": "insert-world-cup-matchups",
+      "parallel": "Gold Prizm",
+      "cards": 28
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup World Cup Matchups Green Crystal Prizm",
+      "category": "insert-world-cup-matchups",
+      "parallel": "Green Crystal Prizm",
+      "cards": 28
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup World Cup Matchups Prizm",
+      "category": "insert-world-cup-matchups",
+      "parallel": "Prizm",
+      "cards": 28
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup World Cup Matchups Purple Prizm",
+      "category": "insert-world-cup-matchups",
+      "parallel": "Purple Prizm",
+      "cards": 28
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup World Cup Matchups Red Prizm",
+      "category": "insert-world-cup-matchups",
+      "parallel": "Red Prizm",
+      "cards": 28
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup World Cup Matchups Red White Blue Power Plaid Prizm",
+      "category": "insert-world-cup-matchups",
+      "parallel": "Red White Blue Power Plaid Prizm",
+      "cards": 28
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup World Cup Matchups Yellow Red Pulsar Prizm",
+      "category": "insert-world-cup-matchups",
+      "parallel": "Yellow Red Pulsar Prizm",
+      "cards": 28
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup World Cup Posters",
+      "category": "insert-world-cup-posters",
+      "parallel": "",
+      "cards": 12
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup World Cup Posters Black Prizm",
+      "category": "insert-world-cup-posters",
+      "parallel": "Black Prizm",
+      "cards": 12
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup World Cup Posters Blue Red Wave Prizm",
+      "category": "insert-world-cup-posters",
+      "parallel": "Blue Red Wave Prizm",
+      "cards": 12
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup World Cup Posters Blue Prizm",
+      "category": "insert-world-cup-posters",
+      "parallel": "Blue Prizm",
+      "cards": 12
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup World Cup Posters Gold Power Prizm",
+      "category": "insert-world-cup-posters",
+      "parallel": "Gold Power Prizm",
+      "cards": 12
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup World Cup Posters Gold Prizm",
+      "category": "insert-world-cup-posters",
+      "parallel": "Gold Prizm",
+      "cards": 12
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup World Cup Posters Green Crystal Prizm",
+      "category": "insert-world-cup-posters",
+      "parallel": "Green Crystal Prizm",
+      "cards": 12
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup World Cup Posters Prizm",
+      "category": "insert-world-cup-posters",
+      "parallel": "Prizm",
+      "cards": 12
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup World Cup Posters Purple Prizm",
+      "category": "insert-world-cup-posters",
+      "parallel": "Purple Prizm",
+      "cards": 12
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup World Cup Posters Red Prizm",
+      "category": "insert-world-cup-posters",
+      "parallel": "Red Prizm",
+      "cards": 12
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup World Cup Posters Red White Blue Power Plaid Prizm",
+      "category": "insert-world-cup-posters",
+      "parallel": "Red White Blue Power Plaid Prizm",
+      "cards": 12
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup World Cup Posters Yellow Red Pulsar Prizm",
+      "category": "insert-world-cup-posters",
+      "parallel": "Yellow Red Pulsar Prizm",
+      "cards": 12
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup World Cup Stars",
+      "category": "insert-world-cup-stars",
+      "parallel": "",
+      "cards": 49
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup World Cup Stars Black Prizm",
+      "category": "insert-world-cup-stars",
+      "parallel": "Black Prizm",
+      "cards": 49
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup World Cup Stars Blue Red Wave Prizm",
+      "category": "insert-world-cup-stars",
+      "parallel": "Blue Red Wave Prizm",
+      "cards": 49
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup World Cup Stars Blue Prizm",
+      "category": "insert-world-cup-stars",
+      "parallel": "Blue Prizm",
+      "cards": 49
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup World Cup Stars Gold Power Prizm",
+      "category": "insert-world-cup-stars",
+      "parallel": "Gold Power Prizm",
+      "cards": 49
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup World Cup Stars Gold Prizm",
+      "category": "insert-world-cup-stars",
+      "parallel": "Gold Prizm",
+      "cards": 49
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup World Cup Stars Green Crystal Prizm",
+      "category": "insert-world-cup-stars",
+      "parallel": "Green Crystal Prizm",
+      "cards": 49
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup World Cup Stars Prizm",
+      "category": "insert-world-cup-stars",
+      "parallel": "Prizm",
+      "cards": 49
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup World Cup Stars Purple Prizm",
+      "category": "insert-world-cup-stars",
+      "parallel": "Purple Prizm",
+      "cards": 49
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup World Cup Stars Red Prizm",
+      "category": "insert-world-cup-stars",
+      "parallel": "Red Prizm",
+      "cards": 49
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup World Cup Stars Red White Blue Power Plaid Prizm",
+      "category": "insert-world-cup-stars",
+      "parallel": "Red White Blue Power Plaid Prizm",
+      "cards": 49
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup World Cup Stars Yellow Red Pulsar Prizm",
+      "category": "insert-world-cup-stars",
+      "parallel": "Yellow Red Pulsar Prizm",
+      "cards": 49
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Black Prizm",
+      "category": "base",
+      "parallel": "Black Prizm",
+      "cards": 201
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Blue Red Wave Prizm",
+      "category": "base",
+      "parallel": "Blue Red Wave Prizm",
+      "cards": 201
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Blue Prizm",
+      "category": "base",
+      "parallel": "Blue Prizm",
+      "cards": 201
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Blue Pulsar Prizm",
+      "category": "base",
+      "parallel": "Blue Pulsar Prizm",
+      "cards": 100
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup El Samba Prizm",
+      "category": "base",
+      "parallel": "El Samba Prizm",
+      "cards": 201
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Gold Power Prizm",
+      "category": "base",
+      "parallel": "Gold Power Prizm",
+      "cards": 201
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Gold Prizm",
+      "category": "base",
+      "parallel": "Gold Prizm",
+      "cards": 201
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Green Crystal Prizm",
+      "category": "base",
+      "parallel": "Green Crystal Prizm",
+      "cards": 201
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Prizm",
+      "category": "base",
+      "parallel": "Prizm",
+      "cards": 201
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Purple Prizm",
+      "category": "base",
+      "parallel": "Purple Prizm",
+      "cards": 201
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Red Prizm",
+      "category": "base",
+      "parallel": "Red Prizm",
+      "cards": 201
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Red White Blue Power Plaid Prizm",
+      "category": "base",
+      "parallel": "Red White Blue Power Plaid Prizm",
+      "cards": 201
+    },
+    {
+      "section": "2014 Panini Prizm FIFA World Cup Yellow Red Pulsar Prizm",
+      "category": "base",
+      "parallel": "Yellow Red Pulsar Prizm",
+      "cards": 201
+    }
+  ],
+  "note": "2014 Panini Prizm FIFA World Cup, acquired from TCDB 2026-09-13 (Beckett is offline for\nmaintenance since 2026-09-09, so the queue's beckett-xlsx lane could not be used).\n136 sub-checklists: the 201-card base set, 13 base parallel rungs and 11 insert families\nwith their own rungs. Every rung paginated to exhaustion (TCDB pages at 100 rows; a\nsingle-page read clipped the base set at 100 of 201).\n\nSETKEY — `panini-prizm-fifa-world-cup`, per Drew's ruling 2026-09-13: the 2014 FIFA World\nCup release is its OWN product key, like the 2025 FIFA release. NO src change was needed —\nthe key already exists and is already a normalizeSetKey FIXED POINT. Verified by running\nthe function rather than reading the table:\n\n  normalizeSetKey('2014 Panini Prizm FIFA World Cup') === 'panini-prizm-fifa-world-cup'\n  normalizeSetKey('panini-prizm-fifa-world-cup')      === 'panini-prizm-fifa-world-cup'\n\nsetkey-reconciliation.json already rules the key verdict `distinct`, canonical itself, on\n96,562 checklist rows, with the rule 'product-family collapse — `panini-prizm` is an\nancestor of `panini-prizm-fifa-world-cup`, and product-family collapse is forbidden (Drew\n2026-09-03)'. reconcileSetKey returns final:true, so the key short-circuits ahead of the\nunanchored /panini-prizm/ pattern that would otherwise swallow the qualifier.\n\nCOMPETITION-NAMED, NOT YEAR-SCOPED — the same shape as its siblings\n`panini-prizm-fifa-world-cup-qatar` (2022) and `panini-prizm-fifa-club-world-cup`. The\nyear-scoped PRIZM_FIFA_YEARS mechanism exists for the BARE title 'Panini Prizm' in soccer,\nwhich is genuinely ambiguous and needs the (sport, year) cell to disambiguate. This\nproduct's own name states the competition, so it needs no sport/year scoping and none was\nadded.\n\nThe rows already on this key are ALL 2026 (reconciliation evidence years '2026-2026'), so\nthese 2014 rows land in their own (sport, year) cell under the same product and collide\nwith nothing. The pool's 2,974 soccer/2014 sales sit on `panini-prizm` and are expected to\nfold here through the rematch once this checklist is ingested.\n\nisAuto and printRun are read from TCDB's own row attributes (AU, SN<n>), not inferred:\nthe Signatures and Combo Signatures rungs carry AU + SN10 and are written as autos /10.\nparallel is BLANK for a plain rung — blank means unknown, never 'Base'.\nThe rung name is what the rung ADDS to the anchor ('Gold Prizm'), per the one-format rule."
+}

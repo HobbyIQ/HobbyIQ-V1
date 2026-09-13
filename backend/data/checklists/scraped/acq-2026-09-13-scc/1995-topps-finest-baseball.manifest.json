@@ -1,0 +1,23 @@
+{
+ "scrapedAt": "2026-09-13T02:02:06.789Z",
+ "source": "sportscardchecklist",
+ "sourceUrl": "https://www.sportscardchecklist.com/set-13065/1995-finest-baseball-trading-card-checklist",
+ "sport": "baseball",
+ "year": 1995,
+ "season": "1995",
+ "setName": "1995 Topps Finest Baseball",
+ "productKey": "1995-topps-finest",
+ "setKey": "topps-finest",
+ "setKeyRequested": "topps-finest",
+ "parallelOfParent": false,
+ "parallelName": null,
+ "subset": null,
+ "rowCount": 330,
+ "parallelColumnAuthoritative": true,
+ "converterVersion": 6,
+ "cardRows": 330,
+ "ladderRows": 0,
+ "subsetRows": 0,
+ "printRunsFound": 0,
+ "sectionsReport": []
+}
