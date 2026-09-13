@@ -516,6 +516,86 @@ function rungFoldingFor(rows) {
     if (!rosters.has(slug)) rosters.set(slug, new Map());
     rosters.get(slug).set(String(r.cardNumber), String(r.player || ""));
   }
+  // CF-THE-SIBLINGS-NAME-THE-SET-EVEN-WITH-NO-BASE-TIER (Drew 2026-09-13).
+  //
+  // A root need not be a FILE. Spectra publishes fourteen "Dual Patch
+  // Autographs <colour>" files and NO uncoloured tier, so guard (a) found no
+  // root and six colours survived as keys. But every one of the fourteen
+  // filenames STATES the set name -- the source simply prints no uncoloured
+  // print run. Reading the shared name is not inventing a root; refusing to
+  // read it is what split one card set fourteen ways.
+  //
+  // The evidence required is the same evidence a root file gives: >= 2 sibling
+  // colour slugs sharing a name prefix at a segment boundary, whose ROSTERS
+  // AGREE with each other -- same number -> same player, zero disagreements.
+  // Two files that merely start alike prove nothing; two files that print the
+  // same players at the same numbers are two printings of one checklist.
+  //
+  // NO BASE ROW IS MINTED. The derived root is an ADDRESS for the colours to
+  // share, never a row: blank stays unknown and nothing is written as Base
+  // (feedback: blank means unknown, never "Base"). Its roster is assembled from
+  // the siblings only so the fold below can measure against it.
+  //
+  // The longest shared prefix wins, so "Dual Patch Autographs Neon Pink" and
+  // "... Neon Purple" establish "dual-patch-autographs" (their agreeing name)
+  // rather than "dual-patch-autographs-neon", which no file names alone.
+  const derivedRoots = new Set();
+  {
+    const stated = new Set(rosters.keys());
+    const candidates = new Map(); // prefix -> [slug, ...]
+    for (const slug of stated) {
+      const segs = slug.split("-");
+      // Only a slug with NO stated root of its own needs one derived. When the
+      // source publishes "College Penmanship" beside "College Penmanship Prizms
+      // Gold", the set is already named and deriving "college" from the shared
+      // first segment would root a real card set on a fragment of its own name.
+      if (segs.some((_, n) => n > 0 && stated.has(segs.slice(0, n).join("-")))) continue;
+      // Every proper prefix at a segment boundary.
+      for (let n = 1; n < segs.length; n++) {
+        const pre = segs.slice(0, n).join("-");
+        if (stated.has(pre)) continue; // a real file already roots this
+        if (!candidates.has(pre)) candidates.set(pre, []);
+        candidates.get(pre).push(slug);
+      }
+    }
+    // WIDEST FIRST, THEN LONGEST. The name to derive is the one the MOST
+    // siblings agree on: with fourteen "Dual Patch Autographs <colour>" files,
+    // twelve share `dual-patch-autographs` while only two share
+    // `dual-patch-autographs-neon`, and the set is the former. Ordering by
+    // length alone over-fits a subgroup and derives a name NO FILE STATES --
+    // measured on a Neon Pink + Neon Purple pair, which alone would mint
+    // "Dual Patch Autographs Neon" and read the colours as "Pink" / "Purple".
+    //
+    // Once a prefix is established the slugs under it are SPOKEN FOR, so a
+    // narrower or shorter name cannot re-root them.
+    const claimed = new Set();
+    const byWidth = [...candidates.keys()].sort((a, b) =>
+      candidates.get(b).length - candidates.get(a).length || b.length - a.length);
+    for (const pre of byWidth) {
+      const sibs = candidates.get(pre).filter((x) => !claimed.has(x));
+      if (sibs.length < 2) continue;
+      // The siblings must AGREE with one another, pairwise against the first.
+      const merged = new Map();
+      let differ = 0, agreed = 0;
+      for (const sib of sibs) {
+        for (const [num, player] of rosters.get(sib)) {
+          const held = merged.get(num);
+          if (held === undefined) merged.set(num, player);
+          else if (held === player) agreed++;
+          else differ++;
+        }
+      }
+      // One disagreement means these are not printings of one checklist.
+      if (differ > 0 || agreed === 0) continue;
+      rosters.set(pre, merged);
+      derivedRoots.add(pre);
+      for (const sib of sibs) claimed.add(sib);
+      // The derived root is itself spoken for: a shorter prefix must not adopt
+      // it, which is what would put the set under a fragment of its own name.
+      claimed.add(pre);
+    }
+  }
+
   const slugs = [...rosters.keys()];
   const folding = new Map();
   for (const slug of slugs) {

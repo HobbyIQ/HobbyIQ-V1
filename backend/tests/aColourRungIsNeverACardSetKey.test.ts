@@ -135,17 +135,113 @@ describe("a subset the rosters do NOT vouch for stays a card set", () => {
     expect(fold.has("hoops-art-signatures-horizontal")).toBe(false);
   });
 
-  it("refuses the fold when NO ROOT SUBSET EXISTS in the cell", () => {
-    // Spectra publishes "Dual Patch Autographs Gold", "… Meta", "… Neon Pink"
-    // and eleven more, but NO plain "Dual Patch Autographs". Inventing the root
-    // would mint a key the checklist never names; the colours are reported for
-    // a ruling instead. Measured: 6 such keys survive the cbc fold.
-    const all = [
-      ...rows("Dual Patch Autographs Gold", ROSTER),
-      ...rows("Dual Patch Autographs Meta", [["7", "Sauce Gardner"], ["8", "Garrett Wilson"]]),
-    ];
-    const fold = IS.rungFoldingFor(all);
+  it("refuses the fold when a LONE colour file has no sibling to agree with", () => {
+    // One file names a set and a colour and nothing corroborates it, so there
+    // is no evidence the plain set exists at all. Absent beats wrong.
+    const fold = IS.rungFoldingFor(rows("Dual Patch Autographs Gold", ROSTER));
     expect(fold.size).toBe(0);
+  });
+});
+
+/**
+ * CF-THE-SIBLINGS-NAME-THE-SET-EVEN-WITH-NO-BASE-TIER (Drew 2026-09-13).
+ *
+ * A root need not be a FILE. Spectra publishes fourteen "Dual Patch Autographs
+ * <colour>" files and NO uncoloured tier, so the first cut found no root and six
+ * colours survived as keys. But every one of the fourteen filenames STATES the
+ * set name -- the source simply prints no uncoloured print run. Drew ruled it:
+ * ONE card set, all fourteen colours on the parallel axis, and NO base row.
+ *
+ * Reading the shared name is not inventing a root. The evidence required is the
+ * same evidence a root file gives: >= 2 siblings sharing a name prefix whose
+ * ROSTERS AGREE. Two files that merely start alike prove nothing; two that
+ * print the same players at the same numbers are two printings of one checklist.
+ */
+describe("sibling colour files name their set even when no base tier is printed", () => {
+  const A: Array<[string, string]> = [["1", "Sauce Gardner"], ["2", "Garrett Wilson"]];
+
+  it("derives the shared name as the root when two siblings' rosters agree", () => {
+    const fold = IS.rungFoldingFor([
+      ...rows("Dual Patch Autographs Gold", A),
+      ...rows("Dual Patch Autographs Meta", A),
+    ]);
+    expect(fold.get("dual-patch-autographs-gold").root).toBe("dual-patch-autographs");
+    expect(fold.get("dual-patch-autographs-gold").parallel).toBe("Gold");
+    expect(fold.get("dual-patch-autographs-meta").root).toBe("dual-patch-autographs");
+    expect(fold.get("dual-patch-autographs-meta").parallel).toBe("Meta");
+  });
+
+  it("mints NO BASE ROW for the derived root — blank stays unknown", () => {
+    // The derived root is an ADDRESS for the colours to share, never a row.
+    const all = [...rows("Dual Patch Autographs Gold", A), ...rows("Dual Patch Autographs Meta", A)];
+    const plan = IS.planFile({
+      rows: all,
+      productSetKey: "panini-spectra",
+      computeId: (r: Row & { setKey: string }) => [r.setKey, r.cardNumber, r.parallel || "BASE"].join(":"),
+      normalize: (k: string) => k,
+    });
+    const ids = all.map((r) => [
+      IS.setKeyForRow({ productSetKey: "panini-spectra", ...r, separate: plan.separate, foldRungs: plan.foldRungs }).setKey,
+      r.cardNumber,
+      IS.parallelForRow({ ...r, foldRungs: plan.foldRungs }) || "BASE",
+    ].join(":"));
+    // Every address carries a colour; none is written as Base.
+    expect(ids.some((id) => id.endsWith(":BASE"))).toBe(false);
+    expect(new Set(ids).size).toBe(4);
+  });
+
+  it("takes the name the MOST siblings agree on, not a subgroup's", () => {
+    // WIDEST FIRST, THEN LONGEST. Ordering by length alone over-fits: the two
+    // Neon files share `dual-patch-autographs-neon`, but all four share
+    // `dual-patch-autographs`, and the set is the latter. The Neon pair must
+    // not pull "Neon" out of the colour and into the set name.
+    const fold = IS.rungFoldingFor([
+      ...rows("Dual Patch Autographs Gold", A),
+      ...rows("Dual Patch Autographs Meta", A),
+      ...rows("Dual Patch Autographs Neon Pink", A),
+      ...rows("Dual Patch Autographs Neon Purple", A),
+    ]);
+    for (const colour of ["gold", "meta", "neon-pink", "neon-purple"]) {
+      expect(fold.get(`dual-patch-autographs-${colour}`).root).toBe("dual-patch-autographs");
+    }
+    expect(fold.get("dual-patch-autographs-neon-pink").parallel).toBe("Neon Pink");
+    // This is the real Spectra shape: fourteen colour files, no base tier.
+    expect(fold.size).toBe(4);
+  });
+
+  it("with ONLY a subgroup present, the widest shared name is all the evidence there is", () => {
+    // THE LIMIT OF THE RULE, pinned deliberately. Given nothing but "… Neon
+    // Pink" and "… Neon Purple", `dual-patch-autographs-neon` IS the widest
+    // name the files agree on, and the module says so rather than guessing at a
+    // shorter one no evidence supports. It still folds the two onto ONE key, so
+    // the pool is not split; only the name is less specific than the full
+    // fourteen-file cell would give. Reading more than the files state is the
+    // failure this whole module exists to prevent.
+    const fold = IS.rungFoldingFor([
+      ...rows("Dual Patch Autographs Neon Pink", A),
+      ...rows("Dual Patch Autographs Neon Purple", A),
+    ]);
+    expect(fold.get("dual-patch-autographs-neon-pink").root).toBe("dual-patch-autographs-neon");
+    expect(new Set([...fold.values()].map((f: { root: string }) => f.root)).size).toBe(1);
+  });
+
+  it("refuses to derive a root when the siblings' rosters DISAGREE", () => {
+    // Two sets that happen to share a first word are not one set.
+    expect(IS.rungFoldingFor([
+      ...rows("Gold Standard Gold", A),
+      ...rows("Gold Standard Silver", [["1", "Someone Else"], ["2", "Another Player"]]),
+    ]).size).toBe(0);
+  });
+
+  it("a STATED root always wins — a real set is never rooted on a fragment of its own name", () => {
+    // "College Penmanship" is published, so "college" must never be derived
+    // from the shared first segment of its own rungs.
+    const fold = IS.rungFoldingFor([
+      ...rows("College Penmanship", ROSTER),
+      ...rows("College Penmanship Prizms Gold", ROSTER),
+    ]);
+    expect(fold.get("college-penmanship-prizms-gold").root).toBe("college-penmanship");
+    expect(fold.has("college-penmanship")).toBe(false);
   });
 });
 
