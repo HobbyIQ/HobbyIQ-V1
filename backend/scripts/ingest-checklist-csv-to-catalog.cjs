@@ -993,8 +993,28 @@ async function main() {
     // `subsetDisambiguated` is deliberately NOT added: those rows ARE written,
     // just at a subset-bearing slug, so they are already inside `written`.
     // Adding them would double-count and overshoot `intended` instead.
-    reportWrites({ job: "ingest-checklist-csv-to-catalog", intended: rows, written, skipped: skippedRow + notReached + unnamedParallel + cardLineParallel + playerNameParallel + explodedRows + subsetCollision + refusedRows, failed });
+    //
+    // CF-ONE-SITE-COMPUTES-THE-SKIP-TOTAL (2026-09-13). skipCount() (declared
+    // below -- function declarations hoist, so the order here is
+    // unconstrained) is the ONLY place subsetCollision is summed in this
+    // file. The rows-read reconciliation a few lines further down calls the
+    // same function, so the two banners can never disagree about what
+    // "skipped" means, and a mutant that drops the term drops it from both.
+    reportWrites({ job: "ingest-checklist-csv-to-catalog", intended: rows, written, skipped: skipCount() + refuseCount(), failed });
   }
+  // The per-row gates this file dropped before ever reaching the batch: a
+  // DELIBERATE, DECLARED skip, never a lost row.
+  function skipCount() {
+    return skippedRow + notReached + unnamedParallel + cardLineParallel + playerNameParallel + subsetCollision;
+  }
+  // A whole FILE or whole CATEGORY the id-integrity / exploded-category
+  // guards dropped -- its own term, never folded into skipCount(), so a
+  // whole-file refusal cannot hide inside a counter named for per-row drops.
+  function refuseCount() {
+    return refusedRows + explodedRows;
+  }
+  const skipped = skipCount();
+  const refused = refuseCount();
 
   // CF-CSV-ROWS-READ-MUST-EQUAL-EVERY-BUCKET-THAT-CLAIMS-ONE (2026-09-13,
   // follow-up to the id-integrity guard above). `rows skipped` and `failed`
@@ -1002,14 +1022,9 @@ async function main() {
   // computed or asserted the sum. Stated here, the same way CF-RECONCILE-
   // DOCUMENTS-NOT-CALLS below states `written` vs `plannedIds` out loud rather
   // than trusting it: every row this run READ is either written, failed,
-  // skipped (a deliberate, declared per-row drop) or refused (a whole file or
-  // whole category dropped by the id-integrity / exploded-category guards).
-  // `skipped` here matches the bucket `reportWrites` above already sums, minus
-  // `refusedRows` and `explodedRows`, which are their own term so a whole-file
-  // refusal is never laundered into "skipped" the way CF-A-REFUSED-SUBSET-
-  // COLLISION-IS-A-DECLARED-SKIP warns against for the APPLY reconciler.
-  const skipped = skippedRow + notReached + unnamedParallel + cardLineParallel + playerNameParallel + subsetCollision;
-  const refused = refusedRows + explodedRows;
+  // skipped (a deliberate, declared per-row drop, above) or refused (a whole
+  // file or whole category dropped by the id-integrity / exploded-category
+  // guards, also above).
   const reconciled = written + failed + skipped + refused;
   console.log(`  csv rows read ${f(rows)} = written ${f(written)} + failed ${f(failed)} + skipped ${f(skipped)} + refused ${f(refused)}${rows === reconciled ? "  (balances)" : `  <- MISMATCH: sums to ${f(reconciled)}`}`);
   if (rows !== reconciled) {

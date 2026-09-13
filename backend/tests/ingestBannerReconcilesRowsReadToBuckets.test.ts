@@ -146,8 +146,20 @@ describe("the reconciliation is a real assertion, not a printed hope", () => {
 
   it("`skipped` and `refused` are their own terms — a whole-file refusal is never laundered into skipped", () => {
     const src = fs.readFileSync(script, "utf8");
-    expect(src).toMatch(/const skipped = skippedRow \+ notReached \+ unnamedParallel \+ cardLineParallel \+ playerNameParallel \+ subsetCollision;/);
-    expect(src).toMatch(/const refused = refusedRows \+ explodedRows;/);
+    // CF-ONE-SITE-COMPUTES-THE-SKIP-TOTAL: skipCount()/refuseCount() are the
+    // single, shared computation the APPLY reconciliation (reportWrites) and
+    // this rows-read banner both call, so `+ subsetCollision` appears exactly
+    // once in the file and a mutation dropping it is caught on both banners
+    // at once (see tests/sccPartialIsTerminalAndSiblingLadders.test.ts,
+    // "drop `+ subsetCollision`").
+    expect(src).toMatch(/function skipCount\(\) \{\s*return skippedRow \+ notReached \+ unnamedParallel \+ cardLineParallel \+ playerNameParallel \+ subsetCollision;\s*\}/);
+    expect(src).toMatch(/function refuseCount\(\) \{\s*return refusedRows \+ explodedRows;\s*\}/);
+    expect(src).toMatch(/const skipped = skipCount\(\);/);
+    expect(src).toMatch(/const refused = refuseCount\(\);/);
+    // Exactly one call site sums subsetCollision — the mutation test in
+    // sccPartialIsTerminalAndSiblingLadders.test.ts relies on a single
+    // `.replace(" + subsetCollision", "")` removing it everywhere.
+    expect(src.split(" + subsetCollision").length - 1).toBe(1);
   });
 });
 
