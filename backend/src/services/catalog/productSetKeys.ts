@@ -661,6 +661,43 @@ export const PRODUCT_SET_KEYS: ReadonlyArray<ProductSetKey> = [
   P("nba-hoops", { parent: "panini", names: ["panini-hoops", "hoops"] }),
 
   /**
+   * ROOKIES & STARS AUTOGRAPH SUBSETS ARE CARD SETS (R30, Drew 2026-09-13).
+   *
+   * "A same-numbered autograph SUBSET is its own card set within the product,
+   * the way a named insert set is."
+   *
+   * 2025 Panini Rookies & Stars publishes eight autograph subsets that EACH
+   * RESTART NUMBERING AT 1 -- "Airborne Signatures" #1, "Crusade Signatures"
+   * #1, "Great American Signatures" #1. Under one shared key they are not
+   * merely ambiguous, they are WRONG: the checklist produced 1,296 duplicate
+   * slugs, 41 of which merged different players onto a single address --
+   * Shedeur Sanders, Odell Beckham Jr., Travis Hunter and CeeDee Lamb all on
+   * `...:2:base:auto:num-99`. That is the SCC-collision shape and
+   * one-card-one-row forbids it.
+   *
+   * The subset is what separates them, so under R30 the subset becomes the
+   * key. Registration here is not bookkeeping -- it is the mechanism: every
+   * one of these keys collapsed straight back to `panini-rookies-and-stars`
+   * through the unanchored flagship rule before it was declared (the
+   * flagship-catch-all class, #1715), and a key that is not a normalizeSetKey
+   * FIXED POINT cannot hold a pool. `spelled` is what makes
+   * productSetKeyForName answer for them, ahead of the regex vocabulary.
+   *
+   * THE COLOUR VARIANTS ARE NOT HERE, deliberately. The workbook lists 26
+   * autograph sections; 18 are colour rungs of these 8 ("Rookies Signatures
+   * Gold" is the Gold rung of "Rookies Signatures"). A named parallel is a
+   * distinct CARD, not a distinct SET, so the colour rides the parallel axis
+   * ON these keys. Within one subset key, number + rung is unique again.
+   */
+  ...["airborne-signatures", "base-signatures", "crusade-signatures",
+    "great-american-signatures", "patrick-mahomes-autograph-collection",
+    "rookies-signatures", "stellar-rookies-signatures", "thrillers-signatures",
+  ].map((sub) => S(`panini-rookies-and-stars-${sub}`, {
+    family: "panini-rookies-and-stars",
+    parent: "panini-rookies-and-stars",
+  })),
+
+  /**
    * PANINI HAUNTED HOOPS IS ITS OWN PRODUCT (#1715 class, 2026-09-07).
    *
    * The Halloween release is a SEPARATE product from Panini NBA Hoops: its own
