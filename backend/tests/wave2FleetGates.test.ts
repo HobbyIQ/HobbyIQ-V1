@@ -126,9 +126,12 @@ describe("the fleet script exists and is a file-launched bash script", () => {
 
   it("never dispatches an apply with the inherited default scope", () => {
     // MODE=apply-improve REFUSES scope=refractor (exit 2) — that refusal is
-    // what killed eighteen slots of the 2026-09-07 fleet (#1963).
+    // what killed eighteen slots of the 2026-09-07 fleet (#1963). The apply
+    // dispatch site passes $SCOPE (validated against improve|r26|r27|r28 at
+    // startup, default improve), never a literal that could drift to the
+    // refused default.
     expect(fleetSrc).not.toMatch(/-f scope=refractor/);
-    expect(fleetSrc).toMatch(/dispatch apply-improve true improve/);
+    expect(fleetSrc).toMatch(/dispatch apply-improve true "\$SCOPE"/);
   });
 });
 
@@ -798,7 +801,11 @@ describe("the finder identifies a run by its log, not by when it started (#1974)
   // accept an apply run of the same slot.
   it("each phase passes the mode it dispatched", () => {
     expect(fleetSrc).toContain('follow_slot census "$s" "$since" census');
-    expect(fleetSrc).toContain('follow_slot apply "$s" "$since" apply-improve');
+    // apply's own "phase" name carries the scope, so an r26 run's slot logs
+    // (apply-r26-slot-N.log) and its in-flight tracking can never be
+    // conflated with an improve run's (apply-improve-slot-N.log) -- see the
+    // per-scope isolation pins in wave2FleetApplyScope.test.ts.
+    expect(fleetSrc).toContain('follow_slot "apply-${SCOPE}" "$s" "$since" apply-improve');
   });
 });
 
