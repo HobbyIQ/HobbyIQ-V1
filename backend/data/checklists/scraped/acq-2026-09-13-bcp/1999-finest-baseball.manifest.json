@@ -106,5 +106,27 @@
  "source": "baseballcardpedia-2026-09-13",
  "acquiredAt": "2026-09-13",
  "setKeyWas": "finest",
- "setKeyNote": "the BCP page names this product \"Finest\"; the catalog vocabulary keys it topps-finest (normalizeSetKey(\"finest\") === \"topps-finest\")"
+ "setKeyNote": "the BCP page names this product \"Finest\"; the catalog vocabulary keys it topps-finest (normalizeSetKey(\"finest\") === \"topps-finest\")",
+ "variationAxisApplied": {
+  "appliedAt": "2026-09-13",
+  "source": "baseballcardpedia-2026-09-13",
+  "why": "#2112's insert-set-key guard refused this file: rows would have landed on fewer distinct ids than there are rows, so a later row would have overwritten an earlier one inside one run and the last writer would have decided which card the address holds. Every decision below was verified against the live baseballcardpedia page before it was applied; nothing here invents a label the source does not print.",
+  "decisions": {
+   "imageVariations": {
+    "rows": 7,
+    "rule": "image variation — the photo descriptor bcp prints after the player's name moves to the parallel axis as \"<Name> Image Variation SP\" (#1613), and the photo names the subset so the base ladder is not multiplied by it"
+   },
+   "trailingPrintRunMoved": {
+    "rows": 311,
+    "rule": "trailing serial — bcp writes a rung's print run inside the player cell (\"Adrian Beltre 25\"); it is moved to printRun, which is what lets a rung's roster compare equal to its root's"
+   }
+  },
+  "rowsBefore": 1545,
+  "rowsAfter": 1527,
+  "distinctIdsAfter": 1527,
+  "verdictAfter": "pass",
+  "notes": [
+   "Dropped 18 rows whose player cell was an insertion-ratio (\"1:216 wax\") read out of the section's odds PROSE, not its checklist."
+  ]
+ }
 }

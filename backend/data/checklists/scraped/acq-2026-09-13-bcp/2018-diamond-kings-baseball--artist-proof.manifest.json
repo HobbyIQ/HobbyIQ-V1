@@ -43,5 +43,93 @@
  "source": "baseballcardpedia-2026-09-13",
  "acquiredAt": "2026-09-13",
  "duplicateIdentityRowsDropped": 120,
- "duplicateIdentityNote": "BCP relists a card under Gimmicks/Errors-and-Variations with the same number and the same player text to note an UNNAMED variation; those rows carry the identity of the base row, so they were dropped (one card, one row, one pool). A variation the page NAMES differs in its player text and is kept as the distinct card it is."
+ "duplicateIdentityNote": "BCP relists a card under Gimmicks/Errors-and-Variations with the same number and the same player text to note an UNNAMED variation; those rows carry the identity of the base row, so they were dropped (one card, one row, one pool). A variation the page NAMES differs in its player text and is kept as the distinct card it is.",
+ "variationAxisApplied": {
+  "appliedAt": "2026-09-13",
+  "source": "baseballcardpedia-2026-09-13",
+  "why": "#2112's insert-set-key guard refused this file: rows would have landed on fewer distinct ids than there are rows, so a later row would have overwritten an earlier one inside one run and the last writer would have decided which card the address holds. Every decision below was verified against the live baseballcardpedia page before it was applied; nothing here invents a label the source does not print.",
+  "decisions": {
+   "imageVariations": {
+    "rows": 174,
+    "rule": "image variation — the photo descriptor bcp prints after the player's name moves to the parallel axis as \"<Name> Image Variation SP\" (#1613), and the photo names the subset so the base ladder is not multiplied by it"
+   }
+  },
+  "rowsBefore": 1080,
+  "rowsAfter": 1068,
+  "distinctIdsAfter": 1068,
+  "verdictAfter": "pass",
+  "heldRows": {
+   "rows": 12,
+   "groups": 6,
+   "rule": "held — the source prints this number more than once and prints nothing that distinguishes the printings; both sides are withheld (absent beats wrong)",
+   "detail": [
+    {
+     "address": "base|35|Base|false|",
+     "cardNumber": "35",
+     "category": "base",
+     "parallel": "Base",
+     "players": [
+      "Billy Herman",
+      "Ty Cobb (Away Jersey)"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|35|Artist Proof|false|99",
+     "cardNumber": "35",
+     "category": "base",
+     "parallel": "Artist Proof",
+     "players": [
+      "Billy Herman",
+      "Ty Cobb (Away Jersey)"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|35|Red|false|",
+     "cardNumber": "35",
+     "category": "base",
+     "parallel": "Red",
+     "players": [
+      "Billy Herman",
+      "Ty Cobb (Away Jersey)"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|35|Gold|false|99",
+     "cardNumber": "35",
+     "category": "base",
+     "parallel": "Gold",
+     "players": [
+      "Billy Herman",
+      "Ty Cobb (Away Jersey)"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|35|Blue|false|25",
+     "cardNumber": "35",
+     "category": "base",
+     "parallel": "Blue",
+     "players": [
+      "Billy Herman",
+      "Ty Cobb (Away Jersey)"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|35|Masterpiece|false|1",
+     "cardNumber": "35",
+     "category": "base",
+     "parallel": "Masterpiece",
+     "players": [
+      "Billy Herman",
+      "Ty Cobb (Away Jersey)"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    }
+   ]
+  }
+ }
 }

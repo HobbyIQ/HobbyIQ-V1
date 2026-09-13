@@ -394,5 +394,200 @@
  "source": "baseballcardpedia-2026-09-13",
  "acquiredAt": "2026-09-13",
  "duplicateIdentityRowsDropped": 160,
- "duplicateIdentityNote": "BCP relists a card under Gimmicks/Errors-and-Variations with the same number and the same player text to note an UNNAMED variation; those rows carry the identity of the base row, so they were dropped (one card, one row, one pool). A variation the page NAMES differs in its player text and is kept as the distinct card it is."
+ "duplicateIdentityNote": "BCP relists a card under Gimmicks/Errors-and-Variations with the same number and the same player text to note an UNNAMED variation; those rows carry the identity of the base row, so they were dropped (one card, one row, one pool). A variation the page NAMES differs in its player text and is kept as the distinct card it is.",
+ "variationAxisApplied": {
+  "appliedAt": "2026-09-13",
+  "source": "baseballcardpedia-2026-09-13",
+  "why": "#2112's insert-set-key guard refused this file: rows would have landed on fewer distinct ids than there are rows, so a later row would have overwritten an earlier one inside one run and the last writer would have decided which card the address holds. Every decision below was verified against the live baseballcardpedia page before it was applied; nothing here invents a label the source does not print.",
+  "decisions": {
+   "imageVariations": {
+    "rows": 328,
+    "rule": "image variation — the photo descriptor bcp prints after the player's name moves to the parallel axis as \"<Name> Image Variation SP\" (#1613), and the photo names the subset so the base ladder is not multiplied by it"
+   },
+   "declaredParallelRungs": {
+    "rows": 367,
+    "rule": "declared parallel — the source's own prose calls this a parallel, so the rung folds onto its root set and the colour rides the parallel axis"
+   },
+   "trailingPrintRunMoved": {
+    "rows": 533,
+    "rule": "trailing serial — bcp writes a rung's print run inside the player cell (\"Adrian Beltre 25\"); it is moved to printRun, which is what lets a rung's roster compare equal to its root's"
+   }
+  },
+  "rowsBefore": 2705,
+  "rowsAfter": 2675,
+  "distinctIdsAfter": 2668,
+  "verdictAfter": "refuse",
+  "heldRows": {
+   "rows": 30,
+   "groups": 15,
+   "rule": "held — the source prints this number more than once and prints nothing that distinguishes the printings; both sides are withheld (absent beats wrong)",
+   "detail": [
+    {
+     "address": "base|35|Base|false|",
+     "cardNumber": "35",
+     "category": "base",
+     "parallel": "Base",
+     "players": [
+      "Billy Herman",
+      "Ty Cobb (Away Jersey)"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|35|Framed|false|99",
+     "cardNumber": "35",
+     "category": "base",
+     "parallel": "Framed",
+     "players": [
+      "Billy Herman",
+      "Ty Cobb (Away Jersey)"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|35|Blue|false|",
+     "cardNumber": "35",
+     "category": "base",
+     "parallel": "Blue",
+     "players": [
+      "Billy Herman",
+      "Ty Cobb (Away Jersey)"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|35|Red|false|",
+     "cardNumber": "35",
+     "category": "base",
+     "parallel": "Red",
+     "players": [
+      "Billy Herman",
+      "Ty Cobb (Away Jersey)"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|35|Gray|false|99",
+     "cardNumber": "35",
+     "category": "base",
+     "parallel": "Gray",
+     "players": [
+      "Billy Herman",
+      "Ty Cobb (Away Jersey)"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|35|Brown|false|49",
+     "cardNumber": "35",
+     "category": "base",
+     "parallel": "Brown",
+     "players": [
+      "Billy Herman",
+      "Ty Cobb (Away Jersey)"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|35|Green|false|5",
+     "cardNumber": "35",
+     "category": "base",
+     "parallel": "Green",
+     "players": [
+      "Billy Herman",
+      "Ty Cobb (Away Jersey)"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|35|Black|false|1",
+     "cardNumber": "35",
+     "category": "base",
+     "parallel": "Black",
+     "players": [
+      "Billy Herman",
+      "Ty Cobb (Away Jersey)"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "auto-diamond-cuts|DC-BT|Masterpiece|true|",
+     "cardNumber": "DC-BT",
+     "category": "auto-diamond-cuts",
+     "parallel": "Masterpiece",
+     "players": [
+      "Bobby Thomson",
+      "Bill Terry"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "auto-diamond-cuts|DC-WS|Masterpiece|true|",
+     "cardNumber": "DC-WS",
+     "category": "auto-diamond-cuts",
+     "parallel": "Masterpiece",
+     "players": [
+      "Warren Spahn",
+      "Willie Stargell"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-dk-materials|DKM-CF||false|",
+     "cardNumber": "DKM-CF",
+     "category": "insert-dk-materials",
+     "parallel": "",
+     "players": [
+      "Clint Frazier",
+      "Carl Furillo"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-dk-materials|DKM-GS||false|",
+     "cardNumber": "DKM-GS",
+     "category": "insert-dk-materials",
+     "parallel": "",
+     "players": [
+      "George Kelly",
+      "Gary Sheffield"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-dk-materials|DKM-GS|Holo Gold|false|49",
+     "cardNumber": "DKM-GS",
+     "category": "insert-dk-materials",
+     "parallel": "Holo Gold",
+     "players": [
+      "Gary Sheffield",
+      "Giancarlo Stanton"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-dk-materials|DKM-GS|Holo Blue|false|5",
+     "cardNumber": "DKM-GS",
+     "category": "insert-dk-materials",
+     "parallel": "Holo Blue",
+     "players": [
+      "George Kelly",
+      "Gary Sheffield"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-dk-originals-materials|OM-CY||false|",
+     "cardNumber": "OM-CY",
+     "category": "insert-dk-originals-materials",
+     "parallel": "",
+     "players": [
+      "Cody Bellinger",
+      "Clayton Kershaw"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    }
+   ]
+  }
+ }
 }

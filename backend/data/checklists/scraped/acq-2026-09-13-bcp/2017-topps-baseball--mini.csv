@@ -1,1539 +1,1487 @@
 category,cardNumber,parallel,isAuto,printRun,player,parallelNote,rarity
-base,1,Base,false,,Kris Bryant
+base,1,Base,false,,Kris Bryant,,
 base,1,Mini,false,,Kris Bryant,,
-base,2,Base,false,,Jason Hammel
+base,2,Base,false,,Jason Hammel,,
 base,2,Mini,false,,Jason Hammel,,
-base,3,Base,false,,Chris Capuano
+base,3,Base,false,,Chris Capuano,,
 base,3,Mini,false,,Chris Capuano,,
-base,4,Base,false,,Mark Reynolds
+base,4,Base,false,,Mark Reynolds,,
 base,4,Mini,false,,Mark Reynolds,,
-base,5,Base,false,,Corey Seager RCup
+base,5,Base,false,,Corey Seager RCup,,
 base,5,Mini,false,,Corey Seager RCup,,
-base,6,Base,false,,Kevin Pillar
+base,6,Base,false,,Kevin Pillar,,
 base,6,Mini,false,,Kevin Pillar,,
-base,7,Base,false,,Gary Sanchez RCup
+base,7,Base,false,,Gary Sanchez RCup,,
 base,7,Mini,false,,Gary Sanchez RCup,,
-base,8,Base,false,,Jose Berrios
+base,8,Base,false,,Jose Berrios,,
 base,8,Mini,false,,Jose Berrios,,
-base,9,Base,false,,Chris Sale
+base,9,Base,false,,Chris Sale,,
 base,9,Mini,false,,Chris Sale,,
-base,10,Base,false,,Steven Souza Jr.
+base,10,Base,false,,Steven Souza Jr.,,
 base,10,Mini,false,,Steven Souza Jr.,,
-base,11,Base,false,,Jake Smolinski
+base,11,Base,false,,Jake Smolinski,,
 base,11,Mini,false,,Jake Smolinski,,
-base,12,Base,false,,Jerad Eickhoff
+base,12,Base,false,,Jerad Eickhoff,,
 base,12,Mini,false,,Jerad Eickhoff,,
-base,13,Base,false,,Adeiny Hechavarria
+base,13,Base,false,,Adeiny Hechavarria,,
 base,13,Mini,false,,Adeiny Hechavarria,,
-base,14,Base,false,,Travis d'Arnaud
+base,14,Base,false,,Travis d'Arnaud,,
 base,14,Mini,false,,Travis d'Arnaud,,
-base,15,Base,false,,Braden Shipley RC
+base,15,Base,false,,Braden Shipley RC,,
 base,15,Mini,false,,Braden Shipley RC,,
-base,16,Base,false,,Lance McCullers
+base,16,Base,false,,Lance McCullers,,
 base,16,Mini,false,,Lance McCullers,,
-base,17,Base,false,,Daniel Descalso
+base,17,Base,false,,Daniel Descalso,,
 base,17,Mini,false,,Daniel Descalso,,
-base,18,Base,false,,Jake Arrieta WSH
+base,18,Base,false,,Jake Arrieta WSH,,
 base,18,Mini,false,,Jake Arrieta WSH,,
-base,19,Base,false,,David Wright
+base,19,Base,false,,David Wright,,
 base,19,Mini,false,,David Wright,,
-base,20,Base,false,,Mike Trout
+base,20,Base,false,,Mike Trout,,
 base,20,Mini,false,,Mike Trout,,
-base,21,Base,false,,Robert Gsellman RC
+base,21,Base,false,,Robert Gsellman RC,,
 base,21,Mini,false,,Robert Gsellman RC,,
-base,22,Base,false,,Keone Kela
+base,22,Base,false,,Keone Kela,,
 base,22,Mini,false,,Keone Kela,,
-base,23,Base,false,,Marcell Ozuna
+base,23,Base,false,,Marcell Ozuna,,
 base,23,Mini,false,,Marcell Ozuna,,
-base,24,Base,false,,Christian Friedrich
+base,24,Base,false,,Christian Friedrich,,
 base,24,Mini,false,,Christian Friedrich,,
-base,25,Base,false,,Giancarlo Stanton
+base,25,Base,false,,Giancarlo Stanton,,
 base,25,Mini,false,,Giancarlo Stanton,,
-base,26,Base,false,,David Peralta
+base,26,Base,false,,David Peralta,,
 base,26,Mini,false,,David Peralta,,
-base,27,Base,false,,Kurt Suzuki
+base,27,Base,false,,Kurt Suzuki,,
 base,27,Mini,false,,Kurt Suzuki,,
-base,28,Base,false,,Rick Porcello LL
+base,28,Base,false,,Rick Porcello LL,,
 base,28,Mini,false,,Rick Porcello LL,,
-base,29,Base,false,,Marco Estrada
+base,29,Base,false,,Marco Estrada,,
 base,29,Mini,false,,Marco Estrada,,
-base,30,Base,false,,Josh Bell RC
+base,30,Base,false,,Josh Bell RC,,
 base,30,Mini,false,,Josh Bell RC,,
-base,31,Base,false,,Carlos Carrasco
+base,31,Base,false,,Carlos Carrasco,,
 base,31,Mini,false,,Carlos Carrasco,,
-base,32,Base,false,,"Matt Harvey / Noah Syndergaard ""Thor and the Dark Knight"""
+base,32,Base,false,,"Matt Harvey / Noah Syndergaard ""Thor and the Dark Knight""",,
 base,32,Mini,false,,"Matt Harvey / Noah Syndergaard ""Thor and the Dark Knight""",,
-base,33,Base,false,,Carson Fulmer RC
+base,33,Base,false,,Carson Fulmer RC,,
 base,33,Mini,false,,Carson Fulmer RC,,
-base,34,Base,false,,Bryce Harper
+base,34,Base,false,,Bryce Harper,,
 base,34,Mini,false,,Bryce Harper,,
-base,35,Base,false,,Nolan Arenado LL
+base,35,Base,false,,Nolan Arenado LL,,
 base,35,Mini,false,,Nolan Arenado LL,,
-base,37,Base,false,,Toronto Blue Jays TC
+base,37,Base,false,,Toronto Blue Jays TC,,
 base,37,Mini,false,,Toronto Blue Jays TC,,
-base,38,Base,false,,Stephen Strasburg
+base,38,Base,false,,Stephen Strasburg,,
 base,38,Mini,false,,Stephen Strasburg,,
-base,39,Base,false,,Aroldis Chapman WSH
+base,39,Base,false,,Aroldis Chapman WSH,,
 base,39,Mini,false,,Aroldis Chapman WSH,,
-base,40,Base,false,,Jordan Zimmermann
+base,40,Base,false,,Jordan Zimmermann,,
 base,40,Mini,false,,Jordan Zimmermann,,
-base,41,Base,false,,Paulo Orlando
+base,41,Base,false,,Paulo Orlando,,
 base,41,Mini,false,,Paulo Orlando,,
-base,42,Base,false,,Trevor Story
+base,42,Base,false,,Trevor Story,,
 base,42,Mini,false,,Trevor Story,,
-base,43,Base,false,,Tyler Austin RC
+base,43,Base,false,,Tyler Austin RC,,
 base,43,Mini,false,,Tyler Austin RC,,
-base,44,Base,false,,Paul Goldschmidt
+base,44,Base,false,,Paul Goldschmidt,,
 base,44,Mini,false,,Paul Goldschmidt,,
-base,45,Base,false,,Joakim Soria
+base,45,Base,false,,Joakim Soria,,
 base,45,Mini,false,,Joakim Soria,,
-base,46,Base,false,,Will Middlebrooks
+base,46,Base,false,,Will Middlebrooks,,
 base,46,Mini,false,,Will Middlebrooks,,
-base,47,Base,false,,Gregor Blanco
+base,47,Base,false,,Gregor Blanco,,
 base,47,Mini,false,,Gregor Blanco,,
-base,48,Base,false,,Brian McCann
+base,48,Base,false,,Brian McCann,,
 base,48,Mini,false,,Brian McCann,,
-base,49,Base,false,,Scooter Gennett
+base,49,Base,false,,Scooter Gennett,,
 base,49,Mini,false,,Scooter Gennett,,
-base,50,Base,false,,Clayton Kershaw
+base,50,Base,false,,Clayton Kershaw,,
 base,50,Mini,false,,Clayton Kershaw,,
-base,51,Base,false,,Jake Barrett
+base,51,Base,false,,Jake Barrett,,
 base,51,Mini,false,,Jake Barrett,,
-base,52,Base,false,,Neftali Feliz
+base,52,Base,false,,Neftali Feliz,,
 base,52,Mini,false,,Neftali Feliz,,
-base,53,Base,false,,Ryon Healy RC
+base,53,Base,false,,Ryon Healy RC,,
 base,53,Mini,false,,Ryon Healy RC,,
-base,54,Base,false,,Dellin Betances
+base,54,Base,false,,Dellin Betances,,
 base,54,Mini,false,,Dellin Betances,,
-base,55,Base,false,,Mark Trumbo LL
+base,55,Base,false,,Mark Trumbo LL,,
 base,55,Mini,false,,Mark Trumbo LL,,
-base,56,Base,false,,Danny Salazar
+base,56,Base,false,,Danny Salazar,,
 base,56,Mini,false,,Danny Salazar,,
-base,57,Base,false,,C.J. Cron
+base,57,Base,false,,C.J. Cron,,
 base,57,Mini,false,,C.J. Cron,,
-base,58,Base,false,,Starling Marte
+base,58,Base,false,,Starling Marte,,
 base,58,Mini,false,,Starling Marte,,
-base,59,Base,false,,Carlos Rodon
+base,59,Base,false,,Carlos Rodon,,
 base,59,Mini,false,,Carlos Rodon,,
-base,60,Base,false,,Jose Bautista
+base,60,Base,false,,Jose Bautista,,
 base,60,Mini,false,,Jose Bautista,,
-base,61,Base,false,,Xander Bogaerts
+base,61,Base,false,,Xander Bogaerts,,
 base,61,Mini,false,,Xander Bogaerts,,
-base,62,Base,false,,Daniel Murphy
+base,62,Base,false,,Daniel Murphy,,
 base,62,Mini,false,,Daniel Murphy,,
-base,63,Base,false,,Mike Moustakas
+base,63,Base,false,,Mike Moustakas,,
 base,63,Mini,false,,Mike Moustakas,,
-base,64,Base,false,,Adam Eaton
+base,64,Base,false,,Adam Eaton,,
 base,64,Mini,false,,Adam Eaton,,
-base,65,Base,false,,Madison Bumgarner
+base,65,Base,false,,Madison Bumgarner,,
 base,65,Mini,false,,Madison Bumgarner,,
-base,66,Base,false,,Aaron Altherr
+base,66,Base,false,,Aaron Altherr,,
 base,66,Mini,false,,Aaron Altherr,,
-base,67,Base,false,,Teoscar Hernandez RC
+base,67,Base,false,,Teoscar Hernandez RC,,
 base,67,Mini,false,,Teoscar Hernandez RC,,
-base,68,Base,false,,Zach Britton
+base,68,Base,false,,Zach Britton,,
 base,68,Mini,false,,Zach Britton,,
-base,69,Base,false,,Henry Owens
+base,69,Base,false,,Henry Owens,,
 base,69,Mini,false,,Henry Owens,,
-base,70,Base,false,,Wily Peralta
+base,70,Base,false,,Wily Peralta,,
 base,70,Mini,false,,Wily Peralta,,
-base,71,Base,false,,Matt Shoemaker
+base,71,Base,false,,Matt Shoemaker,,
 base,71,Mini,false,,Matt Shoemaker,,
-base,72,Base,false,,Chicago Cubs TC
+base,72,Base,false,,Chicago Cubs TC,,
 base,72,Mini,false,,Chicago Cubs TC,,
-base,73,Base,false,,Kyle Schwarber
+base,73,Base,false,,Kyle Schwarber,,
 base,73,Mini,false,,Kyle Schwarber,,
-base,74,Base,false,,Brett Lawrie
+base,74,Base,false,,Brett Lawrie,,
 base,74,Mini,false,,Brett Lawrie,,
-base,75,Base,false,,Carlos Correa
+base,75,Base,false,,Carlos Correa,,
 base,75,Mini,false,,Carlos Correa,,
-base,76,Base,false,,Andre Ethier
+base,76,Base,false,,Andre Ethier,,
 base,76,Mini,false,,Andre Ethier,,
-base,77,Base,false,,Austin Jackson
+base,77,Base,false,,Austin Jackson,,
 base,77,Mini,false,,Austin Jackson,,
-base,78,Base,false,,Addison Russell WSH
+base,78,Base,false,,Addison Russell WSH,,
 base,78,Mini,false,,Addison Russell WSH,,
-base,79,Base,false,,Gabriel Ynoa RC
+base,79,Base,false,,Gabriel Ynoa RC,,
 base,79,Mini,false,,Gabriel Ynoa RC,,
-base,80,Base,false,,Ivan Nova
+base,80,Base,false,,Ivan Nova,,
 base,80,Mini,false,,Ivan Nova,,
-base,81,Base,false,,DJ LeMahieu LL
+base,81,Base,false,,DJ LeMahieu LL,,
 base,81,Mini,false,,DJ LeMahieu LL,,
-base,82,Base,false,,Aaron Sanchez LL
+base,82,Base,false,,Aaron Sanchez LL,,
 base,82,Mini,false,,Aaron Sanchez LL,,
-base,83,Base,false,,Anibal Sanchez
+base,83,Base,false,,Anibal Sanchez,,
 base,83,Mini,false,,Anibal Sanchez,,
-base,84,Base,false,,Daniel Murphy LL
+base,84,Base,false,,Daniel Murphy LL,,
 base,84,Mini,false,,Daniel Murphy LL,,
-base,85,Base,false,,Brandon Finnegan
+base,85,Base,false,,Brandon Finnegan,,
 base,85,Mini,false,,Brandon Finnegan,,
-base,86,Base,false,,Asdrubal Cabrera
+base,86,Base,false,,Asdrubal Cabrera,,
 base,86,Mini,false,,Asdrubal Cabrera,,
-base,87,Base,false,,Dansby Swanson RC
+base,87,Base,false,,Dansby Swanson RC,,
 base,87,Mini,false,,Dansby Swanson RC,,
-base,88,Base,false,,Freddy Galvis
+base,88,Base,false,,Freddy Galvis,,
 base,88,Mini,false,,Freddy Galvis,,
-base,89,Base,false,,Brandon Moss
+base,89,Base,false,,Brandon Moss,,
 base,89,Mini,false,,Brandon Moss,,
-base,90,Base,false,,Jason Grilli
+base,90,Base,false,,Jason Grilli,,
 base,90,Mini,false,,Jason Grilli,,
-base,91,Base,false,,Troy Tulowitzki
+base,91,Base,false,,Troy Tulowitzki,,
 base,91,Mini,false,,Troy Tulowitzki,,
-base,92,Base,false,,Derek Norris
+base,92,Base,false,,Derek Norris,,
 base,92,Mini,false,,Derek Norris,,
-base,93,Base,false,,Matt Joyce
+base,93,Base,false,,Matt Joyce,,
 base,93,Mini,false,,Matt Joyce,,
-base,94,Base,false,,Kyle Barraclough
+base,94,Base,false,,Kyle Barraclough,,
 base,94,Mini,false,,Kyle Barraclough,,
-base,95,Base,false,,Chris Davis
+base,95,Base,false,,Chris Davis,,
 base,95,Mini,false,,Chris Davis,,
-base,96,Base,false,,Jose Quintana
+base,96,Base,false,,Jose Quintana,,
 base,96,Mini,false,,Jose Quintana,,
-base,97,Base,false,,Marcus Semien
+base,97,Base,false,,Marcus Semien,,
 base,97,Mini,false,,Marcus Semien,,
-base,98,Base,false,,Junior Guerra
+base,98,Base,false,,Junior Guerra,,
 base,98,Mini,false,,Junior Guerra,,
-base,99,Base,false,,Michael Wacha
+base,99,Base,false,,Michael Wacha,,
 base,99,Mini,false,,Michael Wacha,,
-base,100,Base,false,,Nate Jones
+base,100,Base,false,,Nate Jones,,
 base,100,Mini,false,,Nate Jones,,
-base,101,Base,false,,Pedro Alvarez
+base,101,Base,false,,Pedro Alvarez,,
 base,101,Mini,false,,Pedro Alvarez,,
-base,102,Base,false,,Cameron Maybin
+base,102,Base,false,,Cameron Maybin,,
 base,102,Mini,false,,Cameron Maybin,,
-base,103,Base,false,,Alex Reyes RC
+base,103,Base,false,,Alex Reyes RC,,
 base,103,Mini,false,,Alex Reyes RC,,
-base,104,Base,false,,Dioner Navarro
+base,104,Base,false,,Dioner Navarro,,
 base,104,Mini,false,,Dioner Navarro,,
-base,105,Base,false,,Francisco Rodriguez
+base,105,Base,false,,Francisco Rodriguez,,
 base,105,Mini,false,,Francisco Rodriguez,,
-base,106,Base,false,,Brandon Crawford
+base,106,Base,false,,Brandon Crawford,,
 base,106,Mini,false,,Brandon Crawford,,
-base,107,Base,false,,Howie Kendrick
+base,107,Base,false,,Howie Kendrick,,
 base,107,Mini,false,,Howie Kendrick,,
-base,108,Base,false,,Nick Hundley
+base,108,Base,false,,Nick Hundley,,
 base,108,Mini,false,,Nick Hundley,,
-base,109,Base,false,,Nelson Cruz
+base,109,Base,false,,Nelson Cruz,,
 base,109,Mini,false,,Nelson Cruz,,
-base,110,Base,false,,Joey Votto LL
+base,110,Base,false,,Joey Votto LL,,
 base,110,Mini,false,,Joey Votto LL,,
-base,111,Base,false,,Edinson Volquez
+base,111,Base,false,,Edinson Volquez,,
 base,111,Mini,false,,Edinson Volquez,,
-base,112,Base,false,,Angel Pagan
+base,112,Base,false,,Angel Pagan,,
 base,112,Mini,false,,Angel Pagan,,
-base,113,Base,false,,Kyle Hendricks LL
+base,113,Base,false,,Kyle Hendricks LL,,
 base,113,Mini,false,,Kyle Hendricks LL,,
-base,114,Base,false,,Colin Rea
+base,114,Base,false,,Colin Rea,,
 base,114,Mini,false,,Colin Rea,,
-base,115,Base,false,,Joaquin Benoit
+base,115,Base,false,,Joaquin Benoit,,
 base,115,Mini,false,,Joaquin Benoit,,
-base,116,Base,false,,Archie Bradley
+base,116,Base,false,,Archie Bradley,,
 base,116,Mini,false,,Archie Bradley,,
-base,117,Base,false,,Adrian Gonzalez
+base,117,Base,false,,Adrian Gonzalez,,
 base,117,Mini,false,,Adrian Gonzalez,,
-base,118,Base,false,,Billy Butler
+base,118,Base,false,,Billy Butler,,
 base,118,Mini,false,,Billy Butler,,
-base,119,Base,false,,Francisco Lindor
+base,119,Base,false,,Francisco Lindor,,
 base,119,Mini,false,,Francisco Lindor,,
-base,120,Base,false,,Reynaldo Lopez RC
+base,120,Base,false,,Reynaldo Lopez RC,,
 base,120,Mini,false,,Reynaldo Lopez RC,,
-base,121,Base,false,,Carlos Santana
+base,121,Base,false,,Carlos Santana,,
 base,121,Mini,false,,Carlos Santana,,
-base,122,Base,false,,Cleveland Indians TC
+base,122,Base,false,,Cleveland Indians TC,,
 base,122,Mini,false,,Cleveland Indians TC,,
-base,123,Base,false,,Jean Segura
+base,123,Base,false,,Jean Segura,,
 base,123,Mini,false,,Jean Segura,,
-base,124,Base,false,,Travis Jankowski
+base,124,Base,false,,Travis Jankowski,,
 base,124,Mini,false,,Travis Jankowski,,
-base,125,Base,false,,Yangervis Solarte
+base,125,Base,false,,Yangervis Solarte,,
 base,125,Mini,false,,Yangervis Solarte,,
-base,126,Base,false,,Miguel Sano
+base,126,Base,false,,Miguel Sano,,
 base,126,Mini,false,,Miguel Sano,,
-base,127,Base,false,,Michael Bourn
+base,127,Base,false,,Michael Bourn,,
 base,127,Mini,false,,Michael Bourn,,
-base,128,Base,false,,Adam Duvall
+base,128,Base,false,,Adam Duvall,,
 base,128,Mini,false,,Adam Duvall,,
-base,129,Base,false,,Adonis Garcia
+base,129,Base,false,,Adonis Garcia,,
 base,129,Mini,false,,Adonis Garcia,,
-base,130,Base,false,,Dustin Pedroia
+base,130,Base,false,,Dustin Pedroia,,
 base,130,Mini,false,,Dustin Pedroia,,
-base,131,Base,false,,J.A. Happ LL
+base,131,Base,false,,J.A. Happ LL,,
 base,131,Mini,false,,J.A. Happ LL,,
-base,132,Base,false,,Randal Grichuk
+base,132,Base,false,,Randal Grichuk,,
 base,132,Mini,false,,Randal Grichuk,,
-base,133,Base,false,,Jace Peterson
+base,133,Base,false,,Jace Peterson,,
 base,133,Mini,false,,Jace Peterson,,
-base,134,Base,false,,Chase Utley
+base,134,Base,false,,Chase Utley,,
 base,134,Mini,false,,Chase Utley,,
-base,135,Base,false,,Jered Weaver
+base,135,Base,false,,Jered Weaver,,
 base,135,Mini,false,,Jered Weaver,,
-base,136,Base,false,,Matt Reynolds
+base,136,Base,false,,Matt Reynolds,,
 base,136,Mini,false,,Matt Reynolds,,
-base,137,Base,false,,Yan Gomes
+base,137,Base,false,,Yan Gomes,,
 base,137,Mini,false,,Yan Gomes,,
-base,138,Base,false,,Tyson Ross
+base,138,Base,false,,Tyson Ross,,
 base,138,Mini,false,,Tyson Ross,,
-base,139,Base,false,,JaCoby Jones RC
+base,139,Base,false,,JaCoby Jones RC,,
 base,139,Mini,false,,JaCoby Jones RC,,
-base,140,Base,false,,Jesse Hahn
+base,140,Base,false,,Jesse Hahn,,
 base,140,Mini,false,,Jesse Hahn,,
-base,141,Base,false,,Baltimore Orioles TC
+base,141,Base,false,,Baltimore Orioles TC,,
 base,141,Mini,false,,Baltimore Orioles TC,,
-base,142,Base,false,,Carlos Ruiz
+base,142,Base,false,,Carlos Ruiz,,
 base,142,Mini,false,,Carlos Ruiz,,
-base,143,Base,false,,Nick Noonan
+base,143,Base,false,,Nick Noonan,,
 base,143,Mini,false,,Nick Noonan,,
-base,144,Base,false,,Jon Lester LL
+base,144,Base,false,,Jon Lester LL,,
 base,144,Mini,false,,Jon Lester LL,,
-base,145,Base,false,,Max Scherzer LL
+base,145,Base,false,,Max Scherzer LL,,
 base,145,Mini,false,,Max Scherzer LL,,
-base,146,Base,false,,Chad Pinder RC
+base,146,Base,false,,Chad Pinder RC,,
 base,146,Mini,false,,Chad Pinder RC,,
-base,147,Base,false,,Marcus Stroman
+base,147,Base,false,,Marcus Stroman,,
 base,147,Mini,false,,Marcus Stroman,,
-base,148,Base,false,,Tim Anderson
+base,148,Base,false,,Tim Anderson,,
 base,148,Mini,false,,Tim Anderson,,
-base,149,Base,false,,Gregory Polanco
+base,149,Base,false,,Gregory Polanco,,
 base,149,Mini,false,,Gregory Polanco,,
-base,150,Base,false,,Miguel Cabrera
+base,150,Base,false,,Miguel Cabrera,,
 base,150,Mini,false,,Miguel Cabrera,,
-base,151,Base,false,,Jonathan Villar
+base,151,Base,false,,Jonathan Villar,,
 base,151,Mini,false,,Jonathan Villar,,
-base,152,Base,false,,Nolan Arenado LL
+base,152,Base,false,,Nolan Arenado LL,,
 base,152,Mini,false,,Nolan Arenado LL,,
-base,153,Base,false,,Nori Aoki
+base,153,Base,false,,Nori Aoki,,
 base,153,Mini,false,,Nori Aoki,,
-base,154,Base,false,,Kevin Kiermaier
+base,154,Base,false,,Kevin Kiermaier,,
 base,154,Mini,false,,Kevin Kiermaier,,
-base,155,Base,false,,Jacob deGrom
+base,155,Base,false,,Jacob deGrom,,
 base,155,Mini,false,,Jacob deGrom,,
-base,156,Base,false,,Alex Colome
+base,156,Base,false,,Alex Colome,,
 base,156,Mini,false,,Alex Colome,,
-base,157,Base,false,,Sean Doolittle
+base,157,Base,false,,Sean Doolittle,,
 base,157,Mini,false,,Sean Doolittle,,
-base,158,Base,false,,Tommy Pham
+base,158,Base,false,,Tommy Pham,,
 base,158,Mini,false,,Tommy Pham,,
-base,159,Base,false,,Justin Verlander LL
+base,159,Base,false,,Justin Verlander LL,,
 base,159,Mini,false,,Justin Verlander LL,,
-base,160,Base,false,,Evan Gattis
+base,160,Base,false,,Evan Gattis,,
 base,160,Mini,false,,Evan Gattis,,
-base,161,Base,false,,Mookie Betts
+base,161,Base,false,,Mookie Betts,,
 base,161,Mini,false,,Mookie Betts,,
-base,162,Base,false,,Jon Lester LL
+base,162,Base,false,,Jon Lester LL,,
 base,162,Mini,false,,Jon Lester LL,,
-base,163,Base,false,,Adam Conley
+base,163,Base,false,,Adam Conley,,
 base,163,Mini,false,,Adam Conley,,
-base,164,Base,false,,Matt Harvey
+base,164,Base,false,,Matt Harvey,,
 base,164,Mini,false,,Matt Harvey,,
-base,165,Base,false,,Corey Dickerson ERR: Logan Morrison depicted
-base,165,Mini,false,,Corey Dickerson ERR: Logan Morrison depicted,,
-base,165,Base,false,,Corey Dickerson COR (factory sets)
+base,165,ERR: Logan Morrison Depicted,false,,Corey Dickerson,,
+base,165,Mini ERR: Logan Morrison Depicted,false,,Corey Dickerson,,
+base,165,Base,false,,Corey Dickerson COR (factory sets),,
 base,165,Mini,false,,Corey Dickerson COR (factory sets),,
-base,166,Base,false,,Jorge Soler
+base,166,Base,false,,Jorge Soler,,
 base,166,Mini,false,,Jorge Soler,,
-base,167,Base,false,,Lorenzo Cain
+base,167,Base,false,,Lorenzo Cain,,
 base,167,Mini,false,,Lorenzo Cain,,
-base,168,Base,false,,Ryan Zimmerman
+base,168,Base,false,,Ryan Zimmerman,,
 base,168,Mini,false,,Ryan Zimmerman,,
-base,169,Base,false,,Steve Pearce
+base,169,Base,false,,Steve Pearce,,
 base,169,Mini,false,,Steve Pearce,,
-base,170,Base,false,,Chris Carter LL
+base,170,Base,false,,Chris Carter LL,,
 base,170,Mini,false,,Chris Carter LL,,
-base,171,Base,false,,Seth Smith
+base,171,Base,false,,Seth Smith,,
 base,171,Mini,false,,Seth Smith,,
-base,172,Base,false,,Wilmer Flores
+base,172,Base,false,,Wilmer Flores,,
 base,172,Mini,false,,Wilmer Flores,,
-base,173,Base,false,,Chicago White Sox TC
+base,173,Base,false,,Chicago White Sox TC,,
 base,173,Mini,false,,Chicago White Sox TC,,
-base,174,Base,false,,Philadelphia Phillies TC
+base,174,Base,false,,Philadelphia Phillies TC,,
 base,174,Mini,false,,Philadelphia Phillies TC,,
-base,175,Base,false,,Houston Astros TC
+base,175,Base,false,,Houston Astros TC,,
 base,175,Mini,false,,Houston Astros TC,,
-base,176,Base,false,,Jaime Garcia
+base,176,Base,false,,Jaime Garcia,,
 base,176,Mini,false,,Jaime Garcia,,
-base,177,Base,false,,Sonny Gray
+base,177,Base,false,,Sonny Gray,,
 base,177,Mini,false,,Sonny Gray,,
-base,178,Base,false,,Rick Porcello
+base,178,Base,false,,Rick Porcello,,
 base,178,Mini,false,,Rick Porcello,,
-base,179,Base,false,,Matt Moore
+base,179,Base,false,,Matt Moore,,
 base,179,Mini,false,,Matt Moore,,
-base,180,Base,false,,Jake McGee
+base,180,Base,false,,Jake McGee,,
 base,180,Mini,false,,Jake McGee,,
-base,181,Base,false,,Aaron Hicks
+base,181,Base,false,,Aaron Hicks,,
 base,181,Mini,false,,Aaron Hicks,,
-base,182,Base,false,,Keon Broxton
+base,182,Base,false,,Keon Broxton,,
 base,182,Mini,false,,Keon Broxton,,
-base,183,Base,false,,Wade Miley
+base,183,Base,false,,Wade Miley,,
 base,183,Mini,false,,Wade Miley,,
-base,184,Base,false,,Oswaldo Arcia
+base,184,Base,false,,Oswaldo Arcia,,
 base,184,Mini,false,,Oswaldo Arcia,,
-base,185,Base,false,,Raisel Iglesias
+base,185,Base,false,,Raisel Iglesias,,
 base,185,Mini,false,,Raisel Iglesias,,
-base,186,Base,false,,Andrew Cashner
+base,186,Base,false,,Andrew Cashner,,
 base,186,Mini,false,,Andrew Cashner,,
-base,187,Base,false,,Sean Manaea
+base,187,Base,false,,Sean Manaea,,
 base,187,Mini,false,,Sean Manaea,,
-base,188,Base,false,,Caleb Cotham
+base,188,Base,false,,Caleb Cotham,,
 base,188,Mini,false,,Caleb Cotham,,
-base,189,Base,false,,Los Angeles Angels of Anaheim TC
+base,189,Base,false,,Los Angeles Angels of Anaheim TC,,
 base,189,Mini,false,,Los Angeles Angels of Anaheim TC,,
-base,190,Base,false,,Blake Snell
+base,190,Base,false,,Blake Snell,,
 base,190,Mini,false,,Blake Snell,,
-base,191,Base,false,,Wilson Ramos
+base,191,Base,false,,Wilson Ramos,,
 base,191,Mini,false,,Wilson Ramos,,
-base,192,Base,false,,San Diego Padres TC
+base,192,Base,false,,San Diego Padres TC,,
 base,192,Mini,false,,San Diego Padres TC,,
-base,193,Base,false,,Jimmy Nelson
+base,193,Base,false,,Jimmy Nelson,,
 base,193,Mini,false,,Jimmy Nelson,,
-base,194,Base,false,,A.J. Ramos
+base,194,Base,false,,A.J. Ramos,,
 base,194,Mini,false,,A.J. Ramos,,
-base,195,Base,false,,Edwin Encarnacion LL
+base,195,Base,false,,Edwin Encarnacion LL,,
 base,195,Mini,false,,Edwin Encarnacion LL,,
-base,196,Base,false,,Colby Rasmus
+base,196,Base,false,,Colby Rasmus,,
 base,196,Mini,false,,Colby Rasmus,,
-base,197,Base,false,,Jacoby Ellsbury
+base,197,Base,false,,Jacoby Ellsbury,,
 base,197,Mini,false,,Jacoby Ellsbury,,
-base,198,Base,false,,Francisco Cervelli
+base,198,Base,false,,Francisco Cervelli,,
 base,198,Mini,false,,Francisco Cervelli,,
-base,199,Base,false,,Johnny Cueto
+base,199,Base,false,,Johnny Cueto,,
 base,199,Mini,false,,Johnny Cueto,,
-base,200,Base,false,,Homer Bailey
+base,200,Base,false,,Homer Bailey,,
 base,200,Mini,false,,Homer Bailey,,
-base,201,Base,false,,Eddie Rosario
+base,201,Base,false,,Eddie Rosario,,
 base,201,Mini,false,,Eddie Rosario,,
-base,202,Base,false,,Masahiro Tanaka LL
+base,202,Base,false,,Masahiro Tanaka LL,,
 base,202,Mini,false,,Masahiro Tanaka LL,,
-base,203,Base,false,,Tyler Naquin RCup
+base,203,Base,false,,Tyler Naquin RCup,,
 base,203,Mini,false,,Tyler Naquin RCup,,
-base,204,Base,false,,Anthony Rizzo LL
+base,204,Base,false,,Anthony Rizzo LL,,
 base,204,Mini,false,,Anthony Rizzo LL,,
-base,205,Base,false,,Kendrys Morales
+base,205,Base,false,,Kendrys Morales,,
 base,205,Mini,false,,Kendrys Morales,,
-base,206,Base,false,,Chicago Cubs WSH
+base,206,Base,false,,Chicago Cubs WSH,,
 base,206,Mini,false,,Chicago Cubs WSH,,
-base,207,Base,false,,Justin Upton
+base,207,Base,false,,Justin Upton,,
 base,207,Mini,false,,Justin Upton,,
-base,208,Base,false,,Masahiro Tanaka
+base,208,Base,false,,Masahiro Tanaka,,
 base,208,Mini,false,,Masahiro Tanaka,,
-base,209,Base,false,,Jon Gray
+base,209,Base,false,,Jon Gray,,
 base,209,Mini,false,,Jon Gray,,
-base,210,Base,false,,Yoan Moncada RC
+base,210,Base,false,,Yoan Moncada RC,,
 base,210,Mini,false,,Yoan Moncada RC,,
-base,211,Base,false,,Noah Syndergaard LL
+base,211,Base,false,,Noah Syndergaard LL,,
 base,211,Mini,false,,Noah Syndergaard LL,,
-base,212,Base,false,,Tanner Roark
+base,212,Base,false,,Tanner Roark,,
 base,212,Mini,false,,Tanner Roark,,
-base,213,Base,false,,Alex Wood
+base,213,Base,false,,Alex Wood,,
 base,213,Mini,false,,Alex Wood,,
-base,214,Base,false,,Jose Altuve LL
+base,214,Base,false,,Jose Altuve LL,,
 base,214,Mini,false,,Jose Altuve LL,,
-base,215,Base,false,,Johnny Giavotella
+base,215,Base,false,,Johnny Giavotella,,
 base,215,Mini,false,,Johnny Giavotella,,
-base,216,Base,false,,Denard Span
+base,216,Base,false,,Denard Span,,
 base,216,Mini,false,,Denard Span,,
-base,217,Base,false,,Miami Marlins TC
+base,217,Base,false,,Miami Marlins TC,,
 base,217,Mini,false,,Miami Marlins TC,,
-base,218,Base,false,,Michael Saunders
+base,218,Base,false,,Michael Saunders,,
 base,218,Mini,false,,Michael Saunders,,
-base,219,Base,false,,Joe Musgrove RC
+base,219,Base,false,,Joe Musgrove RC,,
 base,219,Mini,false,,Joe Musgrove RC,,
-base,220,Base,false,,Ryan Braun
+base,220,Base,false,,Ryan Braun,,
 base,220,Mini,false,,Ryan Braun,,
-base,221,Base,false,,Adam Wainwright
+base,221,Base,false,,Adam Wainwright,,
 base,221,Mini,false,,Adam Wainwright,,
-base,222,Base,false,,Cesar Hernandez
+base,222,Base,false,,Cesar Hernandez,,
 base,222,Mini,false,,Cesar Hernandez,,
-base,223,Base,false,,Jason Heyward
+base,223,Base,false,,Jason Heyward,,
 base,223,Mini,false,,Jason Heyward,,
-base,224,Base,false,,Hector Rondon
+base,224,Base,false,,Hector Rondon,,
 base,224,Mini,false,,Hector Rondon,,
-base,225,Base,false,,Wade Davis
+base,225,Base,false,,Wade Davis,,
 base,225,Mini,false,,Wade Davis,,
-base,226,Base,false,,Logan Morrison
+base,226,Base,false,,Logan Morrison,,
 base,226,Mini,false,,Logan Morrison,,
-base,227,Base,false,,Byron Buxton
+base,227,Base,false,,Byron Buxton,,
 base,227,Mini,false,,Byron Buxton,,
-base,228,Base,false,,Mike Foltynewicz
+base,228,Base,false,,Mike Foltynewicz,,
 base,228,Mini,false,,Mike Foltynewicz,,
-base,229,Base,false,,David Ortiz LL
+base,229,Base,false,,David Ortiz LL,,
 base,229,Mini,false,,David Ortiz LL,,
-base,230,Base,false,,"Josh Donaldson / Troy Tulowitzki ""Northern (High)lights"""
+base,230,Base,false,,"Josh Donaldson / Troy Tulowitzki ""Northern (High)lights""",,
 base,230,Mini,false,,"Josh Donaldson / Troy Tulowitzki ""Northern (High)lights""",,
-base,231,Base,false,,Rubby De La Rosa
+base,231,Base,false,,Rubby De La Rosa,,
 base,231,Mini,false,,Rubby De La Rosa,,
-base,232,Base,false,,Geovany Soto
+base,232,Base,false,,Geovany Soto,,
 base,232,Mini,false,,Geovany Soto,,
-base,233,Base,false,,Nomar Mazara RCup
+base,233,Base,false,,Nomar Mazara RCup,,
 base,233,Mini,false,,Nomar Mazara RCup,,
-base,234,Base,false,,Luke Weaver RC
+base,234,Base,false,,Luke Weaver RC,,
 base,234,Mini,false,,Luke Weaver RC,,
-base,235,Base,false,,San Francisco Giants TC
+base,235,Base,false,,San Francisco Giants TC,,
 base,235,Mini,false,,San Francisco Giants TC,,
-base,236,Base,false,,Lucas Duda COR (factory sets)
-base,236,Mini,false,,Lucas Duda COR (factory sets),,
-base,236,Base,false,,Lucas Duda ERR: Eric Campbell depicted
-base,236,Mini,false,,Lucas Duda ERR: Eric Campbell depicted,,
-base,237,Base,false,,Joey Gallo
+base,236,COR Factory Sets,false,,Lucas Duda,,
+base,236,Mini COR Factory Sets,false,,Lucas Duda,,
+base,236,ERR: Eric Campbell Depicted,false,,Lucas Duda,,
+base,236,Mini ERR: Eric Campbell Depicted,false,,Lucas Duda,,
+base,237,Base,false,,Joey Gallo,,
 base,237,Mini,false,,Joey Gallo,,
-base,238,Base,false,,Ben Zobrist
+base,238,Base,false,,Ben Zobrist,,
 base,238,Mini,false,,Ben Zobrist,,
-base,239,Base,false,,Rajai Davis
+base,239,Base,false,,Rajai Davis,,
 base,239,Mini,false,,Rajai Davis,,
-base,240,Base,false,,Mike Aviles
+base,240,Base,false,,Mike Aviles,,
 base,240,Mini,false,,Mike Aviles,,
-base,241,Base,false,,Chris Young
+base,241,Base,false,,Chris Young,,
 base,241,Mini,false,,Chris Young,,
-base,242,Base,false,,Mookie Betts LL
+base,242,Base,false,,Mookie Betts LL,,
 base,242,Mini,false,,Mookie Betts LL,,
-base,243,Base,false,,Felix Hernandez
+base,243,Base,false,,Felix Hernandez,,
 base,243,Mini,false,,Felix Hernandez,,
-base,244,Base,false,,Freddie Freeman
+base,244,Base,false,,Freddie Freeman,,
 base,244,Mini,false,,Freddie Freeman,,
-base,245,Base,false,,Jackie Bradley Jr.
+base,245,Base,false,,Jackie Bradley Jr.,,
 base,245,Mini,false,,Jackie Bradley Jr.,,
-base,246,Base,false,,Hunter Strickland
+base,246,Base,false,,Hunter Strickland,,
 base,246,Mini,false,,Hunter Strickland,,
-base,247,Base,false,,Hector Neris
+base,247,Base,false,,Hector Neris,,
 base,247,Mini,false,,Hector Neris,,
-base,248,Base,false,,Yasmany Tomas
+base,248,Base,false,,Yasmany Tomas,,
 base,248,Mini,false,,Yasmany Tomas,,
-base,249,Base,false,,New York Yankees TC
+base,249,Base,false,,New York Yankees TC,,
 base,249,Mini,false,,New York Yankees TC,,
-base,250,Base,false,,Sean Rodriguez
+base,250,Base,false,,Sean Rodriguez,,
 base,250,Mini,false,,Sean Rodriguez,,
-base,251,Base,false,,Justin Turner
+base,251,Base,false,,Justin Turner,,
 base,251,Mini,false,,Justin Turner,,
-base,252,Base,false,,Clint Robinson
+base,252,Base,false,,Clint Robinson,,
 base,252,Mini,false,,Clint Robinson,,
-base,253,Base,false,,Tucker Barnhart
+base,253,Base,false,,Tucker Barnhart,,
 base,253,Mini,false,,Tucker Barnhart,,
-base,254,Base,false,,Wade LeBlanc
+base,254,Base,false,,Wade LeBlanc,,
 base,254,Mini,false,,Wade LeBlanc,,
-base,255,Base,false,,Orlando Arcia RC
+base,255,Base,false,,Orlando Arcia RC,,
 base,255,Mini,false,,Orlando Arcia RC,,
-base,256,Base,false,,Tony Watson
+base,256,Base,false,,Tony Watson,,
 base,256,Mini,false,,Tony Watson,,
-base,257,Base,false,,Corey Kluber LL
+base,257,Base,false,,Corey Kluber LL,,
 base,257,Mini,false,,Corey Kluber LL,,
-base,258,Base,false,,Matt Adams
+base,258,Base,false,,Matt Adams,,
 base,258,Mini,false,,Matt Adams,,
-base,259,Base,false,,Taijuan Walker
+base,259,Base,false,,Taijuan Walker,,
 base,259,Mini,false,,Taijuan Walker,,
-base,260,Base,false,,Stephen Piscotty
+base,260,Base,false,,Stephen Piscotty,,
 base,260,Mini,false,,Stephen Piscotty,,
-base,261,Base,false,,Nathan Eovaldi
+base,261,Base,false,,Nathan Eovaldi,,
 base,261,Mini,false,,Nathan Eovaldi,,
-base,262,Base,false,,Liam Hendriks
+base,262,Base,false,,Liam Hendriks,,
 base,262,Mini,false,,Liam Hendriks,,
-base,263,Base,false,,Addison Russell
+base,263,Base,false,,Addison Russell,,
 base,263,Mini,false,,Addison Russell,,
-base,264,Base,false,,Cory Spangenberg
+base,264,Base,false,,Cory Spangenberg,,
 base,264,Mini,false,,Cory Spangenberg,,
-base,265,Base,false,,Charlie Blackmon
+base,265,Base,false,,Charlie Blackmon,,
 base,265,Mini,false,,Charlie Blackmon,,
-base,266,Base,false,,Tampa Bay Rays TC
+base,266,Base,false,,Tampa Bay Rays TC,,
 base,266,Mini,false,,Tampa Bay Rays TC,,
-base,267,Base,false,,Clay Buchholz
+base,267,Base,false,,Clay Buchholz,,
 base,267,Mini,false,,Clay Buchholz,,
-base,268,Base,false,,Anthony Gose
+base,268,Base,false,,Anthony Gose,,
 base,268,Mini,false,,Anthony Gose,,
-base,269,Base,false,,Jose De Leon RC
+base,269,Base,false,,Jose De Leon RC,,
 base,269,Mini,false,,Jose De Leon RC,,
-base,270,Base,false,,Jake Arrieta LL
+base,270,Base,false,,Jake Arrieta LL,,
 base,270,Mini,false,,Jake Arrieta LL,,
-base,271,Base,false,,Nelson Cruz LL
+base,271,Base,false,,Nelson Cruz LL,,
 base,271,Mini,false,,Nelson Cruz LL,,
-base,272,Base,false,,Pat Neshek
+base,272,Base,false,,Pat Neshek,,
 base,272,Mini,false,,Pat Neshek,,
-base,273,Base,false,,A.J. Reed
+base,273,Base,false,,A.J. Reed,,
 base,273,Mini,false,,A.J. Reed,,
-base,274,Base,false,,Matt Strahm RC
+base,274,Base,false,,Matt Strahm RC,,
 base,274,Mini,false,,Matt Strahm RC,,
-base,275,Base,false,,Dallas Keuchel
+base,275,Base,false,,Dallas Keuchel,,
 base,275,Mini,false,,Dallas Keuchel,,
-base,277,Base,false,,Kris Bryant LL
+base,277,Base,false,,Kris Bryant LL,,
 base,277,Mini,false,,Kris Bryant LL,,
-base,278,Base,false,,Julio Teheran
+base,278,Base,false,,Julio Teheran,,
 base,278,Mini,false,,Julio Teheran,,
-base,279,Base,false,,Leonys Martin
+base,279,Base,false,,Leonys Martin,,
 base,279,Mini,false,,Leonys Martin,,
-base,280,Base,false,,Adrian Beltre
+base,280,Base,false,,Adrian Beltre,,
 base,280,Mini,false,,Adrian Beltre,,
-base,281,Base,false,,Coco Crisp
+base,281,Base,false,,Coco Crisp,,
 base,281,Mini,false,,Coco Crisp,,
-base,282,Base,false,,Tyler Flowers
+base,282,Base,false,,Tyler Flowers,,
 base,282,Mini,false,,Tyler Flowers,,
-base,283,Base,false,,Andrew Benintendi RC
+base,283,Base,false,,Andrew Benintendi RC,,
 base,283,Mini,false,,Andrew Benintendi RC,,
-base,284,Base,false,,Elvis Andrus
+base,284,Base,false,,Elvis Andrus,,
 base,284,Mini,false,,Elvis Andrus,,
-base,285,Base,false,,Tyler White
+base,285,Base,false,,Tyler White,,
 base,285,Mini,false,,Tyler White,,
-base,286,Base,false,,Drew Pomeranz
+base,286,Base,false,,Drew Pomeranz,,
 base,286,Mini,false,,Drew Pomeranz,,
-base,287,Base,false,,Aaron Judge RC
+base,287,Base,false,,Aaron Judge RC,,
 base,287,Mini,false,,Aaron Judge RC,,
-base,288,Base,false,,Joey Votto
+base,288,Base,false,,Joey Votto,,
 base,288,Mini,false,,Joey Votto,,
-base,289,Base,false,,Brian Goodwin RC
+base,289,Base,false,,Brian Goodwin RC,,
 base,289,Mini,false,,Brian Goodwin RC,,
-base,290,Base,false,,Shin-Soo Choo
+base,290,Base,false,,Shin-Soo Choo,,
 base,290,Mini,false,,Shin-Soo Choo,,
-base,291,Base,false,,Khris Davis LL
+base,291,Base,false,,Khris Davis LL,,
 base,291,Mini,false,,Khris Davis LL,,
-base,292,Base,false,,Fernando Rodney
+base,292,Base,false,,Fernando Rodney,,
 base,292,Mini,false,,Fernando Rodney,,
-base,293,Base,false,,Aledmys Diaz
+base,293,Base,false,,Aledmys Diaz,,
 base,293,Mini,false,,Aledmys Diaz,,
-base,294,Base,false,,Kole Calhoun
+base,294,Base,false,,Kole Calhoun,,
 base,294,Mini,false,,Kole Calhoun,,
-base,295,Base,false,,Matt Kemp LL
+base,295,Base,false,,Matt Kemp LL,,
 base,295,Mini,false,,Matt Kemp LL,,
-base,296,Base,false,,Tyler Clippard
+base,296,Base,false,,Tyler Clippard,,
 base,296,Mini,false,,Tyler Clippard,,
-base,297,Base,false,,Anthony DeSclafani
+base,297,Base,false,,Anthony DeSclafani,,
 base,297,Mini,false,,Anthony DeSclafani,,
-base,298,Base,false,,"Trevor Story / Nolan Arenado ""New Blake Street Bombers"""
+base,298,Base,false,,"Trevor Story / Nolan Arenado ""New Blake Street Bombers""",,
 base,298,Mini,false,,"Trevor Story / Nolan Arenado ""New Blake Street Bombers""",,
-base,299,Base,false,,Yulieski Gurriel RC
+base,299,Base,false,,Yulieski Gurriel RC,,
 base,299,Mini,false,,Yulieski Gurriel RC,,
-base,300,Base,false,,Arodys Vizcaino
+base,300,Base,false,,Arodys Vizcaino,,
 base,300,Mini,false,,Arodys Vizcaino,,
-base,301,Base,false,,Jeurys Familia
+base,301,Base,false,,Jeurys Familia,,
 base,301,Mini,false,,Jeurys Familia,,
-base,302,Base,false,,David Freese
+base,302,Base,false,,David Freese,,
 base,302,Mini,false,,David Freese,,
-base,303,Base,false,,Pedro Strop
+base,303,Base,false,,Pedro Strop,,
 base,303,Mini,false,,Pedro Strop,,
-base,304,Base,false,,Minnesota Twins TC
+base,304,Base,false,,Minnesota Twins TC,,
 base,304,Mini,false,,Minnesota Twins TC,,
-base,305,Base,false,,Tyler Duffey
+base,305,Base,false,,Tyler Duffey,,
 base,305,Mini,false,,Tyler Duffey,,
-base,306,Base,false,,David Dahl RC
+base,306,Base,false,,David Dahl RC,,
 base,306,Mini,false,,David Dahl RC,,
-base,307,Base,false,,Zach Duke
+base,307,Base,false,,Zach Duke,,
 base,307,Mini,false,,Zach Duke,,
-base,308,Base,false,,Yovani Gallardo
+base,308,Base,false,,Yovani Gallardo,,
 base,308,Mini,false,,Yovani Gallardo,,
-base,309,Base,false,,Craig Kimbrel
+base,309,Base,false,,Craig Kimbrel,,
 base,309,Mini,false,,Craig Kimbrel,,
-base,310,Base,false,,Scott Schebler
+base,310,Base,false,,Scott Schebler,,
 base,310,Mini,false,,Scott Schebler,,
-base,311,Base,false,,Tyler Chatwood
+base,311,Base,false,,Tyler Chatwood,,
 base,311,Mini,false,,Tyler Chatwood,,
-base,312,Base,false,,Brandon Guyer
+base,312,Base,false,,Brandon Guyer,,
 base,312,Mini,false,,Brandon Guyer,,
-base,313,Base,false,,Robbie Grossman
+base,313,Base,false,,Robbie Grossman,,
 base,313,Mini,false,,Robbie Grossman,,
-base,314,Base,false,,Ryan Flaherty
+base,314,Base,false,,Ryan Flaherty,,
 base,314,Mini,false,,Ryan Flaherty,,
-base,315,Base,false,,Carlos Beltran
+base,315,Base,false,,Carlos Beltran,,
 base,315,Mini,false,,Carlos Beltran,,
-base,316,Base,false,,Justin Smoak
+base,316,Base,false,,Justin Smoak,,
 base,316,Mini,false,,Justin Smoak,,
-base,317,Base,false,,Mitch Moreland
+base,317,Base,false,,Mitch Moreland,,
 base,317,Mini,false,,Mitch Moreland,,
-base,318,Base,false,,Matt Carasiti RC
+base,318,Base,false,,Matt Carasiti RC,,
 base,318,Mini,false,,Matt Carasiti RC,,
-base,319,Base,false,,Seth Lugo RC
+base,319,Base,false,,Seth Lugo RC,,
 base,319,Mini,false,,Seth Lugo RC,,
-base,320,Base,false,,Arizona Diamondbacks TC
+base,320,Base,false,,Arizona Diamondbacks TC,,
 base,320,Mini,false,,Arizona Diamondbacks TC,,
-base,321,Base,false,,Dustin Pedroia LL
+base,321,Base,false,,Dustin Pedroia LL,,
 base,321,Mini,false,,Dustin Pedroia LL,,
-base,322,Base,false,,Albert Pujols LL
+base,322,Base,false,,Albert Pujols LL,,
 base,322,Mini,false,,Albert Pujols LL,,
-base,323,Base,false,,Jameson Taillon
+base,323,Base,false,,Jameson Taillon,,
 base,323,Mini,false,,Jameson Taillon,,
-base,324,Base,false,,Ben Revere
+base,324,Base,false,,Ben Revere,,
 base,324,Mini,false,,Ben Revere,,
-base,325,Base,false,,Chris Hatcher
+base,325,Base,false,,Chris Hatcher,,
 base,325,Mini,false,,Chris Hatcher,,
-base,326,Base,false,,Chris Archer
+base,326,Base,false,,Chris Archer,,
 base,326,Mini,false,,Chris Archer,,
-base,327,Base,false,,Danny Espinosa
+base,327,Base,false,,Danny Espinosa,,
 base,327,Mini,false,,Danny Espinosa,,
-base,328,Base,false,,Adam Lind
+base,328,Base,false,,Adam Lind,,
 base,328,Mini,false,,Adam Lind,,
-base,329,Base,false,,Josh Reddick
+base,329,Base,false,,Josh Reddick,,
 base,329,Mini,false,,Josh Reddick,,
-base,330,Base,false,,Doug Fister
+base,330,Base,false,,Doug Fister,,
 base,330,Mini,false,,Doug Fister,,
-base,331,Base,false,,Jake Lamb
+base,331,Base,false,,Jake Lamb,,
 base,331,Mini,false,,Jake Lamb,,
-base,332,Base,false,,Huston Street
+base,332,Base,false,,Huston Street,,
 base,332,Mini,false,,Huston Street,,
-base,333,Base,false,,Jarred Cosart
+base,333,Base,false,,Jarred Cosart,,
 base,333,Mini,false,,Jarred Cosart,,
-base,334,Base,false,,Drew Smyly
+base,334,Base,false,,Drew Smyly,,
 base,334,Mini,false,,Drew Smyly,,
-base,335,Base,false,,Jeff Hoffman RC
+base,335,Base,false,,Jeff Hoffman RC,,
 base,335,Mini,false,,Jeff Hoffman RC,,
-base,336,Base,false,,Hector Santiago
+base,336,Base,false,,Hector Santiago,,
 base,336,Mini,false,,Hector Santiago,,
-base,337,Base,false,,Scott Van Slyke
+base,337,Base,false,,Scott Van Slyke,,
 base,337,Mini,false,,Scott Van Slyke,,
-base,338,Base,false,,Alcides Escobar
+base,338,Base,false,,Alcides Escobar,,
 base,338,Mini,false,,Alcides Escobar,,
-base,339,Base,false,,Daniel Norris
+base,339,Base,false,,Daniel Norris,,
 base,339,Mini,false,,Daniel Norris,,
-base,340,Base,false,,Aaron Nola
+base,340,Base,false,,Aaron Nola,,
 base,340,Mini,false,,Aaron Nola,,
-base,341,Base,false,,Alex Bregman RC RCup
-base,341,Mini,false,,Alex Bregman RC RCup,,
-base,342,Base,false,,Josh Tomlin
+base,342,Base,false,,Josh Tomlin,,
 base,342,Mini,false,,Josh Tomlin,,
-base,343,Base,false,,Mike Zunino
+base,343,Base,false,,Mike Zunino,,
 base,343,Mini,false,,Mike Zunino,,
-base,344,Base,false,,Jake Thompson RC
+base,344,Base,false,,Jake Thompson RC,,
 base,344,Mini,false,,Jake Thompson RC,,
-base,345,Base,false,,Kevin Gausman
+base,345,Base,false,,Kevin Gausman,,
 base,345,Mini,false,,Kevin Gausman,,
-base,346,Base,false,,Jonathan Lucroy
+base,346,Base,false,,Jonathan Lucroy,,
 base,346,Mini,false,,Jonathan Lucroy,,
-base,347,Base,false,,Brandon Belt
+base,347,Base,false,,Brandon Belt,,
 base,347,Mini,false,,Brandon Belt,,
-base,348,Base,false,,Jeremy Hellickson
+base,348,Base,false,,Jeremy Hellickson,,
 base,348,Mini,false,,Jeremy Hellickson,,
-base,349,Base,false,,Tyler Glasnow RC
+base,349,Base,false,,Tyler Glasnow RC,,
 base,349,Mini,false,,Tyler Glasnow RC,,
-base,350,Base,false,,David Ortiz
+base,350,Base,false,,David Ortiz,,
 base,350,Mini,false,,David Ortiz,,
-base,351,Base,false,,German Marquez RC
+base,351,Base,false,,German Marquez RC,,
 base,351,Mini,false,,German Marquez RC,,
-base,352,Base,false,,Cameron Rupp
+base,352,Base,false,,Cameron Rupp,,
 base,352,Mini,false,,Cameron Rupp,,
-base,353,Base,false,,Felipe Rivero
+base,353,Base,false,,Felipe Rivero,,
 base,353,Mini,false,,Felipe Rivero,,
-base,354,Base,false,,Nick Tropeano
+base,354,Base,false,,Nick Tropeano,,
 base,354,Mini,false,,Nick Tropeano,,
-base,355,Base,false,,Shelby Miller
+base,355,Base,false,,Shelby Miller,,
 base,355,Mini,false,,Shelby Miller,,
-base,356,Base,false,,Brad Miller
+base,356,Base,false,,Brad Miller,,
 base,356,Mini,false,,Brad Miller,,
-base,357,Base,false,,Kelvin Herrera
+base,357,Base,false,,Kelvin Herrera,,
 base,357,Mini,false,,Kelvin Herrera,,
-base,358,Base,false,,Brad Boxberger
+base,358,Base,false,,Brad Boxberger,,
 base,358,Mini,false,,Brad Boxberger,,
-base,359,Base,false,,Matt Carpenter
+base,359,Base,false,,Matt Carpenter,,
 base,359,Mini,false,,Matt Carpenter,,
-base,360,Base,false,,Jon Lester
+base,360,Base,false,,Jon Lester,,
 base,360,Mini,false,,Jon Lester,,
-base,361,Base,false,,Dylan Bundy
+base,361,Base,false,,Dylan Bundy,,
 base,361,Mini,false,,Dylan Bundy,,
-base,362,Base,false,,John Lackey
+base,362,Base,false,,John Lackey,,
 base,362,Mini,false,,John Lackey,,
-base,363,Base,false,,Yunel Escobar
+base,363,Base,false,,Yunel Escobar,,
 base,363,Mini,false,,Yunel Escobar,,
-base,364,Base,false,,Koda Glover RC
+base,364,Base,false,,Koda Glover RC,,
 base,364,Mini,false,,Koda Glover RC,,
-base,365,Base,false,,Jorge De La Rosa
+base,365,Base,false,,Jorge De La Rosa,,
 base,365,Mini,false,,Jorge De La Rosa,,
-base,366,Base,false,,Jayson Werth
+base,366,Base,false,,Jayson Werth,,
 base,366,Mini,false,,Jayson Werth,,
-base,367,Base,false,,Jurickson Profar
+base,367,Base,false,,Jurickson Profar,,
 base,367,Mini,false,,Jurickson Profar,,
-base,368,Base,false,,Jhonny Peralta
+base,368,Base,false,,Jhonny Peralta,,
 base,368,Mini,false,,Jhonny Peralta,,
-base,369,Base,false,,Mark Canha
+base,369,Base,false,,Mark Canha,,
 base,369,Mini,false,,Mark Canha,,
-base,370,Base,false,,St. Louis Cardinals TC
+base,370,Base,false,,St. Louis Cardinals TC,,
 base,370,Mini,false,,St. Louis Cardinals TC,,
-base,371,Base,false,,Chad Bettis
+base,371,Base,false,,Chad Bettis,,
 base,371,Mini,false,,Chad Bettis,,
-base,372,Base,false,,Ryan Schimpf UER No RCup
-base,372,Mini,false,,Ryan Schimpf UER No RCup,,
-base,373,Base,false,,Yadier Molina
+base,372,UER No RCup,false,,Ryan Schimpf,,
+base,372,Mini UER No RCup,false,,Ryan Schimpf,,
+base,373,Base,false,,Yadier Molina,,
 base,373,Mini,false,,Yadier Molina,,
-base,374,Base,false,,Jim Johnson
+base,374,Base,false,,Jim Johnson,,
 base,374,Mini,false,,Jim Johnson,,
-base,375,Base,false,,Yasiel Puig
-base,375,Mini,false,,Yasiel Puig,,
-base,376,Base,false,,Chase Anderson
+base,376,Base,false,,Chase Anderson,,
 base,376,Mini,false,,Chase Anderson,,
-base,377,Base,false,,Adam Rosales
+base,377,Base,false,,Adam Rosales,,
 base,377,Mini,false,,Adam Rosales,,
-base,378,Base,false,,"Francisco Lindor / Tyler Naquin ""They Got Hops!"""
+base,378,Base,false,,"Francisco Lindor / Tyler Naquin ""They Got Hops!""",,
 base,378,Mini,false,,"Francisco Lindor / Tyler Naquin ""They Got Hops!""",,
-base,379,Base,false,,Phil Hughes
+base,379,Base,false,,Phil Hughes,,
 base,379,Mini,false,,Phil Hughes,,
-base,380,Base,false,,Albert Pujols
+base,380,Base,false,,Albert Pujols,,
 base,380,Mini,false,,Albert Pujols,,
-base,381,Base,false,,Hunter Renfroe RC
+base,381,Base,false,,Hunter Renfroe RC,,
 base,381,Mini,false,,Hunter Renfroe RC,,
-base,382,Base,false,,Josh Harrison
-base,382,Mini,false,,Josh Harrison,,
-base,383,Base,false,,Adam Frazier
+base,383,Base,false,,Adam Frazier,,
 base,383,Mini,false,,Adam Frazier,,
-base,384,Base,false,,Welington Castillo
+base,384,Base,false,,Welington Castillo,,
 base,384,Mini,false,,Welington Castillo,,
-base,385,Base,false,,DJ LeMahieu
+base,385,Base,false,,DJ LeMahieu,,
 base,385,Mini,false,,DJ LeMahieu,,
-base,386,Base,false,,Michael Lorenzen
+base,386,Base,false,,Michael Lorenzen,,
 base,386,Mini,false,,Michael Lorenzen,,
-base,387,Base,false,,Zack Godley
+base,387,Base,false,,Zack Godley,,
 base,387,Mini,false,,Zack Godley,,
-base,388,Base,false,,Yasmani Grandal
+base,388,Base,false,,Yasmani Grandal,,
 base,388,Mini,false,,Yasmani Grandal,,
-base,389,Base,false,,George Springer
+base,389,Base,false,,George Springer,,
 base,389,Mini,false,,George Springer,,
-base,390,Base,false,,Evan Longoria
+base,390,Base,false,,Evan Longoria,,
 base,390,Mini,false,,Evan Longoria,,
-base,391,Base,false,,Jonathan Schoop
+base,391,Base,false,,Jonathan Schoop,,
 base,391,Mini,false,,Jonathan Schoop,,
-base,392,Base,false,,Pablo Sandoval
+base,392,Base,false,,Pablo Sandoval,,
 base,392,Mini,false,,Pablo Sandoval,,
-base,393,Base,false,,Koji Uehara
+base,393,Base,false,,Koji Uehara,,
 base,393,Mini,false,,Koji Uehara,,
-base,394,Base,false,,Detroit Tigers TC
+base,394,Base,false,,Detroit Tigers TC,,
 base,394,Mini,false,,Detroit Tigers TC,,
-base,395,Base,false,,Drew Storen
+base,395,Base,false,,Drew Storen,,
 base,395,Mini,false,,Drew Storen,,
-base,396,Base,false,,J.T. Realmuto
+base,396,Base,false,,J.T. Realmuto,,
 base,396,Mini,false,,J.T. Realmuto,,
-base,397,Base,false,,Stephen Cardullo RC
+base,397,Base,false,,Stephen Cardullo RC,,
 base,397,Mini,false,,Stephen Cardullo RC,,
-base,398,Base,false,,Blake Treinen
+base,398,Base,false,,Blake Treinen,,
 base,398,Mini,false,,Blake Treinen,,
-base,399,Base,false,,Ender Inciarte
+base,399,Base,false,,Ender Inciarte,,
 base,399,Mini,false,,Ender Inciarte,,
-base,400,Base,false,,Nolan Arenado
+base,400,Base,false,,Nolan Arenado,,
 base,400,Mini,false,,Nolan Arenado,,
-base,401,Base,false,,Manny Margot RC UER: Stats are for Hunter Renfroe
-base,401,Mini,false,,Manny Margot RC UER: Stats are for Hunter Renfroe,,
-base,402,Base,false,,Logan Forsythe
+base,401,UER: Stats Are For Hunter Renfroe,false,,Manny Margot RC,,
+base,401,Mini UER: Stats Are For Hunter Renfroe,false,,Manny Margot RC,,
+base,402,Base,false,,Logan Forsythe,,
 base,402,Mini,false,,Logan Forsythe,,
-base,403,Base,false,,John Axford
+base,403,Base,false,,John Axford,,
 base,403,Mini,false,,John Axford,,
-base,404,Base,false,,Joe Mauer
+base,404,Base,false,,Joe Mauer,,
 base,404,Mini,false,,Joe Mauer,,
-base,405,Base,false,,Max Kepler
+base,405,Base,false,,Max Kepler,,
 base,405,Mini,false,,Max Kepler,,
-base,406,Base,false,,Stephen Vogt
+base,406,Base,false,,Stephen Vogt,,
 base,406,Mini,false,,Stephen Vogt,,
-base,407,Base,false,,Eduardo Escobar
+base,407,Base,false,,Eduardo Escobar,,
 base,407,Mini,false,,Eduardo Escobar,,
-base,408,Base,false,,Michael Conforto
+base,408,Base,false,,Michael Conforto,,
 base,408,Mini,false,,Michael Conforto,,
-base,409,Base,false,,R.A. Dickey
+base,409,Base,false,,R.A. Dickey,,
 base,409,Mini,false,,R.A. Dickey,,
-base,410,Base,false,,Jarrett Parker
+base,410,Base,false,,Jarrett Parker,,
 base,410,Mini,false,,Jarrett Parker,,
-base,411,Base,false,,Maikel Franco
+base,411,Base,false,,Maikel Franco,,
 base,411,Mini,false,,Maikel Franco,,
-base,412,Base,false,,Chris Iannetta
+base,412,Base,false,,Chris Iannetta,,
 base,412,Mini,false,,Chris Iannetta,,
-base,413,Base,false,,Rob Segedin RC
+base,413,Base,false,,Rob Segedin RC,,
 base,413,Mini,false,,Rob Segedin RC,,
-base,414,Base,false,,Zack Cozart
+base,414,Base,false,,Zack Cozart,,
 base,414,Mini,false,,Zack Cozart,,
-base,415,Base,false,,Pat Valaika RC
+base,415,Base,false,,Pat Valaika RC,,
 base,415,Mini,false,,Pat Valaika RC,,
-base,416,Base,false,,Neil Walker
+base,416,Base,false,,Neil Walker,,
 base,416,Mini,false,,Neil Walker,,
-base,417,Base,false,,Darren O'Day
+base,417,Base,false,,Darren O'Day,,
 base,417,Mini,false,,Darren O'Day,,
-base,418,Base,false,,James McCann
+base,418,Base,false,,James McCann,,
 base,418,Mini,false,,James McCann,,
-base,419,Base,false,,Roberto Perez UER: Hit HR in the ALDS
-base,419,Mini,false,,Roberto Perez UER: Hit HR in the ALDS,,
-base,420,Base,false,,Matt Wisler
+base,419,UER: Hit HR In The ALDS,false,,Roberto Perez,,
+base,419,Mini UER: Hit HR In The ALDS,false,,Roberto Perez,,
+base,420,Base,false,,Matt Wisler,,
 base,420,Mini,false,,Matt Wisler,,
-base,421,Base,false,,Santiago Casilla
+base,421,Base,false,,Santiago Casilla,,
 base,421,Mini,false,,Santiago Casilla,,
-base,422,Base,false,,Andrew Miller
+base,422,Base,false,,Andrew Miller,,
 base,422,Mini,false,,Andrew Miller,,
-base,423,Base,false,,Sergio Romo
+base,423,Base,false,,Sergio Romo,,
 base,423,Mini,false,,Sergio Romo,,
-base,424,Base,false,,Derek Dietrich
+base,424,Base,false,,Derek Dietrich,,
 base,424,Mini,false,,Derek Dietrich,,
-base,425,Base,false,,Carlos Gonzalez
+base,425,Base,false,,Carlos Gonzalez,,
 base,425,Mini,false,,Carlos Gonzalez,,
-base,426,Base,false,,New York Mets TC
+base,426,Base,false,,New York Mets TC,,
 base,426,Mini,false,,New York Mets TC,,
-base,427,Base,false,,Carlos Gomez
+base,427,Base,false,,Carlos Gomez,,
 base,427,Mini,false,,Carlos Gomez,,
-base,428,Base,false,,Jay Bruce
+base,428,Base,false,,Jay Bruce,,
 base,428,Mini,false,,Jay Bruce,,
-base,429,Base,false,,Mark Melancon
+base,429,Base,false,,Mark Melancon,,
 base,429,Mini,false,,Mark Melancon,,
-base,430,Base,false,,Texas Rangers TC
+base,430,Base,false,,Texas Rangers TC,,
 base,430,Mini,false,,Texas Rangers TC,,
-base,431,Base,false,,Tommy Joseph UER No RCup
-base,431,Mini,false,,Tommy Joseph UER No RCup,,
-base,432,Base,false,,Lucas Giolito
+base,431,UER No RCup,false,,Tommy Joseph,,
+base,431,Mini UER No RCup,false,,Tommy Joseph,,
+base,432,Base,false,,Lucas Giolito,,
 base,432,Mini,false,,Lucas Giolito,,
-base,433,Base,false,,Mitch Haniger RC
+base,433,Base,false,,Mitch Haniger RC,,
 base,433,Mini,false,,Mitch Haniger RC,,
-base,434,Base,false,,Tyler Saladino
+base,434,Base,false,,Tyler Saladino,,
 base,434,Mini,false,,Tyler Saladino,,
-base,435,Base,false,,Robbie Ray
+base,435,Base,false,,Robbie Ray,,
 base,435,Mini,false,,Robbie Ray,,
-base,436,Base,false,,Cody Allen
+base,436,Base,false,,Cody Allen,,
 base,436,Mini,false,,Cody Allen,,
-base,437,Base,false,,Trevor Rosenthal
+base,437,Base,false,,Trevor Rosenthal,,
 base,437,Mini,false,,Trevor Rosenthal,,
-base,438,Base,false,,Chris Carter
+base,438,Base,false,,Chris Carter,,
 base,438,Mini,false,,Chris Carter,,
-base,439,Base,false,,Salvador Perez
+base,439,Base,false,,Salvador Perez,,
 base,439,Mini,false,,Salvador Perez,,
-base,440,Base,false,,Eduardo Rodriguez
+base,440,Base,false,,Eduardo Rodriguez,,
 base,440,Mini,false,,Eduardo Rodriguez,,
-base,441,Base,false,,Jose Iglesias
+base,441,Base,false,,Jose Iglesias,,
 base,441,Mini,false,,Jose Iglesias,,
-base,442,Base,false,,Javier Baez
+base,442,Base,false,,Javier Baez,,
 base,442,Mini,false,,Javier Baez,,
-base,443,Base,false,,Dee Gordon
+base,443,Base,false,,Dee Gordon,,
 base,443,Mini,false,,Dee Gordon,,
-base,444,Base,false,,Andrew Heaney
+base,444,Base,false,,Andrew Heaney,,
 base,444,Mini,false,,Andrew Heaney,,
-base,445,Base,false,,Alex Gordon
+base,445,Base,false,,Alex Gordon,,
 base,445,Mini,false,,Alex Gordon,,
-base,446,Base,false,,Dexter Fowler
+base,446,Base,false,,Dexter Fowler,,
 base,446,Mini,false,,Dexter Fowler,,
-base,447,Base,false,,Scott Kazmir
+base,447,Base,false,,Scott Kazmir,,
 base,447,Mini,false,,Scott Kazmir,,
-base,448,Base,false,,Jose Martinez RC
+base,448,Base,false,,Jose Martinez RC,,
 base,448,Mini,false,,Jose Martinez RC,,
-base,449,Base,false,,Ian Kennedy
+base,449,Base,false,,Ian Kennedy,,
 base,449,Mini,false,,Ian Kennedy,,
-base,450,Base,false,,Justin Verlander
+base,450,Base,false,,Justin Verlander,,
 base,450,Mini,false,,Justin Verlander,,
-base,451,Base,false,,Jharel Cotton RC
+base,451,Base,false,,Jharel Cotton RC,,
 base,451,Mini,false,,Jharel Cotton RC,,
-base,452,Base,false,,Travis Shaw
+base,452,Base,false,,Travis Shaw,,
 base,452,Mini,false,,Travis Shaw,,
-base,453,Base,false,,Danny Santana
+base,453,Base,false,,Danny Santana,,
 base,453,Mini,false,,Danny Santana,,
-base,454,Base,false,,Andrew Toles RC
+base,454,Base,false,,Andrew Toles RC,,
 base,454,Mini,false,,Andrew Toles RC,,
-base,455,Base,false,,Mauricio Cabrera RC
+base,455,Base,false,,Mauricio Cabrera RC,,
 base,455,Mini,false,,Mauricio Cabrera RC,,
-base,456,Base,false,,Steve Cishek
+base,456,Base,false,,Steve Cishek,,
 base,456,Mini,false,,Steve Cishek,,
-base,457,Base,false,,Brett Gardner
+base,457,Base,false,,Brett Gardner,,
 base,457,Mini,false,,Brett Gardner,,
-base,458,Base,false,,Hernan Perez
+base,458,Base,false,,Hernan Perez,,
 base,458,Mini,false,,Hernan Perez,,
-base,459,Base,false,,Wil Myers
+base,459,Base,false,,Wil Myers,,
 base,459,Mini,false,,Wil Myers,,
-base,460,Base,false,,Alejandro De Aza
+base,460,Base,false,,Alejandro De Aza,,
 base,460,Mini,false,,Alejandro De Aza,,
-base,461,Base,false,,Bruce Maxwell RC
+base,461,Base,false,,Bruce Maxwell RC,,
 base,461,Mini,false,,Bruce Maxwell RC,,
-base,462,Base,false,,Rich Hill
+base,462,Base,false,,Rich Hill,,
 base,462,Mini,false,,Rich Hill,,
-base,463,Base,false,,Jeff Samardzija
+base,463,Base,false,,Jeff Samardzija,,
 base,463,Mini,false,,Jeff Samardzija,,
-base,464,Base,false,,Hisashi Iwakuma
+base,464,Base,false,,Hisashi Iwakuma,,
 base,464,Mini,false,,Hisashi Iwakuma,,
-base,465,Base,false,,CC Sabathia
+base,465,Base,false,,CC Sabathia,,
 base,465,Mini,false,,CC Sabathia,,
-base,466,Base,false,,David Robertson
+base,466,Base,false,,David Robertson,,
 base,466,Mini,false,,David Robertson,,
-base,467,Base,false,,Adam Ottavino
+base,467,Base,false,,Adam Ottavino,,
 base,467,Mini,false,,Adam Ottavino,,
-base,468,Base,false,,Kyle Hendricks
+base,468,Base,false,,Kyle Hendricks,,
 base,468,Mini,false,,Kyle Hendricks,,
-base,469,Base,false,,Francisco Liriano
+base,469,Base,false,,Francisco Liriano,,
 base,469,Mini,false,,Francisco Liriano,,
-base,470,Base,false,,Brandon Drury
+base,470,Base,false,,Brandon Drury,,
 base,470,Mini,false,,Brandon Drury,,
-base,471,Base,false,,Nick Franklin
+base,471,Base,false,,Nick Franklin,,
 base,471,Mini,false,,Nick Franklin,,
-base,472,Base,false,,Pittsburgh Pirates TC
+base,472,Base,false,,Pittsburgh Pirates TC,,
 base,472,Mini,false,,Pittsburgh Pirates TC,,
-base,473,Base,false,,Eugenio Suarez
+base,473,Base,false,,Eugenio Suarez,,
 base,473,Mini,false,,Eugenio Suarez,,
-base,474,Base,false,,Michael Pineda
+base,474,Base,false,,Michael Pineda,,
 base,474,Mini,false,,Michael Pineda,,
-base,475,Base,false,,Peter O'Brien
+base,475,Base,false,,Peter O'Brien,,
 base,475,Mini,false,,Peter O'Brien,,
-base,476,Base,false,,Matt Olson RC
+base,476,Base,false,,Matt Olson RC,,
 base,476,Mini,false,,Matt Olson RC,,
-base,477,Base,false,,Zach Davies
+base,477,Base,false,,Zach Davies,,
 base,477,Mini,false,,Zach Davies,,
-base,478,Base,false,,Rob Zastryzny RC
+base,478,Base,false,,Rob Zastryzny RC,,
 base,478,Mini,false,,Rob Zastryzny RC,,
-base,479,Base,false,,Ryan Madson
+base,479,Base,false,,Ryan Madson,,
 base,479,Mini,false,,Ryan Madson,,
-base,480,Base,false,,Jason Kipnis
+base,480,Base,false,,Jason Kipnis,,
 base,480,Mini,false,,Jason Kipnis,,
-base,481,Base,false,,Kansas City Royals TC
+base,481,Base,false,,Kansas City Royals TC,,
 base,481,Mini,false,,Kansas City Royals TC,,
-base,482,Base,false,,Didi Gregorius
-base,482,Mini,false,,Didi Gregorius,,
-base,483,Base,false,,Anthony Rendon
+base,483,Base,false,,Anthony Rendon,,
 base,483,Mini,false,,Anthony Rendon,,
-base,484,Base,false,,Yonder Alonso
+base,484,Base,false,,Yonder Alonso,,
 base,484,Mini,false,,Yonder Alonso,,
-base,485,Base,false,,Greg Bird
-base,485,Mini,false,,Greg Bird,,
-base,486,Base,false,,Aroldis Chapman
+base,486,Base,false,,Aroldis Chapman,,
 base,486,Mini,false,,Aroldis Chapman,,
-base,487,Base,false,,Jose Ramirez
+base,487,Base,false,,Jose Ramirez,,
 base,487,Mini,false,,Jose Ramirez,,
-base,488,Base,false,,Jake Odorizzi
+base,488,Base,false,,Jake Odorizzi,,
 base,488,Mini,false,,Jake Odorizzi,,
-base,489,Base,false,,Jarrod Dyson
+base,489,Base,false,,Jarrod Dyson,,
 base,489,Mini,false,,Jarrod Dyson,,
-base,490,Base,false,,Joc Pederson
+base,490,Base,false,,Joc Pederson,,
 base,490,Mini,false,,Joc Pederson,,
-base,491,Base,false,,Ryan Vogelsong
+base,491,Base,false,,Ryan Vogelsong,,
 base,491,Mini,false,,Ryan Vogelsong,,
-base,492,Base,false,,Avisail Garcia
+base,492,Base,false,,Avisail Garcia,,
 base,492,Mini,false,,Avisail Garcia,,
-base,493,Base,false,,Hunter Dozier RC
+base,493,Base,false,,Hunter Dozier RC,,
 base,493,Mini,false,,Hunter Dozier RC,,
-base,494,Base,false,,Tom Murphy
+base,494,Base,false,,Tom Murphy,,
 base,494,Mini,false,,Tom Murphy,,
-base,495,Base,false,,Adam Jones
+base,495,Base,false,,Adam Jones,,
 base,495,Mini,false,,Adam Jones,,
-base,496,Base,false,,Mike Fiers
+base,496,Base,false,,Mike Fiers,,
 base,496,Mini,false,,Mike Fiers,,
-base,497,Base,false,,Boston Red Sox TC
+base,497,Base,false,,Boston Red Sox TC,,
 base,497,Mini,false,,Boston Red Sox TC,,
-base,498,Base,false,,Roman Quinn RC
+base,498,Base,false,,Roman Quinn RC,,
 base,498,Mini,false,,Roman Quinn RC,,
-base,499,Base,false,,Danny Valencia
+base,499,Base,false,,Danny Valencia,,
 base,499,Mini,false,,Danny Valencia,,
-base,500,Base,false,,Anthony Rizzo
-base,500,Mini,false,,Anthony Rizzo,,
-base,501,Base,false,,Ian Kinsler
+base,501,Base,false,,Ian Kinsler,,
 base,501,Mini,false,,Ian Kinsler,,
-base,502,Base,false,,Willson Contreras
+base,502,Base,false,,Willson Contreras,,
 base,502,Mini,false,,Willson Contreras,,
-base,503,Base,false,,Jesus Aguilar RC
+base,503,Base,false,,Jesus Aguilar RC,,
 base,503,Mini,false,,Jesus Aguilar RC,,
-base,504,Base,false,,Austin Hedges
+base,504,Base,false,,Austin Hedges,,
 base,504,Mini,false,,Austin Hedges,,
-base,505,Base,false,,Seung-Hwan Oh UER No RCup
-base,505,Mini,false,,Seung-Hwan Oh UER No RCup,,
-base,506,Base,false,,Jose Peraza
+base,505,UER No RCup,false,,Seung-Hwan Oh,,
+base,505,Mini UER No RCup,false,,Seung-Hwan Oh,,
+base,506,Base,false,,Jose Peraza,,
 base,506,Mini,false,,Jose Peraza,,
-base,507,Base,false,,Matt Garza
+base,507,Base,false,,Matt Garza,,
 base,507,Mini,false,,Matt Garza,,
-base,508,Base,false,,Hanley Ramirez
-base,508,Mini,false,,Hanley Ramirez,,
-base,509,Base,false,,Miguel Rojas
+base,509,Base,false,,Miguel Rojas,,
 base,509,Mini,false,,Miguel Rojas,,
-base,510,Base,false,,Kelby Tomlinson
+base,510,Base,false,,Kelby Tomlinson,,
 base,510,Mini,false,,Kelby Tomlinson,,
-base,511,Base,false,,Devin Mesoraco
+base,511,Base,false,,Devin Mesoraco,,
 base,511,Mini,false,,Devin Mesoraco,,
-base,512,Base,false,,Mallex Smith
+base,512,Base,false,,Mallex Smith,,
 base,512,Mini,false,,Mallex Smith,,
-base,513,Base,false,,Tony Kemp
+base,513,Base,false,,Tony Kemp,,
 base,513,Mini,false,,Tony Kemp,,
-base,514,Base,false,,Jeremy Jeffress
+base,514,Base,false,,Jeremy Jeffress,,
 base,514,Mini,false,,Jeremy Jeffress,,
-base,515,Base,false,,Nick Castellanos
+base,515,Base,false,,Nick Castellanos,,
 base,515,Mini,false,,Nick Castellanos,,
-base,516,Base,false,,Tony Wolters
+base,516,Base,false,,Tony Wolters,,
 base,516,Mini,false,,Tony Wolters,,
-base,517,Base,false,,Kolten Wong
+base,517,Base,false,,Kolten Wong,,
 base,517,Mini,false,,Kolten Wong,,
-base,518,Base,false,,Christian Yelich
+base,518,Base,false,,Christian Yelich,,
 base,518,Mini,false,,Christian Yelich,,
-base,519,Base,false,,Dan Vogelbach RC
+base,519,Base,false,,Dan Vogelbach RC,,
 base,519,Mini,false,,Dan Vogelbach RC,,
-base,520,Base,false,,Andrelton Simmons
+base,520,Base,false,,Andrelton Simmons,,
 base,520,Mini,false,,Andrelton Simmons,,
-base,521,Base,false,,Brandon Phillips
+base,521,Base,false,,Brandon Phillips,,
 base,521,Mini,false,,Brandon Phillips,,
-base,522,Base,false,,Edwin Diaz
+base,522,Base,false,,Edwin Diaz,,
 base,522,Mini,false,,Edwin Diaz,,
-base,523,Base,false,,Carlos Martinez
+base,523,Base,false,,Carlos Martinez,,
 base,523,Mini,false,,Carlos Martinez,,
-base,524,Base,false,,James Loney
+base,524,Base,false,,James Loney,,
 base,524,Mini,false,,James Loney,,
-base,525,Base,false,,Curtis Granderson
+base,525,Base,false,,Curtis Granderson,,
 base,525,Mini,false,,Curtis Granderson,,
-base,526,Base,false,,Jake Marisnick
+base,526,Base,false,,Jake Marisnick,,
 base,526,Mini,false,,Jake Marisnick,,
-base,527,Base,false,,Gio Gonzalez
+base,527,Base,false,,Gio Gonzalez,,
 base,527,Mini,false,,Gio Gonzalez,,
-base,528,Base,false,,Jake Arrieta
+base,528,Base,false,,Jake Arrieta,,
 base,528,Mini,false,,Jake Arrieta,,
-base,529,Base,false,,J.J. Hardy
+base,529,Base,false,,J.J. Hardy,,
 base,529,Mini,false,,J.J. Hardy,,
-base,530,Base,false,,Jabari Blash
+base,530,Base,false,,Jabari Blash,,
 base,530,Mini,false,,Jabari Blash,,
-base,531,Base,false,,Nick Markakis
+base,531,Base,false,,Nick Markakis,,
 base,531,Mini,false,,Nick Markakis,,
-base,532,Base,false,,Eduardo Nunez
+base,532,Base,false,,Eduardo Nunez,,
 base,532,Mini,false,,Eduardo Nunez,,
-base,533,Base,false,,Trevor Bauer
+base,533,Base,false,,Trevor Bauer,,
 base,533,Mini,false,,Trevor Bauer,,
-base,534,Base,false,,Cody Asche
+base,534,Base,false,,Cody Asche,,
 base,534,Mini,false,,Cody Asche,,
-base,535,Base,false,,Lonnie Chisenhall
+base,535,Base,false,,Lonnie Chisenhall,,
 base,535,Mini,false,,Lonnie Chisenhall,,
-base,536,Base,false,,Trey Mancini RC
+base,536,Base,false,,Trey Mancini RC,,
 base,536,Mini,false,,Trey Mancini RC,,
-base,537,Base,false,,Gerardo Parra
+base,537,Base,false,,Gerardo Parra,,
 base,537,Mini,false,,Gerardo Parra,,
-base,538,Base,false,,Brad Ziegler
+base,538,Base,false,,Brad Ziegler,,
 base,538,Mini,false,,Brad Ziegler,,
-base,539,Base,false,,Amir Garrett RC
+base,539,Base,false,,Amir Garrett RC,,
 base,539,Mini,false,,Amir Garrett RC,,
-base,540,Base,false,,Billy Hamilton
+base,540,Base,false,,Billy Hamilton,,
 base,540,Mini,false,,Billy Hamilton,,
-base,541,Base,false,,Shawn Kelley
+base,541,Base,false,,Shawn Kelley,,
 base,541,Mini,false,,Shawn Kelley,,
-base,542,Base,false,,Trevor Plouffe
+base,542,Base,false,,Trevor Plouffe,,
 base,542,Mini,false,,Trevor Plouffe,,
-base,543,Base,false,,Brian Dozier
+base,543,Base,false,,Brian Dozier,,
 base,543,Mini,false,,Brian Dozier,,
-base,544,Base,false,,Luis Severino
+base,544,Base,false,,Luis Severino,,
 base,544,Mini,false,,Luis Severino,,
-base,545,Base,false,,Martin Perez
+base,545,Base,false,,Martin Perez,,
 base,545,Mini,false,,Martin Perez,,
-base,546,Base,false,,Addison Reed
+base,546,Base,false,,Addison Reed,,
 base,546,Mini,false,,Addison Reed,,
-base,547,Base,false,,Vince Velasquez
+base,547,Base,false,,Vince Velasquez,,
 base,547,Mini,false,,Vince Velasquez,,
-base,548,Base,false,,David Price
+base,548,Base,false,,David Price,,
 base,548,Mini,false,,David Price,,
-base,549,Base,false,,Miguel Gonzalez
+base,549,Base,false,,Miguel Gonzalez,,
 base,549,Mini,false,,Miguel Gonzalez,,
-base,550,Base,false,,Mikie Mahtook
+base,550,Base,false,,Mikie Mahtook,,
 base,550,Mini,false,,Mikie Mahtook,,
-base,551,Base,false,,Matt Duffy
+base,551,Base,false,,Matt Duffy,,
 base,551,Mini,false,,Matt Duffy,,
-base,552,Base,false,,Tom Koehler
+base,552,Base,false,,Tom Koehler,,
 base,552,Mini,false,,Tom Koehler,,
-base,553,Base,false,,T.J. Rivera RC
+base,553,Base,false,,T.J. Rivera RC,,
 base,553,Mini,false,,T.J. Rivera RC,,
-base,554,Base,false,,Jason Castro
+base,554,Base,false,,Jason Castro,,
 base,554,Mini,false,,Jason Castro,,
-base,555,Base,false,,Noah Syndergaard
+base,555,Base,false,,Noah Syndergaard,,
 base,555,Mini,false,,Noah Syndergaard,,
-base,556,Base,false,,Starlin Castro
+base,556,Base,false,,Starlin Castro,,
 base,556,Mini,false,,Starlin Castro,,
-base,557,Base,false,,Milwaukee Brewers TC
+base,557,Base,false,,Milwaukee Brewers TC,,
 base,557,Mini,false,,Milwaukee Brewers TC,,
-base,558,Base,false,,Oakland Athletics TC
+base,558,Base,false,,Oakland Athletics TC,,
 base,558,Mini,false,,Oakland Athletics TC,,
-base,559,Base,false,,Jason Motte
+base,559,Base,false,,Jason Motte,,
 base,559,Mini,false,,Jason Motte,,
-base,560,Base,false,,Zack Greinke
+base,560,Base,false,,Zack Greinke,,
 base,560,Mini,false,,Zack Greinke,,
-base,561,Base,false,,Ricky Nolasco
+base,561,Base,false,,Ricky Nolasco,,
 base,561,Mini,false,,Ricky Nolasco,,
-base,562,Base,false,,Nick Ahmed
+base,562,Base,false,,Nick Ahmed,,
 base,562,Mini,false,,Nick Ahmed,,
-base,563,Base,false,,Marwin Gonzalez
+base,563,Base,false,,Marwin Gonzalez,,
 base,563,Mini,false,,Marwin Gonzalez,,
-base,564,Base,false,,Washington Nationals TC
+base,564,Base,false,,Washington Nationals TC,,
 base,564,Mini,false,,Washington Nationals TC,,
-base,565,Base,false,,J.D. Martinez
+base,565,Base,false,,J.D. Martinez,,
 base,565,Mini,false,,J.D. Martinez,,
-base,566,Base,false,,"Elvis Andrus / Rougned Odor ""Heart of Texas"""
+base,566,Base,false,,"Elvis Andrus / Rougned Odor ""Heart of Texas""",,
 base,566,Mini,false,,"Elvis Andrus / Rougned Odor ""Heart of Texas""",,
-base,567,Base,false,,Devon Travis
+base,567,Base,false,,Devon Travis,,
 base,567,Mini,false,,Devon Travis,,
-base,568,Base,false,,Ryan Pressly
+base,568,Base,false,,Ryan Pressly,,
 base,568,Mini,false,,Ryan Pressly,,
-base,569,Base,false,,Jorge Alfaro RC
+base,569,Base,false,,Jorge Alfaro RC,,
 base,569,Mini,false,,Jorge Alfaro RC,,
-base,570,Base,false,,Josh Donaldson
+base,570,Base,false,,Josh Donaldson,,
 base,570,Mini,false,,Josh Donaldson,,
-base,571,Base,false,,J.C. Ramirez
+base,571,Base,false,,J.C. Ramirez,,
 base,571,Mini,false,,J.C. Ramirez,,
-base,572,Base,false,,Atlanta Braves TC
+base,572,Base,false,,Atlanta Braves TC,,
 base,572,Mini,false,,Atlanta Braves TC,,
-base,573,Base,false,,Bartolo Colon
+base,573,Base,false,,Bartolo Colon,,
 base,573,Mini,false,,Bartolo Colon,,
-base,574,Base,false,,Trayce Thompson
+base,574,Base,false,,Trayce Thompson,,
 base,574,Mini,false,,Trayce Thompson,,
-base,575,Base,false,,Chris Owings
+base,575,Base,false,,Chris Owings,,
 base,575,Mini,false,,Chris Owings,,
-base,576,Base,false,,Russell Martin
+base,576,Base,false,,Russell Martin,,
 base,576,Mini,false,,Russell Martin,,
-base,577,Base,false,,Chris Tillman
+base,577,Base,false,,Chris Tillman,,
 base,577,Mini,false,,Chris Tillman,,
-base,578,Base,false,,Jed Lowrie
+base,578,Base,false,,Jed Lowrie,,
 base,578,Mini,false,,Jed Lowrie,,
-base,579,Base,false,,Taylor Jungmann
+base,579,Base,false,,Taylor Jungmann,,
 base,579,Mini,false,,Taylor Jungmann,,
-base,580,Base,false,,Matt Holliday
-base,580,Mini,false,,Matt Holliday,,
-base,581,Base,false,,Brock Holt
+base,581,Base,false,,Brock Holt,,
 base,581,Mini,false,,Brock Holt,,
-base,582,Base,false,,Julio Urias UER No RCup
-base,582,Mini,false,,Julio Urias UER No RCup,,
-base,583,Base,false,,Colorado Rockies TC
+base,582,UER No RCup,false,,Julio Urias,,
+base,582,Mini UER No RCup,false,,Julio Urias,,
+base,583,Base,false,,Colorado Rockies TC,,
 base,583,Mini,false,,Colorado Rockies TC,,
-base,584,Base,false,,"Jayson Werth / Bryce Harper ""Tater Triumph"""
+base,584,Base,false,,"Jayson Werth / Bryce Harper ""Tater Triumph""",,
 base,584,Mini,false,,"Jayson Werth / Bryce Harper ""Tater Triumph""",,
-base,585,Base,false,,Collin McHugh
+base,585,Base,false,,Collin McHugh,,
 base,585,Mini,false,,Collin McHugh,,
-base,586,Base,false,,Aaron Sanchez
+base,586,Base,false,,Aaron Sanchez,,
 base,586,Mini,false,,Aaron Sanchez,,
-base,587,Base,false,,Gerrit Cole
+base,587,Base,false,,Gerrit Cole,,
 base,587,Mini,false,,Gerrit Cole,,
-base,588,Base,false,,Kirk Nieuwenhuis
+base,588,Base,false,,Kirk Nieuwenhuis,,
 base,588,Mini,false,,Kirk Nieuwenhuis,,
-base,589,Base,false,,Ian Desmond
+base,589,Base,false,,Ian Desmond,,
 base,589,Mini,false,,Ian Desmond,,
-base,591,Base,false,,Matt Bush
+base,591,Base,false,,Matt Bush,,
 base,591,Mini,false,,Matt Bush,,
-base,592,Base,false,,Kendall Graveman
+base,592,Base,false,,Kendall Graveman,,
 base,592,Mini,false,,Kendall Graveman,,
-base,593,Base,false,,Jose Abreu
+base,593,Base,false,,Jose Abreu,,
 base,593,Mini,false,,Jose Abreu,,
-base,594,Base,false,,Justin Bour
+base,594,Base,false,,Justin Bour,,
 base,594,Mini,false,,Justin Bour,,
-base,595,Base,false,,Max Scherzer
+base,595,Base,false,,Max Scherzer,,
 base,595,Mini,false,,Max Scherzer,,
-base,596,Base,false,,Ken Giles
+base,596,Base,false,,Ken Giles,,
 base,596,Mini,false,,Ken Giles,,
-base,597,Base,false,,Kenta Maeda UER No RCup
-base,597,Mini,false,,Kenta Maeda UER No RCup,,
-base,598,Base,false,,Michael Taylor
+base,597,UER No RCup,false,,Kenta Maeda,,
+base,597,Mini UER No RCup,false,,Kenta Maeda,,
+base,598,Base,false,,Michael Taylor,,
 base,598,Mini,false,,Michael Taylor,,
-base,599,Base,false,,Cincinnati Reds TC
+base,599,Base,false,,Cincinnati Reds TC,,
 base,599,Mini,false,,Cincinnati Reds TC,,
-base,600,Base,false,,Yoenis Cespedes
+base,600,Base,false,,Yoenis Cespedes,,
 base,600,Mini,false,,Yoenis Cespedes,,
-base,601,Base,false,,Khris Davis
+base,601,Base,false,,Khris Davis,,
 base,601,Mini,false,,Khris Davis,,
-base,602,Base,false,,Alex Dickerson
+base,602,Base,false,,Alex Dickerson,,
 base,602,Mini,false,,Alex Dickerson,,
-base,603,Base,false,,Eric Thames
+base,603,Base,false,,Eric Thames,,
 base,603,Mini,false,,Eric Thames,,
-base,604,Base,false,,Gavin Cecchini RC
+base,604,Base,false,,Gavin Cecchini RC,,
 base,604,Mini,false,,Gavin Cecchini RC,,
-base,605,Base,false,,Michael Brantley
+base,605,Base,false,,Michael Brantley,,
 base,605,Mini,false,,Michael Brantley,,
-base,606,Base,false,,Glen Perkins
+base,606,Base,false,,Glen Perkins,,
 base,606,Mini,false,,Glen Perkins,,
-base,607,Base,false,,Tyler Thornburg
+base,607,Base,false,,Tyler Thornburg,,
 base,607,Mini,false,,Tyler Thornburg,,
-base,608,Base,false,,Los Angeles Dodgers TC
+base,608,Base,false,,Los Angeles Dodgers TC,,
 base,608,Mini,false,,Los Angeles Dodgers TC,,
-base,609,Base,false,,Adalberto Mejia RC
+base,609,Base,false,,Adalberto Mejia RC,,
 base,609,Mini,false,,Adalberto Mejia RC,,
-base,610,Base,false,,Ryan Buchter
+base,610,Base,false,,Ryan Buchter,,
 base,610,Mini,false,,Ryan Buchter,,
-base,611,Base,false,,Victor Martinez
-base,611,Mini,false,,Victor Martinez,,
-base,612,Base,false,,Odubel Herrera
+base,612,Base,false,,Odubel Herrera,,
 base,612,Mini,false,,Odubel Herrera,,
-base,613,Base,false,,Jonathan Broxton
+base,613,Base,false,,Jonathan Broxton,,
 base,613,Mini,false,,Jonathan Broxton,,
-base,614,Base,false,,Shawn O'Malley
+base,614,Base,false,,Shawn O'Malley,,
 base,614,Mini,false,,Shawn O'Malley,,
-base,615,Base,false,,John Jaso
+base,615,Base,false,,John Jaso,,
 base,615,Mini,false,,John Jaso,,
-base,616,Base,false,,Mark Trumbo
+base,616,Base,false,,Mark Trumbo,,
 base,616,Mini,false,,Mark Trumbo,,
-base,617,Base,false,,A.J. Pollock
+base,617,Base,false,,A.J. Pollock,,
 base,617,Mini,false,,A.J. Pollock,,
-base,618,Base,false,,Kenley Jansen
+base,618,Base,false,,Kenley Jansen,,
 base,618,Mini,false,,Kenley Jansen,,
-base,619,Base,false,,Brad Brach
+base,619,Base,false,,Brad Brach,,
 base,619,Mini,false,,Brad Brach,,
-base,620,Base,false,,Sam Dyson
+base,620,Base,false,,Sam Dyson,,
 base,620,Mini,false,,Sam Dyson,,
-base,621,Base,false,,Chase Headley
+base,621,Base,false,,Chase Headley,,
 base,621,Mini,false,,Chase Headley,,
-base,622,Base,false,,Steven Wright
+base,622,Base,false,,Steven Wright,,
 base,622,Mini,false,,Steven Wright,,
-base,623,Base,false,,Melvin Upton Jr.
+base,623,Base,false,,Melvin Upton Jr.,,
 base,623,Mini,false,,Melvin Upton Jr.,,
-base,624,Base,false,,Brandon Maurer
+base,624,Base,false,,Brandon Maurer,,
 base,624,Mini,false,,Brandon Maurer,,
-base,625,Base,false,,Ty Blach RC
+base,625,Base,false,,Ty Blach RC,,
 base,625,Mini,false,,Ty Blach RC,,
-base,626,Base,false,,Roberto Osuna
+base,626,Base,false,,Roberto Osuna,,
 base,626,Mini,false,,Roberto Osuna,,
-base,627,Base,false,,Zach Putnam
+base,627,Base,false,,Zach Putnam,,
 base,627,Mini,false,,Zach Putnam,,
-base,628,Base,false,,Domingo Santana
+base,628,Base,false,,Domingo Santana,,
 base,628,Mini,false,,Domingo Santana,,
-base,629,Base,false,,Jordy Mercer
+base,629,Base,false,,Jordy Mercer,,
 base,629,Mini,false,,Jordy Mercer,,
-base,630,Base,false,,Edwin Encarnacion
+base,630,Base,false,,Edwin Encarnacion,,
 base,630,Mini,false,,Edwin Encarnacion,,
-base,631,Base,false,,Zack Wheeler
+base,631,Base,false,,Zack Wheeler,,
 base,631,Mini,false,,Zack Wheeler,,
-base,632,Base,false,,Steven Matz
+base,632,Base,false,,Steven Matz,,
 base,632,Mini,false,,Steven Matz,,
-base,633,Base,false,,Hunter Pence
+base,633,Base,false,,Hunter Pence,,
 base,633,Mini,false,,Hunter Pence,,
-base,634,Base,false,,Danny Duffy
+base,634,Base,false,,Danny Duffy,,
 base,634,Mini,false,,Danny Duffy,,
-base,635,Base,false,,Michael Fulmer
+base,635,Base,false,,Michael Fulmer,,
 base,635,Mini,false,,Michael Fulmer,,
-base,636,Base,false,,"Andrew McCutchen / John Jaso ""Allegheny Armada"""
+base,636,Base,false,,"Andrew McCutchen / John Jaso ""Allegheny Armada""",,
 base,636,Mini,false,,"Andrew McCutchen / John Jaso ""Allegheny Armada""",,
-base,637,Base,false,,Ryan Rua
+base,637,Base,false,,Ryan Rua,,
 base,637,Mini,false,,Ryan Rua,,
-base,638,Base,false,,Luis Valbuena
+base,638,Base,false,,Luis Valbuena,,
 base,638,Mini,false,,Luis Valbuena,,
-base,639,Base,false,,Matt Kemp
-base,639,Mini,false,,Matt Kemp,,
-base,640,Base,false,,Cole Hamels
+base,640,Base,false,,Cole Hamels,,
 base,640,Mini,false,,Cole Hamels,,
-base,641,Base,false,,Robinson Cano
+base,641,Base,false,,Robinson Cano,,
 base,641,Mini,false,,Robinson Cano,,
-base,642,Base,false,,Renato Nunez RC
+base,642,Base,false,,Renato Nunez RC,,
 base,642,Mini,false,,Renato Nunez RC,,
-base,643,Base,false,,Wei-Yin Chen
+base,643,Base,false,,Wei-Yin Chen,,
 base,643,Mini,false,,Wei-Yin Chen,,
-base,644,Base,false,,Jose Altuve
+base,644,Base,false,,Jose Altuve,,
 base,644,Mini,false,,Jose Altuve,,
-base,645,Base,false,,Trea Turner UER No RCup
-base,645,Mini,false,,Trea Turner UER No RCup,,
-base,646,Base,false,,Corey Knebel
+base,645,UER No RCup,false,,Trea Turner,,
+base,645,Mini UER No RCup,false,,Trea Turner,,
+base,646,Base,false,,Corey Knebel,,
 base,646,Mini,false,,Corey Knebel,,
-base,647,Base,false,,Jose Reyes
+base,647,Base,false,,Jose Reyes,,
 base,647,Mini,false,,Jose Reyes,,
-base,648,Base,false,,Seattle Mariners TC
+base,648,Base,false,,Seattle Mariners TC,,
 base,648,Mini,false,,Seattle Mariners TC,,
-base,649,Base,false,,Manny Machado
+base,649,Base,false,,Manny Machado,,
 base,649,Mini,false,,Manny Machado,,
-base,650,Base,false,,Andrew McCutchen
-base,650,Mini,false,,Andrew McCutchen,,
-base,651,Base,false,,Jose Lobaton
+base,651,Base,false,,Jose Lobaton,,
 base,651,Mini,false,,Jose Lobaton,,
-base,652,Base,false,,Kyle Seager
+base,652,Base,false,,Kyle Seager,,
 base,652,Mini,false,,Kyle Seager,,
-base,653,Base,false,,Cam Bedrosian
+base,653,Base,false,,Cam Bedrosian,,
 base,653,Mini,false,,Cam Bedrosian,,
-base,654,Base,false,,Chris Young
+base,654,Base,false,,Chris Young,,
 base,654,Mini,false,,Chris Young,,
-base,655,Base,false,,Garrett Richards
+base,655,Base,false,,Garrett Richards,,
 base,655,Mini,false,,Garrett Richards,,
-base,656,Base,false,,Todd Frazier
+base,656,Base,false,,Todd Frazier,,
 base,656,Mini,false,,Todd Frazier,,
-base,657,Base,false,,Kevin Quackenbush
+base,657,Base,false,,Kevin Quackenbush,,
 base,657,Mini,false,,Kevin Quackenbush,,
-base,658,Base,false,,James Paxton
+base,658,Base,false,,James Paxton,,
 base,658,Mini,false,,James Paxton,,
-base,659,Base,false,,Melky Cabrera
+base,659,Base,false,,Melky Cabrera,,
 base,659,Mini,false,,Melky Cabrera,,
-base,660,Base,false,,Jeanmar Gomez
+base,660,Base,false,,Jeanmar Gomez,,
 base,660,Mini,false,,Jeanmar Gomez,,
-base,661,Base,false,,Peter Bourjos
+base,661,Base,false,,Peter Bourjos,,
 base,661,Mini,false,,Peter Bourjos,,
-base,662,Base,false,,J.A. Happ
+base,662,Base,false,,J.A. Happ,,
 base,662,Mini,false,,J.A. Happ,,
-base,663,Base,false,,Ketel Marte
+base,663,Base,false,,Ketel Marte,,
 base,663,Mini,false,,Ketel Marte,,
-base,664,Base,false,,Blake Swihart
+base,664,Base,false,,Blake Swihart,,
 base,664,Mini,false,,Blake Swihart,,
-base,665,Base,false,,Yu Darvish
+base,665,Base,false,,Yu Darvish,,
 base,665,Mini,false,,Yu Darvish,,
-base,666,Base,false,,Rougned Odor
+base,666,Base,false,,Rougned Odor,,
 base,666,Mini,false,,Rougned Odor,,
-base,667,Base,false,,Alex Cobb
+base,667,Base,false,,Alex Cobb,,
 base,667,Mini,false,,Alex Cobb,,
-base,668,Base,false,,Jedd Gyorko
+base,668,Base,false,,Jedd Gyorko,,
 base,668,Mini,false,,Jedd Gyorko,,
-base,669,Base,false,,Corey Kluber
+base,669,Base,false,,Corey Kluber,,
 base,669,Mini,false,,Corey Kluber,,
-base,670,Base,false,,Martin Maldonado
+base,670,Base,false,,Martin Maldonado,,
 base,670,Mini,false,,Martin Maldonado,,
-base,671,Base,false,,Joe Ross
+base,671,Base,false,,Joe Ross,,
 base,671,Mini,false,,Joe Ross,,
-base,672,Base,false,,Luke Maile
+base,672,Base,false,,Luke Maile,,
 base,672,Mini,false,,Luke Maile,,
-base,673,Base,false,,Joe Panik
+base,673,Base,false,,Joe Panik,,
 base,673,Mini,false,,Joe Panik,,
-base,674,Base,false,,Martin Prado
+base,674,Base,false,,Martin Prado,,
 base,674,Mini,false,,Martin Prado,,
-base,675,Base,false,,Buster Posey
+base,675,Base,false,,Buster Posey,,
 base,675,Mini,false,,Buster Posey,,
-base,676,Base,false,,Eric Hosmer
+base,676,Base,false,,Eric Hosmer,,
 base,676,Mini,false,,Eric Hosmer,,
-base,677,Base,false,,Cheslor Cuthbert
+base,677,Base,false,,Cheslor Cuthbert,,
 base,677,Mini,false,,Cheslor Cuthbert,,
-base,678,Base,false,,Ervin Santana
+base,678,Base,false,,Ervin Santana,,
 base,678,Mini,false,,Ervin Santana,,
-base,679,Base,false,,Jung Ho Kang
+base,679,Base,false,,Jung Ho Kang,,
 base,679,Mini,false,,Jung Ho Kang,,
-base,680,Base,false,,Mike Pelfrey
+base,680,Base,false,,Mike Pelfrey,,
 base,680,Mini,false,,Mike Pelfrey,,
-base,681,Base,false,,Mike Napoli
+base,681,Base,false,,Mike Napoli,,
 base,681,Mini,false,,Mike Napoli,,
-base,682,Base,false,,James Shields
+base,682,Base,false,,James Shields,,
 base,682,Mini,false,,James Shields,,
-base,683,Base,false,,Mac Williamson
+base,683,Base,false,,Mac Williamson,,
 base,683,Mini,false,,Mac Williamson,,
-base,684,Base,false,,Jorge Polanco
+base,684,Base,false,,Jorge Polanco,,
 base,684,Mini,false,,Jorge Polanco,,
-base,685,Base,false,,Enrique Hernandez
+base,685,Base,false,,Enrique Hernandez,,
 base,685,Mini,false,,Enrique Hernandez,,
-base,686,Base,false,,Luis Sardinas
+base,686,Base,false,,Luis Sardinas,,
 base,686,Mini,false,,Luis Sardinas,,
-base,687,Base,false,,Tyler Collins
+base,687,Base,false,,Tyler Collins,,
 base,687,Mini,false,,Tyler Collins,,
-base,688,Base,false,,Mike Clevinger
+base,688,Base,false,,Mike Clevinger,,
 base,688,Mini,false,,Mike Clevinger,,
-base,689,Base,false,,Jason Vargas
+base,689,Base,false,,Jason Vargas,,
 base,689,Mini,false,,Jason Vargas,,
-base,690,Base,false,,Andres Blanco
+base,690,Base,false,,Andres Blanco,,
 base,690,Mini,false,,Andres Blanco,,
-base,691,Base,false,,Richard Bleier
+base,691,Base,false,,Richard Bleier,,
 base,691,Mini,false,,Richard Bleier,,
-base,692,Base,false,,Rob Refsnyder
+base,692,Base,false,,Rob Refsnyder,,
 base,692,Mini,false,,Rob Refsnyder,,
-base,693,Base,false,,Matt Cain
+base,693,Base,false,,Matt Cain,,
 base,693,Mini,false,,Matt Cain,,
-base,694,Base,false,,Matt Wieters
+base,694,Base,false,,Matt Wieters,,
 base,694,Mini,false,,Matt Wieters,,
-base,695,Base,false,,Jon Jay
+base,695,Base,false,,Jon Jay,,
 base,695,Mini,false,,Jon Jay,,
-base,696,Base,false,,Jeff Mathis
+base,696,Base,false,,Jeff Mathis,,
 base,696,Mini,false,,Jeff Mathis,,
-base,697,Base,false,,Christian Bethancourt
+base,697,Base,false,,Christian Bethancourt,,
 base,697,Mini,false,,Christian Bethancourt,,
-base,698,Base,false,,Tony Cingrani
+base,698,Base,false,,Tony Cingrani,,
 base,698,Mini,false,,Tony Cingrani,,
-base,699,Base,false,,Ichiro
+base,699,Base,false,,Ichiro,,
 base,699,Mini,false,,Ichiro,,
-base,700,Base,false,,Ryan Goins
+base,700,Base,false,,Ryan Goins,,
 base,700,Mini,false,,Ryan Goins,,
-base,1,Base,false,,Kris Bryant (dugout)
-base,1,Mini,false,,Kris Bryant (dugout),,
-base,5,Base,false,,Corey Seager (on deck)
-base,5,Mini,false,,Corey Seager (on deck),,
-base,8,Base,false,,Jose Berrios (red jersey)
-base,8,Mini,false,,Jose Berrios (red jersey),,
-base,9,Base,false,,Chris Sale (black jacket)
-base,9,Mini,false,,Chris Sale (black jacket),,
-base,20,Base,false,,Mike Trout (dugout)
-base,20,Mini,false,,Mike Trout (dugout),,
-base,25,Base,false,,Giancarlo Stanton (dugout)
-base,25,Mini,false,,Giancarlo Stanton (dugout),,
-base,34,Base,false,,Bryce Harper (on deck)
-base,34,Mini,false,,Bryce Harper (on deck),,
-base,38,Base,false,,Stephen Strasburg (dugout)
-base,38,Mini,false,,Stephen Strasburg (dugout),,
-base,44,Base,false,,Paul Goldschmidt (chewing gum)
-base,44,Mini,false,,Paul Goldschmidt (chewing gum),,
-base,50,Base,false,,Clayton Kershaw (sunglasses)
-base,50,Mini,false,,Clayton Kershaw (sunglasses),,
-base,60,Base,false,,Jose Bautista (dugout)
-base,60,Mini,false,,Jose Bautista (dugout),,
-base,65,Base,false,,Madison Bumgarner (Yankee Stadium)
-base,65,Mini,false,,Madison Bumgarner (Yankee Stadium),,
-base,75,Base,false,,Carlos Correa (w/team)
-base,75,Mini,false,,Carlos Correa (w/team),,
-base,87,Base,false,,Dansby Swanson (red jersey)
-base,87,Mini,false,,Dansby Swanson (red jersey),,
-base,91,Base,false,,Troy Tulowitzki (blue jersey)
-base,91,Mini,false,,Troy Tulowitzki (blue jersey),,
-base,109,Base,false,,Nelson Cruz (blue sweatshirt)
-base,109,Mini,false,,Nelson Cruz (blue sweatshirt),,
-base,119,Base,false,,Francisco Lindor (running)
-base,119,Mini,false,,Francisco Lindor (running),,
-base,126,Base,false,,Miguel Sano (red jersey)
-base,126,Mini,false,,Miguel Sano (red jersey),,
-base,130,Base,false,,Dustin Pedroia (dugout)
-base,130,Mini,false,,Dustin Pedroia (dugout),,
-base,150,Base,false,,Miguel Cabrera (dugout)
-base,150,Mini,false,,Miguel Cabrera (dugout),,
-base,155,Base,false,,Jacob deGrom (dugout)
-base,155,Mini,false,,Jacob deGrom (dugout),,
-base,161,Base,false,,Mookie Betts (gray jersey)
-base,161,Mini,false,,Mookie Betts (gray jersey),,
-base,177,Base,false,,Sonny Gray (yellow jersey)
-base,177,Mini,false,,Sonny Gray (yellow jersey),,
-base,199,Base,false,,Johnny Cueto (blowing bubbles)
-base,199,Mini,false,,Johnny Cueto (blowing bubbles),,
-base,207,Base,false,,Justin Upton (dugout)
-base,207,Mini,false,,Justin Upton (dugout),,
-base,208,Base,false,,Masahiro Tanaka (dugout)
-base,208,Mini,false,,Masahiro Tanaka (dugout),,
-base,210,Base,false,,Yoan Moncada (red jersey)
-base,210,Mini,false,,Yoan Moncada (red jersey),,
-base,220,Base,false,,Ryan Braun (batting practice)
-base,220,Mini,false,,Ryan Braun (batting practice),,
-base,227,Base,false,,Byron Buxton (on deck)
-base,227,Mini,false,,Byron Buxton (on deck),,
-base,243,Base,false,,Felix Hernandez (in dugout)
-base,243,Mini,false,,Felix Hernandez (in dugout),,
-base,244,Base,false,,Freddie Freeman (water bath)
-base,244,Mini,false,,Freddie Freeman (water bath),,
-base,260,Base,false,,Stephen Piscotty (dugout)
-base,260,Mini,false,,Stephen Piscotty (dugout),,
-base,263,Base,false,,Addison Russell (dugout)
-base,263,Mini,false,,Addison Russell (dugout),,
-base,265,Base,false,,Charlie Blackmon (dugout
-base,265,Mini,false,,Charlie Blackmon (dugout,,
-base,283,Base,false,,Andrew Benintendi (in dugout)
-base,283,Mini,false,,Andrew Benintendi (in dugout),,
-base,287,Base,false,,Aaron Judge (dugout)
-base,287,Mini,false,,Aaron Judge (dugout),,
-base,288,Base,false,,Joey Votto (blue gatorade)
-base,288,Mini,false,,Joey Votto (blue gatorade),,
-base,299,Base,false,,Yulieski Gurriel (blue jersey)
-base,299,Mini,false,,Yulieski Gurriel (blue jersey),,
-base,340,Base,false,,Aaron Nola (throwback jersey)
-base,340,Mini,false,,Aaron Nola (throwback jersey),,
-base,341,Base,false,,Alex Bregman (dugout)
-base,341,Mini,false,,Alex Bregman (dugout),,
-base,350a,Base,false,,David Ortiz (cowboy hat)
+insert-image-variation-dugout,1,Dugout Image Variation SP,false,,Kris Bryant,,
+insert-image-variation-dugout,1,Dugout Image Variation Mini SP,false,,Kris Bryant,,
+insert-image-variation-on-deck,5,On Deck Image Variation SP,false,,Corey Seager RCup,,
+insert-image-variation-on-deck,5,On Deck Image Variation Mini SP,false,,Corey Seager RCup,,
+insert-image-variation-red-jersey,8,Red Jersey Image Variation SP,false,,Jose Berrios,,
+insert-image-variation-red-jersey,8,Red Jersey Image Variation Mini SP,false,,Jose Berrios,,
+insert-image-variation-black-jacket,9,Black Jacket Image Variation SP,false,,Chris Sale,,
+insert-image-variation-black-jacket,9,Black Jacket Image Variation Mini SP,false,,Chris Sale,,
+insert-image-variation-dugout,20,Dugout Image Variation SP,false,,Mike Trout,,
+insert-image-variation-dugout,20,Dugout Image Variation Mini SP,false,,Mike Trout,,
+insert-image-variation-dugout,25,Dugout Image Variation SP,false,,Giancarlo Stanton,,
+insert-image-variation-dugout,25,Dugout Image Variation Mini SP,false,,Giancarlo Stanton,,
+insert-image-variation-on-deck,34,On Deck Image Variation SP,false,,Bryce Harper,,
+insert-image-variation-on-deck,34,On Deck Image Variation Mini SP,false,,Bryce Harper,,
+insert-image-variation-dugout,38,Dugout Image Variation SP,false,,Stephen Strasburg,,
+insert-image-variation-dugout,38,Dugout Image Variation Mini SP,false,,Stephen Strasburg,,
+insert-image-variation-chewing-gum,44,Chewing Gum Image Variation SP,false,,Paul Goldschmidt,,
+insert-image-variation-chewing-gum,44,Chewing Gum Image Variation Mini SP,false,,Paul Goldschmidt,,
+insert-image-variation-sunglasses,50,Sunglasses Image Variation SP,false,,Clayton Kershaw,,
+insert-image-variation-sunglasses,50,Sunglasses Image Variation Mini SP,false,,Clayton Kershaw,,
+insert-image-variation-dugout,60,Dugout Image Variation SP,false,,Jose Bautista,,
+insert-image-variation-dugout,60,Dugout Image Variation Mini SP,false,,Jose Bautista,,
+insert-image-variation-yankee-stadium,65,Yankee Stadium Image Variation SP,false,,Madison Bumgarner,,
+insert-image-variation-yankee-stadium,65,Yankee Stadium Image Variation Mini SP,false,,Madison Bumgarner,,
+insert-image-variation-w-team,75,W/Team Image Variation SP,false,,Carlos Correa,,
+insert-image-variation-w-team,75,W/Team Image Variation Mini SP,false,,Carlos Correa,,
+insert-image-variation-jersey,87,Jersey Image Variation SP,false,,Dansby Swanson RC,,
+insert-image-variation-jersey,87,Jersey Image Variation Mini SP,false,,Dansby Swanson RC,,
+insert-image-variation-blue-jersey,91,Blue Jersey Image Variation SP,false,,Troy Tulowitzki,,
+insert-image-variation-blue-jersey,91,Blue Jersey Image Variation Mini SP,false,,Troy Tulowitzki,,
+insert-image-variation-blue-sweatshirt,109,Blue Sweatshirt Image Variation SP,false,,Nelson Cruz,,
+insert-image-variation-blue-sweatshirt,109,Blue Sweatshirt Image Variation Mini SP,false,,Nelson Cruz,,
+insert-image-variation-running,119,Running Image Variation SP,false,,Francisco Lindor,,
+insert-image-variation-running,119,Running Image Variation Mini SP,false,,Francisco Lindor,,
+insert-image-variation-red-jersey,126,Red Jersey Image Variation SP,false,,Miguel Sano,,
+insert-image-variation-red-jersey,126,Red Jersey Image Variation Mini SP,false,,Miguel Sano,,
+insert-image-variation-dugout,130,Dugout Image Variation SP,false,,Dustin Pedroia,,
+insert-image-variation-dugout,130,Dugout Image Variation Mini SP,false,,Dustin Pedroia,,
+insert-image-variation-dugout,150,Dugout Image Variation SP,false,,Miguel Cabrera,,
+insert-image-variation-dugout,150,Dugout Image Variation Mini SP,false,,Miguel Cabrera,,
+insert-image-variation-dugout,155,Dugout Image Variation SP,false,,Jacob deGrom,,
+insert-image-variation-dugout,155,Dugout Image Variation Mini SP,false,,Jacob deGrom,,
+insert-image-variation-gray-jersey,161,Gray Jersey Image Variation SP,false,,Mookie Betts,,
+insert-image-variation-gray-jersey,161,Gray Jersey Image Variation Mini SP,false,,Mookie Betts,,
+insert-image-variation-yellow-jersey,177,Yellow Jersey Image Variation SP,false,,Sonny Gray,,
+insert-image-variation-yellow-jersey,177,Yellow Jersey Image Variation Mini SP,false,,Sonny Gray,,
+insert-image-variation-blowing-bubbles,199,Blowing Bubbles Image Variation SP,false,,Johnny Cueto,,
+insert-image-variation-blowing-bubbles,199,Blowing Bubbles Image Variation Mini SP,false,,Johnny Cueto,,
+insert-image-variation-dugout,207,Dugout Image Variation SP,false,,Justin Upton,,
+insert-image-variation-dugout,207,Dugout Image Variation Mini SP,false,,Justin Upton,,
+insert-image-variation-dugout,208,Dugout Image Variation SP,false,,Masahiro Tanaka,,
+insert-image-variation-dugout,208,Dugout Image Variation Mini SP,false,,Masahiro Tanaka,,
+insert-image-variation-jersey,210,Jersey Image Variation SP,false,,Yoan Moncada RC,,
+insert-image-variation-jersey,210,Jersey Image Variation Mini SP,false,,Yoan Moncada RC,,
+insert-image-variation-batting-practice,220,Batting Practice Image Variation SP,false,,Ryan Braun,,
+insert-image-variation-batting-practice,220,Batting Practice Image Variation Mini SP,false,,Ryan Braun,,
+insert-image-variation-on-deck,227,On Deck Image Variation SP,false,,Byron Buxton,,
+insert-image-variation-on-deck,227,On Deck Image Variation Mini SP,false,,Byron Buxton,,
+insert-image-variation-in-dugout,243,In Dugout Image Variation SP,false,,Felix Hernandez,,
+insert-image-variation-in-dugout,243,In Dugout Image Variation Mini SP,false,,Felix Hernandez,,
+insert-image-variation-water-bath,244,Water Bath Image Variation SP,false,,Freddie Freeman,,
+insert-image-variation-water-bath,244,Water Bath Image Variation Mini SP,false,,Freddie Freeman,,
+insert-image-variation-dugout,260,Dugout Image Variation SP,false,,Stephen Piscotty,,
+insert-image-variation-dugout,260,Dugout Image Variation Mini SP,false,,Stephen Piscotty,,
+insert-image-variation-dugout,263,Dugout Image Variation SP,false,,Addison Russell,,
+insert-image-variation-dugout,263,Dugout Image Variation Mini SP,false,,Addison Russell,,
+insert-image-variation-dugout,265,Dugout Image Variation SP,false,,Charlie Blackmon,,
+insert-image-variation-dugout,265,Dugout Image Variation Mini SP,false,,Charlie Blackmon,,
+insert-image-variation-dugout,283,Dugout Image Variation SP,false,,Andrew Benintendi RC,,
+insert-image-variation-dugout,283,Dugout Image Variation Mini SP,false,,Andrew Benintendi RC,,
+insert-image-variation-dugout,287,Dugout Image Variation SP,false,,Aaron Judge RC,,
+insert-image-variation-dugout,287,Dugout Image Variation Mini SP,false,,Aaron Judge RC,,
+insert-image-variation-blue-gatorade,288,Blue Gatorade Image Variation SP,false,,Joey Votto,,
+insert-image-variation-blue-gatorade,288,Blue Gatorade Image Variation Mini SP,false,,Joey Votto,,
+insert-image-variation-blue-jersey,299,Blue Jersey Image Variation SP,false,,Yulieski Gurriel RC,,
+insert-image-variation-blue-jersey,299,Blue Jersey Image Variation Mini SP,false,,Yulieski Gurriel RC,,
+insert-image-variation-throwback-jersey,340,Throwback Jersey Image Variation SP,false,,Aaron Nola,,
+insert-image-variation-throwback-jersey,340,Throwback Jersey Image Variation Mini SP,false,,Aaron Nola,,
+base,350a,Base,false,,David Ortiz (cowboy hat),,
 base,350a,Mini,false,,David Ortiz (cowboy hat),,
-base,350b,Base,false,,"David Ortiz (""We Play for Championships"")"
+base,350b,Base,false,,"David Ortiz (""We Play for Championships"")",,
 base,350b,Mini,false,,"David Ortiz (""We Play for Championships"")",,
-base,350c,Base,false,,David Ortiz (dugout)
+base,350c,Base,false,,David Ortiz (dugout),,
 base,350c,Mini,false,,David Ortiz (dugout),,
-base,350d,Base,false,,David Ortiz (gatorade bath)
+base,350d,Base,false,,David Ortiz (gatorade bath),,
 base,350d,Mini,false,,David Ortiz (gatorade bath),,
-base,350e,Base,false,,David Ortiz (scoreboard)
+base,350e,Base,false,,David Ortiz (scoreboard),,
 base,350e,Mini,false,,David Ortiz (scoreboard),,
-base,350f,Base,false,,David Ortiz (hat tip)
+base,350f,Base,false,,David Ortiz (hat tip),,
 base,350f,Mini,false,,David Ortiz (hat tip),,
-base,350g,Base,false,,David Ortiz (Legos)
+base,350g,Base,false,,David Ortiz (Legos),,
 base,350g,Mini,false,,David Ortiz (Legos),,
-base,350h,Base,false,,David Ortiz (parka)
+base,350h,Base,false,,David Ortiz (parka),,
 base,350h,Mini,false,,David Ortiz (parka),,
-base,350i,Base,false,,David Ortiz (w/A. Pujols)
+base,350i,Base,false,,David Ortiz (w/A. Pujols),,
 base,350i,Mini,false,,David Ortiz (w/A. Pujols),,
-base,350j,Base,false,,David Ortiz (at Dodger Stadium)
+base,350j,Base,false,,David Ortiz (at Dodger Stadium),,
 base,350j,Mini,false,,David Ortiz (at Dodger Stadium),,
-base,582,Base,false,,Julio Urias
+base,582,Base,false,,Julio Urias,,
 base,582,Mini,false,,Julio Urias,,
-base,597,Base,false,,Kenta Maeda
-base,597,Mini,false,,Kenta Maeda,,
-base,600,Base,false,,Yoenis Cepedes
-base,600,Mini,false,,Yoenis Cepedes,,
-base,645,Base,false,,Trea Turner
+base,645,Base,false,,Trea Turner,,
 base,645,Mini,false,,Trea Turner,,
-base,375,Base,false,,Jackie Robinson
-base,375,Mini,false,,Jackie Robinson,,
-base,382,Base,false,,Honus Wagner
-base,382,Mini,false,,Honus Wagner,,
-base,482,Base,false,,Lou Gehrig
-base,482,Mini,false,,Lou Gehrig,,
-base,485,Base,false,,Roger Maris
-base,485,Mini,false,,Roger Maris,,
-base,500,Base,false,,Ernie Banks
-base,500,Mini,false,,Ernie Banks,,
-base,508,Base,false,,Ted Williams
-base,508,Mini,false,,Ted Williams,,
-base,580,Base,false,,Babe Ruth
-base,580,Mini,false,,Babe Ruth,,
-base,597,Base,false,,Sandy Koufax
-base,597,Mini,false,,Sandy Koufax,,
-base,611,Base,false,,Ty Cobb
-base,611,Mini,false,,Ty Cobb,,
-base,639,Base,false,,Hank Aaron
-base,639,Mini,false,,Hank Aaron,,
-base,650,Base,false,,Roberto Clemente
-base,650,Mini,false,,Roberto Clemente,,
-base,87,Base,false,,Dansby Swanson
-base,87,Mini,false,,Dansby Swanson,,
-base,210,Base,false,,Yoan Moncada
-base,210,Mini,false,,Yoan Moncada,,
-base,283,Base,false,,Andrew Benintendi
-base,283,Mini,false,,Andrew Benintendi,,
-base,287,Base,false,,Aaron Judge
-base,287,Mini,false,,Aaron Judge,,
-base,341,Base,false,,Alex Bregman
-base,341,Mini,false,,Alex Bregman,,
+insert-factory-set-rookie-variations,87,Base,false,,Dansby Swanson,"bcp ""Factory Set Rookie Variations""",
+insert-factory-set-rookie-variations,87,Mini,false,,Dansby Swanson,"bcp ""Factory Set Rookie Variations""",
+insert-factory-set-rookie-variations,210,Base,false,,Yoan Moncada,"bcp ""Factory Set Rookie Variations""",
+insert-factory-set-rookie-variations,210,Mini,false,,Yoan Moncada,"bcp ""Factory Set Rookie Variations""",
+insert-factory-set-rookie-variations,283,Base,false,,Andrew Benintendi,"bcp ""Factory Set Rookie Variations""",
+insert-factory-set-rookie-variations,283,Mini,false,,Andrew Benintendi,"bcp ""Factory Set Rookie Variations""",
+insert-factory-set-rookie-variations,287,Base,false,,Aaron Judge,"bcp ""Factory Set Rookie Variations""",
+insert-factory-set-rookie-variations,287,Mini,false,,Aaron Judge,"bcp ""Factory Set Rookie Variations""",

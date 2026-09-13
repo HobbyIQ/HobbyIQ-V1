@@ -33,5 +33,390 @@
  "source": "baseballcardpedia-2026-09-13",
  "acquiredAt": "2026-09-13",
  "duplicateIdentityRowsDropped": 248,
- "duplicateIdentityNote": "BCP relists a card under Gimmicks/Errors-and-Variations with the same number and the same player text to note an UNNAMED variation; those rows carry the identity of the base row, so they were dropped (one card, one row, one pool). A variation the page NAMES differs in its player text and is kept as the distinct card it is."
+ "duplicateIdentityNote": "BCP relists a card under Gimmicks/Errors-and-Variations with the same number and the same player text to note an UNNAMED variation; those rows carry the identity of the base row, so they were dropped (one card, one row, one pool). A variation the page NAMES differs in its player text and is kept as the distinct card it is.",
+ "variationAxisApplied": {
+  "appliedAt": "2026-09-13",
+  "source": "baseballcardpedia-2026-09-13",
+  "why": "#2112's insert-set-key guard refused this file: rows would have landed on fewer distinct ids than there are rows, so a later row would have overwritten an earlier one inside one run and the last writer would have decided which card the address holds. Every decision below was verified against the live baseballcardpedia page before it was applied; nothing here invents a label the source does not print.",
+  "decisions": {
+   "imageVariations": {
+    "rows": 336,
+    "rule": "image variation — the photo descriptor bcp prints after the player's name moves to the parallel axis as \"<Name> Image Variation SP\" (#1613), and the photo names the subset so the base ladder is not multiplied by it"
+   },
+   "namedSubsetRestored": {
+    "rows": 36,
+    "rule": "named subset — the source prints a heading for these rows that the scrape flattened into `base`; the category is restored to the section the source names"
+   },
+   "duplicatesDropped": {
+    "rows": 4,
+    "rule": "duplicate — a byte-identical row, or a repeat of a checklist line under a misspelling of the same player with no descriptor to make it a distinct card"
+   }
+  },
+  "rowsBefore": 3176,
+  "rowsAfter": 3108,
+  "distinctIdsAfter": 3072,
+  "verdictAfter": "refuse",
+  "heldRows": {
+   "rows": 64,
+   "groups": 32,
+   "rule": "held — the source prints this number more than once and prints nothing that distinguishes the printings; both sides are withheld (absent beats wrong)",
+   "detail": [
+    {
+     "address": "base|135|Base|false|",
+     "cardNumber": "135",
+     "category": "base",
+     "parallel": "Base",
+     "players": [
+      "Matt Dominguez",
+      "Brett Lawrie tossing baseballs"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|135|Black|false|10",
+     "cardNumber": "135",
+     "category": "base",
+     "parallel": "Black",
+     "players": [
+      "Matt Dominguez",
+      "Brett Lawrie tossing baseballs"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|135|Red|false|5",
+     "cardNumber": "135",
+     "category": "base",
+     "parallel": "Red",
+     "players": [
+      "Matt Dominguez",
+      "Brett Lawrie tossing baseballs"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|135|Gold|false|1",
+     "cardNumber": "135",
+     "category": "base",
+     "parallel": "Gold",
+     "players": [
+      "Matt Dominguez",
+      "Brett Lawrie tossing baseballs"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|387|Base|false|",
+     "cardNumber": "387",
+     "category": "base",
+     "parallel": "Base",
+     "players": [
+      "Jacob deGrom ROY",
+      "Jacob deGrom"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|387|Black|false|10",
+     "cardNumber": "387",
+     "category": "base",
+     "parallel": "Black",
+     "players": [
+      "Jacob deGrom ROY",
+      "Jacob deGrom"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|387|Red|false|5",
+     "cardNumber": "387",
+     "category": "base",
+     "parallel": "Red",
+     "players": [
+      "Jacob deGrom ROY",
+      "Jacob deGrom"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|387|Gold|false|1",
+     "cardNumber": "387",
+     "category": "base",
+     "parallel": "Gold",
+     "players": [
+      "Jacob deGrom ROY",
+      "Jacob deGrom"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|389|Base|false|",
+     "cardNumber": "389",
+     "category": "base",
+     "parallel": "Base",
+     "players": [
+      "Mookie Betts FS",
+      "Mookie Betts"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|389|Black|false|10",
+     "cardNumber": "389",
+     "category": "base",
+     "parallel": "Black",
+     "players": [
+      "Mookie Betts FS",
+      "Mookie Betts"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|389|Red|false|5",
+     "cardNumber": "389",
+     "category": "base",
+     "parallel": "Red",
+     "players": [
+      "Mookie Betts FS",
+      "Mookie Betts"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|389|Gold|false|1",
+     "cardNumber": "389",
+     "category": "base",
+     "parallel": "Gold",
+     "players": [
+      "Mookie Betts FS",
+      "Mookie Betts"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|487|Base|false|",
+     "cardNumber": "487",
+     "category": "base",
+     "parallel": "Base",
+     "players": [
+      "Corey Kluber AW",
+      "Corey Kluber"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|487|Black|false|10",
+     "cardNumber": "487",
+     "category": "base",
+     "parallel": "Black",
+     "players": [
+      "Corey Kluber AW",
+      "Corey Kluber"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|487|Red|false|5",
+     "cardNumber": "487",
+     "category": "base",
+     "parallel": "Red",
+     "players": [
+      "Corey Kluber AW",
+      "Corey Kluber"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|487|Gold|false|1",
+     "cardNumber": "487",
+     "category": "base",
+     "parallel": "Gold",
+     "players": [
+      "Corey Kluber AW",
+      "Corey Kluber"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|503|Base|false|",
+     "cardNumber": "503",
+     "category": "base",
+     "parallel": "Base",
+     "players": [
+      "Joe Panik FS",
+      "Joe Panik"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|503|Black|false|10",
+     "cardNumber": "503",
+     "category": "base",
+     "parallel": "Black",
+     "players": [
+      "Joe Panik FS",
+      "Joe Panik"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|503|Red|false|5",
+     "cardNumber": "503",
+     "category": "base",
+     "parallel": "Red",
+     "players": [
+      "Joe Panik FS",
+      "Joe Panik"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|503|Gold|false|1",
+     "cardNumber": "503",
+     "category": "base",
+     "parallel": "Gold",
+     "players": [
+      "Joe Panik FS",
+      "Joe Panik"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|588|Base|false|",
+     "cardNumber": "588",
+     "category": "base",
+     "parallel": "Base",
+     "players": [
+      "Kolten Wong FS",
+      "Kolten Wong"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|588|Black|false|10",
+     "cardNumber": "588",
+     "category": "base",
+     "parallel": "Black",
+     "players": [
+      "Kolten Wong FS",
+      "Kolten Wong"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|588|Red|false|5",
+     "cardNumber": "588",
+     "category": "base",
+     "parallel": "Red",
+     "players": [
+      "Kolten Wong FS",
+      "Kolten Wong"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|588|Gold|false|1",
+     "cardNumber": "588",
+     "category": "base",
+     "parallel": "Gold",
+     "players": [
+      "Kolten Wong FS",
+      "Kolten Wong"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|603|Base|false|",
+     "cardNumber": "603",
+     "category": "base",
+     "parallel": "Base",
+     "players": [
+      "Jose Fernandez FS",
+      "Jose Fernandez"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|603|Black|false|10",
+     "cardNumber": "603",
+     "category": "base",
+     "parallel": "Black",
+     "players": [
+      "Jose Fernandez FS",
+      "Jose Fernandez"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|603|Red|false|5",
+     "cardNumber": "603",
+     "category": "base",
+     "parallel": "Red",
+     "players": [
+      "Jose Fernandez FS",
+      "Jose Fernandez"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|603|Gold|false|1",
+     "cardNumber": "603",
+     "category": "base",
+     "parallel": "Gold",
+     "players": [
+      "Jose Fernandez FS",
+      "Jose Fernandez"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|645|Base|false|",
+     "cardNumber": "645",
+     "category": "base",
+     "parallel": "Base",
+     "players": [
+      "Neftali Feliz",
+      "Neftali Perez"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|645|Black|false|10",
+     "cardNumber": "645",
+     "category": "base",
+     "parallel": "Black",
+     "players": [
+      "Neftali Feliz",
+      "Neftali Perez"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|645|Red|false|5",
+     "cardNumber": "645",
+     "category": "base",
+     "parallel": "Red",
+     "players": [
+      "Neftali Feliz",
+      "Neftali Perez"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|645|Gold|false|1",
+     "cardNumber": "645",
+     "category": "base",
+     "parallel": "Gold",
+     "players": [
+      "Neftali Feliz",
+      "Neftali Perez"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    }
+   ]
+  },
+  "notes": [
+   "Dropped 4 rows that repeat a card already on the checklist under a MISSPELLING of the same player (\"Torii Hunger\" for \"Torii Hunter\", \"Neftali Perez\" for \"Neftali Feliz\", \"Russel Martin\" for \"Russell Martin\") with no descriptor to make them a distinct card. Verified on the source: these sit in its hand-typed Gimmicks/Twinks lists. The checklist's own spelling stands."
+  ]
+ }
 }

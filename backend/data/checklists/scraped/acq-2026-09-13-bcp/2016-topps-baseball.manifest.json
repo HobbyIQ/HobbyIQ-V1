@@ -607,5 +607,395 @@
  "source": "baseballcardpedia-2026-09-13",
  "acquiredAt": "2026-09-13",
  "duplicateIdentityRowsDropped": 566,
- "duplicateIdentityNote": "BCP relists a card under Gimmicks/Errors-and-Variations with the same number and the same player text to note an UNNAMED variation; those rows carry the identity of the base row, so they were dropped (one card, one row, one pool). A variation the page NAMES differs in its player text and is kept as the distinct card it is."
+ "duplicateIdentityNote": "BCP relists a card under Gimmicks/Errors-and-Variations with the same number and the same player text to note an UNNAMED variation; those rows carry the identity of the base row, so they were dropped (one card, one row, one pool). A variation the page NAMES differs in its player text and is kept as the distinct card it is.",
+ "variationAxisApplied": {
+  "appliedAt": "2026-09-13",
+  "source": "baseballcardpedia-2026-09-13",
+  "why": "#2112's insert-set-key guard refused this file: rows would have landed on fewer distinct ids than there are rows, so a later row would have overwritten an earlier one inside one run and the last writer would have decided which card the address holds. Every decision below was verified against the live baseballcardpedia page before it was applied; nothing here invents a label the source does not print.",
+  "decisions": {
+   "imageVariations": {
+    "rows": 648,
+    "rule": "image variation — the photo descriptor bcp prints after the player's name moves to the parallel axis as \"<Name> Image Variation SP\" (#1613), and the photo names the subset so the base ladder is not multiplied by it"
+   },
+   "trailingPrintRunMoved": {
+    "rows": 170,
+    "rule": "trailing serial — bcp writes a rung's print run inside the player cell (\"Adrian Beltre 25\"); it is moved to printRun, which is what lets a rung's roster compare equal to its root's"
+   },
+   "namedSubsetRestored": {
+    "rows": 12,
+    "rule": "named subset — the source prints a heading for these rows that the scrape flattened into `base`; the category is restored to the section the source names"
+   },
+   "duplicatesDropped": {
+    "rows": 12,
+    "rule": "duplicate — a byte-identical row, or a repeat of a checklist line under a misspelling of the same player with no descriptor to make it a distinct card"
+   }
+  },
+  "rowsBefore": 14879,
+  "rowsAfter": 10203,
+  "distinctIdsAfter": 10191,
+  "verdictAfter": "refuse",
+  "heldRows": {
+   "rows": 64,
+   "groups": 32,
+   "rule": "held — the source prints this number more than once and prints nothing that distinguishes the printings; both sides are withheld (absent beats wrong)",
+   "detail": [
+    {
+     "address": "base|350|Base|false|",
+     "cardNumber": "350",
+     "category": "base",
+     "parallel": "Base",
+     "players": [
+      "Kris Bryant FS",
+      "Kris Bryant"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|350|Purple|false|",
+     "cardNumber": "350",
+     "category": "base",
+     "parallel": "Purple",
+     "players": [
+      "Kris Bryant FS",
+      "Kris Bryant"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|350|Rainbow Foil|false|",
+     "cardNumber": "350",
+     "category": "base",
+     "parallel": "Rainbow Foil",
+     "players": [
+      "Kris Bryant FS",
+      "Kris Bryant"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|350|Black & White Negatives|false|",
+     "cardNumber": "350",
+     "category": "base",
+     "parallel": "Black & White Negatives",
+     "players": [
+      "Kris Bryant FS",
+      "Kris Bryant"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|350|Gold|false|2016",
+     "cardNumber": "350",
+     "category": "base",
+     "parallel": "Gold",
+     "players": [
+      "Kris Bryant FS",
+      "Kris Bryant"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|350|Sparkle Foil|false|177",
+     "cardNumber": "350",
+     "category": "base",
+     "parallel": "Sparkle Foil",
+     "players": [
+      "Kris Bryant FS",
+      "Kris Bryant"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|350|Vintage Stock|false|99",
+     "cardNumber": "350",
+     "category": "base",
+     "parallel": "Vintage Stock",
+     "players": [
+      "Kris Bryant FS",
+      "Kris Bryant"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|350|Black|false|65",
+     "cardNumber": "350",
+     "category": "base",
+     "parallel": "Black",
+     "players": [
+      "Kris Bryant FS",
+      "Kris Bryant"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|350|Pink|false|50",
+     "cardNumber": "350",
+     "category": "base",
+     "parallel": "Pink",
+     "players": [
+      "Kris Bryant FS",
+      "Kris Bryant"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|350|Framed|false|16",
+     "cardNumber": "350",
+     "category": "base",
+     "parallel": "Framed",
+     "players": [
+      "Kris Bryant FS",
+      "Kris Bryant"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|350|Clear|false|10",
+     "cardNumber": "350",
+     "category": "base",
+     "parallel": "Clear",
+     "players": [
+      "Kris Bryant FS",
+      "Kris Bryant"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|350|Platinum|false|1",
+     "cardNumber": "350",
+     "category": "base",
+     "parallel": "Platinum",
+     "players": [
+      "Kris Bryant FS",
+      "Kris Bryant"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-pitch|FP-1||false|",
+     "cardNumber": "FP-1",
+     "category": "insert-first-pitch",
+     "parallel": "",
+     "players": [
+      "Abby Wambach",
+      "Tim McGraw"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-pitch|FP-2||false|",
+     "cardNumber": "FP-2",
+     "category": "insert-first-pitch",
+     "parallel": "",
+     "players": [
+      "Gabrielle Giffords",
+      "Jimmy Kimmel"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-pitch|FP-3||false|",
+     "cardNumber": "FP-3",
+     "category": "insert-first-pitch",
+     "parallel": "",
+     "players": [
+      "Don Cherry",
+      "Rosie Rios"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-pitch|FP-4||false|",
+     "cardNumber": "FP-4",
+     "category": "insert-first-pitch",
+     "parallel": "",
+     "players": [
+      "Mo'Ne Davis",
+      "Billy Joe Armstrong"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-pitch|FP-5||false|",
+     "cardNumber": "FP-5",
+     "category": "insert-first-pitch",
+     "parallel": "",
+     "players": [
+      "Evelyn Jones",
+      "Nina Agdal"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-pitch|FP-6||false|",
+     "cardNumber": "FP-6",
+     "category": "insert-first-pitch",
+     "parallel": "",
+     "players": [
+      "Bree Morse",
+      "Jeff Tweedy"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-pitch|FP-7||false|",
+     "cardNumber": "FP-7",
+     "category": "insert-first-pitch",
+     "parallel": "",
+     "players": [
+      "Jordan Speith",
+      "Jim Harbaugh"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-pitch|FP-8||false|",
+     "cardNumber": "FP-8",
+     "category": "insert-first-pitch",
+     "parallel": "",
+     "players": [
+      "Kristaps Porzingis",
+      "Jim Breuer"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-pitch|FP-9||false|",
+     "cardNumber": "FP-9",
+     "category": "insert-first-pitch",
+     "parallel": "",
+     "players": [
+      "Victor Espinoza",
+      "Spencer Stone"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-pitch|FP-10||false|",
+     "cardNumber": "FP-10",
+     "category": "insert-first-pitch",
+     "parallel": "",
+     "players": [
+      "Johnny Knoxville",
+      "Kyle Larson"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-pitch|FP-11||false|",
+     "cardNumber": "FP-11",
+     "category": "insert-first-pitch",
+     "parallel": "",
+     "players": [
+      "James Taylor",
+      "Miguel Cotto"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-pitch|FP-12||false|",
+     "cardNumber": "FP-12",
+     "category": "insert-first-pitch",
+     "parallel": "",
+     "players": [
+      "Bud Selig",
+      "Tom Watson"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-pitch|FP-13||false|",
+     "cardNumber": "FP-13",
+     "category": "insert-first-pitch",
+     "parallel": "",
+     "players": [
+      "LeVar Burton",
+      "Edward Burns"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-pitch|FP-14||false|",
+     "cardNumber": "FP-14",
+     "category": "insert-first-pitch",
+     "parallel": "",
+     "players": [
+      "Hayley Atwell",
+      "Geoff Britten"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-pitch|FP-15||false|",
+     "cardNumber": "FP-15",
+     "category": "insert-first-pitch",
+     "parallel": "",
+     "players": [
+      "Bill Withers",
+      "Lea Thompson"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-pitch|FP-16||false|",
+     "cardNumber": "FP-16",
+     "category": "insert-first-pitch",
+     "parallel": "",
+     "players": [
+      "Steve Aoki",
+      "Jim Caviezel"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-pitch|FP-17||false|",
+     "cardNumber": "FP-17",
+     "category": "insert-first-pitch",
+     "parallel": "",
+     "players": [
+      "Carrie Brownstein",
+      "George H.W. Bush"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-pitch|FP-18||false|",
+     "cardNumber": "FP-18",
+     "category": "insert-first-pitch",
+     "parallel": "",
+     "players": [
+      "Rebekah Gregory",
+      "J.K. Simmons"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-pitch|FP-19||false|",
+     "cardNumber": "FP-19",
+     "category": "insert-first-pitch",
+     "parallel": "",
+     "players": [
+      "Tony Hawk",
+      "Kendrick Lamar"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-pitch|FP-20||false|",
+     "cardNumber": "FP-20",
+     "category": "insert-first-pitch",
+     "parallel": "",
+     "players": [
+      "IronE Singleton",
+      "David Hearn"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    }
+   ]
+  },
+  "notes": [
+   "Removed 4600 rows of category insert-double-play-rip-cards: a scrape cross-join (920 player-date strings x 1 malformed cardNumber \"Shin-Soo\", from splitting \"Shin-Soo Choo\" on its hyphenated first name). The source lists Double Play Rip Cards as ~1,002 one-of-ones by player+date with NO card numbers, so there is no numbered checklist to re-scrape.",
+   "Dropped 12 rows that repeat a card already on the checklist under a MISSPELLING of the same player (\"Torii Hunger\" for \"Torii Hunter\", \"Neftali Perez\" for \"Neftali Feliz\", \"Russel Martin\" for \"Russell Martin\") with no descriptor to make them a distinct card. Verified on the source: these sit in its hand-typed Gimmicks/Twinks lists. The checklist's own spelling stands."
+  ]
+ }
 }

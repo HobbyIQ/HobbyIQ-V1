@@ -602,5 +602,2462 @@
  "source": "baseballcardpedia-2026-09-13",
  "acquiredAt": "2026-09-13",
  "duplicateIdentityRowsDropped": 693,
- "duplicateIdentityNote": "BCP relists a card under Gimmicks/Errors-and-Variations with the same number and the same player text to note an UNNAMED variation; those rows carry the identity of the base row, so they were dropped (one card, one row, one pool). A variation the page NAMES differs in its player text and is kept as the distinct card it is."
+ "duplicateIdentityNote": "BCP relists a card under Gimmicks/Errors-and-Variations with the same number and the same player text to note an UNNAMED variation; those rows carry the identity of the base row, so they were dropped (one card, one row, one pool). A variation the page NAMES differs in its player text and is kept as the distinct card it is.",
+ "variationAxisApplied": {
+  "appliedAt": "2026-09-13",
+  "source": "baseballcardpedia-2026-09-13",
+  "why": "#2112's insert-set-key guard refused this file: rows would have landed on fewer distinct ids than there are rows, so a later row would have overwritten an earlier one inside one run and the last writer would have decided which card the address holds. Every decision below was verified against the live baseballcardpedia page before it was applied; nothing here invents a label the source does not print.",
+  "decisions": {
+   "imageVariations": {
+    "rows": 924,
+    "rule": "image variation — the photo descriptor bcp prints after the player's name moves to the parallel axis as \"<Name> Image Variation SP\" (#1613), and the photo names the subset so the base ladder is not multiplied by it"
+   },
+   "trailingPrintRunMoved": {
+    "rows": 143,
+    "rule": "trailing serial — bcp writes a rung's print run inside the player cell (\"Adrian Beltre 25\"); it is moved to printRun, which is what lets a rung's roster compare equal to its root's"
+   },
+   "namedSubsetRestored": {
+    "rows": 99,
+    "rule": "named subset — the source prints a heading for these rows that the scrape flattened into `base`; the category is restored to the section the source names"
+   },
+   "duplicatesDropped": {
+    "rows": 11,
+    "rule": "duplicate — a byte-identical row, or a repeat of a checklist line under a misspelling of the same player with no descriptor to make it a distinct card"
+   }
+  },
+  "rowsBefore": 10016,
+  "rowsAfter": 9565,
+  "distinctIdsAfter": 9454,
+  "verdictAfter": "refuse",
+  "heldRows": {
+   "rows": 440,
+   "groups": 220,
+   "rule": "held — the source prints this number more than once and prints nothing that distinguishes the printings; both sides are withheld (absent beats wrong)",
+   "detail": [
+    {
+     "address": "base|135|Base|false|",
+     "cardNumber": "135",
+     "category": "base",
+     "parallel": "Base",
+     "players": [
+      "Matt Dominguez",
+      "Brett Lawrie tossing baseballs"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|135|Rainbow Foil|false|",
+     "cardNumber": "135",
+     "category": "base",
+     "parallel": "Rainbow Foil",
+     "players": [
+      "Matt Dominguez",
+      "Brett Lawrie tossing baseballs"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|135|Purple|false|",
+     "cardNumber": "135",
+     "category": "base",
+     "parallel": "Purple",
+     "players": [
+      "Matt Dominguez",
+      "Brett Lawrie tossing baseballs"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|135|Gold|false|2015",
+     "cardNumber": "135",
+     "category": "base",
+     "parallel": "Gold",
+     "players": [
+      "Matt Dominguez",
+      "Brett Lawrie tossing baseballs"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|135|Sparkle Foil|false|179",
+     "cardNumber": "135",
+     "category": "base",
+     "parallel": "Sparkle Foil",
+     "players": [
+      "Matt Dominguez",
+      "Brett Lawrie tossing baseballs"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|135|Snow Camo|false|99",
+     "cardNumber": "135",
+     "category": "base",
+     "parallel": "Snow Camo",
+     "players": [
+      "Matt Dominguez",
+      "Brett Lawrie tossing baseballs"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|135|Black|false|64",
+     "cardNumber": "135",
+     "category": "base",
+     "parallel": "Black",
+     "players": [
+      "Matt Dominguez",
+      "Brett Lawrie tossing baseballs"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|135|Pink|false|50",
+     "cardNumber": "135",
+     "category": "base",
+     "parallel": "Pink",
+     "players": [
+      "Matt Dominguez",
+      "Brett Lawrie tossing baseballs"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|135|Framed|false|20",
+     "cardNumber": "135",
+     "category": "base",
+     "parallel": "Framed",
+     "players": [
+      "Matt Dominguez",
+      "Brett Lawrie tossing baseballs"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|135|Clear|false|10",
+     "cardNumber": "135",
+     "category": "base",
+     "parallel": "Clear",
+     "players": [
+      "Matt Dominguez",
+      "Brett Lawrie tossing baseballs"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|135|Platinum|false|1",
+     "cardNumber": "135",
+     "category": "base",
+     "parallel": "Platinum",
+     "players": [
+      "Matt Dominguez",
+      "Brett Lawrie tossing baseballs"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|387|Base|false|",
+     "cardNumber": "387",
+     "category": "base",
+     "parallel": "Base",
+     "players": [
+      "Jacob deGrom ROY",
+      "Jacob deGrom"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|387|Rainbow Foil|false|",
+     "cardNumber": "387",
+     "category": "base",
+     "parallel": "Rainbow Foil",
+     "players": [
+      "Jacob deGrom ROY",
+      "Jacob deGrom"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|387|Purple|false|",
+     "cardNumber": "387",
+     "category": "base",
+     "parallel": "Purple",
+     "players": [
+      "Jacob deGrom ROY",
+      "Jacob deGrom"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|387|Gold|false|2015",
+     "cardNumber": "387",
+     "category": "base",
+     "parallel": "Gold",
+     "players": [
+      "Jacob deGrom ROY",
+      "Jacob deGrom"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|387|Sparkle Foil|false|179",
+     "cardNumber": "387",
+     "category": "base",
+     "parallel": "Sparkle Foil",
+     "players": [
+      "Jacob deGrom ROY",
+      "Jacob deGrom"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|387|Snow Camo|false|99",
+     "cardNumber": "387",
+     "category": "base",
+     "parallel": "Snow Camo",
+     "players": [
+      "Jacob deGrom ROY",
+      "Jacob deGrom"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|387|Black|false|64",
+     "cardNumber": "387",
+     "category": "base",
+     "parallel": "Black",
+     "players": [
+      "Jacob deGrom ROY",
+      "Jacob deGrom"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|387|Pink|false|50",
+     "cardNumber": "387",
+     "category": "base",
+     "parallel": "Pink",
+     "players": [
+      "Jacob deGrom ROY",
+      "Jacob deGrom"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|387|Framed|false|20",
+     "cardNumber": "387",
+     "category": "base",
+     "parallel": "Framed",
+     "players": [
+      "Jacob deGrom ROY",
+      "Jacob deGrom"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|387|Clear|false|10",
+     "cardNumber": "387",
+     "category": "base",
+     "parallel": "Clear",
+     "players": [
+      "Jacob deGrom ROY",
+      "Jacob deGrom"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|387|Platinum|false|1",
+     "cardNumber": "387",
+     "category": "base",
+     "parallel": "Platinum",
+     "players": [
+      "Jacob deGrom ROY",
+      "Jacob deGrom"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|389|Base|false|",
+     "cardNumber": "389",
+     "category": "base",
+     "parallel": "Base",
+     "players": [
+      "Mookie Betts FS",
+      "Mookie Betts"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|389|Rainbow Foil|false|",
+     "cardNumber": "389",
+     "category": "base",
+     "parallel": "Rainbow Foil",
+     "players": [
+      "Mookie Betts FS",
+      "Mookie Betts"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|389|Purple|false|",
+     "cardNumber": "389",
+     "category": "base",
+     "parallel": "Purple",
+     "players": [
+      "Mookie Betts FS",
+      "Mookie Betts"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|389|Gold|false|2015",
+     "cardNumber": "389",
+     "category": "base",
+     "parallel": "Gold",
+     "players": [
+      "Mookie Betts FS",
+      "Mookie Betts"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|389|Sparkle Foil|false|179",
+     "cardNumber": "389",
+     "category": "base",
+     "parallel": "Sparkle Foil",
+     "players": [
+      "Mookie Betts FS",
+      "Mookie Betts"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|389|Snow Camo|false|99",
+     "cardNumber": "389",
+     "category": "base",
+     "parallel": "Snow Camo",
+     "players": [
+      "Mookie Betts FS",
+      "Mookie Betts"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|389|Black|false|64",
+     "cardNumber": "389",
+     "category": "base",
+     "parallel": "Black",
+     "players": [
+      "Mookie Betts FS",
+      "Mookie Betts"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|389|Pink|false|50",
+     "cardNumber": "389",
+     "category": "base",
+     "parallel": "Pink",
+     "players": [
+      "Mookie Betts FS",
+      "Mookie Betts"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|389|Framed|false|20",
+     "cardNumber": "389",
+     "category": "base",
+     "parallel": "Framed",
+     "players": [
+      "Mookie Betts FS",
+      "Mookie Betts"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|389|Clear|false|10",
+     "cardNumber": "389",
+     "category": "base",
+     "parallel": "Clear",
+     "players": [
+      "Mookie Betts FS",
+      "Mookie Betts"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|389|Platinum|false|1",
+     "cardNumber": "389",
+     "category": "base",
+     "parallel": "Platinum",
+     "players": [
+      "Mookie Betts FS",
+      "Mookie Betts"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|487|Base|false|",
+     "cardNumber": "487",
+     "category": "base",
+     "parallel": "Base",
+     "players": [
+      "Corey Kluber AW",
+      "Corey Kluber"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|487|Rainbow Foil|false|",
+     "cardNumber": "487",
+     "category": "base",
+     "parallel": "Rainbow Foil",
+     "players": [
+      "Corey Kluber AW",
+      "Corey Kluber"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|487|Purple|false|",
+     "cardNumber": "487",
+     "category": "base",
+     "parallel": "Purple",
+     "players": [
+      "Corey Kluber AW",
+      "Corey Kluber"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|487|Gold|false|2015",
+     "cardNumber": "487",
+     "category": "base",
+     "parallel": "Gold",
+     "players": [
+      "Corey Kluber AW",
+      "Corey Kluber"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|487|Sparkle Foil|false|179",
+     "cardNumber": "487",
+     "category": "base",
+     "parallel": "Sparkle Foil",
+     "players": [
+      "Corey Kluber AW",
+      "Corey Kluber"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|487|Snow Camo|false|99",
+     "cardNumber": "487",
+     "category": "base",
+     "parallel": "Snow Camo",
+     "players": [
+      "Corey Kluber AW",
+      "Corey Kluber"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|487|Black|false|64",
+     "cardNumber": "487",
+     "category": "base",
+     "parallel": "Black",
+     "players": [
+      "Corey Kluber AW",
+      "Corey Kluber"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|487|Pink|false|50",
+     "cardNumber": "487",
+     "category": "base",
+     "parallel": "Pink",
+     "players": [
+      "Corey Kluber AW",
+      "Corey Kluber"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|487|Framed|false|20",
+     "cardNumber": "487",
+     "category": "base",
+     "parallel": "Framed",
+     "players": [
+      "Corey Kluber AW",
+      "Corey Kluber"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|487|Clear|false|10",
+     "cardNumber": "487",
+     "category": "base",
+     "parallel": "Clear",
+     "players": [
+      "Corey Kluber AW",
+      "Corey Kluber"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|487|Platinum|false|1",
+     "cardNumber": "487",
+     "category": "base",
+     "parallel": "Platinum",
+     "players": [
+      "Corey Kluber AW",
+      "Corey Kluber"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|503|Base|false|",
+     "cardNumber": "503",
+     "category": "base",
+     "parallel": "Base",
+     "players": [
+      "Joe Panik FS",
+      "Joe Panik"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|503|Rainbow Foil|false|",
+     "cardNumber": "503",
+     "category": "base",
+     "parallel": "Rainbow Foil",
+     "players": [
+      "Joe Panik FS",
+      "Joe Panik"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|503|Purple|false|",
+     "cardNumber": "503",
+     "category": "base",
+     "parallel": "Purple",
+     "players": [
+      "Joe Panik FS",
+      "Joe Panik"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|503|Gold|false|2015",
+     "cardNumber": "503",
+     "category": "base",
+     "parallel": "Gold",
+     "players": [
+      "Joe Panik FS",
+      "Joe Panik"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|503|Sparkle Foil|false|179",
+     "cardNumber": "503",
+     "category": "base",
+     "parallel": "Sparkle Foil",
+     "players": [
+      "Joe Panik FS",
+      "Joe Panik"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|503|Snow Camo|false|99",
+     "cardNumber": "503",
+     "category": "base",
+     "parallel": "Snow Camo",
+     "players": [
+      "Joe Panik FS",
+      "Joe Panik"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|503|Black|false|64",
+     "cardNumber": "503",
+     "category": "base",
+     "parallel": "Black",
+     "players": [
+      "Joe Panik FS",
+      "Joe Panik"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|503|Pink|false|50",
+     "cardNumber": "503",
+     "category": "base",
+     "parallel": "Pink",
+     "players": [
+      "Joe Panik FS",
+      "Joe Panik"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|503|Framed|false|20",
+     "cardNumber": "503",
+     "category": "base",
+     "parallel": "Framed",
+     "players": [
+      "Joe Panik FS",
+      "Joe Panik"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|503|Clear|false|10",
+     "cardNumber": "503",
+     "category": "base",
+     "parallel": "Clear",
+     "players": [
+      "Joe Panik FS",
+      "Joe Panik"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|503|Platinum|false|1",
+     "cardNumber": "503",
+     "category": "base",
+     "parallel": "Platinum",
+     "players": [
+      "Joe Panik FS",
+      "Joe Panik"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|588|Base|false|",
+     "cardNumber": "588",
+     "category": "base",
+     "parallel": "Base",
+     "players": [
+      "Kolten Wong FS",
+      "Kolten Wong"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|588|Rainbow Foil|false|",
+     "cardNumber": "588",
+     "category": "base",
+     "parallel": "Rainbow Foil",
+     "players": [
+      "Kolten Wong FS",
+      "Kolten Wong"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|588|Purple|false|",
+     "cardNumber": "588",
+     "category": "base",
+     "parallel": "Purple",
+     "players": [
+      "Kolten Wong FS",
+      "Kolten Wong"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|588|Gold|false|2015",
+     "cardNumber": "588",
+     "category": "base",
+     "parallel": "Gold",
+     "players": [
+      "Kolten Wong FS",
+      "Kolten Wong"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|588|Sparkle Foil|false|179",
+     "cardNumber": "588",
+     "category": "base",
+     "parallel": "Sparkle Foil",
+     "players": [
+      "Kolten Wong FS",
+      "Kolten Wong"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|588|Snow Camo|false|99",
+     "cardNumber": "588",
+     "category": "base",
+     "parallel": "Snow Camo",
+     "players": [
+      "Kolten Wong FS",
+      "Kolten Wong"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|588|Black|false|64",
+     "cardNumber": "588",
+     "category": "base",
+     "parallel": "Black",
+     "players": [
+      "Kolten Wong FS",
+      "Kolten Wong"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|588|Pink|false|50",
+     "cardNumber": "588",
+     "category": "base",
+     "parallel": "Pink",
+     "players": [
+      "Kolten Wong FS",
+      "Kolten Wong"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|588|Framed|false|20",
+     "cardNumber": "588",
+     "category": "base",
+     "parallel": "Framed",
+     "players": [
+      "Kolten Wong FS",
+      "Kolten Wong"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|588|Clear|false|10",
+     "cardNumber": "588",
+     "category": "base",
+     "parallel": "Clear",
+     "players": [
+      "Kolten Wong FS",
+      "Kolten Wong"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|588|Platinum|false|1",
+     "cardNumber": "588",
+     "category": "base",
+     "parallel": "Platinum",
+     "players": [
+      "Kolten Wong FS",
+      "Kolten Wong"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|603|Base|false|",
+     "cardNumber": "603",
+     "category": "base",
+     "parallel": "Base",
+     "players": [
+      "Jose Fernandez FS",
+      "Jose Fernandez"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|603|Rainbow Foil|false|",
+     "cardNumber": "603",
+     "category": "base",
+     "parallel": "Rainbow Foil",
+     "players": [
+      "Jose Fernandez FS",
+      "Jose Fernandez"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|603|Purple|false|",
+     "cardNumber": "603",
+     "category": "base",
+     "parallel": "Purple",
+     "players": [
+      "Jose Fernandez FS",
+      "Jose Fernandez"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|603|Gold|false|2015",
+     "cardNumber": "603",
+     "category": "base",
+     "parallel": "Gold",
+     "players": [
+      "Jose Fernandez FS",
+      "Jose Fernandez"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|603|Sparkle Foil|false|179",
+     "cardNumber": "603",
+     "category": "base",
+     "parallel": "Sparkle Foil",
+     "players": [
+      "Jose Fernandez FS",
+      "Jose Fernandez"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|603|Snow Camo|false|99",
+     "cardNumber": "603",
+     "category": "base",
+     "parallel": "Snow Camo",
+     "players": [
+      "Jose Fernandez FS",
+      "Jose Fernandez"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|603|Black|false|64",
+     "cardNumber": "603",
+     "category": "base",
+     "parallel": "Black",
+     "players": [
+      "Jose Fernandez FS",
+      "Jose Fernandez"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|603|Pink|false|50",
+     "cardNumber": "603",
+     "category": "base",
+     "parallel": "Pink",
+     "players": [
+      "Jose Fernandez FS",
+      "Jose Fernandez"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|603|Framed|false|20",
+     "cardNumber": "603",
+     "category": "base",
+     "parallel": "Framed",
+     "players": [
+      "Jose Fernandez FS",
+      "Jose Fernandez"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|603|Clear|false|10",
+     "cardNumber": "603",
+     "category": "base",
+     "parallel": "Clear",
+     "players": [
+      "Jose Fernandez FS",
+      "Jose Fernandez"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|603|Platinum|false|1",
+     "cardNumber": "603",
+     "category": "base",
+     "parallel": "Platinum",
+     "players": [
+      "Jose Fernandez FS",
+      "Jose Fernandez"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|645|Base|false|",
+     "cardNumber": "645",
+     "category": "base",
+     "parallel": "Base",
+     "players": [
+      "Neftali Feliz",
+      "Neftali Perez"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|645|Rainbow Foil|false|",
+     "cardNumber": "645",
+     "category": "base",
+     "parallel": "Rainbow Foil",
+     "players": [
+      "Neftali Feliz",
+      "Neftali Perez"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|645|Purple|false|",
+     "cardNumber": "645",
+     "category": "base",
+     "parallel": "Purple",
+     "players": [
+      "Neftali Feliz",
+      "Neftali Perez"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|645|Gold|false|2015",
+     "cardNumber": "645",
+     "category": "base",
+     "parallel": "Gold",
+     "players": [
+      "Neftali Feliz",
+      "Neftali Perez"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|645|Sparkle Foil|false|179",
+     "cardNumber": "645",
+     "category": "base",
+     "parallel": "Sparkle Foil",
+     "players": [
+      "Neftali Feliz",
+      "Neftali Perez"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|645|Snow Camo|false|99",
+     "cardNumber": "645",
+     "category": "base",
+     "parallel": "Snow Camo",
+     "players": [
+      "Neftali Feliz",
+      "Neftali Perez"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|645|Black|false|64",
+     "cardNumber": "645",
+     "category": "base",
+     "parallel": "Black",
+     "players": [
+      "Neftali Feliz",
+      "Neftali Perez"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|645|Pink|false|50",
+     "cardNumber": "645",
+     "category": "base",
+     "parallel": "Pink",
+     "players": [
+      "Neftali Feliz",
+      "Neftali Perez"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|645|Framed|false|20",
+     "cardNumber": "645",
+     "category": "base",
+     "parallel": "Framed",
+     "players": [
+      "Neftali Feliz",
+      "Neftali Perez"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|645|Clear|false|10",
+     "cardNumber": "645",
+     "category": "base",
+     "parallel": "Clear",
+     "players": [
+      "Neftali Feliz",
+      "Neftali Perez"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "base|645|Platinum|false|1",
+     "cardNumber": "645",
+     "category": "base",
+     "parallel": "Platinum",
+     "players": [
+      "Neftali Feliz",
+      "Neftali Perez"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-10||false|",
+     "cardNumber": "FHR-10",
+     "category": "insert-first-home-run",
+     "parallel": "",
+     "players": [
+      "Chipper Jones",
+      "Miguel Cabrera"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-10|Black|false|",
+     "cardNumber": "FHR-10",
+     "category": "insert-first-home-run",
+     "parallel": "Black",
+     "players": [
+      "Chipper Jones",
+      "Miguel Cabrera"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-10|Gold|false|",
+     "cardNumber": "FHR-10",
+     "category": "insert-first-home-run",
+     "parallel": "Gold",
+     "players": [
+      "Chipper Jones",
+      "Miguel Cabrera"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-10|Silver|false|",
+     "cardNumber": "FHR-10",
+     "category": "insert-first-home-run",
+     "parallel": "Silver",
+     "players": [
+      "Chipper Jones",
+      "Miguel Cabrera"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-10|White|false|",
+     "cardNumber": "FHR-10",
+     "category": "insert-first-home-run",
+     "parallel": "White",
+     "players": [
+      "Chipper Jones",
+      "Miguel Cabrera"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-11||false|",
+     "cardNumber": "FHR-11",
+     "category": "insert-first-home-run",
+     "parallel": "",
+     "players": [
+      "Anthony Rizzo",
+      "Giancarlo Stanton"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-11|Black|false|",
+     "cardNumber": "FHR-11",
+     "category": "insert-first-home-run",
+     "parallel": "Black",
+     "players": [
+      "Anthony Rizzo",
+      "Giancarlo Stanton"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-11|Gold|false|",
+     "cardNumber": "FHR-11",
+     "category": "insert-first-home-run",
+     "parallel": "Gold",
+     "players": [
+      "Anthony Rizzo",
+      "Giancarlo Stanton"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-11|Silver|false|",
+     "cardNumber": "FHR-11",
+     "category": "insert-first-home-run",
+     "parallel": "Silver",
+     "players": [
+      "Anthony Rizzo",
+      "Giancarlo Stanton"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-11|White|false|",
+     "cardNumber": "FHR-11",
+     "category": "insert-first-home-run",
+     "parallel": "White",
+     "players": [
+      "Anthony Rizzo",
+      "Giancarlo Stanton"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-12||false|",
+     "cardNumber": "FHR-12",
+     "category": "insert-first-home-run",
+     "parallel": "",
+     "players": [
+      "Jason Heyward",
+      "Hunter Pence"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-12|Black|false|",
+     "cardNumber": "FHR-12",
+     "category": "insert-first-home-run",
+     "parallel": "Black",
+     "players": [
+      "Jason Heyward",
+      "Hunter Pence"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-12|Gold|false|",
+     "cardNumber": "FHR-12",
+     "category": "insert-first-home-run",
+     "parallel": "Gold",
+     "players": [
+      "Jason Heyward",
+      "Hunter Pence"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-12|Silver|false|",
+     "cardNumber": "FHR-12",
+     "category": "insert-first-home-run",
+     "parallel": "Silver",
+     "players": [
+      "Jason Heyward",
+      "Hunter Pence"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-12|White|false|",
+     "cardNumber": "FHR-12",
+     "category": "insert-first-home-run",
+     "parallel": "White",
+     "players": [
+      "Jason Heyward",
+      "Hunter Pence"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-13||false|",
+     "cardNumber": "FHR-13",
+     "category": "insert-first-home-run",
+     "parallel": "",
+     "players": [
+      "Javier Baez",
+      "Reggie Jackson"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-13|Black|false|",
+     "cardNumber": "FHR-13",
+     "category": "insert-first-home-run",
+     "parallel": "Black",
+     "players": [
+      "Javier Baez",
+      "Reggie Jackson"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-13|Gold|false|",
+     "cardNumber": "FHR-13",
+     "category": "insert-first-home-run",
+     "parallel": "Gold",
+     "players": [
+      "Javier Baez",
+      "Reggie Jackson"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-13|Silver|false|",
+     "cardNumber": "FHR-13",
+     "category": "insert-first-home-run",
+     "parallel": "Silver",
+     "players": [
+      "Javier Baez",
+      "Reggie Jackson"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-13|White|false|",
+     "cardNumber": "FHR-13",
+     "category": "insert-first-home-run",
+     "parallel": "White",
+     "players": [
+      "Javier Baez",
+      "Reggie Jackson"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-14||false|",
+     "cardNumber": "FHR-14",
+     "category": "insert-first-home-run",
+     "parallel": "",
+     "players": [
+      "Yasiel Puig",
+      "Carlos Beltran"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-14|Black|false|",
+     "cardNumber": "FHR-14",
+     "category": "insert-first-home-run",
+     "parallel": "Black",
+     "players": [
+      "Yasiel Puig",
+      "Carlos Beltran"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-14|Gold|false|",
+     "cardNumber": "FHR-14",
+     "category": "insert-first-home-run",
+     "parallel": "Gold",
+     "players": [
+      "Yasiel Puig",
+      "Carlos Beltran"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-14|Silver|false|",
+     "cardNumber": "FHR-14",
+     "category": "insert-first-home-run",
+     "parallel": "Silver",
+     "players": [
+      "Yasiel Puig",
+      "Carlos Beltran"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-14|White|false|",
+     "cardNumber": "FHR-14",
+     "category": "insert-first-home-run",
+     "parallel": "White",
+     "players": [
+      "Yasiel Puig",
+      "Carlos Beltran"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-15||false|",
+     "cardNumber": "FHR-15",
+     "category": "insert-first-home-run",
+     "parallel": "",
+     "players": [
+      "Alex Rodriguez",
+      "Bo Jackson"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-15|Black|false|",
+     "cardNumber": "FHR-15",
+     "category": "insert-first-home-run",
+     "parallel": "Black",
+     "players": [
+      "Alex Rodriguez",
+      "Bo Jackson"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-15|Gold|false|",
+     "cardNumber": "FHR-15",
+     "category": "insert-first-home-run",
+     "parallel": "Gold",
+     "players": [
+      "Alex Rodriguez",
+      "Bo Jackson"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-15|Silver|false|",
+     "cardNumber": "FHR-15",
+     "category": "insert-first-home-run",
+     "parallel": "Silver",
+     "players": [
+      "Alex Rodriguez",
+      "Bo Jackson"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-15|White|false|",
+     "cardNumber": "FHR-15",
+     "category": "insert-first-home-run",
+     "parallel": "White",
+     "players": [
+      "Alex Rodriguez",
+      "Bo Jackson"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-16||false|",
+     "cardNumber": "FHR-16",
+     "category": "insert-first-home-run",
+     "parallel": "",
+     "players": [
+      "Matt Adams",
+      "David Ortiz"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-16|Black|false|",
+     "cardNumber": "FHR-16",
+     "category": "insert-first-home-run",
+     "parallel": "Black",
+     "players": [
+      "Matt Adams",
+      "David Ortiz"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-16|Gold|false|",
+     "cardNumber": "FHR-16",
+     "category": "insert-first-home-run",
+     "parallel": "Gold",
+     "players": [
+      "Matt Adams",
+      "David Ortiz"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-16|Silver|false|",
+     "cardNumber": "FHR-16",
+     "category": "insert-first-home-run",
+     "parallel": "Silver",
+     "players": [
+      "Matt Adams",
+      "David Ortiz"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-16|White|false|",
+     "cardNumber": "FHR-16",
+     "category": "insert-first-home-run",
+     "parallel": "White",
+     "players": [
+      "Matt Adams",
+      "David Ortiz"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-17||false|",
+     "cardNumber": "FHR-17",
+     "category": "insert-first-home-run",
+     "parallel": "",
+     "players": [
+      "Adam Dunn",
+      "Mark McGwire"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-17|Black|false|",
+     "cardNumber": "FHR-17",
+     "category": "insert-first-home-run",
+     "parallel": "Black",
+     "players": [
+      "Adam Dunn",
+      "Mark McGwire"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-17|Gold|false|",
+     "cardNumber": "FHR-17",
+     "category": "insert-first-home-run",
+     "parallel": "Gold",
+     "players": [
+      "Adam Dunn",
+      "Mark McGwire"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-17|Silver|false|",
+     "cardNumber": "FHR-17",
+     "category": "insert-first-home-run",
+     "parallel": "Silver",
+     "players": [
+      "Adam Dunn",
+      "Mark McGwire"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-17|White|false|",
+     "cardNumber": "FHR-17",
+     "category": "insert-first-home-run",
+     "parallel": "White",
+     "players": [
+      "Adam Dunn",
+      "Mark McGwire"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-18||false|",
+     "cardNumber": "FHR-18",
+     "category": "insert-first-home-run",
+     "parallel": "",
+     "players": [
+      "Buster Posey",
+      "Tony Gwynn"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-18|Black|false|",
+     "cardNumber": "FHR-18",
+     "category": "insert-first-home-run",
+     "parallel": "Black",
+     "players": [
+      "Buster Posey",
+      "Tony Gwynn"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-18|Gold|false|",
+     "cardNumber": "FHR-18",
+     "category": "insert-first-home-run",
+     "parallel": "Gold",
+     "players": [
+      "Buster Posey",
+      "Tony Gwynn"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-18|Silver|false|",
+     "cardNumber": "FHR-18",
+     "category": "insert-first-home-run",
+     "parallel": "Silver",
+     "players": [
+      "Buster Posey",
+      "Tony Gwynn"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-18|White|false|",
+     "cardNumber": "FHR-18",
+     "category": "insert-first-home-run",
+     "parallel": "White",
+     "players": [
+      "Buster Posey",
+      "Tony Gwynn"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-19||false|",
+     "cardNumber": "FHR-19",
+     "category": "insert-first-home-run",
+     "parallel": "",
+     "players": [
+      "Paul Konerko",
+      "Jayson Werth"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-19|Black|false|",
+     "cardNumber": "FHR-19",
+     "category": "insert-first-home-run",
+     "parallel": "Black",
+     "players": [
+      "Paul Konerko",
+      "Jayson Werth"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-19|Gold|false|",
+     "cardNumber": "FHR-19",
+     "category": "insert-first-home-run",
+     "parallel": "Gold",
+     "players": [
+      "Paul Konerko",
+      "Jayson Werth"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-19|Silver|false|",
+     "cardNumber": "FHR-19",
+     "category": "insert-first-home-run",
+     "parallel": "Silver",
+     "players": [
+      "Paul Konerko",
+      "Jayson Werth"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-19|White|false|",
+     "cardNumber": "FHR-19",
+     "category": "insert-first-home-run",
+     "parallel": "White",
+     "players": [
+      "Paul Konerko",
+      "Jayson Werth"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-20||false|",
+     "cardNumber": "FHR-20",
+     "category": "insert-first-home-run",
+     "parallel": "",
+     "players": [
+      "Adrian Gonzalez",
+      "Harmon Killebrew"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-20|Black|false|",
+     "cardNumber": "FHR-20",
+     "category": "insert-first-home-run",
+     "parallel": "Black",
+     "players": [
+      "Adrian Gonzalez",
+      "Harmon Killebrew"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-20|Gold|false|",
+     "cardNumber": "FHR-20",
+     "category": "insert-first-home-run",
+     "parallel": "Gold",
+     "players": [
+      "Adrian Gonzalez",
+      "Harmon Killebrew"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-20|Silver|false|",
+     "cardNumber": "FHR-20",
+     "category": "insert-first-home-run",
+     "parallel": "Silver",
+     "players": [
+      "Adrian Gonzalez",
+      "Harmon Killebrew"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-20|White|false|",
+     "cardNumber": "FHR-20",
+     "category": "insert-first-home-run",
+     "parallel": "White",
+     "players": [
+      "Adrian Gonzalez",
+      "Harmon Killebrew"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-21||false|",
+     "cardNumber": "FHR-21",
+     "category": "insert-first-home-run",
+     "parallel": "",
+     "players": [
+      "Jose Bautista",
+      "Clayton Kershaw"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-21|Black|false|",
+     "cardNumber": "FHR-21",
+     "category": "insert-first-home-run",
+     "parallel": "Black",
+     "players": [
+      "Jose Bautista",
+      "Clayton Kershaw"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-21|Gold|false|",
+     "cardNumber": "FHR-21",
+     "category": "insert-first-home-run",
+     "parallel": "Gold",
+     "players": [
+      "Jose Bautista",
+      "Clayton Kershaw"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-21|Silver|false|",
+     "cardNumber": "FHR-21",
+     "category": "insert-first-home-run",
+     "parallel": "Silver",
+     "players": [
+      "Jose Bautista",
+      "Clayton Kershaw"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-21|White|false|",
+     "cardNumber": "FHR-21",
+     "category": "insert-first-home-run",
+     "parallel": "White",
+     "players": [
+      "Jose Bautista",
+      "Clayton Kershaw"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-22||false|",
+     "cardNumber": "FHR-22",
+     "category": "insert-first-home-run",
+     "parallel": "",
+     "players": [
+      "Josh Hamilton",
+      "Rusney Castillo"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-22|Black|false|",
+     "cardNumber": "FHR-22",
+     "category": "insert-first-home-run",
+     "parallel": "Black",
+     "players": [
+      "Josh Hamilton",
+      "Rusney Castillo"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-22|Gold|false|",
+     "cardNumber": "FHR-22",
+     "category": "insert-first-home-run",
+     "parallel": "Gold",
+     "players": [
+      "Josh Hamilton",
+      "Rusney Castillo"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-22|Silver|false|",
+     "cardNumber": "FHR-22",
+     "category": "insert-first-home-run",
+     "parallel": "Silver",
+     "players": [
+      "Josh Hamilton",
+      "Rusney Castillo"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-22|White|false|",
+     "cardNumber": "FHR-22",
+     "category": "insert-first-home-run",
+     "parallel": "White",
+     "players": [
+      "Josh Hamilton",
+      "Rusney Castillo"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-23||false|",
+     "cardNumber": "FHR-23",
+     "category": "insert-first-home-run",
+     "parallel": "",
+     "players": [
+      "Chase Utley",
+      "Dwight Gooden"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-23|Black|false|",
+     "cardNumber": "FHR-23",
+     "category": "insert-first-home-run",
+     "parallel": "Black",
+     "players": [
+      "Chase Utley",
+      "Dwight Gooden"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-23|Gold|false|",
+     "cardNumber": "FHR-23",
+     "category": "insert-first-home-run",
+     "parallel": "Gold",
+     "players": [
+      "Chase Utley",
+      "Dwight Gooden"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-23|Silver|false|",
+     "cardNumber": "FHR-23",
+     "category": "insert-first-home-run",
+     "parallel": "Silver",
+     "players": [
+      "Chase Utley",
+      "Dwight Gooden"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-23|White|false|",
+     "cardNumber": "FHR-23",
+     "category": "insert-first-home-run",
+     "parallel": "White",
+     "players": [
+      "Chase Utley",
+      "Dwight Gooden"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-24||false|",
+     "cardNumber": "FHR-24",
+     "category": "insert-first-home-run",
+     "parallel": "",
+     "players": [
+      "Ryan Howard",
+      "Greg Maddux"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-24|Black|false|",
+     "cardNumber": "FHR-24",
+     "category": "insert-first-home-run",
+     "parallel": "Black",
+     "players": [
+      "Ryan Howard",
+      "Greg Maddux"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-24|Gold|false|",
+     "cardNumber": "FHR-24",
+     "category": "insert-first-home-run",
+     "parallel": "Gold",
+     "players": [
+      "Ryan Howard",
+      "Greg Maddux"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-24|Silver|false|",
+     "cardNumber": "FHR-24",
+     "category": "insert-first-home-run",
+     "parallel": "Silver",
+     "players": [
+      "Ryan Howard",
+      "Greg Maddux"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-24|White|false|",
+     "cardNumber": "FHR-24",
+     "category": "insert-first-home-run",
+     "parallel": "White",
+     "players": [
+      "Ryan Howard",
+      "Greg Maddux"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-25||false|",
+     "cardNumber": "FHR-25",
+     "category": "insert-first-home-run",
+     "parallel": "",
+     "players": [
+      "Joey Votto",
+      "Pedro Alvarez"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-25|Black|false|",
+     "cardNumber": "FHR-25",
+     "category": "insert-first-home-run",
+     "parallel": "Black",
+     "players": [
+      "Joey Votto",
+      "Pedro Alvarez"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-25|Gold|false|",
+     "cardNumber": "FHR-25",
+     "category": "insert-first-home-run",
+     "parallel": "Gold",
+     "players": [
+      "Joey Votto",
+      "Pedro Alvarez"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-25|Silver|false|",
+     "cardNumber": "FHR-25",
+     "category": "insert-first-home-run",
+     "parallel": "Silver",
+     "players": [
+      "Joey Votto",
+      "Pedro Alvarez"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-25|White|false|",
+     "cardNumber": "FHR-25",
+     "category": "insert-first-home-run",
+     "parallel": "White",
+     "players": [
+      "Joey Votto",
+      "Pedro Alvarez"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-26||false|",
+     "cardNumber": "FHR-26",
+     "category": "insert-first-home-run",
+     "parallel": "",
+     "players": [
+      "Adam Jones",
+      "Ryan Braun"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-26|Black|false|",
+     "cardNumber": "FHR-26",
+     "category": "insert-first-home-run",
+     "parallel": "Black",
+     "players": [
+      "Adam Jones",
+      "Ryan Braun"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-26|Gold|false|",
+     "cardNumber": "FHR-26",
+     "category": "insert-first-home-run",
+     "parallel": "Gold",
+     "players": [
+      "Adam Jones",
+      "Ryan Braun"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-26|Silver|false|",
+     "cardNumber": "FHR-26",
+     "category": "insert-first-home-run",
+     "parallel": "Silver",
+     "players": [
+      "Adam Jones",
+      "Ryan Braun"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-26|White|false|",
+     "cardNumber": "FHR-26",
+     "category": "insert-first-home-run",
+     "parallel": "White",
+     "players": [
+      "Adam Jones",
+      "Ryan Braun"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-27||false|",
+     "cardNumber": "FHR-27",
+     "category": "insert-first-home-run",
+     "parallel": "",
+     "players": [
+      "Chris Davis",
+      "Albert Pujols"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-27|Black|false|",
+     "cardNumber": "FHR-27",
+     "category": "insert-first-home-run",
+     "parallel": "Black",
+     "players": [
+      "Chris Davis",
+      "Albert Pujols"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-27|Gold|false|",
+     "cardNumber": "FHR-27",
+     "category": "insert-first-home-run",
+     "parallel": "Gold",
+     "players": [
+      "Chris Davis",
+      "Albert Pujols"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-27|Silver|false|",
+     "cardNumber": "FHR-27",
+     "category": "insert-first-home-run",
+     "parallel": "Silver",
+     "players": [
+      "Chris Davis",
+      "Albert Pujols"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-27|White|false|",
+     "cardNumber": "FHR-27",
+     "category": "insert-first-home-run",
+     "parallel": "White",
+     "players": [
+      "Chris Davis",
+      "Albert Pujols"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-28||false|",
+     "cardNumber": "FHR-28",
+     "category": "insert-first-home-run",
+     "parallel": "",
+     "players": [
+      "Don Mattingly",
+      "Matt Kemp"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-28|Black|false|",
+     "cardNumber": "FHR-28",
+     "category": "insert-first-home-run",
+     "parallel": "Black",
+     "players": [
+      "Don Mattingly",
+      "Matt Kemp"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-28|Gold|false|",
+     "cardNumber": "FHR-28",
+     "category": "insert-first-home-run",
+     "parallel": "Gold",
+     "players": [
+      "Don Mattingly",
+      "Matt Kemp"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-28|Silver|false|",
+     "cardNumber": "FHR-28",
+     "category": "insert-first-home-run",
+     "parallel": "Silver",
+     "players": [
+      "Don Mattingly",
+      "Matt Kemp"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-28|White|false|",
+     "cardNumber": "FHR-28",
+     "category": "insert-first-home-run",
+     "parallel": "White",
+     "players": [
+      "Don Mattingly",
+      "Matt Kemp"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-29||false|",
+     "cardNumber": "FHR-29",
+     "category": "insert-first-home-run",
+     "parallel": "",
+     "players": [
+      "Joe Mauer",
+      "Prince Fielder"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-29|Black|false|",
+     "cardNumber": "FHR-29",
+     "category": "insert-first-home-run",
+     "parallel": "Black",
+     "players": [
+      "Joe Mauer",
+      "Prince Fielder"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-29|Gold|false|",
+     "cardNumber": "FHR-29",
+     "category": "insert-first-home-run",
+     "parallel": "Gold",
+     "players": [
+      "Joe Mauer",
+      "Prince Fielder"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-29|Silver|false|",
+     "cardNumber": "FHR-29",
+     "category": "insert-first-home-run",
+     "parallel": "Silver",
+     "players": [
+      "Joe Mauer",
+      "Prince Fielder"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-29|White|false|",
+     "cardNumber": "FHR-29",
+     "category": "insert-first-home-run",
+     "parallel": "White",
+     "players": [
+      "Joe Mauer",
+      "Prince Fielder"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-30||false|",
+     "cardNumber": "FHR-30",
+     "category": "insert-first-home-run",
+     "parallel": "",
+     "players": [
+      "Jose Abreu",
+      "Nelson Cruz"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-30|Black|false|",
+     "cardNumber": "FHR-30",
+     "category": "insert-first-home-run",
+     "parallel": "Black",
+     "players": [
+      "Jose Abreu",
+      "Nelson Cruz"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-30|Gold|false|",
+     "cardNumber": "FHR-30",
+     "category": "insert-first-home-run",
+     "parallel": "Gold",
+     "players": [
+      "Jose Abreu",
+      "Nelson Cruz"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-30|Silver|false|",
+     "cardNumber": "FHR-30",
+     "category": "insert-first-home-run",
+     "parallel": "Silver",
+     "players": [
+      "Jose Abreu",
+      "Nelson Cruz"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-30|White|false|",
+     "cardNumber": "FHR-30",
+     "category": "insert-first-home-run",
+     "parallel": "White",
+     "players": [
+      "Jose Abreu",
+      "Nelson Cruz"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-31||false|",
+     "cardNumber": "FHR-31",
+     "category": "insert-first-home-run",
+     "parallel": "",
+     "players": [
+      "Yoenis Cespedes",
+      "Cliff Floyd"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-31|Black|false|",
+     "cardNumber": "FHR-31",
+     "category": "insert-first-home-run",
+     "parallel": "Black",
+     "players": [
+      "Yoenis Cespedes",
+      "Cliff Floyd"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-31|Gold|false|",
+     "cardNumber": "FHR-31",
+     "category": "insert-first-home-run",
+     "parallel": "Gold",
+     "players": [
+      "Yoenis Cespedes",
+      "Cliff Floyd"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-31|Silver|false|",
+     "cardNumber": "FHR-31",
+     "category": "insert-first-home-run",
+     "parallel": "Silver",
+     "players": [
+      "Yoenis Cespedes",
+      "Cliff Floyd"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-31|White|false|",
+     "cardNumber": "FHR-31",
+     "category": "insert-first-home-run",
+     "parallel": "White",
+     "players": [
+      "Yoenis Cespedes",
+      "Cliff Floyd"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-32||false|",
+     "cardNumber": "FHR-32",
+     "category": "insert-first-home-run",
+     "parallel": "",
+     "players": [
+      "Paul Goldschmidt",
+      "Pablo Sandoval"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-32|Black|false|",
+     "cardNumber": "FHR-32",
+     "category": "insert-first-home-run",
+     "parallel": "Black",
+     "players": [
+      "Paul Goldschmidt",
+      "Pablo Sandoval"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-32|Gold|false|",
+     "cardNumber": "FHR-32",
+     "category": "insert-first-home-run",
+     "parallel": "Gold",
+     "players": [
+      "Paul Goldschmidt",
+      "Pablo Sandoval"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-32|Silver|false|",
+     "cardNumber": "FHR-32",
+     "category": "insert-first-home-run",
+     "parallel": "Silver",
+     "players": [
+      "Paul Goldschmidt",
+      "Pablo Sandoval"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-32|White|false|",
+     "cardNumber": "FHR-32",
+     "category": "insert-first-home-run",
+     "parallel": "White",
+     "players": [
+      "Paul Goldschmidt",
+      "Pablo Sandoval"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-33||false|",
+     "cardNumber": "FHR-33",
+     "category": "insert-first-home-run",
+     "parallel": "",
+     "players": [
+      "Freddie Freeman",
+      "Yadier Molina"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-33|Black|false|",
+     "cardNumber": "FHR-33",
+     "category": "insert-first-home-run",
+     "parallel": "Black",
+     "players": [
+      "Freddie Freeman",
+      "Yadier Molina"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-33|Gold|false|",
+     "cardNumber": "FHR-33",
+     "category": "insert-first-home-run",
+     "parallel": "Gold",
+     "players": [
+      "Freddie Freeman",
+      "Yadier Molina"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-33|Silver|false|",
+     "cardNumber": "FHR-33",
+     "category": "insert-first-home-run",
+     "parallel": "Silver",
+     "players": [
+      "Freddie Freeman",
+      "Yadier Molina"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-33|White|false|",
+     "cardNumber": "FHR-33",
+     "category": "insert-first-home-run",
+     "parallel": "White",
+     "players": [
+      "Freddie Freeman",
+      "Yadier Molina"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-34||false|",
+     "cardNumber": "FHR-34",
+     "category": "insert-first-home-run",
+     "parallel": "",
+     "players": [
+      "Mike Trout",
+      "Alex Gordon"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-34|Black|false|",
+     "cardNumber": "FHR-34",
+     "category": "insert-first-home-run",
+     "parallel": "Black",
+     "players": [
+      "Mike Trout",
+      "Alex Gordon"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-34|Gold|false|",
+     "cardNumber": "FHR-34",
+     "category": "insert-first-home-run",
+     "parallel": "Gold",
+     "players": [
+      "Mike Trout",
+      "Alex Gordon"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-34|Silver|false|",
+     "cardNumber": "FHR-34",
+     "category": "insert-first-home-run",
+     "parallel": "Silver",
+     "players": [
+      "Mike Trout",
+      "Alex Gordon"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-34|White|false|",
+     "cardNumber": "FHR-34",
+     "category": "insert-first-home-run",
+     "parallel": "White",
+     "players": [
+      "Mike Trout",
+      "Alex Gordon"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-35||false|",
+     "cardNumber": "FHR-35",
+     "category": "insert-first-home-run",
+     "parallel": "",
+     "players": [
+      "Evan Longoria",
+      "Lucas Duda"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-35|Black|false|",
+     "cardNumber": "FHR-35",
+     "category": "insert-first-home-run",
+     "parallel": "Black",
+     "players": [
+      "Evan Longoria",
+      "Lucas Duda"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-35|Gold|false|",
+     "cardNumber": "FHR-35",
+     "category": "insert-first-home-run",
+     "parallel": "Gold",
+     "players": [
+      "Evan Longoria",
+      "Lucas Duda"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-35|Silver|false|",
+     "cardNumber": "FHR-35",
+     "category": "insert-first-home-run",
+     "parallel": "Silver",
+     "players": [
+      "Evan Longoria",
+      "Lucas Duda"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "insert-first-home-run|FHR-35|White|false|",
+     "cardNumber": "FHR-35",
+     "category": "insert-first-home-run",
+     "parallel": "White",
+     "players": [
+      "Evan Longoria",
+      "Lucas Duda"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "auto-strata-signature-relics|SSR-CS||true|",
+     "cardNumber": "SSR-CS",
+     "category": "auto-strata-signature-relics",
+     "parallel": "",
+     "players": [
+      "CC Sabathia",
+      "Chris Sale"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    },
+    {
+     "address": "auto-strata-signature-relics|SSR-JB||true|",
+     "cardNumber": "SSR-JB",
+     "category": "auto-strata-signature-relics",
+     "parallel": "",
+     "players": [
+      "Jay Bruce",
+      "Javier Baez"
+     ],
+     "reason": "the source prints this card number more than once in this section and prints no label that distinguishes the printings; absent beats wrong"
+    }
+   ]
+  },
+  "notes": [
+   "Dropped 11 rows that repeat a card already on the checklist under a MISSPELLING of the same player (\"Torii Hunger\" for \"Torii Hunter\", \"Neftali Perez\" for \"Neftali Feliz\", \"Russel Martin\" for \"Russell Martin\") with no descriptor to make them a distinct card. Verified on the source: these sit in its hand-typed Gimmicks/Twinks lists. The checklist's own spelling stands."
+  ]
+ }
 }
