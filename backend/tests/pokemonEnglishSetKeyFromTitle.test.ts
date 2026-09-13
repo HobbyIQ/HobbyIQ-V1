@@ -114,10 +114,15 @@ describe("CF-THE-POKEMON-VOCABULARY — the boundaries the fix must not cross", 
   it("a SPORTS title still reaches its own product rules", () => {
     // The Pokemon branch runs inside the non-sports guard, so nothing above
     // it may change. These are the neighbours most at risk.
-    // Verified against unmodified main: this title returns `topps-chrome`
-    // there too. The point of the pin is that the Pokemon branch changes
-    // NOTHING above it, not that this particular answer is the ideal one.
-    expect(key("2024 Topps Chrome Update Paul Skenes #USC1")).toBe("topps-chrome");
+    // Updated 2026-09-13 for #2091 (fix/deriver-no-parent-collapse): before
+    // that PR, unmodified main returned `topps-chrome` here because
+    // inferFamilySetKeyFromTitle's bare /topps\s+chrome/ catch-all discarded
+    // "Update Series" before normalizeSetKey ever saw it. #2091 added a
+    // qualifier check ahead of that catch-all so the title's own stated
+    // product survives. The point of THIS pin is still that the Pokemon
+    // branch changes NOTHING above it -- it must track whatever the sports
+    // path legitimately returns, not freeze a pre-#2091 answer.
+    expect(key("2024 Topps Chrome Update Paul Skenes #USC1")).toBe("topps-chrome-update-series");
     expect(key("2026 Bowman Chrome Prospect Auto CPA-BR")).toBe("bowman-chrome");
   });
 
