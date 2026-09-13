@@ -470,16 +470,37 @@ auto-hoops-ink,2,,true,,LaMelo Ball
       .toEqual(["great-significance", "hoops-ink"]);
   });
 
-  it("and each file then REFUSES, naming its own key to register", () => {
+  it("and an UNREGISTERED key then REFUSES, naming itself to register", () => {
+    // THE EXAMPLE MOVED, DELIBERATELY (R30 cbc registration, Drew 2026-09-13).
+    // This case used `nba-hoops-great-significance`, which was unregistered
+    // when #2112 shipped and is now registered in src along with the other 42
+    // cbc subset keys — so it can no longer demonstrate a refusal. The test
+    // keeps its intent and uses a subset the source does NOT publish; the
+    // registered key's own behaviour is pinned in the case below.
+    const imaginary = greatSignificance.map((r: Row) => ({ ...r, category: "auto-imaginary-signatures" }));
+    const separate = new Set(["imaginary-signatures", "hoops-ink"]);
+    const plan = lib.planFile({
+      rows: imaginary, productSetKey: "nba-hoops", computeId,
+      normalize: normalizeSetKey, separate,
+    });
+    expect(plan.verdict).toBe("refuse");
+    expect(plan.reason).toBe("unregistered-set-keys");
+    expect(plan.unregistered.map((u: any) => u.setKey)).toEqual(["nba-hoops-imaginary-signatures"]);
+    expect(plan.unregistered[0].resolvesTo).toBe("nba-hoops");
+  });
+
+  it("a REGISTERED cbc key now passes the same plan — the refusal was the mechanism working", () => {
+    // The other side of the contract: once the key is a normalizeSetKey fixed
+    // point, the identical file plans clean. That is what the registration PR
+    // changes, and why the refusal above had to move rather than be deleted.
     const separate = new Set(["great-significance", "hoops-ink"]);
     const plan = lib.planFile({
       rows: greatSignificance, productSetKey: "nba-hoops", computeId,
       normalize: normalizeSetKey, separate,
     });
-    expect(plan.verdict).toBe("refuse");
-    expect(plan.reason).toBe("unregistered-set-keys");
-    expect(plan.unregistered.map((u: any) => u.setKey)).toEqual(["nba-hoops-great-significance"]);
-    expect(plan.unregistered[0].resolvesTo).toBe("nba-hoops");
+    expect(plan.unregistered).toHaveLength(0);
+    expect(plan.keys.map((k: any) => k.setKey)).toEqual(["nba-hoops-great-significance"]);
+    expect(normalizeSetKey("nba-hoops-great-significance")).toBe("nba-hoops-great-significance");
   });
 
   it("#2106's key form IS already a fixed point — the canonical shape, proven", () => {
