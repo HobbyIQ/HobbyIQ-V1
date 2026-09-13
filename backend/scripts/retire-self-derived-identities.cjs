@@ -177,6 +177,7 @@
 "use strict";
 
 const path = require("path");
+const fs = require("fs");
 const backend = path.join(__dirname, "..");
 const { CosmosClient } = require(path.join(backend, "node_modules/@azure/cosmos"));
 const { runnerShardScope } = require(path.join(__dirname, "lib", "runner-shard-scope.cjs"));
@@ -190,6 +191,10 @@ const {
   contaminationReason,
   mayEnqueueAcquisition,
 } = require(path.join(__dirname, "lib", "sport-contamination.cjs"));
+// The write-ledger's dedupe and the verify-by-read's mismatch classification,
+// pulled out so both are unit-testable against a mocked read result with no
+// Cosmos client in the way (CF-NAME-THE-ROWS-BEFORE-CALLING-DAMAGE, 2026-09-13).
+const { classifyLedgerRead, createLedger } = require(path.join(__dirname, "lib", "write-ledger-verify.cjs"));
 // CF-A-LANE-EXITS-WHEN-ITS-WORK-IS-DONE (#1809). A lane does not end by
 // letting the loop drain -- it exits, after flushing, with the code it means.
 const { budget, finishLane } = require(path.join(__dirname, "lib", "runner-budget.cjs"));
@@ -207,6 +212,17 @@ const APPLY = String(process.env.BACKFILL_APPLY || process.env.APPLY || "") === 
 const CARD_RULE = process.argv.includes("--card-rule") || String(process.env.CARD_RULE || "") === "true";
 const SPORT = String(process.env.SPORT || process.env.SPORTS || "baseball").trim().toLowerCase();
 const PRODUCTS = Number(process.env.PRODUCTS || 0);
+/** CF-NAME-THE-ROWS-BEFORE-CALLING-DAMAGE (2026-09-13). A mismatch nobody can
+ *  point at is a mismatch nobody can act on -- the VERIFY BY READ banner used
+ *  to print only aggregates ("2 MISSING THE MARKER") with no way to find which
+ *  two ids. This is the ledger + verify outcome, written next to the runner's
+ *  own /tmp/backfill.log so a coordinator can pull it without a workflow edit:
+ *  no upload-artifact step in backfill-runner.yml is gated on
+ *  inputs.script == 'retire-self-derived-identities', so there is no existing
+ *  step to hand a script-specific path to -- this rides the log's own /tmp.
+ *  Sibling lanes spell this WRITE_LEDGER_OUT (rematch-sold-comps,
+ *  repair-bowman-product-refile); this one follows the same name. */
+const WRITE_LEDGER_OUT = String(process.env.WRITE_LEDGER_OUT || "/tmp/retire-self-derived-write-ledger.json").trim();
 
 /** ── THE BUDGET MUST STOP UNDER THE ACTION CEILING ────────────────────────
  *
@@ -624,7 +640,24 @@ async function main() {
    * `{ id, pk, field }` because the two lanes write DIFFERENT markers and a
    * verify that checked only one of them would report a retire as unwritten.
    */
-  const ledger = [];
+  /** A graded child is reachable TWICE in one product pass: once as its own
+   *  entry in `sd` (it mirrors its parent's identity fields, so it classifies
+   *  the same way its parent does and can retire ON ITS OWN), and again as a
+   *  member of `childrenOf.get(parent.id)` when the PARENT retires and takes
+   *  its children with it. Both paths patch the same row and both used to
+   *  push their own ledger entry -- a duplicate `{id, pk, field}` that cost a
+   *  second point-read for nothing when the two entries agreed, and would
+   *  have let a later entry's `expect` silently shadow an earlier one's if
+   *  the two paths ever disagreed. `createLedger()` makes the ledger a set by
+   *  id: the FIRST write for a given id is the one the verify checks, and a
+   *  second attempt to ledger the same id is counted rather than pushed, so
+   *  it shows up in the banner instead of doubling silently. */
+  const writeLedger = createLedger();
+  const ledgerPush = (entry) => writeLedger.push(entry);
+  // Alias so every downstream `ledger.length` / `ledger.slice` / `ledger` read
+  // below (unchanged from before the extraction) keeps working: `entries` IS
+  // the live backing array, pushed to only through `ledgerPush` above.
+  const ledger = writeLedger.entries;
   /** The partition key patchCatalogRowFields WILL have used for this row.
    *  Mirrored, not guessed: that function computes `cardId ? String(cardId)
    *  : id`, so a row with no cardId is written at its own id. A ledger that
@@ -774,7 +807,7 @@ async function main() {
             retiredMatchLevel: hasFull ? "identity" : "card",
           }, { retry });
           written++;
-          ledger.push({ id: String(r.id), pk: pkOf(r), field: "retiredReason" });
+          ledgerPush({ id: String(r.id), pk: pkOf(r), field: "retiredReason" });
           for (const kid of kids) {
             await patchCatalogRowFields(cat, String(kid.id), kid.cardId, {
               retiredReason: RETIRED,
@@ -784,7 +817,7 @@ async function main() {
               retiredWithParent: String(r.id),
             }, { retry });
             written++;
-            ledger.push({ id: String(kid.id), pk: pkOf(kid), field: "retiredReason" });
+            ledgerPush({ id: String(kid.id), pk: pkOf(kid), field: "retiredReason" });
           }
         } catch (e) { failed++; }
         continue;
@@ -831,7 +864,7 @@ async function main() {
                 retiredTrueSport: contamination.trueSport,
               }, { retry });
               written++;
-              ledger.push({ id: String(r.id), pk: pkOf(r), field: "retiredReason", expect: reason });
+              ledgerPush({ id: String(r.id), pk: pkOf(r), field: "retiredReason", expect: reason });
               for (const kid of kids) {
                 await patchCatalogRowFields(cat, String(kid.id), kid.cardId, {
                   retiredReason: reason,
@@ -842,7 +875,7 @@ async function main() {
                   retiredTrueSport: contamination.trueSport,
                 }, { retry });
                 written++;
-                ledger.push({ id: String(kid.id), pk: pkOf(kid), field: "retiredReason", expect: reason });
+                ledgerPush({ id: String(kid.id), pk: pkOf(kid), field: "retiredReason", expect: reason });
               }
             } catch (e) { failed++; }
             continue;
@@ -863,7 +896,7 @@ async function main() {
               identityTrueSport: contamination.trueSport,
             }, { retry });
             written++;
-            ledger.push({ id: String(r.id), pk: pkOf(r), field: UNVERIFIED });
+            ledgerPush({ id: String(r.id), pk: pkOf(r), field: UNVERIFIED });
           } catch (e) { failed++; }
           continue;
         }
@@ -884,7 +917,7 @@ async function main() {
             identityCandidateSports: contamination.candidates,
           }, { retry });
           written++;
-          ledger.push({ id: String(r.id), pk: pkOf(r), field: UNVERIFIED });
+          ledgerPush({ id: String(r.id), pk: pkOf(r), field: UNVERIFIED });
         } catch (e) { failed++; }
         continue;
       }
@@ -907,7 +940,7 @@ async function main() {
           identityUnverifiedBy: "retire-self-derived-identities",
         }, { retry });
         written++;
-        ledger.push({ id: String(r.id), pk: pkOf(r), field: UNVERIFIED });
+        ledgerPush({ id: String(r.id), pk: pkOf(r), field: UNVERIFIED });
       } catch (e) { failed++; }
     }
   }
@@ -924,6 +957,9 @@ async function main() {
   console.log(`  identityUnverified ${f(unverified)}`);
   console.log(`  already marked     ${f(alreadyMarked)}`);
   console.log(`  write failures     ${f(failed)}`);
+  if (writeLedger.duplicates) {
+    console.log(`  ledger de-duped    ${f(writeLedger.duplicates)}   (graded child ledgered once, not once per path)`);
+  }
 
   /** THE PROBE'S REPORT. Printed even at zero, because "the probe ran and
    *  found nothing" and "the probe did not run" are different facts and the
@@ -1076,40 +1112,93 @@ async function main() {
       // cannot quietly become an unbounded phase.
       const CHUNK = 200;
       let verified = 0, mismatched = 0, unread = 0, capHit = false;
+      /** CF-NAME-THE-ROWS-BEFORE-CALLING-DAMAGE (2026-09-13). Every mismatch,
+       *  by id, so an operator can act on it instead of staring at a count.
+       *  `reason` buckets it for the tally: `404` (the read found nothing --
+       *  a delete raced the verify, or the ledger's pk is wrong),
+       *  `present-without-marker` (the row exists but never got the field at
+       *  all -- the write did not land), or `different-value` (the field is
+       *  set to something other than what this run's write meant to leave --
+       *  another writer touched it after). classifyLedgerRead (below) is
+       *  where these three are actually decided. */
+      const mismatches = [];
+      const mismatchReasonCounts = new Map();
 
       for (let i = 0; i < ledger.length && !capHit; i += CHUNK) {
         const batch = ledger.slice(i, i + CHUNK);
         const got = await LANE_BUDGET.capped(vt0, `ledger ${i + 1}-${i + batch.length}`, async (signal) => {
-          let ok = 0, bad = 0;
+          let ok = 0;
+          // Collected LOCALLY, same as `ok`, and only merged into the outer
+          // `mismatches`/`mismatchReasonCounts` once this whole batch
+          // completes (below) — an aborted batch must not leave partial
+          // mismatches counted against `mismatched` while the rest of it is
+          // folded into `unread`, or RECONCILE stops balancing.
+          const bad = [];
           for (const e of batch) {
             if (signal && signal.aborted) throw new Error("verify-cap");
             // A point-read: single partition, ~1 RU, no fan-out. `retry` gets
             // the signal so an aborted batch stops instead of sleeping its
             // way past the ceiling (#1809).
-            const { resource } = await retry(() => cat.item(e.id, e.pk).read(), 2, signal);
-            const got1 = resource && resource[e.field];
-            // The marker is on the row, in the shape this lane writes it.
-            // A cross-sport retire carries `sport-contaminated:twin-in-<sport>`
+            let resource;
+            try {
+              ({ resource } = await retry(() => cat.item(e.id, e.pk).read(), 2, signal));
+            } catch (readErr) {
+              if (readErr && (readErr.code === 404 || readErr.statusCode === 404)) resource = undefined;
+              else throw readErr;
+            }
+            // classifyLedgerRead is the pure decision (lib/write-ledger-verify.cjs),
+            // unit-tested against a mocked read result with no Cosmos client
+            // involved. A missing `resource` covers BOTH a real 404 and the
+            // SDK resolving a 404 point-read as `resource: undefined` rather
+            // than throwing -- either way the row is not readable at (id, pk)
+            // right now: most likely a hard delete (this lane's own
+            // graded-child path, or a concurrent retire-*.cjs lane) raced the
+            // verify, or the ledger's mirrored pk does not match where the
+            // write actually went.
+            //
+            // The marker is checked in the shape this lane writes it. A
+            // cross-sport retire carries `sport-contaminated:twin-in-<sport>`
             // rather than the plain RETIRED marker, so the ledger records what
             // THIS write meant to leave (`expect`) and the verify checks that.
             // Hard-coding RETIRED here would read a perfectly good cross-sport
             // write as MISSING THE MARKER and turn a healthy run red -- the
             // same class of defect the `pkOf` mirror comment above guards.
-            const want = e.expect || RETIRED;
-            if (e.field === UNVERIFIED ? got1 === true : String(got1 || "") === want) ok++;
-            else bad++;
+            const verdict = classifyLedgerRead(e, resource, RETIRED);
+            if (verdict.ok) { ok++; continue; }
+            bad.push({ e, reason: verdict.reason, found: verdict.found });
           }
           return { ok, bad };
         });
         if (got === null) { capHit = true; unread = ledger.length - verified - mismatched; break; }
         verified += got.ok;
-        mismatched += got.bad;
+        mismatched += got.bad.length;
+        for (const { e, reason, found } of got.bad) {
+          mismatchReasonCounts.set(reason, (mismatchReasonCounts.get(reason) || 0) + 1);
+          mismatches.push({
+            id: e.id, pk: e.pk, field: e.field,
+            expect: e.expect || (e.field === UNVERIFIED ? true : RETIRED),
+            found, reason,
+          });
+        }
+      }
+
+      // Each named line, printed BEFORE the aggregate banner -- the aggregate
+      // is a summary of what these lines already said, never the other way.
+      for (const m of mismatches) {
+        console.log(`  MISMATCH ${m.id} pk=${m.pk} field=${m.field} expected=${JSON.stringify(m.expect)} found=${typeof m.found === "string" ? m.found : JSON.stringify(m.found)}`);
       }
 
       console.log(`\n  VERIFY BY READ  ${SPORT}: verified ${f(verified)} of ${f(ledger.length)} written`
         + (mismatched ? `   *** ${f(mismatched)} MISSING THE MARKER ***` : "")
         + (unread ? `   ${f(unread)} UNCONFIRMED (verify cap)` : "")
         + `   [${Math.round((Date.now() - vt0) / 1000)}s of a ${Math.round(VERIFY_MS / 60000)}m cap]`);
+
+      if (mismatchReasonCounts.size) {
+        console.log(`  MISMATCH TALLY BY REASON:`);
+        for (const [reason, n] of [...mismatchReasonCounts.entries()].sort((a, b) => b[1] - a[1])) {
+          console.log(`   ${String(f(n)).padStart(8)}  ${reason}`);
+        }
+      }
 
       // RECONCILE THE VERIFY ITSELF, the way the loop reconciles its own
       // arithmetic: every written id took exactly one path.
@@ -1120,6 +1209,40 @@ async function main() {
 
       if (unread) {
         console.log(`  the verify count is UNREAD, not zero — the writes above reconciled and are durable.`);
+      }
+
+      // ── PERSIST THE LEDGER + VERIFY OUTCOME ──────────────────────────
+      //
+      // CF-NAME-THE-ROWS-BEFORE-CALLING-DAMAGE (2026-09-13). The console
+      // lines above are what a human reads live; this file is what a
+      // coordinator reads after the fact without re-grepping a 150-minute
+      // log for sixteen shards. No upload-artifact step in
+      // backfill-runner.yml is gated on this script's name, so there is no
+      // existing per-script path to hand this to -- it is written next to
+      // the runner's own /tmp/backfill.log, which every dispatch already
+      // captures and uploads regardless of which script ran
+      // (`node ... | tee /tmp/backfill.log`).
+      try {
+        fs.mkdirSync(path.dirname(WRITE_LEDGER_OUT), { recursive: true });
+        fs.writeFileSync(WRITE_LEDGER_OUT, JSON.stringify({
+          job: "retire-self-derived-identities",
+          sport: SPORT,
+          slot: SLOT,
+          slots: SLOTS,
+          apply: APPLY,
+          written: ledger.length,
+          ledgerDuplicates: writeLedger.duplicates,
+          verified,
+          mismatched,
+          unread,
+          capHit,
+          mismatchReasonCounts: Object.fromEntries(mismatchReasonCounts),
+          mismatches,
+          ledger,
+        }, null, 1));
+        console.log(`  LEDGER + VERIFY written -> ${WRITE_LEDGER_OUT}`);
+      } catch (e) {
+        console.error(`!! could not write the ledger to ${WRITE_LEDGER_OUT}: ${String(e && e.message ? e.message : e)}`);
       }
 
       // ── THE CAP MUST END THE LANE ─────────────────────────────
