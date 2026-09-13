@@ -109,11 +109,24 @@ Four priority products go from zero rungs to a full ladder with one command.
 
 ## 3. Two correctness bugs found in the existing scraper
 
+**Fixed in PR #1576** (2026-08-30, `3a27ee8a`) — both §3.1 and §3.2 below.
+Range-scoping (`parseCardRange` / `cardInRange`) and the EXCEPT-block split
+(`splitAtException` / `exceptionPlayers`) shipped in that PR along with 23
+fixture-based tests (`backend/tests/bcpPrintRunIsScoped.test.ts`) pinned
+against the real `1998_SPx_Finite` and `1999_Black_Diamond` pages fetched
+2026-08-30 (`backend/tests/fixtures/bcp/1998-spx-finite.trimmed.html`,
+`1999-black-diamond.trimmed.html`). Re-verified 2026-09-13 (this doc-correction
+PR): all 29 tests in that file still pass on `main`, and a fixture parse-only
+run confirms no rung width equals the full card count (no cross-join) — this
+section is left in place as a record of the original defects, not as an open
+item. This doc simply went un-updated after #1576 landed; nothing further to
+fix here.
+
 Both were predicted by Lane A on structural grounds and are confirmed here
 against live page text. Both are the `right guard, wrong scope` shape, and both
 write **confidently wrong** values — the kind that survive a sweep forever.
 
-### 3.1 BLOCKER — print runs are range-scoped; the scraper cross-joins them
+### 3.1 FIXED (PR #1576) — print runs are range-scoped; the scraper cross-joins them
 
 BCP states SPx Finite print runs per card-number range:
 
@@ -137,7 +150,7 @@ for SPx Finite alone.
 scope each rung to its card numbers. Rungs whose range does not parse must be
 emitted with a blank `printRun`, never the set-level default.
 
-### 3.2 BLOCKER — the exception block is read as the rule
+### 3.2 FIXED (PR #1576) — the exception block is read as the rule
 
 Black Diamond page text:
 
@@ -175,9 +188,9 @@ numbers matched against page text**, not the staged row count.
 
 Ordered by gap closed per unit of work. Items 1–2 are the whole vintage lane.
 
-### Step 1 — Fix the two print-run bugs in `scrape-bcp-ladders.cjs` (BLOCKER)
-Nothing vintage should be ingested until §3.1 and §3.2 are fixed. This is a
-parser change to one committed file, not a new source.
+### Step 1 — Fix the two print-run bugs in `scrape-bcp-ladders.cjs` (DONE — PR #1576)
+§3.1 and §3.2 are fixed; nothing here still blocks vintage ingest on print-run
+correctness. This was a parser change to one committed file, not a new source.
 
 *Parse recipe:* keep the existing structural approach (`<h2 id="Base_Set">`,
 `<h2 id="Parallels">`, stop at `id="Inserts"`). Add (a) a card-range clause
