@@ -112,6 +112,29 @@ import rateLimit from "express-rate-limit";
 const config = getConfig();
 const app = express();
 
+// CF-TRUST-PROXY (Fable, 2026-09-13, launch-eve P0). Azure App Service
+// terminates TLS and proxies every request through exactly ONE front-end
+// hop before it reaches this process — the socket peer express sees is
+// always the platform's front end, never the client. Without this,
+// req.ip resolves to that single front-end address for every request, so
+// every express-rate-limit bucket keyed on req.ip (the global /api/
+// limiter below, plus signinLimiter/registerLimiter/usernameLimiter/
+// sendVerificationLimiter/changePasswordLimiter in auth.routes.ts) is
+// actually ONE shared bucket across ALL users. A prod probe tonight
+// showed RateLimit-Remaining counting down from other users' traffic —
+// on launch day, 20 sign-ins across the whole user base would lock
+// everyone out.
+//
+// `1` (not `true`) is deliberate: express's trust-proxy numeric-hop mode
+// trusts exactly the outermost N hops of X-Forwarded-For and takes the
+// left-most address beyond that as req.ip. Azure App Service injects
+// exactly one hop, so 1 resolves req.ip to the real client address
+// without also trusting a spoofable client-supplied X-Forwarded-For
+// prefix (which `trust proxy: true` would do). Must be set before any
+// middleware reads req.ip — that includes the rate limiter mounted
+// immediately below.
+app.set("trust proxy", 1);
+
 // CF-CATALOG-RESOLVER (2026-07-13): register vendor sources at startup so
 // resolveCard has plugins available on first call. Order matters —
 // listVendorSources returns in registration order, and reconciliation logs

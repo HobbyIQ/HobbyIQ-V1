@@ -25,6 +25,32 @@ import { requireSession } from "../middleware/requireSession.js";
 const router = Router();
 
 // Rate limit auth-sensitive endpoints to slow credential stuffing and bot abuse.
+//
+// CF-TRUST-PROXY (Fable, 2026-09-13, launch-eve P0). Left keyed on IP alone
+// (the express-rate-limit default keyGenerator, now backed by a real
+// req.ip now that app.ts sets trust proxy) rather than switching to an
+// identifier+IP composite key.
+//
+// skipSuccessfulRequests was considered and rejected: /signin returns HTTP
+// 200 with { success: false } on bad credentials — the handler never
+// returns a non-2xx status for a failed login — so
+// skipSuccessfulRequests (which only inspects res.statusCode) can't tell a
+// failed attempt from a real one. Turning it on would make every request
+// look "successful" and stop counting entirely, disabling the limiter.
+// Changing the route to return 401 on bad credentials is a separate,
+// wider-blast contract change (every client parses this response shape)
+// that shouldn't ride along with a launch-eve rate-limit fix.
+//
+// An identifier+IP composite key was also considered and rejected: it
+// would let one IP credential-stuff an unbounded number of different
+// usernames without ever tripping a single bucket, which is a real
+// weakening of the existing protection (the task guardrail is "do not
+// weaken abuse protection"). Plain per-IP is the correct cap for both
+// "one account attacked from many IPs" and "one IP attacking many
+// accounts" — the actual defect was never the keying, it was that every
+// user's real IP was being collapsed onto the platform's front-end
+// address. Fixing trust proxy (app.ts) already makes this bucket
+// per-client instead of global; no keyGenerator change is needed here.
 const signinLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 20,
