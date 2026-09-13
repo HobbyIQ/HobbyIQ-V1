@@ -65,9 +65,19 @@ describe("Red Ink and Black & White Shimmer are two different cards", () => {
   });
 
   it("gives each its own slug — the spellings parallelLadders.ts already holds", () => {
+    // CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT (#2064/#2069, 2026-09-12).
+    // slugOf hardcodes setKey: "bowman-chrome" as an input to isolate the
+    // PARALLEL vocabulary this file exists to test (Red Ink vs Shimmer are
+    // different cards) — it is not itself a claim about which product
+    // CPA-JG belongs to. But CPA-JG (Justin Gonzales) really is a 2026
+    // BOWMAN-only number (2026-bowman-full.csv lists him; 2026-bowman-chrome
+    // .csv does not — the same shape as Marconi German's CPA-MG and Victor
+    // Figueroa's CPA-VF), so computeHobbyIqCardId now correctly reads the
+    // bowman-chrome INPUT through to its checklist-backed bowman OUTPUT.
+    // The parallel segment — the actual point of this test — is unchanged.
     expect(slugOf("2026 Bowman Chrome Justin Gonzales Black & White Red Ink Auto CPA-JG"))
-      .toBe("hiq:baseball:2026:bowman-chrome:cpa-jg:black-white-red-ink:auto");
+      .toBe("hiq:baseball:2026:bowman:cpa-jg:black-white-red-ink:auto");
     expect(slugOf("2026 Bowman Chrome Justin Gonzales Black & White Shimmer Auto CPA-JG"))
-      .toBe("hiq:baseball:2026:bowman-chrome:cpa-jg:black-white-shimmer-refractor:auto");
+      .toBe("hiq:baseball:2026:bowman:cpa-jg:black-white-shimmer-refractor:auto");
   });
 });

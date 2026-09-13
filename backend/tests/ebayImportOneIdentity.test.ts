@@ -171,15 +171,25 @@ const LISTING_TITLE = "2026 Bowman Marconi German Chrome Auto Gold Refractor 1st
 const ORDER_ID = "377413083669-10083183646909";
 const ITEM_ID = "377413083669";
 
-const CHECKLIST_SLUG = "hiq:baseball:2026:bowman-chrome:cpa-mg:gold-refractor:auto:num-50";
-const TWIN_SLUG = "hiq:baseball:2026:bowman-chrome:cpa-mg:gold-refractor:auto";
-const REFRACTOR_SLUG = "hiq:baseball:2026:bowman-chrome:cpa-mg:refractor:auto";
-const BASE_SLUG = "hiq:baseball:2026:bowman-chrome:cpa-mg:base:auto";
+// CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT (#2060 follow-on, 2026-09-12).
+// This fixture is Drew's own real Marconi German / CPA-MG holding. Its
+// checklist address moved from bowman-chrome to bowman: 2026 Bowman Chrome's
+// checklist carries zero CPA-MG rows, while 2026 Bowman's carries three
+// (Chrome Prospect Autographs is a SECTION of Bowman, not of Bowman Chrome).
+// computeHobbyIqCardId now derives `bowman` for this exact input
+// (applySiblingChecklistOverride in hobbyIqCardId.service.ts), so every slug
+// constant and the fixture catalog rows below are updated to match — the
+// listing title still legitimately reads "Bowman ... Chrome ..." (the card
+// IS chrome stock; that is unchanged), only the checklist ADDRESS moved.
+const CHECKLIST_SLUG = "hiq:baseball:2026:bowman:cpa-mg:gold-refractor:auto:num-50";
+const TWIN_SLUG = "hiq:baseball:2026:bowman:cpa-mg:gold-refractor:auto";
+const REFRACTOR_SLUG = "hiq:baseball:2026:bowman:cpa-mg:refractor:auto";
+const BASE_SLUG = "hiq:baseball:2026:bowman:cpa-mg:base:auto";
 
 function checklistRow(slug: string, parallel: string, printRun: number | null): Record<string, unknown> {
   return {
     id: slug, cardId: slug, hobbyiqCardId: slug,
-    sport: "baseball", year: 2026, setKey: "bowman-chrome", setName: "Bowman Chrome",
+    sport: "baseball", year: 2026, setKey: "bowman", setName: "Bowman",
     cardNumber: "CPA-MG", parallel, parallelSlug: parallel.toLowerCase().replace(/\s+/g, "-"),
     isAuto: true, printRun, playerName: "Marconi German", playerSlug: "marconi-german",
     source: "checklist", confidence: 0.95, verificationStatus: "verified",
@@ -257,7 +267,7 @@ function seedChecklist(): void {
     checklistRow(CHECKLIST_SLUG, "Gold Refractor", 50),
     checklistRow(REFRACTOR_SLUG, "Refractor", 499),
     checklistRow(BASE_SLUG, "Base", null),
-    checklistRow("hiq:baseball:2026:bowman-chrome:cpa-mg:blue-refractor:auto:num-150", "Blue Refractor", 150),
+    checklistRow("hiq:baseball:2026:bowman:cpa-mg:blue-refractor:auto:num-150", "Blue Refractor", 150),
   ]) catalog.rows.set(String(row.id), row);
 }
 

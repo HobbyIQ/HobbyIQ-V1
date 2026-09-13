@@ -73,8 +73,14 @@ describe("CF-TRADED-TIFFANY-IS-A-PRODUCT — the parser reaches the ruled keys",
   it("flagship and neighbouring Topps products are unaffected", () => {
     // Blast-radius pin: the new rules sit above the bare /topps/ catch-all,
     // so they must not shadow any sibling product rule.
+    // Updated 2026-09-13 for #2091 (fix/deriver-no-parent-collapse): before
+    // that PR, inferFamilySetKeyFromTitle discarded "Update Series" and
+    // returned bare `topps-chrome`; #2091 added a qualifier ahead of the
+    // catch-all so the title's own stated product survives. This pin is
+    // about flagship/Finest/Sapphire staying untouched by the TRADED TIFFANY
+    // rules, not about freezing the pre-#2091 Chrome Update answer.
     expect(key("1987 Topps #70 Some Player")).toBe("topps");
-    expect(key("2024 Topps Chrome Update Refractor #USC1")).toBe("topps-chrome");
+    expect(key("2024 Topps Chrome Update Refractor #USC1")).toBe("topps-chrome-update-series");
     expect(key("2025 Topps Finest #168 Xavier Worthy Purple Refractor")).toBe("topps-finest");
     expect(key("2023 Bowman Chrome Sapphire #BCP-1")).toBe("bowman-chrome-sapphire");
   });

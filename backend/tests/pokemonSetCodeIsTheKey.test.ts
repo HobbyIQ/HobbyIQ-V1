@@ -79,7 +79,12 @@ describe("CF-THE-SET-CODE-IS-THE-KEY — the boundaries it must not cross", () =
     // Pokemon branch is gated on the title naming Pokemon, so none of these
     // may reach it. Each title below carries a token that IS a Pokemon set
     // code, and each must answer with its own sports product.
-    expect(key("2024 Topps Chrome Update Paul Skenes #USC1")).toBe("topps-chrome");
+    // Updated 2026-09-13 for #2091: before that PR, inferFamilySetKeyFromTitle
+    // discarded "Update Series" and returned bare `topps-chrome` for this
+    // title; #2091 added a qualifier so the title's own stated product
+    // survives. This pin only needs the answer to be a SPORTS product, not
+    // any particular one -- tracking the legitimate improvement.
+    expect(key("2024 Topps Chrome Update Paul Skenes #USC1")).toBe("topps-chrome-update-series");
     expect(key("2023 Topps Series 1 Aaron Judge SP #99")).not.toBe("sp");
     expect(key("2021 Panini Prizm RC Rookie Card Ja Morant #RC1")).not.toBe("rc");
     expect(key("2022 Bowman Chrome LC Luis Campusano #BCP150")).not.toBe("lc");

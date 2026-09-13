@@ -65,7 +65,17 @@ import type { PortfolioHoldingWire } from "../src/services/portfolioiq/responseA
 import { readUserDoc } from "../src/services/portfolioiq/portfolioStore.service.js";
 import type { PortfolioHolding } from "../src/types/portfolioiq.types.js";
 
-const SLUG = "hiq:baseball:2026:bowman-chrome:cpa-mg:gold-refractor:auto:num-50";
+// CF-SIBLING-CHECKLIST-DECIDES-THE-PRODUCT (#2060 follow-on, 2026-09-12).
+// This fixture is Drew's own real Marconi German / CPA-MG holding. Its
+// checklist address moved from bowman-chrome to bowman: 2026 Bowman Chrome's
+// checklist carries zero CPA-MG rows, while 2026 Bowman's carries three
+// (Chrome Prospect Autographs is a SECTION of Bowman, not of Bowman Chrome).
+// computeHobbyIqCardId now derives `bowman` for this exact input
+// (applySiblingChecklistOverride in hobbyIqCardId.service.ts), so the fixture
+// catalog row and the expected resolved slug are updated to match — the
+// title in every row below still legitimately reads "Bowman Chrome" (the
+// card IS chrome stock; that is unchanged), only the checklist ADDRESS moved.
+const SLUG = "hiq:baseball:2026:bowman:cpa-mg:gold-refractor:auto:num-50";
 
 /** The catalog, as far as these tests are concerned. */
 const CATALOG = new Map<string, Record<string, unknown>>();
@@ -73,7 +83,7 @@ const CATALOG = new Map<string, Record<string, unknown>>();
 function catalogRow(slug: string, overrides: Record<string, unknown> = {}) {
   return {
     id: slug, cardId: slug, hobbyiqCardId: slug,
-    sport: "baseball", year: 2026, setKey: "bowman-chrome", cardNumber: "CPA-MG",
+    sport: "baseball", year: 2026, setKey: "bowman", cardNumber: "CPA-MG",
     parallel: "Gold Refractor", parallelSlug: "gold-refractor", isAuto: true, printRun: 50,
     playerName: "Marconi German", playerSlug: "marconi-german", vendorIds: {},
     ...overrides,
