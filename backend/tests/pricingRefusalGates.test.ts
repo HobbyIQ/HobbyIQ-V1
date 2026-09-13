@@ -1124,3 +1124,147 @@ describe("D. no-exact-pool goes through the one-stamp choke point", () => {
     expect(prose).not.toMatch(/catalog holds no identity/i);
   });
 });
+
+/**
+ * CF-A-RETENTION-STAMP-HAS-NO-WAY-TO-COME-OFF (2026-09-13), the sibling of
+ * C' above for `fmvRetainedReason` / `fmvRetainedAt` instead of
+ * `pricingSourceMeta.withheld`.
+ *
+ * Holding 277b05a3 (Cal Ripken Jr., 1997 Metal Universe Magnetic Field,
+ * PSA 8, $52.98 cost basis) is the same row C-8's own doctrine test
+ * (retainedValueNamesItsSource.test.ts) uses to pin the RETENTION half of
+ * this contract. This is the PUBLISH half it never pinned: read read-only
+ * from prod 2026-09-13, the row carried a clean, current
+ * `exact-pool-last-sale` publish ($5.40, valueSource "observed", no
+ * `pricingSourceMeta.withheld`) standing beside an `fmvRetainedReason`
+ * sentence from an earlier pass insisting the very same rung was "refused
+ * by the cost-basis sanity floor ... the holding falls to its cost basis" —
+ * because nothing in `writeHoldingValuation` ever clears those two fields
+ * once a later pass supersedes them, the same one-way door C' closed for
+ * the withheld block but not for its top-level siblings.
+ */
+describe("D'. a publish clears the retention stamp it inherited", () => {
+  /** 277b05a3 mid-way through the incident: a floor rejection has just
+   *  stamped the retention fields on it. */
+  const RIPKEN_RETAINED = {
+    id: "277b05a3-935f-451a-b5b7-97eb926a3542",
+    playerName: "Cal Ripken, Jr.",
+    hobbyiqCardId: "hiq:baseball:1997:metal-universe:8:magnetic-field:no-auto",
+    fairMarketValue: 49.99,
+    fmvRung: null,
+    valueSource: "estimated",
+    valuationStatus: "pending",
+    purchasePrice: 52.98,
+    totalCostBasis: 52.98,
+    quantity: 1,
+    pricingSourceMeta: {
+      slug: "hiq:baseball:1997:metal-universe:8:magnetic-field:no-auto",
+      method: "withheld",
+      compsUsed: 1,
+      confidence: 0,
+      withheld: {
+        reason: "cost-basis-floor",
+        blockingId: "hiq:baseball:1997:metal-universe:8:magnetic-field:no-auto",
+        blockingCount: 1,
+        proposed: 5.4,
+        retained: null,
+        retentionRefused: "prior-fails-floor",
+        retainedRung: null,
+      },
+    },
+    fmvRetainedReason:
+      "price refused by the cost-basis sanity floor: the valuation path returned "
+      + "$5.4 under rung exact-pool-last-sale, 10.19% of a $52.98 cost basis "
+      + "(floor: 15%). A price this far under basis is a pool or identity "
+      + "mismatch, not a market. The prior value of $5.4 is NOT retained: it is "
+      + "itself below the floor against this basis, so retaining it would "
+      + "publish the very shape the floor refuses. The holding falls to its "
+      + "cost basis until a defensible price exists.",
+    fmvRetainedAt: "2026-09-13T10:54:03.003Z",
+  } as unknown as PortfolioHolding;
+
+  it("R24: a fresh exact-pool publish of the SAME shape clears both stale fields", () => {
+    // The 16:22Z pass exactly as `observedHoldingWrite` makes it: R24 exempts
+    // `exact-pool-last-sale`, so this time the floor never rejects and the
+    // $5.40 publishes as a clean observed price.
+    //
+    // MUTATION CHECK: remove the `clearsStaleRetention` branch from
+    // writeHoldingValuation and this goes red — `fmvRetainedReason` comes
+    // back as the stale cost-basis-floor sentence standing beside a current
+    // `fairMarketValue: 5.4`, which is the exact prod shape this pin closes.
+    const published = writeHoldingValuation(RIPKEN_RETAINED, {
+      fairMarketValue: 5.4,
+      rung: { rung: "exact-pool-last-sale" },
+      valueSource: "observed",
+      nowIso: NOW,
+      meta: { slug: "hiq:baseball:1997:metal-universe:8:magnetic-field:no-auto", compsUsed: 1, confidence: 0 },
+    });
+    expect(published.fairMarketValue).toBe(5.4);
+    const meta = published.pricingSourceMeta as Record<string, unknown>;
+    expect(meta.withheld).toBeUndefined();
+    expect(meta.method).toBe("exact-pool-last-sale");
+    const anyOut = published as unknown as Record<string, unknown>;
+    expect(anyOut.fmvRetainedReason).toBeNull();
+    expect(anyOut.fmvRetainedAt).toBeNull();
+  });
+
+  it("a write that DECLARES a fresh retention keeps it — the clear is for publishes only", () => {
+    // A genuine retention (another floor rejection, or the confidence-gated
+    // skip branch) states its OWN fmvRetainedReason/At in `fields`, and that
+    // must stand — this is not a blanket wipe of the two fields on every
+    // write, only a clear of a STALE one a publish did not restate.
+    const retainedAgain = writeHoldingValuation(RIPKEN_RETAINED, {
+      fairMarketValue: null,
+      rung: { noRung: "refused again" },
+      valueSource: "estimated",
+      nowIso: NOW,
+      meta: {
+        slug: "hiq:baseball:1997:metal-universe:8:magnetic-field:no-auto",
+        compsUsed: 1,
+        confidence: 0,
+        withheld: {
+          reason: "cost-basis-floor", blockingId: "s", blockingCount: 1, proposed: 5.4,
+          retained: null, retentionRefused: "prior-fails-floor", retainedRung: null,
+        },
+      },
+      fields: {
+        fmvRetainedReason: "a fresh refusal, stated on this very write",
+        fmvRetainedAt: NOW,
+      } as Partial<PortfolioHolding> & Record<string, unknown>,
+    });
+    const anyOut = retainedAgain as unknown as Record<string, unknown>;
+    expect(anyOut.fmvRetainedReason).toBe("a fresh refusal, stated on this very write");
+    expect(anyOut.fmvRetainedAt).toBe(NOW);
+  });
+
+  it("a row that never carried a retention stamp is untouched by the clear", () => {
+    const clean = { ...RIPKEN_RETAINED, fmvRetainedReason: undefined, fmvRetainedAt: undefined } as unknown as PortfolioHolding;
+    const published = writeHoldingValuation(clean, {
+      fairMarketValue: 5.4,
+      rung: { rung: "exact-pool-last-sale" },
+      valueSource: "observed",
+      nowIso: NOW,
+      meta: { slug: "s", compsUsed: 1, confidence: 0 },
+    });
+    const anyOut = published as unknown as Record<string, unknown>;
+    expect(anyOut.fmvRetainedReason).toBeUndefined();
+    expect(anyOut.fmvRetainedAt).toBeUndefined();
+  });
+
+  it("a writeMeta:false continuation that restates no retention of its own still clears a stale one", () => {
+    // The shape of portfolioStore's resolver-fallback rescue and legacy
+    // confidence-gated persist: publishes a real value, states no meta of its
+    // own, but also does not restate fmvRetainedReason — so a stale one from
+    // an earlier pass must not survive the ...holding spread here either.
+    const published = writeHoldingValuation(RIPKEN_RETAINED, {
+      fairMarketValue: 5.4,
+      rung: { noRung: "legacy confidence-gated reprice; the legacy engine names no rung" },
+      valueSource: "estimated",
+      nowIso: NOW,
+      writeMeta: false,
+    });
+    const anyOut = published as unknown as Record<string, unknown>;
+    expect(anyOut.fmvRetainedReason).toBeNull();
+    expect(anyOut.fmvRetainedAt).toBeNull();
+  });
+});

@@ -376,6 +376,45 @@ export function writeHoldingValuation(
     ? (() => { const { withheld: _dropped, ...rest } = carriedMeta as Record<string, unknown>; return rest; })()
     : null;
 
+  // CF-A-RETENTION-STAMP-HAS-NO-WAY-TO-COME-OFF (2026-09-13). The sibling of
+  // CF-A-HOLDING-CARRIES-ONE-STAMP above, for `fmvRetainedReason` /
+  // `fmvRetainedAt` — the two top-level fields `costBasisFloorRefusalWrite`
+  // stamps when a floor rejection retains (or drops) a PRIOR value (C-8,
+  // 2026-09-03). That stamp had the same one-way door the withheld block did:
+  // nothing ever wrote it back to null, so a later pass that genuinely
+  // re-derives and PUBLISHES a fresh number rides straight over it on the
+  // `...holding` spread, leaving the row wearing two contradictory claims —
+  // a current `pricingSourceMeta.method` naming a clean exact-pool publish,
+  // and an `fmvRetainedReason` sentence insisting the very same rung was
+  // "refused by the cost-basis sanity floor... the holding falls to its cost
+  // basis" from an earlier pass that never got superseded in the reader's
+  // eyes.
+  //
+  // Live case: holding 277b05a3 (Cal Ripken Jr. 1997 Metal Universe Magnetic
+  // Field PSA 8). A 10:54Z pass hit the floor and stamped
+  // `fmvRetainedReason` accordingly. A later 16:22Z pass re-derived the same
+  // exact-pool tier — R24 (#2063) correctly exempted it this time, and wrote
+  // a clean `fairMarketValue: 5.4`, `valueSource: "observed"`,
+  // `pricingSourceMeta.method: "exact-pool-last-sale"`, no `withheld` block.
+  // Nothing cleared `fmvRetainedReason` / `fmvRetainedAt`, so the document
+  // read as a live cost-basis-floor refusal to any reader who trusted those
+  // two fields over the (correct) pricing contract beside them — precisely
+  // the "one stamp" defect the withheld-block clear already exists to
+  // prevent, just on the sibling fields it didn't reach.
+  //
+  // So this clears the SAME way: only when the write does not itself declare
+  // a retention (`fields` carries no `fmvRetainedReason` of its own — every
+  // site that means to stamp one puts it there) and the row is carrying one
+  // forward from a prior pass. A `writeMeta: false` continuation that means
+  // to leave a retention stamp untouched still can — it need only decline to
+  // overwrite `fmvRetainedReason` in `fields`, at which point this clear does
+  // not fire because the carried value already reads as what `fields` states
+  // (the two agree, not "a fresh publish contradicting a stale claim").
+  const declaresRetention = Object.prototype.hasOwnProperty.call(w.fields ?? {}, "fmvRetainedReason");
+  const carriedRetainedReason = (holding as { fmvRetainedReason?: unknown }).fmvRetainedReason;
+  const clearsStaleRetention = !declaresRetention
+    && carriedRetainedReason != null;
+
   return {
     ...holding,
     ...(w.fields ?? {}),
@@ -391,6 +430,7 @@ export function writeHoldingValuation(
       : clearsStaleWithhold
         ? { pricingSourceMeta: carriedWithoutWithhold as PortfolioHolding["pricingSourceMeta"] }
         : {}),
+    ...(clearsStaleRetention ? { fmvRetainedReason: null, fmvRetainedAt: null } : {}),
     lastUpdated: w.nowIso,
   } as PortfolioHolding;
 }
