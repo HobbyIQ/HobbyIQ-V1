@@ -52,6 +52,7 @@ import {
 } from "../catalog/pokemonSetCodes.js";
 import { slugify } from "./hobbyIqCardId.service.js";
 import { statedFinishFromChecklist } from "./statedFinishFromChecklist.js";
+import { bareColourAliasFromChecklist } from "./bareColourAliasFromChecklist.js";
 import { pokemonFinishFromTitle } from "./pokemonFinishFromTitle.js";
 
 /** TCG `POS/TOTAL` card number, e.g. "008/132". Position CAN exceed the total
@@ -2117,6 +2118,33 @@ function extractParallel(
       pokemonSetKeyForResidue: ctx?.pokemonSetKeyForResidue ?? null,
     });
     if (stated) return stated;
+  }
+
+  // CF-A-BARE-COLOUR-IS-WHATEVER-ITS-OWN-CHECKLIST-SAYS (2026-09-13).
+  //
+  // STILL LAST-CHANCE, AND ONLY UNDER THE SAME REFUSAL. `statedFinishFromChecklist`
+  // above requires a checklist name with a non-colour residue ("Black Foil"),
+  // so it never answers a title whose ONLY finish evidence is a bare colour
+  // word ("2025 Donruss Elite Football #9 Green"). Round-2 parallel-semantics
+  // rulings (2026-09-13) found this is 448 of 450 sampled `dropped:parallel`
+  // rows: the row's own stored `parallel` field already says the bare colour,
+  // the title says it too, and no rule above -- the Chrome colour=refractor
+  // scan, the Prizm/Optic/Select/Contenders families -- was ever extended to
+  // `donruss-elite`, `panini-certified`, `panini-prizm-draft-picks`,
+  // `topps-signature-class` and the rest of that release slate. Rather than
+  // hand-add another product to a hand-built list (the shape that produced
+  // the gap), this asks the product's OWN checklist whether the bare colour
+  // is unambiguous for it and answers with the checklist's own spelling only
+  // when it is -- see bareColourAliasFromChecklist.ts for the full doctrine
+  // and the tie-refusal that keeps a product with two same-colour parallels
+  // (e.g. donruss-elite's own "Green Disco" vs. "Spellbound Green") from
+  // being force-resolved.
+  if (!isMultiCardLot(T)) {
+    const bareColour = bareColourAliasFromChecklist(T, {
+      year: ctx?.year ?? null,
+      setKey: ctx?.setKey ?? null,
+    });
+    if (bareColour) return bareColour;
   }
 
   // CF-A-FINISH-IS-A-CARD-LINE, AT THE TITLE PARSER (Drew, 2026-09-07).
