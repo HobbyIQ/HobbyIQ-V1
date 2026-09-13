@@ -51,14 +51,40 @@ import type { PortfolioHolding } from "./api";
  *  which means every rung looked and found nothing: a timed-out ladder made
  *  no claim about the pool at all, so the copy must not imply "no sale
  *  exists" — that would send an owner looking for a match under another
- *  slug when the truth is simply "try again once things are less busy". */
+ *  slug when the truth is simply "try again once things are less busy".
+ *
+ *  `confidence-gate` joined 2026-09-13, the SAME shape again: the legacy
+ *  confidence-gated reprice lane's own decline reason
+ *  (`noBasisReasonFromEngine`'s fallback in holdingValuation.ts) was already
+ *  persisted on every holding it declined, and this file's union — like the
+ *  wire type it mirrors — never named it, so `withheldOf` dropped it to
+ *  `null`. Unlike the other five, this is not a rare edge: measured
+ *  read-only against prod on 2026-09-13, it is the SINGLE LARGEST refusal
+ *  reason on the live portfolio (39 of 139 holdings, 67% of every withhold),
+ *  every one of them reaching the glass as an unreasoned "—".
+ *
+ *  `pending-review` joined the same day (Claude Fable 5.1, go-live census):
+ *  a DIFFERENT kind of refusal from the six above — those are all about
+ *  the EVIDENCE or the CATALOG; this one is about CONFIRMATION. The holding
+ *  is `cardStatus: "pending-review"` (an eBay auto-import, or any lane using
+ *  the same review gate) that the owner has not yet confirmed, and HobbyIQ
+ *  will not publish a number for a card nobody has confirmed is the right
+ *  one — checklist-backed or not. THE FINDING: holdings 925ccfe7 / 4e70af40
+ *  (Jack Wheeler) carried a published $14.79 for ~8 days past their import
+ *  while sitting at cardStatus: "pending-review", with no withheld block at
+ *  all — the import-time number, never revisited by name. Unlike every
+ *  other reason here, the unlock is a single confirm tap, not time or new
+ *  data — Rule 2's "the owner's to fix" case, same shape as
+ *  `no-checklist-match`. */
 export type WithheldReason =
   | "cost-basis-floor"
   | "no-checklist-match"
   | "identity-not-in-catalog"
   | "pool-migrating"
   | "no-exact-pool"
-  | "ladder-timeout";
+  | "ladder-timeout"
+  | "confidence-gate"
+  | "pending-review";
 
 export interface WithheldBlock {
   reason: WithheldReason;
@@ -91,6 +117,8 @@ const SHORT: Record<WithheldReason, string> = {
   "pool-migrating": "comps settling",
   "no-exact-pool": "no sales yet for this exact card",
   "ladder-timeout": "price still computing",
+  "confidence-gate": "not enough evidence yet",
+  "pending-review": "awaiting your review",
 };
 
 /** Rule 2: what would unlock a price, per reason. */
@@ -111,6 +139,14 @@ const UNLOCK: Record<WithheldReason, string> = {
   // statement about the market — the engine simply did not finish checking
   // in time. The next repricing pass is the unlock, not a new sale.
   "ladder-timeout": "This usually resolves on its own — try refreshing in a moment.",
+  // Not the owner's to fix either. The legacy pricing pass looked and could
+  // not clear its own confidence bar — thin comps, a stale read, or a low
+  // sample count — and declined rather than guess. The next scheduled
+  // reprice, or more sales landing in the pool, is the unlock.
+  "confidence-gate": "The next pricing pass may find enough evidence to publish a value.",
+  // The owner's to fix, same shape as no-checklist-match — but the fix here
+  // is confirming (or correcting) an import, not acquiring a checklist.
+  "pending-review": "Review and confirm this card's details to price it.",
 };
 
 /** The words for the attention column and the row chip. */
@@ -163,6 +199,12 @@ export function withheldSentence(
   }
   if (w.reason === "ladder-timeout") {
     return "We could not finish checking this card's sales in time, likely due to high demand on our pricing data. This is not a statement that no sale exists — just try again in a moment.";
+  }
+  if (w.reason === "confidence-gate") {
+    return "We found some evidence for this card, but not enough to publish a confident value yet. We will keep checking on the next pricing pass.";
+  }
+  if (w.reason === "pending-review") {
+    return "This card is awaiting your review. Its details were parsed from an import and have not been confirmed, so we do not publish a market value for it yet.";
   }
   // cost-basis-floor with nothing computed: no number to quote, and Rule 3
   // forbids borrowing one.

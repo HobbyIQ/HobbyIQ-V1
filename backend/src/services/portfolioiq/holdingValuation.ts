@@ -53,8 +53,93 @@ import type { PortfolioHolding } from "../../types/portfolioiq.types.js";
 import { valueIdentity, type Valuation } from "../compiq/oneValuationPath.service.js";
 import { isExactPoolRung, isPricingRung } from "../compiq/fmvRung.js";
 import { identityBackingOf, mayPublishPrice, NO_CHECKLIST_MATCH } from "../catalog/identityBacking.js";
+import { readCatalogIdentityBySlug } from "../catalog/catalogMatcher.service.js";
 import { persistedLabelsForValuation } from "../compiq/valuationLabels.js";
 import { writeHoldingValuation } from "./writeHoldingValuation.js";
+
+/**
+ * CF-THE-LEGACY-SHORTCUT-NEVER-ASKED (Fable, 2026-09-13).
+ *
+ * `valueHoldingThroughOneEntry` runs `mayPublishPrice` before it will ever
+ * write `observed`/`estimated` on a holding (see the CF-WE-DONT-WANT-
+ * SELF-DERIVED gate above). But four call sites in portfolioStore.service.ts
+ * — the `PORTFOLIO_OBSERVED_GRADE_OVERRIDE_ENABLED` "unified early-exit"
+ * blocks in `autoPriceHolding` and `repriceHoldingsForUser` — are LEGACY,
+ * pre-D17 shortcuts that fire only when the one entry returned `unresolved`
+ * (i.e. `holdingValuationIds` had nothing to give it: a `no-slug` holding
+ * whose only identity is a raw `cardId`/`hobbyiqCardId`). They call
+ * `priceHoldingFromExactPool` directly — which reads `sold_comps` by id and
+ * knows nothing about `card_catalog` provenance — and persist whatever it
+ * finds as `valueSource: "observed"` with NO identity-backing check at all.
+ *
+ * Measured read-only against prod on 2026-09-13 (139 holdings, 12 users): 9
+ * of 139 holdings carry a live `fairMarketValue` under an exact-pool rung
+ * with `no-slug` or `no-catalog-row` backing, every one stamped in the SAME
+ * reprice pass, every one's rung inside `isExactPoolRung` — exactly the
+ * shape this shortcut produces and the one-entry gate would have refused.
+ * `holdingId 69eab153` (Chipper Jones 1997 Metal Universe #31, no catalog
+ * row at all) is the same holding #1781's doctrine comment used to
+ * illustrate the cost-basis-floor defect two rulings ago — the identity was
+ * never fixed, only the floor around it.
+ *
+ * So the shortcut asks the SAME question the one entry asks, of the SAME
+ * identity it is about to publish (`attempt.cardId` — the id the pool was
+ * actually read under, not the holding's stored, possibly-different, slug).
+ * Reusing `identityBackingOf`/`mayPublishPrice` rather than a new predicate
+ * is deliberate: two independent implementations of "may a price rest on
+ * this row" is precisely the shape CF-RIGHT-GUARD-WRONG-SCOPE warns about.
+ *
+ * Returns `true` (publish allowed) only for a `checklist-backed` identity.
+ * A `hiq:`-shaped id that names no catalog row, or names one this codebase
+ * minted itself, refuses — the caller falls through to the legacy
+ * confidence-gated chain below it, which already knows how to persist a
+ * proper withheld reason (`identity-not-in-catalog` / `no-checklist-match`)
+ * instead of silently publishing.
+ *
+ * CF-A-REVIEW-STATUS-IS-NOT-A-CONFIRMED-IDENTITY (Claude Fable 5.1,
+ * 2026-09-13): also refuses when the caller's holding is `cardStatus:
+ * "pending-review"`, regardless of what the catalog says. This shortcut
+ * fires only when `valueHoldingThroughOneEntry` returned `unresolved` — the
+ * one case (`holdingValuationIds` found no slug/cardId at all) where that
+ * entry's OWN pending-review check (see `valueHoldingThroughOneEntry` below)
+ * never ran, because it returns `unresolved` before it ever reads
+ * `v.identity`. Without this second ask, an unconfirmed import with no
+ * resolvable identity at all would be the one shape that slips past both
+ * gates and reaches this shortcut's unguarded pool read. `cardStatus` is
+ * optional on the type (`Record<string, unknown>` escape hatch, same as
+ * everywhere else it's read) so every existing caller — none of which knows
+ * about review state — keeps compiling and keeps refusing nothing new.
+ */
+export async function mayPublishFromLegacyExactPoolShortcut(
+  attemptCardId: string | null | undefined,
+  cardStatus?: string | null,
+): Promise<boolean> {
+  if (String(cardStatus ?? "").trim() === "pending-review") return false;
+  const id = String(attemptCardId ?? "").trim();
+  if (!id) return false;
+  // A non-`hiq:` id (a bare vendor cardId) names no catalog row by
+  // definition — `readCatalogIdentityBySlug` itself refuses to look one up
+  // for exactly that reason. `identityBackingOf` correctly reads that as
+  // `no-slug`/`no-catalog-row` territory without a wasted read.
+  let row: { source: string | null } | null = null;
+  try {
+    row = await readCatalogIdentityBySlug(id);
+  } catch (err) {
+    // Fails CLOSED, unlike the resolver's read-error tolerance elsewhere:
+    // this shortcut is optional legacy coverage, and a throttled read is not
+    // grounds to skip the one check that stands between a holding and an
+    // unbacked publish. The legacy confidence-gated chain still runs.
+    console.warn(JSON.stringify({
+      event: "legacy_exact_pool_shortcut_identity_check_error",
+      source: "holdingValuation.mayPublishFromLegacyExactPoolShortcut",
+      attemptCardId: id,
+      error: (err as Error)?.message ?? String(err),
+    }));
+    return false;
+  }
+  const backing = identityBackingOf(id, row ? [{ source: row.source }] : []);
+  return mayPublishPrice(backing);
+}
 
 export type HoldingValuationOutcome =
   | { outcome: "observed"; holding: PortfolioHolding; valuation: Valuation }
@@ -400,6 +485,12 @@ function refusalFacts(
 const IDENTITY_REFUSALS: ReadonlySet<string> = new Set([
   "no-checklist-match",
   "identity-not-in-catalog",
+  // CF-A-REVIEW-STATUS-IS-NOT-A-CONFIRMED-IDENTITY (Claude Fable 5.1,
+  // 2026-09-13). A `pending-review` holding's prior value is the import-time
+  // number itself — the exact thing this refusal exists to withhold — so
+  // retaining it would hand the number straight back under a different name.
+  // See `noBasisRefusalWrite`'s `pending-review` branch for the fuller story.
+  "pending-review",
 ]);
 
 /** Why a prior value could not be retained, or the value that stood. */
@@ -783,7 +874,32 @@ export type NoBasisRefusalReason =
    *  out of time (most likely fleet RU pressure on sold_comps). */
   | "ladder-timeout"
   /** The confidence gate declined and the engine named no reason of its own. */
-  | "confidence-gate";
+  | "confidence-gate"
+  /** CF-A-REVIEW-STATUS-IS-NOT-A-CONFIRMED-IDENTITY (Claude Fable 5.1,
+   *  2026-09-13). The holding's `cardStatus` is `"pending-review"` — an
+   *  eBay auto-import (or any import lane using the same review gate) whose
+   *  identity the USER has not confirmed — and, checklist-backed or not,
+   *  HobbyIQ does not publish a price for an identity nobody has confirmed
+   *  is even the right card. Distinct from `no-checklist-match`: that reason
+   *  says "no real checklist confirms this row"; this one can fire even on a
+   *  genuinely checklist-backed identity, because the review gate is a
+   *  SEPARATE question from catalog backing (`cardStatus` decides who looks
+   *  at a row; `identityBackingOf` decides whether a price may rest on it —
+   *  CF-A-REVIEW-STATUS-IS-NOT-A-PRICING-STATUS, #1869 — and this is the
+   *  ONE case where both must say yes before a number publishes).
+   *
+   *  THE FINDING (2026-09-13, go-live census): holdings 925ccfe7 / 4e70af40
+   *  (Jack Wheeler, user-67878bb5) sat at `cardStatus: "pending-review"`
+   *  since their 2026-09-04 import, carrying a published `fairMarketValue`
+   *  of $14.79 under `exact-pool-projection` with no `withheld` block at
+   *  all — the import-time number, never revisited by name. #2094 (same
+   *  day) closed the *identity-backing* gap the legacy exact-pool shortcuts
+   *  had, which independently would have withheld these two rows once
+   *  repriced (their slug names no `card_catalog` row). This reason closes
+   *  the narrower, still-open gap: even a holding whose identity WOULD
+   *  clear `mayPublishPrice` must not publish while a human has not yet
+   *  confirmed the row is the card the parser thinks it is. */
+  | "pending-review";
 
 /**
  * The engine's `ValuationReason` (or a confidence-gate decline) as a refusal
@@ -859,8 +975,11 @@ export function noBasisRefusalWrite(
             : reason === "ladder-timeout"
               ? `the fallback ladder for ${slug ?? "this identity"} did not settle within its time`
                 + ` budget — withheld rather than a stale or partial number; ${retentionClause}`
-              : `${slug ?? "this identity"} is still having its sales re-keyed — the pool is incomplete`
-                + `; ${retentionClause}`;
+              : reason === "pending-review"
+                ? `this holding is awaiting the owner's review and confirmation — its identity has`
+                  + ` not been confirmed, checklist-backed or not; ${retentionClause}`
+                : `${slug ?? "this identity"} is still having its sales re-keyed — the pool is incomplete`
+                  + `; ${retentionClause}`;
   const refusal = reason === "identity-not-in-catalog"
     ? `no price was published: the catalog holds no identity for this holding`
       + `${slug ? ` (${slug})` : ""}, so there is no pool to price it from.`
@@ -903,6 +1022,15 @@ export function noBasisRefusalWrite(
       + ` pool within its time budget, most likely because sold_comps was under heavy load —`
       + ` this is NOT a statement that no sale exists, only that the engine could not confirm`
       + ` one in time. Pricing resumes on the next repricing pass under normal load.`
+    : reason === "pending-review"
+    // CF-A-REVIEW-STATUS-IS-NOT-A-CONFIRMED-IDENTITY. The remedy is the
+    // OWNER's: nothing about the pool or the catalog is at fault, and no
+    // amount of re-pricing unblocks this row until a human says the parsed
+    // card is the right one.
+    ? `no price was published: this holding is awaiting your review. Its card details were parsed`
+      + ` from an import and have not been confirmed, so HobbyIQ does not publish a market value for`
+      + ` it yet — checklist-backed or not, an unconfirmed identity is not one a price may rest on.`
+      + ` Pricing resumes once you confirm (or correct) this card.`
     : `no price was published: this card's identity was created recently and its sales are still`
       + ` being re-keyed onto it, so the pool is a partial view. Pricing resumes once the re-key for`
       + ` this identity has settled. No fallback number is published in the meantime — a partial pool`
@@ -1265,6 +1393,36 @@ export async function valueHoldingThroughOneEntry(
     // rides #1785's one-stamp write and #1781's retention rule by
     // construction rather than by a parallel implementation remembering to.
     return { outcome: "no-basis-refusal", reason: NO_CHECKLIST_MATCH, valuation: v };
+  }
+
+  // CF-A-REVIEW-STATUS-IS-NOT-A-CONFIRMED-IDENTITY (Claude Fable 5.1,
+  // 2026-09-13). Asked SECOND, right after the checklist gate and still ahead
+  // of the cost-basis floor — the same ordering rationale: this is a question
+  // about whether there is a CONFIRMED card here, not about whether the
+  // number is plausible. A `pending-review` holding can be checklist-backed
+  // (the parser's + Browse's match may well be correct) and must STILL
+  // withhold, because #1869's own ruling — "a review status is not a pricing
+  // status" — cuts both ways: it means pending-review no longer BLOCKS the
+  // one valuation path from being asked, but it was never meant to mean an
+  // unconfirmed row may PUBLISH. The two Jack Wheeler holdings (925ccfe7 /
+  // 4e70af40, `hiq:baseball:2026:bowman-chrome:cpa-jwh:refractor:auto:num-499`)
+  // are the case this closes: `mayPublishPrice` alone cannot see a pending
+  // review, only a catalog backing.
+  if (String((holding as { cardStatus?: unknown }).cardStatus ?? "").trim() === "pending-review") {
+    console.warn(JSON.stringify({
+      event: "one_valuation_path_withheld_pending_review",
+      source: "holdingValuation.valueHoldingThroughOneEntry",
+      site: opts.caller,
+      userId: opts.userId ?? null,
+      holdingId: holding.id,
+      slug: v.identity.slug,
+      pricedId: v.identity.pooledAs,
+      backing,
+      rung: v.rungLabel,
+      proposed: v.fairMarketValue,
+      compsUsed: v.compsUsed,
+    }));
+    return { outcome: "no-basis-refusal", reason: "pending-review", valuation: v };
   }
 
   // "Observed" keeps its EXISTING meaning, unchanged: comps of this exact

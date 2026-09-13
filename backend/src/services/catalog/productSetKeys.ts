@@ -851,6 +851,41 @@ export const PRODUCT_SET_KEYS: ReadonlyArray<ProductSetKey> = [
   S("fleer-update-glossy", { family: "fleer-update", parent: "fleer-update" }),
   S("fleer-tradition-tiffany", { family: "fleer-tradition", parent: "fleer-tradition" }),
   P("flair", { parent: "fleer" }),
+
+  /**
+   * 1997 FLAIR SHOWCASE IS THREE CARD SETS (R30, Drew 2026-09-13).
+   *
+   * The same ruling as the Rookies & Stars autograph subsets: a same-numbered
+   * subset is its own card set. baseballcardpedia states it outright -- "all
+   * 540 base cards (180 players from all three Rows) are available in a Legacy
+   * and Masterpiece parallel" -- and 540 = 180 x 3. Rows 0, 1 and 2 are three
+   * distinct 180-card sets that SHARE NUMBERS 1-180, so the number cannot tell
+   * a Row 0 Griffey from a Row 2 Griffey and only the row can.
+   *
+   * Measured on the #2107 staged rows before this entry existed: 1,080 of
+   * 1,620 minted ids collided, all three rows landing on
+   * `hiq:baseball:1997:flair:1:base:no-auto`.
+   *
+   * REGISTRATION IS THE MECHANISM, NOT BOOKKEEPING. `normalizeSetKey` returned
+   * `flair` for all three, because the strict-tier rule `/flair-showcase|flair/`
+   * swallows every `flair-showcase-*` spelling. A key that is not a
+   * normalizeSetKey FIXED POINT cannot hold a pool, so `spelled` is what makes
+   * productSetKeyForName answer ahead of the regex vocabulary -- and the
+   * anchored rule added beside that catch-all in hobbyIqCardId.service.ts is
+   * what holds if this table is ever absent (its loader degrades to an EMPTY
+   * doc by design, so "absent" is a state that really occurs).
+   *
+   * LEGACY COLLECTION (/100) AND MASTERPIECE (/1) ARE NOT ROWS. The same
+   * sentence names them as parallels of every row, so they are rungs ON these
+   * three keys rather than keys of their own, and there is no Row 3 -- only
+   * 0, 1 and 2 appear anywhere on the page.
+   *
+   * THE BARE SPELLINGS STILL POOL INTO `flair`. "Flair Showcase" with no row,
+   * and plain "Flair", are untouched and keep folding to `flair` exactly as
+   * the pinned test requires; only a spelling that NAMES a row is separated.
+   */
+  ...["flair-showcase-row-0", "flair-showcase-row-1", "flair-showcase-row-2"]
+    .map((k) => S(k, { parent: "flair" })),
   P("ultra"),
   P("skybox"),
   ...["skybox-metal-universe", "skybox-thunder", "skybox-premium", "skybox-molten-metal"].map((k) => P(k, { parent: "skybox" })),

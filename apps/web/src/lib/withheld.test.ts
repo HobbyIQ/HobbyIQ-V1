@@ -27,6 +27,8 @@ const ALL: WithheldReason[] = [
   "pool-migrating",
   "no-exact-pool",
   "ladder-timeout",
+  "confidence-gate",
+  "pending-review",
 ];
 
 function holding(withheld: unknown): PortfolioHolding {
@@ -53,17 +55,18 @@ describe("withheldOf: reads the envelope, invents nothing", () => {
   });
 });
 
-describe("Rule 1: six causes, six different sentences", () => {
+describe("Rule 1: eight causes, eight different sentences", () => {
   it("gives every reason its own short label", () => {
     const seen = new Set(ALL.map((r) => withheldShort(r)));
-    // The bug: all four collapsed to "cost-basis check". Six distinct
-    // strings (now that no-exact-pool and ladder-timeout have joined the
-    // union) is the assertion that cannot pass if they ever re-collapse.
-    expect(seen.size).toBe(6);
+    // The bug: all four collapsed to "cost-basis check". Eight distinct
+    // strings (now that no-exact-pool, ladder-timeout, confidence-gate and
+    // pending-review have joined the union) is the assertion that cannot
+    // pass if they ever re-collapse.
+    expect(seen.size).toBe(8);
   });
 
   it("gives every reason its own unlock line", () => {
-    expect(new Set(ALL.map((r) => withheldUnlock(r))).size).toBe(6);
+    expect(new Set(ALL.map((r) => withheldUnlock(r))).size).toBe(8);
   });
 
   it("never leaks the engine's vocabulary onto the glass", () => {
@@ -76,6 +79,8 @@ describe("Rule 1: six causes, six different sentences", () => {
       expect(words).not.toContain("pool-migrating");
       expect(words).not.toContain("no-exact-pool");
       expect(words).not.toContain("ladder-timeout");
+      expect(words).not.toContain("confidence-gate");
+      expect(words).not.toContain("pending-review");
     }
   });
 
@@ -108,6 +113,12 @@ describe("Rule 2: every reason says what would unlock it", () => {
     // ladder-timeout is not even the owner's card to fix — the engine ran
     // out of time, not out of evidence. No card-detail action applies.
     expect(withheldUnlock("ladder-timeout").toLowerCase()).not.toContain("confirm");
+    // confidence-gate: the card is known, the engine looked and declined for
+    // its own reasons — nothing on the card record is what is missing.
+    expect(withheldUnlock("confidence-gate").toLowerCase()).not.toContain("confirm");
+    // pending-review is the OTHER owner-actionable reason, same shape as
+    // no-checklist-match: a human confirming the import is the unlock.
+    expect(withheldUnlock("pending-review").toLowerCase()).toContain("confirm");
   });
 });
 
@@ -169,6 +180,29 @@ describe("Rule 3: the refused number is evidence, never a price", () => {
       reason: "no-exact-pool", proposed: null, retained: null, blockingId: null, blockingCount: null, retentionRefused: null,
     });
     expect(noExactPool.toLowerCase()).not.toContain("not a statement that no sale exists");
+  });
+
+  it("pending-review reads as an owner action, not a market or catalog fact", () => {
+    // CF-A-REVIEW-STATUS-IS-NOT-A-CONFIRMED-IDENTITY: distinct from
+    // no-checklist-match/identity-not-in-catalog — this reason can fire on a
+    // genuinely checklist-backed identity, so the sentence must not blame the
+    // catalog or the market, only the unconfirmed import.
+    const s = withheldSentence({
+      reason: "pending-review", proposed: null, retained: null, blockingId: null, blockingCount: null, retentionRefused: null,
+    });
+    expect(s.toLowerCase()).toContain("review");
+    expect(s).not.toMatch(/\$\d/);
+  });
+});
+
+describe("pending-review badge: 'awaiting your review', a short one-sentence tooltip", () => {
+  it("short label is the badge text", () => {
+    expect(withheldShort("pending-review")).toBe("awaiting your review");
+  });
+
+  it("unlock line is one sentence ending in a period", () => {
+    const unlock = withheldUnlock("pending-review");
+    expect(unlock).toMatch(/^[^.]*\.$/);
   });
 });
 
@@ -283,6 +317,7 @@ describe("showsCheckingPrice — the spinner never masks a decided row", () => {
       "pool-migrating",
       "no-exact-pool",
       "ladder-timeout",
+      "confidence-gate",
     ];
     for (const reason of reasons) {
       expect(showsCheckingPrice({ repricing: true, value: null, withheld: { ...w, reason } })).toBe(

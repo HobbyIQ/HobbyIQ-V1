@@ -432,6 +432,16 @@ export function withheldOf(
     // CF-LADDER-TIME-BUDGET: same join, for the ladder's own timeout
     // reason — see the type's own comment in pricingEnvelope.ts.
     && reason !== "ladder-timeout"
+    // CF-THE-DOMINANT-REFUSAL-WAS-UNNAMED (2026-09-13): same join, for the
+    // legacy confidence-gated reprice lane's own decline reason — see the
+    // type's own comment in pricingEnvelope.ts. This was the single largest
+    // silent drop on the live portfolio (39 of 139 holdings, 2026-09-13).
+    && reason !== "confidence-gate"
+    // CF-A-REVIEW-STATUS-IS-NOT-A-CONFIRMED-IDENTITY (Claude Fable 5.1,
+    // 2026-09-13): same join, for a holding awaiting the owner's review —
+    // see the type's own comment in pricingEnvelope.ts. The Jack Wheeler
+    // holdings (925ccfe7 / 4e70af40) are the case this closes.
+    && reason !== "pending-review"
   ) {
     return null;
   }

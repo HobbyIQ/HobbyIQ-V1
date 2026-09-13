@@ -6,14 +6,51 @@
 # WHAT THIS IS. WAVE 2 is the population-wide IMPROVE apply of the GREAT
 # REMATCH: the ~44k writable `unknown`-keyed rows, the soccer competition rows,
 # the Hoops 3,057, the Bowman Chrome Draft rows, the Pokémon finish/era rows.
-# It runs in TWO PHASES over the same 32-slot shard table:
+# #2093 armed three further RULED SCOPES on the same rematch-sold-comps.cjs
+# apply path -- r26, r27, r28 -- each its own class of rows, selectable via the
+# EXISTING `scope` dispatch input. This driver runs, PER SCOPE
+# (WAVE2_APPLY_SCOPE, default `improve`), TWO PHASES over the same 32-slot
+# shard table:
 #
-#   census   mode=census apply=false  — every slot, report-only. Produces the
-#            per-slot `census-slot-<N>.json` artifact, which is BOTH the new I9
-#            reference (via rebaseline-i9-reference.cjs) AND the expected
-#            writable count each apply slot is gated against.
-#   apply    mode=apply-improve apply=true scope=improve — the writes, in
-#            waves of 4, slot 0 first as the canary.
+#   census   mode=census apply=false  — every slot, report-only, REGARDLESS of
+#            scope. Produces the per-slot `census-slot-<N>.json` artifact,
+#            which is BOTH the new I9 reference (via rebaseline-i9-reference.cjs)
+#            AND the expected writable count each apply slot is gated
+#            against -- one count per scope (`counts.IMPROVE`, `counts.r26`,
+#            `counts.r27`, `counts.r28`), all produced by the SAME census run.
+#   apply    mode=apply-improve apply=true scope=<WAVE2_APPLY_SCOPE> — the
+#            writes, in waves of 4, slot 0 first as the canary. Run once per
+#            scope: canary (slot 0) -> apply (slots 1-31), each gated against
+#            that scope's OWN expected-writable count, never another scope's.
+#
+# THE PER-SCOPE PROGRAM. A full pass over all four scopes is FOUR invocations
+# of `canary` and FOUR of `apply` (or fewer, if only some scopes are wanted),
+# sharing ONE `census` + `collect`:
+#
+#   WAVE2_APPLY_SCOPE=improve  wave2-fleet.sh canary   # slot 0, scope=improve
+#   WAVE2_APPLY_SCOPE=improve  wave2-fleet.sh apply    # slots 1-31, scope=improve
+#   WAVE2_APPLY_SCOPE=r26      wave2-fleet.sh canary   # slot 0, scope=r26
+#   WAVE2_APPLY_SCOPE=r26      wave2-fleet.sh apply    # slots 1-31, scope=r26
+#   WAVE2_APPLY_SCOPE=r27      wave2-fleet.sh canary   # slot 0, scope=r27
+#   WAVE2_APPLY_SCOPE=r27      wave2-fleet.sh apply    # slots 1-31, scope=r27
+#   WAVE2_APPLY_SCOPE=r28      wave2-fleet.sh canary   # slot 0, scope=r28
+#   WAVE2_APPLY_SCOPE=r28      wave2-fleet.sh apply    # slots 1-31, scope=r28
+#
+# Each scope's canary/apply reads its OWN `counts.<SCOPE>` from the SAME
+# collected census artifacts (WAVE2_CENSUS_DIR need not be re-collected
+# between scopes) and gates against ITS OWN count only -- an r26 apply is
+# never compared against counts.IMPROVE, or vice versa. `WAVE2_APPLY_SCOPE` is
+# validated against the allowlist improve|r26|r27|r28 and any other value is
+# refused outright (exit 2) -- this is a class of rows the fleet is told to
+# write, and an unrecognised class must never fall through to a default.
+#
+# TWO SCOPES' RUNS NEVER SHARE STATE. Every log and in-flight marker this
+# driver produces for an apply/canary carries the scope in its name
+# (`apply-<scope>-slot-<N>.log`, the `.inflight-apply-<scope>-<pid>` table), so
+# an r26 pass and a concurrent or sequential improve pass can never read each
+# other's logs or count each other's chains as in flight. (The workflow's own
+# write-ledger artifact is already named by run id -- `rematch-write-ledger-
+# slot-<slot>-<run_id>` -- which is unique per dispatch regardless of scope.)
 #
 # WHY A BANNER AND NOT A CONCLUSION. A green run is not a written row and a red
 # run is not a lost one. Eighteen slots of the 2026-09-07 fleet died in 55-70
@@ -40,8 +77,16 @@
 #   backend/scripts/wave2/wave2-fleet.sh canary          # slot 0 apply, gated
 #   backend/scripts/wave2/wave2-fleet.sh apply           # slots 1..31, waves of 4
 #
+# WAVE2_APPLY_SCOPE selects which class `canary`/`apply` dispatch and gate
+# against: improve (default) | r26 | r27 | r28. Any other value is REFUSED at
+# startup. `census` is scope-blind -- it always reports every class in one
+# pass, regardless of WAVE2_APPLY_SCOPE.
+#
 # `apply` and `canary` REFUSE without WAVE2_CENSUS_DIR pointing at collected
-# census artifacts: an apply with no expected writable count has no gate.
+# census artifacts: an apply with no expected writable count has no gate. They
+# also REFUSE if the collected artifact carries no `counts.<SCOPE>` key for the
+# requested scope -- that is a census taken before the scope existed, not a
+# scope with zero writable rows (zero is a present key with value 0).
 #
 # DRY RUN. WAVE2_DISPATCH=false prints every `gh workflow run` it would issue
 # and dispatches nothing. That is the default — an apply must be armed by hand.
@@ -67,6 +112,15 @@ WAVE_SIZE="${WAVE2_WAVE_SIZE:-4}"
 BAND_PCT="${WAVE2_BAND_PCT:-5}"
 CENSUS_DIR="${WAVE2_CENSUS_DIR:-}"
 DISPATCH="${WAVE2_DISPATCH:-false}"
+# THE APPLY CLASS. #2093 armed r26/r27/r28 as further ruled scopes on the same
+# rematch-sold-comps.cjs apply path, alongside the original `improve`. This is
+# the ONE place that class is chosen for the whole run -- `dispatch`,
+# `run_apply_slots`, `expected_writable` and every apply-side log/marker name
+# all read it from here, never a second copy. Validated below, once `die` is
+# defined (see the case block right after die()'s own definition): an
+# unrecognised scope is refused at startup, not defaulted to `improve` -- a
+# typo here must never silently apply the wrong class of rows.
+SCOPE="${WAVE2_APPLY_SCOPE:-improve}"
 POLL_SECS="${WAVE2_POLL_SECS:-60}"
 # A slot's chain may relaunch several times under the 180-minute job ceiling.
 MAX_CHAIN_MINUTES="${WAVE2_MAX_CHAIN_MINUTES:-600}"
@@ -81,6 +135,11 @@ LOGDIR="${WAVE2_LOGDIR:-/tmp/wave2}"
 # in_progress count before EVERY dispatch and waits for room, capping how many
 # of ITS OWN slots can be in flight at once -- independent of whatever else is
 # using the shared backfill-runner lane.
+#
+# 2026-09-12: "independent of whatever else is using the shared lane" was the
+# INTENT here from the start but not what the code measured -- see the
+# comment above inflight_state_dir() for the gap between the two and the
+# per-slot chain table that closes it.
 MAX_INFLIGHT_CENSUS_SLOTS="${WAVE2_MAX_INFLIGHT_CENSUS_SLOTS:-8}"
 INFLIGHT_POLL_SECS="${WAVE2_INFLIGHT_POLL_SECS:-30}"
 
@@ -89,6 +148,24 @@ mkdir -p "$LOGDIR"
 say()  { printf '%s\n' "$*"; }
 warn() { printf 'WAVE2 !! %s\n' "$*" >&2; }
 die()  { printf 'WAVE2 REFUSED — %s\n' "$*" >&2; exit 2; }
+
+# THE APPLY CLASS, validated now that die() exists. An unrecognised
+# WAVE2_APPLY_SCOPE is refused outright rather than falling through to
+# `improve` -- a typo must never silently apply the wrong class of rows.
+case "$SCOPE" in
+  improve|r26|r27|r28) ;;
+  *) die "WAVE2_APPLY_SCOPE='$SCOPE' is not one of improve|r26|r27|r28 — refusing rather than guess which class of rows to write." ;;
+esac
+# The census artifact's count KEY for this scope. `improve` reads the
+# original `counts.IMPROVE` (unchanged casing, unchanged key, so an existing
+# collected census from before this change still gates an improve apply
+# exactly as it always did); the three ruled scopes read `counts.r26` /
+# `counts.r27` / `counts.r28` verbatim, per the census artifact shape #2093's
+# follow-up PR writes.
+case "$SCOPE" in
+  improve) SCOPE_COUNT_KEY=IMPROVE ;;
+  *)       SCOPE_COUNT_KEY="$SCOPE" ;;
+esac
 
 # ── BANNER READERS ───────────────────────────────────────────────────────────
 #
@@ -256,34 +333,197 @@ preflight_lane() {
   return 0
 }
 
-# How many of THIS driver's own census dispatches are currently queued or
-# in_progress, counted by matching `-f script=rematch-sold-comps -f
-# mode=census` in each run's own dispatch inputs (`gh run view --json
-# displayTitle,name` does not carry input values, so the inputs are read off
-# the run same as everywhere else in this file: from its log, via
-# run_log_identifies_slot -- but that requires a COMPLETED log, which an
-# in_progress run never has). So the count here is coarser than identification
-# is elsewhere: it is every NOT-YET-COMPLETED backfill-runner run created at or
-# after `since`, on the theory that this driver is the only caller staggering
-# ITS OWN dispatches and a shared-lane run started by something else belongs
-# to preflight_lane's question, not this one. `since` keeps a long WAVE2
-# session from counting runs that predate it.
+# ── THE STAGGER'S OWN SLOT TABLE (2026-09-12) ───────────────────────────────
+#
+# THE DEFECT THIS REPLACES. The original `inflight_census_count` counted every
+# queued/in_progress run on the SHARED backfill-runner.yml lane created since
+# the phase started -- no filter on script, mode or slot. Measured tonight: 6
+# real census slots plus 2 unrelated baseline-pool-snapshot cron runs read as
+# "8 in flight" against a cap of 8, and slot 10+ never dispatched though this
+# fleet genuinely had room. The workflow has no free-text or marker INPUT to
+# filter on -- `script` is a fixed dropdown (see the `on.workflow_dispatch`
+# block above) -- and `gh run list`'s `displayTitle`/`name` are the workflow's
+# STATIC name for every run regardless of script/mode/slot (the same fact
+# `find_run_for_slot`'s "THE STEP NAMES ARE NOT AN ALTERNATIVE" comment
+# already established for job step names), so neither can substitute.
+#
+# THE FIX IS A TABLE OF THIS FLEET'S OWN CHAINS, ONE ROW PER SLOT --
+# `$LOGDIR/.inflight-<tag>/<slot>.run_id` -- keyed by the run id THIS driver
+# dispatched for that slot, or a self-relaunch successor of that run. A
+# slot's row is never a foreign run: it starts from a run id `dispatch()`
+# itself just created, and moves only to a run id `run_log_identifies_slot`
+# positively identifies (the SAME log check every other verdict in this file
+# uses, never touched here) as MODE=census slot N.
+#
+# CHAINS, NOT RUNS (the second defect named alongside the first). A link that
+# stops at its budget is not the end of the slot -- `relaunch-on-marker`
+# dispatches the successor inline, in the same job step, seconds after the
+# predecessor's completed status is visible. So a slot whose current link just
+# went `budget` must still count as ONE in-flight slot for a grace window
+# after that completion: the successor is real but not yet visible to
+# `gh run list`, and undercounting it is exactly the race that would let a
+# 9th dispatch through while 8 chains are still alive.
+INFLIGHT_BUDGET_GRACE_SECS="${WAVE2_INFLIGHT_BUDGET_GRACE_SECS:-90}"
+
+# Where this phase's per-slot tracking rows live. Cleared per invocation of
+# phase_census (never across CLI runs) so a stale row from an earlier session
+# cannot mis-attribute a run id that has since finished and moved on.
+inflight_state_dir() { printf '%s/.inflight-%s' "$LOGDIR" "$1"; }
+
+inflight_reset_state() {
+  local tag="$1"
+  rm -rf "$(inflight_state_dir "$tag")"
+  mkdir -p "$(inflight_state_dir "$tag")"
+}
+
+# Record the run THIS dispatch just created as slot `$2`'s current chain link.
+# Called only from dispatch()'s success path, so `run_id` is always a run this
+# driver itself created -- never a candidate found by searching the lane.
+inflight_track_dispatch() {
+  local tag="$1" slot="$2" run_id="$3" dir
+  dir="$(inflight_state_dir "$tag")"
+  mkdir -p "$dir"
+  printf '%s' "$run_id" >"$dir/$slot.run_id"
+  rm -f "$dir/$slot.budget_at"
+}
+
+# Refresh ONE slot's row against `gh` and print whether it still counts as
+# in-flight ("1" or "0"). Never touches a run id this driver did not itself
+# attach: the only way a new id ever lands in the row is
+# run_log_identifies_slot() confirming it as MODE=census slot N's successor,
+# the identical check follow_slot() gates its own verdict reads on.
+inflight_refresh_slot() {
+  local tag="$1" slot="$2" dir run_id st
+  dir="$(inflight_state_dir "$tag")"
+  run_id=$(cat "$dir/$slot.run_id" 2>/dev/null) || return 1
+  [ -n "${run_id:-}" ] || return 1
+
+  st=$(gh run view "$run_id" --repo "$REPO" --json status --jq .status 2>/dev/null)
+  case "$st" in
+    queued|in_progress)
+      rm -f "$dir/$slot.budget_at"
+      printf '1'; return 0
+      ;;
+    completed)
+      local log="$LOGDIR/.probe-inflight-$tag-$slot.log"
+      gh run view "$run_id" --repo "$REPO" --log >"$log" 2>/dev/null || : >"$log"
+      if ! run_log_identifies_slot "$log" census "$slot"; then
+        # Not a run we can attribute to this slot's census -- stop tracking it
+        # rather than guessing. A slot with no attributable row is simply not
+        # counted (never assumed in-flight, never assumed clear): the next
+        # dispatch loop iteration for THIS slot has not happened yet, so there
+        # is nothing further to track until it does.
+        rm -f "$log" "$dir/$slot.run_id" "$dir/$slot.budget_at"
+        printf '0'; return 0
+      fi
+      if [ "$(chain_outcome "$log")" = "budget" ]; then
+        rm -f "$log"
+        # First time we have seen THIS link report budget: stamp the grace
+        # window clock. Re-checking the same completed run on a later poll
+        # must not keep resetting the clock -- only replacing run_id with a
+        # newly found successor (below) clears it.
+        [ -s "$dir/$slot.budget_at" ] || date +%s >"$dir/$slot.budget_at"
+        # Look for the successor now: find_run_for_slot with a short discovery
+        # window and NO completion wait (WAVE2_IDENTIFY_TIMEOUT_MINUTES=0 would
+        # be a no-op deadline in bash's integer arithmetic, so a one-shot probe
+        # is done inline instead of borrowing the full finder's blocking loop).
+        local since succ
+        since=$(date -u -d "@$(( $(cat "$dir/$slot.budget_at") - 5 ))" +%Y-%m-%dT%H:%M:%SZ 2>/dev/null \
+                || date -u +%Y-%m-%dT%H:%M:%SZ)
+        succ=$(inflight_find_successor census "$slot" "$since" "$run_id")
+        if [ -n "${succ:-}" ]; then
+          printf '%s' "$succ" >"$dir/$slot.run_id"
+          rm -f "$dir/$slot.budget_at"
+          printf '1'; return 0
+        fi
+        # No successor visible yet. Still counts as in-flight while inside the
+        # grace window -- the chain is not over, `gh run list` just has not
+        # shown the new run yet.
+        local age=$(( $(date +%s) - $(cat "$dir/$slot.budget_at") ))
+        if [ "$age" -lt "$INFLIGHT_BUDGET_GRACE_SECS" ]; then
+          printf '1'; return 0
+        fi
+        warn "slot $slot: budget stop on run $run_id but no self-relaunch successor became visible within ${INFLIGHT_BUDGET_GRACE_SECS}s -- no longer counted in-flight."
+        rm -f "$dir/$slot.run_id" "$dir/$slot.budget_at"
+        printf '0'; return 0
+      fi
+      # Any other completed outcome (finished, verdict, killed, startup-refused,
+      # died-in-startup) ends the chain for stagger purposes -- follow_slot is
+      # what judges the slot; this table only tracks whether it is still using
+      # a runner slot.
+      rm -f "$log" "$dir/$slot.run_id" "$dir/$slot.budget_at"
+      printf '0'; return 0
+      ;;
+    *)
+      # gh failed or returned nothing for a run id we DO hold -- not proof the
+      # run ended, so it is not dropped from the table. Read as "cannot
+      # confirm" rather than "clear", the same non-fatal-but-not-optimistic
+      # posture wait_for_inflight_room already takes on a whole-query failure.
+      return 1
+      ;;
+  esac
+}
+
+# A single, non-blocking probe for a budget-stopped slot's self-relaunch
+# successor: the SAME identification find_run_for_slot uses (script + MODE +
+# slot, off the completed log -- run_log_identifies_slot, untouched), but
+# capped to one pass over the candidate list with no polling loop, because
+# inflight_refresh_slot is itself called repeatedly from the stagger's own
+# poll loop and must not block behind a second nested wait.
+inflight_find_successor() {
+  local mode="$1" slot="$2" since="$3" exclude="$4"
+  local ids id st probe
+  ids=$(gh run list --repo "$REPO" --workflow=backfill-runner.yml --limit 100 \
+          --json databaseId,createdAt --jq "[.[] | select(.createdAt >= \"$since\")] | sort_by(.createdAt) | .[].databaseId" 2>/dev/null)
+  for id in ${ids:-}; do
+    [ "$id" = "$exclude" ] && continue
+    st=$(gh run view "$id" --repo "$REPO" --json status --jq .status 2>/dev/null)
+    case "$st" in
+      queued|in_progress)
+        printf '%s' "$id"; return 0
+        ;;
+      completed)
+        probe="$LOGDIR/.probe-successor-$mode-$slot.log"
+        gh run view "$id" --repo "$REPO" --log >"$probe" 2>/dev/null || : >"$probe"
+        if run_log_identifies_slot "$probe" "$mode" "$slot"; then
+          rm -f "$probe"
+          printf '%s' "$id"; return 0
+        fi
+        rm -f "$probe"
+        ;;
+    esac
+  done
+  return 1
+}
+
+# How many of THIS driver's own census CHAINS are currently in flight: every
+# tracked slot whose inflight_refresh_slot() call returns "1". `tag` scopes
+# the state table to one phase_census invocation. Prints NOTHING (not "0")
+# and returns nonzero if any tracked slot's status could not be confirmed --
+# same "cannot confirm, don't guess" contract the old whole-query read had,
+# just evaluated per row instead of per call.
 inflight_census_count() {
-  local since="$1"
-  gh run list --repo "$REPO" --workflow=backfill-runner.yml --limit 100 \
-    --json createdAt,status \
-    --jq "[.[] | select(.createdAt >= \"$since\") | select(.status==\"queued\" or .status==\"in_progress\")] | length" 2>/dev/null
+  local tag="$1" dir slot n=0 r
+  dir="$(inflight_state_dir "$tag")"
+  [ -d "$dir" ] || { printf '0'; return 0; }
+  for f in "$dir"/*.run_id; do
+    [ -e "$f" ] || continue
+    slot=$(basename "$f" .run_id)
+    r=$(inflight_refresh_slot "$tag" "$slot") || return 1
+    [ "$r" = "1" ] && n=$((n + 1))
+  done
+  printf '%s' "$n"
 }
 
 # Block until fewer than MAX_INFLIGHT_CENSUS_SLOTS of this driver's own
-# dispatches (since `since`) are queued or in_progress. Never blocks forever:
-# a `gh` failure is read as "cannot confirm room" and proceeds rather than
-# wedging the fleet on a transient API error, the same non-fatal posture
+# CHAINS (tracked in `$tag`'s state table) are in flight. Never blocks
+# forever: a `gh` failure is read as "cannot confirm room" and proceeds rather
+# than wedging the fleet on a transient API error, the same non-fatal posture
 # preflight_lane takes on the same failure.
 wait_for_inflight_room() {
-  local since="$1" n
+  local tag="$1" n
   while :; do
-    n=$(inflight_census_count "$since")
+    n=$(inflight_census_count "$tag")
     if [ -z "${n:-}" ]; then
       warn "could not read in-flight census count — proceeding without the stagger for this dispatch"
       return 0
@@ -295,7 +535,7 @@ wait_for_inflight_room() {
 }
 
 dispatch() {
-  local mode="$1" apply="$2" scope="$3" slot="$4"
+  local mode="$1" apply="$2" scope="$3" slot="$4" inflight_tag="${5:-}"
   local cmd=(gh workflow run backfill-runner.yml --repo "$REPO" --ref "$REF"
              -f script=rematch-sold-comps
              -f mode="$mode" -f apply="$apply" -f scope="$scope"
@@ -326,6 +566,20 @@ dispatch() {
     return 1
   fi
   say "WAVE2 dispatched slot $slot ($mode apply=$apply scope=$scope) -> $url"
+  # THE STAGGER'S OWN TABLE. `$inflight_tag`, when given (the census phase's
+  # dispatch loop and run_apply_slots's per-scope dispatch loop both pass one
+  # -- see phase_census's `tag="census-$$"` and run_apply_slots's
+  # `tag="apply-${SCOPE}-$$"`), seeds this slot's in-flight tracking row
+  # with the run id `gh` just handed back. This is a SEED, not a trusted
+  # identity: inflight_refresh_slot() never counts a completed run toward the
+  # cap without first passing it through run_log_identifies_slot, the same
+  # check follow_slot() gates every verdict on -- so a URL that (rarely) named
+  # the wrong run is simply dropped from the table once it completes and fails
+  # that check, never miscounted as a foreign slot's chain link.
+  if [ -n "$inflight_tag" ]; then
+    local run_id; run_id=$(printf '%s' "$url" | grep -aoE '[0-9]+$')
+    [ -n "${run_id:-}" ] && inflight_track_dispatch "$inflight_tag" "$slot" "$run_id"
+  fi
 }
 
 # -- THE FINDER: A RUN IS THIS SLOT'S ONLY WHEN ITS OWN LOG SAYS SO ----------
@@ -618,17 +872,27 @@ selected_slots() {
 phase_census() {
   preflight_lane
   local since; since=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-  say "WAVE2 CENSUS — shard table $SLOTS slots, driving [$(selected_slots | tr "\n" " ")], mode=census apply=false (report-only), stagger cap $MAX_INFLIGHT_CENSUS_SLOTS"
+  # THE STAGGER'S TABLE TAG. One per phase_census invocation, never reused
+  # across a CLI run -- inflight_reset_state wipes any row a previous
+  # invocation in this same $LOGDIR left behind, so a stale run id from a
+  # prior session cannot be counted toward THIS fan-out's cap.
+  local tag="census-$$"
+  inflight_reset_state "$tag"
+  say "WAVE2 CENSUS — shard table $SLOTS slots, driving [$(selected_slots | tr "\n" " ")], mode=census apply=false (report-only), stagger cap $MAX_INFLIGHT_CENSUS_SLOTS (own chains only, grace ${INFLIGHT_BUDGET_GRACE_SECS}s)"
   local s
   local selected; selected=$(selected_slots)
-  # THE STAGGER: at most MAX_INFLIGHT_CENSUS_SLOTS of this phase's own
-  # dispatches queued or in_progress at once. Checked BEFORE every dispatch,
-  # not only the first, so the cap holds across the whole fan-out and not just
-  # at its start -- see the 2026-09-11 comment above MAX_INFLIGHT_CENSUS_SLOTS.
+  # THE STAGGER: at most MAX_INFLIGHT_CENSUS_SLOTS of THIS FLEET'S OWN CHAINS
+  # -- tracked in `$tag`'s per-slot table, never the shared lane's whole
+  # queued/in_progress count -- in flight at once. Checked BEFORE every
+  # dispatch, not only the first, so the cap holds across the whole fan-out
+  # and not just at its start -- see the 2026-09-11 comment above
+  # MAX_INFLIGHT_CENSUS_SLOTS and the 2026-09-12 comment above
+  # inflight_state_dir for why a shared-lane count over-attributed foreign
+  # runs (a snapshot cron, an ad-hoc dispatch) to this fleet's own cap.
   if [ "$DISPATCH" = "true" ]; then
     for s in $selected; do
-      wait_for_inflight_room "$since"
-      dispatch census false improve "$s" || true
+      wait_for_inflight_room "$tag"
+      dispatch census false improve "$s" "$tag" || true
     done
   else
     for s in $selected; do dispatch census false improve "$s" || true; done
@@ -681,19 +945,36 @@ phase_collect() {
   [ "$n" -gt 0 ]
 }
 
-# The expected writable count for a slot: its census's IMPROVE count, read from
-# the collected artifact. THIS is the number the apply is gated against.
+# The expected writable count for a slot: its census's count for THIS RUN'S
+# SCOPE ($SCOPE_COUNT_KEY -- IMPROVE for scope=improve, r26/r27/r28 verbatim
+# for the ruled scopes), read from the collected artifact. THIS is the number
+# the apply is gated against -- never another scope's count, even when both
+# live in the same census-slot-N.json.
+#
+# A key that is ABSENT is not a zero. A census taken before #2093's follow-up
+# PR shipped `counts.r26` et al. has no such key at all, which is a different
+# fact from "this census counted r26 and found nothing writable" (that would
+# be counts.r26 present with value 0). The caller must refuse rather than
+# gate an r26 apply against a number that was never measured.
 expected_writable() {
   local slot="$1"
   local f; f=$(find "$CENSUS_DIR" -name "census-slot-$slot.json" | head -1)
   [ -n "${f:-}" ] || return 1
   node -e '
     const fs=require("fs");
+    const key=process.argv[2];
     const j=JSON.parse(fs.readFileSync(process.argv[1],"utf8"));
-    const n=Number(j?.counts?.IMPROVE);
+    if(!Object.prototype.hasOwnProperty.call(j?.counts||{}, key)){process.exit(3);}
+    const n=Number(j.counts[key]);
     if(!Number.isFinite(n)){process.exit(1);}
     process.stdout.write(String(n));
-  ' "$f"
+  ' "$f" "$SCOPE_COUNT_KEY"
+  local rc=$?
+  if [ "$rc" -eq 3 ]; then
+    warn "census artifact carries no counts.$SCOPE_COUNT_KEY; run a census that counts ruled scopes first"
+    return 1
+  fi
+  return "$rc"
 }
 
 # ── PHASE: APPLY ─────────────────────────────────────────────────────────────
@@ -707,7 +988,7 @@ gate_apply_slot() {
   fl=$(apply_field "$log" failed)        || fl="?"
   nr=$(apply_field "$log" "not reached") || nr="?"
   apply_reconciled "$log" >/dev/null || { warn "slot $slot: intended/written reconciliation ABSENT or DRIFTED — HELD"; return 1; }
-  say "WAVE2 slot $slot apply: written $w / skipped $sk / refused-or-failed $fl / not reached $nr  (reconciled; census writable $expected)"
+  say "WAVE2 slot $slot apply (scope=${SCOPE:-improve}): written $w / skipped $sk / refused-or-failed $fl / not reached $nr  (reconciled; census writable $expected)"
 
   # THE SHARD'S OWN CANARY IS THE FIRST GATE, because it is the ATTRIBUTED one.
   # A regression here stops the fleet outright — the next shard is not censused
@@ -715,7 +996,7 @@ gate_apply_slot() {
   local cv; cv=$(canary_verdict "$log")
   case "$cv" in
     hold)      ;;
-    regressed) warn "slot $slot CANARY REGRESSION — this shard is damage, not an improvement. STOP THE FLEET."; return 1 ;;
+    regressed) warn "slot $slot CANARY REGRESSION (scope=${SCOPE:-improve}) — this shard is damage, not an improvement. STOP THE FLEET."; return 1 ;;
     *)         warn "slot $slot: NO canary verdict in the log — a shard with no canary did not pass one. HELD."; return 1 ;;
   esac
 
@@ -725,9 +1006,9 @@ gate_apply_slot() {
   # out-writes its own census is writing rows the census never classified.
   if [ "$canary" = "true" ]; then
     if [ "$w" -gt "$expected" ]; then
-      warn "CANARY slot $slot wrote $w > census writable $expected — HOLD THE FLEET"; return 1
+      warn "CANARY slot $slot (scope=${SCOPE:-improve}) wrote $w > census writable $expected — HOLD THE FLEET"; return 1
     fi
-    say "WAVE2 CANARY slot $slot PASS ($w <= $expected)"
+    say "WAVE2 CANARY slot $slot (scope=${SCOPE:-improve}) PASS ($w <= $expected)"
     return 0
   fi
 
@@ -736,40 +1017,56 @@ gate_apply_slot() {
   # around zero, and a slot that writes into a class its census found empty is
   # the exact shape of a scope failure.
   if [ "$expected" -eq 0 ]; then
-    [ "$w" -eq 0 ] || { warn "slot $slot wrote $w where its census found 0 writable — HELD"; return 1; }
+    [ "$w" -eq 0 ] || { warn "slot $slot wrote $w where its census found 0 writable (scope=${SCOPE:-improve}) — HELD"; return 1; }
     return 0
   fi
   local lo=$(( expected - expected * BAND_PCT / 100 ))
   local hi=$(( expected + expected * BAND_PCT / 100 ))
   if [ "$w" -lt "$lo" ] || [ "$w" -gt "$hi" ]; then
-    warn "slot $slot wrote $w, outside ±${BAND_PCT}% of census writable $expected ($lo..$hi) — HELD"; return 1
+    warn "slot $slot wrote $w, outside ±${BAND_PCT}% of census writable $expected ($lo..$hi) (scope=${SCOPE:-improve}) — HELD"; return 1
   fi
   return 0
 }
 
+# Dispatches and follows one wave of apply slots for $SCOPE (the global set at
+# startup, validated against improve|r26|r27|r28 -- see the case above). This
+# was the hardcoded `dispatch apply-improve true improve "$s"` #2093's
+# follow-up needed generalised: the class dispatched, the class gated against,
+# the logs read and the in-flight table consulted are now ALL keyed by the
+# same $SCOPE, so a canary or apply run for one scope can never be judged
+# against -- or counted alongside -- another scope's chains.
 run_apply_slots() {
   local canary="$1"; shift
   local slots=("$@")
   preflight_lane
   local since; since=$(date -u +%Y-%m-%dT%H:%M:%SZ)
   local s
-  for s in "${slots[@]}"; do dispatch apply-improve true improve "$s" || true; done
+  # ONE TAG PER (scope, invocation). Never reused across a CLI run, same
+  # discipline phase_census's tag already follows: an r26 apply and an
+  # improve apply running back to back (or, on separate LOGDIRs, at the same
+  # time) must never see each other's dispatched run ids when counting what
+  # of THIS scope's own chains is in flight.
+  local tag="apply-${SCOPE}-$$"
+  inflight_reset_state "$tag"
+  for s in "${slots[@]}"; do
+    dispatch apply-improve true "$SCOPE" "$s" "$tag" || true
+  done
   [ "$DISPATCH" = "true" ] || { say "WAVE2 dry-run: dispatched nothing."; return 0; }
 
   local failed=0
   for s in "${slots[@]}"; do
-    local out; out=$(follow_slot apply "$s" "$since" apply-improve)
-    local log="$LOGDIR/apply-slot-$s.log"
+    local out; out=$(follow_slot "apply-${SCOPE}" "$s" "$since" apply-improve)
+    local log="$LOGDIR/apply-${SCOPE}-slot-$s.log"
     case "$out" in
       startup-refused)
-        warn "slot $s STARTUP REFUSED — the lane never began work; NOTHING was written and the slot is UNSTARTED. HOLD."
+        warn "slot $s STARTUP REFUSED (scope=$SCOPE) — the lane never began work; NOTHING was written and the slot is UNSTARTED. HOLD."
         failed=$((failed + 1)); continue ;;
       finished) ;;
       *)
-        warn "slot $s outcome=$out — not a clean finish. HELD."
+        warn "slot $s outcome=$out (scope=$SCOPE) — not a clean finish. HELD."
         failed=$((failed + 1)); continue ;;
     esac
-    local exp; exp=$(expected_writable "$s") || { warn "slot $s: no census artifact — cannot gate. HELD."; failed=$((failed+1)); continue; }
+    local exp; exp=$(expected_writable "$s") || { warn "slot $s: no census artifact for scope=$SCOPE — cannot gate. HELD."; failed=$((failed+1)); continue; }
     gate_apply_slot "$s" "$log" "$exp" "$canary" || failed=$((failed + 1))
   done
   [ "$failed" -eq 0 ]
@@ -777,13 +1074,13 @@ run_apply_slots() {
 
 phase_canary() {
   [ -n "$CENSUS_DIR" ] || die "WAVE2_CENSUS_DIR is unset — an apply with no census has no gate."
-  say "WAVE2 CANARY — slot 0, mode=apply-improve scope=improve apply=true"
+  say "WAVE2 CANARY — slot 0, mode=apply-improve scope=$SCOPE apply=true"
   run_apply_slots true 0
 }
 
 phase_apply() {
   [ -n "$CENSUS_DIR" ] || die "WAVE2_CENSUS_DIR is unset — an apply with no census has no gate."
-  say "WAVE2 APPLY — slots 1..$((SLOTS - 1)) in waves of $WAVE_SIZE"
+  say "WAVE2 APPLY — slots 1..$((SLOTS - 1)) in waves of $WAVE_SIZE, scope=$SCOPE"
   local wave=() s
   for s in $(seq 1 $((SLOTS - 1))); do
     wave+=("$s")

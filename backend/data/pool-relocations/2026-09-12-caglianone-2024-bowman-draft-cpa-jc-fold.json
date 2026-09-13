@@ -1,0 +1,31 @@
+{
+ "generatedAt": "2026-09-12T20:38:42.000Z",
+ "forLane": "relocate-pool-rows-by-list",
+ "reportOnlyUntil": "Drew's review — no apply is authorized by this PR",
+ "finding": "CF-THE-TITLE-DECIDES fold for Drew's holding 96f1a812-4aae-4dcd-9286-c96dad167caf (2024 Bowman Draft Jac Caglianone 1st Bowman Chrome Auto Refractor /499). Its own PSA 9 sale ($405, tca-ebay::800493761453, soldAt 2026-08-19, title '2024 Bowman Draft Jac Caglianone 1st Bowman Auto Refractor /499 PSA 9') sits at cardId hiq:baseball:2024:bowman-draft:b24-jce:refractor:auto:num-499 — a slug minted from a seller/listing code (cardNumber stored as lowercase 'b24-jce', no matching card_catalog row at this exact address) rather than from a checklist number, and the row itself carries reslugedFrom/reslugedReason=CF-RESLUG-ALL-SOLD-COMPS from an earlier bulk pass. Read-only 2026-09-12: card_catalog holds the checklist-backed row hiq:baseball:2024:bowman-draft:cpa-jc:refractor:auto:num-499 (source checklistcenter-2026-08-29, verificationStatus verified, confidence 0.95, playerName Jac Caglianone, parallel Refractor, isAuto true, printRun 499) — point-read confirmed live and unchanged. A bounded scan of every 2024 bowman-draft address containing 'jce' found exactly two rows: this one, and a 'Lot of (5)' listing (tca-ebay::366595029805) at b24-jce:refractor:no-auto whose title states neither Auto nor a print run — out of this fold's scope, left untouched. Two card-number-prefix collisions were checked and ruled out as competing identities: CPA-JC is reused in 2026 Bowman Chrome's own checklist for a different player (Johenssy Colome), and 'B24-JCE' is also confirmed a REAL, DIFFERENT, checklist-backed card number (72 card_catalog rows) belonging to the unrelated 2024 Bowman's Best product (setKey bowmans-best) and to the base 2024 Bowman product's own Sky Blue /499 NON-auto parallel (setKey bowman) — neither carries a Refractor Auto /499 tier, so neither collision is a competing identity for this title.",
+ "rulings": [
+  "CF-THE-TITLE-DECIDES. The source row's title states '1st Bowman Auto Refractor /499 PSA 9' — no insert-set name, no 'Bowman's Best', no 'Chrome' variant beyond the standard 1st Bowman Chrome product. That matches the checklist row's own parallel (Refractor, auto, /499) exactly, and is corroborated by the destination pool itself already holding an ebay-user-purchase row (128032791220-10084503020016) titled '2024 Bowman Draft Jac Caglianone 1st Bowman Chrome Auto Refractor /499 PSA 9' at the identical checklist address — the same wording, the same grade, a different sale.",
+  "CF-A-WHOLE-SCOPE-WRITE-REFUSES-WITHOUT-ITS-SCOPE / code collisions are not identity. CPA-JC is reused elsewhere (2026 Bowman Chrome's CPA-JC is Johenssy Colome) and B24-JCE is reused elsewhere (2024 Bowman's Best autographs, and 2024 Bowman's own non-auto Sky Blue parallel) — neither collision is evidence against this fold, because the destination is judged by its OWN card_catalog row (checklistcenter-2026-08-29, verified, Jac Caglianone, 2024 Bowman Draft, Refractor, auto, /499), not by the prefix string alone. Measured: no card_catalog row anywhere names B24-JCE as an auto Refractor /499 card — its only /499 entry is the non-auto Sky Blue parallel of the unrelated base 2024 Bowman product — so B24-JCE cannot be this sale's destination under any reading of the title.",
+  "R22 (key-spelling / seller-code twins fold onto the checklist key). The source address's own cardNumber field stores the lowercase, non-checklist token 'b24-jce' with no card_catalog row backing it at this exact slug — an unaddressable stub, not a second card. It folds onto the checklist-backed CPA-JC row for the same player, same product, same parallel, same print run.",
+  "GRADED FIELDS ARE KEPT AS STORED. gradeCompany PSA / gradeValue 9 are carried unchanged onto the target partition; the engine tiers FMV by gradeCompany/gradeValue on the checklist row, so no grade-shape transform is needed or performed here.",
+  "THE LOT LISTING PARKS BY SCOPE, NOT BY THIS FILE. tca-ebay::366595029805 ('Lot of (5) 2024 Bowman Draft Chrome Refractor Jac Caglianone Royals RC Rookie', $50, at b24-jce:refractor:no-auto) states no Auto and no print run — it fails the task's own match criteria (1st Bowman + Auto + Refractor + /499) and is a multi-card lot besides. It is left at its current address, untouched by this list; it is not a duplicate of the single-card CPA-JC identity and folding it would misattribute a 5-card lot price to one card."
+ ],
+ "census": {
+  "b24JceAddressesScanned": 2,
+  "titleMatchesAllFourCriteria": 1,
+  "relocate": 1,
+  "park": 0,
+  "outOfScopeLotListing": 1,
+  "destinationChecklistRowVerified": true,
+  "destinationPoolCountBeforeFold": 36
+ },
+ "entries": [
+  {
+   "id": "tca-ebay::800493761453",
+   "fromCardId": "hiq:baseball:2024:bowman-draft:b24-jce:refractor:auto:num-499",
+   "toCardId": "hiq:baseball:2024:bowman-draft:cpa-jc:refractor:auto:num-499",
+   "price": 405,
+   "evidence": "Title '2024 Bowman Draft Jac Caglianone 1st Bowman Auto Refractor /499 PSA 9' states 1st Bowman, Auto, Refractor and /499 — all four match the checklist-backed hiq:baseball:2024:bowman-draft:cpa-jc:refractor:auto:num-499 (source checklistcenter-2026-08-29, verified, Jac Caglianone, Refractor, auto, printRun 499). PSA 9, $405, soldAt 2026-08-19. RELOCATE onto the checklist row per R22; gradeCompany/gradeValue (PSA 9) carry unchanged onto the target."
+  }
+ ]
+}
