@@ -181,6 +181,14 @@ const fs = require("fs");
 const backend = path.join(__dirname, "..");
 const { CosmosClient } = require(path.join(backend, "node_modules/@azure/cosmos"));
 const { runnerShardScope } = require(path.join(__dirname, "lib", "runner-shard-scope.cjs"));
+// CF-THE-SCAN-AND-THE-WRITE-MUST-AGREE-ON-WHERE-A-ROW-LIVES (2026-09-14). The
+// pk decision and the None-pk patch, pulled out so both are unit-testable
+// against a MOCKED container -- see the lib's own header for the full
+// argument. `patchCatalogRowFields`'s `cardId ? cardId : id` fallback
+// (backend/src/services/catalog/catalogRowOps.service.ts) is correct for a
+// row that carries a cardId and wrong for one that does not; fixing that
+// fallback itself is out of scope for this scripts-only PR.
+const { pkOf, isNonePkRow, patchNonePkRow } = require(path.join(__dirname, "lib", "catalog-none-pk.cjs"));
 // CF-A-ROW-IN-THE-WRONG-SPORT-IS-NOT-A-MISSING-CHECKLIST. The cross-sport
 // probe lives in a lib so the pins drive the SHIPPED rule, not a restatement
 // of it. Without it a row whose SPORT is wrong is compared against the wrong
@@ -621,6 +629,37 @@ async function main() {
   const t0 = Date.now();
   let scanned = 0, rowsRead = 0, retired = 0, unverified = 0, gradedChildren = 0, written = 0;
   let cardLevelSeen = 0, failed = 0, alreadyMarked = 0;
+  /** ── A NOOP AT WRITE TIME IS NOT A WRITE (2026-09-14) ──────────────────
+   *
+   * CF-NAME-THE-ROWS-BEFORE-CALLING-DAMAGE, continued. `patchCatalogRowFields`
+   * point-reads the row at `pkOf(r)` before patching it, and returns
+   * `{action:"noop"}` WITHOUT THROWING when that read finds nothing (see its
+   * own `if (!row) return { action: "noop", ... }`). Every call site in this
+   * lane treated "did not throw" as "wrote it" and fell straight through to
+   * `written++` and a ledger push -- so a row the scan found but the point-
+   * read could not (a partition-key mismatch: the scan is a cross-partition
+   * `WHERE c.sport=... AND c.year=... AND c.setKey=...` that needs no pk,
+   * while the write needs the ONE pk `pkOf` guesses) was counted as written,
+   * ledgered, and then failed its own verify-by-read at the same wrong pk --
+   * on every rerun, because the scan keeps finding the same row every time.
+   *
+   * `absentAtWrite` is that outcome, named instead of miscounted: a row this
+   * run SAW but could not address at write time. It is not `written` (no
+   * bytes moved), not ledgered (the verify would only rediscover the same
+   * absence), and not `failed` (nothing threw; a guard did not decline it
+   * either). It gets its own RECONCILE term so the arithmetic still balances
+   * without borrowing a bucket that means something else. */
+  let absentAtWrite = 0;
+  /** ── THE None-cardId DIAGNOSTIC (2026-09-14) ────────────────────────────
+   *
+   * Read-only tally, no extra query: the lane's own per-product projection
+   * already selects `c.cardId`, so counting how many self-derived rows in the
+   * scanned scope carry none costs nothing beyond a branch already being
+   * evaluated. Printed in the banner so an operator can see the SIZE of the
+   * None-pk population this run walked through without waiting on a
+   * dedicated census -- the sport-wide equivalent of the 25-of-43
+   * `user-verified` sample this defect was traced from. */
+  let selfDerivedNoCardId = 0;
   /** The cross-sport probe's own books. `contaminated` counts ROWS the probe
    *  decided (it is a subset of retired + unverified, never a fourth path, so
    *  the RECONCILE arithmetic below is unchanged); `probed` counts the extra
@@ -658,14 +697,43 @@ async function main() {
   // below (unchanged from before the extraction) keeps working: `entries` IS
   // the live backing array, pushed to only through `ledgerPush` above.
   const ledger = writeLedger.entries;
-  /** The partition key patchCatalogRowFields WILL have used for this row.
-   *  Mirrored, not guessed: that function computes `cardId ? String(cardId)
-   *  : id`, so a row with no cardId is written at its own id. A ledger that
-   *  recorded a raw null here would point-read the wrong partition, get
-   *  nothing back, and report a perfectly good write as MISSING THE MARKER --
-   *  which, now that a mismatch ends the lane non-zero, would turn a healthy
-   *  run red. The verify must read exactly where the write went. */
-  const pkOf = (row) => (row && row.cardId ? String(row.cardId) : String(row && row.id));
+  // `pkOf`, `isNonePkRow` and `patchNonePkRow` come from lib/catalog-none-pk.cjs
+  // (required at the top) -- pulled out so the pk decision is unit-testable
+  // against a mocked container. See that file's header for the full argument;
+  // in short: `patchCatalogRowFields` computes `cardId ? cardId : id`, which
+  // is wrong for a row with no `cardId` at all (it lives at Cosmos's "None"
+  // partition key, not at a partition keyed by its `id`), and that function
+  // has no parameter to override the pk it computes -- so a None-pk row can
+  // only be written by going around it, at the pk it actually lives at.
+  /** ── THE ONE PLACE THAT COUNTS A WRITE AS A WRITE ────────────────────────
+   *
+   * Every call site used to do `await patchCatalogRowFields(...); written++;
+   * ledgerPush(...)` unconditionally -- treating "did not throw" as "wrote
+   * it". `patchCatalogRowFields` throws only on a genuine Cosmos failure; a
+   * point-read that finds nothing returns `{action:"noop"}` WITHOUT throwing
+   * (see its own `if (!row) return { action: "noop", ... }`), and every call
+   * site here walked straight past that into the ledger. The sibling lanes
+   * (dedupe-catalog-by-hobbyiq, repair-bcp-misfiled-parallels, ...) all check
+   * `res.action === "noop"` before counting anything; this lane never did.
+   *
+   * `applyPatch` is the one seam all six call sites now go through, so the
+   * check is made once, not re-derived six times with six chances to miss a
+   * seventh. It ALSO routes a None-pk row (no `cardId`) to `patchNonePkRow`
+   * instead of the shared helper, since the shared helper cannot reach it
+   * (see above). It returns `true` when the write landed (caller may
+   * `written++` and ledger the entry) and `false` when it did not (caller
+   * bumps `absentAtWrite`) -- it never ledgers or increments `written`
+   * itself, because the caller still needs to choose the ledger
+   * `field`/`expect` for ITS marker, and duplicating that here would be a
+   * second place to keep those in sync. */
+  const applyPatch = async (id, cardId, fields) => {
+    const row = { cardId };
+    const result = isNonePkRow(row)
+      ? await patchNonePkRow(cat, id, fields, { retry })
+      : await patchCatalogRowFields(cat, id, cardId, fields, { retry });
+    if (result && result.action === "noop") { absentAtWrite++; return false; }
+    return true;
+  };
   const gaps = new Map();
   let stopReason = null;
   let productsDone = 0;
@@ -707,7 +775,10 @@ async function main() {
     let chkInSport = 0;
     for (const r of rows) {
       if (isChecklist(r.source)) { chkFull.add(kFull(r)); chkCard.add(kCard(r)); chkInSport++; }
-      else if (isSelfDerived(r.source)) sd.push(r);
+      else if (isSelfDerived(r.source)) {
+        sd.push(r);
+        if (!r.cardId) selfDerivedNoCardId++;
+      }
     }
 
     /** ── THE CROSS-SPORT PROBE ────────────────────────────────────────────
@@ -800,24 +871,26 @@ async function main() {
         if (!APPLY) continue;
         try {
           const now = new Date().toISOString();
-          await patchCatalogRowFields(cat, String(r.id), r.cardId, {
+          if (await applyPatch(String(r.id), r.cardId, {
             retiredReason: RETIRED,
             retiredAt: now,
             retiredBy: "retire-self-derived-identities",
             retiredMatchLevel: hasFull ? "identity" : "card",
-          }, { retry });
-          written++;
-          ledgerPush({ id: String(r.id), pk: pkOf(r), field: "retiredReason" });
+          })) {
+            written++;
+            ledgerPush({ id: String(r.id), pk: pkOf(r), field: "retiredReason" });
+          }
           for (const kid of kids) {
-            await patchCatalogRowFields(cat, String(kid.id), kid.cardId, {
+            if (await applyPatch(String(kid.id), kid.cardId, {
               retiredReason: RETIRED,
               retiredAt: now,
               retiredBy: "retire-self-derived-identities",
               retiredMatchLevel: "graded-child",
               retiredWithParent: String(r.id),
-            }, { retry });
-            written++;
-            ledgerPush({ id: String(kid.id), pk: pkOf(kid), field: "retiredReason" });
+            })) {
+              written++;
+              ledgerPush({ id: String(kid.id), pk: pkOf(kid), field: "retiredReason" });
+            }
           }
         } catch (e) { failed++; }
         continue;
@@ -856,26 +929,28 @@ async function main() {
             if (!APPLY) continue;
             try {
               const now = new Date().toISOString();
-              await patchCatalogRowFields(cat, String(r.id), r.cardId, {
+              if (await applyPatch(String(r.id), r.cardId, {
                 retiredReason: reason,
                 retiredAt: now,
                 retiredBy: "retire-self-derived-identities",
                 retiredMatchLevel: tFull ? "identity-cross-sport" : "card-cross-sport",
                 retiredTrueSport: contamination.trueSport,
-              }, { retry });
-              written++;
-              ledgerPush({ id: String(r.id), pk: pkOf(r), field: "retiredReason", expect: reason });
+              })) {
+                written++;
+                ledgerPush({ id: String(r.id), pk: pkOf(r), field: "retiredReason", expect: reason });
+              }
               for (const kid of kids) {
-                await patchCatalogRowFields(cat, String(kid.id), kid.cardId, {
+                if (await applyPatch(String(kid.id), kid.cardId, {
                   retiredReason: reason,
                   retiredAt: now,
                   retiredBy: "retire-self-derived-identities",
                   retiredMatchLevel: "graded-child",
                   retiredWithParent: String(r.id),
                   retiredTrueSport: contamination.trueSport,
-                }, { retry });
-                written++;
-                ledgerPush({ id: String(kid.id), pk: pkOf(kid), field: "retiredReason", expect: reason });
+                })) {
+                  written++;
+                  ledgerPush({ id: String(kid.id), pk: pkOf(kid), field: "retiredReason", expect: reason });
+                }
               }
             } catch (e) { failed++; }
             continue;
@@ -888,15 +963,16 @@ async function main() {
           unverified++;
           if (!APPLY) continue;
           try {
-            await patchCatalogRowFields(cat, String(r.id), r.cardId, {
+            if (await applyPatch(String(r.id), r.cardId, {
               [UNVERIFIED]: true,
               identityUnverifiedAt: new Date().toISOString(),
               identityUnverifiedBy: "retire-self-derived-identities",
               identityUnverifiedReason: reason,
               identityTrueSport: contamination.trueSport,
-            }, { retry });
-            written++;
-            ledgerPush({ id: String(r.id), pk: pkOf(r), field: UNVERIFIED });
+            })) {
+              written++;
+              ledgerPush({ id: String(r.id), pk: pkOf(r), field: UNVERIFIED });
+            }
           } catch (e) { failed++; }
           continue;
         }
@@ -909,15 +985,16 @@ async function main() {
         unverified++;
         if (!APPLY) continue;
         try {
-          await patchCatalogRowFields(cat, String(r.id), r.cardId, {
+          if (await applyPatch(String(r.id), r.cardId, {
             [UNVERIFIED]: true,
             identityUnverifiedAt: new Date().toISOString(),
             identityUnverifiedBy: "retire-self-derived-identities",
             identityUnverifiedReason: "sport-ambiguous",
             identityCandidateSports: contamination.candidates,
-          }, { retry });
-          written++;
-          ledgerPush({ id: String(r.id), pk: pkOf(r), field: UNVERIFIED });
+          })) {
+            written++;
+            ledgerPush({ id: String(r.id), pk: pkOf(r), field: UNVERIFIED });
+          }
         } catch (e) { failed++; }
         continue;
       }
@@ -934,13 +1011,14 @@ async function main() {
       }
       if (!APPLY) continue;
       try {
-        await patchCatalogRowFields(cat, String(r.id), r.cardId, {
+        if (await applyPatch(String(r.id), r.cardId, {
           [UNVERIFIED]: true,
           identityUnverifiedAt: new Date().toISOString(),
           identityUnverifiedBy: "retire-self-derived-identities",
-        }, { retry });
-        written++;
-        ledgerPush({ id: String(r.id), pk: pkOf(r), field: UNVERIFIED });
+        })) {
+          written++;
+          ledgerPush({ id: String(r.id), pk: pkOf(r), field: UNVERIFIED });
+        }
       } catch (e) { failed++; }
     }
   }
@@ -957,6 +1035,8 @@ async function main() {
   console.log(`  identityUnverified ${f(unverified)}`);
   console.log(`  already marked     ${f(alreadyMarked)}`);
   console.log(`  write failures     ${f(failed)}`);
+  console.log(`  absent at write    ${f(absentAtWrite)}   (scanned by this run, 404 at its own write pk -- a SUBSET of retired/unverified above, not a fourth path; NOT written, NOT ledgered)`);
+  console.log(`  self-derived, no cardId  ${f(selfDerivedNoCardId)}   (of ${f(scanned)} scanned -- these write/verify at the SDK's None partition key, not at their own id)`);
   if (writeLedger.duplicates) {
     console.log(`  ledger de-duped    ${f(writeLedger.duplicates)}   (graded child ledgered once, not once per path)`);
   }
@@ -982,10 +1062,21 @@ async function main() {
   // paths must sum to the population. A run that cannot balance its own
   // arithmetic has not measured what it claims to
   // (feedback_gate_merges_on_exit_codes).
+  //
+  // `absentAtWrite` is named here too, but it is NOT a sixth path added to the
+  // sum: `retired`/`unverified` increment at the DECISION (before the
+  // `!APPLY` guard and before any write is attempted), so a row that later
+  // 404s at its own write pk was already counted inside one of those two --
+  // the same relationship `contaminated` already has to retired/unverified
+  // above. Adding it again would over-account and turn a balanced run red for
+  // the wrong reason. It is reported alongside the equation so an operator
+  // reading RECONCILE sees at a glance how much of "retired"/"unverified"
+  // never actually reached Cosmos, without the arithmetic double-counting it.
   const routed = retired + unverified + alreadyMarked + (CARD_RULE ? 0 : cardLevelSeen);
   console.log(`\n  RECONCILE  seen ${f(scanned)} = retired ${f(retired)} + unverified ${f(unverified)}`
     + ` + alreadyMarked ${f(alreadyMarked)} + cardLevelLeft ${f(CARD_RULE ? 0 : cardLevelSeen)}`
-    + `  => ${f(routed)} ${routed === scanned ? "BALANCES" : "*** DOES NOT BALANCE ***"}`);
+    + `  => ${f(routed)} ${routed === scanned ? "BALANCES" : "*** DOES NOT BALANCE ***"}`
+    + `   (of which absentAtWrite ${f(absentAtWrite)}, a subset -- not written, not ledgered)`);
 
   // The queue no longer carries cells the probe refused. A cell whose
   // checklist lives under another sport is not a gap to acquire; it is a
@@ -1038,6 +1129,13 @@ async function main() {
       intended: retired + gradedChildren + unverified + alreadyMarked + (CARD_RULE ? 0 : cardLevelSeen),
       written,
       skipped: alreadyMarked + (CARD_RULE ? 0 : cardLevelSeen),
+      // A row this run decided to mark, whose write then found nothing at its
+      // own point-read pk (see `absentAtWrite` above), is neither `written`
+      // (no bytes moved) nor `failed` (nothing threw). It is declared here so
+      // `reconcileWrites`' own equation (written + skipped + refused + failed
+      // == intended) still balances honestly instead of reading as a
+      // shortfall this run cannot explain.
+      refused: absentAtWrite,
       failed,
     });
 
