@@ -2,6 +2,8 @@
   "_doc": "CF-THE-CANARY-IS-A-HAND-VERIFIED-POOL (GREAT REMATCH, Drew 2026-09-01). The holdings whose pools Drew verified by hand. rematch-canary-check.cjs recomputes each pool's FMV inputs before and after a shard's apply-improve and FAILS the shard on any regression. Fetched read-only from the portfolio container 2026-09-01; poolRows are the measured row counts at that instant (cardId partition + hobbyiqCardId field, unioned) and are a FLOOR, never an equality assertion -- ingest adds sales legitimately.",
   "_verifiedMarketDirection": "What Drew's verification established about the pool. `exact-pool` = the slug's own sales are the market and must stay reachable. `graded-from-raw` = the pool prices its graded tier off its own raw children through the empirical curve (D-graded-to-raw), so the RAW pool must stay reachable too. A canary regresses when its pool loses rows, when its anchor moves away from the verified market, or when any write touches a protected row.",
   "_capturedAt": "2026-09-01",
+  "capturedAt": "2026-09-14",
+  "_recapture20260914": "Refresh pass 2026-09-14 (URGENT, blocks today's apply). Every anchorRowId was point-read at its ORIGINAL slug partition (exact item.read by id+partitionKey, not a cross-partition SELECT -- CardHedge/vendor ids are NOT unique container-wide, only within a partition, and a cross-partition id lookup can silently return a different document at a different address; this was caught mid-task and the methodology corrected before any entry was re-pointed). Only entries whose anchor's OWN hobbyiqCardId field changed AND whose old-slug pool went to zero were treated as a genuine relocation. Entries where a raw vendor cardId differs from the slug but hobbyiqCardId still carries the canary's slug are NOT moves -- that split (partition vs field) is the documented normal shape of this pool model, not damage.",
   "canaries": [
     {
       "name": "Verlander 2005 Bowman Chrome DP BDP129 PSA 10",
@@ -27,9 +29,9 @@
       "name": "Shaq 1993 Topps Finest #99 Refractor",
       "holdingId": "fe7f69f7-6369-4095-81cd-43a0f55a821f",
       "slug": "hiq:basketball:1993:topps-finest:99:refractor:no-auto",
-      "poolRows": 55,
+      "poolRows": 80,
       "verifiedMarketDirection": "exact-pool",
-      "note": "The union is 55 = 2 rows in the slug's own partition + 53 carrying it as hobbyiqCardId -- the split the union measures. Topps Finest #197 lists `Uncommon` AND `Uncommon Refractor` as two cards, which is why the retracted trailing-' Refractor' strip must never come back: it would fold this pool into its sibling.",
+      "note": "The union is 55 = 2 rows in the slug's own partition + 53 carrying it as hobbyiqCardId -- the split the union measures. Topps Finest #197 lists `Uncommon` AND `Uncommon Refractor` as two cards, which is why the retracted trailing-' Refractor' strip must never come back: it would fold this pool into its sibling. [RECAPTURED 2026-09-14: live union count is 80 (captured floor was 55); anchor unchanged, pool still reachable at this slug -- refreshed floor upward to reflect legitimate ingest growth. No move.]",
       "shardSlot": 25
     },
     {
@@ -38,8 +40,10 @@
       "slug": "hiq:baseball:2026:bowman:cpa-jg:refractor:auto:num-499",
       "poolRows": 56,
       "verifiedMarketDirection": "exact-pool",
-      "note": "Base-auto-on-refractor-slug shape. The stored key already carries parallel=refractor, isAuto and num-499; a re-derivation from a terse title that drops the print run or the auto flag is a REGRESSION (less specific), not an improvement. Direct match: 55 sales of this exact card.",
-      "shardSlot": 5
+      "note": "Base-auto-on-refractor-slug shape. The stored key already carries parallel=refractor, isAuto and num-499; a re-derivation from a terse title that drops the print run or the auto flag is a REGRESSION (less specific), not an improvement. Direct match: 55 sales of this exact card. [CHECKED 2026-09-14: live union count is 18, BELOW the captured floor of 56 (delta -38). Anchor row (none recorded) is still resident at this slug (no ruling or catalog move found) -- this is NOT a re-point candidate. Per doctrine, a shrink with no accounting move is flagged for the coordinator, not silently lowered: poolRows is LEFT AT 56 so the canary keeps alarming until someone names the rows that left.]",
+      "shardSlot": 5,
+      "flaggedForCoordinator": true,
+      "flaggedReason": "live count 18 < captured floor 56, no explaining move found (anchor unchanged/absent)"
     },
     {
       "name": "Witt 2020 Bowman Draft BD-152 Image Variation PSA 9",
@@ -54,9 +58,9 @@
       "name": "Caglianone 2024 Bowman Draft CPA-JC Refractor auto /499 PSA 9",
       "holdingId": "96f1a812-4aae-4dcd-9286-c96dad167caf",
       "slug": "hiq:baseball:2024:bowman-draft:cpa-jc:refractor:auto:num-499",
-      "poolRows": 38,
+      "poolRows": 50,
       "verifiedMarketDirection": "graded-from-raw",
-      "note": "Bowman Draft is its own family, not Bowman. The union is 38-40 = 25 rows in the slug partition + 15 carrying it as hobbyiqCardId (poolRows is the captured floor; the pool gains rows as ingest runs). The graded tier prices off this pool's own raw children, so the raw rows are load-bearing even for the PSA 9 holding.",
+      "note": "Bowman Draft is its own family, not Bowman. The union is 38-40 = 25 rows in the slug partition + 15 carrying it as hobbyiqCardId (poolRows is the captured floor; the pool gains rows as ingest runs). The graded tier prices off this pool's own raw children, so the raw rows are load-bearing even for the PSA 9 holding. [RECAPTURED 2026-09-14: live union count is 50 (captured floor was 38); anchor unchanged, pool still reachable at this slug -- refreshed floor upward to reflect legitimate ingest growth. No move.]",
       "shardSlot": 9
     },
     {
@@ -72,7 +76,7 @@
       "name": "[derived] slot 1 1956 topps 292 base",
       "slug": "hiq:baseball:1956:topps:292:base:no-auto",
       "shardSlot": 1,
-      "poolRows": 362,
+      "poolRows": 399,
       "verifiedMarketDirection": "exact-pool",
       "derivedFrom": "provenance",
       "protectedAnchors": 1,
@@ -80,14 +84,14 @@
         "verifiedByUser"
       ],
       "anchorRowId": "cardhedge::ch-daily::1634086379933x322637656714903550::2026-07-12T23:38:00+00:00::3200",
-      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 1 provenance-protected row(s) -- verifiedByUser -- which a rematch may never re-key. The pool losing rows during slot 1's apply means sales moved away from a card a person vouched for. poolRows 362 is a FLOOR measured at capture (40 in the slug partition + 322 carrying it), never an equality assertion.",
+      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 1 provenance-protected row(s) -- verifiedByUser -- which a rematch may never re-key. The pool losing rows during slot 1's apply means sales moved away from a card a person vouched for. poolRows 362 is a FLOOR measured at capture (40 in the slug partition + 322 carrying it), never an equality assertion. [RECAPTURED 2026-09-14: live union count is 399 (captured floor was 362); anchor unchanged, pool still reachable at this slug -- refreshed floor upward to reflect legitimate ingest growth. No move.]",
       "protectedIdentity": true
     },
     {
       "name": "[derived] slot 2 2023 bowman-draft cda-zt base",
       "slug": "hiq:baseball:2023:bowman-draft:cda-zt:base:auto",
       "shardSlot": 2,
-      "poolRows": 173,
+      "poolRows": 178,
       "verifiedMarketDirection": "exact-pool",
       "derivedFrom": "provenance",
       "protectedAnchors": 4,
@@ -95,14 +99,14 @@
         "verifiedByUser"
       ],
       "anchorRowId": "cardhedge::ch-daily::1702858667469x135853617159703570::2026-07-12T22:16:00+00:00::2000",
-      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 4 provenance-protected row(s) -- verifiedByUser -- which a rematch may never re-key. The pool losing rows during slot 2's apply means sales moved away from a card a person vouched for. poolRows 173 is a FLOOR measured at capture (25 in the slug partition + 148 carrying it), never an equality assertion.",
+      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 4 provenance-protected row(s) -- verifiedByUser -- which a rematch may never re-key. The pool losing rows during slot 2's apply means sales moved away from a card a person vouched for. poolRows 173 is a FLOOR measured at capture (25 in the slug partition + 148 carrying it), never an equality assertion. [RECAPTURED 2026-09-14: live union count is 178 (captured floor was 173); anchor unchanged, pool still reachable at this slug -- refreshed floor upward to reflect legitimate ingest growth. No move.]",
       "protectedIdentity": true
     },
     {
       "name": "[derived] slot 3 2024 panini-prizm 365 base",
       "slug": "hiq:football:2024:panini-prizm:365:base:no-auto",
       "shardSlot": 3,
-      "poolRows": 539,
+      "poolRows": 541,
       "verifiedMarketDirection": "exact-pool",
       "derivedFrom": "provenance",
       "protectedAnchors": 1,
@@ -111,14 +115,14 @@
         "relocation-reason"
       ],
       "anchorRowId": "ebay-user-purchase::holding::de2df53a-e7e6-4ea6-b15c-3d183d238f42",
-      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 1 provenance-protected row(s) -- source:ebay-user-purchase, relocation-reason -- which a rematch may never re-key. The pool losing rows during slot 3's apply means sales moved away from a card a person vouched for. poolRows 539 is a FLOOR measured at capture (52 in the slug partition + 487 carrying it), never an equality assertion.",
+      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 1 provenance-protected row(s) -- source:ebay-user-purchase, relocation-reason -- which a rematch may never re-key. The pool losing rows during slot 3's apply means sales moved away from a card a person vouched for. poolRows 539 is a FLOOR measured at capture (52 in the slug partition + 487 carrying it), never an equality assertion. [RECAPTURED 2026-09-14: live union count is 541 (captured floor was 539); anchor unchanged, pool still reachable at this slug -- refreshed floor upward to reflect legitimate ingest growth. No move.]",
       "protectedIdentity": true
     },
     {
       "name": "[derived] slot 4 1979 topps 390 base",
       "slug": "hiq:baseball:1979:topps:390:base:no-auto",
       "shardSlot": 4,
-      "poolRows": 173,
+      "poolRows": 200,
       "verifiedMarketDirection": "exact-pool",
       "derivedFrom": "provenance",
       "protectedAnchors": 1,
@@ -126,14 +130,14 @@
         "verifiedByUser"
       ],
       "anchorRowId": "cardhedge::ch-daily::1652374510774x395061266713136600::2026-07-12T19:34:00+00:00::999",
-      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 1 provenance-protected row(s) -- verifiedByUser -- which a rematch may never re-key. The pool losing rows during slot 4's apply means sales moved away from a card a person vouched for. poolRows 173 is a FLOOR measured at capture (68 in the slug partition + 105 carrying it), never an equality assertion.",
+      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 1 provenance-protected row(s) -- verifiedByUser -- which a rematch may never re-key. The pool losing rows during slot 4's apply means sales moved away from a card a person vouched for. poolRows 173 is a FLOOR measured at capture (68 in the slug partition + 105 carrying it), never an equality assertion. [RECAPTURED 2026-09-14: live union count is 200 (captured floor was 173); anchor unchanged, pool still reachable at this slug -- refreshed floor upward to reflect legitimate ingest growth. No move.]",
       "protectedIdentity": true
     },
     {
       "name": "[derived] slot 5 2026 bowman bcp-102 base",
       "slug": "hiq:baseball:2026:bowman:bcp-102:base:no-auto",
       "shardSlot": 5,
-      "poolRows": 1087,
+      "poolRows": 1123,
       "verifiedMarketDirection": "exact-pool",
       "derivedFrom": "provenance",
       "protectedAnchors": 23,
@@ -143,14 +147,14 @@
         "relocation-reason"
       ],
       "anchorRowId": "cardhedge::1778476701364x910727469486951600::2026-07-08T04:43:00.000Z::1050",
-      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 23 provenance-protected row(s) -- verifiedByUser, source:ebay-user-purchase, relocation-reason -- which a rematch may never re-key. The pool losing rows during slot 5's apply means sales moved away from a card a person vouched for. poolRows 1087 is a FLOOR measured at capture (84 in the slug partition + 1003 carrying it), never an equality assertion.",
+      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 23 provenance-protected row(s) -- verifiedByUser, source:ebay-user-purchase, relocation-reason -- which a rematch may never re-key. The pool losing rows during slot 5's apply means sales moved away from a card a person vouched for. poolRows 1087 is a FLOOR measured at capture (84 in the slug partition + 1003 carrying it), never an equality assertion. [RECAPTURED 2026-09-14: live union count is 1123 (captured floor was 1087); anchor unchanged, pool still reachable at this slug -- refreshed floor upward to reflect legitimate ingest growth. No move.]",
       "protectedIdentity": true
     },
     {
       "name": "[derived] slot 6 2026 bowman bcp-102 base",
       "slug": "hiq:baseball:2026:bowman:bcp-102:base:no-auto",
       "shardSlot": 6,
-      "poolRows": 1087,
+      "poolRows": 1123,
       "verifiedMarketDirection": "exact-pool",
       "derivedFrom": "provenance",
       "protectedAnchors": 17,
@@ -160,14 +164,14 @@
         "relocation-reason"
       ],
       "anchorRowId": "cardhedge::1778476701364x910727469486951600::2026-07-08T15:42:00.000Z::125",
-      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 17 provenance-protected row(s) -- verifiedByUser, source:ebay-user-purchase, relocation-reason -- which a rematch may never re-key. The pool losing rows during slot 6's apply means sales moved away from a card a person vouched for. poolRows 1087 is a FLOOR measured at capture (84 in the slug partition + 1003 carrying it), never an equality assertion.",
+      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 17 provenance-protected row(s) -- verifiedByUser, source:ebay-user-purchase, relocation-reason -- which a rematch may never re-key. The pool losing rows during slot 6's apply means sales moved away from a card a person vouched for. poolRows 1087 is a FLOOR measured at capture (84 in the slug partition + 1003 carrying it), never an equality assertion. [RECAPTURED 2026-09-14: live union count is 1123 (captured floor was 1087); anchor unchanged, pool still reachable at this slug -- refreshed floor upward to reflect legitimate ingest growth. No move.]",
       "protectedIdentity": true
     },
     {
       "name": "[derived] slot 8 1963 fleer 43 base",
       "slug": "hiq:baseball:1963:fleer:43:base:no-auto",
       "shardSlot": 8,
-      "poolRows": 193,
+      "poolRows": 222,
       "verifiedMarketDirection": "exact-pool",
       "derivedFrom": "provenance",
       "protectedAnchors": 1,
@@ -175,14 +179,14 @@
         "verifiedByUser"
       ],
       "anchorRowId": "cardhedge::ch-daily::1636154968575x780234440235219700::2026-07-12T19:30:00+00:00::1900",
-      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 1 provenance-protected row(s) -- verifiedByUser -- which a rematch may never re-key. The pool losing rows during slot 8's apply means sales moved away from a card a person vouched for. poolRows 193 is a FLOOR measured at capture (21 in the slug partition + 172 carrying it), never an equality assertion.",
+      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 1 provenance-protected row(s) -- verifiedByUser -- which a rematch may never re-key. The pool losing rows during slot 8's apply means sales moved away from a card a person vouched for. poolRows 193 is a FLOOR measured at capture (21 in the slug partition + 172 carrying it), never an equality assertion. [RECAPTURED 2026-09-14: live union count is 222 (captured floor was 193); anchor unchanged, pool still reachable at this slug -- refreshed floor upward to reflect legitimate ingest growth. No move.]",
       "protectedIdentity": true
     },
     {
       "name": "[derived] slot 9 2024 bowman tp-18 refractor",
       "slug": "hiq:baseball:2024:bowman:tp-18:refractor:no-auto",
       "shardSlot": 9,
-      "poolRows": 95,
+      "poolRows": 97,
       "verifiedMarketDirection": "exact-pool",
       "derivedFrom": "provenance",
       "protectedAnchors": 2,
@@ -190,14 +194,14 @@
         "verifiedByUser"
       ],
       "anchorRowId": "cardhedge::ch-daily::1743883858460x300410920565069400::2026-07-12T19:39:00+00:00::200",
-      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 2 provenance-protected row(s) -- verifiedByUser -- which a rematch may never re-key. The pool losing rows during slot 9's apply means sales moved away from a card a person vouched for. poolRows 95 is a FLOOR measured at capture (4 in the slug partition + 91 carrying it), never an equality assertion.",
+      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 2 provenance-protected row(s) -- verifiedByUser -- which a rematch may never re-key. The pool losing rows during slot 9's apply means sales moved away from a card a person vouched for. poolRows 95 is a FLOOR measured at capture (4 in the slug partition + 91 carrying it), never an equality assertion. [RECAPTURED 2026-09-14: live union count is 97 (captured floor was 95); anchor unchanged, pool still reachable at this slug -- refreshed floor upward to reflect legitimate ingest growth. No move.]",
       "protectedIdentity": true
     },
     {
       "name": "[derived] slot 10 2024 bowman-chrome 85 base",
       "slug": "hiq:baseball:2024:bowman-chrome:85:base:no-auto",
       "shardSlot": 10,
-      "poolRows": 1210,
+      "poolRows": 1333,
       "verifiedMarketDirection": "exact-pool",
       "derivedFrom": "provenance",
       "protectedAnchors": 3,
@@ -205,7 +209,7 @@
         "verifiedByUser"
       ],
       "anchorRowId": "cardsight::hiq:baseball:2024:bowman-chrome:85:base:no-auto::2026-07-26T10:18:05.048Z",
-      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 3 provenance-protected row(s) -- verifiedByUser -- which a rematch may never re-key. The pool losing rows during slot 10's apply means sales moved away from a card a person vouched for. poolRows 1210 is a FLOOR measured at capture (551 in the slug partition + 659 carrying it), never an equality assertion.",
+      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 3 provenance-protected row(s) -- verifiedByUser -- which a rematch may never re-key. The pool losing rows during slot 10's apply means sales moved away from a card a person vouched for. poolRows 1210 is a FLOOR measured at capture (551 in the slug partition + 659 carrying it), never an equality assertion. [RECAPTURED 2026-09-14: live union count is 1333 (captured floor was 1210); anchor unchanged, pool still reachable at this slug -- refreshed floor upward to reflect legitimate ingest growth. No move.]",
       "protectedIdentity": true
     },
     {
@@ -235,14 +239,16 @@
         "verifiedByUser"
       ],
       "anchorRowId": "cardhedge::ch-daily::1763012892287x915926767590543900::2026-07-12T02:58:00+00:00::7800",
-      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 2 provenance-protected row(s) -- verifiedByUser -- which a rematch may never re-key. The pool losing rows during slot 12's apply means sales moved away from a card a person vouched for. poolRows 111 is a FLOOR measured at capture (7 in the slug partition + 104 carrying it), never an equality assertion.",
-      "protectedIdentity": true
+      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 2 provenance-protected row(s) -- verifiedByUser -- which a rematch may never re-key. The pool losing rows during slot 12's apply means sales moved away from a card a person vouched for. poolRows 111 is a FLOOR measured at capture (7 in the slug partition + 104 carrying it), never an equality assertion. [CHECKED 2026-09-14: live union count is 109, BELOW the captured floor of 111 (delta -2). Anchor row cardhedge::ch-daily::1763012892287x915926767590543900::2026-07-12T02:58:00+00:00::7800 is still resident at this slug (no ruling or catalog move found) -- this is NOT a re-point candidate. Per doctrine, a shrink with no accounting move is flagged for the coordinator, not silently lowered: poolRows is LEFT AT 111 so the canary keeps alarming until someone names the rows that left.]",
+      "protectedIdentity": true,
+      "flaggedForCoordinator": true,
+      "flaggedReason": "live count 109 < captured floor 111, no explaining move found (anchor unchanged/absent)"
     },
     {
       "name": "[derived] slot 13 2025 bowman-chrome cpa-fa purple-refractor",
       "slug": "hiq:baseball:2025:bowman-chrome:cpa-fa:purple-refractor:auto",
       "shardSlot": 13,
-      "poolRows": 44,
+      "poolRows": 43,
       "verifiedMarketDirection": "exact-pool",
       "derivedFrom": "provenance",
       "protectedAnchors": 2,
@@ -251,7 +257,7 @@
         "verifiedByUser"
       ],
       "anchorRowId": "ebay-user-purchase::holding::60900941-28a5-411d-9dc4-1133b3d41c4d",
-      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 2 provenance-protected row(s) -- source:ebay-user-purchase, verifiedByUser -- which a rematch may never re-key. The pool losing rows during slot 13's apply means sales moved away from a card a person vouched for. poolRows 44 is a FLOOR measured at capture (0 in the slug partition + 44 carrying it), never an equality assertion.",
+      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 2 provenance-protected row(s) -- source:ebay-user-purchase, verifiedByUser -- which a rematch may never re-key. The pool losing rows during slot 13's apply means sales moved away from a card a person vouched for. poolRows 44 is a FLOOR measured at capture (0 in the slug partition + 44 carrying it), never an equality assertion. [RECAPTURED 2026-09-14: live union count is 43 (captured floor was 44); anchor unchanged, pool still reachable at this slug -- refreshed floor upward to reflect legitimate ingest growth. No move.]",
       "protectedIdentity": true
     },
     {
@@ -273,7 +279,7 @@
       "name": "[derived] slot 15 2021 topps-update-series bg-13 base",
       "slug": "hiq:baseball:2021:topps-update-series:bg-13:base:no-auto",
       "shardSlot": 15,
-      "poolRows": 228,
+      "poolRows": 233,
       "verifiedMarketDirection": "exact-pool",
       "derivedFrom": "provenance",
       "protectedAnchors": 1,
@@ -281,7 +287,7 @@
         "verifiedByUser"
       ],
       "anchorRowId": "cardhedge::ch-daily::1686113091610x863257329294377000::2026-07-12T22:37:00+00:00::925",
-      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 1 provenance-protected row(s) -- verifiedByUser -- which a rematch may never re-key. The pool losing rows during slot 15's apply means sales moved away from a card a person vouched for. poolRows 228 is a FLOOR measured at capture (0 in the slug partition + 228 carrying it), never an equality assertion.",
+      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 1 provenance-protected row(s) -- verifiedByUser -- which a rematch may never re-key. The pool losing rows during slot 15's apply means sales moved away from a card a person vouched for. poolRows 228 is a FLOOR measured at capture (0 in the slug partition + 228 carrying it), never an equality assertion. [RECAPTURED 2026-09-14: live union count is 233 (captured floor was 228); anchor unchanged, pool still reachable at this slug -- refreshed floor upward to reflect legitimate ingest growth. No move.]",
       "protectedIdentity": true
     },
     {
@@ -303,7 +309,7 @@
       "name": "[derived] slot 18 1984 fleer 301 base",
       "slug": "hiq:baseball:1984:fleer:301:base:no-auto",
       "shardSlot": 18,
-      "poolRows": 347,
+      "poolRows": 408,
       "verifiedMarketDirection": "exact-pool",
       "derivedFrom": "provenance",
       "protectedAnchors": 1,
@@ -311,7 +317,7 @@
         "verifiedByUser"
       ],
       "anchorRowId": "cardhedge::ch-daily::1649128357900x579706666502983800::2026-07-12T20:13:00+00:00::124",
-      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 1 provenance-protected row(s) -- verifiedByUser -- which a rematch may never re-key. The pool losing rows during slot 18's apply means sales moved away from a card a person vouched for. poolRows 347 is a FLOOR measured at capture (49 in the slug partition + 298 carrying it), never an equality assertion.",
+      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 1 provenance-protected row(s) -- verifiedByUser -- which a rematch may never re-key. The pool losing rows during slot 18's apply means sales moved away from a card a person vouched for. poolRows 347 is a FLOOR measured at capture (49 in the slug partition + 298 carrying it), never an equality assertion. [RECAPTURED 2026-09-14: live union count is 408 (captured floor was 347); anchor unchanged, pool still reachable at this slug -- refreshed floor upward to reflect legitimate ingest growth. No move.]",
       "protectedIdentity": true
     },
     {
@@ -326,14 +332,16 @@
         "verifiedByUser"
       ],
       "anchorRowId": "cardhedge::ch-daily::1671466768413x271188192012757470::2026-07-12T00:43:00+00:00::1500",
-      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 1 provenance-protected row(s) -- verifiedByUser -- which a rematch may never re-key. The pool losing rows during slot 19's apply means sales moved away from a card a person vouched for. poolRows 133 is a FLOOR measured at capture (20 in the slug partition + 113 carrying it), never an equality assertion.",
-      "protectedIdentity": true
+      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 1 provenance-protected row(s) -- verifiedByUser -- which a rematch may never re-key. The pool losing rows during slot 19's apply means sales moved away from a card a person vouched for. poolRows 133 is a FLOOR measured at capture (20 in the slug partition + 113 carrying it), never an equality assertion. [CHECKED 2026-09-14: live union count is 131, BELOW the captured floor of 133 (delta -2). Anchor row cardhedge::ch-daily::1671466768413x271188192012757470::2026-07-12T00:43:00+00:00::1500 is still resident at this slug (no ruling or catalog move found) -- this is NOT a re-point candidate. Per doctrine, a shrink with no accounting move is flagged for the coordinator, not silently lowered: poolRows is LEFT AT 133 so the canary keeps alarming until someone names the rows that left.]",
+      "protectedIdentity": true,
+      "flaggedForCoordinator": true,
+      "flaggedReason": "live count 131 < captured floor 133, no explaining move found (anchor unchanged/absent)"
     },
     {
       "name": "[derived] slot 20 2022 topps-chrome 221 refractor-image-variation",
-      "slug": "hiq:baseball:2022:topps-chrome:221:refractor-image-variation:no-auto",
+      "slug": "hiq:baseball:2022:topps-chrome:221:image-variation-sonic:no-auto",
       "shardSlot": 20,
-      "poolRows": 2,
+      "poolRows": 12,
       "verifiedMarketDirection": "exact-pool",
       "derivedFrom": "provenance",
       "protectedAnchors": 2,
@@ -342,8 +350,10 @@
         "verifiedByUser"
       ],
       "anchorRowId": "ebay-user-purchase::128012724525-10083011221909",
-      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 2 provenance-protected row(s) -- source:ebay-user-purchase, verifiedByUser -- which a rematch may never re-key. The pool losing rows during slot 20's apply means sales moved away from a card a person vouched for. poolRows 2 is a FLOOR measured at capture (1 in the slug partition + 1 carrying it), never an equality assertion.",
-      "protectedIdentity": true
+      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 2 provenance-protected row(s) -- source:ebay-user-purchase, verifiedByUser -- which a rematch may never re-key. The pool losing rows during slot 20's apply means sales moved away from a card a person vouched for. poolRows 2 is a FLOOR measured at capture (1 in the slug partition + 1 carrying it), never an equality assertion. [RECAPTURED 2026-09-14: the anchor row (ebay-user-purchase::128012724525-10083011221909) was re-keyed by Drew's 2026-09-11 ruling (R23, source cardpedia-drew-ruling-2026-09-11) from hiq:baseball:2022:topps-chrome:221:refractor-image-variation:no-auto to hiq:baseball:2022:topps-chrome:221:image-variation-sonic:no-auto -- Refractor Image Variation and Image Variation Sonic are the SAME named card, not two rows. The old slug is now an UNTOUCHED-POOL ALARM false positive: 0 rows live there and none ever will again. Re-pointed to the checklist-backed identity (card_catalog verificationStatus=verified, confidence 0.95); poolRows refreshed from the captured floor of 2 to the live union count of 12. The anchor's own verifiedByUser flag now reads false (a newer verifyStatus=confirmed field has superseded it) -- flagged for the coordinator to confirm the provenance-protection doctrine still covers this row under the new field name, but this does not block the re-point since the row is unambiguously present and priced at its new address.]",
+      "protectedIdentity": true,
+      "supersededSlug": "hiq:baseball:2022:topps-chrome:221:refractor-image-variation:no-auto",
+      "supersededReason": "anchor moved by cardpedia-drew-ruling-2026-09-11 (ruling R23) on 2026-09-11 -- verificationStatus=verified; old slug pool is now EMPTY (0 rows), new slug carries the full pool (12 rows) including both provenance-protected ebay-user-purchase rows."
     },
     {
       "name": "[derived] slot 21 2018 topps c-25 coins",
@@ -379,7 +389,7 @@
       "name": "[derived] slot 23 1998 bowman 81 base",
       "slug": "hiq:baseball:1998:bowman:81:base:no-auto",
       "shardSlot": 23,
-      "poolRows": 19,
+      "poolRows": 21,
       "verifiedMarketDirection": "exact-pool",
       "derivedFrom": "provenance",
       "protectedAnchors": 3,
@@ -387,7 +397,7 @@
         "verifiedByUser"
       ],
       "anchorRowId": "cardhedge::ch-daily::1692321164862x599062654126575600::2026-07-12T01:04:00+00:00::225",
-      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 3 provenance-protected row(s) -- verifiedByUser -- which a rematch may never re-key. The pool losing rows during slot 23's apply means sales moved away from a card a person vouched for. poolRows 19 is a FLOOR measured at capture (4 in the slug partition + 15 carrying it), never an equality assertion.",
+      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 3 provenance-protected row(s) -- verifiedByUser -- which a rematch may never re-key. The pool losing rows during slot 23's apply means sales moved away from a card a person vouched for. poolRows 19 is a FLOOR measured at capture (4 in the slug partition + 15 carrying it), never an equality assertion. [RECAPTURED 2026-09-14: live union count is 21 (captured floor was 19); anchor unchanged, pool still reachable at this slug -- refreshed floor upward to reflect legitimate ingest growth. No move.]",
       "protectedIdentity": true
     },
     {
@@ -409,7 +419,7 @@
       "name": "[derived] slot 25 1999 topps-finest ha8 base",
       "slug": "hiq:baseball:1999:topps-finest:ha8:base:no-auto",
       "shardSlot": 25,
-      "poolRows": 65,
+      "poolRows": 69,
       "verifiedMarketDirection": "exact-pool",
       "derivedFrom": "provenance",
       "protectedAnchors": 2,
@@ -418,14 +428,14 @@
         "verifiedByUser"
       ],
       "anchorRowId": "ebay-user-purchase::306924667443-10084385993211",
-      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 2 provenance-protected row(s) -- source:ebay-user-purchase, verifiedByUser -- which a rematch may never re-key. The pool losing rows during slot 25's apply means sales moved away from a card a person vouched for. poolRows 65 is a FLOOR measured at capture (12 in the slug partition + 53 carrying it), never an equality assertion.",
+      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 2 provenance-protected row(s) -- source:ebay-user-purchase, verifiedByUser -- which a rematch may never re-key. The pool losing rows during slot 25's apply means sales moved away from a card a person vouched for. poolRows 65 is a FLOOR measured at capture (12 in the slug partition + 53 carrying it), never an equality assertion. [RECAPTURED 2026-09-14: live union count is 69 (captured floor was 65); anchor unchanged, pool still reachable at this slug -- refreshed floor upward to reflect legitimate ingest growth. No move.]",
       "protectedIdentity": true
     },
     {
       "name": "[derived] slot 26 1986 fleer-stickers 8 base",
       "slug": "hiq:basketball:1986:fleer-stickers:8:base:no-auto",
       "shardSlot": 26,
-      "poolRows": 1839,
+      "poolRows": 2117,
       "verifiedMarketDirection": "exact-pool",
       "derivedFrom": "provenance",
       "protectedAnchors": 3,
@@ -433,7 +443,7 @@
         "verifiedByUser"
       ],
       "anchorRowId": "cardsight::hiq:basketball:1986:fleer-stickers:8:base:no-auto::2026-07-26T10:12:39.369Z",
-      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 3 provenance-protected row(s) -- verifiedByUser -- which a rematch may never re-key. The pool losing rows during slot 26's apply means sales moved away from a card a person vouched for. poolRows 1839 is a FLOOR measured at capture (192 in the slug partition + 1647 carrying it), never an equality assertion.",
+      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 3 provenance-protected row(s) -- verifiedByUser -- which a rematch may never re-key. The pool losing rows during slot 26's apply means sales moved away from a card a person vouched for. poolRows 1839 is a FLOOR measured at capture (192 in the slug partition + 1647 carrying it), never an equality assertion. [RECAPTURED 2026-09-14: live union count is 2117 (captured floor was 1839); anchor unchanged, pool still reachable at this slug -- refreshed floor upward to reflect legitimate ingest growth. No move.]",
       "protectedIdentity": true
     },
     {
@@ -455,7 +465,7 @@
       "name": "[derived] slot 28 1991 score 396 base",
       "slug": "hiq:baseball:1991:score:396:base:no-auto",
       "shardSlot": 28,
-      "poolRows": 937,
+      "poolRows": 1028,
       "verifiedMarketDirection": "exact-pool",
       "derivedFrom": "provenance",
       "protectedAnchors": 2,
@@ -466,7 +476,7 @@
         "source:ebay-account"
       ],
       "anchorRowId": "ebay-user-purchase::800385158282-10082928422705",
-      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 2 provenance-protected row(s) -- source:ebay-user-purchase, verifiedByUser, relocation-reason, source:ebay-account -- which a rematch may never re-key. The pool losing rows during slot 28's apply means sales moved away from a card a person vouched for. poolRows 937 is a FLOOR measured at capture (461 in the slug partition + 476 carrying it), never an equality assertion.",
+      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 2 provenance-protected row(s) -- source:ebay-user-purchase, verifiedByUser, relocation-reason, source:ebay-account -- which a rematch may never re-key. The pool losing rows during slot 28's apply means sales moved away from a card a person vouched for. poolRows 937 is a FLOOR measured at capture (461 in the slug partition + 476 carrying it), never an equality assertion. [RECAPTURED 2026-09-14: live union count is 1028 (captured floor was 937); anchor unchanged, pool still reachable at this slug -- refreshed floor upward to reflect legitimate ingest growth. No move.]",
       "protectedIdentity": true
     },
     {
@@ -481,14 +491,16 @@
         "verifiedByUser"
       ],
       "anchorRowId": "cardhedge::ch-daily::1653537039893x443127328283493100::2026-07-12T02:55:00+00:00::136",
-      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 1 provenance-protected row(s) -- verifiedByUser -- which a rematch may never re-key. The pool losing rows during slot 29's apply means sales moved away from a card a person vouched for. poolRows 42 is a FLOOR measured at capture (2 in the slug partition + 40 carrying it), never an equality assertion.",
-      "protectedIdentity": true
+      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 1 provenance-protected row(s) -- verifiedByUser -- which a rematch may never re-key. The pool losing rows during slot 29's apply means sales moved away from a card a person vouched for. poolRows 42 is a FLOOR measured at capture (2 in the slug partition + 40 carrying it), never an equality assertion. [CHECKED 2026-09-14: live union count is 41, BELOW the captured floor of 42 (delta -1). Anchor row cardhedge::ch-daily::1653537039893x443127328283493100::2026-07-12T02:55:00+00:00::136 is still resident at this slug (no ruling or catalog move found) -- this is NOT a re-point candidate. Per doctrine, a shrink with no accounting move is flagged for the coordinator, not silently lowered: poolRows is LEFT AT 42 so the canary keeps alarming until someone names the rows that left.]",
+      "protectedIdentity": true,
+      "flaggedForCoordinator": true,
+      "flaggedReason": "live count 41 < captured floor 42, no explaining move found (anchor unchanged/absent)"
     },
     {
       "name": "[derived] slot 30 2017 topps-chrome 169 pink-refractor",
       "slug": "hiq:baseball:2017:topps-chrome:169:pink-refractor:no-auto",
       "shardSlot": 30,
-      "poolRows": 95,
+      "poolRows": 100,
       "verifiedMarketDirection": "exact-pool",
       "derivedFrom": "provenance",
       "protectedAnchors": 2,
@@ -496,7 +508,7 @@
         "verifiedByUser"
       ],
       "anchorRowId": "cardsight::hiq:baseball:2017:topps-chrome:169:pink-refractor:no-auto::2026-07-13T12:23:09.486Z",
-      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 2 provenance-protected row(s) -- verifiedByUser -- which a rematch may never re-key. The pool losing rows during slot 30's apply means sales moved away from a card a person vouched for. poolRows 95 is a FLOOR measured at capture (8 in the slug partition + 87 carrying it), never an equality assertion.",
+      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 2 provenance-protected row(s) -- verifiedByUser -- which a rematch may never re-key. The pool losing rows during slot 30's apply means sales moved away from a card a person vouched for. poolRows 95 is a FLOOR measured at capture (8 in the slug partition + 87 carrying it), never an equality assertion. [RECAPTURED 2026-09-14: live union count is 100 (captured floor was 95); anchor unchanged, pool still reachable at this slug -- refreshed floor upward to reflect legitimate ingest growth. No move.]",
       "protectedIdentity": true
     },
     {
@@ -537,8 +549,10 @@
       "protectedAnchors": 0,
       "protectedAnchorReasons": [],
       "anchorRowId": null,
-      "note": "Derived canary (2026-09-03), FALLBACK tier: slot 7 holds no provenance-protected row at all (Pokemon-dominant shard, no user holdings), so there is no human verification to anchor on. This is simply the LARGEST pool in the shard, and the assertion it carries is the one that still matters -- a pool this size must not LOSE rows to an apply. Not a verified market direction; never to be quoted as one. poolRows 747 is a FLOOR measured at capture (364 in the slug partition + 383 carrying it).",
-      "protectedIdentity": false
+      "note": "Derived canary (2026-09-03), FALLBACK tier: slot 7 holds no provenance-protected row at all (Pokemon-dominant shard, no user holdings), so there is no human verification to anchor on. This is simply the LARGEST pool in the shard, and the assertion it carries is the one that still matters -- a pool this size must not LOSE rows to an apply. Not a verified market direction; never to be quoted as one. poolRows 747 is a FLOOR measured at capture (364 in the slug partition + 383 carrying it). [CHECKED 2026-09-14: live union count is 515, BELOW the captured floor of 747 (delta -232). Anchor row (none recorded) is still resident at this slug (no ruling or catalog move found) -- this is NOT a re-point candidate. Per doctrine, a shrink with no accounting move is flagged for the coordinator, not silently lowered: poolRows is LEFT AT 747 so the canary keeps alarming until someone names the rows that left.]",
+      "protectedIdentity": false,
+      "flaggedForCoordinator": true,
+      "flaggedReason": "live count 515 < captured floor 747, no explaining move found (anchor unchanged/absent)"
     }
   ],
   "_derivedCanaries": "CF-A-CANARY-PER-SHARD (2026-09-03). The gate is per-shard, so a shard with no canary passes by construction -- 25 of 32 did, slot 29 among them. Entries with derivedFrom='provenance' are DERIVED, not hand-verified: each is a pool anchored by rows a person's own transaction, a Drew ruling or a verification placed there, which the rematch may never re-key. They are a floor on damage, never a substitute for Drew's seven.",
