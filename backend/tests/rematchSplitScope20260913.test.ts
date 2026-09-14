@@ -253,31 +253,111 @@ describe("out-of-scope axes are parked, not silently ignored", () => {
   });
 });
 
-describe("the `split` scope has NO apply path, ever -- Drew's ruling, 2026-09-13", () => {
-  it("rematch-classify.cjs's parseApplyScope refuses 'split' outright", () => {
+describe("the `split` scope IS an apply path now: it is R32 -- Drew's ruling, 2026-09-14", () => {
+  /**
+   * THIS BLOCK ENCODED THE PRE-RULING STATE AND HAS BEEN UPDATED TO THE RULED
+   * ONE. A pin follows a ruling.
+   *
+   * #2141 (2026-09-13) refused `scope=split` outright, permanently, because
+   * the ruling then in force was "report first, rule later" on split-identity
+   * repair. Drew read the report and ruled on 2026-09-14:
+   *
+   *   "a split-identity row (stored cardId != hobbyiqCardId) moves to the
+   *    checklist-backed side when the title names that side's differing
+   *    segment (product name, parallel, print run, card number)."
+   *
+   * R32-SPLIT-MOVES-TO-THE-NAMED-SIDE is that ruling. `split` is FOLDED INTO
+   * it as a synonym rather than kept as a separate refusing word -- the word
+   * that named the report now names the class the ruling armed.
+   *
+   * WHAT IS PINNED HERE IS THE SAFETY THE REFUSAL USED TO PROVIDE, RESTATED AS
+   * THE RULING'S OWN GUARDS: a split row with NO TITLE EVIDENCE still refuses,
+   * and it refuses on the ruling's named legs, not on the old blanket ban. So
+   * deleting R32's title test or its measured-backing requirement still goes
+   * red -- the mutation intent is preserved, it is simply pointed at the guard
+   * that now carries the safety instead of at the ban that used to.
+   */
+  it("parseApplyScope now ARMS 'split', as a synonym for r32", () => {
     const r = K.parseApplyScope("split");
-    expect(r.ok).toBe(false);
-    expect(r.classes.size).toBe(0);
-    expect(r.reason).toContain("report first, rule later");
-    expect(r.reason.toLowerCase()).toContain("split-identity repair");
+    expect(r.ok).toBe(true);
+    expect([...r.classes]).toEqual([K.SPLIT_MOVES_TO_THE_NAMED_SIDE]);
   });
 
-  it("refuses 'split' even combined with a real class -- one dispatch cannot both report and write", () => {
+  it("'split' and 'r32' are the SAME class -- one definition, not two", () => {
+    expect([...K.parseApplyScope("split").classes]).toEqual([...K.parseApplyScope("r32").classes]);
+  });
+
+  it("'split' combined with a real class arms the union, like every other scope", () => {
     const r = K.parseApplyScope("split,improve");
-    expect(r.ok).toBe(false);
-    expect(r.classes.size).toBe(0);
-    expect(r.reason).toContain("report first, rule later");
+    expect(r.ok).toBe(true);
+    expect([...r.classes].sort()).toEqual([K.IMPROVE, K.SPLIT_MOVES_TO_THE_NAMED_SIDE].sort());
   });
 
   it("is spelling/case/underscore insensitive, like every other scope token", () => {
-    for (const spelling of ["SPLIT", "Split", " split ", "split_scope".replace("_scope", "")]) {
-      expect(K.parseApplyScope(spelling).ok, spelling).toBe(false);
+    for (const spelling of ["SPLIT", "Split", " split "]) {
+      const r = K.parseApplyScope(spelling);
+      expect(r.ok, spelling).toBe(true);
+      expect([...r.classes], spelling).toEqual([K.SPLIT_MOVES_TO_THE_NAMED_SIDE]);
     }
   });
 
-  it("an ordinary scope is unaffected -- the refusal is specific to the token 'split'", () => {
+  it("an ordinary scope is unaffected by the fold", () => {
     expect(K.parseApplyScope("improve").ok).toBe(true);
     expect(K.parseApplyScope("r26").ok).toBe(true);
+  });
+
+  it("r32 is DELIBERATELY ABSENT from `both` and `all` -- a ruled scope is asked for by name", () => {
+    for (const word of ["both", "all", "all-classes"]) {
+      expect([...K.parseApplyScope(word).classes], word).not.toContain(K.SPLIT_MOVES_TO_THE_NAMED_SIDE);
+    }
+  });
+
+  // ── THE SAFETY THE OLD REFUSAL CARRIED, NOW CARRIED BY THE RULING'S GUARDS ──
+
+  it("A SPLIT ROW WITH NO TITLE EVIDENCE STILL REFUSES -- the ruling's central condition", () => {
+    // The exact row the report-only era would have parked. It still does not
+    // move: the title names neither side's differing segment.
+    const r = K.splitMovesToTheNamedSideEvidence({
+      row: {
+        cardId: "hiq:football:2025:panini-phoenix:1:base:no-auto",
+        hobbyiqCardId: "hiq:football:2025:panini:1:base:no-auto",
+        title: "2025 Football Card #1",
+      },
+      splitClass: K.SPLIT_CLASSES.HIQ_SPLIT,
+      splitSegments: ["setKey"],
+      backedSides: { cardId: true, hobbyiqCardId: false },
+    });
+    expect(r.qualifies).toBe(false);
+    expect(r.failed.join(",")).toContain("title-does-not-name-destination");
+  });
+
+  it("AN UNMEASURED SIDE IS NOT A BACKED SIDE -- an apply never runs on the shape proxy", () => {
+    const r = K.splitMovesToTheNamedSideEvidence({
+      row: {
+        cardId: "hiq:football:2025:panini-phoenix:1:base:no-auto",
+        hobbyiqCardId: "hiq:football:2025:panini:1:base:no-auto",
+        title: "2025 Panini Phoenix Football #1 Base",
+      },
+      splitClass: K.SPLIT_CLASSES.HIQ_SPLIT,
+      splitSegments: ["setKey"],
+      backedSides: null,
+    });
+    expect(r.qualifies).toBe(false);
+    expect(r.failed).toContain("checklist-backing-not-measured");
+  });
+
+  it("THE REPORT IS UNTOUCHED -- classifySplitScope still parks what it parked", () => {
+    // The move/park report #2141 built is the SAME module R32 gates over, so a
+    // dispatch sized against that report is sized against these same rows.
+    const v = K.classifySplitScope(
+      {
+        cardId: "hiq:football:2025:bowman:195:x-fractor:no-auto",
+        hobbyiqCardId: "hiq:football:2025:bowman:195:base:no-auto",
+        title: "2025 Bowman Football #195",
+      },
+      ["parallel"],
+    );
+    expect(v.verdict).toBe("split-park");
   });
 });
 
@@ -299,34 +379,62 @@ describe("wave2-fleet.sh: WAVE2_APPLY_SCOPE=split refuses by name, not as a gene
     return win ? `/${win[1].toLowerCase()}/${win[2].replace(/\\/g, "/")}` : p;
   }
 
-  it("the source names split as a permanent refusal, ahead of the ordinary allowlist check", () => {
-    const splitIdx = fleetSrc.indexOf('split) die "WAVE2_APPLY_SCOPE=\'split\'');
-    const allowlistIdx = fleetSrc.indexOf('improve|r26|r27|r28) ;;');
+  /**
+   * UPDATED FROM THE PRE-RULING PIN (Drew, 2026-09-14). This used to assert
+   * that the fleet named `split` as a PERMANENT REFUSAL ahead of the allowlist.
+   * R32 is the ruling that gave it an apply path, so the fleet now REWRITES the
+   * token to `r32` ahead of the allowlist -- same position in the file, same
+   * "handled by name before the generic check" property, opposite verdict.
+   */
+  it("the source rewrites split to r32 BY NAME, ahead of the ordinary allowlist check", () => {
+    const splitIdx = fleetSrc.indexOf("split) SCOPE=r32 ;;");
+    const allowlistIdx = fleetSrc.indexOf("improve|r26|r27|r28|r31|r32|r33) ;;");
     expect(splitIdx).toBeGreaterThan(0);
     expect(allowlistIdx).toBeGreaterThan(splitIdx);
-    expect(fleetSrc.slice(splitIdx, splitIdx + 400)).toContain("report first, rule later");
+    // The ruling is NAMED at the point of the rewrite, so an operator reading
+    // the source learns why the #2141 refusal is gone.
+    expect(fleetSrc.slice(Math.max(0, splitIdx - 1200), splitIdx)).toContain("2026-09-14");
   });
 
-  itShell("WAVE2_APPLY_SCOPE=split exits 2 and names Drew's ruling in stderr", () => {
+  it("the #2141 permanent refusal is GONE, not merely bypassed", () => {
+    expect(fleetSrc).not.toContain("has no apply path");
+  });
+
+  itShell("WAVE2_APPLY_SCOPE=split is no longer refused at startup", () => {
+    // The pre-ruling pin asserted exit 2 with "has no apply path". R32 armed
+    // the scope, so the startup validation must now let it through -- whatever
+    // the script goes on to do about its census directory.
+    let stderr = "";
     try {
       execFileSync(BASH!, [toShellPath(FLEET), "census"], {
         stdio: ["ignore", "pipe", "pipe"],
         env: { ...process.env, WAVE2_APPLY_SCOPE: "split", WAVE2_DISPATCH: "false" },
       });
+    } catch (e: unknown) {
+      stderr = String((e as { stderr?: Buffer | string }).stderr ?? "");
+    }
+    expect(stderr).not.toContain("has no apply path");
+    expect(stderr).not.toContain("is not one of improve");
+  });
+
+  itShell("an UNKNOWN scope is still refused -- the fold did not open the allowlist", () => {
+    try {
+      execFileSync(BASH!, [toShellPath(FLEET), "census"], {
+        stdio: ["ignore", "pipe", "pipe"],
+        env: { ...process.env, WAVE2_APPLY_SCOPE: "r34", WAVE2_DISPATCH: "false" },
+      });
       expect.unreachable("expected the script to exit nonzero");
     } catch (e: unknown) {
       const err = e as { status?: number; stderr?: Buffer | string };
       expect(err.status).toBe(2);
-      const stderr = String(err.stderr);
-      expect(stderr).toContain("WAVE2_APPLY_SCOPE='split' has no apply path");
-      expect(stderr).toContain("report first, rule later");
+      expect(String(err.stderr)).toContain("is not one of improve");
     }
   });
 
   const cutDispatcher = (src: string) => src.slice(0, src.indexOf('case "${1:-}" in'));
 
-  itShell("the four real scopes are unaffected by the split special-case", () => {
-    for (const scope of ["improve", "r26", "r27", "r28"]) {
+  itShell("every real scope is unaffected by the split special-case", () => {
+    for (const scope of ["improve", "r26", "r27", "r28", "r31", "r32", "r33"]) {
       const dir = mkdtempSync(path.join(tmpdir(), "wave2-split-scope-ok-"));
       const harness = path.join(dir, "h.sh");
       writeFileSync(harness, `${cutDispatcher(fleetSrc)}\necho SCOPE_OK=$SCOPE\n`, "utf8");
