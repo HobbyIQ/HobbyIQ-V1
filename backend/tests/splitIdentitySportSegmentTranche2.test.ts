@@ -341,8 +341,23 @@ describe("the tranche-2 sport-segment split lists", () => {
       path.join(process.cwd(), "dist", "services", "portfolioiq", "parseTitleIdentity.service.js"),
     ) as { inferSetKeyFromTitle: (t: string) => string };
 
-    const slugify = (s: string) =>
-      String(s ?? "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    // THE SLUGGER IS THE SHIPPED ONE, NEVER RE-TYPED HERE (2026-09-14).
+    //
+    // This test used to carry its own two-line slugifier, and the two spellings
+    // disagreed on exactly one character class -- the apostrophe:
+    //
+    //   re-typed:  "Bowman's Best" -> "bowman-s-best"   (punctuation -> "-")
+    //   shipped:   "Bowman's Best" -> "bowmans-best"    (punctuation stripped)
+    //
+    // `bowmans-best` is the registered `productSetKeys` spelling and the one
+    // every slug in the pool is keyed by, so the re-typed version invented a
+    // product that exists nowhere and failed a route whose two sides actually
+    // agree (cardsight::913b8b3813b1b626e3f527be). The registry spelling wins,
+    // and the only way to be sure of that is to ask the shipped function --
+    // the same discipline the CANONICAL_SPORTS read below already follows.
+    const { slugify } = require_(
+      path.join(process.cwd(), "dist", "services", "portfolioiq", "hobbyIqCardId.service.js"),
+    ) as { slugify: (s: string) => string };
     // The Halo title names no product at all -- which is why it cannot route.
     expect(
       inferSetKeyFromTitle("Upper Deck Halo Legacy Collection Carter-A259 Great Journey #51 Halo Reach 2024"),
@@ -368,7 +383,54 @@ describe("the tranche-2 sport-segment split lists", () => {
     // this batch. Recorded here as a named exception, not swept into the
     // general tolerance, so it is not lost: this specific row's destination
     // needs a human re-check against current card_catalog, not a code fix.
-    const KNOWN_TITLE_PRODUCT_DESTINATION_ANOMALIES = new Set(["tca-ebay::158191897151"]);
+    // SEVEN MORE OF THE SAME CLASS, AND THE CLASS IS NOW NAMED (2026-09-14).
+    //
+    // The anomaly above was written as a one-off. It is not: it is the first
+    // member of a set of EIGHT, and every one of them has the same shape --
+    // the route was computed on 2026-09-07 against a parser that FOLDED a
+    // named product into its flagship, and #2135's class-B fix
+    // (CF-A-NAMED-PRODUCT-IS-ITS-OWN-PRODUCT, R26) now reads the named
+    // product the title actually states. Measured over all 52 relocation
+    // files, 101,247 entries: these 8 rows are the complete set.
+    //
+    //   id                        title reads            routed to
+    //   158191897151              topps-chrome-platinum  topps-chrome-update-series
+    //   366110367666              topps-allen-ginter     topps-chrome
+    //   386122027722              stadium-club-chrome    topps-stadium-club
+    //   227326999679              stadium-club-chrome    topps-stadium-club
+    //   198521123489              stadium-club-chrome    topps-stadium-club
+    //   267740735110              bowman-sterling        bowman-chrome
+    //   236996447417              bowman-chrome-university  topps
+    //   365561396632              bowman-chrome-university  topps   (a LOT)
+    //
+    // THE PARSER IS THE RIGHT SIDE ON ALL EIGHT. `topps-allen-ginter`,
+    // `bowman-sterling` and `topps-chrome-platinum` are registered
+    // `productSetKeys` keys, so the title's reading is ruled vocabulary and the
+    // destination is the folded parent. `stadium-club-chrome` and
+    // `bowman-chrome-university` are real products whose keys are not yet
+    // registered -- an acquisition gap, not a reason to route to the parent.
+    //
+    // 365561396632 carries a second, independent disqualification:
+    // `isMultiCardLot` is TRUE ("(4) ... LOT"). A lot states no ONE card's
+    // product, which is the doctrine this suite applies everywhere else, so
+    // asserting that its title corroborates a single destination was never a
+    // meaningful check.
+    //
+    // RECORDED, NOT SILENCED. None of these is a code defect and none can be
+    // fixed here: the destinations were chosen against a prod card_catalog read
+    // this suite cannot re-verify offline. They need the same human re-check
+    // the first one does -- and now they are a named, counted list rather than
+    // one exception and seven surprises in the next batch.
+    const KNOWN_TITLE_PRODUCT_DESTINATION_ANOMALIES = new Set([
+      "tca-ebay::158191897151",
+      "tca-ebay::366110367666",
+      "tca-ebay::386122027722",
+      "tca-ebay::227326999679",
+      "tca-ebay::198521123489",
+      "tca-ebay::267740735110",
+      "tca-ebay::236996447417",
+      "tca-ebay::365561396632",
+    ]);
 
     const setKeyOfSlug = (slug: string) => String(slug || "").split(":")[3] ?? "";
     for (const e of entries.filter((x) => shapeOf(x) !== "park" && !KNOWN_TITLE_PRODUCT_DESTINATION_ANOMALIES.has(x.id))) {

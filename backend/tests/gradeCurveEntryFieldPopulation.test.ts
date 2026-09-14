@@ -240,9 +240,16 @@ describe("buildObservedGradeCurve — the unified overlay is the only writer, th
     h.rows = POOL;
     const expected = await computeUnifiedPrice("card-y", { fixedWindowDays: 180 });
     const byLabel = new Map(expected.gradeCurve.map((e) => [e.grade, e]));
+    // CF-EXACT-POOL-GRADE-INDEX (Drew, 2026-09-13). Raw has 10 sales and
+    // keeps its own projection; the two thin graded tiers (5 and 4 sales)
+    // cannot fit their own trend and are now priced from this card's
+    // grade-free index instead of the median of their own newest three. The
+    // subject of this test is unchanged and is asserted below: whatever rung
+    // the engine picks per tier, the iOS curve resolves to the SAME rung and
+    // the SAME marketValue.
     expect(byLabel.get("Raw")?.rungLabel).toBe("exact-pool-projection");
-    expect(byLabel.get("PSA 10")?.rungLabel).toBe("exact-pool-leading-edge");
-    expect(byLabel.get("PSA 7")?.rungLabel).toBe("exact-pool-leading-edge");
+    expect(byLabel.get("PSA 10")?.rungLabel).toBe("exact-pool-grade-index");
+    expect(byLabel.get("PSA 7")?.rungLabel).toBe("exact-pool-grade-index");
 
     h.rows = POOL;
     const curve = await buildObservedGradeCurve("card-y");

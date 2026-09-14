@@ -3986,7 +3986,26 @@ function inferFamilySetKeyFromTitle(title: string, cardNumber?: string | null): 
   // ("Panini Prizm Monopoly WNBA" states both).
   if (/\bmonopoly\b/i.test(t) && /\bwnba\b/i.test(t) && /\bprizm\b/i.test(t)) return "Panini Prizm Monopoly WNBA";
   if (/\bwnba\b/i.test(t) && /\bprizm\b/i.test(t)) return "Panini Prizm WNBA";
-  if (/\bprizm\b/i.test(t) && /prizm\s+black\b|\bblack\s+prizm\b/i.test(t)) return "Panini Prizm Black";
+  // "BLACK STAR" IS A PROMO MARKER, NOT THIS PRODUCT'S NAME (2026-09-14).
+  //
+  // `/prizm\s+black\b/` matches the first two words of "Prizm Black Star
+  // Promo", so a title whose "black" belongs to the Pokemon promo vocabulary
+  // ("Wizards/BW/DP/HGSS/SM/SVP Black Star Promos" -- pokemonSetCodes.ts) was
+  // minting a sports product out of it:
+  //
+  //   "2023 Panini Prizm Black Star Promo Wembanyama" -> panini-prizm-black
+  //
+  // The card is a Panini Prizm promo; `panini-prizm-black` is a different
+  // product with a different checklist, so this filed the sale into a pool it
+  // has no card in. Pinned by pokemonSetCodeIsTheKey.test.ts, whose whole point
+  // is that the promo/black-star vocabulary must not leak across the boundary
+  // in EITHER direction -- this is the sports side of that same boundary.
+  //
+  // The negative lookahead is the narrowest statement of it: "Black" followed
+  // by "Star" is the promo marker and never the product qualifier. Every real
+  // Prizm Black title ("2025 Panini Prizm Black Football #10 Blue") is
+  // untouched, because none of them says "Star".
+  if (/\bprizm\b/i.test(t) && /prizm\s+black\b(?!\s+star\b)|\bblack\s+prizm\b/i.test(t)) return "Panini Prizm Black";
   if (/panini\s+prizm|\bprizm\b/i.test(t)) return "Panini Prizm";
   // CF-A-NAMED-TOPPS-RELEASE-IS-ITS-OWN-PRODUCT (R26, 2026-09-13). Five more
   // ruled Topps keys with no parser rule, each folded by the bare `/topps/`

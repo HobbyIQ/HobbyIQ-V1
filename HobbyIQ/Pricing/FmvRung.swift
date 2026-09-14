@@ -64,6 +64,13 @@ enum ExactPoolRung: String, CaseIterable, Hashable {
     case weightedMedian = "exact-pool-weighted-median"
     case median = "exact-pool-median"
     case trajectory = "exact-pool-trajectory"
+    /// CF-EXACT-POOL-GRADE-INDEX (Drew, 2026-09-13). The tier could not fit
+    /// its own trend (fewer than 8 of its own sales), so the whole card's
+    /// sales at EVERY grade were divided by their empirical multipliers into
+    /// one grade-free index, projected, and multiplied back by this tier's
+    /// multiplier. Exact-pool: every sale it reads is a sale of this card,
+    /// and this tier's own sales are in the fit at their own dates.
+    case gradeIndex = "exact-pool-grade-index"
 }
 
 /// Every rung any engine can name: the exact-pool rungs, every fallback
@@ -73,13 +80,17 @@ enum ExactPoolRung: String, CaseIterable, Hashable {
 /// readable. `CaseIterable` is what lets the parity test prove that every
 /// member of the vocabulary is described.
 enum FmvRung: String, CaseIterable, Hashable {
-    // ── exact pool (6) ───────────────────────────────────────────────
+    // ── exact pool (7) ───────────────────────────────────────────────
     case exactPoolProjection = "exact-pool-projection"
     case exactPoolLastSale = "exact-pool-last-sale"
     case exactPoolLeadingEdge = "exact-pool-leading-edge"
     case exactPoolWeightedMedian = "exact-pool-weighted-median"
     case exactPoolMedian = "exact-pool-median"
     case exactPoolTrajectory = "exact-pool-trajectory"
+    /// CF-EXACT-POOL-GRADE-INDEX (Drew, 2026-09-13): this tier is too thin to
+    /// fit its own trend, so the card's sales at every grade were indexed
+    /// grade-free, projected, and scaled back onto this grade.
+    case exactPoolGradeIndex = "exact-pool-grade-index"
 
     // ── unified / grade-curve fallbacks (5) ──────────────────────────
     case crossGradeFallback = "cross-grade-fallback"
@@ -193,6 +204,11 @@ extension FmvRung {
             return .init(kind: .observed, text: "from \(salesPhrase(n)) of this card (median)", label: rawValue)
         case .exactPoolTrajectory:
             return .init(kind: .observed, text: "from \(salesPhrase(n)) of this card, carried by player momentum", label: rawValue)
+        // Both halves of the claim: the sales are this CARD's (so it is
+        // observed, not an estimate) but they are its sales at every GRADE,
+        // scaled onto this one.
+        case .exactPoolGradeIndex:
+            return .init(kind: .observed, text: "from \(salesPhrase(n)) of this card across every grade, scaled to this grade", label: rawValue)
 
         // ── fallbacks: estimates ─────────────────────────────────────
         case .crossGradeFallback:
