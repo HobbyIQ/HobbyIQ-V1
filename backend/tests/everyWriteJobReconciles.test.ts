@@ -651,23 +651,32 @@ describe("a marker-gated relaunch fires in report mode, and as a report", () => 
       .toEqual([]);
   });
 
-  it("only the rematch DE-escalates, and only because its gate cannot survive a re-dispatch", () => {
-    // AMENDED 2026-09-03 (audit finding 5). `apply=false` is the opposite
-    // direction and cannot produce an unrequested write -- but it is still a
-    // deviation from "forward verbatim", so it is named here rather than
-    // waved through, and every OTHER step must still forward verbatim.
+  it("only the rematch deviates from forward-verbatim, and only behind its own per-link canary", () => {
+    // AMENDED 2026-09-03 (audit finding 5), AMENDED AGAIN 2026-09-14 (#2153).
     //
     // The rematch is the one lane whose apply is gated by a canary baseline
-    // captured on THIS runner's /tmp. A re-dispatch is a fresh runner with a
-    // fresh /tmp, so a continuation apply would run with no before-state and
-    // no gate -- the gate would be skippable by simply being slow. The
-    // continuation therefore runs as a REPORT (which still finishes the
-    // shard's census), and the apply is re-dispatched by hand with its
-    // before/apply/after triple intact.
-    const deEscalating = markerGated().filter((r) => r.applyForwards.some((v) => /false/.test(v) && !/inputs\.apply/.test(v)));
-    expect(deEscalating.map((r) => r.name)).toEqual([
+    // captured on THIS runner's /tmp, which a re-dispatch does not inherit.
+    // The 2026-09-03 answer was a blanket `apply=false`: safe, but once #2152
+    // gave the apply a resume cursor it also meant the shard could never get
+    // past its first link, because a REPORT relaunch deliberately starts cold.
+    //
+    // Drew's 2026-09-14 ruling is auto-continue behind a PER-LINK guard: the
+    // continuation carries apply=true only when this link was an apply AND
+    // this link's own AFTER canary succeeded, so each link is gated by its own
+    // before/apply/after triple and never by one that did not survive. The
+    // forward is therefore CONDITIONAL rather than de-escalating, and the
+    // rematch is still the only lane deviating from forward-verbatim at all.
+    const conditional = markerGated().filter((r) => r.applyForwards.some((v) => /canary_after\.outcome/.test(v)));
+    expect(conditional.map((r) => r.name)).toEqual([
       "Self-relaunch rematch-sold-comps until the shard is finished",
     ]);
+    // The guard is a CONJUNCTION with this run's own apply input -- never a
+    // bare canary test, which would let a REPORT relaunch come back as a write.
+    const rematch = markerGated().find((r) => /rematch-sold-comps/.test(r.name));
+    expect(rematch.applyForwards.join(" ")).toContain("inputs.apply == true &&");
+    // No lane de-escalates unconditionally any more; that shape is gone.
+    const deEscalating = markerGated().filter((r) => r.applyForwards.some((v) => /^"?false"?$/.test(v)));
+    expect(deEscalating.map((r) => r.name)).toEqual([]);
     // everything else forwards verbatim, exactly as before
     const others = markerGated().filter((r) => !/rematch-sold-comps/.test(r.name));
     expect(others.filter((r) => r.applyForwards.some((v) => !/inputs\.apply/.test(v))).map((r) => r.name)).toEqual([]);

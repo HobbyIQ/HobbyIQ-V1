@@ -550,17 +550,37 @@ function rowInSlot(row, units) {
  * many rows were classified, how fast, and how much of the shard that covered.
  * A slot that is SLOW and a slot that is EMPTY produce visibly different lines.
  */
-function stopAccounting({ stopReason, stats, expected, startedAt }) {
+function stopAccounting({ stopReason, stats, expected, startedAt, carried = 0, prefetch = "" }) {
   if (!stopReason) return null;
   const secs = Math.max(0.001, (Date.now() - startedAt) / 1000);
   const looked = stats.seen + stats.prefiltered;
   const reach = stats.seen + stats.prefiltered + stats.otherSlot;
-  const rps = looked / secs;
+  // THE RATE IS THIS LINK'S OWN WORK, NOT THE SHARD'S RUNNING TOTAL.
+  //
+  // `stats.seen` is CUMULATIVE once a cursor resumes: mergeCensusAggregate
+  // adds the prior link's counts before this link classifies a single row.
+  // Dividing that by THIS link's wall clock reported a throughput no link
+  // ever achieved, and it climbed link over link purely because the carry
+  // grew -- census slot 31 printed 18 -> 39 -> 58 -> 76 in-slot rows/s across
+  // four links whose FRESH work was a flat 18.3 / 20.6 / 18.9 / 17.9. Every
+  // comparison drawn from that line (including apply-vs-census) was reading a
+  // number with a carry baked into it.
+  //
+  // `carried` is what the cursor merged in; fresh is what this process did.
+  const freshLooked = Math.max(0, looked - carried);
+  const rps = freshLooked / secs;
   const lines = [stopReason];
-  lines.push(`  where the time went: ${f(stats.seen)} row(s) classified` +
+  lines.push(`  where the time went: ${f(freshLooked)} row(s) classified THIS LINK` +
     (stats.prefiltered ? ` + ${f(stats.prefiltered)} prefiltered out` : "") +
     (stats.filtered ? ` + ${f(stats.filtered)} filtered out` : "") +
     ` in ${(secs / 60).toFixed(1)}m  = ${rps.toFixed(0)} in-slot rows/s`);
+  // The cumulative total keeps its own line, so a reader (and the operator)
+  // can still see how far the whole shard has got across every link.
+  if (carried > 0) {
+    lines.push(`  cumulative:          ${f(stats.seen)} row(s) classified across every link ` +
+      `(${f(carried)} carried in by the cursor + ${f(freshLooked)} this link)`);
+  }
+  if (prefetch) lines.push(`  prefetch:            ${prefetch}`);
   lines.push(`  shard coverage:      ${f(reach)} row(s) reached of ${f(expected)} measured at capture` +
     (expected ? `  (${((reach / expected) * 100).toFixed(1)}%)` : ""));
   // The line that names the two causes apart. A slot that saw its whole shard
@@ -2160,6 +2180,10 @@ async function main() {
   // whichever comes first, so a budget stop mid-unit still leaves a resume
   // point at most one checkpoint interval behind the kill, not at unit 0.
   const priorPartialUnit = priorCursor?.partialUnit ?? null;
+  /** Rows a PRIOR link classified, merged in by the cursor above. Zero on a
+   *  cold start. Subtracted from the throughput line so the rate names this
+   *  link's own work. */
+  let carriedInRows = 0;
   if (priorCursor) {
     // `mergeCensusAggregate` adds the saved `stats` (seen, otherSlot,
     // filtered, prefiltered, ...) into the live counters below, so `stats.seen`
@@ -2167,6 +2191,10 @@ async function main() {
     // `priorCursor.classified` is a redundant witness of the same number,
     // read here only for the narration line, never assigned over the merge.
     mergeCensusAggregate(priorCursor.aggregate);
+    // What the cursor just added, so the throughput line can subtract it and
+    // report THIS link's own work. Read immediately after the merge and never
+    // again -- `stats.seen` climbs from here as this link classifies.
+    carriedInRows = stats.seen + stats.prefiltered;
     const partialNote = priorPartialUnit
       ? ` A page checkpoint inside unit ${priorPartialUnit.key} carries this pass straight to its saved continuation token.`
       : "";
@@ -2207,6 +2235,19 @@ async function main() {
   // instant a unit finishes (see `doneUnitKeys.add` below): a unit marked
   // done must never also carry a stale in-progress token into the cursor.
   let pendingPartialUnit = null;
+  /** THE PREFETCH'S OWN WITNESS (2026-09-14). The prefetch used to run
+   *  silently, so prod run 34896629324 could not show whether it had engaged
+   *  at all -- a diagnosis had to infer it from the code. One line per link,
+   *  printed beside the throughput, states the concurrency it actually used,
+   *  how many pages it warmed, and how many rows were served from that warm
+   *  cache instead of being re-parsed. A zero hit count with pages > 0 is a
+   *  broken cache and is meant to be obvious. */
+  let pagesPrefetched = 0;
+  let prefetchHitsTotal = 0;
+  const prefetchSummary = () => (pagesPrefetched === 0
+    ? `DID NOT RUN (CLASSIFY_CONCURRENCY=${CLASSIFY_CONCURRENCY}) -- every row parsed in the classify loop`
+    : `concurrency ${CLASSIFY_CONCURRENCY}, ${f(pagesPrefetched)} page(s) warmed, ` +
+      `${f(prefetchHitsTotal)} row(s) served from the warm identity cache (parsed once, not twice)`);
 
   page: for (const unit of unitsThisPass) {
     if (MODE === "census" && budgetLeft() < 90000) { stopReason = `stopped at the ${RUN_MINUTES}-minute budget`; break; }
@@ -2263,7 +2304,26 @@ async function main() {
     // change a verdict or lose a row -- at worst it costs that row its warm
     // cache. It also honours the budget: once the clock is gone there is no
     // point warming a cache the loop will never reach.
+    // THE PER-PAGE IDENTITY CACHE (2026-09-14, the #2154 regression fix).
+    //
+    // `deriveIdentity` runs the full title parser, and `parseListingIdentity`
+    // costs ~39 ms of PURE CPU per call on this tree -- measured, not
+    // estimated. The prefetch computed it for every row and DISCARDED it, and
+    // the classify loop then recomputed the identical value: two 39 ms parses
+    // against a measured 90.6 ms/row on prod run 34896629324, which is the
+    // whole of why that link fell to 11 in-slot rows/s from ~18.
+    //
+    // Concurrency cannot fix that and never could: `deriveIdentity` is
+    // SYNCHRONOUS, so every prefetch lane runs it to completion before its
+    // first await, serially, on the one JS thread. CLASSIFY_CONCURRENCY
+    // overlaps I/O waiting; a regex-heavy parse has none to overlap. The fix
+    // is to stop doing the work twice.
+    //
+    // Keyed by the row's `id` and scoped to ONE page, so it cannot grow with
+    // the shard and cannot serve a stale identity across a re-read page.
+    const pageIdentity = new Map();
     if ((resources ?? []).length > 1 && CLASSIFY_CONCURRENCY > 1 && budgetLeft() >= 90000) {
+      pagesPrefetched++;
       const toWarm = resources.filter((row) => rowInSlot(row, q.units) && rowPassesFilter(row, deps));
       let wi = 0;
       const warmOne = async () => {
@@ -2276,6 +2336,9 @@ async function main() {
             // either, exactly as it costs none in the loop.
             if (APPLY_PREFILTER && !APPLY_PREFILTER({ row, stored })) continue;
             const der = deriveIdentity(row, deps);
+            // The whole point: the loop below reads these instead of paying
+            // for the parse a second time.
+            pageIdentity.set(row.id, { stored, der });
             // The SAME questions the loop asks, in the same cost-gated shape,
             // so the prefetch can never read something the loop would not.
             if (der.ok) await checklistBacked(der.slug);
@@ -2320,8 +2383,16 @@ async function main() {
       }
       if (LIMIT && stats.seen >= LIMIT) { stopReason = stopReason ?? `stopped at the LIMIT of ${f(LIMIT)} rows`; break page; }
       stats.seen++;
-      const stored = storedIdentity(row, deps);
-      const der = deriveIdentity(row, deps);
+      // REUSE THE PREFETCH'S PARSE. Absent only when the prefetch did not run
+      // for this page (one row, CLASSIFY_CONCURRENCY=1, or the budget was
+      // already gone) or skipped this row -- in which case the values are
+      // computed here exactly as they always were. Same inputs, same pure
+      // functions, same answers: this changes when the parse happens, never
+      // what it returns.
+      const warmed = pageIdentity.get(row.id);
+      if (warmed) prefetchHitsTotal++;
+      const stored = warmed ? warmed.stored : storedIdentity(row, deps);
+      const der = warmed ? warmed.der : deriveIdentity(row, deps);
       const backed = der.ok ? await checklistBacked(der.slug) : false;
       // The base destination is only ever LOOKED UP for a row that could
       // possibly be an eviction -- its slug must already name a parallel.
@@ -3071,7 +3142,7 @@ async function main() {
   // ── census stops here. There is no write path in this mode. ───────────────
   if (MODE === "census") {
     console.log(`\nREAD ONLY -- the census writes nothing to the pool.`);
-    if (stopReason) console.log(`\n${stopAccounting({ stopReason, stats, expected, startedAt: started })}`);
+    if (stopReason) console.log(`\n${stopAccounting({ stopReason, stats, expected, startedAt: started, carried: carriedInRows, prefetch: prefetchSummary() })}`);
     return;
   }
 
@@ -3174,7 +3245,7 @@ async function main() {
     await writeSettleMarkers(ledger, doc, conn);
   }
   if (APPLY) reportWrites({ job: "rematch-sold-comps", intended: stats.intended, written: stats.written, skipped: stats.skipped, failed: stats.failed });
-  if (stopReason) console.log(`\n${stopAccounting({ stopReason, stats, expected, startedAt: started })}`);
+  if (stopReason) console.log(`\n${stopAccounting({ stopReason, stats, expected, startedAt: started, carried: carriedInRows, prefetch: prefetchSummary() })}`);
 }
 
 /**
