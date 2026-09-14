@@ -150,6 +150,8 @@
  *      SLOT / SLOTS                          which slice (default 0 / 32)
  *      BACKFILL_APPLY=true                   write (apply-improve only)
  *      BACKFILL_CONCURRENCY                  parallel relocates (default 8)
+ *      CLASSIFY_CONCURRENCY                  parallel per-row catalog prefetch
+ *                                            during classification (default 8, cap 32)
  *      RUN_MINUTES=140                       budget marker under the step's 150
  *      LIMIT                                 cap rows read (0 = the whole slot)
  *      YEARS                                 narrow to these years inside the slot
@@ -227,6 +229,22 @@ const { runnerShardScope } = require("./lib/runner-shard-scope.cjs");
 const SHARD_SCOPE = runnerShardScope({ alwaysShard: true, defaultSlots: 32, label: "rematch-sold-comps" });
 const { SHARDED, SLOT, SLOTS } = SHARD_SCOPE;
 const CONCURRENCY = Math.max(1, Number(process.env.BACKFILL_CONCURRENCY || 8));
+/** HOW MANY ROWS OF A PAGE ARE PREPARED AT ONCE (2026-09-14).
+ *
+ * Classification is latency-bound, not RU-bound: each row costs a handful of
+ * SEQUENTIAL catalog point reads (checklistBacked, the base destination, the
+ * spec/vintage/sport/R26-R28 inputs), and at the fleet's measured 17 in-slot
+ * rows/s the process is waiting on Cosmos almost all of the time --
+ * card_catalog sits at 100k RU and sold_comps at 40k, neither throttled.
+ * `BACKFILL_CONCURRENCY` never reached this work: it governs the RELOCATE
+ * workers and the revert pass only.
+ *
+ * Capped at 32 deliberately. The prefetch issues point reads against
+ * card_catalog, and the ceiling is what keeps a 32-slot fleet's combined
+ * fan-out inside that container's RU rather than converting a latency win
+ * into 429s the retry helper then has to absorb.
+ */
+const CLASSIFY_CONCURRENCY = Math.min(32, Math.max(1, Number(process.env.CLASSIFY_CONCURRENCY || 8)));
 const RUN_MINUTES = Number(process.env.RUN_MINUTES || 120);
 /** Wall clock a single unit may still be granted after the budget expires.
  *  CHECKED BEFORE EACH UNIT, never at the loop top. See lib/runner-budget.cjs. */
@@ -805,14 +823,51 @@ async function main() {
   const productSportCache = new Map();
   /** The catalog row for a slug, cached, or null. One read serves both
    *  predicates -- the strict gate must not double the census's catalog RU. */
+  /** Reads of the SAME slug that are in flight at the same time (2026-09-14).
+   *
+   * The classify prefetch below asks for a page's slugs concurrently, and a
+   * page routinely holds many rows of the SAME card -- so without this, N
+   * concurrent misses on one slug would each issue their own point read (the
+   * cache is only written once a read RESOLVES, so none of them sees the
+   * others). Parking the PROMISE, not just the value, makes the second and
+   * later askers await the first one's read instead of starting another.
+   * Cleared on settle so a failed read is retried rather than remembered. */
+  /** ONE READ PER KEY, EVEN UNDER CONCURRENCY (2026-09-14).
+   *
+   * Wraps a cached async lookup so that concurrent misses on the SAME key
+   * await ONE underlying read instead of each starting their own. Every cache
+   * below is written only when its read RESOLVES, so before this the N rows of
+   * a page that share a (year, setKey) would each issue the same
+   * cross-partition product query -- turning the prefetch's parallelism into
+   * duplicated RU rather than speed. The in-flight entry is dropped on settle,
+   * so a throwing read is retried by the next asker and never memoised as a
+   * failure; the VALUE cache each `compute` writes is untouched and remains
+   * the single source of truth once a read has landed.
+   */
+  const oncePerKey = (inFlight, compute) => async (key, ...args) => {
+    const pending = inFlight.get(key);
+    if (pending) return pending;
+    const p = compute(key, ...args);
+    inFlight.set(key, p);
+    try { return await p; }
+    finally { inFlight.delete(key); }
+  };
+  const catRowInFlight = new Map();
   const catRow = async (slug) => {
     if (!slug) return null;
     if (catRowCache.has(slug)) return catRowCache.get(slug);
-    let out = null;
-    try { out = (await retry(() => cat.item(slug, slug).read())).resource ?? null; }
-    catch (e) { if (e?.code !== 404 && e?.statusCode !== 404) throw e; }
-    catRowCache.set(slug, out);
-    return out;
+    const pending = catRowInFlight.get(slug);
+    if (pending) return pending;
+    const p = (async () => {
+      let out = null;
+      try { out = (await retry(() => cat.item(slug, slug).read())).resource ?? null; }
+      catch (e) { if (e?.code !== 404 && e?.statusCode !== 404) throw e; }
+      catRowCache.set(slug, out);
+      return out;
+    })();
+    catRowInFlight.set(slug, p);
+    try { return await p; }
+    finally { catRowInFlight.delete(slug); }
   };
   const sourceText = (r) => `${String(r?.source ?? r?.sourceSystem ?? "")},${Array.isArray(r?.sources) ? r.sources.join(",") : ""}`;
   /** Every source name the row carries, in one list. Any ONE of them may hold
@@ -874,7 +929,7 @@ async function main() {
         // addressed to, never from another sport that reuses the setKey.
         const parts = String(slug).split(":");
         const rivals = parts.length >= 7
-          ? await checklistCells(parts[2], parts[3], deps.normalizeSportStrict(parts[1]))
+          ? await checklistCellsOnce(parts[2], parts[3], deps.normalizeSportStrict(parts[1]))
           : null;
         backed = K.isStrictChecklistRow(resource, rivals ?? []);
       }
@@ -1094,7 +1149,7 @@ async function main() {
   const checklistSaysNotAutoFor = async (identity) => {
     const y = identity?.cardYear, sk = identity?.setKey, num = identity?.cardNumber;
     if (y === null || y === undefined || !sk || !num) return null;
-    const m = await checklistAutos(y, sk, sportOf(identity));
+    const m = await checklistAutosOnce(y, sk, sportOf(identity));
     const hit = m.get(String(num).toUpperCase());
     return hit === undefined ? null : hit === false;
   };
@@ -1103,7 +1158,7 @@ async function main() {
   const checklistPlayerNameFor = async (identity) => {
     const y = identity?.cardYear, sk = identity?.setKey, num = identity?.cardNumber;
     if (y === null || y === undefined || !sk || !num) return null;
-    const m = await checklistNames(y, sk, sportOf(identity));
+    const m = await checklistNamesOnce(y, sk, sportOf(identity));
     return m.get(String(num).toUpperCase()) ?? null;
   };
   /** CF-A-SUBSET-IS-PART-OF-THE-IDENTITY-WHEN-IT-HAS-TO-BE (Drew, 2026-09-04).
@@ -1155,12 +1210,37 @@ async function main() {
     clashMapCache.set(key, out);
     return out;
   };
+  // ── ONE PRODUCT QUERY PER (year, setKey, sport), UNDER CONCURRENCY ───────
+  //
+  // These five are the expensive reads: a cross-partition catalog query per
+  // PRODUCT, deliberately issued once and cached because
+  // CF-FLEET-SCRIPTS-MEASURE-THROUGHPUT-BEFORE-DISPATCH -- a per-row query
+  // over 16.3M rows is an outage, not a census. Once a page's rows are
+  // classified concurrently, the rows sharing a product would all miss the
+  // cache together and re-issue that same query N times. Each wrapper keys
+  // its in-flight map EXACTLY as its implementation keys its value cache, so
+  // the two can never disagree about what counts as the same question.
+  const inFlightCells = new Map(), inFlightFlagship = new Map(), inFlightNames = new Map();
+  const inFlightAutos = new Map(), inFlightClash = new Map();
+  const productKey = (year, setKey, sport) => `${year}|${setKey}|${sport}`;
+  const guardProduct = (inFlight, raw) => {
+    const once = oncePerKey(inFlight, (_key, year, setKey, sport) => raw(year, setKey, sport));
+    return (year, setKey, sport) => once(productKey(year, setKey, sport), year, setKey, sport);
+  };
+  // The guarded entry points. Every caller below uses these, never the bare
+  // implementations above -- a direct call would skip the in-flight dedupe
+  // and re-issue a product query that is already on the wire.
+  const checklistCellsOnce = guardProduct(inFlightCells, checklistCells);
+  const flagshipNumbersOnce = guardProduct(inFlightFlagship, flagshipNumbers);
+  const checklistNamesOnce = guardProduct(inFlightNames, checklistNames);
+  const checklistAutosOnce = guardProduct(inFlightAutos, checklistAutos);
+  const clashMapOnce = guardProduct(inFlightClash, clashMap);
   /** The clashing subsets at THIS row's rung, or [] -- which is the state of
    *  effectively every row and means the subset rule says nothing. */
   const clashSubsetsFor = async (stored) => {
     const year = stored?.cardYear, setKey = String(stored?.setKey ?? "").toLowerCase();
     if (!year || !setKey) return [];
-    const m = await clashMap(year, setKey, sportOf(stored));
+    const m = await clashMapOnce(year, setKey, sportOf(stored));
     if (!m.size) return [];
     const hit = m.get(SUBSET.rungKey(stored));
     return hit ? [...hit] : [];
@@ -1174,7 +1254,7 @@ async function main() {
     // a different sport's card -- see CF-A-SETKEY-IS-NOT-A-PRODUCT-UNTIL-A-
     // SPORT-NAMES-IT above. `null` (unreadable sport, or no strict rows in
     // this sport) stays the refusal it already was.
-    const nums = await flagshipNumbers(year, setKey, sportOf(stored));
+    const nums = await flagshipNumbersOnce(year, setKey, sportOf(stored));
     return nums ? nums.has(num) : null;
   };
   /** SPECIALIZATION-STATED's two catalog facts, computed ONLY for a row whose
@@ -2155,6 +2235,72 @@ async function main() {
     if (budgetLeft() < 90000) { stopReason = `stopped at the ${RUN_MINUTES}-minute budget`; break; }
     const page = await retry(() => it.fetchNext());
     const { resources } = page;
+    // ── PREFETCH THIS PAGE'S CATALOG READS, CLASSIFY_CONCURRENCY AT A TIME ──
+    //
+    // THE DEFECT THIS ENDS. Classification is one long chain of SEQUENTIAL
+    // awaits per row -- checklistBacked, the base destination, the checklist
+    // name, spec/vintage/sport/R26-R28 inputs -- each a catalog point read.
+    // The loop below therefore spent nearly all of its wall clock waiting on
+    // one outstanding Cosmos read at a time, which is the whole of the
+    // fleet's measured ~17 in-slot rows/s (card_catalog is at 100k RU and
+    // sold_comps at 40k, and neither is throttled: it is LATENCY, not RU).
+    //
+    // WHY A PREFETCH AND NOT A PARALLEL LOOP. The classify loop's body is
+    // order-dependent in ways a naive pool would silently break: `stats.seen`
+    // gates the LIMIT stop, `break page` exits two loops, and the sampler,
+    // the per-class counters and the candidate queue all assume the rows of a
+    // page are processed in order. So the loop itself is UNCHANGED and still
+    // serial -- what moves is only the WAITING. Every read a row will ask for
+    // is issued here, concurrently, into the very same caches the loop then
+    // reads from; by the time the loop reaches a row its answers are already
+    // resident and every `await` below completes without a round trip.
+    // Identical per-row semantics, identical order, identical counts -- the
+    // reconcile, the ledger and the cursor rule are untouched.
+    //
+    // The prefetch is BEST EFFORT. A read that throws here is swallowed: the
+    // loop below will ask the same question again and get the real error (or
+    // the real answer) on its own terms, so a prefetch failure can never
+    // change a verdict or lose a row -- at worst it costs that row its warm
+    // cache. It also honours the budget: once the clock is gone there is no
+    // point warming a cache the loop will never reach.
+    if ((resources ?? []).length > 1 && CLASSIFY_CONCURRENCY > 1 && budgetLeft() >= 90000) {
+      const toWarm = resources.filter((row) => rowInSlot(row, q.units) && rowPassesFilter(row, deps));
+      let wi = 0;
+      const warmOne = async () => {
+        while (wi < toWarm.length) {
+          const row = toWarm[wi++];
+          try {
+            const stored = storedIdentity(row, deps);
+            // The scoped-apply prefilter decides whether this row is ever
+            // classified at all; a row it refuses must cost no read here
+            // either, exactly as it costs none in the loop.
+            if (APPLY_PREFILTER && !APPLY_PREFILTER({ row, stored })) continue;
+            const der = deriveIdentity(row, deps);
+            // The SAME questions the loop asks, in the same cost-gated shape,
+            // so the prefetch can never read something the loop would not.
+            if (der.ok) await checklistBacked(der.slug);
+            if (der.ok && K.slugNamesParallel(row.cardId)) {
+              await checklistBacked(der.baseSlug);
+              await checklistPlayerNameFor(der.identity);
+            }
+            await specInputs(row, stored, der);
+            await vintageInputs(row, stored, der);
+            await sportInputs(row, stored, der);
+            await r26Inputs(row, stored, der);
+            await r27Inputs(row, stored, der);
+            await r28Inputs(row, stored, der);
+            await clashSubsetsFor(stored);
+            if (stored?.isAuto === true && K.autographWitnessIsSellerNameOnly(row.title)) {
+              await checklistSaysNotAutoFor(stored);
+            }
+          } catch { /* best effort: the loop re-asks and owns the real answer */ }
+        }
+      };
+      await Promise.all(Array.from(
+        { length: Math.min(CLASSIFY_CONCURRENCY, Math.max(toWarm.length, 1)) },
+        warmOne,
+      ));
+    }
     for (const row of resources ?? []) {
       if (!rowInSlot(row, q.units)) { stats.otherSlot++; continue; }
       // THE IN-SLOT ROW FILTER, applied after slot membership and before any
