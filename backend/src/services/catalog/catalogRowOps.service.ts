@@ -40,7 +40,8 @@
 //   brand / parentSetKey       deriveBrand / deriveParentSetKey on a setKey change
 //   authority                  authorityRank (catalogAuthority.service)
 
-import type { Container, PatchOperation, SqlQuerySpec } from "@azure/cosmos";
+import type { Container, PartitionKey, PatchOperation, SqlQuerySpec } from "@azure/cosmos";
+import { PartitionKeyBuilder } from "@azure/cosmos";
 import { deriveCatalogEntry, type CardCatalogEntry } from "../portfolioiq/cardCatalog.service.js";
 import {
   deriveBrand,
@@ -1141,6 +1142,34 @@ export interface PatchCatalogRowFieldsResult {
 /** Fields that address the row. Patching these is a MOVE, not a field repair. */
 const UNPATCHABLE = new Set(["id", "cardId", "hobbyiqCardId"]);
 
+/**
+ * CF-THE-SCAN-AND-THE-WRITE-MUST-AGREE-ON-WHERE-A-ROW-LIVES (2026-09-14).
+ *
+ * card_catalog partitions on `/cardId`. A document written without a `cardId`
+ * property AT ALL is stored by Cosmos at its own "None" partition key — NOT
+ * at a partition keyed by the document's `id`. The old fallback here,
+ * `cardId ? String(cardId) : id`, guessed `id` for that case, which is wrong:
+ * retire-self-derived-identities.cjs measured it directly against prod —
+ * every sampled `user-verified:*` catalog row carries no `cardId` at all
+ * (only `holdingCardId`, a field this function never reads), a
+ * cross-partition `WHERE c.id=@id` query finds them immediately, and a
+ * point-read at `(id, id)` 404s on them every single time. This function's
+ * own read then silently returns `{action:"noop"}` (see below) rather than
+ * throwing, so a caller with no reason to suspect its write never happened
+ * counts it as a success.
+ *
+ * `NONE_PK` is the SDK's public sentinel for exactly this partition value —
+ * already the established pattern for this row shape elsewhere in the repo
+ * (`fastPatchIdIsSlug.cjs`, `nukeSalesDerivedCatalog.cjs`: "docs written
+ * without cardId land in this partition"). A row that DOES carry a `cardId`
+ * is completely unaffected: `pkFor` returns exactly what the old inline
+ * expression did for that case.
+ */
+const NONE_PK: PartitionKey = new PartitionKeyBuilder().addNoneValue().build();
+function pkFor(id: string, cardId: string | null | undefined): PartitionKey {
+  return cardId ? String(cardId) : NONE_PK;
+}
+
 export async function patchCatalogRowFields(
   container: Container,
   id: string,
@@ -1157,7 +1186,7 @@ export async function patchCatalogRowFields(
     );
   }
   const retry = opts.retry ?? noRetry;
-  const pk = cardId ? String(cardId) : id;
+  const pk = pkFor(id, cardId);
 
   const { resource: row } = await retry(() => container.item(id, pk).read<CatalogRowDoc>());
   if (!row) return { action: "noop", id, fieldsChanged: [] };
