@@ -25,9 +25,18 @@
 // guard has to be at the write door, and these tests pin it there.
 //
 // The remedy differs by source and that difference is pinned too: a user
-// transaction is one row by definition and its stale copy is DELETED (D9), a
-// vendor sale is a real observation and its older copy is FLAGGED --
-// CF-A-RETIRE-IS-A-MARKER-NEVER-A-DELETE, the pool is sacred.
+// transaction is one row by definition and its stale copy is DELETED (D9).
+//
+// CF-INGEST-KEEPS-STORED-IDENTITY (2026-09-14) SUPERSEDES the vendor remedy
+// this file used to pin ("flag the old copy, write the new one"). That
+// remedy was itself a silent re-address: the sale moved pools on a nightly
+// re-upsert, with no census, no canary, no ruling -- 232 rows measured
+// migrating this way between 2026-09-03 and 09-13. A VENDOR sale whose id
+// lands at a different address than last time now KEEPS the stored identity
+// -- no flag, no second document, no move -- and the disagreement is
+// recorded (`derivedIdentityAtIngest` + `identityDriftSeen`) for a human
+// census to rule on. The user-scoped D9 delete is untouched: the id IS the
+// order, so a copy elsewhere is a stale filing, not a pricing disagreement.
 
 import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
 import type { Container } from "@azure/cosmos";
@@ -97,6 +106,12 @@ function fakeContainer() {
             // The same-id rehome probe — the one this file is about.
             if (q.includes("c.id = @id") && q.includes("c.cardId != @cardId")) {
               rows = rows.filter((d) => d.id === p.get("@id") && d.cardId !== p.get("@cardId"));
+            }
+            // CF-INGEST-KEEPS-STORED-IDENTITY's cross-partition confirm probe —
+            // same bare id, confirmed by source row key rather than trusted alone.
+            if (q.includes("c.id = @id") && q.includes("c.sourceExternalId = @extId")) {
+              rows = rows.filter((d) =>
+                d.id === p.get("@id") && d.sourceExternalId === p.get("@extId") && d.source === p.get("@src"));
             }
             if (excludesFlagged) rows = rows.filter((d) => !isFlagged(d));
             return { resources: rows };
@@ -169,42 +184,51 @@ const vendorSale = (over: Record<string, any> = {}) => ({
 });
 
 describe("one sale, one document: a re-ingest under a new setKey does not leave two", () => {
-  it("the same vendor id under a second partition leaves ONE live row, and the older copy is FLAGGED not deleted", async () => {
+  // CF-INGEST-KEEPS-STORED-IDENTITY (2026-09-14) SUPERSEDES the ruling these
+  // two cases used to pin. Re-addressing an EXISTING sale to a freshly
+  // re-derived identity -- even by "flag the old copy, write the new one" --
+  // is itself the defect the new guard closes: a nightly re-upsert is not a
+  // census, a canary, or a ruled apply, and it must not silently move a sale
+  // out of the pool it has always priced. The remedy is now to KEEP the
+  // stored identity and record the disagreement for a human to rule on, not
+  // to re-file under whatever the parser says today. See
+  // ingestKeepsStoredIdentityOnReupsert.test.ts for the guard's own coverage.
+  it("the same vendor id under a second partition keeps the STORED identity — no re-address, no flag, one live row", async () => {
     // 08-06: the parser does not know the set yet.
     await recordSoldComp(vendorSale());
     expect(rows()).toHaveLength(1);
     const firstId = rows()[0].id;
 
     // 08-10: the parser learned `bowman`. Same listing, same externalId, so
-    // makeId mints the SAME id -- under a different partition key.
+    // makeId mints the SAME id -- and the caller now hands it a DIFFERENT
+    // cardId. Without the guard this would re-address the sale; with it, the
+    // sale stays filed under the address it has always lived at.
     await recordSoldComp(vendorSale({
       cardId: "hiq:hockey:2024:bowman:97:base:no-auto",
       setName: "2024 Bowman",
     }));
 
-    // Both documents still EXIST -- a sale is never deleted -- but exactly one
-    // is live. Without the guard both would be live and the sale would price
-    // two cards.
+    // Still exactly ONE document -- the sale was never re-addressed, so there
+    // is nothing for the dedup lane to retire.
     const all = rows().filter((r) => r.id === firstId);
-    expect(all).toHaveLength(2);
-    const live = all.filter((r) => r.flaggedWrong !== true);
-    expect(live).toHaveLength(1);
-    expect(live[0].cardId).toBe("hiq:hockey:2024:bowman:97:base:no-auto");
+    expect(all).toHaveLength(1);
+    expect(all[0].flaggedWrong).not.toBe(true);
+    expect(all[0].cardId).toBe("hiq:hockey:2024:unknown:97:base:no-auto");
 
-    // The older copy is MARKED, never removed, and carries its provenance.
-    const older = all.find((r) => r.cardId === "hiq:hockey:2024:unknown:97:base:no-auto");
-    expect(older?.flaggedWrong).toBe(true);
-    expect(older?.flaggedReason).toBe("duplicate-partition-copy");
-    expect(older?.dedupSupersededBy).toBe("hiq:hockey:2024:bowman:97:base:no-auto");
+    // The disagreement is recorded, not acted on.
+    expect(all[0].identityDriftSeen).toBe(true);
+    expect(all[0].derivedIdentityAtIngest?.cardId).toBe("hiq:hockey:2024:bowman:97:base:no-auto");
     expect(fake.deletes).toHaveLength(0);
+    expect(fake.patches).toHaveLength(0);
   });
 
-  it("a VENDOR copy is never hard-deleted — the pool is sacred", async () => {
+  it("a VENDOR re-upsert at a re-derived address is never flagged or split — the stored row is just updated in place", async () => {
     await recordSoldComp(vendorSale());
     await recordSoldComp(vendorSale({ cardId: "hiq:hockey:2024:bowman:97:base:no-auto" }));
     expect(fake.deletes).toHaveLength(0);
-    expect(fake.patches.length).toBeGreaterThan(0);
-    expect(fake.patches[0].ops.some((o) => o.path === "/flaggedWrong" && o.value === true)).toBe(true);
+    expect(fake.patches).toHaveLength(0);
+    expect(rows()).toHaveLength(1);
+    expect(rows()[0].flaggedWrong).not.toBe(true);
   });
 
   it("a USER transaction keeps the D9 delete — the id IS the order, so a copy is a stale filing", async () => {

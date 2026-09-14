@@ -286,6 +286,33 @@ export interface SoldCompDoc {
     confidence: "high" | "medium" | "low";
   } | null;
 
+  /** CF-INGEST-KEEPS-STORED-IDENTITY (2026-09-14). A nightly CardHedge
+   *  re-upsert (and the TCA/eBay firehose) re-derives `hobbyiqCardId` from
+   *  the row's raw fields on EVERY call, unconditionally overwriting
+   *  whatever was stored — even though the document's address (`id` +
+   *  `cardId` partition) does not change. When the deriver regresses (a
+   *  setKey rule change, a sport flip, a cardNumber parse fix), that
+   *  overwrite silently re-addresses an EXISTING sale: 232
+   *  `hiq:baseball:2007:topps:40:bushmantle:no-auto` rows landed on
+   *  `...:40:base:no-auto` between 2026-09-03 and 09-13 with no ruling, no
+   *  ledger entry, and no `movedBy`. Stored identity changes ONLY through
+   *  census -> canary -> ruled apply; ingest may write identity for a NEW
+   *  sale but must never silently re-address one already in the pool.
+   *
+   *  When a re-upsert's freshly-derived identity disagrees with the
+   *  identity already stored at this address, the STORED identity wins —
+   *  only sale fields (price, date, title, grade, etc.) update — and the
+   *  disagreement is recorded here so the census can count it and a human
+   *  can rule on which identity is actually right. Absent means either
+   *  this is a new sale, or a re-upserted sale whose derivation agreed
+   *  with what was already stored. */
+  derivedIdentityAtIngest?: { cardId: string; hobbyiqCardId: string | null } | null;
+  /** True exactly when `derivedIdentityAtIngest` disagreed with the
+   *  identity that was kept. Denormalized alongside the field above so a
+   *  census can `WHERE c.identityDriftSeen = true` without inspecting the
+   *  nested object. */
+  identityDriftSeen?: boolean;
+
   ttl: number;
 }
 
@@ -833,6 +860,14 @@ export interface RecordSoldCompResult {
   /** Present when written is false. "catalog-unmatched" is the retryable one —
    *  the sale is real, we just have no checklist for its card yet. */
   reason?: "catalog-unmatched" | "invalid-input" | "error";
+  /** CF-INGEST-KEEPS-STORED-IDENTITY (2026-09-14). True when this call was a
+   *  re-upsert of an EXISTING sale whose freshly-derived identity disagreed
+   *  with the identity already stored at this address — the stored identity
+   *  was kept, only sale fields updated, and `derivedIdentityAtIngest` +
+   *  `identityDriftSeen` were stamped on the row. A caller driving a batch
+   *  job (e.g. the CH-daily bulk import) sums this across a run and folds it
+   *  into its write-reconciliation banner as `identity-drift-kept-stored N`. */
+  identityDriftKept?: boolean;
 }
 
 export interface DerivedSlug {
@@ -1877,10 +1912,85 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<Record
   // into `makeId` for vendor sources -- which makes the collision impossible
   // rather than detected -- but that is a re-keying of stored rows and belongs
   // in its own audited lane, not here.
+  //
+  // ── CF-INGEST-KEEPS-STORED-IDENTITY (2026-09-14) SUPERSEDES THE VENDOR
+  //    REMEDY BELOW ──────────────────────────────────────────────────────
+  //
+  // THE DEFECT THIS FIXES. "Flag the stale copy, write the new address" is
+  // itself a silent re-address of an existing sale: the vendor's re-derived
+  // identity wins on EVERY re-upsert, with no census, no canary, no ruling --
+  // exactly the failure mode CF-ONE-TRANSACTION-ONE-ROW exists to prevent for
+  // a stale COPY, just moved one level up, onto the LIVE row. Measured: 232
+  // rows of `hiq:baseball:2007:topps:40:bushmantle:no-auto` migrated to
+  // `...:40:base:no-auto` between 2026-09-03 and 09-13 exactly this way --
+  // the CH-daily nightly re-upsert re-derived a Base identity for a stated
+  // Bush/Mantle variation, and the OLD address got flagged and superseded on
+  // no ruling, not even a human glance.
+  //
+  // A second, narrower case this closes: CardHedge daily rows key `cardId`
+  // (the Cosmos partition) on CardHedge's own stable `card_id` (see
+  // chRowToSoldComp.ts / bulk-import-ch-daily-to-sold-comps.cjs), so a
+  // CH-daily re-upsert NEVER lands under a different partition -- the query
+  // above returns nothing for it, and it never reached this block at all.
+  // What drifts for CH-daily is `hobbyiqCardId`, a denormalized field on the
+  // SAME document that the pool-membership readers (exactPoolReader and
+  // friends) actually group by. The point-read just below is what catches
+  // that: same address, only the identity fields disagree.
+  //
+  // THE RULE, for a VENDOR source (isUserScoped stays on the D9 delete --
+  // the id IS the order, so a copy elsewhere is a stale filing, not a
+  // pricing disagreement): a sale id already resident in the pool -- at
+  // THIS address or another -- keeps its STORED cardId/hobbyiqCardId. Only
+  // sale fields (price, date, title, grade, ...) update, already merged onto
+  // `doc` above. The freshly re-derived identity is recorded as
+  // `derivedIdentityAtIngest` + `identityDriftSeen: true` so a census can
+  // count it and a human can rule on which identity is actually right. A
+  // brand new sale -- nothing resident at this address, and no stale copy
+  // elsewhere -- keeps today's behaviour exactly: the derived identity is
+  // what gets written.
+  let identityDriftKeptThisCall = false;
+  const applyStoredIdentity = (prior: { cardId: string; hobbyiqCardId: string | null }) => {
+    const derivedIdentityAtIngest = { cardId: doc.cardId, hobbyiqCardId: doc.hobbyiqCardId ?? null };
+    doc.cardId = prior.cardId;
+    doc.hobbyiqCardId = prior.hobbyiqCardId ?? null;
+    doc.id = makeId(input.source, input.sourceExternalId ?? null, doc.cardId, doc.soldAt);
+    (doc as SoldCompDoc & Record<string, unknown>).derivedIdentityAtIngest = derivedIdentityAtIngest;
+    (doc as SoldCompDoc & Record<string, unknown>).identityDriftSeen = true;
+    identityDriftKeptThisCall = true;
+    _identityDriftKeptCounter++;
+    console.warn(JSON.stringify({
+      event: "sold_comp_identity_drift_kept_stored",
+      source: "soldCompsStore.recordSoldComp",
+      vendorSource: input.source,
+      id: doc.id,
+      keptCardId: prior.cardId,
+      keptHobbyiqCardId: prior.hobbyiqCardId,
+      derivedCardId: derivedIdentityAtIngest.cardId,
+      derivedHobbyiqCardId: derivedIdentityAtIngest.hobbyiqCardId,
+      cumulativeIdentityDriftKept: _identityDriftKeptCounter,
+    }));
+  };
+
+  // Case 1: this exact id is already resident at the address `doc` is about
+  // to write to (the common CH-daily shape, and the "genuine replace" case
+  // for every other source). Point read is cheap -- single partition, the
+  // address the upsert is about to touch anyway.
+  if (!isUserScoped) {
+    try {
+      const { resource: residentHere } = await c.item(doc.id, doc.cardId).read<SoldCompDoc>();
+      if (residentHere) {
+        const priorHobbyiqCardId = residentHere.hobbyiqCardId ?? null;
+        if (priorHobbyiqCardId !== (doc.hobbyiqCardId ?? null)) {
+          applyStoredIdentity({ cardId: residentHere.cardId, hobbyiqCardId: priorHobbyiqCardId });
+        }
+      }
+    } catch { /* 404 or read failure — nothing resident here to protect */ }
+  }
+
   if (input.sourceExternalId && String(input.sourceExternalId).trim()) {
     try {
-      const { resources: sameId } = await c.items.query<{ id: string; cardId: string }>({
-        query: "SELECT c.id, c.cardId FROM c WHERE c.id = @id AND c.cardId != @cardId",
+      const { resources: sameId } = await c.items.query<{ id: string; cardId: string; hobbyiqCardId?: string | null }>({
+        query: "SELECT c.id, c.cardId, c.hobbyiqCardId FROM c WHERE c.id = @id AND c.cardId != @cardId",
         parameters: [
           { name: "@id", value: doc.id },
           { name: "@cardId", value: doc.cardId },
@@ -1894,36 +2004,35 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<Record
       // so a copy under another slug is not a sale, it is a stale filing, and
       // the delete stays exactly as D9 shipped it.
       //
-      // A VENDOR sale is a real observation of a real price, and
-      // CF-A-RETIRE-IS-A-MARKER-NEVER-A-DELETE governs: the pool is sacred, we
-      // flag and never hard-delete. `flaggedWrong` is what every FMV read
-      // already excludes, so the marker ends the double-count immediately and
-      // is reversible where a delete is not. The provenance names the id's new
-      // home so the repair is auditable and the row can be un-flagged if this
-      // write later turns out to be the wrong address.
+      // A VENDOR sale is a real observation of a real price that is ALREADY
+      // IN THE POOL under `stale`'s address. Case 2 below (Case 1 above
+      // already handled "same address") keeps THAT stored identity rather
+      // than flagging it away -- the ingest write is not the place a stored
+      // identity changes. Nothing here deletes or patches the stale copy: if
+      // it is genuinely stale (created before this guard existed, or before
+      // a real ruling moved the sale) that is the dedup lane's (#1942) job to
+      // find and adjudicate, not this write door's to assume.
+      if (!isUserScoped && stale.length > 0 && !identityDriftKeptThisCall) {
+        const prior = stale[0];
+        applyStoredIdentity({ cardId: prior.cardId, hobbyiqCardId: prior.hobbyiqCardId ?? null });
+      }
       for (const e of stale) {
         try {
           if (isUserScoped) {
             await c.item(e.id, e.cardId).delete();
-          } else {
-            await c.item(e.id, e.cardId).patch([
-              { op: "set", path: "/flaggedWrong", value: true },
-              { op: "set", path: "/flaggedReason", value: "duplicate-partition-copy" },
-              { op: "set", path: "/dedupSupersededBy", value: doc.cardId },
-              { op: "set", path: "/dedupReason", value: "same sale id re-ingested under a new partition key; this copy is the older address" },
-              { op: "set", path: "/dedupAt", value: new Date().toISOString() },
-            ]);
           }
+          // Vendor stale copies are neither deleted nor flagged here anymore
+          // -- see CF-INGEST-KEEPS-STORED-IDENTITY above. `applyStoredIdentity`
+          // already redirected this write onto the stored address; the
+          // sale never had two live copies to begin with once that runs.
         } catch { /* best effort */ }
       }
-      if (stale.length > 0) {
+      if (isUserScoped && stale.length > 0) {
         console.log(JSON.stringify({
           event: "sold_comp_same_id_rehomed",
           source: "soldCompsStore.recordSoldComp",
           vendorSource: doc.source,
-          // A vendor copy is FLAGGED, a user copy is DELETED. Named, so the
-          // two outcomes are distinguishable in the logs rather than inferred.
-          remedy: isUserScoped ? "deleted" : "flaggedWrong",
+          remedy: "deleted",
           id: doc.id,
           fromCardIds: stale.map((e) => e.cardId),
           toCardId: doc.cardId,
@@ -2239,13 +2348,30 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<Record
   }
 
   // Reached only after the upsert succeeded — the sale is in the pool.
-  return { written: true, deduped: false, id: doc.id, hobbyiqCardId: doc.hobbyiqCardId ?? null };
+  return {
+    written: true,
+    deduped: false,
+    id: doc.id,
+    hobbyiqCardId: doc.hobbyiqCardId ?? null,
+    ...(identityDriftKeptThisCall ? { identityDriftKept: true } : {}),
+  };
 }
 
 /** Monotonic counter of upsert failures across the process lifetime.
  *  Exposed via getEmitFailureCount() for health-check endpoints. */
 let _emitFailureCounter = 0;
 export function getEmitFailureCount(): number { return _emitFailureCounter; }
+
+/** CF-INGEST-KEEPS-STORED-IDENTITY (2026-09-14). Monotonic counter of calls
+ *  where a re-upserted sale's freshly-derived identity disagreed with the
+ *  identity already stored at its address, and the stored identity was
+ *  kept. A batch job (e.g. bulk-import-ch-daily-to-sold-comps.cjs) reads
+ *  the delta across a run and folds it into its write-reconciliation
+ *  banner as `identity-drift-kept-stored N`. Exposed for tests via
+ *  `_resetIdentityDriftKeptCounterForTests`. */
+let _identityDriftKeptCounter = 0;
+export function getIdentityDriftKeptCount(): number { return _identityDriftKeptCounter; }
+export function _resetIdentityDriftKeptCounterForTests(): void { _identityDriftKeptCounter = 0; }
 
 /**
  * CF-USER-COMPS-SOFT-DELETE (Drew, 2026-07-15): flag a specific comp
