@@ -637,6 +637,17 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
     // Topps Cracker Jack is a MODERN Topps product, distinct from the 1915
     // vintage Cracker Jack line. Must precede bare topps or it is swallowed.
     [/topps-cracker-jack/, "topps-cracker-jack"],
+    // CF-A-SAME-NUMBERED-INSERT-SET-IS-ITS-OWN-CARD-SET (R30, bcp 2026-09-13).
+    // Five Topps flagship insert sets that restart their numbering and so
+    // collide with base and with each other on the bare product key:
+    // The Babe Ruth Story BR-1 is "St. Mary's Industrial School Student" while
+    // Baseball Royalty BR-1 is "Babe Ruth". Anchored and ABOVE bare /topps/,
+    // which would otherwise swallow every one of them.
+    [/topps-factory-set-rookie-variations/, "topps-factory-set-rookie-variations"],
+    [/topps-the-babe-ruth-story/, "topps-the-babe-ruth-story"],
+    [/topps-baseball-history/, "topps-baseball-history"],
+    [/topps-baseball-royalty/, "topps-baseball-royalty"],
+    [/topps-cal-ripken-jr-refractor/, "topps-cal-ripken-jr-refractor"],
     [/topps/, "topps"],
     // Panini — STRICT tier (fully-qualified "panini-X"). See two-tier
     // comment on knownSetKeyPatterns. National Treasures is included
@@ -650,6 +661,10 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
     // is swallowed here.
     [/prizm-monopoly-wnba|monopoly-wnba/, "panini-prizm-monopoly-wnba"],
     [/prizm-wnba/, "panini-prizm-wnba"],
+    [/(?:^|-)panini-prizm-draft-picks-college-penmanship(?:-|$)/, "panini-prizm-draft-picks-college-penmanship"],
+    [/(?:^|-)panini-prizm-draft-picks-draft-picks-autographs(?:-|$)/, "panini-prizm-draft-picks-draft-picks-autographs"],
+    [/(?:^|-)panini-prizm-draft-picks-freshman-signatures(?:-|$)/, "panini-prizm-draft-picks-freshman-signatures"],
+    [/(?:^|-)panini-prizm-draft-picks-sensational-signatures(?:-|$)/, "panini-prizm-draft-picks-sensational-signatures"],
     [/prizm-(perennial-)?draft-picks/, "panini-prizm-draft-picks"],
     // CF-WORLD-CUP-INSERT-SETS-ARE-CARD-SETS (R30, Drew 2026-09-13). The 2014
     // Panini Prizm FIFA World Cup page publishes nine insert families that
@@ -684,6 +699,10 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
     // CF-COLLAPSED-SETKEY-AUDIT: Elite is its own line (236,976 catalog rows),
     // and Elite Extra Edition is a further distinct product (394,549) — so the
     // Extra Edition pattern MUST come first or it is swallowed by plain Elite.
+    // `panini-donruss-the-elite-series-autographs` folds SIDEWAYS to
+    // `donruss-elite` -- the Elite rule matches the word "elite" inside it --
+    // so it precedes THAT rule rather than the Donruss catch-all below.
+    [/(?:^|-)panini-donruss-the-elite-series-autographs(?:-|$)/, "panini-donruss-the-elite-series-autographs"],
     [/donruss-elite(?!-extra)|(?:^|-)elite(?!-extra)(?:-|$)/, "donruss-elite"],
     [/panini-select/, "panini-select"],
     [/panini-mosaic/, "panini-mosaic"],
@@ -705,6 +724,28 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
     // Both spellings mint the one key from here; rename-setkey-to-product
     // moves the stored rows to it.
     [/(?:panini-)?donruss-optic/, "donruss-optic"],
+    [/(?:^|-)panini-donruss-action-all-pros-autographs(?:-|$)/, "panini-donruss-action-all-pros-autographs"],
+    [/(?:^|-)panini-donruss-all-pro-kings-autographs(?:-|$)/, "panini-donruss-all-pro-kings-autographs"],
+    [/(?:^|-)panini-donruss-all-time-gridiron-kings-autographs(?:-|$)/, "panini-donruss-all-time-gridiron-kings-autographs"],
+    [/(?:^|-)panini-donruss-canton-kings-autographs(?:-|$)/, "panini-donruss-canton-kings-autographs"],
+    [/(?:^|-)panini-donruss-champ-is-here-autographs(?:-|$)/, "panini-donruss-champ-is-here-autographs"],
+    [/(?:^|-)panini-donruss-dominators-autographs(?:-|$)/, "panini-donruss-dominators-autographs"],
+    [/(?:^|-)panini-donruss-fans-of-the-game-autographs(?:-|$)/, "panini-donruss-fans-of-the-game-autographs"],
+    [/(?:^|-)panini-donruss-franchise-future-autographs(?:-|$)/, "panini-donruss-franchise-future-autographs"],
+    [/(?:^|-)panini-donruss-rookie-gridiron-kings-autographs(?:-|$)/, "panini-donruss-rookie-gridiron-kings-autographs"],
+    [/(?:^|-)panini-donruss-gridiron-kings-autographs(?:-|$)/, "panini-donruss-gridiron-kings-autographs"],
+    [/(?:^|-)panini-donruss-highlights-autographs(?:-|$)/, "panini-donruss-highlights-autographs"],
+    [/(?:^|-)panini-donruss-inducted-autographs(?:-|$)/, "panini-donruss-inducted-autographs"],
+    [/(?:^|-)panini-donruss-jersey-kings-autographs(?:-|$)/, "panini-donruss-jersey-kings-autographs"],
+    [/(?:^|-)panini-donruss-leather-kings-autographs(?:-|$)/, "panini-donruss-leather-kings-autographs"],
+    [/(?:^|-)panini-donruss-power-plus-autographs(?:-|$)/, "panini-donruss-power-plus-autographs"],
+    [/(?:^|-)panini-donruss-retro-1992-autographs(?:-|$)/, "panini-donruss-retro-1992-autographs"],
+    [/(?:^|-)panini-donruss-retro-2002-autographs(?:-|$)/, "panini-donruss-retro-2002-autographs"],
+    [/(?:^|-)panini-donruss-rookie-phenom-jersey-autographs(?:-|$)/, "panini-donruss-rookie-phenom-jersey-autographs"],
+    [/(?:^|-)panini-donruss-signature-marks(?:-|$)/, "panini-donruss-signature-marks"],
+    [/(?:^|-)panini-donruss-the-legends-series-autographs(?:-|$)/, "panini-donruss-the-legends-series-autographs"],
+    [/(?:^|-)panini-donruss-the-rookies-autographs(?:-|$)/, "panini-donruss-the-rookies-autographs"],
+    [/(?:^|-)panini-donruss-white-hot-rookies-autographs(?:-|$)/, "panini-donruss-white-hot-rookies-autographs"],
     [/panini-donruss/, "panini-donruss"],
     [/panini-optic/, "donruss-optic"],
     [/panini-contenders/, "panini-contenders"],
@@ -719,6 +760,12 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
     [/panini-phoenix/, "panini-phoenix"],
     [/panini-illusions/, "panini-illusions"],
     [/panini-obsidian/, "panini-obsidian"],
+    [/(?:^|-)panini-spectra-aspiring-patch-autographs(?:-|$)/, "panini-spectra-aspiring-patch-autographs"],
+    [/(?:^|-)panini-spectra-dual-patch-autographs(?:-|$)/, "panini-spectra-dual-patch-autographs"],
+    [/(?:^|-)panini-spectra-full-spectrum-autographs(?:-|$)/, "panini-spectra-full-spectrum-autographs"],
+    [/(?:^|-)panini-spectra-retrospect-autographs(?:-|$)/, "panini-spectra-retrospect-autographs"],
+    [/(?:^|-)panini-spectra-rookie-autographs(?:-|$)/, "panini-spectra-rookie-autographs"],
+    [/(?:^|-)panini-spectra-signatures(?:-|$)/, "panini-spectra-signatures"],
     [/panini-spectra/, "panini-spectra"],
     [/panini-revolution/, "panini-revolution"],
     [/panini-crown-royale/, "panini-crown-royale"],
@@ -787,6 +834,29 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
     // "hoops-premium-stock" and NEVER on the stock words alone -- "Premium
     // Stock" is a stock Prizm borrows too, and normalizeSetKey("2023 Panini
     // Prizm Premium Stock") must keep answering `panini-prizm`.
+    // CF-CBC-ACQUISITION-SUBSETS-ARE-CARD-SETS (R30, Drew 2026-09-13). The
+    // 2026-09-13 cardboardconnection acquisition ships one file per subset (207
+    // files, 68,329 rows) and #2112's cell-wide guard measured 1,803 contested
+    // addresses inside five product cells -- every one claimed by two or more
+    // NAMED subsets. Each key below is a same-numbered subset that only the
+    // subset can identify.
+    //
+    // These sit ABOVE the family catch-all, where they must stay: a longer
+    // product name always precedes the family pattern it contains. Each is
+    // anchored at a segment boundary on both sides, so only a spelling that
+    // really names the subset can match. The COLOUR RUNGS of these subsets are
+    // deliberately absent -- a named parallel is a distinct card, not a
+    // distinct set, and rides the parallel axis on these keys.
+    [/(?:^|-)nba-hoops-calligraphy-signatures(?:-|$)/, "nba-hoops-calligraphy-signatures"],
+    [/(?:^|-)nba-hoops-great-significance(?:-|$)/, "nba-hoops-great-significance"],
+    [/(?:^|-)nba-hoops-hoops-art-signatures-horizontal(?:-|$)/, "nba-hoops-hoops-art-signatures-horizontal"],
+    [/(?:^|-)nba-hoops-hoops-art-signatures-vertical(?:-|$)/, "nba-hoops-hoops-art-signatures-vertical"],
+    [/(?:^|-)nba-hoops-hoops-art-signatures(?:-|$)/, "nba-hoops-hoops-art-signatures"],
+    [/(?:^|-)nba-hoops-hoops-ink(?:-|$)/, "nba-hoops-hoops-ink"],
+    [/(?:^|-)nba-hoops-hot-signatures-rookies(?:-|$)/, "nba-hoops-hot-signatures-rookies"],
+    [/(?:^|-)nba-hoops-hot-signatures(?:-|$)/, "nba-hoops-hot-signatures"],
+    [/(?:^|-)nba-hoops-private-signings(?:-|$)/, "nba-hoops-private-signings"],
+    [/(?:^|-)nba-hoops-rookie-ink(?:-|$)/, "nba-hoops-rookie-ink"],
     [/hoops-premium-stock/, "nba-hoops-premium-stock"],
     [/panini-hoops/, "nba-hoops"],
     [/panini-prestige/, "panini-prestige"],
@@ -944,6 +1014,17 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
     [/(?:^|-)cracker-jack/, "cracker-jack"],
     [/all-time-diamond-kings/, "all-time-diamond-kings"],
     [/panini-diamond-kings/, "panini-diamond-kings"],
+    // CF-A-SAME-NUMBERED-INSERT-SET-IS-ITS-OWN-CARD-SET (R30, bcp 2026-09-13).
+    // DK Signatures and DK Rookie Signatures share the S-<initials> numbering
+    // and collide on seven cards (S-AH Aaron Hicks / Austin Hays, S-CS Chris
+    // Sale / Chance Sisco, S-JD Jacob deGrom / J.D. Davis, ...). Anchored and
+    // ABOVE the bare diamond-kings family rule.
+    //
+    // Their COLOUR rungs are deliberately absent: the source calls Holo
+    // Silver/Gold/Blue, Purple and Masterpiece parallels, so they ride the
+    // parallel axis on these keys and must not become keys of their own.
+    [/diamond-kings-dk-rookie-signatures/, "diamond-kings-dk-rookie-signatures"],
+    [/diamond-kings-dk-signatures/, "diamond-kings-dk-signatures"],
     [/(?:^|-)diamond-kings/, "diamond-kings"],
     [/(?:^|-)t206/, "t206"],
     [/(?:^|-)play-ball/, "play-ball"],

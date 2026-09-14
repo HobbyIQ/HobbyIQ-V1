@@ -133,6 +133,20 @@ const CORPUS_CANDIDATES = (): string[] => [
  * is printed. Admitting one would let an ordinary title state a "finish": every
  * graded listing says "gem mint", every prospect auto says "1st".
  */
+/**
+ * The sport a title names. Never part of a parallel's name on any product, and
+ * always sitting immediately before the parallel in a vendor title's
+ * `<year> <product> <sport> #<number> <parallel>` shape -- which is why the
+ * one-word truncation guard has to know them. Kept separate from STOPWORDS
+ * because STOPWORDS is mirrored against the rematch vocabulary's own
+ * CORPUS_STOPWORDS by a subset assertion, and these are not stopwords there.
+ */
+const SPORT_WORDS: ReadonlySet<string> = new Set([
+  "baseball", "basketball", "football", "hockey", "soccer", "golf",
+  "wrestling", "boxing", "racing", "mma", "ufc", "wnba", "nba", "nfl",
+  "mlb", "nhl", "mls",
+]);
+
 const STOPWORDS: ReadonlySet<string> = new Set([
   "and", "the", "for", "with", "from",
   "auto", "autos", "autograph", "autographs", "autographed", "signature", "signatures",
@@ -596,11 +610,149 @@ function productWordsFromTitle(title: string): Set<string> {
  * what keeps "Gold Rainbow Foil" from matching a title that says only "Rainbow
  * Foil", and keeps a lone shared colour from carrying a match on its own --
  * the same rule `titleEchoesSlugParallel` uses in the classifier.
+ *
+ * ONE ELISION, AND ONLY THE PRODUCT'S OWN NAME (2026-09-13). See
+ * `titleStatesNameEludingProductWords` below for the ruling and the evidence;
+ * this function stays the strict test every other caller wants.
  */
 function titleStatesName(titleWordSet: Set<string>, name: string): boolean {
   const ws = words(name);
   if (!ws.length) return false;
   return ws.every((w) => titleWordSet.has(w));
+}
+
+/**
+ * CF-A-CHECKLIST-SPELLS-ITS-PARALLELS-WITH-THE-PRODUCTS-OWN-NAME (2026-09-13,
+ * from the wave2verify16 sports census).
+ *
+ * THE DEFECT. Panini checklists spell a parallel with the product word inside
+ * it -- "Pink Prizm Shock", "Red Disco Prizm", "Silver Prizm Shock", "Prizms
+ * Glitter" -- and sellers do not repeat a word the product name already
+ * carries. So the title states the FINISH in full and omits only "Prizm":
+ *
+ *   "2025 Panini Select Football #141 Pink Shock"    checklist: Pink Prizm Shock
+ *   "2024 Panini Select Football #363 Red Disco"     checklist: Red Disco Prizm
+ *   "2025 Panini Select Football #38 Silver Die-Cut" checklist: Silver Prizm Shock
+ *   "2024 Panini Prizm Basketball #217 Glitter"      checklist: Prizms Glitter
+ *
+ * `titleStatesName` requires EVERY word, so each of these was refused, the
+ * reader returned null, and the caller kept "Base" -- or worse, a family
+ * colour rule higher up had already invented a rung the product does not list
+ * ("Pink Prizm" for a Pink Shock, "Silver Prizm" for a Silver Die-Cut). The
+ * census measured both directions on the same titles.
+ *
+ * THE ELISION IS THE PRODUCT'S NAME, AND NOTHING ELSE. A word may be treated as
+ * stated only when it is one of `own` -- the words of THIS product's setKey,
+ * which the module already computes and already refuses to read as a finish
+ * (`ws.every((w) => own.has(w))` a few lines down). The two rules are the same
+ * ruling from both sides: a product word is not a finish, and a product word
+ * the title omits is not a missing finish either. Every OTHER word of the name
+ * must still be witnessed in the title, so "Gold Rainbow Foil" still does not
+ * match a title saying only "Rainbow Foil" -- `gold` is not a product word.
+ *
+ * IT CANNOT ANSWER WITH THE PRODUCT'S OWN NAME. A candidate made ENTIRELY of
+ * product words is refused by the caller's existing `own` test, and a
+ * candidate whose only TITLE-WITNESSED word is a product word is refused here:
+ * at least one word of the name must be both stated and not a product word, or
+ * "Prizms Basketball" would answer any Prizm basketball title. That floor is
+ * what keeps this from becoming the set-name-as-parallel defect
+ * CF-A-SET-NAME-IS-NEVER-A-PARALLEL already rules on.
+ *
+ * SCOPED TO A KNOWN PRODUCT. With no setKey, `own` is empty and this degrades
+ * to exactly `titleStatesName` -- the global index keeps its stricter floors,
+ * because without a product there is no product name to elide.
+ */
+function titleStatesNameEludingProductWords(
+  titleWordSet: Set<string>,
+  name: string,
+  elidable: ReadonlySet<string>,
+): boolean {
+  const ws = words(name);
+  if (!ws.length) return false;
+  let statedEvidenceWords = 0;
+  for (const w of ws) {
+    if (titleWordSet.has(w)) {
+      if (!elidable.has(w)) statedEvidenceWords += 1;
+      continue;
+    }
+    // Unstated. Forgiven ONLY when it is a word this product puts on nearly
+    // every parallel it lists -- see `elidableStockWords`.
+    if (!elidable.has(w)) return false;
+  }
+  // At least one word of the name must be real, title-witnessed finish
+  // evidence. Otherwise the "answer" is the product's own stock word wearing a
+  // parallel's clothes.
+  return statedEvidenceWords > 0;
+}
+
+/**
+ * The words THIS PRODUCT prints on almost every parallel it lists -- its stock
+ * words -- which a seller therefore omits.
+ *
+ * WHY THIS IS MEASURED AND NOT A HAND LIST. The elidable word is not always the
+ * setKey's own. On `panini-select` the omitted word is "Prizm": Select's
+ * parallels are struck on Prizm stock and the checklist spells every one of
+ * them with it ("Pink Prizm Shock", "Silver Prizm Shock", "Red Disco Prizm"),
+ * while the setKey says `panini-select` and contains no "prizm" at all. A hand
+ * list of stock words is the shape that has failed here repeatedly -- the foil
+ * colour list, the closed ~90-word parallel list -- so this reads the product's
+ * OWN checklist and asks which words it repeats, exactly as
+ * CF-THE-VOCABULARY-IS-THE-CHECKLIST requires.
+ *
+ * THE FLOOR IS DELIBERATELY HIGH. A word must appear in at least
+ * `STOCK_WORD_SHARE` of this product's parallel names to count. At 60% the word
+ * is structural to how the product names its rungs, not a popular colour:
+ * measured on the 2026-09-13 corpus, `prizm` is on 58 of 62 names for
+ * football|2025|panini-select (94%) and `prizms` on 300 of 335 for
+ * basketball|2024|panini-prizm (90%), while the commonest COLOUR on either
+ * product clears only the low teens. A product with few listed parallels is
+ * refused outright (`MIN_NAMES_FOR_STOCK_WORDS`), because three names cannot
+ * establish that anything is structural.
+ *
+ * A COLOUR IS NEVER ELIDABLE. `COLOUR_WORDS` is excluded unconditionally: a
+ * colour is the axis that distinguishes one rung from its siblings, and
+ * forgiving an unstated colour would let "Gold Prizm Shock" answer a title
+ * saying only "Shock". The whole safety of the elision is that it forgives
+ * only words that carry no distinguishing information on this product.
+ */
+const STOCK_WORD_SHARE = 0.6;
+const MIN_NAMES_FOR_STOCK_WORDS = 8;
+
+function elidableStockWords(
+  productNames: readonly string[] | undefined,
+  own: ReadonlySet<string>,
+): Set<string> {
+  // The product's own setKey words are always elidable -- they name the SET,
+  // which is the rule `own` already encodes on the refusal side.
+  const out = new Set<string>(own);
+  if (!productNames || productNames.length < MIN_NAMES_FOR_STOCK_WORDS) return out;
+  const counts = new Map<string, number>();
+  // A WORD THAT IS ITSELF A WHOLE LISTED NAME IS A RUNG, NEVER BOILERPLATE
+  // (2026-09-13). `mirror` is on 168 of panini-certified's 225 parallel names
+  // -- comfortably over the stock floor -- AND "Mirror" is a listed parallel
+  // in its own right, the product's base parallel line the way "Refractor" is
+  // Chrome's. Eliding it left "2025 Panini Certified Football #67 Mirror" with
+  // zero evidence words and the reader refused a name the title states exactly.
+  //
+  // The test is the checklist's own, not a judgement: if this product lists the
+  // bare word as a parallel, the word carries a rung's worth of meaning here
+  // and may not be forgiven as product boilerplate.
+  const wholeNames = new Set<string>();
+  for (const name of productNames) {
+    const ws = words(name);
+    if (ws.length === 1) wholeNames.add(ws[0]);
+  }
+  for (const name of productNames) {
+    for (const w of new Set(words(name))) counts.set(w, (counts.get(w) ?? 0) + 1);
+  }
+  const floor = productNames.length * STOCK_WORD_SHARE;
+  for (const [w, n] of counts) {
+    if (n < floor) continue;
+    if (COLOUR_WORDS.has(w)) continue;
+    if (wholeNames.has(w)) continue;
+    out.add(w);
+  }
+  return out;
 }
 
 export interface StatedFinishContext {
@@ -733,8 +885,17 @@ export function statedFinishFromChecklist(
   }
 
   let best: string | null = null;
+  // CF-A-CHECKLIST-SPELLS-ITS-PARALLELS-WITH-THE-PRODUCTS-OWN-NAME. The elision
+  // is available ONLY on the product-scoped path, where `own` is the product's
+  // real setKey words and the corpus bucket is that product's own checklist.
+  // On the global path `own` is empty and the helper is exactly the strict test.
+  const productScoped = Boolean(productNames && productNames.length);
+  const elidable = productScoped ? elidableStockWords(productNames, own) : own;
   for (const name of candidates) {
-    if (!titleStatesName(titleWordSet, name)) continue;
+    const stated = productScoped
+      ? titleStatesNameEludingProductWords(titleWordSet, name, elidable)
+      : titleStatesName(titleWordSet, name);
+    if (!stated) continue;
     // A PRODUCT WORD IS NOT A FINISH ON ITS OWN PRODUCT. "Chrome" on
     // `topps-heritage-chrome` names the set; on `topps` it is a finish. Only a
     // name made ENTIRELY of this product's own words is refused -- "Chrome
@@ -746,10 +907,51 @@ export function statedFinishFromChecklist(
       // words that name the SET is the residue this ruling refuses.
       if (setNameWords.size && ws.every((w) => setNameWords.has(w))) continue;
     }
+    // A SPORT-ONLY NAME IS DISQUALIFIED AS A CANDIDATE, NOT AS THE ANSWER
+    // (2026-09-13, class-A residual).
+    //
+    // THE DEFECT IT FIXES. The identical test ran BELOW the loop, on the
+    // winner only. A name with no content besides the sport and this
+    // product's stock words matches EVERY title of the product, and because
+    // longest-match decides the winner it frequently IS the longest match --
+    // so it won the race and then failed the test, and the whole call
+    // returned null. The real rung was a live candidate and never got to be
+    // the answer:
+    //
+    //   "2024 Panini Prizm Basketball #217 Glitter"
+    //     candidates: "Prizms Basketball" (17ch) and "Prizms Glitter" (14ch)
+    //     -> "Prizms Basketball" wins on length -> sport-only -> null, Base
+    //
+    // Measured on the sports census: this single ordering fault is the
+    // largest cause of the class-A residual on Panini products, and every
+    // one of them had the correct rung sitting in `candidates`.
+    //
+    // THE TEST IS UNCHANGED, ONLY ITS POSITION. It still refuses exactly the
+    // names with no distinguishing content -- "USA Basketball Gold" keeps
+    // `gold` and "Football Leather Refractor" keeps `leather refractor`, so
+    // both remain candidates, which is why this may be a `continue` rather
+    // than a refusal of the call. Disqualifying the name lets the next-longest
+    // REAL rung win instead of poisoning the answer for the whole product.
+    if (words(name).every((w) => SPORT_WORDS.has(w) || elidable.has(w))) continue;
     // The longest name that the title fully states is the most specific one.
     if (!best || name.length > best.length) best = name;
   }
   if (!best) return null;
+  // A SPORT WORD IS NEVER THE ANSWER (2026-09-13). Some products list a name
+  // built from the sport ("Basketball Prizms", "Image Variation Basketball"),
+  // and every title of that product states the sport -- so such a name matches
+  // ANY title of the product and identifies no card. It is the set-name-as-
+  // parallel defect CF-A-SET-NAME-IS-NEVER-A-PARALLEL rules on, arriving by the
+  // sport rather than the set. Measured: 5 previously-AGREEing rows answered
+  // "Basketball" this way.
+  //
+  // ONLY WHEN THE SPORT IS ALL THERE IS. "Football Leather Refractor" is a real
+  // 2025 Topps Chrome parallel and contains the sport; refusing every name that
+  // MENTIONS a sport discarded it and 2 more real rungs. The defect is a name
+  // with no distinguishing content BESIDES the sport (and this product's stock
+  // words, which are equally undistinguishing) -- that is the one that matches
+  // every title of the product.
+  if (words(best).every((w) => SPORT_WORDS.has(w) || elidable.has(w))) return null;
 
   // CF-A-NAMED-PARALLEL-IS-A-DISTINCT-CARD, AT THE READER (2026-09-06).
   //
@@ -778,11 +980,65 @@ export function statedFinishFromChecklist(
   // supplies (`_index.finishWords`), so this stays checklist-derived: a word is
   // a finish word here only because some checklist parallel name is built from
   // it.
+  // Is the answer an EXACT, whole, listed parallel name of THIS product, every
+  // word of it witnessed in the title? That is the checklist itself saying the
+  // rung exists and is spelled exactly so -- the only evidence strong enough to
+  // forgive the sport word every title carries. Without it, a bare insert-line
+  // name ("Sublime", "Volcanix", "Ignition") would answer any title of the
+  // product: 32 previously-AGREEing rows, measured 2026-09-13.
+  // ONLY IN THE VENDOR-TITLE SHAPE. The exemption exists for
+  // `<year> <product> <sport> #<number> <parallel>`, where the sport is
+  // positional boilerplate immediately before the rung ("... Donruss Optic
+  // Basketball #228 Orange" -- `words()` drops the number, leaving
+  // `basketball orange`). Requiring that adjacency keeps a bare INSERT-LINE
+  // name -- also a whole listed name -- from having the sport forgiven for it
+  // when the sport sits elsewhere in the title entirely: 24 previously-AGREEing
+  // Base rows, measured 2026-09-13.
+  const bestWords = words(best);
+  const seqForSport = words(t);
+  const sportImmediatelyPrecedesAnswer = (() => {
+    for (let i = 1; i + bestWords.length <= seqForSport.length; i++) {
+      if (!SPORT_WORDS.has(seqForSport[i - 1])) continue;
+      let hit = true;
+      for (let k = 0; k < bestWords.length; k++) {
+        if (seqForSport[i + k] !== bestWords[k]) { hit = false; break; }
+      }
+      if (hit) return true;
+    }
+    return false;
+  })();
+  const bestIsExactWholeProductName = productScoped
+    && sportImmediatelyPrecedesAnswer
+    && titleStatesName(titleWordSet, best)
+    && (productNames ?? []).some((n) => words(n).join(" ") === bestWords.join(" "));
   const answered = new Set(words(best));
   for (const w of titleWordSet) {
     if (answered.has(w)) continue;
     if (!index.finishWords.has(w)) continue;
     if (own.has(w)) continue;            // names the SET on this product
+    // A STOCK WORD THE ANSWER DROPPED IS NOT A DROPPED FINISH (2026-09-13).
+    // The answer below deliberately omits this product's stock words, so a
+    // title that spells one out ("... Pink Prizm Shock" answered "Pink Shock")
+    // would otherwise be refused by the guard meant to catch dropped FINISH
+    // words. A word on ~all of this product's parallel names cannot tell two
+    // of its rungs apart, so its absence is never evidence of a sibling card.
+    // Narrow on purpose: `own` and `elidable` are both measured, never a list.
+    if (elidable.has(w) && !own.has(w) && index.finishWords.has(w)) continue;
+    // A SPORT NAME IS NOT AN UNEXPLAINED FINISH WORD (2026-09-13). Some
+    // products name a parallel after a sport ("Basketball Prizms"), so the
+    // corpus-derived finish vocabulary CONTAINS "basketball" -- and every
+    // vendor title states its sport. That made the sport an unexplained
+    // leftover on essentially every title, so a bare, exactly-matching, whole
+    // checklist name was refused wherever the title spelled the sport out:
+    //
+    //   "2024 Donruss Optic Basketball #228 Orange"    -> null, kept Base
+    //   "2025 Panini Certified Football #67 Mirror"    -> null, kept Base
+    //
+    // `Orange` is a listed parallel of basketball|2024|donruss-optic and
+    // `Mirror` of football|2025|panini-certified. The sport says where the
+    // card is sold; it never tells two rungs of one product apart, which is
+    // the only thing this guard measures.
+    if (SPORT_WORDS.has(w) && bestIsExactWholeProductName) continue;
     if (COLOUR_WORDS.has(w)) continue;   // a colour is an axis the diff already sees
     return null;
   }
@@ -800,6 +1056,14 @@ export function statedFinishFromChecklist(
   // vocabulary at all: if the words immediately around the matched phrase extend
   // it into a longer phrase the corpus ALSO lists, the longer one was the card
   // and this reading is a truncation of it. Refuse; the caller keeps "Base".
+  // THE TRUNCATION GUARD READS A CONTIGUOUS PHRASE, AND AN ELIDED ANSWER IS NOT
+  // ONE (2026-09-13). `best` may now carry a product word the title never
+  // wrote ("Pink Prizm Shock" from a title saying "Pink Shock"), so the scan
+  // below finds no occurrence of it and every arm is skipped. That is the
+  // correct outcome -- there is no contiguous phrase to be a truncation OF --
+  // and it is stated here rather than left to fall out of the loop bounds,
+  // because the one-word arm at the bottom is a REFUSAL and a silent skip of a
+  // refusal is the shape that hides a defect.
   const titleSeq = words(t);
   const bestSeq = words(best);
   for (let i = 0; i + bestSeq.length <= titleSeq.length; i++) {
@@ -846,16 +1110,170 @@ export function statedFinishFromChecklist(
     // The slug's setKey is `flair`, so `flair` is a product word and exempting
     // it let the reader answer with the second half of "Flair Showcase" -- the
     // set's name, offered as this card's finish. The card is the "Row 2".
+    // A SPORT NAME IS NOT A QUALIFIER (2026-09-13, wave2verify16 sports census).
+    //
+    // Vendor titles are built `<year> <product> <sport> #<number> <parallel>`,
+    // so after `words()` drops the `#67` the word immediately before a
+    // one-word parallel is the SPORT:
+    //
+    //   "2025 Panini Certified Football #67 Mirror"   -> refused, kept Base
+    //   "2024 Donruss Optic Basketball #228 Orange"   -> refused, kept Base
+    //
+    // `Mirror` and `Orange` are EXACT, whole checklist names on those exact
+    // products -- panini-certified lists Mirror, donruss-optic lists Orange --
+    // and this arm refused both because "football" and "basketball" read as
+    // content words that might be qualifying them into a different card. No
+    // product names a parallel "Football Mirror"; the sport is where the card
+    // is sold, never part of a rung's name.
+    //
+    // The arm's real targets are untouched. It exists for "Flair Showcase ...
+    // Row 2" -> Showcase and "Desert Shield" -> Shield, where the preceding
+    // word genuinely extends the name. A sport word never does, so removing it
+    // from consideration costs no refusal the arm was written to make -- and
+    // the EXACT-MATCH gate below keeps the arm in force for every answer that
+    // is not a whole listed name of this very product.
+    //
+    // AN EXACT WHOLE NAME OF THIS PRODUCT IS NOT A TRUNCATION. When the answer
+    // is a complete name on THIS product's own checklist and the title states
+    // every word of it, the checklist has already said this rung exists and is
+    // spelled exactly this way. That is the evidence the arm lacks in the
+    // Showcase/Desert Shield cases, where the answer is a whole name on SOME
+    // product and the product at hand is unknown or lists a longer sibling.
+    // NOT A SEPARATE SPORT ESCAPE (2026-09-13, narrowed). An earlier revision
+    // exempted a one-word answer merely because the SPORT preceded it, which
+    // let a bare insert-line name answer any title of the product --
+    // "Sublime", "Volcanix", "Ignition", "Kaleidoscopic" -- and flipped 32
+    // previously-AGREEing rows off Base. The exemption this arm actually needs
+    // is the narrower one below: the answer must be an EXACT, whole, listed
+    // name of THIS product, which is the checklist itself saying the rung
+    // exists and is spelled exactly so. A sport word preceding it is then
+    // irrelevant, because the checklist has already ruled.
+    // EXEMPT ONLY WHEN THE PRECEDING WORD CANNOT BE QUALIFYING THE ANSWER.
+    //
+    // This arm refuses a one-word answer because `before` may extend it into a
+    // different card. That doubt is real for an ordinary content word -- "Prizm
+    // Sublime Reed Sheppard" and "Illusions ... Amazing Card" are insert lines,
+    // and exempting every listed one-word name evicted 30 AGREEing Base rows.
+    // It is NOT real when `before` is this product's own name or one of its
+    // stock words, which qualify nothing and are exactly what sits in front of
+    // a bare colour in a vendor title ("... Donruss Optic Basketball #228
+    // Orange" -> `basketball`; "... Panini Certified Football #67 Mirror").
+    //
+    // So: the answer must be a whole listed name of THIS product, fully stated
+    // by the title, AND the word in front of it must be one that carries no
+    // rung information -- the sport, the product's name, or a stock word.
+    // THE SPORT, AND ONLY THE SPORT. An earlier revision also exempted the
+    // product's own name and its stock words, on the reasoning that they
+    // qualify nothing -- but in a title they QUALIFY EXACTLY THIS WAY: "Panini
+    // Prizm Sublime", "Panini Phoenix Flex", "Panini Absolute Explosive" are
+    // each a PRODUCT followed by one of its INSERT LINES, and the arm's doubt
+    // about `before` is precisely right for them. Measured: 22 previously-
+    // AGREEing Base rows evicted onto an insert name.
+    //
+    // The sport does not qualify, because no product names a rung "<Sport>
+    // <Something>" -- that is the vendor title's fixed
+    // `<product> <sport> #<number> <parallel>` shape, and it is the only case
+    // this exemption was ever measured to need.
+    const beforeCannotQualify = before !== null && SPORT_WORDS.has(before);
+    const exactWholeProductName = productScoped
+      && beforeCannotQualify
+      && titleStatesName(titleWordSet, best)
+      && (productNames ?? []).some((n) => words(n).join(" ") === bestSeq.join(" "));
     if (bestSeq.length === 1 && before
         && before.length >= 3
         && !/^\d+$/.test(before)
+        && !exactWholeProductName
         && !STOPWORDS.has(before)) {
       return null;
     }
   }
 
-  return best
-    .split(" ")
+  // CF-THE-SPELLING-IS-THE-RUNG, NOT THE PRODUCT BOILERPLATE (2026-09-13).
+  //
+  // The elision let a checklist name match a title that omitted this product's
+  // stock word, and the ANSWER must be spelled the same way the title and the
+  // pool spell it -- otherwise the reader trades one disagreement for another:
+  //
+  //   stored "Red Power"  title "... #33 Red Power"  -> Prizms Red Power
+  //   stored "Red"        title "... #380 Red"       -> Red Prizm
+  //
+  // Both of those are the SAME RUNG as the stored row, re-spelled with a word
+  // neither the seller nor the pool wrote, and the 2026-09-13 census counted
+  // 107 previously-AGREEing rows flipped to CONFLICT by exactly that. An
+  // identity that moves a row off a pool it is correctly in is not an
+  // improvement (CF-ONE-CARD-ONE-ROW-ONE-POOL).
+  //
+  // So the stock words the title never stated are dropped from the answer. The
+  // rung is unchanged -- "Pink Prizm Shock" and "Pink Shock" are one card on a
+  // product where every parallel says Prizm -- and what survives is the
+  // checklist's own spelling of the part that DISTINGUISHES the rung, which is
+  // the part the pool is keyed by.
+  //
+  // A word the TITLE stated is always kept, even when it is a stock word: the
+  // seller wrote it, and dropping it would be the mirror defect.
+  //
+  // AND A STOCK WORD IS STATED IN EITHER NUMBER (2026-09-13, class-A residual).
+  //
+  // THE DEFECT. The test was exact-token, and a checklist spells its stock word
+  // in the PLURAL while a seller writes the SINGULAR -- Panini lists "Prizms
+  // Silver" and the title says "Silver Prizm". `prizms` was not in the title's
+  // word set, so the "keep what the seller wrote" arm did not fire, the elision
+  // arm did, and the answer came back "Silver" -- the stock word stripped off a
+  // title that plainly states it. Measured on the sports census: 60
+  // previously-AGREEing Panini rows re-spelled this way ("Silver Prizm" ->
+  // "Silver", "Green Ice Prizm" -> "Green Ice"), every one of them a correct
+  // row moved off its own pool, which is the exact harm
+  // CF-ONE-CARD-ONE-ROW-ONE-POOL names.
+  //
+  // Singular/plural is the only variation admitted, and only for a word already
+  // measured as this product's stock word -- so it can never rescue a
+  // DISTINGUISHING word the title omitted. It asks the one question the exact
+  // test meant to ask: did the seller write this product's stock word?
+  // AND IT IS KEPT IN THE NUMBER THE SELLER WROTE. The point of keeping a
+  // stated stock word is to leave a correct row on the pool it is already in,
+  // and that pool is keyed by the TITLE's spelling -- so answering "Silver
+  // Prizms" for a title saying "Silver Prizm" trades the dropped-word
+  // disagreement for a plural one and moves the row just the same. The
+  // checklist's spelling governs the DISTINGUISHING words, which is what the
+  // vocabulary ruling is about; the stock word is boilerplate either way, and
+  // for boilerplate the seller's number is the one the pool uses.
+  // AND "STATED" MEANS STATED AS PART OF THE RUNG, NOT AS THE PRODUCT'S NAME.
+  //
+  // On `panini-prizm` the word `prizm` is in EVERY title twice over -- once
+  // naming the product ("2024 Panini Prizm Basketball ...") and once, when the
+  // seller writes it, inside the rung ("... #130 Silver Prizm"). A bare
+  // set-membership test cannot tell the two apart, so it read the product's own
+  // name as evidence the seller spelled the rung out and injected the stock word
+  // into answers for titles that never wrote it ("... #217 Glitter" -> "Prizm
+  // Glitter", where the checklist and the pool both say "Prizms Glitter").
+  //
+  // The rung is what the title says APART from the product's name, so the stock
+  // word counts as stated only where it occurs somewhere the product name does
+  // not account for -- i.e. the title uses it more often than the product name
+  // spends it. `own` is this product's setKey words, which is exactly the
+  // budget the product name draws on.
+  const titleWordCounts = new Map<string, number>();
+  for (const w of words(t)) titleWordCounts.set(w, (titleWordCounts.get(w) ?? 0) + 1);
+  const spentByProductName = (w: string): number => (own.has(w) ? 1 : 0);
+  const statedInRung = (w: string): boolean =>
+    (titleWordCounts.get(w) ?? 0) > spentByProductName(w);
+  const statedStockWord = (w: string): string | null => {
+    if (statedInRung(w)) return w;
+    if (!elidable.has(w)) return null;
+    if (w.endsWith("s") && statedInRung(w.slice(0, -1))) return w.slice(0, -1);
+    if (statedInRung(`${w}s`)) return `${w}s`;
+    return null;
+  };
+  const spelled = words(best).flatMap((w) => {
+    const stated = statedStockWord(w);
+    if (stated !== null) return [stated];
+    return elidable.has(w) ? [] : [w];
+  });
+  // Never answer with nothing. If every word was elidable the candidate floor
+  // above should already have refused it, but a reader that can return "" would
+  // write a blank parallel onto a real sale, so this refuses instead.
+  if (!spelled.length) return null;
+  return spelled
     .map((w) => (w ? w[0].toUpperCase() + w.slice(1) : w))
     .join(" ");
 }

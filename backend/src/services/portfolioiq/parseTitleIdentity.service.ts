@@ -412,9 +412,27 @@ export function extractGradeFromTitle(title: string): { gradeCompany: "PSA" | "B
 // matching only its "83T" prefix would split a real SKU. Pinned by
 // cardNumberIntegrityParity.test.ts, which caught exactly that on the first
 // version of this alternative.
-
+//
+// CF-DASH-SUFFIX-IS-PART-OF-THE-NUMBER (2026-09-13). The letter-LED branch
+// `[A-Z]{1,3}\d{1,4}` had no equivalent tail, so a title stating a
+// LETTERS+DIGITS-LETTERS number truncated at the digits:
+//
+//   "2024 Bowman's Best Baseball #B24-GW"  -> cardNumber "B24", not "B24-GW"
+//
+// The census shows this as a CONFLICT: "B24" names no card in any checklist
+// while "B24-GW" (George Wolkow, bowmans-best) does. Bowman's Best (B24-xx),
+// Topps Chrome / Bowman Chrome autos written without a letters-only prefix of
+// 2+ chars (the first alternative already covers CA-xx, RA-xx, BCP-xx), and
+// many inserts use exactly this <1-3 LETTERS><DIGITS>-<SUFFIX> shape. The
+// suffix is pinned immediately against the digits (no whitespace) so a title
+// that puts a space or an unrelated dash-word after the number is untouched:
+// "#12 - PSA 10" and "#5 -Refractor" (space before the dash) do not match the
+// tail and still read "12" / "5". A trailing `/NN` is a print run, not part
+// of the number -- the slash is not in this alternative's suffix class, so
+// "#B24-GW /99" reads cardNumber "B24-GW" and printRun still comes from the
+// existing `/NN` extraction, untouched by this change.
 const DEFAULT_CARD_NUMBER_RE =
-  /#\s*([A-Z]{2,5}-[A-Z0-9]{1,6}|[A-Z]{1,3}\d{1,4}|BCP-\d+|CPA-\w+|BSPA-\w+|BCPA-\w+|BDCA-\w+|BPA-\w+|BDA-\w+|BCRA-\w+|TCRA-\w+|CPALD|CPATWH|BDC-\d+|HL\d+|US\d+|\d{1,4}[A-Z](?:-[A-Z0-9]{1,6})?|\d{1,4})\b/i;
+  /#\s*([A-Z]{2,5}-[A-Z0-9]{1,6}|[A-Z]{1,3}\d{1,4}(?:-[A-Z0-9]{1,6})?|BCP-\d+|CPA-\w+|BSPA-\w+|BCPA-\w+|BDCA-\w+|BPA-\w+|BDA-\w+|BCRA-\w+|TCRA-\w+|CPALD|CPATWH|BDC-\d+|HL\d+|US\d+|\d{1,4}[A-Z](?:-[A-Z0-9]{1,6})?|\d{1,4})\b/i;
 
 // CF-CARDNUM-STANDALONE (Drew, 2026-08-02). Second-chance regex for when
 // the title has no `#` at all but a plausible card-number-shaped token
@@ -1209,9 +1227,12 @@ export function inferIsAuto(input: InferIsAutoInput): boolean {
 /** A `#`-prefixed token that is a PRODUCT-CODED card number (USC88, PDC-171,
  *  CPA-EW, BCP-102) rather than a bare integer. Deliberately the letter-led
  *  alternatives of DEFAULT_CARD_NUMBER_RE and nothing more: this decides only
- *  which of two stated numbers wins, never whether a number is stated. */
+ *  which of two stated numbers wins, never whether a number is stated.
+ *  Carries the same CF-DASH-SUFFIX-IS-PART-OF-THE-NUMBER tail as
+ *  DEFAULT_CARD_NUMBER_RE's letter-led branch, so "#1 2024 ... #B24-GW"
+ *  promotes the whole "B24-GW", not the truncated "B24". */
 const PREFIXED_HASH_CARD_NUMBER_RE =
-  /#\s*([A-Z]{2,5}-[A-Z0-9]{1,6}|[A-Z]{1,3}\d{1,4})\b/gi;
+  /#\s*([A-Z]{2,5}-[A-Z0-9]{1,6}|[A-Z]{1,3}\d{1,4}(?:-[A-Z0-9]{1,6})?)\b/gi;
 /** A bare `#N`, the shape a listing-position prefix also takes. */
 const BARE_HASH_CARD_NUMBER_RE = /#\s*(\d{1,4})\b/g;
 
@@ -1238,7 +1259,7 @@ function preferPrefixedCardNumber(title: string): string | null {
   const bare = BARE_HASH_CARD_NUMBER_RE.exec(t);
   BARE_HASH_CARD_NUMBER_RE.lastIndex = 0;
   if (!bare) return null;
-  const firstPrefixedAt = t.search(/#\s*(?:[A-Z]{2,5}-[A-Z0-9]{1,6}|[A-Z]{1,3}\d{1,4})\b/i);
+  const firstPrefixedAt = t.search(/#\s*(?:[A-Z]{2,5}-[A-Z0-9]{1,6}|[A-Z]{1,3}\d{1,4}(?:-[A-Z0-9]{1,6})?)\b/i);
   if (firstPrefixedAt < 0 || bare.index < firstPrefixedAt) return prefixed[0];
   return null;
 }
@@ -2961,6 +2982,26 @@ const SOCCER_COMPETITION_PRODUCTS: readonly SoccerCompetitionProduct[] = [
   { family: "topps-stadium-club", competition: /\bbundesliga\b/, setKey: "topps-stadium-club-chrome-bundesliga" },
   { family: "topps-stadium-club", competition: /\buefa\b|\bchampions\s+league\b/, setKey: "topps-stadium-club-chrome-uefa" },
 
+  // -- stadium-club-chrome --------------------------------------------------
+  // THE SAME TWO RULED KEYS, REACHED FROM THE CHROME FAMILY (2026-09-13).
+  //
+  // Both destinations ARE the Chrome products, and both rules above were
+  // written when every "Stadium Club Chrome" title still derived the PAPER
+  // family `topps-stadium-club` -- the fold CF-STADIUM-CLUB-CHROME-IS-ITS-OWN-
+  // PRODUCT repairs in `inferFamilySetKeyFromTitle`. Now that a Chrome title
+  // derives `stadium-club-chrome`, these competition titles arrive under a
+  // family this table did not carry, and the refinement that turns them into
+  // their ruled UEFA / Bundesliga keys stopped firing.
+  //
+  // Adding the family HERE rather than reordering the brand rules keeps ONE
+  // refinement seam, which is this table's whole purpose: the brand rules
+  // answer the product, this table refines it by competition, and a title
+  // spelling the product either way reaches the same ruled key. The paper
+  // entries stay -- a title saying "Stadium Club ... UEFA" without "Chrome"
+  // still lands on the same destination, exactly as before.
+  { family: "stadium-club-chrome", competition: /\bbundesliga\b/, setKey: "topps-stadium-club-chrome-bundesliga" },
+  { family: "stadium-club-chrome", competition: /\buefa\b|\bchampions\s+league\b/, setKey: "topps-stadium-club-chrome-uefa" },
+
   // -- topps-museum-collection ----------------------------------------------
   { family: "topps-museum-collection", competition: /\buefa\s+champions\s+league\b|\bchampions\s+league\b|\bucl\b/, setKey: "topps-museum-collection-uefa-champions-league" },
   { family: "topps-museum-collection", competition: /\bbundesliga\b/, setKey: "topps-museum-collection-bundesliga" },
@@ -3596,8 +3637,28 @@ function inferFamilySetKeyFromTitle(title: string, cardNumber?: string | null): 
   if (/bowman(?:\\?['’])?s\s+best\b(?:[\s\-:]+[a-z.']+){0,5}?[\s\-:]+prev(?:iew)?s?\b/i.test(t)) {
     return "Bowman's Best Preview";
   }
+  // CF-STADIUM-CLUB-CHROME-IS-ITS-OWN-PRODUCT (R26, 2026-09-13). Chrome stock
+  // is a different card from paper stock -- the ruling Bowman vs Bowman Chrome
+  // already states -- and `stadium-club-chrome` is the key the pool stores
+  // those sales under. The bare rule claimed them (12 samples):
+  //
+  //   "2021 Topps Stadium Club Chrome Ichiro Refractor #87" -> topps-stadium-club
+  //
+  // Longest first, gated by the Stadium Club words themselves.
+  if (/stadium\s+club\s+chrome|chrome\s+stadium\s+club/i.test(t)) return "Stadium Club Chrome";
   if (/topps\s+stadium\s+club|stadium\s+club/i.test(t)) return "Topps Stadium Club";
-  if (/topps\s+allen[-\s]?(and\s+)?ginter|allen[-\s]?(and\s+)?ginter/i.test(t)) return "Topps Allen Ginter";
+  // CF-THE-AMPERSAND-IS-HOW-THE-PRODUCT-IS-SPELT (2026-09-13). This rule read
+  // "Allen Ginter" and "Allen and Ginter" but NOT "Allen & Ginter" -- which is
+  // how Topps prints the name on the card, how the checklists spell it, and
+  // how 246 of the census's CONFLICT samples spell it. Every one of those fell
+  // past this line to the bare `/topps/` catch-all and priced inside flagship
+  // Topps:
+  //
+  //   "2025 Topps Allen & Ginter Baseball #8 Base"  ->  topps
+  //
+  // `topps-allen-ginter` is the single largest product-fold in the sports
+  // census, and the whole of it was one missing character class.
+  if (/topps\s+allen[-\s]?(?:and\s+|&\s*)?ginter|allen[-\s]?(?:and\s+|&\s*)?ginter/i.test(t)) return "Topps Allen Ginter";
   if (/topps\s+gypsy\s+queen|gypsy\s+queen/i.test(t)) return "Topps Gypsy Queen";
   if (/topps\s+archives/i.test(t)) return "Topps Archives";
   if (/topps\s+big\s+league|big\s+league/i.test(t)) return "Topps Big League";
@@ -3655,6 +3716,29 @@ function inferFamilySetKeyFromTitle(title: string, cardNumber?: string | null): 
   // 2026-09-13 census caught 114 CONFLICT samples of exactly this shape: a
   // live regression of an already-ruled pair. Must precede the bare
   // `/topps\s+chrome/` rule, same ordering doctrine as Sapphire above.
+  // CF-A-NAMED-PRODUCT-IS-ITS-OWN-PRODUCT, THE TOPPS CHROME RUNGS (R26,
+  // 2026-09-13, from the wave2verify16 sports census).
+  //
+  // `topps-chrome-black` and `topps-chrome-logofractor` are BOTH ruled keys
+  // (productSetKeys.ts:479 carries topps-chrome-black with parent
+  // topps-chrome; normalizeSetKey answers both as fixed points) and NEITHER
+  // had a parser rule, so every sale of them fell to the bare
+  // `/topps\s+chrome/` line below and was priced inside the flagship pool.
+  //
+  //   "2025 Topps Chrome Black Football #RV-12 Base"      -> topps-chrome
+  //   "2024 Topps Chrome Logofractor Baseball #55 Base"   -> topps-chrome
+  //
+  // 130 + 51 CONFLICT samples of exactly this shape. Topps Chrome Black is a
+  // black-bordered, separately-boxed release with its own checklist and its
+  // own price curve -- and the census's own `Black Refractor` answer for the
+  // FIRST title is the same defect twice over: the PRODUCT word was read as a
+  // PARALLEL of the flagship instead of as the name of the product.
+  //
+  // Placed with Platinum and Update, above bare `/topps\s+chrome/`, for the
+  // ordering doctrine those two already state: a qualifying word must be read
+  // before the line that returns a constant and never looks again.
+  if (/topps\s+chrome\s+black/i.test(t)) return "Topps Chrome Black";
+  if (/topps\s+chrome\s+logofractor|\blogofractor\b/i.test(t)) return "Topps Chrome Logofractor";
   if (/topps\s+chrome\s+platinum/i.test(t)) return "Topps Chrome Platinum";
   if (/topps\s+chrome\s+update(\s+series)?/i.test(t)) return "Topps Chrome Update Series";
   if (/topps\s+chrome/.test(t)) return "Topps Chrome";
@@ -3724,9 +3808,53 @@ function inferFamilySetKeyFromTitle(title: string, cardNumber?: string | null): 
   }
   if (/bowman\s+draft\s+chrome/.test(t)) return "Bowman Draft Chrome";
   if (/bowman\s+draft/.test(t)) return "Bowman Draft";
+  // CF-A-NAMED-PRODUCT-IS-ITS-OWN-PRODUCT, THE BOWMAN RUNGS (R26, 2026-09-13).
+  //
+  // Four ruled Bowman keys had no parser rule, so each one's sales were priced
+  // inside a PARENT pool. All four are already fixed points in normalizeSetKey
+  // and three carry a productSetKeys ladder entry, so nothing new is invented
+  // here -- the parser is only being taught to REACH keys the vocabulary
+  // already ruled on, the same debt the Traded / Tiffany rules paid down.
+  //
+  //   "2025 Bowman's Best Baseball #47 Gold Lava"        -> bowman        (158+109)
+  //   "2025 Bowman Chrome University Football #PE-8"     -> bowman-chrome (13)
+  //   "2025 Bowman Sterling ... #BSPA-XX"                -> bowman        (10+9)
+  //   "2025 Bowman 1st Edition ..."                      -> bowman        (8)
+  //
+  // ORDER, MOST QUALIFIED FIRST, and every rule brand-gated on the word
+  // "Bowman" this ladder already requires. "Best" and "Sterling" are ordinary
+  // words -- Topps prints a Sterling too -- so neither may fire bare, the same
+  // negative-evidence gate the Sapphire block above states in full.
+  //
+  // BOWMAN'S BEST IS SPELT FOUR WAYS in the pool: a straight apostrophe, a
+  // curly one, a backslash-escaped one, and none at all. The Bowman's Best
+  // Preview rule above already reads all four, and this reads them the SAME
+  // way rather than inventing a fifth reading of one product.
+  //
+  // BOWMAN CHROME UNIVERSITY normalises to `bowman-chrome` TODAY -- the
+  // vocabulary holds no separate fixed point for it yet -- so this rule
+  // returns the label and lets normalizeSetKey answer. Deliberate: minting a
+  // key the vocabulary has not ruled on is the synthetic-parallel failure
+  // CF-NO-SYNTHETIC-PARALLELS forbids, and the census's own AGREE blind-spot
+  // note (BOTH sides fold it) makes it a CHECKLIST acquisition, not a parser
+  // guess. The rule is here so the word survives to the seam that can rule.
+  if (/bowman(?:\\?['’])?s?\s+best\b/i.test(t) && /\buniversity\b/i.test(t)) return "Bowman Best University";
+  if (/bowman(?:\\?['’])?s?\s+best\b/i.test(t)) return "Bowman's Best";
+  if (/bowman\s+sterling/i.test(t)) return "Bowman Sterling";
+  if (/bowman\s+(?:1st|first)\s+edition/i.test(t)) return "Bowman 1st Edition";
+  if (/bowman\s+chrome\s+university|bowman\s+u\b/i.test(t)) return "Bowman Chrome University";
   if (/bowman\s+chrome\s+prospects?/.test(t)) return "Bowman Chrome";
+  // CF-MEGA-BOX-IS-ITS-OWN-PRODUCT (R26, 2026-09-13). This rule sat BELOW
+  // `/bowman\s+chrome/`, so it was DEAD for every title that spells the
+  // product in full: "2025 Bowman Chrome Mega Box Baseball #46" matched
+  // Chrome one line earlier and never reached it. It could only ever fire on
+  // a title saying "Bowman Mega Box" without the word Chrome, the rarer
+  // spelling. 18 CONFLICT samples. `bowman-chrome-mega-box` is a ruled key
+  // with its own productSetKeys ladder entry (family + parent bowman-chrome),
+  // its own Mojo/Chrome parallel ladder and its own price curve. Moved ABOVE
+  // Chrome, where a longest-match rule belongs.
+  if (/bowman\s+(?:chrome\s+)?mega\s*box/i.test(t)) return "Bowman Chrome Mega Box";
   if (/bowman\s+chrome/.test(t)) return "Bowman Chrome";
-  if (/bowman\s+mega\s+box/.test(t)) return "Bowman Chrome Mega Box";
   // CF-CHROME-IMPLIED (Drew, 2026-07-29). Some parallels are Chrome-
   // exclusive (they don't exist on Bowman Paper): Speckle, Shimmer,
   // Lava, Wave, Ray Wave, Grass, X-Fractor, Mojo, Prism, Mini Diamond,
@@ -3776,6 +3904,12 @@ function inferFamilySetKeyFromTitle(title: string, cardNumber?: string | null): 
   if (/panini\s+spectra|\bspectra\b/i.test(t)) return "Panini Spectra";
   if (/panini\s+revolution|\brevolution\b/i.test(t)) return "Panini Revolution";
   if (/panini\s+crown\s+royale|crown\s+royale/i.test(t)) return "Panini Crown Royale";
+  // CF-A-LEAGUE-RELEASE-IS-NOT-ITS-FLAGSHIP (#1918's ruling, applied to the
+  // WNBA slate, 2026-09-13). `panini-select-wnba` is a ruled key and the bare
+  // `/\bselect\b/` line swallowed it, so "2024 Panini Select WNBA Basketball
+  // #70 Bronze Checker" priced inside the men's Select pool (19 samples).
+  // Same shape, same seam and the same ordering as the Prizm WNBA fix below.
+  if (/\bwnba\b/i.test(t) && /panini\s+select|\bselect\b/i.test(t)) return "Panini Select WNBA";
   if (/panini\s+select|\bselect\b/i.test(t)) return "Panini Select";
   if (/panini\s+mosaic|\bmosaic\b/i.test(t)) return "Panini Mosaic";
   if (/panini\s+optic|donruss\s+optic/i.test(t) || (/\boptic\b/i.test(t) && noRivalBrand(t, /panini|donruss/i))) return "Panini Optic";
@@ -3830,7 +3964,69 @@ function inferFamilySetKeyFromTitle(title: string, cardNumber?: string | null): 
   // Prizm arm, same ordering doctrine as the Hoops specializations above.
   if (/prizm\s+deca\b/i.test(t)) return "Panini Prizm Deca";
   if (/prizm\s+(?:perennial\s+)?draft\s+picks\b/i.test(t)) return "Panini Prizm Draft Picks";
+  // CF-FOLD-UP-COLLAPSE-IS-FORBIDDEN, THE REST OF THE PRIZM SLATE (2026-09-13).
+  //
+  // The note above already names `panini-prizm-wnba` as ruled DISTINCT from
+  // `panini-prizm` on 2026-09-03 -- "panini-prizm-wnba/panini-prizm-draft-picks
+  // != panini-prizm... every pair is a normalizeSetKey fixed point" -- and Deca
+  // and Draft Picks got their rules there. WNBA did not, so the bare
+  // `/\bprizm\b/` line kept swallowing it:
+  //
+  //   "2024 Panini Prizm WNBA Basketball #13 Red"     -> panini-prizm   (45)
+  //   "2024 Panini Prizm Monopoly WNBA ..."           -> panini-prizm   (9)
+  //   "2025 Panini Prizm Black Football #10 Blue"     -> panini-prizm   (38)
+  //
+  // Prizm Black is a separate, 1/1-heavy release with its own checklist and
+  // its own ruled key -- not a "Black" parallel of the flagship. The census
+  // reading it as one is the same product-word-read-as-a-parallel defect the
+  // Topps Chrome Black rule above repairs.
+  //
+  // MONOPOLY before WNBA, WNBA before BLACK, all three before the bare arm:
+  // longest and most qualified first, because the words genuinely co-occur
+  // ("Panini Prizm Monopoly WNBA" states both).
+  if (/\bmonopoly\b/i.test(t) && /\bwnba\b/i.test(t) && /\bprizm\b/i.test(t)) return "Panini Prizm Monopoly WNBA";
+  if (/\bwnba\b/i.test(t) && /\bprizm\b/i.test(t)) return "Panini Prizm WNBA";
+  // "BLACK STAR" IS A PROMO MARKER, NOT THIS PRODUCT'S NAME (2026-09-14).
+  //
+  // `/prizm\s+black\b/` matches the first two words of "Prizm Black Star
+  // Promo", so a title whose "black" belongs to the Pokemon promo vocabulary
+  // ("Wizards/BW/DP/HGSS/SM/SVP Black Star Promos" -- pokemonSetCodes.ts) was
+  // minting a sports product out of it:
+  //
+  //   "2023 Panini Prizm Black Star Promo Wembanyama" -> panini-prizm-black
+  //
+  // The card is a Panini Prizm promo; `panini-prizm-black` is a different
+  // product with a different checklist, so this filed the sale into a pool it
+  // has no card in. Pinned by pokemonSetCodeIsTheKey.test.ts, whose whole point
+  // is that the promo/black-star vocabulary must not leak across the boundary
+  // in EITHER direction -- this is the sports side of that same boundary.
+  //
+  // The negative lookahead is the narrowest statement of it: "Black" followed
+  // by "Star" is the promo marker and never the product qualifier. Every real
+  // Prizm Black title ("2025 Panini Prizm Black Football #10 Blue") is
+  // untouched, because none of them says "Star".
+  if (/\bprizm\b/i.test(t) && /prizm\s+black\b(?!\s+star\b)|\bblack\s+prizm\b/i.test(t)) return "Panini Prizm Black";
   if (/panini\s+prizm|\bprizm\b/i.test(t)) return "Panini Prizm";
+  // CF-A-NAMED-TOPPS-RELEASE-IS-ITS-OWN-PRODUCT (R26, 2026-09-13). Five more
+  // ruled Topps keys with no parser rule, each folded by the bare `/topps/`
+  // catch-all one line down -- the very line the Traded/Tiffany note above
+  // describes as "it returns a constant and never reads the rest of the title".
+  //
+  //   "2025 Topps Holiday #H1 ... Blue Metallic Glitter"  -> topps   (28)
+  //   "20xx Topps Diamond Icons ..."                      -> topps   (8)
+  //   "20xx Topps Brooklyn Collection ..."                -> topps   (6)
+  //   "20xx Topps Midnight ..."                           -> topps   (5)
+  //   "20xx Topps Gallery ..."                            -> topps   (4)
+  //
+  // All five are normalizeSetKey fixed points. Every rule is brand-gated on
+  // "Topps": "Holiday", "Gallery" and "Midnight" are ordinary words and a bare
+  // rule for any of them would claim another brand's title -- the negative-
+  // evidence lesson the Museum Collection and Finest rules above both carry.
+  if (/topps\s+holiday|holiday\s+mega\s*box/i.test(t)) return "Topps Holiday";
+  if (/topps\s+diamond\s+icons|diamond\s+icons/i.test(t)) return "Topps Diamond Icons";
+  if (/topps\s+brooklyn\s+collection|brooklyn\s+collection/i.test(t)) return "Topps Brooklyn Collection";
+  if (/topps\s+gallery/i.test(t)) return "Topps Gallery";
+  if (/topps\s+midnight/i.test(t)) return "Topps Midnight";
   if (/topps/.test(t)) return "Topps";
   // CF-INFER-SET-POKEMON-GUARD (Drew, 2026-08-03). Bowman is the
   // baseball default for unmatched sports titles, but TCA firehose
@@ -4051,8 +4247,49 @@ function inferFamilySetKeyFromTitle(title: string, cardNumber?: string | null): 
  * Kept as-is because 800 references read this field; resolveVertical() wraps it
  * and reports confidence. Do not add new callers.
  */
+/**
+ * Blank out the `#`-introduced card-number tokens in a title.
+ *
+ * Used ONLY by the sport reader, whose rules are word tests over the whole
+ * title and therefore cannot tell a product word from three letters of a
+ * player's initials inside a number (`#PPAR-MMA`, `#SS-AEW`). Replaced with a
+ * space rather than removed so word boundaries either side survive.
+ *
+ * Deliberately narrow: only a token that FOLLOWS a `#`. A bare alphanumeric
+ * run elsewhere in a title is ordinary text, and masking those would start
+ * hiding the product words the rules exist to read.
+ */
+function maskCardNumberTokens(title: string): string {
+  return String(title ?? "").replace(/#\s*[A-Za-z0-9][A-Za-z0-9\-\/.]*/g, " ");
+}
+
 export function inferSportFromTitle(title: string, fallback = "baseball"): string {
-  const t = String(title ?? "").toLowerCase();
+  // CF-THE-SPORT-IS-THE-PRODUCTS-SPORT, NOT A CARD-NUMBER TOKEN (2026-09-13,
+  // from the wave2verify16 sports census).
+  //
+  // THE DEFECT. Every rule below is a word test over the WHOLE title, and a
+  // card number is part of the title. Topps numbers its insert subsets with
+  // player initials, so a real baseball card states a rival sport's name
+  // inside its own number:
+  //
+  //   "2025 Topps Pristine Baseball #PPAR-MMA Base"  -> mma
+  //   "2026 Topps Baseball #HLAR-MMA Base"           -> mma   (Marcelo Mayer)
+  //   "2026 Topps Baseball #CC-MMA Orange"           -> mma
+  //   "2020 Panini Prizm Basketball #SS-AEW Base"    -> wrestling
+  //
+  // Each of those titles says "Baseball" or "Basketball" IN WORDS, and the
+  // sport that won was three letters of somebody's initials. The card number
+  // is an ADDRESS on the product; it is never evidence about which sport the
+  // product is (CF-ISAUTO-BOUNDARY-IS-CARDNUMBER makes the mirror ruling for
+  // the auto flag -- the cardNumber decides `isAuto` and title text does not,
+  // and here title text decides the sport and the cardNumber does not).
+  //
+  // THE FIX IS TO HIDE THE NUMBER, NOT TO WEAKEN A RULE. Narrowing `mma`
+  // would cost the real UFC titles it was added for; masking the `#`-anchored
+  // number token costs nothing, because no rule below is ABOUT a card number.
+  // Only a token introduced by `#` is masked, so "2024 UFC #12 Jon Jones"
+  // still reads mma off the product words exactly as before.
+  const t = maskCardNumberTokens(String(title ?? "")).toLowerCase();
   // CF-SOCCER-NEVER-DETECTED (Drew, 2026-08-15). There was no soccer
   // branch at all, so every soccer card fell through to the `baseball`
   // fallback and landed in the pool that feeds baseball FMV and

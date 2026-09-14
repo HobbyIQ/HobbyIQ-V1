@@ -9,6 +9,10 @@
   "productKey": "2022-panini-spectra-football",
   "setKey": "panini-spectra",
   "subset": "2021 Spectra Football Vested Veterans Autographs",
+  "heldRows": {
+    "rows": 65,
+    "reason": "A card set's year is the PRODUCT's year, and a key never carries a year or a sport word (Drew 2026-09-13). These 65 rows across 13 colour rungs are a 2021 Spectra Football set that cardboardconnection listed on the 2022 page -- a redemption / update carry-over, not a 2022 subset. Registering `panini-spectra-2021-spectra-football-vested-veterans-autographs` would mint a key spelling the source's page layout rather than a card set. The rows stay staged and unwritten; if the source publishes a 2021 Spectra page naming Vested Veterans Autographs, they belong to the 2021 product's directory. Absent beats wrong."
+  },
   "rowCount": 65,
   "autoCount": 65,
   "printRunCount": 65,

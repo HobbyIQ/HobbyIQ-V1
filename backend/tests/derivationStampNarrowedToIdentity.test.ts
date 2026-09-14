@@ -78,12 +78,12 @@ const repoRoot = path.resolve(backend, "..");
 const DV = require_(path.join(backend, "scripts", "lib", "derivation-version.cjs"));
 const TABLE = require_(path.join(backend, "data", "rematch-census-shares.json"));
 
-/** The integ/deriver-batch-0912-1600 head the 2026-09-13 reference was stamped
- *  on (#2118 on top of #2086's thirteen PRs). The re-label commit sits on top
- *  of it and touches no DERIVATION_INPUT, so v2 at this commit equals v2 now.
- *  (`measuredUnder.commit` names something else: the MAIN tree the census
- *  artifacts were measured under, 77e305a0.) */
-const REFERENCE_COMMIT = "d6afd28d7d3b6aae766ecc903b1986d244d55345";
+/** The integ/deriver-batch-0913-2 head the 2026-09-14 reference was stamped on
+ *  (#2116 #2122 #2125 #2127 #2135 #2138 #2141 on top of main). The re-label
+ *  commit sits on top of it and touches no DERIVATION_INPUT, so v2 at this
+ *  commit equals v2 now. (`measuredUnder.commit` names something else: the
+ *  MAIN tree the verification census artifacts were measured under, b5ab5f74.) */
+const REFERENCE_COMMIT = "02a5e55738a462b34f5bdd805e3884fd33b3b958";
 
 /** Read one file's content AT a commit via `git show <sha>:<path>` -- READ
  *  ONLY, no worktree, no checkout, nothing mutated. `relFromRepoRoot` is the
