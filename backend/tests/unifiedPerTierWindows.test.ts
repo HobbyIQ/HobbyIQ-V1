@@ -68,9 +68,14 @@ describe("computeUnifiedPrice — perTierWindows", () => {
     expect(tier("PSA 10").sampleCount).toBe(8);
     expect(tier("PSA 10").rungLabel).toBe("exact-pool-projection");
     // Raw never reaches 5 in 60 / 90 and has 3 at 180 -> all three, at 180d.
-    // RULING R25: 3 sales is too few for a trend, so the most recent stands.
+    // Its own 3 sales are still too few for a trend (R25's condition), but
+    // CF-EXACT-POOL-GRADE-INDEX (Drew, 2026-09-13) now asks a further
+    // question R25 could not: does the CARD have a trend? Here it does — 16
+    // sales across three tiers — so Raw is priced from the card's grade-free
+    // index rather than from its own newest sale alone. The tier's own pool
+    // is unchanged at 3; only what is allowed to inform it has changed.
     expect(tier("Raw").sampleCount).toBe(3);
-    expect(tier("Raw").rungLabel).toBe("exact-pool-last-sale");
+    expect(tier("Raw").rungLabel).toBe("exact-pool-grade-index");
     // PSA 9 has 5 sales inside 90d and fewer inside 60d -> the 90d rows.
     expect(tier("PSA 9").sampleCount).toBe(5);
   });

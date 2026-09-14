@@ -1488,12 +1488,17 @@ async function main() {
    */
   const sampleCards = new Map();   // klass -> Map(cardId -> line count)
   /**
-   * THE NAMED AGGREGATE, so a resume can save and reload it as ONE object
-   * instead of the cursor helpers having to know each counter's shape by
-   * hand. Every entry here is either a `Map<string, number>` (bumped
-   * counters), a `Map<string, Map<string, number>>` (the per-class sample
-   * reservoirs' per-card tallies), an array (capped sample lines) or a plain
-   * number -- `censusAggregateToJSON`/`FromJSON` below switch on which.
+   * THE NAMED AGGREGATE, so a resumed pass's `mergeCensusAggregate` can add a
+   * prior pass's counts into these SAME live counters without the merge
+   * logic having to know each counter's shape by hand. Every entry here is
+   * either a `Map<string, number>` (bumped counters), a
+   * `Map<string, Map<string, number>>` (the per-class sample reservoirs'
+   * per-card tallies), an array (capped sample lines) or a plain number --
+   * `mergeCensusAggregate` below switches on which. Only a small subset of
+   * these (`counts`, `stats`, `splitTotal`, plus `scopeCounts` below) is ever
+   * written to the CURSOR (see censusAggregateToCompactJSON) -- the rest
+   * feeds the per-pass ARTIFACT only, built directly from these same Maps
+   * further down, never round-tripped through the cursor.
    */
   const AGGREGATE_FIELDS = {
     counts: "object", stats: "object", splitTotal: "number",
@@ -1519,23 +1524,58 @@ async function main() {
     samples, sampleCards, slugShapeSamples, splitScopeByAxis,
     splitSamples, gftSamples, yfvSamples, sfpSamples,
   };
-  /** Serialize the whole in-memory aggregate to a plain JSON-safe object. */
-  const censusAggregateToJSON = () => {
+  /**
+   * THE COMPACT CURSOR AGGREGATE (2026-09-13, #2073 cursor-size follow-up).
+   *
+   * The cursor USED TO carry the whole aggregate -- every field in
+   * `AGGREGATE_FIELDS` below, including the per-row/per-sample ones
+   * (`samples`, `sampleCards`, `reasons`, `byTier`, `subclasses`,
+   * `splitByClass`/`splitSegments`/`splitSamples`,
+   * `slugShapeCounts`/`slugShapeByClass`/`slugShapeSamples`, the gft/yfv/sfp
+   * detail maps and their sample arrays) -- serialised through a since-
+   * removed `censusAggregateToJSON()` that mirrored the artifact's own
+   * serializer. That is the right shape for the ARTIFACT
+   * (census-slot-N.json, built directly from these same live Maps below,
+   * written once per pass and never read back by another process), and the
+   * wrong shape for the CURSOR: a page checkpoint fires every ~2,000-2,700
+   * rows, `mergeCensusAggregate` concatenates the sample arrays and unions
+   * the reason/subclass maps on every resumed load, and slots 12/15/2/5/16
+   * measured tonight (2,081,532 / 2,061,854 / 1,905,982 / 1,875,034 /
+   * 1,735,792 chars) show that growth is unbounded across a long walk --
+   * slot 12's run 34782080801 hit Cosmos's 2MB document ceiling and exited 5
+   * nine times running.
+   *
+   * The cursor's ONLY job is telling a relaunch where to pick back up:
+   * which units are done, the in-flight unit's own continuation token, and
+   * enough of the count so far to keep narrating progress in the banner
+   * (`stats.seen` carried forward, the four class totals, r26/r27/r28). None
+   * of that grows with the number of DISTINCT samples/reasons/subclasses
+   * seen -- only with the number of units and a handful of numeric buckets,
+   * bounded by the shard table, not by row count. Anything that needs the
+   * per-row detail across passes (an auditor, the audit gate) reads it from
+   * the ARTIFACT instead -- a relaunch that needs the PRIOR pass's samples/
+   * reasons/byTier merged in has to read that pass's own census-slot-N.json
+   * (the composite relaunch already restages artifact files across links;
+   * see its collect/merge step) rather than the cursor. This script does not
+   * do that merge itself: each pass's own artifact reports that PASS's own
+   * detail, cumulative counts only via the cursor's compact numbers -- the
+   * banner says so explicitly (see the CENSUS CURSOR log lines below) rather
+   * than silently shipping a partial sample as if it were the whole shard's.
+   */
+  const CENSUS_CURSOR_AGGREGATE_FIELDS = ["counts", "stats", "splitTotal"];
+  const censusAggregateToCompactJSON = () => {
     const out = {};
-    for (const [name, kind] of Object.entries(AGGREGATE_FIELDS)) {
+    for (const name of CENSUS_CURSOR_AGGREGATE_FIELDS) {
       const v = aggregateRefs[name];
-      if (kind === "map") out[name] = Object.fromEntries(v);
-      else if (kind === "mapOfArrays") out[name] = Object.fromEntries([...v].map(([k, arr]) => [k, arr]));
-      else if (kind === "mapOfMaps") out[name] = Object.fromEntries([...v].map(([k, m]) => [k, Object.fromEntries(m)]));
-      else if (kind === "splitScopeAxisMap") {
-        out[name] = Object.fromEntries([...v].map(([axis, a]) => [axis, {
-          move: a.move, park: a.park,
-          parkReasons: Object.fromEntries(a.parkReasons),
-          moveSamples: a.moveSamples, parkSamples: a.parkSamples,
-        }]));
-      }
-      else out[name] = v; // "object" | "number" | "array" -- already plain
+      out[name] = v; // counts/stats are plain objects, splitTotal a number -- already JSON-safe
     }
+    // scopeCounts (r26/r27/r28) lives outside AGGREGATE_FIELDS/aggregateRefs
+    // (it is MODE=census-only and computed directly off `res.axes`, never
+    // bumped through the same Map-based `bump()` helper) -- carried here as
+    // plain numbers so a relaunch's r26/r27/r28 totals climb across passes
+    // the same way `counts`/`stats` already do, instead of resetting to the
+    // last pass's slice alone.
+    out.scopeCounts = { r26: scopeCounts.r26, r27: scopeCounts.r27, r28: scopeCounts.r28 };
     return out;
   };
   /** Merge a PRIOR pass's saved aggregate into the live in-memory one, BEFORE
@@ -1590,6 +1630,15 @@ async function main() {
       } else if (name === "splitTotal") {
         splitTotal += Number(saved) || 0;
       }
+    }
+    // scopeCounts travels OUTSIDE AGGREGATE_FIELDS (see
+    // censusAggregateToCompactJSON above) -- merged here the same way
+    // `counts`/`stats` are, so a prior pass's r26/r27/r28 climb forward
+    // instead of resetting. Absent on a cursor written before this field
+    // existed (or a fat pre-compaction cursor that never carried it) --
+    // treated as zero, same as any other never-yet-saved counter.
+    if (prior.scopeCounts && typeof prior.scopeCounts === "object") {
+      for (const k of Object.keys(scopeCounts)) scopeCounts[k] += Number(prior.scopeCounts[k]) || 0;
     }
   };
   const sample = (klass, cardId, line) => {
@@ -2053,7 +2102,7 @@ async function main() {
       if (dueByPages || dueByTime) {
         const saved = await saveCensusCursor(control, SLOT, {
           unitsDone: [...doneUnitKeys],
-          aggregate: censusAggregateToJSON(),
+          aggregate: censusAggregateToCompactJSON(),
           classified: stats.seen,
           partialUnit: pendingPartialUnit,
         });
@@ -2132,7 +2181,7 @@ async function main() {
     } else {
       const saved = await saveCensusCursor(control, SLOT, {
         unitsDone: [...doneUnitKeys],
-        aggregate: censusAggregateToJSON(),
+        aggregate: censusAggregateToCompactJSON(),
         classified: stats.seen,
         partialUnit: pendingPartialUnit,
       });
@@ -2992,20 +3041,60 @@ async function getOrCreateControlContainer(conn) {
  * inside a link (most of the 14 of 32 slots that already converged); the
  * page checkpoint only matters for the units that do not.
  *
- * WHAT IS PERSISTED. `unitsDone` (the completed units' `key`s), `partialUnit`
- * (`null`, or the in-flight unit's key + continuation token), plus the
- * MERGED partial aggregate every reader in this file already builds in
- * memory -- counts, byTier, defects, reasons, samples, subclasses, and the
- * rest -- serialised through `censusAggregateToJSON`/`censusAggregateFromJSON`
- * below so a resumed pass adds its own units' rows to the SAME totals rather
- * than starting a new set that a human then has to add by hand. `classified`
- * is carried too, so the final artifact's `classified` reaches `expectedRows`
- * once every unit is done, not just the last pass's slice of it. Because the
- * aggregate snapshot saved alongside a page checkpoint already reflects every
- * row up to and including that exact page, and the saved token is the SDK's
- * own boundary for "everything before here, never again" a resumed pass adds
- * to those totals starting from the very next page -- no page is ever read,
- * and therefore counted, twice, and none is skipped.
+ * WHAT IS PERSISTED (COMPACT, 2026-09-13 -- #2073 cursor-size follow-up).
+ * `unitsDone` (the completed units' `key`s), `partialUnit` (`null`, or the
+ * in-flight unit's key + continuation token), and a COMPACT aggregate --
+ * `counts` (the four class totals), `stats` (seen/otherSlot/filtered/...),
+ * `splitTotal`, and `scopeCounts` (r26/r27/r28), all plain numbers -- via
+ * `censusAggregateToCompactJSON`, so a resumed pass adds its own units' rows
+ * to the SAME totals rather than starting a new set that a human then has to
+ * add by hand. `classified` is carried too, so the final artifact's
+ * `classified` reaches `expectedRows` once every unit is done, not just the
+ * last pass's slice of it. Because the aggregate snapshot saved alongside a
+ * page checkpoint already reflects every row up to and including that exact
+ * page, and the saved token is the SDK's own boundary for "everything before
+ * here, never again" a resumed pass adds to those totals starting from the
+ * very next page -- no page is ever read, and therefore counted, twice, and
+ * none is skipped.
+ *
+ * WHAT IS DELIBERATELY NOT PERSISTED. The cursor USED TO also carry the
+ * full per-row aggregate -- `byTier`, `defects`, `reasons`, `samples`,
+ * `subclasses`, `splitByClass`/`splitSegments`/`splitSamples`, the
+ * slug-shape and R-scope (gft/yfv/sfp) detail maps and their sample arrays
+ * -- and that field GREW WITHOUT BOUND across a long walk: measured
+ * 2026-09-13, slot 12's cursor reached 2,081,532 chars (slot 15: 2,061,854,
+ * slot 2: 1,905,982, slot 5: 1,875,034, slot 16: 1,735,792) and slot 12's run
+ * 34782080801 hit Cosmos's 2MB document ceiling, logging `could not save
+ * census cursor for slot 12 (Request size is too large)` nine times before
+ * exiting 5. None of that detail is needed to RESUME a walk -- only to
+ * REPORT one -- and the per-pass ARTIFACT (census-slot-N.json, built
+ * straight from these same live Maps) already carries it for the audit gate
+ * and any human reading it; the cursor including it too was pure duplication
+ * that happened to be unbounded. A relaunch that needs a PRIOR pass's
+ * samples/reasons/byTier merged into ITS OWN artifact has to read that
+ * pass's own census-slot-N.json directly (the composite relaunch already
+ * restages artifact files across links) -- this script does not do that
+ * merge itself, and says so in the banner rather than silently reporting a
+ * partial sample as if it covered the whole walk.
+ *
+ * BACKWARD COMPATIBILITY. `loadCensusCursor` still reads a FAT cursor
+ * written before this fix -- `mergeCensusAggregate` only ever looks at the
+ * field names it knows about (`AGGREGATE_FIELDS` plus `scopeCounts`), so an
+ * old cursor's extra detail fields are silently ignored on merge, never an
+ * error, and its `unitsDone`/`partialUnit`/counts still resume correctly.
+ * The FIRST save after loading a fat cursor writes the compact shape, so a
+ * shard converges onto the smaller form within one checkpoint interval
+ * without any migration step.
+ *
+ * THE SIZE GUARD. `saveCensusCursor` refuses (FATAL, no retry) to write a
+ * cursor doc over `CENSUS_CURSOR_MAX_BYTES` (512 KB, well under Cosmos's 2MB
+ * ceiling): the failure mode this replaces was nine silent retries against
+ * Cosmos, each one paying the request's own latency before eventually
+ * warning the same way a genuine throttle does -- indistinguishable from a
+ * transient issue in the log, when it is actually a field that will never
+ * shrink on its own. The guard runs BEFORE the network call and names the
+ * single largest field in its FATAL line, because "the cursor is too big" is
+ * not actionable and "the `aggregate.samples` field is 1.8MB" is.
  *
  * WHAT INVALIDATES A CURSOR. The shard table's `measuredAt` and this run's
  * `scope`/`rowFilter` signature -- unchanged by the page checkpoint, since a
@@ -3081,7 +3170,40 @@ async function loadCensusCursor(control, slot) {
  * not save reproduces the restart-from-zero loop rather than escaping it.
  * See the call site below for how the caller turns this `false` into a
  * distinct non-zero exit and a non-budget stop line.
+ *
+ * THE SIZE GUARD (2026-09-13, #2073 cursor-size follow-up, run 34782080801
+ * slot 12). Before this fix, a cursor whose `aggregate` had grown past
+ * Cosmos's 2MB document ceiling failed the SAME way a throttle does: nine
+ * retries against `control.items.upsert`, each paying the request's own
+ * round-trip before the same `!! could not save` warning a transient 429
+ * would produce -- indistinguishable in the log from "try again later" when
+ * the actual defect is a field that will never get smaller on its own. The
+ * guard below runs BEFORE `items.upsert` is ever called: it measures the
+ * doc's own JSON byte size, and if it exceeds `CENSUS_CURSOR_MAX_BYTES`
+ * (512 KB -- comfortably under the 2MB ceiling with room for the signature,
+ * ids and timestamps) it refuses to attempt the write at all, naming the
+ * SINGLE LARGEST top-level field so the FATAL is actionable rather than a
+ * generic "too big". A compact cursor's `aggregate` is a handful of number
+ * fields and can never plausibly reach this size on its own -- the guard
+ * exists as a hard backstop against a future field creeping back into the
+ * cursor's write path, not as a limit this shape is expected to bump into.
  */
+const CENSUS_CURSOR_MAX_BYTES = 512 * 1024;
+
+/** The name of `doc`'s single largest top-level field, by its own JSON byte
+ *  size -- so a FATAL can name the actual offender instead of just "the
+ *  cursor is too big". Ties keep whichever key iterates first. */
+function largestCursorField(doc) {
+  let worstKey = null, worstBytes = -1;
+  for (const [k, v] of Object.entries(doc)) {
+    let bytes;
+    try { bytes = Buffer.byteLength(JSON.stringify(v) ?? "", "utf8"); }
+    catch { continue; } // circular/unserializable -- not a byte-size contender
+    if (bytes > worstBytes) { worstBytes = bytes; worstKey = k; }
+  }
+  return { key: worstKey, bytes: Math.max(worstBytes, 0) };
+}
+
 async function saveCensusCursor(control, slot, { unitsDone, aggregate, classified, partialUnit = null }) {
   if (!control) return false;
   const doc = {
@@ -3099,6 +3221,12 @@ async function saveCensusCursor(control, slot, { unitsDone, aggregate, classifie
     partialUnit: partialUnit ? { key: String(partialUnit.key), continuationToken: partialUnit.continuationToken } : null,
     updatedAt: new Date().toISOString(),
   };
+  const docBytes = Buffer.byteLength(JSON.stringify(doc), "utf8");
+  if (docBytes > CENSUS_CURSOR_MAX_BYTES) {
+    const { key, bytes } = largestCursorField(doc);
+    console.error(`  !! FATAL: census cursor for slot ${slot} is ${docBytes} bytes, over the ${CENSUS_CURSOR_MAX_BYTES}-byte guard -- refusing to write it. Offending field: "${key}" (${bytes} bytes). The cursor must carry only resume state (unitsDone, partialUnit, and a handful of numeric counters) -- a field this large almost certainly holds per-row detail (samples/reasons/byTier/subclasses/...) that belongs in the census-slot-N.json artifact instead, never in the cursor doc.`);
+    return false;
+  }
   try {
     await control.items.upsert(doc);
     return true;
@@ -3368,6 +3496,11 @@ module.exports = {
   // tests drive `pool`.
   censusCursorId, censusCursorSignature, signaturesMatch,
   loadCensusCursor, saveCensusCursor, clearCensusCursor, CENSUS_CURSOR_KIND,
+  // 2026-09-13 (#2073 cursor-size follow-up, run 34782080801 slot 12): the
+  // hard size guard and its threshold/field-naming helper, exported so the
+  // guard is pinned on the SHIPPED constant and function rather than a
+  // test's own copy of the 512KB number.
+  CENSUS_CURSOR_MAX_BYTES, largestCursorField,
   // 2026-09-12 (run 34658848883 slot 3): the container-provisioning fix and
   // its exit-code contract, exported so both are pinned on the SHIPPED
   // functions/constants rather than a test's re-implementation of them.

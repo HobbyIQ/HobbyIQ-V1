@@ -626,6 +626,7 @@ const RUNG_PROSE: Partial<Record<FmvRungLabel, string>> = {
   "exact-pool-weighted-median": "recent sales of this exact card and grade",
   "exact-pool-median": "sales of this exact card and grade",
   "exact-pool-trajectory": "this card's own sales at this grade",
+  "exact-pool-grade-index": "this card's own sales across every grade, scaled to this grade",
   "graded-pool-inverse": "this card's own graded sales, scaled to this grade",
   "cross-grade-fallback": "this card's sales at another grade",
   "grade-curve-estimate": "an estimated grade curve, not sales at this grade",

@@ -708,7 +708,13 @@ export async function valueIdentity(req: ValuationRequest): Promise<Valuation> {
     v.fairMarketValue = tier.trendAdjustedValue;
     v.rungLabel = tier.rungLabel ?? "exact-pool-projection";
     v.valueSource = "observed";
-    v.compsUsed = tier.sampleCount;
+    // CF-EXACT-POOL-GRADE-INDEX (Drew, 2026-09-13): `compsUsed` is the comps
+    // the NUMBER was read from. For every rung that is this tier's own pool;
+    // for `exact-pool-grade-index` it is the card's index points, because
+    // that rung prices off the whole identity's sales across tiers. The
+    // engine states which on the entry rather than making this site re-derive
+    // it from the rung name.
+    v.compsUsed = um?.compsUsed ?? tier.sampleCount;
     v.confidence = um?.confidence ?? tier.confidenceScore;
     v.windowDays = u.windowDays;
     v.trend = { direction: um?.trendDirection ?? "flat", pctPerWeek: um?.trendPctPerWeek ?? null };
