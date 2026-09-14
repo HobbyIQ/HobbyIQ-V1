@@ -1264,7 +1264,19 @@ describe("the retire lane verifies by reading its own write ledger", () => {
   });
 
   it("it keeps a ledger of the ids it wrote, with their partition keys", () => {
-    expect(codeOnly, "the ledger is declared").toMatch(/const ledger = \[\]/);
+    // CF-NAME-THE-ROWS-BEFORE-CALLING-DAMAGE (2026-09-13): the ledger's own
+    // dedupe-by-id and the verify's mismatch classification moved to
+    // lib/write-ledger-verify.cjs so both are unit-testable against a mocked
+    // read with no Cosmos client involved (see
+    // retireSelfDerivedLedgerVerify.test.ts). The lane now builds its ledger
+    // via `createLedger()` and records through the local `ledgerPush`
+    // wrapper rather than a bare array + `ledger.push`.
+    expect(codeOnly, "the ledger comes from the shared, tested helper").toMatch(
+      /const writeLedger = createLedger\(\)/,
+    );
+    expect(codeOnly, "the local wrapper routes through the shared dedupe").toMatch(
+      /const ledgerPush = \(entry\) => writeLedger\.push\(entry\)/,
+    );
     // EVERY write site records. The markers are written by different branches
     // and a ledger missing one would report a real write as absent.
     //
@@ -1279,17 +1291,29 @@ describe("the retire lane verifies by reading its own write ledger", () => {
     // The right way to break this pin is to add a write that does NOT record —
     // so the assertion is stated against every `patchCatalogRowFields` call in
     // the loop, which is the population a ledger must cover.
-    const pushes = codeOnly.match(/ledger\.push\(/g) ?? [];
+    const pushes = codeOnly.match(/ledgerPush\(/g) ?? [];
     expect(pushes.length, "every write site must record to the ledger").toBe(7);
     // A write the ledger does not know about is a write the verify cannot
     // confirm. Each `written++` is one such write, so the two must agree.
     const writes = codeOnly.match(/\bwritten\+\+/g) ?? [];
     expect(
       writes.length,
-      "every `written++` must be matched by a ledger.push -- an unrecorded write is unverifiable",
+      "every `written++` must be matched by a ledgerPush -- an unrecorded write is unverifiable",
     ).toBe(pushes.length);
     // The partition key travels with the id: a point-read needs both.
-    expect(codeOnly).toMatch(/ledger\.push\(\{ id: String\([^)]+\), pk: pkOf\([^)]+\), field:/);
+    expect(codeOnly).toMatch(/ledgerPush\(\{ id: String\([^)]+\), pk: pkOf\([^)]+\), field:/);
+  });
+
+  it("a graded child ledgered via two paths in one pass is recorded ONCE, not twice", () => {
+    // The double-ledger defect this investigation found while tracing the
+    // 2026-09-13 false-mismatch reports: a graded child is reachable both as
+    // its own self-derived entry AND as a member of its parent's `kids` list
+    // when the parent retires and takes its children with it. `createLedger`
+    // (unit-pinned directly in retireSelfDerivedLedgerVerify.test.ts) keeps
+    // only the first write for a given id; this checks the lane actually
+    // reads that ledger back through `writeLedger.entries` rather than a
+    // second, un-deduped array.
+    expect(codeOnly).toMatch(/const ledger = writeLedger\.entries/);
   });
 
   it("the ledger's partition key MIRRORS the one the write used", () => {
@@ -1298,14 +1322,83 @@ describe("the retire lane verifies by reading its own write ledger", () => {
     // get nothing, and report a good write as MISSING THE MARKER -- and since
     // a mismatch now ends the lane non-zero, that would turn a healthy run
     // red. Read exactly where the write went.
-    expect(codeOnly).toMatch(/const pkOf = \(row\) =>[\s\S]{0,160}row\.cardId \? String\(row\.cardId\) : String\(row && row\.id\)/);
-    const svc = read("backend", "src", "services", "catalog", "catalogRowOps.service.ts");
+    //
+    // AS OF 2026-09-14 (CF-THE-SCAN-AND-THE-WRITE-MUST-AGREE-ON-WHERE-A-ROW-
+    // LIVES): `id` was itself the wrong fallback for a row with no `cardId`
+    // at all -- Cosmos stores that document at its own "None" partition key,
+    // not at a partition keyed by `id` -- so the pk decision moved to
+    // lib/catalog-none-pk.cjs, unit-tested directly against a mocked
+    // container in retireSelfDerivedAbsentAtWrite.test.ts. What THIS pin
+    // must still guarantee is the property the old inline-regex assertion
+    // existed for: the ledger's pk and the write's pk cannot drift apart,
+    // because they come from the exact same function, not two copies of a
+    // rule that could disagree. Asserting that on an EXTRACTED helper means
+    // asserting the import, that no second definition has crept back into
+    // the lane, and the function's own behaviour -- not the old literal text.
     expect(
-      svc,
-      "the rule being mirrored must still be the rule patchCatalogRowFields applies",
-    ).toMatch(/const pk = cardId \? String\(cardId\) : id;/);
+      codeOnly,
+      "the lane must import its pk decision from the extracted lib, not inline a fallback again",
+    ).toMatch(/require\(path\.join\(__dirname, "lib", "catalog-none-pk\.cjs"\)\)/);
+    // No second `pkOf`/`cardId ?? id`-shaped definition may exist in the lane
+    // -- that is exactly how the ledger and the write pk would drift apart
+    // again, silently, the same way the original defect did.
+    expect(
+      (codeOnly.match(/\bpkOf\s*=/g) ?? []).length,
+      "pkOf must be imported once, never redefined inline in the lane",
+    ).toBe(0);
+    expect(codeOnly).not.toMatch(/cardId \? (?:String\(cardId\)|cardId) : id\b/);
+    expect(codeOnly).not.toMatch(/row\.cardId \? String\(row\.cardId\) : String\(row && row\.id\)/);
     // And no write site may go back to handing the raw field through.
     expect(codeOnly).not.toMatch(/pk: \w+\.cardId/);
+
+    // THE BEHAVIOURAL ASSERTION: pkOf itself, exercised directly (no Cosmos
+    // client, no mock container needed -- it is a pure function of the row).
+    // A row with no cardId must resolve to the SDK's None-partition-key
+    // sentinel, not to its own id -- that IS the defect this investigation
+    // found: every sampled `user-verified:*` row carries no cardId, and a
+    // point-read at (id, id) 404s on it every single time.
+    //
+    // Compared against `resolveNonePk()`, NOT a fresh
+    // `new PartitionKeyBuilder().addNoneValue().build()` -- the lib
+    // deliberately never touches PartitionKeyBuilder at all (see its own
+    // header, 2026-09-14 second pass): under Node 20, `new
+    // PartitionKeyBuilder()` throws "is not a constructor", which crashed
+    // every lane that so much as required a module built this way, in CI,
+    // the runner and the App Service alike. This machine's Node did not
+    // reproduce that, which is exactly why it shipped unnoticed the first
+    // time. Constructing one here to compare against would silently
+    // reintroduce the same call this pin exists to keep out.
+    const { pkOf, resolveNonePk } = require(path.join(BACKEND, "scripts", "lib", "catalog-none-pk.cjs"));
+    // `codeOnly` is the LANE's source, which never referenced
+    // PartitionKeyBuilder to begin with (it only ever went through pkOf) --
+    // asserted here so a future call site added directly in the lane, rather
+    // than through the lib, cannot reintroduce the Node-20 crash either.
+    expect(codeOnly, "the lane must never construct via PartitionKeyBuilder directly").not.toMatch(/PartitionKeyBuilder/);
+    // The lib itself, with comments stripped -- its own doc comment names
+    // PartitionKeyBuilder in prose (explaining why it is avoided), which a
+    // raw substring check would misread as a violation.
+    const libSrcHere = read("backend", "scripts", "lib", "catalog-none-pk.cjs");
+    const libCodeOnly = libSrcHere
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .split("\n").filter((l) => !/^\s*\/\//.test(l)).join("\n");
+    expect(libCodeOnly, "PartitionKeyBuilder is a Node-20 crash at construction; the lib must not use it at all").not.toMatch(/PartitionKeyBuilder/);
+    const nonePk = resolveNonePk();
+    const noneCardIdRow = { id: "user-verified:afd2283fe6670d0fbfe2" };
+    expect(JSON.stringify(pkOf(noneCardIdRow))).toBe(JSON.stringify(nonePk));
+    expect(pkOf(noneCardIdRow)).not.toBe(noneCardIdRow.id);
+    // A row that DOES carry a cardId is unaffected: the ledger still reads
+    // exactly where patchCatalogRowFields writes.
+    expect(pkOf({ id: "x", cardId: "hiq:baseball:1999:topps-finest:238:base:no-auto" })).toBe(
+      "hiq:baseball:1999:topps-finest:238:base:no-auto",
+    );
+
+    // THE MUTATION. Deleting the require (as a regression would, reaching
+    // for a quick inline fallback instead) must turn this pin red.
+    const withoutImport = codeOnly.replace(
+      /const \{ pkOf, isNonePkRow, patchNonePkRow \} = require\(path\.join\(__dirname, "lib", "catalog-none-pk\.cjs"\)\);\n?/,
+      "",
+    );
+    expect(withoutImport).not.toMatch(/require\(path\.join\(__dirname, "lib", "catalog-none-pk\.cjs"\)\)/);
   });
 
   it("the verify point-reads those ids instead of scanning the sport", () => {
