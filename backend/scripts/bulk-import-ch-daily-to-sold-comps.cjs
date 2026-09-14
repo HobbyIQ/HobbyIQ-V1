@@ -47,13 +47,19 @@ const backend = __dirname + "/..";
 //     TDZ clean. Only evaluation catches it. If the dist/ requires stayed at
 //     the top the test would die on MODULE_NOT_FOUND before ever reaching the
 //     budget block, and would have passed against the broken file.
-let CosmosClient, recordSoldComp, getEmitFailureCount, judgeCardNumber, logCardNumberVerdict, normSport, reportWrites;
+let CosmosClient, recordSoldComp, getEmitFailureCount, getIdentityDriftKeptCount, judgeCardNumber, logCardNumberVerdict, normSport, reportWrites;
 function loadDist() {
   ({ CosmosClient } = require(path.join(backend, "node_modules/@azure/cosmos")));
   // CF-A-SWALLOWED-429-IS-NOT-A-WRITE (2026-09-08). `getEmitFailureCount` comes
   // from the same module as recordSoldComp, and it is how this lane learns
   // about a write that did not happen. See THE 429 COLUMN below.
-  ({ recordSoldComp, getEmitFailureCount } = require(path.join(backend, "dist/services/portfolioiq/soldCompsStore.service.js")));
+  //
+  // CF-INGEST-KEEPS-STORED-IDENTITY (2026-09-14). `getIdentityDriftKeptCount`
+  // is the same pattern for a different fact: a re-upserted CH-daily row whose
+  // freshly re-derived identity disagreed with what was already stored at its
+  // address. recordSoldComp keeps the stored identity and marks the row; this
+  // counter is how the run's banner surfaces HOW MANY of its writes hit that.
+  ({ recordSoldComp, getEmitFailureCount, getIdentityDriftKeptCount } = require(path.join(backend, "dist/services/portfolioiq/soldCompsStore.service.js")));
   // D28 (CF-A-CARD-NUMBER-IS-NOT-A-GRADE). This script keeps its OWN copy of the
   // CH mapping -- the copy that wrote ~4.2M of the current sold_comps rows -- so
   // the guard has to be applied here too. Applying it only in
@@ -255,6 +261,7 @@ let stoppedOnBudget = false;
 let emitted = 0;         // recordSoldComp resolved without throwing
 let intendedWrites = 0;  // rows actually handed to recordSoldComp
 let failedWrites = 0;    // threw in the worker, or threw inside recordSoldComp
+let identityDriftKept = 0; // recordSoldComp kept the STORED identity over a re-derived one
 let currentEnd = null;   // the resume date, whatever ended the walk
 const SPORT_FILTER = (process.env.BULK_SPORT_FILTER || "").trim();
 
@@ -341,6 +348,13 @@ function reportLedger() {
       console.error("  !! RECONCILE MISMATCH -- a prepared write was neither recorded nor failed");
       process.exitCode = 4;
     }
+    // CF-INGEST-KEEPS-STORED-IDENTITY (2026-09-14). Not part of the
+    // intended/written/failed reconcile above -- every one of these rows IS
+    // counted as written. This is the separate signal a census reads: how
+    // many of this run's writes found a re-derived identity disagreeing with
+    // what was already stored, and kept the stored one rather than silently
+    // re-addressing the sale.
+    console.log(`  identity-drift-kept-stored ${identityDriftKept.toLocaleString()}`);
     reportWrites({
       job: "bulk-import-ch-daily-to-sold-comps",
       intended: intendedWrites, written: emitted, skipped: 0, failed: failedWrites,
@@ -560,6 +574,10 @@ async function main() {
       // The emit-failure counter is monotonic across the process, so the DELTA
       // across this batch is this batch's swallowed-write count.
       const failBefore = getEmitFailureCount();
+      // CF-INGEST-KEEPS-STORED-IDENTITY (2026-09-14). Same delta pattern, for
+      // the count of writes where recordSoldComp found a re-derived identity
+      // disagreeing with what was already stored and kept the stored one.
+      const driftKeptBefore = getIdentityDriftKeptCount();
       const { err } = await runInParallel(batch, async (w) => {
         await recordSoldComp(w);
         landed++;
@@ -616,6 +634,11 @@ async function main() {
         console.log(`\r      !! ${swallowed} write(s) in this batch threw inside recordSoldComp `
           + `(429 / throttle) and were counted as FAILED, not written`);
       }
+      // These are still WRITTEN rows -- the sale landed, just under its stored
+      // identity instead of the freshly re-derived one -- so they are not
+      // added to failedWrites or subtracted from emitted. They are purely
+      // informational: a census-worthy signal, not a reconcile column.
+      identityDriftKept += getIdentityDriftKeptCount() - driftKeptBefore;
     }
     const secs = ((Date.now() - t0) / 1000).toFixed(1);
     console.log(`\r      ${landed}/${writes.length} in ${secs}s (landed=${landed})`);

@@ -297,11 +297,45 @@ describe("the runner contract", () => {
   });
 
   it("the census has no write path at all -- not even behind APPLY", () => {
-    // mode=census returns before the apply block is ever reached.
-    const censusReturn = script.indexOf('if (MODE === "census")');
-    const relocate = script.indexOf("await relocateSoldComp(");
-    expect(censusReturn).toBeGreaterThan(0);
-    expect(relocate).toBeGreaterThan(censusReturn);
+    // THIS PIN USED TO COMPARE SOURCE OFFSETS -- the apply block sat wholly
+    // below `if (MODE === "census") return`, so a census could not physically
+    // reach a write. The 2026-09-14 write-as-you-go change (an apply relocates
+    // each page's candidates as it classifies them, so a budget stop leaves
+    // committed progress) necessarily moves the relocate call ABOVE that
+    // return: the census's own early return CANNOT precede the page loop,
+    // because it reports the census JSON that loop produces.
+    //
+    // The GUARANTEE is unchanged and is what this now asserts, at the one door
+    // every write goes through. `drainImprovable` is the only caller of the
+    // relocate worker, and it refuses outright unless the mode is an apply --
+    // so the property holds however the file is later reordered, which an
+    // offset comparison did not.
+    const drain = script.indexOf("const drainImprovable = async () => {");
+    expect(drain).toBeGreaterThan(0);
+    // The refusal is the FIRST executable statement of the drain, before any
+    // claim of a candidate or any Cosmos call.
+    const drainBody = script.slice(drain, drain + 1600);
+    expect(drainBody).toContain('if (MODE !== "apply-improve") return;');
+
+    // ...and every call site is itself mode-gated, so a census never even
+    // reaches the refusal. The gate may be on the call's own line or on the
+    // `if` that opens its block just above, so a small preceding window is
+    // what is searched -- requiring it on the same line would force working
+    // code to be reshaped to suit the test.
+    const lines = script.split("\n");
+    const callSites = lines
+      .map((l, i) => ({ l, n: i + 1 }))
+      .filter((x) => x.l.includes("drainImprovable()") && !x.l.includes("const drainImprovable"));
+    expect(callSites.length).toBeGreaterThan(0);
+    for (const site of callSites) {
+      const window = lines.slice(Math.max(0, site.n - 6), site.n).join("\n");
+      expect(window, `drainImprovable() at line ${site.n} is not MODE-gated within 5 lines above`)
+        .toContain('MODE === "apply-improve"');
+    }
+
+    // The census early return still exists and still returns -- it is simply
+    // no longer what makes the write unreachable.
+    expect(script).toContain("census stops here. There is no write path in this mode.");
   });
 });
 
