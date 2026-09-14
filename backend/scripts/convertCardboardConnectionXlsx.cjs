@@ -240,15 +240,29 @@ function convert(xlsxPath) {
   const hdr = rows[0];
   const colOf = {};
   for (const [k, v] of Object.entries(hdr)) colOf[String(v).trim().toLowerCase()] = k;
+  // TWO LAYOUTS, BOTH FROM cardboardconnection.
+  //
+  //   UD-style      Set Name | Card | Description | Team City | Team Name |
+  //                 Rookie | Auto | Mem | Serial #'d | Odds | Point
+  //   Panini-style  Card Set | Number | Player | Team | Seq.
+  //
+  // The Panini sheet has NO Auto column and NO "Parallel" suffix on its
+  // section names; its Seq. column IS a print run (verified: constant within
+  // every one of the 179 sections that carry it, e.g. Black=/1, Gold=/10 —
+  // a single sampled "1" looked like a row index until the distribution was
+  // checked). isAuto is therefore read from the SECTION NAME on this layout
+  // and nowhere else, which is the source's own attestation for a sheet that
+  // states autographs as named sections ("Rookie Phenom Jersey Autographs").
   const C = {
-    set: colOf["set name"],
-    card: colOf["card"],
-    desc: colOf["description"],
+    set: colOf["set name"] || colOf["card set"],
+    card: colOf["card"] || colOf["number"],
+    desc: colOf["description"] || colOf["player"],
     rookie: colOf["rookie"],
     auto: colOf["auto"],
     mem: colOf["mem"],
-    serial: colOf["serial #'d"] || colOf["serial #d"] || colOf["serial #"],
+    serial: colOf["serial #'d"] || colOf["serial #d"] || colOf["serial #"] || colOf["seq."] || colOf["seq"],
   };
+  const LAYOUT = colOf["card set"] ? "panini" : "ud";
   if (!C.set || !C.card || !C.desc) {
     throw new Error("unexpected header: " + JSON.stringify(hdr));
   }
@@ -263,7 +277,26 @@ function convert(xlsxPath) {
     if (!sectionRows.has(s)) sectionRows.set(s, new Map());
     sectionRows.get(s).set(num, player);
   }
-  const anchors = measureAnchors(sectionRows);
+  let anchors = measureAnchors(sectionRows);
+  const blockedSections = [];
+  if (LAYOUT === "panini") {
+    // R37 (Drew, 2026-09-14): on a sheet with no Parallel marker, the parallel
+    // is what the section title adds beyond the SHORTEST matching base anchor.
+    // An anchor is a section title that is not itself an extension of another
+    // title. A section that matches NO anchor is not guessed — it is BLOCKED
+    // and listed by title in the manifest.
+    const titles = [...sectionRows.keys()];
+    const baseAnchors = titles.filter((t) => !titles.some((p) => p !== t && t.startsWith(p + " ")));
+    anchors = new Map();
+    for (const t of titles) {
+      if (baseAnchors.includes(t)) continue;
+      const cands = baseAnchors.filter((a) => t.startsWith(a + " "));
+      if (!cands.length) { blockedSections.push(t); continue; }
+      // SHORTEST matching anchor, per the ruling.
+      cands.sort((a, b) => a.length - b.length || a.localeCompare(b));
+      anchors.set(t, { anchorSection: cands[0] });
+    }
+  }
 
   const out = [];
   const sections = new Map();
@@ -274,9 +307,12 @@ function convert(xlsxPath) {
     const num = String(r[C.card] || "").trim();
     const player = String(r[C.desc] || "").trim();
     if (!setName || !num || !player) continue;
+    if (blockedSections.includes(setName)) continue;
     const { anchor, parallel, subset } = splitSection(setName, anchors);
     const category = subset ? `${slug(anchor)}--${slug(subset)}` : slug(anchor);
-    const isAuto = Boolean(C.auto) && String(r[C.auto] || "").trim() !== "";
+    const isAuto = LAYOUT === "panini"
+      ? /(?:^|[^a-z])(?:auto|autograph|autographs|signature|signatures|ink|scripts|penmanship)(?:[^a-z]|$)/i.test(setName)
+      : (Boolean(C.auto) && String(r[C.auto] || "").trim() !== "");
     const printRun = C.serial ? normPrintRun(r[C.serial]) : "";
     const rookie = Boolean(C.rookie) && String(r[C.rookie] || "").trim() !== "";
     if (isAuto) signed++;
@@ -297,7 +333,7 @@ function convert(xlsxPath) {
       player: rookie && !/\bRC\b/.test(player) ? `${player} RC` : player,
     });
   }
-  return { rows: out, sections: [...sections.values()], signed, printRuns };
+  return { rows: out, sections: [...sections.values()], signed, printRuns, blockedSections, layout: LAYOUT };
 }
 
 function csvCell(v) {
@@ -306,7 +342,7 @@ function csvCell(v) {
 }
 
 if (require.main === module) {
-  const { rows, sections, signed, printRuns } = convert(XLSX);
+  const { rows, sections, signed, printRuns, blockedSections, layout } = convert(XLSX);
   const header = "category,cardNumber,parallel,isAuto,printRun,player";
   const body = rows.map((r) =>
     [r.category, r.cardNumber, r.parallel, r.isAuto, r.printRun, r.player].map(csvCell).join(",")
@@ -330,6 +366,12 @@ if (require.main === module) {
     printRunCount: printRuns,
     distinctParallels: distinctParallels.size,
     parallelColumnAuthoritative: true,
+    layout,
+    rungRule: layout === "panini"
+      ? "R37 (Drew 2026-09-14): parallel = what the section title adds beyond the SHORTEST matching base anchor; a section matching no anchor is BLOCKED, never guessed."
+      : "measured: a section whose (cardNumber -> player) mapping reproduces another section's is a rung of it.",
+    sectionsBlocked: blockedSections.length,
+    blockedSectionTitles: blockedSections,
     parallelVocabulary: [...distinctParallels].sort(),
     sectionsReport: sections.map((s) => ({
       section: s.section,
@@ -342,7 +384,8 @@ if (require.main === module) {
   };
   fs.writeFileSync(OUT.replace(/\.csv$/, ".manifest.json"), JSON.stringify(manifest, null, 2) + "\n");
   console.log(`wrote ${OUT}`);
-  console.log(`  rows=${rows.length}  signed=${signed}  printRuns=${printRuns}  sections=${sections.length}  parallels=${distinctParallels.size}`);
+  console.log(`  rows=${rows.length}  signed=${signed}  printRuns=${printRuns}  sections=${sections.length}  parallels=${distinctParallels.size}  layout=${layout}  BLOCKED sections=${blockedSections.length}`);
+  for (const b of blockedSections.slice(0, 10)) console.log(`     BLOCKED: ${b}`);
 }
 
 module.exports = { convert, splitSection, measureAnchors, comparablePlayer, normPrintRun };
