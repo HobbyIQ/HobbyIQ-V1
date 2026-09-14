@@ -2001,6 +2001,22 @@ async function main() {
    * so writing earlier changes WHEN a candidate is checked, never WHETHER.
    */
   const drainImprovable = async () => {
+    // THE CENSUS HAS NO WRITE PATH AT ALL, NOT EVEN BEHIND APPLY.
+    //
+    // Before the write-as-you-go change this was guaranteed by POSITION: the
+    // whole write block sat below `if (MODE === "census") return`, so a census
+    // physically could not reach it, and rematchShardingAndCanary.test.ts
+    // pinned exactly that by comparing source offsets. Writing as the page
+    // loop runs necessarily moves the relocate call ABOVE that return -- the
+    // census's own early return cannot precede the loop, because it reports
+    // the census JSON the loop produces.
+    //
+    // So the guarantee is now enforced by CONSTRUCTION instead of by layout,
+    // and this is the single door every write goes through: both call sites
+    // are already `MODE === "apply-improve"`-gated, and this refusal makes a
+    // census that somehow reached one a loud no-op rather than a silent
+    // write. A future edit that moves a call site cannot defeat it.
+    if (MODE !== "apply-improve") return;
     if (idx >= improvable.length) return;
     const lanes = Math.min(CONCURRENCY, Math.max(improvable.length - idx, 1));
     await Promise.all(Array.from({ length: lanes }, worker));
