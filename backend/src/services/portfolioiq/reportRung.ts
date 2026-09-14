@@ -25,6 +25,13 @@ export const EXACT_POOL_RUNGS = [
   "exact-pool-weighted-median",
   "exact-pool-median",
   "exact-pool-trajectory",
+  // CF-EXACT-POOL-GRADE-INDEX (Drew, 2026-09-13): the tier could not fit its
+  // own trend (< 8 of its own sales), so the whole card's sales at every
+  // grade were divided by their empirical multipliers into one grade-free
+  // index, projected, and scaled back onto this tier. OBSERVED — every sale
+  // it reads is a sale of this card, and this tier's own sales are in the fit
+  // at their own dates.
+  "exact-pool-grade-index",
 ] as const;
 
 /** Every fallback rung any engine can name. */
@@ -110,6 +117,13 @@ export function describeRung(
       return { kind: "observed", text: `from ${salesPhrase(n)} of this card (median)`, label };
     case "exact-pool-trajectory":
       return { kind: "observed", text: `from ${salesPhrase(n)} of this card, carried by player momentum`, label };
+    // Both halves of the claim, because either alone would mislead in a
+    // document a collector hands to an insurer: the sales are this CARD's
+    // (so it is observed, not an estimate) but they are its sales at every
+    // GRADE, scaled onto this one. Word for word the web's string — the app
+    // and the PDF must not describe one holding two ways.
+    case "exact-pool-grade-index":
+      return { kind: "observed", text: `from ${salesPhrase(n)} of this card across every grade, scaled to this grade`, label };
     // ── fallbacks: estimates ──────────────────────────────────────────────
     case "cross-grade-fallback":
       return { kind: "estimate", text: "estimate from another grade of this card", label };

@@ -278,10 +278,39 @@ describe("D16 — one fixture pool, four handlers, one number", () => {
   it("(slug, PSA 9 — a thin graded tier) and a thin Raw pool: still one number, an honest thin-pool rung", async () => {
     const psa9 = await four(GOLD, { company: "PSA", value: 9 });
     expect(new Set([psa9.pb.marketValue, psa9.cf.fmv, psa9.hf.fmv, psa9.tile?.trendAdjustedValue]).size).toBe(1);
-    // RULING R25 (Drew, 2026-09-12): 2 sales is too few for a trend — the
-    // most recent ($300, 8d ago) IS the market, unconditionally.
-    expect(psa9.pb.rungLabel).toBe("exact-pool-last-sale");
-    expect(psa9.pb.marketValue).toBe(300);
+    // CF-EXACT-POOL-GRADE-INDEX (RULING, Drew 2026-09-13). This tier has 2
+    // sales of its own — too few to fit its own trend — but the CARD has 18
+    // across three tiers, so the card's grade-free index prices it rather than
+    // its own newest sale standing alone.
+    //
+    // What changed, and what did not. R25 used to answer here: the newest PSA
+    // 9 sale ($300, 8d ago) WAS the market, and neither the 10 Raw sales nor
+    // the 6 PSA 10 sales could move it. Now all 18 sales are divided by their
+    // own empirical multipliers into one index, the index is projected the
+    // same way a dense tier's own OLS is projected, and PSA 9's number is that
+    // index x PSA 9's multiplier. Both PSA 9 sales are still in the fit, at
+    // their own dates. What has NOT changed is the thing this file exists to
+    // pin: one number on all four routes, an exact-pool rung, no ladder call.
+    expect(psa9.pb.rungLabel).toBe("exact-pool-grade-index");
+    expect(psa9.pb.marketValue).toBeGreaterThan(0);
+    expect(psa9.pb.marketValue).not.toBe(300);
+    // The rung is exact-pool on every wire, so the digest still admits it and
+    // R24's cost floor still exempts it.
+    // EXACT is parsed out of ExactPoolRungLabel in fmvRung.ts itself, so this
+    // asserts the rung really declared itself exact-pool at the source.
+    expect(EXACT.has(String(psa9.pb.rungLabel))).toBe(true);
+    expect(psa9.cf.rungLabel).toBe("exact-pool-grade-index");
+    expect(psa9.hf.rungLabel ?? psa9.hf.method).toBe("exact-pool-grade-index");
+    expect(psa9.tile?.rungLabel).toBe("exact-pool-grade-index");
+    // compsUsed is the index's points, not the tier's two sales — the number
+    // says what it was actually read from.
+    expect(psa9.pb.compsUsed).toBe(18);
+
+    // A tier of the SAME card that CAN fit its own trend is untouched by the
+    // rung: 10 Raw sales keep the exact-pool projection. One pool, two rungs.
+    const raw = await four(GOLD);
+    expect(raw.pb.rungLabel).toBe("exact-pool-projection");
+
     const thin = await four(THIN);
     expect(new Set([thin.pb.marketValue, thin.cf.fmv, thin.hf.fmv, thin.tile?.trendAdjustedValue]).size).toBe(1);
     // D22 (CF-ONE-SALE-WINDOW-POLICY): this fixture — $0.88 at 12d, $0.15 at
@@ -290,6 +319,11 @@ describe("D16 — one fixture pool, four handlers, one number", () => {
     // Drew's ruling (the default): the latest sale is the market — the same
     // $0.88 as before, under the label that says one sale carried it. Still
     // an exact-pool thin rung, still one number on every route.
+    //
+    // CF-EXACT-POOL-GRADE-INDEX does NOT reach this card and must not: its
+    // whole pool is 2 sales, below the rung's N=4 floor, so there is no
+    // card-wide trend to lend a thin tier. A pool as thin as its tier keeps
+    // R25 exactly as it was — that is the floor doing its job.
     expect(thin.pb.rungLabel).toBe("exact-pool-last-sale");
     expect(thin.pb.marketValue).toBe(0.88);
     expect(thin.hf.compCount).toBe(2);

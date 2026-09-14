@@ -437,6 +437,11 @@ describe("B. a migrating pool is withheld, never priced off what arrived first",
     const OWN_POOL = [
       "exact-pool-projection", "exact-pool-last-sale", "exact-pool-leading-edge",
       "exact-pool-weighted-median", "exact-pool-median", "exact-pool-trajectory",
+      // CF-EXACT-POOL-GRADE-INDEX (Drew, 2026-09-13). OWN-POOL, and for the
+      // strongest form of the reason this list exists: it reads MORE of this
+      // identity's rows than any other rung — every tier of them — so a
+      // half-arrived pool moves it more, not less.
+      "exact-pool-grade-index",
       "cross-grade-fallback", "grade-curve-estimate", "graded-pool-inverse",
       "player-index-projection",
     ];

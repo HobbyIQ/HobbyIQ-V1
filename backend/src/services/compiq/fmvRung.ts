@@ -64,7 +64,34 @@ export type ExactPoolRungLabel =
   /** observedGradeCurve's own per-grade read of the exact pool, carried
    *  forward by the player-momentum trajectory (the tile value when the
    *  unified overlay did not reach that tier). */
-  | "exact-pool-trajectory";
+  | "exact-pool-trajectory"
+  /** CF-EXACT-POOL-GRADE-INDEX (Drew, 2026-09-13): "a graded tier must be
+   *  priced from the WHOLE card's trend across grades, recency-weighted,
+   *  not frozen on the tier's own last sale."
+   *
+   *  The requested tier is too thin to carry its own OLS (< 8 of its own
+   *  sales) but the card — the SAME hobbyiqCardId, raw and every
+   *  grader/grade, never a sibling card — has >= EXACT_POOL_INDEX_MIN_POOL
+   *  sales across all its tiers. Every one of those sales is divided by its
+   *  OWN tier's empirical GRADE_CALIBRATION multiplier to give a grade-free
+   *  index point; the index is projected forward the same way the >= 8 OLS
+   *  projects a single tier (recency-weighted leading-edge anchor + the
+   *  window's fit, never a median or a mean); and the requested tier's FMV
+   *  is that projection times the requested tier's own multiplier.
+   *
+   *  It is an EXACT-POOL rung, and the distinction is load-bearing rather
+   *  than cosmetic: every sale it reads is a sale OF THIS CARD, at a grade
+   *  whose relationship to the requested grade is measured from our own
+   *  pool. That is what separates it from `cross-grade-fallback` (which
+   *  rescales ONE other tier's number because the requested tier has
+   *  nothing at all) and from `graded-pool-inverse` (the same rescale in
+   *  the raw direction). Here the requested tier's own sales ARE in the
+   *  fit, at their own dates, carrying their own recency weight — the rung
+   *  does not discard the tier's evidence, it stops that evidence from
+   *  being the ONLY thing the tier is allowed to know. RULING R24's cost
+   *  floor therefore exempts it through `isExactPoolRung`, by construction:
+   *  the pool cannot be a mismatch for itself. */
+  | "exact-pool-grade-index";
 
 /** Every rung any engine can name. */
 export type FmvRungLabel =
@@ -204,6 +231,7 @@ export const FMV_RUNG_LABELS = [
   "exact-pool-weighted-median",
   "exact-pool-median",
   "exact-pool-trajectory",
+  "exact-pool-grade-index",
   // Fallback rungs named in this file.
   "cross-grade-fallback",
   "grade-curve-estimate",

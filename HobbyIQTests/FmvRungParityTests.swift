@@ -21,7 +21,7 @@
 //       `testUnknownLabelIsNamedNotHidden` pins that.
 //
 //  The VOCABULARY ITSELF is pinned by `testVocabularyMatchesTheEngine`,
-//  which lists all 27 labels literally. That list is transcribed from
+//  which lists all 28 labels literally. That list is transcribed from
 //  backend/src/services/compiq/fmvRung.ts (via apps/web/src/lib/rung.ts,
 //  which mirrors it). If the engine adds a rung, that test fails with the
 //  missing name — which is the point: the failure NAMES the drift instead
@@ -46,13 +46,15 @@ final class FmvRungParityTests: XCTestCase {
     ///   - `no-basis`
     /// de-duplicated across the two ladders, which overlap.
     private static let engineVocabulary: Set<String> = [
-        // exact pool (6)
+        // exact pool (7)
         "exact-pool-projection",
         "exact-pool-last-sale",
         "exact-pool-leading-edge",
         "exact-pool-weighted-median",
         "exact-pool-median",
         "exact-pool-trajectory",
+        // CF-EXACT-POOL-GRADE-INDEX (Drew, 2026-09-13)
+        "exact-pool-grade-index",
         // named fallbacks (5)
         "cross-grade-fallback",
         "grade-curve-estimate",
@@ -94,9 +96,9 @@ final class FmvRungParityTests: XCTestCase {
             "iOS names rungs the engine does not: \(extraInIOS.sorted()). "
                 + "Either the engine dropped one or this list is stale."
         )
-        // 27 = 6 exact-pool + 20 fallbacks + no-basis. Stated so a change
+        // 28 = 7 exact-pool + 20 fallbacks + no-basis. Stated so a change
         // in COUNT is visible even if someone edits both sides at once.
-        XCTAssertEqual(FmvRung.allCases.count, 27)
+        XCTAssertEqual(FmvRung.allCases.count, 28)
     }
 
     /// #1647 specifically. The rung it added is the reason this whole
@@ -173,9 +175,9 @@ final class FmvRungParityTests: XCTestCase {
         }
     }
 
-    func testExactPoolRungCountIsSix() {
-        XCTAssertEqual(FmvRung.allCases.filter(\.isExactPool).count, 6)
-        XCTAssertEqual(ExactPoolRung.allCases.count, 6)
+    func testExactPoolRungCountIsSeven() {
+        XCTAssertEqual(FmvRung.allCases.filter(\.isExactPool).count, 7)
+        XCTAssertEqual(ExactPoolRung.allCases.count, 7)
         // The two enums must name the same six.
         XCTAssertEqual(
             Set(ExactPoolRung.allCases.map(\.rawValue)),

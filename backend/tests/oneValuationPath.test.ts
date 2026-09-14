@@ -130,8 +130,19 @@ describe("valueIdentity — the exact pool prices the requested tier", () => {
     const raw = await valueIdentity({ id: GOLD });
     const psa10 = await valueIdentity({ id: GOLD, grade: { company: "psa", value: 10 } });
     expect(psa10.requestedTier).toBe("PSA 10");
-    expect(psa10.rungLabel).toBe("exact-pool-leading-edge");
-    expect(psa10.compsUsed).toBe(6);
+    // CF-EXACT-POOL-GRADE-INDEX (RULING, Drew 2026-09-13). Six PSA 10 sales
+    // is under the 8 a tier needs to fit its own trend, and this card has 10
+    // Raw sales besides — so the tier is priced from the card's grade-free
+    // index rather than from the median of its own newest three. Still the
+    // exact pool, still this identity only; what changed is that the OTHER
+    // tier's ten sales are now allowed to inform a tier that cannot carry
+    // its own trend. The PSA 10 sales are all still in the fit.
+    expect(psa10.rungLabel).toBe("exact-pool-grade-index");
+    expect(isExactPoolRung(psa10.rungLabel)).toBe(true);
+    // compsUsed is what the NUMBER was read from: all 16 index points, not
+    // the tier's own 6. The tier's own pool size is unchanged on the curve.
+    expect(psa10.compsUsed).toBe(16);
+    expect(psa10.gradeCurve.find((e) => gradeCurveEntryLabel(e) === "PSA 10")!.sampleCount).toBe(6);
     expect(psa10.fairMarketValue).toBeGreaterThan(raw.fairMarketValue as number);
     // The curve is the same on both calls (one engine result, every tier).
     const rawTierOnPsaCall = psa10.gradeCurve.find((e) => gradeCurveEntryLabel(e) === "Raw")!;
