@@ -1576,6 +1576,15 @@ async function main() {
     // the same way `counts`/`stats` already do, instead of resetting to the
     // last pass's slice alone.
     out.scopeCounts = { r26: scopeCounts.r26, r27: scopeCounts.r27, r28: scopeCounts.r28 };
+    // THE PER-CLASS APPLY TALLIES (2026-09-14). `stats` alone keeps the TOTAL
+    // reconcile balanced across a resumed apply, but the banner also proves
+    // the balance PER CLASS -- and a scoped run has to be able to show it
+    // wrote nothing of the class it disarmed. Without these the second link
+    // of an apply would report its own slice per class against a cumulative
+    // total and exit 4 on a drift that never happened. Plain numbers, one
+    // small object per armed kind -- nothing that can grow with row count.
+    out.perClass = JSON.parse(JSON.stringify(perClass));
+    out.disarmed = { ...disarmed };
     return out;
   };
   /** Merge a PRIOR pass's saved aggregate into the live in-memory one, BEFORE
@@ -1586,6 +1595,20 @@ async function main() {
    *  at that point, so "merge" and "load" are the same operation here. */
   const mergeCensusAggregate = (prior) => {
     if (!prior || typeof prior !== "object") return;
+    // The per-class apply tallies, added kind by kind and field by field so
+    // a cursor written before this field existed (or by a census, which has
+    // none) is simply a no-op rather than an error.
+    if (prior.perClass && typeof prior.perClass === "object") {
+      for (const [kind, t] of Object.entries(prior.perClass)) {
+        if (!perClass[kind] || !t) continue;
+        for (const fld of ["intended", "written", "skipped", "failed", "notReached"]) {
+          perClass[kind][fld] += Number(t[fld]) || 0;
+        }
+      }
+    }
+    if (prior.disarmed && typeof prior.disarmed === "object") {
+      for (const [kind, n] of Object.entries(prior.disarmed)) disarmed[kind] = (disarmed[kind] ?? 0) + (Number(n) || 0);
+    }
     for (const [name, kind] of Object.entries(AGGREGATE_FIELDS)) {
       const saved = prior[name];
       if (saved === undefined || saved === null) continue;
@@ -1674,6 +1697,314 @@ async function main() {
   const sampleCardCount = (klass) => (sampleCards.get(klass) ?? new Map()).size;
 
   const improvable = [];
+  // ── THE WRITE PATH, HOISTED ABOVE THE CLASSIFY LOOP (2026-09-14) ─────────
+  //
+  // It used to live BELOW the loop, so an apply classified its whole shard
+  // before it wrote its first row -- and every slot is far bigger than one
+  // 120-minute link can classify (measured: slot 31 reached 120,232 of its
+  // rows in 118.9m, slot 0 117,917 in 120m). The budget therefore always
+  // expired inside classification and the write phase was unreachable by
+  // construction: runs 34872320344 and 34849159531 both reconciled
+  // `intended 2,717 = written 0 + not reached 2,717` with an EMPTY write
+  // ledger. Declaring the ledger, the per-class tallies and the worker here
+  // lets the classify loop drain the queue as it fills it, so a budget stop
+  // leaves real, committed progress instead of a discarded classification.
+  // Nothing about WHAT is written changes -- the write-time re-read and
+  // re-classify below are untouched and still decide every row.
+  const applied = [];
+  /**
+   * QUEUE ONE WRITABLE CANDIDATE, counting it as it arrives (2026-09-14).
+   *
+   * `stats.intended` and `perClass[kind].intended` used to be computed from
+   * the finished `improvable` array, which only works when nothing is
+   * written until classification ends. Now that the classify loop drains the
+   * queue as it fills it, the totals have to be maintained at push time --
+   * otherwise a row written mid-classification would be counted in `written`
+   * while `intended` was still zero, and the reconcile would not balance.
+   */
+  const queueCandidate = (cand) => {
+    improvable.push(cand);
+    stats.intended++;
+    perClass[cand.kind].intended++;
+  };
+  /** Per-class tallies, so the reconcile balances PER CLASS and not only in
+   *  total -- a scoped apply has to be able to prove it wrote nothing of the
+   *  class it disarmed. */
+  const perClass = {};
+  for (const kind of APPLY_KINDS) perClass[kind] = { intended: 0, written: 0, skipped: 0, failed: 0, notReached: 0 };
+  const ledger = new Map();
+  const ledgerNote = (slug, id, side) => {
+    if (!slug) return;
+    let e = ledger.get(slug);
+    if (!e) { e = { from: [], to: [] }; ledger.set(slug, e); }
+    if (e[side].length < LEDGER_IDS_PER_POOL) e[side].push(id);
+    e[`${side}Count`] = (e[`${side}Count`] ?? 0) + 1;
+  };
+  let idx = 0;
+  const worker = async () => {
+    while (idx < improvable.length) {
+      const my = idx++;
+      if (budgetLeft() < 90000) {
+        stopReason = stopReason ?? `stopped at the ${RUN_MINUTES}-minute budget`;
+        // CF-A-CONCURRENT-STOP-COUNTS-ITS-OWN-CLAIM-ONLY (run 34360565942,
+        // 2026-09-09). This used to add `improvable.length - my` -- the WHOLE
+        // remaining tail from this worker's own claim point -- but `idx` is a
+        // shared counter and every one of the CONCURRENCY workers claims a
+        // DISJOINT `my` before checking the budget, so at a budget stop near
+        // t=0 all 16 workers see the clock expired on their own first claim
+        // and each added its own overlapping tail: sum_{my=0..15}(2179-my) =
+        // 34,744 "not reached" against 2,179 intended -- the exact drift this
+        // run's reconcile caught. Each worker owns exactly the ONE row `my`
+        // it claimed; the loop keeps draining `idx` (cheaply, no Cosmos read)
+        // so every remaining index is still claimed and counted by SOME
+        // worker exactly once, with no read, no write and no overlap.
+        stats.notReached++;
+        perClass[improvable[my].kind].notReached++;
+        continue;
+      }
+      const cand = improvable[my];
+      // RE-READ: the row may have been re-keyed, enriched or deleted since the
+      // census page. The class is decided again on what is there NOW.
+      let fresh = null;
+      try { fresh = (await retry(() => pool.item(cand.row.id, cand.row.cardId).read())).resource ?? null; }
+      catch (e) { if (e?.code !== 404 && e?.statusCode !== 404) { stats.failed++; perClass[cand.kind].failed++; continue; } }
+      if (!fresh) { stats.skipped++; perClass[cand.kind].skipped++; bump(reasons, "apply  row-gone-since-census"); continue; }
+      const stored = storedIdentity(fresh, deps);
+      const der = deriveIdentity(fresh, deps);
+      const backed = der.ok ? await checklistBacked(der.slug) : false;
+      const beCand = der.ok && K.slugNamesParallel(fresh.cardId);
+      const baseBacked = beCand ? await checklistBacked(der.baseSlug) : false;
+      // Supplied at write time for the reason `spec` below is: a gate that
+      // disagrees with itself between the census and the apply is a gate
+      // nobody can audit. Omitting it here would make every name-released row
+      // silently decline to write while the census reported it writable.
+      const beName = beCand ? await checklistPlayerNameFor(der.identity) : null;
+      // THE WRITE-TIME RE-CHECK GETS THE SAME INPUTS AS THE CENSUS.
+      // `classifyRow` refuses SPECIALIZATION-STATED without them, so omitting
+      // them here would not be a leak -- it would be the opposite, every
+      // qualifying row silently declining to write while the census reported
+      // it writable. A gate that disagrees with itself between the two passes
+      // is a gate nobody can audit.
+      const spec = await specInputs(fresh, stored, der);
+      const res = K.classifyRow({
+        row: fresh, stored, derived: der.ok ? der.identity : null, checklistBacked: backed, derivationReasons: der.reasons,
+        storedSlug: fresh.cardId, baseDestSlug: der.baseSlug ?? null, baseDestBacked: baseBacked, checklistPlayerName: beName,
+        parserSaysLot: safeIsLot(fresh.title),
+        autoByCardNumber: der.autoByCardNumber === true,
+        ...spec,
+        // Re-read from the FRESH row at write time, exactly as the class is.
+        titleStatesNumber: K.titleStatesCardNumber(fresh.title),
+        // S3 at write time, for the reason the comment above gives for
+        // `spec`: without it the apply pass could not reproduce the census
+        // verdict, every qualifying row would come back AGREE, and the
+        // class-match check below would skip the whole population while the
+        // census reported it writable. Read off the FRESH row.
+        checklistSaysNotAuto: (stored?.isAuto === true
+          && K.autographWitnessIsSellerNameOnly(fresh.title))
+          ? await checklistSaysNotAutoFor(stored)
+          : null,
+        // CF-A-SUBSET-IS-PART-OF-THE-IDENTITY-WHEN-IT-HAS-TO-BE. Supplied here
+        // for the reason the comment above gives for `spec`: omitting it would
+        // let the apply pass write a row the census refused, because the
+        // classifier cannot see a clash it is not told about. The clash map is
+        // per (year, setKey) and cached, so the re-check costs nothing new.
+        clashSubsets: await clashSubsetsFor(stored),
+        // THE THREE RULED SCOPES OF 2026-09-06. Supplied at BOTH call sites
+        // for the reason `spec` above states: a gate that disagrees with
+        // itself between the census and the apply is a gate nobody can
+        // audit. Each helper is cost-gated on a pure string test first, so
+        // a row that cannot qualify issues no catalog read at all.
+        ...(await vintageInputs(fresh, stored, der)),
+        ...(await sportInputs(fresh, stored, der)),
+        // THE THREE RULED SCOPES OF 2026-09-13 (R26/R27/R28), at write time --
+        // same reason as `spec` above: a gate that disagrees with itself
+        // between the census and the apply is a gate nobody can audit.
+        ...(await r26Inputs(fresh, stored, der)),
+        ...(await r27Inputs(fresh, stored, der)),
+        ...(await r28Inputs(fresh, stored, der)),
+      });
+      // The class is decided again on what is there NOW, and it must come back
+      // as the SAME kind the census queued. A row the census saw as an eviction
+      // that now reads IMPROVE (or the reverse) is a row the pool changed under
+      // us -- it is skipped, not written on the strength of the old verdict.
+      // THE SCOPE IS RE-CHECKED AT WRITE TIME TOO, exactly as the class is.
+      // The queue was built under the scope, so this cannot normally fire --
+      // and that is the point: a guard that is only applied where it is
+      // convenient is a guard that a later edit can walk around.
+      const nowKind = K.applyKindOf(res);
+      if (!K.writableUnderScope(res, ARMED) || nowKind !== cand.kind) {
+        stats.skipped++; perClass[cand.kind].skipped++;
+        bump(reasons, `apply  no-longer-writable:${res.klass}${res.subclass ? `/${res.subclass}` : ""}/${res.tier}`);
+        continue;
+      }
+      // ── THE FIELD BACKFILL: A WRITE THAT IS NOT A RE-KEY ─────────────────
+      //
+      // GRADE-FROM-TITLE stamps two FIELDS at the row's existing address. It
+      // must not go through `relocateSoldComp`: that function's whole job is
+      // to move a row between partitions, and there is no move here. The row
+      // keeps its id, its cardId, its partition and its pool membership; what
+      // changes is that `filterByGrade` stops reading it as raw.
+      //
+      // It reconciles through the SAME per-class counters as every other kind
+      // -- `everyWriteJobReconciles` does not care what shape the write is,
+      // only that intended = written + skipped + failed + not reached -- and
+      // it notes the pool ONCE in the ledger, on both sides, because the
+      // canary's question ("did this shard touch this pool?") is answered YES
+      // for a field write too: the pool's RAW membership changed even though
+      // its row membership did not.
+      if (cand.kind === K.GRADE_FROM_TITLE) {
+        const g = res.gradeFromTitleEvidence ?? {};
+        if (!g.gradeCompany || !(g.gradeValue > 0)) {
+          stats.skipped++; perClass[cand.kind].skipped++;
+          bump(reasons, "apply  refused:grade-evidence-incomplete");
+          continue;
+        }
+        // A ROW THAT ALREADY CARRIES A GRADE IS NEVER RE-STAMPED. The
+        // classifier's G1 says the same thing, and this is the belt to that
+        // brace: between the census and now another writer may have stamped
+        // it, and overwriting would be a grade CHANGE -- a rival reading this
+        // lane has no authority to settle.
+        if (fresh.gradeCompany || (fresh.gradeValue !== null && fresh.gradeValue !== undefined && fresh.gradeValue !== "")) {
+          stats.skipped++; perClass[cand.kind].skipped++;
+          bump(reasons, "apply  refused:grade-already-present-since-census");
+          continue;
+        }
+        if (!APPLY) {
+          stats.written++; perClass[cand.kind].written++;
+          ledgerNote(fresh.cardId, fresh.id, "from"); ledgerNote(fresh.cardId, fresh.id, "to");
+          bump(reasons, `apply  would-write:${cand.kind}`);
+          if (applied.length < 20) applied.push(`  WOULD STAMP ${fresh.id}  ${fresh.cardId}   raw -> ${g.gradeCompany} ${g.gradeValue}   (fields only, no re-key)`);
+          continue;
+        }
+        try {
+          await retry(() => patchSoldCompFields(pool, fresh.id, fresh.cardId, {
+            gradeCompany: g.gradeCompany,
+            gradeValue: g.gradeValue,
+            gradeStampedAt: new Date().toISOString(),
+            gradeStampedReason: `GREAT REMATCH (2026-09-06): GRADE-FROM-TITLE -- title states "${g.gradeCompany} ${g.gradeValue}" and the row's grade fields were empty; address unchanged`,
+          }));
+          // VERIFY BY READ, ON THE ROW ITSELF. The #1850 read-back contract:
+          // a write is not done because the call returned, it is done because
+          // the value is there when you look.
+          const back = (await retry(() => pool.item(fresh.id, fresh.cardId).read())).resource ?? null;
+          if (!back || String(back.gradeCompany ?? "").toUpperCase() !== g.gradeCompany || Number(back.gradeValue) !== Number(g.gradeValue)) {
+            stats.failed++; perClass[cand.kind].failed++;
+            bump(reasons, "apply  failed:grade-stamp-not-visible-on-read-back");
+            continue;
+          }
+          stats.written++; perClass[cand.kind].written++;
+          ledgerNote(fresh.cardId, fresh.id, "from"); ledgerNote(fresh.cardId, fresh.id, "to");
+          bump(reasons, `apply  wrote:${cand.kind}`);
+          if (applied.length < 20) applied.push(`  STAMPED ${fresh.id}  ${fresh.cardId}   raw -> ${g.gradeCompany} ${g.gradeValue}   (fields only, no re-key)`);
+        } catch (e) {
+          stats.failed++; perClass[cand.kind].failed++;
+          console.log(`  FAILED grade stamp ${fresh.id}: ${String(e?.message ?? e).slice(0, 110)}`);
+        }
+        continue;
+      }
+
+      const target = cand.kind === K.BASE_EVICTION ? der.baseSlug : der.slug;
+      const identity = cand.kind === K.BASE_EVICTION ? der.baseIdentity : der.identity;
+      if (target === fresh.cardId) { stats.skipped++; perClass[cand.kind].skipped++; bump(reasons, "apply  already-at-target"); continue; }
+
+      const keep = stripSystem(fresh);
+      keep.cardId = target;
+      keep.hobbyiqCardId = target;
+      keep.setName = identity.setNameRaw || keep.setName;
+      keep.cardNumber = identity.cardNumber || keep.cardNumber;
+      keep.parallel = identity.parallel;
+      keep.isAuto = identity.isAuto;
+      if (cand.kind === K.BASE_EVICTION) {
+        // A STORED PRINT RUN IS NEVER DELETED (audit finding 2). This used to
+        // be `delete keep.printRun` -- an eviction destroyed a stored field on
+        // its way past, and the audit's sample carried a /1 (Immaculate
+        // Pujols) and Carroll /499 among the rows it would have erased.
+        //
+        // The classifier now VETOES the eviction outright when the row stores
+        // a print run (storedPrintRunNamesALimitedParallel), so reaching this
+        // branch with one set means the classifier and the writer disagree.
+        // Refuse rather than write: a fleet never resolves that by guessing,
+        // and the row is reported instead.
+        if (keep.printRun !== null && keep.printRun !== undefined && keep.printRun !== "") {
+          stats.skipped++; perClass[cand.kind].skipped++;
+          bump(reasons, `apply  refused:eviction-would-delete-stored-printrun:/${keep.printRun}`);
+          continue;
+        }
+      } else if (identity.printRun !== null && identity.printRun !== undefined) {
+        keep.printRun = identity.printRun;
+      }
+      keep.sport = identity.sport;
+      keep.cardYear = identity.cardYear;
+      // A row that changes partition must carry the hash of its NEW cardId or
+      // the store's pre-write dedup can never see it.
+      keep.contentHash = contentHashOf(keep);
+      keep.rekeyedFrom = [{ id: fresh.id, cardId: fresh.cardId, hobbyiqCardId: fresh.hobbyiqCardId ?? null, title: fresh.title ?? null }];
+      keep.rekeyedAt = new Date().toISOString();
+      if (cand.kind === K.BASE_EVICTION) {
+        // The three evidence fields travel WITH the row, quoted. A reason that
+        // only names the subclass is not auditable after the fact -- Drew must
+        // be able to read, from the row alone, exactly what was seen.
+        const e = res.evidence ?? {};
+        keep.rekeyedReason = `GREAT REMATCH (2026-09-02): CONFLICT/BASE-EVICTION -- slug parallel "${e.storedSlugParallel}" unsupported: stored parallel field ${JSON.stringify(e.storedParallelField)}, title "${e.titleQuoted}" names no finish, checklist-backed base destination ${e.baseDestSlug}`;
+        keep.baseEvictionEvidence = e;
+      } else if (cand.kind === K.YEAR_FROM_TITLE_VINTAGE) {
+        // The evidence travels WITH the row, quoted, for the reason the
+        // eviction's does: a reason that only names the subclass is not
+        // auditable after the fact. Drew must be able to read, from the row
+        // alone, which year moved and what the title said.
+        const e = res.vintageYearEvidence ?? {};
+        keep.rekeyedReason = `GREAT REMATCH (2026-09-06): YEAR-FROM-TITLE-VINTAGE -- the slug year ${e.slugYear} is the SALE year; the title "${e.titleQuoted}" states ${e.titleYear}, setKey ${e.setKey} is vintage-capable, no retro marker, destination checklist-backed`;
+        keep.vintageYearEvidence = e;
+      } else if (cand.kind === K.SPORT_FROM_PRODUCT) {
+        const e = res.sportFromProductEvidence ?? {};
+        keep.rekeyedReason = `GREAT REMATCH (2026-09-06): SPORT-FROM-PRODUCT -- a card's sport is the PRODUCT's sport; ${e.pair} on setKey ${e.setKey}, product sport read from its own checklist, destination checklist-backed. Title "${e.titleQuoted}"`;
+        keep.sportFromProductEvidence = e;
+      } else if (cand.kind === K.FLAGSHIP_SWALLOWED_NAMED_PRODUCT) {
+        const e = res.flagshipSwallowedNamedProductEvidence ?? {};
+        keep.rekeyedReason = `GREAT REMATCH (2026-09-13): R26-FLAGSHIP-SWALLOWED-NAMED-PRODUCT -- a specialty release filed under its flagship; ${e.storedSetKey}->${e.derivedSetKey}, title states "${(e.distinguishingWords ?? []).join("+")}", destination checklist-backed. Title "${e.titleQuoted}"`;
+        keep.flagshipSwallowedNamedProductEvidence = e;
+      } else if (cand.kind === K.POKEMON_SET_CODE) {
+        const e = res.pokemonSetCodeEvidence ?? {};
+        keep.rekeyedReason = `GREAT REMATCH (2026-09-13): R27-POKEMON-SET-CODE -- the set code is the key; ${e.pair}, destination checklist-backed${e.isAmbiguousCode ? `, ambiguous code resolved by language` : ""}`;
+        keep.pokemonSetCodeEvidence = e;
+      } else if (cand.kind === K.FINISH_IS_A_PARALLEL) {
+        const e = res.finishIsAParallelEvidence ?? {};
+        keep.rekeyedReason = `GREAT REMATCH (2026-09-13): R28-FINISH-IS-A-PARALLEL -- a finish word minted as a setKey; ${e.pair}, checklist lists it as a parallel of the derived product, destination checklist-backed`;
+        keep.finishIsAParallelEvidence = e;
+      } else {
+        keep.rekeyedReason = `GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled ${res.axes.filled.join(",")}`;
+      }
+
+      const r = await relocateSoldComp(pool, { keep, drop: [{ id: fresh.id, cardId: fresh.cardId }], retry, verifyFields: ["cardId", "hobbyiqCardId", "rekeyedAt"], dryRun: !APPLY });
+      const why = cand.kind === K.BASE_EVICTION ? `BASE-EVICTION (slug said "${res.evidence?.storedSlugParallel}", row and title say nothing)` : `IMPROVE filled ${res.axes.filled.join(",")}`;
+      if (!APPLY) { stats.written++; perClass[cand.kind].written++; ledgerNote(fresh.cardId, fresh.id, "from"); ledgerNote(target, fresh.id, "to"); bump(reasons, `apply  would-write:${cand.kind}`); if (applied.length < 20) applied.push(`  WOULD RE-KEY ${fresh.id}  ${fresh.cardId}  ->  ${target}   ${why}`); continue; }
+      if (!r.ok && r.stage !== "done") { stats.failed++; perClass[cand.kind].failed++; console.log(`  FAILED at ${r.stage} ${fresh.id}: ${String(r.error).slice(0, 110)}`); continue; }
+      if (r.duplicatesLeft.length) { stats.failed++; perClass[cand.kind].failed++; stats.duplicatesLeft += r.duplicatesLeft.length; for (const dd of r.duplicatesLeft) console.log(`  DUPLICATE LEFT ${dd.id}@${dd.cardId}: ${String(dd.error).slice(0, 80)}`); continue; }
+      stats.written++; perClass[cand.kind].written++; stats.alreadyGone += r.alreadyGone.length;
+      // The ledger records BOTH pools a re-key changes: the one the row left
+      // and the one it landed in. Either may hold a canary.
+      ledgerNote(fresh.cardId, fresh.id, "from");
+      ledgerNote(target, fresh.id, "to");
+      bump(reasons, `apply  wrote:${cand.kind}`);
+      if (applied.length < 20) applied.push(`  RE-KEYED ${fresh.id}  ${fresh.cardId}  ->  ${target}   ${why}`);
+    }
+  };
+  /**
+   * DRAIN THE QUEUE THAT CLASSIFICATION IS STILL FILLING (2026-09-14).
+   *
+   * Called both DURING the classify loop (write-as-you-go) and once after it
+   * (the tail). `idx` is a shared cursor over `improvable`, so a drain that
+   * starts while the classifier is still pushing simply keeps claiming the
+   * rows appended since -- and a drain called again later resumes at the
+   * same `idx`, never re-writing a row an earlier drain already claimed.
+   * Every worker still re-reads and re-classifies its own row at write time,
+   * so writing earlier changes WHEN a candidate is checked, never WHETHER.
+   */
+  const drainImprovable = async () => {
+    if (idx >= improvable.length) return;
+    const lanes = Math.min(CONCURRENCY, Math.max(improvable.length - idx, 1));
+    await Promise.all(Array.from({ length: lanes }, worker));
+  };
   /** Writable candidates the class scope held back, per class. Counted so the
    *  reconcile can show what a scoped run declined to write. */
   const disarmed = Object.create(null);
@@ -1683,23 +2014,34 @@ async function main() {
   const safeIsLot = (t) => { try { return deps.isMultiCardLot ? !!deps.isMultiCardLot(t) : false; } catch { return false; } };
   let stopReason = null;
 
-  // ── THE CENSUS CURSOR: SKIP DONE UNITS, MERGE THEIR SAVED COUNTS ──────────
+  // ── THE RESUME CURSOR: SKIP DONE UNITS, MERGE THEIR SAVED COUNTS ─────────
   //
-  // MODE=census only -- see censusCursorId's header comment for why. An apply
-  // is not resumable the same way (its queue is built from a census-fresh
-  // read and re-checked row by row at write time), and this cursor never
-  // touches it: `unitsForCensus` below is exactly `q.units` unless a PRIOR
-  // pass's saved cursor says some of them are already classified and counted.
+  // BOTH MODES NOW (2026-09-14). The census resumes at the unit and page
+  // grains it always has. An apply resumes at the PAGE grain only -- it has
+  // one synthetic whole-slot `unit`, so `unitsDone` never fills for it and
+  // the continuation token is the whole of its resume point. That token is
+  // only ever saved AFTER the page's candidates have been written (see the
+  // drain in the `page:` loop), so resuming past it can never skip an
+  // unwritten row. Each mode reads its OWN document -- see censusCursorId.
   // getOrCreateControlContainer (not a bare `.container()` reference) so the
   // FIRST slot to ever touch `rematch_control` provisions it instead of every
   // read/write 404ing against a container the SDK never checked for -- see
   // that function's header comment for the incident this replaces.
   let control = null;
-  if (MODE === "census") {
+  if (MODE === "census" || MODE === "apply-improve") {
     try { control = await getOrCreateControlContainer(conn); }
     catch (e) { console.warn(`  !! could not open/create the ${REMATCH_CONTROL_CONTAINER} container (${String(e?.message ?? e).slice(0, 140)}) -- this census will run without a durable cursor.`); }
   }
-  const priorCursor = MODE === "census" ? await loadCensusCursor(control, SLOT) : null;
+  // A REPORT-ONLY apply must not resume: it writes nothing, so a cursor
+  // saved by a prior APPLY would make it silently skip the rows that apply
+  // already wrote and report a candidate count for only the tail. A dry run
+  // reports the WHOLE shard it was pointed at, every time.
+  const USE_CURSOR = MODE === "census" || (MODE === "apply-improve" && APPLY);
+  /** The cursor lines name the mode that wrote them: an apply reading
+   *  "CENSUS CURSOR" in its own log is a line a human reasonably misreads as
+   *  the census's. Same text either way, one word different. */
+  const CURSOR_LABEL = MODE === "census" ? "CENSUS CURSOR" : "APPLY CURSOR";
+  const priorCursor = USE_CURSOR ? await loadCensusCursor(control, SLOT) : null;
   const doneUnitKeys = new Set(priorCursor?.unitsDone ?? []);
   // THE PAGE CHECKPOINT (2026-09-12, #2058 follow-up). A unit is 500k-1M+
   // rows and this shard's measured rate (~150-200 rows/s in-slot) classifies
@@ -1732,9 +2074,9 @@ async function main() {
     const partialNote = priorPartialUnit
       ? ` A page checkpoint inside unit ${priorPartialUnit.key} carries this pass straight to its saved continuation token.`
       : "";
-    console.log(`  CENSUS CURSOR: resuming slot ${SLOT} -- ${doneUnitKeys.size} of ${q.units.length} unit(s) already classified in a prior pass (${f(stats.seen)} rows carried forward, cursor said ${f(Number(priorCursor.classified) || 0)}). Signature matched: same shard table, scope and filters.${partialNote}`);
-  } else if (MODE === "census") {
-    console.log(`  CENSUS CURSOR: no usable prior checkpoint for slot ${SLOT} -- starting from unit 0.`);
+    console.log(`  ${CURSOR_LABEL}: resuming slot ${SLOT} -- ${doneUnitKeys.size} of ${q.units.length} unit(s) already classified in a prior pass (${f(stats.seen)} rows carried forward, cursor said ${f(Number(priorCursor.classified) || 0)}). Signature matched: same shard table, scope and filters.${partialNote}`);
+  } else if (USE_CURSOR) {
+    console.log(`  ${CURSOR_LABEL}: no usable prior checkpoint for slot ${SLOT} -- starting from unit 0.`);
   }
   /** How often the in-flight unit's continuation token is checkpointed.
    *  Pages are 500 rows (maxItemCount above); at the measured ~150-200
@@ -1783,12 +2125,14 @@ async function main() {
     // read at most once (a prior pass can only ever have been stopped
     // inside ONE unit), but the read itself is naturally one-shot here since
     // `unitsThisPass` visits each unit at most once per process.
-    const resumeToken = (MODE === "census" && priorPartialUnit && String(priorPartialUnit.key) === String(unit.key))
+    const resumeToken = (USE_CURSOR && priorPartialUnit && String(priorPartialUnit.key) === String(unit.key))
       ? priorPartialUnit.continuationToken
       : undefined;
-    const it = MODE === "census"
-      ? pool.items.query(unitQuery, { maxItemCount: 500, continuationToken: resumeToken })
-      : pool.items.query(unitQuery, { maxItemCount: 500 });
+    // An apply passes its saved token the same way a census does: its one
+    // synthetic unit is a plain no-ORDER-BY query (`q`), which is exactly
+    // the shape whose continuation token the SDK guarantees replays safely
+    // on a brand-new process -- see slotQuery`s header.
+    const it = pool.items.query(unitQuery, { maxItemCount: 500, continuationToken: resumeToken });
     let pagesSinceCheckpoint = 0;
     let lastCheckpointAt = Date.now();
     while (it.hasMoreResults()) {
@@ -2052,7 +2396,7 @@ async function main() {
           if (kind === K.GRADE_FROM_TITLE) {
             // A FIELD BACKFILL HAS NO DESTINATION. The slug is the row's own,
             // and what travels is the two grade fields the classifier read.
-            improvable.push({
+            queueCandidate({
               kind, row, stored, slug: row.cardId, identity: stored,
               gradeFields: {
                 gradeCompany: res.gradeFromTitleEvidence?.gradeCompany ?? null,
@@ -2066,11 +2410,11 @@ async function main() {
             // above: each moves setKey (R28 also moves parallel) TO the
             // derived identity, so the destination is `der.slug`/`der.identity`
             // exactly as YEAR-FROM-TITLE-VINTAGE and SPORT-FROM-PRODUCT are.
-            improvable.push({ kind, row, stored, slug: der.slug, identity: der.identity });
+            queueCandidate({ kind, row, stored, slug: der.slug, identity: der.identity });
           } else if (kind === K.IMPROVE) {
-            improvable.push({ kind: K.IMPROVE, row, stored, slug: der.slug, identity: der.identity });
+            queueCandidate({ kind: K.IMPROVE, row, stored, slug: der.slug, identity: der.identity });
           } else if (kind === K.BASE_EVICTION) {
-            improvable.push({ kind: K.BASE_EVICTION, row, stored, slug: der.baseSlug, identity: der.baseIdentity });
+            queueCandidate({ kind: K.BASE_EVICTION, row, stored, slug: der.baseSlug, identity: der.baseIdentity });
           }
         }
       }
@@ -2089,6 +2433,53 @@ async function main() {
     // being true: a token from the FINAL page of a unit is meaningless (the
     // unit's own "done" checkpoint below supersedes it) and some SDK
     // versions return an empty/stale token there.
+    // ── WRITE AS YOU GO, AND CHECKPOINT WHERE YOU GOT TO (2026-09-14) ─────
+    //
+    // The apply mirror of the census checkpoint above. At the end of every
+    // page, the candidates this page just classified are WRITTEN, and the
+    // page token that follows them is saved -- in that order, so the cursor
+    // can only ever advance past rows whose writes have already been
+    // attempted and counted. A budget stop therefore leaves committed work
+    // plus a resume point, instead of a fully classified shard that wrote
+    // nothing (runs 34872320344 / 34849159531).
+    //
+    // The drain is unconditional on the budget: `worker` does its own
+    // budget check per claim and books what it cannot reach as `notReached`,
+    // so the reconcile stays balanced whether the stop lands here or inside
+    // the drain.
+    if (MODE === "apply-improve") {
+      await drainImprovable();
+      // THE TOKEN ONLY ADVANCES PAST A FULLY DRAINED QUEUE.
+      //
+      // `drainImprovable` returns without writing when the budget is gone,
+      // booking what it could not claim as `notReached`. Saving this page's
+      // token in that state would tell the relaunch that everything up to
+      // here is done -- and the rows this pass classified but never wrote
+      // would be skipped forever, which is the very defect the cursor is
+      // here to end (measured before this guard: 2 of 6 fixture rows moved
+      // across two passes, the other 4 stepped over by the token).
+      // `idx` counts rows CLAIMED, not completed -- a worker that finds the
+      // budget gone still claims its row before booking it `notReached`, so
+      // `idx` reaches the end either way. `stats.notReached` is the honest
+      // witness: a drain that actually reached every queued row never bumps
+      // it, and one that gave up always does.
+      const fullyDrained = idx >= improvable.length && stats.notReached === 0;
+      if (fullyDrained && it.hasMoreResults() && page.continuationToken) {
+        pendingPartialUnit = { key: String(unit.key), continuationToken: page.continuationToken };
+        pagesSinceCheckpoint++;
+        const dueByPages = pagesSinceCheckpoint >= PAGE_CHECKPOINT_PAGES;
+        const dueByTime = (Date.now() - lastCheckpointAt) >= PAGE_CHECKPOINT_MS;
+        if (dueByPages || dueByTime) {
+          const saved = await saveCensusCursor(control, SLOT, {
+            unitsDone: [...doneUnitKeys],
+            aggregate: censusAggregateToCompactJSON(),
+            classified: stats.seen,
+            partialUnit: pendingPartialUnit,
+          });
+          if (saved) { pagesSinceCheckpoint = 0; lastCheckpointAt = Date.now(); }
+        }
+      }
+    }
     if (MODE === "census" && it.hasMoreResults() && page.continuationToken) {
       // The in-memory resume point is updated on EVERY page, budget-write or
       // not: it is what the final checkpoint (after the `page:` loop) falls
@@ -2158,15 +2549,24 @@ async function main() {
     }
   }
 
+  // ── THE TAIL DRAIN (2026-09-14) ──────────────────────────────────────────
+  //
+  // The page loop writes each page's candidates as it goes, but the LAST
+  // page's candidates (and, on a LIMIT/budget break out of the loop, any
+  // queued behind it) are still unwritten here. Draining before the
+  // checkpoint below keeps the invariant the resume depends on: the saved
+  // token never points past a row whose write was not attempted.
+  if (MODE === "apply-improve") await drainImprovable();
+
   // ── CHECKPOINT: PERSIST THE CURSOR BEFORE THE BANNER, WHILE THE MERGED ────
-  // AGGREGATE IS STILL THE ONE THIS PASS JUST BUILT (census only).
+  // AGGREGATE IS STILL THE ONE THIS PASS JUST BUILT (census and apply).
   //
   // Written on EVERY census pass, not only a budget stop: a pass that
   // finishes its whole shard in one go still needs its cursor CLEARED (never
   // left behind for a later independent dispatch of the same slot to
   // misread as "resume from here"), and a pass that stops partway needs it
   // SAVED. Both are one call, gated on whether every unit is now done.
-  if (MODE === "census") {
+  if (USE_CURSOR) {
     // `pendingPartialUnit` is non-null here ONLY when the `page:` loop broke
     // out of a unit mid-stream (a budget stop, a LIMIT stop, or a still-
     // failing periodic save) -- every unit that finished cleanly nulled it
@@ -2174,10 +2574,17 @@ async function main() {
     // be true at the same time a partial unit is pending: a unit either
     // finished (counted in `doneUnitKeys`, token discarded) or it did not
     // (token pending, unit absent from `doneUnitKeys`).
-    const allDone = doneUnitKeys.size >= q.units.length;
+    // An apply has ONE synthetic whole-slot unit, so `q.units.length` (the
+    // census's unit count for this slot) is the wrong denominator for it.
+    // It is done exactly when its page loop ran out of pages without
+    // stopping -- which is precisely `pendingPartialUnit === null` plus no
+    // stopReason, the same two facts the census's unit bookkeeping encodes.
+    const allDone = MODE === "census"
+      ? doneUnitKeys.size >= q.units.length
+      : (!stopReason && pendingPartialUnit === null);
     if (allDone) {
       await clearCensusCursor(control, SLOT);
-      console.log(`  CENSUS CURSOR: slot ${SLOT} finished within budget -- every unit classified, cursor cleared.`);
+      console.log(`  ${CURSOR_LABEL}: slot ${SLOT} finished within budget -- every unit classified, cursor cleared.`);
     } else {
       const saved = await saveCensusCursor(control, SLOT, {
         unitsDone: [...doneUnitKeys],
@@ -2189,7 +2596,7 @@ async function main() {
         const pageNote = pendingPartialUnit
           ? ` -- unit ${pendingPartialUnit.key} is IN PROGRESS and resumes from its own last page, not from its first row`
           : "";
-        console.log(`  CENSUS CURSOR: checkpointed ${doneUnitKeys.size} of ${q.units.length} unit(s) for slot ${SLOT} -- the relaunch continues from the next unit${pageNote}.`);
+        console.log(`  ${CURSOR_LABEL}: checkpointed ${doneUnitKeys.size} of ${q.units.length} unit(s) for slot ${SLOT} -- the relaunch continues from the next unit${pageNote}.`);
       } else {
         // CF-A-FAILED-CHECKPOINT-IS-NOT-A-CHECKPOINT (run 34658848883 slot 3).
         // The save above already warned (console.warn, load-bearing). This
@@ -2205,7 +2612,7 @@ async function main() {
         // coverage) but drops it out of the budget-marker regex, so the
         // relaunch action falls through to its "finishLane with a NON-ZERO
         // code" arm instead: verdict reported, re-dispatch withheld, step red.
-        console.warn(`  CENSUS CURSOR: NOT checkpointed for slot ${SLOT} -- the cursor save failed, so this pass's ${doneUnitKeys.size} of ${q.units.length} completed unit(s) will NOT be skipped by a relaunch. Re-dispatching this slot as-is would restart it from unit 0; do not re-dispatch until the cursor save is fixed.`);
+        console.warn(`  ${CURSOR_LABEL}: NOT checkpointed for slot ${SLOT} -- the cursor save failed, so this pass's ${doneUnitKeys.size} of ${q.units.length} completed unit(s) will NOT be skipped by a relaunch. Re-dispatching this slot as-is would restart it from unit 0; do not re-dispatch until the cursor save is fixed.`);
         // MUST NOT contain the substring the relaunch action's unanchored
         // `grep -aqE "stopped at the .*budget"` matches ANYWHERE in the line
         // -- rewording only the prefix (e.g. "X, stopped at the N-minute
@@ -2516,14 +2923,14 @@ async function main() {
   }
   console.log(`  every candidate is re-checked at write time: the pool moves between the census and this pass,`);
   console.log(`  and a candidate that re-checks as the OTHER kind is skipped, not written on the old verdict.`);
-  stats.intended = improvable.length;
-  const applied = [];
-  /** Per-class tallies, so the reconcile balances PER CLASS and not only in
-   *  total -- a scoped apply has to be able to prove it wrote nothing of the
-   *  class it disarmed. */
-  const perClass = {};
-  for (const kind of APPLY_KINDS) perClass[kind] = { intended: 0, written: 0, skipped: 0, failed: 0, notReached: 0 };
-  for (const c of improvable) perClass[c.kind].intended++;
+  // `stats.intended`, `perClass` and `applied` are maintained BY
+  // `queueCandidate` as classification runs (see its definition above the
+  // classify loop): a queue that is DRAINED WHILE IT IS STILL FILLING cannot
+  // have its totals computed from a finished array, which is what this spot
+  // used to do. On a resumed apply `stats.intended` is also CUMULATIVE --
+  // the cursor merges the prior link's counts -- so it deliberately exceeds
+  // this pass's own `improvable.length`, and the reconcile below balances
+  // against the cumulative figure, which is the one a human is owed.
   /**
    * THE WRITE LEDGER -- pool -> the ids this run actually moved (2026-09-04).
    *
@@ -2541,264 +2948,6 @@ async function main() {
    * positive statement "this shard moved nothing anywhere", which is exactly
    * what these two runs needed to say and could not.
    */
-  const ledger = new Map();
-  const ledgerNote = (slug, id, side) => {
-    if (!slug) return;
-    let e = ledger.get(slug);
-    if (!e) { e = { from: [], to: [] }; ledger.set(slug, e); }
-    if (e[side].length < LEDGER_IDS_PER_POOL) e[side].push(id);
-    e[`${side}Count`] = (e[`${side}Count`] ?? 0) + 1;
-  };
-  let idx = 0;
-  const worker = async () => {
-    while (idx < improvable.length) {
-      const my = idx++;
-      if (budgetLeft() < 90000) {
-        stopReason = stopReason ?? `stopped at the ${RUN_MINUTES}-minute budget`;
-        // CF-A-CONCURRENT-STOP-COUNTS-ITS-OWN-CLAIM-ONLY (run 34360565942,
-        // 2026-09-09). This used to add `improvable.length - my` -- the WHOLE
-        // remaining tail from this worker's own claim point -- but `idx` is a
-        // shared counter and every one of the CONCURRENCY workers claims a
-        // DISJOINT `my` before checking the budget, so at a budget stop near
-        // t=0 all 16 workers see the clock expired on their own first claim
-        // and each added its own overlapping tail: sum_{my=0..15}(2179-my) =
-        // 34,744 "not reached" against 2,179 intended -- the exact drift this
-        // run's reconcile caught. Each worker owns exactly the ONE row `my`
-        // it claimed; the loop keeps draining `idx` (cheaply, no Cosmos read)
-        // so every remaining index is still claimed and counted by SOME
-        // worker exactly once, with no read, no write and no overlap.
-        stats.notReached++;
-        perClass[improvable[my].kind].notReached++;
-        continue;
-      }
-      const cand = improvable[my];
-      // RE-READ: the row may have been re-keyed, enriched or deleted since the
-      // census page. The class is decided again on what is there NOW.
-      let fresh = null;
-      try { fresh = (await retry(() => pool.item(cand.row.id, cand.row.cardId).read())).resource ?? null; }
-      catch (e) { if (e?.code !== 404 && e?.statusCode !== 404) { stats.failed++; perClass[cand.kind].failed++; continue; } }
-      if (!fresh) { stats.skipped++; perClass[cand.kind].skipped++; bump(reasons, "apply  row-gone-since-census"); continue; }
-      const stored = storedIdentity(fresh, deps);
-      const der = deriveIdentity(fresh, deps);
-      const backed = der.ok ? await checklistBacked(der.slug) : false;
-      const beCand = der.ok && K.slugNamesParallel(fresh.cardId);
-      const baseBacked = beCand ? await checklistBacked(der.baseSlug) : false;
-      // Supplied at write time for the reason `spec` below is: a gate that
-      // disagrees with itself between the census and the apply is a gate
-      // nobody can audit. Omitting it here would make every name-released row
-      // silently decline to write while the census reported it writable.
-      const beName = beCand ? await checklistPlayerNameFor(der.identity) : null;
-      // THE WRITE-TIME RE-CHECK GETS THE SAME INPUTS AS THE CENSUS.
-      // `classifyRow` refuses SPECIALIZATION-STATED without them, so omitting
-      // them here would not be a leak -- it would be the opposite, every
-      // qualifying row silently declining to write while the census reported
-      // it writable. A gate that disagrees with itself between the two passes
-      // is a gate nobody can audit.
-      const spec = await specInputs(fresh, stored, der);
-      const res = K.classifyRow({
-        row: fresh, stored, derived: der.ok ? der.identity : null, checklistBacked: backed, derivationReasons: der.reasons,
-        storedSlug: fresh.cardId, baseDestSlug: der.baseSlug ?? null, baseDestBacked: baseBacked, checklistPlayerName: beName,
-        parserSaysLot: safeIsLot(fresh.title),
-        autoByCardNumber: der.autoByCardNumber === true,
-        ...spec,
-        // Re-read from the FRESH row at write time, exactly as the class is.
-        titleStatesNumber: K.titleStatesCardNumber(fresh.title),
-        // S3 at write time, for the reason the comment above gives for
-        // `spec`: without it the apply pass could not reproduce the census
-        // verdict, every qualifying row would come back AGREE, and the
-        // class-match check below would skip the whole population while the
-        // census reported it writable. Read off the FRESH row.
-        checklistSaysNotAuto: (stored?.isAuto === true
-          && K.autographWitnessIsSellerNameOnly(fresh.title))
-          ? await checklistSaysNotAutoFor(stored)
-          : null,
-        // CF-A-SUBSET-IS-PART-OF-THE-IDENTITY-WHEN-IT-HAS-TO-BE. Supplied here
-        // for the reason the comment above gives for `spec`: omitting it would
-        // let the apply pass write a row the census refused, because the
-        // classifier cannot see a clash it is not told about. The clash map is
-        // per (year, setKey) and cached, so the re-check costs nothing new.
-        clashSubsets: await clashSubsetsFor(stored),
-        // THE THREE RULED SCOPES OF 2026-09-06. Supplied at BOTH call sites
-        // for the reason `spec` above states: a gate that disagrees with
-        // itself between the census and the apply is a gate nobody can
-        // audit. Each helper is cost-gated on a pure string test first, so
-        // a row that cannot qualify issues no catalog read at all.
-        ...(await vintageInputs(fresh, stored, der)),
-        ...(await sportInputs(fresh, stored, der)),
-        // THE THREE RULED SCOPES OF 2026-09-13 (R26/R27/R28), at write time --
-        // same reason as `spec` above: a gate that disagrees with itself
-        // between the census and the apply is a gate nobody can audit.
-        ...(await r26Inputs(fresh, stored, der)),
-        ...(await r27Inputs(fresh, stored, der)),
-        ...(await r28Inputs(fresh, stored, der)),
-      });
-      // The class is decided again on what is there NOW, and it must come back
-      // as the SAME kind the census queued. A row the census saw as an eviction
-      // that now reads IMPROVE (or the reverse) is a row the pool changed under
-      // us -- it is skipped, not written on the strength of the old verdict.
-      // THE SCOPE IS RE-CHECKED AT WRITE TIME TOO, exactly as the class is.
-      // The queue was built under the scope, so this cannot normally fire --
-      // and that is the point: a guard that is only applied where it is
-      // convenient is a guard that a later edit can walk around.
-      const nowKind = K.applyKindOf(res);
-      if (!K.writableUnderScope(res, ARMED) || nowKind !== cand.kind) {
-        stats.skipped++; perClass[cand.kind].skipped++;
-        bump(reasons, `apply  no-longer-writable:${res.klass}${res.subclass ? `/${res.subclass}` : ""}/${res.tier}`);
-        continue;
-      }
-      // ── THE FIELD BACKFILL: A WRITE THAT IS NOT A RE-KEY ─────────────────
-      //
-      // GRADE-FROM-TITLE stamps two FIELDS at the row's existing address. It
-      // must not go through `relocateSoldComp`: that function's whole job is
-      // to move a row between partitions, and there is no move here. The row
-      // keeps its id, its cardId, its partition and its pool membership; what
-      // changes is that `filterByGrade` stops reading it as raw.
-      //
-      // It reconciles through the SAME per-class counters as every other kind
-      // -- `everyWriteJobReconciles` does not care what shape the write is,
-      // only that intended = written + skipped + failed + not reached -- and
-      // it notes the pool ONCE in the ledger, on both sides, because the
-      // canary's question ("did this shard touch this pool?") is answered YES
-      // for a field write too: the pool's RAW membership changed even though
-      // its row membership did not.
-      if (cand.kind === K.GRADE_FROM_TITLE) {
-        const g = res.gradeFromTitleEvidence ?? {};
-        if (!g.gradeCompany || !(g.gradeValue > 0)) {
-          stats.skipped++; perClass[cand.kind].skipped++;
-          bump(reasons, "apply  refused:grade-evidence-incomplete");
-          continue;
-        }
-        // A ROW THAT ALREADY CARRIES A GRADE IS NEVER RE-STAMPED. The
-        // classifier's G1 says the same thing, and this is the belt to that
-        // brace: between the census and now another writer may have stamped
-        // it, and overwriting would be a grade CHANGE -- a rival reading this
-        // lane has no authority to settle.
-        if (fresh.gradeCompany || (fresh.gradeValue !== null && fresh.gradeValue !== undefined && fresh.gradeValue !== "")) {
-          stats.skipped++; perClass[cand.kind].skipped++;
-          bump(reasons, "apply  refused:grade-already-present-since-census");
-          continue;
-        }
-        if (!APPLY) {
-          stats.written++; perClass[cand.kind].written++;
-          ledgerNote(fresh.cardId, fresh.id, "from"); ledgerNote(fresh.cardId, fresh.id, "to");
-          bump(reasons, `apply  would-write:${cand.kind}`);
-          if (applied.length < 20) applied.push(`  WOULD STAMP ${fresh.id}  ${fresh.cardId}   raw -> ${g.gradeCompany} ${g.gradeValue}   (fields only, no re-key)`);
-          continue;
-        }
-        try {
-          await retry(() => patchSoldCompFields(pool, fresh.id, fresh.cardId, {
-            gradeCompany: g.gradeCompany,
-            gradeValue: g.gradeValue,
-            gradeStampedAt: new Date().toISOString(),
-            gradeStampedReason: `GREAT REMATCH (2026-09-06): GRADE-FROM-TITLE -- title states "${g.gradeCompany} ${g.gradeValue}" and the row's grade fields were empty; address unchanged`,
-          }));
-          // VERIFY BY READ, ON THE ROW ITSELF. The #1850 read-back contract:
-          // a write is not done because the call returned, it is done because
-          // the value is there when you look.
-          const back = (await retry(() => pool.item(fresh.id, fresh.cardId).read())).resource ?? null;
-          if (!back || String(back.gradeCompany ?? "").toUpperCase() !== g.gradeCompany || Number(back.gradeValue) !== Number(g.gradeValue)) {
-            stats.failed++; perClass[cand.kind].failed++;
-            bump(reasons, "apply  failed:grade-stamp-not-visible-on-read-back");
-            continue;
-          }
-          stats.written++; perClass[cand.kind].written++;
-          ledgerNote(fresh.cardId, fresh.id, "from"); ledgerNote(fresh.cardId, fresh.id, "to");
-          bump(reasons, `apply  wrote:${cand.kind}`);
-          if (applied.length < 20) applied.push(`  STAMPED ${fresh.id}  ${fresh.cardId}   raw -> ${g.gradeCompany} ${g.gradeValue}   (fields only, no re-key)`);
-        } catch (e) {
-          stats.failed++; perClass[cand.kind].failed++;
-          console.log(`  FAILED grade stamp ${fresh.id}: ${String(e?.message ?? e).slice(0, 110)}`);
-        }
-        continue;
-      }
-
-      const target = cand.kind === K.BASE_EVICTION ? der.baseSlug : der.slug;
-      const identity = cand.kind === K.BASE_EVICTION ? der.baseIdentity : der.identity;
-      if (target === fresh.cardId) { stats.skipped++; perClass[cand.kind].skipped++; bump(reasons, "apply  already-at-target"); continue; }
-
-      const keep = stripSystem(fresh);
-      keep.cardId = target;
-      keep.hobbyiqCardId = target;
-      keep.setName = identity.setNameRaw || keep.setName;
-      keep.cardNumber = identity.cardNumber || keep.cardNumber;
-      keep.parallel = identity.parallel;
-      keep.isAuto = identity.isAuto;
-      if (cand.kind === K.BASE_EVICTION) {
-        // A STORED PRINT RUN IS NEVER DELETED (audit finding 2). This used to
-        // be `delete keep.printRun` -- an eviction destroyed a stored field on
-        // its way past, and the audit's sample carried a /1 (Immaculate
-        // Pujols) and Carroll /499 among the rows it would have erased.
-        //
-        // The classifier now VETOES the eviction outright when the row stores
-        // a print run (storedPrintRunNamesALimitedParallel), so reaching this
-        // branch with one set means the classifier and the writer disagree.
-        // Refuse rather than write: a fleet never resolves that by guessing,
-        // and the row is reported instead.
-        if (keep.printRun !== null && keep.printRun !== undefined && keep.printRun !== "") {
-          stats.skipped++; perClass[cand.kind].skipped++;
-          bump(reasons, `apply  refused:eviction-would-delete-stored-printrun:/${keep.printRun}`);
-          continue;
-        }
-      } else if (identity.printRun !== null && identity.printRun !== undefined) {
-        keep.printRun = identity.printRun;
-      }
-      keep.sport = identity.sport;
-      keep.cardYear = identity.cardYear;
-      // A row that changes partition must carry the hash of its NEW cardId or
-      // the store's pre-write dedup can never see it.
-      keep.contentHash = contentHashOf(keep);
-      keep.rekeyedFrom = [{ id: fresh.id, cardId: fresh.cardId, hobbyiqCardId: fresh.hobbyiqCardId ?? null, title: fresh.title ?? null }];
-      keep.rekeyedAt = new Date().toISOString();
-      if (cand.kind === K.BASE_EVICTION) {
-        // The three evidence fields travel WITH the row, quoted. A reason that
-        // only names the subclass is not auditable after the fact -- Drew must
-        // be able to read, from the row alone, exactly what was seen.
-        const e = res.evidence ?? {};
-        keep.rekeyedReason = `GREAT REMATCH (2026-09-02): CONFLICT/BASE-EVICTION -- slug parallel "${e.storedSlugParallel}" unsupported: stored parallel field ${JSON.stringify(e.storedParallelField)}, title "${e.titleQuoted}" names no finish, checklist-backed base destination ${e.baseDestSlug}`;
-        keep.baseEvictionEvidence = e;
-      } else if (cand.kind === K.YEAR_FROM_TITLE_VINTAGE) {
-        // The evidence travels WITH the row, quoted, for the reason the
-        // eviction's does: a reason that only names the subclass is not
-        // auditable after the fact. Drew must be able to read, from the row
-        // alone, which year moved and what the title said.
-        const e = res.vintageYearEvidence ?? {};
-        keep.rekeyedReason = `GREAT REMATCH (2026-09-06): YEAR-FROM-TITLE-VINTAGE -- the slug year ${e.slugYear} is the SALE year; the title "${e.titleQuoted}" states ${e.titleYear}, setKey ${e.setKey} is vintage-capable, no retro marker, destination checklist-backed`;
-        keep.vintageYearEvidence = e;
-      } else if (cand.kind === K.SPORT_FROM_PRODUCT) {
-        const e = res.sportFromProductEvidence ?? {};
-        keep.rekeyedReason = `GREAT REMATCH (2026-09-06): SPORT-FROM-PRODUCT -- a card's sport is the PRODUCT's sport; ${e.pair} on setKey ${e.setKey}, product sport read from its own checklist, destination checklist-backed. Title "${e.titleQuoted}"`;
-        keep.sportFromProductEvidence = e;
-      } else if (cand.kind === K.FLAGSHIP_SWALLOWED_NAMED_PRODUCT) {
-        const e = res.flagshipSwallowedNamedProductEvidence ?? {};
-        keep.rekeyedReason = `GREAT REMATCH (2026-09-13): R26-FLAGSHIP-SWALLOWED-NAMED-PRODUCT -- a specialty release filed under its flagship; ${e.storedSetKey}->${e.derivedSetKey}, title states "${(e.distinguishingWords ?? []).join("+")}", destination checklist-backed. Title "${e.titleQuoted}"`;
-        keep.flagshipSwallowedNamedProductEvidence = e;
-      } else if (cand.kind === K.POKEMON_SET_CODE) {
-        const e = res.pokemonSetCodeEvidence ?? {};
-        keep.rekeyedReason = `GREAT REMATCH (2026-09-13): R27-POKEMON-SET-CODE -- the set code is the key; ${e.pair}, destination checklist-backed${e.isAmbiguousCode ? `, ambiguous code resolved by language` : ""}`;
-        keep.pokemonSetCodeEvidence = e;
-      } else if (cand.kind === K.FINISH_IS_A_PARALLEL) {
-        const e = res.finishIsAParallelEvidence ?? {};
-        keep.rekeyedReason = `GREAT REMATCH (2026-09-13): R28-FINISH-IS-A-PARALLEL -- a finish word minted as a setKey; ${e.pair}, checklist lists it as a parallel of the derived product, destination checklist-backed`;
-        keep.finishIsAParallelEvidence = e;
-      } else {
-        keep.rekeyedReason = `GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled ${res.axes.filled.join(",")}`;
-      }
-
-      const r = await relocateSoldComp(pool, { keep, drop: [{ id: fresh.id, cardId: fresh.cardId }], retry, verifyFields: ["cardId", "hobbyiqCardId", "rekeyedAt"], dryRun: !APPLY });
-      const why = cand.kind === K.BASE_EVICTION ? `BASE-EVICTION (slug said "${res.evidence?.storedSlugParallel}", row and title say nothing)` : `IMPROVE filled ${res.axes.filled.join(",")}`;
-      if (!APPLY) { stats.written++; perClass[cand.kind].written++; ledgerNote(fresh.cardId, fresh.id, "from"); ledgerNote(target, fresh.id, "to"); bump(reasons, `apply  would-write:${cand.kind}`); if (applied.length < 20) applied.push(`  WOULD RE-KEY ${fresh.id}  ${fresh.cardId}  ->  ${target}   ${why}`); continue; }
-      if (!r.ok && r.stage !== "done") { stats.failed++; perClass[cand.kind].failed++; console.log(`  FAILED at ${r.stage} ${fresh.id}: ${String(r.error).slice(0, 110)}`); continue; }
-      if (r.duplicatesLeft.length) { stats.failed++; perClass[cand.kind].failed++; stats.duplicatesLeft += r.duplicatesLeft.length; for (const dd of r.duplicatesLeft) console.log(`  DUPLICATE LEFT ${dd.id}@${dd.cardId}: ${String(dd.error).slice(0, 80)}`); continue; }
-      stats.written++; perClass[cand.kind].written++; stats.alreadyGone += r.alreadyGone.length;
-      // The ledger records BOTH pools a re-key changes: the one the row left
-      // and the one it landed in. Either may hold a canary.
-      ledgerNote(fresh.cardId, fresh.id, "from");
-      ledgerNote(target, fresh.id, "to");
-      bump(reasons, `apply  wrote:${cand.kind}`);
-      if (applied.length < 20) applied.push(`  RE-KEYED ${fresh.id}  ${fresh.cardId}  ->  ${target}   ${why}`);
-    }
-  };
-  await Promise.all(Array.from({ length: Math.min(CONCURRENCY, Math.max(improvable.length, 1)) }, worker));
 
   if (applied.length) { console.log("  examples:"); for (const a of applied) console.log(a); }
   console.log(`\n  ${APPLY ? "re-keyed" : "would re-key"}   ${f(stats.written)}`);
@@ -3112,7 +3261,21 @@ const CENSUS_CURSOR_KIND = "rematch-census-cursor";
 
 /** The one document id a slot's cursor lives at. Slot-scoped so two slots
  *  dispatched at once can never read or clobber each other's progress. */
-function censusCursorId(slot) { return `census-cursor::slot-${slot}`; }
+/**
+ * THE CURSOR ID IS KEYED BY MODE (2026-09-14).
+ *
+ * A census and an apply now BOTH checkpoint per-slot cursors, and they are
+ * answering different questions over the same shard: the census walks every
+ * unit to COUNT, the apply walks the whole slot in one query to WRITE. A
+ * shared id would let one mode resume from the other`s position and silently
+ * skip the rows the other had already passed -- so each mode gets its own
+ * document. MODE=census keeps the ORIGINAL id byte for byte, so every cursor
+ * already in `rematch_control` stays readable by the pass that wrote it and
+ * no in-flight census restarts because of this change.
+ */
+function censusCursorId(slot, mode = MODE) {
+  return mode === "apply-improve" ? `apply-cursor::${mode}::slot-${slot}` : `census-cursor::slot-${slot}`;
+}
 
 /** A signature that MUST match between the pass that wrote a cursor and the
  *  pass that would resume from it. Anything that changes what a unit's rows
@@ -3120,6 +3283,13 @@ function censusCursorId(slot) { return `census-cursor::slot-${slot}`; }
  *  would merge answers to two different questions into one count. */
 function censusCursorSignature() {
   return {
+    // THE MODE IS PART OF THE SIGNATURE, not only of the id (2026-09-14):
+    // belt and braces, so even a hand-written or legacy document read under
+    // the wrong id is REFUSED rather than resumed from. A cursor written
+    // before this field existed has `mode: undefined` and so matches only a
+    // census, which is exactly the mode every pre-existing cursor was
+    // written by.
+    mode: MODE === "apply-improve" ? MODE : undefined,
     measuredAt: SHARD_TABLE.measuredAt,
     scope: APPLY_SCOPE_RAW,
     sports: SPORTS_FILTER.slice().sort(),

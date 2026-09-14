@@ -237,3 +237,82 @@ describe("loadCensusCursor / saveCensusCursor / clearCensusCursor -- the WRITE, 
     expect(ok).toBe(false);
   });
 });
+
+/**
+ * CF-AN-APPLY-WRITES-AS-IT-CLASSIFIES-AND-RESUMES (2026-09-14).
+ *
+ * THE DEFECT. MODE=apply-improve classified its WHOLE shard before writing a
+ * single row, and no slot fits in one 120-minute link: run 34872320344 (slot
+ * 31) reached 120,232 rows in 118.9m and run 34849159531 (slot 0) 117,917 in
+ * 120m, both reconciling `intended 2,717 = written 0 + not reached 2,717`
+ * with an EMPTY write ledger. With no apply cursor either, every relaunch
+ * restarted at row 0, so the lane could never write anything at all.
+ *
+ * THE FIX has three halves and this block pins the one that is unit-testable
+ * in isolation -- the cursor is now KEYED BY MODE, so an apply's checkpoint
+ * and a census's can never be read for one another. (The write-as-you-go
+ * drain and the resume itself close over main()'s locals and are proven end
+ * to end in rematchApplyCursorE2E.test.ts.)
+ */
+describe("the resume cursor is keyed by MODE -- an apply and a census never collide", () => {
+  it("MODE=apply-improve addresses a DIFFERENT document than MODE=census, for the same slot", () => {
+    const census = loadScript({ MODE: "census" });
+    const apply = loadScript({ MODE: "apply-improve" });
+    expect(census.censusCursorId(31)).toBe("census-cursor::slot-31");
+    expect(apply.censusCursorId(31)).toBe("apply-cursor::apply-improve::slot-31");
+    expect(apply.censusCursorId(31)).not.toBe(census.censusCursorId(31));
+  });
+
+  it("the census id is UNCHANGED, so cursors already in rematch_control stay readable", () => {
+    // The 32-slot census of 18.35M rows was mid-flight when this shipped.
+    // Any change to this string restarts every one of those slots at unit 0.
+    const S = loadScript({ MODE: "census" });
+    expect(S.censusCursorId(0)).toBe("census-cursor::slot-0");
+    expect(S.censusCursorId(7)).toBe("census-cursor::slot-7");
+  });
+
+  it("an IMPORTER that sets no MODE still gets the census id -- the safe default", () => {
+    // Every other test in this file calls loadScript() with no MODE. Keying
+    // the default off the empty string would have addressed
+    // `apply-cursor::::slot-N`, a document nothing reads or writes.
+    const S = loadScript();
+    expect(S.censusCursorId(3)).toBe("census-cursor::slot-3");
+  });
+
+  it("the MODE travels in the SIGNATURE too, so a cross-mode read is refused even at the same id", async () => {
+    const applyS = loadScript({ MODE: "apply-improve" });
+    const control = fakeControl();
+    await applyS.saveCensusCursor(control, 0, { unitsDone: [], aggregate: {}, classified: 10 });
+    // The apply's own pass reads its own cursor back: same mode, same id.
+    expect(await applyS.loadCensusCursor(control, 0)).not.toBeNull();
+    // A census pointed at that exact document (as if the ids had collided)
+    // must refuse it rather than resume a walk it did not make.
+    const censusS = loadScript({ MODE: "census" });
+    const applyDoc = control.store.get("apply-cursor::apply-improve::slot-0");
+    expect(applyDoc).toBeDefined();
+    control.store.set("census-cursor::slot-0", { ...applyDoc, id: "census-cursor::slot-0" });
+    expect(await censusS.loadCensusCursor(control, 0)).toBeNull();
+  });
+
+  it("a census cursor written BEFORE the mode field existed still loads for a census (no migration)", async () => {
+    const S = loadScript({ MODE: "census" });
+    const control = fakeControl();
+    await S.saveCensusCursor(control, 0, { unitsDone: ["a"], aggregate: {}, classified: 1 });
+    const doc = control.store.get("census-cursor::slot-0");
+    expect(JSON.parse(JSON.stringify(doc.signature))).not.toHaveProperty("mode");
+    // The load is the behaviour that actually matters: an untouched
+    // pre-existing cursor still resumes its census.
+    expect(await S.loadCensusCursor(control, 0)).not.toBeNull();
+    // ...and a cursor stored with NO mode key at all (a genuinely old
+    // document, not one this build wrote) loads too.
+    const legacy = JSON.parse(JSON.stringify(doc));
+    delete legacy.signature.mode;
+    control.store.set("census-cursor::slot-0", legacy);
+    expect(await S.loadCensusCursor(control, 0)).not.toBeNull();
+  });
+
+  it("an apply signature DOES carry the mode", () => {
+    const S = loadScript({ MODE: "apply-improve" });
+    expect(S.censusCursorSignature().mode).toBe("apply-improve");
+  });
+});
