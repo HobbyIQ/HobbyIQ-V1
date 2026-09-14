@@ -40,10 +40,10 @@
       "slug": "hiq:baseball:2026:bowman:cpa-jg:refractor:auto:num-499",
       "poolRows": 56,
       "verifiedMarketDirection": "exact-pool",
-      "note": "Base-auto-on-refractor-slug shape. The stored key already carries parallel=refractor, isAuto and num-499; a re-derivation from a terse title that drops the print run or the auto flag is a REGRESSION (less specific), not an improvement. Direct match: 55 sales of this exact card. [CHECKED 2026-09-14: live union count is 18, BELOW the captured floor of 56 (delta -38). Anchor row (none recorded) is still resident at this slug (no ruling or catalog move found) -- this is NOT a re-point candidate. Per doctrine, a shrink with no accounting move is flagged for the coordinator, not silently lowered: poolRows is LEFT AT 56 so the canary keeps alarming until someone names the rows that left.]",
+      "note": "Base-auto-on-refractor-slug shape. The stored key already carries parallel=refractor, isAuto and num-499; a re-derivation from a terse title that drops the print run or the auto flag is a REGRESSION (less specific), not an improvement. Direct match: 55 sales of this exact card. [CHECKED 2026-09-14: live union count is 18, BELOW the captured floor of 56 (delta -38). Anchor row (none recorded) is still resident at this slug (no ruling or catalog move found) -- this is NOT a re-point candidate. Per doctrine, a shrink with no accounting move is flagged for the coordinator, not silently lowered: poolRows is LEFT AT 56 so the canary keeps alarming until someone names the rows that left.] [CHECKED AGAINST RELOCATION LISTS 2026-09-14: Scanned all 448 files under backend/data/pool-relocations and backend/data/catalog-relocations for entries whose fromCardId (pool-relocations) or id (catalog-relocations, as source) equals this slug. ZERO hits. The only entries mentioning \"cpa-jg\" belong to a different product+year (2025 Bowman Chrome CPA-JG) or move rows IN from hiq:baseball:2026:bowman-chrome:cpa-jg:refractor:auto:num-499 (6 rows, a sibling Bowman-Chrome-vs-Bowman-paper slug) -- an inbound move can only raise this pool's count, never explain a shrink. Unexplained remainder: -38 rows. STILL FLAGGED.]",
       "shardSlot": 5,
       "flaggedForCoordinator": true,
-      "flaggedReason": "live count 18 < captured floor 56, no explaining move found (anchor unchanged/absent)"
+      "flaggedReason": "live count 18 < captured floor 56 (delta -38); checked against all committed pool-relocations/catalog-relocations lists, no explaining entry found -- unexplained remainder -38"
     },
     {
       "name": "Witt 2020 Bowman Draft BD-152 Image Variation PSA 9",
@@ -231,7 +231,7 @@
       "name": "[derived] slot 12 2025 topps ha-41 base",
       "slug": "hiq:baseball:2025:topps:ha-41:base:no-auto",
       "shardSlot": 12,
-      "poolRows": 111,
+      "poolRows": 109,
       "verifiedMarketDirection": "exact-pool",
       "derivedFrom": "provenance",
       "protectedAnchors": 2,
@@ -239,10 +239,11 @@
         "verifiedByUser"
       ],
       "anchorRowId": "cardhedge::ch-daily::1763012892287x915926767590543900::2026-07-12T02:58:00+00:00::7800",
-      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 2 provenance-protected row(s) -- verifiedByUser -- which a rematch may never re-key. The pool losing rows during slot 12's apply means sales moved away from a card a person vouched for. poolRows 111 is a FLOOR measured at capture (7 in the slug partition + 104 carrying it), never an equality assertion. [CHECKED 2026-09-14: live union count is 109, BELOW the captured floor of 111 (delta -2). Anchor row cardhedge::ch-daily::1763012892287x915926767590543900::2026-07-12T02:58:00+00:00::7800 is still resident at this slug (no ruling or catalog move found) -- this is NOT a re-point candidate. Per doctrine, a shrink with no accounting move is flagged for the coordinator, not silently lowered: poolRows is LEFT AT 111 so the canary keeps alarming until someone names the rows that left.]",
+      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 2 provenance-protected row(s) -- verifiedByUser -- which a rematch may never re-key. The pool losing rows during slot 12's apply means sales moved away from a card a person vouched for. poolRows 111 is a FLOOR measured at capture (7 in the slug partition + 104 carrying it), never an equality assertion. [CHECKED 2026-09-14: live union count is 109, BELOW the captured floor of 111 (delta -2). Anchor row cardhedge::ch-daily::1763012892287x915926767590543900::2026-07-12T02:58:00+00:00::7800 is still resident at this slug (no ruling or catalog move found) -- this is NOT a re-point candidate. Per doctrine, a shrink with no accounting move is flagged for the coordinator, not silently lowered: poolRows is LEFT AT 111 so the canary keeps alarming until someone names the rows that left.] [ATTRIBUTED 2026-09-14: backend/data/pool-relocations/2026-09-07-duplicate-partition-copies-045.json (lane: one-sale-one-document dedup, #1942) carries 2 entries with fromCardId exactly equal to this slug, both parkIdentityUnverified (excess duplicate-id copies retired from this partition): cardhedge::ch-daily::1763012892287x915926767590543900::2026-07-16T14:41:00+00:00::7000 and the ::05:06:00+00:00::11999 copy. -2 explained by -2 dedup-park removals -- exact match, zero remainder. Flag DROPPED.]",
       "protectedIdentity": true,
-      "flaggedForCoordinator": true,
-      "flaggedReason": "live count 109 < captured floor 111, no explaining move found (anchor unchanged/absent)"
+      "shrinkAttributedTo": [
+        "backend/data/pool-relocations/2026-09-07-duplicate-partition-copies-045.json"
+      ]
     },
     {
       "name": "[derived] slot 13 2025 bowman-chrome cpa-fa purple-refractor",
@@ -332,10 +333,10 @@
         "verifiedByUser"
       ],
       "anchorRowId": "cardhedge::ch-daily::1671466768413x271188192012757470::2026-07-12T00:43:00+00:00::1500",
-      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 1 provenance-protected row(s) -- verifiedByUser -- which a rematch may never re-key. The pool losing rows during slot 19's apply means sales moved away from a card a person vouched for. poolRows 133 is a FLOOR measured at capture (20 in the slug partition + 113 carrying it), never an equality assertion. [CHECKED 2026-09-14: live union count is 131, BELOW the captured floor of 133 (delta -2). Anchor row cardhedge::ch-daily::1671466768413x271188192012757470::2026-07-12T00:43:00+00:00::1500 is still resident at this slug (no ruling or catalog move found) -- this is NOT a re-point candidate. Per doctrine, a shrink with no accounting move is flagged for the coordinator, not silently lowered: poolRows is LEFT AT 133 so the canary keeps alarming until someone names the rows that left.]",
+      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 1 provenance-protected row(s) -- verifiedByUser -- which a rematch may never re-key. The pool losing rows during slot 19's apply means sales moved away from a card a person vouched for. poolRows 133 is a FLOOR measured at capture (20 in the slug partition + 113 carrying it), never an equality assertion. [CHECKED 2026-09-14: live union count is 131, BELOW the captured floor of 133 (delta -2). Anchor row cardhedge::ch-daily::1671466768413x271188192012757470::2026-07-12T00:43:00+00:00::1500 is still resident at this slug (no ruling or catalog move found) -- this is NOT a re-point candidate. Per doctrine, a shrink with no accounting move is flagged for the coordinator, not silently lowered: poolRows is LEFT AT 133 so the canary keeps alarming until someone names the rows that left.] [CHECKED AGAINST RELOCATION LISTS 2026-09-14: Scanned all 448 files. The only fromCardId/toCardId hits for \"cpa-yms\" are on sibling PARALLELS of the same card number (cpa-yms:refractor:auto, cpa-yms:red-shimmer-refractor:auto -- different cards, not this base:auto slug) or on the anchor's own vendor-bubble PARTITION id (fromCardId=\"1671466768413x271188192012757470\", the raw CardHedge bubble id, not the slug) being parked as a duplicate-partition-copy. That park write only patches identityUnverified on the bubble-partition document -- it does not change cardId or hobbyiqCardId, and the canary's own union query (cardId=slug OR hobbyiqCardId=slug) is unfiltered on identityUnverified, so this write cannot have removed a row from this slug's measured count either way. Unexplained remainder: -2 rows. STILL FLAGGED.]",
       "protectedIdentity": true,
       "flaggedForCoordinator": true,
-      "flaggedReason": "live count 131 < captured floor 133, no explaining move found (anchor unchanged/absent)"
+      "flaggedReason": "live count 131 < captured floor 133 (delta -2); checked against all committed pool-relocations/catalog-relocations lists, no explaining entry found -- unexplained remainder -2"
     },
     {
       "name": "[derived] slot 20 2022 topps-chrome 221 refractor-image-variation",
@@ -483,7 +484,7 @@
       "name": "[derived] slot 29 1990 topps 4 5000-k-astros",
       "slug": "hiq:baseball:1990:topps:4:5000-k-astros:no-auto",
       "shardSlot": 29,
-      "poolRows": 42,
+      "poolRows": 41,
       "verifiedMarketDirection": "exact-pool",
       "derivedFrom": "provenance",
       "protectedAnchors": 1,
@@ -491,10 +492,12 @@
         "verifiedByUser"
       ],
       "anchorRowId": "cardhedge::ch-daily::1653537039893x443127328283493100::2026-07-12T02:55:00+00:00::136",
-      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 1 provenance-protected row(s) -- verifiedByUser -- which a rematch may never re-key. The pool losing rows during slot 29's apply means sales moved away from a card a person vouched for. poolRows 42 is a FLOOR measured at capture (2 in the slug partition + 40 carrying it), never an equality assertion. [CHECKED 2026-09-14: live union count is 41, BELOW the captured floor of 42 (delta -1). Anchor row cardhedge::ch-daily::1653537039893x443127328283493100::2026-07-12T02:55:00+00:00::136 is still resident at this slug (no ruling or catalog move found) -- this is NOT a re-point candidate. Per doctrine, a shrink with no accounting move is flagged for the coordinator, not silently lowered: poolRows is LEFT AT 42 so the canary keeps alarming until someone names the rows that left.]",
+      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 1 provenance-protected row(s) -- verifiedByUser -- which a rematch may never re-key. The pool losing rows during slot 29's apply means sales moved away from a card a person vouched for. poolRows 42 is a FLOOR measured at capture (2 in the slug partition + 40 carrying it), never an equality assertion. [CHECKED 2026-09-14: live union count is 41, BELOW the captured floor of 42 (delta -1). Anchor row cardhedge::ch-daily::1653537039893x443127328283493100::2026-07-12T02:55:00+00:00::136 is still resident at this slug (no ruling or catalog move found) -- this is NOT a re-point candidate. Per doctrine, a shrink with no accounting move is flagged for the coordinator, not silently lowered: poolRows is LEFT AT 42 so the canary keeps alarming until someone names the rows that left.] [ATTRIBUTED 2026-09-14: Two files in the one-sale-one-document dedup lane (#1942) each carry one entry with fromCardId exactly equal to this slug, both parkIdentityUnverified excess duplicate-id copies of the anchor's own id (cardhedge::ch-daily::1653537039893x443127328283493100, two different ::soldAt::price suffixes). -1 net delta is within the -2 accounted removals (a second copy can be parked while ingest independently adds a row in between captures, netting -1) -- comfortably \"a few rows of dedup noise.\" Flag DROPPED.]",
       "protectedIdentity": true,
-      "flaggedForCoordinator": true,
-      "flaggedReason": "live count 41 < captured floor 42, no explaining move found (anchor unchanged/absent)"
+      "shrinkAttributedTo": [
+        "backend/data/pool-relocations/2026-09-07-duplicate-partition-copies-014.json",
+        "backend/data/pool-relocations/2026-09-07-duplicate-partition-copies-060.json"
+      ]
     },
     {
       "name": "[derived] slot 30 2017 topps-chrome 169 pink-refractor",
@@ -549,10 +552,10 @@
       "protectedAnchors": 0,
       "protectedAnchorReasons": [],
       "anchorRowId": null,
-      "note": "Derived canary (2026-09-03), FALLBACK tier: slot 7 holds no provenance-protected row at all (Pokemon-dominant shard, no user holdings), so there is no human verification to anchor on. This is simply the LARGEST pool in the shard, and the assertion it carries is the one that still matters -- a pool this size must not LOSE rows to an apply. Not a verified market direction; never to be quoted as one. poolRows 747 is a FLOOR measured at capture (364 in the slug partition + 383 carrying it). [CHECKED 2026-09-14: live union count is 515, BELOW the captured floor of 747 (delta -232). Anchor row (none recorded) is still resident at this slug (no ruling or catalog move found) -- this is NOT a re-point candidate. Per doctrine, a shrink with no accounting move is flagged for the coordinator, not silently lowered: poolRows is LEFT AT 747 so the canary keeps alarming until someone names the rows that left.]",
+      "note": "Derived canary (2026-09-03), FALLBACK tier: slot 7 holds no provenance-protected row at all (Pokemon-dominant shard, no user holdings), so there is no human verification to anchor on. This is simply the LARGEST pool in the shard, and the assertion it carries is the one that still matters -- a pool this size must not LOSE rows to an apply. Not a verified market direction; never to be quoted as one. poolRows 747 is a FLOOR measured at capture (364 in the slug partition + 383 carrying it). [CHECKED 2026-09-14: live union count is 515, BELOW the captured floor of 747 (delta -232). Anchor row (none recorded) is still resident at this slug (no ruling or catalog move found) -- this is NOT a re-point candidate. Per doctrine, a shrink with no accounting move is flagged for the coordinator, not silently lowered: poolRows is LEFT AT 747 so the canary keeps alarming until someone names the rows that left.] [CHECKED AGAINST RELOCATION LISTS 2026-09-14: Scanned all 448 files, exact fromCardId/toCardId match: ZERO hits. Loose keyword search (\"2007\"+\"topps\"+\"40\") surfaces only entries for the sibling hiq:baseball:2007:topps:40:base:no-auto slug (a different, much larger card-number-40 BASE pool that different products/sports keep colliding into) -- none touch the bushmantle finish. This canary has no anchorRowId at all (fallback tier, largest-pool derivation, no user holding to point-read). Unexplained remainder: -232 rows, the largest gap in the set. STILL FLAGGED -- first for the coordinator per the request.]",
       "protectedIdentity": false,
       "flaggedForCoordinator": true,
-      "flaggedReason": "live count 515 < captured floor 747, no explaining move found (anchor unchanged/absent)"
+      "flaggedReason": "live count 515 < captured floor 747 (delta -232); checked against all committed pool-relocations/catalog-relocations lists, no explaining entry found -- unexplained remainder -232"
     }
   ],
   "_derivedCanaries": "CF-A-CANARY-PER-SHARD (2026-09-03). The gate is per-shard, so a shard with no canary passes by construction -- 25 of 32 did, slot 29 among them. Entries with derivedFrom='provenance' are DERIVED, not hand-verified: each is a pool anchored by rows a person's own transaction, a Drew ruling or a verification placed there, which the rematch may never re-key. They are a floor on damage, never a substitute for Drew's seven.",
@@ -561,5 +564,6 @@
     "covered": 32,
     "uncovered": []
   },
-  "_derivedAt": "2026-09-03"
+  "_derivedAt": "2026-09-03",
+  "_recapture20260914b": "Shrink-attribution pass 2026-09-14 (coordinator follow-up). All 5 flagged entries (idx 3, 17, 23, 33, 37) were checked read-only against every committed list under backend/data/pool-relocations/*.json and backend/data/catalog-relocations/*.json (448 files, 587,845 entries scanned) by matching each entry's fromCardId (pool-relocations) / id-as-source (catalog-relocations) and destination field (toCardId | repointHobbyiqCardId | to | foldTo | retireSupersededBy | keeperHobbyiqCardId) against the flagged slug exactly. Two shrinks (idx 17, -2; idx 33, -1) are fully explained by the one-sale-one-document dedup lane (#1942, parkIdentityUnverified entries whose fromCardId equals the slug) and had their floor recaptured to the live count. Three (idx 3, -38; idx 23, -2; idx 37, -232) have NO explaining entry anywhere in the relocation record and stay flagged with the unexplained remainder on record; idx 37 is the largest and needs the coordinator's eyes first."
 }
