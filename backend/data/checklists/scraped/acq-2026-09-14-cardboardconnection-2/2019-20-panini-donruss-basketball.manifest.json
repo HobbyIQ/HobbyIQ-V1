@@ -1,0 +1,1097 @@
+{
+  "source": "cardboardconnection-2026-09-14",
+  "sourceUrl": "https://www.cardboardconnection.com/2019-20-donruss-basketball-nba-cards",
+  "xlsxUrl": "https://cconnect.s3.amazonaws.com/wp-content/uploads/2019/12/2019-20-Donruss-Basketball-checklist-Excel-spreadsheet.xlsx",
+  "fetchedAt": "2026-09-14",
+  "sport": "basketball",
+  "year": 2019,
+  "setName": "2019-20 Donruss Basketball",
+  "productKey": "2019-20-panini-donruss-basketball",
+  "setKey": "panini-donruss",
+  "rowCount": 7367,
+  "autoCount": 1053,
+  "printRunCount": 5393,
+  "distinctParallels": 40,
+  "parallelColumnAuthoritative": true,
+  "layout": "panini",
+  "rungRule": "R37 (Drew 2026-09-14): parallel = what the section title adds beyond the SHORTEST matching base anchor; a section matching no anchor is BLOCKED, never guessed.",
+  "sectionsBlocked": 0,
+  "blockedSectionTitles": [],
+  "parallelVocabulary": [
+    "Black",
+    "Black Infinite",
+    "Blue Infinite",
+    "Gold",
+    "Gold Infinite",
+    "Green Flood",
+    "Holo Camo Laser",
+    "Holo Green Laser",
+    "Holo Green and Yellow Laser",
+    "Holo Orange Laser",
+    "Holo Pink Laser",
+    "Holo Purple Laser",
+    "Holo Purple and Green Laser",
+    "Holo Red Laser",
+    "Holo Red and Blue Laser",
+    "Holo Yellow Laser",
+    "Infinite",
+    "Press Proof",
+    "Press Proof Black",
+    "Press Proof Black Laser",
+    "Press Proof Blue Laser",
+    "Press Proof Gold Laser",
+    "Press Proof Purple",
+    "Press Proof Red Laser",
+    "Press Proof Silver",
+    "Prime",
+    "Red Infinite",
+    "Signatures",
+    "Signatures Black Infinite",
+    "Signatures Blue Infinite",
+    "Signatures Gold Infinite",
+    "Signatures Green Flood",
+    "Signatures Green and Yellow Laser",
+    "Signatures Holo Orange Laser",
+    "Signatures Holo Purple Laser",
+    "Signatures Holo Purple and Green Laser",
+    "Signatures Holo Yellow Laser",
+    "Signatures Press Proof Black Laser",
+    "Signatures Press Proof Gold Laser",
+    "Signatures Red and Blue Laser"
+  ],
+  "sectionsReport": [
+    {
+      "section": "Base",
+      "category": "base",
+      "parallel": "",
+      "cards": 200,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base Black Infinite",
+      "category": "base",
+      "parallel": "Black Infinite",
+      "cards": 200,
+      "auto": 0,
+      "printRun": 200
+    },
+    {
+      "section": "Base Blue Infinite",
+      "category": "base",
+      "parallel": "Blue Infinite",
+      "cards": 200,
+      "auto": 0,
+      "printRun": 200
+    },
+    {
+      "section": "Base Gold Infinite",
+      "category": "base",
+      "parallel": "Gold Infinite",
+      "cards": 200,
+      "auto": 0,
+      "printRun": 200
+    },
+    {
+      "section": "Base Green Flood",
+      "category": "base",
+      "parallel": "Green Flood",
+      "cards": 200,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base Holo Green and Yellow Laser",
+      "category": "base",
+      "parallel": "Holo Green and Yellow Laser",
+      "cards": 200,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base Holo Green Laser",
+      "category": "base",
+      "parallel": "Holo Green Laser",
+      "cards": 200,
+      "auto": 0,
+      "printRun": 200
+    },
+    {
+      "section": "Base Holo Orange Laser",
+      "category": "base",
+      "parallel": "Holo Orange Laser",
+      "cards": 200,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base Holo Pink Laser",
+      "category": "base",
+      "parallel": "Holo Pink Laser",
+      "cards": 200,
+      "auto": 0,
+      "printRun": 200
+    },
+    {
+      "section": "Base Holo Purple and Green Laser",
+      "category": "base",
+      "parallel": "Holo Purple and Green Laser",
+      "cards": 200,
+      "auto": 0,
+      "printRun": 200
+    },
+    {
+      "section": "Base Holo Purple Laser",
+      "category": "base",
+      "parallel": "Holo Purple Laser",
+      "cards": 200,
+      "auto": 0,
+      "printRun": 200
+    },
+    {
+      "section": "Base Holo Red and Blue Laser",
+      "category": "base",
+      "parallel": "Holo Red and Blue Laser",
+      "cards": 200,
+      "auto": 0,
+      "printRun": 200
+    },
+    {
+      "section": "Base Holo Yellow Laser",
+      "category": "base",
+      "parallel": "Holo Yellow Laser",
+      "cards": 200,
+      "auto": 0,
+      "printRun": 200
+    },
+    {
+      "section": "Base Press Proof Black Laser",
+      "category": "base",
+      "parallel": "Press Proof Black Laser",
+      "cards": 200,
+      "auto": 0,
+      "printRun": 200
+    },
+    {
+      "section": "Base Press Proof Blue Laser",
+      "category": "base",
+      "parallel": "Press Proof Blue Laser",
+      "cards": 200,
+      "auto": 0,
+      "printRun": 200
+    },
+    {
+      "section": "Base Press Proof Gold Laser",
+      "category": "base",
+      "parallel": "Press Proof Gold Laser",
+      "cards": 200,
+      "auto": 0,
+      "printRun": 200
+    },
+    {
+      "section": "Base Press Proof Purple",
+      "category": "base",
+      "parallel": "Press Proof Purple",
+      "cards": 200,
+      "auto": 0,
+      "printRun": 200
+    },
+    {
+      "section": "Base Press Proof Red Laser",
+      "category": "base",
+      "parallel": "Press Proof Red Laser",
+      "cards": 200,
+      "auto": 0,
+      "printRun": 200
+    },
+    {
+      "section": "Base Press Proof Silver",
+      "category": "base",
+      "parallel": "Press Proof Silver",
+      "cards": 200,
+      "auto": 0,
+      "printRun": 200
+    },
+    {
+      "section": "Base Red Infinite",
+      "category": "base",
+      "parallel": "Red Infinite",
+      "cards": 200,
+      "auto": 0,
+      "printRun": 200
+    },
+    {
+      "section": "Changing Stripes",
+      "category": "changing-stripes",
+      "parallel": "",
+      "cards": 10,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Changing Stripes Green Flood",
+      "category": "changing-stripes",
+      "parallel": "Green Flood",
+      "cards": 10,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Changing Stripes Holo Camo Laser",
+      "category": "changing-stripes",
+      "parallel": "Holo Camo Laser",
+      "cards": 10,
+      "auto": 0,
+      "printRun": 10
+    },
+    {
+      "section": "Changing Stripes Holo Purple Laser",
+      "category": "changing-stripes",
+      "parallel": "Holo Purple Laser",
+      "cards": 10,
+      "auto": 0,
+      "printRun": 10
+    },
+    {
+      "section": "Changing Stripes Holo Red Laser",
+      "category": "changing-stripes",
+      "parallel": "Holo Red Laser",
+      "cards": 10,
+      "auto": 0,
+      "printRun": 10
+    },
+    {
+      "section": "Changing Stripes Holo Yellow Laser",
+      "category": "changing-stripes",
+      "parallel": "Holo Yellow Laser",
+      "cards": 10,
+      "auto": 0,
+      "printRun": 10
+    },
+    {
+      "section": "Complete Players",
+      "category": "complete-players",
+      "parallel": "",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Complete Players Green Flood",
+      "category": "complete-players",
+      "parallel": "Green Flood",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Complete Players Holo Camo Laser",
+      "category": "complete-players",
+      "parallel": "Holo Camo Laser",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 20
+    },
+    {
+      "section": "Complete Players Holo Purple Laser",
+      "category": "complete-players",
+      "parallel": "Holo Purple Laser",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 20
+    },
+    {
+      "section": "Complete Players Holo Red Laser",
+      "category": "complete-players",
+      "parallel": "Holo Red Laser",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 20
+    },
+    {
+      "section": "Complete Players Holo Yellow Laser",
+      "category": "complete-players",
+      "parallel": "Holo Yellow Laser",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 20
+    },
+    {
+      "section": "Craftsmen",
+      "category": "craftsmen",
+      "parallel": "",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Craftsmen Press Proof",
+      "category": "craftsmen",
+      "parallel": "Press Proof",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Craftsmen Press Proof Black",
+      "category": "craftsmen",
+      "parallel": "Press Proof Black",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 15
+    },
+    {
+      "section": "Crunch Time",
+      "category": "crunch-time",
+      "parallel": "",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Crunch Time Press Proof",
+      "category": "crunch-time",
+      "parallel": "Press Proof",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Crunch Time Press Proof Black",
+      "category": "crunch-time",
+      "parallel": "Press Proof Black",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 20
+    },
+    {
+      "section": "Defying Gravity",
+      "category": "defying-gravity",
+      "parallel": "",
+      "cards": 10,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Defying Gravity Press Proof",
+      "category": "defying-gravity",
+      "parallel": "Press Proof",
+      "cards": 10,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Defying Gravity Press Proof Black",
+      "category": "defying-gravity",
+      "parallel": "Press Proof Black",
+      "cards": 10,
+      "auto": 0,
+      "printRun": 10
+    },
+    {
+      "section": "Dominator Signatures",
+      "category": "dominator-signatures",
+      "parallel": "",
+      "cards": 30,
+      "auto": 30,
+      "printRun": 30
+    },
+    {
+      "section": "Dominator Signatures Black",
+      "category": "dominator-signatures",
+      "parallel": "Black",
+      "cards": 30,
+      "auto": 30,
+      "printRun": 30
+    },
+    {
+      "section": "Dominator Signatures Gold",
+      "category": "dominator-signatures",
+      "parallel": "Gold",
+      "cards": 30,
+      "auto": 30,
+      "printRun": 30
+    },
+    {
+      "section": "Fantasy Stars",
+      "category": "fantasy-stars",
+      "parallel": "",
+      "cards": 5,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Fantasy Stars Green Flood",
+      "category": "fantasy-stars",
+      "parallel": "Green Flood",
+      "cards": 5,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Fantasy Stars Holo Camo Laser",
+      "category": "fantasy-stars",
+      "parallel": "Holo Camo Laser",
+      "cards": 5,
+      "auto": 0,
+      "printRun": 5
+    },
+    {
+      "section": "Fantasy Stars Holo Purple Laser",
+      "category": "fantasy-stars",
+      "parallel": "Holo Purple Laser",
+      "cards": 5,
+      "auto": 0,
+      "printRun": 5
+    },
+    {
+      "section": "Fantasy Stars Holo Red Laser",
+      "category": "fantasy-stars",
+      "parallel": "Holo Red Laser",
+      "cards": 5,
+      "auto": 0,
+      "printRun": 5
+    },
+    {
+      "section": "Fantasy Stars Holo Yellow Laser",
+      "category": "fantasy-stars",
+      "parallel": "Holo Yellow Laser",
+      "cards": 5,
+      "auto": 0,
+      "printRun": 5
+    },
+    {
+      "section": "Franchise Features",
+      "category": "franchise-features",
+      "parallel": "",
+      "cards": 30,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Franchise Features Green Flood",
+      "category": "franchise-features",
+      "parallel": "Green Flood",
+      "cards": 30,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Franchise Features Holo Camo Laser",
+      "category": "franchise-features",
+      "parallel": "Holo Camo Laser",
+      "cards": 30,
+      "auto": 0,
+      "printRun": 30
+    },
+    {
+      "section": "Franchise Features Holo Purple Laser",
+      "category": "franchise-features",
+      "parallel": "Holo Purple Laser",
+      "cards": 30,
+      "auto": 0,
+      "printRun": 30
+    },
+    {
+      "section": "Franchise Features Holo Red Laser",
+      "category": "franchise-features",
+      "parallel": "Holo Red Laser",
+      "cards": 30,
+      "auto": 0,
+      "printRun": 30
+    },
+    {
+      "section": "Franchise Features Holo Yellow Laser",
+      "category": "franchise-features",
+      "parallel": "Holo Yellow Laser",
+      "cards": 30,
+      "auto": 0,
+      "printRun": 30
+    },
+    {
+      "section": "Great X-Pectations",
+      "category": "great-x-pectations",
+      "parallel": "",
+      "cards": 25,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Great X-Pectations Green Flood",
+      "category": "great-x-pectations",
+      "parallel": "Green Flood",
+      "cards": 25,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Great X-Pectations Holo Camo Laser",
+      "category": "great-x-pectations",
+      "parallel": "Holo Camo Laser",
+      "cards": 25,
+      "auto": 0,
+      "printRun": 25
+    },
+    {
+      "section": "Great X-Pectations Holo Purple Laser",
+      "category": "great-x-pectations",
+      "parallel": "Holo Purple Laser",
+      "cards": 25,
+      "auto": 0,
+      "printRun": 25
+    },
+    {
+      "section": "Great X-Pectations Holo Red Laser",
+      "category": "great-x-pectations",
+      "parallel": "Holo Red Laser",
+      "cards": 25,
+      "auto": 0,
+      "printRun": 25
+    },
+    {
+      "section": "Great X-Pectations Holo Yellow Laser",
+      "category": "great-x-pectations",
+      "parallel": "Holo Yellow Laser",
+      "cards": 25,
+      "auto": 0,
+      "printRun": 25
+    },
+    {
+      "section": "Hall Dominator Signatures",
+      "category": "hall-dominator-signatures",
+      "parallel": "",
+      "cards": 30,
+      "auto": 30,
+      "printRun": 30
+    },
+    {
+      "section": "Hall Dominator Signatures Black",
+      "category": "hall-dominator-signatures",
+      "parallel": "Black",
+      "cards": 30,
+      "auto": 30,
+      "printRun": 30
+    },
+    {
+      "section": "Hall Dominator Signatures Gold",
+      "category": "hall-dominator-signatures",
+      "parallel": "Gold",
+      "cards": 30,
+      "auto": 30,
+      "printRun": 30
+    },
+    {
+      "section": "Jersey Kings",
+      "category": "jersey-kings",
+      "parallel": "",
+      "cards": 60,
+      "auto": 0,
+      "printRun": 60
+    },
+    {
+      "section": "Jersey Kings Prime",
+      "category": "jersey-kings",
+      "parallel": "Prime",
+      "cards": 40,
+      "auto": 0,
+      "printRun": 40
+    },
+    {
+      "section": "Jersey Series",
+      "category": "jersey-series",
+      "parallel": "",
+      "cards": 100,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Jersey Series Prime",
+      "category": "jersey-series",
+      "parallel": "Prime",
+      "cards": 84,
+      "auto": 0,
+      "printRun": 84
+    },
+    {
+      "section": "League Leaders",
+      "category": "league-leaders",
+      "parallel": "",
+      "cards": 10,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "League Leaders Green Flood",
+      "category": "league-leaders",
+      "parallel": "Green Flood",
+      "cards": 10,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "League Leaders Holo Camo Laser",
+      "category": "league-leaders",
+      "parallel": "Holo Camo Laser",
+      "cards": 10,
+      "auto": 0,
+      "printRun": 10
+    },
+    {
+      "section": "League Leaders Holo Purple Laser",
+      "category": "league-leaders",
+      "parallel": "Holo Purple Laser",
+      "cards": 10,
+      "auto": 0,
+      "printRun": 10
+    },
+    {
+      "section": "League Leaders Holo Red Laser",
+      "category": "league-leaders",
+      "parallel": "Holo Red Laser",
+      "cards": 10,
+      "auto": 0,
+      "printRun": 10
+    },
+    {
+      "section": "League Leaders Holo Yellow Laser",
+      "category": "league-leaders",
+      "parallel": "Holo Yellow Laser",
+      "cards": 10,
+      "auto": 0,
+      "printRun": 10
+    },
+    {
+      "section": "Net Marvels",
+      "category": "net-marvels",
+      "parallel": "",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Net Marvels Press Proof",
+      "category": "net-marvels",
+      "parallel": "Press Proof",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Net Marvels Press Proof Black",
+      "category": "net-marvels",
+      "parallel": "Press Proof Black",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 20
+    },
+    {
+      "section": "Next Day Autographs",
+      "category": "next-day-autographs",
+      "parallel": "",
+      "cards": 42,
+      "auto": 42,
+      "printRun": 0
+    },
+    {
+      "section": "Rated Rookies",
+      "category": "rated-rookies",
+      "parallel": "",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Rated Rookies Black Infinite",
+      "category": "rated-rookies",
+      "parallel": "Black Infinite",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 50
+    },
+    {
+      "section": "Rated Rookies Blue Infinite",
+      "category": "rated-rookies",
+      "parallel": "Blue Infinite",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 50
+    },
+    {
+      "section": "Rated Rookies Gold Infinite",
+      "category": "rated-rookies",
+      "parallel": "Gold Infinite",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 50
+    },
+    {
+      "section": "Rated Rookies Green Flood",
+      "category": "rated-rookies",
+      "parallel": "Green Flood",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Rated Rookies Holo Green and Yellow Laser",
+      "category": "rated-rookies",
+      "parallel": "Holo Green and Yellow Laser",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Rated Rookies Holo Green Laser",
+      "category": "rated-rookies",
+      "parallel": "Holo Green Laser",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 50
+    },
+    {
+      "section": "Rated Rookies Holo Orange Laser",
+      "category": "rated-rookies",
+      "parallel": "Holo Orange Laser",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Rated Rookies Holo Pink Laser",
+      "category": "rated-rookies",
+      "parallel": "Holo Pink Laser",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 50
+    },
+    {
+      "section": "Rated Rookies Holo Purple and Green Laser",
+      "category": "rated-rookies",
+      "parallel": "Holo Purple and Green Laser",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 50
+    },
+    {
+      "section": "Rated Rookies Holo Purple Laser",
+      "category": "rated-rookies",
+      "parallel": "Holo Purple Laser",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 50
+    },
+    {
+      "section": "Rated Rookies Holo Red and Blue Laser",
+      "category": "rated-rookies",
+      "parallel": "Holo Red and Blue Laser",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 50
+    },
+    {
+      "section": "Rated Rookies Holo Yellow Laser",
+      "category": "rated-rookies",
+      "parallel": "Holo Yellow Laser",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 50
+    },
+    {
+      "section": "Rated Rookies Infinite",
+      "category": "rated-rookies",
+      "parallel": "Infinite",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Rated Rookies Press Proof Black Laser",
+      "category": "rated-rookies",
+      "parallel": "Press Proof Black Laser",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 50
+    },
+    {
+      "section": "Rated Rookies Press Proof Blue Laser",
+      "category": "rated-rookies",
+      "parallel": "Press Proof Blue Laser",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 50
+    },
+    {
+      "section": "Rated Rookies Press Proof Gold Laser",
+      "category": "rated-rookies",
+      "parallel": "Press Proof Gold Laser",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 50
+    },
+    {
+      "section": "Rated Rookies Press Proof Purple",
+      "category": "rated-rookies",
+      "parallel": "Press Proof Purple",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 50
+    },
+    {
+      "section": "Rated Rookies Press Proof Red Laser",
+      "category": "rated-rookies",
+      "parallel": "Press Proof Red Laser",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 50
+    },
+    {
+      "section": "Rated Rookies Press Proof Silver",
+      "category": "rated-rookies",
+      "parallel": "Press Proof Silver",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 50
+    },
+    {
+      "section": "Rated Rookies Red Infinite",
+      "category": "rated-rookies",
+      "parallel": "Red Infinite",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 50
+    },
+    {
+      "section": "Rated Rookies Signatures",
+      "category": "rated-rookies",
+      "parallel": "Signatures",
+      "cards": 47,
+      "auto": 47,
+      "printRun": 0
+    },
+    {
+      "section": "Rated Rookies Signatures Black Infinite",
+      "category": "rated-rookies",
+      "parallel": "Signatures Black Infinite",
+      "cards": 47,
+      "auto": 47,
+      "printRun": 47
+    },
+    {
+      "section": "Rated Rookies Signatures Blue Infinite",
+      "category": "rated-rookies",
+      "parallel": "Signatures Blue Infinite",
+      "cards": 47,
+      "auto": 47,
+      "printRun": 47
+    },
+    {
+      "section": "Rated Rookies Signatures Gold Infinite",
+      "category": "rated-rookies",
+      "parallel": "Signatures Gold Infinite",
+      "cards": 47,
+      "auto": 47,
+      "printRun": 47
+    },
+    {
+      "section": "Rated Rookies Signatures Green and Yellow Laser",
+      "category": "rated-rookies",
+      "parallel": "Signatures Green and Yellow Laser",
+      "cards": 47,
+      "auto": 47,
+      "printRun": 0
+    },
+    {
+      "section": "Rated Rookies Signatures Green Flood",
+      "category": "rated-rookies",
+      "parallel": "Signatures Green Flood",
+      "cards": 47,
+      "auto": 47,
+      "printRun": 0
+    },
+    {
+      "section": "Rated Rookies Signatures Holo Orange Laser",
+      "category": "rated-rookies",
+      "parallel": "Signatures Holo Orange Laser",
+      "cards": 47,
+      "auto": 47,
+      "printRun": 0
+    },
+    {
+      "section": "Rated Rookies Signatures Holo Purple and Green Laser",
+      "category": "rated-rookies",
+      "parallel": "Signatures Holo Purple and Green Laser",
+      "cards": 47,
+      "auto": 47,
+      "printRun": 0
+    },
+    {
+      "section": "Rated Rookies Signatures Holo Purple Laser",
+      "category": "rated-rookies",
+      "parallel": "Signatures Holo Purple Laser",
+      "cards": 47,
+      "auto": 47,
+      "printRun": 47
+    },
+    {
+      "section": "Rated Rookies Signatures Holo Yellow Laser",
+      "category": "rated-rookies",
+      "parallel": "Signatures Holo Yellow Laser",
+      "cards": 47,
+      "auto": 47,
+      "printRun": 0
+    },
+    {
+      "section": "Rated Rookies Signatures Press Proof Black Laser",
+      "category": "rated-rookies",
+      "parallel": "Signatures Press Proof Black Laser",
+      "cards": 47,
+      "auto": 47,
+      "printRun": 47
+    },
+    {
+      "section": "Rated Rookies Signatures Press Proof Gold Laser",
+      "category": "rated-rookies",
+      "parallel": "Signatures Press Proof Gold Laser",
+      "cards": 47,
+      "auto": 47,
+      "printRun": 47
+    },
+    {
+      "section": "Rated Rookies Signatures Red and Blue Laser",
+      "category": "rated-rookies",
+      "parallel": "Signatures Red and Blue Laser",
+      "cards": 47,
+      "auto": 47,
+      "printRun": 47
+    },
+    {
+      "section": "Retro Series",
+      "category": "retro-series",
+      "parallel": "",
+      "cards": 30,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Retro Series Press Proof",
+      "category": "retro-series",
+      "parallel": "Press Proof",
+      "cards": 30,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Retro Series Press Proof Black",
+      "category": "retro-series",
+      "parallel": "Press Proof Black",
+      "cards": 30,
+      "auto": 0,
+      "printRun": 30
+    },
+    {
+      "section": "Rookie Dominator Signatures",
+      "category": "rookie-dominator-signatures",
+      "parallel": "",
+      "cards": 40,
+      "auto": 40,
+      "printRun": 40
+    },
+    {
+      "section": "Rookie Dominator Signatures Black",
+      "category": "rookie-dominator-signatures",
+      "parallel": "Black",
+      "cards": 40,
+      "auto": 40,
+      "printRun": 40
+    },
+    {
+      "section": "Rookie Dominator Signatures Gold",
+      "category": "rookie-dominator-signatures",
+      "parallel": "Gold",
+      "cards": 40,
+      "auto": 40,
+      "printRun": 40
+    },
+    {
+      "section": "Rookie Jersey Kings",
+      "category": "rookie-jersey-kings",
+      "parallel": "",
+      "cards": 40,
+      "auto": 0,
+      "printRun": 40
+    },
+    {
+      "section": "Rookie Jersey Kings Prime",
+      "category": "rookie-jersey-kings",
+      "parallel": "Prime",
+      "cards": 40,
+      "auto": 0,
+      "printRun": 40
+    },
+    {
+      "section": "Signature Series",
+      "category": "signature-series",
+      "parallel": "",
+      "cards": 100,
+      "auto": 100,
+      "printRun": 0
+    },
+    {
+      "section": "The Rookies",
+      "category": "the-rookies",
+      "parallel": "",
+      "cards": 5,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "The Rookies Press Proof",
+      "category": "the-rookies",
+      "parallel": "Press Proof",
+      "cards": 5,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "The Rookies Press Proof Black",
+      "category": "the-rookies",
+      "parallel": "Press Proof Black",
+      "cards": 5,
+      "auto": 0,
+      "printRun": 5
+    }
+  ],
+  "collisionCheck": {
+    "checkedAt": "2026-09-14",
+    "method": "every row's would-be address (cardNumber, parallel, isAuto, printRun) on the product key, compared across categories — the same test census-catalog-id-collisions.cjs applies, run on the staged file",
+    "clashingAddresses": 462,
+    "verdict": "BLOCKED"
+  },
+  "ingestBlocked": {
+    "clashingAddresses": 462,
+    "unregisteredSubsetKeys": [
+      "changing-stripes",
+      "complete-players",
+      "craftsmen",
+      "crunch-time",
+      "defying-gravity",
+      "dominator-signatures",
+      "fantasy-stars",
+      "franchise-features",
+      "great-x-pectations",
+      "hall-dominator-signatures",
+      "jersey-kings",
+      "jersey-series",
+      "league-leaders",
+      "net-marvels",
+      "next-day-autographs",
+      "retro-series",
+      "rookie-dominator-signatures",
+      "rookie-jersey-kings",
+      "signature-series",
+      "the-rookies"
+    ],
+    "blockedReason": "SAME-NUMBERED INSERT SETS. This product's named insert sets each restart their numbering at 1 with their OWN players, so 462 addresses on the product key are claimed by two or more different cards (e.g. base #1 and several inserts' #1). Per lib/insert-set-key.cjs the unit of refusal is the FILE: until each subset key below is registered in productSetKeys.ts AND normalizeSetKey has an anchored rule for it, ingesting this file would let the last writer decide which player each address holds. Nothing here guesses a key — the list is exactly the categories measured to clash.",
+    "awaitingRuling": true
+  }
+}
