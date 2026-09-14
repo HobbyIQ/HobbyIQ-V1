@@ -83,7 +83,7 @@ const TABLE = require_(path.join(backend, "data", "rematch-census-shares.json"))
  *  commit sits on top of it and touches no DERIVATION_INPUT, so v2 at this
  *  commit equals v2 now. (`measuredUnder.commit` names something else: the
  *  MAIN tree the verification census artifacts were measured under, b5ab5f74.) */
-const REFERENCE_COMMIT = "02a5e55738a462b34f5bdd805e3884fd33b3b958";
+const REFERENCE_COMMIT = "42eb39da49afceba7a8421fc8545189d77b76eef";
 
 /** Read one file's content AT a commit via `git show <sha>:<path>` -- READ
  *  ONLY, no worktree, no checkout, nothing mutated. `relFromRepoRoot` is the
