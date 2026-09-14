@@ -41,7 +41,6 @@
 //   authority                  authorityRank (catalogAuthority.service)
 
 import type { Container, PartitionKey, PatchOperation, SqlQuerySpec } from "@azure/cosmos";
-import { PartitionKeyBuilder } from "@azure/cosmos";
 import { deriveCatalogEntry, type CardCatalogEntry } from "../portfolioiq/cardCatalog.service.js";
 import {
   deriveBrand,
@@ -1158,16 +1157,56 @@ const UNPATCHABLE = new Set(["id", "cardId", "hobbyiqCardId"]);
  * throwing, so a caller with no reason to suspect its write never happened
  * counts it as a success.
  *
- * `NONE_PK` is the SDK's public sentinel for exactly this partition value —
- * already the established pattern for this row shape elsewhere in the repo
- * (`fastPatchIdIsSlug.cjs`, `nukeSalesDerivedCatalog.cjs`: "docs written
- * without cardId land in this partition"). A row that DOES carry a `cardId`
- * is completely unaffected: `pkFor` returns exactly what the old inline
- * expression did for that case.
+ * ── THE SENTINEL IS RESOLVED LAZILY, AND NEVER VIA PartitionKeyBuilder
+ * (2026-09-14, second pass) ──────────────────────────────────────────────
+ *
+ * The first version of this fix did `const NONE_PK: PartitionKey = new
+ * PartitionKeyBuilder().addNoneValue().build()` AT MODULE LOAD — the SDK's
+ * documented builder for exactly this sentinel, and the pattern this repo's
+ * own `fastPatchIdIsSlug.cjs` / `nukeSalesDerivedCatalog.cjs` already use.
+ * That construction worked locally (Node 25) and CRASHED under Node 20 —
+ * which is CI, the backfill runner, AND this App Service — with `new
+ * PartitionKeyBuilder()` throwing "is not a constructor" at require/import
+ * time. `catalogRowOps.service.ts` is imported by other services at
+ * startup, so this was not a lane-scoped crash: it would have taken down
+ * the App Service boot itself.
+ *
+ * `pkFor` now resolves the sentinel LAZILY (memoized on first real call, not
+ * at module evaluation) and NEVER via `PartitionKeyBuilder` at all.
+ * `@azure/cosmos` also exports `NonePartitionKeyLiteral` from its internal
+ * `PartitionKeyInternal` module (the SDK's own batch/typeChecks code
+ * compares against it), but it is NOT re-exported from the package root in
+ * the version this repo pins (verified directly:
+ * `require("@azure/cosmos").NonePartitionKeyLiteral` is `undefined` here) —
+ * so `resolveNonePk` checks for it defensively (in case a future SDK version
+ * starts exporting it) and otherwise falls back to the plain object literal
+ * `{}`, which IS the documented shape (`NonePartitionKeyType = { [K in any]:
+ * never }` — any object carrying none of the partition-key-typed keys) and
+ * was verified directly against prod: `container.item(id, {}).read()` finds
+ * a row Cosmos stored at its own None partition key, exactly like the
+ * (now-removed) `PartitionKeyBuilder` result did.
+ *
+ * A row that DOES carry a `cardId` is completely unaffected either way:
+ * `pkFor` returns exactly what the old inline expression did for that case.
  */
-const NONE_PK: PartitionKey = new PartitionKeyBuilder().addNoneValue().build();
+let cachedNonePk: PartitionKey | undefined;
+function resolveNonePk(): PartitionKey {
+  if (cachedNonePk !== undefined) return cachedNonePk;
+  let literal: unknown;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires -- deliberately
+    // dynamic: importing this by name would bind it at module load the same
+    // way the removed `PartitionKeyBuilder` import did, and a name this SDK
+    // version does not export would then need a static fallback anyway.
+    ({ NonePartitionKeyLiteral: literal } = require("@azure/cosmos") as { NonePartitionKeyLiteral?: unknown });
+  } catch {
+    literal = undefined;
+  }
+  cachedNonePk = (literal && typeof literal === "object" ? literal : {}) as PartitionKey;
+  return cachedNonePk;
+}
 function pkFor(id: string, cardId: string | null | undefined): PartitionKey {
-  return cardId ? String(cardId) : NONE_PK;
+  return cardId ? String(cardId) : resolveNonePk();
 }
 
 export async function patchCatalogRowFields(

@@ -23,10 +23,29 @@
 // A fake that only ever keyed by a string pk could not expose this defect at
 // all -- which is exactly why the pre-existing catalogRowOps.test.ts FakeContainer,
 // built around `keyOf(id, pk?: string)`, never caught it.
+//
+// NONE OF THIS FILE USES PartitionKeyBuilder (2026-09-14, second pass). The
+// first version did, at module scope (`const NONE_PK = new
+// PartitionKeyBuilder().addNoneValue().build()`), which is exactly the call
+// that throws "is not a constructor" under Node 20 -- CI, the runner, and
+// this App Service, none of which are the Node 25 this was first written
+// against. `pkFor` (the function under test) no longer touches
+// PartitionKeyBuilder at all; it falls back to the plain object literal `{}`
+// when @azure/cosmos does not export `NonePartitionKeyLiteral` from its
+// package root, which is the pinned SDK version's actual shape (verified:
+// `require("@azure/cosmos").NonePartitionKeyLiteral` is `undefined`). `{}` IS
+// the documented sentinel shape and was confirmed directly against prod, so
+// this file uses it as the fixture's None-pk value too, with no SDK
+// construction anywhere in the test.
 import { describe, it, expect } from "vitest";
+import * as fs from "node:fs";
+import * as path from "node:path";
+import { createRequire } from "node:module";
 import type { Container } from "@azure/cosmos";
-import { PartitionKeyBuilder } from "@azure/cosmos";
 import { patchCatalogRowFields } from "../src/services/catalog/catalogRowOps.service.js";
+
+const require_ = createRequire(__filename);
+const SRC_PATH = path.join(__dirname, "..", "src", "services", "catalog", "catalogRowOps.service.ts");
 
 type Doc = Record<string, unknown>;
 
@@ -34,7 +53,9 @@ function notFound(): Error & { code: number } {
   return Object.assign(new Error("Entity with the specified id does not exist in the system"), { code: 404 });
 }
 
-const NONE_PK = new PartitionKeyBuilder().addNoneValue().build();
+/** The documented None-partition-key literal -- an object with none of the
+ *  partition-key-typed keys. Not built via PartitionKeyBuilder (see header). */
+const NONE_PK = {};
 
 /**
  * Stores each doc under its OWN partition key, exactly as Cosmos would: a doc
@@ -135,10 +156,10 @@ describe("patchCatalogRowFields — a row with no cardId lives at the None parti
     expect(fake.get("user-verified:afd2283fe6670d0fbfe2")?.retiredReason).toBe("superseded-by-checklist");
 
     // Both the read and the patch used the SDK's None sentinel, not the id.
-    // Compared by serialized value: `pkFor` inside the src function builds
-    // its OWN PartitionKeyBuilder instance, distinct by reference from this
-    // test file's `NONE_PK`, exactly as two independent SDK call sites would
-    // (see `samePk`'s comment above).
+    // Compared by serialized value: `pkFor` inside the src function resolves
+    // its own `{}` instance (memoized, but still a distinct object by
+    // reference from this test file's `NONE_PK`), exactly as two independent
+    // call sites would (see `samePk`'s comment above).
     const looksLikeNonePk = (pk: unknown) => JSON.stringify(pk) === JSON.stringify(NONE_PK);
     expect(fake.reads.some((r) => looksLikeNonePk(r.pk))).toBe(true);
     expect(fake.patches.some((p) => looksLikeNonePk(p.pk))).toBe(true);
@@ -200,5 +221,115 @@ describe("patchCatalogRowFields — a row with no cardId lives at the None parti
     await expect(
       patchCatalogRowFields(fake as unknown as Container, "user-verified:x", undefined, { cardId: "nope" }, { retry: noRetry }),
     ).rejects.toThrow(/address the row/);
+  });
+});
+
+describe("resolveNonePk — Node-20-safe sentinel resolution (2026-09-14, second pass)", () => {
+  // CI, the backfill runner, and this App Service all run Node 20. The first
+  // version of this fix imported `PartitionKeyBuilder` from "@azure/cosmos"
+  // and built the sentinel with `new PartitionKeyBuilder().addNoneValue()
+  // .build()` AT MODULE LOAD. `new PartitionKeyBuilder()` throws "is not a
+  // constructor" under Node 20 -- and this module is imported by other
+  // services at startup, so the crash would not have stayed lane-scoped the
+  // way the scripts-only companion fix's would: it would have taken down the
+  // App Service boot itself. Node 25 (this machine) does not reproduce the
+  // crash, which is exactly how it shipped unnoticed the first time.
+
+  it("catalogRowOps.service.ts never uses PartitionKeyBuilder anywhere in executable code", () => {
+    // A static check on the source, with comments stripped so this file's OWN
+    // doc comment -- which necessarily names PartitionKeyBuilder while
+    // explaining why it is avoided -- cannot produce a false failure.
+    const raw = fs.readFileSync(SRC_PATH, "utf8").replace(/\r\n/g, "\n");
+    const codeOnly = raw
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .split("\n").filter((l) => !/^\s*\/\//.test(l)).join("\n");
+    expect(codeOnly, "PartitionKeyBuilder must not be imported or constructed anywhere in this file").not.toMatch(
+      /PartitionKeyBuilder/,
+    );
+  });
+
+  it("the sentinel is resolved lazily -- no construction reachable at module load, only inside a function body", () => {
+    const raw = fs.readFileSync(SRC_PATH, "utf8").replace(/\r\n/g, "\n");
+    const codeOnly = raw
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .split("\n").filter((l) => !/^\s*\/\//.test(l)).join("\n");
+    const beforeFirstFunction = codeOnly.slice(0, codeOnly.indexOf("function resolveNonePk"));
+    // Nothing before the function declaration (in executable code -- comments
+    // stripped, since this file's own doc comment narrates the old
+    // `addNoneValue().build()` call it replaced) may already invoke it. The
+    // whole point of "lazy" is that importing this module can never itself
+    // reach a constructor call.
+    expect(beforeFirstFunction).not.toMatch(/addNoneValue|\.build\(\)/);
+  });
+
+  it("resolves without throwing when @azure/cosmos exports no NonePartitionKeyLiteral (the pinned SDK version's actual shape)", () => {
+    const cosmos = require_("@azure/cosmos") as Record<string, unknown>;
+    expect(cosmos.NonePartitionKeyLiteral).toBeUndefined();
+    // patchCatalogRowFields itself is the public surface for this behaviour:
+    // a None-pk row must still resolve and patch successfully when the SDK
+    // exports no NonePartitionKeyLiteral, which is exactly the environment
+    // this test runs in.
+    const fake = new PartitionAwareFakeContainer();
+    fake.seed({ id: "resolve-check", source: "user-verified" });
+    return expect(
+      patchCatalogRowFields(
+        fake as unknown as Container,
+        "resolve-check",
+        undefined,
+        { retiredReason: "superseded-by-checklist" },
+        { retry: noRetry },
+      ),
+    ).resolves.toEqual({ action: "patch", id: "resolve-check", fieldsChanged: ["retiredReason"] });
+  });
+
+  it("resolves without throwing when PartitionKeyBuilder itself is undefined on the @azure/cosmos export (mocked)", () => {
+    // The direct simulation of the Node 20 failure mode: override Node's
+    // module cache so "@azure/cosmos" resolves to a fake export with
+    // PartitionKeyBuilder undefined, then require a FRESH copy of the
+    // COMPILED module against it -- proving the resolution path does not
+    // depend on PartitionKeyBuilder at all, under any module shape. Uses the
+    // compiled dist build (this test suite already builds it, per
+    // ensureDistBuilt) because the source .ts is loaded through ts-node/vite
+    // transforms this override cannot intercept the same way `require` can.
+    const distPath = path.join(__dirname, "..", "dist", "services", "catalog", "catalogRowOps.service.js");
+    if (!fs.existsSync(distPath)) {
+      // ensureDistBuilt should have produced this; if it somehow has not,
+      // this pin should fail loudly rather than silently pass on nothing.
+      throw new Error(`expected a built dist at ${distPath} -- did the build step run?`);
+    }
+    const Module = require_("node:module") as { _load: (...args: unknown[]) => unknown };
+    const originalLoad = Module._load;
+    const cosmosPath = require_.resolve("@azure/cosmos");
+    (Module as unknown as { _load: (...args: unknown[]) => unknown })._load = function (
+      request: string,
+      ...rest: unknown[]
+    ) {
+      let resolved: string | null = null;
+      try { resolved = require_.resolve(request); } catch { /* not resolvable from here; fall through */ }
+      if (request === "@azure/cosmos" || resolved === cosmosPath) {
+        return { PartitionKeyBuilder: undefined, NonePartitionKeyLiteral: undefined };
+      }
+      return originalLoad.call(Module, request, ...rest);
+    };
+    try {
+      delete require_.cache[require_.resolve(distPath)];
+      const fresh = require_(distPath) as {
+        patchCatalogRowFields: typeof patchCatalogRowFields;
+      };
+      const fake = new PartitionAwareFakeContainer();
+      fake.seed({ id: "mocked-check", source: "user-verified" });
+      return expect(
+        fresh.patchCatalogRowFields(
+          fake as unknown as Container,
+          "mocked-check",
+          undefined,
+          { retiredReason: "superseded-by-checklist" },
+          { retry: noRetry },
+        ),
+      ).resolves.toEqual({ action: "patch", id: "mocked-check", fieldsChanged: ["retiredReason"] });
+    } finally {
+      Module._load = originalLoad;
+      delete require_.cache[require_.resolve(distPath)];
+    }
   });
 });
