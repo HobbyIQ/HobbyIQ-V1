@@ -1322,14 +1322,60 @@ describe("the retire lane verifies by reading its own write ledger", () => {
     // get nothing, and report a good write as MISSING THE MARKER -- and since
     // a mismatch now ends the lane non-zero, that would turn a healthy run
     // red. Read exactly where the write went.
-    expect(codeOnly).toMatch(/const pkOf = \(row\) =>[\s\S]{0,160}row\.cardId \? String\(row\.cardId\) : String\(row && row\.id\)/);
-    const svc = read("backend", "src", "services", "catalog", "catalogRowOps.service.ts");
+    //
+    // AS OF 2026-09-14 (CF-THE-SCAN-AND-THE-WRITE-MUST-AGREE-ON-WHERE-A-ROW-
+    // LIVES): `id` was itself the wrong fallback for a row with no `cardId`
+    // at all -- Cosmos stores that document at its own "None" partition key,
+    // not at a partition keyed by `id` -- so the pk decision moved to
+    // lib/catalog-none-pk.cjs, unit-tested directly against a mocked
+    // container in retireSelfDerivedAbsentAtWrite.test.ts. What THIS pin
+    // must still guarantee is the property the old inline-regex assertion
+    // existed for: the ledger's pk and the write's pk cannot drift apart,
+    // because they come from the exact same function, not two copies of a
+    // rule that could disagree. Asserting that on an EXTRACTED helper means
+    // asserting the import, that no second definition has crept back into
+    // the lane, and the function's own behaviour -- not the old literal text.
     expect(
-      svc,
-      "the rule being mirrored must still be the rule patchCatalogRowFields applies",
-    ).toMatch(/const pk = cardId \? String\(cardId\) : id;/);
+      codeOnly,
+      "the lane must import its pk decision from the extracted lib, not inline a fallback again",
+    ).toMatch(/require\(path\.join\(__dirname, "lib", "catalog-none-pk\.cjs"\)\)/);
+    // No second `pkOf`/`cardId ?? id`-shaped definition may exist in the lane
+    // -- that is exactly how the ledger and the write pk would drift apart
+    // again, silently, the same way the original defect did.
+    expect(
+      (codeOnly.match(/\bpkOf\s*=/g) ?? []).length,
+      "pkOf must be imported once, never redefined inline in the lane",
+    ).toBe(0);
+    expect(codeOnly).not.toMatch(/cardId \? (?:String\(cardId\)|cardId) : id\b/);
+    expect(codeOnly).not.toMatch(/row\.cardId \? String\(row\.cardId\) : String\(row && row\.id\)/);
     // And no write site may go back to handing the raw field through.
     expect(codeOnly).not.toMatch(/pk: \w+\.cardId/);
+
+    // THE BEHAVIOURAL ASSERTION: pkOf itself, exercised directly (no Cosmos
+    // client, no mock container needed -- it is a pure function of the row).
+    // A row with no cardId must resolve to the SDK's real None-partition-key
+    // sentinel, not to its own id -- that IS the defect this investigation
+    // found: every sampled `user-verified:*` row carries no cardId, and a
+    // point-read at (id, id) 404s on it every single time.
+    const { pkOf } = require(path.join(BACKEND, "scripts", "lib", "catalog-none-pk.cjs"));
+    const { PartitionKeyBuilder } = require(path.join(BACKEND, "node_modules", "@azure", "cosmos"));
+    const nonePk = new PartitionKeyBuilder().addNoneValue().build();
+    const noneCardIdRow = { id: "user-verified:afd2283fe6670d0fbfe2" };
+    expect(JSON.stringify(pkOf(noneCardIdRow))).toBe(JSON.stringify(nonePk));
+    expect(pkOf(noneCardIdRow)).not.toBe(noneCardIdRow.id);
+    // A row that DOES carry a cardId is unaffected: the ledger still reads
+    // exactly where patchCatalogRowFields writes.
+    expect(pkOf({ id: "x", cardId: "hiq:baseball:1999:topps-finest:238:base:no-auto" })).toBe(
+      "hiq:baseball:1999:topps-finest:238:base:no-auto",
+    );
+
+    // THE MUTATION. Deleting the require (as a regression would, reaching
+    // for a quick inline fallback instead) must turn this pin red.
+    const withoutImport = codeOnly.replace(
+      /const \{ pkOf, isNonePkRow, patchNonePkRow \} = require\(path\.join\(__dirname, "lib", "catalog-none-pk\.cjs"\)\);\n?/,
+      "",
+    );
+    expect(withoutImport).not.toMatch(/require\(path\.join\(__dirname, "lib", "catalog-none-pk\.cjs"\)\)/);
   });
 
   it("the verify point-reads those ids instead of scanning the sport", () => {
