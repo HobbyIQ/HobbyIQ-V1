@@ -204,6 +204,33 @@ const PRODUCT_WORDS = (() => {
 })();
 
 /**
+ * THE WORDS THAT QUALIFY ANOTHER WORD IN THE PRODUCT TABLE -- i.e. that appear
+ * somewhere as a NON-FINAL segment of a key. Read from the same table as
+ * `PRODUCT_WORDS`, so the two cannot drift.
+ *
+ * This is the evidence that a word names a product LINE rather than a finish.
+ * `sapphire` qualifies in `bowman-chrome-sapphire-1st-edition`, `chrome` in
+ * `topps-chrome-black`, `prizm` in `panini-prizm-draft-picks`. A word that only
+ * ever ENDS a key qualifies nothing and is that key's own finish spelled into
+ * its name -- `refractor` is final-only across all 366 keys, reaching the table
+ * solely through `topps-cal-ripken-jr-refractor`.
+ *
+ * Used by `setAgrees` to decide which product words may be excused when the
+ * holding's own parallel field explains them. See the ruling there.
+ */
+const PRODUCT_QUALIFIERS = (() => {
+  try {
+    const { productSetKeys } = require(path.join(backend, "dist/services/catalog/productSetKeys.js"));
+    const w = new Set();
+    for (const k of productSetKeys()) {
+      const parts = String(k).split("-").filter(Boolean);
+      for (let i = 0; i < parts.length - 1; i++) w.add(parts[i]);
+    }
+    return w;
+  } catch { return new Set(); }
+})();
+
+/**
  * CF-A-POSSESSIVE-IS-NOT-A-TOKEN (2026-08-30, D35). slug() turns every
  * non-alphanumeric run into a separator, so "1996 Bowman's Best" tokenises to
  * {1996, bowman, s, best} -- and the stray "s" appears in no setKey or
@@ -229,7 +256,51 @@ function setAgrees(holdingSetText, setKey, setName, holding) {
     // A word that NAMES A PRODUCT is never excused, however it reached the
     // holding's set text. This is the guard-scope line: the relaxation below
     // decides which words count as set text, never whether the set agrees.
-    if (PRODUCT_WORDS.has(w)) return false;
+    //
+    // EXCEPT WHERE THE CANDIDATE'S OWN KEY ALREADY ACCOUNTS FOR IT AS A FINISH
+    // (2026-09-14). `PRODUCT_WORDS` is a union over every token of every key,
+    // so ONE key that spells a finish into its name takes that finish out of
+    // circulation for the whole corpus. R30/#2127 registered
+    // `topps-cal-ripken-jr-refractor` -- a legitimate key for a real product --
+    // and "refractor" thereby stopped being excusable by the holding's own
+    // parallel field, which is the entire relaxation this block provides:
+    //
+    //   setAgrees("Bowmans Best Preview Atomic Refractor",
+    //             "bowmans-best-preview", …, { parallel: "Atomic Refractor" })
+    //     true -> false                                              (RC3b)
+    //
+    // The holding's parallel says "Atomic Refractor" in as many words, so the
+    // word is accounted for and the sets agree; refusing it sends a correctly
+    // identified holding to no-match on a word its own row explains.
+    //
+    // THE EXCEPTION IS NARROW ON PURPOSE, and is three conditions at once:
+    //   1. the word is in this file's OWN finish vocabulary (`FAMILIES`, the
+    //      same list `resolveRung` resolves rungs against -- not a new list),
+    //   2. the holding's PARALLEL field states it, so it is explained, and
+    //   3. the word NEVER QUALIFIES another word in the product table --
+    //      `PRODUCT_QUALIFIERS` below.
+    //
+    // CONDITION 3 IS THE ONE THAT KEEPS THE NEGATIVE PINS EXACT, and it is
+    // read from the table rather than judged. A word that names a product LINE
+    // appears NON-FINALLY in some key, because other words qualify it:
+    // `sapphire` in `bowman-chrome-sapphire-1st-edition`, `chrome` in
+    // `topps-chrome-black`, `prizm` in `panini-prizm-draft-picks`. A word that
+    // only ever ENDS a key is that key's own finish and qualifies nothing --
+    // `refractor` is final-only across all 366 keys.
+    //
+    // So "a parallel field may not be used to smuggle a product word through"
+    // holds exactly as before: `setAgrees("2024 Bowman Draft Sapphire",
+    // "bowman-draft", …, { parallel: "Sapphire Draft" })` still returns false,
+    // because `sapphire` is a qualifier and the exception refuses to consider
+    // it. Only `refractor` and the other final-only finishes are let through,
+    // and only when the holding's own parallel field states them.
+    if (PRODUCT_WORDS.has(w)) {
+      const explainedFinish = FAMILIES.includes(w)
+        && !PRODUCT_QUALIFIERS.has(w)
+        && parallelWords.has(w);
+      if (!explainedFinish) return false;
+      continue;
+    }
     if (parallelWords.has(w)) continue;   // the holding's own parallel field says this word
     if (SUBSET_WORDS.has(w)) continue;    // a checklist section, not a product
     return false;                          // every other holding word must appear
