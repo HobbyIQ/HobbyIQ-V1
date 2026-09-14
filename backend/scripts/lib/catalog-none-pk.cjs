@@ -26,14 +26,69 @@
  * account; the caller supplies a `container` with `.item(id, pk).read()` /
  * `.patch()` methods (the real SDK, or a mock with the same shape).
  *
- * `NONE_PK` matches the already-established house pattern for this exact row
- * shape (fastPatchIdIsSlug.cjs, nukeSalesDerivedCatalog.cjs: "docs written
- * without cardId land in this partition").
+ * ── THE SENTINEL IS RESOLVED LAZILY, AND NEVER VIA PartitionKeyBuilder
+ * (2026-09-14, second pass) ──────────────────────────────────────────────
+ *
+ * The first version of this file did `const NONE_PK = new
+ * PartitionKeyBuilder().addNoneValue().build()` AT MODULE LOAD -- the exact
+ * shape `fastPatchIdIsSlug.cjs` and `nukeSalesDerivedCatalog.cjs` already use.
+ * That construction worked locally (Node 25) and CRASHED in CI, the runner,
+ * and on the App Service, all Node 20: `new PartitionKeyBuilder()` throws
+ * "is not a constructor" there, at `require()` time -- so merely requiring
+ * this file, before any row is ever scanned, would have taken down every
+ * lane that imports it. Two changes fix both the crash and the moment it
+ * could happen:
+ *
+ *   1. THE SENTINEL IS NEVER BUILT AT MODULE LOAD. `resolveNonePk()`
+ *      computes it lazily, memoized on first call -- a require of this file
+ *      can never throw, only a CALL that actually needs the sentinel can,
+ *      and only once, if at all.
+ *   2. PartitionKeyBuilder IS NOT USED AT ALL. `@azure/cosmos` also exports
+ *      `NonePartitionKeyLiteral` from its internal PartitionKeyInternal
+ *      module (used by the SDK's own batch/typeChecks code), but it is NOT
+ *      re-exported from the package root in the version this repo pins
+ *      (verified: `require("@azure/cosmos").NonePartitionKeyLiteral` is
+ *      `undefined` here) -- so this resolves it defensively: use the named
+ *      export if a future SDK version starts re-exporting it, and otherwise
+ *      fall back to the plain object literal `{}`, which IS the documented
+ *      shape (`NonePartitionKeyType = { [K in any]: never }`, i.e. any object
+ *      with no partition-key-shaped keys) and was verified directly against
+ *      prod: `container.item(id, {}).read()` finds a None-pk row exactly
+ *      like the (now-removed) `PartitionKeyBuilder` result did.
+ *
+ * `fastPatchIdIsSlug.cjs` and `nukeSalesDerivedCatalog.cjs` still construct
+ * their sentinel the old way, at module load, via `PartitionKeyBuilder` --
+ * they carry the SAME latent Node-20 crash this file had. Out of scope to
+ * fix here (this PR is `retire-self-derived-identities.cjs` and this lib
+ * only), but worth flagging: neither script has run since this was found.
  */
 
-const { PartitionKeyBuilder } = require("@azure/cosmos");
-
-const NONE_PK = new PartitionKeyBuilder().addNoneValue().build();
+/** Resolves and memoizes the SDK's "no partition key" sentinel WITHOUT ever
+ *  constructing a `PartitionKeyBuilder` and without doing any of this at
+ *  module load -- see the header above for why both matter. Safe to call
+ *  from a require()'d module on any Node version: at worst it falls back to
+ *  the plain-object literal, and the fallback path is itself exercised by a
+ *  mocked `@azure/cosmos` export so a future engine change here cannot go
+ *  unnoticed silently. */
+let _nonePk;
+function resolveNonePk() {
+  if (_nonePk !== undefined) return _nonePk;
+  let literal;
+  try {
+    // Not re-exported from the package root in the pinned SDK version
+    // (checked: it is `undefined` here), but resolved defensively in case a
+    // future version starts exporting it -- this is exactly the sentinel the
+    // SDK's own internals compare against (utils/typeChecks.js).
+    ({ NonePartitionKeyLiteral: literal } = require("@azure/cosmos"));
+  } catch {
+    literal = undefined;
+  }
+  // The documented shape either way: an object with no partition-key-typed
+  // keys. Verified directly against prod (see PR body): `container.item(id,
+  // {}).read()` finds a row Cosmos stored at its own None partition key.
+  _nonePk = literal && typeof literal === "object" ? literal : {};
+  return _nonePk;
+}
 
 /** Fields that address the row. Mirrors catalogRowOps.service.ts's own
  *  UNPATCHABLE set -- patching these is a MOVE, not a field repair, and this
@@ -49,7 +104,7 @@ const UNPATCHABLE = new Set(["id", "cardId", "hobbyiqCardId"]);
  */
 function pkOf(row) {
   if (row && row.cardId) return String(row.cardId);
-  return NONE_PK;
+  return resolveNonePk();
 }
 
 /** True when `pkOf` would resolve to the None partition key for this row --
@@ -80,8 +135,9 @@ async function patchNonePkRow(container, id, fields, opts = {}) {
     throw new Error(`patchNonePkRow: ${illegal.join(", ")} address the row -- use moveCatalogRow, not a field patch`);
   }
   const retry = opts.retry || ((fn) => fn());
+  const nonePk = resolveNonePk();
 
-  const { resource: row } = await retry(() => container.item(id, NONE_PK).read());
+  const { resource: row } = await retry(() => container.item(id, nonePk).read());
   if (!row) return { action: "noop", id, fieldsChanged: [] };
 
   const current = row;
@@ -94,8 +150,8 @@ async function patchNonePkRow(container, id, fields, opts = {}) {
     const shadow = `${n}Before`;
     ops.push({ op: current[shadow] === undefined ? "add" : "set", path: `/${shadow}`, value: current[n] ?? null });
   }
-  await retry(() => container.item(id, NONE_PK).patch(ops));
+  await retry(() => container.item(id, nonePk).patch(ops));
   return { action: "patch", id, fieldsChanged: changed };
 }
 
-module.exports = { NONE_PK, pkOf, isNonePkRow, patchNonePkRow, UNPATCHABLE };
+module.exports = { resolveNonePk, pkOf, isNonePkRow, patchNonePkRow, UNPATCHABLE };

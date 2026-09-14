@@ -1353,13 +1353,36 @@ describe("the retire lane verifies by reading its own write ledger", () => {
 
     // THE BEHAVIOURAL ASSERTION: pkOf itself, exercised directly (no Cosmos
     // client, no mock container needed -- it is a pure function of the row).
-    // A row with no cardId must resolve to the SDK's real None-partition-key
+    // A row with no cardId must resolve to the SDK's None-partition-key
     // sentinel, not to its own id -- that IS the defect this investigation
     // found: every sampled `user-verified:*` row carries no cardId, and a
     // point-read at (id, id) 404s on it every single time.
-    const { pkOf } = require(path.join(BACKEND, "scripts", "lib", "catalog-none-pk.cjs"));
-    const { PartitionKeyBuilder } = require(path.join(BACKEND, "node_modules", "@azure", "cosmos"));
-    const nonePk = new PartitionKeyBuilder().addNoneValue().build();
+    //
+    // Compared against `resolveNonePk()`, NOT a fresh
+    // `new PartitionKeyBuilder().addNoneValue().build()` -- the lib
+    // deliberately never touches PartitionKeyBuilder at all (see its own
+    // header, 2026-09-14 second pass): under Node 20, `new
+    // PartitionKeyBuilder()` throws "is not a constructor", which crashed
+    // every lane that so much as required a module built this way, in CI,
+    // the runner and the App Service alike. This machine's Node did not
+    // reproduce that, which is exactly why it shipped unnoticed the first
+    // time. Constructing one here to compare against would silently
+    // reintroduce the same call this pin exists to keep out.
+    const { pkOf, resolveNonePk } = require(path.join(BACKEND, "scripts", "lib", "catalog-none-pk.cjs"));
+    // `codeOnly` is the LANE's source, which never referenced
+    // PartitionKeyBuilder to begin with (it only ever went through pkOf) --
+    // asserted here so a future call site added directly in the lane, rather
+    // than through the lib, cannot reintroduce the Node-20 crash either.
+    expect(codeOnly, "the lane must never construct via PartitionKeyBuilder directly").not.toMatch(/PartitionKeyBuilder/);
+    // The lib itself, with comments stripped -- its own doc comment names
+    // PartitionKeyBuilder in prose (explaining why it is avoided), which a
+    // raw substring check would misread as a violation.
+    const libSrcHere = read("backend", "scripts", "lib", "catalog-none-pk.cjs");
+    const libCodeOnly = libSrcHere
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .split("\n").filter((l) => !/^\s*\/\//.test(l)).join("\n");
+    expect(libCodeOnly, "PartitionKeyBuilder is a Node-20 crash at construction; the lib must not use it at all").not.toMatch(/PartitionKeyBuilder/);
+    const nonePk = resolveNonePk();
     const noneCardIdRow = { id: "user-verified:afd2283fe6670d0fbfe2" };
     expect(JSON.stringify(pkOf(noneCardIdRow))).toBe(JSON.stringify(nonePk));
     expect(pkOf(noneCardIdRow)).not.toBe(noneCardIdRow.id);

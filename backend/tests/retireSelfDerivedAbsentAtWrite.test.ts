@@ -49,7 +49,7 @@ const BACKEND = path.join(ROOT, "backend");
 const LANE = path.join(BACKEND, "scripts/retire-self-derived-identities.cjs");
 const LIB = path.join(BACKEND, "scripts/lib/catalog-none-pk.cjs");
 
-const { pkOf, isNonePkRow, patchNonePkRow, NONE_PK } = require_(LIB) as {
+const { pkOf, isNonePkRow, patchNonePkRow, resolveNonePk } = require_(LIB) as {
   pkOf: (row: { cardId?: unknown; id?: unknown } | null | undefined) => unknown;
   isNonePkRow: (row: { cardId?: unknown } | null | undefined) => boolean;
   patchNonePkRow: (
@@ -58,10 +58,12 @@ const { pkOf, isNonePkRow, patchNonePkRow, NONE_PK } = require_(LIB) as {
     fields: Record<string, unknown>,
     opts?: { retry?: (fn: () => unknown) => unknown },
   ) => Promise<{ action: "patch" | "noop"; id: string; fieldsChanged: string[] }>;
-  NONE_PK: unknown;
+  resolveNonePk: () => unknown;
 };
 
 const laneSrc = fs.readFileSync(LANE, "utf8").replace(/\r\n/g, "\n");
+const libSrc = fs.readFileSync(LIB, "utf8").replace(/\r\n/g, "\n");
+const NONE_PK = resolveNonePk();
 
 describe("lib/catalog-none-pk — the pk decision, isolated from Cosmos", () => {
   it("a row that carries a cardId resolves to that cardId, unchanged from patchCatalogRowFields", () => {
@@ -87,6 +89,73 @@ describe("lib/catalog-none-pk — the pk decision, isolated from Cosmos", () => 
     // every falsy case other than "missing").
     expect(isNonePkRow({ cardId: "" })).toBe(true);
     expect(pkOf({ id: "x", cardId: "" })).toBe(NONE_PK);
+  });
+});
+
+describe("resolveNonePk — Node-20-safe sentinel resolution (2026-09-14, second pass)", () => {
+  // CI, the runner and the App Service all run Node 20. The first version of
+  // this file built its sentinel via `new PartitionKeyBuilder().addNoneValue()
+  // .build()` AT MODULE LOAD, and `new PartitionKeyBuilder()` throws "is not a
+  // constructor" under Node 20 -- so merely requiring this file (which every
+  // lane that imports it does, at startup, before scanning a single row)
+  // would have crashed every one of them. Node 25 (this machine) does not
+  // reproduce the crash, which is exactly how it shipped unnoticed.
+
+  it("requiring the module does not construct anything -- no PartitionKeyBuilder USE, at load time or ever", () => {
+    // A static check on the source, not a runtime one: the whole point of
+    // "lazy" is that `require()` alone must never reach a constructor call --
+    // and the whole point of "never use it" is that no later refactor may
+    // bring it back in, at any position. Checked against the CODE, with
+    // comments stripped, so the doc comment's own prose explaining why
+    // PartitionKeyBuilder is avoided (which necessarily names it) cannot
+    // produce a false failure here.
+    const libCodeOnly = libSrc
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .split("\n").filter((l) => !/^\s*\/\//.test(l)).join("\n");
+    expect(libCodeOnly, "PartitionKeyBuilder must not be used anywhere in executable code").not.toMatch(/PartitionKeyBuilder/);
+    const beforeFirstFunction = libSrc.slice(0, libSrc.indexOf("function resolveNonePk"));
+    expect(beforeFirstFunction).not.toMatch(/=\s*(?:new\s+\w+\(\)\.)?addNoneValue/);
+  });
+
+  it("resolves without throwing when @azure/cosmos exports no NonePartitionKeyLiteral (the pinned SDK version's actual shape)", () => {
+    // Verified directly: require("@azure/cosmos").NonePartitionKeyLiteral is
+    // undefined in the version this repo pins. `resolveNonePk` must not
+    // assume a future SDK shape and must not reach for PartitionKeyBuilder as
+    // a fallback (that is the exact call that crashes under Node 20).
+    const cosmos = require_("@azure/cosmos") as Record<string, unknown>;
+    expect(cosmos.NonePartitionKeyLiteral).toBeUndefined();
+    expect(() => resolveNonePk()).not.toThrow();
+    expect(resolveNonePk()).toEqual({});
+  });
+
+  it("resolves without throwing when PartitionKeyBuilder itself is undefined on the @azure/cosmos export (mocked)", () => {
+    // The direct simulation of the Node 20 failure mode: construct a fake
+    // @azure/cosmos module whose PartitionKeyBuilder is undefined (as it
+    // would effectively be to any caller if construction always throws) and
+    // require a FRESH copy of the lib against it, via Node's own module
+    // cache override -- proving the lib does not touch PartitionKeyBuilder
+    // at all, under any module shape.
+    const Module = require_("node:module") as { _load: (...args: unknown[]) => unknown };
+    const originalLoad = Module._load;
+    const cosmosPath = require_.resolve("@azure/cosmos");
+    (Module as unknown as { _load: (...args: unknown[]) => unknown })._load = function (
+      request: string,
+      ...rest: unknown[]
+    ) {
+      if (request === "@azure/cosmos" || require_.resolve(request) === cosmosPath) {
+        return { PartitionKeyBuilder: undefined, NonePartitionKeyLiteral: undefined };
+      }
+      return originalLoad.call(Module, request, ...rest);
+    };
+    try {
+      delete require_.cache[require_.resolve(LIB)];
+      const fresh = require_(LIB) as { resolveNonePk: () => unknown };
+      expect(() => fresh.resolveNonePk()).not.toThrow();
+      expect(fresh.resolveNonePk()).toEqual({});
+    } finally {
+      Module._load = originalLoad;
+      delete require_.cache[require_.resolve(LIB)];
+    }
   });
 });
 
