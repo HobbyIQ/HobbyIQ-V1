@@ -929,7 +929,7 @@ async function main() {
         // addressed to, never from another sport that reuses the setKey.
         const parts = String(slug).split(":");
         const rivals = parts.length >= 7
-          ? await checklistCells(parts[2], parts[3], deps.normalizeSportStrict(parts[1]))
+          ? await checklistCellsOnce(parts[2], parts[3], deps.normalizeSportStrict(parts[1]))
           : null;
         backed = K.isStrictChecklistRow(resource, rivals ?? []);
       }
@@ -943,7 +943,7 @@ async function main() {
    *  no demoted rows. Graded children are excluded by the predicate itself: a
    *  row minted from its parent cannot confirm that parent one tier up. */
   const checklistCellsCache = new Map();
-  const checklistCellsRaw = async (year, setKey, sport) => {
+  const checklistCells = async (year, setKey, sport) => {
     // Corroboration from another sport's checklist is not corroboration.
     if (!sport) return [];
     const key = `${year}|${setKey}|${sport}`;
@@ -1038,7 +1038,7 @@ async function main() {
   // holds and that one must not.
   const rowIsSport = (r, sport) => K.catalogRowAnswersForSport(r, sport, deps.normalizeSportStrict);
   const flagshipNumbersCache = new Map();
-  const flagshipNumbersRaw = async (year, setKey, sport) => {
+  const flagshipNumbers = async (year, setKey, sport) => {
     // No readable sport, no product, no answer. See sportOf above.
     if (!sport) return null;
     const key = `${year}|${setKey}|${sport}`;
@@ -1076,7 +1076,7 @@ async function main() {
    *  to the row's own name only if that reads as a person. Absent beats wrong.
    */
   const checklistNamesCache = new Map();
-  const checklistNamesRaw = async (year, setKey, sport) => {
+  const checklistNames = async (year, setKey, sport) => {
     // A name read from another sport's checklist is a DIFFERENT PLAYER at the
     // same number, which is the worst possible answer for a guard whose whole
     // job is to say who the card depicts. No sport, no map.
@@ -1117,7 +1117,7 @@ async function main() {
    *  own cure. A product with no strictly-sourced rows yields an empty map,
    *  every lookup returns null, and null is a REFUSAL: absent beats wrong. */
   const checklistAutoCache = new Map();
-  const checklistAutosRaw = async (year, setKey, sport) => {
+  const checklistAutos = async (year, setKey, sport) => {
     // Whether #150 is an autograph is a fact about ONE product's checklist.
     // No sport, no map -- and an empty map is already this gate's refusal.
     if (!sport) return new Map();
@@ -1149,7 +1149,7 @@ async function main() {
   const checklistSaysNotAutoFor = async (identity) => {
     const y = identity?.cardYear, sk = identity?.setKey, num = identity?.cardNumber;
     if (y === null || y === undefined || !sk || !num) return null;
-    const m = await checklistAutos(y, sk, sportOf(identity));
+    const m = await checklistAutosOnce(y, sk, sportOf(identity));
     const hit = m.get(String(num).toUpperCase());
     return hit === undefined ? null : hit === false;
   };
@@ -1158,7 +1158,7 @@ async function main() {
   const checklistPlayerNameFor = async (identity) => {
     const y = identity?.cardYear, sk = identity?.setKey, num = identity?.cardNumber;
     if (y === null || y === undefined || !sk || !num) return null;
-    const m = await checklistNames(y, sk, sportOf(identity));
+    const m = await checklistNamesOnce(y, sk, sportOf(identity));
     return m.get(String(num).toUpperCase()) ?? null;
   };
   /** CF-A-SUBSET-IS-PART-OF-THE-IDENTITY-WHEN-IT-HAS-TO-BE (Drew, 2026-09-04).
@@ -1175,7 +1175,7 @@ async function main() {
    *  catalog, so this returns empty for effectively every row and the subset
    *  rule stays silent -- which is the design, not an accident of the data. */
   const clashMapCache = new Map();
-  const clashMapRaw = async (year, setKey, sport) => {
+  const clashMap = async (year, setKey, sport) => {
     // A subset clash is two subsets of ONE product numbering one card. Two
     // sports numbering their own cards the same is not a clash at all, and
     // counting it as one would make the subset rule fire on cards that do not
@@ -1227,17 +1227,20 @@ async function main() {
     const once = oncePerKey(inFlight, (_key, year, setKey, sport) => raw(year, setKey, sport));
     return (year, setKey, sport) => once(productKey(year, setKey, sport), year, setKey, sport);
   };
-  const checklistCells = guardProduct(inFlightCells, checklistCellsRaw);
-  const flagshipNumbers = guardProduct(inFlightFlagship, flagshipNumbersRaw);
-  const checklistNames = guardProduct(inFlightNames, checklistNamesRaw);
-  const checklistAutos = guardProduct(inFlightAutos, checklistAutosRaw);
-  const clashMap = guardProduct(inFlightClash, clashMapRaw);
+  // The guarded entry points. Every caller below uses these, never the bare
+  // implementations above -- a direct call would skip the in-flight dedupe
+  // and re-issue a product query that is already on the wire.
+  const checklistCellsOnce = guardProduct(inFlightCells, checklistCells);
+  const flagshipNumbersOnce = guardProduct(inFlightFlagship, flagshipNumbers);
+  const checklistNamesOnce = guardProduct(inFlightNames, checklistNames);
+  const checklistAutosOnce = guardProduct(inFlightAutos, checklistAutos);
+  const clashMapOnce = guardProduct(inFlightClash, clashMap);
   /** The clashing subsets at THIS row's rung, or [] -- which is the state of
    *  effectively every row and means the subset rule says nothing. */
   const clashSubsetsFor = async (stored) => {
     const year = stored?.cardYear, setKey = String(stored?.setKey ?? "").toLowerCase();
     if (!year || !setKey) return [];
-    const m = await clashMap(year, setKey, sportOf(stored));
+    const m = await clashMapOnce(year, setKey, sportOf(stored));
     if (!m.size) return [];
     const hit = m.get(SUBSET.rungKey(stored));
     return hit ? [...hit] : [];
@@ -1251,7 +1254,7 @@ async function main() {
     // a different sport's card -- see CF-A-SETKEY-IS-NOT-A-PRODUCT-UNTIL-A-
     // SPORT-NAMES-IT above. `null` (unreadable sport, or no strict rows in
     // this sport) stays the refusal it already was.
-    const nums = await flagshipNumbers(year, setKey, sportOf(stored));
+    const nums = await flagshipNumbersOnce(year, setKey, sportOf(stored));
     return nums ? nums.has(num) : null;
   };
   /** SPECIALIZATION-STATED's two catalog facts, computed ONLY for a row whose
