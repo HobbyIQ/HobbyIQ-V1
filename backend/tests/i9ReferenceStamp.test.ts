@@ -152,31 +152,31 @@ describe("the shipped reference carries its stamp", () => {
   it("records the stamp and the commit the census was measured under", () => {
     expect(TABLE.measuredUnder).toBeTruthy();
     expect(TABLE.measuredUnder.stamp).toMatch(/^d[0-9a-f]{12}\+/);
-    // 77e305a0 — main at the start of the 2026-09-12/13 wave2d4 census. None of
-    // the six DERIVATION_INPUTS changed on main inside the census window, so one
-    // commit names the tree every artifact was measured under.
-    expect(TABLE.measuredUnder.commit).toBe("77e305a00c172849c1e58ef6dd31b411c1c685f5");
+    // b5ab5f74 — the #2086 batch merge, deployed to prod before the 2026-09-13/14
+    // verification census (16-slot fleet, wave2verify16) walked the corpus. The
+    // deriver did not move on main during that window, so one commit names the
+    // tree every artifact was measured under.
+    expect(TABLE.measuredUnder.commit).toBe("b5ab5f745788d88168af9e339fc6be7f8c8de7a0");
     // pricingContract.ts exists now, so the stamp carries its version.
     expect(TABLE.measuredUnder.contract).toBe("2026-09-06.a");
-    // The 32-slot reference stays 32 slots (#1888 stands). Slot 31 is a
-    // budget-stopped PREFIX in this reference (see the coverage pins below).
+    // The 32-slot reference stays 32 slots (#1888 stands), every slot finished.
     expect(TABLE.slotCount).toBe(32);
     expect(TABLE.classifiedTotal).toBeGreaterThan(11_000_000);
-    expect(INV.CENSUS_REFERENCE_SHARES.CONFLICT).toBeCloseTo(0.507, 2);
+    expect(INV.CENSUS_REFERENCE_SHARES.CONFLICT).toBeCloseTo(0.364, 2);
   });
 
   it("says WHAT FRACTION of the corpus it saw, and which slots are partial", () => {
     // A REFERENCE BUILT FROM BUDGET-STOPPED WALKS IS STILL A REFERENCE, BUT IT
-    // MUST SAY SO. In the 2026-09-12/13 census 31 of the 32 slots finished their
-    // walk (page-level checkpoints, #2073); slot 31 hit its budget at 49% and
-    // is recorded as a PREFIX. Coverage reads 139% because the three Pokémon
-    // shards classify far more rows than the shard table expected for them.
-    // Recording `classified` alone would have presented a 49%-walked slot and
-    // a finished one as equally authoritative.
+    // MUST SAY SO. In the 2026-09-13/14 verification census every one of the 32
+    // slots finished its walk (page-level checkpoints #2073, compact cursor
+    // #2139), so no slot is partial. Coverage reads 112% because the shard
+    // table's expected rows undercount a few modern-year units. Recording
+    // `classified` alone would have presented a half-walked slot and a
+    // finished one as equally authoritative, which is why the fields exist.
     expect(TABLE.coverage.classified).toBe(TABLE.classifiedTotal);
-    expect(TABLE.coverage.coverage).toBeCloseTo(1.39, 2);
-    expect(TABLE.coverage.partialSlots).toEqual([31]);
-    expect(TABLE.coverage.completedSlots).toHaveLength(31);
+    expect(TABLE.coverage.coverage).toBeCloseTo(1.12, 2);
+    expect(TABLE.coverage.partialSlots).toEqual([]);
+    expect(TABLE.coverage.completedSlots).toHaveLength(32);
     // Every slot carries its own coverage, so a reader never has to guess.
     for (const s of TABLE.slots) {
       expect(typeof s.expectedRows, `slot ${s.slot} expectedRows`).toBe("number");
