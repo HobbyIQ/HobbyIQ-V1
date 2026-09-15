@@ -3454,21 +3454,22 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
             // falls back to the unrestricted query rather than losing the card.
             //
             // CF-ONE-COSMOS-CLIENT-ON-THE-PRICE-PATH (Fable, 2026-09-15). Each
-            // fan-out now carries an `abortSignal` — see PRICE_LOOKUP_* at the
-            // top of this file. Both of these are cross-partition `TOP 60`
-            // scans whose every predicate is `LOWER()`/`CONTAINS()`, i.e. not
-            // index-servable, so they are the two slowest things this request
-            // does and the ones that were still running when the front door
-            // gave up on the client. The abort does not merely stop us WAITING
+            // fan-out carries an `abortSignal` — see PRICE_LOOKUP_* at the top
+            // of this file, and the split deadline at the call site below. The
+            // predicates are now index-servable (see the query's own note), so
+            // these are no longer the unbounded scans that were still running
+            // when the front door gave up on the client — but the abort stays,
+            // because a bound that is only true of a good query plan is not a
+            // bound. It does not merely stop us WAITING
             // (a Promise.race would do that) — it tells the SDK to stop, so an
             // abandoned query stops consuming RU on a pool that is, by
             // hypothesis, already under RU pressure.
-            const runLookup = async (baseSetOnly: boolean) => {
+            const runLookup = async (baseSetOnly: boolean, deadlineAtMs: number) => {
               const { resources } = await cat.items.query<{
                 id: string; playerName: string; setName: string; cardNumber: string;
                 parallel: string; sport: string; recentSaleCount: number; year: number;
               }>(buildLookupSpec(baseSetOnly), {
-                abortSignal: priceLookupQuerySignal(lookupDeadlineAtMs),
+                abortSignal: priceLookupQuerySignal(deadlineAtMs),
               }).fetchAll();
               return resources;
             };
@@ -3496,15 +3497,52 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
               // CONTAINS-matched bowman, bowman-chrome AND bowman-draft at
               // once, blew past the >3 ambiguity guard below, and discarded the
               // very rows it had found.
+              // CF-AN-EQUALITY-THE-INDEX-CAN-SEEK (Fable, 2026-09-15). Every
+              // predicate here was wrapped in LOWER() or CONTAINS(), and a
+              // Cosmos range index cannot seek through either — so this
+              // "lookup" was a full scan of every 2024 row, per pass, twice
+              // per request. Two changes, both provably answer-preserving.
+              //
+              // 1. `c.setKey = @sk` WITHOUT LOWER(). setKey is a normalised
+              //    slug by construction (deriveCatalogEntry runs
+              //    normalizeSetKey; setKeyFieldInvariant pins the field
+              //    against its id stem), and measured on prod: 0 of 400
+              //    sampled 2024 rows had a non-lowercase setKey. @sk is
+              //    normalizeSetKey's own output, so both sides are already
+              //    lowercase and LOWER() only defeated the index.
+              //
+              // 2. `c.playerSlug = @pslug` promoted to the LEADING disjunct.
+              //    An equality on a stored slug is seekable where
+              //    CONTAINS(LOWER(playerName)) is not. Measured: 393 of 400
+              //    rows carry playerSlug, and the Ohtani lookup resolves
+              //    through it directly. The CONTAINS forms are KEPT as
+              //    fallback disjuncts, so the ~2% of rows without a
+              //    playerSlug — and genuine substring matches like "Ohtani"
+              //    inside "Shohei Ohtani" where the slug differs — still
+              //    match exactly as before. This widens nothing and narrows
+              //    nothing; it only gives the planner a seekable branch to
+              //    try first.
+              //
+              // NOT CHANGED, deliberately: `LOWER(c.parallel)`. Unlike
+              // setKey, `parallel` is stored as the CANONICAL HUMAN FORM —
+              // cardCatalog.CardCatalogEntry documents it as such ("Blue
+              // Refractor") and prod confirms it: of 400 sampled 2024 rows,
+              // 71 parallels contain a space, ZERO contain a hyphen, and the
+              // casing is genuinely mixed ("Pearl Refractor" alongside
+              // "blue refractor"). Dropping LOWER() there would silently stop
+              // matching every row whose parallel is not already lowercase —
+              // a wrong answer, not a slow one. It stays until the field is
+              // normalised.
               query: `SELECT TOP 60 c.id, c.cardId, c.playerName, c.setName, c.setKey, c.cardNumber, c.parallel, c.isAuto, c.printRun, c.sport, c.recentSaleCount, c.year
                       FROM c
                       WHERE c.year = @y
                         AND (
-                          (IS_DEFINED(c.setKey) AND (LOWER(c.setKey) = @sk OR CONTAINS(LOWER(c.setKey), @sk, true)))
+                          (IS_DEFINED(c.setKey) AND (c.setKey = @sk OR CONTAINS(LOWER(c.setKey), @sk, true)))
                           OR (IS_DEFINED(c.setName) AND CONTAINS(LOWER(c.setName), @s, true))
                         )
                         AND (
-                          CONTAINS(LOWER(c.playerName), @p, true)
+                          (IS_DEFINED(c.playerSlug) AND c.playerSlug = @pslug)
+                          OR CONTAINS(LOWER(c.playerName), @p, true)
                           OR (IS_DEFINED(c.playerSlug) AND CONTAINS(c.playerSlug, @pslug))
                         )
                         AND LOWER(c.parallel) = @par
@@ -3524,19 +3562,57 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
               ],
             });
 
-            // Base-set pass first; fall back to the full pool only if it is
-            // empty. A caller who named a card number skips straight to the
-            // full pool — they may well be asking for an insert.
-            let hits = hasExplicitCardNumber ? [] : await runLookup(true);
-            // The second fan-out only runs if budget remains. Without this the
-            // block could spend the per-query ceiling TWICE over and exceed its
-            // own total; with it, an exhausted budget is a stated refusal.
-            if (hits.length === 0) {
-              if (Date.now() >= lookupDeadlineAtMs) {
-                throw new PriceLookupDeadlineError("catalog-lookup-fallback");
-              }
-              hits = await runLookup(false);
+            // CF-TWO-PASSES-IN-THE-TIME-OF-ONE (Fable, 2026-09-15).
+            //
+            // The semantics are unchanged and worth restating exactly, because
+            // the implementation now looks different: P1 is the base-set pass
+            // (`IS_NUMBER(StringToNumber(c.cardNumber))`, flagship base cards
+            // numbered 1..N), P2 is the unrestricted pass. P1's rows WIN
+            // whenever P1 returns any, and P2's are used only when P1 is empty.
+            // That preference is what CF-PRICE-LOOKUP-BASE-SET-FIRST exists to
+            // guarantee — a star player owns hundreds of catalog rows and an
+            // unordered TOP 60 of the full pool can miss his base card
+            // entirely, which is how "2023 Topps Chrome Acuna Base" resolved to
+            // insert C-13. None of that changes here.
+            //
+            // What changes is WHEN P2 is issued. It used to run only after P1
+            // had returned and been found empty, so the common miss cost P1 +
+            // P2 in series. They are independent queries over the same
+            // container, so they now run CONCURRENTLY and the same preference
+            // is applied to the results: identical answer, roughly half the
+            // wall time on the path that needed both.
+            //
+            // THE BUDGET IS SPLIT so this cannot regress the timeout story.
+            // Previously P1 could consume the entire window and leave P2 with
+            // nothing but an instant abort. P1 now gets at most HALF the total
+            // and P2 the remainder, so each pass has a guaranteed share and
+            // neither can starve the other. With them running concurrently the
+            // wall-clock ceiling for the pair is still the block's total.
+            //
+            // A caller who named a card number still skips P1 entirely — they
+            // may well be asking for an insert — and then P2 alone may use the
+            // whole window, exactly as a single-pass lookup always could.
+            const halfBudgetAtMs = Date.now() + Math.floor(PRICE_LOOKUP_TOTAL_MS / 2);
+            const p1 = hasExplicitCardNumber
+              ? Promise.resolve([] as Awaited<ReturnType<typeof runLookup>>)
+              : runLookup(true, halfBudgetAtMs);
+            const p2 = runLookup(false, lookupDeadlineAtMs);
+            // Both are awaited even when P1 wins, so neither can reject
+            // unobserved. `allSettled` also means a P1 that times out at its
+            // half-budget degrades to "no base-set rows" — the same state as an
+            // empty P1 — rather than failing the whole lookup.
+            const [r1, r2] = await Promise.allSettled([p1, p2]);
+            const p1Hits = r1.status === "fulfilled" ? r1.value : [];
+            // P2 is the only pass that can fail the lookup, because it is the
+            // one that can still answer when P1 has not. If both are gone there
+            // is nothing to rank and the deadline is the honest reason.
+            if (p1Hits.length === 0 && r2.status === "rejected") {
+              if (isAbortLikeError(r2.reason)) throw new PriceLookupDeadlineError("catalog-lookup-fallback");
+              throw r2.reason;
             }
+            const hits = p1Hits.length > 0
+              ? p1Hits
+              : (r2.status === "fulfilled" ? r2.value : []);
             // CF-PRICE-LOOKUP-COLLAPSE-GRADES (Drew, 2026-08-12: "a graded card
             // IS an identity"). Graded rows are real, separately-traded assets
             // and they belong in the catalog — a PSA 10 is not a raw copy. But
