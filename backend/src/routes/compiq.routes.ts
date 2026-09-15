@@ -130,6 +130,67 @@ import {
   isMomentumProjectionEnabled,
 } from "../services/compiq/momentumProjection.service.js";
 import { buildEngineMeta } from "../services/compiq/engineMeta.js";
+import { DEFAULT_LADDER_BUDGET } from "../services/compiq/ladderBudget.service.js";
+
+/**
+ * CF-ONE-COSMOS-CLIENT-ON-THE-PRICE-PATH (Fable, 2026-09-15). The wall-clock
+ * ceiling on the /price catalog identity lookup — the pre-ladder step that
+ * turns "2024 Bowman Chrome Ohtani Base" into a catalog slug.
+ *
+ * WHERE THE NUMBERS COME FROM. They are not new budget; they are the budget
+ * the ladder already spends, applied one step earlier. `DEFAULT_LADDER_BUDGET`
+ * (ladderBudget.service.ts, CF-LADDER-TIME-BUDGET) is `{ totalMs: 8000,
+ * perRungMs: 3000 }`: 8 s for a whole valuation walk, 3 s for any one query
+ * inside it. This lookup issues at most two cross-partition `TOP 60` fan-outs
+ * plus the player-index read, which is the same shape of work as a rung — so
+ * each query takes the per-rung 3 s, and the lookup as a whole takes the same
+ * 8 s total. That keeps the identity step and the valuation step on one clock
+ * the reader can reason about, and it bounds the pair well inside Azure's
+ * 240 s front-end kill, which is what was actually terminating these requests.
+ *
+ * WHAT THE CEILING DOES, and it is deliberately narrower than a retry policy:
+ * `AbortSignal.timeout` is handed to the SDK per query, so an over-budget
+ * query is ABANDONED rather than left to burn RU behind a caller that has
+ * stopped waiting. The query text and its parameters are untouched — this
+ * changes when we stop asking, never what we asked.
+ */
+const PRICE_LOOKUP_TOTAL_MS = DEFAULT_LADDER_BUDGET.totalMs;
+const PRICE_LOOKUP_PER_QUERY_MS = DEFAULT_LADDER_BUDGET.perRungMs;
+
+/** Raised when the /price catalog lookup runs out of its wall-clock budget. */
+class PriceLookupDeadlineError extends Error {
+  constructor(readonly stage: string) {
+    super(`price-lookup-timeout:${stage}`);
+    this.name = "PriceLookupDeadlineError";
+  }
+}
+
+/**
+ * Did this error come from an abort/timeout rather than from the query itself?
+ *
+ * `AbortSignal.timeout` rejects with a `TimeoutError` DOMException, the older
+ * `AbortController` path with `AbortError`, and `@azure/cosmos` may rewrap
+ * either inside its own error before it reaches us — so the NAME is the only
+ * property all three reliably share. Matching on it keeps a real Cosmos fault
+ * (a bad query, a 403) on the fall-through path where it belongs.
+ */
+function isAbortLikeError(err: unknown): boolean {
+  const name = String((err as { name?: unknown })?.name ?? "");
+  if (name === "AbortError" || name === "TimeoutError") return true;
+  const message = String((err as { message?: unknown })?.message ?? "");
+  return /AbortError|TimeoutError|operation was aborted/i.test(message);
+}
+
+/**
+ * A per-query abort signal that expires at the SMALLER of the per-query
+ * ceiling and whatever is left of the lookup's total budget — the same
+ * `min(perRung, remaining)` rule `LadderBudget.timeBox` applies, so a second
+ * fan-out can never extend the block past its total.
+ */
+function priceLookupQuerySignal(deadlineAtMs: number): AbortSignal {
+  const remainingMs = deadlineAtMs - Date.now();
+  return AbortSignal.timeout(Math.max(1, Math.min(PRICE_LOOKUP_PER_QUERY_MS, remainingMs)));
+}
 import {
   classifyRegime,
   type RegimeResult,
@@ -3188,11 +3249,39 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
         typeof parsed.playerName === "string" && parsed.playerName.length > 0 &&
         (!parsed.cardNumber || parsed.cardNumber.length === 0)  // this path is for cardNumber-less queries
       ) {
+        // CF-ONE-COSMOS-CLIENT-ON-THE-PRICE-PATH (Fable, 2026-09-15). This
+        // block used to open with:
+        //
+        //     const { CosmosClient: _CC } = await import("@azure/cosmos");
+        //     const cat = new _CC(cn).database(...).container("card_catalog");
+        //
+        // A BRAND-NEW CosmosClient on every request, built from the raw
+        // connection STRING — the one call shape that takes no connection
+        // policy, so it bypassed `cosmosOptionsFromConnectionString` entirely
+        // and left `enableEndpointDiscovery` at the SDK default (true) with an
+        // empty location cache. cosmosConnectionPolicy.ts documents what that
+        // costs, measured: 4 root `GET /` round trips PER OPERATION instead of
+        // 2 for the life of a client. On a client thrown away at the end of
+        // the request the cache never pays for itself even once.
+        //
+        // Layered on top: nothing in backend/src sets `requestTimeout` or a
+        // `retryOptions` ceiling, and there is no Express server-level timeout,
+        // so under 429s the SDK retried without bound and this route rode to
+        // Azure's 240 s front-end kill (HTTP 499) — the user-visible hang on
+        // star queries like "2024 Bowman Chrome Ohtani Base".
+        //
+        // Two changes, both scoped to THIS request path:
+        //   1. take the process-wide memoised handle every other catalog
+        //      reader already takes (built through the shared policy);
+        //   2. give the block its own wall-clock deadline, so a slow Cosmos
+        //      degrades into a stated refusal instead of a hang. See
+        //      PRICE_LOOKUP_* below.
         try {
-          const { CosmosClient: _CC } = await import("@azure/cosmos");
-          const cn = process.env.COSMOS_CONNECTION_STRING;
-          if (cn) {
-            const cat = new _CC(cn).database(process.env.COSMOS_DATABASE ?? "hobbyiq").container("card_catalog");
+          const { getCardCatalogContainer } =
+            await import("../services/portfolioiq/cardCatalog.service.js");
+          const cat = await getCardCatalogContainer();
+          const lookupDeadlineAtMs = Date.now() + PRICE_LOOKUP_TOTAL_MS;
+          if (cat) {
             // CF-PRICE-LOOKUP-USE-SET-NOT-BRAND (Drew, 2026-08-12). This used
             // parsed.brand, which is the FAMILY, not the product. The parser
             // splits "2024 Bowman Chrome Ohtani Base" into:
@@ -3231,11 +3320,24 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
             // undefined for those, so IS_NUMBER keeps the sample on base cards.
             // Prospect products are entirely alpha-numbered, so an empty result
             // falls back to the unrestricted query rather than losing the card.
+            //
+            // CF-ONE-COSMOS-CLIENT-ON-THE-PRICE-PATH (Fable, 2026-09-15). Each
+            // fan-out now carries an `abortSignal` — see PRICE_LOOKUP_* at the
+            // top of this file. Both of these are cross-partition `TOP 60`
+            // scans whose every predicate is `LOWER()`/`CONTAINS()`, i.e. not
+            // index-servable, so they are the two slowest things this request
+            // does and the ones that were still running when the front door
+            // gave up on the client. The abort does not merely stop us WAITING
+            // (a Promise.race would do that) — it tells the SDK to stop, so an
+            // abandoned query stops consuming RU on a pool that is, by
+            // hypothesis, already under RU pressure.
             const runLookup = async (baseSetOnly: boolean) => {
               const { resources } = await cat.items.query<{
                 id: string; playerName: string; setName: string; cardNumber: string;
                 parallel: string; sport: string; recentSaleCount: number; year: number;
-              }>(buildLookupSpec(baseSetOnly)).fetchAll();
+              }>(buildLookupSpec(baseSetOnly), {
+                abortSignal: priceLookupQuerySignal(lookupDeadlineAtMs),
+              }).fetchAll();
               return resources;
             };
 
@@ -3294,7 +3396,15 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
             // empty. A caller who named a card number skips straight to the
             // full pool — they may well be asking for an insert.
             let hits = hasExplicitCardNumber ? [] : await runLookup(true);
-            if (hits.length === 0) hits = await runLookup(false);
+            // The second fan-out only runs if budget remains. Without this the
+            // block could spend the per-query ceiling TWICE over and exceed its
+            // own total; with it, an exhausted budget is a stated refusal.
+            if (hits.length === 0) {
+              if (Date.now() >= lookupDeadlineAtMs) {
+                throw new PriceLookupDeadlineError("catalog-lookup-fallback");
+              }
+              hits = await runLookup(false);
+            }
             // CF-PRICE-LOOKUP-COLLAPSE-GRADES (Drew, 2026-08-12: "a graded card
             // IS an identity"). Graded rows are real, separately-traded assets
             // and they belong in the catalog — a PSA 10 is not a raw copy. But
@@ -3388,7 +3498,18 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
               // computeCanonicalFmv while every other surface priced the same
               // card through valueIdentity. One path now.
               const { valueIdentity } = await import("../services/compiq/oneValuationPath.service.js");
-              const canon = await valueIdentity({
+              // CF-A-RUNG-ABANDONED-IS-A-RUNG-STOPPED (Fable, 2026-09-15).
+              // The ladder has its own 8 s wall-clock budget, but timeBox only
+              // stops it AWAITING a slow rung — the withdrawn cross-partition
+              // scan kept burning RU. Installing the request's signal for the
+              // duration of the walk makes an abandoned rung actually stop.
+              // The ladder's own budget still decides WHEN to give up; this
+              // only makes giving up mean something at the database.
+              const { withPoolAbortSignal } =
+                await import("../services/portfolioiq/hobbyIqFmv.service.js");
+              const canon = await withPoolAbortSignal(
+                AbortSignal.timeout(PRICE_LOOKUP_TOTAL_MS),
+                () => valueIdentity({
                 id: String(best.id ?? ""),
                 // Both must be present to name a tier; a bare "10" with no
                 // grader is not PSA 10, and the engine reads a company with no
@@ -3397,7 +3518,8 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
                   ? { company: String(gradeCompany), value: gradeValue }
                   : null,
                 playerName: best.playerName != null ? String(best.playerName) : null,
-              });
+                }),
+              );
               const canonFmv = canon.fairMarketValue;
               const canonN = canon.compsUsed;
               if (typeof canonFmv === "number" && canonFmv > 0 && canonN > 0) {
@@ -3467,6 +3589,51 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
             }
           }
         } catch (err) {
+          // CF-ONE-COSMOS-CLIENT-ON-THE-PRICE-PATH (Fable, 2026-09-15). A
+          // deadline is NOT a lookup miss, so it must not fall through to
+          // computeEstimate the way a miss does. computeEstimate is the long
+          // CH-dependent ladder; running it after we have already spent the
+          // budget is how a slow request became a 240 s one. When Cosmos could
+          // not answer in the time it was given, we say so and stop — doctrine:
+          // a withheld price is null plus a visible reason, never a slow
+          // number and never one invented to answer in time.
+          //
+          // `catalog-lookup-timeout` is a distinct reason from the engine's
+          // `ladder-timeout`: that one means the VALUATION walk ran out of
+          // clock, this one means we never got as far as naming the card.
+          // Collapsing them would hide which half is slow.
+          // An over-budget fan-out surfaces as the SDK's own abort error, not
+          // as ours — `AbortSignal.timeout` rejects with a TimeoutError
+          // DOMException and the driver may rewrap it. Both mean the same
+          // thing here, so both take the withheld path; anything else is a
+          // genuine lookup fault and still falls through as it always did.
+          if (err instanceof PriceLookupDeadlineError || isAbortLikeError(err)) {
+            console.warn(JSON.stringify({
+              event: "price_canonical_player_lookup_timeout",
+              source: "compiq.routes.price",
+              query,
+              stage: err instanceof PriceLookupDeadlineError ? err.stage : "catalog-lookup-query",
+              budgetMs: PRICE_LOOKUP_TOTAL_MS,
+            }));
+            return {
+              ...buildEngineMeta(),
+              success: true,
+              query: query.trim(),
+              source: "catalog-lookup-timeout",
+              pricingTier: "no-basis",
+              fairMarketValue: null,
+              marketValue: null,
+              predictedPrice: null,
+              compsUsed: 0,
+              compsAvailable: 0,
+              canonicalFmvWithheld: {
+                reason: "catalog-lookup-timeout",
+                method: "catalog-identity-lookup",
+                basis: "The catalog could not name this card within its time budget; no price was computed.",
+              },
+              verdict: "Withheld — the catalog lookup did not finish in time. No price was computed.",
+            };
+          }
           console.warn(JSON.stringify({
             event: "price_canonical_player_lookup_error",
             source: "compiq.routes.price",
