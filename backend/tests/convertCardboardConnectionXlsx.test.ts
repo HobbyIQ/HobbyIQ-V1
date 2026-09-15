@@ -101,4 +101,23 @@ describe("cardboardconnection xlsx converter", () => {
       expect(got.anchor).toBe("UD Canvas");
     });
   });
+
+  describe("R37 shortest-anchor rung rule (Panini layout)", () => {
+    // Drew, 2026-09-14, answering Q7: on a sheet with no Parallel marker the
+    // parallel is what the section title adds beyond the SHORTEST matching
+    // base anchor. These lock the "shortest" half of the ruling, which is the
+    // half that decides between "Green" and "Mosaic Green".
+    it("resolves against the SHORTEST matching anchor, not the longest", () => {
+      const anchors = new Map([["Base Mosaic Green", { anchorSection: "Base" }]]);
+      const got = splitSection("Base Mosaic Green", anchors);
+      expect(got.anchor).toBe("Base");
+      expect(got.parallel).toBe("Mosaic Green");
+    });
+
+    it("leaves an anchorless section for the caller to BLOCK, never guessing", () => {
+      // No anchor supplied => no rung is invented.
+      const got = splitSection("Some Unanchored Insert", new Map());
+      expect(got.parallel).toBe("");
+    });
+  });
 });
