@@ -210,3 +210,99 @@ describe("rematch-sold-comps.cjs MODE=apply-improve writes as it classifies and 
     expect(out).not.toMatch(/APPLY CURSOR: resuming/);
   }, TEST_TIMEOUT_MS);
 });
+
+/**
+ * CF-CLASSIFICATION-IS-LATENCY-BOUND-SO-OVERLAP-IT (2026-09-14).
+ *
+ * Classification costs a handful of SEQUENTIAL catalog point reads per row, so
+ * at the fleet's measured ~17 in-slot rows/s the process is waiting on Cosmos
+ * almost all of the time (card_catalog 100k RU, sold_comps 40k, neither
+ * throttled -- latency, not RU). `CLASSIFY_CONCURRENCY` prefetches a page's
+ * reads into the same caches the serial classify loop then reads from.
+ *
+ * The two things that must stay true while it does:
+ *   1. IT MUST NOT COST MORE READS. Concurrent misses on the same key await one
+ *      in-flight read (catRowInFlight / oncePerKey), so raising concurrency
+ *      overlaps waiting without multiplying round trips.
+ *   2. IT MUST NOT CHANGE A VERDICT. Same candidates, same reconcile, same
+ *      pool, at every concurrency -- the loop is untouched and still serial;
+ *      only the waiting moved.
+ */
+describe("CLASSIFY_CONCURRENCY overlaps the per-row catalog latency without changing what is written", () => {
+  let dir: string;
+  let controlStateFile: string;
+  let poolStateFile: string;
+  let censusOut: string;
+
+  beforeEach(() => {
+    dir = mkdtempSync(join(tmpdir(), "classify-conc-"));
+    controlStateFile = join(dir, "control-state.json");
+    poolStateFile = join(dir, "pool-state.json");
+    censusOut = join(dir, "census");
+  });
+  afterEach(() => { try { rmSync(dir, { recursive: true, force: true }); } catch { /* best effort */ } });
+
+  /** A REPORT pass over `rows` distinct cards, each catalog read costing
+   *  `latencyMs`, at a given CLASSIFY_CONCURRENCY. Report-only because we are
+   *  timing CLASSIFICATION, the phase the prefetch changes. */
+  function timedReport(classifyConcurrency: number, rows: number, latencyMs: number) {
+    const env = {
+      ...process.env,
+      MODE: "apply-improve", SCOPE: "improve", SLOT, SLOTS: "32", APPLY: "false",
+      COSMOS_CONNECTION_STRING: "AccountEndpoint=https://fake.invalid:443/;AccountKey=ZmFrZQ==;",
+      RUN_MINUTES: "30",
+      CENSUS_OUT: censusOut,
+      CONTROL_STATE_FILE: controlStateFile,
+      POOL_STATE_FILE: poolStateFile,
+      APPLY_ROW_COUNT: String(rows),
+      APPLY_PAGE_ROWS: String(rows),
+      SLOW_PAGE_MS: "0",
+      CLASSIFY_CONCURRENCY: String(classifyConcurrency),
+      CATALOG_LATENCY_MS: String(latencyMs),
+      REPORT_CATALOG_READS: "true",
+      // Every row its OWN card, so nothing is served from a cache another row
+      // warmed: the pessimistic case for the prefetch, and the honest one.
+      DISTINCT_CARDS: "true",
+    };
+    const started = Date.now();
+    const res = spawnSync(process.execPath, ["-r", PRELOAD, SCRIPT], {
+      cwd: backend, env, encoding: "utf8", timeout: TEST_TIMEOUT_MS,
+    });
+    const elapsedMs = Date.now() - started;
+    const out = `${res.stdout ?? ""}${res.stderr ?? ""}`;
+    const cand = /would re-key\s+([\d,]+)/.exec(out);
+    const reads = /FIXTURE_CATALOG_READS (\d+)/.exec(out);
+    return {
+      elapsedMs,
+      candidates: cand ? Number(cand[1].replace(/,/g, "")) : -1,
+      catalogReads: reads ? Number(reads[1]) : -1,
+      out,
+    };
+  }
+
+  itIfBuilt("raising concurrency does NOT raise the catalog read count, and finds the same candidates", () => {
+    const serial = timedReport(1, 60, 10);
+    const parallel = timedReport(16, 60, 10);
+
+    // Same work found, either way -- the prefetch changes timing, not verdicts.
+    expect(serial.candidates).toBe(60);
+    expect(parallel.candidates).toBe(serial.candidates);
+
+    // ...and it costs the SAME number of round trips. Without the in-flight
+    // promise maps, 16 concurrent misses on one product would each issue their
+    // own read and this number would climb with concurrency.
+    expect(parallel.catalogReads).toBe(serial.catalogReads);
+  }, TEST_TIMEOUT_MS * 2);
+
+  itIfBuilt("a page of latency-bound rows classifies measurably faster with concurrency", () => {
+    // 20ms per read over 60 distinct rows: serial is dominated by the round
+    // trips, so overlapping them must show up as wall clock even on a loaded
+    // CI box. Asserted as a generous ratio, not a fixed time, because the
+    // absolute numbers belong to the machine and this is a regression pin --
+    // the claim is "concurrency overlaps the waiting", not a benchmark.
+    const serial = timedReport(1, 60, 20);
+    const parallel = timedReport(16, 60, 20);
+    expect(parallel.candidates).toBe(serial.candidates);
+    expect(parallel.elapsedMs).toBeLessThan(serial.elapsedMs);
+  }, TEST_TIMEOUT_MS * 2);
+});
