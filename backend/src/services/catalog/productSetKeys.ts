@@ -985,8 +985,9 @@ export const PRODUCT_SET_KEYS: ReadonlyArray<ProductSetKey> = [
     "montage", "old-school", "overdrive", "rookie-autographs-mosaic",
     "rookie-private-signings-association-version", "rookie-scripts",
     "scripts", "stained-glass", "stare-masters", "straight-fire",
-    "swagger", "will-to-win"
-  ].map((sub) => S(`panini-mosaic-${sub}`, { family: "panini-mosaic", parent: "panini-mosaic" })),
+    "swagger", "will-to-win",
+    "rookie-variations",
+    ].map((sub) => S(`panini-mosaic-${sub}`, { family: "panini-mosaic", parent: "panini-mosaic" })),
 
   ...["college-penmanship", "draft-picks-autographs", "freshman-signatures",
     "sensational-signatures",

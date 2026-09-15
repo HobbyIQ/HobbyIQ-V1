@@ -108,6 +108,26 @@ function readSheet(xlsxPath) {
   }
 }
 
+
+/**
+ * CF-A-DOUBLED-NAME-IS-A-SOURCE-TYPO (2026-09-15). cconnect prints
+ * "Jaret Patterson - Jaret Patterson" in ONE cell of 2021 Donruss FB. That
+ * single malformed row made seven Optic Rated Rookie Preview colours look like
+ * seven different card sets: the roster-agreement gate refuses on ONE
+ * disagreement and 599 of 600 agreed. The cell states one player twice, so
+ * collapsing it is reading the source, not correcting it.
+ */
+function cleanPlayerCell(v) {
+  const s = String(v == null ? "" : v).trim();
+  // Split on " - " and collapse ONLY when both halves are the same name. A
+  // genuine two-player card ("Brian Urlacher - Khalil Mack") is left alone.
+  const halves = s.split(/\s+-\s+/);
+  if (halves.length === 2 && halves[0].trim() && halves[0].trim() === halves[1].trim()) {
+    return halves[0].trim();
+  }
+  return s;
+}
+
 const slug = (s) => String(s).toLowerCase()
   .replace(/&/g, " and ").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
@@ -272,11 +292,30 @@ function convert(xlsxPath) {
   for (const r of rows.slice(1)) {
     const s = String(r[C.set] || "").trim();
     const num = String(r[C.card] || "").trim();
-    const player = String(r[C.desc] || "").trim();
+    const player = cleanPlayerCell(r[C.desc]);
     if (!s || !num || !player) continue;
     if (!sectionRows.has(s)) sectionRows.set(s, new Map());
     sectionRows.get(s).set(num, player);
   }
+  // CF-A-PLURAL-TWIN-IS-THE-SAME-SECTION (2026-09-15). cconnect prints both
+  // "Jersey Kings" and "Jerseys Kings Prime" in 2020-21 Donruss BK. The plural
+  // is a source typo, not a second card set: folding it onto the singular keeps
+  // "Prime" a PARALLEL of the registered `panini-donruss-jersey-kings` insert
+  // instead of minting `...-jerseys-kings-prime`, a key that would say a
+  // parallel is a set. Applied ONLY where the singular form is itself a section
+  // in this sheet, so nothing is invented.
+  const pluralTwins = new Map();
+  {
+    const singularOf = (t) => t.replace(/(\w+?)s(\s)/g, "$1$2");
+    for (const t of [...sectionRows.keys()]) {
+      const sing = singularOf(t);
+      if (sing === t || !sectionRows.has(sing)) continue;
+      const src = sectionRows.get(t), dst = sectionRows.get(sing);
+      for (const [n, pl] of src) if (!dst.has(n)) dst.set(n, pl);
+      pluralTwins.set(t, sing);
+    }
+  }
+
   let anchors = measureAnchors(sectionRows);
   const blockedSections = [];
   if (LAYOUT === "panini") {
@@ -286,15 +325,59 @@ function convert(xlsxPath) {
     // title. A section that matches NO anchor is not guessed — it is BLOCKED
     // and listed by title in the manifest.
     const titles = [...sectionRows.keys()];
-    const baseAnchors = titles.filter((t) => !titles.some((p) => p !== t && t.startsWith(p + " ")));
+    let baseAnchors = titles.filter((t) => !titles.some((p) => p !== t && t.startsWith(p + " ")));
+
+    // CF-A-SUBSET-IS-NOT-A-RUNG (R37 follow-up, 2026-09-15).
+    //
+    // The shortest-anchor rule alone EXPLODED the two Mosaic files: the ingest
+    // refused them with 175 and 224 distinct parallels in one `base` category,
+    // against a real Mosaic ladder of about 29 rungs.
+    //
+    // The cause: Panini prints its base SUBSETS as section titles that extend
+    // the base title — "Base Hall of Fame Mosaic Black". The shortest anchor is
+    // "Base", so everything after it became the parallel and the SUBSET rode
+    // into the rung name. Six subsets x ~29 real rungs = ~175 phantom rungs,
+    // each a cross-join of a section name with a colour.
+    //
+    // A SUBSET IS TOLD APART FROM A RUNG BY ITS CARD NUMBERS, not by its name.
+    // A rung REPRINTS its anchor's numbers; a subset occupies its OWN range.
+    // Measured on 2019-20 Mosaic: base 1-200, Rookies 201-250, USA 251-260,
+    // NBA 261-280, Hall of Fame 281-295, MVPs 296-300 — disjoint, so these are
+    // six sections of one 300-card base set, and the colour that follows is
+    // the rung they share.
+    //
+    // So a title whose numbers are DISJOINT from its candidate anchor's is
+    // promoted to an anchor in its own right. It then becomes the anchor its
+    // own colour rungs measure against, and the ladder collapses back to the
+    // real ~29.
+    const numsOf = (t) => new Set(sectionRows.get(t).keys());
+    const disjoint = (a, b) => { for (const n of a) if (b.has(n)) return false; return true; };
+    for (let pass = 0; pass < 4; pass++) {
+      let grew = false;
+      for (const t of titles) {
+        if (baseAnchors.includes(t)) continue;
+        const cands = baseAnchors.filter((a) => t.startsWith(a + " "));
+        if (!cands.length) continue;
+        cands.sort((a, b) => a.length - b.length || a.localeCompare(b));
+        const anchor = cands[cands.length - 1]; // the longest, i.e. nearest
+        if (disjoint(numsOf(t), numsOf(anchor))) { baseAnchors.push(t); grew = true; }
+      }
+      if (!grew) break;
+    }
+    baseAnchors = [...new Set(baseAnchors)];
+
     anchors = new Map();
     for (const t of titles) {
       if (baseAnchors.includes(t)) continue;
       const cands = baseAnchors.filter((a) => t.startsWith(a + " "));
       if (!cands.length) { blockedSections.push(t); continue; }
-      // SHORTEST matching anchor, per the ruling.
-      cands.sort((a, b) => a.length - b.length || a.localeCompare(b));
-      anchors.set(t, { anchorSection: cands[0] });
+      // SHORTEST matching anchor, per the ruling — but only among anchors whose
+      // numbers this title actually REPRINTS. A rung reprints its anchor; an
+      // anchor whose numbers are disjoint cannot explain this title's cards.
+      const mine = numsOf(t);
+      const sharing = cands.filter((a) => !disjoint(mine, numsOf(a)));
+      const pick = (sharing.length ? sharing : cands).sort((a, b) => a.length - b.length || a.localeCompare(b));
+      anchors.set(t, { anchorSection: pick[0] });
     }
   }
 
@@ -305,10 +388,11 @@ function convert(xlsxPath) {
   for (const r of rows.slice(1)) {
     const setName = String(r[C.set] || "").trim();
     const num = String(r[C.card] || "").trim();
-    const player = String(r[C.desc] || "").trim();
+    const player = cleanPlayerCell(r[C.desc]);
     if (!setName || !num || !player) continue;
     if (blockedSections.includes(setName)) continue;
-    const { anchor, parallel, subset } = splitSection(setName, anchors);
+    const canonical = pluralTwins.get(setName) || setName;
+    const { anchor, parallel, subset } = splitSection(canonical, anchors);
     const category = subset ? `${slug(anchor)}--${slug(subset)}` : slug(anchor);
     const isAuto = LAYOUT === "panini"
       ? /(?:^|[^a-z])(?:auto|autograph|autographs|signature|signatures|ink|scripts|penmanship)(?:[^a-z]|$)/i.test(setName)
