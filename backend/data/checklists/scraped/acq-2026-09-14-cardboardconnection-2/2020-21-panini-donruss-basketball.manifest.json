@@ -1091,14 +1091,19 @@
       "printRun": 10
     }
   ],
-  "collisionCheck": {
-    "checkedAt": "2026-09-15",
-    "method": "lib/insert-set-key.cjs planFile(), driven exactly as ingest-checklist-csv-to-catalog.cjs drives it (rungFoldingByCell -> separationByCell -> planFile -> setKeyForRow). Local, no Cosmos.",
-    "verdict": "pass",
-    "rows": 8033,
-    "distinctIds": 8033,
-    "clashingAddresses": 0,
-    "subsetKeysSeparated": 18
-  },
-  "ingestBlocked": null
+  "ingestBlocked": {
+    "scope": "SECTION-LEVEL, not the whole file — every other section in this file is correct and should be written.",
+    "heldSections": [
+      {
+        "section": "Jerseys Kings Prime",
+        "rows": 40,
+        "shouldBe": "category `jersey-kings`, parallel \"Prime\"",
+        "why": "The source spells this section PLURAL — it prints both \"Jersey Kings\" and \"Jerseys Kings Prime\". Because the two titles differ in the STEM, no rule relates them, so the plural title becomes its own anchor and the rows are addressed to a card set that does not exist. Held until the plural-twin follow-up.",
+        "collides": false
+      }
+    ],
+    "totalHeldRows": 40,
+    "blockedReason": "This section is addressed to a card set the source does not print, because its title is a plural twin of a real section. Holding it keeps the APPLY writing only correct identities; it is released by the plural-twin follow-up.",
+    "awaitingFix": "convertCardboardConnectionXlsx plural-twin fold"
+  }
 }

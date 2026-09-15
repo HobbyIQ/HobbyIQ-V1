@@ -983,7 +983,14 @@ export const PRODUCT_SET_KEYS: ReadonlyArray<ProductSetKey> = [
     "in-it-to-win-it", "international-men-of-mastery", "introductions",
     "introductions-mosaic-red", "jam-masters", "men-of-mastery",
     "montage", "old-school", "overdrive", "rookie-autographs-mosaic",
-    "rookie-private-signings-association-version", "rookie-scripts",
+    "rookie-private-signings-association-version",
+    // The source prints "Rookie Private Signings Icon Version" only as its Gold
+    // and Platinum rungs — there is no plain Icon Version section. Folding the
+    // rungs onto the set they name (rather than minting
+    // `...-icon-version-gold` as a card set) needs the root key registered, or
+    // both rows fall back to the base product and collide with the Association
+    // Version rows at card 12.
+    "rookie-private-signings-icon-version", "rookie-scripts",
     "scripts", "stained-glass", "stare-masters", "straight-fire",
     "swagger", "will-to-win",
     "rookie-variations",

@@ -2,6 +2,7 @@ import * as appInsights from "applicationinsights";
 import { type InstrumentationOptions } from "applicationinsights";
 import { setTelemetryClient, type TelemetryClientLike } from "./services/ops/telemetryClient.js";
 import { warmStart } from "./services/ops/warmStart.js";
+import { allowBackgroundJob, slotRole } from "./services/ops/slotRole.js";
 
 const { useAzureMonitor, TelemetryClient } = appInsights;
 import { SeverityNumber } from "@opentelemetry/api-logs";
@@ -171,6 +172,17 @@ if (process.env.APPLICATIONINSIGHTS_CONNECTION_STRING) {
 const port = Number(process.env.PORT || 8080);
 app.listen(port, "0.0.0.0", () => {
   console.log(`HobbyIQ API listening on port ${port}`);
+  // CF-A-STAGING-SLOT-MUST-NOT-ACT-LIKE-PRODUCTION (Fable, 2026-09-15). State
+  // the role at WARN, so it survives the prod logging floor and appears in the
+  // slot's own log stream. "Which role did this process think it was?" is the
+  // first question of any swap that goes wrong, and it should not require a
+  // deploy to answer.
+  console.warn(JSON.stringify({
+    event: "server_role",
+    source: "server",
+    role: slotRole(),
+    backgroundJobs: slotRole() === "staging" ? "disabled" : "enabled",
+  }));
   // CF-THE-FIRST-USER-SHOULD-NOT-PAY-FOR-THE-DEPLOY (Fable, 2026-09-15).
   // Build the expensive process-wide singletons now, off the request path.
   // AFTER listen deliberately: blocking readiness would trade a slow first
@@ -182,17 +194,17 @@ app.listen(port, "0.0.0.0", () => {
     console.warn("[server] warmStart failed:", (err as Error)?.message ?? err);
   });
   try {
-    startDailyJobs();
+    if (allowBackgroundJob("startDailyJobs")) startDailyJobs();
   } catch (err: any) {
     console.error("[server] startDailyJobs failed:", err?.message ?? err);
   }
   try {
-    startPortfolioRepriceJob();
+    if (allowBackgroundJob("startPortfolioRepriceJob")) startPortfolioRepriceJob();
   } catch (err: any) {
     console.error("[server] startPortfolioRepriceJob failed:", err?.message ?? err);
   }
   try {
-    startPriceAlertEvaluatorJob();
+    if (allowBackgroundJob("startPriceAlertEvaluatorJob")) startPriceAlertEvaluatorJob();
   } catch (err: any) {
     console.error("[server] startPriceAlertEvaluatorJob failed:", err?.message ?? err);
   }
@@ -201,7 +213,7 @@ app.listen(port, "0.0.0.0", () => {
   // STAGING_DRAINER_ENABLED=true — off by default at boot; flip on
   // via App Service settings after verifying deploy landed.
   try {
-    startStagingDrainer();
+    if (allowBackgroundJob("startStagingDrainer")) startStagingDrainer();
   } catch (err: any) {
     console.error("[server] startStagingDrainer failed:", err?.message ?? err);
   }
@@ -210,7 +222,7 @@ app.listen(port, "0.0.0.0", () => {
   // doesn't burn the getPricing budget. Same APNs no-op semantics; same
   // ADVANCED_ALERTS_EVALUATOR_DISABLE kill switch.
   try {
-    startAdvancedAlertsEvaluatorJob();
+    if (allowBackgroundJob("startAdvancedAlertsEvaluatorJob")) startAdvancedAlertsEvaluatorJob();
   } catch (err: any) {
     console.error(
       "[server] startAdvancedAlertsEvaluatorJob failed:",
@@ -218,7 +230,7 @@ app.listen(port, "0.0.0.0", () => {
     );
   }
   try {
-    startEbayOrderPollJob();
+    if (allowBackgroundJob("startEbayOrderPollJob")) startEbayOrderPollJob();
   } catch (err: any) {
     console.error("[server] startEbayOrderPollJob failed:", err?.message ?? err);
   }
@@ -228,7 +240,7 @@ app.listen(port, "0.0.0.0", () => {
   // Combined with EBAY_IMPORT_FORCE_REVIEW=true, imports route to
   // the review queue instead of auto-creating holdings.
   try {
-    startWeeklyEbayPurchaseSyncJob();
+    if (allowBackgroundJob("startWeeklyEbayPurchaseSyncJob")) startWeeklyEbayPurchaseSyncJob();
   } catch (err: any) {
     console.error("[server] startWeeklyEbayPurchaseSyncJob failed:", err?.message ?? err);
   }
@@ -238,7 +250,7 @@ app.listen(port, "0.0.0.0", () => {
   // gated (BUYERIQ_DEAL_SCANNER_DISABLE) so we can toggle without
   // a redeploy.
   try {
-    startBuyerIqDealScannerJob();
+    if (allowBackgroundJob("startBuyerIqDealScannerJob")) startBuyerIqDealScannerJob();
   } catch (err: any) {
     console.error("[server] startBuyerIqDealScannerJob failed:", err?.message ?? err);
   }
@@ -246,7 +258,7 @@ app.listen(port, "0.0.0.0", () => {
   // mix-bias-free per-player momentum. Gated by MATCHED_COHORT_JOB_ENABLED.
   // No-op when off. Populates a Redis cache read by getPlayerTrendSnapshot.
   try {
-    startMatchedCohortJob();
+    if (allowBackgroundJob("startMatchedCohortJob")) startMatchedCohortJob();
   } catch (err: any) {
     console.error("[server] startMatchedCohortJob failed:", err?.message ?? err);
   }
@@ -255,12 +267,12 @@ app.listen(port, "0.0.0.0", () => {
   // deliver. Defaults to 05:15 PT — after the inventory refresh, before
   // DailyIQ at 06:00.
   try {
-    startSubscriptionsSafetyNetJob();
+    if (allowBackgroundJob("startSubscriptionsSafetyNetJob")) startSubscriptionsSafetyNetJob();
   } catch (err: any) {
     console.error("[server] startSubscriptionsSafetyNetJob failed:", err?.message ?? err);
   }
   try {
-    startCacheHitRateEmit();
+    if (allowBackgroundJob("startCacheHitRateEmit")) startCacheHitRateEmit();
   } catch (err: any) {
     console.error("[server] startCacheHitRateEmit failed:", err?.message ?? err);
   }
@@ -269,7 +281,7 @@ app.listen(port, "0.0.0.0", () => {
   // false (deploy-time env var change; no code change). First run +120s
   // post-boot — keeps it out of the cold-start critical path.
   try {
-    startEbayFinancesEnrichmentJob();
+    if (allowBackgroundJob("startEbayFinancesEnrichmentJob")) startEbayFinancesEnrichmentJob();
   } catch (err: any) {
     console.error("[server] startEbayFinancesEnrichmentJob failed:", err?.message ?? err);
   }
