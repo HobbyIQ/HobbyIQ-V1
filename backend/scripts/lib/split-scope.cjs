@@ -25,11 +25,39 @@
  *               split, the print-run token for printRun, the parallel words
  *               for parallel, the literal number for cardNumber, the sport
  *               word for sport).
- * split-park  = neither side is checklist-backed, or BOTH are, or the title
- *               does not name the destination. Every one of those is a
- *               reason to leave the row where it is and report it -- picking
- *               a side without title evidence is exactly the guess PARK lists
- *               exist to refuse.
+ * split-park  = neither side is checklist-backed, or BOTH are, the title
+ *               does not name the destination, or the title names MORE than
+ *               the destination does (R55). Every one of those is a reason to
+ *               leave the row where it is and report it -- picking a side
+ *               without title evidence is exactly the guess PARK lists exist
+ *               to refuse.
+ *
+ * R55 -- THE TITLE MAY NOT NAME MORE THAN THE DESTINATION (Drew, 2026-09-15).
+ *
+ * The move rule above asks only whether the title names what the destination
+ * HAS. It never asked whether the title names something the destination LACKS,
+ * and on the slot-3 census that is a live defect: the destination identity
+ * says `Base` while the title states a parallel or an insert.
+ *
+ *   "Jahmyr Gibbs 2024 Prestige Heroes Holo Foil #3"
+ *        -> football:2024:panini-prestige:3:Base:no-auto
+ *   "2025-26 SP Authentic Acetate Retro Future Watch ... #226 SSP"
+ *        -> hockey:2025:sp-authentic:226:Base:no-auto
+ *   "Nikita Zadorov Retro 2025-26 O-Pee-Chee #351"
+ *        -> hockey:2025:o-pee-chee:351:Base:no-auto
+ *
+ * Each is a real card the destination slug does not name: Heroes is an insert,
+ * Acetate Retro Future Watch SSP is a distinct card, Retro is its own O-Pee-Chee
+ * printing. Moving the sale onto the plain Base slug files it on a card it is
+ * not -- worse than leaving it split, because the split is at least visible.
+ * So the judge parks with `split-scope-parks:title-names-more-than-destination`
+ * and the row becomes insert/R38 work rather than a repoint.
+ *
+ * A FILL IS STILL A MOVE. The ruling is about the title naming MORE than the
+ * destination, not about a destination that is gaining something. When the
+ * stated rung IS the destination's own parallel -- "Press Proof Silver /100"
+ * onto `...:113:Press Proof Silver:no-auto:/100` -- nothing is unaccounted
+ * for and the move stands, as do printRun fills.
  *
  * CHECKLIST-BACKEDNESS, OFFLINE. There is no Cosmos read available to this
  * module (nor to the fleet's own MODE=census pass, which is deliberately
@@ -56,6 +84,14 @@ const SEGMENTS = ["sport", "cardYear", "setKey", "cardNumber", "parallel", "auto
 const AXES_THIS_SCOPE_JUDGES = ["setKey", "printRun", "parallel", "cardNumber", "sport"];
 
 const isHiq = (v) => lower(v).startsWith("hiq:");
+
+/** A parallel that means "the writer could not read one" -- a MIRROR of
+ *  GENERIC_PARALLELS in scripts/lib/rematch-classify.cjs, duplicated here only
+ *  because this module is pure and must not require the classifier (which
+ *  loads the corroboration rule and therefore a built dist/).
+ *  `splitScopeMirrorsGenericParallels` in the test file asserts the two stay
+ *  identical, so they cannot drift: add a spelling there first. */
+const GENERIC_PARALLELS = new Set(["", "base", "[base]", "none", "unknown"]);
 
 /**
  * Parse an hiq: slug into its named segments. Returns null for anything that
@@ -311,6 +347,42 @@ function classifySplitScope({ cardId, hobbyiqCardId, title }, segments, opts = {
     };
   }
 
+  // R55 -- THE TITLE MAY NOT NAME MORE THAN THE DESTINATION DOES.
+  //
+  // Asked LAST, so it narrows a move the rules above already approved and can
+  // never create one. See the header for the ruling and its three measured
+  // rows.
+  //
+  // THE DETECTOR IS INJECTED, NOT REIMPLEMENTED. This module is pure by
+  // contract, and "does the title state a finish this identity does not
+  // account for" is a question the parser already answers --
+  // `parseListingIdentity(...).parallelIsUnconfirmed`, the flag
+  // CF-A-STATED-PARALLEL-IS-NEVER-EVICTED-TO-BASE added for exactly this
+  // shape: the title states finish evidence and the derivation could not turn
+  // it into a rung. A second regex here would be a second opinion about what a
+  // title says, and the two would drift. So the caller supplies the answer the
+  // same way it supplies `isRegisteredSetKey`.
+  //
+  // ONLY WHERE THE DESTINATION SAYS `Base`. A destination that already names a
+  // rung has accounted for the title's finish words -- that is the Press Proof
+  // Silver case, which stays a move. `Base` is the claim that the card has no
+  // parallel, and it is the only claim a stated finish can contradict.
+  //
+  // UNASKED IS NOT GUILTY. `titleStatesUnaccountedFinish` defaults to a
+  // function returning null, and null leaves the move standing -- a caller
+  // that cannot ask keeps today's behaviour rather than parking everything.
+  const destParallel = lower(destSide.parallel);
+  if (GENERIC_PARALLELS.has(destParallel)) {
+    const statesMore = (opts.titleStatesUnaccountedFinish ?? (() => null))(title, destSide);
+    if (statesMore === true) {
+      return {
+        verdict: "split-park", judgedAxes, destination: null, backed,
+        titleNamed: named, titleUnnamed: unnamed,
+        reason: "split-scope-parks:title-names-more-than-destination",
+      };
+    }
+  }
+
   return {
     verdict: "split-move", judgedAxes, destination: destField, backed,
     titleNamed: named, titleUnnamed: unnamed,
@@ -319,7 +391,7 @@ function classifySplitScope({ cardId, hobbyiqCardId, title }, segments, opts = {
 }
 
 module.exports = {
-  SEGMENTS, AXES_THIS_SCOPE_JUDGES,
+  SEGMENTS, AXES_THIS_SCOPE_JUDGES, GENERIC_PARALLELS,
   parseHiqSlug, cardNumberIsWellFormed,
   defaultIsRegisteredSetKey, sideIsChecklistBacked,
   titleNamesSetKey, titleNamesParallel, titleNamesPrintRun, titleNamesCardNumber, titleNamesSport,

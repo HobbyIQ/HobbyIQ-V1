@@ -1,0 +1,1022 @@
+{
+  "_README": "The IMPROVE evidence samples from the slot-3 split-scope census, trimmed to\nwhat tests/r32SplitScopeR55.test.ts reads. Copied verbatim from the run's\nown log so the pins are against real pool rows, not invented strings.\n\nA committed fixture, never a scratchpad path: the runner has only what is\ncommitted, so evidence that is not committed is not evidence.\n\nEach row: the sale id, its provenance tier, the listing title, and the\nstored -> derived identity pair the judge was asked to rule on.",
+  "source": {
+    "job": "rematch-sold-comps",
+    "run": "34972416544",
+    "workflow": "Backfill Runner (sold_comps re-slug / verify_queue batch)",
+    "mode": "apply-improve (DRY-RUN)",
+    "slot": 3,
+    "slots": 32,
+    "scope": "r32",
+    "measuredAt": "2026-09-15",
+    "splitScope": {
+      "judged": 30495,
+      "wouldMove": 2346,
+      "wouldPark": 28149,
+      "byAxis": {
+        "setKey": {
+          "move": 2345,
+          "park": 6367
+        },
+        "printRun": {
+          "move": 155,
+          "park": 16594
+        },
+        "parallel": {
+          "move": 5,
+          "park": 1932
+        },
+        "cardNumber": {
+          "move": 1,
+          "park": 109
+        },
+        "sport": {
+          "move": 0,
+          "park": 8971
+        }
+      }
+    }
+  },
+  "rows": [
+    {
+      "id": "tca-ebay::307091771924",
+      "tier": "AUTO",
+      "title": "2025-26 SP Authentic Acetate Retro Future Watch Connor McDavid Edmonton #226 SSP",
+      "stored": "hockey:2025:unknown:226:Base:no-auto",
+      "derived": "hockey:2025:sp-authentic:226:Base:no-auto"
+    },
+    {
+      "id": "tca-ebay::287263293658",
+      "tier": "AUTO",
+      "title": "Jahmyr Gibbs 2024 Prestige Heroes Holo Foil #3 Detroit Lions Star Pro Bowl",
+      "stored": "football:2024:unknown:3:Base:no-auto",
+      "derived": "football:2024:panini-prestige:3:Base:no-auto"
+    },
+    {
+      "id": "tca-ebay::206393027221",
+      "tier": "AUTO",
+      "title": "Nikita Zadorov Retro 2025-26 O-Pee-Chee #351 Boston Bruins",
+      "stored": "hockey:2025:unknown:351:Base:no-auto",
+      "derived": "hockey:2025:o-pee-chee:351:Base:no-auto"
+    },
+    {
+      "id": "cardhedge::ch-daily::1757095814495x512860845897928260",
+      "tier": "AUTO",
+      "title": "2024 Panini Phoenix - Harrison Butker #66 Blue  😲10/50 😲 Kansas City Chiefs - Raw 10",
+      "stored": "football:2024:panini-phoenix:66:Blue:no-auto",
+      "derived": "football:2024:panini-phoenix:66:Blue:no-auto:/50"
+    },
+    {
+      "id": "cardhedge::ch-daily::1761317250045x172522188974642200",
+      "tier": "AUTO",
+      "title": "Drew Brees 2024 Panini Mosaic #14 Blue Moments in Time #'d/99 Future HOF - Raw 10",
+      "stored": "football:2024:panini-mosaic:14:Blue:no-auto",
+      "derived": "football:2024:panini-mosaic:14:Blue:no-auto:/99"
+    },
+    {
+      "id": "tca-ebay::406949335667",
+      "tier": "AUTO",
+      "title": "2025-26 Flair Hockey Wave Of The Future Brady Martin #WF-17 RC",
+      "stored": "hockey:2025:unknown:wf-17:Base:no-auto",
+      "derived": "hockey:2025:flair:WF-17:Base:no-auto"
+    },
+    {
+      "id": "tca-ebay::395959034344",
+      "tier": "AUTO",
+      "title": "2024 Prestige Lot of 53 Galaxy Parallels 13 RC\\'s 40 Base no dupes Jordan Love",
+      "stored": "football:2024:unknown:13:Base:no-auto",
+      "derived": "football:2024:panini-prestige:13:Base:no-auto"
+    },
+    {
+      "id": "tca-ebay::EBAY-v1|237020541015|0",
+      "tier": "AUTO",
+      "title": "2025-26 UD SP Authentic Future Watch/599 Ian Moore #144 Anaheim Ducks",
+      "stored": "hockey:2025:sp-authentic:144:Base:no-auto",
+      "derived": "hockey:2025:sp-authentic:144:Base:no-auto:/599"
+    },
+    {
+      "id": "cardhedge::ch-daily::1785993207649x249148525533329440",
+      "tier": "PROTECTED",
+      "title": "2024 Donruss Optic Footballs #293 Trey Benson (#'d/16) - Raw",
+      "stored": "football:2024:donruss-optic:293:Footballs:no-auto",
+      "derived": "football:2024:donruss-optic:293:Footballs:no-auto:/16"
+    },
+    {
+      "id": "tca-ebay::EBAY-v1|137635686102|0",
+      "tier": "AUTO",
+      "title": "2024 Panini Prestige - Heroes Justin Herbert #13",
+      "stored": "football:2024:unknown:13:Base:no-auto",
+      "derived": "football:2024:panini-prestige:13:Base:no-auto"
+    },
+    {
+      "id": "cardhedge::ch-fill::1734794608421x404340508397160500::2026-08-11T22:48:59.000Z::600",
+      "tier": "AUTO",
+      "title": "Panini 2024 Prizm Football Caleb Williams RC Rookie #301 Chicago Bears NFL - Raw",
+      "stored": "football:2024::301:Base:no-auto",
+      "derived": "football:2024:panini-prizm:301:Base:no-auto"
+    },
+    {
+      "id": "cardhedge::ch-fill::1734794608421x404340508397160500::2026-08-11T14:07:44.000Z::3500",
+      "tier": "AUTO",
+      "title": "Panini 2024 Prizm Caleb Williams Rookie #301 Chicago Bears Football Card - Raw",
+      "stored": "football:2024::301:Base:no-auto",
+      "derived": "football:2024:panini-prizm:301:Base:no-auto"
+    },
+    {
+      "id": "cardhedge::ch-fill::1734794608421x404340508397160500::2026-08-11T00:18:00.000Z::817",
+      "tier": "AUTO",
+      "title": "2024 Panini Prizm Caleb Williams RC Rookie #301 Bears - Raw",
+      "stored": "football:2024::301:Base:no-auto",
+      "derived": "football:2024:panini-prizm:301:Base:no-auto"
+    },
+    {
+      "id": "cardhedge::ch-fill::1734794608421x404340508397160500::2026-08-10T20:01:48.000Z::600",
+      "tier": "AUTO",
+      "title": "2024 Panini Prizm #301 Caleb Williams - Raw",
+      "stored": "football:2024::301:Base:no-auto",
+      "derived": "football:2024:panini-prizm:301:Base:no-auto"
+    },
+    {
+      "id": "tca-ebay::187705294654",
+      "tier": "AUTO",
+      "title": "2024 Prestige Michael Irvin Diamond Xtra Points #82 Cowboys HOF WR",
+      "stored": "football:2024:unknown:82:Base:no-auto",
+      "derived": "football:2024:panini-prestige:82:Base:no-auto"
+    },
+    {
+      "id": "cardhedge::ch-daily::1749513290898x872271771498047700",
+      "tier": "AUTO",
+      "title": "2024 Panini Phoenix🔥David Montgomery🔥ColorBurst🔥6/10🔥#37 - Raw 10",
+      "stored": "football:2024:panini-phoenix:37:Colorburst:no-auto",
+      "derived": "football:2024:panini-phoenix:37:Colorburst:no-auto:/10"
+    },
+    {
+      "id": "cardhedge::ch-daily::1757040212266x250678403462506020",
+      "tier": "AUTO",
+      "title": "2024 Topps Chrome #227 Nate Wiggins RC Rookie Frozen Fractor -1/0 - Raw 10",
+      "stored": "football:2024:topps-chrome:227:Base:no-auto",
+      "derived": "football:2024:topps-chrome:227:Base:no-auto:/0"
+    },
+    {
+      "id": "tca-ebay::407083064410",
+      "tier": "AUTO",
+      "title": "2025-26 Upper Deck Mvp - Net Presence Macklin Celebrini #NP-10",
+      "stored": "hockey:2025:unknown:NP-10:Base:no-auto",
+      "derived": "hockey:2025:upper-deck:NP-10:Base:no-auto"
+    },
+    {
+      "id": "cardhedge::ch-daily::1741703216816x581403687252299600",
+      "tier": "AUTO",
+      "title": "2024 Panini Spectra #129 Jonathon Brooks Celestial RC #d/99  - Raw 10",
+      "stored": "football:2024:panini-spectra:129:Celestial:no-auto",
+      "derived": "football:2024:panini-spectra:129:Celestial:no-auto:/99"
+    },
+    {
+      "id": "cardhedge::ch-daily::1744352214582x535363735936691400",
+      "tier": "AUTO",
+      "title": "2024 Topps Chrome Football Herman Moore #69 Frozen Fractor -1/0 - Raw 10",
+      "stored": "football:2024:topps-chrome:69:Base:no-auto",
+      "derived": "football:2024:topps-chrome:69:Base:no-auto:/0"
+    },
+    {
+      "id": "cardhedge::ch-daily::1751468772629x632658236552304400",
+      "tier": "AUTO",
+      "title": "2024 Spectra - Rookie Patch Auto Adonai Mitchell #208 Celestial Prizm 5-8/75 - Raw 10",
+      "stored": "football:2024:panini-spectra:208:Celestial:auto",
+      "derived": "football:2024:panini-spectra:208:Celestial:auto:/75"
+    },
+    {
+      "id": "tca-ebay::128019807397",
+      "tier": "AUTO",
+      "title": "2025/26 SELECT FIFA WORLD CUP NOAH OKAFOR BLACK PRIZM LOGO PATCH RARE #1/1",
+      "stored": "soccer:2025:panini-select:1:Base:no-auto",
+      "derived": "soccer:2025:panini-select:1:Base:no-auto:/1"
+    },
+    {
+      "id": "cardhedge::ch-daily::1757374325619x412794193196204000",
+      "tier": "AUTO",
+      "title": "2024 RED DONRUSS ROOKIE CLEARLY JERMAINE BURTON #75!…/99! - Raw 10",
+      "stored": "football:2024:panini-donruss:75:Red:no-auto",
+      "derived": "football:2024:panini-donruss:75:Red:no-auto:/99"
+    },
+    {
+      "id": "tca-ebay::236944786928",
+      "tier": "AUTO",
+      "title": "2025-26 Upper Deck Young Guns Nate Danielson #714 Detroit Red Wings 3 Card Lot",
+      "stored": "hockey:2025:unknown:714:Base:no-auto",
+      "derived": "hockey:2025:upper-deck:714:Base:no-auto"
+    },
+    {
+      "id": "tca-ebay::406716699696",
+      "tier": "AUTO",
+      "title": "2025-26 Topps Chrome EPL Premier League Complete THAT’S HIS JOB Set #1-20",
+      "stored": "soccer:2025:topps-chrome:?:Base:no-auto",
+      "derived": "soccer:2025:topps-chrome:1:Base:no-auto"
+    },
+    {
+      "id": "cardhedge::ch-daily::1746932314042x856224093753022300",
+      "tier": "PROTECTED",
+      "title": "2024 Donruss Optic Football #300 Xavier Worthy Electricity Prizm/75 - Raw 10",
+      "stored": "football:2024:donruss-optic:300:Electricity:no-auto",
+      "derived": "football:2024:donruss-optic:300:Electricity:no-auto:/75"
+    },
+    {
+      "id": "cardhedge::ch-daily::1747600800990x735786597402639000",
+      "tier": "PROTECTED",
+      "title": "2024 Donruss Optic Football #300 Xavier Worthy Electricity Prizm/75 - Raw 10",
+      "stored": "football:2024:donruss-optic:300:Electricity:no-auto",
+      "derived": "football:2024:donruss-optic:300:Electricity:no-auto:/75"
+    },
+    {
+      "id": "cardhedge::ch-daily::1746897297295x891203942003546900",
+      "tier": "PROTECTED",
+      "title": "2024 Donruss Optic - Rated Rookie Kris Jenkins #265 Orange 🍊143/249 - Raw 10",
+      "stored": "football:2024:donruss-optic:265:Orange:no-auto",
+      "derived": "football:2024:donruss-optic:265:Orange:no-auto:/249"
+    },
+    {
+      "id": "tca-ebay::206429457246",
+      "tier": "AUTO",
+      "title": "Upper Deck 25-26 Extended Series Rookie Update RU-3 Alexander Nikishin /1999",
+      "stored": "hockey:2025:upper-deck:ru-3:Base:no-auto",
+      "derived": "hockey:2025:upper-deck:RU-3:Base:no-auto:/1999"
+    },
+    {
+      "id": "tca-ebay::EBAY-v1|206082392406|506846272882",
+      "tier": "AUTO",
+      "title": "2025 Topps Chrome MLS - Base & Rookie Cards #1-200 - Pick Your Card!",
+      "stored": "soccer:2025:topps-chrome:?:Base:no-auto",
+      "derived": "soccer:2025:topps-chrome:1:Base:no-auto"
+    },
+    {
+      "id": "cardhedge::ch-daily::1785284815354x836238113135834200",
+      "tier": "PROTECTED",
+      "title": "2024 Donruss Optic Footballs #32 Tyson Bagent (#'d/16) - Raw",
+      "stored": "football:2024:donruss-optic:32:Footballs:no-auto",
+      "derived": "football:2024:donruss-optic:32:Footballs:no-auto:/16"
+    },
+    {
+      "id": "cardhedge::ch-daily::1737756299084x594087995288241700",
+      "tier": "AUTO",
+      "title": "LAMAR JACKSON #70 2024 PANINI ORIGINS ORANGE ?/125 MVP RAVENS - Raw 10",
+      "stored": "football:2024:panini-origins:70:Orange:no-auto",
+      "derived": "football:2024:panini-origins:70:Orange:no-auto:/125"
+    },
+    {
+      "id": "cardhedge::ch-daily::1741780712562x980349443494171800",
+      "tier": "AUTO",
+      "title": "2024 Topps Chrome Jason Kelce #160 Frozen Fractor -5/0 Philadelphia Eagles  - Raw 10",
+      "stored": "football:2024:topps-chrome:160:Base:no-auto",
+      "derived": "football:2024:topps-chrome:160:Base:no-auto:/0"
+    },
+    {
+      "id": "cardhedge::ch-daily::1756406660432x504668813746207000",
+      "tier": "AUTO",
+      "title": "2024 Panini Zenith Joe Burrow Blue Behind The Numbers #d/25 Bengals Card #13 - Raw 10",
+      "stored": "football:2024:panini-zenith:13:Blue:no-auto",
+      "derived": "football:2024:panini-zenith:13:Blue:no-auto:/25"
+    },
+    {
+      "id": "cardhedge::ch-daily::1743305465994x829449090416064800",
+      "tier": "AUTO",
+      "title": "2024 Panini Spectra #103 Brian Dawkins Hyper #d/75 - Raw 10",
+      "stored": "football:2024:panini-spectra:103:Hyper:no-auto",
+      "derived": "football:2024:panini-spectra:103:Hyper:no-auto:/75"
+    },
+    {
+      "id": "cardhedge::ch-daily::1746737872938x172976744001097860",
+      "tier": "AUTO",
+      "title": "2024 Topps Chrome Adrian Peterson Frozen Fractor -1/0 Minnesota No 113 - Raw 10",
+      "stored": "football:2024:topps-chrome:113:Base:no-auto",
+      "derived": "football:2024:topps-chrome:113:Base:no-auto:/0"
+    },
+    {
+      "id": "cardhedge::ch-daily::1756595848260x766253288387101400",
+      "tier": "AUTO",
+      "title": "2024 Panini Phoenix #221 Malik Nabers Rookie RC FireBurst Prizm #ed/350 Mint - Raw 10",
+      "stored": "football:2024:panini-phoenix:221:Fireburst:no-auto",
+      "derived": "football:2024:panini-phoenix:221:Fireburst:no-auto:/350"
+    },
+    {
+      "id": "cardhedge::ch-daily::1754940047384x707131718800290200",
+      "tier": "AUTO",
+      "title": "Ja’Lynn Polk 2024 Topps Chrome RC Rookie Frozen Fractor -5/0 #220 Patriots - Raw 10",
+      "stored": "football:2024:topps-chrome:220:Base:no-auto",
+      "derived": "football:2024:topps-chrome:220:Base:no-auto:/0"
+    },
+    {
+      "id": "tca-ebay::407091365467",
+      "tier": "AUTO",
+      "title": "Lot (2) Macklin Celebrini 2025-26 Parkhurst Base #179 + Retro #28",
+      "stored": "hockey:2025:unknown:179:Base:no-auto",
+      "derived": "hockey:2025:parkhurst:179:Base:no-auto"
+    },
+    {
+      "id": "cardhedge::ch-daily::1738336239000x539516707242366800",
+      "tier": "AUTO",
+      "title": "Jalen Hurts 2024 Panini Prizm Football 231 Orange Holo Prizm SP #d/249 Eagles - Raw 10",
+      "stored": "football:2024:panini-prizm:231:Orange:no-auto",
+      "derived": "football:2024:panini-prizm:231:Orange:no-auto:/249"
+    },
+    {
+      "id": "cardhedge::ch-daily::1738354747983x691203358583419100",
+      "tier": "AUTO",
+      "title": "Jalen Hurts 2024 Panini Prizm Football 231 Orange Holo Prizm SP #d/249 Eagles - Raw 10",
+      "stored": "football:2024:panini-prizm:231:Orange:no-auto",
+      "derived": "football:2024:panini-prizm:231:Orange:no-auto:/249"
+    },
+    {
+      "id": "cardhedge::ch-daily::1741700933803x291877911275706800",
+      "tier": "AUTO",
+      "title": "2024 Panini Spectra - Interstellar Prizm #32 Dak Prescott #d/60 - Raw 10",
+      "stored": "football:2024:panini-spectra:32:Interstellar:no-auto",
+      "derived": "football:2024:panini-spectra:32:Interstellar:no-auto:/60"
+    },
+    {
+      "id": "cardhedge::ch-daily::1746325169920x468599965266237400",
+      "tier": "AUTO",
+      "title": "2024 Panini Spectra - Interstellar Prizm #32 Dak Prescott #d/60 - Raw 10",
+      "stored": "football:2024:panini-spectra:32:Interstellar:no-auto",
+      "derived": "football:2024:panini-spectra:32:Interstellar:no-auto:/60"
+    },
+    {
+      "id": "tca-ebay::358803839472",
+      "tier": "AUTO",
+      "title": "2024 Panini Contenders JOE BURROW Conference Ticket Prizm/99 Bengals #20",
+      "stored": "football:2024:panini-contenders:20:Base:no-auto",
+      "derived": "football:2024:panini-contenders:20:Base:no-auto:/99"
+    },
+    {
+      "id": "tca-ebay::206463600289",
+      "tier": "AUTO",
+      "title": "2025-26 Flair Hockey Gabe Perreault RC Rookie Wave Of The Future #WF-8 New York",
+      "stored": "hockey:2025:unknown:wf-8:Base:no-auto",
+      "derived": "hockey:2025:flair:WF-8:Base:no-auto"
+    },
+    {
+      "id": "tca-ebay::157927061510",
+      "tier": "AUTO",
+      "title": "2025-26 Flair Hockey #WF-19 Carter Mazur Wave of the Future RC Detroit Red Wings",
+      "stored": "hockey:2025:unknown:wf-19:Base:no-auto",
+      "derived": "hockey:2025:flair:WF-19:Base:no-auto"
+    },
+    {
+      "id": "tca-ebay::318335515457",
+      "tier": "AUTO",
+      "title": "2025-26 Flair Hockey Wave Of The Future Ozzy Weisblatt #WF-11 RC",
+      "stored": "hockey:2025:unknown:wf-11:Base:no-auto",
+      "derived": "hockey:2025:flair:WF-11:Base:no-auto"
+    },
+    {
+      "id": "cardhedge::ch-daily::1741741124902x155596678141299400",
+      "tier": "AUTO",
+      "title": "2024 Panini Spectra #98 Harold Landry Hyper #d/75 - Raw 10",
+      "stored": "football:2024:panini-spectra:98:Hyper:no-auto",
+      "derived": "football:2024:panini-spectra:98:Hyper:no-auto:/75"
+    },
+    {
+      "id": "cardhedge::ch-daily::1741941182421x636969142803554800",
+      "tier": "AUTO",
+      "title": "2024 Spectra #35 Javonte Williams Spectris #d/30 Denver Broncos  - Raw 10",
+      "stored": "football:2024:panini-spectra:35:Spectris:no-auto",
+      "derived": "football:2024:panini-spectra:35:Spectris:no-auto:/30"
+    },
+    {
+      "id": "cardhedge::ch-daily::1746808194137x112095856616289520",
+      "tier": "AUTO",
+      "title": "2024 Bowman U Chrome Will Howard X Fractor Rc Rookie #182 4TH BEST QB RATING - Raw 10",
+      "stored": "football:2024:bowman-chrome:182:Base:no-auto",
+      "derived": "football:2024:bowman-chrome:182:X-Fractor:no-auto"
+    },
+    {
+      "id": "cardhedge::ch-daily::1747891492065x679876032340701600",
+      "tier": "AUTO",
+      "title": "2024 Panini Photogenic Chad Greenway No 138 BLUE numbered/99 - Raw 10",
+      "stored": "football:2024:panini-photogenic:138:Blue:no-auto",
+      "derived": "football:2024:panini-photogenic:138:Blue:no-auto:/99"
+    },
+    {
+      "id": "cardhedge::ch-daily::1748696217687x366479465659154100",
+      "tier": "AUTO",
+      "title": " Davante Adams 2024 Panini Spectra Celestial 💥67💥/99 #57 Raiders - Raw 10",
+      "stored": "football:2024:panini-spectra:57:Celestial:no-auto",
+      "derived": "football:2024:panini-spectra:57:Celestial:no-auto:/99"
+    },
+    {
+      "id": "cardhedge::ch-daily::1751067069892x705717491500577300",
+      "tier": "AUTO",
+      "title": "#'ed/99 🔥 CHOP ROBINSON RC 2024 Panini Spectra Rookie Celestial Prizm No 164 - Raw 10",
+      "stored": "football:2024:panini-spectra:164:Celestial:no-auto",
+      "derived": "football:2024:panini-spectra:164:Celestial:no-auto:/99"
+    },
+    {
+      "id": "tca-ebay::298594276062",
+      "tier": "AUTO",
+      "title": "2025/26 SP AUTHENTIC FUTURE WATCH AUTO PATCH #133 Ryan Leonard #07/50 CAPITALS",
+      "stored": "hockey:2025:sp-authentic:133:Base:no-auto",
+      "derived": "hockey:2025:sp-authentic:133:Base:no-auto:/50"
+    },
+    {
+      "id": "cardhedge::ch-daily::1785349669686x906602209902473100",
+      "tier": "PROTECTED",
+      "title": "2024 Donruss Optic Footballs #262 Kimani Vidal (#'d/16) - Raw",
+      "stored": "football:2024:donruss-optic:262:Footballs:no-auto",
+      "derived": "football:2024:donruss-optic:262:Footballs:no-auto:/16"
+    },
+    {
+      "id": "cardhedge::ch-daily::1789212998337x799929198722838900",
+      "tier": "AUTO",
+      "title": "2024 Panini Phoenix - Zay Flowers #150 Gold Numbered 💥2/10💥 - Raw",
+      "stored": "football:2024:panini-phoenix:150:Gold:no-auto",
+      "derived": "football:2024:panini-phoenix:150:Gold:no-auto:/10"
+    },
+    {
+      "id": "tca-ebay::127863106889",
+      "tier": "AUTO",
+      "title": "2025-26 SPx - Alexander Ovechkin 34.5 LBs Stanley Cup Die-Cut #SC-7 Card",
+      "stored": "hockey:2025:unknown:sc-7:Base:no-auto",
+      "derived": "hockey:2025:spx:SC-7:Base:no-auto"
+    },
+    {
+      "id": "cardhedge::ch-daily::1747613958762x565969338738403100",
+      "tier": "AUTO",
+      "title": "2024 Panini Phoenix #51 DK Metcalf Bronze Prizm/75 - Raw 10",
+      "stored": "football:2024:panini-phoenix:51:Bronze:no-auto",
+      "derived": "football:2024:panini-phoenix:51:Bronze:no-auto:/75"
+    },
+    {
+      "id": "tca-ebay::178342248119",
+      "tier": "AUTO",
+      "title": "2025/26 Panini Select Road To FIFA WC Kevin De Bruyne  #6 7/10",
+      "stored": "soccer:2025:panini-select:6:Base:no-auto",
+      "derived": "soccer:2025:panini-select:6:Base:no-auto:/10"
+    },
+    {
+      "id": "tca-ebay::EBAY-v1|405577686247|675872829269",
+      "tier": "AUTO",
+      "title": "2024 Topps Chrome Football Base #1-200 (You Pick) - Legends & Current Players",
+      "stored": "football:2024:topps-chrome:?:Base:no-auto",
+      "derived": "football:2024:topps-chrome:1:Base:no-auto"
+    },
+    {
+      "id": "cardhedge::ch-daily::1757984848344x638645668490481500",
+      "tier": "PROTECTED",
+      "title": "2024 Donruss Optic Rated Rookie Kamari Lassiter #261 Ice SP/15 - Texans 🔥 - Raw 10",
+      "stored": "football:2024:donruss-optic:261:Ice:no-auto",
+      "derived": "football:2024:donruss-optic:261:Ice:no-auto:/15"
+    },
+    {
+      "id": "cardhedge::ch-daily::1785359913109x815322610018320800",
+      "tier": "PROTECTED",
+      "title": "2024 Donruss Optic Dragon #282 Quinyon Mitchell (#'d/24) - Raw",
+      "stored": "football:2024:donruss-optic:282:Dragon:no-auto",
+      "derived": "football:2024:donruss-optic:282:Dragon:no-auto:/24"
+    },
+    {
+      "id": "cardhedge::ch-daily::1747840137269x943010282509660700",
+      "tier": "PROTECTED",
+      "title": "Jeff Okudah 2024 Panini Donruss Optic Red Priz15/125 #81 Houston Texans - Raw 10",
+      "stored": "football:2024:donruss-optic:81:Red:no-auto",
+      "derived": "football:2024:donruss-optic:81:Red:no-auto:/125"
+    },
+    {
+      "id": "tca-ebay::147450283465",
+      "tier": "AUTO",
+      "title": "Mikhail Sergachev Retro 2025-26 Parkhurst Hockey #25 Mint",
+      "stored": "hockey:2025:unknown:25:Base:no-auto",
+      "derived": "hockey:2025:parkhurst:25:Base:no-auto"
+    },
+    {
+      "id": "cardhedge::ch-fill::1734794614499x926352212271681600::2026-08-11T15:53:00.000Z::700",
+      "tier": "AUTO",
+      "title": "2024 Panini Prizm - Rookies Drake Maye #329 (RC) - Raw",
+      "stored": "football:2024::329:Base:no-auto",
+      "derived": "football:2024:panini-prizm:329:Base:no-auto"
+    },
+    {
+      "id": "cardhedge::ch-fill::1734794614499x926352212271681600::2026-08-10T23:32:12.000Z::325",
+      "tier": "AUTO",
+      "title": "2024 Panini Prizm - Rookies Drake Maye #329 (RC) - Raw",
+      "stored": "football:2024::329:Base:no-auto",
+      "derived": "football:2024:panini-prizm:329:Base:no-auto"
+    },
+    {
+      "id": "cardhedge::ch-fill::1734794614499x926352212271681600::2026-08-10T01:15:18.000Z::550",
+      "tier": "AUTO",
+      "title": "2024 Panini Prizm Drake Maye RC Rookie #329 Patriots - Raw",
+      "stored": "football:2024::329:Base:no-auto",
+      "derived": "football:2024:panini-prizm:329:Base:no-auto"
+    },
+    {
+      "id": "cardhedge::ch-fill::1734794614499x926352212271681600::2026-08-09T16:37:38.000Z::650",
+      "tier": "AUTO",
+      "title": "2024 PANINI PRIZM DRAKE MAYE ROOKIE #329 - Raw",
+      "stored": "football:2024::329:Base:no-auto",
+      "derived": "football:2024:panini-prizm:329:Base:no-auto"
+    },
+    {
+      "id": "tca-ebay::178400035673",
+      "tier": "AUTO",
+      "title": "Upper Deck 2025-26 NHL Luukkonen Deluxe #666 Benson RC Rainbow #300 Lot 2",
+      "stored": "hockey:2025:unknown:666:Base:no-auto",
+      "derived": "hockey:2025:upper-deck:666:Base:no-auto"
+    },
+    {
+      "id": "tca-ebay::206469982943",
+      "tier": "AUTO",
+      "title": "2025 UPPER DECK O-PEE-CHEE #OP-2 CONNOR MCDAVID PREMIER JUMBO / OVERSIZED",
+      "stored": "hockey:2025:unknown:op-2:Base:no-auto",
+      "derived": "hockey:2025:o-pee-chee:OP-2:Base:no-auto"
+    },
+    {
+      "id": "cardhedge::ch-daily::1741803633317x284927020707798530",
+      "tier": "AUTO",
+      "title": "2024 JJ McCarthy Photogenic Rookie Pix Purple #’/75 Color Match Vikings - Raw 10",
+      "stored": "football:2024:panini-photogenic:9:Purple:no-auto",
+      "derived": "football:2024:panini-photogenic:9:Purple:no-auto:/75"
+    },
+    {
+      "id": "cardhedge::ch-daily::1742079994746x504422327363072400",
+      "tier": "AUTO",
+      "title": "2024 Panini Spectra Terry McLaurin CELESTIAL PRIZM #d/99 COMMANDERS #100 - Raw 10",
+      "stored": "football:2024:panini-spectra:100:Celestial:no-auto",
+      "derived": "football:2024:panini-spectra:100:Celestial:no-auto:/99"
+    },
+    {
+      "id": "cardhedge::ch-daily::1747614330007x982683063487534600",
+      "tier": "AUTO",
+      "title": "2024 Panini Phoenix #60 Geno Smith Pulsar Prizm/200 - Raw 10",
+      "stored": "football:2024:panini-phoenix:60:Pulsar:no-auto",
+      "derived": "football:2024:panini-phoenix:60:Pulsar:no-auto:/200"
+    },
+    {
+      "id": "cardhedge::ch-daily::1748755125143x880027562013177900",
+      "tier": "AUTO",
+      "title": "Kurt Warner -5/0 Frozen Fractor 2024 Topps Chrome #1 - Raw 10",
+      "stored": "football:2024:topps-chrome:1:Base:no-auto",
+      "derived": "football:2024:topps-chrome:1:Base:no-auto:/0"
+    },
+    {
+      "id": "cardhedge::ch-daily::1750978321822x229252197685028580",
+      "tier": "AUTO",
+      "title": "2024 Panini Spectra Terry McLaurin CELESTIAL PRIZM #d/99 COMMANDERS #100 - Raw 10",
+      "stored": "football:2024:panini-spectra:100:Celestial:no-auto",
+      "derived": "football:2024:panini-spectra:100:Celestial:no-auto:/99"
+    },
+    {
+      "id": "cardhedge::ch-daily::1744350045258x375975807458898560",
+      "tier": "AUTO",
+      "title": "2024 Panini Zenith - Josh Allen & Jim Kelly Idols #3 - Buffalo Bills - Raw 10",
+      "stored": "football:2024:panini-zenith:?:Hobby:no-auto",
+      "derived": "football:2024:panini-zenith:3:Hobby:no-auto"
+    },
+    {
+      "id": "cardhedge::ch-daily::1745081462846x511798624903174700",
+      "tier": "AUTO",
+      "title": "2024 Panini Zenith - Josh Allen & Jim Kelly Idols #3 - Buffalo Bills - Raw 10",
+      "stored": "football:2024:panini-zenith:?:Hobby:no-auto",
+      "derived": "football:2024:panini-zenith:3:Hobby:no-auto"
+    },
+    {
+      "id": "cardhedge::ch-daily::1746388732912x881104142087852900",
+      "tier": "AUTO",
+      "title": "2024 Panini Zenith - Behind the Numbers Josh Allen #14 - Raw 10",
+      "stored": "football:2024:panini-zenith:?:Hobby:no-auto",
+      "derived": "football:2024:panini-zenith:14:Hobby:no-auto"
+    },
+    {
+      "id": "cardhedge::ch-daily::1747014545429x640042582445933000",
+      "tier": "AUTO",
+      "title": "2024 Panini Zenith - Idols Josh Allen, Jim Kelly #3 - Raw 10",
+      "stored": "football:2024:panini-zenith:?:Hobby:no-auto",
+      "derived": "football:2024:panini-zenith:3:Hobby:no-auto"
+    },
+    {
+      "id": "tca-ebay::136091824893",
+      "tier": "AUTO",
+      "title": "2024 Panini Donruss Football #1-200 Complete Your Set You Pick Choose Card",
+      "stored": "football:2024:panini-donruss:?:Base:no-auto",
+      "derived": "football:2024:panini-donruss:1:Base:no-auto"
+    },
+    {
+      "id": "tca-ebay::237029986747",
+      "tier": "AUTO",
+      "title": "2025-26 Upper Deck Extended Rookie Update RU-44 Jacob Fowler /1999 Canadiens",
+      "stored": "hockey:2025:upper-deck:ru-44:Base:no-auto",
+      "derived": "hockey:2025:upper-deck:RU-44:Base:no-auto:/1999"
+    },
+    {
+      "id": "cardhedge::ch-daily::1785373964168x485779500118783040",
+      "tier": "PROTECTED",
+      "title": "2024 Donruss Optic Dragon #268 Luke McCaffrey (#'d/24) - Raw",
+      "stored": "football:2024:donruss-optic:268:Dragon:no-auto",
+      "derived": "football:2024:donruss-optic:268:Dragon:no-auto:/24"
+    },
+    {
+      "id": "cardhedge::ch-daily::1785358635745x884991294282724100",
+      "tier": "PROTECTED",
+      "title": "2024 Donruss Optic Dragon #13 Lamar Jackson (#'d/24) - Raw",
+      "stored": "football:2024:donruss-optic:13:Dragon:no-auto",
+      "derived": "football:2024:donruss-optic:13:Dragon:no-auto:/24"
+    },
+    {
+      "id": "tca-ebay::406949337393",
+      "tier": "AUTO",
+      "title": "2025-26 Flair Hockey Wave Of The Future Colton Dach #WF-13 RC (3 Cards)",
+      "stored": "hockey:2025:unknown:wf-13:Base:no-auto",
+      "derived": "hockey:2025:flair:WF-13:Base:no-auto"
+    },
+    {
+      "id": "cardhedge::ch-daily::1739307657361x168378437135821020",
+      "tier": "AUTO",
+      "title": "2024 PHOTOGENIC CAMO FOOTBALL TREY MCBRIDE TROOPS TRIBUTE CARDINALS - Raw 10",
+      "stored": "football:2024:unknown:8:Base:no-auto",
+      "derived": "football:2024:panini-photogenic:8:Base:no-auto"
+    },
+    {
+      "id": "cardhedge::ch-daily::1746416727843x656046924295704300",
+      "tier": "AUTO",
+      "title": "2024 Panini Mosaic - Sam Hubbard #47 Orange Mosaic Prizm Color Match5/199 - Raw 10",
+      "stored": "football:2024:panini-mosaic:47:Orange:no-auto",
+      "derived": "football:2024:panini-mosaic:47:Orange:no-auto:/199"
+    },
+    {
+      "id": "tca-ebay::377409008100",
+      "tier": "AUTO",
+      "title": "Gleison Bremer 2025-26 Topps Chrome UEFA #152 Frozen Fractor -5/0",
+      "stored": "soccer:2025:topps-chrome:152:Base:no-auto",
+      "derived": "soccer:2025:topps-chrome:152:Base:no-auto:/0"
+    },
+    {
+      "id": "cardhedge::ch-daily::1751755964783x889577869269546400",
+      "tier": "AUTO",
+      "title": "2024 Panini Clearly Donruss D'ANDRE SWIFT Orange parallel/199 Chicago Bears - Raw 10",
+      "stored": "football:2024:panini-donruss:10:Orange:no-auto",
+      "derived": "football:2024:panini-donruss:10:Orange:no-auto:/199"
+    },
+    {
+      "id": "tca-ebay::398290237575",
+      "tier": "AUTO",
+      "title": "2025-26 Flair Hockey Colton Dach RC Wave of the Future #WF-13 Chicago Blackhawks",
+      "stored": "hockey:2025:unknown:wf-13:Base:no-auto",
+      "derived": "hockey:2025:flair:WF-13:Base:no-auto"
+    },
+    {
+      "id": "tca-ebay::127975820248",
+      "tier": "AUTO",
+      "title": "Ville Koivunen 2025 Upper Deck /1999 #RU-28 Rookie Update RC Pittsburgh Penguins",
+      "stored": "hockey:2025:upper-deck:ru-28:Base:no-auto",
+      "derived": "hockey:2025:upper-deck:RU-28:Base:no-auto:/1999"
+    },
+    {
+      "id": "cardhedge::ch-daily::1785349669686x376566840874529540",
+      "tier": "PROTECTED",
+      "title": "2024 Donruss Optic Footballs #151 Dexter Lawrence (#'d/16) - Raw",
+      "stored": "football:2024:donruss-optic:151:Footballs:no-auto",
+      "derived": "football:2024:donruss-optic:151:Footballs:no-auto:/16"
+    },
+    {
+      "id": "tca-ebay::188709454838",
+      "tier": "AUTO",
+      "title": "MAASON SMITH rc 2024 Topps Chrome Football Base Rookie AUTO #RA-MSM Jaguars",
+      "stored": "football:2024:topps-chrome:ra-msm:Base:auto",
+      "derived": "football:2024:topps-chrome:RA-MSM:Base:auto"
+    },
+    {
+      "id": "tca-ebay::287478668909",
+      "tier": "AUTO",
+      "title": "Topps 2024 Signature Class Drake Maye Fluidity Rookie Insert #F-3 Patriots",
+      "stored": "football:2024:topps:F-3:Base:no-auto",
+      "derived": "football:2024:topps-signature-class:F-3:Base:no-auto"
+    },
+    {
+      "id": "tca-ebay::298536732565",
+      "tier": "AUTO",
+      "title": "BRALEN TRICE 2024 Topps Chrome AUTO Rookie RC #RA-BTR Falcons",
+      "stored": "football:2024:topps-chrome:ra-btr:Base:auto",
+      "derived": "football:2024:topps-chrome:RA-BTR:Base:auto"
+    },
+    {
+      "id": "tca-ebay::198480209727",
+      "tier": "AUTO",
+      "title": "2024 Topps Chrome Jer\\'Zhan Newton Auto Autograph RC #RA-JNE Commanders Rookie",
+      "stored": "football:2024:topps-chrome:ra-jne:Base:auto",
+      "derived": "football:2024:topps-chrome:RA-JNE:Base:auto"
+    },
+    {
+      "id": "tca-ebay::206488322043",
+      "tier": "AUTO",
+      "title": "2024 Topps Chrome Audric Estime Rookie Auto #RA-AES RC Denver Broncos",
+      "stored": "football:2024:topps-chrome:ra-aes:Base:auto",
+      "derived": "football:2024:topps-chrome:RA-AES:Base:auto"
+    },
+    {
+      "id": "tca-ebay::406854824322",
+      "tier": "AUTO",
+      "title": "2025-26 O-Pee-Chee - 4 Nations Face-Off Connor McDavid #531",
+      "stored": "hockey:2025:bowman:531:Base:no-auto",
+      "derived": "hockey:2025:o-pee-chee:531:Base:no-auto"
+    },
+    {
+      "id": "tca-ebay::336613494532",
+      "tier": "AUTO",
+      "title": "2025-26 Topps UEFA CC Romelu Lukaku Superfractor 1/1",
+      "stored": "soccer:2025:topps:11:SuperFractor:no-auto",
+      "derived": "soccer:2025:topps:11:SuperFractor:no-auto:/1"
+    },
+    {
+      "id": "cardhedge::ch-daily::1746755008701x372087505146736500::2026-07-13T01:59:00+00:00::32700",
+      "tier": "AUTO",
+      "title": "2024 Donruss Optic Football #14 Base",
+      "stored": "football:2024:panini-donruss:14:Base:no-auto",
+      "derived": "football:2024:donruss-optic:14:Base:no-auto"
+    },
+    {
+      "id": "cardhedge::ch-daily::1746683325185x286868176291610750::2026-07-13T00:38:00+00:00::1500",
+      "tier": "AUTO",
+      "title": "2024 Donruss Optic Football #10 Base",
+      "stored": "football:2024:panini-donruss:10:Base:no-auto",
+      "derived": "football:2024:donruss-optic:10:Base:no-auto"
+    },
+    {
+      "id": "cardhedge::ch-daily::1753815155241x773877699653402600::2026-07-13T06:02:00+00:00::750",
+      "tier": "AUTO",
+      "title": "2024 Panini Prizm Draft Picks Football #II-AM Base",
+      "stored": "football:2024:panini-prizm:ii-am:Base:no-auto",
+      "derived": "football:2024:panini-prizm-draft-picks:II-AM:Base:no-auto"
+    },
+    {
+      "id": "cardhedge::ch-daily::1752253162254x821198023168496800::2026-07-13T02:14:00+00:00::650",
+      "tier": "AUTO",
+      "title": "2024 Panini Phoenix Football #CON-DME Stars",
+      "stored": "football:2024:panini-phoenix:con-dme:Stars:no-auto",
+      "derived": "football:2024:panini-phoenix:CON-DME:Base:no-auto"
+    },
+    {
+      "id": "tca-ebay::298363002612",
+      "tier": "AUTO",
+      "title": "Lionel Messi 2025-26 Panini Donruss Road to FIFA World Cup Orange Base /99 #154",
+      "stored": "soccer:2025:panini-donruss:154:Base:no-auto",
+      "derived": "soccer:2025:panini-donruss:154:Base:no-auto:/99"
+    },
+    {
+      "id": "tca-ebay::800098355970",
+      "tier": "AUTO",
+      "title": "2025-26 Topps Chrome UCC - Max Dowman #57 (RC) Arsenal Refractor",
+      "stored": "soccer:2025:topps-chrome:57:Refractor:no-auto",
+      "derived": "soccer:2025:topps-chrome-uefa-club-competitions:57:Refractor:no-auto"
+    },
+    {
+      "id": "tca-ebay::366448983680",
+      "tier": "AUTO",
+      "title": "O-Pee-Chee 2025-26 Yellow Parallel Joonas Korpisalo #271 Boston Bruins",
+      "stored": "hockey:2025:bowman:271:Base:no-auto",
+      "derived": "hockey:2025:o-pee-chee:271:Base:no-auto"
+    },
+    {
+      "id": "tca-ebay::800052095315",
+      "tier": "AUTO",
+      "title": "Jude Bellingham 2025-26 Topps Chrome Bundesliga Hidden Gems SSP #HG-1",
+      "stored": "soccer:2025:topps-chrome:HG-1:Base:no-auto",
+      "derived": "soccer:2025:topps-chrome-bundesliga:HG-1:SSP:no-auto"
+    },
+    {
+      "id": "tca-ebay::406933202292",
+      "tier": "AUTO",
+      "title": "2025-26 Topps UEFA Club Axel Tape Bayer Leverkusen #9 RC 231/250",
+      "stored": "soccer:2025:topps:9:Base:no-auto",
+      "derived": "soccer:2025:topps:9:Base:no-auto:/250"
+    },
+    {
+      "id": "tca-ebay::147331223886",
+      "tier": "AUTO",
+      "title": "2024 Topps Bowman U Chrome Rueben Bain Jr Refractor 89/299 Autograph Miami",
+      "stored": "football:2024:bowman-chrome:89299:Refractor:auto",
+      "derived": "football:2024:bowman-chrome:89299:Refractor:auto:/299"
+    },
+    {
+      "id": "cardhedge::ch-daily::1746366758483x182200310113047170::2026-07-14T20:19:00+00:00::113",
+      "tier": "AUTO",
+      "title": "2024 Donruss Optic Football #130 Base",
+      "stored": "football:2024:panini-donruss:130:Base:no-auto",
+      "derived": "football:2024:donruss-optic:130:Base:no-auto"
+    },
+    {
+      "id": "cardhedge::ch-daily::1746754285143x511736411471064770::2026-07-14T21:47:00+00:00::41500",
+      "tier": "AUTO",
+      "title": "2024 Donruss Optic Football #6 Base",
+      "stored": "football:2024:panini-donruss:6:Base:no-auto",
+      "derived": "football:2024:donruss-optic:6:Base:no-auto"
+    },
+    {
+      "id": "cardhedge::ch-daily::1746775020993x180058003093426240::2026-07-15T00:54:00+00:00::500",
+      "tier": "AUTO",
+      "title": "2024 Donruss Optic Football #8 Base",
+      "stored": "football:2024:panini-donruss:8:Base:no-auto",
+      "derived": "football:2024:donruss-optic:8:Base:no-auto"
+    },
+    {
+      "id": "tca-ebay::389160519157",
+      "tier": "AUTO",
+      "title": "MINT 2025 TOPPS MARVEL X-MEN FINEST \\'97 RISE UNCOMMON CARD JUBILEE #63 CARD",
+      "stored": "non-sport:2025:topps:63:Base:no-auto",
+      "derived": "non-sport:2025:topps-finest:63:Base:no-auto"
+    },
+    {
+      "id": "tca-ebay::206290814465",
+      "tier": "AUTO",
+      "title": "2025-26 Upper Deck Allure #71 Macklin Celebrini - Second Year San Jose Sharks",
+      "stored": "hockey:2025:bowman:71:Base:no-auto",
+      "derived": "hockey:2025:upper-deck:71:Base:no-auto"
+    },
+    {
+      "id": "tca-ebay::318345473980",
+      "tier": "AUTO",
+      "title": "2025-26 SPx Finite Blue Zayne Parekh RC #45 /999 Calgary Flames",
+      "stored": "hockey:2025:bowman:45:Base:no-auto",
+      "derived": "hockey:2025:spx:45:Base:no-auto:/999"
+    },
+    {
+      "id": "cardhedge::ch-daily::1737049482085x876396036679532500::2026-07-15T15:28:00+00:00::2050",
+      "tier": "AUTO",
+      "title": "2024 Topps Now Football #5 Base",
+      "stored": "football:2024:topps:5:Base:no-auto",
+      "derived": "football:2024:topps-now:5:Base:no-auto"
+    },
+    {
+      "id": "cardhedge::ch-daily::1746683353087x153266902086453220::2026-07-15T18:32:00+00:00::800",
+      "tier": "AUTO",
+      "title": "2024 Donruss Optic Football #3 Base",
+      "stored": "football:2024:panini-donruss:3:Base:no-auto",
+      "derived": "football:2024:donruss-optic:3:Base:no-auto"
+    },
+    {
+      "id": "tca-ebay::318194091640",
+      "tier": "AUTO",
+      "title": "Leaf 2024 Futures #11 Audric Estime Gold /249 Rookie Football Serial Numbered",
+      "stored": "football:2024:bowman:11:Base:no-auto",
+      "derived": "football:2024:leaf:11:Base:no-auto:/249"
+    },
+    {
+      "id": "tca-ebay::168400730635",
+      "tier": "AUTO",
+      "title": "2025 Topps Royalty WWE D-Von Dudley Golden Hall Auto Silver #07/10 *SSP WOW*",
+      "stored": "non-sport:2025:topps:07:Base:auto",
+      "derived": "wrestling:2025:topps:07:SSP:auto:/10"
+    },
+    {
+      "id": "tca-ebay::227359978937",
+      "tier": "AUTO",
+      "title": "2025-26 Upper Deck Series 2 David Pastrnak #DZ-55 Orange Dazzlers Boston Bruins",
+      "stored": "hockey:2025:bowman:dz-55:Base:no-auto",
+      "derived": "hockey:2025:upper-deck:DZ-55:Base:no-auto"
+    },
+    {
+      "id": "tca-ebay::358538599679",
+      "tier": "AUTO",
+      "title": "2024 Spectra Drake London Colorgraphs CG-DLN #1/4 Neon Marble Prizm On Card Auto",
+      "stored": "football:2024:panini-spectra:1:Base:auto",
+      "derived": "football:2024:panini-spectra:1:Base:auto:/4"
+    },
+    {
+      "id": "tca-ebay::358594812927",
+      "tier": "AUTO",
+      "title": "2025-26 Flair Scoring Power Wyatt Johnston #SP-10 Dallas Stars",
+      "stored": "hockey:2025:bowman:sp-10:Base:no-auto",
+      "derived": "hockey:2025:flair:SP-10:Base:no-auto"
+    },
+    {
+      "id": "tca-ebay::398007295136",
+      "tier": "AUTO",
+      "title": "2025 TOPPS ROYALTY UFC KAI ASAKURA /49 ON CARD SP ROOKIE AUTOGRAPH #RA-KA  RC",
+      "stored": "mma:2025:topps:RA-KA:Base:auto",
+      "derived": "mma:2025:topps:RA-KA:Base:auto:/49"
+    },
+    {
+      "id": "tca-ebay::298369157133",
+      "tier": "AUTO",
+      "title": "Mohamed Salah 2025-26 Panini Prizm FIFA Groovy SSP #2",
+      "stored": "soccer:2025:panini-prizm:2:Base:no-auto",
+      "derived": "soccer:2025:panini-prizm:2:SSP:no-auto"
+    },
+    {
+      "id": "tca-ebay::336110069039",
+      "tier": "AUTO",
+      "title": "2024 Panini Donruss Optic Evan Engram Flex Emoji Prizm 14/149 #92 SP Jaguars",
+      "stored": "football:2024:donruss-optic:92:Base:no-auto",
+      "derived": "football:2024:donruss-optic:92:Base:no-auto:/149"
+    },
+    {
+      "id": "tca-ebay::236303975246",
+      "tier": "AUTO",
+      "title": "2024 Panini Photogenic Michael Vick In the Action Auto #IAA-MVI Atlanta Falcons",
+      "stored": "football:2024:bowman:iaa-mvi:Base:auto",
+      "derived": "football:2024:panini-photogenic:IAA-MVI:Base:auto"
+    },
+    {
+      "id": "tca-ebay::366443400040",
+      "tier": "AUTO",
+      "title": "2025-26 Panini Donruss FIFA World Cup Lionel Messi #4 Animation Case Hit SSP",
+      "stored": "soccer:2025:panini-donruss:4:Base:no-auto",
+      "derived": "soccer:2025:panini-donruss:4:SSP:no-auto"
+    },
+    {
+      "id": "tca-ebay::366447947837",
+      "tier": "AUTO",
+      "title": "#033 - Topps Chrome UEFA Club Competitions 2025-2026 JUMBO FULL TEAM RANDOMS",
+      "stored": "soccer:2025:topps-chrome:033:Base:no-auto",
+      "derived": "soccer:2025:topps-chrome-uefa-club-competitions:033:Base:no-auto"
+    },
+    {
+      "id": "tca-ebay::406953884619",
+      "tier": "AUTO",
+      "title": "2025 Topps Royalty WWE Tiffany Stratton Pillars of Greatness /25 #PGS-TST Auto",
+      "stored": "wrestling:2025:topps:PGS-TST:Base:auto",
+      "derived": "wrestling:2025:topps:PGS-TST:Base:auto:/25"
+    },
+    {
+      "id": "tca-ebay::157949405747",
+      "tier": "AUTO",
+      "title": "2025-26 O-Pee-Chee Platinum Mikko Rantanen Mixed Media Variant SSP Stars #42",
+      "stored": "hockey:2025:bowman:42:Base:no-auto",
+      "derived": "hockey:2025:o-pee-chee:42:SSP:no-auto"
+    },
+    {
+      "id": "cardhedge::ch-daily::1743951923078x121721869410707400::2026-07-19T04:31:00+00:00::10000",
+      "tier": "AUTO",
+      "title": "2024 Panini Spectra Football #RA-DME Interstellar",
+      "stored": "football:2024:panini-spectra:RA-DME:Interstellar:no-auto",
+      "derived": "football:2024:panini-spectra:RA-DME:Interstellar:auto"
+    },
+    {
+      "id": "tca-ebay::236839212547",
+      "tier": "AUTO",
+      "title": "2025-26 Frederik Andersen Upper Deck #277 High Gloss 2/10 Hurricanes",
+      "stored": "hockey:2025:bowman:277:Base:no-auto",
+      "derived": "hockey:2025:upper-deck:277:Base:no-auto:/10"
+    },
+    {
+      "id": "tca-ebay::157943857723",
+      "tier": "AUTO",
+      "title": "Leaf 2024 Metal Football Evan Stewart #41 One of One 1/1 Sports Trading Card",
+      "stored": "football:2024:bowman:41:Base:no-auto",
+      "derived": "football:2024:leaf-metal:41:Base:no-auto:/1"
+    },
+    {
+      "id": "tca-ebay::306953276673",
+      "tier": "AUTO",
+      "title": "MATTHEW KNIES 2025-26 Flair Hockey Backcheck Image Variant #125  105/199",
+      "stored": "hockey:2025:bowman:125:Base:no-auto",
+      "derived": "hockey:2025:flair:125:Base:no-auto:/199"
+    },
+    {
+      "id": "tca-ebay::147188658109",
+      "tier": "AUTO",
+      "title": "2025 Aaron Nola - Topps Cosmic Chrome Stars Refractor #SF-59 Phillies",
+      "stored": "hockey:2025:topps:sf-59:Refractor:no-auto",
+      "derived": "hockey:2025:topps-cosmic-chrome:SF-59:Refractor:no-auto"
+    },
+    {
+      "id": "cardhedge::ch-daily::1746777199137x669375689353338000::2026-07-21T23:55:00+00:00::200",
+      "tier": "AUTO",
+      "title": "2024 Donruss Optic Football #20 Base",
+      "stored": "football:2024:panini-donruss:20:Base:no-auto",
+      "derived": "football:2024:donruss-optic:20:Base:no-auto"
+    },
+    {
+      "id": "tca-ebay::198351393452",
+      "tier": "AUTO",
+      "title": "2025-26 Donruss Road to World Cup PEDRO PORRO Signature Series Auto Dragon 97/99",
+      "stored": "soccer:2025:panini-donruss:9799:Base:auto",
+      "derived": "soccer:2025:panini-donruss:9799:Base:auto:/99"
+    },
+    {
+      "id": "tca-ebay::157963436939",
+      "tier": "AUTO",
+      "title": "2025 Topps Royalty WWE Gunther Ludwig Kaiser Dual Auto 14/25",
+      "stored": "wrestling:2025:topps:1425:Base:auto",
+      "derived": "wrestling:2025:topps:1425:Base:auto:/25"
+    },
+    {
+      "id": "tca-ebay::318328576272",
+      "tier": "AUTO",
+      "title": "PEGGY CARTER 2025 Topps Marvel #TM-HA The Collector’s Museum Encased AUTO /100",
+      "stored": "non-sport:2025:topps:tm-ha:Base:auto",
+      "derived": "non-sport:2025:topps:TM-HA:Base:auto:/100"
+    },
+    {
+      "id": "tca-ebay::127862099947",
+      "tier": "AUTO",
+      "title": "2025-26 Donruss Road to World Cup ANDREW MORAN Rated Rookie Optic Red /199 #229",
+      "stored": "soccer:2025:donruss-optic:229:Base:no-auto",
+      "derived": "soccer:2025:donruss-optic:229:Base:no-auto:/199"
+    },
+    {
+      "id": "cardhedge::ch-daily::1781245881331x889343105353484000::2026-07-06T21:11:00+00:00::1199",
+      "tier": "AUTO",
+      "title": "2024 Panini Score Football #269 Base",
+      "stored": "football:2024:panini-score:269:Base:no-auto",
+      "derived": "football:2024:score:269:Base:no-auto"
+    }
+  ]
+}

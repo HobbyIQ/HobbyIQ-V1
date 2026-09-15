@@ -1511,6 +1511,35 @@ async function main() {
 
 
   /**
+   * R55 -- DOES THE TITLE STATE A FINISH THE DESTINATION IDENTITY DOES NOT
+   * ACCOUNT FOR? (Drew, 2026-09-15.)
+   *
+   * split-scope.cjs is pure by contract, so it cannot ask the parser this
+   * itself; it takes the answer the same way it takes `isRegisteredSetKey`.
+   *
+   * NOT A NEW DETECTOR. `parseListingIdentity(...).parallelIsUnconfirmed` is
+   * the flag CF-A-STATED-PARALLEL-IS-NEVER-EVICTED-TO-BASE added for precisely
+   * this shape -- the title states finish evidence and no reader could turn it
+   * into a rung -- and it is asked with the DESTINATION's own product context,
+   * so "Heroes Holo Foil" is judged against panini-prestige's ladder rather
+   * than against nothing. A second regex here would be a second opinion about
+   * what a title says, and the two would drift.
+   *
+   * Returns null when the question cannot be asked (no destination product, or
+   * the parser throws), and split-scope treats null as "do not park".
+   */
+  const titleStatesUnaccountedFinish = (title, destSide) => {
+    const t = String(title ?? "");
+    if (!t.trim() || !destSide) return null;
+    const setKey = String(destSide.setKey ?? "").toLowerCase();
+    const year = Number(destSide.cardYear);
+    if (!setKey || !Number.isFinite(year)) return null;
+    try {
+      return pti.parseListingIdentity(t, undefined, { setKey, year }).parallelIsUnconfirmed === true;
+    } catch { return null; }
+  };
+
+  /**
    * DOES THE TITLE NAME A SIBLING OF THE PRODUCT WE ARE ABOUT TO WRITE?
    *
    * CF-A-FILL-PRESUMES-THE-RIGHT-ADDRESS (slot-3 census, 2026-09-15). See
@@ -2821,6 +2850,7 @@ async function main() {
           const verdict = K.classifySplitScope(
             { cardId: row.cardId, hobbyiqCardId: row.hobbyiqCardId, title: row.title },
             res.splitSegments ?? [],
+            { titleStatesUnaccountedFinish },
           );
           const forAxes = verdict.judgedAxes.length ? verdict.judgedAxes : ["(none)"];
           if (verdict.verdict === "split-move") splitScopeMove++; else splitScopePark++;
