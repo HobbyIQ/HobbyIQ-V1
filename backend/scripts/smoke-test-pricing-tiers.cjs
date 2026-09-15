@@ -155,16 +155,40 @@ const CASES = [
   },
 ];
 
+// CF-ONE-COSMOS-CLIENT-ON-THE-PRICE-PATH (Fable, 2026-09-15). A client
+// deadline, because this fetch had none.
+//
+// When /price hung, this call inherited Azure's 240 s front-end kill as its
+// effective timeout: the smoke sat silent for four minutes per case and then
+// reported an HTTP 499, which reads as a client abort and names neither the
+// route nor the slow step. 60 s is far above any healthy answer (the server's
+// own catalog-lookup budget is 8 s and the ladder's another 8 s) and far below
+// the front door, so a hang now surfaces HERE, as a real error, in one minute.
+const CLIENT_TIMEOUT_MS = 60_000;
+
 async function hitPrice(query) {
   const start = Date.now();
-  const res = await fetch(`${BASE}/api/compiq/price`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-session-id": TOKEN,
-    },
-    body: JSON.stringify({ query }),
-  });
+  let res;
+  try {
+    res = await fetch(`${BASE}/api/compiq/price`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-session-id": TOKEN,
+      },
+      body: JSON.stringify({ query }),
+      signal: AbortSignal.timeout(CLIENT_TIMEOUT_MS),
+    });
+  } catch (err) {
+    const elapsedMs = Date.now() - start;
+    const timedOut = err && (err.name === "TimeoutError" || err.name === "AbortError");
+    return {
+      ok: false,
+      status: timedOut ? `client-timeout-${CLIENT_TIMEOUT_MS}ms` : "fetch-error",
+      error: (err && err.message) || String(err),
+      elapsedMs,
+    };
+  }
   const elapsedMs = Date.now() - start;
   if (!res.ok) {
     return { ok: false, status: res.status, elapsedMs };

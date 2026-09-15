@@ -1490,6 +1490,110 @@ async function main() {
     };
   };
 
+
+  /**
+   * R31-TITLE-FILLS-THE-BLANK's facts (Drew, 2026-09-14, recorded).
+   *
+   * THE PRE-GATE IS THE ROW'S OWN STORED FIELDS, NOT THE AXES. `classifyRow`
+   * computes `axes` and this input bundle has to be ready BEFORE that call, so
+   * the cheap gate here asks the question the axes would answer, off the
+   * stored row alone: is `parallel` blank (GENERIC_PARALLELS -- blank means
+   * unknown, and a placeholder `Base` is that same unknown), or is `printRun`
+   * null? A row with neither is not a fill candidate under any reading and
+   * pays nothing. The AXES themselves still decide -- R31's own T1/T2 legs
+   * read `axes.filled` and the stored fields again inside the classifier, so
+   * this pre-gate can only ever be WIDER than the rule, never narrower.
+   *
+   * `titleSerial` is `VOCAB.serialFromTitle` -- the SAME lexer every other
+   * print-run guard in this driver uses, year-denominator guard intact. NEVER
+   * INVENT A PRINT RUN: if the title states no serial this is null, and R31's
+   * T4 leg turns that into a counted refusal.
+   */
+  const r31Inputs = async (row, stored, der) => {
+    const none = { checklistListsTitleParallel: false, titleSerial: null, derivedBackedR31: false };
+    if (!der?.ok) return none;
+    const storedParallelBlank = K.GENERIC_PARALLELS.has(String(stored?.parallel ?? "").trim().toLowerCase());
+    const storedRunBlank = stored?.printRun === null || stored?.printRun === undefined
+      || String(stored.printRun).trim() === "";
+    if (!storedParallelBlank && !storedRunBlank) return none;
+    const titleSerial = K.VOCAB.serialFromTitle(row?.title);
+    let listsIt = false;
+    if (storedParallelBlank) {
+      const destParallel = String(der.identity?.parallel ?? "");
+      const year = stored?.cardYear ?? der.identity?.cardYear ?? null;
+      const setKey = String(der.identity?.setKey ?? "").toLowerCase();
+      // THE PER-CELL QUESTION, NOT A GLOBAL UNION: this product, this year.
+      listsIt = (year && setKey && destParallel && !K.GENERIC_PARALLELS.has(destParallel.toLowerCase()))
+        ? K.VOCAB.checklistListsParallel(destParallel, year, setKey)
+        : false;
+    }
+    return {
+      checklistListsTitleParallel: listsIt,
+      titleSerial,
+      derivedBackedR31: await checklistBacked(der.slug),
+    };
+  };
+
+  /**
+   * R32-SPLIT-MOVES-TO-THE-NAMED-SIDE's facts (Drew, 2026-09-14, recorded).
+   *
+   * THE ONE FACT THIS SUPPLIES IS THE ONE split-scope.cjs COULD NOT: the two
+   * sides' REAL checklist backing, measured against card_catalog by the same
+   * `checklistBacked()` every other class's destination is measured by --
+   * never the shape proxy that module ships for its report path (its own doc
+   * says an apply may not run on it, and R32's S2 leg REFUSES a null here).
+   *
+   * Unlike the other input bundles this one runs AFTER `classifyRow`, because
+   * the fact it gates on -- the row's split CLASS -- is something the
+   * classifier computes. That is fine and costs nothing extra: R32 is not a
+   * `classifyRow` return path at all (a split row's class is decided by its
+   * derivation, exactly as it was before this ruling), it is a scope counted
+   * and applied off the split signal beside it.
+   *
+   * Gated hard on HIQ-SPLIT -- two genuine hiq: slugs naming different cards
+   * -- so only that small minority costs the two reads.
+   */
+  const r32Inputs = async (row, res) => {
+    const none = { splitBackedSides: null };
+    if (!res?.splitIdentity) return none;
+    if (res.splitClass !== K.SPLIT_CLASSES.HIQ_SPLIT) return none;
+    const [a, b] = await Promise.all([
+      checklistBacked(row?.cardId),
+      checklistBacked(row?.hobbyiqCardId),
+    ]);
+    return { splitBackedSides: { cardId: a === true, hobbyiqCardId: b === true } };
+  };
+
+  /**
+   * R33-TITLE-CARD-NUMBER-WINS's facts (Drew, 2026-09-14, recorded).
+   *
+   * Gated on pure string work first: the title must state a literal `#N`
+   * through `cardNumberFromTitle`'s own boundary (the SAME one
+   * `titleStatesCardNumber` uses, serial and cert exclusions included), the
+   * stored number must actually disagree with it, and the derivation must
+   * have reached that same number itself. Only then is the checklist asked
+   * whether `(number, product, year)` is a real row -- the ruling's own
+   * condition, and the one catalog read this function can make.
+   *
+   * `titleNumberIsChecklistRow` is answered by asking `checklistBacked` about
+   * the DERIVED slug -- exactly the "the destination must be a checklist-backed
+   * catalog row, measured against card_catalog, not a shape proxy" the ruling
+   * requires. Because R33 also requires the derived number to BE the title's
+   * number, that slug already carries the title's number, so this is one read
+   * answering both legs rather than two reads that could disagree.
+   */
+  const r33Inputs = async (row, stored, der) => {
+    const none = { titleNumberIsChecklistRow: false, derivedBackedR33: false };
+    if (!der?.ok) return none;
+    const titleNumber = K.cardNumberFromTitle(row?.title);
+    if (!titleNumber) return none;
+    const storedNumber = String(stored?.cardNumber ?? "").trim();
+    if (!storedNumber || K.cardNumbersAgree(storedNumber, titleNumber)) return none;
+    if (!K.cardNumbersAgree(der.identity?.cardNumber, titleNumber)) return none;
+    const backed = await checklistBacked(der.slug);
+    return { titleNumberIsChecklistRow: backed === true, derivedBackedR33: backed === true };
+  };
+
   /**
    * THE PER-SCOPE PREDICATE COUNTS (2026-09-13 follow-on to R26/R27/R28).
    *
@@ -1526,7 +1630,32 @@ async function main() {
    * extra predicate evaluations per row on every apply dispatch would be pure
    * waste for a number the apply banner never prints.
    */
-  const scopeCounts = { r26: 0, r27: 0, r28: 0 };
+  const scopeCounts = { r26: 0, r27: 0, r28: 0, r31: 0, r32: 0, r33: 0 };
+  // THE REFUSAL COUNTS AND SAMPLES FOR THE 2026-09-14 TRIO (R31/R32/R33).
+  //
+  // "Every refusal is counted and sampled" is part of the ruling, not a nicety:
+  // a scope whose MOVE count is readable but whose REFUSE count is not cannot
+  // be sized before it is armed -- the number that matters when deciding
+  // whether a guard is too tight is the population it turned away, and which
+  // leg turned it away. So each scope keeps a total, a per-leg tally keyed by
+  // the evidence function own `failed` strings, and a bounded sample list.
+  //
+  // Only rows that were genuine CANDIDATES are counted as refusals. A row that
+  // failed the subclass entry test (R31: nothing is being filled; R33: the
+  // title states no literal number; R32: not a HIQ-SPLIT row) was never asking
+  // this question, and counting it would count the corpus rather than the
+  // defect -- the same discipline the near-miss `reasons` lines in the
+  // classifier follow.
+  const SCOPE_ENTRY_FAILURES = {
+    r31: "no-blank-axis-filled",
+    r32: null,  // gated by splitClass at the call site instead
+    r33: "title-states-no-literal-card-number",
+  };
+  const scopeRefusals = { r31: 0, r32: 0, r33: 0 };
+  const scopeRefusalReasons = { r31: new Map(), r32: new Map(), r33: new Map() };
+  const scopeMoveSamples = { r31: [], r32: [], r33: [] };
+  const scopeRefuseSamples = { r31: [], r32: [], r33: [] };
+  const SCOPE_SAMPLE_CAP = 30;
 
   // ── page the shard ────────────────────────────────────────────────────────
   const counts = { [K.AGREE]: 0, [K.IMPROVE]: 0, [K.CONFLICT]: 0, [K.UNDERIVABLE]: 0 };
@@ -1613,6 +1742,17 @@ async function main() {
     slugShapeSamples: "mapOfArrays",
     splitScopeByAxis: "splitScopeAxisMap",
     splitSamples: "array", gftSamples: "array", yfvSamples: "array", sfpSamples: "array",
+    // THE PER-SCOPE AGGREGATES. `scopeCounts` was NOT registered here before
+    // this change, which meant a RESUMED census silently restarted every
+    // ruled scope count from zero while `counts` itself resumed correctly --
+    // a gate reading `counts.r26` off a resumed pass would have been sized
+    // against part of a shard. Registering all of them (the 2026-09-13 trio
+    // included) is the fix, and it is why the fleet gate can trust these keys
+    // on a resumed run at all.
+    scopeCounts: "object", scopeRefusals: "object",
+    scopeRefusalReasonsR31: "map", scopeRefusalReasonsR32: "map", scopeRefusalReasonsR33: "map",
+    scopeMoveSamplesR31: "array", scopeMoveSamplesR32: "array", scopeMoveSamplesR33: "array",
+    scopeRefuseSamplesR31: "array", scopeRefuseSamplesR32: "array", scopeRefuseSamplesR33: "array",
   };
   const aggregateRefs = {
     counts, stats, get splitTotal() { return splitTotal; }, set splitTotal(v) { splitTotal = v; },
@@ -1623,6 +1763,16 @@ async function main() {
     yfvByDecade, yfvBySetKey, yfvBySport, sfpByPair, sfpBySetKey,
     samples, sampleCards, slugShapeSamples, splitScopeByAxis,
     splitSamples, gftSamples, yfvSamples, sfpSamples,
+    scopeCounts, scopeRefusals,
+    scopeRefusalReasonsR31: scopeRefusalReasons.r31,
+    scopeRefusalReasonsR32: scopeRefusalReasons.r32,
+    scopeRefusalReasonsR33: scopeRefusalReasons.r33,
+    scopeMoveSamplesR31: scopeMoveSamples.r31,
+    scopeMoveSamplesR32: scopeMoveSamples.r32,
+    scopeMoveSamplesR33: scopeMoveSamples.r33,
+    scopeRefuseSamplesR31: scopeRefuseSamples.r31,
+    scopeRefuseSamplesR32: scopeRefuseSamples.r32,
+    scopeRefuseSamplesR33: scopeRefuseSamples.r33,
   };
   /**
    * THE COMPACT CURSOR AGGREGATE (2026-09-13, #2073 cursor-size follow-up).
@@ -2413,6 +2563,10 @@ async function main() {
       const r26In = await r26Inputs(row, stored, der);
       const r27In = await r27Inputs(row, stored, der);
       const r28In = await r28Inputs(row, stored, der);
+      // THE 2026-09-14 TRIO R31/R33 facts. R32 own fact is gathered AFTER
+      // `classifyRow` -- it gates on the split CLASS the classifier computes.
+      const r31In = await r31Inputs(row, stored, der);
+      const r33In = await r33Inputs(row, stored, der);
       const res = K.classifyRow({
         row, stored, derived: der.ok ? der.identity : null, checklistBacked: backed, derivationReasons: der.reasons,
         storedSlug: row.cardId, baseDestSlug: der.baseSlug ?? null, baseDestBacked: baseBacked,
@@ -2449,6 +2603,13 @@ async function main() {
         // as the trio above: supplied at BOTH call sites, each helper
         // cost-gated on pure synchronous work first.
         ...r26In, ...r27In, ...r28In,
+        // THE THREE RULED SCOPES OF 2026-09-14 (R31/R32/R33). R31 and R33
+        // are `classifyRow` return paths and take their facts here; R32 is
+        // counted off the split signal below and takes none.
+        checklistListsTitleParallel: r31In.checklistListsTitleParallel,
+        titleSerial: r31In.titleSerial,
+        titleNumberIsChecklistRow: r33In.titleNumberIsChecklistRow,
+        derivedBackedR33: r33In.derivedBackedR33,
       });
       counts[res.klass]++;
       // THE PER-SCOPE PREDICATE COUNTS, MODE=CENSUS ONLY. Asks each of the
@@ -2486,6 +2647,64 @@ async function main() {
           checklistListsAsParallel: r28In.checklistListsFinishAsParallel,
           derivedBacked: r28In.derivedBackedR28,
         }).qualifies) scopeCounts.r28++;
+
+        // THE 2026-09-14 TRIO (R31/R32/R33), COUNTED THE SAME WAY AND FOR THE
+        // SAME REASON as the trio above -- each evidence function asked
+        // DIRECTLY, off the SAME `res.axes` and the SAME already-gathered
+        // catalog facts, so a per-scope size can be read without any of them
+        // being armed. What is NEW here is that the REFUSALS are counted and
+        // sampled too (the ruling asks for it by name): a scope sized only by
+        // its move count cannot be judged, because the question a reader
+        // actually has is "what did the guard turn away, and on which leg".
+        const scopeTally = (scope, ev, moveLine, refuseLine) => {
+          if (ev.qualifies) {
+            scopeCounts[scope]++;
+            if (scopeMoveSamples[scope].length < SCOPE_SAMPLE_CAP) scopeMoveSamples[scope].push(moveLine());
+            return;
+          }
+          // A row that failed the ENTRY test was never a candidate -- see
+          // SCOPE_ENTRY_FAILURES for why counting it would count the corpus.
+          const entry = SCOPE_ENTRY_FAILURES[scope];
+          if (entry && ev.failed.includes(entry)) return;
+          scopeRefusals[scope]++;
+          for (const leg of ev.failed) bump(scopeRefusalReasons[scope], leg);
+          if (scopeRefuseSamples[scope].length < SCOPE_SAMPLE_CAP) scopeRefuseSamples[scope].push(refuseLine());
+        };
+        const quoted = `"${String(row.title ?? "").slice(0, 160)}"`;
+
+        const r31Ev = K.titleFillsTheBlankEvidence({
+          row, stored, derived: derivedForEvidence, axes: res.axes,
+          titleParallel: derivedForEvidence?.parallel ?? null,
+          checklistListsTitleParallel: r31In.checklistListsTitleParallel,
+          titleSerial: r31In.titleSerial,
+          derivedBacked: r31In.derivedBackedR31,
+        });
+        scopeTally("r31", r31Ev,
+          () => `${row.id}  [${res.klass}/${res.tier}]  ${quoted}  ${row.cardId}  ->  ${r31Ev.evidence.pair}`,
+          () => `${row.id}  [${res.klass}/${res.tier}]  ${quoted}  ${row.cardId}  (${r31Ev.failed.join(",")})`);
+
+        const r33Ev = K.titleCardNumberWinsEvidence({
+          row, stored, derived: derivedForEvidence, axes: res.axes,
+          titleNumberIsChecklistRow: r33In.titleNumberIsChecklistRow,
+          derivedBacked: r33In.derivedBackedR33,
+        });
+        scopeTally("r33", r33Ev,
+          () => `${row.id}  [${res.klass}/${res.tier}]  ${quoted}  ${row.cardId}  ->  #${r33Ev.evidence.titleNumber}`,
+          () => `${row.id}  [${res.klass}/${res.tier}]  ${quoted}  ${row.cardId}  (${r33Ev.failed.join(",")})`);
+
+        // R32 is asked ONLY for a HIQ-SPLIT row -- its own entry test, applied
+        // here rather than through SCOPE_ENTRY_FAILURES because it also gates
+        // the two catalog reads its evidence needs.
+        if (res.splitIdentity && res.splitClass === K.SPLIT_CLASSES.HIQ_SPLIT) {
+          const r32In = await r32Inputs(row, res);
+          const r32Ev = K.splitMovesToTheNamedSideEvidence({
+            row, splitClass: res.splitClass, splitSegments: res.splitSegments ?? [],
+            backedSides: r32In.splitBackedSides,
+          });
+          scopeTally("r32", r32Ev,
+            () => `${row.id}  [${res.klass}/${res.tier}]  ${quoted}  ${r32Ev.evidence.pair}`,
+            () => `${row.id}  [${res.klass}/${res.tier}]  ${quoted}  ${r32Ev.evidence.pair}  (${r32Ev.failed.join(",")})`);
+        }
       }
       // THE SPLIT-IDENTITY SIGNAL, tallied ACROSS classes (Drew 2026-09-02).
       // The row's own two identity fields disagree, which the exact pool
@@ -2992,6 +3211,9 @@ async function main() {
     console.warn(`    counts.r26 (R26-FLAGSHIP-SWALLOWED-NAMED-PRODUCT)  ${f(scopeCounts.r26)}`);
     console.warn(`    counts.r27 (R27-POKEMON-SET-CODE)                  ${f(scopeCounts.r27)}`);
     console.warn(`    counts.r28 (R28-FINISH-IS-A-PARALLEL)              ${f(scopeCounts.r28)}`);
+    console.warn(`    counts.r31 (R31-TITLE-FILLS-THE-BLANK)             ${f(scopeCounts.r31)}  refused ${f(scopeRefusals.r31)}`);
+    console.warn(`    counts.r32 (R32-SPLIT-MOVES-TO-THE-NAMED-SIDE)     ${f(scopeCounts.r32)}  refused ${f(scopeRefusals.r32)}`);
+    console.warn(`    counts.r33 (R33-TITLE-CARD-NUMBER-WINS)            ${f(scopeCounts.r33)}  refused ${f(scopeRefusals.r33)}`);
   }
   // SPLIT-IDENTITY: reported as its own block, not as a class. A split row
   // has already been counted under whichever derivation class it landed in;
@@ -3076,7 +3298,29 @@ async function main() {
     // the key's absence means zero or means "not this mode" -- see
     // `scopeCounts`'s own declaration for why these are independent of
     // `counts[K.IMPROVE]`/`subclasses` and must never be summed with them.
-    counts: { ...counts, r26: scopeCounts.r26, r27: scopeCounts.r27, r28: scopeCounts.r28 },
+    counts: {
+      ...counts,
+      r26: scopeCounts.r26, r27: scopeCounts.r27, r28: scopeCounts.r28,
+      // THE 2026-09-14 TRIO. Same key shape as the trio above, so
+      // wave2-fleet.sh reads `counts.<scope>` verbatim for every ruled scope
+      // and needs no per-scope special case at all.
+      r31: scopeCounts.r31, r32: scopeCounts.r32, r33: scopeCounts.r33,
+    },
+    // THE PER-SCOPE REFUSALS FOR THE 2026-09-14 TRIO, beside `counts` rather
+    // than inside it: `counts.<scope>` is what the fleet gate reads and it
+    // must stay exactly "rows this scope would write". The refusals are the
+    // report a guard is JUDGED by -- per leg, with samples -- and the ruling
+    // asks for them by name.
+    scopeRefusals: {
+      r31: { refused: scopeRefusals.r31, byLeg: Object.fromEntries(scopeRefusalReasons.r31) },
+      r32: { refused: scopeRefusals.r32, byLeg: Object.fromEntries(scopeRefusalReasons.r32) },
+      r33: { refused: scopeRefusals.r33, byLeg: Object.fromEntries(scopeRefusalReasons.r33) },
+    },
+    scopeSamples: {
+      r31: { move: scopeMoveSamples.r31, refuse: scopeRefuseSamples.r31 },
+      r32: { move: scopeMoveSamples.r32, refuse: scopeRefuseSamples.r32 },
+      r33: { move: scopeMoveSamples.r33, refuse: scopeRefuseSamples.r33 },
+    },
     byTier: Object.fromEntries(byTier), defects: Object.fromEntries(defects),
     // Subclass counts are INCLUDED in `counts` -- BASE-EVICTION is a narrowing
     // of CONFLICT, so an auditor summing both would double-count.

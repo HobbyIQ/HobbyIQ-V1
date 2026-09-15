@@ -232,6 +232,59 @@ async function getSoldCompsContainer(): Promise<Container | null> {
   }
 }
 
+/**
+ * CF-A-RUNG-ABANDONED-IS-A-RUNG-STOPPED (Fable, 2026-09-15).
+ *
+ * `LadderBudget.timeBox` stops the ladder AWAITING a slow rung — its own
+ * doc-comment says so: "A rung that times out keeps running in the background
+ * (Node cannot cancel an in-flight Cosmos SDK call)". That is true of a bare
+ * promise race, and it is exactly the residue that hurts here: the withdrawn
+ * rung is a cross-partition scan of `sold_comps`, and it goes on consuming RU
+ * behind a caller that has stopped listening — on a pool that is already under
+ * RU pressure, which is WHY the rung was slow. The ladder sheds load and the
+ * database does not.
+ *
+ * The SDK does support cancellation, via `abortSignal` on the feed options.
+ * A route that has its own request deadline installs it here for the duration
+ * of its walk, so an abandoned rung is genuinely abandoned. Absent (every
+ * script, every cron, the backfill lanes), behaviour is exactly as before.
+ *
+ * Module-scoped rather than threaded through eleven rung call sites: the
+ * signal is a property of the REQUEST, and `withPoolAbortSignal` restores the
+ * previous value in a `finally`, so nesting and concurrency behave.
+ */
+let _poolAbortSignal: AbortSignal | undefined;
+
+export async function withPoolAbortSignal<T>(signal: AbortSignal | undefined, work: () => Promise<T>): Promise<T> {
+  const previous = _poolAbortSignal;
+  _poolAbortSignal = signal;
+  try {
+    return await work();
+  } finally {
+    _poolAbortSignal = previous;
+  }
+}
+
+/**
+ * A ceiling on rows one rung may read, chosen ABOVE every pool this engine is
+ * known to price so that it bounds pathology without changing any answer.
+ *
+ * The query had no TOP, no `maxItemCount` and no FeedOptions of any kind: a
+ * 180-day cross-partition scan with `ORDER BY c.soldAt DESC`, paged at the
+ * SDK default until it ran out of rows. The real pools this file's own case
+ * notes record are 461, 608, 623 and 832 rows; 5,000 is six times the largest
+ * of them, so no rung that answers today loses a single comp — and a pool that
+ * somehow holds a hundred thousand rows (a mis-keyed identity, a split-pool
+ * defect, an ingest loop) can no longer take the request down with it. The
+ * `ORDER BY soldAt DESC` already in the query makes the truncation, in that
+ * pathological case, keep the NEWEST sales, which are the ones every rung
+ * weights most heavily.
+ *
+ * Raise it only with a measured pool that exceeds it; do not lower it to a
+ * number near a real pool size, because THAT would change FMV.
+ */
+const POOL_ROW_CEILING = 5_000;
+
 /** Fetch rows by an arbitrary SQL WHERE clause. Encapsulates the
  *  cross-partition query + freshness + column list. */
 async function queryPool(
@@ -267,7 +320,7 @@ async function queryPool(
     // findNeighborComps line 187; catches the 39K cardsight $0.99
     // pollution and any other flaggedWrong rows across the pool.
     const { resources } = await container.items.query({
-      query: `SELECT c.price, c.soldAt, c.source, c.parallel, c.autoStyle, c.gradeQualifier, c.url,
+      query: `SELECT TOP ${POOL_ROW_CEILING} c.price, c.soldAt, c.source, c.parallel, c.autoStyle, c.gradeQualifier, c.url,
                      c.isAuto, c.printRun, c.gradeCompany, c.gradeValue, c.qualityFlags,
                      c.hobbyiqCardId, c.playerName, c.product, c.cardYear
               FROM c
@@ -275,6 +328,12 @@ async function queryPool(
                 AND (NOT IS_DEFINED(c.flaggedWrong) OR c.flaggedWrong = false)
               ORDER BY c.soldAt DESC`,
       parameters: params,
+    }, {
+      // One round trip for every pool this engine actually prices (the
+      // largest on record is 832 rows), instead of the SDK default page size
+      // paging a 180-day cross-partition scan a few hundred rows at a time.
+      maxItemCount: POOL_ROW_CEILING,
+      ...(_poolAbortSignal ? { abortSignal: _poolAbortSignal } : {}),
     }).fetchAll();
     const rows = resources as PoolRow[];
     // Belt and braces behind the string bound — see asOfCutoff.ts.

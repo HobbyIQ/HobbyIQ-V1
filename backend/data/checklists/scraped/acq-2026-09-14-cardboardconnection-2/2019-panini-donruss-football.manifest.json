@@ -1,0 +1,1391 @@
+{
+  "source": "cardboardconnection-2026-09-14",
+  "sourceUrl": "https://www.cardboardconnection.com/2019-donruss-football-nfl-cards",
+  "xlsxUrl": "https://cconnect.s3.amazonaws.com/wp-content/uploads/2019/08/2019-Donruss-Football-checklist-Excel-spreadsheet.xlsx",
+  "fetchedAt": "2026-09-14",
+  "sport": "football",
+  "year": 2019,
+  "setName": "2019 Donruss Football",
+  "productKey": "2019-panini-donruss-football",
+  "setKey": "panini-donruss",
+  "rowCount": 8227,
+  "autoCount": 1035,
+  "printRunCount": 4712,
+  "distinctParallels": 49,
+  "parallelColumnAuthoritative": true,
+  "layout": "panini",
+  "rungRule": "R37 (Drew 2026-09-14): parallel = what the section title adds beyond the SHORTEST matching base anchor; a section matching no anchor is BLOCKED, never guessed.",
+  "sectionsBlocked": 0,
+  "blockedSectionTitles": [],
+  "parallelVocabulary": [
+    "Aqueous Test",
+    "Autographs",
+    "Autographs Blue",
+    "Autographs Green",
+    "Autographs Orange",
+    "Autographs Purple",
+    "Blue",
+    "Bronze",
+    "Canvas",
+    "Canvas Autographs",
+    "Canvas Studio Series",
+    "Green",
+    "Holo",
+    "Jersey Number",
+    "Laundry Tag Brand Logo",
+    "Laundry Tag NFL Player's Logo",
+    "Laundry Tag NFL Shield",
+    "Orange",
+    "Photo Variation",
+    "Photo Variation Aqueous Test",
+    "Photo Variation Jersey Number",
+    "Photo Variation Press Proof Black",
+    "Photo Variation Press Proof Black Die-Cut",
+    "Photo Variation Press Proof Blue",
+    "Photo Variation Press Proof Gold",
+    "Photo Variation Press Proof Gold Die-Cut",
+    "Photo Variation Press Proof Green",
+    "Photo Variation Press Proof Red",
+    "Photo Variation Press Proof Silver",
+    "Photo Variation Press Proof Silver Die-Cut",
+    "Photo Variation Season Stat Line",
+    "Premium",
+    "Press Proof Black",
+    "Press Proof Black Die-Cut",
+    "Press Proof Blue",
+    "Press Proof Gold",
+    "Press Proof Gold Die-Cut",
+    "Press Proof Green",
+    "Press Proof Red",
+    "Press Proof Silver",
+    "Press Proof Silver Die-Cut",
+    "Press Proof Yellow",
+    "Prime",
+    "Purple",
+    "Red",
+    "Rookies",
+    "Rookies Autographs",
+    "Season Stat Line",
+    "Studio Series"
+  ],
+  "sectionsReport": [
+    {
+      "section": "Action All-Pros",
+      "category": "action-all-pros",
+      "parallel": "",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Action All-Pros Autographs",
+      "category": "action-all-pros",
+      "parallel": "Autographs",
+      "cards": 13,
+      "auto": 13,
+      "printRun": 13
+    },
+    {
+      "section": "All Pro Kings",
+      "category": "all-pro-kings",
+      "parallel": "",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 20
+    },
+    {
+      "section": "All Pro Kings Autographs",
+      "category": "all-pro-kings",
+      "parallel": "Autographs",
+      "cards": 14,
+      "auto": 14,
+      "printRun": 14
+    },
+    {
+      "section": "All Pro Kings Studio Series",
+      "category": "all-pro-kings",
+      "parallel": "Studio Series",
+      "cards": 18,
+      "auto": 0,
+      "printRun": 18
+    },
+    {
+      "section": "All-Time Gridiron Kings",
+      "category": "all-time-gridiron-kings",
+      "parallel": "",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "All-Time Gridiron Kings Autographs",
+      "category": "all-time-gridiron-kings",
+      "parallel": "Autographs",
+      "cards": 15,
+      "auto": 15,
+      "printRun": 15
+    },
+    {
+      "section": "All-Time Gridiron Kings Studio Series",
+      "category": "all-time-gridiron-kings",
+      "parallel": "Studio Series",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 15
+    },
+    {
+      "section": "Base",
+      "category": "base",
+      "parallel": "",
+      "cards": 250,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base Aqueous Test",
+      "category": "base",
+      "parallel": "Aqueous Test",
+      "cards": 250,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base Jersey Number",
+      "category": "base",
+      "parallel": "Jersey Number",
+      "cards": 250,
+      "auto": 0,
+      "printRun": 250
+    },
+    {
+      "section": "Base Photo Variation",
+      "category": "base",
+      "parallel": "Photo Variation",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base Photo Variation Aqueous Test",
+      "category": "base",
+      "parallel": "Photo Variation Aqueous Test",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base Photo Variation Jersey Number",
+      "category": "base",
+      "parallel": "Photo Variation Jersey Number",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 50
+    },
+    {
+      "section": "Base Photo Variation Press Proof Black",
+      "category": "base",
+      "parallel": "Photo Variation Press Proof Black",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 50
+    },
+    {
+      "section": "Base Photo Variation Press Proof Black Die-Cut",
+      "category": "base",
+      "parallel": "Photo Variation Press Proof Black Die-Cut",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 50
+    },
+    {
+      "section": "Base Photo Variation Press Proof Blue",
+      "category": "base",
+      "parallel": "Photo Variation Press Proof Blue",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base Photo Variation Press Proof Gold",
+      "category": "base",
+      "parallel": "Photo Variation Press Proof Gold",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 50
+    },
+    {
+      "section": "Base Photo Variation Press Proof Gold Die-Cut",
+      "category": "base",
+      "parallel": "Photo Variation Press Proof Gold Die-Cut",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 50
+    },
+    {
+      "section": "Base Photo Variation Press Proof Green",
+      "category": "base",
+      "parallel": "Photo Variation Press Proof Green",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base Photo Variation Press Proof Red",
+      "category": "base",
+      "parallel": "Photo Variation Press Proof Red",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base Photo Variation Press Proof Silver",
+      "category": "base",
+      "parallel": "Photo Variation Press Proof Silver",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 50
+    },
+    {
+      "section": "Base Photo Variation Press Proof Silver Die-Cut",
+      "category": "base",
+      "parallel": "Photo Variation Press Proof Silver Die-Cut",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 50
+    },
+    {
+      "section": "Base Photo Variation Season Stat Line",
+      "category": "base",
+      "parallel": "Photo Variation Season Stat Line",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 50
+    },
+    {
+      "section": "Base Press Proof Black",
+      "category": "base",
+      "parallel": "Press Proof Black",
+      "cards": 250,
+      "auto": 0,
+      "printRun": 250
+    },
+    {
+      "section": "Base Press Proof Black Die-Cut",
+      "category": "base",
+      "parallel": "Press Proof Black Die-Cut",
+      "cards": 250,
+      "auto": 0,
+      "printRun": 250
+    },
+    {
+      "section": "Base Press Proof Blue",
+      "category": "base",
+      "parallel": "Press Proof Blue",
+      "cards": 250,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base Press Proof Gold",
+      "category": "base",
+      "parallel": "Press Proof Gold",
+      "cards": 250,
+      "auto": 0,
+      "printRun": 250
+    },
+    {
+      "section": "Base Press Proof Gold Die-Cut",
+      "category": "base",
+      "parallel": "Press Proof Gold Die-Cut",
+      "cards": 250,
+      "auto": 0,
+      "printRun": 250
+    },
+    {
+      "section": "Base Press Proof Green",
+      "category": "base",
+      "parallel": "Press Proof Green",
+      "cards": 250,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base Press Proof Red",
+      "category": "base",
+      "parallel": "Press Proof Red",
+      "cards": 250,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base Press Proof Silver",
+      "category": "base",
+      "parallel": "Press Proof Silver",
+      "cards": 250,
+      "auto": 0,
+      "printRun": 250
+    },
+    {
+      "section": "Base Press Proof Silver Die-Cut",
+      "category": "base",
+      "parallel": "Press Proof Silver Die-Cut",
+      "cards": 250,
+      "auto": 0,
+      "printRun": 250
+    },
+    {
+      "section": "Base Press Proof Yellow",
+      "category": "base",
+      "parallel": "Press Proof Yellow",
+      "cards": 250,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base Season Stat Line",
+      "category": "base",
+      "parallel": "Season Stat Line",
+      "cards": 250,
+      "auto": 0,
+      "printRun": 250
+    },
+    {
+      "section": "Canton Kings",
+      "category": "canton-kings",
+      "parallel": "",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 20
+    },
+    {
+      "section": "Canton Kings Autographs",
+      "category": "canton-kings",
+      "parallel": "Autographs",
+      "cards": 20,
+      "auto": 20,
+      "printRun": 20
+    },
+    {
+      "section": "Canton Kings Studio Series",
+      "category": "canton-kings",
+      "parallel": "Studio Series",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 20
+    },
+    {
+      "section": "Champ is Here",
+      "category": "champ-is-here",
+      "parallel": "",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Champ is Here Autographs",
+      "category": "champ-is-here",
+      "parallel": "Autographs",
+      "cards": 10,
+      "auto": 10,
+      "printRun": 10
+    },
+    {
+      "section": "Champ is Here Holo",
+      "category": "champ-is-here",
+      "parallel": "Holo",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 20
+    },
+    {
+      "section": "Champ is Here Red",
+      "category": "champ-is-here",
+      "parallel": "Red",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Dominators",
+      "category": "dominators",
+      "parallel": "",
+      "cards": 40,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Dominators Autographs",
+      "category": "dominators",
+      "parallel": "Autographs",
+      "cards": 33,
+      "auto": 33,
+      "printRun": 33
+    },
+    {
+      "section": "Donruss Threads",
+      "category": "donruss-threads",
+      "parallel": "",
+      "cards": 40,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Donruss Threads Blue",
+      "category": "donruss-threads",
+      "parallel": "Blue",
+      "cards": 40,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Donruss Threads Laundry Tag Brand Logo",
+      "category": "donruss-threads",
+      "parallel": "Laundry Tag Brand Logo",
+      "cards": 39,
+      "auto": 0,
+      "printRun": 39
+    },
+    {
+      "section": "Donruss Threads Laundry Tag NFL Player's Logo",
+      "category": "donruss-threads",
+      "parallel": "Laundry Tag NFL Player's Logo",
+      "cards": 39,
+      "auto": 0,
+      "printRun": 39
+    },
+    {
+      "section": "Donruss Threads Laundry Tag NFL Shield",
+      "category": "donruss-threads",
+      "parallel": "Laundry Tag NFL Shield",
+      "cards": 37,
+      "auto": 0,
+      "printRun": 37
+    },
+    {
+      "section": "Donruss Threads Orange",
+      "category": "donruss-threads",
+      "parallel": "Orange",
+      "cards": 40,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Donruss Threads Prime",
+      "category": "donruss-threads",
+      "parallel": "Prime",
+      "cards": 38,
+      "auto": 0,
+      "printRun": 38
+    },
+    {
+      "section": "Donruss Threads Red",
+      "category": "donruss-threads",
+      "parallel": "Red",
+      "cards": 40,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Downtown!",
+      "category": "downtown",
+      "parallel": "",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Fans of the Game",
+      "category": "fans-of-the-game",
+      "parallel": "",
+      "cards": 3,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Fans of the Game Autographs",
+      "category": "fans-of-the-game",
+      "parallel": "Autographs",
+      "cards": 3,
+      "auto": 3,
+      "printRun": 0
+    },
+    {
+      "section": "Fans of the Game Holo",
+      "category": "fans-of-the-game",
+      "parallel": "Holo",
+      "cards": 3,
+      "auto": 0,
+      "printRun": 3
+    },
+    {
+      "section": "Gridiron Kings",
+      "category": "gridiron-kings",
+      "parallel": "",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Gridiron Kings Autographs",
+      "category": "gridiron-kings",
+      "parallel": "Autographs",
+      "cards": 11,
+      "auto": 11,
+      "printRun": 11
+    },
+    {
+      "section": "Gridiron Kings Studio Series",
+      "category": "gridiron-kings",
+      "parallel": "Studio Series",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 15
+    },
+    {
+      "section": "Highlights",
+      "category": "highlights",
+      "parallel": "",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Highlights Autographs",
+      "category": "highlights",
+      "parallel": "Autographs",
+      "cards": 16,
+      "auto": 16,
+      "printRun": 16
+    },
+    {
+      "section": "Highlights Holo",
+      "category": "highlights",
+      "parallel": "Holo",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 20
+    },
+    {
+      "section": "Inducted",
+      "category": "inducted",
+      "parallel": "",
+      "cards": 4,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Inducted Autographs",
+      "category": "inducted",
+      "parallel": "Autographs",
+      "cards": 4,
+      "auto": 4,
+      "printRun": 4
+    },
+    {
+      "section": "Inducted Holo",
+      "category": "inducted",
+      "parallel": "Holo",
+      "cards": 4,
+      "auto": 0,
+      "printRun": 4
+    },
+    {
+      "section": "Jersey Kings",
+      "category": "jersey-kings",
+      "parallel": "",
+      "cards": 30,
+      "auto": 0,
+      "printRun": 30
+    },
+    {
+      "section": "Jersey Kings Autographs",
+      "category": "jersey-kings",
+      "parallel": "Autographs",
+      "cards": 27,
+      "auto": 27,
+      "printRun": 27
+    },
+    {
+      "section": "Jersey Kings Studio Series",
+      "category": "jersey-kings",
+      "parallel": "Studio Series",
+      "cards": 28,
+      "auto": 0,
+      "printRun": 28
+    },
+    {
+      "section": "Leather Kings",
+      "category": "leather-kings",
+      "parallel": "",
+      "cards": 8,
+      "auto": 0,
+      "printRun": 8
+    },
+    {
+      "section": "Leather Kings Autographs",
+      "category": "leather-kings",
+      "parallel": "Autographs",
+      "cards": 10,
+      "auto": 10,
+      "printRun": 10
+    },
+    {
+      "section": "Leather Kings Studio Series",
+      "category": "leather-kings",
+      "parallel": "Studio Series",
+      "cards": 8,
+      "auto": 0,
+      "printRun": 8
+    },
+    {
+      "section": "Legends of the Fall",
+      "category": "legends-of-the-fall",
+      "parallel": "",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Legends of the Fall Autographs",
+      "category": "legends-of-the-fall",
+      "parallel": "Autographs",
+      "cards": 18,
+      "auto": 18,
+      "printRun": 18
+    },
+    {
+      "section": "Legends of the Fall Holo",
+      "category": "legends-of-the-fall",
+      "parallel": "Holo",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 20
+    },
+    {
+      "section": "Nicknames",
+      "category": "nicknames",
+      "parallel": "",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Passing the Torch Jerseys",
+      "category": "passing-the-torch-jerseys",
+      "parallel": "",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 20
+    },
+    {
+      "section": "Passing the Torch Jerseys Prime",
+      "category": "passing-the-torch-jerseys",
+      "parallel": "Prime",
+      "cards": 19,
+      "auto": 0,
+      "printRun": 19
+    },
+    {
+      "section": "Power Formulas",
+      "category": "power-formulas",
+      "parallel": "",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Power Formulas Autographs",
+      "category": "power-formulas",
+      "parallel": "Autographs",
+      "cards": 14,
+      "auto": 14,
+      "printRun": 14
+    },
+    {
+      "section": "Rated Rookies",
+      "category": "rated-rookies",
+      "parallel": "",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Rated Rookies Aqueous Test",
+      "category": "rated-rookies",
+      "parallel": "Aqueous Test",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Rated Rookies Autographs Blue",
+      "category": "rated-rookies",
+      "parallel": "Autographs Blue",
+      "cards": 46,
+      "auto": 46,
+      "printRun": 0
+    },
+    {
+      "section": "Rated Rookies Autographs Green",
+      "category": "rated-rookies",
+      "parallel": "Autographs Green",
+      "cards": 46,
+      "auto": 46,
+      "printRun": 0
+    },
+    {
+      "section": "Rated Rookies Autographs Orange",
+      "category": "rated-rookies",
+      "parallel": "Autographs Orange",
+      "cards": 45,
+      "auto": 45,
+      "printRun": 0
+    },
+    {
+      "section": "Rated Rookies Autographs Purple",
+      "category": "rated-rookies",
+      "parallel": "Autographs Purple",
+      "cards": 44,
+      "auto": 44,
+      "printRun": 0
+    },
+    {
+      "section": "Rated Rookies Canvas",
+      "category": "rated-rookies",
+      "parallel": "Canvas",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Rated Rookies Canvas Autographs",
+      "category": "rated-rookies",
+      "parallel": "Canvas Autographs",
+      "cards": 48,
+      "auto": 48,
+      "printRun": 48
+    },
+    {
+      "section": "Rated Rookies Canvas Studio Series",
+      "category": "rated-rookies",
+      "parallel": "Canvas Studio Series",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 50
+    },
+    {
+      "section": "Rated Rookies Jersey Number",
+      "category": "rated-rookies",
+      "parallel": "Jersey Number",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 50
+    },
+    {
+      "section": "Rated Rookies Premium",
+      "category": "rated-rookies",
+      "parallel": "Premium",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Rated Rookies Press Proof Black",
+      "category": "rated-rookies",
+      "parallel": "Press Proof Black",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 50
+    },
+    {
+      "section": "Rated Rookies Press Proof Black Die-Cut",
+      "category": "rated-rookies",
+      "parallel": "Press Proof Black Die-Cut",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 50
+    },
+    {
+      "section": "Rated Rookies Press Proof Blue",
+      "category": "rated-rookies",
+      "parallel": "Press Proof Blue",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Rated Rookies Press Proof Gold",
+      "category": "rated-rookies",
+      "parallel": "Press Proof Gold",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 50
+    },
+    {
+      "section": "Rated Rookies Press Proof Gold Die-Cut",
+      "category": "rated-rookies",
+      "parallel": "Press Proof Gold Die-Cut",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 50
+    },
+    {
+      "section": "Rated Rookies Press Proof Green",
+      "category": "rated-rookies",
+      "parallel": "Press Proof Green",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Rated Rookies Press Proof Red",
+      "category": "rated-rookies",
+      "parallel": "Press Proof Red",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Rated Rookies Press Proof Silver",
+      "category": "rated-rookies",
+      "parallel": "Press Proof Silver",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 50
+    },
+    {
+      "section": "Rated Rookies Press Proof Silver Die-Cut",
+      "category": "rated-rookies",
+      "parallel": "Press Proof Silver Die-Cut",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 50
+    },
+    {
+      "section": "Rated Rookies Press Proof Yellow",
+      "category": "rated-rookies",
+      "parallel": "Press Proof Yellow",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Rated Rookies Season Stat Line",
+      "category": "rated-rookies",
+      "parallel": "Season Stat Line",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 50
+    },
+    {
+      "section": "Red Hot Rookies",
+      "category": "red-hot-rookies",
+      "parallel": "",
+      "cards": 10,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Red Hot Rookies Autographs",
+      "category": "red-hot-rookies",
+      "parallel": "Autographs",
+      "cards": 10,
+      "auto": 10,
+      "printRun": 10
+    },
+    {
+      "section": "Retro 1989",
+      "category": "retro-1989",
+      "parallel": "",
+      "cards": 40,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Retro 1989 Autographs",
+      "category": "retro-1989",
+      "parallel": "Autographs",
+      "cards": 23,
+      "auto": 23,
+      "printRun": 23
+    },
+    {
+      "section": "Retro 1999",
+      "category": "retro-1999",
+      "parallel": "",
+      "cards": 40,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Retro 1999 Autographs",
+      "category": "retro-1999",
+      "parallel": "Autographs",
+      "cards": 33,
+      "auto": 33,
+      "printRun": 33
+    },
+    {
+      "section": "Rookie Gridiron Kings",
+      "category": "rookie-gridiron-kings",
+      "parallel": "",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Rookie Gridiron Kings Autographs",
+      "category": "rookie-gridiron-kings",
+      "parallel": "Autographs",
+      "cards": 20,
+      "auto": 20,
+      "printRun": 20
+    },
+    {
+      "section": "Rookie Gridiron Kings Studio Series",
+      "category": "rookie-gridiron-kings",
+      "parallel": "Studio Series",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 20
+    },
+    {
+      "section": "Rookie Phenom Jersey Autographs",
+      "category": "rookie-phenom-jersey-autographs",
+      "parallel": "",
+      "cards": 20,
+      "auto": 20,
+      "printRun": 20
+    },
+    {
+      "section": "Rookie Phenom Jersey Autographs Laundry Tag Brand Logo",
+      "category": "rookie-phenom-jersey-autographs",
+      "parallel": "Laundry Tag Brand Logo",
+      "cards": 20,
+      "auto": 20,
+      "printRun": 20
+    },
+    {
+      "section": "Rookie Phenom Jersey Autographs Laundry Tag NFL Player's Logo",
+      "category": "rookie-phenom-jersey-autographs",
+      "parallel": "Laundry Tag NFL Player's Logo",
+      "cards": 20,
+      "auto": 20,
+      "printRun": 20
+    },
+    {
+      "section": "Rookie Phenom Jersey Autographs Laundry Tag NFL Shield",
+      "category": "rookie-phenom-jersey-autographs",
+      "parallel": "Laundry Tag NFL Shield",
+      "cards": 20,
+      "auto": 20,
+      "printRun": 20
+    },
+    {
+      "section": "Rookie Phenom Jersey Autographs Prime",
+      "category": "rookie-phenom-jersey-autographs",
+      "parallel": "Prime",
+      "cards": 20,
+      "auto": 20,
+      "printRun": 20
+    },
+    {
+      "section": "Rookie Phenom Jerseys",
+      "category": "rookie-phenom-jerseys",
+      "parallel": "",
+      "cards": 40,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Rookie Phenom Jerseys Blue",
+      "category": "rookie-phenom-jerseys",
+      "parallel": "Blue",
+      "cards": 40,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Rookie Phenom Jerseys Laundry Tag Brand Logo",
+      "category": "rookie-phenom-jerseys",
+      "parallel": "Laundry Tag Brand Logo",
+      "cards": 40,
+      "auto": 0,
+      "printRun": 40
+    },
+    {
+      "section": "Rookie Phenom Jerseys Laundry Tag NFL Player's Logo",
+      "category": "rookie-phenom-jerseys",
+      "parallel": "Laundry Tag NFL Player's Logo",
+      "cards": 40,
+      "auto": 0,
+      "printRun": 40
+    },
+    {
+      "section": "Rookie Phenom Jerseys Laundry Tag NFL Shield",
+      "category": "rookie-phenom-jerseys",
+      "parallel": "Laundry Tag NFL Shield",
+      "cards": 40,
+      "auto": 0,
+      "printRun": 40
+    },
+    {
+      "section": "Rookie Phenom Jerseys Orange",
+      "category": "rookie-phenom-jerseys",
+      "parallel": "Orange",
+      "cards": 40,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Rookie Phenom Jerseys Prime",
+      "category": "rookie-phenom-jerseys",
+      "parallel": "Prime",
+      "cards": 40,
+      "auto": 0,
+      "printRun": 40
+    },
+    {
+      "section": "Rookie Phenom Jerseys Red",
+      "category": "rookie-phenom-jerseys",
+      "parallel": "Red",
+      "cards": 40,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Rookies",
+      "category": "rookies",
+      "parallel": "",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Rookies Aqueous Test",
+      "category": "rookies",
+      "parallel": "Aqueous Test",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Rookies Jersey Number",
+      "category": "rookies",
+      "parallel": "Jersey Number",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 50
+    },
+    {
+      "section": "Rookies Press Proof Black",
+      "category": "rookies",
+      "parallel": "Press Proof Black",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 50
+    },
+    {
+      "section": "Rookies Press Proof Black Die-Cut",
+      "category": "rookies",
+      "parallel": "Press Proof Black Die-Cut",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 50
+    },
+    {
+      "section": "Rookies Press Proof Blue",
+      "category": "rookies",
+      "parallel": "Press Proof Blue",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Rookies Press Proof Gold",
+      "category": "rookies",
+      "parallel": "Press Proof Gold",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 50
+    },
+    {
+      "section": "Rookies Press Proof Gold Die-Cut",
+      "category": "rookies",
+      "parallel": "Press Proof Gold Die-Cut",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 50
+    },
+    {
+      "section": "Rookies Press Proof Green",
+      "category": "rookies",
+      "parallel": "Press Proof Green",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Rookies Press Proof Red",
+      "category": "rookies",
+      "parallel": "Press Proof Red",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Rookies Press Proof Silver",
+      "category": "rookies",
+      "parallel": "Press Proof Silver",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 50
+    },
+    {
+      "section": "Rookies Press Proof Silver Die-Cut",
+      "category": "rookies",
+      "parallel": "Press Proof Silver Die-Cut",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 50
+    },
+    {
+      "section": "Rookies Press Proof Yellow",
+      "category": "rookies",
+      "parallel": "Press Proof Yellow",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Rookies Season Stat Line",
+      "category": "rookies",
+      "parallel": "Season Stat Line",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 50
+    },
+    {
+      "section": "Signature Marks",
+      "category": "signature-marks",
+      "parallel": "",
+      "cards": 42,
+      "auto": 42,
+      "printRun": 0
+    },
+    {
+      "section": "Signature Marks Blue",
+      "category": "signature-marks",
+      "parallel": "Blue",
+      "cards": 49,
+      "auto": 49,
+      "printRun": 49
+    },
+    {
+      "section": "Signature Marks Bronze",
+      "category": "signature-marks",
+      "parallel": "Bronze",
+      "cards": 50,
+      "auto": 50,
+      "printRun": 50
+    },
+    {
+      "section": "Signature Marks Green",
+      "category": "signature-marks",
+      "parallel": "Green",
+      "cards": 49,
+      "auto": 49,
+      "printRun": 49
+    },
+    {
+      "section": "Signature Marks Purple",
+      "category": "signature-marks",
+      "parallel": "Purple",
+      "cards": 50,
+      "auto": 50,
+      "printRun": 50
+    },
+    {
+      "section": "Signature Marks Red",
+      "category": "signature-marks",
+      "parallel": "Red",
+      "cards": 50,
+      "auto": 50,
+      "printRun": 50
+    },
+    {
+      "section": "Team Pride Holo Horizontal",
+      "category": "team-pride-holo-horizontal",
+      "parallel": "",
+      "cards": 16,
+      "auto": 0,
+      "printRun": 16
+    },
+    {
+      "section": "Team Pride Holo Vertical",
+      "category": "team-pride-holo-vertical",
+      "parallel": "",
+      "cards": 16,
+      "auto": 0,
+      "printRun": 16
+    },
+    {
+      "section": "Team Pride Horizontal",
+      "category": "team-pride-horizontal",
+      "parallel": "",
+      "cards": 16,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Team Pride Vertical",
+      "category": "team-pride-vertical",
+      "parallel": "",
+      "cards": 16,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Team Supreme Horizontal",
+      "category": "team-supreme-horizontal",
+      "parallel": "",
+      "cards": 6,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Team Supreme Vertical",
+      "category": "team-supreme-vertical",
+      "parallel": "",
+      "cards": 9,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "The Elite Series",
+      "category": "the-elite-series",
+      "parallel": "",
+      "cards": 30,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "The Elite Series Autographs",
+      "category": "the-elite-series",
+      "parallel": "Autographs",
+      "cards": 23,
+      "auto": 23,
+      "printRun": 23
+    },
+    {
+      "section": "The Elite Series Rookies",
+      "category": "the-elite-series",
+      "parallel": "Rookies",
+      "cards": 30,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "The Elite Series Rookies Autographs",
+      "category": "the-elite-series",
+      "parallel": "Rookies Autographs",
+      "cards": 30,
+      "auto": 30,
+      "printRun": 30
+    },
+    {
+      "section": "The Legends Series",
+      "category": "the-legends-series",
+      "parallel": "",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "The Legends Series Autographs",
+      "category": "the-legends-series",
+      "parallel": "Autographs",
+      "cards": 20,
+      "auto": 20,
+      "printRun": 20
+    },
+    {
+      "section": "The Rookies",
+      "category": "the-rookies",
+      "parallel": "",
+      "cards": 40,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "The Rookies Autographs",
+      "category": "the-rookies",
+      "parallel": "Autographs",
+      "cards": 40,
+      "auto": 40,
+      "printRun": 40
+    },
+    {
+      "section": "White Hot Rookies",
+      "category": "white-hot-rookies",
+      "parallel": "",
+      "cards": 10,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "White Hot Rookies Autographs",
+      "category": "white-hot-rookies",
+      "parallel": "Autographs",
+      "cards": 9,
+      "auto": 9,
+      "printRun": 9
+    }
+  ],
+  "collisionCheck": {
+    "checkedAt": "2026-09-14",
+    "method": "every row's would-be address (cardNumber, parallel, isAuto, printRun) on the product key, compared across categories — the same test census-catalog-id-collisions.cjs applies, run on the staged file",
+    "clashingAddresses": 475,
+    "verdict": "BLOCKED"
+  },
+  "ingestBlocked": {
+    "clashingAddresses": 475,
+    "unregisteredSubsetKeys": [
+      "action-all-pros",
+      "all-pro-kings",
+      "all-time-gridiron-kings",
+      "canton-kings",
+      "champ-is-here",
+      "dominators",
+      "donruss-threads",
+      "downtown",
+      "fans-of-the-game",
+      "gridiron-kings",
+      "highlights",
+      "inducted",
+      "jersey-kings",
+      "leather-kings",
+      "legends-of-the-fall",
+      "nicknames",
+      "passing-the-torch-jerseys",
+      "power-formulas",
+      "red-hot-rookies",
+      "retro-1989",
+      "retro-1999",
+      "rookie-gridiron-kings",
+      "rookie-phenom-jerseys",
+      "team-pride-holo-horizontal",
+      "team-pride-holo-vertical",
+      "team-pride-horizontal",
+      "team-pride-vertical",
+      "team-supreme-horizontal",
+      "team-supreme-vertical",
+      "the-elite-series",
+      "the-legends-series",
+      "the-rookies",
+      "white-hot-rookies"
+    ],
+    "blockedReason": "SAME-NUMBERED INSERT SETS. This product's named insert sets each restart their numbering at 1 with their OWN players, so 475 addresses on the product key are claimed by two or more different cards (e.g. base #1 and several inserts' #1). Per lib/insert-set-key.cjs the unit of refusal is the FILE: until each subset key below is registered in productSetKeys.ts AND normalizeSetKey has an anchored rule for it, ingesting this file would let the last writer decide which player each address holds. Nothing here guesses a key — the list is exactly the categories measured to clash.",
+    "awaitingRuling": true
+  }
+}
