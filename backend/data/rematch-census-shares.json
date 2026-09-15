@@ -3,8 +3,8 @@
  "source": "rematch IMPROVE fleet census artifacts, 32/32 slots, 2026-09-13/14",
  "measuredAt": "2026-09-14",
  "measuredUnder": {
-  "stamp": "d85b109414113+2026-09-06.a",
-  "derivation": "d85b109414113",
+  "stamp": "dd20c6afd9539+2026-09-06.a",
+  "derivation": "dd20c6afd9539",
   "contract": "2026-09-06.a",
   "commit": "b5ab5f745788d88168af9e339fc6be7f8c8de7a0",
   "note": "Recorded by scripts/rebaseline-i9-reference.cjs. The alarm compares only against a reference carrying THIS stamp; a stamp change makes the drift a finding, not an alarm."
@@ -131,20 +131,20 @@
   }
  },
  "supersedes": {
-  "stamp": "d714a9bd11554+2026-09-06.a",
-  "measuredAt": "2026-09-13",
-  "classifiedTotal": 22694704,
+  "stamp": "d85b109414113+2026-09-06.a",
+  "measuredAt": "2026-09-14",
+  "classifiedTotal": 18352932,
   "weighted": {
-   "AGREE": 0.35057,
-   "IMPROVE": 0.031183,
-   "CONFLICT": 0.506875,
-   "UNDERIVABLE": 0.086931
+   "AGREE": 0.429696,
+   "IMPROVE": 0.09765,
+   "CONFLICT": 0.36437,
+   "UNDERIVABLE": 0.073416
   },
   "delta": {
-   "AGREE": 0.079126,
-   "IMPROVE": 0.066467,
-   "CONFLICT": -0.142505,
-   "UNDERIVABLE": -0.013515
+   "AGREE": 0,
+   "IMPROVE": 0,
+   "CONFLICT": 0,
+   "UNDERIVABLE": 0
   },
   "reason": "stamp-changed"
  },
