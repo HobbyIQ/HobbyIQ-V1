@@ -452,6 +452,12 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
       totalElapsedMs: ladderBudget.elapsedMs(),
       rungTimings: ladderBudget.rungTimings,
     }));
+    // CF-A-LOG-NOBODY-CAN-READ-IS-NOT-TELEMETRY (Fable, 2026-09-15). The line
+    // above reaches App Insights as a SAMPLED log row, so at 10% ingestion
+    // sampling the timed-out walk — the one case anyone ever goes looking for —
+    // is 9 times out of 10 simply absent. Emit the same facts as a custom event
+    // too, where they survive at full fidelity and arrive as typed fields.
+    ladderBudget.reportWalkSummary({ slug, outcome: "ladder-timeout" });
     return {
       ...noBasis,
       basisNote: `ladder-timeout: the fallback ladder did not settle within its ${ladderBudget.elapsedMs()}ms budget — withheld rather than returning a stale or partial number`,
