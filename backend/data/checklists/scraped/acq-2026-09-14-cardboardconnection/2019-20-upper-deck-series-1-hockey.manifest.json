@@ -472,12 +472,20 @@
       "printRun": 100
     }
   ],
-  "ingestBlocked": {
-    "unregisteredSubsetKeys": [
-      "1994-95-rookie-tribute-die-cuts"
-    ],
-    "clashingAddresses": 10,
-    "blockedReason": "SAME-NUMBERED INSERT. The 1994-95 Rookie Tribute Die-Cuts subset restarts at card 1 with its OWN players (#1 Cale Makar vs base #1 Auston Matthews), so its 10 cards compute the same ids as 10 base cards. Per lib/insert-set-key.cjs this file is REFUSED until the subset key is registered in productSetKeys.ts AND normalizeSetKey has an anchored rule for it. Nothing here guesses the key.",
-    "awaitingRuling": true
+  "ingestBlocked": null,
+  "collisionCheck": {
+    "checkedAt": "2026-09-15",
+    "method": "lib/insert-set-key.cjs planFile(), driven as ingest-checklist-csv-to-catalog.cjs drives it. Local, no Cosmos.",
+    "verdict": "pass",
+    "rows": 2067,
+    "distinctIds": 2067,
+    "clashingAddresses": 0,
+    "subsetKeysSeparated": 1
+  },
+  "registeredSubsetKeys": {
+    "ruling": "R42/R43 (Drew, 2026-09-15)",
+    "keys": [
+      "upper-deck-series-1-1994-95-rookie-tribute-die-cuts"
+    ]
   }
 }
