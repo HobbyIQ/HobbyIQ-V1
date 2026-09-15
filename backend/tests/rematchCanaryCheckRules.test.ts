@@ -46,23 +46,40 @@ type Inputs = {
    *  the wave-4 halt). */
   foreignRekeyedAway?: number; foreignRekeyedRows?: string[];
   ids?: string[];
+  /** The tier the anchor was computed over, and how many of `rows` are in
+   *  it (2026-09-15, grade-aware anchor). */
+  anchorTier?: string; anchorTierRows?: number;
 };
 type Cmp = { ok: boolean; regressions: string[]; notes: string[]; touched?: boolean; attributed?: boolean; moved?: number };
 /** One pool's row in the apply's write ledger: what THIS shard moved here. */
 type Touch = { fromCount?: number; toCount?: number; from?: string[]; to?: string[] };
 type Ledger = { doc: Record<string, unknown> & { written?: number }; pools: Record<string, Touch> };
+/** A canary's own target tier, from `canaryTargetTier` (2026-09-15). */
+type Tier = { raw: true; label: string } | { raw: false; company: string; value: number; label: string };
 type Checker = {
   median: (xs: number[]) => number | null;
-  poolInputs: (rows: Record<string, unknown>[]) => Inputs;
+  poolInputs: (rows: Record<string, unknown>[], tier?: Tier) => Inputs;
   /** `touch`: null = no ledger (strict); undefined = ledger exists but does
    *  not name this pool (untouched); an object = this shard wrote here. */
   compareCanary: (c: Record<string, unknown>, b: Inputs, a: Inputs, tol?: number, touch?: Touch | null) => Cmp;
   loadLedger: (file: string) => Ledger | null;
   /** Exported so the residency rule -- the safety property of DEFECT 5 --
    *  can be pinned against a fake container. */
-  measure: (pool: unknown, slug: string, priorIds?: string[]) => Promise<Inputs & {
+  measure: (pool: unknown, slug: string, priorIds?: string[], tier?: Tier) => Promise<Inputs & {
     foreignRekeyedAway?: number; foreignRekeyedRows?: string[]; ids?: string[];
   }>;
+  /** Is this row Raw the way gradeLadder.isRaw defines it -- ported, not
+   *  imported (2026-09-15, this script's dist/-free promise). */
+  isRawRow: (row: Record<string, unknown>) => boolean;
+  /** Canonical grade company for a raw string, ported from gradeLadder.
+   *  service.ts's canonicalGradeCompany/ALIASES (2026-09-15). */
+  canonicalGradeCompany: (raw: string | null | undefined) => string | null;
+  /** A canary's own target tier: Raw by default, or the grade its `name`
+   *  states / its manifest's `targetGrade` names (2026-09-15). */
+  canaryTargetTier: (canary: Record<string, unknown>) => Tier;
+  /** Does this row belong to the given tier -- exact grade match, never
+   *  cross-grade (2026-09-15). */
+  rowMatchesTier: (row: Record<string, unknown>, tier: Tier) => boolean;
 };
 const C = require_(path.join(backend, "scripts", "rematch-canary-check.cjs")) as Checker;
 
@@ -323,6 +340,151 @@ describe("the anchor is the leading edge, never an FMV", () => {
       { id: "b", price: 20, soldAt: "2026-08-01T00:00:00Z" },
     ];
     expect(C.poolInputs(rows).rows).toBe(2);
+  });
+});
+
+/**
+ * THE ANCHOR IS GRADE-AWARE (2026-09-15, coordinator finding).
+ *
+ * `poolInputs`'s anchor used to be the median of the newest 3 rows of the
+ * WHOLE pool, regardless of grade -- but the pool is sliced back into grade
+ * tiers at PRICE time (unifiedPricing.service.ts's perTierWindows, via
+ * gradeLabel/gradeValueToken), so a raw canary's leading edge could be moved
+ * by a graded sale that the price engine would never let anywhere near the
+ * raw tier. `rematchTrustLadder.test.ts`'s "1986 fleer-stickers pool" incident
+ * -- median(3050, 3950, 1875) = 3050, zero rekeys of any kind -- is exactly
+ * this defect: those three newest sales were graded, and a truly grade-blind
+ * gate should never have let them define a raw canary's anchor at all.
+ *
+ * `poolInputs`/`measure` now take a `tier` (from `canaryTargetTier`, read off
+ * the canary's `name`/`targetGrade`) and slice the SORTED-BY-DATE rows to
+ * that tier BEFORE taking the newest 3. `rows`/`byPartition`/`byField`/
+ * `protectedRows` are untouched -- row loss and provenance protection stay
+ * grade-blind, only the anchor is tier-scoped.
+ */
+describe("the anchor is GRADE-AWARE — it anchors on the canary's own tier (2026-09-15)", () => {
+  it("isRawRow: no company AND no value (null/undefined/empty), matching gradeLadder.isRaw's rule", () => {
+    expect(C.isRawRow({})).toBe(true);
+    expect(C.isRawRow({ gradeCompany: null, gradeValue: null })).toBe(true);
+    expect(C.isRawRow({ gradeCompany: "", gradeValue: "" })).toBe(true);
+    expect(C.isRawRow({ gradeCompany: "PSA", gradeValue: 9 })).toBe(false);
+    // A grade VALUE with no company is a graded sale of an unrecorded
+    // grader -- unifiedPricing.service.ts's own CF-A-GRADED-SALE-NEVER-
+    // ENTERS-THE-RAW-TIER rule -- never Raw.
+    expect(C.isRawRow({ gradeCompany: null, gradeValue: 9 })).toBe(false);
+  });
+
+  it("canonicalGradeCompany matches gradeLadder.service.ts's alias table (source-pinned)", () => {
+    const src = fs.readFileSync(new URL("../src/services/catalog/gradeLadder.service.ts", import.meta.url), "utf8");
+    // Every alias this script ports must still be a real alias in the TS
+    // source, so a future edit to either table drifts LOUDLY: this pin fails
+    // the moment the two disagree on any pairing below.
+    for (const [raw, canonical] of [
+      ["PSA/DNA", "PSA"], ["BECKETT", "BGS"], ["BECKETT GRADING SERVICES", "BGS"],
+      ["SPORTSCARD GUARANTY", "SGC"], ["CGC CARDS", "CGC"], ["MINT GRADING SERVICE", "AGS"],
+    ] as const) {
+      expect(src, `${raw} -> ${canonical} missing from gradeLadder.service.ts`).toMatch(
+        new RegExp(`"?${raw}"?:\\s*"${canonical}"`),
+      );
+      expect(C.canonicalGradeCompany(raw)).toBe(canonical);
+    }
+    // Case- and whitespace-insensitive, same as the TS source's own
+    // `.trim().toUpperCase().replace(/\s+/g, " ")` normalisation.
+    expect(C.canonicalGradeCompany("  psa/dna  ")).toBe("PSA");
+    expect(C.canonicalGradeCompany("not a real grader")).toBeNull();
+  });
+
+  it("canaryTargetTier reads the grade off the canary's own name, defaults to Raw", () => {
+    expect(C.canaryTargetTier({ name: "Verlander 2005 Bowman Chrome DP BDP129 PSA 10" }))
+      .toEqual({ raw: false, company: "PSA", value: 10, label: "PSA 10" });
+    expect(C.canaryTargetTier({ name: "Witt 2020 Bowman Draft BD-152 Image Variation PSA 9" }))
+      .toEqual({ raw: false, company: "PSA", value: 9, label: "PSA 9" });
+    // The 34 canaries with no grade token in their name -- fleer-stickers #8
+    // among them -- default to Raw.
+    expect(C.canaryTargetTier({ name: "[derived] slot 26 1986 fleer-stickers 8 base" }))
+      .toEqual({ raw: true, label: "Raw" });
+    // An explicit manifest field is read first, ahead of the name.
+    expect(C.canaryTargetTier({ name: "no grade in this name", targetGrade: { company: "BGS", value: 9.5 } }))
+      .toEqual({ raw: false, company: "BGS", value: 9.5, label: "BGS 9.5" });
+  });
+
+  it("THE FLEER-STICKERS CASE — graded newest sales must not move a raw anchor", () => {
+    // The exact shape rematchTrustLadder.test.ts's incident describes: three
+    // graded sales are the newest three by date, and three raw sales sit
+    // just behind them. A grade-blind anchor reads median(3050, 3950, 1875)
+    // = 3050 off the graded rows; the fix must read the raw rows instead.
+    const rows = [
+      { id: "raw1", price: 1875, soldAt: "2026-07-01T00:00:00Z" },
+      { id: "raw2", price: 1950, soldAt: "2026-07-05T00:00:00Z" },
+      { id: "raw3", price: 2117, soldAt: "2026-07-10T00:00:00Z" },
+      { id: "graded1", price: 3950, soldAt: "2026-09-14T07:50:00Z", gradeCompany: "PSA", gradeValue: 8 },
+      { id: "graded2", price: 3050, soldAt: "2026-09-14T08:00:00Z", gradeCompany: "PSA", gradeValue: 8 },
+      { id: "graded3", price: 1875, soldAt: "2026-09-14T08:10:00Z", gradeCompany: "PSA", gradeValue: 9 },
+    ];
+    const tier = C.canaryTargetTier({ name: "[derived] slot 26 1986 fleer-stickers 8 base" });
+    const result = C.poolInputs(rows, tier);
+    expect(result.rows).toBe(6); // the WHOLE pool -- row loss stays grade-blind
+    expect(result.anchorTier).toBe("Raw");
+    expect(result.anchorTierRows).toBe(3);
+    // median(1875, 1950, 2117) = 1950 -- the raw rows only, NOT
+    // median(3050, 3950, 1875) = 3050 the old grade-blind rule would read.
+    expect(result.anchor).toBe(1950);
+    expect(result.anchor).not.toBe(3050);
+    // The newest sale reported is still whole-pool (informational), so a lost
+    // leading edge is still visible even though it never feeds the anchor.
+    expect(result.newestPrice).toBe(1875);
+    expect(result.newestAt).toBe("2026-09-14T08:10:00Z");
+  });
+
+  it("A GRADED CANARY anchors on ITS OWN grade only, never a sibling grade or raw", () => {
+    // Verlander PSA 10 (graded-from-raw): the pool holds raw, PSA 9 and
+    // PSA 10 rows. Only the PSA 10 rows may ever set this canary's anchor --
+    // a PSA 9 sale, however recent, is not evidence for a PSA 10 pool
+    // (CF-EXACT-GRADE-OUTRANKS-CROSS-GRADE, the same rule the price engine
+    // itself enforces on both sides of its own tier match).
+    const rows = [
+      { id: "raw1", price: 50, soldAt: "2026-09-14T09:00:00Z" },
+      { id: "psa9-1", price: 400, soldAt: "2026-09-14T09:05:00Z", gradeCompany: "PSA", gradeValue: 9 },
+      { id: "psa10-1", price: 900, soldAt: "2026-08-01T00:00:00Z", gradeCompany: "PSA", gradeValue: 10 },
+      { id: "psa10-2", price: 950, soldAt: "2026-08-05T00:00:00Z", gradeCompany: "PSA/DNA", gradeValue: 10 },
+      { id: "psa10-3", price: 1000, soldAt: "2026-08-10T00:00:00Z", gradeCompany: "psa", gradeValue: "10" },
+    ];
+    const tier = C.canaryTargetTier({ name: "Verlander 2005 Bowman Chrome DP BDP129 PSA 10" });
+    const result = C.poolInputs(rows, tier);
+    expect(result.rows).toBe(5);
+    expect(result.anchorTier).toBe("PSA 10");
+    expect(result.anchorTierRows).toBe(3);
+    // median(900, 950, 1000) = 950 -- the three PSA 10 rows, whatever spelling
+    // of "PSA" each one's own gradeCompany carries.
+    expect(result.anchor).toBe(950);
+    // The newest sale (a PSA 9, $400) is reported but never anchors.
+    expect(result.newestPrice).toBe(400);
+  });
+
+  it("a thin or empty tier anchors on fewer than 3 rows, or none -- never borrows another tier's sales", () => {
+    const rows = [
+      { id: "raw1", price: 50, soldAt: "2026-09-14T00:00:00Z" },
+      { id: "psa10-1", price: 900, soldAt: "2026-08-01T00:00:00Z", gradeCompany: "PSA", gradeValue: 10 },
+    ];
+    const tier = C.canaryTargetTier({ name: "Verlander 2005 Bowman Chrome DP BDP129 PSA 10" });
+    const result = C.poolInputs(rows, tier);
+    expect(result.rows).toBe(2);
+    expect(result.anchorTierRows).toBe(1);
+    expect(result.anchor).toBe(900); // median of one value is that value
+    // Zero rows in the requested tier -> anchor is null, never a borrow.
+    const noGraded = C.poolInputs([rows[0]], tier);
+    expect(noGraded.anchorTierRows).toBe(0);
+    expect(noGraded.anchor).toBeNull();
+  });
+
+  it("poolInputs defaults to Raw when no tier is passed — every old call site keeps its old meaning", () => {
+    const rows = [
+      { id: "graded1", price: 9999, soldAt: "2026-09-14T00:00:00Z", gradeCompany: "PSA", gradeValue: 10 },
+    ];
+    // No tier argument at all: defaults raw, so this graded-only pool anchors
+    // on nothing rather than silently reading a whole-pool median again.
+    expect(C.poolInputs(rows).anchor).toBeNull();
+    expect(C.poolInputs(rows).anchorTier).toBe("Raw");
   });
 });
 
