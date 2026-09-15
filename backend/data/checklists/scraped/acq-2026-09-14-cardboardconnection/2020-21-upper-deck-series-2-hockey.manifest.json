@@ -1,0 +1,507 @@
+{
+  "source": "cardboardconnection-2026-09-14",
+  "sourceUrl": "https://www.cardboardconnection.com/2020-21-upper-deck-series-2-hockey-cards",
+  "xlsxUrl": "https://cconnect.s3.amazonaws.com/wp-content/uploads/2021/03/2020-21-Upper-Deck-Series-2-Hockey-checklist-Excel-spreadsheet.xlsx",
+  "fetchedAt": "2026-09-14",
+  "sport": "hockey",
+  "year": 2020,
+  "setName": "2020-21 Upper Deck Series 2 Hockey",
+  "productKey": "2020-21-upper-deck-series-2-hockey",
+  "setKey": "upper-deck-series-2",
+  "rowCount": 2654,
+  "autoCount": 1,
+  "printRunCount": 909,
+  "distinctParallels": 24,
+  "parallelColumnAuthoritative": true,
+  "parallelVocabulary": [
+    "Blue Border",
+    "Clear Cut",
+    "Copper",
+    "Exclusives",
+    "Flouresence Blue",
+    "Flouresence Gold",
+    "Flouresence Green",
+    "Flouresence Magenta",
+    "French",
+    "Gold",
+    "Gold Foil",
+    "Green",
+    "High Gloss",
+    "Jumbos",
+    "O-Pee-Chee Retro Update",
+    "O-Pee-Chee Retro Update Black",
+    "Orange",
+    "Patch",
+    "Pink",
+    "Platinum Blue Foil",
+    "Printing Plates",
+    "Red",
+    "Red Border",
+    "Red Foil"
+  ],
+  "sectionsReport": [
+    {
+      "section": "Base Set",
+      "category": "base-set",
+      "parallel": "",
+      "cards": 200,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base Set - Young Guns",
+      "category": "base-set--young-guns",
+      "parallel": "",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Clear Cut Parallel",
+      "category": "base-set",
+      "parallel": "Clear Cut",
+      "cards": 200,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Clear Cut Parallel - Young Guns",
+      "category": "base-set--young-guns",
+      "parallel": "Clear Cut",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Exclusives Parallel",
+      "category": "base-set",
+      "parallel": "Exclusives",
+      "cards": 200,
+      "auto": 0,
+      "printRun": 200
+    },
+    {
+      "section": "Exclusives Parallel - Young Guns",
+      "category": "base-set--young-guns",
+      "parallel": "Exclusives",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 50
+    },
+    {
+      "section": "French Parallel",
+      "category": "base-set",
+      "parallel": "French",
+      "cards": 200,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "French Parallel - Young Guns",
+      "category": "base-set--young-guns",
+      "parallel": "French",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "High Gloss Parallel",
+      "category": "base-set",
+      "parallel": "High Gloss",
+      "cards": 200,
+      "auto": 0,
+      "printRun": 200
+    },
+    {
+      "section": "High Gloss Parallel - Young Guns",
+      "category": "base-set--young-guns",
+      "parallel": "High Gloss",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 50
+    },
+    {
+      "section": "Jumbos Parallel - Young Guns",
+      "category": "base-set--young-guns",
+      "parallel": "Jumbos",
+      "cards": 14,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "UD Canvas",
+      "category": "ud-canvas",
+      "parallel": "",
+      "cards": 90,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "UD Canvas - Young Guns",
+      "category": "ud-canvas--young-guns",
+      "parallel": "",
+      "cards": 30,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "UD Canvas - Retired Stars",
+      "category": "ud-canvas--retired-stars",
+      "parallel": "",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "UD Canvas - Team Canada Program of Excellence",
+      "category": "ud-canvas--team-canada-program-of-excellence",
+      "parallel": "",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "UD Canvas Printing Plates Parallel",
+      "category": "ud-canvas",
+      "parallel": "Printing Plates",
+      "cards": 90,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "UD Canvas Printing Plates Parallel - Young Guns",
+      "category": "ud-canvas--young-guns",
+      "parallel": "Printing Plates",
+      "cards": 30,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "UD Canvas Signatures",
+      "category": "ud-canvas-signatures",
+      "parallel": "",
+      "cards": 1,
+      "auto": 1,
+      "printRun": 1
+    },
+    {
+      "section": "1994-95 Rookie Tribute Die Cuts",
+      "category": "1994-95-rookie-tribute-die-cuts",
+      "parallel": "",
+      "cards": 10,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "1994-95 Rookie Tribute Die Cuts Red Parallel",
+      "category": "1994-95-rookie-tribute-die-cuts",
+      "parallel": "Red",
+      "cards": 10,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "2020-21 Rookie Commemorative Class",
+      "category": "2020-21-rookie-commemorative-class",
+      "parallel": "",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "2020-21 Rookie Commemorative Class Red Parallel",
+      "category": "2020-21-rookie-commemorative-class",
+      "parallel": "Red",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Box Filler",
+      "category": "box-filler",
+      "parallel": "",
+      "cards": 22,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Day with The Cup",
+      "category": "day-with-the-cup",
+      "parallel": "",
+      "cards": 6,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Dazzlers",
+      "category": "dazzlers",
+      "parallel": "",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Dazzlers Green Parallel",
+      "category": "dazzlers",
+      "parallel": "Green",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Dazzlers Orange Parallel",
+      "category": "dazzlers",
+      "parallel": "Orange",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Dazzlers Pink Parallel",
+      "category": "dazzlers",
+      "parallel": "Pink",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Flouresence Red",
+      "category": "flouresence-red",
+      "parallel": "",
+      "cards": 46,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Flouresence Gold Parallel",
+      "category": "flouresence-red",
+      "parallel": "Flouresence Gold",
+      "cards": 46,
+      "auto": 0,
+      "printRun": 46
+    },
+    {
+      "section": "Flouresence Blue Parallel",
+      "category": "flouresence-red",
+      "parallel": "Flouresence Blue",
+      "cards": 46,
+      "auto": 0,
+      "printRun": 46
+    },
+    {
+      "section": "Flouresence Green Parallel",
+      "category": "flouresence-red",
+      "parallel": "Flouresence Green",
+      "cards": 46,
+      "auto": 0,
+      "printRun": 46
+    },
+    {
+      "section": "Flouresence Magenta Parallel",
+      "category": "flouresence-red",
+      "parallel": "Flouresence Magenta",
+      "cards": 46,
+      "auto": 0,
+      "printRun": 46
+    },
+    {
+      "section": "Rookie Breakouts",
+      "category": "rookie-breakouts",
+      "parallel": "",
+      "cards": 17,
+      "auto": 0,
+      "printRun": 17
+    },
+    {
+      "section": "Rookie Materials",
+      "category": "rookie-materials",
+      "parallel": "",
+      "cards": 38,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Rookie Materials Patch Parallel",
+      "category": "rookie-materials",
+      "parallel": "Patch",
+      "cards": 38,
+      "auto": 0,
+      "printRun": 38
+    },
+    {
+      "section": "Rookie Dual Materials",
+      "category": "rookie-dual-materials",
+      "parallel": "",
+      "cards": 9,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Rookie Dual Materials Patch Parallel",
+      "category": "rookie-dual-materials",
+      "parallel": "Patch",
+      "cards": 9,
+      "auto": 0,
+      "printRun": 9
+    },
+    {
+      "section": "Rookie Photoshoot Flashback Materials",
+      "category": "rookie-photoshoot-flashback-materials",
+      "parallel": "",
+      "cards": 10,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Rookie Photoshoot Flashback Materials Patch Parallel",
+      "category": "rookie-photoshoot-flashback-materials",
+      "parallel": "Patch",
+      "cards": 10,
+      "auto": 0,
+      "printRun": 10
+    },
+    {
+      "section": "UD Portraits - Rookies",
+      "category": "ud-portraits--rookies",
+      "parallel": "",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "UD Portraits Gold Foil Parallel - Rookies",
+      "category": "ud-portraits--rookies",
+      "parallel": "Gold Foil",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 50
+    },
+    {
+      "section": "UD Portraits Platinum Blue Foil Parallel - Rookies",
+      "category": "ud-portraits--rookies",
+      "parallel": "Platinum Blue Foil",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 50
+    },
+    {
+      "section": "UD Portraits Red Foil Parallel - Rookies",
+      "category": "ud-portraits--rookies",
+      "parallel": "Red Foil",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "O-Pee-Chee Update - Award Winners",
+      "category": "o-pee-chee-update--award-winners",
+      "parallel": "",
+      "cards": 10,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "O-Pee-Chee Update - Marquee Rookies",
+      "category": "o-pee-chee-update--marquee-rookies",
+      "parallel": "",
+      "cards": 40,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "O-Pee-Chee Update Blue Border Parallel - Award Winners",
+      "category": "o-pee-chee-update--award-winners",
+      "parallel": "Blue Border",
+      "cards": 10,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "O-Pee-Chee Update Blue Border Parallel - Marquee Rookies",
+      "category": "o-pee-chee-update--marquee-rookies",
+      "parallel": "Blue Border",
+      "cards": 40,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "O-Pee-Chee Update Red Border Parallel - Award Winners",
+      "category": "o-pee-chee-update--award-winners",
+      "parallel": "Red Border",
+      "cards": 10,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "O-Pee-Chee Update Red Border Parallel - Marquee Rookies",
+      "category": "o-pee-chee-update--marquee-rookies",
+      "parallel": "Red Border",
+      "cards": 40,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "O-Pee-Chee Retro Update - Award Winners",
+      "category": "o-pee-chee-update--award-winners",
+      "parallel": "O-Pee-Chee Retro Update",
+      "cards": 10,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "O-Pee-Chee Retro Update - Marquee Rookies",
+      "category": "o-pee-chee-update--marquee-rookies",
+      "parallel": "O-Pee-Chee Retro Update",
+      "cards": 40,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "O-Pee-Chee Retro Update Black Parallel - Award WInners",
+      "category": "o-pee-chee-update--award-winners",
+      "parallel": "O-Pee-Chee Retro Update Black",
+      "cards": 10,
+      "auto": 0,
+      "printRun": 10
+    },
+    {
+      "section": "O-Pee-Chee Retro Update Black Parallel - Marquee Rookies",
+      "category": "o-pee-chee-update--marquee-rookies",
+      "parallel": "O-Pee-Chee Retro Update Black",
+      "cards": 40,
+      "auto": 0,
+      "printRun": 40
+    },
+    {
+      "section": "O-Pee-Chee Glossy Rookies",
+      "category": "o-pee-chee-glossy-rookies",
+      "parallel": "",
+      "cards": 10,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "O-Pee-Chee Glossy Rookies Copper Parallel",
+      "category": "o-pee-chee-glossy-rookies",
+      "parallel": "Copper",
+      "cards": 10,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "O-Pee-Chee Glossy Rookies Gold Parallel",
+      "category": "o-pee-chee-glossy-rookies",
+      "parallel": "Gold",
+      "cards": 10,
+      "auto": 0,
+      "printRun": 0
+    }
+  ],
+  "ingestBlocked": null,
+  "collisionCheck": {
+    "clashingAddresses": 0,
+    "verdict": "pass",
+    "checkedAt": "2026-09-14",
+    "note": "every row computes a distinct id on the product key; no subset registration needed."
+  }
+}
