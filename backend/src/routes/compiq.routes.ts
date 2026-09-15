@@ -130,6 +130,113 @@ import {
   isMomentumProjectionEnabled,
 } from "../services/compiq/momentumProjection.service.js";
 import { buildEngineMeta } from "../services/compiq/engineMeta.js";
+
+/**
+ * CF-A-PRICE-REQUEST-HAS-A-DEADLINE (Fable, 2026-09-15).
+ *
+ * THE DEFECT. `POST /api/compiq/price` had no ceiling of its own, so the only
+ * thing that ever stopped a slow request was Azure's 240 s front-end kill —
+ * which the client sees as an HTTP 499, a shape that names neither the route
+ * nor the slow step. The deploy smoke's "parallel-floor → withheld" case
+ * ("2026 Bowman Chrome Owen Carey Black BCP-69") hit its new 60 s client
+ * deadline at 60,002 ms, and that case's CORRECT answer is a refusal: a 2026
+ * /10 parallel with an empty pool, which every rung must miss before anything
+ * can be said. Taking a minute to say "no" is the worst of both worlds.
+ *
+ * WHY A WHOLE-BODY DEADLINE AND NOT MORE PER-QUERY ONES. The individual slow
+ * pieces have their own bounds — the ladder has `LadderBudget` (8 s total,
+ * 3 s per rung), the CH client times out at 20 s per call, and #2163 bounded
+ * the catalog lookup. What was missing was a bound on their SUM: a request
+ * walks the canonical ladder, then `computeEstimate`, then possibly an
+ * AI-matcher retry and a second ladder, and nothing added those up. This is
+ * that sum, and it is the last line of defence rather than the first — on a
+ * healthy request it never fires.
+ *
+ * WHY 25,000 ms. It is bounded on both sides by numbers that already exist.
+ * Below it: the honest worst case of the work itself, one ~8 s ladder walk
+ * plus `computeEstimate` — and #2163's second change makes it one walk, not
+ * two, so this ceiling is reachable rather than aspirational. Above it: the
+ * smoke's 60 s client deadline and the harness's own 25 s ceiling, so the
+ * server now answers BEFORE either gives up, which is the point — a timeout
+ * the server owns produces a reasoned refusal, while one the client owns
+ * produces an opaque abort. And far under Azure's 240 s.
+ *
+ * WHAT IT RETURNS. Never a hang, and never a fabricated number: the withheld
+ * shape, carrying `ladder-timeout` — the vocabulary
+ * `oneValuationPath.ValuationReason` already defines for "the engine could not
+ * finish checking in the time it was given". Reusing that word rather than
+ * minting one keeps the smoke's `withheldReasonOf` reading it as a REASONED
+ * null, so a slow request degrades to a product decision and never trips
+ * `engine_ok` — which gates the nightly reprice.
+ *
+ * The losing work is abandoned, not cancelled. Node cannot cancel an in-flight
+ * Cosmos call, and `LadderBudget` has the same property for the same reason;
+ * #2163 gave the pool reader an `abortSignal` for the piece that CAN be
+ * stopped. What this guarantees is that the CLIENT is answered on time.
+ *
+ * NOTE the deadline wraps `cacheWrap` rather than sitting inside it, and the
+ * ordering matters in both directions. The withheld response is never written
+ * to the cache — a request that ran out of clock is a statement about THIS
+ * request, not about the card, and caching it would turn one slow moment into
+ * five minutes of refusals. Meanwhile the abandoned walk keeps running and
+ * still writes its REAL answer under the same key when it finishes, so the
+ * next caller for that query gets the genuine number as a fast cache hit.
+ * A timeout here therefore warms the cache it declines to answer from.
+ */
+const PRICE_REQUEST_DEADLINE_MS = 25_000;
+
+/** The refusal a request that ran out of clock returns. Null FMV plus a
+ *  visible reason — the withheld contract, not an error and not a zero. */
+function priceDeadlineWithheld(query: string, elapsedMs: number) {
+  return {
+    ...buildEngineMeta(),
+    success: true,
+    query: query.trim(),
+    source: "ladder-timeout",
+    pricingTier: "no-basis",
+    fairMarketValue: null,
+    marketValue: null,
+    fairMarketValueLive: null,
+    predictedPrice: null,
+    fairMarketValueLow: null,
+    fairMarketValueHigh: null,
+    compsUsed: 0,
+    compsAvailable: 0,
+    recentComps: [],
+    canonicalFmvWithheld: {
+      reason: "ladder-timeout",
+      method: "no-basis",
+      basis: `The pricing engine did not finish within ${Math.round(elapsedMs / 1000)}s. No price was computed.`,
+    },
+    fmvReason: "ladder-timeout",
+    verdict: "Withheld — the pricing engine ran out of time on this card. No price was computed.",
+  };
+}
+
+/** Race the handler body against the request deadline. */
+async function withPriceDeadline<T>(query: string, work: () => Promise<T>): Promise<T | ReturnType<typeof priceDeadlineWithheld>> {
+  const startedAt = Date.now();
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  const expiry = new Promise<{ timedOut: true }>((resolve) => {
+    timer = setTimeout(() => resolve({ timedOut: true }), PRICE_REQUEST_DEADLINE_MS);
+  });
+  try {
+    const outcome = await Promise.race([
+      work().then((value) => ({ timedOut: false as const, value })),
+      expiry,
+    ]);
+    if (!outcome.timedOut) return outcome.value;
+    const elapsedMs = Date.now() - startedAt;
+    console.warn(JSON.stringify({
+      event: "price_request_deadline_exceeded",
+      source: "compiq.routes.price",
+      query, elapsedMs, deadlineMs: PRICE_REQUEST_DEADLINE_MS,
+    }));
+    return priceDeadlineWithheld(query, elapsedMs);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
 import {
   classifyRegime,
   type RegimeResult,
@@ -3006,10 +3113,29 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
     // bump prefix v1→v2 to invalidate every stale entry that still holds
     // a synthesized ($19.99) or variant-mismatch-nulled response.
     const cacheKey = normalizeCacheKey("compiq:price:v2", query);
-    const result = await cacheWrap(cacheKey, async () => {
+    const result = await withPriceDeadline(query, () => cacheWrap(cacheKey, async () => {
       const parsed = parseCardQuery(query);
       const body: CompIQEstimateRequest = requestFromParsed(parsed);
       const searchQuery = buildCompSearchQuery(parsed);
+      /**
+       * CF-ONE-CANONICAL-WALK-PER-REQUEST (Fable, 2026-09-15). The canonical
+       * ladder's verdict for THIS request, recorded the first time it is
+       * walked so it is never walked twice.
+       *
+       * Two blocks below ask the one valuation path about the same card: the
+       * canonical-first block near the top, and the canonical-FMV fallback
+       * after computeEstimate. On a card with a live pool that is invisible —
+       * the first block answers and returns. On a card with an EMPTY pool
+       * (smoke case "2026 Bowman Chrome Owen Carey Black BCP-69", a 2026 /10
+       * parallel with zero sold_comps) the first walk correctly refuses, does
+       * not return, and the second block then walks all eleven rungs again to
+       * be told the same thing — doubling the slowest, least-cacheable work in
+       * the request precisely on the queries that are already slowest.
+       *
+       * `slug` is kept alongside the result so the reuse can prove the second
+       * block is asking about the SAME identity before reusing the answer.
+       */
+      let canonicalWalk: { slug: string; result: { fairMarketValue: number | null; reason: string | null; rungLabel: string; basis: string } } | null = null;
       console.log(
         `[compiq.price] parsed query="${query}" â†’ player="${parsed.playerName}" year=${parsed.year} brand=${parsed.brand} parallel=${parsed.parallel} isAuto=${parsed.isAuto} confidence=${parsed.confidence}`
       );
@@ -3075,6 +3201,12 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
             grade: null,
             playerName: parsed.playerName ?? null,
           });
+          // CF-ONE-CANONICAL-WALK-PER-REQUEST (Fable, 2026-09-15). Keep this
+          // walk's verdict for the rest of the request. The fallback block far
+          // below used to run the ladder a SECOND time for the same card — see
+          // the note there — and when this walk refused, that second walk was
+          // guaranteed to refuse identically while paying the full cost again.
+          canonicalWalk = { slug, result: canon };
           const canonFmv = canon.fairMarketValue;
           const canonN = canon.compsUsed;
           if (typeof canonFmv === "number" && canonFmv > 0 && canonN > 0) {
@@ -3801,7 +3933,51 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
         typeof (est as { cardIdentity?: { card_id?: string } }).cardIdentity?.card_id === "string"
           ? (est as { cardIdentity: { card_id: string } }).cardIdentity.card_id
           : null;
-      if (noUsableLiveFmv && !hasSyntheticFallback && resolvedCardIdForCanonical) {
+      // CF-ONE-CANONICAL-WALK-PER-REQUEST (Fable, 2026-09-15). If the
+      // canonical-first block up top already walked the ladder for this card
+      // and it REFUSED, that refusal is this block's answer too — reuse it
+      // rather than walking all eleven rungs a second time to be told the same
+      // thing.
+      //
+      // Why only when it refused: a walk that PUBLISHED a number already
+      // returned from the block above, so it cannot reach here. Arriving here
+      // with a recorded walk therefore means that walk declined, and a
+      // declined walk is deterministic for the request — same identity, same
+      // pool, same instant. Re-asking cannot produce a different verdict; it
+      // can only cost the same again. On an empty-pool card that is the
+      // difference between one full ladder walk and two, and an empty pool is
+      // exactly when every rung has to be tried before anything can be said.
+      //
+      // The identity check is what makes this safe. The fallback block prices
+      // whatever `est.cardIdentity.card_id` resolved to, which is NOT always
+      // the slug the first block asked about — computeEstimate can resolve a
+      // different card, and the AI-matcher retry above can replace it outright.
+      // When the ids differ this is a genuinely different question and the
+      // engine is asked it, exactly as before.
+      const reusableWalk =
+        canonicalWalk
+        && canonicalWalk.slug === resolvedCardIdForCanonical
+        && canonicalWalk.result.fairMarketValue == null
+          ? canonicalWalk
+          : null;
+      if (reusableWalk) {
+        canonicalFmvWithheld = {
+          reason: reusableWalk.result.reason,
+          method: reusableWalk.result.rungLabel,
+          basis: reusableWalk.result.basis || null,
+        };
+        console.log(JSON.stringify({
+          event: "price_canonical_fmv_withheld",
+          source: "compiq.routes.price",
+          cardId: resolvedCardIdForCanonical,
+          canonicalMethod: canonicalFmvWithheld.method,
+          fmvReason: canonicalFmvWithheld.reason,
+          estSource: source,
+          // The one field that distinguishes this log line from the one the
+          // second walk used to emit: the ladder was NOT walked again.
+          reusedCanonicalWalk: true,
+        }));
+      } else if (noUsableLiveFmv && !hasSyntheticFallback && resolvedCardIdForCanonical) {
         try {
           const { computeCanonicalValuation } = await import(
             "../services/compiq/canonicalValuation.js"
@@ -4061,7 +4237,7 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
         if (r.marketValue == null && r.fairMarketValueLive == null) return true;
         return false;
       },
-    });
+    }));
     // CF-CH-TELEMETRY-OUTSIDE-CACHE (2026-06-28): see /search for rationale.
     recordMomentumProjectionEvaluated({
       source: "compiq.price",
