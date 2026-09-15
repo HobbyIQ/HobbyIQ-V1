@@ -11,6 +11,7 @@
   "reason": "Each of these products numbers its named insert sets from 1 with its OWN players, so 4193 addresses on the product key are claimed by two or more different cards (2019 Donruss Football #1 is Patrick Mahomes II in `base`, Todd Gurley II in `action-all-pros`, and Peyton Manning in `all-time-gridiron-kings`). Per lib/insert-set-key.cjs the unit of refusal is the FILE, so all 8 stay BLOCKED until these keys are registered."
  },
  "howToRule": [
+  "THIS IS TWO FAMILIES, NOT 120 UNRELATED DECISIONS. Every key needing a ruling hangs off one of TWO parent products — panini-donruss (92 keys, 16,014 insert rows) and panini-mosaic (28 keys, 5,444 rows) — so the ruling is really: do named insert sets of Donruss and Mosaic get their own card-set keys in the qualified <parent>-<subset> form? A yes covers all 120 at once; the per-key rows below are there so a specific insert can be pulled out of the block if Drew wants it handled differently.",
   "THE KEY IS PROPOSED IN THE QUALIFIED FORM `<parentSetKey>-<subset>`, not bare. Measured on main: 0 of the 122 bare subset names is a registered product key, while 2 of the qualified forms ALREADY are (panini-donruss-rookie-phenom-jersey-autographs, panini-donruss-signature-marks). The qualified form is also the shape the 2026-09-13 insider acquisition already ships under (panini-rookies-and-stars-rookies-signatures).",
   "A BARE KEY WOULD COLLIDE ACROSS SPORTS. `jersey-kings` and `the-rookies` each appear in BOTH basketball and football products, and `retro-series` in five cells across both sports. Those are different cards sharing an insert name, so the parent must stay in the key.",
   "REGISTRATION IS TWO HALVES, BOTH IN src. productSetKeys.ts needs the entry AND normalizeSetKey needs an anchored rule, or the key is not a fixed point and the rows land where nothing can reach them (lib/insert-set-key.cjs records normalizeSetKey('panini-prizm-fifa-world-cup-guardians') -> 'panini-prizm', a fold PAST the product key onto the bare flagship).",
@@ -22,7 +23,17 @@
   "distinctProposedKeys": 122,
   "alreadyRegistered": 2,
   "needRuling": 120,
-  "keysSpanningMoreThanOneCell": 64
+  "keysSpanningMoreThanOneCell": 64,
+  "needRulingByParent": {
+   "panini-donruss": {
+    "keys": 92,
+    "rows": 16014
+   },
+   "panini-mosaic": {
+    "keys": 28,
+    "rows": 5444
+   }
+  }
  },
  "proposedKeys": [
   {
