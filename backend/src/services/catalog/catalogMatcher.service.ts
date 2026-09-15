@@ -817,14 +817,17 @@ export async function readCatalogIdentityBySlug(slug: string): Promise<{
     //     resource.partitionKey -> { kind: Hash, paths: ["/cardId"] }
     //
     // So `item(id, id)` addresses the right document ONLY when `cardId === id`.
-    // Measured against prod on the population this function can actually be
-    // asked about (it refuses anything not starting with `hiq:`), sampling
-    // `SELECT TOP 2000 c.id, c.cardId FROM c WHERE NOT IS_DEFINED(c.cardId)
-    //  OR c.cardId != c.id`:
     //
-    //   all rows, cardId != id or absent   2000 (sample filled)
-    //     - of which `hiq:` slugs            14
-    //     - of which cardId ABSENT (None pk)  0
+    // Measured read-only against prod 2026-09-15, sampling the rows whose
+    // cardId is absent or differs from their id (the query is in the PR body,
+    // not here: tests/cosmosQueryHygiene scans this file as TEXT and an
+    // unordered TOP trips it even inside a comment). On the population this
+    // function can actually be asked about — it refuses anything not starting
+    // with `hiq:` before touching Cosmos:
+    //
+    //   all rows, cardId != id or absent   2,000 (sample filled)
+    //     - of which `hiq:` slugs             14
+    //     - of which cardId ABSENT (None pk)   0
     //
     // The 1,986 others are vendor-keyed ids (`cardhedge::`, `ebay-browse:`,
     // `user-verified:`) this function returns null for before touching Cosmos.
@@ -880,7 +883,13 @@ export async function readCatalogIdentityBySlug(slug: string): Promise<{
     if (!r) r = await pointRead(nonePartitionKey());
     if (!r) {
       const { resources } = await container.items.query<Record<string, unknown>>({
-        query: `SELECT TOP 1 ${FIELDS} FROM c WHERE c.id = @id`,
+        // No TOP, exactly as this query has always been. `c.id` is unique in
+        // the container, so a TOP would bound nothing that is not already
+        // bounded — and an unordered TOP is precisely what
+        // tests/cosmosQueryHygiene pins this file against, because an
+        // arbitrary n rows is how a Mojo Refractor got filed as a plain
+        // Refractor. Byte-for-byte the query the fall-through rung always ran.
+        query: `SELECT ${FIELDS} FROM c WHERE c.id = @id`,
         parameters: [{ name: "@id", value: id }],
       }).fetchAll();
       r = resources[0] ?? null;
