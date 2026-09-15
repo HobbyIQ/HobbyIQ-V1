@@ -18,19 +18,19 @@
   "sectionsBlocked": 0,
   "blockedSectionTitles": [],
   "parallelVocabulary": [
-    "Aqueous Test",
-    "Autographs",
-    "Autographs Blue",
-    "Autographs Bronze",
-    "Autographs Green",
-    "Autographs Orange",
-    "Autographs Purple",
-    "Autographs Red",
+    "Aqueou Test",
+    "Autograph",
+    "Autograph Blue",
+    "Autograph Bronze",
+    "Autograph Green",
+    "Autograph Orange",
+    "Autograph Purple",
+    "Autograph Red",
     "Blue",
     "Bronze",
-    "Canvas",
-    "Canvas Autographs",
-    "Canvas Studio Series",
+    "Canva",
+    "Canva Autographs",
+    "Canva Studio Series",
     "Dual",
     "Gold",
     "Green",
@@ -41,7 +41,7 @@
     "Laundry Tag NFL Shield",
     "Orange",
     "Photo Variation",
-    "Photo Variation Aqueous Test",
+    "Photo Variation Aqueou Test",
     "Photo Variation Jersey Number",
     "Photo Variation Press Proof Black",
     "Photo Variation Press Proof Black Die-Cut",
@@ -63,10 +63,10 @@
     "Purple",
     "Red",
     "Red and Green",
-    "Rookies",
-    "Rookies Autographs",
+    "Rookie",
+    "Rookie Autographs",
     "Season Stat Line",
-    "Studio Series"
+    "Studio Serie"
   ],
   "sectionsReport": [
     {
@@ -80,7 +80,7 @@
     {
       "section": "Action All-Pros Autographs",
       "category": "action-all-pros",
-      "parallel": "Autographs",
+      "parallel": "Autograph",
       "cards": 11,
       "auto": 11,
       "printRun": 11
@@ -96,7 +96,7 @@
     {
       "section": "All Pro Kings Autographs",
       "category": "all-pro-kings",
-      "parallel": "Autographs",
+      "parallel": "Autograph",
       "cards": 18,
       "auto": 18,
       "printRun": 18
@@ -104,7 +104,7 @@
     {
       "section": "All Pro Kings Studio Series",
       "category": "all-pro-kings",
-      "parallel": "Studio Series",
+      "parallel": "Studio Serie",
       "cards": 16,
       "auto": 0,
       "printRun": 16
@@ -120,7 +120,7 @@
     {
       "section": "All-Time Gridiron Kings Autographs",
       "category": "all-time-gridiron-kings",
-      "parallel": "Autographs",
+      "parallel": "Autograph",
       "cards": 15,
       "auto": 15,
       "printRun": 15
@@ -128,7 +128,7 @@
     {
       "section": "All-Time Gridiron Kings Studio Series",
       "category": "all-time-gridiron-kings",
-      "parallel": "Studio Series",
+      "parallel": "Studio Serie",
       "cards": 15,
       "auto": 0,
       "printRun": 15
@@ -144,7 +144,7 @@
     {
       "section": "Base Aqueous Test",
       "category": "base",
-      "parallel": "Aqueous Test",
+      "parallel": "Aqueou Test",
       "cards": 250,
       "auto": 0,
       "printRun": 0
@@ -168,7 +168,7 @@
     {
       "section": "Base Photo Variation Aqueous Test",
       "category": "base",
-      "parallel": "Photo Variation Aqueous Test",
+      "parallel": "Photo Variation Aqueou Test",
       "cards": 50,
       "auto": 0,
       "printRun": 0
@@ -320,7 +320,7 @@
     {
       "section": "Canton Kings Autographs",
       "category": "canton-kings",
-      "parallel": "Autographs",
+      "parallel": "Autograph",
       "cards": 20,
       "auto": 20,
       "printRun": 20
@@ -328,7 +328,7 @@
     {
       "section": "Canton Kings Studio Series",
       "category": "canton-kings",
-      "parallel": "Studio Series",
+      "parallel": "Studio Serie",
       "cards": 20,
       "auto": 0,
       "printRun": 20
@@ -344,7 +344,7 @@
     {
       "section": "Champ is Here Autographs",
       "category": "champ-is-here",
-      "parallel": "Autographs",
+      "parallel": "Autograph",
       "cards": 12,
       "auto": 12,
       "printRun": 12
@@ -384,7 +384,7 @@
     {
       "section": "Dominators Autographs",
       "category": "dominators",
-      "parallel": "Autographs",
+      "parallel": "Autograph",
       "cards": 32,
       "auto": 32,
       "printRun": 32
@@ -464,7 +464,7 @@
     {
       "section": "Gridiron Kings Autographs",
       "category": "gridiron-kings",
-      "parallel": "Autographs",
+      "parallel": "Autograph",
       "cards": 14,
       "auto": 14,
       "printRun": 14
@@ -472,7 +472,7 @@
     {
       "section": "Gridiron Kings Studio Series",
       "category": "gridiron-kings",
-      "parallel": "Studio Series",
+      "parallel": "Studio Serie",
       "cards": 15,
       "auto": 0,
       "printRun": 15
@@ -488,7 +488,7 @@
     {
       "section": "Highlights Autographs",
       "category": "highlights",
-      "parallel": "Autographs",
+      "parallel": "Autograph",
       "cards": 20,
       "auto": 20,
       "printRun": 20
@@ -512,7 +512,7 @@
     {
       "section": "Inducted Autographs",
       "category": "inducted",
-      "parallel": "Autographs",
+      "parallel": "Autograph",
       "cards": 9,
       "auto": 9,
       "printRun": 9
@@ -536,7 +536,7 @@
     {
       "section": "Jersey Kings Autographs",
       "category": "jersey-kings",
-      "parallel": "Autographs",
+      "parallel": "Autograph",
       "cards": 26,
       "auto": 26,
       "printRun": 26
@@ -544,7 +544,7 @@
     {
       "section": "Jersey Kings Studio Series",
       "category": "jersey-kings",
-      "parallel": "Studio Series",
+      "parallel": "Studio Serie",
       "cards": 29,
       "auto": 0,
       "printRun": 29
@@ -560,7 +560,7 @@
     {
       "section": "Leather Kings Autographs",
       "category": "leather-kings",
-      "parallel": "Autographs",
+      "parallel": "Autograph",
       "cards": 10,
       "auto": 10,
       "printRun": 10
@@ -568,7 +568,7 @@
     {
       "section": "Leather Kings Studio Series",
       "category": "leather-kings",
-      "parallel": "Studio Series",
+      "parallel": "Studio Serie",
       "cards": 8,
       "auto": 0,
       "printRun": 8
@@ -584,7 +584,7 @@
     {
       "section": "Legends of the Fall Autographs",
       "category": "legends-of-the-fall",
-      "parallel": "Autographs",
+      "parallel": "Autograph",
       "cards": 20,
       "auto": 20,
       "printRun": 20
@@ -752,7 +752,7 @@
     {
       "section": "Power Formulas Autographs",
       "category": "power-formulas",
-      "parallel": "Autographs",
+      "parallel": "Autograph",
       "cards": 20,
       "auto": 20,
       "printRun": 20
@@ -768,7 +768,7 @@
     {
       "section": "Rated Rookies Aqueous Test",
       "category": "rated-rookies",
-      "parallel": "Aqueous Test",
+      "parallel": "Aqueou Test",
       "cards": 50,
       "auto": 0,
       "printRun": 0
@@ -776,7 +776,7 @@
     {
       "section": "Rated Rookies Autographs Blue",
       "category": "rated-rookies",
-      "parallel": "Autographs Blue",
+      "parallel": "Autograph Blue",
       "cards": 50,
       "auto": 50,
       "printRun": 0
@@ -784,7 +784,7 @@
     {
       "section": "Rated Rookies Autographs Bronze",
       "category": "rated-rookies",
-      "parallel": "Autographs Bronze",
+      "parallel": "Autograph Bronze",
       "cards": 50,
       "auto": 50,
       "printRun": 0
@@ -792,7 +792,7 @@
     {
       "section": "Rated Rookies Autographs Green",
       "category": "rated-rookies",
-      "parallel": "Autographs Green",
+      "parallel": "Autograph Green",
       "cards": 50,
       "auto": 50,
       "printRun": 0
@@ -800,7 +800,7 @@
     {
       "section": "Rated Rookies Autographs Orange",
       "category": "rated-rookies",
-      "parallel": "Autographs Orange",
+      "parallel": "Autograph Orange",
       "cards": 50,
       "auto": 50,
       "printRun": 0
@@ -808,7 +808,7 @@
     {
       "section": "Rated Rookies Autographs Purple",
       "category": "rated-rookies",
-      "parallel": "Autographs Purple",
+      "parallel": "Autograph Purple",
       "cards": 50,
       "auto": 50,
       "printRun": 0
@@ -816,7 +816,7 @@
     {
       "section": "Rated Rookies Autographs Red",
       "category": "rated-rookies",
-      "parallel": "Autographs Red",
+      "parallel": "Autograph Red",
       "cards": 50,
       "auto": 50,
       "printRun": 0
@@ -824,7 +824,7 @@
     {
       "section": "Rated Rookies Canvas",
       "category": "rated-rookies",
-      "parallel": "Canvas",
+      "parallel": "Canva",
       "cards": 50,
       "auto": 0,
       "printRun": 0
@@ -832,7 +832,7 @@
     {
       "section": "Rated Rookies Canvas Autographs",
       "category": "rated-rookies",
-      "parallel": "Canvas Autographs",
+      "parallel": "Canva Autographs",
       "cards": 50,
       "auto": 50,
       "printRun": 50
@@ -840,7 +840,7 @@
     {
       "section": "Rated Rookies Canvas Studio Series",
       "category": "rated-rookies",
-      "parallel": "Canvas Studio Series",
+      "parallel": "Canva Studio Series",
       "cards": 50,
       "auto": 0,
       "printRun": 50
@@ -928,7 +928,7 @@
     {
       "section": "Red Hot Rookies Autographs",
       "category": "red-hot-rookies",
-      "parallel": "Autographs",
+      "parallel": "Autograph",
       "cards": 10,
       "auto": 10,
       "printRun": 10
@@ -944,7 +944,7 @@
     {
       "section": "Retro 1990 Autographs",
       "category": "retro-1990",
-      "parallel": "Autographs",
+      "parallel": "Autograph",
       "cards": 26,
       "auto": 26,
       "printRun": 26
@@ -960,7 +960,7 @@
     {
       "section": "Retro 2000 Autographs",
       "category": "retro-2000",
-      "parallel": "Autographs",
+      "parallel": "Autograph",
       "cards": 33,
       "auto": 33,
       "printRun": 33
@@ -976,7 +976,7 @@
     {
       "section": "Retro Series Autographs",
       "category": "retro-series",
-      "parallel": "Autographs",
+      "parallel": "Autograph",
       "cards": 16,
       "auto": 16,
       "printRun": 16
@@ -1072,7 +1072,7 @@
     {
       "section": "Rookie Gridiron Kings Autographs",
       "category": "rookie-gridiron-kings",
-      "parallel": "Autographs",
+      "parallel": "Autograph",
       "cards": 20,
       "auto": 20,
       "printRun": 20
@@ -1080,7 +1080,7 @@
     {
       "section": "Rookie Gridiron Kings Studio Series",
       "category": "rookie-gridiron-kings",
-      "parallel": "Studio Series",
+      "parallel": "Studio Serie",
       "cards": 20,
       "auto": 0,
       "printRun": 20
@@ -1216,7 +1216,7 @@
     {
       "section": "Rookies Aqueous Test",
       "category": "rookies",
-      "parallel": "Aqueous Test",
+      "parallel": "Aqueou Test",
       "cards": 50,
       "auto": 0,
       "printRun": 0
@@ -1384,7 +1384,7 @@
     {
       "section": "The Elite Series Autographs",
       "category": "the-elite-series",
-      "parallel": "Autographs",
+      "parallel": "Autograph",
       "cards": 26,
       "auto": 26,
       "printRun": 26
@@ -1392,7 +1392,7 @@
     {
       "section": "The Elite Series Rookies",
       "category": "the-elite-series",
-      "parallel": "Rookies",
+      "parallel": "Rookie",
       "cards": 30,
       "auto": 0,
       "printRun": 0
@@ -1400,7 +1400,7 @@
     {
       "section": "The Elite Series Rookies Autographs",
       "category": "the-elite-series",
-      "parallel": "Rookies Autographs",
+      "parallel": "Rookie Autographs",
       "cards": 30,
       "auto": 30,
       "printRun": 30
@@ -1416,7 +1416,7 @@
     {
       "section": "The Legends Series Autographs",
       "category": "the-legends-series",
-      "parallel": "Autographs",
+      "parallel": "Autograph",
       "cards": 19,
       "auto": 19,
       "printRun": 19
@@ -1432,7 +1432,7 @@
     {
       "section": "The Rookies Autographs",
       "category": "the-rookies",
-      "parallel": "Autographs",
+      "parallel": "Autograph",
       "cards": 42,
       "auto": 42,
       "printRun": 42
@@ -1448,11 +1448,10 @@
     {
       "section": "White Hot Rookies Autographs",
       "category": "white-hot-rookies",
-      "parallel": "Autographs",
+      "parallel": "Autograph",
       "cards": 10,
       "auto": 10,
       "printRun": 10
     }
-  ],
-  "ingestBlocked": null
+  ]
 }

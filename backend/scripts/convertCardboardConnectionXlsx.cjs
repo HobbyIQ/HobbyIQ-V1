@@ -323,21 +323,65 @@ function convert(xlsxPath) {
     sectionRows.get(s).set(num, player);
   }
   // CF-A-PLURAL-TWIN-IS-THE-SAME-SECTION (2026-09-15). cconnect prints both
-  // "Jersey Kings" and "Jerseys Kings Prime" in 2020-21 Donruss BK. The plural
-  // is a source typo, not a second card set: folding it onto the singular keeps
-  // "Prime" a PARALLEL of the registered `panini-donruss-jersey-kings` insert
-  // instead of minting `...-jerseys-kings-prime`, a key that would say a
-  // parallel is a set. Applied ONLY where the singular form is itself a section
-  // in this sheet, so nothing is invented.
+  // "Jersey Kings" and "Jerseys Kings Prime" in 2020-21 and 2021-22 Donruss BK.
+  // The plural is a source typo, not a second card set: the sheet states
+  // "Jersey Kings" (60 cards) and "Jersey Series Prime", so the singular stem
+  // is the heading and the stray "s" is the error.
+  //
+  // Folding it keeps "Prime" a PARALLEL of the registered
+  // `panini-donruss-jersey-kings` insert instead of minting
+  // `panini-donruss-jerseys-kings-prime` — a key that says a parallel is a set,
+  // the same defect class as `optic-rated-rookie-preview-gold`.
+  //
+  // ONE WORD AT A TIME. The first cut de-pluralised every word at once
+  // (`/(\w+?)s(\s)/g`), which turned "Jerseys Kings Prime" into "Jersey King
+  // Prime" — a section this sheet does not print — so nothing ever matched and
+  // all 89 rows stayed on the wrong key. Each plural word is now tried on its
+  // own and the candidate is kept ONLY if the rest of the title still names a
+  // real section here, so the fold is always onto something the source states.
+  //
+  // THE TITLE MUST OTHERWISE BE IDENTICAL. "Jerseys Kings Prime" -> "Jersey
+  // Kings Prime" is accepted because the remainder ("Prime") is untouched; a
+  // title that differs by anything more than one plural "s" is a different
+  // section and is left alone. Absent beats wrong.
   const pluralTwins = new Map();
+  const refusedTwins = [];
   {
-    const singularOf = (t) => t.replace(/(\w+?)s(\s)/g, "$1$2");
-    for (const t of [...sectionRows.keys()]) {
-      const sing = singularOf(t);
-      if (sing === t || !sectionRows.has(sing)) continue;
-      const src = sectionRows.get(t), dst = sectionRows.get(sing);
-      for (const [n, pl] of src) if (!dst.has(n)) dst.set(n, pl);
-      pluralTwins.set(t, sing);
+    const titles = [...sectionRows.keys()];
+    // A section's ANCHOR-BEARING stem: the title with one trailing "s" removed
+    // from exactly one word.
+    const candidates = (t) => {
+      const w = t.split(" ");
+      const out = [];
+      for (let i = 0; i < w.length; i++) {
+        if (!/^\w+s$/.test(w[i]) || /ss$/.test(w[i])) continue;
+        const c = [...w];
+        c[i] = w[i].slice(0, -1);
+        out.push(c.join(" "));
+      }
+      return out;
+    };
+    for (const t of titles) {
+      for (const cand of candidates(t)) {
+        // Fold only onto a section the sheet actually prints, or onto a title
+        // whose own root is printed here (so "Jerseys Kings Prime" can reach
+        // "Jersey Kings Prime" when "Jersey Kings" is the stated section).
+        const stated = sectionRows.has(cand);
+        const rootStated = titles.some((o) => o !== t && cand.startsWith(o + " "));
+        if (!stated && !rootStated) continue;
+        if (stated) {
+          const src = sectionRows.get(t), dst = sectionRows.get(cand);
+          for (const [n, pl] of src) if (!dst.has(n)) dst.set(n, pl);
+        } else {
+          sectionRows.set(cand, new Map(sectionRows.get(t)));
+        }
+        pluralTwins.set(t, cand);
+        break;
+      }
+      if (!pluralTwins.has(t) && candidates(t).length) {
+        // A plural word that names nothing here: reported, never guessed.
+        refusedTwins.push({ section: t, tried: candidates(t), reason: "plural-twin-stem-names-no-section-in-this-cell" });
+      }
     }
   }
 

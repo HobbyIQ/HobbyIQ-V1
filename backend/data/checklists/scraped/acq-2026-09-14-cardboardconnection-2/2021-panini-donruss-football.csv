@@ -28,15 +28,15 @@ action-all-pros,17,,false,,Jalen Ramsey
 action-all-pros,18,,false,,Quenton Nelson
 action-all-pros,19,,false,,David Bakhtiari
 action-all-pros,20,,false,,Minkah Fitzpatrick
-action-all-pros,1,Autographs,true,/10,Aaron Rodgers
-action-all-pros,2,Autographs,true,/10,Patrick Mahomes II
-action-all-pros,3,Autographs,true,/25,Derrick Henry
-action-all-pros,7,Autographs,true,/25,Tyreek Hill
-action-all-pros,9,Autographs,true,/25,Cordarrelle Patterson
-action-all-pros,13,Autographs,true,/25,Aaron Donald
-action-all-pros,16,Autographs,true,/25,Tyrann Mathieu
-action-all-pros,18,Autographs,true,/10,Quenton Nelson
-action-all-pros,20,Autographs,true,/25,Minkah Fitzpatrick
+action-all-pros,1,Autograph,true,/10,Aaron Rodgers
+action-all-pros,2,Autograph,true,/10,Patrick Mahomes II
+action-all-pros,3,Autograph,true,/25,Derrick Henry
+action-all-pros,7,Autograph,true,/25,Tyreek Hill
+action-all-pros,9,Autograph,true,/25,Cordarrelle Patterson
+action-all-pros,13,Autograph,true,/25,Aaron Donald
+action-all-pros,16,Autograph,true,/25,Tyrann Mathieu
+action-all-pros,18,Autograph,true,/10,Quenton Nelson
+action-all-pros,20,Autograph,true,/25,Minkah Fitzpatrick
 all-pro-kings,1,,false,/299,Ezekiel Elliott
 all-pro-kings,2,,false,/299,Quenton Nelson
 all-pro-kings,3,,false,/299,Nick Chubb
@@ -57,32 +57,32 @@ all-pro-kings,17,,false,/299,Alvin Kamara
 all-pro-kings,18,,false,/299,Dalvin Cook
 all-pro-kings,19,,false,/299,DK Metcalf
 all-pro-kings,20,,false,/299,Calvin Ridley
-all-pro-kings,1,Autographs,true,/10,Ezekiel Elliott
-all-pro-kings,2,Autographs,true,/10,Quenton Nelson
-all-pro-kings,3,Autographs,true,/10,Nick Chubb
-all-pro-kings,4,Autographs,true,/10,Joe Thomas
-all-pro-kings,6,Autographs,true,/10,George Kittle
-all-pro-kings,7,Autographs,true,/10,Aaron Rodgers
-all-pro-kings,8,Autographs,true,/10,Patrick Mahomes II
-all-pro-kings,13,Autographs,true,/10,Cordarrelle Patterson
-all-pro-kings,14,Autographs,true,/10,Tre'Davious White
-all-pro-kings,16,Autographs,true,/10,Derrick Henry
-all-pro-kings,1,Studio Series,false,/100,Ezekiel Elliott
-all-pro-kings,2,Studio Series,false,/100,Quenton Nelson
-all-pro-kings,3,Studio Series,false,/100,Nick Chubb
-all-pro-kings,4,Studio Series,false,/100,Joe Thomas
-all-pro-kings,5,Studio Series,false,/100,T.J. Watt
-all-pro-kings,6,Studio Series,false,/100,George Kittle
-all-pro-kings,7,Studio Series,false,/100,Aaron Rodgers
-all-pro-kings,8,Studio Series,false,/100,Patrick Mahomes II
-all-pro-kings,9,Studio Series,false,/100,Myles Garrett
-all-pro-kings,10,Studio Series,false,/100,Joey Bosa
-all-pro-kings,13,Studio Series,false,/100,Cordarrelle Patterson
-all-pro-kings,14,Studio Series,false,/100,Tre'Davious White
-all-pro-kings,15,Studio Series,false,/25,Darius Leonard
-all-pro-kings,16,Studio Series,false,/100,Derrick Henry
-all-pro-kings,17,Studio Series,false,/80,Alvin Kamara
-all-pro-kings,20,Studio Series,false,/100,Calvin Ridley
+all-pro-kings,1,Autograph,true,/10,Ezekiel Elliott
+all-pro-kings,2,Autograph,true,/10,Quenton Nelson
+all-pro-kings,3,Autograph,true,/10,Nick Chubb
+all-pro-kings,4,Autograph,true,/10,Joe Thomas
+all-pro-kings,6,Autograph,true,/10,George Kittle
+all-pro-kings,7,Autograph,true,/10,Aaron Rodgers
+all-pro-kings,8,Autograph,true,/10,Patrick Mahomes II
+all-pro-kings,13,Autograph,true,/10,Cordarrelle Patterson
+all-pro-kings,14,Autograph,true,/10,Tre'Davious White
+all-pro-kings,16,Autograph,true,/10,Derrick Henry
+all-pro-kings,1,Studio Serie,false,/100,Ezekiel Elliott
+all-pro-kings,2,Studio Serie,false,/100,Quenton Nelson
+all-pro-kings,3,Studio Serie,false,/100,Nick Chubb
+all-pro-kings,4,Studio Serie,false,/100,Joe Thomas
+all-pro-kings,5,Studio Serie,false,/100,T.J. Watt
+all-pro-kings,6,Studio Serie,false,/100,George Kittle
+all-pro-kings,7,Studio Serie,false,/100,Aaron Rodgers
+all-pro-kings,8,Studio Serie,false,/100,Patrick Mahomes II
+all-pro-kings,9,Studio Serie,false,/100,Myles Garrett
+all-pro-kings,10,Studio Serie,false,/100,Joey Bosa
+all-pro-kings,13,Studio Serie,false,/100,Cordarrelle Patterson
+all-pro-kings,14,Studio Serie,false,/100,Tre'Davious White
+all-pro-kings,15,Studio Serie,false,/25,Darius Leonard
+all-pro-kings,16,Studio Serie,false,/100,Derrick Henry
+all-pro-kings,17,Studio Serie,false,/80,Alvin Kamara
+all-pro-kings,20,Studio Serie,false,/100,Calvin Ridley
 all-time-gridiron-kings,1,,false,,Randy Moss
 all-time-gridiron-kings,2,,false,,Brett Favre
 all-time-gridiron-kings,3,,false,,Joe Montana
@@ -98,33 +98,33 @@ all-time-gridiron-kings,12,,false,,Steve Young
 all-time-gridiron-kings,13,,false,,Jerry Rice
 all-time-gridiron-kings,14,,false,,Peyton Manning
 all-time-gridiron-kings,15,,false,,Lawrence Taylor
-all-time-gridiron-kings,2,Autographs,true,/10,Brett Favre
-all-time-gridiron-kings,3,Autographs,true,/10,Joe Montana
-all-time-gridiron-kings,4,Autographs,true,/10,Emmitt Smith
-all-time-gridiron-kings,5,Autographs,true,/49,Joe Thomas
-all-time-gridiron-kings,6,Autographs,true,/25,Ray Lewis
-all-time-gridiron-kings,7,Autographs,true,/49,Brian Urlacher
-all-time-gridiron-kings,9,Autographs,true,/25,Barry Sanders
-all-time-gridiron-kings,10,Autographs,true,/25,Drew Brees
-all-time-gridiron-kings,11,Autographs,true,/25,Troy Aikman
-all-time-gridiron-kings,12,Autographs,true,/49,Steve Young
-all-time-gridiron-kings,13,Autographs,true,/10,Jerry Rice
-all-time-gridiron-kings,14,Autographs,true,/10,Peyton Manning
-all-time-gridiron-kings,1,Studio Series,false,/100,Randy Moss
-all-time-gridiron-kings,2,Studio Series,false,/100,Brett Favre
-all-time-gridiron-kings,3,Studio Series,false,/100,Joe Montana
-all-time-gridiron-kings,4,Studio Series,false,/100,Emmitt Smith
-all-time-gridiron-kings,5,Studio Series,false,/100,Joe Thomas
-all-time-gridiron-kings,6,Studio Series,false,/100,Ray Lewis
-all-time-gridiron-kings,7,Studio Series,false,/100,Brian Urlacher
-all-time-gridiron-kings,8,Studio Series,false,/100,Adrian Peterson
-all-time-gridiron-kings,9,Studio Series,false,/100,Barry Sanders
-all-time-gridiron-kings,10,Studio Series,false,/100,Drew Brees
-all-time-gridiron-kings,11,Studio Series,false,/100,Troy Aikman
-all-time-gridiron-kings,12,Studio Series,false,/100,Steve Young
-all-time-gridiron-kings,13,Studio Series,false,/100,Jerry Rice
-all-time-gridiron-kings,14,Studio Series,false,/100,Peyton Manning
-all-time-gridiron-kings,15,Studio Series,false,/100,Lawrence Taylor
+all-time-gridiron-kings,2,Autograph,true,/10,Brett Favre
+all-time-gridiron-kings,3,Autograph,true,/10,Joe Montana
+all-time-gridiron-kings,4,Autograph,true,/10,Emmitt Smith
+all-time-gridiron-kings,5,Autograph,true,/49,Joe Thomas
+all-time-gridiron-kings,6,Autograph,true,/25,Ray Lewis
+all-time-gridiron-kings,7,Autograph,true,/49,Brian Urlacher
+all-time-gridiron-kings,9,Autograph,true,/25,Barry Sanders
+all-time-gridiron-kings,10,Autograph,true,/25,Drew Brees
+all-time-gridiron-kings,11,Autograph,true,/25,Troy Aikman
+all-time-gridiron-kings,12,Autograph,true,/49,Steve Young
+all-time-gridiron-kings,13,Autograph,true,/10,Jerry Rice
+all-time-gridiron-kings,14,Autograph,true,/10,Peyton Manning
+all-time-gridiron-kings,1,Studio Serie,false,/100,Randy Moss
+all-time-gridiron-kings,2,Studio Serie,false,/100,Brett Favre
+all-time-gridiron-kings,3,Studio Serie,false,/100,Joe Montana
+all-time-gridiron-kings,4,Studio Serie,false,/100,Emmitt Smith
+all-time-gridiron-kings,5,Studio Serie,false,/100,Joe Thomas
+all-time-gridiron-kings,6,Studio Serie,false,/100,Ray Lewis
+all-time-gridiron-kings,7,Studio Serie,false,/100,Brian Urlacher
+all-time-gridiron-kings,8,Studio Serie,false,/100,Adrian Peterson
+all-time-gridiron-kings,9,Studio Serie,false,/100,Barry Sanders
+all-time-gridiron-kings,10,Studio Serie,false,/100,Drew Brees
+all-time-gridiron-kings,11,Studio Serie,false,/100,Troy Aikman
+all-time-gridiron-kings,12,Studio Serie,false,/100,Steve Young
+all-time-gridiron-kings,13,Studio Serie,false,/100,Jerry Rice
+all-time-gridiron-kings,14,Studio Serie,false,/100,Peyton Manning
+all-time-gridiron-kings,15,Studio Serie,false,/100,Lawrence Taylor
 base,1,,false,,Tom Brady
 base,2,,false,,Tom Brady
 base,3,,false,,Taylor Heinicke
@@ -375,256 +375,256 @@ base,247,,false,,DeAndre Hopkins
 base,248,,false,,Patrick Peterson
 base,249,,false,,Kenyan Drake
 base,250,,false,,Budda Baker
-base,1,Aqueous Test,false,,Tom Brady
-base,2,Aqueous Test,false,,Tom Brady
-base,3,Aqueous Test,false,,Taylor Heinicke
-base,4,Aqueous Test,false,,Jameis Winston
-base,5,Aqueous Test,false,,Ryan Kerrigan
-base,6,Aqueous Test,false,,Terry McLaurin
-base,7,Aqueous Test,false,,Antonio Gibson
-base,8,Aqueous Test,false,,Logan Thomas
-base,9,Aqueous Test,false,,Chase Young
-base,10,Aqueous Test,false,,Jon Bostic
-base,11,Aqueous Test,false,,Ryan Tannehill
-base,12,Aqueous Test,false,,Mike Vrabel
-base,13,Aqueous Test,false,,A.J. Brown
-base,14,Aqueous Test,false,,Derrick Henry
-base,15,Aqueous Test,false,,Anthony Firkser
-base,16,Aqueous Test,false,,Corey Davis
-base,17,Aqueous Test,false,,Bud Dupree
-base,18,Aqueous Test,false,,Jevon Kearse
-base,19,Aqueous Test,false,,Ben Roethlisberger
-base,20,Aqueous Test,false,,JuJu Smith-Schuster
-base,21,Aqueous Test,false,,James Conner
-base,22,Aqueous Test,false,,T.J. Watt
-base,23,Aqueous Test,false,,Terry Bradshaw
-base,24,Aqueous Test,false,,Alejandro Villanueva
-base,25,Aqueous Test,false,,Diontae Johnson
-base,26,Aqueous Test,false,,Minkah Fitzpatrick
-base,27,Aqueous Test,false,,Chase Claypool
-base,28,Aqueous Test,false,,Russell Wilson
-base,29,Aqueous Test,false,,DK Metcalf
-base,30,Aqueous Test,false,,Chris Carson
-base,31,Aqueous Test,false,,Tyler Lockett
-base,32,Aqueous Test,false,,Bobby Wagner
-base,33,Aqueous Test,false,,Quandre Diggs
-base,34,Aqueous Test,false,,Jamal Adams
-base,35,Aqueous Test,false,,Shaquill Griffin
-base,36,Aqueous Test,false,,Shaun Alexander
-base,37,Aqueous Test,false,,Sam Darnold
-base,38,Aqueous Test,false,,Mark Ingram II
-base,39,Aqueous Test,false,,Denzel Mims
-base,40,Aqueous Test,false,,Jamison Crowder
-base,41,Aqueous Test,false,,Quinnen Williams
-base,42,Aqueous Test,false,,Joe Namath
-base,43,Aqueous Test,false,,Derrick Brown
-base,44,Aqueous Test,false,,Marcus Maye
-base,45,Aqueous Test,false,,Julian Edelman
-base,46,Aqueous Test,false,,Cam Newton
-base,47,Aqueous Test,false,,Kenny Golladay
-base,48,Aqueous Test,false,,Hunter Henry
-base,49,Aqueous Test,false,,Jakobi Meyers
-base,50,Aqueous Test,false,,James White
-base,51,Aqueous Test,false,,Devin McCourty
-base,52,Aqueous Test,false,,Stephon Gilmore
-base,53,Aqueous Test,false,,Jimmy Garoppolo
-base,54,Aqueous Test,false,,George Kittle
-base,55,Aqueous Test,false,,Deebo Samuel
-base,56,Aqueous Test,false,,Nick Bosa
-base,57,Aqueous Test,false,,Joe Montana
-base,58,Aqueous Test,false,,Brandon Aiyuk
-base,59,Aqueous Test,false,,Fred Warner
-base,60,Aqueous Test,false,,Richard Sherman
-base,61,Aqueous Test,false,,Tua Tagovailoa
-base,62,Aqueous Test,false,,Ryan Fitzpatrick
-base,63,Aqueous Test,false,,DeVante Parker
-base,64,Aqueous Test,false,,Mike Gesicki
-base,65,Aqueous Test,false,,Myles Gaskin
-base,66,Aqueous Test,false,,Dan Marino
-base,67,Aqueous Test,false,,Jerome Baker
-base,68,Aqueous Test,false,,Xavien Howard
-base,69,Aqueous Test,false,,Emmanuel Ogbah
-base,70,Aqueous Test,false,,Justin Herbert
-base,71,Aqueous Test,false,,Philip Rivers
-base,72,Aqueous Test,false,,Austin Ekeler
-base,73,Aqueous Test,false,,Keenan Allen
-base,74,Aqueous Test,false,,Derwin James Jr.
-base,75,Aqueous Test,false,,Joey Bosa
-base,76,Aqueous Test,false,,Mike Williams
-base,77,Aqueous Test,false,,Kenneth Murray
-base,78,Aqueous Test,false,,Daniel Jones
-base,79,Aqueous Test,false,,Saquon Barkley
-base,80,Aqueous Test,false,,Darius Slayton
-base,81,Aqueous Test,false,,Evan Engram
-base,82,Aqueous Test,false,,Leonard Williams
-base,83,Aqueous Test,false,,Lawrence Taylor
-base,84,Aqueous Test,false,,Tiki Barber
-base,85,Aqueous Test,false,,Josh Jacobs
-base,86,Aqueous Test,false,,Derek Carr
-base,87,Aqueous Test,false,,Maxx Crosby
-base,88,Aqueous Test,false,,Darren Waller
-base,89,Aqueous Test,false,,Johnathan Abram
-base,90,Aqueous Test,false,,Henry Ruggs III
-base,91,Aqueous Test,false,,Charles Woodson
-base,92,Aqueous Test,false,,Nelson Agholor
-base,93,Aqueous Test,false,,Drew Brees
-base,94,Aqueous Test,false,,Alvin Kamara
-base,95,Aqueous Test,false,,Taysom Hill
-base,96,Aqueous Test,false,,Michael Thomas
-base,97,Aqueous Test,false,,Emmanuel Sanders
-base,98,Aqueous Test,false,,Malcolm Jenkins
-base,99,Aqueous Test,false,,Marshon Lattimore
-base,100,Aqueous Test,false,,Trey Hendrickson
-base,101,Aqueous Test,false,,Mike Evans
-base,102,Aqueous Test,false,,Leonard Fournette
-base,103,Aqueous Test,false,,Chris Godwin
-base,104,Aqueous Test,false,,Rob Gronkowski
-base,105,Aqueous Test,false,,Lavonte David
-base,106,Aqueous Test,false,,Antoine Winfield Jr.
-base,107,Aqueous Test,false,,Ndamukong Suh
-base,108,Aqueous Test,false,,Jalen Hurts
-base,109,Aqueous Test,false,,Miles Sanders
-base,110,Aqueous Test,false,,Travis Fulgham
-base,111,Aqueous Test,false,,Dallas Goedert
-base,112,Aqueous Test,false,,Jalen Reagor
-base,113,Aqueous Test,false,,Jalen Mills
-base,114,Aqueous Test,false,,Brandon Graham
-base,115,Aqueous Test,false,,Fletcher Cox
-base,116,Aqueous Test,false,,Patrick Mahomes II
-base,117,Aqueous Test,false,,Tyreek Hill
-base,118,Aqueous Test,false,,Travis Kelce
-base,119,Aqueous Test,false,,Tyrann Mathieu
-base,120,Aqueous Test,false,,Clyde Edwards-Helaire
-base,121,Aqueous Test,false,,Daniel Sorensen
-base,122,Aqueous Test,false,,L'Jarius Sneed
-base,123,Aqueous Test,false,,Kyle Long
-base,124,Aqueous Test,false,,Kirk Cousins
-base,125,Aqueous Test,false,,Dalvin Cook
-base,126,Aqueous Test,false,,Adam Thielen
-base,127,Aqueous Test,false,,Justin Jefferson
-base,128,Aqueous Test,false,,Randy Moss
-base,129,Aqueous Test,false,,Harrison Smith
-base,130,Aqueous Test,false,,C.J. Ham
-base,131,Aqueous Test,false,,Danielle Hunter
-base,132,Aqueous Test,false,,James Robinson
-base,133,Aqueous Test,false,,DJ Chark Jr.
-base,134,Aqueous Test,false,,Laviska Shenault Jr.
-base,135,Aqueous Test,false,,Joe Schobert
-base,136,Aqueous Test,false,,Keelan Cole
-base,137,Aqueous Test,false,,Mark Brunell
-base,138,Aqueous Test,false,,Myles Jack
-base,139,Aqueous Test,false,,Matthew Stafford
-base,140,Aqueous Test,false,,Aaron Donald
-base,141,Aqueous Test,false,,Jalen Ramsey
-base,142,Aqueous Test,false,,Cooper Kupp
-base,143,Aqueous Test,false,,Cam Akers
-base,144,Aqueous Test,false,,Robert Woods
-base,145,Aqueous Test,false,,Leonard Floyd
-base,146,Aqueous Test,false,,Johnny Hekker
-base,147,Aqueous Test,false,,Carson Wentz
-base,148,Aqueous Test,false,,Peyton Manning
-base,149,Aqueous Test,false,,Darius Leonard
-base,150,Aqueous Test,false,,Jonathan Taylor
-base,151,Aqueous Test,false,,Michael Pittman Jr.
-base,152,Aqueous Test,false,,T.Y. Hilton
-base,153,Aqueous Test,false,,Mo Alie-Cox
-base,154,Aqueous Test,false,,DeForest Buckner
-base,155,Aqueous Test,false,,Aaron Rodgers
-base,156,Aqueous Test,false,,Brett Favre
-base,157,Aqueous Test,false,,Aaron Jones
-base,158,Aqueous Test,false,,Davante Adams
-base,159,Aqueous Test,false,,Za'Darius Smith
-base,160,Aqueous Test,false,,Marquez Valdes-Scantling
-base,161,Aqueous Test,false,,Darnell Savage Jr.
-base,162,Aqueous Test,false,,Adrian Amos
-base,163,Aqueous Test,false,,Deshaun Watson
-base,164,Aqueous Test,false,,J.J. Watt
-base,165,Aqueous Test,false,,David Johnson
-base,166,Aqueous Test,false,,Brandin Cooks
-base,167,Aqueous Test,false,,Will Fuller V
-base,168,Aqueous Test,false,,Zach Cunningham
-base,169,Aqueous Test,false,,Randall Cobb
-base,170,Aqueous Test,false,,Jared Goff
-base,171,Aqueous Test,false,,D'Andre Swift
-base,172,Aqueous Test,false,,Jeff Okudah
-base,173,Aqueous Test,false,,Barry Sanders
-base,174,Aqueous Test,false,,Marvin Jones Jr.
-base,175,Aqueous Test,false,,Adrian Peterson
-base,176,Aqueous Test,false,,T.J. Hockenson
-base,177,Aqueous Test,false,,Danny Amendola
-base,178,Aqueous Test,false,,Romeo Okwara
-base,179,Aqueous Test,false,,Drew Lock
-base,180,Aqueous Test,false,,John Elway
-base,181,Aqueous Test,false,,Von Miller
-base,182,Aqueous Test,false,,Bradley Chubb
-base,183,Aqueous Test,false,,Phillip Lindsay
-base,184,Aqueous Test,false,,Melvin Gordon III
-base,185,Aqueous Test,false,,Jerry Jeudy
-base,186,Aqueous Test,false,,Tim Patrick
-base,187,Aqueous Test,false,,Dak Prescott
-base,188,Aqueous Test,false,,Ezekiel Elliott
-base,189,Aqueous Test,false,,Amari Cooper
-base,190,Aqueous Test,false,,CeeDee Lamb
-base,191,Aqueous Test,false,,Jaylon Smith
-base,192,Aqueous Test,false,,Michael Gallup
-base,193,Aqueous Test,false,,DeMarcus Lawrence
-base,194,Aqueous Test,false,,Christian Kirk
-base,195,Aqueous Test,false,,Baker Mayfield
-base,196,Aqueous Test,false,,Nick Chubb
-base,197,Aqueous Test,false,,Kareem Hunt
-base,198,Aqueous Test,false,,Odell Beckham Jr.
-base,199,Aqueous Test,false,,Myles Garrett
-base,200,Aqueous Test,false,,Emmitt Smith
-base,201,Aqueous Test,false,,Jarvis Landry
-base,202,Aqueous Test,false,,Olivier Vernon
-base,203,Aqueous Test,false,,Khalil Mack
-base,204,Aqueous Test,false,,Tarik Cohen
-base,205,Aqueous Test,false,,David Montgomery
-base,206,Aqueous Test,false,,Andy Dalton
-base,207,Aqueous Test,false,,Allen Robinson II
-base,208,Aqueous Test,false,,Akiem Hicks
-base,209,Aqueous Test,false,,Roquan Smith
-base,210,Aqueous Test,false,,J.K. Dobbins
-base,211,Aqueous Test,false,,Joe Burrow
-base,212,Aqueous Test,false,,Joe Mixon
-base,213,Aqueous Test,false,,Tee Higgins
-base,214,Aqueous Test,false,,A.J. Green
-base,215,Aqueous Test,false,,Tyler Boyd
-base,216,Aqueous Test,false,,Chad Johnson
-base,217,Aqueous Test,false,,Jessie Bates III
-base,218,Aqueous Test,false,,Teddy Bridgewater
-base,219,Aqueous Test,false,,Christian McCaffrey
-base,220,Aqueous Test,false,,DJ Moore
-base,221,Aqueous Test,false,,Jeremy Chinn
-base,222,Aqueous Test,false,,Robby Anderson
-base,223,Aqueous Test,false,,Curtis Samuel
-base,224,Aqueous Test,false,,Brian Burns
-base,225,Aqueous Test,false,,Josh Allen
-base,226,Aqueous Test,false,,Stefon Diggs
-base,227,Aqueous Test,false,,Devin Singletary
-base,228,Aqueous Test,false,,Tre'Davious White
-base,229,Aqueous Test,false,,Jordan Poyer
-base,230,Aqueous Test,false,,Cole Beasley
-base,231,Aqueous Test,false,,Tremaine Edmunds
-base,232,Aqueous Test,false,,Matt Ryan
-base,233,Aqueous Test,false,,Julio Jones
-base,234,Aqueous Test,false,,Calvin Ridley
-base,235,Aqueous Test,false,,Hayden Hurst
-base,236,Aqueous Test,false,,Foye Oluokun
-base,237,Aqueous Test,false,,Russell Gage
-base,238,Aqueous Test,false,,Michael Vick
-base,239,Aqueous Test,false,,Lamar Jackson
-base,240,Aqueous Test,false,,Justin Tucker
-base,241,Aqueous Test,false,,Marquise Brown
-base,242,Aqueous Test,false,,Patrick Queen
-base,243,Aqueous Test,false,,Marcus Peters
-base,244,Aqueous Test,false,,Mark Andrews
-base,245,Aqueous Test,false,,Kyler Murray
-base,246,Aqueous Test,false,,Larry Fitzgerald
-base,247,Aqueous Test,false,,DeAndre Hopkins
-base,248,Aqueous Test,false,,Patrick Peterson
-base,249,Aqueous Test,false,,Kenyan Drake
-base,250,Aqueous Test,false,,Budda Baker
+base,1,Aqueou Test,false,,Tom Brady
+base,2,Aqueou Test,false,,Tom Brady
+base,3,Aqueou Test,false,,Taylor Heinicke
+base,4,Aqueou Test,false,,Jameis Winston
+base,5,Aqueou Test,false,,Ryan Kerrigan
+base,6,Aqueou Test,false,,Terry McLaurin
+base,7,Aqueou Test,false,,Antonio Gibson
+base,8,Aqueou Test,false,,Logan Thomas
+base,9,Aqueou Test,false,,Chase Young
+base,10,Aqueou Test,false,,Jon Bostic
+base,11,Aqueou Test,false,,Ryan Tannehill
+base,12,Aqueou Test,false,,Mike Vrabel
+base,13,Aqueou Test,false,,A.J. Brown
+base,14,Aqueou Test,false,,Derrick Henry
+base,15,Aqueou Test,false,,Anthony Firkser
+base,16,Aqueou Test,false,,Corey Davis
+base,17,Aqueou Test,false,,Bud Dupree
+base,18,Aqueou Test,false,,Jevon Kearse
+base,19,Aqueou Test,false,,Ben Roethlisberger
+base,20,Aqueou Test,false,,JuJu Smith-Schuster
+base,21,Aqueou Test,false,,James Conner
+base,22,Aqueou Test,false,,T.J. Watt
+base,23,Aqueou Test,false,,Terry Bradshaw
+base,24,Aqueou Test,false,,Alejandro Villanueva
+base,25,Aqueou Test,false,,Diontae Johnson
+base,26,Aqueou Test,false,,Minkah Fitzpatrick
+base,27,Aqueou Test,false,,Chase Claypool
+base,28,Aqueou Test,false,,Russell Wilson
+base,29,Aqueou Test,false,,DK Metcalf
+base,30,Aqueou Test,false,,Chris Carson
+base,31,Aqueou Test,false,,Tyler Lockett
+base,32,Aqueou Test,false,,Bobby Wagner
+base,33,Aqueou Test,false,,Quandre Diggs
+base,34,Aqueou Test,false,,Jamal Adams
+base,35,Aqueou Test,false,,Shaquill Griffin
+base,36,Aqueou Test,false,,Shaun Alexander
+base,37,Aqueou Test,false,,Sam Darnold
+base,38,Aqueou Test,false,,Mark Ingram II
+base,39,Aqueou Test,false,,Denzel Mims
+base,40,Aqueou Test,false,,Jamison Crowder
+base,41,Aqueou Test,false,,Quinnen Williams
+base,42,Aqueou Test,false,,Joe Namath
+base,43,Aqueou Test,false,,Derrick Brown
+base,44,Aqueou Test,false,,Marcus Maye
+base,45,Aqueou Test,false,,Julian Edelman
+base,46,Aqueou Test,false,,Cam Newton
+base,47,Aqueou Test,false,,Kenny Golladay
+base,48,Aqueou Test,false,,Hunter Henry
+base,49,Aqueou Test,false,,Jakobi Meyers
+base,50,Aqueou Test,false,,James White
+base,51,Aqueou Test,false,,Devin McCourty
+base,52,Aqueou Test,false,,Stephon Gilmore
+base,53,Aqueou Test,false,,Jimmy Garoppolo
+base,54,Aqueou Test,false,,George Kittle
+base,55,Aqueou Test,false,,Deebo Samuel
+base,56,Aqueou Test,false,,Nick Bosa
+base,57,Aqueou Test,false,,Joe Montana
+base,58,Aqueou Test,false,,Brandon Aiyuk
+base,59,Aqueou Test,false,,Fred Warner
+base,60,Aqueou Test,false,,Richard Sherman
+base,61,Aqueou Test,false,,Tua Tagovailoa
+base,62,Aqueou Test,false,,Ryan Fitzpatrick
+base,63,Aqueou Test,false,,DeVante Parker
+base,64,Aqueou Test,false,,Mike Gesicki
+base,65,Aqueou Test,false,,Myles Gaskin
+base,66,Aqueou Test,false,,Dan Marino
+base,67,Aqueou Test,false,,Jerome Baker
+base,68,Aqueou Test,false,,Xavien Howard
+base,69,Aqueou Test,false,,Emmanuel Ogbah
+base,70,Aqueou Test,false,,Justin Herbert
+base,71,Aqueou Test,false,,Philip Rivers
+base,72,Aqueou Test,false,,Austin Ekeler
+base,73,Aqueou Test,false,,Keenan Allen
+base,74,Aqueou Test,false,,Derwin James Jr.
+base,75,Aqueou Test,false,,Joey Bosa
+base,76,Aqueou Test,false,,Mike Williams
+base,77,Aqueou Test,false,,Kenneth Murray
+base,78,Aqueou Test,false,,Daniel Jones
+base,79,Aqueou Test,false,,Saquon Barkley
+base,80,Aqueou Test,false,,Darius Slayton
+base,81,Aqueou Test,false,,Evan Engram
+base,82,Aqueou Test,false,,Leonard Williams
+base,83,Aqueou Test,false,,Lawrence Taylor
+base,84,Aqueou Test,false,,Tiki Barber
+base,85,Aqueou Test,false,,Josh Jacobs
+base,86,Aqueou Test,false,,Derek Carr
+base,87,Aqueou Test,false,,Maxx Crosby
+base,88,Aqueou Test,false,,Darren Waller
+base,89,Aqueou Test,false,,Johnathan Abram
+base,90,Aqueou Test,false,,Henry Ruggs III
+base,91,Aqueou Test,false,,Charles Woodson
+base,92,Aqueou Test,false,,Nelson Agholor
+base,93,Aqueou Test,false,,Drew Brees
+base,94,Aqueou Test,false,,Alvin Kamara
+base,95,Aqueou Test,false,,Taysom Hill
+base,96,Aqueou Test,false,,Michael Thomas
+base,97,Aqueou Test,false,,Emmanuel Sanders
+base,98,Aqueou Test,false,,Malcolm Jenkins
+base,99,Aqueou Test,false,,Marshon Lattimore
+base,100,Aqueou Test,false,,Trey Hendrickson
+base,101,Aqueou Test,false,,Mike Evans
+base,102,Aqueou Test,false,,Leonard Fournette
+base,103,Aqueou Test,false,,Chris Godwin
+base,104,Aqueou Test,false,,Rob Gronkowski
+base,105,Aqueou Test,false,,Lavonte David
+base,106,Aqueou Test,false,,Antoine Winfield Jr.
+base,107,Aqueou Test,false,,Ndamukong Suh
+base,108,Aqueou Test,false,,Jalen Hurts
+base,109,Aqueou Test,false,,Miles Sanders
+base,110,Aqueou Test,false,,Travis Fulgham
+base,111,Aqueou Test,false,,Dallas Goedert
+base,112,Aqueou Test,false,,Jalen Reagor
+base,113,Aqueou Test,false,,Jalen Mills
+base,114,Aqueou Test,false,,Brandon Graham
+base,115,Aqueou Test,false,,Fletcher Cox
+base,116,Aqueou Test,false,,Patrick Mahomes II
+base,117,Aqueou Test,false,,Tyreek Hill
+base,118,Aqueou Test,false,,Travis Kelce
+base,119,Aqueou Test,false,,Tyrann Mathieu
+base,120,Aqueou Test,false,,Clyde Edwards-Helaire
+base,121,Aqueou Test,false,,Daniel Sorensen
+base,122,Aqueou Test,false,,L'Jarius Sneed
+base,123,Aqueou Test,false,,Kyle Long
+base,124,Aqueou Test,false,,Kirk Cousins
+base,125,Aqueou Test,false,,Dalvin Cook
+base,126,Aqueou Test,false,,Adam Thielen
+base,127,Aqueou Test,false,,Justin Jefferson
+base,128,Aqueou Test,false,,Randy Moss
+base,129,Aqueou Test,false,,Harrison Smith
+base,130,Aqueou Test,false,,C.J. Ham
+base,131,Aqueou Test,false,,Danielle Hunter
+base,132,Aqueou Test,false,,James Robinson
+base,133,Aqueou Test,false,,DJ Chark Jr.
+base,134,Aqueou Test,false,,Laviska Shenault Jr.
+base,135,Aqueou Test,false,,Joe Schobert
+base,136,Aqueou Test,false,,Keelan Cole
+base,137,Aqueou Test,false,,Mark Brunell
+base,138,Aqueou Test,false,,Myles Jack
+base,139,Aqueou Test,false,,Matthew Stafford
+base,140,Aqueou Test,false,,Aaron Donald
+base,141,Aqueou Test,false,,Jalen Ramsey
+base,142,Aqueou Test,false,,Cooper Kupp
+base,143,Aqueou Test,false,,Cam Akers
+base,144,Aqueou Test,false,,Robert Woods
+base,145,Aqueou Test,false,,Leonard Floyd
+base,146,Aqueou Test,false,,Johnny Hekker
+base,147,Aqueou Test,false,,Carson Wentz
+base,148,Aqueou Test,false,,Peyton Manning
+base,149,Aqueou Test,false,,Darius Leonard
+base,150,Aqueou Test,false,,Jonathan Taylor
+base,151,Aqueou Test,false,,Michael Pittman Jr.
+base,152,Aqueou Test,false,,T.Y. Hilton
+base,153,Aqueou Test,false,,Mo Alie-Cox
+base,154,Aqueou Test,false,,DeForest Buckner
+base,155,Aqueou Test,false,,Aaron Rodgers
+base,156,Aqueou Test,false,,Brett Favre
+base,157,Aqueou Test,false,,Aaron Jones
+base,158,Aqueou Test,false,,Davante Adams
+base,159,Aqueou Test,false,,Za'Darius Smith
+base,160,Aqueou Test,false,,Marquez Valdes-Scantling
+base,161,Aqueou Test,false,,Darnell Savage Jr.
+base,162,Aqueou Test,false,,Adrian Amos
+base,163,Aqueou Test,false,,Deshaun Watson
+base,164,Aqueou Test,false,,J.J. Watt
+base,165,Aqueou Test,false,,David Johnson
+base,166,Aqueou Test,false,,Brandin Cooks
+base,167,Aqueou Test,false,,Will Fuller V
+base,168,Aqueou Test,false,,Zach Cunningham
+base,169,Aqueou Test,false,,Randall Cobb
+base,170,Aqueou Test,false,,Jared Goff
+base,171,Aqueou Test,false,,D'Andre Swift
+base,172,Aqueou Test,false,,Jeff Okudah
+base,173,Aqueou Test,false,,Barry Sanders
+base,174,Aqueou Test,false,,Marvin Jones Jr.
+base,175,Aqueou Test,false,,Adrian Peterson
+base,176,Aqueou Test,false,,T.J. Hockenson
+base,177,Aqueou Test,false,,Danny Amendola
+base,178,Aqueou Test,false,,Romeo Okwara
+base,179,Aqueou Test,false,,Drew Lock
+base,180,Aqueou Test,false,,John Elway
+base,181,Aqueou Test,false,,Von Miller
+base,182,Aqueou Test,false,,Bradley Chubb
+base,183,Aqueou Test,false,,Phillip Lindsay
+base,184,Aqueou Test,false,,Melvin Gordon III
+base,185,Aqueou Test,false,,Jerry Jeudy
+base,186,Aqueou Test,false,,Tim Patrick
+base,187,Aqueou Test,false,,Dak Prescott
+base,188,Aqueou Test,false,,Ezekiel Elliott
+base,189,Aqueou Test,false,,Amari Cooper
+base,190,Aqueou Test,false,,CeeDee Lamb
+base,191,Aqueou Test,false,,Jaylon Smith
+base,192,Aqueou Test,false,,Michael Gallup
+base,193,Aqueou Test,false,,DeMarcus Lawrence
+base,194,Aqueou Test,false,,Christian Kirk
+base,195,Aqueou Test,false,,Baker Mayfield
+base,196,Aqueou Test,false,,Nick Chubb
+base,197,Aqueou Test,false,,Kareem Hunt
+base,198,Aqueou Test,false,,Odell Beckham Jr.
+base,199,Aqueou Test,false,,Myles Garrett
+base,200,Aqueou Test,false,,Emmitt Smith
+base,201,Aqueou Test,false,,Jarvis Landry
+base,202,Aqueou Test,false,,Olivier Vernon
+base,203,Aqueou Test,false,,Khalil Mack
+base,204,Aqueou Test,false,,Tarik Cohen
+base,205,Aqueou Test,false,,David Montgomery
+base,206,Aqueou Test,false,,Andy Dalton
+base,207,Aqueou Test,false,,Allen Robinson II
+base,208,Aqueou Test,false,,Akiem Hicks
+base,209,Aqueou Test,false,,Roquan Smith
+base,210,Aqueou Test,false,,J.K. Dobbins
+base,211,Aqueou Test,false,,Joe Burrow
+base,212,Aqueou Test,false,,Joe Mixon
+base,213,Aqueou Test,false,,Tee Higgins
+base,214,Aqueou Test,false,,A.J. Green
+base,215,Aqueou Test,false,,Tyler Boyd
+base,216,Aqueou Test,false,,Chad Johnson
+base,217,Aqueou Test,false,,Jessie Bates III
+base,218,Aqueou Test,false,,Teddy Bridgewater
+base,219,Aqueou Test,false,,Christian McCaffrey
+base,220,Aqueou Test,false,,DJ Moore
+base,221,Aqueou Test,false,,Jeremy Chinn
+base,222,Aqueou Test,false,,Robby Anderson
+base,223,Aqueou Test,false,,Curtis Samuel
+base,224,Aqueou Test,false,,Brian Burns
+base,225,Aqueou Test,false,,Josh Allen
+base,226,Aqueou Test,false,,Stefon Diggs
+base,227,Aqueou Test,false,,Devin Singletary
+base,228,Aqueou Test,false,,Tre'Davious White
+base,229,Aqueou Test,false,,Jordan Poyer
+base,230,Aqueou Test,false,,Cole Beasley
+base,231,Aqueou Test,false,,Tremaine Edmunds
+base,232,Aqueou Test,false,,Matt Ryan
+base,233,Aqueou Test,false,,Julio Jones
+base,234,Aqueou Test,false,,Calvin Ridley
+base,235,Aqueou Test,false,,Hayden Hurst
+base,236,Aqueou Test,false,,Foye Oluokun
+base,237,Aqueou Test,false,,Russell Gage
+base,238,Aqueou Test,false,,Michael Vick
+base,239,Aqueou Test,false,,Lamar Jackson
+base,240,Aqueou Test,false,,Justin Tucker
+base,241,Aqueou Test,false,,Marquise Brown
+base,242,Aqueou Test,false,,Patrick Queen
+base,243,Aqueou Test,false,,Marcus Peters
+base,244,Aqueou Test,false,,Mark Andrews
+base,245,Aqueou Test,false,,Kyler Murray
+base,246,Aqueou Test,false,,Larry Fitzgerald
+base,247,Aqueou Test,false,,DeAndre Hopkins
+base,248,Aqueou Test,false,,Patrick Peterson
+base,249,Aqueou Test,false,,Kenyan Drake
+base,250,Aqueou Test,false,,Budda Baker
 base,1,Jersey Number,false,/12,Tom Brady
 base,2,Jersey Number,false,/12,Tom Brady
 base,3,Jersey Number,false,/4,Taylor Heinicke
@@ -1175,56 +1175,56 @@ base,239,Photo Variation,false,,Lamar Jackson
 base,245,Photo Variation,false,,Kyler Murray
 base,246,Photo Variation,false,,Larry Fitzgerald
 base,247,Photo Variation,false,,DeAndre Hopkins
-base,1,Photo Variation Aqueous Test,false,,Tom Brady
-base,9,Photo Variation Aqueous Test,false,,Chase Young
-base,14,Photo Variation Aqueous Test,false,,Derrick Henry
-base,22,Photo Variation Aqueous Test,false,,T.J. Watt
-base,28,Photo Variation Aqueous Test,false,,Russell Wilson
-base,29,Photo Variation Aqueous Test,false,,DK Metcalf
-base,42,Photo Variation Aqueous Test,false,,Joe Namath
-base,54,Photo Variation Aqueous Test,false,,George Kittle
-base,57,Photo Variation Aqueous Test,false,,Joe Montana
-base,61,Photo Variation Aqueous Test,false,,Tua Tagovailoa
-base,70,Photo Variation Aqueous Test,false,,Justin Herbert
-base,79,Photo Variation Aqueous Test,false,,Saquon Barkley
-base,85,Photo Variation Aqueous Test,false,,Josh Jacobs
-base,90,Photo Variation Aqueous Test,false,,Henry Ruggs III
-base,93,Photo Variation Aqueous Test,false,,Drew Brees
-base,94,Photo Variation Aqueous Test,false,,Alvin Kamara
-base,95,Photo Variation Aqueous Test,false,,Taysom Hill
-base,104,Photo Variation Aqueous Test,false,,Rob Gronkowski
-base,108,Photo Variation Aqueous Test,false,,Jalen Hurts
-base,116,Photo Variation Aqueous Test,false,,Patrick Mahomes II
-base,117,Photo Variation Aqueous Test,false,,Tyreek Hill
-base,118,Photo Variation Aqueous Test,false,,Travis Kelce
-base,126,Photo Variation Aqueous Test,false,,Adam Thielen
-base,127,Photo Variation Aqueous Test,false,,Justin Jefferson
-base,128,Photo Variation Aqueous Test,false,,Randy Moss
-base,140,Photo Variation Aqueous Test,false,,Aaron Donald
-base,141,Photo Variation Aqueous Test,false,,Jalen Ramsey
-base,148,Photo Variation Aqueous Test,false,,Peyton Manning
-base,149,Photo Variation Aqueous Test,false,,Darius Leonard
-base,150,Photo Variation Aqueous Test,false,,Jonathan Taylor
-base,155,Photo Variation Aqueous Test,false,,Aaron Rodgers
-base,156,Photo Variation Aqueous Test,false,,Brett Favre
-base,158,Photo Variation Aqueous Test,false,,Davante Adams
-base,171,Photo Variation Aqueous Test,false,,D'Andre Swift
-base,173,Photo Variation Aqueous Test,false,,Barry Sanders
-base,180,Photo Variation Aqueous Test,false,,John Elway
-base,181,Photo Variation Aqueous Test,false,,Von Miller
-base,187,Photo Variation Aqueous Test,false,,Dak Prescott
-base,188,Photo Variation Aqueous Test,false,,Ezekiel Elliott
-base,195,Photo Variation Aqueous Test,false,,Baker Mayfield
-base,198,Photo Variation Aqueous Test,false,,Odell Beckham Jr.
-base,203,Photo Variation Aqueous Test,false,,Khalil Mack
-base,211,Photo Variation Aqueous Test,false,,Joe Burrow
-base,219,Photo Variation Aqueous Test,false,,Christian McCaffrey
-base,225,Photo Variation Aqueous Test,false,,Josh Allen
-base,233,Photo Variation Aqueous Test,false,,Julio Jones
-base,239,Photo Variation Aqueous Test,false,,Lamar Jackson
-base,245,Photo Variation Aqueous Test,false,,Kyler Murray
-base,246,Photo Variation Aqueous Test,false,,Larry Fitzgerald
-base,247,Photo Variation Aqueous Test,false,,DeAndre Hopkins
+base,1,Photo Variation Aqueou Test,false,,Tom Brady
+base,9,Photo Variation Aqueou Test,false,,Chase Young
+base,14,Photo Variation Aqueou Test,false,,Derrick Henry
+base,22,Photo Variation Aqueou Test,false,,T.J. Watt
+base,28,Photo Variation Aqueou Test,false,,Russell Wilson
+base,29,Photo Variation Aqueou Test,false,,DK Metcalf
+base,42,Photo Variation Aqueou Test,false,,Joe Namath
+base,54,Photo Variation Aqueou Test,false,,George Kittle
+base,57,Photo Variation Aqueou Test,false,,Joe Montana
+base,61,Photo Variation Aqueou Test,false,,Tua Tagovailoa
+base,70,Photo Variation Aqueou Test,false,,Justin Herbert
+base,79,Photo Variation Aqueou Test,false,,Saquon Barkley
+base,85,Photo Variation Aqueou Test,false,,Josh Jacobs
+base,90,Photo Variation Aqueou Test,false,,Henry Ruggs III
+base,93,Photo Variation Aqueou Test,false,,Drew Brees
+base,94,Photo Variation Aqueou Test,false,,Alvin Kamara
+base,95,Photo Variation Aqueou Test,false,,Taysom Hill
+base,104,Photo Variation Aqueou Test,false,,Rob Gronkowski
+base,108,Photo Variation Aqueou Test,false,,Jalen Hurts
+base,116,Photo Variation Aqueou Test,false,,Patrick Mahomes II
+base,117,Photo Variation Aqueou Test,false,,Tyreek Hill
+base,118,Photo Variation Aqueou Test,false,,Travis Kelce
+base,126,Photo Variation Aqueou Test,false,,Adam Thielen
+base,127,Photo Variation Aqueou Test,false,,Justin Jefferson
+base,128,Photo Variation Aqueou Test,false,,Randy Moss
+base,140,Photo Variation Aqueou Test,false,,Aaron Donald
+base,141,Photo Variation Aqueou Test,false,,Jalen Ramsey
+base,148,Photo Variation Aqueou Test,false,,Peyton Manning
+base,149,Photo Variation Aqueou Test,false,,Darius Leonard
+base,150,Photo Variation Aqueou Test,false,,Jonathan Taylor
+base,155,Photo Variation Aqueou Test,false,,Aaron Rodgers
+base,156,Photo Variation Aqueou Test,false,,Brett Favre
+base,158,Photo Variation Aqueou Test,false,,Davante Adams
+base,171,Photo Variation Aqueou Test,false,,D'Andre Swift
+base,173,Photo Variation Aqueou Test,false,,Barry Sanders
+base,180,Photo Variation Aqueou Test,false,,John Elway
+base,181,Photo Variation Aqueou Test,false,,Von Miller
+base,187,Photo Variation Aqueou Test,false,,Dak Prescott
+base,188,Photo Variation Aqueou Test,false,,Ezekiel Elliott
+base,195,Photo Variation Aqueou Test,false,,Baker Mayfield
+base,198,Photo Variation Aqueou Test,false,,Odell Beckham Jr.
+base,203,Photo Variation Aqueou Test,false,,Khalil Mack
+base,211,Photo Variation Aqueou Test,false,,Joe Burrow
+base,219,Photo Variation Aqueou Test,false,,Christian McCaffrey
+base,225,Photo Variation Aqueou Test,false,,Josh Allen
+base,233,Photo Variation Aqueou Test,false,,Julio Jones
+base,239,Photo Variation Aqueou Test,false,,Lamar Jackson
+base,245,Photo Variation Aqueou Test,false,,Kyler Murray
+base,246,Photo Variation Aqueou Test,false,,Larry Fitzgerald
+base,247,Photo Variation Aqueou Test,false,,DeAndre Hopkins
 base,1,Photo Variation Jersey Number,false,/12,Tom Brady
 base,9,Photo Variation Jersey Number,false,/99,Chase Young
 base,14,Photo Variation Jersey Number,false,/22,Derrick Henry
@@ -5545,41 +5545,41 @@ canton-kings,17,,false,/299,John Elway
 canton-kings,18,,false,/299,Howie Long
 canton-kings,19,,false,/299,Thurman Thomas
 canton-kings,20,,false,/299,Jim Kelly
-canton-kings,1,Autographs,true,/10,Curtis Martin
-canton-kings,2,Autographs,true,/10,Michael Strahan
-canton-kings,3,Autographs,true,/10,Cris Carter
-canton-kings,4,Autographs,true,/7,Charles Woodson
-canton-kings,5,Autographs,true,/10,Terry Bradshaw
-canton-kings,7,Autographs,true,/10,Joe Namath
-canton-kings,8,Autographs,true,/10,Joe Montana
-canton-kings,9,Autographs,true,/10,Jerry Rice
-canton-kings,10,Autographs,true,/10,Steve Young
-canton-kings,11,Autographs,true,/10,Dan Marino
-canton-kings,12,Autographs,true,/10,Randy Moss
-canton-kings,13,Autographs,true,/10,Brett Favre
-canton-kings,14,Autographs,true,/10,Peyton Manning
-canton-kings,15,Autographs,true,/10,Barry Sanders
-canton-kings,16,Autographs,true,/10,Terrell Davis
-canton-kings,17,Autographs,true,/10,John Elway
-canton-kings,18,Autographs,true,/10,Howie Long
-canton-kings,19,Autographs,true,/10,Thurman Thomas
-canton-kings,20,Autographs,true,/10,Jim Kelly
-canton-kings,1,Studio Series,false,/25,Curtis Martin
-canton-kings,2,Studio Series,false,/25,Michael Strahan
-canton-kings,3,Studio Series,false,/25,Cris Carter
-canton-kings,4,Studio Series,false,/25,Charles Woodson
-canton-kings,5,Studio Series,false,/25,Terry Bradshaw
-canton-kings,7,Studio Series,false,/25,Joe Namath
-canton-kings,8,Studio Series,false,/25,Joe Montana
-canton-kings,9,Studio Series,false,/25,Jerry Rice
-canton-kings,10,Studio Series,false,/25,Steve Young
-canton-kings,11,Studio Series,false,/25,Dan Marino
-canton-kings,12,Studio Series,false,/25,Randy Moss
-canton-kings,14,Studio Series,false,/25,Peyton Manning
-canton-kings,15,Studio Series,false,/25,Barry Sanders
-canton-kings,16,Studio Series,false,/25,Terrell Davis
-canton-kings,19,Studio Series,false,/25,Thurman Thomas
-canton-kings,20,Studio Series,false,/25,Jim Kelly
+canton-kings,1,Autograph,true,/10,Curtis Martin
+canton-kings,2,Autograph,true,/10,Michael Strahan
+canton-kings,3,Autograph,true,/10,Cris Carter
+canton-kings,4,Autograph,true,/7,Charles Woodson
+canton-kings,5,Autograph,true,/10,Terry Bradshaw
+canton-kings,7,Autograph,true,/10,Joe Namath
+canton-kings,8,Autograph,true,/10,Joe Montana
+canton-kings,9,Autograph,true,/10,Jerry Rice
+canton-kings,10,Autograph,true,/10,Steve Young
+canton-kings,11,Autograph,true,/10,Dan Marino
+canton-kings,12,Autograph,true,/10,Randy Moss
+canton-kings,13,Autograph,true,/10,Brett Favre
+canton-kings,14,Autograph,true,/10,Peyton Manning
+canton-kings,15,Autograph,true,/10,Barry Sanders
+canton-kings,16,Autograph,true,/10,Terrell Davis
+canton-kings,17,Autograph,true,/10,John Elway
+canton-kings,18,Autograph,true,/10,Howie Long
+canton-kings,19,Autograph,true,/10,Thurman Thomas
+canton-kings,20,Autograph,true,/10,Jim Kelly
+canton-kings,1,Studio Serie,false,/25,Curtis Martin
+canton-kings,2,Studio Serie,false,/25,Michael Strahan
+canton-kings,3,Studio Serie,false,/25,Cris Carter
+canton-kings,4,Studio Serie,false,/25,Charles Woodson
+canton-kings,5,Studio Serie,false,/25,Terry Bradshaw
+canton-kings,7,Studio Serie,false,/25,Joe Namath
+canton-kings,8,Studio Serie,false,/25,Joe Montana
+canton-kings,9,Studio Serie,false,/25,Jerry Rice
+canton-kings,10,Studio Serie,false,/25,Steve Young
+canton-kings,11,Studio Serie,false,/25,Dan Marino
+canton-kings,12,Studio Serie,false,/25,Randy Moss
+canton-kings,14,Studio Serie,false,/25,Peyton Manning
+canton-kings,15,Studio Serie,false,/25,Barry Sanders
+canton-kings,16,Studio Serie,false,/25,Terrell Davis
+canton-kings,19,Studio Serie,false,/25,Thurman Thomas
+canton-kings,20,Studio Serie,false,/25,Jim Kelly
 celebration-ink,1,,true,,Leighton Vander Esch
 celebration-ink,2,,true,,Josh Allen
 champ-is-here,1,,false,,Tom Brady
@@ -5602,14 +5602,14 @@ champ-is-here,17,,false,,Jason Pierre-Paul
 champ-is-here,18,,false,,Aaron Stinnie
 champ-is-here,19,,false,,Ryan Succop
 champ-is-here,20,,false,,Shaquil Barrett
-champ-is-here,1,Autographs,true,/10,Tom Brady
-champ-is-here,2,Autographs,true,/49,Leonard Fournette
-champ-is-here,3,Autographs,true,/49,Ronald Jones II
-champ-is-here,5,Autographs,true,/10,Rob Gronkowski
-champ-is-here,7,Autographs,true,/8,Cameron Brate
-champ-is-here,8,Autographs,true,/2,Antonio Brown
-champ-is-here,9,Autographs,true,/49,Chris Godwin
-champ-is-here,20,Autographs,true,/49,Shaquil Barrett
+champ-is-here,1,Autograph,true,/10,Tom Brady
+champ-is-here,2,Autograph,true,/49,Leonard Fournette
+champ-is-here,3,Autograph,true,/49,Ronald Jones II
+champ-is-here,5,Autograph,true,/10,Rob Gronkowski
+champ-is-here,7,Autograph,true,/8,Cameron Brate
+champ-is-here,8,Autograph,true,/2,Antonio Brown
+champ-is-here,9,Autograph,true,/49,Chris Godwin
+champ-is-here,20,Autograph,true,/49,Shaquil Barrett
 champ-is-here,1,Holo,false,/100,Tom Brady
 champ-is-here,2,Holo,false,/100,Leonard Fournette
 champ-is-here,3,Holo,false,/100,Ronald Jones II
@@ -5692,30 +5692,30 @@ dominators,37,,false,,A.J. Brown
 dominators,38,,false,,Dalvin Cook
 dominators,39,,false,,Davante Adams
 dominators,40,,false,,Aaron Donald
-dominators,1,Autographs,true,/49,Kyler Murray
-dominators,2,Autographs,true,/49,Justin Tucker
-dominators,4,Autographs,true,/25,Josh Allen
-dominators,7,Autographs,true,/49,Allen Robinson II
-dominators,9,Autographs,true,/25,Nick Chubb
-dominators,10,Autographs,true,/25,Ezekiel Elliott
-dominators,13,Autographs,true,/49,Jared Goff
-dominators,14,Autographs,true,/10,Aaron Rodgers
-dominators,15,Autographs,true,/49,Aaron Jones
-dominators,16,Autographs,true,/5,J.J. Watt
-dominators,20,Autographs,true,/10,Patrick Mahomes II
-dominators,21,Autographs,true,/25,Tyreek Hill
-dominators,22,Autographs,true,/25,Michael Thomas
-dominators,23,Autographs,true,/49,Josh Jacobs
-dominators,25,Autographs,true,/49,Justin Herbert
-dominators,26,Autographs,true,/25,Jalen Hurts
-dominators,27,Autographs,true,/49,Tua Tagovailoa
-dominators,28,Autographs,true,/49,Nick Bosa
-dominators,30,Autographs,true,/25,DK Metcalf
-dominators,31,Autographs,true,/5,Tom Brady
-dominators,34,Autographs,true,/25,George Kittle
-dominators,36,Autographs,true,/25,Derrick Henry
-dominators,38,Autographs,true,/25,Dalvin Cook
-dominators,40,Autographs,true,/25,Aaron Donald
+dominators,1,Autograph,true,/49,Kyler Murray
+dominators,2,Autograph,true,/49,Justin Tucker
+dominators,4,Autograph,true,/25,Josh Allen
+dominators,7,Autograph,true,/49,Allen Robinson II
+dominators,9,Autograph,true,/25,Nick Chubb
+dominators,10,Autograph,true,/25,Ezekiel Elliott
+dominators,13,Autograph,true,/49,Jared Goff
+dominators,14,Autograph,true,/10,Aaron Rodgers
+dominators,15,Autograph,true,/49,Aaron Jones
+dominators,16,Autograph,true,/5,J.J. Watt
+dominators,20,Autograph,true,/10,Patrick Mahomes II
+dominators,21,Autograph,true,/25,Tyreek Hill
+dominators,22,Autograph,true,/25,Michael Thomas
+dominators,23,Autograph,true,/49,Josh Jacobs
+dominators,25,Autograph,true,/49,Justin Herbert
+dominators,26,Autograph,true,/25,Jalen Hurts
+dominators,27,Autograph,true,/49,Tua Tagovailoa
+dominators,28,Autograph,true,/49,Nick Bosa
+dominators,30,Autograph,true,/25,DK Metcalf
+dominators,31,Autograph,true,/5,Tom Brady
+dominators,34,Autograph,true,/25,George Kittle
+dominators,36,Autograph,true,/25,Derrick Henry
+dominators,38,Autograph,true,/25,Dalvin Cook
+dominators,40,Autograph,true,/25,Aaron Donald
 donruss-threads,1,,false,,Joe Burrow
 donruss-threads,2,,false,,Tua Tagovailoa
 donruss-threads,3,,false,,Justin Herbert
@@ -6057,32 +6057,32 @@ gridiron-kings,12,,false,,Patrick Mahomes II
 gridiron-kings,13,,false,,Ezekiel Elliott
 gridiron-kings,14,,false,,Jalen Hurts
 gridiron-kings,15,,false,,Nick Bosa
-gridiron-kings,1,Autographs,true,/49,Justin Tucker
-gridiron-kings,2,Autographs,true,/49,Josh Jacobs
-gridiron-kings,3,Autographs,true,/5,Tom Brady
-gridiron-kings,4,Autographs,true,/10,Aaron Rodgers
-gridiron-kings,5,Autographs,true,/25,Aaron Donald
-gridiron-kings,6,Autographs,true,/49,Josh Allen
-gridiron-kings,9,Autographs,true,/49,Justin Herbert
-gridiron-kings,12,Autographs,true,/10,Patrick Mahomes II
-gridiron-kings,13,Autographs,true,/25,Ezekiel Elliott
-gridiron-kings,14,Autographs,true,/49,Jalen Hurts
-gridiron-kings,15,Autographs,true,/49,Nick Bosa
-gridiron-kings,1,Studio Series,false,/100,Justin Tucker
-gridiron-kings,2,Studio Series,false,/100,Josh Jacobs
-gridiron-kings,3,Studio Series,false,/100,Tom Brady
-gridiron-kings,4,Studio Series,false,/100,Aaron Rodgers
-gridiron-kings,5,Studio Series,false,/100,Aaron Donald
-gridiron-kings,6,Studio Series,false,/100,Josh Allen
-gridiron-kings,7,Studio Series,false,/100,Christian McCaffrey
-gridiron-kings,8,Studio Series,false,/100,Justin Jefferson
-gridiron-kings,9,Studio Series,false,/100,Justin Herbert
-gridiron-kings,10,Studio Series,false,/100,T.J. Watt
-gridiron-kings,11,Studio Series,false,/100,DK Metcalf
-gridiron-kings,12,Studio Series,false,/100,Patrick Mahomes II
-gridiron-kings,13,Studio Series,false,/100,Ezekiel Elliott
-gridiron-kings,14,Studio Series,false,/100,Jalen Hurts
-gridiron-kings,15,Studio Series,false,/100,Nick Bosa
+gridiron-kings,1,Autograph,true,/49,Justin Tucker
+gridiron-kings,2,Autograph,true,/49,Josh Jacobs
+gridiron-kings,3,Autograph,true,/5,Tom Brady
+gridiron-kings,4,Autograph,true,/10,Aaron Rodgers
+gridiron-kings,5,Autograph,true,/25,Aaron Donald
+gridiron-kings,6,Autograph,true,/49,Josh Allen
+gridiron-kings,9,Autograph,true,/49,Justin Herbert
+gridiron-kings,12,Autograph,true,/10,Patrick Mahomes II
+gridiron-kings,13,Autograph,true,/25,Ezekiel Elliott
+gridiron-kings,14,Autograph,true,/49,Jalen Hurts
+gridiron-kings,15,Autograph,true,/49,Nick Bosa
+gridiron-kings,1,Studio Serie,false,/100,Justin Tucker
+gridiron-kings,2,Studio Serie,false,/100,Josh Jacobs
+gridiron-kings,3,Studio Serie,false,/100,Tom Brady
+gridiron-kings,4,Studio Serie,false,/100,Aaron Rodgers
+gridiron-kings,5,Studio Serie,false,/100,Aaron Donald
+gridiron-kings,6,Studio Serie,false,/100,Josh Allen
+gridiron-kings,7,Studio Serie,false,/100,Christian McCaffrey
+gridiron-kings,8,Studio Serie,false,/100,Justin Jefferson
+gridiron-kings,9,Studio Serie,false,/100,Justin Herbert
+gridiron-kings,10,Studio Serie,false,/100,T.J. Watt
+gridiron-kings,11,Studio Serie,false,/100,DK Metcalf
+gridiron-kings,12,Studio Serie,false,/100,Patrick Mahomes II
+gridiron-kings,13,Studio Serie,false,/100,Ezekiel Elliott
+gridiron-kings,14,Studio Serie,false,/100,Jalen Hurts
+gridiron-kings,15,Studio Serie,false,/100,Nick Bosa
 gridiron-marvels,1,,false,,Tom Brady
 gridiron-marvels,2,,false,,Patrick Mahomes II
 gridiron-marvels,3,,false,,Josh Allen
@@ -6127,21 +6127,21 @@ highlights,21,,false,,Chase Young
 highlights,22,,false,,Justin Herbert
 highlights,23,,false,,Aaron Rodgers
 highlights,24,,false,,Tom Brady
-highlights,1,Autographs,true,/49,Tyreek Hill
-highlights,2,Autographs,true,/25,Josh Allen
-highlights,3,Autographs,true,/99,Ronald Jones II
-highlights,6,Autographs,true,/99,DK Metcalf
-highlights,7,Autographs,true,/25,Derrick Henry
-highlights,12,Autographs,true,/75,Amari Cooper
-highlights,13,Autographs,true,/99,Jerry Jeudy
-highlights,14,Autographs,true,/75,Sam Darnold
-highlights,16,Autographs,true,/5,Tom Brady
-highlights,18,Autographs,true,/5,Russell Wilson
-highlights,19,Autographs,true,/25,Aaron Donald
-highlights,20,Autographs,true,/99,Alex Smith
-highlights,22,Autographs,true,/49,Justin Herbert
-highlights,23,Autographs,true,/10,Aaron Rodgers
-highlights,24,Autographs,true,/5,Tom Brady
+highlights,1,Autograph,true,/49,Tyreek Hill
+highlights,2,Autograph,true,/25,Josh Allen
+highlights,3,Autograph,true,/99,Ronald Jones II
+highlights,6,Autograph,true,/99,DK Metcalf
+highlights,7,Autograph,true,/25,Derrick Henry
+highlights,12,Autograph,true,/75,Amari Cooper
+highlights,13,Autograph,true,/99,Jerry Jeudy
+highlights,14,Autograph,true,/75,Sam Darnold
+highlights,16,Autograph,true,/5,Tom Brady
+highlights,18,Autograph,true,/5,Russell Wilson
+highlights,19,Autograph,true,/25,Aaron Donald
+highlights,20,Autograph,true,/99,Alex Smith
+highlights,22,Autograph,true,/49,Justin Herbert
+highlights,23,Autograph,true,/10,Aaron Rodgers
+highlights,24,Autograph,true,/5,Tom Brady
 highlights,1,Holo,false,/100,Tyreek Hill
 highlights,2,Holo,false,/100,Josh Allen
 highlights,3,Holo,false,/100,Ronald Jones II
@@ -6176,15 +6176,15 @@ inducted,7,,false,,Charles Woodson
 inducted,8,,false,,Charles Woodson
 inducted,9,,false,,Drew Pearson
 inducted,10,,false,,Peyton Manning
-inducted,1,Autographs,true,/25,Peyton Manning
-inducted,2,Autographs,true,/25,Peyton Manning
-inducted,3,Autographs,true,/49,John Lynch
-inducted,4,Autographs,true,/25,John Lynch
-inducted,5,Autographs,true,/99,Alan Faneca
-inducted,6,Autographs,true,/99,Alan Faneca
-inducted,7,Autographs,true,/10,Charles Woodson
-inducted,8,Autographs,true,/5,Charles Woodson
-inducted,10,Autographs,true,/25,Peyton Manning
+inducted,1,Autograph,true,/25,Peyton Manning
+inducted,2,Autograph,true,/25,Peyton Manning
+inducted,3,Autograph,true,/49,John Lynch
+inducted,4,Autograph,true,/25,John Lynch
+inducted,5,Autograph,true,/99,Alan Faneca
+inducted,6,Autograph,true,/99,Alan Faneca
+inducted,7,Autograph,true,/10,Charles Woodson
+inducted,8,Autograph,true,/5,Charles Woodson
+inducted,10,Autograph,true,/25,Peyton Manning
 inducted,1,Holo,false,/100,Peyton Manning
 inducted,2,Holo,false,/100,Peyton Manning
 inducted,3,Holo,false,/100,John Lynch
@@ -6224,48 +6224,48 @@ jersey-kings,27,,false,/349,Saquon Barkley
 jersey-kings,28,,false,/349,Nick Bosa
 jersey-kings,29,,false,/349,Terry McLaurin
 jersey-kings,30,,false,/349,A.J. Brown
-jersey-kings,1,Autographs,true,/10,Chris Johnson
-jersey-kings,2,Autographs,true,/10,Robert Quinn
-jersey-kings,3,Autographs,true,/10,Chris Cooley
-jersey-kings,4,Autographs,true,/4,Brandin Cooks
-jersey-kings,6,Autographs,true,/10,Philip Rivers
-jersey-kings,7,Autographs,true,/10,JuJu Smith-Schuster
-jersey-kings,8,Autographs,true,/10,Aaron Jones
-jersey-kings,9,Autographs,true,/10,Jason Witten
-jersey-kings,10,Autographs,true,/10,Derek Carr
-jersey-kings,11,Autographs,true,/10,Josh Allen
-jersey-kings,12,Autographs,true,/10,Kyler Murray
-jersey-kings,20,Autographs,true,/10,Josh Jacobs
-jersey-kings,21,Autographs,true,/10,Michael Thomas
-jersey-kings,22,Autographs,true,/10,Adam Thielen
-jersey-kings,24,Autographs,true,/10,Kirk Cousins
-jersey-kings,25,Autographs,true,/10,Ben Roethlisberger
-jersey-kings,28,Autographs,true,/10,Nick Bosa
-jersey-kings,1,Studio Series,false,/100,Chris Johnson
-jersey-kings,2,Studio Series,false,/100,Robert Quinn
-jersey-kings,3,Studio Series,false,/100,Chris Cooley
-jersey-kings,4,Studio Series,false,/100,Brandin Cooks
-jersey-kings,5,Studio Series,false,/100,Michael Gallup
-jersey-kings,6,Studio Series,false,/100,Philip Rivers
-jersey-kings,7,Studio Series,false,/100,JuJu Smith-Schuster
-jersey-kings,8,Studio Series,false,/100,Aaron Jones
-jersey-kings,9,Studio Series,false,/100,Jason Witten
-jersey-kings,10,Studio Series,false,/100,Derek Carr
-jersey-kings,11,Studio Series,false,/100,Josh Allen
-jersey-kings,12,Studio Series,false,/100,Kyler Murray
-jersey-kings,13,Studio Series,false,/100,Lamar Jackson
-jersey-kings,14,Studio Series,false,/100,Calvin Ridley
-jersey-kings,15,Studio Series,false,/100,Joe Mixon
-jersey-kings,16,Studio Series,false,/100,David Montgomery
-jersey-kings,17,Studio Series,false,/100,DJ Moore
-jersey-kings,18,Studio Series,false,/100,Dak Prescott
-jersey-kings,19,Studio Series,false,/100,DJ Chark Jr.
-jersey-kings,21,Studio Series,false,/100,Michael Thomas
-jersey-kings,22,Studio Series,false,/100,Adam Thielen
-jersey-kings,24,Studio Series,false,/75,Kirk Cousins
-jersey-kings,26,Studio Series,false,/100,Keenan Allen
-jersey-kings,29,Studio Series,false,/100,Terry McLaurin
-jersey-kings,30,Studio Series,false,/100,A.J. Brown
+jersey-kings,1,Autograph,true,/10,Chris Johnson
+jersey-kings,2,Autograph,true,/10,Robert Quinn
+jersey-kings,3,Autograph,true,/10,Chris Cooley
+jersey-kings,4,Autograph,true,/4,Brandin Cooks
+jersey-kings,6,Autograph,true,/10,Philip Rivers
+jersey-kings,7,Autograph,true,/10,JuJu Smith-Schuster
+jersey-kings,8,Autograph,true,/10,Aaron Jones
+jersey-kings,9,Autograph,true,/10,Jason Witten
+jersey-kings,10,Autograph,true,/10,Derek Carr
+jersey-kings,11,Autograph,true,/10,Josh Allen
+jersey-kings,12,Autograph,true,/10,Kyler Murray
+jersey-kings,20,Autograph,true,/10,Josh Jacobs
+jersey-kings,21,Autograph,true,/10,Michael Thomas
+jersey-kings,22,Autograph,true,/10,Adam Thielen
+jersey-kings,24,Autograph,true,/10,Kirk Cousins
+jersey-kings,25,Autograph,true,/10,Ben Roethlisberger
+jersey-kings,28,Autograph,true,/10,Nick Bosa
+jersey-kings,1,Studio Serie,false,/100,Chris Johnson
+jersey-kings,2,Studio Serie,false,/100,Robert Quinn
+jersey-kings,3,Studio Serie,false,/100,Chris Cooley
+jersey-kings,4,Studio Serie,false,/100,Brandin Cooks
+jersey-kings,5,Studio Serie,false,/100,Michael Gallup
+jersey-kings,6,Studio Serie,false,/100,Philip Rivers
+jersey-kings,7,Studio Serie,false,/100,JuJu Smith-Schuster
+jersey-kings,8,Studio Serie,false,/100,Aaron Jones
+jersey-kings,9,Studio Serie,false,/100,Jason Witten
+jersey-kings,10,Studio Serie,false,/100,Derek Carr
+jersey-kings,11,Studio Serie,false,/100,Josh Allen
+jersey-kings,12,Studio Serie,false,/100,Kyler Murray
+jersey-kings,13,Studio Serie,false,/100,Lamar Jackson
+jersey-kings,14,Studio Serie,false,/100,Calvin Ridley
+jersey-kings,15,Studio Serie,false,/100,Joe Mixon
+jersey-kings,16,Studio Serie,false,/100,David Montgomery
+jersey-kings,17,Studio Serie,false,/100,DJ Moore
+jersey-kings,18,Studio Serie,false,/100,Dak Prescott
+jersey-kings,19,Studio Serie,false,/100,DJ Chark Jr.
+jersey-kings,21,Studio Serie,false,/100,Michael Thomas
+jersey-kings,22,Studio Serie,false,/100,Adam Thielen
+jersey-kings,24,Studio Serie,false,/75,Kirk Cousins
+jersey-kings,26,Studio Serie,false,/100,Keenan Allen
+jersey-kings,29,Studio Serie,false,/100,Terry McLaurin
+jersey-kings,30,Studio Serie,false,/100,A.J. Brown
 leather-kings,1,,false,/299,Justin Herbert
 leather-kings,2,,false,/299,Tua Tagovailoa
 leather-kings,3,,false,/299,Joe Burrow
@@ -6276,21 +6276,21 @@ leather-kings,7,,false,/299,Jalen Hurts
 leather-kings,8,,false,/299,D'Andre Swift
 leather-kings,9,,false,/299,Jonathan Taylor
 leather-kings,10,,false,/299,Chase Young
-leather-kings,1,Autographs,true,/10,Justin Herbert
-leather-kings,2,Autographs,true,/10,Tua Tagovailoa
-leather-kings,7,Autographs,true,/10,Jalen Hurts
-leather-kings,8,Autographs,true,/10,D'Andre Swift
-leather-kings,9,Autographs,true,/10,Jonathan Taylor
-leather-kings,1,Studio Series,false,/25,Justin Herbert
-leather-kings,2,Studio Series,false,/25,Tua Tagovailoa
-leather-kings,3,Studio Series,false,/25,Joe Burrow
-leather-kings,4,Studio Series,false,/25,Justin Jefferson
-leather-kings,5,Studio Series,false,/25,CeeDee Lamb
-leather-kings,6,Studio Series,false,/25,Chase Claypool
-leather-kings,7,Studio Series,false,/25,Jalen Hurts
-leather-kings,8,Studio Series,false,/25,D'Andre Swift
-leather-kings,9,Studio Series,false,/25,Jonathan Taylor
-leather-kings,10,Studio Series,false,/25,Chase Young
+leather-kings,1,Autograph,true,/10,Justin Herbert
+leather-kings,2,Autograph,true,/10,Tua Tagovailoa
+leather-kings,7,Autograph,true,/10,Jalen Hurts
+leather-kings,8,Autograph,true,/10,D'Andre Swift
+leather-kings,9,Autograph,true,/10,Jonathan Taylor
+leather-kings,1,Studio Serie,false,/25,Justin Herbert
+leather-kings,2,Studio Serie,false,/25,Tua Tagovailoa
+leather-kings,3,Studio Serie,false,/25,Joe Burrow
+leather-kings,4,Studio Serie,false,/25,Justin Jefferson
+leather-kings,5,Studio Serie,false,/25,CeeDee Lamb
+leather-kings,6,Studio Serie,false,/25,Chase Claypool
+leather-kings,7,Studio Serie,false,/25,Jalen Hurts
+leather-kings,8,Studio Serie,false,/25,D'Andre Swift
+leather-kings,9,Studio Serie,false,/25,Jonathan Taylor
+leather-kings,10,Studio Serie,false,/25,Chase Young
 liftoff,1,,false,,Stefon Diggs
 liftoff,2,,false,,Davante Adams
 liftoff,3,,false,,DeAndre Hopkins
@@ -7348,18 +7348,18 @@ power-formulas,17,,false,,Michael Thomas
 power-formulas,18,,false,,Josh Jacobs
 power-formulas,19,,false,,Dalvin Cook
 power-formulas,20,,false,,James Robinson
-power-formulas,1,Autographs,true,/99,D'Andre Swift
-power-formulas,2,Autographs,true,/25,Ezekiel Elliott
-power-formulas,3,Autographs,true,/25,Josh Allen
-power-formulas,5,Autographs,true,/99,Nick Chubb
-power-formulas,7,Autographs,true,/99,Jonathan Taylor
-power-formulas,8,Autographs,true,/99,Justin Herbert
-power-formulas,9,Autographs,true,/49,Jalen Hurts
-power-formulas,10,Autographs,true,/99,Tua Tagovailoa
-power-formulas,11,Autographs,true,/25,Derrick Henry
-power-formulas,14,Autographs,true,/25,George Kittle
-power-formulas,18,Autographs,true,/99,Josh Jacobs
-power-formulas,20,Autographs,true,/99,James Robinson
+power-formulas,1,Autograph,true,/99,D'Andre Swift
+power-formulas,2,Autograph,true,/25,Ezekiel Elliott
+power-formulas,3,Autograph,true,/25,Josh Allen
+power-formulas,5,Autograph,true,/99,Nick Chubb
+power-formulas,7,Autograph,true,/99,Jonathan Taylor
+power-formulas,8,Autograph,true,/99,Justin Herbert
+power-formulas,9,Autograph,true,/49,Jalen Hurts
+power-formulas,10,Autograph,true,/99,Tua Tagovailoa
+power-formulas,11,Autograph,true,/25,Derrick Henry
+power-formulas,14,Autograph,true,/25,George Kittle
+power-formulas,18,Autograph,true,/99,Josh Jacobs
+power-formulas,20,Autograph,true,/99,James Robinson
 rated-rookies,251,,false,,Trevor Lawrence
 rated-rookies,252,,false,,Zach Wilson
 rated-rookies,253,,false,,Justin Fields
@@ -7460,278 +7460,278 @@ rated-rookies,347,,false,,Tyson Campbell
 rated-rookies,348,,false,,Jevon Holland
 rated-rookies,349,,false,,Christian Barmore
 rated-rookies,350,,false,,Tre'von Moehrig
-rated-rookies,251,Aqueous Test,false,,Trevor Lawrence
-rated-rookies,252,Aqueous Test,false,,Zach Wilson
-rated-rookies,253,Aqueous Test,false,,Justin Fields
-rated-rookies,254,Aqueous Test,false,,Trey Lance
-rated-rookies,255,Aqueous Test,false,,Mac Jones
-rated-rookies,256,Aqueous Test,false,,Kellen Mond
-rated-rookies,257,Aqueous Test,false,,Kyle Trask
-rated-rookies,258,Aqueous Test,false,,Travis Etienne Jr.
-rated-rookies,259,Aqueous Test,false,,Najee Harris
-rated-rookies,260,Aqueous Test,false,,Kyle Pitts
-rated-rookies,261,Aqueous Test,false,,DeVonta Smith
-rated-rookies,262,Aqueous Test,false,,Ja'Marr Chase
-rated-rookies,263,Aqueous Test,false,,Jaylen Waddle
-rated-rookies,264,Aqueous Test,false,,Kadarius Toney
-rated-rookies,265,Aqueous Test,false,,Rashod Bateman
-rated-rookies,266,Aqueous Test,false,,Terrace Marshall Jr.
-rated-rookies,267,Aqueous Test,false,,Kenneth Gainwell
-rated-rookies,268,Aqueous Test,false,,Michael Carter
-rated-rookies,269,Aqueous Test,false,,Ian Book
-rated-rookies,270,Aqueous Test,false,,Rondale Moore
-rated-rookies,271,Aqueous Test,false,,Elijah Moore
-rated-rookies,272,Aqueous Test,false,,Tutu Atwell
-rated-rookies,273,Aqueous Test,false,,Davis Mills
-rated-rookies,274,Aqueous Test,false,,Tylan Wallace
-rated-rookies,275,Aqueous Test,false,,Javonte Williams
-rated-rookies,276,Aqueous Test,false,,D'Wayne Eskridge
-rated-rookies,277,Aqueous Test,false,,Josh Palmer
-rated-rookies,278,Aqueous Test,false,,Dyami Brown
-rated-rookies,279,Aqueous Test,false,,Trey Sermon
-rated-rookies,280,Aqueous Test,false,,Nico Collins
-rated-rookies,281,Aqueous Test,false,,Pat Freiermuth
-rated-rookies,282,Aqueous Test,false,,Anthony Schwartz
-rated-rookies,283,Aqueous Test,false,,Dez Fitzpatrick
-rated-rookies,284,Aqueous Test,false,,Amon-Ra St. Brown
-rated-rookies,285,Aqueous Test,false,,Kene Nwangwu
-rated-rookies,286,Aqueous Test,false,,Rhamondre Stevenson
-rated-rookies,287,Aqueous Test,false,,Chuba Hubbard
-rated-rookies,288,Aqueous Test,false,,Jaelon Darden
-rated-rookies,289,Aqueous Test,false,,Cornell Powell
-rated-rookies,290,Aqueous Test,false,,Jacob Harris
-rated-rookies,291,Aqueous Test,false,,Ihmir Smith-Marsette
-rated-rookies,292,Aqueous Test,false,,Simi Fehoko
-rated-rookies,293,Aqueous Test,false,,Demetric Felton
-rated-rookies,294,Aqueous Test,false,,Javian Hawkins
-rated-rookies,295,Aqueous Test,false,,Kylin Hill
-rated-rookies,296,Aqueous Test,false,,Larry Rountree III
-rated-rookies,297,Aqueous Test,false,,Jermar Jefferson
-rated-rookies,298,Aqueous Test,false,,Jaret Patterson
-rated-rookies,299,Aqueous Test,false,,Seth Williams
-rated-rookies,300,Aqueous Test,false,,Marquez Stevenson
-rated-rookies,301,Aqueous Test,false,,Hunter Long
-rated-rookies,302,Aqueous Test,false,,Tommy Tremble
-rated-rookies,303,Aqueous Test,false,,Amari Rodgers
-rated-rookies,304,Aqueous Test,false,,Tre' McKitty
-rated-rookies,305,Aqueous Test,false,,Landon Dickerson
-rated-rookies,306,Aqueous Test,false,,"Carlos ""Boogie"" Basham"
-rated-rookies,307,Aqueous Test,false,,Luke Farrell
-rated-rookies,308,Aqueous Test,false,,Brevin Jordan
-rated-rookies,309,Aqueous Test,false,,Noah Gray
-rated-rookies,310,Aqueous Test,false,,Kelvin Joseph
-rated-rookies,311,Aqueous Test,false,,Frank Darby
-rated-rookies,312,Aqueous Test,false,,Elijah Mitchell
-rated-rookies,313,Aqueous Test,false,,Gary Brightwell
-rated-rookies,314,Aqueous Test,false,,Chris Evans
-rated-rookies,315,Aqueous Test,false,,Shi Smith
-rated-rookies,316,Aqueous Test,false,,Racey McMath
-rated-rookies,317,Aqueous Test,false,,Jabril Cox
-rated-rookies,318,Aqueous Test,false,,Khalil Herbert
-rated-rookies,319,Aqueous Test,false,,Sam Ehlinger
-rated-rookies,320,Aqueous Test,false,,Dazz Newsome
-rated-rookies,321,Aqueous Test,false,,Kylen Granson
-rated-rookies,322,Aqueous Test,false,,Pete Werner
-rated-rookies,323,Aqueous Test,false,,Azeez Ojulari
-rated-rookies,324,Aqueous Test,false,,Nick Bolton
-rated-rookies,325,Aqueous Test,false,,Ben Skowronek
-rated-rookies,326,Aqueous Test,false,,Jeremiah Owusu-Koramoah
-rated-rookies,327,Aqueous Test,false,,Joseph Ossai
-rated-rookies,328,Aqueous Test,false,,Penei Sewell
-rated-rookies,329,Aqueous Test,false,,Jaycee Horn
-rated-rookies,330,Aqueous Test,false,,Patrick Surtain II
-rated-rookies,331,Aqueous Test,false,,Micah Parsons
-rated-rookies,332,Aqueous Test,false,,Rashawn Slater
-rated-rookies,333,Aqueous Test,false,,Alijah Vera-Tucker
-rated-rookies,334,Aqueous Test,false,,Zaven Collins
-rated-rookies,335,Aqueous Test,false,,Alex Leatherwood
-rated-rookies,336,Aqueous Test,false,,Jaelan Phillips
-rated-rookies,337,Aqueous Test,false,,Jamin Davis
-rated-rookies,338,Aqueous Test,false,,Kwity Paye
-rated-rookies,339,Aqueous Test,false,,Caleb Farley
-rated-rookies,340,Aqueous Test,false,,Christian Darrisaw
-rated-rookies,341,Aqueous Test,false,,Greg Newsome II
-rated-rookies,342,Aqueous Test,false,,Payton Turner
-rated-rookies,343,Aqueous Test,false,,Eric Stokes
-rated-rookies,344,Aqueous Test,false,,Greg Rousseau
-rated-rookies,345,Aqueous Test,false,,Odafe Oweh
-rated-rookies,346,Aqueous Test,false,,Joe Tryon
-rated-rookies,347,Aqueous Test,false,,Tyson Campbell
-rated-rookies,348,Aqueous Test,false,,Jevon Holland
-rated-rookies,349,Aqueous Test,false,,Christian Barmore
-rated-rookies,350,Aqueous Test,false,,Tre'von Moehrig
-rated-rookies,251,Autographs Blue,true,,Trevor Lawrence
-rated-rookies,252,Autographs Blue,true,,Zach Wilson
-rated-rookies,253,Autographs Blue,true,,Justin Fields
-rated-rookies,254,Autographs Blue,true,,Trey Lance
-rated-rookies,255,Autographs Blue,true,,Mac Jones
-rated-rookies,256,Autographs Blue,true,,Kellen Mond
-rated-rookies,257,Autographs Blue,true,,Kyle Trask
-rated-rookies,258,Autographs Blue,true,,Travis Etienne Jr.
-rated-rookies,259,Autographs Blue,true,,Najee Harris
-rated-rookies,260,Autographs Blue,true,,Kyle Pitts
-rated-rookies,261,Autographs Blue,true,,DeVonta Smith
-rated-rookies,262,Autographs Blue,true,,Ja'Marr Chase
-rated-rookies,263,Autographs Blue,true,,Jaylen Waddle
-rated-rookies,264,Autographs Blue,true,,Kadarius Toney
-rated-rookies,266,Autographs Blue,true,,Terrace Marshall Jr.
-rated-rookies,267,Autographs Blue,true,,Kenneth Gainwell
-rated-rookies,268,Autographs Blue,true,,Michael Carter
-rated-rookies,269,Autographs Blue,true,,Ian Book
-rated-rookies,270,Autographs Blue,true,,Rondale Moore
-rated-rookies,273,Autographs Blue,true,,Davis Mills
-rated-rookies,274,Autographs Blue,true,,Tylan Wallace
-rated-rookies,275,Autographs Blue,true,,Javonte Williams
-rated-rookies,276,Autographs Blue,true,,D'Wayne Eskridge
-rated-rookies,277,Autographs Blue,true,,Josh Palmer
-rated-rookies,278,Autographs Blue,true,,Dyami Brown
-rated-rookies,279,Autographs Blue,true,,Trey Sermon
-rated-rookies,280,Autographs Blue,true,,Nico Collins
-rated-rookies,281,Autographs Blue,true,,Pat Freiermuth
-rated-rookies,282,Autographs Blue,true,,Anthony Schwartz
-rated-rookies,284,Autographs Blue,true,,Amon-Ra St. Brown
-rated-rookies,285,Autographs Blue,true,,Kene Nwangwu
-rated-rookies,287,Autographs Blue,true,,Chuba Hubbard
-rated-rookies,288,Autographs Blue,true,,Jaelon Darden
-rated-rookies,289,Autographs Blue,true,,Cornell Powell
-rated-rookies,290,Autographs Blue,true,,Jacob Harris
-rated-rookies,291,Autographs Blue,true,,Ihmir Smith-Marsette
-rated-rookies,292,Autographs Blue,true,,Simi Fehoko
-rated-rookies,293,Autographs Blue,true,,Demetric Felton
-rated-rookies,295,Autographs Blue,true,,Kylin Hill
-rated-rookies,296,Autographs Blue,true,,Larry Rountree III
-rated-rookies,297,Autographs Blue,true,,Jermar Jefferson
-rated-rookies,298,Autographs Blue,true,,Jaret Patterson
-rated-rookies,299,Autographs Blue,true,,Seth Williams
-rated-rookies,300,Autographs Blue,true,,Marquez Stevenson
-rated-rookies,251,Autographs Bronze,true,,Trevor Lawrence
-rated-rookies,252,Autographs Bronze,true,,Zach Wilson
-rated-rookies,253,Autographs Bronze,true,,Justin Fields
-rated-rookies,254,Autographs Bronze,true,,Trey Lance
-rated-rookies,255,Autographs Bronze,true,,Mac Jones
-rated-rookies,256,Autographs Bronze,true,,Kellen Mond
-rated-rookies,257,Autographs Bronze,true,,Kyle Trask
-rated-rookies,258,Autographs Bronze,true,,Travis Etienne Jr.
-rated-rookies,259,Autographs Bronze,true,,Najee Harris
-rated-rookies,260,Autographs Bronze,true,,Kyle Pitts
-rated-rookies,261,Autographs Bronze,true,,DeVonta Smith
-rated-rookies,262,Autographs Bronze,true,,Ja'Marr Chase
-rated-rookies,263,Autographs Bronze,true,,Jaylen Waddle
-rated-rookies,264,Autographs Bronze,true,,Kadarius Toney
-rated-rookies,265,Autographs Bronze,true,,Rashod Bateman
-rated-rookies,266,Autographs Bronze,true,,Terrace Marshall Jr.
-rated-rookies,267,Autographs Bronze,true,,Kenneth Gainwell
-rated-rookies,268,Autographs Bronze,true,,Michael Carter
-rated-rookies,269,Autographs Bronze,true,,Ian Book
-rated-rookies,270,Autographs Bronze,true,,Rondale Moore
-rated-rookies,273,Autographs Bronze,true,,Davis Mills
-rated-rookies,274,Autographs Bronze,true,,Tylan Wallace
-rated-rookies,275,Autographs Bronze,true,,Javonte Williams
-rated-rookies,276,Autographs Bronze,true,,D'Wayne Eskridge
-rated-rookies,277,Autographs Bronze,true,,Josh Palmer
-rated-rookies,278,Autographs Bronze,true,,Dyami Brown
-rated-rookies,279,Autographs Bronze,true,,Trey Sermon
-rated-rookies,280,Autographs Bronze,true,,Nico Collins
-rated-rookies,281,Autographs Bronze,true,,Pat Freiermuth
-rated-rookies,282,Autographs Bronze,true,,Anthony Schwartz
-rated-rookies,284,Autographs Bronze,true,,Amon-Ra St. Brown
-rated-rookies,285,Autographs Bronze,true,,Kene Nwangwu
-rated-rookies,287,Autographs Bronze,true,,Chuba Hubbard
-rated-rookies,288,Autographs Bronze,true,,Jaelon Darden
-rated-rookies,289,Autographs Bronze,true,,Cornell Powell
-rated-rookies,290,Autographs Bronze,true,,Jacob Harris
-rated-rookies,291,Autographs Bronze,true,,Ihmir Smith-Marsette
-rated-rookies,292,Autographs Bronze,true,,Simi Fehoko
-rated-rookies,295,Autographs Bronze,true,,Kylin Hill
-rated-rookies,296,Autographs Bronze,true,,Larry Rountree III
-rated-rookies,297,Autographs Bronze,true,,Jermar Jefferson
-rated-rookies,298,Autographs Bronze,true,,Jaret Patterson
-rated-rookies,300,Autographs Bronze,true,,Marquez Stevenson
-rated-rookies,251,Autographs Green,true,,Trevor Lawrence
-rated-rookies,252,Autographs Green,true,,Zach Wilson
-rated-rookies,253,Autographs Green,true,,Justin Fields
-rated-rookies,254,Autographs Green,true,,Trey Lance
-rated-rookies,255,Autographs Green,true,,Mac Jones
-rated-rookies,256,Autographs Green,true,,Kellen Mond
-rated-rookies,257,Autographs Green,true,,Kyle Trask
-rated-rookies,258,Autographs Green,true,,Travis Etienne Jr.
-rated-rookies,259,Autographs Green,true,,Najee Harris
-rated-rookies,260,Autographs Green,true,,Kyle Pitts
-rated-rookies,261,Autographs Green,true,,DeVonta Smith
-rated-rookies,262,Autographs Green,true,,Ja'Marr Chase
-rated-rookies,263,Autographs Green,true,,Jaylen Waddle
-rated-rookies,264,Autographs Green,true,,Kadarius Toney
-rated-rookies,266,Autographs Green,true,,Terrace Marshall Jr.
-rated-rookies,267,Autographs Green,true,,Kenneth Gainwell
-rated-rookies,268,Autographs Green,true,,Michael Carter
-rated-rookies,269,Autographs Green,true,,Ian Book
-rated-rookies,270,Autographs Green,true,,Rondale Moore
-rated-rookies,273,Autographs Green,true,,Davis Mills
-rated-rookies,274,Autographs Green,true,,Tylan Wallace
-rated-rookies,275,Autographs Green,true,,Javonte Williams
-rated-rookies,276,Autographs Green,true,,D'Wayne Eskridge
-rated-rookies,277,Autographs Green,true,,Josh Palmer
-rated-rookies,278,Autographs Green,true,,Dyami Brown
-rated-rookies,279,Autographs Green,true,,Trey Sermon
-rated-rookies,280,Autographs Green,true,,Nico Collins
-rated-rookies,281,Autographs Green,true,,Pat Freiermuth
-rated-rookies,282,Autographs Green,true,,Anthony Schwartz
-rated-rookies,284,Autographs Green,true,,Amon-Ra St. Brown
-rated-rookies,285,Autographs Green,true,,Kene Nwangwu
-rated-rookies,287,Autographs Green,true,,Chuba Hubbard
-rated-rookies,288,Autographs Green,true,,Jaelon Darden
-rated-rookies,289,Autographs Green,true,,Cornell Powell
-rated-rookies,290,Autographs Green,true,,Jacob Harris
-rated-rookies,291,Autographs Green,true,,Ihmir Smith-Marsette
-rated-rookies,292,Autographs Green,true,,Simi Fehoko
-rated-rookies,294,Autographs Green,true,,Javian Hawkins
-rated-rookies,295,Autographs Green,true,,Kylin Hill
-rated-rookies,296,Autographs Green,true,,Larry Rountree III
-rated-rookies,297,Autographs Green,true,,Jermar Jefferson
-rated-rookies,298,Autographs Green,true,,Jaret Patterson
-rated-rookies,299,Autographs Green,true,,Seth Williams
-rated-rookies,300,Autographs Green,true,,Marquez Stevenson
-rated-rookies,251,Autographs Orange,true,,Trevor Lawrence
-rated-rookies,252,Autographs Orange,true,,Zach Wilson
-rated-rookies,253,Autographs Orange,true,,Justin Fields
-rated-rookies,254,Autographs Orange,true,,Trey Lance
-rated-rookies,255,Autographs Orange,true,,Mac Jones
-rated-rookies,257,Autographs Orange,true,,Kyle Trask
-rated-rookies,258,Autographs Orange,true,,Travis Etienne Jr.
-rated-rookies,259,Autographs Orange,true,,Najee Harris
-rated-rookies,260,Autographs Orange,true,,Kyle Pitts
-rated-rookies,261,Autographs Orange,true,,DeVonta Smith
-rated-rookies,262,Autographs Orange,true,,Ja'Marr Chase
-rated-rookies,263,Autographs Orange,true,,Jaylen Waddle
-rated-rookies,264,Autographs Orange,true,,Kadarius Toney
-rated-rookies,266,Autographs Orange,true,,Terrace Marshall Jr.
-rated-rookies,267,Autographs Orange,true,,Kenneth Gainwell
-rated-rookies,268,Autographs Orange,true,,Michael Carter
-rated-rookies,269,Autographs Orange,true,,Ian Book
-rated-rookies,270,Autographs Orange,true,,Rondale Moore
-rated-rookies,273,Autographs Orange,true,,Davis Mills
-rated-rookies,274,Autographs Orange,true,,Tylan Wallace
-rated-rookies,275,Autographs Orange,true,,Javonte Williams
-rated-rookies,276,Autographs Orange,true,,D'Wayne Eskridge
-rated-rookies,277,Autographs Orange,true,,Josh Palmer
-rated-rookies,278,Autographs Orange,true,,Dyami Brown
-rated-rookies,279,Autographs Orange,true,,Trey Sermon
-rated-rookies,280,Autographs Orange,true,,Nico Collins
-rated-rookies,281,Autographs Orange,true,,Pat Freiermuth
-rated-rookies,282,Autographs Orange,true,,Anthony Schwartz
-rated-rookies,284,Autographs Orange,true,,Amon-Ra St. Brown
-rated-rookies,285,Autographs Orange,true,,Kene Nwangwu
-rated-rookies,287,Autographs Orange,true,,Chuba Hubbard
-rated-rookies,288,Autographs Orange,true,,Jaelon Darden
-rated-rookies,289,Autographs Orange,true,,Cornell Powell
-rated-rookies,290,Autographs Orange,true,,Jacob Harris
-rated-rookies,291,Autographs Orange,true,,Ihmir Smith-Marsette
-rated-rookies,292,Autographs Orange,true,,Simi Fehoko
-rated-rookies,295,Autographs Orange,true,,Kylin Hill
-rated-rookies,296,Autographs Orange,true,,Larry Rountree III
-rated-rookies,297,Autographs Orange,true,,Jermar Jefferson
-rated-rookies,298,Autographs Orange,true,,Jaret Patterson
-rated-rookies,300,Autographs Orange,true,,Marquez Stevenson
+rated-rookies,251,Aqueou Test,false,,Trevor Lawrence
+rated-rookies,252,Aqueou Test,false,,Zach Wilson
+rated-rookies,253,Aqueou Test,false,,Justin Fields
+rated-rookies,254,Aqueou Test,false,,Trey Lance
+rated-rookies,255,Aqueou Test,false,,Mac Jones
+rated-rookies,256,Aqueou Test,false,,Kellen Mond
+rated-rookies,257,Aqueou Test,false,,Kyle Trask
+rated-rookies,258,Aqueou Test,false,,Travis Etienne Jr.
+rated-rookies,259,Aqueou Test,false,,Najee Harris
+rated-rookies,260,Aqueou Test,false,,Kyle Pitts
+rated-rookies,261,Aqueou Test,false,,DeVonta Smith
+rated-rookies,262,Aqueou Test,false,,Ja'Marr Chase
+rated-rookies,263,Aqueou Test,false,,Jaylen Waddle
+rated-rookies,264,Aqueou Test,false,,Kadarius Toney
+rated-rookies,265,Aqueou Test,false,,Rashod Bateman
+rated-rookies,266,Aqueou Test,false,,Terrace Marshall Jr.
+rated-rookies,267,Aqueou Test,false,,Kenneth Gainwell
+rated-rookies,268,Aqueou Test,false,,Michael Carter
+rated-rookies,269,Aqueou Test,false,,Ian Book
+rated-rookies,270,Aqueou Test,false,,Rondale Moore
+rated-rookies,271,Aqueou Test,false,,Elijah Moore
+rated-rookies,272,Aqueou Test,false,,Tutu Atwell
+rated-rookies,273,Aqueou Test,false,,Davis Mills
+rated-rookies,274,Aqueou Test,false,,Tylan Wallace
+rated-rookies,275,Aqueou Test,false,,Javonte Williams
+rated-rookies,276,Aqueou Test,false,,D'Wayne Eskridge
+rated-rookies,277,Aqueou Test,false,,Josh Palmer
+rated-rookies,278,Aqueou Test,false,,Dyami Brown
+rated-rookies,279,Aqueou Test,false,,Trey Sermon
+rated-rookies,280,Aqueou Test,false,,Nico Collins
+rated-rookies,281,Aqueou Test,false,,Pat Freiermuth
+rated-rookies,282,Aqueou Test,false,,Anthony Schwartz
+rated-rookies,283,Aqueou Test,false,,Dez Fitzpatrick
+rated-rookies,284,Aqueou Test,false,,Amon-Ra St. Brown
+rated-rookies,285,Aqueou Test,false,,Kene Nwangwu
+rated-rookies,286,Aqueou Test,false,,Rhamondre Stevenson
+rated-rookies,287,Aqueou Test,false,,Chuba Hubbard
+rated-rookies,288,Aqueou Test,false,,Jaelon Darden
+rated-rookies,289,Aqueou Test,false,,Cornell Powell
+rated-rookies,290,Aqueou Test,false,,Jacob Harris
+rated-rookies,291,Aqueou Test,false,,Ihmir Smith-Marsette
+rated-rookies,292,Aqueou Test,false,,Simi Fehoko
+rated-rookies,293,Aqueou Test,false,,Demetric Felton
+rated-rookies,294,Aqueou Test,false,,Javian Hawkins
+rated-rookies,295,Aqueou Test,false,,Kylin Hill
+rated-rookies,296,Aqueou Test,false,,Larry Rountree III
+rated-rookies,297,Aqueou Test,false,,Jermar Jefferson
+rated-rookies,298,Aqueou Test,false,,Jaret Patterson
+rated-rookies,299,Aqueou Test,false,,Seth Williams
+rated-rookies,300,Aqueou Test,false,,Marquez Stevenson
+rated-rookies,301,Aqueou Test,false,,Hunter Long
+rated-rookies,302,Aqueou Test,false,,Tommy Tremble
+rated-rookies,303,Aqueou Test,false,,Amari Rodgers
+rated-rookies,304,Aqueou Test,false,,Tre' McKitty
+rated-rookies,305,Aqueou Test,false,,Landon Dickerson
+rated-rookies,306,Aqueou Test,false,,"Carlos ""Boogie"" Basham"
+rated-rookies,307,Aqueou Test,false,,Luke Farrell
+rated-rookies,308,Aqueou Test,false,,Brevin Jordan
+rated-rookies,309,Aqueou Test,false,,Noah Gray
+rated-rookies,310,Aqueou Test,false,,Kelvin Joseph
+rated-rookies,311,Aqueou Test,false,,Frank Darby
+rated-rookies,312,Aqueou Test,false,,Elijah Mitchell
+rated-rookies,313,Aqueou Test,false,,Gary Brightwell
+rated-rookies,314,Aqueou Test,false,,Chris Evans
+rated-rookies,315,Aqueou Test,false,,Shi Smith
+rated-rookies,316,Aqueou Test,false,,Racey McMath
+rated-rookies,317,Aqueou Test,false,,Jabril Cox
+rated-rookies,318,Aqueou Test,false,,Khalil Herbert
+rated-rookies,319,Aqueou Test,false,,Sam Ehlinger
+rated-rookies,320,Aqueou Test,false,,Dazz Newsome
+rated-rookies,321,Aqueou Test,false,,Kylen Granson
+rated-rookies,322,Aqueou Test,false,,Pete Werner
+rated-rookies,323,Aqueou Test,false,,Azeez Ojulari
+rated-rookies,324,Aqueou Test,false,,Nick Bolton
+rated-rookies,325,Aqueou Test,false,,Ben Skowronek
+rated-rookies,326,Aqueou Test,false,,Jeremiah Owusu-Koramoah
+rated-rookies,327,Aqueou Test,false,,Joseph Ossai
+rated-rookies,328,Aqueou Test,false,,Penei Sewell
+rated-rookies,329,Aqueou Test,false,,Jaycee Horn
+rated-rookies,330,Aqueou Test,false,,Patrick Surtain II
+rated-rookies,331,Aqueou Test,false,,Micah Parsons
+rated-rookies,332,Aqueou Test,false,,Rashawn Slater
+rated-rookies,333,Aqueou Test,false,,Alijah Vera-Tucker
+rated-rookies,334,Aqueou Test,false,,Zaven Collins
+rated-rookies,335,Aqueou Test,false,,Alex Leatherwood
+rated-rookies,336,Aqueou Test,false,,Jaelan Phillips
+rated-rookies,337,Aqueou Test,false,,Jamin Davis
+rated-rookies,338,Aqueou Test,false,,Kwity Paye
+rated-rookies,339,Aqueou Test,false,,Caleb Farley
+rated-rookies,340,Aqueou Test,false,,Christian Darrisaw
+rated-rookies,341,Aqueou Test,false,,Greg Newsome II
+rated-rookies,342,Aqueou Test,false,,Payton Turner
+rated-rookies,343,Aqueou Test,false,,Eric Stokes
+rated-rookies,344,Aqueou Test,false,,Greg Rousseau
+rated-rookies,345,Aqueou Test,false,,Odafe Oweh
+rated-rookies,346,Aqueou Test,false,,Joe Tryon
+rated-rookies,347,Aqueou Test,false,,Tyson Campbell
+rated-rookies,348,Aqueou Test,false,,Jevon Holland
+rated-rookies,349,Aqueou Test,false,,Christian Barmore
+rated-rookies,350,Aqueou Test,false,,Tre'von Moehrig
+rated-rookies,251,Autograph Blue,true,,Trevor Lawrence
+rated-rookies,252,Autograph Blue,true,,Zach Wilson
+rated-rookies,253,Autograph Blue,true,,Justin Fields
+rated-rookies,254,Autograph Blue,true,,Trey Lance
+rated-rookies,255,Autograph Blue,true,,Mac Jones
+rated-rookies,256,Autograph Blue,true,,Kellen Mond
+rated-rookies,257,Autograph Blue,true,,Kyle Trask
+rated-rookies,258,Autograph Blue,true,,Travis Etienne Jr.
+rated-rookies,259,Autograph Blue,true,,Najee Harris
+rated-rookies,260,Autograph Blue,true,,Kyle Pitts
+rated-rookies,261,Autograph Blue,true,,DeVonta Smith
+rated-rookies,262,Autograph Blue,true,,Ja'Marr Chase
+rated-rookies,263,Autograph Blue,true,,Jaylen Waddle
+rated-rookies,264,Autograph Blue,true,,Kadarius Toney
+rated-rookies,266,Autograph Blue,true,,Terrace Marshall Jr.
+rated-rookies,267,Autograph Blue,true,,Kenneth Gainwell
+rated-rookies,268,Autograph Blue,true,,Michael Carter
+rated-rookies,269,Autograph Blue,true,,Ian Book
+rated-rookies,270,Autograph Blue,true,,Rondale Moore
+rated-rookies,273,Autograph Blue,true,,Davis Mills
+rated-rookies,274,Autograph Blue,true,,Tylan Wallace
+rated-rookies,275,Autograph Blue,true,,Javonte Williams
+rated-rookies,276,Autograph Blue,true,,D'Wayne Eskridge
+rated-rookies,277,Autograph Blue,true,,Josh Palmer
+rated-rookies,278,Autograph Blue,true,,Dyami Brown
+rated-rookies,279,Autograph Blue,true,,Trey Sermon
+rated-rookies,280,Autograph Blue,true,,Nico Collins
+rated-rookies,281,Autograph Blue,true,,Pat Freiermuth
+rated-rookies,282,Autograph Blue,true,,Anthony Schwartz
+rated-rookies,284,Autograph Blue,true,,Amon-Ra St. Brown
+rated-rookies,285,Autograph Blue,true,,Kene Nwangwu
+rated-rookies,287,Autograph Blue,true,,Chuba Hubbard
+rated-rookies,288,Autograph Blue,true,,Jaelon Darden
+rated-rookies,289,Autograph Blue,true,,Cornell Powell
+rated-rookies,290,Autograph Blue,true,,Jacob Harris
+rated-rookies,291,Autograph Blue,true,,Ihmir Smith-Marsette
+rated-rookies,292,Autograph Blue,true,,Simi Fehoko
+rated-rookies,293,Autograph Blue,true,,Demetric Felton
+rated-rookies,295,Autograph Blue,true,,Kylin Hill
+rated-rookies,296,Autograph Blue,true,,Larry Rountree III
+rated-rookies,297,Autograph Blue,true,,Jermar Jefferson
+rated-rookies,298,Autograph Blue,true,,Jaret Patterson
+rated-rookies,299,Autograph Blue,true,,Seth Williams
+rated-rookies,300,Autograph Blue,true,,Marquez Stevenson
+rated-rookies,251,Autograph Bronze,true,,Trevor Lawrence
+rated-rookies,252,Autograph Bronze,true,,Zach Wilson
+rated-rookies,253,Autograph Bronze,true,,Justin Fields
+rated-rookies,254,Autograph Bronze,true,,Trey Lance
+rated-rookies,255,Autograph Bronze,true,,Mac Jones
+rated-rookies,256,Autograph Bronze,true,,Kellen Mond
+rated-rookies,257,Autograph Bronze,true,,Kyle Trask
+rated-rookies,258,Autograph Bronze,true,,Travis Etienne Jr.
+rated-rookies,259,Autograph Bronze,true,,Najee Harris
+rated-rookies,260,Autograph Bronze,true,,Kyle Pitts
+rated-rookies,261,Autograph Bronze,true,,DeVonta Smith
+rated-rookies,262,Autograph Bronze,true,,Ja'Marr Chase
+rated-rookies,263,Autograph Bronze,true,,Jaylen Waddle
+rated-rookies,264,Autograph Bronze,true,,Kadarius Toney
+rated-rookies,265,Autograph Bronze,true,,Rashod Bateman
+rated-rookies,266,Autograph Bronze,true,,Terrace Marshall Jr.
+rated-rookies,267,Autograph Bronze,true,,Kenneth Gainwell
+rated-rookies,268,Autograph Bronze,true,,Michael Carter
+rated-rookies,269,Autograph Bronze,true,,Ian Book
+rated-rookies,270,Autograph Bronze,true,,Rondale Moore
+rated-rookies,273,Autograph Bronze,true,,Davis Mills
+rated-rookies,274,Autograph Bronze,true,,Tylan Wallace
+rated-rookies,275,Autograph Bronze,true,,Javonte Williams
+rated-rookies,276,Autograph Bronze,true,,D'Wayne Eskridge
+rated-rookies,277,Autograph Bronze,true,,Josh Palmer
+rated-rookies,278,Autograph Bronze,true,,Dyami Brown
+rated-rookies,279,Autograph Bronze,true,,Trey Sermon
+rated-rookies,280,Autograph Bronze,true,,Nico Collins
+rated-rookies,281,Autograph Bronze,true,,Pat Freiermuth
+rated-rookies,282,Autograph Bronze,true,,Anthony Schwartz
+rated-rookies,284,Autograph Bronze,true,,Amon-Ra St. Brown
+rated-rookies,285,Autograph Bronze,true,,Kene Nwangwu
+rated-rookies,287,Autograph Bronze,true,,Chuba Hubbard
+rated-rookies,288,Autograph Bronze,true,,Jaelon Darden
+rated-rookies,289,Autograph Bronze,true,,Cornell Powell
+rated-rookies,290,Autograph Bronze,true,,Jacob Harris
+rated-rookies,291,Autograph Bronze,true,,Ihmir Smith-Marsette
+rated-rookies,292,Autograph Bronze,true,,Simi Fehoko
+rated-rookies,295,Autograph Bronze,true,,Kylin Hill
+rated-rookies,296,Autograph Bronze,true,,Larry Rountree III
+rated-rookies,297,Autograph Bronze,true,,Jermar Jefferson
+rated-rookies,298,Autograph Bronze,true,,Jaret Patterson
+rated-rookies,300,Autograph Bronze,true,,Marquez Stevenson
+rated-rookies,251,Autograph Green,true,,Trevor Lawrence
+rated-rookies,252,Autograph Green,true,,Zach Wilson
+rated-rookies,253,Autograph Green,true,,Justin Fields
+rated-rookies,254,Autograph Green,true,,Trey Lance
+rated-rookies,255,Autograph Green,true,,Mac Jones
+rated-rookies,256,Autograph Green,true,,Kellen Mond
+rated-rookies,257,Autograph Green,true,,Kyle Trask
+rated-rookies,258,Autograph Green,true,,Travis Etienne Jr.
+rated-rookies,259,Autograph Green,true,,Najee Harris
+rated-rookies,260,Autograph Green,true,,Kyle Pitts
+rated-rookies,261,Autograph Green,true,,DeVonta Smith
+rated-rookies,262,Autograph Green,true,,Ja'Marr Chase
+rated-rookies,263,Autograph Green,true,,Jaylen Waddle
+rated-rookies,264,Autograph Green,true,,Kadarius Toney
+rated-rookies,266,Autograph Green,true,,Terrace Marshall Jr.
+rated-rookies,267,Autograph Green,true,,Kenneth Gainwell
+rated-rookies,268,Autograph Green,true,,Michael Carter
+rated-rookies,269,Autograph Green,true,,Ian Book
+rated-rookies,270,Autograph Green,true,,Rondale Moore
+rated-rookies,273,Autograph Green,true,,Davis Mills
+rated-rookies,274,Autograph Green,true,,Tylan Wallace
+rated-rookies,275,Autograph Green,true,,Javonte Williams
+rated-rookies,276,Autograph Green,true,,D'Wayne Eskridge
+rated-rookies,277,Autograph Green,true,,Josh Palmer
+rated-rookies,278,Autograph Green,true,,Dyami Brown
+rated-rookies,279,Autograph Green,true,,Trey Sermon
+rated-rookies,280,Autograph Green,true,,Nico Collins
+rated-rookies,281,Autograph Green,true,,Pat Freiermuth
+rated-rookies,282,Autograph Green,true,,Anthony Schwartz
+rated-rookies,284,Autograph Green,true,,Amon-Ra St. Brown
+rated-rookies,285,Autograph Green,true,,Kene Nwangwu
+rated-rookies,287,Autograph Green,true,,Chuba Hubbard
+rated-rookies,288,Autograph Green,true,,Jaelon Darden
+rated-rookies,289,Autograph Green,true,,Cornell Powell
+rated-rookies,290,Autograph Green,true,,Jacob Harris
+rated-rookies,291,Autograph Green,true,,Ihmir Smith-Marsette
+rated-rookies,292,Autograph Green,true,,Simi Fehoko
+rated-rookies,294,Autograph Green,true,,Javian Hawkins
+rated-rookies,295,Autograph Green,true,,Kylin Hill
+rated-rookies,296,Autograph Green,true,,Larry Rountree III
+rated-rookies,297,Autograph Green,true,,Jermar Jefferson
+rated-rookies,298,Autograph Green,true,,Jaret Patterson
+rated-rookies,299,Autograph Green,true,,Seth Williams
+rated-rookies,300,Autograph Green,true,,Marquez Stevenson
+rated-rookies,251,Autograph Orange,true,,Trevor Lawrence
+rated-rookies,252,Autograph Orange,true,,Zach Wilson
+rated-rookies,253,Autograph Orange,true,,Justin Fields
+rated-rookies,254,Autograph Orange,true,,Trey Lance
+rated-rookies,255,Autograph Orange,true,,Mac Jones
+rated-rookies,257,Autograph Orange,true,,Kyle Trask
+rated-rookies,258,Autograph Orange,true,,Travis Etienne Jr.
+rated-rookies,259,Autograph Orange,true,,Najee Harris
+rated-rookies,260,Autograph Orange,true,,Kyle Pitts
+rated-rookies,261,Autograph Orange,true,,DeVonta Smith
+rated-rookies,262,Autograph Orange,true,,Ja'Marr Chase
+rated-rookies,263,Autograph Orange,true,,Jaylen Waddle
+rated-rookies,264,Autograph Orange,true,,Kadarius Toney
+rated-rookies,266,Autograph Orange,true,,Terrace Marshall Jr.
+rated-rookies,267,Autograph Orange,true,,Kenneth Gainwell
+rated-rookies,268,Autograph Orange,true,,Michael Carter
+rated-rookies,269,Autograph Orange,true,,Ian Book
+rated-rookies,270,Autograph Orange,true,,Rondale Moore
+rated-rookies,273,Autograph Orange,true,,Davis Mills
+rated-rookies,274,Autograph Orange,true,,Tylan Wallace
+rated-rookies,275,Autograph Orange,true,,Javonte Williams
+rated-rookies,276,Autograph Orange,true,,D'Wayne Eskridge
+rated-rookies,277,Autograph Orange,true,,Josh Palmer
+rated-rookies,278,Autograph Orange,true,,Dyami Brown
+rated-rookies,279,Autograph Orange,true,,Trey Sermon
+rated-rookies,280,Autograph Orange,true,,Nico Collins
+rated-rookies,281,Autograph Orange,true,,Pat Freiermuth
+rated-rookies,282,Autograph Orange,true,,Anthony Schwartz
+rated-rookies,284,Autograph Orange,true,,Amon-Ra St. Brown
+rated-rookies,285,Autograph Orange,true,,Kene Nwangwu
+rated-rookies,287,Autograph Orange,true,,Chuba Hubbard
+rated-rookies,288,Autograph Orange,true,,Jaelon Darden
+rated-rookies,289,Autograph Orange,true,,Cornell Powell
+rated-rookies,290,Autograph Orange,true,,Jacob Harris
+rated-rookies,291,Autograph Orange,true,,Ihmir Smith-Marsette
+rated-rookies,292,Autograph Orange,true,,Simi Fehoko
+rated-rookies,295,Autograph Orange,true,,Kylin Hill
+rated-rookies,296,Autograph Orange,true,,Larry Rountree III
+rated-rookies,297,Autograph Orange,true,,Jermar Jefferson
+rated-rookies,298,Autograph Orange,true,,Jaret Patterson
+rated-rookies,300,Autograph Orange,true,,Marquez Stevenson
 rated-rookies,251,Jersey Number,false,/16,Trevor Lawrence
 rated-rookies,252,Jersey Number,false,/2,Zach Wilson
 rated-rookies,253,Jersey Number,false,/1,Justin Fields
@@ -7982,100 +7982,100 @@ rated-rookies,297,Portrait,false,,Jermar Jefferson
 rated-rookies,298,Portrait,false,,Jaret Patterson
 rated-rookies,299,Portrait,false,,Seth Williams
 rated-rookies,300,Portrait,false,,Marquez Stevenson
-rated-rookies,251,Portrait Autographs,true,/49,Trevor Lawrence
-rated-rookies,252,Portrait Autographs,true,/49,Zach Wilson
-rated-rookies,253,Portrait Autographs,true,/49,Justin Fields
-rated-rookies,254,Portrait Autographs,true,/49,Trey Lance
-rated-rookies,255,Portrait Autographs,true,/49,Mac Jones
-rated-rookies,256,Portrait Autographs,true,/49,Kellen Mond
-rated-rookies,257,Portrait Autographs,true,/49,Kyle Trask
-rated-rookies,258,Portrait Autographs,true,/49,Travis Etienne Jr.
-rated-rookies,259,Portrait Autographs,true,/49,Najee Harris
-rated-rookies,260,Portrait Autographs,true,/49,Kyle Pitts
-rated-rookies,261,Portrait Autographs,true,/49,DeVonta Smith
-rated-rookies,262,Portrait Autographs,true,/49,Ja'Marr Chase
-rated-rookies,263,Portrait Autographs,true,/49,Jaylen Waddle
-rated-rookies,264,Portrait Autographs,true,/49,Kadarius Toney
-rated-rookies,266,Portrait Autographs,true,/49,Terrace Marshall Jr.
-rated-rookies,267,Portrait Autographs,true,/49,Kenneth Gainwell
-rated-rookies,268,Portrait Autographs,true,/49,Michael Carter
-rated-rookies,269,Portrait Autographs,true,/49,Ian Book
-rated-rookies,270,Portrait Autographs,true,/49,Rondale Moore
-rated-rookies,273,Portrait Autographs,true,/49,Davis Mills
-rated-rookies,274,Portrait Autographs,true,/49,Tylan Wallace
-rated-rookies,275,Portrait Autographs,true,/49,Javonte Williams
-rated-rookies,276,Portrait Autographs,true,/49,D'Wayne Eskridge
-rated-rookies,277,Portrait Autographs,true,/49,Josh Palmer
-rated-rookies,278,Portrait Autographs,true,/49,Dyami Brown
-rated-rookies,279,Portrait Autographs,true,/49,Trey Sermon
-rated-rookies,280,Portrait Autographs,true,/49,Nico Collins
-rated-rookies,281,Portrait Autographs,true,/49,Pat Freiermuth
-rated-rookies,282,Portrait Autographs,true,/49,Anthony Schwartz
-rated-rookies,284,Portrait Autographs,true,/49,Amon-Ra St. Brown
-rated-rookies,285,Portrait Autographs,true,/49,Kene Nwangwu
-rated-rookies,287,Portrait Autographs,true,/49,Chuba Hubbard
-rated-rookies,288,Portrait Autographs,true,/49,Jaelon Darden
-rated-rookies,289,Portrait Autographs,true,/49,Cornell Powell
-rated-rookies,290,Portrait Autographs,true,/49,Jacob Harris
-rated-rookies,291,Portrait Autographs,true,/49,Ihmir Smith-Marsette
-rated-rookies,292,Portrait Autographs,true,/49,Simi Fehoko
-rated-rookies,293,Portrait Autographs,true,/49,Demetric Felton
-rated-rookies,295,Portrait Autographs,true,/49,Kylin Hill
-rated-rookies,296,Portrait Autographs,true,/49,Larry Rountree III
-rated-rookies,297,Portrait Autographs,true,/49,Jermar Jefferson
-rated-rookies,298,Portrait Autographs,true,/49,Jaret Patterson
-rated-rookies,299,Portrait Autographs,true,/49,Seth Williams
-rated-rookies,300,Portrait Autographs,true,/49,Marquez Stevenson
-rated-rookies,251,Portrait Studio Series,false,/100,Trevor Lawrence
-rated-rookies,252,Portrait Studio Series,false,/100,Zach Wilson
-rated-rookies,253,Portrait Studio Series,false,/100,Justin Fields
-rated-rookies,254,Portrait Studio Series,false,/100,Trey Lance
-rated-rookies,255,Portrait Studio Series,false,/100,Mac Jones
-rated-rookies,256,Portrait Studio Series,false,/100,Kellen Mond
-rated-rookies,257,Portrait Studio Series,false,/100,Kyle Trask
-rated-rookies,258,Portrait Studio Series,false,/100,Travis Etienne Jr.
-rated-rookies,259,Portrait Studio Series,false,/100,Najee Harris
-rated-rookies,260,Portrait Studio Series,false,/100,Kyle Pitts
-rated-rookies,261,Portrait Studio Series,false,/100,DeVonta Smith
-rated-rookies,262,Portrait Studio Series,false,/100,Ja'Marr Chase
-rated-rookies,263,Portrait Studio Series,false,/100,Jaylen Waddle
-rated-rookies,264,Portrait Studio Series,false,/100,Kadarius Toney
-rated-rookies,265,Portrait Studio Series,false,/100,Rashod Bateman
-rated-rookies,266,Portrait Studio Series,false,/100,Terrace Marshall Jr.
-rated-rookies,267,Portrait Studio Series,false,/100,Kenneth Gainwell
-rated-rookies,268,Portrait Studio Series,false,/100,Michael Carter
-rated-rookies,269,Portrait Studio Series,false,/100,Ian Book
-rated-rookies,270,Portrait Studio Series,false,/100,Rondale Moore
-rated-rookies,271,Portrait Studio Series,false,/100,Elijah Moore
-rated-rookies,272,Portrait Studio Series,false,/100,Tutu Atwell
-rated-rookies,273,Portrait Studio Series,false,/100,Davis Mills
-rated-rookies,274,Portrait Studio Series,false,/100,Tylan Wallace
-rated-rookies,275,Portrait Studio Series,false,/100,Javonte Williams
-rated-rookies,276,Portrait Studio Series,false,/100,D'Wayne Eskridge
-rated-rookies,277,Portrait Studio Series,false,/100,Josh Palmer
-rated-rookies,278,Portrait Studio Series,false,/100,Dyami Brown
-rated-rookies,279,Portrait Studio Series,false,/100,Trey Sermon
-rated-rookies,280,Portrait Studio Series,false,/100,Nico Collins
-rated-rookies,281,Portrait Studio Series,false,/100,Pat Freiermuth
-rated-rookies,282,Portrait Studio Series,false,/100,Anthony Schwartz
-rated-rookies,283,Portrait Studio Series,false,/100,Dez Fitzpatrick
-rated-rookies,284,Portrait Studio Series,false,/100,Amon-Ra St. Brown
-rated-rookies,285,Portrait Studio Series,false,/100,Kene Nwangwu
-rated-rookies,286,Portrait Studio Series,false,/100,Rhamondre Stevenson
-rated-rookies,287,Portrait Studio Series,false,/100,Chuba Hubbard
-rated-rookies,288,Portrait Studio Series,false,/100,Jaelon Darden
-rated-rookies,289,Portrait Studio Series,false,/100,Cornell Powell
-rated-rookies,290,Portrait Studio Series,false,/100,Jacob Harris
-rated-rookies,291,Portrait Studio Series,false,/100,Ihmir Smith-Marsette
-rated-rookies,292,Portrait Studio Series,false,/100,Simi Fehoko
-rated-rookies,293,Portrait Studio Series,false,/100,Demetric Felton
-rated-rookies,294,Portrait Studio Series,false,/100,Javian Hawkins
-rated-rookies,295,Portrait Studio Series,false,/100,Kylin Hill
-rated-rookies,296,Portrait Studio Series,false,/100,Larry Rountree III
-rated-rookies,297,Portrait Studio Series,false,/100,Jermar Jefferson
-rated-rookies,298,Portrait Studio Series,false,/100,Jaret Patterson
-rated-rookies,299,Portrait Studio Series,false,/100,Seth Williams
-rated-rookies,300,Portrait Studio Series,false,/100,Marquez Stevenson
+rated-rookies,251,Portrait Autograph,true,/49,Trevor Lawrence
+rated-rookies,252,Portrait Autograph,true,/49,Zach Wilson
+rated-rookies,253,Portrait Autograph,true,/49,Justin Fields
+rated-rookies,254,Portrait Autograph,true,/49,Trey Lance
+rated-rookies,255,Portrait Autograph,true,/49,Mac Jones
+rated-rookies,256,Portrait Autograph,true,/49,Kellen Mond
+rated-rookies,257,Portrait Autograph,true,/49,Kyle Trask
+rated-rookies,258,Portrait Autograph,true,/49,Travis Etienne Jr.
+rated-rookies,259,Portrait Autograph,true,/49,Najee Harris
+rated-rookies,260,Portrait Autograph,true,/49,Kyle Pitts
+rated-rookies,261,Portrait Autograph,true,/49,DeVonta Smith
+rated-rookies,262,Portrait Autograph,true,/49,Ja'Marr Chase
+rated-rookies,263,Portrait Autograph,true,/49,Jaylen Waddle
+rated-rookies,264,Portrait Autograph,true,/49,Kadarius Toney
+rated-rookies,266,Portrait Autograph,true,/49,Terrace Marshall Jr.
+rated-rookies,267,Portrait Autograph,true,/49,Kenneth Gainwell
+rated-rookies,268,Portrait Autograph,true,/49,Michael Carter
+rated-rookies,269,Portrait Autograph,true,/49,Ian Book
+rated-rookies,270,Portrait Autograph,true,/49,Rondale Moore
+rated-rookies,273,Portrait Autograph,true,/49,Davis Mills
+rated-rookies,274,Portrait Autograph,true,/49,Tylan Wallace
+rated-rookies,275,Portrait Autograph,true,/49,Javonte Williams
+rated-rookies,276,Portrait Autograph,true,/49,D'Wayne Eskridge
+rated-rookies,277,Portrait Autograph,true,/49,Josh Palmer
+rated-rookies,278,Portrait Autograph,true,/49,Dyami Brown
+rated-rookies,279,Portrait Autograph,true,/49,Trey Sermon
+rated-rookies,280,Portrait Autograph,true,/49,Nico Collins
+rated-rookies,281,Portrait Autograph,true,/49,Pat Freiermuth
+rated-rookies,282,Portrait Autograph,true,/49,Anthony Schwartz
+rated-rookies,284,Portrait Autograph,true,/49,Amon-Ra St. Brown
+rated-rookies,285,Portrait Autograph,true,/49,Kene Nwangwu
+rated-rookies,287,Portrait Autograph,true,/49,Chuba Hubbard
+rated-rookies,288,Portrait Autograph,true,/49,Jaelon Darden
+rated-rookies,289,Portrait Autograph,true,/49,Cornell Powell
+rated-rookies,290,Portrait Autograph,true,/49,Jacob Harris
+rated-rookies,291,Portrait Autograph,true,/49,Ihmir Smith-Marsette
+rated-rookies,292,Portrait Autograph,true,/49,Simi Fehoko
+rated-rookies,293,Portrait Autograph,true,/49,Demetric Felton
+rated-rookies,295,Portrait Autograph,true,/49,Kylin Hill
+rated-rookies,296,Portrait Autograph,true,/49,Larry Rountree III
+rated-rookies,297,Portrait Autograph,true,/49,Jermar Jefferson
+rated-rookies,298,Portrait Autograph,true,/49,Jaret Patterson
+rated-rookies,299,Portrait Autograph,true,/49,Seth Williams
+rated-rookies,300,Portrait Autograph,true,/49,Marquez Stevenson
+rated-rookies,251,Portrait Studio Serie,false,/100,Trevor Lawrence
+rated-rookies,252,Portrait Studio Serie,false,/100,Zach Wilson
+rated-rookies,253,Portrait Studio Serie,false,/100,Justin Fields
+rated-rookies,254,Portrait Studio Serie,false,/100,Trey Lance
+rated-rookies,255,Portrait Studio Serie,false,/100,Mac Jones
+rated-rookies,256,Portrait Studio Serie,false,/100,Kellen Mond
+rated-rookies,257,Portrait Studio Serie,false,/100,Kyle Trask
+rated-rookies,258,Portrait Studio Serie,false,/100,Travis Etienne Jr.
+rated-rookies,259,Portrait Studio Serie,false,/100,Najee Harris
+rated-rookies,260,Portrait Studio Serie,false,/100,Kyle Pitts
+rated-rookies,261,Portrait Studio Serie,false,/100,DeVonta Smith
+rated-rookies,262,Portrait Studio Serie,false,/100,Ja'Marr Chase
+rated-rookies,263,Portrait Studio Serie,false,/100,Jaylen Waddle
+rated-rookies,264,Portrait Studio Serie,false,/100,Kadarius Toney
+rated-rookies,265,Portrait Studio Serie,false,/100,Rashod Bateman
+rated-rookies,266,Portrait Studio Serie,false,/100,Terrace Marshall Jr.
+rated-rookies,267,Portrait Studio Serie,false,/100,Kenneth Gainwell
+rated-rookies,268,Portrait Studio Serie,false,/100,Michael Carter
+rated-rookies,269,Portrait Studio Serie,false,/100,Ian Book
+rated-rookies,270,Portrait Studio Serie,false,/100,Rondale Moore
+rated-rookies,271,Portrait Studio Serie,false,/100,Elijah Moore
+rated-rookies,272,Portrait Studio Serie,false,/100,Tutu Atwell
+rated-rookies,273,Portrait Studio Serie,false,/100,Davis Mills
+rated-rookies,274,Portrait Studio Serie,false,/100,Tylan Wallace
+rated-rookies,275,Portrait Studio Serie,false,/100,Javonte Williams
+rated-rookies,276,Portrait Studio Serie,false,/100,D'Wayne Eskridge
+rated-rookies,277,Portrait Studio Serie,false,/100,Josh Palmer
+rated-rookies,278,Portrait Studio Serie,false,/100,Dyami Brown
+rated-rookies,279,Portrait Studio Serie,false,/100,Trey Sermon
+rated-rookies,280,Portrait Studio Serie,false,/100,Nico Collins
+rated-rookies,281,Portrait Studio Serie,false,/100,Pat Freiermuth
+rated-rookies,282,Portrait Studio Serie,false,/100,Anthony Schwartz
+rated-rookies,283,Portrait Studio Serie,false,/100,Dez Fitzpatrick
+rated-rookies,284,Portrait Studio Serie,false,/100,Amon-Ra St. Brown
+rated-rookies,285,Portrait Studio Serie,false,/100,Kene Nwangwu
+rated-rookies,286,Portrait Studio Serie,false,/100,Rhamondre Stevenson
+rated-rookies,287,Portrait Studio Serie,false,/100,Chuba Hubbard
+rated-rookies,288,Portrait Studio Serie,false,/100,Jaelon Darden
+rated-rookies,289,Portrait Studio Serie,false,/100,Cornell Powell
+rated-rookies,290,Portrait Studio Serie,false,/100,Jacob Harris
+rated-rookies,291,Portrait Studio Serie,false,/100,Ihmir Smith-Marsette
+rated-rookies,292,Portrait Studio Serie,false,/100,Simi Fehoko
+rated-rookies,293,Portrait Studio Serie,false,/100,Demetric Felton
+rated-rookies,294,Portrait Studio Serie,false,/100,Javian Hawkins
+rated-rookies,295,Portrait Studio Serie,false,/100,Kylin Hill
+rated-rookies,296,Portrait Studio Serie,false,/100,Larry Rountree III
+rated-rookies,297,Portrait Studio Serie,false,/100,Jermar Jefferson
+rated-rookies,298,Portrait Studio Serie,false,/100,Jaret Patterson
+rated-rookies,299,Portrait Studio Serie,false,/100,Seth Williams
+rated-rookies,300,Portrait Studio Serie,false,/100,Marquez Stevenson
 rated-rookies,251,Premium,false,,Trevor Lawrence
 rated-rookies,252,Premium,false,,Zach Wilson
 rated-rookies,253,Premium,false,,Justin Fields
@@ -9501,14 +9501,14 @@ red-hot-rookies,7,,false,,Elijah Moore
 red-hot-rookies,8,,false,,Rondale Moore
 red-hot-rookies,9,,false,,Kyle Trask
 red-hot-rookies,10,,false,,Kellen Mond
-red-hot-rookies,1,Autographs,true,/25,Trevor Lawrence
-red-hot-rookies,2,Autographs,true,/25,Trey Lance
-red-hot-rookies,4,Autographs,true,/25,Jaylen Waddle
-red-hot-rookies,5,Autographs,true,/25,Kadarius Toney
-red-hot-rookies,6,Autographs,true,/25,Travis Etienne Jr.
-red-hot-rookies,8,Autographs,true,/25,Rondale Moore
-red-hot-rookies,9,Autographs,true,/25,Kyle Trask
-red-hot-rookies,10,Autographs,true,/25,Kellen Mond
+red-hot-rookies,1,Autograph,true,/25,Trevor Lawrence
+red-hot-rookies,2,Autograph,true,/25,Trey Lance
+red-hot-rookies,4,Autograph,true,/25,Jaylen Waddle
+red-hot-rookies,5,Autograph,true,/25,Kadarius Toney
+red-hot-rookies,6,Autograph,true,/25,Travis Etienne Jr.
+red-hot-rookies,8,Autograph,true,/25,Rondale Moore
+red-hot-rookies,9,Autograph,true,/25,Kyle Trask
+red-hot-rookies,10,Autograph,true,/25,Kellen Mond
 retro-1991,1,,false,,T.J. Watt
 retro-1991,2,,false,,Aaron Donald
 retro-1991,3,,false,,Kyler Murray
@@ -9549,27 +9549,27 @@ retro-1991,37,,false,,Carson Wentz
 retro-1991,38,,false,,Justin Tucker
 retro-1991,39,,false,,Baker Mayfield
 retro-1991,40,,false,,Jonathan Taylor
-retro-1991,2,Autographs,true,/25,Aaron Donald
-retro-1991,3,Autographs,true,/25,Kyler Murray
-retro-1991,6,Autographs,true,/25,Allen Robinson II
-retro-1991,9,Autographs,true,/25,D'Andre Swift
-retro-1991,10,Autographs,true,/10,Aaron Rodgers
-retro-1991,13,Autographs,true,/25,Kirk Cousins
-retro-1991,15,Autographs,true,/25,Daniel Jones
-retro-1991,17,Autographs,true,/25,Jalen Hurts
-retro-1991,18,Autographs,true,/25,Nick Bosa
-retro-1991,19,Autographs,true,/10,Russell Wilson
-retro-1991,21,Autographs,true,/5,Tom Brady
-retro-1991,22,Autographs,true,/25,Chris Godwin
-retro-1991,26,Autographs,true,/25,Ryan Tannehill
-retro-1991,27,Autographs,true,/25,Tua Tagovailoa
-retro-1991,28,Autographs,true,/25,Justin Herbert
-retro-1991,29,Autographs,true,/25,Josh Jacobs
-retro-1991,30,Autographs,true,/15,Derek Carr
-retro-1991,31,Autographs,true,/10,Patrick Mahomes II
-retro-1991,35,Autographs,true,/25,Nick Chubb
-retro-1991,38,Autographs,true,/25,Justin Tucker
-retro-1991,40,Autographs,true,/25,Jonathan Taylor
+retro-1991,2,Autograph,true,/25,Aaron Donald
+retro-1991,3,Autograph,true,/25,Kyler Murray
+retro-1991,6,Autograph,true,/25,Allen Robinson II
+retro-1991,9,Autograph,true,/25,D'Andre Swift
+retro-1991,10,Autograph,true,/10,Aaron Rodgers
+retro-1991,13,Autograph,true,/25,Kirk Cousins
+retro-1991,15,Autograph,true,/25,Daniel Jones
+retro-1991,17,Autograph,true,/25,Jalen Hurts
+retro-1991,18,Autograph,true,/25,Nick Bosa
+retro-1991,19,Autograph,true,/10,Russell Wilson
+retro-1991,21,Autograph,true,/5,Tom Brady
+retro-1991,22,Autograph,true,/25,Chris Godwin
+retro-1991,26,Autograph,true,/25,Ryan Tannehill
+retro-1991,27,Autograph,true,/25,Tua Tagovailoa
+retro-1991,28,Autograph,true,/25,Justin Herbert
+retro-1991,29,Autograph,true,/25,Josh Jacobs
+retro-1991,30,Autograph,true,/15,Derek Carr
+retro-1991,31,Autograph,true,/10,Patrick Mahomes II
+retro-1991,35,Autograph,true,/25,Nick Chubb
+retro-1991,38,Autograph,true,/25,Justin Tucker
+retro-1991,40,Autograph,true,/25,Jonathan Taylor
 retro-2001,1,,false,,Larry Fitzgerald
 retro-2001,2,,false,,Michael Vick
 retro-2001,3,,false,,Luke Kuechly
@@ -9610,42 +9610,42 @@ retro-2001,37,,false,,Hines Ward
 retro-2001,38,,false,,Jevon Kearse
 retro-2001,39,,false,,Adrian Peterson
 retro-2001,40,,false,,Len Dawson
-retro-2001,2,Autographs,true,/25,Michael Vick
-retro-2001,3,Autographs,true,/25,Luke Kuechly
-retro-2001,4,Autographs,true,/25,Brian Urlacher
-retro-2001,6,Autographs,true,/25,Barry Sanders
-retro-2001,7,Autographs,true,/25,Brett Favre
-retro-2001,8,Autographs,true,/25,Kurt Warner
-retro-2001,9,Autographs,true,/25,Marshall Faulk
-retro-2001,10,Autographs,true,/10,Randy Moss
-retro-2001,11,Autographs,true,/10,Drew Brees
-retro-2001,12,Autographs,true,/25,Phil Simms
-retro-2001,13,Autographs,true,/25,Randall Cunningham
-retro-2001,14,Autographs,true,/25,Steve Young
-retro-2001,15,Autographs,true,/25,Steve Largent
-retro-2001,16,Autographs,true,/15,Warren Sapp
-retro-2001,17,Autographs,true,/25,Mike Alstott
-retro-2001,18,Autographs,true,/10,Ray Lewis
-retro-2001,19,Autographs,true,/10,Jim Kelly
-retro-2001,20,Autographs,true,/25,Thurman Thomas
-retro-2001,21,Autographs,true,/25,Ken Anderson
-retro-2001,22,Autographs,true,/25,Ozzie Newsome
-retro-2001,23,Autographs,true,/10,John Elway
-retro-2001,25,Autographs,true,/25,Andre Johnson
-retro-2001,26,Autographs,true,/10,Peyton Manning
-retro-2001,27,Autographs,true,/25,Mark Brunell
-retro-2001,28,Autographs,true,/10,Joe Montana
-retro-2001,29,Autographs,true,/25,Howie Long
-retro-2001,30,Autographs,true,/25,Marcus Allen
-retro-2001,31,Autographs,true,/25,Philip Rivers
-retro-2001,32,Autographs,true,/25,Antonio Gates
-retro-2001,33,Autographs,true,/25,Dan Marino
-retro-2001,34,Autographs,true,/25,Joe Namath
-retro-2001,35,Autographs,true,/25,Terry Bradshaw
-retro-2001,36,Autographs,true,/10,Jerome Bettis
-retro-2001,37,Autographs,true,/25,Hines Ward
-retro-2001,38,Autographs,true,/25,Jevon Kearse
-retro-2001,40,Autographs,true,/25,Len Dawson
+retro-2001,2,Autograph,true,/25,Michael Vick
+retro-2001,3,Autograph,true,/25,Luke Kuechly
+retro-2001,4,Autograph,true,/25,Brian Urlacher
+retro-2001,6,Autograph,true,/25,Barry Sanders
+retro-2001,7,Autograph,true,/25,Brett Favre
+retro-2001,8,Autograph,true,/25,Kurt Warner
+retro-2001,9,Autograph,true,/25,Marshall Faulk
+retro-2001,10,Autograph,true,/10,Randy Moss
+retro-2001,11,Autograph,true,/10,Drew Brees
+retro-2001,12,Autograph,true,/25,Phil Simms
+retro-2001,13,Autograph,true,/25,Randall Cunningham
+retro-2001,14,Autograph,true,/25,Steve Young
+retro-2001,15,Autograph,true,/25,Steve Largent
+retro-2001,16,Autograph,true,/15,Warren Sapp
+retro-2001,17,Autograph,true,/25,Mike Alstott
+retro-2001,18,Autograph,true,/10,Ray Lewis
+retro-2001,19,Autograph,true,/10,Jim Kelly
+retro-2001,20,Autograph,true,/25,Thurman Thomas
+retro-2001,21,Autograph,true,/25,Ken Anderson
+retro-2001,22,Autograph,true,/25,Ozzie Newsome
+retro-2001,23,Autograph,true,/10,John Elway
+retro-2001,25,Autograph,true,/25,Andre Johnson
+retro-2001,26,Autograph,true,/10,Peyton Manning
+retro-2001,27,Autograph,true,/25,Mark Brunell
+retro-2001,28,Autograph,true,/10,Joe Montana
+retro-2001,29,Autograph,true,/25,Howie Long
+retro-2001,30,Autograph,true,/25,Marcus Allen
+retro-2001,31,Autograph,true,/25,Philip Rivers
+retro-2001,32,Autograph,true,/25,Antonio Gates
+retro-2001,33,Autograph,true,/25,Dan Marino
+retro-2001,34,Autograph,true,/25,Joe Namath
+retro-2001,35,Autograph,true,/25,Terry Bradshaw
+retro-2001,36,Autograph,true,/10,Jerome Bettis
+retro-2001,37,Autograph,true,/25,Hines Ward
+retro-2001,38,Autograph,true,/25,Jevon Kearse
+retro-2001,40,Autograph,true,/25,Len Dawson
 retro-series,1,,false,,Kurt Warner
 retro-series,2,,false,,Ray Lewis
 retro-series,3,,false,,Michael Vick
@@ -9679,38 +9679,38 @@ retro-series,30,,false,,Tony Boselli
 retro-series,31,,false,,Paul Krause
 retro-series,32,,false,,Bo Jackson
 retro-series,33,,false,,Warren Moon
-retro-series,1,Autographs,true,/25,Kurt Warner
-retro-series,2,Autographs,true,/25,Ray Lewis
-retro-series,3,Autographs,true,/25,Michael Vick
-retro-series,4,Autographs,true,/25,Jim Kelly
-retro-series,5,Autographs,true,/25,Luke Kuechly
-retro-series,6,Autographs,true,/25,Mike Singletary
-retro-series,7,Autographs,true,/25,Ozzie Newsome
-retro-series,9,Autographs,true,/25,Barry Sanders
-retro-series,10,Autographs,true,/25,Troy Aikman
-retro-series,11,Autographs,true,/25,Roger Staubach
-retro-series,12,Autographs,true,/25,Brett Favre
-retro-series,13,Autographs,true,/25,Marshall Faulk
-retro-series,14,Autographs,true,/25,Randy Moss
-retro-series,15,Autographs,true,/10,Joe Montana
-retro-series,16,Autographs,true,/10,Jerry Rice
-retro-series,17,Autographs,true,/25,Drew Brees
-retro-series,18,Autographs,true,/25,Michael Strahan
-retro-series,19,Autographs,true,/25,Philip Rivers
-retro-series,20,Autographs,true,/25,Dan Marino
-retro-series,21,Autographs,true,/5,Tom Brady
-retro-series,22,Autographs,true,/25,Terry Bradshaw
-retro-series,23,Autographs,true,/25,Jerome Bettis
-retro-series,24,Autographs,true,/25,Peyton Manning
-retro-series,25,Autographs,true,/25,John Elway
-retro-series,26,Autographs,true,/25,Andre Johnson
-retro-series,27,Autographs,true,/25,Emmitt Smith
-retro-series,28,Autographs,true,/25,Lawrence Taylor
-retro-series,29,Autographs,true,/25,Drew Bledsoe
-retro-series,30,Autographs,true,/25,Tony Boselli
-retro-series,31,Autographs,true,/25,Paul Krause
-retro-series,32,Autographs,true,/25,Bo Jackson
-retro-series,33,Autographs,true,/25,Warren Moon
+retro-series,1,Autograph,true,/25,Kurt Warner
+retro-series,2,Autograph,true,/25,Ray Lewis
+retro-series,3,Autograph,true,/25,Michael Vick
+retro-series,4,Autograph,true,/25,Jim Kelly
+retro-series,5,Autograph,true,/25,Luke Kuechly
+retro-series,6,Autograph,true,/25,Mike Singletary
+retro-series,7,Autograph,true,/25,Ozzie Newsome
+retro-series,9,Autograph,true,/25,Barry Sanders
+retro-series,10,Autograph,true,/25,Troy Aikman
+retro-series,11,Autograph,true,/25,Roger Staubach
+retro-series,12,Autograph,true,/25,Brett Favre
+retro-series,13,Autograph,true,/25,Marshall Faulk
+retro-series,14,Autograph,true,/25,Randy Moss
+retro-series,15,Autograph,true,/10,Joe Montana
+retro-series,16,Autograph,true,/10,Jerry Rice
+retro-series,17,Autograph,true,/25,Drew Brees
+retro-series,18,Autograph,true,/25,Michael Strahan
+retro-series,19,Autograph,true,/25,Philip Rivers
+retro-series,20,Autograph,true,/25,Dan Marino
+retro-series,21,Autograph,true,/5,Tom Brady
+retro-series,22,Autograph,true,/25,Terry Bradshaw
+retro-series,23,Autograph,true,/25,Jerome Bettis
+retro-series,24,Autograph,true,/25,Peyton Manning
+retro-series,25,Autograph,true,/25,John Elway
+retro-series,26,Autograph,true,/25,Andre Johnson
+retro-series,27,Autograph,true,/25,Emmitt Smith
+retro-series,28,Autograph,true,/25,Lawrence Taylor
+retro-series,29,Autograph,true,/25,Drew Bledsoe
+retro-series,30,Autograph,true,/25,Tony Boselli
+retro-series,31,Autograph,true,/25,Paul Krause
+retro-series,32,Autograph,true,/25,Bo Jackson
+retro-series,33,Autograph,true,/25,Warren Moon
 retro-series,1,Holo,false,/100,Kurt Warner
 retro-series,2,Holo,false,/100,Ray Lewis
 retro-series,3,Holo,false,/100,Michael Vick
@@ -9786,44 +9786,44 @@ rookie-gridiron-kings,17,,false,,Rondale Moore
 rookie-gridiron-kings,18,,false,,Elijah Moore
 rookie-gridiron-kings,19,,false,,Davis Mills
 rookie-gridiron-kings,20,,false,,Ian Book
-rookie-gridiron-kings,1,Autographs,true,/49,Trevor Lawrence
-rookie-gridiron-kings,2,Autographs,true,/49,Zach Wilson
-rookie-gridiron-kings,3,Autographs,true,/49,Justin Fields
-rookie-gridiron-kings,4,Autographs,true,/49,Trey Lance
-rookie-gridiron-kings,5,Autographs,true,/49,Mac Jones
-rookie-gridiron-kings,6,Autographs,true,/49,Kellen Mond
-rookie-gridiron-kings,7,Autographs,true,/49,Kyle Trask
-rookie-gridiron-kings,8,Autographs,true,/49,Travis Etienne Jr.
-rookie-gridiron-kings,9,Autographs,true,/49,Najee Harris
-rookie-gridiron-kings,10,Autographs,true,/49,Kyle Pitts
-rookie-gridiron-kings,11,Autographs,true,/49,DeVonta Smith
-rookie-gridiron-kings,12,Autographs,true,/49,Ja'Marr Chase
-rookie-gridiron-kings,13,Autographs,true,/49,Jaylen Waddle
-rookie-gridiron-kings,14,Autographs,true,/49,Kadarius Toney
-rookie-gridiron-kings,16,Autographs,true,/49,Terrace Marshall Jr.
-rookie-gridiron-kings,17,Autographs,true,/49,Rondale Moore
-rookie-gridiron-kings,19,Autographs,true,/49,Davis Mills
-rookie-gridiron-kings,20,Autographs,true,/49,Ian Book
-rookie-gridiron-kings,1,Studio Series,false,/100,Trevor Lawrence
-rookie-gridiron-kings,2,Studio Series,false,/100,Zach Wilson
-rookie-gridiron-kings,3,Studio Series,false,/100,Justin Fields
-rookie-gridiron-kings,4,Studio Series,false,/100,Trey Lance
-rookie-gridiron-kings,5,Studio Series,false,/100,Mac Jones
-rookie-gridiron-kings,6,Studio Series,false,/100,Kellen Mond
-rookie-gridiron-kings,7,Studio Series,false,/100,Kyle Trask
-rookie-gridiron-kings,8,Studio Series,false,/100,Travis Etienne Jr.
-rookie-gridiron-kings,9,Studio Series,false,/100,Najee Harris
-rookie-gridiron-kings,10,Studio Series,false,/100,Kyle Pitts
-rookie-gridiron-kings,11,Studio Series,false,/100,DeVonta Smith
-rookie-gridiron-kings,12,Studio Series,false,/100,Ja'Marr Chase
-rookie-gridiron-kings,13,Studio Series,false,/100,Jaylen Waddle
-rookie-gridiron-kings,14,Studio Series,false,/100,Kadarius Toney
-rookie-gridiron-kings,15,Studio Series,false,/100,Rashod Bateman
-rookie-gridiron-kings,16,Studio Series,false,/100,Terrace Marshall Jr.
-rookie-gridiron-kings,17,Studio Series,false,/100,Rondale Moore
-rookie-gridiron-kings,18,Studio Series,false,/100,Elijah Moore
-rookie-gridiron-kings,19,Studio Series,false,/100,Davis Mills
-rookie-gridiron-kings,20,Studio Series,false,/100,Ian Book
+rookie-gridiron-kings,1,Autograph,true,/49,Trevor Lawrence
+rookie-gridiron-kings,2,Autograph,true,/49,Zach Wilson
+rookie-gridiron-kings,3,Autograph,true,/49,Justin Fields
+rookie-gridiron-kings,4,Autograph,true,/49,Trey Lance
+rookie-gridiron-kings,5,Autograph,true,/49,Mac Jones
+rookie-gridiron-kings,6,Autograph,true,/49,Kellen Mond
+rookie-gridiron-kings,7,Autograph,true,/49,Kyle Trask
+rookie-gridiron-kings,8,Autograph,true,/49,Travis Etienne Jr.
+rookie-gridiron-kings,9,Autograph,true,/49,Najee Harris
+rookie-gridiron-kings,10,Autograph,true,/49,Kyle Pitts
+rookie-gridiron-kings,11,Autograph,true,/49,DeVonta Smith
+rookie-gridiron-kings,12,Autograph,true,/49,Ja'Marr Chase
+rookie-gridiron-kings,13,Autograph,true,/49,Jaylen Waddle
+rookie-gridiron-kings,14,Autograph,true,/49,Kadarius Toney
+rookie-gridiron-kings,16,Autograph,true,/49,Terrace Marshall Jr.
+rookie-gridiron-kings,17,Autograph,true,/49,Rondale Moore
+rookie-gridiron-kings,19,Autograph,true,/49,Davis Mills
+rookie-gridiron-kings,20,Autograph,true,/49,Ian Book
+rookie-gridiron-kings,1,Studio Serie,false,/100,Trevor Lawrence
+rookie-gridiron-kings,2,Studio Serie,false,/100,Zach Wilson
+rookie-gridiron-kings,3,Studio Serie,false,/100,Justin Fields
+rookie-gridiron-kings,4,Studio Serie,false,/100,Trey Lance
+rookie-gridiron-kings,5,Studio Serie,false,/100,Mac Jones
+rookie-gridiron-kings,6,Studio Serie,false,/100,Kellen Mond
+rookie-gridiron-kings,7,Studio Serie,false,/100,Kyle Trask
+rookie-gridiron-kings,8,Studio Serie,false,/100,Travis Etienne Jr.
+rookie-gridiron-kings,9,Studio Serie,false,/100,Najee Harris
+rookie-gridiron-kings,10,Studio Serie,false,/100,Kyle Pitts
+rookie-gridiron-kings,11,Studio Serie,false,/100,DeVonta Smith
+rookie-gridiron-kings,12,Studio Serie,false,/100,Ja'Marr Chase
+rookie-gridiron-kings,13,Studio Serie,false,/100,Jaylen Waddle
+rookie-gridiron-kings,14,Studio Serie,false,/100,Kadarius Toney
+rookie-gridiron-kings,15,Studio Serie,false,/100,Rashod Bateman
+rookie-gridiron-kings,16,Studio Serie,false,/100,Terrace Marshall Jr.
+rookie-gridiron-kings,17,Studio Serie,false,/100,Rondale Moore
+rookie-gridiron-kings,18,Studio Serie,false,/100,Elijah Moore
+rookie-gridiron-kings,19,Studio Serie,false,/100,Davis Mills
+rookie-gridiron-kings,20,Studio Serie,false,/100,Ian Book
 rookie-holiday-sweater,1,Dual,false,,Travis Etienne Jr.Trevor Lawrence
 rookie-holiday-sweater,2,Dual,false,,Zach WilsonElijah Moore
 rookie-holiday-sweater,3,Dual,false,,Najee HarrisPat Freiermuth
@@ -10786,89 +10786,89 @@ the-elite-series,27,,false,,Rich Gannon
 the-elite-series,28,,false,,Ricky Williams
 the-elite-series,29,,false,,Bill Romanowski
 the-elite-series,30,,false,,James Harrison
-the-elite-series,1,Autographs,true,/25,Dalvin Cook
-the-elite-series,2,Autographs,true,/99,D'Andre Swift
-the-elite-series,4,Autographs,true,/25,Josh Allen
-the-elite-series,6,Autographs,true,/25,Nick Chubb
-the-elite-series,7,Autographs,true,/25,Derrick Henry
-the-elite-series,8,Autographs,true,/99,Henry Ruggs III
-the-elite-series,9,Autographs,true,/99,T.J. Hockenson
-the-elite-series,10,Autographs,true,/49,Daniel Jones
-the-elite-series,11,Autographs,true,/99,Nick Bosa
-the-elite-series,12,Autographs,true,/99,Tre'Davious White
-the-elite-series,13,Autographs,true,/25,Justin Tucker
-the-elite-series,14,Autographs,true,/25,George Kittle
-the-elite-series,15,Autographs,true,/99,Josh Jacobs
-the-elite-series,16,Autographs,true,/99,Eddie George
-the-elite-series,18,Autographs,true,/99,Chris Johnson
-the-elite-series,19,Autographs,true,/99,Ronald Jones II
-the-elite-series,21,Autographs,true,/25,Jalen Hurts
-the-elite-series,22,Autographs,true,/25,Vince Young
-the-elite-series,23,Autographs,true,/25,Bo Jackson
-the-elite-series,24,Autographs,true,/99,Marques Colston
-the-elite-series,25,Autographs,true,/25,Vinny Testaverde
-the-elite-series,26,Autographs,true,/25,Jeff Saturday
-the-elite-series,27,Autographs,true,/99,Rich Gannon
-the-elite-series,28,Autographs,true,/10,Ricky Williams
-the-elite-series,29,Autographs,true,/99,Bill Romanowski
-the-elite-series,30,Autographs,true,/99,James Harrison
-the-elite-series,1,Rookies,false,,Trevor Lawrence
-the-elite-series,2,Rookies,false,,Zach Wilson
-the-elite-series,3,Rookies,false,,Justin Fields
-the-elite-series,4,Rookies,false,,Trey Lance
-the-elite-series,5,Rookies,false,,Mac Jones
-the-elite-series,6,Rookies,false,,Kellen Mond
-the-elite-series,7,Rookies,false,,Kyle Trask
-the-elite-series,8,Rookies,false,,Travis Etienne Jr.
-the-elite-series,9,Rookies,false,,Najee Harris
-the-elite-series,10,Rookies,false,,Kyle Pitts
-the-elite-series,11,Rookies,false,,DeVonta Smith
-the-elite-series,12,Rookies,false,,Ja'Marr Chase
-the-elite-series,13,Rookies,false,,Jaylen Waddle
-the-elite-series,14,Rookies,false,,Kadarius Toney
-the-elite-series,15,Rookies,false,,Rashod Bateman
-the-elite-series,16,Rookies,false,,Terrace Marshall Jr.
-the-elite-series,17,Rookies,false,,Kenneth Gainwell
-the-elite-series,18,Rookies,false,,Michael Carter
-the-elite-series,19,Rookies,false,,Ian Book
-the-elite-series,20,Rookies,false,,Rondale Moore
-the-elite-series,21,Rookies,false,,Elijah Moore
-the-elite-series,22,Rookies,false,,Tutu Atwell
-the-elite-series,23,Rookies,false,,Davis Mills
-the-elite-series,24,Rookies,false,,Tylan Wallace
-the-elite-series,25,Rookies,false,,Javonte Williams
-the-elite-series,26,Rookies,false,,D'Wayne Eskridge
-the-elite-series,27,Rookies,false,,Josh Palmer
-the-elite-series,28,Rookies,false,,Dyami Brown
-the-elite-series,29,Rookies,false,,Trey Sermon
-the-elite-series,30,Rookies,false,,Nico Collins
-the-elite-series,1,Rookies Autographs,true,/75,Trevor Lawrence
-the-elite-series,2,Rookies Autographs,true,/99,Zach Wilson
-the-elite-series,3,Rookies Autographs,true,/99,Justin Fields
-the-elite-series,4,Rookies Autographs,true,/99,Trey Lance
-the-elite-series,5,Rookies Autographs,true,/99,Mac Jones
-the-elite-series,6,Rookies Autographs,true,/99,Kellen Mond
-the-elite-series,7,Rookies Autographs,true,/99,Kyle Trask
-the-elite-series,8,Rookies Autographs,true,/99,Travis Etienne Jr.
-the-elite-series,9,Rookies Autographs,true,/99,Najee Harris
-the-elite-series,10,Rookies Autographs,true,/99,Kyle Pitts
-the-elite-series,11,Rookies Autographs,true,/99,DeVonta Smith
-the-elite-series,12,Rookies Autographs,true,/99,Ja'Marr Chase
-the-elite-series,13,Rookies Autographs,true,/99,Jaylen Waddle
-the-elite-series,14,Rookies Autographs,true,/99,Kadarius Toney
-the-elite-series,16,Rookies Autographs,true,/99,Terrace Marshall Jr.
-the-elite-series,17,Rookies Autographs,true,/99,Kenneth Gainwell
-the-elite-series,18,Rookies Autographs,true,/99,Michael Carter
-the-elite-series,19,Rookies Autographs,true,/99,Ian Book
-the-elite-series,20,Rookies Autographs,true,/99,Rondale Moore
-the-elite-series,23,Rookies Autographs,true,/99,Davis Mills
-the-elite-series,24,Rookies Autographs,true,/99,Tylan Wallace
-the-elite-series,25,Rookies Autographs,true,/99,Javonte Williams
-the-elite-series,26,Rookies Autographs,true,/99,D'Wayne Eskridge
-the-elite-series,27,Rookies Autographs,true,/99,Josh Palmer
-the-elite-series,28,Rookies Autographs,true,/99,Dyami Brown
-the-elite-series,29,Rookies Autographs,true,/99,Trey Sermon
-the-elite-series,30,Rookies Autographs,true,/99,Nico Collins
+the-elite-series,1,Autograph,true,/25,Dalvin Cook
+the-elite-series,2,Autograph,true,/99,D'Andre Swift
+the-elite-series,4,Autograph,true,/25,Josh Allen
+the-elite-series,6,Autograph,true,/25,Nick Chubb
+the-elite-series,7,Autograph,true,/25,Derrick Henry
+the-elite-series,8,Autograph,true,/99,Henry Ruggs III
+the-elite-series,9,Autograph,true,/99,T.J. Hockenson
+the-elite-series,10,Autograph,true,/49,Daniel Jones
+the-elite-series,11,Autograph,true,/99,Nick Bosa
+the-elite-series,12,Autograph,true,/99,Tre'Davious White
+the-elite-series,13,Autograph,true,/25,Justin Tucker
+the-elite-series,14,Autograph,true,/25,George Kittle
+the-elite-series,15,Autograph,true,/99,Josh Jacobs
+the-elite-series,16,Autograph,true,/99,Eddie George
+the-elite-series,18,Autograph,true,/99,Chris Johnson
+the-elite-series,19,Autograph,true,/99,Ronald Jones II
+the-elite-series,21,Autograph,true,/25,Jalen Hurts
+the-elite-series,22,Autograph,true,/25,Vince Young
+the-elite-series,23,Autograph,true,/25,Bo Jackson
+the-elite-series,24,Autograph,true,/99,Marques Colston
+the-elite-series,25,Autograph,true,/25,Vinny Testaverde
+the-elite-series,26,Autograph,true,/25,Jeff Saturday
+the-elite-series,27,Autograph,true,/99,Rich Gannon
+the-elite-series,28,Autograph,true,/10,Ricky Williams
+the-elite-series,29,Autograph,true,/99,Bill Romanowski
+the-elite-series,30,Autograph,true,/99,James Harrison
+the-elite-series,1,Rookie,false,,Trevor Lawrence
+the-elite-series,2,Rookie,false,,Zach Wilson
+the-elite-series,3,Rookie,false,,Justin Fields
+the-elite-series,4,Rookie,false,,Trey Lance
+the-elite-series,5,Rookie,false,,Mac Jones
+the-elite-series,6,Rookie,false,,Kellen Mond
+the-elite-series,7,Rookie,false,,Kyle Trask
+the-elite-series,8,Rookie,false,,Travis Etienne Jr.
+the-elite-series,9,Rookie,false,,Najee Harris
+the-elite-series,10,Rookie,false,,Kyle Pitts
+the-elite-series,11,Rookie,false,,DeVonta Smith
+the-elite-series,12,Rookie,false,,Ja'Marr Chase
+the-elite-series,13,Rookie,false,,Jaylen Waddle
+the-elite-series,14,Rookie,false,,Kadarius Toney
+the-elite-series,15,Rookie,false,,Rashod Bateman
+the-elite-series,16,Rookie,false,,Terrace Marshall Jr.
+the-elite-series,17,Rookie,false,,Kenneth Gainwell
+the-elite-series,18,Rookie,false,,Michael Carter
+the-elite-series,19,Rookie,false,,Ian Book
+the-elite-series,20,Rookie,false,,Rondale Moore
+the-elite-series,21,Rookie,false,,Elijah Moore
+the-elite-series,22,Rookie,false,,Tutu Atwell
+the-elite-series,23,Rookie,false,,Davis Mills
+the-elite-series,24,Rookie,false,,Tylan Wallace
+the-elite-series,25,Rookie,false,,Javonte Williams
+the-elite-series,26,Rookie,false,,D'Wayne Eskridge
+the-elite-series,27,Rookie,false,,Josh Palmer
+the-elite-series,28,Rookie,false,,Dyami Brown
+the-elite-series,29,Rookie,false,,Trey Sermon
+the-elite-series,30,Rookie,false,,Nico Collins
+the-elite-series,1,Rookie Autographs,true,/75,Trevor Lawrence
+the-elite-series,2,Rookie Autographs,true,/99,Zach Wilson
+the-elite-series,3,Rookie Autographs,true,/99,Justin Fields
+the-elite-series,4,Rookie Autographs,true,/99,Trey Lance
+the-elite-series,5,Rookie Autographs,true,/99,Mac Jones
+the-elite-series,6,Rookie Autographs,true,/99,Kellen Mond
+the-elite-series,7,Rookie Autographs,true,/99,Kyle Trask
+the-elite-series,8,Rookie Autographs,true,/99,Travis Etienne Jr.
+the-elite-series,9,Rookie Autographs,true,/99,Najee Harris
+the-elite-series,10,Rookie Autographs,true,/99,Kyle Pitts
+the-elite-series,11,Rookie Autographs,true,/99,DeVonta Smith
+the-elite-series,12,Rookie Autographs,true,/99,Ja'Marr Chase
+the-elite-series,13,Rookie Autographs,true,/99,Jaylen Waddle
+the-elite-series,14,Rookie Autographs,true,/99,Kadarius Toney
+the-elite-series,16,Rookie Autographs,true,/99,Terrace Marshall Jr.
+the-elite-series,17,Rookie Autographs,true,/99,Kenneth Gainwell
+the-elite-series,18,Rookie Autographs,true,/99,Michael Carter
+the-elite-series,19,Rookie Autographs,true,/99,Ian Book
+the-elite-series,20,Rookie Autographs,true,/99,Rondale Moore
+the-elite-series,23,Rookie Autographs,true,/99,Davis Mills
+the-elite-series,24,Rookie Autographs,true,/99,Tylan Wallace
+the-elite-series,25,Rookie Autographs,true,/99,Javonte Williams
+the-elite-series,26,Rookie Autographs,true,/99,D'Wayne Eskridge
+the-elite-series,27,Rookie Autographs,true,/99,Josh Palmer
+the-elite-series,28,Rookie Autographs,true,/99,Dyami Brown
+the-elite-series,29,Rookie Autographs,true,/99,Trey Sermon
+the-elite-series,30,Rookie Autographs,true,/99,Nico Collins
 the-legends-series,1,,false,,Peyton Manning
 the-legends-series,2,,false,,Joe Montana
 the-legends-series,3,,false,,Jerry Rice
@@ -10889,23 +10889,23 @@ the-legends-series,17,,false,,Warren Sapp
 the-legends-series,18,,false,,Emmitt Smith
 the-legends-series,19,,false,,Barry Sanders
 the-legends-series,20,,false,,Jason Witten
-the-legends-series,1,Autographs,true,/10,Peyton Manning
-the-legends-series,2,Autographs,true,/10,Joe Montana
-the-legends-series,3,Autographs,true,/10,Jerry Rice
-the-legends-series,4,Autographs,true,/10,Drew Brees
-the-legends-series,5,Autographs,true,/10,Ray Lewis
-the-legends-series,6,Autographs,true,/10,Brian Urlacher
-the-legends-series,8,Autographs,true,/10,John Elway
-the-legends-series,9,Autographs,true,/10,Brett Favre
-the-legends-series,11,Autographs,true,/25,Jerome Bettis
-the-legends-series,12,Autographs,true,/25,Philip Rivers
-the-legends-series,13,Autographs,true,/25,Joe Namath
-the-legends-series,14,Autographs,true,/10,Terry Bradshaw
-the-legends-series,16,Autographs,true,/10,Kurt Warner
-the-legends-series,17,Autographs,true,/25,Warren Sapp
-the-legends-series,18,Autographs,true,/10,Emmitt Smith
-the-legends-series,19,Autographs,true,/10,Barry Sanders
-the-legends-series,20,Autographs,true,/25,Jason Witten
+the-legends-series,1,Autograph,true,/10,Peyton Manning
+the-legends-series,2,Autograph,true,/10,Joe Montana
+the-legends-series,3,Autograph,true,/10,Jerry Rice
+the-legends-series,4,Autograph,true,/10,Drew Brees
+the-legends-series,5,Autograph,true,/10,Ray Lewis
+the-legends-series,6,Autograph,true,/10,Brian Urlacher
+the-legends-series,8,Autograph,true,/10,John Elway
+the-legends-series,9,Autograph,true,/10,Brett Favre
+the-legends-series,11,Autograph,true,/25,Jerome Bettis
+the-legends-series,12,Autograph,true,/25,Philip Rivers
+the-legends-series,13,Autograph,true,/25,Joe Namath
+the-legends-series,14,Autograph,true,/10,Terry Bradshaw
+the-legends-series,16,Autograph,true,/10,Kurt Warner
+the-legends-series,17,Autograph,true,/25,Warren Sapp
+the-legends-series,18,Autograph,true,/10,Emmitt Smith
+the-legends-series,19,Autograph,true,/10,Barry Sanders
+the-legends-series,20,Autograph,true,/25,Jason Witten
 the-rookies,1,,false,,Trevor Lawrence
 the-rookies,2,,false,,Zach Wilson
 the-rookies,3,,false,,Justin Fields
@@ -10946,41 +10946,41 @@ the-rookies,37,,false,,Chuba Hubbard
 the-rookies,38,,false,,Jaelon Darden
 the-rookies,39,,false,,Cornell Powell
 the-rookies,40,,false,,Jacob Harris
-the-rookies,1,Autographs,true,/299,Trevor Lawrence
-the-rookies,2,Autographs,true,/299,Zach Wilson
-the-rookies,3,Autographs,true,/299,Justin Fields
-the-rookies,4,Autographs,true,/299,Trey Lance
-the-rookies,5,Autographs,true,/299,Mac Jones
-the-rookies,6,Autographs,true,/299,Kellen Mond
-the-rookies,7,Autographs,true,/299,Kyle Trask
-the-rookies,8,Autographs,true,/299,Travis Etienne Jr.
-the-rookies,9,Autographs,true,/299,Najee Harris
-the-rookies,10,Autographs,true,/299,Kyle Pitts
-the-rookies,11,Autographs,true,/299,DeVonta Smith
-the-rookies,12,Autographs,true,/299,Ja'Marr Chase
-the-rookies,13,Autographs,true,/299,Jaylen Waddle
-the-rookies,14,Autographs,true,/299,Kadarius Toney
-the-rookies,16,Autographs,true,/299,Terrace Marshall Jr.
-the-rookies,17,Autographs,true,/299,Kenneth Gainwell
-the-rookies,18,Autographs,true,/299,Michael Carter
-the-rookies,19,Autographs,true,/299,Ian Book
-the-rookies,20,Autographs,true,/299,Rondale Moore
-the-rookies,23,Autographs,true,/299,Davis Mills
-the-rookies,24,Autographs,true,/299,Tylan Wallace
-the-rookies,25,Autographs,true,/299,Javonte Williams
-the-rookies,26,Autographs,true,/299,D'Wayne Eskridge
-the-rookies,27,Autographs,true,/299,Josh Palmer
-the-rookies,28,Autographs,true,/299,Dyami Brown
-the-rookies,29,Autographs,true,/299,Trey Sermon
-the-rookies,30,Autographs,true,/299,Nico Collins
-the-rookies,31,Autographs,true,/299,Pat Freiermuth
-the-rookies,32,Autographs,true,/299,Anthony Schwartz
-the-rookies,34,Autographs,true,/299,Amon-Ra St. Brown
-the-rookies,35,Autographs,true,/299,Kene Nwangwu
-the-rookies,37,Autographs,true,/299,Chuba Hubbard
-the-rookies,38,Autographs,true,/299,Jaelon Darden
-the-rookies,39,Autographs,true,/299,Cornell Powell
-the-rookies,40,Autographs,true,/299,Jacob Harris
+the-rookies,1,Autograph,true,/299,Trevor Lawrence
+the-rookies,2,Autograph,true,/299,Zach Wilson
+the-rookies,3,Autograph,true,/299,Justin Fields
+the-rookies,4,Autograph,true,/299,Trey Lance
+the-rookies,5,Autograph,true,/299,Mac Jones
+the-rookies,6,Autograph,true,/299,Kellen Mond
+the-rookies,7,Autograph,true,/299,Kyle Trask
+the-rookies,8,Autograph,true,/299,Travis Etienne Jr.
+the-rookies,9,Autograph,true,/299,Najee Harris
+the-rookies,10,Autograph,true,/299,Kyle Pitts
+the-rookies,11,Autograph,true,/299,DeVonta Smith
+the-rookies,12,Autograph,true,/299,Ja'Marr Chase
+the-rookies,13,Autograph,true,/299,Jaylen Waddle
+the-rookies,14,Autograph,true,/299,Kadarius Toney
+the-rookies,16,Autograph,true,/299,Terrace Marshall Jr.
+the-rookies,17,Autograph,true,/299,Kenneth Gainwell
+the-rookies,18,Autograph,true,/299,Michael Carter
+the-rookies,19,Autograph,true,/299,Ian Book
+the-rookies,20,Autograph,true,/299,Rondale Moore
+the-rookies,23,Autograph,true,/299,Davis Mills
+the-rookies,24,Autograph,true,/299,Tylan Wallace
+the-rookies,25,Autograph,true,/299,Javonte Williams
+the-rookies,26,Autograph,true,/299,D'Wayne Eskridge
+the-rookies,27,Autograph,true,/299,Josh Palmer
+the-rookies,28,Autograph,true,/299,Dyami Brown
+the-rookies,29,Autograph,true,/299,Trey Sermon
+the-rookies,30,Autograph,true,/299,Nico Collins
+the-rookies,31,Autograph,true,/299,Pat Freiermuth
+the-rookies,32,Autograph,true,/299,Anthony Schwartz
+the-rookies,34,Autograph,true,/299,Amon-Ra St. Brown
+the-rookies,35,Autograph,true,/299,Kene Nwangwu
+the-rookies,37,Autograph,true,/299,Chuba Hubbard
+the-rookies,38,Autograph,true,/299,Jaelon Darden
+the-rookies,39,Autograph,true,/299,Cornell Powell
+the-rookies,40,Autograph,true,/299,Jacob Harris
 vortex,1,,false,,Patrick Mahomes II
 vortex,2,,false,,Tom Brady
 vortex,3,,false,,Lamar Jackson
@@ -11116,12 +11116,12 @@ white-hot-rookies,7,,false,,Rashod Bateman
 white-hot-rookies,8,,false,,Javonte Williams
 white-hot-rookies,9,,false,,Pat Freiermuth
 white-hot-rookies,10,,false,,Davis Mills
-white-hot-rookies,1,Autographs,true,/25,Zach Wilson
-white-hot-rookies,2,Autographs,true,/25,Justin Fields
-white-hot-rookies,3,Autographs,true,/25,Mac Jones
-white-hot-rookies,4,Autographs,true,/25,Ja'Marr Chase
-white-hot-rookies,5,Autographs,true,/25,DeVonta Smith
-white-hot-rookies,6,Autographs,true,/25,Najee Harris
-white-hot-rookies,8,Autographs,true,/25,Javonte Williams
-white-hot-rookies,9,Autographs,true,/25,Pat Freiermuth
-white-hot-rookies,10,Autographs,true,/25,Davis Mills
+white-hot-rookies,1,Autograph,true,/25,Zach Wilson
+white-hot-rookies,2,Autograph,true,/25,Justin Fields
+white-hot-rookies,3,Autograph,true,/25,Mac Jones
+white-hot-rookies,4,Autograph,true,/25,Ja'Marr Chase
+white-hot-rookies,5,Autograph,true,/25,DeVonta Smith
+white-hot-rookies,6,Autograph,true,/25,Najee Harris
+white-hot-rookies,8,Autograph,true,/25,Javonte Williams
+white-hot-rookies,9,Autograph,true,/25,Pat Freiermuth
+white-hot-rookies,10,Autograph,true,/25,Davis Mills
