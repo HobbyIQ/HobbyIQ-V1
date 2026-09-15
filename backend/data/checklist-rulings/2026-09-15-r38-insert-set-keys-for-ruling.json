@@ -1,0 +1,3681 @@
+{
+ "generatedAt": "2026-09-15",
+ "forRuling": "R38 — en-bloc registration of the insert-set keys that block acq-2026-09-14-cardboardconnection-2 (PR #2157)",
+ "status": "AWAITING DREW. This file is a PROPOSAL and a census. It registers nothing, routes nothing, and no lane reads it.",
+ "whatIsBlocked": {
+  "package": "backend/data/checklists/scraped/acq-2026-09-14-cardboardconnection-2",
+  "pr": 2157,
+  "files": 8,
+  "rows": 77333,
+  "clashingAddresses": 4193,
+  "reason": "Each of these products numbers its named insert sets from 1 with its OWN players, so 4193 addresses on the product key are claimed by two or more different cards (2019 Donruss Football #1 is Patrick Mahomes II in `base`, Todd Gurley II in `action-all-pros`, and Peyton Manning in `all-time-gridiron-kings`). Per lib/insert-set-key.cjs the unit of refusal is the FILE, so all 8 stay BLOCKED until these keys are registered."
+ },
+ "howToRule": [
+  "THE KEY IS PROPOSED IN THE QUALIFIED FORM `<parentSetKey>-<subset>`, not bare. Measured on main: 0 of the 122 bare subset names is a registered product key, while 2 of the qualified forms ALREADY are (panini-donruss-rookie-phenom-jersey-autographs, panini-donruss-signature-marks). The qualified form is also the shape the 2026-09-13 insider acquisition already ships under (panini-rookies-and-stars-rookies-signatures).",
+  "A BARE KEY WOULD COLLIDE ACROSS SPORTS. `jersey-kings` and `the-rookies` each appear in BOTH basketball and football products, and `retro-series` in five cells across both sports. Those are different cards sharing an insert name, so the parent must stay in the key.",
+  "REGISTRATION IS TWO HALVES, BOTH IN src. productSetKeys.ts needs the entry AND normalizeSetKey needs an anchored rule, or the key is not a fixed point and the rows land where nothing can reach them (lib/insert-set-key.cjs records normalizeSetKey('panini-prizm-fifa-world-cup-guardians') -> 'panini-prizm', a fold PAST the product key onto the bare flagship).",
+  "NOTHING HERE IS MINTED FROM A SALE. Every subsetCategory below is a section title printed on the cardboardconnection checklist for that product, and `rows` is the number of cards that section lists.",
+  "A DOUBLED WORD IS THE SOURCE'S OWN NAME, NOT A BUG. `panini-donruss-donruss-threads` looks wrong and is not: the insert set printed on the checklist is literally \"Donruss Threads\" inside the Donruss product. The proposal keeps the printed name rather than trimming it, because trimming to `panini-donruss-threads` would invent a name the source does not use. Same shape for any other repeated-brand insert below. Drew may prefer the trimmed spelling — that is part of what this ruling decides."
+ ],
+ "totals": {
+  "perFileKeyEntries": 224,
+  "distinctProposedKeys": 122,
+  "alreadyRegistered": 2,
+  "needRuling": 120,
+  "keysSpanningMoreThanOneCell": 64
+ },
+ "proposedKeys": [
+  {
+   "proposedSetKey": "panini-donruss-rated-rookies",
+   "subsetCategory": "rated-rookies",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "football",
+     "year": 2020,
+     "rows": 1000
+    },
+    {
+     "sport": "football",
+     "year": 2021,
+     "rows": 2131
+    }
+   ],
+   "totalRows": 3131
+  },
+  {
+   "proposedSetKey": "panini-donruss-rookie-phenom-jerseys",
+   "subsetCategory": "rookie-phenom-jerseys",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "football",
+     "year": 2019,
+     "rows": 320
+    },
+    {
+     "sport": "football",
+     "year": 2020,
+     "rows": 333
+    },
+    {
+     "sport": "football",
+     "year": 2021,
+     "rows": 240
+    }
+   ],
+   "totalRows": 893
+  },
+  {
+   "proposedSetKey": "panini-donruss-donruss-threads",
+   "subsetCategory": "donruss-threads",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "football",
+     "year": 2019,
+     "rows": 313
+    },
+    {
+     "sport": "football",
+     "year": 2020,
+     "rows": 264
+    },
+    {
+     "sport": "football",
+     "year": 2021,
+     "rows": 236
+    }
+   ],
+   "totalRows": 813
+  },
+  {
+   "proposedSetKey": "panini-mosaic-autographs-mosaic",
+   "subsetCategory": "autographs-mosaic",
+   "parent": "panini-mosaic",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "basketball",
+     "year": 2019,
+     "rows": 291
+    },
+    {
+     "sport": "basketball",
+     "year": 2020,
+     "rows": 300
+    }
+   ],
+   "totalRows": 591
+  },
+  {
+   "proposedSetKey": "panini-mosaic-autographs-fast-break",
+   "subsetCategory": "autographs-fast-break",
+   "parent": "panini-mosaic",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "basketball",
+     "year": 2019,
+     "rows": 290
+    },
+    {
+     "sport": "basketball",
+     "year": 2020,
+     "rows": 300
+    }
+   ],
+   "totalRows": 590
+  },
+  {
+   "proposedSetKey": "panini-donruss-rookies",
+   "subsetCategory": "rookies",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "football",
+     "year": 2020,
+     "rows": 550
+    }
+   ],
+   "totalRows": 550
+  },
+  {
+   "proposedSetKey": "panini-donruss-franchise-features",
+   "subsetCategory": "franchise-features",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "basketball",
+     "year": 2019,
+     "rows": 180
+    },
+    {
+     "sport": "basketball",
+     "year": 2020,
+     "rows": 150
+    },
+    {
+     "sport": "basketball",
+     "year": 2021,
+     "rows": 210
+    }
+   ],
+   "totalRows": 540
+  },
+  {
+   "proposedSetKey": "panini-donruss-retro-series",
+   "subsetCategory": "retro-series",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "basketball",
+     "year": 2019,
+     "rows": 90
+    },
+    {
+     "sport": "basketball",
+     "year": 2020,
+     "rows": 90
+    },
+    {
+     "sport": "football",
+     "year": 2020,
+     "rows": 50
+    },
+    {
+     "sport": "basketball",
+     "year": 2021,
+     "rows": 150
+    },
+    {
+     "sport": "football",
+     "year": 2021,
+     "rows": 98
+    }
+   ],
+   "totalRows": 478
+  },
+  {
+   "proposedSetKey": "panini-donruss-jersey-kings",
+   "subsetCategory": "jersey-kings",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "basketball",
+     "year": 2019,
+     "rows": 100
+    },
+    {
+     "sport": "football",
+     "year": 2019,
+     "rows": 85
+    },
+    {
+     "sport": "basketball",
+     "year": 2020,
+     "rows": 60
+    },
+    {
+     "sport": "football",
+     "year": 2020,
+     "rows": 85
+    },
+    {
+     "sport": "basketball",
+     "year": 2021,
+     "rows": 60
+    },
+    {
+     "sport": "football",
+     "year": 2021,
+     "rows": 71
+    }
+   ],
+   "totalRows": 461
+  },
+  {
+   "proposedSetKey": "panini-donruss-great-x-pectations",
+   "subsetCategory": "great-x-pectations",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "basketball",
+     "year": 2019,
+     "rows": 150
+    },
+    {
+     "sport": "basketball",
+     "year": 2020,
+     "rows": 125
+    },
+    {
+     "sport": "basketball",
+     "year": 2021,
+     "rows": 175
+    }
+   ],
+   "totalRows": 450
+  },
+  {
+   "proposedSetKey": "panini-mosaic-scripts",
+   "subsetCategory": "scripts",
+   "parent": "panini-mosaic",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "basketball",
+     "year": 2019,
+     "rows": 153
+    },
+    {
+     "sport": "basketball",
+     "year": 2020,
+     "rows": 292
+    }
+   ],
+   "totalRows": 445
+  },
+  {
+   "proposedSetKey": "panini-mosaic-rookie-autographs-mosaic",
+   "subsetCategory": "rookie-autographs-mosaic",
+   "parent": "panini-mosaic",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "basketball",
+     "year": 2019,
+     "rows": 198
+    },
+    {
+     "sport": "basketball",
+     "year": 2020,
+     "rows": 195
+    }
+   ],
+   "totalRows": 393
+  },
+  {
+   "proposedSetKey": "panini-mosaic-montage",
+   "subsetCategory": "montage",
+   "parent": "panini-mosaic",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "basketball",
+     "year": 2019,
+     "rows": 180
+    },
+    {
+     "sport": "basketball",
+     "year": 2020,
+     "rows": 210
+    }
+   ],
+   "totalRows": 390
+  },
+  {
+   "proposedSetKey": "panini-donruss-complete-players",
+   "subsetCategory": "complete-players",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "basketball",
+     "year": 2019,
+     "rows": 120
+    },
+    {
+     "sport": "basketball",
+     "year": 2020,
+     "rows": 100
+    },
+    {
+     "sport": "basketball",
+     "year": 2021,
+     "rows": 140
+    }
+   ],
+   "totalRows": 360
+  },
+  {
+   "proposedSetKey": "panini-donruss-jersey-series",
+   "subsetCategory": "jersey-series",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "basketball",
+     "year": 2019,
+     "rows": 184
+    },
+    {
+     "sport": "basketball",
+     "year": 2020,
+     "rows": 166
+    }
+   ],
+   "totalRows": 350
+  },
+  {
+   "proposedSetKey": "panini-donruss-optic-rated-rookie-preview",
+   "subsetCategory": "optic-rated-rookie-preview",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "football",
+     "year": 2020,
+     "rows": 350
+    }
+   ],
+   "totalRows": 350
+  },
+  {
+   "proposedSetKey": "panini-donruss-optic-rookie-preview",
+   "subsetCategory": "optic-rookie-preview",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "football",
+     "year": 2020,
+     "rows": 350
+    }
+   ],
+   "totalRows": 350
+  },
+  {
+   "proposedSetKey": "panini-donruss-the-elite-series",
+   "subsetCategory": "the-elite-series",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "football",
+     "year": 2019,
+     "rows": 113
+    },
+    {
+     "sport": "football",
+     "year": 2020,
+     "rows": 116
+    },
+    {
+     "sport": "football",
+     "year": 2021,
+     "rows": 113
+    }
+   ],
+   "totalRows": 342
+  },
+  {
+   "proposedSetKey": "panini-mosaic-stare-masters",
+   "subsetCategory": "stare-masters",
+   "parent": "panini-mosaic",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "basketball",
+     "year": 2019,
+     "rows": 150
+    },
+    {
+     "sport": "basketball",
+     "year": 2020,
+     "rows": 175
+    }
+   ],
+   "totalRows": 325
+  },
+  {
+   "proposedSetKey": "panini-mosaic-jam-masters",
+   "subsetCategory": "jam-masters",
+   "parent": "panini-mosaic",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "basketball",
+     "year": 2019,
+     "rows": 140
+    },
+    {
+     "sport": "basketball",
+     "year": 2020,
+     "rows": 180
+    }
+   ],
+   "totalRows": 320
+  },
+  {
+   "proposedSetKey": "panini-mosaic-will-to-win",
+   "subsetCategory": "will-to-win",
+   "parent": "panini-mosaic",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "basketball",
+     "year": 2019,
+     "rows": 140
+    },
+    {
+     "sport": "basketball",
+     "year": 2020,
+     "rows": 180
+    }
+   ],
+   "totalRows": 320
+  },
+  {
+   "proposedSetKey": "panini-mosaic-rookie-scripts",
+   "subsetCategory": "rookie-scripts",
+   "parent": "panini-mosaic",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "basketball",
+     "year": 2019,
+     "rows": 116
+    },
+    {
+     "sport": "basketball",
+     "year": 2020,
+     "rows": 194
+    }
+   ],
+   "totalRows": 310
+  },
+  {
+   "proposedSetKey": "panini-donruss-the-rookies",
+   "subsetCategory": "the-rookies",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "basketball",
+     "year": 2019,
+     "rows": 15
+    },
+    {
+     "sport": "football",
+     "year": 2019,
+     "rows": 80
+    },
+    {
+     "sport": "basketball",
+     "year": 2020,
+     "rows": 15
+    },
+    {
+     "sport": "football",
+     "year": 2020,
+     "rows": 84
+    },
+    {
+     "sport": "basketball",
+     "year": 2021,
+     "rows": 35
+    },
+    {
+     "sport": "football",
+     "year": 2021,
+     "rows": 75
+    }
+   ],
+   "totalRows": 304
+  },
+  {
+   "proposedSetKey": "panini-donruss-signature-marks",
+   "subsetCategory": "signature-marks",
+   "parent": "panini-donruss",
+   "alreadyRegistered": true,
+   "cells": [
+    {
+     "sport": "football",
+     "year": 2021,
+     "rows": 300
+    }
+   ],
+   "totalRows": 300
+  },
+  {
+   "proposedSetKey": "panini-donruss-rookie-jersey-kings",
+   "subsetCategory": "rookie-jersey-kings",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "basketball",
+     "year": 2019,
+     "rows": 80
+    },
+    {
+     "sport": "basketball",
+     "year": 2020,
+     "rows": 80
+    },
+    {
+     "sport": "basketball",
+     "year": 2021,
+     "rows": 80
+    }
+   ],
+   "totalRows": 240
+  },
+  {
+   "proposedSetKey": "panini-mosaic-elevate",
+   "subsetCategory": "elevate",
+   "parent": "panini-mosaic",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "basketball",
+     "year": 2020,
+     "rows": 225
+    }
+   ],
+   "totalRows": 225
+  },
+  {
+   "proposedSetKey": "panini-donruss-crunch-time",
+   "subsetCategory": "crunch-time",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "basketball",
+     "year": 2019,
+     "rows": 60
+    },
+    {
+     "sport": "basketball",
+     "year": 2020,
+     "rows": 60
+    },
+    {
+     "sport": "basketball",
+     "year": 2021,
+     "rows": 100
+    }
+   ],
+   "totalRows": 220
+  },
+  {
+   "proposedSetKey": "panini-donruss-net-marvels",
+   "subsetCategory": "net-marvels",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "basketball",
+     "year": 2019,
+     "rows": 60
+    },
+    {
+     "sport": "basketball",
+     "year": 2020,
+     "rows": 60
+    },
+    {
+     "sport": "basketball",
+     "year": 2021,
+     "rows": 100
+    }
+   ],
+   "totalRows": 220
+  },
+  {
+   "proposedSetKey": "panini-donruss-dominators",
+   "subsetCategory": "dominators",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "football",
+     "year": 2019,
+     "rows": 73
+    },
+    {
+     "sport": "football",
+     "year": 2020,
+     "rows": 72
+    },
+    {
+     "sport": "football",
+     "year": 2021,
+     "rows": 64
+    }
+   ],
+   "totalRows": 209
+  },
+  {
+   "proposedSetKey": "panini-donruss-optic-rated-rookie-preview-red",
+   "subsetCategory": "optic-rated-rookie-preview-red",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "football",
+     "year": 2021,
+     "rows": 200
+    }
+   ],
+   "totalRows": 200
+  },
+  {
+   "proposedSetKey": "panini-donruss-rookie-revolution",
+   "subsetCategory": "rookie-revolution",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "football",
+     "year": 2021,
+     "rows": 200
+    }
+   ],
+   "totalRows": 200
+  },
+  {
+   "proposedSetKey": "panini-donruss-signature-series",
+   "subsetCategory": "signature-series",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "basketball",
+     "year": 2019,
+     "rows": 100
+    },
+    {
+     "sport": "basketball",
+     "year": 2021,
+     "rows": 96
+    }
+   ],
+   "totalRows": 196
+  },
+  {
+   "proposedSetKey": "panini-mosaic-blue-chips",
+   "subsetCategory": "blue-chips",
+   "parent": "panini-mosaic",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "basketball",
+     "year": 2019,
+     "rows": 90
+    },
+    {
+     "sport": "basketball",
+     "year": 2020,
+     "rows": 105
+    }
+   ],
+   "totalRows": 195
+  },
+  {
+   "proposedSetKey": "panini-donruss-highlights",
+   "subsetCategory": "highlights",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "football",
+     "year": 2019,
+     "rows": 56
+    },
+    {
+     "sport": "football",
+     "year": 2020,
+     "rows": 68
+    },
+    {
+     "sport": "football",
+     "year": 2021,
+     "rows": 63
+    }
+   ],
+   "totalRows": 187
+  },
+  {
+   "proposedSetKey": "panini-donruss-champ-is-here",
+   "subsetCategory": "champ-is-here",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "football",
+     "year": 2019,
+     "rows": 70
+    },
+    {
+     "sport": "football",
+     "year": 2020,
+     "rows": 46
+    },
+    {
+     "sport": "football",
+     "year": 2021,
+     "rows": 68
+    }
+   ],
+   "totalRows": 184
+  },
+  {
+   "proposedSetKey": "panini-mosaic-holofame",
+   "subsetCategory": "holofame",
+   "parent": "panini-mosaic",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "basketball",
+     "year": 2020,
+     "rows": 180
+    }
+   ],
+   "totalRows": 180
+  },
+  {
+   "proposedSetKey": "panini-donruss-dominator-signatures",
+   "subsetCategory": "dominator-signatures",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "basketball",
+     "year": 2019,
+     "rows": 90
+    },
+    {
+     "sport": "basketball",
+     "year": 2020,
+     "rows": 89
+    }
+   ],
+   "totalRows": 179
+  },
+  {
+   "proposedSetKey": "panini-donruss-hall-dominator-signatures",
+   "subsetCategory": "hall-dominator-signatures",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "basketball",
+     "year": 2019,
+     "rows": 90
+    },
+    {
+     "sport": "basketball",
+     "year": 2020,
+     "rows": 89
+    }
+   ],
+   "totalRows": 179
+  },
+  {
+   "proposedSetKey": "panini-donruss-rookie-gridiron-kings",
+   "subsetCategory": "rookie-gridiron-kings",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "football",
+     "year": 2019,
+     "rows": 60
+    },
+    {
+     "sport": "football",
+     "year": 2020,
+     "rows": 60
+    },
+    {
+     "sport": "football",
+     "year": 2021,
+     "rows": 58
+    }
+   ],
+   "totalRows": 178
+  },
+  {
+   "proposedSetKey": "panini-donruss-canton-kings",
+   "subsetCategory": "canton-kings",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "football",
+     "year": 2019,
+     "rows": 60
+    },
+    {
+     "sport": "football",
+     "year": 2020,
+     "rows": 60
+    },
+    {
+     "sport": "football",
+     "year": 2021,
+     "rows": 55
+    }
+   ],
+   "totalRows": 175
+  },
+  {
+   "proposedSetKey": "panini-mosaic-got-game",
+   "subsetCategory": "got-game",
+   "parent": "panini-mosaic",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "basketball",
+     "year": 2019,
+     "rows": 175
+    }
+   ],
+   "totalRows": 175
+  },
+  {
+   "proposedSetKey": "panini-donruss-craftsmen",
+   "subsetCategory": "craftsmen",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "basketball",
+     "year": 2019,
+     "rows": 45
+    },
+    {
+     "sport": "basketball",
+     "year": 2020,
+     "rows": 45
+    },
+    {
+     "sport": "basketball",
+     "year": 2021,
+     "rows": 75
+    }
+   ],
+   "totalRows": 165
+  },
+  {
+   "proposedSetKey": "panini-donruss-all-pro-kings",
+   "subsetCategory": "all-pro-kings",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "football",
+     "year": 2019,
+     "rows": 52
+    },
+    {
+     "sport": "football",
+     "year": 2020,
+     "rows": 52
+    },
+    {
+     "sport": "football",
+     "year": 2021,
+     "rows": 46
+    }
+   ],
+   "totalRows": 150
+  },
+  {
+   "proposedSetKey": "panini-mosaic-men-of-mastery",
+   "subsetCategory": "men-of-mastery",
+   "parent": "panini-mosaic",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "basketball",
+     "year": 2020,
+     "rows": 140
+    }
+   ],
+   "totalRows": 140
+  },
+  {
+   "proposedSetKey": "panini-mosaic-old-school",
+   "subsetCategory": "old-school",
+   "parent": "panini-mosaic",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "basketball",
+     "year": 2019,
+     "rows": 140
+    }
+   ],
+   "totalRows": 140
+  },
+  {
+   "proposedSetKey": "panini-mosaic-bang",
+   "subsetCategory": "bang",
+   "parent": "panini-mosaic",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "basketball",
+     "year": 2020,
+     "rows": 135
+    }
+   ],
+   "totalRows": 135
+  },
+  {
+   "proposedSetKey": "panini-donruss-all-time-gridiron-kings",
+   "subsetCategory": "all-time-gridiron-kings",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "football",
+     "year": 2019,
+     "rows": 45
+    },
+    {
+     "sport": "football",
+     "year": 2020,
+     "rows": 45
+    },
+    {
+     "sport": "football",
+     "year": 2021,
+     "rows": 42
+    }
+   ],
+   "totalRows": 132
+  },
+  {
+   "proposedSetKey": "panini-donruss-gridiron-kings",
+   "subsetCategory": "gridiron-kings",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "football",
+     "year": 2019,
+     "rows": 41
+    },
+    {
+     "sport": "football",
+     "year": 2020,
+     "rows": 44
+    },
+    {
+     "sport": "football",
+     "year": 2021,
+     "rows": 41
+    }
+   ],
+   "totalRows": 126
+  },
+  {
+   "proposedSetKey": "panini-donruss-vortex",
+   "subsetCategory": "vortex",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "football",
+     "year": 2021,
+     "rows": 125
+    }
+   ],
+   "totalRows": 125
+  },
+  {
+   "proposedSetKey": "panini-donruss-power-in-the-paint",
+   "subsetCategory": "power-in-the-paint",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "basketball",
+     "year": 2020,
+     "rows": 50
+    },
+    {
+     "sport": "basketball",
+     "year": 2021,
+     "rows": 70
+    }
+   ],
+   "totalRows": 120
+  },
+  {
+   "proposedSetKey": "panini-donruss-rookie-dominator-signatures",
+   "subsetCategory": "rookie-dominator-signatures",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "basketball",
+     "year": 2019,
+     "rows": 120
+    }
+   ],
+   "totalRows": 120
+  },
+  {
+   "proposedSetKey": "panini-mosaic-international-men-of-mastery",
+   "subsetCategory": "international-men-of-mastery",
+   "parent": "panini-mosaic",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "basketball",
+     "year": 2019,
+     "rows": 120
+    }
+   ],
+   "totalRows": 120
+  },
+  {
+   "proposedSetKey": "panini-mosaic-introductions",
+   "subsetCategory": "introductions",
+   "parent": "panini-mosaic",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "basketball",
+     "year": 2019,
+     "rows": 60
+    },
+    {
+     "sport": "basketball",
+     "year": 2020,
+     "rows": 60
+    }
+   ],
+   "totalRows": 120
+  },
+  {
+   "proposedSetKey": "panini-donruss-choice-signatures",
+   "subsetCategory": "choice-signatures",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "basketball",
+     "year": 2020,
+     "rows": 119
+    }
+   ],
+   "totalRows": 119
+  },
+  {
+   "proposedSetKey": "panini-donruss-legends-of-the-fall",
+   "subsetCategory": "legends-of-the-fall",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "football",
+     "year": 2019,
+     "rows": 58
+    },
+    {
+     "sport": "football",
+     "year": 2020,
+     "rows": 60
+    }
+   ],
+   "totalRows": 118
+  },
+  {
+   "proposedSetKey": "panini-donruss-the-legends-series",
+   "subsetCategory": "the-legends-series",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "football",
+     "year": 2019,
+     "rows": 40
+    },
+    {
+     "sport": "football",
+     "year": 2020,
+     "rows": 39
+    },
+    {
+     "sport": "football",
+     "year": 2021,
+     "rows": 37
+    }
+   ],
+   "totalRows": 116
+  },
+  {
+   "proposedSetKey": "panini-donruss-passing-the-torch-jerseys",
+   "subsetCategory": "passing-the-torch-jerseys",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "football",
+     "year": 2019,
+     "rows": 39
+    },
+    {
+     "sport": "football",
+     "year": 2020,
+     "rows": 38
+    },
+    {
+     "sport": "football",
+     "year": 2021,
+     "rows": 37
+    }
+   ],
+   "totalRows": 114
+  },
+  {
+   "proposedSetKey": "panini-donruss-power-formulas",
+   "subsetCategory": "power-formulas",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "football",
+     "year": 2019,
+     "rows": 34
+    },
+    {
+     "sport": "football",
+     "year": 2020,
+     "rows": 40
+    },
+    {
+     "sport": "football",
+     "year": 2021,
+     "rows": 32
+    }
+   ],
+   "totalRows": 106
+  },
+  {
+   "proposedSetKey": "panini-mosaic-give-and-go",
+   "subsetCategory": "give-and-go",
+   "parent": "panini-mosaic",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "basketball",
+     "year": 2019,
+     "rows": 105
+    }
+   ],
+   "totalRows": 105
+  },
+  {
+   "proposedSetKey": "panini-donruss-downtown",
+   "subsetCategory": "downtown",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "football",
+     "year": 2019,
+     "rows": 20
+    },
+    {
+     "sport": "football",
+     "year": 2020,
+     "rows": 40
+    },
+    {
+     "sport": "football",
+     "year": 2021,
+     "rows": 40
+    }
+   ],
+   "totalRows": 100
+  },
+  {
+   "proposedSetKey": "panini-donruss-optic-rated-rookie-preview-blue",
+   "subsetCategory": "optic-rated-rookie-preview-blue",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "football",
+     "year": 2021,
+     "rows": 100
+    }
+   ],
+   "totalRows": 100
+  },
+  {
+   "proposedSetKey": "panini-donruss-optic-rated-rookie-preview-green",
+   "subsetCategory": "optic-rated-rookie-preview-green",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "football",
+     "year": 2021,
+     "rows": 100
+    }
+   ],
+   "totalRows": 100
+  },
+  {
+   "proposedSetKey": "panini-donruss-optic-rated-rookie-preview-holo",
+   "subsetCategory": "optic-rated-rookie-preview-holo",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "football",
+     "year": 2021,
+     "rows": 100
+    }
+   ],
+   "totalRows": 100
+  },
+  {
+   "proposedSetKey": "panini-donruss-optic-rated-rookie-preview-pink",
+   "subsetCategory": "optic-rated-rookie-preview-pink",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "football",
+     "year": 2021,
+     "rows": 100
+    }
+   ],
+   "totalRows": 100
+  },
+  {
+   "proposedSetKey": "panini-donruss-optic-rated-rookie-preview-purple",
+   "subsetCategory": "optic-rated-rookie-preview-purple",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "football",
+     "year": 2021,
+     "rows": 100
+    }
+   ],
+   "totalRows": 100
+  },
+  {
+   "proposedSetKey": "panini-donruss-out-of-this-world",
+   "subsetCategory": "out-of-this-world",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "football",
+     "year": 2021,
+     "rows": 100
+    }
+   ],
+   "totalRows": 100
+  },
+  {
+   "proposedSetKey": "panini-donruss-rookie-holiday-sweater",
+   "subsetCategory": "rookie-holiday-sweater",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "football",
+     "year": 2020,
+     "rows": 50
+    },
+    {
+     "sport": "football",
+     "year": 2021,
+     "rows": 50
+    }
+   ],
+   "totalRows": 100
+  },
+  {
+   "proposedSetKey": "panini-donruss-action-all-pros",
+   "subsetCategory": "action-all-pros",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "football",
+     "year": 2019,
+     "rows": 33
+    },
+    {
+     "sport": "football",
+     "year": 2020,
+     "rows": 29
+    },
+    {
+     "sport": "football",
+     "year": 2021,
+     "rows": 29
+    }
+   ],
+   "totalRows": 91
+  },
+  {
+   "proposedSetKey": "panini-donruss-rookie-phenom-jersey-autographs",
+   "subsetCategory": "rookie-phenom-jersey-autographs",
+   "parent": "panini-donruss",
+   "alreadyRegistered": true,
+   "cells": [
+    {
+     "sport": "football",
+     "year": 2021,
+     "rows": 90
+    }
+   ],
+   "totalRows": 90
+  },
+  {
+   "proposedSetKey": "panini-donruss-next-day-autographs",
+   "subsetCategory": "next-day-autographs",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "basketball",
+     "year": 2019,
+     "rows": 42
+    },
+    {
+     "sport": "basketball",
+     "year": 2021,
+     "rows": 40
+    }
+   ],
+   "totalRows": 82
+  },
+  {
+   "proposedSetKey": "panini-donruss-leather-kings",
+   "subsetCategory": "leather-kings",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "football",
+     "year": 2019,
+     "rows": 26
+    },
+    {
+     "sport": "football",
+     "year": 2020,
+     "rows": 28
+    },
+    {
+     "sport": "football",
+     "year": 2021,
+     "rows": 25
+    }
+   ],
+   "totalRows": 79
+  },
+  {
+   "proposedSetKey": "panini-donruss-retro-2001",
+   "subsetCategory": "retro-2001",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "football",
+     "year": 2021,
+     "rows": 76
+    }
+   ],
+   "totalRows": 76
+  },
+  {
+   "proposedSetKey": "panini-donruss-liftoff",
+   "subsetCategory": "liftoff",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "football",
+     "year": 2021,
+     "rows": 75
+    }
+   ],
+   "totalRows": 75
+  },
+  {
+   "proposedSetKey": "panini-donruss-retro-1999",
+   "subsetCategory": "retro-1999",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "football",
+     "year": 2019,
+     "rows": 73
+    }
+   ],
+   "totalRows": 73
+  },
+  {
+   "proposedSetKey": "panini-donruss-retro-2000",
+   "subsetCategory": "retro-2000",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "football",
+     "year": 2020,
+     "rows": 73
+    }
+   ],
+   "totalRows": 73
+  },
+  {
+   "proposedSetKey": "panini-donruss-magicians",
+   "subsetCategory": "magicians",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "basketball",
+     "year": 2021,
+     "rows": 70
+    }
+   ],
+   "totalRows": 70
+  },
+  {
+   "proposedSetKey": "panini-donruss-inducted",
+   "subsetCategory": "inducted",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "football",
+     "year": 2019,
+     "rows": 12
+    },
+    {
+     "sport": "football",
+     "year": 2020,
+     "rows": 27
+    },
+    {
+     "sport": "football",
+     "year": 2021,
+     "rows": 29
+    }
+   ],
+   "totalRows": 68
+  },
+  {
+   "proposedSetKey": "panini-donruss-retro-1990",
+   "subsetCategory": "retro-1990",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "football",
+     "year": 2020,
+     "rows": 66
+    }
+   ],
+   "totalRows": 66
+  },
+  {
+   "proposedSetKey": "panini-donruss-retro-1989",
+   "subsetCategory": "retro-1989",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "football",
+     "year": 2019,
+     "rows": 63
+    }
+   ],
+   "totalRows": 63
+  },
+  {
+   "proposedSetKey": "panini-donruss-retro-1991",
+   "subsetCategory": "retro-1991",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "football",
+     "year": 2021,
+     "rows": 61
+    }
+   ],
+   "totalRows": 61
+  },
+  {
+   "proposedSetKey": "panini-donruss-changing-stripes",
+   "subsetCategory": "changing-stripes",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "basketball",
+     "year": 2019,
+     "rows": 60
+    }
+   ],
+   "totalRows": 60
+  },
+  {
+   "proposedSetKey": "panini-donruss-league-leaders",
+   "subsetCategory": "league-leaders",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "basketball",
+     "year": 2019,
+     "rows": 60
+    }
+   ],
+   "totalRows": 60
+  },
+  {
+   "proposedSetKey": "panini-mosaic-center-stage",
+   "subsetCategory": "center-stage",
+   "parent": "panini-mosaic",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "basketball",
+     "year": 2019,
+     "rows": 30
+    },
+    {
+     "sport": "basketball",
+     "year": 2020,
+     "rows": 30
+    }
+   ],
+   "totalRows": 60
+  },
+  {
+   "proposedSetKey": "panini-donruss-red-hot-rookies",
+   "subsetCategory": "red-hot-rookies",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "football",
+     "year": 2019,
+     "rows": 20
+    },
+    {
+     "sport": "football",
+     "year": 2020,
+     "rows": 20
+    },
+    {
+     "sport": "football",
+     "year": 2021,
+     "rows": 18
+    }
+   ],
+   "totalRows": 58
+  },
+  {
+   "proposedSetKey": "panini-donruss-white-hot-rookies",
+   "subsetCategory": "white-hot-rookies",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "football",
+     "year": 2019,
+     "rows": 19
+    },
+    {
+     "sport": "football",
+     "year": 2020,
+     "rows": 20
+    },
+    {
+     "sport": "football",
+     "year": 2021,
+     "rows": 19
+    }
+   ],
+   "totalRows": 58
+  },
+  {
+   "proposedSetKey": "panini-donruss-fantasy-stars",
+   "subsetCategory": "fantasy-stars",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "basketball",
+     "year": 2019,
+     "rows": 30
+    },
+    {
+     "sport": "basketball",
+     "year": 2020,
+     "rows": 25
+    }
+   ],
+   "totalRows": 55
+  },
+  {
+   "proposedSetKey": "panini-donruss-all-time-league-leaders",
+   "subsetCategory": "all-time-league-leaders",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "basketball",
+     "year": 2020,
+     "rows": 50
+    }
+   ],
+   "totalRows": 50
+  },
+  {
+   "proposedSetKey": "panini-donruss-gridiron-greats",
+   "subsetCategory": "gridiron-greats",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "football",
+     "year": 2021,
+     "rows": 50
+    }
+   ],
+   "totalRows": 50
+  },
+  {
+   "proposedSetKey": "panini-donruss-night-moves",
+   "subsetCategory": "night-moves",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "football",
+     "year": 2020,
+     "rows": 25
+    },
+    {
+     "sport": "football",
+     "year": 2021,
+     "rows": 25
+    }
+   ],
+   "totalRows": 50
+  },
+  {
+   "proposedSetKey": "panini-donruss-production-line",
+   "subsetCategory": "production-line",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "basketball",
+     "year": 2021,
+     "rows": 50
+    }
+   ],
+   "totalRows": 50
+  },
+  {
+   "proposedSetKey": "panini-donruss-signature-highlights",
+   "subsetCategory": "signature-highlights",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "football",
+     "year": 2021,
+     "rows": 50
+    }
+   ],
+   "totalRows": 50
+  },
+  {
+   "proposedSetKey": "panini-mosaic-overdrive",
+   "subsetCategory": "overdrive",
+   "parent": "panini-mosaic",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "basketball",
+     "year": 2019,
+     "rows": 25
+    },
+    {
+     "sport": "basketball",
+     "year": 2020,
+     "rows": 25
+    }
+   ],
+   "totalRows": 50
+  },
+  {
+   "proposedSetKey": "panini-donruss-rise-n-shine-magnet",
+   "subsetCategory": "rise-n-shine-magnet",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "football",
+     "year": 2020,
+     "rows": 40
+    }
+   ],
+   "totalRows": 40
+  },
+  {
+   "proposedSetKey": "panini-donruss-defying-gravity",
+   "subsetCategory": "defying-gravity",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "basketball",
+     "year": 2019,
+     "rows": 30
+    }
+   ],
+   "totalRows": 30
+  },
+  {
+   "proposedSetKey": "panini-donruss-zero-gravity",
+   "subsetCategory": "zero-gravity",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "basketball",
+     "year": 2020,
+     "rows": 30
+    }
+   ],
+   "totalRows": 30
+  },
+  {
+   "proposedSetKey": "panini-mosaic-swagger",
+   "subsetCategory": "swagger",
+   "parent": "panini-mosaic",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "basketball",
+     "year": 2019,
+     "rows": 15
+    },
+    {
+     "sport": "basketball",
+     "year": 2020,
+     "rows": 15
+    }
+   ],
+   "totalRows": 30
+  },
+  {
+   "proposedSetKey": "panini-donruss-duos",
+   "subsetCategory": "duos",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "basketball",
+     "year": 2021,
+     "rows": 25
+    }
+   ],
+   "totalRows": 25
+  },
+  {
+   "proposedSetKey": "panini-donruss-gridiron-marvels",
+   "subsetCategory": "gridiron-marvels",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "football",
+     "year": 2021,
+     "rows": 20
+    }
+   ],
+   "totalRows": 20
+  },
+  {
+   "proposedSetKey": "panini-donruss-marvels",
+   "subsetCategory": "marvels",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "football",
+     "year": 2020,
+     "rows": 20
+    }
+   ],
+   "totalRows": 20
+  },
+  {
+   "proposedSetKey": "panini-mosaic-in-it-to-win-it",
+   "subsetCategory": "in-it-to-win-it",
+   "parent": "panini-mosaic",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "basketball",
+     "year": 2019,
+     "rows": 20
+    }
+   ],
+   "totalRows": 20
+  },
+  {
+   "proposedSetKey": "panini-mosaic-stained-glass",
+   "subsetCategory": "stained-glass",
+   "parent": "panini-mosaic",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "basketball",
+     "year": 2019,
+     "rows": 10
+    },
+    {
+     "sport": "basketball",
+     "year": 2020,
+     "rows": 10
+    }
+   ],
+   "totalRows": 20
+  },
+  {
+   "proposedSetKey": "panini-mosaic-straight-fire",
+   "subsetCategory": "straight-fire",
+   "parent": "panini-mosaic",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "basketball",
+     "year": 2020,
+     "rows": 20
+    }
+   ],
+   "totalRows": 20
+  },
+  {
+   "proposedSetKey": "panini-donruss-team-supreme-vertical",
+   "subsetCategory": "team-supreme-vertical",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "football",
+     "year": 2019,
+     "rows": 9
+    },
+    {
+     "sport": "football",
+     "year": 2020,
+     "rows": 10
+    }
+   ],
+   "totalRows": 19
+  },
+  {
+   "proposedSetKey": "panini-donruss-road-to-the-super-bowl-divisional-round",
+   "subsetCategory": "road-to-the-super-bowl-divisional-round",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "football",
+     "year": 2020,
+     "rows": 8
+    },
+    {
+     "sport": "football",
+     "year": 2021,
+     "rows": 8
+    }
+   ],
+   "totalRows": 16
+  },
+  {
+   "proposedSetKey": "panini-donruss-road-to-the-super-bowl-wild-card",
+   "subsetCategory": "road-to-the-super-bowl-wild-card",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "football",
+     "year": 2020,
+     "rows": 8
+    },
+    {
+     "sport": "football",
+     "year": 2021,
+     "rows": 8
+    }
+   ],
+   "totalRows": 16
+  },
+  {
+   "proposedSetKey": "panini-donruss-team-pride-holo-horizontal",
+   "subsetCategory": "team-pride-holo-horizontal",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "football",
+     "year": 2019,
+     "rows": 16
+    }
+   ],
+   "totalRows": 16
+  },
+  {
+   "proposedSetKey": "panini-donruss-team-pride-holo-vertical",
+   "subsetCategory": "team-pride-holo-vertical",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "football",
+     "year": 2019,
+     "rows": 16
+    }
+   ],
+   "totalRows": 16
+  },
+  {
+   "proposedSetKey": "panini-donruss-team-pride-horizontal",
+   "subsetCategory": "team-pride-horizontal",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "football",
+     "year": 2019,
+     "rows": 16
+    }
+   ],
+   "totalRows": 16
+  },
+  {
+   "proposedSetKey": "panini-donruss-team-pride-vertical",
+   "subsetCategory": "team-pride-vertical",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "football",
+     "year": 2019,
+     "rows": 16
+    }
+   ],
+   "totalRows": 16
+  },
+  {
+   "proposedSetKey": "panini-donruss-nicknames",
+   "subsetCategory": "nicknames",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "football",
+     "year": 2019,
+     "rows": 15
+    }
+   ],
+   "totalRows": 15
+  },
+  {
+   "proposedSetKey": "panini-mosaic-award-winning-autographs",
+   "subsetCategory": "award-winning-autographs",
+   "parent": "panini-mosaic",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "basketball",
+     "year": 2020,
+     "rows": 12
+    }
+   ],
+   "totalRows": 12
+  },
+  {
+   "proposedSetKey": "panini-donruss-team-supreme-horizontal",
+   "subsetCategory": "team-supreme-horizontal",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "football",
+     "year": 2019,
+     "rows": 6
+    },
+    {
+     "sport": "football",
+     "year": 2020,
+     "rows": 5
+    }
+   ],
+   "totalRows": 11
+  },
+  {
+   "proposedSetKey": "panini-mosaic-introductions-mosaic-red",
+   "subsetCategory": "introductions-mosaic-red",
+   "parent": "panini-mosaic",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "basketball",
+     "year": 2020,
+     "rows": 10
+    }
+   ],
+   "totalRows": 10
+  },
+  {
+   "proposedSetKey": "panini-donruss-fans-of-the-game",
+   "subsetCategory": "fans-of-the-game",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "football",
+     "year": 2019,
+     "rows": 9
+    }
+   ],
+   "totalRows": 9
+  },
+  {
+   "proposedSetKey": "panini-donruss-road-to-the-super-bowl-conference-championship",
+   "subsetCategory": "road-to-the-super-bowl-conference-championship",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "football",
+     "year": 2020,
+     "rows": 4
+    },
+    {
+     "sport": "football",
+     "year": 2021,
+     "rows": 4
+    }
+   ],
+   "totalRows": 8
+  },
+  {
+   "proposedSetKey": "panini-donruss-2020-super-bowl-mvp-signatures",
+   "subsetCategory": "2020-super-bowl-mvp-signatures",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "football",
+     "year": 2021,
+     "rows": 5
+    }
+   ],
+   "totalRows": 5
+  },
+  {
+   "proposedSetKey": "panini-donruss-2019-super-bowl-signatures-prizm",
+   "subsetCategory": "2019-super-bowl-signatures-prizm",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "football",
+     "year": 2021,
+     "rows": 4
+    }
+   ],
+   "totalRows": 4
+  },
+  {
+   "proposedSetKey": "panini-donruss-champions",
+   "subsetCategory": "champions",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "football",
+     "year": 2020,
+     "rows": 2
+    },
+    {
+     "sport": "football",
+     "year": 2021,
+     "rows": 2
+    }
+   ],
+   "totalRows": 4
+  },
+  {
+   "proposedSetKey": "panini-donruss-road-to-the-super-bowl-championship",
+   "subsetCategory": "road-to-the-super-bowl-championship",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "football",
+     "year": 2020,
+     "rows": 2
+    },
+    {
+     "sport": "football",
+     "year": 2021,
+     "rows": 2
+    }
+   ],
+   "totalRows": 4
+  },
+  {
+   "proposedSetKey": "panini-donruss-super-bowl-mvp",
+   "subsetCategory": "super-bowl-mvp",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "football",
+     "year": 2020,
+     "rows": 2
+    },
+    {
+     "sport": "football",
+     "year": 2021,
+     "rows": 2
+    }
+   ],
+   "totalRows": 4
+  },
+  {
+   "proposedSetKey": "panini-mosaic-rookie-private-signings-association-version",
+   "subsetCategory": "rookie-private-signings-association-version",
+   "parent": "panini-mosaic",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "basketball",
+     "year": 2020,
+     "rows": 3
+    }
+   ],
+   "totalRows": 3
+  },
+  {
+   "proposedSetKey": "panini-donruss-celebration-ink",
+   "subsetCategory": "celebration-ink",
+   "parent": "panini-donruss",
+   "alreadyRegistered": false,
+   "cells": [
+    {
+     "sport": "football",
+     "year": 2021,
+     "rows": 2
+    }
+   ],
+   "totalRows": 2
+  }
+ ],
+ "byFile": [
+  {
+   "file": "2019-20-panini-donruss-basketball.csv",
+   "sport": "basketball",
+   "year": 2019,
+   "setKey": "panini-donruss",
+   "setName": "2019-20 Donruss Basketball",
+   "fileRows": 7367,
+   "clashingAddresses": 462,
+   "subsetKeys": [
+    {
+     "subsetCategory": "changing-stripes",
+     "proposedSetKey": "panini-donruss-changing-stripes",
+     "rows": 60,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "complete-players",
+     "proposedSetKey": "panini-donruss-complete-players",
+     "rows": 120,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "craftsmen",
+     "proposedSetKey": "panini-donruss-craftsmen",
+     "rows": 45,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "crunch-time",
+     "proposedSetKey": "panini-donruss-crunch-time",
+     "rows": 60,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "defying-gravity",
+     "proposedSetKey": "panini-donruss-defying-gravity",
+     "rows": 30,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "dominator-signatures",
+     "proposedSetKey": "panini-donruss-dominator-signatures",
+     "rows": 90,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "fantasy-stars",
+     "proposedSetKey": "panini-donruss-fantasy-stars",
+     "rows": 30,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "franchise-features",
+     "proposedSetKey": "panini-donruss-franchise-features",
+     "rows": 180,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "great-x-pectations",
+     "proposedSetKey": "panini-donruss-great-x-pectations",
+     "rows": 150,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "hall-dominator-signatures",
+     "proposedSetKey": "panini-donruss-hall-dominator-signatures",
+     "rows": 90,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "jersey-kings",
+     "proposedSetKey": "panini-donruss-jersey-kings",
+     "rows": 100,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "jersey-series",
+     "proposedSetKey": "panini-donruss-jersey-series",
+     "rows": 184,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "league-leaders",
+     "proposedSetKey": "panini-donruss-league-leaders",
+     "rows": 60,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "net-marvels",
+     "proposedSetKey": "panini-donruss-net-marvels",
+     "rows": 60,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "next-day-autographs",
+     "proposedSetKey": "panini-donruss-next-day-autographs",
+     "rows": 42,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "retro-series",
+     "proposedSetKey": "panini-donruss-retro-series",
+     "rows": 90,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "rookie-dominator-signatures",
+     "proposedSetKey": "panini-donruss-rookie-dominator-signatures",
+     "rows": 120,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "rookie-jersey-kings",
+     "proposedSetKey": "panini-donruss-rookie-jersey-kings",
+     "rows": 80,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "signature-series",
+     "proposedSetKey": "panini-donruss-signature-series",
+     "rows": 100,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "the-rookies",
+     "proposedSetKey": "panini-donruss-the-rookies",
+     "rows": 15,
+     "alreadyRegistered": false
+    }
+   ]
+  },
+  {
+   "file": "2019-20-panini-mosaic-basketball.csv",
+   "sport": "basketball",
+   "year": 2019,
+   "setKey": "panini-mosaic",
+   "setName": "2019-20 Panini Mosaic Basketball",
+   "fileRows": 11226,
+   "clashingAddresses": 612,
+   "subsetKeys": [
+    {
+     "subsetCategory": "autographs-fast-break",
+     "proposedSetKey": "panini-mosaic-autographs-fast-break",
+     "rows": 290,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "autographs-mosaic",
+     "proposedSetKey": "panini-mosaic-autographs-mosaic",
+     "rows": 291,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "blue-chips",
+     "proposedSetKey": "panini-mosaic-blue-chips",
+     "rows": 90,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "center-stage",
+     "proposedSetKey": "panini-mosaic-center-stage",
+     "rows": 30,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "give-and-go",
+     "proposedSetKey": "panini-mosaic-give-and-go",
+     "rows": 105,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "got-game",
+     "proposedSetKey": "panini-mosaic-got-game",
+     "rows": 175,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "in-it-to-win-it",
+     "proposedSetKey": "panini-mosaic-in-it-to-win-it",
+     "rows": 20,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "international-men-of-mastery",
+     "proposedSetKey": "panini-mosaic-international-men-of-mastery",
+     "rows": 120,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "introductions",
+     "proposedSetKey": "panini-mosaic-introductions",
+     "rows": 60,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "jam-masters",
+     "proposedSetKey": "panini-mosaic-jam-masters",
+     "rows": 140,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "montage",
+     "proposedSetKey": "panini-mosaic-montage",
+     "rows": 180,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "old-school",
+     "proposedSetKey": "panini-mosaic-old-school",
+     "rows": 140,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "overdrive",
+     "proposedSetKey": "panini-mosaic-overdrive",
+     "rows": 25,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "rookie-autographs-mosaic",
+     "proposedSetKey": "panini-mosaic-rookie-autographs-mosaic",
+     "rows": 198,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "rookie-scripts",
+     "proposedSetKey": "panini-mosaic-rookie-scripts",
+     "rows": 116,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "scripts",
+     "proposedSetKey": "panini-mosaic-scripts",
+     "rows": 153,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "stained-glass",
+     "proposedSetKey": "panini-mosaic-stained-glass",
+     "rows": 10,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "stare-masters",
+     "proposedSetKey": "panini-mosaic-stare-masters",
+     "rows": 150,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "swagger",
+     "proposedSetKey": "panini-mosaic-swagger",
+     "rows": 15,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "will-to-win",
+     "proposedSetKey": "panini-mosaic-will-to-win",
+     "rows": 140,
+     "alreadyRegistered": false
+    }
+   ]
+  },
+  {
+   "file": "2019-panini-donruss-football.csv",
+   "sport": "football",
+   "year": 2019,
+   "setKey": "panini-donruss",
+   "setName": "2019 Donruss Football",
+   "fileRows": 8227,
+   "clashingAddresses": 475,
+   "subsetKeys": [
+    {
+     "subsetCategory": "action-all-pros",
+     "proposedSetKey": "panini-donruss-action-all-pros",
+     "rows": 33,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "all-pro-kings",
+     "proposedSetKey": "panini-donruss-all-pro-kings",
+     "rows": 52,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "all-time-gridiron-kings",
+     "proposedSetKey": "panini-donruss-all-time-gridiron-kings",
+     "rows": 45,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "canton-kings",
+     "proposedSetKey": "panini-donruss-canton-kings",
+     "rows": 60,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "champ-is-here",
+     "proposedSetKey": "panini-donruss-champ-is-here",
+     "rows": 70,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "dominators",
+     "proposedSetKey": "panini-donruss-dominators",
+     "rows": 73,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "donruss-threads",
+     "proposedSetKey": "panini-donruss-donruss-threads",
+     "rows": 313,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "downtown",
+     "proposedSetKey": "panini-donruss-downtown",
+     "rows": 20,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "fans-of-the-game",
+     "proposedSetKey": "panini-donruss-fans-of-the-game",
+     "rows": 9,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "gridiron-kings",
+     "proposedSetKey": "panini-donruss-gridiron-kings",
+     "rows": 41,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "highlights",
+     "proposedSetKey": "panini-donruss-highlights",
+     "rows": 56,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "inducted",
+     "proposedSetKey": "panini-donruss-inducted",
+     "rows": 12,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "jersey-kings",
+     "proposedSetKey": "panini-donruss-jersey-kings",
+     "rows": 85,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "leather-kings",
+     "proposedSetKey": "panini-donruss-leather-kings",
+     "rows": 26,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "legends-of-the-fall",
+     "proposedSetKey": "panini-donruss-legends-of-the-fall",
+     "rows": 58,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "nicknames",
+     "proposedSetKey": "panini-donruss-nicknames",
+     "rows": 15,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "passing-the-torch-jerseys",
+     "proposedSetKey": "panini-donruss-passing-the-torch-jerseys",
+     "rows": 39,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "power-formulas",
+     "proposedSetKey": "panini-donruss-power-formulas",
+     "rows": 34,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "red-hot-rookies",
+     "proposedSetKey": "panini-donruss-red-hot-rookies",
+     "rows": 20,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "retro-1989",
+     "proposedSetKey": "panini-donruss-retro-1989",
+     "rows": 63,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "retro-1999",
+     "proposedSetKey": "panini-donruss-retro-1999",
+     "rows": 73,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "rookie-gridiron-kings",
+     "proposedSetKey": "panini-donruss-rookie-gridiron-kings",
+     "rows": 60,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "rookie-phenom-jerseys",
+     "proposedSetKey": "panini-donruss-rookie-phenom-jerseys",
+     "rows": 320,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "team-pride-holo-horizontal",
+     "proposedSetKey": "panini-donruss-team-pride-holo-horizontal",
+     "rows": 16,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "team-pride-holo-vertical",
+     "proposedSetKey": "panini-donruss-team-pride-holo-vertical",
+     "rows": 16,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "team-pride-horizontal",
+     "proposedSetKey": "panini-donruss-team-pride-horizontal",
+     "rows": 16,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "team-pride-vertical",
+     "proposedSetKey": "panini-donruss-team-pride-vertical",
+     "rows": 16,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "team-supreme-horizontal",
+     "proposedSetKey": "panini-donruss-team-supreme-horizontal",
+     "rows": 6,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "team-supreme-vertical",
+     "proposedSetKey": "panini-donruss-team-supreme-vertical",
+     "rows": 9,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "the-elite-series",
+     "proposedSetKey": "panini-donruss-the-elite-series",
+     "rows": 113,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "the-legends-series",
+     "proposedSetKey": "panini-donruss-the-legends-series",
+     "rows": 40,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "the-rookies",
+     "proposedSetKey": "panini-donruss-the-rookies",
+     "rows": 80,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "white-hot-rookies",
+     "proposedSetKey": "panini-donruss-white-hot-rookies",
+     "rows": 19,
+     "alreadyRegistered": false
+    }
+   ]
+  },
+  {
+   "file": "2020-21-panini-donruss-basketball.csv",
+   "sport": "basketball",
+   "year": 2020,
+   "setKey": "panini-donruss",
+   "setName": "2020-21 Donruss Basketball",
+   "fileRows": 8033,
+   "clashingAddresses": 345,
+   "subsetKeys": [
+    {
+     "subsetCategory": "all-time-league-leaders",
+     "proposedSetKey": "panini-donruss-all-time-league-leaders",
+     "rows": 50,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "choice-signatures",
+     "proposedSetKey": "panini-donruss-choice-signatures",
+     "rows": 119,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "complete-players",
+     "proposedSetKey": "panini-donruss-complete-players",
+     "rows": 100,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "craftsmen",
+     "proposedSetKey": "panini-donruss-craftsmen",
+     "rows": 45,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "crunch-time",
+     "proposedSetKey": "panini-donruss-crunch-time",
+     "rows": 60,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "dominator-signatures",
+     "proposedSetKey": "panini-donruss-dominator-signatures",
+     "rows": 89,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "fantasy-stars",
+     "proposedSetKey": "panini-donruss-fantasy-stars",
+     "rows": 25,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "franchise-features",
+     "proposedSetKey": "panini-donruss-franchise-features",
+     "rows": 150,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "great-x-pectations",
+     "proposedSetKey": "panini-donruss-great-x-pectations",
+     "rows": 125,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "hall-dominator-signatures",
+     "proposedSetKey": "panini-donruss-hall-dominator-signatures",
+     "rows": 89,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "jersey-kings",
+     "proposedSetKey": "panini-donruss-jersey-kings",
+     "rows": 60,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "jersey-series",
+     "proposedSetKey": "panini-donruss-jersey-series",
+     "rows": 166,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "net-marvels",
+     "proposedSetKey": "panini-donruss-net-marvels",
+     "rows": 60,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "power-in-the-paint",
+     "proposedSetKey": "panini-donruss-power-in-the-paint",
+     "rows": 50,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "retro-series",
+     "proposedSetKey": "panini-donruss-retro-series",
+     "rows": 90,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "rookie-jersey-kings",
+     "proposedSetKey": "panini-donruss-rookie-jersey-kings",
+     "rows": 80,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "the-rookies",
+     "proposedSetKey": "panini-donruss-the-rookies",
+     "rows": 15,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "zero-gravity",
+     "proposedSetKey": "panini-donruss-zero-gravity",
+     "rows": 30,
+     "alreadyRegistered": false
+    }
+   ]
+  },
+  {
+   "file": "2020-21-panini-mosaic-basketball.csv",
+   "sport": "basketball",
+   "year": 2020,
+   "setKey": "panini-mosaic",
+   "setName": "2020-21 Panini Mosaic Basketball",
+   "fileRows": 14186,
+   "clashingAddresses": 777,
+   "subsetKeys": [
+    {
+     "subsetCategory": "autographs-fast-break",
+     "proposedSetKey": "panini-mosaic-autographs-fast-break",
+     "rows": 300,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "autographs-mosaic",
+     "proposedSetKey": "panini-mosaic-autographs-mosaic",
+     "rows": 300,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "award-winning-autographs",
+     "proposedSetKey": "panini-mosaic-award-winning-autographs",
+     "rows": 12,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "bang",
+     "proposedSetKey": "panini-mosaic-bang",
+     "rows": 135,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "blue-chips",
+     "proposedSetKey": "panini-mosaic-blue-chips",
+     "rows": 105,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "center-stage",
+     "proposedSetKey": "panini-mosaic-center-stage",
+     "rows": 30,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "elevate",
+     "proposedSetKey": "panini-mosaic-elevate",
+     "rows": 225,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "holofame",
+     "proposedSetKey": "panini-mosaic-holofame",
+     "rows": 180,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "introductions",
+     "proposedSetKey": "panini-mosaic-introductions",
+     "rows": 60,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "introductions-mosaic-red",
+     "proposedSetKey": "panini-mosaic-introductions-mosaic-red",
+     "rows": 10,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "jam-masters",
+     "proposedSetKey": "panini-mosaic-jam-masters",
+     "rows": 180,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "men-of-mastery",
+     "proposedSetKey": "panini-mosaic-men-of-mastery",
+     "rows": 140,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "montage",
+     "proposedSetKey": "panini-mosaic-montage",
+     "rows": 210,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "overdrive",
+     "proposedSetKey": "panini-mosaic-overdrive",
+     "rows": 25,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "rookie-autographs-mosaic",
+     "proposedSetKey": "panini-mosaic-rookie-autographs-mosaic",
+     "rows": 195,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "rookie-private-signings-association-version",
+     "proposedSetKey": "panini-mosaic-rookie-private-signings-association-version",
+     "rows": 3,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "rookie-scripts",
+     "proposedSetKey": "panini-mosaic-rookie-scripts",
+     "rows": 194,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "scripts",
+     "proposedSetKey": "panini-mosaic-scripts",
+     "rows": 292,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "stained-glass",
+     "proposedSetKey": "panini-mosaic-stained-glass",
+     "rows": 10,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "stare-masters",
+     "proposedSetKey": "panini-mosaic-stare-masters",
+     "rows": 175,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "straight-fire",
+     "proposedSetKey": "panini-mosaic-straight-fire",
+     "rows": 20,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "swagger",
+     "proposedSetKey": "panini-mosaic-swagger",
+     "rows": 15,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "will-to-win",
+     "proposedSetKey": "panini-mosaic-will-to-win",
+     "rows": 180,
+     "alreadyRegistered": false
+    }
+   ]
+  },
+  {
+   "file": "2020-panini-donruss-football.csv",
+   "sport": "football",
+   "year": 2020,
+   "setKey": "panini-donruss",
+   "setName": "2020 Donruss Football",
+   "fileRows": 7965,
+   "clashingAddresses": 522,
+   "subsetKeys": [
+    {
+     "subsetCategory": "action-all-pros",
+     "proposedSetKey": "panini-donruss-action-all-pros",
+     "rows": 29,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "all-pro-kings",
+     "proposedSetKey": "panini-donruss-all-pro-kings",
+     "rows": 52,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "all-time-gridiron-kings",
+     "proposedSetKey": "panini-donruss-all-time-gridiron-kings",
+     "rows": 45,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "canton-kings",
+     "proposedSetKey": "panini-donruss-canton-kings",
+     "rows": 60,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "champ-is-here",
+     "proposedSetKey": "panini-donruss-champ-is-here",
+     "rows": 46,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "champions",
+     "proposedSetKey": "panini-donruss-champions",
+     "rows": 2,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "dominators",
+     "proposedSetKey": "panini-donruss-dominators",
+     "rows": 72,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "donruss-threads",
+     "proposedSetKey": "panini-donruss-donruss-threads",
+     "rows": 264,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "downtown",
+     "proposedSetKey": "panini-donruss-downtown",
+     "rows": 40,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "gridiron-kings",
+     "proposedSetKey": "panini-donruss-gridiron-kings",
+     "rows": 44,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "highlights",
+     "proposedSetKey": "panini-donruss-highlights",
+     "rows": 68,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "inducted",
+     "proposedSetKey": "panini-donruss-inducted",
+     "rows": 27,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "jersey-kings",
+     "proposedSetKey": "panini-donruss-jersey-kings",
+     "rows": 85,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "leather-kings",
+     "proposedSetKey": "panini-donruss-leather-kings",
+     "rows": 28,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "legends-of-the-fall",
+     "proposedSetKey": "panini-donruss-legends-of-the-fall",
+     "rows": 60,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "marvels",
+     "proposedSetKey": "panini-donruss-marvels",
+     "rows": 20,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "night-moves",
+     "proposedSetKey": "panini-donruss-night-moves",
+     "rows": 25,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "optic-rated-rookie-preview",
+     "proposedSetKey": "panini-donruss-optic-rated-rookie-preview",
+     "rows": 350,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "optic-rookie-preview",
+     "proposedSetKey": "panini-donruss-optic-rookie-preview",
+     "rows": 350,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "passing-the-torch-jerseys",
+     "proposedSetKey": "panini-donruss-passing-the-torch-jerseys",
+     "rows": 38,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "power-formulas",
+     "proposedSetKey": "panini-donruss-power-formulas",
+     "rows": 40,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "rated-rookies",
+     "proposedSetKey": "panini-donruss-rated-rookies",
+     "rows": 1000,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "red-hot-rookies",
+     "proposedSetKey": "panini-donruss-red-hot-rookies",
+     "rows": 20,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "retro-1990",
+     "proposedSetKey": "panini-donruss-retro-1990",
+     "rows": 66,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "retro-2000",
+     "proposedSetKey": "panini-donruss-retro-2000",
+     "rows": 73,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "retro-series",
+     "proposedSetKey": "panini-donruss-retro-series",
+     "rows": 50,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "rise-n-shine-magnet",
+     "proposedSetKey": "panini-donruss-rise-n-shine-magnet",
+     "rows": 40,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "road-to-the-super-bowl-championship",
+     "proposedSetKey": "panini-donruss-road-to-the-super-bowl-championship",
+     "rows": 2,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "road-to-the-super-bowl-conference-championship",
+     "proposedSetKey": "panini-donruss-road-to-the-super-bowl-conference-championship",
+     "rows": 4,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "road-to-the-super-bowl-divisional-round",
+     "proposedSetKey": "panini-donruss-road-to-the-super-bowl-divisional-round",
+     "rows": 8,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "road-to-the-super-bowl-wild-card",
+     "proposedSetKey": "panini-donruss-road-to-the-super-bowl-wild-card",
+     "rows": 8,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "rookie-gridiron-kings",
+     "proposedSetKey": "panini-donruss-rookie-gridiron-kings",
+     "rows": 60,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "rookie-holiday-sweater",
+     "proposedSetKey": "panini-donruss-rookie-holiday-sweater",
+     "rows": 50,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "rookie-phenom-jerseys",
+     "proposedSetKey": "panini-donruss-rookie-phenom-jerseys",
+     "rows": 333,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "rookies",
+     "proposedSetKey": "panini-donruss-rookies",
+     "rows": 550,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "super-bowl-mvp",
+     "proposedSetKey": "panini-donruss-super-bowl-mvp",
+     "rows": 2,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "team-supreme-horizontal",
+     "proposedSetKey": "panini-donruss-team-supreme-horizontal",
+     "rows": 5,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "team-supreme-vertical",
+     "proposedSetKey": "panini-donruss-team-supreme-vertical",
+     "rows": 10,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "the-elite-series",
+     "proposedSetKey": "panini-donruss-the-elite-series",
+     "rows": 116,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "the-legends-series",
+     "proposedSetKey": "panini-donruss-the-legends-series",
+     "rows": 39,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "the-rookies",
+     "proposedSetKey": "panini-donruss-the-rookies",
+     "rows": 84,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "white-hot-rookies",
+     "proposedSetKey": "panini-donruss-white-hot-rookies",
+     "rows": 20,
+     "alreadyRegistered": false
+    }
+   ]
+  },
+  {
+   "file": "2021-22-panini-donruss-basketball.csv",
+   "sport": "basketball",
+   "year": 2021,
+   "setKey": "panini-donruss",
+   "setName": "2021-22 Donruss Basketball",
+   "fileRows": 9203,
+   "clashingAddresses": 354,
+   "subsetKeys": [
+    {
+     "subsetCategory": "complete-players",
+     "proposedSetKey": "panini-donruss-complete-players",
+     "rows": 140,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "craftsmen",
+     "proposedSetKey": "panini-donruss-craftsmen",
+     "rows": 75,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "crunch-time",
+     "proposedSetKey": "panini-donruss-crunch-time",
+     "rows": 100,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "duos",
+     "proposedSetKey": "panini-donruss-duos",
+     "rows": 25,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "franchise-features",
+     "proposedSetKey": "panini-donruss-franchise-features",
+     "rows": 210,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "great-x-pectations",
+     "proposedSetKey": "panini-donruss-great-x-pectations",
+     "rows": 175,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "jersey-kings",
+     "proposedSetKey": "panini-donruss-jersey-kings",
+     "rows": 60,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "magicians",
+     "proposedSetKey": "panini-donruss-magicians",
+     "rows": 70,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "net-marvels",
+     "proposedSetKey": "panini-donruss-net-marvels",
+     "rows": 100,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "next-day-autographs",
+     "proposedSetKey": "panini-donruss-next-day-autographs",
+     "rows": 40,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "power-in-the-paint",
+     "proposedSetKey": "panini-donruss-power-in-the-paint",
+     "rows": 70,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "production-line",
+     "proposedSetKey": "panini-donruss-production-line",
+     "rows": 50,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "retro-series",
+     "proposedSetKey": "panini-donruss-retro-series",
+     "rows": 150,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "rookie-jersey-kings",
+     "proposedSetKey": "panini-donruss-rookie-jersey-kings",
+     "rows": 80,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "signature-series",
+     "proposedSetKey": "panini-donruss-signature-series",
+     "rows": 96,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "the-rookies",
+     "proposedSetKey": "panini-donruss-the-rookies",
+     "rows": 35,
+     "alreadyRegistered": false
+    }
+   ]
+  },
+  {
+   "file": "2021-panini-donruss-football.csv",
+   "sport": "football",
+   "year": 2021,
+   "setKey": "panini-donruss",
+   "setName": "2021 Donruss Football",
+   "fileRows": 11126,
+   "clashingAddresses": 646,
+   "subsetKeys": [
+    {
+     "subsetCategory": "2019-super-bowl-signatures-prizm",
+     "proposedSetKey": "panini-donruss-2019-super-bowl-signatures-prizm",
+     "rows": 4,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "2020-super-bowl-mvp-signatures",
+     "proposedSetKey": "panini-donruss-2020-super-bowl-mvp-signatures",
+     "rows": 5,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "action-all-pros",
+     "proposedSetKey": "panini-donruss-action-all-pros",
+     "rows": 29,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "all-pro-kings",
+     "proposedSetKey": "panini-donruss-all-pro-kings",
+     "rows": 46,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "all-time-gridiron-kings",
+     "proposedSetKey": "panini-donruss-all-time-gridiron-kings",
+     "rows": 42,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "canton-kings",
+     "proposedSetKey": "panini-donruss-canton-kings",
+     "rows": 55,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "celebration-ink",
+     "proposedSetKey": "panini-donruss-celebration-ink",
+     "rows": 2,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "champ-is-here",
+     "proposedSetKey": "panini-donruss-champ-is-here",
+     "rows": 68,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "champions",
+     "proposedSetKey": "panini-donruss-champions",
+     "rows": 2,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "dominators",
+     "proposedSetKey": "panini-donruss-dominators",
+     "rows": 64,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "donruss-threads",
+     "proposedSetKey": "panini-donruss-donruss-threads",
+     "rows": 236,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "downtown",
+     "proposedSetKey": "panini-donruss-downtown",
+     "rows": 40,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "gridiron-greats",
+     "proposedSetKey": "panini-donruss-gridiron-greats",
+     "rows": 50,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "gridiron-kings",
+     "proposedSetKey": "panini-donruss-gridiron-kings",
+     "rows": 41,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "gridiron-marvels",
+     "proposedSetKey": "panini-donruss-gridiron-marvels",
+     "rows": 20,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "highlights",
+     "proposedSetKey": "panini-donruss-highlights",
+     "rows": 63,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "inducted",
+     "proposedSetKey": "panini-donruss-inducted",
+     "rows": 29,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "jersey-kings",
+     "proposedSetKey": "panini-donruss-jersey-kings",
+     "rows": 71,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "leather-kings",
+     "proposedSetKey": "panini-donruss-leather-kings",
+     "rows": 25,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "liftoff",
+     "proposedSetKey": "panini-donruss-liftoff",
+     "rows": 75,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "night-moves",
+     "proposedSetKey": "panini-donruss-night-moves",
+     "rows": 25,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "optic-rated-rookie-preview-blue",
+     "proposedSetKey": "panini-donruss-optic-rated-rookie-preview-blue",
+     "rows": 100,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "optic-rated-rookie-preview-green",
+     "proposedSetKey": "panini-donruss-optic-rated-rookie-preview-green",
+     "rows": 100,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "optic-rated-rookie-preview-holo",
+     "proposedSetKey": "panini-donruss-optic-rated-rookie-preview-holo",
+     "rows": 100,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "optic-rated-rookie-preview-pink",
+     "proposedSetKey": "panini-donruss-optic-rated-rookie-preview-pink",
+     "rows": 100,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "optic-rated-rookie-preview-purple",
+     "proposedSetKey": "panini-donruss-optic-rated-rookie-preview-purple",
+     "rows": 100,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "optic-rated-rookie-preview-red",
+     "proposedSetKey": "panini-donruss-optic-rated-rookie-preview-red",
+     "rows": 200,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "out-of-this-world",
+     "proposedSetKey": "panini-donruss-out-of-this-world",
+     "rows": 100,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "passing-the-torch-jerseys",
+     "proposedSetKey": "panini-donruss-passing-the-torch-jerseys",
+     "rows": 37,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "power-formulas",
+     "proposedSetKey": "panini-donruss-power-formulas",
+     "rows": 32,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "rated-rookies",
+     "proposedSetKey": "panini-donruss-rated-rookies",
+     "rows": 2131,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "red-hot-rookies",
+     "proposedSetKey": "panini-donruss-red-hot-rookies",
+     "rows": 18,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "retro-1991",
+     "proposedSetKey": "panini-donruss-retro-1991",
+     "rows": 61,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "retro-2001",
+     "proposedSetKey": "panini-donruss-retro-2001",
+     "rows": 76,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "retro-series",
+     "proposedSetKey": "panini-donruss-retro-series",
+     "rows": 98,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "road-to-the-super-bowl-championship",
+     "proposedSetKey": "panini-donruss-road-to-the-super-bowl-championship",
+     "rows": 2,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "road-to-the-super-bowl-conference-championship",
+     "proposedSetKey": "panini-donruss-road-to-the-super-bowl-conference-championship",
+     "rows": 4,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "road-to-the-super-bowl-divisional-round",
+     "proposedSetKey": "panini-donruss-road-to-the-super-bowl-divisional-round",
+     "rows": 8,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "road-to-the-super-bowl-wild-card",
+     "proposedSetKey": "panini-donruss-road-to-the-super-bowl-wild-card",
+     "rows": 8,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "rookie-gridiron-kings",
+     "proposedSetKey": "panini-donruss-rookie-gridiron-kings",
+     "rows": 58,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "rookie-holiday-sweater",
+     "proposedSetKey": "panini-donruss-rookie-holiday-sweater",
+     "rows": 50,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "rookie-phenom-jersey-autographs",
+     "proposedSetKey": "panini-donruss-rookie-phenom-jersey-autographs",
+     "rows": 90,
+     "alreadyRegistered": true
+    },
+    {
+     "subsetCategory": "rookie-phenom-jerseys",
+     "proposedSetKey": "panini-donruss-rookie-phenom-jerseys",
+     "rows": 240,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "rookie-revolution",
+     "proposedSetKey": "panini-donruss-rookie-revolution",
+     "rows": 200,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "signature-highlights",
+     "proposedSetKey": "panini-donruss-signature-highlights",
+     "rows": 50,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "signature-marks",
+     "proposedSetKey": "panini-donruss-signature-marks",
+     "rows": 300,
+     "alreadyRegistered": true
+    },
+    {
+     "subsetCategory": "super-bowl-mvp",
+     "proposedSetKey": "panini-donruss-super-bowl-mvp",
+     "rows": 2,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "the-elite-series",
+     "proposedSetKey": "panini-donruss-the-elite-series",
+     "rows": 113,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "the-legends-series",
+     "proposedSetKey": "panini-donruss-the-legends-series",
+     "rows": 37,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "the-rookies",
+     "proposedSetKey": "panini-donruss-the-rookies",
+     "rows": 75,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "vortex",
+     "proposedSetKey": "panini-donruss-vortex",
+     "rows": 125,
+     "alreadyRegistered": false
+    },
+    {
+     "subsetCategory": "white-hot-rookies",
+     "proposedSetKey": "panini-donruss-white-hot-rookies",
+     "rows": 19,
+     "alreadyRegistered": false
+    }
+   ]
+  }
+ ]
+}
