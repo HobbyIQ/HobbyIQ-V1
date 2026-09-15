@@ -109,13 +109,114 @@ jobs:
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5AB8B3DC612348FD9D37DBE28FF40802 }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_A45CF8552AE94AF68A046FB846E21206 }}
 
-      - name: Deploy to Azure App Service
+      # CF-A-STAGING-SLOT-MUST-NOT-ACT-LIKE-PRODUCTION (Fable, 2026-09-15, R56).
+      # Deploy to the STAGING SLOT, not to production. The slot warms and is
+      # smoked while production keeps serving the previous build; only a slot
+      # that answered every smoke case is swapped in. No user ever meets a cold
+      # process, which is the 14-22s window this replaces.
+      #
+      # The slot carries HIQ_SLOT_ROLE=staging as a SLOT SETTING (sticky), so
+      # it runs no in-process jobs and no outbound side effects while it warms
+      # — see services/ops/slotRole.ts for what would otherwise double-run, and
+      # docs/runbooks/staging-slot-swap.md for the settings table.
+      - name: Deploy to staging slot
         if: steps.et-gate.outputs.should_run == 'true'
         uses: azure/webapps-deploy@v3
         with:
           app-name: HobbyIQ3
+          slot-name: staging
           resource-group-name: rg-hobbyiq-dev
           package: deploy.zip
+
+      # Warm the slot BEFORE it takes traffic. /api/health/warm builds the
+      # expensive singletons (checklist corpora, parser tables, the ladder
+      # module graph — ~2.5s measured) and returns per-step ms, so the deploy
+      # BLOCKS on warm-up finishing rather than hoping it races the first user.
+      - name: Warm the staging slot
+        if: steps.et-gate.outputs.should_run == 'true'
+        run: |
+          SLOT="https://hobbyiq3-staging.azurewebsites.net"
+          echo "Waiting for the slot to answer /api/health ..."
+          for i in $(seq 1 40); do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 20 "$SLOT/api/health" || echo 000)
+            [ "$STATUS" = "200" ] && { echo "slot healthy after ${i} tries"; break; }
+            sleep 10
+          done
+          if [ "$STATUS" != "200" ]; then
+            echo "Slot never became healthy (last status $STATUS) — not swapping."
+            exit 1
+          fi
+          echo "Warming ..."
+          WARM=$(curl -s --max-time 180 "$SLOT/api/health/warm")
+          echo "$WARM"
+          echo "$WARM" | grep -q '"ok":true' || echo "::warning::warm reported not-ok; continuing to smoke"
+
+      # Fetched BEFORE the slot smoke, which authenticates with it. It was
+      # previously fetched further down, next to the DailyIQ warms that were its
+      # only consumer — leaving it there would have handed the slot smoke an
+      # empty token and turned every case into a 401, i.e. a green-looking
+      # refusal to swap.
+      - name: Fetch TIER1_HARNESS_TOKEN for warm auth
+        if: steps.et-gate.outputs.should_run == 'true'
+        id: harness-token
+        run: |
+          TOKEN=$(az webapp config appsettings list \
+            --name HobbyIQ3 --resource-group rg-hobbyiq-dev \
+            --query "[?name=='TIER1_HARNESS_TOKEN'].value" -o tsv | tr -d '\r\n')
+          if [ -z "$TOKEN" ]; then
+            echo "::warning::TIER1_HARNESS_TOKEN empty from App Service — DailyIQ warms will 401"
+          fi
+          # Mask so the value never lands in any subsequent step's log.
+          echo "::add-mask::$TOKEN"
+          echo "token=$TOKEN" >> "$GITHUB_OUTPUT"
+
+      # Smoke the SLOT. This is the gate: a slot that cannot price is never
+      # swapped into production, so a bad build is caught while the previous
+      # one is still serving users.
+      - name: Smoke the staging slot
+        id: slot-smoke
+        if: steps.et-gate.outputs.should_run == 'true'
+        continue-on-error: true
+        working-directory: backend
+        run: |
+          SMOKE_BASE_URL="https://hobbyiq3-staging.azurewebsites.net"           TIER1_HARNESS_TOKEN="${{ steps.harness-token.outputs.token }}"           node scripts/smoke-test-pricing-tiers.cjs
+
+      - name: Refuse the swap if the slot smoke failed
+        if: steps.et-gate.outputs.should_run == 'true'
+        run: |
+          if [ "${{ steps.slot-smoke.outcome }}" != "success" ]; then
+            echo "The staging slot failed its smoke (engine_ok=${{ steps.slot-smoke.outputs.engine_ok }})."
+            echo "NOT swapping. Production keeps serving the previous build, which is the"
+            echo "entire point of deploying to a slot — a bad build costs a red run, not an outage."
+            exit 1
+          fi
+          echo "Slot smoke green — proceeding to swap."
+
+      # The swap itself. Azure routes production traffic to the warmed slot and
+      # moves the old production instance into the slot, where HIQ_SLOT_ROLE
+      # (sticky to the slot, NOT to the code) makes it go quiet.
+      - name: Swap staging into production
+        if: steps.et-gate.outputs.should_run == 'true'
+        run: |
+          az webapp deployment slot swap             --name HobbyIQ3             --resource-group rg-hobbyiq-dev             --slot staging             --target-slot production
+          echo "Swap complete."
+
+      # Verify the SHA that is actually serving production is the one we built.
+      # build-info.json ships inside the package, so this cannot report a SHA
+      # unless the dist carrying it is the dist that is loaded.
+      - name: Verify production is serving the new build
+        if: steps.et-gate.outputs.should_run == 'true'
+        run: |
+          EXPECTED=$(git rev-parse --short=7 HEAD)
+          for i in $(seq 1 30); do
+            LIVE=$(curl -s --max-time 20 https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net/api/health \n              | grep -o '"shaShort":"[^"]*"' | head -1 | cut -d'"' -f4)
+            echo "try ${i}: production sha=${LIVE} expected=${EXPECTED}"
+            case "$EXPECTED" in "$LIVE"*) echo "production is serving the new build"; exit 0;; esac
+            case "$LIVE" in "$EXPECTED"*) echo "production is serving the new build"; exit 0;; esac
+            sleep 10
+          done
+          echo "::error::production never reported the expected sha after the swap"
+          exit 1
 
       # CF-DEPLOY-RESTARTS-ONCE (2026-09-07). There used to be an "Update build
       # metadata App Settings" step here, writing GIT_SHA/GIT_SHA_SHORT/
@@ -169,20 +270,6 @@ jobs:
       # workflow. Token pulled from App Service settings so it never
       # lives in the workflow file. Fail-closed: if the token is empty,
       # the curls still 401 and we log a workflow warning.
-      - name: Fetch TIER1_HARNESS_TOKEN for warm auth
-        if: steps.et-gate.outputs.should_run == 'true'
-        id: harness-token
-        run: |
-          TOKEN=$(az webapp config appsettings list \
-            --name HobbyIQ3 --resource-group rg-hobbyiq-dev \
-            --query "[?name=='TIER1_HARNESS_TOKEN'].value" -o tsv | tr -d '\r\n')
-          if [ -z "$TOKEN" ]; then
-            echo "::warning::TIER1_HARNESS_TOKEN empty from App Service — DailyIQ warms will 401"
-          fi
-          # Mask so the value never lands in any subsequent step's log.
-          echo "::add-mask::$TOKEN"
-          echo "token=$TOKEN" >> "$GITHUB_OUTPUT"
-
       # Force a fresh DailyIQ pull from MLB Stats API — pre-warms cache for users
       - name: Warm DailyIQ cache (MLB)
         if: steps.et-gate.outputs.should_run == 'true'

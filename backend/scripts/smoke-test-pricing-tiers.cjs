@@ -13,7 +13,14 @@
  *   node backend/scripts/smoke-test-pricing-tiers.cjs
  */
 
-const BASE = "https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net";
+// CF-A-STAGING-SLOT-MUST-NOT-ACT-LIKE-PRODUCTION (Fable, 2026-09-15). The base
+// URL is overridable so the deploy can smoke the STAGING SLOT before swapping
+// it into production — which is the whole point of having a slot. Default is
+// unchanged, so every existing caller (and a bare local run) still targets
+// production exactly as before.
+const BASE =
+  (process.env.SMOKE_BASE_URL || "").trim().replace(/\/+$/, "")
+  || "https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net";
 const TOKEN = process.env.TIER1_HARNESS_TOKEN?.trim() ?? "";
 
 // CF-SMOKE-DECISION-IS-TESTABLE (2026-09-05). This file is both a CLI and the
