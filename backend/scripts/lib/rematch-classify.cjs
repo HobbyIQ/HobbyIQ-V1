@@ -5276,6 +5276,51 @@ function cardNumberFromTitle(title) {
   return lower(tok).replace(/\s+/g, "");
 }
 
+/**
+ * IS THIS TITLE'S `#N` SOMETHING OTHER THAN A CARD NUMBER? Returns the leg
+ * name, or null when the token may be read as an address.
+ *
+ * CF-A-HASH-N-IS-NOT-ALWAYS-A-CARD-NUMBER (slot-3 R33 census, 2026-09-15).
+ * See N1b for the two measured shapes and why each is a write-safety problem
+ * rather than a parsing nicety.
+ *
+ * DELIBERATELY NARROW. Each pattern is anchored on the token the lexer
+ * actually returned, not on the title at large: a title may legitimately say
+ * "lot" in a seller's boilerplate ("check my lot of listings") while stating
+ * one card, and "pick" appears in "Prizm Draft Picks", a PRODUCT name. So the
+ * ordinal test requires the qualifying word to follow the `#N` immediately,
+ * and the lot test requires either an explicit multi-card count or two
+ * DISTINCT `#N` tokens -- the same number twice is one card named twice.
+ */
+function lotOrOrdinalRefusal(title) {
+  const t = str(title);
+  if (!t) return null;
+
+  // ORDINAL: `#1 overall`, `#3 pick`, `#2 draft ...`. The word must follow the
+  // number directly, so "Prizm Draft Picks #23" (product name BEFORE the
+  // number) is untouched.
+  if (/#\s*\d{1,3}\s+(?:overall\b|pick\b|picks\b|draft\b)/i.test(t)) return "ordinal";
+
+  // LOT, stated outright.
+  if (/\(\s*\d+\s*cards?\s*\)/i.test(t)) return "lot-count";
+  if (/\b\d+\s*card\s*lot\b/i.test(t)) return "lot-count";
+  if (/\blot\s+of\s+\d+/i.test(t)) return "lot-count";
+
+  // LOT, by two DISTINCT card-number tokens. "#250 + Hype #5" is two cards.
+  // Normalised so `#12` and `#012` are one number, and de-duplicated so a
+  // title repeating its own number is not a lot.
+  const toks = [...t.matchAll(/#\s*([A-Za-z]{0,5}-?\d{1,4}[A-Za-z]?)\b/g)]
+    .map((m) => lower(m[1]).replace(/\s+/g, "").replace(/(^|[^0-9])0+(\d)/g, "$1$2"))
+    // A `#788/1000` serial and a 5+-digit cert are not card numbers -- the
+    // same two exclusions `cardNumberFromTitle` applies, so this cannot invent
+    // a second "number" the lexer would never have returned.
+    .filter((v) => v.replace(/\D/g, "").length > 0 && v.replace(/\D/g, "").length < 5);
+  const distinct = new Set(toks);
+  if (distinct.size > 1) return `two-card-numbers:${[...distinct].slice(0, 3).join(",")}`;
+
+  return null;
+}
+
 /** Two card numbers, compared the way the corpus spells them: case-folded,
  *  whitespace-stripped, and with leading zeros on the numeric tail ignored
  *  (`rv-012` and `RV-12` are one card; `12` and `21` are two). */
@@ -5306,6 +5351,8 @@ function titleFillsTheBlankEvidence({
   row, stored, derived, axes,
   titleParallel = null,
   checklistListsTitleParallel = false,
+  titleParallelIsARungPhrase = null,
+  titleNamesSiblingProduct = null,
   titleSerial = null,
   derivedBacked = false,
 }) {
@@ -5340,6 +5387,35 @@ function titleFillsTheBlankEvidence({
       failed.push("destination-parallel-is-blank-or-base");
     } else if (!checklistListsTitleParallel) {
       failed.push(`rung-not-in-product-checklist-vocabulary:${lower(destParallel)}`);
+    } else if (titleParallelIsARungPhrase === false) {
+      // T3b -- A RUNG IS A NAME, NOT A BAG OF TOKENS (slot-3 census,
+      // 2026-09-15).
+      //
+      // `checklistListsTitleParallel` is `VOCAB.checklistListsParallel`, a
+      // TOKEN-membership test: it says yes when every word of the candidate
+      // appears SOMEWHERE among this product's rung names, in any names, in
+      // any order. That is the right shape for a DISQUALIFYING test, where
+      // breadth is free -- but R31 WRITES the parallel, so a token-yes lets it
+      // fill a blank with a string that is not any card. Measured on the
+      // slot-3 R31 move samples against the shipped corpus:
+      //
+      //   "snakeskin"               panini-prizm 2024  rung is `Snakeskin Prizms`
+      //   "black and white checker" panini-prizm 2024  rung is `Prizm Black and
+      //                                                White Checker`
+      //   "x-fractor"               topps-chrome 2024  NO such rung -- the only
+      //                                                names are `X-Fractor 1/1
+      //                                                Monster` and `1/2 Mega`
+      //
+      // This is the identical hole `checklistDefinesNumberedBase` was written
+      // for one ruling earlier ("`base` is a token of every product's
+      // checklist, so it answered true for every product and the refusal never
+      // fired"), arriving on the parallel axis.
+      //
+      // The caller supplies the phrase answer (`VOCAB.checklistListsRungPhrase`)
+      // so this module stays pure, exactly as the token answer is supplied.
+      // `null` means the caller did not ask -- this leg only ever NARROWS the
+      // token gate above, so an older caller keeps today's behaviour.
+      failed.push(`not-a-rung-in-product:${lower(destParallel)}`);
     }
   }
 
@@ -5353,6 +5429,29 @@ function titleFillsTheBlankEvidence({
       failed.push(`printrun-disagrees-with-title-serial:${destRun}!=/${titleSerial}`);
     }
   }
+
+  // T5a -- THE TITLE MUST NOT NAME A SIBLING OF THE PRODUCT BEING WRITTEN
+  // (slot-3 census, 2026-09-15).
+  //
+  // A fill is only safe when the row is already at the right ADDRESS and only
+  // the rung is missing. When the title names a SIBLING of the stored product
+  // -- Optic vs Donruss, Chrome vs paper, Sapphire vs Chrome -- the row is at
+  // the wrong product, and filling its parallel writes a rung from one
+  // product's ladder onto another product's card:
+  //
+  //   "2024 Panini Donruss Optic - Dexter Lawrence #151 White Sparkle Prizm"
+  //       stored setKey `panini-optic`, which carries NO ladder at all in the
+  //       corpus; `donruss-optic` is the product holding the 500-rung ladder.
+  //
+  // The RE-KEY comes first (R39); a fill is only meaningful once the row is at
+  // the right address. So this refuses rather than racing it -- and a refusal
+  // is recoverable, while a rung written onto the wrong product is a split
+  // pool (CF-ONE-CARD-ONE-ROW-ONE-POOL).
+  //
+  // Caller-supplied for the same purity reason as every other catalog fact
+  // here. Like T3b it only ever NARROWS, so `null` (unasked) keeps today's
+  // behaviour rather than refusing every row.
+  if (titleNamesSiblingProduct === true) failed.push("title-names-sibling-product");
 
   // T5 -- THE DESTINATION MUST BE CHECKLIST-BACKED.
   if (!derivedBacked) failed.push("destination-not-checklist-backed");
@@ -5370,7 +5469,7 @@ function titleFillsTheBlankEvidence({
       storedParallel: lower(stored?.parallel), destParallel: lower(destParallel),
       storedPrintRun: stored?.printRun ?? null, destPrintRun: destRun,
       titleSerial: titleSerial ?? null,
-      checklistListsTitleParallel, derivedBacked,
+      checklistListsTitleParallel, titleParallelIsARungPhrase, titleNamesSiblingProduct, derivedBacked,
       pair: `${fillsParallel ? `parallel:(blank)->${lower(destParallel) || "?"}` : ""}`
         + `${fillsParallel && fillsPrintRun ? " " : ""}`
         + `${fillsPrintRun ? `printRun:(blank)->/${str(destRun) || "?"}` : ""}`,
@@ -5489,6 +5588,29 @@ function titleCardNumberWinsEvidence({
   // N1 -- THE TITLE MUST STATE A LITERAL NUMBER, through the `#` boundary and
   // no other reading.
   if (!titleNumber) failed.push("title-states-no-literal-card-number");
+
+  // N1b -- A `#N` THAT IS NOT A CARD NUMBER (slot-3 census, 2026-09-15).
+  //
+  // R33 WRITES the number it reads, so a `#N` token that is not an address is
+  // a confident wrong address. Two shapes, both measured on the slot-3 R33
+  // move samples against the live lexer:
+  //
+  //   ORDINALS. "#1 Overall Draft Pick" and "#1 Road to the Super Bowl
+  //   Championship" both read as card #1. The `#1` is the player's draft
+  //   position or a series ordinal -- it is prose, not an address, and card #1
+  //   of the product is a different card that exists.
+  //
+  //   LOTS. "Base #250 + Hype #5" is TWO cards in one listing and read as
+  //   #250. A lot states no single card's number, so neither number is this
+  //   sale's -- the same refusal `isMultiCardLot` already carries on the
+  //   parallel axis, arriving on the number axis.
+  //
+  // Absent beats wrong: a refusal leaves the row where it is and is
+  // recoverable; a wrong number moves a real sale onto another card's pool.
+  if (titleNumber) {
+    const lotLeg = lotOrOrdinalRefusal(title);
+    if (lotLeg) failed.push(`not-a-card-number:${lotLeg}`);
+  }
 
   // N2 -- THE STORED NUMBER MUST ACTUALLY DISAGREE WITH IT. A row whose stored
   // number already matches the title is not this defect; an EMPTY stored

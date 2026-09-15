@@ -1492,6 +1492,44 @@ async function main() {
 
 
   /**
+   * DOES THE TITLE NAME A SIBLING OF THE PRODUCT WE ARE ABOUT TO WRITE?
+   *
+   * CF-A-FILL-PRESUMES-THE-RIGHT-ADDRESS (slot-3 census, 2026-09-15). See
+   * R31's T5a leg for the ruling and the measured row.
+   *
+   * NOT A NEW SIBLING TABLE. The question is answered from the two seams that
+   * already own it: `inferSetKeyFromTitle` reads what the TITLE says the
+   * product is (the same reader the derivation itself uses, so the two cannot
+   * disagree about a title), and `productAncestry` says whether two keys are
+   * on one family line. A second hand-maintained Optic/Donruss/Chrome/Sapphire
+   * list here is exactly how two readings of one title start to drift.
+   *
+   * SIBLING means: the title names a real product, it is NOT the key being
+   * written, and neither key is an ancestor of the other. A title naming the
+   * PARENT of the written key ("Donruss" on a `donruss-optic` row) is not a
+   * sibling -- it is the same family line, less specific, and the ladder still
+   * belongs to the row. Only a genuine fork is refused.
+   *
+   * Returns null when the title names no product at all: unasked, not
+   * innocent, and T5a treats null as "do not refuse" so a title the parser
+   * cannot read keeps today's behaviour.
+   */
+  const titleNamesSiblingOfSetKey = (title, writtenSetKey) => {
+    const written = String(writtenSetKey ?? "").trim().toLowerCase();
+    if (!written) return null;
+    let fromTitle = "";
+    try {
+      fromTitle = String(hic.normalizeSetKey(pti.inferSetKeyFromTitle(String(title ?? ""), null) || "")).toLowerCase();
+    } catch { return null; }
+    if (!fromTitle || fromTitle === "unknown" || fromTitle === written) return null;
+    const a = psk.productAncestry(written) || [];
+    const b = psk.productAncestry(fromTitle) || [];
+    // One family line, either direction -> not a sibling.
+    if (a.includes(fromTitle) || b.includes(written)) return null;
+    return true;
+  };
+
+  /**
    * R31-TITLE-FILLS-THE-BLANK's facts (Drew, 2026-09-14, recorded).
    *
    * THE PRE-GATE IS THE ROW'S OWN STORED FIELDS, NOT THE AXES. `classifyRow`
@@ -1510,7 +1548,10 @@ async function main() {
    * T4 leg turns that into a counted refusal.
    */
   const r31Inputs = async (row, stored, der) => {
-    const none = { checklistListsTitleParallel: false, titleSerial: null, derivedBackedR31: false };
+    const none = {
+      checklistListsTitleParallel: false, titleSerial: null, derivedBackedR31: false,
+      titleParallelIsARungPhrase: null, titleNamesSiblingProduct: null,
+    };
     if (!der?.ok) return none;
     const storedParallelBlank = K.GENERIC_PARALLELS.has(String(stored?.parallel ?? "").trim().toLowerCase());
     const storedRunBlank = stored?.printRun === null || stored?.printRun === undefined
@@ -1527,8 +1568,33 @@ async function main() {
         ? K.VOCAB.checklistListsParallel(destParallel, year, setKey)
         : false;
     }
+    // A RUNG IS A NAME, NOT A BAG OF TOKENS (slot-3 census, 2026-09-15).
+    // `listsIt` above is the TOKEN test; this is the PHRASE test on the same
+    // (year, setKey) cell. R31 writes the parallel, so the write must land on a
+    // rung the product's ladder actually names -- see T3b for the three
+    // measured rows that motivated it. Only computed where the token test
+    // already said yes, so it costs nothing on the rows that are refused
+    // anyway, and it can only ever narrow.
+    let isRungPhrase = null;
+    if (storedParallelBlank && listsIt) {
+      const destParallel = String(der.identity?.parallel ?? "");
+      const year = stored?.cardYear ?? der.identity?.cardYear ?? null;
+      const setKey = String(der.identity?.setKey ?? "").toLowerCase();
+      isRungPhrase = K.VOCAB.checklistListsRungPhrase(destParallel, year, setKey);
+    }
+
+    // THE TITLE MUST NOT NAME A SIBLING OF THE PRODUCT BEING WRITTEN. The
+    // re-key (R39) comes first; see T5a. `titleNamesSiblingOfSetKey` is the
+    // one seam that owns this question, so the classifier stays pure and the
+    // driver does not carry a second copy of the sibling table.
+    const siblingNamed = storedParallelBlank
+      ? titleNamesSiblingOfSetKey(row?.title, String(der.identity?.setKey ?? ""))
+      : null;
+
     return {
       checklistListsTitleParallel: listsIt,
+      titleParallelIsARungPhrase: isRungPhrase,
+      titleNamesSiblingProduct: siblingNamed,
       titleSerial,
       derivedBackedR31: await checklistBacked(der.slug),
     };
@@ -2607,6 +2673,8 @@ async function main() {
         // are `classifyRow` return paths and take their facts here; R32 is
         // counted off the split signal below and takes none.
         checklistListsTitleParallel: r31In.checklistListsTitleParallel,
+        titleParallelIsARungPhrase: r31In.titleParallelIsARungPhrase,
+        titleNamesSiblingProduct: r31In.titleNamesSiblingProduct,
         titleSerial: r31In.titleSerial,
         titleNumberIsChecklistRow: r33In.titleNumberIsChecklistRow,
         derivedBackedR33: r33In.derivedBackedR33,
@@ -2676,6 +2744,8 @@ async function main() {
           row, stored, derived: derivedForEvidence, axes: res.axes,
           titleParallel: derivedForEvidence?.parallel ?? null,
           checklistListsTitleParallel: r31In.checklistListsTitleParallel,
+          titleParallelIsARungPhrase: r31In.titleParallelIsARungPhrase,
+          titleNamesSiblingProduct: r31In.titleNamesSiblingProduct,
           titleSerial: r31In.titleSerial,
           derivedBacked: r31In.derivedBackedR31,
         });
