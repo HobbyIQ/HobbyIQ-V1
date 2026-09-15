@@ -71,6 +71,10 @@ export async function readPlayerPoolRows(input: {
    *  sales would be reporting a move it had already been told the answer to.
    *  Undefined in production; the bound is then absent from the query. */
   asOfIso?: string | null;
+  /** CF-A-BOUND-IS-ALSO-A-PAGE-SIZE (Fable, 2026-09-15). A request-scoped
+   *  deadline, when the caller has one. Absent for every script and cron, and
+   *  the read then behaves exactly as it always has. */
+  abortSignal?: AbortSignal;
 }): Promise<PlayerPoolRow[] | null> {
   const container = getContainer();
   if (!container) return null;
@@ -106,7 +110,26 @@ export async function readPlayerPoolRows(input: {
                  ORDER BY c.soldAt DESC`;
 
   try {
-    const { resources } = await container.items.query<PlayerPoolRow>({ query, parameters }).fetchAll();
+    // CF-A-BOUND-IS-ALSO-A-PAGE-SIZE (Fable, 2026-09-15). The query has always
+    // carried `TOP @lim` (2,000 by default, 4,000 ceiling) but no FeedOptions
+    // at all, so the SDK paged a cross-partition `ORDER BY c.soldAt DESC` at
+    // its default page size: for the most-traded player in the pool that is a
+    // long series of sequential continuations, each a full round trip, to
+    // assemble one result the caller uses as a single basket.
+    //
+    // `maxItemCount: limit` asks for the whole bounded result in one page, so
+    // the read costs round trips proportional to the PARTITIONS touched rather
+    // than to the rows returned. The row bound is unchanged — `TOP @lim` still
+    // decides how many rows come back, and `limit` is the same number it always
+    // was — so no basket gains or loses a sale.
+    //
+    // The abort signal is threaded through from the caller when one exists.
+    // A basket the ladder has stopped waiting for should stop consuming RU on
+    // `sold_comps`, which is the container whose pressure made it slow.
+    const { resources } = await container.items.query<PlayerPoolRow>({ query, parameters }, {
+      maxItemCount: limit,
+      ...(input.abortSignal ? { abortSignal: input.abortSignal } : {}),
+    }).fetchAll();
     const rows = resources ?? [];
     // Belt and braces behind the string bound — see asOfCutoff.ts. `soldAt` is
     // compared as a string and the pool holds three serializations of the same
