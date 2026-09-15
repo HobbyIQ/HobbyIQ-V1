@@ -1,0 +1,31 @@
+{
+ "generatedAt": "2026-09-15",
+ "ruling": "R41 (Drew, 2026-09-15): relabel sv4a and report any other duplicated setNames in tcgdex-ja-modern.",
+ "scope": "backend/data/checklists/tcgdex-ja-modern — 52 staged Japanese set manifests",
+ "method": "Every manifest's setName compared for exact duplicates. Read-only; no Cosmos.",
+ "duplicatedSetNames": [
+  {
+   "setName": "Japanese レイジングサーフ",
+   "members": [
+    { "setKey": "sv3a", "tcgdexId": "SV3a", "year": 2023, "rowCount": 76, "verdict": "CORRECT — SV3a really is レイジングサーフ / Raging Surf" },
+    { "setKey": "sv4a", "tcgdexId": "SV4a", "year": 2023, "rowCount": 367, "verdict": "WRONG — relabelled to シャイニートレジャーex / Shiny Treasure ex" }
+   ],
+   "resolution": "sv4a relabelled; sv3a left as it is."
+  }
+ ],
+ "totalDuplicatedNames": 1,
+ "correction": {
+  "setKey": "sv4a",
+  "was": "Japanese レイジングサーフ",
+  "now": "Japanese シャイニートレジャーex",
+  "setNameEn": "Shiny Treasure ex",
+  "rowsChanged": 0,
+  "evidence": [
+   "UPSTREAM ERROR, NOT OURS. api.tcgdex.net/v2/ja/sets/SV4a returns setName レイジングサーフ while returning SV4a's CORRECT release date 2023-12-01 and its CORRECT card count 320. The same API returns that same name for SV3a, which is the set that really bears it.",
+   "SV3a is a 92-card set released 2023-09-22; SV4a is a High Class Pack released 2023-12-01. Different sets, different sizes, different dates.",
+   "THE ROWS WERE ALREADY RIGHT. Our sv4a file holds 367 rows numbered 1-354 — Shiny Treasure ex's shape, not Raging Surf's 92. Only the label was wrong, so no row changed.",
+   "Confirmed independently against the Japanese market: ハイクラスパック「シャイニートレジャーex」SV4a, 2023年12月1日発売."
+  ]
+ },
+ "whyItMattered": "setName is what a human reads when auditing a cell. Two set codes sharing one name is the condition under which someone reconciles them into a single product and merges two real sets' pools."
+}
