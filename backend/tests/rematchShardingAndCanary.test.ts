@@ -227,7 +227,7 @@ describe("the runner contract", () => {
     expect(composite).toContain("default: /tmp/backfill.log");
   });
 
-  it("the relaunch forwards mode verbatim, and NEVER forwards apply=true", () => {
+  it("the relaunch forwards mode verbatim, and forwards apply=true ONLY behind this link's own canary", () => {
     const step = runner.slice(runner.indexOf("Self-relaunch rematch-sold-comps"));
     const dispatch = step.slice(0, step.indexOf("\n      - name:") + 1);
     expect(dispatch).toContain('-f mode="${{ inputs.mode }}"');
@@ -235,17 +235,32 @@ describe("the runner contract", () => {
     expect(dispatch).toContain('-f slots="${{ inputs.slots }}"');
 
     // AMENDED 2026-09-03 (audit finding 5). `apply` used to be forwarded
-    // verbatim, so an apply that stopped at its 140-minute budget re-dispatched
-    // itself as ANOTHER APPLY -- onto a fresh runner with a fresh /tmp, where
-    // the canary baseline captured by the first run no longer exists. The
-    // continuation then wrote with no before-state and no gate. The gate was
-    // skippable by being slow.
+    // VERBATIM, so an apply that stopped at its budget re-dispatched itself as
+    // another APPLY onto a fresh runner with a fresh /tmp, where the canary
+    // baseline captured by the first run no longer existed. The continuation
+    // wrote with no before-state and no gate: the gate was skippable by being
+    // slow. The fix then was a blanket `-f apply=false`.
     //
-    // The relaunch is now always a REPORT. A report relaunch still finishes
-    // the shard's census (#1578); the apply is re-dispatched by hand, which
-    // brings the before/apply/after triple back with it.
-    expect(dispatch).toContain("-f apply=false");
+    // AMENDED AGAIN 2026-09-14 (#2153, Drew: "auto-continue with per-link
+    // canary guard"). The blanket REPORT became the thing standing between the
+    // fleet and any progress at all: #2152 made an apply resume from a cursor,
+    // and a REPORT relaunch deliberately starts cold, so the shard could never
+    // get past its first link. The continuation now carries apply=true ONLY
+    // when this link was itself an apply AND this link's own AFTER canary
+    // succeeded -- each link takes its own before/apply/after triple on its own
+    // runner, so no link ever trusts a baseline that did not survive.
+    //
+    // What must remain true, and is what this pins: the forward is never
+    // UNCONDITIONAL. A bare `inputs.apply` passthrough is the 2026-09-03
+    // defect returning, and `outcome == 'success'` is false for failure,
+    // cancellation and skipped alike, so every non-success degrades to a
+    // REPORT.
+    expect(dispatch).toContain("steps.canary_after.outcome == 'success'");
+    expect(dispatch).toContain("inputs.apply == true &&");
+    // NEVER the unconditional passthrough that made the gate skippable.
     expect(dispatch).not.toContain('-f apply="${{ inputs.apply }}"');
+    // And the gate it reads must actually be a step in this job.
+    expect(runner).toContain("id: canary_after");
   });
 
   it("the relaunch survives a banner that never says the re-key phrase (CF-CENSUS-THROUGHPUT)", () => {
