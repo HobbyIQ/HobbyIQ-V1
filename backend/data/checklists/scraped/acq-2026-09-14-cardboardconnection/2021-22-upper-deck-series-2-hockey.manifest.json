@@ -601,12 +601,21 @@
       "printRun": 0
     }
   ],
-  "ingestBlocked": {
-    "unregisteredSubsetKeys": [
-      "o-pee-chee-retro-update"
-    ],
-    "clashingAddresses": 40,
-    "blockedReason": "NAMED PRODUCT VARIANT, not a colour rung. O-Pee-Chee Retro Update carries the SAME card numbers as O-Pee-Chee Update (39 of 40 the same player) but is a distinct retro-design product with its OWN parallel ladder (Black Border, Neon Green Border) alongside Update own (Blue Border, Red Border). Doctrine: a named variation is a distinct card, so this is NOT foldable onto Update as a parallel. REFUSED until the key is registered.",
-    "awaitingRuling": true
+  "ingestBlocked": null,
+  "collisionCheck": {
+    "checkedAt": "2026-09-15",
+    "method": "lib/insert-set-key.cjs planFile(), driven as ingest-checklist-csv-to-catalog.cjs drives it. Local, no Cosmos.",
+    "verdict": "pass",
+    "rows": 3038,
+    "distinctIds": 3038,
+    "clashingAddresses": 0,
+    "subsetKeysSeparated": 2
+  },
+  "registeredSubsetKeys": {
+    "ruling": "R42/R43 (Drew, 2026-09-15)",
+    "keys": [
+      "upper-deck-series-2-o-pee-chee-retro-update-rookies",
+      "upper-deck-series-2-o-pee-chee-update-rookies"
+    ]
   }
 }

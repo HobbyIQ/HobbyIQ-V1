@@ -1346,4 +1346,78 @@ export function statedFinishFromChecklist(
  * subset assertion against `CORPUS_STOPWORDS` in the rematch vocabulary. Test
  * seam only -- nothing in the request path reads it.
  */
+/**
+ * DID THIS TITLE STATE A FINISH THIS MODULE COULD NOT CONFIRM?
+ *
+ * CF-A-STATED-PARALLEL-IS-NEVER-EVICTED-TO-BASE (post-wave audit, 2026-09-15).
+ *
+ * `statedFinishFromChecklist` answers null for TWO completely different
+ * situations, and the caller cannot tell them apart:
+ *
+ *   1. The title states no finish at all. The card really is Base.
+ *   2. The title states a finish, and this module could not confirm WHICH
+ *      rung it is -- the product is outside the corpus, or the name is
+ *      spelled a way the checklist does not carry, or a guard refused.
+ *
+ * Collapsing those two into "Base" is the audit's largest single defect: 95
+ * of 400 sampled sports CONFLICT rows are a title that names a parallel, a
+ * stored row that records it correctly, and a deriver that answers Base. On
+ * the AGREE side the same shape hides 41 more, where BOTH sides say Base and
+ * the census can never surface it.
+ *
+ * BASE IS A CLAIM, NOT AN ABSENCE. It names a specific card -- the unparalleled
+ * one -- with its own pool and its own price curve. Answering it for a title
+ * that says "Purple Scope" does not merely lose information; it files a sale
+ * on a different card. Blank means unknown; Base means we read the title and
+ * it said this card has no parallel.
+ *
+ * WHAT COUNTS AS EVIDENCE, AND WHY IT IS DELIBERATELY NARROW
+ *
+ * This function decides whether an identity is WITHHELD, so a false positive
+ * costs a row that could have been derived -- recoverable -- while a false
+ * negative leaves the eviction in place. It is still narrow on purpose,
+ * because "withheld" is not free either: it is the same corpus-derived finish
+ * vocabulary `statedFinishFromChecklist` already uses for its leftover guard
+ * (`_index.finishWords` -- a word is a finish word only because some checklist
+ * parallel name is built from it), minus this product's own set words and the
+ * stopwords. A bare colour COUNTS here, unlike in the reader above: the reader
+ * has to NAME the rung and a colour alone cannot, but for "did the seller
+ * state a parallel at all" a colour is exactly the evidence that matters --
+ * "Purple", "Green", "Orange" are 41 of the audit's 95 rows.
+ *
+ * A TITLE THAT SAYS "BASE" HAS ANSWERED. Same refusal the reader carries, for
+ * the same reason: the seller told us, and CF-NO-REFRACTOR-IS-A-BASE forbids
+ * overriding them.
+ */
+export function titleStatesAnUnconfirmedFinish(
+  title: string,
+  ctx: StatedFinishContext = {},
+): boolean {
+  const t = String(title ?? "");
+  if (!t.trim()) return false;
+  // The reader gets first refusal: a title it CAN name is not unconfirmed.
+  if (statedFinishFromChecklist(t, ctx)) return false;
+  loadCorpus();
+  const index = _index;
+  if (!index) return false;
+  // The seller said Base. That is an answer, and it is theirs to give.
+  if (/base/i.test(t)) return false;
+  // A LOT STATES NO ONE CARD'S FINISH -- the same refusal every reader here
+  // carries. The caller's isMultiCardLot already refuses these upstream; this
+  // is the belt to that braces.
+  const own = productWords(ctx.setKey);
+  const setNameWords = new Set<string>();
+  const residueKey = lower(ctx.pokemonSetKeyForResidue ?? "");
+  if (residueKey) for (const w of pokemonSetNameWords(residueKey)) setNameWords.add(w);
+  for (const w of words(t)) {
+    if (own.has(w)) continue;           // names the SET on this product
+    if (setNameWords.has(w)) continue;  // names a Pokemon SET
+    if (STOPWORDS.has(w)) continue;
+    if (SPORT_WORDS.has(w)) continue;   // where the card is sold, never a rung
+    if (COLOUR_WORDS.has(w)) return true;
+    if (index.finishWords.has(w)) return true;
+  }
+  return false;
+}
+
 export const __STOPWORDS_FOR_TEST: string[] = [...STOPWORDS];

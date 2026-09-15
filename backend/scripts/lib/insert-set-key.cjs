@@ -601,6 +601,35 @@ function rungFoldingFor(rows) {
       // derive.
       const tails = new Set(sibs.map((x) => x.slice(pre.length + 1)));
       if (tails.size < 2) continue;
+      // CF-A-DERIVED-ROOT-IS-NEVER-A-SHARED-FIRST-WORD (R44 follow-up, Drew
+      // 2026-09-15). A subset key must come from the FULL section name the
+      // source prints, never from a word two section names happen to share.
+      //
+      // Measured on acq-2026-09-14-cardboardconnection-2, 2019-20 Donruss
+      // Basketball: "Rookie Dominator Signatures" (40 cards, EVERY row signed,
+      // /25 /99 /1 /10) and "Rookie Jersey Kings" (40 cards, NONE signed,
+      // /99 /75 /25) share the first word "Rookie". Their rosters agree 40/40
+      // -- they are the same rookie class -- so the agreement gate above
+      // passes, and the tails differ, so the tail gate passes too. The fold
+      // therefore derived `panini-donruss-rookie`, a card set the source never
+      // prints, and REFUSED the whole 7,367-row file for an unregistered key.
+      //
+      // The tell is that these are not one set in two printings: a rung
+      // reprints its root, so every sibling of a real root shares the root's
+      // SIGNING STATUS -- "Dual Patch Autographs Gold" and "... Meta" are both
+      // signed. Siblings that disagree on isAuto are different card sets whose
+      // names merely start alike, and no colour rung can explain the
+      // difference because autograph status is not a parallel
+      // (CF-AUTOGRAPH-IS-NOT-A-PARALLEL, above).
+      //
+      // Refusing here is the conservative direction: the siblings keep their
+      // own full-name keys, which is what the source states.
+      const signing = new Set();
+      for (const sib of sibs) for (const r of rows) {
+        const slug = subsetSlugFor({ category: r.category, parallel: r.parallel, subsetName: r.subsetName });
+        if (slug === sib) signing.add(String(r.isAuto) === "true");
+      }
+      if (signing.size > 1) continue;
       rosters.set(pre, merged);
       derivedRoots.add(pre);
       for (const sib of sibs) claimed.add(sib);

@@ -465,6 +465,17 @@ const APPLY_KINDS = [
   K.IMPROVE, K.BASE_EVICTION,
   K.GRADE_FROM_TITLE, K.YEAR_FROM_TITLE_VINTAGE, K.SPORT_FROM_PRODUCT,
   K.FLAGSHIP_SWALLOWED_NAMED_PRODUCT, K.POKEMON_SET_CODE, K.FINISH_IS_A_PARALLEL,
+  // THE THREE RULED SUBCLASSES OF 2026-09-14 (R31/R32/R33, #2149). Omitted
+  // here originally -- the banner, the per-class reconcile and the
+  // scope-failure guard below all walk THIS list, so their absence meant a
+  // scope=r31/r32/r33 apply printed no ARMED/DISARMED line for its own class
+  // and, more importantly, could never trip `everyWriteJobReconciles`'s
+  // per-class safety check (line ~3450: DISARMED-yet-written is a scope
+  // failure, exit 6) for these three specifically -- a defect in that class
+  // alone would only ever surface in the coarser whole-run reconcile. Same
+  // discipline as R26/R27/R28 directly above: each needs its own entry here
+  // or it is invisible to every reader that walks this list.
+  K.TITLE_FILLS_THE_BLANK, K.SPLIT_MOVES_TO_THE_NAMED_SIDE, K.TITLE_CARD_NUMBER_WINS,
 ];
 
 /** The units this slot owns. */
@@ -728,8 +739,16 @@ async function main() {
     ...Object.keys(pkc.POKEMON_JA_SET_CODES ?? {}),
   ].map((k) => k.toLowerCase()));
   const POKEMON_AMBIGUOUS_CODES = new Set([...(pkc.AMBIGUOUS_MARKET_CODES ?? [])].map((k) => k.toLowerCase()));
+  // CF-THE-CHECKLIST-SPELLS-ITS-OWN-RUNGS (2026-09-15). The spelling-adoption
+  // lane and its REPORT-ONLY counter; the banner prints the count so this lane
+  // can be sized against the probe's 938,802-row estimate before anyone
+  // applies it.
+  const csa = d(["portfolioiq", "checklistSpellingAdoption.js"]);
+  csa.resetSpellingAdoptedCount();
   const deps = {
     parseListingIdentity: pti.parseListingIdentity,
+    checklistSpellingFor: csa.checklistSpellingFor,
+    noteSpellingAdopted: csa.noteSpellingAdopted,
     // isAuto's boundary is the CARD NUMBER, never title text
     // (CF-ISAUTO-BOUNDARY-IS-CARDNUMBER). The classifier needs this verdict
     // separately from parseListingIdentity's OR'd `isAuto`, because that OR
@@ -3229,6 +3248,23 @@ async function main() {
       console.log(`                      by sport pair: ${topOf(sfpByPair)}`);
       console.log(`                      by setKey:     ${topOf(sfpBySetKey)}`);
       if (sfpSamples.length) { console.log(`                      sample (${sfpSamples.length}):`); for (const s of sfpSamples) console.log(`                        ${s}`); }
+    }
+  }
+  // CF-THE-CHECKLIST-SPELLS-ITS-OWN-RUNGS (2026-09-15) -- REPORT ONLY.
+  //
+  // Not a class and not a scope: a plain count of how many derivations took
+  // the product checklist's own spelling of a rung the row already named
+  // (`Silver` -> `Silver Prizms`). It changes no verdict and gates nothing.
+  // It is here so the lane can be SIZED against the ladder probe's 938,802-row
+  // estimate from a real run, before anyone decides to apply it -- the same
+  // report-then-apply discipline every other lane here follows.
+  {
+    const adopted = csa.spellingAdoptedCount();
+    if (adopted) {
+      console.log(`
+  spelling-adopted  ${f(adopted)} rows: the row's own stated rung, respelled to the`);
+      console.log(`                    product checklist's spelling of that same rung (REPORT ONLY --`);
+      console.log(`                    no verdict changes, nothing is gated on this).`);
     }
   }
   {

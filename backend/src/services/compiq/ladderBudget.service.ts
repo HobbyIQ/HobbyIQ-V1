@@ -45,6 +45,111 @@
  * out from under the SDK, which the driver does not support cleanly).
  */
 
+/**
+ * CF-A-LOG-NOBODY-CAN-READ-IS-NOT-TELEMETRY (Fable, 2026-09-15).
+ *
+ * The per-rung timings below have been written via `console.warn` since
+ * CF-LADDER-TIME-BUDGET, on the reasoning that stdout at INFO is dropped by the
+ * prod WARN floor so WARN is the level that survives. That reasoning was right
+ * about the floor and wrong about the destination: it was checked, on
+ * 2026-09-15, while investigating why the star query takes 9.2 s. Querying App
+ * Insights for the deploy's own smoke window returned ZERO
+ * `ladder_rung_timing` and ZERO `ladder_walk_summary` rows — console output
+ * reaches the traces table as sampled log lines, and at the 10% ingestion
+ * sampling applied on 09-07 the one request you actually want is the one most
+ * likely to be missing. The timing logs that exist to be read during an
+ * incident were unreadable during an incident.
+ *
+ * So the timings are emitted as a CUSTOM EVENT as well. Custom events go
+ * through `defaultClient.trackEvent` — the isolated `TelemetryClient` published
+ * in server.ts, which exports on its own provider rather than the sampled log
+ * pipeline — so they survive at full fidelity and are queryable as
+ * `customEvents | where name == "ladder_rung_timing"` with the per-rung ms as
+ * typed fields rather than text to be parsed out of a message.
+ *
+ * The console line STAYS, unchanged. It is what a local run and a container log
+ * show, it costs nothing, and removing it would trade one blind spot for
+ * another.
+ *
+ * Emission is a SEAM for the same reason workerLifecycle's is: tests assert on
+ * the payload, not on App Insights, and nothing here may throw into a pricing
+ * request. A missing `defaultClient` (every script, every test, any process
+ * that never initialised telemetry) is the normal case and is silently fine.
+ */
+export type LadderTelemetryEvent = {
+  name: "ladder_rung_timing" | "ladder_walk_summary";
+  properties: Record<string, string>;
+  measurements: Record<string, number>;
+};
+
+/**
+ * The App Insights client, resolved ONCE and cached — including the "there
+ * isn't one" answer.
+ *
+ * This matters more than it looks. `require("applicationinsights")` costs
+ * ~1,225 ms on first call in this repo (measured) and ~0 ms thereafter, because
+ * the module cache absorbs every later call. Resolving it per rung therefore
+ * looks free in any process that has already loaded it — the API, where
+ * server.ts imports it at boot — and costs over a second in any process that
+ * has NOT: every script, every cron, and every test. A ladderTimeBudget test
+ * went from 0.6 s to 16.6 s on exactly that, which is how the cost was found.
+ *
+ * `undefined` means "not resolved yet", `null` means "resolved, and there is no
+ * client". Caching the null is the half that matters: a process with no
+ * telemetry is the common case for scripts and lanes, and it must cost one
+ * failed lookup for the life of the process rather than one per rung.
+ */
+let _telemetryClient: { trackEvent: (t: unknown) => void } | null | undefined;
+
+function resolveTelemetryClient(): { trackEvent: (t: unknown) => void } | null {
+  const cached = _telemetryClient;
+  if (cached !== undefined) return cached;
+  try {
+    // ALREADY-LOADED ONLY. `require.cache` is consulted directly instead of
+    // calling `require`, and the difference is the whole point: the first
+    // `require("applicationinsights")` costs ~1,225 ms in this repo (measured),
+    // and paying it here would put a module load on the ladder's timing path —
+    // in the one function whose entire job is to measure that path. It was
+    // caught exactly that way: a ladderTimeBudget pin went from 0.6 s to 16.6 s.
+    //
+    // The API imports `applicationinsights` at boot in server.ts, so by the
+    // time any rung runs there the module is cached and this finds the client.
+    // Every process that has NOT loaded it — scripts, crons, the rematch lanes,
+    // tests — gets `null` at zero cost and emits nothing, which is the correct
+    // answer for a process with no telemetry pipeline anyway.
+    //
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const loaded = require.cache?.[require.resolve("applicationinsights")]?.exports;
+    const client = (loaded as { defaultClient?: { trackEvent?: unknown } } | undefined)?.defaultClient;
+    _telemetryClient = client && typeof client.trackEvent === "function"
+      ? (client as { trackEvent: (t: unknown) => void })
+      : null;
+  } catch {
+    _telemetryClient = null;
+  }
+  return _telemetryClient ?? null;
+}
+
+/** Test seam: forget the cached client (including a cached "none"). */
+export function _resetLadderTelemetryClient(): void { _telemetryClient = undefined; }
+
+let _emitLadderTelemetry: (event: LadderTelemetryEvent) => void = (event) => {
+  try {
+    const client = resolveTelemetryClient();
+    if (!client) return;
+    client.trackEvent({
+      name: event.name,
+      properties: event.properties,
+      measurements: event.measurements,
+    });
+  } catch { /* telemetry is never load-bearing */ }
+};
+
+/** Test seam: capture emitted ladder telemetry instead of sending it. */
+export function _setLadderTelemetryEmitter(fn: (event: LadderTelemetryEvent) => void): void {
+  _emitLadderTelemetry = fn;
+}
+
 export interface LadderBudgetOptions {
   /** Total wall-clock ceiling for the whole ladder walk. */
   totalMs: number;
@@ -126,6 +231,84 @@ export class LadderBudget {
   }
 
   /**
+   * One rung's timing, to BOTH destinations: the console line that has always
+   * been here (a local run and the container log show it) and a custom event
+   * that survives log sampling (see the note at the top of this file).
+   *
+   * The ms is a MEASUREMENT, not a property, so it is queryable as a number —
+   * `customEvents | where name == "ladder_rung_timing" | summarize
+   *  avg(todouble(customMeasurements.ms)) by tostring(customDimensions.label)`
+   * — instead of being parsed back out of a message string.
+   */
+  private reportRung(
+    label: string,
+    ms: number,
+    outcome: "ok" | "rung-timeout" | "budget-exhausted",
+    ceilingMs?: number,
+  ): void {
+    const totalElapsedMs = this.elapsedMs();
+    console.warn(JSON.stringify({
+      event: "ladder_rung_timing",
+      source: "ladderBudget",
+      label,
+      ms,
+      outcome,
+      ...(ceilingMs !== undefined ? { ceilingMs } : {}),
+      totalElapsedMs,
+    }));
+    _emitLadderTelemetry({
+      name: "ladder_rung_timing",
+      properties: { label, outcome, source: "ladderBudget" },
+      measurements: {
+        ms,
+        totalElapsedMs,
+        ...(ceilingMs !== undefined ? { ceilingMs } : {}),
+      },
+    });
+  }
+
+  /**
+   * The whole walk, once, when it ends. A rung-by-rung view answers "which rung
+   * was slow"; this answers the question an incident actually starts from —
+   * "how long did this take, how much of the budget was left, and how many
+   * rungs did it need" — without having to reassemble N rows to get it.
+   *
+   * Call it at the end of a walk. It is safe to call more than once (a walk
+   * that ends twice reports twice, which is visible rather than hidden) and
+   * safe never to call at all — the per-rung events stand on their own.
+   */
+  reportWalkSummary(extra: Record<string, string> = {}): void {
+    const totalElapsedMs = this.elapsedMs();
+    const timedOut = this.rungTimings.filter((r) => r.outcome !== "ok").length;
+    const slowest = this.rungTimings.reduce(
+      (a, b) => (b.ms > (a?.ms ?? -1) ? b : a),
+      null as { label: string; ms: number } | null,
+    );
+    console.warn(JSON.stringify({
+      event: "ladder_walk_summary",
+      source: "ladderBudget",
+      totalElapsedMs,
+      remainingMs: this.remainingMs(),
+      rungs: this.rungTimings.length,
+      timedOutRungs: timedOut,
+      slowestRung: slowest?.label ?? null,
+      slowestRungMs: slowest?.ms ?? 0,
+      ...extra,
+    }));
+    _emitLadderTelemetry({
+      name: "ladder_walk_summary",
+      properties: { source: "ladderBudget", slowestRung: slowest?.label ?? "none", ...extra },
+      measurements: {
+        totalElapsedMs,
+        remainingMs: this.remainingMs(),
+        rungs: this.rungTimings.length,
+        timedOutRungs: timedOut,
+        slowestRungMs: slowest?.ms ?? 0,
+      },
+    });
+  }
+
+  /**
    * Race `work` against the smaller of the per-rung ceiling and whatever
    * budget remains. Always logs the rung's timing via console.warn —
    * this IS the harness-visible per-rung logging the fix asked for; stdout
@@ -137,14 +320,7 @@ export class LadderBudget {
     if (ceilingMs <= 0) {
       const ms = 0;
       this.rungTimings.push({ label, ms, outcome: "budget-exhausted" });
-      console.warn(JSON.stringify({
-        event: "ladder_rung_timing",
-        source: "ladderBudget",
-        label,
-        ms,
-        outcome: "budget-exhausted",
-        totalElapsedMs: this.elapsedMs(),
-      }));
+      this.reportRung(label, ms, "budget-exhausted");
       return { ok: false, reason: "budget-exhausted", ms };
     }
 
@@ -160,26 +336,11 @@ export class LadderBudget {
       const ms = Date.now() - t0;
       if (result.timedOut) {
         this.rungTimings.push({ label, ms, outcome: "rung-timeout" });
-        console.warn(JSON.stringify({
-          event: "ladder_rung_timing",
-          source: "ladderBudget",
-          label,
-          ms,
-          outcome: "rung-timeout",
-          ceilingMs,
-          totalElapsedMs: this.elapsedMs(),
-        }));
+        this.reportRung(label, ms, "rung-timeout", ceilingMs);
         return { ok: false, reason: "rung-timeout", ms };
       }
       this.rungTimings.push({ label, ms, outcome: "ok" });
-      console.warn(JSON.stringify({
-        event: "ladder_rung_timing",
-        source: "ladderBudget",
-        label,
-        ms,
-        outcome: "ok",
-        totalElapsedMs: this.elapsedMs(),
-      }));
+      this.reportRung(label, ms, "ok");
       return { ok: true, value: result.value, ms };
     } finally {
       if (timer) clearTimeout(timer);

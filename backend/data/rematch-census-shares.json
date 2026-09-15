@@ -1,10 +1,10 @@
 {
  "_doc": "CF-THE-REFERENCE-IS-THE-WHOLE-CORPUS-NOT-ONE-SLOT (2026-09-06). Per-slot classification from the GREAT REMATCH IMPROVE fleet, recovered from each run's rematch-census-slot-<N>-<runId> artifact (file census-slot-<N>.json, fields classified + counts.*). One entry per shard-table slot, latest run per slot in the window 2026-09-13T20:58Z..2026-09-14T13:13Z. `weighted` is the row-weighted corpus average -- the reference a whole-corpus draw is compared against; `slots[].shares` is what a SINGLE-SLOT draw must be compared against instead. NOT EVERY SLOT FINISHED ITS WALK: `slots[].coverage` is classified/expectedRows and `slots[].stoppedAtBudget` says the run hit its budget first, so a partial slot's shares describe a PREFIX of that slot; `coverage` at the top states the corpus fraction and names the partial slots. NOTE the four classes do not sum to 1: the runs report UNDERIVABLE-for-subset in byTier and leave it out of counts, so a share of rows is in none of the four. The shares are therefore comparable to each other and to a sample classified the same way, which is what frameHealth does.",
  "source": "rematch IMPROVE fleet census artifacts, 32/32 slots, 2026-09-13/14",
- "measuredAt": "2026-09-14",
+ "measuredAt": "2026-09-15",
  "measuredUnder": {
-  "stamp": "dd20c6afd9539+2026-09-06.a",
-  "derivation": "dd20c6afd9539",
+  "stamp": "d7348805517d4+2026-09-06.a",
+  "derivation": "d7348805517d4",
   "contract": "2026-09-06.a",
   "commit": "b5ab5f745788d88168af9e339fc6be7f8c8de7a0",
   "note": "Recorded by scripts/rebaseline-i9-reference.cjs. The alarm compares only against a reference carrying THIS stamp; a stamp change makes the drift a finding, not an alarm."
@@ -131,7 +131,7 @@
   }
  },
  "supersedes": {
-  "stamp": "d85b109414113+2026-09-06.a",
+  "stamp": "dd20c6afd9539+2026-09-06.a",
   "measuredAt": "2026-09-14",
   "classifiedTotal": 18352932,
   "weighted": {
