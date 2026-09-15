@@ -220,13 +220,64 @@ describe("R26/R27/R28 per-scope predicate counts, replayed over the real 2026-09
 });
 
 describe("the driver computes counts.r26/r27/r28 in MODE=CENSUS only, off res.axes, at no extra catalog cost", () => {
-  it("scopeCounts is declared and gated on MODE === \"census\"", () => {
-    expect(RUNNER_SRC).toContain("const scopeCounts = { r26: 0, r27: 0, r28: 0 };");
+  /**
+   * UPDATED FROM THE PRE-RULING LITERAL (Drew, 2026-09-14). This pinned the
+   * exact text `{ r26: 0, r27: 0, r28: 0 }`, which the 2026-09-14 trio
+   * (R31/R32/R33) necessarily widened. What the pin is FOR is that the counter
+   * exists and is census-gated, so it now asserts each scope key individually
+   * -- widening the declaration again will not silently break it, but DELETING
+   * a scope's counter still goes red.
+   */
+  it("scopeCounts declares every ruled scope and is gated on MODE === \"census\"", () => {
+    const decl = RUNNER_SRC.slice(
+      RUNNER_SRC.indexOf("const scopeCounts = {"),
+      RUNNER_SRC.indexOf("const scopeCounts = {") + 200,
+    );
+    for (const scope of ["r26", "r27", "r28", "r31", "r32", "r33"]) {
+      expect(decl, `scopeCounts must declare ${scope}`).toContain(`${scope}: 0`);
+    }
     expect(RUNNER_SRC).toMatch(/if \(MODE === "census"\) \{\s*\n\s*const derivedForEvidence/);
   });
 
-  it("counts.r26/r27/r28 are nested inside the existing `counts` object in the census JSON", () => {
-    expect(RUNNER_SRC).toContain("counts: { ...counts, r26: scopeCounts.r26, r27: scopeCounts.r27, r28: scopeCounts.r28 },");
+  /**
+   * THE RESUME DEFECT THIS PR FIXED, PINNED SO IT CANNOT COME BACK.
+   *
+   * `scopeCounts` was never registered in AGGREGATE_FIELDS, so a RESUMED
+   * census silently restarted every ruled scope count from zero while `counts`
+   * itself resumed correctly -- a gate reading `counts.r26` off a resumed pass
+   * would have been sized against part of a shard.
+   */
+  it("the per-scope aggregates RESUME -- scopeCounts is registered in AGGREGATE_FIELDS", () => {
+    expect(RUNNER_SRC).toMatch(/scopeCounts: "object", scopeRefusals: "object",/);
+    expect(RUNNER_SRC).toMatch(/scopeCounts, scopeRefusals,/);
+    // "object" is the kind whose merge ADDS numerically, the same kind `counts`
+    // itself uses -- a resumed pass must sum, never overwrite.
+    expect(RUNNER_SRC).toMatch(/counts: "object", stats: "object"/);
+  });
+
+  /**
+   * UPDATED FROM THE PRE-RULING LITERAL (Drew, 2026-09-14). The `counts:` line
+   * was pinned verbatim and the 2026-09-14 trio widened it. The PROPERTY the
+   * pin protects -- every ruled scope's count is nested inside the existing
+   * `counts` object, which is what wave2-fleet.sh reads as `counts.<scope>` --
+   * is asserted per scope instead, so it survives the next widening and still
+   * goes red if a scope stops being emitted.
+   */
+  it("every ruled scope's count is nested inside the existing `counts` object in the census JSON", () => {
+    const block = RUNNER_SRC.slice(RUNNER_SRC.indexOf("counts: {\n      ...counts,"));
+    expect(block.slice(0, 40)).toContain("...counts");
+    for (const scope of ["r26", "r27", "r28", "r31", "r32", "r33"]) {
+      expect(block.slice(0, 600), `counts.${scope} must be emitted`).toContain(`${scope}: scopeCounts.${scope}`);
+    }
+  });
+
+  it("REFUSALS are counted and sampled per scope -- the 2026-09-14 ruling asks for it by name", () => {
+    expect(RUNNER_SRC).toMatch(/scopeRefusals: \{/);
+    expect(RUNNER_SRC).toMatch(/scopeSamples: \{/);
+    for (const scope of ["r31", "r32", "r33"]) {
+      expect(RUNNER_SRC).toContain(`byLeg: Object.fromEntries(scopeRefusalReasons.${scope})`);
+      expect(RUNNER_SRC).toContain(`move: scopeMoveSamples.${scope}, refuse: scopeRefuseSamples.${scope}`);
+    }
   });
 
   it("the summary prints the three counts via console.warn, not console.log", () => {

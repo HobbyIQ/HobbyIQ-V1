@@ -211,6 +211,7 @@ describe("A. verdict equality -- the fix bought speed and nothing else", () => {
     const gainedCollapseReason: number[] = [];
     const gainedEchoRefusal: number[] = [];
     const gainedR28DistinctProductRefusal: number[] = [];
+    const gainedR33CardNumberWinsRefusal: number[] = [];
     const setKeyNoLongerConflicts: number[] = [];
     got.forEach((v, i) => {
       const now = parts(v), was = parts(recorded.verdicts[i]);
@@ -321,6 +322,47 @@ describe("A. verdict equality -- the fix bought speed and nothing else", () => {
             return;
           }
         }
+        // THE FIFTH LICENSED DIFFERENCE: R33-TITLE-CARD-NUMBER-WINS's refusal
+        // block, on a row the title's own literal card number disagrees with
+        // the stored one (Drew ruling, 2026-09-14, #2149).
+        //
+        // R33 is evaluated on the CONFLICT path immediately after R28, ahead
+        // of `not-base-eviction`. On a row that does not qualify for R33's
+        // apply (this fixture has none -- see the guard-the-guard block
+        // below) it still ADDS its own refusal block, a single run from
+        // `not-title-card-number-wins:` through `identity-axis-moved:<axes>`
+        // (that reason's own axis list carries internal commas, so it is
+        // removed as one contiguous run up to the next recognised reason
+        // head rather than split on ","). DISQUALIFYING ONLY, same shape as
+        // the echo and R28 refusals: it can only add reasons to a row
+        // already CONFLICT/unwritable, never move class, writable, subclass
+        // or tier. Composed with the collapse strip (row 20 in this fixture
+        // gains R33's block AND the collapse reason together) and with
+        // setKeyNoLongerConflicts (row 195's `changed:` list drops `setKey`
+        // for the same reason it stopped conflicting -- the title's own
+        // number now backs the checklist row -- and gains R33's block in the
+        // same pass).
+        const R33_NEXT_HEAD = /(setkey-collapses-distinct-product:|not-base-eviction:)/;
+        const r33Start = r28Stripped.indexOf("not-title-card-number-wins:");
+        if (r33Start !== -1) {
+          const afterStart = r28Stripped.slice(r33Start);
+          const headMatch = afterStart.match(R33_NEXT_HEAD);
+          const r33End = headMatch ? r33Start + headMatch.index! : r28Stripped.length;
+          const r33Stripped = r28Stripped.slice(0, r33Start) + r28Stripped.slice(r33End);
+          const alsoCollapse = r33Stripped.split(",").filter((r) => !COLLAPSE_REASON.test(r)).join(",");
+          // Same direction as setKeyNoLongerConflicts above: strip `setKey`
+          // OUT OF `wasR` and compare to the R33-stripped `now`, not the
+          // other way around -- row 195 is exactly this composition (R33's
+          // block gained AND `setKey` dropped from `changed:` together).
+          const alsoSetKeyFilled =
+            wasR.replace(/^changed:([^,]*),setKey,/, "changed:$1,") === r33Stripped ||
+            wasR.replace(/^changed:setKey,/, "changed:") === r33Stripped ||
+            wasR.replace(/^changed:([^,]*),setKey(,|$)/, "changed:$1$2") === r33Stripped;
+          if (r33Stripped === wasR || alsoCollapse === wasR || alsoSetKeyFilled) {
+            gainedR33CardNumberWinsRefusal.push(i);
+            return;
+          }
+        }
         moved.push({ i, field, was: wasR, now: nowR });
       });
     });
@@ -362,6 +404,18 @@ describe("A. verdict equality -- the fix bought speed and nothing else", () => {
     // unwritable -- the ruling only ever adds a reason, it never changes what
     // the apply pass reads.
     for (const i of gainedR28DistinctProductRefusal) {
+      const r = K.classifyRow(inputFor(rows[i]));
+      expect(r.klass).toBe("CONFLICT");
+      expect(r.writable).toBe(false);
+    }
+    // Guard the guard: if R33's refusal ever stops firing on this fixture,
+    // this pin must fail loudly rather than pass vacuously over a list that
+    // no longer exercises the ruling at all.
+    expect(gainedR33CardNumberWinsRefusal.length).toBeGreaterThan(0);
+    // Every row that gained R33's refusal is still CONFLICT and still
+    // unwritable -- on this fixture the ruling only ever adds a reason, it
+    // never changes what the apply pass reads.
+    for (const i of gainedR33CardNumberWinsRefusal) {
       const r = K.classifyRow(inputFor(rows[i]));
       expect(r.klass).toBe("CONFLICT");
       expect(r.writable).toBe(false);

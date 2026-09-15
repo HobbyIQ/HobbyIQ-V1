@@ -1,0 +1,605 @@
+{
+  "generatedAt": "2026-09-15",
+  "forLane": "relocate-pool-rows-by-list.cjs",
+  "rulings": [
+    "CF-A-VERIFY-MISMATCH-IS-A-DUPLICATE-NOT-A-FAILURE (relocate-sold-comp.cjs, 2026-09-05): a relocate's upsert is checked for success BEFORE the read-back runs; the read-back failing deletes nothing. 'FAILED at verify' can only ever mean a duplicate was left, never a lost sale.",
+    "CF-A-RETIRE-IS-A-MARKER-NEVER-A-DELETE: retire stamps flaggedWrong+dedupSupersededBy on the OLD (twin) row. Reversible. No partition move, no document removal.",
+    "CF-ONE-SALE-ONE-ADDRESS / THE KEEPER NAMES THE TWIN (2026-09-06 precedent, same defect class): the keeper's own rekeyedAt/rekeyedFrom is the proof a human did not have to assert by hand."
+  ],
+  "provenance": {
+    "source": "the 2026-09-15 GREAT REMATCH IMPROVE wave (32 slots, backfill-runner/rematch-sold-comps, APPLY_SCOPE=improve)",
+    "failedAtVerifyLines": 95,
+    "readBackFoundNothing": 95,
+    "readBackDiffers": 0,
+    "verificationMethod": "Read-only point-in-time verification pass run 2026-09-15 (post-wave, pre-apply): for every id, a cross-partition SELECT * WHERE c.id=@id against sold_comps. Cosmos `id` is unique only WITHIN a partition, not container-wide, so a stale-replica read-back failure can and does leave two documents sharing one `id` at two different `cardId` partitions -- confirmed directly on all 95 ids, not assumed from the 2026-09-06 precedent. Every one classified KEEPER-LIVE (keeper carries rekeyedAt/rekeyedFrom/rekeyedReason) with its un-rekeyed old twin independently re-confirmed still resident at the time of this pass. Zero STILL-AT-SOURCE (no unresolved relocate), zero GONE (no data loss).",
+    "APPLY_ORDER": "NO IMPROVE FLEET PASS MAY RUN BETWEEN MERGE AND APPLY OF THIS LIST -- the retired (old) addresses still match the IMPROVE predicate; a live fleet pass racing this list's apply would re-relocate the same rows. The engine-code freeze covers this window; apply only after the postwave verification census (read-only, MODE=census) is also terminal."
+  },
+  "census": {
+    "failedAtVerifyLines": 95,
+    "readBackFoundNothing": 95,
+    "readBackDiffers": 0,
+    "entriesHere": 95,
+    "byClass": {
+      "a_duplicateLeft": 95,
+      "b_alreadyClean": 0,
+      "c_writeLost": 0
+    },
+    "bySource": {
+      "tca-ebay": 95
+    },
+    "excludedFromThisList": 0
+  },
+  "entries": [
+    {
+      "id": "tca-ebay::298597817319",
+      "fromCardId": "hiq:football:2025:topps-signature-class:ss-10:base:no-auto:num-250",
+      "retireSupersededBy": "hiq:football:2025:topps-signature-class:ss-10:magenta:no-auto:num-250",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:football:2025:topps-signature-class:ss-10:magenta:no-auto:num-250 carrying this run's own rekeyedAt 2026-09-15T01:16:15.261Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916117301 (slot 1) logged \"FAILED at verify tca-ebay::298597817319: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:football:2025:topps-signature-class:ss-10:base:no-auto:num-250 on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel"
+    },
+    {
+      "id": "tca-ebay::800518163718",
+      "fromCardId": "hiq:football:2025:topps-resurgence:pt-21:base:no-auto",
+      "retireSupersededBy": "hiq:football:2025:topps-resurgence:pt-21:magenta-surge-refractor:no-auto:num-299",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:football:2025:topps-resurgence:pt-21:magenta-surge-refractor:no-auto:num-299 carrying this run's own rekeyedAt 2026-09-15T01:39:12.171Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916117301 (slot 1) logged \"FAILED at verify tca-ebay::800518163718: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:football:2025:topps-resurgence:pt-21:base:no-auto on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel,printRun"
+    },
+    {
+      "id": "tca-ebay::318726349057",
+      "fromCardId": "hiq:football:2025:topps-resurgence:8:base:no-auto:num-125",
+      "retireSupersededBy": "hiq:football:2025:topps-resurgence:8:white-surge-refractor:no-auto:num-125",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:football:2025:topps-resurgence:8:white-surge-refractor:no-auto:num-125 carrying this run's own rekeyedAt 2026-09-15T01:41:08.603Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916117301 (slot 1) logged \"FAILED at verify tca-ebay::318726349057: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:football:2025:topps-resurgence:8:base:no-auto:num-125 on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel"
+    },
+    {
+      "id": "tca-ebay::117357734005",
+      "fromCardId": "hiq:football:2025:panini-phoenix:117:base:no-auto:num-35",
+      "retireSupersededBy": "hiq:football:2025:panini-phoenix:117:orange-lazer:no-auto:num-35",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:football:2025:panini-phoenix:117:orange-lazer:no-auto:num-35 carrying this run's own rekeyedAt 2026-09-15T01:41:14.212Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916117301 (slot 1) logged \"FAILED at verify tca-ebay::117357734005: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:football:2025:panini-phoenix:117:base:no-auto:num-35 on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel,printRun"
+    },
+    {
+      "id": "tca-ebay::137605917957",
+      "fromCardId": "hiq:football:2025:topps:fl-6:base:no-auto:num-25",
+      "retireSupersededBy": "hiq:football:2025:topps-signature-class:fl-6:red:no-auto:num-25",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:football:2025:topps-signature-class:fl-6:red:no-auto:num-25 carrying this run's own rekeyedAt 2026-09-15T01:43:06.174Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916117301 (slot 1) logged \"FAILED at verify tca-ebay::137605917957: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:football:2025:topps:fl-6:base:no-auto:num-25 on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel"
+    },
+    {
+      "id": "tca-ebay::366619200381",
+      "fromCardId": "hiq:football:2025:panini-select:100:base:no-auto",
+      "retireSupersededBy": "hiq:football:2025:panini-select:100:tri-color-prizm:no-auto:num-399",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:football:2025:panini-select:100:tri-color-prizm:no-auto:num-399 carrying this run's own rekeyedAt 2026-09-15T01:43:51.613Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916117301 (slot 1) logged \"FAILED at verify tca-ebay::366619200381: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:football:2025:panini-select:100:base:no-auto on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel,printRun"
+    },
+    {
+      "id": "tca-ebay::820014282287",
+      "fromCardId": "hiq:football:2025:panini-phoenix:3:base:no-auto",
+      "retireSupersededBy": "hiq:football:2025:panini-phoenix:3:contours-silver-hyper:no-auto:num-299",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:football:2025:panini-phoenix:3:contours-silver-hyper:no-auto:num-299 carrying this run's own rekeyedAt 2026-09-15T01:51:09.371Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916117301 (slot 1) logged \"FAILED at verify tca-ebay::820014282287: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:football:2025:panini-phoenix:3:base:no-auto on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel,printRun"
+    },
+    {
+      "id": "tca-ebay::206395608620",
+      "fromCardId": "hiq:football:2025:panini-mosaic:207:base:no-auto",
+      "retireSupersededBy": "hiq:football:2025:panini-mosaic:207:silver-knight:no-auto:num-149",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:football:2025:panini-mosaic:207:silver-knight:no-auto:num-149 carrying this run's own rekeyedAt 2026-09-15T01:54:44.172Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916117301 (slot 1) logged \"FAILED at verify tca-ebay::206395608620: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:football:2025:panini-mosaic:207:base:no-auto on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel"
+    },
+    {
+      "id": "tca-ebay::EBAY-v1|287532654673|0",
+      "fromCardId": "hiq:football:2025:panini-absolute:106:base:no-auto:num-825",
+      "retireSupersededBy": "hiq:football:2025:panini-absolute:106:orange-mosaic:no-auto:num-825",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:football:2025:panini-absolute:106:orange-mosaic:no-auto:num-825 carrying this run's own rekeyedAt 2026-09-15T01:54:49.389Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916117301 (slot 1) logged \"FAILED at verify tca-ebay::EBAY-v1|287532654673|0: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:football:2025:panini-absolute:106:base:no-auto:num-825 on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel,printRun"
+    },
+    {
+      "id": "tca-ebay::287532654673",
+      "fromCardId": "hiq:football:2025:panini-absolute:106:base:no-auto",
+      "retireSupersededBy": "hiq:football:2025:panini-absolute:106:orange-mosaic:no-auto:num-825",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:football:2025:panini-absolute:106:orange-mosaic:no-auto:num-825 carrying this run's own rekeyedAt 2026-09-15T01:54:49.383Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916117301 (slot 1) logged \"FAILED at verify tca-ebay::287532654673: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:football:2025:panini-absolute:106:base:no-auto on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel,printRun"
+    },
+    {
+      "id": "tca-ebay::278276705446",
+      "fromCardId": "hiq:football:2025:panini-absolute:61:base:no-auto:num-199",
+      "retireSupersededBy": "hiq:football:2025:panini-absolute:61:spectrum-red:no-auto:num-199",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:football:2025:panini-absolute:61:spectrum-red:no-auto:num-199 carrying this run's own rekeyedAt 2026-09-15T01:54:54.956Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916117301 (slot 1) logged \"FAILED at verify tca-ebay::278276705446: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:football:2025:panini-absolute:61:base:no-auto:num-199 on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel,printRun"
+    },
+    {
+      "id": "tca-ebay::398254487219",
+      "fromCardId": "hiq:football:2025:panini-phoenix:112:base:no-auto:num-75",
+      "retireSupersededBy": "hiq:football:2025:panini-phoenix:112:blue-lazer:no-auto:num-75",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:football:2025:panini-phoenix:112:blue-lazer:no-auto:num-75 carrying this run's own rekeyedAt 2026-09-15T01:57:30.822Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916117301 (slot 1) logged \"FAILED at verify tca-ebay::398254487219: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:football:2025:panini-phoenix:112:base:no-auto:num-75 on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel,printRun"
+    },
+    {
+      "id": "tca-ebay::188749776605",
+      "fromCardId": "hiq:football:2025:panini-mosaic:335:base:no-auto:num-99",
+      "retireSupersededBy": "hiq:football:2025:panini-mosaic:335:mosaic-blue:no-auto:num-99",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:football:2025:panini-mosaic:335:mosaic-blue:no-auto:num-99 carrying this run's own rekeyedAt 2026-09-15T01:57:42.971Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916117301 (slot 1) logged \"FAILED at verify tca-ebay::188749776605: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:football:2025:panini-mosaic:335:base:no-auto:num-99 on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel,printRun"
+    },
+    {
+      "id": "tca-ebay::366497974803",
+      "fromCardId": "hiq:football:2025:panini-phoenix:21:base:no-auto:num-125",
+      "retireSupersededBy": "hiq:football:2025:panini-phoenix:21:contours-bronze-pandora:no-auto:num-125",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:football:2025:panini-phoenix:21:contours-bronze-pandora:no-auto:num-125 carrying this run's own rekeyedAt 2026-09-15T01:58:35.649Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916117301 (slot 1) logged \"FAILED at verify tca-ebay::366497974803: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:football:2025:panini-phoenix:21:base:no-auto:num-125 on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel"
+    },
+    {
+      "id": "tca-ebay::168612131970",
+      "fromCardId": "hiq:baseball:2023:topps-pro-debut:pd-59:base:no-auto:num-199",
+      "retireSupersededBy": "hiq:baseball:2023:topps-pro-debut:pd-59:fuchsia-foil:no-auto:num-199",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:baseball:2023:topps-pro-debut:pd-59:fuchsia-foil:no-auto:num-199 carrying this run's own rekeyedAt 2026-09-15T01:53:08.118Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916119110 (slot 2) logged \"FAILED at verify tca-ebay::168612131970: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:baseball:2023:topps-pro-debut:pd-59:base:no-auto:num-199 on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel"
+    },
+    {
+      "id": "tca-ebay::168624362107",
+      "fromCardId": "hiq:football:2024:panini-prizm:385:base:no-auto:num-400",
+      "retireSupersededBy": "hiq:football:2024:panini-prizm:385:pandora:no-auto:num-400",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:football:2024:panini-prizm:385:pandora:no-auto:num-400 carrying this run's own rekeyedAt 2026-09-15T01:20:47.563Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916120822 (slot 3) logged \"FAILED at verify tca-ebay::168624362107: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:football:2024:panini-prizm:385:base:no-auto:num-400 on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel"
+    },
+    {
+      "id": "tca-ebay::227447252488",
+      "fromCardId": "hiq:football:2024:panini-phoenix:48:base:no-auto:num-199",
+      "retireSupersededBy": "hiq:football:2024:panini-phoenix:48:red-lazer:no-auto:num-199",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:football:2024:panini-phoenix:48:red-lazer:no-auto:num-199 carrying this run's own rekeyedAt 2026-09-15T01:29:39.876Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916120822 (slot 3) logged \"FAILED at verify tca-ebay::227447252488: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:football:2024:panini-phoenix:48:base:no-auto:num-199 on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel"
+    },
+    {
+      "id": "tca-ebay::158170521813",
+      "fromCardId": "hiq:football:2024:unknown:1:base:no-auto",
+      "retireSupersededBy": "hiq:football:2024:panini-photogenic:1:draft-snapshots-red:no-auto:num-49",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:football:2024:panini-photogenic:1:draft-snapshots-red:no-auto:num-49 carrying this run's own rekeyedAt 2026-09-15T01:38:09.446Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916120822 (slot 3) logged \"FAILED at verify tca-ebay::158170521813: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:football:2024:unknown:1:base:no-auto on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled setKey,parallel,printRun"
+    },
+    {
+      "id": "tca-ebay::336735011309",
+      "fromCardId": "hiq:football:2024:panini-phoenix:12:base:no-auto",
+      "retireSupersededBy": "hiq:football:2024:panini-phoenix:12:green:no-auto:num-25",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:football:2024:panini-phoenix:12:green:no-auto:num-25 carrying this run's own rekeyedAt 2026-09-15T01:44:08.723Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916120822 (slot 3) logged \"FAILED at verify tca-ebay::336735011309: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:football:2024:panini-phoenix:12:base:no-auto on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel,printRun"
+    },
+    {
+      "id": "tca-ebay::398291879065",
+      "fromCardId": "hiq:football:2024:panini-mosaic:192:base:no-auto",
+      "retireSupersededBy": "hiq:football:2024:panini-mosaic:192:blue-sparkle:no-auto:num-96",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:football:2024:panini-mosaic:192:blue-sparkle:no-auto:num-96 carrying this run's own rekeyedAt 2026-09-15T01:44:36.398Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916120822 (slot 3) logged \"FAILED at verify tca-ebay::398291879065: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:football:2024:panini-mosaic:192:base:no-auto on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel,printRun"
+    },
+    {
+      "id": "tca-ebay::377363106319",
+      "fromCardId": "hiq:football:2024:panini-select:193:base:no-auto",
+      "retireSupersededBy": "hiq:football:2024:panini-select:193:tri-color-prizm:no-auto:num-249",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:football:2024:panini-select:193:tri-color-prizm:no-auto:num-249 carrying this run's own rekeyedAt 2026-09-15T01:47:48.237Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916120822 (slot 3) logged \"FAILED at verify tca-ebay::377363106319: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:football:2024:panini-select:193:base:no-auto on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel,printRun"
+    },
+    {
+      "id": "tca-ebay::287477144005",
+      "fromCardId": "hiq:football:2024:topps:17:base:no-auto:num-250",
+      "retireSupersededBy": "hiq:football:2024:topps-signature-class:17:magenta:no-auto:num-250",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:football:2024:topps-signature-class:17:magenta:no-auto:num-250 carrying this run's own rekeyedAt 2026-09-15T01:55:34.888Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916120822 (slot 3) logged \"FAILED at verify tca-ebay::287477144005: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:football:2024:topps:17:base:no-auto:num-250 on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel"
+    },
+    {
+      "id": "tca-ebay::800524770779",
+      "fromCardId": "hiq:football:2024:panini-phoenix:130:base:no-auto:num-350",
+      "retireSupersededBy": "hiq:football:2024:panini-phoenix:130:fire-burst:no-auto:num-350",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:football:2024:panini-phoenix:130:fire-burst:no-auto:num-350 carrying this run's own rekeyedAt 2026-09-15T01:56:21.702Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916120822 (slot 3) logged \"FAILED at verify tca-ebay::800524770779: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:football:2024:panini-phoenix:130:base:no-auto:num-350 on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel"
+    },
+    {
+      "id": "tca-ebay::278269840121",
+      "fromCardId": "hiq:football:2024:panini-prizm:12:base:no-auto:num-400",
+      "retireSupersededBy": "hiq:football:2024:panini-prizm:12:pandora:no-auto:num-400",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:football:2024:panini-prizm:12:pandora:no-auto:num-400 carrying this run's own rekeyedAt 2026-09-15T02:00:50.689Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916120822 (slot 3) logged \"FAILED at verify tca-ebay::278269840121: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:football:2024:panini-prizm:12:base:no-auto:num-400 on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel"
+    },
+    {
+      "id": "tca-ebay::407136625151",
+      "fromCardId": "hiq:football:2024:panini-illusions:12:base:no-auto",
+      "retireSupersededBy": "hiq:football:2024:panini-illusions:12:illusionists-pink:no-auto:num-399",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:football:2024:panini-illusions:12:illusionists-pink:no-auto:num-399 carrying this run's own rekeyedAt 2026-09-15T01:50:56.494Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916123147 (slot 4) logged \"FAILED at verify tca-ebay::407136625151: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:football:2024:panini-illusions:12:base:no-auto on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel,printRun"
+    },
+    {
+      "id": "tca-ebay::407105023177",
+      "fromCardId": "hiq:football:2024:panini-optic:10:base:no-auto:num-25",
+      "retireSupersededBy": "hiq:football:2024:donruss-optic:10:sunday-kings-black-pandora:no-auto:num-25",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:football:2024:donruss-optic:10:sunday-kings-black-pandora:no-auto:num-25 carrying this run's own rekeyedAt 2026-09-15T01:51:07.995Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916123147 (slot 4) logged \"FAILED at verify tca-ebay::407105023177: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:football:2024:panini-optic:10:base:no-auto:num-25 on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel"
+    },
+    {
+      "id": "tca-ebay::EBAY-v1|257688790353|0",
+      "fromCardId": "hiq:football:2024:panini-select:116:base:no-auto:num-25",
+      "retireSupersededBy": "hiq:football:2024:panini-select:116:blue-disco-prizm:no-auto:num-25",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:football:2024:panini-select:116:blue-disco-prizm:no-auto:num-25 carrying this run's own rekeyedAt 2026-09-15T01:51:24.555Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916123147 (slot 4) logged \"FAILED at verify tca-ebay::EBAY-v1|257688790353|0: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:football:2024:panini-select:116:base:no-auto:num-25 on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel,printRun"
+    },
+    {
+      "id": "tca-ebay::398381056819",
+      "fromCardId": "hiq:football:2024:donruss-elite:39:base:no-auto:num-875",
+      "retireSupersededBy": "hiq:football:2024:donruss-elite:39:status-explosion:no-auto:num-875",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:football:2024:donruss-elite:39:status-explosion:no-auto:num-875 carrying this run's own rekeyedAt 2026-09-15T01:52:01.714Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916123147 (slot 4) logged \"FAILED at verify tca-ebay::398381056819: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:football:2024:donruss-elite:39:base:no-auto:num-875 on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel,printRun"
+    },
+    {
+      "id": "tca-ebay::188759298613",
+      "fromCardId": "hiq:football:2024:panini-phoenix:221:base:no-auto:num-199",
+      "retireSupersededBy": "hiq:football:2024:panini-phoenix:221:red-lazer:no-auto:num-199",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:football:2024:panini-phoenix:221:red-lazer:no-auto:num-199 carrying this run's own rekeyedAt 2026-09-15T01:54:29.499Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916123147 (slot 4) logged \"FAILED at verify tca-ebay::188759298613: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:football:2024:panini-phoenix:221:base:no-auto:num-199 on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel,printRun"
+    },
+    {
+      "id": "tca-ebay::178424979536",
+      "fromCardId": "hiq:football:2024:panini-phoenix:130:base:no-auto",
+      "retireSupersededBy": "hiq:football:2024:panini-phoenix:130:red-fade:no-auto:num-299",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:football:2024:panini-phoenix:130:red-fade:no-auto:num-299 carrying this run's own rekeyedAt 2026-09-15T02:01:08.536Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916123147 (slot 4) logged \"FAILED at verify tca-ebay::178424979536: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:football:2024:panini-phoenix:130:base:no-auto on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel,printRun"
+    },
+    {
+      "id": "tca-ebay::168593734978",
+      "fromCardId": "hiq:football:2024:panini-obsidian:132:base:no-auto",
+      "retireSupersededBy": "hiq:football:2024:panini-obsidian:132:red:no-auto:num-49",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:football:2024:panini-obsidian:132:red:no-auto:num-49 carrying this run's own rekeyedAt 2026-09-15T02:10:14.385Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916123147 (slot 4) logged \"FAILED at verify tca-ebay::168593734978: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:football:2024:panini-obsidian:132:base:no-auto on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel,printRun"
+    },
+    {
+      "id": "tca-ebay::EBAY-v1|278296016870|0",
+      "fromCardId": "hiq:baseball:2026:topps-tribute:8:base:no-auto",
+      "retireSupersededBy": "hiq:baseball:2026:topps-tribute:8:blue:no-auto:num-150",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:baseball:2026:topps-tribute:8:blue:no-auto:num-150 carrying this run's own rekeyedAt 2026-09-15T01:34:40.756Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916125099 (slot 5) logged \"FAILED at verify tca-ebay::EBAY-v1|278296016870|0: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:baseball:2026:topps-tribute:8:base:no-auto on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel,printRun"
+    },
+    {
+      "id": "tca-ebay::398182269903",
+      "fromCardId": "hiq:baseball:2026:topps:312:base:no-auto:num-26",
+      "retireSupersededBy": "hiq:baseball:2026:topps:312:independence-day:no-auto:num-76",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:baseball:2026:topps:312:independence-day:no-auto:num-76 carrying this run's own rekeyedAt 2026-09-15T01:34:47.164Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916126841 (slot 6) logged \"FAILED at verify tca-ebay::398182269903: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:baseball:2026:topps:312:base:no-auto:num-26 on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel,printRun"
+    },
+    {
+      "id": "tca-ebay::EBAY-v1|358607924539|0",
+      "fromCardId": "hiq:baseball:2024:topps-inception:23:base:no-auto:num-150",
+      "retireSupersededBy": "hiq:baseball:2024:topps-inception:23:purple:no-auto:num-150",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:baseball:2024:topps-inception:23:purple:no-auto:num-150 carrying this run's own rekeyedAt 2026-09-15T01:39:35.999Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916132541 (slot 9) logged \"FAILED at verify tca-ebay::EBAY-v1|358607924539|0: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:baseball:2024:topps-inception:23:base:no-auto:num-150 on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel"
+    },
+    {
+      "id": "tca-ebay::EBAY-v1|206431764253|0",
+      "fromCardId": "hiq:baseball:2024:topps-pro-debut:pd-69:base:no-auto",
+      "retireSupersededBy": "hiq:baseball:2024:topps-pro-debut:pd-69:fuchsia-foil:no-auto:num-199",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:baseball:2024:topps-pro-debut:pd-69:fuchsia-foil:no-auto:num-199 carrying this run's own rekeyedAt 2026-09-15T02:14:06.907Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916132541 (slot 9) logged \"FAILED at verify tca-ebay::EBAY-v1|206431764253|0: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:baseball:2024:topps-pro-debut:pd-69:base:no-auto on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel,printRun"
+    },
+    {
+      "id": "tca-ebay::206431764253",
+      "fromCardId": "hiq:baseball:2024:topps-pro-debut:pd-69:base:no-auto:num-199",
+      "retireSupersededBy": "hiq:baseball:2024:topps-pro-debut:pd-69:fuchsia-foil:no-auto:num-199",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:baseball:2024:topps-pro-debut:pd-69:fuchsia-foil:no-auto:num-199 carrying this run's own rekeyedAt 2026-09-15T02:14:06.908Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916132541 (slot 9) logged \"FAILED at verify tca-ebay::206431764253: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:baseball:2024:topps-pro-debut:pd-69:base:no-auto:num-199 on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel"
+    },
+    {
+      "id": "tca-ebay::196551600351",
+      "fromCardId": "hiq:baseball:2024:topps-museum-collection:68:base:no-auto:num-50",
+      "retireSupersededBy": "hiq:baseball:2024:topps-museum-collection:68:ruby:no-auto:num-50",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:baseball:2024:topps-museum-collection:68:ruby:no-auto:num-50 carrying this run's own rekeyedAt 2026-09-15T02:14:13.036Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916132541 (slot 9) logged \"FAILED at verify tca-ebay::196551600351: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:baseball:2024:topps-museum-collection:68:base:no-auto:num-50 on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel"
+    },
+    {
+      "id": "tca-ebay::307094975314",
+      "fromCardId": "hiq:baseball:2024:panini-prizm:233:base:no-auto",
+      "retireSupersededBy": "hiq:baseball:2024:panini-prizm:233:premium-box-set-prizm:no-auto:num-199",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:baseball:2024:panini-prizm:233:premium-box-set-prizm:no-auto:num-199 carrying this run's own rekeyedAt 2026-09-15T01:44:52.948Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916135044 (slot 10) logged \"FAILED at verify tca-ebay::307094975314: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:baseball:2024:panini-prizm:233:base:no-auto on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel,printRun"
+    },
+    {
+      "id": "tca-ebay::178338408311",
+      "fromCardId": "hiq:baseball:2024:topps-pro-debut:pd-114:base:no-auto:num-199",
+      "retireSupersededBy": "hiq:baseball:2024:topps-pro-debut:pd-114:fuchsia-foil:no-auto:num-199",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:baseball:2024:topps-pro-debut:pd-114:fuchsia-foil:no-auto:num-199 carrying this run's own rekeyedAt 2026-09-15T01:55:35.751Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916135044 (slot 10) logged \"FAILED at verify tca-ebay::178338408311: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:baseball:2024:topps-pro-debut:pd-114:base:no-auto:num-199 on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel"
+    },
+    {
+      "id": "tca-ebay::227484960284",
+      "fromCardId": "hiq:baseball:2024:panini-donruss:26:base:no-auto:num-50",
+      "retireSupersededBy": "hiq:baseball:2024:panini-donruss:26:pink-laser:no-auto:num-50",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:baseball:2024:panini-donruss:26:pink-laser:no-auto:num-50 carrying this run's own rekeyedAt 2026-09-15T02:01:56.192Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916135044 (slot 10) logged \"FAILED at verify tca-ebay::227484960284: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:baseball:2024:panini-donruss:26:base:no-auto:num-50 on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel,printRun"
+    },
+    {
+      "id": "tca-ebay::236989590177",
+      "fromCardId": "hiq:baseball:2024:panini-flawless:59:base:no-auto:num-5",
+      "retireSupersededBy": "hiq:baseball:2024:panini-flawless:59:emerald:no-auto:num-5",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:baseball:2024:panini-flawless:59:emerald:no-auto:num-5 carrying this run's own rekeyedAt 2026-09-15T02:05:27.676Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916135044 (slot 10) logged \"FAILED at verify tca-ebay::236989590177: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:baseball:2024:panini-flawless:59:base:no-auto:num-5 on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel,printRun"
+    },
+    {
+      "id": "tca-ebay::137359694012",
+      "fromCardId": "hiq:basketball:2024:panini-mosaic:6:base:no-auto",
+      "retireSupersededBy": "hiq:basketball:2024:panini-mosaic:6:stare-masters-mosaic-blue:no-auto:num-199",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:basketball:2024:panini-mosaic:6:stare-masters-mosaic-blue:no-auto:num-199 carrying this run's own rekeyedAt 2026-09-15T01:37:48.522Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916137270 (slot 11) logged \"FAILED at verify tca-ebay::137359694012: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:basketball:2024:panini-mosaic:6:base:no-auto on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel,printRun"
+    },
+    {
+      "id": "tca-ebay::117264366711",
+      "fromCardId": "hiq:basketball:2024:panini-select:361:base:no-auto",
+      "retireSupersededBy": "hiq:basketball:2024:panini-select:361:white-prizm:no-auto:num-125",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:basketball:2024:panini-select:361:white-prizm:no-auto:num-125 carrying this run's own rekeyedAt 2026-09-15T01:39:17.534Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916137270 (slot 11) logged \"FAILED at verify tca-ebay::117264366711: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:basketball:2024:panini-select:361:base:no-auto on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel,printRun"
+    },
+    {
+      "id": "tca-ebay::800497813805",
+      "fromCardId": "hiq:basketball:2024:unknown:3:base:no-auto",
+      "retireSupersededBy": "hiq:basketball:2024:panini-photogenic:3:photo-finish-diamond:no-auto:num-75",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:basketball:2024:panini-photogenic:3:photo-finish-diamond:no-auto:num-75 carrying this run's own rekeyedAt 2026-09-15T01:39:39.338Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916137270 (slot 11) logged \"FAILED at verify tca-ebay::800497813805: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:basketball:2024:unknown:3:base:no-auto on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled setKey,parallel,printRun"
+    },
+    {
+      "id": "tca-ebay::177982878095",
+      "fromCardId": "hiq:basketball:2024:panini-mosaic:7:base:no-auto",
+      "retireSupersededBy": "hiq:basketball:2024:panini-mosaic:7:montage-mosaic-bronze:no-auto:num-75",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:basketball:2024:panini-mosaic:7:montage-mosaic-bronze:no-auto:num-75 carrying this run's own rekeyedAt 2026-09-15T01:50:30.358Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916137270 (slot 11) logged \"FAILED at verify tca-ebay::177982878095: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:basketball:2024:panini-mosaic:7:base:no-auto on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel,printRun"
+    },
+    {
+      "id": "tca-ebay::318726768923",
+      "fromCardId": "hiq:basketball:2024:panini-obsidian:15:base:no-auto",
+      "retireSupersededBy": "hiq:basketball:2024:panini-obsidian:15:hotspot-electric-etch-gold-flood:no-auto:num-10",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:basketball:2024:panini-obsidian:15:hotspot-electric-etch-gold-flood:no-auto:num-10 carrying this run's own rekeyedAt 2026-09-15T01:52:58.739Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916137270 (slot 11) logged \"FAILED at verify tca-ebay::318726768923: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:basketball:2024:panini-obsidian:15:base:no-auto on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel,printRun"
+    },
+    {
+      "id": "tca-ebay::158174257630",
+      "fromCardId": "hiq:basketball:2024:panini-totally-certified:15:base:no-auto",
+      "retireSupersededBy": "hiq:basketball:2024:panini-totally-certified:15:the-mighty-mirror-blue:no-auto:num-49",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:basketball:2024:panini-totally-certified:15:the-mighty-mirror-blue:no-auto:num-49 carrying this run's own rekeyedAt 2026-09-15T01:55:18.838Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916137270 (slot 11) logged \"FAILED at verify tca-ebay::158174257630: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:basketball:2024:panini-totally-certified:15:base:no-auto on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel,printRun"
+    },
+    {
+      "id": "tca-ebay::EBAY-v1|158186044598|0",
+      "fromCardId": "hiq:basketball:2024:panini-obsidian:197:base:no-auto:num-25",
+      "retireSupersededBy": "hiq:basketball:2024:panini-obsidian:197:electric-etch-green-flood:no-auto:num-25",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:basketball:2024:panini-obsidian:197:electric-etch-green-flood:no-auto:num-25 carrying this run's own rekeyedAt 2026-09-15T01:55:56.939Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916137270 (slot 11) logged \"FAILED at verify tca-ebay::EBAY-v1|158186044598|0: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:basketball:2024:panini-obsidian:197:base:no-auto:num-25 on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel"
+    },
+    {
+      "id": "tca-ebay::206193467159",
+      "fromCardId": "hiq:basketball:2024:panini-select:199:base:no-auto",
+      "retireSupersededBy": "hiq:basketball:2024:panini-select:199:white-scope-prizm:no-auto:num-35",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:basketball:2024:panini-select:199:white-scope-prizm:no-auto:num-35 carrying this run's own rekeyedAt 2026-09-15T01:58:37.628Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916137270 (slot 11) logged \"FAILED at verify tca-ebay::206193467159: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:basketball:2024:panini-select:199:base:no-auto on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel,printRun"
+    },
+    {
+      "id": "tca-ebay::298575357058",
+      "fromCardId": "hiq:basketball:2024:panini-revolution:2:base:no-auto",
+      "retireSupersededBy": "hiq:basketball:2024:panini-revolution:2:new-wave-blue-cosmo:no-auto:num-285",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:basketball:2024:panini-revolution:2:new-wave-blue-cosmo:no-auto:num-285 carrying this run's own rekeyedAt 2026-09-15T02:00:23.845Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916137270 (slot 11) logged \"FAILED at verify tca-ebay::298575357058: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:basketball:2024:panini-revolution:2:base:no-auto on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel,printRun"
+    },
+    {
+      "id": "tca-ebay::157229553380",
+      "fromCardId": "hiq:basketball:2024:panini-mosaic:152:base:no-auto",
+      "retireSupersededBy": "hiq:basketball:2024:panini-mosaic:152:mosaic-orange:no-auto:num-249",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:basketball:2024:panini-mosaic:152:mosaic-orange:no-auto:num-249 carrying this run's own rekeyedAt 2026-09-15T02:00:30.517Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916137270 (slot 11) logged \"FAILED at verify tca-ebay::157229553380: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:basketball:2024:panini-mosaic:152:base:no-auto on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel,printRun"
+    },
+    {
+      "id": "tca-ebay::298559940661",
+      "fromCardId": "hiq:basketball:2024:panini-select:91:base:no-auto",
+      "retireSupersededBy": "hiq:basketball:2024:panini-select:91:maroon-prizm:no-auto:num-175",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:basketball:2024:panini-select:91:maroon-prizm:no-auto:num-175 carrying this run's own rekeyedAt 2026-09-15T02:02:19.053Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916137270 (slot 11) logged \"FAILED at verify tca-ebay::298559940661: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:basketball:2024:panini-select:91:base:no-auto on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel,printRun"
+    },
+    {
+      "id": "tca-ebay::298599992993",
+      "fromCardId": "hiq:baseball:2025:topps-inception:71:base:no-auto",
+      "retireSupersededBy": "hiq:baseball:2025:topps-inception:71:blue:no-auto:num-25",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:baseball:2025:topps-inception:71:blue:no-auto:num-25 carrying this run's own rekeyedAt 2026-09-15T01:39:56.113Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916138988 (slot 12) logged \"FAILED at verify tca-ebay::298599992993: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:baseball:2025:topps-inception:71:base:no-auto on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel,printRun"
+    },
+    {
+      "id": "tca-ebay::389511449849",
+      "fromCardId": "hiq:baseball:2025:topps-pro-debut:pd-68:base:auto:num-199",
+      "retireSupersededBy": "hiq:baseball:2025:topps-pro-debut:pd-68:fuchsia-foil:auto:num-199",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:baseball:2025:topps-pro-debut:pd-68:fuchsia-foil:auto:num-199 carrying this run's own rekeyedAt 2026-09-15T01:52:06.036Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916138988 (slot 12) logged \"FAILED at verify tca-ebay::389511449849: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:baseball:2025:topps-pro-debut:pd-68:base:auto:num-199 on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel"
+    },
+    {
+      "id": "tca-ebay::278287694472",
+      "fromCardId": "hiq:baseball:2025:topps-update:us134:base:no-auto",
+      "retireSupersededBy": "hiq:baseball:2025:topps-update-series:us134:independence-day:no-auto:num-76",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:baseball:2025:topps-update-series:us134:independence-day:no-auto:num-76 carrying this run's own rekeyedAt 2026-09-15T02:05:30.639Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916138988 (slot 12) logged \"FAILED at verify tca-ebay::278287694472: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:baseball:2025:topps-update:us134:base:no-auto on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel,printRun"
+    },
+    {
+      "id": "tca-ebay::336749195300",
+      "fromCardId": "hiq:baseball:2025:topps-inception:36:base:no-auto:num-35",
+      "retireSupersededBy": "hiq:baseball:2025:topps-inception:36:hot-pink:no-auto:num-35",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:baseball:2025:topps-inception:36:hot-pink:no-auto:num-35 carrying this run's own rekeyedAt 2026-09-15T02:05:47.787Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916138988 (slot 12) logged \"FAILED at verify tca-ebay::336749195300: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:baseball:2025:topps-inception:36:base:no-auto:num-35 on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel"
+    },
+    {
+      "id": "tca-ebay::178411923524",
+      "fromCardId": "hiq:baseball:2025:topps-update:us337:base:no-auto:num-2025",
+      "retireSupersededBy": "hiq:baseball:2025:topps-update-series:us337:gold:no-auto:num-2025",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:baseball:2025:topps-update-series:us337:gold:no-auto:num-2025 carrying this run's own rekeyedAt 2026-09-15T02:05:54.937Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916138988 (slot 12) logged \"FAILED at verify tca-ebay::178411923524: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:baseball:2025:topps-update:us337:base:no-auto:num-2025 on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel"
+    },
+    {
+      "id": "tca-ebay::820019748006",
+      "fromCardId": "hiq:baseball:2025:topps-pro-debut:pd-160:base:auto:num-199",
+      "retireSupersededBy": "hiq:baseball:2025:topps-pro-debut:pd-160:fuchsia-foil:auto:num-199",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:baseball:2025:topps-pro-debut:pd-160:fuchsia-foil:auto:num-199 carrying this run's own rekeyedAt 2026-09-15T02:05:57.821Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916138988 (slot 12) logged \"FAILED at verify tca-ebay::820019748006: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:baseball:2025:topps-pro-debut:pd-160:base:auto:num-199 on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel,printRun"
+    },
+    {
+      "id": "tca-ebay::206012810725",
+      "fromCardId": "hiq:baseball:2025:topps-update:us280:base:no-auto:num-2025",
+      "retireSupersededBy": "hiq:baseball:2025:topps-update-series:us280:gold-border:no-auto:num-2025",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:baseball:2025:topps-update-series:us280:gold-border:no-auto:num-2025 carrying this run's own rekeyedAt 2026-09-15T02:05:57.820Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916138988 (slot 12) logged \"FAILED at verify tca-ebay::206012810725: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:baseball:2025:topps-update:us280:base:no-auto:num-2025 on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel,printRun"
+    },
+    {
+      "id": "tca-ebay::267741741717",
+      "fromCardId": "hiq:baseball:2025:topps-update:us337:base:no-auto:num-2025",
+      "retireSupersededBy": "hiq:baseball:2025:topps-update-series:us337:gold:no-auto:num-2025",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:baseball:2025:topps-update-series:us337:gold:no-auto:num-2025 carrying this run's own rekeyedAt 2026-09-15T02:06:00.384Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916138988 (slot 12) logged \"FAILED at verify tca-ebay::267741741717: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:baseball:2025:topps-update:us337:base:no-auto:num-2025 on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel"
+    },
+    {
+      "id": "tca-ebay::188779099520",
+      "fromCardId": "hiq:baseball:2025:panini-donruss:1:base:no-auto",
+      "retireSupersededBy": "hiq:baseball:2025:panini-donruss:1:milestones-holo:no-auto:num-199",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:baseball:2025:panini-donruss:1:milestones-holo:no-auto:num-199 carrying this run's own rekeyedAt 2026-09-15T01:43:41.256Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916140943 (slot 13) logged \"FAILED at verify tca-ebay::188779099520: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:baseball:2025:panini-donruss:1:base:no-auto on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel,printRun"
+    },
+    {
+      "id": "tca-ebay::158250335181",
+      "fromCardId": "hiq:baseball:2025:topps-cosmic-chrome:stn-16:base:no-auto:num-50",
+      "retireSupersededBy": "hiq:baseball:2025:topps-cosmic-chrome:stn-16:gold-interstellar-refractor:no-auto:num-50",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:baseball:2025:topps-cosmic-chrome:stn-16:gold-interstellar-refractor:no-auto:num-50 carrying this run's own rekeyedAt 2026-09-15T01:44:17.632Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916140943 (slot 13) logged \"FAILED at verify tca-ebay::158250335181: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:baseball:2025:topps-cosmic-chrome:stn-16:base:no-auto:num-50 on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel"
+    },
+    {
+      "id": "tca-ebay::236996815517",
+      "fromCardId": "hiq:baseball:2025:topps-inception:33:base:no-auto",
+      "retireSupersededBy": "hiq:baseball:2025:topps-inception:33:red:no-auto:num-99",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:baseball:2025:topps-inception:33:red:no-auto:num-99 carrying this run's own rekeyedAt 2026-09-15T01:51:08.597Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916140943 (slot 13) logged \"FAILED at verify tca-ebay::236996815517: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:baseball:2025:topps-inception:33:base:no-auto on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel,printRun"
+    },
+    {
+      "id": "tca-ebay::168577975735",
+      "fromCardId": "hiq:baseball:2025:topps-inception:81:base:no-auto:num-199",
+      "retireSupersededBy": "hiq:baseball:2025:topps-inception:81:yellow:no-auto:num-199",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:baseball:2025:topps-inception:81:yellow:no-auto:num-199 carrying this run's own rekeyedAt 2026-09-15T01:40:05.810Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916142984 (slot 14) logged \"FAILED at verify tca-ebay::168577975735: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:baseball:2025:topps-inception:81:base:no-auto:num-199 on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel,printRun"
+    },
+    {
+      "id": "tca-ebay::376514950447",
+      "fromCardId": "hiq:baseball:2025:topps-heritage:315:base:no-auto",
+      "retireSupersededBy": "hiq:baseball:2025:topps-heritage:315:bicentennial:no-auto:num-200",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:baseball:2025:topps-heritage:315:bicentennial:no-auto:num-200 carrying this run's own rekeyedAt 2026-09-15T01:42:03.355Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916142984 (slot 14) logged \"FAILED at verify tca-ebay::376514950447: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:baseball:2025:topps-heritage:315:base:no-auto on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel,printRun"
+    },
+    {
+      "id": "tca-ebay::398289647324",
+      "fromCardId": "hiq:baseball:2025:topps-update:us11:base:no-auto:num-2025",
+      "retireSupersededBy": "hiq:baseball:2025:topps-update-series:us11:gold:no-auto:num-2025",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:baseball:2025:topps-update-series:us11:gold:no-auto:num-2025 carrying this run's own rekeyedAt 2026-09-15T01:54:44.557Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916142984 (slot 14) logged \"FAILED at verify tca-ebay::398289647324: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:baseball:2025:topps-update:us11:base:no-auto:num-2025 on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel"
+    },
+    {
+      "id": "tca-ebay::227462612708",
+      "fromCardId": "hiq:baseball:2021:panini-prizm:88:base:no-auto",
+      "retireSupersededBy": "hiq:baseball:2021:panini-prizm:88:blue-donut-circles-prizm:no-auto:num-199",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:baseball:2021:panini-prizm:88:blue-donut-circles-prizm:no-auto:num-199 carrying this run's own rekeyedAt 2026-09-15T01:13:38.089Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916145175 (slot 15) logged \"FAILED at verify tca-ebay::227462612708: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:baseball:2021:panini-prizm:88:base:no-auto on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel,printRun"
+    },
+    {
+      "id": "tca-ebay::318740869783",
+      "fromCardId": "hiq:baseball:2021:topps:333:base:no-auto:num-99",
+      "retireSupersededBy": "hiq:baseball:2021:topps:333:vintage-stock:no-auto:num-99",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:baseball:2021:topps:333:vintage-stock:no-auto:num-99 carrying this run's own rekeyedAt 2026-09-15T01:48:21.991Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916145175 (slot 15) logged \"FAILED at verify tca-ebay::318740869783: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:baseball:2021:topps:333:base:no-auto:num-99 on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel"
+    },
+    {
+      "id": "tca-ebay::407140417422",
+      "fromCardId": "hiq:baseball:2021:panini-prizm:143:base:no-auto:num-50",
+      "retireSupersededBy": "hiq:baseball:2021:panini-prizm:143:snake-skin:no-auto:num-50",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:baseball:2021:panini-prizm:143:snake-skin:no-auto:num-50 carrying this run's own rekeyedAt 2026-09-15T02:00:49.474Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916145175 (slot 15) logged \"FAILED at verify tca-ebay::407140417422: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:baseball:2021:panini-prizm:143:base:no-auto:num-50 on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel"
+    },
+    {
+      "id": "tca-ebay::298591252249",
+      "fromCardId": "hiq:baseball:2021:topps:83:base:no-auto",
+      "retireSupersededBy": "hiq:baseball:2021:topps:83:vintage-stock:no-auto:num-99",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:baseball:2021:topps:83:vintage-stock:no-auto:num-99 carrying this run's own rekeyedAt 2026-09-15T02:03:37.011Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916145175 (slot 15) logged \"FAILED at verify tca-ebay::298591252249: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:baseball:2021:topps:83:base:no-auto on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel,printRun"
+    },
+    {
+      "id": "tca-ebay::366188120497",
+      "fromCardId": "hiq:basketball:2021:panini-optic:185:base:no-auto:num-199",
+      "retireSupersededBy": "hiq:basketball:2021:donruss-optic:185:orange:no-auto:num-199",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:basketball:2021:donruss-optic:185:orange:no-auto:num-199 carrying this run's own rekeyedAt 2026-09-15T02:19:12.466Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916145175 (slot 15) logged \"FAILED at verify tca-ebay::366188120497: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:basketball:2021:panini-optic:185:base:no-auto:num-199 on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel"
+    },
+    {
+      "id": "tca-ebay::389843347706",
+      "fromCardId": "hiq:basketball:2025:topps:208:base:no-auto:num-2025",
+      "retireSupersededBy": "hiq:basketball:2025:topps:208:gold:no-auto:num-2025",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:basketball:2025:topps:208:gold:no-auto:num-2025 carrying this run's own rekeyedAt 2026-09-15T01:37:48.262Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916148786 (slot 17) logged \"FAILED at verify tca-ebay::389843347706: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:basketball:2025:topps:208:base:no-auto:num-2025 on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel,printRun"
+    },
+    {
+      "id": "tca-ebay::278271851573",
+      "fromCardId": "hiq:basketball:2025:topps-finest:171:base:no-auto",
+      "retireSupersededBy": "hiq:basketball:2025:topps-finest:171:green-refractor:no-auto:num-35",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:basketball:2025:topps-finest:171:green-refractor:no-auto:num-35 carrying this run's own rekeyedAt 2026-09-15T01:48:11.063Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916148786 (slot 17) logged \"FAILED at verify tca-ebay::278271851573: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:basketball:2025:topps-finest:171:base:no-auto on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel,printRun"
+    },
+    {
+      "id": "tca-ebay::366579828251",
+      "fromCardId": "hiq:basketball:2025:topps:17:base:no-auto:num-2025",
+      "retireSupersededBy": "hiq:basketball:2025:topps:17:gold:no-auto:num-2025",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:basketball:2025:topps:17:gold:no-auto:num-2025 carrying this run's own rekeyedAt 2026-09-15T01:52:38.872Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916148786 (slot 17) logged \"FAILED at verify tca-ebay::366579828251: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:basketball:2025:topps:17:base:no-auto:num-2025 on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel,printRun"
+    },
+    {
+      "id": "tca-ebay::137625367877",
+      "fromCardId": "hiq:basketball:2025:topps-inception:50:base:no-auto:num-125",
+      "retireSupersededBy": "hiq:basketball:2025:topps-inception:50:purple:no-auto:num-125",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:basketball:2025:topps-inception:50:purple:no-auto:num-125 carrying this run's own rekeyedAt 2026-09-15T01:52:58.226Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916148786 (slot 17) logged \"FAILED at verify tca-ebay::137625367877: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:basketball:2025:topps-inception:50:base:no-auto:num-125 on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel,printRun"
+    },
+    {
+      "id": "tca-ebay::EBAY-v1|336717547758|0",
+      "fromCardId": "hiq:basketball:2025:panini-prizm:5:base:auto:num-5",
+      "retireSupersededBy": "hiq:basketball:2025:panini-prizm:5:gold-vinyl-fotl:auto:num-5",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:basketball:2025:panini-prizm:5:gold-vinyl-fotl:auto:num-5 carrying this run's own rekeyedAt 2026-09-15T01:53:26.611Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916148786 (slot 17) logged \"FAILED at verify tca-ebay::EBAY-v1|336717547758|0: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:basketball:2025:panini-prizm:5:base:auto:num-5 on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel,printRun"
+    },
+    {
+      "id": "tca-ebay::327213420732",
+      "fromCardId": "hiq:basketball:2025:panini-select-wnba:198:base:no-auto",
+      "retireSupersededBy": "hiq:basketball:2025:panini-select-wnba:198:purple-flash-prizm:no-auto:num-149",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:basketball:2025:panini-select-wnba:198:purple-flash-prizm:no-auto:num-149 carrying this run's own rekeyedAt 2026-09-15T01:54:10.128Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916148786 (slot 17) logged \"FAILED at verify tca-ebay::327213420732: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:basketball:2025:panini-select-wnba:198:base:no-auto on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel,printRun"
+    },
+    {
+      "id": "tca-ebay::257309585578",
+      "fromCardId": "hiq:hockey:2024:unknown:16:base:no-auto",
+      "retireSupersededBy": "hiq:hockey:2024:o-pee-chee:16:violet-pixels:no-auto:num-299",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:hockey:2024:o-pee-chee:16:violet-pixels:no-auto:num-299 carrying this run's own rekeyedAt 2026-09-15T02:06:57.792Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916150665 (slot 18) logged \"FAILED at verify tca-ebay::257309585578: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:hockey:2024:unknown:16:base:no-auto on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled setKey,parallel,printRun"
+    },
+    {
+      "id": "tca-ebay::298588100792",
+      "fromCardId": "hiq:football:2019:panini-select:204:base:no-auto",
+      "retireSupersededBy": "hiq:football:2019:panini-select:204:tri-color-prizm:no-auto:num-99",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:football:2019:panini-select:204:tri-color-prizm:no-auto:num-99 carrying this run's own rekeyedAt 2026-09-15T02:14:43.861Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916150665 (slot 18) logged \"FAILED at verify tca-ebay::298588100792: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:football:2019:panini-select:204:base:no-auto on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel,printRun"
+    },
+    {
+      "id": "tca-ebay::EBAY-v1|800526155243|0",
+      "fromCardId": "hiq:football:2022:panini-optic:69:base:no-auto:num-65",
+      "retireSupersededBy": "hiq:football:2022:donruss-optic:69:electricity:no-auto:num-65",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:football:2022:donruss-optic:69:electricity:no-auto:num-65 carrying this run's own rekeyedAt 2026-09-15T02:12:00.789Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916152672 (slot 19) logged \"FAILED at verify tca-ebay::EBAY-v1|800526155243|0: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:football:2022:panini-optic:69:base:no-auto:num-65 on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel"
+    },
+    {
+      "id": "tca-ebay::158170433579",
+      "fromCardId": "hiq:baseball:2022:panini-prizm:46:base:no-auto",
+      "retireSupersededBy": "hiq:baseball:2022:panini-prizm:46:blue-donut-circles-prizm:no-auto:num-199",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:baseball:2022:panini-prizm:46:blue-donut-circles-prizm:no-auto:num-199 carrying this run's own rekeyedAt 2026-09-15T01:52:12.920Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916154566 (slot 20) logged \"FAILED at verify tca-ebay::158170433579: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:baseball:2022:panini-prizm:46:base:no-auto on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel,printRun"
+    },
+    {
+      "id": "tca-ebay::305764388303",
+      "fromCardId": "hiq:football:2022:panini-phoenix:41:base:no-auto",
+      "retireSupersededBy": "hiq:football:2022:panini-phoenix:41:purple-lazer:no-auto:num-99",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:football:2022:panini-phoenix:41:purple-lazer:no-auto:num-99 carrying this run's own rekeyedAt 2026-09-15T02:31:05.959Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916154566 (slot 20) logged \"FAILED at verify tca-ebay::305764388303: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:football:2022:panini-phoenix:41:base:no-auto on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel,printRun"
+    },
+    {
+      "id": "tca-ebay::406798280357",
+      "fromCardId": "hiq:baseball:2022:panini-prizm:17:base:no-auto:num-10",
+      "retireSupersededBy": "hiq:baseball:2022:panini-prizm:17:gold:no-auto:num-10",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:baseball:2022:panini-prizm:17:gold:no-auto:num-10 carrying this run's own rekeyedAt 2026-09-15T02:31:22.275Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916154566 (slot 20) logged \"FAILED at verify tca-ebay::406798280357: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:baseball:2022:panini-prizm:17:base:no-auto:num-10 on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel,printRun"
+    },
+    {
+      "id": "tca-ebay::206483959058",
+      "fromCardId": "hiq:football:2023:panini-prizm:305:base:no-auto",
+      "retireSupersededBy": "hiq:football:2023:panini-prizm:305:purple-ice:no-auto:num-225",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:football:2023:panini-prizm:305:purple-ice:no-auto:num-225 carrying this run's own rekeyedAt 2026-09-15T02:07:34.570Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916161387 (slot 23) logged \"FAILED at verify tca-ebay::206483959058: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:football:2023:panini-prizm:305:base:no-auto on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel,printRun"
+    },
+    {
+      "id": "tca-ebay::158202664890",
+      "fromCardId": "hiq:football:2023:panini-illusions:12:base:no-auto",
+      "retireSupersededBy": "hiq:football:2023:panini-illusions:12:king-of-cards-light-blue:no-auto:num-299",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:football:2023:panini-illusions:12:king-of-cards-light-blue:no-auto:num-299 carrying this run's own rekeyedAt 2026-09-15T02:15:17.103Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916161387 (slot 23) logged \"FAILED at verify tca-ebay::158202664890: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:football:2023:panini-illusions:12:base:no-auto on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel,printRun"
+    },
+    {
+      "id": "tca-ebay::237004608193",
+      "fromCardId": "hiq:football:2023:panini-phoenix:102:base:no-auto",
+      "retireSupersededBy": "hiq:football:2023:panini-phoenix:102:purple:no-auto:num-125",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:football:2023:panini-phoenix:102:purple:no-auto:num-125 carrying this run's own rekeyedAt 2026-09-15T02:15:31.105Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916161387 (slot 23) logged \"FAILED at verify tca-ebay::237004608193: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:football:2023:panini-phoenix:102:base:no-auto on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel,printRun"
+    },
+    {
+      "id": "tca-ebay::158158442441",
+      "fromCardId": "hiq:baseball:2023:panini-donruss:1:base:no-auto",
+      "retireSupersededBy": "hiq:soccer:2023:panini-donruss:1:red:no-auto:num-99",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:soccer:2023:panini-donruss:1:red:no-auto:num-99 carrying this run's own rekeyedAt 2026-09-15T02:18:08.976Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916161387 (slot 23) logged \"FAILED at verify tca-ebay::158158442441: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:baseball:2023:panini-donruss:1:base:no-auto on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel,printRun"
+    },
+    {
+      "id": "tca-ebay::117347928190",
+      "fromCardId": "hiq:football:2023:panini-illusions:1:base:no-auto:num-199",
+      "retireSupersededBy": "hiq:football:2023:panini-illusions:1:illusionists-red:no-auto:num-199",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:football:2023:panini-illusions:1:illusionists-red:no-auto:num-199 carrying this run's own rekeyedAt 2026-09-15T02:20:43.497Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916161387 (slot 23) logged \"FAILED at verify tca-ebay::117347928190: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:football:2023:panini-illusions:1:base:no-auto:num-199 on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel"
+    },
+    {
+      "id": "tca-ebay::188630500507",
+      "fromCardId": "hiq:soccer:2023:panini-donruss:2:base:no-auto:num-99",
+      "retireSupersededBy": "hiq:soccer:2023:panini-donruss:2:blue:no-auto:num-99",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:soccer:2023:panini-donruss:2:blue:no-auto:num-99 carrying this run's own rekeyedAt 2026-09-15T02:24:17.350Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916161387 (slot 23) logged \"FAILED at verify tca-ebay::188630500507: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:soccer:2023:panini-donruss:2:base:no-auto:num-99 on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel,printRun"
+    },
+    {
+      "id": "tca-ebay::407024823397",
+      "fromCardId": "hiq:basketball:2023:panini-prizm:191:base:no-auto:num-20",
+      "retireSupersededBy": "hiq:basketball:2023:panini-prizm:191:choice-cherry-blossom-prizm:no-auto:num-20",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:basketball:2023:panini-prizm:191:choice-cherry-blossom-prizm:no-auto:num-20 carrying this run's own rekeyedAt 2026-09-15T01:39:32.162Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916163375 (slot 24) logged \"FAILED at verify tca-ebay::407024823397: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:basketball:2023:panini-prizm:191:base:no-auto:num-20 on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel"
+    },
+    {
+      "id": "tca-ebay::188849873757",
+      "fromCardId": "hiq:basketball:2023:panini-select:65:base:no-auto:num-49",
+      "retireSupersededBy": "hiq:basketball:2023:panini-select:65:bronze-checker-prizm:no-auto:num-49",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:basketball:2023:panini-select:65:bronze-checker-prizm:no-auto:num-49 carrying this run's own rekeyedAt 2026-09-15T02:03:45.294Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916163375 (slot 24) logged \"FAILED at verify tca-ebay::188849873757: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:basketball:2023:panini-select:65:base:no-auto:num-49 on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel,printRun"
+    },
+    {
+      "id": "tca-ebay::358914857782",
+      "fromCardId": "hiq:basketball:2023:panini-phoenix:14:base:no-auto:num-75",
+      "retireSupersededBy": "hiq:basketball:2023:panini-phoenix:14:pyro-purple:no-auto:num-75",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:basketball:2023:panini-phoenix:14:pyro-purple:no-auto:num-75 carrying this run's own rekeyedAt 2026-09-15T02:08:43.833Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916163375 (slot 24) logged \"FAILED at verify tca-ebay::358914857782: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:basketball:2023:panini-phoenix:14:base:no-auto:num-75 on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel"
+    },
+    {
+      "id": "tca-ebay::178219400243",
+      "fromCardId": "hiq:basketball:2023:panini-obsidian:173:base:no-auto",
+      "retireSupersededBy": "hiq:basketball:2023:panini-obsidian:173:electric-etch-blue:no-auto:num-30",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:basketball:2023:panini-obsidian:173:electric-etch-blue:no-auto:num-30 carrying this run's own rekeyedAt 2026-09-15T02:22:08.514Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916163375 (slot 24) logged \"FAILED at verify tca-ebay::178219400243: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:basketball:2023:panini-obsidian:173:base:no-auto on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel,printRun"
+    },
+    {
+      "id": "tca-ebay::298591522287",
+      "fromCardId": "hiq:basketball:2023:panini-contenders:12:base:no-auto",
+      "retireSupersededBy": "hiq:basketball:2023:panini-contenders:12:blue:no-auto:num-75",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:basketball:2023:panini-contenders:12:blue:no-auto:num-75 carrying this run's own rekeyedAt 2026-09-15T02:24:40.624Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916163375 (slot 24) logged \"FAILED at verify tca-ebay::298591522287: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:basketball:2023:panini-contenders:12:base:no-auto on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled parallel,printRun"
+    },
+    {
+      "id": "tca-ebay::EBAY-v1|298591042891|0",
+      "fromCardId": "hiq:pokemon:2015:unknown:58:base:no-auto",
+      "retireSupersededBy": "hiq:pokemon:2015:xy8:58:reverse-holofoil:no-auto",
+      "evidence": "readback-found-nothing twin: the GREAT REMATCH IMPROVE keeper is LIVE at hiq:pokemon:2015:xy8:58:reverse-holofoil:no-auto carrying this run's own rekeyedAt 2026-09-15T02:42:47.893Z and a rekeyedFrom naming this exact address, so the upsert landed. The post-upsert point-read hit a stale replica -- the row CHANGED PARTITION -- and run 34916167842 (slot 26) logged \"FAILED at verify tca-ebay::EBAY-v1|298591042891|0: read-back found nothing\", so the old row was correctly never deleted and the sale is now resident twice (old twin independently re-confirmed live at hiq:pokemon:2015:unknown:58:base:no-auto on 2026-09-15 by this verification pass). Retired in favour of the verified keeper. Reason: GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled setKey,parallel"
+    }
+  ],
+  "deferred": []
+}

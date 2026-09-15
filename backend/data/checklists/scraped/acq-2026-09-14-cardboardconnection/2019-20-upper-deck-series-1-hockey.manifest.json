@@ -1,0 +1,483 @@
+{
+  "source": "cardboardconnection-2026-09-14",
+  "sourceUrl": "https://www.cardboardconnection.com/2019-20-upper-deck-series-1-hockey-cards",
+  "xlsxUrl": "https://cconnect.s3.amazonaws.com/wp-content/uploads/2019/10/2019-20-Upper-Deck-Series-1-Hockey-checklist-Excel-spreadsheet.xlsx",
+  "fetchedAt": "2026-09-14",
+  "sport": "hockey",
+  "year": 2019,
+  "setName": "2019-20 Upper Deck Series 1 Hockey",
+  "productKey": "2019-20-upper-deck-series-1-hockey",
+  "setKey": "upper-deck-series-1",
+  "rowCount": 2067,
+  "autoCount": 50,
+  "printRunCount": 863,
+  "distinctParallels": 15,
+  "parallelColumnAuthoritative": true,
+  "parallelVocabulary": [
+    "Autographs",
+    "Clear Cut",
+    "Copper",
+    "Exclusives",
+    "Gold",
+    "Gold Foil",
+    "High Gloss",
+    "Jersey",
+    "Jumbos",
+    "Patch",
+    "Platinum Blue Foil",
+    "Printing Plates",
+    "Red",
+    "Rookie Retrospective Patch",
+    "UD Game Patch"
+  ],
+  "sectionsReport": [
+    {
+      "section": "Base Set",
+      "category": "base-set",
+      "parallel": "",
+      "cards": 200,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base Set - Young Guns",
+      "category": "base-set--young-guns",
+      "parallel": "",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "2019 NHL Draft SP",
+      "category": "2019-nhl-draft-sp",
+      "parallel": "",
+      "cards": 1,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "2019 NHL Draft SP Gold Variation",
+      "category": "2019-nhl-draft-sp-gold-variation",
+      "parallel": "",
+      "cards": 1,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Clear Cut Parallel",
+      "category": "base-set",
+      "parallel": "Clear Cut",
+      "cards": 200,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Clear Cut Parallel - Young Guns",
+      "category": "base-set--young-guns",
+      "parallel": "Clear Cut",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Exclusives Parallel",
+      "category": "base-set",
+      "parallel": "Exclusives",
+      "cards": 200,
+      "auto": 0,
+      "printRun": 200
+    },
+    {
+      "section": "Exclusives Parallel - Young Guns",
+      "category": "base-set--young-guns",
+      "parallel": "Exclusives",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 50
+    },
+    {
+      "section": "High Gloss Parallel",
+      "category": "base-set",
+      "parallel": "High Gloss",
+      "cards": 200,
+      "auto": 0,
+      "printRun": 200
+    },
+    {
+      "section": "High Gloss Parallel - Young Guns",
+      "category": "base-set--young-guns",
+      "parallel": "High Gloss",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 50
+    },
+    {
+      "section": "Jumbos Parallel - Young Guns",
+      "category": "base-set--young-guns",
+      "parallel": "Jumbos",
+      "cards": 14,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "UD Canvas",
+      "category": "ud-canvas",
+      "parallel": "",
+      "cards": 90,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "UD Canvas - Young Guns",
+      "category": "ud-canvas--young-guns",
+      "parallel": "",
+      "cards": 30,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "UD Canvas Printing Plates Parallel",
+      "category": "ud-canvas",
+      "parallel": "Printing Plates",
+      "cards": 90,
+      "auto": 0,
+      "printRun": 90
+    },
+    {
+      "section": "UD Canvas Printing Plates Parallel - Young Guns",
+      "category": "ud-canvas--young-guns",
+      "parallel": "Printing Plates",
+      "cards": 30,
+      "auto": 0,
+      "printRun": 30
+    },
+    {
+      "section": "UD Canvas Signatures",
+      "category": "ud-canvas-signatures",
+      "parallel": "",
+      "cards": 2,
+      "auto": 2,
+      "printRun": 2
+    },
+    {
+      "section": "1994-95 Rookie Tribute Die Cuts",
+      "category": "1994-95-rookie-tribute-die-cuts",
+      "parallel": "",
+      "cards": 10,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "1994-95 Rookie Tribute Die Cuts Red Parallel",
+      "category": "1994-95-rookie-tribute-die-cuts",
+      "parallel": "Red",
+      "cards": 10,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "30 Years of Upper Deck",
+      "category": "30-years-of-upper-deck",
+      "parallel": "",
+      "cards": 30,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Ceremonial Puck Drop",
+      "category": "ceremonial-puck-drop",
+      "parallel": "",
+      "cards": 8,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Ceremonial Puck Drop Autographs Parallel",
+      "category": "ceremonial-puck-drop",
+      "parallel": "Autographs",
+      "cards": 4,
+      "auto": 4,
+      "printRun": 0
+    },
+    {
+      "section": "Clear Cut Foundation Duos",
+      "category": "clear-cut-foundation-duos",
+      "parallel": "",
+      "cards": 31,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Clear Cut Honoured Members Update",
+      "category": "clear-cut-honoured-members-update",
+      "parallel": "",
+      "cards": 9,
+      "auto": 0,
+      "printRun": 9
+    },
+    {
+      "section": "Clear Cut Leaders Trios",
+      "category": "clear-cut-leaders-trios",
+      "parallel": "",
+      "cards": 6,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Cup Components",
+      "category": "cup-components",
+      "parallel": "",
+      "cards": 23,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Day with The Cup",
+      "category": "day-with-the-cup",
+      "parallel": "",
+      "cards": 14,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Generation Next",
+      "category": "generation-next",
+      "parallel": "",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Generation Next Jersey Parallel",
+      "category": "generation-next",
+      "parallel": "Jersey",
+      "cards": 18,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Generation Next Patch Parallel",
+      "category": "generation-next",
+      "parallel": "Patch",
+      "cards": 18,
+      "auto": 0,
+      "printRun": 18
+    },
+    {
+      "section": "OPC Glossy Rookies",
+      "category": "opc-glossy-rookies",
+      "parallel": "",
+      "cards": 10,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "OPC Glossy Rookies Copper Parallel",
+      "category": "opc-glossy-rookies",
+      "parallel": "Copper",
+      "cards": 10,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "OPC Glossy Rookies Gold Parallel",
+      "category": "opc-glossy-rookies",
+      "parallel": "Gold",
+      "cards": 10,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Portraits",
+      "category": "portraits",
+      "parallel": "",
+      "cards": 40,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Portraits - Rookies",
+      "category": "portraits--rookies",
+      "parallel": "",
+      "cards": 10,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Portraits Gold Foil Parallel",
+      "category": "portraits",
+      "parallel": "Gold Foil",
+      "cards": 40,
+      "auto": 0,
+      "printRun": 40
+    },
+    {
+      "section": "Portraits Gold Foil Parallel - Rookies",
+      "category": "portraits--rookies",
+      "parallel": "Gold Foil",
+      "cards": 10,
+      "auto": 0,
+      "printRun": 10
+    },
+    {
+      "section": "Portraits Platinum Blue Foil Parallel",
+      "category": "portraits",
+      "parallel": "Platinum Blue Foil",
+      "cards": 40,
+      "auto": 0,
+      "printRun": 40
+    },
+    {
+      "section": "Portraits Platinum Blue Foil Parallel - Rookies",
+      "category": "portraits--rookies",
+      "parallel": "Platinum Blue Foil",
+      "cards": 10,
+      "auto": 0,
+      "printRun": 10
+    },
+    {
+      "section": "Pure Energy",
+      "category": "pure-energy",
+      "parallel": "",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Rookie Retrospective Jersey",
+      "category": "rookie-retrospective-jersey",
+      "parallel": "",
+      "cards": 14,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Rookie Retrospective Patch Parallel",
+      "category": "rookie-retrospective-jersey",
+      "parallel": "Rookie Retrospective Patch",
+      "cards": 14,
+      "auto": 0,
+      "printRun": 14
+    },
+    {
+      "section": "Shooting Stars - Centers",
+      "category": "shooting-stars--centers",
+      "parallel": "",
+      "cards": 10,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Shooting Stars - Defenders",
+      "category": "shooting-stars--defenders",
+      "parallel": "",
+      "cards": 10,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Shooting Stars - Goalies",
+      "category": "shooting-stars--goalies",
+      "parallel": "",
+      "cards": 10,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Shooting Stars - Left Wingers",
+      "category": "shooting-stars--left-wingers",
+      "parallel": "",
+      "cards": 10,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Shooting Stars - Right Wingers",
+      "category": "shooting-stars--right-wingers",
+      "parallel": "",
+      "cards": 10,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Shooting Stars Red Parallel - Centers",
+      "category": "shooting-stars--centers",
+      "parallel": "Red",
+      "cards": 10,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Shooting Stars Red Parallel - Defenders",
+      "category": "shooting-stars--defenders",
+      "parallel": "Red",
+      "cards": 10,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Shooting Stars Red Parallel - Goalies",
+      "category": "shooting-stars--goalies",
+      "parallel": "Red",
+      "cards": 10,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Shooting Stars Red Parallel - Left Wingers",
+      "category": "shooting-stars--left-wingers",
+      "parallel": "Red",
+      "cards": 10,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Shooting Stars Red Parallel - Right Wingers",
+      "category": "shooting-stars--right-wingers",
+      "parallel": "Red",
+      "cards": 10,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Signature Sensations",
+      "category": "signature-sensations",
+      "parallel": "",
+      "cards": 44,
+      "auto": 44,
+      "printRun": 0
+    },
+    {
+      "section": "Sophomore Sensations",
+      "category": "sophomore-sensations",
+      "parallel": "",
+      "cards": 6,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "UD Game Jersey",
+      "category": "ud-game-jersey",
+      "parallel": "",
+      "cards": 100,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "UD Game Patch",
+      "category": "ud-game-jersey",
+      "parallel": "UD Game Patch",
+      "cards": 100,
+      "auto": 0,
+      "printRun": 100
+    }
+  ],
+  "ingestBlocked": {
+    "unregisteredSubsetKeys": [
+      "1994-95-rookie-tribute-die-cuts"
+    ],
+    "clashingAddresses": 10,
+    "blockedReason": "SAME-NUMBERED INSERT. The 1994-95 Rookie Tribute Die-Cuts subset restarts at card 1 with its OWN players (#1 Cale Makar vs base #1 Auston Matthews), so its 10 cards compute the same ids as 10 base cards. Per lib/insert-set-key.cjs this file is REFUSED until the subset key is registered in productSetKeys.ts AND normalizeSetKey has an anchored rule for it. Nothing here guesses the key.",
+    "awaitingRuling": true
+  }
+}
