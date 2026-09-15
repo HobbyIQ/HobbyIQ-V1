@@ -407,8 +407,34 @@ export function computePlayerIndexRatio(
 const MEMO_TTL_MS = 5 * 60_000;
 const memo = new Map<string, { at: number; rows: PlayerPoolRow[] | null }>();
 
+/**
+ * CF-ONE-COSMOS-CLIENT-ON-THE-PRICE-PATH (Fable, 2026-09-15). Singleflight:
+ * the read IN FLIGHT for a key, so concurrent cold callers share one query.
+ *
+ * The memo above is populated only AFTER `readPlayerPoolRows` resolves, so it
+ * de-duplicates nothing while the read is still running. That is the whole
+ * window that matters: `readPlayerPoolRows` issues a cross-partition
+ * `TOP 2000 ... ORDER BY c.soldAt DESC` over `sold_comps` filtered on
+ * `LOWER(c.playerName)` — not index-servable, and by far the most expensive
+ * read on the price path. On a cold key every concurrent request for the same
+ * star player issued its OWN copy of it: a stampede that makes the pool
+ * slower, which widens the window, which admits more of the stampede.
+ *
+ * With this map the FIRST caller for a key issues the query and every caller
+ * that arrives before it settles awaits the same promise. Correctness is
+ * unchanged — they were all asking the identical question and the memo would
+ * have given them the identical answer a moment later.
+ *
+ * The entry is deleted in a `finally`, so a rejected read is never cached as
+ * an in-flight promise and the next caller retries normally.
+ */
+const inFlight = new Map<string, Promise<PlayerPoolRow[] | null>>();
+
 /** Test seam: drop the memo between cases. */
-export function _clearPlayerIndexMemo(): void { memo.clear(); }
+export function _clearPlayerIndexMemo(): void { memo.clear(); inFlight.clear(); }
+
+/** Test seam: how many reads are in flight right now. */
+export function _playerIndexInFlightCount(): number { return inFlight.size; }
 
 async function readPlayerRowsMemoized(
   playerName: string,
@@ -435,17 +461,31 @@ async function readPlayerRowsMemoized(
   // is closed at both ends and cannot acquire new rows — so it never expires
   // within a run.
   if (hit && (asOfMs !== null || nowMs - hit.at < MEMO_TTL_MS)) return hit.rows;
+
+  // Someone is already asking this exact question — wait for their answer
+  // rather than issuing a second copy of the same expensive read.
+  const pending = inFlight.get(key);
+  if (pending) return pending;
+
   const fromIso = new Date(nowMs - BASKET_WINDOW_DAYS * DAY_MS).toISOString();
-  const rows = await readPlayerPoolRows({
-    playerName,
-    sport,
-    fromIso,
-    // asOfCutoffString, not toISOString: `soldAt` is compared as a string and
-    // the pool stores one instant three ways. See asOfCutoff.ts.
-    asOfIso: asOfMs !== null ? asOfCutoffString(asOfMs) : null,
-  });
-  memo.set(key, { at: nowMs, rows });
-  return rows;
+  const read = (async () => {
+    const rows = await readPlayerPoolRows({
+      playerName,
+      sport,
+      fromIso,
+      // asOfCutoffString, not toISOString: `soldAt` is compared as a string and
+      // the pool stores one instant three ways. See asOfCutoff.ts.
+      asOfIso: asOfMs !== null ? asOfCutoffString(asOfMs) : null,
+    });
+    memo.set(key, { at: nowMs, rows });
+    return rows;
+  })();
+  inFlight.set(key, read);
+  try {
+    return await read;
+  } finally {
+    inFlight.delete(key);
+  }
 }
 
 /**
