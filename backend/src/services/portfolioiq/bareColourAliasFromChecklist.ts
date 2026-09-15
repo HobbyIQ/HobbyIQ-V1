@@ -105,6 +105,7 @@
 
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { cleanParallelName } from "./parallelNameVocabulary.js";
 
 interface ParallelCorpusProduct {
   sport?: string;
@@ -206,9 +207,21 @@ function buildMap(): ProductColourMap {
     const setKey = lower(product.setKey ?? "");
     const year = product.year;
     if (!setKey || year == null) continue;
+    // CF-A-PARALLEL-NAME-IS-A-NAME-THE-CHECKLIST-SPELLS (2026-09-15). The
+    // corpus prints a rung's name beside its PACK ODDS on one line, so the raw
+    // `name` field genuinely holds `Yellow - 1:1 Hanger EA;` and `Pink Diamante
+    // Foil - Hanger exclusive`. `statedFinishFromChecklist` has always stripped
+    // that tail before indexing; this module read the raw field instead and
+    // therefore answered with the odds attached -- 2 of the audit's 66
+    // garbled-parallel rows, reproduced verbatim against the live parser.
+    //
+    // The odds belong to the pack, not to the card. Cleaning here (rather than
+    // at the answer) means the tie-detection below compares CARDS: before this,
+    // `Yellow` and `Yellow (Hanger exclusive)` were two different "names" of
+    // one colour and could mask or manufacture a tie.
     const names = (product.parallels ?? [])
-      .map((p) => String(p.name ?? "").trim())
-      .filter(Boolean);
+      .map((p) => cleanParallelName(String(p.name ?? "").trim()))
+      .filter((n): n is string => Boolean(n));
     if (!names.length) continue;
     const productKey = `${year}|${setKey}`;
     // The same (year, setKey) can appear once per sport in the source corpus

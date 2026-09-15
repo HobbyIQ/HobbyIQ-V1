@@ -1784,7 +1784,26 @@ function extractParallel(
   if (/aqua\s+lava/i.test(T)) return "Aqua Lava Refractor";
   if (/aqua\s+wave/i.test(T)) return "Aqua Wave Refractor";
   if (/aqua\s+shimmer/i.test(T)) return "Aqua Shimmer Refractor";
-  m = T.match(/(rose\s+gold)\s+(refractor|x-?fractor|mini)/i);
+  // CF-A-PARALLEL-NAME-IS-A-NAME-THE-CHECKLIST-SPELLS (2026-09-15). The `mini`
+  // alternative used to answer "Rose Gold Mini" -- a fragment of a name, and a
+  // card that does not exist. The corpus lists `Rose Gold Mini-Diamond
+  // Refractor` (and `Rose Gold Mini Diamond Refractor`) but never a bare `Rose
+  // Gold Mini`, so the old answer split the Mini-Diamond pool onto an address
+  // no checklist has ever printed:
+  //
+  //   "2023 Topps Chrome Platinum Baseball #250 Rose Gold Mini-Diamond
+  //    Refractor"  ->  "Rose Gold Mini"
+  //
+  // measured verbatim against the live parser, 1 of the audit's 66
+  // garbled-parallel rows. `mini` alone was never a rung; it is the first word
+  // of one. The general rules at the top of this function already answer
+  // "Mini Diamond Refractor" and "Mini Diamond", so the whole name is reached
+  // by the colour-prefixed forms below rather than by truncating here.
+  m = T.match(/(rose\s+gold)\s+mini[\s-]*diamond\s+refractor/i);
+  if (m) return "Rose Gold Mini-Diamond Refractor";
+  m = T.match(/(rose\s+gold)\s+mini[\s-]*diamond/i);
+  if (m) return "Rose Gold Mini-Diamond";
+  m = T.match(/(rose\s+gold)\s+(refractor|x-?fractor)/i);
   if (m) return "Rose Gold " + capFirst(m[2].replace(/-/, "-"));
   if (/black\s+shimmer\s+refractor/i.test(T)) return "Black Shimmer Refractor";
   // CF-RED-INK-IS-ITS-OWN-CARD (Drew ruling 2026-08-30, card-lingo-glossary).
