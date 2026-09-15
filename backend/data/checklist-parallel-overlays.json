@@ -1,0 +1,41 @@
+{
+  "_README": "Rungs a RULING added that no scraped source file carries.\n\nThe builder reads this on every run, so a regenerate cannot lose them.\nThey were previously hand-edited into the GENERATED file, which works\nexactly once: the next regenerate rewrites from the sources and the\nruling is silently gone.\n\nMERGE RULE: an entry is added only when the product ladder does not\nalready carry the name. When a source finally publishes the rung, the\nSOURCE wins and the overlay entry becomes a no-op -- so this file retires\nitself rather than fighting a future scrape.\n\nNOT A SCRAPE. Each entry names its own ruling and source; nothing here is\nsynthetic (feedback_no_synthetic_parallels_only_actuals) -- these rungs\nare checklist-backed in card_catalog, they simply were never scraped into\na CSV.",
+  "schema": "hobbyiq/checklist-parallel-overlays/v1",
+  "overlays": [
+    {
+      "sport": "baseball",
+      "year": 2025,
+      "setKey": "topps-allen-ginter",
+      "ruling": "R47 amended (Drew, 2026-09-15) — 2025 A&G minis are parallel RUNGS, not their own card set; as originally ruled they would have duplicated the base roster 349/350.",
+      "source": "baseballcardpedia-ladders-2026-09-04 + checklistcenter-2026-08-30 (never scraped into a CSV)",
+      "note": "406 pool rows: Mini Gold Border 177, Mini Black Border 228, Mini Black 1.",
+      "parallels": [
+        {
+          "name": "Mini Black",
+          "printRun": null,
+          "seen": 3,
+          "spellings": [
+            "Mini Black"
+          ]
+        },
+        {
+          "name": "Mini Black Border",
+          "printRun": null,
+          "seen": 350,
+          "spellings": [
+            "Mini Black Border",
+            "Mini Black Bordered"
+          ]
+        },
+        {
+          "name": "Mini Gold Border",
+          "printRun": null,
+          "seen": 350,
+          "spellings": [
+            "Mini Gold Border"
+          ]
+        }
+      ]
+    }
+  ]
+}

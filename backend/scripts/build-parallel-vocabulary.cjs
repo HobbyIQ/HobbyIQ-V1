@@ -97,6 +97,52 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
+/**
+ * THE OVERLAY: RUNGS A RULING ADDED THAT NO SOURCE FILE CARRIES.
+ *
+ * CF-A-REGENERATE-MUST-NOT-ERASE-A-RULING (2026-09-15).
+ *
+ * R47 added three 2025 Allen & Ginter mini rungs -- `Mini Gold Border`,
+ * `Mini Black Border`, `Mini Black` -- covering 406 pool rows. They are
+ * checklist-backed in card_catalog but absent from every scraped FILE, because
+ * they came from `baseballcardpedia-ladders-2026-09-04` and
+ * `checklistcenter-2026-08-30`, which were never scraped into one.
+ *
+ * They were added by HAND-EDITING the generated JSON. That works exactly once:
+ * the next regenerate rewrites the file from the sources and the ruling is
+ * silently gone, with nothing to notice it -- the corpus would simply have
+ * three fewer names and 406 pool rows would lose their spelling again.
+ *
+ * So the ruling lives in a COMMITTED OVERLAY the builder reads on every run.
+ * The overlay is input, like the CSVs; the generated file is output. A
+ * regenerate cannot lose what it re-reads.
+ *
+ * WHY AN OVERLAY AND NOT A SYNTHETIC CSV. A fake CSV would have to invent a
+ * card number, a player and a category for every row to satisfy the reader,
+ * and `feedback_no_synthetic_parallels_only_actuals` rules that out: an
+ * invented row is indistinguishable from a scraped one afterwards. The overlay
+ * is explicitly NOT a scrape -- each entry carries its own `source` and
+ * `ruling`, so the file says where the name came from and which ruling
+ * admitted it.
+ *
+ * MERGE RULE. An overlay entry is added when the product's ladder does not
+ * already carry the name; when it does, the SOURCE wins and the overlay is a
+ * no-op. So re-scraping a product that finally publishes the rung retires the
+ * overlay entry automatically rather than fighting it.
+ */
+function loadOverlay(file) {
+  if (!file || !fs.existsSync(file)) return { byProduct: new Map(), count: 0, entries: 0 };
+  const raw = JSON.parse(fs.readFileSync(file, "utf8"));
+  const byProduct = new Map();
+  let count = 0;
+  for (const e of raw.overlays ?? []) {
+    const pk = `${e.sport}|${e.year}|${e.setKey}`;
+    let g = byProduct.get(pk); if (!g) { g = []; byProduct.set(pk, g); }
+    for (const p of e.parallels ?? []) { g.push({ ...p, ruling: e.ruling, source: e.source }); count++; }
+  }
+  return { byProduct, count, entries: (raw.overlays ?? []).length };
+}
+
 /** Root comparison key: case and punctuation are spelling, not identity. */
 const normForRoot = (s) => String(s ?? "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 
@@ -106,6 +152,7 @@ const arg = (n, d) => {
 };
 const DIRS = arg("dirs", "C:/tmp/beckett-bulk,C:/tmp/ci/csv2").split(",").map((s) => s.trim()).filter(Boolean);
 const OUT = arg("out", "backend/data/checklist-parallel-names.json");
+const OVERLAY = arg("overlay", path.join(__dirname, "..", "data", "checklist-parallel-overlays.json"));
 
 const f = (n) => Number(n).toLocaleString();
 
@@ -317,6 +364,28 @@ function main() {
     return { parallels, sets: merged };
   }
 
+  // THE OVERLAY IS APPLIED BEFORE THE SPLIT, so an overlay rung is judged by
+  // exactly the same rules as a scraped one -- including the insert-set test.
+  const overlay = loadOverlay(OVERLAY);
+  let overlayAdded = 0, overlayAlreadyPresent = 0;
+  for (const [pk, entries] of overlay.byProduct) {
+    if (!vocab.has(pk)) vocab.set(pk, new Map());
+    const bucket = vocab.get(pk);
+    for (const e of entries) {
+      const c = cleanName(e.name);
+      if (!c) continue;
+      const k = key(c.name);
+      if (bucket.has(k)) { overlayAlreadyPresent++; continue; }   // the SOURCE wins
+      bucket.set(k, {
+        name: c.name, printRun: c.printRun ?? e.printRun ?? null, odds: c.odds ?? null,
+        seen: e.seen ?? 1, spellings: e.spellings ?? [e.name],
+        categories: new Set([e.category ?? "base-overlay"]),
+        overlay: { ruling: e.ruling, source: e.source },
+      });
+      overlayAdded++;
+    }
+  }
+
   const out = {};
   let products = 0, names = 0, withRun = 0, insertSetCount = 0, insertNameCount = 0;
   for (const [pk, bucket] of [...vocab.entries()].sort()) {
@@ -368,7 +437,13 @@ function main() {
         .map((e) => {
           names++;
           if (e.printRun !== null) withRun++;
-          return { name: e.name, printRun: e.printRun, odds: e.odds ?? null, seen: e.seen, spellings: e.spellings };
+          return {
+            name: e.name, printRun: e.printRun, odds: e.odds ?? null,
+            seen: e.seen, spellings: e.spellings,
+            // Provenance rides on the row, so the file itself says which names
+            // a ruling admitted and which a scrape found.
+            ...(e.overlay ? { overlay: e.overlay } : {}),
+          };
         }),
       ...(insertSets.length ? { insertSets } : {}),
       // Empty for every source that carries `category` -- i.e. all three
@@ -392,6 +467,7 @@ function main() {
   console.log(`products with parallels  ${f(products)}`);
   console.log(`distinct parallel names  ${f(names)}`);
   console.log(`insert sets              ${f(insertSetCount)}  (${f(insertNameCount)} names moved out of parallels)`);
+  console.log(`overlay                  ${f(overlayAdded)} added, ${f(overlayAlreadyPresent)} already in a source (source wins)`);
   console.log(`  carrying a print run   ${f(withRun)}`);
   console.log(`names cleaned of source noise ${f(cleaned)}`);
   console.log(`  print runs recovered   ${f(runsRecovered)}`);
