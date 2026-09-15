@@ -129,6 +129,36 @@ maybe("the builder separates insert sets from parallels", () => {
     expect(bad.slice(0, 10)).toEqual([]);
   });
 
+  it("KNOWN over-merge: two inserts sharing a first word share a root", () => {
+    // Recorded, not fixed. "Downtown Duos" + "Downtown Legends" land under one
+    // root, as do the three "Rookie ..." sets. 2 of 26 roots on Optic.
+    //
+    // Two alternatives were tried and measured: a colour/finish wordlist
+    // re-fragmented to 68 roots, the source's own category slug to 127. Both
+    // are worse than the over-merge, because the slug appends the colour and
+    // no hand list covers every suffix.
+    //
+    // It costs nothing the consumers read: `children` is exact either way, and
+    // every consumer matches on the CHILD name, not the root label.
+    const p = optic();
+    const downtown = p.insertSets!.find((s) => s.rootKey === "downtown");
+    expect(downtown).toBeTruthy();
+    const kids = downtown!.children.map(lower);
+    expect(kids.some((k) => k.startsWith("downtown duo"))).toBe(true);
+    expect(kids.some((k) => k.startsWith("downtown legend"))).toBe(true);
+  });
+
+  it("the plural fold recovers a root the singular member truncated", () => {
+    // The source spells one set "Best Tuddy" AND "Best Tuddys Gold", so a
+    // literal common prefix stopped at "Best". 3 of 5 truncated roots on Optic
+    // are recovered by folding a trailing "s" when comparing.
+    const p = optic();
+    const roots = p.insertSets!.map((s) => s.root);
+    expect(roots).toContain("Best Tuddys");
+    expect(roots).toContain("Diamond Hands");
+    expect(roots).not.toContain("Best");
+  });
+
   it("parallels[] keeps its shape, so existing consumers load unchanged", () => {
     const e = optic().parallels![0] as Record<string, unknown>;
     for (const f of ["name", "printRun", "odds", "seen", "spellings"]) {

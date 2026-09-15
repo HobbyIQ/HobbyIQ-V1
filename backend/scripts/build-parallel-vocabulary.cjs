@@ -286,7 +286,27 @@ function main() {
       if (!root) { parallels.push(e); continue; }
       let g = sets.get(root); if (!g) { g = []; sets.set(root, g); } g.push(e);
     }
-    // Merge a root into any shorter root it extends.
+    // MERGE A ROOT INTO ANY SHORTER ROOT IT EXTENDS.
+    //
+    // This is what stops one insert set fragmenting into one root per colour:
+    // measured on Optic 2024 FB, 127 roots for 130 names without it, 26 with.
+    //
+    // KNOWN, BOUNDED OVER-MERGE. Two inserts that share a first word land in
+    // one group -- "Downtown Duos" + "Downtown Legends" under `downtown`,
+    // "Rookie Kings" + "Rookie Phenoms" + "Rookie Recruits" under `rookie`.
+    // 2 of 26 roots on Optic 2024, 6 of 34 on Mosaic 2024.
+    //
+    // Left as-is deliberately, after trying the two obvious alternatives and
+    // measuring both: splitting on a colour/finish wordlist re-fragmented to
+    // 68 roots (no hand list covers every suffix a manufacturer invents), and
+    // splitting on the source's own category slug re-fragmented to 127 (the
+    // slug appends the colour, so every colour is its own slug).
+    //
+    // IT COSTS NOTHING THE CONSUMERS READ. `children` is exact either way, and
+    // every consumer in the design matches on the CHILD name, not the root
+    // label -- the root is metadata for a human reading the file. Splitting
+    // these correctly needs the set NAME from the source, which none of the
+    // three sources publishes separately from the slug.
     const ordered = [...sets.keys()].sort((a, b) => a.length - b.length);
     const merged = new Map();
     for (const r of ordered) {
@@ -310,12 +330,26 @@ function main() {
         // The root's DISPLAY name is the longest common leading run of its
         // children, not the shortest member -- otherwise a one-word member
         // ("Best") labels a set whose real name is longer ("Best Tuddys").
-        const words = entries.map((e) => e.name.split(/\s+/));
+        // PLURAL-FOLDED, AND TAKEN FROM THE LONGEST MEMBER.
+        //
+        // The source spells one set both ways -- "Best Tuddy" (the un-suffixed
+        // member) and "Best Tuddys Gold" -- so a LITERAL longest-common-prefix
+        // stops at "Best" and mislabels the set. Measured on Optic 2024 FB: 5
+        // of 26 roots truncated to a single word (Best, Diamond, Rookie,
+        // Sunday, Downtown).
+        //
+        // Folding a trailing "s" while comparing recovers the real name, and
+        // seeding from the LONGEST member makes the label read as the
+        // checklist writes it ("Best Tuddys", not "Best Tuddy").
+        const foldW = (w) => {
+          const x = w.toLowerCase();
+          return x.endsWith("s") && x.length > 3 ? x.slice(0, -1) : x;
+        };
+        const words = entries.map((e) => e.name.split(/\s+/)).sort((x, y) => y.length - x.length);
         let common = words[0] ?? [];
         for (const w of words) {
           let i = 0;
-          while (i < common.length && i < w.length
-            && common[i].toLowerCase() === w[i].toLowerCase()) i++;
+          while (i < common.length && i < w.length && foldW(common[i]) === foldW(w[i])) i++;
           common = common.slice(0, i);
         }
         return {
