@@ -925,13 +925,20 @@ export async function computeUnifiedPrice(
           ? `trend ${perWeek >= 0 ? "+" : ""}${perWeek}%/wk of the anchor, applied forward ${atNow.anchorAgeDays}d to now`
           : atNow.slopeNote === "insane-fit" ? "the window's fit is noise (>300%/month) — no trend applied" : "no trend fit — the anchor stands";
         const capWord = atNow.cap === "newest-band" ? `; held inside ±25% of the newest sale ($${atNow.newestPrice}, ${atNow.newestAgeDays}d ago)` : "";
+        // CF-AN-ANCHOR-THAT-IS-ONE-SALE-SAYS-SO (R57, Drew 2026-09-15). When
+        // one sale carries more than half the recency weight, `n` describes
+        // the query and not the estimate: the projection is that sale plus a
+        // trend. The value stands — the basis stops implying otherwise.
+        const concentrationWord = atNow.anchorDominatesPool
+          ? `; effective n≈${atNow.effectiveN} of ${atNow.n} — anchor is the newest sale (${Math.round(atNow.anchorWeightShare * 100)}% of the recency weight)`
+          : "";
         return {
           marketValue: Math.round(atNow.nextSaleValue * 100) / 100,
           predictedPrice: Math.round((at7d?.nextSaleValue ?? atNow.nextSaleValue) * 100) / 100,
           trendPctPerWeek: perWeek,
           trendDirection: Math.abs(perWeek) < 1 ? "flat" : (perWeek > 0 ? "up" : "down"),
           rungLabel: "exact-pool-projection",
-          projectionNote: `anchored on the leading edge: recency-weighted level $${atNow.anchorPrice} sitting ${atNow.anchorAgeDays}d back (n=${atNow.n}); ${trendWord}${capWord}`,
+          projectionNote: `anchored on the leading edge: recency-weighted level $${atNow.anchorPrice} sitting ${atNow.anchorAgeDays}d back (n=${atNow.n}); ${trendWord}${capWord}${concentrationWord}`,
         };
       }
     }

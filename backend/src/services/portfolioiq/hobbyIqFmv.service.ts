@@ -1477,6 +1477,37 @@ async function computeHobbyIqFmvInner(
 // family-baseline + 1 sample → 0.20. Callers can use this to render
 // a "high/medium/low confidence" pill on iOS.
 function confidenceForRung(rung: HobbyIqFmvMethod, n: number): number {
+  const base = confidenceForRungUncapped(rung, n);
+  // ── CF-A-THIN-POOL-CANNOT-BE-CONFIDENT (R57, Drew 2026-09-15) ─────────
+  //
+  // The rung floors below were written as "how much does this KIND of pool
+  // deserve", and the sample-size term is a saturating BONUS — so one comp
+  // and a hundred comps differ by at most 0.20. On a 1-comp pool that is
+  // backwards: the rung's name is the floor and the evidence never moves it.
+  //
+  // Live case, Verlander 2005 Bowman Chrome BDP129 PSA 10 (2026-09-15):
+  // `cross-setkey` with graded.length === 1 published confidence 0.71
+  // (0.70 + 1/100) on a pool of exactly one sale — which was the owner's
+  // own purchase. Meanwhile projectNextSaleFromComps had already computed
+  // `confidence: 0.2` for the same pool ("Fallback branch is inherently
+  // thin — cap confidence") and buildResult discarded it.
+  //
+  // So a thin pool now carries a CEILING that no rung can float above. The
+  // rung still decides the shape of the number; the evidence decides how
+  // far it is allowed to be trusted.
+  return Math.min(base, thinPoolConfidenceCeiling(n));
+}
+
+/** The ceiling a pool of `n` comps may be trusted to, whatever rung read it.
+ *  Exported for the one-valuation-path callers that assemble confidence
+ *  themselves; `Infinity` above the thin band so it never lowers a real pool. */
+export function thinPoolConfidenceCeiling(n: number): number {
+  if (n <= 1) return 0.25;
+  if (n === 2) return 0.40;
+  return Number.POSITIVE_INFINITY;
+}
+
+function confidenceForRungUncapped(rung: HobbyIqFmvMethod, n: number): number {
   const nBonus = Math.min(0.2, n / 100);      // saturating bonus for sample size
   switch (rung) {
     case "direct-slug":                  return Math.min(0.95, 0.75 + nBonus);
@@ -1609,6 +1640,49 @@ async function buildResult(
     trendSource = "broader-identity";
   }
 
+  // ── CF-A-BORROWED-TREND-NEVER-MOVES-A-LONE-GRADED-SALE (R57, Drew 2026-09-15)
+  //
+  // Both trend sources above are GRADE-AGNOSTIC by construction:
+  // fetchPlayerInSetMomentum passes no grade ("broad set direction includes
+  // raw + every graded tier"), and the broader-identity fallback reads every
+  // parallel of the identity. That is the right signal for a pool that has
+  // its own sales to steady it. It is the wrong signal to apply, alone and
+  // uncorrected, to ONE graded sale.
+  //
+  // Live case, Verlander 2005 Bowman Chrome BDP129 PSA 10 (2026-09-15): the
+  // PSA 10 pool is a single $251 sale — the owner's own verified purchase.
+  // The player/product pool around it is dominated by $3-$33 RAW commons,
+  // which were trending +25.0%/month. Branch 2 of projectNextSaleFromComps
+  // applied that rate across the 1.67 months since the purchase and published
+  // $355.53: the owner's own money, marked up 41.6%, with no sale anywhere
+  // in the database supporting it.
+  //
+  // When the anchor pool is a single GRADED sale, the honest projection is
+  // the sale. projectNextSaleFromComps already documents null as exactly
+  // that ("passes through to branch-2's default (anchor unchanged), which is
+  // the honest thin-signal projection") — so we hand it null and let it say
+  // so. A single RAW sale is left alone: a raw-dominated player trend is at
+  // least measuring the same kind of card.
+  const lonePricedRow = rows.length === 1 ? rows[0] : null;
+  const loneSaleIsGraded = lonePricedRow !== null
+    && typeof lonePricedRow.gradeCompany === "string"
+    && lonePricedRow.gradeCompany.trim() !== ""
+    && typeof lonePricedRow.gradeValue === "number"
+    && Number.isFinite(lonePricedRow.gradeValue);
+  if (loneSaleIsGraded && trendPctPerMonth !== null) {
+    console.log(JSON.stringify({
+      event: "hobbyiq_fmv_borrowed_trend_refused_lone_graded_sale",
+      slug,
+      method,
+      grade: `${lonePricedRow!.gradeCompany} ${lonePricedRow!.gradeValue}`,
+      refusedTrendPctPerMonth: Math.round(trendPctPerMonth * 100) / 100,
+      trendSource,
+      anchorPrice: Number(lonePricedRow!.price),
+    }));
+    trendPctPerMonth = null;
+    trendSource = "none";
+  }
+
   const projection = projectNextSaleFromComps(
     rows.map((r) => ({ price: Number(r.price), soldDate: r.soldAt })),
     {
@@ -1622,9 +1696,17 @@ async function buildResult(
   let fmv: number;
   // CF-RUNG-LABEL: remember WHICH branch produced fmv, for the rung label.
   let aggregation: "linear-regression" | "trend-adjusted-last-sale" | "median";
+  // CF-A-THIN-POOL-CANNOT-BE-CONFIDENT (R57). The projection already judged
+  // how much its own branch can be trusted — branch 2 on a single comp says
+  // 0.2 in so many words. That judgement was computed and thrown away; the
+  // published number is the LOWER of the two reads, never the rung's alone.
+  let effectiveConfidence = confidence;
   if (projection && projection.nextSaleValue > 0) {
     fmv = projection.nextSaleValue;
     aggregation = projection.method;
+    if (Number.isFinite(projection.confidence)) {
+      effectiveConfidence = Math.min(effectiveConfidence, projection.confidence);
+    }
   } else {
     // Shouldn't hit — the priced.length > 0 guard means projection has
     // at least 1 comp to anchor on. Belt-and-suspenders: fall back to
@@ -1692,8 +1774,13 @@ async function buildResult(
     recentComps,
     method,
     rungLabel: hobbyIqRungLabel(method, aggregation),
-    basisNote,
-    confidence,
+    // CF-A-BORROWED-TREND-NEVER-MOVES-A-LONE-GRADED-SALE (R57): when the
+    // refusal above fired, the number IS the sale and the basis says so
+    // rather than leaving "estimated from 1 sale" to imply a projection.
+    basisNote: loneSaleIsGraded
+      ? `${basisNote}; no independent market at this grade — the value is that sale, not a projection`
+      : basisNote,
+    confidence: effectiveConfidence,
     population,
     quality,
     computedAt: now.toISOString(),
