@@ -20,11 +20,43 @@
  *                 slug; Judge Gold Label has 5 under the partition and 0
  *                 carrying it. A check that read one field would see a healthy
  *                 pool vanish and call it unchanged.
- *   anchor        the leading-edge price: the median of the newest 3 sales.
- *                 FMV is the projected next sale from the pool's trend, never
- *                 a median of the pool -- but the ANCHOR the projection starts
- *                 from is a recency-weighted level, and a re-key that changes
- *                 which sales are newest moves it. That is the thing to watch.
+ *   anchor        the leading-edge price: the median of the newest 3 sales OF
+ *                 THE CANARY'S OWN TIER (2026-09-15). FMV is the projected
+ *                 next sale from the pool's trend, never a median of the
+ *                 pool -- but the ANCHOR the projection starts from is a
+ *                 recency-weighted level, and a re-key that changes which
+ *                 sales are newest moves it. That is the thing to watch.
+ *
+ *                 GRADE-BLIND UNTIL 2026-09-15, AND IT WAS WRONG. The union a
+ *                 raw canary (`...:base:no-auto`) measures is sliced into
+ *                 grade tiers again at READ time (unifiedPricing.service.ts's
+ *                 perTierWindows), but the anchor here was computed over every
+ *                 row regardless of grade -- so a PSA 9 sale at $10,700 or a
+ *                 PSA 5 at $2,123 landing among the newest 3 moved a RAW
+ *                 canary's anchor, even though that graded sale never enters
+ *                 the raw price at all downstream. Measured on the fleer-
+ *                 stickers #8 canary (see rematchCanaryCheckRules.test.ts):
+ *                 seven graded CardHedge sales landed in the newest-3 window
+ *                 between two baselines with zero rekeys of any kind, and the
+ *                 gate read the market's own grade mix as a regression.
+ *
+ *                 THE FIX is to slice the SAME way the price does before
+ *                 taking the median: a raw canary anchors on rows that are
+ *                 Raw the way `gradeLadder.isRaw` defines it (no company AND
+ *                 no grade value -- ported here as `isRawRow`, not imported,
+ *                 because this script's whole point is to run without dist/;
+ *                 see `isRawRow`'s own header for why the port is safe). A
+ *                 graded canary -- one whose `name` states a grade token, or
+ *                 whose manifest entry carries an explicit `targetGrade` --
+ *                 anchors on rows of THAT company+value only, company matched
+ *                 through the same alias table `canonicalGradeCompany` uses
+ *                 (PSA/DNA is PSA, BECKETT is BGS, etc. -- ported as
+ *                 `GRADE_COMPANY_ALIASES`). `poolRows` (the whole-pool floor)
+ *                 is UNCHANGED by any of this: row loss is grade-blind, only
+ *                 the anchor computation is tier-scoped. A canary whose tier
+ *                 has too few rows of its own kind anchors on fewer than 3, or
+ *                 on none (anchor null) -- printed exactly as any other thin
+ *                 pool, never silently borrowed from another tier.
  *   newest        the newest sale's date and price, so a pool that lost its
  *                 leading edge is visible even when the count barely moves.
  *   protected     how many rows in the pool are provenance-protected. This
@@ -142,19 +174,127 @@ function median(xs) {
 }
 
 /**
- * The FMV inputs of one canary pool. Pure given the rows, so a test can drive
- * it without Cosmos.
+ * THE RAW/GRADED TIER PREDICATE (2026-09-15), PORTED, NOT IMPORTED.
+ *
+ * This script's own header promises "measured without ... dist/ build" --
+ * that is what lets rematch-canary-check.cjs run before dist/ exists and
+ * without dragging in the estimator's calibration tables. So the two rules
+ * below are a DELIBERATE, DOCUMENTED PORT of the single source of truth,
+ * not a second invention:
+ *
+ *   isRawRow            mirrors gradeLadder.isRaw (backend/src/services/
+ *                        catalog/gradeLadder.service.ts) AND unifiedPricing.
+ *                        service.ts's own gradeLabel/gradeValueToken, which is
+ *                        the function perTierWindows actually calls to slice
+ *                        a pool into tiers at read (price) time. The two
+ *                        agree on every row this script will ever see: a row
+ *                        is raw when it carries no grade COMPANY and no grade
+ *                        VALUE, where "no value" is null, undefined OR the
+ *                        empty string (gradeValueToken's own "absence first,
+ *                        parse second" rule, CF-A-GRADED-SALE-NEVER-ENTERS-
+ *                        THE-RAW-TIER, 2026-09-04) -- Number(null) and
+ *                        Number("") are both 0, so treating either as a real
+ *                        grade value would evict genuinely raw sales from the
+ *                        raw tier, which is the defect that rule exists to
+ *                        prevent.
+ *   GRADE_COMPANY_ALIASES mirrors gradeLadder.service.ts's ALIASES table
+ *                        exactly (PSA/DNA -> PSA, BECKETT[ GRADING[ SERVICES]]
+ *                        -> BGS, SPORTSCARD GUARANTY -> SGC, etc.) so a
+ *                        graded canary named "PSA 9" matches a row whichever
+ *                        way the row's own gradeCompany spells the grader.
+ *                        rematchCanaryCheckRules.test.ts pins both tables
+ *                        against the TypeScript source text, so a future
+ *                        edit to either source drifts LOUDLY, not silently.
  */
-function poolInputs(rows) {
+function isRawRow(row) {
+  const company = String(row?.gradeCompany ?? "").trim();
+  if (company) return false;
+  const value = row?.gradeValue;
+  if (value === null || value === undefined || value === "") return true;
+  const n = typeof value === "number" ? value : Number(value);
+  return !Number.isFinite(n);
+}
+
+const GRADE_COMPANY_ALIASES = new Map([
+  ["PSA", "PSA"], ["PSA/DNA", "PSA"],
+  ["BGS", "BGS"], ["BECKETT", "BGS"], ["BECKETT GRADING", "BGS"], ["BECKETT GRADING SERVICES", "BGS"],
+  ["SGC", "SGC"], ["SPORTSCARD GUARANTY", "SGC"],
+  ["CGC", "CGC"], ["CGC CARDS", "CGC"],
+  ["CSG", "CSG"], ["CERTIFIED SPORTS GUARANTY", "CSG"],
+  ["HGA", "HGA"], ["HYBRID GRADING APPROACH", "HGA"],
+  ["TAG", "TAG"], ["BCCG", "BCCG"], ["ISA", "ISA"], ["AGS", "AGS"], ["ARENA CLUB", "ARENA CLUB"],
+  ["MINT GRADING SERVICE", "AGS"], ["MNT GRADING", "AGS"],
+]);
+
+/** Canonical company for a raw string, or null when unrecognised -- same
+ *  shape as gradeLadder.service.ts's canonicalGradeCompany. */
+function canonicalGradeCompany(raw) {
+  const s = String(raw ?? "").trim().toUpperCase().replace(/\s+/g, " ");
+  if (!s) return null;
+  return GRADE_COMPANY_ALIASES.get(s) ?? null;
+}
+
+/**
+ * A canary's own target tier: `{ raw: true }` or `{ raw: false, company,
+ * value }`. Read from an explicit `canary.targetGrade` (a manifest entry may
+ * name one directly, `{ company, value }`) first, then from a grade token in
+ * `canary.name` ("PSA 10", "BGS 9.5", ...) -- the only source today's 38
+ * canaries carry, since no `slug` in rematch-canaries.json states a grade
+ * segment (grade lives on the ROW, identity is grade-agnostic). Absent
+ * either, the canary is Raw -- the correct default: 34 of 38 today.
+ */
+const GRADE_TOKEN_RE = /\b(PSA|BGS|SGC|CGC|CSG|HGA|TAG|BCCG|ISA|AGS|ARENA CLUB)\s*(\d{1,2}(?:\.\d)?)\b/i;
+function canaryTargetTier(canary) {
+  const explicit = canary?.targetGrade;
+  if (explicit && typeof explicit === "object" && explicit.company) {
+    const company = canonicalGradeCompany(explicit.company);
+    const value = Number(explicit.value);
+    if (company && Number.isFinite(value)) return { raw: false, company, value, label: `${company} ${value}` };
+  }
+  const m = GRADE_TOKEN_RE.exec(String(canary?.name ?? ""));
+  if (m) {
+    const company = canonicalGradeCompany(m[1]);
+    const value = Number(m[2]);
+    if (company && Number.isFinite(value)) return { raw: false, company, value, label: `${company} ${value}` };
+  }
+  return { raw: true, label: "Raw" };
+}
+
+/** Does this row belong to the canary's own tier? Graded matching is EXACT
+ *  grade (company + numeric value), the same identity gradeLabel renders on
+ *  both sides of unifiedPricing's tier match (CF-EXACT-GRADE-OUTRANKS-CROSS-
+ *  GRADE) -- a PSA 8 sale is not evidence for a PSA 9 canary's anchor. */
+function rowMatchesTier(row, tier) {
+  if (tier.raw) return isRawRow(row);
+  if (isRawRow(row)) return false;
+  const company = canonicalGradeCompany(row?.gradeCompany);
+  if (company !== tier.company) return false;
+  const value = typeof row?.gradeValue === "number" ? row.gradeValue : Number(row?.gradeValue);
+  return Number.isFinite(value) && value === tier.value;
+}
+
+/**
+ * The FMV inputs of one canary pool. Pure given the rows, so a test can drive
+ * it without Cosmos. `tier` (from `canaryTargetTier`) scopes the ANCHOR only
+ * -- `rows`/`byPartition`/`byField`/`protectedRows` stay whole-pool, because
+ * row loss and provenance protection are grade-blind: a PSA 9 sale leaving
+ * the pool is exactly as much a departure as a raw one. Defaults to Raw when
+ * no tier is passed, so every existing call site (and every prior recorded
+ * baseline read back from disk) keeps its old meaning until it opts in.
+ */
+function poolInputs(rows, tier = { raw: true, label: "Raw" }) {
   const sorted = rows.slice().sort((a, b) => Date.parse(String(b.soldAt ?? 0)) - Date.parse(String(a.soldAt ?? 0)));
   const newest = sorted[0] ?? null;
-  const anchor = median(sorted.slice(0, 3).map((r) => Number(r.price)));
+  const tierRows = sorted.filter((r) => rowMatchesTier(r, tier));
+  const anchor = median(tierRows.slice(0, 3).map((r) => Number(r.price)));
   const protectedRows = rows.filter((r) => K.provenanceTier(r).tier === K.PROTECTED);
   return {
     rows: rows.length,
     byPartition: rows.filter((r) => r.__viaPartition).length,
     byField: rows.filter((r) => !r.__viaPartition).length,
     anchor,
+    anchorTier: tier.label,
+    anchorTierRows: tierRows.length,
     newestAt: newest?.soldAt ?? null,
     newestPrice: newest === null ? null : Number(newest.price),
     protectedRows: protectedRows.length,
@@ -334,7 +474,7 @@ function compareCanary(canary, before, after, tolPct = TOL, touch) {
   return { name: canary.name, slug: canary.slug, ok: regressions.length === 0, touched, attributed, moved, regressions, notes };
 }
 
-async function measure(pool, slug, priorIds) {
+async function measure(pool, slug, priorIds, tier = { raw: true, label: "Raw" }) {
   const all = async (q, p) => { const it = pool.items.query({ query: q, parameters: p }, { maxItemCount: 1000 }); const o = []; while (it.hasMoreResults()) { const { resources } = await retry(() => it.fetchNext()); o.push(...(resources ?? [])); } return o; };
   // The union, deliberately: a pool split across the partition and the field is
   // exactly the state the rematch is fixing, and a check that read one field
@@ -432,7 +572,7 @@ async function measure(pool, slug, priorIds) {
     }
   }
   return {
-    ...poolInputs([...byId.values()]),
+    ...poolInputs([...byId.values()], tier),
     ids: [...byId.keys()].sort(),
     evictedAway: Number(evicted[0] ?? 0),
     improveRekeyedAway: improveAway.length,
@@ -507,12 +647,19 @@ async function main() {
   }
   const now = {};
   for (const c of canaries) {
-    now[c.slug] = await measure(pool, c.slug, priorBase?.inputs?.[c.slug]?.ids);
+    const tier = canaryTargetTier(c);
+    now[c.slug] = await measure(pool, c.slug, priorBase?.inputs?.[c.slug]?.ids, tier);
     const m = now[c.slug];
     console.log(`\n  ${c.name}`);
     console.log(`    ${c.slug}`);
     console.log(`    rows ${f(m.rows)} (partition ${f(m.byPartition)} + field ${f(m.byField)})   expected floor ${f(c.poolRows)}   protected ${f(m.protectedRows)}`);
-    console.log(`    anchor ${money(m.anchor)}   newest ${money(m.newestPrice)} @ ${m.newestAt ?? "-"}   direction ${c.verifiedMarketDirection}`);
+    // THE ANCHOR IS TIER-SCOPED (2026-09-15): the pool row count above is the
+    // WHOLE pool (row loss is grade-blind), but the anchor below is the
+    // median of the newest 3 rows OF THIS CANARY'S OWN TIER only -- printed
+    // with the tier and how many of the pool's rows are even IN that tier, so
+    // a thin or empty tier (anchor null) reads as "the tier has too few
+    // rows", never as a silent borrow from another grade's sales.
+    console.log(`    anchor ${money(m.anchor)}   newest ${money(m.newestPrice)} @ ${m.newestAt ?? "-"}   direction ${c.verifiedMarketDirection}   tier ${m.anchorTier} (${f(m.anchorTierRows)} of ${f(m.rows)} row(s) in this tier)`);
     if (m.rows < Number(c.poolRows ?? 0)) console.log(`    !! below the captured floor of ${f(c.poolRows)} -- the pool has lost rows since 2026-09-01`);
   }
 
@@ -585,6 +732,6 @@ async function main() {
 // `measure` is exported so the residency rule that separates a foreign
 // writer's re-address from a VANISHED sale can be pinned directly -- it is the
 // safety property of DEFECT 5 and it lives here, not in compareCanary.
-module.exports = { median, poolInputs, compareCanary, loadLedger, measure };
+module.exports = { median, poolInputs, compareCanary, loadLedger, measure, isRawRow, canonicalGradeCompany, canaryTargetTier, rowMatchesTier };
 
 if (require.main === module) main().catch((e) => { console.error("FATAL:", e?.stack || e?.message); process.exit(3); });
