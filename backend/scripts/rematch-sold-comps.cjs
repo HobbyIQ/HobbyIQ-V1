@@ -728,8 +728,16 @@ async function main() {
     ...Object.keys(pkc.POKEMON_JA_SET_CODES ?? {}),
   ].map((k) => k.toLowerCase()));
   const POKEMON_AMBIGUOUS_CODES = new Set([...(pkc.AMBIGUOUS_MARKET_CODES ?? [])].map((k) => k.toLowerCase()));
+  // CF-THE-CHECKLIST-SPELLS-ITS-OWN-RUNGS (2026-09-15). The spelling-adoption
+  // lane and its REPORT-ONLY counter; the banner prints the count so this lane
+  // can be sized against the probe's 938,802-row estimate before anyone
+  // applies it.
+  const csa = d(["portfolioiq", "checklistSpellingAdoption.js"]);
+  csa.resetSpellingAdoptedCount();
   const deps = {
     parseListingIdentity: pti.parseListingIdentity,
+    checklistSpellingFor: csa.checklistSpellingFor,
+    noteSpellingAdopted: csa.noteSpellingAdopted,
     // isAuto's boundary is the CARD NUMBER, never title text
     // (CF-ISAUTO-BOUNDARY-IS-CARDNUMBER). The classifier needs this verdict
     // separately from parseListingIdentity's OR'd `isAuto`, because that OR
@@ -3159,6 +3167,23 @@ async function main() {
       console.log(`                      by sport pair: ${topOf(sfpByPair)}`);
       console.log(`                      by setKey:     ${topOf(sfpBySetKey)}`);
       if (sfpSamples.length) { console.log(`                      sample (${sfpSamples.length}):`); for (const s of sfpSamples) console.log(`                        ${s}`); }
+    }
+  }
+  // CF-THE-CHECKLIST-SPELLS-ITS-OWN-RUNGS (2026-09-15) -- REPORT ONLY.
+  //
+  // Not a class and not a scope: a plain count of how many derivations took
+  // the product checklist's own spelling of a rung the row already named
+  // (`Silver` -> `Silver Prizms`). It changes no verdict and gates nothing.
+  // It is here so the lane can be SIZED against the ladder probe's 938,802-row
+  // estimate from a real run, before anyone decides to apply it -- the same
+  // report-then-apply discipline every other lane here follows.
+  {
+    const adopted = csa.spellingAdoptedCount();
+    if (adopted) {
+      console.log(`
+  spelling-adopted  ${f(adopted)} rows: the row's own stated rung, respelled to the`);
+      console.log(`                    product checklist's spelling of that same rung (REPORT ONLY --`);
+      console.log(`                    no verdict changes, nothing is gated on this).`);
     }
   }
   {

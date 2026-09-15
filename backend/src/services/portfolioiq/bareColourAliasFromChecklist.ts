@@ -178,6 +178,23 @@ function colourMapForProduct(setKey: string, names: readonly string[]): Map<stri
     for (const name of names) {
       const ws = wordsOf(name);
       if (!ws.includes(colour)) continue;
+      // A TWO-COLOUR RUNG IS NOT A CANDIDATE FOR EITHER OF ITS COLOURS.
+      //
+      // The mirror of `bareColourInTitle`'s own rule ("two colours named
+      // together is not a bare colour"), applied to the CHECKLIST side where
+      // it was missing. A title saying only "Blue" cannot be naming
+      // `Blue & Yellow` -- that rung states two colours and the title states
+      // one, so it is not a reading of this title at all.
+      //
+      // FOUND BY A REGRESSION, and worth recording. Before the odds-tail strip
+      // landed, 2025 topps-signature-class held `Blue & Yellow (Retail
+      // exclusive)` as a FOUR-word name, so it never tied with the two-word
+      // `Blue Refractor` and the right answer won on length. Cleaning the
+      // annotation correctly shortened it to `Blue & Yellow` -- two words --
+      // and the shortest-name tie-detector then saw a genuine tie and refused
+      // a colour it had always resolved. The tie was always spurious; only the
+      // word count had been hiding it.
+      if (ws.filter((w) => COLOUR_WORD_SET.has(w)).length > 1) continue;
       if (ws.length < bestLen) {
         bestLen = ws.length;
         bestName = name;

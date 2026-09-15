@@ -141,11 +141,36 @@ function deriveIdentity(row, deps) {
   // identity-axis-moved guard; emitting null would be coerced back to "Base"
   // by the `||` chain this comment exists to remove.
   const parsedNamedARung = parsed.parallel && !/^base$/i.test(parsed.parallel);
-  const parallel = parsedNamedARung
+  const parallelBeforeSpelling = parsedNamedARung
     ? parsed.parallel
     : parsed.parallelIsUnconfirmed
       ? (row.parallel || "unknown")
       : (parsed.parallel || row.parallel || "Base");
+
+  // CF-THE-CHECKLIST-SPELLS-ITS-OWN-RUNGS (round-2 ladder probe, 2026-09-15).
+  //
+  // 938,802 sports rows name a parallel the checklist DOES back, under a
+  // longer spelling: the pool writes `Silver`, the 2025 panini-prizm checklist
+  // says `Silver Prizms`. Those are one card. The single largest gap cell --
+  // baseball|2025|panini-prizm, 333,931 rows -- is 100% this, and an acquirer
+  // sent there would buy a ladder we already own.
+  //
+  // ONLY WHEN THE PRODUCT'S OWN CHECKLIST IS UNAMBIGUOUS. Exactly one rung may
+  // extend the stated finish, and only by the product's stock word
+  // (Prizm/Refractor/Holo...). `Blue` on that same product has FOUR candidates
+  // (Blue Ice / Blue / Blue Pulsar / Blue Shimmer FOTL Prizms) and is left
+  // exactly as written -- a tie is the product really having four rungs, not a
+  // spelling for us to pick between.
+  //
+  // Never Base, never a sibling product's rung, never a changed colour: an
+  // adoption is a strict extension of the text the row already carried.
+  const adopted = deps.checklistSpellingFor
+    ? deps.checklistSpellingFor(parallelBeforeSpelling, {
+        sport: guard.sport, year: cardYear, setKey,
+      })
+    : null;
+  if (adopted && deps.noteSpellingAdopted) deps.noteSpellingAdopted();
+  const parallel = adopted || parallelBeforeSpelling;
   const printRun = parsed.printRun ?? row.printRun ?? null;
   const identity = { sport: guard.sport, cardYear, setKey, setNameRaw: setKeyRaw, cardNumber, parallel, isAuto, printRun, gradeCompany, gradeValue };
   const slug = deps.computeHobbyIqCardId({
