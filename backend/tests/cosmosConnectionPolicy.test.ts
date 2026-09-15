@@ -13,6 +13,7 @@ import { CosmosClient } from "@azure/cosmos";
 import {
   endpointDiscoveryEnabled,
   hobbyIqConnectionPolicy,
+  boundedRetriesEnabled,
   withConnectionPolicy,
   cosmosOptionsFromConnectionString,
 } from "../src/services/ops/cosmosConnectionPolicy.js";
@@ -153,4 +154,152 @@ describe("Cosmos root-path ping volume (real SDK, stubbed transport)", () => {
     expect(paths.some((p) => p.includes("/dbs/hobbyiq/colls/sold_comps"))).toBe(true);
     expect(paths.filter((p) => p.endsWith(" /")).length).toBe(0);
   }, 30_000);
+});
+
+/**
+ * CF-A-REQUEST-NEEDS-A-CEILING (Fable, 2026-09-15). POST-FREEZE.
+ *
+ * The policy previously set `enableEndpointDiscovery` and nothing else, so a
+ * request inherited every SDK default. Measured against the pinned 4.9.3:
+ * `requestTimeout` 60,000 ms; the throttle policy bounded at 9 tries / 30 s;
+ * and `EndpointDiscoveryRetryPolicy.maxTries = 120` at 1,000 ms apart — a
+ * ~120 s ceiling PER OPERATION, on a static the connection policy cannot
+ * configure. Two of those exceed Azure's 240 s front-end kill by themselves,
+ * which is the shape of the /price hang (#2163).
+ *
+ * These pins hold the explicit ceilings, and that an override must be a
+ * deliberate number rather than a typo that silently removes one.
+ */
+describe("the policy states its ceilings rather than inheriting them", () => {
+  const CEILING_KEYS = [
+    "COSMOS_REQUEST_TIMEOUT_MS",
+    "COSMOS_MAX_RETRY_ATTEMPTS",
+    "COSMOS_MAX_RETRY_WAIT_SECONDS",
+    "COSMOS_BOUNDED_RETRIES",
+    "WEBSITE_SITE_NAME",
+  ];
+  const saved: Record<string, string | undefined> = {};
+  beforeEach(() => {
+    for (const k of CEILING_KEYS) { saved[k] = process.env[k]; delete process.env[k]; }
+    // The ceilings are OPT-IN and the opt-in is the web process, so the cases
+    // below that assert a ceiling must first BE the web process. The gate
+    // itself is pinned separately in the next describe block.
+    process.env.WEBSITE_SITE_NAME = "HobbyIQ3";
+  });
+  afterEach(() => {
+    for (const k of CEILING_KEYS) {
+      if (saved[k] === undefined) delete process.env[k];
+      else process.env[k] = saved[k];
+    }
+  });
+
+  it("bounds a single request well under the SDK's 60 s default", () => {
+    const policy = hobbyIqConnectionPolicy();
+    // MUTATION CHECK: pre-fix this field was absent entirely, and the SDK
+    // filled in 60,000.
+    expect(policy.requestTimeout).toBe(20_000);
+  });
+
+  it("states a retry ceiling instead of inheriting 9 tries / 30 s", () => {
+    const policy = hobbyIqConnectionPolicy();
+    expect(policy.retryOptions?.maxRetryAttemptCount).toBe(5);
+    expect(policy.retryOptions?.maxWaitTimeInSeconds).toBe(20);
+  });
+
+  it("keeps the ceilings the request path was fixed against", () => {
+    const policy = hobbyIqConnectionPolicy();
+    const worstCaseMs =
+      (policy.requestTimeout ?? 0) + (policy.retryOptions?.maxWaitTimeInSeconds ?? 0) * 1000;
+    // A whole operation, ceiling to ceiling, must stay far inside the 240 s
+    // front door — the bound that was actually being hit.
+    expect(worstCaseMs).toBeLessThan(45_000);
+  });
+
+  it("carries the ceilings through both helper shapes", () => {
+    for (const options of [withConnectionPolicy({} as any), cosmosOptionsFromConnectionString("AccountEndpoint=https://x/;AccountKey=aaaa;")]) {
+      expect(options.connectionPolicy?.requestTimeout).toBe(20_000);
+      expect(options.connectionPolicy?.retryOptions?.maxRetryAttemptCount).toBe(5);
+    }
+  });
+
+  it("lets a lane raise a ceiling by env without a deploy", () => {
+    process.env.COSMOS_REQUEST_TIMEOUT_MS = "90000";
+    process.env.COSMOS_MAX_RETRY_ATTEMPTS = "9";
+    const policy = hobbyIqConnectionPolicy();
+    expect(policy.requestTimeout).toBe(90_000);
+    expect(policy.retryOptions?.maxRetryAttemptCount).toBe(9);
+  });
+
+  it("ignores a malformed or zero override rather than removing the ceiling", () => {
+    for (const bad of ["", "   ", "abc", "0", "-1"]) {
+      process.env.COSMOS_REQUEST_TIMEOUT_MS = bad;
+      // A typo must not be the thing that restores an unbounded request.
+      expect(hobbyIqConnectionPolicy().requestTimeout).toBe(20_000);
+    }
+  });
+});
+
+/**
+ * CF-A-CEILING-FOR-A-REQUEST-IS-NOT-A-CEILING-FOR-A-LANE (Fable, 2026-09-15).
+ *
+ * A ceiling that is right for a web request is wrong for a batch lane, and
+ * both build their clients from this one file. A user request has a person and
+ * Azure's 240 s front door behind it — giving up early and saying so beats
+ * answering late. A backfill lane has neither: it is measured in hours, runs
+ * against sold_comps at elevated RU, and any request it abandons at 20 s is
+ * work it must redo. A 31-slot rematch wave builds from main, so tightening a
+ * batch lane's retry budget mid-wave is not a thing to discover from a
+ * throughput graph.
+ *
+ * So the ceilings are opt-in, and these pins hold the gate. The load-bearing
+ * one is the LAST: outside the web process this function must return exactly
+ * what it returned before the ceilings existed.
+ */
+describe("the ceilings apply in the web process and nowhere else", () => {
+  const KEYS = ["COSMOS_BOUNDED_RETRIES", "WEBSITE_SITE_NAME", "COSMOS_REQUEST_TIMEOUT_MS"];
+  const saved: Record<string, string | undefined> = {};
+  beforeEach(() => { for (const k of KEYS) { saved[k] = process.env[k]; delete process.env[k]; } });
+  afterEach(() => {
+    for (const k of KEYS) {
+      if (saved[k] === undefined) delete process.env[k];
+      else process.env[k] = saved[k];
+    }
+  });
+
+  it("is ON inside App Service, which sets WEBSITE_SITE_NAME", () => {
+    process.env.WEBSITE_SITE_NAME = "HobbyIQ3";
+    expect(boundedRetriesEnabled()).toBe(true);
+    expect(hobbyIqConnectionPolicy().requestTimeout).toBe(20_000);
+  });
+
+  it("is OFF on a GitHub Actions runner, where that marker is absent", () => {
+    // This is the backfill / rematch / ingest case. No app setting has to be
+    // created for the gate to work, and creating one would be a live prod
+    // config change.
+    expect(boundedRetriesEnabled()).toBe(false);
+  });
+
+  it("an explicit COSMOS_BOUNDED_RETRIES wins in BOTH directions", () => {
+    process.env.COSMOS_BOUNDED_RETRIES = "1";
+    expect(boundedRetriesEnabled()).toBe(true);            // on, off App Service
+
+    process.env.WEBSITE_SITE_NAME = "HobbyIQ3";
+    process.env.COSMOS_BOUNDED_RETRIES = "0";
+    // The escape hatch: if the ceilings turn out to be wrong in prod they can
+    // be switched off by app setting, without a deploy and without a revert.
+    expect(boundedRetriesEnabled()).toBe(false);
+    expect(hobbyIqConnectionPolicy().requestTimeout).toBeUndefined();
+  });
+
+  it("OUTSIDE the web process the policy is byte-for-byte what it always was", () => {
+    // THE pin. Pre-change this function returned exactly one key. Every script,
+    // cron and backfill lane must still get exactly that object — which is what
+    // makes this PR's blast radius outside the web process nil by construction
+    // rather than by review.
+    expect(hobbyIqConnectionPolicy()).toEqual({ enableEndpointDiscovery: false });
+
+    const fromConnString = cosmosOptionsFromConnectionString("AccountEndpoint=https://x/;AccountKey=aaaa;");
+    expect(fromConnString.connectionPolicy).toEqual({ enableEndpointDiscovery: false });
+    expect(fromConnString.connectionPolicy?.retryOptions).toBeUndefined();
+  });
 });
