@@ -91,13 +91,45 @@ export function getGitBranch(): string | undefined {
 }
 
 /**
- * When the running build was deployed. DEPLOYED_AT was part of the App Settings
- * quad that is no longer written, so the artifact's build time is the fallback.
- * (Env first here, unlike the SHA: if an operator-initiated deploy did set
- * DEPLOYED_AT, that is closer to "deployed" than the build timestamp.)
+ * When the running build was deployed.
+ *
+ * CF-DEPLOYEDAT-WAS-PINNED-TO-A-RETIRED-APP-SETTING (Fable, 2026-09-16).
+ *
+ * This preferred the DEPLOYED_AT env var, on the reasoning that "if an
+ * operator-initiated deploy did set DEPLOYED_AT, that is closer to 'deployed'
+ * than the build timestamp." That reasoning was sound while something still
+ * wrote it. Nothing has since 2026-09-07, when CF-DEPLOY-RESTARTS-ONCE removed
+ * the "Update build metadata App Settings" step because the
+ * `az webapp config appsettings set` it ran was the SECOND restart of every
+ * deploy (see docs/reports/2026-09-07-app-service-recycles-and-telemetry-loss).
+ *
+ * The step went; the SETTINGS stayed. Measured on prod, 2026-09-15:
+ *
+ *   GIT_SHA, GIT_SHA_SHORT, GIT_BRANCH, DEPLOYED_AT   still present
+ *   /api/health -> deployedAt  2026-09-07T18:54:13Z   <- frozen, the last write
+ *                  builtAt     2026-09-15T14:28:28Z   <- correct, from the dist
+ *                  sha         31f1829 (a 09-15 build)
+ *
+ * So a fresh build reported a deploy date eight days stale, and every other
+ * build field was right — the artifact already carried the truth and the env
+ * var was shadowing it. That is the same failure the SHA fields were moved off
+ * env for, and the reason `getGitSha` reads the artifact FIRST: a value that
+ * cannot be refreshed is worse than one that is merely approximate, because it
+ * looks authoritative while being wrong.
+ *
+ * Artifact first now, for the same reason. `builtAt` is stamped by
+ * scripts/write-build-info.cjs at build time and ships inside the package, so
+ * it cannot be stale without the dist itself being stale — which is precisely
+ * what one wants this field to detect. DEPLOYED_AT survives only as a fallback
+ * for a build with no artifact, and for the day someone starts writing it
+ * again on purpose.
+ *
+ * This deliberately does NOT delete the stale app settings: that is a live
+ * production config change and belongs to Drew, not to a code path. Once the
+ * artifact is preferred, the leftovers are inert.
  */
 export function getDeployedAt(): string | undefined {
-  return envOrUndefined("DEPLOYED_AT") ?? BUILD_INFO?.builtAt;
+  return BUILD_INFO?.builtAt ?? envOrUndefined("DEPLOYED_AT");
 }
 
 /** Where the identity above came from — for operator-facing surfaces. */
