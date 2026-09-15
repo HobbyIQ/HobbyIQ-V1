@@ -391,6 +391,7 @@ function convert(xlsxPath) {
     }
     baseAnchors = [...new Set(baseAnchors)];
 
+    anchors = new Map();
     // CF-A-COLOUR-SIBLING-SET-NAMES-ITSELF-BY-ITS-PREFIX (2026-09-15).
     //
     // A product can publish an insert with NO uncoloured tier: 2021 Donruss FB

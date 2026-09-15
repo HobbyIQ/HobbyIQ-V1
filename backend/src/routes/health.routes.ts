@@ -194,4 +194,35 @@ router.get("/deep", async (_req, res) => {
   res.status(ok ? 200 : 503).json(body);
 });
 
+/**
+ * CF-THE-FIRST-USER-SHOULD-NOT-PAY-FOR-THE-DEPLOY (Fable, 2026-09-15).
+ *
+ * GET /api/health/warm — build the expensive process-wide singletons and
+ * report what each cost. The server already calls `warmStart()` itself after
+ * `listen`, so in the ordinary case this endpoint finds everything built and
+ * returns in a few milliseconds. It exists for two reasons:
+ *
+ *   1. the deploy workflow's existing "Warm DailyIQ cache" step can hit it, so
+ *      a deploy can BLOCK on the warm-up being finished rather than hoping it
+ *      raced ahead of the first user;
+ *   2. it makes the warm-up observable — `steps[].ms` says what a cold process
+ *      actually paid, which is how the 14-22 s window was attributed in the
+ *      first place.
+ *
+ * Unauthenticated, like the health probes beside it, and safe to be: it issues
+ * no Cosmos query and no vendor call, takes no input, and returns no data about
+ * any card or user. Re-running it is idempotent and nearly free.
+ */
+router.get("/warm", async (_req, res) => {
+  try {
+    const { warmStart } = await import("../services/ops/warmStart.js");
+    const result = await warmStart();
+    res.status(200).json({ ok: true, ...result });
+  } catch (err) {
+    // A failed warm-up is not a failed service — the singletons build lazily on
+    // first use exactly as they always did, just slower. Report it, do not 503.
+    res.status(200).json({ ok: false, error: (err as Error)?.message ?? String(err) });
+  }
+});
+
 export default router;

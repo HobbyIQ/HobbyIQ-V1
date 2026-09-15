@@ -32,13 +32,13 @@ import {
   ATTR_HTTP_RESPONSE_STATUS_CODE,
   ATTR_HTTP_REQUEST_METHOD,
 } from "@opentelemetry/semantic-conventions";
-import * as appInsights from "applicationinsights";
+import { getTelemetryClient } from "../ops/telemetryClient.js";
 
 const TRACER_NAME = "compiq-backend";
 
 let _tracerResolver: () => Tracer = () => trace.getTracer(TRACER_NAME);
 let _exceptionTracker: (err: Error) => void = (err) => {
-  const client = (appInsights as any).defaultClient;
+  const client = getTelemetryClient();
   if (client) client.trackException({ exception: err });
 };
 
@@ -53,7 +53,7 @@ export function _setExceptionTrackerForTests(fn: (err: Error) => void): void {
 }
 export function _resetExceptionTrackerForTests(): void {
   _exceptionTracker = (err) => {
-    const client = (appInsights as any).defaultClient;
+    const client = getTelemetryClient();
     if (client) client.trackException({ exception: err });
   };
 }
