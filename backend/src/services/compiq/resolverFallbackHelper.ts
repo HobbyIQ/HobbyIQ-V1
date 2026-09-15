@@ -125,6 +125,43 @@ export async function overlayResolverRescue(
     (typeof response.marketValue === "number" && response.marketValue > 0);
   if (hasFmv) return response;
 
+  // CF-A-WITHHELD-PRICE-IS-NOT-A-MISSING-ONE, at the rescue (Fable,
+  // 2026-09-15). The guard above asks ONE question — "is there a price?" — and
+  // a WITHHELD verdict answers "no" for exactly the same reason a CH
+  // catalog-miss does. The rescue could not tell "the engine declined" from
+  // "the engine found nothing", so it rescued refusals: the deploy smoke's
+  // case 4 came back `tier: no-basis`, `mechanism: none`,
+  // `verdict: "Withheld — the pricing engine ran out of time on this card"`
+  // and `FMV $875`, a response that contradicts itself in two fields.
+  //
+  // It contradicts itself because the rescue writes the price and never reads
+  // the verdict. So the verdict survives, and only the number changes.
+  //
+  // A stated reason is a PRODUCT DECISION — the engine ran and declined, per
+  // the withheld doctrine (null + a visible reason, never a slow number and
+  // never an invented one). Overwriting it with a resolver fallback publishes
+  // a number for a card the engine has just refused to price, which is the one
+  // outcome the doctrine exists to prevent. A missing reason is the CH gap the
+  // rescue was built for, and that still rescues.
+  //
+  // This predates the request deadline. Any withheld path reaching res.json on
+  // this route has always been rescuable; #2170 only made it common enough to
+  // be caught by a smoke case.
+  const statedReason =
+    response.fmvReason
+    ?? response.canonicalFmvWithheld?.reason
+    ?? response.canonicalFmv?.fmvReason
+    ?? null;
+  if (typeof statedReason === "string" && statedReason.trim() !== "") {
+    console.warn(JSON.stringify({
+      event: "resolver_rescue_declined_withheld_response",
+      source: "resolverFallbackHelper.overlayResolverRescue",
+      reason: statedReason,
+      detail: "the engine stated a reason for withholding; a rescue would publish a price it just refused to give",
+    }));
+    return response;
+  }
+
   const fallback = await tryResolverFallback(query);
   if (!fallback) return response;
 
