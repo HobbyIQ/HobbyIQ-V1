@@ -34,6 +34,7 @@
 // shutdown must not itself become the shutdown.
 
 import * as appInsights from "applicationinsights";
+import { getTelemetryClient } from "./telemetryClient.js";
 // CF-DEPLOY-RESTARTS-ONCE: GIT_SHA_SHORT is no longer written as an App
 // Setting (that write was the second restart per deploy). Read the SHA from
 // the deployed artifact, falling back to the env var.
@@ -50,13 +51,13 @@ let _emit: (name: string, properties: Record<string, string>) => void = (
   name,
   properties,
 ) => {
-  const client = (appInsights as any).defaultClient;
+  const client = getTelemetryClient();
   if (client) client.trackEvent({ name, properties });
 };
 
 /** Seam: flush is a no-op in tests; in prod it races the platform's kill window. */
 let _flush: () => void = () => {
-  const client = (appInsights as any).defaultClient;
+  const client = getTelemetryClient();
   if (client && typeof client.flush === "function") client.flush();
 };
 
@@ -70,11 +71,11 @@ export function _setFlusherForTests(fn: () => void): void {
 }
 export function _resetForTests(): void {
   _emit = (name, properties) => {
-    const client = (appInsights as any).defaultClient;
+    const client = getTelemetryClient();
     if (client) client.trackEvent({ name, properties });
   };
   _flush = () => {
-    const client = (appInsights as any).defaultClient;
+    const client = getTelemetryClient();
     if (client && typeof client.flush === "function") client.flush();
   };
   for (const [event, fn] of _registered) {

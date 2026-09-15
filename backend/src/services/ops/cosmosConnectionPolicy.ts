@@ -81,13 +81,141 @@ export function endpointDiscoveryEnabled(): boolean {
 }
 
 /**
- * The connection policy every HobbyIQ CosmosClient should be built with.
+ * CF-A-REQUEST-NEEDS-A-CEILING (Fable, 2026-09-15). POST-FREEZE.
  *
- * Only `enableEndpointDiscovery` is set. Everything else stays on the SDK
- * default so this cannot silently change retry, throttle or timeout behaviour.
+ * WHAT THIS ADDS, and why the old comment below it was too modest. The policy
+ * set `enableEndpointDiscovery` and nothing else, on the stated grounds that
+ * leaving the rest at SDK defaults "cannot silently change retry, throttle or
+ * timeout behaviour". True — but the SDK defaults are not all bounded the way
+ * a request path needs, and `/api/compiq/price` rode one of them to Azure's
+ * 240 s front-end kill (HTTP 499). See #2163 for the incident; that PR fixed
+ * the request path alone because this file is shared by every lane.
+ *
+ * MEASURED, against the pinned @azure/cosmos 4.9.3 in this repo:
+ *
+ *   ConnectionPolicy.js:27         requestTimeout            60,000 ms
+ *   constants.js:198-200           ThrottledRequestMaxRetryAttemptCount   9
+ *                                  ThrottledRequestMaxWaitTimeInSeconds  30
+ *   endpointDiscoveryRetryPolicy.js:49-51
+ *                                  maxTries   120,  retryAfterInMs  1,000
+ *
+ * The throttle policy is already bounded and is NOT the problem. The endpoint
+ * discovery policy is the one that hurts: 120 tries one second apart is a
+ * ~120,000 ms ceiling PER OPERATION, and `maxTries` there is a hardcoded
+ * static the connection policy cannot configure at all. Two such operations in
+ * one request exceed the 240 s front door on their own, which is exactly the
+ * shape of the /price hang — a client with an empty location cache, discovery
+ * left on, re-resolving the endpoint on every operation.
+ *
+ * Endpoint discovery is already OFF by default here (single-region account),
+ * so that ceiling is not normally reachable. The values below are the belt to
+ * that braces: an explicit per-request ceiling, and a throttle ceiling stated
+ * rather than inherited, so a future change to `COSMOS_ENDPOINT_DISCOVERY` or
+ * to an SDK default cannot quietly restore a 2-minute operation.
+ *
+ * WHY THESE NUMBERS.
+ *
+ *   requestTimeout 20,000 ms (SDK default 60,000). One HTTP round trip to
+ *     Cosmos, retries excluded — this bounds a single call, not a query's
+ *     whole paging walk. The slowest read this repo measures is the ladder's
+ *     per-rung ceiling of 3,000 ms (ladderBudget.service.ts), and the batch
+ *     lanes are wide rather than slow per call, so 20 s is nearly 7x the
+ *     slowest legitimate call and still a third of the default. A lane that
+ *     genuinely needs longer should raise it here with the measurement, not
+ *     silently inherit a minute.
+ *
+ *   maxRetryAttemptCount 5 (SDK default 9) and maxWaitTimeInSeconds 20
+ *     (default 30). The wait cap is the binding one — it already stops a
+ *     throttled request at 30 s — so this is a modest tightening, chosen so
+ *     that requestTimeout + the throttle wait stays under a 45 s budget and
+ *     well inside the ladder's 8 s walk for the request path. Nine retries
+ *     against a partition that is hot is nine requests of added load on the
+ *     thing that is already struggling; five is enough to ride out a
+ *     momentary spike without deepening one.
+ *
+ * WHO SHARES THIS FILE. Everything: 140 files under `backend/src` build their
+ * clients through `cosmosOptionsFromConnectionString` / `hobbyIqConnectionPolicy`
+ * / `withConnectionPolicy` (111 services, 15 routes, 13 repositories, 1 job),
+ * and the 41 scripts under `backend/scripts` that import those services inherit
+ * it transitively — the rematch, backfill, ingest and reprice lanes among them.
+ *
+ * WHICH IS WHY THE CEILINGS ARE GATED TO THE WEB PROCESS. A ceiling that is
+ * right for a user request is wrong for a batch lane: the request has a person
+ * and a 240 s front door behind it, the lane has neither and must redo any work
+ * it abandons. `boundedRetriesEnabled()` below holds that line — outside App
+ * Service this function returns the same single-key object it returned before
+ * this change, so every script, cron and backfill lane keeps today's SDK
+ * defaults byte for byte. The values are additionally env-overridable, so even
+ * inside the web process a budget can be restored without a deploy.
+ *
+ * The connection policy every HobbyIQ CosmosClient should be built with.
  */
 export function hobbyIqConnectionPolicy(): NonNullable<CosmosClientOptions["connectionPolicy"]> {
-  return { enableEndpointDiscovery: endpointDiscoveryEnabled() };
+  const policy: NonNullable<CosmosClientOptions["connectionPolicy"]> = {
+    enableEndpointDiscovery: endpointDiscoveryEnabled(),
+  };
+  if (!boundedRetriesEnabled()) return policy;
+  return {
+    ...policy,
+    requestTimeout: numFromEnv("COSMOS_REQUEST_TIMEOUT_MS", 20_000),
+    retryOptions: {
+      maxRetryAttemptCount: numFromEnv("COSMOS_MAX_RETRY_ATTEMPTS", 5),
+      maxWaitTimeInSeconds: numFromEnv("COSMOS_MAX_RETRY_WAIT_SECONDS", 20),
+      fixedRetryIntervalInMilliseconds: 0,
+    },
+  };
+}
+
+/**
+ * Do the ceilings apply in THIS process?
+ *
+ * WHY THIS GATE EXISTS. A ceiling that is right for a web request is wrong for
+ * a batch lane, and the two share this file. A user request has a person and a
+ * 240 s front door on the other end of it: giving up early and saying so beats
+ * answering late. A backfill lane has neither — it is measured in hours, it
+ * runs against `sold_comps` at elevated RU, and a request it abandons at 20 s
+ * is work it must redo. Tightening a batch lane's retry budget mid-wave is not
+ * a thing to discover from a throughput graph, and a 31-slot rematch wave
+ * builds from main.
+ *
+ * So the ceilings are OPT-IN and the opt-in is the web process:
+ *
+ *   COSMOS_BOUNDED_RETRIES=1   explicit, wins over everything, either way
+ *                              ("0"/"false" force the SDK defaults back even
+ *                              inside App Service — the escape hatch if the
+ *                              ceilings ever turn out to be wrong in prod)
+ *   WEBSITE_SITE_NAME present  the App Service marker. Set by the platform on
+ *                              HobbyIQ3 and hobbyiq3-worker, and absent on a
+ *                              GitHub Actions runner, on the backfill lanes and
+ *                              on every local shell — so the gate needs NO app
+ *                              setting to be created, and creating one would be
+ *                              a live prod config change.
+ *
+ * Default OFF everywhere else, which means every script, cron, backfill,
+ * ingest and rematch lane keeps the SDK defaults it has today, byte for byte:
+ * `hobbyIqConnectionPolicy()` returns the same single-key object it returned
+ * before this change. The blast radius of this PR outside the web process is
+ * therefore nil by construction, not by review.
+ *
+ * NOTE this does gate the worker (hobbyiq3-worker) in as well as the API, since
+ * both carry WEBSITE_SITE_NAME. That is deliberate: the worker is the role the
+ * root-GET flood was measured on (see the note at the top of this file), so it
+ * is the last process that should be running with an unbounded discovery
+ * retry. It is not a batch runner; the backfill lanes run on Actions.
+ */
+export function boundedRetriesEnabled(): boolean {
+  const explicit = String(process.env.COSMOS_BOUNDED_RETRIES ?? "").trim().toLowerCase();
+  if (explicit === "1" || explicit === "true") return true;
+  if (explicit === "0" || explicit === "false") return false;
+  return String(process.env.WEBSITE_SITE_NAME ?? "").trim() !== "";
+}
+
+/** A positive finite number from the environment, or the stated default.
+ *  A malformed or zero value takes the default rather than disabling the
+ *  ceiling — an override must be a deliberate number, never a typo. */
+function numFromEnv(name: string, fallback: number): number {
+  const raw = Number(String(process.env[name] ?? "").trim());
+  return Number.isFinite(raw) && raw > 0 ? raw : fallback;
 }
 
 /**

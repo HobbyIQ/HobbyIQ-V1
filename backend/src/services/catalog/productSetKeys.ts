@@ -435,6 +435,30 @@ const S = (setKey: string, o: Opts = {}): ProductSetKey => ({ setKey, spelled: t
 export const PRODUCT_SET_KEYS: ReadonlyArray<ProductSetKey> = [
   // -- Topps flagship and its verified refinements ---------------------------
   P("topps"),
+
+  /**
+   * CF-A-NAMED-INSERT-SET-IS-ITS-OWN-CARD-SET, R48 (Drew, 2026-09-15).
+   *
+   * Three 2026 Topps Series 1 sections the pool carries as though they were
+   * base PARALLELS. They are not: the source states `75 Years of Topps` at
+   * /75 in its own ladder line, and `Chicks` and `Flowers` are named insert
+   * sets, not finishes of the base card. Registered qualified so a bare
+   * `chicks` can never answer for a card in some other product.
+   *
+   * KEYS ONLY, NO PACKAGE. Measured directly against the pool on 2026-09-15
+   * rather than estimated: `chicks` 415 rows, `75-years-of-topps` 257,
+   * `flowers` 54 -- 726 together. All three are under the 500-row bar that
+   * decides whether a ladder package is worth building, so the keys land here
+   * (they cost nothing and stop the rows folding onto base) and no checklist
+   * is acquired for them yet.
+   *
+   * The earlier round-2 estimate put these at ~6,700 rows. That figure came
+   * from scaling 500-row-per-class census samples, which ranks cells correctly
+   * and sizes them badly -- it over-counted this group about 9x.
+   */
+  S("topps-chicks", { family: "topps", parent: "topps" }),
+  S("topps-flowers", { family: "topps", parent: "topps" }),
+  S("topps-75-years-of-topps", { family: "topps", parent: "topps" }),
   S("topps-series-1", { names: ["topps-series-one", "topps-s1"], family: "topps", parent: "topps", refines: "topps" }),
   S("topps-series-2", { names: ["topps-series-two", "topps-s2"], family: "topps", parent: "topps", refines: "topps" }),
   // "2024 Topps Series 1 1st Edition" is another set (as 1st Edition always

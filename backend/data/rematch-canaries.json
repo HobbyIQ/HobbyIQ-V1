@@ -438,7 +438,7 @@
       "name": "[derived] slot 26 1986 fleer-stickers 8 base",
       "slug": "hiq:basketball:1986:fleer-stickers:8:base:no-auto",
       "shardSlot": 26,
-      "poolRows": 2117,
+      "poolRows": 2181,
       "verifiedMarketDirection": "exact-pool",
       "derivedFrom": "provenance",
       "protectedAnchors": 3,
@@ -446,8 +446,13 @@
         "verifiedByUser"
       ],
       "anchorRowId": "cardsight::hiq:basketball:1986:fleer-stickers:8:base:no-auto::2026-07-26T10:12:39.369Z",
-      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 3 provenance-protected row(s) -- verifiedByUser -- which a rematch may never re-key. The pool losing rows during slot 26's apply means sales moved away from a card a person vouched for. poolRows 1839 is a FLOOR measured at capture (192 in the slug partition + 1647 carrying it), never an equality assertion. [RECAPTURED 2026-09-14: live union count is 2117 (captured floor was 1839); anchor unchanged, pool still reachable at this slug -- refreshed floor upward to reflect legitimate ingest growth. No move.]",
-      "protectedIdentity": true
+      "note": "Derived canary (2026-09-03), not one of Drew's hand-verified seven. This pool is anchored by 3 provenance-protected row(s) -- verifiedByUser -- which a rematch may never re-key. The pool losing rows during slot 26's apply means sales moved away from a card a person vouched for. poolRows 1839 is a FLOOR measured at capture (192 in the slug partition + 1647 carrying it), never an equality assertion. [RECAPTURED 2026-09-14: live union count is 2117 (captured floor was 1839); anchor unchanged, pool still reachable at this slug -- refreshed floor upward to reflect legitimate ingest growth. No move.] [RECAPTURED 2026-09-15 (R54): live union count is 2181 (224 in the slug partition + 1,958 carrying it as hobbyiqCardId, deduped by id) -- floor refreshed from 2117. Anchor still resident and unchanged (point-read at its own partition, verifiedByUser=true). The r26RowIn row cited by the ruling (cardsight::1586038977359x685970805780906000::2026-07-11T00:40:00+00:00::385000, $3,850 PSA 8) is confirmed present in this pool by a fresh read. This is a Drew ruling (R54) naming two live defects bleeding into/contaminating this pool's identity space -- cardhedge-dual-id-duplicates (the same sale double-counted under two CardHedge ids) and graded-sales-in-raw-pool (graded sales landing in what should be the raw pool) -- NOT a relocation or a false alarm; the floor is raised to the measured count and the repair is queued, not silently absorbed.]",
+      "protectedIdentity": true,
+      "anchorMovedBy": "cardhedge-dual-id-duplicates + graded-sales-in-raw-pool",
+      "attributedRun": 34959557376,
+      "r26RowIn": "cardsight::1586038977359x685970805780906000::2026-07-11T00:40:00+00:00::385000 ($3,850 PSA 8, correct)",
+      "repairQueued": ["cardhedge-dual-id-collapse", "grade-from-title"],
+      "rulingBy": "Drew 2026-09-15 R54"
     },
     {
       "name": "[derived] slot 27 1985 bowman 273 base",

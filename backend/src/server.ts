@@ -1,5 +1,6 @@
 import * as appInsights from "applicationinsights";
 import { type InstrumentationOptions } from "applicationinsights";
+import { setTelemetryClient, type TelemetryClientLike } from "./services/ops/telemetryClient.js";
 
 const { useAzureMonitor, TelemetryClient } = appInsights;
 import { SeverityNumber } from "@opentelemetry/api-logs";
@@ -107,14 +108,32 @@ if (process.env.APPLICATIONINSIGHTS_CONNECTION_STRING) {
       instrumentations: [new UndiciInstrumentation()],
     });
 
-    // KEEP `appInsights.defaultClient` ALIVE. Moving off the shim removed the
-    // `setup()` call that used to populate it, and two modules read it for
-    // manual telemetry:
-    //   services/ops/workerLifecycle.ts  -> the `worker_shutdown` event (#1977)
-    //   services/signals/telemetry.ts    -> trackException
-    // Both guard with `if (client)`, so a missing defaultClient would not throw
-    // — it would silently stop reporting, which is precisely the blindness
-    // #1977 was written to end. So publish a client explicitly.
+    // CF-DEFAULTCLIENT-WAS-A-GETTER-ONLY-RE-EXPORT (Fable, 2026-09-15). This
+    // block used to publish the client by ASSIGNING to the SDK's namespace:
+    //
+    //     (appInsights as any).defaultClient = new TelemetryClient(...);
+    //
+    // That never took effect. On applicationinsights@3.14.0 `defaultClient` is
+    // a re-export built by TypeScript's `__createBinding` helper, i.e. a getter
+    // with NO setter (`{ get: true, set: false, configurable: false }`, read
+    // off the live module). Assigning to it is a silent no-op — no throw, so
+    // the catch below never fired — and `appInsights.defaultClient` stayed
+    // undefined for the life of the process. Every consumer guards with
+    // `if (client)`, so every one of them silently emitted nothing.
+    //
+    // Measured: App Insights holds ZERO customEvents rows over 30 days, of any
+    // name. `worker_shutdown` (#1977) has never reported once, and neither has
+    // trackException from services/signals/telemetry. #1977 was written to end
+    // exactly this kind of blindness and was writing into one.
+    //
+    // The client now lives in a module WE own (services/ops/telemetryClient),
+    // which every consumer reads through `getTelemetryClient()`. Nothing
+    // depends on writing a property onto a third-party namespace object.
+    //
+    // Consumers:
+    //   services/ops/workerLifecycle.ts       -> worker_shutdown (#1977)
+    //   services/signals/telemetry.ts         -> trackException
+    //   services/compiq/ladderBudget.service  -> ladder_rung_timing / _walk_summary
     //
     // `useGlobalProviders: false` is load-bearing, not incidental. A client
     // left on the default (true) lazily calls `initialize()` on its first
@@ -125,12 +144,19 @@ if (process.env.APPLICATIONINSIGHTS_CONNECTION_STRING) {
     // the client builds its own provider, exports to the same App Insights
     // resource, and never touches global state.
     try {
-      (appInsights as any).defaultClient = new TelemetryClient(
+      const client = new TelemetryClient(
         process.env.APPLICATIONINSIGHTS_CONNECTION_STRING,
         { useGlobalProviders: false },
       );
+      setTelemetryClient(client as unknown as TelemetryClientLike);
+      // Best-effort, and explicitly allowed to fail: on this SDK version the
+      // property is getter-only and this does nothing. It is kept so a host or
+      // a future SDK that DOES accept it still sees the same client, and it is
+      // no longer what anything depends on.
+      try { (appInsights as any).defaultClient = client; } catch { /* getter-only */ }
+      console.warn("[AppInsights] telemetry client published (customEvents enabled)");
     } catch (err: any) {
-      console.warn("[AppInsights] defaultClient publish failed:", err?.message);
+      console.warn("[AppInsights] telemetry client publish failed:", err?.message);
     }
 
     console.warn(
