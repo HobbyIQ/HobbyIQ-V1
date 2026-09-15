@@ -223,7 +223,28 @@ export async function countExactSalesInWindow(
   }
   const windowDays = opts.windowDays ?? EXACT_POOL_WINDOW_DAYS;
   const cutoff = new Date(Date.now() - windowDays * 86_400_000).toISOString();
-  for (const id of candidates) {
+  // CF-CANDIDATE-COUNTS-ARE-INDEPENDENT (Fable, 2026-09-15). This was `await`
+  // inside a `for`, so N candidates cost N cross-partition COUNTs strictly in
+  // series — the request paid the sum of their latencies even though no count
+  // depends on any other. On the /price star query that serialisation is part
+  // of the 2,361 sold_comps round trips one request made (App Insights
+  // operation_Id 8934a4f603e74d67b1b222014170160f, 9,194 ms): individually
+  // fast (6.4 ms mean) and ruinous only because they were queued behind each
+  // other.
+  //
+  // The counts are now issued together. Every other property is preserved
+  // deliberately:
+  //   - the RESULT is a map keyed by candidate id, so order was never
+  //     load-bearing and `judgeExactPoolSupremacy` walks `candidates` itself;
+  //   - a failed count still records 0 and still logs the same event with the
+  //     same fields, because a count we could not take is not evidence of an
+  //     empty pool and the gate must keep being able to say so;
+  //   - one candidate's failure still cannot affect another's, which is why
+  //     each keeps its own try/catch rather than relying on `allSettled`.
+  //
+  // Candidate lists are short (the identity, its numbered twin, its graded
+  // children) so this is a handful of concurrent reads, not a fan-out.
+  await Promise.all(candidates.map(async (id) => {
     try {
       const { resources } = await container.items.query<number>(exactSalesCountQuery(id, cutoff)).fetchAll();
       const n = Number(resources?.[0] ?? 0);
@@ -237,7 +258,7 @@ export async function countExactSalesInWindow(
         error: (err as Error)?.message ?? String(err),
       }));
     }
-  }
+  }));
   return counts;
 }
 

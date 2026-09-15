@@ -326,7 +326,30 @@ export async function readSettleMarker(
       return settledAt ? { settledAt } : null;
     } catch { return null; }
   };
-  return (await read(identityMarkerId(id))) ?? (await read(scopeMarkerId(year, setKey)));
+  // CF-TWO-MARKERS-IN-THE-TIME-OF-ONE (Fable, 2026-09-15). These were chained
+  // with `??`, which is a SEQUENCE POINT: the scope marker's point read did not
+  // start until the identity marker's had returned, so the common case — no
+  // identity marker, fall back to the scope one — cost two serial round trips.
+  //
+  // They are independent point reads of the same container and neither depends
+  // on the other's result, so they are issued together and the same preference
+  // is applied to the answers: the identity marker still wins whenever it
+  // exists, and the scope marker is still only consulted when it does not.
+  // Identical verdict, one round trip of latency instead of two.
+  //
+  // `allSettled`, not `all`: `read` already swallows a 404 into null, but a
+  // transport error on the marker we were not going to use must not be able to
+  // fail a gate that the other marker could have answered.
+  const [identity, scope] = await Promise.allSettled([
+    read(identityMarkerId(id)),
+    read(scopeMarkerId(year, setKey)),
+  ]);
+  // Typed off `read`'s own return, not a named marker type: the reader
+  // projects a narrower shape than the stored document and the two must not
+  // drift apart here.
+  const valueOf = <T>(r: PromiseSettledResult<T>): T | null =>
+    r.status === "fulfilled" ? r.value : null;
+  return valueOf(identity) ?? valueOf(scope);
 }
 
 let _controlContainer: Container | null = null;
