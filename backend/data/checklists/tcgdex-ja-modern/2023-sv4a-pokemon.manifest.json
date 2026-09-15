@@ -6,9 +6,19 @@
   "source": "tcgdex-ja-modern",
   "confidence": 0.9,
   "provenance": "api.tcgdex.net/v2/ja/sets/SV4a (MIT, tcgdex/cards-database) fetched 2026-09-04 -- 367 rows, 2 ladder entries",
-  "setName": "Japanese レイジングサーフ",
+  "setName": "Japanese シャイニートレジャーex",
   "tcgdexId": "SV4a",
   "sourceUrl": "https://api.tcgdex.net/v2/ja/sets/SV4a",
   "rowCount": 367,
-  "parallelColumnAuthoritative": true
+  "parallelColumnAuthoritative": true,
+  "setNameWas": "Japanese レイジングサーフ",
+  "setNameEn": "Shiny Treasure ex",
+  "setNameCorrection": {
+    "correctedAt": "2026-09-15",
+    "ruling": "R41 (Drew, 2026-09-15)",
+    "was": "Japanese レイジングサーフ",
+    "now": "Japanese シャイニートレジャーex / Shiny Treasure ex",
+    "why": "UPSTREAM ERROR, NOT OURS. api.tcgdex.net/v2/ja/sets/SV4a returns setName レイジングサーフ (Raging Surf) while returning SV4a's correct release date 2023-12-01 and its correct card count 320. Raging Surf is SV3a: a 92-card set released 2023-09-22, and tcgdex returns that same name for SV3a. Our two manifests therefore carried ONE name for TWO different sets. The ROWS are right — this file holds 367 rows numbered 1-354, which is Shiny Treasure ex's shape, not Raging Surf's 92 — so only the label was wrong. Confirmed against the Japanese market (High Class Pack SV4a シャイニートレジャーex, 2023-12-01).",
+    "rowsUnchanged": true
+  }
 }
