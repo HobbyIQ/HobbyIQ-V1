@@ -128,6 +128,40 @@ jobs:
           resource-group-name: rg-hobbyiq-dev
           package: deploy.zip
 
+      # CF-NEVER-HARDCODE-A-SLOT-HOST (Fable, 2026-09-15). The first slot deploy
+      # polled `https://hobbyiq3-staging.azurewebsites.net` and got connection
+      # failure (000) forty times, because that hostname does not exist: an App
+      # Service slot carries the SAME unique suffix production does, so the real
+      # host is `hobbyiq3-staging-aebjecgpd7bvbshq.centralus-01...`. The run
+      # correctly refused to swap, but for the wrong reason — a workflow bug
+      # that reads exactly like a failing build, which is the most expensive
+      # kind of false negative a deploy gate can produce.
+      #
+      # Both hosts are now READ FROM AZURE rather than written down. A name
+      # nobody types cannot be mistyped, and the suffix is not guessable, so
+      # hardcoding it was always a latent break — one Azure hands us for free.
+      - name: Resolve App Service hostnames
+        id: hosts
+        if: steps.et-gate.outputs.should_run == 'true'
+        run: |
+          SLOT_HOST=$(az webapp show --name HobbyIQ3 --resource-group rg-hobbyiq-dev --slot staging --query defaultHostName -o tsv | tr -d '\r\n')
+          PROD_HOST=$(az webapp show --name HobbyIQ3 --resource-group rg-hobbyiq-dev --query defaultHostName -o tsv | tr -d '\r\n')
+          if [ -z "$SLOT_HOST" ] || [ -z "$PROD_HOST" ]; then
+            echo "::error::could not resolve hostnames (slot='$SLOT_HOST' prod='$PROD_HOST')"
+            exit 1
+          fi
+          # A slot host equal to production means --slot was ignored. Warming and
+          # smoking production while calling it "the slot" would then swap an
+          # unverified build into production. Refuse instead.
+          if [ "$SLOT_HOST" = "$PROD_HOST" ]; then
+            echo "::error::slot host equals production host ($PROD_HOST) — refusing"
+            exit 1
+          fi
+          echo "slot=https://$SLOT_HOST" >> "$GITHUB_OUTPUT"
+          echo "prod=https://$PROD_HOST" >> "$GITHUB_OUTPUT"
+          echo "slot host: $SLOT_HOST"
+          echo "prod host: $PROD_HOST"
+
       # Warm the slot BEFORE it takes traffic. /api/health/warm builds the
       # expensive singletons (checklist corpora, parser tables, the ladder
       # module graph — ~2.5s measured) and returns per-step ms, so the deploy
@@ -135,7 +169,7 @@ jobs:
       - name: Warm the staging slot
         if: steps.et-gate.outputs.should_run == 'true'
         run: |
-          SLOT="https://hobbyiq3-staging.azurewebsites.net"
+          SLOT="${{ steps.hosts.outputs.slot }}"
           echo "Waiting for the slot to answer /api/health ..."
           for i in $(seq 1 40); do
             STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 20 "$SLOT/api/health" || echo 000)
@@ -178,8 +212,14 @@ jobs:
         if: steps.et-gate.outputs.should_run == 'true'
         continue-on-error: true
         working-directory: backend
-        run: |
-          SMOKE_BASE_URL="https://hobbyiq3-staging.azurewebsites.net"           TIER1_HARNESS_TOKEN="${{ steps.harness-token.outputs.token }}"           node scripts/smoke-test-pricing-tiers.cjs
+        env:
+          # An env: block, not inline assignments. The previous form relied on
+          # backslash continuations that were flattened into a single line when
+          # this file was written — it happened to still work, and would not
+          # have the next time someone edited it.
+          SMOKE_BASE_URL: ${{ steps.hosts.outputs.slot }}
+          TIER1_HARNESS_TOKEN: ${{ steps.harness-token.outputs.token }}
+        run: node scripts/smoke-test-pricing-tiers.cjs
 
       - name: Refuse the swap if the slot smoke failed
         if: steps.et-gate.outputs.should_run == 'true'
@@ -207,9 +247,12 @@ jobs:
       - name: Verify production is serving the new build
         if: steps.et-gate.outputs.should_run == 'true'
         run: |
+          # Production's host is resolved from Azure too, so the pattern is
+          # symmetrical with the slot and neither name lives in this file.
+          PROD="${{ steps.hosts.outputs.prod }}"
           EXPECTED=$(git rev-parse --short=7 HEAD)
           for i in $(seq 1 30); do
-            LIVE=$(curl -s --max-time 20 https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net/api/health \n              | grep -o '"shaShort":"[^"]*"' | head -1 | cut -d'"' -f4)
+            LIVE=$(curl -s --max-time 20 "$PROD/api/health" | grep -o '"shaShort":"[^"]*"' | head -1 | cut -d'"' -f4)
             echo "try ${i}: production sha=${LIVE} expected=${EXPECTED}"
             case "$EXPECTED" in "$LIVE"*) echo "production is serving the new build"; exit 0;; esac
             case "$LIVE" in "$EXPECTED"*) echo "production is serving the new build"; exit 0;; esac
