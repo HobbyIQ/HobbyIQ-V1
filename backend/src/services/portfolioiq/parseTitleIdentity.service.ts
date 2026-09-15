@@ -3375,6 +3375,29 @@ const LADDER_SPECIALIZATION_PRODUCTS: readonly LadderSpecializationProduct[] = [
   // Traded cards misfiled under Score, a different defect this must not
   // launder into a wrong key. 766 catalog rows, 100% checklist-backed.
   { family: "score", states: /\brookie'?s?\s*(?:&|and|\/|\+)\s*traded\b/, setKey: "score-rookie-and-traded" },
+
+  // -- topps -----------------------------------------------------------------
+  // R26-FLAGSHIP-SWALLOWED-NAMED-PRODUCT, from the post-wave audit (2026-09-15).
+  //
+  // Topps Gold Label is a DISTINCT product with its own checklist, its own
+  // Class 1/2/3 rung ladder and its own price curve -- and it is already a
+  // registered product in productSetKeys (`isProductSetKey("topps-gold-label")`
+  // is true, parent `topps`), so the ladder edge existed and the derivation
+  // simply could not reach it. Exactly the "dead edge" this table was built to
+  // pay down: every Gold Label sale classified AGREE under bare `topps` on
+  // BOTH sides, so the census could never surface one.
+  //
+  //   "2000 Topps Gold Label - Barry Bonds #85 Class 2"  -> topps, Base
+  //   "1999 Topps Gold Label Football #61 Base"          -> topps
+  //
+  // Both measured verbatim against the live parser on 2ac329a9. The "Class 2"
+  // in the first is the product's OWN rung, so folding to `topps` loses the
+  // card twice over -- wrong product, and a rung bare `topps` never had.
+  //
+  // BRAND-GATED like every rule in this table, and here that gate is doing
+  // real work: "gold" is a colour word and "label" an ordinary noun, so an
+  // unanchored rule would read a gold-labelled anything as this product.
+  { family: "topps", states: /\bgold\s+label\b/, setKey: "topps-gold-label" },
 ];
 
 /** The families this table can refine, for the O(1) reject that keeps an
