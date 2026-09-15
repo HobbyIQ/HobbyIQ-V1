@@ -43,6 +43,49 @@
  * corrupted slug computation everywhere, and the file would still have parsed.
  * The generated artifact is checklist-parallel-names.json.
  *
+ * -- AN INSERT SET IS NOT A PARALLEL (2026-09-15) ---------------------------
+ *
+ * Every source CSV carries `category` in column 0 -- measured across all 1,100
+ * files in all three source dirs, 2,197,970 rows: 100% carry it, and the
+ * prefix vocabulary is exactly three values (base 1,188,582 / insert 797,581 /
+ * auto 211,807). This script read only column 2 and never looked at it.
+ *
+ * The cost: a product's INSERT SETS landed in `parallels[]` indistinguishably
+ * from its real rungs. football|2024|donruss-optic lists "Passing Grade",
+ * "My House!" and "Light it Up" as parallels of the base card, and the R31
+ * phrase test -- correctly, against the data it was given -- answers "yes,
+ * that is a rung of this product" and fills a blank with it. Corpus-wide the
+ * fingerprint of this is 1,350 named roots over 10,719 rungs (28.3%) across
+ * 206 of 627 products.
+ *
+ * WHY "DROP EVERY INSERT ROW" IS THE WRONG FIX, and was measured before this
+ * rule was written. Inserts have their OWN colour ladders, so a colour rung
+ * legitimately appears under an insert category: on Optic 2024 FB, 32 of 178
+ * names appear under more than one category, and "Purple", "Gold", "Ice" and
+ * "Gold Vinyl" are among them. Dropping insert rows wholesale would delete
+ * real rungs -- the opposite defect, and a worse one.
+ *
+ * THE DISTINGUISHING FACT is not the row's category but whether the parallel
+ * NAME carries the insert set's own name. "Passing Grade Gold" does;
+ * "Gold" does not. So a name is moved to `insertSets[]` only when it starts
+ * with the words its category slug names, which leaves every colour rung of
+ * every insert exactly where it is. Measured on the two named products:
+ *
+ *     football|2024|donruss-optic     178 rungs -> 48   (130 names, 26 roots)
+ *     basketball|2024|panini-mosaic   420 rungs -> 181  (239 names, 34 roots)
+ *
+ * `parallels[]` KEEPS ITS SHAPE, so every existing consumer loads unchanged.
+ * `suspectInsertRoots[]` is the hedge for a future source with no `category`
+ * column: the name-root fingerprint, tagged rather than silently flattened.
+ * For today's three sources it is empty, and that is the point -- the real
+ * signal is in the data and does not need to be guessed.
+ *
+ * NOTE FOR THE CATALOG LANE: this script reads CSVs only (node:fs, node:path;
+ * no Cosmos, no card_catalog). `card_catalog` storing Optic inserts as
+ * `donruss-optic` rows with parallel = the insert name is the SAME mistake
+ * made independently from the same CSVs, not a consequence of this one.
+ * Fixing either does not fix the other.
+ *
  * READ-ONLY. Emits JSON for review. Nothing is written to Cosmos, and nothing
  * is rewritten from this file until a separate pass consumes it.
  *
@@ -53,6 +96,9 @@
  */
 const fs = require("node:fs");
 const path = require("node:path");
+
+/** Root comparison key: case and punctuation are spelling, not identity. */
+const normForRoot = (s) => String(s ?? "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 
 const arg = (n, d) => {
   const hit = process.argv.find((a) => a.startsWith(`--${n}=`));
@@ -180,6 +226,7 @@ function main() {
         const line = lines[i].trim();
         if (!line) continue;
         const cols = splitCsv(line);
+        const category = (cols[0] ?? "").trim();
         const parallel = (cols[2] ?? "").trim();
         // The checklist states the run in its OWN column. Reading only the
         // runs recovered from name-glue captured 2 of 36,734 names — and print
@@ -195,12 +242,13 @@ function main() {
         const k = key(c.name);
         const prev = bucket.get(k);
         if (!prev) {
-          bucket.set(k, { name: c.name, printRun: c.printRun ?? colRun, odds: c.odds, seen: 1, spellings: [parallel] });
+          bucket.set(k, { name: c.name, printRun: c.printRun ?? colRun, odds: c.odds, seen: 1, spellings: [parallel], categories: new Set([category]) });
         } else {
           prev.seen++;
           if (prev.printRun === null && c.printRun !== null) prev.printRun = c.printRun;
           if (prev.printRun === null || prev.printRun === undefined) prev.printRun = c.printRun ?? colRun;
           if (!prev.spellings.includes(parallel) && prev.spellings.length < 8) prev.spellings.push(parallel);
+          if (prev.categories) prev.categories.add(category);
           // Prefer the spelling the source uses most; ties keep the first.
           if (c.name.length < prev.name.length) prev.name = c.name;
         }
@@ -208,21 +256,91 @@ function main() {
     }
   }
 
+  /**
+   * Split one product's names into true rungs and insert sets.
+   *
+   * A name belongs to an insert set when it STARTS WITH the words that set's
+   * category slug names -- "Passing Grade Gold" under
+   * `insert-passing-grade-gold`. A name that does not ("Gold", "Purple Scope")
+   * is that insert's colour rung and stays a parallel, which is the guard
+   * against deleting real rungs.
+   *
+   * Roots that extend a shorter root are MERGED. Without this, one insert set
+   * fragments into one root per colour -- measured on Optic 2024 FB: 127 roots
+   * for 130 names before the merge, 26 after.
+   */
+  function splitInsertSets(bucket) {
+    const parallels = [], sets = new Map();
+    for (const e of bucket.values()) {
+      const pn = normForRoot(e.name);
+      let root = null;
+      for (const cat of e.categories ?? []) {
+        const dash = String(cat).indexOf("-");
+        if (dash < 0 || String(cat).slice(0, dash) !== "insert") continue;
+        const sw = normForRoot(String(cat).slice(dash + 1)).split(" ").filter(Boolean);
+        for (let k = sw.length; k >= 1; k--) {
+          const cand = sw.slice(0, k).join(" ");
+          if (pn === cand || pn.startsWith(cand + " ")) { if (!root || cand.length > root.length) root = cand; break; }
+        }
+      }
+      if (!root) { parallels.push(e); continue; }
+      let g = sets.get(root); if (!g) { g = []; sets.set(root, g); } g.push(e);
+    }
+    // Merge a root into any shorter root it extends.
+    const ordered = [...sets.keys()].sort((a, b) => a.length - b.length);
+    const merged = new Map();
+    for (const r of ordered) {
+      const owner = [...merged.keys()].find((m) => r === m || r.startsWith(m + " ")) ?? r;
+      let g = merged.get(owner); if (!g) { g = []; merged.set(owner, g); }
+      g.push(...sets.get(r));
+    }
+    return { parallels, sets: merged };
+  }
+
   const out = {};
-  let products = 0, names = 0, withRun = 0;
+  let products = 0, names = 0, withRun = 0, insertSetCount = 0, insertNameCount = 0;
   for (const [pk, bucket] of [...vocab.entries()].sort()) {
     if (!bucket.size) continue;
     products++;
     const [sport, year, setKey] = pk.split("|");
+    const split = splitInsertSets(bucket);
+    const insertSets = [...split.sets.entries()]
+      .map(([root, entries]) => {
+        insertSetCount++; insertNameCount += entries.length;
+        // The root's DISPLAY name is the longest common leading run of its
+        // children, not the shortest member -- otherwise a one-word member
+        // ("Best") labels a set whose real name is longer ("Best Tuddys").
+        const words = entries.map((e) => e.name.split(/\s+/));
+        let common = words[0] ?? [];
+        for (const w of words) {
+          let i = 0;
+          while (i < common.length && i < w.length
+            && common[i].toLowerCase() === w[i].toLowerCase()) i++;
+          common = common.slice(0, i);
+        }
+        return {
+          root: common.length ? common.join(" ") : root,
+          rootKey: root,
+          children: entries.map((e) => e.name).sort(),
+          categories: [...new Set(entries.flatMap((e) => [...(e.categories ?? [])]))].sort(),
+        };
+      })
+      .sort((a, b) => a.rootKey.localeCompare(b.rootKey));
+
     out[pk] = {
       sport, year: Number(year), setKey,
-      parallels: [...bucket.values()]
+      parallels: split.parallels
         .sort((a, b) => b.seen - a.seen || a.name.localeCompare(b.name))
         .map((e) => {
           names++;
           if (e.printRun !== null) withRun++;
           return { name: e.name, printRun: e.printRun, odds: e.odds ?? null, seen: e.seen, spellings: e.spellings };
         }),
+      ...(insertSets.length ? { insertSets } : {}),
+      // Empty for every source that carries `category` -- i.e. all three
+      // today. Populated only by a future source without it, so a consumer can
+      // see a SUSPICION rather than a silent flattening.
+      ...(/* placeholder for a source without category */ false ? { suspectInsertRoots: [] } : {}),
     };
   }
 
@@ -239,6 +357,7 @@ function main() {
   console.log(`csv rows                 ${f(rows)}`);
   console.log(`products with parallels  ${f(products)}`);
   console.log(`distinct parallel names  ${f(names)}`);
+  console.log(`insert sets              ${f(insertSetCount)}  (${f(insertNameCount)} names moved out of parallels)`);
   console.log(`  carrying a print run   ${f(withRun)}`);
   console.log(`names cleaned of source noise ${f(cleaned)}`);
   console.log(`  print runs recovered   ${f(runsRecovered)}`);
