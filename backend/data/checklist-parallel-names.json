@@ -6,7 +6,7 @@
   "C:/tmp/hiq-1758/backend/data/checklists/scraped"
  ],
  "productCount": 627,
- "parallelNameCount": 37849,
+ "parallelNameCount": 37852,
  "products": {
  "baseball|1984|topps": {
   "sport": "baseball",
@@ -46224,6 +46224,34 @@
     "seen": 1935,
     "spellings": [
      "Gold Foil Filagree"
+    ]
+   },
+   {
+    "name": "Mini Black",
+    "printRun": null,
+    "odds": null,
+    "seen": 3,
+    "spellings": [
+     "Mini Black"
+    ]
+   },
+   {
+    "name": "Mini Black Border",
+    "printRun": null,
+    "odds": null,
+    "seen": 350,
+    "spellings": [
+     "Mini Black Border",
+     "Mini Black Bordered"
+    ]
+   },
+   {
+    "name": "Mini Gold Border",
+    "printRun": null,
+    "odds": null,
+    "seen": 350,
+    "spellings": [
+     "Mini Gold Border"
     ]
    },
    {
