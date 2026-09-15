@@ -1209,6 +1209,21 @@ function pkFor(id: string, cardId: string | null | undefined): PartitionKey {
   return cardId ? String(cardId) : resolveNonePk();
 }
 
+/**
+ * The None partition key sentinel, exported so a READ path can reach the same
+ * rows the write paths already can.
+ *
+ * `card_catalog` partitions on `/cardId`, and rows minted without one live at
+ * Cosmos's None partition key — user-verified, see the note above. A point
+ * read at `item(id, id)` misses every one of them. A caller that wants a point
+ * read instead of a cross-partition scan therefore needs both addresses, and
+ * this is the second one. Resolution stays lazy and memoised; nothing about
+ * `pkFor` changes.
+ */
+export function nonePartitionKey(): PartitionKey {
+  return resolveNonePk();
+}
+
 export async function patchCatalogRowFields(
   container: Container,
   id: string,
