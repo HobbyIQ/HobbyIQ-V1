@@ -135,17 +135,30 @@ describe("cleanParallelName", () => {
 // ---------------------------------------------------------------------------
 // THE PROPERTY, OVER THE WHOLE SHIPPED CORPUS
 //
-// 37,849 parallel rows over 627 products. This is the guard that keeps the
-// cleaner from being a hand list: every name the corpus carries must resolve,
-// and its cleaned form must be a FIXED POINT -- cleaning twice is cleaning
-// once. A rule that mangled any real rung would show up here as a null or an
-// unstable round-trip, not as a reviewer noticing.
+// Every parallel row the shipped corpus carries. This is the guard that keeps
+// the cleaner from being a hand list: every name the corpus carries must
+// resolve, and its cleaned form must be a FIXED POINT -- cleaning twice is
+// cleaning once. A rule that mangled any real rung would show up here as a
+// null or an unstable round-trip, not as a reviewer noticing.
+//
+// THE COUNT IS DERIVED, NOT PINNED. It was a literal 37,849, which made every
+// checklist acquisition that adds a rung fail this file for arithmetic rather
+// than for a defect -- #2200 added three 2025 Allen & Ginter mini rungs and
+// tripped it at 37,852 while `unresolved` and `unstable` both stayed empty,
+// i.e. the property held and only the bookkeeping number moved.
+//
+// The count still earns its place: it is checked against the corpus's OWN
+// declared parallelNameCount, so a truncated or mis-shaped read (which would
+// walk zero names and pass both list assertions vacuously) still fails here.
 // ---------------------------------------------------------------------------
 describe("every checklist name round-trips to itself", () => {
-  it("resolves all 37,849 corpus names, and each answer is a fixed point", () => {
+  it("resolves every corpus name, and each answer is a fixed point", () => {
     const raw = JSON.parse(
       readFileSync("data/checklist-parallel-names.json", "utf8"),
-    ) as { products?: Record<string, { parallels?: { name?: string }[] }> };
+    ) as {
+      parallelNameCount?: number;
+      products?: Record<string, { parallels?: { name?: string }[] }>;
+    };
 
     let total = 0;
     const unresolved: string[] = [];
@@ -167,7 +180,10 @@ describe("every checklist name round-trips to itself", () => {
       }
     }
 
-    expect(total).toBe(37849);
+    // The corpus states its own size; the walk must agree with it, and must
+    // have walked a real corpus rather than an empty one.
+    expect(total).toBe(raw.parallelNameCount);
+    expect(total).toBeGreaterThan(37_000);
     expect(unresolved).toEqual([]);
     expect(unstable).toEqual([]);
   });
