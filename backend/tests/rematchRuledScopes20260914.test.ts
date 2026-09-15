@@ -508,3 +508,52 @@ describe("the census reports each scope's size AND what its guard turned away", 
     expect(RUNNER_SRC).toMatch(/checklistBacked\(row\?\.hobbyiqCardId\)/);
   });
 });
+
+// ── the reconcile covers R31/R32/R33 too (follow-up to #2149) ───────────────
+//
+// `K.APPLY_CLASSES` (tested above, "armed only by name") is what lets
+// `applyKindOf` NAME a row's subclass apart from the ordinary IMPROVE it
+// nests inside. `APPLY_KINDS` in rematch-sold-comps.cjs is a DIFFERENT list
+// -- the one the pre-flight ARMED/DISARMED banner, the per-class reconcile
+// and `everyWriteJobReconciles`'s own scope-failure guard (a DISARMED class
+// that is ever written exits 6) all walk. R31/R32/R33 were exported and
+// classified correctly from day one, but never added to THIS list, so a
+// scope=r31 (or r32, r33) apply printed no ARMED/DISARMED line for its own
+// class and -- the real gap -- a write bug in exactly that class could not
+// have tripped the per-class scope-failure guard; it would only ever have
+// shown up in the coarser whole-run reconcile, unattributed. No write
+// behaviour changes: this is visibility and a safety net, not a new path.
+describe("APPLY_KINDS carries R31/R32/R33 too (banner, reconcile, scope guard)", () => {
+  it("the list itself names all three, same line as the 09-13 trio", () => {
+    expect(RUNNER_SRC).toMatch(
+      /K\.FLAGSHIP_SWALLOWED_NAMED_PRODUCT, K\.POKEMON_SET_CODE, K\.FINISH_IS_A_PARALLEL,[\s\S]{0,1200}?K\.TITLE_FILLS_THE_BLANK, K\.SPLIT_MOVES_TO_THE_NAMED_SIDE, K\.TITLE_CARD_NUMBER_WINS,/,
+    );
+  });
+
+  it("every constant APPLY_CLASSES names is also in APPLY_KINDS — the two lists never drift apart", () => {
+    // `K.APPLY_CLASSES` names every subclass `applyKindOf` must tell apart
+    // from the ordinary IMPROVE it nests inside; `APPLY_KINDS` is the
+    // separate list the banner/reconcile/guard walk. They are declared in
+    // two different files for two different readers, so nothing enforces
+    // they stay in sync except a test that reads both. Matched on the bare
+    // `K.<NAME>` identifier text in the APPLY_KINDS source block, not on the
+    // exported string VALUES (APPLY_CLASSES holds those, e.g. "R31-..."),
+    // since APPLY_KINDS is written as identifiers, not strings.
+    const kindsMatch = RUNNER_SRC.match(/const APPLY_KINDS = \[([\s\S]*?)\];/);
+    expect(kindsMatch).not.toBeNull();
+    const kindsBlock = kindsMatch![1];
+    for (const name of Object.keys(K.APPLY_CLASSES)) {
+      expect(kindsBlock, `K.${name} is in APPLY_CLASSES but missing from APPLY_KINDS`).toContain(`K.${name}`);
+    }
+  });
+
+  it("R31/R32/R33 get a real ARMED/DISARMED line under a scoped apply, not silence", () => {
+    // The banner loop (`if (MODE === "apply-improve") { ... for (const kind of
+    // APPLY_KINDS) ... }`) and the PER CLASS reconcile loop both walk
+    // APPLY_KINDS directly -- there is no separate allowlist to also update,
+    // so membership in the list IS the fix. Pinned here as the two loop
+    // sites, so a future refactor that reintroduces a second, narrower list
+    // fails loudly instead of silently dropping the three again.
+    expect(RUNNER_SRC.split("for (const kind of APPLY_KINDS)").length - 1).toBeGreaterThanOrEqual(3);
+  });
+});

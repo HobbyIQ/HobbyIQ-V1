@@ -465,6 +465,17 @@ const APPLY_KINDS = [
   K.IMPROVE, K.BASE_EVICTION,
   K.GRADE_FROM_TITLE, K.YEAR_FROM_TITLE_VINTAGE, K.SPORT_FROM_PRODUCT,
   K.FLAGSHIP_SWALLOWED_NAMED_PRODUCT, K.POKEMON_SET_CODE, K.FINISH_IS_A_PARALLEL,
+  // THE THREE RULED SUBCLASSES OF 2026-09-14 (R31/R32/R33, #2149). Omitted
+  // here originally -- the banner, the per-class reconcile and the
+  // scope-failure guard below all walk THIS list, so their absence meant a
+  // scope=r31/r32/r33 apply printed no ARMED/DISARMED line for its own class
+  // and, more importantly, could never trip `everyWriteJobReconciles`'s
+  // per-class safety check (line ~3450: DISARMED-yet-written is a scope
+  // failure, exit 6) for these three specifically -- a defect in that class
+  // alone would only ever surface in the coarser whole-run reconcile. Same
+  // discipline as R26/R27/R28 directly above: each needs its own entry here
+  // or it is invisible to every reader that walks this list.
+  K.TITLE_FILLS_THE_BLANK, K.SPLIT_MOVES_TO_THE_NAMED_SIDE, K.TITLE_CARD_NUMBER_WINS,
 ];
 
 /** The units this slot owns. */
