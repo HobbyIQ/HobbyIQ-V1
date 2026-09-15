@@ -1629,6 +1629,58 @@ function checklistRungPhrase(parallel, year, setKey) {
   return null;
 }
 
+/**
+ * A rung on THIS product's ladder that the title states and that EXTENDS the
+ * candidate -- i.e. the title names a longer, more specific rung than the one
+ * about to be written. Returns that name, or null.
+ *
+ * CF-THE-LONGEST-RUNG-THE-TITLE-STATES-WINS (slot-3 R31 census, 2026-09-15).
+ *
+ * THE DEFECT. `checklistRungPhrase` answers "is this candidate a rung", and
+ * the answer can be YES for a candidate that is merely the first word of the
+ * rung the title actually names. Measured on donruss-optic 2024, whose ladder
+ * carries BOTH:
+ *
+ *     "Purple"          <- what the derivation offered
+ *     "Purple Scope"    <- what the title says
+ *
+ * so "2024 Panini Donruss Optic ... #242 Purple Scope Prizm" passed every gate
+ * and R31 filled the blank with `purple`. Two rungs, two print runs, two price
+ * curves; writing the shorter one is the pool split
+ * `feedback_one_card_one_row_one_pool` rules on, and it is invisible
+ * afterwards because `purple` IS a real rung of that product.
+ *
+ * This is the same shape `statedFinishFromChecklist`'s truncation guard
+ * already refuses on the READ side ("a name the title extends is a truncation,
+ * not an answer"); R31 writes, so it needs the same refusal on the WRITE side.
+ *
+ * WORD-BOUNDARY ANCHORED, and ordered longest-first so the most specific rung
+ * is the one reported.
+ */
+function longerRungStatedInTitle(parallel, title, year, setKey) {
+  const norm = (x) => lower(x).replace(/&/g, " and ").replace(/[^a-z0-9]+/g, " ").trim();
+  const cand = norm(parallel);
+  if (!cand) return null;
+  const t = norm(title);
+  if (!t) return null;
+  const names = checklistParallelNamesFor(year, setKey);
+  if (!names) return null;
+  const fold = (x) => norm(x).split(" ").filter(Boolean)
+    .map((w) => (w.endsWith("s") && w.length > 3 ? w.slice(0, -1) : w)).join(" ");
+  const candF = fold(cand);
+  let best = null;
+  for (const n of names) {
+    const nf = fold(n);
+    if (nf === candF) continue;                       // the candidate itself
+    if (!nf.startsWith(candF + " ")) continue;        // not an extension
+    // The TITLE must actually state the longer rung, as a contiguous phrase.
+    const nfWords = fold(n);
+    if (!(" " + fold(t) + " ").includes(" " + nfWords + " ")) continue;
+    if (!best || n.length > best.length) best = n;
+  }
+  return best;
+}
+
 /** Is this exact phrase a rung on this product's own ladder? */
 function checklistListsRungPhrase(parallel, year, setKey) {
   return checklistRungPhrase(parallel, year, setKey) !== null;
@@ -1685,7 +1737,7 @@ module.exports = {
   FINISH_FAMILY_TOKENS, FAMILY_ALIASES, SERIAL_TAIL,
   titleFinishFamilyTokens, parallelFinishFamilyTokens,
   familyTokensDroppedByDerivation, checklistParallelNamesFor,
-  checklistRungPhrase, checklistListsRungPhrase,
+  checklistRungPhrase, checklistListsRungPhrase, longerRungStatedInTitle,
   checklistParallelForFamily,
   // leaks 2 + 6: a lot or a range never mints a cardNumber
   isLotOrRangeListing, cardNumberRangeFromTitle,
