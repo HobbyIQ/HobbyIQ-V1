@@ -403,7 +403,50 @@ function filterByGrade(
   });
 }
 
+/**
+ * CF-A-SUMMARY-ONLY-ON-FAILURE-IS-NOT-A-SUMMARY (Fable, 2026-09-15).
+ *
+ * `reportWalkSummary` was wired into `ladderTimeoutResult()` only, so the ONE
+ * walk that never produced a summary was the ordinary one. Every healthy
+ * valuation — which is nearly all of them — emitted per-rung events and no
+ * walk-level row, and the ladder has five separate `return ladderTimeoutResult()`
+ * sites plus many ordinary returns, so there was no single place inside it that
+ * always ran.
+ *
+ * That made the summary useless for the question it exists to answer. "Is this
+ * walk slower than usual?" needs the normal distribution to compare against;
+ * a table containing only timeouts cannot supply one, and a p50 over failures
+ * is not a p50.
+ *
+ * So the public entry point is now a thin wrapper that emits exactly one
+ * summary however the walk ends — success, refusal or timeout — and the real
+ * implementation moved to `computeHobbyIqFmvInner`. The timeout path keeps its
+ * own call, and that is deliberate rather than duplicated: it fires at the
+ * moment the ladder gives up and carries `outcome: "ladder-timeout"`, while
+ * this one records what the walk actually cost. `reportWalkSummary` is
+ * documented as safe to call more than once for this reason.
+ *
+ * The wrapper cannot change a result: it awaits, emits, and returns the same
+ * value, and its emit is wrapped so telemetry can never fail a valuation.
+ */
 export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIqFmvResult> {
+  const budgetRef: { current: LadderBudget | null } = { current: null };
+  try {
+    return await computeHobbyIqFmvInner(input, budgetRef);
+  } finally {
+    try {
+      budgetRef.current?.reportWalkSummary({
+        slug: String(input.hobbyiqCardId ?? ""),
+        outcome: "complete",
+      });
+    } catch { /* telemetry is never load-bearing */ }
+  }
+}
+
+async function computeHobbyIqFmvInner(
+  input: HobbyIqFmvInput,
+  budgetRef: { current: LadderBudget | null },
+): Promise<HobbyIqFmvResult> {
   const slug = String(input.hobbyiqCardId ?? "").trim();
   // CF-AS-OF-IS-AN-UPPER-BOUND (#1651). In a backtest `now` is the evaluation
   // instant, and `asOfIso` is the ceiling every rung's pool read carries.
@@ -443,6 +486,8 @@ export async function computeHobbyIqFmv(input: HobbyIqFmvInput): Promise<HobbyIq
   // only for tests that need a tight ceiling to exercise the timeout path
   // without a real multi-second wait; production never sets it.
   const ladderBudget = new LadderBudget(input.ladderBudgetOverride ?? DEFAULT_LADDER_BUDGET);
+  // Hand the budget to the wrapper so it can summarise however this walk ends.
+  budgetRef.current = ladderBudget;
   const ladderTimeoutResult = (): HobbyIqFmvResult => {
     console.warn(JSON.stringify({
       event: "ladder_walk_summary",

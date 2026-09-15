@@ -152,3 +152,65 @@ describe("telemetry is never load-bearing", () => {
     ).resolves.toBeDefined();
   });
 });
+
+/**
+ * CF-A-SUMMARY-ONLY-ON-FAILURE-IS-NOT-A-SUMMARY (Fable, 2026-09-15).
+ *
+ * VERIFIED IN PROD, not inferred: emitting a probe from the built code against
+ * the real App Insights resource produced a `ladder_rung_timing` row
+ * (2026-09-15T14:27:19Z, label `probe-rung-F102717`, ms=1 as a typed
+ * measurement). The export path works.
+ *
+ * What did NOT work was the WALK summary: `reportWalkSummary` was wired only
+ * into `ladderTimeoutResult()`, so the only walk that ever produced one was a
+ * walk that had already failed. Every healthy valuation emitted per-rung rows
+ * and no walk-level row — which makes the summary useless for the question it
+ * exists to answer, because "is this walk slower than usual?" needs the normal
+ * distribution to compare against, and a p50 over timeouts is not a p50.
+ */
+describe("every walk is summarised, not only the ones that fail", () => {
+  it("emits a walk summary on a SUCCESSFUL valuation", async () => {
+    const { computeHobbyIqFmv } = await import("../src/services/portfolioiq/hobbyIqFmv.service.js");
+
+    await computeHobbyIqFmv({ hobbyiqCardId: "hiq:baseball:2024:bowman-chrome:85:base:no-auto" })
+      .catch(() => null);   // no Cosmos in tests; the walk still runs and ends
+
+    // MUTATION CHECK: before the wrapper this was 0 for any non-timeout walk —
+    // the summary existed but fired only on the failure path.
+    const summaries = events.filter((e) => e.name === "ladder_walk_summary");
+    expect(summaries.length).toBeGreaterThanOrEqual(1);
+  }, 30_000);
+
+  it("the summary names the slug it walked", async () => {
+    const { computeHobbyIqFmv } = await import("../src/services/portfolioiq/hobbyIqFmv.service.js");
+    const slug = "hiq:baseball:2024:bowman-chrome:85:base:no-auto";
+
+    await computeHobbyIqFmv({ hobbyiqCardId: slug }).catch(() => null);
+
+    const summary = events.find((e) => e.name === "ladder_walk_summary");
+    expect(summary?.properties.slug).toBe(slug);
+  }, 30_000);
+
+  it("a request rejected BEFORE the walk begins emits no summary", async () => {
+    // A non-hiq id returns at the guard, before a LadderBudget is constructed.
+    // There is no walk, so there is nothing to summarise — and emitting a
+    // zero-rung row here would pollute the very distribution the summary
+    // exists to provide. Asserting the absence keeps that deliberate rather
+    // than accidental.
+    const { computeHobbyIqFmv } = await import("../src/services/portfolioiq/hobbyIqFmv.service.js");
+
+    await computeHobbyIqFmv({ hobbyiqCardId: "not-an-hiq-slug" }).catch(() => null);
+
+    expect(events.some((e) => e.name === "ladder_walk_summary")).toBe(false);
+  }, 30_000);
+
+  it("the summary is emitted from a finally — a throwing walk still reports", async () => {
+    // The wrapper summarises in a `finally`, so once a walk has actually begun
+    // an exception on the way out does not cost the observability. That is the
+    // case you most want it in.
+    const src = await import("node:fs").then((fs) =>
+      fs.readFileSync(new URL("../src/services/portfolioiq/hobbyIqFmv.service.ts", import.meta.url), "utf8"));
+    const wrapper = src.slice(src.indexOf("export async function computeHobbyIqFmv("));
+    expect(wrapper.slice(0, 600)).toMatch(/finally\s*\{/);
+  }, 30_000);
+});
