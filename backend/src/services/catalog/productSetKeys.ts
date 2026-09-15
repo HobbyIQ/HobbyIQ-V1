@@ -830,6 +830,95 @@ export const PRODUCT_SET_KEYS: ReadonlyArray<ProductSetKey> = [
     "white-hot-rookies-autographs",
   ].map((sub) => S(`panini-donruss-${sub}`, { family: "panini-donruss", parent: "panini-donruss" })),
 
+  /**
+   * CF-A-NAMED-INSERT-SET-IS-ITS-OWN-CARD-SET, R38 (Drew, 2026-09-15).
+   *
+   * 120 insert-set keys for the 2019-2021 Donruss and Mosaic packages staged in
+   * `acq-2026-09-14-cardboardconnection-2` (PR #2157). Those 8 files carry
+   * 77,333 cards and were REFUSED by lib/insert-set-key.cjs because 4,193
+   * addresses on the bare product key were claimed by two or more different
+   * cards: every one of these products numbers its named insert sets from 1
+   * with its OWN players. 2019 Donruss Football #1 is Patrick Mahomes II in
+   * `base`, Todd Gurley II in `action-all-pros` and Peyton Manning in
+   * `all-time-gridiron-kings`.
+   *
+   * THE KEY IS QUALIFIED, `<parent>-<subset>`, because a bare subset name
+   * COLLIDES ACROSS SPORTS: `jersey-kings` and `the-rookies` each appear in
+   * both a basketball and a football product, and `retro-series` in five cells
+   * across both. 64 of the 122 keys span more than one (sport, year) cell.
+   * Measured on main before this change: 0 of the 122 bare names was a
+   * registered key, while 2 of the qualified forms already were
+   * (`panini-donruss-rookie-phenom-jersey-autographs`,
+   * `panini-donruss-signature-marks`) -- so this block registers 120, not 122.
+   *
+   * REGISTERING WITH `S` IS BOTH HALVES. lib/insert-set-key.cjs requires a key
+   * to be a `normalizeSetKey` FIXED POINT, or the rows land where nothing can
+   * reach them. `normalizeSetKey` consults `productSetKeyForName`, which reads
+   * this table, and only `spelled` products answer -- so `S` (not `P`) is what
+   * makes the key answer as itself. Verified by running the function on main
+   * before the change: `normalizeSetKey("panini-donruss-rated-rookies")`
+   * returned `panini-donruss` -- a fold PAST the subset onto the bare parent,
+   * exactly the defect this prevents.
+   *
+   * BRAND-REPEAT NAMES ARE KEPT AS PRINTED (Drew, R38). The insert printed
+   * inside Donruss really is called "Donruss Threads", so the key is
+   * `panini-donruss-donruss-threads`. Trimming it to `panini-donruss-threads`
+   * would invent a name the source does not use.
+   *
+   * Every subset below is a section title printed on the cardboardconnection
+   * checklist for its product; the per-key row counts and the cells each spans
+   * are in `data/checklist-rulings/2026-09-15-r38-insert-set-keys-for-ruling.json`.
+   */
+  ...["2019-super-bowl-signatures-prizm",
+    "2020-super-bowl-mvp-signatures", "action-all-pros",
+    "all-pro-kings", "all-time-gridiron-kings",
+    "all-time-league-leaders", "canton-kings", "celebration-ink",
+    "champ-is-here", "champions", "changing-stripes",
+    "choice-signatures", "complete-players", "craftsmen",
+    "crunch-time", "defying-gravity", "dominator-signatures",
+    "dominators", "donruss-threads", "downtown", "duos",
+    "fans-of-the-game", "fantasy-stars", "franchise-features",
+    "great-x-pectations", "gridiron-greats", "gridiron-kings",
+    "gridiron-marvels", "hall-dominator-signatures", "highlights",
+    "inducted", "jersey-kings", "jersey-series", "league-leaders",
+    "leather-kings", "legends-of-the-fall", "liftoff", "magicians",
+    "marvels", "net-marvels", "next-day-autographs", "nicknames",
+    "night-moves", "optic-rated-rookie-preview",
+    "optic-rated-rookie-preview-blue",
+    "optic-rated-rookie-preview-green",
+    "optic-rated-rookie-preview-holo",
+    "optic-rated-rookie-preview-pink",
+    "optic-rated-rookie-preview-purple",
+    "optic-rated-rookie-preview-red", "optic-rookie-preview",
+    "out-of-this-world", "passing-the-torch-jerseys", "power-formulas",
+    "power-in-the-paint", "production-line", "rated-rookies",
+    "red-hot-rookies", "retro-1989", "retro-1990", "retro-1991",
+    "retro-1999", "retro-2000", "retro-2001", "retro-series",
+    "rise-n-shine-magnet", "road-to-the-super-bowl-championship",
+    "road-to-the-super-bowl-conference-championship",
+    "road-to-the-super-bowl-divisional-round",
+    "road-to-the-super-bowl-wild-card", "rookie-dominator-signatures",
+    "rookie-gridiron-kings", "rookie-holiday-sweater",
+    "rookie-jersey-kings", "rookie-phenom-jerseys",
+    "rookie-revolution", "rookies", "signature-highlights",
+    "signature-series", "super-bowl-mvp", "team-pride-holo-horizontal",
+    "team-pride-holo-vertical", "team-pride-horizontal",
+    "team-pride-vertical", "team-supreme-horizontal",
+    "team-supreme-vertical", "the-elite-series", "the-legends-series",
+    "the-rookies", "vortex", "white-hot-rookies", "zero-gravity"
+  ].map((sub) => S(`panini-donruss-${sub}`, { family: "panini-donruss", parent: "panini-donruss" })),
+
+  ...["autographs-fast-break", "autographs-mosaic",
+    "award-winning-autographs", "bang", "blue-chips", "center-stage",
+    "elevate", "give-and-go", "got-game", "holofame",
+    "in-it-to-win-it", "international-men-of-mastery", "introductions",
+    "introductions-mosaic-red", "jam-masters", "men-of-mastery",
+    "montage", "old-school", "overdrive", "rookie-autographs-mosaic",
+    "rookie-private-signings-association-version", "rookie-scripts",
+    "scripts", "stained-glass", "stare-masters", "straight-fire",
+    "swagger", "will-to-win"
+  ].map((sub) => S(`panini-mosaic-${sub}`, { family: "panini-mosaic", parent: "panini-mosaic" })),
+
   ...["college-penmanship", "draft-picks-autographs", "freshman-signatures",
     "sensational-signatures",
   ].map((sub) => S(`panini-prizm-draft-picks-${sub}`, {
