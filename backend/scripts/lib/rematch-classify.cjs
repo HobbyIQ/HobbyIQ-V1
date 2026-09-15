@@ -5352,6 +5352,7 @@ function titleFillsTheBlankEvidence({
   titleParallel = null,
   checklistListsTitleParallel = false,
   titleParallelIsARungPhrase = null,
+  titleNamesLongerRung = null,
   titleNamesSiblingProduct = null,
   titleSerial = null,
   derivedBacked = false,
@@ -5387,6 +5388,22 @@ function titleFillsTheBlankEvidence({
       failed.push("destination-parallel-is-blank-or-base");
     } else if (!checklistListsTitleParallel) {
       failed.push(`rung-not-in-product-checklist-vocabulary:${lower(destParallel)}`);
+    } else if (titleNamesLongerRung) {
+      // T3c -- THE LONGEST RUNG THE TITLE STATES WINS (slot-3 census,
+      // 2026-09-15).
+      //
+      // The candidate passed T3b because it IS a rung of this product -- and
+      // that is exactly what makes this defect invisible. donruss-optic 2024
+      // lists BOTH `Purple` and `Purple Scope`, so a title reading "Purple
+      // Scope Prizm" filled the blank with `purple`: a real rung, the wrong
+      // card, two price curves fused.
+      //
+      // The same refusal `statedFinishFromChecklist` already makes on the READ
+      // side ("a name the title extends is a truncation, not an answer").
+      // R31 WRITES, so it needs it here too -- and it is a refusal rather than
+      // a correction because choosing between two real rungs of one product is
+      // not this guard's call: absent beats wrong.
+      failed.push(`title-names-longer-rung:${lower(titleNamesLongerRung)}`);
     } else if (titleParallelIsARungPhrase === false) {
       // T3b -- A RUNG IS A NAME, NOT A BAG OF TOKENS (slot-3 census,
       // 2026-09-15).
@@ -5469,7 +5486,7 @@ function titleFillsTheBlankEvidence({
       storedParallel: lower(stored?.parallel), destParallel: lower(destParallel),
       storedPrintRun: stored?.printRun ?? null, destPrintRun: destRun,
       titleSerial: titleSerial ?? null,
-      checklistListsTitleParallel, titleParallelIsARungPhrase, titleNamesSiblingProduct, derivedBacked,
+      checklistListsTitleParallel, titleParallelIsARungPhrase, titleNamesLongerRung, titleNamesSiblingProduct, derivedBacked,
       pair: `${fillsParallel ? `parallel:(blank)->${lower(destParallel) || "?"}` : ""}`
         + `${fillsParallel && fillsPrintRun ? " " : ""}`
         + `${fillsPrintRun ? `printRun:(blank)->/${str(destRun) || "?"}` : ""}`,

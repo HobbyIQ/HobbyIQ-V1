@@ -86,7 +86,7 @@ const TABLE = require_(path.join(backend, "data", "rematch-census-shares.json"))
  *  (`measuredUnder.commit` names something else: the MAIN tree the verification
  *  census artifacts were measured under, b5ab5f74 -- unchanged, because the
  *  same 32 certified artifacts were re-read and the class shares did not move.) */
-const REFERENCE_COMMIT = "f251c1c6c9e193b3c0d9b08ee0c60bd3b6e42083";
+const REFERENCE_COMMIT = "b834772d5f8e668e21860b772f3427a05522035a";
 
 /** Read one file's content AT a commit via `git show <sha>:<path>` -- READ
  *  ONLY, no worktree, no checkout, nothing mutated. `relFromRepoRoot` is the
