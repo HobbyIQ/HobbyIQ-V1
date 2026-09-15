@@ -1,0 +1,89 @@
+{
+  "generatedAt": "2026-09-15",
+  "status": "QUEUE ENTRY — a proposal and a census. Registers nothing, routes nothing, no lane reads it.",
+  "product": "Greats of the Game (baseball)",
+  "whyQueued": "#2174 pins these rows on the bare `fleer` key until a checklist exists. The post-wave audit found the same shape by hand: '2002 Fleer Greats of the Game Kirby Puckett / Don Mattingly Dueling Duos #6 DD' stored AND derived as baseball:2002:fleer:6:Base:no-auto, with the named product and the named insert both lost. A checklist is what unpins them.",
+
+  "poolCensus": {
+    "method": "sold_comps rows whose TITLE contains 'greats of the game', read-only 2026-09-15, paged; no cross-partition COUNT.",
+    "rowsMatchingTitle": 4477,
+    "ofWhichTitleSaysAutoOrSignature": 1437,
+    "topCells": [
+      { "cell": "baseball|2001|fleer", "rows": 1482 },
+      { "cell": "baseball|2002|fleer", "rows": 1434 },
+      { "cell": "baseball|1999|sports-illustrated-greats-of-the-game", "rows": 378 },
+      { "cell": "baseball|2000|fleer", "rows": 202 },
+      { "cell": "baseball|1999|fleer", "rows": 86 },
+      { "cell": "baseball|1999|1999-sports-illustrated-greats-of-the-game-baseball", "rows": 68 },
+      { "cell": "baseball|2004|fleer", "rows": 60 },
+      { "cell": "baseball|2006|fleer", "rows": 52 },
+      { "cell": "baseball|1999|unknown", "rows": 51 },
+      { "cell": "basketball|2005|fleer", "rows": 36 }
+    ],
+    "note": "The football|2026|topps-flagship (260) and basketball|2009|upper-deck (69) cells are DIFFERENT products whose titles happen to contain the phrase. They are not this acquisition and must not be swept in."
+  },
+
+  "yearsAndSources": [
+    {
+      "year": 1999, "exists": true, "brand": "Sports Illustrated Greats of the Game",
+      "manufacturerNote": "Fleer made it under a Sports Illustrated licence. The SI partnership ended after this year.",
+      "standaloneOrInsert": "standalone product",
+      "baseCards": 90,
+      "sourceUrl": "https://baseballcardpedia.com/index.php/1999_Sports_Illustrated_Greats_of_the_Game",
+      "sourceHasCardByCardList": true,
+      "proposedSetKey": "sports-illustrated-greats-of-the-game",
+      "keyNote": "DO NOT key 1999 as Fleer. The pool already agrees: 378 rows sit on `sports-illustrated-greats-of-the-game` and 68 on a long-form variant, against only 86 on bare `fleer`.",
+      "autographs": "Autographs, 80 on-card, 1:7 packs (three Reggie Jackson variations) — its own key."
+    },
+    { "year": 2000, "exists": true, "brand": "Fleer Greats of the Game", "standaloneOrInsert": "standalone product", "baseCards": 107,
+      "sourceUrl": "https://baseballcardpedia.com/index.php/2000_Greats_of_the_Game",
+      "secondarySourceUrl": "https://www.cardboardconnection.com/2000-fleer-greats-of-the-game-baseball-cards",
+      "sourceHasCardByCardList": true, "proposedSetKey": "fleer-greats-of-the-game",
+      "autographs": "Autographs, 93 cards, 1:6 packs, some short-printed; plus Memorable Moments autographed parallels." },
+    { "year": 2001, "exists": true, "brand": "Fleer Greats of the Game", "standaloneOrInsert": "standalone product", "baseCards": 137,
+      "sourceUrl": "https://baseballcardpedia.com/index.php/2001_Greats_of_the_Game",
+      "sourceHasCardByCardList": true, "proposedSetKey": "fleer-greats-of-the-game",
+      "autographs": "Autographs, 94 cards — an explicit PARTIAL PARALLEL OF THE BASE SET, so it shares card numbers with base and WILL merge into the base pool on a number-only match. Highest-risk year.",
+      "poolRows": 1482 },
+    { "year": 2002, "exists": true, "brand": "Fleer Greats of the Game", "standaloneOrInsert": "standalone product", "baseCards": 100,
+      "sourceUrl": "https://baseballcardpedia.com/index.php/2002_Greats_of_the_Game",
+      "sourceHasCardByCardList": true, "proposedSetKey": "fleer-greats-of-the-game",
+      "autographs": "Autographs, 69 cards; plus Dueling Duos Autographs — the insert the audit's Puckett/Mattingly row names.",
+      "poolRows": 1434 },
+    { "year": 2003, "exists": false, "evidence": "https://baseballcardpedia.com/index.php/2003_Greats_of_the_Game returns HTTP 404 — a measured absence, not an absent search hit.",
+      "decoys": [
+        "https://www.baseballcardpedia.com/index.php/2003_Fleer_Rookies_&_Greats — 75 cards, only the LAST 15 are 'Greats'",
+        "https://baseballcardpedia.com/index.php/2003_Flair_Greats — Flair brand, a different product"
+      ] },
+    { "year": 2004, "exists": true, "brand": "Fleer Greats of the Game", "standaloneOrInsert": "standalone product, TWO SERIES", "baseCards": 145,
+      "sourceUrl": "https://baseballcardpedia.com/index.php/2004_Greats_of_the_Game",
+      "sourceHasCardByCardList": true, "proposedSetKey": "fleer-greats-of-the-game",
+      "structureNote": "Cards 1-80 shipped in June as the regular product; 81-145 shipped in December as the Greats of the Game CUT SIGNATURE EDITION — a differently-boxed product under a different name, despite continuous numbering. Whether that is one setKey or two is a ruling; the checklist parses as one 145-row list either way.",
+      "autographs": "Autographs in both series, plus Battery Mates, Yankees Clippings, Announcing Greats Dual, and three cut-signature sets." },
+    { "year": 2005, "exists": false, "evidence": "https://baseballcardpedia.com/index.php/2005_Greats_of_the_Game returns HTTP 404. Fleer went bankrupt in 2005, which is the likely reason there is no release." },
+    { "year": 2006, "exists": true, "brand": "Greats of the Game", "manufacturerNote": "UPPER DECK, not Fleer — the first edition of the brand after Fleer's bankruptcy; Upper Deck bought Fleer out of bankruptcy in 2005.",
+      "standaloneOrInsert": "standalone product", "baseCards": 100,
+      "sourceUrl": "https://baseballcardpedia.com/index.php/2006_Greats_of_the_Game",
+      "sourceHasCardByCardList": true,
+      "proposedSetKey": "UNRESOLVED — see openConflict",
+      "autographs": "Base Autographs, 100 cards — a full 1:1 parallel of the 100-card base, so it shares every card number with base. Second-highest-risk year after 2001.",
+      "poolRows": 52 }
+  ],
+
+  "openConflict": {
+    "what": "Who made 2006 Greats of the Game.",
+    "baseballcardpediaSays": "Upper Deck, and gives a sourced reason (released 2006-04-10, the first Greats edition after Fleer's bankruptcy).",
+    "sportscardchecklistSays": "https://www.sportscardchecklist.com/set-91159/2006-fleer-greats-of-the-game-baseball-trading-card-checklist labels it 'Fleer'. That page was NOT fetched, so this is a title-level conflict, not a verified one.",
+    "ourPoolSays": "52 rows sit on baseball|2006|fleer — which is evidence of how sellers spell it, not of who made it.",
+    "question": "If the setKey namespace carries a manufacturer token, 2006 must not inherit `fleer` on baseballcardpedia's account. RESOLVE BEFORE COMMITTING A KEY."
+  },
+
+  "rulingsNeeded": [
+    "1999 keys as `sports-illustrated-greats-of-the-game`, not Fleer — yes/no? (The pool already spells it that way on 446 of its 532 rows.)",
+    "2006 keys as Upper Deck, not Fleer — yes/no? (See openConflict.)",
+    "2004's cards 81-145 (Cut Signature Edition) — one setKey with the base, or its own?",
+    "The autograph sets get their own keys in every year — yes/no? 1,437 of the 4,477 pool rows name an auto or signature, and in 2001 and 2006 the autograph set shares card numbers with base, so a number-only match silently merges them."
+  ],
+
+  "estimatedRows": { "base": 679, "note": "90 + 107 + 137 + 100 + 145 + 100 across the six years that exist. Autograph and insert sets are extra and are not counted here because their keys are unruled." }
+}

@@ -1,0 +1,47 @@
+{
+  "source": "sportscardchecklist-2026-09-15",
+  "sourceUrl": "https://www.sportscardchecklist.com/set-12438/1992-93-topps-archives-basketball-trading-card-checklist",
+  "fetchedAt": "2026-09-15",
+  "sport": "basketball",
+  "year": 1992,
+  "setName": "1992-93 Topps Archives Basketball",
+  "productKey": "1992-93-topps-archives-basketball",
+  "setKey": "topps-archives",
+  "rowCount": 150,
+  "autoCount": 0,
+  "printRunCount": 0,
+  "parallelColumnAuthoritative": true,
+  "ruling": "R45 (Drew, 2026-09-15): 1992-93 Topps Archives basketball is ACQUIRED as its own product (not folded into topps-stadium-club, where its 57 pool rows were reading as a gap).",
+  "whatThisProductIs": "Topps made no NBA cards from 1982-83 through 1991-92. This 150-card 1992-93 release retroactively issues 'rookie cards' for players who never got a Topps rookie, each front patterned after the Topps BASEBALL design of the corresponding year.",
+  "structure": {
+    "firstDraftPickSubset": "cards 1-11",
+    "players": "cards 12-148, chronological by season then alphabetical",
+    "checklists": "cards 149-150"
+  },
+  "sectionsReport": [
+    {
+      "category": "first-draft-pick",
+      "cards": 11
+    },
+    {
+      "category": "base",
+      "cards": 139
+    }
+  ],
+  "parseNotes": [
+    "FDP IS A SUBSET TAG, NOT PART OF THE NAME. Cards 1-11 are the First Draft Pick subset; the tag is stripped from `player` and carried in `category`, so #1 'Mark Aguirre FDP' and #12 'Mark Aguirre' stay two different cards rather than reading as a duplicate.",
+    "Card 9 is printed 'Pervis Ellison UER FDP' — UER is an uncorrected-error marker the source prints inline. It is left in the player field because removing it would silently differ from the source; Ellison also appears at #122.",
+    "Cards 149 and 150 are the set's own checklist cards and are real cards in this product, kept as rows."
+  ],
+  "notInThisPackage": [
+    "Gold (a full 1:1 150-card parallel, 10,000 factory sets) — sportscardchecklist set-98710",
+    "Master Photos (12 oversized cards) — set-98711; NOT a parallel, its own card set",
+    "Master Photos 5x7 (12) — set-98712"
+  ],
+  "notInThisPackageWhy": "Each is a separate acquisition with its own key question (Gold is a parallel rung of this base; the two Master Photos sets are their own card sets). Minting them from this page would guess at keys no ruling has settled.",
+  "provenance": {
+    "rowsParsedFromPage": 150,
+    "distinctCardNumbers": 150,
+    "verifiedAgainst": "first 10 and last 5 rows match the source verbatim"
+  }
+}

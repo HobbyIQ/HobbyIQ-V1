@@ -1,0 +1,1113 @@
+{
+ "generatedAt": "2026-09-15",
+ "forLane": "relocate-pool-rows-by-list.cjs",
+ "ruling": "R44 (Drew, 2026-09-15): `bowman-paper` FOLDS into `bowman`.",
+ "reportOnlyUntil": "REPORT ONLY until a steward dispatches it. This file routes nothing by existing; the lane writes only under BACKFILL_APPLY=true. Dispatch SCOPE=data/pool-relocations/<this file>, one part at a time.",
+ "continuedFrom": "2026-09-15-r44-bowman-paper-to-bowman-001.json",
+ "part": "009 of 009",
+ "entries": [
+  {
+   "id": "cardhedge::ch-daily::1778468406026x784586965576246800::2026-05-28T01:05:00+00:00::150",
+   "fromCardId": "1778468406026x784586965576246800",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-97:pink-border:no-auto",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1778469850544x732531259066693500::2026-06-03T00:47:00+00:00::200",
+   "fromCardId": "1778469850544x732531259066693500",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-38:fuchsia-border:no-auto",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1778469850544x732531259066693500::2026-06-05T14:15:00+00:00::125",
+   "fromCardId": "1778469850544x732531259066693500",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-38:fuchsia-border:no-auto",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1778468072064x949144790540987800::2026-06-07T05:02:00+00:00::1600",
+   "fromCardId": "1778468072064x949144790540987800",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-137:gold-border-pattern:no-auto",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1778468805303x353810081311562100::2026-07-02T04:26:00+00:00::250",
+   "fromCardId": "1778468805303x353810081311562100",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-47:purple-pattern:no-auto",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1778468072064x949144790540987800::2026-07-06T08:47:00+00:00::688",
+   "fromCardId": "1778468072064x949144790540987800",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-137:gold-border-pattern:no-auto",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1778468166511x556890562720775200::2026-07-10T14:04:00+00:00::149",
+   "fromCardId": "1778468166511x556890562720775200",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-144:purple-pattern:no-auto",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1778468166511x556890562720775200::2026-07-10T17:12:00+00:00::125",
+   "fromCardId": "1778468166511x556890562720775200",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-144:purple-pattern:no-auto",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1778468805303x353810081311562100::2026-07-14T03:46:00+00:00::425",
+   "fromCardId": "1778468805303x353810081311562100",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-47:purple-pattern:no-auto",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardsight::e7f80aa86993f8b762b24215",
+   "fromCardId": "hiq:baseball:2026:bowman:bp-24:neon-green-border:no-auto:num-399",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-24:base:no-auto:num-399",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardsight"
+  },
+  {
+   "id": "cardsight::d6f327014165ac7fae132dcb",
+   "fromCardId": "hiq:baseball:2026:bowman:bp-38:yellow-border:no-auto:num-75",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-38:yellow-border:no-auto:num-75",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardsight"
+  },
+  {
+   "id": "cardsight::7bf5c64f6acdbe54737c953b",
+   "fromCardId": "hiq:baseball:2026:bowman:bp-59:sky-blue-border:no-auto:num-499",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-59:sky-blue-refractor:no-auto:num-499",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardsight"
+  },
+  {
+   "id": "cardsight::f8a4123767c14e1821af85da",
+   "fromCardId": "hiq:baseball:2026:bowman:bp-61:purple-border:no-auto:num-250",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-61:base:no-auto:num-250",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardsight"
+  },
+  {
+   "id": "cardsight::11eb79c276e62c148903a246",
+   "fromCardId": "hiq:baseball:2026:bowman:bp-59:green-border:no-auto:num-99",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-59:green-foil:no-auto:num-99",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardsight"
+  },
+  {
+   "id": "cardsight::ac46b8eccac40ab2430eef91",
+   "fromCardId": "hiq:baseball:2026:bowman:bp-61:purple-border:no-auto:num-250",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-61:purple-border:no-auto:num-250",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardsight"
+  },
+  {
+   "id": "cardsight::a3c379db2c598583d305d4ae",
+   "fromCardId": "hiq:baseball:2026:bowman:bp-97:sky-blue-border:no-auto:num-499",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-97:base:no-auto:num-499",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardsight"
+  },
+  {
+   "id": "cardsight::6b9baf19370a0f71df991a0e",
+   "fromCardId": "hiq:baseball:2026:bowman:bp-114:fuchsia-border:no-auto:num-299",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-114:base:no-auto:num-299",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardsight"
+  },
+  {
+   "id": "cardsight::ae3fab169c08e876690ad41c",
+   "fromCardId": "hiq:baseball:2026:bowman:bp-114:purple-border:no-auto:num-250",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-114:purple-border:no-auto:num-250",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardsight"
+  },
+  {
+   "id": "cardsight::ae02b937cfb5453ddbbeac97",
+   "fromCardId": "hiq:baseball:2026:bowman:bp-114:fuchsia-border:no-auto:num-299",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-114:base:no-auto:num-299",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardsight"
+  },
+  {
+   "id": "cardsight::d8427ff39e92d5ede78d29d5",
+   "fromCardId": "hiq:baseball:2026:bowman:bp-89:green-border:no-auto:num-99",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-89:green-refractor:no-auto:num-99",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardsight"
+  },
+  {
+   "id": "cardsight::d1ebc59af6d8198355ce3491",
+   "fromCardId": "hiq:baseball:2026:bowman:bp-38:yellow-border:no-auto:num-75",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-38:base:no-auto:num-75",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardsight"
+  },
+  {
+   "id": "cardhedge::ch-daily::1778469308067x494945530699647740::2026-07-25T20:22:00+00:00::499",
+   "fromCardId": "1778469308067x494945530699647740",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-84:yellow-border:no-auto",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardsight::37406e0210eb735726a6d689",
+   "fromCardId": "hiq:baseball:2026:bowman:bp-47:blue-border:no-auto:num-150",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-47:blue-border:no-auto:num-150",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardsight"
+  },
+  {
+   "id": "cardhedge::ch-daily::1778469791963x612936298132338600::2026-07-31T00:05:00+00:00::200",
+   "fromCardId": "1778469791963x612936298132338600",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-34:gold-border-pattern:no-auto",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardsight::backstop:eric hartman|2026||blue refractor::2026-08-01T13:37:00+00:00::179",
+   "fromCardId": "backstop:eric hartman|2026||blue refractor",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-102:base:no-auto",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardsight"
+  },
+  {
+   "id": "tca-ebay::398008507098",
+   "fromCardId": "hiq:baseball:2026:bowman-paper:4999:green-refractor:auto:num-99",
+   "toCardId": "hiq:baseball:2026:bowman:4999:green-refractor:auto:num-99",
+   "shape": "relocate",
+   "year": 2026,
+   "source": "tca-ebay"
+  },
+  {
+   "id": "tca-ebay::306961725900",
+   "fromCardId": "hiq:baseball:2026:bowman:bp-97:sky-blue-refractor:no-auto:num-499",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-97:sky-blue-refractor:no-auto",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "tca-ebay"
+  },
+  {
+   "id": "tca-ebay::377216105732",
+   "fromCardId": "hiq:baseball:2026:bowman-paper:25:red-border:no-auto:num-5",
+   "toCardId": "hiq:baseball:2026:bowman:25:red-border:no-auto:num-5",
+   "shape": "relocate",
+   "year": 2026,
+   "source": "tca-ebay"
+  },
+  {
+   "id": "tca-ebay::287353625696",
+   "fromCardId": "hiq:baseball:2026:bowman-paper:244250:base:auto:num-250",
+   "toCardId": "hiq:baseball:2026:bowman:244250:base:auto:num-250",
+   "shape": "relocate",
+   "year": 2026,
+   "source": "tca-ebay"
+  },
+  {
+   "id": "tca-ebay::147330867063",
+   "fromCardId": "hiq:baseball:2026:bowman-paper:prv-ce:base:auto",
+   "toCardId": "hiq:baseball:2026:bowman:prv-ce:base:auto",
+   "shape": "relocate",
+   "year": 2026,
+   "source": "tca-ebay"
+  },
+  {
+   "id": "cardhedge::ch-daily::1785459120051x232105308771569440",
+   "fromCardId": "1778469791963x612936298132338600",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-34:gold-border-pattern:no-auto",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1785013691147x595255175710551800",
+   "fromCardId": "1778469308067x494945530699647740",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-84:yellow-border:no-auto",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1778467755426x345269561493964740::2026-08-11T16:18:00+00:00::299",
+   "fromCardId": "1778467755426x345269561493964740",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-114:pink-border:no-auto",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1786086335730x761852273032061200",
+   "fromCardId": "1778468406026x784586965576246800",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-97:pink-border:no-auto",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1786468058744x965893708722822600",
+   "fromCardId": "1778467755426x345269561493964740",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-114:pink-border:no-auto",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardhedge"
+  },
+  {
+   "id": "tca-ebay::407145923629",
+   "fromCardId": "hiq:baseball:2026:bowman-paper:bp-24:base:no-auto",
+   "toCardId": "hiq:baseball:2026:bowman:bp-24:base:no-auto",
+   "shape": "relocate",
+   "year": 2026,
+   "source": "tca-ebay"
+  },
+  {
+   "id": "tca-ebay::198368982561",
+   "fromCardId": "hiq:baseball:2026:bowman-paper:bp-148:base:no-auto",
+   "toCardId": "hiq:baseball:2026:bowman:bp-148:base:no-auto",
+   "shape": "relocate",
+   "year": 2026,
+   "source": "tca-ebay"
+  },
+  {
+   "id": "tca-ebay::800488434352",
+   "fromCardId": "hiq:baseball:2026:bowman-paper:bp-61:base:no-auto:num-75",
+   "toCardId": "hiq:baseball:2026:bowman:bp-61:base:no-auto:num-75",
+   "shape": "relocate",
+   "year": 2026,
+   "source": "tca-ebay"
+  },
+  {
+   "id": "cardhedge::ch-daily::1786737472018x679996987397957600",
+   "fromCardId": "1778469041470x262982074022797060",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-61:blue-pattern:no-auto",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardhedge"
+  },
+  {
+   "id": "tca-ebay::158181980620",
+   "fromCardId": "hiq:baseball:2026:bowman-paper:bpa-gs:purple:auto:num-250",
+   "toCardId": "hiq:baseball:2026:bowman:bpa-gs:purple:auto:num-250",
+   "shape": "relocate",
+   "year": 2026,
+   "source": "tca-ebay"
+  },
+  {
+   "id": "tca-ebay::257681949411",
+   "fromCardId": "hiq:baseball:2026:bowman-paper:bp-24:base:no-auto",
+   "toCardId": "hiq:baseball:2026:bowman:bp-24:base:no-auto",
+   "shape": "relocate",
+   "year": 2026,
+   "source": "tca-ebay"
+  },
+  {
+   "id": "tca-ebay::318638753884",
+   "fromCardId": "hiq:baseball:2026:bowman-paper:bp-148:base:no-auto",
+   "toCardId": "hiq:baseball:2026:bowman:bp-148:base:no-auto",
+   "shape": "relocate",
+   "year": 2026,
+   "source": "tca-ebay"
+  },
+  {
+   "id": "cardhedge::ch-daily::1778468072064x949144790540987800::2026-08-27T06:47:00+00:00::444",
+   "fromCardId": "1778468072064x949144790540987800",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-137:gold-border-pattern:no-auto",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardhedge"
+  },
+  {
+   "id": "tca-ebay::168586536526",
+   "fromCardId": "hiq:baseball:2026:bowman:bp83:base:no-auto:num-399",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp83:base:no-auto",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "tca-ebay"
+  },
+  {
+   "id": "tca-ebay::307039139975",
+   "fromCardId": "hiq:baseball:2026:bowman-paper:1st:blue-refractor:no-auto:num-150",
+   "toCardId": "hiq:baseball:2026:bowman:1st:blue-refractor:no-auto:num-150",
+   "shape": "relocate",
+   "year": 2026,
+   "source": "tca-ebay"
+  },
+  {
+   "id": "cardhedge::ch-daily::1778468805303x353810081311562100::2026-08-31T03:41:00+00:00::400",
+   "fromCardId": "1778468805303x353810081311562100",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-47:purple-pattern:no-auto",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1787816027002x764538474176054400",
+   "fromCardId": "1778468072064x949144790540987800",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-137:gold-border-pattern:no-auto:num-50",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardsight::4e9b6091d9e1aea2c36d9e04",
+   "fromCardId": "hiq:baseball:2026:bowman-paper:bp-114:purple-pattern:no-auto:num-250",
+   "toCardId": "hiq:baseball:2026:bowman:bp-114:purple-pattern:no-auto:num-250",
+   "shape": "relocate",
+   "year": 2026,
+   "source": "cardsight"
+  },
+  {
+   "id": "cardsight::54fcde5935162824c070f50a",
+   "fromCardId": "hiq:baseball:2026:bowman-paper:bp-34:black-pattern:no-auto:num-10",
+   "toCardId": "hiq:baseball:2026:bowman:bp-34:black-pattern:no-auto:num-10",
+   "shape": "relocate",
+   "year": 2026,
+   "source": "cardsight"
+  },
+  {
+   "id": "cardhedge::ch-daily::1789263345107x852931858766778000",
+   "fromCardId": "1778593948127x232724287005416930",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bpa-ski:base:auto",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1789245701109x468368783973495800",
+   "fromCardId": "1778468146100x760471078928609800",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-143:base:no-auto",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1789226245179x315690305393264500",
+   "fromCardId": "1778468215877x358679164978280770",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-149:base:no-auto",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1789183967316x518646813644015200",
+   "fromCardId": "1778593948127x232724287005416930",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bpa-ski:base:auto",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1789171005118x187536907224006080",
+   "fromCardId": "1778468215877x358679164978280770",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-149:base:no-auto",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1789156285215x461928029042976100",
+   "fromCardId": "1778468215877x358679164978280770",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-149:base:no-auto",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1789156285215x706964622664493000",
+   "fromCardId": "1778468215877x358679164978280770",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-149:base:no-auto",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1789144866011x451468505098911100",
+   "fromCardId": "1778468215877x358679164978280770",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-149:base:no-auto",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1789144317610x232960467273574100",
+   "fromCardId": "1778468215877x358679164978280770",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-149:base:no-auto",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1789133939364x102211255987831200",
+   "fromCardId": "1778468215877x358679164978280770",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-149:base:no-auto",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1789103498318x553045348782406100",
+   "fromCardId": "1778468146100x760471078928609800",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-143:base:no-auto",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1789086749058x798509980833197000",
+   "fromCardId": "1778593948127x232724287005416930",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bpa-ski:base:auto",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1789085726942x669940324730630500",
+   "fromCardId": "1778593905750x779547979154964600",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bpa-wj:retail:auto",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1778469297039x300582178145018900::2026-04-30T22:37:00+00:00::399",
+   "fromCardId": "1778469297039x300582178145018900",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-84:base:no-auto",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1778469297039x300582178145018900::2026-05-14T15:31:00+00:00::175",
+   "fromCardId": "1778469297039x300582178145018900",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-84:base:no-auto",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1778468784456x481681544255609500::2026-05-22T11:44:00+00:00::93",
+   "fromCardId": "1778468784456x481681544255609500",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-47:base:no-auto",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1778469630291x387139247110875000::2026-05-23T21:37:00+00:00::120",
+   "fromCardId": "1778469630291x387139247110875000",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-26:base:no-auto",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1778468802373x794799351491718300::2026-05-25T00:16:00+00:00::225",
+   "fromCardId": "1778468802373x794799351491718300",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-47:bowman-logo-pattern:no-auto",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1778469297039x300582178145018900::2026-05-27T03:56:00+00:00::139",
+   "fromCardId": "1778469297039x300582178145018900",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-84:base:no-auto",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1778469630291x387139247110875000::2026-05-27T17:38:00+00:00::127",
+   "fromCardId": "1778469630291x387139247110875000",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-26:base:no-auto",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1778469297039x300582178145018900::2026-05-28T13:41:00+00:00::74",
+   "fromCardId": "1778469297039x300582178145018900",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-84:base:no-auto",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1778469647262x820038201704438100::2026-05-30T01:20:00+00:00::425",
+   "fromCardId": "1778469647262x820038201704438100",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-26:yellow-border:no-auto",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1778467988600x364069689538237100::2026-05-30T03:11:00+00:00::252",
+   "fromCardId": "1778467988600x364069689538237100",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-131:purple-pattern:no-auto",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1778469630291x387139247110875000::2026-06-01T16:54:00+00:00::149",
+   "fromCardId": "1778469630291x387139247110875000",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-26:base:no-auto",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1778469297039x300582178145018900::2026-06-02T02:13:00+00:00::10",
+   "fromCardId": "1778469297039x300582178145018900",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-84:base:no-auto",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1778467735609x131978202036190820::2026-06-04T03:11:00+00:00::150",
+   "fromCardId": "1778467735609x131978202036190820",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-114:base:no-auto",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1778468401683x495762672775133000::2026-06-19T00:44:00+00:00::185",
+   "fromCardId": "1778468401683x495762672775133000",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-97:fuchsia-border:no-auto",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1778468802373x794799351491718300::2026-06-30T00:42:00+00:00::1250",
+   "fromCardId": "1778468802373x794799351491718300",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-47:bowman-logo-pattern:no-auto",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1778469297039x300582178145018900::2026-06-30T20:29:00+00:00::195",
+   "fromCardId": "1778469297039x300582178145018900",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-84:base:no-auto",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1778469630291x387139247110875000::2026-07-06T01:14:00+00:00::50",
+   "fromCardId": "1778469630291x387139247110875000",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-26:base:no-auto",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1778468289839x276686390730502400::2026-07-15T00:42:00+00:00::150",
+   "fromCardId": "1778468289839x276686390730502400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-89:fuchsia-border:no-auto",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1778469613550x541593399086985500::2026-07-24T21:58:00+00:00::125",
+   "fromCardId": "1778469613550x541593399086985500",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-24:pink-border:no-auto",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardsight::5841522aeb8ddd461163eabe",
+   "fromCardId": "hiq:baseball:2026:bowman:bpa-gs:purple-border:auto:num-250",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bpa-gs:purple-border:auto:num-250",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardsight"
+  },
+  {
+   "id": "cardsight::469393ebe757c0ffd5b5ac33",
+   "fromCardId": "hiq:baseball:2026:bowman:bp-47:neon-green-border:no-auto:num-399",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-47:base:no-auto:num-399",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardsight"
+  },
+  {
+   "id": "cardsight::f0c21f22fceea6fe551985c1",
+   "fromCardId": "hiq:baseball:2026:bowman:bp-47:neon-green-border:no-auto:num-399",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-47:base:no-auto:num-399",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardsight"
+  },
+  {
+   "id": "cardsight::54dea9c3fcfc7a87c551e4db",
+   "fromCardId": "hiq:baseball:2026:bowman:bp-59:gold-border:no-auto:num-50",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-59:gold-border:no-auto:num-50",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardsight"
+  },
+  {
+   "id": "cardsight::9a530679196e14e11e361c44",
+   "fromCardId": "hiq:baseball:2026:bowman:bp-61:sky-blue-border:no-auto:num-499",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-61:sky-blue-border:no-auto:num-499",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardsight"
+  },
+  {
+   "id": "cardsight::a0572c3c0742965fb806f945",
+   "fromCardId": "hiq:baseball:2026:bowman:bp-59:yellow-pattern:no-auto:num-75",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-59:base:no-auto:num-75",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardsight"
+  },
+  {
+   "id": "cardsight::3cfbaabea7d85218f83cd9ea",
+   "fromCardId": "hiq:baseball:2026:bowman:bp-84:purple-border:no-auto:num-250",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-84:base:no-auto:num-250",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardsight"
+  },
+  {
+   "id": "cardsight::ed60dcd97aea18888b40bcd3",
+   "fromCardId": "hiq:baseball:2026:bowman:bp-97:orange-border:no-auto:num-25",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-97:orange-border:no-auto:num-25",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardsight"
+  },
+  {
+   "id": "cardsight::c0f1e2ca8efc5246a26494e0",
+   "fromCardId": "hiq:baseball:2026:bowman:bp-97:orange-border:no-auto:num-25",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-97:sky-blue-refractor:no-auto:num-25",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardsight"
+  },
+  {
+   "id": "cardsight::6ded743e57fdd9d3658f36c1",
+   "fromCardId": "hiq:baseball:2026:bowman:bp-97:orange-border:no-auto:num-25",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-97:orange-refractor:no-auto:num-25",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardsight"
+  },
+  {
+   "id": "cardsight::e6c703377f9c4c6211a7a279",
+   "fromCardId": "hiq:baseball:2026:bowman:bp-97:orange-border:no-auto:num-25",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-97:orange-refractor:no-auto:num-25",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardsight"
+  },
+  {
+   "id": "cardsight::64dd5bd6a3077edfde9e778f",
+   "fromCardId": "hiq:baseball:2026:bowman:bp-131:platinum-border:no-auto:num-1",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-131:base:no-auto:num-1",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardsight"
+  },
+  {
+   "id": "cardsight::f41743edfbae2006406b4f02",
+   "fromCardId": "hiq:baseball:2026:bowman:bp-144:red-border:no-auto:num-5",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-144:red-border:no-auto:num-5",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardsight"
+  },
+  {
+   "id": "cardsight::9f3fb1b81417f065a1dceb53",
+   "fromCardId": "hiq:baseball:2026:bowman:bp-148:purple-border:no-auto:num-250",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-148:base:no-auto:num-250",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardsight"
+  },
+  {
+   "id": "cardsight::9a001b8a3abe23d64bede0cf",
+   "fromCardId": "hiq:baseball:2026:bowman:bp-146:purple-border:no-auto:num-250",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-146:base:no-auto:num-250",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardsight"
+  },
+  {
+   "id": "cardsight::8fc512589263962c6510f5bc",
+   "fromCardId": "hiq:baseball:2026:bowman:bp-146:purple-border:no-auto:num-250",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-146:purple-border:no-auto:num-250",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardsight"
+  },
+  {
+   "id": "cardsight::3bc7109f85ae5e4313f13db7",
+   "fromCardId": "hiq:baseball:2026:bowman:bp-146:purple-border:no-auto:num-250",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-146:purple-border:no-auto:num-250",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardsight"
+  },
+  {
+   "id": "tca-ebay::318329557592",
+   "fromCardId": "hiq:baseball:2026:bowman:bp-148:gold-refractor:no-auto:num-50",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-148:gold-refractor:no-auto",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "tca-ebay"
+  },
+  {
+   "id": "tca-ebay::318395841166",
+   "fromCardId": "hiq:baseball:2026:bowman-paper:prv-ar:base:auto",
+   "toCardId": "hiq:baseball:2026:bowman:prv-ar:base:auto",
+   "shape": "relocate",
+   "year": 2026,
+   "source": "tca-ebay"
+  },
+  {
+   "id": "tca-ebay::178158841769",
+   "fromCardId": "hiq:baseball:2026:bowman-paper:0525:orange-refractor:no-auto:num-25",
+   "toCardId": "hiq:baseball:2026:bowman:0525:orange-refractor:no-auto:num-25",
+   "shape": "relocate",
+   "year": 2026,
+   "source": "tca-ebay"
+  },
+  {
+   "id": "tca-ebay::157949906690",
+   "fromCardId": "hiq:baseball:2026:bowman:bp-97:orange-border:no-auto:num-25",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-97:orange-border:no-auto",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "tca-ebay"
+  },
+  {
+   "id": "cardhedge::ch-daily::1782082770608x985553713213688700",
+   "fromCardId": "1778469297039x300582178145018900",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-84:base:no-auto",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1781309281695x837771786329760300",
+   "fromCardId": "1778468285191x546172842283939400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-89:base:no-auto",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardhedge"
+  },
+  {
+   "id": "tca-ebay::407100147735",
+   "fromCardId": "hiq:baseball:2026:bowman-paper:bp-59:blue-refractor:no-auto:num-150",
+   "toCardId": "hiq:baseball:2026:bowman:bp-59:blue-refractor:no-auto:num-150",
+   "shape": "relocate",
+   "year": 2026,
+   "source": "tca-ebay"
+  },
+  {
+   "id": "tca-ebay::158158407430",
+   "fromCardId": "hiq:baseball:2026:bowman-paper:ba-mq1:base:auto",
+   "toCardId": "hiq:baseball:2026:bowman:ba-mq1:base:auto",
+   "shape": "relocate",
+   "year": 2026,
+   "source": "tca-ebay"
+  },
+  {
+   "id": "tca-ebay::178208951639",
+   "fromCardId": "hiq:baseball:2026:bowman:bp-137:base:no-auto",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-137:base:no-auto",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "tca-ebay"
+  },
+  {
+   "id": "tca-ebay::178346206558",
+   "fromCardId": "hiq:baseball:2026:bowman:bp-34:base:no-auto",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-34:base:no-auto",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "tca-ebay"
+  },
+  {
+   "id": "tca-ebay::278270298217",
+   "fromCardId": "hiq:baseball:2026:bowman-paper:bp-137:base:no-auto:num-175",
+   "toCardId": "hiq:baseball:2026:bowman:bp-137:base:no-auto:num-175",
+   "shape": "relocate",
+   "year": 2026,
+   "source": "tca-ebay"
+  },
+  {
+   "id": "tca-ebay::307098317208",
+   "fromCardId": "hiq:baseball:2026:bowman-paper:3099:ssp:auto:num-99",
+   "toCardId": "hiq:baseball:2026:bowman:3099:ssp:auto:num-99",
+   "shape": "relocate",
+   "year": 2026,
+   "source": "tca-ebay"
+  },
+  {
+   "id": "tca-ebay::EBAY-v1|147518388044|0",
+   "fromCardId": "hiq:baseball:2026:bowman:bp-148:bowman-logo-pattern:no-auto",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-148:bowman-logo-pattern:no-auto",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "tca-ebay"
+  },
+  {
+   "id": "tca-ebay::366544715806",
+   "fromCardId": "hiq:baseball:2026:bowman-paper:bpa-jq:base:auto:num-250",
+   "toCardId": "hiq:baseball:2026:bowman:bpa-jq:base:auto:num-250",
+   "shape": "relocate",
+   "year": 2026,
+   "source": "tca-ebay"
+  },
+  {
+   "id": "tca-ebay::398008352431",
+   "fromCardId": "hiq:baseball:2026:bowman:bp01-gr03:full-art:no-auto",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp01-gr03:full-art:no-auto",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "tca-ebay"
+  },
+  {
+   "id": "tca-ebay::227469028029",
+   "fromCardId": "hiq:baseball:2026:bowman-paper:pf-ethan-holliday-paper-stripes:base:no-auto",
+   "toCardId": "hiq:baseball:2026:bowman:pf-ethan-holliday-paper-stripes:base:no-auto",
+   "shape": "relocate",
+   "year": 2026,
+   "source": "tca-ebay"
+  },
+  {
+   "id": "tca-ebay::307098317208",
+   "fromCardId": "hiq:baseball:2026:bowman-paper:player-tornes-paper-serial:green-refractor:auto:num-99",
+   "toCardId": "hiq:baseball:2026:bowman:player-tornes-paper-serial:green-refractor:auto:num-99",
+   "shape": "relocate",
+   "year": 2026,
+   "source": "tca-ebay"
+  },
+  {
+   "id": "cardhedge::ch-daily::1778468784456x481681544255609500::2026-08-30T15:15:00+00:00::129",
+   "fromCardId": "1778468784456x481681544255609500",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-47:base:no-auto",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardhedge"
+  },
+  {
+   "id": "tca-ebay::EBAY-v1|237022184890|0",
+   "fromCardId": "hiq:baseball:2026:bowman-paper:bp-97:base:no-auto:num-399",
+   "toCardId": "hiq:baseball:2026:bowman:bp-97:base:no-auto:num-399",
+   "shape": "relocate",
+   "year": 2026,
+   "source": "tca-ebay"
+  },
+  {
+   "id": "cardhedge::ch-daily::1788105659721x585627921299956500",
+   "fromCardId": "1778468784456x481681544255609500",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-47:base:no-auto",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1789370935161x660369780767564400",
+   "fromCardId": "1778469656465x120167260934513020",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-27:fuchsia-border:no-auto",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1789357376771x863634318866953100",
+   "fromCardId": "1778469963215x269020235959438900",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-2:gold-border-pattern:no-auto:num-50",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1789232472996x327242103560558840",
+   "fromCardId": "1778469656465x120167260934513020",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-27:fuchsia-border:no-auto:num-299",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1789230887730x207384745472900770",
+   "fromCardId": "1778467765603x721326499454735500",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-115:base:no-auto",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1789196508664x418749246205489840",
+   "fromCardId": "1778469077822x256104615009649300",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-64:base:no-auto",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1789196508664x534391397922351360",
+   "fromCardId": "1778469077822x256104615009649300",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-64:base:no-auto",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1788872848344x319993384312539100",
+   "fromCardId": "1778469077822x256104615009649300",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:2026:bowman:bp-64:base:no-auto",
+   "shape": "repoint",
+   "year": 2026,
+   "source": "cardhedge"
+  }
+ ],
+ "partEntries": 125
+}
