@@ -51,7 +51,7 @@ import {
   AMBIGUOUS_MARKET_CODES,
 } from "../catalog/pokemonSetCodes.js";
 import { slugify } from "./hobbyIqCardId.service.js";
-import { statedFinishFromChecklist } from "./statedFinishFromChecklist.js";
+import { statedFinishFromChecklist, titleStatesAnUnconfirmedFinish } from "./statedFinishFromChecklist.js";
 import { bareColourAliasFromChecklist } from "./bareColourAliasFromChecklist.js";
 import { pokemonFinishFromTitle } from "./pokemonFinishFromTitle.js";
 
@@ -343,6 +343,18 @@ export interface ParsedListingIdentity {
    *  or a standalone "IV" out of context. The seam corroborates it against
    *  the product's checklist; this parser never guesses. */
   variationMarker: VariationMarker | null;
+  /** CF-A-STATED-PARALLEL-IS-NEVER-EVICTED-TO-BASE (post-wave audit,
+   *  2026-09-15). True when `parallel` came back "Base" but the title DOES
+   *  state finish evidence this parser could not resolve to a rung.
+   *
+   *  `parallel` alone cannot express the difference between "the title says
+   *  this card has no parallel" and "the title names one and we could not say
+   *  which", and those are different cards. Base is a CLAIM -- the
+   *  unparalleled card, its own pool, its own curve -- so a writer that emits
+   *  it for a title reading "Purple Scope" files the sale on the wrong card.
+   *  A writer that sees this flag set must WITHHOLD the parallel rather than
+   *  claim Base; blank is unknown and is recoverable. */
+  parallelIsUnconfirmed: boolean;
 }
 
 // CF-GRADE-FROM-TITLE (Drew, 2026-08-01). Matches:
@@ -919,9 +931,25 @@ export function parseListingIdentity(
     ? (canonicalVariationName(finish) ? finish
       : finish && !/^base$/i.test(finish) && !/^refractor$/i.test(finish) ? `${variation.finish} ${finish}` : variation.finish)
     : finish;
+  // CF-A-STATED-PARALLEL-IS-NEVER-EVICTED-TO-BASE (2026-09-15). Asked ONLY
+  // when the answer was about to be "Base", so it overrides nothing: every
+  // rule and reader above has already returned. It reports whether the title
+  // carries finish evidence this parser could not turn into a rung -- the
+  // difference between "no parallel" and "a parallel we could not name",
+  // which `parallel` alone has no way to say. `isMultiCardLot` is refused for
+  // the reason every reader here refuses it: a lot states no one card's
+  // finish.
+  const parallelIsUnconfirmed = /^base$/i.test(parallel)
+    && !isMultiCardLot(t)
+    && titleStatesAnUnconfirmedFinish(t, {
+      year: opts?.year ?? fromSlug.year,
+      setKey: opts?.setKey ?? fromSlug.setKey,
+      pokemonSetKeyForResidue: resolvedPokemonSetKey,
+    });
   return {
     cardNumber,
     parallel,
+    parallelIsUnconfirmed,
     variationMarker: variation.finish ? null : variation.marker,
     isAuto,
     printRun: extractPrintRun(t, isTcg, isPokemon),

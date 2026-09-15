@@ -106,7 +106,46 @@ function deriveIdentity(row, deps) {
   // "PSA AUTHENTIC AUTO" and is still a base card. Carry the cardNumber
   // verdict out separately so the classifier can tell the two apart.
   const autoByCardNumber = deps.isCardNumberAutoSubset ? !!deps.isCardNumberAutoSubset(cardNumber) : false;
-  const parallel = parsed.parallel || row.parallel || "Base";
+  // CF-A-STATED-PARALLEL-IS-NEVER-EVICTED-TO-BASE (post-wave audit,
+  // 2026-09-15).
+  //
+  // THE DEFECT. This line used to read `parsed.parallel || row.parallel ||
+  // "Base"`, and `parsed.parallel` is the string "Base" -- truthy -- whenever
+  // the parser could not name a rung. So a title that STATES a parallel the
+  // parser could not resolve derived Base, discarding both the title's
+  // evidence and the row's own stored field. Measured in the 1,300-row
+  // post-wave audit: the largest single sports CONFLICT pattern at 95 of 400
+  // sampled rows ("stored is right, the deriver drops it"), plus 41 more on
+  // the AGREE side where both sides say Base and the census cannot see them.
+  //
+  //   "2025 Panini Rookies & Stars Football #28 Silver"  stored Silver -> Base
+  //   "2026 Topps Baseball #282 Wood"                    stored Wood   -> Base
+  //   "2025 Panini Mosaic Football #79 Purple Scope"     stored ...    -> Base
+  //
+  // WHY BASE IS NOT A SAFE DEFAULT. Base is a CLAIM, not an absence: it names
+  // the unparalleled card, which has its own pool, its own print run and its
+  // own price curve. Answering it for a title reading "Purple Scope" does not
+  // lose information, it files the sale on a different card -- the pool-split
+  // shape `feedback_one_card_one_row_one_pool` names.
+  //
+  // THE ORDER, AND WHY IT IS THIS ORDER. The title is the evidence, so a rung
+  // the parser NAMED still wins. Below that the row's own stored parallel is
+  // better evidence than a manufactured Base -- it is what an earlier writer
+  // read from this same sale. Only when the title states nothing and the row
+  // stores nothing is Base the honest answer.
+  //
+  // `unknown` rather than null: the classifier's GENERIC_PARALLELS already
+  // carries it and axisIsBlank already treats it as blank, so a withheld
+  // parallel reads as ABSENT on the diff rather than as a named rung. Emitting
+  // a novel sentinel would read as `changed:parallel` and trip R26's
+  // identity-axis-moved guard; emitting null would be coerced back to "Base"
+  // by the `||` chain this comment exists to remove.
+  const parsedNamedARung = parsed.parallel && !/^base$/i.test(parsed.parallel);
+  const parallel = parsedNamedARung
+    ? parsed.parallel
+    : parsed.parallelIsUnconfirmed
+      ? (row.parallel || "unknown")
+      : (parsed.parallel || row.parallel || "Base");
   const printRun = parsed.printRun ?? row.printRun ?? null;
   const identity = { sport: guard.sport, cardYear, setKey, setNameRaw: setKeyRaw, cardNumber, parallel, isAuto, printRun, gradeCompany, gradeValue };
   const slug = deps.computeHobbyIqCardId({
