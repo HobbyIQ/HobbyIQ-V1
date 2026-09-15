@@ -297,24 +297,6 @@ function convert(xlsxPath) {
     if (!sectionRows.has(s)) sectionRows.set(s, new Map());
     sectionRows.get(s).set(num, player);
   }
-  // CF-A-PLURAL-TWIN-IS-THE-SAME-SECTION (2026-09-15). cconnect prints both
-  // "Jersey Kings" and "Jerseys Kings Prime" in 2020-21 Donruss BK. The plural
-  // is a source typo, not a second card set: folding it onto the singular keeps
-  // "Prime" a PARALLEL of the registered `panini-donruss-jersey-kings` insert
-  // instead of minting `...-jerseys-kings-prime`, a key that would say a
-  // parallel is a set. Applied ONLY where the singular form is itself a section
-  // in this sheet, so nothing is invented.
-  const pluralTwins = new Map();
-  {
-    const singularOf = (t) => t.replace(/(\w+?)s(\s)/g, "$1$2");
-    for (const t of [...sectionRows.keys()]) {
-      const sing = singularOf(t);
-      if (sing === t || !sectionRows.has(sing)) continue;
-      const src = sectionRows.get(t), dst = sectionRows.get(sing);
-      for (const [n, pl] of src) if (!dst.has(n)) dst.set(n, pl);
-      pluralTwins.set(t, sing);
-    }
-  }
 
   let anchors = measureAnchors(sectionRows);
   const blockedSections = [];
@@ -366,9 +348,79 @@ function convert(xlsxPath) {
     }
     baseAnchors = [...new Set(baseAnchors)];
 
-    anchors = new Map();
+    // CF-A-COLOUR-SIBLING-SET-NAMES-ITSELF-BY-ITS-PREFIX (2026-09-15).
+    //
+    // A product can publish an insert with NO uncoloured tier: 2021 Donruss FB
+    // prints "Optic Rated Rookie Preview Blue/Gold/Green/Holo/Pink/Purple/Red"
+    // and no plain "Optic Rated Rookie Preview". Every colour then extends
+    // nothing, so each became an anchor — and the CATEGORY is the setKey
+    // segment, so `optic-rated-rookie-preview-gold` would MINT A PARALLEL AS A
+    // CARD SET and give 100 rows a wrong identity.
+    //
+    // The siblings themselves name the set: they share a prefix, they REPRINT
+    // ONE ROSTER (same number -> same player, which is what makes them one
+    // checklist printed several ways), and what they differ by is the rung.
+    // Reading that shared prefix is not inventing a name — refusing to read it
+    // is what splits one card set seven ways. Same evidence the module's own
+    // derived-root rule takes for Spectra's fourteen "Dual Patch Autographs
+    // <colour>" files.
+    //
+    // A TIE IS NOT RESOLVED HERE. The prefix must be shared by >= 2 siblings
+    // and their rosters must agree with ZERO disagreements; one disagreement
+    // means these are different cards and each keeps its own key.
+    {
+      const bySharedPrefix = new Map();
+      for (const t of baseAnchors) {
+        const segs = t.split(" ");
+        for (let n = 1; n < segs.length; n++) {
+          const pre = segs.slice(0, n).join(" ");
+          if (!bySharedPrefix.has(pre)) bySharedPrefix.set(pre, []);
+          bySharedPrefix.get(pre).push(t);
+        }
+      }
+      // Widest first: with seven colours, "Optic Rated Rookie Preview" is
+      // shared by all seven while "Optic Rated Rookie" is shared by the same
+      // seven — prefer the LONGEST among equally-wide, which is the full set
+      // name rather than a fragment of it.
+      const ranked = [...bySharedPrefix.keys()].sort((a, b) =>
+        bySharedPrefix.get(b).length - bySharedPrefix.get(a).length || b.length - a.length);
+      const claimed = new Set();
+      for (const pre of ranked) {
+        const sibs = bySharedPrefix.get(pre).filter((t) => !claimed.has(t));
+        if (sibs.length < 2) continue;
+        if (titles.includes(pre)) continue; // a real section already names it
+        // One roster, printed several ways: zero disagreements required.
+        const merged = new Map();
+        let differ = 0, agreed = 0;
+        for (const s of sibs) {
+          for (const [num, player] of sectionRows.get(s)) {
+            const held = merged.get(num);
+            if (held === undefined) merged.set(num, player);
+            else if (held === player) agreed++;
+            else differ++;
+          }
+        }
+        if (differ > 0 || agreed === 0) continue;
+        // And the tails must differ, or there is no rung to move.
+        const tails = new Set(sibs.map((s) => s.slice(pre.length + 1)));
+        if (tails.size < 2) continue;
+        sectionRows.set(pre, merged);
+        for (const s of sibs) {
+          anchors.set(s, { anchorSection: pre });
+          claimed.add(s);
+          baseAnchors = baseAnchors.filter((x) => x !== s);
+        }
+        baseAnchors.push(pre);
+        claimed.add(pre);
+      }
+    }
+
     for (const t of titles) {
       if (baseAnchors.includes(t)) continue;
+      // A colour sibling has already been resolved against the prefix its own
+      // siblings name; the generic rule below must not re-root it on something
+      // shorter.
+      if (anchors.has(t)) continue;
       const cands = baseAnchors.filter((a) => t.startsWith(a + " "));
       if (!cands.length) { blockedSections.push(t); continue; }
       // SHORTEST matching anchor, per the ruling — but only among anchors whose
@@ -379,6 +431,7 @@ function convert(xlsxPath) {
       const pick = (sharing.length ? sharing : cands).sort((a, b) => a.length - b.length || a.localeCompare(b));
       anchors.set(t, { anchorSection: pick[0] });
     }
+
   }
 
   const out = [];
@@ -391,8 +444,7 @@ function convert(xlsxPath) {
     const player = cleanPlayerCell(r[C.desc]);
     if (!setName || !num || !player) continue;
     if (blockedSections.includes(setName)) continue;
-    const canonical = pluralTwins.get(setName) || setName;
-    const { anchor, parallel, subset } = splitSection(canonical, anchors);
+    const { anchor, parallel, subset } = splitSection(setName, anchors);
     const category = subset ? `${slug(anchor)}--${slug(subset)}` : slug(anchor);
     const isAuto = LAYOUT === "panini"
       ? /(?:^|[^a-z])(?:auto|autograph|autographs|signature|signatures|ink|scripts|penmanship)(?:[^a-z]|$)/i.test(setName)

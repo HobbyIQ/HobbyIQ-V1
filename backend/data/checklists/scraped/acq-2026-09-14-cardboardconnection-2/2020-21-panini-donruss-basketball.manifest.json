@@ -11,7 +11,7 @@
   "rowCount": 8033,
   "autoCount": 1337,
   "printRunCount": 4891,
-  "distinctParallels": 46,
+  "distinctParallels": 51,
   "parallelColumnAuthoritative": true,
   "layout": "panini",
   "rungRule": "R37 (Drew 2026-09-14): parallel = what the section title adds beyond the SHORTEST matching base anchor; a section matching no anchor is BLOCKED, never guessed.",
@@ -25,8 +25,12 @@
     "Choice Blue",
     "Choice Gold",
     "Choice Red",
+    "Dominator Signatures",
+    "Dominator Signatures Gold",
     "Gold",
     "Green Flood",
+    "Hall Dominator Signatures",
+    "Hall Dominator Signatures Gold",
     "Holo Black Laser",
     "Holo Blue Laser",
     "Holo Gold Laser",
@@ -39,6 +43,7 @@
     "Holo Red and Blue Laser",
     "Holo Red and Gold Laser",
     "Holo Yellow Laser",
+    "Jerseys Kings Prime",
     "Press Proof",
     "Press Proof Black",
     "Press Proof Purple",
@@ -396,8 +401,8 @@
     },
     {
       "section": "Dominator Signatures",
-      "category": "dominator-signatures",
-      "parallel": "",
+      "category": "dominator-signatures-gold",
+      "parallel": "Dominator Signatures",
       "cards": 29,
       "auto": 29,
       "printRun": 29
@@ -412,8 +417,8 @@
     },
     {
       "section": "Dominator Signatures Gold",
-      "category": "dominator-signatures",
-      "parallel": "Gold",
+      "category": "dominator-signatures-black",
+      "parallel": "Dominator Signatures Gold",
       "cards": 30,
       "auto": 30,
       "printRun": 30
@@ -540,8 +545,8 @@
     },
     {
       "section": "Hall Dominator Signatures",
-      "category": "hall-dominator-signatures",
-      "parallel": "",
+      "category": "hall-dominator-signatures-gold",
+      "parallel": "Hall Dominator Signatures",
       "cards": 29,
       "auto": 29,
       "printRun": 29
@@ -556,8 +561,8 @@
     },
     {
       "section": "Hall Dominator Signatures Gold",
-      "category": "hall-dominator-signatures",
-      "parallel": "Gold",
+      "category": "hall-dominator-signatures-black",
+      "parallel": "Hall Dominator Signatures Gold",
       "cards": 30,
       "auto": 30,
       "printRun": 30
@@ -588,8 +593,8 @@
     },
     {
       "section": "Jerseys Kings Prime",
-      "category": "jerseys-kings-prime",
-      "parallel": "",
+      "category": "jersey-kings",
+      "parallel": "Jerseys Kings Prime",
       "cards": 40,
       "auto": 0,
       "printRun": 40
@@ -1091,14 +1096,18 @@
       "printRun": 10
     }
   ],
-  "collisionCheck": {
-    "checkedAt": "2026-09-15",
-    "method": "lib/insert-set-key.cjs planFile(), driven exactly as ingest-checklist-csv-to-catalog.cjs drives it (rungFoldingByCell -> separationByCell -> planFile -> setKeyForRow). Local, no Cosmos.",
-    "verdict": "pass",
-    "rows": 8033,
-    "distinctIds": 8033,
-    "clashingAddresses": 0,
-    "subsetKeysSeparated": 18
-  },
-  "ingestBlocked": null
+  "ingestBlocked": {
+    "scope": "SECTION-LEVEL, not the whole file — every other section in this file is correct and should be written.",
+    "heldSections": [
+      {
+        "section": "Jerseys Kings Prime",
+        "rows": 40,
+        "shouldBe": "category `jersey-kings`, parallel \"Prime\"",
+        "why": "The source spells this section PLURAL — it prints both \"Jersey Kings\" and \"Jerseys Kings Prime\". The colour-sibling rule puts the rows on the right card set (`jersey-kings`), but the rung reads \"Jerseys Kings Prime\" instead of \"Prime\", so the parallel would be a name the source never prints for a rung."
+      }
+    ],
+    "totalHeldRows": 40,
+    "blockedReason": "These sections land on the correct CARD SET but carry a rung name the source does not print for a parallel. Holding them keeps the APPLY writing only correct identities; they are released by the plural-twin / two-word-tail follow-up.",
+    "awaitingFix": "convertCardboardConnectionXlsx plural-twin fold and two-word colour tail"
+  }
 }

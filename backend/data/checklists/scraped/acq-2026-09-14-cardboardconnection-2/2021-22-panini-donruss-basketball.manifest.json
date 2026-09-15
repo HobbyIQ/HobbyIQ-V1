@@ -11,7 +11,7 @@
   "rowCount": 9203,
   "autoCount": 1214,
   "printRunCount": 5177,
-  "distinctParallels": 53,
+  "distinctParallels": 54,
   "parallelColumnAuthoritative": true,
   "layout": "panini",
   "rungRule": "R37 (Drew 2026-09-14): parallel = what the section title adds beyond the SHORTEST matching base anchor; a section matching no anchor is BLOCKED, never guessed.",
@@ -42,6 +42,7 @@
     "Holo Red and Gold Laser",
     "Holo Teal Laser",
     "Holo Yellow Laser",
+    "Jerseys Kings Prime",
     "Press Proof",
     "Press Proof Black",
     "Press Proof Gold",
@@ -579,8 +580,8 @@
     },
     {
       "section": "Jerseys Kings Prime",
-      "category": "jerseys-kings-prime",
-      "parallel": "",
+      "category": "jersey-kings",
+      "parallel": "Jerseys Kings Prime",
       "cards": 49,
       "auto": 0,
       "printRun": 49
@@ -1306,14 +1307,18 @@
       "printRun": 5
     }
   ],
-  "collisionCheck": {
-    "checkedAt": "2026-09-15",
-    "method": "lib/insert-set-key.cjs planFile(), driven exactly as ingest-checklist-csv-to-catalog.cjs drives it (rungFoldingByCell -> separationByCell -> planFile -> setKeyForRow). Local, no Cosmos.",
-    "verdict": "pass",
-    "rows": 9203,
-    "distinctIds": 9203,
-    "clashingAddresses": 0,
-    "subsetKeysSeparated": 16
-  },
-  "ingestBlocked": null
+  "ingestBlocked": {
+    "scope": "SECTION-LEVEL, not the whole file — every other section in this file is correct and should be written.",
+    "heldSections": [
+      {
+        "section": "Jerseys Kings Prime",
+        "rows": 49,
+        "shouldBe": "category `jersey-kings`, parallel \"Prime\"",
+        "why": "The source spells this section PLURAL — it prints both \"Jersey Kings\" and \"Jerseys Kings Prime\". The colour-sibling rule puts the rows on the right card set (`jersey-kings`), but the rung reads \"Jerseys Kings Prime\" instead of \"Prime\", so the parallel would be a name the source never prints for a rung."
+      }
+    ],
+    "totalHeldRows": 49,
+    "blockedReason": "These sections land on the correct CARD SET but carry a rung name the source does not print for a parallel. Holding them keeps the APPLY writing only correct identities; they are released by the plural-twin / two-word-tail follow-up.",
+    "awaitingFix": "convertCardboardConnectionXlsx plural-twin fold and two-word colour tail"
+  }
 }
