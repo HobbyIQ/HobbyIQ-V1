@@ -1,0 +1,53 @@
+{
+  "source": "checklistinsider-2026-09-15",
+  "sourceUrl": "https://www.checklistinsider.com/2026-topps-series-1-baseball",
+  "xlsxUrl": "https://xcdn.checklistinsider.com/public/2026/03/2026-Topps-Series-1-Baseball-Checklist-Update-Feb.xlsx",
+  "fetchedAt": "2026-09-15",
+  "sport": "baseball",
+  "year": 2026,
+  "setName": "2026 Topps Series 1 Baseball",
+  "productKey": "2026-topps-series-1-baseball",
+  "setKey": "topps",
+  "rowCount": 1125,
+  "autoCount": 0,
+  "printRunCount": 750,
+  "parallelColumnAuthoritative": true,
+  "mintedBy": "R40 (Drew, 2026-09-15): one row per (base card x STATED rung).",
+  "baseCards": 375,
+  "rungsMinted": [
+    {
+      "parallel": "Sandglitter Gold",
+      "printRun": "/50",
+      "note": "Jumbo exclusive"
+    },
+    {
+      "parallel": "75 Years of Topps",
+      "printRun": "/75",
+      "note": null
+    },
+    {
+      "parallel": "Base Confetti",
+      "printRun": null,
+      "note": null
+    }
+  ],
+  "rungsAlreadyInCatalog": [],
+  "ladderScope": "Three rungs of the 46-rung main ladder that the catalog does not already hold. `Pink Confetti` and `Lime Green Confetti` are already checklist-backed in this cell and are NOT re-minted.",
+  "ladderVerbatim": [
+    "Sandglitter Gold /50",
+    "75 Years of Topps /75",
+    "Base Confetti"
+  ],
+  "unstatedRungs": [
+    "Pink Foil",
+    "Gold Border",
+    "Purple Blue Polka Dots",
+    "Green Pink Polka Dots"
+  ],
+  "unstatedNote": "The source states no rung called `Pink Foil` (it has `Pink Diamante Foil` and `Pink Holo Foil`) and none called `Gold Border` (it has `Gold /2,026` and Gold Diamante/Holo/Rainbow Foil). The pool's polka-dot names are the source's `Confetti` rungs. None of these four is minted under the pool's spelling.",
+  "provenance": {
+    "cardsFrom": "card_catalog checklist-backed BASE print for baseball/2026/topps, read read-only 2026-09-15 (375 cards)",
+    "rungsFrom": "the source page's own stated ladder, verbatim; no rung is inferred and none is taken from a sale",
+    "printRunsFrom": "the source's stated print run only; blank where the source states none"
+  }
+}

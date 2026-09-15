@@ -1,0 +1,4211 @@
+{
+ "generatedAt": "2026-09-15",
+ "forLane": "relocate-pool-rows-by-list.cjs",
+ "ruling": "R39 (Drew, 2026-09-15): basketball pool rows on `panini-donruss` whose stated rung belongs to `donruss-optic`'s checklist ladder and NOT to `panini-donruss`'s are re-keyed to `donruss-optic`.",
+ "reportOnlyUntil": "REPORT ONLY until a steward dispatches it. This file routes nothing by existing; the lane writes only under BACKFILL_APPLY=true. Dispatch SCOPE=data/pool-relocations/<this file>, one part at a time.",
+ "continuedFrom": "2026-09-15-r39-basketball-panini-donruss-to-donruss-optic-001.json",
+ "part": "002 of 002",
+ "entries": [
+  {
+   "id": "cardhedge::ch-daily::1759416573897x442402968734263900::2026-07-13T17:13:00+00:00::999",
+   "fromCardId": "1759416573897x442402968734263900",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:19:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1759416573897x442402968734263900::2026-07-13T19:41:00+00:00::864",
+   "fromCardId": "1759416573897x442402968734263900",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:19:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1759418189793x908600472317114900::2026-07-13T00:34:00+00:00::2755",
+   "fromCardId": "1759418189793x908600472317114900",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:24:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1759423935029x823153848271132700::2026-07-13T02:24:00+00:00::300",
+   "fromCardId": "1759423935029x823153848271132700",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:4:purple:no-auto",
+   "shape": "repoint",
+   "rung": "purple",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1759423935029x823153848271132700::2026-07-13T02:10:00+00:00::700",
+   "fromCardId": "1759423935029x823153848271132700",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:4:purple:no-auto",
+   "shape": "repoint",
+   "rung": "purple",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1759423935029x823153848271132700::2026-07-13T01:13:00+00:00::325",
+   "fromCardId": "1759423935029x823153848271132700",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:4:purple:no-auto",
+   "shape": "repoint",
+   "rung": "purple",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1759419170482x533582136158123000::2026-07-13T14:10:00+00:00::349",
+   "fromCardId": "1759419170482x533582136158123000",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:2:purple:no-auto",
+   "shape": "repoint",
+   "rung": "purple",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1759416573897x442402968734263900::2026-07-13T14:54:00+00:00::355",
+   "fromCardId": "1759416573897x442402968734263900",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:19:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1759426285824x813402022921527600::2026-07-13T15:39:00+00:00::500",
+   "fromCardId": "1759426285824x813402022921527600",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:3:purple:no-auto",
+   "shape": "repoint",
+   "rung": "purple",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1759423935029x823153848271132700::2026-07-13T23:50:00+00:00::1050",
+   "fromCardId": "1759423935029x823153848271132700",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:4:purple:no-auto",
+   "shape": "repoint",
+   "rung": "purple",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1759426285824x813402022921527600::2026-07-14T23:06:00+00:00::150",
+   "fromCardId": "1759426285824x813402022921527600",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:3:purple:no-auto",
+   "shape": "repoint",
+   "rung": "purple",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1759419170482x533582136158123000::2026-07-14T23:57:00+00:00::125",
+   "fromCardId": "1759419170482x533582136158123000",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:2:purple:no-auto",
+   "shape": "repoint",
+   "rung": "purple",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1759413163317x843185447063817100::2026-07-14T00:05:00+00:00::125",
+   "fromCardId": "1759413163317x843185447063817100",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:7:purple:no-auto",
+   "shape": "repoint",
+   "rung": "purple",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1759419170482x533582136158123000::2026-07-21T23:03:00+00:00::734",
+   "fromCardId": "1759419170482x533582136158123000",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:2:purple:no-auto",
+   "shape": "repoint",
+   "rung": "purple",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1745511107858x747517982217714700::2026-07-10T21:01:00+00:00::299",
+   "fromCardId": "1745511107858x747517982217714700",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:90:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1741658189767x110929637890875280",
+   "fromCardId": "1742931439975x927439751753673200",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-202:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1741792605452x270148192116959520",
+   "fromCardId": "1742931429815x495059518099500100",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-228:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1742220281099x976851096804435500",
+   "fromCardId": "1742932854289x601435504826717300",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-240:orange:no-auto",
+   "shape": "repoint",
+   "rung": "orange",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1742513106641x173279209884981120",
+   "fromCardId": "1742931445313x220823183072038600",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-230:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1742513523471x723830233427448200",
+   "fromCardId": "1742931429815x495059518099500100",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-228:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1742611310044x347664591338272960",
+   "fromCardId": "1742931443546x233053968161119900",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-240:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1786092451844x189481162249038660",
+   "fromCardId": "1742932615284x651455204343583500",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-245:seismic:no-auto",
+   "shape": "repoint",
+   "rung": "seismic",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1743256492813x327666263831283260",
+   "fromCardId": "1742931443546x233053968161119900",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-240:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1743967372013x317275929555568960",
+   "fromCardId": "1742931429815x495059518099500100",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-228:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1744510031093x728244349870620800",
+   "fromCardId": "1742931429815x495059518099500100",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-228:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1759416606083x826044549321331300::2026-07-08T03:57:00+00:00::75",
+   "fromCardId": "1759416606083x826044549321331300",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:7:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1745528336223x636921977314412800",
+   "fromCardId": "1745511089099x155822305597308480",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:51:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1745528336312x211357703914081470",
+   "fromCardId": "1745511108640x677220034400869000",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:13:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1746069586828x980741783980673400",
+   "fromCardId": "1742931439975x927439751753673200",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-202:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1746421842683x734235749428349200",
+   "fromCardId": "1742931443546x233053968161119900",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-240:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1746758889560x324116059864913800",
+   "fromCardId": "1742931443546x233053968161119900",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-240:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1746849796943x480605691513418940",
+   "fromCardId": "1742932418694x375812367233761860",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-235:seismic:no-auto",
+   "shape": "repoint",
+   "rung": "seismic",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1746882209394x973533473145509900",
+   "fromCardId": "1742931439975x927439751753673200",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-202:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1746911265126x924375272312189700",
+   "fromCardId": "1745512332437x287823849200143940",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:169:red:no-auto",
+   "shape": "repoint",
+   "rung": "red",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1747088527575x933307859636754600",
+   "fromCardId": "1742931429815x495059518099500100",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-228:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1747113054331x121466373929780540",
+   "fromCardId": "1745512404178x121031091187741470",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:141:red:no-auto",
+   "shape": "repoint",
+   "rung": "red",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1747276776390x536464967208874600",
+   "fromCardId": "1742931429815x495059518099500100",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-228:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1747989595216x381227817217212800",
+   "fromCardId": "1742931439975x927439751753673200",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-202:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1748101196982x172997144962116600",
+   "fromCardId": "1745512404178x121031091187741470",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:141:red:no-auto",
+   "shape": "repoint",
+   "rung": "red",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1749311454079x978290736802392000",
+   "fromCardId": "1742932854289x601435504826717300",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-240:orange:no-auto",
+   "shape": "repoint",
+   "rung": "orange",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1750285327522x233623771625927300",
+   "fromCardId": "1745511108640x677220034400869000",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:13:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1750805633940x235509714077360320",
+   "fromCardId": "1742931439975x927439751753673200",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-202:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1750819081190x384815294713039000",
+   "fromCardId": "1742931443546x233053968161119900",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-240:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1750977779575x641589718167614700",
+   "fromCardId": "1742931439975x927439751753673200",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-202:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1751113829184x724264443661037700",
+   "fromCardId": "1745512614564x200223001348117900",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:160:blue:no-auto",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1751235717040x365634304993347900",
+   "fromCardId": "1742931439975x927439751753673200",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-202:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1755637701265x469460303696780400",
+   "fromCardId": "1742931439975x927439751753673200",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:202:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1755523927340x869030401801499100",
+   "fromCardId": "1742931439975x927439751753673200",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:202:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1755705356576x240168808506491260",
+   "fromCardId": "1742931429815x495059518099500100",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:228:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1755422088601x258621432309683360",
+   "fromCardId": "1742931429815x495059518099500100",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:228:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1755232066320x469287925310854140",
+   "fromCardId": "1742931429815x495059518099500100",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:228:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1754878328333x519168592482545540",
+   "fromCardId": "1742931429815x495059518099500100",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:228:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1754152583366x496023799724491650",
+   "fromCardId": "1742931429815x495059518099500100",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:228:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1749584214585x569254093178368060",
+   "fromCardId": "1742931429815x495059518099500100",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:228:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1748831817632x583046422760336000",
+   "fromCardId": "1742931429815x495059518099500100",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:228:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1748486701716x928600949517308700",
+   "fromCardId": "1742931429815x495059518099500100",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:228:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1747276939981x904065247786229200",
+   "fromCardId": "1742931429815x495059518099500100",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:228:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1746382447356x959310281487214700",
+   "fromCardId": "1742931429815x495059518099500100",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:228:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1745538783460x540349355241628300",
+   "fromCardId": "1742931429815x495059518099500100",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:228:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1745359265936x681506644477253200",
+   "fromCardId": "1742931429815x495059518099500100",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:228:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1751372417465x345051149769747700",
+   "fromCardId": "1745511110227x257709464281689950",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:35:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1756564735439x518948804227075140",
+   "fromCardId": "1742931429815x495059518099500100",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:228:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1756435932791x438195920120660200",
+   "fromCardId": "1742932919213x343074018697624450",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:237:blue:no-auto",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1743475096180x753179418436807700",
+   "fromCardId": "1742932919213x343074018697624450",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:237:blue:no-auto",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1754946707639x168867877155755680",
+   "fromCardId": "1742932919213x343074018697624450",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:237:blue:no-auto",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1753055772191x259512386025700700",
+   "fromCardId": "1742931445313x220823183072038600",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-230:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1748561143390x310535134568479040",
+   "fromCardId": "1742931442520x151735051628961730",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-209:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1749867980653x620588108075886200",
+   "fromCardId": "1742932925679x762772249206622200",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:220:orange:no-auto",
+   "shape": "repoint",
+   "rung": "orange",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1749263151753x326454832999372160",
+   "fromCardId": "1742932925679x762772249206622200",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:220:orange:no-auto",
+   "shape": "repoint",
+   "rung": "orange",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1747794566824x716098546073813000",
+   "fromCardId": "1742932925679x762772249206622200",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:220:orange:no-auto",
+   "shape": "repoint",
+   "rung": "orange",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1753753992443x645826061708155300",
+   "fromCardId": "1742932893458x235950987143768830",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:231:orange:no-auto",
+   "shape": "repoint",
+   "rung": "orange",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1751680718636x376200670942917950",
+   "fromCardId": "1742932907801x243637084803182140",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:206:orange:no-auto",
+   "shape": "repoint",
+   "rung": "orange",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1750833004663x489253787647242700",
+   "fromCardId": "1742932893458x235950987143768830",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:231:orange:no-auto",
+   "shape": "repoint",
+   "rung": "orange",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1745287408618x520553473080584300",
+   "fromCardId": "1742932925679x762772249206622200",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:220:orange:no-auto",
+   "shape": "repoint",
+   "rung": "orange",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1749491821371x139286827849558480",
+   "fromCardId": "1742932893458x235950987143768830",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:231:orange:no-auto",
+   "shape": "repoint",
+   "rung": "orange",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1743388242514x579439549409280400",
+   "fromCardId": "1742932893458x235950987143768830",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:231:orange:no-auto",
+   "shape": "repoint",
+   "rung": "orange",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1757024834167x981995437717116300",
+   "fromCardId": "1742932893458x235950987143768830",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-231:orange:no-auto",
+   "shape": "repoint",
+   "rung": "orange",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1757033720837x197284810286408000",
+   "fromCardId": "1745512399537x885750770638792200",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:195:red:no-auto",
+   "shape": "repoint",
+   "rung": "red",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1757246405223x978622425541619300",
+   "fromCardId": "1742931429815x495059518099500100",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-228:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1757266877729x731993691123531000",
+   "fromCardId": "1742932925679x762772249206622200",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-220:orange:no-auto",
+   "shape": "repoint",
+   "rung": "orange",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1757283668558x820207744988970200",
+   "fromCardId": "1742931443546x233053968161119900",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-240:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1757874275238x257302233907464420",
+   "fromCardId": "1742932925679x762772249206622200",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-220:orange:no-auto",
+   "shape": "repoint",
+   "rung": "orange",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1757776818597x304412098468757950",
+   "fromCardId": "1742931429815x495059518099500100",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-228:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1748100822326x841381367735069800",
+   "fromCardId": "1745511075934x377845635322508800",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:138:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1758218237774x107687209512683520",
+   "fromCardId": "1742931429815x495059518099500100",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-228:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1758045974576x329869637364405250",
+   "fromCardId": "1742931443546x233053968161119900",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-240:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1757684215807x912262434267244800",
+   "fromCardId": "1742932854289x601435504826717300",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-240:orange:no-auto",
+   "shape": "repoint",
+   "rung": "orange",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1758813080370x598609926281087400",
+   "fromCardId": "1742931443546x233053968161119900",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-240:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1758856756827x611528885942626000",
+   "fromCardId": "1742931429815x495059518099500100",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-228:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1758825018173x247889948117972600",
+   "fromCardId": "1742931429815x495059518099500100",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-228:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1759283015814x990455214404606800",
+   "fromCardId": "1742932893458x235950987143768830",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-231:orange:no-auto",
+   "shape": "repoint",
+   "rung": "orange",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1758708244897x239729522770943940::2026-07-13T00:15:00+00:00::425",
+   "fromCardId": "hiq:basketball:2024:panini-donruss:245:orange:no-auto",
+   "toCardId": "hiq:basketball:2024:donruss-optic:245:orange:no-auto",
+   "shape": "relocate",
+   "rung": "orange",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1788569684617x876902926488285400",
+   "fromCardId": "1742931443546x233053968161119900",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-240:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1742931443546x233053968161119900::2026-09-07T16:49:00+00:00::450",
+   "fromCardId": "1742931443546x233053968161119900",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-240:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1760398944173x732730154160739000",
+   "fromCardId": "1742826951903x715550687488312400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:9:blue:no-auto",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1760588896047x154576764197641660",
+   "fromCardId": "1742928878057x784626159242085500",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:9:blue:no-auto",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1760668406796x414999906069008830",
+   "fromCardId": "1742293817500x801948076522709100",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:14:green:no-auto",
+   "shape": "repoint",
+   "rung": "green",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1760742900557x639400130160396900",
+   "fromCardId": "1742822611252x718905946705916700",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:2:blue:no-auto:num-75",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1760888470300x508274218891523700",
+   "fromCardId": "1745512623808x116313758549438260",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:148:blue:no-auto:num-49",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1760905292504x668167211109435900",
+   "fromCardId": "1742271072070x699678452345662300",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:20:blue:no-auto:num-49",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1760913483688x181527209262909660",
+   "fromCardId": "1742316402719x872576888533386900",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:215:red:no-auto:num-125",
+   "shape": "repoint",
+   "rung": "red",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1760920375311x137833836442060160",
+   "fromCardId": "1742877032207x137316630824304130",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:12:red:no-auto",
+   "shape": "repoint",
+   "rung": "red",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1761010750967x758231781253432300",
+   "fromCardId": "1742826920628x564293950072291460",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:8:blue:no-auto:num-99",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1761047867283x120349786049311000",
+   "fromCardId": "1742318850060x672097013936633000",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:214:red:no-auto:num-99",
+   "shape": "repoint",
+   "rung": "red",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1788802567723x126108153324705490",
+   "fromCardId": "1742931443546x233053968161119900",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-240:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1761095810527x452896471675405400",
+   "fromCardId": "1742825878160x810798175933951100",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:10:purple:no-auto",
+   "shape": "repoint",
+   "rung": "purple",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1761101930916x786877231851874200",
+   "fromCardId": "1742312995090x671096471834256500",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:215:red:no-auto",
+   "shape": "repoint",
+   "rung": "red",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1761359450054x873058466093319200",
+   "fromCardId": "1742318799237x545561503789868700",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:221:red:no-auto:num-99",
+   "shape": "repoint",
+   "rung": "red",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1761450462477x771374790714929200",
+   "fromCardId": "1742909911447x849963058302645900",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:8:red:no-auto",
+   "shape": "repoint",
+   "rung": "red",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1761702663969x873964350299294400",
+   "fromCardId": "1742909900961x644134962135275600",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:13:green:no-auto",
+   "shape": "repoint",
+   "rung": "green",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1761937507781x414192460462618600",
+   "fromCardId": "1742930737999x832211283714228900",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:3:red:no-auto",
+   "shape": "repoint",
+   "rung": "red",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1762135992501x924765729021727200",
+   "fromCardId": "1742318799237x545561503789868700",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:221:red:no-auto",
+   "shape": "repoint",
+   "rung": "red",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1762181265133x820466247843680800",
+   "fromCardId": "1742928878057x784626159242085500",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:9:blue:no-auto",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1762234028060x689869704441420500",
+   "fromCardId": "1742877044311x130654825612264600",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:14:blue:no-auto:num-99",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1762293275069x503984762177524600",
+   "fromCardId": "1742910761538x532365381533910660",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:18:purple:no-auto",
+   "shape": "repoint",
+   "rung": "purple",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1759423886995x348412925926073760::2026-07-02T23:00:00+00:00::250",
+   "fromCardId": "1759423886995x348412925926073760",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:5:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1758708232668x434777271341095800::2026-07-02T01:49:00+00:00::207",
+   "fromCardId": "1758708232668x434777271341095800",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:114:orange:no-auto",
+   "shape": "repoint",
+   "rung": "orange",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1759423886995x348412925926073760::2026-07-06T20:09:00+00:00::227",
+   "fromCardId": "1759423886995x348412925926073760",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:5:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1759425400819x398150773005008450::2026-07-07T03:20:00+00:00::169",
+   "fromCardId": "1759425400819x398150773005008450",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:2:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1759416539494x340554439096078200::2026-07-09T21:41:00+00:00::194",
+   "fromCardId": "1759416539494x340554439096078200",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:18:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1758363035148x687943912660483800::2026-07-09T16:31:00+00:00::150",
+   "fromCardId": "1758363035148x687943912660483800",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:78:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1759416673427x641240179742709400::2026-07-10T03:53:00+00:00::2650",
+   "fromCardId": "1759416673427x641240179742709400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:15:purple:no-auto",
+   "shape": "repoint",
+   "rung": "purple",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1758363077635x896885518538882700::2026-07-10T01:38:00+00:00::200",
+   "fromCardId": "1758363077635x896885518538882700",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:148:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1758363077635x896885518538882700::2026-07-10T01:25:00+00:00::300",
+   "fromCardId": "1758363077635x896885518538882700",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:148:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1758708232668x434777271341095800::2026-07-10T05:16:00+00:00::900",
+   "fromCardId": "1758708232668x434777271341095800",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:114:orange:no-auto",
+   "shape": "repoint",
+   "rung": "orange",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1759424672130x179027580050673760::2026-07-13T02:03:00+00:00::325",
+   "fromCardId": "1759424672130x179027580050673760",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:4:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1758363077635x896885518538882700::2026-07-13T23:08:00+00:00::299",
+   "fromCardId": "1758363077635x896885518538882700",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:148:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1758363077635x896885518538882700::2026-07-13T14:15:00+00:00::249",
+   "fromCardId": "1758363077635x896885518538882700",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:148:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1759423917960x557058730074970300::2026-07-13T02:30:00+00:00::205",
+   "fromCardId": "1759423917960x557058730074970300",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:5:purple:no-auto",
+   "shape": "repoint",
+   "rung": "purple",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1759418381435x369921704157623500::2026-07-13T12:23:00+00:00::2051",
+   "fromCardId": "1759418381435x369921704157623500",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:21:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1758363077635x896885518538882700::2026-07-13T13:37:00+00:00::199",
+   "fromCardId": "1758363077635x896885518538882700",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:148:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1758363077635x896885518538882700::2026-07-13T09:39:00+00:00::226",
+   "fromCardId": "1758363077635x896885518538882700",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:148:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1759426162113x783741298301470700::2026-07-13T14:10:00+00:00::278",
+   "fromCardId": "1759426162113x783741298301470700",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:11:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1759423917960x557058730074970300::2026-07-13T15:39:00+00:00::500",
+   "fromCardId": "1759423917960x557058730074970300",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:5:purple:no-auto",
+   "shape": "repoint",
+   "rung": "purple",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1759410322748x618926105161519400::2026-07-13T15:39:00+00:00::300",
+   "fromCardId": "1759410322748x618926105161519400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:19:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1742932887208x375331422256501400::2026-07-07T03:04:00+00:00::851",
+   "fromCardId": "1742932887208x375331422256501400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-208:red:no-auto",
+   "shape": "repoint",
+   "rung": "red",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1759425514769x607976279129106300::2026-07-22T00:08:00+00:00::300",
+   "fromCardId": "1759425514769x607976279129106300",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:6:purple:no-auto",
+   "shape": "repoint",
+   "rung": "purple",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1741474904851x317149599859336600",
+   "fromCardId": "1742931433856x678192280987957000",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-239:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1741737527695x290082815467399800",
+   "fromCardId": "1742932863002x590467236459034000",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-203:orange:no-auto",
+   "shape": "repoint",
+   "rung": "orange",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1741996835257x616303133241193500",
+   "fromCardId": "1742931433856x678192280987957000",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-239:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1743307854560x712799025927402900",
+   "fromCardId": "1742931435437x749406184066406100",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-245:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1743307987537x731925116409070700",
+   "fromCardId": "1742932910623x354381134183185300",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-202:blue:no-auto",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1743307989035x534094602827297500",
+   "fromCardId": "1742932891375x880456908642092200",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-211:orange:no-auto",
+   "shape": "repoint",
+   "rung": "orange",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1743655008831x875357914072746800",
+   "fromCardId": "1742932910623x354381134183185300",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-202:blue:no-auto",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1744210971903x616428007727897600",
+   "fromCardId": "1742932863002x590467236459034000",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-203:orange:no-auto",
+   "shape": "repoint",
+   "rung": "orange",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1759423917960x557058730074970300::2026-07-13T02:24:00+00:00::183",
+   "fromCardId": "1759423917960x557058730074970300",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:5:purple:no-auto",
+   "shape": "repoint",
+   "rung": "purple",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1745528336303x244063811166147520",
+   "fromCardId": "1745511094602x979736982894991600",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:159:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1745720822674x798516616479937500",
+   "fromCardId": "1742932870315x689277220563659900",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-209:orange:no-auto",
+   "shape": "repoint",
+   "rung": "orange",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1746321728167x967639821391173900",
+   "fromCardId": "1742932933257x930823503529054500",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-207:blue:no-auto",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1746387953573x595882262950357800",
+   "fromCardId": "1745512419439x989096453382177200",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:103:red:no-auto",
+   "shape": "repoint",
+   "rung": "red",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1746672582511x686100300521977500",
+   "fromCardId": "1742931433856x678192280987957000",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-239:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1746738588814x237527053027857020",
+   "fromCardId": "1742931433856x678192280987957000",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-239:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1746834237353x291801903057346240",
+   "fromCardId": "1742931433856x678192280987957000",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-239:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1746911084526x306459004399053630",
+   "fromCardId": "1745512371582x483901218041848500",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:127:red:no-auto",
+   "shape": "repoint",
+   "rung": "red",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1747023240314x847337489360231400",
+   "fromCardId": "1745512398771x953157676912103700",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:47:red:no-auto",
+   "shape": "repoint",
+   "rung": "red",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1747922558201x168322476508188320",
+   "fromCardId": "1745512336598x965437504506570000",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:129:red:no-auto",
+   "shape": "repoint",
+   "rung": "red",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1749551813664x203551696702984220",
+   "fromCardId": "1745512367188x733232868774458800",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:197:red:no-auto",
+   "shape": "repoint",
+   "rung": "red",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1750271089381x768892416975103000",
+   "fromCardId": "1745512576062x968054567950049600",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:184:blue:no-auto",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1750327907564x152889705659430270",
+   "fromCardId": "1745512590364x287551135426022500",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:185:blue:no-auto",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1750420662153x891809484413573500",
+   "fromCardId": "1742932928959x481004194334771400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-231:blue:no-auto",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1750883221350x853857058288591900",
+   "fromCardId": "1745511114734x916730991976216000",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:171:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1750919932621x687425336105134800",
+   "fromCardId": "1745511094602x979736982894991600",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:159:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1751028717622x931944241072363900",
+   "fromCardId": "1745512333883x454427963487530100",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:88:red:no-auto",
+   "shape": "repoint",
+   "rung": "red",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1755580742686x789418891500880100",
+   "fromCardId": "1742931444327x727562343552594600",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:222:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1743559271451x813778000987369600",
+   "fromCardId": "1742931444327x727562343552594600",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:222:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1749474262562x208553157708503580",
+   "fromCardId": "1742931444327x727562343552594600",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:222:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1754259124757x597310978147505040",
+   "fromCardId": "1742931435437x749406184066406100",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:245:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1751421465720x668515139370564200",
+   "fromCardId": "1742931435437x749406184066406100",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:245:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1749702658334x551964511603302500",
+   "fromCardId": "1742931435437x749406184066406100",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:245:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1747536997469x120865047927219970",
+   "fromCardId": "1742931435437x749406184066406100",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:245:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1745071267547x827531972601831300",
+   "fromCardId": "1742931435437x749406184066406100",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:245:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1755834690445x301882836688062400",
+   "fromCardId": "1742931435437x749406184066406100",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:245:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1755840725565x501684697736306940",
+   "fromCardId": "1742931435437x749406184066406100",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:245:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1745110124939x444755224405069200",
+   "fromCardId": "1742932859313x625475933395160300",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:248:blue:no-auto",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1756484180966x314955344396898000",
+   "fromCardId": "1742931433856x678192280987957000",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:239:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1753588742325x187885772677158560",
+   "fromCardId": "1742931429402x932338525612484500",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-237:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1752952296980x913718796620537300",
+   "fromCardId": "1742931429402x932338525612484500",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-237:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1746941701273x921589822522038000",
+   "fromCardId": "1742931429402x932338525612484500",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-237:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1748736655632x751531959086294500",
+   "fromCardId": "1742932910623x354381134183185300",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-202:blue:no-auto",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1752445254154x396460018824609660",
+   "fromCardId": "1742932933024x980481413470199200",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:224:orange:no-auto",
+   "shape": "repoint",
+   "rung": "orange",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1747709753250x326997543627756800",
+   "fromCardId": "1742932891375x880456908642092200",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:211:orange:no-auto",
+   "shape": "repoint",
+   "rung": "orange",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1748457478373x432198459500197500",
+   "fromCardId": "1742932891375x880456908642092200",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:211:orange:no-auto",
+   "shape": "repoint",
+   "rung": "orange",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1748397644663x893891093180089000",
+   "fromCardId": "1742932891375x880456908642092200",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:211:orange:no-auto",
+   "shape": "repoint",
+   "rung": "orange",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1755139289452x839374159404403100",
+   "fromCardId": "1742932900066x709216328961029800",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:212:orange:no-auto",
+   "shape": "repoint",
+   "rung": "orange",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1748313786793x180756934283174960",
+   "fromCardId": "1742932900066x709216328961029800",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:212:orange:no-auto",
+   "shape": "repoint",
+   "rung": "orange",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1752562239692x386715237823831500",
+   "fromCardId": "1745512407242x741413933986154800",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:75:red:no-auto",
+   "shape": "repoint",
+   "rung": "red",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1756944584179x605598488071468240",
+   "fromCardId": "1742931435437x749406184066406100",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-245:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1757370663728x734012748508219000",
+   "fromCardId": "1745512576062x968054567950049600",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:184:blue:no-auto",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1748101135610x452538311739769660",
+   "fromCardId": "1745512624468x687943950464364500",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:53:blue:no-auto",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1758856908453x275891190123753500",
+   "fromCardId": "1742932933257x930823503529054500",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-207:blue:no-auto",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1758990899552x470607999056122960",
+   "fromCardId": "1745512605190x195897840101806560",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:195:blue:no-auto",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1759414339612x395439475212723500::2026-07-11T01:07:00+00:00::7600",
+   "fromCardId": "hiq:basketball:2024:panini-donruss:13:green:no-auto",
+   "toCardId": "hiq:basketball:2024:donruss-optic:13:green:no-auto",
+   "shape": "relocate",
+   "rung": "green",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1760504058161x905993245236526500",
+   "fromCardId": "1742379803391x614964358553023600",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:221:blue:no-auto:num-45",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1760574667051x586367341653751600",
+   "fromCardId": "1742927022539x896767623032760300",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:10:blue:no-auto",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1760757969173x109003782613121600",
+   "fromCardId": "1742826946921x731251682573666200",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:2:blue:no-auto:num-99",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1760842488367x520663945353545800",
+   "fromCardId": "1742927013411x519057810197096200",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:18:red:no-auto:num-55",
+   "shape": "repoint",
+   "rung": "red",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1760888786528x307450355141030140",
+   "fromCardId": "1745512386439x231386829476121200",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:57:red:no-auto:num-99",
+   "shape": "repoint",
+   "rung": "red",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1761097357871x289606005342272900",
+   "fromCardId": "1742928853670x318833144217386600",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:4:blue:no-auto",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1760706009900x566606843976503300",
+   "fromCardId": "1742928853670x318833144217386600",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:4:blue:no-auto",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1761185995850x657157342857404000",
+   "fromCardId": "1742928905042x136313237001508100",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:5:blue:no-auto",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1761256775238x437399753343112450",
+   "fromCardId": "1742928853670x318833144217386600",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:4:blue:no-auto:num-99",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1761267739250x960346821295333500",
+   "fromCardId": "1741709309011x403194418683489500",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:197:blue:no-auto",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1761275918522x127071881903393810",
+   "fromCardId": "1742930759764x564386491531645400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:5:blue:no-auto:num-99",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1761429896169x210012901686928540",
+   "fromCardId": "1742926941791x810777984495851400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:7:red:no-auto:num-75",
+   "shape": "repoint",
+   "rung": "red",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1761390532865x882713007454565000",
+   "fromCardId": "1742316414725x473684527988550660",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:225:red:no-auto:num-125",
+   "shape": "repoint",
+   "rung": "red",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1761379093378x272203895291787780",
+   "fromCardId": "1742316414725x473684527988550660",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:225:red:no-auto:num-125",
+   "shape": "repoint",
+   "rung": "red",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1761532745410x984391097342831900",
+   "fromCardId": "1742379803391x614964358553023600",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:221:blue:no-auto",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1761617304732x612137312359718500",
+   "fromCardId": "1742932928551x257408387895240000",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-230:orange:no-auto:num-75",
+   "shape": "repoint",
+   "rung": "orange",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1761259347329x244747723434535200",
+   "fromCardId": "1742928853670x318833144217386600",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:4:blue:no-auto:num-99",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1762055981197x939176397397931600",
+   "fromCardId": "1742928909513x894211482068326700",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:1:red:no-auto:num-75",
+   "shape": "repoint",
+   "rung": "red",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1762144710809x555528769874298300",
+   "fromCardId": "1742907652786x821083716723920300",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:5:purple:no-auto",
+   "shape": "repoint",
+   "rung": "purple",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1762233174636x182125501934918620",
+   "fromCardId": "1742877091601x675098777803437200",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:13:blue:no-auto:num-99",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1762316706469x388944636660033100",
+   "fromCardId": "1742930759764x564386491531645400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:5:blue:no-auto:num-99",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1762271936861x248536222661404300",
+   "fromCardId": "1742930759764x564386491531645400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:5:blue:no-auto",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1762478065665x629450501580874500",
+   "fromCardId": "1742907652786x821083716723920300",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:5:purple:no-auto",
+   "shape": "repoint",
+   "rung": "purple",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1762478549456x531392201369887100",
+   "fromCardId": "1742907652786x821083716723920300",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:5:purple:no-auto",
+   "shape": "repoint",
+   "rung": "purple",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1759418417896x332749733393761660::2026-07-04T20:14:00+00:00::25000",
+   "fromCardId": "1759418417896x332749733393761660",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:15:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1759416643629x105998346868862780::2026-07-04T03:23:00+00:00::104",
+   "fromCardId": "1759416643629x105998346868862780",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:6:purple:no-auto",
+   "shape": "repoint",
+   "rung": "purple",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1758363112682x714393975521230500::2026-07-05T04:23:00+00:00::125",
+   "fromCardId": "1758363112682x714393975521230500",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:293:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1759418361871x545529337696216260::2026-07-08T03:13:00+00:00::4000",
+   "fromCardId": "1759418361871x545529337696216260",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:6:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1759413195713x737353784121257300::2026-07-10T06:42:00+00:00::150",
+   "fromCardId": "1759413195713x737353784121257300",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:2:purple:no-auto",
+   "shape": "repoint",
+   "rung": "purple",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1759416643629x105998346868862780::2026-07-10T00:56:00+00:00::500",
+   "fromCardId": "1759416643629x105998346868862780",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:6:purple:no-auto",
+   "shape": "repoint",
+   "rung": "purple",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1759418116915x729969572269563100::2026-07-10T02:19:00+00:00::2175",
+   "fromCardId": "1759418116915x729969572269563100",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:8:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1759410373648x417416746802646600::2026-07-11T16:41:00+00:00::125",
+   "fromCardId": "1759410373648x417416746802646600",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:8:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1758363013362x986679932837115900::2026-07-11T00:28:00+00:00::200",
+   "fromCardId": "1758363013362x986679932837115900",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:242:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1759423953026x810088628166253800::2026-07-11T02:16:00+00:00::325",
+   "fromCardId": "1759423953026x810088628166253800",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:4:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1759423953026x810088628166253800::2026-07-11T01:58:00+00:00::999",
+   "fromCardId": "1759423953026x810088628166253800",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:4:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1759418417896x332749733393761660::2026-07-11T02:04:00+00:00::500",
+   "fromCardId": "1759418417896x332749733393761660",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:15:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1759418321542x694199158038228700::2026-07-13T00:51:00+00:00::400",
+   "fromCardId": "1759418321542x694199158038228700",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:20:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1759418116915x729969572269563100::2026-07-13T20:30:00+00:00::3600",
+   "fromCardId": "1759418116915x729969572269563100",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:8:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1759416648837x811802608498233700::2026-07-14T18:55:00+00:00::149",
+   "fromCardId": "1759416648837x811802608498233700",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:12:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1745512628038x133508630625063020::2026-07-07T17:09:00+00:00::400",
+   "fromCardId": "1745512628038x133508630625063020",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:90:blue:no-auto",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1745512628038x133508630625063020::2026-07-08T12:22:00+00:00::500",
+   "fromCardId": "1745512628038x133508630625063020",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:90:blue:no-auto",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1745512628038x133508630625063020::2026-07-08T13:32:00+00:00::700",
+   "fromCardId": "1745512628038x133508630625063020",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:90:blue:no-auto",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1745512628038x133508630625063020::2026-07-08T13:33:00+00:00::700",
+   "fromCardId": "1745512628038x133508630625063020",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:90:blue:no-auto",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1745512628038x133508630625063020::2026-07-08T15:25:00+00:00::1000",
+   "fromCardId": "1745512628038x133508630625063020",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:90:blue:no-auto",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1759419186683x172058383511995970::2026-07-22T01:11:00+00:00::425",
+   "fromCardId": "1759419186683x172058383511995970",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:5:purple:no-auto",
+   "shape": "repoint",
+   "rung": "purple",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1759413195713x737353784121257300::2026-07-11T21:54:00+00:00::210",
+   "fromCardId": "1759413195713x737353784121257300",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:2:purple:no-auto",
+   "shape": "repoint",
+   "rung": "purple",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1741610308942x487202390746903900",
+   "fromCardId": "1742932925032x836273679926219100",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-217:orange:no-auto",
+   "shape": "repoint",
+   "rung": "orange",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1741646086996x253847277259969800",
+   "fromCardId": "1742932900342x214787440405839200",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-222:blue:no-auto",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1786167557728x656364687834216800",
+   "fromCardId": "1742932864999x761024060798705100",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-221:orange:no-auto",
+   "shape": "repoint",
+   "rung": "orange",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1742778472611x592395730346671400",
+   "fromCardId": "1742932925032x836273679926219100",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-217:orange:no-auto",
+   "shape": "repoint",
+   "rung": "orange",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1743218947078x944859344435406100",
+   "fromCardId": "1742932867593x814903797308592600",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-226:orange:no-auto",
+   "shape": "repoint",
+   "rung": "orange",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1743458223650x586649934754332200",
+   "fromCardId": "1742932877116x308882085976816640",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-233:blue:no-auto",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1743654295439x104772071631589630",
+   "fromCardId": "1742932887674x436388633901179100",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-214:orange:no-auto",
+   "shape": "repoint",
+   "rung": "orange",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1744080316718x149596497278319900",
+   "fromCardId": "1742932900342x214787440405839200",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-222:blue:no-auto",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1744511339657x698060502049591100",
+   "fromCardId": "1742932877116x308882085976816640",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-233:blue:no-auto",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1744733206231x279152787928798270",
+   "fromCardId": "1742932921674x582932905662277600",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-244:blue:no-auto",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1744771367897x449902137855536800",
+   "fromCardId": "1742932887674x436388633901179100",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-214:orange:no-auto",
+   "shape": "repoint",
+   "rung": "orange",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1745028154702x280335947828207260",
+   "fromCardId": "1742932907520x369628992074608060",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-244:orange:no-auto",
+   "shape": "repoint",
+   "rung": "orange",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1759416643629x105998346868862780::2026-07-11T00:51:00+00:00::200",
+   "fromCardId": "1759416643629x105998346868862780",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:6:purple:no-auto",
+   "shape": "repoint",
+   "rung": "purple",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1759416643629x105998346868862780::2026-07-10T02:57:00+00:00::176",
+   "fromCardId": "1759416643629x105998346868862780",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:6:purple:no-auto",
+   "shape": "repoint",
+   "rung": "purple",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1759416648837x811802608498233700::2026-07-09T18:57:00+00:00::133",
+   "fromCardId": "1759416648837x811802608498233700",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:12:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1759416643629x105998346868862780::2026-07-06T21:22:00+00:00::199",
+   "fromCardId": "1759416643629x105998346868862780",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:6:purple:no-auto",
+   "shape": "repoint",
+   "rung": "purple",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1759416648837x811802608498233700::2026-07-10T09:39:00+00:00::240",
+   "fromCardId": "1759416648837x811802608498233700",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:12:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1745528336032x866069967916560400",
+   "fromCardId": "1745511092540x506270334679440830",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:86:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1745528336070x946632057715282000",
+   "fromCardId": "1745511079067x326427459683025900",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:19:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1745582613660x899736838313067900",
+   "fromCardId": "1745512638514x918298122712798800",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:35:blue:no-auto",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1746317229363x520679538977752300",
+   "fromCardId": "1745511078643x267787996662025800",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:162:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1746404286249x679823123485846800",
+   "fromCardId": "1742932900342x214787440405839200",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-222:blue:no-auto",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1746810714533x393428362225200830",
+   "fromCardId": "1742932867593x814903797308592600",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-226:orange:no-auto",
+   "shape": "repoint",
+   "rung": "orange",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1746970497831x966922029512296700",
+   "fromCardId": "1745512393102x908314637299039400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:166:red:no-auto",
+   "shape": "repoint",
+   "rung": "red",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1746998827019x723483057975563100",
+   "fromCardId": "1742932887674x436388633901179100",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-214:orange:no-auto",
+   "shape": "repoint",
+   "rung": "orange",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1747105001688x930409394869067600",
+   "fromCardId": "1745512379949x385173510135413900",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:116:red:no-auto",
+   "shape": "repoint",
+   "rung": "red",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1747483796997x296408019071928060",
+   "fromCardId": "1742932867593x814903797308592600",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-226:orange:no-auto",
+   "shape": "repoint",
+   "rung": "orange",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1748100822277x103548458844682450",
+   "fromCardId": "1745511115575x668195602875573500",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:200:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1748100946914x397425076481698900",
+   "fromCardId": "1745512360094x248573527323402000",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:25:red:no-auto",
+   "shape": "repoint",
+   "rung": "red",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1748639387872x560137305027782000",
+   "fromCardId": "1742932867593x814903797308592600",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-226:orange:no-auto",
+   "shape": "repoint",
+   "rung": "orange",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1748654338936x580316156946337500",
+   "fromCardId": "1742932921674x582932905662277600",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-244:blue:no-auto",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1748995461493x201709824396943970",
+   "fromCardId": "1742932867593x814903797308592600",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-226:orange:no-auto",
+   "shape": "repoint",
+   "rung": "orange",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1749326932427x928438477087143200",
+   "fromCardId": "1742932900342x214787440405839200",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-222:blue:no-auto",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1750258170993x818969666646061300",
+   "fromCardId": "1742932907520x369628992074608060",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-244:orange:no-auto",
+   "shape": "repoint",
+   "rung": "orange",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1750726993182x296452808444240840",
+   "fromCardId": "1745512360651x740100445992635900",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:28:red:no-auto",
+   "shape": "repoint",
+   "rung": "red",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1751036031208x340830219275469950",
+   "fromCardId": "1742932900342x214787440405839200",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-222:blue:no-auto",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1755644401344x732759474885872100",
+   "fromCardId": "1742932900342x214787440405839200",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:222:blue:no-auto",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1753750722512x551701747596157200",
+   "fromCardId": "1742932925032x836273679926219100",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:217:orange:no-auto",
+   "shape": "repoint",
+   "rung": "orange",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1756256474749x377348263754647040",
+   "fromCardId": "1742931437277x167736162116037600",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:220:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1747539371738x510144578588851000",
+   "fromCardId": "1742931437277x167736162116037600",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:220:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1756726010606x284680288109859780",
+   "fromCardId": "1742932907520x369628992074608060",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:244:orange:no-auto",
+   "shape": "repoint",
+   "rung": "orange",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1752850517748x305315545323060300",
+   "fromCardId": "1742931439007x576017107185370560",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-224:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1752420368001x648281443525236900",
+   "fromCardId": "1742931440285x391935075865466940",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-234:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1749699670294x158893434334896450",
+   "fromCardId": "1742931439007x576017107185370560",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-224:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1746930898785x949262903115891700",
+   "fromCardId": "1742931440285x391935075865466940",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-234:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1747856989752x819016432881484800",
+   "fromCardId": "1742931434862x191628400200496000",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-249:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1749003032000x196052144939514720",
+   "fromCardId": "1742931439007x576017107185370560",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-224:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1747098068936x554966979082528450",
+   "fromCardId": "1742931439007x576017107185370560",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-224:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1752869260268x338883711719846000",
+   "fromCardId": "1742932877116x308882085976816640",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-233:blue:no-auto",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1752632946403x835035525734693500",
+   "fromCardId": "1742932877116x308882085976816640",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-233:blue:no-auto",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1754100419840x271214028030427400",
+   "fromCardId": "1742932890461x690932679037959600",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:235:orange:no-auto",
+   "shape": "repoint",
+   "rung": "orange",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1747105348585x861215856002528900",
+   "fromCardId": "1742932890461x690932679037959600",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:235:orange:no-auto",
+   "shape": "repoint",
+   "rung": "orange",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1750998432946x906721493097508200",
+   "fromCardId": "1742932864999x761024060798705100",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:221:orange:no-auto",
+   "shape": "repoint",
+   "rung": "orange",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1752808309777x112106162951672420",
+   "fromCardId": "1742932391372x757112639223931100",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:222:seismic:no-auto",
+   "shape": "repoint",
+   "rung": "seismic",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1753557480667x957901568638965800",
+   "fromCardId": "1742932520318x914194560021350800",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:227:seismic:no-auto",
+   "shape": "repoint",
+   "rung": "seismic",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1746322038641x545816912544569340",
+   "fromCardId": "1742932391372x757112639223931100",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:222:seismic:no-auto",
+   "shape": "repoint",
+   "rung": "seismic",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1752733944894x310713043419797300",
+   "fromCardId": "1742932520318x914194560021350800",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:227:seismic:no-auto",
+   "shape": "repoint",
+   "rung": "seismic",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1746420371869x840873923584357400",
+   "fromCardId": "1745512391258x330656151748113500",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:130:red:no-auto",
+   "shape": "repoint",
+   "rung": "red",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1757715603861x923662601581923600",
+   "fromCardId": "1742932925032x836273679926219100",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-217:orange:no-auto",
+   "shape": "repoint",
+   "rung": "orange",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1757124465208x412636460963699460",
+   "fromCardId": "1742932921674x582932905662277600",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-244:blue:no-auto",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1759552255238x787967206355382700",
+   "fromCardId": "1745512338873x831549369523795500",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:59:red:no-auto",
+   "shape": "repoint",
+   "rung": "red",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1755566083072x138374720285923570",
+   "fromCardId": "1742825875570x870410487661329900",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:9:purple:no-auto",
+   "shape": "repoint",
+   "rung": "purple",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1747183083435x326939935370702800",
+   "fromCardId": "1742825875570x870410487661329900",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:9:purple:no-auto",
+   "shape": "repoint",
+   "rung": "purple",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1760404573402x817228064076842600",
+   "fromCardId": "1742930773280x757205402374522100",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:7:red:no-auto",
+   "shape": "repoint",
+   "rung": "red",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1760460407432x163207463030152100",
+   "fromCardId": "1742926972725x382771843471070300",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:3:blue:no-auto",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1760489410843x455994980348195800",
+   "fromCardId": "1742907657265x741085991422837100",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:13:purple:no-auto",
+   "shape": "repoint",
+   "rung": "purple",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1760556890129x952473825643341600",
+   "fromCardId": "1742818520698x785022650741965700",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:10:blue:no-auto:num-75",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1760628381157x742807235436813100",
+   "fromCardId": "1742928897667x459307169829616060",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:11:red:no-auto",
+   "shape": "repoint",
+   "rung": "red",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1760654292646x578599639352387300",
+   "fromCardId": "1742910748388x859708567461335200",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:4:purple:no-auto",
+   "shape": "repoint",
+   "rung": "purple",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1760149435099x930901001014424000",
+   "fromCardId": "1742909855767x657811490217574640",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:10:red:no-auto:num-55",
+   "shape": "repoint",
+   "rung": "red",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1760749628472x233321165595546720",
+   "fromCardId": "1742314767047x844221278018242300",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:205:purple:no-auto",
+   "shape": "repoint",
+   "rung": "purple",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1760753686665x144610589056195500",
+   "fromCardId": "1742877053382x882939072019831200",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:11:green:no-auto",
+   "shape": "repoint",
+   "rung": "green",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1760930841043x391300729853903300",
+   "fromCardId": "1742909896930x408180368381518140",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:2:red:no-auto",
+   "shape": "repoint",
+   "rung": "red",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1761095484950x362043076009598300",
+   "fromCardId": "1742909896930x408180368381518140",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:2:red:no-auto",
+   "shape": "repoint",
+   "rung": "red",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1761189509810x634093275620287500",
+   "fromCardId": "1742319435033x402008920560386100",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:222:blue:no-auto",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1761245968231x252263473505059520",
+   "fromCardId": "1742818505604x327256738202866200",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:13:blue:no-auto:num-75",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1761258457712x377852327306248640",
+   "fromCardId": "1742927788342x599987491184125200",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:3:purple:no-auto",
+   "shape": "repoint",
+   "rung": "purple",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1761268992799x509597911272241540",
+   "fromCardId": "1742909877749x565209118745933800",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:15:red:no-auto",
+   "shape": "repoint",
+   "rung": "red",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1761269719504x419449316648703900",
+   "fromCardId": "1742909861289x983457745605949400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:21:blue:no-auto",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1761276212326x676553105376896900",
+   "fromCardId": "1742930737738x609097154035267800",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:9:red:no-auto:num-55",
+   "shape": "repoint",
+   "rung": "red",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1761279191221x783637061444709500",
+   "fromCardId": "1742877053382x882939072019831200",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:11:green:no-auto",
+   "shape": "repoint",
+   "rung": "green",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1761310494233x454404458016632900",
+   "fromCardId": "1742907666426x931954402723718000",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:16:purple:no-auto",
+   "shape": "repoint",
+   "rung": "purple",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1761433862887x934352655326330900",
+   "fromCardId": "1742930723769x440403446062932500",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:10:red:no-auto:num-55",
+   "shape": "repoint",
+   "rung": "red",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1761450700013x565221531060906300",
+   "fromCardId": "1742909896930x408180368381518140",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:2:red:no-auto",
+   "shape": "repoint",
+   "rung": "red",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1761624062219x577535792641403300",
+   "fromCardId": "1742926938997x112367613937035540",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:9:red:no-auto:num-75",
+   "shape": "repoint",
+   "rung": "red",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1761874278709x500018892194140700",
+   "fromCardId": "1742876294421x808798876768380400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:1:purple:no-auto",
+   "shape": "repoint",
+   "rung": "purple",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1761879045604x541857562017555200",
+   "fromCardId": "1742907657265x741085991422837100",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:13:purple:no-auto",
+   "shape": "repoint",
+   "rung": "purple",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1761891857203x785012359203569800",
+   "fromCardId": "1742316424496x650216484596393000",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:222:red:no-auto:num-125",
+   "shape": "repoint",
+   "rung": "red",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1761581109229x907682514508351000",
+   "fromCardId": "1742877079362x239877173835210120",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:1:blue:no-auto:num-99",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1762139527109x542922252482760600",
+   "fromCardId": "1741709270965x931530327867981600",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:2:blue:no-auto:num-85",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1762148527861x359828675308249340",
+   "fromCardId": "1742910748388x859708567461335200",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:4:purple:no-auto",
+   "shape": "repoint",
+   "rung": "purple",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1762219533164x497026440321375550",
+   "fromCardId": "1742877079362x239877173835210120",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:1:blue:no-auto",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1762221918055x785951770252768500",
+   "fromCardId": "1742909889904x767560544739121000",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:16:blue:no-auto:num-99",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1762316661032x607981825874025200",
+   "fromCardId": "1742930737738x609097154035267800",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:9:red:no-auto:num-55",
+   "shape": "repoint",
+   "rung": "red",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1759418395671x726931246831384700::2026-07-01T22:24:00+00:00::850",
+   "fromCardId": "1759418395671x726931246831384700",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:4:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1758708171114x730246467829308800::2026-07-06T23:52:00+00:00::1000",
+   "fromCardId": "1758708171114x730246467829308800",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:280:orange:no-auto",
+   "shape": "repoint",
+   "rung": "orange",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1759423921114x267869421340019900::2026-07-07T03:50:00+00:00::149",
+   "fromCardId": "1759423921114x267869421340019900",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:3:purple:no-auto",
+   "shape": "repoint",
+   "rung": "purple",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1758363064881x882549802378127400::2026-07-10T15:36:00+00:00::224",
+   "fromCardId": "1758363064881x882549802378127400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:127:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1758365220331x166356909518895940::2026-07-10T01:49:00+00:00::1100",
+   "fromCardId": "1758365220331x166356909518895940",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:131:photon:no-auto",
+   "shape": "repoint",
+   "rung": "photon",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1758363229803x377986809563696450::2026-07-10T03:12:00+00:00::176",
+   "fromCardId": "1758363229803x377986809563696450",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:274:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1758363064881x882549802378127400::2026-07-10T03:15:00+00:00::550",
+   "fromCardId": "1758363064881x882549802378127400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:127:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1759416692864x722872452468963200::2026-07-10T02:07:00+00:00::250",
+   "fromCardId": "1759416692864x722872452468963200",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:17:purple:no-auto",
+   "shape": "repoint",
+   "rung": "purple",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1759416660543x140666799412044510::2026-07-10T03:57:00+00:00::388",
+   "fromCardId": "1759416660543x140666799412044510",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:16:purple:no-auto",
+   "shape": "repoint",
+   "rung": "purple",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1759414235954x132447535714883780::2026-07-10T05:10:00+00:00::425",
+   "fromCardId": "1759414235954x132447535714883780",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:12:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1759416629112x966188843506437000::2026-07-10T09:39:00+00:00::160",
+   "fromCardId": "1759416629112x966188843506437000",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:5:purple:no-auto",
+   "shape": "repoint",
+   "rung": "purple",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1759423921114x267869421340019900::2026-07-11T01:13:00+00:00::150",
+   "fromCardId": "1759423921114x267869421340019900",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:3:purple:no-auto",
+   "shape": "repoint",
+   "rung": "purple",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1758363020475x271326271080812640::2026-07-13T00:46:00+00:00::326",
+   "fromCardId": "1758363020475x271326271080812640",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:155:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1759416660543x140666799412044510::2026-07-13T02:59:00+00:00::500",
+   "fromCardId": "1759416660543x140666799412044510",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:16:purple:no-auto",
+   "shape": "repoint",
+   "rung": "purple",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1759416692864x722872452468963200::2026-07-13T03:18:00+00:00::400",
+   "fromCardId": "1759416692864x722872452468963200",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:17:purple:no-auto",
+   "shape": "repoint",
+   "rung": "purple",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1759416692864x722872452468963200::2026-07-13T15:04:00+00:00::499",
+   "fromCardId": "1759416692864x722872452468963200",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:17:purple:no-auto",
+   "shape": "repoint",
+   "rung": "purple",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1758363064881x882549802378127400::2026-07-14T00:30:00+00:00::225",
+   "fromCardId": "1758363064881x882549802378127400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:127:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1758363020475x271326271080812640::2026-07-14T02:55:00+00:00::145",
+   "fromCardId": "1758363020475x271326271080812640",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:155:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1759416683457x153741979834585380::2026-07-14T12:28:00+00:00::9600",
+   "fromCardId": "1759416683457x153741979834585380",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:3:purple:no-auto",
+   "shape": "repoint",
+   "rung": "purple",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1742932583984x902308682434174200::2026-07-16T03:24:00+00:00::1799",
+   "fromCardId": "1742932583984x902308682434174200",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-244:seismic:no-auto",
+   "shape": "repoint",
+   "rung": "seismic",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1759416692864x722872452468963200::2026-07-21T23:16:00+00:00::7500",
+   "fromCardId": "1759416692864x722872452468963200",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:17:purple:no-auto",
+   "shape": "repoint",
+   "rung": "purple",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1759416692864x722872452468963200::2026-07-21T23:36:00+00:00::250",
+   "fromCardId": "1759416692864x722872452468963200",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:17:purple:no-auto",
+   "shape": "repoint",
+   "rung": "purple",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1745512333656x519941311506783200::2026-07-07T20:02:00+00:00::500",
+   "fromCardId": "1745512333656x519941311506783200",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:90:red:no-auto",
+   "shape": "repoint",
+   "rung": "red",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1745512333656x519941311506783200::2026-07-08T19:21:00+00:00::600",
+   "fromCardId": "1745512333656x519941311506783200",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:90:red:no-auto",
+   "shape": "repoint",
+   "rung": "red",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1745512333656x519941311506783200::2026-07-08T19:25:00+00:00::500",
+   "fromCardId": "1745512333656x519941311506783200",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:90:red:no-auto",
+   "shape": "repoint",
+   "rung": "red",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1742931441278x485511972777691100::2026-07-24T13:06:00+00:00::1200",
+   "fromCardId": "1742931441278x485511972777691100",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-236:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1742932871106x915951672069993300::2026-07-25T22:03:00+00:00::3099",
+   "fromCardId": "1742932871106x915951672069993300",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-221:blue:no-auto",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1785019918552x651142111364978200",
+   "fromCardId": "1742932871106x915951672069993300",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-221:blue:no-auto",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1758363162874x652732347305485800::2026-07-13T02:10:00+00:00::135",
+   "fromCardId": "1758363162874x652732347305485800",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:271:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1759416683457x153741979834585380::2026-07-09T14:11:00+00:00::450",
+   "fromCardId": "1759416683457x153741979834585380",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:3:purple:no-auto",
+   "shape": "repoint",
+   "rung": "purple",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1758708171114x730246467829308800::2026-07-06T01:06:00+00:00::200",
+   "fromCardId": "1758708171114x730246467829308800",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:280:orange:no-auto",
+   "shape": "repoint",
+   "rung": "orange",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1741388198237x551927504611261250",
+   "fromCardId": "1742931447356x220786420569385470",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-217:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1741492492110x753082434778276500",
+   "fromCardId": "1742932860420x897051192230222700",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-211:blue:no-auto",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1741797051599x930556101605047800",
+   "fromCardId": "1742931441001x569671504435276900",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-218:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1741912740244x385652105329697540",
+   "fromCardId": "1742931441278x485511972777691100",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-236:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1742166516890x876056075618730500",
+   "fromCardId": "1742931444548x280127502225924640",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-204:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1742337772136x492292803136093800",
+   "fromCardId": "1742932918549x535041010678237060",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-210:blue:no-auto",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1742570691714x555574502869655040",
+   "fromCardId": "1742932876390x173144761969260320",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-240:blue:no-auto",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1786164209764x966137007024920800",
+   "fromCardId": "1742932583984x902308682434174200",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-244:seismic:no-auto",
+   "shape": "repoint",
+   "rung": "seismic",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1742677652979x976486606099844100",
+   "fromCardId": "1742931444548x280127502225924640",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-204:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1742736596523x673183550049715600",
+   "fromCardId": "1742931436263x677819423775908700",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-219:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1742750207474x740324704764012700",
+   "fromCardId": "1742931436263x677819423775908700",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-219:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1742769978452x104508192662275950",
+   "fromCardId": "1742932876390x173144761969260320",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-240:blue:no-auto",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1743219667059x396732654739479800",
+   "fromCardId": "1742931434442x812069439397796500",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-221:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1743269819963x235906450592323620",
+   "fromCardId": "1742931441278x485511972777691100",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-236:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1743292146864x517122503099407300",
+   "fromCardId": "1742931434442x812069439397796500",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-221:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1743302217170x829124352332551600",
+   "fromCardId": "1742932918549x535041010678237060",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-210:blue:no-auto",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1743858068414x511647055156589500",
+   "fromCardId": "1742931436263x677819423775908700",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-219:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1744515287146x233642805337914050",
+   "fromCardId": "1742931434442x812069439397796500",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-221:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1744681346441x613232743213888600",
+   "fromCardId": "1742932876390x173144761969260320",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-240:blue:no-auto",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1744770645388x556766650726952450",
+   "fromCardId": "1742931436263x677819423775908700",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-219:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1744928712602x802083478536320600",
+   "fromCardId": "1745512643749x390426161579852540",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:163:blue:no-auto",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1759416660543x140666799412044510::2026-07-10T03:27:00+00:00::295",
+   "fromCardId": "1759416660543x140666799412044510",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:16:purple:no-auto",
+   "shape": "repoint",
+   "rung": "purple",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1745373532990x262890456036769760",
+   "fromCardId": "1742932871106x915951672069993300",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-221:blue:no-auto",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1745556521796x101037423547334360",
+   "fromCardId": "1742932856547x683647364877881840",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-218:blue:no-auto",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1746383644216x345409579678871230",
+   "fromCardId": "1742931436263x677819423775908700",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-219:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1746391441264x653616741221770000",
+   "fromCardId": "1742931434442x812069439397796500",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-221:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1746581737091x753504546379486100",
+   "fromCardId": "1742932934666x967307278150636200",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-201:orange:no-auto",
+   "shape": "repoint",
+   "rung": "orange",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1746735114100x931329854996594300",
+   "fromCardId": "1745512396823x465970114375193800",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:198:red:no-auto",
+   "shape": "repoint",
+   "rung": "red",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1746758186234x883235967884373500",
+   "fromCardId": "1742931436263x677819423775908700",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-219:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1746807089588x930458095747148400",
+   "fromCardId": "1742931434442x812069439397796500",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-221:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1747007087776x847000728579987500",
+   "fromCardId": "1742931436263x677819423775908700",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-219:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1747414208586x477127577486370100",
+   "fromCardId": "1745512353170x961178611801674800",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:2:red:no-auto",
+   "shape": "repoint",
+   "rung": "red",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1747695847171x678490008725006700",
+   "fromCardId": "1742931436263x677819423775908700",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-219:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1747967949645x771997251468433700",
+   "fromCardId": "1742931444548x280127502225924640",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-204:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1748100822262x642709995355241800",
+   "fromCardId": "1745511103638x766396740810275500",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:156:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1748101069688x981928654883865500",
+   "fromCardId": "1745512408024x542562487849708600",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:37:red:no-auto",
+   "shape": "repoint",
+   "rung": "red",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1748101136616x928202951722313200",
+   "fromCardId": "1745512330770x537821548479471300",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:196:red:no-auto",
+   "shape": "repoint",
+   "rung": "red",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1748850895403x190703879625011330",
+   "fromCardId": "1745512645785x760472822346369700",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:100:blue:no-auto",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1748999747868x706074834831423400",
+   "fromCardId": "1742931436263x677819423775908700",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-219:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1749871517692x655269054063492900",
+   "fromCardId": "1745512330770x537821548479471300",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:196:red:no-auto",
+   "shape": "repoint",
+   "rung": "red",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1750948253868x723050391682272600",
+   "fromCardId": "1742931436263x677819423775908700",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-219:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1751320303691x448302038487202700",
+   "fromCardId": "1742931436263x677819423775908700",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-219:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1748649939806x570049304249377300",
+   "fromCardId": "1742931448349x215898649956965730",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:243:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1746583312760x119663662731699600",
+   "fromCardId": "1742931448349x215898649956965730",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:243:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1746758467920x645083037353691300",
+   "fromCardId": "1742931448349x215898649956965730",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:243:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1746069585430x684420529143595100",
+   "fromCardId": "1742931448349x215898649956965730",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:243:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1755647143568x855611429883758200",
+   "fromCardId": "1742931447566x673419306250774300",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:242:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1751313247837x961183549101047200",
+   "fromCardId": "1742931447566x673419306250774300",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:242:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1753876336984x142042285573465760",
+   "fromCardId": "1742931434245x962798636849810000",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:216:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1753918597003x620770715939512400",
+   "fromCardId": "1742932922409x304371159533782340",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:217:blue:no-auto",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1753060939984x896816072844372600",
+   "fromCardId": "1742932922409x304371159533782340",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:217:blue:no-auto",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1756434951087x162855617117352500",
+   "fromCardId": "1742931444548x280127502225924640",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:204:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1754819969177x657460488208217000",
+   "fromCardId": "1742931441001x569671504435276900",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-218:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1756608532863x892810761995381500",
+   "fromCardId": "1742931448590x402442693659336400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-232:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1745028163829x182027175718442400",
+   "fromCardId": "1742931438488x288661998408210370",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-250:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1756761712533x804345383110494300",
+   "fromCardId": "1742931446125x195942122489619170",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:203:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1751496537900x761064287257565700",
+   "fromCardId": "1742931441001x569671504435276900",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-218:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1751148415628x798050226873904900",
+   "fromCardId": "1742931448590x402442693659336400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-232:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1746968949358x115717034931523300",
+   "fromCardId": "1742931448590x402442693659336400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-232:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1753146915928x361038430868842560",
+   "fromCardId": "1742932927601x727671445514994400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-228:blue:no-auto",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1750819361784x708028340166656300",
+   "fromCardId": "1742932876390x173144761969260320",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-240:blue:no-auto",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1749258731631x607078317995644300",
+   "fromCardId": "1742932860420x897051192230222700",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-211:blue:no-auto",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1747436458361x905530979608157700",
+   "fromCardId": "1742932867942x163316110289406080",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-249:blue:no-auto",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1747900481681x783374501436704900",
+   "fromCardId": "1742932876390x173144761969260320",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-240:blue:no-auto",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1753146915259x364540132838617700",
+   "fromCardId": "1742932927601x727671445514994400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-228:blue:no-auto",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1744405745078x427057833037711760",
+   "fromCardId": "1742932927601x727671445514994400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-228:blue:no-auto",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1747186462900x561339497044027800",
+   "fromCardId": "1742932876390x173144761969260320",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-240:blue:no-auto",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1749480231603x436076948730157900",
+   "fromCardId": "1742932923348x580854496803189600",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:238:orange:no-auto",
+   "shape": "repoint",
+   "rung": "orange",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1746829875929x698779937503092100",
+   "fromCardId": "1742932923348x580854496803189600",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:238:orange:no-auto",
+   "shape": "repoint",
+   "rung": "orange",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1754870687121x500303366740505660",
+   "fromCardId": "1742932583984x902308682434174200",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:244:seismic:no-auto",
+   "shape": "repoint",
+   "rung": "seismic",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1757031788717x316565082524564740",
+   "fromCardId": "1742931441278x485511972777691100",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-236:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1757033435320x558546552141059100",
+   "fromCardId": "1742931436263x677819423775908700",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-219:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1757554238624x111251832914222690",
+   "fromCardId": "1742931444548x280127502225924640",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-204:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1757397863576x350970516379345100",
+   "fromCardId": "1742931440493x579183748091535900",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-233:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1758940869936x185865335478863070",
+   "fromCardId": "1742931446125x195942122489619170",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-203:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1786717158805x157112054317158460",
+   "fromCardId": "1742932876390x173144761969260320",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-240:blue:no-auto",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1745512334159x794240300828828300::2026-08-20T09:36:00+00:00::5000",
+   "fromCardId": "1745512334159x794240300828828300",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:161:red:no-auto",
+   "shape": "repoint",
+   "rung": "red",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1786996289938x669966105919465200",
+   "fromCardId": "1742932871106x915951672069993300",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-221:blue:no-auto",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1759416692864x722872452468963200::2026-07-10T02:33:00+00:00::7500",
+   "fromCardId": "hiq:basketball:2024:panini-donruss:17:purple:no-auto",
+   "toCardId": "hiq:basketball:2024:donruss-optic:17:purple:no-auto",
+   "shape": "relocate",
+   "rung": "purple",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1787224845637x575066041082554560",
+   "fromCardId": "1745512334159x794240300828828300",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:161:red:no-auto",
+   "shape": "repoint",
+   "rung": "red",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1760061758723x401882885909896800",
+   "fromCardId": "1742931444548x280127502225924640",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-204:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1760102294707x108201082024993680",
+   "fromCardId": "1742826919524x880270985604663900",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:1:blue:no-auto",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1760239488401x297619261793802940",
+   "fromCardId": "1742316461311x979284169043951500",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:204:red:no-auto:num-125",
+   "shape": "repoint",
+   "rung": "red",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1760297198182x674071479548126200",
+   "fromCardId": "1741705843891x963447117224648800",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:116:red:no-auto:num-99",
+   "shape": "repoint",
+   "rung": "red",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1760398009337x654219144643330800",
+   "fromCardId": "1742826927331x536352380995068100",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:10:red:no-auto",
+   "shape": "repoint",
+   "rung": "red",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1760754963099x167770431242487260",
+   "fromCardId": "1742926981850x231863689267717300",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:14:red:no-auto",
+   "shape": "repoint",
+   "rung": "red",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1760821599671x808609685589883600",
+   "fromCardId": "1742909800990x949949699382461400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:2:red:no-auto",
+   "shape": "repoint",
+   "rung": "red",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1760830994268x873444159861475100",
+   "fromCardId": "1742931447566x673419306250774300",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:p-242:holo:no-auto",
+   "shape": "repoint",
+   "rung": "holo",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1760846579777x430321270468821950",
+   "fromCardId": "1742930738899x470401886384485000",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:8:red:no-auto",
+   "shape": "repoint",
+   "rung": "red",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1760455046016x338674545445919940",
+   "fromCardId": "1742341038139x263644857169040830",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:201:blue:no-auto:num-49",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1760926080190x621661570025623800",
+   "fromCardId": "1742731860298x566946629478975800",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:255:red:auto:num-99",
+   "shape": "repoint",
+   "rung": "red",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1761073756148x539376204283497700",
+   "fromCardId": "1742826927331x536352380995068100",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:10:red:no-auto:num-75",
+   "shape": "repoint",
+   "rung": "red",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1761146826484x378910830352465800",
+   "fromCardId": "1742877084397x462296667406323600",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:5:red:no-auto",
+   "shape": "repoint",
+   "rung": "red",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1761270547154x566658020837500900",
+   "fromCardId": "1742909837862x926257621393356000",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:11:red:no-auto:num-75",
+   "shape": "repoint",
+   "rung": "red",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1761274534936x623904586792853000",
+   "fromCardId": "1742826927331x536352380995068100",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:10:red:no-auto",
+   "shape": "repoint",
+   "rung": "red",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1761437291021x263797780902477860",
+   "fromCardId": "1742926935506x737159545697550000",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:5:red:no-auto:num-55",
+   "shape": "repoint",
+   "rung": "red",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1761249011896x203186705659926370",
+   "fromCardId": "1745512359126x736935035899504600",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:54:red:no-auto",
+   "shape": "repoint",
+   "rung": "red",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1761579624008x620487636336051200",
+   "fromCardId": "1742312889041x181616287198352000",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:202:red:no-auto",
+   "shape": "repoint",
+   "rung": "red",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1761609084829x500167265389698050",
+   "fromCardId": "1742910758198x911195612182219500",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:10:purple:no-auto",
+   "shape": "repoint",
+   "rung": "purple",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1762042208743x723619853494605000",
+   "fromCardId": "1742826927331x536352380995068100",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:10:red:no-auto:num-75",
+   "shape": "repoint",
+   "rung": "red",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1762047989567x323898783291542340",
+   "fromCardId": "1742316461311x979284169043951500",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:204:red:no-auto",
+   "shape": "repoint",
+   "rung": "red",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1762314713458x162207609420531600",
+   "fromCardId": "1742909803062x998506132400297500",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:1:blue:no-auto",
+   "shape": "repoint",
+   "rung": "blue",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1762396261597x458877453182042560",
+   "fromCardId": "1742907672871x947203207035359500",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:21:purple:no-auto",
+   "shape": "repoint",
+   "rung": "purple",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1762404876543x806837405923022000",
+   "fromCardId": "1742926935506x737159545697550000",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:basketball:2024:donruss-optic:5:red:no-auto",
+   "shape": "repoint",
+   "rung": "red",
+   "source": "cardhedge"
+  }
+ ],
+ "partEntries": 467
+}
