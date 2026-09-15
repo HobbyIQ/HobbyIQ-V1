@@ -543,6 +543,51 @@ export const PRODUCT_SET_KEYS: ReadonlyArray<ProductSetKey> = [
   P("upper-deck"),
   S("upper-deck-series-1", { names: ["upper-deck-series-one"], family: "upper-deck", parent: "upper-deck", refines: "upper-deck" }),
   S("upper-deck-series-2", { names: ["upper-deck-series-two"], family: "upper-deck", parent: "upper-deck", refines: "upper-deck" }),
+
+  /**
+   * CF-A-NAMED-INSERT-SET-IS-ITS-OWN-CARD-SET, R42 and R43 (Drew, 2026-09-15).
+   *
+   * Two same-numbered subsets in the staged Upper Deck hockey package
+   * (`acq-2026-09-14-cardboardconnection`), each of which refused its whole
+   * file until it had a key. Registered qualified, like the R38 block below,
+   * because a bare `o-pee-chee-retro-update` or `1994-95-rookie-tribute-die-cuts`
+   * would not say WHICH Upper Deck product it belongs to.
+   *
+   * R42 `1994-95 Rookie Tribute Die-Cuts` (2019-20 Series 1, 10 clashing
+   * addresses). It restarts at card 1 with its OWN players: #1 is Cale Makar
+   * where the base print's #1 is Auston Matthews, #2 Filip Zadina against
+   * William Nylander. Ten base cards were answering for two cards each.
+   *
+   * R43 `O-Pee-Chee Retro Update` (2021-22 Series 2, 40 clashing addresses).
+   * This one is NOT a parallel, and that is the whole ruling: it carries
+   * O-Pee-Chee Update's card numbers and 39 of 40 the same players, so it looks
+   * like a rung -- but it is a distinct retro-design product with its OWN
+   * parallel ladder (Black Border, Neon Green Border) running beside Update's
+   * (Blue Border, Red Border). A named variation is a distinct card, so it
+   * cannot fold onto Update as a colour.
+   */
+  S("upper-deck-series-1-1994-95-rookie-tribute-die-cuts", {
+    family: "upper-deck-series-1", parent: "upper-deck-series-1",
+  }),
+  S("upper-deck-series-2-o-pee-chee-retro-update", {
+    family: "upper-deck-series-2", parent: "upper-deck-series-2",
+  }),
+  // THE CLASH IS BETWEEN THE ROOKIES SUBSETS, and both sides need a key.
+  // Measured on the staged file: card #611 is William Eklund RC in BOTH
+  // `o-pee-chee-update--rookies` and `o-pee-chee-retro-update--rookies`, so
+  // 40 addresses answered for two cards each. Same numbers, same players --
+  // and DIFFERENT LADDERS, which is what makes them two products rather than
+  // one printed twice: Update's rookies carry Blue Border and Red Border,
+  // Retro Update's carry Black Border /100 and Neon Green Border /50.
+  //
+  // Registering only the Retro parent would have left the pair still colliding,
+  // because neither ROOKIES subset is the parent. Both are registered.
+  S("upper-deck-series-2-o-pee-chee-update-rookies", {
+    family: "upper-deck-series-2", parent: "upper-deck-series-2",
+  }),
+  S("upper-deck-series-2-o-pee-chee-retro-update-rookies", {
+    family: "upper-deck-series-2", parent: "upper-deck-series-2",
+  }),
   // D39 (Drew, 2026-08-31): the hockey umbrella folds onto its SERIES products,
   // and Extended Series is one of them. It was the only named destination the
   // table did not spell, so "2024-25 Upper Deck Extended Series" resolved to
