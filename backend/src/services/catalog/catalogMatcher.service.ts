@@ -19,7 +19,8 @@
  * UPSERT-updated (never deleted). Dedup is a separate one-off pass.
  */
 
-import { CosmosClient, type Container } from "@azure/cosmos";
+import { CosmosClient, type Container, type PartitionKey } from "@azure/cosmos";
+import { nonePartitionKey } from "./catalogRowOps.service.js";
 import {
   cardNumberInClause,
   computeHobbyIqCardId,
@@ -803,14 +804,87 @@ export async function readCatalogIdentityBySlug(slug: string): Promise<{
   try {
     const container = await getContainer();
     if (!container) return null;
-    const { resources } = await container.items.query<Record<string, unknown>>({
-      query: `SELECT c.playerName, c.cardYear, c.year, c.setKey, c.setName, c.cardNumber,
-                     c.parallel, c.isAuto, c.sport, c.printRun, c.imageUrl, c.source,
-                     c.observedAt
-              FROM c WHERE c.id = @id`,
-      parameters: [{ name: "@id", value: id }],
-    }).fetchAll();
-    const r = resources[0];
+    // CF-A-POINT-READ-IS-NOT-A-SCAN (Fable, 2026-09-15). This filtered on
+    // `c.id` and issued it as a CROSS-PARTITION query on EVERY valuation —
+    // `oneValuationPath.resolveValuationIdentity` calls it for each identity
+    // it prices — fanning out across every physical partition to fetch one
+    // document.
+    //
+    // BUT `c.id` IS NOT THE PARTITION KEY, and that is the whole reason this
+    // is a LADDER and not a one-line swap. Read from prod, 2026-09-15:
+    //
+    //   az cosmosdb sql container show --name card_catalog ...
+    //     resource.partitionKey -> { kind: Hash, paths: ["/cardId"] }
+    //
+    // So `item(id, id)` addresses the right document ONLY when `cardId === id`.
+    // Measured against prod on the population this function can actually be
+    // asked about (it refuses anything not starting with `hiq:`), sampling
+    // `SELECT TOP 2000 c.id, c.cardId FROM c WHERE NOT IS_DEFINED(c.cardId)
+    //  OR c.cardId != c.id`:
+    //
+    //   all rows, cardId != id or absent   2000 (sample filled)
+    //     - of which `hiq:` slugs            14
+    //     - of which cardId ABSENT (None pk)  0
+    //
+    // The 1,986 others are vendor-keyed ids (`cardhedge::`, `ebay-browse:`,
+    // `user-verified:`) this function returns null for before touching Cosmos.
+    // The 14 that DO matter are real and they are graded children and
+    // mega-box twins carrying a foreign parent cardId, e.g.
+    //   id hiq:baseball:2022:panini-donruss:116:base:no-auto:bgs-10
+    //   cardId 1685285255353x532412755023418400
+    //   id hiq:baseball:2018:bowman-chrome:bcp150:base:no-auto
+    //   cardId hiq:baseball:2018:bowman-chrome-mega-box:bcp150:base:no-auto
+    //
+    // A bare point read would MISS all fourteen and report them as "no such
+    // card" — a changed classification, which on the ingest path is a wrong
+    // write. Rung 3 below is what makes that impossible: it is the same scan
+    // this function always did, and it still runs whenever the cheap rungs
+    // miss. The point reads only ever SHORT-CIRCUIT a scan that would have
+    // returned the same row; they never replace one that would have found a
+    // row they cannot.
+    //
+    // The ladder is the one `cardCatalog.getCatalogEntry` already walks, for
+    // the same container and the same reason:
+    //   1. point read at the row's own address — hits for every row whose
+    //      `cardId` equals its `id`, which is the overwhelming majority;
+    //   2. point read at the None partition key — rows minted with no
+    //      `cardId` at all live there (user-verified; see
+    //      `catalogRowOps.nonePartitionKey`). The `hiq:` sample above found
+    //      none TODAY, but the write paths can still mint one, and this rung
+    //      costs one point read on a path that is already falling through;
+    //   3. the cross-partition scan — UNCONDITIONAL when both point reads
+    //      miss, and identical to the query this function used to issue. This
+    //      is the equivalence guarantee: anything the old code could find,
+    //      this still finds.
+    //
+    // Same result shape from whichever rung answers. A point read returns the
+    // whole document rather than the projection, which is a superset of the
+    // fields read below, so the mapping is unchanged.
+    const FIELDS = `c.playerName, c.cardYear, c.year, c.setKey, c.setName, c.cardNumber,
+                    c.parallel, c.isAuto, c.sport, c.printRun, c.imageUrl, c.source,
+                    c.observedAt`;
+    const pointRead = async (pk: PartitionKey): Promise<Record<string, unknown> | null> => {
+      try {
+        const { resource } = await container.item(id, pk).read<Record<string, unknown>>();
+        return resource ?? null;
+      } catch (err) {
+        // 404 is "not at THIS address" — a real possibility, and the whole
+        // reason there is a next rung. Any other code is a genuine fault and
+        // must not be read as "the card does not exist", so it also falls
+        // through to the scan rather than returning null here.
+        return null;
+      }
+    };
+
+    let r: Record<string, unknown> | null = await pointRead(id);
+    if (!r) r = await pointRead(nonePartitionKey());
+    if (!r) {
+      const { resources } = await container.items.query<Record<string, unknown>>({
+        query: `SELECT TOP 1 ${FIELDS} FROM c WHERE c.id = @id`,
+        parameters: [{ name: "@id", value: id }],
+      }).fetchAll();
+      r = resources[0] ?? null;
+    }
     if (!r) return null;
     const num = (v: unknown) => (Number.isFinite(Number(v)) ? Number(v) : null);
     const str = (v: unknown) => {
