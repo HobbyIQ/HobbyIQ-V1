@@ -375,6 +375,142 @@ const POKEMON_SET_CODE_LANGUAGE_UNRESOLVED = "ruled:R27-language-unresolved";
  */
 const FINISH_IS_A_PARALLEL = "R28-FINISH-IS-A-PARALLEL";
 
+/**
+ * R31-TITLE-FILLS-THE-BLANK -- the listing title states a rung or a print run
+ * the stored row does not carry (Drew, 2026-09-14, recorded).
+ *
+ * THE RULING, IN SHAPE: "a listing title that states a parallel or a print
+ * run the stored row lacks fills it in (the row's parallel is blank/Base or
+ * printRun null, the title names the rung / `/99`)."
+ *
+ * So this is a FILL, never a change. The stored row's parallel is blank, or
+ * the placeholder `Base` the corpus writes when nothing was known; or its
+ * printRun is null. The title says otherwise, in the seller's own words, and
+ * the derivation has already read those words into a derived identity. The
+ * fill writes what the title said.
+ *
+ * BLANK MEANS UNKNOWN, NEVER BASE -- AND THAT CUTS BOTH WAYS HERE. The
+ * doctrine's usual direction is "do not write Base onto a blank"; this
+ * subclass is its mirror: a stored `Base` that the title contradicts by
+ * naming a real rung was never an assertion that the card IS base, it was the
+ * same unknown wearing a placeholder. That is precisely why this subclass
+ * accepts `base` as a fillable blank and why it refuses, absolutely, to ever
+ * write `Base` INTO one -- the destination parallel must be a real,
+ * checklist-listed rung or there is no fill to make.
+ *
+ * NEVER INVENT A PRINT RUN. The print-run leg fills ONLY from a serial the
+ * title itself states (`serialFromTitle`, the same lexer every other print-run
+ * guard in this file uses, with its year-denominator guard intact so a `/2025`
+ * date is never read as a run of 2,025). A derived printRun with no serial in
+ * the title is a derivation's inference, not the seller's statement, and this
+ * subclass refuses it -- that refusal is counted, not silently dropped.
+ *
+ * THE PARALLEL SPELLING IS THE PRODUCT CHECKLIST'S, AND THE RUNG MUST BE IN
+ * ITS VOCABULARY. The guard the ruling names explicitly: R31 refuses when the
+ * title's rung is not in the product's checklist vocabulary FOR THAT CELL --
+ * `checklistListsParallel(parallel, year, setKey)` against the DERIVED
+ * product and the row's own year, not a global union of every parallel every
+ * product ever printed. A "Pink Wave" that is real in one product and unheard
+ * of in another is a fill in the first and a refusal in the second, and only
+ * the per-cell question can tell them apart.
+ *
+ * ONLY THE BLANK AXES MOVE. `parallel` and `printRun` are the only axes a
+ * fill may cross, and only in the `filled:` direction -- a `changed:parallel`
+ * is a rival reading of a rung the row already asserts, which is R31's
+ * opposite and stays CONFLICT. Every other changed or dropped axis means the
+ * derivation disagrees about identity, not that a blank wants filling.
+ */
+const TITLE_FILLS_THE_BLANK = "R31-TITLE-FILLS-THE-BLANK";
+
+/**
+ * R32-SPLIT-MOVES-TO-THE-NAMED-SIDE -- a split-identity row moves to the
+ * checklist-backed side the title names (Drew, 2026-09-14, recorded).
+ *
+ * THE RULING: "a split-identity row (stored cardId != hobbyiqCardId) moves to
+ * the checklist-backed side when the title names that side's differing
+ * segment (product name, parallel, print run, card number)."
+ *
+ * THIS LIFTS #2141's APPLY REFUSAL, AND ONLY THAT. `lib/split-scope.cjs`
+ * already answers the whole question -- it was written on 2026-09-13 under
+ * "report first, rule later" as a REPORT, with `classifySplitScope` returning
+ * `split-move` (exactly one side checklist-backed AND the title names that
+ * side's differing segments) or `split-park` (anything else). The ruling is
+ * the "rule later" half arriving: the move verdict it already computes now
+ * has an apply path. So R32 CALLS THAT MODULE rather than restating its
+ * logic -- one definition of what a split move is, shared by the report and
+ * the apply, or the two could disagree and nobody could audit which was
+ * right.
+ *
+ * THE REPORT-ONLY `split` SCOPE IS FOLDED INTO R32, NOT KEPT ALONGSIDE IT.
+ * `split` stays a RECOGNISED SPELLING -- `parseApplyScope("split")` now maps
+ * to this class exactly as `r32` does, rather than refusing -- because the
+ * ruling gives the thing it named an apply path, and a scope that still
+ * refused by name after the ruling that armed it would be a trap for the
+ * operator who read the ruling. The census REPORT is untouched: the
+ * `splitIdentity.scopes.split` block still reports move/park per axis from
+ * the same module, so the report a dispatch was sized against does not move
+ * under it.
+ *
+ * THE GUARD THE RULING NAMES: refuse when BOTH sides are checklist-backed and
+ * the title names NEITHER, or names BOTH. `classifySplitScope` already parks
+ * "both backed" and "neither backed" (there is no single destination to move
+ * to), and already parks "title does not name the destination". What R32 adds
+ * on top is the AMBIGUITY leg the ruling states in its own words: a title that
+ * names BOTH sides' differing segments is evidence for neither, because the
+ * words that would pick a side appear on both sides of the split. That is
+ * asked here, explicitly, and counted -- a row refused for naming both is a
+ * different fact from a row refused for naming nothing, and the report must
+ * not blur them.
+ *
+ * CHECKLIST-BACKEDNESS IS MEASURED, NOT PROXIED, ON THE APPLY PATH.
+ * split-scope.cjs ships a deliberately conservative SHAPE PROXY for
+ * `isRegisteredSetKey` so the report could be produced with no catalog read
+ * at all, and says so in its own doc. An APPLY may not run on a proxy: the
+ * driver passes the two sides' real `checklistBacked()` answers, measured
+ * against card_catalog exactly the way every other class in
+ * rematch-sold-comps.cjs measures its destination, and this evidence function
+ * REFUSES outright if the caller did not supply them (`backedSides` null).
+ * Absent beats wrong: an unmeasured side is not a backed side.
+ */
+const SPLIT_MOVES_TO_THE_NAMED_SIDE = "R32-SPLIT-MOVES-TO-THE-NAMED-SIDE";
+
+/**
+ * R33-TITLE-CARD-NUMBER-WINS -- a stored card number the title contradicts
+ * takes the title's number (Drew, 2026-09-14, recorded).
+ *
+ * THE RULING: "a stored card number that disagrees with the literal number in
+ * the title takes the title's number when that (number, product) exists on the
+ * checklist."
+ *
+ * THE LITERAL NUMBER, AND ONLY THE LITERAL NUMBER. `titleStatesCardNumber`'s
+ * `#`-boundary is the witness -- a `#`-prefixed number is a card-number
+ * statement, a bare number anywhere in a title is a year, a serial, a jersey
+ * number or a price. This subclass reads the title's number through that same
+ * boundary and no other, because every looser reading of "the number in the
+ * title" is a way to mint a card number out of a print run.
+ *
+ * THE CHECKLIST DECIDES, PER PRODUCT AND YEAR. The ruling's own condition:
+ * the title's number takes effect only when `(number, product)` EXISTS on the
+ * checklist for that product/year. That is a catalog read -- the caller
+ * supplies it (`titleNumberIsChecklistRow`), the same way R26/R27/R28's
+ * destination-backed legs are supplied -- and an unanswered read is a
+ * refusal, never a guess.
+ *
+ * CONFLICT / BASE-EVICTION ROWS WHERE THE DERIVER READS THE LITERAL NUMBER
+ * BELONG HERE, BY RULING. That is the population this subclass exists for: a
+ * row whose derivation already read the title's `#N` and produced a
+ * `changed:cardNumber` diff against a stored number that disagrees. So R33
+ * requires the DERIVED number to BE the title's number -- it never writes a
+ * number the derivation did not independently reach, which keeps this
+ * subclass inside the one derivation path everything else in this file is
+ * audited against.
+ *
+ * ONLY cardNumber MOVES. Same discipline as R26 and R27: a row whose setKey,
+ * parallel, year or sport also moved is a derivation disagreeing about which
+ * card this is, and a card-number repair must not ride along with it.
+ */
+const TITLE_CARD_NUMBER_WINS = "R33-TITLE-CARD-NUMBER-WINS";
+
 /** Sources that are a real person's own record of their own transaction.
  *  These are never re-keyed by a fleet, only by Drew. */
 const PROTECTED_SOURCES = new Set(["ebay-user-purchase", "ebay-user-sale", "ebay-account", "manual-user-entry"]);
@@ -5114,6 +5250,285 @@ function finishIsAParallelEvidence({
   };
 }
 
+
+/**
+ * THE CARD NUMBER THE TITLE LITERALLY STATES, or null.
+ *
+ * `titleStatesCardNumber` above answers the BOOLEAN through TITLE_NUMBER_RE and
+ * its two exclusions (a `#788/1000` serial is a print run, a 5+-digit run is a
+ * cert number). R33 needs the TOKEN ITSELF, decided by exactly the same
+ * boundary and exactly the same exclusions -- a second, looser reader of "the
+ * number in the title" is how a print run becomes a card number. So this
+ * returns the token that boolean was computed from, and returns null in every
+ * case where that boolean is false.
+ */
+function cardNumberFromTitle(title) {
+  const t = str(title);
+  if (!t) return null;
+  const m = t.match(TITLE_NUMBER_RE);
+  if (!m) return null;
+  const tok = m[1];
+  const at = t.indexOf(m[0]);
+  if (at >= 0 && /^\s*\//.test(t.slice(at + m[0].length))) return null;  // a serial
+  const digits = tok.replace(/\D/g, "");
+  if (digits.length >= 5) return null;                                   // a cert
+  if (!digits.length) return null;
+  return lower(tok).replace(/\s+/g, "");
+}
+
+/** Two card numbers, compared the way the corpus spells them: case-folded,
+ *  whitespace-stripped, and with leading zeros on the numeric tail ignored
+ *  (`rv-012` and `RV-12` are one card; `12` and `21` are two). */
+function cardNumbersAgree(a, b) {
+  const norm = (v) => lower(v).replace(/\s+/g, "").replace(/(^|[^0-9])0+(\d)/g, "$1$2");
+  const x = norm(a), y = norm(b);
+  return !!x && x === y;
+}
+
+/**
+ * The R31 evidence for one row.
+ *
+ * `titleParallel` -- the parallel the DERIVATION read out of the title, i.e.
+ *   the derived identity's parallel. Passed explicitly rather than read off
+ *   `derived` so a caller can state plainly that this fill comes from the
+ *   title's own words; the driver passes `derived.parallel`.
+ * `checklistListsTitleParallel` -- does the DERIVED product's checklist, for
+ *   THIS row's year, list that rung? THE GUARD THE RULING NAMES. A catalog/
+ *   corpus read (`VOCAB.checklistListsParallel`), so the caller supplies it
+ *   and this module stays pure.
+ * `titleSerial` -- the print run the TITLE states (`VOCAB.serialFromTitle`),
+ *   or null. Caller-supplied for symmetry with the parallel leg; null means
+ *   the title states no run, and a null here can never fill a printRun.
+ * `derivedBacked` -- is the derived identity checklist-backed? Same strict
+ *   destination gate every other ruled subclass carries.
+ */
+function titleFillsTheBlankEvidence({
+  row, stored, derived, axes,
+  titleParallel = null,
+  checklistListsTitleParallel = false,
+  titleSerial = null,
+  derivedBacked = false,
+}) {
+  const failed = [];
+  const filled = new Set(axes?.filled ?? []);
+  const fillsParallel = filled.has("parallel");
+  const fillsPrintRun = filled.has("printRun");
+
+  // T1 -- SOMETHING MUST ACTUALLY BE BEING FILLED. R31 is a fill and only a
+  // fill; a row with neither axis in the `filled:` set is not this subclass.
+  if (!fillsParallel && !fillsPrintRun) failed.push("no-blank-axis-filled");
+
+  // T2 -- THE STORED SIDE MUST REALLY BE BLANK, on each axis being filled.
+  // `filled:` already means the derivation saw a blank, but this asks the row
+  // itself so a fill can never be minted onto a row that asserts a real rung:
+  // blank is "", `base`, `[base]`, `none`, `unknown` (GENERIC_PARALLELS --
+  // blank means unknown, and a placeholder `Base` is that same unknown).
+  if (fillsParallel && !GENERIC_PARALLELS.has(lower(stored?.parallel))) {
+    failed.push(`stored-parallel-is-not-blank:${lower(stored?.parallel)}`);
+  }
+  if (fillsPrintRun && stored?.printRun !== null && stored?.printRun !== undefined && str(stored?.printRun) !== "") {
+    failed.push(`stored-printrun-is-not-blank:${str(stored?.printRun)}`);
+  }
+
+  // T3 -- THE PARALLEL LEG: the destination rung must be real, and must be in
+  // THIS product's checklist vocabulary for THIS cell.
+  const destParallel = str(titleParallel ?? derived?.parallel);
+  if (fillsParallel) {
+    if (!destParallel || GENERIC_PARALLELS.has(lower(destParallel))) {
+      // NEVER WRITE `Base` INTO A BLANK. The mirror of T2, and the reason this
+      // subclass can safely treat `base` as fillable on the stored side.
+      failed.push("destination-parallel-is-blank-or-base");
+    } else if (!checklistListsTitleParallel) {
+      failed.push(`rung-not-in-product-checklist-vocabulary:${lower(destParallel)}`);
+    }
+  }
+
+  // T4 -- THE PRINT-RUN LEG: NEVER INVENT A PRINT RUN. The title must state
+  // the serial itself, and it must be the SAME number the derivation reached.
+  const destRun = derived?.printRun ?? null;
+  if (fillsPrintRun) {
+    if (titleSerial === null || titleSerial === undefined) {
+      failed.push("printrun-not-stated-in-title");
+    } else if (Number(titleSerial) !== Number(String(destRun ?? "").replace(/\D/g, ""))) {
+      failed.push(`printrun-disagrees-with-title-serial:${destRun}!=/${titleSerial}`);
+    }
+  }
+
+  // T5 -- THE DESTINATION MUST BE CHECKLIST-BACKED.
+  if (!derivedBacked) failed.push("destination-not-checklist-backed");
+
+  // T6 -- ONLY THE BLANK AXES MOVE, AND ONLY AS FILLS. Any changed or dropped
+  // axis at all is a rival reading, not a blank wanting filling.
+  const moved = [...(axes?.changed ?? []), ...(axes?.dropped ?? [])];
+  if (moved.length) failed.push(`identity-axis-moved:${moved.join(",")}`);
+
+  return {
+    qualifies: failed.length === 0,
+    failed,
+    evidence: {
+      fillsParallel, fillsPrintRun,
+      storedParallel: lower(stored?.parallel), destParallel: lower(destParallel),
+      storedPrintRun: stored?.printRun ?? null, destPrintRun: destRun,
+      titleSerial: titleSerial ?? null,
+      checklistListsTitleParallel, derivedBacked,
+      pair: `${fillsParallel ? `parallel:(blank)->${lower(destParallel) || "?"}` : ""}`
+        + `${fillsParallel && fillsPrintRun ? " " : ""}`
+        + `${fillsPrintRun ? `printRun:(blank)->/${str(destRun) || "?"}` : ""}`,
+      titleQuoted: str(row?.title).slice(0, 160),
+    },
+  };
+}
+
+/**
+ * The R32 evidence for one row.
+ *
+ * This is a THIN GATE OVER `classifySplitScope` (lib/split-scope.cjs), NOT a
+ * second implementation of it -- see SPLIT_MOVES_TO_THE_NAMED_SIDE's doc for
+ * why the report and the apply must share one definition of a split move.
+ *
+ * `splitClass` -- the row's split classification (`SPLIT_CLASSES.HIQ_SPLIT` is
+ *   the only one this subclass may act on: two genuine hiq: slugs naming
+ *   different cards. VENDOR-DESIGN / UNKNOWN-VENDOR / MALFORMED are other
+ *   defects with other repairs).
+ * `splitSegments` -- the differing segments split-identity.cjs computed.
+ * `backedSides` -- `{ cardId: bool, hobbyiqCardId: bool }`, MEASURED against
+ *   card_catalog by the caller. `null` REFUSES: an apply may not run on
+ *   split-scope.cjs's shape proxy (its own doc says so), and absent beats
+ *   wrong.
+ */
+function splitMovesToTheNamedSideEvidence({
+  row, splitClass = null, splitSegments = [], backedSides = null,
+}) {
+  const failed = [];
+  const title = str(row?.title);
+
+  // S1 -- ONLY A TWO-HIQ-SLUG SPLIT.
+  if (splitClass !== SPLIT.HIQ_SPLIT) failed.push(`not-a-hiq-split:${splitClass ?? "(none)"}`);
+
+  // S2 -- CHECKLIST BACKING MUST HAVE BEEN MEASURED. Never the proxy.
+  if (!backedSides || typeof backedSides.cardId !== "boolean" || typeof backedSides.hobbyiqCardId !== "boolean") {
+    failed.push("checklist-backing-not-measured");
+  }
+
+  // S3 -- THE AMBIGUITY LEG THE RULING NAMES, asked BEFORE the move verdict:
+  // when BOTH sides are checklist-backed, a title that names NEITHER side's
+  // differing segments -- or BOTH -- is evidence for neither side. (When only
+  // one side is backed, "both named" is not ambiguity: the checklist has
+  // already picked the side, and the title naming the other side's words too
+  // is the ordinary case of a title that spells out more than one field.)
+  let namedSides = null;
+  if (backedSides && failed.length === 0) {
+    const segs = (splitSegments ?? []).filter((s) => SPLIT_SCOPE.AXES_THIS_SCOPE_JUDGES.includes(s));
+    const a = SPLIT_SCOPE.parseHiqSlug(row?.cardId), b = SPLIT_SCOPE.parseHiqSlug(row?.hobbyiqCardId);
+    const namesSide = (side) => !!side && segs.length > 0
+      && SPLIT_SCOPE.titleNamesDestinationForAxes(title, side, segs).allNamed;
+    namedSides = { cardId: namesSide(a), hobbyiqCardId: namesSide(b) };
+    if (backedSides.cardId && backedSides.hobbyiqCardId) {
+      if (namedSides.cardId && namedSides.hobbyiqCardId) failed.push("both-sides-backed-and-title-names-both");
+      else if (!namedSides.cardId && !namedSides.hobbyiqCardId) failed.push("both-sides-backed-and-title-names-neither");
+      else failed.push("both-sides-checklist-backed");  // classifySplitScope parks this too
+    }
+  }
+
+  // S4 -- THE MOVE VERDICT ITSELF, from the ONE module that defines it, run
+  // with the caller's MEASURED backing rather than the shape proxy.
+  let verdict = null;
+  if (!failed.length) {
+    verdict = SPLIT_SCOPE.classifySplitScope(
+      { cardId: row?.cardId, hobbyiqCardId: row?.hobbyiqCardId, title },
+      splitSegments ?? [],
+      {
+        isRegisteredSetKey: (setKey) => {
+          // The measured answer, routed per side: split-scope.cjs asks this
+          // predicate once per side while parsing that side's own setKey.
+          const a = SPLIT_SCOPE.parseHiqSlug(row?.cardId), b = SPLIT_SCOPE.parseHiqSlug(row?.hobbyiqCardId);
+          if (a && lower(a.setKey) === lower(setKey)) return backedSides.cardId;
+          if (b && lower(b.setKey) === lower(setKey)) return backedSides.hobbyiqCardId;
+          return false;
+        },
+      },
+    );
+    if (verdict.verdict !== "split-move") failed.push(`split-scope-parks:${verdict.reason}`);
+  }
+
+  return {
+    qualifies: failed.length === 0,
+    failed,
+    evidence: {
+      splitClass, splitSegments: [...(splitSegments ?? [])],
+      backed: backedSides, namedSides,
+      destination: verdict?.destination ?? null,
+      judgedAxes: verdict?.judgedAxes ?? [],
+      reason: verdict?.reason ?? null,
+      pair: `${str(row?.cardId) || "?"} || ${str(row?.hobbyiqCardId) || "?"}`
+        + `${verdict?.destination ? ` -> ${verdict.destination}` : ""}`,
+      titleQuoted: title.slice(0, 160),
+    },
+  };
+}
+
+/**
+ * The R33 evidence for one row.
+ *
+ * `titleNumberIsChecklistRow` -- does `(title's number, derived product, year)`
+ *   EXIST on the checklist? THE CONDITION THE RULING STATES. A catalog read,
+ *   caller-supplied; unanswered is a refusal.
+ * `derivedBacked` -- the derived identity as a whole is checklist-backed.
+ */
+function titleCardNumberWinsEvidence({
+  row, stored, derived, axes,
+  titleNumberIsChecklistRow = false,
+  derivedBacked = false,
+}) {
+  const failed = [];
+  const title = str(row?.title);
+  const titleNumber = cardNumberFromTitle(title);
+  const storedNumber = str(stored?.cardNumber);
+  const derivedNumber = str(derived?.cardNumber);
+
+  // N1 -- THE TITLE MUST STATE A LITERAL NUMBER, through the `#` boundary and
+  // no other reading.
+  if (!titleNumber) failed.push("title-states-no-literal-card-number");
+
+  // N2 -- THE STORED NUMBER MUST ACTUALLY DISAGREE WITH IT. A row whose stored
+  // number already matches the title is not this defect; an EMPTY stored
+  // number is a FILL, which is R31's axis, not this one.
+  if (titleNumber) {
+    if (!storedNumber) failed.push("stored-card-number-is-blank-not-a-disagreement");
+    else if (cardNumbersAgree(storedNumber, titleNumber)) failed.push("stored-card-number-already-agrees-with-title");
+  }
+
+  // N3 -- THE DERIVATION MUST HAVE REACHED THE TITLE'S NUMBER ITSELF. R33
+  // never writes a number the deriver did not independently read -- see the
+  // subclass doc: the CONFLICT/BASE-EVICTION population this exists for is
+  // exactly the one where the deriver already read the literal number.
+  if (titleNumber && !cardNumbersAgree(derivedNumber, titleNumber)) {
+    failed.push(`derived-number-is-not-the-title-number:${derivedNumber || "(none)"}!=${titleNumber}`);
+  }
+
+  // N4 -- THE (NUMBER, PRODUCT) MUST EXIST ON THE CHECKLIST FOR THAT
+  // PRODUCT/YEAR. The ruling's own condition, and the guard it names.
+  if (!titleNumberIsChecklistRow) failed.push(`title-number-not-a-checklist-row:${titleNumber || "?"}`);
+
+  // N5 -- THE DESTINATION MUST BE CHECKLIST-BACKED.
+  if (!derivedBacked) failed.push("destination-not-checklist-backed");
+
+  // N6 -- ONLY cardNumber MOVES.
+  const moved = [...(axes?.changed ?? []), ...(axes?.dropped ?? [])].filter((a) => a !== "cardNumber");
+  if (moved.length) failed.push(`identity-axis-moved:${moved.join(",")}`);
+
+  return {
+    qualifies: failed.length === 0,
+    failed,
+    evidence: {
+      titleNumber, storedCardNumber: storedNumber, derivedCardNumber: derivedNumber,
+      titleNumberIsChecklistRow, derivedBacked,
+      pair: `${storedNumber || "(blank)"}->${titleNumber || "?"}`,
+      titleQuoted: title.slice(0, 160),
+    },
+  };
+}
+
 /**
  * Classify ONE row.
  *
@@ -5252,6 +5667,23 @@ function classifyRow({
   derivedBackedR27 = false,
   checklistListsFinishAsParallel = false,
   derivedBackedR28 = false,
+  //   THE THREE RULED SUBCLASSES OF 2026-09-14 (R31/R32/R33). Same
+  //   discipline as the 2026-09-13 trio above -- each caller-supplied fact is
+  //   a catalog/corpus read this module must not make itself, and each is
+  //   named per-subclass so one answer can never silently satisfy another
+  //   subclass gate.
+  //   checklistListsTitleParallel  does the DERIVED product checklist, for
+  //                                this row year, list the rung the title
+  //                                names? (R31 vocabulary guard.)
+  //   titleSerial                  the print run the TITLE states, or null.
+  //                                Null can never fill a printRun (R31).
+  //   titleNumberIsChecklistRow    does (title number, derived product,
+  //                                year) exist on the checklist? (R33.)
+  //   derivedBackedR33             the derived identity is checklist-backed.
+  checklistListsTitleParallel = false,
+  titleSerial = null,
+  titleNumberIsChecklistRow = false,
+  derivedBackedR33 = false,
 }) {
   const prov = provenanceTier(row);
   // THE SLUG-SHAPE DEFECTS ARE COMPUTED FOR EVERY ROW AND CHANGE NOTHING.
@@ -5831,6 +6263,45 @@ function classifyRow({
       reasons.push(`not-finish-is-a-parallel:${r28.failed.join(",")}`);
     }
 
+    // R33-TITLE-CARD-NUMBER-WINS: THE `changed:cardNumber` THE TITLE SETTLES
+    // (Drew, 2026-09-14, recorded).
+    //
+    // The seventh door, and the only one on the cardNumber axis. The stored
+    // number disagrees with the literal `#N` in the seller's own title, the
+    // derivation independently read that same number, and the checklist
+    // carries `(number, product, year)` as a real row. The ruling names this
+    // population explicitly -- "CONFLICT/BASE-EVICTION rows where the deriver
+    // reads the literal number belong to R33" -- so it is evaluated HERE, on
+    // the changed-axis path, rather than anywhere a fill is decided.
+    const r33 = titleCardNumberWinsEvidence({
+      row, stored, derived, axes,
+      titleNumberIsChecklistRow, derivedBacked: derivedBackedR33,
+    });
+    if (r33.qualifies) {
+      const refusals = allImproveRefusals({ row, stored, derived, axes, parserSaysLot, family, derivationRefused, pokemonAmbiguousCodeUnresolved });
+      return {
+        ...base,
+        klass: IMPROVE, subclass: TITLE_CARD_NUMBER_WINS, axes,
+        reasons: [
+          ...reasons,
+          `subclass:${TITLE_CARD_NUMBER_WINS}`,
+          `title-card-number-wins:${r33.evidence.pair}`,
+          ...refusals, ...splitReasons,
+        ],
+        improveRefusals: refusals,
+        titleCardNumberWinsEvidence: r33.evidence,
+        writable: prov.tier === AUTO && refusals.length === 0,
+      };
+    }
+    // Named only for real candidates -- a row whose cardNumber axis actually
+    // moved AND whose title states a literal number at all. Every other
+    // changed-axis row never asked this question, and tagging it would count
+    // the corpus rather than the defect (the same discipline R26/R28 state).
+    if ((axes.changed ?? []).includes("cardNumber")
+      && !r33.failed.includes("title-states-no-literal-card-number")) {
+      reasons.push(`not-title-card-number-wins:${r33.failed.join(",")}`);
+    }
+
     // A PRODUCT-FAMILY COLLAPSE IS REFUSED BY NAME (Drew, 2026-09-03).
     //
     // `changed:setKey` already lands in CONFLICT, and CONFLICT is already
@@ -5909,6 +6380,48 @@ function classifyRow({
   if (refusals.length) reasons.push(...refusals);
   reasons.push(...splitReasons);
 
+
+  // R31-TITLE-FILLS-THE-BLANK: THE FILL THE TITLE'S OWN WORDS AUTHORISE
+  // (Drew, 2026-09-14, recorded).
+  //
+  // A NAMED SUBCLASS OF AN EXISTING POPULATION, NOT A NEW DOOR. Every row
+  // that qualifies here already reached IMPROVE by the ordinary fill path
+  // directly below -- nothing changed, nothing dropped, a blank axis filled,
+  // checklist-backed -- and it still classifies IMPROVE. What the ruling adds
+  // is that this population is now SEPARABLE: it has its own name, its own
+  // census count and its own apply scope, so the fills the title's own words
+  // authorise can be armed and canaried WITHOUT arming the whole of IMPROVE
+  // (which the 2026-09-13 measurement put at 4.9% dirty). That is the same
+  // reason R26/R27/R28 are subclasses of IMPROVE rather than widenings of it.
+  //
+  // IT IS DELIBERATELY EVALUATED AFTER `refusals` IS COMPUTED AND CARRIES THE
+  // SAME `writable` EXPRESSION. A subclass that skipped the IMPROVE guards
+  // would be a hole straight through the very refusals that exist to stop a
+  // fill minting a parallel out of a product word or a print run -- the audit
+  // finding those guards were written for. So R31 inherits them entire: it
+  // narrows what may be written, it never widens it.
+  const r31 = titleFillsTheBlankEvidence({
+    row, stored, derived, axes,
+    titleParallel: derived?.parallel ?? null,
+    checklistListsTitleParallel, titleSerial,
+    derivedBacked: checklistBacked,
+  });
+  if (r31.qualifies) {
+    return {
+      ...base,
+      klass: IMPROVE, subclass: TITLE_FILLS_THE_BLANK, axes,
+      reasons: [...reasons, `subclass:${TITLE_FILLS_THE_BLANK}`, `title-fills-the-blank:${r31.evidence.pair}`],
+      improveRefusals: refusals,
+      titleFillsTheBlankEvidence: r31.evidence,
+      writable: prov.tier === AUTO && refusals.length === 0,
+    };
+  }
+  // Named only for real candidates: the row really is filling `parallel` or
+  // `printRun`. A fill on any other axis never asked this question.
+  if (!r31.failed.includes("no-blank-axis-filled")) {
+    reasons.push(`not-title-fills-the-blank:${r31.failed.join(",")}`);
+  }
+
   // PROTECTED rows are report-only forever, even when IMPROVE-shaped. The
   // class still says IMPROVE (that is what the census measured); `writable`
   // is what the apply pass reads, and it is false.
@@ -5971,6 +6484,10 @@ const APPLY_CLASSES = {
   // the 2026-09-06 trio directly above: `klass` is IMPROVE, so they need their
   // OWN entry here or `applyKindOf` could not name them apart from it.
   FLAGSHIP_SWALLOWED_NAMED_PRODUCT, POKEMON_SET_CODE, FINISH_IS_A_PARALLEL,
+  // THE THREE RULED SUBCLASSES OF 2026-09-14 (R31/R32/R33). Same discipline
+  // again: `klass` is IMPROVE for all three, so each needs its OWN entry here
+  // or `applyKindOf` could not name it apart from the ordinary IMPROVE.
+  TITLE_FILLS_THE_BLANK, SPLIT_MOVES_TO_THE_NAMED_SIDE, TITLE_CARD_NUMBER_WINS,
 };
 
 /** Spellings of each class a dispatch may use. Deliberately generous on
@@ -6025,6 +6542,28 @@ const APPLY_SCOPE_ALIASES = new Map([
   ["r27", [POKEMON_SET_CODE]],
   ["finish-is-a-parallel", [FINISH_IS_A_PARALLEL]],
   ["r28", [FINISH_IS_A_PARALLEL]],
+  // THE THREE RULED SCOPES OF 2026-09-14 (R31/R32/R33). Same discipline as
+  // both trios above: DELIBERATELY ABSENT from "both" and "all", each armed
+  // only by its own name. A comma list still arms the union, so one dispatch
+  // can name several ("r31,r33") when that is what was asked for.
+  ["title-fills-the-blank", [TITLE_FILLS_THE_BLANK]],
+  ["titlefillstheblank", [TITLE_FILLS_THE_BLANK]],
+  ["r31", [TITLE_FILLS_THE_BLANK]],
+  ["split-moves-to-the-named-side", [SPLIT_MOVES_TO_THE_NAMED_SIDE]],
+  ["r32", [SPLIT_MOVES_TO_THE_NAMED_SIDE]],
+  // `split` IS FOLDED INTO R32, NOT KEPT AS A SEPARATE REPORT-ONLY WORD.
+  // #2141 made this spelling refuse BY NAME because the ruling then in force
+  // was "report first, rule later". Drew ruled on 2026-09-14, and R32 IS that
+  // ruling -- so the word that named the report now names the class the
+  // ruling armed. Leaving it refusing would be a trap for the operator who
+  // read the ruling and typed the only scope name it mentions. The census
+  // REPORT is unchanged: `splitIdentity.scopes.split` still reports move/park
+  // per axis from the same module, so a dispatch sized against that report is
+  // sized against the same rows this scope writes.
+  ["split", [SPLIT_MOVES_TO_THE_NAMED_SIDE]],
+  ["title-card-number-wins", [TITLE_CARD_NUMBER_WINS]],
+  ["titlecardnumberwins", [TITLE_CARD_NUMBER_WINS]],
+  ["r33", [TITLE_CARD_NUMBER_WINS]],
   // "both" and "all" keep meaning what they meant when the fleet dispatches
   // that use them were written: the two classes that existed then.
   ["both", [IMPROVE, BASE_EVICTION]],
@@ -6048,34 +6587,24 @@ function parseApplyScope(raw) {
   const out = { classes: new Set(), ok: false, reason: "", raw: str(raw), revert: false };
   if (!v) { out.reason = "scope is empty -- an apply must name the class it writes"; return out; }
   const parts = v.split(",").map((x) => x.trim()).filter(Boolean);
-  // THE `split` SCOPE HAS NO APPLY PATH, BY RULING, AND THAT IS PERMANENT --
-  // NOT A GAP TO BE FILLED LATER.
+  // THE `split` SCOPE NOW HAS AN APPLY PATH: IT IS R32 (Drew, 2026-09-14).
   //
-  // Drew, 2026-09-13: "report first, rule later" on split-identity repair.
-  // The `split` census scope (lib/split-scope.cjs) answers "would a row move,
-  // and to which side" for every HIQ-SPLIT row -- it is a REPORT, produced so
-  // Drew can read move/park estimates per axis before anything is armed.
-  // Deliberately absent from APPLY_SCOPE_ALIASES: an alias table entry (even
-  // one that armed no class, the way `revert-eviction` does) would still let
-  // `scope=split` PARSE as a recognised, "ok: true" dispatch -- indistinguishable
-  // from a scope somebody actually intends to run -- and a fleet script reading
-  // `.ok` alone would sail past the refusal. So this is checked FIRST, before
-  // token parsing, and BEFORE the alias table gets a chance to say anything --
-  // `split` on ITS OWN or inside a comma list ("split,improve") both refuse,
-  // because a scope that means two things about the same rows in one dispatch
-  // is exactly the shape #2093's revert-exclusivity check above refuses for
-  // the undo, and "one recognised class plus an unwritable one" is not a
-  // partial arm of the recognised class -- it is a dispatch that asked for
-  // something this apply path will never do.
-  if (parts.includes("split")) {
-    out.reason = "scope \"split\" has no apply path -- Drew's ruling (2026-09-13) is "
-      + "\"report first, rule later\" on split-identity repair: mode=census with "
-      + "scope naming split (or WAVE2_APPLY_SCOPE=split) REPORTS move/park estimates "
-      + "per axis (lib/split-scope.cjs), and a repoint is never auto-applied from "
-      + "this scope. Run mode=census and read the splitIdentity.scopes.split block "
-      + "in the artifact instead.";
-    return out;
-  }
+  // #2141 refused this spelling BY NAME, here, before token parsing, because
+  // the ruling then in force was "report first, rule later" -- the `split`
+  // census scope (lib/split-scope.cjs) existed to REPORT move/park estimates
+  // per axis so Drew could read them before anything was armed.
+  //
+  // DREW READ THEM AND RULED (2026-09-14): a split-identity row moves to the
+  // checklist-backed side when the title names that side differing segment.
+  // R32-SPLIT-MOVES-TO-THE-NAMED-SIDE IS THAT RULING, and it is built on the
+  // SAME `classifySplitScope` the report was built on -- so the rows this
+  // scope writes are exactly the rows the report called `split-move`.
+  //
+  // So the refusal is LIFTED rather than left standing beside a synonym: the
+  // word `split` maps to R32 in APPLY_SCOPE_ALIASES above (see its comment),
+  // and a dispatch that says `split`, `r32`, or both gets exactly one class.
+  // The REPORT is untouched -- `splitIdentity.scopes.split` still counts
+  // move/park per axis on every census pass, scope-blind as it always was.
   const unknown = [];
   for (const part of parts) {
     const hit = APPLY_SCOPE_ALIASES.get(part);
@@ -6102,7 +6631,7 @@ function parseApplyScope(raw) {
     // to learn what the accepted scopes actually are -- including the revert,
     // which is otherwise undiscoverable.
     out.reason = `scope ${JSON.stringify(str(raw))} carries unrecognised token(s) ${unknown.join(",")} `
-      + `(expected one of: improve, base-eviction, both, revert-eviction, grade-from-title, year-from-title-vintage, sport-from-product, flagship-swallowed-named-product, pokemon-set-code, finish-is-a-parallel)`;
+      + `(expected one of: improve, base-eviction, both, revert-eviction, grade-from-title, year-from-title-vintage, sport-from-product, flagship-swallowed-named-product, pokemon-set-code, finish-is-a-parallel, title-fills-the-blank, split-moves-to-the-named-side, title-card-number-wins)`;
     return out;
   }
   if (out.revert) {
@@ -6112,7 +6641,7 @@ function parseApplyScope(raw) {
   }
   if (!out.classes.size) {
     out.reason = `scope ${JSON.stringify(str(raw))} names no apply class ` +
-      `(expected one of: improve, base-eviction, both, revert-eviction, grade-from-title, year-from-title-vintage, sport-from-product, flagship-swallowed-named-product, pokemon-set-code, finish-is-a-parallel)`;
+      `(expected one of: improve, base-eviction, both, revert-eviction, grade-from-title, year-from-title-vintage, sport-from-product, flagship-swallowed-named-product, pokemon-set-code, finish-is-a-parallel, title-fills-the-blank, split-moves-to-the-named-side, title-card-number-wins)`;
     return out;
   }
   out.ok = true;
@@ -6380,5 +6909,18 @@ module.exports = {
   FLAGSHIP_SWALLOWED_NAMED_PRODUCT, flagshipSwallowedNamedProductEvidence,
   POKEMON_SET_CODE, POKEMON_SET_CODE_LANGUAGE_UNRESOLVED, pokemonSetCodeEvidence,
   FINISH_IS_A_PARALLEL, finishIsAParallelEvidence,
+  // THE THREE RULED SUBCLASSES OF 2026-09-14 (R31/R32/R33), exported the same
+  // way and for the same reason.
+  TITLE_FILLS_THE_BLANK, titleFillsTheBlankEvidence,
+  SPLIT_MOVES_TO_THE_NAMED_SIDE, splitMovesToTheNamedSideEvidence,
+  TITLE_CARD_NUMBER_WINS, titleCardNumberWinsEvidence,
+  // R33 reads the title literal number through the SAME boundary
+  // `titleStatesCardNumber` uses; exported so a pin can drive the reader
+  // itself rather than only the subclass that consumes it.
+  cardNumberFromTitle, cardNumbersAgree,
+  // The split-scope helpers R32 gate reads directly, re-exported beside
+  // `classifySplitScope` so a test can drive the ambiguity leg alone.
+  parseHiqSlug: SPLIT_SCOPE.parseHiqSlug,
+  titleNamesDestinationForAxes: SPLIT_SCOPE.titleNamesDestinationForAxes,
   VOCAB,
 };

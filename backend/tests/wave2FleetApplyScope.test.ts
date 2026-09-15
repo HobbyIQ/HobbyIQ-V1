@@ -70,10 +70,23 @@ describe("WAVE2_APPLY_SCOPE is validated at startup, not defaulted silently", ()
     expect(fleetSrc).toContain('SCOPE="${WAVE2_APPLY_SCOPE:-improve}"');
   });
 
+  // UPDATED FOR DREW'S 2026-09-14 RULING (R31/R32/R33). The allowlist is a
+  // pinned EXACT alternation on purpose -- a scope that can write is a scope a
+  // ruling named -- so it moves when a ruling moves it, and only then.
   it("refuses any value outside the allowlist", () => {
     const block = fleetSrc.slice(fleetSrc.indexOf('SCOPE="${WAVE2_APPLY_SCOPE'), fleetSrc.indexOf("SCOPE_COUNT_KEY="));
-    expect(block).toMatch(/improve\|r26\|r27\|r28\)\s*;;/);
-    expect(block).toContain("die \"WAVE2_APPLY_SCOPE='$SCOPE' is not one of improve|r26|r27|r28");
+    expect(block).toMatch(/improve\|r26\|r27\|r28\|r31\|r32\|r33\)\s*;;/);
+    expect(block).toContain("die \"WAVE2_APPLY_SCOPE='$SCOPE' is not one of improve|r26|r27|r28|r31|r32|r33");
+  });
+
+  // `split` is folded into r32 (Drew, 2026-09-14): the word that named #2141's
+  // report-only scope now names the class the ruling armed. It is rewritten to
+  // r32 BEFORE the allowlist, so it never reaches the generic refusal.
+  it("accepts `split` as a synonym for r32, ahead of the allowlist", () => {
+    const block = fleetSrc.slice(fleetSrc.indexOf('SCOPE="${WAVE2_APPLY_SCOPE'), fleetSrc.indexOf("SCOPE_COUNT_KEY="));
+    expect(block).toMatch(/split\)\s*SCOPE=r32\s*;;/);
+    expect(block.indexOf("split) SCOPE=r32")).toBeLessThan(block.indexOf("improve|r26|r27|r28|r31|r32|r33"));
+    expect(block).not.toContain("has no apply path");
   });
 
   it("maps improve to the IMPROVE count key and every ruled scope to its own name", () => {

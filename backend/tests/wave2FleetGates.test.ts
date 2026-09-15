@@ -595,10 +595,15 @@ describe("the I9 re-baseline path is the artifact the workflow already uploads",
     expect(rematchSrc).toMatch(/const census = \{[\s\S]*?slot: SLOT/);
     expect(rematchSrc).toMatch(/classified: total/);
     // `counts` now also carries r26/r27/r28 (2026-09-13 follow-on to
-    // #2093) via a spread rather than a bare reference, so the artifact
-    // still has a `counts` field -- this asserts the field's PRESENCE and
-    // its per-scope members, not the exact spread syntax.
-    expect(rematchSrc).toMatch(/counts:\s*\{\s*\.\.\.counts,\s*r26:\s*scopeCounts\.r26,\s*r27:\s*scopeCounts\.r27,\s*r28:\s*scopeCounts\.r28\s*\},\s*byTier:/);
+    // #2093) and r31/r32/r33 (2026-09-14 trio, #2149) via a spread rather
+    // than a bare reference, so the artifact still has a `counts` field --
+    // this asserts the field's PRESENCE and its per-scope members, not the
+    // exact spread syntax. Matched as its own bounded object (through the
+    // `counts:` block's own closing `},`) rather than anchored on `byTier:`
+    // immediately following, because #2149 inserted `scopeRefusals` and
+    // `scopeSamples` blocks between `counts` and `byTier` for the same trio.
+    expect(rematchSrc).toMatch(/counts:\s*\{\s*\.\.\.counts,\s*r26:\s*scopeCounts\.r26,\s*r27:\s*scopeCounts\.r27,\s*r28:\s*scopeCounts\.r28,[\s\S]*?r31:\s*scopeCounts\.r31,\s*r32:\s*scopeCounts\.r32,\s*r33:\s*scopeCounts\.r33,?\s*\},/);
+    expect(rematchSrc).toMatch(/\bbyTier:\s*Object\.fromEntries\(byTier\)/);
     const rb = readFileSync(join(repoRoot, "backend", "scripts", "rebaseline-i9-reference.cjs"), "utf8");
     expect(rb).toContain("if (!classified || j.slot === undefined || !j.counts)");
   });
