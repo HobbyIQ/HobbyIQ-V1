@@ -84,7 +84,7 @@ interface ParallelCorpusProduct {
   sport?: string;
   year?: number;
   setKey?: string;
-  parallels?: { name?: string }[];
+  parallels?: { name?: string; spellings?: string[] }[];
 }
 interface ParallelCorpus {
   products?: Record<string, ParallelCorpusProduct>;
@@ -176,6 +176,30 @@ function loadIndex(): AdoptionIndex | null {
         // onto a sale, which is the defect the sibling commit just closed.
         const cleaned = cleanParallelName(String(parallel.name ?? "").trim());
         if (cleaned && !names.includes(cleaned)) names.push(cleaned);
+
+        // R49 -- THE `spellings` ARRAY IS AN ALIAS LIST NOBODY READ.
+        //
+        // Each corpus rung carries every spelling the scrape saw for it. Where
+        // one of those differs from the rung's own name, it is the SAME card
+        // written another way, so a pool row spelling it that way should reach
+        // the rung -- which is the whole of this module's job.
+        //
+        // WHAT THE DATA ACTUALLY HOLDS, measured before trusting it: all 37,849
+        // rungs carry a `spellings` array, but only 28 carry more than one
+        // entry, and those differ by CASE or PUNCTUATION alone
+        // (`Superfractors`/`SUperfractors`, `Tie-Dye Prizm`/`Tie Dye Prizm`) --
+        // which `key()` already folds. The remaining variation is 965 entries
+        // carrying pack-odds text and scrape noise ("991 packs)", "65 cards/").
+        //
+        // So every alias goes through the SAME cleaner as the name. That is
+        // what keeps R49 from re-admitting, through a second door, exactly the
+        // odds-polluted strings CF-A-PARALLEL-NAME-IS-A-NAME-THE-CHECKLIST-
+        // SPELLS exists to strip -- and it means an alias can only ever be a
+        // name the corpus already vouches for.
+        for (const spelling of parallel.spellings ?? []) {
+          const alias = cleanParallelName(String(spelling ?? "").trim());
+          if (alias && !names.includes(alias)) names.push(alias);
+        }
       }
     }
     _index = { byProduct };

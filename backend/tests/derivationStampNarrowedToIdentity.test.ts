@@ -78,15 +78,15 @@ const repoRoot = path.resolve(backend, "..");
 const DV = require_(path.join(backend, "scripts", "lib", "derivation-version.cjs"));
 const TABLE = require_(path.join(backend, "data", "rematch-census-shares.json"));
 
-/** The fix/deriver-audit-defects-0915 head the 2026-09-15 reference was stamped
- *  on: the post-wave audit fixes (stated parallels never evicted to Base,
- *  vocabulary-clean parallel text, named products stay named, checklist
- *  spelling adoption) merged with main. The re-label commit sits on top of it
- *  and touches no DERIVATION_INPUT, so v2 at this commit equals v2 now.
+/** The fix/r31-r33-guards-0915 head the 2026-09-15 reference was stamped on:
+ *  the R31/R33 write guards (a rung is a name not a bag of tokens; a fill
+ *  presumes the right address; a #N is not always a card number) and R49's
+ *  alias reader, merged with main. The re-label commit sits on top of it and
+ *  touches no DERIVATION_INPUT, so v2 at this commit equals v2 now.
  *  (`measuredUnder.commit` names something else: the MAIN tree the verification
  *  census artifacts were measured under, b5ab5f74 -- unchanged, because the
  *  same 32 certified artifacts were re-read and the class shares did not move.) */
-const REFERENCE_COMMIT = "050fc3d7343973d0f59eba309d3305f70d147278";
+const REFERENCE_COMMIT = "f251c1c6c9e193b3c0d9b08ee0c60bd3b6e42083";
 
 /** Read one file's content AT a commit via `git show <sha>:<path>` -- READ
  *  ONLY, no worktree, no checkout, nothing mutated. `relFromRepoRoot` is the

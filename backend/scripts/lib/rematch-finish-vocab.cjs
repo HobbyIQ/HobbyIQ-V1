@@ -1562,6 +1562,79 @@ function checklistListsParallel(parallel, year, setKey) {
 }
 
 /**
+ * IS THIS EXACT PHRASE A RUNG ON THIS PRODUCT'S OWN LADDER?
+ *
+ * CF-A-RUNG-IS-A-NAME-NOT-A-BAG-OF-TOKENS (slot-3 R31/R33 census, 2026-09-15).
+ *
+ * THE DEFECT THIS EXISTS FOR. `checklistListsParallel` above answers a TOKEN
+ * question -- `toks.every(inOwn)` -- so it says yes whenever every word of the
+ * candidate appears SOMEWHERE among the product's rung names, in any names, in
+ * any order. That is not the same question as "is this a rung". Measured on
+ * the slot-3 census samples, against the shipped corpus:
+ *
+ *   "snakeskin"               panini-prizm 2024  -> token-yes, but the rung is
+ *                                                  `Snakeskin Prizms`
+ *   "black and white checker" panini-prizm 2024  -> token-yes, but the rung is
+ *                                                  `Prizm Black and White Checker`
+ *   "x-fractor"               topps-chrome 2024  -> token-yes, but the only
+ *                                                  names are `X-Fractor 1/1
+ *                                                  Monster` and `.. 1/2 Mega`
+ *
+ * R31 WRITES the parallel it is given, so a token-yes lets it fill a blank with
+ * a string that is not any card -- splitting a pool onto an address the
+ * checklist never printed. This is the identical hole
+ * `checklistDefinesNumberedBase` was written for one ruling earlier ("`base` is
+ * a token of every product's checklist, so it answered true for every product
+ * and the refusal never fired"), arriving on the parallel axis.
+ *
+ * WHY A SEPARATE FUNCTION RATHER THAN TIGHTENING THE EXISTING ONE.
+ * `checklistListsParallel` is a DISQUALIFYING test for callers where breadth is
+ * free -- the classifier's IMPROVE guard uses it to refuse, and there a
+ * generous yes only costs a refusal. This one gates a WRITE. The two want
+ * opposite error directions, so they stay two functions, as
+ * `statedFinishFromChecklist` and the rematch vocabulary already do for the
+ * same reason.
+ *
+ * PLURAL-TOLERANT, PUNCTUATION-INSENSITIVE, ORDER-SENSITIVE. A checklist heads
+ * its section in the plural while the card is singular, and spells one rung
+ * `Mini-Diamond` and `Mini Diamond` on different products -- both are the card.
+ * ORDER IS NOT spelling: `Prizm Black and White Checker` and `Black and White
+ * Checker` are the same rung and the second is the collectors spelling, so a
+ * name is matched when the candidate equals it, or equals it minus the
+ * product's own stock words. Nothing looser: a candidate that merely SHARES
+ * words with a rung is refused, which is the whole point.
+ */
+function checklistRungPhrase(parallel, year, setKey) {
+  const norm = (x) => lower(x).replace(/[^a-z0-9]+/g, " ").trim();
+  const cand = norm(parallel);
+  if (!cand) return null;
+  const names = checklistParallelNamesFor(year, setKey);
+  if (!names) return null;
+  // Singular/plural folding applied per word, in both directions.
+  const fold = (x) => norm(x).split(" ").filter(Boolean)
+    .map((w) => (w.endsWith("s") && w.length > 3 ? w.slice(0, -1) : w)).join(" ");
+  const candF = fold(cand);
+  const own = new Set(setKeyTokens(setKey || "").map(fold));
+  // A rung name minus this product's own stock words -- the collectors
+  // spelling of the same card ("Prizm Black and White Checker" -> "black and
+  // white checker" on panini-prizm).
+  const withoutOwn = (x) => fold(x).split(" ").filter((w) => w && !own.has(w)).join(" ");
+  for (const n of names) {
+    if (fold(n) === candF) return n;
+  }
+  for (const n of names) {
+    const stripped = withoutOwn(n);
+    if (stripped && stripped === withoutOwn(cand)) return n;
+  }
+  return null;
+}
+
+/** Is this exact phrase a rung on this product's own ladder? */
+function checklistListsRungPhrase(parallel, year, setKey) {
+  return checklistRungPhrase(parallel, year, setKey) !== null;
+}
+
+/**
  * DOES THIS PRODUCT'S CHECKLIST DEFINE A NUMBERED BASE CARD AT THIS PRINT RUN?
  *
  * CF-NUMBERED-BASE-IS-CHECKLIST-DEFINED (Drew's ruling), asked the way the
@@ -1612,6 +1685,7 @@ module.exports = {
   FINISH_FAMILY_TOKENS, FAMILY_ALIASES, SERIAL_TAIL,
   titleFinishFamilyTokens, parallelFinishFamilyTokens,
   familyTokensDroppedByDerivation, checklistParallelNamesFor,
+  checklistRungPhrase, checklistListsRungPhrase,
   checklistParallelForFamily,
   // leaks 2 + 6: a lot or a range never mints a cardNumber
   isLotOrRangeListing, cardNumberRangeFromTitle,
