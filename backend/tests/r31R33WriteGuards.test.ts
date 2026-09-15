@@ -1,6 +1,8 @@
 /**
  * R31 AND R33 WOULD WRITE WRONG VALUES — THE THREE GUARDS
- * (slot-3 census, run 34958820305, artifact `collect-r3x/flat/census-slot-3.json`).
+ * (slot-3 census, run 34958820305, artifact `collect-r3x/flat/census-slot-3.json`,
+ * copied into `tests/fixtures/r31-r33-slot3-2026-09-15.json` so the evidence is
+ * in the repo the CI runner actually has).
  *
  * Both scopes are APPLY lanes: R31 fills a blank parallel, R33 overwrites a
  * card number. A wrong value in either is not a missed improvement, it is a
@@ -225,11 +227,18 @@ describe("R33 refuses a #N that is not a card number", () => {
 // ---------------------------------------------------------------------------
 describe("the guards, measured over the artifact's own 30+30 move samples", () => {
   it("R33: 28 of 30 still write, 2 refused, and the 2 are the named defects", () => {
+    // THE SAMPLES COME FROM A COMMITTED FIXTURE, NOT FROM A SCRATCHPAD.
+    //
+    // This first read the census artifact from a local scratchpad by absolute
+    // path. It passed locally and failed on the CI runner, where that path does
+    // not exist -- the whole suite red on one `Cannot find module`. A test may
+    // never reach outside the repo for its evidence: the runner has only what
+    // is committed, so evidence that is not committed is not evidence.
+    //
+    // `tests/fixtures/r31-r33-slot3-2026-09-15.json` carries the same 30+30
+    // sample lines verbatim, trimmed to the fields read here.
     const artifact = require_(path.join(
-      "C:", "Users", "dvabu", "AppData", "Local", "Temp", "claude",
-      "c--Users-dvabu-OneDrive---Just-the-Boys-and-Cards-LLC-Desktop-HobbyIQ-V1",
-      "8d4a7bf1-c977-4fd7-a42c-7359a99322ff", "scratchpad",
-      "collect-r3x", "flat", "census-slot-3.json",
+      backend, "tests", "fixtures", "r31-r33-slot3-2026-09-15.json",
     )) as { scopeSamples: { r33: { move: string[] } } };
 
     let writes = 0;
