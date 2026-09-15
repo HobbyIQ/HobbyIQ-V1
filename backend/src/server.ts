@@ -1,6 +1,7 @@
 import * as appInsights from "applicationinsights";
 import { type InstrumentationOptions } from "applicationinsights";
 import { setTelemetryClient, type TelemetryClientLike } from "./services/ops/telemetryClient.js";
+import { warmStart } from "./services/ops/warmStart.js";
 
 const { useAzureMonitor, TelemetryClient } = appInsights;
 import { SeverityNumber } from "@opentelemetry/api-logs";
@@ -170,6 +171,16 @@ if (process.env.APPLICATIONINSIGHTS_CONNECTION_STRING) {
 const port = Number(process.env.PORT || 8080);
 app.listen(port, "0.0.0.0", () => {
   console.log(`HobbyIQ API listening on port ${port}`);
+  // CF-THE-FIRST-USER-SHOULD-NOT-PAY-FOR-THE-DEPLOY (Fable, 2026-09-15).
+  // Build the expensive process-wide singletons now, off the request path.
+  // AFTER listen deliberately: blocking readiness would trade a slow first
+  // request for a late container, and the health probe would be the thing
+  // waiting instead of a user. `warmStart` never rejects and every step inside
+  // it is individually guarded, so this cannot fail a boot that would
+  // otherwise serve traffic — hence `void` plus a catch of last resort.
+  void warmStart().catch((err: unknown) => {
+    console.warn("[server] warmStart failed:", (err as Error)?.message ?? err);
+  });
   try {
     startDailyJobs();
   } catch (err: any) {
