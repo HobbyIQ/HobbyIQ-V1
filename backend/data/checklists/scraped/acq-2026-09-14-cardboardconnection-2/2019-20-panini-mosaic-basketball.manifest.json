@@ -2332,36 +2332,13 @@
     }
   ],
   "collisionCheck": {
-    "checkedAt": "2026-09-14",
-    "method": "every row's would-be address (cardNumber, parallel, isAuto, printRun) on the product key, compared across categories — the same test census-catalog-id-collisions.cjs applies, run on the staged file",
-    "clashingAddresses": 612,
-    "verdict": "BLOCKED"
+    "checkedAt": "2026-09-15",
+    "method": "lib/insert-set-key.cjs planFile(), driven exactly as ingest-checklist-csv-to-catalog.cjs drives it (rungFoldingByCell -> separationByCell -> planFile -> setKeyForRow). Local, no Cosmos.",
+    "verdict": "pass",
+    "rows": 11226,
+    "distinctIds": 11226,
+    "clashingAddresses": 0,
+    "subsetKeysSeparated": 20
   },
-  "ingestBlocked": {
-    "clashingAddresses": 612,
-    "unregisteredSubsetKeys": [
-      "autographs-fast-break",
-      "autographs-mosaic",
-      "blue-chips",
-      "center-stage",
-      "give-and-go",
-      "got-game",
-      "in-it-to-win-it",
-      "international-men-of-mastery",
-      "introductions",
-      "jam-masters",
-      "montage",
-      "old-school",
-      "overdrive",
-      "rookie-autographs-mosaic",
-      "rookie-scripts",
-      "scripts",
-      "stained-glass",
-      "stare-masters",
-      "swagger",
-      "will-to-win"
-    ],
-    "blockedReason": "SAME-NUMBERED INSERT SETS. This product's named insert sets each restart their numbering at 1 with their OWN players, so 612 addresses on the product key are claimed by two or more different cards (e.g. base #1 and several inserts' #1). Per lib/insert-set-key.cjs the unit of refusal is the FILE: until each subset key below is registered in productSetKeys.ts AND normalizeSetKey has an anchored rule for it, ingesting this file would let the last writer decide which player each address holds. Nothing here guesses a key — the list is exactly the categories measured to clash.",
-    "awaitingRuling": true
-  }
+  "ingestBlocked": null
 }
