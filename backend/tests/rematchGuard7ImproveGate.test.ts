@@ -417,16 +417,19 @@ describe("no scope value can ever arm CONFLICT", () => {
   // CONFLICT is a contradiction about WHICH CARD a sale is, and a fleet never
   // settles that -- Drew does. This is structural: CONFLICT is not a member of
   // APPLY_CLASSES, so no alias can name it.
-  // The list grew on 2026-09-06 with Drew's three ruled scopes, and again on
-  // 2026-09-13 with R26/R27/R28. What must NOT grow is what it means: every
-  // member is a class a ruling authorized, and CONFLICT is still not one of
-  // them. Pinned as an EXACT set so a new member cannot appear without a
-  // ruling and a test edit.
+  // The list grew on 2026-09-06 with Drew's three ruled scopes, again on
+  // 2026-09-13 with R26/R27/R28, and again on 2026-09-14 with R31/R32/R33.
+  // What must NOT grow is what it means: every member is a class a ruling
+  // authorized, and CONFLICT is still not one of them. Pinned as an EXACT set
+  // so a new member cannot appear without a ruling and a test edit -- which is
+  // exactly why this line moved for the 2026-09-14 trio and not on its own.
   it("APPLY_CLASSES holds only the classes a ruling has authorized", () => {
     expect(Object.values(K.APPLY_CLASSES).sort()).toEqual([
       K.BASE_EVICTION, K.IMPROVE,
       K.GRADE_FROM_TITLE, K.YEAR_FROM_TITLE_VINTAGE, K.SPORT_FROM_PRODUCT,
       K.FLAGSHIP_SWALLOWED_NAMED_PRODUCT, K.POKEMON_SET_CODE, K.FINISH_IS_A_PARALLEL,
+      // Drew, 2026-09-14 (recorded): R31 fill, R32 split, R33 card number.
+      K.TITLE_FILLS_THE_BLANK, K.SPLIT_MOVES_TO_THE_NAMED_SIDE, K.TITLE_CARD_NUMBER_WINS,
     ].sort());
     expect(Object.values(K.APPLY_CLASSES)).not.toContain(K.CONFLICT);
   });

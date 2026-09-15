@@ -153,29 +153,35 @@ die()  { printf 'WAVE2 REFUSED — %s\n' "$*" >&2; exit 2; }
 # WAVE2_APPLY_SCOPE is refused outright rather than falling through to
 # `improve` -- a typo must never silently apply the wrong class of rows.
 #
-# `split` IS RECOGNISED AND STILL REFUSED, BY NAME, PERMANENTLY (2026-09-13).
-# The `split` census scope (lib/split-scope.cjs) exists to REPORT a move/park
-# estimate for every HIQ-SPLIT row -- Drew's ruling is "report first, rule
-# later" on split-identity repair, and there is no apply path for it at all
-# (rematch-classify.cjs's parseApplyScope refuses "split" the same way, for
-# the same reason). Falling through to the generic "not one of ..." message
-# below would be technically true but would not tell an operator WHY split is
-# different from a typo -- it is a real, understood scope with zero write
-# authority, not an unrecognised one -- so it gets its own message naming the
-# ruling before the allowlist check below ever runs.
+# `split` IS NOW AN APPLY SCOPE: IT IS R32 (Drew, 2026-09-14).
+#
+# #2141 refused this spelling here, by name, permanently -- because the ruling
+# then in force was "report first, rule later" on split-identity repair. Drew
+# read the report and ruled on 2026-09-14: a split-identity row moves to the
+# checklist-backed side when the title names that side's differing segment.
+# R32-SPLIT-MOVES-TO-THE-NAMED-SIDE is that ruling, built on the SAME
+# lib/split-scope.cjs the report was built on, so the rows it writes are
+# exactly the rows the report called `split-move`.
+#
+# So the refusal is LIFTED and `split` is accepted as a SYNONYM FOR r32,
+# mapped to the `r32` count key below -- rematch-classify.cjs's parseApplyScope
+# maps the same word to the same class, for the same reason. The census REPORT
+# is untouched: splitIdentity.scopes.split still reports move/park per axis on
+# every census pass, scope-blind as it always was.
 case "$SCOPE" in
-  split) die "WAVE2_APPLY_SCOPE='split' has no apply path -- Drew's ruling (2026-09-13) is \"report first, rule later\" on split-identity repair. Run mode=census (scope is ignored by census) and read splitIdentity.scopes.split in the collected artifact instead of dispatching canary/apply for this scope." ;;
+  split) SCOPE=r32 ;;
 esac
 case "$SCOPE" in
-  improve|r26|r27|r28) ;;
-  *) die "WAVE2_APPLY_SCOPE='$SCOPE' is not one of improve|r26|r27|r28 — refusing rather than guess which class of rows to write." ;;
+  improve|r26|r27|r28|r31|r32|r33) ;;
+  *) die "WAVE2_APPLY_SCOPE='$SCOPE' is not one of improve|r26|r27|r28|r31|r32|r33 (or 'split', a synonym for r32) — refusing rather than guess which class of rows to write." ;;
 esac
 # The census artifact's count KEY for this scope. `improve` reads the
 # original `counts.IMPROVE` (unchanged casing, unchanged key, so an existing
 # collected census from before this change still gates an improve apply
-# exactly as it always did); the three ruled scopes read `counts.r26` /
-# `counts.r27` / `counts.r28` verbatim, per the census artifact shape #2093's
-# follow-up PR writes.
+# exactly as it always did); EVERY ruled scope reads `counts.<scope>` verbatim
+# (`counts.r26` ... `counts.r33`), per the census artifact shape #2093's
+# follow-up PR writes -- which is why adding the 2026-09-14 trio needed no new
+# per-scope case here at all, only the allowlist entry above.
 case "$SCOPE" in
   improve) SCOPE_COUNT_KEY=IMPROVE ;;
   *)       SCOPE_COUNT_KEY="$SCOPE" ;;

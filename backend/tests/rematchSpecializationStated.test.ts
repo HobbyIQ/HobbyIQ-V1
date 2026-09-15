@@ -483,7 +483,7 @@ ${line}
   });
 
   it("every IMPROVE arm calls allImproveRefusals — none restates its pushes", () => {
-    // NINE CALL sites and exactly one definition:
+    // TEN CALL sites and exactly one definition:
     //   1. the ordinary IMPROVE arm
     //   2. SPECIALIZATION-STATED (this file's subject)
     //   3. SELLER-NAME-AUTO (CF-A-SELLER-NAME-IS-NOT-A-SIGNATURE, 2026-09-04),
@@ -495,17 +495,32 @@ ${line}
     //   7. R26-FLAGSHIP-SWALLOWED-NAMED-PRODUCT (Drew, 2026-09-13) — CONFLICT path.
     //   8. R27-POKEMON-SET-CODE (Drew, 2026-09-13) — CONFLICT path.
     //   9. R28-FINISH-IS-A-PARALLEL (Drew, 2026-09-13) — CONFLICT path.
+    //   10. R33-TITLE-CARD-NUMBER-WINS (Drew, 2026-09-14, #2149) — CONFLICT
+    //       path, the cardNumber-axis door.
+    //
+    // R31-TITLE-FILLS-THE-BLANK and R32-SPLIT-MOVES-TO-THE-NAMED-SIDE (the
+    // other two members of the 2026-09-14 trio) are NOT extra call sites, by
+    // design, not omission: R31 is a named subclass of the SAME row the
+    // ordinary IMPROVE arm already classified, evaluated after `refusals` is
+    // computed and reusing that exact variable rather than recomputing it
+    // (see titleFillsTheBlankEvidence's call site), and R32 delegates its
+    // whole verdict to lib/split-scope.cjs's classifySplitScope rather than
+    // reaching this gate at all (see SPLIT_MOVES_TO_THE_NAMED_SIDE's header:
+    // "R32 CALLS THAT MODULE rather than restating its logic"). Only R33
+    // opens a genuinely new branch on the CONFLICT path, so only R33 adds a
+    // call site.
     //
     // The NUMBER is incidental; the invariant is that it equals the number of
-    // arms and that the definition stays singular. A new arm that restated the
-    // pushes instead of calling this would leave itself unguarded by the
-    // mutation checks that revert them — which is the whole reason this pin
-    // counts rather than trusting the reader.
+    // arms that reach this gate fresh, and that the definition stays
+    // singular. A new arm that restated the pushes instead of calling this
+    // would leave itself unguarded by the mutation checks that revert them —
+    // which is the whole reason this pin counts rather than trusting the
+    // reader.
     //
     // `const refusals = ` is what distinguishes a call from the
     // `function allImproveRefusals({` declaration, which contains the same
     // characters.
-    expect(src.split("const refusals = allImproveRefusals({").length - 1).toBe(9);
+    expect(src.split("const refusals = allImproveRefusals({").length - 1).toBe(10);
     expect(src.split("function allImproveRefusals").length - 1).toBe(1);
   });
 

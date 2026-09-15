@@ -1,0 +1,2198 @@
+{
+ "generatedAt": "2026-09-14",
+ "forLane": "relocate-pool-rows-by-list.cjs",
+ "ruling": "R35 (Drew, 2026-09-14, answering Q3): baseball pool rows on `panini-donruss` in 1983, 1986, 1987 and 1989 are re-keyed to `donruss`.",
+ "reportOnlyUntil": "REPORT ONLY until a steward dispatches it. This file routes nothing by existing; the lane writes only under BACKFILL_APPLY=true. Dispatch SCOPE=data/pool-relocations/<this file>, one part at a time.",
+ "continuedFrom": "2026-09-14-r35-pre2009-donruss-spelling-001.json",
+ "part": "017 of 017",
+ "entries": [
+  {
+   "id": "cardhedge::ch-daily::1744252969202x356005875821553400",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1744421451498x367205946657766850",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1744570601789x710756467689215100",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1744583212409x359220955797403500",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1744583800698x289289555372261200",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1744586443507x410744965466417500",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1744922080450x834427860154074600",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1745202198611x580134195983311500",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1745375096912x189858715658546280",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1745629966292x514257279042509300",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1745631544610x828272938847015600",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1745719134633x723964106802436100",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1745728824931x778841557226506600",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1745801174177x104358908677137260",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1745803090882x970025374199049000",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1745899590226x711304281278024200",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1745965588118x180878130824798200",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1746405954975x696441083458224600",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1746417105043x994398074034385800",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1746494673700x761607107743155800",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1746448207268x791353788350212900",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1746576530596x271119559819062100",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1746590111106x844467821522729500",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1746832549965x526023030903433000",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1747005485591x760184733719599100",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1747009034788x897158351973669600",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1747010147225x339315350107556540",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1747011999027x934087951400543700",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1747013211822x300739347614309440",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1747015670449x722095131072960900",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1747082912914x471707570138965250",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1747495734299x296770359939380040",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1747875524181x438397962801131400",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1747886460247x267124329202163230",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1748058171657x173923075827602240",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1748224131822x864945685814800400",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1748315202965x441520913295990700",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1748579161119x222036188023629440",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1748616274426x999414177157945500",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1748623472322x705454324335803800",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1748708317376x735308394565187100",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1748828536454x483102997541997100",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1748836687133x137177855137837310",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1749049444257x709420451337903500",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1749121613601x907025926423171700",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1749304378977x260588721629274600",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1749470574843x796291176668719700",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1749518489495x560444164876988200",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1749582901104x131056790957792210",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1786273005666x116916078156465310",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "tca-ebay::206478101972",
+   "fromCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "tca-ebay"
+  },
+  {
+   "id": "cardhedge::ch-daily::1749705685499x126032451964745550",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1749835318517x192272750094345950",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1749910592593x922237337955113500",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1750030068441x879596204921672100",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1750030742437x124743911879084960",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1750030743364x490434233896703360",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1750129547133x374364327685632800",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1750362878479x483143832255930100",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1750373426177x744084084766697300",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1750447776969x990154741606444900",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1750512144127x859408310894663600",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1750556548914x280210326766102460",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1750572999514x938113123938129000",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1750728360418x381586090751099100",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1750828854915x437255702171654500",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1750896911214x528035560732786900",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1751061824380x319980613827800500",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1751243089318x477587236499569900",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1751253286079x250512242029820030",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1751383508642x169481549212609820",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1751761622456x674192038856411800",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1751828533579x380957986868089500",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1751838172074x672396000337048800",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1751847430466x956110598475557000",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1751850555924x217196381848185250",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1751987345074x461160019760038300",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1752023078462x357600496018666500",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1752447881280x962188919828169000",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1752449947957x489950442956079500",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1752547492771x518814102879482800",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1752804437085x903464789392154400",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1752804437085x792645580374527100",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1752976988442x951100153728320500",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1753057145586x827433865500701400",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1753199720888x859530829005571800",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1753238102316x857468802836268700",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1753316687478x675683061020699100",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1753322562854x835759979629846300",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1753670227562x112688522911185360",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1753754327175x528088013652923600",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1753835460639x110310408451647520",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1754014258900x372580768894108540",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1754022907458x875282455549222200",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1754695610299x819506521285244800",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1754871641356x346688122164870340",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1755056818121x592309780739065900",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1755478125748x912527385577769900",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1755665467780x500628389780804350",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1786548301661x594240294953023440",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1786509195437x865296665755219500",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1786473119808x199775758055425800",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1755912892281x571954767483753540",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1756562465082x789971004675766100",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1756604327327x346849848939080770",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1756662287316x281042030331306370",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1756680423633x605721000048198900",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1756757821780x957126427045611900",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1756829550092x784542790897904500",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1756846020237x799630629476595300",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1756858388647x941741572270419200",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1756904466742x602513468593002500",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1756922943729x613933164242008400",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1756969086693x544339422262250000",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1757265638251x529224064122253200",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1757295202932x936362932362312000",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1757370234024x860094781717561700",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1757471947954x947905021837754000",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1757432711156x923116954893031200",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1757432035579x575955569914994500",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1757514175974x759584427104180500",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1757557519116x889723971733027400",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1757673421834x907977945028673200",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1757891572409x190039046487603170",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1757949662332x944691737655844700",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1758123512497x927779342040599800",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1758248356652x317376573296262800",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1758337932355x151364774928265380",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1758368669209x745741552031401900",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1758470435107x171213929343713150",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1758535018055x546094209457215900",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1758596597852x207108695609831580",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1758599834077x277864425398271400",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1786600494240x439988646302151000",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1758643866503x538518111410832800",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1786595488048x252468481536601400",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1758683143633x821510362504684700",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1758763614850x189577586648375080",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1758764452192x698891608746161000",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1758765182691x337670349935001800",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1786553970833x465633156936661400",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "tca-ebay::377411053610",
+   "fromCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "tca-ebay"
+  },
+  {
+   "id": "cardhedge::ch-daily::1758847690619x847951002855989000",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1758993053670x426851549773472640",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1759016829885x786925413809680300",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1759075576521x242438825160171680",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1759093032170x788999439860946300",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1759309248866x395453573849248640",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1759365297737x848747889210036200",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1759509041171x426449853472888200",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1759852752137x295103303372077100",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "tca-ebay::147445702955",
+   "fromCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "tca-ebay"
+  },
+  {
+   "id": "tca-ebay::800517005773",
+   "fromCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "tca-ebay"
+  },
+  {
+   "id": "cardhedge::ch-daily::1786740445231x688998813037319700",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "tca-ebay::EBAY-v1|257683019182|0",
+   "fromCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "tca-ebay"
+  },
+  {
+   "id": "tca-ebay::257683019182",
+   "fromCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "tca-ebay"
+  },
+  {
+   "id": "cardhedge::ch-daily::1786813992864x762130465178737500",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "tca-ebay::318750126095",
+   "fromCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "tca-ebay"
+  },
+  {
+   "id": "tca-ebay::298593694643",
+   "fromCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "tca-ebay"
+  },
+  {
+   "id": "tca-ebay::398285448655",
+   "fromCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "tca-ebay"
+  },
+  {
+   "id": "cardhedge::ch-daily::1787147337890x387733607346290940",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1787355189560x660344863808463900",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1787405102778x142573744366842000",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1787254387249x511923992514005570",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1787489403702x354266482264142140",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1787414561215x631100288200775300",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1787377434441x387892038932314800",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1787622589786x891982339304011600",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1787607384436x981537098366789300",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1787581646756x586189404961857400",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1787805517646x565002206977992060",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1787719189012x692168011924101100",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1787860204420x740350240647339300",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1787937554534x964445428030475000",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1788191385359x206881531949182140",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1788127892791x412857998161842750",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1788120434372x768125816921301000",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1788098802699x389644673729039400",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1788070446672x214787676823350530",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1788065904381x120951636797799180",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1788036717668x142704074911352850",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1788010275269x649856606301784100",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1787961392587x408611637041361700",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "tca-ebay::128053895946",
+   "fromCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "tca-ebay"
+  },
+  {
+   "id": "tca-ebay::147554781368",
+   "fromCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "tca-ebay"
+  },
+  {
+   "id": "tca-ebay::318820080627",
+   "fromCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto:psa-10",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "tca-ebay"
+  },
+  {
+   "id": "tca-ebay::117384086024",
+   "fromCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "tca-ebay"
+  },
+  {
+   "id": "tca-ebay::267747543432",
+   "fromCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "tca-ebay"
+  },
+  {
+   "id": "tca-ebay::318805496432",
+   "fromCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "tca-ebay"
+  },
+  {
+   "id": "cardhedge::ch-daily::1788640082805x295279560650232300",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1788579327377x123944366985551120",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1788453365610x572276189596346900",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1788441875155x579790413810860000",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1788440820244x679896437286425100",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1788400899961x792030666555139600",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1788400899961x465696526145429570",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1788342641327x144714957376448580",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1788323503763x225208143247250600",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1759978447725x703637414357401300",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1760058891955x650406172066889200",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1760061865671x741193943673059500",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1760146495023x423188390788300000",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1760204235779x499032837530629600",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1760212668388x563913323226885800",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1760222105400x921094554490888800",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1760281592472x978425505480976800",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1788677073106x818123687449027500",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1788659319647x470524479038457700",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1760378056924x952306673746932400",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1760379258732x315659898768186240",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1760589721799x500798547301192640",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1760612356835x285393400992466560",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1760620896801x499182026253608400",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1760626351664x667150896375998640",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1760648573347x102856214511213300",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1760670812583x947887401297375700",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1788768037770x273392312002430850",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1760737030737x190226515750356400",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1760845109418x859433941178510800",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1760924949182x722245579233483600",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1760924836861x900573106108577800",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1760934648258x965045711027259200",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1760936215816x949983175996706300",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "tca-ebay::128071711115",
+   "fromCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "tca-ebay"
+  },
+  {
+   "id": "tca-ebay::147527704234",
+   "fromCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "tca-ebay"
+  },
+  {
+   "id": "tca-ebay::800549386086",
+   "fromCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "tca-ebay"
+  },
+  {
+   "id": "tca-ebay::800602828619",
+   "fromCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "tca-ebay"
+  },
+  {
+   "id": "cardhedge::ch-daily::1761018074826x631509938708759300",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1761057852413x846283976493090700",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1788807623633x565692965789175800",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1761160022714x724058810057559200",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1761238136942x158571100824836500",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1761308472746x678209709784974200",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1761349632463x752685886648256400",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1761446303459x850846691315001200",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1761616212866x247409625404373820",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1761720066188x395020685218374400",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1761745389719x673207746211334400",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1636025468380x814801503015187200",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "cardhedge::ch-daily::1636024869395x397984913198652800",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  },
+  {
+   "id": "tca-ebay::267600861601",
+   "fromCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "tca-ebay"
+  },
+  {
+   "id": "tca-ebay::324613110487",
+   "fromCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "tca-ebay"
+  },
+  {
+   "id": "cardhedge::ch-daily::1762042251642x606988362476117000",
+   "fromCardId": "1635225627273x947515795272892400",
+   "toCardId": "",
+   "repointHobbyiqCardId": "hiq:baseball:1989:donruss:192:base:no-auto",
+   "shape": "repoint",
+   "cardNumber": "192",
+   "source": "cardhedge"
+  }
+ ],
+ "partEntries": 243
+}

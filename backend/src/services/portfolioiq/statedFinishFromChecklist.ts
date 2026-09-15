@@ -344,9 +344,56 @@ function normaliseName(s: string): string {
   return normalise(s, true);
 }
 
+/**
+ * THE TOKEN INDEX (2026-09-14). `words` is a pure function of its string, and
+ * on the hot path it is called with the SAME few thousand strings over and
+ * over: `titleStatesName` and `titleStatesNameEludingProductWords` re-tokenise
+ * a CHECKLIST NAME once per title, and the corpus holds 37,849 parallel names
+ * (20,729 distinct) across 627 products. Those names are fixed at load; the
+ * work of splitting them is not.
+ *
+ * MEASURED, on 5,000 real titles harvested from census artifacts and profiled
+ * with --cpu-prof: `normalise` 39.4% + `words` 38.8% + the `[^a-z0-9]+` regex
+ * 8.7% = ~88% of ALL parser self-time, essentially all of it re-deriving
+ * checklist names. The per-title cost is bimodal -- 69% of titles cost
+ * ~0.15 ms and never reach the global scan, while 31% cost ~40 ms and do --
+ * for a weighted mean of 12.63 ms/call, which at 78,443 rows is 16.5 minutes
+ * of pure CPU per fleet link.
+ *
+ * WHY MEMOISE `words` RATHER THAN BUILD A NAME->TOKENS MAP AT THE CALL SITES.
+ * There are 20+ call sites that tokenise a name, several of them nested in
+ * loops, and threading a precomputed map through each is 20+ chances to pass
+ * the wrong one. `words` is the single seam every one of them already goes
+ * through, and it is pure: same string in, same array out, for the life of
+ * the process. Caching AT the seam is the same answer with one place to be
+ * wrong instead of twenty. `loadCorpus` warms it with every checklist name so
+ * the first title pays nothing the corpus could have paid once.
+ *
+ * THE RETURNED ARRAY IS SHARED, SO IT MUST NOT BE MUTATED. Every existing
+ * caller only reads (`.every`, `.length`, `for..of`, `.join`, `.flatMap`,
+ * `new Set(...)`) -- none mutates, and `_TOKEN_CACHE_FOR_TEST` exists so a
+ * test can prove the cached tokens still deep-equal a freshly computed
+ * `normalise(name).split(" ")` for every name in the shipped corpus.
+ *
+ * UNBOUNDED BY DESIGN, BOUNDED IN FACT. The keys are checklist names (fixed)
+ * plus the titles a single process actually sees. A fleet link classifies
+ * ~130k rows, so the worst case is ~150k short strings -- tens of MB against
+ * the 8 GB the runner already grants, and freed with the process.
+ */
+const _wordsCache = new Map<string, string[]>();
+
 function words(s: string): string[] {
+  const hit = _wordsCache.get(s);
+  if (hit !== undefined) return hit;
   const n = normalise(s);
-  return n ? n.split(" ") : [];
+  const out = n ? n.split(" ") : [];
+  _wordsCache.set(s, out);
+  return out;
+}
+
+/** The token index, for the parity test. Not part of the runtime contract. */
+export function _TOKEN_CACHE_FOR_TEST(): ReadonlyMap<string, readonly string[]> {
+  return _wordsCache;
 }
 
 /**
@@ -434,6 +481,18 @@ function loadCorpus(): void {
         globalNames.add(name);
       }
     }
+    // WARM THE TOKEN INDEX WITH EVERY NAME THE CORPUS HOLDS (2026-09-14).
+    //
+    // These are exactly the strings `titleStatesName` and
+    // `titleStatesNameEludingProductWords` re-tokenise once per title on the
+    // hot path. Tokenising them here, once, is what moves ~88% of the parser's
+    // measured self-time off the per-title path -- and doing it at load means
+    // the FIRST title pays nothing the corpus could have paid for it, rather
+    // than that one unlucky row absorbing 20,729 normalisations.
+    //
+    // `globalNames` is the de-duplicated set of every usable name across all
+    // 627 products, so this loop is the whole index and costs one pass.
+    for (const name of globalNames) words(name);
     _index = { byProduct, globalNames, productsPerName, finishWords, setKeyWordSets };
   } catch {
     // The corpus is a build artifact copied into dist/. If it is absent this
@@ -446,6 +505,10 @@ function loadCorpus(): void {
 
 /** Test seam: force a corpus reload. */
 export function _resetStatedFinishCorpus(): void {
+  // `words` is pure, so these entries are not stale in any observable way --
+  // but a cache that outlives the corpus it was warmed from invites exactly
+  // the wrong assumption from the next person to read this. Cleared with it.
+  _wordsCache.clear();
   _index = null;
   _loadFailed = false;
 }
