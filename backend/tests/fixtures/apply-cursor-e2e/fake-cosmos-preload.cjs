@@ -62,13 +62,15 @@ function loadPool() {
   }
   const rows = {};
   for (let n = 1; n <= APPLY_ROW_COUNT; n++) {
+    const num = process.env.DISTINCT_CARDS === "true" ? String(n) : "27";
+    const slug = "hiq:baseball:2021:topps-chrome:" + num + ":base:no-auto";
     const row = {
       id: "apply-" + n,
-      cardId: "hiq:baseball:2021:topps-chrome:27:base:no-auto",
-      hobbyiqCardId: "hiq:baseball:2021:topps-chrome:27:base:no-auto",
-      title: "2021 Topps Chrome Mike Trout #27 Refractor",
+      cardId: slug,
+      hobbyiqCardId: slug,
+      title: "2021 Topps Chrome Mike Trout #" + num + " Refractor",
       sport: "baseball", cardYear: 2021, setName: "Topps Chrome",
-      cardNumber: "27", parallel: "", isAuto: false, printRun: null,
+      cardNumber: num, parallel: "", isAuto: false, printRun: null,
       source: "cardhedge", soldPrice: 100 + n, soldDate: "2026-01-01",
     };
     rows[row.id + "::" + row.cardId] = row;
@@ -128,15 +130,38 @@ function soldCompsContainer() {
 }
 
 /** Every slug is checklist-backed, so a derived destination always passes the
- *  backing gate and the classifier's verdict turns on the identity alone. */
+ *  backing gate and the classifier's verdict turns on the identity alone.
+ *
+ *  CATALOG_LATENCY_MS (2026-09-14) makes each point read cost real wall clock,
+ *  which is what the classify path is actually bound by in prod (card_catalog
+ *  at 100k RU, unthrottled -- the cost is the round trip, not the RU). With it
+ *  set, this fixture measures the thing the CLASSIFY_CONCURRENCY prefetch is
+ *  meant to move; with it unset (0) every existing test keeps its old speed.
+ *  `catalogReads` counts the round trips so a test can prove the prefetch
+ *  DEDUPES rather than merely overlapping -- N concurrent misses on one slug
+ *  must still be one read. */
+const CATALOG_LATENCY_MS = Number(process.env.CATALOG_LATENCY_MS || 0);
+const counters = { catalogReads: 0 };
 function cardCatalogContainer() {
   return {
     items: { query: () => ({ hasMoreResults: () => false, fetchNext: async () => ({ resources: [] }) }) },
     item: (id) => ({
-      read: async () => ({ resource: { id, cardId: id, source: "beckett", checklistBacked: true } }),
+      read: async () => {
+        counters.catalogReads++;
+        if (CATALOG_LATENCY_MS > 0) await new Promise((r) => setTimeout(r, CATALOG_LATENCY_MS));
+        return { resource: { id, cardId: id, source: "beckett", checklistBacked: true } };
+      },
     }),
   };
 }
+// The read count goes to stderr at exit so a harness can read it without
+// parsing the lane's own stdout banner.
+process.on("exit", () => {
+  if (process.env.REPORT_CATALOG_READS === "true") {
+    process.stderr.write(`FIXTURE_CATALOG_READS ${counters.catalogReads}
+`);
+  }
+});
 
 function controlContainer() {
   return {
