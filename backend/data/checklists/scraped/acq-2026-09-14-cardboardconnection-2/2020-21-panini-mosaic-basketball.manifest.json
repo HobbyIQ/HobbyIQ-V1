@@ -2543,16 +2543,16 @@
     },
     {
       "section": "Rookie Private Signings Icon Version Gold",
-      "category": "rookie-private-signings-icon-version-gold",
-      "parallel": "",
+      "category": "rookie-private-signings-icon-version",
+      "parallel": "Gold",
       "cards": 1,
       "auto": 0,
       "printRun": 1
     },
     {
       "section": "Rookie Private Signings Icon Version Platinum",
-      "category": "rookie-private-signings-icon-version-platinum",
-      "parallel": "",
+      "category": "rookie-private-signings-icon-version",
+      "parallel": "Platinum",
       "cards": 1,
       "auto": 0,
       "printRun": 1
@@ -2806,5 +2806,20 @@
       "printRun": 20
     }
   ],
-  "ingestBlocked": null
+  "ingestBlocked": {
+    "scope": "WHOLE FILE. The held rows collide with rows that stay, so the ingest guard refuses this file outright — it is not a section-level hold. Nothing here is written until the derived-root fix lands.",
+    "heldSections": [
+      {
+        "section": "Rookie Private Signings Association / Icon Version",
+        "rows": 5,
+        "shouldBe": "two separate insert keys, each with its own Gold/Platinum rungs",
+        "why": "Two different card sets share the prefix \"Rookie Private Signings\", so the ingester lib derives that prefix as a root and reads each set's NAME as a parallel of it. Both then address the base product and collide at card 12. Needs the derived-root rule to refuse a tail that is a set name; held until that lands.",
+        "collides": true
+      }
+    ],
+    "totalHeldRows": 5,
+    "blockedReason": "The ingester lib derives a root from a prefix that two DIFFERENT card sets share and reads each set's name as a parallel of it, so both address the base product and collide. Holding is recorded for the steward; the fix is in the lib's derived-root rule, not in this converter.",
+    "awaitingFix": "insert-set-key.cjs rungFoldingFor — a derived root's tail must not be a set name",
+    "ingestVerdict": "REFUSE (id-collisions=2). Verified: removing only these 2 Icon Version rows makes the file PASS with 14,184 distinct ids and 23 subset keys."
+  }
 }

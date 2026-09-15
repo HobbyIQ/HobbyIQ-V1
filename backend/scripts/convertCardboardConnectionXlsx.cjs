@@ -219,6 +219,31 @@ function measureAnchors(sectionRows) {
     let best = null;
     for (const other of names) {
       if (other === name) continue;
+      // CF-A-RUNG-NAME-EXTENDS-ITS-ROOT (2026-09-15). A rung is its root
+      // PRINTED AGAIN with a finish added, so its title must extend the root's
+      // title. Roster identity alone cannot tell two sets apart when a product
+      // reuses one roster across several of them.
+      //
+      // Measured on 2019-20 Donruss BK: "Next Day Autographs" (42),
+      // "Rookie Dominator Signatures" (40) and "Rookie Jersey Kings" (40) are
+      // three DIFFERENT autograph/relic sets that all print the same rookie
+      // class — #1 Zion Williamson, #2 Ja Morant, #3 RJ Barrett in every one.
+      // Their rosters are identical, so the test below matched and the largest
+      // won: both Rookie sets were filed as rungs of "Next Day Autographs", a
+      // set whose name they do not share a single word with.
+      //
+      // Requiring the name relationship costs nothing real — every genuine rung
+      // this module folds ("Base Set" -> "French Parallel" aside, which is
+      // handled by the caller's anchor map) is spelled as its root plus a
+      // finish — and it is what stops a shared roster fusing distinct sets.
+      // THE ONE EXCEPTION is a title that is nothing BUT a finish — the Upper
+      // Deck sheet prints "French Parallel" and "Clear Cut Parallel" as whole
+      // section names, with no anchor token at all. Those are still rungs of
+      // the print they reproduce, and refusing them put 300 base cards per file
+      // back on one address. A title ending in the word "Parallel" is that
+      // shape; anything else must extend its root's name.
+      const isBareFinish = /\sParallel$/i.test(name);
+      if (!isBareFinish && !name.startsWith(other + " ")) continue;
       const theirs = sectionRows.get(other);
       if (theirs.size < mine.size) continue;
       let allSame = true;
@@ -296,6 +321,24 @@ function convert(xlsxPath) {
     if (!s || !num || !player) continue;
     if (!sectionRows.has(s)) sectionRows.set(s, new Map());
     sectionRows.get(s).set(num, player);
+  }
+  // CF-A-PLURAL-TWIN-IS-THE-SAME-SECTION (2026-09-15). cconnect prints both
+  // "Jersey Kings" and "Jerseys Kings Prime" in 2020-21 Donruss BK. The plural
+  // is a source typo, not a second card set: folding it onto the singular keeps
+  // "Prime" a PARALLEL of the registered `panini-donruss-jersey-kings` insert
+  // instead of minting `...-jerseys-kings-prime`, a key that would say a
+  // parallel is a set. Applied ONLY where the singular form is itself a section
+  // in this sheet, so nothing is invented.
+  const pluralTwins = new Map();
+  {
+    const singularOf = (t) => t.replace(/(\w+?)s(\s)/g, "$1$2");
+    for (const t of [...sectionRows.keys()]) {
+      const sing = singularOf(t);
+      if (sing === t || !sectionRows.has(sing)) continue;
+      const src = sectionRows.get(t), dst = sectionRows.get(sing);
+      for (const [n, pl] of src) if (!dst.has(n)) dst.set(n, pl);
+      pluralTwins.set(t, sing);
+    }
   }
 
   let anchors = measureAnchors(sectionRows);
@@ -404,6 +447,40 @@ function convert(xlsxPath) {
         // And the tails must differ, or there is no rung to move.
         const tails = new Set(sibs.map((s) => s.slice(pre.length + 1)));
         if (tails.size < 2) continue;
+        // SCOPED TO THE SHAPE THIS RULE WAS VERIFIED ON, AND NO WIDER.
+        //
+        // Roster agreement alone is far too weak a licence to invent a root.
+        // "Rookie Dominator Signatures" and "Rookie Jersey Kings" share their
+        // first word and agree 40/40 — they are the same rookie class — yet
+        // one is entirely signed and the other entirely not, so they are two
+        // card sets whose names merely start alike. An earlier cut of this
+        // rule folded them onto a `rookie` root the source never prints and
+        // scattered their colour rungs onto an unrelated set. That is the same
+        // failure CF-A-DERIVED-ROOT-IS-NEVER-A-SHARED-FIRST-WORD names.
+        //
+        // So the rule is held to the Optic Rated Rookie Preview shape it was
+        // measured against, and the general case is left to a follow-up that
+        // can trace the anchor map properly:
+        //
+        //   - the shared prefix is at least THREE words, so a single leading
+        //     word like "Rookie" can never become a card set;
+        //   - every tail is ONE word, so a tail that is itself a set name
+        //     ("Dominator Signatures", "Jersey Kings") disqualifies the group;
+        //   - every sibling shares the same signing status, because a rung
+        //     reprints its root and autograph status is not a parallel.
+        //
+        // Absent beats wrong: a group that fails any of these keeps its
+        // sections on their own full-name keys, which is what the source says.
+        if (pre.trim().split(/\s+/).length < 3) continue;
+        if ([...tails].some((t) => t.trim().split(/\s+/).length !== 1)) continue;
+        const signing = new Set();
+        for (const s of sibs) {
+          for (const r2 of rows.slice(1)) {
+            if (String(r2[C.set] || "").trim() !== s) continue;
+            signing.add(Boolean(C.auto) && String(r2[C.auto] || "").trim() !== "");
+          }
+        }
+        if (signing.size > 1) continue;
         sectionRows.set(pre, merged);
         for (const s of sibs) {
           anchors.set(s, { anchorSection: pre });
@@ -432,6 +509,33 @@ function convert(xlsxPath) {
       anchors.set(t, { anchorSection: pick[0] });
     }
 
+    // A RUNG IS NEVER SOMEONE ELSE'S ROOT.
+    //
+    // 2021 Donruss FB prints seven "Optic Rated Rookie Preview <colour>"
+    // sections and an eighth, "Optic Rated Rookie Preview Red and Green".
+    // That eighth title genuinely extends the name of the "... Red" section
+    // and reprints its roster exactly, so measureAnchors filed it as a rung of
+    // Red — correctly, on the evidence it had, because at that point Red is
+    // still a section in its own right.
+    //
+    // The colour-sibling rule then folds Red itself onto "Optic Rated Rookie
+    // Preview". Red is now a rung, not a root, and the stale pointer minted
+    // `optic-rated-rookie-preview-red` as a CARD SET carrying the nonsense
+    // rung "and Green" — the very defect CF-A-COLOUR-SIBLING names, arriving
+    // by a second route.
+    //
+    // Anchors are only final here, after every fold has been applied, so this
+    // is where the chains get walked: follow each pointer up to the section
+    // that is nobody's rung. That section is what the source prints as the set.
+    for (const [name, rec] of [...anchors]) {
+      const seen = new Set([name]);
+      let root = rec.anchorSection;
+      while (anchors.has(root) && !seen.has(root)) {
+        seen.add(root);
+        root = anchors.get(root).anchorSection;
+      }
+      if (root !== rec.anchorSection) anchors.set(name, { anchorSection: root });
+    }
   }
 
   const out = [];
@@ -444,7 +548,8 @@ function convert(xlsxPath) {
     const player = cleanPlayerCell(r[C.desc]);
     if (!setName || !num || !player) continue;
     if (blockedSections.includes(setName)) continue;
-    const { anchor, parallel, subset } = splitSection(setName, anchors);
+    const canonical = pluralTwins.get(setName) || setName;
+    const { anchor, parallel, subset } = splitSection(canonical, anchors);
     const category = subset ? `${slug(anchor)}--${slug(subset)}` : slug(anchor);
     const isAuto = LAYOUT === "panini"
       ? /(?:^|[^a-z])(?:auto|autograph|autographs|signature|signatures|ink|scripts|penmanship)(?:[^a-z]|$)/i.test(setName)

@@ -1061,14 +1061,5 @@
       "printRun": 5
     }
   ],
-  "collisionCheck": {
-    "checkedAt": "2026-09-15",
-    "method": "lib/insert-set-key.cjs planFile(), driven exactly as ingest-checklist-csv-to-catalog.cjs drives it (rungFoldingByCell -> separationByCell -> planFile -> setKeyForRow). Local, no Cosmos.",
-    "verdict": "BLOCKED",
-    "rows": 7367,
-    "distinctIds": 7367,
-    "clashingAddresses": 0,
-    "subsetKeysSeparated": 19
-  },
   "ingestBlocked": null
 }

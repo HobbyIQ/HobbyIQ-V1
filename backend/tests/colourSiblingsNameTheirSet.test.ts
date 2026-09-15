@@ -83,14 +83,41 @@ describe.runIf(present)("colour siblings name their set by their shared prefix",
     expect(differ).toBe(0);
   });
 
-  it("the two unresolved section shapes are HELD in the manifest, not written wrong", () => {
-    // 89 "Jerseys Kings Prime" rows (plural twin) and 100 "Red and Green" rows
-    // (two-word tail) land on the right card set but carry a rung name the
-    // source does not print. They are held until the follow-up.
+  it("the two-word colour tail resolves too — it is NOT held", () => {
+    // "Optic Rated Rookie Preview Red and Green" reprints the Red roster and
+    // extends its name, so measureAnchors filed it as a rung OF RED. Red is
+    // then folded onto the ORRP root by the colour-sibling rule, which left a
+    // stale pointer minting `optic-rated-rookie-preview-red` as a card set
+    // carrying the nonsense rung "and Green".
+    //
+    // Walking each anchor chain up to the section that is nobody's rung fixes
+    // it, so these 100 rows now carry the rung the source actually prints and
+    // are WRITTEN, not held. 2021 FB therefore holds nothing.
     const m = JSON.parse(fs.readFileSync(path.join(DIR, FILE.replace(/\.csv$/, ".manifest.json")), "utf8"));
+    expect(m.ingestBlocked).toBeNull();
+    const rg = rows.filter((r) => r.parallel === "Red and Green");
+    expect(rg.length).toBe(100);
+    expect([...new Set(rg.map((r) => r.category))]).toEqual(["optic-rated-rookie-preview"]);
+  });
+
+  it("no ORRP section is left rooted on a rung", () => {
+    // The regression guard for the stale-pointer defect: every ORRP row must
+    // sit on the root category, never on a colour of it.
+    const bad = rows.filter((r) => /^optic-rated-rookie-preview-/.test(r.category));
+    expect(bad.map((r) => `${r.category} || ${r.parallel}`)).toEqual([]);
+  });
+
+  it("the plural twin IS still held — it mints a parallel as a card set", () => {
+    // "Jerseys Kings Prime" differs from "Jersey Kings" in the STEM, so no
+    // rule relates them: the plural title becomes its own anchor and the rows
+    // address a card set the source never prints. Same defect class as
+    // `optic-rated-rookie-preview-gold`, still unresolved, so they are held
+    // rather than written wrong.
+    const bk = "2020-21-panini-donruss-basketball";
+    const m = JSON.parse(fs.readFileSync(path.join(DIR, `${bk}.manifest.json`), "utf8"));
     expect(m.ingestBlocked).toBeTruthy();
-    expect(m.ingestBlocked.totalHeldRows).toBe(100);
+    expect(m.ingestBlocked.totalHeldRows).toBe(40);
     expect(m.ingestBlocked.heldSections.map((h: { section: string }) => h.section))
-      .toContain("Optic Rated Rookie Preview Red and Green");
+      .toContain("Jerseys Kings Prime");
   });
 });

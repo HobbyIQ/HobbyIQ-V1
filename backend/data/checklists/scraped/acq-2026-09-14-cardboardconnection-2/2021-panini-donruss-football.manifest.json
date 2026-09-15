@@ -11,7 +11,7 @@
   "rowCount": 11126,
   "autoCount": 1047,
   "printRunCount": 5068,
-  "distinctParallels": 70,
+  "distinctParallels": 66,
   "parallelColumnAuthoritative": true,
   "layout": "panini",
   "rungRule": "R37 (Drew 2026-09-14): parallel = what the section title adds beyond the SHORTEST matching base anchor; a section matching no anchor is BLOCKED, never guessed.",
@@ -39,7 +39,6 @@
     "Laundry Tag NFL Shield",
     "Lava",
     "No Name",
-    "Optic Rated Rookie Preview Red and Green",
     "Orange",
     "Photo Variation",
     "Photo Variation Aqueous Test",
@@ -80,14 +79,11 @@
     "Prime",
     "Purple",
     "Red",
+    "Red and Green",
+    "Rookies",
+    "Rookies Autographs",
     "Season Stat Line",
-    "Studio Series",
-    "Super Bowl MVP",
-    "Super Bowl MVP Holo",
-    "The Elite Series Rookies",
-    "The Elite Series Rookies Autographs",
-    "The Rookies",
-    "The Rookies Autographs"
+    "Studio Series"
   ],
   "sectionsReport": [
     {
@@ -852,8 +848,8 @@
     },
     {
       "section": "Optic Rated Rookie Preview Red and Green",
-      "category": "rated-rookies",
-      "parallel": "Optic Rated Rookie Preview Red and Green",
+      "category": "optic-rated-rookie-preview",
+      "parallel": "Red and Green",
       "cards": 100,
       "auto": 0,
       "printRun": 0
@@ -1500,16 +1496,16 @@
     },
     {
       "section": "Super Bowl MVP",
-      "category": "base",
-      "parallel": "Super Bowl MVP",
+      "category": "super-bowl-mvp",
+      "parallel": "",
       "cards": 1,
       "auto": 0,
       "printRun": 0
     },
     {
       "section": "Super Bowl MVP Holo",
-      "category": "base",
-      "parallel": "Super Bowl MVP Holo",
+      "category": "super-bowl-mvp",
+      "parallel": "Holo",
       "cards": 1,
       "auto": 0,
       "printRun": 1
@@ -1532,16 +1528,16 @@
     },
     {
       "section": "The Elite Series Rookies",
-      "category": "rookie-holiday-sweater",
-      "parallel": "The Elite Series Rookies",
+      "category": "the-elite-series",
+      "parallel": "Rookies",
       "cards": 30,
       "auto": 0,
       "printRun": 0
     },
     {
       "section": "The Elite Series Rookies Autographs",
-      "category": "rookie-holiday-sweater",
-      "parallel": "The Elite Series Rookies Autographs",
+      "category": "the-elite-series",
+      "parallel": "Rookies Autographs",
       "cards": 27,
       "auto": 27,
       "printRun": 27
@@ -1564,16 +1560,16 @@
     },
     {
       "section": "The Rookies",
-      "category": "rookie-holiday-sweater",
-      "parallel": "The Rookies",
+      "category": "the-rookies",
+      "parallel": "",
       "cards": 40,
       "auto": 0,
       "printRun": 0
     },
     {
       "section": "The Rookies Autographs",
-      "category": "rookie-holiday-sweater",
-      "parallel": "The Rookies Autographs",
+      "category": "the-rookies",
+      "parallel": "Autographs",
       "cards": 35,
       "auto": 35,
       "printRun": 35
@@ -1635,18 +1631,5 @@
       "printRun": 9
     }
   ],
-  "ingestBlocked": {
-    "scope": "SECTION-LEVEL, not the whole file — every other section in this file is correct and should be written.",
-    "heldSections": [
-      {
-        "section": "Optic Rated Rookie Preview Red and Green",
-        "rows": 100,
-        "shouldBe": "category `optic-rated-rookie-preview`, parallel \"Red and Green\"",
-        "why": "The only ORRP colour whose tail is TWO words. The seven single-word colours resolve correctly to `optic-rated-rookie-preview` + the colour; this one is rooted on `rated-rookies` with the whole title as its parallel."
-      }
-    ],
-    "totalHeldRows": 100,
-    "blockedReason": "These sections land on the correct CARD SET but carry a rung name the source does not print for a parallel. Holding them keeps the APPLY writing only correct identities; they are released by the plural-twin / two-word-tail follow-up.",
-    "awaitingFix": "convertCardboardConnectionXlsx plural-twin fold and two-word colour tail"
-  }
+  "ingestBlocked": null
 }
