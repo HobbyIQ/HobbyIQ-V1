@@ -492,12 +492,26 @@ describe("E -- the canary gate is wired INSIDE the runner's apply path", () => {
     expect(step).not.toMatch(/continue-on-error:\s*true/);
   });
 
-  it("the self-relaunch NEVER forwards apply=true", () => {
+  it("the self-relaunch forwards apply=true ONLY behind this link's own canary", () => {
+    // AMENDED 2026-09-14 (#2153, Drew: "auto-continue with per-link canary
+    // guard"). This used to require a blanket `-f apply=false`: safe, but once
+    // #2152 gave the apply a resume cursor it also meant the shard could never
+    // get past its first link, because a REPORT relaunch deliberately starts
+    // cold. The continuation now carries apply=true only when this link was
+    // itself an apply AND this link's own AFTER canary succeeded, so each link
+    // is gated by its own before/apply/after triple on its own runner and never
+    // by one that did not survive the re-dispatch.
     const start = yml.indexOf("- name: Self-relaunch rematch-sold-comps");
     const step = yml.slice(start, yml.indexOf("- name:", start + 10) > 0 ? yml.indexOf("      - name:", start + 10) : undefined);
-    expect(step).toMatch(/-f apply=false/);
-    // the old, unsafe forwarding must be gone from THIS step
+    // The guard, both halves: this run was an apply, and its own gate passed.
+    expect(step).toMatch(/inputs\.apply == true &&/);
+    expect(step).toMatch(/steps\.canary_after\.outcome == 'success'/);
+    // The old, unsafe UNCONDITIONAL forwarding must still be gone from THIS
+    // step -- that shape is the 2026-09-03 defect, where a continuation apply
+    // ran on a fresh runner with no baseline and no gate.
     expect(step).not.toMatch(/-f apply="\$\{\{ inputs\.apply \}\}"/);
+    // And the gate it names must actually exist as a step in this workflow.
+    expect(yml).toMatch(/id: canary_after/);
   });
 });
 
