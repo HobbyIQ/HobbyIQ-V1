@@ -1,3 +1,4 @@
+import { getTelemetryClient } from "../ops/telemetryClient.js";
 /**
  * CF-LADDER-TIME-BUDGET (Fable, 2026-09-12).
  *
@@ -99,43 +100,25 @@ export type LadderTelemetryEvent = {
  * telemetry is the common case for scripts and lanes, and it must cost one
  * failed lookup for the life of the process rather than one per rung.
  */
-let _telemetryClient: { trackEvent: (t: unknown) => void } | null | undefined;
-
-function resolveTelemetryClient(): { trackEvent: (t: unknown) => void } | null {
-  const cached = _telemetryClient;
-  if (cached !== undefined) return cached;
-  try {
-    // ALREADY-LOADED ONLY. `require.cache` is consulted directly instead of
-    // calling `require`, and the difference is the whole point: the first
-    // `require("applicationinsights")` costs ~1,225 ms in this repo (measured),
-    // and paying it here would put a module load on the ladder's timing path —
-    // in the one function whose entire job is to measure that path. It was
-    // caught exactly that way: a ladderTimeBudget pin went from 0.6 s to 16.6 s.
-    //
-    // The API imports `applicationinsights` at boot in server.ts, so by the
-    // time any rung runs there the module is cached and this finds the client.
-    // Every process that has NOT loaded it — scripts, crons, the rematch lanes,
-    // tests — gets `null` at zero cost and emits nothing, which is the correct
-    // answer for a process with no telemetry pipeline anyway.
-    //
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const loaded = require.cache?.[require.resolve("applicationinsights")]?.exports;
-    const client = (loaded as { defaultClient?: { trackEvent?: unknown } } | undefined)?.defaultClient;
-    _telemetryClient = client && typeof client.trackEvent === "function"
-      ? (client as { trackEvent: (t: unknown) => void })
-      : null;
-  } catch {
-    _telemetryClient = null;
-  }
-  return _telemetryClient ?? null;
-}
-
-/** Test seam: forget the cached client (including a cached "none"). */
-export function _resetLadderTelemetryClient(): void { _telemetryClient = undefined; }
+/**
+ * CF-DEFAULTCLIENT-WAS-A-GETTER-ONLY-RE-EXPORT (Fable, 2026-09-15). This used
+ * to read `appInsights.defaultClient` out of `require.cache` itself. The cache
+ * lookup was right — the module IS there and identity matches — but the
+ * property it read was always `undefined`, because on applicationinsights@3.14.0
+ * `defaultClient` is a getter with no setter and server.ts's assignment to it
+ * was a silent no-op. So these events were emitted into nothing, which is how
+ * a 30-day window came to hold zero customEvents of any name.
+ *
+ * The client now comes from `services/ops/telemetryClient`, a module this repo
+ * owns and can actually write to. The resolution cost that mattered here is
+ * gone with it: that accessor reads a module-local variable, so there is no
+ * `require` on the ladder's timing path — which was the bug that turned a
+ * 0.6 s test into a 16.6 s one when this was first written.
+ */
 
 let _emitLadderTelemetry: (event: LadderTelemetryEvent) => void = (event) => {
   try {
-    const client = resolveTelemetryClient();
+    const client = getTelemetryClient();
     if (!client) return;
     client.trackEvent({
       name: event.name,
