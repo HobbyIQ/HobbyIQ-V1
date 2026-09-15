@@ -1,0 +1,48 @@
+{
+  "generatedAt": "2026-09-15",
+  "ruling": "R47 (Drew, 2026-09-15): Allen & Ginter MINIS are their own card set.",
+  "status": "NO PACKAGE BUILT — the measurement contradicts the premise the ruling was given on. Reported for Drew rather than built.",
+  "scope": "baseball/2025/topps-allen-ginter (1,938 mini rows; 2023 and 2024 are 153 and 71 rows, both under the 500-row bar)",
+
+  "whatIWasAskedToBuild": "Register `topps-allen-ginter-mini` as its own card set with its own ladder from the stated source, plus a re-key list for pool rows naming a mini.",
+
+  "whyItWasNotBuilt": [
+    "THE MINIS ARE ALREADY CHECKLIST-BACKED, AS RUNGS. baseball/2025/topps-allen-ginter holds 40 distinct mini-named rungs from checklist sources — `Mini`, `Minis`, `Mini Wood`, `Mini Glossy`, `Mini No Number`, `Mini Brooklyn Back`, `Mini M&N Back`, `Framed Mini Printing Plates` and more, most at 350 cards each. Nothing is missing to acquire.",
+    "AND THE MINIS REPRINT THE BASE ROSTER, so they are not separately numbered. The partition test, run against the catalog's own rows: of the 350 numeric cards on the plain `Mini` rung, 349 name the SAME player the base print names at that number. The single difference is #327 `Vladimir Guerrero` vs `Vladimir Guerrero Sr.` — the same person. (25 further rows differ only by an `RC` suffix and were folded before this count.) A card set with its own numbering would not reprint another set's roster 349 times out of 350.",
+    "SO A SEPARATE `topps-allen-ginter-mini` KEY WOULD SPLIT ONE POOL IN TWO. The mini and the base card share a number and a player; moving the minis to their own key would put the same card at two addresses, which is the `one card, one row, one pool` invariant failing on a new axis."
+  ],
+
+  "whatTheRealDefectIs": {
+    "summary": "A SPELLING problem, not an acquisition. 1,211 of the 1,938 mini pool rows already sit on a rung the catalog spells the same way. The other 726 sit on a rung the catalog spells differently.",
+    "unbackedRungsAndTheirBackedCounterparts": [
+      { "poolRung": "black-border", "rows": 228, "catalogSpells": ["Black Bordered", "Mini Black Bordered", "Mini Black Border"] },
+      { "poolRung": "mini-base", "rows": 183, "catalogSpells": ["Base", "Mini"] },
+      { "poolRung": "gold-border", "rows": 177, "catalogSpells": ["Mini Gold Border"] },
+      { "poolRung": "red-refractor", "rows": 39, "catalogSpells": ["Mini Cards Chrome Red Refractor", "Chrome Variations Red Refractor"] },
+      { "poolRung": "gold-refractor", "rows": 28, "catalogSpells": ["Mini Cards Chrome Gold Refractor", "Chrome Variations Gold Refractor"] },
+      { "poolRung": "mini-variation", "rows": 11, "catalogSpells": ["Mini"] },
+      { "poolRung": "orange-refractor", "rows": 9, "catalogSpells": ["Mini Cards Chrome Orange Refractor", "Chrome Variations Orange Refractor"] },
+      { "poolRung": "image-variation", "rows": 17, "catalogSpells": [], "note": "no candidate — the only genuinely unbacked rung of any size" }
+    ],
+    "note": "Several counterparts are AMBIGUOUS — `red-refractor` could be the Mini Cards Chrome rung or the Chrome Variations rung, and those are different cards. That ambiguity is exactly what the exactly-one rule in checklistSpellingAdoption.ts refuses to resolve, and it is not resolvable from the pool text alone."
+  },
+
+  "questionsForDrew": [
+    "R47 was ruled on the premise that A&G minis are their own card set. The catalog says they are a RUNG of the base print that reprints its roster 349/350. Does R47 still stand, or do minis stay a rung? (If they stay a rung, nothing needs building and the 726 rows are a vocabulary job.)",
+    "If minis DO become their own card set, the 40 existing mini rungs on `topps-allen-ginter` have to move too — otherwise the same card sits on both keys. That is a catalog relocation, not an acquisition, and it is much larger than the 1,938 pool rows. Authorise separately?",
+    "`image-variation` (17 rows) has no backed counterpart at all and is the one real gap here. Acquire the A&G image-variation list, or leave 17 rows unbacked?"
+  ],
+
+  "measurement": {
+    "readOnly": true,
+    "readAt": "2026-09-15",
+    "cellRows": 10529,
+    "miniRows": 1938,
+    "miniRowsOnABackedRung": 1211,
+    "miniRowsOnAnUnbackedRung": 726,
+    "catalogMiniRungs": 40,
+    "partitionTest": { "plainMiniRungNumericCards": 350, "samePlayerAsBase": 349, "differentPlayer": 1, "numberNotInBase": 0 },
+    "otherYears": { "baseball/2023/topps-allen-ginter": 153, "baseball/2024/topps-allen-ginter": 71 },
+    "note": "pool read by slug prefix and paged; catalog read per (sport, year, setKey); no cross-partition COUNT over sold_comps."
+  }
+}
