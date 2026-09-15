@@ -1,0 +1,29 @@
+{
+  "generatedAt": "2026-09-15",
+  "ruling": "R49 (Drew, 2026-09-15): `Encased X` is the same rung as `Pristine X`.",
+  "status": "NO PACKAGE BUILT — the ladder already exists in card_catalog, fully checklist-backed. Reported instead.",
+  "question": "Was topps-pristine one of the 2 cells #2175 built, and does it contain the Pristine/Encased ladder?",
+  "answer": "YES it was one of the two, and NO it does not contain that ladder. #2175 built the STANDARD ladder only: 300 rows, one rung (`Base Refractor`), because the other 9 standard rungs were already in the catalog. The Encased/Pristine ladder is a SECOND, different ladder and #2175 listed it under `unstatedRungs` rather than minting it.",
+
+  "whyNoPackageNow": [
+    "THE LADDER IS ALREADY THERE. card_catalog holds all 10 ruled rungs for baseball/2025/topps-pristine, every one checklist-backed, at 367-549 rows each: Pristine Refractor 549, Pristine Primaries Refractor 484, Pristine Red 465, Pristine Black 454, Pristine Orange 443, Pristine Blue 433, Pristine Purple 421, Pristine Gold 421, Pristine Aqua 377, Pristine Pink 367 — plus 6 more Pristine-prefixed rungs beyond the base ladder. Minting them would duplicate existing cards.",
+    "THE CORPUS AND THE CATALOG DISAGREE, and the corpus is the stale one. data/checklist-parallel-names.json was built 2026-09-04 and carries 10 rungs for this cell, NONE containing `Pristine` or `Encased`. That is what the deriver builder measured, and it is correct about the corpus — but the catalog has held the ladder all along. The fix is to REBUILD the corpus from the catalog, not to acquire a ladder we own.",
+    "SO R49 REMAINS A SPELLING QUESTION, and the 1,323 pool rows are already handled by the committed re-key list (#2186), which repoints `encased-*` onto the `pristine-*` rungs that exist. Every one of its 9 mappings was checked 1:1 against these catalog rungs."
+  ],
+
+  "recommendation": "Rebuild data/checklist-parallel-names.json from card_catalog so the deriver's spelling adoption can see the Pristine rungs. Once it can, `Encased X` can ride as a `spellings` alias on each rung exactly as intended — the alias needs a rung in the corpus to point at, and today there is none.",
+
+  "evidence": {
+    "readOnly": true,
+    "readAt": "2026-09-15",
+    "catalogCell": "baseball/2025/topps-pristine",
+    "pristineRungsInCatalog": 16,
+    "allCheckisltBacked": true,
+    "corpusFile": "data/checklist-parallel-names.json",
+    "corpusBuiltAt": "2026-09-04T19:35:22.630Z",
+    "corpusRungsForThisCell": 10,
+    "corpusRungsContainingPristineOrEncased": 0,
+    "poolRowsNamingEncased": 1323,
+    "poolRowsHandledBy": "#2186 — R49 re-key list, 9 mappings, all 1:1"
+  }
+}
