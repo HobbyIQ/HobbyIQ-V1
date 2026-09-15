@@ -138,13 +138,30 @@ describe("parseListingIdentity is byte-identical to unmodified main", () => {
     const before = JSON.parse(readFileSync(fixture, "utf8")) as Array<{ title: string; parsed: unknown }>;
     expect(before.length).toBe(200);
 
+    // COMPARED FIELD BY FIELD OVER THE FIELDS THE SNAPSHOT RECORDED, not as
+    // whole-object JSON.
+    //
+    // The property this test defends is "no parse MOVED" -- every field the
+    // snapshot recorded still has the value it recorded. Comparing stringified
+    // objects also asserts the KEY SET never grows, which is a different and
+    // much stronger claim, and not the one the doc comment above makes.
+    //
+    // CF-A-STATED-PARALLEL-IS-NEVER-EVICTED-TO-BASE (2026-09-15) added
+    // `parallelIsUnconfirmed` to ParsedListingIdentity. It moved no value on
+    // any of these 200 titles -- the whole diff was the new key appearing --
+    // but whole-object equality reported five changed parses. Field-wise keeps
+    // the real guard (a changed value fails, and so does a field that vanished)
+    // while letting the shape grow.
     const moved: string[] = [];
     for (const row of before) {
-      const now = parseListingIdentity(row.title, undefined, { vertical: null, hobbyiqCardId: null } as never);
-      if (JSON.stringify(now) !== JSON.stringify(row.parsed)) {
-        moved.push(`${JSON.stringify(row.title)}\n    before ${JSON.stringify(row.parsed)}\n    after  ${JSON.stringify(now)}`);
-        if (moved.length >= 5) break;
+      const now = parseListingIdentity(row.title, undefined, { vertical: null, hobbyiqCardId: null } as never) as unknown as Record<string, unknown>;
+      const was = row.parsed as Record<string, unknown>;
+      for (const field of Object.keys(was)) {
+        if (JSON.stringify(now[field]) === JSON.stringify(was[field])) continue;
+        moved.push(`${JSON.stringify(row.title)} [${field}]\n    before ${JSON.stringify(was[field])}\n    after  ${JSON.stringify(now[field])}`);
+        break;
       }
+      if (moved.length >= 5) break;
     }
     expect(moved, `the token index changed a parse:\n  ${moved.join("\n  ")}`).toEqual([]);
   });

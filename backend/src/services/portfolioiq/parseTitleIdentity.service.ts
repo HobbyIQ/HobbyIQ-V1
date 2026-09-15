@@ -51,7 +51,7 @@ import {
   AMBIGUOUS_MARKET_CODES,
 } from "../catalog/pokemonSetCodes.js";
 import { slugify } from "./hobbyIqCardId.service.js";
-import { statedFinishFromChecklist } from "./statedFinishFromChecklist.js";
+import { statedFinishFromChecklist, titleStatesAnUnconfirmedFinish } from "./statedFinishFromChecklist.js";
 import { bareColourAliasFromChecklist } from "./bareColourAliasFromChecklist.js";
 import { pokemonFinishFromTitle } from "./pokemonFinishFromTitle.js";
 
@@ -343,6 +343,18 @@ export interface ParsedListingIdentity {
    *  or a standalone "IV" out of context. The seam corroborates it against
    *  the product's checklist; this parser never guesses. */
   variationMarker: VariationMarker | null;
+  /** CF-A-STATED-PARALLEL-IS-NEVER-EVICTED-TO-BASE (post-wave audit,
+   *  2026-09-15). True when `parallel` came back "Base" but the title DOES
+   *  state finish evidence this parser could not resolve to a rung.
+   *
+   *  `parallel` alone cannot express the difference between "the title says
+   *  this card has no parallel" and "the title names one and we could not say
+   *  which", and those are different cards. Base is a CLAIM -- the
+   *  unparalleled card, its own pool, its own curve -- so a writer that emits
+   *  it for a title reading "Purple Scope" files the sale on the wrong card.
+   *  A writer that sees this flag set must WITHHOLD the parallel rather than
+   *  claim Base; blank is unknown and is recoverable. */
+  parallelIsUnconfirmed: boolean;
 }
 
 // CF-GRADE-FROM-TITLE (Drew, 2026-08-01). Matches:
@@ -919,9 +931,25 @@ export function parseListingIdentity(
     ? (canonicalVariationName(finish) ? finish
       : finish && !/^base$/i.test(finish) && !/^refractor$/i.test(finish) ? `${variation.finish} ${finish}` : variation.finish)
     : finish;
+  // CF-A-STATED-PARALLEL-IS-NEVER-EVICTED-TO-BASE (2026-09-15). Asked ONLY
+  // when the answer was about to be "Base", so it overrides nothing: every
+  // rule and reader above has already returned. It reports whether the title
+  // carries finish evidence this parser could not turn into a rung -- the
+  // difference between "no parallel" and "a parallel we could not name",
+  // which `parallel` alone has no way to say. `isMultiCardLot` is refused for
+  // the reason every reader here refuses it: a lot states no one card's
+  // finish.
+  const parallelIsUnconfirmed = /^base$/i.test(parallel)
+    && !isMultiCardLot(t)
+    && titleStatesAnUnconfirmedFinish(t, {
+      year: opts?.year ?? fromSlug.year,
+      setKey: opts?.setKey ?? fromSlug.setKey,
+      pokemonSetKeyForResidue: resolvedPokemonSetKey,
+    });
   return {
     cardNumber,
     parallel,
+    parallelIsUnconfirmed,
     variationMarker: variation.finish ? null : variation.marker,
     isAuto,
     printRun: extractPrintRun(t, isTcg, isPokemon),
@@ -1784,7 +1812,26 @@ function extractParallel(
   if (/aqua\s+lava/i.test(T)) return "Aqua Lava Refractor";
   if (/aqua\s+wave/i.test(T)) return "Aqua Wave Refractor";
   if (/aqua\s+shimmer/i.test(T)) return "Aqua Shimmer Refractor";
-  m = T.match(/(rose\s+gold)\s+(refractor|x-?fractor|mini)/i);
+  // CF-A-PARALLEL-NAME-IS-A-NAME-THE-CHECKLIST-SPELLS (2026-09-15). The `mini`
+  // alternative used to answer "Rose Gold Mini" -- a fragment of a name, and a
+  // card that does not exist. The corpus lists `Rose Gold Mini-Diamond
+  // Refractor` (and `Rose Gold Mini Diamond Refractor`) but never a bare `Rose
+  // Gold Mini`, so the old answer split the Mini-Diamond pool onto an address
+  // no checklist has ever printed:
+  //
+  //   "2023 Topps Chrome Platinum Baseball #250 Rose Gold Mini-Diamond
+  //    Refractor"  ->  "Rose Gold Mini"
+  //
+  // measured verbatim against the live parser, 1 of the audit's 66
+  // garbled-parallel rows. `mini` alone was never a rung; it is the first word
+  // of one. The general rules at the top of this function already answer
+  // "Mini Diamond Refractor" and "Mini Diamond", so the whole name is reached
+  // by the colour-prefixed forms below rather than by truncating here.
+  m = T.match(/(rose\s+gold)\s+mini[\s-]*diamond\s+refractor/i);
+  if (m) return "Rose Gold Mini-Diamond Refractor";
+  m = T.match(/(rose\s+gold)\s+mini[\s-]*diamond/i);
+  if (m) return "Rose Gold Mini-Diamond";
+  m = T.match(/(rose\s+gold)\s+(refractor|x-?fractor)/i);
   if (m) return "Rose Gold " + capFirst(m[2].replace(/-/, "-"));
   if (/black\s+shimmer\s+refractor/i.test(T)) return "Black Shimmer Refractor";
   // CF-RED-INK-IS-ITS-OWN-CARD (Drew ruling 2026-08-30, card-lingo-glossary).
@@ -3328,6 +3375,29 @@ const LADDER_SPECIALIZATION_PRODUCTS: readonly LadderSpecializationProduct[] = [
   // Traded cards misfiled under Score, a different defect this must not
   // launder into a wrong key. 766 catalog rows, 100% checklist-backed.
   { family: "score", states: /\brookie'?s?\s*(?:&|and|\/|\+)\s*traded\b/, setKey: "score-rookie-and-traded" },
+
+  // -- topps -----------------------------------------------------------------
+  // R26-FLAGSHIP-SWALLOWED-NAMED-PRODUCT, from the post-wave audit (2026-09-15).
+  //
+  // Topps Gold Label is a DISTINCT product with its own checklist, its own
+  // Class 1/2/3 rung ladder and its own price curve -- and it is already a
+  // registered product in productSetKeys (`isProductSetKey("topps-gold-label")`
+  // is true, parent `topps`), so the ladder edge existed and the derivation
+  // simply could not reach it. Exactly the "dead edge" this table was built to
+  // pay down: every Gold Label sale classified AGREE under bare `topps` on
+  // BOTH sides, so the census could never surface one.
+  //
+  //   "2000 Topps Gold Label - Barry Bonds #85 Class 2"  -> topps, Base
+  //   "1999 Topps Gold Label Football #61 Base"          -> topps
+  //
+  // Both measured verbatim against the live parser on 2ac329a9. The "Class 2"
+  // in the first is the product's OWN rung, so folding to `topps` loses the
+  // card twice over -- wrong product, and a rung bare `topps` never had.
+  //
+  // BRAND-GATED like every rule in this table, and here that gate is doing
+  // real work: "gold" is a colour word and "label" an ordinary noun, so an
+  // unanchored rule would read a gold-labelled anything as this product.
+  { family: "topps", states: /\bgold\s+label\b/, setKey: "topps-gold-label" },
 ];
 
 /** The families this table can refine, for the O(1) reject that keeps an
