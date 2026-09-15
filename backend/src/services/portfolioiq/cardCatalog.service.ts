@@ -167,6 +167,26 @@ export interface CardCatalogEntry {
 }
 
 let _cached: Container | null = null;
+/**
+ * CF-ONE-COSMOS-CLIENT-ON-THE-PRICE-PATH (Fable, 2026-09-15). The process-wide
+ * `card_catalog` handle, exported so a REQUEST path can never build its own.
+ *
+ * `/api/compiq/price` did `new CosmosClient(connString)` per request — the raw
+ * string form, which takes no connection policy, so `enableEndpointDiscovery`
+ * stayed at the SDK default (true) with a location cache that never populated.
+ * That is the exact pathology `services/ops/cosmosConnectionPolicy.ts` was
+ * written to prevent: 4 root `GET /` round trips per operation, on a client
+ * discarded before the cache could ever pay for itself. Under 429s the SDK
+ * then retried without a ceiling and the route rode to Azure's 240 s
+ * front-end kill (HTTP 499).
+ *
+ * Callers take THIS handle. It is memoised for the life of the process and it
+ * is built through `cosmosOptionsFromConnectionString`, so the policy applies.
+ */
+export async function getCardCatalogContainer(): Promise<Container | null> {
+  return getContainer();
+}
+
 async function getContainer(): Promise<Container | null> {
   if (_cached) return _cached;
   const conn = process.env.COSMOS_CONNECTION_STRING;

@@ -130,6 +130,174 @@ import {
   isMomentumProjectionEnabled,
 } from "../services/compiq/momentumProjection.service.js";
 import { buildEngineMeta } from "../services/compiq/engineMeta.js";
+import { DEFAULT_LADDER_BUDGET } from "../services/compiq/ladderBudget.service.js";
+
+/**
+ * CF-ONE-COSMOS-CLIENT-ON-THE-PRICE-PATH (Fable, 2026-09-15). The wall-clock
+ * ceiling on the /price catalog identity lookup — the pre-ladder step that
+ * turns "2024 Bowman Chrome Ohtani Base" into a catalog slug.
+ *
+ * WHERE THE NUMBERS COME FROM. They are not new budget; they are the budget
+ * the ladder already spends, applied one step earlier. `DEFAULT_LADDER_BUDGET`
+ * (ladderBudget.service.ts, CF-LADDER-TIME-BUDGET) is `{ totalMs: 8000,
+ * perRungMs: 3000 }`: 8 s for a whole valuation walk, 3 s for any one query
+ * inside it. This lookup issues at most two cross-partition `TOP 60` fan-outs
+ * plus the player-index read, which is the same shape of work as a rung — so
+ * each query takes the per-rung 3 s, and the lookup as a whole takes the same
+ * 8 s total. That keeps the identity step and the valuation step on one clock
+ * the reader can reason about, and it bounds the pair well inside Azure's
+ * 240 s front-end kill, which is what was actually terminating these requests.
+ *
+ * WHAT THE CEILING DOES, and it is deliberately narrower than a retry policy:
+ * `AbortSignal.timeout` is handed to the SDK per query, so an over-budget
+ * query is ABANDONED rather than left to burn RU behind a caller that has
+ * stopped waiting. The query text and its parameters are untouched — this
+ * changes when we stop asking, never what we asked.
+ */
+const PRICE_LOOKUP_TOTAL_MS = DEFAULT_LADDER_BUDGET.totalMs;
+const PRICE_LOOKUP_PER_QUERY_MS = DEFAULT_LADDER_BUDGET.perRungMs;
+
+/** Raised when the /price catalog lookup runs out of its wall-clock budget. */
+class PriceLookupDeadlineError extends Error {
+  constructor(readonly stage: string) {
+    super(`price-lookup-timeout:${stage}`);
+    this.name = "PriceLookupDeadlineError";
+  }
+}
+
+/**
+ * Did this error come from an abort/timeout rather than from the query itself?
+ *
+ * `AbortSignal.timeout` rejects with a `TimeoutError` DOMException, the older
+ * `AbortController` path with `AbortError`, and `@azure/cosmos` may rewrap
+ * either inside its own error before it reaches us — so the NAME is the only
+ * property all three reliably share. Matching on it keeps a real Cosmos fault
+ * (a bad query, a 403) on the fall-through path where it belongs.
+ */
+function isAbortLikeError(err: unknown): boolean {
+  const name = String((err as { name?: unknown })?.name ?? "");
+  if (name === "AbortError" || name === "TimeoutError") return true;
+  const message = String((err as { message?: unknown })?.message ?? "");
+  return /AbortError|TimeoutError|operation was aborted/i.test(message);
+}
+
+/**
+ * A per-query abort signal that expires at the SMALLER of the per-query
+ * ceiling and whatever is left of the lookup's total budget — the same
+ * `min(perRung, remaining)` rule `LadderBudget.timeBox` applies, so a second
+ * fan-out can never extend the block past its total.
+ */
+function priceLookupQuerySignal(deadlineAtMs: number): AbortSignal {
+  const remainingMs = deadlineAtMs - Date.now();
+  return AbortSignal.timeout(Math.max(1, Math.min(PRICE_LOOKUP_PER_QUERY_MS, remainingMs)));
+}
+
+/**
+ * CF-A-PRICE-REQUEST-HAS-A-DEADLINE (Fable, 2026-09-15).
+ *
+ * THE DEFECT. `POST /api/compiq/price` had no ceiling of its own, so the only
+ * thing that ever stopped a slow request was Azure's 240 s front-end kill —
+ * which the client sees as an HTTP 499, a shape that names neither the route
+ * nor the slow step. The deploy smoke's "parallel-floor → withheld" case
+ * ("2026 Bowman Chrome Owen Carey Black BCP-69") hit its new 60 s client
+ * deadline at 60,002 ms, and that case's CORRECT answer is a refusal: a 2026
+ * /10 parallel with an empty pool, which every rung must miss before anything
+ * can be said. Taking a minute to say "no" is the worst of both worlds.
+ *
+ * WHY A WHOLE-BODY DEADLINE AND NOT MORE PER-QUERY ONES. The individual slow
+ * pieces have their own bounds — the ladder has `LadderBudget` (8 s total,
+ * 3 s per rung), the CH client times out at 20 s per call, and #2163 bounded
+ * the catalog lookup. What was missing was a bound on their SUM: a request
+ * walks the canonical ladder, then `computeEstimate`, then possibly an
+ * AI-matcher retry and a second ladder, and nothing added those up. This is
+ * that sum, and it is the last line of defence rather than the first — on a
+ * healthy request it never fires.
+ *
+ * WHY 25,000 ms. It is bounded on both sides by numbers that already exist.
+ * Below it: the honest worst case of the work itself, one ~8 s ladder walk
+ * plus `computeEstimate` — and #2163's second change makes it one walk, not
+ * two, so this ceiling is reachable rather than aspirational. Above it: the
+ * smoke's 60 s client deadline and the harness's own 25 s ceiling, so the
+ * server now answers BEFORE either gives up, which is the point — a timeout
+ * the server owns produces a reasoned refusal, while one the client owns
+ * produces an opaque abort. And far under Azure's 240 s.
+ *
+ * WHAT IT RETURNS. Never a hang, and never a fabricated number: the withheld
+ * shape, carrying `ladder-timeout` — the vocabulary
+ * `oneValuationPath.ValuationReason` already defines for "the engine could not
+ * finish checking in the time it was given". Reusing that word rather than
+ * minting one keeps the smoke's `withheldReasonOf` reading it as a REASONED
+ * null, so a slow request degrades to a product decision and never trips
+ * `engine_ok` — which gates the nightly reprice.
+ *
+ * The losing work is abandoned, not cancelled. Node cannot cancel an in-flight
+ * Cosmos call, and `LadderBudget` has the same property for the same reason;
+ * #2163 gave the pool reader an `abortSignal` for the piece that CAN be
+ * stopped. What this guarantees is that the CLIENT is answered on time.
+ *
+ * NOTE the deadline wraps `cacheWrap` rather than sitting inside it, and the
+ * ordering matters in both directions. The withheld response is never written
+ * to the cache — a request that ran out of clock is a statement about THIS
+ * request, not about the card, and caching it would turn one slow moment into
+ * five minutes of refusals. Meanwhile the abandoned walk keeps running and
+ * still writes its REAL answer under the same key when it finishes, so the
+ * next caller for that query gets the genuine number as a fast cache hit.
+ * A timeout here therefore warms the cache it declines to answer from.
+ */
+const PRICE_REQUEST_DEADLINE_MS = 25_000;
+
+/** The refusal a request that ran out of clock returns. Null FMV plus a
+ *  visible reason — the withheld contract, not an error and not a zero. */
+function priceDeadlineWithheld(query: string, elapsedMs: number) {
+  return {
+    ...buildEngineMeta(),
+    success: true,
+    query: query.trim(),
+    source: "ladder-timeout",
+    pricingTier: "no-basis",
+    fairMarketValue: null,
+    marketValue: null,
+    fairMarketValueLive: null,
+    predictedPrice: null,
+    fairMarketValueLow: null,
+    fairMarketValueHigh: null,
+    compsUsed: 0,
+    compsAvailable: 0,
+    recentComps: [],
+    canonicalFmvWithheld: {
+      reason: "ladder-timeout",
+      method: "no-basis",
+      basis: `The pricing engine did not finish within ${Math.round(elapsedMs / 1000)}s. No price was computed.`,
+    },
+    fmvReason: "ladder-timeout",
+    verdict: "Withheld — the pricing engine ran out of time on this card. No price was computed.",
+  };
+}
+
+/** Race the handler body against the request deadline. */
+async function withPriceDeadline<T>(query: string, work: () => Promise<T>): Promise<T | ReturnType<typeof priceDeadlineWithheld>> {
+  const startedAt = Date.now();
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  const expiry = new Promise<{ timedOut: true }>((resolve) => {
+    timer = setTimeout(() => resolve({ timedOut: true }), PRICE_REQUEST_DEADLINE_MS);
+  });
+  try {
+    const outcome = await Promise.race([
+      work().then((value) => ({ timedOut: false as const, value })),
+      expiry,
+    ]);
+    if (!outcome.timedOut) return outcome.value;
+    const elapsedMs = Date.now() - startedAt;
+    console.warn(JSON.stringify({
+      event: "price_request_deadline_exceeded",
+      source: "compiq.routes.price",
+      query, elapsedMs, deadlineMs: PRICE_REQUEST_DEADLINE_MS,
+    }));
+    return priceDeadlineWithheld(query, elapsedMs);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
 import {
   classifyRegime,
   type RegimeResult,
@@ -3006,10 +3174,29 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
     // bump prefix v1→v2 to invalidate every stale entry that still holds
     // a synthesized ($19.99) or variant-mismatch-nulled response.
     const cacheKey = normalizeCacheKey("compiq:price:v2", query);
-    const result = await cacheWrap(cacheKey, async () => {
+    const result = await withPriceDeadline(query, () => cacheWrap(cacheKey, async () => {
       const parsed = parseCardQuery(query);
       const body: CompIQEstimateRequest = requestFromParsed(parsed);
       const searchQuery = buildCompSearchQuery(parsed);
+      /**
+       * CF-ONE-CANONICAL-WALK-PER-REQUEST (Fable, 2026-09-15). The canonical
+       * ladder's verdict for THIS request, recorded the first time it is
+       * walked so it is never walked twice.
+       *
+       * Two blocks below ask the one valuation path about the same card: the
+       * canonical-first block near the top, and the canonical-FMV fallback
+       * after computeEstimate. On a card with a live pool that is invisible —
+       * the first block answers and returns. On a card with an EMPTY pool
+       * (smoke case "2026 Bowman Chrome Owen Carey Black BCP-69", a 2026 /10
+       * parallel with zero sold_comps) the first walk correctly refuses, does
+       * not return, and the second block then walks all eleven rungs again to
+       * be told the same thing — doubling the slowest, least-cacheable work in
+       * the request precisely on the queries that are already slowest.
+       *
+       * `slug` is kept alongside the result so the reuse can prove the second
+       * block is asking about the SAME identity before reusing the answer.
+       */
+      let canonicalWalk: { slug: string; result: { fairMarketValue: number | null; reason: string | null; rungLabel: string; basis: string } } | null = null;
       console.log(
         `[compiq.price] parsed query="${query}" â†’ player="${parsed.playerName}" year=${parsed.year} brand=${parsed.brand} parallel=${parsed.parallel} isAuto=${parsed.isAuto} confidence=${parsed.confidence}`
       );
@@ -3075,6 +3262,12 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
             grade: null,
             playerName: parsed.playerName ?? null,
           });
+          // CF-ONE-CANONICAL-WALK-PER-REQUEST (Fable, 2026-09-15). Keep this
+          // walk's verdict for the rest of the request. The fallback block far
+          // below used to run the ladder a SECOND time for the same card — see
+          // the note there — and when this walk refused, that second walk was
+          // guaranteed to refuse identically while paying the full cost again.
+          canonicalWalk = { slug, result: canon };
           const canonFmv = canon.fairMarketValue;
           const canonN = canon.compsUsed;
           if (typeof canonFmv === "number" && canonFmv > 0 && canonN > 0) {
@@ -3188,11 +3381,39 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
         typeof parsed.playerName === "string" && parsed.playerName.length > 0 &&
         (!parsed.cardNumber || parsed.cardNumber.length === 0)  // this path is for cardNumber-less queries
       ) {
+        // CF-ONE-COSMOS-CLIENT-ON-THE-PRICE-PATH (Fable, 2026-09-15). This
+        // block used to open with:
+        //
+        //     const { CosmosClient: _CC } = await import("@azure/cosmos");
+        //     const cat = new _CC(cn).database(...).container("card_catalog");
+        //
+        // A BRAND-NEW CosmosClient on every request, built from the raw
+        // connection STRING — the one call shape that takes no connection
+        // policy, so it bypassed `cosmosOptionsFromConnectionString` entirely
+        // and left `enableEndpointDiscovery` at the SDK default (true) with an
+        // empty location cache. cosmosConnectionPolicy.ts documents what that
+        // costs, measured: 4 root `GET /` round trips PER OPERATION instead of
+        // 2 for the life of a client. On a client thrown away at the end of
+        // the request the cache never pays for itself even once.
+        //
+        // Layered on top: nothing in backend/src sets `requestTimeout` or a
+        // `retryOptions` ceiling, and there is no Express server-level timeout,
+        // so under 429s the SDK retried without bound and this route rode to
+        // Azure's 240 s front-end kill (HTTP 499) — the user-visible hang on
+        // star queries like "2024 Bowman Chrome Ohtani Base".
+        //
+        // Two changes, both scoped to THIS request path:
+        //   1. take the process-wide memoised handle every other catalog
+        //      reader already takes (built through the shared policy);
+        //   2. give the block its own wall-clock deadline, so a slow Cosmos
+        //      degrades into a stated refusal instead of a hang. See
+        //      PRICE_LOOKUP_* below.
         try {
-          const { CosmosClient: _CC } = await import("@azure/cosmos");
-          const cn = process.env.COSMOS_CONNECTION_STRING;
-          if (cn) {
-            const cat = new _CC(cn).database(process.env.COSMOS_DATABASE ?? "hobbyiq").container("card_catalog");
+          const { getCardCatalogContainer } =
+            await import("../services/portfolioiq/cardCatalog.service.js");
+          const cat = await getCardCatalogContainer();
+          const lookupDeadlineAtMs = Date.now() + PRICE_LOOKUP_TOTAL_MS;
+          if (cat) {
             // CF-PRICE-LOOKUP-USE-SET-NOT-BRAND (Drew, 2026-08-12). This used
             // parsed.brand, which is the FAMILY, not the product. The parser
             // splits "2024 Bowman Chrome Ohtani Base" into:
@@ -3231,11 +3452,25 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
             // undefined for those, so IS_NUMBER keeps the sample on base cards.
             // Prospect products are entirely alpha-numbered, so an empty result
             // falls back to the unrestricted query rather than losing the card.
-            const runLookup = async (baseSetOnly: boolean) => {
+            //
+            // CF-ONE-COSMOS-CLIENT-ON-THE-PRICE-PATH (Fable, 2026-09-15). Each
+            // fan-out carries an `abortSignal` — see PRICE_LOOKUP_* at the top
+            // of this file, and the split deadline at the call site below. The
+            // predicates are now index-servable (see the query's own note), so
+            // these are no longer the unbounded scans that were still running
+            // when the front door gave up on the client — but the abort stays,
+            // because a bound that is only true of a good query plan is not a
+            // bound. It does not merely stop us WAITING
+            // (a Promise.race would do that) — it tells the SDK to stop, so an
+            // abandoned query stops consuming RU on a pool that is, by
+            // hypothesis, already under RU pressure.
+            const runLookup = async (baseSetOnly: boolean, deadlineAtMs: number) => {
               const { resources } = await cat.items.query<{
                 id: string; playerName: string; setName: string; cardNumber: string;
                 parallel: string; sport: string; recentSaleCount: number; year: number;
-              }>(buildLookupSpec(baseSetOnly)).fetchAll();
+              }>(buildLookupSpec(baseSetOnly), {
+                abortSignal: priceLookupQuerySignal(deadlineAtMs),
+              }).fetchAll();
               return resources;
             };
 
@@ -3262,15 +3497,52 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
               // CONTAINS-matched bowman, bowman-chrome AND bowman-draft at
               // once, blew past the >3 ambiguity guard below, and discarded the
               // very rows it had found.
+              // CF-AN-EQUALITY-THE-INDEX-CAN-SEEK (Fable, 2026-09-15). Every
+              // predicate here was wrapped in LOWER() or CONTAINS(), and a
+              // Cosmos range index cannot seek through either — so this
+              // "lookup" was a full scan of every 2024 row, per pass, twice
+              // per request. Two changes, both provably answer-preserving.
+              //
+              // 1. `c.setKey = @sk` WITHOUT LOWER(). setKey is a normalised
+              //    slug by construction (deriveCatalogEntry runs
+              //    normalizeSetKey; setKeyFieldInvariant pins the field
+              //    against its id stem), and measured on prod: 0 of 400
+              //    sampled 2024 rows had a non-lowercase setKey. @sk is
+              //    normalizeSetKey's own output, so both sides are already
+              //    lowercase and LOWER() only defeated the index.
+              //
+              // 2. `c.playerSlug = @pslug` promoted to the LEADING disjunct.
+              //    An equality on a stored slug is seekable where
+              //    CONTAINS(LOWER(playerName)) is not. Measured: 393 of 400
+              //    rows carry playerSlug, and the Ohtani lookup resolves
+              //    through it directly. The CONTAINS forms are KEPT as
+              //    fallback disjuncts, so the ~2% of rows without a
+              //    playerSlug — and genuine substring matches like "Ohtani"
+              //    inside "Shohei Ohtani" where the slug differs — still
+              //    match exactly as before. This widens nothing and narrows
+              //    nothing; it only gives the planner a seekable branch to
+              //    try first.
+              //
+              // NOT CHANGED, deliberately: `LOWER(c.parallel)`. Unlike
+              // setKey, `parallel` is stored as the CANONICAL HUMAN FORM —
+              // cardCatalog.CardCatalogEntry documents it as such ("Blue
+              // Refractor") and prod confirms it: of 400 sampled 2024 rows,
+              // 71 parallels contain a space, ZERO contain a hyphen, and the
+              // casing is genuinely mixed ("Pearl Refractor" alongside
+              // "blue refractor"). Dropping LOWER() there would silently stop
+              // matching every row whose parallel is not already lowercase —
+              // a wrong answer, not a slow one. It stays until the field is
+              // normalised.
               query: `SELECT TOP 60 c.id, c.cardId, c.playerName, c.setName, c.setKey, c.cardNumber, c.parallel, c.isAuto, c.printRun, c.sport, c.recentSaleCount, c.year
                       FROM c
                       WHERE c.year = @y
                         AND (
-                          (IS_DEFINED(c.setKey) AND (LOWER(c.setKey) = @sk OR CONTAINS(LOWER(c.setKey), @sk, true)))
+                          (IS_DEFINED(c.setKey) AND (c.setKey = @sk OR CONTAINS(LOWER(c.setKey), @sk, true)))
                           OR (IS_DEFINED(c.setName) AND CONTAINS(LOWER(c.setName), @s, true))
                         )
                         AND (
-                          CONTAINS(LOWER(c.playerName), @p, true)
+                          (IS_DEFINED(c.playerSlug) AND c.playerSlug = @pslug)
+                          OR CONTAINS(LOWER(c.playerName), @p, true)
                           OR (IS_DEFINED(c.playerSlug) AND CONTAINS(c.playerSlug, @pslug))
                         )
                         AND LOWER(c.parallel) = @par
@@ -3290,11 +3562,57 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
               ],
             });
 
-            // Base-set pass first; fall back to the full pool only if it is
-            // empty. A caller who named a card number skips straight to the
-            // full pool — they may well be asking for an insert.
-            let hits = hasExplicitCardNumber ? [] : await runLookup(true);
-            if (hits.length === 0) hits = await runLookup(false);
+            // CF-TWO-PASSES-IN-THE-TIME-OF-ONE (Fable, 2026-09-15).
+            //
+            // The semantics are unchanged and worth restating exactly, because
+            // the implementation now looks different: P1 is the base-set pass
+            // (`IS_NUMBER(StringToNumber(c.cardNumber))`, flagship base cards
+            // numbered 1..N), P2 is the unrestricted pass. P1's rows WIN
+            // whenever P1 returns any, and P2's are used only when P1 is empty.
+            // That preference is what CF-PRICE-LOOKUP-BASE-SET-FIRST exists to
+            // guarantee — a star player owns hundreds of catalog rows and an
+            // unordered TOP 60 of the full pool can miss his base card
+            // entirely, which is how "2023 Topps Chrome Acuna Base" resolved to
+            // insert C-13. None of that changes here.
+            //
+            // What changes is WHEN P2 is issued. It used to run only after P1
+            // had returned and been found empty, so the common miss cost P1 +
+            // P2 in series. They are independent queries over the same
+            // container, so they now run CONCURRENTLY and the same preference
+            // is applied to the results: identical answer, roughly half the
+            // wall time on the path that needed both.
+            //
+            // THE BUDGET IS SPLIT so this cannot regress the timeout story.
+            // Previously P1 could consume the entire window and leave P2 with
+            // nothing but an instant abort. P1 now gets at most HALF the total
+            // and P2 the remainder, so each pass has a guaranteed share and
+            // neither can starve the other. With them running concurrently the
+            // wall-clock ceiling for the pair is still the block's total.
+            //
+            // A caller who named a card number still skips P1 entirely — they
+            // may well be asking for an insert — and then P2 alone may use the
+            // whole window, exactly as a single-pass lookup always could.
+            const halfBudgetAtMs = Date.now() + Math.floor(PRICE_LOOKUP_TOTAL_MS / 2);
+            const p1 = hasExplicitCardNumber
+              ? Promise.resolve([] as Awaited<ReturnType<typeof runLookup>>)
+              : runLookup(true, halfBudgetAtMs);
+            const p2 = runLookup(false, lookupDeadlineAtMs);
+            // Both are awaited even when P1 wins, so neither can reject
+            // unobserved. `allSettled` also means a P1 that times out at its
+            // half-budget degrades to "no base-set rows" — the same state as an
+            // empty P1 — rather than failing the whole lookup.
+            const [r1, r2] = await Promise.allSettled([p1, p2]);
+            const p1Hits = r1.status === "fulfilled" ? r1.value : [];
+            // P2 is the only pass that can fail the lookup, because it is the
+            // one that can still answer when P1 has not. If both are gone there
+            // is nothing to rank and the deadline is the honest reason.
+            if (p1Hits.length === 0 && r2.status === "rejected") {
+              if (isAbortLikeError(r2.reason)) throw new PriceLookupDeadlineError("catalog-lookup-fallback");
+              throw r2.reason;
+            }
+            const hits = p1Hits.length > 0
+              ? p1Hits
+              : (r2.status === "fulfilled" ? r2.value : []);
             // CF-PRICE-LOOKUP-COLLAPSE-GRADES (Drew, 2026-08-12: "a graded card
             // IS an identity"). Graded rows are real, separately-traded assets
             // and they belong in the catalog — a PSA 10 is not a raw copy. But
@@ -3388,7 +3706,18 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
               // computeCanonicalFmv while every other surface priced the same
               // card through valueIdentity. One path now.
               const { valueIdentity } = await import("../services/compiq/oneValuationPath.service.js");
-              const canon = await valueIdentity({
+              // CF-A-RUNG-ABANDONED-IS-A-RUNG-STOPPED (Fable, 2026-09-15).
+              // The ladder has its own 8 s wall-clock budget, but timeBox only
+              // stops it AWAITING a slow rung — the withdrawn cross-partition
+              // scan kept burning RU. Installing the request's signal for the
+              // duration of the walk makes an abandoned rung actually stop.
+              // The ladder's own budget still decides WHEN to give up; this
+              // only makes giving up mean something at the database.
+              const { withPoolAbortSignal } =
+                await import("../services/portfolioiq/hobbyIqFmv.service.js");
+              const canon = await withPoolAbortSignal(
+                AbortSignal.timeout(PRICE_LOOKUP_TOTAL_MS),
+                () => valueIdentity({
                 id: String(best.id ?? ""),
                 // Both must be present to name a tier; a bare "10" with no
                 // grader is not PSA 10, and the engine reads a company with no
@@ -3397,7 +3726,8 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
                   ? { company: String(gradeCompany), value: gradeValue }
                   : null,
                 playerName: best.playerName != null ? String(best.playerName) : null,
-              });
+                }),
+              );
               const canonFmv = canon.fairMarketValue;
               const canonN = canon.compsUsed;
               if (typeof canonFmv === "number" && canonFmv > 0 && canonN > 0) {
@@ -3467,6 +3797,51 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
             }
           }
         } catch (err) {
+          // CF-ONE-COSMOS-CLIENT-ON-THE-PRICE-PATH (Fable, 2026-09-15). A
+          // deadline is NOT a lookup miss, so it must not fall through to
+          // computeEstimate the way a miss does. computeEstimate is the long
+          // CH-dependent ladder; running it after we have already spent the
+          // budget is how a slow request became a 240 s one. When Cosmos could
+          // not answer in the time it was given, we say so and stop — doctrine:
+          // a withheld price is null plus a visible reason, never a slow
+          // number and never one invented to answer in time.
+          //
+          // `catalog-lookup-timeout` is a distinct reason from the engine's
+          // `ladder-timeout`: that one means the VALUATION walk ran out of
+          // clock, this one means we never got as far as naming the card.
+          // Collapsing them would hide which half is slow.
+          // An over-budget fan-out surfaces as the SDK's own abort error, not
+          // as ours — `AbortSignal.timeout` rejects with a TimeoutError
+          // DOMException and the driver may rewrap it. Both mean the same
+          // thing here, so both take the withheld path; anything else is a
+          // genuine lookup fault and still falls through as it always did.
+          if (err instanceof PriceLookupDeadlineError || isAbortLikeError(err)) {
+            console.warn(JSON.stringify({
+              event: "price_canonical_player_lookup_timeout",
+              source: "compiq.routes.price",
+              query,
+              stage: err instanceof PriceLookupDeadlineError ? err.stage : "catalog-lookup-query",
+              budgetMs: PRICE_LOOKUP_TOTAL_MS,
+            }));
+            return {
+              ...buildEngineMeta(),
+              success: true,
+              query: query.trim(),
+              source: "catalog-lookup-timeout",
+              pricingTier: "no-basis",
+              fairMarketValue: null,
+              marketValue: null,
+              predictedPrice: null,
+              compsUsed: 0,
+              compsAvailable: 0,
+              canonicalFmvWithheld: {
+                reason: "catalog-lookup-timeout",
+                method: "catalog-identity-lookup",
+                basis: "The catalog could not name this card within its time budget; no price was computed.",
+              },
+              verdict: "Withheld — the catalog lookup did not finish in time. No price was computed.",
+            };
+          }
           console.warn(JSON.stringify({
             event: "price_canonical_player_lookup_error",
             source: "compiq.routes.price",
@@ -3801,7 +4176,51 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
         typeof (est as { cardIdentity?: { card_id?: string } }).cardIdentity?.card_id === "string"
           ? (est as { cardIdentity: { card_id: string } }).cardIdentity.card_id
           : null;
-      if (noUsableLiveFmv && !hasSyntheticFallback && resolvedCardIdForCanonical) {
+      // CF-ONE-CANONICAL-WALK-PER-REQUEST (Fable, 2026-09-15). If the
+      // canonical-first block up top already walked the ladder for this card
+      // and it REFUSED, that refusal is this block's answer too — reuse it
+      // rather than walking all eleven rungs a second time to be told the same
+      // thing.
+      //
+      // Why only when it refused: a walk that PUBLISHED a number already
+      // returned from the block above, so it cannot reach here. Arriving here
+      // with a recorded walk therefore means that walk declined, and a
+      // declined walk is deterministic for the request — same identity, same
+      // pool, same instant. Re-asking cannot produce a different verdict; it
+      // can only cost the same again. On an empty-pool card that is the
+      // difference between one full ladder walk and two, and an empty pool is
+      // exactly when every rung has to be tried before anything can be said.
+      //
+      // The identity check is what makes this safe. The fallback block prices
+      // whatever `est.cardIdentity.card_id` resolved to, which is NOT always
+      // the slug the first block asked about — computeEstimate can resolve a
+      // different card, and the AI-matcher retry above can replace it outright.
+      // When the ids differ this is a genuinely different question and the
+      // engine is asked it, exactly as before.
+      const reusableWalk =
+        canonicalWalk
+        && canonicalWalk.slug === resolvedCardIdForCanonical
+        && canonicalWalk.result.fairMarketValue == null
+          ? canonicalWalk
+          : null;
+      if (reusableWalk) {
+        canonicalFmvWithheld = {
+          reason: reusableWalk.result.reason,
+          method: reusableWalk.result.rungLabel,
+          basis: reusableWalk.result.basis || null,
+        };
+        console.log(JSON.stringify({
+          event: "price_canonical_fmv_withheld",
+          source: "compiq.routes.price",
+          cardId: resolvedCardIdForCanonical,
+          canonicalMethod: canonicalFmvWithheld.method,
+          fmvReason: canonicalFmvWithheld.reason,
+          estSource: source,
+          // The one field that distinguishes this log line from the one the
+          // second walk used to emit: the ladder was NOT walked again.
+          reusedCanonicalWalk: true,
+        }));
+      } else if (noUsableLiveFmv && !hasSyntheticFallback && resolvedCardIdForCanonical) {
         try {
           const { computeCanonicalValuation } = await import(
             "../services/compiq/canonicalValuation.js"
@@ -4061,7 +4480,7 @@ router.post("/price", requireSession, requireRateLimited("priceChecksPerDay"), a
         if (r.marketValue == null && r.fairMarketValueLive == null) return true;
         return false;
       },
-    });
+    }));
     // CF-CH-TELEMETRY-OUTSIDE-CACHE (2026-06-28): see /search for rationale.
     recordMomentumProjectionEvaluated({
       source: "compiq.price",

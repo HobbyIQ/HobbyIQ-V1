@@ -1,0 +1,3030 @@
+{
+  "source": "cardboardconnection-2026-09-14",
+  "sourceUrl": "https://www.cardboardconnection.com/2020-21-panini-mosaic-basketball-nba-cards",
+  "xlsxUrl": "https://cconnect.s3.amazonaws.com/wp-content/uploads/2021/11/2020-21-Panini-Mosaic-Basketball-checklist-Excel-spreadsheet.xlsx",
+  "fetchedAt": "2026-09-14",
+  "sport": "basketball",
+  "year": 2020,
+  "setName": "2020-21 Panini Mosaic Basketball",
+  "productKey": "2020-21-panini-mosaic-basketball",
+  "setKey": "panini-mosaic",
+  "rowCount": 14186,
+  "autoCount": 1293,
+  "printRunCount": 7409,
+  "distinctParallels": 234,
+  "parallelColumnAuthoritative": true,
+  "layout": "panini",
+  "rungRule": "R37 (Drew 2026-09-14): parallel = what the section title adds beyond the SHORTEST matching base anchor; a section matching no anchor is BLOCKED, never guessed.",
+  "sectionsBlocked": 0,
+  "blockedSectionTitles": [],
+  "parallelVocabulary": [
+    "All-Time Greats",
+    "All-Time Greats Mosaic",
+    "All-Time Greats Mosaic Black",
+    "All-Time Greats Mosaic Blue",
+    "All-Time Greats Mosaic Blue Fluorescent",
+    "All-Time Greats Mosaic Camo Pink",
+    "All-Time Greats Mosaic Choice Black Gold",
+    "All-Time Greats Mosaic Choice Fusion Red and Yellow",
+    "All-Time Greats Mosaic Choice Nebula",
+    "All-Time Greats Mosaic Choice Peacock",
+    "All-Time Greats Mosaic Fast Break Black",
+    "All-Time Greats Mosaic Fast Break Blue",
+    "All-Time Greats Mosaic Fast Break Gold",
+    "All-Time Greats Mosaic Fast Break Pink",
+    "All-Time Greats Mosaic Fast Break Purple",
+    "All-Time Greats Mosaic Fast Break Silver",
+    "All-Time Greats Mosaic Genesis",
+    "All-Time Greats Mosaic Gold",
+    "All-Time Greats Mosaic Gold Wave",
+    "All-Time Greats Mosaic Green",
+    "All-Time Greats Mosaic Green Fluorescent",
+    "All-Time Greats Mosaic Green Ice",
+    "All-Time Greats Mosaic Green Swirl FOTL",
+    "All-Time Greats Mosaic Lucky Envelopes",
+    "All-Time Greats Mosaic Orange Fluorescent",
+    "All-Time Greats Mosaic Pink Fluorescent",
+    "All-Time Greats Mosaic Pink Swirl FOTL",
+    "All-Time Greats Mosaic Purple",
+    "All-Time Greats Mosaic Reactive Blue",
+    "All-Time Greats Mosaic Reactive Green",
+    "All-Time Greats Mosaic Reactive Orange",
+    "All-Time Greats Mosaic Reactive Red",
+    "All-Time Greats Mosaic Reactive Yellow",
+    "All-Time Greats Mosaic Red",
+    "All-Time Greats Mosaic Red Wave",
+    "All-Time Greats Mosaic White",
+    "All-Time Greats Silver",
+    "Black",
+    "Choice Black Gold",
+    "Choice Fusion Red and Yellow",
+    "Fast Break",
+    "Finals MVPs",
+    "Finals MVPs Mosaic",
+    "Finals MVPs Mosaic Black",
+    "Finals MVPs Mosaic Blue",
+    "Finals MVPs Mosaic Blue Fluorescent",
+    "Finals MVPs Mosaic Camo Pink",
+    "Finals MVPs Mosaic Choice Black Gold",
+    "Finals MVPs Mosaic Choice Fusion Red and Yellow",
+    "Finals MVPs Mosaic Choice Nebula",
+    "Finals MVPs Mosaic Choice Peacock",
+    "Finals MVPs Mosaic Fast Break Black",
+    "Finals MVPs Mosaic Fast Break Blue",
+    "Finals MVPs Mosaic Fast Break Gold",
+    "Finals MVPs Mosaic Fast Break Pink",
+    "Finals MVPs Mosaic Fast Break Purple",
+    "Finals MVPs Mosaic Fast Break Silver",
+    "Finals MVPs Mosaic Genesis",
+    "Finals MVPs Mosaic Gold",
+    "Finals MVPs Mosaic Gold Wave",
+    "Finals MVPs Mosaic Green",
+    "Finals MVPs Mosaic Green Fluorescent",
+    "Finals MVPs Mosaic Green Ice",
+    "Finals MVPs Mosaic Green Swirl FOTL",
+    "Finals MVPs Mosaic Lucky Envelopes",
+    "Finals MVPs Mosaic Orange Fluorescent",
+    "Finals MVPs Mosaic Pink Fluorescent",
+    "Finals MVPs Mosaic Pink Swirl FOTL",
+    "Finals MVPs Mosaic Purple",
+    "Finals MVPs Mosaic Reactive Blue",
+    "Finals MVPs Mosaic Reactive Green",
+    "Finals MVPs Mosaic Reactive Orange",
+    "Finals MVPs Mosaic Reactive Red",
+    "Finals MVPs Mosaic Reactive Yellow",
+    "Finals MVPs Mosaic Red",
+    "Finals MVPs Mosaic Red Wave",
+    "Finals MVPs Mosaic White",
+    "Finals MVPs Silver",
+    "Gold",
+    "Gold Vinyl",
+    "Green Ice",
+    "Mosaic",
+    "Mosaic Black",
+    "Mosaic Blue",
+    "Mosaic Blue Fluorescent",
+    "Mosaic Camo Pink",
+    "Mosaic Choice Black Gold",
+    "Mosaic Choice Fusion Red and Yellow",
+    "Mosaic Choice Nebula",
+    "Mosaic Choice Peacock",
+    "Mosaic Fast Break Black",
+    "Mosaic Fast Break Blue",
+    "Mosaic Fast Break Gold",
+    "Mosaic Fast Break Pink",
+    "Mosaic Fast Break Purple",
+    "Mosaic Fast Break Silver",
+    "Mosaic Genesis",
+    "Mosaic Gold",
+    "Mosaic Gold Wave",
+    "Mosaic Green",
+    "Mosaic Green Fluorescent",
+    "Mosaic Green Fourescent",
+    "Mosaic Green Ice",
+    "Mosaic Green Swirl FOTL",
+    "Mosaic Lucky Envelopes",
+    "Mosaic Orange Fluorescent",
+    "Mosaic Pink Fluorescent",
+    "Mosaic Pink Swirl FOTL",
+    "Mosaic Purple",
+    "Mosaic Reactive Blue",
+    "Mosaic Reactive Green",
+    "Mosaic Reactive Orange",
+    "Mosaic Reactive Red",
+    "Mosaic Reactive Yellow",
+    "Mosaic Red",
+    "Mosaic Red Wave",
+    "Mosaic White",
+    "NBA Debut",
+    "NBA Debut Mosaic",
+    "NBA Debut Mosaic Black",
+    "NBA Debut Mosaic Blue",
+    "NBA Debut Mosaic Blue Fluorescent",
+    "NBA Debut Mosaic Camo Pink",
+    "NBA Debut Mosaic Choice Black Gold",
+    "NBA Debut Mosaic Choice Fusion Red and Yellow",
+    "NBA Debut Mosaic Choice Nebula",
+    "NBA Debut Mosaic Choice Peacock",
+    "NBA Debut Mosaic Fast Break Black",
+    "NBA Debut Mosaic Fast Break Blue",
+    "NBA Debut Mosaic Fast Break Gold",
+    "NBA Debut Mosaic Fast Break Pink",
+    "NBA Debut Mosaic Fast Break Purple",
+    "NBA Debut Mosaic Fast Break Silver",
+    "NBA Debut Mosaic Genesis",
+    "NBA Debut Mosaic Gold",
+    "NBA Debut Mosaic Gold Wave",
+    "NBA Debut Mosaic Green",
+    "NBA Debut Mosaic Green Fluorescent",
+    "NBA Debut Mosaic Green Ice",
+    "NBA Debut Mosaic Green Swirl FOTL",
+    "NBA Debut Mosaic Lucky Envelopes",
+    "NBA Debut Mosaic Orange Fluorescent",
+    "NBA Debut Mosaic Pink Fluorescent",
+    "NBA Debut Mosaic Pink Swirl FOTL",
+    "NBA Debut Mosaic Purple",
+    "NBA Debut Mosaic Reactive Blue",
+    "NBA Debut Mosaic Reactive Green",
+    "NBA Debut Mosaic Reactive Orange",
+    "NBA Debut Mosaic Reactive Red",
+    "NBA Debut Mosaic Reactive Yellow",
+    "NBA Debut Mosaic Red",
+    "NBA Debut Mosaic Red Wave",
+    "NBA Debut Mosaic White",
+    "NBA Debut Silver",
+    "National Pride",
+    "National Pride Mosaic",
+    "National Pride Mosaic Black",
+    "National Pride Mosaic Blue",
+    "National Pride Mosaic Blue Fluorescent",
+    "National Pride Mosaic Camo Pink",
+    "National Pride Mosaic Choice Black Gold",
+    "National Pride Mosaic Choice Fusion Red and Yellow",
+    "National Pride Mosaic Choice Nebula",
+    "National Pride Mosaic Choice Peacock",
+    "National Pride Mosaic Fast Break Black",
+    "National Pride Mosaic Fast Break Blue",
+    "National Pride Mosaic Fast Break Gold",
+    "National Pride Mosaic Fast Break Pink",
+    "National Pride Mosaic Fast Break Purple",
+    "National Pride Mosaic Fast Break Silver",
+    "National Pride Mosaic Genesis",
+    "National Pride Mosaic Gold",
+    "National Pride Mosaic Gold Wave",
+    "National Pride Mosaic Green",
+    "National Pride Mosaic Green Fluorescent",
+    "National Pride Mosaic Green Ice",
+    "National Pride Mosaic Green Swirl FOTL",
+    "National Pride Mosaic Lucky Envelopes",
+    "National Pride Mosaic Orange Fluorescent",
+    "National Pride Mosaic Pink Fluorescent",
+    "National Pride Mosaic Pink Swirl FOTL",
+    "National Pride Mosaic Purple",
+    "National Pride Mosaic Reactive Blue",
+    "National Pride Mosaic Reactive Green",
+    "National Pride Mosaic Reactive Orange",
+    "National Pride Mosaic Reactive Red",
+    "National Pride Mosaic Reactive Yellow",
+    "National Pride Mosaic Red",
+    "National Pride Mosaic Red Wave",
+    "National Pride Mosaic White",
+    "National Pride Mosiac Genesis",
+    "National Pride Silver",
+    "Orange",
+    "Platinum",
+    "Red Wave",
+    "Rookies",
+    "Rookies Mosaic",
+    "Rookies Mosaic Black",
+    "Rookies Mosaic Blue",
+    "Rookies Mosaic Blue Fluorescent",
+    "Rookies Mosaic Camo Pink",
+    "Rookies Mosaic Choice Black Gold",
+    "Rookies Mosaic Choice Fusion Red and Yellow",
+    "Rookies Mosaic Choice Nebula",
+    "Rookies Mosaic Choice Peacock",
+    "Rookies Mosaic Choice Red and Green",
+    "Rookies Mosaic Fast Break Black",
+    "Rookies Mosaic Fast Break Blue",
+    "Rookies Mosaic Fast Break Gold",
+    "Rookies Mosaic Fast Break Pink",
+    "Rookies Mosaic Fast Break Purple",
+    "Rookies Mosaic Fast Break Silver",
+    "Rookies Mosaic Genesis",
+    "Rookies Mosaic Gold",
+    "Rookies Mosaic Gold Wave",
+    "Rookies Mosaic Green",
+    "Rookies Mosaic Green Fluorescent",
+    "Rookies Mosaic Green Ice",
+    "Rookies Mosaic Green Swirl FOTL",
+    "Rookies Mosaic Lucky Envelopes",
+    "Rookies Mosaic Orange Fluorescent",
+    "Rookies Mosaic Pink Fluorescent",
+    "Rookies Mosaic Pink Swirl FOTL",
+    "Rookies Mosaic Purple",
+    "Rookies Mosaic Reactive Blue",
+    "Rookies Mosaic Reactive Green",
+    "Rookies Mosaic Reactive Orange",
+    "Rookies Mosaic Reactive Red",
+    "Rookies Mosaic Reactive Yellow",
+    "Rookies Mosaic Red",
+    "Rookies Mosaic Red Wave",
+    "Rookies Mosaic White",
+    "Rookies Silver",
+    "Silver"
+  ],
+  "sectionsReport": [
+    {
+      "section": "Autographs Fast Break",
+      "category": "autographs-fast-break",
+      "parallel": "",
+      "cards": 100,
+      "auto": 100,
+      "printRun": 0
+    },
+    {
+      "section": "Autographs Fast Break Black",
+      "category": "autographs-fast-break",
+      "parallel": "Black",
+      "cards": 100,
+      "auto": 100,
+      "printRun": 100
+    },
+    {
+      "section": "Autographs Fast Break Gold",
+      "category": "autographs-fast-break",
+      "parallel": "Gold",
+      "cards": 100,
+      "auto": 100,
+      "printRun": 100
+    },
+    {
+      "section": "Autographs Mosaic",
+      "category": "autographs-mosaic",
+      "parallel": "",
+      "cards": 60,
+      "auto": 60,
+      "printRun": 0
+    },
+    {
+      "section": "Autographs Mosaic Black",
+      "category": "autographs-mosaic",
+      "parallel": "Black",
+      "cards": 60,
+      "auto": 60,
+      "printRun": 60
+    },
+    {
+      "section": "Autographs Mosaic Choice Black Gold",
+      "category": "autographs-mosaic",
+      "parallel": "Choice Black Gold",
+      "cards": 60,
+      "auto": 60,
+      "printRun": 60
+    },
+    {
+      "section": "Autographs Mosaic Choice Fusion Red and Yellow",
+      "category": "autographs-mosaic",
+      "parallel": "Choice Fusion Red and Yellow",
+      "cards": 60,
+      "auto": 60,
+      "printRun": 0
+    },
+    {
+      "section": "Autographs Mosaic Gold",
+      "category": "autographs-mosaic",
+      "parallel": "Gold",
+      "cards": 60,
+      "auto": 60,
+      "printRun": 60
+    },
+    {
+      "section": "Award-Winning Autographs",
+      "category": "award-winning-autographs",
+      "parallel": "",
+      "cards": 4,
+      "auto": 4,
+      "printRun": 0
+    },
+    {
+      "section": "Award-Winning Autographs Gold",
+      "category": "award-winning-autographs",
+      "parallel": "Gold",
+      "cards": 4,
+      "auto": 4,
+      "printRun": 4
+    },
+    {
+      "section": "Award-Winning Autographs Gold Vinyl",
+      "category": "award-winning-autographs",
+      "parallel": "Gold Vinyl",
+      "cards": 4,
+      "auto": 4,
+      "printRun": 4
+    },
+    {
+      "section": "Bang!",
+      "category": "bang",
+      "parallel": "",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Bang! Mosaic",
+      "category": "bang",
+      "parallel": "Mosaic",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Bang! Mosaic Blue Fluorescent",
+      "category": "bang",
+      "parallel": "Mosaic Blue Fluorescent",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 15
+    },
+    {
+      "section": "Bang! Mosaic Green",
+      "category": "bang",
+      "parallel": "Mosaic Green",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Bang! Mosaic Green Fluorescent",
+      "category": "bang",
+      "parallel": "Mosaic Green Fluorescent",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 15
+    },
+    {
+      "section": "Bang! Mosaic Orange Fluorescent",
+      "category": "bang",
+      "parallel": "Mosaic Orange Fluorescent",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 15
+    },
+    {
+      "section": "Bang! Mosaic Pink Fluorescent",
+      "category": "bang",
+      "parallel": "Mosaic Pink Fluorescent",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 15
+    },
+    {
+      "section": "Bang! Mosaic Reactive Blue",
+      "category": "bang",
+      "parallel": "Mosaic Reactive Blue",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 15
+    },
+    {
+      "section": "Bang! Mosaic Reactive Yellow",
+      "category": "bang",
+      "parallel": "Mosaic Reactive Yellow",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 15
+    },
+    {
+      "section": "Base",
+      "category": "base",
+      "parallel": "",
+      "cards": 200,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base All-Time Greats",
+      "category": "base",
+      "parallel": "All-Time Greats",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base All-Time Greats Mosaic",
+      "category": "base",
+      "parallel": "All-Time Greats Mosaic",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base All-Time Greats Mosaic Black",
+      "category": "base",
+      "parallel": "All-Time Greats Mosaic Black",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 15
+    },
+    {
+      "section": "Base All-Time Greats Mosaic Blue",
+      "category": "base",
+      "parallel": "All-Time Greats Mosaic Blue",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 15
+    },
+    {
+      "section": "Base All-Time Greats Mosaic Blue Fluorescent",
+      "category": "base",
+      "parallel": "All-Time Greats Mosaic Blue Fluorescent",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 15
+    },
+    {
+      "section": "Base All-Time Greats Mosaic Camo Pink",
+      "category": "base",
+      "parallel": "All-Time Greats Mosaic Camo Pink",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base All-Time Greats Mosaic Choice Black Gold",
+      "category": "base",
+      "parallel": "All-Time Greats Mosaic Choice Black Gold",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 15
+    },
+    {
+      "section": "Base All-Time Greats Mosaic Choice Fusion Red and Yellow",
+      "category": "base",
+      "parallel": "All-Time Greats Mosaic Choice Fusion Red and Yellow",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 15
+    },
+    {
+      "section": "Base All-Time Greats Mosaic Choice Nebula",
+      "category": "base",
+      "parallel": "All-Time Greats Mosaic Choice Nebula",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 15
+    },
+    {
+      "section": "Base All-Time Greats Mosaic Choice Peacock",
+      "category": "base",
+      "parallel": "All-Time Greats Mosaic Choice Peacock",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base All-Time Greats Mosaic Fast Break Black",
+      "category": "base",
+      "parallel": "All-Time Greats Mosaic Fast Break Black",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 15
+    },
+    {
+      "section": "Base All-Time Greats Mosaic Fast Break Blue",
+      "category": "base",
+      "parallel": "All-Time Greats Mosaic Fast Break Blue",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 15
+    },
+    {
+      "section": "Base All-Time Greats Mosaic Fast Break Gold",
+      "category": "base",
+      "parallel": "All-Time Greats Mosaic Fast Break Gold",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 15
+    },
+    {
+      "section": "Base All-Time Greats Mosaic Fast Break Pink",
+      "category": "base",
+      "parallel": "All-Time Greats Mosaic Fast Break Pink",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 15
+    },
+    {
+      "section": "Base All-Time Greats Mosaic Fast Break Purple",
+      "category": "base",
+      "parallel": "All-Time Greats Mosaic Fast Break Purple",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 15
+    },
+    {
+      "section": "Base All-Time Greats Mosaic Fast Break Silver",
+      "category": "base",
+      "parallel": "All-Time Greats Mosaic Fast Break Silver",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base All-Time Greats Mosaic Genesis",
+      "category": "base",
+      "parallel": "All-Time Greats Mosaic Genesis",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base All-Time Greats Mosaic Gold",
+      "category": "base",
+      "parallel": "All-Time Greats Mosaic Gold",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 15
+    },
+    {
+      "section": "Base All-Time Greats Mosaic Gold Wave",
+      "category": "base",
+      "parallel": "All-Time Greats Mosaic Gold Wave",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base All-Time Greats Mosaic Green",
+      "category": "base",
+      "parallel": "All-Time Greats Mosaic Green",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base All-Time Greats Mosaic Green Fluorescent",
+      "category": "base",
+      "parallel": "All-Time Greats Mosaic Green Fluorescent",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 15
+    },
+    {
+      "section": "Base All-Time Greats Mosaic Green Ice",
+      "category": "base",
+      "parallel": "All-Time Greats Mosaic Green Ice",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base All-Time Greats Mosaic Green Swirl FOTL",
+      "category": "base",
+      "parallel": "All-Time Greats Mosaic Green Swirl FOTL",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 15
+    },
+    {
+      "section": "Base All-Time Greats Mosaic Lucky Envelopes",
+      "category": "base",
+      "parallel": "All-Time Greats Mosaic Lucky Envelopes",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 15
+    },
+    {
+      "section": "Base All-Time Greats Mosaic Orange Fluorescent",
+      "category": "base",
+      "parallel": "All-Time Greats Mosaic Orange Fluorescent",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 15
+    },
+    {
+      "section": "Base All-Time Greats Mosaic Pink Fluorescent",
+      "category": "base",
+      "parallel": "All-Time Greats Mosaic Pink Fluorescent",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 15
+    },
+    {
+      "section": "Base All-Time Greats Mosaic Pink Swirl FOTL",
+      "category": "base",
+      "parallel": "All-Time Greats Mosaic Pink Swirl FOTL",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 15
+    },
+    {
+      "section": "Base All-Time Greats Mosaic Purple",
+      "category": "base",
+      "parallel": "All-Time Greats Mosaic Purple",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 15
+    },
+    {
+      "section": "Base All-Time Greats Mosaic Reactive Blue",
+      "category": "base",
+      "parallel": "All-Time Greats Mosaic Reactive Blue",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base All-Time Greats Mosaic Reactive Green",
+      "category": "base",
+      "parallel": "All-Time Greats Mosaic Reactive Green",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base All-Time Greats Mosaic Reactive Orange",
+      "category": "base",
+      "parallel": "All-Time Greats Mosaic Reactive Orange",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base All-Time Greats Mosaic Reactive Red",
+      "category": "base",
+      "parallel": "All-Time Greats Mosaic Reactive Red",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base All-Time Greats Mosaic Reactive Yellow",
+      "category": "base",
+      "parallel": "All-Time Greats Mosaic Reactive Yellow",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base All-Time Greats Mosaic Red",
+      "category": "base",
+      "parallel": "All-Time Greats Mosaic Red",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base All-Time Greats Mosaic Red Wave",
+      "category": "base",
+      "parallel": "All-Time Greats Mosaic Red Wave",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base All-Time Greats Mosaic White",
+      "category": "base",
+      "parallel": "All-Time Greats Mosaic White",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 15
+    },
+    {
+      "section": "Base All-Time Greats Silver",
+      "category": "base",
+      "parallel": "All-Time Greats Silver",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base Finals MVPs",
+      "category": "base",
+      "parallel": "Finals MVPs",
+      "cards": 5,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base Finals MVPs Mosaic",
+      "category": "base",
+      "parallel": "Finals MVPs Mosaic",
+      "cards": 5,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base Finals MVPs Mosaic Black",
+      "category": "base",
+      "parallel": "Finals MVPs Mosaic Black",
+      "cards": 5,
+      "auto": 0,
+      "printRun": 5
+    },
+    {
+      "section": "Base Finals MVPs Mosaic Blue",
+      "category": "base",
+      "parallel": "Finals MVPs Mosaic Blue",
+      "cards": 5,
+      "auto": 0,
+      "printRun": 5
+    },
+    {
+      "section": "Base Finals MVPs Mosaic Blue Fluorescent",
+      "category": "base",
+      "parallel": "Finals MVPs Mosaic Blue Fluorescent",
+      "cards": 5,
+      "auto": 0,
+      "printRun": 5
+    },
+    {
+      "section": "Base Finals MVPs Mosaic Camo Pink",
+      "category": "base",
+      "parallel": "Finals MVPs Mosaic Camo Pink",
+      "cards": 5,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base Finals MVPs Mosaic Choice Black Gold",
+      "category": "base",
+      "parallel": "Finals MVPs Mosaic Choice Black Gold",
+      "cards": 5,
+      "auto": 0,
+      "printRun": 5
+    },
+    {
+      "section": "Base Finals MVPs Mosaic Choice Fusion Red and Yellow",
+      "category": "base",
+      "parallel": "Finals MVPs Mosaic Choice Fusion Red and Yellow",
+      "cards": 5,
+      "auto": 0,
+      "printRun": 5
+    },
+    {
+      "section": "Base Finals MVPs Mosaic Choice Nebula",
+      "category": "base",
+      "parallel": "Finals MVPs Mosaic Choice Nebula",
+      "cards": 5,
+      "auto": 0,
+      "printRun": 5
+    },
+    {
+      "section": "Base Finals MVPs Mosaic Choice Peacock",
+      "category": "base",
+      "parallel": "Finals MVPs Mosaic Choice Peacock",
+      "cards": 5,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base Finals MVPs Mosaic Fast Break Black",
+      "category": "base",
+      "parallel": "Finals MVPs Mosaic Fast Break Black",
+      "cards": 5,
+      "auto": 0,
+      "printRun": 5
+    },
+    {
+      "section": "Base Finals MVPs Mosaic Fast Break Blue",
+      "category": "base",
+      "parallel": "Finals MVPs Mosaic Fast Break Blue",
+      "cards": 5,
+      "auto": 0,
+      "printRun": 5
+    },
+    {
+      "section": "Base Finals MVPs Mosaic Fast Break Gold",
+      "category": "base",
+      "parallel": "Finals MVPs Mosaic Fast Break Gold",
+      "cards": 5,
+      "auto": 0,
+      "printRun": 5
+    },
+    {
+      "section": "Base Finals MVPs Mosaic Fast Break Pink",
+      "category": "base",
+      "parallel": "Finals MVPs Mosaic Fast Break Pink",
+      "cards": 5,
+      "auto": 0,
+      "printRun": 5
+    },
+    {
+      "section": "Base Finals MVPs Mosaic Fast Break Purple",
+      "category": "base",
+      "parallel": "Finals MVPs Mosaic Fast Break Purple",
+      "cards": 5,
+      "auto": 0,
+      "printRun": 5
+    },
+    {
+      "section": "Base Finals MVPs Mosaic Fast Break Silver",
+      "category": "base",
+      "parallel": "Finals MVPs Mosaic Fast Break Silver",
+      "cards": 5,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base Finals MVPs Mosaic Genesis",
+      "category": "base",
+      "parallel": "Finals MVPs Mosaic Genesis",
+      "cards": 5,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base Finals MVPs Mosaic Gold",
+      "category": "base",
+      "parallel": "Finals MVPs Mosaic Gold",
+      "cards": 5,
+      "auto": 0,
+      "printRun": 5
+    },
+    {
+      "section": "Base Finals MVPs Mosaic Gold Wave",
+      "category": "base",
+      "parallel": "Finals MVPs Mosaic Gold Wave",
+      "cards": 5,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base Finals MVPs Mosaic Green",
+      "category": "base",
+      "parallel": "Finals MVPs Mosaic Green",
+      "cards": 5,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base Finals MVPs Mosaic Green Fluorescent",
+      "category": "base",
+      "parallel": "Finals MVPs Mosaic Green Fluorescent",
+      "cards": 5,
+      "auto": 0,
+      "printRun": 5
+    },
+    {
+      "section": "Base Finals MVPs Mosaic Green Ice",
+      "category": "base",
+      "parallel": "Finals MVPs Mosaic Green Ice",
+      "cards": 5,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base Finals MVPs Mosaic Green Swirl FOTL",
+      "category": "base",
+      "parallel": "Finals MVPs Mosaic Green Swirl FOTL",
+      "cards": 5,
+      "auto": 0,
+      "printRun": 5
+    },
+    {
+      "section": "Base Finals MVPs Mosaic Lucky Envelopes",
+      "category": "base",
+      "parallel": "Finals MVPs Mosaic Lucky Envelopes",
+      "cards": 5,
+      "auto": 0,
+      "printRun": 5
+    },
+    {
+      "section": "Base Finals MVPs Mosaic Orange Fluorescent",
+      "category": "base",
+      "parallel": "Finals MVPs Mosaic Orange Fluorescent",
+      "cards": 5,
+      "auto": 0,
+      "printRun": 5
+    },
+    {
+      "section": "Base Finals MVPs Mosaic Pink Fluorescent",
+      "category": "base",
+      "parallel": "Finals MVPs Mosaic Pink Fluorescent",
+      "cards": 5,
+      "auto": 0,
+      "printRun": 5
+    },
+    {
+      "section": "Base Finals MVPs Mosaic Pink Swirl FOTL",
+      "category": "base",
+      "parallel": "Finals MVPs Mosaic Pink Swirl FOTL",
+      "cards": 5,
+      "auto": 0,
+      "printRun": 5
+    },
+    {
+      "section": "Base Finals MVPs Mosaic Purple",
+      "category": "base",
+      "parallel": "Finals MVPs Mosaic Purple",
+      "cards": 5,
+      "auto": 0,
+      "printRun": 5
+    },
+    {
+      "section": "Base Finals MVPs Mosaic Reactive Blue",
+      "category": "base",
+      "parallel": "Finals MVPs Mosaic Reactive Blue",
+      "cards": 5,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base Finals MVPs Mosaic Reactive Green",
+      "category": "base",
+      "parallel": "Finals MVPs Mosaic Reactive Green",
+      "cards": 5,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base Finals MVPs Mosaic Reactive Orange",
+      "category": "base",
+      "parallel": "Finals MVPs Mosaic Reactive Orange",
+      "cards": 5,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base Finals MVPs Mosaic Reactive Red",
+      "category": "base",
+      "parallel": "Finals MVPs Mosaic Reactive Red",
+      "cards": 5,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base Finals MVPs Mosaic Reactive Yellow",
+      "category": "base",
+      "parallel": "Finals MVPs Mosaic Reactive Yellow",
+      "cards": 5,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base Finals MVPs Mosaic Red",
+      "category": "base",
+      "parallel": "Finals MVPs Mosaic Red",
+      "cards": 5,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base Finals MVPs Mosaic Red Wave",
+      "category": "base",
+      "parallel": "Finals MVPs Mosaic Red Wave",
+      "cards": 5,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base Finals MVPs Mosaic White",
+      "category": "base",
+      "parallel": "Finals MVPs Mosaic White",
+      "cards": 5,
+      "auto": 0,
+      "printRun": 5
+    },
+    {
+      "section": "Base Finals MVPs Silver",
+      "category": "base",
+      "parallel": "Finals MVPs Silver",
+      "cards": 5,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base Mosaic",
+      "category": "base",
+      "parallel": "Mosaic",
+      "cards": 200,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base Mosaic Black",
+      "category": "base",
+      "parallel": "Mosaic Black",
+      "cards": 200,
+      "auto": 0,
+      "printRun": 200
+    },
+    {
+      "section": "Base Mosaic Blue",
+      "category": "base",
+      "parallel": "Mosaic Blue",
+      "cards": 200,
+      "auto": 0,
+      "printRun": 200
+    },
+    {
+      "section": "Base Mosaic Blue Fluorescent",
+      "category": "base",
+      "parallel": "Mosaic Blue Fluorescent",
+      "cards": 200,
+      "auto": 0,
+      "printRun": 200
+    },
+    {
+      "section": "Base Mosaic Camo Pink",
+      "category": "base",
+      "parallel": "Mosaic Camo Pink",
+      "cards": 200,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base Mosaic Choice Black Gold",
+      "category": "base",
+      "parallel": "Mosaic Choice Black Gold",
+      "cards": 200,
+      "auto": 0,
+      "printRun": 200
+    },
+    {
+      "section": "Base Mosaic Choice Fusion Red and Yellow",
+      "category": "base",
+      "parallel": "Mosaic Choice Fusion Red and Yellow",
+      "cards": 200,
+      "auto": 0,
+      "printRun": 200
+    },
+    {
+      "section": "Base Mosaic Choice Nebula",
+      "category": "base",
+      "parallel": "Mosaic Choice Nebula",
+      "cards": 200,
+      "auto": 0,
+      "printRun": 200
+    },
+    {
+      "section": "Base Mosaic Choice Peacock",
+      "category": "base",
+      "parallel": "Mosaic Choice Peacock",
+      "cards": 200,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base Mosaic Fast Break Black",
+      "category": "base",
+      "parallel": "Mosaic Fast Break Black",
+      "cards": 200,
+      "auto": 0,
+      "printRun": 200
+    },
+    {
+      "section": "Base Mosaic Fast Break Blue",
+      "category": "base",
+      "parallel": "Mosaic Fast Break Blue",
+      "cards": 200,
+      "auto": 0,
+      "printRun": 200
+    },
+    {
+      "section": "Base Mosaic Fast Break Gold",
+      "category": "base",
+      "parallel": "Mosaic Fast Break Gold",
+      "cards": 200,
+      "auto": 0,
+      "printRun": 200
+    },
+    {
+      "section": "Base Mosaic Fast Break Pink",
+      "category": "base",
+      "parallel": "Mosaic Fast Break Pink",
+      "cards": 200,
+      "auto": 0,
+      "printRun": 200
+    },
+    {
+      "section": "Base Mosaic Fast Break Purple",
+      "category": "base",
+      "parallel": "Mosaic Fast Break Purple",
+      "cards": 200,
+      "auto": 0,
+      "printRun": 200
+    },
+    {
+      "section": "Base Mosaic Fast Break Silver",
+      "category": "base",
+      "parallel": "Mosaic Fast Break Silver",
+      "cards": 200,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base Mosaic Genesis",
+      "category": "base",
+      "parallel": "Mosaic Genesis",
+      "cards": 200,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base Mosaic Gold",
+      "category": "base",
+      "parallel": "Mosaic Gold",
+      "cards": 200,
+      "auto": 0,
+      "printRun": 200
+    },
+    {
+      "section": "Base Mosaic Gold Wave",
+      "category": "base",
+      "parallel": "Mosaic Gold Wave",
+      "cards": 200,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base Mosaic Green",
+      "category": "base",
+      "parallel": "Mosaic Green",
+      "cards": 200,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base Mosaic Green Fluorescent",
+      "category": "base",
+      "parallel": "Mosaic Green Fluorescent",
+      "cards": 200,
+      "auto": 0,
+      "printRun": 200
+    },
+    {
+      "section": "Base Mosaic Green Ice",
+      "category": "base",
+      "parallel": "Mosaic Green Ice",
+      "cards": 200,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base Mosaic Green Swirl FOTL",
+      "category": "base",
+      "parallel": "Mosaic Green Swirl FOTL",
+      "cards": 200,
+      "auto": 0,
+      "printRun": 200
+    },
+    {
+      "section": "Base Mosaic Lucky Envelopes",
+      "category": "base",
+      "parallel": "Mosaic Lucky Envelopes",
+      "cards": 200,
+      "auto": 0,
+      "printRun": 200
+    },
+    {
+      "section": "Base Mosaic Orange Fluorescent",
+      "category": "base",
+      "parallel": "Mosaic Orange Fluorescent",
+      "cards": 200,
+      "auto": 0,
+      "printRun": 200
+    },
+    {
+      "section": "Base Mosaic Pink Fluorescent",
+      "category": "base",
+      "parallel": "Mosaic Pink Fluorescent",
+      "cards": 200,
+      "auto": 0,
+      "printRun": 200
+    },
+    {
+      "section": "Base Mosaic Pink Swirl FOTL",
+      "category": "base",
+      "parallel": "Mosaic Pink Swirl FOTL",
+      "cards": 200,
+      "auto": 0,
+      "printRun": 200
+    },
+    {
+      "section": "Base Mosaic Purple",
+      "category": "base",
+      "parallel": "Mosaic Purple",
+      "cards": 200,
+      "auto": 0,
+      "printRun": 200
+    },
+    {
+      "section": "Base Mosaic Reactive Blue",
+      "category": "base",
+      "parallel": "Mosaic Reactive Blue",
+      "cards": 200,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base Mosaic Reactive Green",
+      "category": "base",
+      "parallel": "Mosaic Reactive Green",
+      "cards": 200,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base Mosaic Reactive Orange",
+      "category": "base",
+      "parallel": "Mosaic Reactive Orange",
+      "cards": 200,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base Mosaic Reactive Red",
+      "category": "base",
+      "parallel": "Mosaic Reactive Red",
+      "cards": 200,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base Mosaic Reactive Yellow",
+      "category": "base",
+      "parallel": "Mosaic Reactive Yellow",
+      "cards": 200,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base Mosaic Red",
+      "category": "base",
+      "parallel": "Mosaic Red",
+      "cards": 200,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base Mosaic Red Wave",
+      "category": "base",
+      "parallel": "Mosaic Red Wave",
+      "cards": 200,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base Mosaic White",
+      "category": "base",
+      "parallel": "Mosaic White",
+      "cards": 200,
+      "auto": 0,
+      "printRun": 200
+    },
+    {
+      "section": "Base National Pride",
+      "category": "base",
+      "parallel": "National Pride",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base National Pride Mosaic",
+      "category": "base",
+      "parallel": "National Pride Mosaic",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base National Pride Mosaic Black",
+      "category": "base",
+      "parallel": "National Pride Mosaic Black",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 15
+    },
+    {
+      "section": "Base National Pride Mosaic Blue",
+      "category": "base",
+      "parallel": "National Pride Mosaic Blue",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 15
+    },
+    {
+      "section": "Base National Pride Mosaic Blue Fluorescent",
+      "category": "base",
+      "parallel": "National Pride Mosaic Blue Fluorescent",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 15
+    },
+    {
+      "section": "Base National Pride Mosaic Camo Pink",
+      "category": "base",
+      "parallel": "National Pride Mosaic Camo Pink",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base National Pride Mosaic Choice Black Gold",
+      "category": "base",
+      "parallel": "National Pride Mosaic Choice Black Gold",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 15
+    },
+    {
+      "section": "Base National Pride Mosaic Choice Fusion Red and Yellow",
+      "category": "base",
+      "parallel": "National Pride Mosaic Choice Fusion Red and Yellow",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 15
+    },
+    {
+      "section": "Base National Pride Mosaic Choice Nebula",
+      "category": "base",
+      "parallel": "National Pride Mosaic Choice Nebula",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 15
+    },
+    {
+      "section": "Base National Pride Mosaic Choice Peacock",
+      "category": "base",
+      "parallel": "National Pride Mosaic Choice Peacock",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base National Pride Mosaic Fast Break Black",
+      "category": "base",
+      "parallel": "National Pride Mosaic Fast Break Black",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 15
+    },
+    {
+      "section": "Base National Pride Mosaic Fast Break Blue",
+      "category": "base",
+      "parallel": "National Pride Mosaic Fast Break Blue",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 15
+    },
+    {
+      "section": "Base National Pride Mosaic Fast Break Gold",
+      "category": "base",
+      "parallel": "National Pride Mosaic Fast Break Gold",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 15
+    },
+    {
+      "section": "Base National Pride Mosaic Fast Break Pink",
+      "category": "base",
+      "parallel": "National Pride Mosaic Fast Break Pink",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 15
+    },
+    {
+      "section": "Base National Pride Mosaic Fast Break Purple",
+      "category": "base",
+      "parallel": "National Pride Mosaic Fast Break Purple",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 15
+    },
+    {
+      "section": "Base National Pride Mosaic Fast Break Silver",
+      "category": "base",
+      "parallel": "National Pride Mosaic Fast Break Silver",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base National Pride Mosaic Genesis",
+      "category": "base",
+      "parallel": "National Pride Mosaic Genesis",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base National Pride Mosaic Gold",
+      "category": "base",
+      "parallel": "National Pride Mosaic Gold",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 15
+    },
+    {
+      "section": "Base National Pride Mosaic Gold Wave",
+      "category": "base",
+      "parallel": "National Pride Mosaic Gold Wave",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base National Pride Mosaic Green",
+      "category": "base",
+      "parallel": "National Pride Mosaic Green",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base National Pride Mosaic Green Fluorescent",
+      "category": "base",
+      "parallel": "National Pride Mosaic Green Fluorescent",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 15
+    },
+    {
+      "section": "Base National Pride Mosaic Green Ice",
+      "category": "base",
+      "parallel": "National Pride Mosaic Green Ice",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base National Pride Mosaic Green Swirl FOTL",
+      "category": "base",
+      "parallel": "National Pride Mosaic Green Swirl FOTL",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 15
+    },
+    {
+      "section": "Base National Pride Mosaic Lucky Envelopes",
+      "category": "base",
+      "parallel": "National Pride Mosaic Lucky Envelopes",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 15
+    },
+    {
+      "section": "Base National Pride Mosaic Orange Fluorescent",
+      "category": "base",
+      "parallel": "National Pride Mosaic Orange Fluorescent",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 15
+    },
+    {
+      "section": "Base National Pride Mosaic Pink Fluorescent",
+      "category": "base",
+      "parallel": "National Pride Mosaic Pink Fluorescent",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 15
+    },
+    {
+      "section": "Base National Pride Mosaic Pink Swirl FOTL",
+      "category": "base",
+      "parallel": "National Pride Mosaic Pink Swirl FOTL",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 15
+    },
+    {
+      "section": "Base National Pride Mosaic Purple",
+      "category": "base",
+      "parallel": "National Pride Mosaic Purple",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 15
+    },
+    {
+      "section": "Base National Pride Mosaic Reactive Blue",
+      "category": "base",
+      "parallel": "National Pride Mosaic Reactive Blue",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base National Pride Mosaic Reactive Green",
+      "category": "base",
+      "parallel": "National Pride Mosaic Reactive Green",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base National Pride Mosaic Reactive Orange",
+      "category": "base",
+      "parallel": "National Pride Mosaic Reactive Orange",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base National Pride Mosaic Reactive Red",
+      "category": "base",
+      "parallel": "National Pride Mosaic Reactive Red",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base National Pride Mosaic Reactive Yellow",
+      "category": "base",
+      "parallel": "National Pride Mosaic Reactive Yellow",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base National Pride Mosaic Red",
+      "category": "base",
+      "parallel": "National Pride Mosaic Red",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base National Pride Mosaic Red Wave",
+      "category": "base",
+      "parallel": "National Pride Mosaic Red Wave",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base National Pride Mosaic White",
+      "category": "base",
+      "parallel": "National Pride Mosaic White",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 15
+    },
+    {
+      "section": "Base National Pride Mosiac Genesis",
+      "category": "base",
+      "parallel": "National Pride Mosiac Genesis",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base National Pride Silver",
+      "category": "base",
+      "parallel": "National Pride Silver",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base NBA Debut",
+      "category": "base",
+      "parallel": "NBA Debut",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base NBA Debut Mosaic",
+      "category": "base",
+      "parallel": "NBA Debut Mosaic",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base NBA Debut Mosaic Black",
+      "category": "base",
+      "parallel": "NBA Debut Mosaic Black",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 20
+    },
+    {
+      "section": "Base NBA Debut Mosaic Blue",
+      "category": "base",
+      "parallel": "NBA Debut Mosaic Blue",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 20
+    },
+    {
+      "section": "Base NBA Debut Mosaic Blue Fluorescent",
+      "category": "base",
+      "parallel": "NBA Debut Mosaic Blue Fluorescent",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 20
+    },
+    {
+      "section": "Base NBA Debut Mosaic Camo Pink",
+      "category": "base",
+      "parallel": "NBA Debut Mosaic Camo Pink",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base NBA Debut Mosaic Choice Black Gold",
+      "category": "base",
+      "parallel": "NBA Debut Mosaic Choice Black Gold",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 20
+    },
+    {
+      "section": "Base NBA Debut Mosaic Choice Fusion Red and Yellow",
+      "category": "base",
+      "parallel": "NBA Debut Mosaic Choice Fusion Red and Yellow",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 20
+    },
+    {
+      "section": "Base NBA Debut Mosaic Choice Nebula",
+      "category": "base",
+      "parallel": "NBA Debut Mosaic Choice Nebula",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 20
+    },
+    {
+      "section": "Base NBA Debut Mosaic Choice Peacock",
+      "category": "base",
+      "parallel": "NBA Debut Mosaic Choice Peacock",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base NBA Debut Mosaic Fast Break Black",
+      "category": "base",
+      "parallel": "NBA Debut Mosaic Fast Break Black",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 20
+    },
+    {
+      "section": "Base NBA Debut Mosaic Fast Break Blue",
+      "category": "base",
+      "parallel": "NBA Debut Mosaic Fast Break Blue",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 20
+    },
+    {
+      "section": "Base NBA Debut Mosaic Fast Break Gold",
+      "category": "base",
+      "parallel": "NBA Debut Mosaic Fast Break Gold",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 20
+    },
+    {
+      "section": "Base NBA Debut Mosaic Fast Break Pink",
+      "category": "base",
+      "parallel": "NBA Debut Mosaic Fast Break Pink",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 20
+    },
+    {
+      "section": "Base NBA Debut Mosaic Fast Break Purple",
+      "category": "base",
+      "parallel": "NBA Debut Mosaic Fast Break Purple",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 20
+    },
+    {
+      "section": "Base NBA Debut Mosaic Fast Break Silver",
+      "category": "base",
+      "parallel": "NBA Debut Mosaic Fast Break Silver",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base NBA Debut Mosaic Genesis",
+      "category": "base",
+      "parallel": "NBA Debut Mosaic Genesis",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base NBA Debut Mosaic Gold",
+      "category": "base",
+      "parallel": "NBA Debut Mosaic Gold",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 20
+    },
+    {
+      "section": "Base NBA Debut Mosaic Gold Wave",
+      "category": "base",
+      "parallel": "NBA Debut Mosaic Gold Wave",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base NBA Debut Mosaic Green",
+      "category": "base",
+      "parallel": "NBA Debut Mosaic Green",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base NBA Debut Mosaic Green Fluorescent",
+      "category": "base",
+      "parallel": "NBA Debut Mosaic Green Fluorescent",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 20
+    },
+    {
+      "section": "Base NBA Debut Mosaic Green Ice",
+      "category": "base",
+      "parallel": "NBA Debut Mosaic Green Ice",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base NBA Debut Mosaic Green Swirl FOTL",
+      "category": "base",
+      "parallel": "NBA Debut Mosaic Green Swirl FOTL",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 20
+    },
+    {
+      "section": "Base NBA Debut Mosaic Lucky Envelopes",
+      "category": "base",
+      "parallel": "NBA Debut Mosaic Lucky Envelopes",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 20
+    },
+    {
+      "section": "Base NBA Debut Mosaic Orange Fluorescent",
+      "category": "base",
+      "parallel": "NBA Debut Mosaic Orange Fluorescent",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 20
+    },
+    {
+      "section": "Base NBA Debut Mosaic Pink Fluorescent",
+      "category": "base",
+      "parallel": "NBA Debut Mosaic Pink Fluorescent",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 20
+    },
+    {
+      "section": "Base NBA Debut Mosaic Pink Swirl FOTL",
+      "category": "base",
+      "parallel": "NBA Debut Mosaic Pink Swirl FOTL",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 20
+    },
+    {
+      "section": "Base NBA Debut Mosaic Purple",
+      "category": "base",
+      "parallel": "NBA Debut Mosaic Purple",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 20
+    },
+    {
+      "section": "Base NBA Debut Mosaic Reactive Blue",
+      "category": "base",
+      "parallel": "NBA Debut Mosaic Reactive Blue",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base NBA Debut Mosaic Reactive Green",
+      "category": "base",
+      "parallel": "NBA Debut Mosaic Reactive Green",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base NBA Debut Mosaic Reactive Orange",
+      "category": "base",
+      "parallel": "NBA Debut Mosaic Reactive Orange",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base NBA Debut Mosaic Reactive Red",
+      "category": "base",
+      "parallel": "NBA Debut Mosaic Reactive Red",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base NBA Debut Mosaic Reactive Yellow",
+      "category": "base",
+      "parallel": "NBA Debut Mosaic Reactive Yellow",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base NBA Debut Mosaic Red",
+      "category": "base",
+      "parallel": "NBA Debut Mosaic Red",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base NBA Debut Mosaic Red Wave",
+      "category": "base",
+      "parallel": "NBA Debut Mosaic Red Wave",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base NBA Debut Mosaic White",
+      "category": "base",
+      "parallel": "NBA Debut Mosaic White",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 20
+    },
+    {
+      "section": "Base NBA Debut Silver",
+      "category": "base",
+      "parallel": "NBA Debut Silver",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base Rookies",
+      "category": "base",
+      "parallel": "Rookies",
+      "cards": 45,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base Rookies Mosaic",
+      "category": "base",
+      "parallel": "Rookies Mosaic",
+      "cards": 45,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base Rookies Mosaic Black",
+      "category": "base",
+      "parallel": "Rookies Mosaic Black",
+      "cards": 45,
+      "auto": 0,
+      "printRun": 45
+    },
+    {
+      "section": "Base Rookies Mosaic Blue",
+      "category": "base",
+      "parallel": "Rookies Mosaic Blue",
+      "cards": 45,
+      "auto": 0,
+      "printRun": 45
+    },
+    {
+      "section": "Base Rookies Mosaic Blue Fluorescent",
+      "category": "base",
+      "parallel": "Rookies Mosaic Blue Fluorescent",
+      "cards": 45,
+      "auto": 0,
+      "printRun": 45
+    },
+    {
+      "section": "Base Rookies Mosaic Camo Pink",
+      "category": "base",
+      "parallel": "Rookies Mosaic Camo Pink",
+      "cards": 45,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base Rookies Mosaic Choice Black Gold",
+      "category": "base",
+      "parallel": "Rookies Mosaic Choice Black Gold",
+      "cards": 45,
+      "auto": 0,
+      "printRun": 45
+    },
+    {
+      "section": "Base Rookies Mosaic Choice Fusion Red and Yellow",
+      "category": "base",
+      "parallel": "Rookies Mosaic Choice Fusion Red and Yellow",
+      "cards": 45,
+      "auto": 0,
+      "printRun": 45
+    },
+    {
+      "section": "Base Rookies Mosaic Choice Nebula",
+      "category": "base",
+      "parallel": "Rookies Mosaic Choice Nebula",
+      "cards": 45,
+      "auto": 0,
+      "printRun": 45
+    },
+    {
+      "section": "Base Rookies Mosaic Choice Peacock",
+      "category": "base",
+      "parallel": "Rookies Mosaic Choice Peacock",
+      "cards": 45,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base Rookies Mosaic Choice Red and Green",
+      "category": "base",
+      "parallel": "Rookies Mosaic Choice Red and Green",
+      "cards": 45,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base Rookies Mosaic Fast Break Black",
+      "category": "base",
+      "parallel": "Rookies Mosaic Fast Break Black",
+      "cards": 45,
+      "auto": 0,
+      "printRun": 45
+    },
+    {
+      "section": "Base Rookies Mosaic Fast Break Blue",
+      "category": "base",
+      "parallel": "Rookies Mosaic Fast Break Blue",
+      "cards": 45,
+      "auto": 0,
+      "printRun": 45
+    },
+    {
+      "section": "Base Rookies Mosaic Fast Break Gold",
+      "category": "base",
+      "parallel": "Rookies Mosaic Fast Break Gold",
+      "cards": 45,
+      "auto": 0,
+      "printRun": 45
+    },
+    {
+      "section": "Base Rookies Mosaic Fast Break Pink",
+      "category": "base",
+      "parallel": "Rookies Mosaic Fast Break Pink",
+      "cards": 45,
+      "auto": 0,
+      "printRun": 45
+    },
+    {
+      "section": "Base Rookies Mosaic Fast Break Purple",
+      "category": "base",
+      "parallel": "Rookies Mosaic Fast Break Purple",
+      "cards": 45,
+      "auto": 0,
+      "printRun": 45
+    },
+    {
+      "section": "Base Rookies Mosaic Fast Break Silver",
+      "category": "base",
+      "parallel": "Rookies Mosaic Fast Break Silver",
+      "cards": 45,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base Rookies Mosaic Genesis",
+      "category": "base",
+      "parallel": "Rookies Mosaic Genesis",
+      "cards": 45,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base Rookies Mosaic Gold",
+      "category": "base",
+      "parallel": "Rookies Mosaic Gold",
+      "cards": 45,
+      "auto": 0,
+      "printRun": 45
+    },
+    {
+      "section": "Base Rookies Mosaic Gold Wave",
+      "category": "base",
+      "parallel": "Rookies Mosaic Gold Wave",
+      "cards": 45,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base Rookies Mosaic Green",
+      "category": "base",
+      "parallel": "Rookies Mosaic Green",
+      "cards": 45,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base Rookies Mosaic Green Fluorescent",
+      "category": "base",
+      "parallel": "Rookies Mosaic Green Fluorescent",
+      "cards": 45,
+      "auto": 0,
+      "printRun": 45
+    },
+    {
+      "section": "Base Rookies Mosaic Green Ice",
+      "category": "base",
+      "parallel": "Rookies Mosaic Green Ice",
+      "cards": 45,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base Rookies Mosaic Green Swirl FOTL",
+      "category": "base",
+      "parallel": "Rookies Mosaic Green Swirl FOTL",
+      "cards": 45,
+      "auto": 0,
+      "printRun": 45
+    },
+    {
+      "section": "Base Rookies Mosaic Lucky Envelopes",
+      "category": "base",
+      "parallel": "Rookies Mosaic Lucky Envelopes",
+      "cards": 45,
+      "auto": 0,
+      "printRun": 45
+    },
+    {
+      "section": "Base Rookies Mosaic Orange Fluorescent",
+      "category": "base",
+      "parallel": "Rookies Mosaic Orange Fluorescent",
+      "cards": 45,
+      "auto": 0,
+      "printRun": 45
+    },
+    {
+      "section": "Base Rookies Mosaic Pink Fluorescent",
+      "category": "base",
+      "parallel": "Rookies Mosaic Pink Fluorescent",
+      "cards": 45,
+      "auto": 0,
+      "printRun": 45
+    },
+    {
+      "section": "Base Rookies Mosaic Pink Swirl FOTL",
+      "category": "base",
+      "parallel": "Rookies Mosaic Pink Swirl FOTL",
+      "cards": 45,
+      "auto": 0,
+      "printRun": 45
+    },
+    {
+      "section": "Base Rookies Mosaic Purple",
+      "category": "base",
+      "parallel": "Rookies Mosaic Purple",
+      "cards": 45,
+      "auto": 0,
+      "printRun": 45
+    },
+    {
+      "section": "Base Rookies Mosaic Reactive Blue",
+      "category": "base",
+      "parallel": "Rookies Mosaic Reactive Blue",
+      "cards": 45,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base Rookies Mosaic Reactive Green",
+      "category": "base",
+      "parallel": "Rookies Mosaic Reactive Green",
+      "cards": 45,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base Rookies Mosaic Reactive Orange",
+      "category": "base",
+      "parallel": "Rookies Mosaic Reactive Orange",
+      "cards": 45,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base Rookies Mosaic Reactive Red",
+      "category": "base",
+      "parallel": "Rookies Mosaic Reactive Red",
+      "cards": 45,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base Rookies Mosaic Reactive Yellow",
+      "category": "base",
+      "parallel": "Rookies Mosaic Reactive Yellow",
+      "cards": 45,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base Rookies Mosaic Red",
+      "category": "base",
+      "parallel": "Rookies Mosaic Red",
+      "cards": 45,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base Rookies Mosaic Red Wave",
+      "category": "base",
+      "parallel": "Rookies Mosaic Red Wave",
+      "cards": 45,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base Rookies Mosaic White",
+      "category": "base",
+      "parallel": "Rookies Mosaic White",
+      "cards": 45,
+      "auto": 0,
+      "printRun": 45
+    },
+    {
+      "section": "Base Rookies Silver",
+      "category": "base",
+      "parallel": "Rookies Silver",
+      "cards": 45,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base Silver",
+      "category": "base",
+      "parallel": "Silver",
+      "cards": 200,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Blue Chips",
+      "category": "blue-chips",
+      "parallel": "",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Blue Chips Fast Break",
+      "category": "blue-chips",
+      "parallel": "Fast Break",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Blue Chips Mosaic",
+      "category": "blue-chips",
+      "parallel": "Mosaic",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Blue Chips Mosaic Black",
+      "category": "blue-chips",
+      "parallel": "Mosaic Black",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 15
+    },
+    {
+      "section": "Blue Chips Mosaic Gold",
+      "category": "blue-chips",
+      "parallel": "Mosaic Gold",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 15
+    },
+    {
+      "section": "Blue Chips Mosaic Red",
+      "category": "blue-chips",
+      "parallel": "Mosaic Red",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Blue Chips Mosaic White",
+      "category": "blue-chips",
+      "parallel": "Mosaic White",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 15
+    },
+    {
+      "section": "Center Stage",
+      "category": "center-stage",
+      "parallel": "",
+      "cards": 30,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Elevate",
+      "category": "elevate",
+      "parallel": "",
+      "cards": 25,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Elevate Mosaic",
+      "category": "elevate",
+      "parallel": "Mosaic",
+      "cards": 25,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Elevate Mosaic Blue Fluorescent",
+      "category": "elevate",
+      "parallel": "Mosaic Blue Fluorescent",
+      "cards": 25,
+      "auto": 0,
+      "printRun": 25
+    },
+    {
+      "section": "Elevate Mosaic Green",
+      "category": "elevate",
+      "parallel": "Mosaic Green",
+      "cards": 25,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Elevate Mosaic Green Fourescent",
+      "category": "elevate",
+      "parallel": "Mosaic Green Fourescent",
+      "cards": 25,
+      "auto": 0,
+      "printRun": 25
+    },
+    {
+      "section": "Elevate Mosaic Orange Fluorescent",
+      "category": "elevate",
+      "parallel": "Mosaic Orange Fluorescent",
+      "cards": 25,
+      "auto": 0,
+      "printRun": 25
+    },
+    {
+      "section": "Elevate Mosaic Pink Fluorescent",
+      "category": "elevate",
+      "parallel": "Mosaic Pink Fluorescent",
+      "cards": 25,
+      "auto": 0,
+      "printRun": 25
+    },
+    {
+      "section": "Elevate Mosaic Reactive Blue",
+      "category": "elevate",
+      "parallel": "Mosaic Reactive Blue",
+      "cards": 25,
+      "auto": 0,
+      "printRun": 25
+    },
+    {
+      "section": "Elevate Mosaic Reactive Yellow",
+      "category": "elevate",
+      "parallel": "Mosaic Reactive Yellow",
+      "cards": 25,
+      "auto": 0,
+      "printRun": 25
+    },
+    {
+      "section": "HoloFame",
+      "category": "holofame",
+      "parallel": "",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "HoloFame Mosaic",
+      "category": "holofame",
+      "parallel": "Mosaic",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "HoloFame Mosaic Blue Fluorescent",
+      "category": "holofame",
+      "parallel": "Mosaic Blue Fluorescent",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 20
+    },
+    {
+      "section": "HoloFame Mosaic Green",
+      "category": "holofame",
+      "parallel": "Mosaic Green",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "HoloFame Mosaic Green Fluorescent",
+      "category": "holofame",
+      "parallel": "Mosaic Green Fluorescent",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 20
+    },
+    {
+      "section": "HoloFame Mosaic Orange Fluorescent",
+      "category": "holofame",
+      "parallel": "Mosaic Orange Fluorescent",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 20
+    },
+    {
+      "section": "HoloFame Mosaic Pink Fluorescent",
+      "category": "holofame",
+      "parallel": "Mosaic Pink Fluorescent",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 20
+    },
+    {
+      "section": "HoloFame Mosaic Reactive Blue",
+      "category": "holofame",
+      "parallel": "Mosaic Reactive Blue",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 20
+    },
+    {
+      "section": "HoloFame Mosaic Reactive Yellow",
+      "category": "holofame",
+      "parallel": "Mosaic Reactive Yellow",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 20
+    },
+    {
+      "section": "Introductions",
+      "category": "introductions",
+      "parallel": "",
+      "cards": 10,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Introductions Fast Break",
+      "category": "introductions",
+      "parallel": "Fast Break",
+      "cards": 10,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Introductions Mosaic",
+      "category": "introductions",
+      "parallel": "Mosaic",
+      "cards": 10,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Introductions Mosaic Black",
+      "category": "introductions",
+      "parallel": "Mosaic Black",
+      "cards": 10,
+      "auto": 0,
+      "printRun": 10
+    },
+    {
+      "section": "Introductions Mosaic Gold",
+      "category": "introductions",
+      "parallel": "Mosaic Gold",
+      "cards": 10,
+      "auto": 0,
+      "printRun": 10
+    },
+    {
+      "section": "introductions Mosaic Red",
+      "category": "introductions-mosaic-red",
+      "parallel": "",
+      "cards": 10,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Introductions Mosaic White",
+      "category": "introductions",
+      "parallel": "Mosaic White",
+      "cards": 10,
+      "auto": 0,
+      "printRun": 10
+    },
+    {
+      "section": "Jam Masters",
+      "category": "jam-masters",
+      "parallel": "",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Jam Masters Mosaic",
+      "category": "jam-masters",
+      "parallel": "Mosaic",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Jam Masters Mosaic Blue Fluorescent",
+      "category": "jam-masters",
+      "parallel": "Mosaic Blue Fluorescent",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 20
+    },
+    {
+      "section": "Jam Masters Mosaic Green",
+      "category": "jam-masters",
+      "parallel": "Mosaic Green",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Jam Masters Mosaic Green Fluorescent",
+      "category": "jam-masters",
+      "parallel": "Mosaic Green Fluorescent",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 20
+    },
+    {
+      "section": "Jam Masters Mosaic Orange Fluorescent",
+      "category": "jam-masters",
+      "parallel": "Mosaic Orange Fluorescent",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 20
+    },
+    {
+      "section": "Jam Masters Mosaic Pink Fluorescent",
+      "category": "jam-masters",
+      "parallel": "Mosaic Pink Fluorescent",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 20
+    },
+    {
+      "section": "Jam Masters Mosaic Reactive Blue",
+      "category": "jam-masters",
+      "parallel": "Mosaic Reactive Blue",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 20
+    },
+    {
+      "section": "Jam Masters Mosaic Reactive Yellow",
+      "category": "jam-masters",
+      "parallel": "Mosaic Reactive Yellow",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 20
+    },
+    {
+      "section": "Men of Mastery",
+      "category": "men-of-mastery",
+      "parallel": "",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Men of Mastery Fast Break",
+      "category": "men-of-mastery",
+      "parallel": "Fast Break",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Men of Mastery Mosaic",
+      "category": "men-of-mastery",
+      "parallel": "Mosaic",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Men of Mastery Mosaic Black",
+      "category": "men-of-mastery",
+      "parallel": "Mosaic Black",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 20
+    },
+    {
+      "section": "Men of Mastery Mosaic Gold",
+      "category": "men-of-mastery",
+      "parallel": "Mosaic Gold",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 20
+    },
+    {
+      "section": "Men of Mastery Mosaic Red",
+      "category": "men-of-mastery",
+      "parallel": "Mosaic Red",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Men of Mastery Mosaic White",
+      "category": "men-of-mastery",
+      "parallel": "Mosaic White",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 20
+    },
+    {
+      "section": "Montage",
+      "category": "montage",
+      "parallel": "",
+      "cards": 30,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Montage Fast Break",
+      "category": "montage",
+      "parallel": "Fast Break",
+      "cards": 30,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Montage Mosaic",
+      "category": "montage",
+      "parallel": "Mosaic",
+      "cards": 30,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Montage Mosaic Black",
+      "category": "montage",
+      "parallel": "Mosaic Black",
+      "cards": 30,
+      "auto": 0,
+      "printRun": 30
+    },
+    {
+      "section": "Montage Mosaic Gold",
+      "category": "montage",
+      "parallel": "Mosaic Gold",
+      "cards": 30,
+      "auto": 0,
+      "printRun": 30
+    },
+    {
+      "section": "Montage Mosaic Red",
+      "category": "montage",
+      "parallel": "Mosaic Red",
+      "cards": 30,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Montage Mosaic White",
+      "category": "montage",
+      "parallel": "Mosaic White",
+      "cards": 30,
+      "auto": 0,
+      "printRun": 30
+    },
+    {
+      "section": "Overdrive",
+      "category": "overdrive",
+      "parallel": "",
+      "cards": 25,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Rookie Autographs Mosaic",
+      "category": "rookie-autographs-mosaic",
+      "parallel": "",
+      "cards": 39,
+      "auto": 39,
+      "printRun": 0
+    },
+    {
+      "section": "Rookie Autographs Mosaic Black",
+      "category": "rookie-autographs-mosaic",
+      "parallel": "Black",
+      "cards": 39,
+      "auto": 39,
+      "printRun": 39
+    },
+    {
+      "section": "Rookie Autographs Mosaic Choice Black Gold",
+      "category": "rookie-autographs-mosaic",
+      "parallel": "Choice Black Gold",
+      "cards": 39,
+      "auto": 39,
+      "printRun": 39
+    },
+    {
+      "section": "Rookie Autographs Mosaic Choice Fusion Red and Yellow",
+      "category": "rookie-autographs-mosaic",
+      "parallel": "Choice Fusion Red and Yellow",
+      "cards": 39,
+      "auto": 39,
+      "printRun": 0
+    },
+    {
+      "section": "Rookie Autographs Mosaic Gold",
+      "category": "rookie-autographs-mosaic",
+      "parallel": "Gold",
+      "cards": 39,
+      "auto": 39,
+      "printRun": 39
+    },
+    {
+      "section": "Rookie Private Signings Association Version",
+      "category": "rookie-private-signings-association-version",
+      "parallel": "",
+      "cards": 1,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Rookie Private Signings Association Version Gold",
+      "category": "rookie-private-signings-association-version",
+      "parallel": "Gold",
+      "cards": 1,
+      "auto": 0,
+      "printRun": 1
+    },
+    {
+      "section": "Rookie Private Signings Association Version Platinum",
+      "category": "rookie-private-signings-association-version",
+      "parallel": "Platinum",
+      "cards": 1,
+      "auto": 0,
+      "printRun": 1
+    },
+    {
+      "section": "Rookie Private Signings Icon Version Gold",
+      "category": "rookie-private-signings-icon-version-gold",
+      "parallel": "",
+      "cards": 1,
+      "auto": 0,
+      "printRun": 1
+    },
+    {
+      "section": "Rookie Private Signings Icon Version Platinum",
+      "category": "rookie-private-signings-icon-version-platinum",
+      "parallel": "",
+      "cards": 1,
+      "auto": 0,
+      "printRun": 1
+    },
+    {
+      "section": "Rookie Scripts",
+      "category": "rookie-scripts",
+      "parallel": "",
+      "cards": 38,
+      "auto": 38,
+      "printRun": 0
+    },
+    {
+      "section": "Rookie Scripts Gold",
+      "category": "rookie-scripts",
+      "parallel": "Gold",
+      "cards": 38,
+      "auto": 38,
+      "printRun": 0
+    },
+    {
+      "section": "Rookie Scripts Green Ice",
+      "category": "rookie-scripts",
+      "parallel": "Green Ice",
+      "cards": 39,
+      "auto": 39,
+      "printRun": 0
+    },
+    {
+      "section": "Rookie Scripts Orange",
+      "category": "rookie-scripts",
+      "parallel": "Orange",
+      "cards": 39,
+      "auto": 39,
+      "printRun": 0
+    },
+    {
+      "section": "Rookie Scripts Red Wave",
+      "category": "rookie-scripts",
+      "parallel": "Red Wave",
+      "cards": 40,
+      "auto": 40,
+      "printRun": 0
+    },
+    {
+      "section": "Rookie Variations",
+      "category": "rookie-variations",
+      "parallel": "",
+      "cards": 14,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Rookie Variations Fast Break",
+      "category": "rookie-variations",
+      "parallel": "Fast Break",
+      "cards": 14,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Scripts",
+      "category": "scripts",
+      "parallel": "",
+      "cards": 59,
+      "auto": 59,
+      "printRun": 0
+    },
+    {
+      "section": "Scripts Gold",
+      "category": "scripts",
+      "parallel": "Gold",
+      "cards": 59,
+      "auto": 59,
+      "printRun": 0
+    },
+    {
+      "section": "Scripts Green Ice",
+      "category": "scripts",
+      "parallel": "Green Ice",
+      "cards": 58,
+      "auto": 58,
+      "printRun": 0
+    },
+    {
+      "section": "Scripts Orange",
+      "category": "scripts",
+      "parallel": "Orange",
+      "cards": 57,
+      "auto": 57,
+      "printRun": 0
+    },
+    {
+      "section": "Scripts Red Wave",
+      "category": "scripts",
+      "parallel": "Red Wave",
+      "cards": 59,
+      "auto": 59,
+      "printRun": 0
+    },
+    {
+      "section": "Stained Glass",
+      "category": "stained-glass",
+      "parallel": "",
+      "cards": 10,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Stare Masters",
+      "category": "stare-masters",
+      "parallel": "",
+      "cards": 25,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Stare Masters Fast Break",
+      "category": "stare-masters",
+      "parallel": "Fast Break",
+      "cards": 25,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Stare Masters Mosaic",
+      "category": "stare-masters",
+      "parallel": "Mosaic",
+      "cards": 25,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Stare Masters Mosaic Black",
+      "category": "stare-masters",
+      "parallel": "Mosaic Black",
+      "cards": 25,
+      "auto": 0,
+      "printRun": 25
+    },
+    {
+      "section": "Stare Masters Mosaic Gold",
+      "category": "stare-masters",
+      "parallel": "Mosaic Gold",
+      "cards": 25,
+      "auto": 0,
+      "printRun": 25
+    },
+    {
+      "section": "Stare Masters Mosaic Red",
+      "category": "stare-masters",
+      "parallel": "Mosaic Red",
+      "cards": 25,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Stare Masters Mosaic White",
+      "category": "stare-masters",
+      "parallel": "Mosaic White",
+      "cards": 25,
+      "auto": 0,
+      "printRun": 25
+    },
+    {
+      "section": "Straight Fire",
+      "category": "straight-fire",
+      "parallel": "",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Swagger",
+      "category": "swagger",
+      "parallel": "",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Will to Win",
+      "category": "will-to-win",
+      "parallel": "",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Will to Win Mosaic",
+      "category": "will-to-win",
+      "parallel": "Mosaic",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Will to Win Mosaic Blue Fluorescent",
+      "category": "will-to-win",
+      "parallel": "Mosaic Blue Fluorescent",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 20
+    },
+    {
+      "section": "Will to Win Mosaic Green",
+      "category": "will-to-win",
+      "parallel": "Mosaic Green",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Will to Win Mosaic Green Fluorescent",
+      "category": "will-to-win",
+      "parallel": "Mosaic Green Fluorescent",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 20
+    },
+    {
+      "section": "Will to Win Mosaic Orange Fluorescent",
+      "category": "will-to-win",
+      "parallel": "Mosaic Orange Fluorescent",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 20
+    },
+    {
+      "section": "Will to Win Mosaic Pink Fluorescent",
+      "category": "will-to-win",
+      "parallel": "Mosaic Pink Fluorescent",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 20
+    },
+    {
+      "section": "Will to Win Mosaic Reactive Blue",
+      "category": "will-to-win",
+      "parallel": "Mosaic Reactive Blue",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 20
+    },
+    {
+      "section": "Will to Win Mosaic Reactive Yellow",
+      "category": "will-to-win",
+      "parallel": "Mosaic Reactive Yellow",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 20
+    }
+  ],
+  "collisionCheck": {
+    "checkedAt": "2026-09-14",
+    "method": "every row's would-be address (cardNumber, parallel, isAuto, printRun) on the product key, compared across categories — the same test census-catalog-id-collisions.cjs applies, run on the staged file",
+    "clashingAddresses": 777,
+    "verdict": "BLOCKED"
+  },
+  "ingestBlocked": {
+    "clashingAddresses": 777,
+    "unregisteredSubsetKeys": [
+      "autographs-fast-break",
+      "autographs-mosaic",
+      "award-winning-autographs",
+      "bang",
+      "blue-chips",
+      "center-stage",
+      "elevate",
+      "holofame",
+      "introductions",
+      "introductions-mosaic-red",
+      "jam-masters",
+      "men-of-mastery",
+      "montage",
+      "overdrive",
+      "rookie-autographs-mosaic",
+      "rookie-private-signings-association-version",
+      "rookie-scripts",
+      "scripts",
+      "stained-glass",
+      "stare-masters",
+      "straight-fire",
+      "swagger",
+      "will-to-win"
+    ],
+    "blockedReason": "SAME-NUMBERED INSERT SETS. This product's named insert sets each restart their numbering at 1 with their OWN players, so 777 addresses on the product key are claimed by two or more different cards (e.g. base #1 and several inserts' #1). Per lib/insert-set-key.cjs the unit of refusal is the FILE: until each subset key below is registered in productSetKeys.ts AND normalizeSetKey has an anchored rule for it, ingesting this file would let the last writer decide which player each address holds. Nothing here guesses a key — the list is exactly the categories measured to clash.",
+    "awaitingRuling": true
+  }
+}

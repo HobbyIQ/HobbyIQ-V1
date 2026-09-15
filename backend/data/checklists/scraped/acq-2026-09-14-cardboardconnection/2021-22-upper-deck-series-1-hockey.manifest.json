@@ -1,0 +1,568 @@
+{
+  "source": "cardboardconnection-2026-09-14",
+  "sourceUrl": "https://www.cardboardconnection.com/2021-22-upper-deck-series-1-hockey-cards",
+  "xlsxUrl": "https://cconnect.s3.amazonaws.com/wp-content/uploads/2022/02/2021-22-Upper-Deck-Series-1-Hockey-checklist-Excel-spreadsheet.xlsx",
+  "fetchedAt": "2026-09-14",
+  "sport": "hockey",
+  "year": 2021,
+  "setName": "2021-22 Upper Deck Series 1 Hockey",
+  "productKey": "2021-22-upper-deck-series-1-hockey",
+  "setKey": "upper-deck-series-1",
+  "rowCount": 2904,
+  "autoCount": 0,
+  "printRunCount": 1029,
+  "distinctParallels": 21,
+  "parallelColumnAuthoritative": true,
+  "parallelVocabulary": [
+    "Black and White",
+    "Bronze",
+    "Clear Cut",
+    "Dazzlers Green",
+    "Dazzlers Orange",
+    "Dazzlers Pink",
+    "Dazzlers Purple",
+    "Dazzlers Red",
+    "Exclusives",
+    "French",
+    "Gold",
+    "Gold Rainbow",
+    "High Gloss",
+    "Jersey",
+    "Jumbos",
+    "Printing Plates",
+    "Rainbow",
+    "Red",
+    "Red Rainbow",
+    "UD Canvas",
+    "UD Game Patch"
+  ],
+  "sectionsReport": [
+    {
+      "section": "Base Set",
+      "category": "base-set",
+      "parallel": "",
+      "cards": 200,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Base Set - Young Guns",
+      "category": "base-set--young-guns",
+      "parallel": "",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "French Parallel",
+      "category": "base-set",
+      "parallel": "French",
+      "cards": 200,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "French Parallel - Young Guns",
+      "category": "base-set--young-guns",
+      "parallel": "French",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Exclusives Parallel",
+      "category": "base-set",
+      "parallel": "Exclusives",
+      "cards": 200,
+      "auto": 0,
+      "printRun": 200
+    },
+    {
+      "section": "Exclusives Parallel - Young Guns",
+      "category": "base-set--young-guns",
+      "parallel": "Exclusives",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 50
+    },
+    {
+      "section": "High Gloss Parallel",
+      "category": "base-set",
+      "parallel": "High Gloss",
+      "cards": 200,
+      "auto": 0,
+      "printRun": 200
+    },
+    {
+      "section": "High Gloss Parallel - Young Guns",
+      "category": "base-set--young-guns",
+      "parallel": "High Gloss",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 50
+    },
+    {
+      "section": "Clear Cut Parallel",
+      "category": "base-set",
+      "parallel": "Clear Cut",
+      "cards": 200,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Clear Cut Parallel - Young Guns",
+      "category": "base-set--young-guns",
+      "parallel": "Clear Cut",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Jumbos Parallel - Young Guns",
+      "category": "base-set--young-guns",
+      "parallel": "Jumbos",
+      "cards": 14,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "UD Canvas",
+      "category": "ud-canvas",
+      "parallel": "",
+      "cards": 90,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "UD Canvas - Young Guns",
+      "category": "ud-canvas--young-guns",
+      "parallel": "",
+      "cards": 30,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "UD Canvas Printing Plates Parallel",
+      "category": "ud-canvas",
+      "parallel": "Printing Plates",
+      "cards": 90,
+      "auto": 0,
+      "printRun": 90
+    },
+    {
+      "section": "UD Canvas - Young Guns Printing Plates Parallel",
+      "category": "ud-canvas--young-guns-printing-plates-parallel",
+      "parallel": "UD Canvas",
+      "cards": 30,
+      "auto": 0,
+      "printRun": 30
+    },
+    {
+      "section": "1994-95 Rookie Die-Cuts",
+      "category": "1994-95-rookie-die-cuts",
+      "parallel": "",
+      "cards": 10,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "1994-95 Rookie Die-Cuts Red Parallel",
+      "category": "1994-95-rookie-die-cuts",
+      "parallel": "Red",
+      "cards": 10,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "2021-22 Rookie Commemorative Class",
+      "category": "2021-22-rookie-commemorative-class",
+      "parallel": "",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "2021-22 Rookie Commemorative Class Red Parallel",
+      "category": "2021-22-rookie-commemorative-class",
+      "parallel": "Red",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Clear Cut Foundations",
+      "category": "clear-cut-foundations",
+      "parallel": "",
+      "cards": 31,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Clear Cut Honoured Members",
+      "category": "clear-cut-honoured-members",
+      "parallel": "",
+      "cards": 9,
+      "auto": 0,
+      "printRun": 9
+    },
+    {
+      "section": "Clear Cut Leaders",
+      "category": "clear-cut-leaders",
+      "parallel": "",
+      "cards": 6,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Clear Picks",
+      "category": "clear-picks",
+      "parallel": "",
+      "cards": 21,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Day With The Cup Flashbacks",
+      "category": "day-with-the-cup-flashbacks",
+      "parallel": "",
+      "cards": 12,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Day With The Cup Flashbacks - SPs",
+      "category": "day-with-the-cup-flashbacks--sps",
+      "parallel": "",
+      "cards": 6,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Dazzlers Blue",
+      "category": "dazzlers-blue",
+      "parallel": "",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Dazzlers Green Parallel",
+      "category": "dazzlers-blue",
+      "parallel": "Dazzlers Green",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Dazzlers Orange Parallel",
+      "category": "dazzlers-blue",
+      "parallel": "Dazzlers Orange",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Dazzlers Pink Parallel",
+      "category": "dazzlers-blue",
+      "parallel": "Dazzlers Pink",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Dazzlers Purple Parallel",
+      "category": "dazzlers-blue",
+      "parallel": "Dazzlers Purple",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Dazzlers Red Parallel",
+      "category": "dazzlers-blue",
+      "parallel": "Dazzlers Red",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Debut Dates",
+      "category": "debut-dates",
+      "parallel": "",
+      "cards": 25,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Debut Dates Gold Parallel",
+      "category": "debut-dates",
+      "parallel": "Gold",
+      "cards": 25,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Debut Dates Printing Plates Parallel",
+      "category": "debut-dates",
+      "parallel": "Printing Plates",
+      "cards": 25,
+      "auto": 0,
+      "printRun": 25
+    },
+    {
+      "section": "Debut Dates Jersey Parallel",
+      "category": "debut-dates",
+      "parallel": "Jersey",
+      "cards": 22,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Electromagnetic",
+      "category": "electromagnetic",
+      "parallel": "",
+      "cards": 30,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Electromagnetic Gold Parallel",
+      "category": "electromagnetic",
+      "parallel": "Gold",
+      "cards": 30,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Electromagnetic Printing Plates Parallel",
+      "category": "electromagnetic",
+      "parallel": "Printing Plates",
+      "cards": 30,
+      "auto": 0,
+      "printRun": 30
+    },
+    {
+      "section": "Honor Roll",
+      "category": "honor-roll",
+      "parallel": "",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Honor Roll Rainbow Parallel",
+      "category": "honor-roll",
+      "parallel": "Rainbow",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 50
+    },
+    {
+      "section": "Honor Roll Gold Rainbow Parallel",
+      "category": "honor-roll",
+      "parallel": "Gold Rainbow",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 50
+    },
+    {
+      "section": "Honor Roll Red Rainbow Parallel",
+      "category": "honor-roll",
+      "parallel": "Red Rainbow",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Honor Roll Printing Plates Parallel",
+      "category": "honor-roll",
+      "parallel": "Printing Plates",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 50
+    },
+    {
+      "section": "Hundo P",
+      "category": "hundo-p",
+      "parallel": "",
+      "cards": 25,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Hundo P Gold Parallel",
+      "category": "hundo-p",
+      "parallel": "Gold",
+      "cards": 25,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Hundo P Printing Plates Parallel",
+      "category": "hundo-p",
+      "parallel": "Printing Plates",
+      "cards": 25,
+      "auto": 0,
+      "printRun": 25
+    },
+    {
+      "section": "O-Pee-Chee Glossy",
+      "category": "o-pee-chee-glossy",
+      "parallel": "",
+      "cards": 10,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "O-Pee-Chee Glossy Bronze Parallel",
+      "category": "o-pee-chee-glossy",
+      "parallel": "Bronze",
+      "cards": 10,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "O-Pee-Chee Glossy Gold Parallel",
+      "category": "o-pee-chee-glossy",
+      "parallel": "Gold",
+      "cards": 10,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Rookie Retrospective",
+      "category": "rookie-retrospective",
+      "parallel": "",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Rookie Retrospective Gold Parallel",
+      "category": "rookie-retrospective",
+      "parallel": "Gold",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Rookie Retrospective Printing Plates Parallel",
+      "category": "rookie-retrospective",
+      "parallel": "Printing Plates",
+      "cards": 20,
+      "auto": 0,
+      "printRun": 20
+    },
+    {
+      "section": "Rookie Retrospective Jersey Parallel",
+      "category": "rookie-retrospective",
+      "parallel": "Jersey",
+      "cards": 17,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Sophomore Sensations",
+      "category": "sophomore-sensations",
+      "parallel": "",
+      "cards": 6,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Team Triples",
+      "category": "team-triples",
+      "parallel": "",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "Team Triples Gold Parallel",
+      "category": "team-triples",
+      "parallel": "Gold",
+      "cards": 15,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "UD Game Jersey",
+      "category": "ud-game-jersey",
+      "parallel": "",
+      "cards": 70,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "UD Game Patch Parallel",
+      "category": "ud-game-jersey",
+      "parallel": "UD Game Patch",
+      "cards": 70,
+      "auto": 0,
+      "printRun": 70
+    },
+    {
+      "section": "UD Portraits",
+      "category": "ud-portraits",
+      "parallel": "",
+      "cards": 30,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "UD Portraits - Rookies",
+      "category": "ud-portraits--rookies",
+      "parallel": "",
+      "cards": 10,
+      "auto": 0,
+      "printRun": 0
+    },
+    {
+      "section": "UD Portraits Black and White Parallel",
+      "category": "ud-portraits",
+      "parallel": "Black and White",
+      "cards": 30,
+      "auto": 0,
+      "printRun": 30
+    },
+    {
+      "section": "UD Portraits Black and White Parallel - Rookies",
+      "category": "ud-portraits--rookies",
+      "parallel": "Black and White",
+      "cards": 10,
+      "auto": 0,
+      "printRun": 10
+    },
+    {
+      "section": "UD Portraits Printing Plates Parallel",
+      "category": "ud-portraits",
+      "parallel": "Printing Plates",
+      "cards": 30,
+      "auto": 0,
+      "printRun": 30
+    },
+    {
+      "section": "UD Portraits Printing Plates Parallel - Rookies",
+      "category": "ud-portraits--rookies",
+      "parallel": "Printing Plates",
+      "cards": 10,
+      "auto": 0,
+      "printRun": 10
+    },
+    {
+      "section": "Work Zone",
+      "category": "work-zone",
+      "parallel": "",
+      "cards": 50,
+      "auto": 0,
+      "printRun": 0
+    }
+  ],
+  "ingestBlocked": null,
+  "collisionCheck": {
+    "clashingAddresses": 0,
+    "verdict": "pass",
+    "checkedAt": "2026-09-14",
+    "note": "every row computes a distinct id on the product key; no subset registration needed."
+  }
+}

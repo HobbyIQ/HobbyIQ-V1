@@ -1,0 +1,2905 @@
+category,cardNumber,parallel,isAuto,printRun,player
+base-set,1,,false,,Nicolas Deslauriers
+base-set,2,,false,,Cam Fowler
+base-set,3,,false,,John Gibson
+base-set,4,,false,,Adam Henrique
+base-set,5,,false,,Jakob Silfverberg
+base-set,6,,false,,Troy Terry
+base-set,7,,false,,Michael Bunting
+base-set,8,,false,,Jakob Chychrun
+base-set,9,,false,,Oliver Ekman-Larsson
+base-set,10,,false,,Niklas Hjalmarsson
+base-set,11,,false,,Clayton Keller
+base-set,12,,false,,Nick Schmaltz
+base-set,13,,false,,Patrice Bergeron
+base-set,14,,false,,Charlie Coyle
+base-set,15,,false,,Jake DeBrusk
+base-set,16,,false,,Matt Grzelcyk
+base-set,17,,false,,Brad Marchand
+base-set,18,,false,,Charlie McAvoy
+base-set,19,,false,,Craig Smith
+base-set,20,,false,,Dylan Cozens
+base-set,21,,false,,Rasmus Dahlin
+base-set,22,,false,,Jack Eichel
+base-set,23,,false,,Rasmus Ristolainen
+base-set,24,,false,,Jeff Skinner
+base-set,25,,false,,Tage Thompson
+base-set,26,,false,,Rasmus Andersson
+base-set,27,,false,,Johnny Gaudreau
+base-set,28,,false,,Noah Hanifin
+base-set,29,,false,,Milan Lucic
+base-set,30,,false,,Sean Monahan
+base-set,31,,false,,Matthew Tkachuk
+base-set,32,,false,,Sebastian Aho
+base-set,33,,false,,Martin Necas
+base-set,34,,false,,Alex Nedeljkovic
+base-set,35,,false,,Brett Pesce
+base-set,36,,false,,Jaccob Slavin
+base-set,37,,false,,Jordan Staal
+base-set,38,,false,,Adam Boqvist
+base-set,39,,false,,Alex DeBrincat
+base-set,40,,false,,Duncan Keith
+base-set,41,,false,,Dominik Kubalik
+base-set,42,,false,,Philipp Kurashev
+base-set,43,,false,,Kevin Lankinen
+base-set,44,,false,,Dylan Strome
+base-set,45,,false,,J.T. Compher
+base-set,46,,false,,Joonas Donskoi
+base-set,47,,false,,Samuel Girard
+base-set,48,,false,,Nazem Kadri
+base-set,49,,false,,Gabriel Landeskog
+base-set,50,,false,,Cale Makar
+base-set,51,,false,,Devon Toews
+base-set,52,,false,,Max Domi
+base-set,53,,false,,Seth Jones
+base-set,54,,false,,Elvis Merzlikins
+base-set,55,,false,,Eric Robinson
+base-set,56,,false,,Jack Roslovic
+base-set,57,,false,,Zach Werenski
+base-set,58,,false,,Miro Heiskanen
+base-set,59,,false,,Denis Gurianov
+base-set,60,,false,,Anton Khudobin
+base-set,61,,false,,Alexander Radulov
+base-set,62,,false,,Jason Robertson
+base-set,63,,false,,Tyler Seguin
+base-set,64,,false,,Danny DeKeyser
+base-set,65,,false,,Thomas Greiss
+base-set,66,,false,,Vladislav Namestnikov
+base-set,67,,false,,Richard Panik
+base-set,68,,false,,Jakub Vrana
+base-set,69,,false,,Filip Zadina
+base-set,70,,false,,Josh Archibald
+base-set,71,,false,,Ethan Bear
+base-set,72,,false,,Mikko Koskinen
+base-set,73,,false,,Connor McDavid
+base-set,74,,false,,Darnell Nurse
+base-set,75,,false,,Jesse Puljujarvi
+base-set,76,,false,,Sergei Bobrovsky
+base-set,77,,false,,Patric Hornqvist
+base-set,78,,false,,Jonathan Huberdeau
+base-set,79,,false,,Carter Verhaeghe
+base-set,80,,false,,MacKenzie Weegar
+base-set,81,,false,,Keith Yandle
+base-set,82,,false,,Drew Doughty
+base-set,83,,false,,Alex Iafallo
+base-set,84,,false,,Adrian Kempe
+base-set,85,,false,,Trevor Moore
+base-set,86,,false,,Cal Petersen
+base-set,87,,false,,Sean Walker
+base-set,88,,false,,Marcus Foligno
+base-set,89,,false,,Jordan Greenway
+base-set,90,,false,,Kirill Kaprizov
+base-set,91,,false,,Zach Parise
+base-set,92,,false,,Jared Spurgeon
+base-set,93,,false,,Mats Zuccarello
+base-set,94,,false,,Jake Allen
+base-set,95,,false,,Josh Anderson
+base-set,96,,false,,Joel Edmundson
+base-set,97,,false,,Brendan Gallagher
+base-set,98,,false,,Jeff Petry
+base-set,99,,false,,Tyler Toffoli
+base-set,100,,false,,Shea Weber
+base-set,101,,false,,Viktor Arvidsson
+base-set,102,,false,,Mattias Ekholm
+base-set,103,,false,,Filip Forsberg
+base-set,104,,false,,Roman Josi
+base-set,105,,false,,Juuse Saros
+base-set,106,,false,,Eeli Tolvanen
+base-set,107,,false,,Mackenzie Blackwood
+base-set,108,,false,,Jesper Bratt
+base-set,109,,false,,Nico Hischier
+base-set,110,,false,,Jack Hughes
+base-set,111,,false,,Ty Smith
+base-set,112,,false,,Miles Wood
+base-set,113,,false,,Josh Bailey
+base-set,114,,false,,Jordan Eberle
+base-set,115,,false,,Nick Leddy
+base-set,116,,false,,Anders Lee
+base-set,117,,false,,Jean-Gabriel Pageau
+base-set,118,,false,,Ryan Pulock
+base-set,119,,false,,Semyon Varlamov
+base-set,120,,false,,Adam Fox
+base-set,121,,false,,Kaapo Kakko
+base-set,122,,false,,Chris Kreider
+base-set,123,,false,,Alexis Lafreniere
+base-set,124,,false,,K'Andre Miller
+base-set,125,,false,,Artemi Panarin
+base-set,126,,false,,Jacob Trouba
+base-set,127,,false,,Thomas Chabot
+base-set,128,,false,,Evgenii Dadonov
+base-set,129,,false,,Josh Norris
+base-set,130,,false,,Tim Stutzle
+base-set,131,,false,,Chris Tierney
+base-set,132,,false,,Colin White
+base-set,133,,false,,Joel Farabee
+base-set,134,,false,,Claude Giroux
+base-set,135,,false,,Carter Hart
+base-set,136,,false,,Kevin Hayes
+base-set,137,,false,,Travis Konecny
+base-set,138,,false,,Oskar Lindblom
+base-set,139,,false,,Jakub Voracek
+base-set,140,,false,,Jeff Carter
+base-set,141,,false,,Sidney Crosby
+base-set,142,,false,,Jake Guentzel
+base-set,143,,false,,Tristan Jarry
+base-set,144,,false,,Kasperi Kapanen
+base-set,145,,false,,Jared McCann
+base-set,146,,false,,Jason Zucker
+base-set,147,,false,,Brent Burns
+base-set,148,,false,,Mario Ferraro
+base-set,149,,false,,Tomas Hertl
+base-set,150,,false,,Martin Jones
+base-set,151,,false,,Kevin Labanc
+base-set,152,,false,,Timo Meier
+base-set,153,,false,,Jordan Binnington
+base-set,154,,false,,Justin Faulk
+base-set,155,,false,,Torey Krug
+base-set,156,,false,,David Perron
+base-set,157,,false,,Brayden Schenn
+base-set,158,,false,,Vladimir Tarasenko
+base-set,159,,false,,Anthony Cirelli
+base-set,160,,false,,Yanni Gourde
+base-set,161,,false,,Victor Hedman
+base-set,162,,false,,Tyler Johnson
+base-set,163,,false,,Ondrej Palat
+base-set,164,,false,,Mikhail Sergachev
+base-set,165,,false,,Andrei Vasilevskiy
+base-set,166,,false,,T.J. Brodie
+base-set,167,,false,,Jack Campbell
+base-set,168,,false,,Justin Holl
+base-set,169,,false,,Alex Kerfoot
+base-set,170,,false,,William Nylander
+base-set,171,,false,,Morgan Rielly
+base-set,172,,false,,John Tavares
+base-set,173,,false,,Thatcher Demko
+base-set,174,,false,,Nils Hoglander
+base-set,175,,false,,Bo Horvat
+base-set,176,,false,,J.T. Miller
+base-set,177,,false,,Tyler Myers
+base-set,178,,false,,Tanner Pearson
+base-set,179,,false,,Elias Pettersson
+base-set,180,,false,,Marc-Andre Fleury
+base-set,181,,false,,Nicolas Hague
+base-set,182,,false,,William Karlsson
+base-set,183,,false,,Jonathan Marchessault
+base-set,184,,false,,Reilly Smith
+base-set,185,,false,,Chandler Stephenson
+base-set,186,,false,,Shea Theodore
+base-set,187,,false,,Nicklas Backstrom
+base-set,188,,false,,John Carlson
+base-set,189,,false,,Lars Eller
+base-set,190,,false,,Evgeny Kuznetsov
+base-set,191,,false,,Justin Schultz
+base-set,192,,false,,Vitek Vanecek
+base-set,193,,false,,Dylan DeMelo
+base-set,194,,false,,Pierre-Luc Dubois
+base-set,195,,false,,Adam Lowry
+base-set,196,,false,,Josh Morrissey
+base-set,197,,false,,Mark Scheifele
+base-set,198,,false,,Blake Wheeler
+base-set,199,,false,,Jason Robertson/Kirill Kaprizov CL
+base-set,200,,false,,Jack Hughes/Alexis Lafreniere CL
+base-set--young-guns,201,,false,,Cole Caufield RC
+base-set--young-guns,202,,false,,Ukko-Pekka Luukkonen RC
+base-set--young-guns,203,,false,,Olle Alsing RC
+base-set--young-guns,204,,false,,Dakota Joshua RC
+base-set--young-guns,205,,false,,Jamie Drysdale RC
+base-set--young-guns,206,,false,,Kyle Burroughs RC
+base-set--young-guns,207,,false,,Tarmo Reunanen RC
+base-set--young-guns,208,,false,,Mike Hardman RC
+base-set--young-guns,209,,false,,Wade Allison RC
+base-set--young-guns,210,,false,,Marian Studenic RC
+base-set--young-guns,211,,false,,Keaton Middleton RC
+base-set--young-guns,212,,false,,Joe Veleno RC
+base-set--young-guns,213,,false,,Wyatt Kalynuk RC
+base-set--young-guns,214,,false,,Garrett Pilon RC
+base-set--young-guns,215,,false,,Morgan Barron RC
+base-set--young-guns,216,,false,,Radim Zohorna RC
+base-set--young-guns,217,,false,,Jack Ahcan RC
+base-set--young-guns,218,,false,,Joshua Dunne RC
+base-set--young-guns,219,,false,,Logan Thompson RC
+base-set--young-guns,220,,false,,Brinson Pasichnuk RC
+base-set--young-guns,221,,false,,Arttu Ruotsalainen RC
+base-set--young-guns,222,,false,,Tanner Jeannot RC
+base-set--young-guns,223,,false,,Spencer Knight RC
+base-set--young-guns,224,,false,,Ross Colton RC
+base-set--young-guns,225,,false,,Filip Gustavsson RC
+base-set--young-guns,226,,false,,Jeremy Swayman RC
+base-set--young-guns,227,,false,,Calen Addison RC
+base-set--young-guns,228,,false,,Simon Benoit RC
+base-set--young-guns,229,,false,,Daniel Walcott RC
+base-set--young-guns,230,,false,,Mattias Samuelsson RC
+base-set--young-guns,231,,false,,Zac Jones RC
+base-set--young-guns,232,,false,,Trevor Zegras RC
+base-set--young-guns,233,,false,,Jeffrey Viel RC
+base-set--young-guns,234,,false,,Lane Pederson RC
+base-set--young-guns,235,,false,,Marc Michaelis RC
+base-set--young-guns,236,,false,,Tanner Laczynski RC
+base-set--young-guns,237,,false,,Jeremy Davies RC
+base-set--young-guns,238,,false,,Jackson Cates RC
+base-set--young-guns,239,,false,,Tyce Thompson RC
+base-set--young-guns,240,,false,,Parker Kelly RC
+base-set--young-guns,241,,false,,Alex Barre-Boulet RC
+base-set--young-guns,242,,false,,Rasmus Kupari RC
+base-set--young-guns,243,,false,,Cam York RC
+base-set--young-guns,244,,false,,Matt Kiersted RC
+base-set--young-guns,245,,false,,Michael Houser RC
+base-set--young-guns,246,,false,,Shane Pinto RC
+base-set--young-guns,247,,false,,Kole Lind RC
+base-set--young-guns,248,,false,,Jacob Bryson RC
+base-set--young-guns,249,,false,,Joey Keane RC
+base-set--young-guns,250,,false,,Cole Caufield/Trevor Zegras CL RC
+base-set,1,French,false,,Nicolas Deslauriers
+base-set,2,French,false,,Cam Fowler
+base-set,3,French,false,,John Gibson
+base-set,4,French,false,,Adam Henrique
+base-set,5,French,false,,Jakob Silfverberg
+base-set,6,French,false,,Troy Terry
+base-set,7,French,false,,Michael Bunting
+base-set,8,French,false,,Jakob Chychrun
+base-set,9,French,false,,Oliver Ekman-Larsson
+base-set,10,French,false,,Niklas Hjalmarsson
+base-set,11,French,false,,Clayton Keller
+base-set,12,French,false,,Nick Schmaltz
+base-set,13,French,false,,Patrice Bergeron
+base-set,14,French,false,,Charlie Coyle
+base-set,15,French,false,,Jake DeBrusk
+base-set,16,French,false,,Matt Grzelcyk
+base-set,17,French,false,,Brad Marchand
+base-set,18,French,false,,Charlie McAvoy
+base-set,19,French,false,,Craig Smith
+base-set,20,French,false,,Dylan Cozens
+base-set,21,French,false,,Rasmus Dahlin
+base-set,22,French,false,,Jack Eichel
+base-set,23,French,false,,Rasmus Ristolainen
+base-set,24,French,false,,Jeff Skinner
+base-set,25,French,false,,Tage Thompson
+base-set,26,French,false,,Rasmus Andersson
+base-set,27,French,false,,Johnny Gaudreau
+base-set,28,French,false,,Noah Hanifin
+base-set,29,French,false,,Milan Lucic
+base-set,30,French,false,,Sean Monahan
+base-set,31,French,false,,Matthew Tkachuk
+base-set,32,French,false,,Sebastian Aho
+base-set,33,French,false,,Martin Necas
+base-set,34,French,false,,Alex Nedeljkovic
+base-set,35,French,false,,Brett Pesce
+base-set,36,French,false,,Jaccob Slavin
+base-set,37,French,false,,Jordan Staal
+base-set,38,French,false,,Adam Boqvist
+base-set,39,French,false,,Alex DeBrincat
+base-set,40,French,false,,Duncan Keith
+base-set,41,French,false,,Dominik Kubalik
+base-set,42,French,false,,Philipp Kurashev
+base-set,43,French,false,,Kevin Lankinen
+base-set,44,French,false,,Dylan Strome
+base-set,45,French,false,,J.T. Compher
+base-set,46,French,false,,Joonas Donskoi
+base-set,47,French,false,,Samuel Girard
+base-set,48,French,false,,Nazem Kadri
+base-set,49,French,false,,Gabriel Landeskog
+base-set,50,French,false,,Cale Makar
+base-set,51,French,false,,Devon Toews
+base-set,52,French,false,,Max Domi
+base-set,53,French,false,,Seth Jones
+base-set,54,French,false,,Elvis Merzlikins
+base-set,55,French,false,,Eric Robinson
+base-set,56,French,false,,Jack Roslovic
+base-set,57,French,false,,Zach Werenski
+base-set,58,French,false,,Miro Heiskanen
+base-set,59,French,false,,Denis Gurianov
+base-set,60,French,false,,Anton Khudobin
+base-set,61,French,false,,Alexander Radulov
+base-set,62,French,false,,Jason Robertson
+base-set,63,French,false,,Tyler Seguin
+base-set,64,French,false,,Danny DeKeyser
+base-set,65,French,false,,Thomas Greiss
+base-set,66,French,false,,Vladislav Namestnikov
+base-set,67,French,false,,Richard Panik
+base-set,68,French,false,,Jakub Vrana
+base-set,69,French,false,,Filip Zadina
+base-set,70,French,false,,Josh Archibald
+base-set,71,French,false,,Ethan Bear
+base-set,72,French,false,,Mikko Koskinen
+base-set,73,French,false,,Connor McDavid
+base-set,74,French,false,,Darnell Nurse
+base-set,75,French,false,,Jesse Puljujarvi
+base-set,76,French,false,,Sergei Bobrovsky
+base-set,77,French,false,,Patric Hornqvist
+base-set,78,French,false,,Jonathan Huberdeau
+base-set,79,French,false,,Carter Verhaeghe
+base-set,80,French,false,,MacKenzie Weegar
+base-set,81,French,false,,Keith Yandle
+base-set,82,French,false,,Drew Doughty
+base-set,83,French,false,,Alex Iafallo
+base-set,84,French,false,,Adrian Kempe
+base-set,85,French,false,,Trevor Moore
+base-set,86,French,false,,Cal Petersen
+base-set,87,French,false,,Sean Walker
+base-set,88,French,false,,Marcus Foligno
+base-set,89,French,false,,Jordan Greenway
+base-set,90,French,false,,Kirill Kaprizov
+base-set,91,French,false,,Zach Parise
+base-set,92,French,false,,Jared Spurgeon
+base-set,93,French,false,,Mats Zuccarello
+base-set,94,French,false,,Jake Allen
+base-set,95,French,false,,Josh Anderson
+base-set,96,French,false,,Joel Edmundson
+base-set,97,French,false,,Brendan Gallagher
+base-set,98,French,false,,Jeff Petry
+base-set,99,French,false,,Tyler Toffoli
+base-set,100,French,false,,Shea Weber
+base-set,101,French,false,,Viktor Arvidsson
+base-set,102,French,false,,Mattias Ekholm
+base-set,103,French,false,,Filip Forsberg
+base-set,104,French,false,,Roman Josi
+base-set,105,French,false,,Juuse Saros
+base-set,106,French,false,,Eeli Tolvanen
+base-set,107,French,false,,Mackenzie Blackwood
+base-set,108,French,false,,Jesper Bratt
+base-set,109,French,false,,Nico Hischier
+base-set,110,French,false,,Jack Hughes
+base-set,111,French,false,,Ty Smith
+base-set,112,French,false,,Miles Wood
+base-set,113,French,false,,Josh Bailey
+base-set,114,French,false,,Jordan Eberle
+base-set,115,French,false,,Nick Leddy
+base-set,116,French,false,,Anders Lee
+base-set,117,French,false,,Jean-Gabriel Pageau
+base-set,118,French,false,,Ryan Pulock
+base-set,119,French,false,,Semyon Varlamov
+base-set,120,French,false,,Adam Fox
+base-set,121,French,false,,Kaapo Kakko
+base-set,122,French,false,,Chris Kreider
+base-set,123,French,false,,Alexis Lafreniere
+base-set,124,French,false,,K'Andre Miller
+base-set,125,French,false,,Artemi Panarin
+base-set,126,French,false,,Jacob Trouba
+base-set,127,French,false,,Thomas Chabot
+base-set,128,French,false,,Evgenii Dadonov
+base-set,129,French,false,,Josh Norris
+base-set,130,French,false,,Tim Stutzle
+base-set,131,French,false,,Chris Tierney
+base-set,132,French,false,,Colin White
+base-set,133,French,false,,Joel Farabee
+base-set,134,French,false,,Claude Giroux
+base-set,135,French,false,,Carter Hart
+base-set,136,French,false,,Kevin Hayes
+base-set,137,French,false,,Travis Konecny
+base-set,138,French,false,,Oskar Lindblom
+base-set,139,French,false,,Jakub Voracek
+base-set,140,French,false,,Jeff Carter
+base-set,141,French,false,,Sidney Crosby
+base-set,142,French,false,,Jake Guentzel
+base-set,143,French,false,,Tristan Jarry
+base-set,144,French,false,,Kasperi Kapanen
+base-set,145,French,false,,Jared McCann
+base-set,146,French,false,,Jason Zucker
+base-set,147,French,false,,Brent Burns
+base-set,148,French,false,,Mario Ferraro
+base-set,149,French,false,,Tomas Hertl
+base-set,150,French,false,,Martin Jones
+base-set,151,French,false,,Kevin Labanc
+base-set,152,French,false,,Timo Meier
+base-set,153,French,false,,Jordan Binnington
+base-set,154,French,false,,Justin Faulk
+base-set,155,French,false,,Torey Krug
+base-set,156,French,false,,David Perron
+base-set,157,French,false,,Brayden Schenn
+base-set,158,French,false,,Vladimir Tarasenko
+base-set,159,French,false,,Anthony Cirelli
+base-set,160,French,false,,Yanni Gourde
+base-set,161,French,false,,Victor Hedman
+base-set,162,French,false,,Tyler Johnson
+base-set,163,French,false,,Ondrej Palat
+base-set,164,French,false,,Mikhail Sergachev
+base-set,165,French,false,,Andrei Vasilevskiy
+base-set,166,French,false,,T.J. Brodie
+base-set,167,French,false,,Jack Campbell
+base-set,168,French,false,,Justin Holl
+base-set,169,French,false,,Alex Kerfoot
+base-set,170,French,false,,William Nylander
+base-set,171,French,false,,Morgan Rielly
+base-set,172,French,false,,John Tavares
+base-set,173,French,false,,Thatcher Demko
+base-set,174,French,false,,Nils Hoglander
+base-set,175,French,false,,Bo Horvat
+base-set,176,French,false,,J.T. Miller
+base-set,177,French,false,,Tyler Myers
+base-set,178,French,false,,Tanner Pearson
+base-set,179,French,false,,Elias Pettersson
+base-set,180,French,false,,Marc-Andre Fleury
+base-set,181,French,false,,Nicolas Hague
+base-set,182,French,false,,William Karlsson
+base-set,183,French,false,,Jonathan Marchessault
+base-set,184,French,false,,Reilly Smith
+base-set,185,French,false,,Chandler Stephenson
+base-set,186,French,false,,Shea Theodore
+base-set,187,French,false,,Nicklas Backstrom
+base-set,188,French,false,,John Carlson
+base-set,189,French,false,,Lars Eller
+base-set,190,French,false,,Evgeny Kuznetsov
+base-set,191,French,false,,Justin Schultz
+base-set,192,French,false,,Vitek Vanecek
+base-set,193,French,false,,Dylan DeMelo
+base-set,194,French,false,,Pierre-Luc Dubois
+base-set,195,French,false,,Adam Lowry
+base-set,196,French,false,,Josh Morrissey
+base-set,197,French,false,,Mark Scheifele
+base-set,198,French,false,,Blake Wheeler
+base-set,199,French,false,,Jason Robertson/Kirill Kaprizov CL
+base-set,200,French,false,,Jack Hughes/Alexis Lafreniere CL
+base-set--young-guns,201,French,false,,Cole Caufield RC
+base-set--young-guns,202,French,false,,Ukko-Pekka Luukkonen RC
+base-set--young-guns,203,French,false,,Olle Alsing RC
+base-set--young-guns,204,French,false,,Dakota Joshua RC
+base-set--young-guns,205,French,false,,Jamie Drysdale RC
+base-set--young-guns,206,French,false,,Kyle Burroughs RC
+base-set--young-guns,207,French,false,,Tarmo Reunanen RC
+base-set--young-guns,208,French,false,,Mike Hardman RC
+base-set--young-guns,209,French,false,,Wade Allison RC
+base-set--young-guns,210,French,false,,Marian Studenic RC
+base-set--young-guns,211,French,false,,Keaton Middleton RC
+base-set--young-guns,212,French,false,,Joe Veleno RC
+base-set--young-guns,213,French,false,,Wyatt Kalynuk RC
+base-set--young-guns,214,French,false,,Garrett Pilon RC
+base-set--young-guns,215,French,false,,Morgan Barron RC
+base-set--young-guns,216,French,false,,Radim Zohorna RC
+base-set--young-guns,217,French,false,,Jack Ahcan RC
+base-set--young-guns,218,French,false,,Joshua Dunne RC
+base-set--young-guns,219,French,false,,Logan Thompson RC
+base-set--young-guns,220,French,false,,Brinson Pasichnuk RC
+base-set--young-guns,221,French,false,,Arttu Ruotsalainen RC
+base-set--young-guns,222,French,false,,Tanner Jeannot RC
+base-set--young-guns,223,French,false,,Spencer Knight RC
+base-set--young-guns,224,French,false,,Ross Colton RC
+base-set--young-guns,225,French,false,,Filip Gustavsson RC
+base-set--young-guns,226,French,false,,Jeremy Swayman RC
+base-set--young-guns,227,French,false,,Calen Addison RC
+base-set--young-guns,228,French,false,,Simon Benoit RC
+base-set--young-guns,229,French,false,,Daniel Walcott RC
+base-set--young-guns,230,French,false,,Mattias Samuelsson RC
+base-set--young-guns,231,French,false,,Zac Jones RC
+base-set--young-guns,232,French,false,,Trevor Zegras RC
+base-set--young-guns,233,French,false,,Jeffrey Viel RC
+base-set--young-guns,234,French,false,,Lane Pederson RC
+base-set--young-guns,235,French,false,,Marc Michaelis RC
+base-set--young-guns,236,French,false,,Tanner Laczynski RC
+base-set--young-guns,237,French,false,,Jeremy Davies RC
+base-set--young-guns,238,French,false,,Jackson Cates RC
+base-set--young-guns,239,French,false,,Tyce Thompson RC
+base-set--young-guns,240,French,false,,Parker Kelly RC
+base-set--young-guns,241,French,false,,Alex Barre-Boulet RC
+base-set--young-guns,242,French,false,,Rasmus Kupari RC
+base-set--young-guns,243,French,false,,Cam York RC
+base-set--young-guns,244,French,false,,Matt Kiersted RC
+base-set--young-guns,245,French,false,,Michael Houser RC
+base-set--young-guns,246,French,false,,Shane Pinto RC
+base-set--young-guns,247,French,false,,Kole Lind RC
+base-set--young-guns,248,French,false,,Jacob Bryson RC
+base-set--young-guns,249,French,false,,Joey Keane RC
+base-set--young-guns,250,French,false,,Cole Caufield/Trevor Zegras CL RC
+base-set,1,Exclusives,false,/100,Nicolas Deslauriers
+base-set,2,Exclusives,false,/100,Cam Fowler
+base-set,3,Exclusives,false,/100,John Gibson
+base-set,4,Exclusives,false,/100,Adam Henrique
+base-set,5,Exclusives,false,/100,Jakob Silfverberg
+base-set,6,Exclusives,false,/100,Troy Terry
+base-set,7,Exclusives,false,/100,Michael Bunting
+base-set,8,Exclusives,false,/100,Jakob Chychrun
+base-set,9,Exclusives,false,/100,Oliver Ekman-Larsson
+base-set,10,Exclusives,false,/100,Niklas Hjalmarsson
+base-set,11,Exclusives,false,/100,Clayton Keller
+base-set,12,Exclusives,false,/100,Nick Schmaltz
+base-set,13,Exclusives,false,/100,Patrice Bergeron
+base-set,14,Exclusives,false,/100,Charlie Coyle
+base-set,15,Exclusives,false,/100,Jake DeBrusk
+base-set,16,Exclusives,false,/100,Matt Grzelcyk
+base-set,17,Exclusives,false,/100,Brad Marchand
+base-set,18,Exclusives,false,/100,Charlie McAvoy
+base-set,19,Exclusives,false,/100,Craig Smith
+base-set,20,Exclusives,false,/100,Dylan Cozens
+base-set,21,Exclusives,false,/100,Rasmus Dahlin
+base-set,22,Exclusives,false,/100,Jack Eichel
+base-set,23,Exclusives,false,/100,Rasmus Ristolainen
+base-set,24,Exclusives,false,/100,Jeff Skinner
+base-set,25,Exclusives,false,/100,Tage Thompson
+base-set,26,Exclusives,false,/100,Rasmus Andersson
+base-set,27,Exclusives,false,/100,Johnny Gaudreau
+base-set,28,Exclusives,false,/100,Noah Hanifin
+base-set,29,Exclusives,false,/100,Milan Lucic
+base-set,30,Exclusives,false,/100,Sean Monahan
+base-set,31,Exclusives,false,/100,Matthew Tkachuk
+base-set,32,Exclusives,false,/100,Sebastian Aho
+base-set,33,Exclusives,false,/100,Martin Necas
+base-set,34,Exclusives,false,/100,Alex Nedeljkovic
+base-set,35,Exclusives,false,/100,Brett Pesce
+base-set,36,Exclusives,false,/100,Jaccob Slavin
+base-set,37,Exclusives,false,/100,Jordan Staal
+base-set,38,Exclusives,false,/100,Adam Boqvist
+base-set,39,Exclusives,false,/100,Alex DeBrincat
+base-set,40,Exclusives,false,/100,Duncan Keith
+base-set,41,Exclusives,false,/100,Dominik Kubalik
+base-set,42,Exclusives,false,/100,Philipp Kurashev
+base-set,43,Exclusives,false,/100,Kevin Lankinen
+base-set,44,Exclusives,false,/100,Dylan Strome
+base-set,45,Exclusives,false,/100,J.T. Compher
+base-set,46,Exclusives,false,/100,Joonas Donskoi
+base-set,47,Exclusives,false,/100,Samuel Girard
+base-set,48,Exclusives,false,/100,Nazem Kadri
+base-set,49,Exclusives,false,/100,Gabriel Landeskog
+base-set,50,Exclusives,false,/100,Cale Makar
+base-set,51,Exclusives,false,/100,Devon Toews
+base-set,52,Exclusives,false,/100,Max Domi
+base-set,53,Exclusives,false,/100,Seth Jones
+base-set,54,Exclusives,false,/100,Elvis Merzlikins
+base-set,55,Exclusives,false,/100,Eric Robinson
+base-set,56,Exclusives,false,/100,Jack Roslovic
+base-set,57,Exclusives,false,/100,Zach Werenski
+base-set,58,Exclusives,false,/100,Miro Heiskanen
+base-set,59,Exclusives,false,/100,Denis Gurianov
+base-set,60,Exclusives,false,/100,Anton Khudobin
+base-set,61,Exclusives,false,/100,Alexander Radulov
+base-set,62,Exclusives,false,/100,Jason Robertson
+base-set,63,Exclusives,false,/100,Tyler Seguin
+base-set,64,Exclusives,false,/100,Danny DeKeyser
+base-set,65,Exclusives,false,/100,Thomas Greiss
+base-set,66,Exclusives,false,/100,Vladislav Namestnikov
+base-set,67,Exclusives,false,/100,Richard Panik
+base-set,68,Exclusives,false,/100,Jakub Vrana
+base-set,69,Exclusives,false,/100,Filip Zadina
+base-set,70,Exclusives,false,/100,Josh Archibald
+base-set,71,Exclusives,false,/100,Ethan Bear
+base-set,72,Exclusives,false,/100,Mikko Koskinen
+base-set,73,Exclusives,false,/100,Connor McDavid
+base-set,74,Exclusives,false,/100,Darnell Nurse
+base-set,75,Exclusives,false,/100,Jesse Puljujarvi
+base-set,76,Exclusives,false,/100,Sergei Bobrovsky
+base-set,77,Exclusives,false,/100,Patric Hornqvist
+base-set,78,Exclusives,false,/100,Jonathan Huberdeau
+base-set,79,Exclusives,false,/100,Carter Verhaeghe
+base-set,80,Exclusives,false,/100,MacKenzie Weegar
+base-set,81,Exclusives,false,/100,Keith Yandle
+base-set,82,Exclusives,false,/100,Drew Doughty
+base-set,83,Exclusives,false,/100,Alex Iafallo
+base-set,84,Exclusives,false,/100,Adrian Kempe
+base-set,85,Exclusives,false,/100,Trevor Moore
+base-set,86,Exclusives,false,/100,Cal Petersen
+base-set,87,Exclusives,false,/100,Sean Walker
+base-set,88,Exclusives,false,/100,Marcus Foligno
+base-set,89,Exclusives,false,/100,Jordan Greenway
+base-set,90,Exclusives,false,/100,Kirill Kaprizov
+base-set,91,Exclusives,false,/100,Zach Parise
+base-set,92,Exclusives,false,/100,Jared Spurgeon
+base-set,93,Exclusives,false,/100,Mats Zuccarello
+base-set,94,Exclusives,false,/100,Jake Allen
+base-set,95,Exclusives,false,/100,Josh Anderson
+base-set,96,Exclusives,false,/100,Joel Edmundson
+base-set,97,Exclusives,false,/100,Brendan Gallagher
+base-set,98,Exclusives,false,/100,Jeff Petry
+base-set,99,Exclusives,false,/100,Tyler Toffoli
+base-set,100,Exclusives,false,/100,Shea Weber
+base-set,101,Exclusives,false,/100,Viktor Arvidsson
+base-set,102,Exclusives,false,/100,Mattias Ekholm
+base-set,103,Exclusives,false,/100,Filip Forsberg
+base-set,104,Exclusives,false,/100,Roman Josi
+base-set,105,Exclusives,false,/100,Juuse Saros
+base-set,106,Exclusives,false,/100,Eeli Tolvanen
+base-set,107,Exclusives,false,/100,Mackenzie Blackwood
+base-set,108,Exclusives,false,/100,Jesper Bratt
+base-set,109,Exclusives,false,/100,Nico Hischier
+base-set,110,Exclusives,false,/100,Jack Hughes
+base-set,111,Exclusives,false,/100,Ty Smith
+base-set,112,Exclusives,false,/100,Miles Wood
+base-set,113,Exclusives,false,/100,Josh Bailey
+base-set,114,Exclusives,false,/100,Jordan Eberle
+base-set,115,Exclusives,false,/100,Nick Leddy
+base-set,116,Exclusives,false,/100,Anders Lee
+base-set,117,Exclusives,false,/100,Jean-Gabriel Pageau
+base-set,118,Exclusives,false,/100,Ryan Pulock
+base-set,119,Exclusives,false,/100,Semyon Varlamov
+base-set,120,Exclusives,false,/100,Adam Fox
+base-set,121,Exclusives,false,/100,Kaapo Kakko
+base-set,122,Exclusives,false,/100,Chris Kreider
+base-set,123,Exclusives,false,/100,Alexis Lafreniere
+base-set,124,Exclusives,false,/100,K'Andre Miller
+base-set,125,Exclusives,false,/100,Artemi Panarin
+base-set,126,Exclusives,false,/100,Jacob Trouba
+base-set,127,Exclusives,false,/100,Thomas Chabot
+base-set,128,Exclusives,false,/100,Evgenii Dadonov
+base-set,129,Exclusives,false,/100,Josh Norris
+base-set,130,Exclusives,false,/100,Tim Stutzle
+base-set,131,Exclusives,false,/100,Chris Tierney
+base-set,132,Exclusives,false,/100,Colin White
+base-set,133,Exclusives,false,/100,Joel Farabee
+base-set,134,Exclusives,false,/100,Claude Giroux
+base-set,135,Exclusives,false,/100,Carter Hart
+base-set,136,Exclusives,false,/100,Kevin Hayes
+base-set,137,Exclusives,false,/100,Travis Konecny
+base-set,138,Exclusives,false,/100,Oskar Lindblom
+base-set,139,Exclusives,false,/100,Jakub Voracek
+base-set,140,Exclusives,false,/100,Jeff Carter
+base-set,141,Exclusives,false,/100,Sidney Crosby
+base-set,142,Exclusives,false,/100,Jake Guentzel
+base-set,143,Exclusives,false,/100,Tristan Jarry
+base-set,144,Exclusives,false,/100,Kasperi Kapanen
+base-set,145,Exclusives,false,/100,Jared McCann
+base-set,146,Exclusives,false,/100,Jason Zucker
+base-set,147,Exclusives,false,/100,Brent Burns
+base-set,148,Exclusives,false,/100,Mario Ferraro
+base-set,149,Exclusives,false,/100,Tomas Hertl
+base-set,150,Exclusives,false,/100,Martin Jones
+base-set,151,Exclusives,false,/100,Kevin Labanc
+base-set,152,Exclusives,false,/100,Timo Meier
+base-set,153,Exclusives,false,/100,Jordan Binnington
+base-set,154,Exclusives,false,/100,Justin Faulk
+base-set,155,Exclusives,false,/100,Torey Krug
+base-set,156,Exclusives,false,/100,David Perron
+base-set,157,Exclusives,false,/100,Brayden Schenn
+base-set,158,Exclusives,false,/100,Vladimir Tarasenko
+base-set,159,Exclusives,false,/100,Anthony Cirelli
+base-set,160,Exclusives,false,/100,Yanni Gourde
+base-set,161,Exclusives,false,/100,Victor Hedman
+base-set,162,Exclusives,false,/100,Tyler Johnson
+base-set,163,Exclusives,false,/100,Ondrej Palat
+base-set,164,Exclusives,false,/100,Mikhail Sergachev
+base-set,165,Exclusives,false,/100,Andrei Vasilevskiy
+base-set,166,Exclusives,false,/100,T.J. Brodie
+base-set,167,Exclusives,false,/100,Jack Campbell
+base-set,168,Exclusives,false,/100,Justin Holl
+base-set,169,Exclusives,false,/100,Alex Kerfoot
+base-set,170,Exclusives,false,/100,William Nylander
+base-set,171,Exclusives,false,/100,Morgan Rielly
+base-set,172,Exclusives,false,/100,John Tavares
+base-set,173,Exclusives,false,/100,Thatcher Demko
+base-set,174,Exclusives,false,/100,Nils Hoglander
+base-set,175,Exclusives,false,/100,Bo Horvat
+base-set,176,Exclusives,false,/100,J.T. Miller
+base-set,177,Exclusives,false,/100,Tyler Myers
+base-set,178,Exclusives,false,/100,Tanner Pearson
+base-set,179,Exclusives,false,/100,Elias Pettersson
+base-set,180,Exclusives,false,/100,Marc-Andre Fleury
+base-set,181,Exclusives,false,/100,Nicolas Hague
+base-set,182,Exclusives,false,/100,William Karlsson
+base-set,183,Exclusives,false,/100,Jonathan Marchessault
+base-set,184,Exclusives,false,/100,Reilly Smith
+base-set,185,Exclusives,false,/100,Chandler Stephenson
+base-set,186,Exclusives,false,/100,Shea Theodore
+base-set,187,Exclusives,false,/100,Nicklas Backstrom
+base-set,188,Exclusives,false,/100,John Carlson
+base-set,189,Exclusives,false,/100,Lars Eller
+base-set,190,Exclusives,false,/100,Evgeny Kuznetsov
+base-set,191,Exclusives,false,/100,Justin Schultz
+base-set,192,Exclusives,false,/100,Vitek Vanecek
+base-set,193,Exclusives,false,/100,Dylan DeMelo
+base-set,194,Exclusives,false,/100,Pierre-Luc Dubois
+base-set,195,Exclusives,false,/100,Adam Lowry
+base-set,196,Exclusives,false,/100,Josh Morrissey
+base-set,197,Exclusives,false,/100,Mark Scheifele
+base-set,198,Exclusives,false,/100,Blake Wheeler
+base-set,199,Exclusives,false,/100,Jason Robertson/Kirill Kaprizov CL
+base-set,200,Exclusives,false,/100,Jack Hughes/Alexis Lafreniere CL
+base-set--young-guns,201,Exclusives,false,/100,Cole Caufield RC
+base-set--young-guns,202,Exclusives,false,/100,Ukko-Pekka Luukkonen RC
+base-set--young-guns,203,Exclusives,false,/100,Olle Alsing RC
+base-set--young-guns,204,Exclusives,false,/100,Dakota Joshua RC
+base-set--young-guns,205,Exclusives,false,/100,Jamie Drysdale RC
+base-set--young-guns,206,Exclusives,false,/100,Kyle Burroughs RC
+base-set--young-guns,207,Exclusives,false,/100,Tarmo Reunanen RC
+base-set--young-guns,208,Exclusives,false,/100,Mike Hardman RC
+base-set--young-guns,209,Exclusives,false,/100,Wade Allison RC
+base-set--young-guns,210,Exclusives,false,/100,Marian Studenic RC
+base-set--young-guns,211,Exclusives,false,/100,Keaton Middleton RC
+base-set--young-guns,212,Exclusives,false,/100,Joe Veleno RC
+base-set--young-guns,213,Exclusives,false,/100,Wyatt Kalynuk RC
+base-set--young-guns,214,Exclusives,false,/100,Garrett Pilon RC
+base-set--young-guns,215,Exclusives,false,/100,Morgan Barron RC
+base-set--young-guns,216,Exclusives,false,/100,Radim Zohorna RC
+base-set--young-guns,217,Exclusives,false,/100,Jack Ahcan RC
+base-set--young-guns,218,Exclusives,false,/100,Joshua Dunne RC
+base-set--young-guns,219,Exclusives,false,/100,Logan Thompson RC
+base-set--young-guns,220,Exclusives,false,/100,Brinson Pasichnuk RC
+base-set--young-guns,221,Exclusives,false,/100,Arttu Ruotsalainen RC
+base-set--young-guns,222,Exclusives,false,/100,Tanner Jeannot RC
+base-set--young-guns,223,Exclusives,false,/100,Spencer Knight RC
+base-set--young-guns,224,Exclusives,false,/100,Ross Colton RC
+base-set--young-guns,225,Exclusives,false,/100,Filip Gustavsson RC
+base-set--young-guns,226,Exclusives,false,/100,Jeremy Swayman RC
+base-set--young-guns,227,Exclusives,false,/100,Calen Addison RC
+base-set--young-guns,228,Exclusives,false,/100,Simon Benoit RC
+base-set--young-guns,229,Exclusives,false,/100,Daniel Walcott RC
+base-set--young-guns,230,Exclusives,false,/100,Mattias Samuelsson RC
+base-set--young-guns,231,Exclusives,false,/100,Zac Jones RC
+base-set--young-guns,232,Exclusives,false,/100,Trevor Zegras RC
+base-set--young-guns,233,Exclusives,false,/100,Jeffrey Viel RC
+base-set--young-guns,234,Exclusives,false,/100,Lane Pederson RC
+base-set--young-guns,235,Exclusives,false,/100,Marc Michaelis RC
+base-set--young-guns,236,Exclusives,false,/100,Tanner Laczynski RC
+base-set--young-guns,237,Exclusives,false,/100,Jeremy Davies RC
+base-set--young-guns,238,Exclusives,false,/100,Jackson Cates RC
+base-set--young-guns,239,Exclusives,false,/100,Tyce Thompson RC
+base-set--young-guns,240,Exclusives,false,/100,Parker Kelly RC
+base-set--young-guns,241,Exclusives,false,/100,Alex Barre-Boulet RC
+base-set--young-guns,242,Exclusives,false,/100,Rasmus Kupari RC
+base-set--young-guns,243,Exclusives,false,/100,Cam York RC
+base-set--young-guns,244,Exclusives,false,/100,Matt Kiersted RC
+base-set--young-guns,245,Exclusives,false,/100,Michael Houser RC
+base-set--young-guns,246,Exclusives,false,/100,Shane Pinto RC
+base-set--young-guns,247,Exclusives,false,/100,Kole Lind RC
+base-set--young-guns,248,Exclusives,false,/100,Jacob Bryson RC
+base-set--young-guns,249,Exclusives,false,/100,Joey Keane RC
+base-set--young-guns,250,Exclusives,false,/100,Cole Caufield/Trevor Zegras CL RC
+base-set,1,High Gloss,false,/10,Nicolas Deslauriers
+base-set,2,High Gloss,false,/10,Cam Fowler
+base-set,3,High Gloss,false,/10,John Gibson
+base-set,4,High Gloss,false,/10,Adam Henrique
+base-set,5,High Gloss,false,/10,Jakob Silfverberg
+base-set,6,High Gloss,false,/10,Troy Terry
+base-set,7,High Gloss,false,/10,Michael Bunting
+base-set,8,High Gloss,false,/10,Jakob Chychrun
+base-set,9,High Gloss,false,/10,Oliver Ekman-Larsson
+base-set,10,High Gloss,false,/10,Niklas Hjalmarsson
+base-set,11,High Gloss,false,/10,Clayton Keller
+base-set,12,High Gloss,false,/10,Nick Schmaltz
+base-set,13,High Gloss,false,/10,Patrice Bergeron
+base-set,14,High Gloss,false,/10,Charlie Coyle
+base-set,15,High Gloss,false,/10,Jake DeBrusk
+base-set,16,High Gloss,false,/10,Matt Grzelcyk
+base-set,17,High Gloss,false,/10,Brad Marchand
+base-set,18,High Gloss,false,/10,Charlie McAvoy
+base-set,19,High Gloss,false,/10,Craig Smith
+base-set,20,High Gloss,false,/10,Dylan Cozens
+base-set,21,High Gloss,false,/10,Rasmus Dahlin
+base-set,22,High Gloss,false,/10,Jack Eichel
+base-set,23,High Gloss,false,/10,Rasmus Ristolainen
+base-set,24,High Gloss,false,/10,Jeff Skinner
+base-set,25,High Gloss,false,/10,Tage Thompson
+base-set,26,High Gloss,false,/10,Rasmus Andersson
+base-set,27,High Gloss,false,/10,Johnny Gaudreau
+base-set,28,High Gloss,false,/10,Noah Hanifin
+base-set,29,High Gloss,false,/10,Milan Lucic
+base-set,30,High Gloss,false,/10,Sean Monahan
+base-set,31,High Gloss,false,/10,Matthew Tkachuk
+base-set,32,High Gloss,false,/10,Sebastian Aho
+base-set,33,High Gloss,false,/10,Martin Necas
+base-set,34,High Gloss,false,/10,Alex Nedeljkovic
+base-set,35,High Gloss,false,/10,Brett Pesce
+base-set,36,High Gloss,false,/10,Jaccob Slavin
+base-set,37,High Gloss,false,/10,Jordan Staal
+base-set,38,High Gloss,false,/10,Adam Boqvist
+base-set,39,High Gloss,false,/10,Alex DeBrincat
+base-set,40,High Gloss,false,/10,Duncan Keith
+base-set,41,High Gloss,false,/10,Dominik Kubalik
+base-set,42,High Gloss,false,/10,Philipp Kurashev
+base-set,43,High Gloss,false,/10,Kevin Lankinen
+base-set,44,High Gloss,false,/10,Dylan Strome
+base-set,45,High Gloss,false,/10,J.T. Compher
+base-set,46,High Gloss,false,/10,Joonas Donskoi
+base-set,47,High Gloss,false,/10,Samuel Girard
+base-set,48,High Gloss,false,/10,Nazem Kadri
+base-set,49,High Gloss,false,/10,Gabriel Landeskog
+base-set,50,High Gloss,false,/10,Cale Makar
+base-set,51,High Gloss,false,/10,Devon Toews
+base-set,52,High Gloss,false,/10,Max Domi
+base-set,53,High Gloss,false,/10,Seth Jones
+base-set,54,High Gloss,false,/10,Elvis Merzlikins
+base-set,55,High Gloss,false,/10,Eric Robinson
+base-set,56,High Gloss,false,/10,Jack Roslovic
+base-set,57,High Gloss,false,/10,Zach Werenski
+base-set,58,High Gloss,false,/10,Miro Heiskanen
+base-set,59,High Gloss,false,/10,Denis Gurianov
+base-set,60,High Gloss,false,/10,Anton Khudobin
+base-set,61,High Gloss,false,/10,Alexander Radulov
+base-set,62,High Gloss,false,/10,Jason Robertson
+base-set,63,High Gloss,false,/10,Tyler Seguin
+base-set,64,High Gloss,false,/10,Danny DeKeyser
+base-set,65,High Gloss,false,/10,Thomas Greiss
+base-set,66,High Gloss,false,/10,Vladislav Namestnikov
+base-set,67,High Gloss,false,/10,Richard Panik
+base-set,68,High Gloss,false,/10,Jakub Vrana
+base-set,69,High Gloss,false,/10,Filip Zadina
+base-set,70,High Gloss,false,/10,Josh Archibald
+base-set,71,High Gloss,false,/10,Ethan Bear
+base-set,72,High Gloss,false,/10,Mikko Koskinen
+base-set,73,High Gloss,false,/10,Connor McDavid
+base-set,74,High Gloss,false,/10,Darnell Nurse
+base-set,75,High Gloss,false,/10,Jesse Puljujarvi
+base-set,76,High Gloss,false,/10,Sergei Bobrovsky
+base-set,77,High Gloss,false,/10,Patric Hornqvist
+base-set,78,High Gloss,false,/10,Jonathan Huberdeau
+base-set,79,High Gloss,false,/10,Carter Verhaeghe
+base-set,80,High Gloss,false,/10,MacKenzie Weegar
+base-set,81,High Gloss,false,/10,Keith Yandle
+base-set,82,High Gloss,false,/10,Drew Doughty
+base-set,83,High Gloss,false,/10,Alex Iafallo
+base-set,84,High Gloss,false,/10,Adrian Kempe
+base-set,85,High Gloss,false,/10,Trevor Moore
+base-set,86,High Gloss,false,/10,Cal Petersen
+base-set,87,High Gloss,false,/10,Sean Walker
+base-set,88,High Gloss,false,/10,Marcus Foligno
+base-set,89,High Gloss,false,/10,Jordan Greenway
+base-set,90,High Gloss,false,/10,Kirill Kaprizov
+base-set,91,High Gloss,false,/10,Zach Parise
+base-set,92,High Gloss,false,/10,Jared Spurgeon
+base-set,93,High Gloss,false,/10,Mats Zuccarello
+base-set,94,High Gloss,false,/10,Jake Allen
+base-set,95,High Gloss,false,/10,Josh Anderson
+base-set,96,High Gloss,false,/10,Joel Edmundson
+base-set,97,High Gloss,false,/10,Brendan Gallagher
+base-set,98,High Gloss,false,/10,Jeff Petry
+base-set,99,High Gloss,false,/10,Tyler Toffoli
+base-set,100,High Gloss,false,/10,Shea Weber
+base-set,101,High Gloss,false,/10,Viktor Arvidsson
+base-set,102,High Gloss,false,/10,Mattias Ekholm
+base-set,103,High Gloss,false,/10,Filip Forsberg
+base-set,104,High Gloss,false,/10,Roman Josi
+base-set,105,High Gloss,false,/10,Juuse Saros
+base-set,106,High Gloss,false,/10,Eeli Tolvanen
+base-set,107,High Gloss,false,/10,Mackenzie Blackwood
+base-set,108,High Gloss,false,/10,Jesper Bratt
+base-set,109,High Gloss,false,/10,Nico Hischier
+base-set,110,High Gloss,false,/10,Jack Hughes
+base-set,111,High Gloss,false,/10,Ty Smith
+base-set,112,High Gloss,false,/10,Miles Wood
+base-set,113,High Gloss,false,/10,Josh Bailey
+base-set,114,High Gloss,false,/10,Jordan Eberle
+base-set,115,High Gloss,false,/10,Nick Leddy
+base-set,116,High Gloss,false,/10,Anders Lee
+base-set,117,High Gloss,false,/10,Jean-Gabriel Pageau
+base-set,118,High Gloss,false,/10,Ryan Pulock
+base-set,119,High Gloss,false,/10,Semyon Varlamov
+base-set,120,High Gloss,false,/10,Adam Fox
+base-set,121,High Gloss,false,/10,Kaapo Kakko
+base-set,122,High Gloss,false,/10,Chris Kreider
+base-set,123,High Gloss,false,/10,Alexis Lafreniere
+base-set,124,High Gloss,false,/10,K'Andre Miller
+base-set,125,High Gloss,false,/10,Artemi Panarin
+base-set,126,High Gloss,false,/10,Jacob Trouba
+base-set,127,High Gloss,false,/10,Thomas Chabot
+base-set,128,High Gloss,false,/10,Evgenii Dadonov
+base-set,129,High Gloss,false,/10,Josh Norris
+base-set,130,High Gloss,false,/10,Tim Stutzle
+base-set,131,High Gloss,false,/10,Chris Tierney
+base-set,132,High Gloss,false,/10,Colin White
+base-set,133,High Gloss,false,/10,Joel Farabee
+base-set,134,High Gloss,false,/10,Claude Giroux
+base-set,135,High Gloss,false,/10,Carter Hart
+base-set,136,High Gloss,false,/10,Kevin Hayes
+base-set,137,High Gloss,false,/10,Travis Konecny
+base-set,138,High Gloss,false,/10,Oskar Lindblom
+base-set,139,High Gloss,false,/10,Jakub Voracek
+base-set,140,High Gloss,false,/10,Jeff Carter
+base-set,141,High Gloss,false,/10,Sidney Crosby
+base-set,142,High Gloss,false,/10,Jake Guentzel
+base-set,143,High Gloss,false,/10,Tristan Jarry
+base-set,144,High Gloss,false,/10,Kasperi Kapanen
+base-set,145,High Gloss,false,/10,Jared McCann
+base-set,146,High Gloss,false,/10,Jason Zucker
+base-set,147,High Gloss,false,/10,Brent Burns
+base-set,148,High Gloss,false,/10,Mario Ferraro
+base-set,149,High Gloss,false,/10,Tomas Hertl
+base-set,150,High Gloss,false,/10,Martin Jones
+base-set,151,High Gloss,false,/10,Kevin Labanc
+base-set,152,High Gloss,false,/10,Timo Meier
+base-set,153,High Gloss,false,/10,Jordan Binnington
+base-set,154,High Gloss,false,/10,Justin Faulk
+base-set,155,High Gloss,false,/10,Torey Krug
+base-set,156,High Gloss,false,/10,David Perron
+base-set,157,High Gloss,false,/10,Brayden Schenn
+base-set,158,High Gloss,false,/10,Vladimir Tarasenko
+base-set,159,High Gloss,false,/10,Anthony Cirelli
+base-set,160,High Gloss,false,/10,Yanni Gourde
+base-set,161,High Gloss,false,/10,Victor Hedman
+base-set,162,High Gloss,false,/10,Tyler Johnson
+base-set,163,High Gloss,false,/10,Ondrej Palat
+base-set,164,High Gloss,false,/10,Mikhail Sergachev
+base-set,165,High Gloss,false,/10,Andrei Vasilevskiy
+base-set,166,High Gloss,false,/10,T.J. Brodie
+base-set,167,High Gloss,false,/10,Jack Campbell
+base-set,168,High Gloss,false,/10,Justin Holl
+base-set,169,High Gloss,false,/10,Alex Kerfoot
+base-set,170,High Gloss,false,/10,William Nylander
+base-set,171,High Gloss,false,/10,Morgan Rielly
+base-set,172,High Gloss,false,/10,John Tavares
+base-set,173,High Gloss,false,/10,Thatcher Demko
+base-set,174,High Gloss,false,/10,Nils Hoglander
+base-set,175,High Gloss,false,/10,Bo Horvat
+base-set,176,High Gloss,false,/10,J.T. Miller
+base-set,177,High Gloss,false,/10,Tyler Myers
+base-set,178,High Gloss,false,/10,Tanner Pearson
+base-set,179,High Gloss,false,/10,Elias Pettersson
+base-set,180,High Gloss,false,/10,Marc-Andre Fleury
+base-set,181,High Gloss,false,/10,Nicolas Hague
+base-set,182,High Gloss,false,/10,William Karlsson
+base-set,183,High Gloss,false,/10,Jonathan Marchessault
+base-set,184,High Gloss,false,/10,Reilly Smith
+base-set,185,High Gloss,false,/10,Chandler Stephenson
+base-set,186,High Gloss,false,/10,Shea Theodore
+base-set,187,High Gloss,false,/10,Nicklas Backstrom
+base-set,188,High Gloss,false,/10,John Carlson
+base-set,189,High Gloss,false,/10,Lars Eller
+base-set,190,High Gloss,false,/10,Evgeny Kuznetsov
+base-set,191,High Gloss,false,/10,Justin Schultz
+base-set,192,High Gloss,false,/10,Vitek Vanecek
+base-set,193,High Gloss,false,/10,Dylan DeMelo
+base-set,194,High Gloss,false,/10,Pierre-Luc Dubois
+base-set,195,High Gloss,false,/10,Adam Lowry
+base-set,196,High Gloss,false,/10,Josh Morrissey
+base-set,197,High Gloss,false,/10,Mark Scheifele
+base-set,198,High Gloss,false,/10,Blake Wheeler
+base-set,199,High Gloss,false,/10,Jason Robertson/Kirill Kaprizov CL
+base-set,200,High Gloss,false,/10,Jack Hughes/Alexis Lafreniere CL
+base-set--young-guns,201,High Gloss,false,/10,Cole Caufield RC
+base-set--young-guns,202,High Gloss,false,/10,Ukko-Pekka Luukkonen RC
+base-set--young-guns,203,High Gloss,false,/10,Olle Alsing RC
+base-set--young-guns,204,High Gloss,false,/10,Dakota Joshua RC
+base-set--young-guns,205,High Gloss,false,/10,Jamie Drysdale RC
+base-set--young-guns,206,High Gloss,false,/10,Kyle Burroughs RC
+base-set--young-guns,207,High Gloss,false,/10,Tarmo Reunanen RC
+base-set--young-guns,208,High Gloss,false,/10,Mike Hardman RC
+base-set--young-guns,209,High Gloss,false,/10,Wade Allison RC
+base-set--young-guns,210,High Gloss,false,/10,Marian Studenic RC
+base-set--young-guns,211,High Gloss,false,/10,Keaton Middleton RC
+base-set--young-guns,212,High Gloss,false,/10,Joe Veleno RC
+base-set--young-guns,213,High Gloss,false,/10,Wyatt Kalynuk RC
+base-set--young-guns,214,High Gloss,false,/10,Garrett Pilon RC
+base-set--young-guns,215,High Gloss,false,/10,Morgan Barron RC
+base-set--young-guns,216,High Gloss,false,/10,Radim Zohorna RC
+base-set--young-guns,217,High Gloss,false,/10,Jack Ahcan RC
+base-set--young-guns,218,High Gloss,false,/10,Joshua Dunne RC
+base-set--young-guns,219,High Gloss,false,/10,Logan Thompson RC
+base-set--young-guns,220,High Gloss,false,/10,Brinson Pasichnuk RC
+base-set--young-guns,221,High Gloss,false,/10,Arttu Ruotsalainen RC
+base-set--young-guns,222,High Gloss,false,/10,Tanner Jeannot RC
+base-set--young-guns,223,High Gloss,false,/10,Spencer Knight RC
+base-set--young-guns,224,High Gloss,false,/10,Ross Colton RC
+base-set--young-guns,225,High Gloss,false,/10,Filip Gustavsson RC
+base-set--young-guns,226,High Gloss,false,/10,Jeremy Swayman RC
+base-set--young-guns,227,High Gloss,false,/10,Calen Addison RC
+base-set--young-guns,228,High Gloss,false,/10,Simon Benoit RC
+base-set--young-guns,229,High Gloss,false,/10,Daniel Walcott RC
+base-set--young-guns,230,High Gloss,false,/10,Mattias Samuelsson RC
+base-set--young-guns,231,High Gloss,false,/10,Zac Jones RC
+base-set--young-guns,232,High Gloss,false,/10,Trevor Zegras RC
+base-set--young-guns,233,High Gloss,false,/10,Jeffrey Viel RC
+base-set--young-guns,234,High Gloss,false,/10,Lane Pederson RC
+base-set--young-guns,235,High Gloss,false,/10,Marc Michaelis RC
+base-set--young-guns,236,High Gloss,false,/10,Tanner Laczynski RC
+base-set--young-guns,237,High Gloss,false,/10,Jeremy Davies RC
+base-set--young-guns,238,High Gloss,false,/10,Jackson Cates RC
+base-set--young-guns,239,High Gloss,false,/10,Tyce Thompson RC
+base-set--young-guns,240,High Gloss,false,/10,Parker Kelly RC
+base-set--young-guns,241,High Gloss,false,/10,Alex Barre-Boulet RC
+base-set--young-guns,242,High Gloss,false,/10,Rasmus Kupari RC
+base-set--young-guns,243,High Gloss,false,/10,Cam York RC
+base-set--young-guns,244,High Gloss,false,/10,Matt Kiersted RC
+base-set--young-guns,245,High Gloss,false,/10,Michael Houser RC
+base-set--young-guns,246,High Gloss,false,/10,Shane Pinto RC
+base-set--young-guns,247,High Gloss,false,/10,Kole Lind RC
+base-set--young-guns,248,High Gloss,false,/10,Jacob Bryson RC
+base-set--young-guns,249,High Gloss,false,/10,Joey Keane RC
+base-set--young-guns,250,High Gloss,false,/10,Cole Caufield/Trevor Zegras CL RC
+base-set,1,Clear Cut,false,,Nicolas Deslauriers
+base-set,2,Clear Cut,false,,Cam Fowler
+base-set,3,Clear Cut,false,,John Gibson
+base-set,4,Clear Cut,false,,Adam Henrique
+base-set,5,Clear Cut,false,,Jakob Silfverberg
+base-set,6,Clear Cut,false,,Troy Terry
+base-set,7,Clear Cut,false,,Michael Bunting
+base-set,8,Clear Cut,false,,Jakob Chychrun
+base-set,9,Clear Cut,false,,Oliver Ekman-Larsson
+base-set,10,Clear Cut,false,,Niklas Hjalmarsson
+base-set,11,Clear Cut,false,,Clayton Keller
+base-set,12,Clear Cut,false,,Nick Schmaltz
+base-set,13,Clear Cut,false,,Patrice Bergeron
+base-set,14,Clear Cut,false,,Charlie Coyle
+base-set,15,Clear Cut,false,,Jake DeBrusk
+base-set,16,Clear Cut,false,,Matt Grzelcyk
+base-set,17,Clear Cut,false,,Brad Marchand
+base-set,18,Clear Cut,false,,Charlie McAvoy
+base-set,19,Clear Cut,false,,Craig Smith
+base-set,20,Clear Cut,false,,Dylan Cozens
+base-set,21,Clear Cut,false,,Rasmus Dahlin
+base-set,22,Clear Cut,false,,Jack Eichel
+base-set,23,Clear Cut,false,,Rasmus Ristolainen
+base-set,24,Clear Cut,false,,Jeff Skinner
+base-set,25,Clear Cut,false,,Tage Thompson
+base-set,26,Clear Cut,false,,Rasmus Andersson
+base-set,27,Clear Cut,false,,Johnny Gaudreau
+base-set,28,Clear Cut,false,,Noah Hanifin
+base-set,29,Clear Cut,false,,Milan Lucic
+base-set,30,Clear Cut,false,,Sean Monahan
+base-set,31,Clear Cut,false,,Matthew Tkachuk
+base-set,32,Clear Cut,false,,Sebastian Aho
+base-set,33,Clear Cut,false,,Martin Necas
+base-set,34,Clear Cut,false,,Alex Nedeljkovic
+base-set,35,Clear Cut,false,,Brett Pesce
+base-set,36,Clear Cut,false,,Jaccob Slavin
+base-set,37,Clear Cut,false,,Jordan Staal
+base-set,38,Clear Cut,false,,Adam Boqvist
+base-set,39,Clear Cut,false,,Alex DeBrincat
+base-set,40,Clear Cut,false,,Duncan Keith
+base-set,41,Clear Cut,false,,Dominik Kubalik
+base-set,42,Clear Cut,false,,Philipp Kurashev
+base-set,43,Clear Cut,false,,Kevin Lankinen
+base-set,44,Clear Cut,false,,Dylan Strome
+base-set,45,Clear Cut,false,,J.T. Compher
+base-set,46,Clear Cut,false,,Joonas Donskoi
+base-set,47,Clear Cut,false,,Samuel Girard
+base-set,48,Clear Cut,false,,Nazem Kadri
+base-set,49,Clear Cut,false,,Gabriel Landeskog
+base-set,50,Clear Cut,false,,Cale Makar
+base-set,51,Clear Cut,false,,Devon Toews
+base-set,52,Clear Cut,false,,Max Domi
+base-set,53,Clear Cut,false,,Seth Jones
+base-set,54,Clear Cut,false,,Elvis Merzlikins
+base-set,55,Clear Cut,false,,Eric Robinson
+base-set,56,Clear Cut,false,,Jack Roslovic
+base-set,57,Clear Cut,false,,Zach Werenski
+base-set,58,Clear Cut,false,,Miro Heiskanen
+base-set,59,Clear Cut,false,,Denis Gurianov
+base-set,60,Clear Cut,false,,Anton Khudobin
+base-set,61,Clear Cut,false,,Alexander Radulov
+base-set,62,Clear Cut,false,,Jason Robertson
+base-set,63,Clear Cut,false,,Tyler Seguin
+base-set,64,Clear Cut,false,,Danny DeKeyser
+base-set,65,Clear Cut,false,,Thomas Greiss
+base-set,66,Clear Cut,false,,Vladislav Namestnikov
+base-set,67,Clear Cut,false,,Richard Panik
+base-set,68,Clear Cut,false,,Jakub Vrana
+base-set,69,Clear Cut,false,,Filip Zadina
+base-set,70,Clear Cut,false,,Josh Archibald
+base-set,71,Clear Cut,false,,Ethan Bear
+base-set,72,Clear Cut,false,,Mikko Koskinen
+base-set,73,Clear Cut,false,,Connor McDavid
+base-set,74,Clear Cut,false,,Darnell Nurse
+base-set,75,Clear Cut,false,,Jesse Puljujarvi
+base-set,76,Clear Cut,false,,Sergei Bobrovsky
+base-set,77,Clear Cut,false,,Patric Hornqvist
+base-set,78,Clear Cut,false,,Jonathan Huberdeau
+base-set,79,Clear Cut,false,,Carter Verhaeghe
+base-set,80,Clear Cut,false,,MacKenzie Weegar
+base-set,81,Clear Cut,false,,Keith Yandle
+base-set,82,Clear Cut,false,,Drew Doughty
+base-set,83,Clear Cut,false,,Alex Iafallo
+base-set,84,Clear Cut,false,,Adrian Kempe
+base-set,85,Clear Cut,false,,Trevor Moore
+base-set,86,Clear Cut,false,,Cal Petersen
+base-set,87,Clear Cut,false,,Sean Walker
+base-set,88,Clear Cut,false,,Marcus Foligno
+base-set,89,Clear Cut,false,,Jordan Greenway
+base-set,90,Clear Cut,false,,Kirill Kaprizov
+base-set,91,Clear Cut,false,,Zach Parise
+base-set,92,Clear Cut,false,,Jared Spurgeon
+base-set,93,Clear Cut,false,,Mats Zuccarello
+base-set,94,Clear Cut,false,,Jake Allen
+base-set,95,Clear Cut,false,,Josh Anderson
+base-set,96,Clear Cut,false,,Joel Edmundson
+base-set,97,Clear Cut,false,,Brendan Gallagher
+base-set,98,Clear Cut,false,,Jeff Petry
+base-set,99,Clear Cut,false,,Tyler Toffoli
+base-set,100,Clear Cut,false,,Shea Weber
+base-set,101,Clear Cut,false,,Viktor Arvidsson
+base-set,102,Clear Cut,false,,Mattias Ekholm
+base-set,103,Clear Cut,false,,Filip Forsberg
+base-set,104,Clear Cut,false,,Roman Josi
+base-set,105,Clear Cut,false,,Juuse Saros
+base-set,106,Clear Cut,false,,Eeli Tolvanen
+base-set,107,Clear Cut,false,,Mackenzie Blackwood
+base-set,108,Clear Cut,false,,Jesper Bratt
+base-set,109,Clear Cut,false,,Nico Hischier
+base-set,110,Clear Cut,false,,Jack Hughes
+base-set,111,Clear Cut,false,,Ty Smith
+base-set,112,Clear Cut,false,,Miles Wood
+base-set,113,Clear Cut,false,,Josh Bailey
+base-set,114,Clear Cut,false,,Jordan Eberle
+base-set,115,Clear Cut,false,,Nick Leddy
+base-set,116,Clear Cut,false,,Anders Lee
+base-set,117,Clear Cut,false,,Jean-Gabriel Pageau
+base-set,118,Clear Cut,false,,Ryan Pulock
+base-set,119,Clear Cut,false,,Semyon Varlamov
+base-set,120,Clear Cut,false,,Adam Fox
+base-set,121,Clear Cut,false,,Kaapo Kakko
+base-set,122,Clear Cut,false,,Chris Kreider
+base-set,123,Clear Cut,false,,Alexis Lafreniere
+base-set,124,Clear Cut,false,,K'Andre Miller
+base-set,125,Clear Cut,false,,Artemi Panarin
+base-set,126,Clear Cut,false,,Jacob Trouba
+base-set,127,Clear Cut,false,,Thomas Chabot
+base-set,128,Clear Cut,false,,Evgenii Dadonov
+base-set,129,Clear Cut,false,,Josh Norris
+base-set,130,Clear Cut,false,,Tim Stutzle
+base-set,131,Clear Cut,false,,Chris Tierney
+base-set,132,Clear Cut,false,,Colin White
+base-set,133,Clear Cut,false,,Joel Farabee
+base-set,134,Clear Cut,false,,Claude Giroux
+base-set,135,Clear Cut,false,,Carter Hart
+base-set,136,Clear Cut,false,,Kevin Hayes
+base-set,137,Clear Cut,false,,Travis Konecny
+base-set,138,Clear Cut,false,,Oskar Lindblom
+base-set,139,Clear Cut,false,,Jakub Voracek
+base-set,140,Clear Cut,false,,Jeff Carter
+base-set,141,Clear Cut,false,,Sidney Crosby
+base-set,142,Clear Cut,false,,Jake Guentzel
+base-set,143,Clear Cut,false,,Tristan Jarry
+base-set,144,Clear Cut,false,,Kasperi Kapanen
+base-set,145,Clear Cut,false,,Jared McCann
+base-set,146,Clear Cut,false,,Jason Zucker
+base-set,147,Clear Cut,false,,Brent Burns
+base-set,148,Clear Cut,false,,Mario Ferraro
+base-set,149,Clear Cut,false,,Tomas Hertl
+base-set,150,Clear Cut,false,,Martin Jones
+base-set,151,Clear Cut,false,,Kevin Labanc
+base-set,152,Clear Cut,false,,Timo Meier
+base-set,153,Clear Cut,false,,Jordan Binnington
+base-set,154,Clear Cut,false,,Justin Faulk
+base-set,155,Clear Cut,false,,Torey Krug
+base-set,156,Clear Cut,false,,David Perron
+base-set,157,Clear Cut,false,,Brayden Schenn
+base-set,158,Clear Cut,false,,Vladimir Tarasenko
+base-set,159,Clear Cut,false,,Anthony Cirelli
+base-set,160,Clear Cut,false,,Yanni Gourde
+base-set,161,Clear Cut,false,,Victor Hedman
+base-set,162,Clear Cut,false,,Tyler Johnson
+base-set,163,Clear Cut,false,,Ondrej Palat
+base-set,164,Clear Cut,false,,Mikhail Sergachev
+base-set,165,Clear Cut,false,,Andrei Vasilevskiy
+base-set,166,Clear Cut,false,,T.J. Brodie
+base-set,167,Clear Cut,false,,Jack Campbell
+base-set,168,Clear Cut,false,,Justin Holl
+base-set,169,Clear Cut,false,,Alex Kerfoot
+base-set,170,Clear Cut,false,,William Nylander
+base-set,171,Clear Cut,false,,Morgan Rielly
+base-set,172,Clear Cut,false,,John Tavares
+base-set,173,Clear Cut,false,,Thatcher Demko
+base-set,174,Clear Cut,false,,Nils Hoglander
+base-set,175,Clear Cut,false,,Bo Horvat
+base-set,176,Clear Cut,false,,J.T. Miller
+base-set,177,Clear Cut,false,,Tyler Myers
+base-set,178,Clear Cut,false,,Tanner Pearson
+base-set,179,Clear Cut,false,,Elias Pettersson
+base-set,180,Clear Cut,false,,Marc-Andre Fleury
+base-set,181,Clear Cut,false,,Nicolas Hague
+base-set,182,Clear Cut,false,,William Karlsson
+base-set,183,Clear Cut,false,,Jonathan Marchessault
+base-set,184,Clear Cut,false,,Reilly Smith
+base-set,185,Clear Cut,false,,Chandler Stephenson
+base-set,186,Clear Cut,false,,Shea Theodore
+base-set,187,Clear Cut,false,,Nicklas Backstrom
+base-set,188,Clear Cut,false,,John Carlson
+base-set,189,Clear Cut,false,,Lars Eller
+base-set,190,Clear Cut,false,,Evgeny Kuznetsov
+base-set,191,Clear Cut,false,,Justin Schultz
+base-set,192,Clear Cut,false,,Vitek Vanecek
+base-set,193,Clear Cut,false,,Dylan DeMelo
+base-set,194,Clear Cut,false,,Pierre-Luc Dubois
+base-set,195,Clear Cut,false,,Adam Lowry
+base-set,196,Clear Cut,false,,Josh Morrissey
+base-set,197,Clear Cut,false,,Mark Scheifele
+base-set,198,Clear Cut,false,,Blake Wheeler
+base-set,199,Clear Cut,false,,Jason Robertson/Kirill Kaprizov CL
+base-set,200,Clear Cut,false,,Jack Hughes/Alexis Lafreniere CL
+base-set--young-guns,201,Clear Cut,false,,Cole Caufield RC
+base-set--young-guns,202,Clear Cut,false,,Ukko-Pekka Luukkonen RC
+base-set--young-guns,203,Clear Cut,false,,Olle Alsing RC
+base-set--young-guns,204,Clear Cut,false,,Dakota Joshua RC
+base-set--young-guns,205,Clear Cut,false,,Jamie Drysdale RC
+base-set--young-guns,206,Clear Cut,false,,Kyle Burroughs RC
+base-set--young-guns,207,Clear Cut,false,,Tarmo Reunanen RC
+base-set--young-guns,208,Clear Cut,false,,Mike Hardman RC
+base-set--young-guns,209,Clear Cut,false,,Wade Allison RC
+base-set--young-guns,210,Clear Cut,false,,Marian Studenic RC
+base-set--young-guns,211,Clear Cut,false,,Keaton Middleton RC
+base-set--young-guns,212,Clear Cut,false,,Joe Veleno RC
+base-set--young-guns,213,Clear Cut,false,,Wyatt Kalynuk RC
+base-set--young-guns,214,Clear Cut,false,,Garrett Pilon RC
+base-set--young-guns,215,Clear Cut,false,,Morgan Barron RC
+base-set--young-guns,216,Clear Cut,false,,Radim Zohorna RC
+base-set--young-guns,217,Clear Cut,false,,Jack Ahcan RC
+base-set--young-guns,218,Clear Cut,false,,Joshua Dunne RC
+base-set--young-guns,219,Clear Cut,false,,Logan Thompson RC
+base-set--young-guns,220,Clear Cut,false,,Brinson Pasichnuk RC
+base-set--young-guns,221,Clear Cut,false,,Arttu Ruotsalainen RC
+base-set--young-guns,222,Clear Cut,false,,Tanner Jeannot RC
+base-set--young-guns,223,Clear Cut,false,,Spencer Knight RC
+base-set--young-guns,224,Clear Cut,false,,Ross Colton RC
+base-set--young-guns,225,Clear Cut,false,,Filip Gustavsson RC
+base-set--young-guns,226,Clear Cut,false,,Jeremy Swayman RC
+base-set--young-guns,227,Clear Cut,false,,Calen Addison RC
+base-set--young-guns,228,Clear Cut,false,,Simon Benoit RC
+base-set--young-guns,229,Clear Cut,false,,Daniel Walcott RC
+base-set--young-guns,230,Clear Cut,false,,Mattias Samuelsson RC
+base-set--young-guns,231,Clear Cut,false,,Zac Jones RC
+base-set--young-guns,232,Clear Cut,false,,Trevor Zegras RC
+base-set--young-guns,233,Clear Cut,false,,Jeffrey Viel RC
+base-set--young-guns,234,Clear Cut,false,,Lane Pederson RC
+base-set--young-guns,235,Clear Cut,false,,Marc Michaelis RC
+base-set--young-guns,236,Clear Cut,false,,Tanner Laczynski RC
+base-set--young-guns,237,Clear Cut,false,,Jeremy Davies RC
+base-set--young-guns,238,Clear Cut,false,,Jackson Cates RC
+base-set--young-guns,239,Clear Cut,false,,Tyce Thompson RC
+base-set--young-guns,240,Clear Cut,false,,Parker Kelly RC
+base-set--young-guns,241,Clear Cut,false,,Alex Barre-Boulet RC
+base-set--young-guns,242,Clear Cut,false,,Rasmus Kupari RC
+base-set--young-guns,243,Clear Cut,false,,Cam York RC
+base-set--young-guns,244,Clear Cut,false,,Matt Kiersted RC
+base-set--young-guns,245,Clear Cut,false,,Michael Houser RC
+base-set--young-guns,246,Clear Cut,false,,Shane Pinto RC
+base-set--young-guns,247,Clear Cut,false,,Kole Lind RC
+base-set--young-guns,248,Clear Cut,false,,Jacob Bryson RC
+base-set--young-guns,249,Clear Cut,false,,Joey Keane RC
+base-set--young-guns,250,Clear Cut,false,,Cole Caufield/Trevor Zegras CL RC
+base-set--young-guns,201,Jumbos,false,,Cole Caufield RC
+base-set--young-guns,202,Jumbos,false,,Ukko-Pekka Luukkonen RC
+base-set--young-guns,205,Jumbos,false,,Jamie Drysdale RC
+base-set--young-guns,209,Jumbos,false,,Wade Allison RC
+base-set--young-guns,212,Jumbos,false,,Joe Veleno RC
+base-set--young-guns,213,Jumbos,false,,Wyatt Kalynuk RC
+base-set--young-guns,223,Jumbos,false,,Spencer Knight RC
+base-set--young-guns,226,Jumbos,false,,Jeremy Swayman RC
+base-set--young-guns,227,Jumbos,false,,Calen Addison RC
+base-set--young-guns,232,Jumbos,false,,Trevor Zegras RC
+base-set--young-guns,241,Jumbos,false,,Alex Barre-Boulet RC
+base-set--young-guns,242,Jumbos,false,,Rasmus Kupari RC
+base-set--young-guns,243,Jumbos,false,,Cam York RC
+base-set--young-guns,246,Jumbos,false,,Shane Pinto RC
+ud-canvas,C1,,false,,Maxime Comtois
+ud-canvas,C2,,false,,Rickard Rakell
+ud-canvas,C3,,false,,Kevin Shattenkirk
+ud-canvas,C4,,false,,Conor Garland
+ud-canvas,C5,,false,,Phil Kessel
+ud-canvas,C6,,false,,Patrice Bergeron
+ud-canvas,C7,,false,,Taylor Hall
+ud-canvas,C8,,false,,David Pastrnak
+ud-canvas,C9,,false,,Dylan Cozens
+ud-canvas,C10,,false,,Victor Olofsson
+ud-canvas,C11,,false,,Mikael Backlund
+ud-canvas,C12,,false,,Elias Lindholm
+ud-canvas,C13,,false,,Jacob Markstrom
+ud-canvas,C14,,false,,Dougie Hamilton
+ud-canvas,C15,,false,,Andrei Svechnikov
+ud-canvas,C16,,false,,Teuvo Teravainen
+ud-canvas,C17,,false,,Kirby Dach
+ud-canvas,C18,,false,,Patrick Kane
+ud-canvas,C19,,false,,Duncan Keith
+ud-canvas,C20,,false,,Philipp Grubauer
+ud-canvas,C21,,false,,Nathan MacKinnon
+ud-canvas,C22,,false,,Mikko Rantanen
+ud-canvas,C23,,false,,Cam Atkinson
+ud-canvas,C24,,false,,Oliver Bjorkstrand
+ud-canvas,C25,,false,,Patrik Laine
+ud-canvas,C26,,false,,Jamie Benn
+ud-canvas,C27,,false,,Roope Hintz
+ud-canvas,C28,,false,,Joe Pavelski
+ud-canvas,C29,,false,,Tyler Bertuzzi
+ud-canvas,C30,,false,,Filip Hronek
+ud-canvas,C31,,false,,Dylan Larkin
+ud-canvas,C32,,false,,Tyson Barrie
+ud-canvas,C33,,false,,Leon Draisaitl
+ud-canvas,C34,,false,,Ryan Nugent-Hopkins
+ud-canvas,C35,,false,,Aleksander Barkov
+ud-canvas,C36,,false,,Aaron Ekblad
+ud-canvas,C37,,false,,Dustin Brown
+ud-canvas,C38,,false,,Anze Kopitar
+ud-canvas,C39,,false,,Gabe Vilardi
+ud-canvas,C40,,false,,Matt Dumba
+ud-canvas,C41,,false,,Kaapo Kahkonen
+ud-canvas,C42,,false,,Ryan Suter
+ud-canvas,C43,,false,,Phillip Danault
+ud-canvas,C44,,false,,Carey Price
+ud-canvas,C45,,false,,Nick Suzuki
+ud-canvas,C46,,false,,Ryan Ellis
+ud-canvas,C47,,false,,Calle Jarnkrok
+ud-canvas,C48,,false,,Pekka Rinne
+ud-canvas,C49,,false,,P.K. Subban
+ud-canvas,C50,,false,,Pavel Zacha
+ud-canvas,C51,,false,,Mathew Barzal
+ud-canvas,C52,,false,,Brock Nelson
+ud-canvas,C53,,false,,Ilya Sorokin
+ud-canvas,C54,,false,,Pavel Buchnevich
+ud-canvas,C55,,false,,Igor Shesterkin
+ud-canvas,C56,,false,,Mika Zibanejad
+ud-canvas,C57,,false,,Drake Batherson
+ud-canvas,C58,,false,,Matt Murray
+ud-canvas,C59,,false,,Brady Tkachuk
+ud-canvas,C60,,false,,Sean Couturier
+ud-canvas,C61,,false,,Kevin Hayes
+ud-canvas,C62,,false,,James van Riemsdyk
+ud-canvas,C63,,false,,Kris Letang
+ud-canvas,C64,,false,,Evgeni Malkin
+ud-canvas,C65,,false,,Bryan Rust
+ud-canvas,C66,,false,,Logan Couture
+ud-canvas,C67,,false,,Evander Kane
+ud-canvas,C68,,false,,Erik Karlsson
+ud-canvas,C69,,false,,David Perron
+ud-canvas,C70,,false,,Ryan O'Reilly
+ud-canvas,C71,,false,,Brayden Schenn
+ud-canvas,C72,,false,,Alex Killorn
+ud-canvas,C73,,false,,Brayden Point
+ud-canvas,C74,,false,,Steven Stamkos
+ud-canvas,C75,,false,,Zach Hyman
+ud-canvas,C76,,false,,Mitch Marner
+ud-canvas,C77,,false,,Auston Matthews
+ud-canvas,C78,,false,,Brock Boeser
+ud-canvas,C79,,false,,Braden Holtby
+ud-canvas,C80,,false,,Quinn Hughes
+ud-canvas,C81,,false,,Robin Lehner
+ud-canvas,C82,,false,,Max Pacioretty
+ud-canvas,C83,,false,,Mark Stone
+ud-canvas,C84,,false,,Anthony Mantha
+ud-canvas,C85,,false,,T.J. Oshie
+ud-canvas,C86,,false,,Alex Ovechkin
+ud-canvas,C87,,false,,Kyle Connor
+ud-canvas,C88,,false,,Nikolaj Ehlers
+ud-canvas,C89,,false,,Connor Hellebuyck
+ud-canvas,C90,,false,,Auston Matthews/Mitch Marner CL
+ud-canvas--young-guns,C91,,false,,Quinton Byfield RC
+ud-canvas--young-guns,C92,,false,,Zac Jones RC
+ud-canvas--young-guns,C93,,false,,Filip Gustavsson RC
+ud-canvas--young-guns,C94,,false,,Tanner Jeannot RC
+ud-canvas--young-guns,C95,,false,,Wade Allison RC
+ud-canvas--young-guns,C96,,false,,Tyce Thompson RC
+ud-canvas--young-guns,C97,,false,,Jan Jenik RC
+ud-canvas--young-guns,C98,,false,,David Farrance RC
+ud-canvas--young-guns,C99,,false,,Lane Pederson RC
+ud-canvas--young-guns,C100,,false,,Alex Barre-Boulet RC
+ud-canvas--young-guns,C101,,false,,Jacob Bryson RC
+ud-canvas--young-guns,C102,,false,,Oskar Steen RC
+ud-canvas--young-guns,C103,,false,,Shane Pinto RC
+ud-canvas--young-guns,C104,,false,,Ross Colton RC
+ud-canvas--young-guns,C105,,false,,Grigori Denisenko RC
+ud-canvas--young-guns,C106,,false,,Ivan Prosvetov RC
+ud-canvas--young-guns,C107,,false,,Brett Murray RC
+ud-canvas--young-guns,C108,,false,,Calen Addison RC
+ud-canvas--young-guns,C109,,false,,Veini Vehvilainen RC
+ud-canvas--young-guns,C110,,false,,Radim Zohorna RC
+ud-canvas--young-guns,C111,,false,,Kole Lind RC
+ud-canvas--young-guns,C112,,false,,Alex Newhook RC
+ud-canvas--young-guns,C113,,false,,Jacob Bernard-Docker RC
+ud-canvas--young-guns,C114,,false,,Wyatt Kalynuk RC
+ud-canvas--young-guns,C115,,false,,Morgan Barron RC
+ud-canvas--young-guns,C116,,false,,Jeremy Swayman RC
+ud-canvas--young-guns,C117,,false,,Trevor Zegras RC
+ud-canvas--young-guns,C118,,false,,Ivan Chekhovich RC
+ud-canvas--young-guns,C119,,false,,Arttu Ruotsalainen RC
+ud-canvas--young-guns,C120,,false,,Quinton Byfield/Alex Newhook CL RC
+ud-canvas,C1,Printing Plates,false,/4,Maxime Comtois
+ud-canvas,C2,Printing Plates,false,/4,Rickard Rakell
+ud-canvas,C3,Printing Plates,false,/4,Kevin Shattenkirk
+ud-canvas,C4,Printing Plates,false,/4,Conor Garland
+ud-canvas,C5,Printing Plates,false,/4,Phil Kessel
+ud-canvas,C6,Printing Plates,false,/4,Patrice Bergeron
+ud-canvas,C7,Printing Plates,false,/4,Taylor Hall
+ud-canvas,C8,Printing Plates,false,/4,David Pastrnak
+ud-canvas,C9,Printing Plates,false,/4,Dylan Cozens
+ud-canvas,C10,Printing Plates,false,/4,Victor Olofsson
+ud-canvas,C11,Printing Plates,false,/4,Mikael Backlund
+ud-canvas,C12,Printing Plates,false,/4,Elias Lindholm
+ud-canvas,C13,Printing Plates,false,/4,Jacob Markstrom
+ud-canvas,C14,Printing Plates,false,/4,Dougie Hamilton
+ud-canvas,C15,Printing Plates,false,/4,Andrei Svechnikov
+ud-canvas,C16,Printing Plates,false,/4,Teuvo Teravainen
+ud-canvas,C17,Printing Plates,false,/4,Kirby Dach
+ud-canvas,C18,Printing Plates,false,/4,Patrick Kane
+ud-canvas,C19,Printing Plates,false,/4,Duncan Keith
+ud-canvas,C20,Printing Plates,false,/4,Philipp Grubauer
+ud-canvas,C21,Printing Plates,false,/4,Nathan MacKinnon
+ud-canvas,C22,Printing Plates,false,/4,Mikko Rantanen
+ud-canvas,C23,Printing Plates,false,/4,Cam Atkinson
+ud-canvas,C24,Printing Plates,false,/4,Oliver Bjorkstrand
+ud-canvas,C25,Printing Plates,false,/4,Patrik Laine
+ud-canvas,C26,Printing Plates,false,/4,Jamie Benn
+ud-canvas,C27,Printing Plates,false,/4,Roope Hintz
+ud-canvas,C28,Printing Plates,false,/4,Joe Pavelski
+ud-canvas,C29,Printing Plates,false,/4,Tyler Bertuzzi
+ud-canvas,C30,Printing Plates,false,/4,Filip Hronek
+ud-canvas,C31,Printing Plates,false,/4,Dylan Larkin
+ud-canvas,C32,Printing Plates,false,/4,Tyson Barrie
+ud-canvas,C33,Printing Plates,false,/4,Leon Draisaitl
+ud-canvas,C34,Printing Plates,false,/4,Ryan Nugent-Hopkins
+ud-canvas,C35,Printing Plates,false,/4,Aleksander Barkov
+ud-canvas,C36,Printing Plates,false,/4,Aaron Ekblad
+ud-canvas,C37,Printing Plates,false,/4,Dustin Brown
+ud-canvas,C38,Printing Plates,false,/4,Anze Kopitar
+ud-canvas,C39,Printing Plates,false,/4,Gabe Vilardi
+ud-canvas,C40,Printing Plates,false,/4,Matt Dumba
+ud-canvas,C41,Printing Plates,false,/4,Kaapo Kahkonen
+ud-canvas,C42,Printing Plates,false,/4,Ryan Suter
+ud-canvas,C43,Printing Plates,false,/4,Phillip Danault
+ud-canvas,C44,Printing Plates,false,/4,Carey Price
+ud-canvas,C45,Printing Plates,false,/4,Nick Suzuki
+ud-canvas,C46,Printing Plates,false,/4,Ryan Ellis
+ud-canvas,C47,Printing Plates,false,/4,Calle Jarnkrok
+ud-canvas,C48,Printing Plates,false,/4,Pekka Rinne
+ud-canvas,C49,Printing Plates,false,/4,P.K. Subban
+ud-canvas,C50,Printing Plates,false,/4,Pavel Zacha
+ud-canvas,C51,Printing Plates,false,/4,Mathew Barzal
+ud-canvas,C52,Printing Plates,false,/4,Brock Nelson
+ud-canvas,C53,Printing Plates,false,/4,Ilya Sorokin
+ud-canvas,C54,Printing Plates,false,/4,Pavel Buchnevich
+ud-canvas,C55,Printing Plates,false,/4,Igor Shesterkin
+ud-canvas,C56,Printing Plates,false,/4,Mika Zibanejad
+ud-canvas,C57,Printing Plates,false,/4,Drake Batherson
+ud-canvas,C58,Printing Plates,false,/4,Matt Murray
+ud-canvas,C59,Printing Plates,false,/4,Brady Tkachuk
+ud-canvas,C60,Printing Plates,false,/4,Sean Couturier
+ud-canvas,C61,Printing Plates,false,/4,Kevin Hayes
+ud-canvas,C62,Printing Plates,false,/4,James van Riemsdyk
+ud-canvas,C63,Printing Plates,false,/4,Kris Letang
+ud-canvas,C64,Printing Plates,false,/4,Evgeni Malkin
+ud-canvas,C65,Printing Plates,false,/4,Bryan Rust
+ud-canvas,C66,Printing Plates,false,/4,Logan Couture
+ud-canvas,C67,Printing Plates,false,/4,Evander Kane
+ud-canvas,C68,Printing Plates,false,/4,Erik Karlsson
+ud-canvas,C69,Printing Plates,false,/4,David Perron
+ud-canvas,C70,Printing Plates,false,/4,Ryan O'Reilly
+ud-canvas,C71,Printing Plates,false,/4,Brayden Schenn
+ud-canvas,C72,Printing Plates,false,/4,Alex Killorn
+ud-canvas,C73,Printing Plates,false,/4,Brayden Point
+ud-canvas,C74,Printing Plates,false,/4,Steven Stamkos
+ud-canvas,C75,Printing Plates,false,/4,Zach Hyman
+ud-canvas,C76,Printing Plates,false,/4,Mitch Marner
+ud-canvas,C77,Printing Plates,false,/4,Auston Matthews
+ud-canvas,C78,Printing Plates,false,/4,Brock Boeser
+ud-canvas,C79,Printing Plates,false,/4,Braden Holtby
+ud-canvas,C80,Printing Plates,false,/4,Quinn Hughes
+ud-canvas,C81,Printing Plates,false,/4,Robin Lehner
+ud-canvas,C82,Printing Plates,false,/4,Max Pacioretty
+ud-canvas,C83,Printing Plates,false,/4,Mark Stone
+ud-canvas,C84,Printing Plates,false,/4,Anthony Mantha
+ud-canvas,C85,Printing Plates,false,/4,T.J. Oshie
+ud-canvas,C86,Printing Plates,false,/4,Alex Ovechkin
+ud-canvas,C87,Printing Plates,false,/4,Kyle Connor
+ud-canvas,C88,Printing Plates,false,/4,Nikolaj Ehlers
+ud-canvas,C89,Printing Plates,false,/4,Connor Hellebuyck
+ud-canvas,C90,Printing Plates,false,/4,Auston Matthews/Mitch Marner CL
+ud-canvas--young-guns-printing-plates-parallel,C91,UD Canvas,false,/4,Quinton Byfield RC
+ud-canvas--young-guns-printing-plates-parallel,C92,UD Canvas,false,/4,Zac Jones RC
+ud-canvas--young-guns-printing-plates-parallel,C93,UD Canvas,false,/4,Filip Gustavsson RC
+ud-canvas--young-guns-printing-plates-parallel,C94,UD Canvas,false,/4,Tanner Jeannot RC
+ud-canvas--young-guns-printing-plates-parallel,C95,UD Canvas,false,/4,Wade Allison RC
+ud-canvas--young-guns-printing-plates-parallel,C96,UD Canvas,false,/4,Tyce Thompson RC
+ud-canvas--young-guns-printing-plates-parallel,C97,UD Canvas,false,/4,Jan Jenik RC
+ud-canvas--young-guns-printing-plates-parallel,C98,UD Canvas,false,/4,David Farrance RC
+ud-canvas--young-guns-printing-plates-parallel,C99,UD Canvas,false,/4,Lane Pederson RC
+ud-canvas--young-guns-printing-plates-parallel,C100,UD Canvas,false,/4,Alex Barre-Boulet RC
+ud-canvas--young-guns-printing-plates-parallel,C101,UD Canvas,false,/4,Jacob Bryson RC
+ud-canvas--young-guns-printing-plates-parallel,C102,UD Canvas,false,/4,Oskar Steen RC
+ud-canvas--young-guns-printing-plates-parallel,C103,UD Canvas,false,/4,Shane Pinto RC
+ud-canvas--young-guns-printing-plates-parallel,C104,UD Canvas,false,/4,Ross Colton RC
+ud-canvas--young-guns-printing-plates-parallel,C105,UD Canvas,false,/4,Grigori Denisenko RC
+ud-canvas--young-guns-printing-plates-parallel,C106,UD Canvas,false,/4,Ivan Prosvetov RC
+ud-canvas--young-guns-printing-plates-parallel,C107,UD Canvas,false,/4,Brett Murray RC
+ud-canvas--young-guns-printing-plates-parallel,C108,UD Canvas,false,/4,Calen Addison RC
+ud-canvas--young-guns-printing-plates-parallel,C109,UD Canvas,false,/4,Veini Vehvilainen RC
+ud-canvas--young-guns-printing-plates-parallel,C110,UD Canvas,false,/4,Radim Zohorna RC
+ud-canvas--young-guns-printing-plates-parallel,C111,UD Canvas,false,/4,Kole Lind RC
+ud-canvas--young-guns-printing-plates-parallel,C112,UD Canvas,false,/4,Alex Newhook RC
+ud-canvas--young-guns-printing-plates-parallel,C113,UD Canvas,false,/4,Jacob Bernard-Docker RC
+ud-canvas--young-guns-printing-plates-parallel,C114,UD Canvas,false,/4,Wyatt Kalynuk RC
+ud-canvas--young-guns-printing-plates-parallel,C115,UD Canvas,false,/4,Morgan Barron RC
+ud-canvas--young-guns-printing-plates-parallel,C116,UD Canvas,false,/4,Jeremy Swayman RC
+ud-canvas--young-guns-printing-plates-parallel,C117,UD Canvas,false,/4,Trevor Zegras RC
+ud-canvas--young-guns-printing-plates-parallel,C118,UD Canvas,false,/4,Ivan Chekhovich RC
+ud-canvas--young-guns-printing-plates-parallel,C119,UD Canvas,false,/4,Arttu Ruotsalainen RC
+ud-canvas--young-guns-printing-plates-parallel,C120,UD Canvas,false,/4,Quinton Byfield/Alex Newhook CL RC
+1994-95-rookie-die-cuts,RDT-1,,false,,Quinton Byfield RC
+1994-95-rookie-die-cuts,RDT-2,,false,,Cole Caufield RC
+1994-95-rookie-die-cuts,RDT-3,,false,,Spencer Knight RC
+1994-95-rookie-die-cuts,RDT-4,,false,,Alex Newhook RC
+1994-95-rookie-die-cuts,RDT-5,,false,,Trevor Zegras RC
+1994-95-rookie-die-cuts,RDT-6,,false,,Ukko-Pekka Luukkonen RC
+1994-95-rookie-die-cuts,RDT-7,,false,,Jeremy Swayman RC
+1994-95-rookie-die-cuts,RDT-8,,false,,Shane Pinto RC
+1994-95-rookie-die-cuts,RDT-9,,false,,Wade Allison RC
+1994-95-rookie-die-cuts,RDT-10,,false,,Jamie Drysdale RC
+1994-95-rookie-die-cuts,RDT-1,Red,false,,Quinton Byfield RC
+1994-95-rookie-die-cuts,RDT-2,Red,false,,Cole Caufield RC
+1994-95-rookie-die-cuts,RDT-3,Red,false,,Spencer Knight RC
+1994-95-rookie-die-cuts,RDT-4,Red,false,,Alex Newhook RC
+1994-95-rookie-die-cuts,RDT-5,Red,false,,Trevor Zegras RC
+1994-95-rookie-die-cuts,RDT-6,Red,false,,Ukko-Pekka Luukkonen RC
+1994-95-rookie-die-cuts,RDT-7,Red,false,,Jeremy Swayman RC
+1994-95-rookie-die-cuts,RDT-8,Red,false,,Shane Pinto RC
+1994-95-rookie-die-cuts,RDT-9,Red,false,,Wade Allison RC
+1994-95-rookie-die-cuts,RDT-10,Red,false,,Jamie Drysdale RC
+2021-22-rookie-commemorative-class,RC-1,,false,,Quinton Byfield RC
+2021-22-rookie-commemorative-class,RC-2,,false,,Cam York RC
+2021-22-rookie-commemorative-class,RC-3,,false,,Trevor Zegras RC
+2021-22-rookie-commemorative-class,RC-4,,false,,Spencer Knight RC
+2021-22-rookie-commemorative-class,RC-5,,false,,Jacob Bernard-Docker RC
+2021-22-rookie-commemorative-class,RC-6,,false,,Wade Allison RC
+2021-22-rookie-commemorative-class,RC-7,,false,,Jeremy Swayman RC
+2021-22-rookie-commemorative-class,RC-8,,false,,Ukko-Pekka Luukkonen RC
+2021-22-rookie-commemorative-class,RC-9,,false,,Joe Veleno RC
+2021-22-rookie-commemorative-class,RC-10,,false,,Wyatt Kalynuk RC
+2021-22-rookie-commemorative-class,RC-11,,false,,Jamie Drysdale RC
+2021-22-rookie-commemorative-class,RC-12,,false,,Shane Pinto RC
+2021-22-rookie-commemorative-class,RC-13,,false,,Calen Addison RC
+2021-22-rookie-commemorative-class,RC-14,,false,,Alex Barre-Boulet RC
+2021-22-rookie-commemorative-class,RC-15,,false,,Cole Caufield RC
+2021-22-rookie-commemorative-class,RC-1,Red,false,,Quinton Byfield RC
+2021-22-rookie-commemorative-class,RC-2,Red,false,,Cam York RC
+2021-22-rookie-commemorative-class,RC-3,Red,false,,Trevor Zegras RC
+2021-22-rookie-commemorative-class,RC-4,Red,false,,Spencer Knight RC
+2021-22-rookie-commemorative-class,RC-5,Red,false,,Jacob Bernard-Docker RC
+2021-22-rookie-commemorative-class,RC-6,Red,false,,Wade Allison RC
+2021-22-rookie-commemorative-class,RC-7,Red,false,,Jeremy Swayman RC
+2021-22-rookie-commemorative-class,RC-8,Red,false,,Ukko-Pekka Luukkonen RC
+2021-22-rookie-commemorative-class,RC-9,Red,false,,Joe Veleno RC
+2021-22-rookie-commemorative-class,RC-10,Red,false,,Wyatt Kalynuk RC
+2021-22-rookie-commemorative-class,RC-11,Red,false,,Jamie Drysdale RC
+2021-22-rookie-commemorative-class,RC-12,Red,false,,Shane Pinto RC
+2021-22-rookie-commemorative-class,RC-13,Red,false,,Calen Addison RC
+2021-22-rookie-commemorative-class,RC-14,Red,false,,Alex Barre-Boulet RC
+2021-22-rookie-commemorative-class,RC-15,Red,false,,Cole Caufield RC
+clear-cut-foundations,CCF-AB,,false,,Cam Atkinson/Oliver Bjorkstrand
+clear-cut-foundations,CCF-BH,,false,,Jack Hughes/Mackenzie Blackwood
+clear-cut-foundations,CCF-BQ,,false,,Brock Boeser/Quinn Hughes
+clear-cut-foundations,CCF-BZ,,false,,Filip Zadina/Tyler Bertuzzi
+clear-cut-foundations,CCF-CD,,false,,Rasmus Dahlin/Dylan Cozens
+clear-cut-foundations,CCF-CF,,false,,Joel Farabee/Sean Couturier
+clear-cut-foundations,CCF-CG,,false,,Jakob Chychrun/Conor Garland
+clear-cut-foundations,CCF-CM,,false,,Nathan MacKinnon/Cale Makar
+clear-cut-foundations,CCF-CO,,false,,John Carlson/Alex Ovechkin
+clear-cut-foundations,CCF-DD,,false,,Alex DeBrincat/Kirby Dach
+clear-cut-foundations,CCF-DZ,,false,,Jamie Drysdale/Trevor Zegras RC
+clear-cut-foundations,CCF-EJ,,false,,Eeli Tolvanen/Juuse Saros
+clear-cut-foundations,CCF-FK,,false,,Kirill Kaprizov/Kevin Fiala
+clear-cut-foundations,CCF-GT,,false,,Mark Giordano/Matthew Tkachuk
+clear-cut-foundations,CCF-HB,,false,,Aleksander Barkov/Jonathan Huberdeau
+clear-cut-foundations,CCF-HV,,false,,Victor Hedman/Andrei Vasilevskiy
+clear-cut-foundations,CCF-KB,,false,,Quinton Byfield/Anze Kopitar RC
+clear-cut-foundations,CCF-KH,,false,,Tomas Hertl/Erik Karlsson
+clear-cut-foundations,CCF-LF,,false,,Alexis Lafreniere/Adam Fox
+clear-cut-foundations,CCF-LG,,false,,Jake Guentzel/Kris Letang
+clear-cut-foundations,CCF-MD,,false,,Leon Draisaitl/Connor McDavid
+clear-cut-foundations,CCF-MM,,false,,Auston Matthews/Mitch Marner
+clear-cut-foundations,CCF-NS,,false,,Tim Stutzle/Josh Norris
+clear-cut-foundations,CCF-PM,,false,,Charlie McAvoy/David Pastrnak
+clear-cut-foundations,CCF-RO,,false,,Jake Oettinger/Jason Robertson
+clear-cut-foundations,CCF-SC,,false,,Nick Suzuki/Cole Caufield RC
+clear-cut-foundations,CCF-SE,,false,,Mark Scheifele/Nikolaj Ehlers
+clear-cut-foundations,CCF-SO,,false,,Ryan O'Reilly/Brayden Schenn
+clear-cut-foundations,CCF-ST,,false,,Mark Stone/Shea Theodore
+clear-cut-foundations,CCF-TS,,false,,Andrei Svechnikov/Teuvo Teravainen
+clear-cut-foundations,CCF-VB,,false,,Semyon Varlamov/Mathew Barzal
+clear-cut-honoured-members,HOF-102,,false,/100,Dick Duff
+clear-cut-honoured-members,HOF-103,,false,/100,Charlie Conacher
+clear-cut-honoured-members,HOF-104,,false,/100,Henri Richard
+clear-cut-honoured-members,HOF-105,,false,/100,Serge Savard
+clear-cut-honoured-members,HOF-106,,false,/100,Guy Carbonneau
+clear-cut-honoured-members,HOF-107,,false,/100,Yvan Cournoyer
+clear-cut-honoured-members,HOF-108,,false,/100,Turk Broda
+clear-cut-honoured-members,HOF-109,,false,/100,Bernie Geoffrion
+clear-cut-honoured-members,HOF-110,,false,/100,Eric Lindros
+clear-cut-leaders,CCL-GAA,,false,,Alex Nedeljkovic/Philipp Grubauer/Marc-Andre Fleury
+clear-cut-leaders,CCL-PIM,,false,,Tom Wilson/Max Domi/Brendan Smith
+clear-cut-leaders,CCL-PPG,,false,,Leon Draisaitl/Joe Pavelski/T.J. Oshie
+clear-cut-leaders,CCL-RPT,,false,,Kirill Kaprizov/Jason Robertson/Josh Norris
+clear-cut-leaders,CCL-SOG,,false,,Auston Matthews/Brady Tkachuk/Nathan MacKinnon
+clear-cut-leaders,CCL-WIN,,false,,Andrei Vasilevskiy/Philipp Grubauer/Marc-Andre Fleury
+clear-picks,CP-1,,false,,Sidney Crosby
+clear-picks,CP-2,,false,,Miro Heiskanen
+clear-picks,CP-3,,false,,Alexis Lafreniere
+clear-picks,CP-4,,false,,Quinton Byfield RC
+clear-picks,CP-5,,false,,Nico Hischier
+clear-picks,CP-6,,false,,Kyle Connor
+clear-picks,CP-7,,false,,Cole Caufield RC
+clear-picks,CP-8,,false,,Aaron Ekblad
+clear-picks,CP-9,,false,,Andrei Svechnikov
+clear-picks,CP-10,,false,,Alex Newhook RC
+clear-picks,CP-11,,false,,Auston Matthews
+clear-picks,CP-12,,false,,Cam York RC
+clear-picks,CP-13,,false,,Thomas Chabot
+clear-picks,CP-14,,false,,Leon Draisaitl
+clear-picks,CP-15,,false,,Mathew Barzal
+clear-picks,CP-16,,false,,Drew Doughty
+clear-picks,CP-17,,false,,Trevor Zegras RC
+clear-picks,CP-18,,false,,Bo Horvat
+clear-picks,CP-19,,false,,Steven Stamkos
+clear-picks,CP-20,,false,,Joel Farabee
+clear-picks,CP-21,,false,,Spencer Knight RC
+day-with-the-cup-flashbacks,DCF-1,,false,,Martin Brodeur
+day-with-the-cup-flashbacks,DCF-2,,false,,Tim Horton
+day-with-the-cup-flashbacks,DCF-3,,false,,Luc Robitaille
+day-with-the-cup-flashbacks,DCF-4,,false,,Rod Brind`Amour
+day-with-the-cup-flashbacks,DCF-5,,false,,Dave Andreychuk
+day-with-the-cup-flashbacks,DCF-6,,false,,Al MacInnis
+day-with-the-cup-flashbacks,DCF-7,,false,,Bobby Clarke
+day-with-the-cup-flashbacks,DCF-8,,false,,Bryan Trottier
+day-with-the-cup-flashbacks,DCF-9,,false,,Doug Gilmour
+day-with-the-cup-flashbacks,DCF-10,,false,,Johnny Bucyk
+day-with-the-cup-flashbacks,DCF-11,,false,,Paul Coffey
+day-with-the-cup-flashbacks,DCF-12,,false,,Phil Esposito
+day-with-the-cup-flashbacks--sps,DCF-13,,false,,Bobby Orr
+day-with-the-cup-flashbacks--sps,DCF-14,,false,,Jean Beliveau
+day-with-the-cup-flashbacks--sps,DCF-15,,false,,Wayne Gretzky
+day-with-the-cup-flashbacks--sps,DCF-16,,false,,Guy Lafleur
+day-with-the-cup-flashbacks--sps,DCF-17,,false,,Jacques Plante
+day-with-the-cup-flashbacks--sps,DCF-18,,false,,Terry Sawchuk
+dazzlers-blue,DZ-1,,false,,Trevor Zegras RC
+dazzlers-blue,DZ-2,,false,,Jamie Drysdale RC
+dazzlers-blue,DZ-3,,false,,Jakob Chychrun
+dazzlers-blue,DZ-4,,false,,Jeremy Swayman RC
+dazzlers-blue,DZ-5,,false,,David Pastrnak
+dazzlers-blue,DZ-6,,false,,Ukko-Pekka Luukkonen RC
+dazzlers-blue,DZ-7,,false,,Rasmus Dahlin
+dazzlers-blue,DZ-8,,false,,Elias Lindholm
+dazzlers-blue,DZ-9,,false,,Sebastian Aho
+dazzlers-blue,DZ-10,,false,,Teuvo Teravainen
+dazzlers-blue,DZ-11,,false,,Alex DeBrincat
+dazzlers-blue,DZ-12,,false,,Dominik Kubalik
+dazzlers-blue,DZ-13,,false,,Alex Newhook RC
+dazzlers-blue,DZ-14,,false,,Cale Makar
+dazzlers-blue,DZ-15,,false,,Cam Atkinson
+dazzlers-blue,DZ-16,,false,,Jason Robertson
+dazzlers-blue,DZ-17,,false,,Joe Pavelski
+dazzlers-blue,DZ-18,,false,,Jakub Vrana
+dazzlers-blue,DZ-19,,false,,Connor McDavid
+dazzlers-blue,DZ-20,,false,,Darnell Nurse
+dazzlers-blue,DZ-21,,false,,Spencer Knight RC
+dazzlers-blue,DZ-22,,false,,Jonathan Huberdeau
+dazzlers-blue,DZ-23,,false,,Quinton Byfield RC
+dazzlers-blue,DZ-24,,false,,Kirill Kaprizov
+dazzlers-blue,DZ-25,,false,,Cole Caufield RC
+dazzlers-blue,DZ-26,,false,,Nick Suzuki
+dazzlers-blue,DZ-27,,false,,Juuse Saros
+dazzlers-blue,DZ-28,,false,,Jack Hughes
+dazzlers-blue,DZ-29,,false,,Semyon Varlamov
+dazzlers-blue,DZ-30,,false,,Mathew Barzal
+dazzlers-blue,DZ-31,,false,,Artemi Panarin
+dazzlers-blue,DZ-32,,false,,Igor Shesterkin
+dazzlers-blue,DZ-33,,false,,Tim Stutzle
+dazzlers-blue,DZ-34,,false,,Jakub Voracek
+dazzlers-blue,DZ-35,,false,,Sidney Crosby
+dazzlers-blue,DZ-36,,false,,Jake Guentzel
+dazzlers-blue,DZ-37,,false,,Tomas Hertl
+dazzlers-blue,DZ-38,,false,,David Perron
+dazzlers-blue,DZ-39,,false,,Steven Stamkos
+dazzlers-blue,DZ-40,,false,,Brayden Point
+dazzlers-blue,DZ-41,,false,,Mitch Marner
+dazzlers-blue,DZ-42,,false,,Morgan Rielly
+dazzlers-blue,DZ-43,,false,,Brock Boeser
+dazzlers-blue,DZ-44,,false,,J.T. Miller
+dazzlers-blue,DZ-45,,false,,Robin Lehner
+dazzlers-blue,DZ-46,,false,,Alex Pietrangelo
+dazzlers-blue,DZ-47,,false,,Alex Ovechkin
+dazzlers-blue,DZ-48,,false,,Anthony Mantha
+dazzlers-blue,DZ-49,,false,,Kyle Connor
+dazzlers-blue,DZ-50,,false,,Connor Hellebuyck
+dazzlers-blue,DZ-1,Dazzlers Green,false,,Trevor Zegras RC
+dazzlers-blue,DZ-2,Dazzlers Green,false,,Jamie Drysdale RC
+dazzlers-blue,DZ-3,Dazzlers Green,false,,Jakob Chychrun
+dazzlers-blue,DZ-4,Dazzlers Green,false,,Jeremy Swayman RC
+dazzlers-blue,DZ-5,Dazzlers Green,false,,David Pastrnak
+dazzlers-blue,DZ-6,Dazzlers Green,false,,Ukko-Pekka Luukkonen RC
+dazzlers-blue,DZ-7,Dazzlers Green,false,,Rasmus Dahlin
+dazzlers-blue,DZ-8,Dazzlers Green,false,,Elias Lindholm
+dazzlers-blue,DZ-9,Dazzlers Green,false,,Sebastian Aho
+dazzlers-blue,DZ-10,Dazzlers Green,false,,Teuvo Teravainen
+dazzlers-blue,DZ-11,Dazzlers Green,false,,Alex DeBrincat
+dazzlers-blue,DZ-12,Dazzlers Green,false,,Dominik Kubalik
+dazzlers-blue,DZ-13,Dazzlers Green,false,,Alex Newhook RC
+dazzlers-blue,DZ-14,Dazzlers Green,false,,Cale Makar
+dazzlers-blue,DZ-15,Dazzlers Green,false,,Cam Atkinson
+dazzlers-blue,DZ-16,Dazzlers Green,false,,Jason Robertson
+dazzlers-blue,DZ-17,Dazzlers Green,false,,Joe Pavelski
+dazzlers-blue,DZ-18,Dazzlers Green,false,,Jakub Vrana
+dazzlers-blue,DZ-19,Dazzlers Green,false,,Connor McDavid
+dazzlers-blue,DZ-20,Dazzlers Green,false,,Darnell Nurse
+dazzlers-blue,DZ-21,Dazzlers Green,false,,Spencer Knight RC
+dazzlers-blue,DZ-22,Dazzlers Green,false,,Jonathan Huberdeau
+dazzlers-blue,DZ-23,Dazzlers Green,false,,Quinton Byfield RC
+dazzlers-blue,DZ-24,Dazzlers Green,false,,Kirill Kaprizov
+dazzlers-blue,DZ-25,Dazzlers Green,false,,Cole Caufield RC
+dazzlers-blue,DZ-26,Dazzlers Green,false,,Nick Suzuki
+dazzlers-blue,DZ-27,Dazzlers Green,false,,Juuse Saros
+dazzlers-blue,DZ-28,Dazzlers Green,false,,Jack Hughes
+dazzlers-blue,DZ-29,Dazzlers Green,false,,Semyon Varlamov
+dazzlers-blue,DZ-30,Dazzlers Green,false,,Mathew Barzal
+dazzlers-blue,DZ-31,Dazzlers Green,false,,Artemi Panarin
+dazzlers-blue,DZ-32,Dazzlers Green,false,,Igor Shesterkin
+dazzlers-blue,DZ-33,Dazzlers Green,false,,Tim Stutzle
+dazzlers-blue,DZ-34,Dazzlers Green,false,,Jakub Voracek
+dazzlers-blue,DZ-35,Dazzlers Green,false,,Sidney Crosby
+dazzlers-blue,DZ-36,Dazzlers Green,false,,Jake Guentzel
+dazzlers-blue,DZ-37,Dazzlers Green,false,,Tomas Hertl
+dazzlers-blue,DZ-38,Dazzlers Green,false,,David Perron
+dazzlers-blue,DZ-39,Dazzlers Green,false,,Steven Stamkos
+dazzlers-blue,DZ-40,Dazzlers Green,false,,Brayden Point
+dazzlers-blue,DZ-41,Dazzlers Green,false,,Mitch Marner
+dazzlers-blue,DZ-42,Dazzlers Green,false,,Morgan Rielly
+dazzlers-blue,DZ-43,Dazzlers Green,false,,Brock Boeser
+dazzlers-blue,DZ-44,Dazzlers Green,false,,J.T. Miller
+dazzlers-blue,DZ-45,Dazzlers Green,false,,Robin Lehner
+dazzlers-blue,DZ-46,Dazzlers Green,false,,Alex Pietrangelo
+dazzlers-blue,DZ-47,Dazzlers Green,false,,Alex Ovechkin
+dazzlers-blue,DZ-48,Dazzlers Green,false,,Anthony Mantha
+dazzlers-blue,DZ-49,Dazzlers Green,false,,Kyle Connor
+dazzlers-blue,DZ-50,Dazzlers Green,false,,Connor Hellebuyck
+dazzlers-blue,DZ-1,Dazzlers Orange,false,,Trevor Zegras RC
+dazzlers-blue,DZ-2,Dazzlers Orange,false,,Jamie Drysdale RC
+dazzlers-blue,DZ-3,Dazzlers Orange,false,,Jakob Chychrun
+dazzlers-blue,DZ-4,Dazzlers Orange,false,,Jeremy Swayman RC
+dazzlers-blue,DZ-5,Dazzlers Orange,false,,David Pastrnak
+dazzlers-blue,DZ-6,Dazzlers Orange,false,,Ukko-Pekka Luukkonen RC
+dazzlers-blue,DZ-7,Dazzlers Orange,false,,Rasmus Dahlin
+dazzlers-blue,DZ-8,Dazzlers Orange,false,,Elias Lindholm
+dazzlers-blue,DZ-9,Dazzlers Orange,false,,Sebastian Aho
+dazzlers-blue,DZ-10,Dazzlers Orange,false,,Teuvo Teravainen
+dazzlers-blue,DZ-11,Dazzlers Orange,false,,Alex DeBrincat
+dazzlers-blue,DZ-12,Dazzlers Orange,false,,Dominik Kubalik
+dazzlers-blue,DZ-13,Dazzlers Orange,false,,Alex Newhook RC
+dazzlers-blue,DZ-14,Dazzlers Orange,false,,Cale Makar
+dazzlers-blue,DZ-15,Dazzlers Orange,false,,Cam Atkinson
+dazzlers-blue,DZ-16,Dazzlers Orange,false,,Jason Robertson
+dazzlers-blue,DZ-17,Dazzlers Orange,false,,Joe Pavelski
+dazzlers-blue,DZ-18,Dazzlers Orange,false,,Jakub Vrana
+dazzlers-blue,DZ-19,Dazzlers Orange,false,,Connor McDavid
+dazzlers-blue,DZ-20,Dazzlers Orange,false,,Darnell Nurse
+dazzlers-blue,DZ-21,Dazzlers Orange,false,,Spencer Knight RC
+dazzlers-blue,DZ-22,Dazzlers Orange,false,,Jonathan Huberdeau
+dazzlers-blue,DZ-23,Dazzlers Orange,false,,Quinton Byfield RC
+dazzlers-blue,DZ-24,Dazzlers Orange,false,,Kirill Kaprizov
+dazzlers-blue,DZ-25,Dazzlers Orange,false,,Cole Caufield RC
+dazzlers-blue,DZ-26,Dazzlers Orange,false,,Nick Suzuki
+dazzlers-blue,DZ-27,Dazzlers Orange,false,,Juuse Saros
+dazzlers-blue,DZ-28,Dazzlers Orange,false,,Jack Hughes
+dazzlers-blue,DZ-29,Dazzlers Orange,false,,Semyon Varlamov
+dazzlers-blue,DZ-30,Dazzlers Orange,false,,Mathew Barzal
+dazzlers-blue,DZ-31,Dazzlers Orange,false,,Artemi Panarin
+dazzlers-blue,DZ-32,Dazzlers Orange,false,,Igor Shesterkin
+dazzlers-blue,DZ-33,Dazzlers Orange,false,,Tim Stutzle
+dazzlers-blue,DZ-34,Dazzlers Orange,false,,Jakub Voracek
+dazzlers-blue,DZ-35,Dazzlers Orange,false,,Sidney Crosby
+dazzlers-blue,DZ-36,Dazzlers Orange,false,,Jake Guentzel
+dazzlers-blue,DZ-37,Dazzlers Orange,false,,Tomas Hertl
+dazzlers-blue,DZ-38,Dazzlers Orange,false,,David Perron
+dazzlers-blue,DZ-39,Dazzlers Orange,false,,Steven Stamkos
+dazzlers-blue,DZ-40,Dazzlers Orange,false,,Brayden Point
+dazzlers-blue,DZ-41,Dazzlers Orange,false,,Mitch Marner
+dazzlers-blue,DZ-42,Dazzlers Orange,false,,Morgan Rielly
+dazzlers-blue,DZ-43,Dazzlers Orange,false,,Brock Boeser
+dazzlers-blue,DZ-44,Dazzlers Orange,false,,J.T. Miller
+dazzlers-blue,DZ-45,Dazzlers Orange,false,,Robin Lehner
+dazzlers-blue,DZ-46,Dazzlers Orange,false,,Alex Pietrangelo
+dazzlers-blue,DZ-47,Dazzlers Orange,false,,Alex Ovechkin
+dazzlers-blue,DZ-48,Dazzlers Orange,false,,Anthony Mantha
+dazzlers-blue,DZ-49,Dazzlers Orange,false,,Kyle Connor
+dazzlers-blue,DZ-50,Dazzlers Orange,false,,Connor Hellebuyck
+dazzlers-blue,DZ-1,Dazzlers Pink,false,,Trevor Zegras RC
+dazzlers-blue,DZ-2,Dazzlers Pink,false,,Jamie Drysdale RC
+dazzlers-blue,DZ-3,Dazzlers Pink,false,,Jakob Chychrun
+dazzlers-blue,DZ-4,Dazzlers Pink,false,,Jeremy Swayman RC
+dazzlers-blue,DZ-5,Dazzlers Pink,false,,David Pastrnak
+dazzlers-blue,DZ-6,Dazzlers Pink,false,,Ukko-Pekka Luukkonen RC
+dazzlers-blue,DZ-7,Dazzlers Pink,false,,Rasmus Dahlin
+dazzlers-blue,DZ-8,Dazzlers Pink,false,,Elias Lindholm
+dazzlers-blue,DZ-9,Dazzlers Pink,false,,Sebastian Aho
+dazzlers-blue,DZ-10,Dazzlers Pink,false,,Teuvo Teravainen
+dazzlers-blue,DZ-11,Dazzlers Pink,false,,Alex DeBrincat
+dazzlers-blue,DZ-12,Dazzlers Pink,false,,Dominik Kubalik
+dazzlers-blue,DZ-13,Dazzlers Pink,false,,Alex Newhook RC
+dazzlers-blue,DZ-14,Dazzlers Pink,false,,Cale Makar
+dazzlers-blue,DZ-15,Dazzlers Pink,false,,Cam Atkinson
+dazzlers-blue,DZ-16,Dazzlers Pink,false,,Jason Robertson
+dazzlers-blue,DZ-17,Dazzlers Pink,false,,Joe Pavelski
+dazzlers-blue,DZ-18,Dazzlers Pink,false,,Jakub Vrana
+dazzlers-blue,DZ-19,Dazzlers Pink,false,,Connor McDavid
+dazzlers-blue,DZ-20,Dazzlers Pink,false,,Darnell Nurse
+dazzlers-blue,DZ-21,Dazzlers Pink,false,,Spencer Knight RC
+dazzlers-blue,DZ-22,Dazzlers Pink,false,,Jonathan Huberdeau
+dazzlers-blue,DZ-23,Dazzlers Pink,false,,Quinton Byfield RC
+dazzlers-blue,DZ-24,Dazzlers Pink,false,,Kirill Kaprizov
+dazzlers-blue,DZ-25,Dazzlers Pink,false,,Cole Caufield RC
+dazzlers-blue,DZ-26,Dazzlers Pink,false,,Nick Suzuki
+dazzlers-blue,DZ-27,Dazzlers Pink,false,,Juuse Saros
+dazzlers-blue,DZ-28,Dazzlers Pink,false,,Jack Hughes
+dazzlers-blue,DZ-29,Dazzlers Pink,false,,Semyon Varlamov
+dazzlers-blue,DZ-30,Dazzlers Pink,false,,Mathew Barzal
+dazzlers-blue,DZ-31,Dazzlers Pink,false,,Artemi Panarin
+dazzlers-blue,DZ-32,Dazzlers Pink,false,,Igor Shesterkin
+dazzlers-blue,DZ-33,Dazzlers Pink,false,,Tim Stutzle
+dazzlers-blue,DZ-34,Dazzlers Pink,false,,Jakub Voracek
+dazzlers-blue,DZ-35,Dazzlers Pink,false,,Sidney Crosby
+dazzlers-blue,DZ-36,Dazzlers Pink,false,,Jake Guentzel
+dazzlers-blue,DZ-37,Dazzlers Pink,false,,Tomas Hertl
+dazzlers-blue,DZ-38,Dazzlers Pink,false,,David Perron
+dazzlers-blue,DZ-39,Dazzlers Pink,false,,Steven Stamkos
+dazzlers-blue,DZ-40,Dazzlers Pink,false,,Brayden Point
+dazzlers-blue,DZ-41,Dazzlers Pink,false,,Mitch Marner
+dazzlers-blue,DZ-42,Dazzlers Pink,false,,Morgan Rielly
+dazzlers-blue,DZ-43,Dazzlers Pink,false,,Brock Boeser
+dazzlers-blue,DZ-44,Dazzlers Pink,false,,J.T. Miller
+dazzlers-blue,DZ-45,Dazzlers Pink,false,,Robin Lehner
+dazzlers-blue,DZ-46,Dazzlers Pink,false,,Alex Pietrangelo
+dazzlers-blue,DZ-47,Dazzlers Pink,false,,Alex Ovechkin
+dazzlers-blue,DZ-48,Dazzlers Pink,false,,Anthony Mantha
+dazzlers-blue,DZ-49,Dazzlers Pink,false,,Kyle Connor
+dazzlers-blue,DZ-50,Dazzlers Pink,false,,Connor Hellebuyck
+dazzlers-blue,DZ-1,Dazzlers Purple,false,,Trevor Zegras RC
+dazzlers-blue,DZ-2,Dazzlers Purple,false,,Jamie Drysdale RC
+dazzlers-blue,DZ-3,Dazzlers Purple,false,,Jakob Chychrun
+dazzlers-blue,DZ-4,Dazzlers Purple,false,,Jeremy Swayman RC
+dazzlers-blue,DZ-5,Dazzlers Purple,false,,David Pastrnak
+dazzlers-blue,DZ-6,Dazzlers Purple,false,,Ukko-Pekka Luukkonen RC
+dazzlers-blue,DZ-7,Dazzlers Purple,false,,Rasmus Dahlin
+dazzlers-blue,DZ-8,Dazzlers Purple,false,,Elias Lindholm
+dazzlers-blue,DZ-9,Dazzlers Purple,false,,Sebastian Aho
+dazzlers-blue,DZ-10,Dazzlers Purple,false,,Teuvo Teravainen
+dazzlers-blue,DZ-11,Dazzlers Purple,false,,Alex DeBrincat
+dazzlers-blue,DZ-12,Dazzlers Purple,false,,Dominik Kubalik
+dazzlers-blue,DZ-13,Dazzlers Purple,false,,Alex Newhook RC
+dazzlers-blue,DZ-14,Dazzlers Purple,false,,Cale Makar
+dazzlers-blue,DZ-15,Dazzlers Purple,false,,Cam Atkinson
+dazzlers-blue,DZ-16,Dazzlers Purple,false,,Jason Robertson
+dazzlers-blue,DZ-17,Dazzlers Purple,false,,Joe Pavelski
+dazzlers-blue,DZ-18,Dazzlers Purple,false,,Jakub Vrana
+dazzlers-blue,DZ-19,Dazzlers Purple,false,,Connor McDavid
+dazzlers-blue,DZ-20,Dazzlers Purple,false,,Darnell Nurse
+dazzlers-blue,DZ-21,Dazzlers Purple,false,,Spencer Knight RC
+dazzlers-blue,DZ-22,Dazzlers Purple,false,,Jonathan Huberdeau
+dazzlers-blue,DZ-23,Dazzlers Purple,false,,Quinton Byfield RC
+dazzlers-blue,DZ-24,Dazzlers Purple,false,,Kirill Kaprizov
+dazzlers-blue,DZ-25,Dazzlers Purple,false,,Cole Caufield RC
+dazzlers-blue,DZ-26,Dazzlers Purple,false,,Nick Suzuki
+dazzlers-blue,DZ-27,Dazzlers Purple,false,,Juuse Saros
+dazzlers-blue,DZ-28,Dazzlers Purple,false,,Jack Hughes
+dazzlers-blue,DZ-29,Dazzlers Purple,false,,Semyon Varlamov
+dazzlers-blue,DZ-30,Dazzlers Purple,false,,Mathew Barzal
+dazzlers-blue,DZ-31,Dazzlers Purple,false,,Artemi Panarin
+dazzlers-blue,DZ-32,Dazzlers Purple,false,,Igor Shesterkin
+dazzlers-blue,DZ-33,Dazzlers Purple,false,,Tim Stutzle
+dazzlers-blue,DZ-34,Dazzlers Purple,false,,Jakub Voracek
+dazzlers-blue,DZ-35,Dazzlers Purple,false,,Sidney Crosby
+dazzlers-blue,DZ-36,Dazzlers Purple,false,,Jake Guentzel
+dazzlers-blue,DZ-37,Dazzlers Purple,false,,Tomas Hertl
+dazzlers-blue,DZ-38,Dazzlers Purple,false,,David Perron
+dazzlers-blue,DZ-39,Dazzlers Purple,false,,Steven Stamkos
+dazzlers-blue,DZ-40,Dazzlers Purple,false,,Brayden Point
+dazzlers-blue,DZ-41,Dazzlers Purple,false,,Mitch Marner
+dazzlers-blue,DZ-42,Dazzlers Purple,false,,Morgan Rielly
+dazzlers-blue,DZ-43,Dazzlers Purple,false,,Brock Boeser
+dazzlers-blue,DZ-44,Dazzlers Purple,false,,J.T. Miller
+dazzlers-blue,DZ-45,Dazzlers Purple,false,,Robin Lehner
+dazzlers-blue,DZ-46,Dazzlers Purple,false,,Alex Pietrangelo
+dazzlers-blue,DZ-47,Dazzlers Purple,false,,Alex Ovechkin
+dazzlers-blue,DZ-48,Dazzlers Purple,false,,Anthony Mantha
+dazzlers-blue,DZ-49,Dazzlers Purple,false,,Kyle Connor
+dazzlers-blue,DZ-50,Dazzlers Purple,false,,Connor Hellebuyck
+dazzlers-blue,DZ-1,Dazzlers Red,false,,Trevor Zegras RC
+dazzlers-blue,DZ-2,Dazzlers Red,false,,Jamie Drysdale RC
+dazzlers-blue,DZ-3,Dazzlers Red,false,,Jakob Chychrun
+dazzlers-blue,DZ-4,Dazzlers Red,false,,Jeremy Swayman RC
+dazzlers-blue,DZ-5,Dazzlers Red,false,,David Pastrnak
+dazzlers-blue,DZ-6,Dazzlers Red,false,,Ukko-Pekka Luukkonen RC
+dazzlers-blue,DZ-7,Dazzlers Red,false,,Rasmus Dahlin
+dazzlers-blue,DZ-8,Dazzlers Red,false,,Elias Lindholm
+dazzlers-blue,DZ-9,Dazzlers Red,false,,Sebastian Aho
+dazzlers-blue,DZ-10,Dazzlers Red,false,,Teuvo Teravainen
+dazzlers-blue,DZ-11,Dazzlers Red,false,,Alex DeBrincat
+dazzlers-blue,DZ-12,Dazzlers Red,false,,Dominik Kubalik
+dazzlers-blue,DZ-13,Dazzlers Red,false,,Alex Newhook RC
+dazzlers-blue,DZ-14,Dazzlers Red,false,,Cale Makar
+dazzlers-blue,DZ-15,Dazzlers Red,false,,Cam Atkinson
+dazzlers-blue,DZ-16,Dazzlers Red,false,,Jason Robertson
+dazzlers-blue,DZ-17,Dazzlers Red,false,,Joe Pavelski
+dazzlers-blue,DZ-18,Dazzlers Red,false,,Jakub Vrana
+dazzlers-blue,DZ-19,Dazzlers Red,false,,Connor McDavid
+dazzlers-blue,DZ-20,Dazzlers Red,false,,Darnell Nurse
+dazzlers-blue,DZ-21,Dazzlers Red,false,,Spencer Knight RC
+dazzlers-blue,DZ-22,Dazzlers Red,false,,Jonathan Huberdeau
+dazzlers-blue,DZ-23,Dazzlers Red,false,,Quinton Byfield RC
+dazzlers-blue,DZ-24,Dazzlers Red,false,,Kirill Kaprizov
+dazzlers-blue,DZ-25,Dazzlers Red,false,,Cole Caufield RC
+dazzlers-blue,DZ-26,Dazzlers Red,false,,Nick Suzuki
+dazzlers-blue,DZ-27,Dazzlers Red,false,,Juuse Saros
+dazzlers-blue,DZ-28,Dazzlers Red,false,,Jack Hughes
+dazzlers-blue,DZ-29,Dazzlers Red,false,,Semyon Varlamov
+dazzlers-blue,DZ-30,Dazzlers Red,false,,Mathew Barzal
+dazzlers-blue,DZ-31,Dazzlers Red,false,,Artemi Panarin
+dazzlers-blue,DZ-32,Dazzlers Red,false,,Igor Shesterkin
+dazzlers-blue,DZ-33,Dazzlers Red,false,,Tim Stutzle
+dazzlers-blue,DZ-34,Dazzlers Red,false,,Jakub Voracek
+dazzlers-blue,DZ-35,Dazzlers Red,false,,Sidney Crosby
+dazzlers-blue,DZ-36,Dazzlers Red,false,,Jake Guentzel
+dazzlers-blue,DZ-37,Dazzlers Red,false,,Tomas Hertl
+dazzlers-blue,DZ-38,Dazzlers Red,false,,David Perron
+dazzlers-blue,DZ-39,Dazzlers Red,false,,Steven Stamkos
+dazzlers-blue,DZ-40,Dazzlers Red,false,,Brayden Point
+dazzlers-blue,DZ-41,Dazzlers Red,false,,Mitch Marner
+dazzlers-blue,DZ-42,Dazzlers Red,false,,Morgan Rielly
+dazzlers-blue,DZ-43,Dazzlers Red,false,,Brock Boeser
+dazzlers-blue,DZ-44,Dazzlers Red,false,,J.T. Miller
+dazzlers-blue,DZ-45,Dazzlers Red,false,,Robin Lehner
+dazzlers-blue,DZ-46,Dazzlers Red,false,,Alex Pietrangelo
+dazzlers-blue,DZ-47,Dazzlers Red,false,,Alex Ovechkin
+dazzlers-blue,DZ-48,Dazzlers Red,false,,Anthony Mantha
+dazzlers-blue,DZ-49,Dazzlers Red,false,,Kyle Connor
+dazzlers-blue,DZ-50,Dazzlers Red,false,,Connor Hellebuyck
+debut-dates,DD-1,,false,,Alexis Lafreniere
+debut-dates,DD-2,,false,,John Leonard
+debut-dates,DD-3,,false,,Dylan Cozens
+debut-dates,DD-4,,false,,Arthur Kaliyev
+debut-dates,DD-5,,false,,Kevin Lankinen
+debut-dates,DD-6,,false,,K'Andre Miller
+debut-dates,DD-7,,false,,Tim Stutzle
+debut-dates,DD-8,,false,,Ty Smith
+debut-dates,DD-9,,false,,Jack Rathbone
+debut-dates,DD-10,,false,,Pierre-Olivier Joseph
+debut-dates,DD-11,,false,,Connor McMichael
+debut-dates,DD-12,,false,,Ty Dellandrea
+debut-dates,DD-13,,false,,Bowen Byram
+debut-dates,DD-14,,false,,Peyton Krebs
+debut-dates,DD-15,,false,,Nick Robertson
+debut-dates,DD-16,,false,,Aleksi Heponiemi
+debut-dates,DD-17,,false,,Nils Hoglander
+debut-dates,DD-18,,false,,Alexander Romanov
+debut-dates,DD-19,,false,,Pius Suter
+debut-dates,DD-20,,false,,Jake Oettinger
+debut-dates,DD-21,,false,,Yegor Sharangovich
+debut-dates,DD-22,,false,,Ilya Sorokin
+debut-dates,DD-23,,false,,Nolan Foote
+debut-dates,DD-24,,false,,Vitali Kravtsov
+debut-dates,DD-25,,false,,Kirill Kaprizov
+debut-dates,DD-1,Gold,false,,Alexis Lafreniere
+debut-dates,DD-2,Gold,false,,John Leonard
+debut-dates,DD-3,Gold,false,,Dylan Cozens
+debut-dates,DD-4,Gold,false,,Arthur Kaliyev
+debut-dates,DD-5,Gold,false,,Kevin Lankinen
+debut-dates,DD-6,Gold,false,,K'Andre Miller
+debut-dates,DD-7,Gold,false,,Tim Stutzle
+debut-dates,DD-8,Gold,false,,Ty Smith
+debut-dates,DD-9,Gold,false,,Jack Rathbone
+debut-dates,DD-10,Gold,false,,Pierre-Olivier Joseph
+debut-dates,DD-11,Gold,false,,Connor McMichael
+debut-dates,DD-12,Gold,false,,Ty Dellandrea
+debut-dates,DD-13,Gold,false,,Bowen Byram
+debut-dates,DD-14,Gold,false,,Peyton Krebs
+debut-dates,DD-15,Gold,false,,Nick Robertson
+debut-dates,DD-16,Gold,false,,Aleksi Heponiemi
+debut-dates,DD-17,Gold,false,,Nils Hoglander
+debut-dates,DD-18,Gold,false,,Alexander Romanov
+debut-dates,DD-19,Gold,false,,Pius Suter
+debut-dates,DD-20,Gold,false,,Jake Oettinger
+debut-dates,DD-21,Gold,false,,Yegor Sharangovich
+debut-dates,DD-22,Gold,false,,Ilya Sorokin
+debut-dates,DD-23,Gold,false,,Nolan Foote
+debut-dates,DD-24,Gold,false,,Vitali Kravtsov
+debut-dates,DD-25,Gold,false,,Kirill Kaprizov
+debut-dates,DD-1,Printing Plates,false,/4,Alexis Lafreniere
+debut-dates,DD-2,Printing Plates,false,/4,John Leonard
+debut-dates,DD-3,Printing Plates,false,/4,Dylan Cozens
+debut-dates,DD-4,Printing Plates,false,/4,Arthur Kaliyev
+debut-dates,DD-5,Printing Plates,false,/4,Kevin Lankinen
+debut-dates,DD-6,Printing Plates,false,/4,K'Andre Miller
+debut-dates,DD-7,Printing Plates,false,/4,Tim Stutzle
+debut-dates,DD-8,Printing Plates,false,/4,Ty Smith
+debut-dates,DD-9,Printing Plates,false,/4,Jack Rathbone
+debut-dates,DD-10,Printing Plates,false,/4,Pierre-Olivier Joseph
+debut-dates,DD-11,Printing Plates,false,/4,Connor McMichael
+debut-dates,DD-12,Printing Plates,false,/4,Ty Dellandrea
+debut-dates,DD-13,Printing Plates,false,/4,Bowen Byram
+debut-dates,DD-14,Printing Plates,false,/4,Peyton Krebs
+debut-dates,DD-15,Printing Plates,false,/4,Nick Robertson
+debut-dates,DD-16,Printing Plates,false,/4,Aleksi Heponiemi
+debut-dates,DD-17,Printing Plates,false,/4,Nils Hoglander
+debut-dates,DD-18,Printing Plates,false,/4,Alexander Romanov
+debut-dates,DD-19,Printing Plates,false,/4,Pius Suter
+debut-dates,DD-20,Printing Plates,false,/4,Jake Oettinger
+debut-dates,DD-21,Printing Plates,false,/4,Yegor Sharangovich
+debut-dates,DD-22,Printing Plates,false,/4,Ilya Sorokin
+debut-dates,DD-23,Printing Plates,false,/4,Nolan Foote
+debut-dates,DD-24,Printing Plates,false,/4,Vitali Kravtsov
+debut-dates,DD-25,Printing Plates,false,/4,Kirill Kaprizov
+debut-dates,DD-1,Jersey,false,,Alexis Lafreniere
+debut-dates,DD-2,Jersey,false,,John Leonard
+debut-dates,DD-3,Jersey,false,,Dylan Cozens
+debut-dates,DD-4,Jersey,false,,Arthur Kaliyev
+debut-dates,DD-6,Jersey,false,,K'Andre Miller
+debut-dates,DD-7,Jersey,false,,Tim Stutzle
+debut-dates,DD-8,Jersey,false,,Ty Smith
+debut-dates,DD-9,Jersey,false,,Jack Rathbone
+debut-dates,DD-10,Jersey,false,,Pierre-Olivier Joseph
+debut-dates,DD-11,Jersey,false,,Connor McMichael
+debut-dates,DD-12,Jersey,false,,Ty Dellandrea
+debut-dates,DD-13,Jersey,false,,Bowen Byram
+debut-dates,DD-14,Jersey,false,,Peyton Krebs
+debut-dates,DD-15,Jersey,false,,Nick Robertson
+debut-dates,DD-17,Jersey,false,,Nils Hoglander
+debut-dates,DD-18,Jersey,false,,Alexander Romanov
+debut-dates,DD-19,Jersey,false,,Pius Suter
+debut-dates,DD-20,Jersey,false,,Jake Oettinger
+debut-dates,DD-21,Jersey,false,,Yegor Sharangovich
+debut-dates,DD-22,Jersey,false,,Ilya Sorokin
+debut-dates,DD-23,Jersey,false,,Nolan Foote
+debut-dates,DD-25,Jersey,false,,Kirill Kaprizov
+electromagnetic,EM-1,,false,,Leon Draisaitl
+electromagnetic,EM-2,,false,,Gabe Vilardi
+electromagnetic,EM-3,,false,,Mikko Rantanen
+electromagnetic,EM-4,,false,,David Perron
+electromagnetic,EM-5,,false,,Mitch Marner
+electromagnetic,EM-6,,false,,Nikolaj Ehlers
+electromagnetic,EM-7,,false,,Sebastian Aho
+electromagnetic,EM-8,,false,,Ilya Sorokin
+electromagnetic,EM-9,,false,,Dylan Larkin
+electromagnetic,EM-10,,false,,Joel Farabee
+electromagnetic,EM-11,,false,,Maxime Comtois
+electromagnetic,EM-12,,false,,Nils Hoglander
+electromagnetic,EM-13,,false,,Nick Suzuki
+electromagnetic,EM-14,,false,,Josh Norris
+electromagnetic,EM-15,,false,,Johnny Gaudreau
+electromagnetic,EM-16,,false,,Evgeni Malkin
+electromagnetic,EM-17,,false,,Nico Hischier
+electromagnetic,EM-18,,false,,Miro Heiskanen
+electromagnetic,EM-19,,false,,Conor Garland
+electromagnetic,EM-20,,false,,Alex DeBrincat
+electromagnetic,EM-21,,false,,Sergei Bobrovsky
+electromagnetic,EM-22,,false,,Taylor Hall
+electromagnetic,EM-23,,false,,Igor Shesterkin
+electromagnetic,EM-24,,false,,Kirill Kaprizov
+electromagnetic,EM-25,,false,,Patrik Laine
+electromagnetic,EM-26,,false,,Shea Theodore
+electromagnetic,EM-27,,false,,Rasmus Dahlin
+electromagnetic,EM-28,,false,,Logan Couture
+electromagnetic,EM-29,,false,,Nikita Kucherov
+electromagnetic,EM-30,,false,,Nicklas Backstrom
+electromagnetic,EM-1,Gold,false,,Leon Draisaitl
+electromagnetic,EM-2,Gold,false,,Gabe Vilardi
+electromagnetic,EM-3,Gold,false,,Mikko Rantanen
+electromagnetic,EM-4,Gold,false,,David Perron
+electromagnetic,EM-5,Gold,false,,Mitch Marner
+electromagnetic,EM-6,Gold,false,,Nikolaj Ehlers
+electromagnetic,EM-7,Gold,false,,Sebastian Aho
+electromagnetic,EM-8,Gold,false,,Ilya Sorokin
+electromagnetic,EM-9,Gold,false,,Dylan Larkin
+electromagnetic,EM-10,Gold,false,,Joel Farabee
+electromagnetic,EM-11,Gold,false,,Maxime Comtois
+electromagnetic,EM-12,Gold,false,,Nils Hoglander
+electromagnetic,EM-13,Gold,false,,Nick Suzuki
+electromagnetic,EM-14,Gold,false,,Josh Norris
+electromagnetic,EM-15,Gold,false,,Johnny Gaudreau
+electromagnetic,EM-16,Gold,false,,Evgeni Malkin
+electromagnetic,EM-17,Gold,false,,Nico Hischier
+electromagnetic,EM-18,Gold,false,,Miro Heiskanen
+electromagnetic,EM-19,Gold,false,,Conor Garland
+electromagnetic,EM-20,Gold,false,,Alex DeBrincat
+electromagnetic,EM-21,Gold,false,,Sergei Bobrovsky
+electromagnetic,EM-22,Gold,false,,Taylor Hall
+electromagnetic,EM-23,Gold,false,,Igor Shesterkin
+electromagnetic,EM-24,Gold,false,,Kirill Kaprizov
+electromagnetic,EM-25,Gold,false,,Patrik Laine
+electromagnetic,EM-26,Gold,false,,Shea Theodore
+electromagnetic,EM-27,Gold,false,,Rasmus Dahlin
+electromagnetic,EM-28,Gold,false,,Logan Couture
+electromagnetic,EM-29,Gold,false,,Nikita Kucherov
+electromagnetic,EM-30,Gold,false,,Nicklas Backstrom
+electromagnetic,EM-1,Printing Plates,false,/4,Leon Draisaitl
+electromagnetic,EM-2,Printing Plates,false,/4,Gabe Vilardi
+electromagnetic,EM-3,Printing Plates,false,/4,Mikko Rantanen
+electromagnetic,EM-4,Printing Plates,false,/4,David Perron
+electromagnetic,EM-5,Printing Plates,false,/4,Mitch Marner
+electromagnetic,EM-6,Printing Plates,false,/4,Nikolaj Ehlers
+electromagnetic,EM-7,Printing Plates,false,/4,Sebastian Aho
+electromagnetic,EM-8,Printing Plates,false,/4,Ilya Sorokin
+electromagnetic,EM-9,Printing Plates,false,/4,Dylan Larkin
+electromagnetic,EM-10,Printing Plates,false,/4,Joel Farabee
+electromagnetic,EM-11,Printing Plates,false,/4,Maxime Comtois
+electromagnetic,EM-12,Printing Plates,false,/4,Nils Hoglander
+electromagnetic,EM-13,Printing Plates,false,/4,Nick Suzuki
+electromagnetic,EM-14,Printing Plates,false,/4,Josh Norris
+electromagnetic,EM-15,Printing Plates,false,/4,Johnny Gaudreau
+electromagnetic,EM-16,Printing Plates,false,/4,Evgeni Malkin
+electromagnetic,EM-17,Printing Plates,false,/4,Nico Hischier
+electromagnetic,EM-18,Printing Plates,false,/4,Miro Heiskanen
+electromagnetic,EM-19,Printing Plates,false,/4,Conor Garland
+electromagnetic,EM-20,Printing Plates,false,/4,Alex DeBrincat
+electromagnetic,EM-21,Printing Plates,false,/4,Sergei Bobrovsky
+electromagnetic,EM-22,Printing Plates,false,/4,Taylor Hall
+electromagnetic,EM-23,Printing Plates,false,/4,Igor Shesterkin
+electromagnetic,EM-24,Printing Plates,false,/4,Kirill Kaprizov
+electromagnetic,EM-25,Printing Plates,false,/4,Patrik Laine
+electromagnetic,EM-26,Printing Plates,false,/4,Shea Theodore
+electromagnetic,EM-27,Printing Plates,false,/4,Rasmus Dahlin
+electromagnetic,EM-28,Printing Plates,false,/4,Logan Couture
+electromagnetic,EM-29,Printing Plates,false,/4,Nikita Kucherov
+electromagnetic,EM-30,Printing Plates,false,/4,Nicklas Backstrom
+honor-roll,HR-1,,false,,Nathan MacKinnon
+honor-roll,HR-2,,false,,Ryan O'Reilly
+honor-roll,HR-3,,false,,Alex Ovechkin
+honor-roll,HR-4,,false,,Alex DeBrincat
+honor-roll,HR-5,,false,,Brayden Point
+honor-roll,HR-6,,false,,Mark Scheifele
+honor-roll,HR-7,,false,,Elias Pettersson
+honor-roll,HR-8,,false,,Marc-Andre Fleury
+honor-roll,HR-9,,false,,Brad Marchand
+honor-roll,HR-10,,false,,Brock Boeser
+honor-roll,HR-11,,false,,Spencer Knight RC
+honor-roll,HR-12,,false,,Cole Caufield RC
+honor-roll,HR-13,,false,,Patrick Kane
+honor-roll,HR-14,,false,,Patrice Bergeron
+honor-roll,HR-15,,false,,Sidney Crosby
+honor-roll,HR-16,,false,,Igor Shesterkin
+honor-roll,HR-17,,false,,Andrei Svechnikov
+honor-roll,HR-18,,false,,Connor McDavid
+honor-roll,HR-19,,false,,Kyle Connor
+honor-roll,HR-20,,false,,John Carlson
+honor-roll,HR-21,,false,,Jack Hughes
+honor-roll,HR-22,,false,,Victor Hedman
+honor-roll,HR-23,,false,,Cale Makar
+honor-roll,HR-24,,false,,Jake Guentzel
+honor-roll,HR-25,,false,,Jack Eichel
+honor-roll,HR-26,,false,,Mitch Marner
+honor-roll,HR-27,,false,,Steven Stamkos
+honor-roll,HR-28,,false,,Andrei Vasilevskiy
+honor-roll,HR-29,,false,,Sebastian Aho
+honor-roll,HR-30,,false,,Alex Newhook RC
+honor-roll,HR-31,,false,,Matthew Tkachuk
+honor-roll,HR-32,,false,,Leon Draisaitl
+honor-roll,HR-33,,false,,David Pastrnak
+honor-roll,HR-34,,false,,John Tavares
+honor-roll,HR-35,,false,,Kirill Kaprizov
+honor-roll,HR-36,,false,,Quinton Byfield RC
+honor-roll,HR-37,,false,,Artemi Panarin
+honor-roll,HR-38,,false,,Connor Hellebuyck
+honor-roll,HR-39,,false,,Aleksander Barkov
+honor-roll,HR-40,,false,,Quinn Hughes
+honor-roll,HR-41,,false,,Mikko Rantanen
+honor-roll,HR-42,,false,,Mark Stone
+honor-roll,HR-43,,false,,Adam Fox
+honor-roll,HR-44,,false,,Semyon Varlamov
+honor-roll,HR-45,,false,,Jonathan Huberdeau
+honor-roll,HR-46,,false,,Trevor Zegras RC
+honor-roll,HR-47,,false,,Brady Tkachuk
+honor-roll,HR-48,,false,,Jeremy Swayman RC
+honor-roll,HR-49,,false,,Evgeni Malkin
+honor-roll,HR-50,,false,,Auston Matthews
+honor-roll,HR-1,Rainbow,false,/250,Nathan MacKinnon
+honor-roll,HR-2,Rainbow,false,/250,Ryan O'Reilly
+honor-roll,HR-3,Rainbow,false,/250,Alex Ovechkin
+honor-roll,HR-4,Rainbow,false,/250,Alex DeBrincat
+honor-roll,HR-5,Rainbow,false,/250,Brayden Point
+honor-roll,HR-6,Rainbow,false,/250,Mark Scheifele
+honor-roll,HR-7,Rainbow,false,/250,Elias Pettersson
+honor-roll,HR-8,Rainbow,false,/250,Marc-Andre Fleury
+honor-roll,HR-9,Rainbow,false,/250,Brad Marchand
+honor-roll,HR-10,Rainbow,false,/250,Brock Boeser
+honor-roll,HR-11,Rainbow,false,/250,Spencer Knight RC
+honor-roll,HR-12,Rainbow,false,/250,Cole Caufield RC
+honor-roll,HR-13,Rainbow,false,/250,Patrick Kane
+honor-roll,HR-14,Rainbow,false,/250,Patrice Bergeron
+honor-roll,HR-15,Rainbow,false,/250,Sidney Crosby
+honor-roll,HR-16,Rainbow,false,/250,Igor Shesterkin
+honor-roll,HR-17,Rainbow,false,/250,Andrei Svechnikov
+honor-roll,HR-18,Rainbow,false,/250,Connor McDavid
+honor-roll,HR-19,Rainbow,false,/250,Kyle Connor
+honor-roll,HR-20,Rainbow,false,/250,John Carlson
+honor-roll,HR-21,Rainbow,false,/250,Jack Hughes
+honor-roll,HR-22,Rainbow,false,/250,Victor Hedman
+honor-roll,HR-23,Rainbow,false,/250,Cale Makar
+honor-roll,HR-24,Rainbow,false,/250,Jake Guentzel
+honor-roll,HR-25,Rainbow,false,/250,Jack Eichel
+honor-roll,HR-26,Rainbow,false,/250,Mitch Marner
+honor-roll,HR-27,Rainbow,false,/250,Steven Stamkos
+honor-roll,HR-28,Rainbow,false,/250,Andrei Vasilevskiy
+honor-roll,HR-29,Rainbow,false,/250,Sebastian Aho
+honor-roll,HR-30,Rainbow,false,/250,Alex Newhook RC
+honor-roll,HR-31,Rainbow,false,/250,Matthew Tkachuk
+honor-roll,HR-32,Rainbow,false,/250,Leon Draisaitl
+honor-roll,HR-33,Rainbow,false,/250,David Pastrnak
+honor-roll,HR-34,Rainbow,false,/250,John Tavares
+honor-roll,HR-35,Rainbow,false,/250,Kirill Kaprizov
+honor-roll,HR-36,Rainbow,false,/250,Quinton Byfield RC
+honor-roll,HR-37,Rainbow,false,/250,Artemi Panarin
+honor-roll,HR-38,Rainbow,false,/250,Connor Hellebuyck
+honor-roll,HR-39,Rainbow,false,/250,Aleksander Barkov
+honor-roll,HR-40,Rainbow,false,/250,Quinn Hughes
+honor-roll,HR-41,Rainbow,false,/250,Mikko Rantanen
+honor-roll,HR-42,Rainbow,false,/250,Mark Stone
+honor-roll,HR-43,Rainbow,false,/250,Adam Fox
+honor-roll,HR-44,Rainbow,false,/250,Semyon Varlamov
+honor-roll,HR-45,Rainbow,false,/250,Jonathan Huberdeau
+honor-roll,HR-46,Rainbow,false,/250,Trevor Zegras RC
+honor-roll,HR-47,Rainbow,false,/250,Brady Tkachuk
+honor-roll,HR-48,Rainbow,false,/250,Jeremy Swayman RC
+honor-roll,HR-49,Rainbow,false,/250,Evgeni Malkin
+honor-roll,HR-50,Rainbow,false,/250,Auston Matthews
+honor-roll,HR-1,Gold Rainbow,false,/25,Nathan MacKinnon
+honor-roll,HR-2,Gold Rainbow,false,/25,Ryan O'Reilly
+honor-roll,HR-3,Gold Rainbow,false,/25,Alex Ovechkin
+honor-roll,HR-4,Gold Rainbow,false,/25,Alex DeBrincat
+honor-roll,HR-5,Gold Rainbow,false,/25,Brayden Point
+honor-roll,HR-6,Gold Rainbow,false,/25,Mark Scheifele
+honor-roll,HR-7,Gold Rainbow,false,/25,Elias Pettersson
+honor-roll,HR-8,Gold Rainbow,false,/25,Marc-Andre Fleury
+honor-roll,HR-9,Gold Rainbow,false,/25,Brad Marchand
+honor-roll,HR-10,Gold Rainbow,false,/25,Brock Boeser
+honor-roll,HR-11,Gold Rainbow,false,/25,Spencer Knight RC
+honor-roll,HR-12,Gold Rainbow,false,/25,Cole Caufield RC
+honor-roll,HR-13,Gold Rainbow,false,/25,Patrick Kane
+honor-roll,HR-14,Gold Rainbow,false,/25,Patrice Bergeron
+honor-roll,HR-15,Gold Rainbow,false,/25,Sidney Crosby
+honor-roll,HR-16,Gold Rainbow,false,/25,Igor Shesterkin
+honor-roll,HR-17,Gold Rainbow,false,/25,Andrei Svechnikov
+honor-roll,HR-18,Gold Rainbow,false,/25,Connor McDavid
+honor-roll,HR-19,Gold Rainbow,false,/25,Kyle Connor
+honor-roll,HR-20,Gold Rainbow,false,/25,John Carlson
+honor-roll,HR-21,Gold Rainbow,false,/25,Jack Hughes
+honor-roll,HR-22,Gold Rainbow,false,/25,Victor Hedman
+honor-roll,HR-23,Gold Rainbow,false,/25,Cale Makar
+honor-roll,HR-24,Gold Rainbow,false,/25,Jake Guentzel
+honor-roll,HR-25,Gold Rainbow,false,/25,Jack Eichel
+honor-roll,HR-26,Gold Rainbow,false,/25,Mitch Marner
+honor-roll,HR-27,Gold Rainbow,false,/25,Steven Stamkos
+honor-roll,HR-28,Gold Rainbow,false,/25,Andrei Vasilevskiy
+honor-roll,HR-29,Gold Rainbow,false,/25,Sebastian Aho
+honor-roll,HR-30,Gold Rainbow,false,/25,Alex Newhook RC
+honor-roll,HR-31,Gold Rainbow,false,/25,Matthew Tkachuk
+honor-roll,HR-32,Gold Rainbow,false,/25,Leon Draisaitl
+honor-roll,HR-33,Gold Rainbow,false,/25,David Pastrnak
+honor-roll,HR-34,Gold Rainbow,false,/25,John Tavares
+honor-roll,HR-35,Gold Rainbow,false,/25,Kirill Kaprizov
+honor-roll,HR-36,Gold Rainbow,false,/25,Quinton Byfield RC
+honor-roll,HR-37,Gold Rainbow,false,/25,Artemi Panarin
+honor-roll,HR-38,Gold Rainbow,false,/25,Connor Hellebuyck
+honor-roll,HR-39,Gold Rainbow,false,/25,Aleksander Barkov
+honor-roll,HR-40,Gold Rainbow,false,/25,Quinn Hughes
+honor-roll,HR-41,Gold Rainbow,false,/25,Mikko Rantanen
+honor-roll,HR-42,Gold Rainbow,false,/25,Mark Stone
+honor-roll,HR-43,Gold Rainbow,false,/25,Adam Fox
+honor-roll,HR-44,Gold Rainbow,false,/25,Semyon Varlamov
+honor-roll,HR-45,Gold Rainbow,false,/25,Jonathan Huberdeau
+honor-roll,HR-46,Gold Rainbow,false,/25,Trevor Zegras RC
+honor-roll,HR-47,Gold Rainbow,false,/25,Brady Tkachuk
+honor-roll,HR-48,Gold Rainbow,false,/25,Jeremy Swayman RC
+honor-roll,HR-49,Gold Rainbow,false,/25,Evgeni Malkin
+honor-roll,HR-50,Gold Rainbow,false,/25,Auston Matthews
+honor-roll,HR-1,Red Rainbow,false,,Nathan MacKinnon
+honor-roll,HR-2,Red Rainbow,false,,Ryan O'Reilly
+honor-roll,HR-3,Red Rainbow,false,,Alex Ovechkin
+honor-roll,HR-4,Red Rainbow,false,,Alex DeBrincat
+honor-roll,HR-5,Red Rainbow,false,,Brayden Point
+honor-roll,HR-6,Red Rainbow,false,,Mark Scheifele
+honor-roll,HR-7,Red Rainbow,false,,Elias Pettersson
+honor-roll,HR-8,Red Rainbow,false,,Marc-Andre Fleury
+honor-roll,HR-9,Red Rainbow,false,,Brad Marchand
+honor-roll,HR-10,Red Rainbow,false,,Brock Boeser
+honor-roll,HR-11,Red Rainbow,false,,Spencer Knight RC
+honor-roll,HR-12,Red Rainbow,false,,Cole Caufield RC
+honor-roll,HR-13,Red Rainbow,false,,Patrick Kane
+honor-roll,HR-14,Red Rainbow,false,,Patrice Bergeron
+honor-roll,HR-15,Red Rainbow,false,,Sidney Crosby
+honor-roll,HR-16,Red Rainbow,false,,Igor Shesterkin
+honor-roll,HR-17,Red Rainbow,false,,Andrei Svechnikov
+honor-roll,HR-18,Red Rainbow,false,,Connor McDavid
+honor-roll,HR-19,Red Rainbow,false,,Kyle Connor
+honor-roll,HR-20,Red Rainbow,false,,John Carlson
+honor-roll,HR-21,Red Rainbow,false,,Jack Hughes
+honor-roll,HR-22,Red Rainbow,false,,Victor Hedman
+honor-roll,HR-23,Red Rainbow,false,,Cale Makar
+honor-roll,HR-24,Red Rainbow,false,,Jake Guentzel
+honor-roll,HR-25,Red Rainbow,false,,Jack Eichel
+honor-roll,HR-26,Red Rainbow,false,,Mitch Marner
+honor-roll,HR-27,Red Rainbow,false,,Steven Stamkos
+honor-roll,HR-28,Red Rainbow,false,,Andrei Vasilevskiy
+honor-roll,HR-29,Red Rainbow,false,,Sebastian Aho
+honor-roll,HR-30,Red Rainbow,false,,Alex Newhook RC
+honor-roll,HR-31,Red Rainbow,false,,Matthew Tkachuk
+honor-roll,HR-32,Red Rainbow,false,,Leon Draisaitl
+honor-roll,HR-33,Red Rainbow,false,,David Pastrnak
+honor-roll,HR-34,Red Rainbow,false,,John Tavares
+honor-roll,HR-35,Red Rainbow,false,,Kirill Kaprizov
+honor-roll,HR-36,Red Rainbow,false,,Quinton Byfield RC
+honor-roll,HR-37,Red Rainbow,false,,Artemi Panarin
+honor-roll,HR-38,Red Rainbow,false,,Connor Hellebuyck
+honor-roll,HR-39,Red Rainbow,false,,Aleksander Barkov
+honor-roll,HR-40,Red Rainbow,false,,Quinn Hughes
+honor-roll,HR-41,Red Rainbow,false,,Mikko Rantanen
+honor-roll,HR-42,Red Rainbow,false,,Mark Stone
+honor-roll,HR-43,Red Rainbow,false,,Adam Fox
+honor-roll,HR-44,Red Rainbow,false,,Semyon Varlamov
+honor-roll,HR-45,Red Rainbow,false,,Jonathan Huberdeau
+honor-roll,HR-46,Red Rainbow,false,,Trevor Zegras RC
+honor-roll,HR-47,Red Rainbow,false,,Brady Tkachuk
+honor-roll,HR-48,Red Rainbow,false,,Jeremy Swayman RC
+honor-roll,HR-49,Red Rainbow,false,,Evgeni Malkin
+honor-roll,HR-50,Red Rainbow,false,,Auston Matthews
+honor-roll,HR-1,Printing Plates,false,/4,Nathan MacKinnon
+honor-roll,HR-2,Printing Plates,false,/4,Ryan O'Reilly
+honor-roll,HR-3,Printing Plates,false,/4,Alex Ovechkin
+honor-roll,HR-4,Printing Plates,false,/4,Alex DeBrincat
+honor-roll,HR-5,Printing Plates,false,/4,Brayden Point
+honor-roll,HR-6,Printing Plates,false,/4,Mark Scheifele
+honor-roll,HR-7,Printing Plates,false,/4,Elias Pettersson
+honor-roll,HR-8,Printing Plates,false,/4,Marc-Andre Fleury
+honor-roll,HR-9,Printing Plates,false,/4,Brad Marchand
+honor-roll,HR-10,Printing Plates,false,/4,Brock Boeser
+honor-roll,HR-11,Printing Plates,false,/4,Spencer Knight RC
+honor-roll,HR-12,Printing Plates,false,/4,Cole Caufield RC
+honor-roll,HR-13,Printing Plates,false,/4,Patrick Kane
+honor-roll,HR-14,Printing Plates,false,/4,Patrice Bergeron
+honor-roll,HR-15,Printing Plates,false,/4,Sidney Crosby
+honor-roll,HR-16,Printing Plates,false,/4,Igor Shesterkin
+honor-roll,HR-17,Printing Plates,false,/4,Andrei Svechnikov
+honor-roll,HR-18,Printing Plates,false,/4,Connor McDavid
+honor-roll,HR-19,Printing Plates,false,/4,Kyle Connor
+honor-roll,HR-20,Printing Plates,false,/4,John Carlson
+honor-roll,HR-21,Printing Plates,false,/4,Jack Hughes
+honor-roll,HR-22,Printing Plates,false,/4,Victor Hedman
+honor-roll,HR-23,Printing Plates,false,/4,Cale Makar
+honor-roll,HR-24,Printing Plates,false,/4,Jake Guentzel
+honor-roll,HR-25,Printing Plates,false,/4,Jack Eichel
+honor-roll,HR-26,Printing Plates,false,/4,Mitch Marner
+honor-roll,HR-27,Printing Plates,false,/4,Steven Stamkos
+honor-roll,HR-28,Printing Plates,false,/4,Andrei Vasilevskiy
+honor-roll,HR-29,Printing Plates,false,/4,Sebastian Aho
+honor-roll,HR-30,Printing Plates,false,/4,Alex Newhook RC
+honor-roll,HR-31,Printing Plates,false,/4,Matthew Tkachuk
+honor-roll,HR-32,Printing Plates,false,/4,Leon Draisaitl
+honor-roll,HR-33,Printing Plates,false,/4,David Pastrnak
+honor-roll,HR-34,Printing Plates,false,/4,John Tavares
+honor-roll,HR-35,Printing Plates,false,/4,Kirill Kaprizov
+honor-roll,HR-36,Printing Plates,false,/4,Quinton Byfield RC
+honor-roll,HR-37,Printing Plates,false,/4,Artemi Panarin
+honor-roll,HR-38,Printing Plates,false,/4,Connor Hellebuyck
+honor-roll,HR-39,Printing Plates,false,/4,Aleksander Barkov
+honor-roll,HR-40,Printing Plates,false,/4,Quinn Hughes
+honor-roll,HR-41,Printing Plates,false,/4,Mikko Rantanen
+honor-roll,HR-42,Printing Plates,false,/4,Mark Stone
+honor-roll,HR-43,Printing Plates,false,/4,Adam Fox
+honor-roll,HR-44,Printing Plates,false,/4,Semyon Varlamov
+honor-roll,HR-45,Printing Plates,false,/4,Jonathan Huberdeau
+honor-roll,HR-46,Printing Plates,false,/4,Trevor Zegras RC
+honor-roll,HR-47,Printing Plates,false,/4,Brady Tkachuk
+honor-roll,HR-48,Printing Plates,false,/4,Jeremy Swayman RC
+honor-roll,HR-49,Printing Plates,false,/4,Evgeni Malkin
+honor-roll,HR-50,Printing Plates,false,/4,Auston Matthews
+hundo-p,HP-1,,false,,Connor McDavid
+hundo-p,HP-2,,false,,Zach Parise
+hundo-p,HP-3,,false,,Brayden Point
+hundo-p,HP-4,,false,,Brent Burns
+hundo-p,HP-5,,false,,Sean Couturier
+hundo-p,HP-6,,false,,Alex Pietrangelo
+hundo-p,HP-7,,false,,Milan Lucic
+hundo-p,HP-8,,false,,Brady Tkachuk
+hundo-p,HP-9,,false,,Sidney Crosby
+hundo-p,HP-10,,false,,Anze Kopitar
+hundo-p,HP-11,,false,,Mark Stone
+hundo-p,HP-12,,false,,Blake Wheeler
+hundo-p,HP-13,,false,,Duncan Keith
+hundo-p,HP-14,,false,,Adam Fox
+hundo-p,HP-15,,false,,Patrice Bergeron
+hundo-p,HP-16,,false,,Joe Pavelski
+hundo-p,HP-17,,false,,Ryan O'Reilly
+hundo-p,HP-18,,false,,Auston Matthews
+hundo-p,HP-19,,false,,Nathan MacKinnon
+hundo-p,HP-20,,false,,Phillip Danault
+hundo-p,HP-21,,false,,Seth Jones
+hundo-p,HP-22,,false,,Roman Josi
+hundo-p,HP-23,,false,,Aleksander Barkov
+hundo-p,HP-24,,false,,Anders Lee
+hundo-p,HP-25,,false,,Matthew Tkachuk
+hundo-p,HP-1,Gold,false,,Connor McDavid
+hundo-p,HP-2,Gold,false,,Zach Parise
+hundo-p,HP-3,Gold,false,,Brayden Point
+hundo-p,HP-4,Gold,false,,Brent Burns
+hundo-p,HP-5,Gold,false,,Sean Couturier
+hundo-p,HP-6,Gold,false,,Alex Pietrangelo
+hundo-p,HP-7,Gold,false,,Milan Lucic
+hundo-p,HP-8,Gold,false,,Brady Tkachuk
+hundo-p,HP-9,Gold,false,,Sidney Crosby
+hundo-p,HP-10,Gold,false,,Anze Kopitar
+hundo-p,HP-11,Gold,false,,Mark Stone
+hundo-p,HP-12,Gold,false,,Blake Wheeler
+hundo-p,HP-13,Gold,false,,Duncan Keith
+hundo-p,HP-14,Gold,false,,Adam Fox
+hundo-p,HP-15,Gold,false,,Patrice Bergeron
+hundo-p,HP-16,Gold,false,,Joe Pavelski
+hundo-p,HP-17,Gold,false,,Ryan O'Reilly
+hundo-p,HP-18,Gold,false,,Auston Matthews
+hundo-p,HP-19,Gold,false,,Nathan MacKinnon
+hundo-p,HP-20,Gold,false,,Phillip Danault
+hundo-p,HP-21,Gold,false,,Seth Jones
+hundo-p,HP-22,Gold,false,,Roman Josi
+hundo-p,HP-23,Gold,false,,Aleksander Barkov
+hundo-p,HP-24,Gold,false,,Anders Lee
+hundo-p,HP-25,Gold,false,,Matthew Tkachuk
+hundo-p,HP-1,Printing Plates,false,/4,Connor McDavid
+hundo-p,HP-2,Printing Plates,false,/4,Zach Parise
+hundo-p,HP-3,Printing Plates,false,/4,Brayden Point
+hundo-p,HP-4,Printing Plates,false,/4,Brent Burns
+hundo-p,HP-5,Printing Plates,false,/4,Sean Couturier
+hundo-p,HP-6,Printing Plates,false,/4,Alex Pietrangelo
+hundo-p,HP-7,Printing Plates,false,/4,Milan Lucic
+hundo-p,HP-8,Printing Plates,false,/4,Brady Tkachuk
+hundo-p,HP-9,Printing Plates,false,/4,Sidney Crosby
+hundo-p,HP-10,Printing Plates,false,/4,Anze Kopitar
+hundo-p,HP-11,Printing Plates,false,/4,Mark Stone
+hundo-p,HP-12,Printing Plates,false,/4,Blake Wheeler
+hundo-p,HP-13,Printing Plates,false,/4,Duncan Keith
+hundo-p,HP-14,Printing Plates,false,/4,Adam Fox
+hundo-p,HP-15,Printing Plates,false,/4,Patrice Bergeron
+hundo-p,HP-16,Printing Plates,false,/4,Joe Pavelski
+hundo-p,HP-17,Printing Plates,false,/4,Ryan O'Reilly
+hundo-p,HP-18,Printing Plates,false,/4,Auston Matthews
+hundo-p,HP-19,Printing Plates,false,/4,Nathan MacKinnon
+hundo-p,HP-20,Printing Plates,false,/4,Phillip Danault
+hundo-p,HP-21,Printing Plates,false,/4,Seth Jones
+hundo-p,HP-22,Printing Plates,false,/4,Roman Josi
+hundo-p,HP-23,Printing Plates,false,/4,Aleksander Barkov
+hundo-p,HP-24,Printing Plates,false,/4,Anders Lee
+hundo-p,HP-25,Printing Plates,false,/4,Matthew Tkachuk
+o-pee-chee-glossy,R-1,,false,,Spencer Knight RC
+o-pee-chee-glossy,R-2,,false,,Joe Veleno RC
+o-pee-chee-glossy,R-3,,false,,Cam York RC
+o-pee-chee-glossy,R-4,,false,,Shane Pinto RC
+o-pee-chee-glossy,R-5,,false,,Cole Caufield RC
+o-pee-chee-glossy,R-6,,false,,Jeremy Swayman RC
+o-pee-chee-glossy,R-7,,false,,Grigori Denisenko RC
+o-pee-chee-glossy,R-8,,false,,Trevor Zegras RC
+o-pee-chee-glossy,R-9,,false,,Quinton Byfield RC
+o-pee-chee-glossy,R-10,,false,,Alex Newhook RC
+o-pee-chee-glossy,R-1,Bronze,false,,Spencer Knight RC
+o-pee-chee-glossy,R-2,Bronze,false,,Joe Veleno RC
+o-pee-chee-glossy,R-3,Bronze,false,,Cam York RC
+o-pee-chee-glossy,R-4,Bronze,false,,Shane Pinto RC
+o-pee-chee-glossy,R-5,Bronze,false,,Cole Caufield RC
+o-pee-chee-glossy,R-6,Bronze,false,,Jeremy Swayman RC
+o-pee-chee-glossy,R-7,Bronze,false,,Grigori Denisenko RC
+o-pee-chee-glossy,R-8,Bronze,false,,Trevor Zegras RC
+o-pee-chee-glossy,R-9,Bronze,false,,Quinton Byfield RC
+o-pee-chee-glossy,R-10,Bronze,false,,Alex Newhook RC
+o-pee-chee-glossy,R-1,Gold,false,,Spencer Knight RC
+o-pee-chee-glossy,R-2,Gold,false,,Joe Veleno RC
+o-pee-chee-glossy,R-3,Gold,false,,Cam York RC
+o-pee-chee-glossy,R-4,Gold,false,,Shane Pinto RC
+o-pee-chee-glossy,R-5,Gold,false,,Cole Caufield RC
+o-pee-chee-glossy,R-6,Gold,false,,Jeremy Swayman RC
+o-pee-chee-glossy,R-7,Gold,false,,Grigori Denisenko RC
+o-pee-chee-glossy,R-8,Gold,false,,Trevor Zegras RC
+o-pee-chee-glossy,R-9,Gold,false,,Quinton Byfield RC
+o-pee-chee-glossy,R-10,Gold,false,,Alex Newhook RC
+rookie-retrospective,RR-1,,false,,Kirill Kaprizov
+rookie-retrospective,RR-2,,false,,Jason Robertson
+rookie-retrospective,RR-3,,false,,Mikey Anderson
+rookie-retrospective,RR-4,,false,,Jake Oettinger
+rookie-retrospective,RR-5,,false,,Yegor Sharangovich
+rookie-retrospective,RR-6,,false,,Gabe Vilardi
+rookie-retrospective,RR-7,,false,,Kevin Lankinen
+rookie-retrospective,RR-8,,false,,Josh Norris
+rookie-retrospective,RR-9,,false,,Nils Hoglander
+rookie-retrospective,RR-10,,false,,Kaapo Kahkonen
+rookie-retrospective,RR-11,,false,,Pius Suter
+rookie-retrospective,RR-12,,false,,Eeli Tolvanen
+rookie-retrospective,RR-13,,false,,Vitek Vanecek
+rookie-retrospective,RR-14,,false,,Ty Smith
+rookie-retrospective,RR-15,,false,,Ilya Sorokin
+rookie-retrospective,RR-16,,false,,Brandon Hagel
+rookie-retrospective,RR-17,,false,,Tim Stutzle
+rookie-retrospective,RR-18,,false,,Alex Nedeljkovic
+rookie-retrospective,RR-19,,false,,K'Andre Miller
+rookie-retrospective,RR-20,,false,,Alexis Lafreniere
+rookie-retrospective,RR-1,Gold,false,,Kirill Kaprizov
+rookie-retrospective,RR-2,Gold,false,,Jason Robertson
+rookie-retrospective,RR-3,Gold,false,,Mikey Anderson
+rookie-retrospective,RR-4,Gold,false,,Jake Oettinger
+rookie-retrospective,RR-5,Gold,false,,Yegor Sharangovich
+rookie-retrospective,RR-6,Gold,false,,Gabe Vilardi
+rookie-retrospective,RR-7,Gold,false,,Kevin Lankinen
+rookie-retrospective,RR-8,Gold,false,,Josh Norris
+rookie-retrospective,RR-9,Gold,false,,Nils Hoglander
+rookie-retrospective,RR-10,Gold,false,,Kaapo Kahkonen
+rookie-retrospective,RR-11,Gold,false,,Pius Suter
+rookie-retrospective,RR-12,Gold,false,,Eeli Tolvanen
+rookie-retrospective,RR-13,Gold,false,,Vitek Vanecek
+rookie-retrospective,RR-14,Gold,false,,Ty Smith
+rookie-retrospective,RR-15,Gold,false,,Ilya Sorokin
+rookie-retrospective,RR-16,Gold,false,,Brandon Hagel
+rookie-retrospective,RR-17,Gold,false,,Tim Stutzle
+rookie-retrospective,RR-18,Gold,false,,Alex Nedeljkovic
+rookie-retrospective,RR-19,Gold,false,,K'Andre Miller
+rookie-retrospective,RR-20,Gold,false,,Alexis Lafreniere
+rookie-retrospective,RR-1,Printing Plates,false,/4,Kirill Kaprizov
+rookie-retrospective,RR-2,Printing Plates,false,/4,Jason Robertson
+rookie-retrospective,RR-3,Printing Plates,false,/4,Mikey Anderson
+rookie-retrospective,RR-4,Printing Plates,false,/4,Jake Oettinger
+rookie-retrospective,RR-5,Printing Plates,false,/4,Yegor Sharangovich
+rookie-retrospective,RR-6,Printing Plates,false,/4,Gabe Vilardi
+rookie-retrospective,RR-7,Printing Plates,false,/4,Kevin Lankinen
+rookie-retrospective,RR-8,Printing Plates,false,/4,Josh Norris
+rookie-retrospective,RR-9,Printing Plates,false,/4,Nils Hoglander
+rookie-retrospective,RR-10,Printing Plates,false,/4,Kaapo Kahkonen
+rookie-retrospective,RR-11,Printing Plates,false,/4,Pius Suter
+rookie-retrospective,RR-12,Printing Plates,false,/4,Eeli Tolvanen
+rookie-retrospective,RR-13,Printing Plates,false,/4,Vitek Vanecek
+rookie-retrospective,RR-14,Printing Plates,false,/4,Ty Smith
+rookie-retrospective,RR-15,Printing Plates,false,/4,Ilya Sorokin
+rookie-retrospective,RR-16,Printing Plates,false,/4,Brandon Hagel
+rookie-retrospective,RR-17,Printing Plates,false,/4,Tim Stutzle
+rookie-retrospective,RR-18,Printing Plates,false,/4,Alex Nedeljkovic
+rookie-retrospective,RR-19,Printing Plates,false,/4,K'Andre Miller
+rookie-retrospective,RR-20,Printing Plates,false,/4,Alexis Lafreniere
+rookie-retrospective,RR-1,Jersey,false,,Kirill Kaprizov
+rookie-retrospective,RR-2,Jersey,false,,Jason Robertson
+rookie-retrospective,RR-3,Jersey,false,,Mikey Anderson
+rookie-retrospective,RR-4,Jersey,false,,Jake Oettinger
+rookie-retrospective,RR-5,Jersey,false,,Yegor Sharangovich
+rookie-retrospective,RR-6,Jersey,false,,Gabe Vilardi
+rookie-retrospective,RR-8,Jersey,false,,Josh Norris
+rookie-retrospective,RR-9,Jersey,false,,Nils Hoglander
+rookie-retrospective,RR-11,Jersey,false,,Pius Suter
+rookie-retrospective,RR-12,Jersey,false,,Eeli Tolvanen
+rookie-retrospective,RR-13,Jersey,false,,Vitek Vanecek
+rookie-retrospective,RR-14,Jersey,false,,Ty Smith
+rookie-retrospective,RR-15,Jersey,false,,Ilya Sorokin
+rookie-retrospective,RR-16,Jersey,false,,Brandon Hagel
+rookie-retrospective,RR-17,Jersey,false,,Tim Stutzle
+rookie-retrospective,RR-19,Jersey,false,,K'Andre Miller
+rookie-retrospective,RR-20,Jersey,false,,Alexis Lafreniere
+sophomore-sensations,SO-1,,false,,Kirill Kaprizov
+sophomore-sensations,SO-2,,false,,Tim Stutzle
+sophomore-sensations,SO-3,,false,,Alexis Lafreniere
+sophomore-sensations,SO-4,,false,,Jason Robertson
+sophomore-sensations,SO-5,,false,,Ilya Sorokin
+sophomore-sensations,SO-6,,false,,Josh Norris
+team-triples,TT-BOS,,false,,David Pastrnak/Brad Marchand/Patrice Bergeron
+team-triples,TT-CAL,,false,,Elias Lindholm/Matthew Tkachuk/Mark Giordano
+team-triples,TT-CHI,,false,,Patrick Kane/Alex DeBrincat/Dominik Kubalik
+team-triples,TT-COL,,false,,Mikko Rantanen/Cale Makar/Nathan MacKinnon
+team-triples,TT-EDM,,false,,Leon Draisaitl/Darnell Nurse/Tyson Barrie
+team-triples,TT-MTL,,false,,Shea Weber/Carey Price/Tyler Toffoli
+team-triples,TT-NYR,,false,,Artemi Panarin/Adam Fox/Mika Zibanejad
+team-triples,TT-OTT,,false,,Brady Tkachuk/Thomas Chabot/Matt Murray
+team-triples,TT-PHI,,false,,Claude Giroux/Jakub Voracek/Sean Couturier
+team-triples,TT-TBL,,false,,Steven Stamkos/Andrei Vasilevskiy/Victor Hedman
+team-triples,TT-TOR,,false,,Auston Matthews/Mitch Marner/William Nylander
+team-triples,TT-VAN,,false,,Bo Horvat/Brock Boeser/Elias Pettersson
+team-triples,TT-VGK,,false,,Marc-Andre Fleury/Mark Stone/Max Pacioretty
+team-triples,TT-WAS,,false,,Alex Ovechkin/Anthony Mantha/Nicklas Backstrom
+team-triples,TT-WIN,,false,,Nikolaj Ehlers/Connor Hellebuyck/Mark Scheifele
+team-triples,TT-BOS,Gold,false,,David Pastrnak/Brad Marchand/Patrice Bergeron
+team-triples,TT-CAL,Gold,false,,Elias Lindholm/Matthew Tkachuk/Mark Giordano
+team-triples,TT-CHI,Gold,false,,Patrick Kane/Alex DeBrincat/Dominik Kubalik
+team-triples,TT-COL,Gold,false,,Mikko Rantanen/Cale Makar/Nathan MacKinnon
+team-triples,TT-EDM,Gold,false,,Leon Draisaitl/Darnell Nurse/Tyson Barrie
+team-triples,TT-MTL,Gold,false,,Shea Weber/Carey Price/Tyler Toffoli
+team-triples,TT-NYR,Gold,false,,Artemi Panarin/Adam Fox/Mika Zibanejad
+team-triples,TT-OTT,Gold,false,,Brady Tkachuk/Thomas Chabot/Matt Murray
+team-triples,TT-PHI,Gold,false,,Claude Giroux/Jakub Voracek/Sean Couturier
+team-triples,TT-TBL,Gold,false,,Steven Stamkos/Andrei Vasilevskiy/Victor Hedman
+team-triples,TT-TOR,Gold,false,,Auston Matthews/Mitch Marner/William Nylander
+team-triples,TT-VAN,Gold,false,,Bo Horvat/Brock Boeser/Elias Pettersson
+team-triples,TT-VGK,Gold,false,,Marc-Andre Fleury/Mark Stone/Max Pacioretty
+team-triples,TT-WAS,Gold,false,,Alex Ovechkin/Anthony Mantha/Nicklas Backstrom
+team-triples,TT-WIN,Gold,false,,Nikolaj Ehlers/Connor Hellebuyck/Mark Scheifele
+ud-game-jersey,GJ-AB,,false,,Adam Boqvist
+ud-game-jersey,GJ-AD,,false,,Alex DeBrincat
+ud-game-jersey,GJ-AE,,false,,Aaron Ekblad
+ud-game-jersey,GJ-AH,,false,,Adam Henrique
+ud-game-jersey,GJ-AK,,false,,Adrian Kempe
+ud-game-jersey,GJ-AL,,false,,Anders Lee
+ud-game-jersey,GJ-AR,,false,,Viktor Arvidsson
+ud-game-jersey,GJ-AV,,false,,Andrei Vasilevskiy
+ud-game-jersey,GJ-BA,,false,,Josh Bailey
+ud-game-jersey,GJ-BG,,false,,Brendan Gallagher
+ud-game-jersey,GJ-BH,,false,,Bo Horvat
+ud-game-jersey,GJ-BP,,false,,Brayden Point
+ud-game-jersey,GJ-BS,,false,,Brayden Schenn
+ud-game-jersey,GJ-BU,,false,,Andre Burakovsky
+ud-game-jersey,GJ-BW,,false,,Blake Wheeler
+ud-game-jersey,GJ-CA,,false,,Cam Atkinson
+ud-game-jersey,GJ-CC,,false,,Charlie Coyle
+ud-game-jersey,GJ-CK,,false,,Clayton Keller
+ud-game-jersey,GJ-CM,,false,,Casey Mittelstadt
+ud-game-jersey,GJ-CW,,false,,Colin White
+ud-game-jersey,GJ-DD,,false,,Drew Doughty
+ud-game-jersey,GJ-DK,,false,,Darcy Kuemper
+ud-game-jersey,GJ-DL,,false,,Dylan Larkin
+ud-game-jersey,GJ-DN,,false,,Darnell Nurse
+ud-game-jersey,GJ-EK,,false,,Evander Kane
+ud-game-jersey,GJ-FF,,false,,Filip Forsberg
+ud-game-jersey,GJ-GA,,false,,Johnny Gaudreau
+ud-game-jersey,GJ-JB,,false,,Jamie Benn
+ud-game-jersey,GJ-JC,,false,,John Carlson
+ud-game-jersey,GJ-JF,,false,,Justin Faulk
+ud-game-jersey,GJ-JG,,false,,John Gibson
+ud-game-jersey,GJ-JH,,false,,Jonathan Huberdeau
+ud-game-jersey,GJ-JM,,false,,Jonathan Marchessault
+ud-game-jersey,GJ-JP,,false,,Jesse Puljujarvi
+ud-game-jersey,GJ-JQ,,false,,Jonathan Quick
+ud-game-jersey,GJ-JS,,false,,Jaden Schwartz
+ud-game-jersey,GJ-JT,,false,,Jacob Trouba
+ud-game-jersey,GJ-JV,,false,,Jakub Voracek
+ud-game-jersey,GJ-JZ,,false,,Jason Zucker
+ud-game-jersey,GJ-KF,,false,,Kevin Fiala
+ud-game-jersey,GJ-KL,,false,,Kris Letang
+ud-game-jersey,GJ-KO,,false,,Anze Kopitar
+ud-game-jersey,GJ-KU,,false,,Evgeny Kuznetsov
+ud-game-jersey,GJ-LC,,false,,Logan Couture
+ud-game-jersey,GJ-MD,,false,,Matt Duchene
+ud-game-jersey,GJ-MG,,false,,Mark Giordano
+ud-game-jersey,GJ-MJ,,false,,Max Jones
+ud-game-jersey,GJ-MS,,false,,Mark Scheifele
+ud-game-jersey,GJ-MZ,,false,,Mika Zibanejad
+ud-game-jersey,GJ-NB,,false,,Nicklas Backstrom
+ud-game-jersey,GJ-NK,,false,,Nikita Kucherov
+ud-game-jersey,GJ-NN,,false,,Nino Niederreiter
+ud-game-jersey,GJ-OT,,false,,Owen Tippett
+ud-game-jersey,GJ-PB,,false,,Pavel Buchnevich
+ud-game-jersey,GJ-PS,,false,,P.K. Subban
+ud-game-jersey,GJ-RD,,false,,Ryan Donato
+ud-game-jersey,GJ-RF,,false,,Robby Fabbri
+ud-game-jersey,GJ-RS,,false,,Reilly Smith
+ud-game-jersey,GJ-RT,,false,,Robert Thomas
+ud-game-jersey,GJ-SA,,false,,Sebastian Aho
+ud-game-jersey,GJ-SV,,false,,Semyon Varlamov
+ud-game-jersey,GJ-TA,,false,,John Tavares
+ud-game-jersey,GJ-TC,,false,,Thomas Chabot
+ud-game-jersey,GJ-TG,,false,,Thomas Greiss
+ud-game-jersey,GJ-TJ,,false,,Tyler Johnson
+ud-game-jersey,GJ-TO,,false,,T.J. Oshie
+ud-game-jersey,GJ-VA,,false,,James van Riemsdyk
+ud-game-jersey,GJ-VH,,false,,Victor Hedman
+ud-game-jersey,GJ-VO,,false,,Victor Olofsson
+ud-game-jersey,GJ-WN,,false,,William Nylander
+ud-game-jersey,GJ-AB,UD Game Patch,false,/15,Adam Boqvist
+ud-game-jersey,GJ-AD,UD Game Patch,false,/15,Alex DeBrincat
+ud-game-jersey,GJ-AE,UD Game Patch,false,/15,Aaron Ekblad
+ud-game-jersey,GJ-AH,UD Game Patch,false,/15,Adam Henrique
+ud-game-jersey,GJ-AK,UD Game Patch,false,/15,Adrian Kempe
+ud-game-jersey,GJ-AL,UD Game Patch,false,/15,Anders Lee
+ud-game-jersey,GJ-AR,UD Game Patch,false,/15,Viktor Arvidsson
+ud-game-jersey,GJ-AV,UD Game Patch,false,/15,Andrei Vasilevskiy
+ud-game-jersey,GJ-BA,UD Game Patch,false,/15,Josh Bailey
+ud-game-jersey,GJ-BG,UD Game Patch,false,/15,Brendan Gallagher
+ud-game-jersey,GJ-BH,UD Game Patch,false,/15,Bo Horvat
+ud-game-jersey,GJ-BP,UD Game Patch,false,/15,Brayden Point
+ud-game-jersey,GJ-BS,UD Game Patch,false,/15,Brayden Schenn
+ud-game-jersey,GJ-BU,UD Game Patch,false,/15,Andre Burakovsky
+ud-game-jersey,GJ-BW,UD Game Patch,false,/15,Blake Wheeler
+ud-game-jersey,GJ-CA,UD Game Patch,false,/15,Cam Atkinson
+ud-game-jersey,GJ-CC,UD Game Patch,false,/15,Charlie Coyle
+ud-game-jersey,GJ-CK,UD Game Patch,false,/15,Clayton Keller
+ud-game-jersey,GJ-CM,UD Game Patch,false,/15,Casey Mittelstadt
+ud-game-jersey,GJ-CW,UD Game Patch,false,/15,Colin White
+ud-game-jersey,GJ-DD,UD Game Patch,false,/15,Drew Doughty
+ud-game-jersey,GJ-DK,UD Game Patch,false,/15,Darcy Kuemper
+ud-game-jersey,GJ-DL,UD Game Patch,false,/15,Dylan Larkin
+ud-game-jersey,GJ-DN,UD Game Patch,false,/15,Darnell Nurse
+ud-game-jersey,GJ-EK,UD Game Patch,false,/15,Evander Kane
+ud-game-jersey,GJ-FF,UD Game Patch,false,/15,Filip Forsberg
+ud-game-jersey,GJ-GA,UD Game Patch,false,/15,Johnny Gaudreau
+ud-game-jersey,GJ-JB,UD Game Patch,false,/15,Jamie Benn
+ud-game-jersey,GJ-JC,UD Game Patch,false,/15,John Carlson
+ud-game-jersey,GJ-JF,UD Game Patch,false,/15,Justin Faulk
+ud-game-jersey,GJ-JG,UD Game Patch,false,/15,John Gibson
+ud-game-jersey,GJ-JH,UD Game Patch,false,/15,Jonathan Huberdeau
+ud-game-jersey,GJ-JM,UD Game Patch,false,/15,Jonathan Marchessault
+ud-game-jersey,GJ-JP,UD Game Patch,false,/15,Jesse Puljujarvi
+ud-game-jersey,GJ-JQ,UD Game Patch,false,/15,Jonathan Quick
+ud-game-jersey,GJ-JS,UD Game Patch,false,/15,Jaden Schwartz
+ud-game-jersey,GJ-JT,UD Game Patch,false,/15,Jacob Trouba
+ud-game-jersey,GJ-JV,UD Game Patch,false,/15,Jakub Voracek
+ud-game-jersey,GJ-JZ,UD Game Patch,false,/15,Jason Zucker
+ud-game-jersey,GJ-KF,UD Game Patch,false,/15,Kevin Fiala
+ud-game-jersey,GJ-KL,UD Game Patch,false,/15,Kris Letang
+ud-game-jersey,GJ-KO,UD Game Patch,false,/15,Anze Kopitar
+ud-game-jersey,GJ-KU,UD Game Patch,false,/15,Evgeny Kuznetsov
+ud-game-jersey,GJ-LC,UD Game Patch,false,/15,Logan Couture
+ud-game-jersey,GJ-MD,UD Game Patch,false,/15,Matt Duchene
+ud-game-jersey,GJ-MG,UD Game Patch,false,/15,Mark Giordano
+ud-game-jersey,GJ-MJ,UD Game Patch,false,/15,Max Jones
+ud-game-jersey,GJ-MS,UD Game Patch,false,/15,Mark Scheifele
+ud-game-jersey,GJ-MZ,UD Game Patch,false,/15,Mika Zibanejad
+ud-game-jersey,GJ-NB,UD Game Patch,false,/15,Nicklas Backstrom
+ud-game-jersey,GJ-NK,UD Game Patch,false,/15,Nikita Kucherov
+ud-game-jersey,GJ-NN,UD Game Patch,false,/15,Nino Niederreiter
+ud-game-jersey,GJ-OT,UD Game Patch,false,/15,Owen Tippett
+ud-game-jersey,GJ-PB,UD Game Patch,false,/15,Pavel Buchnevich
+ud-game-jersey,GJ-PS,UD Game Patch,false,/15,P.K. Subban
+ud-game-jersey,GJ-RD,UD Game Patch,false,/15,Ryan Donato
+ud-game-jersey,GJ-RF,UD Game Patch,false,/15,Robby Fabbri
+ud-game-jersey,GJ-RS,UD Game Patch,false,/15,Reilly Smith
+ud-game-jersey,GJ-RT,UD Game Patch,false,/15,Robert Thomas
+ud-game-jersey,GJ-SA,UD Game Patch,false,/15,Sebastian Aho
+ud-game-jersey,GJ-SV,UD Game Patch,false,/15,Semyon Varlamov
+ud-game-jersey,GJ-TA,UD Game Patch,false,/15,John Tavares
+ud-game-jersey,GJ-TC,UD Game Patch,false,/15,Thomas Chabot
+ud-game-jersey,GJ-TG,UD Game Patch,false,/15,Thomas Greiss
+ud-game-jersey,GJ-TJ,UD Game Patch,false,/15,Tyler Johnson
+ud-game-jersey,GJ-TO,UD Game Patch,false,/15,T.J. Oshie
+ud-game-jersey,GJ-VA,UD Game Patch,false,/15,James van Riemsdyk
+ud-game-jersey,GJ-VH,UD Game Patch,false,/15,Victor Hedman
+ud-game-jersey,GJ-VO,UD Game Patch,false,/15,Victor Olofsson
+ud-game-jersey,GJ-WN,UD Game Patch,false,/15,William Nylander
+ud-portraits,P-1,,false,,Quinn Hughes
+ud-portraits,P-2,,false,,Max Pacioretty
+ud-portraits,P-3,,false,,Semyon Varlamov
+ud-portraits,P-4,,false,,Darnell Nurse
+ud-portraits,P-5,,false,,Rasmus Dahlin
+ud-portraits,P-6,,false,,Alexis Lafreniere
+ud-portraits,P-7,,false,,Jason Robertson
+ud-portraits,P-8,,false,,Jack Hughes
+ud-portraits,P-9,,false,,Andrei Svechnikov
+ud-portraits,P-10,,false,,Kirill Kaprizov
+ud-portraits,P-11,,false,,Jakub Voracek
+ud-portraits,P-12,,false,,Andrei Vasilevskiy
+ud-portraits,P-13,,false,,Robin Lehner
+ud-portraits,P-14,,false,,Johnny Gaudreau
+ud-portraits,P-15,,false,,Miro Heiskanen
+ud-portraits,P-16,,false,,Patrick Kane
+ud-portraits,P-17,,false,,Alex Ovechkin
+ud-portraits,P-18,,false,,David Pastrnak
+ud-portraits,P-19,,false,,Sidney Crosby
+ud-portraits,P-20,,false,,Tim Stutzle
+ud-portraits,P-21,,false,,Phil Kessel
+ud-portraits,P-22,,false,,Brent Burns
+ud-portraits,P-23,,false,,Artemi Panarin
+ud-portraits,P-24,,false,,Mitch Marner
+ud-portraits,P-25,,false,,Connor McDavid
+ud-portraits,P-26,,false,,Kyle Connor
+ud-portraits,P-27,,false,,Nathan MacKinnon
+ud-portraits,P-28,,false,,Torey Krug
+ud-portraits,P-29,,false,,Auston Matthews
+ud-portraits,P-30,,false,,Anthony Mantha
+ud-portraits--rookies,P-31,,false,,Quinton Byfield RC
+ud-portraits--rookies,P-32,,false,,Spencer Knight RC
+ud-portraits--rookies,P-33,,false,,Joe Veleno RC
+ud-portraits--rookies,P-34,,false,,Trevor Zegras RC
+ud-portraits--rookies,P-35,,false,,Jacob Bernard-Docker RC
+ud-portraits--rookies,P-36,,false,,Ukko-Pekka Luukkonen RC
+ud-portraits--rookies,P-37,,false,,Jamie Drysdale RC
+ud-portraits--rookies,P-38,,false,,Calen Addison RC
+ud-portraits--rookies,P-39,,false,,Alex Barre-Boulet RC
+ud-portraits--rookies,P-40,,false,,Cole Caufield RC
+ud-portraits,P-1,Black and White,false,/250,Quinn Hughes
+ud-portraits,P-2,Black and White,false,/250,Max Pacioretty
+ud-portraits,P-3,Black and White,false,/250,Semyon Varlamov
+ud-portraits,P-4,Black and White,false,/250,Darnell Nurse
+ud-portraits,P-5,Black and White,false,/250,Rasmus Dahlin
+ud-portraits,P-6,Black and White,false,/250,Alexis Lafreniere
+ud-portraits,P-7,Black and White,false,/250,Jason Robertson
+ud-portraits,P-8,Black and White,false,/250,Jack Hughes
+ud-portraits,P-9,Black and White,false,/250,Andrei Svechnikov
+ud-portraits,P-10,Black and White,false,/250,Kirill Kaprizov
+ud-portraits,P-11,Black and White,false,/250,Jakub Voracek
+ud-portraits,P-12,Black and White,false,/250,Andrei Vasilevskiy
+ud-portraits,P-13,Black and White,false,/250,Robin Lehner
+ud-portraits,P-14,Black and White,false,/250,Johnny Gaudreau
+ud-portraits,P-15,Black and White,false,/250,Miro Heiskanen
+ud-portraits,P-16,Black and White,false,/250,Patrick Kane
+ud-portraits,P-17,Black and White,false,/250,Alex Ovechkin
+ud-portraits,P-18,Black and White,false,/250,David Pastrnak
+ud-portraits,P-19,Black and White,false,/250,Sidney Crosby
+ud-portraits,P-20,Black and White,false,/250,Tim Stutzle
+ud-portraits,P-21,Black and White,false,/250,Phil Kessel
+ud-portraits,P-22,Black and White,false,/250,Brent Burns
+ud-portraits,P-23,Black and White,false,/250,Artemi Panarin
+ud-portraits,P-24,Black and White,false,/250,Mitch Marner
+ud-portraits,P-25,Black and White,false,/250,Connor McDavid
+ud-portraits,P-26,Black and White,false,/250,Kyle Connor
+ud-portraits,P-27,Black and White,false,/250,Nathan MacKinnon
+ud-portraits,P-28,Black and White,false,/250,Torey Krug
+ud-portraits,P-29,Black and White,false,/250,Auston Matthews
+ud-portraits,P-30,Black and White,false,/250,Anthony Mantha
+ud-portraits--rookies,P-31,Black and White,false,/250,Quinton Byfield RC
+ud-portraits--rookies,P-32,Black and White,false,/250,Spencer Knight RC
+ud-portraits--rookies,P-33,Black and White,false,/250,Joe Veleno RC
+ud-portraits--rookies,P-34,Black and White,false,/250,Trevor Zegras RC
+ud-portraits--rookies,P-35,Black and White,false,/250,Jacob Bernard-Docker RC
+ud-portraits--rookies,P-36,Black and White,false,/250,Ukko-Pekka Luukkonen RC
+ud-portraits--rookies,P-37,Black and White,false,/250,Jamie Drysdale RC
+ud-portraits--rookies,P-38,Black and White,false,/250,Calen Addison RC
+ud-portraits--rookies,P-39,Black and White,false,/250,Alex Barre-Boulet RC
+ud-portraits--rookies,P-40,Black and White,false,/250,Cole Caufield RC
+ud-portraits,P-1,Printing Plates,false,/4,Quinn Hughes
+ud-portraits,P-2,Printing Plates,false,/4,Max Pacioretty
+ud-portraits,P-3,Printing Plates,false,/4,Semyon Varlamov
+ud-portraits,P-4,Printing Plates,false,/4,Darnell Nurse
+ud-portraits,P-5,Printing Plates,false,/4,Rasmus Dahlin
+ud-portraits,P-6,Printing Plates,false,/4,Alexis Lafreniere
+ud-portraits,P-7,Printing Plates,false,/4,Jason Robertson
+ud-portraits,P-8,Printing Plates,false,/4,Jack Hughes
+ud-portraits,P-9,Printing Plates,false,/4,Andrei Svechnikov
+ud-portraits,P-10,Printing Plates,false,/4,Kirill Kaprizov
+ud-portraits,P-11,Printing Plates,false,/4,Jakub Voracek
+ud-portraits,P-12,Printing Plates,false,/4,Andrei Vasilevskiy
+ud-portraits,P-13,Printing Plates,false,/4,Robin Lehner
+ud-portraits,P-14,Printing Plates,false,/4,Johnny Gaudreau
+ud-portraits,P-15,Printing Plates,false,/4,Miro Heiskanen
+ud-portraits,P-16,Printing Plates,false,/4,Patrick Kane
+ud-portraits,P-17,Printing Plates,false,/4,Alex Ovechkin
+ud-portraits,P-18,Printing Plates,false,/4,David Pastrnak
+ud-portraits,P-19,Printing Plates,false,/4,Sidney Crosby
+ud-portraits,P-20,Printing Plates,false,/4,Tim Stutzle
+ud-portraits,P-21,Printing Plates,false,/4,Phil Kessel
+ud-portraits,P-22,Printing Plates,false,/4,Brent Burns
+ud-portraits,P-23,Printing Plates,false,/4,Artemi Panarin
+ud-portraits,P-24,Printing Plates,false,/4,Mitch Marner
+ud-portraits,P-25,Printing Plates,false,/4,Connor McDavid
+ud-portraits,P-26,Printing Plates,false,/4,Kyle Connor
+ud-portraits,P-27,Printing Plates,false,/4,Nathan MacKinnon
+ud-portraits,P-28,Printing Plates,false,/4,Torey Krug
+ud-portraits,P-29,Printing Plates,false,/4,Auston Matthews
+ud-portraits,P-30,Printing Plates,false,/4,Anthony Mantha
+ud-portraits--rookies,P-31,Printing Plates,false,/4,Quinton Byfield RC
+ud-portraits--rookies,P-32,Printing Plates,false,/4,Spencer Knight RC
+ud-portraits--rookies,P-33,Printing Plates,false,/4,Joe Veleno RC
+ud-portraits--rookies,P-34,Printing Plates,false,/4,Trevor Zegras RC
+ud-portraits--rookies,P-35,Printing Plates,false,/4,Jacob Bernard-Docker RC
+ud-portraits--rookies,P-36,Printing Plates,false,/4,Ukko-Pekka Luukkonen RC
+ud-portraits--rookies,P-37,Printing Plates,false,/4,Jamie Drysdale RC
+ud-portraits--rookies,P-38,Printing Plates,false,/4,Calen Addison RC
+ud-portraits--rookies,P-39,Printing Plates,false,/4,Alex Barre-Boulet RC
+ud-portraits--rookies,P-40,Printing Plates,false,/4,Cole Caufield RC
+work-zone,WZ-1,,false,,John Gibson
+work-zone,WZ-2,,false,,Phil Kessel
+work-zone,WZ-3,,false,,Oliver Ekman-Larsson
+work-zone,WZ-4,,false,,Brad Marchand
+work-zone,WZ-5,,false,,Charlie McAvoy
+work-zone,WZ-6,,false,,Jack Eichel
+work-zone,WZ-7,,false,,Mark Giordano
+work-zone,WZ-8,,false,,Dougie Hamilton
+work-zone,WZ-9,,false,,Jordan Staal
+work-zone,WZ-10,,false,,Pius Suter
+work-zone,WZ-11,,false,,Kevin Lankinen
+work-zone,WZ-12,,false,,Nathan MacKinnon
+work-zone,WZ-13,,false,,Philipp Grubauer
+work-zone,WZ-14,,false,,Seth Jones
+work-zone,WZ-15,,false,,John Klingberg
+work-zone,WZ-16,,false,,Roope Hintz
+work-zone,WZ-17,,false,,Dylan Larkin
+work-zone,WZ-18,,false,,Tyler Bertuzzi
+work-zone,WZ-19,,false,,Leon Draisaitl
+work-zone,WZ-20,,false,,Darnell Nurse
+work-zone,WZ-21,,false,,Aleksander Barkov
+work-zone,WZ-22,,false,,Keith Yandle
+work-zone,WZ-23,,false,,Drew Doughty
+work-zone,WZ-24,,false,,Jordan Greenway
+work-zone,WZ-25,,false,,Shea Weber
+work-zone,WZ-26,,false,,Brendan Gallagher
+work-zone,WZ-27,,false,,Roman Josi
+work-zone,WZ-28,,false,,Mackenzie Blackwood
+work-zone,WZ-29,,false,,Josh Bailey
+work-zone,WZ-30,,false,,Anders Lee
+work-zone,WZ-31,,false,,Alexis Lafreniere
+work-zone,WZ-32,,false,,Brady Tkachuk
+work-zone,WZ-33,,false,,Thomas Chabot
+work-zone,WZ-34,,false,,Claude Giroux
+work-zone,WZ-35,,false,,Ivan Provorov
+work-zone,WZ-36,,false,,Kris Letang
+work-zone,WZ-37,,false,,Logan Couture
+work-zone,WZ-38,,false,,Jordan Binnington
+work-zone,WZ-39,,false,,Anthony Cirelli
+work-zone,WZ-40,,false,,Victor Hedman
+work-zone,WZ-41,,false,,Auston Matthews
+work-zone,WZ-42,,false,,John Tavares
+work-zone,WZ-43,,false,,Thatcher Demko
+work-zone,WZ-44,,false,,Quinn Hughes
+work-zone,WZ-45,,false,,Shea Theodore
+work-zone,WZ-46,,false,,Mark Stone
+work-zone,WZ-47,,false,,Alex Ovechkin
+work-zone,WZ-48,,false,,John Carlson
+work-zone,WZ-49,,false,,Connor Hellebuyck
+work-zone,WZ-50,,false,,Mark Scheifele
