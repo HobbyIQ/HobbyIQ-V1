@@ -59,10 +59,113 @@ async function getCatalogContainer(): Promise<Container | null> {
 const CATALOG_CACHE = new Map<string, Array<{ number: string; parallels: string[]; sport: string | null }>>();
 const CATALOG_CACHE_MAX = 5000;
 
+/**
+ * CF-A-THROTTLED-CONTAINER-IS-NOT-A-SLOW-ONE (Fable, 2026-09-16).
+ *
+ * The circuit breaker for the catalog narrow, and the per-query deadline that
+ * makes it reachable.
+ *
+ * MEASURED: one TCA webhook request issued 3,820,650 card_catalog queries over
+ * 370 minutes with 92% failing and a p50 of 35 s. The queries carried no
+ * FeedOptions at all — no `abortSignal` — so each rode the SDK's 60 s default
+ * plus its internal retries, against a container the batch was itself
+ * saturating. Every failure made the next one likelier.
+ *
+ * Two bounds, and the second is the one that matters:
+ *
+ *   PER QUERY. An 8 s `abortSignal`. The narrow is an OPTIONAL enrichment —
+ *   a miss writes the sale without a resolved cardNumber, which is what
+ *   already happens today whenever the catalog has no row. Waiting 60 s for
+ *   an answer that is optional, on a container under pressure, buys nothing.
+ *   8 s is generous against a p50 that is 805 ms when the container is healthy.
+ *
+ *   PER BATCH. After N consecutive failures the breaker OPENS and the narrow
+ *   stops querying entirely for the rest of the request. Consecutive is the
+ *   right signal: one timeout is noise, twenty in a row means the container is
+ *   not answering us, and continuing to ask is what turned a slow batch into a
+ *   six-hour one. An open breaker returns null — the same value a genuine miss
+ *   returns — so NOTHING about what gets written changes. The sale is persisted
+ *   without a narrowed cardNumber, exactly as it would have been.
+ *
+ * The breaker is per-batch, reset by `withNarrowBreaker`, so one bad batch
+ * cannot leave the narrow disabled for the process.
+ */
+const NARROW_QUERY_TIMEOUT_MS = 8_000;
+const NARROW_BREAKER_THRESHOLD = 20;
+
+type NarrowBreaker = { consecutiveFailures: number; open: boolean; skipped: number; failed: number };
+let _narrowBreaker: NarrowBreaker | null = null;
+
+/** Open a breaker scope for one batch. Absent, the narrow behaves as before. */
+export async function withNarrowBreaker<T>(work: () => Promise<T>): Promise<T> {
+  const previous = _narrowBreaker;
+  const breaker: NarrowBreaker = { consecutiveFailures: 0, open: false, skipped: 0, failed: 0 };
+  _narrowBreaker = breaker;
+  try {
+    return await work();
+  } finally {
+    if (breaker.open) {
+      console.warn(JSON.stringify({
+        event: "tca.narrow.breaker_open",
+        source: "persistVendorSalesToPool.checklistNarrow",
+        threshold: NARROW_BREAKER_THRESHOLD,
+        queryTimeoutMs: NARROW_QUERY_TIMEOUT_MS,
+        failedQueries: breaker.failed,
+        salesSkippedAfterOpen: breaker.skipped,
+        detail: "the catalog narrow stopped querying for this batch; affected sales are written without a narrowed cardNumber, exactly as a catalog miss",
+      }));
+    }
+    _narrowBreaker = previous;
+  }
+}
+
+/** Test seam: the current batch's breaker state, or null outside a batch. */
+export function _narrowBreakerStateForTest(): NarrowBreaker | null {
+  return _narrowBreaker ? { ..._narrowBreaker } : null;
+}
+
+/** Test seam: the narrow itself, so the breaker can be exercised at the level
+ *  it guards rather than inferred from a whole persist call. */
+export function _checklistNarrowForTest(
+  playerName: string,
+  cardYear: number,
+  setKeyHint: string | null,
+  sportHint: string | null = null,
+) {
+  return checklistNarrow(playerName, cardYear, setKeyHint, sportHint);
+}
+
+/**
+ * Run one narrow query, feeding the breaker. A success resets the consecutive
+ * counter — the signal is CONSECUTIVE failures, because one timeout is noise
+ * and twenty in a row means the container is not answering us at all.
+ */
+async function narrowQuery<T>(run: () => Promise<T>): Promise<T> {
+  try {
+    const out = await run();
+    if (_narrowBreaker) _narrowBreaker.consecutiveFailures = 0;
+    return out;
+  } catch (err) {
+    const b = _narrowBreaker;
+    if (b) {
+      b.failed++;
+      b.consecutiveFailures++;
+      if (!b.open && b.consecutiveFailures >= NARROW_BREAKER_THRESHOLD) b.open = true;
+    }
+    throw err;
+  }
+}
+
 async function checklistNarrow(playerName: string, cardYear: number, setKeyHint: string | null, sportHint: string | null = null): Promise<Array<{ number: string; parallels: string[]; sport: string | null }> | null> {
   const key = `${playerName.toLowerCase()}|${cardYear}|${(setKeyHint ?? "").toLowerCase()}|${(sportHint ?? "").toLowerCase()}`;
   const hit = CATALOG_CACHE.get(key);
   if (hit) return hit;
+
+  // CF-A-THROTTLED-CONTAINER-IS-NOT-A-SLOW-ONE. Breaker open: stop asking.
+  // Returning null is the SAME value a genuine catalog miss returns, so the
+  // caller writes the sale without a narrowed cardNumber exactly as it already
+  // does when no row exists. Nothing about a resolved row changes.
+  if (_narrowBreaker?.open) { _narrowBreaker.skipped++; return null; }
 
   const catalog = await getCatalogContainer();
   if (!catalog) return null;
@@ -97,7 +200,10 @@ async function checklistNarrow(playerName: string, cardYear: number, setKeyHint:
         { name: "@y", value: Number(cardYear) },
       ],
     };
-    const { resources } = await catalog.items.query(q).fetchAll();
+    // 8 s, not the SDK's 60 s default: the narrow is OPTIONAL enrichment and a
+    // miss is already a supported outcome. See NARROW_QUERY_TIMEOUT_MS.
+    const { resources } = await narrowQuery(() =>
+      catalog.items.query(q, { abortSignal: AbortSignal.timeout(NARROW_QUERY_TIMEOUT_MS) }).fetchAll());
     let cands = (resources || []).filter((r: { cardNumber?: string }) => r.cardNumber);
 
     // CF-FUZZY-PLAYER-MATCH (Drew, 2026-08-03). When exact-name match
@@ -122,7 +228,8 @@ async function checklistNarrow(playerName: string, cardYear: number, setKeyHint:
               { name: "@last", value: lastToken },
             ],
           };
-          const { resources: fuzzy } = await catalog.items.query(fq).fetchAll();
+          const { resources: fuzzy } = await narrowQuery(() =>
+            catalog.items.query(fq, { abortSignal: AbortSignal.timeout(NARROW_QUERY_TIMEOUT_MS) }).fetchAll());
           const target = playerName.toLowerCase().replace(/[^\w\s]/g, "").trim();
           const targetTokens = target.split(/\s+/).filter(Boolean);
           cands = (fuzzy || []).filter((r: { cardNumber?: string; playerName?: string }) => {
