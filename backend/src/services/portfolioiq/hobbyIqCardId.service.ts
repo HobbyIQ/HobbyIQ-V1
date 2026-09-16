@@ -756,7 +756,7 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
     // in productSetKeys was not enough on its own, because
     // productSetKeyForName resolves by SPELLED name and the catch-all answers
     // first for anything it does not name.
-    [/(?:^|-)panini-contenders-optic(?:-|$)/, "panini-contenders-optic"],
+    [/(?:^|-)(?:panini-|playoff-)?contenders-optic(?:-|$)/, "panini-contenders-optic"],
     [/panini-contenders/, "panini-contenders"],
     [/panini-immaculate/, "panini-immaculate"],
     [/panini-flawless/, "panini-flawless"],
