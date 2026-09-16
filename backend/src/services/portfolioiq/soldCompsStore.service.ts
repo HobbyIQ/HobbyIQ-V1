@@ -42,6 +42,11 @@
 
 import { Container, CosmosClient } from "@azure/cosmos";
 import { DefaultAzureCredential } from "@azure/identity";
+import {
+  dedupBreakerAdmits,
+  recordDedupSuccess,
+  recordDedupTimeout,
+} from "./dedupBreaker.js";
 import { computeHobbyIqCardId, resolveSetKeyForSlug, sameCardNumber } from "./hobbyIqCardId.service.js";
 import { guardSlugInputs, normalizeSportStrict, type SlugGuardResult } from "./slugGuard.service.js";
 import { playerTheTitleAllows } from "./playerTheTitleAllows.js";
@@ -712,6 +717,60 @@ export function contentHashesForLookup(input: ContentHashInput): string[] {
 /** Score a doc for pickCanonical — higher = keep. Mirror the scoring
  *  in scripts/apply-sold-comps-dedup.cjs so pre-write dedup + nightly
  *  cleanup agree on which row wins. */
+/**
+ * CF-A-DEDUP-TIMEOUT-IS-NOT-A-MISS (Fable, 2026-09-16).
+ *
+ * The bound on every `sold_comps` dedup query, and the breaker's feed.
+ *
+ * 12 s, chosen against what these queries cost when the container is healthy
+ * (hundreds of ms) rather than against the SDK's 60 s default, which is a
+ * generic transport ceiling and not a statement about this workload. The
+ * drainer runs sixteen of these loops concurrently and forever; a query that
+ * has not answered in twelve seconds is not going to answer usefully.
+ *
+ * WHAT HAPPENS ON TIMEOUT, at all three sites: the query throws, the existing
+ * `catch` treats it as "nothing found", and the write proceeds exactly as it
+ * does on a genuine dedup miss. That is deliberately the SAME code path that
+ * already runs thousands of times a day — no new behaviour, and no row is lost.
+ *
+ * `sold_comps.dedup_timeout` makes the count visible, because "we occasionally
+ * write a row we could not verify" is a fact that should be measurable rather
+ * than inferred.
+ */
+const DEDUP_QUERY_TIMEOUT_MS = 12_000;
+/** One page. These dedup lookups expect a handful of rows, never a scan. */
+const DEDUP_MAX_ITEMS = 100;
+
+async function dedupQuery<T>(site: string, run: () => Promise<T>): Promise<T> {
+  // The breaker holds the drainer back rather than letting it write unverified
+  // rows at scale — see dedupBreaker for why pausing beats guessing.
+  if (!dedupBreakerAdmits()) {
+    const err = new Error("sold_comps dedup paused: breaker open");
+    (err as { dedupBreakerOpen?: boolean }).dedupBreakerOpen = true;
+    throw err;
+  }
+  try {
+    const out = await run();
+    recordDedupSuccess();
+    return out;
+  } catch (err) {
+    const name = String((err as { name?: unknown })?.name ?? "");
+    const isTimeout = name === "TimeoutError" || name === "AbortError"
+      || /aborted|timeout/i.test(String((err as { message?: unknown })?.message ?? ""));
+    if (isTimeout) {
+      recordDedupTimeout();
+      console.warn(JSON.stringify({
+        event: "sold_comps.dedup_timeout",
+        source: "soldCompsStore.recordSoldComp",
+        site,
+        timeoutMs: DEDUP_QUERY_TIMEOUT_MS,
+        detail: "the dedup query did not answer; the row is written as new, exactly as on a genuine miss",
+      }));
+    }
+    throw err;
+  }
+}
+
 export function scoreForCanonical(row: {
   verifiedByUser?: boolean;
   sourceExternalId?: string | null;
@@ -1672,12 +1731,28 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<Record
   const incomingIsFlagged =
     (doc as SoldCompDoc & Record<string, unknown>).flaggedWrong === true;
   try {
-    const { resources: existing } = await c.items.query<SoldCompDoc>({
-      query: incomingIsFlagged
-        ? "SELECT * FROM c WHERE ARRAY_CONTAINS(@h, c.contentHash)"
-        : "SELECT * FROM c WHERE ARRAY_CONTAINS(@h, c.contentHash) AND (NOT IS_DEFINED(c.flaggedWrong) OR c.flaggedWrong != true)",
-      parameters: [{ name: "@h", value: contentHashLookup }],
-    }, { partitionKey: doc.cardId }).fetchAll();
+    // CF-A-DEDUP-TIMEOUT-IS-NOT-A-MISS (Fable, 2026-09-16). 12 s, not the
+    // SDK's 60 s default. ON TIMEOUT this throws, the catch below treats it as
+    // "no existing row found", and the row is written as new — byte-identical
+    // to what a genuine dedup miss does today. `sold_comps.dedup_timeout` makes
+    // the count visible, and the breaker stops the drainer if it keeps
+    // happening (see dedupBreaker: one unknown is tolerable, a sustained run of
+    // them would write a duplicate per row across sixteen loops).
+    //
+    // `SELECT *` stays HERE, deliberately: the rows are scored by
+    // `scoreForCanonical` a few lines below, which reads the whole document.
+    // Narrowing this projection would break canonical selection.
+    const { resources: existing } = await dedupQuery("contentHash", () =>
+      c.items.query<SoldCompDoc>({
+        query: incomingIsFlagged
+          ? "SELECT * FROM c WHERE ARRAY_CONTAINS(@h, c.contentHash)"
+          : "SELECT * FROM c WHERE ARRAY_CONTAINS(@h, c.contentHash) AND (NOT IS_DEFINED(c.flaggedWrong) OR c.flaggedWrong != true)",
+        parameters: [{ name: "@h", value: contentHashLookup }],
+      }, {
+        partitionKey: doc.cardId,
+        maxItemCount: DEDUP_MAX_ITEMS,
+        abortSignal: AbortSignal.timeout(DEDUP_QUERY_TIMEOUT_MS),
+      }).fetchAll());
 
     if (existing.length > 0) {
       const incomingScore = scoreForCanonical(doc);
@@ -1792,8 +1867,26 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<Record
   if (isUserScoped && hobbyiqCardId && doc.contributorUserId && doc.soldAt) {
     try {
       const soldDay = doc.soldAt.slice(0, 10);
-      const { resources: crossPartitionExisting } = await c.items.query<SoldCompDoc>({
-        query: `SELECT * FROM c
+      // CF-A-DEDUP-TIMEOUT-IS-NOT-A-MISS. This is the CROSS-PARTITION dedup —
+      // the most expensive of the three, and the one that had `SELECT *` with
+      // no TOP and no FeedOptions at all.
+      //
+      // The projection is narrowed to the seven fields this result actually
+      // uses: `id` and `cardId` for the log lines, and the five
+      // `scoreForCanonical` reads (verifiedByUser, sourceExternalId, parallel,
+      // observedAt, flaggedWrong). Verified against every consumer below
+      // before narrowing — a projection that dropped a scored field would
+      // silently change which row wins canonical, which is far worse than a
+      // slow query.
+      //
+      // ON TIMEOUT: throws, the catch below leaves `crossPartitionExisting`
+      // unset, and the write proceeds as it does on a genuine miss — the same
+      // behaviour as today.
+      const { resources: crossPartitionExisting } = await dedupQuery("cross-partition", () =>
+        c.items.query<SoldCompDoc>({
+        query: `SELECT c.id, c.cardId, c.verifiedByUser, c.sourceExternalId,
+                       c.parallel, c.observedAt, c.flaggedWrong
+                FROM c
                 WHERE c.hobbyiqCardId = @slug
                   AND c.source = @src
                   AND c.contributorUserId = @u
@@ -1809,7 +1902,10 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<Record
           { name: "@day", value: soldDay },
           { name: "@cardId", value: doc.cardId },
         ],
-      }).fetchAll();
+        }, {
+          maxItemCount: DEDUP_MAX_ITEMS,
+          abortSignal: AbortSignal.timeout(DEDUP_QUERY_TIMEOUT_MS),
+        }).fetchAll());
 
       if (crossPartitionExisting.length > 0) {
         const incomingScore = scoreForCanonical(doc);
@@ -1989,13 +2085,21 @@ export async function recordSoldComp(input: RecordSoldCompInput): Promise<Record
 
   if (input.sourceExternalId && String(input.sourceExternalId).trim()) {
     try {
-      const { resources: sameId } = await c.items.query<{ id: string; cardId: string; hobbyiqCardId?: string | null }>({
-        query: "SELECT c.id, c.cardId, c.hobbyiqCardId FROM c WHERE c.id = @id AND c.cardId != @cardId",
-        parameters: [
-          { name: "@id", value: doc.id },
-          { name: "@cardId", value: doc.cardId },
-        ],
-      }).fetchAll();
+      // CF-A-DEDUP-TIMEOUT-IS-NOT-A-MISS. Projection is already narrow; this
+      // adds the bound. ON TIMEOUT: throws, the catch leaves `sameId` unset,
+      // and no stale twin is retired — the same outcome as finding none, which
+      // is the common case.
+      const { resources: sameId } = await dedupQuery("same-id", () =>
+        c.items.query<{ id: string; cardId: string; hobbyiqCardId?: string | null }>({
+          query: "SELECT c.id, c.cardId, c.hobbyiqCardId FROM c WHERE c.id = @id AND c.cardId != @cardId",
+          parameters: [
+            { name: "@id", value: doc.id },
+            { name: "@cardId", value: doc.cardId },
+          ],
+        }, {
+          maxItemCount: DEDUP_MAX_ITEMS,
+          abortSignal: AbortSignal.timeout(DEDUP_QUERY_TIMEOUT_MS),
+        }).fetchAll());
       // Re-checked in code: only ever this id, only ever another partition.
       const stale = (sameId ?? []).filter((e) => e?.id === doc.id && typeof e.cardId === "string" && e.cardId !== doc.cardId);
       // THE REMEDY IS PER SOURCE, THE DETECTION IS NOT.
