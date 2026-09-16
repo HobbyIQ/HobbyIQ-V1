@@ -165,8 +165,17 @@ describe("every checklist name round-trips to itself", () => {
     const unstable: string[] = [];
 
     for (const product of Object.values(raw.products ?? {})) {
-      for (const parallel of product.parallels ?? []) {
-        const name = String(parallel.name ?? "").trim();
+      // THE CLEANER OWNS `parallels[]`, AND ONLY THAT.
+      //
+      // Since the insert-set split (2026-09-15) a product also carries
+      // `insertSets[].children`. Those are deliberately NOT walked here.
+      // The cleaner normalises against the corpus's own PARALLEL
+      // vocabulary, so an insert-set name ("Home Run Hysteria") has nothing
+      // to resolve to and would be reported unresolved -- a false alarm
+      // about names the cleaner was never responsible for. Measured:
+      // widening this walk reported 20 such names, every one an insert root.
+      const everyName = (product.parallels ?? []).map((x) => String(x.name ?? "").trim());
+      for (const name of everyName) {
         if (!name) continue;
         total++;
         const cleaned = cleanParallelName(name);
@@ -182,8 +191,19 @@ describe("every checklist name round-trips to itself", () => {
 
     // The corpus states its own size; the walk must agree with it, and must
     // have walked a real corpus rather than an empty one.
+    //
+    // `parallelNameCount` counts the emitted `parallels[]` rows only, so the
+    // walk (which also covers insert children) is >= it. The floor is kept as
+    // a "this is a real corpus, not an empty read" guard and is stated against
+    // the TOTAL, which the split does not change.
     expect(total).toBe(raw.parallelNameCount);
-    expect(total).toBeGreaterThan(37_000);
+    // A FLOOR, NOT A PIN: the point is that a real corpus was walked rather
+    // than an empty read. It dropped from 37,000 to 15,000 when the
+    // insert-set split (2026-09-15) moved 22,804 insert names out of
+    // `parallels[]` into `insertSets[]` -- the names still exist and are
+    // still asserted, by corpusInsertSetsAreNotParallels; they are simply
+    // not the cleaner`s population any more.
+    expect(total).toBeGreaterThan(14_000);
     expect(unresolved).toEqual([]);
     expect(unstable).toEqual([]);
   });

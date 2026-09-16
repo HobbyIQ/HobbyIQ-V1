@@ -320,6 +320,28 @@ function main() {
     const parallels = [], sets = new Map();
     for (const e of bucket.values()) {
       const pn = normForRoot(e.name);
+      // A NAME THAT ANY `base` ROW CARRIES IS A TRUE RUNG, FULL STOP.
+      //
+      // Checked FIRST, before the insert walk, and it is the guard that keeps
+      // this split from eating base ladders. A product's own colour rung is
+      // routinely reprinted inside its inserts, so the same name legitimately
+      // appears under `base` AND under `insert-<name>`:
+      //
+      //   2025 donruss-elite: "Orange" is a base row AND appears under
+      //   `insert-orange` and `insert-rookies-orange`.
+      //
+      // Letting the insert branch claim it collapsed that product from 194
+      // rungs to 6 -- measured, and caught by bareColourAliasFromChecklist,
+      // which asks the ladder for a bare colour and got null. 20 of that
+      // product's names sit under both categories.
+      //
+      // The base category is the manufacturer saying "this is a parallel of
+      // the base card". Nothing an insert does can unsay it.
+      const onBase = [...(e.categories ?? [])].some((c) => {
+        const d = String(c).indexOf("-");
+        return (d < 0 ? String(c) : String(c).slice(0, d)) === "base";
+      });
+      if (onBase) { parallels.push(e); continue; }
       let root = null;
       for (const cat of e.categories ?? []) {
         const dash = String(cat).indexOf("-");
@@ -361,6 +383,47 @@ function main() {
       let g = merged.get(owner); if (!g) { g = []; merged.set(owner, g); }
       g.push(...sets.get(r));
     }
+    // A SPLIT THAT LEAVES A PRODUCT WITH NO LADDER IS NOT A SPLIT.
+    //
+    // Some sources label a product's BASE parallel ladder with insert
+    // categories. 2024 donruss-elite is the clearest: 6,929 insert rows to 100
+    // base rows, and its real rungs -- Black, Blue, Purple, Aspirations -- are
+    // filed as `insert-black`, `insert-rookies-black`. The base-wins guard
+    // above cannot save them because they never appear on a base row at all,
+    // and the split reduced that product from 165 rungs to 2.
+    //
+    // Measured across the corpus: 7 products fall from >=20 rungs to <=5, and
+    // 84 keep under a fifth of their names. Those are the products whose
+    // source mis-categorises, not products that are genuinely all-insert.
+    //
+    // So the split REFUSES itself where it would strip a product bare, and the
+    // product keeps its flat ladder exactly as before. That is the honest
+    // outcome: the corpus is no worse than it was for those products, the
+    // R31 phrase test still sees what it sees today, and the mis-categorised
+    // sources are a re-scrape item rather than something to guess through
+    // here. `suspectInsertRoots` records what WOULD have moved, so the list is
+    // available without acting on it.
+    //
+    // The floor is deliberately generous -- a product must keep at least a
+    // quarter of its names AND at least 8 -- because a wrong split is silent
+    // (a real rung simply vanishes) while a refused one is merely the status
+    // quo.
+    const MIN_KEPT_FRACTION = 0.25;
+    const MIN_KEPT_NAMES = 8;
+    const movedCount = [...merged.values()].reduce((n, g) => n + g.length, 0);
+    const totalCount = parallels.length + movedCount;
+    if (movedCount > 0 && totalCount > 0) {
+      const keptEnough = parallels.length >= MIN_KEPT_NAMES
+        && parallels.length / totalCount >= MIN_KEPT_FRACTION;
+      if (!keptEnough) {
+        const suspect = [...merged.entries()].map(([rootKey, entries]) => ({
+          rootKey, children: entries.map((e) => e.name).sort(),
+        }));
+        for (const g of merged.values()) parallels.push(...g);
+        return { parallels, sets: new Map(), refusedSplit: suspect };
+      }
+    }
+
     return { parallels, sets: merged };
   }
 
@@ -446,6 +509,10 @@ function main() {
           };
         }),
       ...(insertSets.length ? { insertSets } : {}),
+      // The split refused itself for this product (see splitInsertSets): its
+      // source labels the base ladder as inserts, so the names stay flat and
+      // what WOULD have moved is recorded instead of acted on.
+      ...(split.refusedSplit?.length ? { suspectInsertRoots: split.refusedSplit } : {}),
       // Empty for every source that carries `category` -- i.e. all three
       // today. Populated only by a future source without it, so a consumer can
       // see a SUSPICION rather than a silent flattening.

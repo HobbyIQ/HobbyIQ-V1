@@ -40,6 +40,78 @@ const minis = (c: Corpus) =>
 
 const maybe = existsSync(SRC) ? describe : describe.skip;
 
+/**
+ * NO PRODUCT SILENTLY LOSES NAMES (the acquisition researcher's ask,
+ * 2026-09-15).
+ *
+ * The rebuild that took the corpus 627 -> 660 also dropped
+ * `baseball|2025|topps-allen-ginter` from 11 rungs to 8 -- R47's three A&G
+ * mini rungs, 406 pool rows -- and nothing in the output said so. A count that
+ * moves in the right direction overall (+162 names) hides a regression inside
+ * one cell.
+ *
+ * So the SHIPPED file is asserted per product against the previous one: every
+ * name a product had must still be accounted for, either as a parallel or as
+ * an insert-set child. A name that is in neither is a silent drop and fails
+ * here with the product named.
+ */
+describe("the shipped corpus loses no product and no unexplained name", () => {
+  const shipped = JSON.parse(
+    readFileSync(path.join(backend, "data", "checklist-parallel-names.json"), "utf8"),
+  ) as {
+    products?: Record<string, {
+      parallels?: { name?: string }[];
+      insertSets?: { children: string[] }[];
+    }>;
+  };
+
+  /** The corpus as main has it, read without a worktree. */
+  function onMain(): typeof shipped | null {
+    try {
+      const raw = execFileSync("git", ["show", "origin/main:backend/data/checklist-parallel-names.json"],
+        { cwd: path.resolve(backend, ".."), encoding: "utf8", maxBuffer: 1 << 28 });
+      return JSON.parse(raw) as typeof shipped;
+    } catch { return null; }   // origin/main not fetched -- absence is not evidence
+  }
+
+  it("A&G 2025 keeps all three mini rungs — the regression this guards", () => {
+    const ag = shipped.products?.["baseball|2025|topps-allen-ginter"];
+    expect(ag).toBeTruthy();
+    const minis = (ag!.parallels ?? []).filter((x) => /^mini/i.test(String(x.name)));
+    expect(minis.map((x) => String(x.name)).sort())
+      .toEqual(["Mini Black", "Mini Black Border", "Mini Gold Border"]);
+  });
+
+  it("no product on main is missing from the shipped corpus", () => {
+    const prev = onMain(); if (!prev) return;
+    const gone = Object.keys(prev.products ?? {}).filter((k) => !(k in (shipped.products ?? {})));
+    expect(gone).toEqual([]);
+  });
+
+  it("every name a product had is still accounted for", () => {
+    const prev = onMain(); if (!prev) return;
+    const lost: string[] = [];
+    for (const [key, before] of Object.entries(prev.products ?? {})) {
+      const after = shipped.products?.[key];
+      if (!after) continue;                       // covered by the test above
+      const had = new Set((before.parallels ?? []).map((x) => String(x.name).toLowerCase()));
+      for (const x of after.parallels ?? []) had.delete(String(x.name).toLowerCase());
+      for (const s of after.insertSets ?? []) for (const c of s.children) had.delete(c.toLowerCase());
+      // A name may also have been CLEANED to a different spelling; compare on
+      // the cleaned key so a re-spelling is not reported as a loss.
+      const normed = new Set([
+        ...(after.parallels ?? []).map((x) => String(x.name).toLowerCase().replace(/[^a-z0-9]+/g, " ").trim()),
+        ...(after.insertSets ?? []).flatMap((s) => s.children.map((c) => c.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim())),
+      ]);
+      for (const n of [...had]) {
+        if (normed.has(n.replace(/[^a-z0-9]+/g, " ").trim())) had.delete(n);
+      }
+      if (had.size) lost.push(`${key}: ${[...had].slice(0, 4).join(", ")}`);
+    }
+    expect(lost.slice(0, 10)).toEqual([]);
+  });
+});
+
 maybe("the overlay survives a regenerate", () => {
   it("the overlay file carries R47's three rungs with their provenance", () => {
     const o = JSON.parse(readFileSync(OVERLAY, "utf8")) as {
