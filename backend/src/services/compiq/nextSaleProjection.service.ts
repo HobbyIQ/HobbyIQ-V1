@@ -411,7 +411,35 @@ export interface LeadingEdgeProjection {
   cap: "none" | "newest-band";
   /** Why there is no trend when slopePerDay is 0. */
   slopeNote: "fit" | "no-fit" | "insane-fit";
+  // ── CF-AN-ANCHOR-THAT-IS-ONE-SALE-SAYS-SO (R57, Drew 2026-09-15) ──────
+  //
+  // The anchor is a weight-CUMULATIVE median: it walks the pool in price
+  // order and returns the first sale at which the running weight reaches
+  // half the total. That returns an OBSERVED price, which is the point —
+  // but it means a single sale whose own weight exceeds half the total
+  // wins the walk outright, no matter how many sales sit above it.
+  //
+  // Live case, Rivera 1992 Bowman #302 BGS 9 (2026-09-15): eight sales in
+  // 90d, the newest 3d old and the next 51d old. At a 14-day half life
+  // that gap is ~3.4 half-lives, so the newest sale carries 91.2% of the
+  // weight and the walk stops on it before ever reaching $67/$96/$110.
+  // The published price was the newest sale +2.6%, reported as n=8 with
+  // confidence 0.694. The VALUE was defensible; the LABEL was not.
+  //
+  // So the projection now measures its own concentration and says so.
+  // Nothing about the value changes — this is a reporting field.
+  /** The winning anchor sale's share of total weight, 0..1. */
+  anchorWeightShare: number;
+  /** Kish effective sample size: (Σw)² / Σw². 1 when one sale carries the
+   *  pool; approaches `n` when the weights are even. */
+  effectiveN: number;
+  /** True when the anchor sale alone carries more than half the weight —
+   *  the projection is a one-sale estimator whatever `n` says. */
+  anchorDominatesPool: boolean;
 }
+
+/** Above this share of total weight, the anchor sale IS the projection. */
+const ANCHOR_DOMINANCE_SHARE = 0.5;
 
 export function projectFromLeadingEdge(
   comps: ReadonlyArray<DatedComp>,
@@ -439,6 +467,16 @@ export function projectFromLeadingEdge(
   let anchorPrice = byPrice[byPrice.length - 1].price;
   for (const r of byPrice) { cum += r.w; if (cum >= totalW / 2) { anchorPrice = r.price; break; } }
   const anchorAgeDays = weighted.reduce((s, r) => s + r.w * r.ageDays, 0) / totalW;
+
+  // CF-AN-ANCHOR-THAT-IS-ONE-SALE-SAYS-SO (R57). How concentrated is the
+  // weight the anchor won on? Ties at the anchor price count together —
+  // two sales at the same price ARE two sales, and the walk would have
+  // stopped on either. Kish effective-N describes the whole pool.
+  const anchorWeight = weighted.reduce((s, r) => (r.price === anchorPrice ? s + r.w : s), 0);
+  const anchorWeightShare = anchorWeight / totalW;
+  const sumW2 = weighted.reduce((s, r) => s + r.w * r.w, 0);
+  const effectiveN = sumW2 > 0 ? (totalW * totalW) / sumW2 : dated.length;
+  const anchorDominatesPool = anchorWeightShare > ANCHOR_DOMINANCE_SHARE;
 
   // The trend: the window's OLS slope, $/day, sanity-capped.
   const reg = fitLinearRegression(dated);
@@ -475,5 +513,8 @@ export function projectFromLeadingEdge(
     newestAgeDays: Math.round(newestAgeDays * 10) / 10,
     cap,
     slopeNote,
+    anchorWeightShare: Math.round(anchorWeightShare * 1000) / 1000,
+    effectiveN: Math.round(effectiveN * 10) / 10,
+    anchorDominatesPool,
   };
 }
