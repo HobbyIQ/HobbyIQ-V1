@@ -33,6 +33,49 @@ describe("warmStart builds the expensive singletons", () => {
     expect(typeof result.totalMs).toBe("number");
   }, 30_000);
 
+  it("warms the COSMOS containers the price path uses, as separate steps", async () => {
+    const result = await warmStart();
+    const labels = result.steps.map((s) => s.label);
+
+    // CF-A-WARM-PROCESS-HAS-AN-OPEN-CONNECTION. Slot-smoke run 35037265421
+    // reported `totalMs: 13` on a genuinely new process (the sha-match poll
+    // took 4 polls), and then cases 5 and 7 aborted against card_catalog at
+    // 3,161 ms and 3,057 ms — the 3 s per-query catalog ceiling. 13 ms was
+    // truthful about the in-process singletons and silent about Cosmos, which
+    // warm-up did not touch at all.
+    //
+    // Separate steps, not one aggregate, so a reader can see whether the
+    // expensive half ran. An aggregate is exactly what let 13 ms pass for warm.
+    expect(labels).toContain("cosmos-card-catalog");
+    expect(labels).toContain("cosmos-sold-comps");
+  }, 30_000);
+
+  it("the Cosmos steps report a real duration — 13 ms can never again pass for warm", async () => {
+    const result = await warmStart();
+    const cosmos = result.steps.filter((s) => s.label.startsWith("cosmos-"));
+
+    expect(cosmos.length).toBe(2);
+    for (const s of cosmos) {
+      // Each Cosmos step reports its OWN ms, always. The number itself is not
+      // asserted to be non-zero: with no COSMOS_CONNECTION_STRING the step
+      // returns immediately and 0 ms is the honest answer, and pinning ">0"
+      // here would only assert that the test box has Cosmos configured.
+      //
+      // What the pin protects is the SHAPE — a per-step ms that a reader can
+      // look at. The original bug was a single aggregate `totalMs: 13` that
+      // said nothing about whether the Cosmos path had been opened; two
+      // separately-reported steps make that unmistakable either way.
+      expect(typeof s.ms).toBe("number");
+      expect(Number.isFinite(s.ms)).toBe(true);
+    }
+
+    // And when Cosmos IS configured, the read really happens — asserted where
+    // it can be, rather than asserted everywhere and true nowhere.
+    if (process.env.COSMOS_CONNECTION_STRING) {
+      expect(cosmos.some((s) => s.ms > 0)).toBe(true);
+    }
+  }, 30_000);
+
   it("every step succeeds against the real modules", async () => {
     const result = await warmStart();
 
@@ -108,14 +151,35 @@ describe("warm-up is never load-bearing", () => {
       new URL("../src/services/ops/warmStart.ts", import.meta.url), "utf8",
     ).replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
 
+    // CF-A-WARM-PROCESS-HAS-AN-OPEN-CONNECTION (2026-09-16) NARROWED this pin.
+    // It used to forbid `new CosmosClient` and `.item(...).read()` too, and that
+    // was the bug: a warm-up touching no Cosmos left the client, the endpoint
+    // resolution and the partition-key map cold, so the first real request paid
+    // them and aborted at the 3 s catalog deadline. Two point reads now open
+    // that path deliberately.
+    //
+    // What must NEVER appear is unchanged: a QUERY (unbounded RU every restart)
+    // or a WRITE (a boot-time optimisation must not mutate anything).
     for (const forbidden of [
-      /new CosmosClient/,
       /\.items\.query\(/,
       /\.items\.(create|upsert)\(/,
-      /\.item\([^)]*\)\.(read|patch|replace|delete)\(/,
-      /fetch\(/,
+      /\.item\([^)]*\)\.(patch|replace|delete)\(/,
+      /[^a-zA-Z]fetch\(/,
     ]) {
       expect(src).not.toMatch(forbidden);
     }
+  });
+
+  it("DOES open the Cosmos path — the gap that let a cold catalog look warm", async () => {
+    const fs = await import("node:fs");
+    const src = fs.readFileSync(
+      new URL("../src/services/ops/warmStart.ts", import.meta.url), "utf8",
+    ).replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
+
+    // MUTATION CHECK: before this change warm-up made no Cosmos call at all,
+    // and /api/health/warm reported totalMs 13 on a process whose very next
+    // request timed out against card_catalog at 3,161 ms. Deleting these reads
+    // restores exactly that.
+    expect(src).toMatch(/\.item\([^)]*\)\.read\(\)/);
   });
 });

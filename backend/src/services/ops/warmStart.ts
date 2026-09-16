@@ -31,10 +31,11 @@
  *     first request for a late-arriving container, and App Service's health
  *     probe would be the thing waiting instead of a user. Warm-up is a
  *     best-effort optimisation and must never delay or fail the boot.
- *   - Read-only. It parses fixed strings and touches in-process caches. It
- *     issues NO Cosmos query and NO vendor call, so it cannot write, cannot
- *     cost RU, and cannot behave differently against prod than against a
- *     local box.
+ *   - Read-only. It parses fixed strings, touches in-process caches, and makes
+ *     exactly TWO Cosmos POINT READS — never a query, never a write, so it
+ *     cannot mutate anything and its RU cost is ~2 RU per boot. See
+ *     CF-A-WARM-PROCESS-HAS-AN-OPEN-CONNECTION below for why those two reads
+ *     had to be added.
  *   - Fully guarded. Every step is individually try/caught: a warm-up that
  *     throws must never take down a process that would otherwise serve
  *     traffic. A failed step logs and the next one still runs.
@@ -50,10 +51,52 @@
  * live production config change, so it is Drew's call, not this PR's.
  */
 
+/**
+ * CF-A-WARM-PROCESS-HAS-AN-OPEN-CONNECTION (Fable, 2026-09-16).
+ *
+ * THE GAP THIS CLOSES, and it was mine. The original warm-up deliberately
+ * issued no Cosmos call at all — a guarantee of zero RU and zero write risk.
+ * That guarantee is exactly what left the expensive half cold.
+ *
+ * Slot-smoke run 35037265421 (sha 09d9a765) is the evidence. The sha-match poll
+ * worked (4 polls, so it really was the new process), `/api/health/warm`
+ * reported `totalMs: 13`, and then smoke cases 5 and 7 came back
+ * `catalog-lookup-timeout` after 3,161 ms and 3,057 ms — the per-query catalog
+ * ceiling (`PRICE_LOOKUP_PER_QUERY_MS` = `DEFAULT_LADDER_BUDGET.perRungMs` =
+ * 3,000 ms) plus overhead.
+ *
+ * `totalMs: 13` was TRUTHFUL ABOUT WHAT IT MEASURED AND SILENT ABOUT WHAT IT
+ * DID NOT. It said the in-process singletons were built. It never claimed the
+ * Cosmos client was constructed, the account endpoint resolved, or a
+ * container's partition-key map fetched — and on a fresh process every one of
+ * those is cold, paid by whichever request arrives first. That request was a
+ * smoke case, and it aborted at the deadline.
+ *
+ * So the warm-up now opens the connection it was avoiding: ONE POINT READ per
+ * hot container. A point read, not a query — it is the cheapest call that
+ * forces the whole cold path (client construction, endpoint resolution,
+ * partition-key ranges, TLS handshake, auth token) and it costs ~1 RU whether
+ * the document exists or not. A 404 is a perfectly good warm: the round trip
+ * is the point, not the row.
+ *
+ * The deadline is deliberately NOT raised to accommodate a cold process. 3 s is
+ * correct for a warm one, and re-baselining it to cold would mask this defect
+ * and slow every genuine refusal. Warm the path instead.
+ */
 type WarmStep = { label: string; ms: number; ok: boolean; error?: string };
 
 /** Fixed, representative inputs. Never a real user's query. */
 const WARM_TITLE = "2024 Bowman Chrome Shohei Ohtani Gold Refractor Auto /50";
+
+/**
+ * A real, stable `hiq:` slug used only as a point-read address.
+ *
+ * It does not need to EXIST. `container.item(id, pk).read()` performs the full
+ * cold-path work either way, and a 404 is caught below and still recorded as a
+ * successful warm — because what is being warmed is the connection, not a
+ * cache of this row.
+ */
+const WARM_CATALOG_ID = "hiq:baseball:2024:bowman-chrome:85:base:no-auto";
 
 async function step(label: string, fn: () => unknown | Promise<unknown>): Promise<WarmStep> {
   const startedAt = Date.now();
@@ -104,6 +147,37 @@ export async function warmStart(): Promise<{ totalMs: number; steps: WarmStep[] 
   steps.push(await step("valuation-module-graph", async () => {
     await import("../compiq/oneValuationPath.service.js");
     await import("../portfolioiq/hobbyIqFmv.service.js");
+  }));
+
+  // The two Cosmos containers the price path actually touches, each as its OWN
+  // step so its ms is separately visible. That separation is the point: a
+  // single aggregate `totalMs: 13` is what let a cold catalog path look warm,
+  // and a reader can now see at a glance whether the expensive half ran.
+  //
+  // A failed read still counts as a warm attempt — the connection work happens
+  // before the 404 — so these are guarded and their error is recorded rather
+  // than swallowed.
+  steps.push(await step("cosmos-card-catalog", async () => {
+    const { getCardCatalogContainer } = await import("../portfolioiq/cardCatalog.service.js");
+    const container = await getCardCatalogContainer();
+    if (!container) return;                       // no connection string: nothing to warm
+    // Point read, never a query: ~1 RU, and it forces client construction,
+    // endpoint resolution, the partition-key map, TLS and auth all at once.
+    // card_catalog partitions on /cardId, and a checklist-minted row has
+    // cardId === id, so this is the row's own address.
+    await container.item(WARM_CATALOG_ID, WARM_CATALOG_ID).read().catch(() => undefined);
+  }));
+
+  steps.push(await step("cosmos-sold-comps", async () => {
+    const { CosmosClient } = await import("@azure/cosmos");
+    const { cosmosOptionsFromConnectionString } = await import("./cosmosConnectionPolicy.js");
+    const conn = process.env.COSMOS_CONNECTION_STRING;
+    if (!conn) return;
+    const container = new CosmosClient(cosmosOptionsFromConnectionString(conn))
+      .database(process.env.COSMOS_DATABASE ?? "hobbyiq")
+      .container(process.env.COSMOS_SOLD_COMPS_CONTAINER ?? "sold_comps");
+    // sold_comps partitions on /cardId. The id need not exist — see above.
+    await container.item(WARM_CATALOG_ID, WARM_CATALOG_ID).read().catch(() => undefined);
   }));
 
   const totalMs = Date.now() - startedAt;
