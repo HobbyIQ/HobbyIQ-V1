@@ -1068,6 +1068,21 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
     [/fleer-tradition-glossy/, "fleer-tradition-glossy"],
     [/fleer-tradition|(?:^|-)tradition(?:-|$)/, "fleer-tradition"],
     [/fleer-update/, "fleer-update"],
+    // GREATS OF THE GAME (Drew, 2026-09-15): a named product is its own card
+    // set, so it must be decided BEFORE the bare /fleer/ catch-all below —
+    // the same shape as the panini-prizm-draft-picks entries above, which is
+    // how a specialisation survives its family's pattern.
+    //
+    // Without this, `fleer-greats-of-the-game` normalizes to bare `fleer` and
+    // the key is unreachable: registering it in productSetKeys is not enough
+    // on its own, because productSetKeyForName resolves by SPELLED name and a
+    // bare P() entry is not spelled (the same finding as R62, #2219).
+    //
+    // Measured 2026-09-15: 2,961 pool rows titled "… Greats of the Game" sit
+    // on bare `fleer` today — 1,518 in 2001, 1,443 in 2002 — with no other
+    // destination that resolves. The re-key waits on the checklists; this is
+    // what gives those rows somewhere to go.
+    [/(?:^|-)fleer-greats-of-the-game(?:-|$)/, "fleer-greats-of-the-game"],
     [/fleer/, "fleer"],
   ];
 }
