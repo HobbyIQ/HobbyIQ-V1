@@ -49,6 +49,7 @@ function args() {
   for (let i = 0; i < a.length; i++) {
     if (a[i] === "--from") { while (a[i + 1] && !a[i + 1].startsWith("--")) out.from.push(a[++i]); }
     else if (a[i] === "--force-stamp") out.forceStamp = true;
+    else if (a[i] === "--relabel") out.relabel = true;
   }
   return out;
 }
@@ -153,8 +154,94 @@ function weightedOf(slots) {
   return { weighted: out, total };
 }
 
+/**
+ * --relabel: RE-STAMP THE SAME MEASUREMENT, WITHOUT RE-MEASURING IT.
+ *
+ * WHY IT EXISTS. Changing a derivation input moves the stamp, so the recorded
+ * reference stops being comparable and PROPERTY 3 goes red. Re-baselining
+ * needs census artifacts, which a PR author changing one file does not have
+ * and should not need: the CLASS SHARES did not move, only the hash of the
+ * files that produce them.
+ *
+ * Under squash merges the old workaround -- pin REFERENCE_COMMIT at a commit
+ * containing the change -- is unsatisfiable before the merge (#2189, #2205,
+ * 0a05cda1 all merged red and were re-labelled after). This is the legal move
+ * instead: recompute the stamp from the tree, keep the shares exactly as
+ * recorded, and commit the result IN the PR that changed the input.
+ *
+ * WHAT IT REFUSES.
+ *   * A tree whose stamp already matches -- nothing to re-label.
+ *   * A missing input.
+ *   * Any attempt to touch the SHARES. It copies them byte-for-byte; moving a
+ *     share needs a real re-measure with --from, and that refusal is what
+ *     keeps this from becoming a way to launder a corpus regression.
+ *
+ * WHAT IT WRITES: measuredUnder.{stamp,derivation,contract,commit}, the
+ * relabelled note, and a supersedes block naming the stamp it replaced. The
+ * four class shares are untouched by construction.
+ */
+function relabel(old, current) {
+  if (!old?.measuredUnder || !old?.weighted) {
+    console.error("REFUSED — no existing reference to re-label. Use --from to record one.");
+    process.exit(4);
+  }
+  const head = (() => {
+    try {
+      return require("node:child_process")
+        .execFileSync("git", ["rev-parse", "HEAD"], { cwd: path.join(__dirname, "..", ".."), encoding: "utf8" }).trim();
+    } catch { return old.measuredUnder.commit ?? null; }
+  })();
+
+  const next = JSON.parse(JSON.stringify(old));
+  next.measuredUnder = {
+    ...old.measuredUnder,
+    stamp: current.combined,
+    derivation: current.derivation,
+    contract: current.contract,
+    note: "Re-labelled by scripts/rebaseline-i9-reference.cjs --relabel: a derivation"
+      + " input changed, so the stamp moved, but the measurement did not. The four"
+      + " class shares are copied unchanged from the superseded reference; only a"
+      + " --from run may move them.",
+  };
+  next.supersedes = {
+    stamp: old.measuredUnder.stamp,
+    derivation: old.measuredUnder.derivation,
+    measuredAt: old.measuredUnder.measuredAt ?? old.measuredAt ?? null,
+    classifiedTotal: old.classifiedTotal ?? null,
+    weighted: old.weighted,
+    reason: "relabel-derivation-input-changed",
+    relabelledAt: new Date().toISOString(),
+    relabelledOnCommit: head,
+  };
+
+  // THE SHARES MUST BE IDENTICAL. Asserted rather than trusted -- a relabel
+  // that moved a share would be exactly the laundering this tool refuses.
+  const same = JSON.stringify(next.weighted) === JSON.stringify(old.weighted)
+    && next.classifiedTotal === old.classifiedTotal;
+  if (!same) {
+    console.error("REFUSED — a relabel must not move the class shares. This is a bug in --relabel.");
+    process.exit(5);
+  }
+
+  console.log("\n  RE-LABEL (no re-measure):");
+  console.log(`    stamp      ${old.measuredUnder.stamp}  ->  ${current.combined}`);
+  console.log("    shares     unchanged (copied from the superseded reference):");
+  for (const k of CLASSES) {
+    const v = old.weighted?.[k];
+    if (v !== undefined) console.log(`      ${k.padEnd(12)} ${(Number(v) * 100).toFixed(1)}%`);
+  }
+  if (!APPLY_RELABEL) {
+    console.log("\nDRY RUN — set APPLY=true to write data/rematch-census-shares.json.");
+    return;
+  }
+  fs.writeFileSync(TABLE_PATH, `${JSON.stringify(next, null, 2)}\n`);
+  console.log(`\nWROTE ${TABLE_PATH} under stamp ${current.combined}`);
+}
+
+const APPLY_RELABEL = String(process.env.APPLY ?? "").toLowerCase() === "true";
+
 function main() {
-  const { from, forceStamp } = args();
+  const { from, forceStamp, relabel: doRelabel } = args();
   const current = DV.currentStamp();
   const old = fs.existsSync(TABLE_PATH) ? JSON.parse(fs.readFileSync(TABLE_PATH, "utf8")) : null;
   const oldStamp = old?.measuredUnder?.stamp ?? null;
@@ -169,6 +256,19 @@ function main() {
 
   const agreement = DV.stampsAgree(oldStamp, current);
   console.log(`  comparable      ${agreement.comparable}${agreement.reason ? ` (${agreement.reason})` : ""}`);
+
+  if (doRelabel) {
+    if (agreement.comparable && !forceStamp) {
+      console.error("REFUSED — the reference is already at the current derivation stamp; nothing to re-label.");
+      process.exit(3);
+    }
+    if (from.length) {
+      console.error("REFUSED — --relabel re-stamps WITHOUT re-measuring; it takes no --from artifacts.");
+      console.error("  Use --from on its own to record a fresh measurement.");
+      process.exit(6);
+    }
+    return relabel(old, current);
+  }
 
   // THE REFUSAL THAT KEEPS THIS FROM BEING A SILENCER. A reference already at
   // the current stamp is COMPARABLE, so any drift against it is a real finding
