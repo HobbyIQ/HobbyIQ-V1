@@ -59,6 +59,20 @@ export interface ExactPoolRow {
    *  majority of rows, which is exactly what makes the basis `row-count`
    *  rather than a silent claim of independence. */
   sellerHandle?: string | null;
+  // ── CF-A-SELF-COMP-WEARS-EVERY-SOURCES-NAME (R59, Drew 2026-09-15) ────
+  //
+  // The identity keys the row was found under. Projected for two reasons,
+  // both of which need to know WHERE a row came from rather than only what
+  // it says:
+  //
+  //   1. a vendor CLONE of the owner's own sale carries no
+  //      contributorUserId, so it is matched on (identity, soldAt, price)
+  //      against the tagged row instead — see applySelfCompRule;
+  //   2. the basis reports how many partitions actually returned rows, so
+  //      `id=cardId+hobbyiqCardId` can no longer imply a single-sided read
+  //      when the query swept two partitions.
+  cardId?: string | null;
+  hobbyiqCardId?: string | null;
 }
 
 let _container: Container | null = null;
@@ -163,7 +177,7 @@ export async function readExactPoolRows(input: {
   hiqIds.forEach((v, i) => params.push({ name: `@hiq${i === 0 ? "" : i}`, value: v }));
   try {
     const { resources } = await cont.items.query<ExactPoolRow>({
-      query: `SELECT c.price, c.soldAt, c.gradeCompany, c.gradeValue, c.priceAnomaly, c.contributorUserId, c.source, c.sellerHandle FROM c WHERE ${parts.join(" AND ")}`,
+      query: `SELECT c.price, c.soldAt, c.gradeCompany, c.gradeValue, c.priceAnomaly, c.contributorUserId, c.source, c.sellerHandle, c.cardId, c.hobbyiqCardId FROM c WHERE ${parts.join(" AND ")}`,
       parameters: params,
     }, { maxItemCount: 500 }).fetchAll();
     const rows = resources || [];
