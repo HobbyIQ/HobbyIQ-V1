@@ -704,6 +704,22 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
     // so it precedes THAT rule rather than the Donruss catch-all below.
     [/(?:^|-)panini-donruss-the-elite-series-autographs(?:-|$)/, "panini-donruss-the-elite-series-autographs"],
     [/donruss-elite(?!-extra)|(?:^|-)elite(?!-extra)(?:-|$)/, "donruss-elite"],
+    // R53(ii) (Drew, 2026-09-15): Select's named TIERS are their own card
+    // sets, and must be decided BEFORE the bare /panini-select/ catch-all
+    // below -- the same shape as the panini-prizm-draft-picks entries above,
+    // which is how a specialisation survives its family's pattern.
+    //
+    // Registering the keys in productSetKeys is NOT enough on its own:
+    // productSetKeyForName resolves by SPELLED name, and a bare P() entry is
+    // not spelled, so the catch-all answered first for anything it does not
+    // name. Measured 2026-09-15: baseball 2024 prints 100 numbers in BOTH
+    // Concourse and Premier Level, and 36 of them name a DIFFERENT PLAYER in
+    // each tier (#10 Kyle Manzardo vs Paul Skenes). Two cards at one number,
+    // so the tier is a card set, not a finish -- on the parallel axis those
+    // 36 pairs would collide into one id and one pool.
+    [/(?:^|-)panini-select-concourse(?:-|$)/, "panini-select-concourse"],
+    [/(?:^|-)panini-select-premier-level(?:-|$)/, "panini-select-premier-level"],
+    [/(?:^|-)panini-select-field-level(?:-|$)/, "panini-select-field-level"],
     [/panini-select/, "panini-select"],
     [/panini-mosaic/, "panini-mosaic"],
     // CF-OPTIC-WITHOUT-PANINI (Drew, 2026-08-17). This required the `panini-`
