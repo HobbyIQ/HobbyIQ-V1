@@ -264,6 +264,34 @@ function priceDeadlineWithheld(query: string, elapsedMs: number) {
     compsUsed: 0,
     compsAvailable: 0,
     recentComps: [],
+    // CF-A-WITHHELD-RESPONSE-STATES-NOTHING-BUT-THE-REFUSAL (Fable,
+    // 2026-09-15). Every field a reader might mistake for a price, or for
+    // confidence in one, is explicitly null here — not merely absent.
+    //
+    // The smoke's case 4 came back `no-basis` / mechanism `none` / `Withheld
+    // — …` / `FMV $875`, because `overlayResolverRescue` wrote a price into a
+    // refusal on its way to res.json. That is fixed at the rescue, which now
+    // declines any response carrying a stated reason. These nulls are the
+    // second half: a shape that cannot be half-overwritten into something
+    // self-contradictory, and that says "no confidence" as loudly as it says
+    // "no price". A consumer reading `pricingConfidence` off a withheld
+    // response should get 0, not a stale number from a merge.
+    marketTier: null,
+    buyZone: null,
+    holdZone: null,
+    sellZone: null,
+    predictedPriceRange: null,
+    predictedPriceAttribution: null,
+    fmvMechanism: null,
+    // `confidence` is a bare number on this route (PricingRouteResult), while
+    // `pricingConfidence` is the flat field the smoke reads via
+    // `price.confidence?.pricingConfidence ?? price.pricingConfidence`. Both
+    // are zeroed so neither spelling can report confidence in a price that
+    // does not exist.
+    confidence: 0,
+    pricingConfidence: 0,
+    approximate: false,
+    estimateBasis: null,
     canonicalFmvWithheld: {
       reason: "ladder-timeout",
       method: "no-basis",

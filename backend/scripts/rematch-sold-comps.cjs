@@ -1598,7 +1598,7 @@ async function main() {
   const r31Inputs = async (row, stored, der) => {
     const none = {
       checklistListsTitleParallel: false, titleSerial: null, derivedBackedR31: false,
-      titleParallelIsARungPhrase: null, titleNamesSiblingProduct: null,
+      titleParallelIsARungPhrase: null, titleNamesLongerRung: null, titleNamesSiblingProduct: null,
     };
     if (!der?.ok) return none;
     const storedParallelBlank = K.GENERIC_PARALLELS.has(String(stored?.parallel ?? "").trim().toLowerCase());
@@ -1624,11 +1624,18 @@ async function main() {
     // already said yes, so it costs nothing on the rows that are refused
     // anyway, and it can only ever narrow.
     let isRungPhrase = null;
+    let longerRung = null;
     if (storedParallelBlank && listsIt) {
       const destParallel = String(der.identity?.parallel ?? "");
       const year = stored?.cardYear ?? der.identity?.cardYear ?? null;
       const setKey = String(der.identity?.setKey ?? "").toLowerCase();
       isRungPhrase = K.VOCAB.checklistListsRungPhrase(destParallel, year, setKey);
+      // CF-THE-LONGEST-RUNG-THE-TITLE-STATES-WINS. Only asked where the
+      // candidate already IS a rung -- a non-rung is refused by T3b and this
+      // would cost a lookup for nothing.
+      if (isRungPhrase) {
+        longerRung = K.VOCAB.longerRungStatedInTitle(destParallel, row?.title, year, setKey);
+      }
     }
 
     // THE TITLE MUST NOT NAME A SIBLING OF THE PRODUCT BEING WRITTEN. The
@@ -1642,6 +1649,7 @@ async function main() {
     return {
       checklistListsTitleParallel: listsIt,
       titleParallelIsARungPhrase: isRungPhrase,
+      titleNamesLongerRung: longerRung,
       titleNamesSiblingProduct: siblingNamed,
       titleSerial,
       derivedBackedR31: await checklistBacked(der.slug),
@@ -2722,6 +2730,7 @@ async function main() {
         // counted off the split signal below and takes none.
         checklistListsTitleParallel: r31In.checklistListsTitleParallel,
         titleParallelIsARungPhrase: r31In.titleParallelIsARungPhrase,
+        titleNamesLongerRung: r31In.titleNamesLongerRung,
         titleNamesSiblingProduct: r31In.titleNamesSiblingProduct,
         titleSerial: r31In.titleSerial,
         titleNumberIsChecklistRow: r33In.titleNumberIsChecklistRow,
@@ -2793,6 +2802,8 @@ async function main() {
           titleParallel: derivedForEvidence?.parallel ?? null,
           checklistListsTitleParallel: r31In.checklistListsTitleParallel,
           titleParallelIsARungPhrase: r31In.titleParallelIsARungPhrase,
+          titleNamesLongerRung: r31In.titleNamesLongerRung,
+        titleNamesLongerRung: r31In.titleNamesLongerRung,
           titleNamesSiblingProduct: r31In.titleNamesSiblingProduct,
           titleSerial: r31In.titleSerial,
           derivedBacked: r31In.derivedBackedR31,
