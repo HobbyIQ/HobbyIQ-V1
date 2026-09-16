@@ -51,10 +51,19 @@ export async function persistDailyPriceSeries(
     }
     const contentHash = contentHashOf(source, cardId, grade, closingDate, price.toFixed(2));
     try {
+      // CF-A-DEDUP-TIMEOUT-IS-NOT-A-MISS (Fable, 2026-09-16). 15 s, not the
+      // SDK's 60 s default. This is a background writer with no request
+      // context — 13,230 of its calls per 7 days were failing at 60 s.
+      //
+      // ON TIMEOUT: this throws and the enclosing catch records the row as an
+      // error rather than a dedup, so the series point is NOT written and the
+      // next run re-attempts it. A daily series tolerates a late point; what it
+      // would not tolerate is a duplicate, which is why the timeout must not be
+      // read as "no existing row".
       const { resources: existing } = await container.items.query({
         query: "SELECT c.id FROM c WHERE c.cardId = @c AND c.contentHash = @h",
         parameters: [{ name: "@c", value: cardId }, { name: "@h", value: contentHash }],
-      }).fetchAll();
+      }, { maxItemCount: 10, abortSignal: AbortSignal.timeout(15_000) }).fetchAll();
       if (existing.length > 0) { result.deduped++; continue; }
       const doc = {
         id: `${source}::${cardId}::${grade.toLowerCase()}::${closingDate}`,
