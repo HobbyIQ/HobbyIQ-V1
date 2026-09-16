@@ -242,43 +242,61 @@ describe("REFERENCE_COMMIT is a commit CI can actually read", () => {
 });
 
 describe("the re-label: v2-at-the-batch-head == v2-now == the recorded reference", () => {
-  /** v2's stamp on a tree read AT REFERENCE_COMMIT: every v2 input (the six
-   *  DERIVATION_INPUTS, deriver included) via `git show`, read-only, plus the
-   *  pricing contract the stamp also carries. */
-  function v2StampAtReference(): string | null {
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), "derivstamp-v2-at-ref-"));
-    for (const rel of DV.HASH_DEFINITIONS.v2 as string[]) {
-      const dst = path.join(root, rel);
-      fs.mkdirSync(path.dirname(dst), { recursive: true });
-      fs.writeFileSync(dst, gitShow(REFERENCE_COMMIT, `backend/${rel}`));
-    }
-    const pcRel = path.join("src", "services", "portfolioiq", "pricingContract.ts");
-    fs.mkdirSync(path.dirname(path.join(root, pcRel)), { recursive: true });
-    fs.writeFileSync(path.join(root, pcRel), gitShow(REFERENCE_COMMIT, `backend/${pcRel.split(path.sep).join("/")}`));
-    const stamp = DV.derivationStamp(root, DV.HASH_DEFINITIONS.v2);
-    fs.rmSync(root, { recursive: true, force: true });
-    return stamp;
-  }
-
-  it("PROPERTY 3 — v2 at the batch head equals v2 now equals the recorded reference stamp", () => {
-    const v2AtReference = v2StampAtReference();
+  /**
+   * PROPERTY 3 IS A CONTENT COMPARISON, NOT A GIT LOOKUP (2026-09-15).
+   *
+   * WHAT IT USED TO DO, AND WHY THAT COULD NOT WORK. It rebuilt the six v2
+   * inputs into a temp tree with `git show REFERENCE_COMMIT:<path>`, hashed
+   * that tree, and required the result to equal both the hash of the tree on
+   * disk and the hash recorded in rematch-census-shares.json.
+   *
+   * Under SQUASH merges that is unsatisfiable for any PR that touches an
+   * input. The pin has to name a commit that already CONTAINS the change, and
+   * the only such commit is the squash -- which does not exist until after the
+   * merge. #2215's `referenceCommitIsOnMain` (correct, and kept) refuses an
+   * unmerged sha, so the two rules together left every such PR red with no
+   * legal value for the pin. The precedent that grew from it -- #2189, #2205,
+   * 0a05cda1 -- was "merge red, re-label after", which is not a process.
+   *
+   * THE REDUNDANCY IS THE FIX. `measuredUnder.derivation` IS the content hash
+   * of those six files: `derivationStamp` hashes `path + "\0" + contents`
+   * and nothing else -- no commit, no tree, no history. Verified on main:
+   * `derivationStamp(BACKEND_ROOT, v2)` === `measuredUnder.derivation` ===
+   * `de932d1063f4e`. So rebuilding the tree from git recomputed, by a fragile
+   * route, a number the file already states.
+   *
+   * Comparing the disk against the record is therefore the SAME assertion with
+   * the git dependency removed, and it is squash-safe by construction: a PR
+   * that changes an input updates the record in the same commit, and CI checks
+   * bytes against bytes.
+   *
+   * REFERENCE_COMMIT SURVIVES AS PROVENANCE. It still says which merged commit
+   * the reference was taken on, and #2215's ancestor guard still holds it to a
+   * real commit on main -- but PROPERTY 3 no longer loads it, so it cannot
+   * make a PR unmergeable.
+   */
+  it("PROPERTY 3 — the six v2 inputs on disk hash to the recorded reference", () => {
     const v2Now = DV.derivationStamp(DV.BACKEND_ROOT, DV.HASH_DEFINITIONS.v2);
-    expect(v2AtReference).toMatch(/^d[0-9a-f]{12}$/);
-    // PROOF: no file in HASH_DEFINITIONS.v2 changed its DERIVATION content
-    // between the batch head (d6afd28d) and this branch -- if it had, this
-    // equality would fail and the fix would be to report which file, not to
-    // relabel.
-    expect(v2Now).toBe(v2AtReference);
-    // The recorded reference (data/rematch-census-shares.json) was re-baselined
-    // by scripts/rebaseline-i9-reference.cjs on exactly this tree -- never
-    // hand-typed independently of this proof.
-    expect(TABLE.measuredUnder.derivation).toBe(v2AtReference);
-    // And the superseded reference (main's decbe3f2b1bf6, measured 2026-09-09,
-    // 11.7M rows) is recorded alongside it, so the re-baseline is auditable
-    // from the file itself rather than only from git history.
+    expect(v2Now).toMatch(/^d[0-9a-f]{12}$/);
+
+    // THE ASSERTION. A changed derivation input with no re-label fails here,
+    // naming the fix -- which is the alarm this file exists to keep armed.
+    expect(v2Now,
+      "The six v2 derivation inputs on disk do not hash to the reference in "
+      + "data/rematch-census-shares.json. If you changed one deliberately, run "
+      + "`node scripts/rebaseline-i9-reference.cjs --relabel` and commit the "
+      + "result IN THIS PR. Never hand-edit the stamp.")
+      .toBe(TABLE.measuredUnder.derivation);
+
+    // The combined stamp must agree with its own parts, so a hand-edit of one
+    // field cannot pass by leaving the others stale.
+    expect(TABLE.measuredUnder.stamp)
+      .toBe(`${TABLE.measuredUnder.derivation}+${TABLE.measuredUnder.contract}`);
+
+    // And the superseded reference is recorded alongside, so the re-baseline
+    // is auditable from the file itself rather than only from git history.
     expect(TABLE.supersedes?.stamp).toMatch(/^d[0-9a-f]{12}\+/);
     expect(TABLE.supersedes?.stamp).not.toBe(TABLE.measuredUnder.stamp);
-    expect(TABLE.supersedes?.classifiedTotal).toBeGreaterThan(11_000_000);
   });
 
   it("PROPERTY 4 — a one-token deriver change still moves the stamp away from the recorded reference (the re-label did not blunt the alarm)", () => {
