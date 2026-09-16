@@ -78,15 +78,20 @@ const repoRoot = path.resolve(backend, "..");
 const DV = require_(path.join(backend, "scripts", "lib", "derivation-version.cjs"));
 const TABLE = require_(path.join(backend, "data", "rematch-census-shares.json"));
 
-/** The fix/r31-r33-guards-0915 head the 2026-09-15 reference was stamped on:
- *  the R31/R33 write guards (a rung is a name not a bag of tokens; a fill
- *  presumes the right address; a #N is not always a card number) and R49's
- *  alias reader, merged with main. The re-label commit sits on top of it and
- *  touches no DERIVATION_INPUT, so v2 at this commit equals v2 now.
+/** The MERGED commit the 2026-09-15 reference was stamped on: #2205's squash,
+ *  carrying R31's T3c longer-rung guard on top of the R31/R33 write guards and
+ *  R49's alias reader. v2 at this commit equals v2 now.
  *  (`measuredUnder.commit` names something else: the MAIN tree the verification
  *  census artifacts were measured under, b5ab5f74 -- unchanged, because the
- *  same 32 certified artifacts were re-read and the class shares did not move.) */
-const REFERENCE_COMMIT = "f251c1c6c9e193b3c0d9b08ee0c60bd3b6e42083";
+ *  same 32 certified artifacts were re-read and the class shares did not move.)
+ *
+ *  IT MUST BE A COMMIT ON MAIN. This pin was briefly set to the PRE-SQUASH
+ *  branch head (b834772d), which exists only in the author's clone: every CI
+ *  run after the merge failed on `git show <sha>:...` with the object missing,
+ *  on every PR, because PROPERTY 3 reads the v2 inputs at this commit. The
+ *  same shape bit #2153's stale pins. `referenceCommitIsOnMain` below refuses
+ *  a non-ancestor so a pre-squash pin cannot reach CI again. */
+const REFERENCE_COMMIT = "09d9a7653ce39a3a104e968dece58c89651ad6aa";
 
 /** Read one file's content AT a commit via `git show <sha>:<path>` -- READ
  *  ONLY, no worktree, no checkout, nothing mutated. `relFromRepoRoot` is the
@@ -176,6 +181,63 @@ describe("DERIVATION_INPUTS no longer names the whole rematch-sold-comps.cjs scr
       fs.appendFileSync(classifier, "\n// a rule changed\n");
     }));
     expect(after).not.toBe(before);
+  });
+});
+
+describe("REFERENCE_COMMIT is a commit CI can actually read", () => {
+  /**
+   * WHY THIS TEST EXISTS -- a CI-wide red, twice.
+   *
+   * PROPERTY 3 below reads every v2 input AT `REFERENCE_COMMIT` with
+   * `git show <sha>:<path>`. A sha that is not on main exists only in the
+   * author's clone, so on a CI runner that command fails with the object
+   * missing and the whole file goes red -- on EVERY pull request, not just the
+   * one that set the pin, because the pin lives on main.
+   *
+   * Measured 2026-09-15: the pin was set to a pre-squash branch head
+   * (b834772d) while the merge landed as a squash (09d9a765). The two trees
+   * were byte-identical for all six v2 inputs -- the stamp was never wrong --
+   * yet every PR failed. #2153's stale pins were the same shape.
+   *
+   * The failure mode is entirely mechanical and entirely preventable, so it is
+   * asserted rather than remembered.
+   */
+  const isSha = /^[0-9a-f]{40}$/;
+
+  it("is a full 40-character sha", () => {
+    expect(REFERENCE_COMMIT).toMatch(isSha);
+  });
+
+  it("names an object this checkout HAS", () => {
+    // The direct precondition for `gitShow`. A clear failure here beats six
+    // confusing ones in PROPERTY 3.
+    expect(() => execFileSync("git", ["cat-file", "-e", `${REFERENCE_COMMIT}^{commit}`],
+      { cwd: repoRoot, stdio: "ignore" })).not.toThrow();
+  });
+
+  it("is an ANCESTOR of origin/main — never a pre-squash branch head", () => {
+    // The real guard. An object can be present in the author's clone and still
+    // be unreachable from main; only ancestry proves CI can read it.
+    //
+    // Skipped when origin/main is not fetched (a shallow or detached checkout),
+    // because absence of the ref is not evidence the pin is bad.
+    let haveMain = true;
+    try {
+      execFileSync("git", ["rev-parse", "--verify", "origin/main"], { cwd: repoRoot, stdio: "ignore" });
+    } catch { haveMain = false; }
+    if (!haveMain) return;
+
+    const ancestor = (() => {
+      try {
+        execFileSync("git", ["merge-base", "--is-ancestor", REFERENCE_COMMIT, "origin/main"],
+          { cwd: repoRoot, stdio: "ignore" });
+        return true;
+      } catch { return false; }
+    })();
+    expect(ancestor,
+      `REFERENCE_COMMIT ${REFERENCE_COMMIT} is not an ancestor of origin/main. `
+      + "A pre-squash branch head exists only in the author's clone and fails "
+      + "a git-show on every CI runner. Re-point it at the MERGED commit.").toBe(true);
   });
 });
 

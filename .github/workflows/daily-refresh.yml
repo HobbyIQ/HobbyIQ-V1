@@ -170,20 +170,61 @@ jobs:
         if: steps.et-gate.outputs.should_run == 'true'
         run: |
           SLOT="${{ steps.hosts.outputs.slot }}"
-          echo "Waiting for the slot to answer /api/health ..."
-          for i in $(seq 1 40); do
-            STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 20 "$SLOT/api/health" || echo 000)
-            [ "$STATUS" = "200" ] && { echo "slot healthy after ${i} tries"; break; }
-            sleep 10
+          EXPECTED="${{ github.sha }}"
+
+          # CF-A-HEALTHY-SLOT-IS-NOT-THE-NEW-SLOT (Fable, 2026-09-15). This
+          # polled for HTTP 200 and stopped there. Run 34989816447 showed why
+          # that is not enough: `/api/health` answered 200 on the FIRST try,
+          # 0.09 s into the step — because App Service had not yet recycled the
+          # worker onto the package OneDeploy had just finished uploading. The
+          # OUTGOING process answered.
+          #
+          # Everything downstream then measured the wrong process. The warm
+          # call came back `{"ok":true,"totalMs":17}` — a cold process pays
+          # ~2,555 ms there (measured, #2196), so 17 ms means it warmed a
+          # process that was already warm, i.e. the one being replaced. The
+          # smoke then hit the cold INCOMING process and case 4 answered after
+          # 25,321 ms, which is the route deadline (25,000 ms) to the second.
+          #
+          # So the poll now proves IDENTITY, not just liveness: keep asking
+          # until the slot reports the sha this run built. `build.sha` comes
+          # from dist/build-info.json, which ships inside the package — it
+          # cannot report a sha unless the dist carrying it is the dist that is
+          # loaded, which is exactly the property needed here.
+          echo "Waiting for the slot to serve ${EXPECTED} ..."
+          MATCHED=""
+          for i in $(seq 1 72); do          # 72 x 5s = 6 minutes
+            LIVE=$(curl -s --max-time 20 "$SLOT/api/health" \
+              | grep -o '"sha":"[^"]*"' | head -1 | cut -d'"' -f4)
+            echo "poll ${i}: slot sha=${LIVE:-<no answer>} expected=${EXPECTED}"
+            if [ -n "$LIVE" ] && [ "$LIVE" = "$EXPECTED" ]; then
+              MATCHED=yes
+              echo "slot is serving the new build after ${i} polls"
+              break
+            fi
+            sleep 5
           done
-          if [ "$STATUS" != "200" ]; then
-            echo "Slot never became healthy (last status $STATUS) — not swapping."
+          if [ -z "$MATCHED" ]; then
+            echo "::error::slot never reported sha ${EXPECTED} within 6 minutes — not swapping."
+            echo "The slot may still be recycling, or OneDeploy landed a package the"
+            echo "worker never picked up. Either way the build is unverified, so"
+            echo "production keeps the one it has."
             exit 1
           fi
+
+          # Only now is there a correct process to warm.
           echo "Warming ..."
           WARM=$(curl -s --max-time 180 "$SLOT/api/health/warm")
           echo "$WARM"
-          echo "$WARM" | grep -q '"ok":true' || echo "::warning::warm reported not-ok; continuing to smoke"
+          if ! echo "$WARM" | grep -q '"ok":true'; then
+            echo "::error::warm did not report ok:true — not swapping."
+            exit 1
+          fi
+          # Recorded because it is the tell: on a genuinely cold process this is
+          # seconds, and a value near zero means the warm hit a process that was
+          # already warm — the symptom that hid the sequencing bug above.
+          WARM_MS=$(echo "$WARM" | grep -o '"totalMs":[0-9]*' | head -1 | cut -d: -f2)
+          echo "warm totalMs=${WARM_MS:-unknown}"
 
       # Fetched BEFORE the slot smoke, which authenticates with it. It was
       # previously fetched further down, next to the DailyIQ warms that were its

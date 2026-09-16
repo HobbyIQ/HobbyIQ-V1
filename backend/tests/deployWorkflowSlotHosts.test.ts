@@ -59,6 +59,70 @@ describe("no App Service hostname is hardcoded in the deploy path", () => {
   });
 });
 
+/**
+ * CF-A-HEALTHY-SLOT-IS-NOT-THE-NEW-SLOT (Fable, 2026-09-15).
+ *
+ * Run 34989816447: `/api/health` answered 200 on the FIRST try, 0.09 s into the
+ * warm step, because App Service had not yet recycled onto the package
+ * OneDeploy had just uploaded — the OUTGOING process answered. Everything
+ * downstream then measured the wrong process: the warm returned
+ * `{"ok":true,"totalMs":17}` (a cold process pays ~2,555 ms), and the smoke hit
+ * the cold INCOMING process, where case 4 answered after 25,321 ms — the route
+ * deadline, 25,000 ms, to the second.
+ *
+ * A liveness poll cannot distinguish the process being replaced from the one
+ * replacing it. Only identity can, so the poll now compares the slot's reported
+ * `build.sha` against this run's commit.
+ */
+describe("the slot poll proves identity, not just liveness", () => {
+  it("compares the slot's build.sha against github.sha", () => {
+    // THE pin. `build.sha` comes from dist/build-info.json, which ships inside
+    // the package — it cannot report a sha unless the dist carrying it is the
+    // dist actually loaded.
+    expect(shell).toMatch(/EXPECTED="\$\{\{ github\.sha \}\}"/);
+    expect(shell).toMatch(/grep -o '"sha":"\[\^"\]\*"'/);
+    expect(shell).toMatch(/\[ "\$LIVE" = "\$EXPECTED" \]/);
+  });
+
+  it("no longer accepts a bare 200 as proof the slot is ready", () => {
+    // MUTATION CHECK: this exact pattern is what run 34989816447 satisfied in
+    // 0.09 s against the process that was on its way out.
+    expect(shell).not.toMatch(/\[ "\$STATUS" = "200" \] && \{ echo "slot healthy/);
+  });
+
+  it("logs every poll's sha, so a stuck recycle is visible", () => {
+    expect(shell).toMatch(/poll \$\{i\}: slot sha=/);
+  });
+
+  it("fails loudly when the sha never matches", () => {
+    // A timeout here means the build is unverified. Swapping anyway would put
+    // an unverified build into production, which is the thing the slot exists
+    // to prevent.
+    expect(shell).toMatch(/::error::slot never reported sha/);
+  });
+
+  it("warms only AFTER the sha matches, and requires ok:true", () => {
+    const pollAt = shell.indexOf("slot is serving the new build");
+    const warmAt = shell.indexOf("/api/health/warm");
+    expect(pollAt).toBeGreaterThan(-1);
+    expect(warmAt).toBeGreaterThan(pollAt);
+    // Previously a not-ok warm was a `::warning::` and the deploy carried on.
+    // A warm that did not happen is a cold process about to take traffic.
+    expect(shell).toMatch(/::error::warm did not report ok:true/);
+  });
+
+  it("records the warm's totalMs — the tell that caught this bug", () => {
+    // On a cold process this is seconds; near-zero means the warm hit a process
+    // that was already warm, which is exactly how the sequencing bug hid.
+    expect(shell).toMatch(/warm totalMs=/);
+  });
+
+  it("adds no workflow_dispatch inputs", () => {
+    const dispatch = yml.slice(yml.indexOf("workflow_dispatch"), yml.indexOf("jobs:"));
+    expect(dispatch).not.toMatch(/^\s+inputs:/m);
+  });
+});
+
 describe("the deploy targets the slot, and the gate still gates", () => {
   it("deploys with slot-name: staging", () => {
     // Confirmed against run 34986071521's log: `slot-name: staging` was passed
