@@ -24,7 +24,7 @@
 import { Router, Request, Response } from "express";
 import express from "express";
 import crypto from "crypto";
-import { persistVendorSalesToPool } from "../services/portfolioiq/persistVendorSalesToPool.service.js";
+import { persistVendorSalesToPool, withNarrowBreaker } from "../services/portfolioiq/persistVendorSalesToPool.service.js";
 import { matchKnownProductLine } from "../services/portfolioiq/hobbyIqCardId.service.js";
 
 /**
@@ -319,7 +319,61 @@ async function processBatchAsync(
   }
   const CONCURRENCY = 48;
   const inflight = new Set<Promise<unknown>>();
+  /**
+   * CF-A-DETACHED-BATCH-STILL-NEEDS-A-CEILING (Fable, 2026-09-16).
+   *
+   * MEASURED. Over 7 days this webhook issued 16,975,370 card_catalog calls,
+   * 8.2% of them failing at the SDK's 60 s default — and it is not spread
+   * evenly. The eight worst REQUESTS account for ~10M of them. The worst
+   * single one:
+   *
+   *   card_catalog calls   3,820,650
+   *   window               19:05:59 -> 01:15:03   (370 MINUTES)
+   *   p50 duration         35,019 ms
+   *   failed               3,521,410  (92%)
+   *
+   * One HTTP request ran for six hours issuing 3.8M queries, nine in ten
+   * failing. Six of the eight worst cluster in 09-14 19:21-23:15, and in that
+   * window this webhook's own card_catalog load (9.09M) dwarfs every other
+   * producer — so it is self-inflicted, not collateral from the wave.
+   *
+   * THE RE-ENTRY IS THE ABSENCE OF A CEILING, not a loop bug. Three facts
+   * compound, and each was individually reasonable:
+   *
+   *   1. `CF-TCA-WEBHOOK-ACK-FIRST` removed the 25 s hard-bail that used to sit
+   *      right here (see the note below), on the sound reasoning that dropping
+   *      rows after acking would silently lose data. But it replaced the bail
+   *      with NOTHING, so the detached batch now has no lifetime bound at all.
+   *      `elapsedMs` at the end of this function is REPORTED, never CHECKED.
+   *   2. The catalog narrow's queries carry no FeedOptions — no `abortSignal`,
+   *      no per-query deadline — so each rides the SDK's 60 s default plus its
+   *      internal retries. A p50 of 35 s per row is the visible result.
+   *   3. Under that load the container throttles, which makes the next query
+   *      slower, which holds the 48 concurrency slots longer. The batch cannot
+   *      finish, and nothing stops it trying.
+   *
+   * THE FIX BOUNDS THE BATCH WITHOUT DROPPING ANYTHING SILENTLY — which is the
+   * constraint ACK-FIRST was protecting. On expiry the loop stops issuing NEW
+   * work and RECORDS the unprocessed rows by id, so a human (or a replay) knows
+   * exactly what was not attempted. Rows already resolved are written exactly
+   * as before; nothing about a successful row changes.
+   */
+  const BATCH_BUDGET_MS = 10 * 60_000;
+  const batchDeadlineAtMs = startMs + BATCH_BUDGET_MS;
+  /** Rows the budget stopped us from attempting. Never silently dropped. */
+  const unprocessedIds: string[] = [];
+  let budgetStopped = false;
+  // The breaker is per-batch: one bad batch must not leave the narrow disabled
+  // for the whole process. See withNarrowBreaker.
+  await withNarrowBreaker(async () => {
   for (const t of rows) {
+    // The ceiling. Checked before issuing new work, so rows already in flight
+    // still finish — a half-written row is worse than a late one.
+    if (Date.now() >= batchDeadlineAtMs) {
+      budgetStopped = true;
+      unprocessedIds.push(String(t.id ?? "(no id)"));
+      continue;
+    }
     // CF-TCA-WEBHOOK-ACK-FIRST removed the 25s hard-bail budget that
     // used to sit here. Rationale: the bail existed to beat TCA's 10s
     // ack window on sync-processing batches. Now that we ack in <100ms
@@ -416,6 +470,28 @@ async function processBatchAsync(
     inflight.add(p);
   }
   await Promise.all([...inflight]);
+  });
+
+  // CF-A-DETACHED-BATCH-STILL-NEEDS-A-CEILING. Its own event, at WARN, with the
+  // ids listed — so a KQL count of `tca.webhook.budget_exhausted` is the
+  // standing answer to "is this still happening?", and the unprocessed rows are
+  // recoverable rather than a number in a log line. Capped at 200 ids so a
+  // pathological batch cannot itself become a logging incident; the COUNT is
+  // always exact even when the list is truncated.
+  if (budgetStopped) {
+    console.warn(JSON.stringify({
+      event: "tca.webhook.budget_exhausted",
+      source: "tcaWebhook.routes",
+      endpoint: endpointLabel,
+      budgetMs: BATCH_BUDGET_MS,
+      elapsedMs: Date.now() - startMs,
+      rowsInBatch: rows.length,
+      unprocessedCount: unprocessedIds.length,
+      unprocessedIds: unprocessedIds.slice(0, 200),
+      unprocessedIdsTruncated: unprocessedIds.length > 200,
+      detail: "the batch hit its wall-clock ceiling; these rows were NOT attempted and TCA has already been acked for them",
+    }));
+  }
 
   const elapsedMs = Date.now() - startMs;
   console.log(JSON.stringify({
