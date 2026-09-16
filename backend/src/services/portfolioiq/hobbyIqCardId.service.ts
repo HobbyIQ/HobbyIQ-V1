@@ -748,6 +748,15 @@ function knownSetKeyPatterns(): Array<[RegExp, string]> {
     [/(?:^|-)panini-donruss-white-hot-rookies-autographs(?:-|$)/, "panini-donruss-white-hot-rookies-autographs"],
     [/panini-donruss/, "panini-donruss"],
     [/panini-optic/, "donruss-optic"],
+    // R62 (Drew, 2026-09-15): Playoff Contenders Optic is its OWN product, and
+    // must be decided BEFORE the bare `/panini-contenders/` catch-all below --
+    // the same shape as the panini-prizm-draft-picks entries above, which is
+    // how a specialisation survives its family's pattern. D31 already listed
+    // this product among the neighbours that must not collapse; registering it
+    // in productSetKeys was not enough on its own, because
+    // productSetKeyForName resolves by SPELLED name and the catch-all answers
+    // first for anything it does not name.
+    [/(?:^|-)panini-contenders-optic(?:-|$)/, "panini-contenders-optic"],
     [/panini-contenders/, "panini-contenders"],
     [/panini-immaculate/, "panini-immaculate"],
     [/panini-flawless/, "panini-flawless"],
