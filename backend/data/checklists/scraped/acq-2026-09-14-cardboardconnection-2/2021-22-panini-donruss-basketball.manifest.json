@@ -48,28 +48,28 @@
     "Press Proof Purple",
     "Press Proof Silver",
     "Prime",
-    "Signatures",
-    "Signatures Choice",
-    "Signatures Choice Black",
-    "Signatures Choice Black Gold",
-    "Signatures Choice Blue",
-    "Signatures Choice Gold",
-    "Signatures Choice Red",
-    "Signatures Holo Black Laser",
-    "Signatures Holo Blue Laser",
-    "Signatures Holo Gold Laser",
-    "Signatures Holo Green Ice",
-    "Signatures Holo Green and Yellow Laser",
-    "Signatures Holo Laser",
-    "Signatures Holo Light Blue Laser",
-    "Signatures Holo Orange Laser",
-    "Signatures Holo Pink Laser",
-    "Signatures Holo Purple Laser",
-    "Signatures Holo Red Laser",
-    "Signatures Holo Red and Blue Laser",
-    "Signatures Holo Red and Gold Laser",
-    "Signatures Holo Teal Laser",
-    "Signatures Holo Yellow Laser",
+    "Signature",
+    "Signature Choice",
+    "Signature Choice Black",
+    "Signature Choice Black Gold",
+    "Signature Choice Blue",
+    "Signature Choice Gold",
+    "Signature Choice Red",
+    "Signature Holo Black Laser",
+    "Signature Holo Blue Laser",
+    "Signature Holo Gold Laser",
+    "Signature Holo Green Ice",
+    "Signature Holo Green and Yellow Laser",
+    "Signature Holo Laser",
+    "Signature Holo Light Blue Laser",
+    "Signature Holo Orange Laser",
+    "Signature Holo Pink Laser",
+    "Signature Holo Purple Laser",
+    "Signature Holo Red Laser",
+    "Signature Holo Red and Blue Laser",
+    "Signature Holo Red and Gold Laser",
+    "Signature Holo Teal Laser",
+    "Signature Holo Yellow Laser",
     "Yellow Flood"
   ],
   "sectionsReport": [
@@ -579,8 +579,8 @@
     },
     {
       "section": "Jerseys Kings Prime",
-      "category": "jerseys-kings-prime",
-      "parallel": "",
+      "category": "jersey-kings",
+      "parallel": "Prime",
       "cards": 49,
       "auto": 0,
       "printRun": 49
@@ -1004,7 +1004,7 @@
     {
       "section": "Rated Rookies Signatures",
       "category": "rated-rookies",
-      "parallel": "Signatures",
+      "parallel": "Signature",
       "cards": 49,
       "auto": 49,
       "printRun": 0
@@ -1012,7 +1012,7 @@
     {
       "section": "Rated Rookies Signatures Choice",
       "category": "rated-rookies",
-      "parallel": "Signatures Choice",
+      "parallel": "Signature Choice",
       "cards": 49,
       "auto": 49,
       "printRun": 0
@@ -1020,7 +1020,7 @@
     {
       "section": "Rated Rookies Signatures Choice Black",
       "category": "rated-rookies",
-      "parallel": "Signatures Choice Black",
+      "parallel": "Signature Choice Black",
       "cards": 49,
       "auto": 49,
       "printRun": 49
@@ -1028,7 +1028,7 @@
     {
       "section": "Rated Rookies Signatures Choice Black Gold",
       "category": "rated-rookies",
-      "parallel": "Signatures Choice Black Gold",
+      "parallel": "Signature Choice Black Gold",
       "cards": 49,
       "auto": 49,
       "printRun": 49
@@ -1036,7 +1036,7 @@
     {
       "section": "Rated Rookies Signatures Choice Blue",
       "category": "rated-rookies",
-      "parallel": "Signatures Choice Blue",
+      "parallel": "Signature Choice Blue",
       "cards": 49,
       "auto": 49,
       "printRun": 49
@@ -1044,7 +1044,7 @@
     {
       "section": "Rated Rookies Signatures Choice Gold",
       "category": "rated-rookies",
-      "parallel": "Signatures Choice Gold",
+      "parallel": "Signature Choice Gold",
       "cards": 49,
       "auto": 49,
       "printRun": 49
@@ -1052,7 +1052,7 @@
     {
       "section": "Rated Rookies Signatures Choice Red",
       "category": "rated-rookies",
-      "parallel": "Signatures Choice Red",
+      "parallel": "Signature Choice Red",
       "cards": 49,
       "auto": 49,
       "printRun": 49
@@ -1060,7 +1060,7 @@
     {
       "section": "Rated Rookies Signatures Holo Black Laser",
       "category": "rated-rookies",
-      "parallel": "Signatures Holo Black Laser",
+      "parallel": "Signature Holo Black Laser",
       "cards": 49,
       "auto": 49,
       "printRun": 49
@@ -1068,7 +1068,7 @@
     {
       "section": "Rated Rookies Signatures Holo Blue Laser",
       "category": "rated-rookies",
-      "parallel": "Signatures Holo Blue Laser",
+      "parallel": "Signature Holo Blue Laser",
       "cards": 49,
       "auto": 49,
       "printRun": 49
@@ -1076,7 +1076,7 @@
     {
       "section": "Rated Rookies Signatures Holo Gold Laser",
       "category": "rated-rookies",
-      "parallel": "Signatures Holo Gold Laser",
+      "parallel": "Signature Holo Gold Laser",
       "cards": 49,
       "auto": 49,
       "printRun": 49
@@ -1084,7 +1084,7 @@
     {
       "section": "Rated Rookies Signatures Holo Green and Yellow Laser",
       "category": "rated-rookies",
-      "parallel": "Signatures Holo Green and Yellow Laser",
+      "parallel": "Signature Holo Green and Yellow Laser",
       "cards": 49,
       "auto": 49,
       "printRun": 0
@@ -1092,7 +1092,7 @@
     {
       "section": "Rated Rookies Signatures Holo Green Ice",
       "category": "rated-rookies",
-      "parallel": "Signatures Holo Green Ice",
+      "parallel": "Signature Holo Green Ice",
       "cards": 49,
       "auto": 49,
       "printRun": 0
@@ -1100,7 +1100,7 @@
     {
       "section": "Rated Rookies Signatures Holo Laser",
       "category": "rated-rookies",
-      "parallel": "Signatures Holo Laser",
+      "parallel": "Signature Holo Laser",
       "cards": 49,
       "auto": 49,
       "printRun": 49
@@ -1108,7 +1108,7 @@
     {
       "section": "Rated Rookies Signatures Holo Light Blue Laser",
       "category": "rated-rookies",
-      "parallel": "Signatures Holo Light Blue Laser",
+      "parallel": "Signature Holo Light Blue Laser",
       "cards": 49,
       "auto": 49,
       "printRun": 0
@@ -1116,7 +1116,7 @@
     {
       "section": "Rated Rookies Signatures Holo Orange Laser",
       "category": "rated-rookies",
-      "parallel": "Signatures Holo Orange Laser",
+      "parallel": "Signature Holo Orange Laser",
       "cards": 49,
       "auto": 49,
       "printRun": 0
@@ -1124,7 +1124,7 @@
     {
       "section": "Rated Rookies Signatures Holo Pink Laser",
       "category": "rated-rookies",
-      "parallel": "Signatures Holo Pink Laser",
+      "parallel": "Signature Holo Pink Laser",
       "cards": 49,
       "auto": 49,
       "printRun": 0
@@ -1132,7 +1132,7 @@
     {
       "section": "Rated Rookies Signatures Holo Purple Laser",
       "category": "rated-rookies",
-      "parallel": "Signatures Holo Purple Laser",
+      "parallel": "Signature Holo Purple Laser",
       "cards": 49,
       "auto": 49,
       "printRun": 49
@@ -1140,7 +1140,7 @@
     {
       "section": "Rated Rookies Signatures Holo Red and Blue Laser",
       "category": "rated-rookies",
-      "parallel": "Signatures Holo Red and Blue Laser",
+      "parallel": "Signature Holo Red and Blue Laser",
       "cards": 49,
       "auto": 49,
       "printRun": 49
@@ -1148,7 +1148,7 @@
     {
       "section": "Rated Rookies Signatures Holo Red and Gold Laser",
       "category": "rated-rookies",
-      "parallel": "Signatures Holo Red and Gold Laser",
+      "parallel": "Signature Holo Red and Gold Laser",
       "cards": 49,
       "auto": 49,
       "printRun": 0
@@ -1156,7 +1156,7 @@
     {
       "section": "Rated Rookies Signatures Holo Red Laser",
       "category": "rated-rookies",
-      "parallel": "Signatures Holo Red Laser",
+      "parallel": "Signature Holo Red Laser",
       "cards": 49,
       "auto": 49,
       "printRun": 49
@@ -1164,7 +1164,7 @@
     {
       "section": "Rated Rookies Signatures Holo Teal Laser",
       "category": "rated-rookies",
-      "parallel": "Signatures Holo Teal Laser",
+      "parallel": "Signature Holo Teal Laser",
       "cards": 49,
       "auto": 49,
       "printRun": 0
@@ -1172,7 +1172,7 @@
     {
       "section": "Rated Rookies Signatures Holo Yellow Laser",
       "category": "rated-rookies",
-      "parallel": "Signatures Holo Yellow Laser",
+      "parallel": "Signature Holo Yellow Laser",
       "cards": 49,
       "auto": 49,
       "printRun": 0
@@ -1305,20 +1305,5 @@
       "auto": 0,
       "printRun": 5
     }
-  ],
-  "ingestBlocked": {
-    "scope": "SECTION-LEVEL, not the whole file — every other section in this file is correct and should be written.",
-    "heldSections": [
-      {
-        "section": "Jerseys Kings Prime",
-        "rows": 49,
-        "shouldBe": "category `jersey-kings`, parallel \"Prime\"",
-        "why": "The source spells this section PLURAL — it prints both \"Jersey Kings\" and \"Jerseys Kings Prime\". Because the two titles differ in the STEM, no rule relates them, so the plural title becomes its own anchor and the rows are addressed to a card set that does not exist. Held until the plural-twin follow-up.",
-        "collides": false
-      }
-    ],
-    "totalHeldRows": 49,
-    "blockedReason": "This section is addressed to a card set the source does not print, because its title is a plural twin of a real section. Holding it keeps the APPLY writing only correct identities; it is released by the plural-twin follow-up.",
-    "awaitingFix": "convertCardboardConnectionXlsx plural-twin fold"
-  }
+  ]
 }
