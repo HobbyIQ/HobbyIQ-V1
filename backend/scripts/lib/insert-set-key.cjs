@@ -540,6 +540,9 @@ function rungFoldingFor(rows) {
   // "... Neon Purple" establish "dual-patch-autographs" (their agreeing name)
   // rather than "dual-patch-autographs-neon", which no file names alone.
   const derivedRoots = new Set();
+  // Roots the fold REFUSED, with the reason, so a caller can report why a
+  // section kept its own key instead of silently seeing no fold at all.
+  const refusedRoots = new Map();
   {
     const stated = new Set(rosters.keys());
     const candidates = new Map(); // prefix -> [slug, ...]
@@ -630,6 +633,67 @@ function rungFoldingFor(rows) {
         if (slug === sib) signing.add(String(r.isAuto) === "true");
       }
       if (signing.size > 1) continue;
+      // CF-A-DERIVED-ROOT-TAIL-IS-NEVER-A-SET-NAME (2026-09-15).
+      //
+      // The gates above ask whether the siblings could be one set. They cannot
+      // ask whether the TAIL is a colour, and that is the question that decides
+      // it: a rung is a FINISH, so "Dual Patch Autographs Gold" and "... Meta"
+      // may share a derived root, but two sets whose names merely start alike
+      // may not.
+      //
+      // Measured on 2020-21 Panini Mosaic: "Rookie Private Signings Association
+      // Version" and "Rookie Private Signings Icon Version" agree on their
+      // roster (one card, #12 Tyrese Haliburton), differ after the prefix, and
+      // are both unsigned -- so every gate above passes and the fold derived
+      // `rookie-private-signings`, reading each SET'S NAME as a parallel of it.
+      // Both then collapsed to one subset slug, subsetsToSeparate saw a single
+      // slug and separated nothing, and the two rows landed on the base product
+      // where card 12 Gold collided with card 12 Gold. The ingest guard refused
+      // the whole 14,186-row file for 2 id-collisions.
+      //
+      // THE TELL IS WHAT THE CELL PRINTS AS A PARALLEL, and it is a MEASUREMENT
+      // rather than a lexicon (see CF-A-COLOUR-RUNG-IS-NEVER-A-CARD-SET-KEY
+      // above: a word list would fold "Gold Standard" and "Black Gold", real
+      // products whose names END in a colour word).
+      //
+      // A cell states its own finish vocabulary in the `parallel` column.
+      // 2020-21 Mosaic prints "Gold" on 8 different categories and "Platinum"
+      // on 2 -- they are finishes of that product. It prints "Association
+      // Version" and "Icon Version" on ZERO categories, because those are not
+      // finishes: they are the names of two card sets that happen to share the
+      // prefix "Rookie Private Signings".
+      //
+      // So a tail this fold would turn into a parallel must be a parallel the
+      // cell ACTUALLY PRINTS somewhere. When not one of them is, the siblings
+      // are not one set in several printings and the fold is refused; they keep
+      // their own full-name keys, which is what the source states and what lets
+      // each become its own registered insert key.
+      //
+      // THIS DOES NOT COST THE SPECTRA FOLD. cardboardconnection ships one file
+      // per rung with the colour in the manifest and the parallel column BLANK,
+      // so no cell-stated vocabulary exists to test against -- the rule only
+      // fires where the cell HAS a vocabulary and the tails are absent from it.
+      //
+      // Measured on 2020-21 Panini Mosaic: refusing here turns the file's 2
+      // id-collisions into 2 properly addressed rows -- 14,184 distinct ids
+      // becomes 14,186, and the file goes from REFUSE to PASS.
+      const statedParallels = new Set();
+      for (const r of rows) {
+        const p = String(r.parallel || "").trim();
+        if (p) statedParallels.add(p.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""));
+      }
+      if (statedParallels.size) {
+        const unstatedTails = [...tails].filter((t) => !statedParallels.has(t));
+        if (unstatedTails.length === tails.size) {
+          refusedRoots.set(pre, {
+            reason: "derived-root-tail-is-a-set-name",
+            siblings: [...sibs],
+            // Not one of these tails is a finish this cell prints on any card.
+            unstatedTails,
+          });
+          continue;
+        }
+      }
       rosters.set(pre, merged);
       derivedRoots.add(pre);
       for (const sib of sibs) claimed.add(sib);
@@ -709,6 +773,9 @@ function rungFoldingFor(rows) {
     fold.root = root;
     fold.parallel = slug.slice(root.length + 1).replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
   }
+  // Carried as a non-enumerable property so every existing caller that spreads
+  // or iterates the Map is unaffected; only a caller that asks sees it.
+  Object.defineProperty(folding, "refusedRoots", { value: refusedRoots, enumerable: false });
   return folding;
 }
 

@@ -94,7 +94,8 @@ describe.runIf(present)("colour siblings name their set by their shared prefix",
     // it, so these 100 rows now carry the rung the source actually prints and
     // are WRITTEN, not held. 2021 FB therefore holds nothing.
     const m = JSON.parse(fs.readFileSync(path.join(DIR, FILE.replace(/\.csv$/, ".manifest.json")), "utf8"));
-    expect(m.ingestBlocked).toBeNull();
+    // Nothing held: either the field is absent or it is explicitly null.
+    expect(m.ingestBlocked ?? null).toBeNull();
     const rg = rows.filter((r) => r.parallel === "Red and Green");
     expect(rg.length).toBe(100);
     expect([...new Set(rg.map((r) => r.category))]).toEqual(["optic-rated-rookie-preview"]);
@@ -107,17 +108,24 @@ describe.runIf(present)("colour siblings name their set by their shared prefix",
     expect(bad.map((r) => `${r.category} || ${r.parallel}`)).toEqual([]);
   });
 
-  it("the plural twin IS still held — it mints a parallel as a card set", () => {
-    // "Jerseys Kings Prime" differs from "Jersey Kings" in the STEM, so no
-    // rule relates them: the plural title becomes its own anchor and the rows
-    // address a card set the source never prints. Same defect class as
-    // `optic-rated-rookie-preview-gold`, still unresolved, so they are held
-    // rather than written wrong.
+  it("the plural twin is RESOLVED — it no longer mints a parallel as a card set", () => {
+    // "Jerseys Kings Prime" is a source typo for "Jersey Kings Prime": the
+    // sheet states "Jersey Kings" (60 cards) and "Jersey Series Prime", so the
+    // singular is the heading and the stray "s" is the error. It used to become
+    // its own anchor and address `panini-donruss-jerseys-kings-prime` — a key
+    // that says a parallel is a set — so those 40 rows were HELD.
+    //
+    // De-pluralising ONE WORD AT A TIME, and folding only onto a section the
+    // sheet actually prints, resolves it: the rows carry the registered
+    // `jersey-kings` set with "Prime" as the parallel, and nothing is held.
     const bk = "2020-21-panini-donruss-basketball";
     const m = JSON.parse(fs.readFileSync(path.join(DIR, `${bk}.manifest.json`), "utf8"));
-    expect(m.ingestBlocked).toBeTruthy();
-    expect(m.ingestBlocked.totalHeldRows).toBe(40);
-    expect(m.ingestBlocked.heldSections.map((h: { section: string }) => h.section))
-      .toContain("Jerseys Kings Prime");
+    expect(m.ingestBlocked ?? null).toBeNull();
+
+    const bkRows = readRows(`${bk}.csv`);
+    // No category anywhere is a plural twin minting a parallel as a card set.
+    expect(bkRows.filter((r) => /^jerseys-kings/.test(r.category))).toEqual([]);
+    const prime = bkRows.filter((r) => r.category === "jersey-kings" && r.parallel === "Prime");
+    expect(prime.length).toBe(40);
   });
 });

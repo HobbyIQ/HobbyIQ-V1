@@ -45,19 +45,19 @@
     "Press Proof Silver",
     "Prime",
     "Red Infinite",
-    "Signatures",
-    "Signatures Black Infinite",
-    "Signatures Blue Infinite",
-    "Signatures Gold Infinite",
-    "Signatures Green Flood",
-    "Signatures Green and Yellow Laser",
-    "Signatures Holo Orange Laser",
-    "Signatures Holo Purple Laser",
-    "Signatures Holo Purple and Green Laser",
-    "Signatures Holo Yellow Laser",
-    "Signatures Press Proof Black Laser",
-    "Signatures Press Proof Gold Laser",
-    "Signatures Red and Blue Laser"
+    "Signature",
+    "Signature Black Infinite",
+    "Signature Blue Infinite",
+    "Signature Gold Infinite",
+    "Signature Green Flood",
+    "Signature Green and Yellow Laser",
+    "Signature Holo Orange Laser",
+    "Signature Holo Purple Laser",
+    "Signature Holo Purple and Green Laser",
+    "Signature Holo Yellow Laser",
+    "Signature Press Proof Black Laser",
+    "Signature Press Proof Gold Laser",
+    "Signature Red and Blue Laser"
   ],
   "sectionsReport": [
     {
@@ -863,7 +863,7 @@
     {
       "section": "Rated Rookies Signatures",
       "category": "rated-rookies",
-      "parallel": "Signatures",
+      "parallel": "Signature",
       "cards": 47,
       "auto": 47,
       "printRun": 0
@@ -871,7 +871,7 @@
     {
       "section": "Rated Rookies Signatures Black Infinite",
       "category": "rated-rookies",
-      "parallel": "Signatures Black Infinite",
+      "parallel": "Signature Black Infinite",
       "cards": 47,
       "auto": 47,
       "printRun": 47
@@ -879,7 +879,7 @@
     {
       "section": "Rated Rookies Signatures Blue Infinite",
       "category": "rated-rookies",
-      "parallel": "Signatures Blue Infinite",
+      "parallel": "Signature Blue Infinite",
       "cards": 47,
       "auto": 47,
       "printRun": 47
@@ -887,7 +887,7 @@
     {
       "section": "Rated Rookies Signatures Gold Infinite",
       "category": "rated-rookies",
-      "parallel": "Signatures Gold Infinite",
+      "parallel": "Signature Gold Infinite",
       "cards": 47,
       "auto": 47,
       "printRun": 47
@@ -895,7 +895,7 @@
     {
       "section": "Rated Rookies Signatures Green and Yellow Laser",
       "category": "rated-rookies",
-      "parallel": "Signatures Green and Yellow Laser",
+      "parallel": "Signature Green and Yellow Laser",
       "cards": 47,
       "auto": 47,
       "printRun": 0
@@ -903,7 +903,7 @@
     {
       "section": "Rated Rookies Signatures Green Flood",
       "category": "rated-rookies",
-      "parallel": "Signatures Green Flood",
+      "parallel": "Signature Green Flood",
       "cards": 47,
       "auto": 47,
       "printRun": 0
@@ -911,7 +911,7 @@
     {
       "section": "Rated Rookies Signatures Holo Orange Laser",
       "category": "rated-rookies",
-      "parallel": "Signatures Holo Orange Laser",
+      "parallel": "Signature Holo Orange Laser",
       "cards": 47,
       "auto": 47,
       "printRun": 0
@@ -919,7 +919,7 @@
     {
       "section": "Rated Rookies Signatures Holo Purple and Green Laser",
       "category": "rated-rookies",
-      "parallel": "Signatures Holo Purple and Green Laser",
+      "parallel": "Signature Holo Purple and Green Laser",
       "cards": 47,
       "auto": 47,
       "printRun": 0
@@ -927,7 +927,7 @@
     {
       "section": "Rated Rookies Signatures Holo Purple Laser",
       "category": "rated-rookies",
-      "parallel": "Signatures Holo Purple Laser",
+      "parallel": "Signature Holo Purple Laser",
       "cards": 47,
       "auto": 47,
       "printRun": 47
@@ -935,7 +935,7 @@
     {
       "section": "Rated Rookies Signatures Holo Yellow Laser",
       "category": "rated-rookies",
-      "parallel": "Signatures Holo Yellow Laser",
+      "parallel": "Signature Holo Yellow Laser",
       "cards": 47,
       "auto": 47,
       "printRun": 0
@@ -943,7 +943,7 @@
     {
       "section": "Rated Rookies Signatures Press Proof Black Laser",
       "category": "rated-rookies",
-      "parallel": "Signatures Press Proof Black Laser",
+      "parallel": "Signature Press Proof Black Laser",
       "cards": 47,
       "auto": 47,
       "printRun": 47
@@ -951,7 +951,7 @@
     {
       "section": "Rated Rookies Signatures Press Proof Gold Laser",
       "category": "rated-rookies",
-      "parallel": "Signatures Press Proof Gold Laser",
+      "parallel": "Signature Press Proof Gold Laser",
       "cards": 47,
       "auto": 47,
       "printRun": 47
@@ -959,7 +959,7 @@
     {
       "section": "Rated Rookies Signatures Red and Blue Laser",
       "category": "rated-rookies",
-      "parallel": "Signatures Red and Blue Laser",
+      "parallel": "Signature Red and Blue Laser",
       "cards": 47,
       "auto": 47,
       "printRun": 47
@@ -1060,6 +1060,5 @@
       "auto": 0,
       "printRun": 5
     }
-  ],
-  "ingestBlocked": null
+  ]
 }

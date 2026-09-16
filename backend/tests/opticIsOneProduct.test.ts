@@ -136,7 +136,11 @@ describe("the fold does not eat its neighbours (sapphire-style non-collapse)", (
   // a split pool.
   it.each([
     // [text, where it lands today, un-graded catalog rows on the key it NAMES]
-    ["2023 Panini Contenders Optic Football", "panini-contenders", 12_133],
+    // R62 (Drew 2026-09-15): Contenders Optic is its OWN product, so it now
+    // lands on `panini-contenders-optic` rather than on bare Contenders. D31
+    // already listed it among the neighbours that must not collapse; it was
+    // simply never registered, so it collapsed one product to its LEFT.
+    ["2023 Panini Contenders Optic Football", "panini-contenders-optic", 12_133],
     ["2024 Leaf Optichrome Baseball", "leaf-optichrome", 81_298],
   ])("%s does not fold into Optic (lands on %s)", (text, lands) => {
     expect(normalizeSetKey(text)).not.toBe("donruss-optic");
@@ -144,21 +148,34 @@ describe("the fold does not eat its neighbours (sapphire-style non-collapse)", (
     expect(normalizeSetKey(text)).toBe(lands);
   });
 
-  // PRE-EXISTING, NOT THIS FOLD, and pinned so it is not mistaken for one.
-  // The qualified spelling is safe because /panini-contenders/ is matched
-  // before /panini-optic/ in the strict tier. The BARE spelling is not: the
-  // bare /(^|-)optic(-|$)/ rule sits one line above /(^|-)contenders(-|$)/,
-  // so "Contenders Optic" reaches the optic rule first. On origin/main that
-  // produced panini-optic; after this fold it produces donruss-optic -- the
-  // DESTINATION is renamed by this change, the COLLAPSE is not introduced by
-  // it. 35 catalog rows sit on a bare contenders-optic key (measured
-  // 2026-08-31), and re-ordering those two bare rules is its own lane with
-  // its own blast radius. This test states the behaviour so that lane starts
-  // from a measured premise rather than a rediscovery.
-  it("KNOWN GAP: bare Contenders Optic still collapses into Optic (pre-existing rule order)", () => {
-    expect(normalizeSetKey("Contenders Optic")).toBe("donruss-optic");
-    // the qualified spelling, which is the one the checklists write, is fine
-    expect(normalizeSetKey("Panini Contenders Optic")).toBe("panini-contenders");
+  // GAP CLOSED by R62 (Drew 2026-09-15). This test used to pin the bare
+  // spelling collapsing into Optic, and said so explicitly: "a future widening
+  // of the optic rules is caught by a red test rather than by a split pool",
+  // and "re-ordering those two bare rules is its own lane". R62 IS that lane.
+  //
+  // `Contenders Optic` reached the bare /(^|-)optic(-|$)/ rule before
+  // /(^|-)contenders(-|$)/ and landed on donruss-optic; the qualified spelling
+  // landed on bare panini-contenders. Both were wrong in the same way — a
+  // product merged into a neighbour's pool. An explicit pattern ahead of the
+  // family catch-all now decides all three spellings the sources actually
+  // write, including the "Playoff" one R62 names.
+  it("R62: every spelling of Contenders Optic lands on its own product", () => {
+    expect(normalizeSetKey("Contenders Optic")).toBe("panini-contenders-optic");
+    expect(normalizeSetKey("Panini Contenders Optic")).toBe("panini-contenders-optic");
+    // The spelling R62 was ruled on, which the 2025 Optic source file writes.
+    expect(normalizeSetKey("2024 Playoff Contenders Optic Football")).toBe("panini-contenders-optic");
+  });
+
+  it("R62 is a specialisation, not a hole — the neighbours still resolve as before", () => {
+    // The mutation check on the widened rule: it must not swallow plain
+    // Contenders, nor Playoff, nor anything else that merely shares a word.
+    expect(normalizeSetKey("2024 Playoff Contenders Football")).toBe("panini-contenders");
+    expect(normalizeSetKey("panini-contenders")).toBe("panini-contenders");
+    expect(normalizeSetKey("panini-playoff")).toBe("panini-playoff");
+    expect(normalizeSetKey("2024 Leaf Optichrome Baseball")).toBe("leaf-optichrome");
+    // and Optic itself is untouched
+    expect(normalizeSetKey("2023 Donruss Optic Football")).toBe("donruss-optic");
+    expect(normalizeSetKey("2023 Panini Optic Football")).toBe("donruss-optic");
   });
 
   it("the neighbours are not in the same pool as Optic", () => {

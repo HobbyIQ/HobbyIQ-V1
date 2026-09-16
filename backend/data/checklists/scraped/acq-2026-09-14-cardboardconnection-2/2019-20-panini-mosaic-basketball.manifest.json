@@ -11,7 +11,7 @@
   "rowCount": 11226,
   "autoCount": 1048,
   "printRunCount": 6682,
-  "distinctParallels": 37,
+  "distinctParallels": 38,
   "parallelColumnAuthoritative": true,
   "layout": "panini",
   "rungRule": "R37 (Drew 2026-09-14): parallel = what the section title adds beyond the SHORTEST matching base anchor; a section matching no anchor is BLOCKED, never guessed.",
@@ -40,6 +40,7 @@
     "Mosaic Fast Break Pink",
     "Mosaic Fast Break Purple",
     "Mosaic Fast Break Silver",
+    "Mosaic Genesi",
     "Mosaic Genesis",
     "Mosaic Gold",
     "Mosaic Green",
@@ -260,7 +261,7 @@
     {
       "section": "Base Hall of Fame Mosaic Genesis",
       "category": "base-hall-of-fame",
-      "parallel": "Mosaic Genesis",
+      "parallel": "Mosaic Genesi",
       "cards": 15,
       "auto": 0,
       "printRun": 0
@@ -484,7 +485,7 @@
     {
       "section": "Base Mosaic Genesis",
       "category": "base",
-      "parallel": "Mosaic Genesis",
+      "parallel": "Mosaic Genesi",
       "cards": 200,
       "auto": 0,
       "printRun": 0
@@ -579,7 +580,7 @@
     },
     {
       "section": "Base MVPs",
-      "category": "base-mvps",
+      "category": "base-mvp",
       "parallel": "",
       "cards": 5,
       "auto": 0,
@@ -587,7 +588,7 @@
     },
     {
       "section": "Base MVPs Mosaic",
-      "category": "base-mvps",
+      "category": "base-mvp",
       "parallel": "Mosaic",
       "cards": 5,
       "auto": 0,
@@ -595,7 +596,7 @@
     },
     {
       "section": "Base MVPs Mosaic Black",
-      "category": "base-mvps",
+      "category": "base-mvp",
       "parallel": "Mosaic Black",
       "cards": 5,
       "auto": 0,
@@ -603,7 +604,7 @@
     },
     {
       "section": "Base MVPs Mosaic Blue",
-      "category": "base-mvps",
+      "category": "base-mvp",
       "parallel": "Mosaic Blue",
       "cards": 5,
       "auto": 0,
@@ -611,7 +612,7 @@
     },
     {
       "section": "Base MVPs Mosaic Blue Fluorescent",
-      "category": "base-mvps",
+      "category": "base-mvp",
       "parallel": "Mosaic Blue Fluorescent",
       "cards": 5,
       "auto": 0,
@@ -619,7 +620,7 @@
     },
     {
       "section": "Base MVPs Mosaic Camo Pink",
-      "category": "base-mvps",
+      "category": "base-mvp",
       "parallel": "Mosaic Camo Pink",
       "cards": 5,
       "auto": 0,
@@ -627,7 +628,7 @@
     },
     {
       "section": "Base MVPs Mosaic Choice Black Gold",
-      "category": "base-mvps",
+      "category": "base-mvp",
       "parallel": "Mosaic Choice Black Gold",
       "cards": 5,
       "auto": 0,
@@ -635,7 +636,7 @@
     },
     {
       "section": "Base MVPs Mosaic Choice Fusion Red",
-      "category": "base-mvps",
+      "category": "base-mvp",
       "parallel": "Mosaic Choice Fusion Red",
       "cards": 5,
       "auto": 0,
@@ -643,7 +644,7 @@
     },
     {
       "section": "Base MVPs Mosaic Choice Nebula",
-      "category": "base-mvps",
+      "category": "base-mvp",
       "parallel": "Mosaic Choice Nebula",
       "cards": 5,
       "auto": 0,
@@ -651,7 +652,7 @@
     },
     {
       "section": "Base MVPs Mosaic Choice Peacock",
-      "category": "base-mvps",
+      "category": "base-mvp",
       "parallel": "Mosaic Choice Peacock",
       "cards": 5,
       "auto": 0,
@@ -659,7 +660,7 @@
     },
     {
       "section": "Base MVPs Mosaic Fast Break Black",
-      "category": "base-mvps",
+      "category": "base-mvp",
       "parallel": "Mosaic Fast Break Black",
       "cards": 5,
       "auto": 0,
@@ -667,7 +668,7 @@
     },
     {
       "section": "Base MVPs Mosaic Fast Break Blue",
-      "category": "base-mvps",
+      "category": "base-mvp",
       "parallel": "Mosaic Fast Break Blue",
       "cards": 5,
       "auto": 0,
@@ -675,7 +676,7 @@
     },
     {
       "section": "Base MVPs Mosaic Fast Break Gold",
-      "category": "base-mvps",
+      "category": "base-mvp",
       "parallel": "Mosaic Fast Break Gold",
       "cards": 5,
       "auto": 0,
@@ -683,7 +684,7 @@
     },
     {
       "section": "Base MVPs Mosaic Fast Break Pink",
-      "category": "base-mvps",
+      "category": "base-mvp",
       "parallel": "Mosaic Fast Break Pink",
       "cards": 5,
       "auto": 0,
@@ -691,7 +692,7 @@
     },
     {
       "section": "Base MVPs Mosaic Fast Break Purple",
-      "category": "base-mvps",
+      "category": "base-mvp",
       "parallel": "Mosaic Fast Break Purple",
       "cards": 5,
       "auto": 0,
@@ -699,7 +700,7 @@
     },
     {
       "section": "Base MVPs Mosaic Fast Break Silver",
-      "category": "base-mvps",
+      "category": "base-mvp",
       "parallel": "Mosaic Fast Break Silver",
       "cards": 5,
       "auto": 0,
@@ -707,7 +708,7 @@
     },
     {
       "section": "Base MVPs Mosaic Genesis",
-      "category": "base-mvps",
+      "category": "base-mvp",
       "parallel": "Mosaic Genesis",
       "cards": 5,
       "auto": 0,
@@ -715,7 +716,7 @@
     },
     {
       "section": "Base MVPs Mosaic Gold",
-      "category": "base-mvps",
+      "category": "base-mvp",
       "parallel": "Mosaic Gold",
       "cards": 5,
       "auto": 0,
@@ -723,7 +724,7 @@
     },
     {
       "section": "Base MVPs Mosaic Green",
-      "category": "base-mvps",
+      "category": "base-mvp",
       "parallel": "Mosaic Green",
       "cards": 5,
       "auto": 0,
@@ -731,7 +732,7 @@
     },
     {
       "section": "Base MVPs Mosaic Green Swirl",
-      "category": "base-mvps",
+      "category": "base-mvp",
       "parallel": "Mosaic Green Swirl",
       "cards": 5,
       "auto": 0,
@@ -739,7 +740,7 @@
     },
     {
       "section": "Base MVPs Mosaic Orange Fluorescent",
-      "category": "base-mvps",
+      "category": "base-mvp",
       "parallel": "Mosaic Orange Fluorescent",
       "cards": 5,
       "auto": 0,
@@ -747,7 +748,7 @@
     },
     {
       "section": "Base MVPs Mosaic Pink Fluorescent",
-      "category": "base-mvps",
+      "category": "base-mvp",
       "parallel": "Mosaic Pink Fluorescent",
       "cards": 5,
       "auto": 0,
@@ -755,7 +756,7 @@
     },
     {
       "section": "Base MVPs Mosaic Pink Swirl",
-      "category": "base-mvps",
+      "category": "base-mvp",
       "parallel": "Mosaic Pink Swirl",
       "cards": 5,
       "auto": 0,
@@ -763,7 +764,7 @@
     },
     {
       "section": "Base MVPs Mosaic Purple",
-      "category": "base-mvps",
+      "category": "base-mvp",
       "parallel": "Mosaic Purple",
       "cards": 5,
       "auto": 0,
@@ -771,7 +772,7 @@
     },
     {
       "section": "Base MVPs Mosaic Reactive Blue",
-      "category": "base-mvps",
+      "category": "base-mvp",
       "parallel": "Mosaic Reactive Blue",
       "cards": 5,
       "auto": 0,
@@ -779,7 +780,7 @@
     },
     {
       "section": "Base MVPs Mosaic Reactive Orange",
-      "category": "base-mvps",
+      "category": "base-mvp",
       "parallel": "Mosaic Reactive Orange",
       "cards": 5,
       "auto": 0,
@@ -787,7 +788,7 @@
     },
     {
       "section": "Base MVPs Mosaic Red",
-      "category": "base-mvps",
+      "category": "base-mvp",
       "parallel": "Mosaic Red",
       "cards": 5,
       "auto": 0,
@@ -795,7 +796,7 @@
     },
     {
       "section": "Base MVPs Mosaic White",
-      "category": "base-mvps",
+      "category": "base-mvp",
       "parallel": "Mosaic White",
       "cards": 5,
       "auto": 0,
@@ -803,7 +804,7 @@
     },
     {
       "section": "Base MVPs Silver",
-      "category": "base-mvps",
+      "category": "base-mvp",
       "parallel": "Silver",
       "cards": 5,
       "auto": 0,
@@ -940,7 +941,7 @@
     {
       "section": "Base NBA Debut Mosaic Genesis",
       "category": "base-nba-debut",
-      "parallel": "Mosaic Genesis",
+      "parallel": "Mosaic Genesi",
       "cards": 20,
       "auto": 0,
       "printRun": 0
@@ -1043,7 +1044,7 @@
     },
     {
       "section": "Base Rookies",
-      "category": "base-rookies",
+      "category": "base-rookie",
       "parallel": "",
       "cards": 50,
       "auto": 0,
@@ -1051,7 +1052,7 @@
     },
     {
       "section": "Base Rookies Mosaic",
-      "category": "base-rookies",
+      "category": "base-rookie",
       "parallel": "Mosaic",
       "cards": 50,
       "auto": 0,
@@ -1059,7 +1060,7 @@
     },
     {
       "section": "Base Rookies Mosaic Black",
-      "category": "base-rookies",
+      "category": "base-rookie",
       "parallel": "Mosaic Black",
       "cards": 50,
       "auto": 0,
@@ -1067,7 +1068,7 @@
     },
     {
       "section": "Base Rookies Mosaic Blue",
-      "category": "base-rookies",
+      "category": "base-rookie",
       "parallel": "Mosaic Blue",
       "cards": 50,
       "auto": 0,
@@ -1075,7 +1076,7 @@
     },
     {
       "section": "Base Rookies Mosaic Blue Fluorescent",
-      "category": "base-rookies",
+      "category": "base-rookie",
       "parallel": "Mosaic Blue Fluorescent",
       "cards": 50,
       "auto": 0,
@@ -1083,7 +1084,7 @@
     },
     {
       "section": "Base Rookies Mosaic Camo Pink",
-      "category": "base-rookies",
+      "category": "base-rookie",
       "parallel": "Mosaic Camo Pink",
       "cards": 50,
       "auto": 0,
@@ -1091,7 +1092,7 @@
     },
     {
       "section": "Base Rookies Mosaic Choice Black Gold",
-      "category": "base-rookies",
+      "category": "base-rookie",
       "parallel": "Mosaic Choice Black Gold",
       "cards": 50,
       "auto": 0,
@@ -1099,7 +1100,7 @@
     },
     {
       "section": "Base Rookies Mosaic Choice Fusion Red",
-      "category": "base-rookies",
+      "category": "base-rookie",
       "parallel": "Mosaic Choice Fusion Red",
       "cards": 50,
       "auto": 0,
@@ -1107,7 +1108,7 @@
     },
     {
       "section": "Base Rookies Mosaic Choice Nebula",
-      "category": "base-rookies",
+      "category": "base-rookie",
       "parallel": "Mosaic Choice Nebula",
       "cards": 50,
       "auto": 0,
@@ -1115,7 +1116,7 @@
     },
     {
       "section": "Base Rookies Mosaic Choice Peacock",
-      "category": "base-rookies",
+      "category": "base-rookie",
       "parallel": "Mosaic Choice Peacock",
       "cards": 50,
       "auto": 0,
@@ -1123,7 +1124,7 @@
     },
     {
       "section": "Base Rookies Mosaic Choice Red and Green",
-      "category": "base-rookies",
+      "category": "base-rookie",
       "parallel": "Mosaic Choice Red and Green",
       "cards": 50,
       "auto": 0,
@@ -1131,7 +1132,7 @@
     },
     {
       "section": "Base Rookies Mosaic Fast Break Black",
-      "category": "base-rookies",
+      "category": "base-rookie",
       "parallel": "Mosaic Fast Break Black",
       "cards": 50,
       "auto": 0,
@@ -1139,7 +1140,7 @@
     },
     {
       "section": "Base Rookies Mosaic Fast Break Blue",
-      "category": "base-rookies",
+      "category": "base-rookie",
       "parallel": "Mosaic Fast Break Blue",
       "cards": 50,
       "auto": 0,
@@ -1147,7 +1148,7 @@
     },
     {
       "section": "Base Rookies Mosaic Fast Break Gold",
-      "category": "base-rookies",
+      "category": "base-rookie",
       "parallel": "Mosaic Fast Break Gold",
       "cards": 50,
       "auto": 0,
@@ -1155,7 +1156,7 @@
     },
     {
       "section": "Base Rookies Mosaic Fast Break Pink",
-      "category": "base-rookies",
+      "category": "base-rookie",
       "parallel": "Mosaic Fast Break Pink",
       "cards": 50,
       "auto": 0,
@@ -1163,7 +1164,7 @@
     },
     {
       "section": "Base Rookies Mosaic Fast Break Purple",
-      "category": "base-rookies",
+      "category": "base-rookie",
       "parallel": "Mosaic Fast Break Purple",
       "cards": 50,
       "auto": 0,
@@ -1171,7 +1172,7 @@
     },
     {
       "section": "Base Rookies Mosaic Fast Break Silver",
-      "category": "base-rookies",
+      "category": "base-rookie",
       "parallel": "Mosaic Fast Break Silver",
       "cards": 50,
       "auto": 0,
@@ -1179,7 +1180,7 @@
     },
     {
       "section": "Base Rookies Mosaic Genesis",
-      "category": "base-rookies",
+      "category": "base-rookie",
       "parallel": "Mosaic Genesis",
       "cards": 50,
       "auto": 0,
@@ -1187,7 +1188,7 @@
     },
     {
       "section": "Base Rookies Mosaic Gold",
-      "category": "base-rookies",
+      "category": "base-rookie",
       "parallel": "Mosaic Gold",
       "cards": 50,
       "auto": 0,
@@ -1195,7 +1196,7 @@
     },
     {
       "section": "Base Rookies Mosaic Green",
-      "category": "base-rookies",
+      "category": "base-rookie",
       "parallel": "Mosaic Green",
       "cards": 50,
       "auto": 0,
@@ -1203,7 +1204,7 @@
     },
     {
       "section": "Base Rookies Mosaic Green Swirl",
-      "category": "base-rookies",
+      "category": "base-rookie",
       "parallel": "Mosaic Green Swirl",
       "cards": 50,
       "auto": 0,
@@ -1211,7 +1212,7 @@
     },
     {
       "section": "Base Rookies Mosaic Orange Fluorescent",
-      "category": "base-rookies",
+      "category": "base-rookie",
       "parallel": "Mosaic Orange Fluorescent",
       "cards": 50,
       "auto": 0,
@@ -1219,7 +1220,7 @@
     },
     {
       "section": "Base Rookies Mosaic Pink Fluorescent",
-      "category": "base-rookies",
+      "category": "base-rookie",
       "parallel": "Mosaic Pink Fluorescent",
       "cards": 50,
       "auto": 0,
@@ -1227,7 +1228,7 @@
     },
     {
       "section": "Base Rookies Mosaic Pink Swirl",
-      "category": "base-rookies",
+      "category": "base-rookie",
       "parallel": "Mosaic Pink Swirl",
       "cards": 50,
       "auto": 0,
@@ -1235,7 +1236,7 @@
     },
     {
       "section": "Base Rookies Mosaic Purple",
-      "category": "base-rookies",
+      "category": "base-rookie",
       "parallel": "Mosaic Purple",
       "cards": 50,
       "auto": 0,
@@ -1243,7 +1244,7 @@
     },
     {
       "section": "Base Rookies Mosaic Reactive Blue",
-      "category": "base-rookies",
+      "category": "base-rookie",
       "parallel": "Mosaic Reactive Blue",
       "cards": 50,
       "auto": 0,
@@ -1251,7 +1252,7 @@
     },
     {
       "section": "Base Rookies Mosaic Reactive Orange",
-      "category": "base-rookies",
+      "category": "base-rookie",
       "parallel": "Mosaic Reactive Orange",
       "cards": 50,
       "auto": 0,
@@ -1259,7 +1260,7 @@
     },
     {
       "section": "Base Rookies Mosaic Red",
-      "category": "base-rookies",
+      "category": "base-rookie",
       "parallel": "Mosaic Red",
       "cards": 50,
       "auto": 0,
@@ -1267,7 +1268,7 @@
     },
     {
       "section": "Base Rookies Mosaic White",
-      "category": "base-rookies",
+      "category": "base-rookie",
       "parallel": "Mosaic White",
       "cards": 50,
       "auto": 0,
@@ -1275,7 +1276,7 @@
     },
     {
       "section": "Base Rookies Silver",
-      "category": "base-rookies",
+      "category": "base-rookie",
       "parallel": "Silver",
       "cards": 50,
       "auto": 0,
@@ -1420,7 +1421,7 @@
     {
       "section": "Base USA Basketball Mosaic Genesis",
       "category": "base-usa-basketball",
-      "parallel": "Mosaic Genesis",
+      "parallel": "Mosaic Genesi",
       "cards": 10,
       "auto": 0,
       "printRun": 0
@@ -2185,6 +2186,5 @@
       "auto": 0,
       "printRun": 20
     }
-  ],
-  "ingestBlocked": null
+  ]
 }
