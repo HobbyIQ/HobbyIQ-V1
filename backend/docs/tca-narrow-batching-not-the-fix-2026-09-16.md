@@ -77,3 +77,59 @@ batching the narrow would not have touched it — which is why no PR was raised.
 
 Nothing. `tcaWebhook.routes.ts` and `persistVendorSalesToPool.service.ts` are
 untouched on this branch.
+
+---
+
+## Denominator resolved, and the 19,073 explained (2026-09-16)
+
+**The denominator is sound.** `POST /api/tca/webhook` over 7 days: 89 sampled
+rows × itemCount 10 = **890 un-sampled requests**, ~5.3/hour. Sampling is
+already accounted for, so the ratio is not a sampling artifact.
+
+**But the average was the wrong statistic.** The load is extremely bursty:
+
+```
+2026-09-09      30,440        2026-09-13   3,671,790
+2026-09-10   2,146,660        2026-09-14   8,182,650
+2026-09-11     373,050        2026-09-15   2,555,370
+2026-09-12      15,410
+```
+
+and per individual request it is worse — the top eight requests account for
+~10M of the ~17M calls. The single worst:
+
+| one webhook request | |
+|---|---:|
+| `card_catalog` calls | **3,820,650** |
+| wall-clock window | 19:05:59 → 01:15:03 (**370 min**) |
+| p50 duration | **35,019 ms** |
+| failed | **3,521,410** (92%) |
+| rate | ~10,326 calls/minute |
+
+**One HTTP request ran for six hours and issued 3.8M catalog calls, 92% of them
+failing.** That is not a per-sale narrow on a 1,000-row batch under any
+arithmetic. It is a runaway: a retry or reprocessing loop inside
+`processBatchAsync`, which is detached from the response (the route acks in
+<100 ms by design, per CF-TCA-WEBHOOK-ACK-FIRST) and therefore has nothing
+bounding its lifetime.
+
+The p50 of 35 s and the 92% failure rate are consistent with the loop retrying
+against a container it is itself saturating — each retry making the next one
+likelier to fail.
+
+### What this means for the 60 s timeouts
+
+The 1.4M 60 s failures attributed to this webhook are **overwhelmingly one
+pathological request at a time**, not a broad per-sale cost. Fixing the narrow —
+by batching or otherwise — would not have touched it. The loop is the defect.
+
+### Next step
+
+Find what re-enters inside `processBatchAsync`. Candidates, in order of
+suspicion:
+1. a retry wrapper around the per-row persist with no attempt ceiling;
+2. the TCA catalog fallback (`persistVendorSalesToPool.service.ts:427-445`)
+   re-driving rows;
+3. a queue/cursor that re-reads the same batch after a partial failure.
+
+This wants a code read rather than more KQL: the telemetry has said what it can.
