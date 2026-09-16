@@ -764,6 +764,109 @@ export const PRODUCT_SET_KEYS: ReadonlyArray<ProductSetKey> = [
   // panini-chronicles-optic, and the contenders-optic-* insert keys. "Optic"
   // names a stock those products borrow; it is not this product.
   S("donruss-optic", { names: ["panini-optic", "panini-donruss-optic"], parent: "panini" }),
+  // R-PENDING (Drew, ruling round of 2026-09-15): DONRUSS OPTIC INSERT SETS.
+  //
+  // HOLD -- the key FORM is not yet ruled. Registered here as
+  // `donruss-optic-<insert>` because D31 made `donruss-optic` the canonical
+  // product (with `panini-optic` / `panini-donruss-optic` as aliases), so the
+  // alias form would read as a second product.
+  //
+  // WHY THEY MUST BE KEYS. card_catalog holds these as PARALLELS of
+  // donruss-optic -- parallel "Passing Grade Ice" on a base-product row --
+  // because the pre-#2112 ingester ignored insert sets, and the vocabulary
+  // corpus inherited the shape because it is built from the catalog. A named
+  // insert is a distinct CARD SET (R38/R48), so the name belongs on the setKey
+  // axis and only the finish stays a parallel.
+  //
+  // REGISTRATION IS WHAT MAKES THEM ADDRESSABLE. normalizeSetKey rewrites any
+  // key containing the segment `optic` to bare `donruss-optic`
+  // (bareAliasPatterns), and the ingest guard refuses a key that is not a
+  // normalizeSetKey fixed point. productSetKeyForName answers BEFORE those
+  // patterns, so registering a key is precisely what makes it survive -- the
+  // same mechanism that keeps `panini-mosaic-jam-masters` while unregistered
+  // `panini-prizm-fireworks` collapses.
+  //
+  // Measured read-only from card_catalog on 2026-09-15: 53 headings over
+  // football 2023/2024/2025 and basketball 2023/2024, 17,147 catalog rows, zero
+  // destination collisions. Verbatim headings and their cells:
+  //
+  //   "Alter Ego"                                    basketball 2024
+  //   "Best Tuddys"                                  football 2023, football 2024, football 2025
+  //   "Blazers"                                      football 2023
+  //   "Captain in Charge"                            football 2023, football 2024, football 2025
+  //   "Chain Reaction"                               football 2023, football 2024, football 2025
+  //   "Diamond Hands"                                football 2023, football 2024, football 2025
+  //   "Dominators Signatures"                        basketball 2023, basketball 2024
+  //   "Donruss Threads"                              football 2023, football 2024, football 2025
+  //   "Downtown!"                                    basketball 2024, football 2023, football 2024
+  //   "Downtown Duos"                                football 2024, football 2025
+  //   "Downtown Legends"                             football 2024, football 2025
+  //   "Duos"                                         football 2025
+  //   "Elite Dominators"                             basketball 2023, basketball 2024
+  //   "Express Lane"                                 basketball 2023, basketball 2024
+  //   "Fast Break Signatures"                        basketball 2023
+  //   "First Year Fresh"                             football 2024
+  //   "Hidden Potential"                             football 2023, football 2024, football 2025
+  //   "International Downtown"                       football 2023
+  //   "Legends"                                      football 2025
+  //   "Light it Up"                                  football 2023, football 2024, football 2025
+  //   "Lights Out"                                   basketball 2023, basketball 2024
+  //   "My House!"                                    basketball 2023, basketball 2024, football 2023, football 2024, football 2025
+  //   "Mythical"                                     basketball 2024, football 2023
+  //   "Net Marvels"                                  basketball 2024
+  //   "Opti-Graphs"                                  basketball 2023
+  //   "Opti-Graphs Choice"                           basketball 2024
+  //   "Optic Update I: Rated Rookies RPS Autographs" football 2023
+  //   "Optical Illusions"                            basketball 2023, basketball 2024
+  //   "Passing Grade"                                football 2023, football 2024, football 2025
+  //   "Phazes"                                       basketball 2024
+  //   "Play Action"                                  football 2023, football 2024, football 2025
+  //   "Raining 3s"                                   basketball 2023
+  //   "Red Hot Rookies"                              basketball 2023, basketball 2024
+  //   "Retro Series"                                 football 2023
+  //   "Retro Series Signatures"                      basketball 2023, basketball 2024
+  //   "Rising Suns"                                  basketball 2023, basketball 2024
+  //   "Rookie Dominators Signatures"                 basketball 2023, basketball 2024
+  //   "Rookie Dual Signatures"                       basketball 2023, basketball 2024
+  //   "Rookie Kings"                                 basketball 2024, football 2023, football 2024, football 2025
+  //   "Rookie Phenoms"                               football 2024
+  //   "Rookie Primary Colors"                        football 2023, football 2024, football 2025
+  //   "Rookie Recruits"                              football 2023, football 2024, football 2025
+  //   "RPS Autographs"                               football 2024
+  //   "Signature Series"                             basketball 2023
+  //   "Slammy!"                                      basketball 2024
+  //   "Splash"                                       basketball 2023, basketball 2024
+  //   "Sunday Kings"                                 football 2024
+  //   "Super Bowl Downtown"                          football 2023
+  //   "The Elite Series Signatures"                  basketball 2023, basketball 2024
+  //   "The Rookies"                                  basketball 2023, basketball 2024
+  //   "Uptowns"                                      football 2024
+  //   "White Hot Rookies"                            basketball 2023, basketball 2024
+  //   "Winner Stays"                                 basketball 2023, basketball 2024
+  //
+  // NOT REGISTERED, pending the ruling:
+  //   "RPS"        -- a fragment of "RPS Autographs", not a set (32 rows).
+  //   "Variation"  -- a card attribute, not a set name (13 rows).
+  //   "2015 Retro" -- 6 colour children in the corpus but NO checklist-backed
+  //                   catalog rows, so it cannot be shown to be an insert.
+  ...[
+    "alter-ego", "best-tuddys", "blazers", "captain-in-charge",
+    "chain-reaction", "diamond-hands", "dominators-signatures",
+    "donruss-threads", "downtown", "downtown-duos", "downtown-legends",
+    "duos", "elite-dominators", "express-lane", "fast-break-signatures",
+    "first-year-fresh", "hidden-potential", "international-downtown",
+    "legends", "light-it-up", "lights-out", "my-house", "mythical",
+    "net-marvels", "opti-graphs", "opti-graphs-choice",
+    "optic-update-i-rated-rookies-rps-autographs", "optical-illusions",
+    "passing-grade", "phazes", "play-action", "raining-3s",
+    "red-hot-rookies", "retro-series", "retro-series-signatures",
+    "rising-suns", "rookie-dominators-signatures", "rookie-dual-signatures",
+    "rookie-kings", "rookie-phenoms", "rookie-primary-colors",
+    "rookie-recruits", "rps-autographs", "signature-series", "slammy",
+    "splash", "sunday-kings", "super-bowl-downtown",
+    "the-elite-series-signatures", "the-rookies", "uptowns",
+    "white-hot-rookies", "winner-stays",
+  ].map((sub) => S(`donruss-optic-${sub}`, { family: "donruss-optic", parent: "donruss-optic" })),
 
   // -- Panini (the maker is the parent; every product its own family) --------
   P("panini"),
