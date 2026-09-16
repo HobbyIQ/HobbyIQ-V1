@@ -1,0 +1,69 @@
+{
+ "scrapedAt": "2026-09-16T01:57:24.028Z",
+ "source": "baseballcardpedia-2026-09-15",
+ "sourceUrl": "https://baseballcardpedia.com/index.php/2002_Greats_of_the_Game",
+ "corroboratingSource": "sportscardchecklist",
+ "corroboratingSourceUrl": "https://www.sportscardchecklist.com/sport-baseball/year-2002/index-fleer-greats-of-the-game/trading-card-checklists-and-product-information",
+ "sport": "baseball",
+ "year": 2002,
+ "setName": "2002 Fleer Greats of the Game Baseball",
+ "productKey": "2002-fleer-greats-of-the-game",
+ "setKey": "fleer-greats-of-the-game",
+ "rowCount": 100,
+ "parallelColumnAuthoritative": true,
+ "baseSetSize": 100,
+ "note": "100-card base set, Fleer. Corroborated by multiple complete-set listings (\"Complete Set of 100\", \"81 Hall of Famers\").",
+ "scope": "BASE SET ONLY. The insert sets and autograph/game-used subsets this product also prints are listed in `subsetsNotStaged` and are NOT in this file: each needs its own registered key under R38/R48 before it can be ingested, and neither source publishes their per-card rosters on the pages read.",
+ "subsetsNotStaged": [
+  {
+   "name": "Autographs",
+   "cards": 69,
+   "source": "baseballcardpedia"
+  },
+  {
+   "name": "Dueling Duos",
+   "cards": 29,
+   "source": "baseballcardpedia"
+  },
+  {
+   "name": "Dueling Duos Game Used Single",
+   "cards": 54,
+   "source": "baseballcardpedia"
+  },
+  {
+   "name": "Dueling Duos Game Used Double",
+   "cards": 27,
+   "printRun": 25,
+   "source": "baseballcardpedia"
+  },
+  {
+   "name": "Dueling Duos Autographs",
+   "cards": 6,
+   "printRun": 25,
+   "source": "baseballcardpedia"
+  },
+  {
+   "name": "Through The Years Level 1",
+   "cards": 31,
+   "source": "baseballcardpedia"
+  },
+  {
+   "name": "Through The Years Level 1 Patch",
+   "cards": 27,
+   "printRun": 100,
+   "source": "baseballcardpedia"
+  },
+  {
+   "name": "Through The Years Level 2",
+   "cards": 22,
+   "printRun": 100,
+   "source": "baseballcardpedia"
+  },
+  {
+   "name": "Through The Years Level 3",
+   "cards": 19,
+   "printRun": 25,
+   "source": "baseballcardpedia"
+  }
+ ]
+}
