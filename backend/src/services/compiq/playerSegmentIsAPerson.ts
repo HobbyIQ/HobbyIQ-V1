@@ -121,7 +121,46 @@ const tokenize = (s: string): string[] =>
 // ---------------------------------------------------------------------------
 
 interface ParallelCorpus {
-  products?: Record<string, { parallels?: { name?: string }[] }>;
+  products?: Record<string, {
+    parallels?: { name?: string }[];
+    /** Insert-set names, split out of `parallels[]` on 2026-09-15. This module
+     *  needs BOTH fields -- see `everyCorpusName`. */
+    insertSets?: { children?: string[] }[];
+  }>;
+}
+
+/**
+ * EVERY NAME THE CORPUS HOLDS FOR A PRODUCT, in both fields.
+ *
+ * CF-AN-INSERT-NAME-IS-STILL-NOT-A-PLAYER (2026-09-15).
+ *
+ * This module decides whether a title segment is a PERSON, and it does that by
+ * knowing which words are card vocabulary. Until the insert-set split those
+ * names all sat in `parallels[]`, so reading that one field saw them. After the
+ * split 9,415 of them live in `insertSets[].children`, and reading only
+ * `parallels[]` silently forgets them.
+ *
+ * MEASURED on the 1,000-row TCA fixture: "Courtside", "En Fuego", "Global
+ * Reach" and "Legendary Talent" left `parallels[]`, and four rows stopped
+ * resolving because the parser could no longer tell the insert name from the
+ * player's. One row started resolving for the mirror-image reason, netting the
+ * 497 -> 494 that made this visible.
+ *
+ * The distinction the split draws -- is this rung a parallel of the base card,
+ * or a set of its own -- matters to the R31 write path. It does not matter
+ * here: for "is this word part of a card's name rather than a person's", an
+ * insert name counts exactly as much as a parallel.
+ */
+function everyCorpusName(product: {
+  parallels?: { name?: string }[];
+  insertSets?: { children?: string[] }[];
+}): string[] {
+  const out: string[] = [];
+  for (const parallel of product.parallels ?? []) out.push(String(parallel.name ?? ""));
+  for (const set of product.insertSets ?? []) {
+    for (const child of set.children ?? []) out.push(String(child ?? ""));
+  }
+  return out;
 }
 
 let _corpusWords: Set<string> | null = null;
@@ -222,8 +261,8 @@ function loadCorpus(): void {
     // the frequency floor can tell a finish word from a player-named insert.
     const frequency = new Map<string, number>();
     for (const product of Object.values(raw.products ?? {})) {
-      for (const parallel of product.parallels ?? []) {
-        for (const w of new Set(tokenize(parallel.name ?? ""))) {
+      for (const name of everyCorpusName(product)) {
+        for (const w of new Set(tokenize(name))) {
           if (w.length >= 3 && !/^\d+$/.test(w)) frequency.set(w, (frequency.get(w) ?? 0) + 1);
         }
       }
@@ -236,8 +275,8 @@ function loadCorpus(): void {
       const productKey = `${parts[1] ?? ""}|${parts[2] ?? ""}`;
       let bucket = byProduct.get(productKey);
       if (!bucket) { bucket = new Set<string>(); byProduct.set(productKey, bucket); }
-      for (const parallel of product.parallels ?? []) {
-        for (const w of tokenize(parallel.name ?? "")) {
+      for (const name of everyCorpusName(product)) {
+        for (const w of tokenize(name)) {
           if (w.length < 3 || /^\d+$/.test(w)) continue;
           if ((frequency.get(w) ?? 0) < CORPUS_FREQUENCY_FLOOR) continue;
           words.add(w);
