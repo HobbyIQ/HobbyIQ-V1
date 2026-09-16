@@ -725,7 +725,13 @@ export async function valueIdentity(req: ValuationRequest): Promise<Valuation> {
     // anchor the projection started from, and what the rung did — the
     // projectionNote — beside the numbers. Still prefixed `unified:` (the
     // digest gate's secondary read).
-    v.basis = `unified: ${requestedTier} window=${u.windowDays}d${um?.windowNote ? ` [${um.windowNote}]` : ""} n=${tier.sampleCount} anchor=$${tier.weightedMedianPrice?.toFixed(0) ?? "?"} marketValue=$${v.fairMarketValue.toFixed(0)} predicted=$${v.predictedPrice?.toFixed(0) ?? "?"} trend=${v.trend.direction} ${v.trend.pctPerWeek?.toFixed(1) ?? "?"}%/wk rung=${v.rungLabel}${um?.projectionNote ? ` — ${um.projectionNote}` : ""}${um?.selfCompNote ? ` — ${um.selfCompNote}` : ""}`;
+    // ONE template carrying BOTH notes, in ruling order: who the sales belong
+    // to (R59), then where their grades came from (R58). A naive keep-both
+    // here produces two consecutive `v.basis = ...` assignments where the
+    // second silently overwrites the first and drops selfCompNote entirely.
+    // Each note is null unless it has something to say, so an ordinary pool's
+    // basis string is unchanged.
+    v.basis = `unified: ${requestedTier} window=${u.windowDays}d${um?.windowNote ? ` [${um.windowNote}]` : ""} n=${tier.sampleCount} anchor=$${tier.weightedMedianPrice?.toFixed(0) ?? "?"} marketValue=$${v.fairMarketValue.toFixed(0)} predicted=$${v.predictedPrice?.toFixed(0) ?? "?"} trend=${v.trend.direction} ${v.trend.pctPerWeek?.toFixed(1) ?? "?"}%/wk rung=${v.rungLabel}${um?.projectionNote ? ` — ${um.projectionNote}` : ""}${um?.selfCompNote ? ` — ${um.selfCompNote}` : ""}${um?.gradeSourceNote ? ` — ${um.gradeSourceNote}` : ""}`;
     // Tiers with no pool of their own are filled from this identity's
     // observed tiers × the empirical ratio (estimated, labelled), never
     // touching an observed tier.

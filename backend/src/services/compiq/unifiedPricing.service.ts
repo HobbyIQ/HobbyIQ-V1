@@ -25,6 +25,7 @@ import { assessSellerIndependence, MIN_INDEPENDENT_SELLERS } from "./sellerIndep
 import { dedupeSoldComps } from "../portfolioiq/dedupeSoldComps.js";
 import { projectFromLeadingEdge } from "./nextSaleProjection.service.js";
 import { readExactPoolRows, type ExactPoolRow } from "./exactPoolReader.js";
+import { countGradeSources, gradeSourceNote, stampGradeSources, type GradeSourceCounts } from "./gradeSource.js";
 import type { ExactPoolRungLabel } from "./fmvRung.js";
 import {
   projectGradeIndex,
@@ -204,6 +205,13 @@ export interface UnifiedGradeEntry {
   // self-comps stand (project_self_comp_publish_labeled); what they may not
   // do is read as somebody else's trade. Null when none are the owner's.
   selfCompNote: string | null;
+  // CF-A-GRADE-NAMES-ITS-SOURCE (R58 as amended, Drew 2026-09-15). Where the
+  // grades behind THIS tier's number came from, and the sentence the basis
+  // carries when any of them trace to a vendor product record rather than
+  // the sale's own title. `gradeSourceNote` is null when every grade came
+  // from a title — there is then nothing to caveat.
+  gradeSources: GradeSourceCounts;
+  gradeSourceNote: string | null;
   // CF-EXACT-POOL-GRADE-INDEX (Drew, 2026-09-13). The number of comps the
   // tier's PRICE was read from, when that differs from `sampleCount` (the
   // tier's own pool). Only the grade-index rung sets it — it prices off the
@@ -257,6 +265,8 @@ export interface UnifiedPriceResult {
   // So the result reports how many DISTINCT partition keys actually returned
   // rows, and the basis appends it: `id=hobbyiqCardId(2 partitions)`.
   partitionsRead: number;
+  // R58: the whole pool's grade provenance, for `pricingSourceMeta.gradeSources`.
+  gradeSources: GradeSourceCounts;
   method: "weighted-median" | "no-basis";
   confidence: number;
   computedAt: string;
@@ -305,6 +315,14 @@ async function fetchPoolRows(
   const resources = await readExactPoolRows({ cardId, hobbyiqCardId, hobbyiqCardIds, windowDays, nowMs, asOfMs });
   if (resources === null) return null;
   const raw = resources.filter((r) => Number.isFinite(r.price) && r.price > 0 && !!r.soldAt);
+  // CF-A-GRADE-NAMES-ITS-SOURCE (R58 as amended, 2026-09-15). BEFORE dedupe,
+  // and that ordering is the whole trick. `dedupeSoldComps` buckets by
+  // (gradeKey, price) and keeps the FIRST row of each cluster — so a
+  // ch-daily row and its ch-fill twin that agree on the grade collapse to
+  // one, and the copy carrying the grader token in its title is exactly the
+  // one dropped. Classify first and the surviving row keeps the evidence its
+  // twin brought.
+  stampGradeSources(raw);
   // CF-DEDUPE-SOLD-COMPS (2026-08-22). One sale arrives up to three times —
   // cardsight, cardhedge and tca-ebay all ingest the same eBay transaction,
   // and cardhedge writes it twice at different timestamp precision. On
@@ -766,6 +784,7 @@ export async function computeUnifiedPrice(
     windowDays: 180,
     totalSampleCount: 0,
     partitionsRead: 0,
+    gradeSources: { "sale-title": 0, "product-record": 0, "twin-title": 0 },
     method: "no-basis",
     confidence: 0,
     computedAt: new Date(nowMs).toISOString(),
@@ -1450,6 +1469,7 @@ export async function computeUnifiedPrice(
     const wMed = weightedMedian(rows, nowMs);
     const trend = computeTrendAndPrediction(rows, wMed, label);
     const gi = trend.gradeIndex ?? null;
+    const tierGradeSources = countGradeSources(rows);
     gradeCurve.push({
       grade: label,
       gradeCompany: rows[0].gradeCompany,
@@ -1473,6 +1493,10 @@ export async function computeUnifiedPrice(
       // clone pass above has already stamped vendor copies, so this counts
       // every copy of the owner's trade, not only the tagged one.
       selfCompNote: selfCompNoteFor(rows, opts.excludeContributorUserId ?? null),
+      // R58: the provenance of this tier's own grades. Counted off the rows
+      // that priced it, so the sentence and the number describe one pool.
+      gradeSources: tierGradeSources,
+      gradeSourceNote: gradeSourceNote(tierGradeSources),
       // CF-EXACT-POOL-GRADE-INDEX: the comps this tier was PRICED FROM. For
       // every other rung that is the tier's own pool and this is absent; for
       // the index rung it is every index point, because that is what the
@@ -1679,6 +1703,7 @@ export async function computeUnifiedPrice(
         .map((r) => (typeof r.cardId === "string" ? r.cardId.trim() : ""))
         .filter((k) => k !== ""),
     ).size,
+    gradeSources: countGradeSources(comps),
     method: comps.length > 0 ? "weighted-median" : "no-basis",
     confidence: selectedConfidence || Math.min(1, comps.length / 30),
     computedAt: new Date(nowMs).toISOString(),
