@@ -888,6 +888,40 @@ export const PRODUCT_SET_KEYS: ReadonlyArray<ProductSetKey> = [
     "panini-court-kings", "panini-origins", "panini-encased", "panini-eminence", "panini-totally-certified",
     "panini-certified", "panini-crusade", "panini-prestige", "panini-elite-extra-edition",
     "panini-diamond-kings"].map((k) => P(k, { parent: "panini" })),
+  // R62 (Drew, 2026-09-15): PLAYOFF CONTENDERS OPTIC IS ITS OWN PRODUCT.
+  //
+  // `panini-contenders-optic` was named in D31's own list of neighbours that
+  // must NOT collapse into donruss-optic ("panini-contenders-optic 12,133,
+  // leaf-optichrome 81,298 ... 'Optic' names a stock those products borrow; it
+  // is not this product") -- but it was never REGISTERED, so it collapsed
+  // anyway, one product to its left: normalizeSetKey took it to
+  // `panini-contenders` via the bare `/(^|-)contenders(-|$)/` alias.
+  //
+  // Measured read-only from card_catalog, 2026-09-15 -- 18,397 checklist-backed
+  // rows already carry this setKey, from three independent sources:
+  //
+  //   football    2023   7,133 rows   42 parallels   checklistinsider,
+  //                                                  checklistcenter
+  //   football    2024   5,537 rows   80 parallels   + hobbymonitor
+  //   basketball  2023   5,727 rows   94 parallels
+  //
+  // The scrapes corroborate it as its own checklist: C:/tmp/ci/csv2 ships
+  // 2023-panini-contenders-optic-football.csv (6,435 rows, 66 sub-sets),
+  // 2024-panini-contenders-optic-football.csv (5,851 rows, 59 sub-sets) and
+  // 2023-24-panini-contenders-optic-basketball.csv (148 sub-sets) as FILES of
+  // their own -- Season Ticket, Rookie Ticket, Rookie Ticket Autographs, X's
+  // and O's, All-Time Contenders, MVP Contenders, Lottery Ticket, Induction
+  // Ticket Autographs. That is a product's checklist, not a parallel ladder.
+  //
+  // ITS INSERT KEYS ARE NOT REGISTERED HERE. 123 sub-set stems are attested
+  // across those three files, but the derivation still carries colour rungs
+  // (`-international-jade`, `-gold-lazer`, `-black-and`) and a source typo
+  // (`hoop-deams` beside `hoop-dreams`), so registering them now would mint
+  // colours as card sets -- the defect #2195 and #2208 exist to stop. They are
+  // reported for a follow-up ruling in the R60 form
+  // (`panini-contenders-optic-<insert>`), measured the same way the 53 Optic
+  // keys were.
+  P("panini-contenders-optic", { family: "panini-contenders", parent: "panini-contenders" }),
   // NBA HOOPS is a Panini product spelled by its CHECKLIST (Drew 2026-09-05).
   // It stays a child of `panini` — the family link is what lets the matcher
   // widen — but the KEY is the bare one, because `nba-hoops` holds 26,355

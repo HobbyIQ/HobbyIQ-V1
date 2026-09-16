@@ -3,8 +3,8 @@
  "source": "rematch IMPROVE fleet census artifacts, 32/32 slots, 2026-09-13/14",
  "measuredAt": "2026-09-15",
  "measuredUnder": {
-  "stamp": "de932d1063f4e+2026-09-06.a",
-  "derivation": "de932d1063f4e",
+  "stamp": "dacd3b86f003b+2026-09-06.a",
+  "derivation": "dacd3b86f003b",
   "contract": "2026-09-06.a",
   "commit": "b5ab5f745788d88168af9e339fc6be7f8c8de7a0",
   "note": "Recorded by scripts/rebaseline-i9-reference.cjs. The alarm compares only against a reference carrying THIS stamp; a stamp change makes the drift a finding, not an alarm."
@@ -131,7 +131,7 @@
   }
  },
  "supersedes": {
-  "stamp": "de95d3afa2d46+2026-09-06.a",
+  "stamp": "de932d1063f4e+2026-09-06.a",
   "measuredAt": "2026-09-15",
   "classifiedTotal": 18352932,
   "weighted": {

@@ -880,9 +880,12 @@ const RULED_DISTINCT: Readonly<Record<string, string>> = Object.freeze({
  *                                                           outright)
  *   flair-showcase         -> flair                    marked DELIBERATE in
  *                                                      collapsedProductsBatch1
- *   panini-contenders-optic -> panini-contenders       ruled by opticIsOneProduct
  *   donruss-champions      -> panini-donruss           parent brand, pinned in
  *                                                      slugRegression
+ *
+ * (`panini-contenders-optic -> panini-contenders` was here until R62, Drew
+ *  2026-09-15, ruled Contenders Optic a distinct product. See the note at its
+ *  former position in the table below.)
  *
  * This list is DERIVED, not guessed: it is every key for which a test in this
  * repo asserts `normalizeSetKey(x) === y` with a y our verdict would forbid
@@ -922,7 +925,25 @@ const ALREADY_RULED_COLLAPSES: Readonly<Record<string, string>> = Object.freeze(
   // The sapphire ruling in the vocabulary, applied to its "Edition" spelling.
   "bowman-chrome-sapphire-edition": "bowman-chrome-sapphire",
   "bowman-draft-sapphire-edition": "bowman-draft-sapphire",
-  "panini-contenders-optic": "panini-contenders",
+  // NOTE (R62, Drew 2026-09-15): `panini-contenders-optic` USED TO LIVE HERE,
+  // pinned by opticIsOneProduct as collapsing into `panini-contenders`. Drew
+  // ruled it a DISTINCT PRODUCT: Playoff Contenders Optic is its own card set.
+  //
+  // The collapse was never a decision anybody made about this product — D31
+  // (2026-08-31) had already listed it among the neighbours that must NOT
+  // collapse ("'Optic' names a stock those products borrow; it is not this
+  // product"). It simply was not registered, so the bare `/panini-contenders/`
+  // pattern answered first and it collapsed one product to its LEFT. The pin
+  // recorded that behaviour as the measured status quo, and opticIsOneProduct
+  // said so outright: "a future widening of the optic rules is caught by a red
+  // test rather than by a split pool". R62 is that widening.
+  //
+  // Evidence, read-only 2026-09-15: 18,397 checklist-backed catalog rows
+  // already carry this setKey (FB2023 7,133 / FB2024 5,537 / BK2023 5,727)
+  // from checklistinsider, checklistcenter and hobbymonitor, and the scrapes
+  // ship its checklists as FILES of their own with 59-148 sub-sets each.
+  // Removed here rather than edited: this list means "a collapse nobody has
+  // re-affirmed", and this one has now been overturned.
   "donruss-champions": "panini-donruss",
 });
 
