@@ -1811,6 +1811,58 @@ async function main() {
   // is tallied under EVERY axis it differs on, and `splitScopeMove`/
   // `splitScopePark` are the totals of ROWS, not of (row, axis) pairs.
   const SPLIT_SCOPE_SAMPLE_CAP = 50;
+
+  /**
+   * THE UNCAPPED R32 WOULD-MOVE EXPORT (report-only, census mode).
+   *
+   * WHY THE SAMPLES ARE NOT ENOUGH. Every split-scope axis caps its samples at
+   * SPLIT_SCOPE_SAMPLE_CAP (50), which is right for a banner and useless for a
+   * work list: slot 3 alone judged 30,494 HIQ-SPLIT rows and the 32-slot run
+   * reports 17,313 would-move. Those rows cannot be recovered from the logs or
+   * from census-slot-N.json afterwards, so the R32 list lane would have to
+   * re-run the whole census to get them.
+   *
+   * WHAT IT WRITES. One JSON object per would-move row, streamed to
+   * `r32-would-move-slot-N.jsonl` beside the census artifact. Streamed rather
+   * than accumulated because the population is unbounded by design -- holding
+   * 17k+ objects to serialise at the end is how a census runs out of memory on
+   * the one slot that has the most work.
+   *
+   * WHAT IT IS NOT. It changes no verdict, no class, no share. It is written
+   * from the SAME `verdict` object the banner counts, inside the same
+   * `split-move` branch, so a row appears here if and only if it was already
+   * counted as a move. `r32WouldMoveExportIsReportOnly` pins that the stamp
+   * and the four class shares are untouched.
+   *
+   * OFF BY DEFAULT, AND NO NEW WORKFLOW INPUT. Enabled by
+   * `R32_EXPORT=true` or by asking for the r32 scope (`scope=r32`), both of
+   * which the runner already passes through as env -- adding a
+   * workflow_dispatch input would need a workflow change for a report.
+   */
+  const R32_EXPORT = String(process.env.R32_EXPORT ?? "").toLowerCase() === "true"
+    || String(process.env.SCOPE ?? process.env.scope ?? "").toLowerCase().includes("r32");
+  const r32ExportPath = (() => {
+    if (!R32_EXPORT || MODE !== "census") return null;
+    const dir = CENSUS_OUT.endsWith(".json") ? path.dirname(CENSUS_OUT) : CENSUS_OUT;
+    return path.join(dir, `r32-would-move-slot-${SLOT}.jsonl`);
+  })();
+  let r32ExportStream = null, r32ExportWritten = 0, r32ExportFailed = null;
+  const r32ExportRow = (obj) => {
+    if (!r32ExportPath || r32ExportFailed) return;
+    try {
+      if (!r32ExportStream) {
+        fs.mkdirSync(path.dirname(r32ExportPath), { recursive: true });
+        // Truncate on open: a relaunch of the same slot re-reads the same rows,
+        // and appending would duplicate them silently.
+        r32ExportStream = fs.createWriteStream(r32ExportPath, { flags: "w" });
+      }
+      r32ExportStream.write(`${JSON.stringify(obj)}\n`);
+      r32ExportWritten++;
+    } catch (e) {
+      // A failed export must never fail a census. Record it and stop trying.
+      r32ExportFailed = String(e?.message ?? e);
+    }
+  };
   const splitScopeByAxis = new Map(); // axis -> { move, park, parkReasons: Map, moveSamples: [], parkSamples: [] }
   let splitScopeMove = 0, splitScopePark = 0;
   const splitScopeAxis = (axis) => {
@@ -2869,6 +2921,29 @@ async function main() {
             const bucket = splitScopeAxis(axis);
             if (verdict.verdict === "split-move") {
               bucket.move++;
+              // THE UNCAPPED EXPORT. Same branch, same verdict object, so a row
+              // is exported if and only if it was counted -- the export cannot
+              // disagree with the banner. Emitted per AXIS, matching how the
+              // banner counts, so a row judged on two axes appears once per
+              // axis with its own axis field.
+              if (r32ExportPath) {
+                const dest = verdict.destination;   // "cardId" | "hobbyiqCardId"
+                const toCardId = dest === "cardId" ? row.cardId : row.hobbyiqCardId;
+                r32ExportRow({
+                  id: row.id,
+                  fromCardId: row.cardId ?? null,
+                  fromHobbyiqCardId: row.hobbyiqCardId ?? null,
+                  toCardId: toCardId ?? null,
+                  // The field the repair would repoint: moving to the cardId
+                  // side means hobbyiqCardId is the one that changes, and the
+                  // other way round.
+                  repointHobbyiqCardId: dest === "cardId",
+                  shape: res.splitClass ?? null,
+                  axis,
+                  reason: verdict.reason ?? null,
+                  title: String(row.title ?? ""),
+                });
+              }
               if (bucket.moveSamples.length < SPLIT_SCOPE_SAMPLE_CAP) {
                 bucket.moveSamples.push(
                   `${row.id}  [${res.tier}]  "${String(row.title ?? "").slice(0, 160)}"  `
@@ -3524,6 +3599,13 @@ async function main() {
     },
     stoppedAtBudget: !!stopReason, generatedAt: new Date().toISOString(),
   };
+  if (r32ExportStream) {
+    try { r32ExportStream.end(); } catch { /* a report must not fail the run */ }
+    console.log(`\n  R32 would-move export -> ${r32ExportPath}  (${r32ExportWritten} rows, uncapped, REPORT ONLY)`);
+  } else if (r32ExportPath) {
+    console.log(`\n  R32 would-move export: no would-move rows in this slot (${r32ExportPath} not written)`);
+  }
+  if (r32ExportFailed) console.log(`  !! R32 export stopped after ${r32ExportWritten} rows: ${r32ExportFailed}`);
   const outFile = path.join(CENSUS_OUT.endsWith(".json") ? path.dirname(CENSUS_OUT) : CENSUS_OUT, `census-slot-${SLOT}.json`);
   let wroteFile = false;
   try { fs.mkdirSync(path.dirname(outFile), { recursive: true }); fs.writeFileSync(outFile, JSON.stringify(census, null, 1)); wroteFile = true; console.log(`\n  shard census JSON -> ${outFile}`); }
