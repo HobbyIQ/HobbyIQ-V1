@@ -198,6 +198,12 @@ export interface UnifiedGradeEntry {
   // D22: why this window — the cascade's path for this tier ("60d n=15" or
   // "60d n=1, 90d n=1, 180d n=2"), stated so the basis can say it.
   windowNote: string | null;
+  // CF-A-SELF-COMP-WEARS-EVERY-SOURCES-NAME (R59, Drew 2026-09-15). When
+  // any sale behind this tier's number is the owner's own — tagged, or an
+  // untagged vendor clone of a tagged row — the basis SAYS SO. Labelled
+  // self-comps stand (project_self_comp_publish_labeled); what they may not
+  // do is read as somebody else's trade. Null when none are the owner's.
+  selfCompNote: string | null;
   // CF-EXACT-POOL-GRADE-INDEX (Drew, 2026-09-13). The number of comps the
   // tier's PRICE was read from, when that differs from `sampleCount` (the
   // tier's own pool). Only the grade-index rung sets it — it prices off the
@@ -235,6 +241,22 @@ export interface UnifiedPriceResult {
   gradeCurve: UnifiedGradeEntry[];
   windowDays: number;            // adaptive window that produced these numbers
   totalSampleCount: number;
+  // ── CF-THE-LABEL-NAMES-THE-PARTITIONS-THAT-ANSWERED (R59, Drew 2026-09-15)
+  //
+  // The basis reports `id=<attempt label>`, which names the ATTEMPT — not
+  // where the rows came from. Attempt 1 is labelled `hobbyiqCardId` and sets
+  // BOTH cardId and hobbyiqCardId to the slug, and readExactPoolRows ORs the
+  // two with no partitionKey — so it is a CROSS-PARTITION read.
+  //
+  // Measured on Rivera 1992 Bowman #302 BGS 9 (2026-09-15): the basis said
+  // `id=hobbyiqCardId` while the slug partition holds 3 BGS 9 sales and the
+  // eight the engine priced from came from the vendor-id partition too, every
+  // row of which carries the slug on `hobbyiqCardId`. The label was not false;
+  // it simply could not answer the question an auditor was asking.
+  //
+  // So the result reports how many DISTINCT partition keys actually returned
+  // rows, and the basis appends it: `id=hobbyiqCardId(2 partitions)`.
+  partitionsRead: number;
   method: "weighted-median" | "no-basis";
   confidence: number;
   computedAt: string;
@@ -332,8 +354,136 @@ async function fetchPoolRows(
  * whose only evidence is the owner's own purchase keeps that purchase (and
  * is published labeled, per the self-comp doctrine), while a tier with a
  * real market of its own still excludes the owner's sale from it. */
+/** Sales this close together, at the same price and identity, are one sale
+ *  reported twice — not two trades. 60s per R59. */
+const SELF_COMP_CLONE_WINDOW_MS = 60_000;
+
+/** The identity keys a row was found under, for clone matching. */
+function identityKeysOf(r: RawCompRow): string[] {
+  const keys: string[] = [];
+  if (typeof r.cardId === "string" && r.cardId.trim()) keys.push(r.cardId.trim());
+  if (typeof r.hobbyiqCardId === "string" && r.hobbyiqCardId.trim()) keys.push(r.hobbyiqCardId.trim());
+  return keys;
+}
+
+/**
+ * CF-A-SELF-COMP-WEARS-EVERY-SOURCES-NAME (R59, Drew 2026-09-15).
+ *
+ * The self-comp rule matched on `contributorUserId`, which only the row
+ * the owner's own import wrote ever carries. The SAME sale also arrives
+ * through the vendor feeds, anonymously, and those copies were invisible
+ * to the rule.
+ *
+ * Measured on Rivera 1992 Bowman #302 BGS 9 (2026-09-15). Drew's 07-27
+ * purchase is in the pool twice:
+ *
+ *   ebay-user-purchase::267728550616-…   slug partition    contributor=user-199fcbc9-…
+ *   cardhedge::ch-daily::1785125199393…  vendor partition  contributor=null
+ *
+ * Same instant (2026-07-27T02:30), same $96, same BGS 9 — and the vendor
+ * copy's own title names it: "…Rookie BGS 9 Mint". Whichever way the
+ * reprieve branched, the owner's purchase stayed in the pool exactly once,
+ * laundered through CardHedge and counted as an independent market comp.
+ * On a thinner or newer pool that clone would set the price outright.
+ *
+ * So a row is the owner's when it is TAGGED as theirs, or when it is an
+ * untagged clone of a tagged row: same identity (either key), same price,
+ * sold within 60s. Clones are labelled exactly as the tagged row is.
+ *
+ * NOTHING IS DELETED. Labelled self-comps STAND (project_self_comp_publish
+ * _labeled, and the per-tier reprieve below). This function decides what
+ * counts as the OWNER's sale; it does not decide to drop it.
+ */
+function markSelfCompClones(
+  rows: RawCompRow[],
+  excludeContributorUserId: string,
+): Set<RawCompRow> {
+  const owned = new Set<RawCompRow>();
+  const tagged = rows.filter((r) => r.contributorUserId === excludeContributorUserId);
+  for (const r of tagged) owned.add(r);
+  if (tagged.length === 0) return owned;
+  for (const candidate of rows) {
+    if (owned.has(candidate)) continue;
+    // A row that names a DIFFERENT owner is that person's sale, not a clone.
+    if (typeof candidate.contributorUserId === "string"
+      && candidate.contributorUserId.trim() !== ""
+      && candidate.contributorUserId !== excludeContributorUserId) continue;
+    const cPrice = Number(candidate.price);
+    const cTime = Date.parse(String(candidate.soldAt ?? ""));
+    if (!Number.isFinite(cPrice) || !Number.isFinite(cTime)) continue;
+    const cKeys = identityKeysOf(candidate);
+    for (const own of tagged) {
+      const oPrice = Number(own.price);
+      const oTime = Date.parse(String(own.soldAt ?? ""));
+      if (!Number.isFinite(oPrice) || !Number.isFinite(oTime)) continue;
+      if (oPrice !== cPrice) continue;
+      if (Math.abs(oTime - cTime) > SELF_COMP_CLONE_WINDOW_MS) continue;
+      // Identity: the two rows must have been found under a shared key.
+      const oKeys = identityKeysOf(own);
+      const sharesIdentity = cKeys.length === 0 || oKeys.length === 0
+        ? true            // a row with no keys projected cannot refute identity
+        : cKeys.some((k) => oKeys.includes(k));
+      if (!sharesIdentity) continue;
+      // Grade must agree too — the same price at the same second in a
+      // different tier is a different card's sale, not this one's clone.
+      if (gradeLabel(own.gradeCompany, own.gradeValue)
+        !== gradeLabel(candidate.gradeCompany, candidate.gradeValue)) continue;
+      owned.add(candidate);
+      // LABELLED THE SAME WAY, not deleted. Stamping the contributor is what
+      // makes every downstream label rule — the self-anchored ratio, the
+      // sell-draft caveat, the basis sentence — see this copy as the owner's
+      // sale, which it is. The row object is the reader's own projection, so
+      // this mutates nothing in Cosmos.
+      candidate.contributorUserId = excludeContributorUserId;
+      console.log(JSON.stringify({
+        event: "self_comp_vendor_clone_labelled",
+        source: candidate.source ?? null,
+        ownerSource: own.source ?? null,
+        price: cPrice,
+        soldAt: candidate.soldAt,
+        grade: gradeLabel(candidate.gradeCompany, candidate.gradeValue),
+        detail: "an untagged vendor copy of the owner's own sale — labelled, not deleted",
+      }));
+      break;
+    }
+  }
+  return owned;
+}
+
+/**
+ * R59 item 5: the sentence the basis carries when the owner's own sale is
+ * among the comps behind a tier's number. Labelled self-comps STAND — this
+ * is the label, not a filter. Null when none of the sales are theirs.
+ */
+export function selfCompNoteFor(
+  rows: ReadonlyArray<Pick<RawCompRow, "contributorUserId">>,
+  ownerUserId: string | null,
+): string | null {
+  if (!ownerUserId) return null;
+  const own = rows.reduce((n, r) => (r.contributorUserId === ownerUserId ? n + 1 : n), 0);
+  if (own === 0) return null;
+  const total = rows.length;
+  if (own === total) {
+    return total === 1
+      ? "includes 1 sale that is your own purchase — it is the only sale behind this number"
+      : `all ${total} sales behind this number are your own purchases`;
+  }
+  return `includes ${own} sale${own === 1 ? "" : "s"} that ${own === 1 ? "is" : "are"} your own purchase${own === 1 ? "" : "s"} (of ${total})`;
+}
+
+/** R59: the self-comp rule, exported so the clone pass is pinned directly
+ *  rather than re-implemented in the test. Pure over the rows handed in. */
+export function applySelfCompRuleForTest(
+  rows: RawCompRow[],
+  excludeContributorUserId?: string | null,
+): RawCompRow[] {
+  return applySelfCompRule(rows, excludeContributorUserId);
+}
+
 function applySelfCompRule(rows: RawCompRow[], excludeContributorUserId?: string | null): RawCompRow[] {
   if (!excludeContributorUserId) return rows;
+  // R59: the owner's sale is every copy of it, not only the tagged one.
+  const owned = markSelfCompClones(rows, excludeContributorUserId);
   const kept: RawCompRow[] = [];
   const byTier = new Map<string, RawCompRow[]>();
   for (const r of rows) {
@@ -343,7 +493,7 @@ function applySelfCompRule(rows: RawCompRow[], excludeContributorUserId?: string
     arr.push(r);
   }
   for (const tierRowsForLabel of byTier.values()) {
-    const others = tierRowsForLabel.filter((r) => r.contributorUserId !== excludeContributorUserId);
+    const others = tierRowsForLabel.filter((r) => !owned.has(r));
     // CF-INDEPENDENCE-MUST-NAME-ITS-BASIS (2026-09-04). "Can this tier
     // price itself without the owner?" is the 3-INDEPENDENT-SELLER question
     // (Drew, 2026-09-01), and it is asked here on seller identity whenever
@@ -615,6 +765,7 @@ export async function computeUnifiedPrice(
     gradeCurve: [],
     windowDays: 180,
     totalSampleCount: 0,
+    partitionsRead: 0,
     method: "no-basis",
     confidence: 0,
     computedAt: new Date(nowMs).toISOString(),
@@ -1311,6 +1462,10 @@ export async function computeUnifiedPrice(
       rungLabel: trend.rungLabel,
       projectionNote: trend.projectionNote,
       windowNote: tierWindowNotes.get(label) ?? null,
+      // R59: count the owner's own sales behind THIS tier's number. The
+      // clone pass above has already stamped vendor copies, so this counts
+      // every copy of the owner's trade, not only the tagged one.
+      selfCompNote: selfCompNoteFor(rows, opts.excludeContributorUserId ?? null),
       // CF-EXACT-POOL-GRADE-INDEX: the comps this tier was PRICED FROM. For
       // every other rung that is the tier's own pool and this is absent; for
       // the index rung it is every index point, because that is what the
@@ -1510,6 +1665,13 @@ export async function computeUnifiedPrice(
     gradeCurve,
     windowDays: selectedWindow,
     totalSampleCount: comps.length,
+    // R59: the partition keys that actually answered. `cardId` IS the
+    // partition key on sold_comps, so distinct values = distinct partitions.
+    partitionsRead: new Set(
+      comps
+        .map((r) => (typeof r.cardId === "string" ? r.cardId.trim() : ""))
+        .filter((k) => k !== ""),
+    ).size,
     method: comps.length > 0 ? "weighted-median" : "no-basis",
     confidence: selectedConfidence || Math.min(1, comps.length / 30),
     computedAt: new Date(nowMs).toISOString(),
