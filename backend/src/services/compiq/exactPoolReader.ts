@@ -102,6 +102,12 @@ export interface ExactPoolRow {
    *  with the stored grade: the twin's grade won. Carries what was replaced,
    *  so the override is auditable rather than silent. */
   gradeOverriddenFrom?: string | null;
+  /** CF-A-RECONCILED-TWIN-IS-ONE-SALE (R58, twin census 2026-09-16). How many
+   *  vendor copies this READ reconciled to a twin's sale title and then
+   *  merged away via the existing dedupe. Stamped identically on every
+   *  surviving row of the read, so any subset of them reports the same
+   *  per-read figure; absent when the read merged none. */
+  twinsCollapsedInRead?: number;
 }
 
 /**

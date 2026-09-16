@@ -144,11 +144,33 @@ export function stampGradeSources(rows: ExactPoolRow[]): ExactPoolRow[] {
 
   // Pass 1: a row whose OWN title names a grader is settled on its own
   // evidence and never consults a twin.
+  //
+  // An UNGRADED row is normally out of scope — R58 speaks about rows that
+  // assert a grade — with ONE exception, which is the defect the twin census
+  // (2026-09-16) actually found. All 42 twins that survived the 60-minute
+  // dedupe were `ch-daily = RAW` against a `ch-fill` twin whose title said
+  // PSA 9/10: the vendor product record had no grade for that sale, so the
+  // row entered the RAW TIER AT A GRADED PRICE (Rivera's raw tier spanning
+  // $0.99-$800; Ohtani 2018 Leaf PR-02 raw reading $7.95-$136.19 against a
+  // true clearing price near $13.50).
+  //
+  // Such a row is exactly a product-record row whose product record happened
+  // to say "no grade". It is admitted to the twin pass so its twin's title
+  // can correct it — and ONLY when its own title names no grader, so a
+  // genuinely raw sale that says so is never touched. A raw row whose twin
+  // is also raw simply finds nothing and keeps `gradeSource` unset, which is
+  // what `countGradeSources` already ignores.
   const needsTwin: ExactPoolRow[] = [];
   for (const r of rows) {
-    if (!rowIsGraded(r)) continue;
-    if (graderTokenInTitle(r.title)) {
+    const graded = rowIsGraded(r);
+    if (graded && graderTokenInTitle(r.title)) {
       r.gradeSource = "sale-title";
+      continue;
+    }
+    if (!graded) {
+      // No grade asserted and no token of its own: eligible for correction,
+      // but carries no gradeSource unless a twin actually supplies one.
+      if (!graderTokenInTitle(r.title)) needsTwin.push(r);
       continue;
     }
     r.gradeSource = "product-record";
@@ -175,7 +197,10 @@ export function stampGradeSources(rows: ExactPoolRow[]): ExactPoolRow[] {
       if (!Number.isFinite(ct) || Math.abs(ct - t) > TWIN_WINDOW_MS) continue;
       if (!sharesPartitionScope(row, cand)) continue;
 
-      const storedTier = tierOf(row.gradeCompany, row.gradeValue);
+      // An ungraded row's "stored tier" is RAW — which is precisely the
+      // claim the twin is about to refute, so it must be spelled and
+      // recorded, not left blank.
+      const storedTier = rowIsGraded(row) ? tierOf(row.gradeCompany, row.gradeValue) : "RAW";
       const twinTier = tierOf(token.company, token.value);
       row.gradeSource = "twin-title";
       if (storedTier !== twinTier) {
@@ -206,18 +231,111 @@ export interface GradeSourceCounts {
   "sale-title": number;
   "product-record": number;
   "twin-title": number;
+  // ── CF-A-RECONCILED-TWIN-IS-ONE-SALE (R58, the twin census 2026-09-16) ──
+  //
+  // How many vendor copies were reconciled to their sale title and then
+  // collapsed away by the existing 60-minute dedupe — one sale that used to
+  // be counted twice, at two different grades.
+  //
+  // The census measured why this number is not zero. Across 926 vendor<->slug
+  // pairs (1,846 partitions, 59,536 rows) there were 645 exact ch-daily /
+  // ch-fill twins. `dedupeSoldComps` already collapsed 603 of them (93.5%) —
+  // it buckets by (gradeKey, price), so twins that AGREE on the grade meet in
+  // one bucket and the earliest wins. The 42 that survived (6.5%) survived
+  // precisely BECAUSE they disagreed about the grade: a RAW copy and a PSA 10
+  // copy hash to different buckets and are never compared.
+  //
+  // Every one of those 42 was the same shape — ch-daily said RAW, the
+  // ch-fill twin's title said PSA 9 or PSA 10 — and the token asymmetry was
+  // perfectly one-directional: 58 twins where only ch-fill carried a grader
+  // token, ZERO the other way. So the RAW-labelled copy was landing in the
+  // RAW TIER AT A GRADED PRICE. Measured on Ohtani 2018 Leaf PR-02: the raw
+  // tier read $7.95-$136.19 with 15 rows over $100 and a mean of $21.81,
+  // against a true raw clearing price near $13.50. On Rivera 1992 Bowman
+  // #302: $0.99-$800, the $800 being a PSA 10 whose title is
+  // "1992 Bowman Baseball #302 Base".
+  //
+  // `stampGradeSources` restamps that copy from its twin's title, which both
+  // removes it from the raw tier AND puts it in the same dedupe bucket as its
+  // twin — so the dedupe that already runs then collapses the pair. No new
+  // dedupe pass exists or is needed. This counter is the LABEL on that: it
+  // says how many rows the reconciliation removed, so a reader is told the
+  // pool was repaired rather than silently seeing a smaller `n`.
+  "twins-collapsed": number;
 }
 
-/** How many of a pool's graded rows got their grade from where. */
+/** A zero GradeSourceCounts. */
+export function emptyGradeSourceCounts(): GradeSourceCounts {
+  return { "sale-title": 0, "product-record": 0, "twin-title": 0, "twins-collapsed": 0 };
+}
+
+/**
+ * How many rows the twin reconciliation removed: rows `stampGradeSources`
+ * restamped from a twin's title (`gradeOverriddenFrom` set) that the
+ * subsequent dedupe then collapsed away.
+ *
+ * Measured ACROSS the two steps, because that is what actually happened —
+ * the stamp alone changes a grade, and only the dedupe behind it turns two
+ * rows into one. Counting the overrides that SURVIVE and subtracting is the
+ * only way to tell "reconciled and merged" from "reconciled and kept" (a
+ * twin whose partner fell outside the 60-minute dedupe window).
+ *
+ * Pure; both arrays are the caller's, `after` being a subset of `before`.
+ */
+export function countTwinsCollapsed(
+  before: ReadonlyArray<ExactPoolRow>,
+  after: ReadonlyArray<ExactPoolRow>,
+): number {
+  const overridden = before.filter((r) => typeof r.gradeOverriddenFrom === "string");
+  if (overridden.length === 0) return 0;
+  const survivors = new Set<ExactPoolRow>(after);
+
+  // Count the rows the merge REMOVED from each reconciled cluster — not the
+  // overridden rows themselves.
+  //
+  // Which of a pair survives is not the question and must not be assumed:
+  // `dedupeSoldComps` keeps the EARLIEST row of a cluster, and the vendor
+  // `ch-daily` copy is usually the earlier one, so the row that gets
+  // restamped is typically the row that STAYS while its title-bearing twin
+  // is the one dropped. An earlier draft of this counter asked "was the
+  // overridden row removed?" and answered 0 on exactly the Rivera pair it
+  // exists to describe.
+  //
+  // A cluster is (grade after reconciliation, price) — the same key the
+  // dedupe buckets on, which is the point: reconciliation MOVES a row into
+  // its twin's bucket, and the merge that follows is what removes a row.
+  const clusterKey = (r: ExactPoolRow): string => {
+    const company = typeof r.gradeCompany === "string" && r.gradeCompany.trim()
+      ? r.gradeCompany.trim().toUpperCase()
+      : "RAW";
+    const value = typeof r.gradeValue === "number" && Number.isFinite(r.gradeValue) ? String(r.gradeValue) : "";
+    return `${company}:${value}|${Number(r.price).toFixed(2)}`;
+  };
+  const reconciledClusters = new Set(overridden.map(clusterKey));
+  let removed = 0;
+  for (const r of before) {
+    if (survivors.has(r)) continue;
+    if (reconciledClusters.has(clusterKey(r))) removed += 1;
+  }
+  return removed;
+}
+
+/** How many of a pool's graded rows got their grade from where.
+ *
+ *  `twinsCollapsed` is not derivable from the surviving rows — the rows it
+ *  counts are gone by then — so the caller passes it in from
+ *  `countTwinsCollapsed`, measured across the stamp/dedupe boundary. */
 export function countGradeSources(
   rows: ReadonlyArray<Pick<ExactPoolRow, "gradeSource" | "gradeCompany" | "gradeValue">>,
+  twinsCollapsed = 0,
 ): GradeSourceCounts {
-  const counts: GradeSourceCounts = { "sale-title": 0, "product-record": 0, "twin-title": 0 };
+  const counts = emptyGradeSourceCounts();
   for (const r of rows) {
     if (!rowIsGraded(r)) continue;
     const s: GradeSource = r.gradeSource ?? "product-record";
     counts[s] += 1;
   }
+  counts["twins-collapsed"] = Number.isFinite(twinsCollapsed) && twinsCollapsed > 0 ? twinsCollapsed : 0;
   return counts;
 }
 
@@ -232,10 +350,25 @@ export function countGradeSources(
  */
 export function gradeSourceNote(counts: GradeSourceCounts): string | null {
   const productRecord = counts["product-record"];
-  if (productRecord <= 0) return null;
-  const fromTitles = counts["sale-title"] + counts["twin-title"];
-  const parts: string[] = [];
-  if (fromTitles > 0) parts.push(`${fromTitles} from sale title${fromTitles === 1 ? "" : "s"}`);
-  parts.push(`${productRecord} from the vendor product record`);
-  return `grades: ${parts.join(", ")}`;
+  const collapsed = counts["twins-collapsed"];
+  // Either fact is worth stating on its own: grades that trace to a vendor
+  // record, or vendor copies this read reconciled and merged. A pool with
+  // neither says nothing.
+  if (productRecord <= 0 && collapsed <= 0) return null;
+  const segments: string[] = [];
+  if (productRecord > 0) {
+    const fromTitles = counts["sale-title"] + counts["twin-title"];
+    const parts: string[] = [];
+    if (fromTitles > 0) parts.push(`${fromTitles} from sale title${fromTitles === 1 ? "" : "s"}`);
+    parts.push(`${productRecord} from the vendor product record`);
+    segments.push(`grades: ${parts.join(", ")}`);
+  }
+  if (collapsed > 0) {
+    // Say what was done and why the count moved, so a smaller `n` reads as a
+    // repair rather than missing evidence.
+    segments.push(
+      `${collapsed} vendor cop${collapsed === 1 ? "y" : "ies"} reconciled to ${collapsed === 1 ? "its sale title" : "their sale titles"} and merged`,
+    );
+  }
+  return segments.join("; ");
 }

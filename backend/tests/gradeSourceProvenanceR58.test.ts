@@ -31,6 +31,7 @@ import { describe, it, expect } from "vitest";
 import type { ExactPoolRow } from "../src/services/compiq/exactPoolReader.js";
 import {
   countGradeSources,
+  countTwinsCollapsed,
   gradeSourceNote,
   graderTokenInTitle,
   stampGradeSources,
@@ -105,7 +106,7 @@ describe("R58 — the Rivera pool keeps all 8 rows and says where its grades cam
     }
 
     const counts = countGradeSources(rows);
-    expect(counts).toEqual({ "sale-title": 2, "product-record": 6, "twin-title": 0 });
+    expect(counts).toEqual({ "sale-title": 2, "product-record": 6, "twin-title": 0, "twins-collapsed": 0 });
   });
 
   it("the two rows whose own titles name BGS 9 are sale-title", () => {
@@ -289,7 +290,7 @@ describe("R58 — a clean pool is untouched and says nothing", () => {
     stampGradeSources(rows);
 
     const counts = countGradeSources(rows);
-    expect(counts).toEqual({ "sale-title": 3, "product-record": 0, "twin-title": 0 });
+    expect(counts).toEqual({ "sale-title": 3, "product-record": 0, "twin-title": 0, "twins-collapsed": 0 });
     // The sentence is emitted ONLY when there is something to caveat.
     expect(gradeSourceNote(counts)).toBeNull();
     // Output unchanged: same grades, same prices, same count.
@@ -306,7 +307,7 @@ describe("R58 — a clean pool is untouched and says nothing", () => {
     stampGradeSources(rows);
     expect(rows[0].gradeSource).toBeUndefined();
     expect(countGradeSources(rows))
-      .toEqual({ "sale-title": 0, "product-record": 0, "twin-title": 0 });
+      .toEqual({ "sale-title": 0, "product-record": 0, "twin-title": 0, "twins-collapsed": 0 });
   });
 
   it("the note counts twin-title rows as title evidence, because they are", () => {
@@ -316,6 +317,119 @@ describe("R58 — a clean pool is untouched and says nothing", () => {
       .toBe("grades: 4 from sale titles, 2 from the vendor product record");
     expect(gradeSourceNote({ "sale-title": 0, "product-record": 1, "twin-title": 0 }))
       .toBe("grades: 1 from the vendor product record");
+  });
+});
+
+describe("R58 — twinsCollapsed labels what the reconciliation removed", () => {
+  // The twin census (2026-09-16, 926 vendor<->slug pairs / 1,846 partitions /
+  // 59,536 rows) found 645 exact ch-daily / ch-fill twins, of which
+  // dedupeSoldComps already collapsed 603 (93.5%). The 42 that survived did
+  // so BECAUSE they disagreed about the grade — ch-daily said RAW, the
+  // ch-fill twin's title said PSA 9/10 — so they hashed to different dedupe
+  // buckets and were never compared, and the RAW-labelled copy landed in the
+  // RAW TIER AT A GRADED PRICE.
+  //
+  // Token asymmetry across the census was perfectly one-directional: 58
+  // twins where only ch-fill carried a grader token, ZERO the other way.
+  //
+  // This is the Rivera shape of that pair. Reconciling it removes a row, so
+  // the label has to say a row was removed — otherwise `n` just gets smaller
+  // and reads as missing evidence.
+  const RIVERA_RAW_VS_PSA10 = (): ExactPoolRow[] => ([
+    {
+      // ch-daily, vendor partition: product record says RAW, title is generic.
+      id: "ch-daily-800", price: 800, soldAt: "2026-07-02T00:00:00Z",
+      title: CH_PRODUCT_TITLE,
+      gradeCompany: null, gradeValue: null,
+      source: "cardhedge", cardId: VENDOR_PK, hobbyiqCardId: SLUG,
+    },
+    {
+      // ch-fill, slug partition: the real eBay title names PSA 10.
+      id: "ch-fill-800", price: 800, soldAt: "2026-07-02T00:00:12Z",
+      title: "1992 Bowman Mariano Rivera Rookie Card PSA 10 Gem Mint Graded Baseball #",
+      gradeCompany: "PSA", gradeValue: 10,
+      source: "cardhedge", cardId: SLUG, hobbyiqCardId: SLUG,
+    },
+  ]);
+
+  it("the RAW ch-daily / PSA 10 ch-fill pair collapses to ONE graded row, counter reads 1", async () => {
+    const { dedupeSoldComps } = await import("../src/services/portfolioiq/dedupeSoldComps.js");
+    const rows = RIVERA_RAW_VS_PSA10();
+
+    // BEFORE: two rows, in two different grade tiers. This is the defect —
+    // an $800 sale sitting in the RAW tier of a 1992 Bowman Rivera.
+    expect(rows).toHaveLength(2);
+    expect(rows[0].gradeCompany).toBeNull();
+    expect(dedupeSoldComps(rows as any)).toHaveLength(2);   // different buckets
+
+    // The engine's order: stamp, then dedupe.
+    stampGradeSources(rows);
+    const kept = dedupeSoldComps(rows as any) as unknown as ExactPoolRow[];
+
+    // AFTER: the ch-daily copy was restamped from its twin's title, which put
+    // it in the SAME bucket, which the existing dedupe then merged.
+    expect(kept).toHaveLength(1);
+    expect(kept[0].gradeCompany).toBe("PSA");
+    expect(kept[0].gradeValue).toBe(10);
+    // Nothing left in the raw tier.
+    expect(kept.filter((r) => !r.gradeCompany)).toHaveLength(0);
+
+    // THE LABEL: one row was removed by reconciliation, and it says so.
+    expect(countTwinsCollapsed(rows, kept)).toBe(1);
+    const counts = countGradeSources(kept, countTwinsCollapsed(rows, kept));
+    expect(counts["twins-collapsed"]).toBe(1);
+    expect(gradeSourceNote(counts))
+      .toBe("1 vendor copy reconciled to its sale title and merged");
+  });
+
+  it("the override is auditable: the restamped row records what it replaced", () => {
+    const rows = RIVERA_RAW_VS_PSA10();
+    stampGradeSources(rows);
+    expect(rows[0].gradeSource).toBe("twin-title");
+    expect(rows[0].gradeOverriddenFrom).toBe("RAW");
+  });
+
+  it("the note pluralises, and states both facts when the pool has both", () => {
+    expect(gradeSourceNote({
+      "sale-title": 0, "product-record": 0, "twin-title": 0, "twins-collapsed": 3,
+    })).toBe("3 vendor copies reconciled to their sale titles and merged");
+
+    expect(gradeSourceNote({
+      "sale-title": 2, "product-record": 6, "twin-title": 0, "twins-collapsed": 2,
+    })).toBe(
+      "grades: 2 from sale titles, 6 from the vendor product record; "
+      + "2 vendor copies reconciled to their sale titles and merged",
+    );
+  });
+
+  it("MUTATION CHECK: a reconciliation that does NOT merge is not counted", () => {
+    // An agreeing twin is restamped twin-title but sets no
+    // gradeOverriddenFrom, so nothing was reconciled away. And a disagreeing
+    // twin whose partner sits outside the dedupe window is reconciled but
+    // KEPT — the counter says "removed", so neither may increment it.
+    const agreeing: ExactPoolRow[] = [
+      { id: "a", price: 96, soldAt: "2026-07-27T02:30:00Z", title: CH_PRODUCT_TITLE,
+        gradeCompany: "BGS", gradeValue: 9, cardId: VENDOR_PK, hobbyiqCardId: SLUG },
+      { id: "b", price: 96, soldAt: "2026-07-27T02:30:05Z",
+        title: "1992 Bowman Mariano Rivera #302 BGS 9 Mint",
+        gradeCompany: "BGS", gradeValue: 9, cardId: SLUG, hobbyiqCardId: SLUG },
+    ];
+    stampGradeSources(agreeing);
+    expect(agreeing[0].gradeOverriddenFrom).toBeUndefined();
+    // Both rows still present => nothing removed by reconciliation.
+    expect(countTwinsCollapsed(agreeing, agreeing)).toBe(0);
+    expect(countGradeSources(agreeing, countTwinsCollapsed(agreeing, agreeing))["twins-collapsed"]).toBe(0);
+  });
+
+  it("MUTATION CHECK: a clean pool reports 0 and still says nothing", () => {
+    const rows: ExactPoolRow[] = [
+      { id: "x", price: 100, soldAt: "2026-09-10T00:00:00Z", title: "… PSA 10 Gem Mint",
+        gradeCompany: "PSA", gradeValue: 10, cardId: SLUG, hobbyiqCardId: SLUG },
+    ];
+    stampGradeSources(rows);
+    const counts = countGradeSources(rows, countTwinsCollapsed(rows, rows));
+    expect(counts["twins-collapsed"]).toBe(0);
+    expect(gradeSourceNote(counts)).toBeNull();
   });
 });
 

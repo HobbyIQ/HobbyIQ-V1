@@ -25,7 +25,7 @@ import { assessSellerIndependence, MIN_INDEPENDENT_SELLERS } from "./sellerIndep
 import { dedupeSoldComps } from "../portfolioiq/dedupeSoldComps.js";
 import { projectFromLeadingEdge } from "./nextSaleProjection.service.js";
 import { readExactPoolRows, type ExactPoolRow } from "./exactPoolReader.js";
-import { countGradeSources, gradeSourceNote, stampGradeSources, type GradeSourceCounts } from "./gradeSource.js";
+import { countGradeSources, countTwinsCollapsed, emptyGradeSourceCounts, gradeSourceNote, stampGradeSources, type GradeSourceCounts } from "./gradeSource.js";
 import type { ExactPoolRungLabel } from "./fmvRung.js";
 import {
   projectGradeIndex,
@@ -344,7 +344,44 @@ async function fetchPoolRows(
       removed: raw.length - clean.length,
     }));
   }
+  // CF-A-RECONCILED-TWIN-IS-ONE-SALE (R58, twin census 2026-09-16). How many
+  // rows the twin reconciliation just removed — a vendor copy restamped from
+  // its twin's sale title, which put it in the SAME dedupe bucket as that
+  // twin, which the dedupe above then merged. Measured across both steps
+  // because that is what happened: the stamp changes a grade, the dedupe
+  // behind it turns two rows into one.
+  //
+  // Carried on the surviving rows rather than through fetchPoolRows's return
+  // type: it is a fact about the READ, every consumer already passes these
+  // rows around, and the per-tier counter is assembled from exactly the rows
+  // that priced each tier — so the label and the number describe one pool
+  // without threading a second value through four call sites.
+  const twinsCollapsed = countTwinsCollapsed(raw, clean);
+  if (twinsCollapsed > 0) {
+    for (const r of clean) r.twinsCollapsedInRead = twinsCollapsed;
+    console.log(JSON.stringify({
+      event: "grade_source_twins_reconciled_and_merged",
+      source: "unifiedPricing.fetchPoolRows",
+      cardId,
+      hobbyiqCardId,
+      twinsCollapsed,
+      detail: "vendor copies restamped from their twin's sale title, then merged by the 60-minute dedupe",
+    }));
+  }
   return clean;
+}
+
+/** The read's twin-reconciliation count, off whichever rows the caller holds.
+ *  `fetchPoolRows` stamps the same figure on every surviving row, so a tier's
+ *  subset reports the read's number rather than a per-tier recount — the rows
+ *  it would recount from are exactly the ones the dedupe removed. 0 when the
+ *  read merged nothing, which is the overwhelmingly common case. */
+function twinsCollapsedIn(rows: ReadonlyArray<RawCompRow>): number {
+  for (const r of rows) {
+    const n = r.twinsCollapsedInRead;
+    if (typeof n === "number" && Number.isFinite(n) && n > 0) return n;
+  }
+  return 0;
 }
 
 /** Post-filter: exclude self-comps ONLY when the surviving other-pool is
@@ -784,7 +821,7 @@ export async function computeUnifiedPrice(
     windowDays: 180,
     totalSampleCount: 0,
     partitionsRead: 0,
-    gradeSources: { "sale-title": 0, "product-record": 0, "twin-title": 0 },
+    gradeSources: emptyGradeSourceCounts(),
     method: "no-basis",
     confidence: 0,
     computedAt: new Date(nowMs).toISOString(),
@@ -1469,7 +1506,10 @@ export async function computeUnifiedPrice(
     const wMed = weightedMedian(rows, nowMs);
     const trend = computeTrendAndPrediction(rows, wMed, label);
     const gi = trend.gradeIndex ?? null;
-    const tierGradeSources = countGradeSources(rows);
+    // R58: the provenance of THIS tier's grades, plus the read's twin
+    // reconciliation count (stamped on every surviving row, so any tier's
+    // subset reports the same per-read figure).
+    const tierGradeSources = countGradeSources(rows, twinsCollapsedIn(rows));
     gradeCurve.push({
       grade: label,
       gradeCompany: rows[0].gradeCompany,
@@ -1703,7 +1743,7 @@ export async function computeUnifiedPrice(
         .map((r) => (typeof r.cardId === "string" ? r.cardId.trim() : ""))
         .filter((k) => k !== ""),
     ).size,
-    gradeSources: countGradeSources(comps),
+    gradeSources: countGradeSources(comps, twinsCollapsedIn(comps)),
     method: comps.length > 0 ? "weighted-median" : "no-basis",
     confidence: selectedConfidence || Math.min(1, comps.length / 30),
     computedAt: new Date(nowMs).toISOString(),
