@@ -485,10 +485,23 @@ struct CompIQPriceCardIdentity: Codable, Hashable {
     let year: Int?
     let number: String?
     let variant: String?
+    /// CF-CARD-TITLE-NEVER-DOUBLES-THE-YEAR (Drew, 2026-09-06, backend
+    /// PR #1904): the product name with any leading year already removed
+    /// server-side. `set` above is the STORED name and may still lead with
+    /// the year ("2023 Topps Heritage"); this one never does.
+    let setName: String?
+    /// The card title, composed ONCE by the backend
+    /// ("2023 Topps Heritage Mike Trout #74PB-1"). Read this instead of
+    /// joining `year` and `set` yourself — that join is what rendered the
+    /// year twice on the web card page. Nil against an engine older than
+    /// PR #1904, so every reader keeps its existing composition as a
+    /// fallback.
+    let displayName: String?
 
     private enum CodingKeys: String, CodingKey {
         case cardId = "card_id"
         case player, set, release, year, number, variant
+        case setName, displayName
     }
 }
 
