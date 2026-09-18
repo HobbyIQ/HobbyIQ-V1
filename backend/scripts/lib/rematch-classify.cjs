@@ -6826,6 +6826,20 @@ function applyKindOf(result) {
   if (result.subclass === POKEMON_SET_CODE) return POKEMON_SET_CODE;
   if (result.subclass === FINISH_IS_A_PARALLEL) return FINISH_IS_A_PARALLEL;
   if (result.subclass === BASE_EVICTION) return BASE_EVICTION;
+  // THE THREE RULED SUBCLASSES OF 2026-09-14 (R31/R32/R33), for the same
+  // reason as the two trios above -- and this omission is why the terminal R33
+  // wave wrote nothing.
+  //
+  // Their `klass` is IMPROVE, so without a branch here they fall through to
+  // the bare IMPROVE fallback. Under `scope=r33` the driver then arms
+  // R33-TITLE-CARD-NUMBER-WINS, classifies an R33 row, is told its kind is
+  // IMPROVE, finds IMPROVE disarmed, and counts it `not-armed-by-scope:
+  // IMPROVE`. Measured on slot 3 (run 35037780923): 610 R33 rows writable,
+  // the class ARMED by name, `APPLYING candidates 0`, and 4,101 rows held
+  // back under IMPROVE. All 29 terminal slots had the same shape.
+  if (result.subclass === TITLE_FILLS_THE_BLANK) return TITLE_FILLS_THE_BLANK;
+  if (result.subclass === SPLIT_MOVES_TO_THE_NAMED_SIDE) return SPLIT_MOVES_TO_THE_NAMED_SIDE;
+  if (result.subclass === TITLE_CARD_NUMBER_WINS) return TITLE_CARD_NUMBER_WINS;
   if (result.klass === IMPROVE) return IMPROVE;
   return null;
 }
