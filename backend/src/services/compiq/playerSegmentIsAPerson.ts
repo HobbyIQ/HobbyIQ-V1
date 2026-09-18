@@ -77,6 +77,16 @@ const TRAILING_PARTICLES = new Set([
   "mc", "mac", "st", "san", "le", "du", "bin", "ibn", "ter", "ten",
 ]);
 
+/** Function words that are never the first token of a person's name, and that
+ *  arrive here only as debris left over when a PRODUCT's name is stripped:
+ *  "Greats OF the Game Bob Gibson" -> "of bob gibson". Dropped from the FRONT
+ *  only. Deliberately separate from TRAILING_PARTICLES, which is name
+ *  particles (de/la/van/mc) -- a name genuinely ends on one of those when it
+ *  has been truncated, and these are a different claim entirely. */
+const LEADING_PRODUCT_DEBRIS = new Set([
+  "of", "the", "and", "for", "with", "by", "in", "on", "at", "to", "a", "an",
+]);
+
 /** Names and initials that are genuinely one or two characters, so a short
  *  final token is not mistaken for a truncation. */
 const REAL_SHORT_NAMES = new Set([
@@ -406,6 +416,33 @@ function boundName(tokens: string[]): { name: string | null; reason: PlayerSegme
   if (tokens.length >= 2 && TRAILING_PARTICLES.has(last)) {
     return { name: null, reason: "refused-unbounded" };
   }
+  // BEGINS on a particle: the name is what SURVIVED a strip, not a name.
+  //
+  // The mirror of the guard directly above, and measured on the real GotG
+  // rows this module was pointed at:
+  //
+  //     "Greats of the Game Bob Gibson"  -> strips greats/the/game
+  //                                      -> "Of Bob Gibson"        <- minted
+  //
+  // `of` is left over from the PRODUCT's name. No person's name begins with a
+  // lowercase particle, so a leading one is proof the residue is a fragment of
+  // something else -- exactly what the trailing guard concludes from the other
+  // end. Dropping it (rather than refusing the row) recovers the real name,
+  // which is the whole point: `player-bob-gibson` is a card that exists.
+  //
+  // Only LEADING particles go. Interior ones are load-bearing and must
+  // survive: "Elly De La Cruz" and "Vladimir Guerrero Jr" are pinned.
+  //
+  // The list is NOT `TRAILING_PARTICLES`. That set is name particles (de, la,
+  // van, mc) -- the pieces a person's name is genuinely built from, which is
+  // why a name ENDING on one is a truncation. `of` is not one of those; it is
+  // an English preposition that only ever arrives here as debris from a
+  // product's name ("Greats OF the Game"). Adding it to the name-particle set
+  // would be a category error and would change what a trailing `of` means.
+  let start = 0;
+  while (start < tokens.length - 1
+    && (LEADING_PRODUCT_DEBRIS.has(tokens[start]) || TRAILING_PARTICLES.has(tokens[start]))) start++;
+  if (start > 0) tokens = tokens.slice(start);
   // A final token too short to be a name, and not one of the real short ones.
   if (last.length < 3 && !REAL_SHORT_NAMES.has(last)) {
     return { name: null, reason: "refused-unbounded" };
