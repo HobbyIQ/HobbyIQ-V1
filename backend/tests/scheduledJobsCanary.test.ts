@@ -56,6 +56,27 @@ describe("the enumeration — which workflows the canary watches", () => {
     expect(hasScheduleTrigger(inComment)).toBe(false);
   });
 
+  it("the RETIRED Cardsight crawl is really off the clock, and keeps its manual dispatch", () => {
+    // The pins above use synthetic YAML. This one reads the actual file,
+    // because that is the thing that can regress: Cardsight was retired from
+    // matching on 2026-08-16 and taken off the cron in D13, and its last four
+    // scheduled runs (08-26..08-29) all failed on deliberately-missing
+    // secrets. A re-added `schedule:` would put a retired vendor's crawl back
+    // on the clock AND put a permanent red into the scheduled-jobs canary.
+    //
+    // Verified against the live canary run 35380022757: Cardsight is absent
+    // from its breach list entirely, while auto-multiplier-refresh and
+    // sub-raw-inversion-scan-nightly are named — so the enumeration is already
+    // correct and this pin holds it there.
+    const yml = fs.readFileSync(
+      path.join(WORKFLOW_DIR, "cardsight-pricing-nightly.yml"), "utf8");
+    expect(hasScheduleTrigger(yml),
+      "the retired Cardsight crawl must stay off the cron").toBe(false);
+    // Manual re-crawl stays available — retiring the schedule is not retiring
+    // the capability.
+    expect(yml).toMatch(/^\s*workflow_dispatch:/m);
+  });
+
   it("a schedule under a DIFFERENT top-level key is not a trigger", () => {
     const yml = "name: x\non:\n  workflow_dispatch:\njobs:\n  schedule:\n    runs-on: ubuntu-latest\n";
     expect(hasScheduleTrigger(yml)).toBe(false);
