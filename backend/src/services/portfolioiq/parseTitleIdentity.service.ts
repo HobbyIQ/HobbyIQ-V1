@@ -3832,6 +3832,35 @@ function inferFamilySetKeyFromTitle(title: string, cardNumber?: string | null): 
   if (/topps\s+chrome\s+logofractor|\blogofractor\b/i.test(t)) return "Topps Chrome Logofractor";
   if (/topps\s+chrome\s+platinum/i.test(t)) return "Topps Chrome Platinum";
   if (/topps\s+chrome\s+update(\s+series)?/i.test(t)) return "Topps Chrome Update Series";
+  // CF-CHROME-EDITION-IS-THE-PRODUCT (R64, Drew 2026-09-18). Two more Chrome
+  // editions the reader could not see, found by the Witt #221 split: every
+  // sale naming them fell to the bare line below and pooled with flagship
+  // Chrome.
+  //
+  //   "2022 Topps Chrome Ben Baller Bobby Witt Jr ... SP 221"   -> topps-chrome
+  //   "2022 Topps Chrome Sonic - Image Variation #221 ..."      -> topps-chrome
+  //
+  // MEASURED: one partition (#221 image-variation-sonic) held 15 rows naming
+  // FOUR different cards, with Sonic raw at $150-250 against Refractor PSA 10s
+  // at $975+. Two more partitions mix the same way (#128 Cruz, #200 Trout).
+  //
+  // SONIC AND SONIC LITE ARE ONE PRODUCT, verified against two sources rather
+  // than assumed: Cardboard Connection's "2022 Topps Chrome Sonic" URL serves
+  // the Sonic LITE page ("Topps Chrome Sonic LITE bursts into hobby shops for
+  // the first time", 220-card base, SPs at 221-225), and checklistcenter names
+  // it "2022 Topps Chrome Sonic Lite Baseball" with a 10-card Base Image
+  // Variation Set at 1:6399 -- cards 35, 83, 113, 128, 133, 221, 222, 223,
+  // 224, 225. That 10-at-1:6399 is exactly BCP's "Gimmicks | 10 | - | 1:6399"
+  // from Ruling 23, so all three sources describe one release. The catalog
+  // agrees: `topps-chrome-sonic-lite` holds 6,293 checklist-backed rows while
+  // `topps-chrome-sonic` holds ZERO. So a bare "Sonic" resolves to Sonic Lite
+  // -- not by collapsing a distinct product into it, but because there is no
+  // distinct product to collapse.
+  //
+  // Ben Baller is tested before Sonic only because no title states both; the
+  // order is not load-bearing and neither pattern subsumes the other.
+  if (/topps\s+chrome\s+ben\s+baller|\bben\s+baller\b/i.test(t)) return "Topps Chrome Ben Baller";
+  if (/topps\s+chrome\s+sonic|\bsonic\s+lite\b/i.test(t)) return "Topps Chrome Sonic Lite";
   if (/topps\s+chrome/.test(t)) return "Topps Chrome";
   // CF-FLEER-STICKERS (Drew, 2026-07-29). 1986 Fleer Stickers (basketball)
   // is a distinct product from base 1986 Fleer — Michael Jordan #8 Sticker
