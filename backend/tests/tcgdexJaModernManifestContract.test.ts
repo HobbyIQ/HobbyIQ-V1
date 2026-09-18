@@ -22,8 +22,20 @@ import { describe, it, expect } from "vitest";
 import * as fs from "node:fs";
 import * as path from "node:path";
 
+import {
+  POKEMON_EN_SET_CODES,
+  POKEMON_JA_SET_CODES,
+} from "../src/services/catalog/pokemonSetCodes.js";
+
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { productOf } = require("../scripts/ingest-checklist-csv-to-catalog.cjs");
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { jaSetKeyFor } = require("../scripts/lib/tcgdex-ja-set-key.cjs");
+
+/** Derived from the committed tables, never a hand list — see the R65 pin. */
+const EN_CODES_NAME: Readonly<Record<string, string>> = POKEMON_EN_SET_CODES;
+const EN_CODES = new Set(Object.keys(POKEMON_EN_SET_CODES));
+const JA_CODES = new Set(Object.keys(POKEMON_JA_SET_CODES));
 
 const DIR = path.join(__dirname, "..", "data", "checklists", "tcgdex-ja-modern");
 const csvs = fs.readdirSync(DIR).filter((f) => f.endsWith(".csv")).sort();
@@ -61,16 +73,72 @@ describe("the tcgdex-ja modern lane ships the sidecar its ingest reads", () => {
     }
   });
 
-  it("the manifest setKey is the BARE OFFICIAL CODE and productOf() keeps it", () => {
+  it("the manifest setKey is the BARE OFFICIAL CODE — or the ruled ja- key — and productOf() keeps it", () => {
     for (const csv of csvs) {
       const manifest = JSON.parse(
         fs.readFileSync(path.join(DIR, csv.replace(/\.csv$/, ".manifest.json")), "utf8"),
       );
       const p = productOf(path.join(DIR, csv));
       expect(p.setKey).toBe(manifest.setKey);
-      expect(p.setKey).toBe(String(manifest.tcgdexId).toLowerCase());
+      // R5/#1959: the bare code is the key EXCEPT where an English set owns it,
+      // in which case the ruled `ja-<code>` is. `String(tcgdexId).toLowerCase()`
+      // alone is what put "Japanese ロケット団の栄光" on the English `sv10` key,
+      // so the expectation routes through the ruling rather than the raw id.
+      expect(p.setKey).toBe(jaSetKeyFor(manifest.tcgdexId, EN_CODES));
       expect(p.setKey).not.toMatch(/^swsh/);
       expect(p.setKey).not.toMatch(/^japanese-/);
+    }
+  });
+
+  /**
+   * CF-A-STAGED-MANIFEST-MAY-NOT-CLAIM-AN-ENGLISH-KEY (R65, Drew 2026-09-18).
+   *
+   * #1971 fixed the GENERATOR -- `jaSetKeyFor` returns `ja-sv10` -- but a fix to
+   * the writer does not rewrite what the writer already wrote. The staged
+   * `2025-sv10-pokemon.manifest.json` was emitted 2026-09-04, three days before
+   * that fix landed on 09-07, and went on declaring `"setKey": "sv10"`: Glory of
+   * Team Rocket addressed to English Destined Rivals, the one-card-one-row
+   * defect the ruling exists to prevent.
+   *
+   * So the pin is over the ARTIFACTS ON DISK, not the function. The two are
+   * different questions and only the first one caught this.
+   *
+   * THE EN-OWNED SET IS DERIVED FROM THE COMMITTED TABLES, never a hand list: a
+   * hand list is a third copy to drift, and the whole defect is two copies
+   * already disagreeing.
+   */
+  it("no staged JA manifest declares a setKey an ENGLISH set owns", () => {
+    const offenders: string[] = [];
+    for (const csv of csvs) {
+      const manifest = JSON.parse(
+        fs.readFileSync(path.join(DIR, csv.replace(/\.csv$/, ".manifest.json")), "utf8"),
+      );
+      const key = String(manifest.setKey ?? "").trim().toLowerCase();
+      // An EN-owned code that is NOT already the ruled ja- spelling is the defect.
+      if (EN_CODES.has(key) && !JA_CODES.has(key)) {
+        offenders.push(`${csv}: setKey "${key}" is the English key for "${EN_CODES_NAME[key]}"`);
+      }
+    }
+    expect(offenders, offenders.join("\n")).toEqual([]);
+  });
+
+  /**
+   * The filename is a FALLBACK KEY, so it has to move with the manifest.
+   *
+   * productOf() parses the stem when a manifest is missing or unreadable, and
+   * `2025-sv10-pokemon` parses cleanly to setKey `sv10`. A corrected manifest
+   * beside an uncorrected filename therefore still mints on the English key the
+   * moment the sidecar is lost -- silently, exactly as the MUTATION above shows.
+   */
+  it("the staged FILENAME carries the same ruled key as its manifest", () => {
+    for (const csv of csvs) {
+      const manifest = JSON.parse(
+        fs.readFileSync(path.join(DIR, csv.replace(/\.csv$/, ".manifest.json")), "utf8"),
+      );
+      const stem = csv.replace(/\.csv$/, "");
+      expect(stem, `${csv} stem must be <year>-<setKey>-pokemon`).toBe(
+        `${manifest.year}-${manifest.setKey}-pokemon`,
+      );
     }
   });
 

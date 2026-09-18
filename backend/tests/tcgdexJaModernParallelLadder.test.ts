@@ -23,6 +23,13 @@ import { describe, expect, it } from "vitest";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { rowsForCard, csvLine, MODERN_ID, NON_PARALLEL_RARITY } = require("../scripts/scrape-tcgdex-ja-modern.cjs");
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { jaSetKeyFor } = require("../scripts/lib/tcgdex-ja-set-key.cjs");
+
+import { POKEMON_EN_SET_CODES } from "../src/services/catalog/pokemonSetCodes.js";
+
+/** Derived from the committed table, never a hand list (R65). */
+const EN_CODES = new Set(Object.keys(POKEMON_EN_SET_CODES));
 
 /** The dex bridge in miniature — real entries, same shape as the JSON. */
 const BRIDGE: Record<string, string> = { "25": "pikachu", "196": "espeon", "406": "budew" };
@@ -210,12 +217,21 @@ describe("the 52 staged sets are drivable from the universe manifest", () => {
     }
   });
 
-  it("the driver verifies by the BARE setKey the manifest stages", () => {
+  it("the driver verifies by the setKey the manifest stages — bare, or the ruled ja- key", () => {
     // setKeyFor() lowercases the set id off the sourceRef; the manifest stages
     // the same string. If these ever diverge, a clean ingest records `failed`.
+    //
+    // EXCEPT where an English set owns that code (R5/#1959): the manifest then
+    // stages the ruled `ja-<code>` and the lowercased sourceRef tail is the
+    // ENGLISH key, so the two are SUPPOSED to differ. Asserting raw equality
+    // here is what kept "Japanese ロケット団の栄光" pinned to English `sv10`.
+    //
+    // The verify still holds because setKeyCandidates() UNIONS the manifest's
+    // stated key with the reconstructed one — measured ["ja-sv10","sv10"] — so
+    // the driver queries both and no clean ingest records a false `failed`.
     for (const m of manifests) {
       const fromRef = String(m.sourceUrl).split("/").pop()!.toLowerCase();
-      expect(fromRef).toBe(m.setKey);
+      expect(m.setKey).toBe(jaSetKeyFor(fromRef, EN_CODES));
     }
   });
 });
