@@ -3,8 +3,8 @@
  "source": "rematch IMPROVE fleet census artifacts, 32/32 slots, 2026-09-13/14",
  "measuredAt": "2026-09-15",
  "measuredUnder": {
-  "stamp": "d487da732699d+2026-09-06.a",
-  "derivation": "d487da732699d",
+  "stamp": "da01b49d41219+2026-09-06.a",
+  "derivation": "da01b49d41219",
   "contract": "2026-09-06.a",
   "commit": "b5ab5f745788d88168af9e339fc6be7f8c8de7a0",
   "note": "Re-labelled by scripts/rebaseline-i9-reference.cjs --relabel: a derivation input changed, so the stamp moved, but the measurement did not. The four class shares are copied unchanged from the superseded reference; only a --from run may move them."
@@ -131,8 +131,8 @@
   }
  },
  "supersedes": {
-  "stamp": "dc96174db9673+2026-09-06.a",
-  "derivation": "dc96174db9673",
+  "stamp": "d487da732699d+2026-09-06.a",
+  "derivation": "d487da732699d",
   "measuredAt": "2026-09-15",
   "classifiedTotal": 18352932,
   "weighted": {
@@ -142,8 +142,8 @@
    "UNDERIVABLE": 0.073416
   },
   "reason": "relabel-derivation-input-changed",
-  "relabelledAt": "2026-09-18T21:58:52.486Z",
-  "relabelledOnCommit": "c7aa7c18971366c2e5df858f16de05db0f627105"
+  "relabelledAt": "2026-09-18T22:29:28.386Z",
+  "relabelledOnCommit": "ba063f1ccea7d123b715a1333125cd92cb7a0267"
  },
  "slots": [
   {

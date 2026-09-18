@@ -45,6 +45,8 @@
 //
 // This module has ZERO side effects. Import + call is safe anywhere.
 
+import { playerSegmentIsAPerson } from "../compiq/playerSegmentIsAPerson.js";
+
 import { chromeRefractorSuffixForVariation, normalizeVariationSlug } from "../catalog/variationVocabulary.js";
 import { POKEMON_SET_ALIASES } from "../catalog/pokemonSetAliases.js";
 import { YUGIOH_SET_ALIASES, MTG_SET_ALIASES } from "../catalog/tcgSetAliases.js";
@@ -197,8 +199,87 @@ export function isUnparsedCardNumber(raw: string | null | undefined): boolean {
 /** The cardNumber segment for an unnumbered card, or null when there is no
  *  player to identify it by — in which case the card has no identity at all
  *  and slugGuard must refuse it. */
-export function unnumberedCardSegment(playerName: string | null | undefined): string | null {
-  const p = slugify(String(playerName ?? ""));
+/**
+ * A MULTI-WORD NON-NUMERIC FRAGMENT IS NEVER A CARD NUMBER (2026-09-18).
+ *
+ * THE DEFECT. This function slugified WHATEVER STRING IT WAS HANDED. The
+ * caller passes `components.playerName`, which on a vendor row is a field
+ * somebody else filled in, so a product fragment that arrived in it became a
+ * card number:
+ *
+ *     "The Game Maury Wills"           -> player-the-game-maury-wills
+ *     "Greats of the Game Bob Gibson"  -> player-greats-of-the-game-bob-gibson
+ *
+ * Both are addresses no checklist can ever match, and both SPLIT the pool for
+ * a card that already has a correct address (`player-maury-wills`). The
+ * `player-` prefix did its job -- it never collided with a real number -- but
+ * nothing ever asked whether what followed it was a PERSON.
+ *
+ * THE FIX IS NOT A NEW HEURISTIC. `playerSegmentIsAPerson` already answers
+ * exactly this question, against the checklist corpus plus the finish/product
+ * vocabulary, and is already the authority everywhere else the player is
+ * derived. It was simply never wired into the one place that MINTS an address
+ * out of the name. So this is a chokepoint, not a rule:
+ *
+ *     "The Game Maury Wills"  -> "Maury Wills"  -> player-maury-wills
+ *     "Greats of the Game"    -> null           -> NO SEGMENT
+ *
+ * BLANK MEANS UNKNOWN, NEVER A GUESS. When the predicate cannot find a person,
+ * this returns null and `computeHobbyIqCardId` throws UNDERIVABLE -- the same
+ * refusal an unnumbered card with no player has always produced. An
+ * unpriceable row is recoverable; a row filed under a fabricated address
+ * splits a real card's pool and is not.
+ *
+ * The predicate is passed the row's own (year, setKey) when the caller has
+ * them, because "Chrome" is a product word on topps-chrome and a finish word
+ * on topps -- the same per-product test the rest of the repo uses.
+ */
+export function unnumberedCardSegment(
+  playerName: string | null | undefined,
+  ctx: { year?: number | null; setKey?: string | null } = {},
+): string | null {
+  const raw = String(playerName ?? "").trim();
+  if (!raw) return null;
+
+  // THE SUBJECT OF AN UNNUMBERED CARD IS NOT ALWAYS A PERSON, and that is the
+  // narrow point this guard has to respect. T206 numbers nothing, and its real
+  // cards include `Checklist 1-154`, `Checklist 547-653`, `1918 - Red Sox`.
+  // Those are DISTINCT CARDS with their own pools; refusing them would leave
+  // them unpriceable forever, which is the very harm CF-PLAYER-IS-THE-NUMBER
+  // was written to end. (Caught by playerIsTheNumber's digit-bearing pin --
+  // the first draft of this guard blanked all four.)
+  //
+  // So the predicate is used SUBTRACTIVELY, never as a veto:
+  //
+  //   it finds a person   -> use THAT name, product debris removed
+  //   it finds none       -> keep the raw subject, which is a card either way
+  //
+  // What that buys is the defect and nothing else: "The Game Maury Wills"
+  // becomes `player-maury-wills` because a person WAS found under the product
+  // words. "Checklist 1-154" keeps its own address because no person was
+  // claimed for it and none is needed.
+  let subject = raw;
+  try {
+    // PlayerSegmentContext takes (year, setKey) -- the pair isProductWord is
+    // keyed on. Sport is not part of that test, so it is not passed.
+    const verdict = playerSegmentIsAPerson(raw, {
+      year: ctx.year ?? undefined,
+      setKey: ctx.setKey ?? undefined,
+    });
+    // Only ACCEPT a correction that is a strict simplification of what we were
+    // given -- i.e. the predicate recovered a name from inside the string. A
+    // verdict that invents tokens the subject never had is not a correction.
+    if (verdict.player && raw.toLowerCase().includes(verdict.player.toLowerCase())) {
+      subject = verdict.player;
+    }
+  } catch {
+    // The predicate reads a corpus file. If it cannot load, keep the raw
+    // subject rather than changing any address -- a corpus outage must never
+    // move a card.
+    subject = raw;
+  }
+
+  const p = slugify(subject);
   return p ? `player-${p}` : null;
 }
 
@@ -2478,7 +2559,12 @@ export function computeHobbyIqCardId(components: HobbyIqCardIdComponents): strin
     ? normalizePokemonCardNumber(components.cardNumber, components.pokemonChecklistNumberWidth ?? null)
     : components.cardNumber;
   const cardNumber = unnumbered
-    ? (unnumberedCardSegment(components.playerName) ?? normalizeCardNumber(statedCardNumber))
+    // The row's own (sport, year, setKey) go with the name: "Chrome" is a
+    // product word on topps-chrome and a finish word on topps, and the
+    // person-test is per-product for exactly that reason.
+    ? (unnumberedCardSegment(components.playerName, {
+        year: components.year ?? null, setKey: components.setKey ?? null,
+      }) ?? normalizeCardNumber(statedCardNumber))
     : normalizeCardNumber(statedCardNumber);
   // An unnumbered card with no player to name it has no identity either. The
   // old code let `normalizeCardNumber("nno")` through as the literal `nno`,
