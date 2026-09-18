@@ -36,10 +36,16 @@ describe("CF-A-BARE-COLOUR-IS-WHATEVER-ITS-OWN-CHECKLIST-SAYS", () => {
       "2025 Donruss Elite Football #10 Orange",
       { year: 2025, setKey: "donruss-elite" },
     )).toBe("Orange");
+    // STILL a tie after the insert-set split (2026-09-15), and still for a
+    // real reason. The product's own green rungs are "Green Disco" and
+    // "Status Green" -- both two words -- plus "Aspirations Lime Green". Two
+    // names at the shortest length is exactly the ambiguity this module
+    // refuses to resolve, and both survivors are base rungs, so the split did
+    // not touch it.
     expect(bareColourAliasFromChecklist(
       "2025 Donruss Elite Football #9 Green",
       { year: 2025, setKey: "donruss-elite" },
-    )).toBeNull(); // donruss-elite has 2025 "Green Disco" AND several "<Insert> Green" ties -- ambiguous, see below
+    )).toBeNull();
     expect(bareColourAliasFromChecklist(
       "2024 Donruss Elite Football #124 Black",
       { year: 2024, setKey: "donruss-elite" },
@@ -119,6 +125,14 @@ describe("CF-A-BARE-COLOUR-IS-WHATEVER-ITS-OWN-CHECKLIST-SAYS", () => {
   it("2024 panini-certified Gold ties between the Mirror line and a same-length insert name", () => {
     // "Mirror Gold" and "Gold Team" are both two-word names built from "gold" --
     // a real ambiguity the checklist itself carries, not a defect to paper over.
+    //
+    // STILL TRUE after the insert-set split (2026-09-15), and worth saying why.
+    // "Gold Team" IS an insert set, so in principle the split retires this tie
+    // -- but this product's source labels its whole base ladder with insert
+    // categories (100 base rows against 6,929 insert rows), so the split
+    // REFUSES itself here rather than stripping the product to nothing, and
+    // the ladder stays flat. See splitInsertSets's floor and this product's
+    // own `suspectInsertRoots`.
     expect(bareColourAliasFromChecklist(
       "2024 Panini Certified Football #71 Gold",
       { year: 2024, setKey: "panini-certified" },

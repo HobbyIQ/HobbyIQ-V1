@@ -234,6 +234,8 @@ interface CorpusIndex {
    * word recurs across products; a person's name appears once.
    */
   finishWords: Set<string>;
+  /** The same floor, counted among POKEMON products only -- see loadCorpus. */
+  pokemonFinishWords: Set<string>;
   /**
    * Every setKey in the corpus, as its word list -- the evidence
    * `productWordsFromTitle` reads when there is no setKey to suppress against.
@@ -441,11 +443,36 @@ function loadCorpus(): void {
         }
       }
     }
+    // THE FLOOR IS COUNTED WITHIN A DOMAIN, NOT ACROSS ALL OF THEM
+    // (2026-09-15, corpus regenerate).
+    //
+    // The floor asks "is this word a finish word, or one product's private
+    // insert name" and answers it by product coverage. Counted globally, a
+    // word that is ubiquitous in ONE domain gets promoted into every other
+    // domain's vocabulary.
+    //
+    // Measured when the 33 Pokemon JA products were added: `reverse` went
+    // from 1 product to 12 -- every one of them Pokemon, all spelling
+    // "Reverse Holo" -- and crossed the floor. The sports parser then read
+    // "2021 Panini Prizm Football #1 Reverse Silver" as stating a finish,
+    // which is exactly the cross-domain leak
+    // CF-A-FINISH-IS-A-CARD-LINE's Pokemon gate exists to prevent. The gate
+    // could not help: it guards which READER runs, while this vocabulary is
+    // consulted underneath it.
+    //
+    // So a word qualifies when it clears the floor among POKEMON products or
+    // among SPORTS products, and it is admitted only to the vocabulary of the
+    // domain(s) where it did. `Reverse Holo` stays a Pokemon finish and stops
+    // being a sports one, with no hand list and no new gate.
+    const isPokemonKey = (k: string): boolean => k.startsWith("pokemon|");
     const finishWords = new Set<string>();
+    const pokemonFinishWords = new Set<string>();
     for (const [w, prods] of wordProducts) {
-      if (prods.size < FINISH_WORD_PRODUCT_FLOOR) continue;
       if (STOPWORDS.has(w)) continue;
-      finishWords.add(w);
+      let sports = 0, pokemon = 0;
+      for (const k of prods) (isPokemonKey(k) ? pokemon++ : sports++);
+      if (sports >= FINISH_WORD_PRODUCT_FLOOR) finishWords.add(w);
+      if (pokemon >= FINISH_WORD_PRODUCT_FLOOR) pokemonFinishWords.add(w);
     }
 
     // The corpus's setKeys, as word lists. A setKey of one word is skipped:
@@ -493,13 +520,13 @@ function loadCorpus(): void {
     // `globalNames` is the de-duplicated set of every usable name across all
     // 627 products, so this loop is the whole index and costs one pass.
     for (const name of globalNames) words(name);
-    _index = { byProduct, globalNames, productsPerName, finishWords, setKeyWordSets };
+    _index = { byProduct, globalNames, productsPerName, finishWords, pokemonFinishWords, setKeyWordSets };
   } catch {
     // The corpus is a build artifact copied into dist/. If it is absent this
     // module answers null for everything and the caller keeps "Base" -- the
     // pre-existing behaviour. Degrade, never throw.
     _loadFailed = true;
-    _index = { byProduct: new Map(), globalNames: new Set(), productsPerName: new Map(), finishWords: new Set(), setKeyWordSets: [] };
+    _index = { byProduct: new Map(), globalNames: new Set(), productsPerName: new Map(), finishWords: new Set(), pokemonFinishWords: new Set(), setKeyWordSets: [] };
   }
 }
 

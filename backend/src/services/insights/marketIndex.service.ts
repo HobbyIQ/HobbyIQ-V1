@@ -502,6 +502,20 @@ export async function fetchSales(
       { name: "@from", value: from },
       { name: "@to", value: to },
     ],
+  }, {
+    // CF-A-DEDUP-TIMEOUT-IS-NOT-A-MISS (Fable, 2026-09-16). 15 s per PAGE —
+    // this is a paged sweep, so the signal bounds each round trip, not the
+    // whole walk. A background writer with no request context, and one of the
+    // remaining unbounded callers behind the 60 s failure class.
+    //
+    // ON TIMEOUT: `fetchNext` throws and the caller's error handling applies —
+    // the index is NOT published from a partial sweep. That is the right
+    // failure: the market index carries the last PUBLISHED level when a run
+    // cannot complete (project_market_index_thresholds_ruling), so a missing
+    // run is already a supported state, whereas an index computed from half a
+    // window would be a wrong number published as a right one.
+    maxItemCount: 1000,
+    abortSignal: AbortSignal.timeout(15_000),
   });
   const rows: CompRow[] = [];
   while (iter.hasMoreResults()) {

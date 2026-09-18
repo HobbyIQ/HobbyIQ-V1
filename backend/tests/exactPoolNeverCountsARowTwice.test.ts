@@ -16,9 +16,13 @@
  * disjuncts still satisfies the WHERE clause exactly once, so Cosmos returns
  * it once and the pool holds one copy. There is no self-join and no UNION ALL
  * anywhere in this query, so no in-process dedupe by `id` is required to make
- * one pool correct — and none is possible here regardless, because the
- * projection does not even select `c.id` (asserted below, so a future
- * projection change cannot quietly invalidate the reasoning that follows).
+ * one pool correct.
+ *
+ * (REVISITED 2026-09-15, R58. This half originally rested on the projection
+ * not selecting `c.id` at all. It now does — the grade-source classifier needs
+ * to tell one row from another so a row is never its own twin — so the test
+ * below pins the invariant DIRECTLY instead of through that proxy: the reader
+ * adds no dedupe pass and drops nothing. The conclusion is unchanged.)
  *
  * HALF 2 — ACROSS TWO POOL READS, THE SAME ROW IS COUNTED IN BOTH.
  * This is the actual damage and it is NOT a dedupe bug. When the two fields
@@ -151,14 +155,33 @@ describe("#1919 — one row is never counted twice WITHIN a single pool read", (
     expect(q.match(/\bFROM\b/gi) ?? []).toHaveLength(1);
   });
 
-  it("the projection does not select id — so no reader-side dedupe by id exists", async () => {
-    // This is an ASSERTION OF FACT that the census reasoning rests on, not a
-    // preference: a dedupe by id is impossible on rows that carry no id. If a
-    // future change adds `c.id` to the projection intending to dedupe, this
-    // test fails and forces the reasoning above to be revisited.
-    const { readExactPoolRows } = await loadReaderOver([SPLIT_ROW]);
-    await readExactPoolRows({ cardId: A, hobbyiqCardId: null, windowDays: 90 });
-    expect(String(captured.query ?? "")).not.toContain("c.id");
+  it("no reader-side dedupe by id exists — the reader returns what the query returned", async () => {
+    // REVISITED 2026-09-15 (R58, grade-source provenance), exactly as the
+    // header invited: "if a future change adds `c.id` to the projection
+    // intending to dedupe, this test fails and forces the reasoning above to
+    // be revisited."
+    //
+    // `c.id` IS now projected — and NOT to dedupe. R58's twin lookup needs to
+    // tell one row from another (a row must never be its own twin) when a
+    // CardHedge product-record grade is checked against a ch-fill copy that
+    // carries a grader token in its title. That is a classification concern
+    // in the ENGINE, downstream of this reader.
+    //
+    // The census reasoning is untouched and both halves still hold: the OR is
+    // still a predicate over documents rather than a join (pinned above), so
+    // one read still returns one copy; and the cross-pool double-count is
+    // still a STORED-ROW defect whose repair belongs in the data, not here.
+    //
+    // So the assertion now pins the thing that actually mattered — that this
+    // reader adds no dedupe pass of its own — rather than the proxy for it.
+    // A reader-side dedupe would have to drop rows; this one never does.
+    const { readExactPoolRows } = await loadReaderOver([SPLIT_ROW, { ...SPLIT_ROW }]);
+    const rows = await readExactPoolRows({ cardId: A, hobbyiqCardId: null, windowDays: 90 });
+    // Two documents in, two documents out: the reader collapses nothing, even
+    // when the rows are indistinguishable.
+    expect(rows).toHaveLength(2);
+    const q = String(captured.query ?? "");
+    expect(q.toUpperCase()).not.toContain("DISTINCT");
   });
 
   it("duplicate union keys are collapsed before they reach the query", async () => {

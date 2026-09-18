@@ -956,6 +956,39 @@ export const PRODUCT_SET_KEYS: ReadonlyArray<ProductSetKey> = [
   // (`panini-contenders-optic-<insert>`), measured the same way the 53 Optic
   // keys were.
   P("panini-contenders-optic", { family: "panini-contenders", parent: "panini-contenders" }),
+  // R53(ii) (Drew, 2026-09-15): SELECT'S TIERS ARE THEIR OWN CARD SETS.
+  //
+  // Panini Select prints its base set in named tiers -- Concourse, Premier
+  // Level, Field Level. The question the ruling turned on is whether a tier is
+  // a PARALLEL of one checklist or a card set of its own, and the answer is in
+  // the numbering. Measured read-only on card_catalog, 2026-09-15:
+  //
+  //   baseball 2023   concourse 100 + premier level 100 = 200 distinct numbers
+  //                   ZERO shared numbers -- the tiers partition the set
+  //   baseball 2025   likewise, 200 distinct, zero overlap
+  //   baseball 2024   concourse 100, premier level 100, but only 100 distinct
+  //                   numbers: all 100 are SHARED, and 36 of them name a
+  //                   DIFFERENT PLAYER in each tier --
+  //                     #21  Rhett Lowder    vs  Homer Bush Jr.
+  //                     #10  Kyle Manzardo   vs  Paul Skenes
+  //                     #98  Zach DeLoach    vs  Robert Hassell
+  //
+  // That is the whole argument. If a tier were a finish, #10 would be the same
+  // card in both; it is not. Two different players at one number is two cards,
+  // so the tier rides the setKey axis, not the parallel axis -- and on the
+  // parallel axis those 36 pairs would collide into one id and one pool.
+  //
+  // 24,505 checklist-backed rows carry a tier name today (baseball 2023/2024/
+  // 2025 and soccer 2025 Field Level), all on the bare `panini-select` key.
+  // Registration makes the keys addressable: like every other specialisation
+  // under a family catch-all, an unregistered `panini-select-concourse`
+  // normalizes straight back to `panini-select`.
+  //
+  // The UNTIERED rows stay where they are. This registers the destinations; it
+  // moves nothing.
+  ...["panini-select-concourse", "panini-select-premier-level",
+    "panini-select-field-level"].map((k) =>
+    P(k, { family: "panini-select", parent: "panini-select" })),
   // NBA HOOPS is a Panini product spelled by its CHECKLIST (Drew 2026-09-05).
   // It stays a child of `panini` — the family link is what lets the matcher
   // widen — but the KEY is the bare one, because `nba-hoops` holds 26,355

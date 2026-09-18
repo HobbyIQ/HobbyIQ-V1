@@ -59,7 +59,71 @@ export interface ExactPoolRow {
    *  majority of rows, which is exactly what makes the basis `row-count`
    *  rather than a silent claim of independence. */
   sellerHandle?: string | null;
+  // ── CF-A-GRADE-NAMES-ITS-SOURCE (R58 as amended, Drew 2026-09-15) ─────
+  //
+  // Projected so the engine can say WHERE each row's grade came from. The
+  // census (10,128 graded rows) found 5.9% carry a grade that traces only
+  // to the CardHedge PRODUCT record — the sale's own title says nothing
+  // about a grade ("1992 Bowman Baseball #302 Base"). Where a ch-fill twin
+  // of such a row exists, it agreed with the stored grade 126 times out of
+  // 126, so the amended ruling LABELS these rather than dropping them.
+  //
+  // `title` carries the grader token when the sale had one; `id` identifies
+  // a row so a twin can be told apart from the row itself. Neither is
+  // persisted by this PR — the stamp lives on the reader's projection.
+  title?: string | null;
+  id?: string | null;
+  // ── The identity keys the row was found under ────────────────────────
+  //
+  // ONE declaration, serving both rulings — they need the same two fields
+  // for the same underlying reason (knowing WHERE a row came from, not just
+  // what it says), so declaring it twice is a TS2300 duplicate, not a merge
+  // that keeps both sides.
+  //
+  // CF-A-SELF-COMP-WEARS-EVERY-SOURCES-NAME (R59):
+  //   1. a vendor CLONE of the owner's own sale carries no
+  //      contributorUserId, so it is matched on (identity, soldAt, price)
+  //      against the tagged row instead — see applySelfCompRule;
+  //   2. the basis reports how many partitions actually returned rows, so
+  //      `id=cardId+hobbyiqCardId` can no longer imply a single-sided read
+  //      when the query swept two partitions.
+  //
+  // CF-A-GRADE-NAMES-ITS-SOURCE (R58): both are needed to scope the twin
+  // lookup to the row's own partition or its paired partition (vendor
+  // cardId <-> hiq slug) — the census found 3 false "disagreements" when
+  // the search was unscoped, every one a price/time coincidence between
+  // unrelated cards.
+  cardId?: string | null;
+  hobbyiqCardId?: string | null;
+  // ── Stamped by the engine, never read from Cosmos ─────────────────────
+  /** Where this row's grade came from. Absent on ungraded rows. */
+  gradeSource?: GradeSource;
+  /** Set when `gradeSource` is "twin-title" and the twin's token DISAGREED
+   *  with the stored grade: the twin's grade won. Carries what was replaced,
+   *  so the override is auditable rather than silent. */
+  gradeOverriddenFrom?: string | null;
+  /** CF-A-RECONCILED-TWIN-IS-ONE-SALE (R58, twin census 2026-09-16). How many
+   *  vendor copies this READ reconciled to a twin's sale title and then
+   *  merged away via the existing dedupe. Stamped identically on every
+   *  surviving row of the read, so any subset of them reports the same
+   *  per-read figure; absent when the read merged none. */
+  twinsCollapsedInRead?: number;
 }
+
+/**
+ * Where a row's grade came from (R58 as amended).
+ *
+ *   sale-title      a grader token was parsed from the sale's OWN title —
+ *                   the sale itself is the evidence;
+ *   product-record  the grade traces to the CardHedge product fields and
+ *                   the title names no grader. It STAYS in the graded tier
+ *                   (the census found such grades reliable where checkable)
+ *                   but the basis says so;
+ *   twin-title      the row's own title named nothing, but its twin — the
+ *                   same sale ingested under another id — carried a token,
+ *                   and the twin's grade is what stands.
+ */
+export type GradeSource = "sale-title" | "product-record" | "twin-title";
 
 let _container: Container | null = null;
 function getContainer(): Container | null {
@@ -163,7 +227,11 @@ export async function readExactPoolRows(input: {
   hiqIds.forEach((v, i) => params.push({ name: `@hiq${i === 0 ? "" : i}`, value: v }));
   try {
     const { resources } = await cont.items.query<ExactPoolRow>({
-      query: `SELECT c.price, c.soldAt, c.gradeCompany, c.gradeValue, c.priceAnomaly, c.contributorUserId, c.source, c.sellerHandle FROM c WHERE ${parts.join(" AND ")}`,
+      // R58's superset: it already carries R59's `c.cardId, c.hobbyiqCardId`
+      // and adds `c.title, c.id`, without which the grade-source classifier
+      // has nothing to parse a grader token from and no way to tell a row
+      // from its own twin.
+      query: `SELECT c.price, c.soldAt, c.gradeCompany, c.gradeValue, c.priceAnomaly, c.contributorUserId, c.source, c.sellerHandle, c.title, c.id, c.cardId, c.hobbyiqCardId FROM c WHERE ${parts.join(" AND ")}`,
       parameters: params,
     }, { maxItemCount: 500 }).fetchAll();
     const rows = resources || [];

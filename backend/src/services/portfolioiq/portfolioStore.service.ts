@@ -3088,6 +3088,22 @@ type EstimateGateOutcome =
   | { outcome: "priced-from-exact-pool"; holding: PortfolioHolding; blockingId: string; canonical: number }
   | { outcome: "withheld"; holding: PortfolioHolding; blockingId: string; cleared: boolean };
 
+/**
+ * R59 item 7: how many partitions actually answered, for the basis `id=`.
+ *
+ * `id=` names the identity ATTEMPT, and attempt 1 (`hobbyiqCardId`) sets both
+ * keys to the slug and is read WITHOUT a partitionKey — a cross-partition OR.
+ * On Rivera 1992 Bowman #302 the basis said `id=hobbyiqCardId` while the rows
+ * came from the slug partition AND the vendor-id partition, every row of which
+ * carries the slug on `hobbyiqCardId`. Empty when the engine reported nothing
+ * (older cached results), so the basis simply reads as it did before.
+ */
+function partitionsReadSuffix(u: { partitionsRead?: number }): string {
+  const n = u.partitionsRead;
+  if (typeof n !== "number" || !Number.isFinite(n) || n <= 0) return "";
+  return `(${n} partition${n === 1 ? "" : "s"})`;
+}
+
 /** The unified write, in the shape the early exits use — labels included. */
 function unifiedHoldingWrite(
   holding: PortfolioHolding,
@@ -3110,6 +3126,12 @@ function unifiedHoldingWrite(
       slug: exact.attempt.cardId,
       compsUsed: u.totalSampleCount,
       confidence: u.confidence,
+      // CF-A-GRADE-NAMES-ITS-SOURCE (R58 as amended, Drew 2026-09-15). How
+      // many of the grades behind this number came from a sale's own title
+      // and how many from a vendor product record. Persisted so a reader —
+      // or a later audit — can ask that question of a price already written,
+      // rather than only of one being computed now.
+      gradeSources: u.gradeSources,
       // CF-A-PERSISTED-PRICE-CARRIES-ITS-LABELS (Drew, 2026-09-03).
       ...persistedLabelsForUnifiedResult(u, tierLabelFor(holdingGradeOf(holding)), ownerUserId),
     }, exact.attempt),
@@ -3131,7 +3153,10 @@ function unifiedHoldingWrite(
     // refused because the halves named different products, the price stands
     // but says so — the pool it came from is narrower than the holding's two
     // identities suggest.
-    estimateBasis: `unified: window=${u.windowDays}d median=$${u.fmv?.toFixed(0) ?? "?"} marketValue=$${u.marketValue?.toFixed(0) ?? "?"} predicted=$${u.predictedPrice?.toFixed(0) ?? "?"} trend=${u.trendDirection} ${u.trendPctPerWeek?.toFixed(1) ?? "?"}%/wk conf=${u.confidence.toFixed(2)} id=${exact.attempt.label}${exact.attempt.unionRefusedReason ? ` — ${exact.attempt.unionRefusedReason}` : ""}`,
+    // R59: `id=` names the ATTEMPT; the partition count names where the rows
+    // actually came from. Attempt 1 reads cross-partition, so the two are not
+    // the same claim and the basis now states both.
+    estimateBasis: `unified: window=${u.windowDays}d median=$${u.fmv?.toFixed(0) ?? "?"} marketValue=$${u.marketValue?.toFixed(0) ?? "?"} predicted=$${u.predictedPrice?.toFixed(0) ?? "?"} trend=${u.trendDirection} ${u.trendPctPerWeek?.toFixed(1) ?? "?"}%/wk conf=${u.confidence.toFixed(2)} id=${exact.attempt.label}${partitionsReadSuffix(u)}${exact.attempt.unionRefusedReason ? ` — ${exact.attempt.unionRefusedReason}` : ""}`,
     isEstimate: false,
     valuationStatus: "observed",
     pricingSource: "unified-pricing",

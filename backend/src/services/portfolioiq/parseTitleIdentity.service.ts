@@ -3312,6 +3312,27 @@ const LADDER_SPECIALIZATION_PRODUCTS: readonly LadderSpecializationProduct[] = [
   // ZERO sampled titles say both words, so the order between them is not
   // load-bearing — but Glossy is tested first anyway, because the nine real
   // 1987 "GLOSSY ... TIFFANY" sales the ruling names must reach Glossy.
+  // CF-THE-DAY-THE-CHECKLIST-LANDS (2026-09-18). This rule was left OUT on
+  // purpose when the audit found it: `isProductSetKey("fleer-greats-of-the-
+  // game")` was FALSE, so pointing a title rule at it would have filed real
+  // sales at an address no checklist backs — the failure one level up from a
+  // synthetic parallel. namedProductIsNeverFoldedIntoFlagship pinned the fold
+  // OPEN and said outright that the day the key is registered, its own
+  // expectation flips and that is "the signal to add the rule".
+  //
+  // That day is here: this PR registers the key (with an explicit pattern
+  // ahead of the /fleer/ catch-all) and #2234 landed the 237-row checklist —
+  // 137 for 2001 and 100 for 2002, from baseballcardpedia with
+  // sportscardchecklist corroborating. The destination is real, so the title
+  // may now reach it.
+  //
+  // Measured read-only 2026-09-15: 2,961 pool rows whose titles say "… Greats
+  // of the Game" sit on bare `fleer` — 1,518 in 2001 and 1,443 in 2002.
+  //
+  // ANCHORED ON THE WHOLE PHRASE, not "greats". Fleer also prints "Fleer
+  // Greats", and 2005 Donruss Greats is a different product with its own key,
+  // so a bare /greats/ would reach past this one.
+  { family: "fleer", states: /\bgreats of the game\b/, setKey: "fleer-greats-of-the-game" },
   { family: "fleer", states: /\bglossy\b/, setKey: "fleer-glossy" },
   { family: "fleer", states: /\btiffany\b/, setKey: "fleer-tiffany", minYear: 1996 },
   // `fleer-tradition-tiffany` is NOT here. It has 600 checklist rows (2002,

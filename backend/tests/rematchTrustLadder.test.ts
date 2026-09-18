@@ -136,9 +136,18 @@ const cxInput = (cx: (typeof COUNTEREXAMPLES)[number]): ClassifyInput => {
 describe("A -- the finish vocabulary is derived from the checklist parallel corpus", () => {
   it("loads the corpus the findings header cites, not a hand list", () => {
     const s = V.vocabularyStats();
-    // 576 products / 36,699 parallel names, measured on the committed corpus.
+    // 660 products, measured on the committed corpus.
     expect(s.products).toBeGreaterThan(500);
-    expect(s.parallelNames).toBeGreaterThan(30_000);
+    // A FLOOR, NOT A PIN: the point is that a real corpus was loaded rather
+    // than an empty read or a hand list.
+    //
+    // It dropped from ~37k to ~28.6k on 2026-09-15, when the insert-set split
+    // moved 9,415 insert names out of `parallels[]` into `insertSets[]`. The
+    // names still exist and the corpus total is unchanged at 38,017 -- this
+    // statistic counts one of the two fields. `vocabularyStats` is a
+    // diagnostic for the banner, so it is left counting the parallel ladder
+    // (which is what this vocabulary is built from); the floor moves with it.
+    expect(s.parallelNames).toBeGreaterThan(25_000);
     // The derived vocabulary is an order of magnitude past the ~90-word list.
     expect(s.globalTokens).toBeGreaterThan(1_000);
   });

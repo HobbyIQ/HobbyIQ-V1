@@ -1,0 +1,57 @@
+{
+ "scrapedAt": "2026-09-16T01:57:24.018Z",
+ "source": "baseballcardpedia-2026-09-15",
+ "sourceUrl": "https://baseballcardpedia.com/index.php/2001_Greats_of_the_Game",
+ "corroboratingSource": "sportscardchecklist",
+ "corroboratingSourceUrl": "https://www.sportscardchecklist.com/sport-baseball/year-2001/index-fleer-greats-of-the-game/trading-card-checklists-and-product-information",
+ "sport": "baseball",
+ "year": 2001,
+ "setName": "2001 Fleer Greats of the Game Baseball",
+ "productKey": "2001-fleer-greats-of-the-game",
+ "setKey": "fleer-greats-of-the-game",
+ "rowCount": 137,
+ "parallelColumnAuthoritative": true,
+ "baseSetSize": 137,
+ "note": "137-card base set, Fleer, released March 2001. Notable for some of the first officially-licensed Negro League cards (Fleer held a Negro Leagues Baseball Museum licence).",
+ "scope": "BASE SET ONLY. The insert sets and autograph/game-used subsets this product also prints are listed in `subsetsNotStaged` and are NOT in this file: each needs its own registered key under R38/R48 before it can be ingested, and neither source publishes their per-card rosters on the pages read.",
+ "subsetsNotStaged": [
+  {
+   "name": "Autographs",
+   "cards": 94,
+   "source": "sportscardchecklist"
+  },
+  {
+   "name": "Autographs Redemptions",
+   "cards": 15,
+   "source": "sportscardchecklist"
+  },
+  {
+   "name": "Feel the Game Classics",
+   "cards": 24,
+   "printRun": "144-300",
+   "source": "both"
+  },
+  {
+   "name": "Dodger Blues",
+   "cards": 13,
+   "source": "sportscardchecklist",
+   "discrepancy": "baseballcardpedia says 15 cards; sportscardchecklist says 13. Unresolved — not staged."
+  },
+  {
+   "name": "Retrospection",
+   "cards": 10,
+   "source": "both"
+  },
+  {
+   "name": "Stargell Stars",
+   "cards": 1,
+   "printRun": "700 hand-numbered",
+   "source": "both"
+  },
+  {
+   "name": "Promos",
+   "cards": 36,
+   "source": "baseballcardpedia"
+  }
+ ]
+}

@@ -99,7 +99,27 @@ const AUDIT_ROWS: Array<[string, string, number, string]> = [
   ["2025 Panini Rookies & Stars Football #17 Orange", "panini-rookies-and-stars", 2025, "Orange"],
   ["2024 Panini Score Football #71 Green", "panini-score", 2024, "Green"],
   ["2024 Panini Illusions Football #11 Gold", "panini-illusions", 2024, "Gold"],
-  ["2024 Panini Zenith - Rookie Patch Autographs Trey Benson #227 /399 (AU, MEM, RC)", "panini-zenith", 2024, "Rookie Patch Autographs Ice"],
+  // REMOVED 2026-09-15, and the reason is the point.
+  //
+  //   "2024 Panini Zenith - Rookie Patch Autographs Trey Benson #227 /399"
+  //        stored parallel: "Rookie Patch Autographs Ice"
+  //
+  // This row used to read as "the title states a finish we cannot confirm",
+  // and it no longer does. That is CORRECT, not a regression:
+  //
+  //   * "Rookie Patch Autographs" is an INSERT SET, not a parallel of the
+  //     zenith base card. Since the insert-set split it lives in
+  //     `insertSets[]`, and the 2024 zenith ladder is Blue / Gold / Red /
+  //     White / Prime / Gold Ice / ... -- no Rookie Patch rung, on any source.
+  //   * The evidence reader saw `patch` and `rookie` as FINISH WORDS only
+  //     because flattened insert names inflated their product coverage
+  //     (measured: patch 63 -> 34 products, rookie 111 -> 36 after the split).
+  //   * The TITLE never says "Ice". The stored parallel's distinguishing word
+  //     is absent, so there is no stated finish here to withhold.
+  //
+  // The row is not evidence of the defect this file pins, so keeping it would
+  // pin the flattening instead. The 16 rows below are all real stated
+  // parallels and still carry the case.
   ["2024 Panini Select Football #156 Red and Blue Shock", "panini-select", 2024, "Red and Blue Shock"],
   ["2024 Panini Prizm Black & White Checker Checkerboard Prizm #286 JEVON KEARSE - Raw", "panini-prizm", 2024, "Black and White Checker"],
   ["2024 Panini Zenith Football #149 No Huddle", "panini-zenith", 2024, "No Huddle"],
