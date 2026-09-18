@@ -1,0 +1,99 @@
+{
+ "lane": "relocate-pool-rows-by-list",
+ "reason": "r64-cruz-128-trout-200-image-variation-mixes",
+ "generatedAt": "2026-09-18T20:37:49.668Z",
+ "reportOnlyUntil": "Drew review - no apply is authorized by this PR",
+ "rulings": [
+  "R64 (Drew, 2026-09-18) part (c): the census found THREE mixed 2022 Topps Chrome image-variation partitions. #221 Witt is listed separately (2026-09-18-r64-witt-221-four-cards.json); these are the other two.",
+  "BOTH PARTITIONS ARE ALREADY THE RIGHT ADDRESS FOR MOST OF THEIR ROWS. Unlike #221, the partition id here IS a checklist-backed row: `hiq:baseball:2022:topps-chrome:<n>:image-variation:no-auto` is Beckett's `Image Variation SP` for both #128 Cruz and #200 Trout (beckett-scraped-2026-09-01). So the fix is narrow - one row each - not a four-way split.",
+  "#128 CRUZ: one row moves. 'ONeil Cruz 2022 Topps Chrome Ben Baller Black Rookie RC #128 SP PSA 10 GEM MINT' ($85, tca-ebay) names the Ben Baller EDITION with Black as its parallel, and pooled with the flagship SP because the title reader could not see the edition - the defect PR #2246 fixes. The two 'Topps Chrome - Variation #128' rows ($154.01, $2.50) state no product word and stay.",
+  "#200 TROUT: one row is PARKED, none move. 'Mike Trout 2022 Topps Chrome #200 Image Variation SP Refractor Angels' ($18.26) states an SP AND a refractor finish, and NO catalog row carries that combination for #200. Minting one from a single sale would repeat exactly the #221 SP error this ruling forbids. The other row ('MIKE TROUT Variation #200', $25) states no finish and stays.",
+  "THE DESTINATION FOR CRUZ NEEDS MINTING and is NOT minted here: `topps-chrome-ben-baller:128:black` does not exist as a catalog row. Ben Baller's checklist IS held (7,301 checklist-backed rows incl. #128 Refractor Orange/Rose Gold/SuperFractor), so this is a gap in one parallel rather than an unbacked product - but it is still a mint, and mints do not belong in a pool list. Flagged for the catalog lane.",
+  "AXIS: setKey and parallel move together as ONE ruled axis. cardNumber, isAuto and every trailing segment carry through byte-identical.",
+  "uniqueness is on (id, fromCardId)."
+ ],
+ "census": {
+  "partitions": 2,
+  "poolRows": 5,
+  "relocates": 1,
+  "parks": 1,
+  "stays": 3,
+  "catalogRowsToMint": 0,
+  "catalogRowsNeededBeforeApply": [
+   "hiq:baseball:2022:topps-chrome-ben-baller:128:black:no-auto"
+  ]
+ },
+ "entries": [
+  {
+   "id": "cardhedge::ch-daily::1749450042253x104105521072992210",
+   "fromCardId": "hiq:baseball:2022:topps-chrome:128:image-variation:no-auto",
+   "fromSetKey": "topps-chrome",
+   "fromParallel": "Image Variation SP",
+   "cardNumber": "128",
+   "price": 154.01,
+   "grade": "",
+   "source": "cardhedge",
+   "title": "2022 Topps Chrome - Variation Oneil Cruz #128 (RC) - Raw 10",
+   "stays": true,
+   "card": "plainIV",
+   "evidence": "stays: the partition id IS the Beckett-backed `Image Variation SP` row for #128 (hiq:...:128:image-variation:no-auto, beckett-scraped-2026-09-01). A tier-blind 'Variation' title with no product word belongs here."
+  },
+  {
+   "id": "cardhedge::ch-daily::1741468990744x595794985273934160",
+   "fromCardId": "hiq:baseball:2022:topps-chrome:128:image-variation:no-auto",
+   "fromSetKey": "topps-chrome",
+   "fromParallel": "Image Variation SP",
+   "cardNumber": "128",
+   "price": 2.5,
+   "grade": "",
+   "source": "cardhedge",
+   "title": "2022 Topps Chrome - Variation #128 Oneil Cruz (RC) - Raw 10",
+   "stays": true,
+   "card": "plainIV",
+   "evidence": "stays: the partition id IS the Beckett-backed `Image Variation SP` row for #128 (hiq:...:128:image-variation:no-auto, beckett-scraped-2026-09-01). A tier-blind 'Variation' title with no product word belongs here."
+  },
+  {
+   "id": "tca-ebay::188291674014",
+   "fromCardId": "hiq:baseball:2022:topps-chrome:128:image-variation:no-auto",
+   "fromSetKey": "topps-chrome",
+   "fromParallel": "Image Variation SP",
+   "cardNumber": "128",
+   "price": 85,
+   "grade": "PSA10",
+   "source": "tca-ebay",
+   "title": "ONeil Cruz 2022 Topps Chrome Ben Baller Black Rookie RC #128 SP PSA 10 GEM MINT",
+   "toCardId": "hiq:baseball:2022:topps-chrome-ben-baller:128:black:no-auto",
+   "toSetKey": "topps-chrome-ben-baller",
+   "toParallel": "Black",
+   "card": "benBaller"
+  },
+  {
+   "id": "tca-ebay::800345736016",
+   "fromCardId": "hiq:baseball:2022:topps-chrome:200:image-variation:no-auto",
+   "fromSetKey": "topps-chrome",
+   "fromParallel": "Image Variation SP",
+   "cardNumber": "200",
+   "price": 18.26,
+   "grade": "",
+   "source": "tca-ebay",
+   "title": "Mike Trout 2022 Topps Chrome #200 Image Variation SP Refractor Angels",
+   "parkIdentityUnverified": true,
+   "card": "refractor",
+   "evidence": "PARKED: the title states 'Image Variation SP Refractor' -- an SP AND a refractor finish -- but no catalog row carries that combination for #200. The Beckett row is `Image Variation SP` (no finish) and checklistcenter's are named speckle/superfractor refractors. Absent beats wrong: minting `image-variation-sp-refractor` from one $18.26 sale would repeat the #221 SP error this same ruling forbids."
+  },
+  {
+   "id": "cardhedge::ch-daily::1756757922024x174721532680891300",
+   "fromCardId": "hiq:baseball:2022:topps-chrome:200:image-variation:no-auto",
+   "fromSetKey": "topps-chrome",
+   "fromParallel": "Image Variation SP",
+   "cardNumber": "200",
+   "price": 25,
+   "grade": "",
+   "source": "cardhedge",
+   "title": "2022 Topps Chrome MIKE TROUT Variation #200 Angels - Raw 10",
+   "stays": true,
+   "card": "plainIV",
+   "evidence": "stays: the partition id IS the Beckett-backed `Image Variation SP` row for #200 (beckett-scraped-2026-09-01). A tier-blind 'Variation' title with no product word belongs here."
+  }
+ ]
+}
