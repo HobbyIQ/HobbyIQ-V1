@@ -43,6 +43,30 @@ const APPLY = String(process.env.APPLY ?? "").toLowerCase() === "true";
 const MIN_ROWS = Number(process.env.MIN_ROWS ?? 20000);
 const CLASSES = ["AGREE", "IMPROVE", "CONFLICT", "UNDERIVABLE"];
 
+/**
+ * THE ONE WRITER FOR THE REFERENCE TABLE, so its formatting cannot drift
+ * between the two paths that write it.
+ *
+ * THE DEFECT THIS FIXES. There were two `writeFileSync` calls: the re-baseline
+ * wrote `JSON.stringify(next, null, 1)` and `--relabel` wrote `null, 2`. The
+ * committed file is 1-space, so every re-label RE-INDENTED ALL ~1,095 LINES.
+ * Measured on this PR's own re-label, which changes exactly four fields and a
+ * supersedes block: 1,087 insertions / 1,090 deletions.
+ *
+ * WHY IT MATTERS MORE THAN TIDINESS. The reference table is the I9 baseline —
+ * the thing a reviewer reads to confirm a re-label moved the STAMP and not the
+ * SHARES. A whole-file rewrite makes that impossible to see at review time,
+ * which is precisely the check `--relabel` exists to keep honest (it already
+ * asserts the shares byte-for-byte; the diff should show it too).
+ *
+ * Key ORDER is preserved for free: `relabel` builds its object by cloning the
+ * old one and overwriting in place, and JSON.stringify emits insertion order.
+ * Only the indent differed, and now only one call site sets it.
+ */
+function writeTable(next) {
+  fs.writeFileSync(TABLE_PATH, `${JSON.stringify(next, null, 1)}\n`, "utf8");
+}
+
 function args() {
   const out = { from: [] };
   const a = process.argv.slice(2);
@@ -234,7 +258,7 @@ function relabel(old, current) {
     console.log("\nDRY RUN — set APPLY=true to write data/rematch-census-shares.json.");
     return;
   }
-  fs.writeFileSync(TABLE_PATH, `${JSON.stringify(next, null, 2)}\n`);
+  writeTable(next);
   console.log(`\nWROTE ${TABLE_PATH} under stamp ${current.combined}`);
 }
 
@@ -423,7 +447,7 @@ function main() {
     console.log("\nDRY RUN — set APPLY=true to write data/rematch-census-shares.json.");
     return;
   }
-  fs.writeFileSync(TABLE_PATH, `${JSON.stringify(next, null, 1)}\n`, "utf8");
+  writeTable(next);
   console.log(`\nWROTE ${TABLE_PATH} under stamp ${current.combined}`);
 }
 

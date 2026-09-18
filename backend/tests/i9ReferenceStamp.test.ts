@@ -367,4 +367,35 @@ describe("the re-baseline recorder refuses to launder a regression", () => {
     expect(src).not.toMatch(/\.(upsert|replace|create|patch|delete)\(/);
     expect(src).not.toMatch(/CosmosClient/);
   });
+
+  it("writes the reference through ONE writer, so a re-label diffs its fields and not the file", () => {
+    // THE DEFECT. The script used to write the table from two places with two
+    // different indents: the re-baseline `JSON.stringify(next, null, 1)` and
+    // `--relabel` `null, 2`. The committed file is 1-space, so every re-label
+    // re-indented all ~1,095 lines — 1,087 insertions / 1,090 deletions for a
+    // change of four fields and a supersedes block (measured 2026-09-18).
+    //
+    // That is not cosmetic. `--relabel`'s whole contract is "the stamp moved,
+    // the shares did not", and the reviewer confirms it by READING THE DIFF. A
+    // whole-file rewrite hides exactly the thing the diff exists to show.
+    const src = fs.readFileSync(script, "utf8");
+    const writes = src.match(/writeFileSync\(\s*TABLE_PATH/g) ?? [];
+    expect(writes.length,
+      "the reference table must be written through writeTable() only — a second "
+      + "writeFileSync(TABLE_PATH) is how the indents drifted apart").toBe(1);
+    // And that one writer keeps the committed file's 1-space indent.
+    expect(src).toMatch(/JSON\.stringify\(next, null, 1\)/);
+    expect(src).not.toMatch(/JSON\.stringify\(next, null, 2\)/);
+  });
+
+  it("the shipped reference really is 1-space indented, so the writer and the file agree", () => {
+    // The other half of the pin: the assertion above fixes the WRITER, this one
+    // fixes the FILE it has to match. If the committed table is ever re-indented
+    // by hand, the next --relabel would rewrite it wholesale again.
+    const raw = fs.readFileSync(path.join(backend, "data", "rematch-census-shares.json"), "utf8");
+    const firstNested = raw.split("\n").find((l) => /^\s+"/.test(l));
+    expect(firstNested, "the table must have at least one nested key").toBeTruthy();
+    expect(firstNested!.match(/^ +/)![0].length,
+      "the committed reference is 1-space indented; writeTable() emits 1-space").toBe(1);
+  });
 });
