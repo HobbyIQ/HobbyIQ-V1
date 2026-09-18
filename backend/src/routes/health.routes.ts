@@ -1,3 +1,4 @@
+import { instanceTag } from "../services/ops/warmStart.js";
 import { Router } from "express";
 import {
   getBuildInfo,
@@ -128,6 +129,18 @@ router.get(["/", ""], (req, res) => {
       branchFromCode: BUILD_INFO?.branch ?? null,
       builtAt: BUILD_INFO?.builtAt ?? null,
     },
+    // WHICH WORKER ANSWERED (2026-09-18). Additive; no existing field moves.
+    //
+    // With 2+ instances and no ARR affinity on an un-cookied curl, successive
+    // polls round-robin. The deploy gate used to stop at the FIRST poll that
+    // reported the expected sha -- which proves ONE instance recycled and says
+    // nothing about the other. Measured on the 2026-09-18 deploy: the sha poll
+    // matched while warm calls 2 and 3 came back with no instance field at
+    // all, i.e. from a worker still running the OLD code.
+    //
+    // The same 8-char hash warmStart publishes, from the same function, so
+    // "which instance answered" has ONE answer across both endpoints.
+    instance: instanceTag(),
   });
 });
 
@@ -181,6 +194,8 @@ router.get("/deep", async (_req, res) => {
       shaShort: getGitShaShort() ?? "unknown",
       shaFromCodeShort: BUILD_INFO?.shaShort ?? null,
     },
+    // Same addition on the deep probe, for the same reason.
+    instance: instanceTag(),
     checks: {
       cosmos,
       config: {
