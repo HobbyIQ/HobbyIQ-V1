@@ -682,6 +682,52 @@ function isPseudoCardNumber(v) {
 }
 
 /**
+ * IS THIS STORED cardNumber A CODED INSERT SLOT? (§3c, 2026-09-18)
+ *
+ * `RPJ-JSA`, `RR-BNX`, `MM-15`, `N-AHH`, `D/149` -- a product's own numbering
+ * for a card inside a NAMED INSERT SET. The letters are the set's code and the
+ * tail identifies the card within it, so the whole token IS the address.
+ *
+ * WHY IT MATTERS. R33 rewrites a stored card number to the number the title
+ * states. Measured on the 500 real R33 samples from slot 3 (run 35391563906),
+ * 311 of 429 parseable stored numbers are of this shape, and their titles name
+ * the insert outright:
+ *
+ *   RPJ-JSA  "2024 Donruss Rookie Phenom Jerseys #6 Ja'Tavion Sanders"   -> 6
+ *   RR-BNX   "Bo Nix 2024 Panini Phoenix Rookie Rising Insert #47"       -> 47
+ *   MM-15    "Emmitt Smith Men of Mastery Silver #15"                    -> 15
+ *
+ * The `#6` is the card's number WITHIN Rookie Phenom Jerseys; the flagship's
+ * own #6 is a different card that exists. Taking the title's number files an
+ * insert card onto a base card's pool -- the flagship catch-all swallowing a
+ * specialization, in the one direction the ruling exists to prevent.
+ *
+ * THE STORED CODED ADDRESS STANDS. Absent beats wrong.
+ *
+ * A `player-<name>` pseudo-number is EXCLUDED and must be: it is the UNPARSED
+ * case (a number the title spells out and the derivation discarded), which is
+ * exactly the population R33 legitimately repairs. Matching it here would
+ * disable the rule on its own best evidence.
+ *
+ * Validated against every distinct stored number in those samples: 311 coded
+ * matched, 118 plain numeric correctly rejected, 0 letter-bearing missed.
+ */
+const CODED_INSERT_SLOT_RE = /^(?=.*[A-Za-z])[A-Za-z0-9]+(?:[-/][A-Za-z0-9]+)*$/;
+function isCodedInsertSlot(v) {
+  const s = str(v).trim();
+  if (!s) return false;
+  if (isPseudoCardNumber(s)) return false;   // the unparsed case R33 repairs
+  // A BLANK MARKER IS NOT AN ADDRESS. `unknown`, `none`, `base` match the
+  // shape by letters alone, and reading them as "more specific than the title"
+  // is exactly backwards -- blank means UNKNOWN, and a row whose number is
+  // unknown is precisely the row R33 exists to give a number to. The same
+  // GENERIC_PARALLELS set the parallel axis uses, because it is the same
+  // claim about the same words.
+  if (GENERIC_PARALLELS.has(lower(s))) return false;
+  return CODED_INSERT_SLOT_RE.test(s);
+}
+
+/**
  * A CORRUPTED PLAYER NAME IS NOT A LESS-GOOD NAME, IT IS NOT A NAME
  * (CF-A-PLAYER-SEGMENT-IS-A-PERSON, Drew 2026-09-04).
  *
@@ -4167,10 +4213,26 @@ function improveRefusals({
  */
 function allImproveRefusals({
   row, stored, derived, axes, parserSaysLot, family, derivationRefused = [],
-  pokemonAmbiguousCodeUnresolved = false,
+  pokemonAmbiguousCodeUnresolved = false, titleNamesInsertSet = null,
 }) {
   const refusals = improveRefusals({ row, stored, derived, axes, parserSaysLot, pokemonAmbiguousCodeUnresolved });
   if (family.qualifies) refusals.push("finish-family-collision:not-writable-until-ruled");
+  // THE INSERT-SET REFUSAL BELONGS TO **IMPROVE**, NOT ONLY TO R31 (§3c).
+  //
+  // Caught by the §3c test, and it is the whole point of putting the guard
+  // here: refusing inside `titleFillsTheBlankEvidence` alone only strips the
+  // SUBCLASS. The row then falls through to a plain IMPROVE that is still
+  // `writable: true`, and `scope=improve` writes exactly the same fill --
+  // the same destination, minus the label and minus the evidence.
+  //
+  //     reasons: ["filled:parallel",
+  //               "not-title-fills-the-blank:r31:names-an-insert-set:rookie rising"]
+  //     writable: true          <- and it would have been written
+  //
+  // A guard that only renames the thing it refuses is not a guard. The title
+  // names a run of cards this row is not addressed to, so NO improvement to
+  // its parallel is safe, subclass or no subclass.
+  if (titleNamesInsertSet) refusals.push(`improve-names-an-insert-set:${lower(titleNamesInsertSet)}`);
   refusals.push(...derivationRefused);
   return refusals;
 }
@@ -5356,6 +5418,7 @@ function titleFillsTheBlankEvidence({
   titleNamesSiblingProduct = null,
   titleSerial = null,
   derivedBacked = false,
+  titleNamesInsertSet = null,
 }) {
   const failed = [];
   const filled = new Set(axes?.filled ?? []);
@@ -5470,6 +5533,28 @@ function titleFillsTheBlankEvidence({
   // behaviour rather than refusing every row.
   if (titleNamesSiblingProduct === true) failed.push("title-names-sibling-product");
 
+  // T5b -- THE TITLE NAMES A NAMED INSERT SET (§3c, 2026-09-18).
+  //
+  // The same reasoning as T5a one line above, arriving from the other
+  // direction. T5a refuses when the title names a sibling PRODUCT; this
+  // refuses when it names a named INSERT SET of this product, read from the
+  // corpus's `insertSets[]` for this (sport, year, setKey).
+  //
+  // An insert set is its own run of cards with its own numbering, so a title
+  // that names one is telling us WHICH CARD this is, not which printing. The
+  // row is therefore at a rung of the wrong card, and filling its blank
+  // parallel writes the flagship's ladder onto an insert -- the same split
+  // pool T5a prevents (CF-ONE-CARD-ONE-ROW-ONE-POOL,
+  // CF-A-NAMED-PARALLEL-IS-A-DISTINCT-CARD).
+  //
+  // The re-key comes first here too: an insert card belongs at the insert's
+  // own address, and that is a MOVE, not a fill. A refusal leaves the row
+  // where it is and is recoverable.
+  //
+  // Caller-supplied and NARROWING only, like T3b and T5a: `null` (unasked)
+  // keeps today's behaviour rather than refusing every row.
+  if (titleNamesInsertSet) failed.push(`r31:names-an-insert-set:${lower(titleNamesInsertSet)}`);
+
   // T5 -- THE DESTINATION MUST BE CHECKLIST-BACKED.
   if (!derivedBacked) failed.push("destination-not-checklist-backed");
 
@@ -5487,6 +5572,7 @@ function titleFillsTheBlankEvidence({
       storedPrintRun: stored?.printRun ?? null, destPrintRun: destRun,
       titleSerial: titleSerial ?? null,
       checklistListsTitleParallel, titleParallelIsARungPhrase, titleNamesLongerRung, titleNamesSiblingProduct, derivedBacked,
+      titleNamesInsertSet: titleNamesInsertSet ?? null,
       pair: `${fillsParallel ? `parallel:(blank)->${lower(destParallel) || "?"}` : ""}`
         + `${fillsParallel && fillsPrintRun ? " " : ""}`
         + `${fillsPrintRun ? `printRun:(blank)->/${str(destRun) || "?"}` : ""}`,
@@ -5595,6 +5681,7 @@ function titleCardNumberWinsEvidence({
   row, stored, derived, axes,
   titleNumberIsChecklistRow = false,
   derivedBacked = false,
+  titleNamesInsertSet = null,
 }) {
   const failed = [];
   const title = str(row?.title);
@@ -5645,6 +5732,69 @@ function titleCardNumberWinsEvidence({
     failed.push(`derived-number-is-not-the-title-number:${derivedNumber || "(none)"}!=${titleNumber}`);
   }
 
+  // N1c -- THE TITLE'S NUMBER BELONGS TO A NAMED INSERT SET (§3c, 2026-09-18).
+  //
+  // THE MEASURED POPULATION. Of the 500 real R33 samples from slot 3 (run
+  // 35391563906), 311 of 429 parseable stored numbers are CODED INSERT SLOTS
+  // and their titles name the insert outright:
+  //
+  //   RPJ-JSA  "2024 Donruss Rookie Phenom Jerseys #6 Ja'Tavion Sanders"  -> 6
+  //   RR-BNX   "Bo Nix 2024 Panini Phoenix Rookie Rising Insert #47"      -> 47
+  //   MM-15    "Emmitt Smith Men of Mastery Silver #15"                   -> 15
+  //
+  // The `#6` is the card's number WITHIN Rookie Phenom Jerseys. The flagship's
+  // own #6 is a DIFFERENT CARD that exists, with its own pool and its own
+  // price. Taking the title's number files an insert card onto a base card's
+  // pool -- CF-FLAGSHIP-CATCH-ALL-SWALLOWS-SPECIALIZATIONS, in the exact
+  // direction the ruling exists to prevent, and one row at a time it would
+  // merge two real cards' comps.
+  //
+  // TWO INDEPENDENT WITNESSES, EITHER SUFFICIENT:
+  //
+  //   (a) THE STORED ADDRESS IS A CODED INSERT SLOT. `RPJ-JSA` is not a
+  //       half-parsed number, it is the product's own address for a card in a
+  //       named insert -- structured, deliberate, and MORE specific than the
+  //       plain number the title gives. Rewriting it is a strict LOSS of
+  //       specificity, which only-improve forbids on its own terms.
+  //
+  //   (b) THE TITLE NAMES ONE OF THIS PRODUCT'S INSERT SETS, read from the
+  //       corpus's `insertSets[]` for this (sport, year, setKey). A title that
+  //       says "Rookie Phenom Jerseys" has told us which run of cards it is.
+  //
+  // (a) is the stronger and cheaper test and needs no corpus, so a product the
+  // corpus does not cover still refuses on the coded address alone.
+  //
+  // THE STORED CODED ADDRESS STANDS. Absent beats wrong: a refusal leaves the
+  // row where it is and is recoverable; a wrong number merges two pools.
+  // THE ONE CASE A CODED STORED SLOT MUST **NOT** REFUSE: the title states the
+  // SAME coded address, only punctuated. `kb47` stored vs `#KB-47` in the
+  // title is R33's FOUNDING population -- a hyphen the derivation dropped, not
+  // a different card -- and the whole of its originally measured evidence
+  // (tests/rematchRuledScopes20260914.test.ts's real census rows).
+  //
+  // The two cases are opposites and the difference is the only thing that
+  // matters here:
+  //
+  //   kb47    -> KB-47   SAME address, punctuation restored   REPAIR  (write)
+  //   RPJ-JSA -> 6       DIFFERENT address, insert -> flagship  MERGE (refuse)
+  //
+  // So the comparison is punctuation-blind: strip every non-alphanumeric from
+  // both sides and ask whether they are the same token. `cardNumbersAgree` is
+  // not the right test -- it is deliberately punctuation-SENSITIVE, which is
+  // exactly why `kb47` reaches R33 as a disagreement in the first place.
+  const bareToken = (v) => lower(v).replace(/[^a-z0-9]/g, "");
+  const titleRestatesStoredAddress = bareToken(storedNumber) !== ""
+    && bareToken(storedNumber) === bareToken(titleNumber);
+
+  if (titleRestatesStoredAddress) {
+    // Nothing to refuse: the title is restating this row's OWN address. The
+    // other legs still decide whether the repair is safe.
+  } else if (isCodedInsertSlot(storedNumber)) {
+    failed.push(`title-number-belongs-to-named-insert:stored-is-a-coded-slot:${storedNumber}`);
+  } else if (titleNamesInsertSet) {
+    failed.push(`title-number-belongs-to-named-insert:${lower(titleNamesInsertSet)}`);
+  }
+
   // N4 -- THE (NUMBER, PRODUCT) MUST EXIST ON THE CHECKLIST FOR THAT
   // PRODUCT/YEAR. The ruling's own condition, and the guard it names.
   if (!titleNumberIsChecklistRow) failed.push(`title-number-not-a-checklist-row:${titleNumber || "?"}`);
@@ -5662,6 +5812,8 @@ function titleCardNumberWinsEvidence({
     evidence: {
       titleNumber, storedCardNumber: storedNumber, derivedCardNumber: derivedNumber,
       titleNumberIsChecklistRow, derivedBacked,
+      storedIsCodedInsertSlot: isCodedInsertSlot(storedNumber),
+      titleNamesInsertSet: titleNamesInsertSet ?? null,
       pair: `${storedNumber || "(blank)"}->${titleNumber || "?"}`,
       titleQuoted: title.slice(0, 160),
     },
@@ -5823,6 +5975,17 @@ function classifyRow({
   titleSerial = null,
   titleNumberIsChecklistRow = false,
   derivedBackedR33 = false,
+  //   titleNamesInsertSet        the NAME of a named insert set of this
+  //                              (sport, year, setKey) that the title states,
+  //                              or null. A catalog/corpus read, so the caller
+  //                              supplies it and this module stays pure --
+  //                              `VOCAB.insertSetNamedInTitle`. Read by R31
+  //                              (T5b) and R33 (N1c): both refuse, because an
+  //                              insert set is its own run of cards and a
+  //                              title naming one is saying which CARD this
+  //                              is, not which printing. NARROWING only, so
+  //                              null (unasked) keeps today's behaviour.
+  titleNamesInsertSet = null,
 }) {
   const prov = provenanceTier(row);
   // THE SLUG-SHAPE DEFECTS ARE COMPUTED FOR EVERY ROW AND CHANGE NOTHING.
@@ -6066,7 +6229,7 @@ function classifyRow({
       row, stored, derived, axes, checklistSaysNotAuto, autoByCardNumber,
     });
     if (sna.qualifies) {
-      const refusals = allImproveRefusals({ row, stored, derived, axes, parserSaysLot, family, derivationRefused, pokemonAmbiguousCodeUnresolved });
+      const refusals = allImproveRefusals({ row, stored, derived, axes, parserSaysLot, family, derivationRefused, pokemonAmbiguousCodeUnresolved, titleNamesInsertSet });
       const snaReasons = [
         `subclass:${SELLER_NAME_AUTO}`,
         "seller-name-auto:isAuto true->false",
@@ -6114,7 +6277,7 @@ function classifyRow({
     // copies of a gate is one gate that silently is not there.
     const gft = gradeFromTitleEvidence({ row, stored, axes });
     if (gft.qualifies) {
-      const refusals = allImproveRefusals({ row, stored, derived, axes, parserSaysLot, family, derivationRefused, pokemonAmbiguousCodeUnresolved });
+      const refusals = allImproveRefusals({ row, stored, derived, axes, parserSaysLot, family, derivationRefused, pokemonAmbiguousCodeUnresolved, titleNamesInsertSet });
       return {
         ...base,
         klass: IMPROVE, subclass: GRADE_FROM_TITLE,
@@ -6189,7 +6352,7 @@ function classifyRow({
       // in rematchDerivationDefects.test.ts revert exactly those pushes and
       // assert there is EXACTLY ONE site to revert. Two copies would leave
       // this arm silently unguarded by the pin that guards the other.
-      const refusals = allImproveRefusals({ row, stored, derived, axes, parserSaysLot, family, derivationRefused, pokemonAmbiguousCodeUnresolved });
+      const refusals = allImproveRefusals({ row, stored, derived, axes, parserSaysLot, family, derivationRefused, pokemonAmbiguousCodeUnresolved, titleNamesInsertSet });
       const specReasons = [
         `subclass:${SPECIALIZATION_STATED}`,
         `specialization:${spec.evidence.storedSetKey}->${spec.evidence.derivedSetKey}`,
@@ -6227,7 +6390,7 @@ function classifyRow({
       row, stored, derived, axes, storedSlug, destBacked: vintageDestBacked,
     });
     if (vint.qualifies) {
-      const refusals = allImproveRefusals({ row, stored, derived, axes, parserSaysLot, family, derivationRefused, pokemonAmbiguousCodeUnresolved });
+      const refusals = allImproveRefusals({ row, stored, derived, axes, parserSaysLot, family, derivationRefused, pokemonAmbiguousCodeUnresolved, titleNamesInsertSet });
       return {
         ...base,
         klass: IMPROVE, subclass: YEAR_FROM_TITLE_VINTAGE, axes,
@@ -6264,7 +6427,7 @@ function classifyRow({
       row, stored, derived, axes, productSport, destBacked: sportDestBacked,
     });
     if (sfp.qualifies) {
-      const refusals = allImproveRefusals({ row, stored, derived, axes, parserSaysLot, family, derivationRefused, pokemonAmbiguousCodeUnresolved });
+      const refusals = allImproveRefusals({ row, stored, derived, axes, parserSaysLot, family, derivationRefused, pokemonAmbiguousCodeUnresolved, titleNamesInsertSet });
       return {
         ...base,
         klass: IMPROVE, subclass: SPORT_FROM_PRODUCT, axes,
@@ -6301,7 +6464,7 @@ function classifyRow({
       derivedIsNamedProduct, derivedBacked: derivedBackedR26,
     });
     if (r26.qualifies) {
-      const refusals = allImproveRefusals({ row, stored, derived, axes, parserSaysLot, family, derivationRefused, pokemonAmbiguousCodeUnresolved });
+      const refusals = allImproveRefusals({ row, stored, derived, axes, parserSaysLot, family, derivationRefused, pokemonAmbiguousCodeUnresolved, titleNamesInsertSet });
       return {
         ...base,
         klass: IMPROVE, subclass: FLAGSHIP_SWALLOWED_NAMED_PRODUCT, axes,
@@ -6337,7 +6500,7 @@ function classifyRow({
       languageResolves: pokemonLanguageResolves, derivedBacked: derivedBackedR27,
     });
     if (r27.qualifies) {
-      const refusals = allImproveRefusals({ row, stored, derived, axes, parserSaysLot, family, derivationRefused, pokemonAmbiguousCodeUnresolved });
+      const refusals = allImproveRefusals({ row, stored, derived, axes, parserSaysLot, family, derivationRefused, pokemonAmbiguousCodeUnresolved, titleNamesInsertSet });
       return {
         ...base,
         klass: IMPROVE, subclass: POKEMON_SET_CODE, axes,
@@ -6379,7 +6542,7 @@ function classifyRow({
       derivedBacked: derivedBackedR28,
     });
     if (r28.qualifies) {
-      const refusals = allImproveRefusals({ row, stored, derived, axes, parserSaysLot, family, derivationRefused, pokemonAmbiguousCodeUnresolved });
+      const refusals = allImproveRefusals({ row, stored, derived, axes, parserSaysLot, family, derivationRefused, pokemonAmbiguousCodeUnresolved, titleNamesInsertSet });
       return {
         ...base,
         klass: IMPROVE, subclass: FINISH_IS_A_PARALLEL, axes,
@@ -6415,9 +6578,10 @@ function classifyRow({
     const r33 = titleCardNumberWinsEvidence({
       row, stored, derived, axes,
       titleNumberIsChecklistRow, derivedBacked: derivedBackedR33,
+      titleNamesInsertSet,
     });
     if (r33.qualifies) {
-      const refusals = allImproveRefusals({ row, stored, derived, axes, parserSaysLot, family, derivationRefused, pokemonAmbiguousCodeUnresolved });
+      const refusals = allImproveRefusals({ row, stored, derived, axes, parserSaysLot, family, derivationRefused, pokemonAmbiguousCodeUnresolved, titleNamesInsertSet });
       return {
         ...base,
         klass: IMPROVE, subclass: TITLE_CARD_NUMBER_WINS, axes,
@@ -6495,7 +6659,7 @@ function classifyRow({
   // onto base rows. A refusal keeps the CLASS -- the census must still count
   // the shape, and Drew must be able to read what was refused and why -- and
   // takes `writable` to false, the same way the provenance tier does.
-  const refusals = allImproveRefusals({ row, stored, derived, axes, parserSaysLot, family, derivationRefused, pokemonAmbiguousCodeUnresolved });
+  const refusals = allImproveRefusals({ row, stored, derived, axes, parserSaysLot, family, derivationRefused, pokemonAmbiguousCodeUnresolved, titleNamesInsertSet });
 
   // A FLAGGED FAMILY COLLISION IS A REFUSAL LIKE THE OTHER THREE.
   //
@@ -6544,6 +6708,7 @@ function classifyRow({
     titleParallel: derived?.parallel ?? null,
     checklistListsTitleParallel, titleSerial,
     derivedBacked: checklistBacked,
+    titleNamesInsertSet,
   });
   if (r31.qualifies) {
     return {
@@ -7053,6 +7218,7 @@ module.exports = {
   allImproveRefusals,
   // The apply class scope (audit gate item 8) -- BASE-EVICTION is clean
   // corpus-wide while IMPROVE is not, so the apply is scopable to a class.
+  isCodedInsertSlot,
   APPLY_CLASSES, APPLY_SCOPE_ALIASES, parseApplyScope, applyKindOf, writableUnderScope,
   // The undo scope. A NAME, not a class -- see REVERT_EVICTION above.
   REVERT_EVICTION, REVERT_SCOPE_WORDS,

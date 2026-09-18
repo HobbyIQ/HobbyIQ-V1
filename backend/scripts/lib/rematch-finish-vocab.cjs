@@ -519,6 +519,51 @@ function checklistParallelNamesFor(year, setKey) {
 }
 
 /**
+ * DOES THIS TITLE NAME ONE OF THIS PRODUCT'S NAMED INSERT SETS? (§3c)
+ *
+ * Returns the insert name the title states (the LONGEST match, so "Rookie
+ * Phenom Jerseys Gold" wins over "Rookie Phenom Jerseys"), or null.
+ *
+ * WHY THE LONGEST MATCH. The same reason R31's T3c takes the longest rung: a
+ * title that states a more specific name has stated it, and refusing on the
+ * shorter one would name the wrong card in the evidence.
+ *
+ * THE MINIMUM LENGTH GATE IS NOT COSMETIC. Measured on the committed corpus,
+ * 8 insert ROOTS are also real parallel names of the same product -- "Elite"
+ * (2026 donruss-elite), "Rookie" (2023 panini-prizm, 2024 panini-mosaic, 2023
+ * panini-immaculate), "Printing Plates" (2023 upper-deck-chl). A bare
+ * single-word root that is ALSO a parallel of this product is ambiguous: the
+ * title saying "Elite" may be naming the insert or the finish, and a refusal
+ * built on the ambiguous reading would block legitimate parallel fills. Those
+ * roots are skipped, and only a multi-word insert name (or a single-word one
+ * this product does NOT also list as a parallel) can refuse.
+ *
+ * Absent beats wrong in both directions here: we neither move an insert card
+ * onto the flagship, nor refuse a real parallel because its name collides.
+ */
+function insertSetNamedInTitle(title, sport, year, setKey) {
+  const t = lower(title).replace(/[^a-z0-9]+/g, " ").trim();
+  if (!t) return null;
+  // NO SPORT, NO ANSWER. The index is sport-scoped on purpose; a caller that
+  // cannot say which sport must not be handed another sport's inserts.
+  if (!lower(sport)) return null;
+  const c = corpus();
+  const names = c.insertNamesByProduct?.get(insertKey(sport, year, setKey));
+  if (!names || !names.size) return null;
+  const parallelNames = c.namesByProduct?.get(productKey(year, setKey)) ?? null;
+  let best = null;
+  for (const n of names) {
+    if (!n) continue;
+    // An insert name that is ALSO a parallel name of this product cannot
+    // decide anything on its own -- see the header.
+    if (parallelNames && parallelNames.has(n) && !n.includes(" ")) continue;
+    if (!t.includes(n)) continue;
+    if (!best || n.length > best.length) best = n;
+  }
+  return best;
+}
+
+/**
  * Does this product's checklist list a parallel whose name carries EVERY
  * family token the title names? Returns that name (the most specific match)
  * or null.
@@ -929,6 +974,34 @@ let _corpusPathOverride = null;
 const productKey = (year, setKey) =>
   `${year === null || year === undefined || year === "" ? "" : Number(year)}|${lower(setKey)}`;
 
+/**
+ * THE INSERT-SET KEY IS SPORT-SCOPED, AND `productKey` IS NOT. (§3c)
+ *
+ * `productKey` deliberately omits the sport: a FINISH is a finish, so
+ * "Refractor" on 2024 panini-select means the same printing whichever sport's
+ * checklist lists it, and folding the three sports together is what lets one
+ * product's vocabulary answer for all of them.
+ *
+ * AN INSERT SET IS NOT LIKE THAT. It is a named run of CARDS, and the same
+ * product name in two sports lists different ones. Measured on the committed
+ * corpus, 2024 panini-select is three separate products:
+ *
+ *   baseball|2024|panini-select     roots: Dual, Legendary
+ *   basketball|2024|panini-select   roots: ..., In Flight, Select, Top Shelf
+ *   football|2024|panini-select     roots: Prime Selections, Rookie
+ *
+ * Under the sport-blind key, basketball's bare "Select" root matched the
+ * football title "2024 Panini Select Concourse ... #66 Gold Prizm" -- a plain
+ * parallel fill -- and would have refused it as an insert. That is the same
+ * shape as the L5 defect where a lookup with no sport predicate let one
+ * sport's checklist answer for another's card.
+ *
+ * So the insert index carries the sport, and a caller that cannot name the
+ * sport gets NOTHING rather than another sport's answer. Absent beats wrong.
+ */
+const insertKey = (sport, year, setKey) =>
+  `${lower(sport)}|${productKey(year, setKey)}`;
+
 /** The tokens a setKey is made of. `topps-heritage-chrome` -> topps, heritage,
  *  chrome -- each of which, ON THAT PRODUCT, names the set and not a finish. */
 function setKeyTokens(setKey) {
@@ -970,6 +1043,21 @@ function buildVocabulary(corpusPath = CORPUS_PATH) {
    * Built in the same pass so the corpus is still read once.
    */
   const namesByProduct = new Map();
+  /**
+   * THE NAMED INSERT SETS this product lists (§3c, 2026-09-18).
+   *
+   * Per product: a Set of normalised insert names -- each set's ROOT ("Rookie
+   * Phenom Jerseys") and each of its CHILDREN ("Rookie Phenom Jerseys Gold").
+   * Kept separate from `namesByProduct` on purpose: an insert set is a
+   * different KIND of thing from a parallel. A parallel is a finish of a card
+   * that already exists; an insert set is its own run of cards with its own
+   * numbering, so a title naming one is saying which CARD it is, not which
+   * printing.
+   *
+   * Read by R31 and R33 to refuse a move that would file an insert card onto
+   * the flagship's card of the same number.
+   */
+  const insertNamesByProduct = new Map();
   /**
    * The PRINT RUNS this product's checklist gives its BASE row, if any.
    *
@@ -1032,6 +1120,23 @@ function buildVocabulary(corpusPath = CORPUS_PATH) {
     if (!byProduct.has(pk)) byProduct.set(pk, new Set());
     const bucket = byProduct.get(pk);
     const seenHere = new Set();
+    // THE NAMED INSERT SETS OF THIS PRODUCT, root and children alike. Both are
+    // names a title can state, and either one identifies the insert.
+    //
+    // Keyed by SPORT + year + setKey, not by `pk` -- see `insertKey`. The
+    // three sports' 2024 panini-select list different inserts, and one
+    // sport's must never answer for another's card.
+    const ik = insertKey(p?.sport, year, setKey);
+    for (const is of p?.insertSets ?? []) {
+      const add = (n) => {
+        const norm = lower(n).replace(/[^a-z0-9]+/g, " ").trim();
+        if (!norm) return;
+        if (!insertNamesByProduct.has(ik)) insertNamesByProduct.set(ik, new Set());
+        insertNamesByProduct.get(ik).add(norm);
+      };
+      add(is?.root);
+      for (const child of is?.children ?? []) add(child);
+    }
     for (const par of p?.parallels ?? []) {
       const spellings = (par?.spellings ?? []).length ? par.spellings : [par?.name];
       for (const sp of spellings) {
@@ -1131,6 +1236,7 @@ function buildVocabulary(corpusPath = CORPUS_PATH) {
 
   return {
     global, byProduct, namesByProduct, stopwordExceptions, baseRunsByProduct,
+    insertNamesByProduct,
     phrases, support, adjudicated, productCount, nameCount,
     phraseIndex: buildPhraseIndex(phrases),
   };
@@ -1738,6 +1844,7 @@ module.exports = {
   titleFinishFamilyTokens, parallelFinishFamilyTokens,
   familyTokensDroppedByDerivation, checklistParallelNamesFor,
   checklistRungPhrase, checklistListsRungPhrase, longerRungStatedInTitle,
+  insertSetNamedInTitle,
   checklistParallelForFamily,
   // leaks 2 + 6: a lot or a range never mints a cardNumber
   isLotOrRangeListing, cardNumberRangeFromTitle,
