@@ -147,7 +147,10 @@ const WARM_COSMOS_SLOW_MS = 15_000;
  * only a short hash is exposed — enough to DISTINGUISH instances and to match
  * against `cloud_RoleInstance` in App Insights, without publishing the raw id.
  */
-function instanceTag(): string | null {
+/** Exported so `/api/health` reports the SAME tag this warm does. Two
+ *  definitions of "which instance answered" would be two answers, and the
+ *  deploy gate compares them across endpoints. */
+export function instanceTag(): string | null {
   const raw = String(process.env.WEBSITE_INSTANCE_ID ?? "").trim();
   return raw ? raw.slice(0, 8) : null;
 }

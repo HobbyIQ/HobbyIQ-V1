@@ -125,6 +125,39 @@ describe("the deploy workflow proves both workers and deploys once", () => {
   };
   const shell = () => yml().split("\n").filter((l) => !l.trim().startsWith("#")).join("\n");
 
+  it("the sha gate requires EVERY distinct instance, not the first one that matches", () => {
+    // CF-ONE-INSTANCE-IS-NOT-THE-SLOT (2026-09-18). The gate used to `break` on
+    // the first poll carrying the expected sha. With 2 instances and no ARR
+    // affinity on an un-cookied curl, successive polls round-robin, so that
+    // proves ONE worker recycled and says nothing about the other.
+    //
+    // MEASURED on the 2026-09-18 deploy: the sha poll matched and passed, then
+    // warm calls 2 and 3 came back with NO instance field — a field that only
+    // exists in the new code, so those answers came from a worker still
+    // running the OLD build, after the gate had declared the slot verified.
+    const s = shell();
+    // It must read the instance tag from the health payload...
+    expect(s).toMatch(/grep -o '"instance":"/);
+    // ...track which distinct instances have served the expected sha...
+    expect(s).toMatch(/OK_IDS/);
+    expect(s).toMatch(/SEEN_IDS/);
+    // ...and pass only when every instance SEEN is an instance VERIFIED.
+    expect(s).toMatch(/"\$N_OK" -ge "\$N_SEEN"/);
+    // A stability streak, because with round-robin the only way to enumerate
+    // N workers is to keep polling until the set stops growing.
+    expect(s).toMatch(/STREAK_NEEDED/);
+    expect(s).toMatch(/"\$STREAK" -ge "\$STREAK_NEEDED"/);
+  });
+
+  it("an answer with NO instance tag can never satisfy the gate", () => {
+    // The old build does not serve the field at all, so a missing tag is
+    // positive evidence of an un-recycled worker — never a pass. The verified
+    // branch requires a non-empty $INST.
+    const s = shell();
+    expect(s).toMatch(/\[ -n "\$INST" \]/);
+    expect(s).toMatch(/no-instance/);
+  });
+
   it("warms EIGHT times and requires every call ok", () => {
     const s = shell();
     expect(s).toMatch(/for i in \$\(seq 1 8\); do/);

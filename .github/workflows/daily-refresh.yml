@@ -223,21 +223,64 @@ jobs:
           # from dist/build-info.json, which ships inside the package — it
           # cannot report a sha unless the dist carrying it is the dist that is
           # loaded, which is exactly the property needed here.
-          echo "Waiting for the slot to serve ${EXPECTED} ..."
+          echo "Waiting for the slot to serve ${EXPECTED} on EVERY instance ..."
+
+          # CF-ONE-INSTANCE-IS-NOT-THE-SLOT (2026-09-18). The poll above
+          # used to break on the FIRST answer carrying the expected sha.
+          # With the plan running 2 instances and no ARR affinity on an
+          # un-cookied curl, successive polls round-robin -- so a match
+          # proves ONE worker recycled and says nothing about the other.
+          #
+          # Measured on the 2026-09-18 deploy: this poll matched and passed,
+          # then warm calls 2 and 3 came back with NO instance field at all
+          # -- the field only exists in the new code, so those answers came
+          # from a worker still running the OLD build. The gate had already
+          # declared the slot verified.
+          #
+          # So the gate now requires the expected sha from every DISTINCT
+          # instance it has seen, and it must keep seeing the same set for
+          # STREAK consecutive polls before it believes it has seen them all
+          # (with round-robin, N polls is the only way to enumerate N
+          # workers -- there is no endpoint that lists them).
+          #
+          # No new dispatch inputs: the instance count comes from the health
+          # payload itself, which now reports the same 8-char tag the warm
+          # step already used to prove it covered both workers.
+          STREAK_NEEDED=6           # 6 x 5s = 30s of an unchanging instance set
           MATCHED=""
+          SEEN_IDS=""
+          OK_IDS=""
+          STREAK=0
+          PREV_SIG=""
           for i in $(seq 1 72); do          # 72 x 5s = 6 minutes
-            LIVE=$(curl -s --max-time 20 "$SLOT/api/health" \
-              | grep -o '"sha":"[^"]*"' | head -1 | cut -d'"' -f4)
-            echo "poll ${i}: slot sha=${LIVE:-<no answer>} expected=${EXPECTED}"
-            if [ -n "$LIVE" ] && [ "$LIVE" = "$EXPECTED" ]; then
+            BODY=$(curl -s --max-time 20 "$SLOT/api/health")
+            LIVE=$(echo "$BODY" | grep -o '"sha":"[^"]*"' | head -1 | cut -d'"' -f4)
+            INST=$(echo "$BODY" | grep -o '"instance":"[^"]*"' | head -1 | cut -d'"' -f4)
+            # An answer with no instance tag is an OLD build by construction:
+            # the field ships in this change. Treat it as a distinct worker
+            # that has not recycled, never as a pass.
+            TAG="${INST:-no-instance}"
+            case " $SEEN_IDS " in *" $TAG "*) ;; *) SEEN_IDS="$SEEN_IDS $TAG" ;; esac
+            if [ -n "$LIVE" ] && [ "$LIVE" = "$EXPECTED" ] && [ -n "$INST" ]; then
+              case " $OK_IDS " in *" $TAG "*) ;; *) OK_IDS="$OK_IDS $TAG" ;; esac
+            fi
+            SIG=$(echo "$SEEN_IDS" | tr " " "\n" | grep -v "^$" | sort -u | tr "\n" " ")
+            N_SEEN=$(echo "$SIG" | wc -w)
+            N_OK=$(echo "$OK_IDS" | wc -w)
+            echo "poll ${i}: instance=${TAG} sha=${LIVE:-<no answer>} | verified ${N_OK}/${N_SEEN} distinct"
+            if [ "$SIG" = "$PREV_SIG" ]; then STREAK=$((STREAK + 1)); else STREAK=1; PREV_SIG="$SIG"; fi
+            # Every instance seen has served the expected sha, AND the set of
+            # instances has been stable long enough to trust it is complete.
+            if [ "$N_OK" -ge "$N_SEEN" ] && [ "$N_OK" -gt 0 ] && [ "$STREAK" -ge "$STREAK_NEEDED" ]; then
               MATCHED=yes
-              echo "slot is serving the new build after ${i} polls"
+              echo "every instance is serving the new build after ${i} polls:${SIG}"
               break
             fi
             sleep 5
           done
           if [ -z "$MATCHED" ]; then
-            echo "::error::slot never reported sha ${EXPECTED} within 6 minutes — not swapping."
+            echo "::error::not every slot instance reported sha ${EXPECTED} within 6 minutes — not swapping."
+            echo "verified instances:${OK_IDS:- none}  |  instances seen:${SEEN_IDS:- none}"
             echo "The slot may still be recycling, or OneDeploy landed a package the"
             echo "worker never picked up. Either way the build is unverified, so"
             echo "production keeps the one it has."

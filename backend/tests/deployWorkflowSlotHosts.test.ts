@@ -90,19 +90,25 @@ describe("the slot poll proves identity, not just liveness", () => {
     expect(shell).not.toMatch(/\[ "\$STATUS" = "200" \] && \{ echo "slot healthy/);
   });
 
-  it("logs every poll's sha, so a stuck recycle is visible", () => {
-    expect(shell).toMatch(/poll \$\{i\}: slot sha=/);
+  it("logs every poll's instance AND sha, so a stuck recycle is visible", () => {
+    // CF-ONE-INSTANCE-IS-NOT-THE-SLOT (2026-09-18): the line now names WHICH
+    // worker answered, because "the slot reported the sha" was never the
+    // question — "did every worker report it" is.
+    expect(shell).toMatch(/poll \$\{i\}: instance=/);
+    expect(shell).toMatch(/sha=\$\{LIVE:-<no answer>\}/);
   });
 
   it("fails loudly when the sha never matches", () => {
     // A timeout here means the build is unverified. Swapping anyway would put
     // an unverified build into production, which is the thing the slot exists
     // to prevent.
-    expect(shell).toMatch(/::error::slot never reported sha/);
+    // The message now names the stronger condition it enforces: not "the slot"
+    // but EVERY instance of it.
+    expect(shell).toMatch(/::error::not every slot instance reported sha/);
   });
 
   it("warms only AFTER the sha matches, and requires ok:true", () => {
-    const pollAt = shell.indexOf("slot is serving the new build");
+    const pollAt = shell.indexOf("every instance is serving the new build");
     const warmAt = shell.indexOf("/api/health/warm");
     expect(pollAt).toBeGreaterThan(-1);
     expect(warmAt).toBeGreaterThan(pollAt);
