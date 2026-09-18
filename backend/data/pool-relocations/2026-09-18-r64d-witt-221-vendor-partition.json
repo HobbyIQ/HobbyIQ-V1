@@ -1,297 +1,313 @@
 {
- "lane": "relocate-pool-rows-by-list",
- "reason": "r64d-witt-221-vendor-partition-repoints",
- "generatedAt": "2026-09-18T22:13:14.224Z",
- "reportOnlyUntil": "Drew review - no apply is authorized by this PR",
- "rulings": [
-  "R64d (2026-09-18). The CardHedge vendor partition 1664553883976x293772727399522100 holds 30 sales of 2022 Topps Chrome #221 Bobby Witt Jr. They were invisible to every earlier R64 list because those read by cardId and these rows are partitioned on the CH PRODUCT id, not on a hiq slug. Their hobbyiqCardId is the identity that moves; cardId STAYS - so every entry here is a REPOINT, never a relocate.",
-  "(a) THE 2 BLOCKED ROWS GO TO BASE. 'Image Variation SP Rookie RC PSA 10' (667.88) and '#221 Rookie Image Variation SP - PSA 9' (282.82) state no finish word, so by R64b - #221 IS the Extended Base Short Print - they are the base SP. The partition's own bands corroborate: base PSA 10s clear 600-945 and base PSA 9s 250-267, while refractor PSA 10s run 789-1000. Both sit in the base band for their grade.",
-  "(b) SONIC TITLES. Sonic Lite's checklist-backed #221 ladder is: Short Prints, Image Variations, Short Prints Gold RayWave /50, Short Prints Green RayWave /99, Short Prints Orange/Black Sonic Pulse /25, Short Prints Red/Black Sonic Pulse /5 (plus the non-SP RayWave and Pulse rows) - ALL checklistcenter. There is NO plain 'Refractor' and NO 'SSP' among them. So a Sonic title stating no finish repoints to `topps-chrome-sonic-lite:221:short-prints`; a Sonic title naming a finish Sonic Lite does not print is PARKED, never invented.",
-  "SSP IS NOT SP, and that decides two of the parks. `project_image_variations_are_named_cards`: 'SP and SSP are SEPARATE CARDS (1:16,938 vs ~1:1,000 pull rate)'. The two 'SSP' titles (1,499 and 1,500, both PSA 9) name a tier Sonic Lite does not print at #221, so they park beside the Refractor-titled ones rather than folding onto Short Prints.",
-  "(c) THE COSMIC TITLE IS PARKED, and the reason is not 'no product'. Topps Cosmic Chrome IS registered and DOES exist in 2022 - 4,743 catalog rows - but its 2022 numbering runs 1..200 and Bobby Witt Jr. is #162 there (also SN-12 and CCA-BW). There is no #221 in 2022 Cosmic Chrome, so '2022 Topps Chrome Cosmic SP #221' contradicts itself: either the number or the product word is wrong. Parked rather than guessed onto either.",
-  "EVERYTHING ELSE STAYS. 21 of the 30 rows name no product word beyond Topps Chrome and no finish this list rules on; they are left exactly where they are and are not in `entries`.",
-  "AXIS: hobbyiqCardId only. cardId (the vendor partition key) is unchanged on every row, and so are cardNumber, grade and every other field.",
-  "uniqueness is on (id, fromHobbyiqCardId)."
- ],
- "census": {
-  "partition": "1664553883976x293772727399522100",
-  "rowsInPartition": 30,
-  "repointToBase": 2,
-  "repointToSonicShortPrints": 1,
-  "parkedSonicFinishNotPrinted": 5,
-  "parkedCosmic": 1,
-  "unchanged": 21,
-  "catalogRowsToMint": 0
- },
- "entries": [
-  {
-   "id": "cardhedge::ch-daily::1739418299216x249854723720545500",
-   "cardId": "1664553883976x293772727399522100",
-   "fromHobbyiqCardId": "hiq:baseball:2022:topps-chrome:221:base:no-auto",
-   "cardNumber": "221",
-   "price": 152.5,
-   "grade": "PSA8",
-   "source": "cardhedge",
-   "title": "2022 Topps Chrome Sonic #221 Bobby Witt Jr RC ROOKIE SP PSA 8 NM-MT",
-   "toHobbyiqCardId": "hiq:baseball:2022:topps-chrome-sonic-lite:221:short-prints:no-auto",
-   "shape": "repoint",
-   "card": "sonicShortPrint",
-   "evidence": "Title names SONIC and states no finish, so it is Sonic Lite's own #221 short print. Destination is checklistcenter-backed (parallel 'Short Prints'). Sonic Lite's #221 ladder is Short Prints, Image Variations, Gold/Green RayWave and Orange-Black/Red-Black Sonic Pulse."
+  "lane": "relocate-pool-rows-by-list",
+  "reason": "r64d-witt-221-vendor-partition-repoints",
+  "generatedAt": "2026-09-18T22:13:14.224Z",
+  "reportOnlyUntil": "Drew review - no apply is authorized by this PR",
+  "rulings": [
+    "R64d (2026-09-18). The CardHedge vendor partition 1664553883976x293772727399522100 holds 30 sales of 2022 Topps Chrome #221 Bobby Witt Jr. They were invisible to every earlier R64 list because those read by cardId and these rows are partitioned on the CH PRODUCT id, not on a hiq slug. Their hobbyiqCardId is the identity that moves; cardId STAYS - so every entry here is a REPOINT, never a relocate.",
+    "(a) THE 2 BLOCKED ROWS GO TO BASE. 'Image Variation SP Rookie RC PSA 10' (667.88) and '#221 Rookie Image Variation SP - PSA 9' (282.82) state no finish word, so by R64b - #221 IS the Extended Base Short Print - they are the base SP. The partition's own bands corroborate: base PSA 10s clear 600-945 and base PSA 9s 250-267, while refractor PSA 10s run 789-1000. Both sit in the base band for their grade.",
+    "(b) SONIC TITLES. Sonic Lite's checklist-backed #221 ladder is: Short Prints, Image Variations, Short Prints Gold RayWave /50, Short Prints Green RayWave /99, Short Prints Orange/Black Sonic Pulse /25, Short Prints Red/Black Sonic Pulse /5 (plus the non-SP RayWave and Pulse rows) - ALL checklistcenter. There is NO plain 'Refractor' and NO 'SSP' among them. So a Sonic title stating no finish repoints to `topps-chrome-sonic-lite:221:short-prints`; a Sonic title naming a finish Sonic Lite does not print is PARKED, never invented.",
+    "SSP IS NOT SP, and that decides two of the parks. `project_image_variations_are_named_cards`: 'SP and SSP are SEPARATE CARDS (1:16,938 vs ~1:1,000 pull rate)'. The two 'SSP' titles (1,499 and 1,500, both PSA 9) name a tier Sonic Lite does not print at #221, so they park beside the Refractor-titled ones rather than folding onto Short Prints.",
+    "(c) THE COSMIC TITLE IS PARKED, and the reason is not 'no product'. Topps Cosmic Chrome IS registered and DOES exist in 2022 - 4,743 catalog rows - but its 2022 numbering runs 1..200 and Bobby Witt Jr. is #162 there (also SN-12 and CCA-BW). There is no #221 in 2022 Cosmic Chrome, so '2022 Topps Chrome Cosmic SP #221' contradicts itself: either the number or the product word is wrong. Parked rather than guessed onto either.",
+    "EVERYTHING ELSE STAYS. 21 of the 30 rows name no product word beyond Topps Chrome and no finish this list rules on; they are left exactly where they are and are not in `entries`.",
+    "AXIS: hobbyiqCardId only. cardId (the vendor partition key) is unchanged on every row, and so are cardNumber, grade and every other field.",
+    "uniqueness is on (id, fromHobbyiqCardId).",
+    "SHAPE: every entry names `fromCardId` = the CardHedge vendor partition 1664553883976x293772727399522100, `toCardId` empty, and a repoint carries `repointHobbyiqCardId` - the same shape as the R49 Encased->Pristine list on main. cardId does NOT change: these rows are keyed on the vendor product id and only hobbyiqCardId moves. poolRelocationListShape.test.ts pins that every pool entry names the partition it is addressed to."
+  ],
+  "census": {
+    "partition": "1664553883976x293772727399522100",
+    "rowsInPartition": 30,
+    "repointToBase": 2,
+    "repointToSonicShortPrints": 1,
+    "parkedSonicFinishNotPrinted": 5,
+    "parkedCosmic": 1,
+    "unchanged": 21,
+    "catalogRowsToMint": 0
   },
-  {
-   "id": "cardhedge::ch-daily::1741091081539x223367822161176350",
-   "cardId": "1664553883976x293772727399522100",
-   "fromHobbyiqCardId": "hiq:baseball:2022:topps-chrome:221:base:no-auto",
-   "cardNumber": "221",
-   "price": 1499,
-   "grade": "PSA9",
-   "source": "cardhedge",
-   "title": "2022 Topps Chrome Sonic Bobby Witt Jr #221 SSP PSA 9 POP 5 Only 6 Higher",
-   "parkIdentityUnverified": true,
-   "card": "sonicUnprintedFinish",
-   "evidence": "PARKED. Title names SONIC plus a finish Sonic Lite does NOT print at #221. Its checklist-backed #221 ladder is: Short Prints, Image Variations, Short Prints Gold RayWave /50, Short Prints Green RayWave /99, Short Prints Orange/Black Sonic Pulse /25, Short Prints Red/Black Sonic Pulse /5 (plus the non-SP RayWave/Pulse rows) - there is NO plain 'Refractor' and NO 'SSP' among them. Inventing 'Sonic Refractor' or 'Sonic SSP' would mint a parallel from a sale title, which R64b forbids. Needs a source that prints this finish, or a ruling that the title means one of the listed ones."
-  },
-  {
-   "id": "cardhedge::ch-daily::1743366529683x986528242107901200",
-   "cardId": "1664553883976x293772727399522100",
-   "fromHobbyiqCardId": "hiq:baseball:2022:topps-chrome:221:refractor:no-auto",
-   "cardNumber": "221",
-   "price": 192.5,
-   "grade": "",
-   "source": "cardhedge",
-   "title": "2022 Topps Chrome Sonic - Bobby Witt Jr #221 Refractor (RC) - Raw 10",
-   "parkIdentityUnverified": true,
-   "card": "sonicUnprintedFinish",
-   "evidence": "PARKED. Title names SONIC plus a finish Sonic Lite does NOT print at #221. Its checklist-backed #221 ladder is: Short Prints, Image Variations, Short Prints Gold RayWave /50, Short Prints Green RayWave /99, Short Prints Orange/Black Sonic Pulse /25, Short Prints Red/Black Sonic Pulse /5 (plus the non-SP RayWave/Pulse rows) - there is NO plain 'Refractor' and NO 'SSP' among them. Inventing 'Sonic Refractor' or 'Sonic SSP' would mint a parallel from a sale title, which R64b forbids. Needs a source that prints this finish, or a ruling that the title means one of the listed ones."
-  },
-  {
-   "id": "cardhedge::ch-daily::1745261564556x586812167469995500",
-   "cardId": "1664553883976x293772727399522100",
-   "fromHobbyiqCardId": "hiq:baseball:2022:topps-chrome:221:ssp-refractor:no-auto",
-   "cardNumber": "221",
-   "price": 1500,
-   "grade": "PSA9",
-   "source": "cardhedge",
-   "title": "2022 Topps Chrome Sonic BOBBY WITT JR #221 SSP Variation RC - PSA 9 MINT - RARE",
-   "parkIdentityUnverified": true,
-   "card": "sonicUnprintedFinish",
-   "evidence": "PARKED. Title names SONIC plus a finish Sonic Lite does NOT print at #221. Its checklist-backed #221 ladder is: Short Prints, Image Variations, Short Prints Gold RayWave /50, Short Prints Green RayWave /99, Short Prints Orange/Black Sonic Pulse /25, Short Prints Red/Black Sonic Pulse /5 (plus the non-SP RayWave/Pulse rows) - there is NO plain 'Refractor' and NO 'SSP' among them. Inventing 'Sonic Refractor' or 'Sonic SSP' would mint a parallel from a sale title, which R64b forbids. Needs a source that prints this finish, or a ruling that the title means one of the listed ones."
-  },
-  {
-   "id": "cardhedge::ch-daily::1746544357535x132886934759926420",
-   "cardId": "1664553883976x293772727399522100",
-   "fromHobbyiqCardId": "hiq:baseball:2022:topps-chrome:221:image-variation-refractor:no-auto",
-   "cardNumber": "221",
-   "price": 282.82,
-   "grade": "PSA9",
-   "source": "cardhedge",
-   "title": "2022 Topps Chrome - BOBBY WITT JR - #221 Rookie Image Variation SP - PSA 9",
-   "toHobbyiqCardId": "hiq:baseball:2022:topps-chrome:221:base:no-auto",
-   "shape": "repoint",
-   "card": "base",
-   "evidence": "R64b: #221 is the Extended Base SHORT PRINT, so 'Image Variation SP' with NO finish word names the short print itself. Price corroborates against this partition's own bands - base PSA 10s clear 600-945 and base PSA 9s 250-267, while refractor PSA 10s run 789-1000; this row at 282.82 sits in the base band for its grade."
-  },
-  {
-   "id": "cardhedge::ch-daily::1747880326755x250293040417266530",
-   "cardId": "1664553883976x293772727399522100",
-   "fromHobbyiqCardId": "hiq:baseball:2022:topps-chrome:221:base:no-auto",
-   "cardNumber": "221",
-   "price": 716,
-   "grade": "PSA10",
-   "source": "cardhedge",
-   "title": "2022 Topps Chrome Cosmic SP #221 Bobby Witt JR Royals RC Rookie PSA 10 GEM MINT",
-   "parkIdentityUnverified": true,
-   "card": "cosmic",
-   "evidence": "PARKED. Title names Topps Cosmic Chrome, which IS its own registered product and DOES exist in 2022 (4,743 rows) - but its 2022 card numbers run 1..200 and Bobby Witt Jr. is #162 there (also SN-12, CCA-BW). There is no #221 in 2022 Cosmic Chrome, so a '#221 Cosmic SP' title contradicts itself: either the number or the product word is wrong. Not guessed onto either."
-  },
-  {
-   "id": "cardhedge::ch-daily::1748208404625x909342203493076500",
-   "cardId": "1664553883976x293772727399522100",
-   "fromHobbyiqCardId": "hiq:baseball:2022:topps-chrome:221:refractor:no-auto",
-   "cardNumber": "221",
-   "price": 260,
-   "grade": "",
-   "source": "cardhedge",
-   "title": "2022 Topps Chrome BOBBY WITT JR #221 Sonic SP Refractor RC - Raw 10",
-   "parkIdentityUnverified": true,
-   "card": "sonicUnprintedFinish",
-   "evidence": "PARKED. Title names SONIC plus a finish Sonic Lite does NOT print at #221. Its checklist-backed #221 ladder is: Short Prints, Image Variations, Short Prints Gold RayWave /50, Short Prints Green RayWave /99, Short Prints Orange/Black Sonic Pulse /25, Short Prints Red/Black Sonic Pulse /5 (plus the non-SP RayWave/Pulse rows) - there is NO plain 'Refractor' and NO 'SSP' among them. Inventing 'Sonic Refractor' or 'Sonic SSP' would mint a parallel from a sale title, which R64b forbids. Needs a source that prints this finish, or a ruling that the title means one of the listed ones."
-  },
-  {
-   "id": "cardhedge::ch-daily::1748657335925x230745526276940000",
-   "cardId": "1664553883976x293772727399522100",
-   "fromHobbyiqCardId": "hiq:baseball:2022:topps-chrome:221:refractor:no-auto",
-   "cardNumber": "221",
-   "price": 1600,
-   "grade": "PSA9",
-   "source": "cardhedge",
-   "title": "2022 Topps Chrome Sonic Refractor Variation SSP Bobby Witt Jr #221 PSA 9 MINT",
-   "parkIdentityUnverified": true,
-   "card": "sonicUnprintedFinish",
-   "evidence": "PARKED. Title names SONIC plus a finish Sonic Lite does NOT print at #221. Its checklist-backed #221 ladder is: Short Prints, Image Variations, Short Prints Gold RayWave /50, Short Prints Green RayWave /99, Short Prints Orange/Black Sonic Pulse /25, Short Prints Red/Black Sonic Pulse /5 (plus the non-SP RayWave/Pulse rows) - there is NO plain 'Refractor' and NO 'SSP' among them. Inventing 'Sonic Refractor' or 'Sonic SSP' would mint a parallel from a sale title, which R64b forbids. Needs a source that prints this finish, or a ruling that the title means one of the listed ones."
-  },
-  {
-   "id": "cardhedge::ch-daily::1748833398454x676143609912286800",
-   "cardId": "1664553883976x293772727399522100",
-   "fromHobbyiqCardId": "hiq:baseball:2022:topps-chrome:221:image-variation-refractor:no-auto",
-   "cardNumber": "221",
-   "price": 667.88,
-   "grade": "PSA10",
-   "source": "cardhedge",
-   "title": "Bobby Witt Jr 2022 Topps Chrome 221 Image Variation SP Rookie RC PSA 10",
-   "toHobbyiqCardId": "hiq:baseball:2022:topps-chrome:221:base:no-auto",
-   "shape": "repoint",
-   "card": "base",
-   "evidence": "R64b: #221 is the Extended Base SHORT PRINT, so 'Image Variation SP' with NO finish word names the short print itself. Price corroborates against this partition's own bands - base PSA 10s clear 600-945 and base PSA 9s 250-267, while refractor PSA 10s run 789-1000; this row at 667.88 sits in the base band for its grade."
-  }
- ],
- "unchanged": [
-  {
-   "id": "cardhedge::ch-daily::1664553883976x293772727399522100::2026-05-25T00:26:00+00:00::88700",
-   "hobbyiqCardId": "hiq:baseball:2022:topps-chrome:221:base:no-auto",
-   "price": 887,
-   "grade": "",
-   "title": "2022 Topps Chrome Baseball #221 Base"
-  },
-  {
-   "id": "cardhedge::ch-daily::1736296852470x165066357598433460",
-   "hobbyiqCardId": "hiq:baseball:2022:topps-chrome:221:refractor:no-auto",
-   "price": 249.99,
-   "grade": "",
-   "title": "2022 Topps Chrome - Extended SP Refractor #221 Bobby Witt Jr (RC) - Raw 10"
-  },
-  {
-   "id": "cardhedge::ch-daily::1736786318265x222873618110348350",
-   "hobbyiqCardId": "hiq:baseball:2022:topps-chrome:221:base:no-auto",
-   "price": 560,
-   "grade": "PSA10",
-   "title": "Bobby Witt Jr 2022 Topps Chrome Rookie Card RC Short Print SP #221 PSA 10"
-  },
-  {
-   "id": "cardhedge::ch-daily::1737060530991x418881623539463230",
-   "hobbyiqCardId": "hiq:baseball:2022:topps-chrome:221:refractor:no-auto",
-   "price": 630,
-   "grade": "PSA10",
-   "title": "Bobby Witt Jr Rookie SP 221 Refractor Silver 2022 Topps Chrome PSA 10 Gem Mint"
-  },
-  {
-   "id": "cardhedge::ch-daily::1737083690814x424866166852936770",
-   "hobbyiqCardId": "hiq:baseball:2022:topps-chrome:221:base:no-auto",
-   "price": 660,
-   "grade": "PSA10",
-   "title": "Bobby Witt Jr 2022 Topps Chrome Rookie Card RC Short Print SP #221 PSA 10"
-  },
-  {
-   "id": "cardhedge::ch-daily::1737940256840x625644656049338800",
-   "hobbyiqCardId": "hiq:baseball:2022:topps-chrome:221:base:no-auto",
-   "price": 615,
-   "grade": "PSA10",
-   "title": "Bobby Witt Jr 2022 Topps Chrome Rookie Card RC Short Print SP #221 PSA 10"
-  },
-  {
-   "id": "cardhedge::ch-daily::1739594799070x526044989570216200",
-   "hobbyiqCardId": "hiq:baseball:2022:topps-chrome:221:base:no-auto",
-   "price": 285,
-   "grade": "PSA9",
-   "title": "Bobby Witt Jr 2022 Topps Chrome Rookie Card RC Short Print SP #221 PSA 9"
-  },
-  {
-   "id": "cardhedge::ch-daily::1739727904742x473646592536977500",
-   "hobbyiqCardId": "hiq:baseball:2022:topps-chrome:221:refractor:no-auto",
-   "price": 300,
-   "grade": "PSA9",
-   "title": "2022 Topps Chrome Extended  SP SSP RC Rookie Refractor #221 Bobby Witt Jr PSA 9"
-  },
-  {
-   "id": "cardhedge::ch-daily::1740282298867x219944567947129470",
-   "hobbyiqCardId": "hiq:baseball:2022:topps-chrome:221:base:no-auto",
-   "price": 290,
-   "grade": "PSA9",
-   "title": "2022 Topps Chrome SP #221 Bobby Witt Jr PSA 9 Rookie RC"
-  },
-  {
-   "id": "cardhedge::ch-daily::1740365966985x373021276788166200",
-   "hobbyiqCardId": "hiq:baseball:2022:topps-chrome:221:refractor:no-auto",
-   "price": 680,
-   "grade": "PSA10",
-   "title": "2022 Topps Chrome Bobby Witt Jr Refractor Rookie SP RC #221 PSA 10"
-  },
-  {
-   "id": "cardhedge::ch-daily::1740705176361x173982959330094560",
-   "hobbyiqCardId": "hiq:baseball:2022:topps-chrome:221:base:no-auto",
-   "price": 700,
-   "grade": "PSA10",
-   "title": "2022 Topps Chrome - Bobby Witt Jr - SP RC - Kansas City Royals - #221 - PSA 10"
-  },
-  {
-   "id": "cardhedge::ch-daily::1740763556864x402470326755613760",
-   "hobbyiqCardId": "hiq:baseball:2022:topps-chrome:221:base:no-auto",
-   "price": 700,
-   "grade": "PSA10",
-   "title": "2022 Topps Chrome #221 Bobby Witt Jr RC SP PSA 10 💎"
-  },
-  {
-   "id": "cardhedge::ch-daily::1742174465034x444587639862996700",
-   "hobbyiqCardId": "hiq:baseball:2022:topps-chrome:221:base:no-auto",
-   "price": 795,
-   "grade": "PSA10",
-   "title": "2022 TOPPS CHROME SP #221 BOBBY WITT JR ROOKIE RC PSA 10"
-  },
-  {
-   "id": "cardhedge::ch-daily::1743901984050x363939168027699100",
-   "hobbyiqCardId": "hiq:baseball:2022:topps-chrome:221:base:no-auto",
-   "price": 250.27,
-   "grade": "PSA9",
-   "title": "2022 TOPPS CHROME SP #221 BOBBY WITT JR ROOKIE RC PSA 9"
-  },
-  {
-   "id": "cardhedge::ch-daily::1744837846671x224298269953168400",
-   "hobbyiqCardId": "hiq:baseball:2022:topps-chrome:221:base:no-auto",
-   "price": 267,
-   "grade": "PSA9",
-   "title": "Bobby Witt Jr 2022 Topps Chrome True Rookie 1st SP #221 (RC) PSA 9 Royals"
-  },
-  {
-   "id": "cardhedge::ch-daily::1745013277752x666253870971074160",
-   "hobbyiqCardId": "hiq:baseball:2022:topps-chrome:221:base:no-auto",
-   "price": 793.26,
-   "grade": "PSA10",
-   "title": "Bobby Witt Jr 2022 Topps Chrome True Rookie 1st SP #221 (RC) PSA 10 Royals"
-  },
-  {
-   "id": "cardhedge::ch-daily::1745419385782x798553436081898500",
-   "hobbyiqCardId": "hiq:baseball:2022:topps-chrome:221:refractor:no-auto",
-   "price": 799.99,
-   "grade": "PSA10",
-   "title": "Bobby Witt Jr Rookie SP 221 Refractor Silver 2022 Topps Chrome PSA 10 Gem Mint"
-  },
-  {
-   "id": "cardhedge::ch-daily::1745809380334x911067250817163500",
-   "hobbyiqCardId": "hiq:baseball:2022:topps-chrome:221:refractor:no-auto",
-   "price": 788.79,
-   "grade": "PSA10",
-   "title": "2022 Topps Chrome BOBBY WITT JR #221 SP Refractor RC Rookie PSA 10 GEM MT 2D"
-  },
-  {
-   "id": "cardhedge::ch-daily::1746497435103x876253636042148200",
-   "hobbyiqCardId": "hiq:baseball:2022:topps-chrome:221:base:no-auto",
-   "price": 810,
-   "grade": "PSA10",
-   "title": "2022 Topps Chrome Bobby Witt Jr SP ROOKIE #221 PSA 10 GEM MINT"
-  },
-  {
-   "id": "cardhedge::ch-daily::1746928256792x960493396419614700",
-   "hobbyiqCardId": "hiq:baseball:2022:topps-chrome:221:base:no-auto",
-   "price": 945,
-   "grade": "PSA10",
-   "title": "2022 TOPPS CHROME SP #221 BOBBY WITT JR ROOKIE RC PSA 10"
-  },
-  {
-   "id": "cardhedge::ch-daily::1749001625282x730378345311965400",
-   "hobbyiqCardId": "hiq:baseball:2022:topps-chrome:221:base:no-auto",
-   "price": 600,
-   "grade": "PSA10",
-   "title": "2022 TOPPS CHROME SP #221 BOBBY WITT JR ROOKIE RC PSA 10"
-  }
- ]
+  "entries": [
+    {
+      "id": "cardhedge::ch-daily::1739418299216x249854723720545500",
+      "fromCardId": "1664553883976x293772727399522100",
+      "toCardId": "",
+      "shape": "repoint",
+      "fromHobbyiqCardId": "hiq:baseball:2022:topps-chrome:221:base:no-auto",
+      "cardNumber": "221",
+      "price": 152.5,
+      "grade": "PSA8",
+      "source": "cardhedge",
+      "title": "2022 Topps Chrome Sonic #221 Bobby Witt Jr RC ROOKIE SP PSA 8 NM-MT",
+      "card": "sonicShortPrint",
+      "evidence": "Title names SONIC and states no finish, so it is Sonic Lite's own #221 short print. Destination is checklistcenter-backed (parallel 'Short Prints'). Sonic Lite's #221 ladder is Short Prints, Image Variations, Gold/Green RayWave and Orange-Black/Red-Black Sonic Pulse.",
+      "repointHobbyiqCardId": "hiq:baseball:2022:topps-chrome-sonic-lite:221:short-prints:no-auto"
+    },
+    {
+      "id": "cardhedge::ch-daily::1741091081539x223367822161176350",
+      "fromCardId": "1664553883976x293772727399522100",
+      "toCardId": "",
+      "shape": "park",
+      "fromHobbyiqCardId": "hiq:baseball:2022:topps-chrome:221:base:no-auto",
+      "cardNumber": "221",
+      "price": 1499,
+      "grade": "PSA9",
+      "source": "cardhedge",
+      "title": "2022 Topps Chrome Sonic Bobby Witt Jr #221 SSP PSA 9 POP 5 Only 6 Higher",
+      "parkIdentityUnverified": true,
+      "card": "sonicUnprintedFinish",
+      "evidence": "PARKED. Title names SONIC plus a finish Sonic Lite does NOT print at #221. Its checklist-backed #221 ladder is: Short Prints, Image Variations, Short Prints Gold RayWave /50, Short Prints Green RayWave /99, Short Prints Orange/Black Sonic Pulse /25, Short Prints Red/Black Sonic Pulse /5 (plus the non-SP RayWave/Pulse rows) - there is NO plain 'Refractor' and NO 'SSP' among them. Inventing 'Sonic Refractor' or 'Sonic SSP' would mint a parallel from a sale title, which R64b forbids. Needs a source that prints this finish, or a ruling that the title means one of the listed ones."
+    },
+    {
+      "id": "cardhedge::ch-daily::1743366529683x986528242107901200",
+      "fromCardId": "1664553883976x293772727399522100",
+      "toCardId": "",
+      "shape": "park",
+      "fromHobbyiqCardId": "hiq:baseball:2022:topps-chrome:221:refractor:no-auto",
+      "cardNumber": "221",
+      "price": 192.5,
+      "grade": "",
+      "source": "cardhedge",
+      "title": "2022 Topps Chrome Sonic - Bobby Witt Jr #221 Refractor (RC) - Raw 10",
+      "parkIdentityUnverified": true,
+      "card": "sonicUnprintedFinish",
+      "evidence": "PARKED. Title names SONIC plus a finish Sonic Lite does NOT print at #221. Its checklist-backed #221 ladder is: Short Prints, Image Variations, Short Prints Gold RayWave /50, Short Prints Green RayWave /99, Short Prints Orange/Black Sonic Pulse /25, Short Prints Red/Black Sonic Pulse /5 (plus the non-SP RayWave/Pulse rows) - there is NO plain 'Refractor' and NO 'SSP' among them. Inventing 'Sonic Refractor' or 'Sonic SSP' would mint a parallel from a sale title, which R64b forbids. Needs a source that prints this finish, or a ruling that the title means one of the listed ones."
+    },
+    {
+      "id": "cardhedge::ch-daily::1745261564556x586812167469995500",
+      "fromCardId": "1664553883976x293772727399522100",
+      "toCardId": "",
+      "shape": "park",
+      "fromHobbyiqCardId": "hiq:baseball:2022:topps-chrome:221:ssp-refractor:no-auto",
+      "cardNumber": "221",
+      "price": 1500,
+      "grade": "PSA9",
+      "source": "cardhedge",
+      "title": "2022 Topps Chrome Sonic BOBBY WITT JR #221 SSP Variation RC - PSA 9 MINT - RARE",
+      "parkIdentityUnverified": true,
+      "card": "sonicUnprintedFinish",
+      "evidence": "PARKED. Title names SONIC plus a finish Sonic Lite does NOT print at #221. Its checklist-backed #221 ladder is: Short Prints, Image Variations, Short Prints Gold RayWave /50, Short Prints Green RayWave /99, Short Prints Orange/Black Sonic Pulse /25, Short Prints Red/Black Sonic Pulse /5 (plus the non-SP RayWave/Pulse rows) - there is NO plain 'Refractor' and NO 'SSP' among them. Inventing 'Sonic Refractor' or 'Sonic SSP' would mint a parallel from a sale title, which R64b forbids. Needs a source that prints this finish, or a ruling that the title means one of the listed ones."
+    },
+    {
+      "id": "cardhedge::ch-daily::1746544357535x132886934759926420",
+      "fromCardId": "1664553883976x293772727399522100",
+      "toCardId": "",
+      "shape": "repoint",
+      "fromHobbyiqCardId": "hiq:baseball:2022:topps-chrome:221:image-variation-refractor:no-auto",
+      "cardNumber": "221",
+      "price": 282.82,
+      "grade": "PSA9",
+      "source": "cardhedge",
+      "title": "2022 Topps Chrome - BOBBY WITT JR - #221 Rookie Image Variation SP - PSA 9",
+      "card": "base",
+      "evidence": "R64b: #221 is the Extended Base SHORT PRINT, so 'Image Variation SP' with NO finish word names the short print itself. Price corroborates against this partition's own bands - base PSA 10s clear 600-945 and base PSA 9s 250-267, while refractor PSA 10s run 789-1000; this row at 282.82 sits in the base band for its grade.",
+      "repointHobbyiqCardId": "hiq:baseball:2022:topps-chrome:221:base:no-auto"
+    },
+    {
+      "id": "cardhedge::ch-daily::1747880326755x250293040417266530",
+      "fromCardId": "1664553883976x293772727399522100",
+      "toCardId": "",
+      "shape": "park",
+      "fromHobbyiqCardId": "hiq:baseball:2022:topps-chrome:221:base:no-auto",
+      "cardNumber": "221",
+      "price": 716,
+      "grade": "PSA10",
+      "source": "cardhedge",
+      "title": "2022 Topps Chrome Cosmic SP #221 Bobby Witt JR Royals RC Rookie PSA 10 GEM MINT",
+      "parkIdentityUnverified": true,
+      "card": "cosmic",
+      "evidence": "PARKED. Title names Topps Cosmic Chrome, which IS its own registered product and DOES exist in 2022 (4,743 rows) - but its 2022 card numbers run 1..200 and Bobby Witt Jr. is #162 there (also SN-12, CCA-BW). There is no #221 in 2022 Cosmic Chrome, so a '#221 Cosmic SP' title contradicts itself: either the number or the product word is wrong. Not guessed onto either."
+    },
+    {
+      "id": "cardhedge::ch-daily::1748208404625x909342203493076500",
+      "fromCardId": "1664553883976x293772727399522100",
+      "toCardId": "",
+      "shape": "park",
+      "fromHobbyiqCardId": "hiq:baseball:2022:topps-chrome:221:refractor:no-auto",
+      "cardNumber": "221",
+      "price": 260,
+      "grade": "",
+      "source": "cardhedge",
+      "title": "2022 Topps Chrome BOBBY WITT JR #221 Sonic SP Refractor RC - Raw 10",
+      "parkIdentityUnverified": true,
+      "card": "sonicUnprintedFinish",
+      "evidence": "PARKED. Title names SONIC plus a finish Sonic Lite does NOT print at #221. Its checklist-backed #221 ladder is: Short Prints, Image Variations, Short Prints Gold RayWave /50, Short Prints Green RayWave /99, Short Prints Orange/Black Sonic Pulse /25, Short Prints Red/Black Sonic Pulse /5 (plus the non-SP RayWave/Pulse rows) - there is NO plain 'Refractor' and NO 'SSP' among them. Inventing 'Sonic Refractor' or 'Sonic SSP' would mint a parallel from a sale title, which R64b forbids. Needs a source that prints this finish, or a ruling that the title means one of the listed ones."
+    },
+    {
+      "id": "cardhedge::ch-daily::1748657335925x230745526276940000",
+      "fromCardId": "1664553883976x293772727399522100",
+      "toCardId": "",
+      "shape": "park",
+      "fromHobbyiqCardId": "hiq:baseball:2022:topps-chrome:221:refractor:no-auto",
+      "cardNumber": "221",
+      "price": 1600,
+      "grade": "PSA9",
+      "source": "cardhedge",
+      "title": "2022 Topps Chrome Sonic Refractor Variation SSP Bobby Witt Jr #221 PSA 9 MINT",
+      "parkIdentityUnverified": true,
+      "card": "sonicUnprintedFinish",
+      "evidence": "PARKED. Title names SONIC plus a finish Sonic Lite does NOT print at #221. Its checklist-backed #221 ladder is: Short Prints, Image Variations, Short Prints Gold RayWave /50, Short Prints Green RayWave /99, Short Prints Orange/Black Sonic Pulse /25, Short Prints Red/Black Sonic Pulse /5 (plus the non-SP RayWave/Pulse rows) - there is NO plain 'Refractor' and NO 'SSP' among them. Inventing 'Sonic Refractor' or 'Sonic SSP' would mint a parallel from a sale title, which R64b forbids. Needs a source that prints this finish, or a ruling that the title means one of the listed ones."
+    },
+    {
+      "id": "cardhedge::ch-daily::1748833398454x676143609912286800",
+      "fromCardId": "1664553883976x293772727399522100",
+      "toCardId": "",
+      "shape": "repoint",
+      "fromHobbyiqCardId": "hiq:baseball:2022:topps-chrome:221:image-variation-refractor:no-auto",
+      "cardNumber": "221",
+      "price": 667.88,
+      "grade": "PSA10",
+      "source": "cardhedge",
+      "title": "Bobby Witt Jr 2022 Topps Chrome 221 Image Variation SP Rookie RC PSA 10",
+      "card": "base",
+      "evidence": "R64b: #221 is the Extended Base SHORT PRINT, so 'Image Variation SP' with NO finish word names the short print itself. Price corroborates against this partition's own bands - base PSA 10s clear 600-945 and base PSA 9s 250-267, while refractor PSA 10s run 789-1000; this row at 667.88 sits in the base band for its grade.",
+      "repointHobbyiqCardId": "hiq:baseball:2022:topps-chrome:221:base:no-auto"
+    }
+  ],
+  "unchanged": [
+    {
+      "id": "cardhedge::ch-daily::1664553883976x293772727399522100::2026-05-25T00:26:00+00:00::88700",
+      "hobbyiqCardId": "hiq:baseball:2022:topps-chrome:221:base:no-auto",
+      "price": 887,
+      "grade": "",
+      "title": "2022 Topps Chrome Baseball #221 Base"
+    },
+    {
+      "id": "cardhedge::ch-daily::1736296852470x165066357598433460",
+      "hobbyiqCardId": "hiq:baseball:2022:topps-chrome:221:refractor:no-auto",
+      "price": 249.99,
+      "grade": "",
+      "title": "2022 Topps Chrome - Extended SP Refractor #221 Bobby Witt Jr (RC) - Raw 10"
+    },
+    {
+      "id": "cardhedge::ch-daily::1736786318265x222873618110348350",
+      "hobbyiqCardId": "hiq:baseball:2022:topps-chrome:221:base:no-auto",
+      "price": 560,
+      "grade": "PSA10",
+      "title": "Bobby Witt Jr 2022 Topps Chrome Rookie Card RC Short Print SP #221 PSA 10"
+    },
+    {
+      "id": "cardhedge::ch-daily::1737060530991x418881623539463230",
+      "hobbyiqCardId": "hiq:baseball:2022:topps-chrome:221:refractor:no-auto",
+      "price": 630,
+      "grade": "PSA10",
+      "title": "Bobby Witt Jr Rookie SP 221 Refractor Silver 2022 Topps Chrome PSA 10 Gem Mint"
+    },
+    {
+      "id": "cardhedge::ch-daily::1737083690814x424866166852936770",
+      "hobbyiqCardId": "hiq:baseball:2022:topps-chrome:221:base:no-auto",
+      "price": 660,
+      "grade": "PSA10",
+      "title": "Bobby Witt Jr 2022 Topps Chrome Rookie Card RC Short Print SP #221 PSA 10"
+    },
+    {
+      "id": "cardhedge::ch-daily::1737940256840x625644656049338800",
+      "hobbyiqCardId": "hiq:baseball:2022:topps-chrome:221:base:no-auto",
+      "price": 615,
+      "grade": "PSA10",
+      "title": "Bobby Witt Jr 2022 Topps Chrome Rookie Card RC Short Print SP #221 PSA 10"
+    },
+    {
+      "id": "cardhedge::ch-daily::1739594799070x526044989570216200",
+      "hobbyiqCardId": "hiq:baseball:2022:topps-chrome:221:base:no-auto",
+      "price": 285,
+      "grade": "PSA9",
+      "title": "Bobby Witt Jr 2022 Topps Chrome Rookie Card RC Short Print SP #221 PSA 9"
+    },
+    {
+      "id": "cardhedge::ch-daily::1739727904742x473646592536977500",
+      "hobbyiqCardId": "hiq:baseball:2022:topps-chrome:221:refractor:no-auto",
+      "price": 300,
+      "grade": "PSA9",
+      "title": "2022 Topps Chrome Extended  SP SSP RC Rookie Refractor #221 Bobby Witt Jr PSA 9"
+    },
+    {
+      "id": "cardhedge::ch-daily::1740282298867x219944567947129470",
+      "hobbyiqCardId": "hiq:baseball:2022:topps-chrome:221:base:no-auto",
+      "price": 290,
+      "grade": "PSA9",
+      "title": "2022 Topps Chrome SP #221 Bobby Witt Jr PSA 9 Rookie RC"
+    },
+    {
+      "id": "cardhedge::ch-daily::1740365966985x373021276788166200",
+      "hobbyiqCardId": "hiq:baseball:2022:topps-chrome:221:refractor:no-auto",
+      "price": 680,
+      "grade": "PSA10",
+      "title": "2022 Topps Chrome Bobby Witt Jr Refractor Rookie SP RC #221 PSA 10"
+    },
+    {
+      "id": "cardhedge::ch-daily::1740705176361x173982959330094560",
+      "hobbyiqCardId": "hiq:baseball:2022:topps-chrome:221:base:no-auto",
+      "price": 700,
+      "grade": "PSA10",
+      "title": "2022 Topps Chrome - Bobby Witt Jr - SP RC - Kansas City Royals - #221 - PSA 10"
+    },
+    {
+      "id": "cardhedge::ch-daily::1740763556864x402470326755613760",
+      "hobbyiqCardId": "hiq:baseball:2022:topps-chrome:221:base:no-auto",
+      "price": 700,
+      "grade": "PSA10",
+      "title": "2022 Topps Chrome #221 Bobby Witt Jr RC SP PSA 10 💎"
+    },
+    {
+      "id": "cardhedge::ch-daily::1742174465034x444587639862996700",
+      "hobbyiqCardId": "hiq:baseball:2022:topps-chrome:221:base:no-auto",
+      "price": 795,
+      "grade": "PSA10",
+      "title": "2022 TOPPS CHROME SP #221 BOBBY WITT JR ROOKIE RC PSA 10"
+    },
+    {
+      "id": "cardhedge::ch-daily::1743901984050x363939168027699100",
+      "hobbyiqCardId": "hiq:baseball:2022:topps-chrome:221:base:no-auto",
+      "price": 250.27,
+      "grade": "PSA9",
+      "title": "2022 TOPPS CHROME SP #221 BOBBY WITT JR ROOKIE RC PSA 9"
+    },
+    {
+      "id": "cardhedge::ch-daily::1744837846671x224298269953168400",
+      "hobbyiqCardId": "hiq:baseball:2022:topps-chrome:221:base:no-auto",
+      "price": 267,
+      "grade": "PSA9",
+      "title": "Bobby Witt Jr 2022 Topps Chrome True Rookie 1st SP #221 (RC) PSA 9 Royals"
+    },
+    {
+      "id": "cardhedge::ch-daily::1745013277752x666253870971074160",
+      "hobbyiqCardId": "hiq:baseball:2022:topps-chrome:221:base:no-auto",
+      "price": 793.26,
+      "grade": "PSA10",
+      "title": "Bobby Witt Jr 2022 Topps Chrome True Rookie 1st SP #221 (RC) PSA 10 Royals"
+    },
+    {
+      "id": "cardhedge::ch-daily::1745419385782x798553436081898500",
+      "hobbyiqCardId": "hiq:baseball:2022:topps-chrome:221:refractor:no-auto",
+      "price": 799.99,
+      "grade": "PSA10",
+      "title": "Bobby Witt Jr Rookie SP 221 Refractor Silver 2022 Topps Chrome PSA 10 Gem Mint"
+    },
+    {
+      "id": "cardhedge::ch-daily::1745809380334x911067250817163500",
+      "hobbyiqCardId": "hiq:baseball:2022:topps-chrome:221:refractor:no-auto",
+      "price": 788.79,
+      "grade": "PSA10",
+      "title": "2022 Topps Chrome BOBBY WITT JR #221 SP Refractor RC Rookie PSA 10 GEM MT 2D"
+    },
+    {
+      "id": "cardhedge::ch-daily::1746497435103x876253636042148200",
+      "hobbyiqCardId": "hiq:baseball:2022:topps-chrome:221:base:no-auto",
+      "price": 810,
+      "grade": "PSA10",
+      "title": "2022 Topps Chrome Bobby Witt Jr SP ROOKIE #221 PSA 10 GEM MINT"
+    },
+    {
+      "id": "cardhedge::ch-daily::1746928256792x960493396419614700",
+      "hobbyiqCardId": "hiq:baseball:2022:topps-chrome:221:base:no-auto",
+      "price": 945,
+      "grade": "PSA10",
+      "title": "2022 TOPPS CHROME SP #221 BOBBY WITT JR ROOKIE RC PSA 10"
+    },
+    {
+      "id": "cardhedge::ch-daily::1749001625282x730378345311965400",
+      "hobbyiqCardId": "hiq:baseball:2022:topps-chrome:221:base:no-auto",
+      "price": 600,
+      "grade": "PSA10",
+      "title": "2022 TOPPS CHROME SP #221 BOBBY WITT JR ROOKIE RC PSA 10"
+    }
+  ]
 }
