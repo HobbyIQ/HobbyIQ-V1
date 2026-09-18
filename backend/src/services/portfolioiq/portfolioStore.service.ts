@@ -3126,6 +3126,12 @@ function unifiedHoldingWrite(
       slug: exact.attempt.cardId,
       compsUsed: u.totalSampleCount,
       confidence: u.confidence,
+      // CF-A-GRADE-NAMES-ITS-SOURCE (R58 as amended, Drew 2026-09-15). How
+      // many of the grades behind this number came from a sale's own title
+      // and how many from a vendor product record. Persisted so a reader —
+      // or a later audit — can ask that question of a price already written,
+      // rather than only of one being computed now.
+      gradeSources: u.gradeSources,
       // CF-A-PERSISTED-PRICE-CARRIES-ITS-LABELS (Drew, 2026-09-03).
       ...persistedLabelsForUnifiedResult(u, tierLabelFor(holdingGradeOf(holding)), ownerUserId),
     }, exact.attempt),
