@@ -148,7 +148,7 @@ function drive(specs: EntrySpec[], env: Record<string, string> = {}, opts: { fai
       cwd: backend,
       env: {
         PATH: process.env.PATH ?? "",
-        SystemRoot: process.env.SystemRoot ?? "",
+        SystemRoot: process.env.SystemRoot || process.env.SYSTEMROOT || "C:\Windows",
         NODE_OPTIONS: `--require ${JSON.stringify(shim)}`,
         COSMOS_CONNECTION_STRING: "AccountEndpoint=https://stub/;AccountKey=c3R1Yg==;",
         MANIFEST_PATH: manifestOf(specs),

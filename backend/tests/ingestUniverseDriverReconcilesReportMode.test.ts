@@ -90,7 +90,7 @@ function drive(entries: Entry[], unreachable: Mark[], env: Record<string, string
       cwd: backend,
       env: {
         PATH: process.env.PATH ?? "",
-        SystemRoot: process.env.SystemRoot ?? "",
+        SystemRoot: process.env.SystemRoot || process.env.SYSTEMROOT || "C:\Windows",
         NODE_OPTIONS: `--require ${JSON.stringify(shim())}`,
         COSMOS_CONNECTION_STRING: "AccountEndpoint=https://stub/;AccountKey=c3R1Yg==;",
         MANIFEST_PATH: manifestOf(entries, unreachable),

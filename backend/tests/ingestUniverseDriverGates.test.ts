@@ -290,7 +290,7 @@ describe("ingest-universe-driver — scope refusals come before any require", ()
         cwd: backend,
         // The env is REPLACED, never spread: an ambient SOURCES from the shell
         // would hand the script the very scope this asserts it does not have.
-        env: { PATH: process.env.PATH ?? "", SystemRoot: process.env.SystemRoot ?? "", ...env },
+        env: { PATH: process.env.PATH ?? "", SystemRoot: process.env.SystemRoot || process.env.SYSTEMROOT || "C:\Windows", ...env },
         encoding: "utf8",
         stdio: ["ignore", "pipe", "pipe"],
       });

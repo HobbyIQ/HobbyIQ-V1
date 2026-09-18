@@ -133,7 +133,7 @@ function runD30(loserFlagged: boolean, env: Record<string, string> = {}): { out:
     out = execFileSync(process.execPath, ["--require", stubPath, path.join(backend, "scripts", "consolidate-catalog-duplicates.cjs")], {
       cwd: backend,
       env: {
-        PATH: process.env.PATH ?? "", SystemRoot: process.env.SystemRoot ?? "",
+        PATH: process.env.PATH ?? "", SystemRoot: process.env.SystemRoot || process.env.SYSTEMROOT || "C:\Windows",
         COSMOS_CONNECTION_STRING: "AccountEndpoint=https://x/;AccountKey=x==;",
         SPORTS: "football", YEARS: "2024",
         AMBIGUOUS_OUT: path.join(tmp, "ambiguous.json"),

@@ -194,7 +194,7 @@ function runScript(
     out = execFileSync(process.execPath, ["--require", stubPath, target], {
       cwd: backend,
       env: {
-        PATH: process.env.PATH ?? "", SystemRoot: process.env.SystemRoot ?? "",
+        PATH: process.env.PATH ?? "", SystemRoot: process.env.SystemRoot || process.env.SYSTEMROOT || "C:\Windows",
         COSMOS_CONNECTION_STRING: "AccountEndpoint=https://x/;AccountKey=x==;",
         WRITES_OUT: writesOut, ...env,
       },
@@ -271,7 +271,7 @@ describe("D3 — sold-comps-cross-source-dedup.cjs, executed", () => {
     try {
       out = execFileSync(process.execPath, ["--require", stubPath, path.join(backend, "scripts", "sold-comps-cross-source-dedup.cjs")], {
         cwd: backend,
-        env: { PATH: process.env.PATH ?? "", SystemRoot: process.env.SystemRoot ?? "",
+        env: { PATH: process.env.PATH ?? "", SystemRoot: process.env.SystemRoot || process.env.SYSTEMROOT || "C:\Windows",
           COSMOS_CONNECTION_STRING: "AccountEndpoint=https://x/;AccountKey=x==;",
           WRITES_OUT: writesOut, APPLY: "true", MIN_PRICE: "1" },
         encoding: "utf8", timeout: 60_000, stdio: ["ignore", "pipe", "pipe"],

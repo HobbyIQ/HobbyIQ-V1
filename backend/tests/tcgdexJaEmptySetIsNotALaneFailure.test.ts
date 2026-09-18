@@ -145,7 +145,27 @@ function drive(specs: Spec[], env: Record<string, string> = {}) {
       cwd: backend,
       env: {
         PATH: process.env.PATH ?? "",
-        SystemRoot: process.env.SystemRoot ?? "",
+        // WINDOWS NEEDS A REAL `SystemRoot` OR THE CHILD NODE DOES NOT START.
+        //
+        // node v25 seeds its CSPRNG during InitializeOncePerProcess, and on
+        // Windows that reaches the crypto provider under %SystemRoot%. Hand it
+        // an EMPTY string and the process aborts before it runs a line of our
+        // script:
+        //
+        //   Assertion failed: ncrypto::CSPRNG(nullptr, 0)
+        //   node::InitializeOncePerProcessInternal at src\node.cc:1204
+        //
+        // Every `drive()` assertion then fails on a native stack trace instead
+        // of the lane's own output, which reads exactly like a lane regression
+        // and is not one.
+        //
+        // The empty string is real: env var names are case-INSENSITIVE to
+        // Windows itself but case-SENSITIVE to `process.env`, and some shells
+        // (Git Bash here) export the name as `SYSTEMROOT`. So
+        // `process.env.SystemRoot` is undefined while the machine is perfectly
+        // healthy. Read both spellings, and fall back to the OS default rather
+        // than passing "" — a wrong-but-present value is what breaks it.
+        SystemRoot: process.env.SystemRoot || process.env.SYSTEMROOT || "C:\\Windows",
         NODE_OPTIONS: `--require ${JSON.stringify(shim)}`,
         COSMOS_CONNECTION_STRING: "AccountEndpoint=https://stub/;AccountKey=c3R1Yg==;",
         MANIFEST_PATH: manifestOf(specs),

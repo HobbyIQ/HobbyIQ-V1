@@ -134,7 +134,7 @@ function drive(env: Record<string, string> = {}) {
   const shim = shimOf();
   const base = {
     PATH: process.env.PATH ?? "",
-    SystemRoot: process.env.SystemRoot ?? "",
+    SystemRoot: process.env.SystemRoot || process.env.SYSTEMROOT || "C:\Windows",
     NODE_OPTIONS: `--require ${JSON.stringify(shim)}`,
     COSMOS_CONNECTION_STRING: "AccountEndpoint=https://stub/;AccountKey=c3R1Yg==;",
     CENSUS_OUT: out,
