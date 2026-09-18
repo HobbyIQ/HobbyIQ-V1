@@ -273,6 +273,14 @@ const RULED_ALIASES: Readonly<Record<string, { to: string; why: string }>> = Obj
     why: "CF-SAPPHIRE-ONE-NAME, word order only. sapphireOneName.test.ts:34 already pins the title form 'Bowman Sapphire Chrome' to this destination; the setKey spelling must agree." },
   "topps-sapphire-chrome": { to: "topps-chrome-sapphire",
     why: "Word order only — the vocabulary already carries [/topps-(?:chrome-sapphire|sapphire-chrome)/] as ONE rule with two spellings of the same product." },
+  // R64 (Drew, 2026-09-18). Same shape as bowman-sapphire-edition above:
+  // "Edition" is a marketing suffix, not a product. This key is
+  // checklist-backed (2,157 rows), so the census made it a FIXED POINT on
+  // evidence alone — which is right as a default and wrong here, because both
+  // spellings describe ONE release. A declared canonical overrides a derived
+  // fixed point; that is what this table is for.
+  "topps-chrome-ben-baller-edition": { to: "topps-chrome-ben-baller",
+    why: "R64: one product, two spellings. Both are fully checklist-backed over the SAME years (2020, 2021, 2022) from DIFFERENT sources — topps-chrome-ben-baller 7,301 rows (checklistcenter x3) against topps-chrome-ben-baller-edition 2,157 (baseballcardpedia-ladders, baseballcardpedia-graded, beckett-checklist). Count by source decides the canonical spelling, and a source split is not a product split: no card exists in one spelling and not the other." },
   "topps-sapphire-chrome-factory-set": { to: "topps-chrome-sapphire",
     why: "2016 Topps Chrome Sapphire was SOLD as a factory set — the delivery format, not a different product. 1,044 checklist rows, all 2016, the year of that release. A box configuration does not mint an identity." },
 

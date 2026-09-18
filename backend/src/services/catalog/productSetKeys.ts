@@ -501,6 +501,38 @@ export const PRODUCT_SET_KEYS: ReadonlyArray<ProductSetKey> = [
   P("topps-chrome-sapphire", { parent: "topps-chrome" }),
   P("topps-chrome-platinum", { parent: "topps-chrome" }),
   P("topps-chrome-black", { parent: "topps-chrome" }),
+  // R64 (Drew, 2026-09-18). Two Chrome editions the title reader could not
+  // see, so every sale naming them pooled with flagship Chrome. Registered so
+  // the keys are deliberate rather than surviving by luck -- nothing claimed
+  // them, but nothing declared them either.
+  //
+  // BEN BALLER: one product, two spellings, both fully checklist-backed over
+  // the same years (2020-22) from DIFFERENT sources --
+  //
+  //   topps-chrome-ben-baller          7,301 rows   checklistcenter x3
+  //   topps-chrome-ben-baller-edition  2,157 rows   baseballcardpedia, beckett
+  //
+  // Count by source decides the canonical spelling, so the `-edition` form is
+  // an ALIAS, not a rival product. (`no synthetic parallels` at the product
+  // level: two spellings of one release are not two releases.)
+  S("topps-chrome-ben-baller", {
+    names: ["topps-chrome-ben-baller-edition"],
+    family: "topps-chrome", parent: "topps-chrome", refines: "topps-chrome",
+  }),
+  // SONIC LITE: "Sonic" and "Sonic Lite" are ONE release, verified against two
+  // sources rather than assumed. Cardboard Connection's `2022-topps-chrome-
+  // sonic-baseball-cards` URL serves the LITE page ("Topps Chrome Sonic LITE
+  // bursts into hobby shops for the first time"), and checklistcenter names it
+  // "2022 Topps Chrome Sonic Lite Baseball" with a 10-card Base Image
+  // Variation Set at 1:6399 -- cards 35, 83, 113, 128, 133, 221-225 -- which
+  // is exactly BCP's "Gimmicks | 10 | - | 1:6399" from Ruling 23. The catalog
+  // agrees: `topps-chrome-sonic-lite` holds 6,293 checklist-backed rows and
+  // `topps-chrome-sonic` holds ZERO. So the bare spelling is an alias because
+  // there is no distinct product for it to name -- not because one was folded.
+  S("topps-chrome-sonic-lite", {
+    names: ["topps-chrome-sonic"],
+    family: "topps-chrome", parent: "topps-chrome", refines: "topps-chrome",
+  }),
   P("topps-heritage", { parent: "topps" }),
   S("topps-heritage-high-number", { names: ["topps-heritage-high-numbers", "heritage-high-number", "heritage-high-numbers"], family: "topps-heritage", parent: "topps-heritage", refines: "topps-heritage" }),
   P("topps-traded", { parent: "topps" }),
