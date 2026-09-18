@@ -126,26 +126,53 @@ describe("plain Topps is still plain Topps", () => {
 // ---------------------------------------------------------------------------
 // REPORTED, NOT INVENTED: FLEER GREATS OF THE GAME
 // ---------------------------------------------------------------------------
-describe("Fleer Greats of the Game has no registered product key", () => {
-  it("is not a product the table carries, so no rule may point at it", () => {
-    // This is the REASON the fold below is left open. When the checklist is
-    // acquired and the key registered, this expectation flips and the next
-    // test's `toBe("fleer")` is what will fail -- which is the signal to add
-    // the rule, not a regression.
-    expect(isProductSetKey("fleer-greats-of-the-game")).toBe(false);
+describe("Fleer Greats of the Game — the checklist landed, the fold is closed", () => {
+  // THE DAY THIS TEST PREDICTED (2026-09-18). The block below used to pin
+  // `isProductSetKey("fleer-greats-of-the-game")` as FALSE and the three real
+  // sales as staying on `fleer`, and it said why: inventing a destination key
+  // for a product no checklist backed would be the synthetic-parallel failure
+  // one level up. It also said what would end that:
+  //
+  //   "When the checklist is acquired and the key registered, this expectation
+  //    flips and the next test's `toBe("fleer")` is what will fail -- which is
+  //    the signal to add the rule, not a regression."
+  //
+  // Both happened. #2234 landed the 237-row checklist (137 for 2001, 100 for
+  // 2002, baseballcardpedia with sportscardchecklist corroborating) and this
+  // PR registers the key with an explicit pattern ahead of the /fleer/
+  // catch-all. So the rule was added, and these assertions now state the new
+  // truth rather than the old debt.
+  it("is a registered product the table carries", () => {
+    expect(isProductSetKey("fleer-greats-of-the-game")).toBe(true);
+    // `fleer-greats` is still NOT a product: the phrase the sources print is
+    // "Greats of the Game", and Fleer separately prints "Fleer Greats". A key
+    // for that has no checklist, so it stays unregistered.
     expect(isProductSetKey("fleer-greats")).toBe(false);
+  });
+
+  it("nests under its flagship, so the ladder edge exists", () => {
+    expect(productParentOf("fleer-greats-of-the-game")).toBe("fleer");
   });
 
   it.each([
     "2002 Fleer Greats of the Game Kirby Puckett / Don Mattingly Dueling Duos #6 DD - Raw",
     "Bill Dickey 2002 Fleer Greats of the Game #78  Baseball Card - Raw 10",
     "2002 2002 Fleer Greats of the Game Baseball #75 Base",
-  ])("%s stays on the flagship until the checklist exists", (title) => {
-    // NOT an endorsement of the fold -- a pin on the honest state. Inventing
-    // `fleer-greats-of-the-game` here would file real sales at an address no
-    // checklist backs, which is the failure one level up from a synthetic
-    // parallel.
-    expect(setKeyOf(title)).toBe("fleer");
+  ])("%s reaches its own product", (title) => {
+    // Every one of these is a REAL pool row from the post-wave audit sample.
+    // 2,961 rows like them sat on bare `fleer` (1,518 in 2001, 1,443 in 2002)
+    // because no other destination resolved.
+    expect(setKeyOf(title)).toBe("fleer-greats-of-the-game");
+  });
+
+  it("the rule is anchored on the PHRASE, so it does not reach past its product", () => {
+    // A bare /greats/ would swallow 2005 Donruss Greats (1,302 checklist-backed
+    // rows, its own registered key) and any "Fleer Greats" title. The mutation
+    // check that the gate is a specialisation and not a hole.
+    expect(setKeyOf("2005 Donruss Greats Baseball #18 Gold HoloFoil")).toBe("panini-donruss");
+    expect(setKeyOf("2002 Fleer Baseball #75 Base")).toBe("fleer");
+    expect(setKeyOf("1987 Fleer Glossy Tin #12")).toBe("fleer-glossy");
+    expect(setKeyOf("1996 Fleer Tiffany #5")).toBe("fleer-tiffany");
   });
 });
 
