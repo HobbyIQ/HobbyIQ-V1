@@ -1,8 +1,8 @@
 {
-  "productKey": "2025-sv10",
+  "productKey": "2025-ja-sv10",
   "sport": "pokemon",
   "year": 2025,
-  "setKey": "sv10",
+  "setKey": "ja-sv10",
   "source": "tcgdex-ja-modern",
   "confidence": 0.9,
   "provenance": "api.tcgdex.net/v2/ja/sets/SV10 (MIT, tcgdex/cards-database) fetched 2026-09-04 -- 132 rows, 6 ladder entries",
