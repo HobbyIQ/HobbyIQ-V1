@@ -413,8 +413,40 @@ function main() {
     const movedCount = [...merged.values()].reduce((n, g) => n + g.length, 0);
     const totalCount = parallels.length + movedCount;
     if (movedCount > 0 && totalCount > 0) {
+      // THE FLOOR ASKS THE WRONG QUESTION WHEN THE SOURCE LABELS ITS BASE
+      // LADDER EXPLICITLY (2026-09-18).
+      //
+      // The fraction is a PROXY for "did the source mis-categorise this
+      // product's base ladder as inserts?" -- it has to be, because on the
+      // products it was written for (2024 donruss-elite) there is no base
+      // category at all and the only evidence is the shape of what is left.
+      //
+      // When the source DOES carry `insert-base*` categories, that proxy is
+      // unnecessary: the manufacturer has said outright which rows are the
+      // base card's ladder, those names are already in `parallels` via the
+      // base-wins guard above, and a product genuinely CAN have far more
+      // insert names than base rungs. Measured on the two products this was
+      // suppressing:
+      //
+      //   2024 panini-illusions FB   212 names, 173 would move, keeps 18.4%
+      //   2024 panini-photogenic FB   80 names,  70 would move, keeps 12.5%
+      //
+      // Both cleared the >=8 bar and failed only the 25% fraction, so both
+      // emitted `insertSets: ABSENT` -- and R31/R33 then had no corpus witness
+      // for "Illusionists", "In Motion", "Troops Tribute" et al, which is
+      // exactly the gap the R33 survivors were landing in.
+      //
+      // The >=8 floor is KEPT regardless: a split that yields a handful of
+      // names is still more likely to be noise than a ladder, whatever the
+      // categories say.
+      const sourceLabelsItsBase = [...bucket.values()].some((e) =>
+        [...(e.categories ?? [])].some((c) => {
+          const s = String(c);
+          return s === "insert-base" || s.startsWith("insert-base-")
+            || s === "base" || s.startsWith("base-");
+        }));
       const keptEnough = parallels.length >= MIN_KEPT_NAMES
-        && parallels.length / totalCount >= MIN_KEPT_FRACTION;
+        && (sourceLabelsItsBase || parallels.length / totalCount >= MIN_KEPT_FRACTION);
       if (!keptEnough) {
         const suspect = [...merged.entries()].map(([rootKey, entries]) => ({
           rootKey, children: entries.map((e) => e.name).sort(),
