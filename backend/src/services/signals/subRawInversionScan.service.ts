@@ -71,6 +71,63 @@ function median(sortedAsc: number[]): number {
   return sortedAsc[Math.floor(sortedAsc.length / 2)];
 }
 
+/**
+ * CF-A-429-IS-BACKPRESSURE-NOT-A-FAILURE (2026-09-18).
+ *
+ * THE DEFECT. This lane's page loop called `iter.fetchNext()` bare. Cosmos
+ * answers a throttled read with 429 "The request rate is too large" -- which
+ * is the server asking to be asked again, not a statement that the query is
+ * wrong. Unhandled, it propagates out of the scan, the dispatched job records
+ * a failure, and the workflow leg reports no summary:
+ *
+ *   sub-raw-inversion-scan-basketball: run failed after 42s --
+ *   The request rate is too large. Please retry after sometime. (429)
+ *
+ * Basketball has failed this way on its last three scheduled runs (09-16,
+ * 09-17, 09-18) while the other two sports settle, because the three legs of
+ * the nightly matrix fire CONCURRENTLY against one RU budget -- so the lane
+ * that loses the race is the one that dies, and which one loses is arbitrary.
+ *
+ * BOUNDED, AND IT GIVES UP. Six attempts, 500 ms doubling to a 15 s ceiling --
+ * the same shape the census scripts use (`retry()` in checkCatalogDuplicates
+ * et al). Bounded because a lane that retries forever is a lane that never
+ * reports, which is the failure mode the dispatch+poll split exists to avoid:
+ * the workflow's own poll would sit until its deadline with no summary either
+ * way, and an honest error beats a hang.
+ *
+ * ONLY BACKPRESSURE IS RETRIED. 429/503 and the transport resets say "not
+ * now"; anything else (a malformed query, a missing container, an auth
+ * failure) is a real defect and must surface on the first attempt rather than
+ * be hidden behind six slow retries.
+ */
+const RETRYABLE_READ = /request rate is too large|\b429\b|\b503\b|ETIMEDOUT|ECONNRESET|socket hang up/i;
+
+async function fetchWithRetry<T>(
+  fn: () => Promise<T>,
+  sport: string,
+  tries = 6,
+): Promise<T> {
+  let waitMs = 500;
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      const msg = String((err as { message?: string })?.message ?? err);
+      const code = Number((err as { code?: number })?.code ?? 0);
+      const retryable = code === 429 || code === 503 || RETRYABLE_READ.test(msg);
+      if (!retryable || attempt >= tries) throw err;
+      // Logged so a lane that is merely SLOW is distinguishable in the job
+      // output from one that died -- the difference the failing runs could
+      // not show.
+      console.warn(
+        `[sub-raw-inversion] ${sport}: throttled (${code || "429"}), retry ${attempt + 1}/${tries} in ${waitMs}ms`,
+      );
+      await new Promise((r) => setTimeout(r, waitMs));
+      waitMs = Math.min(waitMs * 2, 15_000);
+    }
+  }
+}
+
 /** CF-PROSPECTS-BREAKING-OUT (Drew, 2026-07-20). Returned by
  *  computeSubRawInversions() so both the nightly scan (telemetry
  *  side-effect) AND the user-facing prospects feed (endpoint that
@@ -122,7 +179,7 @@ export async function computeSubRawInversions(
 
   const rows: Array<CompRow & { cardNumber?: string | null; cardYear?: number | null }> = [];
   while (iter.hasMoreResults()) {
-    const { resources } = await iter.fetchNext();
+    const { resources } = await fetchWithRetry(() => iter.fetchNext(), opts.sport);
     rows.push(...resources);
   }
 
