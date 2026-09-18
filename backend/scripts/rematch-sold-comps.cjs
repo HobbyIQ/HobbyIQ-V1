@@ -2420,6 +2420,18 @@ async function main() {
         const e = res.finishIsAParallelEvidence ?? {};
         keep.rekeyedReason = `GREAT REMATCH (2026-09-13): R28-FINISH-IS-A-PARALLEL -- a finish word minted as a setKey; ${e.pair}, checklist lists it as a parallel of the derived product, destination checklist-backed`;
         keep.finishIsAParallelEvidence = e;
+      } else if (cand.kind === K.TITLE_FILLS_THE_BLANK) {
+        // The evidence travels WITH the row for the same reason every ruled
+        // subclass above carries it: Drew must be able to read, from the row
+        // alone, exactly what was seen. A reason naming only the subclass is
+        // not auditable after the fact.
+        const e = res.titleFillsTheBlankEvidence ?? {};
+        keep.rekeyedReason = `GREAT REMATCH (2026-09-14): R31-TITLE-FILLS-THE-BLANK -- a blank axis filled from the seller's own words; ${e.pair}, the checklist lists the rung for this cell, destination checklist-backed. Title "${e.titleQuoted}"`;
+        keep.titleFillsTheBlankEvidence = e;
+      } else if (cand.kind === K.TITLE_CARD_NUMBER_WINS) {
+        const e = res.titleCardNumberWinsEvidence ?? {};
+        keep.rekeyedReason = `GREAT REMATCH (2026-09-14): R33-TITLE-CARD-NUMBER-WINS -- the title states a literal card number the stored address contradicts; ${e.pair}, the title's number is a row of this checklist, destination checklist-backed. Title "${e.titleQuoted}"`;
+        keep.titleCardNumberWinsEvidence = e;
       } else {
         keep.rekeyedReason = `GREAT REMATCH (2026-09-01): IMPROVE, checklist-backed, filled ${res.axes.filled.join(",")}`;
       }
@@ -2473,6 +2485,13 @@ async function main() {
   /** Writable candidates the class scope held back, per class. Counted so the
    *  reconcile can show what a scoped run declined to write. */
   const disarmed = Object.create(null);
+  /** Writable candidates of an ARMED kind that the queue dispatch could not
+   *  route -- i.e. a kind with no branch giving it a destination. This is
+   *  always a code defect, never a legitimate outcome, so it is counted
+   *  separately from `disarmed` (a deliberate refusal) and shouted about in
+   *  the banner. Before this existed such rows vanished silently; see the
+   *  dispatch's final `else`. */
+  const unroutable = Object.create(null);
   /** The parser's lot detector, defensive: a parser throw must not take out a
    *  census pass over 16.3M rows, and the classifier's own range/pick half of
    *  GUARD 5 still fires without it. */
@@ -3093,10 +3112,45 @@ async function main() {
             // derived identity, so the destination is `der.slug`/`der.identity`
             // exactly as YEAR-FROM-TITLE-VINTAGE and SPORT-FROM-PRODUCT are.
             queueCandidate({ kind, row, stored, slug: der.slug, identity: der.identity });
+          } else if (kind === K.TITLE_FILLS_THE_BLANK || kind === K.TITLE_CARD_NUMBER_WINS) {
+            // THE TWO WRITING SCOPES OF 2026-09-14. Both move the row TO the
+            // derived identity, exactly like the 09-13 trio above: R31 fills a
+            // blank parallel (and/or print run), R33 takes the card number the
+            // title states. `der.slug`/`der.identity` is that destination.
+            //
+            // R32-SPLIT-MOVES-TO-THE-NAMED-SIDE is deliberately NOT here. It
+            // has no apply path at all -- split-scope.cjs is report-only by
+            // ruling -- so it must fall through to the refusal below rather
+            // than be given a destination it was never ruled to have.
+            queueCandidate({ kind, row, stored, slug: der.slug, identity: der.identity });
           } else if (kind === K.IMPROVE) {
             queueCandidate({ kind: K.IMPROVE, row, stored, slug: der.slug, identity: der.identity });
           } else if (kind === K.BASE_EVICTION) {
             queueCandidate({ kind: K.BASE_EVICTION, row, stored, slug: der.baseSlug, identity: der.baseIdentity });
+          } else {
+            // A KIND THAT IS ARMED, WRITABLE, AND HAS NO DESTINATION IS A
+            // DEFECT -- AND IT MUST NEVER AGAIN BE A SILENT ONE.
+            //
+            // This chain used to end at BASE-EVICTION with no `else`. A row of
+            // an armed kind with no branch fell out of the block entirely:
+            // never queued, never counted as held back, absent from `intended`
+            // and from every refusal tally. That is exactly how the terminal
+            // R33 wave reported success while writing nothing -- measured on
+            // run 35391563906 (slot 3), where the audit counted 664 writable
+            // R33 rows and the queue reported `candidates 0` with no
+            // corresponding `not-armed-by-scope` line for any of them.
+            //
+            // `applyKindOf` learning the kind (2026-09-15) was necessary and
+            // NOT sufficient: it got these rows past the arming check and into
+            // a dispatch that had nowhere to put them. Two independent holes on
+            // one path.
+            //
+            // Counted under its own reason so the banner's arithmetic cannot
+            // balance while rows disappear, and named so the next ruled scope
+            // that forgets its branch says so in the census instead of writing
+            // zero quietly.
+            bump(reasons, `apply  armed-kind-has-no-queue-branch:${kind}`);
+            unroutable[kind] = (unroutable[kind] ?? 0) + 1;
           }
         }
       }
@@ -3704,6 +3758,17 @@ async function main() {
     if (!armed && (c.intended || c.written)) {
       console.error(`!! SCOPE FAILURE: ${kind} is DISARMED and yet ${f(c.intended)} candidate(s) were queued and ${f(c.written)} written. Exit 6.`);
       process.exitCode = 6;
+    }
+    // AN ARMED KIND WITH NO QUEUE BRANCH IS A DEFECT, AND IT EXITS NONZERO.
+    //
+    // The silent version of this cost the terminal R33 wave: 664 writable rows
+    // of an ARMED class, `candidates 0`, and a banner whose arithmetic balanced
+    // perfectly because the rows were never counted anywhere. A run that cannot
+    // route an armed kind has not "written nothing", it has FAILED, and it must
+    // say so loudly enough that no one reads the zero as a clean result.
+    if (unroutable[kind]) {
+      console.error(`!! DISPATCH DEFECT: ${kind} is ARMED and ${f(unroutable[kind])} writable candidate(s) reached the queue with NO branch to route them -- never queued, never written, never held back. This is a code defect, not a scope decision. Exit 7.`);
+      process.exitCode = 7;
     }
   }
   const recon = stats.written + stats.skipped + stats.failed + stats.notReached;
