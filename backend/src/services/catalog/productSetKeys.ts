@@ -178,6 +178,38 @@ const METAL_UNIVERSE_ERA_MISNOMERS: Readonly<Record<string, string>> = Object.fr
 });
 
 /**
+ * R51 AMENDED (Drew, 2026-09-18): THE 2006 "GREATS OF THE GAME" IS FLEER'S.
+ *
+ * The product prints NO MAKER. 4,796 of its 4,797 checklist-backed catalog
+ * rows spell the setName "2006 Greats of the Game" — no Fleer, no Upper Deck —
+ * which is why R51's original attribution to Upper Deck was doubted and sent
+ * back: the 2006 `upper-deck` pool holds ZERO rows titled Greats of the Game.
+ * Drew's amendment keys it to `fleer-greats-of-the-game`, the maker the line
+ * belongs to and the key #2232 already registered for 2000-2004.
+ *
+ * IT IS YEAR-GATED BECAUSE THE KEY IS NOT 2006-ONLY, which a glance would
+ * miss. `greats-of-the-game` carries 4,801 rows: the 4,797 from 2006, plus ONE
+ * each in 2000, 2001, 2002 and 2004. Those four are `bccp-product-structure`
+ * stubs — no player, no card number, no hiq id, ids of the form
+ * `product-structure:2001-greats-of-the-game`. They are placeholders for
+ * products whose own checklists are an open acquisition (2001/2002 are #2234's
+ * subject), NOT 2006 cards, and folding them into a 2006 ruling would attribute
+ * four other years' products on no evidence.
+ *
+ * So the rule is gated to the ONE year Drew ruled on, and an absent year
+ * decides nothing — the same refusal the two tables above already make.
+ * Every other "Greats of the Game" spelling is untouched: `donruss-greats`
+ * (2005, 1,302 checklist rows) and `sports-illustrated-greats-of-the-game`
+ * (1999, 416) are registered fixed points from #2232 and never reach here.
+ */
+export const GREATS_OF_THE_GAME_FLEER_YEAR = 2006;
+
+/** The bare key the 2006 release is spelled with, and the maker key it is. */
+const GREATS_OF_THE_GAME_ERA_MAKER: Readonly<Record<string, string>> = Object.freeze({
+  "greats-of-the-game": "fleer-greats-of-the-game",
+});
+
+/**
  * CF-A-CHECKLIST-ROW-SPELLS-ITS-ERA-LIKE-A-SALE-DOES (Drew, 2026-09-05).
  *
  * THE DEFECT. `ERA_SPLIT_TABLE` (setKeyReconciliation.ts) rules that Score,
@@ -1848,6 +1880,15 @@ export function spellForEra(setKey: string, year: number | null | undefined, pol
   if (metalUniverseMisnomer !== undefined) {
     if (typeof year !== "number" || !Number.isFinite(year) || year <= 0) return setKey;
     return year < METAL_UNIVERSE_REVIVAL_FROM_YEAR ? metalUniverseMisnomer : setKey;
+  }
+  // R51 AMENDED: the 2006 "Greats of the Game" is Fleer's, and ONLY 2006.
+  // Same shape and same refusal as the two above — an absent or non-2006 year
+  // leaves the bare key exactly as it is, so the four bccp product-structure
+  // stubs in 2000/2001/2002/2004 are not attributed to a ruling about 2006.
+  const greatsMaker = GREATS_OF_THE_GAME_ERA_MAKER[setKey];
+  if (greatsMaker !== undefined) {
+    if (typeof year !== "number" || !Number.isFinite(year) || year <= 0) return setKey;
+    return year === GREATS_OF_THE_GAME_FLEER_YEAR ? greatsMaker : setKey;
   }
   // CF-A-CHECKLIST-ROW-SPELLS-ITS-ERA-LIKE-A-SALE-DOES: the era table's
   // never-acquired brands take the bare key in EVERY year, so this fires
