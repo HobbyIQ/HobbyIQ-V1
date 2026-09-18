@@ -717,6 +717,13 @@ function isCodedInsertSlot(v) {
   const s = str(v).trim();
   if (!s) return false;
   if (isPseudoCardNumber(s)) return false;   // the unparsed case R33 repairs
+  // A BLANK MARKER IS NOT AN ADDRESS. `unknown`, `none`, `base` match the
+  // shape by letters alone, and reading them as "more specific than the title"
+  // is exactly backwards -- blank means UNKNOWN, and a row whose number is
+  // unknown is precisely the row R33 exists to give a number to. The same
+  // GENERIC_PARALLELS set the parallel axis uses, because it is the same
+  // claim about the same words.
+  if (GENERIC_PARALLELS.has(lower(s))) return false;
   return CODED_INSERT_SLOT_RE.test(s);
 }
 
@@ -5759,7 +5766,30 @@ function titleCardNumberWinsEvidence({
   //
   // THE STORED CODED ADDRESS STANDS. Absent beats wrong: a refusal leaves the
   // row where it is and is recoverable; a wrong number merges two pools.
-  if (isCodedInsertSlot(storedNumber)) {
+  // THE ONE CASE A CODED STORED SLOT MUST **NOT** REFUSE: the title states the
+  // SAME coded address, only punctuated. `kb47` stored vs `#KB-47` in the
+  // title is R33's FOUNDING population -- a hyphen the derivation dropped, not
+  // a different card -- and the whole of its originally measured evidence
+  // (tests/rematchRuledScopes20260914.test.ts's real census rows).
+  //
+  // The two cases are opposites and the difference is the only thing that
+  // matters here:
+  //
+  //   kb47    -> KB-47   SAME address, punctuation restored   REPAIR  (write)
+  //   RPJ-JSA -> 6       DIFFERENT address, insert -> flagship  MERGE (refuse)
+  //
+  // So the comparison is punctuation-blind: strip every non-alphanumeric from
+  // both sides and ask whether they are the same token. `cardNumbersAgree` is
+  // not the right test -- it is deliberately punctuation-SENSITIVE, which is
+  // exactly why `kb47` reaches R33 as a disagreement in the first place.
+  const bareToken = (v) => lower(v).replace(/[^a-z0-9]/g, "");
+  const titleRestatesStoredAddress = bareToken(storedNumber) !== ""
+    && bareToken(storedNumber) === bareToken(titleNumber);
+
+  if (titleRestatesStoredAddress) {
+    // Nothing to refuse: the title is restating this row's OWN address. The
+    // other legs still decide whether the repair is safe.
+  } else if (isCodedInsertSlot(storedNumber)) {
     failed.push(`title-number-belongs-to-named-insert:stored-is-a-coded-slot:${storedNumber}`);
   } else if (titleNamesInsertSet) {
     failed.push(`title-number-belongs-to-named-insert:${lower(titleNamesInsertSet)}`);

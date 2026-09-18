@@ -81,6 +81,32 @@ describe("R33 refuses a number that belongs to a named insert set", () => {
     expect(res.writable).toBe(true);
   });
 
+  it("a hyphen-dropped coded number is REPAIRED, not refused — same address, punctuated", () => {
+    // R33's FOUNDING population, and the opposite of the defect above. The
+    // distinction is the only thing that matters:
+    //
+    //   kb47    -> KB-47   SAME address, punctuation restored   REPAIR
+    //   RPJ-JSA -> 6       DIFFERENT address, insert -> flagship  MERGE
+    //
+    // Both stored numbers are coded slots, so a guard keyed on "is it coded?"
+    // alone kills R33's own best evidence. CI caught this; the comparison is
+    // punctuation-blind on purpose.
+    const stored = {
+      sport: "basketball", cardYear: 2008, setKey: "upper-deck-mvp",
+      cardNumber: "kb47", parallel: "", isAuto: false, printRun: null,
+    };
+    const slug = "hiq:basketball:2008:upper-deck-mvp:kb47:base:no-auto";
+    const res = K.classifyRow({
+      row: { title: "2008-09 Upper Deck MVP #KB-47 Kobe Bryant BASKETBALL Los Angeles Lakers", id: "r33", cardId: slug },
+      stored, derived: { ...stored, cardNumber: "KB-47" },
+      checklistBacked: true, derivationReasons: [], storedSlug: slug,
+      titleNumberIsChecklistRow: true, derivedBackedR33: true,
+      titleNamesInsertSet: null,
+    });
+    expect(res.subclass, "a dropped hyphen is a repair R33 exists for").toBe(K.TITLE_CARD_NUMBER_WINS);
+    expect(res.writable).toBe(true);
+  });
+
   it("a `player-<name>` pseudo-number is NOT a coded slot — it is the case R33 repairs", () => {
     // `player-todd-worrell` matches the coded shape by letters alone, and
     // must be excluded: it is the UNPARSED case (a number the title spells out

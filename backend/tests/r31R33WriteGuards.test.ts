@@ -73,7 +73,14 @@ function r31({ title, parallel, listsToken, isRungPhrase = null, sibling = null 
 function r33(title: string, titleNumber: string) {
   return K.titleCardNumberWinsEvidence({
     row: { title },
-    stored: { cardNumber: "zzz-stored-differs" },
+    // A PLAIN number that merely DIFFERS from the title's. It used to be
+    // `zzz-stored-differs`, which said "differs" and nothing else — but §3c
+    // added a leg that reads a LETTER-BEARING stored number as a coded insert
+    // slot (RPJ-JSA, CI-22) and refuses on it, so the placeholder started
+    // failing these cases for a reason none of them is about. These tests are
+    // aimed at N1b (ordinals and lots), and the stored side only has to
+    // disagree.
+    stored: { cardNumber: "99999" },
     derived: { cardNumber: titleNumber },
     axes: { changed: ["cardNumber"], dropped: [] },
     titleNumberIsChecklistRow: true,
