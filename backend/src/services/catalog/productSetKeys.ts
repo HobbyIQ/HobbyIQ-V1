@@ -888,6 +888,40 @@ export const PRODUCT_SET_KEYS: ReadonlyArray<ProductSetKey> = [
     "panini-court-kings", "panini-origins", "panini-encased", "panini-eminence", "panini-totally-certified",
     "panini-certified", "panini-crusade", "panini-prestige", "panini-elite-extra-edition",
     "panini-diamond-kings"].map((k) => P(k, { parent: "panini" })),
+  // R50 / R52 / GREATS-OF-THE-GAME (Drew, 2026-09-15). A named product is its
+  // own card set, and these four were never registered — so the two that
+  // survived did so only because no family catch-all happened to name them,
+  // and the one that did not was being swallowed:
+  //
+  //   fleer-greats-of-the-game               -> fleer        COLLAPSED
+  //   upper-deck-greats-of-the-game          -> upper-deck   COLLAPSED
+  //   sports-illustrated-greats-of-the-game  -> itself       (by luck)
+  //   donruss-greats                         -> itself       (by luck)
+  //
+  // That is CF-FLAGSHIP-CATCH-ALL-SWALLOWS-SPECIALIZATIONS: a bare brand
+  // regex discarding the qualifier. Measured read-only 2026-09-15, the cost
+  // is 2,961 POOL rows titled "… Greats of the Game" addressed to bare
+  // `fleer` — 1,518 in 2001 and 1,443 in 2002 — because no other destination
+  // resolves.
+  //
+  //   sports-illustrated-greats-of-the-game  1999   416 checklist-backed rows,
+  //                                                 131 auto, baseballcardpedia
+  //                                                 + baseballcardpedia-graded
+  //   donruss-greats                         2005 1,302 checklist-backed rows,
+  //                                                 126 auto, same two sources
+  //   fleer-greats-of-the-game               2000-2004, Fleer by name in every
+  //                                                 source; its checklists are
+  //                                                 an acquisition (2001/2002
+  //                                                 have ZERO checklist rows)
+  //
+  // 2006 IS DELIBERATELY ABSENT. Its 4,797 checklist-backed rows are spelled
+  // "2006 Greats of the Game" in 4,796 of them — no maker in the name — and
+  // the 2006 `upper-deck` pool holds ZERO rows titled Greats of the Game. The
+  // key form for that year is with Drew; registering a guess would move 4,797
+  // rows to a name no source writes.
+  P("fleer-greats-of-the-game", { family: "fleer", parent: "fleer" }),
+  P("sports-illustrated-greats-of-the-game", { family: "sports-illustrated-greats-of-the-game" }),
+  P("donruss-greats", { family: "donruss", parent: "panini-donruss" }),
   // R62 (Drew, 2026-09-15): PLAYOFF CONTENDERS OPTIC IS ITS OWN PRODUCT.
   //
   // `panini-contenders-optic` was named in D31's own list of neighbours that
