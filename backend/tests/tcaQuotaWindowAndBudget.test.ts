@@ -50,31 +50,11 @@ function minuteOfDay(cron: string): number {
  * cron RUNS. Those are two different values and only one of them is binding
  * here; the test below pins them equal so they cannot drift apart.
  *
- * TEMPORARY 2026-09-13 → 2026-09-18 (Drew, 2026-09-12): while TCGplayer is
- * paused on the schedule, the fallback is a per-event-name ternary rather
- * than a bare literal, so this also matches that shape. See
- * tcaTcgplayerPauseRevert.test.ts for the test that fails once the window
- * has passed and this ternary is still present.
  */
 function scheduledPlatforms(): string[] {
   const literal = FIREHOSE.match(/PLATFORMS="\$\{\{ inputs\.platforms \|\| '([^']+)' \}\}"/);
-  if (literal) return literal[1].split(",").map((p) => p.trim()).filter(Boolean);
-  const paused = FIREHOSE.match(
-    /PLATFORMS="\$\{\{ inputs\.platforms \|\| \(github\.event_name == 'schedule' && '([^']+)' \|\| '([^']+)'\) \}\}"/,
-  );
-  expect(paused, "the ingest step must resolve PLATFORMS with a literal fallback").not.toBeNull();
-  return paused![1].split(",").map((p) => p.trim()).filter(Boolean);
-}
-
-/** The platforms a manual dispatch falls back to (the dispatch-form default side). */
-function dispatchFallbackPlatforms(): string[] {
-  const literal = FIREHOSE.match(/PLATFORMS="\$\{\{ inputs\.platforms \|\| '([^']+)' \}\}"/);
-  if (literal) return literal[1].split(",").map((p) => p.trim()).filter(Boolean);
-  const paused = FIREHOSE.match(
-    /PLATFORMS="\$\{\{ inputs\.platforms \|\| \(github\.event_name == 'schedule' && '([^']+)' \|\| '([^']+)'\) \}\}"/,
-  );
-  expect(paused, "the ingest step must resolve a dispatch fallback").not.toBeNull();
-  return paused![2].split(",").map((p) => p.trim()).filter(Boolean);
+  expect(literal, "the ingest step must resolve PLATFORMS with a literal fallback").not.toBeNull();
+  return literal![1].split(",").map((p) => p.trim()).filter(Boolean);
 }
 
 describe("the priority pull and the firehose do not share a quota window", () => {
@@ -199,18 +179,14 @@ describe("the firehose's reset-window run is budgeted on quota, not our clock", 
 // Halving it to 6 to seat TCGplayer would truncate the tighter lane to serve
 // the cheaper one. So the budget became per-platform and sequential.
 //
-// TEMPORARY 2026-09-13 → 2026-09-18 (Drew, 2026-09-12): TCGplayer is OFF the
-// schedule for this window (see tcaTcgplayerPauseRevert.test.ts), so the two
-// tests below assert against the manual-dispatch fallback instead of the
-// scheduled one until the pause is reverted.
 describe("the scheduled firehose ingests TCGplayer alongside eBay", () => {
-  it("names both platforms on the manual-dispatch fallback", () => {
-    const p = dispatchFallbackPlatforms().map((s) => s.toLowerCase());
+  it("names both platforms on the scheduled fallback", () => {
+    const p = scheduledPlatforms().map((s) => s.toLowerCase());
     expect(p).toContain("ebay");
     expect(p).toContain("tcgplayer");
   });
 
-  it("pre-fills the dispatch form with the same platforms a manual dispatch falls back to", () => {
+  it("pre-fills the dispatch form with the same platforms a scheduled run falls back to", () => {
     // Two literals for one decision drift apart silently: the form would go on
     // offering platforms a dispatch without the input set would not actually run.
     const formDefault = FIREHOSE.match(
@@ -218,7 +194,7 @@ describe("the scheduled firehose ingests TCGplayer alongside eBay", () => {
     );
     expect(formDefault, "the platforms input must carry a default").not.toBeNull();
     expect(formDefault![1].split(",").map((s) => s.trim()))
-      .toEqual(dispatchFallbackPlatforms());
+      .toEqual(scheduledPlatforms());
   });
 
   it("gives each platform the FULL budget rather than a divided one", () => {
