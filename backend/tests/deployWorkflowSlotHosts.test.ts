@@ -108,7 +108,11 @@ describe("the slot poll proves identity, not just liveness", () => {
     expect(warmAt).toBeGreaterThan(pollAt);
     // Previously a not-ok warm was a `::warning::` and the deploy carried on.
     // A warm that did not happen is a cold process about to take traffic.
-    expect(shell).toMatch(/::error::warm did not report ok:true/);
+    // CF-A-WARM-THAT-TIMED-OUT-IS-NOT-A-WARM (2026-09-18): the single warm call
+    // became eight, so the refusal message moved with it. The PROPERTY this pin
+    // holds is unchanged — a warm that did not report ok refuses the swap —
+    // and it is now strictly stronger, because all eight must report ok.
+    expect(shell).toMatch(/::error::only \$\{WARM_OK\}\/8 warm calls succeeded/);
   });
 
   it("records the warm's totalMs — the tell that caught this bug", () => {

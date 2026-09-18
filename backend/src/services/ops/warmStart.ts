@@ -113,7 +113,52 @@ async function step(label: string, fn: () => unknown | Promise<unknown>): Promis
  * rejects. Safe to call more than once — each underlying build memoises, so a
  * second call is a no-op that costs a few milliseconds.
  */
-export async function warmStart(): Promise<{ totalMs: number; steps: WarmStep[] }> {
+/**
+ * CF-A-WARM-THAT-TIMED-OUT-IS-NOT-A-WARM (Fable, 2026-09-18).
+ *
+ * A Cosmos warm step that takes this long did not warm anything — it hit
+ * `COSMOS_REQUEST_TIMEOUT_MS` (20,000 ms, from the connection policy, which
+ * applies on App Service because WEBSITE_SITE_NAME is set). 15 s is
+ * comfortably above every healthy reading measured (prod: 20 consecutive
+ * samples, max 4 ms; a healthy slot instance: 3-22 ms) and comfortably below
+ * the 20 s ceiling, so it cannot fire on a slow-but-working call.
+ */
+const WARM_COSMOS_SLOW_MS = 15_000;
+
+/**
+ * A short, stable identifier for the App Service worker serving this process.
+ *
+ * WHY THIS EXISTS. Four of five slot deploys refused the swap because the smoke
+ * timed out, while `/api/health/warm` reported `"ok":true`. It was reporting
+ * `ok` on a warm whose two Cosmos steps had taken 20,003 ms and 20,005 ms —
+ * i.e. had TIMED OUT — because each step is individually guarded and a failed
+ * step is recorded rather than fatal.
+ *
+ * Underneath that was a second fact no endpoint could show: the plan runs TWO
+ * instances, there is no ARR affinity, so the warm call and the smoke call
+ * round-robin independently. Warming one instance proves nothing about the one
+ * the smoke lands on. Measured on prod's own telemetry, last 3 h:
+ *
+ *   instance a549df3a…   calls 15,080   >=20s 280   p99 20,000 ms
+ *   instance 6fd4f9ab…   calls 21,850   >=20s   0   p99    121 ms
+ *
+ * Without an instance id in the response there is no way to prove a warm
+ * covered both workers. `WEBSITE_INSTANCE_ID` is a 64-char platform value;
+ * only a short hash is exposed — enough to DISTINGUISH instances and to match
+ * against `cloud_RoleInstance` in App Insights, without publishing the raw id.
+ */
+function instanceTag(): string | null {
+  const raw = String(process.env.WEBSITE_INSTANCE_ID ?? "").trim();
+  return raw ? raw.slice(0, 8) : null;
+}
+
+export async function warmStart(): Promise<{
+  ok: boolean;
+  totalMs: number;
+  instance: string | null;
+  failedSteps: string[];
+  steps: WarmStep[];
+}> {
   const startedAt = Date.now();
   const steps: WarmStep[] = [];
 
@@ -181,11 +226,29 @@ export async function warmStart(): Promise<{ totalMs: number; steps: WarmStep[] 
   }));
 
   const totalMs = Date.now() - startedAt;
+
+  // CF-A-WARM-THAT-TIMED-OUT-IS-NOT-A-WARM. A Cosmos step counts as FAILED
+  // when it threw OR when it took >= WARM_COSMOS_SLOW_MS, because a step that
+  // sat on the 20 s request ceiling did not open the connection it was there to
+  // open. Reporting `ok:true` for that is what let four slot deploys smoke a
+  // process whose Cosmos path was stone cold.
+  //
+  // Only the `cosmos-` steps get the duration rule: the in-process ones are
+  // pure CPU and a slow one is still a completed one.
+  const failedSteps = steps
+    .filter((s) => !s.ok || (s.label.startsWith("cosmos-") && s.ms >= WARM_COSMOS_SLOW_MS))
+    .map((s) => `${s.label}=${s.ms}ms${s.ok ? " (timed out)" : ` (${s.error ?? "error"})`}`);
+  const ok = failedSteps.length === 0;
+  const instance = instanceTag();
+
   console.warn(JSON.stringify({
     event: "warm_start_complete",
     source: "warmStart",
+    ok,
+    instance,
     totalMs,
+    failedSteps,
     steps: steps.map((s) => ({ label: s.label, ms: s.ms, ok: s.ok, ...(s.error ? { error: s.error } : {}) })),
   }));
-  return { totalMs, steps };
+  return { ok, totalMs, instance, failedSteps, steps };
 }

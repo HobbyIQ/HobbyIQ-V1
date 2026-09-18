@@ -217,7 +217,16 @@ router.get("/warm", async (_req, res) => {
   try {
     const { warmStart } = await import("../services/ops/warmStart.js");
     const result = await warmStart();
-    res.status(200).json({ ok: true, ...result });
+    // CF-A-WARM-THAT-TIMED-OUT-IS-NOT-A-WARM (Fable, 2026-09-18). This used to
+    // be `{ ok: true, ...result }` — a hardcoded verdict that the spread could
+    // not override, because `warmStart` did not return one. So a warm whose two
+    // Cosmos steps had each sat 20,003 ms on the request ceiling still reported
+    // `"ok":true`, the deploy believed it, and the smoke then hit a process
+    // whose Cosmos path was never opened. Four slot deploys in three days
+    // refused the swap that way.
+    //
+    // `result.ok` now carries the verdict and the spread is the whole answer.
+    res.status(200).json(result);
   } catch (err) {
     // A failed warm-up is not a failed service — the singletons build lazily on
     // first use exactly as they always did, just slower. Report it, do not 503.

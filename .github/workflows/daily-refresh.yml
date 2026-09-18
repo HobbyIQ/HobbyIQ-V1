@@ -46,13 +46,45 @@ jobs:
           # Widen the gate from equality to a 4-hour window to absorb GitHub
           # Actions schedule drift (cron jobs regularly fire 1-3+ hours late).
           # 10# strips leading zeros so bash treats "05" as decimal, not octal.
-          if [ "$((10#$ET_HOUR))" -ge 5 ] && [ "$((10#$ET_HOUR))" -le 9 ]; then
-            echo "should_run=true" >> "$GITHUB_OUTPUT"
-            echo "Current ET hour is $ET_HOUR (within 05-09 window); continuing workflow."
-          else
+          if [ "$((10#$ET_HOUR))" -lt 5 ] || [ "$((10#$ET_HOUR))" -gt 9 ]; then
             echo "should_run=false" >> "$GITHUB_OUTPUT"
             echo "Current ET hour is $ET_HOUR (outside 05-09 window); skipping this UTC trigger."
+            exit 0
           fi
+
+          # CF-ONE-DEPLOY-PER-DAY-NOT-TWO (Fable, 2026-09-18). Two cron entries
+          # (09:00 and 10:00 UTC) exist so that exactly one of them is 5 AM ET
+          # across DST. But the ET window above is 05-09 — deliberately wide, to
+          # absorb the 1-3 h Actions schedule drift — and BOTH triggers fall
+          # inside it. Measured: 09-16, 09-17 and 09-18 each ran twice, at
+          # ~09:1xZ and ~10:1xZ, redeploying an identical sha the second time.
+          #
+          # The window cannot simply be narrowed without losing the drift
+          # tolerance it was widened for. So the second run is stopped by what
+          # actually distinguishes it: production is ALREADY SERVING this sha.
+          # That is a stronger test than any clock arithmetic — it also skips a
+          # manual re-run of a build that is already live, and it cannot
+          # mis-fire on the genuine first run of a NEW sha.
+          # The public hostname is used directly, NOT `az webapp show`: this gate
+          # runs at step 1, before `azure/login`, so the CLI is not
+          # authenticated here. Every other host reference in this workflow is
+          # still resolved from Azure (#2202) — this one call cannot be, and a
+          # health probe over the public URL needs no credentials anyway.
+          LIVE=$(curl -s --max-time 20 \
+            "https://hobbyiq3-e5a4dgfsdnb5fbha.centralus-01.azurewebsites.net/api/health" \
+            | grep -o '"sha":"[^"]*"' | head -1 | cut -d'"' -f4)
+          if [ -n "$LIVE" ] && [ "$LIVE" = "${{ github.sha }}" ]; then
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+            echo "already live: production is serving ${LIVE} — nothing to deploy, skipping."
+            exit 0
+          fi
+          # An unreachable or unparsable health response must NOT block a
+          # deploy — fall through and let the slot flow decide, exactly as
+          # before this check existed.
+          echo "production serves ${LIVE:-<unknown>}; this run builds ${{ github.sha }}"
+
+          echo "should_run=true" >> "$GITHUB_OUTPUT"
+          echo "Current ET hour is $ET_HOUR (within 05-09 window); continuing workflow."
 
       - name: Setup Node.js 24
         if: steps.et-gate.outputs.should_run == 'true'
@@ -212,13 +244,60 @@ jobs:
             exit 1
           fi
 
-          # Only now is there a correct process to warm.
-          echo "Warming ..."
-          WARM=$(curl -s --max-time 180 "$SLOT/api/health/warm")
-          echo "$WARM"
-          if ! echo "$WARM" | grep -q '"ok":true'; then
-            echo "::error::warm did not report ok:true — not swapping."
+          # CF-A-WARM-THAT-TIMED-OUT-IS-NOT-A-WARM (Fable, 2026-09-18).
+          #
+          # This called warm ONCE and grepped for `"ok":true`. Both halves were
+          # wrong, and together they cost four refused swaps in three days:
+          #
+          #   1. `ok:true` was hardcoded in the route, so a warm whose two
+          #      Cosmos steps had each sat 20,003 ms on the request ceiling —
+          #      i.e. had TIMED OUT — still reported success. Fixed in
+          #      warmStart/health.routes; the endpoint now reports the verdict.
+          #   2. ONE call cannot warm TWO instances. The plan runs P2v3 x2 with
+          #      no ARR affinity, so the warm call and the smoke round-robin
+          #      independently: warming one worker proves nothing about the one
+          #      the smoke lands on. Measured on prod telemetry, one worker had
+          #      280 calls at the 20 s ceiling in 3 h while the other had zero.
+          #
+          # Eight calls, every one required ok, and at least two DISTINCT
+          # instance ids required — so "both workers are warm" is proved rather
+          # than hoped. With 2 instances and no affinity, 8 independent calls
+          # miss a worker with probability 2^-7 (<1%).
+          echo "Warming (8 calls, no affinity cookie) ..."
+          WARM_OK=0
+          WARM_IDS=""
+          for i in $(seq 1 8); do
+            WARM=$(curl -s --max-time 180 "$SLOT/api/health/warm")
+            ID=$(echo "$WARM" | grep -o '"instance":"[^"]*"' | head -1 | cut -d'"' -f4)
+            MS=$(echo "$WARM" | grep -o '"totalMs":[0-9]*' | head -1 | cut -d: -f2)
+            echo "  warm $i: instance=${ID:-<none>} totalMs=${MS:-?}"
+            echo "    $WARM"
+            if echo "$WARM" | grep -q '"ok":true'; then
+              WARM_OK=$((WARM_OK + 1))
+            else
+              FAILED=$(echo "$WARM" | grep -o '"failedSteps":\[[^]]*\]' | head -1)
+              echo "::error::warm call $i reported ok:false — ${FAILED:-no failedSteps in response}"
+            fi
+            [ -n "$ID" ] && WARM_IDS="$WARM_IDS $ID"
+          done
+
+          if [ "$WARM_OK" -ne 8 ]; then
+            echo "::error::only ${WARM_OK}/8 warm calls succeeded — not swapping."
+            echo "A warm that timed out means this slot instance cannot reach Cosmos."
+            echo "The smoke would hit the same instance and fail, so the swap is refused here"
+            echo "with a message that names the cause instead of a 25 s smoke timeout."
             exit 1
+          fi
+
+          DISTINCT=$(echo "$WARM_IDS" | tr ' ' '\n' | grep -v '^$' | sort -u | wc -l)
+          echo "warm covered ${DISTINCT} distinct instance(s):$(echo "$WARM_IDS" | tr ' ' '\n' | grep -v '^$' | sort -u | tr '\n' ' ')"
+          INSTANCES=$(az appservice plan show --name HobbyIqPLan2 --resource-group rg-hobbyiq-dev --query sku.capacity -o tsv 2>/dev/null || echo 1)
+          if [ "${INSTANCES:-1}" -gt 1 ] && [ "$DISTINCT" -lt 2 ]; then
+            # Not fatal: the ids come from WEBSITE_INSTANCE_ID, and a platform
+            # that stops setting it must not block every deploy. But an
+            # un-proved second worker is exactly the gap that produced the four
+            # failures, so it is a loud warning rather than a silent pass.
+            echo "::warning::plan has ${INSTANCES} instances but warm only proved ${DISTINCT} — the smoke may land on an unwarmed worker"
           fi
           # Recorded because it is the tell: on a genuinely cold process this is
           # seconds, and a value near zero means the warm hit a process that was
