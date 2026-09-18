@@ -63,14 +63,44 @@ function loadPool() {
   const rows = {};
   for (let n = 1; n <= APPLY_ROW_COUNT; n++) {
     const num = process.env.DISTINCT_CARDS === "true" ? String(n) : "27";
-    const slug = "hiq:baseball:2021:topps-chrome:" + num + ":base:no-auto";
+    // A PLAIN IMPROVE ROW, ON AN AXIS NO RULED SCOPE OWNS.
+    //
+    // This fixture used to be `parallel: ""` with a "... Refractor" title.
+    // That is a BLANK-PARALLEL FILL -- R31-TITLE-FILLS-THE-BLANK, a scope HELD
+    // by ruling. It was invisible for as long as applyKindOf mapped R31 to the
+    // bare IMPROVE kind, so `scope=improve` armed these rows BY ACCIDENT and
+    // the e2e passed for the wrong reason. The moment applyKindOf learned the
+    // trio's real kinds (2026-09-15) the same rows stopped being armed by
+    // `improve` and this file wrote nothing.
+    //
+    // This test is about the CURSOR -- writes as it classifies, checkpoints at
+    // the budget, resumes across a relaunch, converges -- so it needs a row
+    // that is writable under `scope=improve` for reasons that have nothing to
+    // do with the ruled scopes. Two constraints decide the shape:
+    //
+    //   1. The improvement must be STRICTLY MORE SPECIFIC on an axis none of
+    //      R31 (fills a blank parallel or print run), R32 (split identity) or
+    //      R33 (the title's card number) owns.
+    //   2. The improvement must MOVE THE SLUG. The write is a relocate, and a
+    //      canonical slug is (sport, year, setKey, cardNumber, parallel,
+    //      auto) -- six axes, and printRun is NOT one of them. An improvement
+    //      the slug cannot see re-keys nothing and the test would read 0
+    //      writes for a second, quieter reason.
+    //
+    // So the blank axis is the SET KEY: stored `unknown`, derived
+    // `topps-chrome` from the title. That is the largest real class in the
+    // pool (the unknown-setKey census: 664,810 rows), it is strictly more
+    // specific, it moves the slug, and no ruled scope claims it. The parallel
+    // AGREES on both sides so there is nothing for R31 to fill, and the card
+    // number agrees so there is nothing for R33 to win.
+    const slug = "hiq:baseball:2021:unknown:" + num + ":refractor:no-auto";
     const row = {
       id: "apply-" + n,
       cardId: slug,
       hobbyiqCardId: slug,
       title: "2021 Topps Chrome Mike Trout #" + num + " Refractor",
-      sport: "baseball", cardYear: 2021, setName: "Topps Chrome",
-      cardNumber: num, parallel: "", isAuto: false, printRun: null,
+      sport: "baseball", cardYear: 2021, setName: "unknown",
+      cardNumber: num, parallel: "Refractor", isAuto: false, printRun: null,
       source: "cardhedge", soldPrice: 100 + n, soldDate: "2026-01-01",
     };
     rows[row.id + "::" + row.cardId] = row;

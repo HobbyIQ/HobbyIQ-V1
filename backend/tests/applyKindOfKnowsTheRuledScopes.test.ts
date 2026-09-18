@@ -67,9 +67,16 @@ describe("applyKindOf knows every ruled subclass the scope table can arm", () =>
     (scope, subclass) => {
       // The end-to-end shape the driver asks: parse the scope, classify a row,
       // and see whether the queue would take it.
-      const armed = K.scopeToKinds ? K.scopeToKinds(scope) : new Set([subclass]);
+      //
+      // `parseApplyScope` is the ONLY scope parser — an earlier draft of this
+      // test reached for a `K.scopeToKinds` that does not exist, so the
+      // fallback branch ran and the assertion tested a hand-built Set instead
+      // of the real table. A scope table this test never actually reads is a
+      // scope table this test cannot pin.
+      const parsed = K.parseApplyScope(scope);
+      expect(parsed.ok, `scope=${scope} must parse: ${parsed.reason}`).toBe(true);
       const res = { klass: K.IMPROVE, subclass, writable: true, tier: K.AUTO };
-      expect(K.writableUnderScope(res, armed instanceof Set ? armed : new Set(armed)),
+      expect(K.writableUnderScope(res, parsed.classes),
         `a writable ${subclass} row must be queueable under scope=${scope}`).toBe(true);
     },
   );
@@ -95,11 +102,15 @@ describe("applyKindOf knows every ruled subclass the scope table can arm", () =>
     // The GENERAL form of the defect, so the next ruled scope cannot repeat it:
     // a scope that arms a kind no result can ever carry is a wave that writes
     // nothing and reports success.
+    //
+    // The table is `APPLY_SCOPE_ALIASES` — scope word -> kinds. An earlier
+    // draft read a `K.SCOPE_TO_KINDS` that does not exist, so `armable` was
+    // empty and the whole check returned before asserting anything.
     const armable = new Set<string>();
-    for (const kinds of (K.SCOPE_TO_KINDS ?? new Map()).values()) {
+    for (const kinds of K.APPLY_SCOPE_ALIASES.values()) {
       for (const k of kinds) armable.add(k);
     }
-    if (!armable.size) return;   // table not exported in this shape; covered above
+    expect(armable.size, "the scope table must arm at least one kind").toBeGreaterThan(0);
     const reachable = new Set<string>();
     for (const subclass of armable) {
       const kind = K.applyKindOf({ klass: K.IMPROVE, subclass, writable: true });
@@ -110,4 +121,129 @@ describe("applyKindOf knows every ruled subclass the scope table can arm", () =>
       "these kinds can be ARMED by a scope but no classifier result maps to them, "
       + "so a scoped wave would queue nothing and report success").toEqual([]);
   });
+});
+
+/**
+ * THE CONTAINMENT, ASSERTED ON REAL CLASSIFIED ROWS.
+ *
+ * The tests above pin the MAPPING (subclass -> kind) on hand-built results.
+ * These two pin the CONSEQUENCE on rows that go through `classifyRow`, which
+ * is where the defect would actually bite:
+ *
+ *   1. `scope=improve` arms IMPROVE and nothing else. R31 is HELD by ruling,
+ *      so an `improve` dispatch that silently reaches an R31 row is the hole,
+ *      not the feature — and the e2e fixture proved this is not theoretical:
+ *      it was an R31-shaped row that `scope=improve` armed by accident for as
+ *      long as applyKindOf mapped R31 to the bare IMPROVE kind.
+ *   2. `scope=r31` / `scope=r33` arm their own rows when the destination is
+ *      checklist-backed, and refuse the SAME row when it is not. Absent beats
+ *      wrong: unbacked means the destination was never proven to exist, and a
+ *      confident write onto an unproven address is worse than no write.
+ */
+describe("the ruled scopes are contained: improve never reaches them, they never skip the backing gate", () => {
+  const IMPROVE_SCOPE = K.parseApplyScope("improve").classes;
+
+  /** An R31 row: the stored parallel is BLANK and the title names the rung. */
+  function r31Row(checklistBacked: boolean) {
+    const stored = {
+      sport: "baseball", cardYear: 2021, setKey: "topps-chrome",
+      cardNumber: "27", parallel: "", isAuto: false, printRun: null,
+    };
+    const slug = "hiq:baseball:2021:topps-chrome:27:base:no-auto";
+    return K.classifyRow({
+      row: { title: "2021 Topps Chrome Mike Trout #27 Refractor", id: "r31", cardId: slug },
+      stored, derived: { ...stored, parallel: "Refractor" },
+      checklistBacked, derivationReasons: [], storedSlug: slug,
+      // R31's two catalog reads: the checklist lists the title's rung for this
+      // cell, and the phrase reads as a rung rather than prose.
+      checklistListsTitleParallel: true, titleParallelIsARungPhrase: true,
+    });
+  }
+
+  /** An R33 row: the stored number DISAGREES with the title's literal `#N`. */
+  function r33Row(checklistBacked: boolean) {
+    const stored = {
+      sport: "baseball", cardYear: 2021, setKey: "topps-chrome",
+      cardNumber: "99", parallel: "Refractor", isAuto: false, printRun: null,
+    };
+    const slug = "hiq:baseball:2021:topps-chrome:99:refractor:no-auto";
+    return K.classifyRow({
+      row: { title: "2021 Topps Chrome Mike Trout #27 Refractor", id: "r33", cardId: slug },
+      stored, derived: { ...stored, cardNumber: "27" },
+      checklistBacked, derivationReasons: [], storedSlug: slug,
+      // R33's catalog reads: the title's number is a real row of this
+      // checklist, and the derived address as a whole is backed.
+      titleNumberIsChecklistRow: checklistBacked, derivedBackedR33: checklistBacked,
+    });
+  }
+
+  it("scope=improve writes ZERO R31- and R33-shaped rows, even though both classify writable", () => {
+    const r31 = r31Row(true);
+    const r33 = r33Row(true);
+
+    // Precondition — if these stopped being the ruled subclasses the test
+    // below would pass vacuously, which is exactly how the e2e fixture hid
+    // this for two waves.
+    expect(r31.subclass, "the R31 fixture must really be R31").toBe(K.TITLE_FILLS_THE_BLANK);
+    expect(r33.subclass, "the R33 fixture must really be R33").toBe(K.TITLE_CARD_NUMBER_WINS);
+    expect(r31.writable, "the R31 fixture must be writable, or containment is untested").toBe(true);
+    expect(r33.writable, "the R33 fixture must be writable, or containment is untested").toBe(true);
+
+    // THE ASSERTION. Writable under their OWN scope, and not under `improve`.
+    expect(K.writableUnderScope(r31, IMPROVE_SCOPE),
+      "scope=improve must NOT arm an R31 row — R31 is held by ruling").toBe(false);
+    expect(K.writableUnderScope(r33, IMPROVE_SCOPE),
+      "scope=improve must NOT arm an R33 row — R33 is held by ruling").toBe(false);
+  });
+
+  it("a plain IMPROVE row IS still armed by scope=improve — the containment does not disarm the ordinary case", () => {
+    // The mirror of the test above, and the reason the e2e fixture had to
+    // change rather than the mapping: `scope=improve` must keep writing what
+    // it wrote yesterday. The improvement here is the SET KEY — strictly more
+    // specific, and an axis none of R31 (blank parallel / print run), R32
+    // (split identity) or R33 (the title's card number) owns.
+    const stored = {
+      sport: "baseball", cardYear: 2021, setKey: "unknown",
+      cardNumber: "27", parallel: "Refractor", isAuto: false, printRun: null,
+    };
+    const slug = "hiq:baseball:2021:unknown:27:refractor:no-auto";
+    const res = K.classifyRow({
+      row: { title: "2021 Topps Chrome Mike Trout #27 Refractor", id: "imp", cardId: slug },
+      stored, derived: { ...stored, setKey: "topps-chrome" },
+      checklistBacked: true, derivationReasons: [], storedSlug: slug,
+    });
+    expect(res.klass).toBe(K.IMPROVE);
+    expect(res.subclass, "a plain IMPROVE carries no ruled subclass").toBeFalsy();
+    expect(K.applyKindOf(res)).toBe(K.IMPROVE);
+    expect(K.writableUnderScope(res, IMPROVE_SCOPE),
+      "scope=improve must still arm an ordinary improvement").toBe(true);
+  });
+
+  it.each([
+    ["r31", "R31", r31Row, K.TITLE_FILLS_THE_BLANK],
+    ["r33", "R33", r33Row, K.TITLE_CARD_NUMBER_WINS],
+  ] as const)(
+    "scope=%s queues its own row when checklist-backed, and refuses the SAME row when it is not",
+    (scope, label, build, subclass) => {
+      const parsed = K.parseApplyScope(scope);
+      expect(parsed.ok, `scope=${scope} must parse: ${parsed.reason}`).toBe(true);
+
+      // BACKED: the destination is proven to exist, so the row is queueable.
+      const backed = build(true);
+      expect(backed.subclass, `${label} backed must classify as ${subclass}`).toBe(subclass);
+      expect(K.writableUnderScope(backed, parsed.classes),
+        `a backed ${label} row must be queueable under scope=${scope}`).toBe(true);
+
+      // UNBACKED: the SAME row, one fact removed. Absent beats wrong — the
+      // destination was never proven, so nothing is written and the refusal is
+      // named in the reasons rather than swallowed.
+      const unbacked = build(false);
+      expect(unbacked.writable,
+        `an unbacked ${label} row must never be writable`).toBe(false);
+      expect(K.writableUnderScope(unbacked, parsed.classes),
+        `scope=${scope} must NOT queue an unbacked ${label} row`).toBe(false);
+      expect(unbacked.reasons.join(" "),
+        `the refusal must NAME the backing gate, not vanish`).toMatch(/not-checklist-backed|destination-not-checklist-backed/);
+    },
+  );
 });

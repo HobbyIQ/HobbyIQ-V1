@@ -2246,6 +2246,31 @@ async function main() {
         ...(await r26Inputs(fresh, stored, der)),
         ...(await r27Inputs(fresh, stored, der)),
         ...(await r28Inputs(fresh, stored, der)),
+        // THE THREE RULED SCOPES OF 2026-09-14 (R31/R32/R33), at write time --
+        // and this omission was a latent defect until applyKindOf learned
+        // their kinds.
+        //
+        // Without these inputs the re-check classifies an R31/R33 row as plain
+        // IMPROVE, so `nowKind !== cand.kind` fires and the row is skipped as
+        // "no-longer-writable" -- the census says writable, the apply writes
+        // nothing, and the two passes disagree with no way to audit which is
+        // right. It was invisible while applyKindOf mapped the trio to IMPROVE
+        // too, because then both sides answered IMPROVE and agreed by
+        // accident. rematchApplyCursorE2E caught it the moment they stopped.
+        //
+        // This is exactly what the `spec` comment above warns about, arriving
+        // in the one trio that had not been wired.
+        ...(await r31Inputs(fresh, stored, der)),
+        ...(await r33Inputs(fresh, stored, der)),
+        // R32 IS NOT HERE, AND THAT IS NOT AN OMISSION. `r32Inputs(row, res)`
+        // needs the classify RESULT (it reads `res.splitIdentity`), so it
+        // cannot be spread into the call that produces that result -- the
+        // census asks it in a second step. R32 also has no apply path at all:
+        // split-scope.cjs is report-only by ruling (Drew, 2026-09-13 "report
+        // first, rule later") and no classifier result ever carries the R32
+        // subclass, so no R32 candidate can reach this re-check to disagree.
+        // When R32 gains an apply path it gains its inputs here in the same
+        // change.
       });
       // The class is decided again on what is there NOW, and it must come back
       // as the SAME kind the census queued. A row the census saw as an eviction
