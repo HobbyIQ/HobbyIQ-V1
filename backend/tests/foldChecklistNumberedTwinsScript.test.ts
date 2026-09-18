@@ -25,7 +25,7 @@ describe("fold-checklist-numbered-twins -- the scope refusal", () => {
         cwd: backend,
         env: {
           PATH: process.env.PATH ?? "",
-          SystemRoot: process.env.SystemRoot ?? "",
+          SystemRoot: process.env.SystemRoot || process.env.SYSTEMROOT || "C:\Windows",
           COSMOS_CONNECTION_STRING: "dummy",
         },
         encoding: "utf8",

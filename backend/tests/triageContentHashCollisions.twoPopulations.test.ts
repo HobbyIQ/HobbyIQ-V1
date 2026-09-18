@@ -134,7 +134,7 @@ function runTriage(env: Record<string, string>): { out: string; code: number | n
     out = execFileSync(process.execPath, ["--require", stubPath, path.join(backend, "scripts", "triage-contenthash-collisions.cjs")], {
       cwd: backend,
       env: {
-        PATH: process.env.PATH ?? "", SystemRoot: process.env.SystemRoot ?? "",
+        PATH: process.env.PATH ?? "", SystemRoot: process.env.SystemRoot || process.env.SYSTEMROOT || "C:\Windows",
         COSMOS_CONNECTION_STRING: "AccountEndpoint=https://x/;AccountKey=x==;",
         TRIAGE_OUT: outJson, WRITES_OUT: writesOut, ...env,
       },

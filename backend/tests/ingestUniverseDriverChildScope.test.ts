@@ -164,7 +164,7 @@ Module._load = function (request) {
         cwd: backend,
         env: {
           PATH: process.env.PATH ?? "",
-          SystemRoot: process.env.SystemRoot ?? "",
+          SystemRoot: process.env.SystemRoot || process.env.SYSTEMROOT || "C:\Windows",
           NODE_OPTIONS: `--require ${JSON.stringify(shim)}`,
           COSMOS_CONNECTION_STRING: "AccountEndpoint=https://stub/;AccountKey=c3R1Yg==;",
           MANIFEST_PATH: manifest,
@@ -222,7 +222,7 @@ Module._load = function (request) {
         cwd: backend,
         env: {
           PATH: process.env.PATH ?? "",
-          SystemRoot: process.env.SystemRoot ?? "",
+          SystemRoot: process.env.SystemRoot || process.env.SYSTEMROOT || "C:\Windows",
           COSMOS_CONNECTION_STRING: "AccountEndpoint=https://stub/;AccountKey=c3R1Yg==;",
           DIR: dir, SOURCE: "baseballcardpedia-ladders-2026-09-04",
           SLOT: "0", SLOTS: "16",
@@ -261,7 +261,7 @@ Module._load = function (request) {
         cwd: backend,
         env: {
           PATH: process.env.PATH ?? "",
-          SystemRoot: process.env.SystemRoot ?? "",
+          SystemRoot: process.env.SystemRoot || process.env.SYSTEMROOT || "C:\Windows",
           COSMOS_CONNECTION_STRING: "AccountEndpoint=https://stub/;AccountKey=c3R1Yg==;",
           DIR: dir, SOURCE: "baseballcardpedia-ladders-2026-09-04",
           // A non-zero slot is self-evidently deliberate: no default names one.
@@ -458,7 +458,7 @@ Module._load = function (request) {
       cwd: backend,
       env: {
         PATH: process.env.PATH ?? "",
-        SystemRoot: process.env.SystemRoot ?? "",
+        SystemRoot: process.env.SystemRoot || process.env.SYSTEMROOT || "C:\Windows",
         NODE_OPTIONS: `--require ${JSON.stringify(shim)}`,
         COSMOS_CONNECTION_STRING: "AccountEndpoint=https://stub/;AccountKey=c3R1Yg==;",
         MANIFEST_PATH: manifest,

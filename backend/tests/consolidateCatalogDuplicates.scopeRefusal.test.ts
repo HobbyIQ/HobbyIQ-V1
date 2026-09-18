@@ -26,7 +26,7 @@ function run(env: Record<string, string>): { code: number | null; out: string } 
       cwd: backend,
       // The env is REPLACED, not spread: inheriting an ambient SPORTS/YEARS
       // would hand the script the very scope this asserts it does not have.
-      env: { PATH: process.env.PATH ?? "", SystemRoot: process.env.SystemRoot ?? "", ...env },
+      env: { PATH: process.env.PATH ?? "", SystemRoot: process.env.SystemRoot || process.env.SYSTEMROOT || "C:\Windows", ...env },
       encoding: "utf8",
       stdio: ["ignore", "pipe", "pipe"],
     });

@@ -268,7 +268,7 @@ function run(opts: {
     cwd: backend,
     env: {
       PATH: process.env.PATH ?? "",
-      SystemRoot: process.env.SystemRoot ?? "",
+      SystemRoot: process.env.SystemRoot || process.env.SYSTEMROOT || "C:\Windows",
       NODE_OPTIONS: `--require ${JSON.stringify(shim).slice(1, -1)}`,
       COSMOS_CONNECTION_STRING: "AccountEndpoint=https://stub/;AccountKey=c3R1Yg==;",
       MARKET_SIGNALS_APPLY: "true",
@@ -474,7 +474,7 @@ describe("refresh-market-signals — a Cosmos 429 mid-scan is a backoff, not a c
       cwd: backend,
       env: {
         PATH: process.env.PATH ?? "",
-        SystemRoot: process.env.SystemRoot ?? "",
+        SystemRoot: process.env.SystemRoot || process.env.SYSTEMROOT || "C:\Windows",
         NODE_OPTIONS: `--require ${JSON.stringify(badShimPath).slice(1, -1)}`,
         COSMOS_CONNECTION_STRING: "AccountEndpoint=https://stub/;AccountKey=c3R1Yg==;",
         MARKET_SIGNALS_APPLY: "true",

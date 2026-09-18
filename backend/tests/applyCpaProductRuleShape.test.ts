@@ -47,7 +47,7 @@ function run(env: Record<string, string>): { code: number; out: string } {
   // exactly the ambient-value trap. Only the vars node needs to start are kept.
   const base: Record<string, string> = {
     PATH: process.env.PATH ?? "",
-    SystemRoot: process.env.SystemRoot ?? "",
+    SystemRoot: process.env.SystemRoot || process.env.SYSTEMROOT || "C:\Windows",
     COMSPEC: process.env.COMSPEC ?? "",
   };
   try {
