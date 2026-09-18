@@ -10,18 +10,17 @@
   "#200 TROUT: one row is PARKED, none move. 'Mike Trout 2022 Topps Chrome #200 Image Variation SP Refractor Angels' ($18.26) states an SP AND a refractor finish, and NO catalog row carries that combination for #200. Minting one from a single sale would repeat exactly the #221 SP error this ruling forbids. The other row ('MIKE TROUT Variation #200', $25) states no finish and stays.",
   "THE DESTINATION FOR CRUZ NEEDS MINTING and is NOT minted here: `topps-chrome-ben-baller:128:black` does not exist as a catalog row. Ben Baller's checklist IS held (7,301 checklist-backed rows incl. #128 Refractor Orange/Rose Gold/SuperFractor), so this is a gap in one parallel rather than an unbacked product - but it is still a mint, and mints do not belong in a pool list. Flagged for the catalog lane.",
   "AXIS: setKey and parallel move together as ONE ruled axis. cardNumber, isAuto and every trailing segment carry through byte-identical.",
-  "uniqueness is on (id, fromCardId)."
+  "uniqueness is on (id, fromCardId).",
+  "AMENDED 2026-09-18: the Ben Baller entry is PARKED, not relocated. The acquisition asked for was refused - three sources agree 2022 Topps Chrome Ben Baller has no Black parallel, so `topps-chrome-ben-baller:128:black` names a card that does not exist and nothing was staged. `catalogRowsNeededBeforeApply` is now empty: this list mints nothing and needs nothing minted."
  ],
  "census": {
   "partitions": 2,
   "poolRows": 5,
-  "relocates": 1,
-  "parks": 1,
+  "relocates": 0,
+  "parks": 2,
   "stays": 3,
   "catalogRowsToMint": 0,
-  "catalogRowsNeededBeforeApply": [
-   "hiq:baseball:2022:topps-chrome-ben-baller:128:black:no-auto"
-  ]
+  "catalogRowsNeededBeforeApply": []
  },
  "entries": [
   {
@@ -62,10 +61,9 @@
    "grade": "PSA10",
    "source": "tca-ebay",
    "title": "ONeil Cruz 2022 Topps Chrome Ben Baller Black Rookie RC #128 SP PSA 10 GEM MINT",
-   "toCardId": "hiq:baseball:2022:topps-chrome-ben-baller:128:black:no-auto",
-   "toSetKey": "topps-chrome-ben-baller",
-   "toParallel": "Black",
-   "card": "benBaller"
+   "card": "benBaller",
+   "parkIdentityUnverified": true,
+   "evidence": "PARKED, acquisition REFUSED. The title says 'Ben Baller Black' but THREE sources agree no Black parallel exists in 2022 Topps Chrome Ben Baller: checklistcenter ('There is no BLACK parallel listed'), Cardboard Connection (Green/99, Blue/75, Gold/50, Orange/25, Chartreuse/15, Rose Gold/10, Red/5, SuperFractor 1/1, plus Purple Friends-and-Family /42), and BaseballCardPedia verbatim ('All base cards except the five high-number short-prints are also available in the following parallels. Green Refractor ... Blue Refractor ... Chartreuse Refractor') with no Black, B&W or Black/White variant. Our own catalog agrees: ben-baller #128 holds 16 checklistcenter rows (Base + those 8 parallels), no Black; and topps-chrome-black has ZERO #128 rows, so 'Black' is not naming that product either. Minting a Black row so this sale has somewhere to go would file 85 USD at an address no publisher backs - the error R64b forbids. See backend/docs/acquisition/2026-09-18-ben-baller-128-black.md; if Drew reads 'Black' as describing Ben Baller's black-bordered design, the destination hiq:baseball:2022:topps-chrome-ben-baller:128:base:no-auto already exists, checklist-backed, and this becomes a one-line relocate."
   },
   {
    "id": "tca-ebay::800345736016",
