@@ -1,18 +1,19 @@
 {
  "generatedAt": "2026-09-18T22:13:45.269Z",
  "forLane": "relocate-catalog-rows-by-list",
- "reportOnlyUntil": "Drew review - AND it must run AFTER the R64d pool repoints land",
+ "reportOnlyUntil": "Drew review - the R64d pool apply has landed, so this list is now safe for the ONE id it retires",
  "finding": "Two more 2022 Topps Chrome #221 rows name cards no checklist carries. Both hold sales TODAY, so neither can be retired until the R64d pool list has repointed them - this list is the follow-up that lane's blocked entry promised.",
  "rulings": [
   "SEQUENCING IS THE POINT. relocate-catalog-rows-by-list retires by HARD DELETE and re-points nothing, so a retire while sales still carry the slug unplaces them. Both ids below currently hold sales by hobbyiqCardId. Run the R64d POOL list first; then these point-read 0 and this list is safe.",
   "`:221:image-variation-refractor:no-auto` - source ingest-auto-seed (authority `derived`). Held 2 CardHedge sales, which #2251 correctly BLOCKED rather than retire. R64d repoints both to `:221:base:no-auto`. After that it is empty and this entry retires the last of the phantom image-variation addresses.",
-  "`:221:ssp-refractor:no-auto` - source ingest-auto-seed, parallel 'Ssp Refractor'. Checked the same way as asked: it IS auto-seed, and it holds 1 sale by hobbyiqCardId (0 by cardId). That sale is '2022 Topps Chrome Sonic BOBBY WITT JR #221 SSP Variation RC - PSA 9 MINT - RARE' (1,500), which R64d PARKS - Sonic Lite prints no SSP tier at #221, and SP and SSP are separate cards. So this row is a self-derived address for a card no source attests, and once the sale is parked off it, it retires too.",
-  "NEITHER IS SAFE YET. If Drew runs this before R64d, one sale is unplaced and one is deleted out from under a park. Stated here rather than left to the operator to notice."
+  "NEITHER IS SAFE YET. If Drew runs this before R64d, one sale is unplaced and one is deleted out from under a park. Stated here rather than left to the operator to notice.",
+  "SPLIT 2026-09-18 after the R64d apply. This list originally carried BOTH ids on the reasoning 'run the pool list first, then both point-read 0'. That was right for image-variation-refractor and WRONG for ssp-refractor, because R64d PARKS the sale addressed to it rather than repointing it - and a park keeps hobbyiqCardId. The retire REPORT (run 35402882706) caught it: image-variation-refractor 0 sales, ssp-refractor still 1, 'sales made UNPLACED 1'. A park is not a move, and a list that treats it as one deletes the address a parked sale is waiting at."
  ],
  "census": {
-  "entries": 2,
-  "bothBlockedUntil": "the R64d pool repoints land",
-  "salesHeldToday": 3
+  "entries": 1,
+  "blocked": 1,
+  "salesHeldByBlockedRow": 1,
+  "verifiedAfterR64dApply": "image-variation-refractor point-reads 0 by BOTH identity fields; ssp-refractor holds 1 by hobbyiqCardId"
  },
  "entries": [
   {
@@ -20,12 +21,21 @@
    "action": "retire",
    "reason": "2022 Topps Chrome has no image-variation card at #221: #221 IS the Extended Base Short Print, so this address names a card no checklist carries",
    "evidence": "Bobby Witt Jr. #221, parallel 'Image Variation Refractor', source ingest-auto-seed (catalogAuthorityOf = derived). Two sources say #221-225 are the Extended Base Short Prints and the flagship Base Image Variation Set runs 1-220 (R64b). BLOCKED in #2251 because it held 2 CardHedge sales by hobbyiqCardId - 282.82 PSA 9 and 667.88 PSA 10, partitioned on the CH product id. R64d repoints both to :221:base:no-auto; AFTER that this row point-reads 0 and is safe to delete. Re-verify 0/0 by BOTH identity fields with fetchAll before applying."
-  },
+  }
+ ],
+ "blocked": [
   {
    "id": "hiq:baseball:2022:topps-chrome:221:ssp-refractor:no-auto",
-   "action": "retire",
-   "reason": "a self-derived 'Ssp Refractor' address for #221 that no checklist attests; Sonic Lite prints no SSP tier at this number and the flagship SSP variation list stops at #220",
-   "evidence": "Bobby Witt Jr. #221, parallel 'Ssp Refractor', source ingest-auto-seed (catalogAuthorityOf = derived). Holds 1 sale by hobbyiqCardId and 0 by cardId: '2022 Topps Chrome Sonic BOBBY WITT JR #221 SSP Variation RC - PSA 9 MINT - RARE' (1,500), in the CH vendor partition. R64d PARKS that sale rather than moving it, because Sonic Lite's checklist-backed #221 ladder has no SSP tier and SP/SSP are separate cards (project_image_variations_are_named_cards: 1:16,938 vs ~1:1,000). AFTER the park the row point-reads 0 and is safe. Re-verify 0/0 by BOTH identity fields with fetchAll before applying."
+   "action": "BLOCKED - not retired",
+   "reason": "one PARKED sale is still addressed to this row; a park keeps its hobbyiqCardId, so the address is still live",
+   "evidence": "R64d PARKED '2022 Topps Chrome Sonic BOBBY WITT JR #221 SSP Variation RC - PSA 9 MINT - RARE' (1,500, cardhedge, vendor partition 1664553883976x293772727399522100) rather than moving it, because Sonic Lite prints no SSP tier at #221. A park stamps identityUnverified and leaves hobbyiqCardId WHERE IT IS - it does not clear the address - so this row still holds 1 sale by hobbyiqCardId (0 by cardId) after the R64d apply. The retire lane's REPORT on run 35402882706 said so: 'sales made UNPLACED 1'. Retiring now would unplace a 1,500 USD sale that is deliberately waiting on a ruling.",
+   "remedy": "Pending Drew: what IS the Sonic SSP #221 card? Sonic Lite's checklist-backed #221 ladder is Short Prints, Image Variations, Short Prints Gold RayWave /50, Green RayWave /99, Orange/Black Sonic Pulse /25, Red/Black Sonic Pulse /5 - no SSP tier, and SP/SSP are separate cards (project_image_variations_are_named_cards: 1:16,938 vs ~1:1,000). Three ways out: (a) a source documents a Sonic SSP at #221 -> acquire it, mint the row, repoint the sale, then retire this one; (b) Drew rules the title's 'SSP' names the Short Print -> repoint to topps-chrome-sonic-lite:221:short-prints, then retire; (c) the sale stays parked indefinitely -> this row stays, because a parked sale still needs an address to sit at. Do NOT retire under any of the three until the sale has moved.",
+   "wasEntry": {
+    "id": "hiq:baseball:2022:topps-chrome:221:ssp-refractor:no-auto",
+    "action": "retire",
+    "reason": "a self-derived 'Ssp Refractor' address for #221 that no checklist attests; Sonic Lite prints no SSP tier at this number and the flagship SSP variation list stops at #220",
+    "evidence": "Bobby Witt Jr. #221, parallel 'Ssp Refractor', source ingest-auto-seed (catalogAuthorityOf = derived). Holds 1 sale by hobbyiqCardId and 0 by cardId: '2022 Topps Chrome Sonic BOBBY WITT JR #221 SSP Variation RC - PSA 9 MINT - RARE' (1,500), in the CH vendor partition. R64d PARKS that sale rather than moving it, because Sonic Lite's checklist-backed #221 ladder has no SSP tier and SP/SSP are separate cards (project_image_variations_are_named_cards: 1:16,938 vs ~1:1,000). AFTER the park the row point-reads 0 and is safe. Re-verify 0/0 by BOTH identity fields with fetchAll before applying."
+   }
   }
  ]
 }
