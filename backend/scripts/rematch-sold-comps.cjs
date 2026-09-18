@@ -1652,6 +1652,15 @@ async function main() {
       titleNamesLongerRung: longerRung,
       titleNamesSiblingProduct: siblingNamed,
       titleSerial,
+      // THE NAMED INSERT SETS OF THIS PRODUCT (§3c). A corpus read, supplied
+      // here for the same purity reason as every other catalog fact: the
+      // classifier stays pure and this is the one place the corpus is asked.
+      // Keyed by SPORT + year + setKey -- an insert set is sport-specific
+      // (three sports share the name "2024 panini-select" and list different
+      // inserts), unlike a finish.
+      titleNamesInsertSet: K.VOCAB.insertSetNamedInTitle(
+        row?.title, stored?.sport, stored?.cardYear, stored?.setKey,
+      ),
       derivedBackedR31: await checklistBacked(der.slug),
     };
   };
@@ -1705,7 +1714,7 @@ async function main() {
    * answering both legs rather than two reads that could disagree.
    */
   const r33Inputs = async (row, stored, der) => {
-    const none = { titleNumberIsChecklistRow: false, derivedBackedR33: false };
+    const none = { titleNumberIsChecklistRow: false, derivedBackedR33: false, titleNamesInsertSet: null };
     if (!der?.ok) return none;
     const titleNumber = K.cardNumberFromTitle(row?.title);
     if (!titleNumber) return none;
@@ -1713,7 +1722,16 @@ async function main() {
     if (!storedNumber || K.cardNumbersAgree(storedNumber, titleNumber)) return none;
     if (!K.cardNumbersAgree(der.identity?.cardNumber, titleNumber)) return none;
     const backed = await checklistBacked(der.slug);
-    return { titleNumberIsChecklistRow: backed === true, derivedBackedR33: backed === true };
+    return {
+      titleNumberIsChecklistRow: backed === true,
+      derivedBackedR33: backed === true,
+      // §3c: the named insert sets of this (sport, year, setKey). See the
+      // note in r31Inputs -- same corpus read, same sport-scoping, and R33
+      // refuses on it exactly as R31 does.
+      titleNamesInsertSet: K.VOCAB.insertSetNamedInTitle(
+        row?.title, stored?.sport, stored?.cardYear, stored?.setKey,
+      ),
+    };
   };
 
   /**
@@ -2831,6 +2849,10 @@ async function main() {
         titleSerial: r31In.titleSerial,
         titleNumberIsChecklistRow: r33In.titleNumberIsChecklistRow,
         derivedBackedR33: r33In.derivedBackedR33,
+        // §3c. ONE fact, read once, shared by R31 (T5b), R33 (N1c) and the
+        // plain-IMPROVE refusal -- the two helpers compute it identically, so
+        // either answer is the same answer.
+        titleNamesInsertSet: r31In.titleNamesInsertSet ?? r33In.titleNamesInsertSet ?? null,
       });
       counts[res.klass]++;
       // THE PER-SCOPE PREDICATE COUNTS, MODE=CENSUS ONLY. Asks each of the
