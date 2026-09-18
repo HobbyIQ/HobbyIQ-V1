@@ -116,13 +116,13 @@
     {
       "holdingId": "2b62a93f-f24c-454e-8d5f-1101eb417358",
       "userId": "user-199fcbc9-58ba-4643-a0c9-f75bcbc90bd4",
-      "from": "hiq:baseball:2022:topps-chrome:221:image-variation-sonic:no-auto",
-      "to": "hiq:baseball:2022:topps-chrome:221:image-variation-refractor:no-auto",
+      "from": "hiq:baseball:2022:topps-chrome:221:image-variation-refractor:no-auto",
+      "to": "hiq:baseball:2022:topps-chrome:221:refractor:no-auto",
       "rulingBy": "Drew",
       "date": "2026-09-18",
-      "note": "R64: 2022 Topps Chrome Witt Jr. #221 is FOUR cards - Ben Baller, Sonic Lite, Refractor image variation and plain Image Variation SP. Drew bought the REFRACTOR image variation (his two purchases $229.74 and $224.75, titles 'Topps Chrome Refractor Bobby Witt Jr. #221' and 'RC Refractor SP #221 Royals Rookie'), so the holding leaves the pooled image-variation-sonic address. REVERSES the 2026-09-11 ruling (cardpedia-drew-ruling-2026-09-11 / Ruling 24) that folded tier-blind variation titles onto Sonic on the premise that Sonic was this card's only variation tier. The pool APPLY has already moved the 6 matching sales to this address (verified by point-read 2026-09-18).",
+      "note": "R64b: the engine WITHHELD on the R64 destination - no-checklist-match, identitySource ingest-auto-seed, backing self-derived-only - and it was right. Two sources say 2022 Topps Chrome #221-225 are the EXTENDED BASE SHORT PRINTS, not image variations: Cardboard Connection gives the base set as 1-220 with 221-225 a separate Extended Base Short Prints subset (#221 Bobby Witt Jr.), and checklistcenter lists an Extended Base SP Set (#221-225) SEPARATE from a Base Image Variation Set whose numbers stop at 220, stating Witt #221 appears only in the SP set. So there is no image-variation #221; #221 IS the short print, and Drew's card - bought as Topps Chrome Refractor #221 - is simply #221 Refractor. The destination is checklist-backed (baseballcardpedia-ladders-2026-08-29), which is what the withhold was asking for.",
       "fields": {
-        "parallel": "Image Variation Refractor",
+        "parallel": "Refractor",
         "setName": "2022 Topps Chrome"
       }
     }
