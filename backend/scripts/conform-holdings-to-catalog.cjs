@@ -388,7 +388,22 @@ async function applyRulings(portfolio, cat) {
   const file = path.join(backend, "data", "holding-identity-rulings.json");
   const rulings = JSON.parse(fs.readFileSync(file, "utf8")).rulings ?? [];
   console.log(`conform-holdings-to-catalog  SCOPE=rulings  ${APPLY ? "APPLY" : "REPORT ONLY"}  ${rulings.length} ruling(s) from ${path.relative(backend, file)}`);
-  let applied = 0, skipped = 0, failed = 0;
+  // `notReached` is the reconciliation's fourth bucket: a ruling the loop never
+  // got to (a budget or an early exit). It is declared here because the summary
+  // and the reconcile check below both read it -- it was referenced ten times
+  // and declared nowhere, so EVERY SCOPE=rulings run died with
+  // `ReferenceError: notReached is not defined` after the loop had finished.
+  //
+  // In REPORT that only cost the summary. In APPLY it is worse: the patches are
+  // written inside the loop, so the run would write and THEN throw, skipping
+  // reportWrites() entirely -- a lane that wrote rows while reporting nothing,
+  // which is exactly the shape `green workflow is not data flow` warns about.
+  // The loop has no early exit today, so the values are 0/false and the
+  // reconcile holds. Both are declared together here because that is how the
+  // sibling scope at line ~533 declares them (`let notReached = 0,
+  // stoppedAtBudget = false;`) -- this function was written from that template
+  // and lost the pair.
+  let applied = 0, skipped = 0, failed = 0, notReached = 0, stoppedAtBudget = false;
   for (const r of rulings) {
     try {
       let row = null; try { row = (await retry(() => cat.item(r.to, r.to).read())).resource ?? null; } catch (e) { if (e?.code !== 404) throw e; }
