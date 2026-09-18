@@ -1,0 +1,63 @@
+{
+ "generatedAt": "2026-09-18T21:59:28.764Z",
+ "forLane": "relocate-catalog-rows-by-list",
+ "reportOnlyUntil": "Drew review - no apply is authorized by this PR",
+ "finding": "Five card_catalog rows address a 2022 Topps Chrome image variation at card #221. No such card exists. Two published sources agree that #221-225 are the EXTENDED BASE SHORT PRINTS and that the flagship Base Image Variation Set stops at #220 - so every one of these is a self-derived, vendor-derived or ruling-minted address for a card the checklists do not carry.",
+ "rulings": [
+  "R64 (Drew, 2026-09-18): Witt #221 pooled four different cards; split them. R64's chosen Refractor destination was `image-variation-refractor`, an ingest-auto-seed row.",
+  "R64b (2026-09-18): the pricing engine WITHHELD on that destination - 'no-checklist-match ... identitySource ingest-auto-seed, backing self-derived-only' - and it was right. Cardboard Connection: the base set is '220 cards numbered 1-220' and 221-225 are 'not part of the main base set' but the 'Extended Base Short Prints' subset ('Card 221: Bobby Witt Jr.'). checklistcenter: an 'Extended Base SP Set (5 cards: #221-225)' SEPARATE from a 'Base Image Variation Set (20 cards)' running 1..220, and Witt #221 'appears only in the Extended Base SP Set, not in the Image Variations section (which tops out at #220)'. The sales now live on the checklist-backed `:221:refractor:` and `:221:base:` rows, and the holding prices $253.95 there.",
+  "cardpedia-drew-ruling-2026-09-11 (Ruling 23) is CITED AND REVERSED for this card: it minted `image-variation-sonic` from BCP's Gimmicks line on the reading that #221's variation is Sonic. R64 withdrew that premise; R64b showed the Sonic image variations are the SONIC LITE product's, and their 6 sales sit on that product's own checklistcenter-backed row.",
+  "RETIRE IS A HARD DELETE in this lane (retireCatalogRow: graded children, then the row) and it re-points NOTHING. That is safe here and only here because every id below point-reads 0 sales and 0 holdings - verified 2026-09-18, and stated per row in its evidence. If any had sales, the entry would be listed BLOCKED rather than retired.",
+  "NOT IN THIS LIST, deliberately: `hiq:baseball:2022:topps-chrome-sonic-lite:221:image-variations:no-auto`. It is checklistcenter-backed, it is the real Sonic Lite image variation, and it holds the 6 Sonic sales. Retiring it would delete a real card and unplace live sales.",
+  "The graded children are NAMED rather than left to the lane's own child sweep, so the operator can see every id this list deletes before the apply.",
+  "A RETIRE LIST MUST COUNT BY BOTH IDENTITY FIELDS, and this list is the proof. It originally carried 5 entries. The lane's own REPORT disagreed with my point-read - 'sales pointing here: 2' where a cardId query said 0 - because the lane counts by hobbyiqCardId (that is what retireCatalogRow leaves behind) while CardHedge rows are partitioned on the CH product id. A paged fetchNext read compounded it, returning 0 for a row that has 2. The row is now BLOCKED, the two sales are named, and the remaining four are verified 0/0 by cardId AND hobbyiqCardId with fetchAll."
+ ],
+ "census": {
+  "entries": 4,
+  "salesHandedToRematch": 0,
+  "holdingsAffected": 0,
+  "blocked": 1,
+  "bySource": {
+   "ingest-auto-seed": 1,
+   "ingest-auto-seed-graded": 2,
+   "ebay-user-purchase": 1,
+   "cardpedia-drew-ruling-2026-09-11": 1
+  },
+  "verification": "0 sales by EITHER identity field across all 4 retired ids - cardId AND hobbyiqCardId, read with fetchAll"
+ },
+ "entries": [
+  {
+   "id": "hiq:baseball:2022:topps-chrome:221:image-variation-refractor:no-auto:psa-9",
+   "action": "retire",
+   "reason": "2022 Topps Chrome #221 has no image-variation card: #221 IS the Extended Base Short Print, so this address names a card no checklist carries",
+   "evidence": "Bobby Witt Jr. #221, parallel \"Image Variation Refractor\", source ingest-auto-seed-graded (catalogAuthorityOf = derived). POINT-READ 2026-09-18: 0 sale(s) resident and 0 holding(s) pointing here - nothing is handed to the rematch by deleting it. graded child of the row above, same derived mint (ingest-auto-seed-graded). Named explicitly rather than left to retireCatalogRow's child sweep, so the operator sees every id this list deletes."
+  },
+  {
+   "id": "hiq:baseball:2022:topps-chrome:221:image-variation-refractor:no-auto:psa-10",
+   "action": "retire",
+   "reason": "2022 Topps Chrome #221 has no image-variation card: #221 IS the Extended Base Short Print, so this address names a card no checklist carries",
+   "evidence": "Bobby Witt Jr. #221, parallel \"Image Variation Refractor\", source ingest-auto-seed-graded (catalogAuthorityOf = derived). POINT-READ 2026-09-18: 0 sale(s) resident and 0 holding(s) pointing here - nothing is handed to the rematch by deleting it. graded child of the row above, same derived mint (ingest-auto-seed-graded). Named explicitly for the same reason."
+  },
+  {
+   "id": "hiq:baseball:2022:topps-chrome:221:refractor-image-variation:no-auto",
+   "action": "retire",
+   "reason": "2022 Topps Chrome #221 has no image-variation card: #221 IS the Extended Base Short Print, so this address names a card no checklist carries",
+   "evidence": "Bobby Witt Jr. #221, parallel \"Refractor Image Variation\", source ebay-user-purchase (catalogAuthorityOf = vendor). POINT-READ 2026-09-18: 0 sale(s) resident and 0 holding(s) pointing here - nothing is handed to the rematch by deleting it. the same non-existent card under the other word order, minted from Drew's own eBay purchase (source ebay-user-purchase, authority `vendor`). CF-PERSIST-VENDOR-LOOKUPS: checklists mint, vendors never."
+  },
+  {
+   "id": "hiq:baseball:2022:topps-chrome:221:image-variation-sonic:no-auto",
+   "action": "retire",
+   "reason": "2022 Topps Chrome #221 has no image-variation card: #221 IS the Extended Base Short Print, so this address names a card no checklist carries",
+   "evidence": "Bobby Witt Jr. #221, parallel \"Image Variation Sonic\", source cardpedia-drew-ruling-2026-09-11 (catalogAuthorityOf = checklist). POINT-READ 2026-09-18: 0 sale(s) resident and 0 holding(s) pointing here - nothing is handed to the rematch by deleting it. minted by cardpedia-drew-ruling-2026-09-11 (Ruling 23: 'Witt Jr. #221 is Sonic per BCP -> mint from BCP'). R64 (2026-09-18) REVERSED the premise that Sonic is this card's only variation tier, and R64b established there is no flagship image-variation #221 at all - the Sonic image variations belong to the SONIC LITE product, whose own checklistcenter-backed row holds those 6 sales."
+  }
+ ],
+ "blocked": [
+  {
+   "id": "hiq:baseball:2022:topps-chrome:221:image-variation-refractor:no-auto",
+   "action": "BLOCKED - not retired",
+   "reason": "2 live CardHedge sales still carry this slug as their hobbyiqCardId; a retire here would unplace real money",
+   "evidence": "Point-read 2026-09-18 by BOTH identity fields: 0 rows by cardId, but 2 by hobbyiqCardId - cardhedge::ch-daily::1746544357535x132886934759926420 (282.82 USD, PSA 9) and cardhedge::ch-daily::1748833398454x676143609912286800 (667.88 USD, PSA 10), titles '2022 Topps Chrome - BOBBY WITT JR - #221 Rookie Image Variation SP - PSA 9' and 'Bobby Witt Jr 2022 Topps Chrome 221 Image Variation SP Rookie RC PSA 10'. Both are partitioned on the CardHedge PRODUCT id 1664553883976x293772727399522100, not on any hiq slug - the exact shape the 2026-09-12 list warned about: 'twelve of the sixteen rows here are CardHedge sales keyed on the CH product id ... built the other way this list would point-read 0 of them'.",
+   "remedy": "Re-key these 2 in the POOL lane first, onto hiq:baseball:2022:topps-chrome:221:refractor:no-auto on the same reading as R64b (#221 is the Extended Base SP, so an 'Image Variation SP' title names the short print). NOTE FOR DREW: at 282.82 (PSA 9) and 667.88 (PSA 10) these sit between the base band and the refractor band (refractor PSA 10s cleared 975.99 and 1000.00; base is unpriced), so the tier is worth confirming before the re-key rather than inferred from price. Once they are moved this row point-reads 0/0 and can be retired in a follow-up."
+  }
+ ]
+}
