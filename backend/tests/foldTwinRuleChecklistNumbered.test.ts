@@ -9,6 +9,7 @@ import {
   pickChecklistNumberedTarget,
   printRunOf,
   shardOfIdentity,
+  subsetSegmentOf,
   type IdentityRow,
 } from "../src/services/catalog/foldTwinRuleChecklistNumbered.js";
 import { catalogAuthorityOf } from "../src/services/catalog/catalogAuthority.service.js";
@@ -338,6 +339,77 @@ describe("R1 -- identityKeyOf reads the setKey FIELD, not the id segment", () =>
     const renamedId: IdentityRow = { id: "hiq:baseball:2020:topps-triple-threads:sjr-am:sapphire:no-auto:num-25", source: "bccp", sport: "baseball", year: 2020, setKey: "topps-triple-threads", cardNumber: "SJR-AM", parallelSlug: "sapphire", isAuto: false, printRun: 25 };
     const oldId: IdentityRow = { ...renamedId, id: "hiq:baseball:2020:topps:sjr-am:sapphire:no-auto:num-25" };
     expect(identityKeyOf(renamedId)).toBe(identityKeyOf(oldId));
+  });
+});
+
+describe("R1 -- identityKeyOf includes the id's :sub- segment (catalog audit finding, 2026-09-19)", () => {
+  // Real shapes measured on the baseball catalog audit: 59,522 rows carry
+  // this disambiguator ONLY in the id -- never in parallelSlug, variation or
+  // setKey -- so a key built from fields alone reads a sub row and its plain
+  // twin as one identity. None of these rows carry a printRun (vintage), so
+  // the mixed groups never folded only because the /N gate above already
+  // refused them -- the identity itself was still wrong.
+  const PLAIN: IdentityRow = {
+    id: "hiq:baseball:1971:topps:15:base:no-auto",
+    source: "checklistcenter",
+    sport: "baseball",
+    year: 1971,
+    setKey: "topps",
+    cardNumber: "15",
+    parallelSlug: "base",
+    isAuto: false,
+    printRun: null,
+  };
+  const SUB_TEK_30: IdentityRow = { ...PLAIN, id: "hiq:baseball:1971:topps:sub-tek-pattern-30:15:base:no-auto" };
+  const SUB_TEK_31: IdentityRow = { ...PLAIN, id: "hiq:baseball:1971:topps:sub-tek-pattern-31:15:base:no-auto" };
+  const SUB_VENEZUELAN: IdentityRow = { ...PLAIN, id: "hiq:baseball:1971:topps:sub-venezuelan:15:base:no-auto" };
+
+  it("a :sub- row and its plain base twin are DIFFERENT identities", () => {
+    expect(identityKeyOf(SUB_TEK_30)).not.toBe(identityKeyOf(PLAIN));
+  });
+
+  it("the SAME :sub- segment on two rows is the SAME identity", () => {
+    const sameSub: IdentityRow = { ...SUB_TEK_30, source: "a-different-source" };
+    expect(identityKeyOf(SUB_TEK_30)).toBe(identityKeyOf(sameSub));
+  });
+
+  it("sub-tek-pattern-30 and sub-tek-pattern-31 are DIFFERENT identities -- each Tek pattern is its own card", () => {
+    expect(identityKeyOf(SUB_TEK_30)).not.toBe(identityKeyOf(SUB_TEK_31));
+  });
+
+  it("two DIFFERENT :sub- names on the same card number are different identities", () => {
+    expect(identityKeyOf(SUB_TEK_30)).not.toBe(identityKeyOf(SUB_VENEZUELAN));
+  });
+
+  it("a row with NO :sub- segment keys BYTE-IDENTICALLY to before this field existed", () => {
+    // The exact pinned string from the D23 test above, unaffected by this
+    // change -- proves the append is additive, never disturbing the
+    // no-segment case, so canary counts do not shift except by the mixed
+    // groups this fix actually corrects.
+    expect(identityKeyOf(PLAIN)).toBe("baseball|1971|topps|15|base|no-auto");
+    const fieldRow: IdentityRow = { id: "hiq:baseball:2020:topps:sjr-am:sapphire:no-auto:num-25", source: "bccp", sport: "baseball", year: 2020, setKey: "topps-triple-threads", cardNumber: "SJR-AM", parallelSlug: "sapphire", isAuto: false, printRun: 25 };
+    expect(identityKeyOf(fieldRow)).toBe("baseball|2020|topps-triple-threads|sjr-am|sapphire|no-auto");
+  });
+
+  it("sub-base-set is read like any other segment -- not special-cased in this PR", () => {
+    // Left exactly as the mechanism reads it. Whether "Base Set" should be
+    // folded onto the plain base row is a separate question for Drew (see
+    // the PR description); this fix does not decide it either way.
+    const subBaseSet: IdentityRow = { ...PLAIN, id: "hiq:baseball:1971:topps:sub-base-set:15:base:no-auto" };
+    expect(identityKeyOf(subBaseSet)).not.toBe(identityKeyOf(PLAIN));
+    expect(identityKeyOf(subBaseSet)).toContain("sub-base-set");
+  });
+
+  it("the sub-segment rides at the END of the key, so it composes with the existing fields untouched", () => {
+    expect(identityKeyOf(SUB_TEK_30)).toBe("baseball|1971|topps|15|base|no-auto|sub-tek-pattern-30");
+  });
+
+  it("subsetSegmentOf reads the id directly -- no field carries this fact, by construction", () => {
+    expect(subsetSegmentOf({ id: "hiq:baseball:1971:topps:sub-tek-pattern-30:15:base:no-auto" })).toBe("sub-tek-pattern-30");
+    expect(subsetSegmentOf({ id: "hiq:baseball:1971:topps:sub-gold-press-proofs:15:base:no-auto" })).toBe("sub-gold-press-proofs");
+    expect(subsetSegmentOf({ id: "hiq:baseball:1971:topps:sub-zero-frozenfractors:15:base:no-auto" })).toBe("sub-zero-frozenfractors");
+    expect(subsetSegmentOf({ id: "hiq:baseball:1971:topps:15:base:no-auto" })).toBe("");
+    expect(subsetSegmentOf({ id: "hiq:baseball:2020:bowman-chrome:cpa-mh:base-refractor:auto:num-499" })).toBe("");
   });
 });
 
