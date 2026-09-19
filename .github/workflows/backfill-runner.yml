@@ -233,6 +233,28 @@ on:
           # REQUIRED, no 'all' escape hatch. The pilot dispatch is
           # scope=baseball:2026 titles=topps.
           - repoint-sales-to-checklist-numbered
+          # R76 (Drew, 2026-09-19). repair-set-sport.cjs (2026-08-20) flipped
+          # 183,248 sold_comps rows' sport by set-level checklist dominance,
+          # vetoed only by five literal substring words -- a census judged
+          # 69,598 of those flips WRONG because the substring veto missed
+          # titles naming a TEAM or LEAGUE rather than the sport word itself
+          # ("Chicago Bulls" never contains "basketball"). This lane restores
+          # them: self-derived selection
+          # (IS_DEFINED(c.setSportRepairedAt) AND
+          # NOT IS_DEFINED(c.setSportReversedAt)), judged by the same
+          # gazetteer module (sport-title-evidence.cjs) that also now backs
+          # setSportAuthority.cjs's own veto, so the repair's cause is fixed
+          # in the same PR. Two write shapes: PATCH (cardId untouched by the
+          # 08-20 repair, the 67,180-row majority) and RELOCATE
+          # (cardId === the current wrong-sport hobbyiqCardId, the 2,418-row
+          # minority -- a real partition move via relocate-sold-comp.cjs).
+          # SCOPE is REQUIRED: the literal `all-repaired` (typed explicitly)
+          # or a comma list of `setKey|year` cells (e.g.
+          # fleer|1988,score|1989) -- the inherited defaults ('', 'refractor',
+          # 'all') are all refused, and 'all' is deliberately NOT a synonym
+          # for `all-repaired`. No new dispatch input; `titles` is unused by
+          # this lane. The pilot dispatch is scope=fleer|1988.
+          - revert-set-sport-repair
           # CF-A-WRONG-IDENTITY-IS-NOT-A-MISSING-ONE (Drew, 2026-09-04, R2).
           # Re-derives the identity of holdings that HAVE one and have the
           # WRONG one -- the population `recheck-holding-identity`'s own sweep
@@ -816,7 +838,7 @@ on:
         required: false
         default: "16"
       scope:
-        description: "For repair-refractor-mislabel: 'refractor' (plain segment only) or 'all' (every parallel pool). For rename-setkey-to-product MODE=product: comma-separated ruled product keys (e.g. topps-series-1,leaf-metal); the default here or 'all' = every ruled product. NOTE the default is 'refractor' and it is INHERITED, not chosen -- for triage-contenthash-collisions and consolidate-catalog-duplicates it narrows NOTHING (both read SCOPE only as the 'all' escape hatch for the no-sports/no-years refusal), so the triage now REFUSES any non-'all' value rather than ignoring it: pass scope=all with those two and narrow with sports/years/slot instead. For rematch-sold-comps MODE=apply-improve this is the APPLY CLASS SCOPE: 'base-eviction' | 'improve' | 'both' -- REQUIRED, and the inherited default 'refractor' is REFUSED (exit 2), because an apply names the class it writes. MODE=census ignores it. ALSO the three RULED SCOPES of 2026-09-06, each armed ONLY by its own name and deliberately NOT by 'improve'/'both'/'all' (every fleet dispatch in flight predates the rulings): 'grade-from-title' -- a FIELD BACKFILL, not a re-key: stamps gradeCompany/gradeValue on rows whose title states a grader token and whose grade fields are empty, at the row's EXISTING address (the slug carries no grade segment; see CF-CARD-IDENTITY-VS-GRADE). 'year-from-title-vintage' -- moves a vintage sale off the slug year that is really its SALE year onto the title's issue year (#1890's class). 'sport-from-product' -- a card's sport is the PRODUCT's sport, read from the product's own checklist; multi-sport products are refused by name. ALSO 'revert-eviction' on the SAME script and mode: the UNDO. It moves the rows a base-eviction wave wrote whose titles G6 now refuses back to the slug their own rekeyedFrom marker recorded, arms NO write class, and is refused if combined with one (a run cannot revert and write at once). It shards on sha1(id) rather than the 32-slot year table, so slots=1 is correct for it. For repair-rc-marker-playername and rekey-catalog-id-to-setkey: REQUIRED comma-separated `sport:year` cells (e.g. hockey:2024,hockey:2025) -- the inherited default 'refractor' and the values '' / 'all' are all REFUSED (exit 2) for both; there is no whole-source sweep."
+        description: "For repair-refractor-mislabel: 'refractor' (plain segment only) or 'all' (every parallel pool). For rename-setkey-to-product MODE=product: comma-separated ruled product keys (e.g. topps-series-1,leaf-metal); the default here or 'all' = every ruled product. NOTE the default is 'refractor' and it is INHERITED, not chosen -- for triage-contenthash-collisions and consolidate-catalog-duplicates it narrows NOTHING (both read SCOPE only as the 'all' escape hatch for the no-sports/no-years refusal), so the triage now REFUSES any non-'all' value rather than ignoring it: pass scope=all with those two and narrow with sports/years/slot instead. For rematch-sold-comps MODE=apply-improve this is the APPLY CLASS SCOPE: 'base-eviction' | 'improve' | 'both' -- REQUIRED, and the inherited default 'refractor' is REFUSED (exit 2), because an apply names the class it writes. MODE=census ignores it. ALSO the three RULED SCOPES of 2026-09-06, each armed ONLY by its own name and deliberately NOT by 'improve'/'both'/'all' (every fleet dispatch in flight predates the rulings): 'grade-from-title' -- a FIELD BACKFILL, not a re-key: stamps gradeCompany/gradeValue on rows whose title states a grader token and whose grade fields are empty, at the row's EXISTING address (the slug carries no grade segment; see CF-CARD-IDENTITY-VS-GRADE). 'year-from-title-vintage' -- moves a vintage sale off the slug year that is really its SALE year onto the title's issue year (#1890's class). 'sport-from-product' -- a card's sport is the PRODUCT's sport, read from the product's own checklist; multi-sport products are refused by name. ALSO 'revert-eviction' on the SAME script and mode: the UNDO. It moves the rows a base-eviction wave wrote whose titles G6 now refuses back to the slug their own rekeyedFrom marker recorded, arms NO write class, and is refused if combined with one (a run cannot revert and write at once). It shards on sha1(id) rather than the 32-slot year table, so slots=1 is correct for it. For repair-rc-marker-playername and rekey-catalog-id-to-setkey: REQUIRED comma-separated `sport:year` cells (e.g. hockey:2024,hockey:2025) -- the inherited default 'refractor' and the values '' / 'all' are all REFUSED (exit 2) for both; there is no whole-source sweep. For revert-set-sport-repair (R76): REQUIRED, either the literal 'all-repaired' (typed explicitly -- sweeps every row this lane can reach) or a comma-separated list of `setKey|year` cells (note the pipe, not a colon -- e.g. fleer|1988,score|1989) parsed from each row's OWN hobbyiqCardIdBefore; the inherited defaults ('', 'refractor', 'all') are all REFUSED (exit 2), and 'all' is deliberately NOT accepted as a synonym for 'all-repaired' -- a whole-source restore needs its own name. The pilot dispatch is scope=fleer|1988."
         required: false
         default: "refractor"
         type: string
@@ -3227,6 +3249,43 @@ jobs:
             echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (relocated=${R:-0} patched=${P:-0}) — done, no re-dispatch."
           dispatch: |
             gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=repoint-sales-to-checklist-numbered -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f scope="${{ inputs.scope }}" -f titles="${{ inputs.titles }}"
+
+      # R76's whole point is a reviewer being able to audit every wrongly-
+      # flipped sale that moved (or was refused, and why) -- never a
+      # truncated sample -- same reason the checklist-numbered fold log and
+      # the id-follows-setkey-field rekey log above are both kept.
+      - name: Upload the revert-set-sport-repair log
+        if: ${{ always() && inputs.script == 'revert-set-sport-repair' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: revert-set-sport-repair-${{ inputs.apply == true && 'apply' || 'report' }}-slot-${{ inputs.slot }}-${{ github.run_id }}
+          path: /tmp/backfill.log
+          if-no-files-found: warn
+          retention-days: 90
+
+      - name: Self-relaunch the set-sport-repair revert until the scope is clean
+        # Stops at its own 110-minute budget and PRINTS its summary; a run killed
+        # by the 150-minute step ceiling prints nothing. CF-RELAUNCH-ONLY-ON-
+        # BUDGET (#1361): relaunch iff the marker printed, never on a count. A
+        # re-run after a budget stop is idempotent by construction: a row this
+        # run restores stamps setSportReversedAt and drops out of the next
+        # run's selection.
+        if: ${{ !cancelled() && inputs.script == 'revert-set-sport-repair' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        uses: ./.github/actions/relaunch-on-marker
+        with:
+          outcome: ${{ steps.backfill.outcome }}
+          script: revert-set-sport-repair
+          preamble: |
+            R=$(grep -aoE "(RESTORED|WOULD RESTORE) +[0-9,]+" /tmp/backfill.log | tail -1 | grep -oE "[0-9,]+$" | tr -d , || true)
+            echo "restored=${R:-0}"
+          budget-notice: |
+            echo "::notice::budget hit (restored=${R:-0}) — re-dispatching slot ${{ inputs.slot }}/${{ inputs.slots }} to continue"
+          finished-notice: |
+            echo "::notice::slot ${{ inputs.slot }}/${{ inputs.slots }} finished within budget (restored=${R:-0}) — done, no re-dispatch."
+          dispatch: |
+            gh workflow run backfill-runner.yml --repo "$GITHUB_REPOSITORY" --ref main -f script=revert-set-sport-repair -f apply="${{ inputs.apply }}" -f concurrency="${{ inputs.concurrency }}" -f slot="${{ inputs.slot }}" -f slots="${{ inputs.slots }}" -f scope="${{ inputs.scope }}"
 
       - name: Self-relaunch the isAuto-from-card-number repair until the slot is clean
         # Stops at its own 140-minute budget and PRINTS its summary; a run killed
